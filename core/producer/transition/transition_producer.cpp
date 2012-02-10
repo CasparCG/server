@@ -26,6 +26,7 @@
 #include "../frame_producer.h"
 #include "../../frame/draw_frame.h"
 #include "../../frame/frame_transform.h"
+#include "../../monitor/monitor.h"
 
 #include <tbb/parallel_invoke.h>
 
@@ -33,15 +34,16 @@ namespace caspar { namespace core {
 
 struct transition_producer : public frame_producer
 {	
-	const field_mode		mode_;
-	unsigned int				current_frame_;
+	spl::shared_ptr<monitor::subject>	event_subject_;
+	const field_mode					mode_;
+	int									current_frame_;
 	
-	const transition_info		info_;
+	const transition_info				info_;
 	
-	spl::shared_ptr<frame_producer>	dest_producer_;
-	spl::shared_ptr<frame_producer>	source_producer_;
+	spl::shared_ptr<frame_producer>		dest_producer_;
+	spl::shared_ptr<frame_producer>		source_producer_;
 
-	spl::shared_ptr<draw_frame>		last_frame_;
+	spl::shared_ptr<draw_frame>			last_frame_;
 		
 	explicit transition_producer(const field_mode& mode, const spl::shared_ptr<frame_producer>& dest, const transition_info& info) 
 		: mode_(mode)
@@ -49,7 +51,10 @@ struct transition_producer : public frame_producer
 		, info_(info)
 		, dest_producer_(dest)
 		, source_producer_(frame_producer::empty())
-		, last_frame_(draw_frame::empty()){}
+		, last_frame_(draw_frame::empty())
+	{
+		dest->subscribe(event_subject_);
+	}
 	
 	// frame_producer
 
@@ -68,6 +73,20 @@ struct transition_producer : public frame_producer
 		if(++current_frame_ >= info_.duration)
 			return draw_frame::eof();
 		
+		*event_subject_ << monitor::event("transition/frame") % current_frame_ % info_.duration
+						<< monitor::event("transition/type") % [&]() -> std::string
+																{
+																	switch(info_.type.value())
+																	{
+																	case transition_type::mix:		return "mix";
+																	case transition_type::wipe:		return "wipe";
+																	case transition_type::slide:	return "slide";
+																	case transition_type::push:		return "push";
+																	case transition_type::cut:		return "cut";
+																	default:						return "n/a";
+																	}
+																}();
+
 		auto dest = draw_frame::empty();
 		auto source = draw_frame::empty();
 
@@ -83,7 +102,7 @@ struct transition_producer : public frame_producer
 			source = source_producer_->receive(flags);
 			if(source == core::draw_frame::late())
 				source = source_producer_->last_frame();
-		});
+		});		
 
 		return compose(dest, source);
 	}
@@ -101,6 +120,11 @@ struct transition_producer : public frame_producer
 	virtual std::wstring print() const override
 	{
 		return L"transition[" + source_producer_->print() + L"=>" + dest_producer_->print() + L"]";
+	}
+
+	virtual std::wstring name() const override
+	{
+		return L"transition";
 	}
 	
 	boost::property_tree::wptree info() const override
@@ -171,6 +195,16 @@ struct transition_producer : public frame_producer
 		last_frame_ = draw_frame::over(s_frame2, d_frame2);
 
 		return draw_frame::over(s_frame, d_frame);
+	}
+
+	virtual void subscribe(const monitor::observable::observer_ptr& o) override															
+	{
+		return event_subject_->subscribe(o);
+	}
+
+	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override		
+	{
+		return event_subject_->unsubscribe(o);
 	}
 };
 

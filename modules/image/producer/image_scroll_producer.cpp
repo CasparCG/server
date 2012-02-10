@@ -201,6 +201,11 @@ struct image_scroll_producer : public core::frame_producer
 		return L"image_scroll_producer[" + filename_ + L"]";
 	}
 
+	virtual std::wstring name() const override
+	{
+		return L"image-scroll";
+	}
+
 	virtual boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;

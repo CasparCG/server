@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include "../monitor/monitor.h"
+
 #include <common/forward.h>
 #include <common/spl/memory.h>
 #include <common/enum_class.h>
@@ -40,7 +42,8 @@ FORWARD1(boost, template<typename T> class unique_future);
 
 namespace caspar { namespace core {
 	
-struct frame_producer : boost::noncopyable
+struct frame_producer : public monitor::observable
+					  , boost::noncopyable
 {
 	struct flags_def
 	{
@@ -56,6 +59,7 @@ struct frame_producer : boost::noncopyable
 	virtual ~frame_producer(){}	
 
 	virtual std::wstring print() const = 0; // nothrow
+	virtual std::wstring name() const = 0;
 	virtual boost::property_tree::wptree info() const = 0;
 
 	virtual boost::unique_future<std::wstring> call(const std::wstring&);
@@ -68,7 +72,13 @@ struct frame_producer : boost::noncopyable
 	virtual spl::shared_ptr<class draw_frame> receive(int flags) = 0;
 	virtual spl::shared_ptr<class draw_frame> last_frame() const = 0;
 
+
 	static const spl::shared_ptr<frame_producer>& empty(); // nothrow
+
+	// monitor::observable
+
+	virtual void subscribe(const monitor::observable::observer_ptr& o) {}
+	virtual void unsubscribe(const monitor::observable::observer_ptr& o) {}
 };
 
 typedef std::function<spl::shared_ptr<core::frame_producer>(const spl::shared_ptr<struct frame_factory>&, const std::vector<std::wstring>&)> producer_factory_t;

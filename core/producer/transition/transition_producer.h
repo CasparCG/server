@@ -64,7 +64,7 @@ struct transition_info
 		, direction(transition_direction::from_left)
 		, tweener(L"linear"){}
 		
-	size_t					duration;
+	int						duration;
 	transition_direction	direction;
 	transition_type			type;
 	tweener					tweener;

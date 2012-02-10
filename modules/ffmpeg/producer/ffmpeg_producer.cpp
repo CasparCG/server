@@ -41,6 +41,7 @@
 #include <core/frame/frame_factory.h>
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_transform.h>
+#include <core/monitor/monitor.h>
 
 #include <boost/algorithm/string.hpp>
 #include <common/assert.h>
@@ -64,10 +65,10 @@ namespace caspar { namespace ffmpeg {
 				
 struct ffmpeg_producer : public core::frame_producer
 {
+	spl::shared_ptr<monitor::subject>							event_subject_;
 	const std::wstring											filename_;
 	
 	const spl::shared_ptr<diagnostics::graph>					graph_;
-	boost::timer												frame_timer_;
 					
 	const spl::shared_ptr<core::frame_factory>					frame_factory_;
 	const core::video_format_desc								format_desc_;
@@ -141,16 +142,31 @@ public:
 	
 	virtual spl::shared_ptr<core::draw_frame> receive(int flags) override
 	{		
-		frame_timer_.restart();
+		boost::timer frame_timer;
 				
 		std::shared_ptr<core::draw_frame> frame = try_decode_frame(flags);
 							
-		graph_->set_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
+		graph_->set_value("frame-time", frame_timer.elapsed()*format_desc_.fps*0.5);
+		
+		*event_subject_ << monitor::event("profiler/time")		% frame_timer.elapsed() % (1.0/format_desc_.fps)					
+						<< monitor::event("file/time")			% monitor::duration(file_frame_number()/fps_) 
+																% monitor::duration(file_nb_frames()/fps_)
+						<< monitor::event("file/frame")			% static_cast<int64_t>(file_frame_number())
+																% static_cast<int64_t>(file_nb_frames())
+						<< monitor::event("file/fps")			% fps_
+						<< monitor::event("file/video/mode")	% u8(print_mode())
+						<< monitor::event("file/video/codec")	% (video_decoder_ ? u8(video_decoder_->print()) : "n/a")
+						<< monitor::event("file/audio/codec")	% (audio_decoder_ ? u8(audio_decoder_->print()) : "n/a")
+						<< monitor::event("filename")			% u8(filename_)
+						<< monitor::event("loop")				% input_.loop();
 				
 		if(!frame)
 		{
-			if(!input_.eof())				
+			if(!input_.eof())		
+			{
 				graph_->set_tag("underflow");	
+				*event_subject_ << monitor::event("underflow") % true;
+			}
 			return last_frame();
 		}
 				
@@ -206,6 +222,11 @@ public:
 						  + boost::lexical_cast<std::wstring>(file_frame_number()) + L"/" + boost::lexical_cast<std::wstring>(file_nb_frames()) + L"]";
 	}
 
+	virtual std::wstring name() const override
+	{
+		return L"ffmpeg";
+	}
+
 	boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
@@ -223,12 +244,22 @@ public:
 		info.add(L"file-nb-frames",		file_nb_frames());
 		return info;
 	}
+	
+	virtual void subscribe(const monitor::observable::observer_ptr& o) override
+	{
+		event_subject_->subscribe(o);
+	}
+
+	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override
+	{
+		event_subject_->unsubscribe(o);
+	}
 
 	// ffmpeg_producer
 
 	std::wstring print_mode() const
 	{
-		return video_decoder_ ? ffmpeg::print_mode(video_decoder_->width(), video_decoder_->height(), fps_, !video_decoder_->is_progressive()) : L"";
+		return video_decoder_ ? ffmpeg::print_mode(video_decoder_->width(), video_decoder_->height(), fps_, !video_decoder_->is_progressive()) : L"n/a";
 	}
 					
 	std::wstring do_call(const std::wstring& param)
