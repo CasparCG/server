@@ -24,7 +24,7 @@
 #include "image_mixer.h"
 
 #include "../util/write_frame.h"
-#include "../util/blend.h"
+#include "../util/simd.h"
 
 #include <common/assert.h>
 #include <common/gl/gl_check.h>
@@ -51,6 +51,8 @@
 #include <boost/range/algorithm_ext/erase.hpp>
 #include <boost/thread/future.hpp>
 
+#include <intrin.h>
+#include <stdint.h>
 #include <algorithm>
 #include <vector>
 
@@ -91,6 +93,53 @@ bool operator!=(const item& lhs, const item& rhs)
 {
 	return !(lhs == rhs);
 }
+	
+inline xmm_epi8 blend(xmm_epi8 dest, xmm_epi8 source)
+{	
+	auto s = xmm_cast<xmm_epi16>(source);
+	auto d = dest;
+
+	const xmm_epi16 round	= 128;
+	const xmm_epi16 lomask	= 0x00FF;
+
+	// T(S, D) = S * D[A] + 0x80
+	auto aaaa   = xmm_epi8::shuffle(d, xmm_epi8(15, 15, 15, 15, 11, 11, 11, 11, 7, 7, 7, 7, 3, 3, 3, 3));
+	d			= xmm_epi8::umin(d, aaaa); // overflow guard
+
+	auto xaxa	= xmm_cast<xmm_epi16>(aaaa) & lomask;		
+			      
+	auto xrxb	= s & lomask;
+	auto t1		= xmm_epi16::multiply_low(xrxb, xaxa) + round;    
+			
+	auto xaxg	= s >> 8;
+	auto t2		= xmm_epi16::multiply_low(xaxg, xaxa) + round;
+		
+	// C(S, D) = S + D - (((T >> 8) + T) >> 8);
+	auto rxbx	= xmm_cast<xmm_epi8>(((t1 >> 8) + t1) >> 8);      
+	auto axgx	= xmm_cast<xmm_epi8>((t2 >> 8) + t2);    
+	auto argb   = xmm_epi8::blend(rxbx, axgx, xmm_epi8(-1, 0, -1, 0));
+
+	return xmm_cast<xmm_epi8>(s) + (d - argb);
+}
+	
+template<typename write_op>
+static void kernel(uint8_t* dest, const uint8_t* source, size_t count, const core::frame_transform& transform)
+{				
+	for(auto n = 0; n < count; n += 32)    
+	{
+		auto s0 = xmm_epi8::load(dest+n+0);
+		auto s1 = xmm_epi8::load(dest+n+16);
+
+		auto d0 = xmm_epi8::load(source+n+0);
+		auto d1 = xmm_epi8::load(source+n+16);
+		
+		auto argb0 = blend(d0, s0);
+		auto argb1 = blend(d1, s1);
+
+		xmm_epi8::write<write_op>(argb0, dest+n+0);
+		xmm_epi8::write<write_op>(argb1, dest+n+16);
+	} 
+}
 
 class image_renderer
 {
@@ -114,22 +163,13 @@ private:
 		
 		auto result = spl::make_shared<host_buffer>(format_desc.size, 0);
 		if(format_desc.field_mode != core::field_mode::progressive)
-		{
-			auto upper = items;
-			auto lower = items;
-
-			BOOST_FOREACH(auto& item, upper)
-				item.transform.field_mode &= core::field_mode::upper;
-					
-			BOOST_FOREACH(auto& item, lower)
-				item.transform.field_mode &= core::field_mode::lower;
-			
-			draw(upper, result->data(), format_desc.width, format_desc.height);
-			draw(lower, result->data(), format_desc.width, format_desc.height);
+		{			
+			draw(items, result->data(), format_desc.width, format_desc.height, core::field_mode::upper);
+			draw(items, result->data(), format_desc.width, format_desc.height, core::field_mode::lower);
 		}
 		else
 		{
-			draw(items, result->data(), format_desc.width, format_desc.height);
+			draw(items, result->data(), format_desc.width, format_desc.height,  core::field_mode::progressive);
 		}
 		
 		return async(launch_policy::deferred, [=]
@@ -138,33 +178,41 @@ private:
 		});		
 	}
 
-	void draw(std::vector<item>& items, uint8_t* dest, int width, int height)
-	{
+	void draw(std::vector<item> items, uint8_t* dest, int width, int height, core::field_mode field_mode)
+	{		
 		BOOST_FOREACH(auto& item, items)
+			item.transform.field_mode &= field_mode;
+
+		boost::remove_erase_if(items, [](item& item){return item.transform.field_mode == core::field_mode::empty;});
+
+		if(items.empty())
+			return;
+
+		static const int CACHE_SIZE = 8192;
+
+		auto start = field_mode == core::field_mode::lower ? 1 : 0;
+		auto step  = field_mode == core::field_mode::progressive ? 1 : 2;
+		
+		// TODO: Add support for fill translations.
+		// TODO: Add support for mask rect.
+		// TODO: Add support for opacity.
+		// TODO: Add support for mix transition.
+		// TODO: Add support for push transition.
+		// TODO: Add support for wipe transition.
+		// TODO: Add support for slide transition.
+		tbb::parallel_for(tbb::blocked_range<int>(0, height/step, CACHE_SIZE/(width*4)), [&](const tbb::blocked_range<int>& r)
 		{
-			auto field_mode = item.transform.field_mode;		
-
-			if(field_mode == core::field_mode::empty)
-				continue;
-
-			auto start = field_mode == core::field_mode::lower ? 1 : 0;
-			auto step  = field_mode == core::field_mode::progressive ? 1 : 2;
-
-			auto source = item.buffers.at(0)->data();
-
-			// TODO: Blend using divide and conquer instead of accumulation.
-			// TODO: Add support for fill translations.
-			// TODO: Add support for mask translations.
-			// TODO: Add support for opacity.
-			// TODO: Add support for mix transition.
-			// TODO: Add support for push transition.
-			// TODO: Add support for wipe transition.
-			// TODO: Add support for slide transition.
-			tbb::parallel_for(start, height, step, [&](int y)
+			for(auto n = r.begin(); n != r.end(); ++n)
 			{
-				cpu::blend(dest + y*width*4, source + y*width*4, width*4);
-			});
-		}
+				auto y = n*step+start;
+
+				auto it = items.begin();
+				for(; it != items.end()-1; ++it)			
+					kernel<store_write>(dest + y*width*4, it->buffers.at(0)->data() + y*width*4, width*4, it->transform);
+
+				kernel<stream_write>(dest + y*width*4, it->buffers.at(0)->data() + y*width*4, width*4, it->transform);
+			}
+		});
 	}
 	
 	void convert(std::vector<item>& items, int width, int height)
@@ -201,8 +249,6 @@ private:
 				
 			sws_scale(sws_context.get(), input_av_frame->data, input_av_frame->linesize, 0, input_av_frame->height, av_frame->data, av_frame->linesize);	
 			
-			clamp_alpha_overflow(av_frame->data[0], av_frame->data[0], width*height*4);
-
 			item.buffers.clear();
 			item.buffers.push_back(dest);
 			item.pix_desc = core::pixel_format_desc(core::pixel_format::bgra);
@@ -211,36 +257,6 @@ private:
 
 			pool.push(sws_context);
 		});
-	}
-
-	void clamp_alpha_overflow(uint8_t* dest, const uint8_t* source, size_t count)
-	{		
-		CASPAR_VERIFY(count % 64 == 0);
-
-		auto alpha_shuffle	= xmm_epi8(15, 15, 15, 15, 11, 11, 11, 11, 7, 7, 7, 7, 3, 3, 3, 3);
-
-		for(auto n = 0; n < count; n += 64)    
-		{
-			auto x0			= xmm_epi8::load(source+n+0);
-			auto x1			= xmm_epi8::load(source+n+16);
-			auto x2			= xmm_epi8::load(source+n+32);
-			auto x3			= xmm_epi8::load(source+n+48);
-
-			auto aaaa0		= xmm_epi8::shuffle(x0, alpha_shuffle);
-			auto aaaa1		= xmm_epi8::shuffle(x1, alpha_shuffle);
-			auto aaaa2		= xmm_epi8::shuffle(x2, alpha_shuffle);
-			auto aaaa3		= xmm_epi8::shuffle(x3, alpha_shuffle);
-
-			x0				= xmm_epi8::umin(x0, aaaa0);
-			x1				= xmm_epi8::umin(x1, aaaa1);
-			x2				= xmm_epi8::umin(x2, aaaa2);
-			x3				= xmm_epi8::umin(x3, aaaa3);
-			
-			xmm_epi8::stream(x0, dest+n+0);
-			xmm_epi8::stream(x1, dest+n+16);
-			xmm_epi8::stream(x2, dest+n+32);
-			xmm_epi8::stream(x3, dest+n+48);
-		} 
 	}
 };
 		

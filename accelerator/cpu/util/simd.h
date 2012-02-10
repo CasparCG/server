@@ -10,6 +10,15 @@ namespace caspar { namespace accelerator { namespace cpu {
 
 typedef std::vector<float, tbb::cache_aligned_allocator<float>> vector_ps;
 
+struct stream_write
+{
+	static const int value = 0x01;
+};
+struct store_write
+{
+	static const int value = 0x02;
+};
+
 class xmm_ps
 {
 	__m128 value_;
@@ -238,6 +247,7 @@ class xmm_epi16
 	__m128i value_;
 	template<typename> friend struct xmm_cast_impl;
 	friend xmm_epi32 horizontal_add(const xmm_epi16&);
+	friend class xmm_epi8;
 public:
 	typedef xmm_epi16 xmm_epi_tag;
 
@@ -332,13 +342,7 @@ public:
 		value_ = _mm_unpackhi_epi16 (value_, other.value_);
 		return *this;
 	}
-
-	xmm_epi16 pack(const xmm_epi16& other)
-	{		
-		value_ = _mm_packs_epi16(value_, other.value_);
-		return *this;
-	}
-		
+			
 	xmm_epi16 max(const xmm_epi16& other)
 	{		
 		value_ = _mm_max_epi16(value_, other.value_);
@@ -409,12 +413,7 @@ public:
 	{
 		return xmm_epi16(lhs).unpack_high(rhs);
 	}
-
-	static xmm_epi16 pack(const xmm_epi16& lhs, const xmm_epi16& rhs)
-	{
-		return xmm_epi16(lhs).pack(rhs);
-	}
-
+	
 	static xmm_epi16 and_not(const xmm_epi16& lhs, const xmm_epi16& rhs)
 	{
 		return xmm_epi16(lhs).and_not(rhs);
@@ -548,11 +547,26 @@ public:
 		value_ = _mm_blendv_epi8(value_, other.value_, mask.value_);
 		return *this;
 	}
-
+	
 	const xmm_epi8& stream(void* dest) const
 	{
 		_mm_stream_si128(reinterpret_cast<__m128i*>(dest), value_);
 		return *this;
+	}
+
+	const xmm_epi8& store(void* dest) const
+	{
+		_mm_store_si128(reinterpret_cast<__m128i*>(dest), value_);
+		return *this;
+	}
+
+	template<typename write_op>
+	const xmm_epi8& write(void* dest) const
+	{
+		if(write_op::value == stream_write::value)
+			return stream(dest);
+		else
+			return store(dest);
 	}
 	
 	char operator[](int index) const
@@ -564,11 +578,36 @@ public:
 	{
 		return value_.m128i_i8[index];
 	}
+	
+	static xmm_epi16 unpack_low(const xmm_epi8& lhs, const xmm_epi8& rhs)
+	{
+		return _mm_unpacklo_epi8(rhs.value_, lhs.value_);
+	}
+	
+	static xmm_epi16 unpack_high(const xmm_epi8& lhs, const xmm_epi8& rhs)
+	{
+		return _mm_unpackhi_epi8(rhs.value_, lhs.value_);
+	}
+	
+	static xmm_epi8 upack(const xmm_epi16& lhs, const xmm_epi16& rhs)
+	{
+		return _mm_packus_epi16(lhs.value_, rhs.value_);
+	}
 
 	static const xmm_epi8& stream(const xmm_epi8& source, void* dest)
 	{
-		source.stream(dest);
-		return source;
+		return source.stream(dest);
+	}
+	
+	static const xmm_epi8& store(const xmm_epi8& source, void* dest)
+	{
+		return source.store(dest);
+	}
+	
+	template<typename write_op>
+	static const xmm_epi8& write(const xmm_epi8& source, void* dest)
+	{
+		return source.write<write_op>(dest);
 	}
 
 	static xmm_epi8 load(const void* source)
