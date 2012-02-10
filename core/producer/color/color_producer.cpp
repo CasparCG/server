@@ -73,7 +73,7 @@ public:
 	boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
-		info.add(L"type", L"color-producer");
+		info.add(L"type", L"color");
 		info.add(L"color", color_str_);
 		return info;
 	}

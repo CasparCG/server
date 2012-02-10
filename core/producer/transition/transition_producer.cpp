@@ -129,11 +129,7 @@ struct transition_producer : public frame_producer
 	
 	boost::property_tree::wptree info() const override
 	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"transition-producer");
-		info.add_child(L"source.producer",	   source_producer_->info());
-		info.add_child(L"destination.producer", dest_producer_->info());
-		return info;
+		return dest_producer_->info();
 	}
 
 	// transition_producer

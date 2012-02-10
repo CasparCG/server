@@ -99,11 +99,7 @@ struct separated_producer : public frame_producer
 
 	boost::property_tree::wptree info() const override
 	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"separated-producer");
-		info.add_child(L"fill.producer",	fill_producer_->info());
-		info.add_child(L"key.producer",	key_producer_->info());
-		return info;
+		return fill_producer_->info();;
 	}
 
 	virtual void subscribe(const monitor::observable::observer_ptr& o) override															

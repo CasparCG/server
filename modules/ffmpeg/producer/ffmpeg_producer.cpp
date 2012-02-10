@@ -230,7 +230,7 @@ public:
 	boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
-		info.add(L"type",				L"ffmpeg-producer");
+		info.add(L"type",				L"ffmpeg");
 		info.add(L"filename",			filename_);
 		info.add(L"width",				video_decoder_ ? video_decoder_->width() : 0);
 		info.add(L"height",				video_decoder_ ? video_decoder_->height() : 0);

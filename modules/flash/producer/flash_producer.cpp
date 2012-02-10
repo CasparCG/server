@@ -430,7 +430,7 @@ public:
 	virtual boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
-		info.add(L"type", L"flash-producer");
+		info.add(L"type", L"flash");
 		return info;
 	}
 

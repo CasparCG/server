@@ -322,13 +322,13 @@ public:
 	
 	virtual std::wstring name() const override
 	{
-		return L"decklinke";
+		return L"decklink";
 	}
 
 	virtual boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
-		info.add(L"type", L"decklink-producer");
+		info.add(L"type", L"decklink");
 		return info;
 	}
 };
