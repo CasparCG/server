@@ -76,7 +76,7 @@ struct pixel_format_desc sealed
 		}
 	};
 
-	pixel_format_desc(pixel_format format) 
+	pixel_format_desc(pixel_format format = core::pixel_format::invalid) 
 		: format(format)
 	{
 	}
