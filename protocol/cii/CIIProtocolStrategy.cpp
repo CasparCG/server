@@ -85,7 +85,7 @@ void CIIProtocolStrategy::Parse(const TCHAR* pData, int charCount, IO::ClientInf
 
 void CIIProtocolStrategy::ProcessMessage(const std::wstring& message, IO::ClientInfoPtr pClientInfo)
 {	
-	CASPAR_LOG(info) << L"Received message from " << pClientInfo->print() << ": " << message + L"\\r\\n";
+	CASPAR_LOG(info) << L"Received message from " << pClientInfo->print() << ": " << log::replace_nonprintable_copy(message, L'?') + L"\\r\\n";
 
 	std::vector<std::wstring> tokens;
 	int tokenCount = TokenizeMessage(message, &tokens);
