@@ -188,7 +188,7 @@ private:
 		if(items.empty())
 			return;
 
-		static const int CACHE_SIZE = 8192;
+		static const int CACHE_SIZE = 16384;
 
 		auto start = field_mode == core::field_mode::lower ? 1 : 0;
 		auto step  = field_mode == core::field_mode::progressive ? 1 : 2;
