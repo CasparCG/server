@@ -43,6 +43,7 @@
 #include <atlbase.h>
 
 #include <protocol/amcp/AMCPProtocolStrategy.h>
+#include <protocol/osc/server.h>
 
 #include <modules/bluefish/bluefish.h>
 #include <modules/decklink/decklink.h>
@@ -65,6 +66,8 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/foreach.hpp>
 
+using namespace caspar;
+	
 // NOTE: This is needed in order to make CComObject work since this is not a real ATL project.
 CComModule _AtlModule;
 extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
@@ -102,7 +105,7 @@ void setup_console_window()
 
 	// Set console title.
 	std::wstringstream str;
-	str << "CasparCG Server " << caspar::env::version() << L" x64 ";
+	str << "CasparCG Server " << env::version() << L" x64 ";
 #ifdef COMPILE_RELEASE
 	str << " Release";
 #elif  COMPILE_PROFILE
@@ -120,26 +123,26 @@ void print_info()
 	CASPAR_LOG(info) << L"################################################################################";
 	CASPAR_LOG(info) << L"Copyright (c) 2010 Sveriges Television AB, www.casparcg.com, <info@casparcg.com>";
 	CASPAR_LOG(info) << L"################################################################################";
-	CASPAR_LOG(info) << L"Starting CasparCG Video and Graphics Playout Server " << caspar::env::version();
-	CASPAR_LOG(info) << L"on " << caspar::get_win_product_name() << L" " << caspar::get_win_sp_version();
-	CASPAR_LOG(info) << caspar::get_cpu_info();
-	CASPAR_LOG(info) << caspar::get_system_product_name();
+	CASPAR_LOG(info) << L"Starting CasparCG Video and Graphics Playout Server " << env::version();
+	CASPAR_LOG(info) << L"on " << get_win_product_name() << L" " << get_win_sp_version();
+	CASPAR_LOG(info) << get_cpu_info();
+	CASPAR_LOG(info) << get_system_product_name();
 	
-	CASPAR_LOG(info) << L"Decklink " << caspar::decklink::get_version();
-	BOOST_FOREACH(auto device, caspar::decklink::get_device_list())
+	CASPAR_LOG(info) << L"Decklink " << decklink::get_version();
+	BOOST_FOREACH(auto device, decklink::get_device_list())
 		CASPAR_LOG(info) << L" - " << device;	
 		
-	CASPAR_LOG(info) << L"Bluefish " << caspar::bluefish::get_version();
-	BOOST_FOREACH(auto device, caspar::bluefish::get_device_list())
+	CASPAR_LOG(info) << L"Bluefish " << bluefish::get_version();
+	BOOST_FOREACH(auto device, bluefish::get_device_list())
 		CASPAR_LOG(info) << L" - " << device;	
 	
-	CASPAR_LOG(info) << L"Flash "			<< caspar::flash::get_version();
-	CASPAR_LOG(info) << L"FreeImage "		<< caspar::image::get_version();
-	CASPAR_LOG(info) << L"FFMPEG-avcodec "  << caspar::ffmpeg::get_avcodec_version();
-	CASPAR_LOG(info) << L"FFMPEG-avformat " << caspar::ffmpeg::get_avformat_version();
-	CASPAR_LOG(info) << L"FFMPEG-avfilter " << caspar::ffmpeg::get_avfilter_version();
-	CASPAR_LOG(info) << L"FFMPEG-avutil "	<< caspar::ffmpeg::get_avutil_version();
-	CASPAR_LOG(info) << L"FFMPEG-swscale "  << caspar::ffmpeg::get_swscale_version();
+	CASPAR_LOG(info) << L"Flash "			<< flash::get_version();
+	CASPAR_LOG(info) << L"FreeImage "		<< image::get_version();
+	CASPAR_LOG(info) << L"FFMPEG-avcodec "  << ffmpeg::get_avcodec_version();
+	CASPAR_LOG(info) << L"FFMPEG-avformat " << ffmpeg::get_avformat_version();
+	CASPAR_LOG(info) << L"FFMPEG-avfilter " << ffmpeg::get_avfilter_version();
+	CASPAR_LOG(info) << L"FFMPEG-avutil "	<< ffmpeg::get_avutil_version();
+	CASPAR_LOG(info) << L"FFMPEG-swscale "  << ffmpeg::get_swscale_version();
 }
 
 LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
@@ -159,7 +162,7 @@ LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
 }
 
 int main(int argc, wchar_t* argv[])
-{		
+{	
 	SetUnhandledExceptionFilter(UserUnhandledExceptionFilter);
 
 	std::wcout << L"Type \"q\" to close application." << std::endl;
@@ -183,7 +186,7 @@ int main(int argc, wchar_t* argv[])
 	SetPriorityClass(GetCurrentProcess(), ABOVE_NORMAL_PRIORITY_CLASS);
 
 	// Install structured exception handler.
-	caspar::win32_exception::install_handler();
+	win32_exception::install_handler();
 				
 	// Increase time precision. This will increase accuracy of function like Sleep(1) from 10 ms to 1 ms.
 	struct inc_prec
@@ -198,8 +201,8 @@ int main(int argc, wchar_t* argv[])
 		tbb_thread_installer(){observe(true);}
 		void on_scheduler_entry(bool is_worker)
 		{
-			//caspar::detail::SetThreadName(GetCurrentThreadId(), "tbb-worker-thread");
-			caspar::win32_exception::install_handler();
+			//detail::SetThreadName(GetCurrentThreadId(), "tbb-worker-thread");
+			win32_exception::install_handler();
 		}
 	} tbb_thread_installer;
 
@@ -208,18 +211,18 @@ int main(int argc, wchar_t* argv[])
 	try 
 	{
 		// Configure environment properties from configuration.
-		caspar::env::configure(L"casparcg.config");
+		env::configure(L"casparcg.config");
 				
-		caspar::log::set_log_level(caspar::env::properties().get(L"configuration.log-level", L"debug"));
+		log::set_log_level(env::properties().get(L"configuration.log-level", L"debug"));
 
 	#ifdef _DEBUG
-		if(caspar::env::properties().get(L"configuration.debugging.remote", false))
+		if(env::properties().get(L"configuration.debugging.remote", false))
 			MessageBox(nullptr, TEXT("Now is the time to connect for remote debugging..."), TEXT("Debug"), MB_OK | MB_TOPMOST);
 	#endif	 
 
 		// Start logging to file.
-		caspar::log::add_file_sink(caspar::env::log_folder());			
-		std::wcout << L"Logging [info] or higher severity to " << caspar::env::log_folder() << std::endl << std::endl;
+		log::add_file_sink(env::log_folder());			
+		std::wcout << L"Logging [info] or higher severity to " << env::log_folder() << std::endl << std::endl;
 		
 		// Setup console window.
 		setup_console_window();
@@ -229,26 +232,22 @@ int main(int argc, wchar_t* argv[])
 		
 		std::wstringstream str;
 		boost::property_tree::xml_writer_settings<wchar_t> w(' ', 3);
-		boost::property_tree::write_xml(str, caspar::env::properties(), w);
+		boost::property_tree::write_xml(str, env::properties(), w);
 		CASPAR_LOG(info) << L"casparcg.config:\n-----------------------------------------\n" << str.str().c_str() << L"-----------------------------------------";
 				
 		{
 			// Create server object which initializes channels, protocols and controllers.
-			caspar::server caspar_server;
+			server caspar_server;
 				
+			auto server = spl::make_shared<protocol::osc::server>(protocol::osc::server::tcp_params(5253));
+			caspar_server.subscribe(server);
+
 			// Create a amcp parser for console commands.
-			caspar::protocol::amcp::AMCPProtocolStrategy amcp(caspar_server.get_channels());
+			protocol::amcp::AMCPProtocolStrategy amcp(caspar_server.get_channels());
 
 			// Create a dummy client which prints amcp responses to console.
-			auto console_client = std::make_shared<caspar::IO::ConsoleClientInfo>();
+			auto console_client = std::make_shared<IO::ConsoleClientInfo>();
 			
-			//auto console_obs = caspar::reactive::make_observer([](const caspar::monitor::event& e)
-			//{
-			//	std::cout << e.path().str() << std::endl;
-			//});
-			//
-			//caspar_server.subscribe(console_obs);
-
 			std::wstring wcmd;
 			while(true)
 			{
