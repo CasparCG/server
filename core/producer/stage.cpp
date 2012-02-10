@@ -46,19 +46,25 @@
 namespace caspar { namespace core {
 	
 struct stage::impl : public std::enable_shared_from_this<impl>
-{			
+{				
+	spl::shared_ptr<diagnostics::graph> graph_;
 	std::map<int, layer>				layers_;	
 	std::map<int, tweened_transform>	tweens_;	
 	executor							executor_;
 public:
-	impl() : executor_(L"stage")
+	impl(spl::shared_ptr<diagnostics::graph> graph) 
+		: graph_(std::move(graph))
+		, executor_(L"stage")
 	{
+		graph_->set_color("produce-time", diagnostics::color(0.0f, 1.0f, 0.0f));
 	}
 		
 	std::map<int, spl::shared_ptr<draw_frame>> operator()(const struct video_format_desc& format_desc)
 	{		
 		return executor_.invoke([=]() -> std::map<int, spl::shared_ptr<draw_frame>>
 		{
+			boost::timer frame_timer;
+
 			std::map<int, spl::shared_ptr<class draw_frame>> frames;
 
 			try
@@ -103,6 +109,8 @@ public:
 				layers_.clear();
 				CASPAR_LOG_CURRENT_EXCEPTION();
 			}	
+			
+			graph_->set_value("produce-time", frame_timer.elapsed()*format_desc.fps*0.5);
 
 			return frames;
 		});
@@ -272,7 +280,7 @@ public:
 	}		
 };
 
-stage::stage() : impl_(new impl()){}
+stage::stage(spl::shared_ptr<diagnostics::graph> graph) : impl_(new impl(std::move(graph))){}
 void stage::apply_transforms(const std::vector<stage::transform_tuple_t>& transforms){impl_->apply_transforms(transforms);}
 void stage::apply_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const tweener& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
 void stage::clear_transforms(int index){impl_->clear_transforms(index);}

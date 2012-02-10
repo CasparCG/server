@@ -25,13 +25,19 @@
 #include <common/reactive.h>
 #include <common/forward.h>
 
+#include "monitor/monitor.h"
+
 #include <boost/property_tree/ptree_fwd.hpp>
 
 FORWARD3(caspar, core, ogl, class accelerator);
 
 namespace caspar { namespace core {
 	
-class video_channel sealed : public reactive::observable<spl::shared_ptr<const struct data_frame>>
+typedef reactive::observable<spl::shared_ptr<const struct data_frame>>	frame_observer;
+typedef reactive::observable<monitor::event>							event_observer;
+
+class video_channel sealed : public frame_observer
+						   , public event_observer
 {
 	video_channel(const video_channel&);
 	video_channel& operator=(const video_channel&);
@@ -48,10 +54,13 @@ public:
 	
 	boost::property_tree::wptree info() const;
 
-	// observable
+	// observable<spl::shared_ptr<const struct data_frame>>
 	
-	virtual void subscribe(const observer_ptr& o) override;
-	virtual void unsubscribe(const observer_ptr& o) override;
+	virtual void subscribe(const frame_observer::observer_ptr& o) override;
+	virtual void unsubscribe(const frame_observer::observer_ptr& o) override;
+		
+	virtual void subscribe(const event_observer::observer_ptr& o) override;
+	virtual void unsubscribe(const event_observer::observer_ptr& o) override;
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;
