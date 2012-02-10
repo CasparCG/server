@@ -47,7 +47,7 @@ namespace caspar { namespace core {
 struct video_channel::impl sealed : public frame_factory
 {
 	reactive::basic_subject<spl::shared_ptr<const data_frame>> frame_subject_;
-	monitor::subject										   event_subject_;
+	spl::shared_ptr<monitor::subject>						   event_subject_;
 
 	const int										index_;
 
@@ -63,7 +63,7 @@ struct video_channel::impl sealed : public frame_factory
 	executor										executor_;
 public:
 	impl(int index, const video_format_desc& format_desc, spl::shared_ptr<image_mixer> image_mixer)  
-		: event_subject_(monitor::path() % "channel" % index)
+		: event_subject_(new monitor::subject(monitor::path() % "channel" % index))
 		, index_(index)
 		, format_desc_(format_desc)
 		, output_(new caspar::core::output(graph_, format_desc, index))
@@ -74,6 +74,8 @@ public:
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
+
+		stage_->subscribe(event_subject_);
 
 		executor_.begin_invoke([=]{tick();});
 
@@ -121,8 +123,8 @@ public:
 		
 			graph_->set_value("tick-time", frame_timer.elapsed()*format_desc.fps*0.5);
 
-			event_subject_ << monitor::event("debug/time") % frame_timer.elapsed();
-			event_subject_ << monitor::event("format")		% u8(format_desc.name);
+			*event_subject_ << monitor::event("debug/time")  % frame_timer.elapsed();
+			*event_subject_ << monitor::event("format")		% u8(format_desc.name);
 		}
 		catch(...)
 		{
@@ -172,7 +174,7 @@ void video_channel::set_video_format_desc(const video_format_desc& format_desc){
 boost::property_tree::wptree video_channel::info() const{return impl_->info();}
 void video_channel::subscribe(const frame_observer::observer_ptr& o) {impl_->frame_subject_.subscribe(o);}
 void video_channel::unsubscribe(const frame_observer::observer_ptr& o) {impl_->frame_subject_.unsubscribe(o);}		
-void video_channel::subscribe(const event_observer::observer_ptr& o) {impl_->event_subject_.subscribe(o);}
-void video_channel::unsubscribe(const event_observer::observer_ptr& o) {impl_->event_subject_.unsubscribe(o);}
+void video_channel::subscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_->subscribe(o);}
+void video_channel::unsubscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_->unsubscribe(o);}
 
 }}

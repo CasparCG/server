@@ -25,6 +25,7 @@
 
 #include "frame_producer.h"
 
+#include "../video_format.h"
 #include "../frame/draw_frame.h"
 #include "../frame/frame_transform.h"
 
@@ -35,6 +36,7 @@ namespace caspar { namespace core {
 
 struct layer::impl
 {				
+	monitor::subject				event_subject_;
 	spl::shared_ptr<frame_producer>	foreground_;
 	spl::shared_ptr<frame_producer>	background_;
 	int64_t							frame_number_;
@@ -42,8 +44,9 @@ struct layer::impl
 	bool							is_paused_;
 
 public:
-	impl() 
-		: foreground_(frame_producer::empty())
+	impl(int index) 
+		: event_subject_(monitor::path("layer") % index)
+		, foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
 		, frame_number_(0)
 		, is_paused_(false)
@@ -92,7 +95,7 @@ public:
 		pause();
 	}
 		
-	spl::shared_ptr<draw_frame> receive(frame_producer::flags flags)
+	spl::shared_ptr<draw_frame> receive(frame_producer::flags flags, const video_format_desc& format_desc)
 	{		
 		try
 		{
@@ -111,9 +114,15 @@ public:
 				if(frames_left < 1)
 				{
 					play();
-					return receive(flags);
+					return receive(flags, format_desc);
 				}
 			}
+
+			event_subject_	<< monitor::event("state")	% u8(is_paused_ ? L"paused" : (foreground_ == frame_producer::empty() ? L"stopped" : L"playing"))							
+							<< monitor::event("time")	% monitor::duration(frame_number_/format_desc.fps)
+														% monitor::duration(static_cast<int64_t>(foreground_->nb_frames()) - static_cast<int64_t>(auto_play_delta_ ? *auto_play_delta_ : 0)/format_desc.fps)
+							<< monitor::event("frame")	% static_cast<int64_t>(frame_number_)
+														% static_cast<int64_t>((static_cast<int64_t>(foreground_->nb_frames()) - static_cast<int64_t>(auto_play_delta_ ? *auto_play_delta_ : 0)));
 				
 			return frame;
 		}
@@ -142,10 +151,9 @@ public:
 	}
 };
 
-layer::layer() : impl_(new impl()){}
-layer::layer(const layer& other) : impl_(new impl(*other.impl_)){}
+layer::layer(int index) : impl_(new impl(index)){}
 layer::layer(layer&& other) : impl_(std::move(other.impl_)){}
-layer& layer::operator=(layer other)
+layer& layer::operator=(layer&& other)
 {
 	other.swap(*this);
 	return *this;
@@ -158,8 +166,10 @@ void layer::load(spl::shared_ptr<frame_producer> frame_producer, const boost::op
 void layer::play(){impl_->play();}
 void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}
-spl::shared_ptr<draw_frame> layer::receive(frame_producer::flags flags) {return impl_->receive(flags);}
+spl::shared_ptr<draw_frame> layer::receive(frame_producer::flags flags, const video_format_desc& format_desc) {return impl_->receive(flags, format_desc);}
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_;}
 boost::property_tree::wptree layer::info() const{return impl_->info();}
+void layer::subscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_.subscribe(o);}
+void layer::unsubscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_.unsubscribe(o);}
 }}
