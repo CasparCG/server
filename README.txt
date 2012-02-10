@@ -41,5 +41,7 @@ CREDITS - People who have contributed to the CasparCG Project (sorted alphabetic
 	Andreas Jeansson		(andreas.jeansson@svt.se)
 	Peter 	Karlsson		(peter.p.karlsson@svt.se)
 	Robert 	Nagy			(robert.nagy@svt.se)
+	Wincent	Persson			(wincent.persson@svt.se)
+	Andreas Andersson		(andreas.p.andersson@svt.se)
 	Olle 	Soprani			
 	Thomas 	R. Kaltz III 
