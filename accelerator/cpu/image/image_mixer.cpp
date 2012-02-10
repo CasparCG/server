@@ -24,7 +24,7 @@
 #include "image_mixer.h"
 
 #include "../util/write_frame.h"
-#include "../util/simd.h"
+#include "../util/xmm.h"
 
 #include <common/assert.h>
 #include <common/gl/gl_check.h>
@@ -94,50 +94,54 @@ bool operator!=(const item& lhs, const item& rhs)
 	return !(lhs == rhs);
 }
 	
-inline xmm_epi8 blend(xmm_epi8 dest, xmm_epi8 source)
+inline xmm::s8_x blend(xmm::s8_x dest, xmm::s8_x source)
 {	
-	auto s = xmm_cast<xmm_epi16>(source);
+	using namespace xmm;
+
+	auto s = s16_x(source);
 	auto d = dest;
 
-	const xmm_epi16 round	= 128;
-	const xmm_epi16 lomask	= 0x00FF;
+	const s16_x round	= 128;
+	const s16_x lomask	= 0x00FF;
 
 	// T(S, D) = S * D[A] + 0x80
-	auto aaaa   = xmm_epi8::shuffle(d, xmm_epi8(15, 15, 15, 15, 11, 11, 11, 11, 7, 7, 7, 7, 3, 3, 3, 3));
-	d			= xmm_epi8::umin(d, aaaa); // overflow guard
+	auto aaaa   = s8_x::shuffle(d, s8_x(15, 15, 15, 15, 11, 11, 11, 11, 7, 7, 7, 7, 3, 3, 3, 3));
+	d			= s8_x(u8_x::min(u8_x(d), u8_x(aaaa))); // overflow guard
 
-	auto xaxa	= xmm_cast<xmm_epi16>(aaaa) & lomask;		
+	auto xaxa	= s16_x(aaaa) & lomask;		
 			      
 	auto xrxb	= s & lomask;
-	auto t1		= xmm_epi16::multiply_low(xrxb, xaxa) + round;    
+	auto t1		= s16_x::multiply_low(xrxb, xaxa) + round;    
 			
 	auto xaxg	= s >> 8;
-	auto t2		= xmm_epi16::multiply_low(xaxg, xaxa) + round;
+	auto t2		= s16_x::multiply_low(xaxg, xaxa) + round;
 		
 	// C(S, D) = S + D - (((T >> 8) + T) >> 8);
-	auto rxbx	= xmm_cast<xmm_epi8>(((t1 >> 8) + t1) >> 8);      
-	auto axgx	= xmm_cast<xmm_epi8>((t2 >> 8) + t2);    
-	auto argb   = xmm_epi8::blend(rxbx, axgx, xmm_epi8(-1, 0, -1, 0));
+	auto rxbx	= s8_x(((t1 >> 8) + t1) >> 8);      
+	auto axgx	= s8_x((t2 >> 8) + t2);    
+	auto argb   = s8_x::blend(rxbx, axgx, s8_x(-1, 0, -1, 0));
 
-	return xmm_cast<xmm_epi8>(s) + (d - argb);
+	return s8_x(s) + (d - argb);
 }
 	
-template<typename write_op>
+template<typename write_tag>
 static void kernel(uint8_t* dest, const uint8_t* source, size_t count, const core::frame_transform& transform)
-{				
+{			
+	using namespace xmm;
+
 	for(auto n = 0; n < count; n += 32)    
 	{
-		auto s0 = xmm_epi8::load(dest+n+0);
-		auto s1 = xmm_epi8::load(dest+n+16);
+		auto s0 = s8_x::load(dest+n+0);
+		auto s1 = s8_x::load(dest+n+16);
 
-		auto d0 = xmm_epi8::load(source+n+0);
-		auto d1 = xmm_epi8::load(source+n+16);
+		auto d0 = s8_x::load(source+n+0);
+		auto d1 = s8_x::load(source+n+16);
 		
 		auto argb0 = blend(d0, s0);
 		auto argb1 = blend(d1, s1);
 
-		xmm_epi8::write<write_op>(argb0, dest+n+0);
-		xmm_epi8::write<write_op>(argb1, dest+n+16);
+		s8_x::write(argb0, dest+n+0 , write_tag());
+		s8_x::write(argb1, dest+n+16, write_tag());
 	} 
 }
 
@@ -208,9 +212,9 @@ private:
 
 				auto it = items.begin();
 				for(; it != items.end()-1; ++it)			
-					kernel<store_write>(dest + y*width*4, it->buffers.at(0)->data() + y*width*4, width*4, it->transform);
+					kernel<xmm::store_tag>(dest + y*width*4, it->buffers.at(0)->data() + y*width*4, width*4, it->transform);
 
-				kernel<stream_write>(dest + y*width*4, it->buffers.at(0)->data() + y*width*4, width*4, it->transform);
+				kernel<xmm::stream_tag>(dest + y*width*4, it->buffers.at(0)->data() + y*width*4, width*4, it->transform);
 			}
 		});
 	}

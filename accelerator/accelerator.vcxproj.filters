@@ -25,9 +25,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="StdAfx.h" />
-    <ClInclude Include="cpu\util\simd.h">
-      <Filter>source\cpu\util</Filter>
-    </ClInclude>
     <ClInclude Include="ogl\image\image_mixer.h">
       <Filter>source\ogl\image</Filter>
     </ClInclude>
@@ -69,6 +66,9 @@
     </ClInclude>
     <ClInclude Include="ogl\factory.h">
       <Filter>source\ogl</Filter>
+    </ClInclude>
+    <ClInclude Include="cpu\util\xmm.h">
+      <Filter>source\cpu\util</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
