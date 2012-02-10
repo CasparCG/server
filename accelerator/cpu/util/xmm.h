@@ -123,9 +123,9 @@ public:
 	s8_x(char b);
 	s8_x(char b3,  char b2,  char b1,  char b0);
 	s8_x(char b15, char b14, char b13, char b12, 
-			 char b11, char b10, char b9,  char b8,  
-			 char b7,  char b6,  char b5,  char b4,  
-			 char b3,  char b2,  char b1,  char b0);
+		 char b11, char b10, char b9,  char b8,  
+		 char b7,  char b6,  char b5,  char b4,  
+		 char b3,  char b2,  char b1,  char b0);
 
 	s8_x& operator+=(const s8_x& other);
 	s8_x& operator-=(const s8_x& other);									
@@ -161,9 +161,9 @@ public:
 	u8_x(char b);
 	u8_x(char b3,  char b2,  char b1,  char b0);
 	u8_x(char b15, char b14, char b13, char b12, 
-			 char b11, char b10, char b9,  char b8,  
-			 char b7,  char b6,  char b5,  char b4,  
-			 char b3,  char b2,  char b1,  char b0);
+		 char b11, char b10, char b9,  char b8,  
+		 char b7,  char b6,  char b5,  char b4,  
+		 char b3,  char b2,  char b1,  char b0);
 										
 	char operator[](int index) const;
 	char& operator[](int index);
