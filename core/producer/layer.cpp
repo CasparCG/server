@@ -167,7 +167,7 @@ public:
 
 		info.add(L"nb_frames",	 nb_frames == std::numeric_limits<int64_t>::max() ? -1 : nb_frames);
 		info.add(L"frames-left", nb_frames == std::numeric_limits<int64_t>::max() ? -1 : (foreground_->nb_frames() - frame_number_ - (auto_play_delta_ ? *auto_play_delta_ : 0)));
-		info.add_child(L"foreground.producer", foreground_->info());
+		info.add_child(L"producer", foreground_->info());
 		info.add_child(L"background.producer", background_->info());
 		return info;
 	}

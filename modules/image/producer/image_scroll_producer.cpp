@@ -209,7 +209,7 @@ struct image_scroll_producer : public core::frame_producer
 	virtual boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
-		info.add(L"type", L"image-scroll-producer");
+		info.add(L"type", L"image-scroll");
 		info.add(L"filename", filename_);
 		return info;
 	}
