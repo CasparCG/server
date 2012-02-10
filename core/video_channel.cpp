@@ -101,26 +101,28 @@ public:
 	{
 		try
 		{
+			auto format_desc = get_video_format_desc();
+
 			boost::timer frame_timer;
 
 			// Produce
 			
-			auto stage_frames = (*stage_)(format_desc_);
+			auto stage_frames = (*stage_)(format_desc);
 
 			// Mix
 			
-			auto mixed_frame  = (*mixer_)(std::move(stage_frames), format_desc_);
+			auto mixed_frame  = (*mixer_)(std::move(stage_frames), format_desc);
 
 			// Consume
 			
 			frame_subject_ << mixed_frame;
 			
-			(*output_)(std::move(mixed_frame), format_desc_);
+			(*output_)(std::move(mixed_frame), format_desc);
 		
-			graph_->set_value("tick-time", frame_timer.elapsed()*format_desc_.fps*0.5);
+			graph_->set_value("tick-time", frame_timer.elapsed()*format_desc.fps*0.5);
 
 			event_subject_ << monitor::event("debug/time") % frame_timer.elapsed();
-			event_subject_ << monitor::event("format");
+			event_subject_ << monitor::event("format")		% u8(format_desc.name);
 		}
 		catch(...)
 		{
@@ -140,7 +142,7 @@ public:
 		
 	std::wstring print() const
 	{
-		return L"video_channel[" + boost::lexical_cast<std::wstring>(index_) + L"|" +  format_desc_.name + L"]";
+		return L"video_channel[" + boost::lexical_cast<std::wstring>(index_) + L"|" +  get_video_format_desc().name + L"]";
 	}
 
 	boost::property_tree::wptree info() const
