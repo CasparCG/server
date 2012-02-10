@@ -239,7 +239,7 @@ int main(int argc, wchar_t* argv[])
 			// Create server object which initializes channels, protocols and controllers.
 			server caspar_server;
 				
-			auto server = spl::make_shared<protocol::osc::server>(protocol::osc::server::tcp_params(5253));
+			auto server = spl::make_shared<protocol::osc::server>(5253);
 			caspar_server.subscribe(server);
 
 			// Create a amcp parser for console commands.
