@@ -23,6 +23,8 @@
 
 #include "frame_producer.h"
 
+#include "../monitor/monitor.h"
+
 #include <common/forward.h>
 #include <common/spl/memory.h>
 
@@ -35,13 +37,12 @@ FORWARD1(boost, template<typename T> class optional);
 
 namespace caspar { namespace core {
 	
-class layer sealed
+class layer sealed : public monitor::observable
 {
 public:
-	layer(); // nothrow
-	layer(const layer&);
+	layer(int index = -1); // nothrow
 	layer(layer&& other); // nothrow
-	layer& operator=(layer other); // nothrow
+	layer& operator=(layer&& other); // nothrow
 
 	void swap(layer& other); // nothrow 
 		
@@ -53,9 +54,14 @@ public:
 	spl::shared_ptr<struct frame_producer> foreground() const; // nothrow
 	spl::shared_ptr<struct frame_producer> background() const; // nothrow
 
-	spl::shared_ptr<class draw_frame> receive(frame_producer::flags flags); // nothrow
+	spl::shared_ptr<class draw_frame> receive(frame_producer::flags flags, const struct video_format_desc& format_desc); // nothrow
 
 	boost::property_tree::wptree info() const;
+
+	// monitor::observable
+
+	virtual void subscribe(const monitor::observable::observer_ptr& o) override;
+	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override;
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

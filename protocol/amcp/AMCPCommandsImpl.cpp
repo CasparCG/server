@@ -548,13 +548,13 @@ bool SwapCommand::DoExecute()
 			int l1 = GetLayerIndex();
 			int l2 = boost::lexical_cast<int>(strs.at(1));
 
-			ch1->stage()->swap_layer(l1, l2, ch2->stage());
+			ch1->stage()->swap_layer(l1, l2, *ch2->stage());
 		}
 		else
 		{
 			auto ch1 = GetChannel();
 			auto ch2 = GetChannels().at(boost::lexical_cast<int>(_parameters[0])-1);
-			ch1->stage()->swap_layers(ch2->stage());
+			ch1->stage()->swap_layers(*ch2->stage());
 		}
 		
 		SetReplyString(TEXT("202 SWAP OK\r\n"));
