@@ -121,7 +121,7 @@
   <ItemGroup>
     <ClInclude Include="cpu\factory.h" />
     <ClInclude Include="cpu\image\image_mixer.h" />
-    <ClInclude Include="cpu\util\simd.h" />
+    <ClInclude Include="cpu\util\xmm.h" />
     <ClInclude Include="cpu\util\write_frame.h" />
     <ClInclude Include="factory.h" />
     <ClInclude Include="ogl\factory.h" />
