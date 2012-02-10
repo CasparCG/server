@@ -48,7 +48,7 @@ struct layer::impl
 public:
 	impl(int index) 
 		: event_subject_(new monitor::subject(monitor::path("layer") % index))
-		, foreground_event_subject_(new monitor::subject("foreground"))
+		, foreground_event_subject_(new monitor::subject(""))
 		, background_event_subject_(new monitor::subject("background"))
 		, foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
