@@ -49,9 +49,9 @@ public:
 	typedef s32_x xmm_epi_tag;
 
 	s32_x();
-	s32_x(const s16_x& other);
-	s32_x(const s8_x& other);
-	s32_x(const u8_x& other);
+	explicit s32_x(const s16_x& other);
+	explicit s32_x(const s8_x& other);
+	explicit s32_x(const u8_x& other);
 	s32_x(const __m128i& value);
 
 	s32_x& operator>>=(int count);
@@ -75,9 +75,9 @@ public:
 	typedef s16_x xmm_epi_tag;
 
 	s16_x();
-	s16_x(const s32_x& other);
-	s16_x(const s8_x& other);
-	s16_x(const u8_x& other);
+	explicit s16_x(const s32_x& other);
+	explicit s16_x(const s8_x& other);
+	explicit s16_x(const u8_x& other);
 	s16_x(const __m128i& value);
 	s16_x(short value);
 
@@ -104,6 +104,14 @@ public:
 	static s16_x min(const s16_x& lhs, const s16_x& rhs);
 };
 
+template<typename T>
+class base8_x : public base_x<s8_x>
+{
+									
+	char operator[](int index) const;
+	char& operator[](int index);
+};
+
 class s8_x : public base_x<s8_x>
 {
 	__m128i value_;
@@ -116,9 +124,9 @@ public:
 	typedef s8_x xmm_epi_tag;
 
 	s8_x();
-	s8_x(const s32_x& other);
-	s8_x(const s16_x& other);
-	s8_x(const u8_x& other);
+	explicit s8_x(const s32_x& other);
+	explicit s8_x(const s16_x& other);
+	explicit s8_x(const u8_x& other);
 	s8_x(const __m128i& value);	
 	s8_x(char b);
 	s8_x(char b3,  char b2,  char b1,  char b0);
@@ -128,18 +136,18 @@ public:
 		 char b3,  char b2,  char b1,  char b0);
 
 	s8_x& operator+=(const s8_x& other);
-	s8_x& operator-=(const s8_x& other);									
+	s8_x& operator-=(const s8_x& other);	
 	char operator[](int index) const;
 	char& operator[](int index);
 	
 	static s8_x upack(const s16_x& lhs, const s16_x& rhs);
 
-	static s16_x multiply_add(const s8_x& lhs, const s8_x& rhs);
-	static s8_x shuffle(const s8_x& lhs, const s8_x& rhs);
+	static s16_x multiply_add(const u8_x& lhs, const s8_x& rhs);
 	static s8_x max(const s8_x& lhs, const s8_x& rhs);
 	static s8_x min(const s8_x& lhs, const s8_x& rhs);
+
+	static s8_x shuffle(const s8_x& lhs, const s8_x& rhs);
 	static s8_x blend(const s8_x& lhs, const s8_x& rhs, const s8_x& mask);
-	static s8_x zero();
 };
 
 class u8_x : public base_x<u8_x>
@@ -154,9 +162,9 @@ public:
 	typedef u8_x xmm_epu_tag;
 
 	u8_x();
-	u8_x(const s32_x& other);
-	u8_x(const s16_x& other);
-	u8_x(const s8_x& other);
+	explicit u8_x(const s32_x& other);
+	explicit u8_x(const s16_x& other);
+	explicit u8_x(const s8_x& other);
 	u8_x(const __m128i& value);	
 	u8_x(char b);
 	u8_x(char b3,  char b2,  char b1,  char b0);
@@ -170,6 +178,9 @@ public:
 			
 	static u8_x max(const u8_x& lhs, const u8_x& rhs);
 	static u8_x min(const u8_x& lhs, const u8_x& rhs);
+		
+	static u8_x shuffle(const u8_x& lhs, const u8_x& rhs);
+	static u8_x blend(const u8_x& lhs, const u8_x& rhs, const u8_x& mask);
 };
 
 // base_x
@@ -528,14 +539,9 @@ s8_x s8_x::upack(const s16_x& lhs, const s16_x& rhs)
 	return _mm_packus_epi16(lhs.value_, rhs.value_);
 }
 
-s16_x s8_x::multiply_add(const s8_x& lhs, const s8_x& rhs)
+s16_x s8_x::multiply_add(const u8_x& lhs, const s8_x& rhs)
 {		
 	return _mm_maddubs_epi16(lhs.value_, rhs.value_);
-}
-
-s8_x s8_x::shuffle(const s8_x& lhs, const s8_x& rhs)
-{		
-	return _mm_shuffle_epi8(lhs.value_, rhs.value_);
 }
 	
 s8_x s8_x::max(const s8_x& lhs, const s8_x& rhs)
@@ -547,11 +553,6 @@ s8_x s8_x::min(const s8_x& lhs, const s8_x& rhs)
 {		
 	return _mm_min_epi8(lhs.value_, rhs.value_);
 }
-	
-s8_x s8_x::blend(const s8_x& lhs, const s8_x& rhs, const s8_x& mask)
-{		
-	return _mm_blendv_epi8(lhs.value_, rhs.value_, mask.value_);
-}
 
 inline s8_x operator+(const s8_x& lhs, const s8_x& rhs)
 {
@@ -561,6 +562,16 @@ inline s8_x operator+(const s8_x& lhs, const s8_x& rhs)
 inline s8_x operator-(const s8_x& lhs, const s8_x& rhs)
 {
 	return s8_x(lhs) -= rhs;
+}
+	
+s8_x s8_x::shuffle(const s8_x& lhs, const s8_x& rhs)
+{		
+	return _mm_shuffle_epi8(lhs.value_, rhs.value_);
+}
+
+s8_x s8_x::blend(const s8_x& lhs, const s8_x& rhs, const s8_x& mask)
+{		
+	return _mm_blendv_epi8(lhs.value_, rhs.value_, mask.value_);
 }
 
 // u8_x
@@ -627,6 +638,15 @@ u8_x u8_x::min(const u8_x& lhs, const u8_x& rhs)
 	return _mm_min_epu8(lhs.value_, rhs.value_);
 }
 
+u8_x u8_x::shuffle(const u8_x& lhs, const u8_x& rhs)
+{		
+	return _mm_shuffle_epi8(lhs.value_, rhs.value_);
+}
+
+u8_x u8_x::blend(const u8_x& lhs, const u8_x& rhs, const u8_x& mask)
+{		
+	return _mm_blendv_epi8(lhs.value_, rhs.value_, mask.value_);
+}
 
 // xmm_cast
 
