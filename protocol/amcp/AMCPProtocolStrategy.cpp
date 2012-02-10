@@ -112,7 +112,7 @@ void AMCPProtocolStrategy::Parse(const TCHAR* pData, int charCount, ClientInfoPt
 
 void AMCPProtocolStrategy::ProcessMessage(const std::wstring& message, ClientInfoPtr& pClientInfo)
 {	
-	CASPAR_LOG(info) << L"Received message from " << pClientInfo->print() << ": " << message + L"\\r\\n";
+	CASPAR_LOG(info) << L"Received message from " << pClientInfo->print() << ": " << log::replace_nonprintable_copy(message, L'?') + L"\\r\\n";
 	
 	bool bError = true;
 	MessageParserState state = New;
