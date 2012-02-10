@@ -56,7 +56,6 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 public:
 	impl(spl::shared_ptr<diagnostics::graph> graph) 
 		: graph_(std::move(graph))
-		, event_subject_(new monitor::subject("stage"))
 		, executor_(L"stage")
 	{
 		graph_->set_color("produce-time", diagnostics::color(0.0f, 1.0f, 0.0f));
