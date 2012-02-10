@@ -120,6 +120,7 @@ public:
 		
 struct mixer::impl : boost::noncopyable
 {				
+	spl::shared_ptr<diagnostics::graph> graph_;
 	audio_mixer							audio_mixer_;
 	spl::shared_ptr<image_mixer>		image_mixer_;
 	
@@ -128,11 +129,13 @@ struct mixer::impl : boost::noncopyable
 	executor executor_;
 
 public:
-	impl(spl::shared_ptr<image_mixer> image_mixer) 
-		: audio_mixer_()
+	impl(spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer) 
+		: graph_(std::move(graph))
+		, audio_mixer_()
 		, image_mixer_(std::move(image_mixer))
 		, executor_(L"mixer")
 	{			
+		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8));
 	}	
 	
 	spl::shared_ptr<const data_frame> operator()(std::map<int, spl::shared_ptr<draw_frame>> frames, const video_format_desc& format_desc)
@@ -140,7 +143,9 @@ public:
 		return executor_.invoke([=]() mutable -> spl::shared_ptr<const struct data_frame>
 		{		
 			try
-			{				
+			{	
+				boost::timer frame_timer;
+
 				BOOST_FOREACH(auto& frame, frames)
 				{
 					auto blend_it = blend_modes_.find(frame.first);
@@ -154,6 +159,8 @@ public:
 
 				auto image = (*image_mixer_)(format_desc);
 				auto audio = audio_mixer_(format_desc);
+				
+				graph_->set_value("mix-time", frame_timer.elapsed()*format_desc.fps*0.5);
 
 				return spl::make_shared<mixed_frame>(this, std::move(image), std::move(audio), format_desc);	
 			}
@@ -185,8 +192,8 @@ public:
 	}
 };
 	
-mixer::mixer(spl::shared_ptr<image_mixer> image_mixer) 
-	: impl_(new impl(std::move(image_mixer))){}
+mixer::mixer(spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer) 
+	: impl_(new impl(std::move(graph), std::move(image_mixer))){}
 void mixer::set_blend_mode(int index, blend_mode value){impl_->set_blend_mode(index, value);}
 boost::unique_future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
 spl::shared_ptr<const data_frame> mixer::operator()(std::map<int, spl::shared_ptr<draw_frame>> frames, const struct video_format_desc& format_desc){return (*impl_)(std::move(frames), format_desc);}

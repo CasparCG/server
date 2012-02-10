@@ -31,6 +31,9 @@
     <Filter Include="source\frame">
       <UniqueIdentifier>{b19721c1-8dd1-45fb-b9e3-212b548ebbb6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\monitor">
+      <UniqueIdentifier>{e09a01c7-bfd9-4b56-97fd-ec9d060c0bbc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="producer\transition\transition_producer.h">
@@ -100,6 +103,9 @@
     <ClInclude Include="frame\write_frame.h">
       <Filter>source\frame</Filter>
     </ClInclude>
+    <ClInclude Include="monitor\monitor.h">
+      <Filter>source\monitor</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
@@ -150,6 +156,9 @@
     </ClCompile>
     <ClCompile Include="frame\data_frame.cpp">
       <Filter>source\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="monitor\monitor.cpp">
+      <Filter>source\monitor</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
