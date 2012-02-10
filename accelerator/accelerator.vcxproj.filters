@@ -28,9 +28,6 @@
     <ClInclude Include="cpu\util\simd.h">
       <Filter>source\cpu\util</Filter>
     </ClInclude>
-    <ClInclude Include="cpu\util\blend.h">
-      <Filter>source\cpu\util</Filter>
-    </ClInclude>
     <ClInclude Include="ogl\image\image_mixer.h">
       <Filter>source\ogl\image</Filter>
     </ClInclude>
