@@ -36,6 +36,9 @@
 #include <boost/log/sources/severity_logger.hpp>
 #include <boost/log/sources/record_ostream.hpp>
 
+#include <string>
+#include <locale>
+
 namespace caspar { namespace log {
 	
 namespace internal{
@@ -94,6 +97,20 @@ BOOST_LOG_DECLARE_GLOBAL_LOGGER_INIT(logger, caspar_logger)
 	catch(...){}
 
 void set_log_level(const std::wstring& lvl);
+
+template<typename T>
+inline void replace_nonprintable(std::basic_string<T, std::char_traits<T>, std::allocator<T>>& str, T with)
+{
+	std::locale loc;
+	std::replace_if(str.begin(), str.end(), [&](T c)->bool { return !std::isprint(c, loc); }, with);
+}
+
+template<typename T>
+inline std::basic_string<T> replace_nonprintable_copy(std::basic_string<T, std::char_traits<T>, std::allocator<T>> str, T with)
+{
+	replace_nonprintable(str, with);
+	return str;
+}
 
 }}
 
