@@ -94,32 +94,23 @@ bool operator!=(const item& lhs, const item& rhs)
 	return !(lhs == rhs);
 }
 	
-inline xmm::s8_x blend(xmm::s8_x dest, xmm::s8_x source)
+inline xmm::s8_x blend(xmm::s8_x d, xmm::s8_x s)
 {	
 	using namespace xmm;
-
-	auto s = s16_x(source);
-	auto d = dest;
-
-	const s16_x round	= 128;
-	const s16_x lomask	= 0x00FF;
-
+		
 	// T(S, D) = S * D[A] + 0x80
 	auto aaaa   = s8_x::shuffle(d, s8_x(15, 15, 15, 15, 11, 11, 11, 11, 7, 7, 7, 7, 3, 3, 3, 3));
 	d			= s8_x(u8_x::min(u8_x(d), u8_x(aaaa))); // overflow guard
 
-	auto xaxa	= s16_x(aaaa) & lomask;		
+	auto xaxa	= s16_x(aaaa) >> 8;		
 			      
-	auto xrxb	= s & lomask;
-	auto t1		= s16_x::multiply_low(xrxb, xaxa) + round;    
-			
-	auto xaxg	= s >> 8;
-	auto t2		= s16_x::multiply_low(xaxg, xaxa) + round;
+	auto t1		= s16_x::multiply_low(s16_x(s) & 0x00FF, xaxa) + 0x80;    
+	auto t2		= s16_x::multiply_low(s16_x(s) >> 8    , xaxa) + 0x80;
 		
 	// C(S, D) = S + D - (((T >> 8) + T) >> 8);
-	auto rxbx	= s8_x(((t1 >> 8) + t1) >> 8);      
-	auto axgx	= s8_x((t2 >> 8) + t2);    
-	auto argb   = s8_x::blend(rxbx, axgx, s8_x(-1, 0, -1, 0));
+	auto xyxy	= s8_x(((t1 >> 8) + t1) >> 8);      
+	auto yxyx	= s8_x((t2 >> 8) + t2);    
+	auto argb   = s8_x::blend(xyxy, yxyx, s8_x(-1, 0, -1, 0));
 
 	return s8_x(s) + (d - argb);
 }
