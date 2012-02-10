@@ -212,15 +212,29 @@ private:
 	
 	void convert(std::vector<item>& items, int width, int height)
 	{
-		// TODO: Don't convert buffers multiple times just because they are in different items due to e.g. interlacing.
-		tbb::parallel_for_each(items.begin(), items.end(), [&](item& item)
+		typedef std::map<std::vector<spl::shared_ptr<host_buffer>>, std::shared_ptr<host_buffer>>	buffer_map_t;
+		typedef std::map<std::vector<spl::shared_ptr<host_buffer>>, core::pixel_format_desc>		pix_desc_map_t;
+
+		buffer_map_t	 buffer_map;
+		pix_desc_map_t	 pix_desc_map;
+		BOOST_FOREACH(auto& item, items)
 		{
-			if(item.pix_desc.format == core::pixel_format::bgra && 
-			   item.pix_desc.planes.at(0).width == width &&
-			   item.pix_desc.planes.at(0).height == height)
+			buffer_map[item.buffers] = nullptr;
+			pix_desc_map[item.buffers] = item.pix_desc;
+		}
+
+		// TODO: Don't convert buffers multiple times just because they are in different items due to e.g. interlacing.
+		tbb::parallel_for_each(buffer_map.begin(), buffer_map.end(), [&](buffer_map_t::value_type& pair)
+		{
+			auto buffers   = pair.first;
+			auto pix_desc  = pix_desc_map[buffers];
+
+			if(pix_desc.format == core::pixel_format::bgra && 
+			   pix_desc.planes.at(0).width == width &&
+			   pix_desc.planes.at(0).height == height)
 				return;
 
-			auto input_av_frame = ffmpeg::make_av_frame(item.buffers, item.pix_desc);
+			auto input_av_frame = ffmpeg::make_av_frame(buffers, pix_desc);
 								
 			int key = ((input_av_frame->width << 22) & 0xFFC00000) | ((input_av_frame->height << 6) & 0x003FC000) | ((input_av_frame->format << 7) & 0x00007F00);
 						
@@ -238,20 +252,24 @@ private:
 		
 			auto dest = spl::make_shared<host_buffer>(width*height*4);
 
-			spl::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
-			avcodec_get_frame_defaults(av_frame.get());			
-			avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), dest->data(), PIX_FMT_BGRA, width, height);
+			{
+				spl::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
+				avcodec_get_frame_defaults(av_frame.get());			
+				avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), dest->data(), PIX_FMT_BGRA, width, height);
 				
-			sws_scale(sws_context.get(), input_av_frame->data, input_av_frame->linesize, 0, input_av_frame->height, av_frame->data, av_frame->linesize);	
-			
-			item.buffers.clear();
-			item.buffers.push_back(dest);
-			item.pix_desc = core::pixel_format_desc(core::pixel_format::bgra);
-			item.pix_desc.planes.clear();
-			item.pix_desc.planes.push_back(core::pixel_format_desc::plane(width, height, 4));
+				sws_scale(sws_context.get(), input_av_frame->data, input_av_frame->linesize, 0, input_av_frame->height, av_frame->data, av_frame->linesize);				
+				pool.push(sws_context);
+			}
 
-			pool.push(sws_context);
+			pair.second = dest;
 		});
+		
+		BOOST_FOREACH(auto& item, items)
+		{		
+			item.buffers			= boost::assign::list_of(spl::make_shared_ptr(buffer_map[item.buffers]));
+			item.pix_desc			= core::pixel_format_desc(core::pixel_format::bgra);
+			item.pix_desc.planes	= boost::assign::list_of(core::pixel_format_desc::plane(width, height, 4));
+		}
 	}
 };
 		
