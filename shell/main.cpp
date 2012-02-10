@@ -226,7 +226,7 @@ int main(int argc, wchar_t* argv[])
 
 		// Print environment information.
 		print_info();
-			
+		
 		std::wstringstream str;
 		boost::property_tree::xml_writer_settings<wchar_t> w(' ', 3);
 		boost::property_tree::write_xml(str, caspar::env::properties(), w);
@@ -241,6 +241,13 @@ int main(int argc, wchar_t* argv[])
 
 			// Create a dummy client which prints amcp responses to console.
 			auto console_client = std::make_shared<caspar::IO::ConsoleClientInfo>();
+			
+			//auto console_obs = caspar::reactive::make_observer([](const caspar::monitor::event& e)
+			//{
+			//	std::cout << e.path().str() << std::endl;
+			//});
+			//
+			//caspar_server.subscribe(console_obs);
 
 			std::wstring wcmd;
 			while(true)

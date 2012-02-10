@@ -315,9 +315,14 @@ public:
 		return length_;
 	}
 	
-	std::wstring print() const override
+	virtual std::wstring print() const override
 	{
 		return producer_->print();
+	}
+	
+	virtual std::wstring name() const override
+	{
+		return L"decklinke";
 	}
 
 	virtual boost::property_tree::wptree info() const override

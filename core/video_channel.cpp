@@ -123,8 +123,8 @@ public:
 		
 			graph_->set_value("tick-time", frame_timer.elapsed()*format_desc.fps*0.5);
 
-			*event_subject_ << monitor::event("debug/time")  % frame_timer.elapsed();
-			*event_subject_ << monitor::event("format")		% u8(format_desc.name);
+			//*event_subject_ << monitor::event("debug/profiler")  % frame_timer.elapsed() % (1.0/format_desc_.fps);
+			//*event_subject_ << monitor::event("format")		% u8(format_desc.name);
 		}
 		catch(...)
 		{
