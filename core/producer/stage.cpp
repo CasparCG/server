@@ -40,6 +40,7 @@
 
 #include <tbb/parallel_for_each.h>
 
+#include <functional>
 #include <map>
 #include <vector>
 
@@ -48,12 +49,14 @@ namespace caspar { namespace core {
 struct stage::impl : public std::enable_shared_from_this<impl>
 {				
 	spl::shared_ptr<diagnostics::graph> graph_;
+	spl::shared_ptr<monitor::subject>	event_subject_;
 	std::map<int, layer>				layers_;	
 	std::map<int, tweened_transform>	tweens_;	
 	executor							executor_;
 public:
 	impl(spl::shared_ptr<diagnostics::graph> graph) 
 		: graph_(std::move(graph))
+		, event_subject_(new monitor::subject("stage"))
 		, executor_(L"stage")
 	{
 		graph_->set_color("produce-time", diagnostics::color(0.0f, 1.0f, 0.0f));
@@ -66,43 +69,19 @@ public:
 			boost::timer frame_timer;
 
 			std::map<int, spl::shared_ptr<class draw_frame>> frames;
-
+			
 			try
-			{					
-				BOOST_FOREACH(auto& layer, layers_)			
-					frames[layer.first] = draw_frame::empty();	
+			{			
+				std::vector<int> indices;
 
-				auto format_desc2 = format_desc;
-
-				tbb::parallel_for_each(layers_.begin(), layers_.end(), [&](std::map<int, layer>::value_type& layer)
+				BOOST_FOREACH(auto& layer, layers_)	
 				{
-					auto& tween		= tweens_[layer.first];
-					auto transform	= tween.fetch_and_tick(1);
+					frames[layer.first] = draw_frame::empty();	
+					indices.push_back(layer.first);
+				}				
 
-					frame_producer::flags flags = frame_producer::flags::none;
-					if(format_desc2.field_mode != field_mode::progressive)
-					{
-						flags |= std::abs(transform.fill_scale[1]  - 1.0) > 0.0001 ? frame_producer::flags::deinterlace : frame_producer::flags::none;
-						flags |= std::abs(transform.fill_translation[1])  > 0.0001 ? frame_producer::flags::deinterlace : frame_producer::flags::none;
-					}
-
-					if(transform.is_key)
-						flags |= frame_producer::flags::alpha_only;
-
-					auto frame = layer.second.receive(flags);	
-				
-					auto frame1 = spl::make_shared<core::draw_frame>(frame);
-					frame1->get_frame_transform() = transform;
-
-					if(format_desc2.field_mode != core::field_mode::progressive)
-					{				
-						auto frame2 = spl::make_shared<core::draw_frame>(frame);
-						frame2->get_frame_transform() = tween.fetch_and_tick(1);
-						frame1 = core::draw_frame::interlace(frame1, frame2, format_desc2.field_mode);
-					}
-
-					frames[layer.first] = frame1;
-				});		
+				// WORKAROUND: Compiler doesn't seem to like lambda.
+				tbb::parallel_for_each(indices.begin(), indices.end(), std::bind(&stage::impl::draw, this, std::placeholders::_1, std::ref(format_desc), std::ref(frames)));
 			}
 			catch(...)
 			{
@@ -114,6 +93,48 @@ public:
 
 			return frames;
 		});
+	}
+
+	void draw(int index, const video_format_desc& format_desc, std::map<int, spl::shared_ptr<draw_frame>>& frames)
+	{
+		auto& layer		= layers_[index];
+		auto& tween		= tweens_[index];
+		auto transform	= tween.fetch_and_tick(1);
+
+		frame_producer::flags flags = frame_producer::flags::none;
+		if(format_desc.field_mode != field_mode::progressive)
+		{
+			flags |= std::abs(transform.fill_scale[1]  - 1.0) > 0.0001 ? frame_producer::flags::deinterlace : frame_producer::flags::none;
+			flags |= std::abs(transform.fill_translation[1])  > 0.0001 ? frame_producer::flags::deinterlace : frame_producer::flags::none;
+		}
+
+		if(transform.is_key)
+			flags |= frame_producer::flags::alpha_only;
+
+		auto frame = layer.receive(flags, format_desc);	
+				
+		auto frame1 = spl::make_shared<core::draw_frame>(frame);
+		frame1->get_frame_transform() = transform;
+
+		if(format_desc.field_mode != core::field_mode::progressive)
+		{				
+			auto frame2 = spl::make_shared<core::draw_frame>(frame);
+			frame2->get_frame_transform() = tween.fetch_and_tick(1);
+			frame1 = core::draw_frame::interlace(frame1, frame2, format_desc.field_mode);
+		}
+
+		frames[index] = frame;
+	}
+
+	layer& get_layer(int index)
+	{
+		auto it = layers_.find(index);
+		if(it == std::end(layers_))
+		{
+			it = layers_.insert(std::make_pair(index, layer(index))).first;
+			it->second.subscribe(event_subject_);
+		}
+		return it->second;
 	}
 		
 	void apply_transforms(const std::vector<std::tuple<int, stage::transform_func_t, unsigned int, tweener>>& transforms)
@@ -159,7 +180,7 @@ public:
 	{
 		executor_.begin_invoke([=]
 		{
-			layers_[index].load(producer, auto_play_delta);
+			get_layer(index).load(producer, auto_play_delta);
 		}, task_priority::high_priority);
 	}
 
@@ -203,18 +224,35 @@ public:
 		}, task_priority::high_priority);
 	}	
 		
-	void swap_layers(const spl::shared_ptr<stage>& other)
+	void swap_layers(stage& other)
 	{
-		if(other->impl_.get() == this)
+		auto other_impl = other.impl_;
+
+		if(other_impl.get() == this)
 			return;
 		
 		auto func = [=]
 		{
-			std::swap(layers_, other->impl_->layers_);
+			auto layers			= layers_ | boost::adaptors::map_values;
+			auto other_layers	= other_impl->layers_ | boost::adaptors::map_values;
+
+			BOOST_FOREACH(auto& layer, layers)
+				layer.unsubscribe(event_subject_);
+			
+			BOOST_FOREACH(auto& layer, other_layers)
+				layer.unsubscribe(event_subject_);
+			
+			std::swap(layers_, other_impl->layers_);
+						
+			BOOST_FOREACH(auto& layer, layers)
+				layer.subscribe(event_subject_);
+			
+			BOOST_FOREACH(auto& layer, other_layers)
+				layer.subscribe(event_subject_);
 		};		
 		executor_.begin_invoke([=]
 		{
-			other->impl_->executor_.invoke(func, task_priority::high_priority);
+			other_impl->executor_.invoke(func, task_priority::high_priority);
 		}, task_priority::high_priority);
 	}
 
@@ -226,19 +264,30 @@ public:
 		}, task_priority::high_priority);
 	}
 
-	void swap_layer(int index, int other_index, const spl::shared_ptr<stage>& other)
+	void swap_layer(int index, int other_index, stage& other)
 	{
-		if(other->impl_.get() == this)
+		auto other_impl = other.impl_;
+
+		if(other_impl.get() == this)
 			swap_layer(index, other_index);
 		else
 		{
 			auto func = [=]
 			{
-				std::swap(layers_[index], other->impl_->layers_[other_index]);
+				auto& my_layer		= get_layer(index);
+				auto& other_layer	= other_impl->get_layer(other_index);
+
+				my_layer.unsubscribe(event_subject_);
+				other_layer.unsubscribe(other_impl->event_subject_);
+
+				std::swap(my_layer, other_layer);
+
+				my_layer.subscribe(event_subject_);
+				other_layer.subscribe(other_impl->event_subject_);
 			};		
 			executor_.begin_invoke([=]
 			{
-				other->impl_->executor_.invoke(func, task_priority::high_priority);
+				other_impl->executor_.invoke(func, task_priority::high_priority);
 			}, task_priority::high_priority);
 		}
 	}
@@ -291,12 +340,14 @@ void stage::play(int index){impl_->play(index);}
 void stage::stop(int index){impl_->stop(index);}
 void stage::clear(int index){impl_->clear(index);}
 void stage::clear(){impl_->clear();}
-void stage::swap_layers(const spl::shared_ptr<stage>& other){impl_->swap_layers(other);}
+void stage::swap_layers(stage& other){impl_->swap_layers(other);}
 void stage::swap_layer(int index, int other_index){impl_->swap_layer(index, other_index);}
-void stage::swap_layer(int index, int other_index, const spl::shared_ptr<stage>& other){impl_->swap_layer(index, other_index, other);}
+void stage::swap_layer(int index, int other_index, stage& other){impl_->swap_layer(index, other_index, other);}
 boost::unique_future<spl::shared_ptr<frame_producer>> stage::foreground(int index) {return impl_->foreground(index);}
 boost::unique_future<spl::shared_ptr<frame_producer>> stage::background(int index) {return impl_->background(index);}
 boost::unique_future<boost::property_tree::wptree> stage::info() const{return impl_->info();}
 boost::unique_future<boost::property_tree::wptree> stage::info(int index) const{return impl_->info(index);}
 std::map<int, spl::shared_ptr<class draw_frame>> stage::operator()(const video_format_desc& format_desc){return (*impl_)(format_desc);}
+void stage::subscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_->subscribe(o);}
+void stage::unsubscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_->unsubscribe(o);}
 }}

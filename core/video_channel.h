@@ -34,10 +34,9 @@ FORWARD3(caspar, core, ogl, class accelerator);
 namespace caspar { namespace core {
 	
 typedef reactive::observable<spl::shared_ptr<const struct data_frame>>	frame_observer;
-typedef reactive::observable<monitor::event>							event_observer;
 
 class video_channel sealed : public frame_observer
-						   , public event_observer
+						   , public monitor::observable
 {
 	video_channel(const video_channel&);
 	video_channel& operator=(const video_channel&);
@@ -59,8 +58,10 @@ public:
 	virtual void subscribe(const frame_observer::observer_ptr& o) override;
 	virtual void unsubscribe(const frame_observer::observer_ptr& o) override;
 		
-	virtual void subscribe(const event_observer::observer_ptr& o) override;
-	virtual void unsubscribe(const event_observer::observer_ptr& o) override;
+	// monitor::observable
+
+	virtual void subscribe(const monitor::observable::observer_ptr& o) override;
+	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override;
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

@@ -47,6 +47,11 @@ public:
 
 		return *this;
 	}
+	
+	path& operator%=(const char* value)
+	{
+		return *this %= std::string(value);
+	}
 
 	void swap(path& other);
 
@@ -106,6 +111,8 @@ private:
 	monitor::path				path_;
 	std::shared_ptr<params_t>	params_;
 };
+
+typedef reactive::observable<monitor::event> observable;
 	
 class subject : public reactive::subject<monitor::event>
 {	    

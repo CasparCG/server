@@ -23,6 +23,8 @@
 
 #include "frame_producer.h"
 
+#include "../monitor/monitor.h"
+
 #include <common/forward.h>
 #include <common/spl/memory.h>
 #include <common/tweener.h>
@@ -39,7 +41,7 @@ FORWARD1(boost, template<typename> class unique_future);
 
 namespace caspar { namespace core {
 	
-class stage sealed
+class stage sealed : public monitor::observable
 {
 	stage(const stage&);
 	stage& operator=(const stage&);
@@ -62,9 +64,9 @@ public:
 	void stop(int index);
 	void clear(int index);
 	void clear();	
-	void swap_layers(const spl::shared_ptr<stage>& other);
+	void swap_layers(stage& other);
 	void swap_layer(int index, int other_index);
-	void swap_layer(int index, int other_index, const spl::shared_ptr<stage>& other);
+	void swap_layer(int index, int other_index, stage& other);
 	
 	boost::unique_future<spl::shared_ptr<struct frame_producer>>	foreground(int index);
 	boost::unique_future<spl::shared_ptr<struct frame_producer>>	background(int index);
@@ -72,6 +74,10 @@ public:
 	boost::unique_future<boost::property_tree::wptree> info() const;
 	boost::unique_future<boost::property_tree::wptree> info(int index) const;
 	
+	// monitor::observable
+
+	virtual void subscribe(const monitor::observable::observer_ptr& o) override;
+	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override;
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;
