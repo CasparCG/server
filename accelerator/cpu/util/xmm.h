@@ -1,14 +1,9 @@
 #pragma once
 
 #include <intrin.h>
-
 #include <type_traits>
-#include <vector>
-#include <tbb/cache_aligned_allocator.h>
 
 namespace caspar { namespace accelerator { namespace cpu { namespace xmm {
-
-typedef std::vector<float, tbb::cache_aligned_allocator<float>> vector_ps;
 
 struct stream_tag
 {
