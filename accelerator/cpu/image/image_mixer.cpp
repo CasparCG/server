@@ -51,9 +51,8 @@
 #include <boost/range/algorithm_ext/erase.hpp>
 #include <boost/thread/future.hpp>
 
-#include <intrin.h>
-#include <stdint.h>
 #include <algorithm>
+#include <stdint.h>
 #include <vector>
 
 #if defined(_MSC_VER)
@@ -210,64 +209,59 @@ private:
 	
 	void convert(std::vector<item>& items, int width, int height)
 	{
-		typedef std::map<std::vector<spl::shared_ptr<host_buffer>>, std::shared_ptr<host_buffer>>	buffer_map_t;
-		typedef std::map<std::vector<spl::shared_ptr<host_buffer>>, core::pixel_format_desc>		pix_desc_map_t;
+		std::set<std::vector<spl::shared_ptr<host_buffer>>> buffers;
 
-		buffer_map_t	 buffer_map;
-		pix_desc_map_t	 pix_desc_map;
 		BOOST_FOREACH(auto& item, items)
-		{
-			buffer_map[item.buffers] = nullptr;
-			pix_desc_map[item.buffers] = item.pix_desc;
-		}
+			buffers.insert(item.buffers);
+		
+		tbb::parallel_for_each(buffers.begin(), buffers.end(), std::bind(&image_renderer::do_convert, this, std::ref(items), std::placeholders::_1, width, height));					
+	}
 
-		// TODO: Don't convert buffers multiple times just because they are in different items due to e.g. interlacing.
-		tbb::parallel_for_each(buffer_map.begin(), buffer_map.end(), [&](buffer_map_t::value_type& pair)
-		{
-			auto buffers   = pair.first;
-			auto pix_desc  = pix_desc_map[buffers];
+	void do_convert(std::vector<item>& items, const std::vector<spl::shared_ptr<host_buffer>>& buffers, int width, int height)
+	{		
+		auto pix_desc  = std::find_if(items.begin(), items.end(), [&](const item& item){return item.buffers == buffers;})->pix_desc;
 
-			if(pix_desc.format == core::pixel_format::bgra && 
-			   pix_desc.planes.at(0).width == width &&
-			   pix_desc.planes.at(0).height == height)
-				return;
+		if(pix_desc.format == core::pixel_format::bgra && 
+			pix_desc.planes.at(0).width == width &&
+			pix_desc.planes.at(0).height == height)
+			return;
 
-			auto input_av_frame = ffmpeg::make_av_frame(buffers, pix_desc);
+		auto input_av_frame = ffmpeg::make_av_frame(buffers, pix_desc);
 								
-			int key = ((input_av_frame->width << 22) & 0xFFC00000) | ((input_av_frame->height << 6) & 0x003FC000) | ((input_av_frame->format << 7) & 0x00007F00);
+		int key = ((input_av_frame->width << 22) & 0xFFC00000) | ((input_av_frame->height << 6) & 0x003FC000) | ((input_av_frame->format << 7) & 0x00007F00);
 						
-			auto& pool = sws_contexts_[key];
+		auto& pool = sws_contexts_[key];
 
-			std::shared_ptr<SwsContext> sws_context;
-			if(!pool.try_pop(sws_context))
-			{
-				double param;
-				sws_context.reset(sws_getContext(input_av_frame->width, input_av_frame->height, static_cast<PixelFormat>(input_av_frame->format), width, height, PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
-			}
-			
-			if(!sws_context)				
-				BOOST_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling context.") << boost::errinfo_api_function("sws_getContext"));				
-		
-			auto dest = spl::make_shared<host_buffer>(width*height*4);
-
-			{
-				spl::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
-				avcodec_get_frame_defaults(av_frame.get());			
-				avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), dest->data(), PIX_FMT_BGRA, width, height);
-				
-				sws_scale(sws_context.get(), input_av_frame->data, input_av_frame->linesize, 0, input_av_frame->height, av_frame->data, av_frame->linesize);				
-				pool.push(sws_context);
-			}
-
-			pair.second = dest;
-		});
-		
-		BOOST_FOREACH(auto& item, items)
-		{		
-			item.buffers			= boost::assign::list_of(spl::make_shared_ptr(buffer_map[item.buffers]));
-			item.pix_desc			= core::pixel_format_desc(core::pixel_format::bgra);
-			item.pix_desc.planes	= boost::assign::list_of(core::pixel_format_desc::plane(width, height, 4));
+		std::shared_ptr<SwsContext> sws_context;
+		if(!pool.try_pop(sws_context))
+		{
+			double param;
+			sws_context.reset(sws_getContext(input_av_frame->width, input_av_frame->height, static_cast<PixelFormat>(input_av_frame->format), width, height, PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
 		}
+			
+		if(!sws_context)				
+			BOOST_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling context.") << boost::errinfo_api_function("sws_getContext"));				
+		
+		auto dest = spl::make_shared<host_buffer>(width*height*4);
+
+		{
+			spl::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
+			avcodec_get_frame_defaults(av_frame.get());			
+			avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), dest->data(), PIX_FMT_BGRA, width, height);
+				
+			sws_scale(sws_context.get(), input_av_frame->data, input_av_frame->linesize, 0, input_av_frame->height, av_frame->data, av_frame->linesize);				
+			pool.push(sws_context);
+		}
+			
+		BOOST_FOREACH(auto& item, items)
+		{
+			if(item.buffers == buffers)
+			{
+				item.buffers			= boost::assign::list_of(dest);
+				item.pix_desc			= core::pixel_format_desc(core::pixel_format::bgra);
+				item.pix_desc.planes	= boost::assign::list_of(core::pixel_format_desc::plane(width, height, 4));
+			}
+		}	
 	}
 };
 		
