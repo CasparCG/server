@@ -151,8 +151,8 @@ public:
 		*event_subject_ << monitor::event("profiler/time")		% frame_timer.elapsed() % (1.0/format_desc_.fps)					
 						<< monitor::event("file/time")			% monitor::duration(file_frame_number()/fps_) 
 																% monitor::duration(file_nb_frames()/fps_)
-						<< monitor::event("file/frame")			% static_cast<int64_t>(file_frame_number())
-																% static_cast<int64_t>(file_nb_frames())
+						<< monitor::event("file/frame")			% static_cast<int32_t>(file_frame_number())
+																% static_cast<int32_t>(file_nb_frames())
 						<< monitor::event("file/fps")			% fps_
 						<< monitor::event("file/video/mode")	% u8(print_mode())
 						<< monitor::event("file/video/codec")	% (video_decoder_ ? u8(video_decoder_->print()) : "n/a")
