@@ -90,8 +90,8 @@ public:
 	virtual std::wstring										name() const override															{return producer_->name();}
 	virtual boost::property_tree::wptree 						info() const override															{return producer_->info();}
 	virtual boost::unique_future<std::wstring>					call(const std::wstring& str) override											{return producer_->call(str);}
-	virtual spl::shared_ptr<frame_producer>						get_following_producer() const override											{return producer_->get_following_producer();}
-	virtual void												set_leading_producer(const spl::shared_ptr<frame_producer>& producer) override	{return producer_->set_leading_producer(producer);}
+	virtual spl::shared_ptr<frame_producer>						following_producer() const override											{return producer_->following_producer();}
+	virtual void												leading_producer(const spl::shared_ptr<frame_producer>& producer) override	{return producer_->leading_producer(producer);}
 	virtual uint32_t											nb_frames() const override														{return producer_->nb_frames();}
 	virtual void subscribe(const monitor::observable::observer_ptr& o)																			{return producer_->subscribe(o);}
 	virtual void unsubscribe(const monitor::observable::observer_ptr& o)																		{return producer_->unsubscribe(o);}
@@ -113,10 +113,10 @@ public:
 		if(frame == draw_frame::eof())
 		{
 			CASPAR_LOG(info) << producer_->print() << " End Of File.";
-			auto following = producer_->get_following_producer();
+			auto following = producer_->following_producer();
 			if(following != frame_producer::empty())
 			{
-				following->set_leading_producer(spl::make_shared_ptr(producer_));
+				following->leading_producer(spl::make_shared_ptr(producer_));
 
 				producer_->unsubscribe(event_subject_);
 				producer_ = std::move(following);

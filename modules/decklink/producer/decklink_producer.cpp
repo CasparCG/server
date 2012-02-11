@@ -350,7 +350,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
 	
 	if(format_desc.format == core::video_format::invalid)
-		format_desc = frame_factory->get_video_format_desc();
+		format_desc = frame_factory->video_format_desc();
 			
 	return core::wrap_producer(spl::make_shared<decklink_producer_proxy>(frame_factory, format_desc, device_index, filter_str, length));
 }

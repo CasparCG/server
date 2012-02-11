@@ -117,7 +117,7 @@ void CLKProtocolStrategy::Parse(const TCHAR* pData, int charCount, IO::ClientInf
 
 			if(currentCommand_.command_ == CLKCommand::CLKReset) 
 			{
-				pChannel_->stage()->clear(flash::cg_proxy::DEFAULT_LAYER);
+				pChannel_->stage().clear(flash::cg_proxy::DEFAULT_LAYER);
 				bClockLoaded_ = false;
 				
 				CASPAR_LOG(info) << L"CLK: Recieved and executed reset-command";

@@ -66,7 +66,7 @@ struct image_scroll_producer : public core::frame_producer
 	explicit image_scroll_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int speed) 
 		: filename_(filename)
 		, delta_(0)
-		, format_desc_(frame_factory->get_video_format_desc())
+		, format_desc_(frame_factory->video_format_desc())
 		, speed_(speed)
 		, last_frame_(core::draw_frame::empty())
 	{

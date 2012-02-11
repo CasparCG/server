@@ -99,8 +99,8 @@ public:
 		
 		frame_number_++;
 		
-		bool double_speed	= std::abs(frame_factory_->get_video_format_desc().fps / 2.0 - read_frame->get_frame_rate()) < 0.01;		
-		bool half_speed		= std::abs(read_frame->get_frame_rate() / 2.0 - frame_factory_->get_video_format_desc().fps) < 0.01;
+		bool double_speed	= std::abs(frame_factory_->video_format_desc().fps / 2.0 - read_frame->get_frame_rate()) < 0.01;		
+		bool half_speed		= std::abs(read_frame->get_frame_rate() / 2.0 - frame_factory_->video_format_desc().fps) < 0.01;
 
 		if(half_speed && frame_number_ % 2 == 0) // Skip frame
 			return receive(0);

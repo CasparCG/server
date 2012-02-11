@@ -58,12 +58,12 @@ struct transition_producer : public frame_producer
 	
 	// frame_producer
 
-	virtual spl::shared_ptr<frame_producer> get_following_producer() const override
+	virtual spl::shared_ptr<frame_producer> following_producer() const override
 	{
 		return dest_producer_;
 	}
 	
-	virtual void set_leading_producer(const spl::shared_ptr<frame_producer>& producer) override
+	virtual void leading_producer(const spl::shared_ptr<frame_producer>& producer) override
 	{
 		source_producer_ = producer;
 	}
@@ -114,7 +114,7 @@ struct transition_producer : public frame_producer
 
 	virtual uint32_t nb_frames() const override
 	{
-		return get_following_producer()->nb_frames();
+		return following_producer()->nb_frames();
 	}
 
 	virtual std::wstring print() const override

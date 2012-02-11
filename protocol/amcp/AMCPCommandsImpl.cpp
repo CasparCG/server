@@ -201,7 +201,7 @@ void AMCPCommand::SendReply()
 
 void AMCPCommand::Clear() 
 {
-	pChannel_->stage()->clear();
+	pChannel_->stage().clear();
 	pClientInfo_.reset();
 	channelIndex_ = 0;
 	_parameters.clear();
@@ -236,15 +236,15 @@ bool ChannelGridCommand::DoExecute()
 	params.push_back(L"Channel Grid Window");
 	auto screen = create_consumer(params);
 
-	self->output()->add(screen);
+	self->output().add(screen);
 
 	BOOST_FOREACH(auto channel, GetChannels())
 	{
 		if(channel != self)
 		{
 			auto producer = reroute::create_producer(self->frame_factory(), *channel);		
-			self->stage()->load(index, producer, false);
-			self->stage()->play(index);
+			self->stage().load(index, producer, false);
+			self->stage().play(index);
 			index++;
 		}
 	}
@@ -268,7 +268,7 @@ bool ChannelGridCommand::DoExecute()
 				transform.clip_scale[1]			= delta;			
 				return transform;
 			};
-			self->stage()->apply_transform(index, transform);
+			self->stage().apply_transform(index, transform);
 		}
 	}
 
@@ -288,14 +288,14 @@ bool CallCommand::DoExecute()
 			std::wstring param;
 			for(auto it = std::begin(_parameters2)+1; it != std::end(_parameters2); ++it, param += L" ")
 				param += *it;
-			result = (what == L"F" ? GetChannel()->stage()->foreground(GetLayerIndex()) : GetChannel()->stage()->background(GetLayerIndex())).get()->call(boost::trim_copy(param));
+			result = (what == L"F" ? GetChannel()->stage().foreground(GetLayerIndex()) : GetChannel()->stage().background(GetLayerIndex())).get()->call(boost::trim_copy(param));
 		}
 		else
 		{
 			std::wstring param;
 			for(auto it = std::begin(_parameters2); it != std::end(_parameters2); ++it, param += L" ")
 				param += *it;
-			result = GetChannel()->stage()->foreground(GetLayerIndex()).get()->call(boost::trim_copy(param));
+			result = GetChannel()->stage().foreground(GetLayerIndex()).get()->call(boost::trim_copy(param));
 		}
 
 		if(!result.timed_wait(boost::posix_time::seconds(2)))
@@ -424,7 +424,7 @@ bool MixerCommand::DoExecute()
 		{
 			auto blend_str = _parameters.at(1);								
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->set_blend_mode(GetLayerIndex(), get_blend_mode(blend_str));	
+			GetChannel()->mixer().set_blend_mode(GetLayerIndex(), get_blend_mode(blend_str));	
 		}
 		else if(_parameters[0] == L"BRIGHTNESS")
 		{
@@ -492,9 +492,9 @@ bool MixerCommand::DoExecute()
 		{
 			int layer = GetLayerIndex(std::numeric_limits<int>::max());
 			if(layer ==	std::numeric_limits<int>::max())
-				GetChannel()->stage()->clear_transforms();
+				GetChannel()->stage().clear_transforms();
 			else
-				GetChannel()->stage()->clear_transforms(layer);
+				GetChannel()->stage().clear_transforms(layer);
 		}
 		else if(_parameters[0] == L"COMMIT")
 		{
@@ -512,7 +512,7 @@ bool MixerCommand::DoExecute()
 			defer_tranforms.insert(defer_tranforms.end(), transforms.begin(), transforms.end());
 		}
 		else
-			GetChannel()->stage()->apply_transforms(transforms);
+			GetChannel()->stage().apply_transforms(transforms);
 	
 		SetReplyString(TEXT("202 MIXER OK\r\n"));
 
@@ -548,13 +548,13 @@ bool SwapCommand::DoExecute()
 			int l1 = GetLayerIndex();
 			int l2 = boost::lexical_cast<int>(strs.at(1));
 
-			ch1->stage()->swap_layer(l1, l2, *ch2->stage());
+			ch1->stage().swap_layer(l1, l2, ch2->stage());
 		}
 		else
 		{
 			auto ch1 = GetChannel();
 			auto ch2 = GetChannels().at(boost::lexical_cast<int>(_parameters[0])-1);
-			ch1->stage()->swap_layers(*ch2->stage());
+			ch1->stage().swap_layers(ch2->stage());
 		}
 		
 		SetReplyString(TEXT("202 SWAP OK\r\n"));
@@ -581,7 +581,7 @@ bool AddCommand::DoExecute()
 	try
 	{
 		auto consumer = create_consumer(_parameters);
-		GetChannel()->output()->add(GetLayerIndex(consumer->index()), consumer);
+		GetChannel()->output().add(GetLayerIndex(consumer->index()), consumer);
 	
 		SetReplyString(TEXT("202 ADD OK\r\n"));
 
@@ -610,7 +610,7 @@ bool RemoveCommand::DoExecute()
 		if(index == std::numeric_limits<int>::min())
 			index = create_consumer(_parameters)->index();
 
-		GetChannel()->output()->remove(index);
+		GetChannel()->output().remove(index);
 
 		SetReplyString(TEXT("202 REMOVE OK\r\n"));
 
@@ -637,7 +637,7 @@ bool LoadCommand::DoExecute()
 	{
 		_parameters[0] = _parameters[0];
 		auto pFP = create_producer(GetChannel()->frame_factory(), _parameters);		
-		GetChannel()->stage()->load(GetLayerIndex(), pFP, true);
+		GetChannel()->stage().load(GetLayerIndex(), pFP, true);
 	
 		SetReplyString(TEXT("202 LOAD OK\r\n"));
 
@@ -748,11 +748,11 @@ bool LoadbgCommand::DoExecute()
 
 		bool auto_play = std::find(_parameters.begin(), _parameters.end(), L"AUTO") != _parameters.end();
 
-		auto pFP2 = create_transition_producer(GetChannel()->get_video_format_desc().field_mode, pFP, transitionInfo);
+		auto pFP2 = create_transition_producer(GetChannel()->video_format_desc().field_mode, pFP, transitionInfo);
 		if(auto_play)
-			GetChannel()->stage()->load(GetLayerIndex(), pFP2, transitionInfo.duration); // TODO: LOOP
+			GetChannel()->stage().load(GetLayerIndex(), pFP2, transitionInfo.duration); // TODO: LOOP
 		else
-			GetChannel()->stage()->load(GetLayerIndex(), pFP2); // TODO: LOOP
+			GetChannel()->stage().load(GetLayerIndex(), pFP2); // TODO: LOOP
 	
 		SetReplyString(TEXT("202 LOADBG OK\r\n"));
 
@@ -779,7 +779,7 @@ bool PauseCommand::DoExecute()
 {
 	try
 	{
-		GetChannel()->stage()->pause(GetLayerIndex());
+		GetChannel()->stage().pause(GetLayerIndex());
 		SetReplyString(TEXT("202 PAUSE OK\r\n"));
 		return true;
 	}
@@ -808,7 +808,7 @@ bool PlayCommand::DoExecute()
 				throw std::exception();
 		}
 
-		GetChannel()->stage()->play(GetLayerIndex());
+		GetChannel()->stage().play(GetLayerIndex());
 		
 		SetReplyString(TEXT("202 PLAY OK\r\n"));
 		return true;
@@ -825,7 +825,7 @@ bool StopCommand::DoExecute()
 {
 	try
 	{
-		GetChannel()->stage()->stop(GetLayerIndex());
+		GetChannel()->stage().stop(GetLayerIndex());
 		SetReplyString(TEXT("202 STOP OK\r\n"));
 		return true;
 	}
@@ -841,9 +841,9 @@ bool ClearCommand::DoExecute()
 {
 	int index = GetLayerIndex(std::numeric_limits<int>::min());
 	if(index != std::numeric_limits<int>::min())
-		GetChannel()->stage()->clear(index);
+		GetChannel()->stage().clear(index);
 	else
-		GetChannel()->stage()->clear();
+		GetChannel()->stage().clear();
 		
 	SetReplyString(TEXT("202 CLEAR OK\r\n"));
 
@@ -852,7 +852,7 @@ bool ClearCommand::DoExecute()
 
 bool PrintCommand::DoExecute()
 {
-	GetChannel()->output()->add(create_consumer(boost::assign::list_of(L"IMAGE")));
+	GetChannel()->output().add(create_consumer(boost::assign::list_of(L"IMAGE")));
 		
 	SetReplyString(TEXT("202 PRINT OK\r\n"));
 
@@ -1100,7 +1100,7 @@ bool CGCommand::DoExecuteRemove()
 
 bool CGCommand::DoExecuteClear() 
 {
-	GetChannel()->stage()->clear(GetLayerIndex(flash::cg_proxy::DEFAULT_LAYER));
+	GetChannel()->stage().clear(GetLayerIndex(flash::cg_proxy::DEFAULT_LAYER));
 	SetReplyString(TEXT("202 CG OK\r\n"));
 	return true;
 }
@@ -1346,7 +1346,7 @@ bool CinfCommand::DoExecute()
 
 void GenerateChannelInfo(int index, const spl::shared_ptr<core::video_channel>& pChannel, std::wstringstream& replyString)
 {
-	replyString << index+1 << TEXT(" ") << pChannel->get_video_format_desc().name << TEXT(" PLAYING") << TEXT("\r\n");
+	replyString << index+1 << TEXT(" ") << pChannel->video_format_desc().name << TEXT(" PLAYING") << TEXT("\r\n");
 }
 
 bool InfoCommand::DoExecute()
@@ -1454,13 +1454,13 @@ bool InfoCommand::DoExecute()
 					if(_parameters.size() >= 2)
 					{
 						if(_parameters[1] == L"B")
-							info.add_child(L"producer", channels_.at(channel)->stage()->background(layer).get()->info());
+							info.add_child(L"producer", channels_.at(channel)->stage().background(layer).get()->info());
 						else
-							info.add_child(L"producer", channels_.at(channel)->stage()->foreground(layer).get()->info());
+							info.add_child(L"producer", channels_.at(channel)->stage().foreground(layer).get()->info());
 					}
 					else
 					{
-						info.add_child(L"layer", channels_.at(channel)->stage()->info(layer).get())
+						info.add_child(L"layer", channels_.at(channel)->stage().info(layer).get())
 							.add(L"index", layer);
 					}
 				}
@@ -1554,7 +1554,7 @@ bool SetCommand::DoExecute()
 		auto format_desc = core::video_format_desc(value);
 		if(format_desc.format != core::video_format::invalid)
 		{
-			GetChannel()->set_video_format_desc(format_desc);
+			GetChannel()->video_format_desc(format_desc);
 			SetReplyString(TEXT("202 SET MODE OK\r\n"));
 		}
 		else

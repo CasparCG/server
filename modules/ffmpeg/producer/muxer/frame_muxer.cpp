@@ -87,7 +87,7 @@ struct frame_muxer::impl : boost::noncopyable
 	impl(double in_fps, const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filter_str)
 		: display_mode_(display_mode::invalid)
 		, in_fps_(in_fps)
-		, format_desc_(frame_factory->get_video_format_desc())
+		, format_desc_(frame_factory->video_format_desc())
 		, auto_transcode_(env::properties().get(L"configuration.auto-transcode", true))
 		, auto_deinterlace_(env::properties().get(L"configuration.auto-deinterlace", true))
 		, audio_cadence_(format_desc_.audio_cadence)
