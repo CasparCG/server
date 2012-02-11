@@ -114,25 +114,27 @@ inline xmm::s8_x blend(xmm::s8_x d, xmm::s8_x s)
 	return s8_x(s) + (d - argb);
 }
 	
-template<typename write_tag>
-static void kernel(uint8_t* dest, const uint8_t* source, size_t count, const core::frame_transform& transform)
+template<typename temporal, typename alignment>
+static void kernel(uint8_t* dest, const uint8_t* source, size_t count)
 {			
 	using namespace xmm;
 
 	for(auto n = 0; n < count; n += 32)    
 	{
-		auto s0 = s8_x::load(dest+n+0);
-		auto s1 = s8_x::load(dest+n+16);
+		auto s0 = s8_x::load<xmm::temporal_tag, alignment>(dest+n+0);
+		auto s1 = s8_x::load<xmm::temporal_tag, alignment>(dest+n+16);
 
-		auto d0 = s8_x::load(source+n+0);
-		auto d1 = s8_x::load(source+n+16);
+		auto d0 = s8_x::load<xmm::temporal_tag, alignment>(source+n+0);
+		auto d1 = s8_x::load<xmm::temporal_tag, alignment>(source+n+16);
 		
 		auto argb0 = blend(d0, s0);
 		auto argb1 = blend(d1, s1);
 
-		s8_x::write(argb0, dest+n+0 , write_tag());
-		s8_x::write(argb1, dest+n+16, write_tag());
+		s8_x::store<temporal, alignment>(argb0, dest+n+0 );
+		s8_x::store<temporal, alignment>(argb1, dest+n+16);
 	} 
+
+	_mm_mfence();
 }
 
 class image_renderer
@@ -200,9 +202,9 @@ private:
 
 				auto it = items.begin();
 				for(; it != items.end()-1; ++it)			
-					kernel<xmm::store_tag>(dest + y*width*4, it->buffers.at(0)->data() + y*width*4, width*4, it->transform);
+					kernel<xmm::temporal_tag, xmm::aligned_tag>(dest + y*width*4, it->buffers.at(0)->data() + y*width*4, width*4);
 
-				kernel<xmm::stream_tag>(dest + y*width*4, it->buffers.at(0)->data() + y*width*4, width*4, it->transform);
+				kernel<xmm::nontemporal_tag, xmm::aligned_tag>(dest + y*width*4, it->buffers.at(0)->data() + y*width*4, width*4);
 			}
 		});
 	}
