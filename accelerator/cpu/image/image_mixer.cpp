@@ -182,9 +182,7 @@ private:
 
 		if(items.empty())
 			return;
-
-		static const int CACHE_SIZE = 16384;
-
+		
 		auto start = field_mode == core::field_mode::lower ? 1 : 0;
 		auto step  = field_mode == core::field_mode::progressive ? 1 : 2;
 		
@@ -195,7 +193,7 @@ private:
 		// TODO: Add support for push transition.
 		// TODO: Add support for wipe transition.
 		// TODO: Add support for slide transition.
-		tbb::parallel_for(tbb::blocked_range<int>(0, height/step, CACHE_SIZE/(width*4)), [&](const tbb::blocked_range<int>& r)
+		tbb::parallel_for(tbb::blocked_range<int>(0, height/step), [&](const tbb::blocked_range<int>& r)
 		{
 			for(auto n = r.begin(); n != r.end(); ++n)
 			{
