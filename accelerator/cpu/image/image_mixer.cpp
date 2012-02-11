@@ -121,11 +121,11 @@ static void kernel(uint8_t* dest, const uint8_t* source, size_t count)
 
 	for(auto n = 0; n < count; n += 32)    
 	{
-		auto s0 = s8_x::load<xmm::temporal_tag, alignment>(dest+n+0);
-		auto s1 = s8_x::load<xmm::temporal_tag, alignment>(dest+n+16);
+		auto s0 = s8_x::load<temporal_tag, alignment>(dest+n+0);
+		auto s1 = s8_x::load<temporal_tag, alignment>(dest+n+16);
 
-		auto d0 = s8_x::load<xmm::temporal_tag, alignment>(source+n+0);
-		auto d1 = s8_x::load<xmm::temporal_tag, alignment>(source+n+16);
+		auto d0 = s8_x::load<temporal_tag, alignment>(source+n+0);
+		auto d1 = s8_x::load<temporal_tag, alignment>(source+n+16);
 		
 		auto argb0 = blend(d0, s0);
 		auto argb1 = blend(d1, s1);
@@ -133,8 +133,17 @@ static void kernel(uint8_t* dest, const uint8_t* source, size_t count)
 		s8_x::store<temporal, alignment>(argb0, dest+n+0 );
 		s8_x::store<temporal, alignment>(argb1, dest+n+16);
 	} 
+}
 
-	_mm_mfence();
+template<typename temporal>
+static void kernel(uint8_t* dest, const uint8_t* source, size_t count)
+{			
+	using namespace xmm;
+
+	if(reinterpret_cast<int>(dest) % 16 != 0 || reinterpret_cast<int>(source) % 16 != 0)
+		kernel<temporal_tag, unaligned_tag>(dest, source, count);
+	else
+		kernel<temporal_tag, aligned_tag>(dest, source, count);
 }
 
 class image_renderer
@@ -196,74 +205,79 @@ private:
 		// TODO: Add support for slide transition.
 		tbb::parallel_for(tbb::blocked_range<int>(0, height/step), [&](const tbb::blocked_range<int>& r)
 		{
-			for(auto n = r.begin(); n != r.end(); ++n)
+			for(auto i = r.begin(); i != r.end(); ++i)
 			{
-				auto y = n*step+start;
+				auto y = i*step+start;
 
-				auto it = items.begin();
-				for(; it != items.end()-1; ++it)			
-					kernel<xmm::temporal_tag, xmm::aligned_tag>(dest + y*width*4, it->buffers.at(0)->data() + y*width*4, width*4);
-
-				kernel<xmm::nontemporal_tag, xmm::aligned_tag>(dest + y*width*4, it->buffers.at(0)->data() + y*width*4, width*4);
+				for(std::size_t n = 0; n < items.size()-1; ++n)
+					kernel<xmm::temporal_tag>(dest + y*width*4, items[n].buffers.at(0)->data() + y*width*4, width*4);
+				
+				std::size_t n = items.size()-1;				
+				kernel<xmm::nontemporal_tag>(dest + y*width*4, items[n].buffers.at(0)->data() + y*width*4, width*4);
 			}
+
+			_mm_mfence();
 		});
 	}
-	
-	void convert(std::vector<item>& items, int width, int height)
+		
+	void convert(std::vector<item>& source_items, int width, int height)
 	{
 		std::set<std::vector<spl::shared_ptr<host_buffer>>> buffers;
 
-		BOOST_FOREACH(auto& item, items)
+		BOOST_FOREACH(auto& item, source_items)
 			buffers.insert(item.buffers);
 		
-		tbb::parallel_for_each(buffers.begin(), buffers.end(), std::bind(&image_renderer::do_convert, this, std::ref(items), std::placeholders::_1, width, height));					
-	}
+		auto dest_items = source_items;
 
-	void do_convert(std::vector<item>& items, const std::vector<spl::shared_ptr<host_buffer>>& buffers, int width, int height)
-	{		
-		auto pix_desc  = std::find_if(items.begin(), items.end(), [&](const item& item){return item.buffers == buffers;})->pix_desc;
+		tbb::parallel_for_each(buffers.begin(), buffers.end(), [&](const std::vector<spl::shared_ptr<host_buffer>>& buffers)
+		{			
+			auto pix_desc = std::find_if(source_items.begin(), source_items.end(), [&](const item& item){return item.buffers == buffers;})->pix_desc;
 
-		if(pix_desc.format == core::pixel_format::bgra && 
-			pix_desc.planes.at(0).width == width &&
-			pix_desc.planes.at(0).height == height)
-			return;
+			if(pix_desc.format == core::pixel_format::bgra && 
+				pix_desc.planes.at(0).width == width &&
+				pix_desc.planes.at(0).height == height)
+				return;
 
-		auto input_av_frame = ffmpeg::make_av_frame(buffers, pix_desc);
+			auto input_av_frame = ffmpeg::make_av_frame(buffers, pix_desc);
 								
-		int key = ((input_av_frame->width << 22) & 0xFFC00000) | ((input_av_frame->height << 6) & 0x003FC000) | ((input_av_frame->format << 7) & 0x00007F00);
+			int key = ((input_av_frame->width << 22) & 0xFFC00000) | ((input_av_frame->height << 6) & 0x003FC000) | ((input_av_frame->format << 7) & 0x00007F00);
 						
-		auto& pool = sws_contexts_[key];
+			auto& pool = sws_contexts_[key];
 
-		std::shared_ptr<SwsContext> sws_context;
-		if(!pool.try_pop(sws_context))
-		{
-			double param;
-			sws_context.reset(sws_getContext(input_av_frame->width, input_av_frame->height, static_cast<PixelFormat>(input_av_frame->format), width, height, PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
-		}
-			
-		if(!sws_context)				
-			BOOST_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling context.") << boost::errinfo_api_function("sws_getContext"));				
-		
-		auto dest = spl::make_shared<host_buffer>(width*height*4);
-
-		{
-			spl::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
-			avcodec_get_frame_defaults(av_frame.get());			
-			avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), dest->data(), PIX_FMT_BGRA, width, height);
-				
-			sws_scale(sws_context.get(), input_av_frame->data, input_av_frame->linesize, 0, input_av_frame->height, av_frame->data, av_frame->linesize);				
-			pool.push(sws_context);
-		}
-			
-		BOOST_FOREACH(auto& item, items)
-		{
-			if(item.buffers == buffers)
+			std::shared_ptr<SwsContext> sws_context;
+			if(!pool.try_pop(sws_context))
 			{
-				item.buffers			= boost::assign::list_of(dest);
-				item.pix_desc			= core::pixel_format_desc(core::pixel_format::bgra);
-				item.pix_desc.planes	= boost::assign::list_of(core::pixel_format_desc::plane(width, height, 4));
+				double param;
+				sws_context.reset(sws_getContext(input_av_frame->width, input_av_frame->height, static_cast<PixelFormat>(input_av_frame->format), width, height, PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
 			}
-		}	
+			
+			if(!sws_context)				
+				BOOST_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling context.") << boost::errinfo_api_function("sws_getContext"));				
+		
+			auto dest_frame = spl::make_shared<host_buffer>(width*height*4);
+
+			{
+				spl::shared_ptr<AVFrame> dest_av_frame(avcodec_alloc_frame(), av_free);	
+				avcodec_get_frame_defaults(dest_av_frame.get());			
+				avpicture_fill(reinterpret_cast<AVPicture*>(dest_av_frame.get()), dest_frame->data(), PIX_FMT_BGRA, width, height);
+				
+				sws_scale(sws_context.get(), input_av_frame->data, input_av_frame->linesize, 0, input_av_frame->height, dest_av_frame->data, dest_av_frame->linesize);				
+				pool.push(sws_context);
+			}
+		
+			for(std::size_t n = 0; n < source_items.size(); ++n)
+			{
+				if(source_items[n].buffers == buffers)
+				{
+					dest_items[n].buffers			= boost::assign::list_of(dest_frame);
+					dest_items[n].pix_desc			= core::pixel_format_desc(core::pixel_format::bgra);
+					dest_items[n].pix_desc.planes	= boost::assign::list_of(core::pixel_format_desc::plane(width, height, 4));
+					dest_items[n].transform			= source_items[n].transform;
+				}
+			}
+		});	
+
+		source_items = std::move(dest_items);
 	}
 };
 		
