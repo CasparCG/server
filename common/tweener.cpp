@@ -449,9 +449,10 @@ tweener_t get_tweener(std::wstring name)
 	if(it == tweens.end())
 		BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("Could not find tween.") << arg_value_info(name));
 	
+	auto tween = it->second;
 	return [=](double t, double b, double c, double d)
 	{
-		return it->second(t, b, c, d, params);
+		return tween(t, b, c, d, params);
 	};
 };
 
