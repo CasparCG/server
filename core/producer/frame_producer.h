@@ -64,15 +64,14 @@ struct frame_producer : public monitor::observable
 
 	virtual boost::unique_future<std::wstring> call(const std::wstring&);
 
-	virtual spl::shared_ptr<frame_producer> get_following_producer() const {return frame_producer::empty();}  // nothrow
-	virtual void set_leading_producer(const spl::shared_ptr<frame_producer>&) {}  // nothrow
+	virtual spl::shared_ptr<frame_producer> following_producer() const {return frame_producer::empty();}  // nothrow
+	virtual void leading_producer(const spl::shared_ptr<frame_producer>&) {}  // nothrow
 		
 	virtual uint32_t nb_frames() const {return std::numeric_limits<uint32_t>::max();}
 	
-	virtual spl::shared_ptr<class draw_frame> receive(int flags) = 0;
+	virtual spl::shared_ptr<class draw_frame> receive(int fBlags) = 0;
 	virtual spl::shared_ptr<class draw_frame> last_frame() const = 0;
-
-
+	
 	static const spl::shared_ptr<frame_producer>& empty(); // nothrow
 
 	// monitor::observable

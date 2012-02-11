@@ -52,30 +52,30 @@ struct video_channel::impl sealed : public frame_factory
 	const int										index_;
 
 	mutable tbb::spin_mutex							format_desc_mutex_;
-	video_format_desc								format_desc_;
+	core::video_format_desc							format_desc_;
 	
 	const spl::shared_ptr<diagnostics::graph>		graph_;
 
-	const spl::shared_ptr<caspar::core::output>		output_;
-	const spl::shared_ptr<caspar::core::mixer>		mixer_;
-	const spl::shared_ptr<caspar::core::stage>		stage_;	
+	caspar::core::output							output_;
+	caspar::core::mixer								mixer_;
+	caspar::core::stage								stage_;	
 
 	executor										executor_;
 public:
-	impl(int index, const video_format_desc& format_desc, spl::shared_ptr<image_mixer> image_mixer)  
+	impl(int index, const core::video_format_desc& format_desc, spl::shared_ptr<image_mixer> image_mixer)  
 		: event_subject_(new monitor::subject(monitor::path() % "channel" % index))
 		, index_(index)
 		, format_desc_(format_desc)
-		, output_(new caspar::core::output(graph_, format_desc, index))
-		, mixer_(new caspar::core::mixer(graph_, std::move(image_mixer)))
-		, stage_(new caspar::core::stage(graph_))	
+		, output_(graph_, format_desc, index)
+		, mixer_(graph_, std::move(image_mixer))
+		, stage_(graph_)
 		, executor_(L"video_channel")
 	{
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 
-		stage_->subscribe(event_subject_);
+		stage_.subscribe(event_subject_);
 
 		executor_.begin_invoke([=]{tick();});
 
@@ -86,10 +86,10 @@ public:
 						
 	virtual spl::shared_ptr<write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc) override
 	{		
-		return mixer_->create_frame(tag, desc);
+		return mixer_.create_frame(tag, desc);
 	}
 	
-	virtual core::video_format_desc get_video_format_desc() const override
+	virtual core::video_format_desc video_format_desc() const
 	{
 		return lock(format_desc_mutex_, [&]
 		{
@@ -98,28 +98,36 @@ public:
 	}
 	
 	// video_channel
+	
+	void video_format_desc(const core::video_format_desc& format_desc)
+	{
+		lock(format_desc_mutex_, [&]
+		{
+			format_desc_ = format_desc;
+		});
+	}
 
 	void tick()
 	{
 		try
 		{
-			auto format_desc = get_video_format_desc();
+			auto format_desc = video_format_desc();
 
 			boost::timer frame_timer;
 
 			// Produce
 			
-			auto stage_frames = (*stage_)(format_desc);
+			auto stage_frames = stage_(format_desc);
 
 			// Mix
 			
-			auto mixed_frame  = (*mixer_)(std::move(stage_frames), format_desc);
+			auto mixed_frame  = mixer_(std::move(stage_frames), format_desc);
 
 			// Consume
 			
 			frame_subject_ << mixed_frame;
 			
-			(*output_)(std::move(mixed_frame), format_desc);
+			output_(std::move(mixed_frame), format_desc);
 		
 			graph_->set_value("tick-time", frame_timer.elapsed()*format_desc.fps*0.5);
 
@@ -133,27 +141,19 @@ public:
 
 		executor_.begin_invoke([=]{tick();});
 	}
-
-	void set_video_format_desc(const video_format_desc& format_desc)
-	{
-		lock(format_desc_mutex_, [&]
-		{
-			format_desc_ = format_desc;
-		});
-	}
-		
+			
 	std::wstring print() const
 	{
-		return L"video_channel[" + boost::lexical_cast<std::wstring>(index_) + L"|" +  get_video_format_desc().name + L"]";
+		return L"video_channel[" + boost::lexical_cast<std::wstring>(index_) + L"|" +  video_format_desc().name + L"]";
 	}
 
 	boost::property_tree::wptree info() const
 	{
 		boost::property_tree::wptree info;
 
-		auto stage_info  = stage_->info();
-		auto mixer_info  = mixer_->info();
-		auto output_info = output_->info();
+		auto stage_info  = stage_.info();
+		auto mixer_info  = mixer_.info();
+		auto output_info = output_.info();
 
 		info.add(L"video-mode", format_desc_.name);
 		info.add_child(L"stage", stage_info.get());
@@ -164,16 +164,19 @@ public:
 	}
 };
 
-video_channel::video_channel(int index, const video_format_desc& format_desc, spl::shared_ptr<image_mixer> image_mixer) : impl_(new impl(index, format_desc, image_mixer)){}
-spl::shared_ptr<stage> video_channel::stage() { return impl_->stage_;} 
-spl::shared_ptr<mixer> video_channel::mixer() { return impl_->mixer_;} 
+video_channel::video_channel(int index, const core::video_format_desc& format_desc, spl::shared_ptr<image_mixer> image_mixer) : impl_(new impl(index, format_desc, image_mixer)){}
+const stage& video_channel::stage() const { return impl_->stage_;} 
+stage& video_channel::stage() { return impl_->stage_;} 
+const mixer& video_channel::mixer() const{ return impl_->mixer_;} 
+mixer& video_channel::mixer() { return impl_->mixer_;} 
+const output& video_channel::output() const { return impl_->output_;} 
+output& video_channel::output() { return impl_->output_;} 
 spl::shared_ptr<frame_factory> video_channel::frame_factory() { return impl_;} 
-spl::shared_ptr<output> video_channel::output() { return impl_->output_;} 
-video_format_desc video_channel::get_video_format_desc() const{return impl_->format_desc_;}
-void video_channel::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
+core::video_format_desc video_channel::video_format_desc() const{return impl_->video_format_desc();}
+void core::video_channel::video_format_desc(const core::video_format_desc& format_desc){impl_->video_format_desc(format_desc);}
 boost::property_tree::wptree video_channel::info() const{return impl_->info();}
-void video_channel::subscribe(const frame_observer::observer_ptr& o) {impl_->frame_subject_.subscribe(o);}
-void video_channel::unsubscribe(const frame_observer::observer_ptr& o) {impl_->frame_subject_.unsubscribe(o);}		
+void video_channel::subscribe(const frame_observable::observer_ptr& o) {impl_->frame_subject_.subscribe(o);}
+void video_channel::unsubscribe(const frame_observable::observer_ptr& o) {impl_->frame_subject_.unsubscribe(o);}		
 void video_channel::subscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_->subscribe(o);}
 void video_channel::unsubscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_->unsubscribe(o);}
 

@@ -200,8 +200,8 @@ void CIIProtocolStrategy::DisplayTemplate(const std::wstring& titleName)
 {
 	try
 	{
-		pChannel_->stage()->load(0, GetPreparedTemplate(titleName));
-		pChannel_->stage()->play(0);
+		pChannel_->stage().load(0, GetPreparedTemplate(titleName));
+		pChannel_->stage().play(0);
 
 		CASPAR_LOG(info) << L"Displayed title " << titleName ;
 	}
@@ -218,11 +218,11 @@ void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename)
 	transition.duration = 12;
 
 	auto pFP = create_producer(GetChannel()->frame_factory(), filename);
-	auto pTransition = create_transition_producer(GetChannel()->get_video_format_desc().field_mode, pFP, transition);
+	auto pTransition = create_transition_producer(GetChannel()->video_format_desc().field_mode, pFP, transition);
 
 	try
 	{
-		pChannel_->stage()->load(0, pTransition);
+		pChannel_->stage().load(0, pTransition);
 	}
 	catch(...)
 	{
@@ -231,7 +231,7 @@ void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename)
 		return;
 	}
 
-	pChannel_->stage()->play(0);
+	pChannel_->stage().play(0);
 
 	CASPAR_LOG(info) << L"Displayed " << filename;
 }

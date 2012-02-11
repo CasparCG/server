@@ -140,15 +140,15 @@ public:
 	
 cg_proxy create_cg_proxy(const spl::shared_ptr<core::video_channel>& video_channel, int render_layer)
 {	
-	auto flash_producer = video_channel->stage()->foreground(render_layer).get();
+	auto flash_producer = video_channel->stage().foreground(render_layer).get();
 
 	try
 	{
 		if(flash_producer->print().find(L"flash[") == std::string::npos) // UGLY hack
 		{
 			flash_producer = flash::create_producer(video_channel->frame_factory(), boost::assign::list_of<std::wstring>());	
-			video_channel->stage()->load(render_layer, flash_producer); 
-			video_channel->stage()->play(render_layer);
+			video_channel->stage().load(render_layer, flash_producer); 
+			video_channel->stage().play(render_layer);
 		}
 	}
 	catch(...)

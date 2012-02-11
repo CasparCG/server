@@ -30,33 +30,43 @@
 #include <boost/property_tree/ptree_fwd.hpp>
 
 FORWARD3(caspar, core, ogl, class accelerator);
+FORWARD2(caspar, core, class stage);
+FORWARD2(caspar, core, class mixer);
+FORWARD2(caspar, core, class output);
+FORWARD2(caspar, core, struct image_mixer);
+FORWARD2(caspar, core, struct video_format_desc);
+FORWARD2(caspar, core, struct frame_factory);
 
 namespace caspar { namespace core {
 	
-typedef reactive::observable<spl::shared_ptr<const struct data_frame>>	frame_observer;
+typedef reactive::observable<spl::shared_ptr<const struct data_frame>>	frame_observable;
 
-class video_channel sealed : public frame_observer
+class video_channel sealed : public frame_observable
 						   , public monitor::observable
 {
 	video_channel(const video_channel&);
 	video_channel& operator=(const video_channel&);
 public:
-	explicit video_channel(int index, const struct video_format_desc& format_desc, spl::shared_ptr<struct image_mixer> image_mixer);
+	explicit video_channel(int index, const video_format_desc& format_desc, spl::shared_ptr<image_mixer> image_mixer);
+	
+	const core::stage&	stage() const;
+	core::stage&		stage();
+	const core::mixer&	mixer() const;
+	core::mixer&		mixer();
+	const core::output&	output() const;
+	core::output&		output();
+		
+	core::video_format_desc video_format_desc() const;
+	void video_format_desc(const core::video_format_desc& format_desc);
+	
+	spl::shared_ptr<core::frame_factory> frame_factory();
 
-	spl::shared_ptr<class stage>			stage();
-	spl::shared_ptr<class mixer>			mixer();
-	spl::shared_ptr<class output>			output();
-	spl::shared_ptr<struct frame_factory>	frame_factory();
-	
-	struct video_format_desc get_video_format_desc() const;
-	void set_video_format_desc(const struct video_format_desc& format_desc);
-	
 	boost::property_tree::wptree info() const;
 
 	// observable<spl::shared_ptr<const struct data_frame>>
 	
-	virtual void subscribe(const frame_observer::observer_ptr& o) override;
-	virtual void unsubscribe(const frame_observer::observer_ptr& o) override;
+	virtual void subscribe(const frame_observable::observer_ptr& o) override;
+	virtual void unsubscribe(const frame_observable::observer_ptr& o) override;
 		
 	// monitor::observable
 

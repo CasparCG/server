@@ -90,7 +90,7 @@ public:
 	explicit ffmpeg_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, uint32_t start, uint32_t length) 
 		: filename_(filename)
 		, frame_factory_(frame_factory)		
-		, format_desc_(frame_factory->get_video_format_desc())
+		, format_desc_(frame_factory->video_format_desc())
 		, input_(graph_, filename_, loop, start, length)
 		, fps_(read_fps(*input_.context(), format_desc_.fps))
 		, start_(start)
@@ -119,7 +119,7 @@ public:
 
 		try
 		{
-			audio_decoder_.reset(new audio_decoder(input_.context(), frame_factory->get_video_format_desc()));
+			audio_decoder_.reset(new audio_decoder(input_.context(), frame_factory->video_format_desc()));
 			CASPAR_LOG(info) << print() << L" " << audio_decoder_->print();
 		}
 		catch(averror_stream_not_found&)

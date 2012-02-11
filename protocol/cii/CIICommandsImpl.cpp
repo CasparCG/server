@@ -138,7 +138,7 @@ void MiscellaneousCommand::Setup(const std::vector<std::wstring>& parameters)
 		std::wstring value = parameters[3];
 		std::transform(value.begin(), value.end(), value.begin(), toupper);
 
-		this->pCIIStrategy_->GetChannel()->set_video_format_desc(core::video_format_desc(value));
+		this->pCIIStrategy_->GetChannel()->video_format_desc(core::video_format_desc(value));
 	}
 }
 
@@ -169,7 +169,7 @@ void KeydataCommand::Execute()
 	else if(state_ == 1)
 		flash::create_cg_proxy(pCIIStrategy_->GetChannel()).stop(layer_, 0);
 	else if(state_ == 2)
-		pCIIStrategy_->GetChannel()->stage()->clear(flash::cg_proxy::DEFAULT_LAYER);
+		pCIIStrategy_->GetChannel()->stage().clear(flash::cg_proxy::DEFAULT_LAYER);
 	else if(state_ == 3)
 		flash::create_cg_proxy(pCIIStrategy_->GetChannel()).play(layer_);
 }
