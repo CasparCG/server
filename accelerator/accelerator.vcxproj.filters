@@ -58,17 +58,11 @@
     <ClInclude Include="cpu\util\write_frame.h">
       <Filter>source\cpu\util</Filter>
     </ClInclude>
-    <ClInclude Include="factory.h">
-      <Filter>source</Filter>
-    </ClInclude>
-    <ClInclude Include="cpu\factory.h">
-      <Filter>source\cpu</Filter>
-    </ClInclude>
-    <ClInclude Include="ogl\factory.h">
-      <Filter>source\ogl</Filter>
-    </ClInclude>
     <ClInclude Include="cpu\util\xmm.h">
       <Filter>source\cpu\util</Filter>
+    </ClInclude>
+    <ClInclude Include="accelerator.h">
+      <Filter>source</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -103,11 +97,8 @@
     <ClCompile Include="cpu\util\write_frame.cpp">
       <Filter>source\cpu\util</Filter>
     </ClCompile>
-    <ClCompile Include="cpu\factory.cpp">
-      <Filter>source\cpu</Filter>
-    </ClCompile>
-    <ClCompile Include="ogl\factory.cpp">
-      <Filter>source\ogl</Filter>
+    <ClCompile Include="accelerator.cpp">
+      <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

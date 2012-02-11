@@ -417,7 +417,7 @@ public:
 	
     template<typename T2, typename D2>    
     unique_ptr(unique_ptr<T2, D2>&& p, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0) 
-        : p_(std::move(p))
+		: p_(p.p_.release(), p.p_.get_deleter())
     {
     }
 			
