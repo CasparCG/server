@@ -113,7 +113,7 @@ public:
 
 		auto frame = layer.receive(flags, format_desc);	
 				
-		auto frame = spl::make_shared<core::draw_frame>(frame);
+		frame = spl::make_shared<core::draw_frame>(frame);
 		frame->get_frame_transform() = transform;
 
 		if(format_desc.field_mode != core::field_mode::progressive)
