@@ -282,7 +282,7 @@ public:
 	impl() 
 		: transform_stack_(1)	
 	{
-		CASPAR_LOG(info) << L"Initialized CPU Accelerated Image Mixer";
+		CASPAR_LOG(info) << L"Initialized Streaming SIMD Extensions Accelerated CPU Image Mixer";
 	}
 
 	void begin_layer(core::blend_mode blend_mode)

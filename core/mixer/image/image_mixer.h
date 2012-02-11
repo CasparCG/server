@@ -32,7 +32,7 @@
 
 #include <stdint.h>
 
-FORWARD1(boost, template<typename> class unique_future);
+FORWARD1(boost, template<typename> class shared_future);
 FORWARD2(caspar, core, struct write_frame);
 FORWARD2(caspar, core, struct pixel_format_desc);
 

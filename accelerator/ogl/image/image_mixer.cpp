@@ -117,7 +117,6 @@ public:
 		: ogl_(ogl)
 		, kernel_(ogl_)
 	{
-		CASPAR_LOG(info) << L"Initialized OpenGL GPU Accelerated Image Mixer";
 	}
 	
 	boost::shared_future<boost::iterator_range<const uint8_t*>> operator()(std::vector<layer> layers, const core::video_format_desc& format_desc)
@@ -371,6 +370,7 @@ public:
 		, renderer_(ogl)
 		, transform_stack_(1)	
 	{
+		CASPAR_LOG(info) << L"Initialized OpenGL Accelerated GPU Image Mixer";
 	}
 
 	void begin_layer(core::blend_mode blend_mode)

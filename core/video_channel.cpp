@@ -36,6 +36,8 @@
 #include <common/concurrency/lock.h>
 #include <common/concurrency/executor.h>
 
+#include <core/mixer/image/image_mixer.h>
+
 #include <tbb/spin_mutex.h>
 
 #include <boost/property_tree/ptree.hpp>
@@ -62,7 +64,7 @@ struct video_channel::impl sealed : public frame_factory
 
 	executor										executor_;
 public:
-	impl(int index, const core::video_format_desc& format_desc, spl::shared_ptr<image_mixer> image_mixer)  
+	impl(int index, const core::video_format_desc& format_desc, spl::unique_ptr<image_mixer> image_mixer)  
 		: event_subject_(new monitor::subject(monitor::path() % "channel" % index))
 		, index_(index)
 		, format_desc_(format_desc)
@@ -164,7 +166,7 @@ public:
 	}
 };
 
-video_channel::video_channel(int index, const core::video_format_desc& format_desc, spl::shared_ptr<image_mixer> image_mixer) : impl_(new impl(index, format_desc, image_mixer)){}
+video_channel::video_channel(int index, const core::video_format_desc& format_desc, spl::unique_ptr<image_mixer> image_mixer) : impl_(new impl(index, format_desc, std::move(image_mixer))){}
 const stage& video_channel::stage() const { return impl_->stage_;} 
 stage& video_channel::stage() { return impl_->stage_;} 
 const mixer& video_channel::mixer() const{ return impl_->mixer_;} 
