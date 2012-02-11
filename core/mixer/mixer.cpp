@@ -122,14 +122,14 @@ struct mixer::impl : boost::noncopyable
 {				
 	spl::shared_ptr<diagnostics::graph> graph_;
 	audio_mixer							audio_mixer_;
-	spl::shared_ptr<image_mixer>		image_mixer_;
+	spl::unique_ptr<image_mixer>		image_mixer_;
 	
 	std::unordered_map<int, blend_mode>	blend_modes_;
 			
 	executor executor_;
 
 public:
-	impl(spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer) 
+	impl(spl::shared_ptr<diagnostics::graph> graph, spl::unique_ptr<image_mixer> image_mixer) 
 		: graph_(std::move(graph))
 		, audio_mixer_()
 		, image_mixer_(std::move(image_mixer))
@@ -192,7 +192,7 @@ public:
 	}
 };
 	
-mixer::mixer(spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer) 
+mixer::mixer(spl::shared_ptr<diagnostics::graph> graph, spl::unique_ptr<image_mixer> image_mixer) 
 	: impl_(new impl(std::move(graph), std::move(image_mixer))){}
 void mixer::set_blend_mode(int index, blend_mode value){impl_->set_blend_mode(index, value);}
 boost::unique_future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}

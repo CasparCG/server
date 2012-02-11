@@ -47,7 +47,7 @@ class video_channel sealed : public frame_observable
 	video_channel(const video_channel&);
 	video_channel& operator=(const video_channel&);
 public:
-	explicit video_channel(int index, const video_format_desc& format_desc, spl::shared_ptr<image_mixer> image_mixer);
+	explicit video_channel(int index, const video_format_desc& format_desc, spl::unique_ptr<image_mixer> image_mixer);
 	
 	const core::stage&	stage() const;
 	core::stage&		stage();
