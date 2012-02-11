@@ -5,11 +5,19 @@
 
 namespace caspar { namespace accelerator { namespace cpu { namespace xmm {
 
-struct stream_tag
+struct temporal_tag
 {
 	static const int value = 0x01;
 };
-struct store_tag
+struct nontemporal_tag
+{
+	static const int value = 0x02;
+};
+struct aligned_tag
+{
+	static const int value = 0x01;
+};
+struct unaligned_tag
 {
 	static const int value = 0x02;
 };
@@ -23,14 +31,13 @@ template<typename T>
 class base_x
 {
 public:
+	template<typename temporal, typename alignment>
 	static T load(const void* source);
-	static T loadu(const void* source);
-	static T zero();
 	
-	static void write(const T& source, void* dest, stream_tag);
-	static void write(const T& source, void* dest, store_tag);
-	static void stream(const T& source, void* dest);
+	template<typename temporal,typename alignment>
 	static void store(const T& source, void* dest);
+	
+	static T zero();
 };
 
 class s32_x : public base_x<s32_x>
@@ -180,45 +187,32 @@ public:
 // base_x
 
 template<typename T>
+template<typename temporal, typename alignment>
 T base_x<T>::load(const void* source)
-{
-	return _mm_load_si128(reinterpret_cast<const __m128i*>(source));
+{ 
+	static_assert(temporal::value != nontemporal_tag::value, "streaming loads not supported");
+	if(alignment::value == aligned_tag::value)
+		return _mm_load_si128(reinterpret_cast<const __m128i*>(source));
+	else
+		return _mm_loadu_si128(reinterpret_cast<const __m128i*>(source));
 }
 	
 template<typename T>
-T base_x<T>::loadu(const void* source)
+template<typename temporal, typename alignment>
+void base_x<T>::store(const T& source, void* dest)
 {
-	return _mm_loadu_si128(reinterpret_cast<const __m128i*>(source));
+	if(temporal::value == nontemporal_tag::value && alignment::value == aligned_tag::value)
+		_mm_stream_si128(reinterpret_cast<__m128i*>(dest), source.value_);
+	else if(alignment::value == aligned_tag::value)
+		_mm_store_si128(reinterpret_cast<__m128i*>(dest), source.value_);
+	else
+		_mm_storeu_si128(reinterpret_cast<__m128i*>(dest), source.value_);
 }
 
 template<typename T>
 T base_x<T>::zero()
 {
 	return _mm_setzero_si128();
-}
-
-template<typename T>
-void base_x<T>::write(const T& source, void* dest, store_tag)
-{
-	base_x<T>::store(source, dest);
-}
-
-template<typename T>
-void base_x<T>::write(const T& source, void* dest, stream_tag)
-{
-	base_x<T>::stream(source, dest);
-}
-
-template<typename T>
-void base_x<T>::stream(const T& source, void* dest)
-{
-	_mm_stream_si128(reinterpret_cast<__m128i*>(dest), source.value_);
-}
-
-template<typename T>
-void base_x<T>::store(const T& source, void* dest)
-{	
-	_mm_store_si128(reinterpret_cast<__m128i*>(dest), source.value_);
 }
 
 // s32_x
