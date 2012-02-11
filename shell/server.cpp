@@ -146,15 +146,15 @@ struct server::impl : boost::noncopyable
 				{
 					auto name = xml_consumer.first;
 					if(name == L"screen")
-						channel->output()->add(caspar::screen::create_consumer(xml_consumer.second));					
+						channel->output().add(caspar::screen::create_consumer(xml_consumer.second));					
 					else if(name == L"bluefish")					
-						channel->output()->add(bluefish::create_consumer(xml_consumer.second));					
+						channel->output().add(bluefish::create_consumer(xml_consumer.second));					
 					else if(name == L"decklink")					
-						channel->output()->add(decklink::create_consumer(xml_consumer.second));				
+						channel->output().add(decklink::create_consumer(xml_consumer.second));				
 					else if(name == L"file")					
-						channel->output()->add(ffmpeg::create_consumer(xml_consumer.second));						
+						channel->output().add(ffmpeg::create_consumer(xml_consumer.second));						
 					else if(name == L"system-audio")
-						channel->output()->add(oal::create_consumer());		
+						channel->output().add(oal::create_consumer());		
 					else if(name != L"<xmlcomment>")
 						CASPAR_LOG(warning) << "Invalid consumer: " << name;	
 				}

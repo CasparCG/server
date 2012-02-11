@@ -34,7 +34,7 @@ struct frame_factory : boost::noncopyable
 	virtual ~frame_factory(){}
 
 	virtual spl::shared_ptr<struct write_frame> create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;		
-	virtual struct video_format_desc get_video_format_desc() const = 0; // nothrow
+	virtual struct video_format_desc video_format_desc() const = 0; // nothrow
 };
 
 }}

@@ -85,7 +85,7 @@ public:
 	{			
 		if(background_ != frame_producer::empty())
 		{
-			background_->set_leading_producer(foreground_);
+			background_->leading_producer(foreground_);
 
 			background_->unsubscribe(background_event_subject_);
 			foreground_->unsubscribe(foreground_event_subject_);

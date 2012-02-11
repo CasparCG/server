@@ -100,11 +100,12 @@ public:
 		remove(consumer->index());
 	}
 	
-	void set_video_format_desc(const video_format_desc& format_desc)
+	void video_format_desc(const core::video_format_desc& format_desc)
 	{
 		executor_.invoke([&]
 		{
-			boost::timer frame_timer;
+			if(format_desc_ == format_desc)
+				return;
 
 			auto it = consumers_.begin();
 			while(it != consumers_.end())
@@ -124,8 +125,6 @@ public:
 			
 			format_desc_ = format_desc;
 			frames_.clear();
-
-			graph_->set_value("consume-time", frame_timer.elapsed()*format_desc.fps*0.5);
 		});
 	}
 
@@ -147,16 +146,17 @@ public:
 		return boost::range::count_if(consumers_ | boost::adaptors::map_values, [](const spl::shared_ptr<frame_consumer>& x){return x->has_synchronization_clock();}) > 0;
 	}
 		
-	void operator()(spl::shared_ptr<const data_frame> input_frame, const video_format_desc& format_desc)
+	void operator()(spl::shared_ptr<const data_frame> input_frame, const core::video_format_desc& format_desc)
 	{
+		video_format_desc(format_desc);
+
 		executor_.invoke([=]
 		{			
+			boost::timer frame_timer;
+
 			if(!has_synchronization_clock())
 				sync_timer_.tick(1.0/format_desc_.fps);
 				
-			if(format_desc_ != format_desc)
-				set_video_format_desc(format_desc);
-
 			if(input_frame->image_data().size() != format_desc_.size)
 			{
 				sync_timer_.tick(1.0/format_desc_.fps);
@@ -184,6 +184,8 @@ public:
 					consumers_.erase(it++);
 				}
 			}
+
+			graph_->set_value("consume-time", frame_timer.elapsed()*format_desc.fps*0.5);
 		});
 	}
 
