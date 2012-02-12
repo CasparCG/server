@@ -414,10 +414,15 @@ public:
 		return consumer_ ? consumer_->print() : L"[ffmpeg_consumer]";
 	}
 
+	virtual std::wstring name() const override
+	{
+		return L"file";
+	}
+
 	virtual boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
-		info.add(L"type", L"ffmpeg-consumer");
+		info.add(L"type", L"file");
 		info.add(L"key-only", key_only_);
 		info.add(L"filename", filename_);
 		info.add(L"vcodec", codec_);

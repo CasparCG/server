@@ -38,13 +38,15 @@ public:
 	frame_consumer(){}
 	virtual ~frame_consumer() {}
 	
-	virtual bool send(const spl::shared_ptr<const class data_frame>& frame) = 0;
-	virtual void initialize(const struct video_format_desc& format_desc, int channel_index) = 0;
-	virtual std::wstring print() const = 0;
-	virtual boost::property_tree::wptree info() const = 0;
-	virtual bool has_synchronization_clock() const {return true;}
-	virtual int buffer_depth() const = 0;
-	virtual int index() const = 0;
+	virtual std::wstring					print() const = 0;
+	virtual std::wstring					name() const = 0;
+	virtual boost::property_tree::wptree	info() const = 0;
+	virtual bool							has_synchronization_clock() const {return true;}
+	virtual int								buffer_depth() const = 0;
+	virtual int								index() const = 0;
+
+	virtual bool							send(const spl::shared_ptr<const class data_frame>& frame) = 0;
+	virtual void							initialize(const struct video_format_desc& format_desc, int channel_index) = 0;
 
 	static const spl::shared_ptr<frame_consumer>& empty();
 };

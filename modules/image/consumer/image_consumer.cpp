@@ -80,11 +80,16 @@ public:
 	{
 		return L"image[]";
 	}
+	
+	virtual std::wstring name() const override
+	{
+		return L"image";
+	}
 
 	virtual boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
-		info.add(L"type", L"image-consumer");
+		info.add(L"type", L"image");
 		return info;
 	}
 

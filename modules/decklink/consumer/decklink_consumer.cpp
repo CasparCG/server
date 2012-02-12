@@ -532,10 +532,15 @@ public:
 		return consumer_ ? consumer_->print() : L"[decklink_consumer]";
 	}		
 
+	virtual std::wstring name() const override
+	{
+		return L"decklink";
+	}
+
 	virtual boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
-		info.add(L"type", L"decklink-consumer");
+		info.add(L"type", L"decklink");
 		info.add(L"key-only", config_.key_only);
 		info.add(L"device", config_.device_index);
 		info.add(L"low-latency", config_.low_latency);
