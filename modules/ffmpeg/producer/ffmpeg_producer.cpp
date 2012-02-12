@@ -163,10 +163,7 @@ public:
 		if(!frame)
 		{
 			if(!input_.eof())		
-			{
 				graph_->set_tag("underflow");	
-				*event_subject_ << monitor::event("underflow") % true;
-			}
 			return last_frame();
 		}
 				
