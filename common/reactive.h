@@ -165,7 +165,6 @@ public:
 	
 	basic_subject_impl& operator=(basic_subject_impl<I, O>&& other)
 	{
-		tbb::spin_rw_mutex::scoped_lock lock(mutex_, true);
 		observers_ = std::move(observers_);
 		return *this;
 	}

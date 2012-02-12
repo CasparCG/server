@@ -162,14 +162,11 @@ class basic_subject sealed : public reactive::subject<monitor::event>
 		impl& operator=(impl&& other)
 		{
 			impl_ = std::move(other.impl_);		
-
-			tbb::spin_rw_mutex::scoped_lock lock(mutex_, true);
 			path_ = std::move(other.path_);
 		}
 							
 		void on_next(const monitor::event& e) override
 		{				
-			tbb::spin_rw_mutex::scoped_lock lock(mutex_, false);
 			impl_.on_next(path_.empty() ? e : e.propagate(path_));
 		}
 
@@ -185,7 +182,6 @@ class basic_subject sealed : public reactive::subject<monitor::event>
 				
 	private:
 		reactive::basic_subject_impl<monitor::event>	impl_;		
-		mutable tbb::spin_rw_mutex						mutex_;
 		monitor::path									path_;
 	};
 
