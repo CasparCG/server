@@ -28,8 +28,8 @@ namespace caspar { namespace core {
 struct frame_visitor : boost::noncopyable
 {
 	virtual ~frame_visitor(){}
-	virtual void push(struct frame_transform& transform) = 0;
-	virtual void visit(struct data_frame& frame) = 0;
+	virtual void push(const struct frame_transform& transform) = 0;
+	virtual void visit(const struct data_frame& frame) = 0;
 	virtual void pop() = 0;
 };
 

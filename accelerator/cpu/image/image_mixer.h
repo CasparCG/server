@@ -23,8 +23,8 @@ class image_mixer sealed : public core::image_mixer
 public:
 	image_mixer();
 	
-	virtual void push(core::frame_transform& frame);
-	virtual void visit(core::data_frame& frame);
+	virtual void push(const core::frame_transform& frame);
+	virtual void visit(const core::data_frame& frame);
 	virtual void pop();
 
 	void begin_layer(core::blend_mode blend_mode);
