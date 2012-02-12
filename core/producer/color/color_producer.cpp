@@ -65,6 +65,11 @@ public:
 		return L"color";
 	}
 
+	virtual spl::shared_ptr<draw_frame> last_frame() const override
+	{
+		return frame_;
+	}
+
 	boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
