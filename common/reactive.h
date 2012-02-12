@@ -1,6 +1,7 @@
 #pragma once
 
 #include "spl/memory.h"
+#include "concurrency/lock.h"
 
 #include <tbb/spin_rw_mutex.h>
 #include <tbb/cache_aligned_allocator.h>
@@ -143,7 +144,7 @@ private:
 };
 
 template<typename I, typename O = I>
-class basic_subject_impl : public subject<I, O>
+class basic_subject_impl sealed : public subject<I, O>
 {	
     template <typename, typename> friend class basic_subject_impl;
 
@@ -156,38 +157,27 @@ public:
 	basic_subject_impl()
 	{
 	}
-			
-	virtual ~basic_subject_impl()
-	{
-	}
-		
-	basic_subject_impl(basic_subject_impl<typename observer::value_type, typename observable::value_type>&& other)
+					
+	basic_subject_impl(basic_subject_impl<I, O>&& other)
 		: observers_(std::move(other.observers_))
 	{
 	}
 	
-	basic_subject_impl& operator=(basic_subject_impl<typename observer::value_type, typename observable::value_type>&& other)
+	basic_subject_impl& operator=(basic_subject_impl<I, O>&& other)
 	{
-		other.swap(*this);
+		tbb::spin_rw_mutex::scoped_lock lock(mutex_, true);
+		observers_ = std::move(observers_);
 		return *this;
 	}
-	
-	void swap(basic_subject_impl<typename observer::value_type, typename observable::value_type>& other)
-	{		
-		tbb::spin_rw_mutex::scoped_lock lock(mutex_, true);
-		tbb::spin_rw_mutex::scoped_lock other_lock(other.mutex_, true);
 
-		std::swap(observers_, other.observers_);
-	}
-
-	virtual void clear()
+	void clear()
 	{
 		tbb::spin_rw_mutex::scoped_lock lock(mutex_, true);
 
 		observers_.clear();
 	}
 	
-	virtual void subscribe(const observer_ptr& o) override
+	void subscribe(const observer_ptr& o) override
 	{				
 		tbb::spin_rw_mutex::scoped_lock lock(mutex_, false);
 
@@ -199,7 +189,7 @@ public:
 		}		
 	}
 
-	virtual void unsubscribe(const observer_ptr& o) override
+	void unsubscribe(const observer_ptr& o) override
 	{
 		tbb::spin_rw_mutex::scoped_lock lock(mutex_, false);
 		
@@ -211,7 +201,7 @@ public:
 		}		
 	}
 	
-	virtual void on_next(const I& e) override
+	void on_next(const I& e) override
 	{				
 		std::vector<spl::shared_ptr<observer>> observers;
 
