@@ -83,7 +83,7 @@ public:
 		data_ = GL2(glMapBuffer(target_, usage_ == GL_STREAM_DRAW ? GL_WRITE_ONLY : GL_READ_ONLY));  
 		GL(glBindBuffer(target_, 0));
 		if(!data_)
-			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to map target_ OpenGL Pixel Buffer Object."));
+			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to map target OpenGL Pixel Buffer Object."));
 
 		return data_;
 	}
@@ -116,8 +116,8 @@ host_buffer::host_buffer(int size, usage usage) : impl_(new impl(size, usage)){}
 void* host_buffer::data(){return impl_->data_;}
 void host_buffer::map(){impl_->map();}
 void host_buffer::unmap(){impl_->unmap();}
-void host_buffer::bind(){impl_->bind();}
-void host_buffer::unbind(){impl_->unbind();}
+void host_buffer::bind() const{impl_->bind();}
+void host_buffer::unbind() const{impl_->unbind();}
 int host_buffer::size() const { return impl_->size_; }
 
 }}}
