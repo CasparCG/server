@@ -49,7 +49,7 @@ namespace caspar { namespace core {
 struct stage::impl : public std::enable_shared_from_this<impl>
 {				
 	spl::shared_ptr<diagnostics::graph> graph_;
-	spl::shared_ptr<monitor::subject>	event_subject_;
+	monitor::subject					event_subject_;
 	std::map<int, layer>				layers_;	
 	std::map<int, tweened_transform>	tweens_;	
 	executor							executor_;
@@ -89,7 +89,7 @@ public:
 			}	
 			
 			graph_->set_value("produce-time", frame_timer.elapsed()*format_desc.fps*0.5);
-			*event_subject_ << monitor::event("profiler/time") % frame_timer.elapsed() % (1.0/format_desc.fps);
+			event_subject_ << monitor::event("profiler/time") % frame_timer.elapsed() % (1.0/format_desc.fps);
 
 			return frames;
 		});
@@ -348,6 +348,6 @@ boost::unique_future<spl::shared_ptr<frame_producer>> stage::background(int inde
 boost::unique_future<boost::property_tree::wptree> stage::info() const{return impl_->info();}
 boost::unique_future<boost::property_tree::wptree> stage::info(int index) const{return impl_->info(index);}
 std::map<int, spl::shared_ptr<class draw_frame>> stage::operator()(const video_format_desc& format_desc){return (*impl_)(format_desc);}
-void stage::subscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_->subscribe(o);}
-void stage::unsubscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_->unsubscribe(o);}
+void stage::subscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_.subscribe(o);}
+void stage::unsubscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_.unsubscribe(o);}
 }}

@@ -65,7 +65,7 @@ using namespace protocol;
 
 struct server::impl : boost::noncopyable
 {
-	spl::shared_ptr<monitor::subject>					event_subject_;
+	monitor::subject									event_subject_;
 	accelerator::accelerator							accelerator_;
 	std::vector<spl::shared_ptr<IO::AsyncEventServer>>	async_servers_;	
 	std::vector<spl::shared_ptr<video_channel>>			channels_;
@@ -201,7 +201,7 @@ const std::vector<spl::shared_ptr<video_channel>> server::get_channels() const
 {
 	return impl_->channels_;
 }
-void server::subscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_->subscribe(o);}
-void server::unsubscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_->unsubscribe(o);}
+void server::subscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_.subscribe(o);}
+void server::unsubscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_.unsubscribe(o);}
 
 }

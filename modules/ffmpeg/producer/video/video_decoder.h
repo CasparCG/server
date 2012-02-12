@@ -24,6 +24,8 @@
 #include <common/spl/memory.h>
 #include <common/forward.h>
 
+#include <core/monitor/monitor.h>
+
 #include <boost/noncopyable.hpp>
 
 struct AVFormatContext;
@@ -35,7 +37,8 @@ FORWARD2(caspar, core, struct frame_factory);
 
 namespace caspar { namespace ffmpeg {
 
-class video_decoder : boost::noncopyable
+class video_decoder : public monitor::observable
+					, boost::noncopyable
 {
 public:
 	explicit video_decoder(const spl::shared_ptr<AVFormatContext>& context);
@@ -53,6 +56,11 @@ public:
 	bool	 is_progressive() const;
 
 	std::wstring print() const;
+	
+	// monitor::observable
+	
+	virtual void subscribe(const monitor::observable::observer_ptr& o) override;
+	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override;
 
 private:
 	struct impl;

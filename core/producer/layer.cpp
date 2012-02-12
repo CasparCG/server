@@ -36,9 +36,9 @@ namespace caspar { namespace core {
 
 struct layer::impl
 {				
-	spl::shared_ptr<monitor::subject>	event_subject_;
-	spl::shared_ptr<monitor::subject>	foreground_event_subject_;
-	spl::shared_ptr<monitor::subject>	background_event_subject_;
+	monitor::subject					event_subject_;
+	monitor::subject					foreground_event_subject_;
+	monitor::subject					background_event_subject_;
 	spl::shared_ptr<frame_producer>		foreground_;
 	spl::shared_ptr<frame_producer>		background_;
 	int64_t								frame_number_;
@@ -47,16 +47,16 @@ struct layer::impl
 
 public:
 	impl(int index) 
-		: event_subject_(new monitor::subject(monitor::path("layer") % index))
-		, foreground_event_subject_(new monitor::subject(""))
-		, background_event_subject_(new monitor::subject("background"))
+		: event_subject_(monitor::path("layer") % index)
+		, foreground_event_subject_("")
+		, background_event_subject_("background")
 		, foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
 		, frame_number_(0)
 		, is_paused_(false)
 	{
-		foreground_event_subject_->subscribe(event_subject_);
-		background_event_subject_->subscribe(event_subject_);
+		foreground_event_subject_.subscribe(event_subject_);
+		background_event_subject_.subscribe(event_subject_);
 	}
 
 	void pause()
@@ -137,14 +137,14 @@ public:
 				}
 			}
 
-			*event_subject_	<< monitor::event("state")	% u8(is_paused_ ? L"paused" : (foreground_ == frame_producer::empty() ? L"stopped" : L"playing"))							
+			event_subject_	<< monitor::event("state")	% u8(is_paused_ ? L"paused" : (foreground_ == frame_producer::empty() ? L"stopped" : L"playing"))							
 							<< monitor::event("time")	% monitor::duration(frame_number_/format_desc.fps)
 														% monitor::duration(static_cast<int64_t>(foreground_->nb_frames()) - static_cast<int64_t>(auto_play_delta_ ? *auto_play_delta_ : 0)/format_desc.fps)
 							<< monitor::event("frame")	% static_cast<int64_t>(frame_number_)
 														% static_cast<int64_t>((static_cast<int64_t>(foreground_->nb_frames()) - static_cast<int64_t>(auto_play_delta_ ? *auto_play_delta_ : 0)));
 
-			*foreground_event_subject_ << monitor::event("type") % u8(foreground_->name());
-			*background_event_subject_ << monitor::event("type") % u8(foreground_->name());
+			foreground_event_subject_ << monitor::event("type") % u8(foreground_->name());
+			background_event_subject_ << monitor::event("type") % u8(foreground_->name());
 				
 			return frame;
 		}
@@ -192,6 +192,6 @@ spl::shared_ptr<draw_frame> layer::receive(frame_producer::flags flags, const vi
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_;}
 boost::property_tree::wptree layer::info() const{return impl_->info();}
-void layer::subscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_->subscribe(o);}
-void layer::unsubscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_->unsubscribe(o);}
+void layer::subscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_.subscribe(o);}
+void layer::unsubscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_.unsubscribe(o);}
 }}
