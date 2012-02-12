@@ -65,7 +65,7 @@ namespace caspar { namespace ffmpeg {
 				
 struct ffmpeg_producer : public core::frame_producer
 {
-	monitor::subject											event_subject_;
+	monitor::basic_subject										event_subject_;
 	const std::wstring											filename_;
 	
 	const spl::shared_ptr<diagnostics::graph>					graph_;

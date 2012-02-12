@@ -49,7 +49,7 @@ namespace caspar { namespace core {
 struct video_channel::impl sealed : public frame_factory
 {
 	reactive::basic_subject<spl::shared_ptr<const data_frame>> frame_subject_;
-	monitor::subject								event_subject_;
+	monitor::basic_subject							event_subject_;
 
 	const int										index_;
 

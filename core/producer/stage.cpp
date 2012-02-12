@@ -49,7 +49,7 @@ namespace caspar { namespace core {
 struct stage::impl : public std::enable_shared_from_this<impl>
 {				
 	spl::shared_ptr<diagnostics::graph> graph_;
-	monitor::subject					event_subject_;
+	monitor::basic_subject				event_subject_;
 	std::map<int, layer>				layers_;	
 	std::map<int, tweened_transform>	tweens_;	
 	executor							executor_;

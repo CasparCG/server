@@ -238,7 +238,7 @@ private:
 };
 
 template<typename I, typename O = I>
-class basic_subject : public subject<I, O>
+class basic_subject sealed : public subject<I, O>
 {	
     template <typename, typename> friend class basic_subject;
 
@@ -260,11 +260,7 @@ public:
 		: impl_(std::move(other.impl_))
 	{
 	}
-
-	virtual ~basic_subject()
-	{
-	}
-
+	
 	basic_subject& operator=(basic_subject&& other)
 	{
 		other.swap(*this);

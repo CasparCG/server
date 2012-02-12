@@ -34,7 +34,7 @@ namespace caspar { namespace core {
 
 struct transition_producer : public frame_producer
 {	
-	monitor::subject					event_subject_;
+	monitor::basic_subject				event_subject_;
 	const field_mode					mode_;
 	int									current_frame_;
 	
