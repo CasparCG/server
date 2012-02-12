@@ -42,8 +42,6 @@ struct transition_producer : public frame_producer
 	
 	spl::shared_ptr<frame_producer>		dest_producer_;
 	spl::shared_ptr<frame_producer>		source_producer_;
-
-	spl::shared_ptr<draw_frame>			last_frame_;
 		
 	explicit transition_producer(const field_mode& mode, const spl::shared_ptr<frame_producer>& dest, const transition_info& info) 
 		: mode_(mode)
@@ -51,18 +49,12 @@ struct transition_producer : public frame_producer
 		, info_(info)
 		, dest_producer_(dest)
 		, source_producer_(frame_producer::empty())
-		, last_frame_(draw_frame::empty())
 	{
 		dest->subscribe(event_subject_);
 	}
 	
 	// frame_producer
-
-	virtual spl::shared_ptr<frame_producer> following_producer() const override
-	{
-		return dest_producer_;
-	}
-	
+		
 	virtual void leading_producer(const spl::shared_ptr<frame_producer>& producer) override
 	{
 		source_producer_ = producer;
@@ -70,9 +62,11 @@ struct transition_producer : public frame_producer
 
 	virtual spl::shared_ptr<draw_frame> receive(int flags) override
 	{
-		if(++current_frame_ >= info_.duration)
-			return draw_frame::eof();
+		if(current_frame_ >= info_.duration)
+			return dest_producer_->receive(flags);
 		
+		++current_frame_;
+
 		event_subject_	<< monitor::event("transition/frame") % current_frame_ % info_.duration
 						<< monitor::event("transition/type") % [&]() -> std::string
 																{
@@ -106,15 +100,10 @@ struct transition_producer : public frame_producer
 
 		return compose(dest, source);
 	}
-
-	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
-	{
-		return last_frame_;
-	}
-
+	
 	virtual uint32_t nb_frames() const override
 	{
-		return following_producer()->nb_frames();
+		return dest_producer_->nb_frames();
 	}
 
 	virtual std::wstring print() const override
@@ -188,8 +177,6 @@ struct transition_producer : public frame_producer
 		const auto s_frame = s_frame1->get_frame_transform() == s_frame2->get_frame_transform() ? s_frame2 : draw_frame::interlace(s_frame1, s_frame2, mode_);
 		const auto d_frame = d_frame1->get_frame_transform() == d_frame2->get_frame_transform() ? d_frame2 : draw_frame::interlace(d_frame1, d_frame2, mode_);
 		
-		last_frame_ = draw_frame::over(s_frame2, d_frame2);
-
 		return draw_frame::over(s_frame, d_frame);
 	}
 

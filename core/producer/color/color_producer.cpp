@@ -54,12 +54,7 @@ public:
 	{
 		return frame_;
 	}	
-
-	virtual spl::shared_ptr<draw_frame> last_frame() const override
-	{
-		return frame_; 
-	}	
-
+	
 	virtual std::wstring print() const override
 	{
 		return L"color[" + color_str_ + L"]";

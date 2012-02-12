@@ -50,25 +50,22 @@ namespace caspar { namespace image {
 		
 struct image_scroll_producer : public core::frame_producer
 {	
-	const std::wstring							filename_;
+	const std::wstring								filename_;
 	std::vector<spl::shared_ptr<core::draw_frame>>	frames_;
-	core::video_format_desc						format_desc_;
-	int										width_;
-	int										height_;
+	core::video_format_desc							format_desc_;
+	int												width_;
+	int												height_;
 
-	int											delta_;
-	int											speed_;
+	int												delta_;
+	int												speed_;
 
-	std::array<double, 2>						start_offset_;
+	std::array<double, 2>							start_offset_;
 
-	spl::shared_ptr<core::draw_frame>					last_frame_;
-	
 	explicit image_scroll_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int speed) 
 		: filename_(filename)
 		, delta_(0)
 		, format_desc_(frame_factory->video_format_desc())
 		, speed_(speed)
-		, last_frame_(core::draw_frame::empty())
 	{
 		start_offset_.assign(0.0);
 
@@ -188,14 +185,9 @@ struct image_scroll_producer : public core::frame_producer
 			}
 		}
 
-		return last_frame_ = spl::make_shared<core::draw_frame>(frames_);
+		return spl::make_shared<core::draw_frame>(frames_);
 	}
-
-	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
-	{
-		return last_frame_;
-	}
-		
+			
 	virtual std::wstring print() const override
 	{
 		return L"image_scroll_producer[" + filename_ + L"]";
