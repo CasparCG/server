@@ -110,20 +110,20 @@ public:
 
 		if(transform.is_key)
 			flags |= frame_producer::flags::alpha_only;
-
+		
 		auto frame = layer.receive(flags, format_desc);	
 				
-		frame = spl::make_shared<core::draw_frame>(frame);
-		frame->get_frame_transform() = transform;
+		auto frame1 = spl::make_shared<core::draw_frame>(frame);
+		frame1->get_frame_transform() = transform;
 
 		if(format_desc.field_mode != core::field_mode::progressive)
 		{				
 			auto frame2 = spl::make_shared<core::draw_frame>(frame);
 			frame2->get_frame_transform() = tween.fetch_and_tick(1);
-			frame = core::draw_frame::interlace(frame, frame2, format_desc.field_mode);
+			frame1 = core::draw_frame::interlace(frame1, frame2, format_desc.field_mode);
 		}
 
-		frames[index] = frame;
+		frames[index] = frame1;
 	}
 
 	layer& get_layer(int index)
