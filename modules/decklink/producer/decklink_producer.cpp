@@ -269,14 +269,12 @@ public:
 	
 class decklink_producer_proxy : public core::frame_producer
 {		
-	spl::shared_ptr<core::draw_frame>			last_frame_;
 	std::unique_ptr<decklink_producer>	producer_;
 	const uint32_t						length_;
 	executor							executor_;
 public:
 	explicit decklink_producer_proxy(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str, uint32_t length)
 		: executor_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
-		, last_frame_(core::draw_frame::empty())
 		, length_(length)
 	{
 		executor_.invoke([=]
@@ -299,17 +297,9 @@ public:
 				
 	virtual spl::shared_ptr<core::draw_frame> receive(int flags) override
 	{
-		auto frame = producer_->get_frame(flags);
-		if(frame != core::draw_frame::late())
-			last_frame_ = frame;
-		return frame;
+		return producer_->get_frame(flags);
 	}
-
-	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
-	{
-		return last_frame_;
-	}
-	
+		
 	virtual uint32_t nb_frames() const override
 	{
 		return length_;

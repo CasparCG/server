@@ -81,9 +81,7 @@ struct ffmpeg_producer : public core::frame_producer
 	const double												fps_;
 	const uint32_t												start_;
 	const uint32_t												length_;
-
-	spl::shared_ptr<core::draw_frame>							last_frame_;
-	
+		
 	int64_t														frame_number_;
 	
 public:
@@ -95,7 +93,6 @@ public:
 		, fps_(read_fps(*input_.context(), format_desc_.fps))
 		, start_(start)
 		, length_(length)
-		, last_frame_(core::draw_frame::empty())
 		, frame_number_(0)
 	{
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
@@ -163,21 +160,16 @@ public:
 		{
 			if(!input_.eof())		
 				graph_->set_tag("underflow");	
-			return last_frame();
+			return core::draw_frame::late();
 		}
 				
 		++frame_number_;
 
 		graph_->set_text(print());
 
-		return last_frame_ = spl::make_shared_ptr(frame);
+		return spl::make_shared_ptr(frame);
 	}
-
-	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
-	{
-		return core::draw_frame::mute(last_frame_);
-	}
-
+	
 	virtual uint32_t nb_frames() const override
 	{
 		if(input_.loop())

@@ -332,10 +332,7 @@ struct flash_producer : public core::frame_producer
 
 	std::queue<spl::shared_ptr<core::draw_frame>>						frame_buffer_;
 	tbb::concurrent_bounded_queue<spl::shared_ptr<core::draw_frame>>	output_buffer_;
-
-	spl::shared_ptr<core::draw_frame>									last_frame_;
-	mutable tbb::spin_mutex												last_frame_mutex_;
-			
+				
 	std::unique_ptr<flash_renderer>										renderer_;
 
 	executor															executor_;	
@@ -346,7 +343,6 @@ public:
 		, width_(width > 0 ? width : frame_factory->video_format_desc().width)
 		, height_(height > 0 ? height : frame_factory->video_format_desc().height)
 		, buffer_size_(env::properties().get(L"configuration.flash.buffer-depth", frame_factory_->video_format_desc().fps > 30.0 ? 4 : 2))
-		, last_frame_(core::draw_frame::empty())
 		, executor_(L"flash_producer")
 	{	
 		sync_ = true;
@@ -382,14 +378,6 @@ public:
 						
 		return frame;
 	}
-
-	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
-	{
-		return lock(last_frame_mutex_, [this]
-		{
-			return last_frame_;
-		});
-	}		
 	
 	virtual boost::unique_future<std::wstring> call(const std::wstring& param) override
 	{	
@@ -435,15 +423,7 @@ public:
 	}
 
 	// flash_producer
-
-	spl::shared_ptr<core::draw_frame> render()
-	{
-		return lock(last_frame_mutex_, [this]
-		{
-			return last_frame_ = renderer_->render();
-		});
-	}
-
+	
 	void tick()
 	{
 		renderer_->tick(sync_);
@@ -459,13 +439,13 @@ public:
 			auto format_desc = frame_factory_->video_format_desc();
 					
 			tick();
-			auto frame = render();
+			auto frame = renderer_->render();
 
 			if(abs(renderer_->fps()/2.0 - format_desc.fps) < 2.0) // flash == 2 * format -> interlace
 			{					
 				tick();
 				if(format_desc.field_mode != core::field_mode::progressive)
-					frame = core::draw_frame::interlace(frame, render(), format_desc.field_mode);
+					frame = core::draw_frame::interlace(frame, renderer_->render(), format_desc.field_mode);
 				
 				frame_buffer_.push(frame);
 			}

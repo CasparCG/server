@@ -70,11 +70,6 @@ struct image_producer : public core::frame_producer
 		return frame_;
 	}
 		
-	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
-	{
-		return frame_;
-	}
-
 	virtual std::wstring print() const override
 	{
 		return L"image_producer[" + filename_ + L"]";
