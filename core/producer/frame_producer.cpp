@@ -157,6 +157,7 @@ public:
 
 class last_frame_producer_proxy : public producer_proxy_base
 {	
+	spl::shared_ptr<draw_frame> last_frame_;
 public:
 	last_frame_producer_proxy(spl::shared_ptr<frame_producer>&& producer) 
 		: producer_proxy_base(std::move(producer))
@@ -180,7 +181,8 @@ spl::shared_ptr<core::frame_producer> wrap_producer(spl::shared_ptr<core::frame_
 {
 	return spl::make_shared<destroy_producer_proxy>(
 			 spl::make_shared<print_producer_proxy>(
-			  std::move(producer)));
+			  spl::make_shared<last_frame_producer_proxy>(
+			   std::move(producer))));
 }
 
 spl::shared_ptr<core::frame_producer> do_create_producer(const spl::shared_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)
