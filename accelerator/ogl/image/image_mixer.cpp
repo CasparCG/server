@@ -253,9 +253,15 @@ private:
 					const core::video_format_desc&		format_desc)
 	{		
 		// Remove empty items.
-		boost::range::remove_erase_if(layer.items, [](const item& item)
+		boost::range::remove_erase_if(layer.items, [&](const item& item)
 		{
 			return item.transform.field_mode == core::field_mode::empty;
+		});
+		
+		// Remove first field stills.
+		boost::range::remove_erase_if(layer.items, [&](const item& item)
+		{
+			return item.transform.is_still && item.transform.field_mode == format_desc.field_mode; // only us last field for stills.
 		});
 
 		if(layer.items.empty())
@@ -378,14 +384,14 @@ public:
 		layers_.push_back(layer(std::vector<item>(), blend_mode));
 	}
 		
-	void push(core::frame_transform& transform)
+	void push(const core::frame_transform& transform)
 	{
 		transform_stack_.push_back(transform_stack_.back()*transform);
 	}
 		
-	void visit(core::data_frame& frame2)
+	void visit(const core::data_frame& frame2)
 	{			
-		write_frame* frame = dynamic_cast<write_frame*>(&frame2);
+		auto frame = dynamic_cast<const write_frame*>(&frame2);
 		if(frame == nullptr)
 			return;
 
@@ -434,8 +440,8 @@ public:
 };
 
 image_mixer::image_mixer(const spl::shared_ptr<context>& ogl) : impl_(new impl(ogl)){}
-void image_mixer::push(core::frame_transform& transform){impl_->push(transform);}
-void image_mixer::visit(core::data_frame& frame){impl_->visit(frame);}
+void image_mixer::push(const core::frame_transform& transform){impl_->push(transform);}
+void image_mixer::visit(const core::data_frame& frame){impl_->visit(frame);}
 void image_mixer::pop(){impl_->pop();}
 boost::shared_future<boost::iterator_range<const uint8_t*>> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
 void image_mixer::begin_layer(core::blend_mode blend_mode){impl_->begin_layer(blend_mode);}

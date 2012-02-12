@@ -37,6 +37,7 @@ frame_transform::frame_transform()
 	, field_mode(field_mode::progressive)
 	, is_key(false)
 	, is_mix(false)
+	, is_still(false)
 {
 	boost::range::fill(fill_translation, 0.0);
 	boost::range::fill(fill_scale, 1.0);
@@ -67,6 +68,7 @@ frame_transform& frame_transform::operator*=(const frame_transform &other)
 	field_mode				 = static_cast<core::field_mode>(field_mode & other.field_mode);
 	is_key					|= other.is_key;
 	is_mix					|= other.is_mix;
+	is_still				|= other.is_still;
 	return *this;
 }
 
@@ -104,6 +106,7 @@ frame_transform frame_transform::tween(double time, const frame_transform& sourc
 	result.field_mode			= source.field_mode & dest.field_mode;
 	result.is_key				= source.is_key | dest.is_key;
 	result.is_mix				= source.is_mix | dest.is_mix;
+	result.is_still				= source.is_still | dest.is_still;
 	
 	return result;
 }

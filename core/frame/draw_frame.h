@@ -40,24 +40,27 @@ public:
 	draw_frame& operator=(draw_frame other);
 	virtual ~draw_frame(){}
 
-	draw_frame(spl::shared_ptr<draw_frame> frame);
+	draw_frame(spl::shared_ptr<const draw_frame> frame);
 	draw_frame(std::vector<spl::shared_ptr<draw_frame>> frames);
+	draw_frame(std::vector<spl::shared_ptr<const draw_frame>> frames);
 		
 	void swap(draw_frame& other);
+
+	field_mode field_mode() const;
 
 	const struct frame_transform& get_frame_transform() const;
 	struct frame_transform& get_frame_transform();
 				
-	static spl::shared_ptr<draw_frame> interlace(const spl::shared_ptr<draw_frame>& frame1, const spl::shared_ptr<draw_frame>& frame2, field_mode mode);
-	static spl::shared_ptr<draw_frame> over(const spl::shared_ptr<draw_frame>& frame1, const spl::shared_ptr<draw_frame>& frame2);
-	static spl::shared_ptr<draw_frame> mask(const spl::shared_ptr<draw_frame>& fill, const spl::shared_ptr<draw_frame>& key);
-	static spl::shared_ptr<draw_frame> mute(const spl::shared_ptr<draw_frame>& frame);
+	static spl::shared_ptr<draw_frame> interlace(const spl::shared_ptr<const draw_frame>& frame1, const spl::shared_ptr<const draw_frame>& frame2, core::field_mode mode);
+	static spl::shared_ptr<draw_frame> over(const spl::shared_ptr<const draw_frame>& frame1, const spl::shared_ptr<const draw_frame>& frame2);
+	static spl::shared_ptr<draw_frame> mask(const spl::shared_ptr<const draw_frame>& fill, const spl::shared_ptr<const draw_frame>& key);
+	static spl::shared_ptr<draw_frame> still(const spl::shared_ptr<const draw_frame>& frame);
 		
 	static const spl::shared_ptr<draw_frame>& eof();
 	static const spl::shared_ptr<draw_frame>& empty();
 	static const spl::shared_ptr<draw_frame>& late();
 	
-	virtual void accept(frame_visitor& visitor);
+	virtual void accept(frame_visitor& visitor) const;
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

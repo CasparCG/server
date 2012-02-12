@@ -55,7 +55,7 @@ public:
 			
 	// draw_frame
 
-	virtual void accept(core::frame_visitor& visitor) override;
+	virtual void accept(core::frame_visitor& visitor) const override;
 
 	// data_frame
 		
@@ -76,7 +76,7 @@ public:
 
 	// write_frames
 
-	std::vector<spl::shared_ptr<host_buffer>> get_buffers();		
+	std::vector<spl::shared_ptr<host_buffer>> get_buffers() const;		
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

@@ -54,6 +54,9 @@ boost::unique_future<std::wstring> frame_producer::call(const std::wstring&)
 	BOOST_THROW_EXCEPTION(not_supported());
 }
 
+const spl::shared_ptr<frame_producer>& frame_producer::empty() // nothrow
+{
+
 struct empty_frame_producer : public frame_producer
 {
 	virtual spl::shared_ptr<draw_frame> receive(int){return draw_frame::empty();}
@@ -73,43 +76,22 @@ struct empty_frame_producer : public frame_producer
 	}
 };
 
-const spl::shared_ptr<frame_producer>& frame_producer::empty() // nothrow
-{
 	static spl::shared_ptr<frame_producer> producer = spl::make_shared<empty_frame_producer>();
 	return producer;
 }	
 
-class producer_proxy_base : public frame_producer
+class producer_proxy : public frame_producer
 {	
-protected:
 	std::shared_ptr<frame_producer> producer_;
+	spl::shared_ptr<draw_frame>		last_frame_;
 public:
-	producer_proxy_base(spl::shared_ptr<frame_producer>&& producer) 
+	producer_proxy(spl::shared_ptr<frame_producer>&& producer) 
 		: producer_(std::move(producer))
 	{
-	}
-	
-	virtual spl::shared_ptr<draw_frame>							receive(int hints) override														{return producer_->receive(hints);}
-	virtual spl::shared_ptr<draw_frame>							last_frame() const override		 												{return producer_->last_frame();}
-	virtual std::wstring										print() const override															{return producer_->print();}
-	virtual std::wstring										name() const override															{return producer_->name();}
-	virtual boost::property_tree::wptree 						info() const override															{return producer_->info();}
-	virtual boost::unique_future<std::wstring>					call(const std::wstring& str) override											{return producer_->call(str);}
-	virtual void												leading_producer(const spl::shared_ptr<frame_producer>& producer) override		{return producer_->leading_producer(producer);}
-	virtual uint32_t											nb_frames() const override														{return producer_->nb_frames();}
-	virtual void subscribe(const monitor::observable::observer_ptr& o)																			{return producer_->subscribe(o);}
-	virtual void unsubscribe(const monitor::observable::observer_ptr& o)																		{return producer_->unsubscribe(o);}
-};
-
-class destroy_producer_proxy : public producer_proxy_base
-{	
-public:
-	destroy_producer_proxy(spl::shared_ptr<frame_producer>&& producer) 
-		: producer_proxy_base(std::move(producer))
-	{
+		CASPAR_LOG(info) << producer_->print() << L" Initialized.";
 	}
 
-	~destroy_producer_proxy()
+	virtual ~producer_proxy()
 	{		
 		static tbb::atomic<int> counter = tbb::atomic<int>();
 		
@@ -129,60 +111,42 @@ public:
 					CASPAR_LOG(trace) << str << L" Destroying on asynchronous destruction thread.";
 			}
 			catch(...){}
-
+			
+			CASPAR_LOG(trace) << str << L" Uninitializing.";
 			pointer_guard.reset();
+			CASPAR_LOG(info) << str << L" Uninitialized.";
 
 			--counter;
 		}); 
 	}
-};
-
-class print_producer_proxy : public producer_proxy_base
-{	
-public:
-	print_producer_proxy(spl::shared_ptr<frame_producer>&& producer) 
-		: producer_proxy_base(std::move(producer))
-	{
-		CASPAR_LOG(info) << producer_->print() << L" Initialized.";
-	}
-
-	~print_producer_proxy()
-	{		
-		auto str = producer_->print();
-		CASPAR_LOG(trace) << str << L" Uninitializing.";
-		producer_.reset();
-		CASPAR_LOG(info) << str << L" Uninitialized.";
-	}
-};
-
-class last_frame_producer_proxy : public producer_proxy_base
-{	
-	spl::shared_ptr<draw_frame> last_frame_;
-public:
-	last_frame_producer_proxy(spl::shared_ptr<frame_producer>&& producer) 
-		: producer_proxy_base(std::move(producer))
-		, last_frame_(draw_frame::empty())
-	{
-		CASPAR_LOG(info) << producer_->print() << L" Initialized.";
-	}
 	
-	virtual spl::shared_ptr<draw_frame>	receive(int hints) override					
+	virtual spl::shared_ptr<draw_frame>	receive(int hints) override														
 	{
-		return last_frame_ = producer_->receive(hints);
+		auto frame = producer_->receive(hints);
+		
+		if(frame != draw_frame::late())
+			last_frame_ = frame;
+
+		return std::move(frame);
+	}
+	virtual spl::shared_ptr<draw_frame>	last_frame() const override														
+	{
+		return draw_frame::still(last_frame_);
 	}
 
-	virtual spl::shared_ptr<draw_frame>	last_frame() const override		 												
-	{
-		return last_frame_;
-	}
+	virtual std::wstring										print() const override															{return producer_->print();}
+	virtual std::wstring										name() const override															{return producer_->name();}
+	virtual boost::property_tree::wptree 						info() const override															{return producer_->info();}
+	virtual boost::unique_future<std::wstring>					call(const std::wstring& str) override											{return producer_->call(str);}
+	virtual void												leading_producer(const spl::shared_ptr<frame_producer>& producer) override		{return producer_->leading_producer(producer);}
+	virtual uint32_t											nb_frames() const override														{return producer_->nb_frames();}
+	virtual void subscribe(const monitor::observable::observer_ptr& o)																			{return producer_->subscribe(o);}
+	virtual void unsubscribe(const monitor::observable::observer_ptr& o)																		{return producer_->unsubscribe(o);}
 };
 
 spl::shared_ptr<core::frame_producer> wrap_producer(spl::shared_ptr<core::frame_producer> producer)
 {
-	return spl::make_shared<destroy_producer_proxy>(
-			 spl::make_shared<print_producer_proxy>(
-			  spl::make_shared<last_frame_producer_proxy>(
-			   std::move(producer))));
+	return spl::make_shared<producer_proxy>(std::move(producer));
 }
 
 spl::shared_ptr<core::frame_producer> do_create_producer(const spl::shared_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)

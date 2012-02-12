@@ -31,7 +31,7 @@ namespace caspar { namespace core {
 																																						
 struct draw_frame::impl
 {		
-	std::vector<spl::shared_ptr<draw_frame>> frames_;
+	std::vector<spl::shared_ptr<const draw_frame>> frames_;
 
 	frame_transform frame_transform_;		
 public:
@@ -39,34 +39,53 @@ public:
 	{
 	}
 
-	impl(std::vector<spl::shared_ptr<draw_frame>> frames) : frames_(std::move(frames))
+	impl(std::vector<spl::shared_ptr<draw_frame>> frames)
+	{
+		frames_.insert(frames_.end(), frames.begin(), frames.end());
+	}
+
+	impl(std::vector<spl::shared_ptr<const draw_frame>> frames) : frames_(std::move(frames))
 	{
 	}
 
-	impl(spl::shared_ptr<draw_frame>&& frame) 
+	impl(spl::shared_ptr<const draw_frame> frame) 
 	{
 		frames_.push_back(std::move(frame));
 	}
-
-	impl(const spl::shared_ptr<draw_frame>& frame) 		
-	{ 
-		frames_.push_back(frame);
-	}
-	
-	void accept(frame_visitor& visitor)
+		
+	void accept(frame_visitor& visitor) const
 	{
 		visitor.push(frame_transform_);
 		BOOST_FOREACH(auto frame, frames_)
 			frame->accept(visitor);
 		visitor.pop();
 	}	
+		
+	core::field_mode field_mode() const
+	{
+		if(frame_transform_.field_mode == field_mode::upper || frame_transform_.field_mode == field_mode::lower)
+			return frame_transform_.field_mode;
+
+		if(frames_.empty())
+			return field_mode::progressive;
+		
+		BOOST_FOREACH(auto frame, frames_)
+		{
+			auto mode = frame->field_mode();
+			if(frame_transform_.field_mode == field_mode::upper || frame_transform_.field_mode == field_mode::lower)
+				return mode;
+		}
+
+		return field_mode::progressive;
+	}
 };
 	
 draw_frame::draw_frame() : impl_(new impl()){}
 draw_frame::draw_frame(const draw_frame& other) : impl_(new impl(*other.impl_)){}
 draw_frame::draw_frame(draw_frame&& other) : impl_(std::move(other.impl_)){}
 draw_frame::draw_frame(std::vector<spl::shared_ptr<draw_frame>> frames) : impl_(new impl(frames)){}
-draw_frame::draw_frame(spl::shared_ptr<draw_frame> frame)  : impl_(new impl(std::move(frame))){}
+draw_frame::draw_frame(std::vector<spl::shared_ptr<const draw_frame>> frames) : impl_(new impl(frames)){}
+draw_frame::draw_frame(spl::shared_ptr<const draw_frame> frame)  : impl_(new impl(std::move(frame))){}
 draw_frame& draw_frame::operator=(draw_frame other)
 {
 	other.swap(*this);
@@ -76,9 +95,10 @@ void draw_frame::swap(draw_frame& other){impl_.swap(other.impl_);}
 
 const frame_transform& draw_frame::get_frame_transform() const { return impl_->frame_transform_;}
 frame_transform& draw_frame::get_frame_transform() { return impl_->frame_transform_;}
-void draw_frame::accept(frame_visitor& visitor){impl_->accept(visitor);}
+void draw_frame::accept(frame_visitor& visitor) const{impl_->accept(visitor);}
+field_mode draw_frame::field_mode() const{return impl_->field_mode();}
 
-spl::shared_ptr<draw_frame> draw_frame::interlace(const spl::shared_ptr<draw_frame>& frame1, const spl::shared_ptr<draw_frame>& frame2, field_mode mode)
+spl::shared_ptr<draw_frame> draw_frame::interlace(const spl::shared_ptr<const draw_frame>& frame1, const spl::shared_ptr<const draw_frame>& frame2, core::field_mode mode)
 {				
 	if(frame1 == draw_frame::eof() || frame2 == draw_frame::eof())
 		return draw_frame::eof();
@@ -86,11 +106,12 @@ spl::shared_ptr<draw_frame> draw_frame::interlace(const spl::shared_ptr<draw_fra
 	if(frame1 == draw_frame::empty() && frame2 == draw_frame::empty())
 		return draw_frame::empty();
 	
-	if(frame1 == frame2 || mode == field_mode::progressive)
-		return frame2;
-
 	auto my_frame1 = spl::make_shared<draw_frame>(frame1);
 	auto my_frame2 = spl::make_shared<draw_frame>(frame2);
+
+	if(frame1 == frame2 || mode == field_mode::progressive)
+		return my_frame2;
+
 	if(mode == field_mode::upper)
 	{
 		my_frame1->get_frame_transform().field_mode = field_mode::upper;	
@@ -102,13 +123,13 @@ spl::shared_ptr<draw_frame> draw_frame::interlace(const spl::shared_ptr<draw_fra
 		my_frame2->get_frame_transform().field_mode = field_mode::upper;	
 	}
 
-	std::vector<spl::shared_ptr<draw_frame>> frames;
+	std::vector<spl::shared_ptr<const draw_frame>> frames;
 	frames.push_back(my_frame1);
 	frames.push_back(my_frame2);
 	return spl::make_shared<draw_frame>(std::move(frames));
 }
 
-spl::shared_ptr<draw_frame> draw_frame::over(const spl::shared_ptr<draw_frame>& frame1, const spl::shared_ptr<draw_frame>& frame2)
+spl::shared_ptr<draw_frame> draw_frame::over(const spl::shared_ptr<const draw_frame>& frame1, const spl::shared_ptr<const draw_frame>& frame2)
 {	
 	if(frame1 == draw_frame::eof() || frame2 == draw_frame::eof())
 		return draw_frame::eof();
@@ -116,13 +137,13 @@ spl::shared_ptr<draw_frame> draw_frame::over(const spl::shared_ptr<draw_frame>& 
 	if(frame1 == draw_frame::empty() && frame2 == draw_frame::empty())
 		return draw_frame::empty();
 
-	std::vector<spl::shared_ptr<draw_frame>> frames;
+	std::vector<spl::shared_ptr<const draw_frame>> frames;
 	frames.push_back(frame1);
 	frames.push_back(frame2);
 	return spl::make_shared<draw_frame>(std::move(frames));
 }
 
-spl::shared_ptr<draw_frame> draw_frame::mask(const spl::shared_ptr<draw_frame>& fill, const spl::shared_ptr<draw_frame>& key)
+spl::shared_ptr<draw_frame> draw_frame::mask(const spl::shared_ptr<const draw_frame>& fill, const spl::shared_ptr<const draw_frame>& key)
 {	
 	if(fill == draw_frame::eof() || key == draw_frame::eof())
 		return draw_frame::eof();
@@ -130,17 +151,18 @@ spl::shared_ptr<draw_frame> draw_frame::mask(const spl::shared_ptr<draw_frame>& 
 	if(fill == draw_frame::empty() || key == draw_frame::empty())
 		return draw_frame::empty();
 
-	std::vector<spl::shared_ptr<draw_frame>> frames;
-	key->get_frame_transform().is_key = true;
-	frames.push_back(key);
+	std::vector<spl::shared_ptr<const draw_frame>> frames;
+	auto key2 = spl::make_shared<draw_frame>(key);
+	key2->get_frame_transform().is_key = true;
+	frames.push_back(key2);
 	frames.push_back(fill);
 	return spl::make_shared<draw_frame>(std::move(frames));
 }
-	
-spl::shared_ptr<draw_frame> draw_frame::mute(const spl::shared_ptr<draw_frame>& frame)
+
+spl::shared_ptr<draw_frame> draw_frame::still(const spl::shared_ptr<const draw_frame>& frame)
 {
 	auto frame2 = spl::make_shared<draw_frame>(frame);
-	frame2->get_frame_transform().volume = 0.0;
+	frame2->get_frame_transform().is_still = true;		
 	return frame2;
 }
 
