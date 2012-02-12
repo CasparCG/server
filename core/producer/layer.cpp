@@ -151,7 +151,7 @@ public:
 														% static_cast<int64_t>((static_cast<int64_t>(foreground_->nb_frames()) - static_cast<int64_t>(auto_play_delta_ ? *auto_play_delta_ : 0)));
 
 			foreground_event_subject_ << monitor::event("type") % u8(foreground_->name());
-			background_event_subject_ << monitor::event("type") % u8(foreground_->name());
+			background_event_subject_ << monitor::event("type") % u8(background_->name());
 				
 			return frame;
 		}
