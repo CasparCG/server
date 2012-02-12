@@ -113,28 +113,56 @@ private:
 };
 
 typedef reactive::observable<monitor::event> observable;
+typedef reactive::observer<monitor::event> observer;
 	
 class subject : public reactive::subject<monitor::event>
 {	    
 	subject(const subject&);
 	subject& operator=(const subject&);
-
-	typedef reactive::basic_subject_impl<monitor::event> impl_base;
 	
-	class impl : public impl_base
+	class impl : public observer
 	{
 	public:
 		impl(monitor::path path = monitor::path())
-			: path_(std::move(path))
+			: impl_()
+			, path_(std::move(path))
 		{
 		}
-							
-		virtual void on_next(const monitor::event& e) override
-		{				
-			impl_base::on_next(path_.empty() ? e : e.propagate(path_));
+
+		impl(impl&& other)
+			: impl_(std::move(other.impl_))
+			, path_(std::move(other.path_))
+		{		
 		}
+
+		impl& operator=(impl&& other)
+		{
+			impl_ = std::move(other.impl_);		
+
+			tbb::spin_rw_mutex::scoped_lock lock(mutex_, true);
+			path_ = std::move(other.path_);
+		}
+							
+		void on_next(const monitor::event& e) override
+		{				
+			tbb::spin_rw_mutex::scoped_lock lock(mutex_, false);
+			impl_.on_next(path_.empty() ? e : e.propagate(path_));
+		}
+
+		void subscribe(const observer_ptr& o)
+		{				
+			impl_.subscribe(o);
+		}
+
+		void unsubscribe(const observer_ptr& o)
+		{
+			impl_.unsubscribe(o);
+		}
+				
 	private:
-		monitor::path			path_;
+		reactive::basic_subject_impl<monitor::event>	impl_;		
+		mutable tbb::spin_rw_mutex						mutex_;
+		monitor::path									path_;
 	};
 
 public:		
@@ -155,12 +183,7 @@ public:
 
 	subject& operator=(subject&& other)
 	{
-		other.swap(*this);
-	}
-
-	void swap(subject& other)
-	{
-		impl_.swap(other.impl_);
+		impl_ = std::move(other.impl_);
 	}
 	
 	virtual void subscribe(const observer_ptr& o) override
