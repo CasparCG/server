@@ -119,11 +119,18 @@ public:
 		try
 		{
 			if(is_paused_)
-				return draw_frame::mute(foreground_->last_frame());
+				return foreground_->last_frame();
 		
 			auto frame = foreground_->receive(flags.value());
+
 			if(frame == core::draw_frame::late())
 				return foreground_->last_frame();
+			
+			if(frame == core::draw_frame::eof())
+			{	
+				stop();
+				return core::draw_frame::empty();
+			}
 			
 			++frame_number_;
 

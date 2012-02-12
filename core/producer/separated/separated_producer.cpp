@@ -36,14 +36,12 @@ struct separated_producer : public frame_producer
 	spl::shared_ptr<frame_producer>	key_producer_;
 	spl::shared_ptr<draw_frame>		fill_;
 	spl::shared_ptr<draw_frame>		key_;
-	spl::shared_ptr<draw_frame>		last_frame_;
 		
 	explicit separated_producer(const spl::shared_ptr<frame_producer>& fill, const spl::shared_ptr<frame_producer>& key) 
 		: fill_producer_(fill)
 		, key_producer_(key)
 		, fill_(core::draw_frame::late())
 		, key_(core::draw_frame::late())
-		, last_frame_(core::draw_frame::empty())
 	{
 	}
 
@@ -74,14 +72,9 @@ struct separated_producer : public frame_producer
 		fill_ = draw_frame::late();
 		key_  = draw_frame::late();
 
-		return last_frame_ = frame;
+		return frame;
 	}
-
-	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
-	{
-		return last_frame_;
-	}
-
+	
 	virtual uint32_t nb_frames() const override
 	{
 		return std::min(fill_producer_->nb_frames(), key_producer_->nb_frames());
