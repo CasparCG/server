@@ -332,10 +332,15 @@ public:
 		return consumer_ ? consumer_->print() : L"[bluefish_consumer]";
 	}
 
+	virtual std::wstring name() const override
+	{
+		return L"bluefish";
+	}
+
 	virtual boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
-		info.add(L"type", L"bluefish-consumer");
+		info.add(L"type", L"bluefish");
 		info.add(L"key-only", key_only_);
 		info.add(L"device", device_index_);
 		info.add(L"embedded-audio", embedded_audio_);

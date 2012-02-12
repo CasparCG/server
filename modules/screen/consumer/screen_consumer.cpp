@@ -488,10 +488,15 @@ public:
 		return consumer_ ? consumer_->print() : L"[screen_consumer]";
 	}
 
+	virtual std::wstring name() const override
+	{
+		return L"screen";
+	}
+
 	virtual boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
-		info.add(L"type", L"ogl-consumer");
+		info.add(L"type", L"screen");
 		info.add(L"key-only", config_.key_only);
 		info.add(L"windowed", config_.windowed);
 		info.add(L"auto-deinterlace", config_.auto_deinterlace);

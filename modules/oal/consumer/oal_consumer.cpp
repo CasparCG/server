@@ -106,10 +106,15 @@ public:
 		return L"oal[" + boost::lexical_cast<std::wstring>(channel_index_) + L"|" + format_desc_.name + L"]";
 	}
 
+	virtual std::wstring name() const override
+	{
+		return L"system-audio";
+	}
+
 	virtual boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
-		info.add(L"type", L"oal-consumer");
+		info.add(L"type", L"system-audio");
 		return info;
 	}
 	
