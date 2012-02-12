@@ -35,7 +35,7 @@ namespace core {
 	class video_channel;
 }
 
-class server sealed : public monitor::subject
+class server sealed : public monitor::observable
 					, boost::noncopyable
 {
 public:

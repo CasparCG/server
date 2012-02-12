@@ -54,13 +54,11 @@ path::path()
 path::path(const char* path)
 	: str_(path)
 {
-
 }
 
 path::path(std::string path)
 	: str_(path)
 {
-
 }
 
 path::path(const path& other)
@@ -99,34 +97,33 @@ bool path::empty() const
 	return str_.empty();
 }
 
+std::ostream& operator<<(std::ostream& o, const path& p)
+{
+	o << p.str();
+	return o;
+}
+
 // event
 
 event::event(monitor::path path)
-	: read_only_(true)
-	, path_(std::move(path))
-	, params_(std::make_shared<params_t>())
+	: path_(std::move(path))
 {
 }
 	
-event::event(monitor::path path, std::shared_ptr<params_t> params)
-	: read_only_(true)
-	, path_(std::move(path))
+event::event(monitor::path path, params_t params)
+	: path_(std::move(path))
 	, params_(std::move(params))
 {
-	if(params_ == nullptr)
-		throw std::invalid_argument("params");
 }
 
 event::event(const event& other)
-	: read_only_(true)
-	, path_(other.path_)
+	: path_(other.path_)
 	, params_(other.params_)
 {
 }
 
 event::event(event&& other)
-	: read_only_(true)
-	, path_(std::move(other.path_))
+	: path_(std::move(other.path_))
 	, params_(std::move(other.params_))
 {
 }
@@ -139,7 +136,6 @@ event& event::operator=(event other)
 
 void event::swap(event& other)
 {
-	std::swap(read_only_, other.read_only_);
 	std::swap(path_, other.path_);
 	std::swap(params_, other.params_);
 }
@@ -151,12 +147,20 @@ const path&	event::path() const
 
 const event::params_t& event::params() const	
 {
-	return *params_;
+	return params_;
 }
 
 event event::propagate(monitor::path path) const
 {
 	return event(std::move(path) % path_, params_);
+}
+
+std::ostream& operator<<(std::ostream& o, const event& e)
+{
+	o << e.path();
+	for(auto it = e.params().begin(); it != e.params().end(); ++it)
+		o << " " << *it;
+	return o;
 }
 
 }}

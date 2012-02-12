@@ -36,9 +36,9 @@ namespace caspar { namespace core {
 
 struct layer::impl
 {				
-	monitor::subject					event_subject_;
-	monitor::subject					foreground_event_subject_;
-	monitor::subject					background_event_subject_;
+	monitor::basic_subject				event_subject_;
+	monitor::basic_subject				foreground_event_subject_;
+	monitor::basic_subject				background_event_subject_;
 	spl::shared_ptr<frame_producer>		foreground_;
 	spl::shared_ptr<frame_producer>		background_;
 	int64_t								frame_number_;

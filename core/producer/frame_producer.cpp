@@ -99,7 +99,7 @@ public:
 
 class follow_producer_proxy : public producer_proxy_base
 {	
-	monitor::subject event_subject_;
+	monitor::basic_subject event_subject_;
 public:
 	follow_producer_proxy(spl::shared_ptr<frame_producer>&& producer) 
 		: producer_proxy_base(std::move(producer))

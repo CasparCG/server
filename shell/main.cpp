@@ -242,15 +242,15 @@ int main(int argc, wchar_t* argv[])
 			auto server = spl::make_shared<protocol::osc::server>(5253);
 			caspar_server.subscribe(server);
 						
-			auto console_obs = reactive::make_observer([](const monitor::event& e)
-			{
-				CASPAR_LOG(trace) << e.path().str().c_str();
-			});
+			//auto console_obs = reactive::make_observer([](const monitor::event& e)
+			//{
+			//	std::stringstream str;
+			//	str << e;
+			//	CASPAR_LOG(trace) << str.str().c_str();
+			//});
 
-			caspar_server.subscribe(console_obs);
-
-
-
+			//caspar_server.subscribe(console_obs);
+						
 			// Create a amcp parser for console commands.
 			protocol::amcp::AMCPProtocolStrategy amcp(caspar_server.get_channels());
 
