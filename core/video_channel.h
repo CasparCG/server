@@ -33,13 +33,13 @@ FORWARD3(caspar, core, ogl, class accelerator);
 FORWARD2(caspar, core, class stage);
 FORWARD2(caspar, core, class mixer);
 FORWARD2(caspar, core, class output);
-FORWARD2(caspar, core, struct image_mixer);
+FORWARD2(caspar, core, class image_mixer);
 FORWARD2(caspar, core, struct video_format_desc);
-FORWARD2(caspar, core, struct frame_factory);
+FORWARD2(caspar, core, class frame_factory);
 
 namespace caspar { namespace core {
 	
-typedef reactive::observable<spl::shared_ptr<const struct data_frame>>	frame_observable;
+typedef reactive::observable<spl::shared_ptr<const class data_frame>>	frame_observable;
 
 class video_channel sealed : public frame_observable
 						   , public monitor::observable
@@ -63,7 +63,7 @@ public:
 
 	boost::property_tree::wptree info() const;
 
-	// observable<spl::shared_ptr<const struct data_frame>>
+	// observable<spl::shared_ptr<const class data_frame>>
 	
 	virtual void subscribe(const frame_observable::observer_ptr& o) override;
 	virtual void unsubscribe(const frame_observable::observer_ptr& o) override;

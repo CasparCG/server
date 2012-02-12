@@ -32,7 +32,7 @@
 
 namespace caspar { namespace core {	
 
-struct transition_producer : public frame_producer
+class transition_producer : public frame_producer
 {	
 	monitor::basic_subject				event_subject_;
 	const field_mode					mode_;
@@ -45,6 +45,7 @@ struct transition_producer : public frame_producer
 	spl::shared_ptr<frame_producer>		dest_producer_;
 	spl::shared_ptr<frame_producer>		source_producer_;
 		
+public:
 	explicit transition_producer(const field_mode& mode, const spl::shared_ptr<frame_producer>& dest, const transition_info& info) 
 		: mode_(mode)
 		, current_frame_(0)

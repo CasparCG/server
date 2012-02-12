@@ -10,10 +10,10 @@
 
 FORWARD1(boost, template<typename> class shared_future);
 FORWARD1(boost, template<typename> class iterator_range);
-FORWARD2(caspar, core, struct write_frame);
+FORWARD2(caspar, core, class write_frame);
 FORWARD2(caspar, core, struct pixel_format_desc);
 FORWARD2(caspar, core, struct video_format_desc);
-FORWARD2(caspar, core, struct data_Frame);
+FORWARD2(caspar, core, class data_frame);
 FORWARD2(caspar, core, struct frame_transform);
 
 namespace caspar { namespace accelerator { namespace cpu {

@@ -30,7 +30,7 @@
 namespace caspar { 
 
 namespace core {
-	struct frame_consumer;
+	class frame_consumer;
 }	
 
 namespace oal {

@@ -53,7 +53,7 @@
 
 namespace caspar { namespace core {
 
-struct mixed_frame : public data_frame
+class mixed_frame : public data_frame
 {
 	mutable boost::shared_future<boost::iterator_range<const uint8_t*>>	image_data_;
 	const audio_buffer													audio_data_;
@@ -140,7 +140,7 @@ public:
 	
 	spl::shared_ptr<const data_frame> operator()(std::map<int, spl::shared_ptr<draw_frame>> frames, const video_format_desc& format_desc)
 	{		
-		return executor_.invoke([=]() mutable -> spl::shared_ptr<const struct data_frame>
+		return executor_.invoke([=]() mutable -> spl::shared_ptr<const class data_frame>
 		{		
 			try
 			{	

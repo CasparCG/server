@@ -40,11 +40,11 @@ public:
 	
 	// output
 
-	void operator()(spl::shared_ptr<const struct data_frame> frame, const struct video_format_desc& format_desc);
+	void operator()(spl::shared_ptr<const class data_frame> frame, const struct video_format_desc& format_desc);
 	
-	void add(const spl::shared_ptr<struct frame_consumer>& consumer);
-	void add(int index, const spl::shared_ptr<struct frame_consumer>& consumer);
-	void remove(const spl::shared_ptr<struct frame_consumer>& consumer);
+	void add(const spl::shared_ptr<class frame_consumer>& consumer);
+	void add(int index, const spl::shared_ptr<class frame_consumer>& consumer);
+	void remove(const spl::shared_ptr<class frame_consumer>& consumer);
 	void remove(int index);
 	
 	boost::unique_future<boost::property_tree::wptree> info() const;

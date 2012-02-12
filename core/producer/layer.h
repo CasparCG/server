@@ -46,13 +46,13 @@ public:
 
 	void swap(layer& other); // nothrow 
 		
-	void load(spl::shared_ptr<struct frame_producer> producer, const boost::optional<int32_t>& auto_play_delta = nullptr); // nothrow
+	void load(spl::shared_ptr<class frame_producer> producer, const boost::optional<int32_t>& auto_play_delta = nullptr); // nothrow
 	void play(); // nothrow
 	void pause(); // nothrow
 	void stop(); // nothrow
 		
-	spl::shared_ptr<struct frame_producer> foreground() const; // nothrow
-	spl::shared_ptr<struct frame_producer> background() const; // nothrow
+	spl::shared_ptr<class frame_producer> foreground() const; // nothrow
+	spl::shared_ptr<class frame_producer> background() const; // nothrow
 
 	spl::shared_ptr<class draw_frame> receive(frame_producer::flags flags, const struct video_format_desc& format_desc); // nothrow
 

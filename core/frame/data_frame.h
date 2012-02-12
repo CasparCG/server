@@ -15,8 +15,9 @@ namespace caspar { namespace core {
 	
 typedef std::vector<int32_t, tbb::cache_aligned_allocator<int32_t>> audio_buffer;
 
-struct data_frame
+class data_frame
 {
+public:
 	data_frame(){}
 	virtual ~data_frame(){}
 
