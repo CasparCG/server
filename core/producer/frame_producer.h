@@ -59,18 +59,15 @@ public:
 
 	virtual ~frame_producer(){}	
 
-	virtual std::wstring print() const = 0; // nothrow
-	virtual std::wstring name() const = 0;
-	virtual boost::property_tree::wptree info() const = 0;
+	virtual std::wstring						print() const = 0; // nothrow
+	virtual std::wstring						name() const = 0;
+	virtual boost::property_tree::wptree		info() const = 0;
+	virtual uint32_t							nb_frames() const {return std::numeric_limits<uint32_t>::max();}
+	virtual spl::shared_ptr<class draw_frame>	last_frame() const = 0;
 
-	virtual boost::unique_future<std::wstring> call(const std::wstring&);
-
-	virtual void leading_producer(const spl::shared_ptr<frame_producer>&) {}  // nothrow
-		
-	virtual uint32_t nb_frames() const {return std::numeric_limits<uint32_t>::max();}
-	
-	virtual spl::shared_ptr<class draw_frame> receive(int flags) = 0;
-	virtual spl::shared_ptr<class draw_frame> last_frame() const = 0;
+	virtual spl::shared_ptr<class draw_frame>	receive(int flags) = 0;
+	virtual boost::unique_future<std::wstring>	call(const std::wstring&);
+	virtual void								leading_producer(const spl::shared_ptr<frame_producer>&) {}  // nothrow
 	
 	static const spl::shared_ptr<frame_producer>& empty(); // nothrow
 
