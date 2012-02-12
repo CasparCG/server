@@ -53,7 +53,7 @@ namespace caspar { namespace ffmpeg {
 	
 struct video_decoder::impl : boost::noncopyable
 {
-	monitor::subject						event_subject_;
+	monitor::basic_subject					event_subject_;
 	int										index_;
 	const spl::shared_ptr<AVCodecContext>	codec_context_;
 
