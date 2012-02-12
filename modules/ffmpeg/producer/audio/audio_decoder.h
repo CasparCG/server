@@ -22,6 +22,7 @@
 #pragma once
 
 #include <core/mixer/audio/audio_mixer.h>
+#include <core/monitor/monitor.h>
 
 #include <common/spl/memory.h>
 
@@ -40,7 +41,8 @@ struct video_format_desc;
 
 namespace ffmpeg {
 	
-class audio_decoder : boost::noncopyable
+class audio_decoder : public monitor::observable
+					, boost::noncopyable
 {
 public:
 	explicit audio_decoder(const spl::shared_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc);
@@ -54,6 +56,12 @@ public:
 	uint32_t file_frame_number() const;
 
 	std::wstring print() const;
+	
+	// monitor::observable
+	
+	virtual void subscribe(const monitor::observable::observer_ptr& o) override;
+	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override;
+
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

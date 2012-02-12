@@ -99,7 +99,7 @@ public:
 
 class follow_producer_proxy : public producer_proxy_base
 {	
-	spl::shared_ptr<monitor::subject> event_subject_;
+	monitor::subject event_subject_;
 public:
 	follow_producer_proxy(spl::shared_ptr<frame_producer>&& producer) 
 		: producer_proxy_base(std::move(producer))
@@ -120,7 +120,7 @@ public:
 
 				producer_->unsubscribe(event_subject_);
 				producer_ = std::move(following);
-				event_subject_->subscribe(event_subject_);
+				producer_->subscribe(event_subject_);
 			}
 
 			return receive(hints);
@@ -135,12 +135,12 @@ public:
 
 	virtual void subscribe(const monitor::observable::observer_ptr& o) override															
 	{
-		return event_subject_->subscribe(o);
+		event_subject_.subscribe(o);
 	}
 
 	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override		
 	{
-		return event_subject_->unsubscribe(o);
+		event_subject_.unsubscribe(o);
 	}
 };
 
