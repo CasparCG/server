@@ -20,6 +20,29 @@
 #define _SCL_SECURE_NO_WARNINGS
 #endif
 
+namespace boost {
+namespace detail { namespace variant {
+
+template <>
+struct has_nothrow_move<std::string>
+: mpl::true_
+{
+};
+  
+template <>
+struct has_nothrow_move<std::vector<int8_t>>
+: mpl::true_
+{
+};
+
+template <>
+struct has_nothrow_move<boost::chrono::duration<double, boost::ratio<1, 1>>>
+: mpl::true_
+{
+};
+
+}}}
+
 namespace caspar { namespace monitor {
 	
 // path
@@ -67,6 +90,8 @@ path operator%(path path, T&& value)
 	return std::move(path %= std::forward<T>(value));
 }
 
+std::ostream& operator<<(std::ostream& o, const path& p);
+
 // param
 
 typedef boost::chrono::duration<double, boost::ratio<1, 1>> duration;
@@ -83,7 +108,7 @@ public:
 	typedef std::vector<param, tbb::cache_aligned_allocator<param>> params_t;
 	
 	event(path path);	
-	event(path path, std::shared_ptr<params_t> params);	
+	event(path path, params_t params);	
 				
 	event(const event& other);
 	event(event&& other);
@@ -94,12 +119,7 @@ public:
 	template<typename T>
 	event& operator%(T&& value)
 	{
-		if(read_only_)
-		{
-			read_only_ = false;
-			params_ = spl::make_shared<params_t>(*params_);
-		}
-		params_->push_back(std::forward<T>(value));
+		params_.push_back(std::forward<T>(value));
 		return *this;
 	}
 	
@@ -107,18 +127,22 @@ public:
 	const path&		path() const;
 	const params_t&	params() const;
 private:
-	bool						read_only_;		
-	monitor::path				path_;
-	std::shared_ptr<params_t>	params_;
+	monitor::path	path_;
+	params_t		params_;
 };
 
-typedef reactive::observable<monitor::event> observable;
-typedef reactive::observer<monitor::event> observer;
+std::ostream& operator<<(std::ostream& o, const event& e);
+
+// reactive
+
+typedef reactive::observable<monitor::event>	observable;
+typedef reactive::observer<monitor::event>		observer;
+typedef reactive::subject<monitor::event>		subject;
 	
-class subject : public reactive::subject<monitor::event>
+class basic_subject sealed : public reactive::subject<monitor::event>
 {	    
-	subject(const subject&);
-	subject& operator=(const subject&);
+	basic_subject(const basic_subject&);
+	basic_subject& operator=(const basic_subject&);
 	
 	class impl : public observer
 	{
@@ -166,22 +190,18 @@ class subject : public reactive::subject<monitor::event>
 	};
 
 public:		
-	subject(monitor::path path = monitor::path())
+	basic_subject(monitor::path path = monitor::path())
 		: impl_(std::make_shared<impl>(std::move(path)))
 
 	{
 	}
 		
-	subject(subject&& other)
+	basic_subject(basic_subject&& other)
 		: impl_(std::move(other.impl_))
 	{
 	}
-
-	virtual ~subject()
-	{
-	}
-
-	subject& operator=(subject&& other)
+	
+	basic_subject& operator=(basic_subject&& other)
 	{
 		impl_ = std::move(other.impl_);
 	}
