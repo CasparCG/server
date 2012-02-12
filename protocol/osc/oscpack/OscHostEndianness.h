@@ -30,7 +30,7 @@
 #ifndef OSC_HOSTENDIANNESS_H
 #define OSC_HOSTENDIANNESS_H
 
-#define OSC_HOST_BIG_ENDIAN 1
+//#define OSC_HOST_BIG_ENDIAN 1
 
 ///*
 //    Make sure either OSC_HOST_LITTLE_ENDIAN or OSC_HOST_BIG_ENDIAN is defined
