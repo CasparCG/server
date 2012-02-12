@@ -68,7 +68,7 @@ struct frame_producer : public monitor::observable
 		
 	virtual uint32_t nb_frames() const {return std::numeric_limits<uint32_t>::max();}
 	
-	virtual spl::shared_ptr<class draw_frame> receive(int fBlags) = 0;
+	virtual spl::shared_ptr<class draw_frame> receive(int flags) = 0;
 	virtual spl::shared_ptr<class draw_frame> last_frame() const;
 	
 	static const spl::shared_ptr<frame_producer>& empty(); // nothrow
