@@ -118,19 +118,34 @@ class subject : public reactive::subject<monitor::event>
 {	    
 	subject(const subject&);
 	subject& operator=(const subject&);
+
+	typedef reactive::basic_subject_impl<monitor::event> impl_base;
 	
-	typedef reactive::basic_subject<monitor::event> impl;
+	class impl : public impl_base
+	{
+	public:
+		impl(monitor::path path = monitor::path())
+			: path_(std::move(path))
+		{
+		}
+							
+		virtual void on_next(const monitor::event& e) override
+		{				
+			impl_base::on_next(path_.empty() ? e : e.propagate(path_));
+		}
+	private:
+		monitor::path			path_;
+	};
+
 public:		
 	subject(monitor::path path = monitor::path())
-		: path_(std::move(path))
-		, impl_(std::make_shared<impl>())
+		: impl_(std::make_shared<impl>(std::move(path)))
 
 	{
 	}
 		
 	subject(subject&& other)
-		: path_(std::move(other.path_))
-		, impl_(std::move(other.impl_))
+		: impl_(std::move(other.impl_))
 	{
 	}
 
@@ -145,8 +160,7 @@ public:
 
 	void swap(subject& other)
 	{
-		std::swap(path_, other.path_);
-		std::swap(impl_, other.impl_);
+		impl_.swap(other.impl_);
 	}
 	
 	virtual void subscribe(const observer_ptr& o) override
@@ -161,7 +175,7 @@ public:
 				
 	virtual void on_next(const monitor::event& e) override
 	{				
-		impl_->on_next(path_.empty() ? e : e.propagate(path_));
+		impl_->on_next(e);
 	}
 
 	operator std::weak_ptr<observer>()
@@ -169,7 +183,6 @@ public:
 		return impl_;
 	}
 private:
-	monitor::path			path_;
 	std::shared_ptr<impl>	impl_;
 };
 
