@@ -51,25 +51,25 @@ boost::unique_future<std::wstring> frame_producer::call(const std::wstring&)
 
 const spl::shared_ptr<frame_producer>& frame_producer::empty() // nothrow
 {
-
-struct empty_frame_producer : public frame_producer
-{
-	virtual spl::shared_ptr<draw_frame> receive(int){return draw_frame::empty();}
-	virtual spl::shared_ptr<draw_frame> last_frame() const{return draw_frame::empty();}
-	virtual void set_frame_factory(const spl::shared_ptr<frame_factory>&){}
-	virtual uint32_t nb_frames() const {return 0;}
-	virtual std::wstring print() const { return L"empty";}
-	virtual void subscribe(const monitor::observable::observer_ptr& o){}
-	virtual void unsubscribe(const monitor::observable::observer_ptr& o){}	
-	virtual std::wstring name() const {return L"empty";}
-	
-	virtual boost::property_tree::wptree info() const override
+	class empty_frame_producer : public frame_producer
 	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"empty-producer");
-		return info;
-	}
-};
+	public:
+		virtual spl::shared_ptr<draw_frame> receive(int){return draw_frame::empty();}
+		virtual spl::shared_ptr<draw_frame> last_frame() const{return draw_frame::empty();}
+		virtual void set_frame_factory(const spl::shared_ptr<frame_factory>&){}
+		virtual uint32_t nb_frames() const {return 0;}
+		virtual std::wstring print() const { return L"empty";}
+		virtual void subscribe(const monitor::observable::observer_ptr& o){}
+		virtual void unsubscribe(const monitor::observable::observer_ptr& o){}	
+		virtual std::wstring name() const {return L"empty";}
+	
+		virtual boost::property_tree::wptree info() const override
+		{
+			boost::property_tree::wptree info;
+			info.add(L"type", L"empty-producer");
+			return info;
+		}
+	};
 
 	static spl::shared_ptr<frame_producer> producer = spl::make_shared<empty_frame_producer>();
 	return producer;

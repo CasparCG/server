@@ -91,8 +91,9 @@ public:
 };
 
 template<typename I, typename O = I>
-struct subject : public observer<I>, public observable<O>
+class subject : public observer<I>, public observable<O>
 {
+public:
 	typedef typename observable<O>::observer		observer;
 	typedef typename observable<O>::observer_ptr	observer_ptr;
 

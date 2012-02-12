@@ -33,7 +33,7 @@
 #include <stdint.h>
 #include <vector>
 
-FORWARD2(caspar, core, struct frame_visitor);
+FORWARD2(caspar, core, class frame_visitor);
 FORWARD2(caspar, core, struct pixel_format_desc);
 
 namespace caspar { namespace accelerator { namespace cpu {

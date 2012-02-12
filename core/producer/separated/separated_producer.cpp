@@ -30,7 +30,7 @@
 
 namespace caspar { namespace core {	
 
-struct separated_producer : public frame_producer
+class separated_producer : public frame_producer
 {		
 	spl::shared_ptr<frame_producer>	fill_producer_;
 	spl::shared_ptr<frame_producer>	key_producer_;
@@ -38,6 +38,7 @@ struct separated_producer : public frame_producer
 	spl::shared_ptr<draw_frame>		key_;
 	spl::shared_ptr<draw_frame>		last_frame_;
 			
+public:
 	explicit separated_producer(const spl::shared_ptr<frame_producer>& fill, const spl::shared_ptr<frame_producer>& key) 
 		: fill_producer_(fill)
 		, key_producer_(key)

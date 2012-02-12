@@ -42,7 +42,7 @@ public:
 	audio_mixer();
 
 	virtual void push(const struct frame_transform& transform);
-	virtual void visit(const struct data_frame& frame);
+	virtual void visit(const class data_frame& frame);
 	virtual void pop();
 
 	audio_buffer operator()(const struct video_format_desc& format_desc);

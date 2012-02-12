@@ -70,6 +70,6 @@ struct transition_info
 	tweener					tweener;
 };
 
-spl::shared_ptr<struct frame_producer> create_transition_producer(const field_mode& mode, const spl::shared_ptr<struct frame_producer>& destination, const transition_info& info);
+spl::shared_ptr<class frame_producer> create_transition_producer(const field_mode& mode, const spl::shared_ptr<class frame_producer>& destination, const transition_info& info);
 
 }}

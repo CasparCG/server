@@ -26,7 +26,7 @@
 
 namespace caspar { namespace core {
 	
-struct write_frame : public draw_frame, public data_frame
+class write_frame : public draw_frame, public data_frame
 {
 };
 

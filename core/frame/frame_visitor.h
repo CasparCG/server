@@ -25,11 +25,12 @@
 
 namespace caspar { namespace core {
 	
-struct frame_visitor : boost::noncopyable
+class frame_visitor : boost::noncopyable
 {
+public:
 	virtual ~frame_visitor(){}
 	virtual void push(const struct frame_transform& transform) = 0;
-	virtual void visit(const struct data_frame& frame) = 0;
+	virtual void visit(const class data_frame& frame) = 0;
 	virtual void pop() = 0;
 };
 
