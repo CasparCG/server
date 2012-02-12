@@ -39,6 +39,8 @@ struct transition_producer : public frame_producer
 	int									current_frame_;
 	
 	const transition_info				info_;
+
+	spl::shared_ptr<draw_frame>			last_frame_;
 	
 	spl::shared_ptr<frame_producer>		dest_producer_;
 	spl::shared_ptr<frame_producer>		source_producer_;
@@ -47,6 +49,7 @@ struct transition_producer : public frame_producer
 		: mode_(mode)
 		, current_frame_(0)
 		, info_(info)
+		, last_frame_(draw_frame::empty())
 		, dest_producer_(dest)
 		, source_producer_(frame_producer::empty())
 	{
@@ -99,6 +102,11 @@ struct transition_producer : public frame_producer
 		});		
 
 		return compose(dest, source);
+	}
+
+	virtual spl::shared_ptr<draw_frame> last_frame() const override
+	{
+		return dest_producer_->last_frame();
 	}
 	
 	virtual uint32_t nb_frames() const override

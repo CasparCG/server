@@ -61,11 +61,14 @@ struct image_scroll_producer : public core::frame_producer
 
 	std::array<double, 2>							start_offset_;
 
+	spl::shared_ptr<core::draw_frame>				last_frame_;
+
 	explicit image_scroll_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int speed) 
 		: filename_(filename)
 		, delta_(0)
 		, format_desc_(frame_factory->video_format_desc())
 		, speed_(speed)
+		, last_frame_(core::draw_frame::empty())
 	{
 		start_offset_.assign(0.0);
 
@@ -185,7 +188,12 @@ struct image_scroll_producer : public core::frame_producer
 			}
 		}
 
-		return spl::make_shared<core::draw_frame>(frames_);
+		return last_frame_ = spl::make_shared<core::draw_frame>(frames_);
+	}
+
+	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
+	{
+		return core::draw_frame::still(last_frame_);
 	}
 			
 	virtual std::wstring print() const override

@@ -56,10 +56,13 @@ class reroute_producer : public reactive::observer<spl::shared_ptr<const core::d
 	std::queue<spl::shared_ptr<core::draw_frame>>								frame_buffer_;
 	uint64_t																	frame_number_;
 
+	spl::shared_ptr<core::draw_frame>											last_frame_;
+
 public:
 	explicit reroute_producer(const spl::shared_ptr<core::frame_factory>& frame_factory) 
 		: frame_factory_(frame_factory)
 		, frame_number_(0)
+		, last_frame_(core::draw_frame::empty())
 	{
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
@@ -85,7 +88,7 @@ public:
 		{
 			auto frame = frame_buffer_.front();
 			frame_buffer_.pop();
-			return frame;
+			return last_frame_ = frame;
 		}
 		
 		std::shared_ptr<const core::data_frame> read_frame;
@@ -115,6 +118,11 @@ public:
 
 		return receive(0);
 	}	
+
+	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
+	{
+		return core::draw_frame::still(last_frame_);
+	}
 	
 	virtual std::wstring print() const override
 	{

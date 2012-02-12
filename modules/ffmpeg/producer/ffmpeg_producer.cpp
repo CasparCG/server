@@ -83,6 +83,8 @@ struct ffmpeg_producer : public core::frame_producer
 	const uint32_t												length_;
 		
 	int64_t														frame_number_;
+
+	spl::shared_ptr<core::draw_frame>							last_frame_;
 	
 public:
 	explicit ffmpeg_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, uint32_t start, uint32_t length) 
@@ -94,6 +96,7 @@ public:
 		, start_(start)
 		, length_(length)
 		, frame_number_(0)
+		, last_frame_(core::draw_frame::empty())
 	{
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
@@ -166,8 +169,16 @@ public:
 		++frame_number_;
 
 		graph_->set_text(print());
+		
+		if(frame != core::draw_frame::late())
+			last_frame_ = spl::make_shared_ptr(frame);
 
 		return spl::make_shared_ptr(frame);
+	}
+
+	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
+	{
+		return core::draw_frame::still(last_frame_);
 	}
 	
 	virtual uint32_t nb_frames() const override
