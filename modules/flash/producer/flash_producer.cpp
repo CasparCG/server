@@ -335,6 +335,8 @@ struct flash_producer : public core::frame_producer
 				
 	std::unique_ptr<flash_renderer>										renderer_;
 
+	spl::shared_ptr<core::draw_frame>									last_frame_;
+
 	executor															executor_;	
 public:
 	flash_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
@@ -343,6 +345,7 @@ public:
 		, width_(width > 0 ? width : frame_factory->video_format_desc().width)
 		, height_(height > 0 ? height : frame_factory->video_format_desc().height)
 		, buffer_size_(env::properties().get(L"configuration.flash.buffer-depth", frame_factory_->video_format_desc().fps > 30.0 ? 4 : 2))
+		, last_frame_(core::draw_frame::empty())
 		, executor_(L"flash_producer")
 	{	
 		sync_ = true;
@@ -373,10 +376,18 @@ public:
 
 		if(output_buffer_.try_pop(frame))			
 			executor_.begin_invoke(std::bind(&flash_producer::next, this));		
-		else
-			graph_->set_tag("late-frame");
-						
+		else		
+			graph_->set_tag("late-frame");		
+
+		if(frame != core::draw_frame::late())
+			last_frame_ = frame;
+		
 		return frame;
+	}
+
+	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
+	{
+		return core::draw_frame::still(last_frame_);
 	}
 	
 	virtual boost::unique_future<std::wstring> call(const std::wstring& param) override
