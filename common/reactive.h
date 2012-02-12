@@ -317,19 +317,3 @@ basic_subject<T>& operator<<(basic_subject<T>& s, const T& val)
 }
 
 }}
-
-namespace std {
-	
-template <typename T, typename F1, typename F2>
-void swap(caspar::reactive::observer_function<T, F1>& lhs, caspar::reactive::observer_function<T, F2>& rhs) 
-{
-    lhs.swap(rhs);
-}
-
-template <typename I, typename O>
-void swap(caspar::reactive::basic_subject<I, O>& lhs, caspar::reactive::basic_subject<I, O>& rhs) 
-{
-    lhs.swap(rhs);
-}
-
-} // std

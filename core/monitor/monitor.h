@@ -71,7 +71,7 @@ path operator%(path path, T&& value)
 
 typedef boost::chrono::duration<double, boost::ratio<1, 1>> duration;
 
-typedef boost::variant<bool, int32_t, int64_t, float, double, std::string, std::vector<int8_t>,  duration> param;
+typedef boost::variant<bool, int32_t, int64_t, float, double, std::string, std::vector<int8_t>, duration> param;
 
 std::ostream& operator<<(std::ostream& o, const param& p);
 
@@ -137,6 +137,17 @@ public:
 	virtual ~subject()
 	{
 	}
+
+	subject& operator=(subject&& other)
+	{
+		other.swap(*this);
+	}
+
+	void swap(subject& other)
+	{
+		std::swap(path_, other.path_);
+		std::swap(impl_, other.impl_);
+	}
 	
 	virtual void subscribe(const observer_ptr& o) override
 	{				
@@ -152,6 +163,11 @@ public:
 	{				
 		impl_->on_next(path_.empty() ? e : e.propagate(path_));
 	}
+
+	operator std::weak_ptr<observer>()
+	{
+		return impl_;
+	}
 private:
 	monitor::path			path_;
 	std::shared_ptr<impl>	impl_;
@@ -164,17 +180,3 @@ inline subject& operator<<(subject& s, const event& e)
 }
 
 }}
-
-namespace std {
-
-inline void swap(caspar::monitor::path& lhs, caspar::monitor::path& rhs) 
-{
-    lhs.swap(rhs);
-}
-   
-inline void swap(caspar::monitor::event& lhs, caspar::monitor::event& rhs) 
-{
-    lhs.swap(rhs);
-}
-
-}

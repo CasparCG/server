@@ -34,7 +34,7 @@ namespace caspar { namespace core {
 
 struct transition_producer : public frame_producer
 {	
-	spl::shared_ptr<monitor::subject>	event_subject_;
+	monitor::subject					event_subject_;
 	const field_mode					mode_;
 	int									current_frame_;
 	
@@ -73,7 +73,7 @@ struct transition_producer : public frame_producer
 		if(++current_frame_ >= info_.duration)
 			return draw_frame::eof();
 		
-		*event_subject_ << monitor::event("transition/frame") % current_frame_ % info_.duration
+		event_subject_	<< monitor::event("transition/frame") % current_frame_ % info_.duration
 						<< monitor::event("transition/type") % [&]() -> std::string
 																{
 																	switch(info_.type.value())
@@ -195,12 +195,12 @@ struct transition_producer : public frame_producer
 
 	virtual void subscribe(const monitor::observable::observer_ptr& o) override															
 	{
-		return event_subject_->subscribe(o);
+		event_subject_.subscribe(o);
 	}
 
 	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override		
 	{
-		return event_subject_->unsubscribe(o);
+		event_subject_.unsubscribe(o);
 	}
 };
 

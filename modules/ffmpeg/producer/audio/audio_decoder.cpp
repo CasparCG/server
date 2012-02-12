@@ -53,15 +53,16 @@ namespace caspar { namespace ffmpeg {
 	
 struct audio_decoder::impl : boost::noncopyable
 {	
+	monitor::subject											event_subject_;
 	int															index_;
-	const spl::shared_ptr<AVCodecContext>								codec_context_;		
+	const spl::shared_ptr<AVCodecContext>						codec_context_;		
 	const core::video_format_desc								format_desc_;
 
 	audio_resampler												resampler_;
 
 	std::vector<int8_t,  tbb::cache_aligned_allocator<int8_t>>	buffer1_;
 
-	std::queue<spl::shared_ptr<AVPacket>>								packets_;
+	std::queue<spl::shared_ptr<AVPacket>>						packets_;
 
 	const int64_t												nb_frames_;
 	tbb::atomic<uint32_t>										file_frame_number_;
@@ -127,6 +128,11 @@ public:
 		
 		const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S32);
 		const auto samples = reinterpret_cast<int32_t*>(buffer1_.data());
+		
+		event_subject_  << monitor::event("file/audio/sample-rate")	% codec_context_->sample_rate
+						<< monitor::event("file/audio/channels")	% codec_context_->channels
+						<< monitor::event("file/audio/format")		% u8(av_get_sample_fmt_name(codec_context_->sample_fmt))
+						<< monitor::event("file/audio/codec")		% u8(codec_context_->codec->long_name);
 
 		++file_frame_number_;
 
@@ -156,5 +162,7 @@ std::shared_ptr<core::audio_buffer> audio_decoder::poll(){return impl_->poll();}
 uint32_t audio_decoder::nb_frames() const{return impl_->nb_frames();}
 uint32_t audio_decoder::file_frame_number() const{return impl_->file_frame_number_;}
 std::wstring audio_decoder::print() const{return impl_->print();}
+void audio_decoder::subscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_.subscribe(o);}
+void audio_decoder::unsubscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_.unsubscribe(o);}
 
 }}

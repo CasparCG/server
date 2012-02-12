@@ -65,7 +65,7 @@ namespace caspar { namespace ffmpeg {
 				
 struct ffmpeg_producer : public core::frame_producer
 {
-	spl::shared_ptr<monitor::subject>							event_subject_;
+	monitor::subject											event_subject_;
 	const std::wstring											filename_;
 	
 	const spl::shared_ptr<diagnostics::graph>					graph_;
@@ -105,6 +105,7 @@ public:
 		try
 		{
 			video_decoder_.reset(new video_decoder(input_.context()));
+			video_decoder_->subscribe(event_subject_);
 			CASPAR_LOG(info) << print() << L" " << video_decoder_->print();
 		}
 		catch(averror_stream_not_found&)
@@ -120,6 +121,7 @@ public:
 		try
 		{
 			audio_decoder_.reset(new audio_decoder(input_.context(), frame_factory->video_format_desc()));
+			audio_decoder_->subscribe(event_subject_);
 			CASPAR_LOG(info) << print() << L" " << audio_decoder_->print();
 		}
 		catch(averror_stream_not_found&)
@@ -148,15 +150,12 @@ public:
 							
 		graph_->set_value("frame-time", frame_timer.elapsed()*format_desc_.fps*0.5);
 		
-		*event_subject_ << monitor::event("profiler/time")		% frame_timer.elapsed() % (1.0/format_desc_.fps)					
+		event_subject_	<< monitor::event("profiler/time")		% frame_timer.elapsed() % (1.0/format_desc_.fps)					
 						<< monitor::event("file/time")			% monitor::duration(file_frame_number()/fps_) 
 																% monitor::duration(file_nb_frames()/fps_)
 						<< monitor::event("file/frame")			% static_cast<int32_t>(file_frame_number())
 																% static_cast<int32_t>(file_nb_frames())
 						<< monitor::event("file/fps")			% fps_
-						<< monitor::event("file/video/mode")	% u8(print_mode())
-						<< monitor::event("file/video/codec")	% (video_decoder_ ? u8(video_decoder_->print()) : "n/a")
-						<< monitor::event("file/audio/codec")	% (audio_decoder_ ? u8(audio_decoder_->print()) : "n/a")
 						<< monitor::event("filename")			% u8(filename_)
 						<< monitor::event("loop")				% input_.loop();
 				
@@ -244,12 +243,12 @@ public:
 	
 	virtual void subscribe(const monitor::observable::observer_ptr& o) override
 	{
-		event_subject_->subscribe(o);
+		event_subject_.subscribe(o);
 	}
 
 	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override
 	{
-		event_subject_->unsubscribe(o);
+		event_subject_.unsubscribe(o);
 	}
 
 	// ffmpeg_producer
