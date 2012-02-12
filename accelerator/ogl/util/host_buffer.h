@@ -50,8 +50,8 @@ public:
 	void map();
 	void unmap();
 
-	void bind();
-	void unbind();
+	void bind() const;
+	void unbind() const;
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;
