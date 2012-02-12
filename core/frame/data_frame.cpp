@@ -8,8 +8,9 @@ namespace caspar { namespace core {
 	
 spl::shared_ptr<data_frame> data_frame::empty()
 {
-	struct empty_frame : public data_frame
+	class empty_frame : public data_frame
 	{
+	public:
 		empty_frame(){}
 		virtual const struct pixel_format_desc& get_pixel_format_desc() const override
 		{

@@ -76,7 +76,7 @@ public:
 		}); 
 	}
 	
-	virtual bool send(const spl::shared_ptr<const struct data_frame>& frame) override					{return (*consumer_)->send(frame);}
+	virtual bool send(const spl::shared_ptr<const class data_frame>& frame) override					{return (*consumer_)->send(frame);}
 	virtual void initialize(const struct video_format_desc& format_desc, int channel_index)	override	{return (*consumer_)->initialize(format_desc, channel_index);}
 	virtual std::wstring print() const override															{return (*consumer_)->print();}
 	virtual boost::property_tree::wptree info() const override 											{return (*consumer_)->info();}
@@ -103,7 +103,7 @@ public:
 		CASPAR_LOG(info) << str << L" Uninitialized.";
 	}
 	
-	virtual bool send(const spl::shared_ptr<const struct data_frame>& frame) override					{return consumer_->send(frame);}
+	virtual bool send(const spl::shared_ptr<const class data_frame>& frame) override					{return consumer_->send(frame);}
 	virtual void initialize(const struct video_format_desc& format_desc, int channel_index)	override	{return consumer_->initialize(format_desc, channel_index);}
 	virtual std::wstring print() const override															{return consumer_->print();}
 	virtual boost::property_tree::wptree info() const override 											{return consumer_->info();}
@@ -123,7 +123,7 @@ public:
 	{
 	}
 	
-	virtual bool send(const spl::shared_ptr<const struct data_frame>& frame)					
+	virtual bool send(const spl::shared_ptr<const class data_frame>& frame)					
 	{
 		try
 		{
@@ -238,8 +238,9 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 
 const spl::shared_ptr<frame_consumer>& frame_consumer::empty()
 {
-	struct empty_frame_consumer : public frame_consumer
+	class empty_frame_consumer : public frame_consumer
 	{
+	public:
 		virtual bool send(const spl::shared_ptr<const data_frame>&) override {return false;}
 		virtual void initialize(const video_format_desc&, int) override{}
 		virtual std::wstring print() const override {return L"empty";}

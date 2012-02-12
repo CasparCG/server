@@ -40,15 +40,15 @@ namespace caspar { namespace core {
 class mixer sealed : boost::noncopyable
 {
 public:	
-	explicit mixer(spl::shared_ptr<diagnostics::graph> graph, spl::unique_ptr<struct image_mixer> image_mixer);
+	explicit mixer(spl::shared_ptr<diagnostics::graph> graph, spl::unique_ptr<class image_mixer> image_mixer);
 					
-	spl::shared_ptr<const struct data_frame> operator()(std::map<int, spl::shared_ptr<class draw_frame>> frames, const struct video_format_desc& format_desc);
+	spl::shared_ptr<const class data_frame> operator()(std::map<int, spl::shared_ptr<class draw_frame>> frames, const struct video_format_desc& format_desc);
 	
 	void set_blend_mode(int index, blend_mode value);
 
 	boost::unique_future<boost::property_tree::wptree> info() const;
 
-	spl::shared_ptr<struct write_frame> create_frame(const void* tag, const struct pixel_format_desc& desc);
+	spl::shared_ptr<class write_frame> create_frame(const void* tag, const struct pixel_format_desc& desc);
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

@@ -32,12 +32,13 @@
 
 namespace caspar { namespace core {
 	
-struct frame_consumer : boost::noncopyable
+class frame_consumer : boost::noncopyable
 {
+public:
 	frame_consumer(){}
 	virtual ~frame_consumer() {}
 	
-	virtual bool send(const spl::shared_ptr<const struct data_frame>& frame) = 0;
+	virtual bool send(const spl::shared_ptr<const class data_frame>& frame) = 0;
 	virtual void initialize(const struct video_format_desc& format_desc, int channel_index) = 0;
 	virtual std::wstring print() const = 0;
 	virtual boost::property_tree::wptree info() const = 0;

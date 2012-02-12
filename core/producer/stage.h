@@ -58,7 +58,7 @@ public:
 	void clear_transforms(int index);
 	void clear_transforms();
 				
-	void load(int index, const spl::shared_ptr<struct frame_producer>& producer, const boost::optional<int32_t>& auto_play_delta = nullptr);
+	void load(int index, const spl::shared_ptr<class frame_producer>& producer, const boost::optional<int32_t>& auto_play_delta = nullptr);
 	void pause(int index);
 	void play(int index);
 	void stop(int index);
@@ -68,8 +68,8 @@ public:
 	void swap_layer(int index, int other_index);
 	void swap_layer(int index, int other_index, stage& other);
 	
-	boost::unique_future<spl::shared_ptr<struct frame_producer>>	foreground(int index);
-	boost::unique_future<spl::shared_ptr<struct frame_producer>>	background(int index);
+	boost::unique_future<spl::shared_ptr<class frame_producer>>	foreground(int index);
+	boost::unique_future<spl::shared_ptr<class frame_producer>>	background(int index);
 
 	boost::unique_future<boost::property_tree::wptree> info() const;
 	boost::unique_future<boost::property_tree::wptree> info(int index) const;

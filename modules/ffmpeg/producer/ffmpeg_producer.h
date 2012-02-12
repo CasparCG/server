@@ -30,8 +30,8 @@ namespace caspar {
 
 namespace core {
 
-struct frame_producer;
-struct frame_factory;
+class frame_producer;
+class frame_factory;
 
 }
 	

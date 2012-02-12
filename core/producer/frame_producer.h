@@ -42,9 +42,10 @@ FORWARD1(boost, template<typename T> class unique_future);
 
 namespace caspar { namespace core {
 	
-struct frame_producer : public monitor::observable
+class frame_producer : public monitor::observable
 					  , boost::noncopyable
 {
+public:
 	struct flags_def
 	{
 		enum type
@@ -79,7 +80,7 @@ struct frame_producer : public monitor::observable
 	virtual void unsubscribe(const monitor::observable::observer_ptr& o) {}
 };
 
-typedef std::function<spl::shared_ptr<core::frame_producer>(const spl::shared_ptr<struct frame_factory>&, const std::vector<std::wstring>&)> producer_factory_t;
+typedef std::function<spl::shared_ptr<core::frame_producer>(const spl::shared_ptr<class frame_factory>&, const std::vector<std::wstring>&)> producer_factory_t;
 void register_producer_factory(const producer_factory_t& factory); // Not thread-safe.
 
 spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>&, const std::vector<std::wstring>& params);
