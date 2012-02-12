@@ -100,52 +100,6 @@ struct subject : public observer<I>, public observable<O>
 	}
 };
 
-namespace detail {
-
-template<typename T>
-struct true_func
-{
-	bool operator()(T)
-	{
-		return true;
-	}
-};
-
-template<typename T>
-struct void_func
-{
-	void operator()(T)
-	{
-	}
-};
-
-template<typename I, typename O>
-struct forward_func
-{
-	forward_func(std::function<O(const I&)> func)
-		: func_(std::move(func))
-	{
-	}
-
-	O operator()(const I& value)
-	{
-		return func_(value);
-	}
-
-	std::function<O(const I&)> func_;
-};
-
-template<typename I>
-struct forward_func<I, I>
-{
-	const I& operator()(const I& value)
-	{
-		return value;
-	}
-};
-
-}
-
 template<typename T, typename C>
 class observer_function : public observer<T>
 {
@@ -188,46 +142,37 @@ private:
 	C func_;
 };
 
-template<typename T>
-class observer_function<T, detail::void_func<T>> : public observer<T>
-{
-public:		
-	virtual void on_next(const T& e) override
-	{
-	}
-};
-
 template<typename I, typename O = I>
-class basic_subject : public subject<I, O>
+class basic_subject_impl : public subject<I, O>
 {	
-    template <typename, typename> friend class basic_subject;
+    template <typename, typename> friend class basic_subject_impl;
 
-	basic_subject(const basic_subject&);
-	basic_subject& operator=(const basic_subject&);
+	basic_subject_impl(const basic_subject_impl&);
+	basic_subject_impl& operator=(const basic_subject_impl&);
 public:	
 	typedef typename subject<I, O>::observer		observer;
 	typedef typename subject<I, O>::observer_ptr	observer_ptr;
 
-	basic_subject()
+	basic_subject_impl()
 	{
 	}
 			
-	virtual ~basic_subject()
+	virtual ~basic_subject_impl()
 	{
 	}
 		
-	basic_subject(basic_subject<typename observer::value_type, typename observable::value_type>&& other)
+	basic_subject_impl(basic_subject_impl<typename observer::value_type, typename observable::value_type>&& other)
 		: observers_(std::move(other.observers_))
 	{
 	}
 	
-	basic_subject& operator=(basic_subject<typename observer::value_type, typename observable::value_type>&& other)
+	basic_subject_impl& operator=(basic_subject_impl<typename observer::value_type, typename observable::value_type>&& other)
 	{
 		other.swap(*this);
 		return *this;
 	}
 	
-	void swap(basic_subject<typename observer::value_type, typename observable::value_type>& other)
+	void swap(basic_subject_impl<typename observer::value_type, typename observable::value_type>& other)
 	{		
 		tbb::spin_rw_mutex::scoped_lock lock(mutex_, true);
 		tbb::spin_rw_mutex::scoped_lock other_lock(other.mutex_, true);
@@ -300,6 +245,67 @@ private:
 	std::owner_less<std::weak_ptr<observer>>		comp_;
 	std::vector<std::weak_ptr<observer>, allocator>	observers_;
 	mutable tbb::spin_rw_mutex						mutex_;
+};
+
+template<typename I, typename O = I>
+class basic_subject : public subject<I, O>
+{	
+    template <typename, typename> friend class basic_subject;
+
+	basic_subject(const basic_subject&);
+	basic_subject& operator=(const basic_subject&);
+
+	typedef basic_subject_impl<I, O> impl;
+public:	
+	typedef typename subject<I, O>::observer		observer;
+	typedef typename subject<I, O>::observer_ptr	observer_ptr;
+
+	basic_subject()
+		: impl_(std::make_shared<impl>())
+
+	{
+	}
+		
+	basic_subject(subject&& other)
+		: impl_(std::move(other.impl_))
+	{
+	}
+
+	virtual ~basic_subject()
+	{
+	}
+
+	basic_subject& operator=(basic_subject&& other)
+	{
+		other.swap(*this);
+	}
+
+	void swap(basic_subject& other)
+	{
+		impl_.swap(other.impl_);
+	}
+	
+	virtual void subscribe(const observer_ptr& o) override
+	{				
+		impl_->subscribe(o);
+	}
+
+	virtual void unsubscribe(const observer_ptr& o) override
+	{
+		impl_->unsubscribe(o);
+	}
+				
+	virtual void on_next(const I& e) override
+	{				
+		impl_->on_next(e);
+	}
+
+	operator std::weak_ptr<observer>()
+	{
+		return impl_;
+	}
+private:
+	std::shared_ptr<impl> impl_;
 };
 
 template<typename F>
