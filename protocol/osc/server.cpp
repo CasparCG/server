@@ -91,6 +91,7 @@ public:
 	
 	void stop()
 	{
+		socket_->shutdown(boost::asio::socket_base::shutdown_both);
 		socket_->close();
 	}
 		
