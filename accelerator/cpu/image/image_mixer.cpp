@@ -23,7 +23,7 @@
 
 #include "image_mixer.h"
 
-#include "../util/write_frame.h"
+#include "../util/data_frame.h"
 #include "../util/xmm.h"
 
 #include <common/assert.h>
@@ -31,7 +31,7 @@
 #include <common/concurrency/async.h>
 #include <common/memory/memcpy.h>
 
-#include <core/frame/write_frame.h>
+#include <core/frame/data_frame.h>
 #include <core/frame/frame_transform.h>
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
@@ -314,7 +314,7 @@ public:
 		
 	void visit(const core::data_frame& frame2)
 	{			
-		auto frame = dynamic_cast<const write_frame*>(&frame2);
+		auto frame = dynamic_cast<const data_frame*>(&frame2);
 		if(frame == nullptr)
 			return;
 
@@ -349,9 +349,9 @@ public:
 		return renderer_(std::move(items_), format_desc);
 	}
 	
-	virtual spl::shared_ptr<cpu::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode)
+	virtual spl::shared_ptr<core::data_frame> create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode)
 	{
-		return spl::make_shared<cpu::write_frame>(tag, desc, frame_rate, field_mode);
+		return spl::make_shared<cpu::data_frame>(tag, desc, frame_rate, field_mode);
 	}
 };
 
@@ -362,6 +362,6 @@ void image_mixer::pop(){impl_->pop();}
 boost::shared_future<boost::iterator_range<const uint8_t*>> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
 void image_mixer::begin_layer(core::blend_mode blend_mode){impl_->begin_layer(blend_mode);}
 void image_mixer::end_layer(){impl_->end_layer();}
-spl::shared_ptr<core::write_frame> image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) {return impl_->create_frame(tag, desc, frame_rate, field_mode);}
+spl::shared_ptr<core::data_frame> image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) {return impl_->create_frame(tag, desc, frame_rate, field_mode);}
 
 }}}

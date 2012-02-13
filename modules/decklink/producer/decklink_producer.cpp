@@ -37,7 +37,8 @@
 #include <common/log.h>
 #include <common/param.h>
 
-#include <core/frame/write_frame.h>
+#include <core/frame/data_frame.h>
+#include <core/frame/draw_frame.h>
 #include <core/frame/frame_transform.h>
 #include <core/frame/frame_factory.h>
 

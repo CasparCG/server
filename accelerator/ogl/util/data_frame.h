@@ -24,39 +24,33 @@
 #include <common/spl/memory.h>
 #include <common/forward.h>
 
-#include <core/frame/write_frame.h>
+#include <core/frame/data_frame.h>
+#include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 #include <core/mixer/audio/audio_mixer.h>
-
-#include <boost/range/iterator_range.hpp>
 
 #include <stdint.h>
 #include <vector>
 
+FORWARD1(boost, template <typename> class iterator_range);
 FORWARD2(caspar, core, class frame_visitor);
 FORWARD2(caspar, core, struct pixel_format_desc);
 
-namespace caspar { namespace accelerator { namespace cpu {
+namespace caspar { namespace accelerator { namespace ogl {
 	
-typedef std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> host_buffer;
-
-class write_frame sealed : public core::write_frame
+class data_frame sealed : public core::data_frame
 {
-	write_frame(const write_frame&);
-	write_frame& operator=(const write_frame);
+	data_frame(const data_frame&);
+	data_frame& operator=(const data_frame);
 public:	
-	explicit write_frame(const void* tag);
-	explicit write_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode);
+	explicit data_frame(const void* tag);
+	explicit data_frame(const spl::shared_ptr<class context>& ogl, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode);
 
-	write_frame(write_frame&& other);
-	write_frame& operator=(write_frame&& other);
+	data_frame(data_frame&& other);
+	data_frame& operator=(data_frame&& other);
 
-	void swap(write_frame& other);
+	void swap(data_frame& other);
 			
-	// draw_frame
-
-	virtual void accept(core::frame_visitor& visitor) const override;
-
 	// data_frame
 		
 	virtual const core::pixel_format_desc& pixel_format_desc() const override;
@@ -73,11 +67,11 @@ public:
 	virtual int width() const override;
 	virtual int height() const override;
 								
-	virtual const void* tag() const override;	
+	virtual const void* tag() const override;
+			
+	// data_frames
 
-	// write_frames
-
-	std::vector<spl::shared_ptr<host_buffer>> buffers() const;		
+	std::vector<spl::shared_ptr<class host_buffer>> buffers() const;
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

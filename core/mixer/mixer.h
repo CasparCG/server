@@ -50,7 +50,7 @@ public:
 
 	boost::unique_future<boost::property_tree::wptree> info() const;
 
-	spl::shared_ptr<class write_frame> create_frame(const void* tag, const struct pixel_format_desc& desc, double frame_rate, core::field_mode field_mode);
+	spl::shared_ptr<class data_frame> create_frame(const void* tag, const struct pixel_format_desc& desc, double frame_rate, core::field_mode field_mode);
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

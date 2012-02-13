@@ -121,7 +121,7 @@
   <ItemGroup>
     <ClInclude Include="cpu\image\image_mixer.h" />
     <ClInclude Include="cpu\util\xmm.h" />
-    <ClInclude Include="cpu\util\write_frame.h" />
+    <ClInclude Include="cpu\util\data_frame.h" />
     <ClInclude Include="accelerator.h" />
     <ClInclude Include="ogl\image\blending_glsl.h" />
     <ClInclude Include="ogl\image\image_kernel.h" />
@@ -131,7 +131,7 @@
     <ClInclude Include="ogl\util\device_buffer.h" />
     <ClInclude Include="ogl\util\host_buffer.h" />
     <ClInclude Include="ogl\util\shader.h" />
-    <ClInclude Include="ogl\util\write_frame.h" />
+    <ClInclude Include="ogl\util\data_frame.h" />
     <ClInclude Include="StdAfx.h" />
   </ItemGroup>
   <ItemGroup>
@@ -151,7 +151,7 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="cpu\util\write_frame.cpp">
+    <ClCompile Include="cpu\util\data_frame.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -183,7 +183,7 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="ogl\util\write_frame.cpp">
+    <ClCompile Include="ogl\util\data_frame.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>

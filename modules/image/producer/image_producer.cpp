@@ -25,10 +25,10 @@
 
 #include <core/video_format.h>
 
+#include <core/frame/data_frame.h>
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
-#include <core/frame/write_frame.h>
 
 #include <common/env.h>
 #include <common/log.h>
@@ -60,7 +60,7 @@ struct image_producer : public core::frame_producer
 		auto frame = frame_factory->create_frame(this, desc);
 
 		std::copy_n(FreeImage_GetBits(bitmap.get()), frame->image_data(0).size(), frame->image_data(0).begin());
-		frame_ = std::move(frame);
+		frame_ = spl::make_shared<core::draw_frame>(std::move(frame));
 	}
 	
 	// frame_producer

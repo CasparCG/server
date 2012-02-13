@@ -31,10 +31,10 @@
 
 #include <core/video_format.h>
 
+#include <core/frame/data_frame.h>
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
-#include <core/frame/write_frame.h>
 
 #include <common/env.h>
 #include <common/concurrency/executor.h>
@@ -291,7 +291,7 @@ public:
 			auto frame = frame_factory_->create_frame(this, desc, fps(), core::field_mode::progressive);
 
 			A_memcpy(frame->image_data(0).begin(), bmp_.data(), width_*height_*4);
-			head_ = frame;	
+			head_ = spl::make_shared<core::draw_frame>(frame);	
 		}		
 										
 		graph_->set_value("frame-time", static_cast<float>(frame_timer_.elapsed()/frame_time)*0.5f);

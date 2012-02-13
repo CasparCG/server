@@ -100,9 +100,6 @@
     <ClInclude Include="frame\draw_frame.h">
       <Filter>source\frame</Filter>
     </ClInclude>
-    <ClInclude Include="frame\write_frame.h">
-      <Filter>source\frame</Filter>
-    </ClInclude>
     <ClInclude Include="monitor\monitor.h">
       <Filter>source\monitor</Filter>
     </ClInclude>
