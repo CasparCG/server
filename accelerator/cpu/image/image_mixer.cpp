@@ -75,7 +75,7 @@ struct item
 {
 	core::pixel_format_desc						pix_desc;
 	std::vector<spl::shared_ptr<host_buffer>>	buffers;
-	core::frame_transform						transform;
+	core::image_transform						transform;
 
 	item()
 		: pix_desc(core::pixel_format::invalid)
@@ -294,7 +294,7 @@ private:
 struct image_mixer::impl : boost::noncopyable
 {	
 	image_renderer						renderer_;
-	std::vector<core::frame_transform>	transform_stack_;
+	std::vector<core::image_transform>	transform_stack_;
 	std::vector<item>					items_; // layer/stream/items
 public:
 	impl() 
@@ -309,7 +309,7 @@ public:
 		
 	void push(const core::frame_transform& transform)
 	{
-		transform_stack_.push_back(transform_stack_.back()*transform);
+		transform_stack_.push_back(transform_stack_.back()*transform.image_transform);
 	}
 		
 	void visit(const core::data_frame& frame2)
@@ -331,7 +331,6 @@ public:
 		item.pix_desc			= frame->get_pixel_format_desc();
 		item.buffers			= frame->get_buffers();				
 		item.transform			= transform_stack_.back();
-		item.transform.volume	= core::frame_transform().volume; // Set volume to default since we don't care about it here.
 
 		items_.push_back(item);
 	}

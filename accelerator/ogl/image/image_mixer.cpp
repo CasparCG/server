@@ -61,7 +61,7 @@ struct item
 	core::pixel_format_desc						pix_desc;
 	std::vector<spl::shared_ptr<host_buffer>>	buffers;
 	std::vector<future_texture>					textures;
-	core::frame_transform						transform;
+	core::image_transform						transform;
 
 
 	item()
@@ -148,7 +148,7 @@ private:
 			   (kernel_.has_blend_modes() && layers.at(0).blend_mode != core::blend_mode::normal) == false &&
 			    layers.at(0).items.at(0).pix_desc.format		== core::pixel_format::bgra &&
 			    layers.at(0).items.at(0).buffers.at(0)->size() == format_desc.size &&
-			    layers.at(0).items.at(0).transform				== core::frame_transform())
+			    layers.at(0).items.at(0).transform				== core::image_transform())
 		{ // Bypass GPU using streaming loads to cachable memory.
 			auto uswc_buffer = layers.at(0).items.at(0).buffers.at(0);
 			auto buffer		 = std::make_shared<std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>>(uswc_buffer->size());
@@ -349,7 +349,7 @@ private:
 		draw_params.pix_desc.format		= core::pixel_format::bgra;
 		draw_params.pix_desc.planes		= list_of(core::pixel_format_desc::plane(source_buffer->width(), source_buffer->height(), 4));
 		draw_params.textures			= list_of(source_buffer);
-		draw_params.transform			= core::frame_transform();
+		draw_params.transform			= core::image_transform();
 		draw_params.blend_mode			= blend_mode;
 		draw_params.background			= draw_buffer;
 
@@ -368,7 +368,7 @@ struct image_mixer::impl : boost::noncopyable
 {	
 	spl::shared_ptr<context>			ogl_;
 	image_renderer						renderer_;
-	std::vector<core::frame_transform>	transform_stack_;
+	std::vector<core::image_transform>	transform_stack_;
 	std::vector<layer>					layers_; // layer/stream/items
 public:
 	impl(const spl::shared_ptr<context>& ogl) 
@@ -386,7 +386,7 @@ public:
 		
 	void push(const core::frame_transform& transform)
 	{
-		transform_stack_.push_back(transform_stack_.back()*transform);
+		transform_stack_.push_back(transform_stack_.back()*transform.image_transform);
 	}
 		
 	void visit(const core::data_frame& frame2)
@@ -408,7 +408,6 @@ public:
 		item.pix_desc			= frame->get_pixel_format_desc();
 		item.buffers			= frame->get_buffers();				
 		item.transform			= transform_stack_.back();
-		item.transform.volume	= core::frame_transform().volume; // Set volume to default since we don't care about it here.
 
 		layers_.back().items.push_back(item);
 	}

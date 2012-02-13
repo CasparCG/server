@@ -56,7 +56,7 @@ struct write_frame::impl : boost::noncopyable
 			
 	void accept(const write_frame& self, core::frame_visitor& visitor) const
 	{
-		visitor.push(self.get_frame_transform());
+		visitor.push(self.frame_transform());
 		visitor.visit(self);
 		visitor.pop();
 	}

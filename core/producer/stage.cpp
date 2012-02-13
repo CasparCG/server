@@ -105,22 +105,22 @@ public:
 		frame_producer::flags flags = frame_producer::flags::none;
 		if(format_desc.field_mode != field_mode::progressive)
 		{
-			flags |= std::abs(transform.fill_scale[1]  - 1.0) > 0.0001 ? frame_producer::flags::deinterlace : frame_producer::flags::none;
-			flags |= std::abs(transform.fill_translation[1])  > 0.0001 ? frame_producer::flags::deinterlace : frame_producer::flags::none;
+			flags |= std::abs(transform.image_transform.fill_scale[1]  - 1.0) > 0.0001 ? frame_producer::flags::deinterlace : frame_producer::flags::none;
+			flags |= std::abs(transform.image_transform.fill_translation[1])  > 0.0001 ? frame_producer::flags::deinterlace : frame_producer::flags::none;
 		}
 
-		if(transform.is_key)
+		if(transform.image_transform.is_key)
 			flags |= frame_producer::flags::alpha_only;
 		
 		auto frame = layer.receive(flags, format_desc);	
 				
 		auto frame1 = spl::make_shared<core::draw_frame>(frame);
-		frame1->get_frame_transform() = transform;
+		frame1->frame_transform() = transform;
 
 		if(format_desc.field_mode != core::field_mode::progressive)
 		{				
 			auto frame2 = spl::make_shared<core::draw_frame>(frame);
-			frame2->get_frame_transform() = tween.fetch_and_tick(1);
+			frame2->frame_transform() = tween.fetch_and_tick(1);
 			frame1 = core::draw_frame::interlace(frame1, frame2, format_desc.field_mode);
 		}
 

@@ -258,14 +258,14 @@ bool ChannelGridCommand::DoExecute()
 			int index = x+y*n+1;
 			auto transform = [=](frame_transform transform) -> frame_transform
 			{		
-				transform.fill_translation[0]	= x*delta;
-				transform.fill_translation[1]	= y*delta;
-				transform.fill_scale[0]			= delta;
-				transform.fill_scale[1]			= delta;
-				transform.clip_translation[0]	= x*delta;
-				transform.clip_translation[1]	= y*delta;
-				transform.clip_scale[0]			= delta;
-				transform.clip_scale[1]			= delta;			
+				transform.image_transform.fill_translation[0]	= x*delta;
+				transform.image_transform.fill_translation[1]	= y*delta;
+				transform.image_transform.fill_scale[0]			= delta;
+				transform.image_transform.fill_scale[1]			= delta;
+				transform.image_transform.clip_translation[0]	= x*delta;
+				transform.image_transform.clip_translation[1]	= y*delta;
+				transform.image_transform.clip_scale[0]			= delta;
+				transform.image_transform.clip_scale[1]			= delta;			
 				return transform;
 			};
 			self->stage().apply_transform(index, transform);
@@ -337,7 +337,7 @@ bool MixerCommand::DoExecute()
 			bool value = boost::lexical_cast<int>(_parameters.at(1));
 			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
-				transform.is_key = value;
+				transform.image_transform.is_key = value;
 				return transform;					
 			}, 0, L"linear"));
 		}
@@ -350,7 +350,7 @@ bool MixerCommand::DoExecute()
 			
 			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
-				transform.opacity = value;
+				transform.image_transform.opacity = value;
 				return transform;					
 			}, duration, tween));
 		}
@@ -365,14 +365,14 @@ bool MixerCommand::DoExecute()
 
 			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) mutable -> frame_transform
 			{
-				transform.fill_translation[0]	= x;
-				transform.fill_translation[1]	= y;
-				transform.fill_scale[0]			= x_s;
-				transform.fill_scale[1]			= y_s;
-				transform.clip_translation[0]	= x;
-				transform.clip_translation[1]	= y;
-				transform.clip_scale[0]			= x_s;
-				transform.clip_scale[1]			= y_s;
+				transform.image_transform.fill_translation[0]	= x;
+				transform.image_transform.fill_translation[1]	= y;
+				transform.image_transform.fill_scale[0]			= x_s;
+				transform.image_transform.fill_scale[1]			= y_s;
+				transform.image_transform.clip_translation[0]	= x;
+				transform.image_transform.clip_translation[1]	= y;
+				transform.image_transform.clip_scale[0]			= x_s;
+				transform.image_transform.clip_scale[1]			= y_s;
 				return transform;
 			}, duration, tween));
 		}
@@ -387,10 +387,10 @@ bool MixerCommand::DoExecute()
 
 			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
-				transform.clip_translation[0]	= x;
-				transform.clip_translation[1]	= y;
-				transform.clip_scale[0]			= x_s;
-				transform.clip_scale[1]			= y_s;
+				transform.image_transform.clip_translation[0]	= x;
+				transform.image_transform.clip_translation[1]	= y;
+				transform.image_transform.clip_scale[0]			= x_s;
+				transform.image_transform.clip_scale[1]			= y_s;
 				return transform;
 			}, duration, tween));
 		}
@@ -407,14 +407,14 @@ bool MixerCommand::DoExecute()
 					int index = x+y*n+1;
 					transforms.push_back(stage::transform_tuple_t(index, [=](frame_transform transform) -> frame_transform
 					{		
-						transform.fill_translation[0]	= x*delta;
-						transform.fill_translation[1]	= y*delta;
-						transform.fill_scale[0]			= delta;
-						transform.fill_scale[1]			= delta;
-						transform.clip_translation[0]	= x*delta;
-						transform.clip_translation[1]	= y*delta;
-						transform.clip_scale[0]			= delta;
-						transform.clip_scale[1]			= delta;			
+						transform.image_transform.fill_translation[0]	= x*delta;
+						transform.image_transform.fill_translation[1]	= y*delta;
+						transform.image_transform.fill_scale[0]			= delta;
+						transform.image_transform.fill_scale[1]			= delta;
+						transform.image_transform.clip_translation[0]	= x*delta;
+						transform.image_transform.clip_translation[1]	= y*delta;
+						transform.image_transform.clip_scale[0]			= delta;
+						transform.image_transform.clip_scale[1]			= delta;			
 						return transform;
 					}, duration, tween));
 				}
@@ -433,7 +433,7 @@ bool MixerCommand::DoExecute()
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
 			auto transform = stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
-				transform.brightness = value;
+				transform.image_transform.brightness = value;
 				return transform;
 			}, duration, tween);
 		}
@@ -444,7 +444,7 @@ bool MixerCommand::DoExecute()
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
 			auto transform = stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
-				transform.saturation = value;
+				transform.image_transform.saturation = value;
 				return transform;
 			}, duration, tween);	
 		}
@@ -455,7 +455,7 @@ bool MixerCommand::DoExecute()
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
 			auto transform = stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
-				transform.contrast = value;
+				transform.image_transform.contrast = value;
 				return transform;
 			}, duration, tween);	
 		}
@@ -472,7 +472,7 @@ bool MixerCommand::DoExecute()
 
 			auto transform = stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
-				transform.levels = value;
+				transform.image_transform.levels = value;
 				return transform;
 			}, duration, tween);
 		}
@@ -484,7 +484,7 @@ bool MixerCommand::DoExecute()
 
 			auto transform = stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
-				transform.volume = value;
+				transform.audio_transform.volume = value;
 				return transform;
 			}, duration, tween);
 		}
