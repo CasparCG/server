@@ -110,7 +110,7 @@ struct frame_muxer::impl : boost::noncopyable
 		
 		if(video_frame == flush_video())
 		{	
-			//video_streams_.push(std::queue<spl::shared_ptr<data_frame>>());
+			video_streams_.push(std::queue<spl::shared_ptr<data_frame>>());
 		}
 		else if(video_frame == empty_video())
 		{
