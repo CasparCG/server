@@ -287,13 +287,11 @@ public:
 			c->bit_rate	= format_desc_.width < 1280 ? 50*1000000 : 100*1000000;
 			c->width = format_desc_.height == 1280 ? 960  : c->width;
 			
-			//if(format_desc_.format == core::video_format::ntsc)
-			//	c->pix_fmt = PIX_FMT_YUV411P;
-			//else if(format_desc_.format == core::video_format::pal)
-			//	c->pix_fmt = PIX_FMT_YUV420P;
-
-			c->pix_fmt = PIX_FMT_YUV411P;
-
+			if(format_desc_.format == core::video_format::ntsc)
+				c->pix_fmt = PIX_FMT_YUV411P;
+			else if(format_desc_.format == core::video_format::pal)
+				c->pix_fmt = PIX_FMT_YUV420P;
+			
 			if(c->bit_rate >= 50*1000000) // dv50
 				c->pix_fmt = PIX_FMT_YUV422P;
 			
