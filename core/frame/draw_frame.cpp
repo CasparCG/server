@@ -32,10 +32,25 @@ namespace caspar { namespace core {
 struct draw_frame::impl
 {		
 	std::vector<spl::shared_ptr<const draw_frame>> frames_;
+	std::shared_ptr<const data_frame> data_frame_;
 
 	core::frame_transform frame_transform_;		
 public:
 	impl()
+	{
+	}
+		
+	impl(spl::shared_ptr<const data_frame> frame) 
+		: data_frame_(frame)
+	{
+	}
+
+	impl(spl::shared_ptr<const draw_frame> frame) 
+	{
+		frames_.push_back(std::move(frame));
+	}
+
+	impl(std::vector<spl::shared_ptr<const draw_frame>> frames) : frames_(std::move(frames))
 	{
 	}
 
@@ -44,20 +59,19 @@ public:
 		frames_.insert(frames_.end(), frames.begin(), frames.end());
 	}
 
-	impl(std::vector<spl::shared_ptr<const draw_frame>> frames) : frames_(std::move(frames))
-	{
-	}
-
-	impl(spl::shared_ptr<const draw_frame> frame) 
-	{
-		frames_.push_back(std::move(frame));
-	}
 		
 	void accept(frame_visitor& visitor) const
 	{
 		visitor.push(frame_transform_);
-		BOOST_FOREACH(auto frame, frames_)
-			frame->accept(visitor);
+		if(data_frame_)
+		{
+			visitor.visit(*data_frame_);
+		}
+		else
+		{
+			BOOST_FOREACH(auto frame, frames_)
+				frame->accept(visitor);
+		}
 		visitor.pop();
 	}	
 };
@@ -65,9 +79,10 @@ public:
 draw_frame::draw_frame() : impl_(new impl()){}
 draw_frame::draw_frame(const draw_frame& other) : impl_(new impl(*other.impl_)){}
 draw_frame::draw_frame(draw_frame&& other) : impl_(std::move(other.impl_)){}
+draw_frame::draw_frame(spl::shared_ptr<const data_frame> frame)  : impl_(new impl(std::move(frame))){}
+draw_frame::draw_frame(spl::shared_ptr<const draw_frame> frame)  : impl_(new impl(std::move(frame))){}
 draw_frame::draw_frame(std::vector<spl::shared_ptr<draw_frame>> frames) : impl_(new impl(frames)){}
 draw_frame::draw_frame(std::vector<spl::shared_ptr<const draw_frame>> frames) : impl_(new impl(frames)){}
-draw_frame::draw_frame(spl::shared_ptr<const draw_frame> frame)  : impl_(new impl(std::move(frame))){}
 draw_frame& draw_frame::operator=(draw_frame other)
 {
 	other.swap(*this);

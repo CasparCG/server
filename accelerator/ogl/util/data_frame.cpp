@@ -21,7 +21,7 @@
 
 #include "../../stdafx.h"
 
-#include "write_frame.h"
+#include "data_frame.h"
 
 #include "context.h"
 #include "host_buffer.h"
@@ -35,7 +35,7 @@
 
 namespace caspar { namespace accelerator { namespace ogl {
 																																							
-struct write_frame::impl : boost::noncopyable
+struct data_frame::impl : boost::noncopyable
 {			
 	std::shared_ptr<context>						ogl_;
 	std::vector<spl::shared_ptr<ogl::host_buffer>>	buffers_;
@@ -65,13 +65,6 @@ struct write_frame::impl : boost::noncopyable
 		});
 	}
 			
-	void accept(const write_frame& self, core::frame_visitor& visitor) const
-	{
-		visitor.push(self.frame_transform());
-		visitor.visit(self);
-		visitor.pop();
-	}
-
 	boost::iterator_range<uint8_t*> image_data(int index)
 	{
 		if(index >= buffers_.size() || !buffers_[index]->data())
@@ -81,27 +74,26 @@ struct write_frame::impl : boost::noncopyable
 	}
 };
 	
-write_frame::write_frame(const void* tag) : impl_(new impl(tag)){}
-write_frame::write_frame(const spl::shared_ptr<ogl::context>& ogl, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) 
+data_frame::data_frame(const void* tag) : impl_(new impl(tag)){}
+data_frame::data_frame(const spl::shared_ptr<ogl::context>& ogl, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) 
 	: impl_(new impl(ogl, tag, desc, frame_rate, field_mode)){}
-write_frame::write_frame(write_frame&& other) : impl_(std::move(other.impl_)){}
-write_frame& write_frame::operator=(write_frame&& other)
+data_frame::data_frame(data_frame&& other) : impl_(std::move(other.impl_)){}
+data_frame& data_frame::operator=(data_frame&& other)
 {
 	impl_ = std::move(other.impl_);
 	return *this;
 }
-void write_frame::swap(write_frame& other){impl_.swap(other.impl_);}
-void write_frame::accept(core::frame_visitor& visitor) const {impl_->accept(*this, visitor);}
-const core::pixel_format_desc& write_frame::pixel_format_desc() const{return impl_->desc_;}
-const boost::iterator_range<const uint8_t*> write_frame::image_data(int index) const{return impl_->image_data(index);}
-const core::audio_buffer& write_frame::audio_data() const{return impl_->audio_data_;}
-const boost::iterator_range<uint8_t*> write_frame::image_data(int index){return impl_->image_data(index);}
-core::audio_buffer& write_frame::audio_data(){return impl_->audio_data_;}
-double write_frame::frame_rate() const{return impl_->frame_rate_;}
-core::field_mode write_frame::field_mode() const{return impl_->field_mode_;}
-int write_frame::width() const{return impl_->desc_.planes.at(0).width;}
-int write_frame::height() const{return impl_->desc_.planes.at(0).height;}						
-const void* write_frame::tag() const{return impl_->tag_;}	
-std::vector<spl::shared_ptr<ogl::host_buffer>> write_frame::buffers() const{return impl_->buffers_;}
+void data_frame::swap(data_frame& other){impl_.swap(other.impl_);}
+const core::pixel_format_desc& data_frame::pixel_format_desc() const{return impl_->desc_;}
+const boost::iterator_range<const uint8_t*> data_frame::image_data(int index) const{return impl_->image_data(index);}
+const core::audio_buffer& data_frame::audio_data() const{return impl_->audio_data_;}
+const boost::iterator_range<uint8_t*> data_frame::image_data(int index){return impl_->image_data(index);}
+core::audio_buffer& data_frame::audio_data(){return impl_->audio_data_;}
+double data_frame::frame_rate() const{return impl_->frame_rate_;}
+core::field_mode data_frame::field_mode() const{return impl_->field_mode_;}
+int data_frame::width() const{return impl_->desc_.planes.at(0).width;}
+int data_frame::height() const{return impl_->desc_.planes.at(0).height;}						
+const void* data_frame::tag() const{return impl_->tag_;}	
+std::vector<spl::shared_ptr<ogl::host_buffer>> data_frame::buffers() const{return impl_->buffers_;}
 
 }}}

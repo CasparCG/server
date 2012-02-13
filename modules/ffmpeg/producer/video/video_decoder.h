@@ -32,9 +32,6 @@ struct AVFormatContext;
 struct AVFrame;
 struct AVPacket;
 
-FORWARD2(caspar, core, class write_frame);
-FORWARD2(caspar, core, class frame_factory);
-
 namespace caspar { namespace ffmpeg {
 
 class video_decoder : public monitor::observable
