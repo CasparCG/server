@@ -276,15 +276,15 @@ spl::shared_ptr<core::write_frame> make_write_frame(const void* tag, const spl::
 
 	if(decoded_frame->height == 480) // NTSC DV
 	{
-		write->get_frame_transform().fill_translation[1] += 2.0/static_cast<double>(frame_factory->video_format_desc().height);
-		write->get_frame_transform().fill_scale[1] = 1.0 - 6.0*1.0/static_cast<double>(frame_factory->video_format_desc().height);
+		write->frame_transform().image_transform.fill_translation[1] += 2.0/static_cast<double>(frame_factory->video_format_desc().height);
+		write->frame_transform().image_transform.fill_scale[1] = 1.0 - 6.0*1.0/static_cast<double>(frame_factory->video_format_desc().height);
 	}
 	
 	// Fix field-order if needed
 	if(get_mode(*decoded_frame) == core::field_mode::lower && frame_factory->video_format_desc().field_mode == core::field_mode::upper)
-		write->get_frame_transform().fill_translation[1] += 1.0/static_cast<double>(frame_factory->video_format_desc().height);
+		write->frame_transform().image_transform.fill_translation[1] += 1.0/static_cast<double>(frame_factory->video_format_desc().height);
 	else if(get_mode(*decoded_frame) == core::field_mode::upper && frame_factory->video_format_desc().field_mode == core::field_mode::lower)
-		write->get_frame_transform().fill_translation[1] -= 1.0/static_cast<double>(frame_factory->video_format_desc().height);
+		write->frame_transform().image_transform.fill_translation[1] -= 1.0/static_cast<double>(frame_factory->video_format_desc().height);
 
 	return spl::make_shared_ptr(write);
 }

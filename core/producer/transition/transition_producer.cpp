@@ -144,47 +144,47 @@ public:
 		
 		// For interlaced transitions. Seperate fields into seperate frames which are transitioned accordingly.
 		
-		src_frame->get_frame_transform().volume = 1.0-delta2;
+		src_frame->frame_transform().audio_transform.volume = 1.0-delta2;
 		auto s_frame1 = spl::make_shared<draw_frame>(src_frame);
 		auto s_frame2 = spl::make_shared<draw_frame>(src_frame);
 		
-		dest_frame->get_frame_transform().volume = delta2;
+		dest_frame->frame_transform().audio_transform.volume = delta2;
 		auto d_frame1 = spl::make_shared<draw_frame>(dest_frame);
 		auto d_frame2 = spl::make_shared<draw_frame>(dest_frame);
 		
 		if(info_.type == transition_type::mix)
 		{
-			d_frame1->get_frame_transform().opacity = delta1;	
-			d_frame1->get_frame_transform().is_mix = true;
-			d_frame2->get_frame_transform().opacity = delta2;
-			d_frame2->get_frame_transform().is_mix = true;
+			d_frame1->frame_transform().image_transform.opacity = delta1;	
+			d_frame1->frame_transform().image_transform.is_mix = true;
+			d_frame2->frame_transform().image_transform.opacity = delta2;
+			d_frame2->frame_transform().image_transform.is_mix = true;
 
-			s_frame1->get_frame_transform().opacity = 1.0-delta1;	
-			s_frame1->get_frame_transform().is_mix = true;
-			s_frame2->get_frame_transform().opacity = 1.0-delta2;	
-			s_frame2->get_frame_transform().is_mix = true;
+			s_frame1->frame_transform().image_transform.opacity = 1.0-delta1;	
+			s_frame1->frame_transform().image_transform.is_mix = true;
+			s_frame2->frame_transform().image_transform.opacity = 1.0-delta2;	
+			s_frame2->frame_transform().image_transform.is_mix = true;
 		}
 		if(info_.type == transition_type::slide)
 		{
-			d_frame1->get_frame_transform().fill_translation[0] = (-1.0+delta1)*dir;	
-			d_frame2->get_frame_transform().fill_translation[0] = (-1.0+delta2)*dir;		
+			d_frame1->frame_transform().image_transform.fill_translation[0] = (-1.0+delta1)*dir;	
+			d_frame2->frame_transform().image_transform.fill_translation[0] = (-1.0+delta2)*dir;		
 		}
 		else if(info_.type == transition_type::push)
 		{
-			d_frame1->get_frame_transform().fill_translation[0] = (-1.0+delta1)*dir;
-			d_frame2->get_frame_transform().fill_translation[0] = (-1.0+delta2)*dir;
+			d_frame1->frame_transform().image_transform.fill_translation[0] = (-1.0+delta1)*dir;
+			d_frame2->frame_transform().image_transform.fill_translation[0] = (-1.0+delta2)*dir;
 
-			s_frame1->get_frame_transform().fill_translation[0] = (0.0+delta1)*dir;	
-			s_frame2->get_frame_transform().fill_translation[0] = (0.0+delta2)*dir;		
+			s_frame1->frame_transform().image_transform.fill_translation[0] = (0.0+delta1)*dir;	
+			s_frame2->frame_transform().image_transform.fill_translation[0] = (0.0+delta2)*dir;		
 		}
 		else if(info_.type == transition_type::wipe)		
 		{
-			d_frame1->get_frame_transform().clip_scale[0] = delta1;	
-			d_frame2->get_frame_transform().clip_scale[0] = delta2;			
+			d_frame1->frame_transform().image_transform.clip_scale[0] = delta1;	
+			d_frame2->frame_transform().image_transform.clip_scale[0] = delta2;			
 		}
 				
-		const auto s_frame = s_frame1->get_frame_transform() == s_frame2->get_frame_transform() ? s_frame2 : draw_frame::interlace(s_frame1, s_frame2, mode_);
-		const auto d_frame = d_frame1->get_frame_transform() == d_frame2->get_frame_transform() ? d_frame2 : draw_frame::interlace(d_frame1, d_frame2, mode_);
+		const auto s_frame = s_frame1->frame_transform() == s_frame2->frame_transform() ? s_frame2 : draw_frame::interlace(s_frame1, s_frame2, mode_);
+		const auto d_frame = d_frame1->frame_transform() == d_frame2->frame_transform() ? d_frame2 : draw_frame::interlace(d_frame1, d_frame2, mode_);
 		
 		return draw_frame::over(s_frame, d_frame);
 	}

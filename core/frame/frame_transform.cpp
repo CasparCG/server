@@ -28,9 +28,10 @@
 
 namespace caspar { namespace core {
 		
-frame_transform::frame_transform() 
-	: volume(1.0)
-	, opacity(1.0)
+// image_transform
+
+image_transform::image_transform() 
+	: opacity(1.0)
 	, brightness(1.0)
 	, contrast(1.0)
 	, saturation(1.0)
@@ -45,9 +46,8 @@ frame_transform::frame_transform()
 	boost::range::fill(clip_scale, 1.0);
 }
 
-frame_transform& frame_transform::operator*=(const frame_transform &other)
+image_transform& image_transform::operator*=(const image_transform &other)
 {
-	volume					*= other.volume;
 	opacity					*= other.opacity;	
 	brightness				*= other.brightness;
 	contrast				*= other.contrast;
@@ -72,20 +72,19 @@ frame_transform& frame_transform::operator*=(const frame_transform &other)
 	return *this;
 }
 
-frame_transform frame_transform::operator*(const frame_transform &other) const
+image_transform image_transform::operator*(const image_transform &other) const
 {
-	return frame_transform(*this) *= other;
+	return image_transform(*this) *= other;
 }
 
-frame_transform frame_transform::tween(double time, const frame_transform& source, const frame_transform& dest, double duration, const tweener& tween)
+image_transform image_transform::tween(double time, const image_transform& source, const image_transform& dest, double duration, const tweener& tween)
 {	
 	auto do_tween = [](double time, double source, double dest, double duration, const tweener& tween)
 	{
 		return tween(time, source, dest-source, duration);
 	};
 	
-	frame_transform result;	
-	result.volume				= do_tween(time, source.volume,					dest.volume,				duration, tween);
+	image_transform result;	
 	result.brightness			= do_tween(time, source.brightness,				dest.brightness,			duration, tween);
 	result.contrast				= do_tween(time, source.contrast,				dest.contrast,				duration, tween);
 	result.saturation			= do_tween(time, source.saturation,				dest.saturation,			duration, tween);
@@ -111,7 +110,7 @@ frame_transform frame_transform::tween(double time, const frame_transform& sourc
 	return result;
 }
 
-bool operator==(const frame_transform& lhs, const frame_transform& rhs)
+bool operator==(const image_transform& lhs, const image_transform& rhs)
 {
 	auto eq = [](double lhs, double rhs)
 	{
@@ -119,7 +118,6 @@ bool operator==(const frame_transform& lhs, const frame_transform& rhs)
 	};
 
 	return 
-		eq(lhs.volume, rhs.volume) &&
 		eq(lhs.opacity, rhs.opacity) &&
 		eq(lhs.contrast, rhs.contrast) &&
 		eq(lhs.brightness, rhs.brightness) &&
@@ -130,7 +128,90 @@ bool operator==(const frame_transform& lhs, const frame_transform& rhs)
 		boost::range::equal(lhs.clip_scale, rhs.clip_scale, eq) &&
 		lhs.field_mode == rhs.field_mode &&
 		lhs.is_key == rhs.is_key &&
-		lhs.is_mix == rhs.is_mix;
+		lhs.is_mix == rhs.is_mix &&
+		lhs.is_still == rhs.is_still;
+}
+
+bool operator!=(const image_transform& lhs, const image_transform& rhs)
+{
+	return !(lhs == rhs);
+}
+
+// audio_transform
+		
+audio_transform::audio_transform() 
+	: volume(1.0)
+{
+}
+
+audio_transform& audio_transform::operator*=(const audio_transform &other)
+{
+	volume					*= other.volume;	
+	return *this;
+}
+
+audio_transform audio_transform::operator*(const audio_transform &other) const
+{
+	return audio_transform(*this) *= other;
+}
+
+audio_transform audio_transform::tween(double time, const audio_transform& source, const audio_transform& dest, double duration, const tweener& tween)
+{	
+	auto do_tween = [](double time, double source, double dest, double duration, const tweener& tween)
+	{
+		return tween(time, source, dest-source, duration);
+	};
+	
+	audio_transform result;	
+	result.volume			= do_tween(time, source.volume,				dest.volume,			duration, tween);
+	
+	return result;
+}
+
+bool operator==(const audio_transform& lhs, const audio_transform& rhs)
+{
+	auto eq = [](double lhs, double rhs)
+	{
+		return std::abs(lhs - rhs) < 5e-8;
+	};
+
+	return eq(lhs.volume, rhs.volume);
+}
+
+bool operator!=(const audio_transform& lhs, const audio_transform& rhs)
+{
+	return !(lhs == rhs);
+}
+
+// frame_transform
+frame_transform::frame_transform()
+{
+}
+
+frame_transform& frame_transform::operator*=(const frame_transform &other)
+{
+	image_transform *= other.image_transform;
+	audio_transform *= other.audio_transform;
+	return *this;
+}
+
+frame_transform frame_transform::operator*(const frame_transform &other) const
+{
+	return frame_transform(*this) *= other;
+}
+
+frame_transform frame_transform::tween(double time, const frame_transform& source, const frame_transform& dest, double duration, const tweener& tween)
+{
+	frame_transform result;
+	result.image_transform = image_transform::tween(time, source.image_transform, dest.image_transform, duration, tween);
+	result.audio_transform = audio_transform::tween(time, source.audio_transform, dest.audio_transform, duration, tween);
+	return result;
+}
+
+bool operator==(const frame_transform& lhs, const frame_transform& rhs)
+{
+	return	lhs.image_transform == rhs.image_transform && 
+			lhs.audio_transform == rhs.audio_transform;
 }
 
 bool operator!=(const frame_transform& lhs, const frame_transform& rhs)
