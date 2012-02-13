@@ -357,7 +357,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 {
 	if(params.size() < 1 || params[0] != L"BLUEFISH")
 		return core::frame_consumer::empty();
-		
+
 	const auto device_index = params.size() > 1 ? boost::lexical_cast<int>(params[1]) : 1;
 
 	const auto embedded_audio = std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
