@@ -39,7 +39,7 @@ namespace caspar { namespace core {
 struct audio_item
 {
 	const void*			tag;
-	frame_transform		transform;
+	audio_transform		transform;
 	audio_buffer		audio_data;
 
 	audio_item()
@@ -58,13 +58,13 @@ typedef std::vector<float, tbb::cache_aligned_allocator<float>> audio_buffer_ps;
 	
 struct audio_stream
 {
-	frame_transform		prev_transform;
+	audio_transform		prev_transform;
 	audio_buffer_ps		audio_data;
 };
 
 struct audio_mixer::impl : boost::noncopyable
 {
-	std::stack<core::frame_transform>	transform_stack_;
+	std::stack<core::audio_transform>	transform_stack_;
 	std::map<const void*, audio_stream>	audio_streams_;
 	std::vector<audio_item>				items_;
 	std::vector<int>					audio_cadence_;
@@ -73,12 +73,12 @@ struct audio_mixer::impl : boost::noncopyable
 public:
 	impl()
 	{
-		transform_stack_.push(core::frame_transform());
+		transform_stack_.push(core::audio_transform());
 	}
 	
 	void push(const frame_transform& transform)
 	{
-		transform_stack_.push(transform_stack_.top()*transform);
+		transform_stack_.push(transform_stack_.top()*transform.audio_transform);
 	}
 
 	void visit(const data_frame& frame)
@@ -87,14 +87,11 @@ public:
 		item.tag		= frame.tag();
 		item.transform	= transform_stack_.top();
 		item.audio_data = frame.audio_data();
-
-		if(item.transform.is_still)
-			item.transform.volume = 0.0;
 		
 		items_.push_back(std::move(item));		
 	}
 
-	void begin(const core::frame_transform& transform)
+	void begin(const core::audio_transform& transform)
 	{
 		transform_stack_.push(transform_stack_.top()*transform);
 	}

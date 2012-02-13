@@ -31,6 +31,8 @@
 
 namespace caspar { namespace core {
 	
+struct frame_transform;
+
 class draw_frame
 {
 public:
@@ -45,11 +47,9 @@ public:
 	draw_frame(std::vector<spl::shared_ptr<const draw_frame>> frames);
 		
 	void swap(draw_frame& other);
-
-	field_mode field_mode() const;
-
-	const struct frame_transform& get_frame_transform() const;
-	struct frame_transform& get_frame_transform();
+	
+	const core::frame_transform& frame_transform() const;
+	core::frame_transform& frame_transform();
 				
 	static spl::shared_ptr<draw_frame> interlace(const spl::shared_ptr<const draw_frame>& frame1, const spl::shared_ptr<const draw_frame>& frame2, core::field_mode mode);
 	static spl::shared_ptr<draw_frame> over(const spl::shared_ptr<const draw_frame>& frame1, const spl::shared_ptr<const draw_frame>& frame2);

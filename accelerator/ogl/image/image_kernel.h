@@ -47,7 +47,7 @@ struct draw_params sealed
 {
 	core::pixel_format_desc								pix_desc;
 	std::vector<spl::shared_ptr<class device_buffer>>	textures;
-	core::frame_transform								transform;
+	core::image_transform								transform;
 	core::blend_mode									blend_mode;
 	keyer												keyer;
 	std::shared_ptr<class device_buffer>				background;
