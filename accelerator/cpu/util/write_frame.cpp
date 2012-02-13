@@ -86,7 +86,7 @@ write_frame& write_frame::operator=(write_frame&& other)
 }
 void write_frame::swap(write_frame& other){impl_.swap(other.impl_);}
 void write_frame::accept(core::frame_visitor& visitor) const {impl_->accept(*this, visitor);}
-const core::pixel_format_desc& write_frame::get_pixel_format_desc() const{return impl_->desc_;}
+const core::pixel_format_desc& write_frame::pixel_format_desc() const{return impl_->desc_;}
 const boost::iterator_range<const uint8_t*> write_frame::image_data(int index) const{return impl_->image_data(index);}
 const core::audio_buffer& write_frame::audio_data() const{return impl_->audio_data_;}
 const boost::iterator_range<uint8_t*> write_frame::image_data(int index){return impl_->image_data(index);}
@@ -96,6 +96,6 @@ core::field_mode write_frame::field_mode()const{return impl_->field_mode_;}
 int write_frame::width() const{return impl_->desc_.planes.at(0).width;}
 int write_frame::height() const{return impl_->desc_.planes.at(0).height;}						
 const void* write_frame::tag() const{return impl_->tag_;}	
-std::vector<spl::shared_ptr<host_buffer>> write_frame::get_buffers() const{return impl_->buffers_;}
+std::vector<spl::shared_ptr<host_buffer>> write_frame::buffers() const{return impl_->buffers_;}
 
 }}}

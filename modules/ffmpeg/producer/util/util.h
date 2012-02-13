@@ -69,7 +69,7 @@ std::shared_ptr<AVFrame> make_av_frame(const C& container, const core::pixel_for
 	return make_av_frame(data, pix_desc);
 }
 
-core::pixel_format_desc				get_pixel_format_desc(PixelFormat pix_fmt, int width, int height);
+core::pixel_format_desc				pixel_format_desc(PixelFormat pix_fmt, int width, int height);
 
 spl::shared_ptr<AVPacket> create_packet();
 

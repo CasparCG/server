@@ -21,7 +21,7 @@ public:
 	data_frame(){}
 	virtual ~data_frame(){}
 
-	virtual const struct pixel_format_desc& get_pixel_format_desc() const = 0;
+	virtual const struct pixel_format_desc& pixel_format_desc() const = 0;
 
 	virtual const boost::iterator_range<const uint8_t*> image_data(int index = 0) const = 0;
 	virtual const audio_buffer& audio_data() const = 0;

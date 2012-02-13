@@ -28,7 +28,7 @@
 
 namespace caspar {
 	
-static std::wstring get_cpu_info()
+static std::wstring cpu_info()
 {
 	std::wstring cpu_name = L"Unknown CPU";
 	HKEY hkey; 
@@ -57,7 +57,7 @@ static std::wstring get_cpu_info()
 	return s.str();
 }
 
-static std::wstring get_system_product_name()
+static std::wstring system_product_name()
 {
 	std::wstring system_product_name = L"Unknown System";
 	HKEY hkey; 

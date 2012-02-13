@@ -395,18 +395,18 @@ public:
 		if(frame == nullptr)
 			return;
 
-		if(frame->get_pixel_format_desc().format == core::pixel_format::invalid)
+		if(frame->pixel_format_desc().format == core::pixel_format::invalid)
 			return;
 
-		if(frame->get_buffers().empty())
+		if(frame->buffers().empty())
 			return;
 
 		if(transform_stack_.back().field_mode == core::field_mode::empty)
 			return;
 
 		item item;
-		item.pix_desc			= frame->get_pixel_format_desc();
-		item.buffers			= frame->get_buffers();				
+		item.pix_desc			= frame->pixel_format_desc();
+		item.buffers			= frame->buffers();				
 		item.transform			= transform_stack_.back();
 
 		layers_.back().items.push_back(item);

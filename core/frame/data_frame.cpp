@@ -12,9 +12,9 @@ spl::shared_ptr<data_frame> data_frame::empty()
 	{
 	public:
 		empty_frame(){}
-		virtual const struct pixel_format_desc& get_pixel_format_desc() const override
+		virtual const struct core::pixel_format_desc& pixel_format_desc() const override
 		{
-			static pixel_format_desc invalid(pixel_format::invalid);
+			static core::pixel_format_desc invalid(pixel_format::invalid);
 			return invalid;
 		}
 		virtual const boost::iterator_range<const uint8_t*> image_data(int) const override
