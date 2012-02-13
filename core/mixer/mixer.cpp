@@ -58,7 +58,7 @@ class mixed_frame : public data_frame
 	mutable boost::shared_future<boost::iterator_range<const uint8_t*>>	image_data_;
 	const audio_buffer													audio_data_;
 	const video_format_desc												video_desc_;
-	pixel_format_desc													pixel_desc_;
+	core::pixel_format_desc												pixel_desc_;
 	const void*															tag_;
 
 public:
@@ -82,7 +82,7 @@ public:
 		BOOST_THROW_EXCEPTION(invalid_operation());
 	}
 	
-	virtual const struct pixel_format_desc& get_pixel_format_desc() const override
+	virtual const struct pixel_format_desc& pixel_format_desc() const override
 	{
 		return pixel_desc_;
 	}

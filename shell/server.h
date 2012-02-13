@@ -40,7 +40,7 @@ class server sealed : public monitor::observable
 {
 public:
 	server();
-	const std::vector<spl::shared_ptr<core::video_channel>> get_channels() const;
+	const std::vector<spl::shared_ptr<core::video_channel>> channels() const;
 
 	// monitor::observable
 

@@ -1394,24 +1394,24 @@ bool InfoCommand::DoExecute()
 			
 			boost::property_tree::wptree info;
 			
-			info.add(L"system.name",					caspar::get_system_product_name());
-			info.add(L"system.windows.name",			caspar::get_win_product_name());
-			info.add(L"system.windows.service-pack",	caspar::get_win_sp_version());
-			info.add(L"system.cpu",						caspar::get_cpu_info());
+			info.add(L"system.name",					caspar::system_product_name());
+			info.add(L"system.windows.name",			caspar::win_product_name());
+			info.add(L"system.windows.service-pack",	caspar::win_sp_version());
+			info.add(L"system.cpu",						caspar::cpu_info());
 	
-			BOOST_FOREACH(auto device, caspar::decklink::get_device_list())
+			BOOST_FOREACH(auto device, caspar::decklink::device_list())
 				info.add(L"system.decklink.device", device);
 
-			BOOST_FOREACH(auto device, caspar::bluefish::get_device_list())
+			BOOST_FOREACH(auto device, caspar::bluefish::device_list())
 				info.add(L"system.bluefish.device", device);
 				
-			info.add(L"system.flash",					caspar::flash::get_version());
-			//info.add(L"system.free-image",				caspar::image::get_version());
-			info.add(L"system.ffmpeg.avcodec",			caspar::ffmpeg::get_avcodec_version());
-			info.add(L"system.ffmpeg.avformat",			caspar::ffmpeg::get_avformat_version());
-			info.add(L"system.ffmpeg.avfilter",			caspar::ffmpeg::get_avfilter_version());
-			info.add(L"system.ffmpeg.avutil",			caspar::ffmpeg::get_avutil_version());
-			info.add(L"system.ffmpeg.swscale",			caspar::ffmpeg::get_swscale_version());
+			info.add(L"system.flash",					caspar::flash::version());
+			//info.add(L"system.free-image",				caspar::image::version());
+			info.add(L"system.ffmpeg.avcodec",			caspar::ffmpeg::avcodec_version());
+			info.add(L"system.ffmpeg.avformat",			caspar::ffmpeg::avformat_version());
+			info.add(L"system.ffmpeg.avfilter",			caspar::ffmpeg::avfilter_version());
+			info.add(L"system.ffmpeg.avutil",			caspar::ffmpeg::avutil_version());
+			info.add(L"system.ffmpeg.swscale",			caspar::ffmpeg::swscale_version());
 						
 			boost::property_tree::write_xml(replyString, info, w);
 		}
@@ -1524,9 +1524,9 @@ bool VersionCommand::DoExecute()
 	if(_parameters.size() > 0)
 	{
 		if(_parameters[0] == L"FLASH")
-			replyString = TEXT("201 VERSION OK\r\n") + flash::get_version() + TEXT("\r\n");
+			replyString = TEXT("201 VERSION OK\r\n") + flash::version() + TEXT("\r\n");
 		else if(_parameters[0] == L"TEMPLATEHOST")
-			replyString = TEXT("201 VERSION OK\r\n") + flash::get_cg_version() + TEXT("\r\n");
+			replyString = TEXT("201 VERSION OK\r\n") + flash::cg_version() + TEXT("\r\n");
 		else if(_parameters[0] != L"SERVER")
 			replyString = TEXT("403 VERSION ERROR\r\n");
 	}

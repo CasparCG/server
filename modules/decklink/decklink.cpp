@@ -60,7 +60,7 @@ void init()
 	core::register_producer_factory(create_producer);
 }
 
-std::wstring get_version() 
+std::wstring version() 
 {
 	std::wstring version = L"Not found";
 	
@@ -74,14 +74,14 @@ std::wstring get_version()
 	{
 		CComPtr<IDeckLinkIterator> pDecklinkIterator;
 		if(SUCCEEDED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))		
-			version = get_version(pDecklinkIterator);
+			version = decklink::version(pDecklinkIterator);
 	}
 	catch(...){}
 
 	return version;
 }
 
-std::vector<std::wstring> get_device_list()
+std::vector<std::wstring> device_list()
 {
 	std::vector<std::wstring> devices;
 	

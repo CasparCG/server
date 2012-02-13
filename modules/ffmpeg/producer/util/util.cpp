@@ -114,7 +114,7 @@ core::pixel_format get_pixel_format(PixelFormat pix_fmt)
 	}
 }
 
-core::pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, int width, int height)
+core::pixel_format_desc pixel_format_desc(PixelFormat pix_fmt, int width, int height)
 {
 	// Get linesizes
 	AVPicture dummy_pict;	
@@ -180,10 +180,10 @@ spl::shared_ptr<core::write_frame> make_write_frame(const void* tag, const spl::
 
 	const auto width  = decoded_frame->width;
 	const auto height = decoded_frame->height;
-	auto desc		  = get_pixel_format_desc(static_cast<PixelFormat>(decoded_frame->format), width, height);
+	auto desc		  = pixel_format_desc(static_cast<PixelFormat>(decoded_frame->format), width, height);
 	
 	if(flags & core::frame_producer::flags::alpha_only)
-		desc = get_pixel_format_desc(static_cast<PixelFormat>(make_alpha_format(decoded_frame->format)), width, height);
+		desc = pixel_format_desc(static_cast<PixelFormat>(make_alpha_format(decoded_frame->format)), width, height);
 
 	std::shared_ptr<core::write_frame> write;
 
@@ -205,7 +205,7 @@ spl::shared_ptr<core::write_frame> make_write_frame(const void* tag, const spl::
 		else if(pix_fmt == PIX_FMT_YUV444P10)
 			target_pix_fmt = PIX_FMT_YUV444P;
 		
-		auto target_desc = get_pixel_format_desc(target_pix_fmt, width, height);
+		auto target_desc = pixel_format_desc(target_pix_fmt, width, height);
 
 		write = frame_factory->create_frame(tag, target_desc, fps, get_mode(*decoded_frame));
 
@@ -292,10 +292,10 @@ spl::shared_ptr<core::write_frame> make_write_frame(const void* tag, const spl::
 spl::shared_ptr<AVFrame> make_av_frame(caspar::core::data_frame& frame)
 {
 	std::array<void*, 4> data = {};
-	for(int n = 0; n < frame.get_pixel_format_desc().planes.size(); ++n)
+	for(int n = 0; n < frame.pixel_format_desc().planes.size(); ++n)
 		data[n] = frame.image_data(n).begin();
 
-	return make_av_frame(data, frame.get_pixel_format_desc());
+	return make_av_frame(data, frame.pixel_format_desc());
 }
 
 spl::shared_ptr<AVFrame> make_av_frame(std::array<void*, 4> data, const core::pixel_format_desc& pix_desc)

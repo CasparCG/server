@@ -59,7 +59,7 @@ public:
 
 	// data_frame
 		
-	virtual const core::pixel_format_desc& get_pixel_format_desc() const override;
+	virtual const core::pixel_format_desc& pixel_format_desc() const override;
 
 	virtual const boost::iterator_range<const uint8_t*> image_data(int index) const override;
 	virtual const core::audio_buffer& audio_data() const override;
@@ -77,7 +77,7 @@ public:
 
 	// write_frames
 
-	std::vector<spl::shared_ptr<host_buffer>> get_buffers() const;		
+	std::vector<spl::shared_ptr<host_buffer>> buffers() const;		
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

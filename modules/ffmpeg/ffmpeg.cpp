@@ -225,29 +225,29 @@ std::wstring make_version(unsigned int ver)
 	return str.str();
 }
 
-std::wstring get_avcodec_version()
+std::wstring avcodec_version()
 {
-	return make_version(avcodec_version());
+	return make_version(::avcodec_version());
 }
 
-std::wstring get_avformat_version()
+std::wstring avformat_version()
 {
-	return make_version(avformat_version());
+	return make_version(::avformat_version());
 }
 
-std::wstring get_avutil_version()
+std::wstring avutil_version()
 {
-	return make_version(avutil_version());
+	return make_version(::avutil_version());
 }
 
-std::wstring get_avfilter_version()
+std::wstring avfilter_version()
 {
-	return make_version(avfilter_version());
+	return make_version(::avfilter_version());
 }
 
-std::wstring get_swscale_version()
+std::wstring swscale_version()
 {
-	return make_version(swscale_version());
+	return make_version(::swscale_version());
 }
 
 }}

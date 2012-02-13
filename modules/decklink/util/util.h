@@ -118,7 +118,7 @@ static BMDDisplayMode get_display_mode(const T& device, core::video_format fmt, 
 }
 
 template<typename T>
-static std::wstring get_version(T& iterator)
+static std::wstring version(T& iterator)
 {
 	CComQIPtr<IDeckLinkAPIInformation> info = iterator;
 	if (!info)

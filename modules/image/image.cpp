@@ -51,7 +51,7 @@ void uninit()
 }
 
 
-std::wstring get_version()
+std::wstring version()
 {
 	return u16(FreeImage_GetVersion());
 }
