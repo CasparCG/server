@@ -197,7 +197,7 @@ struct server::impl : boost::noncopyable
 
 server::server() : impl_(new impl()){}
 
-const std::vector<spl::shared_ptr<video_channel>> server::get_channels() const
+const std::vector<spl::shared_ptr<video_channel>> server::channels() const
 {
 	return impl_->channels_;
 }

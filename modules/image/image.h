@@ -28,6 +28,6 @@ namespace caspar { namespace image {
 void init();
 void uninit();
 
-std::wstring get_version();
+std::wstring version();
 
 }}

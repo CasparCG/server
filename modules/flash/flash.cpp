@@ -35,12 +35,12 @@ void init()
 	core::register_producer_factory(create_ct_producer);
 }
 
-std::wstring get_cg_version()
+std::wstring cg_version()
 {
 	return L"Unknown";
 }
 
-std::wstring get_version()
+std::wstring version()
 {		
 	std::wstring version = L"Not found";
 #ifdef WIN32

@@ -49,7 +49,7 @@ void init()
 	catch(...){}
 }
 
-std::wstring get_version()
+std::wstring version()
 {
 	try
 	{
@@ -66,7 +66,7 @@ std::wstring get_version()
 	return u16(BlueVelvetVersion());
 }
 
-std::vector<std::wstring> get_device_list()
+std::vector<std::wstring> device_list()
 {
 	std::vector<std::wstring> devices;
 

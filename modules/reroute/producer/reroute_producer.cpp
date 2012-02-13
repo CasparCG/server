@@ -106,7 +106,7 @@ public:
 		if(half_speed && frame_number_ % 2 == 0) // Skip frame
 			return receive(0);
 
-		auto frame = frame_factory_->create_frame(this, read_frame->get_pixel_format_desc());
+		auto frame = frame_factory_->create_frame(this, read_frame->pixel_format_desc());
 
 		A_memcpy(frame->image_data(0).begin(), read_frame->image_data().begin(), read_frame->image_data().size());
 		boost::push_back(frame->audio_data(), read_frame->audio_data());

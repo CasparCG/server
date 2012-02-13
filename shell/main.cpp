@@ -124,25 +124,25 @@ void print_info()
 	CASPAR_LOG(info) << L"Copyright (c) 2010 Sveriges Television AB, www.casparcg.com, <info@casparcg.com>";
 	CASPAR_LOG(info) << L"################################################################################";
 	CASPAR_LOG(info) << L"Starting CasparCG Video and Graphics Playout Server " << env::version();
-	CASPAR_LOG(info) << L"on " << get_win_product_name() << L" " << get_win_sp_version();
-	CASPAR_LOG(info) << get_cpu_info();
-	CASPAR_LOG(info) << get_system_product_name();
+	CASPAR_LOG(info) << L"on " << win_product_name() << L" " << win_sp_version();
+	CASPAR_LOG(info) << cpu_info();
+	CASPAR_LOG(info) << system_product_name();
 	
-	CASPAR_LOG(info) << L"Decklink " << decklink::get_version();
-	BOOST_FOREACH(auto device, decklink::get_device_list())
+	CASPAR_LOG(info) << L"Decklink " << decklink::version();
+	BOOST_FOREACH(auto device, decklink::device_list())
 		CASPAR_LOG(info) << L" - " << device;	
 		
-	CASPAR_LOG(info) << L"Bluefish " << bluefish::get_version();
-	BOOST_FOREACH(auto device, bluefish::get_device_list())
+	CASPAR_LOG(info) << L"Bluefish " << bluefish::version();
+	BOOST_FOREACH(auto device, bluefish::device_list())
 		CASPAR_LOG(info) << L" - " << device;	
 	
-	CASPAR_LOG(info) << L"Flash "			<< flash::get_version();
-	CASPAR_LOG(info) << L"FreeImage "		<< image::get_version();
-	CASPAR_LOG(info) << L"FFMPEG-avcodec "  << ffmpeg::get_avcodec_version();
-	CASPAR_LOG(info) << L"FFMPEG-avformat " << ffmpeg::get_avformat_version();
-	CASPAR_LOG(info) << L"FFMPEG-avfilter " << ffmpeg::get_avfilter_version();
-	CASPAR_LOG(info) << L"FFMPEG-avutil "	<< ffmpeg::get_avutil_version();
-	CASPAR_LOG(info) << L"FFMPEG-swscale "  << ffmpeg::get_swscale_version();
+	CASPAR_LOG(info) << L"Flash "			<< flash::version();
+	CASPAR_LOG(info) << L"FreeImage "		<< image::version();
+	CASPAR_LOG(info) << L"FFMPEG-avcodec "  << ffmpeg::avcodec_version();
+	CASPAR_LOG(info) << L"FFMPEG-avformat " << ffmpeg::avformat_version();
+	CASPAR_LOG(info) << L"FFMPEG-avfilter " << ffmpeg::avfilter_version();
+	CASPAR_LOG(info) << L"FFMPEG-avutil "	<< ffmpeg::avutil_version();
+	CASPAR_LOG(info) << L"FFMPEG-swscale "  << ffmpeg::swscale_version();
 }
 
 LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
@@ -252,7 +252,7 @@ int main(int argc, wchar_t* argv[])
 			//caspar_server.subscribe(console_obs);
 						
 			// Create a amcp parser for console commands.
-			protocol::amcp::AMCPProtocolStrategy amcp(caspar_server.get_channels());
+			protocol::amcp::AMCPProtocolStrategy amcp(caspar_server.channels());
 
 			// Create a dummy client which prints amcp responses to console.
 			auto console_client = std::make_shared<IO::ConsoleClientInfo>();
