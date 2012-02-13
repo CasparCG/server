@@ -349,9 +349,9 @@ public:
 		return renderer_(std::move(items_), format_desc);
 	}
 	
-	virtual spl::shared_ptr<cpu::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc)
+	virtual spl::shared_ptr<cpu::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode)
 	{
-		return spl::make_shared<cpu::write_frame>(tag, desc);
+		return spl::make_shared<cpu::write_frame>(tag, desc, frame_rate, field_mode);
 	}
 };
 
@@ -362,6 +362,6 @@ void image_mixer::pop(){impl_->pop();}
 boost::shared_future<boost::iterator_range<const uint8_t*>> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
 void image_mixer::begin_layer(core::blend_mode blend_mode){impl_->begin_layer(blend_mode);}
 void image_mixer::end_layer(){impl_->end_layer();}
-spl::shared_ptr<core::write_frame> image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->create_frame(tag, desc);}
+spl::shared_ptr<core::write_frame> image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) {return impl_->create_frame(tag, desc, frame_rate, field_mode);}
 
 }}}

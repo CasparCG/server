@@ -29,7 +29,8 @@ public:
 	virtual const boost::iterator_range<uint8_t*> image_data(int index) = 0;
 	virtual audio_buffer& audio_data() = 0;
 
-	virtual double get_frame_rate() const = 0;
+	virtual double frame_rate() const = 0;
+	virtual field_mode field_mode() const = 0;
 
 	virtual int width() const = 0;
 	virtual int height() const = 0;
