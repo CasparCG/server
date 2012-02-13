@@ -7,6 +7,7 @@
 #include <core/mixer/image/image_mixer.h>
 
 #include <core/frame/frame_visitor.h>
+#include <core/video_format.h>
 
 FORWARD1(boost, template<typename> class shared_future);
 FORWARD1(boost, template<typename> class iterator_range);
@@ -33,7 +34,7 @@ public:
 	// NOTE: Content of return future is only valid while future is valid.
 	virtual ::boost::shared_future<::boost::iterator_range<const uint8_t*>> operator()(const core::video_format_desc& format_desc) override;
 		
-	virtual spl::shared_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc) override;
+	virtual spl::shared_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) override;
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

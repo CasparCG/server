@@ -86,9 +86,9 @@ public:
 	
 	// frame_factory
 						
-	virtual spl::shared_ptr<write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc) override
+	virtual spl::shared_ptr<write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) override
 	{		
-		return mixer_.create_frame(tag, desc);
+		return mixer_.create_frame(tag, desc, frame_rate, field_mode);
 	}
 	
 	virtual core::video_format_desc video_format_desc() const

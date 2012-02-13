@@ -43,7 +43,7 @@ class write_frame sealed : public core::write_frame
 	write_frame& operator=(const write_frame);
 public:	
 	explicit write_frame(const void* tag);
-	explicit write_frame(const spl::shared_ptr<class context>& ogl, const void* tag, const core::pixel_format_desc& desc);
+	explicit write_frame(const spl::shared_ptr<class context>& ogl, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode);
 
 	write_frame(write_frame&& other);
 	write_frame& operator=(write_frame&& other);
@@ -64,7 +64,8 @@ public:
 	virtual const boost::iterator_range<uint8_t*> image_data(int index) override;
 	virtual core::audio_buffer& audio_data() override;
 	
-	virtual double get_frame_rate() const override;
+	virtual double frame_rate() const override;
+	virtual core::field_mode field_mode() const override;
 
 	virtual int width() const override;
 	virtual int height() const override;

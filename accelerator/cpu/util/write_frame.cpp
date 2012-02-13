@@ -37,16 +37,21 @@ struct write_frame::impl : boost::noncopyable
 	core::audio_buffer							audio_data_;
 	const core::pixel_format_desc				desc_;
 	const void*									tag_;
+	double										frame_rate_;
+	core::field_mode							field_mode_;
 
 	impl(const void* tag)
 		: desc_(core::pixel_format::invalid)
 		, tag_(tag)		
+		, field_mode_(core::field_mode::empty)
 	{
 	}
 
-	impl(const void* tag, const core::pixel_format_desc& desc) 
+	impl(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) 
 		: desc_(desc)
 		, tag_(tag)
+		, frame_rate_(frame_rate)
+		, field_mode_(field_mode)
 	{
 		std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(buffers_), [&](const core::pixel_format_desc::plane& plane)
 		{
@@ -71,8 +76,8 @@ struct write_frame::impl : boost::noncopyable
 };
 	
 write_frame::write_frame(const void* tag) : impl_(new impl(tag)){}
-write_frame::write_frame(const void* tag, const core::pixel_format_desc& desc) 
-	: impl_(new impl(tag, desc)){}
+write_frame::write_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) 
+	: impl_(new impl(tag, desc, frame_rate, field_mode)){}
 write_frame::write_frame(write_frame&& other) : impl_(std::move(other.impl_)){}
 write_frame& write_frame::operator=(write_frame&& other)
 {
@@ -86,7 +91,8 @@ const boost::iterator_range<const uint8_t*> write_frame::image_data(int index) c
 const core::audio_buffer& write_frame::audio_data() const{return impl_->audio_data_;}
 const boost::iterator_range<uint8_t*> write_frame::image_data(int index){return impl_->image_data(index);}
 core::audio_buffer& write_frame::audio_data(){return impl_->audio_data_;}
-double write_frame::get_frame_rate() const{return 0.0;} // TODO: what's this?
+double write_frame::frame_rate() const{return impl_->frame_rate_;}
+core::field_mode write_frame::field_mode()const{return impl_->field_mode_;}
 int write_frame::width() const{return impl_->desc_.planes.at(0).width;}
 int write_frame::height() const{return impl_->desc_.planes.at(0).height;}						
 const void* write_frame::tag() const{return impl_->tag_;}	

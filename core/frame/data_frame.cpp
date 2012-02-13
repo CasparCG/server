@@ -35,9 +35,13 @@ spl::shared_ptr<data_frame> data_frame::empty()
 			static audio_buffer buffer;
 			return buffer;
 		}
-		virtual double get_frame_rate() const override
+		virtual double frame_rate() const override
 		{
 			return 0.0;
+		}
+		virtual core::field_mode field_mode() const override
+		{
+			return core::field_mode::empty;
 		}
 		virtual int width() const override
 		{

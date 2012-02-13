@@ -171,7 +171,7 @@ int make_alpha_format(int format)
 	}
 }
 
-spl::shared_ptr<core::write_frame> make_write_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, const spl::shared_ptr<core::frame_factory>& frame_factory, int flags)
+spl::shared_ptr<core::write_frame> make_write_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, double fps, const spl::shared_ptr<core::frame_factory>& frame_factory, int flags)
 {			
 	static tbb::concurrent_unordered_map<int, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contexts_;
 	
@@ -207,7 +207,7 @@ spl::shared_ptr<core::write_frame> make_write_frame(const void* tag, const spl::
 		
 		auto target_desc = get_pixel_format_desc(target_pix_fmt, width, height);
 
-		write = frame_factory->create_frame(tag, target_desc);
+		write = frame_factory->create_frame(tag, target_desc, fps, get_mode(*decoded_frame));
 
 		std::shared_ptr<SwsContext> sws_context;
 
@@ -252,8 +252,8 @@ spl::shared_ptr<core::write_frame> make_write_frame(const void* tag, const spl::
 	}
 	else
 	{
-		write = frame_factory->create_frame(tag, desc);
-
+		write = frame_factory->create_frame(tag, desc, fps, get_mode(*decoded_frame));
+		
 		for(int n = 0; n < static_cast<int>(desc.planes.size()); ++n)
 		{
 			auto plane            = desc.planes[n];
