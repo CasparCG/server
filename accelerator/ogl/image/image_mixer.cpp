@@ -25,7 +25,7 @@
 
 #include "image_kernel.h"
 
-#include "../util/write_frame.h"
+#include "../util/data_frame.h"
 #include "../util/context.h"
 #include "../util/host_buffer.h"
 #include "../util/device_buffer.h"
@@ -34,7 +34,7 @@
 #include <common/concurrency/async.h>
 #include <common/memory/memcpy.h>
 
-#include <core/frame/write_frame.h>
+#include <core/frame/data_frame.h>
 #include <core/frame/frame_transform.h>
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
@@ -59,13 +59,14 @@ typedef boost::shared_future<spl::shared_ptr<device_buffer>> future_texture;
 struct item
 {
 	core::pixel_format_desc						pix_desc;
+	core::field_mode							field_mode;
 	std::vector<spl::shared_ptr<host_buffer>>	buffers;
 	std::vector<future_texture>					textures;
 	core::image_transform						transform;
 
-
 	item()
 		: pix_desc(core::pixel_format::invalid)
+		, field_mode(core::field_mode::empty)
 	{
 	}
 };
@@ -297,7 +298,19 @@ private:
 				   std::shared_ptr<device_buffer>&	local_key_buffer, 
 				   std::shared_ptr<device_buffer>&	local_mix_buffer,
 				   const core::video_format_desc&	format_desc)
-	{			
+	{									
+		if(item.pix_desc.planes.at(0).height == 480) // NTSC DV
+		{
+			item.transform.fill_translation[1] += 2.0/static_cast<double>(format_desc.height);
+			item.transform.fill_scale[1] = 1.0 - 6.0*1.0/static_cast<double>(format_desc.height);
+		}
+	
+		// Fix field-order if needed
+		if(item.field_mode == core::field_mode::lower && format_desc.field_mode == core::field_mode::upper)
+			item.transform.fill_translation[1] += 1.0/static_cast<double>(format_desc.height);
+		else if(item.field_mode == core::field_mode::upper && format_desc.field_mode == core::field_mode::lower)
+			item.transform.fill_translation[1] -= 1.0/static_cast<double>(format_desc.height);
+		
 		draw_params draw_params;
 		draw_params.pix_desc	= std::move(item.pix_desc);
 		draw_params.transform	= std::move(item.transform);
@@ -391,7 +404,7 @@ public:
 		
 	void visit(const core::data_frame& frame2)
 	{			
-		auto frame = dynamic_cast<const write_frame*>(&frame2);
+		auto frame = dynamic_cast<const data_frame*>(&frame2);
 		if(frame == nullptr)
 			return;
 
@@ -406,6 +419,7 @@ public:
 
 		item item;
 		item.pix_desc			= frame->pixel_format_desc();
+		item.field_mode			= frame->field_mode();
 		item.buffers			= frame->buffers();				
 		item.transform			= transform_stack_.back();
 
@@ -432,9 +446,9 @@ public:
 		return renderer_(std::move(layers_), format_desc);
 	}
 	
-	virtual spl::shared_ptr<ogl::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode)
+	virtual spl::shared_ptr<core::data_frame> create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode)
 	{
-		return spl::make_shared<ogl::write_frame>(ogl_, tag, desc, frame_rate, field_mode);
+		return spl::make_shared<ogl::data_frame>(ogl_, tag, desc, frame_rate, field_mode);
 	}
 };
 
@@ -445,6 +459,6 @@ void image_mixer::pop(){impl_->pop();}
 boost::shared_future<boost::iterator_range<const uint8_t*>> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
 void image_mixer::begin_layer(core::blend_mode blend_mode){impl_->begin_layer(blend_mode);}
 void image_mixer::end_layer(){impl_->end_layer();}
-spl::shared_ptr<core::write_frame> image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) {return impl_->create_frame(tag, desc, frame_rate, field_mode);}
+spl::shared_ptr<core::data_frame> image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) {return impl_->create_frame(tag, desc, frame_rate, field_mode);}
 
 }}}

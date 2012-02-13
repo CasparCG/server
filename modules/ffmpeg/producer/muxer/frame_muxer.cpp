@@ -31,7 +31,7 @@
 #include <core/frame/frame_transform.h>
 #include <core/frame/pixel_format.h>
 #include <core/frame/frame_factory.h>
-#include <core/frame/write_frame.h>
+#include <core/frame/data_frame.h>
 
 #include <common/env.h>
 #include <common/except.h>
@@ -67,22 +67,22 @@ namespace caspar { namespace ffmpeg {
 	
 struct frame_muxer::impl : boost::noncopyable
 {	
-	std::queue<std::queue<spl::shared_ptr<write_frame>>>	video_streams_;
-	std::queue<core::audio_buffer>					audio_streams_;
-	std::queue<spl::shared_ptr<draw_frame>>				frame_buffer_;
-	display_mode								display_mode_;
-	const double									in_fps_;
-	const video_format_desc							format_desc_;
-	bool											auto_transcode_;
-	bool											auto_deinterlace_;
+	std::queue<std::queue<spl::shared_ptr<data_frame>>>		video_streams_;
+	std::queue<core::audio_buffer>							audio_streams_;
+	std::queue<spl::shared_ptr<draw_frame>>					frame_buffer_;
+	display_mode											display_mode_;
+	const double											in_fps_;
+	const video_format_desc									format_desc_;
+	bool													auto_transcode_;
+	bool													auto_deinterlace_;
 	
-	std::vector<int>								audio_cadence_;
+	std::vector<int>										audio_cadence_;
 			
 	spl::shared_ptr<core::frame_factory>					frame_factory_;
 	
-	filter											filter_;
-	const std::wstring								filter_str_;
-	bool											force_deinterlacing_;
+	filter													filter_;
+	const std::wstring										filter_str_;
+	bool													force_deinterlacing_;
 		
 	impl(double in_fps, const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filter_str)
 		: display_mode_(display_mode::invalid)
@@ -95,7 +95,7 @@ struct frame_muxer::impl : boost::noncopyable
 		, filter_str_(filter_str)
 		, force_deinterlacing_(false)
 	{
-		video_streams_.push(std::queue<spl::shared_ptr<write_frame>>());
+		video_streams_.push(std::queue<spl::shared_ptr<data_frame>>());
 		audio_streams_.push(core::audio_buffer());
 		
 		// Note: Uses 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
@@ -110,7 +110,7 @@ struct frame_muxer::impl : boost::noncopyable
 		
 		if(video_frame == flush_video())
 		{	
-			video_streams_.push(std::queue<spl::shared_ptr<write_frame>>());
+			//video_streams_.push(std::queue<spl::shared_ptr<data_frame>>());
 		}
 		else if(video_frame == empty_video())
 		{
@@ -144,7 +144,7 @@ struct frame_muxer::impl : boost::noncopyable
 				if(video_frame->format == PIX_FMT_GRAY8 && format == CASPAR_PIX_FMT_LUMA)
 					av_frame->format = format;
 
-				video_streams_.back().push(make_write_frame(this, av_frame, frame_factory_->video_format_desc().fps, frame_factory_, flags));
+				video_streams_.back().push(make_data_frame(this, av_frame, frame_factory_->video_format_desc().fps, frame_factory_, flags));
 			}
 		}
 
@@ -238,7 +238,7 @@ struct frame_muxer::impl : boost::noncopyable
 		case display_mode::deinterlace_bob:				
 		case display_mode::deinterlace:	
 			{
-				frame_buffer_.push(frame1);
+				frame_buffer_.push(spl::make_shared<draw_frame>(frame1));
 				break;
 			}
 		case display_mode::interlace:					
@@ -246,22 +246,22 @@ struct frame_muxer::impl : boost::noncopyable
 			{				
 				auto frame2 = pop_video();
 
-				frame_buffer_.push(core::draw_frame::interlace(frame1, frame2, format_desc_.field_mode));	
+				frame_buffer_.push(core::draw_frame::interlace(spl::make_shared<draw_frame>(frame1), spl::make_shared<draw_frame>(frame2), format_desc_.field_mode));	
 				break;
 			}
 		case display_mode::duplicate:	
 			{
 				boost::range::push_back(frame1->audio_data(), pop_audio());
 
-				frame_buffer_.push(frame1);
-				frame_buffer_.push(frame1);
+				frame_buffer_.push(spl::make_shared<draw_frame>(frame1));
+				frame_buffer_.push(spl::make_shared<draw_frame>(frame1));
 				break;
 			}
 		case display_mode::half:	
 			{				
 				pop_video(); // Throw away
 
-				frame_buffer_.push(frame1);
+				frame_buffer_.push(spl::make_shared<draw_frame>(frame1));
 				break;
 			}
 		}
@@ -269,7 +269,7 @@ struct frame_muxer::impl : boost::noncopyable
 		return frame_buffer_.empty() ? nullptr : poll();
 	}
 	
-	spl::shared_ptr<core::write_frame> pop_video()
+	spl::shared_ptr<core::data_frame> pop_video()
 	{
 		auto frame = video_streams_.front().front();
 		video_streams_.front().pop();		
@@ -344,7 +344,7 @@ struct frame_muxer::impl : boost::noncopyable
 				filter_.push(frame);
 				auto av_frame = filter_.poll();
 				if(av_frame)							
-					video_streams_.back().push(make_write_frame(this, spl::make_shared_ptr(av_frame), frame_factory_->video_format_desc().fps, frame_factory_, 0));
+					video_streams_.back().push(make_data_frame(this, spl::make_shared_ptr(av_frame), frame_factory_->video_format_desc().fps, frame_factory_, 0));
 			}
 			filter_ = filter(filter_str);
 			CASPAR_LOG(info) << L"[frame_muxer] " << display_mode_ << L" " << print_mode(frame->width, frame->height, in_fps_, frame->interlaced_frame > 0);

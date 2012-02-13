@@ -27,7 +27,6 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
-#include <core/frame/write_frame.h>
 #include <core/frame/data_frame.h>
 
 #include <common/except.h>
@@ -110,11 +109,11 @@ public:
 
 		A_memcpy(frame->image_data(0).begin(), read_frame->image_data().begin(), read_frame->image_data().size());
 		boost::push_back(frame->audio_data(), read_frame->audio_data());
-
-		frame_buffer_.push(frame);	
+		
+		frame_buffer_.push(spl::make_shared<core::draw_frame>(frame));
 		
 		if(double_speed)	
-			frame_buffer_.push(frame);
+			frame_buffer_.push(spl::make_shared<core::draw_frame>(frame));
 
 		return receive(0);
 	}	

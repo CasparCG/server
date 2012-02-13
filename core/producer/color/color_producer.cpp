@@ -24,10 +24,10 @@
 #include "color_producer.h"
 
 #include <core/producer/frame_producer.h>
+#include <core/frame/data_frame.h>
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
-#include <core/frame/write_frame.h>
 
 #include <common/except.h>
 
@@ -131,7 +131,7 @@ spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<fram
 
 	return core::wrap_producer(spl::make_shared<color_producer>(frame_factory, color2));
 }
-spl::shared_ptr<write_frame> create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, const std::wstring& color)
+spl::shared_ptr<draw_frame> create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, const std::wstring& color)
 {
 	auto color2 = get_hex_color(color);
 	if(color2.length() != 9 || color2[0] != '#')
@@ -148,7 +148,7 @@ spl::shared_ptr<write_frame> create_color_frame(void* tag, const spl::shared_ptr
 	if(!(str >> std::hex >> value) || !str.eof())
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(color2) << msg_info("Invalid color."));
 			
-	return frame;
+	return spl::make_shared<draw_frame>(frame);
 }
 
 }}

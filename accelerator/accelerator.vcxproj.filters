@@ -49,20 +49,20 @@
     <ClInclude Include="ogl\util\shader.h">
       <Filter>source\ogl\util</Filter>
     </ClInclude>
-    <ClInclude Include="ogl\util\write_frame.h">
-      <Filter>source\ogl\util</Filter>
-    </ClInclude>
     <ClInclude Include="cpu\image\image_mixer.h">
       <Filter>source\cpu\image</Filter>
-    </ClInclude>
-    <ClInclude Include="cpu\util\write_frame.h">
-      <Filter>source\cpu\util</Filter>
     </ClInclude>
     <ClInclude Include="cpu\util\xmm.h">
       <Filter>source\cpu\util</Filter>
     </ClInclude>
     <ClInclude Include="accelerator.h">
       <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="cpu\util\data_frame.h">
+      <Filter>source\cpu\util</Filter>
+    </ClInclude>
+    <ClInclude Include="ogl\util\data_frame.h">
+      <Filter>source\ogl\util</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -88,17 +88,17 @@
     <ClCompile Include="ogl\util\shader.cpp">
       <Filter>source\ogl\util</Filter>
     </ClCompile>
-    <ClCompile Include="ogl\util\write_frame.cpp">
-      <Filter>source\ogl\util</Filter>
-    </ClCompile>
     <ClCompile Include="cpu\image\image_mixer.cpp">
       <Filter>source\cpu\image</Filter>
     </ClCompile>
-    <ClCompile Include="cpu\util\write_frame.cpp">
-      <Filter>source\cpu\util</Filter>
-    </ClCompile>
     <ClCompile Include="accelerator.cpp">
       <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="cpu\util\data_frame.cpp">
+      <Filter>source\cpu\util</Filter>
+    </ClCompile>
+    <ClCompile Include="ogl\util\data_frame.cpp">
+      <Filter>source\ogl\util</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

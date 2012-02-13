@@ -33,8 +33,8 @@
 
 #include <core/frame/frame_transform.h>
 #include <core/frame/frame_factory.h>
+#include <core/frame/data_frame.h>
 #include <core/producer/frame_producer.h>
-#include <core/frame/write_frame.h>
 
 #include <common/except.h>
 
@@ -171,7 +171,7 @@ int make_alpha_format(int format)
 	}
 }
 
-spl::shared_ptr<core::write_frame> make_write_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, double fps, const spl::shared_ptr<core::frame_factory>& frame_factory, int flags)
+spl::shared_ptr<core::data_frame> make_data_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, double fps, const spl::shared_ptr<core::frame_factory>& frame_factory, int flags)
 {			
 	static tbb::concurrent_unordered_map<int, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contexts_;
 	
@@ -185,7 +185,7 @@ spl::shared_ptr<core::write_frame> make_write_frame(const void* tag, const spl::
 	if(flags & core::frame_producer::flags::alpha_only)
 		desc = pixel_format_desc(static_cast<PixelFormat>(make_alpha_format(decoded_frame->format)), width, height);
 
-	std::shared_ptr<core::write_frame> write;
+	std::shared_ptr<core::data_frame> write;
 
 	if(desc.format == core::pixel_format::invalid)
 	{
@@ -273,19 +273,7 @@ spl::shared_ptr<core::write_frame> make_write_frame(const void* tag, const spl::
 			}, ap);
 		}
 	}
-
-	if(decoded_frame->height == 480) // NTSC DV
-	{
-		write->frame_transform().image_transform.fill_translation[1] += 2.0/static_cast<double>(frame_factory->video_format_desc().height);
-		write->frame_transform().image_transform.fill_scale[1] = 1.0 - 6.0*1.0/static_cast<double>(frame_factory->video_format_desc().height);
-	}
 	
-	// Fix field-order if needed
-	if(get_mode(*decoded_frame) == core::field_mode::lower && frame_factory->video_format_desc().field_mode == core::field_mode::upper)
-		write->frame_transform().image_transform.fill_translation[1] += 1.0/static_cast<double>(frame_factory->video_format_desc().height);
-	else if(get_mode(*decoded_frame) == core::field_mode::upper && frame_factory->video_format_desc().field_mode == core::field_mode::lower)
-		write->frame_transform().image_transform.fill_translation[1] -= 1.0/static_cast<double>(frame_factory->video_format_desc().height);
-
 	return spl::make_shared_ptr(write);
 }
 

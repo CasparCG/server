@@ -11,7 +11,7 @@
 
 FORWARD1(boost, template<typename> class shared_future);
 FORWARD1(boost, template<typename> class iterator_range);
-FORWARD2(caspar, core, class write_frame);
+FORWARD2(caspar, core, class data_frame);
 FORWARD2(caspar, core, struct pixel_format_desc);
 FORWARD2(caspar, core, struct video_format_desc);
 FORWARD2(caspar, core, class data_frame);
@@ -34,7 +34,7 @@ public:
 	// NOTE: Content of return future is only valid while future is valid.
 	virtual ::boost::shared_future<::boost::iterator_range<const uint8_t*>> operator()(const core::video_format_desc& format_desc) override;
 		
-	virtual spl::shared_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) override;
+	virtual spl::shared_ptr<core::data_frame> create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) override;
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

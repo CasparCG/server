@@ -25,11 +25,11 @@
 
 #include <core/video_format.h>
 
+#include <core/frame/data_frame.h>
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/frame_transform.h>
 #include <core/frame/pixel_format.h>
-#include <core/frame/write_frame.h>
 
 #include <common/env.h>
 #include <common/log.h>
@@ -101,7 +101,7 @@ struct image_scroll_producer : public core::frame_producer
 					count = 0;
 				}
 			
-				frames_.push_back(frame);
+				frames_.push_back(spl::make_shared<core::draw_frame>(frame));
 			}
 			
 			if(speed_ < 0.0)
@@ -137,7 +137,7 @@ struct image_scroll_producer : public core::frame_producer
 					count = 0;
 				}
 			
-				frames_.push_back(frame);
+				frames_.push_back(spl::make_shared<core::draw_frame>(frame));
 			}
 
 			std::reverse(frames_.begin(), frames_.end());

@@ -123,7 +123,6 @@
     <ClInclude Include="frame\frame_transform.h" />
     <ClInclude Include="frame\frame_visitor.h" />
     <ClInclude Include="frame\pixel_format.h" />
-    <ClInclude Include="frame\write_frame.h" />
     <ClInclude Include="mixer\audio\audio_util.h" />
     <ClInclude Include="mixer\image\blend_modes.h" />
     <ClInclude Include="monitor\monitor.h" />

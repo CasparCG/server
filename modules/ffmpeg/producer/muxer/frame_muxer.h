@@ -35,7 +35,7 @@
 struct AVFrame;
 
 FORWARD2(caspar, core, struct pixel_format_desc);
-FORWARD2(caspar, core, class write_frame);
+FORWARD2(caspar, core, class data_frame);
 FORWARD2(caspar, core, class frame_factory);
 FORWARD2(caspar, core, class draw_frame);
 
