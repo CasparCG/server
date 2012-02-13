@@ -144,7 +144,7 @@ struct frame_muxer::impl : boost::noncopyable
 				if(video_frame->format == PIX_FMT_GRAY8 && format == CASPAR_PIX_FMT_LUMA)
 					av_frame->format = format;
 
-				video_streams_.back().push(make_write_frame(this, av_frame, frame_factory_, flags));
+				video_streams_.back().push(make_write_frame(this, av_frame, frame_factory_->video_format_desc().fps, frame_factory_, flags));
 			}
 		}
 
@@ -344,7 +344,7 @@ struct frame_muxer::impl : boost::noncopyable
 				filter_.push(frame);
 				auto av_frame = filter_.poll();
 				if(av_frame)							
-					video_streams_.back().push(make_write_frame(this, spl::make_shared_ptr(av_frame), frame_factory_, 0));
+					video_streams_.back().push(make_write_frame(this, spl::make_shared_ptr(av_frame), frame_factory_->video_format_desc().fps, frame_factory_, 0));
 			}
 			filter_ = filter(filter_str);
 			CASPAR_LOG(info) << L"[frame_muxer] " << display_mode_ << L" " << print_mode(frame->width, frame->height, in_fps_, frame->interlaced_frame > 0);

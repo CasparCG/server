@@ -277,7 +277,7 @@ public:
 	
 	spl::shared_ptr<core::draw_frame> render()
 	{			
-		const float frame_time = 1.0f/ax_->GetFPS();
+		const float frame_time = 1.0f/fps();
 
 		frame_timer_.restart();
 
@@ -288,7 +288,7 @@ public:
 		
 			core::pixel_format_desc desc = core::pixel_format::bgra;
 			desc.planes.push_back(core::pixel_format_desc::plane(width_, height_, 4));
-			auto frame = frame_factory_->create_frame(this, desc);
+			auto frame = frame_factory_->create_frame(this, desc, fps(), core::field_mode::progressive);
 
 			A_memcpy(frame->image_data(0).begin(), bmp_.data(), width_*height_*4);
 			head_ = frame;	
