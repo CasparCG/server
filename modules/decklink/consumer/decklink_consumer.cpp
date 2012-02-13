@@ -484,7 +484,6 @@ struct decklink_consumer_proxy : public core::frame_consumer
 {
 	const configuration					config_;
 	std::unique_ptr<decklink_consumer>	consumer_;
-	std::vector<int>					audio_cadence_;
 	executor							executor_;
 public:
 
@@ -513,16 +512,12 @@ public:
 		executor_.invoke([=]
 		{
 			consumer_.reset();
-			consumer_.reset(new decklink_consumer(config_, format_desc, channel_index));		
-			audio_cadence_ = format_desc.audio_cadence;			
+			consumer_.reset(new decklink_consumer(config_, format_desc, channel_index));			
 		});
 	}
 	
 	virtual bool send(const spl::shared_ptr<const core::data_frame>& frame) override
 	{
-		CASPAR_VERIFY(audio_cadence_.front() == static_cast<int>(frame->audio_data().size()));
-		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
-
 		consumer_->send(frame);
 		return true;
 	}

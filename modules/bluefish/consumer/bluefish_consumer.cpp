@@ -299,7 +299,6 @@ struct bluefish_consumer_proxy : public core::frame_consumer
 	const int							device_index_;
 	const bool							embedded_audio_;
 	const bool							key_only_;
-	std::vector<int>					audio_cadence_;
 public:
 
 	bluefish_consumer_proxy(int device_index, bool embedded_audio, bool key_only)
@@ -315,14 +314,10 @@ public:
 	{
 		consumer_.reset();
 		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_, key_only_, channel_index));
-		audio_cadence_ = format_desc.audio_cadence;	
 	}
 	
 	virtual bool send(const spl::shared_ptr<const core::data_frame>& frame) override
 	{
-		CASPAR_VERIFY(audio_cadence_.front() == static_cast<size_t>(frame->audio_data().size()));
-		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
-
 		consumer_->send(frame);
 		return true;
 	}
