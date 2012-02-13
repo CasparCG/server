@@ -404,7 +404,7 @@ public:
 		
 	void visit(const core::data_frame& frame2)
 	{			
-		auto frame = dynamic_cast<const data_frame*>(&frame2);
+		auto frame = dynamic_cast<const ogl::data_frame*>(&frame2);
 		if(frame == nullptr)
 			return;
 
