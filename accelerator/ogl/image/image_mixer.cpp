@@ -39,8 +39,6 @@
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
-#include <modules/ffmpeg/producer/filter/filter.h>
-
 #include <asmlib.h>
 
 #include <gl/glew.h>
@@ -114,12 +112,10 @@ class image_renderer
 	spl::shared_ptr<context>																		ogl_;
 	image_kernel																					kernel_;
 	std::pair<std::vector<layer>, boost::shared_future<boost::iterator_range<const uint8_t*>>>		last_image_;	
-	ffmpeg::filter																					deinterlacer_;
 public:
 	image_renderer(const spl::shared_ptr<context>& ogl)
 		: ogl_(ogl)
 		, kernel_(ogl_)
-		, deinterlacer_(L"YADIF=0:-1")
 	{
 	}
 	
