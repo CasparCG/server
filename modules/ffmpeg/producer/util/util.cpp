@@ -171,7 +171,7 @@ int make_alpha_format(int format)
 	}
 }
 
-spl::shared_ptr<core::data_frame> make_data_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, double fps, const spl::shared_ptr<core::frame_factory>& frame_factory, int flags)
+spl::unique_ptr<core::data_frame> make_data_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, double fps, const spl::shared_ptr<core::frame_factory>& frame_factory, int flags)
 {			
 	static tbb::concurrent_unordered_map<int, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contexts_;
 	
@@ -184,9 +184,7 @@ spl::shared_ptr<core::data_frame> make_data_frame(const void* tag, const spl::sh
 	
 	if(flags & core::frame_producer::flags::alpha_only)
 		desc = pixel_format_desc(static_cast<PixelFormat>(make_alpha_format(decoded_frame->format)), width, height);
-
-	std::shared_ptr<core::data_frame> write;
-
+	
 	if(desc.format == core::pixel_format::invalid)
 	{
 		auto pix_fmt = static_cast<PixelFormat>(decoded_frame->format);
@@ -207,7 +205,7 @@ spl::shared_ptr<core::data_frame> make_data_frame(const void* tag, const spl::sh
 		
 		auto target_desc = pixel_format_desc(target_pix_fmt, width, height);
 
-		write = frame_factory->create_frame(tag, target_desc, fps, get_mode(*decoded_frame));
+		auto write = frame_factory->create_frame(tag, target_desc, fps, get_mode(*decoded_frame));
 
 		std::shared_ptr<SwsContext> sws_context;
 
@@ -249,10 +247,12 @@ spl::shared_ptr<core::data_frame> make_data_frame(const void* tag, const spl::sh
 
 		sws_scale(sws_context.get(), decoded_frame->data, decoded_frame->linesize, 0, height, av_frame->data, av_frame->linesize);	
 		pool.push(sws_context);	
+
+		return std::move(write);
 	}
 	else
 	{
-		write = frame_factory->create_frame(tag, desc, fps, get_mode(*decoded_frame));
+		auto write = frame_factory->create_frame(tag, desc, fps, get_mode(*decoded_frame));
 		
 		for(int n = 0; n < static_cast<int>(desc.planes.size()); ++n)
 		{
@@ -272,9 +272,9 @@ spl::shared_ptr<core::data_frame> make_data_frame(const void* tag, const spl::sh
 					A_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
 			}, ap);
 		}
-	}
 	
-	return spl::make_shared_ptr(write);
+		return std::move(write);
+	}
 }
 
 spl::shared_ptr<AVFrame> make_av_frame(caspar::core::data_frame& frame)

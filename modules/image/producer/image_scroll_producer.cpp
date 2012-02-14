@@ -101,7 +101,7 @@ struct image_scroll_producer : public core::frame_producer
 					count = 0;
 				}
 			
-				frames_.push_back(spl::make_shared<core::draw_frame>(frame));
+				frames_.push_back(spl::make_shared<core::draw_frame>(std::move(frame)));
 			}
 			
 			if(speed_ < 0.0)
@@ -137,7 +137,7 @@ struct image_scroll_producer : public core::frame_producer
 					count = 0;
 				}
 			
-				frames_.push_back(spl::make_shared<core::draw_frame>(frame));
+				frames_.push_back(spl::make_shared<core::draw_frame>(std::move(frame)));
 			}
 
 			std::reverse(frames_.begin(), frames_.end());

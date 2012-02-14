@@ -23,6 +23,8 @@
 
 #include "draw_frame.h"
 
+#include "data_frame.h"
+
 #include "frame_transform.h"
 
 #include <boost/foreach.hpp>
@@ -32,7 +34,7 @@ namespace caspar { namespace core {
 struct draw_frame::impl
 {		
 	std::vector<spl::shared_ptr<const draw_frame>> frames_;
-	std::shared_ptr<const data_frame> data_frame_;
+	std::shared_ptr<spl::unique_ptr<const data_frame>> data_frame_;
 
 	core::frame_transform frame_transform_;		
 public:
@@ -40,8 +42,8 @@ public:
 	{
 	}
 		
-	impl(spl::shared_ptr<const data_frame> frame) 
-		: data_frame_(frame)
+	impl(spl::unique_ptr<const data_frame> frame) 
+		: data_frame_(new spl::unique_ptr<const data_frame>(std::move(frame)))
 	{
 	}
 
@@ -65,7 +67,7 @@ public:
 		visitor.push(frame_transform_);
 		if(data_frame_)
 		{
-			visitor.visit(*data_frame_);
+			visitor.visit(**data_frame_);
 		}
 		else
 		{
@@ -79,7 +81,7 @@ public:
 draw_frame::draw_frame() : impl_(new impl()){}
 draw_frame::draw_frame(const draw_frame& other) : impl_(new impl(*other.impl_)){}
 draw_frame::draw_frame(draw_frame&& other) : impl_(std::move(other.impl_)){}
-draw_frame::draw_frame(spl::shared_ptr<const data_frame> frame)  : impl_(new impl(std::move(frame))){}
+draw_frame::draw_frame(spl::unique_ptr<const data_frame> frame)  : impl_(new impl(std::move(frame))){}
 draw_frame::draw_frame(spl::shared_ptr<const draw_frame> frame)  : impl_(new impl(std::move(frame))){}
 draw_frame::draw_frame(std::vector<spl::shared_ptr<draw_frame>> frames) : impl_(new impl(frames)){}
 draw_frame::draw_frame(std::vector<spl::shared_ptr<const draw_frame>> frames) : impl_(new impl(frames)){}
