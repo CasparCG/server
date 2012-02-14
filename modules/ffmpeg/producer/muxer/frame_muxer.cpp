@@ -327,7 +327,7 @@ struct frame_muxer::impl : boost::noncopyable
 			   display_mode_ != display_mode::deinterlace_bob && 
 			   display_mode_ != display_mode::deinterlace_bob_reinterlace)			
 			{	
-				CASPAR_LOG(info) << L"[frame_muxer] Automatically started non bob-deinterlacing. Consider starting producer with bob-deinterlacing (FILTER DEINTERLACE_BOB) for smoothest playback.";
+				CASPAR_LOG(info) << L"[frame_muxer] Automatically started non bob-deinterlacing. Consider starting producer with bob-deinterlacing (FILTER DEINTERLACE_BOB) for smoother playback.";
 				display_mode_ = display_mode::deinterlace;
 			}
 
