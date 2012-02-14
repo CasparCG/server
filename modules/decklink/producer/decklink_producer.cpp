@@ -228,13 +228,14 @@ public:
 			boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 			
 			// POLL
-			
-			for(auto frame = muxer_.poll(); frame; frame = muxer_.poll())
+
+			auto frame = core::draw_frame::late();
+			if(muxer_.try_pop(frame))
 			{
-				if(!frame_buffer_.try_push(spl::make_shared_ptr(frame)))
+				if(!frame_buffer_.try_push(frame))
 					graph_->set_tag("dropped-frame");
 			}
-
+			
 			graph_->set_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
 
 			graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
