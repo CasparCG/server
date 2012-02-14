@@ -208,13 +208,13 @@ struct frame_muxer::impl : boost::noncopyable
 		}
 	}
 		
-	std::shared_ptr<draw_frame> poll()
+	bool try_pop(spl::shared_ptr<core::draw_frame>& result)
 	{
 		if(!frame_buffer_.empty())
 		{
-			auto frame = frame_buffer_.front();
+			result = std::move(frame_buffer_.front());
 			frame_buffer_.pop();	
-			return frame;
+			return true;
 		}
 
 		if(video_streams_.size() > 1 && audio_streams_.size() > 1 && (!video_ready2() || !audio_ready2()))
@@ -227,7 +227,7 @@ struct frame_muxer::impl : boost::noncopyable
 		}
 
 		if(!video_ready2() || !audio_ready2() || display_mode_ == display_mode::invalid)
-			return nullptr;
+			return false;
 				
 		auto frame1				= pop_video();
 		frame1->audio_data()	= pop_audio();
@@ -266,7 +266,10 @@ struct frame_muxer::impl : boost::noncopyable
 			}
 		}
 		
-		return frame_buffer_.empty() ? nullptr : poll();
+		if(frame_buffer_.empty())
+			return false;
+
+		return try_pop(result);
 	}
 	
 	spl::shared_ptr<core::data_frame> pop_video()
@@ -378,7 +381,7 @@ frame_muxer::frame_muxer(double in_fps, const spl::shared_ptr<core::frame_factor
 	: impl_(new impl(in_fps, frame_factory, filter)){}
 void frame_muxer::push(const std::shared_ptr<AVFrame>& video_frame, int flags){impl_->push(video_frame, flags);}
 void frame_muxer::push(const std::shared_ptr<core::audio_buffer>& audio_samples){return impl_->push(audio_samples);}
-std::shared_ptr<draw_frame> frame_muxer::poll(){return impl_->poll();}
+bool frame_muxer::try_pop(spl::shared_ptr<core::draw_frame>& result){return impl_->try_pop(result);}
 uint32_t frame_muxer::calc_nb_frames(uint32_t nb_frames) const {return impl_->calc_nb_frames(nb_frames);}
 bool frame_muxer::video_ready() const{return impl_->video_ready();}
 bool frame_muxer::audio_ready() const{return impl_->audio_ready();}
