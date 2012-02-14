@@ -264,11 +264,10 @@ struct frame_muxer::impl : boost::noncopyable
 				frame_buffer_.push(spl::make_shared<draw_frame>(frame1));
 				break;
 			}
+		default:
+			BOOST_THROW_EXCEPTION(invalid_operation());
 		}
 		
-		if(frame_buffer_.empty())
-			return false;
-
 		return try_pop(result);
 	}
 	
