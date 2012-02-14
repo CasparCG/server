@@ -63,6 +63,7 @@ struct field_mode_def
 		upper		= 2,
 		progressive = 3, // NOTE: progressive == lower | upper;
 	};
+	static_assert((lower | upper) == progressive, "");
 };
 typedef enum_class<field_mode_def> field_mode;
 
