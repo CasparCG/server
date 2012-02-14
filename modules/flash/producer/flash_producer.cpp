@@ -291,7 +291,7 @@ public:
 			auto frame = frame_factory_->create_frame(this, desc, fps(), core::field_mode::progressive);
 
 			A_memcpy(frame->image_data(0).begin(), bmp_.data(), width_*height_*4);
-			head_ = spl::make_shared<core::draw_frame>(frame);	
+			head_ = spl::make_shared<core::draw_frame>(std::move(frame));	
 		}		
 										
 		graph_->set_value("frame-time", static_cast<float>(frame_timer_.elapsed()/frame_time)*0.5f);

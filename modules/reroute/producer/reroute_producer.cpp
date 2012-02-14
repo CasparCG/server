@@ -110,10 +110,12 @@ public:
 		A_memcpy(frame->image_data(0).begin(), read_frame->image_data().begin(), read_frame->image_data().size());
 		boost::push_back(frame->audio_data(), read_frame->audio_data());
 		
-		frame_buffer_.push(spl::make_shared<core::draw_frame>(frame));
+		auto draw_frame = spl::make_shared<core::draw_frame>(std::move(frame));
+
+		frame_buffer_.push(draw_frame);
 		
 		if(double_speed)	
-			frame_buffer_.push(spl::make_shared<core::draw_frame>(frame));
+			frame_buffer_.push(draw_frame);
 
 		return receive(0);
 	}	

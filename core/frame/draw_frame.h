@@ -42,7 +42,7 @@ public:
 	draw_frame& operator=(draw_frame other);
 	virtual ~draw_frame(){}
 	
-	draw_frame(spl::shared_ptr<const data_frame> frame);
+	draw_frame(spl::unique_ptr<const data_frame> frame);
 	draw_frame(spl::shared_ptr<const draw_frame> frame);
 	draw_frame(std::vector<spl::shared_ptr<draw_frame>> frames);
 	draw_frame(std::vector<spl::shared_ptr<const draw_frame>> frames);

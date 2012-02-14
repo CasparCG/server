@@ -52,7 +52,7 @@ public:
 	virtual void end_layer() = 0;
 		
 	virtual boost::shared_future<boost::iterator_range<const uint8_t*>> operator()(const struct video_format_desc& format_desc) = 0;
-	virtual spl::shared_ptr<core::data_frame> create_frame(const void* tag, const struct pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) = 0;
+	virtual spl::unique_ptr<core::data_frame> create_frame(const void* tag, const struct pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) = 0;
 };
 
 }}

@@ -67,7 +67,7 @@ namespace caspar { namespace ffmpeg {
 	
 struct frame_muxer::impl : boost::noncopyable
 {	
-	std::queue<std::queue<spl::shared_ptr<data_frame>>>		video_streams_;
+	std::queue<std::queue<spl::unique_ptr<data_frame>>>		video_streams_;
 	std::queue<core::audio_buffer>							audio_streams_;
 	std::queue<spl::shared_ptr<draw_frame>>					frame_buffer_;
 	display_mode											display_mode_;
@@ -95,7 +95,7 @@ struct frame_muxer::impl : boost::noncopyable
 		, filter_str_(filter_str)
 		, force_deinterlacing_(false)
 	{
-		video_streams_.push(std::queue<spl::shared_ptr<data_frame>>());
+		video_streams_.push(std::queue<spl::unique_ptr<data_frame>>());
 		audio_streams_.push(core::audio_buffer());
 		
 		// Note: Uses 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
@@ -110,12 +110,12 @@ struct frame_muxer::impl : boost::noncopyable
 		
 		if(video_frame == flush_video())
 		{	
-			video_streams_.push(std::queue<spl::shared_ptr<data_frame>>());
+			video_streams_.push(std::queue<spl::unique_ptr<data_frame>>());
 		}
 		else if(video_frame == empty_video())
 		{
 			auto empty_frame = frame_factory_->create_frame(this, core::pixel_format_desc(core::pixel_format::invalid));
-			video_streams_.back().push(empty_frame);
+			video_streams_.back().push(std::move(empty_frame));
 			display_mode_ = display_mode::simple;
 		}
 		else
@@ -238,7 +238,7 @@ struct frame_muxer::impl : boost::noncopyable
 		case display_mode::deinterlace_bob:				
 		case display_mode::deinterlace:	
 			{
-				frame_buffer_.push(spl::make_shared<draw_frame>(frame1));
+				frame_buffer_.push(spl::make_shared<draw_frame>(std::move(frame1)));
 				break;
 			}
 		case display_mode::interlace:					
@@ -246,22 +246,26 @@ struct frame_muxer::impl : boost::noncopyable
 			{				
 				auto frame2 = pop_video();
 
-				frame_buffer_.push(core::draw_frame::interlace(spl::make_shared<draw_frame>(frame1), spl::make_shared<draw_frame>(frame2), format_desc_.field_mode));	
+				frame_buffer_.push(core::draw_frame::interlace(
+					spl::make_shared<core::draw_frame>(std::move(frame1)),
+					spl::make_shared<core::draw_frame>(std::move(frame2)),
+					format_desc_.field_mode));	
 				break;
 			}
 		case display_mode::duplicate:	
 			{
 				boost::range::push_back(frame1->audio_data(), pop_audio());
 
-				frame_buffer_.push(spl::make_shared<draw_frame>(frame1));
-				frame_buffer_.push(spl::make_shared<draw_frame>(frame1));
+				auto draw_frame = spl::make_shared<core::draw_frame>(std::move(frame1));
+				frame_buffer_.push(draw_frame);
+				frame_buffer_.push(draw_frame);
 				break;
 			}
 		case display_mode::half:	
 			{				
 				pop_video(); // Throw away
 
-				frame_buffer_.push(spl::make_shared<draw_frame>(frame1));
+				frame_buffer_.push(spl::make_shared<draw_frame>(std::move(frame1)));
 				break;
 			}
 		default:
@@ -271,11 +275,11 @@ struct frame_muxer::impl : boost::noncopyable
 		return try_pop(result);
 	}
 	
-	spl::shared_ptr<core::data_frame> pop_video()
+	spl::unique_ptr<core::data_frame> pop_video()
 	{
-		auto frame = video_streams_.front().front();
+		auto frame = std::move(video_streams_.front().front());
 		video_streams_.front().pop();		
-		return frame;
+		return std::move(frame);
 	}
 
 	core::audio_buffer pop_audio()

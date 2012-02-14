@@ -148,7 +148,7 @@ spl::shared_ptr<draw_frame> create_color_frame(void* tag, const spl::shared_ptr<
 	if(!(str >> std::hex >> value) || !str.eof())
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(color2) << msg_info("Invalid color."));
 			
-	return spl::make_shared<draw_frame>(frame);
+	return spl::make_shared<draw_frame>(std::move(frame));
 }
 
 }}
