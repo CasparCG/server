@@ -46,12 +46,19 @@ class stage sealed : public monitor::observable
 	stage(const stage&);
 	stage& operator=(const stage&);
 public:	
+
+	/// Static Members
+	
 	typedef std::function<struct frame_transform(struct frame_transform)> transform_func_t;
 	typedef std::tuple<int, transform_func_t, unsigned int, tweener> transform_tuple_t;
 
-	stage(spl::shared_ptr<diagnostics::graph> graph);
-		
-	std::map<int, spl::shared_ptr<class draw_frame>> operator()(const struct video_format_desc& format_desc);
+	///  Constructors
+
+	explicit stage(spl::shared_ptr<diagnostics::graph> graph);
+	
+	/// Methods
+
+	std::map<int, class draw_frame> operator()(const struct video_format_desc& format_desc);
 
 	void apply_transforms(const std::vector<transform_tuple_t>& transforms);
 	void apply_transform(int index, const transform_func_t& transform, unsigned int mix_duration = 0, const tweener& tween = L"linear");
@@ -68,16 +75,19 @@ public:
 	void swap_layer(int index, int other_index);
 	void swap_layer(int index, int other_index, stage& other);
 	
-	boost::unique_future<spl::shared_ptr<class frame_producer>>	foreground(int index);
-	boost::unique_future<spl::shared_ptr<class frame_producer>>	background(int index);
-
-	boost::unique_future<boost::property_tree::wptree> info() const;
-	boost::unique_future<boost::property_tree::wptree> info(int index) const;
-	
 	// monitor::observable
 
 	virtual void subscribe(const monitor::observable::observer_ptr& o) override;
 	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override;
+
+	/// Properties
+
+	boost::unique_future<spl::shared_ptr<class frame_producer>>	foreground(int index);
+	boost::unique_future<spl::shared_ptr<class frame_producer>>	background(int index);
+
+	boost::unique_future<boost::property_tree::wptree>			info() const;
+	boost::unique_future<boost::property_tree::wptree>			info(int index) const;
+
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

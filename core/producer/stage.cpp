@@ -62,13 +62,13 @@ public:
 		graph_->set_color("produce-time", diagnostics::color(0.0f, 1.0f, 0.0f));
 	}
 		
-	std::map<int, spl::shared_ptr<draw_frame>> operator()(const struct video_format_desc& format_desc)
+	std::map<int, draw_frame> operator()(const struct video_format_desc& format_desc)
 	{		
-		return executor_.invoke([=]() -> std::map<int, spl::shared_ptr<draw_frame>>
+		return executor_.invoke([=]() -> std::map<int, draw_frame>
 		{
 			boost::timer frame_timer;
 
-			std::map<int, spl::shared_ptr<class draw_frame>> frames;
+			std::map<int, class draw_frame> frames;
 			
 			try
 			{			
@@ -96,7 +96,7 @@ public:
 		});
 	}
 
-	void draw(int index, const video_format_desc& format_desc, std::map<int, spl::shared_ptr<draw_frame>>& frames)
+	void draw(int index, const video_format_desc& format_desc, std::map<int, draw_frame>& frames)
 	{
 		auto& layer		= layers_[index];
 		auto& tween		= tweens_[index];
@@ -114,13 +114,13 @@ public:
 		
 		auto frame = layer.receive(flags, format_desc);	
 				
-		auto frame1 = spl::make_shared<core::draw_frame>(frame);
-		frame1->frame_transform() = transform;
+		auto frame1 = core::draw_frame(frame);
+		frame1.transform() = transform;
 
 		if(format_desc.field_mode != core::field_mode::progressive)
 		{				
-			auto frame2 = spl::make_shared<core::draw_frame>(frame);
-			frame2->frame_transform() = tween.fetch_and_tick(1);
+			auto frame2 = core::draw_frame(frame);
+			frame2.transform() = tween.fetch_and_tick(1);
 			frame1 = core::draw_frame::interlace(frame1, frame2, format_desc.field_mode);
 		}
 
@@ -348,7 +348,7 @@ boost::unique_future<spl::shared_ptr<frame_producer>> stage::foreground(int inde
 boost::unique_future<spl::shared_ptr<frame_producer>> stage::background(int index) {return impl_->background(index);}
 boost::unique_future<boost::property_tree::wptree> stage::info() const{return impl_->info();}
 boost::unique_future<boost::property_tree::wptree> stage::info(int index) const{return impl_->info(index);}
-std::map<int, spl::shared_ptr<class draw_frame>> stage::operator()(const video_format_desc& format_desc){return (*impl_)(format_desc);}
+std::map<int, class draw_frame> stage::operator()(const video_format_desc& format_desc){return (*impl_)(format_desc);}
 void stage::subscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_.subscribe(o);}
 void stage::unsubscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_.unsubscribe(o);}
 }}

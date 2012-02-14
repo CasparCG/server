@@ -79,30 +79,29 @@ namespace caspar { namespace decklink {
 		
 class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 {	
-	spl::shared_ptr<diagnostics::graph>		graph_;
-	boost::timer							tick_timer_;
-	boost::timer							frame_timer_;
+	spl::shared_ptr<diagnostics::graph>				graph_;
+	boost::timer									tick_timer_;
+	boost::timer									frame_timer_;
 
-	CComPtr<IDeckLink>						decklink_;
-	CComQIPtr<IDeckLinkInput>				input_;
-	CComQIPtr<IDeckLinkAttributes >			attributes_;
+	CComPtr<IDeckLink>								decklink_;
+	CComQIPtr<IDeckLinkInput>						input_;
+	CComQIPtr<IDeckLinkAttributes >					attributes_;
 	
-	const std::wstring						model_name_;
-	const size_t							device_index_;
-	const std::wstring						filter_;
+	const std::wstring								model_name_;
+	const size_t									device_index_;
+	const std::wstring								filter_;
 	
-	core::video_format_desc					format_desc_;
-	std::vector<int>						audio_cadence_;
-	boost::circular_buffer<size_t>			sync_buffer_;
-	ffmpeg::frame_muxer						muxer_;
+	core::video_format_desc							format_desc_;
+	std::vector<int>								audio_cadence_;
+	boost::circular_buffer<size_t>					sync_buffer_;
+	ffmpeg::frame_muxer								muxer_;
 			
-	tbb::atomic<int>						flags_;
-	spl::shared_ptr<core::frame_factory>	frame_factory_;
+	tbb::atomic<int>								flags_;
+	spl::shared_ptr<core::frame_factory>			frame_factory_;
 
-	tbb::concurrent_bounded_queue<
-		spl::shared_ptr<core::draw_frame>>	frame_buffer_;
+	tbb::concurrent_bounded_queue<core::draw_frame>	frame_buffer_;
 
-	std::exception_ptr						exception_;		
+	std::exception_ptr								exception_;		
 
 public:
 	decklink_producer(const core::video_format_desc& format_desc, size_t device_index, const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filter)
@@ -249,14 +248,14 @@ public:
 		return S_OK;
 	}
 	
-	spl::shared_ptr<core::draw_frame> get_frame(int flags)
+	core::draw_frame get_frame(int flags)
 	{
 		if(exception_ != nullptr)
 			std::rethrow_exception(exception_);
 
 		flags_ = flags;
 
-		spl::shared_ptr<core::draw_frame> frame = core::draw_frame::late();
+		core::draw_frame frame = core::draw_frame::late();
 		if(!frame_buffer_.try_pop(frame))
 			graph_->set_tag("late-frame");
 		graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
@@ -273,7 +272,7 @@ class decklink_producer_proxy : public core::frame_producer
 {		
 	std::unique_ptr<decklink_producer>	producer_;
 	const uint32_t						length_;
-	spl::shared_ptr<core::draw_frame>	last_frame_;
+	core::draw_frame	last_frame_;
 	executor							executor_;
 public:
 	explicit decklink_producer_proxy(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str, uint32_t length)
@@ -299,7 +298,7 @@ public:
 	
 	// frame_producer
 				
-	virtual spl::shared_ptr<core::draw_frame> receive(int flags) override
+	virtual core::draw_frame receive(int flags) override
 	{
 		auto frame = producer_->get_frame(flags);
 
@@ -309,7 +308,7 @@ public:
 		return frame;
 	}
 
-	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
+	virtual core::draw_frame last_frame() const override
 	{
 		return core::draw_frame::still(last_frame_);
 	}

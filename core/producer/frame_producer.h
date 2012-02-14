@@ -34,7 +34,6 @@
 #include <type_traits>
 #include <vector>
 
-#include <boost/noncopyable.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
 
 FORWARD1(caspar, class executor);
@@ -42,10 +41,15 @@ FORWARD1(boost, template<typename T> class unique_future);
 
 namespace caspar { namespace core {
 	
+/// Interface
 class frame_producer : public monitor::observable
-					  , boost::noncopyable
 {
+	frame_producer(const frame_producer&);
+	frame_producer& operator=(const frame_producer&);
 public:
+
+	/// Static Members
+	
 	struct flags_def
 	{
 		enum type
@@ -57,24 +61,31 @@ public:
 	};
 	typedef enum_class<flags_def> flags;
 
+	static const spl::shared_ptr<frame_producer>& empty();
+
+	///  Constructors
+
+	frame_producer(){}
 	virtual ~frame_producer(){}	
 
-	virtual std::wstring						print() const = 0; // nothrow
-	virtual std::wstring						name() const = 0;
-	virtual boost::property_tree::wptree		info() const = 0;
-	virtual uint32_t							nb_frames() const {return std::numeric_limits<uint32_t>::max();}
-	virtual spl::shared_ptr<class draw_frame>	last_frame() const = 0;
+	/// Methods	
 
-	virtual spl::shared_ptr<class draw_frame>	receive(int flags) = 0;
+	virtual class draw_frame					receive(int flags) = 0;
 	virtual boost::unique_future<std::wstring>	call(const std::wstring&);
-	virtual void								leading_producer(const spl::shared_ptr<frame_producer>&) {}  // nothrow
 	
-	static const spl::shared_ptr<frame_producer>& empty(); // nothrow
-
 	// monitor::observable
 
 	virtual void subscribe(const monitor::observable::observer_ptr& o) {}
 	virtual void unsubscribe(const monitor::observable::observer_ptr& o) {}
+
+	/// Properties
+
+	virtual std::wstring						print() const = 0;
+	virtual std::wstring						name() const = 0;
+	virtual boost::property_tree::wptree		info() const = 0;
+	virtual uint32_t							nb_frames() const {return std::numeric_limits<uint32_t>::max();}
+	virtual class draw_frame					last_frame() const = 0;
+	virtual void								leading_producer(const spl::shared_ptr<frame_producer>&) {}  	
 };
 
 typedef std::function<spl::shared_ptr<core::frame_producer>(const spl::shared_ptr<class frame_factory>&, const std::vector<std::wstring>&)> producer_factory_t;

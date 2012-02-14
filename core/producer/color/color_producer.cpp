@@ -39,7 +39,7 @@ namespace caspar { namespace core {
 	
 class color_producer : public frame_producer
 {
-	spl::shared_ptr<draw_frame> frame_;
+	draw_frame frame_;
 	const std::wstring color_str_;
 
 public:
@@ -50,7 +50,7 @@ public:
 
 	// frame_producer
 			
-	virtual spl::shared_ptr<draw_frame> receive(int) override
+	virtual draw_frame receive(int) override
 	{
 		return frame_;
 	}	
@@ -65,7 +65,7 @@ public:
 		return L"color";
 	}
 
-	virtual spl::shared_ptr<draw_frame> last_frame() const override
+	virtual draw_frame last_frame() const override
 	{
 		return frame_;
 	}
@@ -131,7 +131,8 @@ spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<fram
 
 	return core::wrap_producer(spl::make_shared<color_producer>(frame_factory, color2));
 }
-spl::shared_ptr<draw_frame> create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, const std::wstring& color)
+
+draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, const std::wstring& color)
 {
 	auto color2 = get_hex_color(color);
 	if(color2.length() != 9 || color2[0] != '#')
@@ -148,7 +149,7 @@ spl::shared_ptr<draw_frame> create_color_frame(void* tag, const spl::shared_ptr<
 	if(!(str >> std::hex >> value) || !str.eof())
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(color2) << msg_info("Invalid color."));
 			
-	return spl::make_shared<draw_frame>(std::move(frame));
+	return core::draw_frame(std::move(frame));
 }
 
 }}

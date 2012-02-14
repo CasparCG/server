@@ -52,10 +52,10 @@ class reroute_producer : public reactive::observer<spl::shared_ptr<const core::d
 	const spl::shared_ptr<core::frame_factory>									frame_factory_;
 	
 	tbb::concurrent_bounded_queue<std::shared_ptr<const core::data_frame>>		input_buffer_;
-	std::queue<spl::shared_ptr<core::draw_frame>>								frame_buffer_;
+	std::queue<core::draw_frame>												frame_buffer_;
 	uint64_t																	frame_number_;
 
-	spl::shared_ptr<core::draw_frame>											last_frame_;
+	core::draw_frame															last_frame_;
 
 public:
 	explicit reroute_producer(const spl::shared_ptr<core::frame_factory>& frame_factory) 
@@ -81,11 +81,11 @@ public:
 
 	// frame_producer
 			
-	virtual spl::shared_ptr<core::draw_frame> receive(int) override
+	virtual core::draw_frame receive(int) override
 	{
 		if(!frame_buffer_.empty())
 		{
-			auto frame = frame_buffer_.front();
+			auto frame = std::move(frame_buffer_.front());
 			frame_buffer_.pop();
 			return last_frame_ = frame;
 		}
@@ -110,7 +110,7 @@ public:
 		A_memcpy(frame->image_data(0).begin(), read_frame->image_data().begin(), read_frame->image_data().size());
 		boost::push_back(frame->audio_data(), read_frame->audio_data());
 		
-		auto draw_frame = spl::make_shared<core::draw_frame>(std::move(frame));
+		auto draw_frame = core::draw_frame(std::move(frame));
 
 		frame_buffer_.push(draw_frame);
 		
@@ -120,7 +120,7 @@ public:
 		return receive(0);
 	}	
 
-	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
+	virtual core::draw_frame last_frame() const override
 	{
 		return core::draw_frame::still(last_frame_);
 	}

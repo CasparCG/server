@@ -84,7 +84,7 @@ struct ffmpeg_producer : public core::frame_producer
 		
 	int64_t														frame_number_;
 
-	spl::shared_ptr<core::draw_frame>							last_frame_;
+	core::draw_frame							last_frame_;
 	
 public:
 	explicit ffmpeg_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, uint32_t start, uint32_t length) 
@@ -142,7 +142,7 @@ public:
 
 	// frame_producer
 	
-	virtual spl::shared_ptr<core::draw_frame> receive(int flags) override
+	virtual core::draw_frame receive(int flags) override
 	{		
 		boost::timer frame_timer;
 				
@@ -175,7 +175,7 @@ public:
 		return frame;
 	}
 
-	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
+	virtual core::draw_frame last_frame() const override
 	{
 		return core::draw_frame::still(last_frame_);
 	}
@@ -281,7 +281,7 @@ public:
 		BOOST_THROW_EXCEPTION(invalid_argument());
 	}
 
-	bool try_decode_frame(spl::shared_ptr<core::draw_frame>& result, int flags)
+	bool try_decode_frame(core::draw_frame& result, int flags)
 	{
 		for(int n = 0; n < 32; ++n)
 		{

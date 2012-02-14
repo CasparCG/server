@@ -114,7 +114,7 @@ public:
 		pause();
 	}
 		
-	spl::shared_ptr<draw_frame> receive(frame_producer::flags flags, const video_format_desc& format_desc)
+	draw_frame receive(frame_producer::flags flags, const video_format_desc& format_desc)
 	{		
 		try
 		{
@@ -195,7 +195,7 @@ void layer::load(spl::shared_ptr<frame_producer> frame_producer, const boost::op
 void layer::play(){impl_->play();}
 void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}
-spl::shared_ptr<draw_frame> layer::receive(frame_producer::flags flags, const video_format_desc& format_desc) {return impl_->receive(flags, format_desc);}
+draw_frame layer::receive(frame_producer::flags flags, const video_format_desc& format_desc) {return impl_->receive(flags, format_desc);}
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_;}
 boost::property_tree::wptree layer::info() const{return impl_->info();}
