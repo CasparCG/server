@@ -49,13 +49,14 @@ boost::unique_future<std::wstring> frame_producer::call(const std::wstring&)
 	BOOST_THROW_EXCEPTION(not_supported());
 }
 
-const spl::shared_ptr<frame_producer>& frame_producer::empty() // nothrow
+const spl::shared_ptr<frame_producer>& frame_producer::empty() 
 {
 	class empty_frame_producer : public frame_producer
 	{
 	public:
-		virtual spl::shared_ptr<draw_frame> receive(int){return draw_frame::empty();}
-		virtual spl::shared_ptr<draw_frame> last_frame() const{return draw_frame::empty();}
+		empty_frame_producer(){}
+		virtual draw_frame receive(int){return draw_frame::empty();}
+		virtual draw_frame last_frame() const{return draw_frame::empty();}
 		virtual void set_frame_factory(const spl::shared_ptr<frame_factory>&){}
 		virtual uint32_t nb_frames() const {return 0;}
 		virtual std::wstring print() const { return L"empty";}
@@ -114,8 +115,8 @@ public:
 		}); 
 	}
 	
-	virtual spl::shared_ptr<draw_frame>	receive(int flags) override																				{return producer_->receive(flags);}
-	virtual spl::shared_ptr<draw_frame>	last_frame() const override																				{return producer_->last_frame();}
+	virtual draw_frame	receive(int flags) override																				{return producer_->receive(flags);}
+	virtual draw_frame	last_frame() const override																				{return producer_->last_frame();}
 	virtual std::wstring										print() const override															{return producer_->print();}
 	virtual std::wstring										name() const override															{return producer_->name();}
 	virtual boost::property_tree::wptree 						info() const override															{return producer_->info();}

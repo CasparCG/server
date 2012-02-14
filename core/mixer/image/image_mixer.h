@@ -39,11 +39,22 @@ FORWARD2(caspar, core, struct pixel_format_desc);
 
 namespace caspar { namespace core {
 	
+/// Interface
 class image_mixer : public frame_visitor
 {
+	image_mixer(const image_mixer&);
+	image_mixer& operator=(const image_mixer&);
 public:
+
+	/// Static Members
+
+	///  Constructors
+
+	image_mixer(){}
 	virtual ~image_mixer(){}
 	
+	/// Methods
+
 	virtual void push(const struct frame_transform& frame) = 0;
 	virtual void visit(const class data_frame& frame) = 0;
 	virtual void pop() = 0;
@@ -52,7 +63,10 @@ public:
 	virtual void end_layer() = 0;
 		
 	virtual boost::shared_future<boost::iterator_range<const uint8_t*>> operator()(const struct video_format_desc& format_desc) = 0;
+
 	virtual spl::unique_ptr<core::data_frame> create_frame(const void* tag, const struct pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) = 0;
+
+	/// Properties
 };
 
 }}

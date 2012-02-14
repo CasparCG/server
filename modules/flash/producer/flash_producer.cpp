@@ -168,7 +168,7 @@ class flash_renderer
 	const std::shared_ptr<core::frame_factory> frame_factory_;
 	
 	CComObject<caspar::flash::FlashAxContainer>* ax_;
-	spl::shared_ptr<core::draw_frame> head_;
+	core::draw_frame head_;
 	bitmap bmp_;
 	
 	spl::shared_ptr<diagnostics::graph> graph_;
@@ -275,7 +275,7 @@ public:
 		}
 	}
 	
-	spl::shared_ptr<core::draw_frame> render()
+	core::draw_frame render()
 	{			
 		const float frame_time = 1.0f/fps();
 
@@ -291,7 +291,7 @@ public:
 			auto frame = frame_factory_->create_frame(this, desc, fps(), core::field_mode::progressive);
 
 			A_memcpy(frame->image_data(0).begin(), bmp_.data(), width_*height_*4);
-			head_ = spl::make_shared<core::draw_frame>(std::move(frame));	
+			head_ = core::draw_frame(std::move(frame));	
 		}		
 										
 		graph_->set_value("frame-time", static_cast<float>(frame_timer_.elapsed()/frame_time)*0.5f);
@@ -319,25 +319,25 @@ public:
 
 struct flash_producer : public core::frame_producer
 {	
-	const std::wstring													filename_;	
-	const spl::shared_ptr<core::frame_factory>							frame_factory_;
-	const int															width_;
-	const int															height_;
-	const int															buffer_size_;
+	const std::wstring								filename_;	
+	const spl::shared_ptr<core::frame_factory>		frame_factory_;
+	const int										width_;
+	const int										height_;
+	const int										buffer_size_;
 
-	tbb::atomic<int>													fps_;
-	tbb::atomic<bool>													sync_;
+	tbb::atomic<int>								fps_;
+	tbb::atomic<bool>								sync_;
 
-	spl::shared_ptr<diagnostics::graph>									graph_;
+	spl::shared_ptr<diagnostics::graph>				graph_;
 
-	std::queue<spl::shared_ptr<core::draw_frame>>						frame_buffer_;
-	tbb::concurrent_bounded_queue<spl::shared_ptr<core::draw_frame>>	output_buffer_;
+	std::queue<core::draw_frame>					frame_buffer_;
+	tbb::concurrent_bounded_queue<core::draw_frame>	output_buffer_;
 				
-	std::unique_ptr<flash_renderer>										renderer_;
+	std::unique_ptr<flash_renderer>					renderer_;
 
-	spl::shared_ptr<core::draw_frame>									last_frame_;
+	core::draw_frame								last_frame_;
 
-	executor															executor_;	
+	executor										executor_;	
 public:
 	flash_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
 		: filename_(filename)		
@@ -367,7 +367,7 @@ public:
 
 	// frame_producer
 		
-	virtual spl::shared_ptr<core::draw_frame> receive(int) override
+	virtual core::draw_frame receive(int) override
 	{					
 		auto frame = core::draw_frame::late();
 		
@@ -385,7 +385,7 @@ public:
 		return frame;
 	}
 
-	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
+	virtual core::draw_frame last_frame() const override
 	{
 		return core::draw_frame::still(last_frame_);
 	}

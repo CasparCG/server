@@ -38,15 +38,28 @@ typedef std::vector<int32_t, tbb::cache_aligned_allocator<int32_t>> audio_buffer
 
 class audio_mixer sealed : public frame_visitor
 {
+	audio_mixer(const audio_mixer&);
+	audio_mixer& operator=(const audio_mixer&);
 public:
+
+	/// Static Members
+
+	///  Constructors
+
 	audio_mixer();
+
+	/// Methods
+	
+	audio_buffer operator()(const struct video_format_desc& format_desc);
+
+	// frame_visitor
 
 	virtual void push(const struct frame_transform& transform);
 	virtual void visit(const class data_frame& frame);
 	virtual void pop();
-
-	audio_buffer operator()(const struct video_format_desc& format_desc);
 	
+	/// Properties
+
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

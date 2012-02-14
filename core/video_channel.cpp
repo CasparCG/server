@@ -29,6 +29,7 @@
 #include "mixer/mixer.h"
 #include "consumer/output.h"
 #include "frame/data_frame.h"
+#include "frame/draw_frame.h"
 #include "frame/frame_factory.h"
 
 #include <common/diagnostics/graph.h>

@@ -47,21 +47,14 @@ class video_channel sealed : public frame_observable
 	video_channel(const video_channel&);
 	video_channel& operator=(const video_channel&);
 public:
+
+	/// Static Members
+
+	///  Constructors
+
 	explicit video_channel(int index, const video_format_desc& format_desc, spl::unique_ptr<image_mixer> image_mixer);
 	
-	const core::stage&	stage() const;
-	core::stage&		stage();
-	const core::mixer&	mixer() const;
-	core::mixer&		mixer();
-	const core::output&	output() const;
-	core::output&		output();
-		
-	core::video_format_desc video_format_desc() const;
-	void video_format_desc(const core::video_format_desc& format_desc);
-	
-	spl::shared_ptr<core::frame_factory> frame_factory();
-
-	boost::property_tree::wptree info() const;
+	/// Methods
 
 	// observable<spl::shared_ptr<const class data_frame>>
 	
@@ -72,6 +65,22 @@ public:
 
 	virtual void subscribe(const monitor::observable::observer_ptr& o) override;
 	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override;
+
+	/// Properties
+
+	const core::stage&					 stage() const;
+	core::stage&						 stage();
+	const core::mixer&					 mixer() const;
+	core::mixer&						 mixer();
+	const core::output&					 output() const;
+	core::output&						 output();
+										 
+	core::video_format_desc				 video_format_desc() const;
+	void								 video_format_desc(const core::video_format_desc& format_desc);
+	
+	spl::shared_ptr<core::frame_factory> frame_factory();
+
+	boost::property_tree::wptree		 info() const;
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

@@ -69,7 +69,7 @@ struct frame_muxer::impl : boost::noncopyable
 {	
 	std::queue<std::queue<spl::unique_ptr<data_frame>>>		video_streams_;
 	std::queue<core::audio_buffer>							audio_streams_;
-	std::queue<spl::shared_ptr<draw_frame>>					frame_buffer_;
+	std::queue<draw_frame>					frame_buffer_;
 	display_mode											display_mode_;
 	const double											in_fps_;
 	const video_format_desc									format_desc_;
@@ -208,7 +208,7 @@ struct frame_muxer::impl : boost::noncopyable
 		}
 	}
 		
-	bool try_pop(spl::shared_ptr<core::draw_frame>& result)
+	bool try_pop(core::draw_frame& result)
 	{
 		if(!frame_buffer_.empty())
 		{
@@ -238,7 +238,7 @@ struct frame_muxer::impl : boost::noncopyable
 		case display_mode::deinterlace_bob:				
 		case display_mode::deinterlace:	
 			{
-				frame_buffer_.push(spl::make_shared<draw_frame>(std::move(frame1)));
+				frame_buffer_.push(core::draw_frame(std::move(frame1)));
 				break;
 			}
 		case display_mode::interlace:					
@@ -247,8 +247,8 @@ struct frame_muxer::impl : boost::noncopyable
 				auto frame2 = pop_video();
 
 				frame_buffer_.push(core::draw_frame::interlace(
-					spl::make_shared<core::draw_frame>(std::move(frame1)),
-					spl::make_shared<core::draw_frame>(std::move(frame2)),
+					core::draw_frame(std::move(frame1)),
+					core::draw_frame(std::move(frame2)),
 					format_desc_.field_mode));	
 				break;
 			}
@@ -256,7 +256,7 @@ struct frame_muxer::impl : boost::noncopyable
 			{
 				boost::range::push_back(frame1->audio_data(), pop_audio());
 
-				auto draw_frame = spl::make_shared<core::draw_frame>(std::move(frame1));
+				auto draw_frame = core::draw_frame(std::move(frame1));
 				frame_buffer_.push(draw_frame);
 				frame_buffer_.push(draw_frame);
 				break;
@@ -265,7 +265,7 @@ struct frame_muxer::impl : boost::noncopyable
 			{				
 				pop_video(); // Throw away
 
-				frame_buffer_.push(spl::make_shared<draw_frame>(std::move(frame1)));
+				frame_buffer_.push(core::draw_frame(std::move(frame1)));
 				break;
 			}
 		default:
@@ -384,7 +384,7 @@ frame_muxer::frame_muxer(double in_fps, const spl::shared_ptr<core::frame_factor
 	: impl_(new impl(in_fps, frame_factory, filter)){}
 void frame_muxer::push(const std::shared_ptr<AVFrame>& video_frame, int flags){impl_->push(video_frame, flags);}
 void frame_muxer::push(const std::shared_ptr<core::audio_buffer>& audio_samples){return impl_->push(audio_samples);}
-bool frame_muxer::try_pop(spl::shared_ptr<core::draw_frame>& result){return impl_->try_pop(result);}
+bool frame_muxer::try_pop(core::draw_frame& result){return impl_->try_pop(result);}
 uint32_t frame_muxer::calc_nb_frames(uint32_t nb_frames) const {return impl_->calc_nb_frames(nb_frames);}
 bool frame_muxer::video_ready() const{return impl_->video_ready();}
 bool frame_muxer::audio_ready() const{return impl_->audio_ready();}

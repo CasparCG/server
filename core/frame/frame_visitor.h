@@ -21,17 +21,27 @@
 
 #pragma once
 
-#include <boost/noncopyable.hpp>
-
 namespace caspar { namespace core {
 	
-class frame_visitor : boost::noncopyable
+class frame_visitor
 {
+	frame_visitor(const frame_visitor&);
+	frame_visitor& operator=(const frame_visitor&);
 public:
+	/// Static Members
+
+	///  Constructors
+
+	frame_visitor(){}
 	virtual ~frame_visitor(){}
+
+	/// Methods
+
 	virtual void push(const struct frame_transform& transform) = 0;
 	virtual void visit(const class data_frame& frame) = 0;
 	virtual void pop() = 0;
+
+	/// Properties
 };
 
 }}

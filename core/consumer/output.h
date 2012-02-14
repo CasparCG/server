@@ -25,7 +25,6 @@
 #include <common/spl/memory.h>
 #include <common/reactive.h>
 
-#include <boost/noncopyable.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
 
 FORWARD1(boost, template<typename> class unique_future)
@@ -33,12 +32,19 @@ FORWARD2(caspar, diagnostics, class graph);
 
 namespace caspar { namespace core {
 	
-class output sealed : boost::noncopyable
+class output sealed
 {
+	output(const output&);
+	output& operator=(const output&);
 public:
+
+	/// Static Members
+
+	///  Constructors
+
 	explicit output(spl::shared_ptr<diagnostics::graph> graph, const struct video_format_desc& format_desc, int channel_index);
 	
-	// output
+	/// Methods
 
 	void operator()(spl::shared_ptr<const class data_frame> frame, const struct video_format_desc& format_desc);
 	
@@ -47,6 +53,8 @@ public:
 	void remove(const spl::shared_ptr<class frame_consumer>& consumer);
 	void remove(int index);
 	
+	/// Properties
+
 	boost::unique_future<boost::property_tree::wptree> info() const;
 
 private:

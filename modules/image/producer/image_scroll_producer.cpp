@@ -51,7 +51,7 @@ namespace caspar { namespace image {
 struct image_scroll_producer : public core::frame_producer
 {	
 	const std::wstring								filename_;
-	std::vector<spl::shared_ptr<core::draw_frame>>	frames_;
+	std::vector<core::draw_frame>	frames_;
 	core::video_format_desc							format_desc_;
 	int												width_;
 	int												height_;
@@ -61,7 +61,7 @@ struct image_scroll_producer : public core::frame_producer
 
 	std::array<double, 2>							start_offset_;
 
-	spl::shared_ptr<core::draw_frame>				last_frame_;
+	core::draw_frame				last_frame_;
 
 	explicit image_scroll_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int speed) 
 		: filename_(filename)
@@ -101,7 +101,7 @@ struct image_scroll_producer : public core::frame_producer
 					count = 0;
 				}
 			
-				frames_.push_back(spl::make_shared<core::draw_frame>(std::move(frame)));
+				frames_.push_back(core::draw_frame(std::move(frame)));
 			}
 			
 			if(speed_ < 0.0)
@@ -137,7 +137,7 @@ struct image_scroll_producer : public core::frame_producer
 					count = 0;
 				}
 			
-				frames_.push_back(spl::make_shared<core::draw_frame>(std::move(frame)));
+				frames_.push_back(core::draw_frame(std::move(frame)));
 			}
 
 			std::reverse(frames_.begin(), frames_.end());
@@ -158,7 +158,7 @@ struct image_scroll_producer : public core::frame_producer
 	
 	// frame_producer
 
-	virtual spl::shared_ptr<core::draw_frame> receive(int) override
+	virtual core::draw_frame receive(int) override
 	{		
 		delta_ += speed_;
 
@@ -172,8 +172,8 @@ struct image_scroll_producer : public core::frame_producer
 
 			for(int n = 0; n < frames_.size(); ++n)
 			{
-				frames_[n]->frame_transform().image_transform.fill_translation[0] = start_offset_[0];
-				frames_[n]->frame_transform().image_transform.fill_translation[1] =	start_offset_[1] - (n+1) + delta_ * 0.5/static_cast<double>(format_desc_.height);
+				frames_[n].transform().image_transform.fill_translation[0] = start_offset_[0];
+				frames_[n].transform().image_transform.fill_translation[1] =	start_offset_[1] - (n+1) + delta_ * 0.5/static_cast<double>(format_desc_.height);
 			}
 		}
 		else
@@ -183,15 +183,15 @@ struct image_scroll_producer : public core::frame_producer
 
 			for(int n = 0; n < frames_.size(); ++n)
 			{
-				frames_[n]->frame_transform().image_transform.fill_translation[0] = start_offset_[0] - (n+1) + delta_ * 0.5/static_cast<double>(format_desc_.width);				
-				frames_[n]->frame_transform().image_transform.fill_translation[1] = start_offset_[1];
+				frames_[n].transform().image_transform.fill_translation[0] = start_offset_[0] - (n+1) + delta_ * 0.5/static_cast<double>(format_desc_.width);				
+				frames_[n].transform().image_transform.fill_translation[1] = start_offset_[1];
 			}
 		}
 
-		return last_frame_ = spl::make_shared<core::draw_frame>(frames_);
+		return last_frame_ = core::draw_frame(frames_);
 	}
 
-	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
+	virtual core::draw_frame last_frame() const override
 	{
 		return core::draw_frame::still(last_frame_);
 	}

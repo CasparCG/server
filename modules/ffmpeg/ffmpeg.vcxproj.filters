@@ -78,9 +78,6 @@
     <ClInclude Include="producer\ffmpeg_producer.h">
       <Filter>source\producer</Filter>
     </ClInclude>
-    <ClInclude Include="producer\video\video_decoder.h">
-      <Filter>source\producer\video</Filter>
-    </ClInclude>
     <ClInclude Include="producer\audio\audio_decoder.h">
       <Filter>source\producer\audio</Filter>
     </ClInclude>
@@ -120,6 +117,9 @@
     </ClInclude>
     <ClInclude Include="producer\tbb_avcodec.h">
       <Filter>source\producer</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\video\video_decoder.h">
+      <Filter>source\producer\video</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
