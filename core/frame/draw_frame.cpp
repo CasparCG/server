@@ -36,7 +36,7 @@ namespace caspar { namespace core {
 struct draw_frame::impl
 {		
 	int													tag_;
-	std::vector<const draw_frame>						frames_;
+	std::vector<draw_frame>								frames_;
 	std::shared_ptr<spl::unique_ptr<const data_frame>>	data_frame_;
 
 	core::frame_transform frame_transform_;		
@@ -59,17 +59,11 @@ public:
 		, data_frame_(new spl::unique_ptr<const data_frame>(std::move(frame)))
 	{
 	}
-
-	impl(draw_frame frame) 
-		: tag_(frame_tag)
-	{
-		frames_.push_back(std::move(frame));
-	}
-
+	
 	impl(std::vector<draw_frame> frames)
 		: tag_(frame_tag)
+		, frames_(std::move(frames))
 	{
-		frames_.insert(frames_.end(), frames.begin(), frames.end());
 	}
 		
 	void accept(frame_visitor& visitor) const
