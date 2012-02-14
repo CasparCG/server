@@ -29,8 +29,6 @@
 
 #include <boost/foreach.hpp>
 
-#include <boost/variant.hpp>
-
 namespace caspar { namespace core {
 		
 struct draw_frame::impl
