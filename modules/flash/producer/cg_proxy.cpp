@@ -144,7 +144,7 @@ cg_proxy create_cg_proxy(const spl::shared_ptr<core::video_channel>& video_chann
 
 	try
 	{
-		if(flash_producer->print().find(L"flash[") == std::string::npos) // UGLY hack
+		if(flash_producer->name() != L"flash")
 		{
 			flash_producer = flash::create_producer(video_channel->frame_factory(), boost::assign::list_of<std::wstring>());	
 			video_channel->stage().load(render_layer, flash_producer); 
