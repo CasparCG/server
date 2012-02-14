@@ -90,14 +90,15 @@ public:
 bool operator==(const audio_transform& lhs, const audio_transform& rhs);
 bool operator!=(const audio_transform& lhs, const audio_transform& rhs);
 
-struct frame_transform sealed
+__declspec(align(16)) struct frame_transform sealed
 {
 public:
-
 	frame_transform();
 	
 	image_transform image_transform;
 	audio_transform audio_transform;
+
+	char padding[3];
 	
 	frame_transform& operator*=(const frame_transform &other);
 	frame_transform operator*(const frame_transform &other) const;
