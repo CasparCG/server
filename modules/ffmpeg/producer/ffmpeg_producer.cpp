@@ -146,7 +146,12 @@ public:
 	{		
 		boost::timer frame_timer;
 				
-		std::shared_ptr<core::draw_frame> frame = try_decode_frame(flags);
+		auto frame = core::draw_frame::late();		
+		if(!try_decode_frame(frame, flags))
+		{
+			if(!input_.eof())		
+				graph_->set_tag("underflow");	
+		}
 							
 		graph_->set_value("frame-time", frame_timer.elapsed()*format_desc_.fps*0.5);
 		
@@ -158,22 +163,16 @@ public:
 						<< monitor::event("file/fps")			% fps_
 						<< monitor::event("filename")			% u8(filename_)
 						<< monitor::event("loop")				% input_.loop();
-				
-		if(!frame)
+					
+		graph_->set_text(print());
+
+		if(frame != core::draw_frame::late())
 		{
-			if(!input_.eof())		
-				graph_->set_tag("underflow");	
-			return core::draw_frame::late();
+			++frame_number_;
+			last_frame_ = frame;
 		}
 				
-		++frame_number_;
-
-		graph_->set_text(print());
-		
-		if(frame != core::draw_frame::late())
-			last_frame_ = spl::make_shared_ptr(frame);
-
-		return spl::make_shared_ptr(frame);
+		return frame;
 	}
 
 	virtual spl::shared_ptr<core::draw_frame> last_frame() const override
@@ -282,12 +281,13 @@ public:
 		BOOST_THROW_EXCEPTION(invalid_argument());
 	}
 
-	std::shared_ptr<core::draw_frame> try_decode_frame(int flags)
+	bool try_decode_frame(spl::shared_ptr<core::draw_frame>& result, int flags)
 	{
-		std::shared_ptr<core::draw_frame> result = muxer_->poll();
-
-		for(int n = 0; n < 32 && !result; ++n, result = muxer_->poll())
+		for(int n = 0; n < 32; ++n)
 		{
+			if(muxer_->try_pop(result))			
+				return true;			
+
 			std::shared_ptr<AVPacket> pkt;
 
 			for(int n = 0; n < 32 && ((video_decoder_ && !video_decoder_->ready()) || (audio_decoder_ && !audio_decoder_->ready())) && input_.try_pop(pkt); ++n)
@@ -333,7 +333,7 @@ public:
 			}
 		}
 
-		return result;
+		return false;
 	}
 };
 

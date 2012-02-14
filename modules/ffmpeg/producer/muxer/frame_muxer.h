@@ -52,7 +52,7 @@ public:
 	bool video_ready() const;
 	bool audio_ready() const;
 
-	std::shared_ptr<core::draw_frame> poll();
+	bool try_pop(spl::shared_ptr<core::draw_frame>& result);
 
 	uint32_t calc_nb_frames(uint32_t nb_frames) const;
 private:
