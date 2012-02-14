@@ -33,38 +33,49 @@ namespace caspar { namespace core {
 	
 struct frame_transform;
 
-class draw_frame
+class draw_frame sealed
 {
-public:
-	draw_frame();	
+	draw_frame(int tag);
+public:		
+	/// Static Members
+
+	static draw_frame interlace(draw_frame frame1, draw_frame frame2, core::field_mode mode);
+	static draw_frame over(draw_frame frame1, draw_frame frame2);
+	static draw_frame mask(draw_frame fill, draw_frame key);
+	static draw_frame still(draw_frame frame);
+		
+	static const draw_frame& eof();
+	static const draw_frame& empty();
+	static const draw_frame& late();
+
+	///  Constructors
+
+	draw_frame();
 	draw_frame(const draw_frame& other);
-	draw_frame(draw_frame&& other);
+	draw_frame(draw_frame&& other);	
+	explicit draw_frame(spl::unique_ptr<const data_frame>&& frame);
+	explicit draw_frame(std::vector<draw_frame> frames);
+
+	~draw_frame();
+	
+	/// Methods
+
 	draw_frame& operator=(draw_frame other);
-	virtual ~draw_frame(){}
+
+	void swap(draw_frame& other);	
 	
-	draw_frame(spl::unique_ptr<const data_frame> frame);
-	draw_frame(spl::shared_ptr<const draw_frame> frame);
-	draw_frame(std::vector<spl::shared_ptr<draw_frame>> frames);
-	draw_frame(std::vector<spl::shared_ptr<const draw_frame>> frames);
-		
-	void swap(draw_frame& other);
-	
-	const core::frame_transform& frame_transform() const;
-	core::frame_transform& frame_transform();
-				
-	static spl::shared_ptr<draw_frame> interlace(const spl::shared_ptr<const draw_frame>& frame1, const spl::shared_ptr<const draw_frame>& frame2, core::field_mode mode);
-	static spl::shared_ptr<draw_frame> over(const spl::shared_ptr<const draw_frame>& frame1, const spl::shared_ptr<const draw_frame>& frame2);
-	static spl::shared_ptr<draw_frame> mask(const spl::shared_ptr<const draw_frame>& fill, const spl::shared_ptr<const draw_frame>& key);
-	static spl::shared_ptr<draw_frame> still(const spl::shared_ptr<const draw_frame>& frame);
-		
-	static const spl::shared_ptr<draw_frame>& eof();
-	static const spl::shared_ptr<draw_frame>& empty();
-	static const spl::shared_ptr<draw_frame>& late();
-	
-	virtual void accept(frame_visitor& visitor) const;
+	void accept(frame_visitor& visitor) const;
+
+	bool operator==(const draw_frame& other) const;
+	bool operator!=(const draw_frame& other) const;
+
+	/// Properties
+
+	const core::frame_transform&	transform() const;
+	core::frame_transform&			transform();			
 private:
 	struct impl;
-	spl::shared_ptr<impl> impl_;
+	spl::unique_ptr<impl> impl_;
 };
 	
 

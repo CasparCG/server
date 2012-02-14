@@ -143,7 +143,7 @@ public:
 		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8));
 	}	
 	
-	spl::shared_ptr<const data_frame> operator()(std::map<int, spl::shared_ptr<draw_frame>> frames, const video_format_desc& format_desc)
+	spl::shared_ptr<const data_frame> operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc)
 	{		
 		return executor_.invoke([=]() mutable -> spl::shared_ptr<const class data_frame>
 		{		
@@ -156,8 +156,8 @@ public:
 					auto blend_it = blend_modes_.find(frame.first);
 					image_mixer_->begin_layer(blend_it != blend_modes_.end() ? blend_it->second : blend_mode::normal);
 													
-					frame.second->accept(audio_mixer_);					
-					frame.second->accept(*image_mixer_);
+					frame.second.accept(audio_mixer_);					
+					frame.second.accept(*image_mixer_);
 
 					image_mixer_->end_layer();
 				}
@@ -201,6 +201,6 @@ mixer::mixer(spl::shared_ptr<diagnostics::graph> graph, spl::unique_ptr<image_mi
 	: impl_(new impl(std::move(graph), std::move(image_mixer))){}
 void mixer::set_blend_mode(int index, blend_mode value){impl_->set_blend_mode(index, value);}
 boost::unique_future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
-spl::shared_ptr<const data_frame> mixer::operator()(std::map<int, spl::shared_ptr<draw_frame>> frames, const struct video_format_desc& format_desc){return (*impl_)(std::move(frames), format_desc);}
+spl::shared_ptr<const data_frame> mixer::operator()(std::map<int, draw_frame> frames, const struct video_format_desc& format_desc){return (*impl_)(std::move(frames), format_desc);}
 spl::unique_ptr<data_frame> mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) {return impl_->image_mixer_->create_frame(tag, desc, frame_rate, field_mode);}
 }}

@@ -39,29 +39,41 @@ namespace caspar { namespace core {
 	
 class layer sealed : public monitor::observable
 {
+	layer(const layer&);
+	layer& operator=(const layer&);
 public:
-	layer(int index = -1); // nothrow
-	layer(layer&& other); // nothrow
-	layer& operator=(layer&& other); // nothrow
+	/// Static Members
 
-	void swap(layer& other); // nothrow 
+	///  Constructors
+
+	explicit layer(int index = -1); 
+	layer(layer&& other); 
+
+	/// Methods
+
+	layer& operator=(layer&& other); 
+
+	void swap(layer& other);  
 		
-	void load(spl::shared_ptr<class frame_producer> producer, const boost::optional<int32_t>& auto_play_delta = nullptr); // nothrow
-	void play(); // nothrow
-	void pause(); // nothrow
-	void stop(); // nothrow
-		
-	spl::shared_ptr<class frame_producer> foreground() const; // nothrow
-	spl::shared_ptr<class frame_producer> background() const; // nothrow
-
-	spl::shared_ptr<class draw_frame> receive(frame_producer::flags flags, const struct video_format_desc& format_desc); // nothrow
-
-	boost::property_tree::wptree info() const;
-
+	void load(spl::shared_ptr<class frame_producer> producer, const boost::optional<int32_t>& auto_play_delta = nullptr); 
+	void play(); 
+	void pause(); 
+	void stop(); 
+	
+	class draw_frame receive(frame_producer::flags flags, const struct video_format_desc& format_desc); 
+	
 	// monitor::observable
 
 	virtual void subscribe(const monitor::observable::observer_ptr& o) override;
 	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override;
+
+	/// Properties
+		
+	spl::shared_ptr<class frame_producer>	foreground() const; 
+	spl::shared_ptr<class frame_producer>	background() const; 
+
+	boost::property_tree::wptree			info() const;
+
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

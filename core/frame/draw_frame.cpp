@@ -29,38 +29,48 @@
 
 #include <boost/foreach.hpp>
 
+#include <boost/variant.hpp>
+
 namespace caspar { namespace core {
-																																						
+		
 struct draw_frame::impl
 {		
-	std::vector<spl::shared_ptr<const draw_frame>> frames_;
-	std::shared_ptr<spl::unique_ptr<const data_frame>> data_frame_;
+	int													tag_;
+	std::vector<const draw_frame>						frames_;
+	std::shared_ptr<spl::unique_ptr<const data_frame>>	data_frame_;
 
 	core::frame_transform frame_transform_;		
-public:
-	impl()
+public:		
+	enum tags
 	{
-	}
-		
-	impl(spl::unique_ptr<const data_frame> frame) 
-		: data_frame_(new spl::unique_ptr<const data_frame>(std::move(frame)))
+		frame_tag = 0,
+		empty_tag,
+		eof_tag,
+		late_tag
+	};
+
+	impl(int tag = impl::empty_tag)
+		: tag_(tag)
 	{
 	}
 
-	impl(spl::shared_ptr<const draw_frame> frame) 
+	impl(spl::unique_ptr<const data_frame>&& frame) 
+		: tag_(frame_tag)
+		, data_frame_(new spl::unique_ptr<const data_frame>(std::move(frame)))
+	{
+	}
+
+	impl(draw_frame frame) 
+		: tag_(frame_tag)
 	{
 		frames_.push_back(std::move(frame));
 	}
 
-	impl(std::vector<spl::shared_ptr<const draw_frame>> frames) : frames_(std::move(frames))
-	{
-	}
-
-	impl(std::vector<spl::shared_ptr<draw_frame>> frames)
+	impl(std::vector<draw_frame> frames)
+		: tag_(frame_tag)
 	{
 		frames_.insert(frames_.end(), frames.begin(), frames.end());
 	}
-
 		
 	void accept(frame_visitor& visitor) const
 	{
@@ -72,19 +82,26 @@ public:
 		else
 		{
 			BOOST_FOREACH(auto frame, frames_)
-				frame->accept(visitor);
+				frame.accept(visitor);
 		}
 		visitor.pop();
 	}	
+
+	bool operator==(const impl& other)
+	{
+		return	tag_ == other.tag_ && 
+				frames_ == other.frames_ && 
+				data_frame_ == other.data_frame_;
+	}
 };
 	
 draw_frame::draw_frame() : impl_(new impl()){}
+draw_frame::draw_frame(int tag) : impl_(new impl(std::move(tag))){}
 draw_frame::draw_frame(const draw_frame& other) : impl_(new impl(*other.impl_)){}
 draw_frame::draw_frame(draw_frame&& other) : impl_(std::move(other.impl_)){}
-draw_frame::draw_frame(spl::unique_ptr<const data_frame> frame)  : impl_(new impl(std::move(frame))){}
-draw_frame::draw_frame(spl::shared_ptr<const draw_frame> frame)  : impl_(new impl(std::move(frame))){}
-draw_frame::draw_frame(std::vector<spl::shared_ptr<draw_frame>> frames) : impl_(new impl(frames)){}
-draw_frame::draw_frame(std::vector<spl::shared_ptr<const draw_frame>> frames) : impl_(new impl(frames)){}
+draw_frame::draw_frame(spl::unique_ptr<const data_frame>&& frame)  : impl_(new impl(std::move(frame))){}
+draw_frame::draw_frame(std::vector<draw_frame> frames) : impl_(new impl(frames)){}
+draw_frame::~draw_frame(){}
 draw_frame& draw_frame::operator=(draw_frame other)
 {
 	other.swap(*this);
@@ -92,10 +109,13 @@ draw_frame& draw_frame::operator=(draw_frame other)
 }
 void draw_frame::swap(draw_frame& other){impl_.swap(other.impl_);}
 
-const core::frame_transform& draw_frame::frame_transform() const { return impl_->frame_transform_;}
-core::frame_transform& draw_frame::frame_transform() { return impl_->frame_transform_;}
+const core::frame_transform& draw_frame::transform() const { return impl_->frame_transform_;}
+core::frame_transform& draw_frame::transform() { return impl_->frame_transform_;}
 void draw_frame::accept(frame_visitor& visitor) const{impl_->accept(visitor);}
-spl::shared_ptr<draw_frame> draw_frame::interlace(const spl::shared_ptr<const draw_frame>& frame1, const spl::shared_ptr<const draw_frame>& frame2, core::field_mode mode)
+bool draw_frame::operator==(const draw_frame& other)const{return *impl_ == *other.impl_;}
+bool draw_frame::operator!=(const draw_frame& other)const{return !(*this == other);}
+
+draw_frame draw_frame::interlace(draw_frame frame1, draw_frame frame2, core::field_mode mode)
 {				
 	if(frame1 == draw_frame::eof() || frame2 == draw_frame::eof())
 		return draw_frame::eof();
@@ -103,30 +123,27 @@ spl::shared_ptr<draw_frame> draw_frame::interlace(const spl::shared_ptr<const dr
 	if(frame1 == draw_frame::empty() && frame2 == draw_frame::empty())
 		return draw_frame::empty();
 	
-	auto my_frame1 = spl::make_shared<draw_frame>(frame1);
-	auto my_frame2 = spl::make_shared<draw_frame>(frame2);
-
 	if(frame1 == frame2 || mode == field_mode::progressive)
-		return my_frame2;
+		return frame2;
 
 	if(mode == field_mode::upper)
 	{
-		my_frame1->frame_transform().image_transform.field_mode = field_mode::upper;	
-		my_frame2->frame_transform().image_transform.field_mode = field_mode::lower;	
+		frame1.transform().image_transform.field_mode = field_mode::upper;	
+		frame2.transform().image_transform.field_mode = field_mode::lower;	
 	}									 
 	else								 
 	{									 
-		my_frame1->frame_transform().image_transform.field_mode = field_mode::lower;	
-		my_frame2->frame_transform().image_transform.field_mode = field_mode::upper;	
+		frame1.transform().image_transform.field_mode = field_mode::lower;	
+		frame2.transform().image_transform.field_mode = field_mode::upper;	
 	}
 
-	std::vector<spl::shared_ptr<const draw_frame>> frames;
-	frames.push_back(my_frame1);
-	frames.push_back(my_frame2);
-	return spl::make_shared<draw_frame>(std::move(frames));
+	std::vector<draw_frame> frames;
+	frames.push_back(std::move(frame1));
+	frames.push_back(std::move(frame2));
+	return draw_frame(std::move(frames));
 }
 
-spl::shared_ptr<draw_frame> draw_frame::over(const spl::shared_ptr<const draw_frame>& frame1, const spl::shared_ptr<const draw_frame>& frame2)
+draw_frame draw_frame::over(draw_frame frame1, draw_frame frame2)
 {	
 	if(frame1 == draw_frame::eof() || frame2 == draw_frame::eof())
 		return draw_frame::eof();
@@ -134,13 +151,13 @@ spl::shared_ptr<draw_frame> draw_frame::over(const spl::shared_ptr<const draw_fr
 	if(frame1 == draw_frame::empty() && frame2 == draw_frame::empty())
 		return draw_frame::empty();
 
-	std::vector<spl::shared_ptr<const draw_frame>> frames;
-	frames.push_back(frame1);
-	frames.push_back(frame2);
-	return spl::make_shared<draw_frame>(std::move(frames));
+	std::vector<draw_frame> frames;
+	frames.push_back(std::move(frame1));
+	frames.push_back(std::move(frame2));
+	return draw_frame(std::move(frames));
 }
 
-spl::shared_ptr<draw_frame> draw_frame::mask(const spl::shared_ptr<const draw_frame>& fill, const spl::shared_ptr<const draw_frame>& key)
+draw_frame draw_frame::mask(draw_frame fill, draw_frame key)
 {	
 	if(fill == draw_frame::eof() || key == draw_frame::eof())
 		return draw_frame::eof();
@@ -148,37 +165,35 @@ spl::shared_ptr<draw_frame> draw_frame::mask(const spl::shared_ptr<const draw_fr
 	if(fill == draw_frame::empty() || key == draw_frame::empty())
 		return draw_frame::empty();
 
-	std::vector<spl::shared_ptr<const draw_frame>> frames;
-	auto key2 = spl::make_shared<draw_frame>(key);
-	key2->frame_transform().image_transform.is_key = true;
-	frames.push_back(key2);
-	frames.push_back(fill);
-	return spl::make_shared<draw_frame>(std::move(frames));
+	std::vector<draw_frame> frames;
+	key.transform().image_transform.is_key = true;
+	frames.push_back(std::move(key));
+	frames.push_back(std::move(fill));
+	return draw_frame(std::move(frames));
 }
 
-spl::shared_ptr<draw_frame> draw_frame::still(const spl::shared_ptr<const draw_frame>& frame)
+draw_frame draw_frame::still(draw_frame frame)
 {
-	auto frame2 = spl::make_shared<draw_frame>(frame);
-	frame2->frame_transform().image_transform.is_still	= true;	
-	frame2->frame_transform().audio_transform.volume	= 0.0;		
-	return frame2;
-}
-
-const spl::shared_ptr<draw_frame>& draw_frame::eof()
-{
-	static spl::shared_ptr<draw_frame> frame = spl::make_shared<draw_frame>();
+	frame.transform().image_transform.is_still	= true;	
+	frame.transform().audio_transform.volume	= 0.0;		
 	return frame;
 }
 
-const spl::shared_ptr<draw_frame>& draw_frame::empty()
+const draw_frame& draw_frame::eof()
 {
-	static spl::shared_ptr<draw_frame> frame = spl::make_shared<draw_frame>();
+	static draw_frame frame(impl::eof_tag);
 	return frame;
 }
 
-const spl::shared_ptr<draw_frame>& draw_frame::late()
+const draw_frame& draw_frame::empty()
 {
-	static spl::shared_ptr<draw_frame> frame = spl::make_shared<draw_frame>();
+	static draw_frame frame(impl::empty_tag);
+	return frame;
+}
+
+const draw_frame& draw_frame::late()
+{
+	static draw_frame frame(impl::late_tag);
 	return frame;
 }
 	

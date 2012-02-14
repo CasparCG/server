@@ -34,9 +34,9 @@ class separated_producer : public frame_producer
 {		
 	spl::shared_ptr<frame_producer>	fill_producer_;
 	spl::shared_ptr<frame_producer>	key_producer_;
-	spl::shared_ptr<draw_frame>		fill_;
-	spl::shared_ptr<draw_frame>		key_;
-	spl::shared_ptr<draw_frame>		last_frame_;
+	draw_frame						fill_;
+	draw_frame						key_;
+	draw_frame						last_frame_;
 			
 public:
 	explicit separated_producer(const spl::shared_ptr<frame_producer>& fill, const spl::shared_ptr<frame_producer>& key) 
@@ -50,7 +50,7 @@ public:
 
 	// frame_producer
 	
-	virtual spl::shared_ptr<draw_frame> receive(int flags) override
+	virtual draw_frame receive(int flags) override
 	{
 		tbb::parallel_invoke(
 		[&]
@@ -81,7 +81,7 @@ public:
 		return frame;
 	}
 
-	virtual spl::shared_ptr<draw_frame> last_frame() const override
+	virtual draw_frame last_frame() const override
 	{
 		return draw_frame::still(last_frame_);
 	}

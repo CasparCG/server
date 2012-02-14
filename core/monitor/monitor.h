@@ -50,6 +50,11 @@ namespace caspar { namespace monitor {
 class path sealed
 {
 public:	
+
+	/// Static Members
+
+	///  Constructors
+
 	path();		
 	path(const char* path);
 	path(std::string path);
@@ -57,6 +62,8 @@ public:
 	path(const path& other);	
 	path(path&& other);
 		
+	/// Methods
+
 	path& operator=(path other);
 	path& operator%=(path other);
 
@@ -77,6 +84,8 @@ public:
 	}
 
 	void swap(path& other);
+
+	/// Properties
 
 	const std::string& str() const;	
 	bool empty() const;
@@ -105,13 +114,20 @@ std::ostream& operator<<(std::ostream& o, const param& p);
 class event sealed
 {	
 public:	
-	typedef std::vector<param, tbb::cache_aligned_allocator<param>> params_t;
 	
+	/// Static Members
+
+	typedef std::vector<param, tbb::cache_aligned_allocator<param>> params_t;
+
+	///  Constructors
+
 	event(path path);	
-	event(path path, params_t params);	
-				
+	event(path path, params_t params);					
 	event(const event& other);
 	event(event&& other);
+
+	/// Methods
+
 	event& operator=(event other);
 
 	void swap(event& other);
@@ -124,6 +140,9 @@ public:
 	}
 	
 	event			propagate(path path) const;
+
+	/// Properties
+
 	const path&		path() const;
 	const params_t&	params() const;
 private:
@@ -186,6 +205,11 @@ class basic_subject sealed : public reactive::subject<monitor::event>
 	};
 
 public:		
+
+	/// Static Members
+
+	///  Constructors
+
 	basic_subject(monitor::path path = monitor::path())
 		: impl_(std::make_shared<impl>(std::move(path)))
 
@@ -197,10 +221,19 @@ public:
 	{
 	}
 	
+	/// Methods
+
 	basic_subject& operator=(basic_subject&& other)
 	{
 		impl_ = std::move(other.impl_);
 	}
+
+	operator std::weak_ptr<observer>()
+	{
+		return impl_;
+	}
+
+	// observable
 	
 	virtual void subscribe(const observer_ptr& o) override
 	{				
@@ -211,16 +244,16 @@ public:
 	{
 		impl_->unsubscribe(o);
 	}
+
+	// observer
 				
 	virtual void on_next(const monitor::event& e) override
 	{				
 		impl_->on_next(e);
 	}
 
-	operator std::weak_ptr<observer>()
-	{
-		return impl_;
-	}
+	/// Properties
+
 private:
 	std::shared_ptr<impl>	impl_;
 };
