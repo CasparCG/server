@@ -69,7 +69,7 @@ struct frame_muxer::impl : boost::noncopyable
 {	
 	std::queue<std::queue<spl::unique_ptr<data_frame>>>		video_streams_;
 	std::queue<core::audio_buffer>							audio_streams_;
-	std::queue<draw_frame>					frame_buffer_;
+	std::queue<draw_frame>									frame_buffer_;
 	display_mode											display_mode_;
 	const double											in_fps_;
 	const video_format_desc									format_desc_;
