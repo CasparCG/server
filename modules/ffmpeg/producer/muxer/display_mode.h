@@ -45,18 +45,16 @@ std::basic_ostream< CharT, TraitsT >& operator<< (std::basic_ostream<CharT, Trai
 {	
 	switch(value)
 	{
-		case simple:						o << L"simple";
-		case duplicate:						o << L"duplicate";
-		case half:							o << L"half";
-		case interlace:						o << L"interlace";
-		case deinterlace_bob:				o << L"deinterlace_bob";
-		case deinterlace_bob_reinterlace:	o << L"deinterlace_bob_reinterlace";
-		case deinterlace:					o << L"deinterlace";
-		default:							o << L"invalid";
+		case simple:						return o << L"simple";
+		case duplicate:						return o << L"duplicate";
+		case half:							return o << L"half";
+		case interlace:						return o << L"interlace";
+		case deinterlace_bob:				return o << L"deinterlace_bob";
+		case deinterlace_bob_reinterlace:	return o << L"deinterlace_bob_reinterlace";
+		case deinterlace:					return o << L"deinterlace";
+		default:							return o << L"invalid";
 	}
-	return o;
 }
-
 
 static display_mode get_display_mode(const core::field_mode in_mode, double in_fps, const core::field_mode out_mode, double out_fps)
 {		
