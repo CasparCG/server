@@ -259,7 +259,6 @@ public:
 		boost::filesystem2::remove(boost::filesystem2::wpath(env::media_folder() + widen(filename))); // Delete the file if it exists
 
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
-		graph_->set_color("write-time", diagnostics::color(0.5f, 0.5f, 0.1f));
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 
@@ -297,9 +296,8 @@ public:
 	~ffmpeg_consumer()
 	{    
 		encode_executor_.stop();
-		encode_executor_.join();
-
 		write_executor_.stop();
+		encode_executor_.join();
 		write_executor_.join();
 		
 		LOG_ON_ERROR2(av_write_trailer(oc_.get()), "[ffmpeg_consumer]");
@@ -459,7 +457,7 @@ public:
 		});
 	}
 
-	std::shared_ptr<AVFrame> convert_video(const safe_ptr<core::read_frame>& frame, AVCodecContext* c)
+	std::shared_ptr<AVFrame> convert_video(core::read_frame& frame, AVCodecContext* c)
 	{
 		if(!sws_) 
 		{
@@ -469,7 +467,7 @@ public:
 		}
 
 		std::shared_ptr<AVFrame> in_frame(avcodec_alloc_frame(), av_free);
-		avpicture_fill(reinterpret_cast<AVPicture*>(in_frame.get()), const_cast<uint8_t*>(frame->image_data().begin()), PIX_FMT_BGRA, format_desc_.width, format_desc_.height);
+		avpicture_fill(reinterpret_cast<AVPicture*>(in_frame.get()), const_cast<uint8_t*>(frame.image_data().begin()), PIX_FMT_BGRA, format_desc_.width, format_desc_.height);
 				
 		std::shared_ptr<AVFrame> out_frame(avcodec_alloc_frame(), av_free);
 		picture_buf_.resize(avpicture_get_size(c->pix_fmt, c->width, c->height));
@@ -480,7 +478,7 @@ public:
 		return out_frame;
 	}
   
-	std::shared_ptr<AVPacket> encode_video_frame(const safe_ptr<core::read_frame>& frame)
+	std::shared_ptr<AVPacket> encode_video_frame(core::read_frame& frame)
 	{ 
 		auto c = video_st_->codec;
 		
@@ -523,7 +521,7 @@ public:
 		return nullptr;
 	}
 		
-	byte_vector convert_audio(const safe_ptr<core::read_frame>& frame, AVCodecContext* c)
+	byte_vector convert_audio(core::read_frame& frame, AVCodecContext* c)
 	{
 		if(!swr_) 		
 			swr_.reset(new audio_resampler(c->channels, format_desc_.audio_channels, 
@@ -531,7 +529,7 @@ public:
 										   c->sample_fmt, AV_SAMPLE_FMT_S32));
 		
 
-		auto audio_data = frame->audio_data();
+		auto audio_data = frame.audio_data();
 
 		std::vector<int8_t,  tbb::cache_aligned_allocator<int8_t>> audio_resample_buffer;
 		std::copy(reinterpret_cast<const uint8_t*>(audio_data.begin()), 
@@ -543,7 +541,7 @@ public:
 		return byte_vector(audio_resample_buffer.begin(), audio_resample_buffer.end());
 	}
 
-	std::shared_ptr<AVPacket> encode_audio_frame(const safe_ptr<core::read_frame>& frame)
+	std::shared_ptr<AVPacket> encode_audio_frame(core::read_frame& frame)
 	{			
 		auto c = audio_st_->codec;
 
@@ -596,21 +594,17 @@ public:
 		{		
 			boost::timer frame_timer;
 
-			auto video = encode_video_frame(frame);
-			auto audio = encode_audio_frame(frame);
+			auto video = encode_video_frame(*frame);
+			auto audio = encode_audio_frame(*frame);
 
 			graph_->set_value("frame-time", frame_timer.elapsed()*format_desc_.fps*0.5);
 			
 			write_executor_.begin_invoke([=]
 			{
-				boost::timer write_timer;
-
 				if(video)
-					av_write_frame(oc_.get(), video.get());
+					av_interleaved_write_frame(oc_.get(), video.get());
 				if(audio)
-					av_write_frame(oc_.get(), audio.get());
-
-				graph_->set_value("write-time", write_timer.elapsed()*format_desc_.fps*0.5);
+					av_interleaved_write_frame(oc_.get(), audio.get());
 			});
 		});
 	}
