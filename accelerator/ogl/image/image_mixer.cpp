@@ -132,15 +132,13 @@ public:
 
 private:	
 	boost::shared_future<boost::iterator_range<const uint8_t*>> render(std::vector<layer> layers, const core::video_format_desc& format_desc)
-	{	
-		static const auto empty = spl::make_shared<const std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>>(2048*2048*4, 0);
-		CASPAR_VERIFY(empty->size() >= format_desc.size);
-		
+	{			
 		if(layers.empty())
 		{ // Bypass GPU with empty frame.
+			auto buffer = spl::make_shared<const std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>>(format_desc.size, 0);
 			return async(launch_policy::deferred, [=]
 			{
-				return boost::iterator_range<const uint8_t*>(empty->data(), empty->data() + format_desc.size);
+				return boost::iterator_range<const uint8_t*>(buffer->data(), buffer->data() + format_desc.size);
 			});
 		}
 		else if(has_uswc_memcpy() &&				
