@@ -194,7 +194,7 @@ public:
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
 		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));	
-		graph_->set_color("skip-sync", diagnostics::color(0.8f, 0.3f, 0.2f));			
+		graph_->set_color("sync", diagnostics::color(0.8f, 0.3f, 0.2f));			
 		
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to create FlashAxContainer"));
@@ -250,17 +250,19 @@ public:
 		return result;
 	}
 
-	void tick(bool sync)
+	void tick(double sync)
 	{		
 		const float frame_time = 1.0f/ax_->GetFPS();
 
 		graph_->set_value("tick-time", static_cast<float>(tick_timer_.elapsed()/frame_time)*0.5f);
 		tick_timer_.restart();
-		
-		if(sync)			
-			timer_.tick(frame_time); // This will block the thread.
+				
+		if(sync > 0.00001)			
+			timer_.tick(frame_time*sync); // This will block the thread.
 		else
-			graph_->set_tag("skip-sync");
+			graph_->set_tag("sync");
+
+		graph_->set_value("sync", sync);
 		
 		ax_->Tick();
 					
@@ -326,7 +328,6 @@ struct flash_producer : public core::frame_producer
 	const int										buffer_size_;
 
 	tbb::atomic<int>								fps_;
-	tbb::atomic<bool>								sync_;
 
 	spl::shared_ptr<diagnostics::graph>				graph_;
 
@@ -348,7 +349,6 @@ public:
 		, last_frame_(core::draw_frame::empty())
 		, executor_(L"flash_producer")
 	{	
-		sync_ = true;
 		fps_ = 0;
 	 
 		graph_->set_color("buffer-size", diagnostics::color(1.0f, 1.0f, 0.0f));
@@ -371,9 +371,6 @@ public:
 	{					
 		auto frame = core::draw_frame::late();
 		
-		graph_->set_value("buffer-size", static_cast<float>(output_buffer_.size())/static_cast<float>(buffer_size_));
-		sync_ = output_buffer_.size() == buffer_size_;
-
 		if(output_buffer_.try_pop(frame))			
 			executor_.begin_invoke(std::bind(&flash_producer::next, this));		
 		else		
@@ -437,7 +434,9 @@ public:
 	
 	void tick()
 	{
-		renderer_->tick(sync_);
+		double ratio = std::min(1.0, static_cast<double>(output_buffer_.size())/static_cast<double>(std::max(1, buffer_size_ - 1)));
+		double sync  = 2*ratio - ratio*ratio;
+		renderer_->tick(sync);
 	}
 	
 	void next()
