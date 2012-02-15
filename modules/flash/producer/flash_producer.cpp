@@ -191,7 +191,7 @@ public:
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
 		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));	
-		graph_->set_color("skip-sync", diagnostics::color(0.8f, 0.3f, 0.2f));			
+		graph_->set_color("sync", diagnostics::color(0.8f, 0.3f, 0.2f));			
 		
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to create FlashAxContainer"));
@@ -245,7 +245,7 @@ public:
 		return result;
 	}
 	
-	safe_ptr<core::basic_frame> render_frame(bool sync)
+	safe_ptr<core::basic_frame> render_frame(double sync)
 	{
 		float frame_time = 1.0f/ax_->GetFPS();
 
@@ -255,10 +255,12 @@ public:
 		if(ax_->IsEmpty())
 			return core::basic_frame::empty();		
 		
-		if(sync)			
-			timer_.tick(frame_time); // This will block the thread.
+		if(sync > 0.00001)			
+			timer_.tick(frame_time*sync); // This will block the thread.
 		else
-			graph_->set_tag("skip-sync");
+			graph_->set_tag("sync");
+
+		graph_->set_value("sync", sync);
 			
 		frame_timer_.restart();
 
@@ -320,7 +322,6 @@ struct flash_producer : public core::frame_producer
 	const int													buffer_size_;
 
 	tbb::atomic<int>											fps_;
-	tbb::atomic<bool>											sync_;
 
 	safe_ptr<diagnostics::graph>								graph_;
 
@@ -343,10 +344,8 @@ public:
 		, buffer_size_(env::properties().get(L"configuration.flash.buffer-depth", frame_factory_->get_video_format_desc().fps > 30.0 ? 4 : 2))
 		, executor_(L"flash_producer")
 	{	
-		sync_ = true;
 		fps_ = 0;
 	 
-		graph_->set_color("buffer-size", diagnostics::color(1.0f, 1.0f, 0.0f));
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.9f));
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
@@ -366,9 +365,6 @@ public:
 	{					
 		auto frame = core::basic_frame::late();
 		
-		graph_->set_value("buffer-size", static_cast<float>(output_buffer_.size())/static_cast<float>(buffer_size_));
-		sync_ = output_buffer_.size() == buffer_size_;
-
 		if(output_buffer_.try_pop(frame))	
 			next();
 		else
@@ -472,7 +468,10 @@ public:
 
 	safe_ptr<core::basic_frame> render_frame()
 	{	
-		auto frame = renderer_->render_frame(sync_);
+		double ratio = std::min(1.0, static_cast<double>(output_buffer_.size())/static_cast<double>(std::max(1, buffer_size_ - 1)));
+		double sync  = 2*ratio - ratio*ratio;
+
+		auto frame = renderer_->render_frame(sync);
 		lock(last_frame_mutex_, [&]
 		{
 			last_frame_ = frame;
