@@ -44,6 +44,7 @@
 
 #include <tbb/cache_aligned_allocator.h>
 #include <tbb/parallel_for_each.h>
+#include <tbb/concurrent_queue.h>
 
 #include <boost/assign.hpp>
 #include <boost/foreach.hpp>
@@ -151,7 +152,7 @@ class image_renderer
 {
 	std::pair<std::vector<item>, boost::shared_future<boost::iterator_range<const uint8_t*>>>		last_image_;
 	tbb::concurrent_unordered_map<int, tbb::concurrent_bounded_queue<std::shared_ptr<SwsContext>>>	sws_contexts_;
-	std::vector<spl::shared_ptr<host_buffer>>														temp_buffers_;
+	tbb::concurrent_bounded_queue<spl::shared_ptr<host_buffer>>										temp_buffers_;
 public:	
 	boost::shared_future<boost::iterator_range<const uint8_t*>> operator()(std::vector<item> items, const core::video_format_desc& format_desc)
 	{	
@@ -273,6 +274,7 @@ private:
 				BOOST_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling context.") << boost::errinfo_api_function("sws_getContext"));				
 		
 			auto dest_frame = spl::make_shared<host_buffer>(width*height*4);
+			temp_buffers_.push(dest_frame);
 
 			{
 				spl::shared_ptr<AVFrame> dest_av_frame(avcodec_alloc_frame(), av_free);	
@@ -282,9 +284,7 @@ private:
 				sws_scale(sws_context.get(), input_av_frame->data, input_av_frame->linesize, 0, input_av_frame->height, dest_av_frame->data, dest_av_frame->linesize);				
 				pool.push(sws_context);
 			}
-
-			temp_buffers_.push_back(dest_frame);
-		
+					
 			for(std::size_t n = 0; n < source_items.size(); ++n)
 			{
 				if(source_items[n].data == data)
@@ -329,6 +329,9 @@ public:
 			return;
 
 		if(frame.pixel_format_desc().planes.empty())
+			return;
+		
+		if(frame.pixel_format_desc().planes.at(0).size < 16)
 			return;
 
 		if(transform_stack_.back().field_mode == core::field_mode::empty)
