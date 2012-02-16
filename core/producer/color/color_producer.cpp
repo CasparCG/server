@@ -46,7 +46,9 @@ public:
 	explicit color_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& color) 
 		: color_str_(color)
 		, frame_(create_color_frame(this, frame_factory, color))
-	{}
+	{
+		CASPAR_LOG(info) << print() << L" Initialized";
+	}
 
 	// frame_producer
 			
@@ -129,7 +131,7 @@ spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<fram
 	if(color2.length() != 9 || color2[0] != '#')
 		return core::frame_producer::empty();
 
-	return core::wrap_producer(spl::make_shared<color_producer>(frame_factory, color2));
+	return spl::make_shared<color_producer>(frame_factory, color2);
 }
 
 draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, const std::wstring& color)

@@ -56,13 +56,15 @@ public:
 		, source_producer_(frame_producer::empty())
 	{
 		dest->subscribe(event_subject_);
+
+		CASPAR_LOG(info) << print() << L" Initialized";
 	}
 	
 	// frame_producer
 		
 	virtual void leading_producer(const spl::shared_ptr<frame_producer>& producer) override
 	{
-		source_producer_ = producer;
+		source_producer_ = create_destroy_proxy(producer);
 	}
 
 	virtual draw_frame receive(int flags) override
@@ -70,8 +72,6 @@ public:
 		if(current_frame_ >= info_.duration)
 			return dest_producer_->receive(flags);
 		
-		++current_frame_;
-
 		event_subject_	<< monitor::event("transition/frame") % current_frame_ % info_.duration
 						<< monitor::event("transition/type") % [&]() -> std::string
 																{
@@ -102,6 +102,11 @@ public:
 			if(source == core::draw_frame::late())
 				source = source_producer_->last_frame();
 		});		
+		
+		++current_frame_;
+
+		if(current_frame_ >= info_.duration)
+			source_producer_ = core::frame_producer::empty();
 
 		return compose(dest, source);
 	}
@@ -203,7 +208,7 @@ public:
 
 spl::shared_ptr<frame_producer> create_transition_producer(const field_mode& mode, const spl::shared_ptr<frame_producer>& destination, const transition_info& info)
 {
-	return core::wrap_producer(spl::make_shared<transition_producer>(mode, destination, info));
+	return spl::make_shared<transition_producer>(mode, destination, info);
 }
 
 }}

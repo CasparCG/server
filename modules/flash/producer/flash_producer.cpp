@@ -355,6 +355,8 @@ public:
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.9f));
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
+
+		CASPAR_LOG(info) << print() << L" Initialized";
 	}
 
 	~flash_producer()
@@ -490,7 +492,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 	if(!boost::filesystem::exists(filename))
 		BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(u8(filename)));	
 
-	return core::wrap_producer(spl::make_shared<flash_producer>(frame_factory, filename, template_host.width, template_host.height));
+	return spl::make_shared<flash_producer>(frame_factory, filename, template_host.width, template_host.height);
 }
 
 std::wstring find_template(const std::wstring& template_name)

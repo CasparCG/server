@@ -76,20 +76,22 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
 	return producer;
 }	
 
-class producer_proxy : public frame_producer
+class destroy_producer_proxy : public frame_producer
 {	
 	std::shared_ptr<frame_producer> producer_;
 public:
-	producer_proxy(spl::shared_ptr<frame_producer>&& producer) 
+	destroy_producer_proxy(spl::shared_ptr<frame_producer>&& producer) 
 		: producer_(std::move(producer))
 	{
-		CASPAR_LOG(info) << producer_->print() << L" Initialized.";
 	}
 
-	virtual ~producer_proxy()
+	virtual ~destroy_producer_proxy()
 	{		
 		static tbb::atomic<int> counter = tbb::atomic<int>();
 		
+		if(producer_ == core::frame_producer::empty())
+			return;
+
 		++counter;
 		CASPAR_VERIFY(counter < 32);
 		
@@ -107,9 +109,8 @@ public:
 			}
 			catch(...){}
 			
-			CASPAR_LOG(trace) << str << L" Uninitializing.";
 			pointer_guard.reset();
-			CASPAR_LOG(info) << str << L" Uninitialized.";
+			CASPAR_LOG(info) << str << L" Destroyed.";
 
 			--counter;
 		}); 
@@ -127,9 +128,9 @@ public:
 	virtual void unsubscribe(const monitor::observable::observer_ptr& o)																		{return producer_->unsubscribe(o);}
 };
 
-spl::shared_ptr<core::frame_producer> wrap_producer(spl::shared_ptr<core::frame_producer> producer)
+spl::shared_ptr<core::frame_producer> create_destroy_proxy(spl::shared_ptr<core::frame_producer> producer)
 {
-	return spl::make_shared<producer_proxy>(std::move(producer));
+	return spl::make_shared<destroy_producer_proxy>(std::move(producer));
 }
 
 spl::shared_ptr<core::frame_producer> do_create_producer(const spl::shared_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)

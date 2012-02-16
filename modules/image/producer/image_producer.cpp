@@ -61,6 +61,8 @@ struct image_producer : public core::frame_producer
 
 		std::copy_n(FreeImage_GetBits(bitmap.get()), frame->image_data(0).size(), frame->image_data(0).begin());
 		frame_ = core::draw_frame(std::move(frame));
+
+		CASPAR_LOG(info) << print() << L" Initialized";
 	}
 	
 	// frame_producer
@@ -107,7 +109,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 	if(ext == extensions.end())
 		return core::frame_producer::empty();
 
-	return core::wrap_producer(spl::make_shared<image_producer>(frame_factory, filename + *ext));
+	return spl::make_shared<image_producer>(frame_factory, filename + *ext);
 }
 
 
