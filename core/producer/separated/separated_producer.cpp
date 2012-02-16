@@ -46,6 +46,7 @@ public:
 		, key_(core::draw_frame::late())
 		, last_frame_(core::draw_frame::empty())
 	{
+		CASPAR_LOG(info) << print() << L" Initialized";
 	}
 
 	// frame_producer
@@ -119,7 +120,7 @@ public:
 
 spl::shared_ptr<frame_producer> create_separated_producer(const spl::shared_ptr<frame_producer>& fill, const spl::shared_ptr<frame_producer>& key)
 {
-	return core::wrap_producer(spl::make_shared<separated_producer>(fill, key));
+	return spl::make_shared<separated_producer>(fill, key);
 }
 
 }}

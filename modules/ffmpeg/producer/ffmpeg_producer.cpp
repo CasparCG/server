@@ -138,6 +138,8 @@ public:
 			BOOST_THROW_EXCEPTION(averror_stream_not_found() << msg_info("No streams found"));
 
 		muxer_.reset(new frame_muxer(fps_, frame_factory, filter));
+
+		CASPAR_LOG(info) << print() << L" Initialized";
 	}
 
 	// frame_producer
@@ -352,7 +354,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
 	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
 	
-	return core::wrap_producer(spl::make_shared<ffmpeg_producer>(frame_factory, filename, filter_str, loop, start, length));
+	return spl::make_shared<ffmpeg_producer>(frame_factory, filename, filter_str, loop, start, length);
 }
 
 }}
