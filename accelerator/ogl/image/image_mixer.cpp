@@ -110,7 +110,7 @@ bool operator!=(const layer& lhs, const layer& rhs)
 
 class image_renderer
 {
-	spl::shared_ptr<device>																		ogl_;
+	spl::shared_ptr<device>																			ogl_;
 	image_kernel																					kernel_;
 	std::pair<std::vector<layer>, boost::shared_future<boost::iterator_range<const uint8_t*>>>		last_image_;	
 public:
@@ -162,9 +162,7 @@ private:
 		else
 		{	
 			// Start host->device transfers.
-
-			std::map<const host_buffer*, future_texture> buffer_map;
-
+			
 			BOOST_FOREACH(auto& layer, layers)
 			{
 				BOOST_FOREACH(auto& item, layer.items)
@@ -175,14 +173,9 @@ private:
 					for(size_t n = 0; n < host_buffers.size(); ++n)	
 					{
 						auto buffer	= host_buffers[n];
-						auto it		= buffer_map.find(buffer.get());
-						if(it == buffer_map.end())
-						{
-							auto plane			= item.pix_desc.planes[n];
-							auto future_texture	= ogl_->copy_async(buffer, plane.width, plane.height, plane.channels);
-							it = buffer_map.insert(std::make_pair(buffer.get(), std::move(future_texture))).first;
-						}
-						item.textures.push_back(it->second);
+						auto plane			= item.pix_desc.planes[n];
+						auto future_texture	= ogl_->copy_async(buffer, plane.width, plane.height, plane.channels);		
+						item.textures.push_back(std::move(future_texture));
 					}	
 					item.buffers.clear();
 				}
@@ -377,7 +370,7 @@ private:
 		
 struct image_mixer::impl : boost::noncopyable
 {	
-	spl::shared_ptr<device>			ogl_;
+	spl::shared_ptr<device>				ogl_;
 	image_renderer						renderer_;
 	std::vector<core::image_transform>	transform_stack_;
 	std::vector<layer>					layers_; // layer/stream/items
