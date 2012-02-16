@@ -52,6 +52,8 @@ namespace caspar { namespace accelerator { namespace ogl {
 		
 struct device::impl : public std::enable_shared_from_this<impl>
 {
+	std::map<host_buffer*, spl::shared_ptr<device_buffer>> write_buffer_transfer_cache_;
+
 	std::unique_ptr<sf::Context> device_;
 	std::unique_ptr<sf::Context> host_alloc_device_;
 	
@@ -134,17 +136,15 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	{
 		return executor_.invoke([&]() -> spl::shared_ptr<device_buffer>
 		{
-			std::shared_ptr<device_buffer> buffer;
 			try
 			{
-				buffer.reset(new device_buffer(width, height, stride));
+				return spl::make_shared<device_buffer>(width, height, stride);
 			}
 			catch(...)
 			{
 				CASPAR_LOG(error) << L"ogl: create_device_buffer failed!";
 				throw;
 			}
-			return spl::make_shared_ptr(buffer);
 		});
 	}
 				
@@ -170,23 +170,21 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	{
 		return host_alloc_executor_.invoke([=]() -> spl::shared_ptr<host_buffer>
 		{
-			std::shared_ptr<host_buffer> buffer;
-
 			try
 			{
-				buffer.reset(new host_buffer(size, usage));
+				auto buffer = spl::make_shared<host_buffer>(size, usage);
 				if(usage == host_buffer::usage::write_only)
 					buffer->map();
 				else
-					buffer->unmap();			
+					buffer->unmap();	
+
+				return buffer;
 			}
 			catch(...)
 			{
 				CASPAR_LOG(error) << L"ogl: create_host_buffer failed!";
 				throw;	
 			}
-
-			return spl::make_shared_ptr(buffer);
 		});
 	}
 	
@@ -208,12 +206,17 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		{
 			self->host_alloc_executor_.begin_invoke([=]() mutable
 			{		
-				if(is_write)
-					buffer->map();
+				if(is_write)				
+					buffer->map();				
 				else
 					buffer->unmap();
 
 				pool->push(buffer);
+			}, task_priority::high_priority);	
+
+			self->executor_.begin_invoke([=]
+			{
+				write_buffer_transfer_cache_.erase(buffer.get());				
 			}, task_priority::high_priority);	
 		});
 	}
@@ -235,9 +238,14 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	{
 		return executor_.begin_invoke([=]() -> spl::shared_ptr<device_buffer>
 		{
-			auto result = create_device_buffer(width, height, stride);
-			result->copy_from(*source);
-			return result;
+			auto buffer_it = write_buffer_transfer_cache_.find(source.get());
+			if(buffer_it == write_buffer_transfer_cache_.end())
+			{
+				auto result = create_device_buffer(width, height, stride);
+				result->copy_from(*source);
+				buffer_it = write_buffer_transfer_cache_.insert(std::make_pair(source.get(), result)).first;
+			}
+			return buffer_it->second;
 		}, task_priority::high_priority);
 	}
 };
