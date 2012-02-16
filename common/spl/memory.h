@@ -27,6 +27,292 @@
 
 namespace caspar { namespace spl {
 
+	
+// unique_ptr
+
+template<typename T, typename D = std::default_delete<T>>
+class unique_ptr
+{   
+	unique_ptr(const unique_ptr&);
+	unique_ptr& operator=(const unique_ptr&);
+
+    template <typename, typename> friend class unique_ptr;
+    template <typename> friend class shared_ptr;
+public:
+    typedef T element_type;
+    typedef D deleter_type;
+
+    unique_ptr()
+		: p_(new T())
+	{
+	}
+	
+    template<typename T2, typename D2>    
+    unique_ptr(unique_ptr<T2, D2>&& p, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0) 
+		: p_(p.p_.release(), p.p_.get_deleter())
+    {
+    }
+			
+    template<typename T2, typename D2>    
+    explicit unique_ptr(std::unique_ptr<T2, D2>&& p, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0) 
+        : p_(std::move(p))
+    {
+        if(!p_)
+            throw std::invalid_argument("p");
+    }
+
+    template<typename T2>    
+    explicit unique_ptr(T2* p, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0) 
+        : p_(p)
+    {
+        if(!p_)
+            throw std::invalid_argument("p");
+    }
+	
+    template<typename T2>   
+	explicit unique_ptr(T2* p, typename std::remove_reference<D>::type&& d, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
+	    : p_(p, d)
+    {
+        if(!p_)
+            throw std::invalid_argument("p");
+    }
+
+    unique_ptr<T>& operator=(unique_ptr&& other)
+    {
+        other.swap(*this);
+        return *this;
+    }
+					
+    T& operator*() const 
+    { 
+        return *p_.get();
+    }
+
+    T* operator->() const 
+    { 
+        return p_.get();
+    }
+
+    T* get() const 
+    { 
+        return p_.get();
+    }
+	
+    void swap(unique_ptr& other) 
+    { 
+        p_.swap(other.p_); 
+    } 
+	
+    template<class D, class T2> 
+    D* get_deleter(shared_ptr<T2> const& ptr) 
+    { 
+        return p_.get_deleter(); 
+    }
+
+private:    
+	T* release()
+	{
+		return p_.release();
+	}
+
+    std::unique_ptr<T, D> p_;
+};
+
+template<class T, class T2>
+bool operator==(const unique_ptr<T>& a, const unique_ptr<T2>& b)
+{
+    return a.get() == b.get();
+}
+
+template<class T, class T2>
+bool operator==(const std::unique_ptr<T>& a, const unique_ptr<T2>& b)
+{
+    return a.get() == b.get();
+}
+
+template<class T, class T2>
+bool operator==(const unique_ptr<T>& a, const std::unique_ptr<T2>& b)
+{
+    return a.get() == b.get();
+}
+
+template<class T, class T2>
+bool operator!=(const unique_ptr<T>& a, const unique_ptr<T2>& b)
+{
+    return a.get() != b.get();
+}
+
+template<class T, class T2>
+bool operator!=(const std::unique_ptr<T>& a, const unique_ptr<T2>& b)
+{
+    return a.get() != b.get();
+}
+
+template<class T, class T2>
+bool operator!=(const unique_ptr<T>& a, const std::unique_ptr<T2>& b)
+{
+    return a.get() != b.get();
+}
+
+template<class T, class T2>
+bool operator<(const unique_ptr<T>& a, const unique_ptr<T2>& b)
+{
+    return a.get() < b.get();
+}
+
+template<class T, class T2>
+bool operator<(const std::unique_ptr<T>& a, const unique_ptr<T2>& b)
+{
+    return a.get() < b.get();
+}
+
+template<class T, class T2>
+bool operator<(const unique_ptr<T>& a, const std::unique_ptr<T2>& b)
+{
+    return a.get() < b.get();
+}
+
+template<class T, class T2>
+bool operator>(const unique_ptr<T>& a, const unique_ptr<T2>& b)
+{
+    return a.get() > b.get();
+}
+
+template<class T, class T2>
+bool operator>(const std::unique_ptr<T>& a, const unique_ptr<T2>& b)
+{
+    return a.get() > b.get();
+}
+
+template<class T, class T2>
+bool operator>(const unique_ptr<T>& a, const std::unique_ptr<T2>& b)
+{
+    return a.get() > b.get();
+}
+
+template<class T, class T2>
+bool operator>=(const unique_ptr<T>& a, const unique_ptr<T2>& b)
+{
+    return a.get() >= b.get();
+}
+
+template<class T, class T2>
+bool operator>=(const std::unique_ptr<T>& a, const unique_ptr<T2>& b)
+{
+    return a.get() >= b.get();
+}
+
+template<class T, class T2>
+bool operator>=(const unique_ptr<T>& a, const std::unique_ptr<T2>& b)
+{
+    return a.get() >= b.get();
+}
+
+template<class T, class T2>
+bool operator<=(const unique_ptr<T>& a, const unique_ptr<T2>& b)
+{
+    return a.get() <= b.get();
+}
+
+template<class T, class T2>
+bool operator<=(const std::unique_ptr<T>& a, const unique_ptr<T2>& b)
+{
+    return a.get() <= b.get();
+}
+
+template<class T, class T2>
+bool operator<=(const unique_ptr<T>& a, const std::unique_ptr<T2>& b)
+{
+    return a.get() <= b.get();
+}
+
+template<class E, class T, class T2>
+std::basic_ostream<E, T>& operator<<(std::basic_ostream<E, T>& oT2t, const unique_ptr<T2>& p)
+{
+    return oT2t << p.get();
+}
+
+template<class T> 
+void swap(unique_ptr<T>& a, unique_ptr<T>& b)
+{
+    a.swap(b);
+}
+
+template<class T> 
+T* get_pointer(unique_ptr<T> const& p)
+{
+    return p.get();
+}
+
+template <class T, class T2>
+unique_ptr<T> static_pointer_cast(const unique_ptr<T2>& p)
+{
+    return unique_ptr<T>(std::static_pointer_cast<T>(std::unique_ptr<T2>(p)));
+}
+
+template <class T, class T2>
+unique_ptr<T> const_pointer_cast(const unique_ptr<T2>& p)
+{
+    return unique_ptr<T>(std::const_pointer_cast<T>(std::unique_ptr<T2>(p)));
+}
+
+template <class T, class T2>
+unique_ptr<T> dynamic_pointer_cast(const unique_ptr<T2>& p)
+{
+    aT2to temp = std::dynamic_pointer_cast<T>(std::unique_ptr<T2>(p));
+    if(!temp)
+        throw std::bad_cast();
+    return unique_ptr<T>(std::move(temp));
+}
+
+template<typename T>
+unique_ptr<T> make_unique_ptr(std::unique_ptr<T>&& ptr)
+{
+	return unique_ptr<T>(std::move(ptr));
+}
+
+template<typename T>
+unique_ptr<T> make_unique()
+{
+    return unique_ptr<T>(new T());
+}
+
+template<typename T, typename P0>
+unique_ptr<T> make_unique(P0&& p0)
+{
+    return unique_ptr<T>(new T(std::forward<P0>(p0)));
+}
+
+template<typename T, typename P0, typename P1>
+unique_ptr<T> make_unique(P0&& p0, P1&& p1)
+{
+    return unique_ptr<T>(new T(std::forward<P0>(p0), std::forward<P1>(p1)));
+}
+
+template<typename T, typename P0, typename P1, typename P2>
+unique_ptr<T> make_unique(P0&& p0, P1&& p1, P2&& p2)
+{
+    return unique_ptr<T>(new T(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2)));
+}
+
+template<typename T, typename P0, typename P1, typename P2, typename P3>
+unique_ptr<T> make_unique(P0&& p0, P1&& p1, P2&& p2, P3&& p3)
+{
+    return unique_ptr<T>(new T(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3)));
+}
+
+template<typename T, typename P0, typename P1, typename P2, typename P3, typename P4>
+unique_ptr<T> make_unique(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4)
+{
+    return unique_ptr<T>(new T(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4)));
+}
+
+template<typename T, typename P0, typename P1, typename P2, typename P3, typename P4, typename P5>
+unique_ptr<T> make_unique(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4, P5&& p5)
+{
+    return unique_ptr<T>(new T(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4), std::forward<P5>(p5)));
+}
+
 // shared_ptr
 
 template<typename T>
@@ -47,6 +333,14 @@ public:
     template<typename T2>    
     explicit shared_ptr(std::unique_ptr<T2>&& p, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0) 
         : p_(std::move(p))
+    {
+        if(!p_)
+            throw std::invalid_argument("p");
+    }
+	
+    template<typename T2>    
+    explicit shared_ptr(spl::unique_ptr<T2>&& p, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0) 
+        : p_(p.release())
     {
         if(!p_)
             throw std::invalid_argument("p");
@@ -396,284 +690,5 @@ shared_ptr<T>::shared_ptr()
     : p_(make_shared<T>())
 {
 } 
-
-// unique_ptr
-
-template<typename T, typename D = std::default_delete<T>>
-class unique_ptr
-{   
-	unique_ptr(const unique_ptr&);
-	unique_ptr& operator=(const unique_ptr&);
-
-    template <typename, typename> friend class unique_ptr;
-public:
-    typedef T element_type;
-    typedef D deleter_type;
-
-    unique_ptr()
-		: p_(new T())
-	{
-	}
-	
-    template<typename T2, typename D2>    
-    unique_ptr(unique_ptr<T2, D2>&& p, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0) 
-		: p_(p.p_.release(), p.p_.get_deleter())
-    {
-    }
-			
-    template<typename T2, typename D2>    
-    explicit unique_ptr(std::unique_ptr<T2, D2>&& p, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0) 
-        : p_(std::move(p))
-    {
-        if(!p_)
-            throw std::invalid_argument("p");
-    }
-
-    template<typename T2>    
-    explicit unique_ptr(T2* p, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0) 
-        : p_(p)
-    {
-        if(!p_)
-            throw std::invalid_argument("p");
-    }
-	
-    template<typename T2>   
-	explicit unique_ptr(T2* p, typename std::remove_reference<D>::type&& d, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0)
-	    : p_(p, d)
-    {
-        if(!p_)
-            throw std::invalid_argument("p");
-    }
-
-    unique_ptr<T>& operator=(unique_ptr&& other)
-    {
-        other.swap(*this);
-        return *this;
-    }
-				
-    T& operator*() const 
-    { 
-        return *p_.get();
-    }
-
-    T* operator->() const 
-    { 
-        return p_.get();
-    }
-
-    T* get() const 
-    { 
-        return p_.get();
-    }
-	
-    void swap(unique_ptr& other) 
-    { 
-        p_.swap(other.p_); 
-    } 
-	
-    template<class D, class T2> 
-    D* get_deleter(shared_ptr<T2> const& ptr) 
-    { 
-        return p_.get_deleter(); 
-    }
-
-private:    
-    std::unique_ptr<T, D> p_;
-};
-
-template<class T, class T2>
-bool operator==(const unique_ptr<T>& a, const unique_ptr<T2>& b)
-{
-    return a.get() == b.get();
-}
-
-template<class T, class T2>
-bool operator==(const std::unique_ptr<T>& a, const unique_ptr<T2>& b)
-{
-    return a.get() == b.get();
-}
-
-template<class T, class T2>
-bool operator==(const unique_ptr<T>& a, const std::unique_ptr<T2>& b)
-{
-    return a.get() == b.get();
-}
-
-template<class T, class T2>
-bool operator!=(const unique_ptr<T>& a, const unique_ptr<T2>& b)
-{
-    return a.get() != b.get();
-}
-
-template<class T, class T2>
-bool operator!=(const std::unique_ptr<T>& a, const unique_ptr<T2>& b)
-{
-    return a.get() != b.get();
-}
-
-template<class T, class T2>
-bool operator!=(const unique_ptr<T>& a, const std::unique_ptr<T2>& b)
-{
-    return a.get() != b.get();
-}
-
-template<class T, class T2>
-bool operator<(const unique_ptr<T>& a, const unique_ptr<T2>& b)
-{
-    return a.get() < b.get();
-}
-
-template<class T, class T2>
-bool operator<(const std::unique_ptr<T>& a, const unique_ptr<T2>& b)
-{
-    return a.get() < b.get();
-}
-
-template<class T, class T2>
-bool operator<(const unique_ptr<T>& a, const std::unique_ptr<T2>& b)
-{
-    return a.get() < b.get();
-}
-
-template<class T, class T2>
-bool operator>(const unique_ptr<T>& a, const unique_ptr<T2>& b)
-{
-    return a.get() > b.get();
-}
-
-template<class T, class T2>
-bool operator>(const std::unique_ptr<T>& a, const unique_ptr<T2>& b)
-{
-    return a.get() > b.get();
-}
-
-template<class T, class T2>
-bool operator>(const unique_ptr<T>& a, const std::unique_ptr<T2>& b)
-{
-    return a.get() > b.get();
-}
-
-template<class T, class T2>
-bool operator>=(const unique_ptr<T>& a, const unique_ptr<T2>& b)
-{
-    return a.get() >= b.get();
-}
-
-template<class T, class T2>
-bool operator>=(const std::unique_ptr<T>& a, const unique_ptr<T2>& b)
-{
-    return a.get() >= b.get();
-}
-
-template<class T, class T2>
-bool operator>=(const unique_ptr<T>& a, const std::unique_ptr<T2>& b)
-{
-    return a.get() >= b.get();
-}
-
-template<class T, class T2>
-bool operator<=(const unique_ptr<T>& a, const unique_ptr<T2>& b)
-{
-    return a.get() <= b.get();
-}
-
-template<class T, class T2>
-bool operator<=(const std::unique_ptr<T>& a, const unique_ptr<T2>& b)
-{
-    return a.get() <= b.get();
-}
-
-template<class T, class T2>
-bool operator<=(const unique_ptr<T>& a, const std::unique_ptr<T2>& b)
-{
-    return a.get() <= b.get();
-}
-
-template<class E, class T, class T2>
-std::basic_ostream<E, T>& operator<<(std::basic_ostream<E, T>& oT2t, const unique_ptr<T2>& p)
-{
-    return oT2t << p.get();
-}
-
-template<class T> 
-void swap(unique_ptr<T>& a, unique_ptr<T>& b)
-{
-    a.swap(b);
-}
-
-template<class T> 
-T* get_pointer(unique_ptr<T> const& p)
-{
-    return p.get();
-}
-
-template <class T, class T2>
-unique_ptr<T> static_pointer_cast(const unique_ptr<T2>& p)
-{
-    return unique_ptr<T>(std::static_pointer_cast<T>(std::unique_ptr<T2>(p)));
-}
-
-template <class T, class T2>
-unique_ptr<T> const_pointer_cast(const unique_ptr<T2>& p)
-{
-    return unique_ptr<T>(std::const_pointer_cast<T>(std::unique_ptr<T2>(p)));
-}
-
-template <class T, class T2>
-unique_ptr<T> dynamic_pointer_cast(const unique_ptr<T2>& p)
-{
-    aT2to temp = std::dynamic_pointer_cast<T>(std::unique_ptr<T2>(p));
-    if(!temp)
-        throw std::bad_cast();
-    return unique_ptr<T>(std::move(temp));
-}
-
-template<typename T>
-unique_ptr<T> make_unique_ptr(std::unique_ptr<T>&& ptr)
-{
-	return unique_ptr<T>(std::move(ptr));
-}
-
-template<typename T>
-unique_ptr<T> make_unique()
-{
-    return unique_ptr<T>(new T());
-}
-
-template<typename T, typename P0>
-unique_ptr<T> make_unique(P0&& p0)
-{
-    return unique_ptr<T>(new T(std::forward<P0>(p0)));
-}
-
-template<typename T, typename P0, typename P1>
-unique_ptr<T> make_unique(P0&& p0, P1&& p1)
-{
-    return unique_ptr<T>(new T(std::forward<P0>(p0), std::forward<P1>(p1)));
-}
-
-template<typename T, typename P0, typename P1, typename P2>
-unique_ptr<T> make_unique(P0&& p0, P1&& p1, P2&& p2)
-{
-    return unique_ptr<T>(new T(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2)));
-}
-
-template<typename T, typename P0, typename P1, typename P2, typename P3>
-unique_ptr<T> make_unique(P0&& p0, P1&& p1, P2&& p2, P3&& p3)
-{
-    return unique_ptr<T>(new T(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3)));
-}
-
-template<typename T, typename P0, typename P1, typename P2, typename P3, typename P4>
-unique_ptr<T> make_unique(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4)
-{
-    return unique_ptr<T>(new T(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4)));
-}
-
-template<typename T, typename P0, typename P1, typename P2, typename P3, typename P4, typename P5>
-unique_ptr<T> make_unique(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4, P5&& p5)
-{
-    return unique_ptr<T>(new T(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4), std::forward<P5>(p5)));
-}
 
 }}
