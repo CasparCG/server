@@ -41,10 +41,10 @@ void register_consumer_factory(const consumer_factory_t& factory)
 
 class destroy_consumer_proxy : public frame_consumer
 {	
-	std::unique_ptr<std::shared_ptr<frame_consumer>> consumer_;
+	std::shared_ptr<frame_consumer> consumer_;
 public:
 	destroy_consumer_proxy(spl::shared_ptr<frame_consumer>&& consumer) 
-		: consumer_(new std::shared_ptr<frame_consumer>(std::move(consumer)))
+		: consumer_(std::move(consumer))
 	{
 	}
 
@@ -55,7 +55,7 @@ public:
 		++counter;
 		CASPAR_VERIFY(counter < 32);
 		
-		auto consumer = consumer_.release();
+		auto consumer = new std::shared_ptr<frame_consumer>(std::move(consumer_));
 		async([=]
 		{
 			std::unique_ptr<std::shared_ptr<frame_consumer>> pointer_guard(consumer);
@@ -76,14 +76,14 @@ public:
 		}); 
 	}
 	
-	virtual bool send(const spl::shared_ptr<const class data_frame>& frame) override					{return (*consumer_)->send(frame);}
-	virtual void initialize(const struct video_format_desc& format_desc, int channel_index)	override	{return (*consumer_)->initialize(format_desc, channel_index);}
-	virtual std::wstring print() const override															{return (*consumer_)->print();}	
-	virtual std::wstring name() const override															{return (*consumer_)->name();}
-	virtual boost::property_tree::wptree info() const override 											{return (*consumer_)->info();}
-	virtual bool has_synchronization_clock() const override												{return (*consumer_)->has_synchronization_clock();}
-	virtual int buffer_depth() const override															{return (*consumer_)->buffer_depth();}
-	virtual int index() const override																	{return (*consumer_)->index();}
+	virtual bool send(const spl::shared_ptr<const class data_frame>& frame) override					{return consumer_->send(frame);}
+	virtual void initialize(const struct video_format_desc& format_desc, int channel_index)	override	{return consumer_->initialize(format_desc, channel_index);}
+	virtual std::wstring print() const override															{return consumer_->print();}	
+	virtual std::wstring name() const override															{return consumer_->name();}
+	virtual boost::property_tree::wptree info() const override 											{return consumer_->info();}
+	virtual bool has_synchronization_clock() const override												{return consumer_->has_synchronization_clock();}
+	virtual int buffer_depth() const override															{return consumer_->buffer_depth();}
+	virtual int index() const override																	{return consumer_->index();}
 };
 
 class print_consumer_proxy : public frame_consumer
