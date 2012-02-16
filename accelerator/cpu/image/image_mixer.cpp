@@ -73,19 +73,20 @@ namespace caspar { namespace accelerator { namespace cpu {
 		
 struct item
 {
-	core::pixel_format_desc						pix_desc;
-	std::vector<spl::shared_ptr<host_buffer>>	buffers;
-	core::image_transform						transform;
+	core::pixel_format_desc			pix_desc;
+	std::array<const uint8_t*, 4>	data;
+	core::image_transform			transform;
 
 	item()
 		: pix_desc(core::pixel_format::invalid)
 	{
+		data.fill(0);
 	}
 };
 
 bool operator==(const item& lhs, const item& rhs)
 {
-	return lhs.buffers == rhs.buffers && lhs.transform == rhs.transform;
+	return lhs.data == rhs.data && lhs.transform == rhs.transform;
 }
 
 bool operator!=(const item& lhs, const item& rhs)
@@ -150,6 +151,7 @@ class image_renderer
 {
 	std::pair<std::vector<item>, boost::shared_future<boost::iterator_range<const uint8_t*>>>		last_image_;
 	tbb::concurrent_unordered_map<int, tbb::concurrent_bounded_queue<std::shared_ptr<SwsContext>>>	sws_contexts_;
+	std::vector<spl::shared_ptr<host_buffer>>														temp_buffers_;
 public:	
 	boost::shared_future<boost::iterator_range<const uint8_t*>> operator()(std::vector<item> items, const core::video_format_desc& format_desc)
 	{	
@@ -220,35 +222,41 @@ private:
 				auto y = i*step+start;
 
 				for(std::size_t n = 0; n < items.size()-1; ++n)
-					kernel<xmm::temporal_tag>(dest + y*width*4, items[n].buffers.at(0)->data() + y*width*4, width*4);
+					kernel<xmm::temporal_tag>(dest + y*width*4, items[n].data.at(0) + y*width*4, width*4);
 				
 				std::size_t n = items.size()-1;				
-				kernel<xmm::nontemporal_tag>(dest + y*width*4, items[n].buffers.at(0)->data() + y*width*4, width*4);
+				kernel<xmm::nontemporal_tag>(dest + y*width*4, items[n].data.at(0) + y*width*4, width*4);
 			}
 
 			_mm_mfence();
 		});
+
+		temp_buffers_.clear();
 	}
 		
 	void convert(std::vector<item>& source_items, int width, int height)
 	{
-		std::set<std::vector<spl::shared_ptr<host_buffer>>> buffers;
+		std::set<std::array<const uint8_t*, 4>> buffers;
 
 		BOOST_FOREACH(auto& item, source_items)
-			buffers.insert(item.buffers);
+			buffers.insert(item.data);
 		
 		auto dest_items = source_items;
 
-		tbb::parallel_for_each(buffers.begin(), buffers.end(), [&](const std::vector<spl::shared_ptr<host_buffer>>& buffers)
+		tbb::parallel_for_each(buffers.begin(), buffers.end(), [&](const std::array<const uint8_t*, 4>& data)
 		{			
-			auto pix_desc = std::find_if(source_items.begin(), source_items.end(), [&](const item& item){return item.buffers == buffers;})->pix_desc;
+			auto pix_desc = std::find_if(source_items.begin(), source_items.end(), [&](const item& item){return item.data == data;})->pix_desc;
 
 			if(pix_desc.format == core::pixel_format::bgra && 
 				pix_desc.planes.at(0).width == width &&
 				pix_desc.planes.at(0).height == height)
 				return;
 
-			auto input_av_frame = ffmpeg::make_av_frame(buffers, pix_desc);
+			std::array<uint8_t*, 4> data2 = {};
+			for(std::size_t n = 0; n < data.size(); ++n)
+				data2.at(n) = const_cast<uint8_t*>(data[n]);
+
+			auto input_av_frame = ffmpeg::make_av_frame(data2, pix_desc);
 								
 			int key = ((input_av_frame->width << 22) & 0xFFC00000) | ((input_av_frame->height << 6) & 0x003FC000) | ((input_av_frame->format << 7) & 0x00007F00);
 						
@@ -274,12 +282,15 @@ private:
 				sws_scale(sws_context.get(), input_av_frame->data, input_av_frame->linesize, 0, input_av_frame->height, dest_av_frame->data, dest_av_frame->linesize);				
 				pool.push(sws_context);
 			}
+
+			temp_buffers_.push_back(dest_frame);
 		
 			for(std::size_t n = 0; n < source_items.size(); ++n)
 			{
-				if(source_items[n].buffers == buffers)
+				if(source_items[n].data == data)
 				{
-					dest_items[n].buffers			= boost::assign::list_of(dest_frame);
+					dest_items[n].data.assign(0);
+					dest_items[n].data[0]			= dest_frame->data();
 					dest_items[n].pix_desc			= core::pixel_format_desc(core::pixel_format::bgra);
 					dest_items[n].pix_desc.planes	= boost::assign::list_of(core::pixel_format_desc::plane(width, height, 4));
 					dest_items[n].transform			= source_items[n].transform;
@@ -312,25 +323,22 @@ public:
 		transform_stack_.push_back(transform_stack_.back()*transform.image_transform);
 	}
 		
-	void visit(const core::data_frame& frame2)
+	void visit(const core::data_frame& frame)
 	{			
-		auto frame = dynamic_cast<const cpu::data_frame*>(&frame2);
-		if(frame == nullptr)
+		if(frame.pixel_format_desc().format == core::pixel_format::invalid)
 			return;
 
-		if(frame->pixel_format_desc().format == core::pixel_format::invalid)
-			return;
-
-		if(frame->buffers().empty())
+		if(frame.pixel_format_desc().planes.empty())
 			return;
 
 		if(transform_stack_.back().field_mode == core::field_mode::empty)
 			return;
 
 		item item;
-		item.pix_desc			= frame->pixel_format_desc();
-		item.buffers			= frame->buffers();				
-		item.transform			= transform_stack_.back();
+		item.pix_desc	= frame.pixel_format_desc();
+		item.transform	= transform_stack_.back();
+		for(int n = 0; n < item.pix_desc.planes.size(); ++n)
+			item.data.at(n) = frame.image_data(n).begin();		
 
 		items_.push_back(item);
 	}
