@@ -279,14 +279,14 @@ spl::unique_ptr<core::data_frame> make_data_frame(const void* tag, const spl::sh
 
 spl::shared_ptr<AVFrame> make_av_frame(caspar::core::data_frame& frame)
 {
-	std::array<void*, 4> data = {};
+	std::array<uint8_t*, 4> data = {};
 	for(int n = 0; n < frame.pixel_format_desc().planes.size(); ++n)
 		data[n] = frame.image_data(n).begin();
 
 	return make_av_frame(data, frame.pixel_format_desc());
 }
 
-spl::shared_ptr<AVFrame> make_av_frame(std::array<void*, 4> data, const core::pixel_format_desc& pix_desc)
+spl::shared_ptr<AVFrame> make_av_frame(std::array<uint8_t*, 4> data, const core::pixel_format_desc& pix_desc)
 {
 	spl::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
 	avcodec_get_frame_defaults(av_frame.get());
@@ -298,7 +298,7 @@ spl::shared_ptr<AVFrame> make_av_frame(std::array<void*, 4> data, const core::pi
 	av_frame->height = planes[0].height;
 	for(int n = 0; n < planes.size(); ++n)	
 	{
-		av_frame->data[n]	  = reinterpret_cast<uint8_t*>(data[n]);
+		av_frame->data[n]	  = data[n];
 		av_frame->linesize[n] = planes[n].linesize;	
 	}
 	switch(format)
