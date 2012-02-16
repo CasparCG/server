@@ -23,7 +23,7 @@
 
 #include "data_frame.h"
 
-#include "context.h"
+#include "device.h"
 #include "host_buffer.h"
 #include "device_buffer.h"
 
@@ -37,7 +37,7 @@ namespace caspar { namespace accelerator { namespace ogl {
 																																							
 struct data_frame::impl : boost::noncopyable
 {			
-	std::shared_ptr<context>						ogl_;
+	std::shared_ptr<device>						ogl_;
 	std::vector<spl::shared_ptr<ogl::host_buffer>>	buffers_;
 	core::audio_buffer								audio_data_;
 	const core::pixel_format_desc					desc_;
@@ -52,7 +52,7 @@ struct data_frame::impl : boost::noncopyable
 	{
 	}
 
-	impl(const spl::shared_ptr<ogl::context>& ogl, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) 
+	impl(const spl::shared_ptr<ogl::device>& ogl, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) 
 		: ogl_(ogl)
 		, desc_(desc)
 		, tag_(tag)
@@ -75,7 +75,7 @@ struct data_frame::impl : boost::noncopyable
 };
 	
 data_frame::data_frame(const void* tag) : impl_(new impl(tag)){}
-data_frame::data_frame(const spl::shared_ptr<ogl::context>& ogl, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) 
+data_frame::data_frame(const spl::shared_ptr<ogl::device>& ogl, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) 
 	: impl_(new impl(ogl, tag, desc, frame_rate, field_mode)){}
 data_frame::data_frame(data_frame&& other) : impl_(std::move(other.impl_)){}
 data_frame& data_frame::operator=(data_frame&& other)

@@ -5,7 +5,7 @@
 #include "cpu/image/image_mixer.h"
 #include "ogl/image/image_mixer.h"
 
-#include "ogl/util/context.h"
+#include "ogl/util/device.h"
 
 #include <tbb/mutex.h>
 
@@ -15,7 +15,7 @@ struct accelerator::impl
 {
 	const std::wstring				path_;
 	tbb::mutex						mutex_;
-	std::shared_ptr<ogl::context>	ogl_context_;
+	std::shared_ptr<ogl::device>	ogl_device_;
 
 	impl(const std::wstring& path)
 		: path_(path)
@@ -30,10 +30,10 @@ struct accelerator::impl
 			{
 				tbb::mutex::scoped_lock lock(mutex_);
 
-				if(!ogl_context_)
-					ogl_context_.reset(new ogl::context());
+				if(!ogl_device_)
+					ogl_device_.reset(new ogl::device());
 
-				return spl::make_unique<ogl::image_mixer>(spl::make_shared_ptr(ogl_context_));
+				return spl::make_unique<ogl::image_mixer>(spl::make_shared_ptr(ogl_device_));
 			}
 		}
 		catch(...)

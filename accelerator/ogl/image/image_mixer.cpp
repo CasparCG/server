@@ -26,7 +26,7 @@
 #include "image_kernel.h"
 
 #include "../util/data_frame.h"
-#include "../util/context.h"
+#include "../util/device.h"
 #include "../util/host_buffer.h"
 #include "../util/device_buffer.h"
 
@@ -110,11 +110,11 @@ bool operator!=(const layer& lhs, const layer& rhs)
 
 class image_renderer
 {
-	spl::shared_ptr<context>																		ogl_;
+	spl::shared_ptr<device>																		ogl_;
 	image_kernel																					kernel_;
 	std::pair<std::vector<layer>, boost::shared_future<boost::iterator_range<const uint8_t*>>>		last_image_;	
 public:
-	image_renderer(const spl::shared_ptr<context>& ogl)
+	image_renderer(const spl::shared_ptr<device>& ogl)
 		: ogl_(ogl)
 		, kernel_(ogl_)
 	{
@@ -377,12 +377,12 @@ private:
 		
 struct image_mixer::impl : boost::noncopyable
 {	
-	spl::shared_ptr<context>			ogl_;
+	spl::shared_ptr<device>			ogl_;
 	image_renderer						renderer_;
 	std::vector<core::image_transform>	transform_stack_;
 	std::vector<layer>					layers_; // layer/stream/items
 public:
-	impl(const spl::shared_ptr<context>& ogl) 
+	impl(const spl::shared_ptr<device>& ogl) 
 		: ogl_(ogl)
 		, renderer_(ogl)
 		, transform_stack_(1)	
@@ -450,7 +450,7 @@ public:
 	}
 };
 
-image_mixer::image_mixer(const spl::shared_ptr<context>& ogl) : impl_(new impl(ogl)){}
+image_mixer::image_mixer(const spl::shared_ptr<device>& ogl) : impl_(new impl(ogl)){}
 void image_mixer::push(const core::frame_transform& transform){impl_->push(transform);}
 void image_mixer::visit(const core::data_frame& frame){impl_->visit(frame);}
 void image_mixer::pop(){impl_->pop();}
