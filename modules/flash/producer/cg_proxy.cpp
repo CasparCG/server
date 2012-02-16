@@ -174,7 +174,7 @@ spl::shared_ptr<core::frame_producer> create_ct_producer(const spl::shared_ptr<c
 	auto producer = flash_producer;
 	cg_proxy(producer).add(0, filename, 1);
 
-	return core::wrap_producer(producer);
+	return producer;
 }
 
 cg_proxy::cg_proxy(const spl::shared_ptr<core::frame_producer>& frame_producer) : impl_(new impl(frame_producer)){}
