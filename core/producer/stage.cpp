@@ -181,7 +181,7 @@ public:
 	{
 		executor_.begin_invoke([=]
 		{
-			get_layer(index).load(create_destroy_proxy(producer), auto_play_delta);			
+			get_layer(index).load(producer, auto_play_delta);			
 		}, task_priority::high_priority);
 	}
 
