@@ -22,15 +22,16 @@
 #pragma once
 
 #include <common/spl/memory.h>
-#include <common/reactive.h>
 #include <common/forward.h>
 
 #include <core/frame/frame_factory.h>
 #include <core/producer/frame_producer.h>
 #include <core/frame/data_frame.h>
 
+FORWARD2(caspar, core, class video_channel);
+
 namespace caspar { namespace reroute {
 	
-spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, reactive::observable<spl::shared_ptr<const core::data_frame>>& o);
+spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, core::video_channel& channel);
 
 }}
