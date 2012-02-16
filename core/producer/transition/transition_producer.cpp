@@ -70,8 +70,13 @@ public:
 	virtual draw_frame receive(int flags) override
 	{
 		if(current_frame_ >= info_.duration)
+		{
+			source_producer_ = core::frame_producer::empty();
 			return dest_producer_->receive(flags);
-		
+		}
+
+		++current_frame_;
+
 		event_subject_	<< monitor::event("transition/frame") % current_frame_ % info_.duration
 						<< monitor::event("transition/type") % [&]() -> std::string
 																{
@@ -101,13 +106,8 @@ public:
 			source = source_producer_->receive(flags);
 			if(source == core::draw_frame::late())
 				source = source_producer_->last_frame();
-		});		
+		});				
 		
-		++current_frame_;
-
-		if(current_frame_ >= info_.duration)
-			source_producer_ = core::frame_producer::empty();
-
 		return compose(dest, source);
 	}
 
