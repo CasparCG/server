@@ -30,6 +30,9 @@
 #include <algorithm>
 #include <modules/flash/producer/cg_proxy.h>
 #include <boost/locale.hpp>
+#include <boost/algorithm/string/trim.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/lexical_cast.hpp>
 
 namespace caspar { namespace protocol { namespace cii {
 
@@ -167,11 +170,11 @@ void KeydataCommand::Execute()
 
 	//TODO: Need to be checked for validity
 	else if(state_ == 1)
-		flash::create_cg_proxy(pCIIStrategy_->GetChannel()).stop(layer_, 0);
+		flash::create_cg_proxy(pCIIStrategy_->GetChannel(), casparLayer_).stop(layer_, 0);
 	else if(state_ == 2)
-		pCIIStrategy_->GetChannel()->stage().clear(flash::cg_proxy::DEFAULT_LAYER);
+		pCIIStrategy_->GetChannel()->stage().clear();
 	else if(state_ == 3)
-		flash::create_cg_proxy(pCIIStrategy_->GetChannel()).play(layer_);
+		flash::create_cg_proxy(pCIIStrategy_->GetChannel(), casparLayer_).play(layer_);
 }
 
 void KeydataCommand::Setup(const std::vector<std::wstring>& parameters) {
@@ -191,8 +194,29 @@ void KeydataCommand::Setup(const std::vector<std::wstring>& parameters) {
 		state_ = 0;
 	}
 
-	if(parameters.size() > 2)	
-		layer_ = _ttoi(parameters[2].c_str());	
+	casparLayer_ = flash::cg_proxy::DEFAULT_LAYER;
+	if(parameters.size() > 2)
+	{
+		//The layer parameter now supports casparlayers.
+		//the format is [CasparLayer]-[FlashLayer]
+		std::wstring str = boost::trim_copy(parameters[2]);
+		std::vector<std::wstring> split;
+		boost::split(split, str, boost::is_any_of("-"));
+		
+		try
+		{
+			casparLayer_ = boost::lexical_cast<int>(split[0]);
+
+			if(split.size() > 1)
+				layer_ = boost::lexical_cast<int>(split[1]);
+		}
+		catch(...)
+		{ 
+			casparLayer_ = flash::cg_proxy::DEFAULT_LAYER;
+			layer_ = 0;
+		}
+	}
+
 
 	if(parameters[1].at(0) == 27)	//NEPTUNE:	Y\<27>\X			Stop layer X.
 		state_ = 1;

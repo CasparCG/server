@@ -114,7 +114,7 @@ private:
 class KeydataCommand : public ICIICommand
 {
 public:
-	KeydataCommand(CIIProtocolStrategy* pPS) : pCIIStrategy_(pPS), state_(-1), layer_(0)
+	KeydataCommand(CIIProtocolStrategy* pPS) : pCIIStrategy_(pPS), state_(-1), layer_(0), casparLayer_(0)
 	{}
 
 	virtual int GetMinimumParameters() {
@@ -128,6 +128,7 @@ private:
 	std::wstring titleName_;
 	int state_;
 	int layer_;
+	int casparLayer_;
 
 	CIIProtocolStrategy* pCIIStrategy_;
 };
