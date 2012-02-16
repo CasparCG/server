@@ -39,10 +39,7 @@ FORWARD2(caspar, core, class frame_factory);
 
 namespace caspar { namespace core {
 	
-typedef reactive::observable<spl::shared_ptr<const class data_frame>>	frame_observable;
-
-class video_channel sealed : public frame_observable
-						   , public monitor::observable
+class video_channel sealed : public monitor::observable
 {
 	video_channel(const video_channel&);
 	video_channel& operator=(const video_channel&);
@@ -55,12 +52,7 @@ public:
 	explicit video_channel(int index, const video_format_desc& format_desc, spl::unique_ptr<image_mixer> image_mixer);
 	
 	/// Methods
-
-	// observable<spl::shared_ptr<const class data_frame>>
-	
-	virtual void subscribe(const frame_observable::observer_ptr& o) override;
-	virtual void unsubscribe(const frame_observable::observer_ptr& o) override;
-		
+			
 	// monitor::observable
 
 	virtual void subscribe(const monitor::observable::observer_ptr& o) override;
