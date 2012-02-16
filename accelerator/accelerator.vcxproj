@@ -127,7 +127,7 @@
     <ClInclude Include="ogl\image\image_kernel.h" />
     <ClInclude Include="ogl\image\image_mixer.h" />
     <ClInclude Include="ogl\image\image_shader.h" />
-    <ClInclude Include="ogl\util\context.h" />
+    <ClInclude Include="ogl\util\device.h" />
     <ClInclude Include="ogl\util\device_buffer.h" />
     <ClInclude Include="ogl\util\host_buffer.h" />
     <ClInclude Include="ogl\util\shader.h" />
@@ -167,7 +167,7 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="ogl\util\context.cpp">
+    <ClCompile Include="ogl\util\device.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>

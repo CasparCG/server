@@ -151,7 +151,7 @@ static void kernel(uint8_t* dest, const uint8_t* source, size_t count)
 class image_renderer
 {
 	std::pair<std::vector<item>, boost::shared_future<boost::iterator_range<const uint8_t*>>>		last_image_;
-	tbb::concurrent_unordered_map<int, tbb::concurrent_bounded_queue<std::shared_ptr<SwsContext>>>	sws_contexts_;
+	tbb::concurrent_unordered_map<int, tbb::concurrent_bounded_queue<std::shared_ptr<SwsContext>>>	sws_devices_;
 	tbb::concurrent_bounded_queue<spl::shared_ptr<host_buffer>>										temp_buffers_;
 public:	
 	boost::shared_future<boost::iterator_range<const uint8_t*>> operator()(std::vector<item> items, const core::video_format_desc& format_desc)
@@ -261,17 +261,17 @@ private:
 								
 			int key = ((input_av_frame->width << 22) & 0xFFC00000) | ((input_av_frame->height << 6) & 0x003FC000) | ((input_av_frame->format << 7) & 0x00007F00);
 						
-			auto& pool = sws_contexts_[key];
+			auto& pool = sws_devices_[key];
 
-			std::shared_ptr<SwsContext> sws_context;
-			if(!pool.try_pop(sws_context))
+			std::shared_ptr<SwsContext> sws_device;
+			if(!pool.try_pop(sws_device))
 			{
 				double param;
-				sws_context.reset(sws_getContext(input_av_frame->width, input_av_frame->height, static_cast<PixelFormat>(input_av_frame->format), width, height, PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
+				sws_device.reset(sws_getContext(input_av_frame->width, input_av_frame->height, static_cast<PixelFormat>(input_av_frame->format), width, height, PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
 			}
 			
-			if(!sws_context)				
-				BOOST_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling context.") << boost::errinfo_api_function("sws_getContext"));				
+			if(!sws_device)				
+				BOOST_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling device.") << boost::errinfo_api_function("sws_getContext"));				
 		
 			auto dest_frame = spl::make_shared<host_buffer>(width*height*4);
 			temp_buffers_.push(dest_frame);
@@ -281,8 +281,8 @@ private:
 				avcodec_get_frame_defaults(dest_av_frame.get());			
 				avpicture_fill(reinterpret_cast<AVPicture*>(dest_av_frame.get()), dest_frame->data(), PIX_FMT_BGRA, width, height);
 				
-				sws_scale(sws_context.get(), input_av_frame->data, input_av_frame->linesize, 0, input_av_frame->height, dest_av_frame->data, dest_av_frame->linesize);				
-				pool.push(sws_context);
+				sws_scale(sws_device.get(), input_av_frame->data, input_av_frame->linesize, 0, input_av_frame->height, dest_av_frame->data, dest_av_frame->linesize);				
+				pool.push(sws_device);
 			}
 					
 			for(std::size_t n = 0; n < source_items.size(); ++n)

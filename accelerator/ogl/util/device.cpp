@@ -23,7 +23,7 @@
 
 #include "../../stdafx.h"
 
-#include "context.h"
+#include "device.h"
 
 #include "shader.h"
 
@@ -50,10 +50,10 @@ tbb::atomic<int> g_count = tbb::atomic<int>();
 
 namespace caspar { namespace accelerator { namespace ogl {
 		
-struct context::impl : public std::enable_shared_from_this<impl>
+struct device::impl : public std::enable_shared_from_this<impl>
 {
-	std::unique_ptr<sf::Context> context_;
-	std::unique_ptr<sf::Context> host_alloc_context_;
+	std::unique_ptr<sf::Context> device_;
+	std::unique_ptr<sf::Context> host_alloc_device_;
 	
 	std::array<tbb::concurrent_unordered_map<int, tbb::concurrent_bounded_queue<std::shared_ptr<device_buffer>>>, 4>	device_pools_;
 	std::array<tbb::concurrent_unordered_map<int, tbb::concurrent_bounded_queue<std::shared_ptr<host_buffer>>>, 2>		host_pools_;
@@ -65,17 +65,17 @@ struct context::impl : public std::enable_shared_from_this<impl>
 				
 	impl(executor& executor) 
 		: executor_(executor)
-		, host_alloc_executor_(L"OpenGL allocation context")
+		, host_alloc_executor_(L"OpenGL allocation device")
 	{
 		if(g_count++ > 1)
-			CASPAR_LOG(warning) << L"Multiple OGL contexts.";
+			CASPAR_LOG(warning) << L"Multiple OGL devices.";
 
 		CASPAR_LOG(info) << L"Initializing OpenGL Device.";
 		
 		auto ctx1 = executor_.invoke([=]() -> HGLRC 
 		{
-			context_.reset(new sf::Context());
-			context_->SetActive(true);		
+			device_.reset(new sf::Context());
+			device_->SetActive(true);		
 						
 			if (glewInit() != GLEW_OK)
 				BOOST_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
@@ -88,24 +88,24 @@ struct context::impl : public std::enable_shared_from_this<impl>
 			
 			auto ctx1 = wglGetCurrentContext();
 			
-			context_->SetActive(false);
+			device_->SetActive(false);
 
 			return ctx1;
 		});
 
 		host_alloc_executor_.invoke([=]
 		{
-			host_alloc_context_.reset(new sf::Context());
-			host_alloc_context_->SetActive(true);	
+			host_alloc_device_.reset(new sf::Context());
+			host_alloc_device_->SetActive(true);	
 			auto ctx2 = wglGetCurrentContext();
 
 			if(!wglShareLists(ctx1, ctx2))
-				BOOST_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to share OpenGL contexts."));
+				BOOST_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to share OpenGL devices."));
 		});
 
 		executor_.invoke([=]
 		{		
-			context_->SetActive(true);
+			device_->SetActive(true);
 		});
 		
 		CASPAR_LOG(info) << L"Successfully initialized OpenGL " << version();
@@ -115,7 +115,7 @@ struct context::impl : public std::enable_shared_from_this<impl>
 	{
 		host_alloc_executor_.invoke([=]
 		{
-			host_alloc_context_.reset();
+			host_alloc_device_.reset();
 			BOOST_FOREACH(auto& pool, host_pools_)
 				pool.clear();
 		});
@@ -126,7 +126,7 @@ struct context::impl : public std::enable_shared_from_this<impl>
 				pool.clear();
 			glDeleteFramebuffers(1, &fbo_);
 
-			context_.reset();
+			device_.reset();
 		});
 	}
 
@@ -242,16 +242,16 @@ struct context::impl : public std::enable_shared_from_this<impl>
 	}
 };
 
-context::context() 
-	: executor_(L"context")
+device::device() 
+	: executor_(L"device")
 	, impl_(new impl(executor_))
 {
 }
 	
-spl::shared_ptr<device_buffer>							context::create_device_buffer(int width, int height, int stride){return impl_->create_device_buffer(width, height, stride);}
-spl::shared_ptr<host_buffer>							context::create_host_buffer(int size, host_buffer::usage usage){return impl_->create_host_buffer(size, usage);}
-boost::unique_future<spl::shared_ptr<device_buffer>>	context::copy_async(spl::shared_ptr<host_buffer>& source, int width, int height, int stride){return impl_->copy_async(source, width, height, stride);}
-std::wstring											context::version(){return impl_->version();}
+spl::shared_ptr<device_buffer>							device::create_device_buffer(int width, int height, int stride){return impl_->create_device_buffer(width, height, stride);}
+spl::shared_ptr<host_buffer>							device::create_host_buffer(int size, host_buffer::usage usage){return impl_->create_host_buffer(size, usage);}
+boost::unique_future<spl::shared_ptr<device_buffer>>	device::copy_async(spl::shared_ptr<host_buffer>& source, int width, int height, int stride){return impl_->copy_async(source, width, height, stride);}
+std::wstring											device::version(){return impl_->version();}
 
 
 }}}

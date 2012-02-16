@@ -24,7 +24,7 @@
 #include "image_shader.h"
 
 #include "../util/shader.h"
-#include "../util/context.h"
+#include "../util/device.h"
 
 #include "blending_glsl.h"
 
