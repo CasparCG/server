@@ -49,7 +49,6 @@ namespace caspar { namespace core {
 
 struct video_channel::impl sealed : public frame_factory
 {
-	reactive::basic_subject<spl::shared_ptr<const data_frame>> frame_subject_;
 	monitor::basic_subject							event_subject_;
 
 	const int										index_;
@@ -127,9 +126,7 @@ public:
 			auto mixed_frame  = mixer_(std::move(stage_frames), format_desc);
 
 			// Consume
-			
-			frame_subject_ << mixed_frame;
-			
+						
 			output_(std::move(mixed_frame), format_desc);
 		
 			graph_->set_value("tick-time", frame_timer.elapsed()*format_desc.fps*0.5);
@@ -177,9 +174,7 @@ output& video_channel::output() { return impl_->output_;}
 spl::shared_ptr<frame_factory> video_channel::frame_factory() { return impl_;} 
 core::video_format_desc video_channel::video_format_desc() const{return impl_->video_format_desc();}
 void core::video_channel::video_format_desc(const core::video_format_desc& format_desc){impl_->video_format_desc(format_desc);}
-boost::property_tree::wptree video_channel::info() const{return impl_->info();}
-void video_channel::subscribe(const frame_observable::observer_ptr& o) {impl_->frame_subject_.subscribe(o);}
-void video_channel::unsubscribe(const frame_observable::observer_ptr& o) {impl_->frame_subject_.unsubscribe(o);}		
+boost::property_tree::wptree video_channel::info() const{return impl_->info();}		
 void video_channel::subscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_.subscribe(o);}
 void video_channel::unsubscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_.unsubscribe(o);}
 
