@@ -179,6 +179,8 @@ private:
 		{
 			draw(items, result->data(), format_desc.width, format_desc.height,  core::field_mode::progressive);
 		}
+
+		temp_buffers_.clear();
 		
 		return async(launch_policy::deferred, [=]
 		{
@@ -231,8 +233,6 @@ private:
 
 			_mm_mfence();
 		});
-
-		temp_buffers_.clear();
 	}
 		
 	void convert(std::vector<item>& source_items, int width, int height)
