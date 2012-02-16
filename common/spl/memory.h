@@ -340,7 +340,7 @@ public:
 	
     template<typename T2>    
     explicit shared_ptr(spl::unique_ptr<T2>&& p, typename std::enable_if<std::is_convertible<T2*, T*>::value, void*>::type = 0) 
-        : p_(p.release())
+		: p_(p.release(), p.get_deleter())
     {
         if(!p_)
             throw std::invalid_argument("p");
