@@ -145,7 +145,8 @@ namespace caspar { namespace reroute {
 
 spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, core::video_channel& channel)
 {
-	return core::frame_producer::empty();
+	BOOST_THROW_EXCEPTION(not_implemented());
+	//return core::frame_producer::empty();
 	//auto producer = spl::make_shared<reroute_producer>(frame_factory);
 	//o.subscribe(producer);
 	//return core::wrap_producer(producer);
