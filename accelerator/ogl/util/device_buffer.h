@@ -31,7 +31,7 @@ FORWARD1(boost, template<typename> class unique_future);
 namespace caspar { namespace accelerator { namespace ogl {
 		
 class host_buffer;
-class context;
+class device;
 
 class device_buffer : boost::noncopyable
 {

@@ -28,7 +28,7 @@
 
 #include "../util/shader.h"
 #include "../util/device_buffer.h"
-#include "../util/context.h"
+#include "../util/device.h"
 
 #include <common/except.h>
 #include <common/gl/gl_check.h>
@@ -56,11 +56,11 @@ GLubyte lower_pattern[] = {
 
 struct image_kernel::impl : boost::noncopyable
 {	
-	spl::shared_ptr<context>	ogl_;
+	spl::shared_ptr<device>	ogl_;
 	spl::shared_ptr<shader>		shader_;
 	bool					blend_modes_;
 							
-	impl(const spl::shared_ptr<context>& ogl)
+	impl(const spl::shared_ptr<device>& ogl)
 		: ogl_(ogl)
 		, shader_(ogl_->invoke([&]{return get_image_shader(blend_modes_);}))
 	{
@@ -226,7 +226,7 @@ struct image_kernel::impl : boost::noncopyable
 	}
 };
 
-image_kernel::image_kernel(const spl::shared_ptr<context>& ogl) : impl_(new impl(ogl)){}
+image_kernel::image_kernel(const spl::shared_ptr<device>& ogl) : impl_(new impl(ogl)){}
 void image_kernel::draw(draw_params&& params)
 {
 	impl_->draw(std::move(params));

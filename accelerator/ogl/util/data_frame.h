@@ -44,7 +44,7 @@ class data_frame sealed : public core::data_frame
 	data_frame& operator=(const data_frame);
 public:	
 	explicit data_frame(const void* tag);
-	explicit data_frame(const spl::shared_ptr<class context>& ogl, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode);
+	explicit data_frame(const spl::shared_ptr<class device>& ogl, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode);
 
 	data_frame(data_frame&& other);
 	data_frame& operator=(data_frame&& other);

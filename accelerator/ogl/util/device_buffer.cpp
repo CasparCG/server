@@ -22,7 +22,7 @@
 #include "../../stdafx.h"
 
 #include "device_buffer.h"
-#include "context.h"
+#include "device.h"
 
 #include <common/except.h>
 #include <common/gl/gl_check.h>

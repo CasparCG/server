@@ -39,7 +39,7 @@ public:
 	void set(const std::string& name, double value);
 	void use() const;
 private:
-	friend class context;
+	friend class device;
 	struct impl;
 	spl::shared_ptr<impl> impl_;
 

@@ -26,7 +26,7 @@
 namespace caspar { namespace accelerator { namespace ogl {
 
 class shader;
-class context;
+class device;
 
 struct texture_id
 {

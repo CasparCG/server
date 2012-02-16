@@ -42,7 +42,7 @@ namespace caspar { namespace accelerator { namespace ogl {
 class image_mixer sealed : public core::image_mixer
 {
 public:
-	image_mixer(const spl::shared_ptr<class context>& ogl);
+	image_mixer(const spl::shared_ptr<class device>& ogl);
 	
 	virtual void push(const core::frame_transform& frame);
 	virtual void visit(const core::data_frame& frame);
