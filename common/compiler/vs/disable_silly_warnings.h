@@ -27,9 +27,10 @@
 #pragma warning (disable : 4482) // nonstandard extension used: enum 'enum' used in qualified name
 #pragma warning (disable : 4503) // decorated name length exceeded, name was truncated
 #pragma warning (disable : 4512) // assignment operator could not be generated
-#pragma warning (disable : 4702) //  unreachable code
+#pragma warning (disable : 4702) // unreachable code
 #pragma warning (disable : 4714) // marked as __forceinline not inlined
-#pragma warning (disable : 4505) //  unreferenced local function has been removed
-#pragma warning (disable : 4481) //  nonstandard extension used: override specifier 'override'
+#pragma warning (disable : 4505) // unreferenced local function has been 
+#pragma warning (disable : 4481) // nonstandard extension used: override specifier 'override'
+#pragma warning (disable : 4996) // function call with parameters that may be unsafe
 #endif
 

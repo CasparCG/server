@@ -46,13 +46,13 @@ typedef enum_class<keyer_def> keyer;
 struct draw_params sealed
 {
 	core::pixel_format_desc								pix_desc;
-	std::vector<spl::shared_ptr<class device_buffer>>	textures;
+	std::vector<spl::shared_ptr<class texture>>	textures;
 	core::image_transform								transform;
 	core::blend_mode									blend_mode;
 	keyer												keyer;
-	std::shared_ptr<class device_buffer>				background;
-	std::shared_ptr<class device_buffer>				local_key;
-	std::shared_ptr<class device_buffer>				layer_key;
+	std::shared_ptr<class texture>				background;
+	std::shared_ptr<class texture>				local_key;
+	std::shared_ptr<class texture>				layer_key;
 
 	draw_params() 
 		: pix_desc(core::pixel_format::invalid)
@@ -65,8 +65,19 @@ struct draw_params sealed
 class image_kernel sealed : boost::noncopyable
 {
 public:
+
+	// Static Members
+
+	// Constructors
+
 	image_kernel(const spl::shared_ptr<class device>& ogl);
+
+	// Methods
+
 	void draw(draw_params&& params);
+	
+	// Properties
+
 	bool has_blend_modes() const;
 private:
 	struct impl;

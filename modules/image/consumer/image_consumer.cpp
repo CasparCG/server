@@ -28,7 +28,7 @@
 
 #include <core/consumer/frame_consumer.h>
 #include <core/video_format.h>
-#include <core/frame/data_frame.h>
+#include <core/frame/frame.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/thread.hpp>
@@ -53,7 +53,7 @@ public:
 	{
 	}
 	
-	virtual bool send(const spl::shared_ptr<const core::data_frame>& frame) override
+	virtual bool send(core::const_frame frame) override
 	{				
 		boost::thread async([frame]
 		{
@@ -61,8 +61,8 @@ public:
 			{
 				auto filename = u8(env::data_folder()) +  boost::posix_time::to_iso_string(boost::posix_time::second_clock::local_time()) + ".png";
 
-				auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Allocate(frame->width(), frame->height(), 32), FreeImage_Unload);
-				A_memcpy(FreeImage_GetBits(bitmap.get()), frame->image_data().begin(), frame->image_data().size());
+				auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Allocate(static_cast<int>(frame.width()), static_cast<int>(frame.height()), 32), FreeImage_Unload);
+				A_memcpy(FreeImage_GetBits(bitmap.get()), frame.image_data().begin(), frame.image_data().size());
 				FreeImage_FlipVertical(bitmap.get());
 				FreeImage_Save(FIF_PNG, bitmap.get(), filename.c_str(), 0);
 			}

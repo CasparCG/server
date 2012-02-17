@@ -28,7 +28,7 @@
 #include "producer/stage.h"
 #include "mixer/mixer.h"
 #include "consumer/output.h"
-#include "frame/data_frame.h"
+#include "frame/frame.h"
 #include "frame/draw_frame.h"
 #include "frame/frame_factory.h"
 
@@ -47,7 +47,7 @@
 
 namespace caspar { namespace core {
 
-struct video_channel::impl sealed : public frame_factory
+struct video_channel::impl sealed
 {
 	monitor::basic_subject							event_subject_;
 
@@ -59,17 +59,19 @@ struct video_channel::impl sealed : public frame_factory
 	const spl::shared_ptr<diagnostics::graph>		graph_;
 
 	caspar::core::output							output_;
+	spl::shared_ptr<image_mixer>					image_mixer_;
 	caspar::core::mixer								mixer_;
 	caspar::core::stage								stage_;	
 
 	executor										executor_;
 public:
-	impl(int index, const core::video_format_desc& format_desc, spl::unique_ptr<image_mixer> image_mixer)  
+	impl(int index, const core::video_format_desc& format_desc, std::unique_ptr<image_mixer> image_mixer)  
 		: event_subject_(monitor::path() % "channel" % index)
 		, index_(index)
 		, format_desc_(format_desc)
 		, output_(graph_, format_desc, index)
-		, mixer_(graph_, std::move(image_mixer))
+		, image_mixer_(std::move(image_mixer))
+		, mixer_(graph_, image_mixer_)
 		, stage_(graph_)
 		, executor_(L"video_channel")
 	{
@@ -83,24 +85,15 @@ public:
 
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
 	}
-	
-	// frame_factory
-						
-	virtual spl::unique_ptr<data_frame> create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) override
-	{		
-		return mixer_.create_frame(tag, desc, frame_rate, field_mode);
-	}
-	
-	virtual core::video_format_desc video_format_desc() const
+							
+	core::video_format_desc video_format_desc() const
 	{
 		return lock(format_desc_mutex_, [&]
 		{
 			return format_desc_;
 		});
 	}
-	
-	// video_channel
-	
+		
 	void video_format_desc(const core::video_format_desc& format_desc)
 	{
 		lock(format_desc_mutex_, [&]
@@ -164,14 +157,15 @@ public:
 	}
 };
 
-video_channel::video_channel(int index, const core::video_format_desc& format_desc, spl::unique_ptr<image_mixer> image_mixer) : impl_(new impl(index, format_desc, std::move(image_mixer))){}
+video_channel::video_channel(int index, const core::video_format_desc& format_desc, std::unique_ptr<image_mixer> image_mixer) : impl_(new impl(index, format_desc, std::move(image_mixer))){}
+video_channel::~video_channel(){}
 const stage& video_channel::stage() const { return impl_->stage_;} 
 stage& video_channel::stage() { return impl_->stage_;} 
 const mixer& video_channel::mixer() const{ return impl_->mixer_;} 
 mixer& video_channel::mixer() { return impl_->mixer_;} 
 const output& video_channel::output() const { return impl_->output_;} 
 output& video_channel::output() { return impl_->output_;} 
-spl::shared_ptr<frame_factory> video_channel::frame_factory() { return impl_;} 
+spl::shared_ptr<frame_factory> video_channel::frame_factory() { return impl_->image_mixer_;} 
 core::video_format_desc video_channel::video_format_desc() const{return impl_->video_format_desc();}
 void core::video_channel::video_format_desc(const core::video_format_desc& format_desc){impl_->video_format_desc(format_desc);}
 boost::property_tree::wptree video_channel::info() const{return impl_->info();}		

@@ -23,7 +23,7 @@
 
 #include "audio_mixer.h"
 
-#include <core/frame/data_frame.h>
+#include <core/frame/frame.h>
 #include <core/frame/frame_transform.h>
 #include <common/diagnostics/graph.h>
 
@@ -81,7 +81,7 @@ public:
 		transform_stack_.push(transform_stack_.top()*transform.audio_transform);
 	}
 
-	void visit(const data_frame& frame)
+	void visit(const mutable_frame& frame)
 	{
 		audio_item item;
 		item.tag		= frame.tag();
@@ -193,7 +193,7 @@ public:
 
 audio_mixer::audio_mixer() : impl_(new impl()){}
 void audio_mixer::push(const frame_transform& transform){impl_->push(transform);}
-void audio_mixer::visit(const data_frame& frame){impl_->visit(frame);}
+void audio_mixer::visit(const mutable_frame& frame){impl_->visit(frame);}
 void audio_mixer::pop(){impl_->pop();}
 audio_buffer audio_mixer::operator()(const video_format_desc& format_desc){return impl_->mix(format_desc);}
 

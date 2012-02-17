@@ -21,31 +21,38 @@
 
 #pragma once
 
-#include "host_buffer.h"
-#include "device_buffer.h"
+#include <core/frame/frame.h>
 
 #include <common/spl/memory.h>
-
-#include <boost/noncopyable.hpp>
-#include <boost/thread/future.hpp>
-
 #include <common/concurrency/executor.h>
 
 namespace caspar { namespace accelerator { namespace ogl {
-	
-class device : public std::enable_shared_from_this<device>, boost::noncopyable
+
+class texture;
+
+class device sealed : public std::enable_shared_from_this<device>
 {	
+	device(const device&);
+	device& operator=(const device&);
+
 	executor executor_;
 public:		
+
+	// Static Members
+
+	// Constructors
+
 	device();
+	~device();
+
+	// Methods
 		
-	spl::shared_ptr<device_buffer>							create_device_buffer(int width, int height, int stride);
-	spl::shared_ptr<host_buffer>							create_host_buffer(int size, host_buffer::usage usage);
+	spl::shared_ptr<texture> create_texture(int width, int height, int stride);
+	core::mutable_array		 create_array(int size);
 
-	boost::unique_future<spl::shared_ptr<device_buffer>>	copy_async(spl::shared_ptr<host_buffer>& source, int width, int height, int stride);
+	boost::unique_future<spl::shared_ptr<texture>> copy_async(const core::mutable_array& source, int width, int height, int stride);
+	boost::unique_future<core::const_array>		   copy_async(const spl::shared_ptr<texture>& source);
 	
-	std::wstring version();
-
 	template<typename Func>
 	auto begin_invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> boost::unique_future<decltype(func())> // noexcept
 	{			
@@ -57,6 +64,11 @@ public:
 	{
 		return executor_.invoke(std::forward<Func>(func), priority);
 	}
+
+	// Properties
+	
+	std::wstring version();
+
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

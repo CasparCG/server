@@ -31,7 +31,7 @@
 
 #include <core/video_format.h>
 
-#include <core/frame/data_frame.h>
+#include <core/frame/frame.h>
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
@@ -292,7 +292,7 @@ public:
 			desc.planes.push_back(core::pixel_format_desc::plane(width_, height_, 4));
 			auto frame = frame_factory_->create_frame(this, desc, fps(), core::field_mode::progressive);
 
-			A_memcpy(frame->image_data(0).begin(), bmp_.data(), width_*height_*4);
+			A_memcpy(frame.image_data(0).begin(), bmp_.data(), width_*height_*4);
 			head_ = core::draw_frame(std::move(frame));	
 		}		
 										
@@ -323,6 +323,7 @@ struct flash_producer : public core::frame_producer
 {	
 	const std::wstring								filename_;	
 	const spl::shared_ptr<core::frame_factory>		frame_factory_;
+	const core::video_format_desc					format_desc_;
 	const int										width_;
 	const int										height_;
 	const int										buffer_size_;
@@ -340,12 +341,13 @@ struct flash_producer : public core::frame_producer
 
 	executor										executor_;	
 public:
-	flash_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
+	flash_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::wstring& filename, int width, int height) 
 		: filename_(filename)		
 		, frame_factory_(frame_factory)
-		, width_(width > 0 ? width : frame_factory->video_format_desc().width)
-		, height_(height > 0 ? height : frame_factory->video_format_desc().height)
-		, buffer_size_(env::properties().get(L"configuration.flash.buffer-depth", frame_factory_->video_format_desc().fps > 30.0 ? 4 : 2))
+		, format_desc_(format_desc)
+		, width_(width > 0 ? width : format_desc.width)
+		, height_(height > 0 ? height : format_desc.height)
+		, buffer_size_(env::properties().get(L"configuration.flash.buffer-depth", format_desc.fps > 30.0 ? 4 : 2))
 		, last_frame_(core::draw_frame::empty())
 		, executor_(L"flash_producer")
 	{	
@@ -447,21 +449,19 @@ public:
 			frame_buffer_.push(core::draw_frame::empty());
 
 		if(frame_buffer_.empty())
-		{
-			auto format_desc = frame_factory_->video_format_desc();
-					
+		{					
 			tick();
 			auto frame = renderer_->render();
 
-			if(abs(renderer_->fps()/2.0 - format_desc.fps) < 2.0) // flash == 2 * format -> interlace
+			if(abs(renderer_->fps()/2.0 - format_desc_.fps) < 2.0) // flash == 2 * format -> interlace
 			{					
 				tick();
-				if(format_desc.field_mode != core::field_mode::progressive)
-					frame = core::draw_frame::interlace(frame, renderer_->render(), format_desc.field_mode);
+				if(format_desc_.field_mode != core::field_mode::progressive)
+					frame = core::draw_frame::interlace(frame, renderer_->render(), format_desc_.field_mode);
 				
 				frame_buffer_.push(frame);
 			}
-			else if(abs(renderer_->fps() - format_desc.fps/2.0) < 2.0) // format == 2 * flash -> duplicate
+			else if(abs(renderer_->fps() - format_desc_.fps/2.0) < 2.0) // format == 2 * flash -> duplicate
 			{
 				frame_buffer_.push(frame);
 				frame_buffer_.push(frame);
@@ -483,16 +483,16 @@ public:
 	}
 };
 
-spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
 {
-	auto template_host = get_template_host(frame_factory->video_format_desc());
+	auto template_host = get_template_host(format_desc);
 	
 	auto filename = env::template_folder() + L"\\" + template_host.filename;
 	
 	if(!boost::filesystem::exists(filename))
 		BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(u8(filename)));	
 
-	return spl::make_shared<flash_producer>(frame_factory, filename, template_host.width, template_host.height);
+	return spl::make_shared<flash_producer>(frame_factory, format_desc, filename, template_host.width, template_host.height);
 }
 
 std::wstring find_template(const std::wstring& template_name)

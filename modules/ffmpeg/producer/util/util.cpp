@@ -33,7 +33,7 @@
 
 #include <core/frame/frame_transform.h>
 #include <core/frame/frame_factory.h>
-#include <core/frame/data_frame.h>
+#include <core/frame/frame.h>
 #include <core/producer/frame_producer.h>
 
 #include <common/except.h>
@@ -171,7 +171,7 @@ int make_alpha_format(int format)
 	}
 }
 
-spl::unique_ptr<core::data_frame> make_data_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, double fps, const spl::shared_ptr<core::frame_factory>& frame_factory, int flags)
+core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, double fps, const spl::shared_ptr<core::frame_factory>& frame_factory, int flags)
 {			
 	static tbb::concurrent_unordered_map<int, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contexts_;
 	
@@ -231,8 +231,8 @@ spl::unique_ptr<core::data_frame> make_data_frame(const void* tag, const spl::sh
 		avcodec_get_frame_defaults(av_frame.get());			
 		if(target_pix_fmt == PIX_FMT_BGRA)
 		{
-			auto size = avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write->image_data(0).begin(), PIX_FMT_BGRA, width, height);
-			CASPAR_VERIFY(size == write->image_data(0).size()); 
+			auto size = avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write.image_data(0).begin(), PIX_FMT_BGRA, width, height);
+			CASPAR_VERIFY(size == write.image_data(0).size()); 
 		}
 		else
 		{
@@ -240,7 +240,7 @@ spl::unique_ptr<core::data_frame> make_data_frame(const void* tag, const spl::sh
 			av_frame->height = height;
 			for(int n = 0; n < target_desc.planes.size(); ++n)
 			{
-				av_frame->data[n]		= write->image_data(n).begin();
+				av_frame->data[n]		= write.image_data(n).begin();
 				av_frame->linesize[n]	= target_desc.planes[n].linesize;
 			}
 		}
@@ -257,12 +257,12 @@ spl::unique_ptr<core::data_frame> make_data_frame(const void* tag, const spl::sh
 		for(int n = 0; n < static_cast<int>(desc.planes.size()); ++n)
 		{
 			auto plane            = desc.planes[n];
-			auto result           = write->image_data(n).begin();
+			auto result           = write.image_data(n).begin();
 			auto decoded          = decoded_frame->data[n];
 			auto decoded_linesize = decoded_frame->linesize[n];
 			
 			CASPAR_ASSERT(decoded);
-			CASPAR_ASSERT(write->image_data(n).begin());
+			CASPAR_ASSERT(write.image_data(n).begin());
 
 			// Copy line by line since ffmpeg sometimes pads each line.
 			tbb::affinity_partitioner ap;
@@ -277,7 +277,7 @@ spl::unique_ptr<core::data_frame> make_data_frame(const void* tag, const spl::sh
 	}
 }
 
-spl::shared_ptr<AVFrame> make_av_frame(caspar::core::data_frame& frame)
+spl::shared_ptr<AVFrame> make_av_frame(core::mutable_frame& frame)
 {
 	std::array<uint8_t*, 4> data = {};
 	for(int n = 0; n < frame.pixel_format_desc().planes.size(); ++n)

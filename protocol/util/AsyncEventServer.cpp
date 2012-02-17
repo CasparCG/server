@@ -22,7 +22,7 @@
  
 // AsyncEventServer.cpp: impl of the AsyncEventServer class.
 //
-//////////////////////////////////////////////////////////////////////
+////////////////////////////////
 
 #include "../stdafx.h"
 
@@ -43,7 +43,7 @@ namespace caspar { namespace IO {
 #define CASPAR_MAXIMUM_SOCKET_CLIENTS	(MAXIMUM_WAIT_OBJECTS-1)	
 
 long AsyncEventServer::instanceCount_ = 0;
-//////////////////////////////
+//////////////
 // AsyncEventServer constructor
 // PARAMS: port(TCP-port the server should listen to)
 // COMMENT: Initializes the WinSock2 library
@@ -61,7 +61,7 @@ AsyncEventServer::AsyncEventServer(const spl::shared_ptr<IProtocolStrategy>& pPr
 	InterlockedIncrement(&instanceCount_);
 }
 
-/////////////////////////////
+//////////////
 // AsyncEventServer destructor
 AsyncEventServer::~AsyncEventServer() {
 	Stop();
@@ -75,7 +75,7 @@ void AsyncEventServer::SetClientDisconnectHandler(ClientDisconnectEvent handler)
 	socketInfoCollection_.onSocketInfoRemoved = handler;
 }
 
-//////////////////////////////
+//////////////
 // AsyncEventServer::Start
 // RETURNS: true at successful startup
 bool AsyncEventServer::Start() {
@@ -215,7 +215,7 @@ bool AsyncEventServer::OnUnhandledException(const std::exception& ex) throw() {
 	return bDoRestart;
 }
 
-///////////////////////////////
+//////////////
 // AsyncEventServer:Stop
 // COMMENT: Shuts down
 void AsyncEventServer::Stop()
@@ -232,14 +232,14 @@ void AsyncEventServer::Stop()
 	socketInfoCollection_.Clear();
 }
 
-////////////////////////////////////////////////////////////////////
+///////////////////////////////
 //
 // MESSAGE HANDLERS   
 //
-////////////////////////////////////////////////////////////////////
+///////////////////////////////
 
 
-//////////////////////////////
+//////////////
 // AsyncEventServer::OnAccept
 // PARAMS: ...
 // COMMENT: Called when a new client connects
@@ -336,7 +336,7 @@ bool ConvertMultiByteToWideChar(UINT codePage, char* pSource, int sourceLength, 
 	return (charsWritten > 0);
 }
 
-//////////////////////////////
+//////////////
 // AsyncEventServer::OnRead
 // PARAMS: ...
 // COMMENT: Called then something arrives on the socket that has to be read
@@ -376,7 +376,7 @@ bool AsyncEventServer::OnRead(SocketInfoPtr& pSI) {
 	return false;
 }
 
-//////////////////////////////
+//////////////
 // AsyncEventServer::OnWrite
 // PARAMS: ...
 // COMMENT: Called when the socket is ready to send more data
@@ -457,7 +457,7 @@ void AsyncEventServer::DoSend(SocketInfo& socketInfo) {
 	}
 }
 
-//////////////////////////////
+//////////////
 // AsyncEventServer::OnClose
 // PARAMS: ...
 // COMMENT: Called when a client disconnects / is disconnected
@@ -467,7 +467,7 @@ void AsyncEventServer::OnClose(SocketInfoPtr& pSI) {
 	socketInfoCollection_.RemoveSocketInfo(pSI);
 }
 
-//////////////////////////////
+//////////////
 // AsyncEventServer::OnError
 // PARAMS: ...
 // COMMENT: Called when an errorcode is recieved
@@ -482,7 +482,7 @@ void AsyncEventServer::OnError(HANDLE waitEvent, int errorCode) {
 	}
 }
 
-//////////////////////////////
+//////////////
 // AsyncEventServer::DisconnectClient
 // PARAMS: ...
 // COMMENT: The client is removed from the actual client-list when an FD_CLOSE notification is recieved
@@ -492,7 +492,7 @@ void AsyncEventServer::DisconnectClient(SocketInfo& socketInfo) {
 		OnError(socketInfo.event_, result);
 }
 
-//////////////////////////////
+//////////////
 // AsyncEventServer::LogSocketError
 void AsyncEventServer::LogSocketError(const TCHAR* pStr, int socketError) {
 	if(socketError == 0)
@@ -502,9 +502,9 @@ void AsyncEventServer::LogSocketError(const TCHAR* pStr, int socketError) {
 }
 
 
-//////////////////////////////
+//////////////
 //  SocketInfoCollection
-//////////////////////////////
+//////////////
 
 AsyncEventServer::SocketInfoCollection::SocketInfoCollection() : bDirty_(false) {
 }

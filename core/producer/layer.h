@@ -42,14 +42,14 @@ class layer sealed : public monitor::observable
 	layer(const layer&);
 	layer& operator=(const layer&);
 public:
-	/// Static Members
+	// Static Members
 
-	///  Constructors
+	// Constructors
 
 	explicit layer(int index = -1); 
 	layer(layer&& other); 
 
-	/// Methods
+	// Methods
 
 	layer& operator=(layer&& other); 
 
@@ -67,7 +67,7 @@ public:
 	virtual void subscribe(const monitor::observable::observer_ptr& o) override;
 	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override;
 
-	/// Properties
+	// Properties
 		
 	spl::shared_ptr<class frame_producer>	foreground() const; 
 	spl::shared_ptr<class frame_producer>	background() const; 

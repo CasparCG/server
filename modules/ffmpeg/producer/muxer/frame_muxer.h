@@ -27,6 +27,7 @@
 #include <common/spl/memory.h>
 
 #include <core/mixer/audio/audio_mixer.h>
+#include <core/video_format.h>
 
 #include <boost/noncopyable.hpp>
 
@@ -35,7 +36,7 @@
 struct AVFrame;
 
 FORWARD2(caspar, core, struct pixel_format_desc);
-FORWARD2(caspar, core, class data_frame);
+FORWARD2(caspar, core, class frame);
 FORWARD2(caspar, core, class frame_factory);
 FORWARD2(caspar, core, class draw_frame);
 
@@ -44,7 +45,7 @@ namespace caspar { namespace ffmpeg {
 class frame_muxer : boost::noncopyable
 {
 public:
-	frame_muxer(double in_fps, const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filter = L"");
+	frame_muxer(double in_fps, const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::wstring& filter = L"");
 	
 	void push(const std::shared_ptr<AVFrame>& video_frame, int flags = 0);
 	void push(const std::shared_ptr<core::audio_buffer>& audio_samples);

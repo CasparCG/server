@@ -37,12 +37,6 @@
     <ClInclude Include="ogl\image\image_kernel.h">
       <Filter>source\ogl\image</Filter>
     </ClInclude>
-    <ClInclude Include="ogl\util\device_buffer.h">
-      <Filter>source\ogl\util</Filter>
-    </ClInclude>
-    <ClInclude Include="ogl\util\host_buffer.h">
-      <Filter>source\ogl\util</Filter>
-    </ClInclude>
     <ClInclude Include="ogl\util\shader.h">
       <Filter>source\ogl\util</Filter>
     </ClInclude>
@@ -55,13 +49,13 @@
     <ClInclude Include="accelerator.h">
       <Filter>source</Filter>
     </ClInclude>
-    <ClInclude Include="cpu\util\data_frame.h">
-      <Filter>source\cpu\util</Filter>
-    </ClInclude>
-    <ClInclude Include="ogl\util\data_frame.h">
+    <ClInclude Include="ogl\util\device.h">
       <Filter>source\ogl\util</Filter>
     </ClInclude>
-    <ClInclude Include="ogl\util\device.h">
+    <ClInclude Include="ogl\util\texture.h">
+      <Filter>source\ogl\util</Filter>
+    </ClInclude>
+    <ClInclude Include="ogl\util\buffer.h">
       <Filter>source\ogl\util</Filter>
     </ClInclude>
   </ItemGroup>
@@ -76,12 +70,6 @@
     <ClCompile Include="ogl\image\image_kernel.cpp">
       <Filter>source\ogl\image</Filter>
     </ClCompile>
-    <ClCompile Include="ogl\util\device_buffer.cpp">
-      <Filter>source\ogl\util</Filter>
-    </ClCompile>
-    <ClCompile Include="ogl\util\host_buffer.cpp">
-      <Filter>source\ogl\util</Filter>
-    </ClCompile>
     <ClCompile Include="ogl\util\shader.cpp">
       <Filter>source\ogl\util</Filter>
     </ClCompile>
@@ -91,13 +79,13 @@
     <ClCompile Include="accelerator.cpp">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="cpu\util\data_frame.cpp">
-      <Filter>source\cpu\util</Filter>
-    </ClCompile>
-    <ClCompile Include="ogl\util\data_frame.cpp">
+    <ClCompile Include="ogl\util\device.cpp">
       <Filter>source\ogl\util</Filter>
     </ClCompile>
-    <ClCompile Include="ogl\util\device.cpp">
+    <ClCompile Include="ogl\util\texture.cpp">
+      <Filter>source\ogl\util</Filter>
+    </ClCompile>
+    <ClCompile Include="ogl\util\buffer.cpp">
       <Filter>source\ogl\util</Filter>
     </ClCompile>
   </ItemGroup>

@@ -25,7 +25,7 @@
 
 #include "ffmpeg_consumer.h"
 
-#include <core/frame/data_frame.h>
+#include <core/frame/frame.h>
 #include <core/mixer/audio/audio_util.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/video_format.h>
@@ -224,11 +224,8 @@ public:
 
 	~ffmpeg_consumer()
 	{    
-		executor_.stop();
-		executor_.join();
-
-		file_write_executor_.stop();
-		file_write_executor_.join();
+		executor_.wait();
+		file_write_executor_.wait();
 		
 		LOG_ON_ERROR2(av_write_trailer(oc_.get()), "[ffmpeg_consumer]");
 		
@@ -369,28 +366,28 @@ public:
 		});
 	}
 
-	std::shared_ptr<AVFrame> convert_video_frame(const spl::shared_ptr<const core::data_frame>& frame, AVCodecContext* c)
+	std::shared_ptr<AVFrame> convert_video_frame(core::const_frame frame, AVCodecContext* c)
 	{
 		if(!sws_) 
 		{
-			sws_.reset(sws_getContext(format_desc_.width, format_desc_.height, PIX_FMT_BGRA, c->width, c->height, c->pix_fmt, SWS_BICUBIC, nullptr, nullptr, nullptr), sws_freeContext);
+			sws_.reset(sws_getContext(static_cast<int>(format_desc_.width), static_cast<int>(format_desc_.height), PIX_FMT_BGRA, c->width, c->height, c->pix_fmt, SWS_BICUBIC, nullptr, nullptr, nullptr), sws_freeContext);
 			if (sws_ == nullptr) 
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Cannot initialize the conversion context"));
 		}
 
 		std::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);
-		avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), const_cast<uint8_t*>(frame->image_data().begin()), PIX_FMT_BGRA, format_desc_.width, format_desc_.height);
+		avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), const_cast<uint8_t*>(frame.image_data().begin()), PIX_FMT_BGRA, static_cast<int>(format_desc_.width), static_cast<int>(format_desc_.height));
 				
 		std::shared_ptr<AVFrame> local_av_frame(avcodec_alloc_frame(), av_free);
-		picture_buf_.resize(avpicture_get_size(c->pix_fmt, format_desc_.width, format_desc_.height));
-		avpicture_fill(reinterpret_cast<AVPicture*>(local_av_frame.get()), picture_buf_.data(), c->pix_fmt, format_desc_.width, format_desc_.height);
+		picture_buf_.resize(avpicture_get_size(c->pix_fmt, static_cast<int>(format_desc_.width), static_cast<int>(format_desc_.height)));
+		avpicture_fill(reinterpret_cast<AVPicture*>(local_av_frame.get()), picture_buf_.data(), c->pix_fmt, static_cast<int>(format_desc_.width), static_cast<int>(format_desc_.height));
 
 		sws_scale(sws_.get(), av_frame->data, av_frame->linesize, 0, c->height, local_av_frame->data, local_av_frame->linesize);
 
 		return local_av_frame;
 	}
   
-	std::shared_ptr<AVPacket> encode_video_frame(const spl::shared_ptr<const core::data_frame>& frame)
+	std::shared_ptr<AVPacket> encode_video_frame(core::const_frame frame)
 	{ 
 		auto c = video_st_->codec;
  
@@ -425,11 +422,11 @@ public:
 		return nullptr;
 	}
 		
-	std::shared_ptr<AVPacket> encode_audio_frame(const spl::shared_ptr<const core::data_frame>& frame)
+	std::shared_ptr<AVPacket> encode_audio_frame(core::const_frame frame)
 	{			
 		auto c = audio_st_->codec;
 
-		auto audio_data = core::audio_32_to_16(frame->audio_data());
+		auto audio_data = core::audio_32_to_16(frame.audio_data());
 		
 		spl::shared_ptr<AVPacket> pkt(new AVPacket, [](AVPacket* p)
 		{
@@ -450,7 +447,7 @@ public:
 		return pkt;
 	}
 		 
-	void send(const spl::shared_ptr<const core::data_frame>& frame)
+	void send(core::const_frame& frame)
 	{
 		executor_.begin_invoke([=]
 		{		
@@ -497,7 +494,7 @@ public:
 		consumer_.reset(new ffmpeg_consumer(u8(filename_), format_desc, options_));
 	}
 	
-	virtual bool send(const spl::shared_ptr<const core::data_frame>& frame) override
+	virtual bool send(core::const_frame frame) override
 	{
 		consumer_->send(frame);
 		return true;

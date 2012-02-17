@@ -34,7 +34,7 @@
 #include <ffmpeg/producer/filter/filter.h>
 
 #include <core/video_format.h>
-#include <core/frame/data_frame.h>
+#include <core/frame/frame.h>
 #include <core/consumer/frame_consumer.h>
 
 #include <boost/timer.hpp>
@@ -121,20 +121,20 @@ struct screen_consumer : boost::noncopyable
 			
 	float					width_;
 	float					height_;	
-	unsigned int			screen_x_;
-	unsigned int			screen_y_;
-	unsigned int			screen_width_;
-	unsigned int			screen_height_;
-	int						square_width_;
-	int						square_height_;				
+	int				screen_x_;
+	int				screen_y_;
+	int				screen_width_;
+	int				screen_height_;
+	int				square_width_;
+	int				square_height_;				
 	
 	sf::Window				window_;
 	
 	spl::shared_ptr<diagnostics::graph>	graph_;
-	boost::timer					perf_timer_;
-	boost::timer					tick_timer_;
+	boost::timer						perf_timer_;
+	boost::timer						tick_timer_;
 
-	tbb::concurrent_bounded_queue<std::shared_ptr<const core::data_frame>>	frame_buffer_;
+	tbb::concurrent_bounded_queue<core::const_frame>	frame_buffer_;
 
 	boost::thread			thread_;
 	tbb::atomic<bool>		is_running_;
@@ -197,7 +197,7 @@ public:
 	~screen_consumer()
 	{
 		is_running_ = false;
-		frame_buffer_.try_push(core::data_frame::empty());
+		frame_buffer_.try_push(core::const_frame::empty());
 		thread_.join();
 	}
 
@@ -286,11 +286,11 @@ public:
 							is_running_ = false;
 					}
 			
-					std::shared_ptr<const core::data_frame> frame;
+					auto frame = core::const_frame::empty();
 					frame_buffer_.pop(frame);
 					
 					perf_timer_.restart();
-					render(spl::make_shared_ptr(frame));
+					render(frame);
 					graph_->set_value("frame-time", perf_timer_.elapsed()*format_desc_.fps*0.5);	
 
 					window_.Display();
@@ -328,13 +328,13 @@ public:
 		return av_frame;
 	}
 
-	void render(const spl::shared_ptr<const core::data_frame>& frame)
+	void render(core::const_frame frame)
 	{			
-		if(static_cast<int>(frame->image_data().size()) != format_desc_.size)
+		if(static_cast<int>(frame.image_data().size()) != format_desc_.size)
 			return;
 					
 		auto av_frame = get_av_frame();
-		av_frame->data[0] = const_cast<uint8_t*>(frame->image_data().begin());
+		av_frame->data[0] = const_cast<uint8_t*>(frame.image_data().begin());
 
 		filter_.push(av_frame);
 		auto frames = filter_.poll_all();
@@ -390,7 +390,7 @@ public:
 		std::rotate(pbos_.begin(), pbos_.begin() + 1, pbos_.end());
 	}
 
-	bool send(const spl::shared_ptr<const core::data_frame>& frame)
+	bool send(core::const_frame frame)
 	{
 		if(!frame_buffer_.try_push(frame))
 			graph_->set_tag("dropped-frame");
@@ -478,7 +478,7 @@ public:
 		consumer_.reset(new screen_consumer(config_, format_desc, channel_index));
 	}
 	
-	virtual bool send(const spl::shared_ptr<const core::data_frame>& frame) override
+	virtual bool send(core::const_frame frame) override
 	{
 		return consumer_->send(frame);
 	}

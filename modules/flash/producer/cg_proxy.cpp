@@ -146,7 +146,7 @@ cg_proxy create_cg_proxy(const spl::shared_ptr<core::video_channel>& video_chann
 	{
 		if(flash_producer->name() != L"flash")
 		{
-			flash_producer = flash::create_producer(video_channel->frame_factory(), boost::assign::list_of<std::wstring>());	
+			flash_producer = flash::create_producer(video_channel->frame_factory(), video_channel->video_format_desc(), boost::assign::list_of<std::wstring>());	
 			video_channel->stage().load(render_layer, flash_producer); 
 			video_channel->stage().play(render_layer);
 		}
@@ -160,7 +160,7 @@ cg_proxy create_cg_proxy(const spl::shared_ptr<core::video_channel>& video_chann
 	return cg_proxy(std::move(flash_producer));
 }
 
-spl::shared_ptr<core::frame_producer> create_ct_producer(const spl::shared_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params) 
+spl::shared_ptr<core::frame_producer> create_ct_producer(const spl::shared_ptr<core::frame_factory> frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params) 
 {
 	std::wstring filename = env::media_folder() + L"\\" + params[0] + L".ct";
 	if(!boost::filesystem::exists(filename))
@@ -170,7 +170,7 @@ spl::shared_ptr<core::frame_producer> create_ct_producer(const spl::shared_ptr<c
 	path = boost::filesystem3::complete(path);
 	filename = path.wstring();
 
-	auto flash_producer = flash::create_producer(frame_factory, boost::assign::list_of<std::wstring>());	
+	auto flash_producer = flash::create_producer(frame_factory, format_desc, boost::assign::list_of<std::wstring>());	
 	auto producer = flash_producer;
 	cg_proxy(producer).add(0, filename, 1);
 

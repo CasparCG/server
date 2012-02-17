@@ -18,23 +18,21 @@
 *
 * Author: Robert Nagy, ronag89@gmail.com
 */
-
 #include "../../stdafx.h"
 
 #include "image_mixer.h"
 
 #include "image_kernel.h"
 
-#include "../util/data_frame.h"
 #include "../util/device.h"
-#include "../util/host_buffer.h"
-#include "../util/device_buffer.h"
+#include "../util/buffer.h"
+#include "../util/texture.h"
 
 #include <common/gl/gl_check.h>
 #include <common/concurrency/async.h>
 #include <common/memory/memcpy.h>
 
-#include <core/frame/data_frame.h>
+#include <core/frame/frame.h>
 #include <core/frame/frame_transform.h>
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
@@ -54,15 +52,14 @@ using namespace boost::assign;
 
 namespace caspar { namespace accelerator { namespace ogl {
 		
-typedef boost::shared_future<spl::shared_ptr<device_buffer>> future_texture;
+typedef boost::shared_future<spl::shared_ptr<texture>> future_texture;
 
 struct item
 {
-	core::pixel_format_desc						pix_desc;
-	core::field_mode							field_mode;
-	std::vector<spl::shared_ptr<host_buffer>>	buffers;
-	std::vector<future_texture>					textures;
-	core::image_transform						transform;
+	core::pixel_format_desc								pix_desc;
+	core::field_mode									field_mode;
+	std::vector<future_texture>							textures;
+	core::image_transform								transform;
 
 	item()
 		: pix_desc(core::pixel_format::invalid)
@@ -70,16 +67,6 @@ struct item
 	{
 	}
 };
-
-bool operator==(const item& lhs, const item& rhs)
-{
-	return lhs.buffers == rhs.buffers && lhs.transform == rhs.transform;
-}
-
-bool operator!=(const item& lhs, const item& rhs)
-{
-	return !(lhs == rhs);
-}
 
 struct layer
 {
@@ -98,21 +85,10 @@ struct layer
 	}
 };
 
-bool operator==(const layer& lhs, const layer& rhs)
-{
-	return lhs.items == rhs.items && lhs.blend_mode == rhs.blend_mode;
-}
-
-bool operator!=(const layer& lhs, const layer& rhs)
-{
-	return !(lhs == rhs);
-}
-
 class image_renderer
 {
-	spl::shared_ptr<device>																			ogl_;
-	image_kernel																					kernel_;
-	std::pair<std::vector<layer>, boost::shared_future<boost::iterator_range<const uint8_t*>>>		last_image_;	
+	spl::shared_ptr<device>	ogl_;
+	image_kernel			kernel_;
 public:
 	image_renderer(const spl::shared_ptr<device>& ogl)
 		: ogl_(ogl)
@@ -120,130 +96,72 @@ public:
 	{
 	}
 	
-	boost::shared_future<boost::iterator_range<const uint8_t*>> operator()(std::vector<layer> layers, const core::video_format_desc& format_desc)
+	boost::unique_future<core::const_array> operator()(std::vector<layer> layers, const core::video_format_desc& format_desc)
 	{	
-		if(last_image_.first == layers && last_image_.second.has_value())
-			return last_image_.second;
-
-		auto image	= render(layers, format_desc);
-		last_image_ = std::make_pair(std::move(layers), image);
-		return image;
-	}
-
-private:	
-	boost::shared_future<boost::iterator_range<const uint8_t*>> render(std::vector<layer> layers, const core::video_format_desc& format_desc)
-	{			
 		if(layers.empty())
 		{ // Bypass GPU with empty frame.
 			auto buffer = spl::make_shared<const std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>>(format_desc.size, 0);
 			return async(launch_policy::deferred, [=]
 			{
-				return boost::iterator_range<const uint8_t*>(buffer->data(), buffer->data() + format_desc.size);
+				return core::const_array(buffer->data(), static_cast<std::size_t>(format_desc.size), buffer);
 			});
-		}
-		else if(has_uswc_memcpy() &&				
-				layers.size()				== 1 &&
-			    layers.at(0).items.size()	== 1 &&
-			   (kernel_.has_blend_modes() && layers.at(0).blend_mode != core::blend_mode::normal) == false &&
-			    layers.at(0).items.at(0).pix_desc.format		== core::pixel_format::bgra &&
-			    layers.at(0).items.at(0).buffers.at(0)->size() == format_desc.size &&
-			    layers.at(0).items.at(0).transform				== core::image_transform())
-		{ // Bypass GPU using streaming loads to cachable memory.
-			auto uswc_buffer = layers.at(0).items.at(0).buffers.at(0);
-			auto buffer		 = std::make_shared<std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>>(uswc_buffer->size());
+		}		
 
-			uswc_memcpy(buffer->data(), uswc_buffer->data(), uswc_buffer->size());
+		return fold(ogl_->begin_invoke([=]() mutable -> boost::shared_future<core::const_array>
+		{
+			auto draw_buffer = create_mixer_buffer(format_desc.width, format_desc.height, 4);
 
-			return async(launch_policy::deferred, [=]
+			if(format_desc.field_mode != core::field_mode::progressive)
 			{
-				return boost::iterator_range<const uint8_t*>(buffer->data(), buffer->data() + buffer->size());
-			});
-		}
-		else
-		{	
-			// Start host->device transfers.
-			
-			BOOST_FOREACH(auto& layer, layers)
-			{
-				BOOST_FOREACH(auto& item, layer.items)
-				{
-					auto host_buffers = boost::get<std::vector<spl::shared_ptr<host_buffer>>>(item.buffers);
-					auto textures	  = std::vector<future_texture>();
-
-					for(size_t n = 0; n < host_buffers.size(); ++n)	
-					{
-						auto buffer	= host_buffers[n];
-						auto plane			= item.pix_desc.planes[n];
-						auto future_texture	= ogl_->copy_async(buffer, plane.width, plane.height, plane.channels);		
-						item.textures.push_back(std::move(future_texture));
-					}	
-					item.buffers.clear();
-				}
-			}	
-			
-			// Draw
-			boost::shared_future<spl::shared_ptr<host_buffer>> buffer = ogl_->begin_invoke([=]() mutable -> spl::shared_ptr<host_buffer>
-			{
-				auto draw_buffer = create_mixer_buffer(4, format_desc);
-
-				if(format_desc.field_mode != core::field_mode::progressive)
-				{
-					auto upper = layers;
-					auto lower = std::move(layers);
-
-					BOOST_FOREACH(auto& layer, upper)
-					{
-						BOOST_FOREACH(auto& item, layer.items)
-							item.transform.field_mode &= core::field_mode::upper;
-					}
-
-					BOOST_FOREACH(auto& layer, lower)
-					{
-						BOOST_FOREACH(auto& item, layer.items)
-							item.transform.field_mode &= core::field_mode::lower;
-					}
-
-					draw(std::move(upper), draw_buffer, format_desc);
-					draw(std::move(lower), draw_buffer, format_desc);
-				}
-				else
-				{
-					draw(std::move(layers), draw_buffer, format_desc);
-				}
-			
-				auto result = ogl_->create_host_buffer(static_cast<int>(format_desc.size), host_buffer::usage::read_only); 
-				draw_buffer->copy_to(*result);							
-				return result;
-			});
-		
-			// Defer memory mapping.
-			return async(launch_policy::deferred, [=]() mutable -> boost::iterator_range<const uint8_t*>
-			{
-				const auto& buf = buffer.get();
-				if(!buf->data())
-					ogl_->invoke(std::bind(&host_buffer::map, std::ref(buf)), task_priority::high_priority);
-
-				auto ptr = reinterpret_cast<const uint8_t*>(buf->data()); // .get() and ->data() can block calling thread, ->data() can also block OpenGL thread, defer it as long as possible.
-				return boost::iterator_range<const uint8_t*>(ptr, ptr + buffer.get()->size());
-			});
-		}
+				draw(layers,			draw_buffer, format_desc, core::field_mode::upper);
+				draw(std::move(layers), draw_buffer, format_desc, core::field_mode::lower);
+			}
+			else			
+				draw(std::move(layers), draw_buffer, format_desc, core::field_mode::progressive);
+								
+			return make_shared(ogl_->copy_async(draw_buffer));
+		}));
 	}
+
+private:	
 	
-	void draw(std::vector<layer>&&				layers, 
-			  spl::shared_ptr<device_buffer>&	draw_buffer, 
-			  const core::video_format_desc&	format_desc)
+	void draw(std::vector<layer>				layers, 
+			  spl::shared_ptr<texture>&			draw_buffer, 
+			  const core::video_format_desc&	format_desc,
+			  core::field_mode					field_mode)
 	{
-		std::shared_ptr<device_buffer> layer_key_buffer;
+		std::shared_ptr<texture> layer_key_buffer;
 
 		BOOST_FOREACH(auto& layer, layers)
-			draw_layer(std::move(layer), draw_buffer, layer_key_buffer, format_desc);
+			draw_layer(std::move(layer), draw_buffer, layer_key_buffer, format_desc, field_mode);
 	}
 
-	void draw_layer(layer&&								layer, 
-					spl::shared_ptr<device_buffer>&		draw_buffer,
-					std::shared_ptr<device_buffer>&		layer_key_buffer,
-					const core::video_format_desc&		format_desc)
+	void draw_layer(layer							layer, 
+					spl::shared_ptr<texture>&		draw_buffer,
+					std::shared_ptr<texture>&		layer_key_buffer,
+					const core::video_format_desc&	format_desc,
+					core::field_mode				field_mode)
 	{		
+		// Fix frames		
+		BOOST_FOREACH(auto& item, layer.items)		
+		{
+			if(item.pix_desc.planes.at(0).height == 480) // NTSC DV
+			{
+				item.transform.fill_translation[1] += 2.0/static_cast<double>(format_desc.height);
+				item.transform.fill_scale[1] = 1.0 - 6.0*1.0/static_cast<double>(format_desc.height);
+			}
+	
+			// Fix field-order if needed
+			if(item.field_mode == core::field_mode::lower && format_desc.field_mode == core::field_mode::upper)
+				item.transform.fill_translation[1] += 1.0/static_cast<double>(format_desc.height);
+			else if(item.field_mode == core::field_mode::upper && format_desc.field_mode == core::field_mode::lower)
+				item.transform.fill_translation[1] -= 1.0/static_cast<double>(format_desc.height);
+		}
+
+		// Mask out fields
+		BOOST_FOREACH(auto& item, layer.items)				
+			item.transform.field_mode &= field_mode;
+		
 		// Remove empty items.
 		boost::range::remove_erase_if(layer.items, [&](const item& item)
 		{
@@ -253,21 +171,21 @@ private:
 		// Remove first field stills.
 		boost::range::remove_erase_if(layer.items, [&](const item& item)
 		{
-			return item.transform.is_still && item.transform.field_mode == format_desc.field_mode; // only us last field for stills.
+			return item.transform.is_still && item.transform.field_mode == format_desc.field_mode; // only use last field for stills.
 		});
 
 		if(layer.items.empty())
 			return;
 
-		std::shared_ptr<device_buffer> local_key_buffer;
-		std::shared_ptr<device_buffer> local_mix_buffer;
+		std::shared_ptr<texture> local_key_buffer;
+		std::shared_ptr<texture> local_mix_buffer;
 				
 		if(layer.blend_mode != core::blend_mode::normal)
 		{
-			auto layer_draw_buffer = create_mixer_buffer(4, format_desc);
+			auto layer_draw_buffer = create_mixer_buffer(draw_buffer->width(), draw_buffer->height(), 4);
 
 			BOOST_FOREACH(auto& item, layer.items)
-				draw_item(std::move(item), layer_draw_buffer, layer_key_buffer, local_key_buffer, local_mix_buffer, format_desc);	
+				draw_item(std::move(item), layer_draw_buffer, layer_key_buffer, local_key_buffer, local_mix_buffer);	
 		
 			draw_mixer_buffer(layer_draw_buffer, std::move(local_mix_buffer), core::blend_mode::normal);							
 			draw_mixer_buffer(draw_buffer, std::move(layer_draw_buffer), layer.blend_mode);
@@ -275,7 +193,7 @@ private:
 		else // fast path
 		{
 			BOOST_FOREACH(auto& item, layer.items)		
-				draw_item(std::move(item), draw_buffer, layer_key_buffer, local_key_buffer, local_mix_buffer, format_desc);		
+				draw_item(std::move(item), draw_buffer, layer_key_buffer, local_key_buffer, local_mix_buffer);		
 					
 			draw_mixer_buffer(draw_buffer, std::move(local_mix_buffer), core::blend_mode::normal);
 		}					
@@ -283,25 +201,12 @@ private:
 		layer_key_buffer = std::move(local_key_buffer);
 	}
 
-	void draw_item(item&&							item, 
-				   spl::shared_ptr<device_buffer>&	draw_buffer, 
-				   std::shared_ptr<device_buffer>&	layer_key_buffer, 
-				   std::shared_ptr<device_buffer>&	local_key_buffer, 
-				   std::shared_ptr<device_buffer>&	local_mix_buffer,
-				   const core::video_format_desc&	format_desc)
-	{									
-		if(item.pix_desc.planes.at(0).height == 480) // NTSC DV
-		{
-			item.transform.fill_translation[1] += 2.0/static_cast<double>(format_desc.height);
-			item.transform.fill_scale[1] = 1.0 - 6.0*1.0/static_cast<double>(format_desc.height);
-		}
-	
-		// Fix field-order if needed
-		if(item.field_mode == core::field_mode::lower && format_desc.field_mode == core::field_mode::upper)
-			item.transform.fill_translation[1] += 1.0/static_cast<double>(format_desc.height);
-		else if(item.field_mode == core::field_mode::upper && format_desc.field_mode == core::field_mode::lower)
-			item.transform.fill_translation[1] -= 1.0/static_cast<double>(format_desc.height);
-		
+	void draw_item(item							item, 
+				   spl::shared_ptr<texture>&	draw_buffer, 
+				   std::shared_ptr<texture>&	layer_key_buffer, 
+				   std::shared_ptr<texture>&	local_key_buffer, 
+				   std::shared_ptr<texture>&	local_mix_buffer)
+	{					
 		draw_params draw_params;
 		draw_params.pix_desc	= std::move(item.pix_desc);
 		draw_params.transform	= std::move(item.transform);
@@ -310,7 +215,7 @@ private:
 
 		if(item.transform.is_key)
 		{
-			local_key_buffer = local_key_buffer ? local_key_buffer : create_mixer_buffer(1, format_desc);
+			local_key_buffer = local_key_buffer ? local_key_buffer : create_mixer_buffer(draw_buffer->width(), draw_buffer->height(), 1);
 
 			draw_params.background			= local_key_buffer;
 			draw_params.local_key			= nullptr;
@@ -320,7 +225,7 @@ private:
 		}
 		else if(item.transform.is_mix)
 		{
-			local_mix_buffer = local_mix_buffer ? local_mix_buffer : create_mixer_buffer(4, format_desc);
+			local_mix_buffer = local_mix_buffer ? local_mix_buffer : create_mixer_buffer(draw_buffer->width(), draw_buffer->height(), 4);
 
 			draw_params.background			= local_mix_buffer;
 			draw_params.local_key			= std::move(local_key_buffer);
@@ -342,9 +247,9 @@ private:
 		}	
 	}
 
-	void draw_mixer_buffer(spl::shared_ptr<device_buffer>&	draw_buffer, 
-						   std::shared_ptr<device_buffer>&& source_buffer, 
-						   core::blend_mode					blend_mode = core::blend_mode::normal)
+	void draw_mixer_buffer(spl::shared_ptr<texture>&	draw_buffer, 
+						   std::shared_ptr<texture>&&	source_buffer, 
+						   core::blend_mode				blend_mode = core::blend_mode::normal)
 	{
 		if(!source_buffer)
 			return;
@@ -360,9 +265,9 @@ private:
 		kernel_.draw(std::move(draw_params));
 	}
 			
-	spl::shared_ptr<device_buffer> create_mixer_buffer(int stride, const core::video_format_desc& format_desc)
+	spl::shared_ptr<texture> create_mixer_buffer(int width, int height, int stride)
 	{
-		auto buffer = ogl_->create_device_buffer(format_desc.width, format_desc.height, stride);
+		auto buffer = ogl_->create_texture(width, height, stride);
 		buffer->clear();
 		return buffer;
 	}
@@ -393,27 +298,24 @@ public:
 		transform_stack_.push_back(transform_stack_.back()*transform.image_transform);
 	}
 		
-	void visit(const core::data_frame& frame2)
+	void visit(const core::mutable_frame& frame)
 	{			
-		auto frame = dynamic_cast<const ogl::data_frame*>(&frame2);
-		if(frame == nullptr)
+		if(frame.pixel_format_desc().format == core::pixel_format::invalid)
 			return;
 
-		if(frame->pixel_format_desc().format == core::pixel_format::invalid)
-			return;
-
-		if(frame->buffers().empty())
+		if(frame.pixel_format_desc().planes.empty())
 			return;
 
 		if(transform_stack_.back().field_mode == core::field_mode::empty)
 			return;
 
 		item item;
-		item.pix_desc			= frame->pixel_format_desc();
-		item.field_mode			= frame->field_mode();
-		item.buffers			= frame->buffers();				
-		item.transform			= transform_stack_.back();
-
+		item.pix_desc	= frame.pixel_format_desc();
+		item.field_mode	= frame.field_mode();
+		item.transform	= transform_stack_.back();
+		for(int n = 0; n < static_cast<int>(item.pix_desc.planes.size()); ++n)
+			item.textures.push_back(ogl_->copy_async(frame.image_data(n), item.pix_desc.planes[n].width, item.pix_desc.planes[n].height, item.pix_desc.planes[n].stride));
+		
 		layers_.back().items.push_back(item);
 	}
 
@@ -426,30 +328,29 @@ public:
 	{		
 	}
 	
-	boost::shared_future<boost::iterator_range<const uint8_t*>> render(const core::video_format_desc& format_desc)
+	boost::unique_future<core::const_array> render(const core::video_format_desc& format_desc)
 	{
-		// Remove empty layers.
-		boost::range::remove_erase_if(layers_, [](const layer& layer)
-		{
-			return layer.items.empty();
-		});
-
 		return renderer_(std::move(layers_), format_desc);
 	}
 	
-	virtual spl::unique_ptr<core::data_frame> create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode)
+	virtual core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode)
 	{
-		return spl::make_unique<ogl::data_frame>(ogl_, tag, desc, frame_rate, field_mode);
+		std::vector<core::mutable_array> buffers;
+		BOOST_FOREACH(auto& plane, desc.planes)		
+			buffers.push_back(ogl_->create_array(plane.size));		
+
+		return core::mutable_frame(std::move(buffers), core::audio_buffer(), tag, desc, frame_rate, field_mode);
 	}
 };
 
 image_mixer::image_mixer(const spl::shared_ptr<device>& ogl) : impl_(new impl(ogl)){}
+image_mixer::~image_mixer(){}
 void image_mixer::push(const core::frame_transform& transform){impl_->push(transform);}
-void image_mixer::visit(const core::data_frame& frame){impl_->visit(frame);}
+void image_mixer::visit(const core::mutable_frame& frame){impl_->visit(frame);}
 void image_mixer::pop(){impl_->pop();}
-boost::shared_future<boost::iterator_range<const uint8_t*>> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
+boost::unique_future<core::const_array> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
 void image_mixer::begin_layer(core::blend_mode blend_mode){impl_->begin_layer(blend_mode);}
 void image_mixer::end_layer(){impl_->end_layer();}
-spl::unique_ptr<core::data_frame> image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) {return impl_->create_frame(tag, desc, frame_rate, field_mode);}
+core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) {return impl_->create_frame(tag, desc, frame_rate, field_mode);}
 
 }}}

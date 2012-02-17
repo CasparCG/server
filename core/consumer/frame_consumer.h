@@ -31,28 +31,28 @@
 
 namespace caspar { namespace core {
 	
-/// Interface
+// Interface
 class frame_consumer
 {
 	frame_consumer(const frame_consumer&);
 	frame_consumer& operator=(const frame_consumer&);
 public:
 
-	/// Static Members
+	// Static Members
 	
 	static const spl::shared_ptr<frame_consumer>& empty();
 
-	///  Constructors
+	// Constructors
 
 	frame_consumer(){}
 	virtual ~frame_consumer() {}
 	
-	/// Methods
+	// Methods
 
-	virtual bool							send(const spl::shared_ptr<const class data_frame>& frame) = 0;
+	virtual bool							send(class const_frame frame) = 0;
 	virtual void							initialize(const struct video_format_desc& format_desc, int channel_index) = 0;
 
-	/// Properties
+	// Properties
 
 	virtual std::wstring					print() const = 0;
 	virtual std::wstring					name() const = 0;

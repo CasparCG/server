@@ -55,9 +55,9 @@ FlashAxContainer::~FlashAxContainer()
 }
 
 
-///////////////////
+/////////
 // IObjectWithSite
-///////////////////
+/////////
 HRESULT STDMETHODCALLTYPE FlashAxContainer::SetSite(IUnknown* pUnkSite)
 {
 	ATLTRACE(_T("IObjectWithSite::SetSite\n"));
@@ -76,9 +76,9 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::SetSite(IUnknown* pUnkSite)
 	return hr;
 }
 
-///////////////////
+/////////
 // IOleClientSite
-///////////////////
+/////////
 HRESULT STDMETHODCALLTYPE FlashAxContainer::SaveObject()
 {
 	ATLTRACENOTIMPL(_T("IOleClientSite::SaveObject"));
@@ -130,9 +130,9 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::RequestNewObjectLayout()
 	return S_OK;
 }
 
-///////////////////
+/////////
 // IOleInPlaceSite
-///////////////////
+/////////
 HRESULT STDMETHODCALLTYPE FlashAxContainer::GetWindow(HWND* pHwnd)
 {
 	ATLTRACE(_T("IOleInPlaceSite::GetWindow\n"));
@@ -233,9 +233,9 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::OnPosRectChange(LPCRECT lprcPosRect)
 }
 
 
-/////////////////////
+//////////
 // IOleInPlaceSiteEx
-/////////////////////
+//////////
 HRESULT STDMETHODCALLTYPE FlashAxContainer::OnInPlaceActivateEx(BOOL* pfNoRedraw, DWORD dwFlags)
 {
 	// should only be called once the first time control is inplace-activated
@@ -272,9 +272,9 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::RequestUIActivate()
 }
 
 
-/////////////////////////////
+//////////////
 // IOleInPlaceSiteWindowless
-/////////////////////////////
+//////////////
 HRESULT STDMETHODCALLTYPE FlashAxContainer::CanWindowlessActivate()
 {
 	ATLTRACE(_T("IOleInPlaceSiteWindowless::CanWindowlessActivate\n"));
@@ -360,9 +360,9 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::OnDefWindowMessage(UINT msg, WPARAM 
 	return S_OK;
 }
 
-///////////////////
+/////////
 // IOleControlSite
-///////////////////
+/////////
 HRESULT STDMETHODCALLTYPE FlashAxContainer::OnControlInfoChanged()
 {
 	ATLTRACE(_T("IOleControlSite::OnControlInfoChanged"));
@@ -409,9 +409,9 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::ShowPropertyFrame()
 }
 
 
-///////////////////
+/////////
 // IAdviseSink
-///////////////////
+/////////
 void STDMETHODCALLTYPE FlashAxContainer::OnDataChange(FORMATETC* pFormatetc, STGMEDIUM* pStgmed)
 {
 	ATLTRACE(_T("IAdviseSink::OnDataChange\n"));
@@ -448,9 +448,9 @@ DEFINE_GUID2(IID_IDirectDraw3,0x618f8ad4,0x8b7a,0x11d0,0x8f,0xcc,0x0,0xc0,0x4f,0
 DEFINE_GUID2(IID_IDirectDraw4,0x9c59509a,0x39bd,0x11d1,0x8c,0x4a,0x00,0xc0,0x4f,0xd9,0x30,0xc5);
 DEFINE_GUID2(IID_IDirectDraw7,0x15e65ec0,0x3b9c,0x11d2,0xb9,0x2f,0x00,0x60,0x97,0x97,0xea,0x5b);
 
-///////////////////
+/////////
 // IServiceProvider
-///////////////////
+/////////
 HRESULT STDMETHODCALLTYPE FlashAxContainer::QueryService( REFGUID rsid, REFIID riid, void** ppvObj) 
 {
 //	ATLTRACE(_T("IServiceProvider::QueryService\n"));
@@ -494,9 +494,9 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::QueryService( REFGUID rsid, REFIID r
 }
 
 
-///////////////////
+/////////
 // ITimerService
-///////////////////
+/////////
 HRESULT STDMETHODCALLTYPE FlashAxContainer::CreateTimer(ITimer *pReferenceTimer, ITimer **ppNewTimer)
 {
 	ATLTRACE(_T("ITimerService::CreateTimer\n"));
@@ -526,9 +526,9 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::SetNamedTimerReference(REFGUID rguid
 	return S_OK;
 }
 
-///////////
+//////
 // ITimer
-///////////
+//////
 HRESULT STDMETHODCALLTYPE FlashAxContainer::Advise(VARIANT vtimeMin, VARIANT vtimeMax, VARIANT vtimeInterval, DWORD dwFlags, ITimerSink *pTimerSink, DWORD *pdwCookie)
 {
 	ATLTRACE(_T("Timer::Advise\n"));

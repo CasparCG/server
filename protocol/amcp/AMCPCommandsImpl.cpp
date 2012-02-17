@@ -636,7 +636,7 @@ bool LoadCommand::DoExecute()
 	try
 	{
 		_parameters[0] = _parameters[0];
-		auto pFP = create_producer(GetChannel()->frame_factory(), _parameters);		
+		auto pFP = create_producer(GetChannel()->frame_factory(), GetChannel()->video_format_desc(), _parameters);		
 		GetChannel()->stage().load(GetLayerIndex(), pFP, true);
 	
 		SetReplyString(TEXT("202 LOAD OK\r\n"));
@@ -742,7 +742,7 @@ bool LoadbgCommand::DoExecute()
 	try
 	{
 		_parameters[0] = _parameters[0];
-		auto pFP = create_producer(GetChannel()->frame_factory(), _parameters);
+		auto pFP = create_producer(GetChannel()->frame_factory(), GetChannel()->video_format_desc(), _parameters);
 		if(pFP == frame_producer::empty())
 			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? _parameters[0] : L""));
 

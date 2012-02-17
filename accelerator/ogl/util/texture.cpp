@@ -21,8 +21,9 @@
 
 #include "../../stdafx.h"
 
-#include "device_buffer.h"
-#include "device.h"
+#include "texture.h"
+
+#include "buffer.h"
 
 #include <common/except.h>
 #include <common/gl/gl_check.h>
@@ -46,7 +47,7 @@ unsigned int format(int stride)
 
 static tbb::atomic<int> g_total_count;
 
-struct device_buffer::impl : boost::noncopyable
+struct texture::impl : boost::noncopyable
 {
 	GLuint						id_;
 
@@ -67,7 +68,7 @@ public:
 		GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
 		GL(glTexImage2D(GL_TEXTURE_2D, 0, INTERNAL_FORMAT[stride_], width_, height_, 0, FORMAT[stride_], TYPE[stride_], NULL));
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
-		CASPAR_LOG(trace) << "[device_buffer] [" << ++g_total_count << L"] allocated size:" << width*height*stride;	
+		//CASPAR_LOG(trace) << "[texture] [" << ++g_total_count << L"] allocated size:" << width*height*stride;	
 	}	
 
 	~impl()
@@ -102,7 +103,7 @@ public:
 		GL(glClear(GL_COLOR_BUFFER_BIT));
 	}
 		
-	void copy_from(host_buffer& source)
+	void copy_from(buffer& source)
 	{
 		source.unmap();
 		source.bind();
@@ -112,7 +113,7 @@ public:
 		source.unbind();
 	}
 
-	void copy_to(host_buffer& dest)
+	void copy_to(buffer& dest)
 	{
 		dest.unmap();
 		dest.bind();
@@ -125,16 +126,18 @@ public:
 	}
 };
 
-device_buffer::device_buffer(int width, int height, int stride) : impl_(new impl(width, height, stride)){}
-int device_buffer::stride() const { return impl_->stride_; }
-int device_buffer::width() const { return impl_->width_; }
-int device_buffer::height() const { return impl_->height_; }
-void device_buffer::bind(int index){impl_->bind(index);}
-void device_buffer::unbind(){impl_->unbind();}
-void device_buffer::attach(){impl_->attach();}
-void device_buffer::clear(){impl_->clear();}
-void device_buffer::copy_from(host_buffer& source){impl_->copy_from(source);}
-void device_buffer::copy_to(host_buffer& dest){impl_->copy_to(dest);}
-int device_buffer::id() const{ return impl_->id_;}
+texture::texture(int width, int height, int stride) : impl_(new impl(width, height, stride)){}
+texture::~texture(){}
+void texture::bind(int index){impl_->bind(index);}
+void texture::unbind(){impl_->unbind();}
+void texture::attach(){impl_->attach();}
+void texture::clear(){impl_->clear();}
+void texture::copy_from(buffer& source){impl_->copy_from(source);}
+void texture::copy_to(buffer& dest){impl_->copy_to(dest);}
+int texture::width() const { return impl_->width_; }
+int texture::height() const { return impl_->height_; }
+int texture::size() const { return impl_->width_*impl_->height_*impl_->stride_; }
+int texture::stride() const { return impl_->stride_; }
+int texture::id() const{ return impl_->id_;}
 
 }}}

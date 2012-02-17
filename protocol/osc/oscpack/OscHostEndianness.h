@@ -32,7 +32,7 @@
 
 //#define OSC_HOST_BIG_ENDIAN 1
 
-///*
+//*
 //    Make sure either OSC_HOST_LITTLE_ENDIAN or OSC_HOST_BIG_ENDIAN is defined
 //
 //    If you know a way to enhance the detection below for Linux and/or MacOSX
@@ -41,12 +41,12 @@
 //
 //#if defined(OSC_HOST_LITTLE_ENDIAN) || defined(OSC_HOST_BIG_ENDIAN)
 //
-//// you can define one of the above symbols from the command line
-//// then you don't have to edit this file.
+// you can define one of the above symbols from the command line
+// then you don't have to edit this file.
 //
 //#elif defined(__WIN32__) || defined(WIN32) || defined(WINCE)
 //
-//// assume that __WIN32__ is only defined on little endian systems
+// assume that __WIN32__ is only defined on little endian systems
 //
 //#define OSC_HOST_LITTLE_ENDIAN 1
 //#undef OSC_HOST_BIG_ENDIAN

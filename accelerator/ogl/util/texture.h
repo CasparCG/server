@@ -24,35 +24,46 @@
 #include <common/spl/memory.h>
 #include <common/forward.h>
 
-#include <boost/noncopyable.hpp>
-
 FORWARD1(boost, template<typename> class unique_future);
 
 namespace caspar { namespace accelerator { namespace ogl {
 		
-class host_buffer;
+class buffer;
 class device;
 
-class device_buffer : boost::noncopyable
+class texture sealed
 {
+	texture(const texture&);
+	texture& operator=(const texture&);
 public:	
-	device_buffer(int width, int height, int stride);
 
-	int stride() const;	
-	int width() const;
-	int height() const;
+	// Static Members
+
+	// Constructors
+
+	texture(int width, int height, int stride);
+	~texture();
+
+	// Methods
 		
-	void copy_from(host_buffer& source);
-	void copy_to(host_buffer& dest);
+	void copy_from(buffer& source);
+	void copy_to(buffer& dest);
 			
 	void attach();
 	void clear();
 	void bind(int index);
 	void unbind();
+
+	// Properties
+
+	int width() const;
+	int height() const;
+	int size() const;
+	int stride() const;	
 	int id() const;
 private:
 	struct impl;
-	spl::shared_ptr<impl> impl_;
+	spl::unique_ptr<impl> impl_;
 };
 	
 unsigned int format(int stride);

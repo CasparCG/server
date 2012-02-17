@@ -25,7 +25,7 @@
 
 #include <core/video_format.h>
 
-#include <core/frame/data_frame.h>
+#include <core/frame/frame.h>
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
@@ -59,7 +59,7 @@ struct image_producer : public core::frame_producer
 		desc.planes.push_back(core::pixel_format_desc::plane(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), 4));
 		auto frame = frame_factory->create_frame(this, desc);
 
-		std::copy_n(FreeImage_GetBits(bitmap.get()), frame->image_data(0).size(), frame->image_data(0).begin());
+		std::copy_n(FreeImage_GetBits(bitmap.get()), frame.image_data(0).size(), frame.image_data(0).begin());
 		frame_ = core::draw_frame(std::move(frame));
 
 		CASPAR_LOG(info) << print() << L" Initialized";
@@ -96,7 +96,7 @@ struct image_producer : public core::frame_producer
 	}
 };
 
-spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
 {
 	static const std::vector<std::wstring> extensions = list_of(L".png")(L".tga")(L".bmp")(L".jpg")(L".jpeg")(L".gif")(L".tiff")(L".tif")(L".jp2")(L".jpx")(L".j2k")(L".j2c");
 	std::wstring filename = env::media_folder() + L"\\" + params[0];

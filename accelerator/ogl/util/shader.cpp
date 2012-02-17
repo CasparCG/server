@@ -139,8 +139,8 @@ public:
 	}
 };
 
-
 shader::shader(const std::string& vertex_source_str, const std::string& fragment_source_str) : impl_(new impl(vertex_source_str, fragment_source_str)){}
+shader::~shader(){}
 void shader::set(const std::string& name, bool value){impl_->set(name, value);}
 void shader::set(const std::string& name, int value){impl_->set(name, value);}
 void shader::set(const std::string& name, float value){impl_->set(name, value);}

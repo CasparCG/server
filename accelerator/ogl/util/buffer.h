@@ -24,13 +24,18 @@
 #include <common/spl/memory.h>
 #include <common/enum_class.h>
 
-#include <boost/noncopyable.hpp>
+#include <stdint.h>
 
 namespace caspar { namespace accelerator { namespace ogl {
 			
-class host_buffer : boost::noncopyable
+class buffer sealed
 {
+	buffer(const buffer&);
+	buffer& operator=(const buffer&);
 public:
+
+	// Static Members
+
 	struct usage_def
 	{
 		enum type
@@ -41,20 +46,26 @@ public:
 	};
 	typedef enum_class<usage_def> usage;
 	
-	host_buffer(int size, usage usage);
+	// Constructors
 
-	const void* data() const;
-	void* data();
-	int size() const;	
+	buffer(std::size_t size, usage usage);
+	~buffer();
+
+	// Methods
 	
 	void map();
 	void unmap();
 
 	void bind() const;
 	void unbind() const;
+
+	// Properties
+
+	uint8_t* data();
+	std::size_t size() const;	
 private:
 	struct impl;
-	spl::shared_ptr<impl> impl_;
+	spl::unique_ptr<impl> impl_;
 };
 
 }}}
