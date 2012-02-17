@@ -24,7 +24,7 @@
 #include "color_producer.h"
 
 #include <core/producer/frame_producer.h>
-#include <core/frame/data_frame.h>
+#include <core/frame/frame.h>
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
@@ -146,7 +146,7 @@ draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& f
 		
 	// Read color from hex-string and write to frame pixel.
 
-	auto& value = *reinterpret_cast<uint32_t*>(frame->image_data(0).begin());
+	auto& value = *reinterpret_cast<uint32_t*>(frame.image_data(0).begin());
 	std::wstringstream str(color2.substr(1));
 	if(!(str >> std::hex >> value) || !str.eof())
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(color2) << msg_info("Invalid color."));

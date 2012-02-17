@@ -94,14 +94,14 @@
     <ClInclude Include="frame\pixel_format.h">
       <Filter>source\frame</Filter>
     </ClInclude>
-    <ClInclude Include="frame\data_frame.h">
-      <Filter>source\frame</Filter>
-    </ClInclude>
     <ClInclude Include="frame\draw_frame.h">
       <Filter>source\frame</Filter>
     </ClInclude>
     <ClInclude Include="monitor\monitor.h">
       <Filter>source\monitor</Filter>
+    </ClInclude>
+    <ClInclude Include="frame\frame.h">
+      <Filter>source\frame</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -151,11 +151,11 @@
     <ClCompile Include="frame\draw_frame.cpp">
       <Filter>source\frame</Filter>
     </ClCompile>
-    <ClCompile Include="frame\data_frame.cpp">
-      <Filter>source\frame</Filter>
-    </ClCompile>
     <ClCompile Include="monitor\monitor.cpp">
       <Filter>source\monitor</Filter>
+    </ClCompile>
+    <ClCompile Include="frame\frame.cpp">
+      <Filter>source\frame</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -23,27 +23,38 @@
 
 #include <common/spl/memory.h>
 
-#include <boost/noncopyable.hpp>
-
 #include <string>
 
 namespace caspar { namespace accelerator { namespace ogl {
 		
-class shader : boost::noncopyable
+class shader sealed
 {
+	shader(const shader&);
+	shader& operator=(const shader&);
 public:
+
+	// Static Members
+
+	// Constructors
+
 	shader(const std::string& vertex_source_str, const std::string& fragment_source_str);
+	~shader();
+
+	// Methods
+
 	void set(const std::string& name, bool value);
 	void set(const std::string& name, int value);
 	void set(const std::string& name, float value);
 	void set(const std::string& name, double value);
 	void use() const;
-private:
-	friend class device;
-	struct impl;
-	spl::shared_ptr<impl> impl_;
 
+	// Properties
+	
 	int id() const;
+
+private:
+	struct impl;
+	spl::unique_ptr<impl> impl_;
 };
 
 }}}

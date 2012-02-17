@@ -23,7 +23,7 @@
 
 #include "mixer.h"
 
-#include "../frame/data_frame.h"
+#include "../frame/frame.h"
 
 #include "audio/audio_mixer.h"
 #include "image/image_mixer.h"
@@ -53,99 +53,31 @@
 
 namespace caspar { namespace core {
 
-class mixed_frame : public data_frame
-{
-	mutable boost::shared_future<boost::iterator_range<const uint8_t*>>	image_data_;
-	const audio_buffer													audio_data_;
-	const video_format_desc												video_desc_;
-	core::pixel_format_desc												pixel_desc_;
-	const void*															tag_;
-
-public:
-	mixed_frame(const void* tag, boost::shared_future<boost::iterator_range<const uint8_t*>>&& image_data, audio_buffer&& audio_data, const video_format_desc& format_desc) 
-		: tag_(tag)
-		, image_data_(std::move(image_data))
-		, audio_data_(std::move(audio_data))
-		, video_desc_(format_desc)
-		, pixel_desc_(core::pixel_format::bgra)
-	{
-		pixel_desc_.planes.push_back(core::pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
-	}	
-	
-	const boost::iterator_range<const uint8_t*> image_data(int index = 0) const override
-	{
-		return image_data_.get();
-	}
-		
-	const boost::iterator_range<uint8_t*> image_data(int) override
-	{
-		BOOST_THROW_EXCEPTION(invalid_operation());
-	}
-	
-	virtual const struct pixel_format_desc& pixel_format_desc() const override
-	{
-		return pixel_desc_;
-	}
-
-	virtual const audio_buffer& audio_data() const override
-	{
-		return audio_data_;
-	}
-
-	virtual audio_buffer& audio_data() override
-	{
-		BOOST_THROW_EXCEPTION(invalid_operation());
-	}
-			
-	virtual double frame_rate() const override
-	{
-		return video_desc_.fps;
-	}
-
-	virtual core::field_mode field_mode() const
-	{
-		return video_desc_.field_mode;
-	}
-	
-	virtual int width() const override
-	{
-		return video_desc_.width;
-	}
-
-	virtual int height() const override
-	{
-		return video_desc_.height;
-	}
-
-	virtual const void* tag() const override
-	{
-		return tag_;
-	}
-};
-		
 struct mixer::impl : boost::noncopyable
 {				
 	spl::shared_ptr<diagnostics::graph> graph_;
 	audio_mixer							audio_mixer_;
-	spl::unique_ptr<image_mixer>		image_mixer_;
+	spl::shared_ptr<image_mixer>		image_mixer_;
 	
 	std::unordered_map<int, blend_mode>	blend_modes_;
 			
 	executor executor_;
 
 public:
-	impl(spl::shared_ptr<diagnostics::graph> graph, spl::unique_ptr<image_mixer> image_mixer) 
+	impl(spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer) 
 		: graph_(std::move(graph))
 		, audio_mixer_()
 		, image_mixer_(std::move(image_mixer))
 		, executor_(L"mixer")
 	{			
 		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8));
+		graph_->set_color("audio-mix-time", diagnostics::color(1.0f, 0.0f, 0.0f, 0.8));
+		graph_->set_color("video-mix-time", diagnostics::color(0.0f, 1.0f, 1.0f, 0.8));
 	}	
 	
-	spl::shared_ptr<const data_frame> operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc)
+	const_frame operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc)
 	{		
-		return executor_.invoke([=]() mutable -> spl::shared_ptr<const class data_frame>
+		return executor_.invoke([=]() mutable -> const_frame
 		{		
 			try
 			{	
@@ -161,18 +93,26 @@ public:
 
 					image_mixer_->end_layer();
 				}
-
+				
+				boost::timer video_frame_timer;
 				auto image = (*image_mixer_)(format_desc);
+				graph_->set_value("video-mix-time", video_frame_timer.elapsed()*format_desc.fps*0.5);
+
+				
+				boost::timer audio_frame_timer;
 				auto audio = audio_mixer_(format_desc);
+				graph_->set_value("audio-mix-time", audio_frame_timer.elapsed()*format_desc.fps*0.5);
 				
 				graph_->set_value("mix-time", frame_timer.elapsed()*format_desc.fps*0.5);
 
-				return spl::make_shared<mixed_frame>(this, std::move(image), std::move(audio), format_desc);	
+				auto desc = core::pixel_format_desc(core::pixel_format::bgra);
+				desc.planes.push_back(core::pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
+				return const_frame(std::move(image), std::move(audio), this, desc, format_desc.fps, format_desc.field_mode);	
 			}
 			catch(...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
-				return data_frame::empty();
+				return const_frame::empty();
 			}	
 		});		
 	}
@@ -197,10 +137,10 @@ public:
 	}
 };
 	
-mixer::mixer(spl::shared_ptr<diagnostics::graph> graph, spl::unique_ptr<image_mixer> image_mixer) 
+mixer::mixer(spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer) 
 	: impl_(new impl(std::move(graph), std::move(image_mixer))){}
 void mixer::set_blend_mode(int index, blend_mode value){impl_->set_blend_mode(index, value);}
 boost::unique_future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
-spl::shared_ptr<const data_frame> mixer::operator()(std::map<int, draw_frame> frames, const struct video_format_desc& format_desc){return (*impl_)(std::move(frames), format_desc);}
-spl::unique_ptr<data_frame> mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) {return impl_->image_mixer_->create_frame(tag, desc, frame_rate, field_mode);}
+const_frame mixer::operator()(std::map<int, draw_frame> frames, const struct video_format_desc& format_desc){return (*impl_)(std::move(frames), format_desc);}
+mutable_frame mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) {return impl_->image_mixer_->create_frame(tag, desc, frame_rate, field_mode);}
 }}

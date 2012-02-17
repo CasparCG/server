@@ -87,10 +87,16 @@ struct ffmpeg_producer : public core::frame_producer
 	core::draw_frame							last_frame_;
 	
 public:
-	explicit ffmpeg_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, uint32_t start, uint32_t length) 
+	explicit ffmpeg_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, 
+							 const core::video_format_desc& format_desc, 
+							 const std::wstring& filename, 
+							 const std::wstring& filter, 
+							 bool loop, 
+							 uint32_t start, 
+							 uint32_t length) 
 		: filename_(filename)
 		, frame_factory_(frame_factory)		
-		, format_desc_(frame_factory->video_format_desc())
+		, format_desc_(format_desc)
 		, input_(graph_, filename_, loop, start, length)
 		, fps_(read_fps(*input_.context(), format_desc_.fps))
 		, start_(start)
@@ -120,7 +126,7 @@ public:
 
 		try
 		{
-			audio_decoder_.reset(new audio_decoder(input_.context(), frame_factory->video_format_desc()));
+			audio_decoder_.reset(new audio_decoder(input_.context(), format_desc_));
 			audio_decoder_->subscribe(event_subject_);
 			CASPAR_LOG(info) << print() << L" " << audio_decoder_->print();
 		}
@@ -137,7 +143,7 @@ public:
 		if(!video_decoder_ && !audio_decoder_)
 			BOOST_THROW_EXCEPTION(averror_stream_not_found() << msg_info("No streams found"));
 
-		muxer_.reset(new frame_muxer(fps_, frame_factory, filter));
+		muxer_.reset(new frame_muxer(fps_, frame_factory, format_desc_, filter));
 
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}
@@ -339,7 +345,7 @@ public:
 	}
 };
 
-spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
 {		
 	auto filename = probe_stem(env::media_folder() + L"\\" + params.at(0));
 
@@ -354,7 +360,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
 	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
 	
-	return spl::make_shared<ffmpeg_producer>(frame_factory, filename, filter_str, loop, start, length);
+	return spl::make_shared_ptr(std::make_shared<ffmpeg_producer>(frame_factory, format_desc, filename, filter_str, loop, start, length));
 }
 
 }}

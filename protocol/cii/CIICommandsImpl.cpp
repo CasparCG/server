@@ -36,7 +36,7 @@
 
 namespace caspar { namespace protocol { namespace cii {
 
-/////////////////
+////////
 // MediaCommand
 void MediaCommand::Setup(const std::vector<std::wstring>& parameters) 
 {
@@ -49,7 +49,7 @@ void MediaCommand::Execute()
 }
 
 
-/////////////////
+////////
 // WriteCommand
 void WriteCommand::Setup(const std::vector<std::wstring>& parameters)
 {
@@ -82,7 +82,7 @@ void WriteCommand::Execute()
 }
 
 
-//////////////////////
+//////////
 // ImagestoreCommand
 void ImagestoreCommand::Setup(const std::vector<std::wstring>& parameters) 
 {
@@ -96,7 +96,7 @@ void ImagestoreCommand::Execute()
 }
 
 
-//////////////////////
+//////////
 // MiscellaneousCommand
 void MiscellaneousCommand::Setup(const std::vector<std::wstring>& parameters)
 {
@@ -160,7 +160,7 @@ void MiscellaneousCommand::Execute()
 }
 
 
-///////////////////
+/////////
 // KeydataCommand
 void KeydataCommand::Execute() 
 {

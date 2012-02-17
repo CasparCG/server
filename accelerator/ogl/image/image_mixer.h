@@ -31,33 +31,46 @@
 #include <core/video_format.h>
 
 FORWARD1(boost, template<typename> class unique_future);
-FORWARD2(caspar, core, class data_frame);
+FORWARD2(caspar, core, class frame);
 FORWARD2(caspar, core, struct pixel_format_desc);
 FORWARD2(caspar, core, struct video_format_desc);
-FORWARD2(caspar, core, class data_frame);
+FORWARD2(caspar, core, class mutable_frame);
 FORWARD2(caspar, core, struct frame_transform);
 
 namespace caspar { namespace accelerator { namespace ogl {
 	
 class image_mixer sealed : public core::image_mixer
 {
+	image_mixer(const image_mixer&);
+	image_mixer& operator=(const image_mixer&);
 public:
-	image_mixer(const spl::shared_ptr<class device>& ogl);
-	
-	virtual void push(const core::frame_transform& frame);
-	virtual void visit(const core::data_frame& frame);
-	virtual void pop();
 
-	void begin_layer(core::blend_mode blend_mode);
-	void end_layer();
-		
-	// NOTE: Content of return future is only valid while future is valid.
-	virtual boost::shared_future<boost::iterator_range<const uint8_t*>> operator()(const core::video_format_desc& format_desc) override;
-		
-	virtual spl::unique_ptr<core::data_frame> create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) override;
+	// Static Members
+	
+	// Constructors
+
+	image_mixer(const spl::shared_ptr<class device>& ogl);
+	~image_mixer();
+
+	// Methods
+			
+	virtual boost::unique_future<core::const_array> operator()(const core::video_format_desc& format_desc) override;		
+	virtual core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) override;
+
+	// core::image_mixer
+	
+	virtual void begin_layer(core::blend_mode blend_mode) override;
+	virtual void end_layer() override;
+
+	virtual void push(const core::frame_transform& frame) override;
+	virtual void visit(const core::mutable_frame& frame) override;
+	virtual void pop() override;
+			
+	// Properties
+
 private:
 	struct impl;
-	spl::shared_ptr<impl> impl_;
+	spl::unique_ptr<impl> impl_;
 };
 
 }}}

@@ -47,16 +47,16 @@ class stage sealed : public monitor::observable
 	stage& operator=(const stage&);
 public:	
 
-	/// Static Members
+	// Static Members
 	
 	typedef std::function<struct frame_transform(struct frame_transform)> transform_func_t;
 	typedef std::tuple<int, transform_func_t, unsigned int, tweener> transform_tuple_t;
 
-	///  Constructors
+	// Constructors
 
 	explicit stage(spl::shared_ptr<diagnostics::graph> graph);
 	
-	/// Methods
+	// Methods
 
 	std::map<int, class draw_frame> operator()(const struct video_format_desc& format_desc);
 
@@ -80,7 +80,7 @@ public:
 	virtual void subscribe(const monitor::observable::observer_ptr& o) override;
 	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override;
 
-	/// Properties
+	// Properties
 
 	boost::unique_future<spl::shared_ptr<class frame_producer>>	foreground(int index);
 	boost::unique_future<spl::shared_ptr<class frame_producer>>	background(int index);

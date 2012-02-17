@@ -30,7 +30,7 @@
 #include "frame_consumer.h"
 
 #include "../video_format.h"
-#include "../frame/data_frame.h"
+#include "../frame/frame.h"
 
 #include <common/concurrency/async.h>
 #include <common/concurrency/executor.h>
@@ -50,13 +50,13 @@ namespace caspar { namespace core {
 	
 struct output::impl
 {		
-	spl::shared_ptr<diagnostics::graph>							graph_;
-	const int													channel_index_;
-	video_format_desc											format_desc_;
-	std::map<int, spl::shared_ptr<frame_consumer>>				consumers_;	
-	prec_timer													sync_timer_;
-	boost::circular_buffer<spl::shared_ptr<const data_frame>>	frames_;
-	executor													executor_;		
+	spl::shared_ptr<diagnostics::graph>				graph_;
+	const int										channel_index_;
+	video_format_desc								format_desc_;
+	std::map<int, spl::shared_ptr<frame_consumer>>	consumers_;	
+	prec_timer										sync_timer_;
+	boost::circular_buffer<const_frame>		frames_;
+	executor										executor_;		
 public:
 	impl(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index) 
 		: graph_(std::move(graph))
@@ -146,7 +146,7 @@ public:
 		return boost::range::count_if(consumers_ | boost::adaptors::map_values, [](const spl::shared_ptr<frame_consumer>& x){return x->has_synchronization_clock();}) > 0;
 	}
 		
-	void operator()(spl::shared_ptr<const data_frame> input_frame, const core::video_format_desc& format_desc)
+	void operator()(const_frame input_frame, const core::video_format_desc& format_desc)
 	{
 		video_format_desc(format_desc);
 
@@ -157,8 +157,7 @@ public:
 			if(!has_synchronization_clock())
 				sync_timer_.tick(1.0/format_desc_.fps);
 				
-			if(input_frame->width() != format_desc_.width ||
-			   input_frame->height() != format_desc_.height)
+			if(input_frame.size() != format_desc_.size)
 			{
 				sync_timer_.tick(1.0/format_desc_.fps);
 				return;
@@ -216,5 +215,5 @@ void output::add(const spl::shared_ptr<frame_consumer>& consumer){impl_->add(con
 void output::remove(int index){impl_->remove(index);}
 void output::remove(const spl::shared_ptr<frame_consumer>& consumer){impl_->remove(consumer);}
 boost::unique_future<boost::property_tree::wptree> output::info() const{return impl_->info();}
-void output::operator()(spl::shared_ptr<const data_frame> frame, const video_format_desc& format_desc){(*impl_)(std::move(frame), format_desc);}
+void output::operator()(const_frame frame, const video_format_desc& format_desc){(*impl_)(std::move(frame), format_desc);}
 }}

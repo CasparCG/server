@@ -27,7 +27,7 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
-#include <core/frame/data_frame.h>
+#include <core/frame/frame.h>
 
 #include <common/except.h>
 #include <common/diagnostics/graph.h>
@@ -45,13 +45,13 @@
 
 namespace caspar { namespace reroute {
 //		
-//class reroute_producer : public reactive::observer<spl::shared_ptr<const core::data_frame>>
+//class reroute_producer : public reactive::observer<spl::shared_ptr<const core::frame>>
 //					   , public core::frame_producer
 //{
 //	const spl::shared_ptr<diagnostics::graph>									graph_;
 //	const spl::shared_ptr<core::frame_factory>									frame_factory_;
 //	
-//	tbb::concurrent_bounded_queue<std::shared_ptr<const core::data_frame>>		input_buffer_;
+//	tbb::concurrent_bounded_queue<std::shared_ptr<const core::frame>>		input_buffer_;
 //	std::queue<core::draw_frame>												frame_buffer_;
 //	uint64_t																	frame_number_;
 //
@@ -73,7 +73,7 @@ namespace caspar { namespace reroute {
 //	
 //	// observable
 //
-//	void on_next(const spl::shared_ptr<const core::data_frame>& frame)
+//	void on_next(const spl::shared_ptr<const core::frame>& frame)
 //	{
 //		if(!input_buffer_.try_push(frame))
 //			graph_->set_tag("dropped-frame");
@@ -90,7 +90,7 @@ namespace caspar { namespace reroute {
 //			return last_frame_ = frame;
 //		}
 //		
-//		std::shared_ptr<const core::data_frame> read_frame;
+//		std::shared_ptr<const core::frame> read_frame;
 //		if(!input_buffer_.try_pop(read_frame))
 //		{
 //			graph_->set_tag("late-frame");

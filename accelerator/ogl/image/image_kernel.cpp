@@ -27,7 +27,7 @@
 #include "blending_glsl.h"
 
 #include "../util/shader.h"
-#include "../util/device_buffer.h"
+#include "../util/texture.h"
 #include "../util/device.h"
 
 #include <common/except.h>

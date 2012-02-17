@@ -32,7 +32,7 @@
 #include <core/mixer/audio/audio_mixer.h>
 #include <core/video_format.h>
 
-#include <core/frame/data_frame.h>
+#include <core/frame/frame.h>
 
 #include <SFML/Audio/SoundStream.hpp>
 
@@ -95,9 +95,9 @@ public:
 		}
 	}
 	
-	virtual bool send(const spl::shared_ptr<const core::data_frame>& frame) override
+	virtual bool send(core::const_frame frame) override
 	{			
-		input_.push(std::make_shared<audio_buffer_16>(core::audio_32_to_16(frame->audio_data())));
+		input_.push(std::make_shared<audio_buffer_16>(core::audio_32_to_16(frame.audio_data())));
 		return true;
 	}
 	

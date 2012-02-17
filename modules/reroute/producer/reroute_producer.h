@@ -26,7 +26,7 @@
 
 #include <core/frame/frame_factory.h>
 #include <core/producer/frame_producer.h>
-#include <core/frame/data_frame.h>
+#include <core/frame/frame.h>
 
 FORWARD2(caspar, core, class video_channel);
 

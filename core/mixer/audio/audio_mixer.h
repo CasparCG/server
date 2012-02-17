@@ -42,23 +42,23 @@ class audio_mixer sealed : public frame_visitor
 	audio_mixer& operator=(const audio_mixer&);
 public:
 
-	/// Static Members
+	// Static Members
 
-	///  Constructors
+	// Constructors
 
 	audio_mixer();
 
-	/// Methods
+	// Methods
 	
 	audio_buffer operator()(const struct video_format_desc& format_desc);
 
 	// frame_visitor
 
 	virtual void push(const struct frame_transform& transform);
-	virtual void visit(const class data_frame& frame);
+	virtual void visit(const class mutable_frame& frame);
 	virtual void pop();
 	
-	/// Properties
+	// Properties
 
 private:
 	struct impl;

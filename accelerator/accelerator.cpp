@@ -22,7 +22,7 @@ struct accelerator::impl
 	{
 	}
 
-	spl::unique_ptr<core::image_mixer> create_image_mixer()
+	std::unique_ptr<core::image_mixer> create_image_mixer()
 	{
 		try
 		{
@@ -33,7 +33,7 @@ struct accelerator::impl
 				if(!ogl_device_)
 					ogl_device_.reset(new ogl::device());
 
-				return spl::make_unique<ogl::image_mixer>(spl::make_shared_ptr(ogl_device_));
+				return std::unique_ptr<core::image_mixer>(new ogl::image_mixer(spl::make_shared_ptr(ogl_device_)));
 			}
 		}
 		catch(...)
@@ -42,7 +42,7 @@ struct accelerator::impl
 				CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 
-		return spl::make_unique<cpu::image_mixer>();
+		return std::unique_ptr<core::image_mixer>(new cpu::image_mixer());
 	}
 };
 
@@ -55,7 +55,7 @@ accelerator::~accelerator()
 {
 }
 
-spl::unique_ptr<core::image_mixer> accelerator::create_image_mixer()
+std::unique_ptr<core::image_mixer> accelerator::create_image_mixer()
 {
 	return impl_->create_image_mixer();
 }

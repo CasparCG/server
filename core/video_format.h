@@ -25,6 +25,7 @@
 
 #include <vector>
 #include <string>
+#include <cstddef>
 
 namespace caspar { namespace core {
 	

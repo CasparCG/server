@@ -44,21 +44,21 @@ class mixer sealed
 	mixer& operator=(const mixer&);
 public:
 	
-	/// Static Members
+	// Static Members
 					
-	///  Constructors
+	// Constructors
 	
-	explicit mixer(spl::shared_ptr<diagnostics::graph> graph, spl::unique_ptr<class image_mixer> image_mixer);
+	explicit mixer(spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<class image_mixer> image_mixer);
 
-	/// Methods
+	// Methods
 		
-	spl::shared_ptr<const class data_frame> operator()(std::map<int, class draw_frame> frames, const struct video_format_desc& format_desc);
+	class const_frame operator()(std::map<int, class draw_frame> frames, const struct video_format_desc& format_desc);
 	
-	void								set_blend_mode(int index, blend_mode value);
+	void set_blend_mode(int index, blend_mode value);
 
-	spl::unique_ptr<class data_frame>	create_frame(const void* tag, const struct pixel_format_desc& desc, double frame_rate, core::field_mode field_mode);
+	class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc, double frame_rate, core::field_mode field_mode);
 
-	/// Properties
+	// Properties
 
 	boost::unique_future<boost::property_tree::wptree> info() const;
 

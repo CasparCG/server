@@ -51,9 +51,9 @@ class path sealed
 {
 public:	
 
-	/// Static Members
+	// Static Members
 
-	///  Constructors
+	// Constructors
 
 	path();		
 	path(const char* path);
@@ -62,7 +62,7 @@ public:
 	path(const path& other);	
 	path(path&& other);
 		
-	/// Methods
+	// Methods
 
 	path& operator=(path other);
 	path& operator%=(path other);
@@ -85,7 +85,7 @@ public:
 
 	void swap(path& other);
 
-	/// Properties
+	// Properties
 
 	const std::string& str() const;	
 	bool empty() const;
@@ -115,18 +115,18 @@ class event sealed
 {	
 public:	
 	
-	/// Static Members
+	// Static Members
 
 	typedef std::vector<param, tbb::cache_aligned_allocator<param>> params_t;
 
-	///  Constructors
+	// Constructors
 
 	event(path path);	
 	event(path path, params_t params);					
 	event(const event& other);
 	event(event&& other);
 
-	/// Methods
+	// Methods
 
 	event& operator=(event other);
 
@@ -141,7 +141,7 @@ public:
 	
 	event			propagate(path path) const;
 
-	/// Properties
+	// Properties
 
 	const path&		path() const;
 	const params_t&	params() const;
@@ -206,9 +206,9 @@ class basic_subject sealed : public reactive::subject<monitor::event>
 
 public:		
 
-	/// Static Members
+	// Static Members
 
-	///  Constructors
+	// Constructors
 
 	basic_subject(monitor::path path = monitor::path())
 		: impl_(std::make_shared<impl>(std::move(path)))
@@ -221,7 +221,7 @@ public:
 	{
 	}
 	
-	/// Methods
+	// Methods
 
 	basic_subject& operator=(basic_subject&& other)
 	{
@@ -252,7 +252,7 @@ public:
 		impl_->on_next(e);
 	}
 
-	/// Properties
+	// Properties
 
 private:
 	std::shared_ptr<impl>	impl_;

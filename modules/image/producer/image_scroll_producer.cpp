@@ -25,7 +25,7 @@
 
 #include <core/video_format.h>
 
-#include <core/frame/data_frame.h>
+#include <core/frame/frame.h>
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/frame_transform.h>
@@ -50,23 +50,23 @@ namespace caspar { namespace image {
 		
 struct image_scroll_producer : public core::frame_producer
 {	
-	const std::wstring								filename_;
+	const std::wstring				filename_;
 	std::vector<core::draw_frame>	frames_;
-	core::video_format_desc							format_desc_;
-	int												width_;
-	int												height_;
+	core::video_format_desc			format_desc_;
+	int								width_;
+	int								height_;
 
-	int												delta_;
-	int												speed_;
+	int								delta_;
+	int								speed_;
 
-	std::array<double, 2>							start_offset_;
+	std::array<double, 2>			start_offset_;
 
 	core::draw_frame				last_frame_;
 
-	explicit image_scroll_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int speed) 
+	explicit image_scroll_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::wstring& filename, int speed) 
 		: filename_(filename)
 		, delta_(0)
-		, format_desc_(frame_factory->video_format_desc())
+		, format_desc_(format_desc)
 		, speed_(speed)
 		, last_frame_(core::draw_frame::empty())
 	{
@@ -79,7 +79,7 @@ struct image_scroll_producer : public core::frame_producer
 		height_ = FreeImage_GetHeight(bitmap.get());
 
 		auto bytes = FreeImage_GetBits(bitmap.get());
-		int count = width_*height_*4;
+		auto count = width_*height_*4;
 
 		if(height_ > format_desc_.height)
 		{
@@ -89,15 +89,15 @@ struct image_scroll_producer : public core::frame_producer
 				desc.planes.push_back(core::pixel_format_desc::plane(width_, format_desc_.height, 4));
 				auto frame = frame_factory->create_frame(reinterpret_cast<void*>(rand()), desc);
 
-				if(count >= frame->image_data(0).size())
+				if(count >= frame.image_data(0).size())
 				{	
-					std::copy_n(bytes + count - frame->image_data(0).size(), frame->image_data(0).size(), frame->image_data(0).begin());
-					count -= static_cast<int>(frame->image_data(0).size());
+					std::copy_n(bytes + count - frame.image_data(0).size(), frame.image_data(0).size(), frame.image_data(0).begin());
+					count -= static_cast<int>(frame.image_data(0).size());
 				}
 				else
 				{
-					memset(frame->image_data(0).begin(), 0, frame->image_data(0).size());	
-					std::copy_n(bytes, count, frame->image_data(0).begin() + format_desc_.size - count);
+					memset(frame.image_data(0).begin(), 0, frame.image_data(0).size());	
+					std::copy_n(bytes, count, frame.image_data(0).begin() + format_desc_.size - count);
 					count = 0;
 				}
 			
@@ -119,20 +119,20 @@ struct image_scroll_producer : public core::frame_producer
 				core::pixel_format_desc desc = core::pixel_format::bgra;
 				desc.planes.push_back(core::pixel_format_desc::plane(format_desc_.width, height_, 4));
 				auto frame = frame_factory->create_frame(reinterpret_cast<void*>(rand()), desc);
-				if(count >= frame->image_data(0).size())
+				if(count >= frame.image_data(0).size())
 				{	
 					for(int y = 0; y < height_; ++y)
-						std::copy_n(bytes + i * format_desc_.width*4 + y * width_*4, format_desc_.width*4, frame->image_data(0).begin() + y * format_desc_.width*4);
+						std::copy_n(bytes + i * format_desc_.width*4 + y * width_*4, format_desc_.width*4, frame.image_data(0).begin() + y * format_desc_.width*4);
 					
 					++i;
-					count -= static_cast<int>(frame->image_data(0).size());
+					count -= static_cast<int>(frame.image_data(0).size());
 				}
 				else
 				{
-					memset(frame->image_data(0).begin(), 0, frame->image_data(0).size());	
-					int width2 = width_ % format_desc_.width;
+					memset(frame.image_data(0).begin(), 0, frame.image_data(0).size());	
+					auto width2 = width_ % format_desc_.width;
 					for(int y = 0; y < height_; ++y)
-						std::copy_n(bytes + i * format_desc_.width*4 + y * width_*4, width2*4, frame->image_data(0).begin() + y * format_desc_.width*4);
+						std::copy_n(bytes + i * format_desc_.width*4 + y * width_*4, width2*4, frame.image_data(0).begin() + y * format_desc_.width*4);
 
 					count = 0;
 				}
@@ -230,7 +230,7 @@ struct image_scroll_producer : public core::frame_producer
 	}
 };
 
-spl::shared_ptr<core::frame_producer> create_scroll_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_scroll_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
 {
 	static const std::vector<std::wstring> extensions = list_of(L"png")(L"tga")(L"bmp")(L"jpg")(L"jpeg")(L"gif")(L"tiff")(L"tif")(L"jp2")(L"jpx")(L"j2k")(L"j2c");
 	std::wstring filename = env::media_folder() + L"\\" + params[0];
@@ -254,7 +254,7 @@ spl::shared_ptr<core::frame_producer> create_scroll_producer(const spl::shared_p
 	if(speed == 0)
 		return core::frame_producer::empty();
 
-	return spl::make_shared<image_scroll_producer>(frame_factory, filename + L"." + *ext, speed);
+	return spl::make_shared<image_scroll_producer>(frame_factory, format_desc, filename + L"." + *ext, speed);
 }
 
 }}

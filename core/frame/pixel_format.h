@@ -25,6 +25,7 @@
 
 #include <common/enum_class.h>
 
+#include <cstddef>
 #include <vector>
 
 namespace caspar { namespace core {
@@ -55,23 +56,23 @@ struct pixel_format_desc sealed
 		int width;
 		int height;
 		int size;
-		int channels;
+		int stride;
 
 		plane() 
 			: linesize(0)
 			, width(0)
 			, height(0)
 			, size(0)
-			, channels(0)
+			, stride(0)
 		{
 		}
 
-		plane(int width, int height, int channels)
-			: linesize(width*channels)
+		plane(int width, int height, int stride)
+			: linesize(width*stride)
 			, width(width)
 			, height(height)
-			, size(width*height*channels)
-			, channels(channels)
+			, size(width*height*stride)
+			, stride(stride)
 		{
 		}
 	};
