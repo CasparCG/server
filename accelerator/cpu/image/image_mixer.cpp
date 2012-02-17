@@ -23,7 +23,6 @@
 
 #include "image_mixer.h"
 
-#include "../util/data_frame.h"
 #include "../util/xmm.h"
 
 #include <common/assert.h>
@@ -31,7 +30,7 @@
 #include <common/concurrency/async.h>
 #include <common/memory/memcpy.h>
 
-#include <core/frame/data_frame.h>
+#include <core/frame/frame.h>
 #include <core/frame/frame_transform.h>
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
@@ -95,20 +94,22 @@ bool operator!=(const item& lhs, const item& rhs)
 	return !(lhs == rhs);
 }
 	
+// 100% accurate blending with correct rounding.
 inline xmm::s8_x blend(xmm::s8_x d, xmm::s8_x s)
 {	
 	using namespace xmm;
 		
+	// C(S, D) = S + D - (((T >> 8) + T) >> 8);
 	// T(S, D) = S * D[A] + 0x80
+
 	auto aaaa   = s8_x::shuffle(d, s8_x(15, 15, 15, 15, 11, 11, 11, 11, 7, 7, 7, 7, 3, 3, 3, 3));
-	d			= s8_x(u8_x::min(u8_x(d), u8_x(aaaa))); // overflow guard
+	d			= s8_x(u8_x::min(u8_x(d), u8_x(aaaa))); // Overflow guard. Some source files have color values which incorrectly exceed pre-multiplied alpha values, e.g. red(255) > alpha(254).
 
 	auto xaxa	= s16_x(aaaa) >> 8;		
 			      
 	auto t1		= s16_x::multiply_low(s16_x(s) & 0x00FF, xaxa) + 0x80;    
 	auto t2		= s16_x::multiply_low(s16_x(s) >> 8    , xaxa) + 0x80;
 		
-	// C(S, D) = S + D - (((T >> 8) + T) >> 8);
 	auto xyxy	= s8_x(((t1 >> 8) + t1) >> 8);      
 	auto yxyx	= s8_x((t2 >> 8) + t2);    
 	auto argb   = s8_x::blend(xyxy, yxyx, s8_x(-1, 0, -1, 0));
@@ -150,26 +151,14 @@ static void kernel(uint8_t* dest, const uint8_t* source, size_t count)
 
 class image_renderer
 {
-	std::pair<std::vector<item>, boost::shared_future<boost::iterator_range<const uint8_t*>>>		last_image_;
 	tbb::concurrent_unordered_map<int, tbb::concurrent_bounded_queue<std::shared_ptr<SwsContext>>>	sws_devices_;
-	tbb::concurrent_bounded_queue<spl::shared_ptr<host_buffer>>										temp_buffers_;
+	tbb::concurrent_bounded_queue<spl::shared_ptr<buffer>>											temp_buffers_;
 public:	
-	boost::shared_future<boost::iterator_range<const uint8_t*>> operator()(std::vector<item> items, const core::video_format_desc& format_desc)
+	boost::unique_future<core::const_array> operator()(std::vector<item> items, const core::video_format_desc& format_desc)
 	{	
-		if(last_image_.first == items && last_image_.second.has_value())
-			return last_image_.second;
-
-		auto image	= render(items, format_desc);
-		last_image_ = std::make_pair(std::move(items), image);
-		return image;
-	}
-
-private:
-	boost::shared_future<boost::iterator_range<const uint8_t*>> render(std::vector<item> items, const core::video_format_desc& format_desc)
-	{
 		convert(items, format_desc.width, format_desc.height);		
 		
-		auto result = spl::make_shared<host_buffer>(format_desc.size, 0);
+		auto result = spl::make_shared<buffer>(format_desc.size, 0);
 		if(format_desc.field_mode != core::field_mode::progressive)
 		{			
 			draw(items, result->data(), format_desc.width, format_desc.height, core::field_mode::upper);
@@ -184,11 +173,13 @@ private:
 		
 		return async(launch_policy::deferred, [=]
 		{
-			return boost::iterator_range<const uint8_t*>(result->data(), result->data() + format_desc.size);
-		});		
+			return core::const_array(result->data(), format_desc.size, result);
+		});	
 	}
 
-	void draw(std::vector<item> items, uint8_t* dest, int width, int height, core::field_mode field_mode)
+private:
+
+	void draw(std::vector<item> items, uint8_t* dest, std::size_t width, std::size_t height, core::field_mode field_mode)
 	{		
 		BOOST_FOREACH(auto& item, items)
 			item.transform.field_mode &= field_mode;
@@ -218,7 +209,7 @@ private:
 		// TODO: Add support for push transition.
 		// TODO: Add support for wipe transition.
 		// TODO: Add support for slide transition.
-		tbb::parallel_for(tbb::blocked_range<int>(0, height/step), [&](const tbb::blocked_range<int>& r)
+		tbb::parallel_for(tbb::blocked_range<std::size_t>(0, height/step), [&](const tbb::blocked_range<std::size_t>& r)
 		{
 			for(auto i = r.begin(); i != r.end(); ++i)
 			{
@@ -273,7 +264,7 @@ private:
 			if(!sws_device)				
 				BOOST_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling device.") << boost::errinfo_api_function("sws_getContext"));				
 		
-			auto dest_frame = spl::make_shared<host_buffer>(width*height*4);
+			auto dest_frame = spl::make_shared<buffer>(width*height*4);
 			temp_buffers_.push(dest_frame);
 
 			{
@@ -323,7 +314,7 @@ public:
 		transform_stack_.push_back(transform_stack_.back()*transform.image_transform);
 	}
 		
-	void visit(const core::data_frame& frame)
+	void visit(const core::mutable_frame& frame)
 	{			
 		if(frame.pixel_format_desc().format == core::pixel_format::invalid)
 			return;
@@ -355,24 +346,31 @@ public:
 	{		
 	}
 	
-	boost::shared_future<boost::iterator_range<const uint8_t*>> render(const core::video_format_desc& format_desc)
+	boost::unique_future<core::const_array> render(const core::video_format_desc& format_desc)
 	{
 		return renderer_(std::move(items_), format_desc);
 	}
 	
-	virtual spl::unique_ptr<core::data_frame> create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode)
+	virtual core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode)
 	{
-		return spl::make_unique<cpu::data_frame>(tag, desc, frame_rate, field_mode);
+		std::vector<core::mutable_array> buffers;
+		BOOST_FOREACH(auto& plane, desc.planes)
+		{
+			auto buf = spl::make_shared<buffer>(plane.size);
+			buffers.push_back(core::mutable_array(buf->data(), plane.size, buf));
+		}
+		return core::mutable_frame(std::move(buffers), core::audio_buffer(), tag, desc, frame_rate, field_mode);
 	}
 };
 
 image_mixer::image_mixer() : impl_(new impl()){}
+image_mixer::~image_mixer(){}
 void image_mixer::push(const core::frame_transform& transform){impl_->push(transform);}
-void image_mixer::visit(const core::data_frame& frame){impl_->visit(frame);}
+void image_mixer::visit(const core::mutable_frame& frame){impl_->visit(frame);}
 void image_mixer::pop(){impl_->pop();}
-boost::shared_future<boost::iterator_range<const uint8_t*>> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
+boost::unique_future<core::const_array> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
 void image_mixer::begin_layer(core::blend_mode blend_mode){impl_->begin_layer(blend_mode);}
 void image_mixer::end_layer(){impl_->end_layer();}
-spl::unique_ptr<core::data_frame> image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) {return impl_->create_frame(tag, desc, frame_rate, field_mode);}
+core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) {return impl_->create_frame(tag, desc, frame_rate, field_mode);}
 
 }}}

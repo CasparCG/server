@@ -133,7 +133,7 @@ spl::shared_ptr<core::frame_producer> create_destroy_proxy(spl::shared_ptr<core:
 	return spl::make_shared<destroy_producer_proxy>(std::move(producer));
 }
 
-spl::shared_ptr<core::frame_producer> do_create_producer(const spl::shared_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> do_create_producer(const spl::shared_ptr<frame_factory>& my_frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params)
 {
 	if(params.empty())
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
@@ -143,7 +143,7 @@ spl::shared_ptr<core::frame_producer> do_create_producer(const spl::shared_ptr<f
 		{
 			try
 			{
-				producer = factory(my_frame_factory, params);
+				producer = factory(my_frame_factory, format_desc, params);
 			}
 			catch(...)
 			{
@@ -161,9 +161,9 @@ spl::shared_ptr<core::frame_producer> do_create_producer(const spl::shared_ptr<f
 	return create_destroy_proxy(producer);
 }
 
-spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>& my_frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params)
 {	
-	auto producer = do_create_producer(my_frame_factory, params);
+	auto producer = do_create_producer(my_frame_factory, format_desc, params);
 	auto key_producer = frame_producer::empty();
 	
 	try // to find a key file.
@@ -172,11 +172,11 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<fram
 		if(params_copy.size() > 0)
 		{
 			params_copy[0] += L"_A";
-			key_producer = do_create_producer(my_frame_factory, params_copy);			
+			key_producer = do_create_producer(my_frame_factory, format_desc, params_copy);			
 			if(key_producer == frame_producer::empty())
 			{
 				params_copy[0] += L"LPHA";
-				key_producer = do_create_producer(my_frame_factory, params_copy);	
+				key_producer = do_create_producer(my_frame_factory, format_desc, params_copy);	
 			}
 		}
 	}
@@ -197,13 +197,13 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<fram
 }
 
 
-spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>& factory, const std::wstring& params)
+spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>& factory, const video_format_desc& format_desc, const std::wstring& params)
 {
 	std::wstringstream iss(params);
 	std::vector<std::wstring> tokens;
 	typedef std::istream_iterator<std::wstring, wchar_t, std::char_traits<wchar_t> > iterator;
 	std::copy(iterator(iss),  iterator(), std::back_inserter(tokens));
-	return create_producer(factory, tokens);
+	return create_producer(factory, format_desc, tokens);
 }
 
 }}

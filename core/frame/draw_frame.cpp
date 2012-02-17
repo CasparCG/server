@@ -23,7 +23,7 @@
 
 #include "draw_frame.h"
 
-#include "data_frame.h"
+#include "frame.h"
 
 #include "frame_transform.h"
 
@@ -33,11 +33,11 @@ namespace caspar { namespace core {
 		
 struct draw_frame::impl
 {		
-	int													tag_;
-	std::vector<draw_frame>								frames_;
-	std::shared_ptr<spl::unique_ptr<const data_frame>>	data_frame_;
+	int									tag_;
+	std::vector<draw_frame>				frames_;
+	std::shared_ptr<mutable_frame>	frame_;
 
-	core::frame_transform frame_transform_;		
+	core::frame_transform				frame_transform_;		
 public:		
 	enum tags
 	{
@@ -52,9 +52,9 @@ public:
 	{
 	}
 
-	impl(spl::unique_ptr<const data_frame>&& frame) 
+	impl(mutable_frame&& frame) 
 		: tag_(frame_tag)
-		, data_frame_(new spl::unique_ptr<const data_frame>(std::move(frame)))
+		, frame_(new mutable_frame(std::move(frame)))
 	{
 	}
 	
@@ -63,13 +63,21 @@ public:
 		, frames_(std::move(frames))
 	{
 	}
-		
+
+	impl(const impl& other)
+		: tag_(other.tag_)
+		, frames_(other.frames_)
+		, frame_(other.frame_)
+		, frame_transform_(other.frame_transform_)
+	{
+	}
+			
 	void accept(frame_visitor& visitor) const
 	{
 		visitor.push(frame_transform_);
-		if(data_frame_)
+		if(frame_)
 		{
-			visitor.visit(**data_frame_);
+			visitor.visit(*frame_);
 		}
 		else
 		{
@@ -78,12 +86,12 @@ public:
 		}
 		visitor.pop();
 	}	
-
+		
 	bool operator==(const impl& other)
 	{
 		return	tag_ == other.tag_ && 
 				frames_ == other.frames_ && 
-				data_frame_ == other.data_frame_;
+				frame_ == other.frame_;
 	}
 };
 	
@@ -91,7 +99,7 @@ draw_frame::draw_frame() : impl_(new impl()){}
 draw_frame::draw_frame(int tag) : impl_(new impl(std::move(tag))){}
 draw_frame::draw_frame(const draw_frame& other) : impl_(new impl(*other.impl_)){}
 draw_frame::draw_frame(draw_frame&& other) : impl_(std::move(other.impl_)){}
-draw_frame::draw_frame(spl::unique_ptr<const data_frame>&& frame)  : impl_(new impl(std::move(frame))){}
+draw_frame::draw_frame(mutable_frame&& frame)  : impl_(new impl(std::move(frame))){}
 draw_frame::draw_frame(std::vector<draw_frame> frames) : impl_(new impl(frames)){}
 draw_frame::~draw_frame(){}
 draw_frame& draw_frame::operator=(draw_frame other)

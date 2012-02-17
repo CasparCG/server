@@ -37,7 +37,7 @@ class draw_frame sealed
 {
 	draw_frame(int tag);
 public:		
-	/// Static Members
+	// Static Members
 
 	static draw_frame interlace(draw_frame frame1, draw_frame frame2, core::field_mode mode);
 	static draw_frame over(draw_frame frame1, draw_frame frame2);
@@ -48,17 +48,17 @@ public:
 	static const draw_frame& empty();
 	static const draw_frame& late();
 
-	///  Constructors
+	// Constructors
 
 	draw_frame();
 	draw_frame(const draw_frame& other);
 	draw_frame(draw_frame&& other);	
-	explicit draw_frame(spl::unique_ptr<const data_frame>&& frame);
+	explicit draw_frame(class mutable_frame&& frame);
 	explicit draw_frame(std::vector<draw_frame> frames);
 
 	~draw_frame();
 	
-	/// Methods
+	// Methods
 
 	draw_frame& operator=(draw_frame other);
 
@@ -69,7 +69,7 @@ public:
 	bool operator==(const draw_frame& other) const;
 	bool operator!=(const draw_frame& other) const;
 
-	/// Properties
+	// Properties
 
 	const core::frame_transform&	transform() const;
 	core::frame_transform&			transform();			

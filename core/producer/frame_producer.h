@@ -22,6 +22,7 @@
 #pragma once
 
 #include "../monitor/monitor.h"
+#include "../video_format.h"
 
 #include <common/forward.h>
 #include <common/spl/memory.h>
@@ -41,14 +42,14 @@ FORWARD1(boost, template<typename T> class unique_future);
 
 namespace caspar { namespace core {
 	
-/// Interface
+// Interface
 class frame_producer : public monitor::observable
 {
 	frame_producer(const frame_producer&);
 	frame_producer& operator=(const frame_producer&);
 public:
 
-	/// Static Members
+	// Static Members
 	
 	struct flags_def
 	{
@@ -63,12 +64,12 @@ public:
 
 	static const spl::shared_ptr<frame_producer>& empty();
 
-	///  Constructors
+	// Constructors
 
 	frame_producer(){}
 	virtual ~frame_producer(){}	
 
-	/// Methods	
+	// Methods	
 
 	virtual class draw_frame					receive(int flags) = 0;
 	virtual boost::unique_future<std::wstring>	call(const std::wstring&);
@@ -78,7 +79,7 @@ public:
 	virtual void subscribe(const monitor::observable::observer_ptr& o) {}
 	virtual void unsubscribe(const monitor::observable::observer_ptr& o) {}
 
-	/// Properties
+	// Properties
 
 	virtual std::wstring						print() const = 0;
 	virtual std::wstring						name() const = 0;
@@ -88,11 +89,11 @@ public:
 	virtual void								leading_producer(const spl::shared_ptr<frame_producer>&) {}  	
 };
 
-typedef std::function<spl::shared_ptr<core::frame_producer>(const spl::shared_ptr<class frame_factory>&, const std::vector<std::wstring>&)> producer_factory_t;
+typedef std::function<spl::shared_ptr<core::frame_producer>(const spl::shared_ptr<class frame_factory>&, const video_format_desc& format_desc, const std::vector<std::wstring>&)> producer_factory_t;
 void register_producer_factory(const producer_factory_t& factory); // Not thread-safe.
 
-spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>&, const std::vector<std::wstring>& params);
-spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>&, const std::wstring& params);
+spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>&, const video_format_desc& format_desc, const std::vector<std::wstring>& params);
+spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>&, const video_format_desc& format_desc, const std::wstring& params);
 
 spl::shared_ptr<core::frame_producer> create_destroy_proxy(spl::shared_ptr<core::frame_producer> producer);
 		

@@ -26,7 +26,7 @@
 #include "../util/memory.h"
 
 #include <core/video_format.h>
-#include <core/frame/data_frame.h>
+#include <core/frame/frame.h>
 
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
@@ -67,7 +67,7 @@ struct bluefish_consumer : boost::noncopyable
 	unsigned int						vid_fmt_;
 
 	std::array<blue_dma_buffer_ptr, 4>	reserved_frames_;	
-	tbb::concurrent_bounded_queue<std::shared_ptr<const core::data_frame>> frame_buffer_;
+	tbb::concurrent_bounded_queue<core::const_frame> frame_buffer_;
 	
 	const bool							embedded_audio_;
 	const bool							key_only_;
@@ -153,7 +153,7 @@ public:
 		enable_video_output();
 						
 		int n = 0;
-		boost::range::generate(reserved_frames_, [&]{return std::make_shared<blue_dma_buffer>(format_desc_.size, n++);});
+		boost::range::generate(reserved_frames_, [&]{return std::make_shared<blue_dma_buffer>(static_cast<int>(format_desc_.size), n++);});
 	}
 
 	~bluefish_consumer()
@@ -185,7 +185,7 @@ public:
 			CASPAR_LOG(error)<< print() << TEXT(" Failed to disable video output.");		
 	}
 	
-	void send(const spl::shared_ptr<const core::data_frame>& frame)
+	void send(core::const_frame& frame)
 	{					
 		executor_.begin_invoke([=]
 		{
@@ -202,7 +202,7 @@ public:
 		});
 	}
 
-	void display_frame(const spl::shared_ptr<const core::data_frame>& frame)
+	void display_frame(core::const_frame frame)
 	{
 		// Sync
 
@@ -215,12 +215,12 @@ public:
 
 		// Copy to local buffers
 		
-		if(!frame->image_data().empty())
+		if(!frame.image_data().empty())
 		{
 			if(key_only_)						
-				aligned_memshfl(reserved_frames_.front()->image_data(), std::begin(frame->image_data()), frame->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+				aligned_memshfl(reserved_frames_.front()->image_data(), frame.image_data().begin(), frame.image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 			else
-				A_memcpy(reserved_frames_.front()->image_data(), std::begin(frame->image_data()), frame->image_data().size());
+				A_memcpy(reserved_frames_.front()->image_data(), frame.image_data().begin(), frame.image_data().size());
 		}
 		else
 			A_memset(reserved_frames_.front()->image_data(), 0, reserved_frames_.front()->image_size());
@@ -230,11 +230,11 @@ public:
 
 		if(embedded_audio_)
 		{		
-			auto frame_audio = core::audio_32_to_24(frame->audio_data());			
+			auto frame_audio = core::audio_32_to_24(frame.audio_data());			
 			encode_hanc(reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()), 
 						frame_audio.data(), 
-						static_cast<int>(frame->audio_data().size()/format_desc_.audio_channels), 
-						format_desc_.audio_channels);
+						static_cast<int>(frame.audio_data().size()/format_desc_.audio_channels), 
+						static_cast<int>(format_desc_.audio_channels));
 								
 			blue_->system_buffer_write_async(const_cast<uint8_t*>(reserved_frames_.front()->image_data()), 
 											static_cast<unsigned long>(reserved_frames_.front()->image_size()), 
@@ -316,7 +316,7 @@ public:
 		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_, key_only_, channel_index));
 	}
 	
-	virtual bool send(const spl::shared_ptr<const core::data_frame>& frame) override
+	virtual bool send(core::const_frame frame) override
 	{
 		consumer_->send(frame);
 		return true;

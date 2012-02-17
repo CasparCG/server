@@ -21,9 +21,9 @@
 
 #include "../../stdafx.h"
 
-#include "host_buffer.h"
+#include "buffer.h"
 
-#include "device_buffer.h"
+#include "texture.h"
 #include "device.h"
 
 #include <common/except.h>
@@ -38,32 +38,32 @@ namespace caspar { namespace accelerator { namespace ogl {
 static tbb::atomic<int> g_w_total_count;
 static tbb::atomic<int> g_r_total_count;
 																																								
-struct host_buffer::impl : boost::noncopyable
+struct buffer::impl : boost::noncopyable
 {	
 	GLuint						pbo_;
-	const int					size_;
-	tbb::atomic<void*>			data_;
+	const std::size_t			size_;
+	tbb::atomic<uint8_t*>		data_;
 	GLenum						usage_;
 	GLenum						target_;
 
 public:
-	impl(int size, host_buffer::usage usage) 
+	impl(std::size_t size, buffer::usage usage) 
 		: size_(size)
-		, pbo_(0)
-		, target_(usage == host_buffer::usage::write_only ? GL_PIXEL_UNPACK_BUFFER : GL_PIXEL_PACK_BUFFER)
-		, usage_(usage == host_buffer::usage::write_only ? GL_STREAM_DRAW : GL_STREAM_READ)
+		, target_(usage == buffer::usage::write_only ? GL_PIXEL_UNPACK_BUFFER : GL_PIXEL_PACK_BUFFER)
+		, usage_(usage == buffer::usage::write_only ? GL_STREAM_DRAW : GL_STREAM_READ)
 	{
 		data_ = nullptr;
 		GL(glGenBuffers(1, &pbo_));
-		bind();
-		if(usage_ != GL_STREAM_DRAW)	
-			GL(glBufferData(target_, size_, NULL, usage_));	
+		bind();	
+		GL(glBufferData(target_, size_, NULL, usage_));		
+		if(usage_ == GL_STREAM_DRAW)	
+			data_ = (uint8_t*)GL2(glMapBuffer(target_, usage_ == GL_STREAM_DRAW ? GL_WRITE_ONLY : GL_READ_ONLY));  
 		unbind();
 
 		if(!pbo_)
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to allocate buffer."));
 
-		CASPAR_LOG(trace) << "[host_buffer] [" << ++(usage_ == host_buffer::usage::write_only ? g_w_total_count : g_r_total_count) << L"] allocated size:" << size_ << " usage: " << (usage == host_buffer::usage::write_only ? "write_only" : "read_only");
+		//CASPAR_LOG(trace) << "[buffer] [" << ++(usage_ == buffer::usage::write_only ? g_w_total_count : g_r_total_count) << L"] allocated size:" << size_ << " usage: " << (usage == buffer::usage::write_only ? "write_only" : "read_only");
 	}	
 
 	~impl()
@@ -80,7 +80,7 @@ public:
 		if(usage_ == GL_STREAM_DRAW)			
 			GL(glBufferData(target_, size_, NULL, usage_));	// Notify OpenGL that we don't care about previous data.
 		
-		data_ = GL2(glMapBuffer(target_, usage_ == GL_STREAM_DRAW ? GL_WRITE_ONLY : GL_READ_ONLY));  
+		data_ = (uint8_t*)GL2(glMapBuffer(target_, usage_ == GL_STREAM_DRAW ? GL_WRITE_ONLY : GL_READ_ONLY));  
 		GL(glBindBuffer(target_, 0));
 		if(!data_)
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to map target OpenGL Pixel Buffer Object."));
@@ -112,12 +112,13 @@ public:
 	}
 };
 
-host_buffer::host_buffer(int size, usage usage) : impl_(new impl(size, usage)){}
-void* host_buffer::data(){return impl_->data_;}
-void host_buffer::map(){impl_->map();}
-void host_buffer::unmap(){impl_->unmap();}
-void host_buffer::bind() const{impl_->bind();}
-void host_buffer::unbind() const{impl_->unbind();}
-int host_buffer::size() const { return impl_->size_; }
+buffer::buffer(std::size_t size, usage usage) : impl_(new impl(size, usage)){}
+buffer::~buffer(){}
+uint8_t* buffer::data(){return impl_->data_;}
+void buffer::map(){impl_->map();}
+void buffer::unmap(){impl_->unmap();}
+void buffer::bind() const{impl_->bind();}
+void buffer::unbind() const{impl_->unbind();}
+std::size_t buffer::size() const { return impl_->size_; }
 
 }}}

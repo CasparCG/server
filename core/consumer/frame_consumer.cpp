@@ -26,7 +26,7 @@
 #include <common/except.h>
 
 #include <core/video_format.h>
-#include <core/frame/data_frame.h>
+#include <core/frame/frame.h>
 
 #include <common/concurrency/async.h>
 
@@ -76,7 +76,7 @@ public:
 		}); 
 	}
 	
-	virtual bool send(const spl::shared_ptr<const class data_frame>& frame) override					{return consumer_->send(frame);}
+	virtual bool send(const_frame frame) override													{return consumer_->send(std::move(frame));}
 	virtual void initialize(const struct video_format_desc& format_desc, int channel_index)	override	{return consumer_->initialize(format_desc, channel_index);}
 	virtual std::wstring print() const override															{return consumer_->print();}	
 	virtual std::wstring name() const override															{return consumer_->name();}
@@ -104,7 +104,7 @@ public:
 		CASPAR_LOG(info) << str << L" Uninitialized.";
 	}
 	
-	virtual bool send(const spl::shared_ptr<const class data_frame>& frame) override					{return consumer_->send(frame);}
+	virtual bool send(const_frame frame) override													{return consumer_->send(std::move(frame));}
 	virtual void initialize(const struct video_format_desc& format_desc, int channel_index)	override	{return consumer_->initialize(format_desc, channel_index);}
 	virtual std::wstring print() const override															{return consumer_->print();}
 	virtual std::wstring name() const override															{return consumer_->name();}
@@ -125,7 +125,7 @@ public:
 	{
 	}
 	
-	virtual bool send(const spl::shared_ptr<const class data_frame>& frame)					
+	virtual bool send(const_frame frame)					
 	{
 		try
 		{
@@ -167,8 +167,8 @@ public:
 class cadence_guard : public frame_consumer
 {
 	spl::shared_ptr<frame_consumer>		consumer_;
-	std::vector<int>				audio_cadence_;
-	boost::circular_buffer<int>	sync_buffer_;
+	std::vector<int>					audio_cadence_;
+	boost::circular_buffer<std::size_t>	sync_buffer_;
 public:
 	cadence_guard(const spl::shared_ptr<frame_consumer>& consumer)
 		: consumer_(consumer)
@@ -178,18 +178,18 @@ public:
 	virtual void initialize(const video_format_desc& format_desc, int channel_index) override
 	{
 		audio_cadence_	= format_desc.audio_cadence;
-		sync_buffer_	= boost::circular_buffer<int>(format_desc.audio_cadence.size());
+		sync_buffer_	= boost::circular_buffer<std::size_t>(format_desc.audio_cadence.size());
 		consumer_->initialize(format_desc, channel_index);
 	}
 
-	virtual bool send(const spl::shared_ptr<const data_frame>& frame) override
+	virtual bool send(const_frame frame) override
 	{		
 		if(audio_cadence_.size() == 1)
 			return consumer_->send(frame);
 
 		bool result = true;
 		
-		if(boost::range::equal(sync_buffer_, audio_cadence_) && audio_cadence_.front() == static_cast<int>(frame->audio_data().size())) 
+		if(boost::range::equal(sync_buffer_, audio_cadence_) && audio_cadence_.front() == static_cast<int>(frame.audio_data().size())) 
 		{	
 			// Audio sent so far is in sync, now we can send the next chunk.
 			result = consumer_->send(frame);
@@ -198,7 +198,7 @@ public:
 		else
 			CASPAR_LOG(trace) << print() << L" Syncing audio.";
 
-		sync_buffer_.push_back(static_cast<int>(frame->audio_data().size()));
+		sync_buffer_.push_back(static_cast<int>(frame.audio_data().size()));
 		
 		return result;
 	}
@@ -245,7 +245,7 @@ const spl::shared_ptr<frame_consumer>& frame_consumer::empty()
 	class empty_frame_consumer : public frame_consumer
 	{
 	public:
-		virtual bool send(const spl::shared_ptr<const data_frame>&) override {return false;}
+		virtual bool send(const_frame) override {return false;}
 		virtual void initialize(const video_format_desc&, int) override{}
 		virtual std::wstring print() const override {return L"empty";}
 		virtual std::wstring name() const override {return L"empty";}

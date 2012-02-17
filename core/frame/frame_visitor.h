@@ -28,20 +28,20 @@ class frame_visitor
 	frame_visitor(const frame_visitor&);
 	frame_visitor& operator=(const frame_visitor&);
 public:
-	/// Static Members
+	// Static Members
 
-	///  Constructors
+	// Constructors
 
 	frame_visitor(){}
 	virtual ~frame_visitor(){}
 
-	/// Methods
+	// Methods
 
 	virtual void push(const struct frame_transform& transform) = 0;
-	virtual void visit(const class data_frame& frame) = 0;
+	virtual void visit(const class mutable_frame& frame) = 0;
 	virtual void pop() = 0;
 
-	/// Properties
+	// Properties
 };
 
 }}

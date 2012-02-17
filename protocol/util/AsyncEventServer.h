@@ -21,7 +21,7 @@
 
  
 // AsyncEventServer.h: interface for the AsyncServer class.
-//////////////////////////////////////////////////////////////////////
+////////////////////////////////
 
 #if !defined(AFX_ASYNCEVENTSERVER_H__0BFA29CB_BE4C_46A0_9CAE_E233ED27A8EC__INCLUDED_)
 #define AFX_ASYNCEVENTSERVER_H__0BFA29CB_BE4C_46A0_9CAE_E233ED27A8EC__INCLUDED_

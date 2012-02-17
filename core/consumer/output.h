@@ -38,22 +38,22 @@ class output sealed
 	output& operator=(const output&);
 public:
 
-	/// Static Members
+	// Static Members
 
-	///  Constructors
+	// Constructors
 
 	explicit output(spl::shared_ptr<diagnostics::graph> graph, const struct video_format_desc& format_desc, int channel_index);
 	
-	/// Methods
+	// Methods
 
-	void operator()(spl::shared_ptr<const class data_frame> frame, const struct video_format_desc& format_desc);
+	void operator()(class const_frame frame, const struct video_format_desc& format_desc);
 	
 	void add(const spl::shared_ptr<class frame_consumer>& consumer);
 	void add(int index, const spl::shared_ptr<class frame_consumer>& consumer);
 	void remove(const spl::shared_ptr<class frame_consumer>& consumer);
 	void remove(int index);
 	
-	/// Properties
+	// Properties
 
 	boost::unique_future<boost::property_tree::wptree> info() const;
 

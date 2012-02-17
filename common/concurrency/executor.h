@@ -105,7 +105,7 @@ public:
 	virtual ~executor() // noexcept
 	{
 		stop();
-		join();
+		thread_.join();
 	}
 
 	void set_capacity(size_t capacity) // noexcept
@@ -122,21 +122,12 @@ public:
 				
 	void stop() // noexcept
 	{
-		is_running_ = false;	
-		execution_queue_[task_priority::normal_priority].try_push([]{}); // Wake the execution thread.
+		invoke([this]{is_running_ = false;});
 	}
 
 	void wait() // noexcept
 	{
 		invoke([]{});
-	}
-
-	void join()
-	{
-		if(boost::this_thread::get_id() == thread_.get_id())
-			BOOST_THROW_EXCEPTION(invalid_operation());
-
-		thread_.join();
 	}
 				
 	template<typename Func>

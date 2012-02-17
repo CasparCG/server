@@ -86,4 +86,20 @@ auto async(F&& f) -> boost::unique_future<decltype(f())>
 	return async(launch_policy::async, std::forward<F>(f));
 }
 
+template<typename T>
+auto make_shared(boost::unique_future<T>&& f) -> boost::shared_future<T>
+{	
+	return boost::shared_future<T>(std::move(f));
+}
+
+template<typename T>
+auto fold(boost::unique_future<T>&& f) -> boost::unique_future<decltype(f.get().get())>
+{
+	auto shared_f = make_shared(std::move(f));
+	return async(launch_policy::deferred, [=]() mutable
+	{
+		return shared_f.get().get();
+	});
+}
+
 }

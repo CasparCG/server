@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "data_frame.h"
+#include "frame.h"
 
 #include <common/spl/memory.h>
 
@@ -34,25 +34,23 @@ class frame_factory : boost::noncopyable
 	frame_factory(const frame_factory&);
 	frame_factory& operator=(const frame_factory&);
 public:
-	/// Static Members
+	// Static Members
 
-	//Constructors
+	// Constructors
 
 	frame_factory(){}
 	virtual ~frame_factory(){}
 
-	/// Methods
+	// Methods
 
-	virtual spl::unique_ptr<class data_frame>	create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) = 0;	
-	spl::unique_ptr<class data_frame>			create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc)
+	virtual class mutable_frame	create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) = 0;	
+	class mutable_frame			create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc)
 	{
 		auto format_desc = video_format_desc();
 		return create_frame(video_stream_tag, desc, format_desc.fps, format_desc.field_mode);
 	}
 
-	/// Properties
-
-	virtual struct video_format_desc video_format_desc() const = 0; 
+	// Properties
 };
 
 }}

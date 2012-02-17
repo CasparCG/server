@@ -27,7 +27,7 @@
 
 #include "../interop/DeckLinkAPI_h.h"
 
-#include <core/frame/data_frame.h>
+#include <core/frame/frame.h>
 #include <core/mixer/audio/audio_mixer.h>
 
 #include <common/concurrency/executor.h>
@@ -91,13 +91,13 @@ struct configuration
 class decklink_frame : public IDeckLinkVideoFrame
 {
 	tbb::atomic<int>											ref_count_;
-	std::shared_ptr<const core::data_frame>								frame_;
+	core::const_frame										frame_;
 	const core::video_format_desc								format_desc_;
 
 	const bool													key_only_;
 	std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> data_;
 public:
-	decklink_frame(const spl::shared_ptr<const core::data_frame>& frame, const core::video_format_desc& format_desc, bool key_only)
+	decklink_frame(core::const_frame frame, const core::video_format_desc& format_desc, bool key_only)
 		: frame_(frame)
 		, format_desc_(format_desc)
 		, key_only_(key_only)
@@ -126,9 +126,9 @@ public:
 
 	// IDecklinkVideoFrame
 
-	STDMETHOD_(long,			GetWidth())			{return format_desc_.width;}        
-    STDMETHOD_(long,			GetHeight())		{return format_desc_.height;}        
-    STDMETHOD_(long,			GetRowBytes())		{return format_desc_.width*4;}        
+	STDMETHOD_(long,			GetWidth())			{return static_cast<long>(format_desc_.width);}        
+    STDMETHOD_(long,			GetHeight())		{return static_cast<long>(format_desc_.height);}        
+    STDMETHOD_(long,			GetRowBytes())		{return static_cast<long>(format_desc_.width*4);}        
 	STDMETHOD_(BMDPixelFormat,	GetPixelFormat())	{return bmdFormat8BitBGRA;}        
     STDMETHOD_(BMDFrameFlags,	GetFlags())			{return bmdFrameFlagDefault;}
         
@@ -136,7 +136,7 @@ public:
 	{
 		try
 		{
-			if(static_cast<int>(frame_->image_data().size()) != format_desc_.size)
+			if(static_cast<int>(frame_.image_data().size()) != format_desc_.size)
 			{
 				data_.resize(format_desc_.size, 0);
 				*buffer = data_.data();
@@ -145,13 +145,13 @@ public:
 			{
 				if(data_.empty())
 				{
-					data_.resize(frame_->image_data().size());
-					aligned_memshfl(data_.data(), frame_->image_data().begin(), frame_->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+					data_.resize(frame_.image_data().size());
+					aligned_memshfl(data_.data(), frame_.image_data().begin(), frame_.image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 				}
 				*buffer = data_.data();
 			}
 			else
-				*buffer = const_cast<uint8_t*>(frame_->image_data().begin());
+				*buffer = const_cast<uint8_t*>(frame_.image_data().begin());
 		}
 		catch(...)
 		{
@@ -169,7 +169,7 @@ public:
 
 	const core::audio_buffer& audio_data()
 	{
-		return frame_->audio_data();
+		return frame_.audio_data();
 	}
 };
 
@@ -200,8 +200,8 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 		
 	boost::circular_buffer<std::vector<int32_t>>	audio_container_;
 
-	tbb::concurrent_bounded_queue<std::shared_ptr<const core::data_frame>> video_frame_buffer_;
-	tbb::concurrent_bounded_queue<std::shared_ptr<const core::data_frame>> audio_frame_buffer_;
+	tbb::concurrent_bounded_queue<core::const_frame> video_frame_buffer_;
+	tbb::concurrent_bounded_queue<core::const_frame> audio_frame_buffer_;
 	
 	spl::shared_ptr<diagnostics::graph> graph_;
 	boost::timer tick_timer_;
@@ -249,7 +249,7 @@ public:
 			output_->BeginAudioPreroll();		
 		
 		for(int n = 0; n < buffer_size_; ++n)
-			schedule_next_video(core::data_frame::empty());
+			schedule_next_video(core::const_frame::empty());
 
 		if(!config.embedded_audio)
 			start_playback();
@@ -258,8 +258,8 @@ public:
 	~decklink_consumer()
 	{		
 		is_running_ = false;
-		video_frame_buffer_.try_push(core::data_frame::empty());
-		audio_frame_buffer_.try_push(core::data_frame::empty());
+		video_frame_buffer_.try_push(core::const_frame::empty());
+		audio_frame_buffer_.try_push(core::const_frame::empty());
 
 		if(output_ != nullptr) 
 		{
@@ -372,9 +372,9 @@ public:
 			else if(result == bmdOutputFrameFlushed)
 				graph_->set_tag("flushed-frame");
 
-			std::shared_ptr<const core::data_frame> frame;	
+			auto frame = core::const_frame::empty();	
 			video_frame_buffer_.pop(frame);					
-			schedule_next_video(spl::make_shared_ptr(frame));	
+			schedule_next_video(frame);	
 			
 			unsigned long buffered;
 			output_->GetBufferedVideoFrameCount(&buffered);
@@ -411,9 +411,9 @@ public:
 			}
 			else
 			{
-				std::shared_ptr<const core::data_frame> frame;
+				auto frame = core::const_frame::empty();
 				audio_frame_buffer_.pop(frame);
-				schedule_next_audio(frame->audio_data());
+				schedule_next_audio(frame.audio_data());
 			}
 
 			unsigned long buffered;
@@ -443,7 +443,7 @@ public:
 		audio_scheduled_ += sample_frame_count;
 	}
 			
-	void schedule_next_video(const spl::shared_ptr<const core::data_frame>& frame)
+	void schedule_next_video(core::const_frame frame)
 	{
 		CComPtr<IDeckLinkVideoFrame> frame2(new decklink_frame(frame, format_desc_, config_.key_only));
 		if(FAILED(output_->ScheduleVideoFrame(frame2, video_scheduled_, format_desc_.duration, format_desc_.time_scale)))
@@ -455,7 +455,7 @@ public:
 		tick_timer_.restart();
 	}
 
-	void send(const spl::shared_ptr<const core::data_frame>& frame)
+	void send(core::const_frame frame)
 	{
 		auto exception = lock(exception_mutex_, [&]
 		{
@@ -516,7 +516,7 @@ public:
 		});
 	}
 	
-	virtual bool send(const spl::shared_ptr<const core::data_frame>& frame) override
+	virtual bool send(core::const_frame frame) override
 	{
 		consumer_->send(frame);
 		return true;

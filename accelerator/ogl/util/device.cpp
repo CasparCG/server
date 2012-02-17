@@ -25,56 +25,62 @@
 
 #include "device.h"
 
+#include "buffer.h"
+#include "texture.h"
 #include "shader.h"
 
 #include <common/assert.h>
 #include <common/except.h>
+#include <common/concurrency/async.h>
 #include <common/gl/gl_check.h>
+#include <common/os/windows/windows.h>
 
 #include <boost/foreach.hpp>
 
 #include <gl/glew.h>
 
-#include <windows.h>
-
 #include <SFML/Window/Context.hpp>
+
+#include <tbb/concurrent_unordered_map.h>
+#include <tbb/concurrent_hash_map.h>
+#include <tbb/concurrent_queue.h>
+
+#include <boost/utility/declval.hpp>
 
 #include <array>
 #include <unordered_map>
-
-#include <tbb/concurrent_unordered_map.h>
-#include <tbb/concurrent_queue.h>
-#include <tbb/atomic.h>
 
 tbb::atomic<int> g_count = tbb::atomic<int>();
 
 namespace caspar { namespace accelerator { namespace ogl {
 		
 struct device::impl : public std::enable_shared_from_this<impl>
-{
-	std::map<host_buffer*, spl::shared_ptr<device_buffer>> write_buffer_transfer_cache_;
+{	
+	static_assert(std::is_same<decltype(boost::declval<device>().impl_), spl::shared_ptr<impl>>::value, "impl_ must be shared_ptr");
+
+	tbb::concurrent_hash_map<buffer*, std::shared_ptr<texture>> texture_mapping_;
 
 	std::unique_ptr<sf::Context> device_;
 	std::unique_ptr<sf::Context> host_alloc_device_;
 	
-	std::array<tbb::concurrent_unordered_map<int, tbb::concurrent_bounded_queue<std::shared_ptr<device_buffer>>>, 4>	device_pools_;
-	std::array<tbb::concurrent_unordered_map<int, tbb::concurrent_bounded_queue<std::shared_ptr<host_buffer>>>, 2>		host_pools_;
+	std::array<tbb::concurrent_unordered_map<int, tbb::concurrent_bounded_queue<std::shared_ptr<texture>>>, 4>	device_pools_;
+	std::array<tbb::concurrent_unordered_map<int, tbb::concurrent_bounded_queue<std::shared_ptr<buffer>>>, 2>	host_pools_;
 	
 	GLuint fbo_;
 
-	executor& executor_;
-	executor  host_alloc_executor_;
+	executor& render_executor_;
+	executor  alloc_executor_;
 				
 	impl(executor& executor) 
-		: executor_(executor)
-		, host_alloc_executor_(L"OpenGL allocation device")
+		: render_executor_(executor)
+		, alloc_executor_(L"OpenGL allocation context.")
 	{
 		if(g_count++ > 1)
 			CASPAR_LOG(warning) << L"Multiple OGL devices.";
 
 		CASPAR_LOG(info) << L"Initializing OpenGL Device.";
 		
-		auto ctx1 = executor_.invoke([=]() -> HGLRC 
+		auto ctx1 = render_executor_.invoke([=]() -> HGLRC 
 		{
 			device_.reset(new sf::Context());
 			device_->SetActive(true);		
@@ -95,7 +101,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 			return ctx1;
 		});
 
-		host_alloc_executor_.invoke([=]
+		alloc_executor_.invoke([=]
 		{
 			host_alloc_device_.reset(new sf::Context());
 			host_alloc_device_->SetActive(true);	
@@ -105,7 +111,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 				BOOST_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to share OpenGL devices."));
 		});
 
-		executor_.invoke([=]
+		render_executor_.invoke([=]
 		{		
 			device_->SetActive(true);
 		});
@@ -115,14 +121,14 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
 	~impl()
 	{
-		host_alloc_executor_.invoke([=]
+		alloc_executor_.invoke([=]
 		{
 			host_alloc_device_.reset();
 			BOOST_FOREACH(auto& pool, host_pools_)
 				pool.clear();
 		});
 
-		executor_.invoke([=]
+		render_executor_.invoke([=]
 		{
 			BOOST_FOREACH(auto& pool, device_pools_)
 				pool.clear();
@@ -131,135 +137,131 @@ struct device::impl : public std::enable_shared_from_this<impl>
 			device_.reset();
 		});
 	}
-
-	spl::shared_ptr<device_buffer> allocate_device_buffer(int width, int height, int stride)
-	{
-		return executor_.invoke([&]() -> spl::shared_ptr<device_buffer>
+		
+	std::wstring version()
+	{	
+		try
 		{
-			try
+			return alloc_executor_.invoke([]
 			{
-				return spl::make_shared<device_buffer>(width, height, stride);
-			}
-			catch(...)
-			{
-				CASPAR_LOG(error) << L"ogl: create_device_buffer failed!";
-				throw;
-			}
-		});
+				return u16(reinterpret_cast<const char*>(GL2(glGetString(GL_VERSION)))) + L" " + u16(reinterpret_cast<const char*>(GL2(glGetString(GL_VENDOR))));
+			});	
+		}
+		catch(...)
+		{
+			return L"Not found";;
+		}
 	}
-				
-	spl::shared_ptr<device_buffer> create_device_buffer(int width, int height, int stride)
+							
+	spl::shared_ptr<texture> create_texture(int width, int height, int stride)
 	{
 		CASPAR_VERIFY(stride > 0 && stride < 5);
 		CASPAR_VERIFY(width > 0 && height > 0);
 		
 		auto pool = &device_pools_[stride-1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
 		
-		std::shared_ptr<device_buffer> buffer;
+		std::shared_ptr<texture> buffer;
 		if(!pool->try_pop(buffer))		
-			buffer = allocate_device_buffer(width, height, stride);		
+			buffer = spl::make_shared<texture>(width, height, stride);
 	
-		auto self = shared_from_this();
-		return spl::shared_ptr<device_buffer>(buffer.get(), [self, buffer, pool](device_buffer*) mutable
+		return spl::shared_ptr<texture>(buffer.get(), [buffer, pool](texture*) mutable
 		{		
 			pool->push(buffer);	
 		});
 	}
-
-	spl::shared_ptr<host_buffer> allocate_host_buffer(int size, host_buffer::usage usage)
+		
+	spl::shared_ptr<buffer> create_buffer(int size, buffer::usage usage)
 	{
-		return host_alloc_executor_.invoke([=]() -> spl::shared_ptr<host_buffer>
-		{
-			try
-			{
-				auto buffer = spl::make_shared<host_buffer>(size, usage);
-				if(usage == host_buffer::usage::write_only)
-					buffer->map();
-				else
-					buffer->unmap();	
-
-				return buffer;
-			}
-			catch(...)
-			{
-				CASPAR_LOG(error) << L"ogl: create_host_buffer failed!";
-				throw;	
-			}
-		});
-	}
-	
-	spl::shared_ptr<host_buffer> create_host_buffer(int size, host_buffer::usage usage)
-	{
-		CASPAR_VERIFY(usage == host_buffer::usage::write_only || usage == host_buffer::usage::read_only);
 		CASPAR_VERIFY(size > 0);
 		
 		auto pool = &host_pools_[usage.value()][size];
 		
-		std::shared_ptr<host_buffer> buffer;
-		if(!pool->try_pop(buffer))	
-			buffer = allocate_host_buffer(size, usage);	
-	
-		bool is_write = (usage == host_buffer::usage::write_only);
-
-		auto self = shared_from_this();
-		return spl::shared_ptr<host_buffer>(buffer.get(), [self, is_write, buffer, pool](host_buffer*) mutable
+		std::shared_ptr<buffer> buf;
+		if(!pool->try_pop(buf))	
 		{
-			self->host_alloc_executor_.begin_invoke([=]() mutable
-			{		
-				if(is_write)				
-					buffer->map();				
-				else
-					buffer->unmap();
-
-				pool->push(buffer);
-			}, task_priority::high_priority);	
-
-			self->executor_.begin_invoke([=]
+			buf = alloc_executor_.invoke([&]
 			{
-				write_buffer_transfer_cache_.erase(buffer.get());				
-			}, task_priority::high_priority);	
+				return spl::make_shared<buffer>(size, usage);
+			});
+		}
+				
+		auto ptr = buf->data();
+		auto self = shared_from_this(); // buffers can leave the device context, take a hold on life-time.
+
+		auto on_release = [self, buf, ptr, usage, pool]() mutable
+		{		
+			if(usage == buffer::usage::write_only)					
+				buf->map();					
+			else
+				buf->unmap();
+
+			self->texture_mapping_.erase(buf.get());
+
+			pool->push(buf);
+		};
+		
+		return spl::shared_ptr<buffer>(buf.get(), [=](buffer*) mutable
+		{
+			self->alloc_executor_.begin_invoke(on_release);	
 		});
 	}
-		
-	std::wstring version()
-	{	
-		static std::wstring ver = L"Not found";
-		try
-		{
-			ver = u16(executor_.invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VERSION)));})
-			+ " "	+ executor_.invoke([]{return std::string(reinterpret_cast<const char*>(glGetString(GL_VENDOR)));}));			
-		}
-		catch(...){}
 
-		return ver;
+	core::mutable_array create_array(int size)
+	{		
+		auto buf = create_buffer(size, buffer::usage::write_only);
+		return core::mutable_array(buf->data(), buf->size(), buf);
 	}
-			
-	boost::unique_future<spl::shared_ptr<device_buffer>> copy_async(spl::shared_ptr<host_buffer>& source, int width, int height, int stride)
+
+	boost::unique_future<spl::shared_ptr<texture>> copy_async(const core::mutable_array& source, int width, int height, int stride)
 	{
-		return executor_.begin_invoke([=]() -> spl::shared_ptr<device_buffer>
+		auto buf = boost::any_cast<spl::shared_ptr<buffer>>(source.storage());
+				
+		return render_executor_.begin_invoke([=]() -> spl::shared_ptr<texture>
 		{
-			auto buffer_it = write_buffer_transfer_cache_.find(source.get());
-			if(buffer_it == write_buffer_transfer_cache_.end())
-			{
-				auto result = create_device_buffer(width, height, stride);
-				result->copy_from(*source);
-				buffer_it = write_buffer_transfer_cache_.insert(std::make_pair(source.get(), result)).first;
-			}
-			return buffer_it->second;
+			tbb::concurrent_hash_map<buffer*, std::shared_ptr<texture>>::const_accessor a;
+			if(texture_mapping_.find(a, buf.get()))
+				return spl::make_shared_ptr(a->second);
+
+			auto texture = create_texture(width, height, stride);
+			texture->copy_from(*buf);	
+
+			texture_mapping_.insert(std::make_pair(buf.get(), texture));
+
+			return texture;
+
 		}, task_priority::high_priority);
+	}
+
+	boost::unique_future<core::const_array> copy_async(const spl::shared_ptr<texture>& source)
+	{
+		return fold(render_executor_.begin_invoke([=]() -> boost::shared_future<core::const_array>
+		{
+			auto buffer = create_buffer(source->size(), buffer::usage::read_only); 
+			source->copy_to(*buffer);	
+
+			return make_shared(async(launch_policy::deferred, [=]() mutable -> core::const_array
+			{
+				const auto& buf = buffer.get();
+				if(!buf->data())
+					alloc_executor_.invoke(std::bind(&buffer::map, std::ref(buf))); // Defer blocking "map" call until data is needed.
+
+				return core::const_array(buf->data(), buf->size(), buffer);
+			}));
+		}, task_priority::high_priority));
 	}
 };
 
 device::device() 
-	: executor_(L"device")
+	: executor_(L"OpenGL Rendering Context.")
 	, impl_(new impl(executor_))
 {
 }
-	
-spl::shared_ptr<device_buffer>							device::create_device_buffer(int width, int height, int stride){return impl_->create_device_buffer(width, height, stride);}
-spl::shared_ptr<host_buffer>							device::create_host_buffer(int size, host_buffer::usage usage){return impl_->create_host_buffer(size, usage);}
-boost::unique_future<spl::shared_ptr<device_buffer>>	device::copy_async(spl::shared_ptr<host_buffer>& source, int width, int height, int stride){return impl_->copy_async(source, width, height, stride);}
-std::wstring											device::version(){return impl_->version();}
+device::~device(){}	
+spl::shared_ptr<texture>							device::create_texture(int width, int height, int stride){return impl_->create_texture(width, height, stride);}
+core::mutable_array									device::create_array(int size){return impl_->create_array(size);}
+boost::unique_future<spl::shared_ptr<texture>>		device::copy_async(const core::mutable_array& source, int width, int height, int stride){return impl_->copy_async(source, width, height, stride);}
+boost::unique_future<core::const_array>				device::copy_async(const spl::shared_ptr<texture>& source){return impl_->copy_async(source);}
+std::wstring										device::version(){return impl_->version();}
 
 
 }}}

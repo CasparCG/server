@@ -45,20 +45,20 @@ class video_channel sealed : public monitor::observable
 	video_channel& operator=(const video_channel&);
 public:
 
-	/// Static Members
+	// Static Members
 
-	///  Constructors
+	// Constructors
 
-	explicit video_channel(int index, const video_format_desc& format_desc, spl::unique_ptr<image_mixer> image_mixer);
-	
-	/// Methods
+	explicit video_channel(int index, const video_format_desc& format_desc, std::unique_ptr<image_mixer> image_mixer);
+	~video_channel();
+	// Methods
 			
 	// monitor::observable
 
 	virtual void subscribe(const monitor::observable::observer_ptr& o) override;
 	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override;
 
-	/// Properties
+	// Properties
 
 	const core::stage&					 stage() const;
 	core::stage&						 stage();
@@ -75,7 +75,7 @@ public:
 	boost::property_tree::wptree		 info() const;
 private:
 	struct impl;
-	spl::shared_ptr<impl> impl_;
+	spl::unique_ptr<impl> impl_;
 };
 
 }}
