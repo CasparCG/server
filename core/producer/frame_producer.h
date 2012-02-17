@@ -28,7 +28,7 @@
 #include <common/spl/memory.h>
 #include <common/enum_class.h>
 
-#include <stdint.h>
+#include <cstdint>
 #include <limits>
 #include <functional>
 #include <string>

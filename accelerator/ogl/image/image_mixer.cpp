@@ -30,7 +30,7 @@
 
 #include <common/gl/gl_check.h>
 #include <common/concurrency/async.h>
-#include <common/memory/memcpy.h>
+#include <common/memory/array.h>
 
 #include <core/frame/frame.h>
 #include <core/frame/frame_transform.h>

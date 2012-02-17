@@ -28,6 +28,7 @@
 #include <common/gl/gl_check.h>
 #include <common/log.h>
 #include <common/spl/memory.h>
+#include <common/memory/array.h>
 #include <common/memory/memshfl.h>
 #include <common/utf.h>
 

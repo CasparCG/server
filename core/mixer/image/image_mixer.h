@@ -33,7 +33,7 @@
 
 #include <boost/range.hpp>
 
-#include <stdint.h>
+#include <cstdint>
 
 FORWARD1(boost, template<typename> class unique_future);
 FORWARD2(caspar, core, struct pixel_format_desc);
