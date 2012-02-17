@@ -30,6 +30,7 @@
 #include <core/frame/pixel_format.h>
 
 #include <common/except.h>
+#include <common/memory/array.h>
 
 #include <boost/algorithm/string.hpp>
 

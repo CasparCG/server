@@ -37,6 +37,7 @@
 #include <core/producer/frame_producer.h>
 
 #include <common/except.h>
+#include <common/memory/array.h>
 
 #include <tbb/parallel_for.h>
 

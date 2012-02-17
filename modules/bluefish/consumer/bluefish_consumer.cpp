@@ -30,6 +30,7 @@
 
 #include <common/concurrency/executor.h>
 #include <common/diagnostics/graph.h>
+#include <common/memory/array.h>
 #include <common/memory/memshfl.h>
 
 #include <core/consumer/frame_consumer.h>

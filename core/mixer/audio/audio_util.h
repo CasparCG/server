@@ -23,7 +23,7 @@
 
 #include <algorithm>
 #include <vector>
-#include <stdint.h>
+#include <cstdint>
 
 #include <tbb/cache_aligned_allocator.h>
 

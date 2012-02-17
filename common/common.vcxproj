@@ -129,6 +129,7 @@
     <ClInclude Include="forward.h" />
     <ClInclude Include="gl\gl_check.h" />
     <ClInclude Include="log.h" />
+    <ClInclude Include="memory\array.h" />
     <ClInclude Include="memory\memcpy.h" />
     <ClInclude Include="memory\memshfl.h" />
     <ClInclude Include="memory\page_locked_allocator.h" />
@@ -157,6 +158,12 @@
     </ClCompile>
     <ClCompile Include="log.cpp" />
     <ClCompile Include="env.cpp" />
+    <ClCompile Include="memory\array.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
     <ClCompile Include="memory\page_locked_allocator.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>

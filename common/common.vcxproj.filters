@@ -61,6 +61,9 @@
     <ClCompile Include="memory\page_locked_allocator.cpp">
       <Filter>source\memory</Filter>
     </ClCompile>
+    <ClCompile Include="memory\array.cpp">
+      <Filter>source\memory</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="compiler\vs\disable_silly_warnings.h">
@@ -135,6 +138,9 @@
     </ClInclude>
     <ClInclude Include="param.h">
       <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="memory\array.h">
+      <Filter>source\memory</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
