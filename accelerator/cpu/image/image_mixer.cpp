@@ -28,7 +28,7 @@
 #include <common/assert.h>
 #include <common/gl/gl_check.h>
 #include <common/concurrency/async.h>
-#include <common/memory/memcpy.h>
+#include <common/memory/array.h>
 
 #include <core/frame/frame.h>
 #include <core/frame/frame_transform.h>
@@ -42,6 +42,7 @@
 #include <gl/glew.h>
 
 #include <tbb/cache_aligned_allocator.h>
+#include <tbb/parallel_for.h>
 #include <tbb/parallel_for_each.h>
 #include <tbb/concurrent_queue.h>
 
@@ -52,7 +53,7 @@
 #include <boost/thread/future.hpp>
 
 #include <algorithm>
-#include <stdint.h>
+#include <cstdint>
 #include <vector>
 
 #if defined(_MSC_VER)

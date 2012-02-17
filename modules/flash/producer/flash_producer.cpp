@@ -41,6 +41,7 @@
 #include <common/concurrency/lock.h>
 #include <common/diagnostics/graph.h>
 #include <common/prec_timer.h>
+#include <common/memory/array.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>

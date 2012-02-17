@@ -1,7 +1,7 @@
 #pragma once
 
 #include <intrin.h>
-#include <stdint.h>
+#include <cstdint>
 
 #include <array>
 

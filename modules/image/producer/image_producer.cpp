@@ -32,6 +32,7 @@
 
 #include <common/env.h>
 #include <common/log.h>
+#include <common/memory/array.h>
 
 #include <boost/assign.hpp>
 #include <boost/filesystem.hpp>

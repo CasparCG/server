@@ -32,8 +32,10 @@
 #include <common/assert.h>
 #include <common/except.h>
 #include <common/concurrency/async.h>
+#include <common/memory/array.h>
 #include <common/gl/gl_check.h>
 #include <common/os/windows/windows.h>
+
 
 #include <boost/foreach.hpp>
 

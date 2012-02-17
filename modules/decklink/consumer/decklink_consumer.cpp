@@ -35,6 +35,7 @@
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
 #include <common/memory/memshfl.h>
+#include <common/memory/array.h>
 
 #include <core/consumer/frame_consumer.h>
 

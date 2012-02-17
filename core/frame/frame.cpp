@@ -24,6 +24,8 @@
 #include "frame.h"
 
 #include <common/except.h>
+#include <common/memory/array.h>
+
 #include <core/frame/frame_visitor.h>
 #include <core/frame/pixel_format.h>
 

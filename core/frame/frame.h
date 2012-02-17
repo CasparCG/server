@@ -11,123 +11,14 @@
 #include <tbb/cache_aligned_allocator.h>
 
 #include <cstddef>
-#include <stdint.h>
+#include <cstdint>
 
 FORWARD1(boost, template<typename> class shared_future);
 
 namespace caspar { namespace core {
 
-class const_array
-{
-public:
-
-	// Static Members
-
-	// Constructors
-
-	template<typename T>
-	explicit const_array(const uint8_t* ptr, std::size_t size, T&& storage)
-		: ptr_(ptr)
-		, size_(size)
-		, storage_(new boost::any(std::forward<T>(storage)))
-	{
-	}
-	
-	const_array(const const_array& other)
-		: ptr_(other.ptr_)
-		, size_(other.size_)
-		, storage_(other.storage_)
-	{
-	}
-
-	const_array(const_array&& other)
-		: ptr_(other.ptr_)
-		, size_(other.size_)
-		, storage_(std::move(other.storage_))
-	{
-	}
-
-	// Methods
-
-	const_array& operator=(const_array other)
-	{
-		other.swap(*this);
-		return *this;
-	}
-
-	void swap(const_array& other)
-	{
-		std::swap(ptr_, other.ptr_);
-		std::swap(size_, other.size_);
-		std::swap(storage_, other.storage_);
-	}
-
-	// Properties
-		
-	const uint8_t* begin() const	{return ptr_;}		
-	const uint8_t* data() const		{return ptr_;}
-	const uint8_t* end() const		{return ptr_ + size_;}
-	std::size_t size() const		{return size_;}
-	bool empty() const				{return size() == 0;}
-		
-private:
-	const uint8_t*	ptr_;
-	std::size_t		size_;
-	spl::shared_ptr<boost::any>	storage_;
-};
-
-class mutable_array
-{
-	mutable_array(const mutable_array&);
-	mutable_array& operator=(const mutable_array&);
-public:
-
-	// Static Members
-
-	// Constructors
-	
-	template<typename T>
-	explicit mutable_array(uint8_t* ptr, std::size_t size, T&& storage)
-		: ptr_(ptr)
-		, size_(size)
-		, storage_(new boost::any(std::forward<T>(storage)))
-	{
-	}
-
-	mutable_array(mutable_array&& other)
-		: ptr_(other.ptr_)
-		, size_(other.size_)
-		, storage_(std::move(other.storage_))
-	{
-	}
-
-	// Methods
-
-	mutable_array& operator=(mutable_array&& other)
-	{
-		ptr_		= other.ptr_;
-		size_		= other.size_;
-		storage_	= std::move(other.storage_);
-		return *this;
-	}
-
-	// Properties
-	
-	uint8_t* begin()					{return ptr_;}		
-	uint8_t* data()						{return ptr_;}
-	uint8_t* end()						{return ptr_ + size_;}	
-	const uint8_t* begin() const		{return ptr_;}		
-	const uint8_t* data() const			{return ptr_;}
-	const uint8_t* end() const			{return ptr_ + size_;}
-	std::size_t size() const			{return size_;}
-	bool empty() const					{return size() == 0;}
-	const boost::any& storage() const	{return *storage_;}
-private:
-	uint64_t	id_;
-	uint8_t*	ptr_;
-	std::size_t	size_;
-	spl::unique_ptr<boost::any>	storage_;
-};
+class const_array;
+class mutable_array;
 
 typedef std::vector<int32_t, tbb::cache_aligned_allocator<int32_t>> audio_buffer;
 
