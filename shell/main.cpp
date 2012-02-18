@@ -262,7 +262,6 @@ void run()
 		wcmd += L"\r\n";
 		amcp.Parse(wcmd.c_str(), static_cast<int>(wcmd.length()), console_client);
 	}	
-	Sleep(1000);
 	CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
 }
 

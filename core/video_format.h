@@ -81,7 +81,7 @@ struct video_format_desc sealed
 	int					time_scale;
 	int					duration;
 	int					field_count;
-	int					size;		// frame size in bytes 
+	std::size_t			size;		// frame size in bytes 
 	std::wstring		name;		// name of output format
 
 	int					audio_sample_rate;
