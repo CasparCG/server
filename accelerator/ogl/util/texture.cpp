@@ -40,11 +40,6 @@ static GLenum FORMAT[] = {0, GL_RED, GL_RG, GL_BGR, GL_BGRA};
 static GLenum INTERNAL_FORMAT[] = {0, GL_R8, GL_RG8, GL_RGB8, GL_RGBA8};	
 static GLenum TYPE[] = {0, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_INT_8_8_8_8_REV};	
 
-unsigned int format(int stride)
-{
-	return FORMAT[stride];
-}
-
 static tbb::atomic<int> g_total_count;
 
 struct texture::impl : boost::noncopyable
