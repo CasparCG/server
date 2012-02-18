@@ -20,7 +20,7 @@ struct launch_policy_def
 		deferred
 	};
 };
-typedef enum_class<launch_policy_def> launch_policy;
+typedef enum_class<launch_policy_def> launch;
 
 namespace detail {
 
@@ -48,33 +48,44 @@ struct invoke_function<void>
 }
 	
 template<typename F>
-auto async(launch_policy lp, F&& f) -> boost::unique_future<decltype(f())>
+auto async(launch lp, F&& f) -> boost::unique_future<decltype(f())>
 {		
 	typedef decltype(f()) result_type;
-
-	if(lp == launch_policy::deferred)
-	{
-		typedef boost::promise<result_type> promise_t;
-
-		auto promise = new promise_t();
-		auto future  = promise->get_future();
 	
+	typedef boost::promise<result_type> promise_t;
+
+	// WORKAROUND: Use heap storage since lambdas don't support move semantics and do a lot of unnecessary copies.
+	auto promise = new promise_t();
+	auto func	 = new F(std::forward<F>(f));
+	auto future  = promise->get_future();
+
+	if(lp == launch::deferred)
+	{	
 		promise->set_wait_callback(std::function<void(promise_t&)>([=](promise_t&) mutable
 		{
 			std::unique_ptr<promise_t> pointer_guard(promise);
-			detail::invoke_function<result_type>()(*promise, f);
+			std::unique_ptr<F>		   func_guard(func);
+			detail::invoke_function<result_type>()(*promise, *func);
 		}));
 
 		return std::move(future);
 	}
 	else
 	{
-		typedef boost::packaged_task<result_type> packaged_task_t;
+		boost::thread([=]
+		{
+			std::unique_ptr<promise_t> pointer_guard(promise);
+			std::unique_ptr<F>		   func_guard(func);
 
-		auto task   = packaged_task_t(f);    
-		auto future = task.get_future();
-
-		boost::thread(std::move(task)).detach();
+			try
+			{				
+				detail::invoke_function<result_type>()(*promise, *func);
+			}
+			catch(...)
+			{
+				promise->set_exception(boost::current_exception());
+			}
+		}).detach();
 
 		return std::move(future);
 	}
@@ -83,7 +94,7 @@ auto async(launch_policy lp, F&& f) -> boost::unique_future<decltype(f())>
 template<typename F>
 auto async(F&& f) -> boost::unique_future<decltype(f())>
 {	
-	return async(launch_policy::async, std::forward<F>(f));
+	return async(launch::async, std::forward<F>(f));
 }
 
 template<typename T>
@@ -93,10 +104,10 @@ auto make_shared(boost::unique_future<T>&& f) -> boost::shared_future<T>
 }
 
 template<typename T>
-auto fold(boost::unique_future<T>&& f) -> boost::unique_future<decltype(f.get().get())>
+auto flatten(boost::unique_future<T>&& f) -> boost::unique_future<decltype(f.get().get())>
 {
 	auto shared_f = make_shared(std::move(f));
-	return async(launch_policy::deferred, [=]() mutable
+	return async(launch::deferred, [=]() mutable
 	{
 		return shared_f.get().get();
 	});

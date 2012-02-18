@@ -236,12 +236,12 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
 	boost::unique_future<core::const_array> copy_async(const spl::shared_ptr<texture>& source)
 	{
-		return fold(render_executor_.begin_invoke([=]() -> boost::shared_future<core::const_array>
+		return flatten(render_executor_.begin_invoke([=]() -> boost::shared_future<core::const_array>
 		{
 			auto buffer = create_buffer(source->size(), buffer::usage::read_only); 
 			source->copy_to(*buffer);	
 
-			return make_shared(async(launch_policy::deferred, [=]() mutable -> core::const_array
+			return make_shared(async(launch::deferred, [=]() mutable -> core::const_array
 			{
 				const auto& buf = buffer.get();
 				if(!buf->data())
