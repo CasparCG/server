@@ -172,7 +172,7 @@ public:
 
 		temp_buffers_.clear();
 		
-		return async(launch_policy::deferred, [=]
+		return async(launch::deferred, [=]
 		{
 			return core::const_array(result->data(), format_desc.size, result);
 		});	
