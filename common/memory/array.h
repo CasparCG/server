@@ -25,9 +25,10 @@ public:
 	// Constructors
 	
 	template<typename T>
-	explicit mutable_array(std::uint8_t* ptr, std::size_t size, T&& storage)
+	explicit mutable_array(std::uint8_t* ptr, std::size_t size, bool cacheable, T&& storage)
 		: ptr_(ptr)
 		, size_(size)
+		, cacheable_(cacheable)
 		, storage_(new boost::any(std::forward<T>(storage)))
 	{
 	}
@@ -48,6 +49,7 @@ public:
 	const std::uint8_t* end() const;
 	std::size_t size() const;
 	bool empty() const;
+	bool cacheable() const;
 	
 	template<typename T>
 	T storage() const
@@ -57,6 +59,7 @@ public:
 private:
 	std::uint8_t*	ptr_;
 	std::size_t		size_;
+	bool			cacheable_;
 	std::unique_ptr<boost::any>	storage_;
 };
 
@@ -69,9 +72,10 @@ public:
 	// Constructors
 
 	template<typename T>
-	explicit const_array(const std::uint8_t* ptr, std::size_t size, T&& storage)
+	explicit const_array(const std::uint8_t* ptr, std::size_t size, bool cacheable, T&& storage)
 		: ptr_(ptr)
 		, size_(size)
+		, cacheable_(cacheable)
 		, storage_(new boost::any(std::forward<T>(storage)))
 	{
 	}
@@ -91,6 +95,7 @@ public:
 	const std::uint8_t* end() const;
 	std::size_t size() const;
 	bool empty() const;
+	bool cacheable() const;
 
 	template<typename T>
 	T storage() const
@@ -101,6 +106,7 @@ public:
 private:
 	const std::uint8_t*	ptr_;
 	std::size_t			size_;
+	bool				cacheable_;
 	std::shared_ptr<boost::any>	storage_;
 };
 

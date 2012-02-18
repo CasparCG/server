@@ -211,7 +211,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	core::mutable_array create_array(int size)
 	{		
 		auto buf = create_buffer(size, buffer::usage::write_only);
-		return core::mutable_array(buf->data(), buf->size(), buf);
+		return core::mutable_array(buf->data(), buf->size(), false, buf);
 	}
 
 	boost::unique_future<spl::shared_ptr<texture>> copy_async(const core::const_array& source, int width, int height, int stride)
@@ -247,7 +247,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 				if(!buf->data())
 					alloc_executor_.invoke(std::bind(&buffer::map, std::ref(buf))); // Defer blocking "map" call until data is needed.
 
-				return core::const_array(buf->data(), buf->size(), buffer);
+				return core::const_array(buf->data(), buf->size(), true, buffer);
 			}));
 		}, task_priority::high_priority));
 	}

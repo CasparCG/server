@@ -136,7 +136,7 @@ struct const_frame::impl : boost::noncopyable
 
 	const_array image_data(int index) const
 	{
-		return tag_ != empty().tag() ? future_buffers_.at(index).get() : const_array(nullptr, 0, 0);
+		return tag_ != empty().tag() ? future_buffers_.at(index).get() : const_array(nullptr, 0, true, 0);
 	}
 
 	std::size_t width() const
