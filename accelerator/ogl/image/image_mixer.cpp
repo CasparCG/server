@@ -103,7 +103,7 @@ public:
 			auto buffer = spl::make_shared<const std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>>(format_desc.size, 0);
 			return async(launch::deferred, [=]
 			{
-				return core::const_array(buffer->data(), static_cast<std::size_t>(format_desc.size), true, buffer);
+				return core::const_array(buffer->data(), format_desc.size, true, buffer);
 			});
 		}		
 
