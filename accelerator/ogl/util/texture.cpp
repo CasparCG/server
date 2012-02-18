@@ -49,7 +49,7 @@ static tbb::atomic<int> g_total_count;
 
 struct texture::impl : boost::noncopyable
 {
-	GLuint						id_;
+	GLuint	id_;
 
 	const int width_;
 	const int height_;
@@ -127,7 +127,9 @@ public:
 };
 
 texture::texture(int width, int height, int stride) : impl_(new impl(width, height, stride)){}
+texture::texture(texture&& other) : impl_(std::move(other.impl_)){}
 texture::~texture(){}
+texture& texture::operator=(texture&& other){impl_ = std::move(other.impl_); return *this;}
 void texture::bind(int index){impl_->bind(index);}
 void texture::unbind(){impl_->unbind();}
 void texture::attach(){impl_->attach();}
@@ -136,8 +138,8 @@ void texture::copy_from(buffer& source){impl_->copy_from(source);}
 void texture::copy_to(buffer& dest){impl_->copy_to(dest);}
 int texture::width() const { return impl_->width_; }
 int texture::height() const { return impl_->height_; }
-int texture::size() const { return impl_->width_*impl_->height_*impl_->stride_; }
 int texture::stride() const { return impl_->stride_; }
+std::size_t texture::size() const { return static_cast<std::size_t>(impl_->width_*impl_->height_*impl_->stride_); }
 int texture::id() const{ return impl_->id_;}
 
 }}}

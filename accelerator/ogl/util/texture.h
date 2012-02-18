@@ -22,9 +22,8 @@
 #pragma once
 
 #include <common/spl/memory.h>
-#include <common/forward.h>
 
-FORWARD1(boost, template<typename> class unique_future);
+#include <cstddef>
 
 namespace caspar { namespace accelerator { namespace ogl {
 		
@@ -42,9 +41,12 @@ public:
 	// Constructors
 
 	texture(int width, int height, int stride);
+	texture(texture&& other);
 	~texture();
-
+	
 	// Methods
+
+	texture& operator=(texture&& other);
 		
 	void copy_from(buffer& source);
 	void copy_to(buffer& dest);
@@ -58,9 +60,11 @@ public:
 
 	int width() const;
 	int height() const;
-	int size() const;
 	int stride() const;	
+	std::size_t size() const;
+
 	int id() const;
+
 private:
 	struct impl;
 	spl::unique_ptr<impl> impl_;

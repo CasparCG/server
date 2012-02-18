@@ -46,12 +46,13 @@ public:
 	~device();
 
 	// Methods
-		
+			
 	spl::shared_ptr<texture> create_texture(int width, int height, int stride);
-	core::mutable_array		 create_array(int size);
+	array<std::uint8_t>		 create_array(int size);
 
-	boost::unique_future<spl::shared_ptr<texture>> copy_async(const core::const_array& source, int width, int height, int stride);
-	boost::unique_future<core::const_array>		   copy_async(const spl::shared_ptr<texture>& source);
+	boost::unique_future<spl::shared_ptr<texture>>	copy_async(const array<const std::uint8_t>& source, int width, int height, int stride);
+	boost::unique_future<spl::shared_ptr<texture>>	copy_async(const array<std::uint8_t>& source, int width, int height, int stride);
+	boost::unique_future<array<const std::uint8_t>>	copy_async(const spl::shared_ptr<texture>& source);
 	
 	template<typename Func>
 	auto begin_invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> boost::unique_future<decltype(func())> // noexcept
@@ -67,7 +68,7 @@ public:
 
 	// Properties
 	
-	std::wstring version();
+	std::wstring version() const;
 
 private:
 	struct impl;
