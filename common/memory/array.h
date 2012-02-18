@@ -10,14 +10,15 @@
 
 FORWARD1(boost, template<typename> class shared_future);
 
-namespace caspar { namespace core {
+namespace caspar {
 	
-class mutable_array
+template<typename T>
+class array sealed
 {
-	mutable_array(const mutable_array&);
-	mutable_array& operator=(const mutable_array&);
+	array(const array<std::uint8_t>&);
+	array& operator=(const array<std::uint8_t>&);
 
-	friend class const_array;
+	template<typename> friend class array;
 public:
 
 	// Static Members
@@ -25,7 +26,7 @@ public:
 	// Constructors
 	
 	template<typename T>
-	explicit mutable_array(std::uint8_t* ptr, std::size_t size, bool cacheable, T&& storage)
+	explicit array(std::uint8_t* ptr, std::size_t size, bool cacheable, T&& storage)
 		: ptr_(ptr)
 		, size_(size)
 		, cacheable_(cacheable)
@@ -33,23 +34,37 @@ public:
 	{
 	}
 
-	mutable_array(mutable_array&& other);
+	array(array&& other)
+		: ptr_(other.ptr_)
+		, size_(other.size_)
+		, cacheable_(other.cacheable_)
+		, storage_(std::move(other.storage_))
+	{
+		CASPAR_ASSERT(storage_);
+	}
 
 	// Methods
-
-	mutable_array& operator=(mutable_array&& other);
-
-	// Properties
 	
-	std::uint8_t* begin();
-	std::uint8_t* data();
-	std::uint8_t* end();
-	const std::uint8_t* begin() const;
-	const std::uint8_t* data() const;
-	const std::uint8_t* end() const;
-	std::size_t size() const;
-	bool empty() const;
-	bool cacheable() const;
+	array& operator=(array&& other)
+	{
+		ptr_		= other.ptr_;
+		size_		= other.size_;
+		cacheable_  = other.cacheable_;
+		storage_	= std::move(other.storage_);
+
+		CASPAR_ASSERT(storage_);
+
+		return *this;
+	}
+
+	// Properties	
+			
+	T* begin() const			{return ptr_;}		
+	T* data() const				{return ptr_;}
+	T* end() const				{return reinterpret_cast<T*>(reinterpret_cast<char*>(ptr_) + size_);}
+	std::size_t size() const	{return size_;}
+	bool empty() const			{return size() == 0;}
+	bool cacheable() const		{return cacheable_;}
 	
 	template<typename T>
 	T storage() const
@@ -57,13 +72,14 @@ public:
 		return boost::any_cast<T>(*storage_);
 	}
 private:
-	std::uint8_t*	ptr_;
-	std::size_t		size_;
-	bool			cacheable_;
+	T*			ptr_;
+	std::size_t	size_;
+	bool		cacheable_;
 	std::unique_ptr<boost::any>	storage_;
 };
 
-class const_array
+template<typename T>
+class array<const T> sealed
 {
 public:
 
@@ -72,7 +88,7 @@ public:
 	// Constructors
 
 	template<typename T>
-	explicit const_array(const std::uint8_t* ptr, std::size_t size, bool cacheable, T&& storage)
+	explicit array(const std::uint8_t* ptr, std::size_t size, bool cacheable, T&& storage)
 		: ptr_(ptr)
 		, size_(size)
 		, cacheable_(cacheable)
@@ -80,23 +96,49 @@ public:
 	{
 	}
 	
-	const_array(const const_array& other);	
-	const_array(mutable_array&& other);
+	array(const array& other)
+		: ptr_(other.ptr_)
+		, size_(other.size_)
+		, cacheable_(other.cacheable_)
+		, storage_(other.storage_)
+	{
+		CASPAR_ASSERT(storage_);
+	}
+
+	array(array<T>&& other)
+		: ptr_(other.ptr_)
+		, size_(other.size_)
+		, cacheable_(other.cacheable_)
+		, storage_(std::move(other.storage_))
+	{
+		CASPAR_ASSERT(storage_);
+	}
 
 	// Methods
 
-	const_array& operator=(const const_array& other);
-	void swap(const_array& other);
+	array& operator=(array other)
+	{
+		other.swap(*this);
+		return *this;
+	}
+
+	void swap(array& other)
+	{
+		ptr_		= other.ptr_;
+		size_		= other.size_;
+		storage_	= other.storage_;
+		cacheable_	= other.cacheable_;
+	}
 
 	// Properties
-		
-	const std::uint8_t* begin() const;
-	const std::uint8_t* data() const;
-	const std::uint8_t* end() const;
-	std::size_t size() const;
-	bool empty() const;
-	bool cacheable() const;
-
+			
+	const T* begin() const		{return ptr_;}		
+	const T* data() const		{return ptr_;}
+	const T* end() const		{return reinterpret_cast<const T*>(reinterpret_cast<const char*>(ptr_) + size_);}
+	std::size_t size() const	{return size_;}
+	bool empty() const			{return size() == 0;}
+	bool cacheable() const		{return cacheable_;}
+	
 	template<typename T>
 	T storage() const
 	{
@@ -104,10 +146,21 @@ public:
 	}
 
 private:
-	const std::uint8_t*	ptr_;
-	std::size_t			size_;
-	bool				cacheable_;
+	const T*	ptr_;
+	std::size_t	size_;
+	bool		cacheable_;
 	std::shared_ptr<boost::any>	storage_;
 };
 
-}}
+}
+
+namespace std {
+	
+template<typename T>
+void swap(caspar::array<const T>& lhs, caspar::array<const T>& rhs)
+{
+	lhs.swap(rhs);
+}
+
+}
+

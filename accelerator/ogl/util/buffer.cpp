@@ -113,12 +113,15 @@ public:
 };
 
 buffer::buffer(std::size_t size, usage usage) : impl_(new impl(size, usage)){}
+buffer::buffer(buffer&& other) : impl_(std::move(other.impl_)){}
 buffer::~buffer(){}
+buffer& buffer::operator=(buffer&& other){impl_ = std::move(other.impl_); return *this;}
 uint8_t* buffer::data(){return impl_->data_;}
 void buffer::map(){impl_->map();}
 void buffer::unmap(){impl_->unmap();}
 void buffer::bind() const{impl_->bind();}
 void buffer::unbind() const{impl_->unbind();}
 std::size_t buffer::size() const { return impl_->size_; }
+int buffer::id() const {return impl_->pbo_;}
 
 }}}

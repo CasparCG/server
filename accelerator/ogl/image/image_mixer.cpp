@@ -96,18 +96,18 @@ public:
 	{
 	}
 	
-	boost::unique_future<core::const_array> operator()(std::vector<layer> layers, const core::video_format_desc& format_desc)
+	boost::unique_future<array<const std::uint8_t>> operator()(std::vector<layer> layers, const core::video_format_desc& format_desc)
 	{	
 		if(layers.empty())
 		{ // Bypass GPU with empty frame.
 			auto buffer = spl::make_shared<const std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>>(format_desc.size, 0);
 			return async(launch::deferred, [=]
 			{
-				return core::const_array(buffer->data(), format_desc.size, true, buffer);
+				return array<const std::uint8_t>(buffer->data(), format_desc.size, true, buffer);
 			});
 		}		
 
-		return flatten(ogl_->begin_invoke([=]() mutable -> boost::shared_future<core::const_array>
+		return flatten(ogl_->begin_invoke([=]() mutable -> boost::shared_future<array<const std::uint8_t>>
 		{
 			auto draw_buffer = create_mixer_buffer(format_desc.width, format_desc.height, 4);
 
@@ -328,14 +328,14 @@ public:
 	{		
 	}
 	
-	boost::unique_future<core::const_array> render(const core::video_format_desc& format_desc)
+	boost::unique_future<array<const std::uint8_t>> render(const core::video_format_desc& format_desc)
 	{
 		return renderer_(std::move(layers_), format_desc);
 	}
 	
 	virtual core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode)
 	{
-		std::vector<core::mutable_array> buffers;
+		std::vector<array<std::uint8_t>> buffers;
 		BOOST_FOREACH(auto& plane, desc.planes)		
 			buffers.push_back(ogl_->create_array(plane.size));		
 
@@ -348,7 +348,7 @@ image_mixer::~image_mixer(){}
 void image_mixer::push(const core::frame_transform& transform){impl_->push(transform);}
 void image_mixer::visit(const core::const_frame& frame){impl_->visit(frame);}
 void image_mixer::pop(){impl_->pop();}
-boost::unique_future<core::const_array> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
+boost::unique_future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
 void image_mixer::begin_layer(core::blend_mode blend_mode){impl_->begin_layer(blend_mode);}
 void image_mixer::end_layer(){impl_->end_layer();}
 core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) {return impl_->create_frame(tag, desc, frame_rate, field_mode);}

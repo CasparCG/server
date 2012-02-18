@@ -36,7 +36,6 @@
 #include <common/gl/gl_check.h>
 #include <common/os/windows/windows.h>
 
-
 #include <boost/foreach.hpp>
 
 #include <gl/glew.h>
@@ -60,13 +59,13 @@ struct device::impl : public std::enable_shared_from_this<impl>
 {	
 	static_assert(std::is_same<decltype(boost::declval<device>().impl_), spl::shared_ptr<impl>>::value, "impl_ must be shared_ptr");
 
-	tbb::concurrent_hash_map<buffer*, std::shared_ptr<texture>> texture_mapping_;
+	tbb::concurrent_hash_map<buffer*, std::shared_ptr<texture>> texture_cache_;
 
 	std::unique_ptr<sf::Context> device_;
 	std::unique_ptr<sf::Context> host_alloc_device_;
 	
-	std::array<tbb::concurrent_unordered_map<int, tbb::concurrent_bounded_queue<std::shared_ptr<texture>>>, 4>	device_pools_;
-	std::array<tbb::concurrent_unordered_map<int, tbb::concurrent_bounded_queue<std::shared_ptr<buffer>>>, 2>	host_pools_;
+	std::array<tbb::concurrent_unordered_map<std::size_t, tbb::concurrent_bounded_queue<std::shared_ptr<texture>>>, 4>	device_pools_;
+	std::array<tbb::concurrent_unordered_map<std::size_t, tbb::concurrent_bounded_queue<std::shared_ptr<buffer>>>, 2>	host_pools_;
 	
 	GLuint fbo_;
 
@@ -172,7 +171,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		});
 	}
 		
-	spl::shared_ptr<buffer> create_buffer(int size, buffer::usage usage)
+	spl::shared_ptr<buffer> create_buffer(std::size_t size, buffer::usage usage)
 	{
 		CASPAR_VERIFY(size > 0);
 		
@@ -197,7 +196,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 			else
 				buf->unmap();
 
-			self->texture_mapping_.erase(buf.get());
+			self->texture_cache_.erase(buf.get());
 
 			pool->push(buf);
 		};
@@ -208,46 +207,59 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		});
 	}
 
-	core::mutable_array create_array(int size)
+	array<std::uint8_t> create_array(std::size_t size)
 	{		
 		auto buf = create_buffer(size, buffer::usage::write_only);
-		return core::mutable_array(buf->data(), buf->size(), false, buf);
+		return array<std::uint8_t>(buf->data(), buf->size(), false, buf);
 	}
 
-	boost::unique_future<spl::shared_ptr<texture>> copy_async(const core::const_array& source, int width, int height, int stride)
+	boost::unique_future<spl::shared_ptr<texture>> copy_async(const array<const std::uint8_t>& source, int width, int height, int stride)
 	{
 		auto buf = source.storage<spl::shared_ptr<buffer>>();
 				
 		return render_executor_.begin_invoke([=]() -> spl::shared_ptr<texture>
 		{
 			tbb::concurrent_hash_map<buffer*, std::shared_ptr<texture>>::const_accessor a;
-			if(texture_mapping_.find(a, buf.get()))
+			if(texture_cache_.find(a, buf.get()))
 				return spl::make_shared_ptr(a->second);
 
 			auto texture = create_texture(width, height, stride);
 			texture->copy_from(*buf);	
 
-			texture_mapping_.insert(std::make_pair(buf.get(), texture));
+			texture_cache_.insert(std::make_pair(buf.get(), texture));
 
 			return texture;
 
 		}, task_priority::high_priority);
 	}
-
-	boost::unique_future<core::const_array> copy_async(const spl::shared_ptr<texture>& source)
+	
+	boost::unique_future<spl::shared_ptr<texture>> copy_async(const array<std::uint8_t>& source, int width, int height, int stride)
 	{
-		return flatten(render_executor_.begin_invoke([=]() -> boost::shared_future<core::const_array>
+		auto buf = source.storage<spl::shared_ptr<buffer>>();
+				
+		return render_executor_.begin_invoke([=]() -> spl::shared_ptr<texture>
+		{
+			auto texture = create_texture(width, height, stride);
+			texture->copy_from(*buf);				
+			return texture;
+		}, task_priority::high_priority);
+	}
+
+	boost::unique_future<array<const std::uint8_t>> copy_async(const spl::shared_ptr<texture>& source)
+	{
+		return flatten(render_executor_.begin_invoke([=]() -> boost::shared_future<array<const std::uint8_t>>
 		{
 			auto buffer = create_buffer(source->size(), buffer::usage::read_only); 
 			source->copy_to(*buffer);	
 
-			return make_shared(async(launch::deferred, [=]() mutable -> core::const_array
+			auto self = shared_from_this();
+			return make_shared(async(launch::deferred, [self, buffer]() mutable -> array<const std::uint8_t>
 			{
 				const auto& buf = buffer.get();
 				if(!buf->data())
-					alloc_executor_.invoke(std::bind(&buffer::map, std::ref(buf))); // Defer blocking "map" call until data is needed.
+					self->alloc_executor_.invoke(std::bind(&buffer::map, std::ref(buf))); // Defer blocking "map" call until data is needed.
 
-				return core::const_array(buf->data(), buf->size(), true, buffer);
+				return array<const std::uint8_t>(buf->data(), buf->size(), true, buffer);
 			}));
 		}, task_priority::high_priority));
 	}
@@ -255,15 +267,14 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
 device::device() 
 	: executor_(L"OpenGL Rendering Context.")
-	, impl_(new impl(executor_))
-{
-}
-device::~device(){}	
+	, impl_(new impl(executor_)){}
+device::~device(){}
 spl::shared_ptr<texture>							device::create_texture(int width, int height, int stride){return impl_->create_texture(width, height, stride);}
-core::mutable_array									device::create_array(int size){return impl_->create_array(size);}
-boost::unique_future<spl::shared_ptr<texture>>		device::copy_async(const core::const_array& source, int width, int height, int stride){return impl_->copy_async(source, width, height, stride);}
-boost::unique_future<core::const_array>				device::copy_async(const spl::shared_ptr<texture>& source){return impl_->copy_async(source);}
-std::wstring										device::version(){return impl_->version();}
+array<std::uint8_t>									device::create_array(int size){return impl_->create_array(size);}
+boost::unique_future<spl::shared_ptr<texture>>		device::copy_async(const array<const std::uint8_t>& source, int width, int height, int stride){return impl_->copy_async(source, width, height, stride);}
+boost::unique_future<spl::shared_ptr<texture>>		device::copy_async(const array<std::uint8_t>& source, int width, int height, int stride){return impl_->copy_async(source, width, height, stride);}
+boost::unique_future<array<const std::uint8_t>>		device::copy_async(const spl::shared_ptr<texture>& source){return impl_->copy_async(source);}
+std::wstring										device::version() const{return impl_->version();}
 
 
 }}}
