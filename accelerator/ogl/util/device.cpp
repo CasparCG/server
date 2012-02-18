@@ -154,20 +154,26 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		}
 	}
 							
-	spl::shared_ptr<texture> create_texture(int width, int height, int stride)
+	spl::shared_ptr<texture> create_texture(int width, int height, int stride, bool clear = false)
 	{
-		CASPAR_VERIFY(stride > 0 && stride < 5);
-		CASPAR_VERIFY(width > 0 && height > 0);
+		return render_executor_.invoke([=]() -> spl::shared_ptr<texture>
+		{
+			CASPAR_VERIFY(stride > 0 && stride < 5);
+			CASPAR_VERIFY(width > 0 && height > 0);
 		
-		auto pool = &device_pools_[stride-1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
+			auto pool = &device_pools_[stride-1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
 		
-		std::shared_ptr<texture> buffer;
-		if(!pool->try_pop(buffer))		
-			buffer = spl::make_shared<texture>(width, height, stride);
+			std::shared_ptr<texture> buffer;
+			if(!pool->try_pop(buffer))		
+				buffer = spl::make_shared<texture>(width, height, stride);
 	
-		return spl::shared_ptr<texture>(buffer.get(), [buffer, pool](texture*) mutable
-		{		
-			pool->push(buffer);	
+			if(clear)
+				buffer->clear();
+
+			return spl::shared_ptr<texture>(buffer.get(), [buffer, pool](texture*) mutable
+			{		
+				pool->push(buffer);	
+			});
 		});
 	}
 		
@@ -229,7 +235,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
 			texture_cache_.insert(std::make_pair(buf.get(), texture));
 
 			return texture;
-
 		}, task_priority::high_priority);
 	}
 	
@@ -239,7 +244,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 				
 		return render_executor_.begin_invoke([=]() -> spl::shared_ptr<texture>
 		{
-			auto texture = create_texture(width, height, stride);
+			auto texture = create_texture(width, height, stride, false);
 			texture->copy_from(*buf);				
 			return texture;
 		}, task_priority::high_priority);
@@ -269,7 +274,7 @@ device::device()
 	: executor_(L"OpenGL Rendering Context.")
 	, impl_(new impl(executor_)){}
 device::~device(){}
-spl::shared_ptr<texture>							device::create_texture(int width, int height, int stride){return impl_->create_texture(width, height, stride);}
+spl::shared_ptr<texture>							device::create_texture(int width, int height, int stride){return impl_->create_texture(width, height, stride, true);}
 array<std::uint8_t>									device::create_array(int size){return impl_->create_array(size);}
 boost::unique_future<spl::shared_ptr<texture>>		device::copy_async(const array<const std::uint8_t>& source, int width, int height, int stride){return impl_->copy_async(source, width, height, stride);}
 boost::unique_future<spl::shared_ptr<texture>>		device::copy_async(const array<std::uint8_t>& source, int width, int height, int stride){return impl_->copy_async(source, width, height, stride);}

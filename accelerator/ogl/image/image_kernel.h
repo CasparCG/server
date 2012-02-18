@@ -29,8 +29,6 @@
 #include <core/frame/pixel_format.h>
 #include <core/frame/frame_transform.h>
 
-#include <boost/noncopyable.hpp>
-
 namespace caspar { namespace accelerator { namespace ogl {
 	
 struct keyer_def
@@ -45,11 +43,11 @@ typedef enum_class<keyer_def> keyer;
 
 struct draw_params sealed
 {
-	core::pixel_format_desc								pix_desc;
+	core::pixel_format_desc						pix_desc;
 	std::vector<spl::shared_ptr<class texture>>	textures;
-	core::image_transform								transform;
-	core::blend_mode									blend_mode;
-	keyer												keyer;
+	core::image_transform						transform;
+	core::blend_mode							blend_mode;
+	keyer										keyer;
 	std::shared_ptr<class texture>				background;
 	std::shared_ptr<class texture>				local_key;
 	std::shared_ptr<class texture>				layer_key;
@@ -62,8 +60,10 @@ struct draw_params sealed
 	}
 };
 
-class image_kernel sealed : boost::noncopyable
+class image_kernel sealed
 {
+	image_kernel(const image_kernel&);
+	image_kernel& operator=(const image_kernel&);
 public:
 
 	// Static Members
@@ -71,17 +71,18 @@ public:
 	// Constructors
 
 	image_kernel(const spl::shared_ptr<class device>& ogl);
+	~image_kernel();
 
 	// Methods
 
-	void draw(draw_params&& params);
+	void draw(const draw_params& params);
 	
 	// Properties
 
 	bool has_blend_modes() const;
 private:
 	struct impl;
-	spl::shared_ptr<impl> impl_;
+	spl::unique_ptr<impl> impl_;
 };
 
 }}}
