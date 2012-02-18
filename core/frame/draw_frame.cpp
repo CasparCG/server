@@ -34,7 +34,7 @@ namespace caspar { namespace core {
 struct draw_frame::impl
 {		
 	int								tag_;
-	std::shared_ptr<mutable_frame>	frame_;
+	std::shared_ptr<const_frame>	frame_;
 	std::vector<draw_frame>			frames_;
 	core::frame_transform			frame_transform_;		
 public:		
@@ -51,12 +51,18 @@ public:
 	{
 	}
 
-	impl(mutable_frame&& frame) 
+	impl(const_frame&& frame) 
 		: tag_(frame_tag)
-		, frame_(new mutable_frame(std::move(frame)))
+		, frame_(new const_frame(std::move(frame)))
 	{
 	}
 	
+	impl(mutable_frame&& frame) 
+		: tag_(frame_tag)
+		, frame_(new const_frame(std::move(frame)))
+	{
+	}
+
 	impl(std::vector<draw_frame> frames)
 		: tag_(frame_tag)
 		, frames_(std::move(frames))
@@ -99,6 +105,7 @@ draw_frame::draw_frame() : impl_(new impl()){}
 draw_frame::draw_frame(int tag) : impl_(new impl(std::move(tag))){}
 draw_frame::draw_frame(const draw_frame& other) : impl_(new impl(*other.impl_)){}
 draw_frame::draw_frame(draw_frame&& other) : impl_(std::move(other.impl_)){}
+draw_frame::draw_frame(const_frame&& frame)  : impl_(new impl(std::move(frame))){}
 draw_frame::draw_frame(mutable_frame&& frame)  : impl_(new impl(std::move(frame))){}
 draw_frame::draw_frame(std::vector<draw_frame> frames) : impl_(new impl(frames)){}
 draw_frame::~draw_frame(){}

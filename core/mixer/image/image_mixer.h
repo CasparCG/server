@@ -58,7 +58,7 @@ public:
 	// Methods
 
 	virtual void push(const struct frame_transform& frame) = 0;
-	virtual void visit(const class mutable_frame& frame) = 0;
+	virtual void visit(const class const_frame& frame) = 0;
 	virtual void pop() = 0;
 
 	virtual void begin_layer(blend_mode blend_mode) = 0;

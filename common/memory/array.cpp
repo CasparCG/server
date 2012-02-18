@@ -23,25 +23,57 @@
 
 #include "array.h"
 
+#include "../assert.h"
+
 namespace caspar { namespace core {
 		
+mutable_array::mutable_array(mutable_array&& other)
+	: ptr_(other.ptr_)
+	, size_(other.size_)
+	, storage_(std::move(other.storage_))
+{
+	CASPAR_ASSERT(storage_);
+}
+	
+mutable_array& mutable_array::operator=(mutable_array&& other)
+{
+	ptr_		= other.ptr_;
+	size_		= other.size_;
+	storage_	= std::move(other.storage_);
+
+	CASPAR_ASSERT(storage_);
+
+	return *this;
+}
+		
+std::uint8_t* mutable_array::begin()				{return ptr_;}		
+std::uint8_t* mutable_array::data()					{return ptr_;}
+std::uint8_t* mutable_array::end()					{return ptr_ + size_;}	
+const std::uint8_t* mutable_array::begin() const	{return ptr_;}		
+const std::uint8_t* mutable_array::data() const		{return ptr_;}
+const std::uint8_t* mutable_array::end() const		{return ptr_ + size_;}
+std::size_t mutable_array::size() const				{return size_;}
+bool mutable_array::empty() const					{return size() == 0;}
+
 const_array::const_array(const const_array& other)
 	: ptr_(other.ptr_)
 	, size_(other.size_)
 	, storage_(other.storage_)
 {
+	CASPAR_ASSERT(storage_);
 }
 
-const_array::const_array(const_array&& other)
+const_array::const_array(mutable_array&& other)
 	: ptr_(other.ptr_)
 	, size_(other.size_)
 	, storage_(std::move(other.storage_))
 {
+	CASPAR_ASSERT(storage_);
 }
 
-const_array& const_array::operator=(const_array other)
+const_array& const_array::operator=(const const_array& other)
 {
-	other.swap(*this);
+	const_array(other).swap(*this);
 	return *this;
 }
 
@@ -57,30 +89,5 @@ const std::uint8_t* const_array::data() const	{return ptr_;}
 const std::uint8_t* const_array::end() const	{return ptr_ + size_;}
 std::size_t const_array::size() const			{return size_;}
 bool const_array::empty() const					{return size() == 0;}
-
-mutable_array::mutable_array(mutable_array&& other)
-	: ptr_(other.ptr_)
-	, size_(other.size_)
-	, storage_(std::move(other.storage_))
-{
-}
-	
-mutable_array& mutable_array::operator=(mutable_array&& other)
-{
-	ptr_		= other.ptr_;
-	size_		= other.size_;
-	storage_	= std::move(other.storage_);
-	return *this;
-}
-		
-std::uint8_t* mutable_array::begin()				{return ptr_;}		
-std::uint8_t* mutable_array::data()					{return ptr_;}
-std::uint8_t* mutable_array::end()					{return ptr_ + size_;}	
-const std::uint8_t* mutable_array::begin() const	{return ptr_;}		
-const std::uint8_t* mutable_array::data() const		{return ptr_;}
-const std::uint8_t* mutable_array::end() const		{return ptr_ + size_;}
-std::size_t mutable_array::size() const				{return size_;}
-bool mutable_array::empty() const					{return size() == 0;}
-const boost::any& mutable_array::storage() const	{return *storage_;}
 
 }}
