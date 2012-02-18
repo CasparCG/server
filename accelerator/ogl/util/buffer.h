@@ -49,9 +49,12 @@ public:
 	// Constructors
 
 	buffer(std::size_t size, usage usage);
+	buffer(buffer&& other);
 	~buffer();
 
 	// Methods
+
+	buffer& operator=(buffer&& other);
 	
 	void map();
 	void unmap();
@@ -63,6 +66,9 @@ public:
 
 	uint8_t* data();
 	std::size_t size() const;	
+
+	int id() const;
+
 private:
 	struct impl;
 	spl::unique_ptr<impl> impl_;

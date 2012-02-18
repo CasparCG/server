@@ -36,14 +36,14 @@ namespace caspar { namespace core {
 		
 struct mutable_frame::impl : boost::noncopyable
 {			
-	std::vector<mutable_array>					buffers_;
+	std::vector<array<std::uint8_t>>					buffers_;
 	core::audio_buffer							audio_data_;
 	const core::pixel_format_desc				desc_;
 	const void*									tag_;
 	double										frame_rate_;
 	core::field_mode							field_mode_;
 	
-	impl(std::vector<mutable_array> buffers, audio_buffer audio_buffer, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) 
+	impl(std::vector<array<std::uint8_t>> buffers, audio_buffer audio_buffer, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) 
 		: buffers_(std::move(buffers))
 		, audio_data_(std::move(audio_buffer))
 		, desc_(desc)
@@ -57,7 +57,7 @@ struct mutable_frame::impl : boost::noncopyable
 	}
 };
 	
-mutable_frame::mutable_frame(std::vector<mutable_array> image_buffers, audio_buffer audio_buffer, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) 
+mutable_frame::mutable_frame(std::vector<array<std::uint8_t>> image_buffers, audio_buffer audio_buffer, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) 
 	: impl_(new impl(std::move(image_buffers), std::move(audio_buffer), tag, desc, frame_rate, field_mode)){}
 mutable_frame::~mutable_frame(){}
 mutable_frame::mutable_frame(mutable_frame&& other) : impl_(std::move(other.impl_)){}
@@ -68,9 +68,9 @@ mutable_frame& mutable_frame::operator=(mutable_frame&& other)
 }
 void mutable_frame::swap(mutable_frame& other){impl_.swap(other.impl_);}
 const core::pixel_format_desc& mutable_frame::pixel_format_desc() const{return impl_->desc_;}
-const mutable_array& mutable_frame::image_data(std::size_t index) const{return impl_->buffers_.at(index);}
+const array<std::uint8_t>& mutable_frame::image_data(std::size_t index) const{return impl_->buffers_.at(index);}
 const core::audio_buffer& mutable_frame::audio_data() const{return impl_->audio_data_;}
-mutable_array& mutable_frame::image_data(std::size_t index){return impl_->buffers_.at(index);}
+array<std::uint8_t>& mutable_frame::image_data(std::size_t index){return impl_->buffers_.at(index);}
 core::audio_buffer& mutable_frame::audio_data(){return impl_->audio_data_;}
 double mutable_frame::frame_rate() const{return impl_->frame_rate_;}
 core::field_mode mutable_frame::field_mode() const{return impl_->field_mode_;}
@@ -88,7 +88,7 @@ const const_frame& const_frame::empty()
 
 struct const_frame::impl : boost::noncopyable
 {			
-	mutable std::vector<boost::shared_future<const_array>>	future_buffers_;
+	mutable std::vector<boost::shared_future<array<const std::uint8_t>>>	future_buffers_;
 	int											id_;
 	core::audio_buffer							audio_data_;
 	const core::pixel_format_desc				desc_;
@@ -104,7 +104,7 @@ struct const_frame::impl : boost::noncopyable
 	{
 	}
 	
-	impl(boost::shared_future<const_array> image, audio_buffer audio_buffer, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) 
+	impl(boost::shared_future<array<const std::uint8_t>> image, audio_buffer audio_buffer, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) 
 		: audio_data_(std::move(audio_buffer))
 		, desc_(desc)
 		, tag_(tag)
@@ -128,15 +128,15 @@ struct const_frame::impl : boost::noncopyable
 	{
 		for(std::size_t n = 0; n < desc_.planes.size(); ++n)
 		{
-			boost::promise<const_array> p;
+			boost::promise<array<const std::uint8_t>> p;
 			p.set_value(std::move(other.image_data(n)));
 			future_buffers_.push_back(p.get_future());
 		}
 	}
 
-	const_array image_data(int index) const
+	array<const std::uint8_t> image_data(int index) const
 	{
-		return tag_ != empty().tag() ? future_buffers_.at(index).get() : const_array(nullptr, 0, true, 0);
+		return tag_ != empty().tag() ? future_buffers_.at(index).get() : array<const std::uint8_t>(nullptr, 0, true, 0);
 	}
 
 	std::size_t width() const
@@ -161,7 +161,7 @@ struct const_frame::impl : boost::noncopyable
 };
 	
 const_frame::const_frame(const void* tag) : impl_(new impl(tag)){}
-const_frame::const_frame(boost::shared_future<const_array> image, audio_buffer audio_buffer, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) 
+const_frame::const_frame(boost::shared_future<array<const std::uint8_t>> image, audio_buffer audio_buffer, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) 
 	: impl_(new impl(std::move(image), std::move(audio_buffer), tag, desc, frame_rate, field_mode)){}
 const_frame::const_frame(mutable_frame&& other) : impl_(new impl(std::move(other))){}
 const_frame::~const_frame(){}
@@ -180,7 +180,7 @@ const_frame& const_frame::operator=(const const_frame& other)
 bool const_frame::operator==(const const_frame& other){return *impl_ == *other.impl_;}
 bool const_frame::operator!=(const const_frame& other){return !(*this == other);}
 const core::pixel_format_desc& const_frame::pixel_format_desc()const{return impl_->desc_;}
-const_array const_frame::image_data(int index)const{return impl_->image_data(index);}
+array<const std::uint8_t> const_frame::image_data(int index)const{return impl_->image_data(index);}
 const core::audio_buffer& const_frame::audio_data()const{return impl_->audio_data_;}
 double const_frame::frame_rate()const{return impl_->frame_rate_;}
 core::field_mode const_frame::field_mode()const{return impl_->field_mode_;}
