@@ -174,7 +174,7 @@ public:
 		
 		return async(launch::deferred, [=]
 		{
-			return core::const_array(result->data(), format_desc.size, result);
+			return core::const_array(result->data(), format_desc.size, true, result);
 		});	
 	}
 
@@ -358,7 +358,7 @@ public:
 		BOOST_FOREACH(auto& plane, desc.planes)
 		{
 			auto buf = spl::make_shared<buffer>(plane.size);
-			buffers.push_back(core::mutable_array(buf->data(), plane.size, buf));
+			buffers.push_back(core::mutable_array(buf->data(), plane.size, true, buf));
 		}
 		return core::mutable_frame(std::move(buffers), core::audio_buffer(), tag, desc, frame_rate, field_mode);
 	}

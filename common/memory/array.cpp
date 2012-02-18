@@ -30,6 +30,7 @@ namespace caspar { namespace core {
 mutable_array::mutable_array(mutable_array&& other)
 	: ptr_(other.ptr_)
 	, size_(other.size_)
+	, cacheable_(other.cacheable_)
 	, storage_(std::move(other.storage_))
 {
 	CASPAR_ASSERT(storage_);
@@ -39,6 +40,7 @@ mutable_array& mutable_array::operator=(mutable_array&& other)
 {
 	ptr_		= other.ptr_;
 	size_		= other.size_;
+	cacheable_  = other.cacheable_;
 	storage_	= std::move(other.storage_);
 
 	CASPAR_ASSERT(storage_);
@@ -54,10 +56,12 @@ const std::uint8_t* mutable_array::data() const		{return ptr_;}
 const std::uint8_t* mutable_array::end() const		{return ptr_ + size_;}
 std::size_t mutable_array::size() const				{return size_;}
 bool mutable_array::empty() const					{return size() == 0;}
+bool mutable_array::cacheable() const				{return cacheable_;}
 
 const_array::const_array(const const_array& other)
 	: ptr_(other.ptr_)
 	, size_(other.size_)
+	, cacheable_(other.cacheable_)
 	, storage_(other.storage_)
 {
 	CASPAR_ASSERT(storage_);
@@ -66,6 +70,7 @@ const_array::const_array(const const_array& other)
 const_array::const_array(mutable_array&& other)
 	: ptr_(other.ptr_)
 	, size_(other.size_)
+	, cacheable_(other.cacheable_)
 	, storage_(std::move(other.storage_))
 {
 	CASPAR_ASSERT(storage_);
@@ -79,9 +84,10 @@ const_array& const_array::operator=(const const_array& other)
 
 void const_array::swap(const_array& other)
 {
-	std::swap(ptr_, other.ptr_);
-	std::swap(size_, other.size_);
-	std::swap(storage_, other.storage_);
+	ptr_		= other.ptr_;
+	size_		= other.size_;
+	storage_	= other.storage_;
+	cacheable_	= other.cacheable_;
 }
 			
 const std::uint8_t* const_array::begin() const	{return ptr_;}		
@@ -89,5 +95,6 @@ const std::uint8_t* const_array::data() const	{return ptr_;}
 const std::uint8_t* const_array::end() const	{return ptr_ + size_;}
 std::size_t const_array::size() const			{return size_;}
 bool const_array::empty() const					{return size() == 0;}
+bool const_array::cacheable() const				{return cacheable_;}
 
 }}
