@@ -51,7 +51,9 @@ Returns the version of specified component.
 
 Syntax::
 
-	VERSION	{SERVER|FLASH}
+	VERSION	SERVER
+    VERSION FLASH
+    VERSION TEMPLATEHOST
 		
 Example::
 
@@ -63,11 +65,28 @@ Example::
 ====
 INFO
 ====
-Returns information about the server. The TEMPLATE version will read and return the meta-data of the specified template.
+Returns xml-formatted information about the server.
+
+INFO TEMPLATE:  Reads meta-data from a flash-template.
+INFO PATHS:     Returns configured paths.
+INFO SYSTEM:    Returns information about the system.
+INFO CONFIG:    Return the configuration.
+INFO:           Returns a list of channels (not xml-formatted due to compatibility issues with older clients).
+INFO 1:         Returns information about specified channl.
+INFO 1-1:       Returns information about specified layer.
+CG 1 INFO       Returns information about flash-producer running on specified channel.
+
 
 Syntax::
 
-	INFO {[channel:int]{-[layer:int]}|TEMPLATE [filename:string]}
+    INFO TEMPLATE [filename:string]
+    INFO PATHS
+    INFO SYSTEM
+    INFO CONFIG
+    INFO 
+    INFO [channel:int]
+    INFO [channel:int]-[layer:int]
+    CG [channel:int] INFO
 		
 Example::
 
