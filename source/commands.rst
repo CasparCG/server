@@ -51,9 +51,9 @@ Information
 ==========
 Successful
 ==========
-* 200 [command] OK	 - The command has been executed
+* 200 [command] OK	 - The command has been executed and several lines of data are being returned (terminated by an empty line).
 * 201 [command] OK	 - The command has been executed and a line of data is being returned
-* 202 [command] OK	 - The command has been executed and several lines of data are being returned (terminated by an empty line).
+* 202 [command] OK	 - The command has been executed
 
 ============
 Client Error
