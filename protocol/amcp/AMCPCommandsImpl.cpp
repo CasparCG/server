@@ -282,21 +282,13 @@ bool CallCommand::DoExecute()
 	{
 		auto what = _parameters.at(0);
 				
-		boost::unique_future<std::wstring> result;
-		if(what == L"B" || what == L"F")
-		{
-			std::wstring param;
-			for(auto it = std::begin(_parameters2)+1; it != std::end(_parameters2); ++it, param += L" ")
-				param += *it;
-			result = (what == L"F" ? GetChannel()->stage().foreground(GetLayerIndex()) : GetChannel()->stage().background(GetLayerIndex())).get()->call(boost::trim_copy(param));
-		}
-		else
-		{
-			std::wstring param;
-			for(auto it = std::begin(_parameters2); it != std::end(_parameters2); ++it, param += L" ")
-				param += *it;
-			result = GetChannel()->stage().foreground(GetLayerIndex()).get()->call(boost::trim_copy(param));
-		}
+		std::wstring param;
+		for(auto it = std::begin(_parameters2); it != std::end(_parameters2); ++it, param += L" ")
+			param += *it;
+
+		auto producer = GetChannel()->stage().foreground(GetLayerIndex()).get();
+
+		auto result = producer->call(boost::trim_copy(param));
 
 		if(!result.timed_wait(boost::posix_time::seconds(2)))
 			BOOST_THROW_EXCEPTION(timed_out());

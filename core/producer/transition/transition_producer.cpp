@@ -131,9 +131,14 @@ public:
 		return L"transition";
 	}
 	
-	boost::property_tree::wptree info() const override
+	virtual boost::property_tree::wptree info() const override
 	{
 		return dest_producer_->info();
+	}
+	
+	virtual boost::unique_future<std::wstring> call(const std::wstring& str) override
+	{
+		return dest_producer_->call(str);
 	}
 
 	// transition_producer
