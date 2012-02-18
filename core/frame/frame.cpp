@@ -34,98 +34,6 @@
 
 namespace caspar { namespace core {
 		
-const const_frame& const_frame::empty()
-{
-	static int dummy;
-	static const_frame empty(&dummy);
-	return empty;
-}
-
-struct const_frame::impl : boost::noncopyable
-{			
-	mutable boost::shared_future<const_array>	future_buffer_;
-	int											id_;
-	core::audio_buffer							audio_data_;
-	const core::pixel_format_desc				desc_;
-	const void*									tag_;
-	double										frame_rate_;
-	core::field_mode							field_mode_;
-
-	impl(const void* tag)
-		: desc_(core::pixel_format::invalid)
-		, tag_(tag)	
-		, id_(0)
-		, field_mode_(core::field_mode::empty)
-	{
-	}
-	
-	impl(boost::shared_future<const_array> image, audio_buffer audio_buffer, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) 
-		: future_buffer_(std::move(image))
-		, audio_data_(std::move(audio_buffer))
-		, desc_(desc)
-		, tag_(tag)
-		, id_(reinterpret_cast<int>(this))
-		, frame_rate_(frame_rate)
-		, field_mode_(field_mode)
-	{
-		if(desc.format != core::pixel_format::bgra)
-			BOOST_THROW_EXCEPTION(not_implemented());
-	}
-
-	const_array image_data() const
-	{
-		return tag_ != empty().tag() ? future_buffer_.get() : const_array(nullptr, 0, 0);
-	}
-
-	std::size_t width() const
-	{
-		return tag_ != empty().tag() ? desc_.planes.at(0).width : 0;
-	}
-
-	std::size_t height() const
-	{
-		return tag_ != empty().tag() ? desc_.planes.at(0).height : 0;
-	}
-
-	std::size_t size() const
-	{
-		return tag_ != empty().tag() ? desc_.planes.at(0).size : 0;
-	}
-
-	bool operator==(const impl& other)
-	{
-		return tag_ == other.tag_ && id_ == other.id_;
-	}
-};
-	
-const_frame::const_frame(const void* tag) : impl_(new impl(tag)){}
-const_frame::const_frame(boost::shared_future<const_array> image, audio_buffer audio_buffer, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) 
-	: impl_(new impl(std::move(image), std::move(audio_buffer), tag, desc, frame_rate, field_mode)){}
-const_frame::~const_frame(){}
-const_frame::const_frame(const_frame&& other) : impl_(std::move(other.impl_)){}
-const_frame& const_frame::operator=(const_frame&& other)
-{
-	impl_ = std::move(other.impl_);
-	return *this;
-}
-const_frame::const_frame(const const_frame& other) : impl_(other.impl_){}
-const_frame& const_frame::operator=(const const_frame& other)
-{
-	impl_ = other.impl_;
-	return *this;
-}
-bool const_frame::operator==(const const_frame& other){return *impl_ == *other.impl_;}
-bool const_frame::operator!=(const const_frame& other){return !(*this == other);}
-const core::pixel_format_desc& const_frame::pixel_format_desc()const{return impl_->desc_;}
-const_array const_frame::image_data()const{return impl_->image_data();}
-const core::audio_buffer& const_frame::audio_data()const{return impl_->audio_data_;}
-double const_frame::frame_rate()const{return impl_->frame_rate_;}
-core::field_mode const_frame::field_mode()const{return impl_->field_mode_;}
-std::size_t const_frame::width()const{return impl_->width();}
-std::size_t const_frame::height()const{return impl_->height();}	
-std::size_t const_frame::size()const{return impl_->size();}						
-const void* const_frame::tag()const{return impl_->tag_;}	
-
 struct mutable_frame::impl : boost::noncopyable
 {			
 	std::vector<mutable_array>					buffers_;
@@ -169,5 +77,116 @@ core::field_mode mutable_frame::field_mode() const{return impl_->field_mode_;}
 std::size_t mutable_frame::width() const{return impl_->desc_.planes.at(0).width;}
 std::size_t mutable_frame::height() const{return impl_->desc_.planes.at(0).height;}						
 const void* mutable_frame::tag() const{return impl_->tag_;}	
+
+
+const const_frame& const_frame::empty()
+{
+	static int dummy;
+	static const_frame empty(&dummy);
+	return empty;
+}
+
+struct const_frame::impl : boost::noncopyable
+{			
+	mutable std::vector<boost::shared_future<const_array>>	future_buffers_;
+	int											id_;
+	core::audio_buffer							audio_data_;
+	const core::pixel_format_desc				desc_;
+	const void*									tag_;
+	double										frame_rate_;
+	core::field_mode							field_mode_;
+
+	impl(const void* tag)
+		: desc_(core::pixel_format::invalid)
+		, tag_(tag)	
+		, id_(0)
+		, field_mode_(core::field_mode::empty)
+	{
+	}
+	
+	impl(boost::shared_future<const_array> image, audio_buffer audio_buffer, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) 
+		: audio_data_(std::move(audio_buffer))
+		, desc_(desc)
+		, tag_(tag)
+		, id_(reinterpret_cast<int>(this))
+		, frame_rate_(frame_rate)
+		, field_mode_(field_mode)
+	{
+		if(desc.format != core::pixel_format::bgra)
+			BOOST_THROW_EXCEPTION(not_implemented());
+		
+		future_buffers_.push_back(std::move(image));
+	}
+
+	impl(mutable_frame&& other)
+		: audio_data_(other.audio_data())
+		, desc_(other.pixel_format_desc())
+		, tag_(other.tag())
+		, id_(reinterpret_cast<int>(this))
+		, frame_rate_(other.frame_rate())
+		, field_mode_(other.field_mode())
+	{
+		for(std::size_t n = 0; n < desc_.planes.size(); ++n)
+		{
+			boost::promise<const_array> p;
+			p.set_value(std::move(other.image_data(n)));
+			future_buffers_.push_back(p.get_future());
+		}
+	}
+
+	const_array image_data(int index) const
+	{
+		return tag_ != empty().tag() ? future_buffers_.at(index).get() : const_array(nullptr, 0, 0);
+	}
+
+	std::size_t width() const
+	{
+		return tag_ != empty().tag() ? desc_.planes.at(0).width : 0;
+	}
+
+	std::size_t height() const
+	{
+		return tag_ != empty().tag() ? desc_.planes.at(0).height : 0;
+	}
+
+	std::size_t size() const
+	{
+		return tag_ != empty().tag() ? desc_.planes.at(0).size : 0;
+	}
+
+	bool operator==(const impl& other)
+	{
+		return tag_ == other.tag_ && id_ == other.id_;
+	}
+};
+	
+const_frame::const_frame(const void* tag) : impl_(new impl(tag)){}
+const_frame::const_frame(boost::shared_future<const_array> image, audio_buffer audio_buffer, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) 
+	: impl_(new impl(std::move(image), std::move(audio_buffer), tag, desc, frame_rate, field_mode)){}
+const_frame::const_frame(mutable_frame&& other) : impl_(new impl(std::move(other))){}
+const_frame::~const_frame(){}
+const_frame::const_frame(const_frame&& other) : impl_(std::move(other.impl_)){}
+const_frame& const_frame::operator=(const_frame&& other)
+{
+	impl_ = std::move(other.impl_);
+	return *this;
+}
+const_frame::const_frame(const const_frame& other) : impl_(other.impl_){}
+const_frame& const_frame::operator=(const const_frame& other)
+{
+	impl_ = other.impl_;
+	return *this;
+}
+bool const_frame::operator==(const const_frame& other){return *impl_ == *other.impl_;}
+bool const_frame::operator!=(const const_frame& other){return !(*this == other);}
+const core::pixel_format_desc& const_frame::pixel_format_desc()const{return impl_->desc_;}
+const_array const_frame::image_data(int index)const{return impl_->image_data(index);}
+const core::audio_buffer& const_frame::audio_data()const{return impl_->audio_data_;}
+double const_frame::frame_rate()const{return impl_->frame_rate_;}
+core::field_mode const_frame::field_mode()const{return impl_->field_mode_;}
+std::size_t const_frame::width()const{return impl_->width();}
+std::size_t const_frame::height()const{return impl_->height();}	
+std::size_t const_frame::size()const{return impl_->size();}						
+const void* const_frame::tag()const{return impl_->tag_;}	
 
 }}

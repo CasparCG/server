@@ -53,6 +53,7 @@ public:
 	draw_frame();
 	draw_frame(const draw_frame& other);
 	draw_frame(draw_frame&& other);	
+	explicit draw_frame(class const_frame&& frame);
 	explicit draw_frame(class mutable_frame&& frame);
 	explicit draw_frame(std::vector<draw_frame> frames);
 

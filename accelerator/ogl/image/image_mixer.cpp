@@ -298,7 +298,7 @@ public:
 		transform_stack_.push_back(transform_stack_.back()*transform.image_transform);
 	}
 		
-	void visit(const core::mutable_frame& frame)
+	void visit(const core::const_frame& frame)
 	{			
 		if(frame.pixel_format_desc().format == core::pixel_format::invalid)
 			return;
@@ -346,7 +346,7 @@ public:
 image_mixer::image_mixer(const spl::shared_ptr<device>& ogl) : impl_(new impl(ogl)){}
 image_mixer::~image_mixer(){}
 void image_mixer::push(const core::frame_transform& transform){impl_->push(transform);}
-void image_mixer::visit(const core::mutable_frame& frame){impl_->visit(frame);}
+void image_mixer::visit(const core::const_frame& frame){impl_->visit(frame);}
 void image_mixer::pop(){impl_->pop();}
 boost::unique_future<core::const_array> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
 void image_mixer::begin_layer(core::blend_mode blend_mode){impl_->begin_layer(blend_mode);}

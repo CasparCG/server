@@ -39,7 +39,7 @@ public:
 	virtual void end_layer();
 
 	virtual void push(const core::frame_transform& frame);
-	virtual void visit(const core::mutable_frame& frame);
+	virtual void visit(const core::const_frame& frame);
 	virtual void pop();
 		
 	virtual boost::unique_future<core::const_array> operator()(const core::video_format_desc& format_desc) override;
