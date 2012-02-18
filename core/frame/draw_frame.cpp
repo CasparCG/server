@@ -33,11 +33,10 @@ namespace caspar { namespace core {
 		
 struct draw_frame::impl
 {		
-	int									tag_;
-	std::vector<draw_frame>				frames_;
+	int								tag_;
 	std::shared_ptr<mutable_frame>	frame_;
-
-	core::frame_transform				frame_transform_;		
+	std::vector<draw_frame>			frames_;
+	core::frame_transform			frame_transform_;		
 public:		
 	enum tags
 	{
@@ -89,9 +88,10 @@ public:
 		
 	bool operator==(const impl& other)
 	{
-		return	tag_ == other.tag_ && 
-				frames_ == other.frames_ && 
-				frame_ == other.frame_;
+		return	tag_				== other.tag_ && 
+				frames_				== other.frames_ && 
+				frame_				== other.frame_ &&
+				frame_transform_	== other.frame_transform_;
 	}
 };
 	
