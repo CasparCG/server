@@ -104,11 +104,13 @@ struct server::impl : boost::noncopyable
 
 	~impl()
 	{		
-		image::uninit();
-		ffmpeg::uninit();
-
 		async_servers_.clear();
 		channels_.clear();
+
+		Sleep(500); // HACK: Wait for asynchronous destruction of producers and consumers.
+
+		image::uninit();
+		ffmpeg::uninit();
 	}
 				
 	void setup_channels(const boost::property_tree::wptree& pt)

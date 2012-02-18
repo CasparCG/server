@@ -26,6 +26,7 @@
 #include "../log.h"
 
 #include <tbb/atomic.h>
+#include <tbb/concurrent_priority_queue.h>
 #include <tbb/concurrent_queue.h>
 
 #include <boost/thread.hpp>
@@ -33,67 +34,59 @@
 #include <functional>
 
 namespace caspar {
-
-namespace detail {
-	
-template<typename T>
-struct move_on_copy
-{
-	move_on_copy(const move_on_copy<T>& other) : value(std::move(other.value)){}
-	move_on_copy(T&& value) : value(std::move(value)){}
-	mutable T value;
-};
-
-template<typename T>
-move_on_copy<T> make_move_on_copy(T&& value)
-{
-	return move_on_copy<T>(std::move(value));
-}
-
-}
-	
+		
 struct task_priority_def
 {
 	enum type
 	{
-		high_priority,
+		lower_priority = 1,
+		low_priority,
 		normal_priority,
-		priority_count
+		high_priority,
+		higher_priority
 	};
 };
 typedef enum_class<task_priority_def> task_priority;
 
 class executor
-{
+{	
+	struct priority_function
+	{
+		int						priority;
+		std::function<void()>	func;
+
+		priority_function()
+		{
+		}
+
+		template<typename F>
+		priority_function(int priority, F&& func)
+			: priority(priority)
+			, func(std::forward<F>(func))
+		{
+		}
+
+		void operator()()
+		{
+			func();
+		}
+
+		bool operator<(const priority_function& other) const
+		{
+			return priority < other.priority;
+		}
+	};
+
 	executor(const executor&);
 	executor& operator=(const executor&);
 	
-	tbb::atomic<bool>	is_running_;
-	boost::thread		thread_;
-	
-	typedef tbb::concurrent_bounded_queue<std::function<void()>> function_queue;
-	function_queue execution_queue_[task_priority::priority_count];
-		
-	template<typename Func>
-	auto create_task(Func&& func) -> boost::packaged_task<decltype(func())> // noexcept
-	{	
-		typedef boost::packaged_task<decltype(func())> task_type;
-				
-		auto task = task_type(std::forward<Func>(func));
-		
-		task.set_wait_callback(std::function<void(task_type&)>([=](task_type& my_task) // The std::function wrapper is required in order to add ::result_type to functor class.
-		{
-			try
-			{
-				if(boost::this_thread::get_id() == thread_.get_id())  // Avoids potential deadlock.
-					my_task();
-			}
-			catch(boost::task_already_started&){}
-		}));
-				
-		return std::move(task);
-	}
+	typedef tbb::concurrent_priority_queue<priority_function>	function_queue_t;
 
+	tbb::atomic<bool>											is_running_;
+	boost::thread												thread_;	
+	function_queue_t											execution_queue_;
+	tbb::concurrent_bounded_queue<int>							semaphore_;
+		
 public:		
 	executor(const std::wstring& name) // noexcept
 	{
@@ -107,58 +100,62 @@ public:
 		stop();
 		thread_.join();
 	}
-
-	void set_capacity(size_t capacity) // noexcept
-	{
-		execution_queue_[task_priority::normal_priority].set_capacity(capacity);
-	}
-	
-	void clear()
-	{		
-		std::function<void()> func;
-		while(execution_queue_[task_priority::normal_priority].try_pop(func));
-		while(execution_queue_[task_priority::high_priority].try_pop(func));
-	}
-				
-	void stop() // noexcept
-	{
-		invoke([this]{is_running_ = false;});
-	}
-
-	void wait() // noexcept
-	{
-		invoke([]{});
-	}
-				
+						
 	template<typename Func>
 	auto begin_invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> boost::unique_future<decltype(func())> // noexcept
 	{	
 		if(!is_running_)
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("executor not running."));
+				
+		typedef typename std::remove_reference<Func>::type	function_type;
+		typedef decltype(func())							result_type;
+		typedef boost::packaged_task<result_type>			task_type;
+								
+		std::unique_ptr<task_type> task;
 
-		// Create a move on copy adaptor to avoid copying the functor into the queue, tbb::concurrent_queue does not support move semantics.
-		auto task_adaptor = detail::make_move_on_copy(create_task(func));
+		// Use pointers since the boost thread library doesn't fully support move semantics.
 
-		auto future = task_adaptor.value.get_future();
-
-		execution_queue_[priority.value()].push([=]
+		auto raw_func2 = new function_type(std::forward<Func>(func));
+		try
+		{
+			task.reset(new task_type([raw_func2]() -> result_type
+			{
+				std::unique_ptr<function_type> func2(raw_func2);
+				return (*func2)();
+			}));
+		}
+		catch(...)
+		{
+			delete raw_func2;
+			throw;
+		}
+		
+		task->set_wait_callback(std::function<void(task_type&)>([=](task_type& my_task) // The std::function wrapper is required in order to add ::result_type to functor class.
 		{
 			try
 			{
-				task_adaptor.value();
+				if(boost::this_thread::get_id() == thread_.get_id())  // Avoids potential deadlock.
+					my_task();
 			}
-			catch(boost::task_already_started&)
+			catch(boost::task_already_started&){}
+		}));
+				
+		auto future = task->get_future();
+
+		auto raw_task = task.release();
+		priority_function prio_func(priority.value(), [raw_task]
+		{
+			std::unique_ptr<task_type> task(raw_task);
+			try
 			{
+				(*task)();
 			}
-			catch(...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-			}
+			catch(boost::task_already_started&){}
 		});
 
-		if(priority != task_priority::normal_priority)
-			execution_queue_[task_priority::normal_priority].push(nullptr);
-					
+		execution_queue_.push(prio_func);
+		semaphore_.push(0);
+							
 		return std::move(future);		
 	}
 	
@@ -176,44 +173,52 @@ public:
 		if(boost::this_thread::get_id() != thread_.get_id())
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Executor can only yield inside of thread context."));
 
-		std::function<void()> func;
-		execution_queue_[task_priority::normal_priority].pop(func);	
-		
-		std::function<void()> func2;
-		while(execution_queue_[task_priority::high_priority].try_pop(func2))
-		{
-			if(func2)
-				func2();
-		}	
+		int dummy;
+		semaphore_.pop(dummy);
 
-		if(func)
+		priority_function func;
+		if(execution_queue_.try_pop(func))
 			func();
 	}
 
-	void yield(task_priority priority) // noexcept
+	void set_capacity(std::size_t capacity) // noexcept
 	{
-		if(boost::this_thread::get_id() != thread_.get_id())
-			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Executor can only yield inside of thread context."));
+		semaphore_.set_capacity(capacity);
+	}
 
-		if(priority == task_priority::high_priority)
-		{
-			std::function<void()> func2;
-			while(execution_queue_[task_priority::high_priority].try_pop(func2))
-			{
-				if(func2)
-					func2();
-			}	
-		}
-		else
-			yield();
-	}
-		
-	function_queue::size_type size() const /*noexcept*/
+	std::size_t capacity() const
 	{
-		return execution_queue_[task_priority::normal_priority].size() + execution_queue_[task_priority::high_priority].size();	
+		return semaphore_.capacity();
+	}
+	
+	void clear()
+	{		
+		priority_function func;
+		while(execution_queue_.try_pop(func));
+	}
+				
+	void stop()
+	{
+		invoke([this]
+		{
+			is_running_ = false;
+		});
+	}
+
+	void wait()
+	{
+		invoke([]{});
 	}
 		
-	bool is_running() const /*noexcept*/ { return is_running_; }	
+	function_queue_t::size_type size() const 
+	{
+		return execution_queue_.size();	
+	}
+		
+	bool is_running() const
+	{
+		return is_running_; 
+	}	
 		
 private:	
 
