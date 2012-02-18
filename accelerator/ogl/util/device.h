@@ -50,7 +50,7 @@ public:
 	spl::shared_ptr<texture> create_texture(int width, int height, int stride);
 	core::mutable_array		 create_array(int size);
 
-	boost::unique_future<spl::shared_ptr<texture>> copy_async(const core::mutable_array& source, int width, int height, int stride);
+	boost::unique_future<spl::shared_ptr<texture>> copy_async(const core::const_array& source, int width, int height, int stride);
 	boost::unique_future<core::const_array>		   copy_async(const spl::shared_ptr<texture>& source);
 	
 	template<typename Func>

@@ -214,9 +214,9 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		return core::mutable_array(buf->data(), buf->size(), buf);
 	}
 
-	boost::unique_future<spl::shared_ptr<texture>> copy_async(const core::mutable_array& source, int width, int height, int stride)
+	boost::unique_future<spl::shared_ptr<texture>> copy_async(const core::const_array& source, int width, int height, int stride)
 	{
-		auto buf = boost::any_cast<spl::shared_ptr<buffer>>(source.storage());
+		auto buf = source.storage<spl::shared_ptr<buffer>>();
 				
 		return render_executor_.begin_invoke([=]() -> spl::shared_ptr<texture>
 		{
@@ -261,7 +261,7 @@ device::device()
 device::~device(){}	
 spl::shared_ptr<texture>							device::create_texture(int width, int height, int stride){return impl_->create_texture(width, height, stride);}
 core::mutable_array									device::create_array(int size){return impl_->create_array(size);}
-boost::unique_future<spl::shared_ptr<texture>>		device::copy_async(const core::mutable_array& source, int width, int height, int stride){return impl_->copy_async(source, width, height, stride);}
+boost::unique_future<spl::shared_ptr<texture>>		device::copy_async(const core::const_array& source, int width, int height, int stride){return impl_->copy_async(source, width, height, stride);}
 boost::unique_future<core::const_array>				device::copy_async(const spl::shared_ptr<texture>& source){return impl_->copy_async(source);}
 std::wstring										device::version(){return impl_->version();}
 

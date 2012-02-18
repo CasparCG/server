@@ -63,7 +63,7 @@ public:
 	virtual void end_layer() override;
 
 	virtual void push(const core::frame_transform& frame) override;
-	virtual void visit(const core::mutable_frame& frame) override;
+	virtual void visit(const core::const_frame& frame) override;
 	virtual void pop() override;
 			
 	// Properties
