@@ -109,38 +109,38 @@ public:
 
 		return flatten(ogl_->begin_invoke([=]() mutable -> boost::shared_future<array<const std::uint8_t>>
 		{
-			auto draw_buffer = create_mixer_buffer(format_desc.width, format_desc.height, 4);
+			auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4);
 
 			if(format_desc.field_mode != core::field_mode::progressive)
 			{
-				draw(layers,			draw_buffer, format_desc, core::field_mode::upper);
-				draw(std::move(layers), draw_buffer, format_desc, core::field_mode::lower);
+				draw(target_texture, layers,			format_desc, core::field_mode::upper);
+				draw(target_texture, std::move(layers), format_desc, core::field_mode::lower);
 			}
 			else			
-				draw(std::move(layers), draw_buffer, format_desc, core::field_mode::progressive);
+				draw(target_texture, std::move(layers), format_desc, core::field_mode::progressive);
 								
-			return make_shared(ogl_->copy_async(draw_buffer));
+			return make_shared(ogl_->copy_async(target_texture));
 		}));
 	}
 
 private:	
 	
-	void draw(std::vector<layer>				layers, 
-			  spl::shared_ptr<texture>&			draw_buffer, 
+	void draw(spl::shared_ptr<texture>&			target_texture, 
+			  std::vector<layer>				layers, 
 			  const core::video_format_desc&	format_desc,
 			  core::field_mode					field_mode)
 	{
-		std::shared_ptr<texture> layer_key_buffer;
+		std::shared_ptr<texture> layer_key_texture;
 
 		BOOST_FOREACH(auto& layer, layers)
-			draw_layer(std::move(layer), draw_buffer, layer_key_buffer, format_desc, field_mode);
+			draw(target_texture, std::move(layer), layer_key_texture, format_desc, field_mode);
 	}
 
-	void draw_layer(layer							layer, 
-					spl::shared_ptr<texture>&		draw_buffer,
-					std::shared_ptr<texture>&		layer_key_buffer,
-					const core::video_format_desc&	format_desc,
-					core::field_mode				field_mode)
+	void draw(spl::shared_ptr<texture>&		target_texture,
+			  layer							layer, 
+			  std::shared_ptr<texture>&		layer_key_texture,
+			  const core::video_format_desc&	format_desc,
+			  core::field_mode				field_mode)
 	{		
 		// Fix frames		
 		BOOST_FOREACH(auto& item, layer.items)		
@@ -177,35 +177,35 @@ private:
 		if(layer.items.empty())
 			return;
 
-		std::shared_ptr<texture> local_key_buffer;
-		std::shared_ptr<texture> local_mix_buffer;
+		std::shared_ptr<texture> local_key_texture;
+		std::shared_ptr<texture> local_mix_texture;
 				
 		if(layer.blend_mode != core::blend_mode::normal)
 		{
-			auto layer_draw_buffer = create_mixer_buffer(draw_buffer->width(), draw_buffer->height(), 4);
+			auto layer_texture = ogl_->create_texture(target_texture->width(), target_texture->height(), 4);
 
 			BOOST_FOREACH(auto& item, layer.items)
-				draw_item(std::move(item), layer_draw_buffer, layer_key_buffer, local_key_buffer, local_mix_buffer);	
+				draw(layer_texture, std::move(item), layer_key_texture, local_key_texture, local_mix_texture);	
 		
-			draw_mixer_buffer(layer_draw_buffer, std::move(local_mix_buffer), core::blend_mode::normal);							
-			draw_mixer_buffer(draw_buffer, std::move(layer_draw_buffer), layer.blend_mode);
+			draw(layer_texture, std::move(local_mix_texture), core::blend_mode::normal);							
+			draw(target_texture, std::move(layer_texture), layer.blend_mode);
 		}
 		else // fast path
 		{
 			BOOST_FOREACH(auto& item, layer.items)		
-				draw_item(std::move(item), draw_buffer, layer_key_buffer, local_key_buffer, local_mix_buffer);		
+				draw(target_texture, std::move(item), layer_key_texture, local_key_texture, local_mix_texture);		
 					
-			draw_mixer_buffer(draw_buffer, std::move(local_mix_buffer), core::blend_mode::normal);
+			draw(target_texture, std::move(local_mix_texture), core::blend_mode::normal);
 		}					
 
-		layer_key_buffer = std::move(local_key_buffer);
+		layer_key_texture = std::move(local_key_texture);
 	}
 
-	void draw_item(item							item, 
-				   spl::shared_ptr<texture>&	draw_buffer, 
-				   std::shared_ptr<texture>&	layer_key_buffer, 
-				   std::shared_ptr<texture>&	local_key_buffer, 
-				   std::shared_ptr<texture>&	local_mix_buffer)
+	void draw(spl::shared_ptr<texture>&	target_texture, 
+			  item						item, 
+		      std::shared_ptr<texture>&	layer_key_texture, 
+			  std::shared_ptr<texture>&	local_key_texture, 
+			  std::shared_ptr<texture>&	local_mix_texture)
 	{					
 		draw_params draw_params;
 		draw_params.pix_desc	= std::move(item.pix_desc);
@@ -215,9 +215,9 @@ private:
 
 		if(item.transform.is_key)
 		{
-			local_key_buffer = local_key_buffer ? local_key_buffer : create_mixer_buffer(draw_buffer->width(), draw_buffer->height(), 1);
+			local_key_texture = local_key_texture ? local_key_texture : ogl_->create_texture(target_texture->width(), target_texture->height(), 1);
 
-			draw_params.background			= local_key_buffer;
+			draw_params.background			= local_key_texture;
 			draw_params.local_key			= nullptr;
 			draw_params.layer_key			= nullptr;
 
@@ -225,11 +225,11 @@ private:
 		}
 		else if(item.transform.is_mix)
 		{
-			local_mix_buffer = local_mix_buffer ? local_mix_buffer : create_mixer_buffer(draw_buffer->width(), draw_buffer->height(), 4);
+			local_mix_texture = local_mix_texture ? local_mix_texture : ogl_->create_texture(target_texture->width(), target_texture->height(), 4);
 
-			draw_params.background			= local_mix_buffer;
-			draw_params.local_key			= std::move(local_key_buffer);
-			draw_params.layer_key			= layer_key_buffer;
+			draw_params.background			= local_mix_texture;
+			draw_params.local_key			= std::move(local_key_texture);
+			draw_params.layer_key			= layer_key_texture;
 
 			draw_params.keyer				= keyer::additive;
 
@@ -237,19 +237,19 @@ private:
 		}
 		else
 		{
-			draw_mixer_buffer(draw_buffer, std::move(local_mix_buffer), core::blend_mode::normal);
+			draw(target_texture, std::move(local_mix_texture), core::blend_mode::normal);
 			
-			draw_params.background			= draw_buffer;
-			draw_params.local_key			= std::move(local_key_buffer);
-			draw_params.layer_key			= layer_key_buffer;
+			draw_params.background			= target_texture;
+			draw_params.local_key			= std::move(local_key_texture);
+			draw_params.layer_key			= layer_key_texture;
 
 			kernel_.draw(std::move(draw_params));
 		}	
 	}
 
-	void draw_mixer_buffer(spl::shared_ptr<texture>&	draw_buffer, 
-						   std::shared_ptr<texture>&&	source_buffer, 
-						   core::blend_mode				blend_mode = core::blend_mode::normal)
+	void draw(spl::shared_ptr<texture>&	 target_texture, 
+			  std::shared_ptr<texture>&& source_buffer, 
+			  core::blend_mode			 blend_mode = core::blend_mode::normal)
 	{
 		if(!source_buffer)
 			return;
@@ -260,16 +260,9 @@ private:
 		draw_params.textures			= list_of(source_buffer);
 		draw_params.transform			= core::image_transform();
 		draw_params.blend_mode			= blend_mode;
-		draw_params.background			= draw_buffer;
+		draw_params.background			= target_texture;
 
 		kernel_.draw(std::move(draw_params));
-	}
-			
-	spl::shared_ptr<texture> create_mixer_buffer(int width, int height, int stride)
-	{
-		auto buffer = ogl_->create_texture(width, height, stride);
-		buffer->clear();
-		return buffer;
 	}
 };
 		

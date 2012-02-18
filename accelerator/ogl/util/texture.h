@@ -70,6 +70,4 @@ private:
 	spl::unique_ptr<impl> impl_;
 };
 	
-unsigned int format(int stride);
-
 }}}

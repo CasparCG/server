@@ -71,8 +71,6 @@ public:
 		, executor_(L"mixer")
 	{			
 		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8));
-		graph_->set_color("audio-mix-time", diagnostics::color(1.0f, 0.0f, 0.0f, 0.8));
-		graph_->set_color("video-mix-time", diagnostics::color(0.0f, 1.0f, 1.0f, 0.8));
 	}	
 	
 	const_frame operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc)
@@ -94,14 +92,8 @@ public:
 					image_mixer_->end_layer();
 				}
 				
-				boost::timer video_frame_timer;
 				auto image = (*image_mixer_)(format_desc);
-				graph_->set_value("video-mix-time", video_frame_timer.elapsed()*format_desc.fps*0.5);
-
-				
-				boost::timer audio_frame_timer;
 				auto audio = audio_mixer_(format_desc);
-				graph_->set_value("audio-mix-time", audio_frame_timer.elapsed()*format_desc.fps*0.5);
 				
 				graph_->set_value("mix-time", frame_timer.elapsed()*format_desc.fps*0.5);
 
