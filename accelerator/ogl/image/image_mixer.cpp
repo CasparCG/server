@@ -101,13 +101,13 @@ public:
 		if(layers.empty())
 		{ // Bypass GPU with empty frame.
 			auto buffer = spl::make_shared<const std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>>(format_desc.size, 0);
-			return async(launch_policy::deferred, [=]
+			return async(launch::deferred, [=]
 			{
 				return core::const_array(buffer->data(), static_cast<std::size_t>(format_desc.size), buffer);
 			});
 		}		
 
-		return fold(ogl_->begin_invoke([=]() mutable -> boost::shared_future<core::const_array>
+		return flatten(ogl_->begin_invoke([=]() mutable -> boost::shared_future<core::const_array>
 		{
 			auto draw_buffer = create_mixer_buffer(format_desc.width, format_desc.height, 4);
 
