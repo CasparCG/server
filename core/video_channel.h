@@ -51,6 +51,7 @@ public:
 
 	explicit video_channel(int index, const video_format_desc& format_desc, std::unique_ptr<image_mixer> image_mixer);
 	~video_channel();
+
 	// Methods
 			
 	// monitor::observable
