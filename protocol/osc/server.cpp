@@ -43,6 +43,7 @@ struct param_visitor : public boost::static_visitor<void>
 	void operator()(const float value)					{o << value;}
 	void operator()(const double value)					{o << static_cast<float>(value);}
 	void operator()(const std::string& value)			{o << value.c_str();}
+	void operator()(const std::wstring& value)			{o << u8(value).c_str();}
 	void operator()(const std::vector<int8_t>& value)	{o << ::osc::Blob(value.data(), static_cast<unsigned long>(value.size()));}
 	void operator()(const monitor::duration& value)
 	{

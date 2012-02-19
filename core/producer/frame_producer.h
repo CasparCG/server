@@ -76,8 +76,8 @@ public:
 	
 	// monitor::observable
 
-	virtual void subscribe(const monitor::observable::observer_ptr& o) {}
-	virtual void unsubscribe(const monitor::observable::observer_ptr& o) {}
+	virtual void subscribe(const monitor::observable::observer_ptr& o) = 0;
+	virtual void unsubscribe(const monitor::observable::observer_ptr& o) = 0;
 
 	// Properties
 

@@ -105,7 +105,7 @@ std::ostream& operator<<(std::ostream& o, const path& p);
 
 typedef boost::chrono::duration<double, boost::ratio<1, 1>> duration;
 
-typedef boost::variant<bool, int32_t, int64_t, float, double, std::string, std::vector<int8_t>, duration> param;
+typedef boost::variant<bool, int32_t, int64_t, float, double, std::string, std::wstring, std::vector<int8_t>, duration> param;
 
 std::ostream& operator<<(std::ostream& o, const param& p);
 

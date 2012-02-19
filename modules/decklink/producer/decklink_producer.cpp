@@ -41,6 +41,7 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_transform.h>
 #include <core/frame/frame_factory.h>
+#include <core/monitor/monitor.h>
 
 #include <tbb/concurrent_queue.h>
 
@@ -79,9 +80,9 @@ namespace caspar { namespace decklink {
 		
 class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 {	
+	monitor::basic_subject							event_subject_;
 	spl::shared_ptr<diagnostics::graph>				graph_;
 	boost::timer									tick_timer_;
-	boost::timer									frame_timer_;
 
 	CComPtr<IDeckLink>								decklink_;
 	CComQIPtr<IDeckLinkInput>						input_;
@@ -188,7 +189,7 @@ public:
 			graph_->set_value("tick-time", tick_timer_.elapsed()*out_format_desc_.fps*0.5);
 			tick_timer_.restart();
 
-			frame_timer_.restart();
+			boost::timer frame_timer;	
 
 			// PUSH
 
@@ -207,6 +208,16 @@ public:
 			av_frame->interlaced_frame	= in_format_desc_.field_mode != core::field_mode::progressive;
 			av_frame->top_field_first	= in_format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
 				
+			event_subject_	<< monitor::event("file/name")				% model_name_
+							<< monitor::event("file/path")				% device_index_
+							<< monitor::event("file/video/width")		% video->GetWidth()
+							<< monitor::event("file/video/height")		% video->GetHeight()
+							<< monitor::event("file/video/field")		% u8(!av_frame->interlaced_frame ? "progressive" : (av_frame->top_field_first ? "upper" : "lower"))
+							<< monitor::event("file/audio/sample-rate")	% 48000
+							<< monitor::event("file/audio/channels")	% 2
+							<< monitor::event("file/audio/format")		% u8(av_get_sample_fmt_name(AV_SAMPLE_FMT_S32))
+							<< monitor::event("file/fps")				% in_format_desc_.fps;
+
 			std::shared_ptr<core::audio_buffer> audio_buffer;
 
 			// It is assumed that audio is always equal or ahead of video.
@@ -243,9 +254,11 @@ public:
 					graph_->set_tag("dropped-frame");
 			}
 			
-			graph_->set_value("frame-time", frame_timer_.elapsed()*out_format_desc_.fps*0.5);
+			graph_->set_value("frame-time", frame_timer.elapsed()*out_format_desc_.fps*0.5);	
+			event_subject_ << monitor::event("profiler/time") % frame_timer.elapsed() % out_format_desc_.fps;
 
 			graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
+			event_subject_ << monitor::event("buffer") % frame_buffer_.size() % frame_buffer_.capacity();
 		}
 		catch(...)
 		{
@@ -273,6 +286,16 @@ public:
 	std::wstring print() const
 	{
 		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"|" + in_format_desc_.name + L"]";
+	}
+
+	void subscribe(const monitor::observable::observer_ptr& o)
+	{
+		event_subject_.subscribe(o);
+	}
+
+	void unsubscribe(const monitor::observable::observer_ptr& o)
+	{
+		event_subject_.unsubscribe(o);
 	}
 };
 	
@@ -306,6 +329,16 @@ public:
 			producer_.reset();
 			CoUninitialize();
 		});
+	}
+
+	virtual void subscribe(const monitor::observable::observer_ptr& o) override
+	{
+		producer_->subscribe(o);
+	}
+
+	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override
+	{
+		producer_->unsubscribe(o);
 	}
 	
 	// frame_producer
