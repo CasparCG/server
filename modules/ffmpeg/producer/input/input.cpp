@@ -164,14 +164,12 @@ struct input::impl : boost::noncopyable
 				{
 					frame_number_	= 0;
 
-					if(loop_)
-					{
-						queued_seek(start_);
-						graph_->set_tag("seek");		
-						CASPAR_LOG(trace) << print() << " Looping.";			
-					}		
-					else
-						executor_.stop();
+					if(!loop_)
+						return;
+
+					queued_seek(start_);
+					graph_->set_tag("seek");		
+					CASPAR_LOG(trace) << print() << " Looping.";	
 				}
 				else
 				{		
@@ -196,9 +194,9 @@ struct input::impl : boost::noncopyable
 					buffer_size_ += packet->size;
 				
 					graph_->set_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
-					graph_->set_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));
+					graph_->set_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));		
 				}	
-		
+
 				tick();		
 			}
 			catch(...)
@@ -244,10 +242,10 @@ struct input::impl : boost::noncopyable
 	{
 		#pragma warning (disable : 4146)
 
-		if(ret == AVERROR(EIO))
-			CASPAR_LOG(trace) << print() << " Received EIO, assuming EOF. ";
-		if(ret == AVERROR_EOF)
-			CASPAR_LOG(trace) << print() << " Received EOF. ";
+		//if(ret == AVERROR(EIO))
+		//	CASPAR_LOG(trace) << print() << " Received EIO, assuming EOF. ";
+		//if(ret == AVERROR_EOF)
+		//	CASPAR_LOG(trace) << print() << " Received EOF. ";
 
 		return ret == AVERROR_EOF || ret == AVERROR(EIO) || frame_number_ >= length_; // av_read_frame doesn't always correctly return AVERROR_EOF;
 	}
