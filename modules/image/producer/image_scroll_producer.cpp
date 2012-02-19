@@ -30,6 +30,7 @@
 #include <core/frame/frame_factory.h>
 #include <core/frame/frame_transform.h>
 #include <core/frame/pixel_format.h>
+#include <core/monitor/monitor.h>
 
 #include <common/env.h>
 #include <common/log.h>
@@ -51,6 +52,8 @@ namespace caspar { namespace image {
 		
 struct image_scroll_producer : public core::frame_producer
 {	
+	monitor::basic_subject			event_subject_;
+
 	const std::wstring				filename_;
 	std::vector<core::draw_frame>	frames_;
 	core::video_format_desc			format_desc_;
@@ -188,6 +191,10 @@ struct image_scroll_producer : public core::frame_producer
 				frames_[n].transform().image_transform.fill_translation[1] = start_offset_[1];
 			}
 		}
+		
+		event_subject_ << monitor::event("file/path") % filename_
+					   << monitor::event("delta") % delta_ 
+					   << monitor::event("speed") % speed_;
 
 		return last_frame_ = core::draw_frame(frames_);
 	}
@@ -228,6 +235,16 @@ struct image_scroll_producer : public core::frame_producer
 			auto result = length/std::abs(speed_);// + length % std::abs(delta_));
 			return result;
 		}
+	}
+
+	virtual void subscribe(const monitor::observable::observer_ptr& o) override															
+	{
+		return event_subject_.subscribe(o);
+	}
+
+	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override		
+	{
+		return event_subject_.unsubscribe(o);
 	}
 };
 

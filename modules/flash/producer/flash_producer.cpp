@@ -35,6 +35,7 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
+#include <core/monitor/monitor.h>
 
 #include <common/env.h>
 #include <common/concurrency/executor.h>
@@ -164,26 +165,27 @@ class flash_renderer
 		}
 	} com_init_;
 
-	const std::wstring filename_;
+	monitor::basic_subject&						event_subject_;
 
-	const std::shared_ptr<core::frame_factory> frame_factory_;
+	const std::wstring							filename_;
+
+	const std::shared_ptr<core::frame_factory>	frame_factory_;
 	
 	CComObject<caspar::flash::FlashAxContainer>* ax_;
-	core::draw_frame head_;
-	bitmap bmp_;
+	core::draw_frame							head_;
+	bitmap										bmp_;
 	
-	spl::shared_ptr<diagnostics::graph> graph_;
-	boost::timer frame_timer_;
-	boost::timer tick_timer_;
+	spl::shared_ptr<diagnostics::graph>			graph_;
+	
+	prec_timer									timer_;
 
-	prec_timer timer_;
-
-	const int width_;
-	const int height_;
+	const int									width_;
+	const int									height_;
 	
 public:
-	flash_renderer(const spl::shared_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
-		: graph_(graph)
+	flash_renderer(monitor::basic_subject& event_subject, const spl::shared_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
+		: event_subject_(event_subject)
+		, graph_(graph)
 		, filename_(filename)
 		, frame_factory_(frame_factory)
 		, ax_(nullptr)
@@ -193,7 +195,6 @@ public:
 		, height_(height)
 	{		
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
-		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
 		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));	
 		graph_->set_color("sync", diagnostics::color(0.8f, 0.3f, 0.2f));			
 		
@@ -255,15 +256,13 @@ public:
 	{		
 		const float frame_time = 1.0f/ax_->GetFPS();
 
-		graph_->set_value("tick-time", static_cast<float>(tick_timer_.elapsed()/frame_time)*0.5f);
-		tick_timer_.restart();
-				
 		if(sync > 0.00001)			
 			timer_.tick(frame_time*sync); // This will block the thread.
 		else
 			graph_->set_tag("sync");
 
 		graph_->set_value("sync", sync);
+		event_subject_ << monitor::event("sync") % sync;
 		
 		ax_->Tick();
 					
@@ -282,7 +281,7 @@ public:
 	{			
 		const float frame_time = 1.0f/fps();
 
-		frame_timer_.restart();
+		boost::timer frame_timer;
 
 		if(ax_->InvalidRect())
 		{			
@@ -297,7 +296,8 @@ public:
 			head_ = core::draw_frame(std::move(frame));	
 		}		
 										
-		graph_->set_value("frame-time", static_cast<float>(frame_timer_.elapsed()/frame_time)*0.5f);
+		graph_->set_value("frame-time", static_cast<float>(frame_timer.elapsed()/frame_time)*0.5f);
+		event_subject_ << monitor::event("renderer/profiler/time") % frame_timer.elapsed() % frame_time;
 		return head_;
 	}
 	
@@ -322,6 +322,7 @@ public:
 
 struct flash_producer : public core::frame_producer
 {	
+	monitor::basic_subject							event_subject_;
 	const std::wstring								filename_;	
 	const spl::shared_ptr<core::frame_factory>		frame_factory_;
 	const core::video_format_desc					format_desc_;
@@ -336,6 +337,7 @@ struct flash_producer : public core::frame_producer
 	std::queue<core::draw_frame>					frame_buffer_;
 	tbb::concurrent_bounded_queue<core::draw_frame>	output_buffer_;
 				
+	boost::timer									tick_timer_;
 	std::unique_ptr<flash_renderer>					renderer_;
 
 	core::draw_frame								last_frame_;
@@ -355,6 +357,7 @@ public:
 		fps_ = 0;
 	 
 		graph_->set_color("buffer-size", diagnostics::color(1.0f, 1.0f, 0.0f));
+		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.9f));
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
@@ -384,6 +387,12 @@ public:
 		if(frame != core::draw_frame::late())
 			last_frame_ = frame;
 		
+		event_subject_ << monitor::event("host/path")	% filename_
+					   << monitor::event("host/width")	% width_
+					   << monitor::event("host/height") % height_
+					   << monitor::event("host/fps")	% fps_
+					   << monitor::event("buffer")		% output_buffer_.size() % buffer_size_;
+
 		return frame;
 	}
 
@@ -400,7 +409,7 @@ public:
 			{
 				if(!renderer_)
 				{
-					renderer_.reset(new flash_renderer(graph_, frame_factory_, filename_, width_, height_));
+					renderer_.reset(new flash_renderer(event_subject_, graph_, frame_factory_, filename_, width_, height_));
 
 					while(output_buffer_.size() < buffer_size_)
 						output_buffer_.push(core::draw_frame::empty());
@@ -435,6 +444,16 @@ public:
 		return info;
 	}
 
+	virtual void subscribe(const monitor::observable::observer_ptr& o) override
+	{
+		event_subject_.subscribe(o);
+	}
+
+	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override
+	{
+		event_subject_.unsubscribe(o);
+	}
+
 	// flash_producer
 	
 	void tick()
@@ -448,6 +467,8 @@ public:
 	{	
 		if(!renderer_)
 			frame_buffer_.push(core::draw_frame::empty());
+
+		tick_timer_.restart();				
 
 		if(frame_buffer_.empty())
 		{					
@@ -478,6 +499,9 @@ public:
 			if(renderer_->is_empty())			
 				renderer_.reset();
 		}
+
+		graph_->set_value("tick-time", static_cast<float>(tick_timer_.elapsed()/fps_)*0.5f);
+		event_subject_ << monitor::event("profiler/time") % tick_timer_.elapsed() % fps_;
 
 		output_buffer_.push(std::move(frame_buffer_.front()));
 		frame_buffer_.pop();
