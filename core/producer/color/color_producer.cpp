@@ -28,6 +28,7 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
+#include <core/monitor/monitor.h>
 
 #include <common/except.h>
 #include <common/memory/array.h>
@@ -40,8 +41,10 @@ namespace caspar { namespace core {
 	
 class color_producer : public frame_producer
 {
-	draw_frame frame_;
-	const std::wstring color_str_;
+	monitor::basic_subject	event_subject_;
+
+	draw_frame				frame_;
+	const std::wstring		color_str_;
 
 public:
 	explicit color_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& color) 
@@ -55,6 +58,8 @@ public:
 			
 	virtual draw_frame receive(int) override
 	{
+		event_subject_ << monitor::event("color") % color_str_;
+
 		return frame_;
 	}	
 	
@@ -79,6 +84,16 @@ public:
 		info.add(L"type", L"color");
 		info.add(L"color", color_str_);
 		return info;
+	}
+
+	virtual void subscribe(const monitor::observable::observer_ptr& o) override															
+	{
+		return event_subject_.subscribe(o);
+	}
+
+	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override		
+	{
+		return event_subject_.unsubscribe(o);
 	}
 };
 

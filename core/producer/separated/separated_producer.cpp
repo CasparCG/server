@@ -23,8 +23,9 @@
 
 #include "separated_producer.h"
 
-#include "../frame_producer.h"
-#include "../../frame/draw_frame.h"
+#include <core/producer/frame_producer.h>
+#include <core/frame/draw_frame.h>
+#include <core/monitor/monitor.h>
 
 #include <tbb/parallel_invoke.h>
 
@@ -32,6 +33,9 @@ namespace caspar { namespace core {
 
 class separated_producer : public frame_producer
 {		
+	monitor::basic_subject			event_subject_;
+	monitor::basic_subject			key_event_subject_;
+
 	spl::shared_ptr<frame_producer>	fill_producer_;
 	spl::shared_ptr<frame_producer>	key_producer_;
 	draw_frame						fill_;
@@ -40,13 +44,19 @@ class separated_producer : public frame_producer
 			
 public:
 	explicit separated_producer(const spl::shared_ptr<frame_producer>& fill, const spl::shared_ptr<frame_producer>& key) 
-		: fill_producer_(fill)
+		: key_event_subject_("keyer")		
+		, fill_producer_(fill)
 		, key_producer_(key)
 		, fill_(core::draw_frame::late())
 		, key_(core::draw_frame::late())
 		, last_frame_(core::draw_frame::empty())
 	{
 		CASPAR_LOG(info) << print() << L" Initialized";
+
+		key_event_subject_.subscribe(event_subject_);
+
+		key_producer_->subscribe(key_event_subject_);
+		fill_producer_->subscribe(event_subject_);
 	}
 
 	// frame_producer
@@ -109,12 +119,12 @@ public:
 
 	virtual void subscribe(const monitor::observable::observer_ptr& o) override															
 	{
-		return fill_producer_->subscribe(o);
+		return event_subject_.subscribe(o);
 	}
 
 	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override		
 	{
-		return fill_producer_->unsubscribe(o);
+		return event_subject_.unsubscribe(o);
 	}
 };
 

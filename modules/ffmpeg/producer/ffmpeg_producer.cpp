@@ -151,7 +151,7 @@ public:
 	// frame_producer
 	
 	virtual core::draw_frame receive(int flags) override
-	{		
+	{				
 		boost::timer frame_timer;
 				
 		auto frame = core::draw_frame::late();		
@@ -162,16 +162,8 @@ public:
 		}
 							
 		graph_->set_value("frame-time", frame_timer.elapsed()*format_desc_.fps*0.5);
-		
-		event_subject_	<< monitor::event("profiler/time")		% frame_timer.elapsed() % (1.0/format_desc_.fps)					
-						<< monitor::event("file/time")			% monitor::duration(file_frame_number()/fps_) 
-																% monitor::duration(file_nb_frames()/fps_)
-						<< monitor::event("file/frame")			% static_cast<int32_t>(file_frame_number())
-																% static_cast<int32_t>(file_nb_frames())
-						<< monitor::event("file/fps")			% fps_
-						<< monitor::event("filename")			% u8(filename_)
-						<< monitor::event("loop")				% input_.loop();
-					
+		event_subject_	<< monitor::event("profiler/time") % frame_timer.elapsed() % (1.0/format_desc_.fps);			
+								
 		graph_->set_text(print());
 
 		if(frame != core::draw_frame::late())
@@ -180,6 +172,14 @@ public:
 			last_frame_ = frame;
 		}
 				
+		event_subject_	<< monitor::event("file/time")			% monitor::duration(file_frame_number()/fps_) 
+																% monitor::duration(file_nb_frames()/fps_)
+						<< monitor::event("file/frame")			% static_cast<int32_t>(file_frame_number())
+																% static_cast<int32_t>(file_nb_frames())
+						<< monitor::event("file/fps")			% fps_
+						<< monitor::event("file/path")			% filename_
+						<< monitor::event("loop")				% input_.loop();
+
 		return frame;
 	}
 

@@ -77,20 +77,6 @@ public:
 
 		++current_frame_;
 
-		event_subject_	<< monitor::event("transition/frame") % current_frame_ % info_.duration
-						<< monitor::event("transition/type") % [&]() -> std::string
-																{
-																	switch(info_.type.value())
-																	{
-																	case transition_type::mix:		return "mix";
-																	case transition_type::wipe:		return "wipe";
-																	case transition_type::slide:	return "slide";
-																	case transition_type::push:		return "push";
-																	case transition_type::cut:		return "cut";
-																	default:						return "n/a";
-																	}
-																}();
-
 		auto dest = draw_frame::empty();
 		auto source = draw_frame::empty();
 
@@ -108,6 +94,20 @@ public:
 				source = source_producer_->last_frame();
 		});				
 		
+		event_subject_	<< monitor::event("transition/frame") % current_frame_ % info_.duration
+						<< monitor::event("transition/type") % [&]() -> std::string
+																{
+																	switch(info_.type.value())
+																	{
+																	case transition_type::mix:		return "mix";
+																	case transition_type::wipe:		return "wipe";
+																	case transition_type::slide:	return "slide";
+																	case transition_type::push:		return "push";
+																	case transition_type::cut:		return "cut";
+																	default:						return "n/a";
+																	}
+																}();
+
 		return compose(dest, source);
 	}
 
