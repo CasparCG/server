@@ -119,7 +119,7 @@ public:
 			else			
 				draw(target_texture, std::move(layers), format_desc, core::field_mode::progressive);
 								
-			return make_shared(ogl_->copy_async(target_texture));
+			return ogl_->copy_async(target_texture);
 		}));
 	}
 
