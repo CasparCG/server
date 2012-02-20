@@ -156,24 +156,24 @@ struct device::impl : public std::enable_shared_from_this<impl>
 							
 	spl::shared_ptr<texture> create_texture(int width, int height, int stride, bool clear = false)
 	{
-		return render_executor_.invoke([=]() -> spl::shared_ptr<texture>
-		{
-			CASPAR_VERIFY(stride > 0 && stride < 5);
-			CASPAR_VERIFY(width > 0 && height > 0);
-		
-			auto pool = &device_pools_[stride-1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
-		
-			std::shared_ptr<texture> buffer;
-			if(!pool->try_pop(buffer))		
-				buffer = spl::make_shared<texture>(width, height, stride);
-	
-			if(clear)
-				buffer->clear();
+		CASPAR_VERIFY(stride > 0 && stride < 5);
+		CASPAR_VERIFY(width > 0 && height > 0);
 
-			return spl::shared_ptr<texture>(buffer.get(), [buffer, pool](texture*) mutable
-			{		
-				pool->push(buffer);	
-			});
+		if(!render_executor_.is_current())
+			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Operation only valid in an OpenGL Context."));
+					
+		auto pool = &device_pools_[stride-1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
+		
+		std::shared_ptr<texture> buffer;
+		if(!pool->try_pop(buffer))		
+			buffer = spl::make_shared<texture>(width, height, stride);
+	
+		if(clear)
+			buffer->clear();
+
+		return spl::shared_ptr<texture>(buffer.get(), [buffer, pool](texture*) mutable
+		{		
+			pool->push(buffer);	
 		});
 	}
 		
@@ -191,25 +191,12 @@ struct device::impl : public std::enable_shared_from_this<impl>
 				return spl::make_shared<buffer>(size, usage);
 			});
 		}
-				
-		auto ptr = buf->data();
-		auto self = shared_from_this(); // buffers can leave the device context, take a hold on life-time.
-
-		auto on_release = [self, buf, ptr, usage, pool]() mutable
-		{		
-			if(usage == buffer::usage::write_only)					
-				buf->map();					
-			else
-				buf->unmap();
-
-			self->texture_cache_.erase(buf.get());
-
-			pool->push(buf);
-		};
 		
+		auto self = shared_from_this(); // buffers can leave the device context, take a hold on life-time.
 		return spl::shared_ptr<buffer>(buf.get(), [=](buffer*) mutable
-		{
-			self->alloc_executor_.begin_invoke(on_release);	
+		{	
+			texture_cache_.erase(buf.get());
+			pool->push(buf);
 		});
 	}
 
@@ -252,21 +239,21 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
 	boost::unique_future<array<const std::uint8_t>> copy_async(const spl::shared_ptr<texture>& source)
 	{
-		return flatten(render_executor_.begin_invoke([=]() -> boost::shared_future<array<const std::uint8_t>>
+		if(!render_executor_.is_current())
+			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Operation only valid in an OpenGL Context."));
+
+		auto buffer = create_buffer(source->size(), buffer::usage::read_only); 
+		source->copy_to(*buffer);	
+
+		auto self = shared_from_this();
+		return async(launch::deferred, [self, buffer]() mutable -> array<const std::uint8_t>
 		{
-			auto buffer = create_buffer(source->size(), buffer::usage::read_only); 
-			source->copy_to(*buffer);	
+			const auto& buf = buffer.get();
+			if(!buf->data())
+				self->alloc_executor_.invoke(std::bind(&buffer::map, std::ref(buf))); // Defer blocking "map" call until data is needed.
 
-			auto self = shared_from_this();
-			return async(launch::deferred, [self, buffer]() mutable -> array<const std::uint8_t>
-			{
-				const auto& buf = buffer.get();
-				if(!buf->data())
-					self->alloc_executor_.invoke(std::bind(&buffer::map, std::ref(buf))); // Defer blocking "map" call until data is needed.
-
-				return array<const std::uint8_t>(buf->data(), buf->size(), true, buffer);
-			});
-		}, task_priority::high_priority));
+			return array<const std::uint8_t>(buf->data(), buf->size(), true, buffer);
+		});
 	}
 };
 

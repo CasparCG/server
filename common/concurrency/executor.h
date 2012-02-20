@@ -134,7 +134,7 @@ public:
 		{
 			try
 			{
-				if(boost::this_thread::get_id() == thread_.get_id())  // Avoids potential deadlock.
+				if(is_current())  // Avoids potential deadlock.
 					my_task();
 			}
 			catch(boost::task_already_started&){}
@@ -162,7 +162,7 @@ public:
 	template<typename Func>
 	auto invoke(Func&& func, task_priority prioriy = task_priority::normal_priority) -> decltype(func()) // noexcept
 	{
-		if(boost::this_thread::get_id() == thread_.get_id())  // Avoids potential deadlock.
+		if(is_current())  // Avoids potential deadlock.
 			return func();
 		
 		return begin_invoke(std::forward<Func>(func), prioriy).get();
@@ -170,7 +170,7 @@ public:
 
 	void yield() // noexcept
 	{
-		if(boost::this_thread::get_id() != thread_.get_id())
+		if(!is_current())
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Executor can only yield inside of thread context."));
 
 		int dummy;
@@ -219,6 +219,11 @@ public:
 	{
 		return is_running_; 
 	}	
+
+	bool is_current() const
+	{
+		return boost::this_thread::get_id() == thread_.get_id();
+	}
 		
 private:	
 
