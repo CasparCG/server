@@ -56,7 +56,7 @@ public:
 		CASPAR_VERIFY(counter < 32);
 		
 		auto consumer = new std::shared_ptr<frame_consumer>(std::move(consumer_));
-		async([=]
+		async(launch::async, [=]
 		{
 			std::unique_ptr<std::shared_ptr<frame_consumer>> pointer_guard(consumer);
 

@@ -96,7 +96,7 @@ public:
 		CASPAR_VERIFY(counter < 32);
 		
 		auto producer = new spl::shared_ptr<frame_producer>(std::move(producer_));
-		async([=]
+		async(launch::async, [=]
 		{
 			std::unique_ptr<spl::shared_ptr<frame_producer>> pointer_guard(producer);
 			auto str = (*producer)->print();
