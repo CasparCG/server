@@ -95,7 +95,7 @@ public:
 			return;
 
 		++counter;
-		CASPAR_VERIFY(counter < 32);
+		CASPAR_VERIFY(counter < 8);
 		
 		auto producer = new spl::shared_ptr<frame_producer>(std::move(producer_));
 		boost::thread([=]
