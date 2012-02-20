@@ -306,6 +306,8 @@ public:
 		item.pix_desc	= frame.pixel_format_desc();
 		item.field_mode	= frame.field_mode();
 		item.transform	= transform_stack_.back();
+
+		// NOTE: Once we have copied the arrays they are no longer valid for reading!!! Check for alternative solution e.g. transfer with AMD_pinned_memory.
 		for(int n = 0; n < static_cast<int>(item.pix_desc.planes.size()); ++n)
 			item.textures.push_back(ogl_->copy_async(frame.image_data(n), item.pix_desc.planes[n].width, item.pix_desc.planes[n].height, item.pix_desc.planes[n].stride));
 		
