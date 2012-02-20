@@ -29,8 +29,15 @@ struct invoke_callback
 {	
 	template<typename F>
 	void operator()(boost::detail::future_object<R>& p, F& f)
-	{
-        p.mark_finished_with_result_internal(f());
+	{		
+        try
+        {
+		   p.mark_finished_with_result_internal(f());
+        }
+        catch(...)
+        {
+			p.mark_exceptional_finish_internal(boost::current_exception());
+        }
 	}
 };
 
@@ -40,8 +47,15 @@ struct invoke_callback<void>
 	template<typename F>
 	void operator()(boost::detail::future_object<void>& p, F& f)
 	{
-		f();
-        p.mark_finished_with_result_internal();
+        try
+        {
+			f();
+			p.mark_finished_with_result_internal();
+		}
+        catch(...)
+        {
+			p.mark_exceptional_finish_internal(boost::current_exception());
+        }
 	}
 };
 
