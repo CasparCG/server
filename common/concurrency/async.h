@@ -25,7 +25,7 @@ typedef enum_class<launch_policy_def> launch;
 namespace detail {
 
 template<typename R>
-struct invoke_function
+struct invoke_callback
 {	
 	template<typename F>
 	void operator()(boost::detail::future_object<R>& p, F& f)
@@ -35,7 +35,7 @@ struct invoke_function
 };
 
 template<>
-struct invoke_function<void>
+struct invoke_callback<void>
 {	
 	template<typename F>
 	void operator()(boost::detail::future_object<void>& p, F& f)
@@ -58,18 +58,18 @@ auto async(launch lp, F&& f) -> boost::unique_future<decltype(f())>
 
         typedef boost::shared_ptr<boost::detail::future_object<result_type>> future_ptr;
 		
-		auto fake_future		= boost::make_shared<future_ptr::value_type>();
-		auto fake_future_raw	= fake_future.get();
+		auto future_object		= boost::make_shared<future_ptr::value_type>();
+		auto future_object_raw	= future_object.get();
 
-		int dummy;
-		fake_future->set_wait_callback(std::function<void(int)>([f, fake_future_raw](int) mutable
+		int dummy = sizeof(boost::exception_ptr);
+		future_object->set_wait_callback(std::function<void(int)>([f, future_object_raw](int) mutable
 		{			
-            boost::lock_guard<boost::mutex> lock(fake_future_raw->mutex);
-            detail::invoke_function<result_type>()(*fake_future_raw, f);
+            boost::lock_guard<boost::mutex> lock(future_object_raw->mutex);
+            detail::invoke_callback<result_type>()(*future_object_raw, f);
 		}), &dummy);
 		
 		boost::unique_future<result_type> future;
-		reinterpret_cast<future_ptr&>(future) = std::move(fake_future); // Get around the "private" encapsulation.
+		reinterpret_cast<future_ptr&>(future) = std::move(future_object); // Get around the "private" encapsulation.
 		return std::move(future);
 	}
 	else
