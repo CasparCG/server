@@ -1,14 +1,14 @@
 #pragma once
 
-#include <functional>
-#include <memory>
+#include "../enum_class.h"
 
 #include <boost/thread/future.hpp>
 #include <boost/thread/thread.hpp>
-
 #include <boost/utility/declval.hpp>
 
-#include "../enum_class.h"
+#include <functional>
+#include <memory>
+#include <tuple>
 
 namespace caspar {
 
@@ -56,20 +56,38 @@ auto async(launch lp, F&& f) -> boost::unique_future<decltype(f())>
 	{			
 		// HACK: THIS IS A MAYOR HACK!
 
-        typedef boost::shared_ptr<boost::detail::future_object<result_type>> future_ptr;
-		
-		auto future_object		= boost::make_shared<future_ptr::value_type>();
+		typedef boost::detail::future_object<result_type> future_object_t;
+
+		struct future_object_ex_t : public future_object_t
+		{
+			bool done;
+
+			future_object_ex_t()
+				: done(false)
+			{
+			}
+		};
+			
+		auto future_object_ex	= boost::make_shared<future_object_ex_t>();
+		bool& done				= future_object_ex->done;
+		auto future_object		= boost::static_pointer_cast<future_object_t>(std::move(future_object_ex));
 		auto future_object_raw	= future_object.get();
 
-		int dummy = sizeof(boost::exception_ptr);
-		future_object->set_wait_callback(std::function<void(int)>([f, future_object_raw](int) mutable
-		{			
-            boost::lock_guard<boost::mutex> lock(future_object_raw->mutex);
-            detail::invoke_callback<result_type>()(*future_object_raw, f);
+		int dummy = 0;
+		future_object->set_wait_callback(std::function<void(int)>([f, future_object_raw, &done](int) mutable
+		{								
+			boost::lock_guard<boost::mutex> lock2(future_object_raw->mutex);
+			
+			if(done)
+				return;
+
+			detail::invoke_callback<result_type>()(*future_object_raw, f);
+			
+			done = true;
 		}), &dummy);
 		
 		boost::unique_future<result_type> future;
-		reinterpret_cast<future_ptr&>(future) = std::move(future_object); // Get around the "private" encapsulation.
+		reinterpret_cast<boost::shared_ptr<future_object_t>&>(future) = std::move(future_object); // Get around the "private" encapsulation.
 		return std::move(future);
 	}
 	else
