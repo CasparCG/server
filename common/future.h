@@ -26,7 +26,7 @@ template<typename R>
 struct future_object_helper
 {	
 	template<typename T, typename F>
-	static void invoke(T& future_object, F& f)
+	static void nonlocking_invoke(T& future_object, F& f)
 	{				
         try
         {
@@ -37,13 +37,26 @@ struct future_object_helper
 			future_object.mark_exceptional_finish_internal(boost::current_exception());
         }
 	}
+
+	template<typename T, typename F>
+	static void locking_invoke(T& future_object, F& f)
+	{				
+        try
+        {
+			future_object.mark_finished_with_result(f());
+        }
+        catch(...)
+        {
+			future_object.mark_exceptional_finish();
+        }
+	}
 };
 
 template<>
 struct future_object_helper<void>
 {	
 	template<typename T, typename F>
-	static void invoke(T& future_object, F& f)
+	static void nonlocking_invoke(T& future_object, F& f)
 	{				
         try
         {
@@ -53,6 +66,20 @@ struct future_object_helper<void>
         catch(...)
         {
 			future_object.mark_exceptional_finish_internal(boost::current_exception());
+        }
+	}
+
+	template<typename T, typename F>
+	static void locking_invoke(T& future_object, F& f)
+	{				
+        try
+        {
+			f();
+			future_object.mark_finished_with_result();
+        }
+        catch(...)
+        {
+			future_object.mark_exceptional_finish();
         }
 	}
 };
@@ -78,7 +105,7 @@ struct deferred_future_object : public boost::detail::future_object<R>
 		if(done)
 			return;
 
-		future_object_helper<R>::invoke(*this, f);
+		future_object_helper<R>::nonlocking_invoke(*this, f);
 
 		done = true;
 	}
@@ -104,9 +131,7 @@ struct async_future_object : public boost::detail::future_object<R>
 
 	void run()
 	{
-		boost::lock_guard<boost::mutex> lock2(mutex);		
-
-		future_object_helper<R>::invoke(*this, f);
+		future_object_helper<R>::locking_invoke(*this, f);
 	}
 };
 
