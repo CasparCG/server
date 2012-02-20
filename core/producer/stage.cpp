@@ -63,6 +63,16 @@ public:
 		, time_(0)
 		, tweener_(get_tweener(tween)){}
 	
+	const T& source() const
+	{
+		return source_;
+	}
+	
+	const T& dest() const
+	{
+		return dest_;
+	}
+
 	T fetch()
 	{
 		return time_ == duration_ ? dest_ : tween(static_cast<double>(time_), source_, dest_, static_cast<double>(duration_), tweener_);
@@ -183,8 +193,9 @@ public:
 		{
 			BOOST_FOREACH(auto& transform, transforms)
 			{
-				auto src = transforms_[std::get<0>(transform)].fetch();
-				auto dst = std::get<1>(transform)(src);
+				auto& tween = transforms_[std::get<0>(transform)];
+				auto src = tween.fetch();
+				auto dst = std::get<1>(transform)(tween.dest());
 				transforms_[std::get<0>(transform)] = tweened_transform<frame_transform>(src, dst, std::get<2>(transform), std::get<3>(transform));
 			}
 		}, high_priority);
