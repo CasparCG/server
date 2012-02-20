@@ -28,7 +28,7 @@
 #include <core/video_format.h>
 #include <core/frame/frame.h>
 
-#include <common/future.h>
+#include <boost/thread.hpp>
 
 namespace caspar { namespace core {
 		
@@ -56,7 +56,7 @@ public:
 		CASPAR_VERIFY(counter < 32);
 		
 		auto consumer = new std::shared_ptr<frame_consumer>(std::move(consumer_));
-		async(launch::async, [=]
+		boost::thread([=]
 		{
 			std::unique_ptr<std::shared_ptr<frame_consumer>> pointer_guard(consumer);
 
@@ -73,7 +73,7 @@ public:
 			pointer_guard.reset();
 
 			--counter;
-		}); 
+		}).detach(); 
 	}
 	
 	virtual bool send(const_frame frame) override													{return consumer_->send(std::move(frame));}

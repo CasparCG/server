@@ -35,6 +35,8 @@
 #include <common/future.h>
 #include <common/memory.h>
 
+#include <boost/thread.hpp>
+
 namespace caspar { namespace core {
 	
 std::vector<const producer_factory_t> g_factories;
@@ -96,7 +98,7 @@ public:
 		CASPAR_VERIFY(counter < 32);
 		
 		auto producer = new spl::shared_ptr<frame_producer>(std::move(producer_));
-		async(launch::async, [=]
+		boost::thread([=]
 		{
 			std::unique_ptr<spl::shared_ptr<frame_producer>> pointer_guard(producer);
 			auto str = (*producer)->print();
@@ -113,7 +115,7 @@ public:
 			CASPAR_LOG(info) << str << L" Destroyed.";
 
 			--counter;
-		}); 
+		}).detach(); 
 	}
 	
 	virtual draw_frame	receive(int flags) override																				{return producer_->receive(flags);}
