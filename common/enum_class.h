@@ -12,12 +12,19 @@ public:
 	enum_class(type v) : val_(v) {}
 	inner value() const { return val_; }
  
-	bool operator==(const enum_class& s) const { return val_ == s.val_; }
-	bool operator!=(const enum_class& s) const { return val_ != s.val_; }
-	bool operator<(const enum_class& s) const { return val_ <  s.val_; }
-	bool operator<=(const enum_class& s) const { return val_ <= s.val_; }
-	bool operator>(const enum_class& s) const { return val_ >  s.val_; }
-	bool operator>=(const enum_class& s) const { return val_ >= s.val_; }
+	bool operator==(const enum_class& s) const	{ return val_ == s.val_; }
+	bool operator!=(const enum_class& s) const	{ return val_ != s.val_; }
+	bool operator<(const enum_class& s) const	{ return val_ <  s.val_; }
+	bool operator<=(const enum_class& s) const	{ return val_ <= s.val_; }
+	bool operator>(const enum_class& s) const	{ return val_ >  s.val_; }
+	bool operator>=(const enum_class& s) const	{ return val_ >= s.val_; }
+		
+	bool operator==(const int& val) const	{ return val_ == val; }
+	bool operator!=(const int& val) const	{ return val_ != val; }
+	bool operator<(const int& val) const	{ return val_ <  val; }
+	bool operator<=(const int& val) const	{ return val_ <= val; }
+	bool operator>(const int& val) const	{ return val_ >  val; }
+	bool operator>=(const int& val) const	{ return val_ >= val; }
 
 	enum_class operator&(const enum_class& s) const
 	{

@@ -24,7 +24,8 @@
 #include "blend_modes.h"
 
 #include <common/forward.h>
-#include <common/spl/memory.h>
+#include <common/future_fwd.h>
+#include <common/memory.h>
 
 #include <core/video_format.h>
 #include <core/frame/frame_visitor.h>
@@ -35,7 +36,6 @@
 
 #include <cstdint>
 
-FORWARD1(boost, template<typename> class unique_future);
 FORWARD2(caspar, core, struct pixel_format_desc);
 
 namespace caspar { namespace core {

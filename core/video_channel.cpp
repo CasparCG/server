@@ -34,8 +34,8 @@
 
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
-#include <common/concurrency/lock.h>
-#include <common/concurrency/executor.h>
+#include <common/lock.h>
+#include <common/executor.h>
 
 #include <core/mixer/image/image_mixer.h>
 

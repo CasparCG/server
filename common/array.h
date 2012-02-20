@@ -1,14 +1,12 @@
 #pragma once
 
-#include "../spl/memory.h"
-#include "../forward.h"
+#include "memory.h"
+#include "forward.h"
 
 #include <boost/any.hpp>
 
 #include <cstddef>
 #include <cstdint>
-
-FORWARD1(boost, template<typename> class shared_future);
 
 namespace caspar {
 	

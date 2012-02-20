@@ -24,7 +24,8 @@
 #include "image/blend_modes.h"
 
 #include <common/forward.h>
-#include <common/spl/memory.h>
+#include <common/future_fwd.h>
+#include <common/memory.h>
 #include <common/reactive.h>
 
 #include <core/video_format.h>
@@ -33,7 +34,6 @@
 
 #include <map>
 
-FORWARD1(boost, template<typename> class unique_future);
 FORWARD2(caspar, diagnostics, class graph);
 
 namespace caspar { namespace core {

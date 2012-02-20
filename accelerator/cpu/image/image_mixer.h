@@ -1,7 +1,7 @@
 #pragma once
 
 #include <common/forward.h>
-#include <common/spl/memory.h>
+#include <common/memory.h>
 
 #include <core/mixer/image/blend_modes.h>
 #include <core/mixer/image/image_mixer.h>

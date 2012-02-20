@@ -31,9 +31,9 @@
 
 #include <common/assert.h>
 #include <common/except.h>
-#include <common/concurrency/executor.h>
-#include <common/concurrency/async.h>
-#include <common/spl/memory.h>
+#include <common/executor.h>
+#include <common/future.h>
+#include <common/memory.h>
 
 namespace caspar { namespace core {
 	

@@ -29,7 +29,7 @@
 
 #include <core/producer/stage.h>
 
-#include <common/concurrency/executor.h>
+#include <common/executor.h>
 
 namespace caspar { namespace protocol { namespace cii {
 

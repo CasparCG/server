@@ -26,7 +26,8 @@
 #include "../monitor/monitor.h"
 
 #include <common/forward.h>
-#include <common/spl/memory.h>
+#include <common/future_fwd.h>
+#include <common/memory.h>
 #include <common/tweener.h>
 
 #include <boost/optional.hpp>
@@ -37,7 +38,6 @@
 #include <vector>
 
 FORWARD2(caspar, diagnostics, class graph);
-FORWARD1(boost, template<typename> class unique_future);
 
 namespace caspar { namespace core {
 	

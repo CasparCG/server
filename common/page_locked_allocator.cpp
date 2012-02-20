@@ -1,6 +1,6 @@
-#include "../stdafx.h"
+#include "stdafx.h"
 
-#include "../os/windows/windows.h"
+#include "os/windows/windows.h"
 
 #include <unordered_map>
 #include <tbb/mutex.h>

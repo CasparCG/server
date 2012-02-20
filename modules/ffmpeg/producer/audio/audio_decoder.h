@@ -24,7 +24,7 @@
 #include <core/mixer/audio/audio_mixer.h>
 #include <core/monitor/monitor.h>
 
-#include <common/spl/memory.h>
+#include <common/memory.h>
 
 #include <boost/noncopyable.hpp>
 

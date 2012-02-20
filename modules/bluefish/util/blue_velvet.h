@@ -26,7 +26,7 @@
 #include <BlueVelvet4.h>
 #include <BlueHancUtils.h>
 
-#include <common/spl/memory.h>
+#include <common/memory.h>
 #include <common/except.h>
 
 namespace caspar { 

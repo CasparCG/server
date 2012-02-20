@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/spl/memory.h>
+#include <common/memory.h>
 
 namespace caspar { namespace accelerator { namespace ogl {
 

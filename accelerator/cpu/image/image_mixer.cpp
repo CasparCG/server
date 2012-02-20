@@ -27,8 +27,8 @@
 
 #include <common/assert.h>
 #include <common/gl/gl_check.h>
-#include <common/concurrency/async.h>
-#include <common/memory/array.h>
+#include <common/future.h>
+#include <common/array.h>
 
 #include <core/frame/frame.h>
 #include <core/frame/frame_transform.h>

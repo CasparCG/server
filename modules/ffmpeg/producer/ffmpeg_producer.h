@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/spl/memory.h>
+#include <common/memory.h>
 
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>

@@ -35,7 +35,7 @@
 #include <common/env.h>
 #include <common/log.h>
 #include <common/except.h>
-#include <common/memory/array.h>
+#include <common/array.h>
 
 #include <boost/assign.hpp>
 #include <boost/filesystem.hpp>
