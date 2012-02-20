@@ -106,6 +106,7 @@ public:
 		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width_, height_, FORMAT[stride_], TYPE[stride_], NULL));
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
 		source.unbind();
+		source.map(); // Just map it back since map will orphan buffer.
 	}
 
 	void copy_to(buffer& dest)
