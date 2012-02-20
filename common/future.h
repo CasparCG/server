@@ -145,6 +145,8 @@ auto async(launch policy, F&& f) -> boost::unique_future<decltype(f())>
 
 	boost::shared_ptr<future_object_type> future_object;
 
+	// HACK: This solution is a hack to avoid modifying boost code.
+
 	if((policy & launch::async) != 0)
 		future_object = boost::static_pointer_cast<future_object_type>(boost::make_shared<detail::async_future_object<result_type, F>>(std::forward<F>(f)));
 	else if((policy & launch::deferred) != 0)
