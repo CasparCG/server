@@ -97,6 +97,10 @@ struct deferred_future_object : public boost::detail::future_object<R>
 	{
 		set_wait_callback(std::mem_fn(&detail::deferred_future_object<R, F>::operator()), this);
 	}
+
+	~deferred_future_object()
+	{
+	}
 		
 	void operator()()
 	{		
@@ -148,9 +152,9 @@ auto async(launch policy, F&& f) -> boost::unique_future<decltype(f())>
 	// HACK: This solution is a hack to avoid modifying boost code.
 
 	if((policy & launch::async) != 0)
-		future_object = boost::static_pointer_cast<future_object_type>(boost::make_shared<detail::async_future_object<result_type, F>>(std::forward<F>(f)));
+		future_object.reset(new detail::async_future_object<result_type, F>(std::forward<F>(f)), [](future_object_type* p){delete reinterpret_cast<detail::async_future_object<result_type, F>*>(p);});
 	else if((policy & launch::deferred) != 0)
-		future_object = boost::static_pointer_cast<future_object_type>(boost::make_shared<detail::deferred_future_object<result_type, F>>(std::forward<F>(f)));	
+		future_object.reset(new detail::deferred_future_object<result_type, F>(std::forward<F>(f)), [](future_object_type* p){delete reinterpret_cast<detail::deferred_future_object<result_type, F>*>(p);});
 	else
 		throw std::invalid_argument("policy");
 	
