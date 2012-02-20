@@ -28,9 +28,9 @@ template<typename R>
 struct invoke_function
 {	
 	template<typename F>
-	void operator()(boost::promise<R>& p, F& f)
+	void operator()(boost::detail::future_object<R>& p, F& f)
 	{
-		p.set_value(f());
+        p.mark_finished_with_result_internal(f());
 	}
 };
 
@@ -38,10 +38,10 @@ template<>
 struct invoke_function<void>
 {	
 	template<typename F>
-	void operator()(boost::promise<void>& p, F& f)
+	void operator()(boost::detail::future_object<void>& p, F& f)
 	{
 		f();
-		p.set_value();
+        p.mark_finished_with_result_internal();
 	}
 };
 
@@ -52,41 +52,35 @@ auto async(launch lp, F&& f) -> boost::unique_future<decltype(f())>
 {		
 	typedef decltype(f()) result_type;
 	
-	typedef boost::promise<result_type> promise_t;
-
-	// WORKAROUND: Use heap storage since lambdas don't support move semantics and do a lot of unnecessary copies.
-	auto promise = new promise_t();
-	auto func	 = new F(std::forward<F>(f));
-	auto future  = promise->get_future();
-
 	if(lp == launch::deferred)
-	{	
-		promise->set_wait_callback(std::function<void(promise_t&)>([=](promise_t&) mutable
-		{
-			std::unique_ptr<promise_t> pointer_guard(promise);
-			std::unique_ptr<F>		   func_guard(func);
-			detail::invoke_function<result_type>()(*promise, *func);
-		}));
+	{			
+		// HACK: THIS IS A MAYOR HACK!
 
+        typedef boost::shared_ptr<boost::detail::future_object<result_type>> future_ptr;
+		
+		auto fake_future		= boost::make_shared<future_ptr::value_type>();
+		auto fake_future_raw	= fake_future.get();
+
+		int dummy;
+		fake_future->set_wait_callback(std::function<void(int)>([f, fake_future_raw](int) mutable
+		{			
+            boost::lock_guard<boost::mutex> lock(fake_future_raw->mutex);
+            detail::invoke_function<result_type>()(*fake_future_raw, f);
+		}), &dummy);
+		
+		boost::unique_future<result_type> future;
+		reinterpret_cast<future_ptr&>(future) = std::move(fake_future); // Get around the "private" encapsulation.
 		return std::move(future);
 	}
 	else
 	{
-		boost::thread([=]
-		{
-			std::unique_ptr<promise_t> pointer_guard(promise);
-			std::unique_ptr<F>		   func_guard(func);
+		typedef boost::packaged_task<decltype(f())> task_t;
 
-			try
-			{				
-				detail::invoke_function<result_type>()(*promise, *func);
-			}
-			catch(...)
-			{
-				promise->set_exception(boost::current_exception());
-			}
-		}).detach();
-
+		auto task	= task_t(std::forward<F>(f));	
+		auto future = task.get_future();
+		
+		boost::thread(std::move(task)).detach();
+	
 		return std::move(future);
 	}
 }
