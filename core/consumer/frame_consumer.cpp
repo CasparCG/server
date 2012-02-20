@@ -53,7 +53,7 @@ public:
 		static tbb::atomic<int> counter = tbb::atomic<int>();
 			
 		++counter;
-		CASPAR_VERIFY(counter < 32);
+		CASPAR_VERIFY(counter < 8);
 		
 		auto consumer = new std::shared_ptr<frame_consumer>(std::move(consumer_));
 		boost::thread([=]
