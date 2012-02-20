@@ -248,11 +248,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		auto self = shared_from_this();
 		return async(launch::deferred, [self, buffer]() mutable -> array<const std::uint8_t>
 		{
-			const auto& buf = buffer.get();
-			if(!buf->data())
-				self->alloc_executor_.invoke(std::bind(&buffer::map, std::ref(buf))); // Defer blocking "map" call until data is needed.
-
-			return array<const std::uint8_t>(buf->data(), buf->size(), true, buffer);
+			self->alloc_executor_.invoke(std::bind(&buffer::map, std::ref(buffer))); // Defer blocking "map" call until data is needed.
+			return array<const std::uint8_t>(buffer->data(), buffer->size(), true, buffer);
 		});
 	}
 };
