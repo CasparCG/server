@@ -92,7 +92,7 @@ auto async(launch lp, F&& f) -> boost::unique_future<decltype(f())>
 	}
 	else
 	{
-		typedef boost::packaged_task<decltype(f())> task_t;
+		typedef boost::packaged_task<result_type> task_t;
 
 		auto task	= task_t(std::forward<F>(f));	
 		auto future = task.get_future();
