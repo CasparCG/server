@@ -33,10 +33,10 @@
 #include <common/env.h>
 #include <common/utf.h>
 #include <common/param.h>
-#include <common/concurrency/executor.h>
+#include <common/executor.h>
 #include <common/diagnostics/graph.h>
-#include <common/memory/array.h>
-#include <common/spl/memory.h>
+#include <common/array.h>
+#include <common/memory.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/timer.hpp>

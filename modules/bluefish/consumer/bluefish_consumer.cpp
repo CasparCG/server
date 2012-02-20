@@ -28,10 +28,10 @@
 #include <core/video_format.h>
 #include <core/frame/frame.h>
 
-#include <common/concurrency/executor.h>
+#include <common/executor.h>
 #include <common/diagnostics/graph.h>
-#include <common/memory/array.h>
-#include <common/memory/memshfl.h>
+#include <common/array.h>
+#include <common/memshfl.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/mixer/audio/audio_util.h>

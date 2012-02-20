@@ -22,7 +22,8 @@
 #pragma once
 
 #include <common/forward.h>
-#include <common/spl/memory.h>
+#include <common/memory.h>
+#include <common/future_fwd.h>
 
 #include <core/mixer/image/blend_modes.h>
 #include <core/mixer/image/image_mixer.h>
@@ -30,7 +31,6 @@
 #include <core/frame/frame_visitor.h>
 #include <core/video_format.h>
 
-FORWARD1(boost, template<typename> class unique_future);
 FORWARD2(caspar, core, class frame);
 FORWARD2(caspar, core, struct pixel_format_desc);
 FORWARD2(caspar, core, struct video_format_desc);

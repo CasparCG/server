@@ -27,9 +27,9 @@
 #include <common/diagnostics/graph.h>
 #include <common/gl/gl_check.h>
 #include <common/log.h>
-#include <common/spl/memory.h>
-#include <common/memory/array.h>
-#include <common/memory/memshfl.h>
+#include <common/memory.h>
+#include <common/array.h>
+#include <common/memshfl.h>
 #include <common/utf.h>
 
 #include <ffmpeg/producer/filter/filter.h>
@@ -40,9 +40,10 @@
 
 #include <boost/timer.hpp>
 #include <boost/circular_buffer.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>
-#include <boost/thread.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/thread.hpp>
 
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
@@ -113,23 +114,23 @@ struct configuration
 
 struct screen_consumer : boost::noncopyable
 {		
-	const configuration		config_;
-	core::video_format_desc format_desc_;
-	int						channel_index_;
+	const configuration					config_;
+	core::video_format_desc				format_desc_;
+	int									channel_index_;
 
-	GLuint					texture_;
-	std::vector<GLuint>		pbos_;
+	GLuint								texture_;
+	std::vector<GLuint>					pbos_;
 			
-	float					width_;
-	float					height_;	
-	int				screen_x_;
-	int				screen_y_;
-	int				screen_width_;
-	int				screen_height_;
-	int				square_width_;
-	int				square_height_;				
+	float								width_;
+	float								height_;	
+	int									screen_x_;
+	int									screen_y_;
+	int									screen_width_;
+	int									screen_height_;
+	int									square_width_;
+	int									square_height_;				
 	
-	sf::Window				window_;
+	sf::Window							window_;
 	
 	spl::shared_ptr<diagnostics::graph>	graph_;
 	boost::timer						perf_timer_;
@@ -137,10 +138,10 @@ struct screen_consumer : boost::noncopyable
 
 	tbb::concurrent_bounded_queue<core::const_frame>	frame_buffer_;
 
-	boost::thread			thread_;
-	tbb::atomic<bool>		is_running_;
+	boost::thread						thread_;
+	tbb::atomic<bool>					is_running_;
 	
-	ffmpeg::filter			filter_;
+	ffmpeg::filter						filter_;
 public:
 	screen_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index) 
 		: config_(config)

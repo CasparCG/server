@@ -23,7 +23,7 @@
 
 #include "frame.h"
 
-#include <common/spl/memory.h>
+#include <common/memory.h>
 
 #include <core/video_format.h>
 

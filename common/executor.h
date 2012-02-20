@@ -21,9 +21,9 @@
 
 #pragma once
 
-#include "../except.h"
-#include "../enum_class.h"
-#include "../log.h"
+#include "except.h"
+#include "enum_class.h"
+#include "log.h"
 
 #include <tbb/atomic.h>
 #include <tbb/concurrent_priority_queue.h>

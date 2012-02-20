@@ -24,7 +24,7 @@
 #include "display_mode.h"
 
 #include <common/forward.h>
-#include <common/spl/memory.h>
+#include <common/memory.h>
 
 #include <core/mixer/audio/audio_mixer.h>
 #include <core/video_format.h>

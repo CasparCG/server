@@ -30,12 +30,12 @@
 #include <core/frame/frame.h>
 #include <core/mixer/audio/audio_mixer.h>
 
-#include <common/concurrency/executor.h>
-#include <common/concurrency/lock.h>
+#include <common/executor.h>
+#include <common/lock.h>
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
-#include <common/memory/memshfl.h>
-#include <common/memory/array.h>
+#include <common/memshfl.h>
+#include <common/array.h>
 
 #include <core/consumer/frame_consumer.h>
 

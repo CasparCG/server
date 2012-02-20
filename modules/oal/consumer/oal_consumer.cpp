@@ -28,15 +28,15 @@
 #include <common/env.h>
 
 #include <core/consumer/frame_consumer.h>
+#include <core/frame/frame.h>
 #include <core/mixer/audio/audio_util.h>
 #include <core/mixer/audio/audio_mixer.h>
 #include <core/video_format.h>
 
-#include <core/frame/frame.h>
-
 #include <SFML/Audio/SoundStream.hpp>
 
 #include <boost/circular_buffer.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/timer.hpp>
 

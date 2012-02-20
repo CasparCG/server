@@ -25,7 +25,7 @@
 #include <common/env.h>
 #include <common/log.h>
 #include <common/utf.h>
-#include <common/memory/array.h>
+#include <common/array.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/video_format.h>

@@ -24,7 +24,7 @@
 #include "../../video_format.h"
 
 #include <common/enum_class.h>
-#include <common/spl/memory.h>
+#include <common/memory.h>
 #include <common/tweener.h>
 
 #include <string>

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "spl/memory.h"
-#include "concurrency/lock.h"
+#include "memory.h"
+#include "lock.h"
 
 #include <tbb/spin_rw_mutex.h>
 #include <tbb/cache_aligned_allocator.h>
@@ -55,8 +55,13 @@ class observer
 	observer(const observer&);
 	observer& operator=(const observer&);
 public:
+
+	// Static Members
+
 	typedef T value_type;
 	
+	// Constructors
+
 	observer()
 	{
 	}
@@ -65,7 +70,11 @@ public:
 	{
 	}
 
+	// Methods
+
 	virtual void on_next(const T&) = 0;
+
+	// Properties
 };
 
 template<typename T>
@@ -74,9 +83,14 @@ class observable
 	observable(const observable&);
 	observable& operator=(const observable&);
 public:
+
+	// Static Members
+
 	typedef T						value_type;
 	typedef observer<T>				observer;
 	typedef std::weak_ptr<observer>	observer_ptr;
+	
+	// Constructors
 
 	observable()
 	{
@@ -85,27 +99,45 @@ public:
 	virtual ~observable()
 	{
 	}
+	
+	// Methods
 
 	virtual void subscribe(const observer_ptr&) = 0;
 	virtual void unsubscribe(const observer_ptr&) = 0;
+	
+	// Properties
 };
 
 template<typename I, typename O = I>
 class subject : public observer<I>, public observable<O>
 {
 public:
+	
+	// Static Members
+
 	typedef typename observable<O>::observer		observer;
 	typedef typename observable<O>::observer_ptr	observer_ptr;
+	
+	// Constructors
 
 	virtual ~subject()
 	{
 	}
+	
+	// Methods
+
+	// Properties
 };
 
 template<typename T, typename C>
 class observer_function : public observer<T>
 {
 public:
+	
+	// Static Members
+	
+	// Constructors
+
 	observer_function()
 	{
 	}
@@ -129,6 +161,8 @@ public:
 	{
 		other.swap(*this);
 	}
+		
+	// Methods
 
 	void swap(observer_function& other)
 	{
@@ -140,6 +174,8 @@ public:
 	{
 		func_(e);
 	}
+
+	// Properties
 private:
 	C func_;
 };
@@ -152,8 +188,12 @@ class basic_subject_impl sealed : public subject<I, O>
 	basic_subject_impl(const basic_subject_impl&);
 	basic_subject_impl& operator=(const basic_subject_impl&);
 public:	
+	// Static Members
+
 	typedef typename subject<I, O>::observer		observer;
 	typedef typename subject<I, O>::observer_ptr	observer_ptr;
+
+	// Constructors
 
 	basic_subject_impl()
 	{
@@ -169,6 +209,8 @@ public:
 		observers_ = std::move(observers_);
 		return *this;
 	}
+
+	// Methods
 
 	void clear()
 	{
@@ -229,6 +271,9 @@ public:
 		for(auto it = std::begin(observers); it != std::end(observers); ++it)
 			(*it)->on_next(e);
 	}
+
+	// Properties
+
 private:
 	typedef tbb::cache_aligned_allocator<std::weak_ptr<observer>>	allocator;
 
@@ -247,8 +292,13 @@ class basic_subject sealed : public subject<I, O>
 
 	typedef basic_subject_impl<I, O> impl;
 public:	
+
+	// Static Members
+
 	typedef typename subject<I, O>::observer		observer;
 	typedef typename subject<I, O>::observer_ptr	observer_ptr;
+
+	// Constructors
 
 	basic_subject()
 		: impl_(std::make_shared<impl>())
@@ -265,6 +315,8 @@ public:
 	{
 		other.swap(*this);
 	}
+
+	// Methods
 
 	void swap(basic_subject& other)
 	{
@@ -290,6 +342,9 @@ public:
 	{
 		return impl_;
 	}
+
+	// Properties
+
 private:
 	std::shared_ptr<impl> impl_;
 };

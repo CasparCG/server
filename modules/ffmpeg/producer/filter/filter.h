@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/spl/memory.h>
+#include <common/memory.h>
 
 #include <boost/noncopyable.hpp>
 #include <boost/algorithm/string/case_conv.hpp>

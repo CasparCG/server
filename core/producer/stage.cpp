@@ -28,7 +28,7 @@
 #include "../frame/draw_frame.h"
 #include "../frame/frame_factory.h"
 
-#include <common/concurrency/executor.h>
+#include <common/executor.h>
 #include <common/diagnostics/graph.h>
 
 #include <core/frame/frame_transform.h>
