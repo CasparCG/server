@@ -23,7 +23,7 @@
 
 #include <core/producer/frame_producer.h>
 
-#include <common/spl/memory.h>
+#include <common/memory.h>
 
 #include <vector>
 #include <string>

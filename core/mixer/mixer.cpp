@@ -29,7 +29,7 @@
 #include "image/image_mixer.h"
 
 #include <common/env.h>
-#include <common/concurrency/executor.h>
+#include <common/executor.h>
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
 #include <common/gl/gl_check.h>

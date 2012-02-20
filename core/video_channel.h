@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/spl/memory.h>
+#include <common/memory.h>
 #include <common/reactive.h>
 #include <common/forward.h>
 

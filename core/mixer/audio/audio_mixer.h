@@ -22,7 +22,7 @@
 #pragma once
 
 #include <common/forward.h>
-#include <common/spl/memory.h>
+#include <common/memory.h>
 
 #include <core/frame/frame_visitor.h>
 

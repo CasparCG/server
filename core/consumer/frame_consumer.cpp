@@ -28,7 +28,7 @@
 #include <core/video_format.h>
 #include <core/frame/frame.h>
 
-#include <common/concurrency/async.h>
+#include <common/future.h>
 
 namespace caspar { namespace core {
 		

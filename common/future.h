@@ -1,26 +1,24 @@
 #pragma once
 
-#include "../enum_class.h"
+#include "enum_class.h"
 
 #include <boost/thread/future.hpp>
 #include <boost/thread/thread.hpp>
-#include <boost/utility/declval.hpp>
+#include <boost/shared_ptr.hpp>
 
 #include <functional>
-#include <memory>
-#include <tuple>
 
 namespace caspar {
-
+	
 struct launch_policy_def
 {
 	enum type
 	{
-		async,
-		deferred
+		async = 1,
+		deferred = 2
 	};
 };
-typedef enum_class<launch_policy_def> launch;
+typedef caspar::enum_class<launch_policy_def> launch;
 
 namespace detail {
 
@@ -94,12 +92,23 @@ struct callback_object<void, F> : public boost::detail::future_object<void>
 }
 	
 template<typename F>
-auto async(launch lp, F&& f) -> boost::unique_future<decltype(f())>
+auto async(launch policy, F&& f) -> boost::unique_future<decltype(f())>
 {		
 	typedef decltype(f()) result_type;
 	
-	if(lp == launch::deferred)
-	{			
+	if((policy & launch::async) != 0)
+	{
+		typedef boost::packaged_task<result_type> task_t;
+
+		auto task	= task_t(std::forward<F>(f));	
+		auto future = task.get_future();
+		
+		boost::thread(std::move(task)).detach();
+	
+		return std::move(future);
+	}
+	else if((policy & launch::deferred) != 0)
+	{		
 		// HACK: THIS IS A MAYOR HACK!
 
 		typedef boost::detail::future_object<result_type> future_object_t;
@@ -115,20 +124,14 @@ auto async(launch lp, F&& f) -> boost::unique_future<decltype(f())>
 		}), &dummy);
 		
 		boost::unique_future<result_type> future;
+
+		static_assert(sizeof(future) == sizeof(future_object), "");
+
 		reinterpret_cast<boost::shared_ptr<future_object_t>&>(future) = std::move(future_object); // Get around the "private" encapsulation.
 		return std::move(future);
 	}
 	else
-	{
-		typedef boost::packaged_task<result_type> task_t;
-
-		auto task	= task_t(std::forward<F>(f));	
-		auto future = task.get_future();
-		
-		boost::thread(std::move(task)).detach();
-	
-		return std::move(future);
-	}
+		throw std::invalid_argument("policy");
 }
 	
 template<typename F>

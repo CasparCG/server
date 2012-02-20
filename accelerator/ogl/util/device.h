@@ -23,8 +23,8 @@
 
 #include <core/frame/frame.h>
 
-#include <common/spl/memory.h>
-#include <common/concurrency/executor.h>
+#include <common/memory.h>
+#include <common/executor.h>
 
 namespace caspar { namespace accelerator { namespace ogl {
 

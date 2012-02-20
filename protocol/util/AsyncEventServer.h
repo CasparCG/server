@@ -30,7 +30,7 @@
 #pragma once
 #endif
 
-#include <common/spl/memory.h>
+#include <common/memory.h>
 
 #include <string>
 #include <map>

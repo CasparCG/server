@@ -26,13 +26,13 @@
 #include "../monitor/monitor.h"
 
 #include <common/forward.h>
-#include <common/spl/memory.h>
+#include <common/future_fwd.h>
+#include <common/memory.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
 
 #include <string>
 
-FORWARD1(boost, template<typename T> class unique_future);
 FORWARD1(boost, template<typename T> class optional);
 
 namespace caspar { namespace core {

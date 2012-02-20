@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/spl/memory.h>
+#include <common/memory.h>
 #include <common/forward.h>
 
 #include <core/monitor/monitor.h>

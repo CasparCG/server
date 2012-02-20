@@ -24,7 +24,7 @@
 #include <core/mixer/image/blend_modes.h>
 
 #include <common/enum_class.h>
-#include <common/spl/memory.h>
+#include <common/memory.h>
 
 #include <core/frame/pixel_format.h>
 #include <core/frame/frame_transform.h>

@@ -22,12 +22,12 @@
 #pragma once
 
 #include <common/forward.h>
-#include <common/spl/memory.h>
+#include <common/future_fwd.h>
+#include <common/memory.h>
 #include <common/reactive.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
 
-FORWARD1(boost, template<typename> class unique_future)
 FORWARD2(caspar, diagnostics, class graph);
 
 namespace caspar { namespace core {

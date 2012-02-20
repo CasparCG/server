@@ -31,7 +31,7 @@
 #include <core/monitor/monitor.h>
 
 #include <common/except.h>
-#include <common/memory/array.h>
+#include <common/array.h>
 
 #include <boost/algorithm/string.hpp>
 

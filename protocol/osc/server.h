@@ -1,6 +1,6 @@
 #pragma once
 
-#include <common/spl/memory.h>
+#include <common/memory.h>
 
 #include <core/monitor/monitor.h>
 

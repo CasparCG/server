@@ -32,19 +32,20 @@
 #include "../video_format.h"
 #include "../frame/frame.h"
 
-#include <common/concurrency/async.h>
-#include <common/concurrency/executor.h>
+#include <common/assert.h>
+#include <common/future.h>
+#include <common/executor.h>
 #include <common/diagnostics/graph.h>
 #include <common/prec_timer.h>
-#include <common/memory/memshfl.h>
+#include <common/memshfl.h>
 #include <common/env.h>
 
-#include <common/assert.h>
 #include <boost/circular_buffer.hpp>
-#include <boost/timer.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/property_tree/ptree.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/range/adaptors.hpp>
-#include <boost/property_tree/ptree.hpp>
+#include <boost/timer.hpp>
 
 namespace caspar { namespace core {
 	

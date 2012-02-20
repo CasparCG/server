@@ -25,8 +25,8 @@
 
 #pragma warning (disable : 4244)
 
-#include "../concurrency/executor.h"
-#include "../concurrency/lock.h"
+#include "../executor.h"
+#include "../lock.h"
 #include "../env.h"
 
 #include <SFML/Graphics.hpp>

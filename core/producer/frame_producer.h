@@ -25,7 +25,8 @@
 #include "../video_format.h"
 
 #include <common/forward.h>
-#include <common/spl/memory.h>
+#include <common/future_fwd.h>
+#include <common/memory.h>
 #include <common/enum_class.h>
 
 #include <cstdint>
@@ -38,7 +39,6 @@
 #include <boost/property_tree/ptree_fwd.hpp>
 
 FORWARD1(caspar, class executor);
-FORWARD1(boost, template<typename T> class unique_future);
 
 namespace caspar { namespace core {
 	
