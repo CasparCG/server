@@ -24,38 +24,70 @@ typedef enum_class<launch_policy_def> launch;
 
 namespace detail {
 
-template<typename R>
-struct invoke_callback
+template<typename R, typename F>
+struct callback_object: public boost::detail::future_object<R>
 {	
-	template<typename F>
-	void operator()(boost::detail::future_object<R>& p, F& f)
+	F f;
+	bool done;
+
+	template<typename F2>
+	callback_object(F2&& f)
+		: f(std::forward<F2>(f))
+		, done(false)
+	{
+	}
+		
+	void operator()()
 	{		
+		boost::lock_guard<boost::mutex> lock2(mutex);
+
+		if(done)
+			return;
+
         try
         {
-		   p.mark_finished_with_result_internal(f());
+		   this->mark_finished_with_result_internal(f());
         }
         catch(...)
         {
-			p.mark_exceptional_finish_internal(boost::current_exception());
+			this->mark_exceptional_finish_internal(boost::current_exception());
         }
+
+		done = true;
 	}
 };
 
-template<>
-struct invoke_callback<void>
+template<typename F>
+struct callback_object<void, F> : public boost::detail::future_object<void>
 {	
-	template<typename F>
-	void operator()(boost::detail::future_object<void>& p, F& f)
+	F f;
+	bool done;
+
+	template<typename F2>
+	callback_object(F2&& f)
+		: f(std::forward<F2>(f))
+		, done(false)
 	{
+	}
+
+	void operator()()
+	{
+		boost::lock_guard<boost::mutex> lock2(mutex);
+		
+		if(done)
+			return;
+
         try
         {
 			f();
-			p.mark_finished_with_result_internal();
+			this->mark_finished_with_result_internal();
 		}
         catch(...)
         {
-			p.mark_exceptional_finish_internal(boost::current_exception());
+			this->mark_exceptional_finish_internal(boost::current_exception());
         }
+
+		done = true;
 	}
 };
 
@@ -71,33 +103,15 @@ auto async(launch lp, F&& f) -> boost::unique_future<decltype(f())>
 		// HACK: THIS IS A MAYOR HACK!
 
 		typedef boost::detail::future_object<result_type> future_object_t;
-
-		struct future_object_ex_t : public future_object_t
-		{
-			bool done;
-
-			future_object_ex_t()
-				: done(false)
-			{
-			}
-		};
-			
-		auto future_object_ex	= boost::make_shared<future_object_ex_t>();
-		bool& done				= future_object_ex->done;
-		auto future_object		= boost::static_pointer_cast<future_object_t>(std::move(future_object_ex));
-		auto future_object_raw	= future_object.get();
+					
+		auto callback_object	 = boost::make_shared<detail::callback_object<result_type, F>>(std::forward<F>(f));
+		auto callback_object_raw = callback_object.get();
+		auto future_object		 = boost::static_pointer_cast<future_object_t>(std::move(callback_object));
 
 		int dummy = 0;
-		future_object->set_wait_callback(std::function<void(int)>([f, future_object_raw, &done](int) mutable
+		future_object->set_wait_callback(std::function<void(int)>([callback_object_raw](int) mutable
 		{								
-			boost::lock_guard<boost::mutex> lock2(future_object_raw->mutex);
-			
-			if(done)
-				return;
-
-			detail::invoke_callback<result_type>()(*future_object_raw, f);
-			
-			done = true;
+			(*callback_object_raw)();
 		}), &dummy);
 		
 		boost::unique_future<result_type> future;
