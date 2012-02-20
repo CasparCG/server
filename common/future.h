@@ -21,18 +21,54 @@ struct launch_policy_def
 typedef caspar::enum_class<launch_policy_def> launch;
 
 namespace detail {
+	
+template<typename R>
+struct future_object_helper
+{	
+	template<typename T, typename F>
+	static void invoke(T& future_object, F& f)
+	{				
+        try
+        {
+			future_object.mark_finished_with_result_internal(f());
+        }
+        catch(...)
+        {
+			future_object.mark_exceptional_finish_internal(boost::current_exception());
+        }
+	}
+};
+
+template<>
+struct future_object_helper<void>
+{	
+	template<typename T, typename F>
+	static void invoke(T& future_object, F& f)
+	{				
+        try
+        {
+			f();
+			future_object.mark_finished_with_result_internal();
+        }
+        catch(...)
+        {
+			future_object.mark_exceptional_finish_internal(boost::current_exception());
+        }
+	}
+};
 
 template<typename R, typename F>
-struct callback_object: public boost::detail::future_object<R>
+struct deferred_future_object : public boost::detail::future_object<R>
 {	
 	F f;
 	bool done;
 
 	template<typename F2>
-	callback_object(F2&& f)
+	deferred_future_object(F2&& f)
 		: f(std::forward<F2>(f))
 		, done(false)
 	{
+		set_wait_callback(std::mem_fn(&detail::deferred_future_object<R, F>::operator()), this);
 	}
 		
 	void operator()()
@@ -42,50 +78,35 @@ struct callback_object: public boost::detail::future_object<R>
 		if(done)
 			return;
 
-        try
-        {
-			this->mark_finished_with_result_internal(f());
-        }
-        catch(...)
-        {
-			this->mark_exceptional_finish_internal(boost::current_exception());
-        }
+		future_object_helper<R>::invoke(*this, f);
 
 		done = true;
 	}
 };
 
-template<typename F>
-struct callback_object<void, F> : public boost::detail::future_object<void>
+template<typename R, typename F>
+struct async_future_object : public boost::detail::future_object<R>
 {	
 	F f;
-	bool done;
+	boost::thread thread;
 
 	template<typename F2>
-	callback_object(F2&& f)
+	async_future_object(F2&& f)
 		: f(std::forward<F2>(f))
-		, done(false)
+		, thread([this]{run();})
 	{
 	}
 
-	void operator()()
+	~async_future_object()
 	{
-		boost::lock_guard<boost::mutex> lock2(mutex);
-		
-		if(done)
-			return;
+		thread.join();
+	}
 
-        try
-        {
-			f();
-			this->mark_finished_with_result_internal();
-		}
-        catch(...)
-        {
-			this->mark_exceptional_finish_internal(boost::current_exception());
-        }
+	void run()
+	{
+		boost::lock_guard<boost::mutex> lock2(mutex);		
 
-		done = true;
+		future_object_helper<R>::invoke(*this, f);
 	}
 };
 
@@ -94,40 +115,24 @@ struct callback_object<void, F> : public boost::detail::future_object<void>
 template<typename F>
 auto async(launch policy, F&& f) -> boost::unique_future<decltype(f())>
 {		
-	typedef decltype(f()) result_type;
-	
+	typedef decltype(f())								result_type;	
+	typedef boost::detail::future_object<result_type>	future_object_type;
+
+	boost::shared_ptr<future_object_type> future_object;
+
 	if((policy & launch::async) != 0)
-	{
-		typedef boost::packaged_task<result_type> task_t;
-
-		auto task	= task_t(std::forward<F>(f));	
-		auto future = task.get_future();
-		
-		boost::thread(std::move(task)).detach();
-	
-		return std::move(future);
-	}
+		future_object = boost::static_pointer_cast<future_object_type>(boost::make_shared<detail::async_future_object<result_type, F>>(std::forward<F>(f)));
 	else if((policy & launch::deferred) != 0)
-	{		
-		// HACK: THIS IS A MAYOR HACK!
-
-		typedef boost::detail::future_object<result_type> future_object_t;
-					
-		auto callback_object	 = boost::make_shared<detail::callback_object<result_type, F>>(std::forward<F>(f));
-		auto callback_object_raw = callback_object.get();
-		auto future_object		 = boost::static_pointer_cast<future_object_t>(std::move(callback_object));
-
-		future_object->set_wait_callback(std::mem_fn(&detail::callback_object<result_type, F>::operator()), callback_object_raw);
-		
-		boost::unique_future<result_type> future;
-
-		static_assert(sizeof(future) == sizeof(future_object), "");
-
-		reinterpret_cast<boost::shared_ptr<future_object_t>&>(future) = std::move(future_object); // Get around the "private" encapsulation.
-		return std::move(future);
-	}
+		future_object = boost::static_pointer_cast<future_object_type>(boost::make_shared<detail::deferred_future_object<result_type, F>>(std::forward<F>(f)));	
 	else
 		throw std::invalid_argument("policy");
+	
+	boost::unique_future<result_type> future;
+
+	static_assert(sizeof(future) == sizeof(future_object), "");
+
+	reinterpret_cast<boost::shared_ptr<future_object_type>&>(future) = std::move(future_object); // Get around the "private" encapsulation.
+	return std::move(future);
 }
 	
 template<typename F>
