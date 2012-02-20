@@ -117,11 +117,7 @@ auto async(launch policy, F&& f) -> boost::unique_future<decltype(f())>
 		auto callback_object_raw = callback_object.get();
 		auto future_object		 = boost::static_pointer_cast<future_object_t>(std::move(callback_object));
 
-		int dummy = 0;
-		future_object->set_wait_callback(std::function<void(int)>([callback_object_raw](int) mutable
-		{								
-			(*callback_object_raw)();
-		}), &dummy);
+		future_object->set_wait_callback(std::mem_fn(&detail::callback_object<result_type, F>::operator()), callback_object_raw);
 		
 		boost::unique_future<result_type> future;
 
@@ -137,7 +133,7 @@ auto async(launch policy, F&& f) -> boost::unique_future<decltype(f())>
 template<typename F>
 auto async(F&& f) -> boost::unique_future<decltype(f())>
 {	
-	return async(launch::async, std::forward<F>(f));
+	return async(launch::async | launch::deferred, std::forward<F>(f));
 }
 
 template<typename T>
