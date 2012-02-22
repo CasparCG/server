@@ -58,7 +58,7 @@ extern "C"
 
 static const size_t MAX_BUFFER_COUNT = 100;
 static const size_t MIN_BUFFER_COUNT = 4;
-static const size_t MAX_BUFFER_SIZE  = 16 * 1000000;
+static const size_t MAX_BUFFER_SIZE  = 64 * 1000000;
 
 namespace caspar { namespace ffmpeg {
 		
