@@ -26,7 +26,15 @@
 #include "producer/cg_producer.h"
 #include "producer/flash_producer.h"
 
+#include <core/producer/frame/frame_factory.h>
+#include <core/mixer/write_frame.h>
+
 #include <common/env.h>
+
+#include <boost/regex.hpp>
+
+#include <string>
+#include <vector>
 
 namespace caspar { namespace flash {
 
@@ -38,6 +46,30 @@ void init()
 
 std::wstring get_cg_version()
 {
+	struct dummy_factory : public core::frame_factory
+	{
+		
+		virtual safe_ptr<core::write_frame> create_frame(const void* video_stream_tag, const core::pixel_format_desc& desc) 
+		{
+			return make_safe<core::write_frame>(nullptr);
+		}
+	
+		virtual core::video_format_desc get_video_format_desc() const
+		{
+			return core::video_format_desc::get(L"PAL");
+		}
+	};
+
+	std::vector<std::wstring> params;
+	auto producer = make_safe<cg_producer>(flash::create_producer(make_safe<dummy_factory>(), params));
+
+	auto info = producer->template_host_info();
+	
+	boost::wregex ver_exp(L"version=&quot;(?<VERSION>[^&]*)");
+	boost::wsmatch what;
+	if(boost::regex_search(info, what, ver_exp))
+		return what[L"VERSION"];
+
 	return L"Unknown";
 }
 

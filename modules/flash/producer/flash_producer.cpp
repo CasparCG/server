@@ -275,9 +275,12 @@ public:
 			desc.planes.push_back(core::pixel_format_desc::plane(width_, height_, 4));
 			auto frame = frame_factory_->create_frame(this, desc);
 
-			fast_memcpy(frame->image_data().begin(), bmp_.data(), width_*height_*4);
-			frame->commit();
-			head_ = frame;
+			if(frame->image_data().size() == static_cast<int>(width_*height_*4))
+			{
+				fast_memcpy(frame->image_data().begin(), bmp_.data(), width_*height_*4);
+				frame->commit();
+				head_ = frame;
+			}
 		}		
 					
 		MSG msg;

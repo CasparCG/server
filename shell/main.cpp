@@ -134,13 +134,14 @@ void print_info()
 	BOOST_FOREACH(auto device, caspar::bluefish::get_device_list())
 		CASPAR_LOG(info) << L" - " << device;	
 	
-	CASPAR_LOG(info) << L"Flash "			<< caspar::flash::get_version();
 	CASPAR_LOG(info) << L"FreeImage "		<< caspar::image::get_version();
 	CASPAR_LOG(info) << L"FFMPEG-avcodec "  << caspar::ffmpeg::get_avcodec_version();
 	CASPAR_LOG(info) << L"FFMPEG-avformat " << caspar::ffmpeg::get_avformat_version();
 	CASPAR_LOG(info) << L"FFMPEG-avfilter " << caspar::ffmpeg::get_avfilter_version();
 	CASPAR_LOG(info) << L"FFMPEG-avutil "	<< caspar::ffmpeg::get_avutil_version();
 	CASPAR_LOG(info) << L"FFMPEG-swscale "  << caspar::ffmpeg::get_swscale_version();
+	CASPAR_LOG(info) << L"Flash "			<< caspar::flash::get_version();
+	CASPAR_LOG(info) << L"Template-Host "	<< caspar::flash::get_cg_version();
 }
 
 LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)

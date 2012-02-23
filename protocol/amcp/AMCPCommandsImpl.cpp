@@ -43,6 +43,7 @@
 #include <core/producer/stage.h>
 #include <core/producer/layer.h>
 #include <core/mixer/mixer.h>
+#include <core/mixer/gpu/ogl_device.h>
 #include <core/consumer/output.h>
 
 #include <modules/bluefish/bluefish.h>
@@ -1398,24 +1399,25 @@ bool InfoCommand::DoExecute()
 			info.add(L"system.cpu",						caspar::get_cpu_info());
 	
 			BOOST_FOREACH(auto device, caspar::decklink::get_device_list())
-				info.add(L"system.decklink.device", device);
+				info.add(L"system.caspar.decklink.device", device);
 
 			BOOST_FOREACH(auto device, caspar::bluefish::get_device_list())
-				info.add(L"system.bluefish.device", device);
+				info.add(L"system.caspar.bluefish.device", device);
 				
-			info.add(L"system.flash",					caspar::flash::get_version());
-			info.add(L"system.free-image",				caspar::image::get_version());
-			info.add(L"system.ffmpeg.avcodec",			caspar::ffmpeg::get_avcodec_version());
-			info.add(L"system.ffmpeg.avformat",			caspar::ffmpeg::get_avformat_version());
-			info.add(L"system.ffmpeg.avfilter",			caspar::ffmpeg::get_avfilter_version());
-			info.add(L"system.ffmpeg.avutil",			caspar::ffmpeg::get_avutil_version());
-			info.add(L"system.ffmpeg.swscale",			caspar::ffmpeg::get_swscale_version());
-						
+			info.add(L"system.caspar.flash",					caspar::flash::get_version());
+			info.add(L"system.caspar.template-host",			caspar::flash::get_cg_version());
+			info.add(L"system.caspar.free-image",				caspar::image::get_version());
+			info.add(L"system.caspar.ffmpeg.avcodec",			caspar::ffmpeg::get_avcodec_version());
+			info.add(L"system.caspar.ffmpeg.avformat",			caspar::ffmpeg::get_avformat_version());
+			info.add(L"system.caspar.ffmpeg.avfilter",			caspar::ffmpeg::get_avfilter_version());
+			info.add(L"system.caspar.ffmpeg.avutil",			caspar::ffmpeg::get_avutil_version());
+			info.add(L"system.caspar.ffmpeg.swscale",			caspar::ffmpeg::get_swscale_version());
+									
 			boost::property_tree::write_xml(replyString, info, w);
 		}
 		else if(_parameters.size() >= 1 && _parameters[0] == L"SERVER")
 		{
-			replyString << L"201 INFO SYSTEM OK\r\n";
+			replyString << L"201 INFO SERVER OK\r\n";
 			
 			boost::property_tree::wptree info;
 
