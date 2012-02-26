@@ -148,7 +148,7 @@ private:
 			if(item.pix_desc.planes.at(0).height == 480) // NTSC DV
 			{
 				item.transform.fill_translation[1] += 2.0/static_cast<double>(format_desc.height);
-				item.transform.fill_scale[1] = 1.0 - 6.0*1.0/static_cast<double>(format_desc.height);
+				item.transform.fill_scale[1] *= 1.0 - 6.0*1.0/static_cast<double>(format_desc.height);
 			}
 	
 			// Fix field-order if needed
