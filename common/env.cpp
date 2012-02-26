@@ -96,14 +96,21 @@ void configure(const std::wstring& filename)
 
 	try
 	{
+		try
+		{
+			auto log_path = boost::filesystem::path(log);
+			if(!boost::filesystem::exists(log_path))
+				boost::filesystem::create_directories(log_path);
+		}
+		catch(...)
+		{
+			log = L"./";
+		}
+
 		auto media_path = boost::filesystem::path(media);
 		if(!boost::filesystem::exists(media_path))
 			boost::filesystem::create_directories(media_path);
-		
-		auto log_path = boost::filesystem::path(log);
-		if(!boost::filesystem::exists(log_path))
-			boost::filesystem::create_directories(log_path);
-		
+				
 		auto template_path = boost::filesystem::path(ftemplate);
 		if(!boost::filesystem::exists(template_path))
 			boost::filesystem::create_directories(template_path);
