@@ -251,7 +251,13 @@ public:
 			if(muxer_.try_pop(frame))
 			{
 				if(!frame_buffer_.try_push(frame))
+				{
+					auto dummy = core::draw_frame::empty();
+					frame_buffer_.try_pop(dummy);
+					frame_buffer_.try_push(frame);
+						
 					graph_->set_tag("dropped-frame");
+				}
 			}
 			
 			graph_->set_value("frame-time", frame_timer.elapsed()*out_format_desc_.fps*0.5);	
