@@ -122,8 +122,6 @@ struct output_format
 	CodecID			acodec;
 	int				croptop;
 	int				cropbot;
-	int				cropleft;
-	int				cropright;
 
 	output_format(const core::video_format_desc& format_desc, const std::string& filename, std::vector<option>& options)
 		: format(av_guess_format(nullptr, filename.c_str(), nullptr))
@@ -133,8 +131,6 @@ struct output_format
 		, acodec(CODEC_ID_NONE)
 		, croptop(0)
 		, cropbot(0)
-		, cropleft(0)
-		, cropright(0)
 	{
 		boost::range::remove_erase_if(options, [&](const option& o)
 		{
@@ -222,18 +218,6 @@ struct output_format
 		else if(name == "cropbot")
 		{
 			cropbot = boost::lexical_cast<int>(value);
-
-			return true;
-		}
-		else if(name == "cropleft")
-		{
-			cropleft = boost::lexical_cast<int>(value);
-
-			return true;
-		}
-		else if(name == "cropright")
-		{
-			cropright = boost::lexical_cast<int>(value);
 
 			return true;
 		}
@@ -363,7 +347,7 @@ public:
 		c->codec_id			= output_format_.vcodec;
 		c->codec_type		= AVMEDIA_TYPE_VIDEO;
 		c->width			= output_format_.width;
-		c->height			= output_format_.height;
+		c->height			= output_format_.height - output_format_.croptop - output_format_.cropbot;
 		c->time_base.den	= format_desc_.time_scale;
 		c->time_base.num	= format_desc_.duration;
 		c->gop_size			= 25;
@@ -488,7 +472,7 @@ public:
 	{
 		if(!sws_) 
 		{
-			sws_.reset(sws_getContext(format_desc_.width  - output_format_.cropleft - output_format_.cropright, 
+			sws_.reset(sws_getContext(format_desc_.width, 
 									  format_desc_.height - output_format_.croptop  - output_format_.cropbot, 
 									  PIX_FMT_BGRA,
 									  c->width,
@@ -506,14 +490,11 @@ public:
 					   const_cast<uint8_t*>(frame.image_data().begin()),
 					   PIX_FMT_BGRA, 
 					   format_desc_.width,
-					   format_desc_.height);
+					   format_desc_.height - output_format_.croptop  - output_format_.cropbot);
 
-		for(int n = 0; n < 4; ++n)
-		{
-			in_frame->data[n]	  = in_frame->data[n] + output_format_.cropleft;
-			in_frame->linesize[n] = in_frame->linesize[n] - output_format_.cropleft - output_format_.cropright;
-		}
-						
+		for(int n = 0; n < 4; ++n)		
+			in_frame->data[n] += in_frame->linesize[n] * output_format_.croptop;		
+								
 		std::shared_ptr<AVFrame> out_frame(avcodec_alloc_frame(), av_free);
 
 		picture_buf_.resize(avpicture_get_size(c->pix_fmt, 
@@ -529,8 +510,8 @@ public:
 		sws_scale(sws_.get(), 
 				  in_frame->data, 
 				  in_frame->linesize,
-				  output_format_.croptop, 
-				  format_desc_.height - output_format_.croptop - output_format_.cropbot, 
+				  0, 
+				  format_desc_.height - output_format_.cropbot - output_format_.croptop, 
 				  out_frame->data, 
 				  out_frame->linesize);
 
