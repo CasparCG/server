@@ -120,6 +120,10 @@ struct output_format
 	int				height;
 	CodecID			vcodec;
 	CodecID			acodec;
+	int				croptop;
+	int				cropbot;
+	int				cropleft;
+	int				cropright;
 
 	output_format(const core::video_format_desc& format_desc, const std::string& filename, std::vector<option>& options)
 		: format(av_guess_format(nullptr, filename.c_str(), nullptr))
@@ -127,6 +131,10 @@ struct output_format
 		, height(format_desc.height)
 		, vcodec(CODEC_ID_NONE)
 		, acodec(CODEC_ID_NONE)
+		, croptop(0)
+		, cropbot(0)
+		, cropleft(0)
+		, cropright(0)
 	{
 		boost::range::remove_erase_if(options, [&](const option& o)
 		{
@@ -205,7 +213,31 @@ struct output_format
 			
 			return true;
 		}
+		else if(name == "croptop")
+		{
+			croptop = boost::lexical_cast<int>(value);
 
+			return true;
+		}
+		else if(name == "cropbot")
+		{
+			cropbot = boost::lexical_cast<int>(value);
+
+			return true;
+		}
+		else if(name == "cropleft")
+		{
+			cropleft = boost::lexical_cast<int>(value);
+
+			return true;
+		}
+		else if(name == "cropright")
+		{
+			cropright = boost::lexical_cast<int>(value);
+
+			return true;
+		}
+		
 		return false;
 	}
 };
@@ -456,19 +488,51 @@ public:
 	{
 		if(!sws_) 
 		{
-			sws_.reset(sws_getContext(format_desc_.width, format_desc_.height, PIX_FMT_BGRA, c->width, c->height, c->pix_fmt, SWS_BICUBIC, nullptr, nullptr, nullptr), sws_freeContext);
+			sws_.reset(sws_getContext(format_desc_.width  - output_format_.cropleft - output_format_.cropright, 
+									  format_desc_.height - output_format_.croptop  - output_format_.cropbot, 
+									  PIX_FMT_BGRA,
+									  c->width,
+									  c->height, 
+									  c->pix_fmt, 
+									  SWS_BICUBIC, nullptr, nullptr, nullptr), 
+						sws_freeContext);
 			if (sws_ == nullptr) 
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Cannot initialize the conversion context"));
 		}
 
 		std::shared_ptr<AVFrame> in_frame(avcodec_alloc_frame(), av_free);
-		avpicture_fill(reinterpret_cast<AVPicture*>(in_frame.get()), const_cast<uint8_t*>(frame.image_data().begin()), PIX_FMT_BGRA, format_desc_.width, format_desc_.height);
-				
-		std::shared_ptr<AVFrame> out_frame(avcodec_alloc_frame(), av_free);
-		picture_buf_.resize(avpicture_get_size(c->pix_fmt, c->width, c->height));
-		avpicture_fill(reinterpret_cast<AVPicture*>(out_frame.get()), picture_buf_.data(), c->pix_fmt, c->width, c->height);
 
-		sws_scale(sws_.get(), in_frame->data, in_frame->linesize, 0, format_desc_.height, out_frame->data, out_frame->linesize);
+		avpicture_fill(reinterpret_cast<AVPicture*>(in_frame.get()), 
+					   const_cast<uint8_t*>(frame.image_data().begin()),
+					   PIX_FMT_BGRA, 
+					   format_desc_.width,
+					   format_desc_.height);
+
+		for(int n = 0; n < 4; ++n)
+		{
+			in_frame->data[n]	  = in_frame->data[n] + output_format_.cropleft;
+			in_frame->linesize[n] = in_frame->linesize[n] - output_format_.cropleft - output_format_.cropright;
+		}
+						
+		std::shared_ptr<AVFrame> out_frame(avcodec_alloc_frame(), av_free);
+
+		picture_buf_.resize(avpicture_get_size(c->pix_fmt, 
+											   c->width,
+											   c->height));
+
+		avpicture_fill(reinterpret_cast<AVPicture*>(out_frame.get()),
+					   picture_buf_.data(), 
+					   c->pix_fmt, 
+					   c->width, 
+					   c->height);
+
+		sws_scale(sws_.get(), 
+				  in_frame->data, 
+				  in_frame->linesize,
+				  output_format_.croptop, 
+				  format_desc_.height - output_format_.croptop - output_format_.cropbot, 
+				  out_frame->data, 
+				  out_frame->linesize);
 
 		return out_frame;
 	}
