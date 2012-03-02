@@ -2,9 +2,17 @@
 Producers
 #########
 
-======
-ffmpeg
-======
+===============
+FFMPEG Producer
+===============
+
+---------------
+Supported Media
+---------------
+
+The ffmpeg producer supports all files that the ffmpeg library (www.ffmpeg.org) can play. 
+
+Support check is not dependent on file extension.
 
 -------
 Filters
@@ -25,7 +33,7 @@ ffmpeg[ *filename* | *video-mode* | *file-frame-number* / *file-nb-frames*]
 +---------------+-----------------------------------------------+--------+
 | buffer-count  | Number of input packets buffered.             |  100   |
 +---------------+-----------------------------------------------+--------+
-| buffer-count  | Size of buffered input packets.               | 16MB   |
+| buffer-size   | Size of buffered input packets.               | 64MB   |
 +---------------+-----------------------------------------------+--------+
 | underflow     | Frame was not ready in time and is skipped.   |  N/A   |
 +---------------+-----------------------------------------------+--------+
@@ -127,3 +135,150 @@ Returns
 Example::
 	
 	>>> CALL 1-1 SEEK 200
+        
+==============
+Flash Producer
+==============
+
+---------------
+Supported Media
+---------------
+
++---------------+-----------------------------------------------+
+| Extension     | Description                                   |
++===============+===============================================+
+| .ft           | Flash-template.                               |
++---------------+-----------------------------------------------+
+| .ct           | Compressed-template.                          |
++---------------+-----------------------------------------------+
+| .swf          | Flash file.                                   |
++---------------+-----------------------------------------------+
+
+-----------
+Diagnostics
+-----------
+
+flash[ *template-host* | *video-mode*]
+
++---------------+-----------------------------------------------+--------+
+| Graph         | Description                                   |  Scale |
++===============+===============================================+========+
+| frame-time    | Time spent rendering the current frame.       | fps/2  |
++---------------+-----------------------------------------------+--------+
+| tick-time     | Time between rendering two frames.            | fps/2  |
++---------------+-----------------------------------------------+--------+
+| param         | Invoked flash command.                        |  N/A   |
++---------------+-----------------------------------------------+--------+
+| late-frame    | Frame was not ready in time and is skipped.   |  N/A   |
++---------------+-----------------------------------------------+--------+
+| sync          | Synced time between rendering two frames.     | fps/2  |
++---------------+-----------------------------------------------+--------+
+
+
+=================
+Decklink Producer
+=================
+
+-----------
+Diagnostics
+-----------
+
+flash[ *model-name* | *device-index* | *video-mode*]
+
++---------------+-----------------------------------------------+--------+
+| Graph         | Description                                   |  Scale |
++===============+===============================================+========+
+| frame-time    | Time spent rendering the current frame.       | fps/2  |
++---------------+-----------------------------------------------+--------+
+| tick-time     | Time between rendering two frames.            | fps/2  |
++---------------+-----------------------------------------------+--------+
+| dropped-frame | Dropped an input frame.                       |  N/A   |
++---------------+-----------------------------------------------+--------+
+| late-frame    | Frame was not ready in time and is skipped.   |  N/A   |
++---------------+-----------------------------------------------+--------+
+| output-buffer | Buffering.                                     |        |
++---------------+-----------------------------------------------+--------+
+----------
+Parameters
+----------
+
+^^^^^^
+DEVICE
+^^^^^^
+
+Which BlackMagic device to attach.
+
+Syntax::
+
+	[device:int]
+	
+Example::
+	
+	>>> PLAY 1-1 DECKLINK 1
+    
+^^^^^^
+LENGTH
+^^^^^^
+Sets the end of the file.
+
+Syntax::
+
+	LENGTH [frames:int]
+	
+Example::
+	
+	>>> PLAY 1-1 DECKLINK 1 LENGTH 100
+	
+^^^^^^
+FILTER
+^^^^^^
+Configures libavfilter which will be used.
+
+Syntax::
+
+	FILTER [libavfilter-parameters:string]
+		
+Example::
+		
+	>>> PLAY 1-1 DECKLINK 1 FILTER hflip:yadif=0:0
+	
+^^^^^^
+FORMAT
+^^^^^^
+Sets the video-mode. If no video-mode is provided then the parent channels video-mode will be used.
+
+Syntax::
+
+	FORMAT [video-mode:string]
+	
+Example::
+	
+	>>> PLAY 1-1 DECKLINK 1 FORMAT PAL LENGTH 100
+        
+==============
+Image Producer
+==============
+
+---------------
+Supported Media
+---------------
+
++-----------------------+-----------------------------------------------+
+| Extension             | Description                                   |
++=======================+===============================================+
+| .png                  |                                               |
++-----------------------+-----------------------------------------------+
+| .tga                  |                                               |
++-----------------------+-----------------------------------------------+
+| .bmp                  |                                               |
++-----------------------+-----------------------------------------------+
+| .jpg, .jpeg, .j2k     |                                               |
++-----------------------+-----------------------------------------------+
+| .gif                  |                                               |
++-----------------------+-----------------------------------------------+
+| .tif, tiff            |                                               |
++-----------------------+-----------------------------------------------+
+
+=====================
+Image Scroll-Producer
+=====================
