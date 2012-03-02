@@ -20,6 +20,8 @@ Example::
 MIXER BLEND
 ===========
 
+Note: Requires <blend-modes> to be actived in casparcg.config.
+
 Syntax::
 
 	MIXER
@@ -50,6 +52,8 @@ Example::
 MIXER BRIGTHNESS
 ================
 
+Note: Requires <blend-modes> to be actived in casparcg.config.
+
 Syntax::
 
 	MIXER [channel:int]-[layer:int] BRIGTHNESS [brightness:double] {[tween:string] [duration:int]}
@@ -61,6 +65,8 @@ Example::
 ================
 MIXER SATURATION
 ================
+
+Note: Requires <blend-modes> to be actived in casparcg.config.
 
 Syntax::
 
@@ -75,6 +81,8 @@ Example::
 MIXER CONTRAST
 ==============
 
+Note: Requires <blend-modes> to be actived in casparcg.config.
+
 Syntax::
 
 	MIXER
@@ -87,6 +95,8 @@ Example::
 ============
 MIXER LEVELS
 ============
+
+Note: Requires <blend-modes> to be actived in casparcg.config.
 
 Syntax::
 
@@ -127,7 +137,7 @@ MIXER GRID
 ==========
 Creates a grid of video streams in ascending order of the layer index, i.e. if resolution equals 2 then a 2x2 grid of layers will be created.
 
-	MIXER [channel:int] RID	[resolution:int]
+	MIXER [channel:int] GRID [resolution:int]
 		
 Example::
 
@@ -149,6 +159,10 @@ Example::
 ===========
 MIXER CLEAR
 ===========
+
+Resets all mixer transforms to identity values.
+
+Note: MIXER BLEND is not reset.
 
 Syntax::
 
