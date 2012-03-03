@@ -1,5 +1,8 @@
 #pragma once
 
+#undef BOOST_PARAMETER_MAX_ARITY
+#define BOOST_PARAMETER_MAX_ARITY 7
+
 #include "../video_format.h"
 
 #include <common/memory.h>
@@ -8,6 +11,7 @@
 
 #include <boost/range.hpp>
 #include <boost/any.hpp>
+#include <boost/signals2.hpp>
 
 #include <tbb/cache_aligned_allocator.h>
 
@@ -61,7 +65,8 @@ public:
 	std::size_t width() const;
 	std::size_t height() const;
 								
-	const void* tag() const;
+	const void* stream_tag() const;
+	const void* data_tag() const;
 			
 private:
 	struct impl;
@@ -96,6 +101,8 @@ public:
 	const_frame& operator=(const const_frame& other);
 				
 	// Properties
+
+	boost::signals2::signal<void()> on_released;
 			
 	const struct pixel_format_desc& pixel_format_desc() const;
 
@@ -109,10 +116,13 @@ public:
 	std::size_t height() const;
 	std::size_t size() const;
 								
-	const void* tag() const;
+	const void* stream_tag() const;
+	const void* data_tag() const;
 
 	bool operator==(const const_frame& other);
 	bool operator!=(const const_frame& other);
+	bool operator<(const const_frame& other);
+	bool operator>(const const_frame& other);
 			
 private:
 	struct impl;
