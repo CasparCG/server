@@ -84,7 +84,7 @@ public:
 	void visit(const const_frame& frame)
 	{
 		audio_item item;
-		item.tag		= frame.tag();
+		item.tag		= frame.stream_tag();
 		item.transform	= transform_stack_.top();
 		item.audio_data = frame.audio_data();
 		
