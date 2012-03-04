@@ -159,10 +159,7 @@ const_frame::const_frame(const void* tag) : impl_(new impl(tag)){}
 const_frame::const_frame(boost::shared_future<array<const std::uint8_t>> image, audio_buffer audio_buffer, const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) 
 	: impl_(new impl(std::move(image), std::move(audio_buffer), tag, desc, frame_rate, field_mode)){}
 const_frame::const_frame(mutable_frame&& other) : impl_(new impl(std::move(other))){}
-const_frame::~const_frame()
-{
-	on_released();
-}
+const_frame::~const_frame(){}
 const_frame::const_frame(const_frame&& other) : impl_(std::move(other.impl_)){}
 const_frame& const_frame::operator=(const_frame&& other)
 {
