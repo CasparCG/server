@@ -11,7 +11,6 @@
 
 #include <boost/range.hpp>
 #include <boost/any.hpp>
-#include <boost/signals2.hpp>
 
 #include <tbb/cache_aligned_allocator.h>
 
@@ -101,9 +100,7 @@ public:
 	const_frame& operator=(const const_frame& other);
 				
 	// Properties
-
-	boost::signals2::signal<void()> on_released;
-			
+				
 	const struct pixel_format_desc& pixel_format_desc() const;
 
 	array<const std::uint8_t> image_data(int index = 0) const;
