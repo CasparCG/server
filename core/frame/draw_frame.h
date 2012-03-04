@@ -35,7 +35,6 @@ struct frame_transform;
 
 class draw_frame sealed
 {
-	draw_frame(int tag);
 public:		
 	// Static Members
 
@@ -51,6 +50,7 @@ public:
 	// Constructors
 
 	draw_frame();
+	draw_frame(int type_tag);
 	draw_frame(const draw_frame& other);
 	draw_frame(draw_frame&& other);	
 	explicit draw_frame(class const_frame&& frame);

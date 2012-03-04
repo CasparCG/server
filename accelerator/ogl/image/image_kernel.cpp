@@ -38,7 +38,7 @@
 #include <core/frame/pixel_format.h>
 #include <core/frame/frame_transform.h>
 
-#include <boost/noncopyable.hpp>
+#include <boost/lexical_cast.hpp>
 
 namespace caspar { namespace accelerator { namespace ogl {
 	
@@ -54,7 +54,7 @@ GLubyte lower_pattern[] = {
 	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,
 	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff};
 
-struct image_kernel::impl : boost::noncopyable
+struct image_kernel::impl
 {	
 	spl::shared_ptr<device>	ogl_;
 	spl::shared_ptr<shader>		shader_;
@@ -97,6 +97,11 @@ struct image_kernel::impl : boost::noncopyable
 		shader_->set("plane[1]",		texture_id::plane1);
 		shader_->set("plane[2]",		texture_id::plane2);
 		shader_->set("plane[3]",		texture_id::plane3);
+		for(int n = 0; n < params.textures.size(); ++n)
+			shader_->set("plane_size[" + boost::lexical_cast<std::string>(n) + "]",	
+						 static_cast<float>(params.textures[n]->width()), 
+						 static_cast<float>(params.textures[n]->height()));
+
 		shader_->set("local_key",		texture_id::local_key);
 		shader_->set("layer_key",		texture_id::layer_key);
 		shader_->set("is_hd",		 	params.pix_desc.planes.at(0).height > 700 ? 1 : 0);
@@ -104,7 +109,8 @@ struct image_kernel::impl : boost::noncopyable
 		shader_->set("has_layer_key",	params.layer_key);
 		shader_->set("pixel_format",	params.pix_desc.format.value());	
 		shader_->set("opacity",			params.transform.is_key ? 1.0 : params.transform.opacity);	
-		
+				
+
 		// Setup blend_func
 		
 		if(params.transform.is_key)

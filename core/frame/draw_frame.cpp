@@ -31,6 +31,14 @@
 
 namespace caspar { namespace core {
 		
+enum tags
+{
+	frame_tag = 0,
+	empty_tag,
+	eof_tag,
+	late_tag
+};
+
 struct draw_frame::impl
 {		
 	int								tag_;
@@ -38,15 +46,8 @@ struct draw_frame::impl
 	std::vector<draw_frame>			frames_;
 	core::frame_transform			frame_transform_;		
 public:		
-	enum tags
-	{
-		frame_tag = 0,
-		empty_tag,
-		eof_tag,
-		late_tag
-	};
 
-	impl(int tag = impl::empty_tag)
+	impl(int tag = empty_tag)
 		: tag_(tag)
 	{
 	}
@@ -179,6 +180,10 @@ draw_frame draw_frame::mask(draw_frame fill, draw_frame key)
 	return draw_frame(std::move(frames));
 }
 
+draw_frame eof_frame(eof_tag);
+draw_frame empty_frame(empty_tag);
+draw_frame late_frame(late_tag);
+
 draw_frame draw_frame::still(draw_frame frame)
 {
 	frame.transform().image_transform.is_still	= true;	
@@ -188,20 +193,17 @@ draw_frame draw_frame::still(draw_frame frame)
 
 const draw_frame& draw_frame::eof()
 {
-	static draw_frame frame(impl::eof_tag);
-	return frame;
+	return eof_frame;
 }
 
 const draw_frame& draw_frame::empty()
 {
-	static draw_frame frame(impl::empty_tag);
-	return frame;
+	return empty_frame;
 }
 
 const draw_frame& draw_frame::late()
 {
-	static draw_frame frame(impl::late_tag);
-	return frame;
+	return late_frame;
 }
 	
 
