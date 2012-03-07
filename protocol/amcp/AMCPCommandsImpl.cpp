@@ -423,7 +423,7 @@ bool MixerCommand::DoExecute()
 			auto value = boost::lexical_cast<double>(_parameters.at(1));
 			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
-			auto transform = stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
+			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.image_transform.brightness = value;
 				return transform;
@@ -434,7 +434,7 @@ bool MixerCommand::DoExecute()
 			auto value = boost::lexical_cast<double>(_parameters.at(1));
 			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
-			auto transform = stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
+			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.image_transform.saturation = value;
 				return transform;
@@ -445,7 +445,7 @@ bool MixerCommand::DoExecute()
 			auto value = boost::lexical_cast<double>(_parameters.at(1));
 			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
-			auto transform = stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
+			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.image_transform.contrast = value;
 				return transform;
@@ -462,7 +462,7 @@ bool MixerCommand::DoExecute()
 			int duration = _parameters.size() > 6 ? boost::lexical_cast<int>(_parameters[6]) : 0;
 			std::wstring tween = _parameters.size() > 7 ? _parameters[7] : L"linear";
 
-			auto transform = stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
+			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.image_transform.levels = value;
 				return transform;
@@ -474,7 +474,7 @@ bool MixerCommand::DoExecute()
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
 			double value = boost::lexical_cast<double>(_parameters[1]);
 
-			auto transform = stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
+			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.audio_transform.volume = value;
 				return transform;
