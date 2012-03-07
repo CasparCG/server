@@ -125,12 +125,12 @@ private:
 		void Clear();
 
 		ClientDisconnectEvent onSocketInfoRemoved;
-
+		
+		HandleVector waitEvents_;
+		tbb::mutex mutex_;
 	private:
 		SocketInfoMap socketInfoMap_;
-		HandleVector waitEvents_;
 		bool bDirty_;
-		tbb::mutex mutex_;
 	};
 	SocketInfoCollection socketInfoCollection_;
 	tbb::mutex mutex_;

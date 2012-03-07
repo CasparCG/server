@@ -433,33 +433,33 @@ bool MixerCommand::DoExecute()
 			auto value = boost::lexical_cast<double>(_parameters.at(1));
 			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
-			auto transform = stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
+			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.brightness = value;
 				return transform;
-			}, duration, tween);
+			}, duration, tween));
 		}
 		else if(_parameters[0] == L"SATURATION")
 		{
 			auto value = boost::lexical_cast<double>(_parameters.at(1));
 			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
-			auto transform = stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
+			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.saturation = value;
 				return transform;
-			}, duration, tween);	
+			}, duration, tween));	
 		}
 		else if(_parameters[0] == L"CONTRAST")
 		{
 			auto value = boost::lexical_cast<double>(_parameters.at(1));
 			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
-			auto transform = stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
+			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.contrast = value;
 				return transform;
-			}, duration, tween);	
+			}, duration, tween));	
 		}
 		else if(_parameters[0] == L"LEVELS")
 		{
@@ -472,11 +472,11 @@ bool MixerCommand::DoExecute()
 			int duration = _parameters.size() > 6 ? boost::lexical_cast<int>(_parameters[6]) : 0;
 			std::wstring tween = _parameters.size() > 7 ? _parameters[7] : L"linear";
 
-			auto transform = stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
+			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.levels = value;
 				return transform;
-			}, duration, tween);
+			}, duration, tween));
 		}
 		else if(_parameters[0] == L"VOLUME")
 		{
@@ -484,11 +484,11 @@ bool MixerCommand::DoExecute()
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
 			double value = boost::lexical_cast<double>(_parameters[1]);
 
-			auto transform = stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
+			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.volume = value;
 				return transform;
-			}, duration, tween);
+			}, duration, tween));
 		}
 		else if(_parameters[0] == L"CLEAR")
 		{
