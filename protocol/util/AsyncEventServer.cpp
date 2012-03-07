@@ -254,6 +254,22 @@ bool AsyncEventServer::OnAccept(SocketInfoPtr& pSI) {
 
 	SocketInfoPtr pClientSocket(new SocketInfo(clientSocket, this));
 
+	try
+	{ // !!!!!!!!!!!!
+		if(socketInfoCollection_.Size() >= 50) 
+		{
+			HANDLE handle = nullptr;
+			{
+				tbb::mutex::scoped_lock lock(socketInfoCollection_.mutex_);				
+				handle = *(socketInfoCollection_.waitEvents_.begin()+0);
+				if(handle == pListenSocketInfo_->event_)
+					handle = *(socketInfoCollection_.waitEvents_.begin()+1);
+			}
+			socketInfoCollection_.RemoveSocketInfo(handle);
+			CASPAR_LOG(error) << " Too many connections. Removed last used connection.";
+		}
+	}catch(...){}
+
 	//Determine if we can handle one more client
 	if(socketInfoCollection_.Size() >= CASPAR_MAXIMUM_SOCKET_CLIENTS) {
 		CASPAR_LOG(error) << "Could not accept ) << too many connections).";
@@ -271,7 +287,7 @@ bool AsyncEventServer::OnAccept(SocketInfoPtr& pSI) {
 
 	socketInfoCollection_.AddSocketInfo(pClientSocket);
 
-	CASPAR_LOG(info) << "Accepted connection from " << pClientSocket->host_.c_str();
+	CASPAR_LOG(info) << "Accepted connection from " << pClientSocket->host_.c_str() << " " << socketInfoCollection_.Size();
 
 	return true;
 }
@@ -342,6 +358,21 @@ bool ConvertMultiByteToWideChar(UINT codePage, char* pSource, int sourceLength, 
 // COMMENT: Called then something arrives on the socket that has to be read
 bool AsyncEventServer::OnRead(SocketInfoPtr& pSI) {
 	int recvResult = SOCKET_ERROR;
+	
+	try
+	{ // !!!!!!!!!!!!
+		if(pSI)
+		{
+			tbb::mutex::scoped_lock lock(socketInfoCollection_.mutex_);
+			auto it = std::find(socketInfoCollection_.waitEvents_.begin(), socketInfoCollection_.waitEvents_.end(), pSI->event_);
+			if(it != socketInfoCollection_.waitEvents_.end())
+			{
+				auto handle = *it;
+				socketInfoCollection_.waitEvents_.erase(it);
+				socketInfoCollection_.waitEvents_.push_back(handle);
+			}
+		}
+	}catch(...){}
 
 	int maxRecvLength = sizeof(pSI->recvBuffer_)-pSI->recvLeftoverOffset_;
 	recvResult = recv(pSI->socket_, pSI->recvBuffer_+pSI->recvLeftoverOffset_, maxRecvLength, 0);
@@ -362,7 +393,7 @@ bool AsyncEventServer::OnRead(SocketInfoPtr& pSI) {
 		maxRecvLength = sizeof(pSI->recvBuffer_)-pSI->recvLeftoverOffset_;
 		recvResult = recv(pSI->socket_, pSI->recvBuffer_+pSI->recvLeftoverOffset_, maxRecvLength, 0);
 	}
-
+			
 	if(recvResult == SOCKET_ERROR) {
 		int errorCode = WSAGetLastError();
 		if(errorCode == WSAEWOULDBLOCK)
@@ -380,7 +411,7 @@ bool AsyncEventServer::OnRead(SocketInfoPtr& pSI) {
 // AsyncEventServer::OnWrite
 // PARAMS: ...
 // COMMENT: Called when the socket is ready to send more data
-void AsyncEventServer::OnWrite(SocketInfoPtr& pSI) {
+void AsyncEventServer::OnWrite(SocketInfoPtr& pSI) {		
 	DoSend(*pSI);	
 }
 
