@@ -427,7 +427,7 @@ bool MixerCommand::DoExecute()
 			{
 				transform.image_transform.brightness = value;
 				return transform;
-			}, duration, tween);
+			}, duration, tween));
 		}
 		else if(_parameters[0] == L"SATURATION")
 		{
@@ -438,7 +438,7 @@ bool MixerCommand::DoExecute()
 			{
 				transform.image_transform.saturation = value;
 				return transform;
-			}, duration, tween);	
+			}, duration, tween));	
 		}
 		else if(_parameters[0] == L"CONTRAST")
 		{
@@ -449,7 +449,7 @@ bool MixerCommand::DoExecute()
 			{
 				transform.image_transform.contrast = value;
 				return transform;
-			}, duration, tween);	
+			}, duration, tween));	
 		}
 		else if(_parameters[0] == L"LEVELS")
 		{
@@ -466,7 +466,7 @@ bool MixerCommand::DoExecute()
 			{
 				transform.image_transform.levels = value;
 				return transform;
-			}, duration, tween);
+			}, duration, tween));
 		}
 		else if(_parameters[0] == L"VOLUME")
 		{
@@ -478,7 +478,7 @@ bool MixerCommand::DoExecute()
 			{
 				transform.audio_transform.volume = value;
 				return transform;
-			}, duration, tween);
+			}, duration, tween));
 		}
 		else if(_parameters[0] == L"CLEAR")
 		{
