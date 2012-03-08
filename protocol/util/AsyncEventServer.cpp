@@ -36,6 +36,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
+#include <boost/lexical_cast.hpp>
 
 using boost::asio::ip::tcp;
 
@@ -167,10 +168,11 @@ public:
 private:
     connection(const spl::shared_ptr<tcp::socket>& socket, const ProtocolStrategyPtr& protocol, const spl::shared_ptr<connection_set>& connection_set) 
 		: socket_(socket)
-		, name_((socket_->is_open() ? u16(socket_->local_endpoint().address().to_string()) : L"no-address"))
+		, name_((socket_->is_open() ? u16(socket_->local_endpoint().address().to_string() + ":" + boost::lexical_cast<std::string>(socket_->local_endpoint().port())) : L"no-address"))
 		, protocol_(protocol)
 		, connection_set_(connection_set)
 	{
+		CASPAR_LOG(info) << print() << L" Connected.";
     }
 			
     void handle_read(const boost::system::error_code& error, size_t bytes_transferred) 
