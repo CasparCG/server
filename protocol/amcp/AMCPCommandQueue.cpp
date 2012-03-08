@@ -42,13 +42,13 @@ void AMCPCommandQueue::AddCommand(AMCPCommandPtr pCurrentCommand)
 	if(pCurrentCommand->GetScheduling() == ImmediatelyAndClear)
 		executor_.clear();
 
-	if(executor_.size() > 64)
+	if(executor_.size() > 128)
 	{
 		try
 		{
 			CASPAR_LOG(error) << "AMCP Command Queue Overflow.";
 			CASPAR_LOG(error) << "Failed to execute command:" << pCurrentCommand->print();
-			pCurrentCommand->SetReplyString(L"500 FAILED");
+			pCurrentCommand->SetReplyString(L"500 FAILED\r\n");
 			pCurrentCommand->SendReply();
 		}
 		catch(...)
