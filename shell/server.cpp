@@ -171,7 +171,6 @@ struct server::impl : boost::noncopyable
 				{					
 					unsigned int port = xml_controller.second.get(L"port", 5250);
 					auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(create_protocol(protocol), port);
-					asyncbootstrapper->Start();
 					async_servers_.push_back(asyncbootstrapper);
 				}
 				else

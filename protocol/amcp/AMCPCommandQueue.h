@@ -21,8 +21,6 @@
 
 #pragma once
 
-#include "../util/thread.h"
-
 #include "AMCPCommand.h"
 
 #include <common/executor.h>
