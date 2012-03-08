@@ -742,9 +742,9 @@ bool LoadbgCommand::DoExecute()
 
 		auto pFP2 = create_transition_producer(GetChannel()->video_format_desc().field_mode, pFP, transitionInfo);
 		if(auto_play)
-			GetChannel()->stage().load(GetLayerIndex(), pFP2, transitionInfo.duration); // TODO: LOOP
+			GetChannel()->stage().load(GetLayerIndex(), pFP2, false, transitionInfo.duration); // TODO: LOOP
 		else
-			GetChannel()->stage().load(GetLayerIndex(), pFP2); // TODO: LOOP
+			GetChannel()->stage().load(GetLayerIndex(), pFP2, false); // TODO: LOOP
 	
 		SetReplyString(TEXT("202 LOADBG OK\r\n"));
 
