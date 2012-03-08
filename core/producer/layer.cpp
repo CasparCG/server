@@ -69,13 +69,20 @@ public:
 		is_paused_ = false;
 	}
 
-	void load(spl::shared_ptr<frame_producer> producer, const boost::optional<int32_t>& auto_play_delta)
+	void load(spl::shared_ptr<frame_producer> producer, bool preview, const boost::optional<int32_t>& auto_play_delta)
 	{		
 		background_->unsubscribe(background_event_subject_);
 		background_ = std::move(producer);
 		background_->subscribe(background_event_subject_);
 
 		auto_play_delta_ = auto_play_delta;
+
+		if(preview)
+		{
+			play();
+			foreground_->receive(0);
+			pause();
+		}
 
 		if(auto_play_delta_ && foreground_ == frame_producer::empty())
 			play();
@@ -191,7 +198,7 @@ void layer::swap(layer& other)
 {	
 	impl_.swap(other.impl_);
 }
-void layer::load(spl::shared_ptr<frame_producer> frame_producer, const boost::optional<int32_t>& auto_play_delta){return impl_->load(std::move(frame_producer), auto_play_delta);}	
+void layer::load(spl::shared_ptr<frame_producer> frame_producer, bool preview, const boost::optional<int32_t>& auto_play_delta){return impl_->load(std::move(frame_producer), preview, auto_play_delta);}	
 void layer::play(){impl_->play();}
 void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}

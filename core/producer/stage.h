@@ -65,7 +65,7 @@ public:
 	void clear_transforms(int index);
 	void clear_transforms();
 				
-	void load(int index, const spl::shared_ptr<class frame_producer>& producer, const boost::optional<int32_t>& auto_play_delta = nullptr);
+	void load(int index, const spl::shared_ptr<class frame_producer>& producer, bool preview = false, const boost::optional<int32_t>& auto_play_delta = nullptr);
 	void pause(int index);
 	void play(int index);
 	void stop(int index);
