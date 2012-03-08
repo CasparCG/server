@@ -110,7 +110,7 @@ std::wstring MediaInfo(const boost::filesystem::path& path)
 			clipttype = TEXT(" STILL ");
 		else if(extension == L".MOV" || extension == L".DV"  || extension == L".CT" || extension == L".AVI" || extension == L".FLV" || extension == L".F4V" ||
 			    extension == L".MP4" || extension == L".WAV" || extension == L".MP4" || extension == L".MPG" || extension == L".H264" ||
-				caspar::ffmpeg::is_valid_file(path.file_string()))
+				caspar::ffmpeg::is_valid_file(path.wstring()))
 			clipttype = TEXT(" MOVIE ");
 
 		if(clipttype != TEXT(" N/A "))
