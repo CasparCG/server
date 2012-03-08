@@ -92,6 +92,7 @@ public:
 	
 	void stop()
 	{
+		connection_set_->erase(shared_from_this());
 		socket_->shutdown(boost::asio::socket_base::shutdown_both);
 		socket_->close();
 	}
@@ -136,11 +137,8 @@ private:
 			
 			read_some();
 		}  
-		else if (error != boost::asio::error::operation_aborted)
-		{
-			connection_set_->erase(shared_from_this());
-			stop();
-		}
+		else if (error != boost::asio::error::operation_aborted)		
+			stop();		
 		else
 			read_some();
     }
@@ -151,10 +149,7 @@ private:
 		{
 		}
 		else if (error != boost::asio::error::operation_aborted)
-		{
-			connection_set_->erase(shared_from_this());
-			stop();
-		}
+			stop();		
     }
 
 	void read_some()
