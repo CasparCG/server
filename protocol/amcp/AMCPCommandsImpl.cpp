@@ -1328,6 +1328,7 @@ bool CinfCommand::DoExecute()
 	}
 	catch(...)
 	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
 		SetReplyString(TEXT("404 CINF ERROR\r\n"));
 		return false;
 	}
@@ -1470,6 +1471,7 @@ bool InfoCommand::DoExecute()
 	}
 	catch(...)
 	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
 		SetReplyString(TEXT("403 INFO ERROR\r\n"));
 		return false;
 	}
@@ -1489,23 +1491,42 @@ bool ClsCommand::DoExecute()
 		tga = still
 		col = still
 	*/
-	std::wstringstream replyString;
-	replyString << TEXT("200 CLS OK\r\n");
-	replyString << ListMedia();
-	replyString << TEXT("\r\n");
-	SetReplyString(boost::to_upper_copy(replyString.str()));
+	try
+	{
+		std::wstringstream replyString;
+		replyString << TEXT("200 CLS OK\r\n");
+		replyString << ListMedia();
+		replyString << TEXT("\r\n");
+		SetReplyString(boost::to_upper_copy(replyString.str()));
+	}
+	catch(...)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		SetReplyString(TEXT("501 CLS FAILED\r\n"));
+		return false;
+	}
+
 	return true;
 }
 
 bool TlsCommand::DoExecute()
 {
-	std::wstringstream replyString;
-	replyString << TEXT("200 TLS OK\r\n");
+	try
+	{
+		std::wstringstream replyString;
+		replyString << TEXT("200 TLS OK\r\n");
 
-	replyString << ListTemplates();
-	replyString << TEXT("\r\n");
+		replyString << ListTemplates();
+		replyString << TEXT("\r\n");
 
-	SetReplyString(replyString.str());
+		SetReplyString(replyString.str());
+	}
+	catch(...)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		SetReplyString(TEXT("501 TLS FAILED\r\n"));
+		return false;
+	}
 	return true;
 }
 
@@ -1535,26 +1556,35 @@ bool ByeCommand::DoExecute()
 
 bool SetCommand::DoExecute()
 {
-	std::wstring name = _parameters[0];
-	std::transform(name.begin(), name.end(), name.begin(), toupper);
-
-	std::wstring value = _parameters[1];
-	std::transform(value.begin(), value.end(), value.begin(), toupper);
-
-	if(name == TEXT("MODE"))
+	try
 	{
-		auto format_desc = core::video_format_desc(value);
-		if(format_desc.format != core::video_format::invalid)
+		std::wstring name = _parameters[0];
+		std::transform(name.begin(), name.end(), name.begin(), toupper);
+
+		std::wstring value = _parameters[1];
+		std::transform(value.begin(), value.end(), value.begin(), toupper);
+
+		if(name == TEXT("MODE"))
 		{
-			GetChannel()->video_format_desc(format_desc);
-			SetReplyString(TEXT("202 SET MODE OK\r\n"));
+			auto format_desc = core::video_format_desc(value);
+			if(format_desc.format != core::video_format::invalid)
+			{
+				GetChannel()->video_format_desc(format_desc);
+				SetReplyString(TEXT("202 SET MODE OK\r\n"));
+			}
+			else
+				SetReplyString(TEXT("501 SET MODE FAILED\r\n"));
 		}
 		else
-			SetReplyString(TEXT("501 SET MODE FAILED\r\n"));
+		{
+			this->SetReplyString(TEXT("403 SET ERROR\r\n"));
+		}
 	}
-	else
+	catch(...)
 	{
-		this->SetReplyString(TEXT("403 SET ERROR\r\n"));
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		SetReplyString(TEXT("501 SET FAILED\r\n"));
+		return false;
 	}
 
 	return true;

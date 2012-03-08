@@ -212,7 +212,10 @@ private:
 	{
 		if(!error)			
 		{
-			CASPAR_LOG(trace) << print() << L" Sent: " << u16(std::string(data->begin(), data->end()));
+			if(data->size() < 512)
+				CASPAR_LOG(trace) << print() << L" Sent: " << u16(std::string(data->begin(), data->end()));
+			else
+				CASPAR_LOG(trace) << print() << L" Sent more than 512 bytes.";
 		}
 		else if (error != boost::asio::error::operation_aborted)		
 		{
