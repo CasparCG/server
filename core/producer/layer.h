@@ -55,7 +55,7 @@ public:
 
 	void swap(layer& other);  
 		
-	void load(spl::shared_ptr<class frame_producer> producer, const boost::optional<int32_t>& auto_play_delta = nullptr); 
+	void load(spl::shared_ptr<class frame_producer> producer, bool preview, const boost::optional<int32_t>& auto_play_delta = nullptr); 
 	void play(); 
 	void pause(); 
 	void stop(); 
