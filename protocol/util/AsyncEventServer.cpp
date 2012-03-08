@@ -153,13 +153,14 @@ public:
 
 	virtual void Disconnect()
 	{
-		connection_set_->erase(shared_from_this());
+		stop();
 	}
 	
 	/**************/
 	
 	void stop()
 	{
+		connection_set_->erase(shared_from_this());
 		socket_->shutdown(boost::asio::socket_base::shutdown_both);
 		socket_->close();
 		CASPAR_LOG(info) << print() << L" Disconnected.";
@@ -200,10 +201,7 @@ private:
 			read_some();
 		}  
 		else if (error != boost::asio::error::operation_aborted)
-		{
-			connection_set_->erase(shared_from_this());
-			stop();
-		}
+			stop();		
 		else
 			read_some();
     }
@@ -218,10 +216,7 @@ private:
 				CASPAR_LOG(trace) << print() << L" Sent more than 512 bytes.";
 		}
 		else if (error != boost::asio::error::operation_aborted)		
-		{
-			connection_set_->erase(shared_from_this());
-			stop();
-		}
+			stop();		
     }
 
 	void read_some()
