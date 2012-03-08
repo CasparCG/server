@@ -50,8 +50,6 @@
     <ClInclude Include="util\AsyncEventServer.h" />
     <ClInclude Include="util\ClientInfo.h" />
     <ClInclude Include="util\ProtocolStrategy.h" />
-    <ClInclude Include="util\SocketInfo.h" />
-    <ClInclude Include="util\Thread.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="amcp\AMCPCommandQueue.cpp">
@@ -107,14 +105,6 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="util\AsyncEventServer.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="util\SocketInfo.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="util\Thread.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>

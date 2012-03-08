@@ -83,6 +83,9 @@ public:
 
 	void visit(const const_frame& frame)
 	{
+		if(transform_stack_.top().volume < 0.002 || frame.audio_data().empty())
+			return;
+
 		audio_item item;
 		item.tag		= frame.stream_tag();
 		item.transform	= transform_stack_.top();

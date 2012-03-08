@@ -97,7 +97,7 @@ void my_formatter(std::wostream& strm, boost::log::basic_record<wchar_t> const& 
 			strm << L" ";
 	}
 
-    strm << rec.message();
+    strm << replace_nonprintable_copy(rec.message(), L'?');
 }
 
 namespace internal{
