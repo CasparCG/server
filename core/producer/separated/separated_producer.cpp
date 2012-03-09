@@ -107,6 +107,12 @@ public:
 		return L"separated[fill:" + fill_producer_->print() + L"|key[" + key_producer_->print() + L"]]";
 	}	
 
+	virtual boost::unique_future<std::wstring> call(const std::wstring& str) override
+	{
+		key_producer_->call(str);
+		return fill_producer_->call(str);
+	}
+
 	virtual std::wstring name() const override
 	{
 		return L"separated";
