@@ -69,6 +69,20 @@ namespace caspar { namespace log {
 
 using namespace boost;
 
+template<typename T>
+inline void replace_nonprintable(std::basic_string<T, std::char_traits<T>, std::allocator<T>>& str, T with)
+{
+	std::locale loc;
+	std::replace_if(str.begin(), str.end(), [&](T c)->bool { return !std::isprint(c, loc) && c != '\r' && c != '\n'; }, with);
+}
+
+template<typename T>
+inline std::basic_string<T> replace_nonprintable_copy(std::basic_string<T, std::char_traits<T>, std::allocator<T>> str, T with)
+{
+	replace_nonprintable(str, with);
+	return str;
+}
+
 void my_formatter(std::wostream& strm, boost::log::basic_record<wchar_t> const& rec)
 {
     namespace lambda = boost::lambda;
@@ -85,8 +99,7 @@ void my_formatter(std::wostream& strm, boost::log::basic_record<wchar_t> const& 
     boost::log::attributes::current_thread_id::held_type thread_id;
     if(boost::log::extract<boost::log::attributes::current_thread_id::held_type>(L"ThreadID", rec.attribute_values(), lambda::var(thread_id) = lambda::_1))
         strm << L"[" << thread_id << L"] ";
-
-
+	
     severity_level severity;
     if(boost::log::extract<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get(), rec.attribute_values(), lambda::var(severity) = lambda::_1))
 	{
