@@ -61,6 +61,7 @@ extern "C"
 	#include <libavutil/opt.h>
 	#include <libavutil/pixdesc.h>
 	#include <libavutil/parseutils.h>
+	#include <libavutil/samplefmt.h>
 }
 #if defined(_MSC_VER)
 #pragma warning (pop)
@@ -280,8 +281,6 @@ public:
 
 		oc_->oformat = output_format_.format;
 				
-		THROW_ON_ERROR2(av_set_parameters(oc_.get(), nullptr), "[ffmpeg_consumer]");
-
 		strcpy_s(oc_->filename, filename_.c_str());
 		
 		//  Add the audio and video streams using the default format codecs	and initialize the codecs.
@@ -289,13 +288,13 @@ public:
 		video_st_ = add_video_stream(options2);
 		audio_st_ = add_audio_stream(options);
 				
-		dump_format(oc_.get(), 0, filename_.c_str(), 1);
+		av_dump_format(oc_.get(), 0, filename_.c_str(), 1);
 		 
 		// Open the output ffmpeg, if needed.
 		if (!(oc_->oformat->flags & AVFMT_NOFILE)) 
-			THROW_ON_ERROR2(avio_open(&oc_->pb, filename_.c_str(), URL_WRONLY), "[ffmpeg_consumer]");
+			THROW_ON_ERROR2(avio_open(&oc_->pb, filename.c_str(), AVIO_FLAG_WRITE), "[ffmpeg_consumer]");
 				
-		THROW_ON_ERROR2(av_write_header(oc_.get()), "[ffmpeg_consumer]");
+		THROW_ON_ERROR2(avformat_write_header(oc_.get(), nullptr), "[ffmpeg_consumer]");
 
 		if(options.size() > 0)
 		{
@@ -445,7 +444,7 @@ public:
 		c->codec_type		= AVMEDIA_TYPE_AUDIO;
 		c->sample_rate		= 48000;
 		c->channels			= 2;
-		c->sample_fmt		= SAMPLE_FMT_S16;
+		c->sample_fmt		= AV_SAMPLE_FMT_S16;
 
 		if(output_format_.vcodec == CODEC_ID_FLV1)		
 			c->sample_rate	= 44100;		
