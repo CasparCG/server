@@ -284,8 +284,7 @@ public:
 		strcpy_s(oc_->filename, filename_.c_str());
 		
 		//  Add the audio and video streams using the default format codecs	and initialize the codecs.
-		auto options2 = options;
-		video_st_ = add_video_stream(options2);
+		video_st_ = add_video_stream(options);
 		audio_st_ = add_audio_stream(options);
 				
 		av_dump_format(oc_.get(), 0, filename_.c_str(), 1);
