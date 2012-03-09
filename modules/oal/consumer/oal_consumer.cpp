@@ -64,10 +64,11 @@ public:
 		, channel_index_(-1)
 	{
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
+		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
 		diagnostics::register_graph(graph_);
 
 		is_running_ = true;
-		input_.set_capacity(1);
+		input_.set_capacity(2);
 	}
 
 	~oal_consumer()
@@ -97,7 +98,9 @@ public:
 	
 	virtual bool send(core::const_frame frame) override
 	{			
-		input_.push(std::make_shared<audio_buffer_16>(core::audio_32_to_16(frame.audio_data())));
+		if(!input_.try_push(std::make_shared<audio_buffer_16>(core::audio_32_to_16(frame.audio_data()))))
+			graph_->set_tag("dropped-frame");
+
 		return true;
 	}
 	
@@ -116,6 +119,11 @@ public:
 		boost::property_tree::wptree info;
 		info.add(L"type", L"system-audio");
 		return info;
+	}
+	
+	virtual bool has_synchronization_clock() const override
+	{
+		return false;
 	}
 	
 	virtual int buffer_depth() const override
