@@ -93,7 +93,14 @@ public:
 	void stop()
 	{
 		connection_set_->erase(shared_from_this());
-		socket_->close();
+		try
+		{
+			socket_->close();
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
 		CASPAR_LOG(info) << print() << L" Disconnected.";
 	}
 		
@@ -194,31 +201,22 @@ public:
 	}
 
 	~tcp_observer()
-	{				
+	{		
 		try
 		{
 			acceptor_.close();
-
-			service_.post([=]
-			{
-				auto connections = *connection_set_;
-				BOOST_FOREACH(auto& connection, connections)
-				{
-					try
-					{
-						connection->stop();
-					}
-					catch(...)
-					{
-						CASPAR_LOG_CURRENT_EXCEPTION();
-					}
-				}
-			});
 		}
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
+
+		service_.post([=]
+		{
+			auto connections = *connection_set_;
+			BOOST_FOREACH(auto& connection, connections)
+				connection->stop();				
+		});
 
 		thread_.join();
 	}
