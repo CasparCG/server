@@ -510,6 +510,13 @@ bool is_valid_file(const std::wstring filename)
 {			
 	if(boost::filesystem::path(filename).extension() == ".m2t")
 		return true;
+	
+	AVProbeData pb = {};
+	pb.filename = u8(filename).c_str();
+
+	int score = 0;
+	if(av_probe_input_format2(&pb, false, &score) != nullptr)
+		return true;
 
 	std::ifstream file(filename);
 
@@ -520,12 +527,9 @@ bool is_valid_file(const std::wstring filename)
 	if(buf.empty())
 		return nullptr;
 
-	AVProbeData pb;
-	pb.filename = u8(filename).c_str();
 	pb.buf		= buf.data();
 	pb.buf_size = static_cast<int>(buf.size());
 
-	int score = 0;
 	return av_probe_input_format2(&pb, true, &score) != nullptr;
 }
 
