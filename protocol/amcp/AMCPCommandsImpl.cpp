@@ -101,19 +101,19 @@ std::wstring MediaInfo(const boost::filesystem::path& path)
 {
 	if(boost::filesystem::is_regular_file(path))
 	{
-		std::wstring clipttype = TEXT(" N/A ");
+		std::wstring clipttype = TEXT("N/A");
 		std::wstring extension = boost::to_upper_copy(path.extension().wstring());
 		if(extension == TEXT(".TGA") || extension == TEXT(".COL") || extension == L".PNG" || extension == L".JPEG" || extension == L".JPG" ||
 			extension == L"GIF" || extension == L"BMP")
-			clipttype = TEXT(" STILL ");
+			clipttype = TEXT("STILL");
 		else if(extension == TEXT(".WAV") || extension == TEXT(".MP3"))
-			clipttype = TEXT(" STILL ");
+			clipttype = TEXT("STILL");
 		else if(extension == L".MOV" || extension == L".DV"  || extension == L".CT" || extension == L".AVI" || extension == L".FLV" || extension == L".F4V" ||
 			    extension == L".MP4" || extension == L".WAV" || extension == L".MP4" || extension == L".MPG" || extension == L".H264" ||
 				caspar::ffmpeg::is_valid_file(path.wstring()))
-			clipttype = TEXT(" MOVIE ");
+			clipttype = TEXT("MOVIE");
 
-		if(clipttype != TEXT(" N/A "))
+		if(clipttype != TEXT("N/A"))
 		{		
 			auto is_not_digit = [](char c){ return std::isdigit(c) == 0; };
 
@@ -1312,7 +1312,7 @@ bool CinfCommand::DoExecute()
 	try
 	{
 		std::wstring info;
-		for (boost::filesystem::recursive_directory_iterator itr(env::media_folder()), end; itr != end; ++itr)
+		for (boost::filesystem::recursive_directory_iterator itr(env::media_folder()), end; itr != end && info.empty(); ++itr)
 		{
 			auto path = itr->path();
 			auto file = path.replace_extension(L"").filename();
