@@ -80,7 +80,13 @@ public:
 		if(usage_ == GL_STREAM_DRAW)			
 			GL(glBufferData(target_, size_, NULL, usage_));	// Notify OpenGL that we don't care about previous data.
 		
+		boost::timer timer;
+
 		data_ = (uint8_t*)GL2(glMapBuffer(target_, usage_ == GL_STREAM_DRAW ? GL_WRITE_ONLY : GL_READ_ONLY));  
+
+		if(timer.elapsed() > 0.01)
+			CASPAR_LOG(warning) << L"[buffer] Performance warning. Buffer mapping blocked more than 10ms.";
+
 		GL(glBindBuffer(target_, 0));
 		if(!data_)
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to map target OpenGL Pixel Buffer Object."));
