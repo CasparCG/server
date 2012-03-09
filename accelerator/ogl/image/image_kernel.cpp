@@ -57,7 +57,7 @@ GLubyte lower_pattern[] = {
 struct image_kernel::impl
 {	
 	spl::shared_ptr<device>	ogl_;
-	spl::shared_ptr<shader>		shader_;
+	spl::shared_ptr<shader>	shader_;
 	bool					blend_modes_;
 							
 	impl(const spl::shared_ptr<device>& ogl)
@@ -118,7 +118,7 @@ struct image_kernel::impl
 
 		if(blend_modes_)
 		{
-			params.background->bind(6);
+			params.background->bind(texture_id::background);
 
 			shader_->set("background",	texture_id::background);
 			shader_->set("blend_mode",	params.blend_mode.value());
