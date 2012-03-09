@@ -94,11 +94,12 @@ public:
 	{
 		connection_set_->erase(shared_from_this());
 		socket_->close();
+		CASPAR_LOG(info) << print() << L" Disconnected.";
 	}
 		
 	std::wstring print() const
 	{
-		return L"[" + (socket_->is_open() ? u16(socket_->remote_endpoint().address().to_string()) : L"n/a") + L"]";
+		return L"osc[" + (socket_->is_open() ? u16(socket_->local_endpoint().address().to_string() + ":" + boost::lexical_cast<std::string>(socket_->local_endpoint().port())) : L"no-address") + L"]";
 	}
 		
 	void on_next(const monitor::event& e)
@@ -107,10 +108,10 @@ public:
 			return;	
 
 		auto data_ptr = spl::make_shared<std::vector<char>>(write_osc_event(e));
-		auto size = data_ptr->size();
+		int32_t size = static_cast<int32_t>(data_ptr->size());
 		char* size_ptr = reinterpret_cast<char*>(&size);
 
-		data_ptr->insert(std::begin(*data_ptr), size_ptr, size_ptr + sizeof(int32_t));
+		data_ptr->insert(data_ptr->begin(), size_ptr, size_ptr + sizeof(int32_t));
 		socket_->async_write_some(boost::asio::buffer(*data_ptr), std::bind(&connection::handle_write, shared_from_this(), data_ptr, std::placeholders::_1, std::placeholders::_2));	
 	}
 	
@@ -119,6 +120,7 @@ private:
 		: socket_(std::move(socket))
 		, connection_set_(std::move(connection_set))
 	{
+		CASPAR_LOG(info) << print() << L" Connected.";
     }
 					
     void handle_read(const boost::system::error_code& error, size_t bytes_transferred) 
@@ -192,14 +194,31 @@ public:
 	}
 
 	~tcp_observer()
-	{		
-		acceptor_.close();
-
-		service_.post([=]
+	{				
+		try
 		{
-			BOOST_FOREACH(auto& connection, *connection_set_)
-				connection->stop();
-		});
+			acceptor_.close();
+
+			service_.post([=]
+			{
+				auto connections = *connection_set_;
+				BOOST_FOREACH(auto& connection, connections)
+				{
+					try
+					{
+						connection->stop();
+					}
+					catch(...)
+					{
+						CASPAR_LOG_CURRENT_EXCEPTION();
+					}
+				}
+			});
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
 
 		thread_.join();
 	}
