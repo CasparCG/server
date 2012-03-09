@@ -107,7 +107,7 @@ struct configuration
 		, auto_deinterlace(true)
 		, key_only(false)
 		, aspect(aspect_invalid)
-		, vsync(false)
+		, vsync(true)
 	{
 	}
 };
