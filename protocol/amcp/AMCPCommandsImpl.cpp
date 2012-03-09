@@ -108,7 +108,7 @@ std::wstring MediaInfo(const boost::filesystem::path& path)
 			clipttype = TEXT("STILL");
 		else if(extension == TEXT(".WAV") || extension == TEXT(".MP3"))
 			clipttype = TEXT("STILL");
-		else if(extension == L".CT" || caspar::ffmpeg::is_valid_file(path.wstring()))
+		else if(extension == TEXT("SWF") || extension == TEXT("CT") || extension == TEXT("DV") || extension == TEXT("MOV") || extension == TEXT("MPG") || extension == TEXT("AVI") || caspar::ffmpeg::is_valid_file(path.wstring()))
 			clipttype = TEXT("MOVIE");
 
 		if(clipttype != TEXT("N/A"))
