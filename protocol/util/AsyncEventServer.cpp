@@ -1,26 +1,23 @@
 /*
-* copyright (c) 2010 Sveriges Television AB <info@casparcg.com>
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
-*  This file is part of CasparCG.
+* This file is part of CasparCG (www.casparcg.com).
 *
-*    CasparCG is free software: you can redistribute it and/or modify
-*    it under the terms of the GNU General Public License as published by
-*    the Free Software Foundation, either version 3 of the License, or
-*    (at your option) any later version.
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
 *
-*    CasparCG is distributed in the hope that it will be useful,
-*    but WITHOUT ANY WARRANTY; without even the implied warranty of
-*    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-*    GNU General Public License for more details.
-
-*    You should have received a copy of the GNU General Public License
-*    along with CasparCG.  If not, see <http://www.gnu.org/licenses/>.
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
 *
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
 */
- 
-// AsyncEventServer.cpp: implementation of the AsyncEventServer class.
-//
-//////////////////////////////////////////////////////////////////////
 
 #include "..\stdafx.h"
 
@@ -37,96 +34,25 @@
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/locale.hpp>
+#include <boost/algorithm/string/split.hpp>
 
 using boost::asio::ip::tcp;
 
 namespace caspar { namespace IO {
 	
-bool ConvertWideCharToMultiByte(UINT codePage, const std::wstring& wideString, std::vector<char>& destBuffer)
-{
-	int bytesWritten = 0;
-	int multibyteBufferCapacity = WideCharToMultiByte(codePage, 0, wideString.c_str(), static_cast<int>(wideString.length()), 0, 0, NULL, NULL);
-	if(multibyteBufferCapacity > 0) 
-	{
-		destBuffer.resize(multibyteBufferCapacity);
-		bytesWritten = WideCharToMultiByte(codePage, 0, wideString.c_str(), static_cast<int>(wideString.length()), destBuffer.data(), static_cast<int>(destBuffer.size()), NULL, NULL);
-	}
-	destBuffer.resize(bytesWritten);
-	return (bytesWritten > 0);
-}
-
-bool ConvertMultiByteToWideChar(UINT codePage, char* pSource, int sourceLength, std::vector<wchar_t>& wideBuffer, int& countLeftovers)
-{
-	if(codePage == CP_UTF8) {
-		countLeftovers = 0;
-		//check from the end of pSource for ev. uncompleted UTF-8 byte sequence
-		if(pSource[sourceLength-1] & 0x80) {
-			//The last byte is part of a multibyte sequence. If the sequence is not complete, we need to save the partial sequence
-			int bytesToCheck = std::min<int>(4, sourceLength);	//a sequence contains a maximum of 4 bytes
-			int currentLeftoverIndex = sourceLength-1;
-			for(; bytesToCheck > 0; --bytesToCheck, --currentLeftoverIndex) {
-				++countLeftovers;
-				if(pSource[currentLeftoverIndex] & 0x80) {
-					if(pSource[currentLeftoverIndex] & 0x40) { //The two high-bits are set, this is the "header"
-						int expectedSequenceLength = 2;
-						if(pSource[currentLeftoverIndex] & 0x20)
-							++expectedSequenceLength;
-						if(pSource[currentLeftoverIndex] & 0x10)
-							++expectedSequenceLength;
-
-						if(countLeftovers < expectedSequenceLength) {
-							//The sequence is incomplete. Leave the leftovers to be interpreted with the next call
-							break;
-						}
-						//The sequence is complete, there are no leftovers. 
-						//...OR...
-						//error. Let the conversion-function take the hit.
-						countLeftovers = 0;
-						break;
-					}
-				}
-				else {
-					//error. Let the conversion-function take the hit.
-					countLeftovers = 0;
-					break;
-				}
-			}
-			if(countLeftovers == 4) {
-				//error. Let the conversion-function take the hit.
-				countLeftovers = 0;
-			}
-		}
-	}
-
-	int charsWritten = 0;
-	int sourceBytesToProcess = sourceLength-countLeftovers;
-	int wideBufferCapacity = MultiByteToWideChar(codePage, 0, pSource, sourceBytesToProcess, NULL, NULL);
-	if(wideBufferCapacity > 0) 
-	{
-		wideBuffer.resize(wideBufferCapacity);
-		charsWritten = MultiByteToWideChar(codePage, 0, pSource, sourceBytesToProcess, wideBuffer.data(), static_cast<int>(wideBuffer.size()));
-	}
-	//copy the leftovers to the front of the buffer
-	if(countLeftovers > 0) {
-		memcpy(pSource, &(pSource[sourceBytesToProcess]), countLeftovers);
-	}
-
-	wideBuffer.resize(charsWritten);
-	return (charsWritten > 0);
-}
-
 class connection;
 
 typedef std::set<spl::shared_ptr<connection>> connection_set;
 
 class connection : public spl::enable_shared_from_this<connection>, public ClientInfo
 {    
-    spl::shared_ptr<tcp::socket>		socket_; 
-	const std::wstring					name_;
+    spl::shared_ptr<tcp::socket>				socket_; 
+	const std::wstring							name_;
 
-	std::array<char, 8192>				data_;
+	std::array<char, 32768>						data_;
 
-	std::vector<char>					buffer_;
+	std::string									buffer_;
 
 	const spl::shared_ptr<IProtocolStrategy>	protocol_;
 	spl::shared_ptr<connection_set>				connection_set_;
@@ -134,7 +60,7 @@ class connection : public spl::enable_shared_from_this<connection>, public Clien
 public:
     static spl::shared_ptr<connection> create(spl::shared_ptr<tcp::socket> socket, const ProtocolStrategyPtr& protocol, spl::shared_ptr<connection_set> connection_set)
 	{
-		spl::shared_ptr<connection> con(new connection(socket, protocol, connection_set));
+		spl::shared_ptr<connection> con(new connection(std::move(socket), std::move(protocol), std::move(connection_set)));
 		con->read_some();
 		return con;
     }
@@ -184,13 +110,18 @@ private:
 				CASPAR_LOG(trace) << print() << L" Received: " << u16(std::string(data_.begin(), data_.begin() + bytes_transferred));
 
 				buffer_.insert(buffer_.end(), data_.begin(), data_.begin() + bytes_transferred);
-		
-				std::vector<wchar_t> str;
-				int left_overs;
-				ConvertMultiByteToWideChar(protocol_->GetCodepage(), buffer_.data(), static_cast<int>(buffer_.size()), str, left_overs);
-				buffer_.resize(left_overs);
-		
-				protocol_->Parse(str.data(), static_cast<int>(str.size()), shared_from_this());
+				
+				std::vector<std::string> split;
+				boost::iter_split(split, buffer_, boost::algorithm::first_finder("\r\n"));
+				
+				buffer_ = std::move(split.back());
+				split.pop_back();
+
+				BOOST_FOREACH(auto cmd, split)
+				{
+					auto u16cmd = boost::locale::conv::to_utf<wchar_t>(cmd, protocol_->GetCodepage()) + L"\r\n";
+					protocol_->Parse(u16cmd.data(), static_cast<int>(u16cmd.size()), shared_from_this());
+				}
 			}
 			catch(...)
 			{
@@ -205,14 +136,11 @@ private:
 			read_some();
     }
 
-    void handle_write(const spl::shared_ptr<std::vector<char>>& data, const boost::system::error_code& error, size_t bytes_transferred)
+    void handle_write(const spl::shared_ptr<std::string>& data, const boost::system::error_code& error, size_t bytes_transferred)
 	{
 		if(!error)			
 		{
-			if(data->size() < 512)
-				CASPAR_LOG(trace) << print() << L" Sent: " << u16(std::string(data->begin(), data->end()));
-			else
-				CASPAR_LOG(trace) << print() << L" Sent more than 512 bytes.";
+			CASPAR_LOG(trace) << print() << L" Sent: " << (data->size() < 512 ? u16(std::string(data->begin(), data->end())) : L"more than 512 bytes.");
 		}
 		else if (error != boost::asio::error::operation_aborted)		
 			stop();		
@@ -225,10 +153,8 @@ private:
 	
 	void write_some(const std::wstring& data)
 	{
-		spl::shared_ptr<std::vector<char>> str;
-		ConvertWideCharToMultiByte(protocol_->GetCodepage(), data, *str);
-
-		socket_->async_write_some(boost::asio::buffer(*str), std::bind(&connection::handle_write, shared_from_this(), str, std::placeholders::_1, std::placeholders::_2));
+		auto str = spl::make_shared<std::string>(boost::locale::conv::from_utf<wchar_t>(data, protocol_->GetCodepage()));
+		socket_->async_write_some(boost::asio::buffer(str->data(), str->size()), std::bind(&connection::handle_write, shared_from_this(), str, std::placeholders::_1, std::placeholders::_2));
 	}
 };
 
