@@ -29,6 +29,8 @@
 
 #include <boost/noncopyable.hpp>
 
+#include <string>
+
 namespace caspar { namespace protocol { namespace amcp {
 
 class AMCPProtocolStrategy : public IO::IProtocolStrategy, boost::noncopyable
@@ -50,8 +52,8 @@ public:
 	virtual ~AMCPProtocolStrategy();
 
 	virtual void Parse(const TCHAR* pData, int charCount, IO::ClientInfoPtr pClientInfo);
-	virtual UINT GetCodepage() {
-		return CP_UTF8;
+	virtual std::string GetCodepage() {
+		return "UTF-8";
 	}
 
 	AMCPCommandPtr InterpretCommandString(const std::wstring& str, MessageParserState* pOutState=0);
