@@ -93,7 +93,6 @@ public:
 	void stop()
 	{
 		connection_set_->erase(shared_from_this());
-		socket_->shutdown(boost::asio::socket_base::shutdown_both);
 		socket_->close();
 	}
 		
@@ -209,8 +208,9 @@ public:
 	{
 		service_.post([=]
 		{
-			BOOST_FOREACH(auto& connection, *connection_set_)
-				connection->on_next(e);
+			auto connections = *connection_set_;
+			BOOST_FOREACH(auto& connection, connections)
+				connection->stop();
 		});
 	}	
 private:		
