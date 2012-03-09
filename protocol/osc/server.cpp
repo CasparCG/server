@@ -160,19 +160,19 @@ private:
 	{
 		input_ += str;
 
-		std::vector<std::string> commands;
-		boost::iter_split(commands, input_, boost::algorithm::first_finder("\r\n"));
+		std::vector<std::string> split;
+		boost::iter_split(split, input_, boost::algorithm::first_finder("\r\n"));
 		
-		if(commands.size() == 1)
+		input_ = split.back();
+		split.pop_back();	
+		
+		if(split.empty())
 			return;
 
-		input_ = commands.back();
-		commands.pop_back();	
-
-		if(commands.back() == ".*")
+		if(split.back() == ".*")
 			regex_.reset();
 		else
-			regex_ = std::regex(commands.back());
+			regex_ = std::regex(split.back());
 	}
 };
 
