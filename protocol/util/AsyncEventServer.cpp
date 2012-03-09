@@ -161,7 +161,6 @@ public:
 	void stop()
 	{
 		connection_set_->erase(shared_from_this());
-		socket_->shutdown(boost::asio::socket_base::shutdown_both);
 		socket_->close();
 		CASPAR_LOG(info) << print() << L" Disconnected.";
 	}
@@ -251,13 +250,30 @@ struct AsyncEventServer::implementation
 
 	~implementation()
 	{
-		acceptor_.close();
-
-		service_.post([=]
+		try
 		{
-			BOOST_FOREACH(auto& connection, *connection_set_)
-				connection->stop();
-		});
+			acceptor_.close();
+
+			service_.post([=]
+			{
+				auto connections = *connection_set_;
+				BOOST_FOREACH(auto& connection, connections)
+				{
+					try
+					{
+						connection->stop();
+					}
+					catch(...)
+					{
+						CASPAR_LOG_CURRENT_EXCEPTION();
+					}
+				}
+			});
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
 
 		thread_.join();
 	}
