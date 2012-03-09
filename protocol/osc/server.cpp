@@ -225,11 +225,8 @@ public:
 	
 	void on_next(const monitor::event& e) override
 	{
-		service_.post([=]
-		{
-			BOOST_FOREACH(auto& connection, *connection_set_)
-				connection->on_next(e);
-		});
+		BOOST_FOREACH(auto& connection, *connection_set_)
+			service_.post([=]{connection->on_next(e);});		
 	}	
 private:		
     void start_accept() 
