@@ -227,9 +227,8 @@ public:
 	{
 		service_.post([=]
 		{
-			auto connections = *connection_set_;
-			BOOST_FOREACH(auto& connection, connections)
-				connection->stop();
+			BOOST_FOREACH(auto& connection, *connection_set_)
+				connection->on_next(e);
 		});
 	}	
 private:		
