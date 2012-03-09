@@ -508,20 +508,28 @@ std::wstring print_mode(int width, int height, double fps, bool interlaced)
 
 bool is_valid_file(const std::wstring filename)
 {			
-	if(boost::filesystem::path(filename).extension() == ".m2t")
-		return true;
-	
-	AVProbeData pb = {};
-	pb.filename = u8(filename).c_str();
+	{
+		static auto exts = boost::assign::list_of(L".m2t")(L".mov")(L".mp4")(L".dv")(L".flv")(L".mpg")(L".wav")(L".mp3")(L".dnxhd")(L".h264")(L".prores");
 
+		auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
+		
+		if(std::find(exts.begin(), exts.end(), ext) != exts.end())
+			return true;
+	}
+	
+	auto u8filename = u8(filename);
+	
 	int score = 0;
+	AVProbeData pb = {};
+	pb.filename = u8filename.c_str();
+
 	if(av_probe_input_format2(&pb, false, &score) != nullptr)
 		return true;
 
 	std::ifstream file(filename);
 
 	std::vector<unsigned char> buf;
-	for(auto file_it = std::istreambuf_iterator<char>(file); file_it != std::istreambuf_iterator<char>() && buf.size() < 2048; ++file_it)
+	for(auto file_it = std::istreambuf_iterator<char>(file); file_it != std::istreambuf_iterator<char>() && buf.size() < 1024; ++file_it)
 		buf.push_back(*file_it);
 
 	if(buf.empty())
