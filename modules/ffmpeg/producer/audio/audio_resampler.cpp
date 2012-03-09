@@ -72,12 +72,7 @@ struct audio_resampler::impl
 
 			char sample_fmt_string[200];
 			av_get_sample_fmt_string(sample_fmt_string, 200, input_sample_format);
-
-			CASPAR_LOG(warning) << L"[audio-resampler]"		
-								<< L" sample-rate: "	<< input_sample_rate 
-								<< L" channels: "		<< input_channels 
-								<< L" sample-fmt: "		<< u16(sample_fmt_string);
-
+			
 			if(resampler)
 				resampler_.reset(resampler, audio_resample_close);
 			else
@@ -85,26 +80,25 @@ struct audio_resampler::impl
 		}		
 	}
 
-	std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>> resample(std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>>&& data)
+	std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>> resample(const std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>>& data)
 	{
 		if(resampler_ && !data.empty())
 		{
 			buffer2_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
 			auto ret = audio_resample(resampler_.get(),
 									  reinterpret_cast<short*>(buffer2_.data()), 
-									  reinterpret_cast<short*>(data.data()), 
+									  const_cast<short*>(reinterpret_cast<const short*>(data.data())), 
 									  static_cast<int>(data.size()) / (av_get_bytes_per_sample(input_sample_format_) * input_channels_)); 
 			buffer2_.resize(ret * av_get_bytes_per_sample(output_sample_format_) * output_channels_);
-			std::swap(data, buffer2_);
 		}
 
-		return std::move(data);
+		return buffer2_;
 	}
 };
 
 
 audio_resampler::audio_resampler(int output_channels, int input_channels, int output_sample_rate, int input_sample_rate, AVSampleFormat output_sample_format, AVSampleFormat input_sample_format)
 				: impl_(new impl(output_channels, input_channels, output_sample_rate, input_sample_rate, output_sample_format, input_sample_format)){}
-std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>> audio_resampler::resample(std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>>&& data){return impl_->resample(std::move(data));}
+std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>> audio_resampler::resample(const std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>>& data){return impl_->resample(std::move(data));}
 
 }}

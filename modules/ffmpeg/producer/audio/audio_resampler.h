@@ -34,7 +34,7 @@ public:
 					int			output_sample_rate,		int			input_sample_rate, 
 					AVSampleFormat	output_sample_format,	AVSampleFormat	input_sample_format);
 	
-	std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>> resample(std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>>&& data);
+	std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>> resample(const std::vector<int8_t, tbb::cache_aligned_allocator<int8_t>>& data);
 private:
 	struct impl;
 	std::shared_ptr<impl> impl_;
