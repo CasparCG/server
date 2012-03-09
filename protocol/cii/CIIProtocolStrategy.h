@@ -31,6 +31,8 @@
 
 #include <common/executor.h>
 
+#include <string>
+
 namespace caspar { namespace protocol { namespace cii {
 
 class CIIProtocolStrategy : public IO::IProtocolStrategy
@@ -39,7 +41,7 @@ public:
 	CIIProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>& channels);
 
 	void Parse(const TCHAR* pData, int charCount, IO::ClientInfoPtr pClientInfo);
-	UINT GetCodepage() {return 28591;}	//ISO 8859-1
+	std::string GetCodepage() {return "ISO-8859-1";}	//ISO 8859-1
 
 	void SetProfile(const std::wstring& profile) {currentProfile_ = profile;}
 
