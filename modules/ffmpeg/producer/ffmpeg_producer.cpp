@@ -219,7 +219,7 @@ public:
 		static const boost::wregex seek_exp(L"SEEK\\s+(?<VALUE>\\d+)", boost::regex::icase);
 		static const boost::wregex length_exp(L"LENGTH\\s+(?<VALUE>\\d+)", boost::regex::icase);
 		static const boost::wregex start_exp(L"START\\s+(?<VALUE>\\d+)", boost::regex::icase);
-
+		
 		std::wstring result;
 			
 		boost::wsmatch what;
@@ -235,19 +235,19 @@ public:
 		}
 		else if(boost::regex_match(param, what, length_exp))
 		{
-			if(!what["LENGTH"].str().empty())
+			if(!what["VALUE"].str().empty())
 			{
-				if(boost::iequals(what["LENGTH"].str(), "NaN"))
+				if(boost::iequals(what["VALUE"].str(), "NaN"))
 					input_.length(std::numeric_limits<uint32_t>::max());
 				else
-					input_.length(boost::lexical_cast<uint32_t>(what["LENGTH"].str()));
+					input_.length(boost::lexical_cast<uint32_t>(what["VALUE"].str()));
 			}
 			result = boost::lexical_cast<std::wstring>(input_.length());
 		}
 		else if(boost::regex_match(param, what, start_exp))
 		{
-			if(!what["START"].str().empty())
-				input_.start(boost::lexical_cast<uint32_t>(what["START"].str()));
+			if(!what["VALUE"].str().empty())
+				input_.start(boost::lexical_cast<uint32_t>(what["VALUE"].str()));
 			result = boost::lexical_cast<std::wstring>(input_.start());
 		}
 		else
