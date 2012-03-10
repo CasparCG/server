@@ -60,7 +60,7 @@ public:
 	void pause(); 
 	void stop(); 
 	
-	class draw_frame receive(frame_producer::flags flags, const struct video_format_desc& format_desc); 
+	class draw_frame receive(const struct video_format_desc& format_desc); 
 	
 	// monitor::observable
 

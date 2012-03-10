@@ -99,7 +99,6 @@ core::pixel_format get_pixel_format(PixelFormat pix_fmt)
 {
 	switch(pix_fmt)
 	{
-	case CASPAR_PIX_FMT_LUMA:	return core::pixel_format::luma;
 	case PIX_FMT_GRAY8:			return core::pixel_format::gray;
 	case PIX_FMT_BGRA:			return core::pixel_format::bgra;
 	case PIX_FMT_ARGB:			return core::pixel_format::argb;
@@ -119,7 +118,7 @@ core::pixel_format_desc pixel_format_desc(PixelFormat pix_fmt, int width, int he
 {
 	// Get linesizes
 	AVPicture dummy_pict;	
-	avpicture_fill(&dummy_pict, nullptr, pix_fmt == CASPAR_PIX_FMT_LUMA ? PIX_FMT_GRAY8 : pix_fmt, width, height);
+	avpicture_fill(&dummy_pict, nullptr, pix_fmt, width, height);
 
 	core::pixel_format_desc desc = get_pixel_format(pix_fmt);
 		
@@ -160,19 +159,7 @@ core::pixel_format_desc pixel_format_desc(PixelFormat pix_fmt, int width, int he
 	}
 }
 
-int make_alpha_format(int format)
-{
-	switch(get_pixel_format(static_cast<PixelFormat>(format)).value())
-	{
-	case core::pixel_format::ycbcr:
-	case core::pixel_format::ycbcra:
-		return CASPAR_PIX_FMT_LUMA;
-	default:
-		return format;
-	}
-}
-
-core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, double fps, core::frame_factory& frame_factory, int flags)
+core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, double fps, core::frame_factory& frame_factory)
 {			
 	static tbb::concurrent_unordered_map<int, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contexts_;
 	
@@ -182,10 +169,7 @@ core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& 
 	const auto width  = decoded_frame->width;
 	const auto height = decoded_frame->height;
 	auto desc		  = pixel_format_desc(static_cast<PixelFormat>(decoded_frame->format), width, height);
-	
-	if(flags & core::frame_producer::flags::alpha_only)
-		desc = pixel_format_desc(static_cast<PixelFormat>(make_alpha_format(decoded_frame->format)), width, height);
-	
+		
 	if(desc.format == core::pixel_format::invalid)
 	{
 		auto pix_fmt = static_cast<PixelFormat>(decoded_frame->format);

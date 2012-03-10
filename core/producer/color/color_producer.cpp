@@ -56,7 +56,7 @@ public:
 
 	// frame_producer
 			
-	draw_frame receive(int) override
+	draw_frame receive() override
 	{
 		event_subject_ << monitor::event("color") % color_str_;
 

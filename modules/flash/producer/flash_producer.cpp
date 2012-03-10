@@ -375,7 +375,7 @@ public:
 
 	// frame_producer
 		
-	core::draw_frame receive(int) override
+	core::draw_frame receive() override
 	{					
 		auto frame = core::draw_frame::late();
 		

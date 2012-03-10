@@ -67,12 +67,12 @@ public:
 		source_producer_ = create_destroy_proxy(producer);
 	}
 
-	draw_frame receive(int flags) override
+	draw_frame receive() override
 	{
 		if(current_frame_ >= info_.duration)
 		{
 			source_producer_ = core::frame_producer::empty();
-			return dest_producer_->receive(flags);
+			return dest_producer_->receive();
 		}
 
 		++current_frame_;
@@ -83,13 +83,13 @@ public:
 		tbb::parallel_invoke(
 		[&]
 		{
-			dest = dest_producer_->receive(flags);
+			dest = dest_producer_->receive();
 			if(dest == core::draw_frame::late())
 				dest = dest_producer_->last_frame();
 		},
 		[&]
 		{
-			source = source_producer_->receive(flags);
+			source = source_producer_->receive();
 			if(source == core::draw_frame::late())
 				source = source_producer_->last_frame();
 		});				

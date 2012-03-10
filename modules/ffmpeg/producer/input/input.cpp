@@ -70,8 +70,8 @@ struct input::impl : boost::noncopyable
 	const int													default_stream_index_;
 			
 	const std::wstring											filename_;
-	const uint32_t												start_;		
-	const uint32_t												length_;
+	tbb::atomic<uint32_t>										start_;		
+	tbb::atomic<uint32_t>										length_;
 	tbb::atomic<bool>											loop_;
 	uint32_t													frame_number_;
 	
@@ -80,16 +80,16 @@ struct input::impl : boost::noncopyable
 		
 	executor													executor_;
 	
-	impl(const spl::shared_ptr<diagnostics::graph> graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length) 
+	impl(const spl::shared_ptr<diagnostics::graph> graph, const std::wstring& filename, const bool loop, const uint32_t start, const uint32_t length) 
 		: graph_(graph)
 		, format_context_(open_input(filename))		
 		, default_stream_index_(av_find_default_stream_index(format_context_.get()))
 		, filename_(filename)
-		, start_(start)
-		, length_(length)
 		, frame_number_(0)
 		, executor_(print())
 	{		
+		start_			= start;
+		length_			= length;
 		loop_			= loop;
 		buffer_size_	= 0;
 
@@ -259,4 +259,8 @@ spl::shared_ptr<AVFormatContext> input::context(){return impl_->format_context_;
 void input::loop(bool value){impl_->loop_ = value;}
 bool input::loop() const{return impl_->loop_;}
 void input::seek(uint32_t target){impl_->seek(target);}
+void input::start(uint32_t value){impl_->start_ = value;}
+uint32_t input::start() const{return impl_->start_;}
+void input::length(uint32_t value){impl_->length_ = value;}
+uint32_t input::length() const{return impl_->length_;}
 }}

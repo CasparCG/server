@@ -1,5 +1,5 @@
 #pragma once
-/*
+
 #include <common/forward.h>
 
 #include <core/frame/frame.h>
@@ -30,4 +30,4 @@ private:
 	spl::unique_ptr<impl> impl_;
 };
 
-}}}*/
+}}}
