@@ -142,7 +142,7 @@ private:
     void handle_write(const spl::shared_ptr<std::string>& data, const boost::system::error_code& error, size_t bytes_transferred)
 	{
 		if(!error)			
-			CASPAR_LOG(trace) << print() << L" Sent: " << (data->size() < 512 ? u16(std::string(data->begin(), data->end())) : L"more than 512 bytes.");		
+			CASPAR_LOG(trace) << print() << L" Sent: " << (data->size() < 512 ? u16(*data) : L"more than 512 bytes.");		
 		else if (error != boost::asio::error::operation_aborted)		
 			stop();		
     }
