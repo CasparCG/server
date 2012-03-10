@@ -278,7 +278,7 @@ struct frame_muxer::impl : boost::noncopyable
 		display_mode_ = display_mode::simple;
 
 		auto mode = get_mode(*frame);
-		if(mode == core::field_mode::progressive && frame->height < 720) // SD frames are interlaced. Probably incorrect meta-data. Fix it.
+		if(mode == core::field_mode::progressive && frame->height < 720 && in_fps_ < 50.0) // SD frames are interlaced. Probably incorrect meta-data. Fix it.
 			mode = core::field_mode::upper;
 
 		auto fps  = in_fps_;
