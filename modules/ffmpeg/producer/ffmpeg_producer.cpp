@@ -35,6 +35,7 @@
 #include <common/log.h>
 #include <common/param.h>
 #include <common/diagnostics/graph.h>
+#include <common/future.h>
 
 #include <core/video_format.h>
 #include <core/producer/frame_producer.h>
@@ -214,9 +215,45 @@ public:
 	
 	boost::unique_future<std::wstring> call(const std::wstring& param) override
 	{
-		boost::promise<std::wstring> promise;
-		promise.set_value(do_call(param));
-		return promise.get_future();
+		static const boost::wregex loop_exp(L"LOOP\\s*(?<VALUE>\\d?)?", boost::regex::icase);
+		static const boost::wregex seek_exp(L"SEEK\\s+(?<VALUE>\\d+)", boost::regex::icase);
+		static const boost::wregex length_exp(L"LENGTH\\s+(?<VALUE>\\d+)", boost::regex::icase);
+		static const boost::wregex start_exp(L"START\\s+(?<VALUE>\\d+)", boost::regex::icase);
+
+		std::wstring result;
+			
+		boost::wsmatch what;
+		if(boost::regex_match(param, what, loop_exp))
+		{
+			if(!what["VALUE"].str().empty())
+				input_.loop(boost::lexical_cast<bool>(what["VALUE"].str()));
+			result = boost::lexical_cast<std::wstring>(input_.loop());
+		}
+		else if(boost::regex_match(param, what, seek_exp))
+		{
+			input_.seek(boost::lexical_cast<uint32_t>(what["VALUE"].str()));
+		}
+		else if(boost::regex_match(param, what, length_exp))
+		{
+			if(!what["LENGTH"].str().empty())
+			{
+				if(boost::iequals(what["LENGTH"].str(), "NaN"))
+					input_.length(std::numeric_limits<uint32_t>::max());
+				else
+					input_.length(boost::lexical_cast<uint32_t>(what["LENGTH"].str()));
+			}
+			result = boost::lexical_cast<std::wstring>(input_.length());
+		}
+		else if(boost::regex_match(param, what, start_exp))
+		{
+			if(!what["START"].str().empty())
+				input_.start(boost::lexical_cast<uint32_t>(what["START"].str()));
+			result = boost::lexical_cast<std::wstring>(input_.start());
+		}
+		else
+			BOOST_THROW_EXCEPTION(invalid_argument());
+
+		return async(launch::deferred, [=]{return result;});
 	}
 				
 	std::wstring print() const override
@@ -265,47 +302,7 @@ public:
 	{
 		return video_decoder_ ? ffmpeg::print_mode(video_decoder_->width(), video_decoder_->height(), fps_, !video_decoder_->is_progressive()) : L"n/a";
 	}
-					
-	std::wstring do_call(const std::wstring& param)
-	{
-		static const boost::wregex loop_exp(L"LOOP\\s*(?<VALUE>\\d?)?", boost::regex::icase);
-		static const boost::wregex seek_exp(L"SEEK\\s+(?<VALUE>\\d+)", boost::regex::icase);
-		static const boost::wregex length_exp(L"LENGTH\\s+(?<VALUE>\\d+)", boost::regex::icase);
-		static const boost::wregex start_exp(L"START\\s+(?<VALUE>\\d+)", boost::regex::icase);
-		
-		boost::wsmatch what;
-		if(boost::regex_match(param, what, loop_exp))
-		{
-			if(!what["VALUE"].str().empty())
-				input_.loop(boost::lexical_cast<bool>(what["VALUE"].str()));
-			return boost::lexical_cast<std::wstring>(input_.loop());
-		}
-		if(boost::regex_match(param, what, seek_exp))
-		{
-			input_.seek(boost::lexical_cast<uint32_t>(what["VALUE"].str()));
-			return L"";
-		}
-		if(boost::regex_match(param, what, length_exp))
-		{
-			if(!what["LENGTH"].str().empty())
-			{
-				if(boost::iequals(what["LENGTH"].str(), "NaN"))
-					input_.length(std::numeric_limits<uint32_t>::max());
-				else
-					input_.length(boost::lexical_cast<uint32_t>(what["LENGTH"].str()));
-			}
-			return boost::lexical_cast<std::wstring>(input_.length());
-		}
-		if(boost::regex_match(param, what, start_exp))
-		{
-			if(!what["START"].str().empty())
-				input_.start(boost::lexical_cast<uint32_t>(what["START"].str()));
-			return boost::lexical_cast<std::wstring>(input_.start());
-		}
-
-		BOOST_THROW_EXCEPTION(invalid_argument());
-	}
-
+			
 	bool try_decode_frame(core::draw_frame& result)
 	{
 		for(int n = 0; n < 32; ++n)
