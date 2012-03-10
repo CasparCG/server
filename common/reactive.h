@@ -170,7 +170,7 @@ public:
 		std::swap(filter_, other.filter_);
 	}
 		
-	virtual void on_next(const T& e) override
+	void on_next(const T& e) override
 	{
 		func_(e);
 	}
@@ -323,17 +323,17 @@ public:
 		impl_.swap(other.impl_);
 	}
 	
-	virtual void subscribe(const observer_ptr& o) override
+	void subscribe(const observer_ptr& o) override
 	{				
 		impl_->subscribe(o);
 	}
 
-	virtual void unsubscribe(const observer_ptr& o) override
+	void unsubscribe(const observer_ptr& o) override
 	{
 		impl_->unsubscribe(o);
 	}
 				
-	virtual void on_next(const I& e) override
+	void on_next(const I& e) override
 	{				
 		impl_->on_next(e);
 	}

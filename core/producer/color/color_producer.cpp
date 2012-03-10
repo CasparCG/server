@@ -56,24 +56,24 @@ public:
 
 	// frame_producer
 			
-	virtual draw_frame receive(int) override
+	draw_frame receive(int) override
 	{
 		event_subject_ << monitor::event("color") % color_str_;
 
 		return frame_;
 	}	
 	
-	virtual std::wstring print() const override
+	std::wstring print() const override
 	{
 		return L"color[" + color_str_ + L"]";
 	}
 
-	virtual std::wstring name() const override
+	std::wstring name() const override
 	{
 		return L"color";
 	}
 
-	virtual draw_frame last_frame() const override
+	draw_frame last_frame() const override
 	{
 		return frame_;
 	}
@@ -86,12 +86,12 @@ public:
 		return info;
 	}
 
-	virtual void subscribe(const monitor::observable::observer_ptr& o) override															
+	void subscribe(const monitor::observable::observer_ptr& o) override															
 	{
 		return event_subject_.subscribe(o);
 	}
 
-	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override		
+	void unsubscribe(const monitor::observable::observer_ptr& o) override		
 	{
 		return event_subject_.unsubscribe(o);
 	}

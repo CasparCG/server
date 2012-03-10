@@ -337,19 +337,19 @@ public:
 		});
 	}
 
-	virtual void subscribe(const monitor::observable::observer_ptr& o) override
+	void subscribe(const monitor::observable::observer_ptr& o) override
 	{
 		producer_->subscribe(o);
 	}
 
-	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override
+	void unsubscribe(const monitor::observable::observer_ptr& o) override
 	{
 		producer_->unsubscribe(o);
 	}
 	
 	// frame_producer
 				
-	virtual core::draw_frame receive(int flags) override
+	core::draw_frame receive(int flags) override
 	{
 		auto frame = producer_->get_frame(flags);
 
@@ -359,27 +359,27 @@ public:
 		return frame;
 	}
 
-	virtual core::draw_frame last_frame() const override
+	core::draw_frame last_frame() const override
 	{
 		return core::draw_frame::still(last_frame_);
 	}
 		
-	virtual uint32_t nb_frames() const override
+	uint32_t nb_frames() const override
 	{
 		return length_;
 	}
 	
-	virtual std::wstring print() const override
+	std::wstring print() const override
 	{
 		return producer_->print();
 	}
 	
-	virtual std::wstring name() const override
+	std::wstring name() const override
 	{
 		return L"decklink";
 	}
 
-	virtual boost::property_tree::wptree info() const override
+	boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
 		info.add(L"type", L"decklink");

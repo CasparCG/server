@@ -13,7 +13,7 @@ class server : public reactive::observer<monitor::event>
 public:	
 	server(unsigned short port);
 	
-	virtual void on_next(const monitor::event& e) override;
+	void on_next(const monitor::event& e) override;
 private:
 	spl::shared_ptr<observer<monitor::event>> impl_;
 };

@@ -235,19 +235,19 @@ public:
 
 	// observable
 	
-	virtual void subscribe(const observer_ptr& o) override
+	void subscribe(const observer_ptr& o) override
 	{				
 		impl_->subscribe(o);
 	}
 
-	virtual void unsubscribe(const observer_ptr& o) override
+	void unsubscribe(const observer_ptr& o) override
 	{
 		impl_->unsubscribe(o);
 	}
 
 	// observer
 				
-	virtual void on_next(const monitor::event& e) override
+	void on_next(const monitor::event& e) override
 	{				
 		impl_->on_next(e);
 	}

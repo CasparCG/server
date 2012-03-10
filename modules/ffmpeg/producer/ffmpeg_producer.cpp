@@ -150,7 +150,7 @@ public:
 
 	// frame_producer
 	
-	virtual core::draw_frame receive(int flags) override
+	core::draw_frame receive(int flags) override
 	{				
 		boost::timer frame_timer;
 				
@@ -183,12 +183,12 @@ public:
 		return frame;
 	}
 
-	virtual core::draw_frame last_frame() const override
+	core::draw_frame last_frame() const override
 	{
 		return core::draw_frame::still(last_frame_);
 	}
 	
-	virtual uint32_t nb_frames() const override
+	uint32_t nb_frames() const override
 	{
 		if(input_.loop())
 			return std::numeric_limits<uint32_t>::max();
@@ -214,21 +214,21 @@ public:
 		return video_decoder_ ? video_decoder_->file_frame_number() : 0;
 	}
 	
-	virtual boost::unique_future<std::wstring> call(const std::wstring& param) override
+	boost::unique_future<std::wstring> call(const std::wstring& param) override
 	{
 		boost::promise<std::wstring> promise;
 		promise.set_value(do_call(param));
 		return promise.get_future();
 	}
 				
-	virtual std::wstring print() const override
+	std::wstring print() const override
 	{
 		return L"ffmpeg[" + boost::filesystem::path(filename_).filename().wstring() + L"|" 
 						  + print_mode() + L"|" 
 						  + boost::lexical_cast<std::wstring>(file_frame_number()) + L"/" + boost::lexical_cast<std::wstring>(file_nb_frames()) + L"]";
 	}
 
-	virtual std::wstring name() const override
+	std::wstring name() const override
 	{
 		return L"ffmpeg";
 	}
@@ -251,12 +251,12 @@ public:
 		return info;
 	}
 	
-	virtual void subscribe(const monitor::observable::observer_ptr& o) override
+	void subscribe(const monitor::observable::observer_ptr& o) override
 	{
 		event_subject_.subscribe(o);
 	}
 
-	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override
+	void unsubscribe(const monitor::observable::observer_ptr& o) override
 	{
 		event_subject_.unsubscribe(o);
 	}

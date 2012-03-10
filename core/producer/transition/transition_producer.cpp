@@ -62,12 +62,12 @@ public:
 	
 	// frame_producer
 		
-	virtual void leading_producer(const spl::shared_ptr<frame_producer>& producer) override
+	void leading_producer(const spl::shared_ptr<frame_producer>& producer) override
 	{
 		source_producer_ = create_destroy_proxy(producer);
 	}
 
-	virtual draw_frame receive(int flags) override
+	draw_frame receive(int flags) override
 	{
 		if(current_frame_ >= info_.duration)
 		{
@@ -111,32 +111,32 @@ public:
 		return compose(dest, source);
 	}
 
-	virtual draw_frame last_frame() const override
+	draw_frame last_frame() const override
 	{
 		return dest_producer_->last_frame();
 	}
 	
-	virtual uint32_t nb_frames() const override
+	uint32_t nb_frames() const override
 	{
 		return dest_producer_->nb_frames();
 	}
 
-	virtual std::wstring print() const override
+	std::wstring print() const override
 	{
 		return L"transition[" + source_producer_->print() + L"=>" + dest_producer_->print() + L"]";
 	}
 
-	virtual std::wstring name() const override
+	std::wstring name() const override
 	{
 		return L"transition";
 	}
 	
-	virtual boost::property_tree::wptree info() const override
+	boost::property_tree::wptree info() const override
 	{
 		return dest_producer_->info();
 	}
 	
-	virtual boost::unique_future<std::wstring> call(const std::wstring& str) override
+	boost::unique_future<std::wstring> call(const std::wstring& str) override
 	{
 		return dest_producer_->call(str);
 	}
@@ -200,12 +200,12 @@ public:
 		return draw_frame::over(s_frame, d_frame);
 	}
 
-	virtual void subscribe(const monitor::observable::observer_ptr& o) override															
+	void subscribe(const monitor::observable::observer_ptr& o) override															
 	{
 		event_subject_.subscribe(o);
 	}
 
-	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override		
+	void unsubscribe(const monitor::observable::observer_ptr& o) override		
 	{
 		event_subject_.unsubscribe(o);
 	}

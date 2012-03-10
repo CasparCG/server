@@ -56,8 +56,8 @@ public:
 	
 	// monitor::observable
 	
-	virtual void subscribe(const monitor::observable::observer_ptr& o) override;
-	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override;
+	void subscribe(const monitor::observable::observer_ptr& o) override;
+	void unsubscribe(const monitor::observable::observer_ptr& o) override;
 
 private:
 	struct impl;

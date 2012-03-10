@@ -375,7 +375,7 @@ public:
 
 	// frame_producer
 		
-	virtual core::draw_frame receive(int) override
+	core::draw_frame receive(int) override
 	{					
 		auto frame = core::draw_frame::late();
 		
@@ -396,12 +396,12 @@ public:
 		return frame;
 	}
 
-	virtual core::draw_frame last_frame() const override
+	core::draw_frame last_frame() const override
 	{
 		return core::draw_frame::still(last_frame_);
 	}
 	
-	virtual boost::unique_future<std::wstring> call(const std::wstring& param) override
+	boost::unique_future<std::wstring> call(const std::wstring& param) override
 	{	
 		return executor_.begin_invoke([this, param]() -> std::wstring
 		{			
@@ -427,29 +427,29 @@ public:
 		});
 	}
 		
-	virtual std::wstring print() const override
+	std::wstring print() const override
 	{ 
 		return L"flash[" + boost::filesystem::path(filename_).wstring() + L"|" + boost::lexical_cast<std::wstring>(fps_) + L"]";		
 	}	
 
-	virtual std::wstring name() const override
+	std::wstring name() const override
 	{
 		return L"flash";
 	}
 
-	virtual boost::property_tree::wptree info() const override
+	boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
 		info.add(L"type", L"flash");
 		return info;
 	}
 
-	virtual void subscribe(const monitor::observable::observer_ptr& o) override
+	void subscribe(const monitor::observable::observer_ptr& o) override
 	{
 		event_subject_.subscribe(o);
 	}
 
-	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override
+	void unsubscribe(const monitor::observable::observer_ptr& o) override
 	{
 		event_subject_.unsubscribe(o);
 	}

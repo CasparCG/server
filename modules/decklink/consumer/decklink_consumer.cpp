@@ -508,7 +508,7 @@ public:
 
 	// frame_consumer
 	
-	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
+	void initialize(const core::video_format_desc& format_desc, int channel_index) override
 	{
 		executor_.invoke([=]
 		{
@@ -517,23 +517,23 @@ public:
 		});
 	}
 	
-	virtual bool send(core::const_frame frame) override
+	bool send(core::const_frame frame) override
 	{
 		consumer_->send(frame);
 		return true;
 	}
 	
-	virtual std::wstring print() const override
+	std::wstring print() const override
 	{
 		return consumer_ ? consumer_->print() : L"[decklink_consumer]";
 	}		
 
-	virtual std::wstring name() const override
+	std::wstring name() const override
 	{
 		return L"decklink";
 	}
 
-	virtual boost::property_tree::wptree info() const override
+	boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
 		info.add(L"type", L"decklink");
@@ -546,12 +546,12 @@ public:
 		return info;
 	}
 
-	virtual int buffer_depth() const override
+	int buffer_depth() const override
 	{
 		return config_.buffer_depth();
 	}
 
-	virtual int index() const override
+	int index() const override
 	{
 		return 300 + config_.device_index;
 	}

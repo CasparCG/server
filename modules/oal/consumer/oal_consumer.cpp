@@ -83,7 +83,7 @@ public:
 
 	// frame consumer
 
-	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
+	void initialize(const core::video_format_desc& format_desc, int channel_index) override
 	{
 		format_desc_	= format_desc;		
 		channel_index_	= channel_index;
@@ -96,7 +96,7 @@ public:
 		}
 	}
 	
-	virtual bool send(core::const_frame frame) override
+	bool send(core::const_frame frame) override
 	{			
 		if(!input_.try_push(std::make_shared<audio_buffer_16>(core::audio_32_to_16(frame.audio_data()))))
 			graph_->set_tag("dropped-frame");
@@ -104,36 +104,36 @@ public:
 		return true;
 	}
 	
-	virtual std::wstring print() const override
+	std::wstring print() const override
 	{
 		return L"oal[" + boost::lexical_cast<std::wstring>(channel_index_) + L"|" + format_desc_.name + L"]";
 	}
 
-	virtual std::wstring name() const override
+	std::wstring name() const override
 	{
 		return L"system-audio";
 	}
 
-	virtual boost::property_tree::wptree info() const override
+	boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
 		info.add(L"type", L"system-audio");
 		return info;
 	}
 	
-	virtual bool has_synchronization_clock() const override
+	bool has_synchronization_clock() const override
 	{
 		return false;
 	}
 	
-	virtual int buffer_depth() const override
+	int buffer_depth() const override
 	{
 		return 3;
 	}
 
 	// oal_consumer
 	
-	virtual bool OnGetData(sf::SoundStream::Chunk& data) override
+	bool OnGetData(sf::SoundStream::Chunk& data) override
 	{		
 		std::shared_ptr<audio_buffer_16> audio_data;		
 		input_.pop(audio_data);
@@ -148,7 +148,7 @@ public:
 		return is_running_;
 	}
 
-	virtual int index() const override
+	int index() const override
 	{
 		return 500;
 	}
