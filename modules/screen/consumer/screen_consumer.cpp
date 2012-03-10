@@ -474,28 +474,28 @@ public:
 	
 	// frame_consumer
 
-	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
+	void initialize(const core::video_format_desc& format_desc, int channel_index) override
 	{
 		consumer_.reset();
 		consumer_.reset(new screen_consumer(config_, format_desc, channel_index));
 	}
 	
-	virtual bool send(core::const_frame frame) override
+	bool send(core::const_frame frame) override
 	{
 		return consumer_->send(frame);
 	}
 	
-	virtual std::wstring print() const override
+	std::wstring print() const override
 	{
 		return consumer_ ? consumer_->print() : L"[screen_consumer]";
 	}
 
-	virtual std::wstring name() const override
+	std::wstring name() const override
 	{
 		return L"screen";
 	}
 
-	virtual boost::property_tree::wptree info() const override
+	boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
 		info.add(L"type", L"screen");
@@ -505,17 +505,17 @@ public:
 		return info;
 	}
 
-	virtual bool has_synchronization_clock() const override
+	bool has_synchronization_clock() const override
 	{
 		return false;
 	}
 	
-	virtual int buffer_depth() const override
+	int buffer_depth() const override
 	{
 		return 2;
 	}
 
-	virtual int index() const override
+	int index() const override
 	{
 		return 600;
 	}

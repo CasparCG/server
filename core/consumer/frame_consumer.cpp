@@ -76,14 +76,14 @@ public:
 		}).detach(); 
 	}
 	
-	virtual bool send(const_frame frame) override													{return consumer_->send(std::move(frame));}
+	bool send(const_frame frame) override													{return consumer_->send(std::move(frame));}
 	virtual void initialize(const struct video_format_desc& format_desc, int channel_index)	override	{return consumer_->initialize(format_desc, channel_index);}
-	virtual std::wstring print() const override															{return consumer_->print();}	
-	virtual std::wstring name() const override															{return consumer_->name();}
-	virtual boost::property_tree::wptree info() const override 											{return consumer_->info();}
-	virtual bool has_synchronization_clock() const override												{return consumer_->has_synchronization_clock();}
-	virtual int buffer_depth() const override															{return consumer_->buffer_depth();}
-	virtual int index() const override																	{return consumer_->index();}
+	std::wstring print() const override															{return consumer_->print();}	
+	std::wstring name() const override															{return consumer_->name();}
+	boost::property_tree::wptree info() const override 											{return consumer_->info();}
+	bool has_synchronization_clock() const override												{return consumer_->has_synchronization_clock();}
+	int buffer_depth() const override															{return consumer_->buffer_depth();}
+	int index() const override																	{return consumer_->index();}
 };
 
 class print_consumer_proxy : public frame_consumer
@@ -104,14 +104,14 @@ public:
 		CASPAR_LOG(info) << str << L" Uninitialized.";
 	}
 	
-	virtual bool send(const_frame frame) override													{return consumer_->send(std::move(frame));}
+	bool send(const_frame frame) override													{return consumer_->send(std::move(frame));}
 	virtual void initialize(const struct video_format_desc& format_desc, int channel_index)	override	{return consumer_->initialize(format_desc, channel_index);}
-	virtual std::wstring print() const override															{return consumer_->print();}
-	virtual std::wstring name() const override															{return consumer_->name();}
-	virtual boost::property_tree::wptree info() const override 											{return consumer_->info();}
-	virtual bool has_synchronization_clock() const override												{return consumer_->has_synchronization_clock();}
-	virtual int buffer_depth() const override															{return consumer_->buffer_depth();}
-	virtual int index() const override																	{return consumer_->index();}
+	std::wstring print() const override															{return consumer_->print();}
+	std::wstring name() const override															{return consumer_->name();}
+	boost::property_tree::wptree info() const override 											{return consumer_->info();}
+	bool has_synchronization_clock() const override												{return consumer_->has_synchronization_clock();}
+	int buffer_depth() const override															{return consumer_->buffer_depth();}
+	int index() const override																	{return consumer_->index();}
 };
 
 class recover_consumer_proxy : public frame_consumer
@@ -155,12 +155,12 @@ public:
 		return consumer_->initialize(format_desc, channel_index);
 	}
 
-	virtual std::wstring print() const override					{return consumer_->print();}
-	virtual std::wstring name() const override					{return consumer_->name();}
-	virtual boost::property_tree::wptree info() const override 	{return consumer_->info();}
-	virtual bool has_synchronization_clock() const override		{return consumer_->has_synchronization_clock();}
-	virtual int buffer_depth() const override					{return consumer_->buffer_depth();}
-	virtual int index() const override							{return consumer_->index();}
+	std::wstring print() const override					{return consumer_->print();}
+	std::wstring name() const override					{return consumer_->name();}
+	boost::property_tree::wptree info() const override 	{return consumer_->info();}
+	bool has_synchronization_clock() const override		{return consumer_->has_synchronization_clock();}
+	int buffer_depth() const override					{return consumer_->buffer_depth();}
+	int index() const override							{return consumer_->index();}
 };
 
 // This class is used to guarantee that audio cadence is correct. This is important for NTSC audio.
@@ -175,14 +175,14 @@ public:
 	{
 	}
 	
-	virtual void initialize(const video_format_desc& format_desc, int channel_index) override
+	void initialize(const video_format_desc& format_desc, int channel_index) override
 	{
 		audio_cadence_	= format_desc.audio_cadence;
 		sync_buffer_	= boost::circular_buffer<std::size_t>(format_desc.audio_cadence.size());
 		consumer_->initialize(format_desc, channel_index);
 	}
 
-	virtual bool send(const_frame frame) override
+	bool send(const_frame frame) override
 	{		
 		if(audio_cadence_.size() == 1)
 			return consumer_->send(frame);
@@ -203,12 +203,12 @@ public:
 		return result;
 	}
 	
-	virtual std::wstring print() const override					{return consumer_->print();}
-	virtual std::wstring name() const override					{return consumer_->name();}
-	virtual boost::property_tree::wptree info() const override 	{return consumer_->info();}
-	virtual bool has_synchronization_clock() const override		{return consumer_->has_synchronization_clock();}
-	virtual int buffer_depth() const override					{return consumer_->buffer_depth();}
-	virtual int index() const override							{return consumer_->index();}
+	std::wstring print() const override					{return consumer_->print();}
+	std::wstring name() const override					{return consumer_->name();}
+	boost::property_tree::wptree info() const override 	{return consumer_->info();}
+	bool has_synchronization_clock() const override		{return consumer_->has_synchronization_clock();}
+	int buffer_depth() const override					{return consumer_->buffer_depth();}
+	int index() const override							{return consumer_->index();}
 };
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
@@ -245,14 +245,14 @@ const spl::shared_ptr<frame_consumer>& frame_consumer::empty()
 	class empty_frame_consumer : public frame_consumer
 	{
 	public:
-		virtual bool send(const_frame) override {return false;}
-		virtual void initialize(const video_format_desc&, int) override{}
-		virtual std::wstring print() const override {return L"empty";}
-		virtual std::wstring name() const override {return L"empty";}
-		virtual bool has_synchronization_clock() const override {return false;}
-		virtual int buffer_depth() const override {return 0;};
+		bool send(const_frame) override {return false;}
+		void initialize(const video_format_desc&, int) override{}
+		std::wstring print() const override {return L"empty";}
+		std::wstring name() const override {return L"empty";}
+		bool has_synchronization_clock() const override {return false;}
+		int buffer_depth() const override {return 0;};
 		virtual int index() const{return -1;}
-		virtual boost::property_tree::wptree info() const override
+		boost::property_tree::wptree info() const override
 		{
 			boost::property_tree::wptree info;
 			info.add(L"type", L"empty");

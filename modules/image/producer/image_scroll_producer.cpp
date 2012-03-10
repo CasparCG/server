@@ -162,7 +162,7 @@ struct image_scroll_producer : public core::frame_producer
 	
 	// frame_producer
 
-	virtual core::draw_frame receive(int) override
+	core::draw_frame receive(int) override
 	{		
 		delta_ += speed_;
 
@@ -199,22 +199,22 @@ struct image_scroll_producer : public core::frame_producer
 		return last_frame_ = core::draw_frame(frames_);
 	}
 
-	virtual core::draw_frame last_frame() const override
+	core::draw_frame last_frame() const override
 	{
 		return core::draw_frame::still(last_frame_);
 	}
 			
-	virtual std::wstring print() const override
+	std::wstring print() const override
 	{
 		return L"image_scroll_producer[" + filename_ + L"]";
 	}
 
-	virtual std::wstring name() const override
+	std::wstring name() const override
 	{
 		return L"image-scroll";
 	}
 
-	virtual boost::property_tree::wptree info() const override
+	boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
 		info.add(L"type", L"image-scroll");
@@ -222,7 +222,7 @@ struct image_scroll_producer : public core::frame_producer
 		return info;
 	}
 
-	virtual uint32_t nb_frames() const override
+	uint32_t nb_frames() const override
 	{
 		if(height_ > format_desc_.height)
 		{
@@ -237,12 +237,12 @@ struct image_scroll_producer : public core::frame_producer
 		}
 	}
 
-	virtual void subscribe(const monitor::observable::observer_ptr& o) override															
+	void subscribe(const monitor::observable::observer_ptr& o) override															
 	{
 		return event_subject_.subscribe(o);
 	}
 
-	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override		
+	void unsubscribe(const monitor::observable::observer_ptr& o) override		
 	{
 		return event_subject_.unsubscribe(o);
 	}

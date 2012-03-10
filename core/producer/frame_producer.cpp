@@ -66,7 +66,7 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
 		virtual void unsubscribe(const monitor::observable::observer_ptr& o){}	
 		virtual std::wstring name() const {return L"empty";}
 	
-		virtual boost::property_tree::wptree info() const override
+		boost::property_tree::wptree info() const override
 		{
 			boost::property_tree::wptree info;
 			info.add(L"type", L"empty-producer");
@@ -118,14 +118,14 @@ public:
 		}).detach(); 
 	}
 	
-	virtual draw_frame	receive(int flags) override																				{return producer_->receive(flags);}
-	virtual draw_frame	last_frame() const override																				{return producer_->last_frame();}
-	virtual std::wstring										print() const override															{return producer_->print();}
-	virtual std::wstring										name() const override															{return producer_->name();}
-	virtual boost::property_tree::wptree 						info() const override															{return producer_->info();}
-	virtual boost::unique_future<std::wstring>					call(const std::wstring& str) override											{return producer_->call(str);}
-	virtual void												leading_producer(const spl::shared_ptr<frame_producer>& producer) override		{return producer_->leading_producer(producer);}
-	virtual uint32_t											nb_frames() const override														{return producer_->nb_frames();}
+	draw_frame	receive(int flags) override																				{return producer_->receive(flags);}
+	draw_frame	last_frame() const override																				{return producer_->last_frame();}
+	std::wstring										print() const override															{return producer_->print();}
+	std::wstring										name() const override															{return producer_->name();}
+	boost::property_tree::wptree 						info() const override															{return producer_->info();}
+	boost::unique_future<std::wstring>					call(const std::wstring& str) override											{return producer_->call(str);}
+	void												leading_producer(const spl::shared_ptr<frame_producer>& producer) override		{return producer_->leading_producer(producer);}
+	uint32_t											nb_frames() const override														{return producer_->nb_frames();}
 	virtual void subscribe(const monitor::observable::observer_ptr& o)																			{return producer_->subscribe(o);}
 	virtual void unsubscribe(const monitor::observable::observer_ptr& o)																		{return producer_->unsubscribe(o);}
 };

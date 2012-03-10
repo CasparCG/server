@@ -311,29 +311,29 @@ public:
 	
 	// frame_consumer
 	
-	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
+	void initialize(const core::video_format_desc& format_desc, int channel_index) override
 	{
 		consumer_.reset();
 		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_, key_only_, channel_index));
 	}
 	
-	virtual bool send(core::const_frame frame) override
+	bool send(core::const_frame frame) override
 	{
 		consumer_->send(frame);
 		return true;
 	}
 		
-	virtual std::wstring print() const override
+	std::wstring print() const override
 	{
 		return consumer_ ? consumer_->print() : L"[bluefish_consumer]";
 	}
 
-	virtual std::wstring name() const override
+	std::wstring name() const override
 	{
 		return L"bluefish";
 	}
 
-	virtual boost::property_tree::wptree info() const override
+	boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
 		info.add(L"type", L"bluefish");
@@ -348,7 +348,7 @@ public:
 		return 1;
 	}
 	
-	virtual int index() const override
+	int index() const override
 	{
 		return 400 + device_index_;
 	}

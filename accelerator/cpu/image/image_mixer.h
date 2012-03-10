@@ -42,9 +42,9 @@ public:
 	virtual void visit(const core::const_frame& frame);
 	virtual void pop();
 		
-	virtual boost::unique_future<array<const std::uint8_t>> operator()(const core::video_format_desc& format_desc) override;
+	boost::unique_future<array<const std::uint8_t>> operator()(const core::video_format_desc& format_desc) override;
 		
-	virtual core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) override;
+	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) override;
 
 	// Properties
 

@@ -61,7 +61,7 @@ public:
 
 	// frame_producer
 	
-	virtual draw_frame receive(int flags) override
+	draw_frame receive(int flags) override
 	{
 		tbb::parallel_invoke(
 		[&]
@@ -92,28 +92,28 @@ public:
 		return frame;
 	}
 
-	virtual draw_frame last_frame() const override
+	draw_frame last_frame() const override
 	{
 		return draw_frame::still(last_frame_);
 	}
 		
-	virtual uint32_t nb_frames() const override
+	uint32_t nb_frames() const override
 	{
 		return std::min(fill_producer_->nb_frames(), key_producer_->nb_frames());
 	}
 
-	virtual std::wstring print() const override
+	std::wstring print() const override
 	{
 		return L"separated[fill:" + fill_producer_->print() + L"|key[" + key_producer_->print() + L"]]";
 	}	
 
-	virtual boost::unique_future<std::wstring> call(const std::wstring& str) override
+	boost::unique_future<std::wstring> call(const std::wstring& str) override
 	{
 		key_producer_->call(str);
 		return fill_producer_->call(str);
 	}
 
-	virtual std::wstring name() const override
+	std::wstring name() const override
 	{
 		return L"separated";
 	}
@@ -123,12 +123,12 @@ public:
 		return fill_producer_->info();;
 	}
 
-	virtual void subscribe(const monitor::observable::observer_ptr& o) override															
+	void subscribe(const monitor::observable::observer_ptr& o) override															
 	{
 		return event_subject_.subscribe(o);
 	}
 
-	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override		
+	void unsubscribe(const monitor::observable::observer_ptr& o) override		
 	{
 		return event_subject_.unsubscribe(o);
 	}
