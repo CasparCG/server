@@ -288,7 +288,12 @@ public:
 		if(boost::regex_match(param, what, length_exp))
 		{
 			if(!what["LENGTH"].str().empty())
-				input_.length(boost::lexical_cast<uint32_t>(what["LENGTH"].str()));
+			{
+				if(boost::iequals(what["LENGTH"].str(), "NaN"))
+					input_.length(std::numeric_limits<uint32_t>::max());
+				else
+					input_.length(boost::lexical_cast<uint32_t>(what["LENGTH"].str()));
+			}
 			return boost::lexical_cast<std::wstring>(input_.length());
 		}
 		if(boost::regex_match(param, what, start_exp))
