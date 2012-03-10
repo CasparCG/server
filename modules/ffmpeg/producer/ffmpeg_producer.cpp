@@ -240,7 +240,7 @@ public:
 			auto value = what["VALUE"].str();
 			if(!value.empty())
 			{
-				if(boost::iequals(value, "NaN"))
+				if(boost::iequals(value, "NaN") || boost::iequals(value, "-1"))
 					input_.length(std::numeric_limits<uint32_t>::max());
 				else
 					input_.length(boost::lexical_cast<uint32_t>(value));
