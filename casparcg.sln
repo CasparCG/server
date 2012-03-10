@@ -7,11 +7,11 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "shell", "shell\shell.vcxpro
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "protocol", "protocol\protocol.vcxproj", "{2040B361-1FB6-488E-84A5-38A580DA90DE}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "documentation", "documentation", "{32079541-68ED-4319-91FB-0FF041642679}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "documents", "documents", "{32079541-68ED-4319-91FB-0FF041642679}"
 	ProjectSection(SolutionItems) = preProject
+		CHANGES.txt = CHANGES.txt
 		COPYING.txt = COPYING.txt
 		README.txt = README.txt
-		TODO.txt = TODO.txt
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "modules", "modules", "{C54DA43E-4878-45DB-B76D-35970553672C}"
