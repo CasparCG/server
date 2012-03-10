@@ -45,10 +45,10 @@ public:
 	
 	array& operator=(array&& other)
 	{
-		ptr_		= other.ptr_;
-		size_		= other.size_;
-		cacheable_  = other.cacheable_;
-		storage_	= std::move(other.storage_);
+		std::swap(ptr_,	other.ptr_);
+		std::swap(size_, other.size_);
+		std::swap(storage_,	other.storage_);
+		std::swap(cacheable_, other.cacheable_);
 
 		CASPAR_ASSERT(storage_);
 
@@ -122,10 +122,10 @@ public:
 
 	void swap(array& other)
 	{
-		ptr_		= other.ptr_;
-		size_		= other.size_;
-		storage_	= other.storage_;
-		cacheable_	= other.cacheable_;
+		std::swap(ptr_,	other.ptr_);
+		std::swap(size_, other.size_);
+		std::swap(storage_,	other.storage_);
+		std::swap(cacheable_, other.cacheable_);
 	}
 
 	// Properties
