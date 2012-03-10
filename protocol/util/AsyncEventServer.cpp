@@ -47,15 +47,13 @@ typedef std::set<spl::shared_ptr<connection>> connection_set;
 
 class connection : public spl::enable_shared_from_this<connection>, public ClientInfo
 {    
-    spl::shared_ptr<tcp::socket>				socket_; 
+    const spl::shared_ptr<tcp::socket>			socket_; 
+	const spl::shared_ptr<connection_set>		connection_set_;
 	const std::wstring							name_;
+	const spl::shared_ptr<IProtocolStrategy>	protocol_;
 
 	std::array<char, 32768>						data_;
-
-	std::string									buffer_;
-
-	const spl::shared_ptr<IProtocolStrategy>	protocol_;
-	spl::shared_ptr<connection_set>				connection_set_;
+	std::string									input_;
 
 public:
     static spl::shared_ptr<connection> create(spl::shared_ptr<tcp::socket> socket, const ProtocolStrategyPtr& protocol, spl::shared_ptr<connection_set> connection_set)
@@ -102,8 +100,8 @@ private:
     connection(const spl::shared_ptr<tcp::socket>& socket, const ProtocolStrategyPtr& protocol, const spl::shared_ptr<connection_set>& connection_set) 
 		: socket_(socket)
 		, name_((socket_->is_open() ? u16(socket_->local_endpoint().address().to_string() + ":" + boost::lexical_cast<std::string>(socket_->local_endpoint().port())) : L"no-address"))
-		, protocol_(protocol)
 		, connection_set_(connection_set)
+		, protocol_(protocol)
 	{
 		CASPAR_LOG(info) << print() << L" Connected.";
     }
@@ -116,12 +114,12 @@ private:
 			{
 				CASPAR_LOG(trace) << print() << L" Received: " << u16(std::string(data_.begin(), data_.begin() + bytes_transferred));
 
-				buffer_.insert(buffer_.end(), data_.begin(), data_.begin() + bytes_transferred);
+				input_.append(data_.begin(), data_.begin() + bytes_transferred);
 				
 				std::vector<std::string> split;
-				boost::iter_split(split, buffer_, boost::algorithm::first_finder("\r\n"));
+				boost::iter_split(split, input_, boost::algorithm::first_finder("\r\n"));
 				
-				buffer_ = std::move(split.back());
+				input_ = std::move(split.back());
 				split.pop_back();
 
 				BOOST_FOREACH(auto cmd, split)
@@ -139,8 +137,6 @@ private:
 		}  
 		else if (error != boost::asio::error::operation_aborted)
 			stop();		
-		else
-			read_some();
     }
 
     void handle_write(const spl::shared_ptr<std::string>& data, const boost::system::error_code& error, size_t bytes_transferred)
