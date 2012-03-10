@@ -81,7 +81,7 @@ namespace caspar { namespace reroute {
 //
 //	// frame_producer
 //			
-//	virtual core::draw_frame receive(int) override
+//	core::draw_frame receive(int) override
 //	{
 //		if(!frame_buffer_.empty())
 //		{
@@ -120,22 +120,22 @@ namespace caspar { namespace reroute {
 //		return receive(0);
 //	}	
 //
-//	virtual core::draw_frame last_frame() const override
+//	core::draw_frame last_frame() const override
 //	{
 //		return core::draw_frame::still(last_frame_);
 //	}
 //	
-//	virtual std::wstring print() const override
+//	std::wstring print() const override
 //	{
 //		return L"reroute[]";
 //	}
 //
-//	virtual std::wstring name() const override
+//	std::wstring name() const override
 //	{
 //		return L"reroute";
 //	}
 //
-//	virtual boost::property_tree::wptree info() const override
+//	boost::property_tree::wptree info() const override
 //	{
 //		boost::property_tree::wptree info;
 //		info.add(L"type", L"rerotue-producer");

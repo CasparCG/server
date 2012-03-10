@@ -54,17 +54,17 @@ public:
 
 	// Methods
 			
-	virtual boost::unique_future<array<const std::uint8_t>> operator()(const core::video_format_desc& format_desc) override;		
-	virtual core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) override;
+	boost::unique_future<array<const std::uint8_t>> operator()(const core::video_format_desc& format_desc) override;		
+	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) override;
 
 	// core::image_mixer
 	
-	virtual void begin_layer(core::blend_mode blend_mode) override;
-	virtual void end_layer() override;
+	void begin_layer(core::blend_mode blend_mode) override;
+	void end_layer() override;
 
-	virtual void push(const core::frame_transform& frame) override;
-	virtual void visit(const core::const_frame& frame) override;
-	virtual void pop() override;
+	void push(const core::frame_transform& frame) override;
+	void visit(const core::const_frame& frame) override;
+	void pop() override;
 			
 	// Properties
 

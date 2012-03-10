@@ -71,29 +71,29 @@ struct image_producer : public core::frame_producer
 	
 	// frame_producer
 
-	virtual core::draw_frame receive(int) override
+	core::draw_frame receive(int) override
 	{
 		event_subject_ << monitor::event("file/path") % filename_;
 
 		return frame_;
 	}
 
-	virtual core::draw_frame last_frame() const override
+	core::draw_frame last_frame() const override
 	{
 		return frame_;
 	}
 		
-	virtual std::wstring print() const override
+	std::wstring print() const override
 	{
 		return L"image_producer[" + filename_ + L"]";
 	}
 
-	virtual std::wstring name() const override
+	std::wstring name() const override
 	{
 		return L"image";
 	}
 
-	virtual boost::property_tree::wptree info() const override
+	boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
 		info.add(L"type", L"image");
@@ -101,12 +101,12 @@ struct image_producer : public core::frame_producer
 		return info;
 	}
 
-	virtual void subscribe(const monitor::observable::observer_ptr& o) override															
+	void subscribe(const monitor::observable::observer_ptr& o) override															
 	{
 		return event_subject_.subscribe(o);
 	}
 
-	virtual void unsubscribe(const monitor::observable::observer_ptr& o) override		
+	void unsubscribe(const monitor::observable::observer_ptr& o) override		
 	{
 		return event_subject_.unsubscribe(o);
 	}

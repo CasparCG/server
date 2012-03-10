@@ -328,7 +328,7 @@ public:
 		return renderer_(std::move(layers_), format_desc);
 	}
 	
-	virtual core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) override
+	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) override
 	{
 		std::vector<array<std::uint8_t>> buffers;
 		BOOST_FOREACH(auto& plane, desc.planes)		

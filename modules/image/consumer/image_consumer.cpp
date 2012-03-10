@@ -50,11 +50,11 @@ public:
 
 	// frame_consumer
 
-	virtual void initialize(const core::video_format_desc&, int) override
+	void initialize(const core::video_format_desc&, int) override
 	{
 	}
 	
-	virtual bool send(core::const_frame frame) override
+	bool send(core::const_frame frame) override
 	{				
 		boost::thread async([frame]
 		{
@@ -77,29 +77,29 @@ public:
 		return false;
 	}
 
-	virtual std::wstring print() const override
+	std::wstring print() const override
 	{
 		return L"image[]";
 	}
 	
-	virtual std::wstring name() const override
+	std::wstring name() const override
 	{
 		return L"image";
 	}
 
-	virtual boost::property_tree::wptree info() const override
+	boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
 		info.add(L"type", L"image");
 		return info;
 	}
 
-	virtual int buffer_depth() const override
+	int buffer_depth() const override
 	{
 		return 0;
 	}
 
-	virtual int index() const override
+	int index() const override
 	{
 		return 100;
 	}

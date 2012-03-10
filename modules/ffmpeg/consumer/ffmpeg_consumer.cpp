@@ -669,23 +669,23 @@ public:
 		consumer_.reset(new ffmpeg_consumer(u8(filename_), format_desc, options_));
 	}
 	
-	virtual bool send(core::const_frame frame) override
+	bool send(core::const_frame frame) override
 	{
 		consumer_->send(frame);
 		return true;
 	}
 	
-	virtual std::wstring print() const override
+	std::wstring print() const override
 	{
 		return consumer_ ? consumer_->print() : L"[ffmpeg_consumer]";
 	}
 
-	virtual std::wstring name() const override
+	std::wstring name() const override
 	{
 		return L"file";
 	}
 
-	virtual boost::property_tree::wptree info() const override
+	boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
 		info.add(L"type", L"file");
@@ -693,17 +693,17 @@ public:
 		return info;
 	}
 		
-	virtual bool has_synchronization_clock() const override
+	bool has_synchronization_clock() const override
 	{
 		return false;
 	}
 
-	virtual int buffer_depth() const override
+	int buffer_depth() const override
 	{
 		return 1;
 	}
 
-	virtual int index() const override
+	int index() const override
 	{
 		return 200;
 	}
