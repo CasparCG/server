@@ -42,6 +42,7 @@
 #include <core/frame/frame_transform.h>
 #include <core/frame/frame_factory.h>
 #include <core/monitor/monitor.h>
+#include <core/mixer/audio/audio_mixer.h>
 
 #include <tbb/concurrent_queue.h>
 
@@ -96,7 +97,6 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	boost::circular_buffer<size_t>					sync_buffer_;
 	ffmpeg::frame_muxer								muxer_;
 			
-	tbb::atomic<int>								flags_;
 	spl::shared_ptr<core::frame_factory>			frame_factory_;
 	core::video_format_desc							in_format_desc_;
 	core::video_format_desc							out_format_desc_;
@@ -124,7 +124,6 @@ public:
 		, sync_buffer_(out_format_desc.audio_cadence.size())
 		, frame_factory_(frame_factory)
 	{	
-		flags_ = 0;
 		frame_buffer_.set_capacity(2);
 		
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
@@ -239,9 +238,9 @@ public:
 				CASPAR_LOG(trace) << print() << L" Syncing audio.";
 				return S_OK;
 			}
-
-			muxer_.push(audio_buffer);
-			muxer_.push(av_frame, flags_);	
+			
+			muxer_.push_video(av_frame);	
+			muxer_.push_audio(audio_buffer);
 											
 			boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 			
@@ -275,13 +274,11 @@ public:
 		return S_OK;
 	}
 	
-	core::draw_frame get_frame(int flags)
+	core::draw_frame get_frame()
 	{
 		if(exception_ != nullptr)
 			std::rethrow_exception(exception_);
-
-		flags_ = flags;
-
+		
 		core::draw_frame frame = core::draw_frame::late();
 		if(!frame_buffer_.try_pop(frame))
 			graph_->set_tag("late-frame");
@@ -349,9 +346,9 @@ public:
 	
 	// frame_producer
 				
-	core::draw_frame receive(int flags) override
+	core::draw_frame receive() override
 	{
-		auto frame = producer_->get_frame(flags);
+		auto frame = producer_->get_frame();
 
 		if(frame != core::draw_frame::late())
 			last_frame_ = frame;

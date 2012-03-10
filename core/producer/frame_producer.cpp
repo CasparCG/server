@@ -57,7 +57,7 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
 	{
 	public:
 		empty_frame_producer(){}
-		virtual draw_frame receive(int){return draw_frame::empty();}
+		virtual draw_frame receive(){return draw_frame::empty();}
 		virtual draw_frame last_frame() const{return draw_frame::empty();}
 		virtual void set_frame_factory(const spl::shared_ptr<frame_factory>&){}
 		virtual uint32_t nb_frames() const {return 0;}
@@ -118,16 +118,16 @@ public:
 		}).detach(); 
 	}
 	
-	draw_frame	receive(int flags) override																				{return producer_->receive(flags);}
-	draw_frame	last_frame() const override																				{return producer_->last_frame();}
+	draw_frame	receive() override																										{return producer_->receive();}
+	draw_frame	last_frame() const override																								{return producer_->last_frame();}
 	std::wstring										print() const override															{return producer_->print();}
 	std::wstring										name() const override															{return producer_->name();}
 	boost::property_tree::wptree 						info() const override															{return producer_->info();}
 	boost::unique_future<std::wstring>					call(const std::wstring& str) override											{return producer_->call(str);}
 	void												leading_producer(const spl::shared_ptr<frame_producer>& producer) override		{return producer_->leading_producer(producer);}
 	uint32_t											nb_frames() const override														{return producer_->nb_frames();}
-	virtual void subscribe(const monitor::observable::observer_ptr& o)																			{return producer_->subscribe(o);}
-	virtual void unsubscribe(const monitor::observable::observer_ptr& o)																		{return producer_->unsubscribe(o);}
+	virtual void subscribe(const monitor::observable::observer_ptr& o)																	{return producer_->subscribe(o);}
+	virtual void unsubscribe(const monitor::observable::observer_ptr& o)																{return producer_->unsubscribe(o);}
 };
 
 spl::shared_ptr<core::frame_producer> create_destroy_proxy(spl::shared_ptr<core::frame_producer> producer)

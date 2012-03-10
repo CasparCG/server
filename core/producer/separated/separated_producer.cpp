@@ -61,18 +61,18 @@ public:
 
 	// frame_producer
 	
-	draw_frame receive(int flags) override
+	draw_frame receive() override
 	{
 		tbb::parallel_invoke(
 		[&]
 		{
 			if(fill_ == core::draw_frame::late())
-				fill_ = fill_producer_->receive(flags);
+				fill_ = fill_producer_->receive();
 		},
 		[&]
 		{
 			if(key_ == core::draw_frame::late())
-				key_ = key_producer_->receive(flags | frame_producer::flags::alpha_only);
+				key_ = key_producer_->receive();
 		});
 
 		if(fill_ == draw_frame::eof() || key_ == draw_frame::eof())

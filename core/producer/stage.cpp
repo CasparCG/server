@@ -101,19 +101,8 @@ public:
 		auto& layer		= layers_[index];
 		auto& tween		= tweens_[index];
 		auto transform	= tween.fetch_and_tick(1);
-
-		frame_producer::flags flags = frame_producer::flags::none;
-		if(format_desc.field_mode != field_mode::progressive)
-		{
-			flags |= std::abs(transform.image_transform.fill_scale[1]  - 1.0) > 0.0001 ? frame_producer::flags::deinterlace : frame_producer::flags::none;
-			flags |= std::abs(transform.image_transform.fill_translation[1])  > 0.0001 ? frame_producer::flags::deinterlace : frame_producer::flags::none;
-		}
-
-		if(transform.image_transform.is_key)
-			flags |= frame_producer::flags::alpha_only;
-		
-		auto frame = layer.receive(flags, format_desc);	
 				
+		auto frame  = layer.receive(format_desc);					
 		auto frame1 = core::draw_frame(frame);
 		frame1.transform() = transform;
 

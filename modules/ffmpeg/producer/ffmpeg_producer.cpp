@@ -65,26 +65,25 @@ namespace caspar { namespace ffmpeg {
 				
 struct ffmpeg_producer : public core::frame_producer
 {
-	monitor::basic_subject										event_subject_;
-	const std::wstring											filename_;
+	monitor::basic_subject							event_subject_;
+	const std::wstring								filename_;
 	
-	const spl::shared_ptr<diagnostics::graph>					graph_;
+	const spl::shared_ptr<diagnostics::graph>		graph_;
 					
-	const spl::shared_ptr<core::frame_factory>					frame_factory_;
-	const core::video_format_desc								format_desc_;
+	const spl::shared_ptr<core::frame_factory>		frame_factory_;
+	const core::video_format_desc					format_desc_;
 
-	input														input_;	
-	std::unique_ptr<video_decoder>								video_decoder_;
-	std::unique_ptr<audio_decoder>								audio_decoder_;	
-	std::unique_ptr<frame_muxer>								muxer_;
+	input											input_;	
+	std::unique_ptr<video_decoder>					video_decoder_;
+	std::unique_ptr<audio_decoder>					audio_decoder_;	
+	std::unique_ptr<frame_muxer>					muxer_;
 
-	const double												fps_;
-	const uint32_t												start_;
-	const uint32_t												length_;
+	const double									fps_;
+	const uint32_t									start_;
 		
-	int64_t														frame_number_;
+	int64_t											frame_number_;
 
-	core::draw_frame							last_frame_;
+	core::draw_frame								last_frame_;
 	
 public:
 	explicit ffmpeg_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, 
@@ -100,7 +99,6 @@ public:
 		, input_(graph_, filename_, loop, start, length)
 		, fps_(read_fps(*input_.context(), format_desc_.fps))
 		, start_(start)
-		, length_(length)
 		, frame_number_(0)
 		, last_frame_(core::draw_frame::empty())
 	{
@@ -150,12 +148,12 @@ public:
 
 	// frame_producer
 	
-	core::draw_frame receive(int flags) override
+	core::draw_frame receive() override
 	{				
 		boost::timer frame_timer;
 				
 		auto frame = core::draw_frame::late();		
-		if(!try_decode_frame(frame, flags))
+		if(!try_decode_frame(frame))
 		{
 			if(!input_.eof())		
 				graph_->set_tag("underflow");	
@@ -195,7 +193,7 @@ public:
 
 		uint32_t nb_frames = file_nb_frames();
 
-		nb_frames = std::min(length_, nb_frames);
+		nb_frames = std::min(input_.length(), nb_frames);
 		nb_frames = muxer_->calc_nb_frames(nb_frames);
 		
 		return nb_frames > start_ ? nb_frames - start_ : 0;
@@ -272,6 +270,8 @@ public:
 	{
 		static const boost::wregex loop_exp(L"LOOP\\s*(?<VALUE>\\d?)?", boost::regex::icase);
 		static const boost::wregex seek_exp(L"SEEK\\s+(?<VALUE>\\d+)", boost::regex::icase);
+		static const boost::wregex length_exp(L"LENGTH\\s+(?<VALUE>\\d+)", boost::regex::icase);
+		static const boost::wregex start_exp(L"START\\s+(?<VALUE>\\d+)", boost::regex::icase);
 		
 		boost::wsmatch what;
 		if(boost::regex_match(param, what, loop_exp))
@@ -285,11 +285,23 @@ public:
 			input_.seek(boost::lexical_cast<uint32_t>(what["VALUE"].str()));
 			return L"";
 		}
+		if(boost::regex_match(param, what, length_exp))
+		{
+			if(!what["LENGTH"].str().empty())
+				input_.length(boost::lexical_cast<uint32_t>(what["LENGTH"].str()));
+			return boost::lexical_cast<std::wstring>(input_.length());
+		}
+		if(boost::regex_match(param, what, start_exp))
+		{
+			if(!what["START"].str().empty())
+				input_.start(boost::lexical_cast<uint32_t>(what["START"].str()));
+			return boost::lexical_cast<std::wstring>(input_.start());
+		}
 
 		BOOST_THROW_EXCEPTION(invalid_argument());
 	}
 
-	bool try_decode_frame(core::draw_frame& result, int flags)
+	bool try_decode_frame(core::draw_frame& result)
 	{
 		for(int n = 0; n < 32; ++n)
 		{
@@ -321,23 +333,23 @@ public:
 					audio = audio_decoder_->poll();		
 			});
 		
-			muxer_->push(video, flags);
-			muxer_->push(audio);
+			muxer_->push_video(video);
+			muxer_->push_audio(audio);
 
 			if(!audio_decoder_)
 			{
 				if(video == flush_video())
-					muxer_->push(flush_audio());
+					muxer_->push_audio(flush_audio());
 				else if(!muxer_->audio_ready())
-					muxer_->push(empty_audio());
+					muxer_->push_audio(empty_audio());
 			}
 
 			if(!video_decoder_)
 			{
 				if(audio == flush_audio())
-					muxer_->push(flush_video(), 0);
+					muxer_->push_video(flush_video());
 				else if(!muxer_->video_ready())
-					muxer_->push(empty_video(), 0);
+					muxer_->push_video(empty_video());
 			}
 		}
 
@@ -353,7 +365,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 		return core::frame_producer::empty();
 	
 	auto loop		= boost::range::find(params, L"LOOP") != params.end();
-	auto start		= get_param(L"SEEK", params, static_cast<uint32_t>(0));
+	auto start		= get_param(L"START", params, get_param(L"SEEK", params, static_cast<uint32_t>(0)));
 	auto length		= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
 	auto filter_str = get_param(L"FILTER", params, L""); 	
 		

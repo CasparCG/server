@@ -80,7 +80,7 @@ public:
 		if(preview)
 		{
 			play();
-			foreground_->receive(0);
+			foreground_->receive();
 			pause();
 		}
 
@@ -121,14 +121,14 @@ public:
 		pause();
 	}
 		
-	draw_frame receive(frame_producer::flags flags, const video_format_desc& format_desc)
+	draw_frame receive(const video_format_desc& format_desc)
 	{		
 		try
 		{
 			if(is_paused_)
 				return foreground_->last_frame();
 		
-			auto frame = foreground_->receive(flags.value());
+			auto frame = foreground_->receive();
 
 			if(frame == core::draw_frame::late())
 				return foreground_->last_frame();
@@ -147,7 +147,7 @@ public:
 				if(frames_left < 1)
 				{
 					play();
-					return receive(flags, format_desc);
+					return receive(format_desc);
 				}
 			}
 
@@ -202,7 +202,7 @@ void layer::load(spl::shared_ptr<frame_producer> frame_producer, bool preview, c
 void layer::play(){impl_->play();}
 void layer::pause(){impl_->pause();}
 void layer::stop(){impl_->stop();}
-draw_frame layer::receive(frame_producer::flags flags, const video_format_desc& format_desc) {return impl_->receive(flags, format_desc);}
+draw_frame layer::receive(const video_format_desc& format_desc) {return impl_->receive(format_desc);}
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_;}
 boost::property_tree::wptree layer::info() const{return impl_->info();}
