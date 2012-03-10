@@ -102,10 +102,8 @@ struct frame_muxer::impl : boost::noncopyable
 		if(!video_frame)
 			return;
 		
-		if(video_frame == flush_video())
-		{	
-			video_streams_.push(std::queue<core::mutable_frame>());
-		}
+		if(video_frame == flush_video())		
+			video_streams_.push(std::queue<core::mutable_frame>());		
 		else if(video_frame == empty_video())
 		{
 			auto empty_frame = frame_factory_->create_frame(this, core::pixel_format_desc(core::pixel_format::invalid));
@@ -131,18 +129,12 @@ struct frame_muxer::impl : boost::noncopyable
 		if(!audio)	
 			return;
 
-		if(audio == flush_audio())
-		{
-			audio_streams_.push(core::audio_buffer());
-		}
-		else if(audio == empty_audio())
-		{
-			boost::range::push_back(audio_streams_.back(), core::audio_buffer(audio_cadence_.front(), 0));
-		}
-		else
-		{
-			boost::range::push_back(audio_streams_.back(), *audio);
-		}
+		if(audio == flush_audio())		
+			audio_streams_.push(core::audio_buffer());		
+		else if(audio == empty_audio())		
+			boost::range::push_back(audio_streams_.back(), core::audio_buffer(audio_cadence_.front(), 0));		
+		else		
+			boost::range::push_back(audio_streams_.back(), *audio);		
 
 		if(audio_streams_.back().size() > static_cast<size_t>(32*audio_cadence_.front()))
 			BOOST_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("audio-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
