@@ -145,9 +145,9 @@ private:
 		// Fix frames		
 		BOOST_FOREACH(auto& item, layer.items)		
 		{
-			if(std::abs(item.transform.fill_scale[1]-1.0) > 1.0/target_texture->height() ||
-			   std::abs(item.transform.fill_translation[1]) > 1.0/target_texture->height())		
-				CASPAR_LOG(warning) << L"[image_mixer] Frame should be deinterlaced. Send FILTER DEINTERLACE_BOB when creating producer.";	
+			//if(std::abs(item.transform.fill_scale[1]-1.0) > 1.0/target_texture->height() ||
+			//   std::abs(item.transform.fill_translation[1]) > 1.0/target_texture->height())		
+			//	CASPAR_LOG(warning) << L"[image_mixer] Frame should be deinterlaced. Send FILTER DEINTERLACE_BOB when creating producer.";	
 
 			if(item.pix_desc.planes.at(0).height == 480) // NTSC DV
 			{
