@@ -230,12 +230,20 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	
 	boost::unique_future<spl::shared_ptr<texture>> copy_async(const array<std::uint8_t>& source, int width, int height, int stride)
 	{
-		//auto buf = source.storage<spl::shared_ptr<buffer>>();
-		auto buf = create_buffer(source.size(), buffer::usage::write_only);
-		tbb::parallel_for(tbb::blocked_range<std::size_t>(0, source.size()), [&](const tbb::blocked_range<std::size_t>& r)
+		std::shared_ptr<buffer> buf;
+
+		try
 		{
-			A_memcpy(buf->data() + r.begin(), source.data() + r.begin(), r.size());
-		});
+			buf = source.storage<spl::shared_ptr<buffer>>();
+		}
+		catch(boost::bad_any_cast&)
+		{			
+			buf = create_buffer(source.size(), buffer::usage::write_only);
+			tbb::parallel_for(tbb::blocked_range<std::size_t>(0, source.size()), [&](const tbb::blocked_range<std::size_t>& r)
+			{
+				A_memcpy(buf->data() + r.begin(), source.data() + r.begin(), r.size());
+			});
+		}
 
 		return render_executor_.begin_invoke([=]() -> spl::shared_ptr<texture>
 		{
