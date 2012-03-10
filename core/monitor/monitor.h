@@ -1,24 +1,19 @@
 #pragma once
 
 #include <common/reactive.h>
-#include <common/memory.h>
 
 #include <functional>
-#include <string>
-#include <vector>
+#include <memory>
 #include <ostream>
+#include <string>
 #include <type_traits>
+#include <vector>
 
 #include <boost/variant.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/chrono.hpp>
 
 #include <tbb/cache_aligned_allocator.h>
-#include <tbb/spin_mutex.h>
-
-#ifndef _SCL_SECURE_NO_WARNINGS
-#define _SCL_SECURE_NO_WARNINGS
-#endif
 
 namespace boost {
 namespace detail { namespace variant {
@@ -139,7 +134,7 @@ public:
 		return *this;
 	}
 	
-	event			propagate(path path) const;
+	event propagate(path path) const;
 
 	// Properties
 
@@ -255,7 +250,7 @@ public:
 	// Properties
 
 private:
-	std::shared_ptr<impl>	impl_;
+	std::shared_ptr<impl> impl_;
 };
 
 inline subject& operator<<(subject& s, const event& e)
