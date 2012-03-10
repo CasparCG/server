@@ -401,7 +401,7 @@ public:
 				
 		boost::range::remove_erase_if(options, [&](const option& o)
 		{
-			return ffmpeg::av_opt_set(c, o.name.c_str(), o.value.c_str(), AV_OPT_SEARCH_CHILDREN) > -1;
+			return o.name.at(0) != 'a' && ffmpeg::av_opt_set(c, o.name.c_str(), o.value.c_str(), AV_OPT_SEARCH_CHILDREN) > -1;
 		});
 				
 		if(output_format_.format->flags & AVFMT_GLOBALHEADER)
