@@ -186,7 +186,7 @@ std::wstring ListTemplates()
 
 namespace amcp {
 	
-AMCPCommand::AMCPCommand() : channelIndex_(0), scheduling_(Default), layerIndex_(-1)
+AMCPCommand::AMCPCommand() : channelIndex_(0), layerIndex_(-1)
 {}
 
 void AMCPCommand::SendReply()
