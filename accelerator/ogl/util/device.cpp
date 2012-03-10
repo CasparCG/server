@@ -209,9 +209,29 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		return array<std::uint8_t>(buf->data(), buf->size(), false, buf);
 	}
 
+	template<typename T>
+	std::shared_ptr<buffer> copy_to_buf(const T& source)
+	{
+		std::shared_ptr<buffer> buf;
+
+		auto tmp = source.storage<spl::shared_ptr<buffer>>();
+		if(tmp)
+			buf = *tmp;
+		else
+		{			
+			buf = create_buffer(source.size(), buffer::usage::write_only);
+			tbb::parallel_for(tbb::blocked_range<std::size_t>(0, source.size()), [&](const tbb::blocked_range<std::size_t>& r)
+			{
+				A_memcpy(buf->data() + r.begin(), source.data() + r.begin(), r.size());
+			});
+		}
+
+		return buf;
+	}
+
 	boost::unique_future<spl::shared_ptr<texture>> copy_async(const array<const std::uint8_t>& source, int width, int height, int stride)
 	{
-		auto buf = source.storage<spl::shared_ptr<buffer>>();
+		std::shared_ptr<buffer> buf = copy_to_buf(source);
 				
 		return render_executor_.begin_invoke([=]() -> spl::shared_ptr<texture>
 		{
@@ -230,20 +250,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	
 	boost::unique_future<spl::shared_ptr<texture>> copy_async(const array<std::uint8_t>& source, int width, int height, int stride)
 	{
-		std::shared_ptr<buffer> buf;
-
-		try
-		{
-			buf = source.storage<spl::shared_ptr<buffer>>();
-		}
-		catch(boost::bad_any_cast&)
-		{			
-			buf = create_buffer(source.size(), buffer::usage::write_only);
-			tbb::parallel_for(tbb::blocked_range<std::size_t>(0, source.size()), [&](const tbb::blocked_range<std::size_t>& r)
-			{
-				A_memcpy(buf->data() + r.begin(), source.data() + r.begin(), r.size());
-			});
-		}
+		std::shared_ptr<buffer> buf = copy_to_buf(source);
 
 		return render_executor_.begin_invoke([=]() -> spl::shared_ptr<texture>
 		{
