@@ -73,14 +73,12 @@ typedef std::set<spl::shared_ptr<connection>> connection_set;
 
 class connection : public spl::enable_shared_from_this<connection>
 {    
-    spl::shared_ptr<tcp::socket>	socket_; 
-	boost::optional<std::regex>		regex_;
+    const spl::shared_ptr<tcp::socket>		socket_; 
+	const spl::shared_ptr<connection_set>	connection_set_;
 
-	std::array<char, 8192>			data_;
-	
-	spl::shared_ptr<connection_set>	connection_set_;
-
-	std::string						input_;
+	boost::optional<std::regex>				regex_;
+	std::array<char, 32768>					data_;
+	std::string								input_;
 
 public:
     static spl::shared_ptr<connection> create(spl::shared_ptr<tcp::socket> socket, spl::shared_ptr<connection_set> connection_set)
@@ -147,8 +145,6 @@ private:
 		}  
 		else if (error != boost::asio::error::operation_aborted)		
 			stop();		
-		else
-			read_some();
     }
 
     void handle_write(const spl::shared_ptr<std::vector<char>>& data, const boost::system::error_code& error, size_t bytes_transferred)
