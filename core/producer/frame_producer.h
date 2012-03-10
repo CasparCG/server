@@ -51,17 +51,6 @@ public:
 
 	// Static Members
 	
-	struct flags_def
-	{
-		enum type
-		{
-			none		= 0,
-			alpha_only	= 2,
-			deinterlace	= 4,
-		};
-	};
-	typedef enum_class<flags_def> flags;
-
 	static const spl::shared_ptr<frame_producer>& empty();
 
 	// Constructors
@@ -71,7 +60,7 @@ public:
 
 	// Methods	
 
-	virtual class draw_frame					receive(int flags) = 0;
+	virtual class draw_frame					receive() = 0;
 	virtual boost::unique_future<std::wstring>	call(const std::wstring&);
 	
 	// monitor::observable

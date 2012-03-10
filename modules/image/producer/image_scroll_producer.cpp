@@ -162,7 +162,7 @@ struct image_scroll_producer : public core::frame_producer
 	
 	// frame_producer
 
-	core::draw_frame receive(int) override
+	core::draw_frame receive() override
 	{		
 		delta_ += speed_;
 

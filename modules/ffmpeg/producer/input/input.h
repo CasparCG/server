@@ -52,6 +52,10 @@ public:
 
 	void loop(bool value);
 	bool loop() const;
+	void start(uint32_t value);
+	uint32_t start() const;
+	void length(uint32_t value);
+	uint32_t length() const;
 
 	void seek(uint32_t target);
 
