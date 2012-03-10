@@ -587,7 +587,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const boost::property_tree
 {
 	configuration config;
 
-	auto keyer = ptree.get(L"keyer", L"external");
+	auto keyer = ptree.get(L"keyer", L"default");
 	if(keyer == L"external")
 		config.keyer = configuration::external_keyer;
 	else if(keyer == L"internal")
