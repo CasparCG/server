@@ -528,9 +528,8 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 	
 	configuration config;
 		
-	auto device_it = std::find(params.begin(), params.end(), L"DEVICE");
-	if(device_it != params.end() && ++device_it != params.end())
-		config.screen_index = boost::lexical_cast<int>(*device_it);
+	if(params.size() > 1)
+		config.screen_index = boost::lexical_cast<int>(params[1]);
 		
 	config.key_only = std::find(params.begin(), params.end(), L"WINDOWED") != params.end();
 	config.key_only = std::find(params.begin(), params.end(), L"KEY_ONLY") != params.end();
