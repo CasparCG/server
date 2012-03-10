@@ -65,9 +65,9 @@ public:
 	bool cacheable() const		{return cacheable_;}
 	
 	template<typename T>
-	T storage() const
+	T* storage() const
 	{
-		return boost::any_cast<T>(*storage_);
+		return boost::any_cast<T>(storage_.get());
 	}
 private:
 	T*			ptr_;
@@ -138,9 +138,9 @@ public:
 	bool cacheable() const		{return cacheable_;}
 	
 	template<typename T>
-	T storage() const
+	T* storage() const
 	{
-		return boost::any_cast<T>(*storage_);
+		return boost::any_cast<T>(storage_.get());
 	}
 
 private:
