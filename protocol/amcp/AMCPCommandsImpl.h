@@ -32,97 +32,97 @@ std::wstring ListTemplates();
 
 namespace amcp {
 	
-class ChannelGridCommand : public AMCPCommandBase<false, AddToQueue, 0>
+class ChannelGridCommand : public AMCPCommandBase<false, 0>
 {
 	std::wstring print() const { return L"ChannelGridCommand";}
 	bool DoExecute();
 };
 
-class DiagnosticsCommand : public AMCPCommandBase<false, AddToQueue, 0>
+class DiagnosticsCommand : public AMCPCommandBase<false, 0>
 {
 	std::wstring print() const { return L"DiagnosticsCommand";}
 	bool DoExecute();
 };
 
-class CallCommand : public AMCPCommandBase<true, AddToQueue, 1>
+class CallCommand : public AMCPCommandBase<true, 1>
 {
 	std::wstring print() const { return L"CallCommand";}
 	bool DoExecute();
 };
 
-class MixerCommand : public AMCPCommandBase<true, AddToQueue, 1>
+class MixerCommand : public AMCPCommandBase<true, 1>
 {
 	std::wstring print() const { return L"MixerCommand";}
 	bool DoExecute();
 };
 	
-class AddCommand : public AMCPCommandBase<true, AddToQueue, 1>
+class AddCommand : public AMCPCommandBase<true, 1>
 {
 	std::wstring print() const { return L"AddCommand";}
 	bool DoExecute();
 };
 
-class RemoveCommand : public AMCPCommandBase<true, AddToQueue, 0>
+class RemoveCommand : public AMCPCommandBase<true, 0>
 {
 	std::wstring print() const { return L"RemoveCommand";}
 	bool DoExecute();
 };
 
-class SwapCommand : public AMCPCommandBase<true, AddToQueue, 1>
+class SwapCommand : public AMCPCommandBase<true, 1>
 {
 	std::wstring print() const { return L"SwapCommand";}
 	bool DoExecute();
 };
 
-class LoadCommand : public AMCPCommandBase<true, AddToQueue, 1>
+class LoadCommand : public AMCPCommandBase<true, 1>
 {
 	std::wstring print() const { return L"LoadCommand";}
 	bool DoExecute();
 };
 
-class LoadbgCommand : public AMCPCommandBase<true, AddToQueue, 1>
+class LoadbgCommand : public AMCPCommandBase<true, 1>
 {
 	std::wstring print() const { return L"LoadbgCommand";}
 	bool DoExecute();
 };
 
-class PlayCommand: public AMCPCommandBase<true, AddToQueue, 0>
+class PlayCommand: public AMCPCommandBase<true, 0>
 {
 	std::wstring print() const { return L"PlayCommand";}
 	bool DoExecute();
 };
 
-class PauseCommand: public AMCPCommandBase<true, AddToQueue, 0>
+class PauseCommand: public AMCPCommandBase<true, 0>
 {
 	std::wstring print() const { return L"PauseCommand";}
 	bool DoExecute();
 };
 
-class StopCommand : public AMCPCommandBase<true, AddToQueue, 0>
+class StopCommand : public AMCPCommandBase<true, 0>
 {
 	std::wstring print() const { return L"StopCommand";}
 	bool DoExecute();
 };
 
-class ClearCommand : public AMCPCommandBase<true, ImmediatelyAndClear, 0>
+class ClearCommand : public AMCPCommandBase<true, 0>
 {
 	std::wstring print() const { return L"ClearCommand";}
 	bool DoExecute();
 };
 
-class PrintCommand : public AMCPCommandBase<true, AddToQueue, 0>
+class PrintCommand : public AMCPCommandBase<true, 0>
 {
 	std::wstring print() const { return L"PrintCommand";}
 	bool DoExecute();
 };
 
-class LogCommand : public AMCPCommandBase<false, AddToQueue, 0>
+class LogCommand : public AMCPCommandBase<false, 0>
 {
 	std::wstring print() const { return L"LogCommand";}
 	bool DoExecute();
 };
 
-class CGCommand : public AMCPCommandBase<true, AddToQueue, 1>
+class CGCommand : public AMCPCommandBase<true, 1>
 {
 	std::wstring print() const { return L"CGCommand";}
 	bool DoExecute();
@@ -139,7 +139,7 @@ class CGCommand : public AMCPCommandBase<true, AddToQueue, 1>
 	bool DoExecuteInfo();
 };
 
-class DataCommand : public AMCPCommandBase<false, AddToQueue, 1>
+class DataCommand : public AMCPCommandBase<false, 1>
 {
 	std::wstring print() const { return L"DataCommand";}
 	bool DoExecute();
@@ -148,25 +148,25 @@ class DataCommand : public AMCPCommandBase<false, AddToQueue, 1>
 	bool DoExecuteList();
 };
 
-class ClsCommand : public AMCPCommandBase<false, AddToQueue, 0>
+class ClsCommand : public AMCPCommandBase<false, 0>
 {
 	std::wstring print() const { return L"ClsCommand";}
 	bool DoExecute();
 };
 
-class TlsCommand : public AMCPCommandBase<false, AddToQueue, 0>
+class TlsCommand : public AMCPCommandBase<false, 0>
 {
 	std::wstring print() const { return L"TlsCommand";}
 	bool DoExecute();
 };
 
-class CinfCommand : public AMCPCommandBase<false, AddToQueue, 1>
+class CinfCommand : public AMCPCommandBase<false, 1>
 {
 	std::wstring print() const { return L"CinfCommand";}
 	bool DoExecute();
 };
 
-class InfoCommand : public AMCPCommandBase<false, AddToQueue, 0>
+class InfoCommand : public AMCPCommandBase<false, 0>
 {
 public:
 	std::wstring print() const { return L"InfoCommand";}
@@ -176,19 +176,19 @@ private:
 	const std::vector<spl::shared_ptr<core::video_channel>>& channels_;
 };
 
-class VersionCommand : public AMCPCommandBase<false, AddToQueue, 0>
+class VersionCommand : public AMCPCommandBase<false, 0>
 {
 	std::wstring print() const { return L"VersionCommand";}
 	bool DoExecute();
 };
 
-class ByeCommand : public AMCPCommandBase<false, AddToQueue, 0>
+class ByeCommand : public AMCPCommandBase<false, 0>
 {
 	std::wstring print() const { return L"ByeCommand";}
 	bool DoExecute();
 };
 
-class SetCommand : public AMCPCommandBase<true, AddToQueue, 2>
+class SetCommand : public AMCPCommandBase<true, 2>
 {
 	std::wstring print() const { return L"SetCommand";}
 	bool DoExecute();

@@ -23,6 +23,8 @@
 
 #include "AMCPCommandQueue.h"
 
+#include <boost/timer.hpp>
+
 namespace caspar { namespace protocol { namespace amcp {
 	
 AMCPCommandQueue::AMCPCommandQueue() 
@@ -38,10 +40,7 @@ void AMCPCommandQueue::AddCommand(AMCPCommandPtr pCurrentCommand)
 {
 	if(!pCurrentCommand)
 		return;
-
-	if(pCurrentCommand->GetScheduling() == ImmediatelyAndClear)
-		executor_.clear();
-
+	
 	if(executor_.size() > 128)
 	{
 		try
@@ -63,10 +62,11 @@ void AMCPCommandQueue::AddCommand(AMCPCommandPtr pCurrentCommand)
 		{
 			try
 			{
+				boost::timer timer;
 				if(pCurrentCommand->Execute()) 
-					CASPAR_LOG(debug) << "Executed command: " << pCurrentCommand->print();
+					CASPAR_LOG(debug) << "Executed command: " << pCurrentCommand->print() << " " << timer.elapsed();
 				else 
-					CASPAR_LOG(warning) << "Failed to execute command: " << pCurrentCommand->print();
+					CASPAR_LOG(warning) << "Failed to execute command: " << pCurrentCommand->print() << " " << timer.elapsed();
 			}
 			catch(...)
 			{
