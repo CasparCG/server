@@ -57,14 +57,13 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
 	{
 	public:
 		empty_frame_producer(){}
-		virtual draw_frame receive(){return draw_frame::empty();}
-		virtual draw_frame last_frame() const{return draw_frame::empty();}
-		virtual void set_frame_factory(const spl::shared_ptr<frame_factory>&){}
-		virtual uint32_t nb_frames() const {return 0;}
-		virtual std::wstring print() const { return L"empty";}
-		virtual void subscribe(const monitor::observable::observer_ptr& o){}
-		virtual void unsubscribe(const monitor::observable::observer_ptr& o){}	
-		virtual std::wstring name() const {return L"empty";}
+		virtual draw_frame receive() override{return draw_frame::empty();}
+		virtual draw_frame last_frame() const override{return draw_frame::empty();}
+		virtual uint32_t nb_frames() const override {return 0;}
+		virtual std::wstring print() const override { return L"empty";}
+		virtual void subscribe(const monitor::observable::observer_ptr& o) override{}
+		virtual void unsubscribe(const monitor::observable::observer_ptr& o) override{}	
+		virtual std::wstring name() const override {return L"empty";}
 	
 		boost::property_tree::wptree info() const override
 		{
