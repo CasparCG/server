@@ -517,7 +517,7 @@ public:
 
 	int index() const override
 	{
-		return 600;
+		return 600 + (config_.key_only ? 1 : 0);
 	}
 };	
 
