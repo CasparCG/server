@@ -167,12 +167,12 @@ struct image_scroll_producer : public core::frame_producer
 		delta_ += speed_;
 
 		if(frames_.empty())
-			return core::draw_frame::eof();
+			return last_frame();
 		
 		if(height_ > format_desc_.height)
 		{
 			if(static_cast<int>(std::abs(delta_)) >= height_ - format_desc_.height)
-				return core::draw_frame::eof();
+				return last_frame();
 
 			for(int n = 0; n < frames_.size(); ++n)
 			{
@@ -183,7 +183,7 @@ struct image_scroll_producer : public core::frame_producer
 		else
 		{
 			if(static_cast<int>(std::abs(delta_)) >= width_ - format_desc_.width)
-				return core::draw_frame::eof();
+				return last_frame();
 
 			for(int n = 0; n < frames_.size(); ++n)
 			{

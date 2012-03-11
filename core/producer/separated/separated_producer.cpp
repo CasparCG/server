@@ -74,10 +74,7 @@ public:
 			if(key_ == core::draw_frame::late())
 				key_ = key_producer_->receive();
 		});
-
-		if(fill_ == draw_frame::eof() || key_ == draw_frame::eof())
-			return draw_frame::eof();
-
+		
 		if(fill_ == core::draw_frame::late() || key_ == core::draw_frame::late()) // One of the producers is lagging, keep them in sync.
 			return core::draw_frame::late();
 		
