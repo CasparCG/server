@@ -275,7 +275,7 @@ spl::shared_ptr<shader> get_image_shader(bool& blend_modes)
 		
 	try
 	{				
-		g_blend_modes  = glTextureBarrierNV ? env::properties().get(L"configuration.blend-modes", false) : false;
+		g_blend_modes  = glTextureBarrierNV ? env::properties().get(L"configuration.blend-modes", true) : false;
 		g_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes)));
 	}
 	catch(...)
