@@ -173,10 +173,13 @@ private:
 		});
 		
 		// Remove first field stills.
-		boost::range::remove_erase_if(layer.items, [&](const item& item)
+		if(format_desc.field_mode != core::field_mode::progressive)
 		{
-			return item.transform.is_still && item.transform.field_mode == format_desc.field_mode; // only use last field for stills.
-		});
+			boost::range::remove_erase_if(layer.items, [&](const item& item)
+			{
+				return item.transform.is_still && item.transform.field_mode == format_desc.field_mode; // only use last field for stills.
+			});
+		}
 
 		if(layer.items.empty())
 			return;
