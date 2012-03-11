@@ -64,7 +64,7 @@ public:
 		
 	void leading_producer(const spl::shared_ptr<frame_producer>& producer) override
 	{
-		source_producer_ = create_destroy_proxy(producer);
+		source_producer_ = producer;
 	}
 
 	draw_frame receive() override
