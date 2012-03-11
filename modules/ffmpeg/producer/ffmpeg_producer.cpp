@@ -178,6 +178,9 @@ public:
 						<< monitor::event("file/fps")			% fps_
 						<< monitor::event("file/path")			% filename_
 						<< monitor::event("loop")				% input_.loop();
+		
+		if(frame == core::draw_frame::late() && input_.eof())
+			return last_frame();
 
 		return frame;
 	}

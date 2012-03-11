@@ -108,7 +108,7 @@ public:
 																	}
 																}();
 
-		return compose(dest, source);
+		return compose(draw_frame::push(dest), draw_frame::push(source));
 	}
 
 	draw_frame last_frame() const override

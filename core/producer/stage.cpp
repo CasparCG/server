@@ -103,12 +103,12 @@ public:
 		auto transform	= tween.fetch_and_tick(1);
 				
 		auto frame  = layer.receive(format_desc);					
-		auto frame1 = core::draw_frame(frame);
+		auto frame1 = draw_frame::push(frame);
 		frame1.transform() = transform;
 
 		if(format_desc.field_mode != core::field_mode::progressive)
 		{				
-			auto frame2 = core::draw_frame(frame);
+			auto frame2 = draw_frame::push(frame);
 			frame2.transform() = tween.fetch_and_tick(1);
 			frame1 = core::draw_frame::interlace(frame1, frame2, format_desc.field_mode);
 		}
