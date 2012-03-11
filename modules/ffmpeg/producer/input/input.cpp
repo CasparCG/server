@@ -73,6 +73,7 @@ struct input::impl : boost::noncopyable
 	tbb::atomic<uint32_t>										start_;		
 	tbb::atomic<uint32_t>										length_;
 	tbb::atomic<bool>											loop_;
+	tbb::atomic<bool>											eof_;
 	uint32_t													frame_number_;
 	
 	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>	buffer_;
@@ -91,6 +92,7 @@ struct input::impl : boost::noncopyable
 		start_			= start;
 		length_			= length;
 		loop_			= loop;
+		eof_			= false;
 		buffer_size_	= 0;
 
 		if(start_ > 0)			
@@ -164,15 +166,19 @@ struct input::impl : boost::noncopyable
 				{
 					frame_number_	= 0;
 
-					if(!loop_)
-						return;
-
-					queued_seek(start_);
-					graph_->set_tag("seek");		
-					CASPAR_LOG(trace) << print() << " Looping.";	
+					if(loop_)
+					{
+						queued_seek(start_);
+						graph_->set_tag("seek");		
+						CASPAR_LOG(trace) << print() << " Looping.";	
+					}
+					else
+						eof_ = true;
 				}
 				else
 				{		
+					eof_ = false;
+
 					THROW_ON_ERROR(ret, "av_read_frame", print());
 
 					if(packet->stream_index == default_stream_index_)
@@ -197,7 +203,8 @@ struct input::impl : boost::noncopyable
 					graph_->set_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));		
 				}	
 
-				tick();		
+				if(!eof_)
+					tick();		
 			}
 			catch(...)
 			{
@@ -253,7 +260,7 @@ struct input::impl : boost::noncopyable
 
 input::input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length) 
 	: impl_(new impl(graph, filename, loop, start, length)){}
-bool input::eof() const {return !impl_->executor_.is_running();}
+bool input::eof() const {return impl_->eof_;}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
 spl::shared_ptr<AVFormatContext> input::context(){return impl_->format_context_;}
 void input::loop(bool value){impl_->loop_ = value;}

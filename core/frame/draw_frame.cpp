@@ -172,6 +172,13 @@ draw_frame draw_frame::mask(draw_frame fill, draw_frame key)
 	return draw_frame(std::move(frames));
 }
 
+draw_frame draw_frame::push(draw_frame frame)
+{
+	std::vector<draw_frame> frames;
+	frames.push_back(std::move(frame));
+	return draw_frame(std::move(frames));
+}
+
 draw_frame eof_frame(const_frame(0));
 draw_frame empty_frame(const_frame(0));
 draw_frame late_frame(const_frame(0));
