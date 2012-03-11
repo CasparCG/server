@@ -117,9 +117,6 @@ bool draw_frame::operator!=(const draw_frame& other)const{return !(*this == othe
 
 draw_frame draw_frame::interlace(draw_frame frame1, draw_frame frame2, core::field_mode mode)
 {				
-	if(frame1 == draw_frame::eof() || frame2 == draw_frame::eof())
-		return draw_frame::eof();
-
 	if(frame1 == draw_frame::empty() && frame2 == draw_frame::empty())
 		return draw_frame::empty();
 	
@@ -144,10 +141,7 @@ draw_frame draw_frame::interlace(draw_frame frame1, draw_frame frame2, core::fie
 }
 
 draw_frame draw_frame::over(draw_frame frame1, draw_frame frame2)
-{	
-	if(frame1 == draw_frame::eof() || frame2 == draw_frame::eof())
-		return draw_frame::eof();
-	
+{		
 	if(frame1 == draw_frame::empty() && frame2 == draw_frame::empty())
 		return draw_frame::empty();
 
@@ -159,9 +153,6 @@ draw_frame draw_frame::over(draw_frame frame1, draw_frame frame2)
 
 draw_frame draw_frame::mask(draw_frame fill, draw_frame key)
 {	
-	if(fill == draw_frame::eof() || key == draw_frame::eof())
-		return draw_frame::eof();
-
 	if(fill == draw_frame::empty() || key == draw_frame::empty())
 		return draw_frame::empty();
 
@@ -188,11 +179,6 @@ draw_frame draw_frame::still(draw_frame frame)
 	frame.transform().image_transform.is_still	= true;	
 	frame.transform().audio_transform.volume	= 0.0;		
 	return frame;
-}
-
-const draw_frame& draw_frame::eof()
-{
-	return eof_frame;
 }
 
 const draw_frame& draw_frame::empty()
