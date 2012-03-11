@@ -1,0 +1,443 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>1. Consumers &mdash; CasparCG 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/sidebar.js"></script>
+    <link rel="search" type="application/opensearchdescription+xml"
+          title="Search within CasparCG 2.0 documentation"
+          href="../_static/opensearch.xml"/>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="CasparCG 2.0 documentation" href="../index.html" />
+    <link rel="up" title="Consumers" href="index.html" />
+    <link rel="next" title="CasparCG Frequently Asked Questions" href="../faq/index.html" />
+    <link rel="prev" title="Consumers" href="index.html" />
+ 
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../faq/index.html" title="CasparCG Frequently Asked Questions"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Consumers"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">CasparCG 2.0 documentation</a> &raquo;</li>
+
+          <li><a href="index.html" accesskey="U">Consumers</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="consumers">
+<h1>1. Consumers<a class="headerlink" href="#consumers" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="file-consumer">
+<h2>1.1. File Consumer<a class="headerlink" href="#file-consumer" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="diagnostics">
+<h3>1.1.1. Diagnostics<a class="headerlink" href="#diagnostics" title="Permalink to this headline">¶</a></h3>
+<p>ffmpeg[<em>filename</em>]</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="67%" />
+<col width="11%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Graph</th>
+<th class="head">Description</th>
+<th class="head">Scale</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>frame-time</td>
+<td>Time spent decoding the current frame.</td>
+<td>fps/2</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="parameters">
+<h3>1.1.2. Parameters<a class="headerlink" href="#parameters" title="Permalink to this headline">¶</a></h3>
+<p>The file consumer uses the same option syntax as ffmpeg.</p>
+<p>Note, not all options supported by ffmpeg have been implemented.</p>
+<div class="section" id="filename">
+<h4>1.1.2.1. FILENAME<a class="headerlink" href="#filename" title="Permalink to this headline">¶</a></h4>
+<p>Target filename.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><pre>[filename:string]</pre>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>ADD 1 FILE test.mov -vcodec libx264 -crf 5 -preset ultrafast -tune fastdecode -s 1280x720 -r 50 -acodec aac -ab 128k
+REMOVE 1 FILE</pre>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="bluefish-consumer">
+<h2>1.2. Bluefish Consumer<a class="headerlink" href="#bluefish-consumer" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id1">
+<h3>1.2.1. Diagnostics<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<p>ffmpeg[<em>filename</em>]</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="67%" />
+<col width="11%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Graph</th>
+<th class="head">Description</th>
+<th class="head">Scale</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>frame-time</td>
+<td>Time spent decoding the current frame.</td>
+<td>fps/2</td>
+</tr>
+<tr class="row-odd"><td>sync-time</td>
+<td>Time spent waiting for sync.</td>
+<td>fps/2</td>
+</tr>
+<tr class="row-even"><td>tick-time</td>
+<td>Time between frames frame.</td>
+<td>fps/2</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="id2">
+<h3>1.2.2. Parameters<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="device">
+<h4>1.2.2.1. DEVICE<a class="headerlink" href="#device" title="Permalink to this headline">¶</a></h4>
+<p>Which BlueFish device to attach.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><pre>[device:int]</pre>
+</div>
+<p>Configuration Syntax:</p>
+<div class="highlight-python"><pre>&lt;device&gt;[1..]&lt;/device&gt;</pre>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&lt;&lt; ADD 1 BLUEFISH 1</pre>
+</div>
+</div>
+<div class="section" id="embedded-audio">
+<h4>1.2.2.2. EMBEDDED_AUDIO<a class="headerlink" href="#embedded-audio" title="Permalink to this headline">¶</a></h4>
+<p>Enables embedded-audio.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">EMBEDDED_AUDIO</span>
+</pre></div>
+</div>
+<p>Default:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">Disabled</span>
+</pre></div>
+</div>
+<p>Configuration Syntax:</p>
+<div class="highlight-python"><pre>&lt;embedded-audio&gt;[true|false]&lt;/embedded-audio&gt;</pre>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&lt;&lt; ADD 1 BLUEFISH 1 EMBEDDED_AUDIO</pre>
+</div>
+</div>
+<div class="section" id="key-only">
+<h4>1.2.2.3. KEY_ONLY<a class="headerlink" href="#key-only" title="Permalink to this headline">¶</a></h4>
+<p>Displays key as fill.</p>
+<p>Default:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">Disabled</span>
+</pre></div>
+</div>
+<p>Syntax:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">KEY_ONLY</span>
+</pre></div>
+</div>
+<p>Configuration Syntax:</p>
+<div class="highlight-python"><pre>&lt;key-only&gt;[true|false]&lt;/key-only&gt;</pre>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&lt;&lt; ADD 1 BLUEFISH 1 EMBEDDED_AUDIO KEY_ONLY</pre>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="decklink-consumer">
+<h2>1.3. Decklink Consumer<a class="headerlink" href="#decklink-consumer" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id3">
+<h3>1.3.1. Diagnostics<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
+<p>ffmpeg[<em>filename</em>]</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="20%" />
+<col width="62%" />
+<col width="18%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Graph</th>
+<th class="head">Description</th>
+<th class="head">Scale</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>frame-time</td>
+<td>Time spent decoding the current frame.</td>
+<td>fps/2</td>
+</tr>
+<tr class="row-odd"><td>sync-time</td>
+<td>Time spent waiting for sync.</td>
+<td>fps/2</td>
+</tr>
+<tr class="row-even"><td>tick-time</td>
+<td>Time between frames frame.</td>
+<td>fps/2</td>
+</tr>
+<tr class="row-odd"><td>dropped-frame</td>
+<td>Frame was dropped.</td>
+<td>N/A</td>
+</tr>
+<tr class="row-even"><td>late-frame</td>
+<td>Frame was late.</td>
+<td>N/A</td>
+</tr>
+<tr class="row-odd"><td>buffered-video</td>
+<td>Frame was dropped.</td>
+<td>fps</td>
+</tr>
+<tr class="row-even"><td>buffered-audio</td>
+<td>Frame was late.</td>
+<td>cadence*2</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="id4">
+<h3>1.3.2. Parameters<a class="headerlink" href="#id4" title="Permalink to this headline">¶</a></h3>
+<div class="section" id="id5">
+<h4>1.3.2.1. DEVICE<a class="headerlink" href="#id5" title="Permalink to this headline">¶</a></h4>
+<p>Which BlueFish device to attach.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><pre>[device:int]</pre>
+</div>
+<p>Configuration Syntax:</p>
+<div class="highlight-python"><pre>&lt;device&gt;[1..]&lt;/device&gt;</pre>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&lt;&lt; ADD 1 BLUEFISH 1</pre>
+</div>
+</div>
+<div class="section" id="id6">
+<h4>1.3.2.2. EMBEDDED_AUDIO<a class="headerlink" href="#id6" title="Permalink to this headline">¶</a></h4>
+<p>Enables embedded-audio.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">EMBEDDED_AUDIO</span>
+</pre></div>
+</div>
+<p>Default:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">Disabled</span>
+</pre></div>
+</div>
+<p>Configuration Syntax:</p>
+<div class="highlight-python"><pre>&lt;embedded-audio&gt;[true|false]&lt;/embedded-audio&gt;</pre>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&lt;&lt; ADD 1 BLUEFISH 1 EMBEDDED_AUDIO</pre>
+</div>
+</div>
+<div class="section" id="id7">
+<h4>1.3.2.3. KEY_ONLY<a class="headerlink" href="#id7" title="Permalink to this headline">¶</a></h4>
+<p>Displays key as fill.</p>
+<p>Default:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">Disabled</span>
+</pre></div>
+</div>
+<p>Syntax:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">KEY_ONLY</span>
+</pre></div>
+</div>
+<p>Configuration Syntax:</p>
+<div class="highlight-python"><pre>&lt;key-only&gt;[true|false]&lt;/key-only&gt;</pre>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&lt;&lt; ADD 1 BLUEFISH 1 EMBEDDED_AUDIO KEY_ONLY</pre>
+</div>
+</div>
+<div class="section" id="latency">
+<h4>1.3.2.4. LATENCY<a class="headerlink" href="#latency" title="Permalink to this headline">¶</a></h4>
+<p>Set latency mode.</p>
+<p>Default:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">normal</span>
+</pre></div>
+</div>
+<p>Configuration Syntax:</p>
+<div class="highlight-python"><pre>&lt;latency&gt;[normal|low|default]&lt;/latency&gt;</pre>
+</div>
+</div>
+<div class="section" id="keyer">
+<h4>1.3.2.5. KEYER<a class="headerlink" href="#keyer" title="Permalink to this headline">¶</a></h4>
+<p>Set keyer mode.</p>
+<p>Default:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">external</span>
+</pre></div>
+</div>
+<p>Configuration Syntax:</p>
+<div class="highlight-python"><pre>&lt;keyer&gt;[external|internal|default]&lt;/keyer&gt;</pre>
+</div>
+</div>
+<div class="section" id="buffer-depth">
+<h4>1.3.2.6. BUFFER_DEPTH<a class="headerlink" href="#buffer-depth" title="Permalink to this headline">¶</a></h4>
+<p>Set buffer depth. Settings this value to low can cause output distortion.</p>
+<p>Default:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="mi">3</span>
+</pre></div>
+</div>
+<p>Configuration Syntax:</p>
+<div class="highlight-python"><pre>&lt;buffer-depth&gt;[1..]&lt;/buffer-depth&gt;</pre>
+</div>
+</div>
+</div>
+</div>
+<div class="section" id="screen-consumer">
+<h2>1.4. Screen Consumer<a class="headerlink" href="#screen-consumer" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="system-audio-consumer">
+<h2>1.5. System Audio Consumer<a class="headerlink" href="#system-audio-consumer" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../contents.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">1. Consumers</a><ul>
+<li><a class="reference internal" href="#file-consumer">1.1. File Consumer</a><ul>
+<li><a class="reference internal" href="#diagnostics">1.1.1. Diagnostics</a></li>
+<li><a class="reference internal" href="#parameters">1.1.2. Parameters</a><ul>
+<li><a class="reference internal" href="#filename">1.1.2.1. FILENAME</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#bluefish-consumer">1.2. Bluefish Consumer</a><ul>
+<li><a class="reference internal" href="#id1">1.2.1. Diagnostics</a></li>
+<li><a class="reference internal" href="#id2">1.2.2. Parameters</a><ul>
+<li><a class="reference internal" href="#device">1.2.2.1. DEVICE</a></li>
+<li><a class="reference internal" href="#embedded-audio">1.2.2.2. EMBEDDED_AUDIO</a></li>
+<li><a class="reference internal" href="#key-only">1.2.2.3. KEY_ONLY</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#decklink-consumer">1.3. Decklink Consumer</a><ul>
+<li><a class="reference internal" href="#id3">1.3.1. Diagnostics</a></li>
+<li><a class="reference internal" href="#id4">1.3.2. Parameters</a><ul>
+<li><a class="reference internal" href="#id5">1.3.2.1. DEVICE</a></li>
+<li><a class="reference internal" href="#id6">1.3.2.2. EMBEDDED_AUDIO</a></li>
+<li><a class="reference internal" href="#id7">1.3.2.3. KEY_ONLY</a></li>
+<li><a class="reference internal" href="#latency">1.3.2.4. LATENCY</a></li>
+<li><a class="reference internal" href="#keyer">1.3.2.5. KEYER</a></li>
+<li><a class="reference internal" href="#buffer-depth">1.3.2.6. BUFFER_DEPTH</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#screen-consumer">1.4. Screen Consumer</a></li>
+<li><a class="reference internal" href="#system-audio-consumer">1.5. System Audio Consumer</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Consumers</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../faq/index.html"
+                        title="next chapter">CasparCG Frequently Asked Questions</a></p>
+<h3>This Page</h3>
+<ul class="this-page-menu">
+  <li><a href="../bugs.html">Report a Bug</a></li>
+  <li><a href="../_sources/consumers/consumers.txt"
+         rel="nofollow">Show Source</a></li>
+</ul>
+
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../faq/index.html" title="CasparCG Frequently Asked Questions"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Consumers"
+             >previous</a> |</li>
+        <li><a href="../index.html">CasparCG 2.0 documentation</a> &raquo;</li>
+
+          <li><a href="index.html" >Consumers</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+    &copy; <a href="../copyright.html">Copyright</a> 2011, Robert Nagy (ronag89@gmail.com).
+    <br />
+    <a href="http://www.python.org/psf/donations/">Please donate.</a>
+    <br />
+    Last updated on Mar 11, 2012.
+    <a href="../bugs.html">Found a bug</a>?
+    <br />
+    Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+
+  </body>
+</html>
