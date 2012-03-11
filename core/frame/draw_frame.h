@@ -44,7 +44,6 @@ public:
 	static draw_frame still(draw_frame frame);
 	static draw_frame push(draw_frame frame);
 		
-	static const draw_frame& eof();
 	static const draw_frame& empty();
 	static const draw_frame& late();
 

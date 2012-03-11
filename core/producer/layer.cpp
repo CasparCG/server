@@ -132,13 +132,7 @@ public:
 
 			if(frame == core::draw_frame::late())
 				return foreground_->last_frame();
-			
-			if(frame == core::draw_frame::eof())
-			{	
-				stop();
-				return core::draw_frame::empty();
-			}
-			
+						
 			++frame_number_;
 
 			if(auto_play_delta_)
