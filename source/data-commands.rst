@@ -15,7 +15,7 @@ Syntax::
 		
 Example::
 
-	<<< DATA STORE my_data "Some useful data"
+	>> DATA STORE my_data "Some useful data"
 	
 =============
 DATA RETRIEVE
@@ -28,8 +28,8 @@ Syntax::
 		
 Example::
 
-	<<< DATA RETRIEVE my_data
-	>>> "Some usefule data"
+	>> DATA RETRIEVE my_data
+	<< "Some usefule data"
 	
 =========
 DATA LIST
@@ -41,5 +41,5 @@ Syntax::
 
 Example::
 
-	<<< DATA LIST
-	>>> my_data
+	>> DATA LIST
+	<< my_data

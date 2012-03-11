@@ -14,7 +14,7 @@ Syntax::
 			
 Example::
 
-	<<< LOADBG 1-1 MY_VIDEO PUSH 20 easeinesine LOOP SEEK 200 LENGTH 400 AUTO FILTER hflip 
+	>> LOADBG 1-1 MY_VIDEO PUSH 20 easeinesine LOOP SEEK 200 LENGTH 400 AUTO FILTER hflip 
 		
 ====
 LOAD
@@ -28,7 +28,7 @@ Syntax::
 	
 Example::	
 
-	<<< LOAD 1-1 MY_VIDEO PUSH 20 easeinesine LOOP SEEK 200 LENGTH 400 AUTO FILTER hflip 
+	>> LOAD 1-1 MY_VIDEO PUSH 20 easeinesine LOOP SEEK 200 LENGTH 400 AUTO FILTER hflip 
 	
 ====
 PLAY
@@ -43,8 +43,8 @@ Syntax::
 	
 Example::
 
-	<<< PLAY 1-1 MY_VIDEO PUSH 20 easeinesine LOOP SEEK 200 LENGTH 400 AUTO FILTER hflip 
-	<<< PLAY 1-1
+	>> PLAY 1-1 MY_VIDEO PUSH 20 easeinesine LOOP SEEK 200 LENGTH 400 AUTO FILTER hflip 
+	>> PLAY 1-1
 	
 =====
 PAUSE
@@ -57,7 +57,7 @@ Syntax::
 
 Example::
 
-	<<< PAUSE 1-1
+	>> PAUSE 1-1
 	
 =====
 STOP
@@ -70,7 +70,7 @@ Syntax::
 
 Example::
 
-	<<< STOP 1-1
+	>> STOP 1-1
 
 =====
 CLEAR
@@ -83,8 +83,8 @@ Syntax::
 
 Example::
 
-	<<< CLEAR 1-1
-	<<< CLEAR 1
+	>> CLEAR 1-1
+	>> CLEAR 1
 		
 ======
 CALL
@@ -97,7 +97,7 @@ Syntax::
 
 Example::
 
-	<<< CALL 1-1 SEEK 400
+	>> CALL 1-1 SEEK 400
 		
 ====
 SWAP
@@ -110,8 +110,8 @@ Syntax::
 
 Example::
 
-	<<< SWAP 1-1 1-2
-	<<< SWAP 1-0 2-0		
+	>> SWAP 1-1 1-2
+	>> SWAP 1-0 2-0		
 		
 ===
 ADD
@@ -124,8 +124,8 @@ Syntax::
 	
 Example::
 
-	<<< ADD 1 FILE output.mov CODEC DNXHD
-	<<< ADD 1 DECKLINK 1
+	>> ADD 1 FILE output.mov CODEC DNXHD
+	>> ADD 1 DECKLINK 1
 		
 ======
 REMOVE
@@ -138,5 +138,5 @@ Syntax::
 
 Example::
 
-	<<< REMOVE 1 FILE 
-	<<< REMOVE 1 DECKLINK 1
+	>> REMOVE 1 FILE 
+	>> REMOVE 1 DECKLINK 1

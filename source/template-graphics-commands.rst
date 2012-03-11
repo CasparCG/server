@@ -37,7 +37,7 @@ Syntax::
 		
 Example::
 
-	<<< CG 1-1 ADD 10 svtnews/info 1
+	>> CG 1-1 ADD 10 svtnews/info 1
 	
 =========
 CG REMOVE
@@ -50,7 +50,7 @@ Syntax::
 		
 Example::
 
-	<<< CG 1-1 REMOVE 1
+	>> CG 1-1 REMOVE 1
 		
 ========
 CG CLEAR
@@ -63,7 +63,7 @@ Syntax::
 		
 Example::
 
-	<<< CG 1-1 CLEAR
+	>> CG 1-1 CLEAR
 
 =======
 CG PLAY
@@ -76,7 +76,7 @@ Syntax::
 		
 Example::
 
-	<<< CG 1-1 PLAY 1
+	>> CG 1-1 PLAY 1
 
 =======
 CG STOP
@@ -89,7 +89,7 @@ Syntax::
 		
 Example::
 
-	<<< CG 1-1 STOP
+	>> CG 1-1 STOP
 
 =======
 CG NEXT
@@ -102,7 +102,7 @@ Syntax::
 		
 Example::
 
-	<<< CG 1-1 NEXT 1
+	>> CG 1-1 NEXT 1
 
 =======
 CG GOTO
@@ -115,7 +115,7 @@ Syntax::
 		
 Example::
 
-	<<< CG 1-1 GOTO 1 intro
+	>> CG 1-1 GOTO 1 intro
 	
 =========
 CG UPDATE
@@ -128,7 +128,7 @@ Syntax::
 		
 Example::
 
-	<<< CG 1-1 UPDATE 1 "Some data"
+	>> CG 1-1 UPDATE 1 "Some data"
 	
 =========
 CG INVOKE
@@ -141,4 +141,4 @@ Syntax::
 		
 Example::
 
-	<<< CG 1-1 INVOKE 1 start_intro
+	>> CG 1-1 INVOKE 1 start_intro

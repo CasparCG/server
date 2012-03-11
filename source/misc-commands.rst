@@ -12,7 +12,7 @@ Syntax::
 	
 Example::
 
-	<<< DIAG
+	>> DIAG
 	
 ===
 BYE
@@ -25,7 +25,7 @@ Syntax::
 	
 Example
 
-	<<< BYE
+	>> BYE
 	
 ====
 CHANNEL_GRID
@@ -34,8 +34,8 @@ Opens a window displaying all the channels currently running on the server.
 
 Syntax::
 
-	<<< CHANNEL_GRID
+	>> CHANNEL_GRID
 	
 Example::
 
-	<<< CHANNEL_GRID
+	>> CHANNEL_GRID

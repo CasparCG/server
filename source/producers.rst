@@ -3,16 +3,14 @@ Producers
 #########
 
 ===============
-FFMPEG Producer
+ffmpeg Producer
 ===============
 
 ---------------
 Supported Media
 ---------------
 
-The ffmpeg producer supports all files that the ffmpeg library (www.ffmpeg.org) can play. 
-
-Support check is not dependent on file extension.
+The ffmpeg producer supports all files that the "ffmpeg" library (www.ffmpeg.org) can play. 
 
 -------
 Filters
@@ -24,7 +22,7 @@ The ffmpeg producer supports "libavfilter" filters through the "FILTER" paramete
 Diagnostics
 -----------
 
-ffmpeg[ *filename* | *video-mode* | *file-frame-number* / *file-nb-frames*]
+ffmpeg[*filename* | *video-mode* | *file-frame-number* / *file-nb-frames*]
 
 +---------------+-----------------------------------------------+--------+
 | Graph         | Description                                   |  Scale |
@@ -55,7 +53,7 @@ Syntax::
 	
 Example::
 	
-	>>> PLAY 1-1 MOVIE LOOP
+	<< PLAY 1-1 MOVIE LOOP
 	
 ^^^^
 SEEK
@@ -68,8 +66,21 @@ Syntax::
 	
 Example::
 	
-	>>> PLAY 1-1 MOVIE SEEK 100 LOOP
+	<< PLAY 1-1 MOVIE SEEK 100 LOOP
+	    
+^^^^
+START (CasparCG 2.1)
+^^^^
+Sets the start of the file. This point will be used while looping.
+
+Syntax::
+
+	START [frames:int]
 	
+Example::
+	
+	<< PLAY 1-1 MOVIE START 100 LOOP
+    
 ^^^^^^
 LENGTH
 ^^^^^^
@@ -81,7 +92,7 @@ Syntax::
 	
 Example::
 	
-	>>> PLAY 1-1 MOVIE LENGTH 100
+	<< PLAY 1-1 MOVIE LENGTH 100
 	
 ^^^^^^
 FILTER
@@ -94,7 +105,7 @@ Syntax::
 		
 Example::
 		
-	>>> PLAY 1-1 MOVIE FILTER hflip:yadif=0:0
+	<< PLAY 1-1 MOVIE FILTER hflip:yadif=0:0
 	
 ---------
 Functions
@@ -115,9 +126,9 @@ Returns
 	
 Example::
 	
-	>>> CALL 1-1 LOOP 1
-	>>> CALL 1-1 LOOP   // Queries without changing.
-	<<< 1
+	<< CALL 1-1 LOOP 1
+	<< CALL 1-1 LOOP   // Queries without changing.
+	>> 1
 	
 ^^^^
 SEEK
@@ -134,8 +145,34 @@ Returns
 	
 Example::
 	
-	>>> CALL 1-1 SEEK 200
+	<< CALL 1-1 SEEK 200
         
+^^^^
+START (CasparCG 2.1)
+^^^^
+Sets the start of the file. This point will be used while looping.
+
+Syntax::
+
+	START [frames:int]
+	
+Example::
+	
+	<< CALL 1-1 START 100
+    
+^^^^^^
+LENGTH (CasparCG 2.1)
+^^^^^^
+Sets the end of the file.
+
+Syntax::
+
+	LENGTH [frames:int]
+	
+Example::
+	
+	<< CALL 1-1 LENGTH 100P
+    
 ==============
 Flash Producer
 ==============
@@ -158,7 +195,7 @@ Supported Media
 Diagnostics
 -----------
 
-flash[ *template-host* | *video-mode*]
+flash[*template-host* | *video-mode*]
 
 +---------------+-----------------------------------------------+--------+
 | Graph         | Description                                   |  Scale |
@@ -183,7 +220,7 @@ Decklink Producer
 Diagnostics
 -----------
 
-flash[ *model-name* | *device-index* | *video-mode*]
+flash[*model-name* | *device-index* | *video-mode*]
 
 +---------------+-----------------------------------------------+--------+
 | Graph         | Description                                   |  Scale |
@@ -214,7 +251,7 @@ Syntax::
 	
 Example::
 	
-	>>> PLAY 1-1 DECKLINK 1
+	<< PLAY 1-1 DECKLINK 1
     
 ^^^^^^
 LENGTH
@@ -227,7 +264,7 @@ Syntax::
 	
 Example::
 	
-	>>> PLAY 1-1 DECKLINK 1 LENGTH 100
+	<< PLAY 1-1 DECKLINK 1 LENGTH 100
 	
 ^^^^^^
 FILTER
@@ -240,7 +277,7 @@ Syntax::
 		
 Example::
 		
-	>>> PLAY 1-1 DECKLINK 1 FILTER hflip:yadif=0:0
+	<< PLAY 1-1 DECKLINK 1 FILTER hflip:yadif=0:0
 	
 ^^^^^^
 FORMAT
@@ -253,7 +290,7 @@ Syntax::
 	
 Example::
 	
-	>>> PLAY 1-1 DECKLINK 1 FORMAT PAL LENGTH 100
+	<< PLAY 1-1 DECKLINK 1 FORMAT PAL LENGTH 100
         
 ==============
 Image Producer

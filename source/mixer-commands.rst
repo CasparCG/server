@@ -14,7 +14,7 @@ Syntax::
 		
 Example::
 
-	<<< MIXER 1-1 KEYER 1
+	>> MIXER 1-1 KEYER 1
 	
 ===========
 MIXER BLEND
@@ -29,7 +29,7 @@ Syntax::
 		
 Example::
 
-	<<< MIXER 1-1 BLEND overlay
+	>> MIXER 1-1 BLEND overlay
 	
 See:: 
 
@@ -46,7 +46,7 @@ Syntax::
 		
 Example::
 
-	<<< MIXER 1-1 OPACITY 0.5
+	>> MIXER 1-1 OPACITY 0.5
 	
 ================
 MIXER BRIGTHNESS
@@ -60,7 +60,7 @@ Syntax::
 		
 Example::
 
-	<<< MIXER 1-1 BRIGTHNESS 0.5
+	>> MIXER 1-1 BRIGTHNESS 0.5
 	
 ================
 MIXER SATURATION
@@ -75,7 +75,7 @@ Syntax::
 		
 Example::
 
-	<<< MIXER 1-1 SATURATION 0.5
+	>> MIXER 1-1 SATURATION 0.5
 	
 ==============
 MIXER CONTRAST
@@ -90,7 +90,7 @@ Syntax::
 		
 Example::
 
-	<<< MIXER 1-1 CONTRAST 0.5
+	>> MIXER 1-1 CONTRAST 0.5
 
 ============
 MIXER LEVELS
@@ -104,7 +104,7 @@ Syntax::
 		
 Example::
 
-	<<< MIXER 1-1 LEVELS 0.1 0.1 1.0 0.9 0.9
+	>> MIXER 1-1 LEVELS 0.1 0.1 1.0 0.9 0.9
 	
 ==========
 MIXER FILL
@@ -117,7 +117,7 @@ Syntax::
 		
 Example::
 
-	<<< MIXER 1-1 FILL 0.25 0.25 0.5 0.5
+	>> MIXER 1-1 FILL 0.25 0.25 0.5 0.5
 	
 ==========
 MIXER CLIP
@@ -130,7 +130,7 @@ Syntax::
 		
 Example::
 
-	<<< MIXER 1-1 CLIP 0.25 0.25 0.5 0.5
+	>> MIXER 1-1 CLIP 0.25 0.25 0.5 0.5
 	
 ==========
 MIXER GRID
@@ -141,7 +141,7 @@ Creates a grid of video streams in ascending order of the layer index, i.e. if r
 		
 Example::
 
-	<<< MIXER 1 GRID 2
+	>> MIXER 1 GRID 2
 
 ============
 MIXER VOLUME
@@ -154,7 +154,7 @@ Syntax::
 		
 Example::
 
-	<<< MIXER 1-1 VOLUME 0.5
+	>> MIXER 1-1 VOLUME 0.5
 	
 ===========
 MIXER CLEAR
@@ -170,5 +170,5 @@ Syntax::
 		
 Example::
 
-	<<< MIXER 1-1 CLEAR
+	>> MIXER 1-1 CLEAR
 		

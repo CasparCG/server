@@ -9,12 +9,12 @@ Welcome to CasparCG's documentation!
 Contents:
 
 .. 	toctree::
-	:maxdepth: 2
+	:maxdepth: 3
 	:numbered:
    
-	producers
-	consumers
-	commands
+	producers.rst
+	consumers.rst
+	commands.rst
 
 Indices and tables
 ==================

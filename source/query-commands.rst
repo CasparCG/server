@@ -13,8 +13,8 @@ Syntax::
 		
 Example::
 
-	<<< CINF movie
-	>>> ...
+	>> CINF movie
+	<< ...
 
 ===
 CLS
@@ -27,8 +27,8 @@ Syntax::
 		
 Example::
 
-	<<< CLS
-	>>> ...
+	>> CLS
+	<< ...
 	
 ===
 TLS
@@ -41,8 +41,8 @@ Syntax::
 		
 Example::
 
-	<<< TLS
-	>>> ...
+	>> TLS
+	<< ...
 	
 =======
 VERSION
@@ -57,10 +57,10 @@ Syntax::
 		
 Example::
 
-	<<< VERSION
-	>>> ...
-	<<< VERSION FLASH
-	>>> ...
+	>> VERSION
+	<< ...
+	>> VERSION FLASH
+	<< ...
 	
 ====
 INFO
@@ -90,11 +90,11 @@ Syntax::
 		
 Example::
 
-	<<< INFO
-	>>> ...
-	<<< INFO 1
-	>>> ...
-	<<< INFO 1-1
-	>>> ...
-	<<< INFO TEMPLATE my_table_template
-	>>> ...
+	>> INFO
+	<< ...
+	>> INFO 1
+	<< ...
+	>> INFO 1-1
+	<< ...
+	>> INFO TEMPLATE my_table_template
+	<< ...
