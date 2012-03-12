@@ -97,7 +97,7 @@ struct frame_muxer::impl : boost::noncopyable
 		boost::range::rotate(audio_cadence_, std::end(audio_cadence_)-1);
 	}
 
-	void push_video(const std::shared_ptr<AVFrame>& video_frame)
+	void push(const std::shared_ptr<AVFrame>& video_frame)
 	{		
 		if(!video_frame)
 			return;
@@ -124,7 +124,7 @@ struct frame_muxer::impl : boost::noncopyable
 			BOOST_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("video-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
 	}
 
-	void push_audio(const std::shared_ptr<core::audio_buffer>& audio)
+	void push(const std::shared_ptr<core::audio_buffer>& audio)
 	{
 		if(!audio)	
 			return;
@@ -340,8 +340,8 @@ struct frame_muxer::impl : boost::noncopyable
 
 frame_muxer::frame_muxer(double in_fps, const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::wstring& filter)
 	: impl_(new impl(in_fps, frame_factory, format_desc, filter)){}
-void frame_muxer::push_video(const std::shared_ptr<AVFrame>& video_frame){impl_->push_video(video_frame);}
-void frame_muxer::push_audio(const std::shared_ptr<core::audio_buffer>& audio_samples){return impl_->push_audio(audio_samples);}
+void frame_muxer::push(const std::shared_ptr<AVFrame>& video_frame){impl_->push(video_frame);}
+void frame_muxer::push(const std::shared_ptr<core::audio_buffer>& audio_samples){return impl_->push(audio_samples);}
 bool frame_muxer::try_pop(core::draw_frame& result){return impl_->try_pop(result);}
 uint32_t frame_muxer::calc_nb_frames(uint32_t nb_frames) const {return impl_->calc_nb_frames(nb_frames);}
 bool frame_muxer::video_ready() const{return impl_->video_ready();}

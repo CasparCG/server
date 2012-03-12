@@ -319,7 +319,9 @@ public:
 
 			std::shared_ptr<AVPacket> pkt;
 
-			for(int n = 0; n < 32 && ((video_decoder_ && !video_decoder_->ready()) || (audio_decoder_ && !audio_decoder_->ready())) && input_.try_pop(pkt); ++n)
+			for(int n = 0; n < 32 && ((video_decoder_ && !video_decoder_->ready() && !muxer_->video_ready()) || 
+									  (audio_decoder_ && !audio_decoder_->ready() && !muxer_->audio_ready())) && 
+									 input_.try_pop(pkt); ++n)
 			{
 				if(video_decoder_)
 					video_decoder_->push(pkt);
@@ -330,35 +332,35 @@ public:
 			std::shared_ptr<AVFrame>			video;
 			std::shared_ptr<core::audio_buffer> audio;
 
-			tbb::parallel_invoke(
-			[&]
-			{
-				if(!muxer_->video_ready() && video_decoder_)	
-					video = video_decoder_->poll();	
-			},
-			[&]
-			{		
-				if(!muxer_->audio_ready() && audio_decoder_)		
-					audio = audio_decoder_->poll();		
-			});
+			tbb::parallel_invoke
+			(
+				[&]
+				{
+					video = !muxer_->video_ready() && video_decoder_ ? video_decoder_->poll() : nullptr;	
+				},
+				[&]
+				{		
+					audio = !muxer_->audio_ready() && audio_decoder_ ? audio_decoder_->poll() : nullptr;		
+				}
+			);
 		
-			muxer_->push_video(video);
-			muxer_->push_audio(audio);
+			muxer_->push(video);
+			muxer_->push(audio);
 
 			if(!audio_decoder_)
 			{
 				if(video == flush_video())
-					muxer_->push_audio(flush_audio());
+					muxer_->push(flush_audio());
 				else if(!muxer_->audio_ready())
-					muxer_->push_audio(empty_audio());
+					muxer_->push(empty_audio());
 			}
 
 			if(!video_decoder_)
 			{
 				if(audio == flush_audio())
-					muxer_->push_video(flush_video());
+					muxer_->push(flush_video());
 				else if(!muxer_->video_ready())
-					muxer_->push_video(empty_video());
+					muxer_->push(empty_video());
 			}
 		}
 
