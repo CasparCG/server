@@ -72,7 +72,7 @@ struct parallel_yadif_context
 		int mode;
 	};
 
-	arg	args[1080];
+	arg	args[4096];
 	int	index;
 	int last_index;
 
