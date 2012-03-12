@@ -104,16 +104,11 @@ void thread_free(AVCodecContext* s)
 
 int tbb_avcodec_open(AVCodecContext* avctx, AVCodec* codec)
 {
-	//CodecID supported_codecs[] = {CODEC_ID_MPEG2VIDEO, CODEC_ID_PRORES, CODEC_ID_FFV1};
-
 	avctx->thread_count = 1;
 	// Some codecs don't like to have multiple multithreaded decoding instances. Only enable for those we know work.
-	if(//std::find(std::begin(supported_codecs), std::end(supported_codecs), codec->id) != std::end(supported_codecs) && 
-	  (codec->capabilities & CODEC_CAP_SLICE_THREADS) && 
-	  (avctx->thread_type & FF_THREAD_SLICE)) 
-	{
+	if((codec->capabilities & CODEC_CAP_SLICE_THREADS) && (avctx->thread_type & FF_THREAD_SLICE)) 	
 		thread_init(avctx);
-	}	
+	
 	// ff_thread_init will not be executed since thread_opaque != nullptr || thread_count == 1.
 	return avcodec_open(avctx, codec); 
 }
