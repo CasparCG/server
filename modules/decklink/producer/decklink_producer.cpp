@@ -196,7 +196,7 @@ public:
 			if(FAILED(video->GetBytes(&bytes)) || !bytes)
 				return S_OK;
 			
-			spl::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
+			std::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
 			avcodec_get_frame_defaults(av_frame.get());
 						
 			av_frame->data[0]			= reinterpret_cast<uint8_t*>(bytes);
@@ -239,8 +239,8 @@ public:
 				return S_OK;
 			}
 			
-			muxer_.push_video(av_frame);	
-			muxer_.push_audio(audio_buffer);
+			muxer_.push(av_frame);	
+			muxer_.push(audio_buffer);
 											
 			boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 			
