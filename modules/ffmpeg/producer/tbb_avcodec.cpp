@@ -31,6 +31,8 @@
 #include <tbb/parallel_for.h>
 #include <tbb/tbb_thread.h>
 
+#include <boost/foreach.hpp>
+
 #if defined(_MSC_VER)
 #pragma warning (push)
 #pragma warning (disable : 4244)
