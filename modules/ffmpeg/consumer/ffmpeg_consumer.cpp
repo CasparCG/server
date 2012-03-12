@@ -26,6 +26,7 @@
 #include "ffmpeg_consumer.h"
 
 #include "../producer/audio/audio_resampler.h"
+#include "../producer/tbb_avcodec.h"
 
 #include <core/frame/frame.h>
 #include <core/mixer/audio/audio_util.h>
@@ -407,16 +408,12 @@ public:
 		if(output_format_.format->flags & AVFMT_GLOBALHEADER)
 			c->flags |= CODEC_FLAG_GLOBAL_HEADER;
 		
-		c->thread_count = boost::thread::hardware_concurrency();
-		if(avcodec_open(c, encoder) < 0)
-		{
-			c->thread_count = 1;
-			THROW_ON_ERROR2(avcodec_open(c, encoder), "[ffmpeg_consumer]");
-		}
+		//c->thread_count = boost::thread::hardware_concurrency();
+		THROW_ON_ERROR2(tbb_avcodec_open(c, encoder), "[ffmpeg_consumer]");
 
 		return std::shared_ptr<AVStream>(st, [](AVStream* st)
 		{
-			LOG_ON_ERROR2(avcodec_close(st->codec), "[ffmpeg_consumer]");
+			LOG_ON_ERROR2(tbb_avcodec_close(st->codec), "[ffmpeg_consumer]");
 			av_freep(&st->codec);
 			av_freep(&st);
 		});

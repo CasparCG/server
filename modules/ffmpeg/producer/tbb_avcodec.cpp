@@ -47,6 +47,8 @@ extern "C"
 
 namespace caspar {
 		
+static const int MAX_THREADS = 16; // See mpegvideo.h
+
 int thread_execute(AVCodecContext* s, int (*func)(AVCodecContext *c2, void *arg2), void* arg, int* ret, int count, int size)
 {
 	tbb::parallel_for(0, count, 1, [&](int i)
@@ -60,30 +62,27 @@ int thread_execute(AVCodecContext* s, int (*func)(AVCodecContext *c2, void *arg2
 }
 
 int thread_execute2(AVCodecContext* s, int (*func)(AVCodecContext* c2, void* arg2, int, int), void* arg, int* ret, int count)
-{	
-	tbb::atomic<int> counter;   
-    counter = 0;   
-
-	CASPAR_VERIFY(tbb::tbb_thread::hardware_concurrency() <= 16);
-	// Note: this will probably only work when tbb::task_scheduler_init::num_threads() < 16.
-    tbb::parallel_for(tbb::blocked_range<int>(0, count, 2), [&](const tbb::blocked_range<int> &r)    
+{	   
+	std::array<std::vector<int>, 16> jobs;
+	
+	for(int n = 0; n < count; ++n)	
+		jobs[(n*MAX_THREADS) / count].push_back(n);	
+	
+	tbb::parallel_for(0, MAX_THREADS, [&](int n)    
     {   
-        int threadnr = counter++;   
-        for(int jobnr = r.begin(); jobnr != r.end(); ++jobnr)
-        {   
-            int r = func(s, arg, jobnr, threadnr);   
-            if (ret)   
-                ret[jobnr] = r;   
-        }
-        --counter;
+		BOOST_FOREACH(auto k, jobs[n])
+		{
+			int r = func(s, arg, k, n);
+			if(ret) 
+				ret[k]= r;
+		}
     });   
 
-    return 0;  
+	return 0; 
 }
 
 void thread_init(AVCodecContext* s)
 {
-	static const size_t MAX_THREADS = 16; // See mpegvideo.h
 	static int dummy_opaque;
 
     s->active_thread_type = FF_THREAD_SLICE;
