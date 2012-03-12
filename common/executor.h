@@ -39,7 +39,8 @@ struct task_priority_def
 {
 	enum type
 	{
-		lower_priority = 1,
+		lowest_priority = 0,
+		lower_priority,
 		low_priority,
 		normal_priority,
 		high_priority,
@@ -207,7 +208,7 @@ public:
 
 	void wait()
 	{
-		invoke([]{});
+		invoke([]{}, task_priority::lowest_priority);
 	}
 		
 	function_queue_t::size_type size() const 
