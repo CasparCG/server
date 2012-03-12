@@ -72,7 +72,7 @@ public:
 	
 	static int delay(const std::wstring& filters)
 	{
-		return is_double_rate(filters) ? 1 : 1;
+		return is_double_rate(filters) ? 1 : 0;
 	}
 
 	int delay() const
