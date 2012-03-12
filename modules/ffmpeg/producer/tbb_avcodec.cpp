@@ -105,8 +105,8 @@ void thread_free(AVCodecContext* s)
 int tbb_avcodec_open(AVCodecContext* avctx, AVCodec* codec)
 {
 	avctx->thread_count = 1;
-	// Some codecs don't like to have multiple multithreaded decoding instances. Only enable for those we know work.
-	if((codec->capabilities & CODEC_CAP_SLICE_THREADS) && (avctx->thread_type & FF_THREAD_SLICE)) 	
+
+	if(codec->capabilities & CODEC_CAP_SLICE_THREADS) 	
 		thread_init(avctx);
 	
 	// ff_thread_init will not be executed since thread_opaque != nullptr || thread_count == 1.
