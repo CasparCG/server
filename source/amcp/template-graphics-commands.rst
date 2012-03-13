@@ -59,7 +59,7 @@ Clears all layers and any state that might be stored. What this actually does be
 
 Syntax::
 
-	CG channel:int]-[layer:int]	CLEAR
+	CG [channel:int]-[layer:int] CLEAR
 		
 Example::
 
@@ -89,7 +89,7 @@ Syntax::
 		
 Example::
 
-	>> CG 1-1 STOP
+	>> CG 1-1 STOP 1
 
 =======
 CG NEXT
@@ -120,7 +120,7 @@ Example::
 =========
 CG UPDATE
 =========
-Sends new data to the template on specified layer. Data is either inline xml or a reference to a saved dataset.
+Sends new data to the template on specified layer. Data is either inline xml or a reference to a saved dataset (See AMCP DATA command).
 
 Syntax::
 
@@ -128,7 +128,7 @@ Syntax::
 		
 Example::
 
-	>> CG 1-1 UPDATE 1 "Some data"
+	>> CG 1-1 UPDATE 1 "<templateData> xml or stored dataset name"
 	
 =========
 CG INVOKE
