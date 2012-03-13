@@ -34,7 +34,7 @@ Parameters
 DEVICE
 ^^^^^^
 
-Which BlueFish device to attach.
+Which Decklink device to attach.
 
 Syntax::
 
@@ -46,7 +46,7 @@ Configuration Syntax::
 	
 Example::
 	
-	<< ADD 1 BLUEFISH 1
+	<< ADD 1 DECKLINK 1
     
     
 ^^^^^^^^^^^^^^
@@ -69,7 +69,7 @@ Configuration Syntax::
 	
 Example::
 	
-	<< ADD 1 BLUEFISH 1 EMBEDDED_AUDIO
+	<< ADD 1 DECKLINK 1 EMBEDDED_AUDIO
     
 ^^^^^^^^
 KEY_ONLY
@@ -91,7 +91,7 @@ Configuration Syntax::
 	    
 Example::
 	
-	<< ADD 1 BLUEFISH 1 EMBEDDED_AUDIO KEY_ONLY    
+	<< ADD 1 DECKLINK 1 EMBEDDED_AUDIO KEY_ONLY    
     
 ^^^^^^^
 LATENCY
