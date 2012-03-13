@@ -6,7 +6,7 @@ Basic Commands
 LOADBG
 ======
 Loads a producer in the background and prepares it for playout.
-If no layer is specified the default layer index will be used.
+If no layer is specified the default layer index(0) will be used.
 
 Syntax:: 
 
@@ -15,36 +15,41 @@ Syntax::
 Example::
 
 	>> LOADBG 1-1 MY_VIDEO PUSH 20 easeinesine LOOP SEEK 200 LENGTH 400 AUTO FILTER hflip 
-		
+	
+Notes::
+
+	AUTO: This token will tell the layer to automatically play the background producer (with any specified transition) when the foreground producer ends.  Please note that some producers technically never end (still images) and this token will have no effect.  There will also be no effect when there is no producer playing in the foreground.
+	
 ====
 LOAD
 ====
 Loads a producer to the foreground and displays the first frame.
-If no layer is specified the default layer index will be used.
+If a producer was already playing in the foreground it will be removed.
+If no layer is specified the default layer index(0) will be used.
 
 Syntax:: 
 
-	LOAD [channel:int]-[layer:int] [clip:string] {[transition:CUT|MIX|PUSH|WIPE|SLIDE] [duration:int] {tween:string} {direction:LEFT|RIGHT} {auto:AUTO} {parameters:string}}
+	LOAD [channel:int]-[layer:int] [clip:string] {[transition:CUT|MIX|PUSH|WIPE|SLIDE] [duration:int] {tween:string} {direction:LEFT|RIGHT} {parameters:string}}
 	
 Example::	
 
-	>> LOAD 1-1 MY_VIDEO PUSH 20 easeinesine LOOP SEEK 200 LENGTH 400 AUTO FILTER hflip 
-	
+	>> LOAD 1-1 MY_VIDEO PUSH 20 easeinesine LOOP SEEK 200 LENGTH 400 FILTER hflip
+		
 ====
 PLAY
 ====	
 Moves producer from background to foreground and starts playing it. If a transition (see LOADBG) is prepared, it will be executed.
-If additional parameters (see LOADBG) are provided then the provided producer will first be loaded to the background.
-If no layer is specified the default layer index will be used.
+If additional parameters (after the layer index) are provided then the specified producer will first be loaded to the background. This will clear out any LOADBG command that was previously executed, then the clip will be immediatelly transfered to the foreground.
+If no layer is specified the default layer index(0) will be used.
 
 Syntax::
 	
-	PLAY [channel:int]-[layer:int] [clip:string] {[transition:CUT|MIX|PUSH|WIPE|SLIDE] [duration:int] {tween:string} {direction:LEFT|RIGHT} {auto:AUTO} {parameters:string}}
+	PLAY [channel:int]-[layer:int] [clip:string] {[transition:CUT|MIX|PUSH|WIPE|SLIDE] [duration:int] {tween:string} {direction:LEFT|RIGHT} {parameters:string}}
 	
 Example::
 
-	>> PLAY 1-1 MY_VIDEO PUSH 20 easeinesine LOOP SEEK 200 LENGTH 400 AUTO FILTER hflip 
 	>> PLAY 1-1
+	>> PLAY 1-1 MY_VIDEO PUSH 20 easeinesine LOOP SEEK 200 LENGTH 400 FILTER hflip 
 	
 =====
 PAUSE
@@ -62,7 +67,7 @@ Example::
 =====
 STOP
 =====
-Removes foreground clip. If no layer is specified the default layer index will be used.
+Removes foreground clip. If no layer is specified the default layer index(0) will be used.
 
 Syntax::	
 
@@ -98,6 +103,7 @@ Syntax::
 Example::
 
 	>> CALL 1-1 SEEK 400
+	>> CALL 1-1 LOOP 1
 		
 ====
 SWAP
@@ -111,12 +117,13 @@ Syntax::
 Example::
 
 	>> SWAP 1-1 1-2
-	>> SWAP 1-0 2-0		
+	>> SWAP 1-0 2-0
+	>> SWAP 1 2	
 		
 ===
 ADD
 ===
-Adds consumer to output.
+Adds consumer to the channel.
 
 Syntax::
 
@@ -124,13 +131,14 @@ Syntax::
 	
 Example::
 
-	>> ADD 1 FILE output.mov CODEC DNXHD
+	>> ADD 1 FILE output.mov -vcodec DNXHD
+	>> ADD 1 SCREEN
 	>> ADD 1 DECKLINK 1
 		
 ======
 REMOVE
 ======
-Removes consumer from output.
+Removes consumer from the channel.
 
 Syntax::
 
