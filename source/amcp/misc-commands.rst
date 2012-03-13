@@ -4,7 +4,7 @@ Misc Commands
 ====
 DIAG
 ====
-Opens the diagnostics window.
+Opens the diagnostic graphs window.
 
 Syntax::
 
