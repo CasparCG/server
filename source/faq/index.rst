@@ -10,3 +10,4 @@
    general.rst
    decklink.rst
    bluefish.rst
+   flash.rst
