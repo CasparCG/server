@@ -34,6 +34,7 @@ Example::
 =========
 DATA LIST
 =========
+Lists names of all stored data.
 
 Syntax::
 
