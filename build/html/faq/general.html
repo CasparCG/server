@@ -64,6 +64,34 @@
             
   <div class="section" id="general-casparcg-faq">
 <h1>General CasparCG FAQ<a class="headerlink" href="#general-casparcg-faq" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="where-can-i-find-the-documentation-for-the-configuration-file-casparcg-config">
+<h2>Where can I find the documentation for the configuration file (casparcg.config)?<a class="headerlink" href="#where-can-i-find-the-documentation-for-the-configuration-file-casparcg-config" title="Permalink to this headline">¶</a></h2>
+<p>All available options are defined in the commented &lt;!&#8211; &#8211;&gt; section found at the bottom of the file.</p>
+</div>
+<div class="section" id="when-i-start-casparcg-all-i-get-is-an-empty-console-window">
+<h2>When I start CasparCG all I get is an empty console window?<a class="headerlink" href="#when-i-start-casparcg-all-i-get-is-an-empty-console-window" title="Permalink to this headline">¶</a></h2>
+<p>You probably have an AMD/ATI graphics card which are not fully supported with CasparCG.</p>
+<p>NOTE: Future CasparCG 2.1 has better AMD/ATI support and also a cpu fallback.</p>
+</div>
+<div class="section" id="how-can-i-get-fill-and-key-to-two-separate-outputs-e-g-two-screens">
+<h2>How can I get fill and key to two separate outputs? e.g. two screens.<a class="headerlink" href="#how-can-i-get-fill-and-key-to-two-separate-outputs-e-g-two-screens" title="Permalink to this headline">¶</a></h2>
+<p>It is possible to only output key to an output using the &#8220;key-only&#8221; option.</p>
+<div class="highlight-python"><pre>&lt;consumer&gt;
+    &lt;screen&gt;
+        &lt;device&gt;1&lt;/device&gt;
+    &lt;/screen&gt;
+    &lt;screen&gt;
+        &lt;device&gt;2&lt;/device&gt;
+        &lt;key-only&gt;true&lt;/key-only&gt;
+    &lt;/screen&gt;
+&lt;/consumers&gt;</pre>
+</div>
+</div>
+<div class="section" id="what-kind-of-transition-animations-are-supported">
+<h2>What kind of transition animations are supported?<a class="headerlink" href="#what-kind-of-transition-animations-are-supported" title="Permalink to this headline">¶</a></h2>
+<p>CasparCG can do PUSH, WIPE, SLIDE and MIX using the LOAD, LOADBG and PLAY commands.</p>
+<p>It is also possible to create more advanced custom transitions using MIXER commands.</p>
+</div>
 </div>
 
 
@@ -72,6 +100,17 @@
       </div>
       <div class="sphinxsidebar">
         <div class="sphinxsidebarwrapper">
+  <h3><a href="../contents.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">General CasparCG FAQ</a><ul>
+<li><a class="reference internal" href="#where-can-i-find-the-documentation-for-the-configuration-file-casparcg-config">Where can I find the documentation for the configuration file (casparcg.config)?</a></li>
+<li><a class="reference internal" href="#when-i-start-casparcg-all-i-get-is-an-empty-console-window">When I start CasparCG all I get is an empty console window?</a></li>
+<li><a class="reference internal" href="#how-can-i-get-fill-and-key-to-two-separate-outputs-e-g-two-screens">How can I get fill and key to two separate outputs? e.g. two screens.</a></li>
+<li><a class="reference internal" href="#what-kind-of-transition-animations-are-supported">What kind of transition animations are supported?</a></li>
+</ul>
+</li>
+</ul>
+
   <h4>Previous topic</h4>
   <p class="topless"><a href="index.html"
                         title="previous chapter">CasparCG Frequently Asked Questions</a></p>
@@ -124,7 +163,7 @@
     <br />
     <a href="http://www.python.org/psf/donations/">Please donate.</a>
     <br />
-    Last updated on Mar 11, 2012.
+    Last updated on Mar 13, 2012.
     <a href="../bugs.html">Found a bug</a>?
     <br />
     Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.

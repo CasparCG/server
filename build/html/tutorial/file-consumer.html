@@ -8,7 +8,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>3. Screen Consumer &mdash; CasparCG 2.0 documentation</title>
+    <title>Running the File Consumer &mdash; CasparCG 2.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/default.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -32,9 +32,9 @@
     <link rel="author" title="About these documents" href="../about.html" />
     <link rel="copyright" title="Copyright" href="../copyright.html" />
     <link rel="top" title="CasparCG 2.0 documentation" href="../index.html" />
-    <link rel="up" title="Consumers" href="index.html" />
-    <link rel="next" title="4. System Audio Consumer" href="system-audio.html" />
-    <link rel="prev" title="2. Bluefish Consumer" href="bluefish.html" />
+    <link rel="up" title="CasparCG Tutorials" href="index.html" />
+    <link rel="next" title="Producers" href="../producers/index.html" />
+    <link rel="prev" title="CasparCG Tutorials" href="index.html" />
  
 
   </head>
@@ -46,14 +46,14 @@
           <a href="../genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="system-audio.html" title="4. System Audio Consumer"
+          <a href="../producers/index.html" title="Producers"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="bluefish.html" title="2. Bluefish Consumer"
+          <a href="index.html" title="CasparCG Tutorials"
              accesskey="P">previous</a> |</li>
         <li><a href="../index.html">CasparCG 2.0 documentation</a> &raquo;</li>
 
-          <li><a href="index.html" accesskey="U">Consumers</a> &raquo;</li> 
+          <li><a href="index.html" accesskey="U">CasparCG Tutorials</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -62,8 +62,37 @@
         <div class="bodywrapper">
           <div class="body">
             
-  <div class="section" id="screen-consumer">
-<h1>3. Screen Consumer<a class="headerlink" href="#screen-consumer" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="running-the-file-consumer">
+<span id="tut-file"></span><h1>Running the File Consumer<a class="headerlink" href="#running-the-file-consumer" title="Permalink to this headline">¶</a></h1>
+<p>The disk consumer uses ffmpeg to encode video and ffmpeg users will feel somewhat at home with the commands.</p>
+<p>The encoding will take advantage of multi-core cpus.</p>
+<p>To start the disk consumer you need to send the following command:</p>
+<div class="highlight-python"><pre>ADD 1 FILE myfile.mov</pre>
+</div>
+<p>Where the file extension will decide the container format and appropriate codec.</p>
+<p>To stop it you simply type:</p>
+<div class="highlight-python"><pre>REMOVE 1 FILE</pre>
+</div>
+<p>The default, and recommended format is H264 which uses the highly optimized libx264 encoder. You can of course also choose what codec to encode to. The file consumer follows commandline arguments syntax used by ffmpeg, see ffmpeg for more options. Some of the available options are:</p>
+<div class="highlight-python"><pre>-f // container format
+-vcodec // vicdeo codec
+-pix_fmt // pixel_format
+-r // video framerate
+-s // size
+-b // video bitrate
+-acodec // audio codec
+-ar // audio samplerate
+-ab // audio bitrate
+-ac // audio channels</pre>
+</div>
+<div class="highlight-python"><pre>ADD 1 FILE myfile.mov -vcodec dnxhd
+ADD 1 FILE myfile.mov -vcodec prores
+ADD 1 FILE myfile.mov -vcodec dvvideo
+ADD 1 FILE myfile.mov -vcodec libx264</pre>
+</div>
+<p>For the above formats we have already provided high quality default parameters. Though you can of course also specify other codecs (see the -vcodec option in ffmpeg), and the corresponding options (see ffmpeg documentation):</p>
+<div class="highlight-python"><pre>ADD 1 FILE myfile.mov -vcodec libx264 -preset ultrafast -tune fastdecode -crf 5</pre>
+</div>
 </div>
 
 
@@ -73,15 +102,15 @@
       <div class="sphinxsidebar">
         <div class="sphinxsidebarwrapper">
   <h4>Previous topic</h4>
-  <p class="topless"><a href="bluefish.html"
-                        title="previous chapter">2. Bluefish Consumer</a></p>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">CasparCG Tutorials</a></p>
   <h4>Next topic</h4>
-  <p class="topless"><a href="system-audio.html"
-                        title="next chapter">4. System Audio Consumer</a></p>
+  <p class="topless"><a href="../producers/index.html"
+                        title="next chapter">Producers</a></p>
 <h3>This Page</h3>
 <ul class="this-page-menu">
   <li><a href="../bugs.html">Report a Bug</a></li>
-  <li><a href="../_sources/consumers/screen.txt"
+  <li><a href="../_sources/tutorial/file-consumer.txt"
          rel="nofollow">Show Source</a></li>
 </ul>
 
@@ -109,14 +138,14 @@
           <a href="../genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="system-audio.html" title="4. System Audio Consumer"
+          <a href="../producers/index.html" title="Producers"
              >next</a> |</li>
         <li class="right" >
-          <a href="bluefish.html" title="2. Bluefish Consumer"
+          <a href="index.html" title="CasparCG Tutorials"
              >previous</a> |</li>
         <li><a href="../index.html">CasparCG 2.0 documentation</a> &raquo;</li>
 
-          <li><a href="index.html" >Consumers</a> &raquo;</li> 
+          <li><a href="index.html" >CasparCG Tutorials</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
