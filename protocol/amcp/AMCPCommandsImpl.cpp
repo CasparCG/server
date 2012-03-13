@@ -227,6 +227,8 @@ bool DiagnosticsCommand::DoExecute()
 
 bool ChannelGridCommand::DoExecute()
 {
+	BOOST_THROW_EXCEPTION(not_implemented());
+
 	int index = 1;
 	auto self = GetChannels().back();
 	
