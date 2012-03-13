@@ -8,7 +8,7 @@ The file consumer uses ffmpeg to encode video.
 
 The encoding will automatically take advantage of multi-core CPUs.
 
-To start the file consumer you to send the following command:
+To start the file consumer send the following command:
 
 ::
     
@@ -23,7 +23,7 @@ To stop writing to the file send:
     REMOVE 1 FILE
 
 
-The file consumer follows commandline arguments syntax used by ffmpeg, see ffmpeg for more options. Some of the available options are:
+The file consumer follows the commandline argument syntax used by ffmpeg, see ffmpeg.org for more options (note, not all options supported by ffmpeg have been implemented). Some of the available options are:
 
 ::
 
