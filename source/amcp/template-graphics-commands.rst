@@ -37,12 +37,12 @@ Syntax::
 		
 Example::
 
-	>> CG 1-1 ADD 10 svtnews/info 1
+	>> CG 1-1 ADD 10 svtnews/info 1 "<templateData> xml or stored dataset name"
 	
 =========
 CG REMOVE
 =========
-Removes the visible template from a specific layer.
+Immediately Removes the visible template from a specific layer without running the outro animation.
 
 Syntax::
 
@@ -68,11 +68,11 @@ Example::
 =======
 CG PLAY
 =======
-Plays and displays the template in the specified layer.
+Plays and displays the template that was previously loaded in the specified layer.
 
 Syntax::
 
-	CG [channel:int]-[layer:int] PLAY [template-host-layer:int] 
+	CG [channel:int]-[layer:int] PLAY [template-host-layer:int]
 		
 Example::
 
