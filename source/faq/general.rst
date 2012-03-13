@@ -10,9 +10,9 @@ All available options are defined in the commented <!-- --> section found at the
 When I start CasparCG all I get is an empty console window?
 -----------------------------------------------------------
 
-You probably have an AMD/ATI graphics card which are not fully supported with CasparCG.
+You probably have an AMD/ATI graphics card which are not fully compatible with CasparCG 2.0.
 
-NOTE: Future CasparCG 2.1 has better AMD/ATI support and also a cpu fallback.
+NOTE: The currently "unstable" CasparCG 2.1 has better AMD/ATI support and also a cpu fallback.
 
 How can I get fill and key to two separate outputs? e.g. two screens.
 ---------------------------------------------------------------------

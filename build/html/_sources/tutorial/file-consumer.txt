@@ -4,25 +4,26 @@
 Running the File Consumer
 *************************
 
-The disk consumer uses ffmpeg to encode video and ffmpeg users will feel somewhat at home with the commands.
+The file consumer uses ffmpeg to encode video.
 
-The encoding will take advantage of multi-core cpus.
+The encoding will automatically take advantage of multi-core CPUs.
 
-To start the disk consumer you need to send the following command:
+To start the file consumer send the following command:
 
 ::
     
     ADD 1 FILE myfile.mov
 
-Where the file extension will decide the container format and appropriate codec.
+If the "-f"  or "-vcodec/-acodec" option is not supplied then the container format and appropriate codec will be automatically deduced from the file extension.
 
-To stop it you simply type:
+To stop writing to the file send:
 
 ::
 
     REMOVE 1 FILE
 
-The default, and recommended format is H264 which uses the highly optimized libx264 encoder. You can of course also choose what codec to encode to. The file consumer follows commandline arguments syntax used by ffmpeg, see ffmpeg for more options. Some of the available options are:
+
+The file consumer follows the commandline argument syntax used by ffmpeg, see ffmpeg.org for more options (note, not all options supported by ffmpeg have been implemented). Some of the available options are:
 
 ::
 
@@ -44,8 +45,21 @@ The default, and recommended format is H264 which uses the highly optimized libx
     ADD 1 FILE myfile.mov -vcodec dvvideo
     ADD 1 FILE myfile.mov -vcodec libx264
 
-For the above formats we have already provided high quality default parameters. Though you can of course also specify other codecs (see the -vcodec option in ffmpeg), and the corresponding options (see ffmpeg documentation):
+For the above formats have already provided high quality default parameters. 
+
+Another example:
 
 ::
 
     ADD 1 FILE myfile.mov -vcodec libx264 -preset ultrafast -tune fastdecode -crf 5
+    
+In order to run multiple file consumers on the same channel you will need to provide a unique consumer index.
+
+::
+
+    ADD 1-0 FILE myfile.mov -s 1920x1080
+    ADD 1-1 FILE myfile.mov -s 1280x720
+    ...
+    REMOVE 1-0
+    REMOVE 1-1
+

@@ -64,16 +64,16 @@
             
   <div class="section" id="running-the-file-consumer">
 <span id="tut-file"></span><h1>Running the File Consumer<a class="headerlink" href="#running-the-file-consumer" title="Permalink to this headline">¶</a></h1>
-<p>The disk consumer uses ffmpeg to encode video and ffmpeg users will feel somewhat at home with the commands.</p>
-<p>The encoding will take advantage of multi-core cpus.</p>
-<p>To start the disk consumer you need to send the following command:</p>
+<p>The file consumer uses ffmpeg to encode video.</p>
+<p>The encoding will automatically take advantage of multi-core CPUs.</p>
+<p>To start the file consumer send the following command:</p>
 <div class="highlight-python"><pre>ADD 1 FILE myfile.mov</pre>
 </div>
-<p>Where the file extension will decide the container format and appropriate codec.</p>
-<p>To stop it you simply type:</p>
+<p>If the &#8220;-f&#8221;  or &#8220;-vcodec/-acodec&#8221; option is not supplied then the container format and appropriate codec will be automatically deduced from the file extension.</p>
+<p>To stop writing to the file send:</p>
 <div class="highlight-python"><pre>REMOVE 1 FILE</pre>
 </div>
-<p>The default, and recommended format is H264 which uses the highly optimized libx264 encoder. You can of course also choose what codec to encode to. The file consumer follows commandline arguments syntax used by ffmpeg, see ffmpeg for more options. Some of the available options are:</p>
+<p>The file consumer follows the commandline argument syntax used by ffmpeg, see ffmpeg.org for more options (note, not all options supported by ffmpeg have been implemented). Some of the available options are:</p>
 <div class="highlight-python"><pre>-f // container format
 -vcodec // vicdeo codec
 -pix_fmt // pixel_format
@@ -90,8 +90,16 @@ ADD 1 FILE myfile.mov -vcodec prores
 ADD 1 FILE myfile.mov -vcodec dvvideo
 ADD 1 FILE myfile.mov -vcodec libx264</pre>
 </div>
-<p>For the above formats we have already provided high quality default parameters. Though you can of course also specify other codecs (see the -vcodec option in ffmpeg), and the corresponding options (see ffmpeg documentation):</p>
+<p>For the above formats have already provided high quality default parameters.</p>
+<p>Another example:</p>
 <div class="highlight-python"><pre>ADD 1 FILE myfile.mov -vcodec libx264 -preset ultrafast -tune fastdecode -crf 5</pre>
+</div>
+<p>In order to run multiple file consumers on the same channel you will need to provide a unique consumer index.</p>
+<div class="highlight-python"><pre>ADD 1-0 FILE myfile.mov -s 1920x1080
+ADD 1-1 FILE myfile.mov -s 1280x720
+...
+REMOVE 1-0
+REMOVE 1-1</pre>
 </div>
 </div>
 
@@ -150,8 +158,6 @@ ADD 1 FILE myfile.mov -vcodec libx264</pre>
     </div>
     <div class="footer">
     &copy; <a href="../copyright.html">Copyright</a> 2011, Robert Nagy (ronag89@gmail.com).
-    <br />
-    <a href="http://www.python.org/psf/donations/">Please donate.</a>
     <br />
     Last updated on Mar 13, 2012.
     <a href="../bugs.html">Found a bug</a>?
