@@ -52,3 +52,14 @@ Another example:
 ::
 
     ADD 1 FILE myfile.mov -vcodec libx264 -preset ultrafast -tune fastdecode -crf 5
+    
+In order to run multiple file consumers on the same channel you will need to provide a unique consumer index.
+
+::
+
+    ADD 1-0 FILE myfile.mov -s 1920x1080
+    ADD 1-1 FILE myfile.mov -s 1280x720
+    ...
+    REMOVE 1-0
+    REMOVE 1-1
+
