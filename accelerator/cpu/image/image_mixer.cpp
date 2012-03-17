@@ -196,6 +196,13 @@ private:
 		{
 			return item.transform.is_still && item.transform.field_mode == field_mode; // only us last field for stills.
 		});
+		
+		// Stills are progressive, TODO: deinterlace.
+		BOOST_FOREACH(auto item, items)
+		{
+			if(item.transform.is_still)
+				item.transform.field_mode = core::field_mode::progressive;
+		}
 
 		if(items.empty())
 			return;
