@@ -98,11 +98,8 @@ public:
 	{
 		lock(format_desc_mutex_, [&]
 		{
-			if(format_desc_ != format_desc)
-			{
-				format_desc_ = format_desc;
-				stage_.clear();
-			}
+			format_desc_ = format_desc;
+			stage_.clear();
 		});
 	}
 
