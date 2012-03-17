@@ -61,7 +61,7 @@ public:
 	// Methods	
 
 	virtual class draw_frame					receive() = 0;
-	virtual boost::unique_future<std::wstring>	call(const std::wstring&);
+	virtual boost::unique_future<std::wstring>	call(const std::wstring& params);
 	
 	// monitor::observable
 

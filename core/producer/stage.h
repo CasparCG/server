@@ -75,6 +75,8 @@ public:
 	void swap_layer(int index, int other_index);
 	void swap_layer(int index, int other_index, stage& other);
 	
+	boost::unique_future<std::wstring> call(int index, const std::wstring& params);
+
 	// monitor::observable
 
 	void subscribe(const monitor::observable::observer_ptr& o) override;
