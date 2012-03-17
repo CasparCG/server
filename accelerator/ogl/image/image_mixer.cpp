@@ -217,6 +217,9 @@ private:
 		draw_params draw_params;
 		draw_params.pix_desc	= std::move(item.pix_desc);
 		draw_params.transform	= std::move(item.transform);
+		if(item.transform.is_still)
+			draw_params.transform.field_mode = core::field_mode::progressive;
+
 		BOOST_FOREACH(auto& future_texture, item.textures)
 			draw_params.textures.push_back(future_texture.get());
 
