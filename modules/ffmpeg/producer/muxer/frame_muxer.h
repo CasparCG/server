@@ -53,6 +53,7 @@ public:
 	bool video_ready() const;
 	bool audio_ready() const;
 
+	void clear();
 	bool try_pop(core::draw_frame& result);
 
 	uint32_t calc_nb_frames(uint32_t nb_frames) const;

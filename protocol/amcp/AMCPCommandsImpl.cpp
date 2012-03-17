@@ -288,10 +288,8 @@ bool CallCommand::DoExecute()
 		for(auto it = std::begin(_parameters2); it != std::end(_parameters2); ++it, param += L" ")
 			param += *it;
 
-		auto producer = GetChannel()->stage().foreground(GetLayerIndex()).get();
-
-		auto result = producer->call(boost::trim_copy(param));
-
+		auto result = GetChannel()->stage().call(GetLayerIndex(), boost::trim_copy(param));
+		
 		if(!result.timed_wait(boost::posix_time::seconds(2)))
 			BOOST_THROW_EXCEPTION(timed_out());
 				

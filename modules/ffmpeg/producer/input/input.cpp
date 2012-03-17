@@ -96,7 +96,7 @@ struct input::impl : boost::noncopyable
 		buffer_size_	= 0;
 
 		if(start_ > 0)			
-			queued_seek(start_);
+			seek(start_, false);
 								
 		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));	
 		graph_->set_color("buffer-count", diagnostics::color(0.7f, 0.4f, 0.4f));
@@ -122,16 +122,45 @@ struct input::impl : boost::noncopyable
 		return result;
 	}
 
-	void seek(uint32_t target)
+	void seek(uint32_t target, bool clear)
 	{
-		executor_.begin_invoke([=]
+		executor_.invoke([=]
 		{
-			std::shared_ptr<AVPacket> packet;
-			while(buffer_.try_pop(packet) && packet)
-				buffer_size_ -= packet->size;
+			if(clear)
+			{
+				std::shared_ptr<AVPacket> packet;
+				while(buffer_.try_pop(packet) && packet)
+					buffer_size_ -= packet->size;
+			}
+			
+			CASPAR_LOG(debug) << print() << " Seeking: " << target;
 
-			queued_seek(target);
+			int flags = AVSEEK_FLAG_FRAME;
+			if(target == 0)
+			{
+				// Fix VP6 seeking
+				int vid_stream_index = av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
+				if(vid_stream_index >= 0)
+				{
+					auto codec_id = format_context_->streams[vid_stream_index]->codec->codec_id;
+					if(codec_id == CODEC_ID_VP6A || codec_id == CODEC_ID_VP6F || codec_id == CODEC_ID_VP6)
+						flags = AVSEEK_FLAG_BYTE;
+				}
+			}
+		
+			auto stream = format_context_->streams[default_stream_index_];
+			auto codec  = stream->codec;
+			auto fixed_target = (target*stream->time_base.den*codec->time_base.num)/(stream->time_base.num*codec->time_base.den)*codec->ticks_per_frame;
+		
+			THROW_ON_ERROR2(avformat_seek_file(format_context_.get(), default_stream_index_, std::numeric_limits<int64_t>::min(), fixed_target, std::numeric_limits<int64_t>::max(), 0), print());		
+		
+			auto flush_packet	= create_packet();
+			flush_packet->data	= nullptr;
+			flush_packet->size	= 0;
+			flush_packet->pos	= target;
 
+			buffer_.push(flush_packet);
+			
 			tick();
 		}, task_priority::high_priority);
 	}
@@ -164,11 +193,11 @@ struct input::impl : boost::noncopyable
 		
 				if(is_eof(ret))														     
 				{
-					frame_number_	= 0;
+					frame_number_ = 0;
 
 					if(loop_)
 					{
-						queued_seek(start_);
+						seek(start_, false);
 						graph_->set_tag("seek");		
 						CASPAR_LOG(trace) << print() << " Looping.";	
 					}
@@ -214,37 +243,6 @@ struct input::impl : boost::noncopyable
 		});
 	}	
 			
-	void queued_seek(const uint32_t target)
-	{  	
-		CASPAR_LOG(debug) << print() << " Seeking: " << target;
-
-		int flags = AVSEEK_FLAG_FRAME;
-		if(target == 0)
-		{
-			// Fix VP6 seeking
-			int vid_stream_index = av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
-			if(vid_stream_index >= 0)
-			{
-				auto codec_id = format_context_->streams[vid_stream_index]->codec->codec_id;
-				if(codec_id == CODEC_ID_VP6A || codec_id == CODEC_ID_VP6F || codec_id == CODEC_ID_VP6)
-					flags = AVSEEK_FLAG_BYTE;
-			}
-		}
-		
-		auto stream = format_context_->streams[default_stream_index_];
-		auto codec  = stream->codec;
-		auto fixed_target = (target*stream->time_base.den*codec->time_base.num)/(stream->time_base.num*codec->time_base.den)*codec->ticks_per_frame;
-		
-		THROW_ON_ERROR2(avformat_seek_file(format_context_.get(), default_stream_index_, std::numeric_limits<int64_t>::min(), fixed_target, std::numeric_limits<int64_t>::max(), 0), print());		
-		
-		auto flush_packet	= create_packet();
-		flush_packet->data	= nullptr;
-		flush_packet->size	= 0;
-		flush_packet->pos	= target;
-
-		buffer_.push(flush_packet);
-	}	
-
 	bool is_eof(int ret)
 	{
 		#pragma warning (disable : 4146)
@@ -265,7 +263,7 @@ bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(pac
 spl::shared_ptr<AVFormatContext> input::context(){return impl_->format_context_;}
 void input::loop(bool value){impl_->loop_ = value;}
 bool input::loop() const{return impl_->loop_;}
-void input::seek(uint32_t target){impl_->seek(target);}
+void input::seek(uint32_t target){impl_->seek(target, true);}
 void input::start(uint32_t value){impl_->start_ = value;}
 uint32_t input::start() const{return impl_->start_;}
 void input::length(uint32_t value){impl_->length_ = value;}

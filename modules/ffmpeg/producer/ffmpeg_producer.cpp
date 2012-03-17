@@ -75,13 +75,14 @@ struct ffmpeg_producer : public core::frame_producer
 	const core::video_format_desc					format_desc_;
 
 	input											input_;	
-	std::unique_ptr<video_decoder>					video_decoder_;
-	std::unique_ptr<audio_decoder>					audio_decoder_;	
-	std::unique_ptr<frame_muxer>					muxer_;
 
 	const double									fps_;
 	const uint32_t									start_;
 		
+	video_decoder									video_decoder_;
+	audio_decoder									audio_decoder_;	
+	frame_muxer										muxer_;
+
 	int64_t											frame_number_;
 
 	core::draw_frame								last_frame_;
@@ -99,6 +100,7 @@ public:
 		, format_desc_(format_desc)
 		, input_(graph_, filename_, loop, start, length)
 		, fps_(read_fps(*input_.context(), format_desc_.fps))
+		, muxer_(fps_, frame_factory, format_desc_, filter)
 		, start_(start)
 		, frame_number_(0)
 		, last_frame_(core::draw_frame::empty())
@@ -109,9 +111,9 @@ public:
 		
 		try
 		{
-			video_decoder_.reset(new video_decoder(input_.context()));
-			video_decoder_->subscribe(event_subject_);
-			CASPAR_LOG(info) << print() << L" " << video_decoder_->print();
+			video_decoder_ = video_decoder(input_.context());
+			video_decoder_.subscribe(event_subject_);
+			CASPAR_LOG(info) << print() << L" " << video_decoder_.print();
 		}
 		catch(averror_stream_not_found&)
 		{
@@ -125,9 +127,9 @@ public:
 
 		try
 		{
-			audio_decoder_.reset(new audio_decoder(input_.context(), format_desc_));
-			audio_decoder_->subscribe(event_subject_);
-			CASPAR_LOG(info) << print() << L" " << audio_decoder_->print();
+			audio_decoder_ = audio_decoder(input_.context(), format_desc_);
+			audio_decoder_.subscribe(event_subject_);
+			CASPAR_LOG(info) << print() << L" " << audio_decoder_.print();
 		}
 		catch(averror_stream_not_found&)
 		{
@@ -138,12 +140,7 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			CASPAR_LOG(warning) << print() << " Failed to open audio-stream. Running without audio.";		
 		}	
-
-		if(!video_decoder_ && !audio_decoder_)
-			BOOST_THROW_EXCEPTION(averror_stream_not_found() << msg_info("No streams found"));
-
-		muxer_.reset(new frame_muxer(fps_, frame_factory, format_desc_, filter));
-
+		
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}
 
@@ -154,6 +151,7 @@ public:
 		boost::timer frame_timer;
 				
 		auto frame = core::draw_frame::late();		
+		
 		if(!try_decode_frame(frame))
 		{
 			if(!input_.eof())		
@@ -198,7 +196,7 @@ public:
 		uint32_t nb_frames = file_nb_frames();
 
 		nb_frames = std::min(input_.length(), nb_frames);
-		nb_frames = muxer_->calc_nb_frames(nb_frames);
+		nb_frames = muxer_.calc_nb_frames(nb_frames);
 		
 		return nb_frames > start_ ? nb_frames - start_ : 0;
 	}
@@ -206,16 +204,16 @@ public:
 	uint32_t file_nb_frames() const
 	{
 		uint32_t file_nb_frames = 0;
-		file_nb_frames = std::max(file_nb_frames, video_decoder_ ? video_decoder_->nb_frames() : 0);
-		file_nb_frames = std::max(file_nb_frames, audio_decoder_ ? audio_decoder_->nb_frames() : 0);
+		file_nb_frames = std::max(file_nb_frames, video_decoder_.nb_frames());
+		file_nb_frames = std::max(file_nb_frames, audio_decoder_.nb_frames());
 		return file_nb_frames;
 	}
 
 	uint32_t file_frame_number() const
 	{
-		return video_decoder_ ? video_decoder_->file_frame_number() : 0;
+		return video_decoder_.file_frame_number();
 	}
-	
+		
 	boost::unique_future<std::wstring> call(const std::wstring& param) override
 	{
 		static const boost::wregex loop_exp(L"LOOP\\s*(?<VALUE>\\d?)?", boost::regex::icase);
@@ -231,31 +229,26 @@ public:
 			auto value = what["VALUE"].str();
 			if(!value.empty())
 				input_.loop(boost::lexical_cast<bool>(value));
-			result = boost::lexical_cast<std::wstring>(input_.loop());
+			result = boost::lexical_cast<std::wstring>(loop());
 		}
 		else if(boost::regex_match(param, what, seek_exp))
 		{
 			auto value = what["VALUE"].str();
-			input_.seek(boost::lexical_cast<uint32_t>(value));
+			seek(boost::lexical_cast<uint32_t>(value));
 		}
 		else if(boost::regex_match(param, what, length_exp))
 		{
 			auto value = what["VALUE"].str();
 			if(!value.empty())
-			{
-				if(boost::iequals(value, "NaN") || boost::iequals(value, "-1"))
-					input_.length(std::numeric_limits<uint32_t>::max());
-				else
-					input_.length(boost::lexical_cast<uint32_t>(value));
-			}
-			result = boost::lexical_cast<std::wstring>(input_.length());
+				length(boost::lexical_cast<uint32_t>(value));			
+			result = boost::lexical_cast<std::wstring>(length());
 		}
 		else if(boost::regex_match(param, what, start_exp))
 		{
 			auto value = what["VALUE"].str();
 			if(!value.empty())
-				input_.start(boost::lexical_cast<uint32_t>(value));
-			result = boost::lexical_cast<std::wstring>(input_.start());
+				start(boost::lexical_cast<uint32_t>(value));
+			result = boost::lexical_cast<std::wstring>(start());
 		}
 		else
 			BOOST_THROW_EXCEPTION(invalid_argument());
@@ -280,9 +273,9 @@ public:
 		boost::property_tree::wptree info;
 		info.add(L"type",				L"ffmpeg");
 		info.add(L"filename",			filename_);
-		info.add(L"width",				video_decoder_ ? video_decoder_->width() : 0);
-		info.add(L"height",				video_decoder_ ? video_decoder_->height() : 0);
-		info.add(L"progressive",		video_decoder_ ? video_decoder_->is_progressive() : false);
+		info.add(L"width",				video_decoder_.width());
+		info.add(L"height",				video_decoder_.height());
+		info.add(L"progressive",		video_decoder_.is_progressive());
 		info.add(L"fps",				fps_);
 		info.add(L"loop",				input_.loop());
 		info.add(L"frame-number",		frame_number_);
@@ -304,29 +297,68 @@ public:
 	}
 
 	// ffmpeg_producer
+	
+	void loop(bool value)
+	{
+		input_.loop(value);
+	}
+
+	bool loop() const
+	{
+		return input_.loop();
+	}
+
+	void length(uint32_t value)
+	{
+		input_.length(value);
+	}
+
+	uint32_t length()
+	{
+		return input_.length();
+	}
+	
+	void start(uint32_t value)
+	{
+		input_.start(value);
+	}
+
+	uint32_t start()
+	{
+		return input_.start();
+	}
+
+	void seek(uint32_t target)
+	{
+		muxer_.clear();
+		video_decoder_.clear();
+		audio_decoder_.clear();
+			
+		input_.seek(target);
+						
+		receive();
+		receive();
+		receive();
+		receive();
+	}
 
 	std::wstring print_mode() const
 	{
-		return video_decoder_ ? ffmpeg::print_mode(video_decoder_->width(), video_decoder_->height(), fps_, !video_decoder_->is_progressive()) : L"n/a";
+		return ffmpeg::print_mode(video_decoder_.width(), video_decoder_.height(), fps_, !video_decoder_.is_progressive());
 	}
 			
 	bool try_decode_frame(core::draw_frame& result)
 	{
 		for(int n = 0; n < 32; ++n)
 		{
-			if(muxer_->try_pop(result))			
+			if(muxer_.try_pop(result))			
 				return true;			
 
 			std::shared_ptr<AVPacket> pkt;
-
-			for(int n = 0; n < 32 && ((video_decoder_ && !video_decoder_->ready() && !muxer_->video_ready()) || 
-									  (audio_decoder_ && !audio_decoder_->ready() && !muxer_->audio_ready())) && 
-									 input_.try_pop(pkt); ++n)
+			for(int n = 0; n < 32 && (!video_decoder_.ready() || !audio_decoder_.ready()) && input_.try_pop(pkt); ++n)
 			{
-				if(video_decoder_)
-					video_decoder_->push(pkt);
-				if(audio_decoder_)
-					audio_decoder_->push(pkt);
+				video_decoder_.push(pkt);
+				audio_decoder_.push(pkt);
 			}
 		
 			std::shared_ptr<AVFrame>			video;
@@ -336,32 +368,18 @@ public:
 			(
 				[&]
 				{
-					video = !muxer_->video_ready() && video_decoder_ ? video_decoder_->poll() : nullptr;	
+					if(!muxer_.video_ready())
+						video = video_decoder_.poll();	
 				},
 				[&]
 				{		
-					audio = !muxer_->audio_ready() && audio_decoder_ ? audio_decoder_->poll() : nullptr;		
+					if(!muxer_.audio_ready())
+						audio = audio_decoder_.poll();		
 				}
 			);
 		
-			muxer_->push(video);
-			muxer_->push(audio);
-
-			if(!audio_decoder_)
-			{
-				if(video == flush_video())
-					muxer_->push(flush_audio());
-				else if(!muxer_->audio_ready())
-					muxer_->push(empty_audio());
-			}
-
-			if(!video_decoder_)
-			{
-				if(audio == flush_audio())
-					muxer_->push(flush_video());
-				else if(!muxer_->video_ready())
-					muxer_->push(empty_video());
-			}
+			muxer_.push(video);
+			muxer_.push(audio);
 		}
 
 		return false;

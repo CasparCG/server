@@ -30,9 +30,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="producer\video\video_decoder.cpp">
-      <Filter>source\producer\video</Filter>
-    </ClCompile>
     <ClCompile Include="producer\audio\audio_decoder.cpp">
       <Filter>source\producer\audio</Filter>
     </ClCompile>
@@ -72,6 +69,9 @@
     </ClCompile>
     <ClCompile Include="ffmpeg_error.cpp">
       <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\video\video_decoder.cpp">
+      <Filter>source\producer\video</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
