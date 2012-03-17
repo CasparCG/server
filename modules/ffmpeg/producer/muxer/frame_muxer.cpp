@@ -289,6 +289,11 @@ struct frame_muxer::impl : boost::noncopyable
 		{
 			display_mode_ = display_mode::deinterlace_bob_reinterlace; // The frame will most likely be scaled, we need to deinterlace->reinterlace	
 		}
+
+		// ALWAYS de-interlace, until we have GPU de-interlacing.
+		if(frame->interlaced_frame)
+			display_mode_ = display_mode::deinterlace_bob_reinterlace;
+
 		
 		if(display_mode_ == display_mode::deinterlace)
 			filter_str = append_filter(filter_str, L"YADIF=0:-1");
