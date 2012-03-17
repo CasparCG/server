@@ -38,21 +38,27 @@ class video_decoder : public monitor::observable
 					, boost::noncopyable
 {
 public:
+	explicit video_decoder();
 	explicit video_decoder(const spl::shared_ptr<AVFormatContext>& context);
 	
+	video_decoder(video_decoder&& other);
+	video_decoder& operator=(video_decoder&& other);
+
 	bool ready() const;
 	void push(const std::shared_ptr<AVPacket>& packet);
 	std::shared_ptr<AVFrame> poll();
 	
-	int	 width()		const;
-	int	 height()	const;
+	int	 width() const;
+	int	 height() const;
 
 	uint32_t nb_frames() const;
 	uint32_t file_frame_number() const;
 
-	bool	 is_progressive() const;
+	bool is_progressive() const;
 
 	std::wstring print() const;
+
+	void clear();
 	
 	// monitor::observable
 	

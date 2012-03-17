@@ -29,6 +29,7 @@
 #include "../frame/frame_factory.h"
 
 #include <common/executor.h>
+#include <common/future.h>
 #include <common/diagnostics/graph.h>
 
 #include <core/frame/frame_transform.h>
@@ -317,9 +318,18 @@ public:
 			return layers_[index].info();
 		}, task_priority::high_priority);
 	}		
+	
+	boost::unique_future<std::wstring> call(int index, const std::wstring& params)
+	{
+		return flatten(executor_.begin_invoke([=]
+		{
+			return make_shared(layers_[index].foreground()->call(params));
+		}, task_priority::high_priority));
+	}
 };
 
 stage::stage(spl::shared_ptr<diagnostics::graph> graph) : impl_(new impl(std::move(graph))){}
+boost::unique_future<std::wstring> stage::call(int index, const std::wstring& params){return impl_->call(index, params);}
 void stage::apply_transforms(const std::vector<stage::transform_tuple_t>& transforms){impl_->apply_transforms(transforms);}
 void stage::apply_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const tweener& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
 void stage::clear_transforms(int index){impl_->clear_transforms(index);}

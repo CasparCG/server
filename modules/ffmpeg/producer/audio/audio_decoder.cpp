@@ -55,10 +55,10 @@ struct audio_decoder::impl : boost::noncopyable
 {	
 	monitor::basic_subject										event_subject_;
 	int															index_;
-	const spl::shared_ptr<AVCodecContext>						codec_context_;		
+	const std::shared_ptr<AVCodecContext>						codec_context_;		
 	const core::video_format_desc								format_desc_;
 
-	audio_resampler												resampler_;
+	boost::optional<audio_resampler>							resampler_;
 
 	std::vector<int8_t,  tbb::cache_aligned_allocator<int8_t>>	buffer1_;
 
@@ -67,12 +67,18 @@ struct audio_decoder::impl : boost::noncopyable
 	const int64_t												nb_frames_;
 	tbb::atomic<uint32_t>										file_frame_number_;
 public:
-	explicit impl(const spl::shared_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
+	explicit impl() 
+		: nb_frames_(0)//context->streams[index_]->nb_frames)
+	{		
+		file_frame_number_ = 0;   
+	}
+
+	explicit impl(const std::shared_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
 		: format_desc_(format_desc)	
 		, codec_context_(open_codec(*context, AVMEDIA_TYPE_AUDIO, index_))
-		, resampler_(format_desc.audio_channels,	codec_context_->channels,
+		, resampler_(audio_resampler(format_desc.audio_channels,	codec_context_->channels,
 					 format_desc.audio_sample_rate, codec_context_->sample_rate,
-					 AV_SAMPLE_FMT_S32,				codec_context_->sample_fmt)
+					 AV_SAMPLE_FMT_S32,				codec_context_->sample_fmt))
 		, buffer1_(AVCODEC_MAX_AUDIO_FRAME_SIZE*2)
 		, nb_frames_(0)//context->streams[index_]->nb_frames)
 	{		
@@ -94,21 +100,29 @@ public:
 			return nullptr;
 				
 		auto packet = packets_.front();
-
-		if(packet->data == nullptr)
+		
+		if(!codec_context_)		
 		{
 			packets_.pop();
-			file_frame_number_ = static_cast<uint32_t>(packet->pos);
-			avcodec_flush_buffers(codec_context_.get());
-			return flush_audio();
+			return packet->data == nullptr ? flush_audio() : empty_audio();
 		}
+		else
+		{
+			if(packet->data == nullptr)
+			{
+				packets_.pop();
+				file_frame_number_ = static_cast<uint32_t>(packet->pos);
+				avcodec_flush_buffers(codec_context_.get());
+				return flush_audio();
+			}
 
-		auto audio = decode(*packet);
+			auto audio = decode(*packet);
 
-		if(packet->size == 0)					
-			packets_.pop();
+			if(packet->size == 0)					
+				packets_.pop();
 
-		return audio;
+			return audio;
+		}
 	}
 
 	std::shared_ptr<core::audio_buffer> decode(AVPacket& pkt)
@@ -124,7 +138,7 @@ public:
 			
 		buffer1_.resize(written_bytes);
 
-		buffer1_ = resampler_.resample(std::move(buffer1_));
+		buffer1_ = resampler_->resample(std::move(buffer1_));
 		
 		const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S32);
 		const auto samples = reinterpret_cast<int32_t*>(buffer1_.data());
@@ -141,7 +155,13 @@ public:
 
 	bool ready() const
 	{
-		return !packets_.empty();
+		return !codec_context_ || !packets_.empty();
+	}
+	
+	void clear()
+	{
+		while(!packets_.empty())
+			packets_.pop();
 	}
 
 	uint32_t nb_frames() const
@@ -155,13 +175,17 @@ public:
 	}
 };
 
-audio_decoder::audio_decoder(const spl::shared_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) : impl_(new impl(context, format_desc)){}
+audio_decoder::audio_decoder() : impl_(new impl()){}
+audio_decoder::audio_decoder(const std::shared_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) : impl_(new impl(context, format_desc)){}
+audio_decoder::audio_decoder(audio_decoder&& other) : impl_(std::move(other.impl_)){}
+audio_decoder& audio_decoder::operator=(audio_decoder&& other){impl_ = std::move(other.impl_); return *this;}
 void audio_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
 bool audio_decoder::ready() const{return impl_->ready();}
 std::shared_ptr<core::audio_buffer> audio_decoder::poll(){return impl_->poll();}
 uint32_t audio_decoder::nb_frames() const{return impl_->nb_frames();}
 uint32_t audio_decoder::file_frame_number() const{return impl_->file_frame_number_;}
 std::wstring audio_decoder::print() const{return impl_->print();}
+void audio_decoder::clear(){impl_->clear();}
 void audio_decoder::subscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_.subscribe(o);}
 void audio_decoder::unsubscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_.unsubscribe(o);}
 
