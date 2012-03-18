@@ -75,6 +75,7 @@ struct input::impl : boost::noncopyable
 	tbb::atomic<bool>											loop_;
 	tbb::atomic<bool>											eof_;
 	uint32_t													frame_number_;
+	double														fps_;
 	
 	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>	buffer_;
 	tbb::atomic<size_t>											buffer_size_;
@@ -87,6 +88,7 @@ struct input::impl : boost::noncopyable
 		, default_stream_index_(av_find_default_stream_index(format_context_.get()))
 		, filename_(filename)
 		, frame_number_(0)
+		, fps_(read_fps(*format_context_, 25))
 		, executor_(print())
 	{		
 		start_			= start;
@@ -152,12 +154,12 @@ struct input::impl : boost::noncopyable
 			auto codec  = stream->codec;
 			auto fixed_target = (target*stream->time_base.den*codec->time_base.num)/(stream->time_base.num*codec->time_base.den)*codec->ticks_per_frame;
 		
-			THROW_ON_ERROR2(avformat_seek_file(format_context_.get(), default_stream_index_, std::numeric_limits<int64_t>::min(), fixed_target, std::numeric_limits<int64_t>::max(), 0), print());		
+			THROW_ON_ERROR2(avformat_seek_file(format_context_.get(), default_stream_index_, std::numeric_limits<int64_t>::min(), fixed_target, fixed_target, 0), print());		
 		
 			auto flush_packet	= create_packet();
 			flush_packet->data	= nullptr;
 			flush_packet->size	= 0;
-			flush_packet->pos	= target;
+			flush_packet->pts	= target;
 
 			buffer_.push(flush_packet);
 			
@@ -224,6 +226,11 @@ struct input::impl : boost::noncopyable
 						packet->size = size;
 						packet->data = data;				
 					});
+
+					auto time_base = format_context_->streams[packet->stream_index]->time_base;
+					packet->pts = static_cast<uint64_t>((static_cast<double>(packet->pts * time_base.num)/time_base.den)*fps_);
+
+					CASPAR_LOG(trace) << packet->pts;
 
 					buffer_.try_push(packet);
 					buffer_size_ += packet->size;

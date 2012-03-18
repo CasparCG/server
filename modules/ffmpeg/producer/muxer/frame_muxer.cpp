@@ -100,10 +100,13 @@ struct frame_muxer::impl : boost::noncopyable
 	void push(const std::shared_ptr<AVFrame>& video_frame)
 	{		
 		if(!video_frame)
+		{
+			merge();
 			return;
-		
+		}
+
 		if(video_frame == flush_video())		
-			video_streams_.push(std::queue<core::mutable_frame>());		
+			video_streams_.push(std::queue<core::mutable_frame>());				
 		else if(video_frame == empty_video())
 		{
 			auto empty_frame = frame_factory_->create_frame(this, core::pixel_format_desc(core::pixel_format::invalid));
@@ -122,15 +125,20 @@ struct frame_muxer::impl : boost::noncopyable
 
 		if(video_streams_.back().size() > 32)
 			BOOST_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("video-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
+		
+		merge();
 	}
 
 	void push(const std::shared_ptr<core::audio_buffer>& audio)
 	{
-		if(!audio)	
+		if(!audio)
+		{
+			merge();
 			return;
+		}
 
-		if(audio == flush_audio())		
-			audio_streams_.push(core::audio_buffer());		
+		if(audio == flush_audio())			
+			audio_streams_.push(core::audio_buffer());				
 		else if(audio == empty_audio())		
 			boost::range::push_back(audio_streams_.back(), core::audio_buffer(audio_cadence_.front(), 0));		
 		else		
@@ -138,6 +146,8 @@ struct frame_muxer::impl : boost::noncopyable
 
 		if(audio_streams_.back().size() > static_cast<size_t>(32*audio_cadence_.front()))
 			BOOST_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("audio-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
+
+		merge();
 	}
 	
 	bool video_ready() const
@@ -173,16 +183,24 @@ struct frame_muxer::impl : boost::noncopyable
 			return audio_streams_.front().size() >= static_cast<size_t>(audio_cadence_.front());
 		}
 	}
-		
-	bool try_pop(core::draw_frame& result)
-	{
-		if(!frame_buffer_.empty())
-		{
-			result = std::move(frame_buffer_.front());
-			frame_buffer_.pop();	
-			return true;
-		}
 
+	bool empty() const
+	{
+		return frame_buffer_.empty();
+	}
+
+	core::draw_frame front() const
+	{
+		return frame_buffer_.front();
+	}
+
+	void pop()
+	{
+		frame_buffer_.pop();
+	}
+		
+	void merge()
+	{
 		if(video_streams_.size() > 1 && audio_streams_.size() > 1 && (!video_ready2() || !audio_ready2()))
 		{
 			if(!video_streams_.front().empty() || !audio_streams_.front().empty())
@@ -193,7 +211,7 @@ struct frame_muxer::impl : boost::noncopyable
 		}
 
 		if(!video_ready2() || !audio_ready2() || display_mode_ == display_mode::invalid)
-			return false;
+			return;
 				
 		auto frame1				= pop_video();
 		frame1.audio_data()	= pop_audio();
@@ -237,8 +255,6 @@ struct frame_muxer::impl : boost::noncopyable
 		default:
 			BOOST_THROW_EXCEPTION(invalid_operation());
 		}
-		
-		return try_pop(result);
 	}
 	
 	core::mutable_frame pop_video()
@@ -349,7 +365,9 @@ frame_muxer::frame_muxer(double in_fps, const spl::shared_ptr<core::frame_factor
 	: impl_(new impl(in_fps, frame_factory, format_desc, filter)){}
 void frame_muxer::push(const std::shared_ptr<AVFrame>& video_frame){impl_->push(video_frame);}
 void frame_muxer::push(const std::shared_ptr<core::audio_buffer>& audio_samples){return impl_->push(audio_samples);}
-bool frame_muxer::try_pop(core::draw_frame& result){return impl_->try_pop(result);}
+bool frame_muxer::empty() const{return impl_->empty();}
+core::draw_frame frame_muxer::front() const{return impl_->front();}
+void frame_muxer::pop(){return impl_->pop();}
 void frame_muxer::clear(){impl_->clear();}
 uint32_t frame_muxer::calc_nb_frames(uint32_t nb_frames) const {return impl_->calc_nb_frames(nb_frames);}
 bool frame_muxer::video_ready() const{return impl_->video_ready();}

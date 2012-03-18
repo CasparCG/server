@@ -155,10 +155,16 @@ public:
 			return last_frame();
 
 		boost::timer frame_timer;
-				
-		auto frame = core::draw_frame::late();		
+						
+		decode_next_frame();
 		
-		if(!try_decode_frame(frame))
+		auto frame = core::draw_frame::late();		
+		if(!muxer_.empty())
+		{
+			frame = std::move(muxer_.front());
+			muxer_.pop();
+		}
+		else
 		{
 			if(!input_.eof())		
 				graph_->set_tag("underflow");	
@@ -349,19 +355,19 @@ public:
 		video_decoder_.clear();
 		audio_decoder_.clear();
 			
+		target = std::min(target, file_nb_frames()-3);
+
 		input_.seek(target);
 				
-		auto frame = core::draw_frame::late();		
-		
-		// TODO
-		try_decode_frame(frame);
-		try_decode_frame(frame);
-		try_decode_frame(frame);
-		try_decode_frame(frame);
-		try_decode_frame(frame);
+		decode_next_frame();
 
-		if(frame != core::draw_frame::late())
-			last_frame_ = frame;
+		for(int n = 0; n < 50 && video_decoder_.file_frame_number() != target+2 && !muxer_.empty(); ++n) // TODO: +2 since a frame can be stuck inside yadif filter.
+		{
+			muxer_.pop();
+			decode_next_frame();
+		}
+		
+		last_frame_ = !muxer_.empty() ? muxer_.front() : last_frame_;			
 	}
 
 	std::wstring print_mode() const
@@ -369,13 +375,10 @@ public:
 		return ffmpeg::print_mode(video_decoder_.width(), video_decoder_.height(), fps_, !video_decoder_.is_progressive());
 	}
 			
-	bool try_decode_frame(core::draw_frame& result)
+	void decode_next_frame()
 	{
-		for(int n = 0; n < 32; ++n)
+		for(int n = 0; n < 64 && muxer_.empty(); ++n)
 		{
-			if(muxer_.try_pop(result))			
-				return true;			
-
 			std::shared_ptr<AVPacket> pkt;
 			for(int n = 0; n < 32 && (!video_decoder_.ready() || !audio_decoder_.ready()) && input_.try_pop(pkt); ++n)
 			{
@@ -403,8 +406,6 @@ public:
 			muxer_.push(video);
 			muxer_.push(audio);
 		}
-
-		return false;
 	}
 };
 
