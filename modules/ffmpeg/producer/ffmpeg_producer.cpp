@@ -64,7 +64,7 @@
 
 namespace caspar { namespace ffmpeg {
 				
-struct ffmpeg_producer : public core::frame_producer_base
+struct ffmpeg_producer : public core::frame_producer
 {
 	monitor::basic_subject							event_subject_;
 	const std::wstring								filename_;
@@ -76,6 +76,7 @@ struct ffmpeg_producer : public core::frame_producer_base
 
 	input											input_;	
 
+	tbb::atomic<bool>								paused_;
 	const double									fps_;
 	const uint32_t									start_;
 		
@@ -83,6 +84,10 @@ struct ffmpeg_producer : public core::frame_producer_base
 	audio_decoder									audio_decoder_;	
 	frame_muxer										muxer_;
 
+	tbb::atomic<uint32_t>							frame_number_;
+
+	core::draw_frame								last_frame_;
+	
 public:
 	explicit ffmpeg_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, 
 							 const core::video_format_desc& format_desc, 
@@ -98,7 +103,11 @@ public:
 		, fps_(read_fps(*input_.context(), format_desc_.fps))
 		, muxer_(fps_, frame_factory, format_desc_, filter)
 		, start_(start)
+		, last_frame_(core::draw_frame::empty())
 	{
+		paused_ = false;
+		frame_number_ = 0;
+
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
 		diagnostics::register_graph(graph_);
@@ -140,8 +149,11 @@ public:
 
 	// frame_producer
 	
-	core::draw_frame receive_impl() override
+	core::draw_frame receive() override
 	{				
+		if(paused_)
+			return last_frame();
+
 		boost::timer frame_timer;
 				
 		auto frame = core::draw_frame::late();		
@@ -156,7 +168,10 @@ public:
 		event_subject_	<< monitor::event("profiler/time") % frame_timer.elapsed() % (1.0/format_desc_.fps);			
 								
 		graph_->set_text(print());
-						
+
+		if(frame != core::draw_frame::late())		
+			++frame_number_;		
+				
 		event_subject_	<< monitor::event("file/time")			% monitor::duration(file_frame_number()/fps_) 
 																% monitor::duration(file_nb_frames()/fps_)
 						<< monitor::event("file/frame")			% static_cast<int32_t>(file_frame_number())
@@ -165,12 +180,29 @@ public:
 						<< monitor::event("file/path")			% filename_
 						<< monitor::event("loop")				% input_.loop();
 		
-		if(frame == core::draw_frame::late() && input_.eof())
+		if(frame == core::draw_frame::late())
+			return frame;
+		else if(input_.eof())
 			return last_frame();
-
-		return frame;
+		else
+			return last_frame_ = frame;
 	}
-		
+
+	core::draw_frame last_frame() const override
+	{
+		return core::draw_frame::still(last_frame_);
+	}
+
+	void paused(bool value)
+	{
+		paused_ = value;
+	}
+
+	uint32_t frame_number() const override
+	{
+		return frame_number_;
+	}
+	
 	uint32_t nb_frames() const override
 	{
 		if(input_.loop())
@@ -261,7 +293,7 @@ public:
 		info.add(L"progressive",		video_decoder_.is_progressive());
 		info.add(L"fps",				fps_);
 		info.add(L"loop",				input_.loop());
-		info.add(L"frame-number",		frame_number());
+		info.add(L"frame-number",		frame_number_);
 		auto nb_frames2 = nb_frames();
 		info.add(L"nb-frames",			nb_frames2 == std::numeric_limits<int64_t>::max() ? -1 : nb_frames2);
 		info.add(L"file-frame-number",	file_frame_number());
@@ -318,11 +350,17 @@ public:
 		audio_decoder_.clear();
 			
 		input_.seek(target);
-						
-		receive_impl();
-		receive_impl();
-		receive_impl();
-		receive_impl();
+				
+		auto frame = core::draw_frame::late();		
+		
+		try_decode_frame(frame);
+		try_decode_frame(frame);
+		try_decode_frame(frame);
+		try_decode_frame(frame);
+		try_decode_frame(frame);
+
+		if(frame != core::draw_frame::late())
+			last_frame_ = frame;
 	}
 
 	std::wstring print_mode() const
