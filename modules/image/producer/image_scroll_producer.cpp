@@ -50,7 +50,7 @@ using namespace boost::assign;
 
 namespace caspar { namespace image {
 		
-struct image_scroll_producer : public core::frame_producer_impl
+struct image_scroll_producer : public core::frame_producer_base
 {	
 	monitor::basic_subject			event_subject_;
 

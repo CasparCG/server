@@ -81,11 +81,11 @@ public:
 	virtual void								leading_producer(const spl::shared_ptr<frame_producer>&) {}  
 };
 
-class frame_producer_impl : public frame_producer
+class frame_producer_base : public frame_producer
 {
 public:
-	frame_producer_impl();
-	virtual ~frame_producer_impl(){}	
+	frame_producer_base();
+	virtual ~frame_producer_base(){}	
 
 	// Methods	
 

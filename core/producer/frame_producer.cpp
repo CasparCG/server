@@ -46,14 +46,14 @@ void register_producer_factory(const producer_factory_t& factory)
 	g_factories.push_back(factory);
 }
 
-struct frame_producer_impl::impl
+struct frame_producer_base::impl
 {
 	tbb::atomic<uint32_t>	frame_number_;
 	tbb::atomic<bool>		paused_;
-	frame_producer_impl&	self_;
+	frame_producer_base&	self_;
 	draw_frame				last_frame_;
 
-	impl(frame_producer_impl& self)
+	impl(frame_producer_base& self)
 		: self_(self)
 		, last_frame_(draw_frame::empty())
 	{
@@ -84,36 +84,36 @@ struct frame_producer_impl::impl
 	}
 };
 
-frame_producer_impl::frame_producer_impl() : impl_(new impl(*this))
+frame_producer_base::frame_producer_base() : impl_(new impl(*this))
 {
 }
 
-draw_frame frame_producer_impl::receive()
+draw_frame frame_producer_base::receive()
 {
 	return impl_->receive();
 }
 
-void frame_producer_impl::paused(bool value)
+void frame_producer_base::paused(bool value)
 {
 	impl_->paused(value);
 }
 
-draw_frame frame_producer_impl::last_frame() const
+draw_frame frame_producer_base::last_frame() const
 {
 	return impl_->last_frame();
 }
 
-boost::unique_future<std::wstring> frame_producer_impl::call(const std::wstring&) 
+boost::unique_future<std::wstring> frame_producer_base::call(const std::wstring&) 
 {
 	BOOST_THROW_EXCEPTION(not_supported());
 }
 
-uint32_t frame_producer_impl::nb_frames() const
+uint32_t frame_producer_base::nb_frames() const
 {
 	return std::numeric_limits<uint32_t>::max();
 }
 
-uint32_t frame_producer_impl::frame_number() const
+uint32_t frame_producer_base::frame_number() const
 {
 	return impl_->frame_number_;
 }

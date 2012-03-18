@@ -31,7 +31,7 @@
 
 namespace caspar { namespace core {	
 
-class separated_producer : public frame_producer_impl
+class separated_producer : public frame_producer_base
 {		
 	monitor::basic_subject			event_subject_;
 	monitor::basic_subject			key_event_subject_;

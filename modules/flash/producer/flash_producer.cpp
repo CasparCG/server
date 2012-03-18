@@ -320,7 +320,7 @@ public:
 	}
 };
 
-struct flash_producer : public core::frame_producer_impl
+struct flash_producer : public core::frame_producer_base
 {	
 	monitor::basic_subject							event_subject_;
 	const std::wstring								filename_;	

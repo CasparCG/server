@@ -32,7 +32,7 @@
 
 namespace caspar { namespace core {	
 
-class transition_producer : public frame_producer_impl
+class transition_producer : public frame_producer_base
 {	
 	monitor::basic_subject				event_subject_;
 	const field_mode					mode_;
