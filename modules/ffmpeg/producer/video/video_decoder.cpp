@@ -120,9 +120,7 @@ public:
 				}
 					
 				packets_.pop();
-				file_frame_number_ = static_cast<uint32_t>(packet->pts);
-				avcodec_flush_buffers(codec_context_.get());
-				
+				avcodec_flush_buffers(codec_context_.get());				
 				return flush_video();	
 			}
 			
@@ -165,7 +163,7 @@ public:
 	
 	bool ready() const
 	{
-		return !codec_context_ || !packets_.empty();
+		return !packets_.empty();
 	}
 
 	void clear()
