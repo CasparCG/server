@@ -75,7 +75,7 @@ struct configuration
 	
 	configuration()
 		: device_index(1)
-		, embedded_audio(false)
+		, embedded_audio(true)
 		, keyer(default_keyer)
 		, latency(default_latency)
 		, key_only(false)
