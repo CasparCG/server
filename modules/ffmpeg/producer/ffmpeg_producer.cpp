@@ -186,12 +186,13 @@ public:
 						<< monitor::event("file/path")			% filename_
 						<< monitor::event("loop")				% input_.loop();
 		
-		if(frame == core::draw_frame::late())
-			return frame;
-		else if(input_.eof())
-			return last_frame();
-		else
-			return last_frame_ = frame;
+		if(frame == core::draw_frame::late() && input_.eof())
+				return last_frame();
+		
+		if(frame != core::draw_frame::late())
+			last_frame_ = frame;
+		
+		return frame;
 	}
 
 	core::draw_frame last_frame() const override
@@ -355,13 +356,12 @@ public:
 		video_decoder_.clear();
 		audio_decoder_.clear();
 			
-		target = std::min(target, file_nb_frames()-3);
+		//target = std::min(target, file_nb_frames()-8);
 
 		input_.seek(target);
 				
 		decode_next_frame();
-
-		for(int n = 0; n < 25 && video_decoder_.file_frame_number() != target+2 && !muxer_.empty(); ++n) // TODO: +2 since a frame can be stuck inside yadif filter.
+		for(int n = 0; n < 8 && !muxer_.empty(); ++n) // TODO: +2 since a frame can be stuck inside yadif filter.
 		{
 			muxer_.pop();
 			decode_next_frame();
