@@ -356,17 +356,20 @@ public:
 		video_decoder_.clear();
 		audio_decoder_.clear();
 			
-		//target = std::min(target, file_nb_frames()-8);
+		target = std::min(target, file_nb_frames()-25);
 
 		input_.seek(target);
 				
 		decode_next_frame();
-		for(int n = 0; n < 8 && !muxer_.empty(); ++n) // TODO: +2 since a frame can be stuck inside yadif filter.
-		{
-			muxer_.pop();
-			decode_next_frame();
-		}
-		
+		decode_next_frame();
+		decode_next_frame();
+		decode_next_frame();
+		decode_next_frame();
+		decode_next_frame();
+		muxer_.clear();
+		decode_next_frame();
+		decode_next_frame();
+
 		last_frame_ = !muxer_.empty() ? muxer_.front() : last_frame_;			
 	}
 
