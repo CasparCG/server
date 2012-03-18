@@ -98,8 +98,7 @@ public:
 	virtual void								paused(bool value) override;	
 	virtual uint32_t							nb_frames() const override;
 	uint32_t									frame_number() const override;
-	class draw_frame							last_frame() const override;
-	
+	class draw_frame							last_frame() const override;	
 
 private:
 	virtual class draw_frame					receive() override;
