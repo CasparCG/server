@@ -304,19 +304,9 @@ struct frame_muxer::impl : boost::noncopyable
 			CASPAR_LOG(warning) << L"[frame_muxer] Auto-transcode: Failed to detect display-mode.";
 			display_mode_ = display_mode::simple;
 		}
-			
-		if(!boost::iequals(filter_.filter_str(), filter_str))
-		{
-			for(int n = 0; n < filter_.delay(); ++n)
-			{
-				filter_.push(frame);
-				auto av_frame = filter_.poll();
-				if(av_frame)							
-					video_streams_.back().push(make_frame(this, spl::make_shared_ptr(av_frame), format_desc_.fps, *frame_factory_));
-			}
-			filter_ = filter(filter_str);
-			CASPAR_LOG(info) << L"[frame_muxer] " << display_mode_ << L" " << print_mode(frame->width, frame->height, in_fps_, frame->interlaced_frame > 0);
-		}
+
+		filter_ = filter(filter_str);
+		CASPAR_LOG(info) << L"[frame_muxer] " << display_mode_ << L" " << print_mode(frame->width, frame->height, in_fps_, frame->interlaced_frame > 0);
 	}
 	
 	uint32_t calc_nb_frames(uint32_t nb_frames) const
