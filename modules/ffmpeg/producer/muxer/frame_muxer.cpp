@@ -67,8 +67,8 @@ namespace caspar { namespace ffmpeg {
 	
 struct frame_muxer::impl : boost::noncopyable
 {	
-	std::queue<std::queue<core::mutable_frame>>		video_streams_;
-	std::queue<core::audio_buffer>					audio_streams_;
+	std::queue<core::mutable_frame>					video_stream_;
+	core::audio_buffer								audio_stream_;
 	std::queue<draw_frame>							frame_buffer_;
 	display_mode									display_mode_;
 	const double									in_fps_;
@@ -88,99 +88,64 @@ struct frame_muxer::impl : boost::noncopyable
 		, audio_cadence_(format_desc_.audio_cadence)
 		, frame_factory_(frame_factory)
 		, filter_str_(filter_str)
-	{
-		video_streams_.push(std::queue<core::mutable_frame>());
-		audio_streams_.push(core::audio_buffer());
-		
+	{		
 		// Note: Uses 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
 		// This cadence fills the audio mixer most optimally.
 		boost::range::rotate(audio_cadence_, std::end(audio_cadence_)-1);
 	}
 
-	void push(const std::shared_ptr<AVFrame>& video_frame)
+	void push(const std::shared_ptr<AVFrame>& video)
 	{		
-		if(!video_frame)
-		{
-			merge();
-			return;
-		}
-
-		if(video_frame == flush_video())		
-			video_streams_.push(std::queue<core::mutable_frame>());				
-		else if(video_frame == empty_video())
+		if(video == empty_video())
 		{
 			auto empty_frame = frame_factory_->create_frame(this, core::pixel_format_desc(core::pixel_format::invalid));
-			video_streams_.back().push(std::move(empty_frame));
+			video_stream_.push(std::move(empty_frame));
 			display_mode_ = display_mode::simple;
 		}
-		else
+		else if(video)
 		{
 			if(display_mode_ == display_mode::invalid)
-				update_display_mode(video_frame);
+				update_display_mode(video);
 				
-			filter_.push(video_frame);
+			filter_.push(video);
 			BOOST_FOREACH(auto& av_frame, filter_.poll_all())			
-				video_streams_.back().push(make_frame(this, av_frame, format_desc_.fps, *frame_factory_));			
+				video_stream_.push(make_frame(this, av_frame, format_desc_.fps, *frame_factory_));			
 		}
 
-		if(video_streams_.back().size() > 32)
-			BOOST_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("video-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
-		
 		merge();
 	}
 
 	void push(const std::shared_ptr<core::audio_buffer>& audio)
 	{
-		if(!audio)
-		{
-			merge();
-			return;
-		}
-
-		if(audio == flush_audio())			
-			audio_streams_.push(core::audio_buffer());				
-		else if(audio == empty_audio())		
-			boost::range::push_back(audio_streams_.back(), core::audio_buffer(audio_cadence_.front(), 0));		
-		else		
-			boost::range::push_back(audio_streams_.back(), *audio);		
-
-		if(audio_streams_.back().size() > static_cast<size_t>(32*audio_cadence_.front()))
-			BOOST_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("audio-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
+		if(audio == empty_audio())		
+			boost::range::push_back(audio_stream_, core::audio_buffer(audio_cadence_.front(), 0));		
+		else if(audio)	
+			boost::range::push_back(audio_stream_, *audio);		
 
 		merge();
 	}
 	
 	bool video_ready() const
 	{		
-		return video_streams_.size() > 1 || (video_streams_.size() >= audio_streams_.size() && video_ready2());
-	}
-	
-	bool audio_ready() const
-	{
-		return audio_streams_.size() > 1 || (audio_streams_.size() >= video_streams_.size() && audio_ready2());
-	}
-
-	bool video_ready2() const
-	{		
 		switch(display_mode_)
 		{
 		case display_mode::deinterlace_bob_reinterlace:					
 		case display_mode::interlace:	
 		case display_mode::half:
-			return video_streams_.front().size() >= 2;
+			return video_stream_.size() >= 2;
 		default:										
-			return video_streams_.front().size() >= 1;
+			return video_stream_.size() >= 1;
 		}
 	}
 	
-	bool audio_ready2() const
+	bool audio_ready() const
 	{
 		switch(display_mode_)
 		{
 		case display_mode::duplicate:					
-			return audio_streams_.front().size()/2 >= static_cast<size_t>(audio_cadence_.front());
+			return audio_stream_.size()/2 >= static_cast<size_t>(audio_cadence_.front());
 		default:										
-			return audio_streams_.front().size() >= static_cast<size_t>(audio_cadence_.front());
+			return audio_stream_.size() >= static_cast<size_t>(audio_cadence_.front());
 		}
 	}
 
@@ -201,78 +166,67 @@ struct frame_muxer::impl : boost::noncopyable
 		
 	void merge()
 	{
-		if(video_streams_.size() > 1 && audio_streams_.size() > 1 && (!video_ready2() || !audio_ready2()))
-		{
-			if(!video_streams_.front().empty() || !audio_streams_.front().empty())
-				CASPAR_LOG(trace) << "Truncating: " << video_streams_.front().size() << L" video-frames, " << audio_streams_.front().size() << L" audio-samples.";
+		if(video_ready() && audio_ready() && display_mode_ != display_mode::invalid)
+		{				
+			auto frame1			= pop_video();
+			frame1.audio_data()	= pop_audio();
 
-			video_streams_.pop();
-			audio_streams_.pop();
-		}
-
-		if(!video_ready2() || !audio_ready2() || display_mode_ == display_mode::invalid)
-			return;
-				
-		auto frame1				= pop_video();
-		frame1.audio_data()	= pop_audio();
-
-		switch(display_mode_)
-		{
-		case display_mode::simple:						
-		case display_mode::deinterlace_bob:				
-		case display_mode::deinterlace:	
+			switch(display_mode_)
 			{
-				frame_buffer_.push(core::draw_frame(std::move(frame1)));
-				break;
-			}
-		case display_mode::interlace:					
-		case display_mode::deinterlace_bob_reinterlace:	
-			{				
-				auto frame2 = pop_video();
+			case display_mode::simple:						
+			case display_mode::deinterlace_bob:				
+			case display_mode::deinterlace:	
+				{
+					frame_buffer_.push(core::draw_frame(std::move(frame1)));
+					break;
+				}
+			case display_mode::interlace:					
+			case display_mode::deinterlace_bob_reinterlace:	
+				{				
+					auto frame2 = pop_video();
 
-				frame_buffer_.push(core::draw_frame::interlace(
-					core::draw_frame(std::move(frame1)),
-					core::draw_frame(std::move(frame2)),
-					format_desc_.field_mode));	
-				break;
-			}
-		case display_mode::duplicate:	
-			{
-				boost::range::push_back(frame1.audio_data(), pop_audio());
+					frame_buffer_.push(core::draw_frame::interlace(
+						core::draw_frame(std::move(frame1)),
+						core::draw_frame(std::move(frame2)),
+						format_desc_.field_mode));	
+					break;
+				}
+			case display_mode::duplicate:	
+				{
+					boost::range::push_back(frame1.audio_data(), pop_audio());
 
-				auto draw_frame = core::draw_frame(std::move(frame1));
-				frame_buffer_.push(draw_frame);
-				frame_buffer_.push(draw_frame);
-				break;
-			}
-		case display_mode::half:	
-			{				
-				pop_video(); // Throw away
+					auto draw_frame = core::draw_frame(std::move(frame1));
+					frame_buffer_.push(draw_frame);
+					frame_buffer_.push(draw_frame);
+					break;
+				}
+			case display_mode::half:	
+				{				
+					pop_video(); // Throw away
 
-				frame_buffer_.push(core::draw_frame(std::move(frame1)));
-				break;
+					frame_buffer_.push(core::draw_frame(std::move(frame1)));
+					break;
+				}
+			default:
+				BOOST_THROW_EXCEPTION(invalid_operation());
 			}
-		default:
-			BOOST_THROW_EXCEPTION(invalid_operation());
 		}
 	}
 	
 	core::mutable_frame pop_video()
 	{
-		auto frame = std::move(video_streams_.front().front());
-		video_streams_.front().pop();		
+		auto frame = std::move(video_stream_.front());
+		video_stream_.pop();		
 		return std::move(frame);
 	}
 
 	core::audio_buffer pop_audio()
 	{
-		CASPAR_VERIFY(audio_streams_.front().size() >= static_cast<size_t>(audio_cadence_.front()));
-
-		auto begin = audio_streams_.front().begin();
+		auto begin = audio_stream_.begin();
 		auto end   = begin + audio_cadence_.front();
 
 		core::audio_buffer samples(begin, end);
-		audio_streams_.front().erase(begin, end);
+		audio_stream_.erase(begin, end);
 		
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 
@@ -349,15 +303,13 @@ struct frame_muxer::impl : boost::noncopyable
 
 	void clear()
 	{
-		while(!video_streams_.empty())
-			video_streams_.pop();		
-		while(!audio_streams_.empty())
-			audio_streams_.pop();
+		while(!video_stream_.empty())
+			video_stream_.pop();	
+
+		audio_stream_.clear();
+
 		while(!frame_buffer_.empty())
 			frame_buffer_.pop();
-
-		video_streams_.push(std::queue<core::mutable_frame>());
-		audio_streams_.push(core::audio_buffer());
 	}
 };
 

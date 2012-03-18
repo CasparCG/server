@@ -88,7 +88,7 @@ public:
 
 	void push(const std::shared_ptr<AVPacket>& packet)
 	{			
-		if(!packet)
+		if(!packet || !codec_context_)
 			return;
 
 		if(packet->stream_index == index_ || packet->data == nullptr)
@@ -97,32 +97,27 @@ public:
 	
 	std::shared_ptr<core::audio_buffer> poll()
 	{
+		if(!codec_context_)
+			return empty_audio();
+
 		if(packets_.empty())
 			return nullptr;
 				
 		auto packet = packets_.front();
 		
-		if(!codec_context_)		
+		if(packet->data == nullptr)
 		{
 			packets_.pop();
-			return packet->data == nullptr ? flush_audio() : empty_audio();
+			avcodec_flush_buffers(codec_context_.get());
+			return nullptr;
 		}
-		else
-		{
-			if(packet->data == nullptr)
-			{
-				packets_.pop();
-				avcodec_flush_buffers(codec_context_.get());
-				return flush_audio();
-			}
 
-			auto audio = decode(*packet);
+		auto audio = decode(*packet);
 
-			if(packet->size == 0)					
-				packets_.pop();
+		if(packet->size == 0)					
+			packets_.pop();
 
-			return audio;
-		}
+		return audio;
 	}
 
 	std::shared_ptr<core::audio_buffer> decode(AVPacket& pkt)
@@ -155,7 +150,7 @@ public:
 
 	bool ready() const
 	{
-		return !packets_.empty();
+		return !codec_context_ || !packets_.empty();
 	}
 	
 	void clear()

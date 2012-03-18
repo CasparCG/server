@@ -420,9 +420,6 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 	auto start		= get_param(L"START", params, get_param(L"SEEK", params, static_cast<uint32_t>(0)));
 	auto length		= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
 	auto filter_str = get_param(L"FILTER", params, L""); 	
-		
-	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
-	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
 	
 	return spl::make_shared_ptr(std::make_shared<ffmpeg_producer>(frame_factory, format_desc, filename, filter_str, loop, start, length));
 }
