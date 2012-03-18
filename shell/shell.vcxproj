@@ -204,7 +204,7 @@ copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
     </ClCompile>
     <Link>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>alibcof64.lib;sfml-system.lib;sfml-window.lib;sfml-graphics.lib;sfml-audio.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;tbb.lib;OpenGL32.lib;glew32.lib;freetype248.lib;openal32.lib;freeimage.lib</AdditionalDependencies>
+      <AdditionalDependencies>alibcof64.lib;sfml-system.lib;sfml-window.lib;sfml-graphics.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;tbb.lib;OpenGL32.lib;glew32.lib;freetype248.lib;openal32.lib;freeimage.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
