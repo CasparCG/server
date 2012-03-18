@@ -89,7 +89,7 @@ public:
 
 	void push(const std::shared_ptr<AVPacket>& packet)
 	{
-		if(!packet)
+		if(!packet || !codec_context_)
 			return;
 
 		if(packet->stream_index == index_ || packet->data == nullptr)
@@ -98,36 +98,30 @@ public:
 
 	std::shared_ptr<AVFrame> poll()
 	{		
+		if(!codec_context_)
+			return empty_video();
+
 		if(packets_.empty())
 			return nullptr;
 		
 		auto packet = packets_.front();
 		
-		if(!codec_context_)		
-		{
-			packets_.pop();
-			return packet->data == nullptr ? flush_video() : empty_video();
-		}
-		else
-		{
-			if(packet->data == nullptr)
-			{			
-				if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
-				{
-					auto video = decode(*packet);
-					if(video)
-						return video;
-				}
-					
-				packets_.pop();
-				avcodec_flush_buffers(codec_context_.get());				
-				return flush_video();	
+		if(packet->data == nullptr)
+		{			
+			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
+			{
+				auto video = decode(*packet);
+				if(video)
+					return video;
 			}
-			
+					
 			packets_.pop();
-			return decode(*packet);
+			avcodec_flush_buffers(codec_context_.get());				
+			return nullptr;	
 		}
-		
+			
+		packets_.pop();
+		return decode(*packet);		
 	}
 
 	std::shared_ptr<AVFrame> decode(AVPacket& pkt)
@@ -163,7 +157,7 @@ public:
 	
 	bool ready() const
 	{
-		return !packets_.empty();
+		return !codec_context_ || !packets_.empty();
 	}
 
 	void clear()
