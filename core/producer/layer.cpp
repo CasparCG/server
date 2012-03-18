@@ -41,9 +41,7 @@ struct layer::impl
 	monitor::basic_subject				background_event_subject_;
 	spl::shared_ptr<frame_producer>		foreground_;
 	spl::shared_ptr<frame_producer>		background_;
-	int64_t								frame_number_;
 	boost::optional<int32_t>			auto_play_delta_;
-	bool								is_paused_;
 
 public:
 	impl(int index) 
@@ -52,8 +50,6 @@ public:
 		, background_event_subject_("background")
 		, foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
-		, frame_number_(0)
-		, is_paused_(false)
 	{
 		foreground_event_subject_.subscribe(event_subject_);
 		background_event_subject_.subscribe(event_subject_);
@@ -61,14 +57,9 @@ public:
 
 	void pause()
 	{
-		is_paused_ = true;
+		foreground_->paused(true);
 	}
-
-	void resume()
-	{
-		is_paused_ = false;
-	}
-
+	
 	void load(spl::shared_ptr<frame_producer> producer, bool preview, const boost::optional<int32_t>& auto_play_delta)
 	{		
 		background_->unsubscribe(background_event_subject_);
@@ -81,7 +72,7 @@ public:
 		{
 			play();
 			foreground_->receive();
-			pause();
+			foreground_->paused(true);
 		}
 
 		if(auto_play_delta_ && foreground_ == frame_producer::empty())
@@ -102,11 +93,10 @@ public:
 			
 			foreground_->subscribe(foreground_event_subject_);
 
-			frame_number_	= 0;
 			auto_play_delta_.reset();
 		}
 
-		resume();
+		foreground_->paused(false);
 	}
 	
 	void stop()
@@ -115,29 +105,21 @@ public:
 
 		foreground_ = std::move(frame_producer::empty());
 
-		frame_number_	= 0;
 		auto_play_delta_.reset();
-
-		pause();
 	}
 		
 	draw_frame receive(const video_format_desc& format_desc)
 	{		
 		try
-		{
-			if(is_paused_)
-				return foreground_->last_frame();
-		
+		{		
 			auto frame = foreground_->receive();
 
 			if(frame == core::draw_frame::late())
 				return foreground_->last_frame();
 						
-			++frame_number_;
-
 			if(auto_play_delta_)
 			{
-				auto frames_left = static_cast<int64_t>(foreground_->nb_frames()) - frame_number_ - static_cast<int64_t>(*auto_play_delta_);
+				auto frames_left = static_cast<int64_t>(foreground_->nb_frames()) - foreground_->frame_number() - static_cast<int64_t>(*auto_play_delta_);
 				if(frames_left < 1)
 				{
 					play();
@@ -145,10 +127,9 @@ public:
 				}
 			}
 
-			event_subject_	<< monitor::event("state")	% u8(is_paused_ ? L"paused" : (foreground_ == frame_producer::empty() ? L"stopped" : L"playing"))							
-							<< monitor::event("time")	% monitor::duration(frame_number_/format_desc.fps)
+			event_subject_	<< monitor::event("time")	% monitor::duration(foreground_->frame_number()/format_desc.fps)
 														% monitor::duration(static_cast<int64_t>(foreground_->nb_frames()) - static_cast<int64_t>(auto_play_delta_ ? *auto_play_delta_ : 0)/format_desc.fps)
-							<< monitor::event("frame")	% static_cast<int64_t>(frame_number_)
+							<< monitor::event("frame")	% static_cast<int64_t>(foreground_->frame_number())
 														% static_cast<int64_t>((static_cast<int64_t>(foreground_->nb_frames()) - static_cast<int64_t>(auto_play_delta_ ? *auto_play_delta_ : 0)));
 
 			foreground_event_subject_ << monitor::event("type") % foreground_->name();
@@ -167,14 +148,13 @@ public:
 	boost::property_tree::wptree info() const
 	{
 		boost::property_tree::wptree info;
-		info.add(L"status",		is_paused_ ? L"paused" : (foreground_ == frame_producer::empty() ? L"stopped" : L"playing"));
 		info.add(L"auto_delta",	(auto_play_delta_ ? boost::lexical_cast<std::wstring>(*auto_play_delta_) : L"null"));
-		info.add(L"frame-number", frame_number_);
+		info.add(L"frame-number", foreground_->frame_number());
 
 		auto nb_frames = foreground_->nb_frames();
 
 		info.add(L"nb_frames",	 nb_frames == std::numeric_limits<int64_t>::max() ? -1 : nb_frames);
-		info.add(L"frames-left", nb_frames == std::numeric_limits<int64_t>::max() ? -1 : (foreground_->nb_frames() - frame_number_ - (auto_play_delta_ ? *auto_play_delta_ : 0)));
+		info.add(L"frames-left", nb_frames == std::numeric_limits<int64_t>::max() ? -1 : (foreground_->nb_frames() - foreground_->frame_number() - (auto_play_delta_ ? *auto_play_delta_ : 0)));
 		info.add_child(L"producer", foreground_->info());
 		info.add_child(L"background.producer", background_->info());
 		return info;

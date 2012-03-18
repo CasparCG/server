@@ -320,7 +320,7 @@ public:
 	}
 };
 
-struct flash_producer : public core::frame_producer
+struct flash_producer : public core::frame_producer_impl
 {	
 	monitor::basic_subject							event_subject_;
 	const std::wstring								filename_;	
@@ -339,9 +339,7 @@ struct flash_producer : public core::frame_producer
 				
 	boost::timer									tick_timer_;
 	std::unique_ptr<flash_renderer>					renderer_;
-
-	core::draw_frame								last_frame_;
-
+	
 	executor										executor_;	
 public:
 	flash_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::wstring& filename, int width, int height) 
@@ -351,7 +349,6 @@ public:
 		, width_(width > 0 ? width : format_desc.width)
 		, height_(height > 0 ? height : format_desc.height)
 		, buffer_size_(env::properties().get(L"configuration.flash.buffer-depth", format_desc.fps > 30.0 ? 4 : 2))
-		, last_frame_(core::draw_frame::empty())
 		, executor_(L"flash_producer")
 	{	
 		fps_ = 0;
@@ -375,7 +372,7 @@ public:
 
 	// frame_producer
 		
-	core::draw_frame receive() override
+	core::draw_frame receive_impl() override
 	{					
 		auto frame = core::draw_frame::late();
 		
@@ -383,10 +380,7 @@ public:
 			executor_.begin_invoke(std::bind(&flash_producer::next, this));		
 		else		
 			graph_->set_tag("late-frame");		
-
-		if(frame != core::draw_frame::late())
-			last_frame_ = frame;
-		
+				
 		event_subject_ << monitor::event("host/path")	% filename_
 					   << monitor::event("host/width")	% width_
 					   << monitor::event("host/height") % height_
@@ -395,12 +389,7 @@ public:
 
 		return frame;
 	}
-
-	core::draw_frame last_frame() const override
-	{
-		return core::draw_frame::still(last_frame_);
-	}
-	
+		
 	boost::unique_future<std::wstring> call(const std::wstring& param) override
 	{	
 		return executor_.begin_invoke([this, param]() -> std::wstring

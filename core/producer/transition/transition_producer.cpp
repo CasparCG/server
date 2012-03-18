@@ -32,16 +32,14 @@
 
 namespace caspar { namespace core {	
 
-class transition_producer : public frame_producer
+class transition_producer : public frame_producer_impl
 {	
 	monitor::basic_subject				event_subject_;
 	const field_mode					mode_;
 	int									current_frame_;
 	
 	const transition_info				info_;
-
-	draw_frame							last_frame_;
-	
+		
 	spl::shared_ptr<frame_producer>		dest_producer_;
 	spl::shared_ptr<frame_producer>		source_producer_;
 		
@@ -51,7 +49,6 @@ public:
 		: mode_(mode)
 		, current_frame_(0)
 		, info_(info)
-		, last_frame_(draw_frame::empty())
 		, dest_producer_(dest)
 		, source_producer_(frame_producer::empty())
 	{
@@ -67,7 +64,7 @@ public:
 		source_producer_ = producer;
 	}
 
-	draw_frame receive() override
+	draw_frame receive_impl() override
 	{
 		if(current_frame_ >= info_.duration)
 		{
@@ -108,14 +105,9 @@ public:
 																	}
 																}();
 
-		return compose(draw_frame::push(dest), draw_frame::push(source));
+		return compose(dest, source);
 	}
-
-	draw_frame last_frame() const override
-	{
-		return dest_producer_->last_frame();
-	}
-	
+		
 	uint32_t nb_frames() const override
 	{
 		return dest_producer_->nb_frames();

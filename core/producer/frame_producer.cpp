@@ -46,9 +46,76 @@ void register_producer_factory(const producer_factory_t& factory)
 	g_factories.push_back(factory);
 }
 
-boost::unique_future<std::wstring> frame_producer::call(const std::wstring&) 
+struct frame_producer_impl::impl
+{
+	tbb::atomic<uint32_t>	frame_number_;
+	tbb::atomic<bool>		paused_;
+	frame_producer_impl&	self_;
+	draw_frame				last_frame_;
+
+	impl(frame_producer_impl& self)
+		: self_(self)
+		, last_frame_(draw_frame::empty())
+	{
+		frame_number_ = 0;
+		paused_ = false;
+	}
+	
+	draw_frame receive()
+	{
+		if(paused_)
+			return self_.last_frame();
+
+		auto frame = draw_frame::push(self_.receive_impl());
+		if(frame != draw_frame::late())
+			++frame_number_;
+
+		return last_frame_ = frame;
+	}
+
+	void paused(bool value)
+	{
+		paused_ = value;
+	}
+
+	draw_frame last_frame() const
+	{
+		return draw_frame::still(last_frame_);
+	}
+};
+
+frame_producer_impl::frame_producer_impl() : impl_(new impl(*this))
+{
+}
+
+draw_frame frame_producer_impl::receive()
+{
+	return impl_->receive();
+}
+
+void frame_producer_impl::paused(bool value)
+{
+	impl_->paused(value);
+}
+
+draw_frame frame_producer_impl::last_frame() const
+{
+	return impl_->last_frame();
+}
+
+boost::unique_future<std::wstring> frame_producer_impl::call(const std::wstring&) 
 {
 	BOOST_THROW_EXCEPTION(not_supported());
+}
+
+uint32_t frame_producer_impl::nb_frames() const
+{
+	return std::numeric_limits<uint32_t>::max();
+}
+
+uint32_t frame_producer_impl::frame_number() const
+{
+	return impl_->frame_number_;
 }
 
 const spl::shared_ptr<frame_producer>& frame_producer::empty() 
@@ -57,13 +124,16 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
 	{
 	public:
 		empty_frame_producer(){}
-		virtual draw_frame receive() override{return draw_frame::empty();}
-		virtual draw_frame last_frame() const override{return draw_frame::empty();}
-		virtual uint32_t nb_frames() const override {return 0;}
-		virtual std::wstring print() const override { return L"empty";}
-		virtual void subscribe(const monitor::observable::observer_ptr& o) override{}
-		virtual void unsubscribe(const monitor::observable::observer_ptr& o) override{}	
-		virtual std::wstring name() const override {return L"empty";}
+		draw_frame receive() override{return draw_frame::empty();}
+		void paused(bool value) override{}
+		uint32_t nb_frames() const override {return 0;}
+		std::wstring print() const override { return L"empty";}
+		void subscribe(const monitor::observable::observer_ptr& o) override{}
+		void unsubscribe(const monitor::observable::observer_ptr& o) override{}	
+		std::wstring name() const override {return L"empty";}
+		uint32_t frame_number() const override {return 0;}
+		boost::unique_future<std::wstring> call(const std::wstring& params) override{BOOST_THROW_EXCEPTION(not_supported());}
+		draw_frame last_frame() const {return draw_frame::empty();}
 	
 		boost::property_tree::wptree info() const override
 		{
@@ -118,15 +188,18 @@ public:
 	}
 	
 	draw_frame	receive() override																										{return producer_->receive();}
-	draw_frame	last_frame() const override																								{return producer_->last_frame();}
 	std::wstring										print() const override															{return producer_->print();}
+	void												paused(bool value) override														{producer_->paused(value);}
 	std::wstring										name() const override															{return producer_->name();}
+	void												puased(bool value)																{producer_->paused(value);}
+	uint32_t											frame_number() const override													{return producer_->frame_number();}
 	boost::property_tree::wptree 						info() const override															{return producer_->info();}
 	boost::unique_future<std::wstring>					call(const std::wstring& str) override											{return producer_->call(str);}
 	void												leading_producer(const spl::shared_ptr<frame_producer>& producer) override		{return producer_->leading_producer(producer);}
 	uint32_t											nb_frames() const override														{return producer_->nb_frames();}
-	virtual void subscribe(const monitor::observable::observer_ptr& o)																	{return producer_->subscribe(o);}
-	virtual void unsubscribe(const monitor::observable::observer_ptr& o)																{return producer_->unsubscribe(o);}
+	class draw_frame									last_frame() const																{return producer_->last_frame();}
+	void												subscribe(const monitor::observable::observer_ptr& o)							{return producer_->subscribe(o);}
+	void												unsubscribe(const monitor::observable::observer_ptr& o)							{return producer_->unsubscribe(o);}
 };
 
 spl::shared_ptr<core::frame_producer> create_destroy_proxy(spl::shared_ptr<core::frame_producer> producer)

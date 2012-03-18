@@ -61,7 +61,7 @@ public:
 	// Methods	
 
 	virtual class draw_frame					receive() = 0;
-	virtual boost::unique_future<std::wstring>	call(const std::wstring& params);
+	virtual boost::unique_future<std::wstring>	call(const std::wstring& params) = 0;
 	
 	// monitor::observable
 
@@ -69,13 +69,45 @@ public:
 	virtual void unsubscribe(const monitor::observable::observer_ptr& o) = 0;
 
 	// Properties
+	
 
+	virtual void								paused(bool value) = 0;
 	virtual std::wstring						print() const = 0;
 	virtual std::wstring						name() const = 0;
 	virtual boost::property_tree::wptree		info() const = 0;
-	virtual uint32_t							nb_frames() const {return std::numeric_limits<uint32_t>::max();}
+	virtual uint32_t							nb_frames() const = 0;
+	virtual uint32_t							frame_number() const = 0;
 	virtual class draw_frame					last_frame() const = 0;
-	virtual void								leading_producer(const spl::shared_ptr<frame_producer>&) {}  	
+	virtual void								leading_producer(const spl::shared_ptr<frame_producer>&) {}  
+};
+
+class frame_producer_impl : public frame_producer
+{
+public:
+	frame_producer_impl();
+	virtual ~frame_producer_impl(){}	
+
+	// Methods	
+
+	virtual boost::unique_future<std::wstring>	call(const std::wstring& params);
+	
+	// monitor::observable
+	
+	// Properties
+	
+	virtual void								paused(bool value) override;	
+	virtual uint32_t							nb_frames() const override;
+	uint32_t									frame_number() const override;
+	class draw_frame							last_frame() const override;
+	
+
+private:
+	virtual class draw_frame					receive() override;
+	virtual class draw_frame					receive_impl() = 0;
+
+	struct impl;
+	friend struct impl;
+	std::shared_ptr<impl> impl_;
 };
 
 typedef std::function<spl::shared_ptr<core::frame_producer>(const spl::shared_ptr<class frame_factory>&, const video_format_desc& format_desc, const std::vector<std::wstring>&)> producer_factory_t;
