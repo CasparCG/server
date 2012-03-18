@@ -85,7 +85,8 @@
     </PreBuildEvent>
     <Lib />
     <PostBuildEvent>
-      <Command>"SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir)\version.tmpl" "$(SolutionDir)\version.h"</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
