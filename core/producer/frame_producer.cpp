@@ -49,6 +49,7 @@ void register_producer_factory(const producer_factory_t& factory)
 struct frame_producer_base::impl
 {
 	tbb::atomic<uint32_t>	frame_number_;
+	tbb::atomic<bool>		paused_;
 	frame_producer_base&	self_;
 	draw_frame				last_frame_;
 
@@ -57,10 +58,14 @@ struct frame_producer_base::impl
 		, last_frame_(draw_frame::empty())
 	{
 		frame_number_ = 0;
+		paused_ = false;
 	}
 	
 	draw_frame receive()
 	{
+		if(paused_)
+			return self_.last_frame();
+
 		auto frame = draw_frame::push(self_.receive_impl());
 		if(frame == draw_frame::late())
 			return frame;
@@ -69,7 +74,12 @@ struct frame_producer_base::impl
 
 		return last_frame_ = frame;
 	}
-	
+
+	void paused(bool value)
+	{
+		paused_ = value;
+	}
+
 	draw_frame last_frame() const
 	{
 		return draw_frame::still(last_frame_);
@@ -91,7 +101,7 @@ draw_frame frame_producer_base::receive()
 
 void frame_producer_base::paused(bool value)
 {
-	BOOST_THROW_EXCEPTION(not_supported());
+	impl_->paused(value);
 }
 
 draw_frame frame_producer_base::last_frame() const
