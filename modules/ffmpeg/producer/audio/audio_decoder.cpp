@@ -112,7 +112,6 @@ public:
 			if(packet->data == nullptr)
 			{
 				packets_.pop();
-				file_frame_number_ = static_cast<uint32_t>(packet->pts);
 				avcodec_flush_buffers(codec_context_.get());
 				return flush_audio();
 			}
@@ -156,7 +155,7 @@ public:
 
 	bool ready() const
 	{
-		return !codec_context_ || !packets_.empty();
+		return !packets_.empty();
 	}
 	
 	void clear()
