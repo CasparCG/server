@@ -302,11 +302,10 @@ public:
 	}
 };
 	
-class decklink_producer_proxy : public core::frame_producer
+class decklink_producer_proxy : public core::frame_producer_impl
 {		
 	std::unique_ptr<decklink_producer>	producer_;
 	const uint32_t						length_;
-	core::draw_frame					last_frame_;
 	executor							executor_;
 public:
 	explicit decklink_producer_proxy(const core::video_format_desc& in_format_desc,
@@ -316,7 +315,6 @@ public:
 									 const std::wstring& filter_str, uint32_t length)
 		: executor_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
 		, length_(length)
-		, last_frame_(core::draw_frame::empty())
 	{
 		executor_.invoke([=]
 		{
@@ -346,21 +344,11 @@ public:
 	
 	// frame_producer
 				
-	core::draw_frame receive() override
-	{
-		auto frame = producer_->get_frame();
-
-		if(frame != core::draw_frame::late())
-			last_frame_ = frame;
-
-		return frame;
+	core::draw_frame receive_impl() override
+	{		
+		return producer_->get_frame();
 	}
-
-	core::draw_frame last_frame() const override
-	{
-		return core::draw_frame::still(last_frame_);
-	}
-		
+			
 	uint32_t nb_frames() const override
 	{
 		return length_;

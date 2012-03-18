@@ -50,7 +50,7 @@ using namespace boost::assign;
 
 namespace caspar { namespace image {
 		
-struct image_scroll_producer : public core::frame_producer
+struct image_scroll_producer : public core::frame_producer_impl
 {	
 	monitor::basic_subject			event_subject_;
 
@@ -64,15 +64,12 @@ struct image_scroll_producer : public core::frame_producer
 	int								speed_;
 
 	std::array<double, 2>			start_offset_;
-
-	core::draw_frame				last_frame_;
-
+	
 	explicit image_scroll_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::wstring& filename, int speed) 
 		: filename_(filename)
 		, delta_(0)
 		, format_desc_(format_desc)
 		, speed_(speed)
-		, last_frame_(core::draw_frame::empty())
 	{
 		start_offset_.assign(0.0);
 
@@ -162,7 +159,7 @@ struct image_scroll_producer : public core::frame_producer
 	
 	// frame_producer
 
-	core::draw_frame receive() override
+	core::draw_frame receive_impl() override
 	{		
 		delta_ += speed_;
 
@@ -196,14 +193,9 @@ struct image_scroll_producer : public core::frame_producer
 					   << monitor::event("delta") % delta_ 
 					   << monitor::event("speed") % speed_;
 
-		return last_frame_ = core::draw_frame(frames_);
+		return core::draw_frame(frames_);
 	}
-
-	core::draw_frame last_frame() const override
-	{
-		return core::draw_frame::still(last_frame_);
-	}
-			
+				
 	std::wstring print() const override
 	{
 		return L"image_scroll_producer[" + filename_ + L"]";

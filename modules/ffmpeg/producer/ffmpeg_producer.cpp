@@ -64,7 +64,7 @@
 
 namespace caspar { namespace ffmpeg {
 				
-struct ffmpeg_producer : public core::frame_producer
+struct ffmpeg_producer : public core::frame_producer_impl
 {
 	monitor::basic_subject							event_subject_;
 	const std::wstring								filename_;
@@ -83,10 +83,6 @@ struct ffmpeg_producer : public core::frame_producer
 	audio_decoder									audio_decoder_;	
 	frame_muxer										muxer_;
 
-	int64_t											frame_number_;
-
-	core::draw_frame								last_frame_;
-	
 public:
 	explicit ffmpeg_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, 
 							 const core::video_format_desc& format_desc, 
@@ -102,8 +98,6 @@ public:
 		, fps_(read_fps(*input_.context(), format_desc_.fps))
 		, muxer_(fps_, frame_factory, format_desc_, filter)
 		, start_(start)
-		, frame_number_(0)
-		, last_frame_(core::draw_frame::empty())
 	{
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
@@ -146,7 +140,7 @@ public:
 
 	// frame_producer
 	
-	core::draw_frame receive() override
+	core::draw_frame receive_impl() override
 	{				
 		boost::timer frame_timer;
 				
@@ -162,13 +156,7 @@ public:
 		event_subject_	<< monitor::event("profiler/time") % frame_timer.elapsed() % (1.0/format_desc_.fps);			
 								
 		graph_->set_text(print());
-
-		if(frame != core::draw_frame::late())
-		{
-			++frame_number_;
-			last_frame_ = frame;
-		}
-				
+						
 		event_subject_	<< monitor::event("file/time")			% monitor::duration(file_frame_number()/fps_) 
 																% monitor::duration(file_nb_frames()/fps_)
 						<< monitor::event("file/frame")			% static_cast<int32_t>(file_frame_number())
@@ -182,12 +170,7 @@ public:
 
 		return frame;
 	}
-
-	core::draw_frame last_frame() const override
-	{
-		return core::draw_frame::still(last_frame_);
-	}
-	
+		
 	uint32_t nb_frames() const override
 	{
 		if(input_.loop())
@@ -278,7 +261,7 @@ public:
 		info.add(L"progressive",		video_decoder_.is_progressive());
 		info.add(L"fps",				fps_);
 		info.add(L"loop",				input_.loop());
-		info.add(L"frame-number",		frame_number_);
+		info.add(L"frame-number",		frame_number());
 		auto nb_frames2 = nb_frames();
 		info.add(L"nb-frames",			nb_frames2 == std::numeric_limits<int64_t>::max() ? -1 : nb_frames2);
 		info.add(L"file-frame-number",	file_frame_number());
@@ -336,10 +319,10 @@ public:
 			
 		input_.seek(target);
 						
-		receive();
-		receive();
-		receive();
-		receive();
+		receive_impl();
+		receive_impl();
+		receive_impl();
+		receive_impl();
 	}
 
 	std::wstring print_mode() const

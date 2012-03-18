@@ -46,7 +46,7 @@ using namespace boost::assign;
 
 namespace caspar { namespace image {
 
-struct image_producer : public core::frame_producer
+struct image_producer : public core::frame_producer_impl
 {	
 	monitor::basic_subject	event_subject_;
 	const std::wstring		filename_;
@@ -71,18 +71,13 @@ struct image_producer : public core::frame_producer
 	
 	// frame_producer
 
-	core::draw_frame receive() override
+	core::draw_frame receive_impl() override
 	{
 		event_subject_ << monitor::event("file/path") % filename_;
 
 		return frame_;
 	}
-
-	core::draw_frame last_frame() const override
-	{
-		return frame_;
-	}
-		
+			
 	std::wstring print() const override
 	{
 		return L"image_producer[" + filename_ + L"]";

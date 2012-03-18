@@ -103,7 +103,7 @@ public:
 		auto& tween		= tweens_[index];
 		auto transform	= tween.fetch_and_tick(1);
 				
-		auto frame  = draw_frame::push(layer.receive(format_desc));					
+		auto frame  = layer.receive(format_desc);					
 		auto frame1 = frame;
 		frame1.transform() = transform;
 

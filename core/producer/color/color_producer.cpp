@@ -39,7 +39,7 @@
 
 namespace caspar { namespace core {
 	
-class color_producer : public frame_producer
+class color_producer : public frame_producer_impl
 {
 	monitor::basic_subject	event_subject_;
 
@@ -56,7 +56,7 @@ public:
 
 	// frame_producer
 			
-	draw_frame receive() override
+	draw_frame receive_impl() override
 	{
 		event_subject_ << monitor::event("color") % color_str_;
 
@@ -72,12 +72,7 @@ public:
 	{
 		return L"color";
 	}
-
-	draw_frame last_frame() const override
-	{
-		return frame_;
-	}
-
+	
 	boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
