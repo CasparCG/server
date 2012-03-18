@@ -361,7 +361,7 @@ public:
 				
 		decode_next_frame();
 
-		for(int n = 0; n < 50 && video_decoder_.file_frame_number() != target+2 && !muxer_.empty(); ++n) // TODO: +2 since a frame can be stuck inside yadif filter.
+		for(int n = 0; n < 25 && video_decoder_.file_frame_number() != target+2 && !muxer_.empty(); ++n) // TODO: +2 since a frame can be stuck inside yadif filter.
 		{
 			muxer_.pop();
 			decode_next_frame();
