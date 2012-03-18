@@ -187,7 +187,7 @@ public:
 						<< monitor::event("loop")				% input_.loop();
 		
 		if(frame == core::draw_frame::late() && input_.eof())
-				return last_frame();
+			return last_frame();
 		
 		if(frame != core::draw_frame::late())
 			last_frame_ = frame;
