@@ -83,6 +83,12 @@ public:
 		
 		return frame;
 	}
+
+	void paused(bool value) override
+	{
+		fill_producer_->paused(value);
+		key_producer_->paused(value);
+	}
 			
 	uint32_t nb_frames() const override
 	{
