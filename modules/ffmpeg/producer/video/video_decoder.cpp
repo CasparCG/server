@@ -65,7 +65,7 @@ struct video_decoder::impl : boost::noncopyable
 	const int								height_;
 	bool									is_progressive_;
 
-	tbb::atomic<uint32_t>					file_frame_number_;
+	uint32_t								file_frame_number_;
 
 public:
 	explicit impl() 
@@ -73,8 +73,8 @@ public:
 		, width_(0)
 		, height_(0)
 		, is_progressive_(true)
+		, file_frame_number_(0)
 	{
-		file_frame_number_ = 0;
 	}
 
 	explicit impl(const spl::shared_ptr<AVFormatContext>& context) 
@@ -119,8 +119,9 @@ public:
 				}
 					
 				packets_.pop();
-				file_frame_number_ = static_cast<uint32_t>(packet->pos);
+				file_frame_number_ = static_cast<uint32_t>(packet->pts);
 				avcodec_flush_buffers(codec_context_.get());
+				
 				return flush_video();	
 			}
 			
@@ -153,8 +154,10 @@ public:
 						<< monitor::event("file/video/height")	% height_
 						<< monitor::event("file/video/field")	% u8(!decoded_frame->interlaced_frame ? "progressive" : (decoded_frame->top_field_first ? "upper" : "lower"))
 						<< monitor::event("file/video/codec")	% u8(codec_context_->codec->long_name);
+		
+		file_frame_number_ = static_cast<uint32_t>(pkt.pts);
 
-		++file_frame_number_;
+		decoded_frame->pts = file_frame_number_;
 
 		return decoded_frame;
 	}

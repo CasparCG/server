@@ -65,12 +65,12 @@ struct audio_decoder::impl : boost::noncopyable
 	std::queue<spl::shared_ptr<AVPacket>>						packets_;
 
 	const int64_t												nb_frames_;
-	tbb::atomic<uint32_t>										file_frame_number_;
+	uint32_t													file_frame_number_;
 public:
 	explicit impl() 
 		: nb_frames_(0)//context->streams[index_]->nb_frames)
+		, file_frame_number_(0)
 	{		
-		file_frame_number_ = 0;   
 	}
 
 	explicit impl(const std::shared_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
@@ -111,7 +111,7 @@ public:
 			if(packet->data == nullptr)
 			{
 				packets_.pop();
-				file_frame_number_ = static_cast<uint32_t>(packet->pos);
+				file_frame_number_ = static_cast<uint32_t>(packet->pts);
 				avcodec_flush_buffers(codec_context_.get());
 				return flush_audio();
 			}
@@ -147,9 +147,9 @@ public:
 						<< monitor::event("file/audio/channels")	% codec_context_->channels
 						<< monitor::event("file/audio/format")		% u8(av_get_sample_fmt_name(codec_context_->sample_fmt))
 						<< monitor::event("file/audio/codec")		% u8(codec_context_->codec->long_name);
-
-		++file_frame_number_;
-
+		
+		file_frame_number_ = static_cast<uint32_t>(pkt.pts);
+		
 		return std::make_shared<core::audio_buffer>(samples, samples + n_samples);
 	}
 
