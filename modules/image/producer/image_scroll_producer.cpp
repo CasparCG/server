@@ -164,7 +164,7 @@ struct image_scroll_producer : public core::frame_producer_base
 		delta_ += speed_;
 
 		if(frames_.empty())
-			return last_frame();
+			return core::draw_frame::late();
 		
 		if(height_ > format_desc_.height)
 		{

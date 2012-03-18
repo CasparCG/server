@@ -85,6 +85,7 @@ class frame_producer_base : public frame_producer
 {
 public:
 	frame_producer_base();
+	frame_producer_base(frame_producer_base& self);
 	virtual ~frame_producer_base(){}	
 
 	// Methods	
@@ -95,14 +96,14 @@ public:
 	
 	// Properties
 	
-	virtual void								paused(bool value) override;	
-	virtual uint32_t							nb_frames() const override;
-	uint32_t									frame_number() const override;
-	class draw_frame							last_frame() const override;	
+	void						paused(bool value) override;	
+	uint32_t					nb_frames() const override;
+	uint32_t					frame_number() const override;
+	virtual class draw_frame	last_frame() const override;
 
 private:
-	virtual class draw_frame					receive() override;
-	virtual class draw_frame					receive_impl() = 0;
+	virtual class draw_frame	receive() override;
+	virtual class draw_frame	receive_impl() = 0;
 
 	struct impl;
 	friend struct impl;

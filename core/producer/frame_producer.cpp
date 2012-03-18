@@ -90,6 +90,10 @@ frame_producer_base::frame_producer_base() : impl_(new impl(*this))
 {
 }
 
+frame_producer_base::frame_producer_base(frame_producer_base& self) : impl_(new impl(self))
+{
+}
+
 draw_frame frame_producer_base::receive()
 {
 	return impl_->receive();
