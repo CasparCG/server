@@ -67,8 +67,10 @@ struct frame_producer_base::impl
 			return self_.last_frame();
 
 		auto frame = draw_frame::push(self_.receive_impl());
-		if(frame != draw_frame::late())
-			++frame_number_;
+		if(frame == draw_frame::late())
+			return frame;
+
+		++frame_number_;
 
 		return last_frame_ = frame;
 	}
