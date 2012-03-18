@@ -72,11 +72,8 @@ struct parallel_yadif_context
 		int mode;
 	};
 
-	arg	args[4096];
-	int	index;
-	int last_index;
-
-	parallel_yadif_context() : index(0){}
+	int				 size;
+	std::vector<arg> args;
 };
 
 void (*org_yadif_filter_line)(uint8_t *dst, uint8_t *prev, uint8_t *cur, uint8_t *next, int w, int prefs, int mrefs, int parity, int mode) = 0;
@@ -84,16 +81,16 @@ void (*org_yadif_filter_line)(uint8_t *dst, uint8_t *prev, uint8_t *cur, uint8_t
 void parallel_yadif_filter_line(parallel_yadif_context& ctx, uint8_t *dst, uint8_t *prev, uint8_t *cur, uint8_t *next, int w, int prefs, int mrefs, int parity, int mode)
 {
 	parallel_yadif_context::arg arg = {dst, prev, cur, next, w, prefs, mrefs, parity, mode};
-	ctx.args[ctx.index++] = arg;
+	ctx.args.push_back(arg);
 	
-	if(ctx.index == ctx.last_index)
+	if(ctx.args.size() == ctx.size)
 	{		
-		tbb::parallel_for(tbb::blocked_range<size_t>(0, ctx.index), [=](const tbb::blocked_range<size_t>& r)
+		tbb::parallel_for(tbb::blocked_range<size_t>(0, ctx.args.size()), [=](const tbb::blocked_range<size_t>& r)
 		{
 			for(auto n = r.begin(); n != r.end(); ++n)
 				org_yadif_filter_line(ctx.args[n].dst, ctx.args[n].prev, ctx.args[n].cur, ctx.args[n].next, ctx.args[n].w, ctx.args[n].prefs, ctx.args[n].mrefs, ctx.args[n].parity, ctx.args[n].mode);
 		});
-		ctx.index = 0;
+		ctx.args.clear();
 	}
 }
 
@@ -145,11 +142,11 @@ std::shared_ptr<void> make_parallel_yadif(AVFilterContext* ctx)
 		while(index < sizeof(fs)/sizeof(fs[0]) && fs[index] != func)
 			++index;
 
-		ctxs[index].last_index = 0;
+		ctxs[index].size = 0;
 		for (int y = 0; y < ctx->inputs[0]->h; y++)
 		{
             if ((y ^ yadif->parity) & 1)
-				++ctxs[index].last_index;
+				++ctxs[index].size;
 		}
 
 		yadif->filter_line = func;
