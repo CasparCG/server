@@ -110,7 +110,6 @@ public:
 	
 	void paused(bool value) override
 	{
-		source_producer_->paused(value);
 		dest_producer_->paused(value);
 	}
 		

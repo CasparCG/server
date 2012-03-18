@@ -197,7 +197,6 @@ public:
 	std::wstring										print() const override															{return producer_->print();}
 	void												paused(bool value) override														{producer_->paused(value);}
 	std::wstring										name() const override															{return producer_->name();}
-	void												puased(bool value)																{producer_->paused(value);}
 	uint32_t											frame_number() const override													{return producer_->frame_number();}
 	boost::property_tree::wptree 						info() const override															{return producer_->info();}
 	boost::unique_future<std::wstring>					call(const std::wstring& str) override											{return producer_->call(str);}
