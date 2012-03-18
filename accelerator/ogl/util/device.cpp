@@ -54,8 +54,6 @@
 #include <asmlib.h>
 #include <tbb/parallel_for.h>
 
-tbb::atomic<int> g_count = tbb::atomic<int>();
-
 namespace caspar { namespace accelerator { namespace ogl {
 		
 struct device::impl : public std::enable_shared_from_this<impl>
@@ -79,9 +77,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		: render_executor_(executor)
 		, alloc_executor_(L"OpenGL allocation context.")
 	{
-		if(g_count++ > 1)
-			CASPAR_LOG(warning) << L"Multiple OGL devices.";
-
 		CASPAR_LOG(info) << L"Initializing OpenGL Device.";
 		
 		auto ctx1 = render_executor_.invoke([=]() -> HGLRC 
