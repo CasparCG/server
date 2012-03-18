@@ -159,14 +159,12 @@ struct input::impl : boost::noncopyable
 			auto flush_packet	= create_packet();
 			flush_packet->data	= nullptr;
 			flush_packet->size	= 0;
-			flush_packet->pts	= target;
-
 			buffer_.push(flush_packet);
 			
 			tick();
 		}, task_priority::high_priority);
 	}
-	
+		
 	std::wstring print() const
 	{
 		return L"ffmpeg_input[" + filename_ + L")]";
@@ -204,7 +202,14 @@ struct input::impl : boost::noncopyable
 						CASPAR_LOG(trace) << print() << " Looping.";	
 					}
 					else
+					{
+						auto flush_packet	= create_packet();
+						flush_packet->data	= nullptr;
+						flush_packet->size	= 0;
+						buffer_.push(flush_packet);
+
 						eof_ = true;
+					}
 				}
 				else
 				{		
