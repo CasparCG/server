@@ -69,7 +69,8 @@ struct video_decoder::impl : boost::noncopyable
 
 public:
 	explicit impl() 
-		: nb_frames_(0)
+		: index_(0)
+		, nb_frames_(0)
 		, width_(0)
 		, height_(0)
 		, is_progressive_(true)

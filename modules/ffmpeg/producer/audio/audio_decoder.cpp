@@ -68,7 +68,8 @@ struct audio_decoder::impl : boost::noncopyable
 	uint32_t													file_frame_number_;
 public:
 	explicit impl() 
-		: nb_frames_(0)//context->streams[index_]->nb_frames)
+		: index_(0)
+		, nb_frames_(0)//context->streams[index_]->nb_frames)
 		, file_frame_number_(0)
 	{		
 	}
