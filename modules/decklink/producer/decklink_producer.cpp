@@ -302,7 +302,7 @@ public:
 	}
 };
 	
-class decklink_producer_proxy : public core::frame_producer_impl
+class decklink_producer_proxy : public core::frame_producer_base
 {		
 	std::unique_ptr<decklink_producer>	producer_;
 	const uint32_t						length_;

@@ -46,7 +46,7 @@ using namespace boost::assign;
 
 namespace caspar { namespace image {
 
-struct image_producer : public core::frame_producer_impl
+struct image_producer : public core::frame_producer_base
 {	
 	monitor::basic_subject	event_subject_;
 	const std::wstring		filename_;

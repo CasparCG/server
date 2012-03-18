@@ -64,7 +64,7 @@
 
 namespace caspar { namespace ffmpeg {
 				
-struct ffmpeg_producer : public core::frame_producer_impl
+struct ffmpeg_producer : public core::frame_producer_base
 {
 	monitor::basic_subject							event_subject_;
 	const std::wstring								filename_;
