@@ -48,20 +48,21 @@ typedef std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>> audio_buffer
 
 struct oal_consumer : public core::frame_consumer,  public sf::SoundStream
 {
-	spl::shared_ptr<diagnostics::graph>						graph_;
+	spl::shared_ptr<diagnostics::graph>					graph_;
 	boost::timer										perf_timer_;
 	int													channel_index_;
 
 	tbb::concurrent_bounded_queue<std::shared_ptr<audio_buffer_16>>	input_;
 	boost::circular_buffer<audio_buffer_16>				container_;
 	tbb::atomic<bool>									is_running_;
-	core::audio_buffer									temp;
+	bool												set_thread_priority_;
 
 	core::video_format_desc								format_desc_;
 public:
 	oal_consumer() 
 		: container_(16)
 		, channel_index_(-1)
+		, set_thread_priority_(true)
 	{
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
@@ -135,6 +136,12 @@ public:
 	
 	bool OnGetData(sf::SoundStream::Chunk& data) override
 	{		
+		if(set_thread_priority_)
+		{
+			SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
+			set_thread_priority_ = false;
+		}
+
 		std::shared_ptr<audio_buffer_16> audio_data;		
 		input_.pop(audio_data);
 				
