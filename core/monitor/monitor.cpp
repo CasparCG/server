@@ -130,7 +130,7 @@ event::event(event&& other)
 
 event& event::operator=(event other)
 {
-	std::swap(*this, other);
+	other.swap(*this);
 	return *this;
 }
 
