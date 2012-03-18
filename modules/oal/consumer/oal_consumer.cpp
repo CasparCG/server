@@ -68,7 +68,7 @@ public:
 		diagnostics::register_graph(graph_);
 
 		is_running_ = true;
-		input_.set_capacity(2);
+		input_.set_capacity(1);
 	}
 
 	~oal_consumer()
