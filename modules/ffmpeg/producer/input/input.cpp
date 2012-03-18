@@ -229,9 +229,7 @@ struct input::impl : boost::noncopyable
 
 					auto time_base = format_context_->streams[packet->stream_index]->time_base;
 					packet->pts = static_cast<uint64_t>((static_cast<double>(packet->pts * time_base.num)/time_base.den)*fps_);
-
-					CASPAR_LOG(trace) << packet->pts;
-
+					
 					buffer_.try_push(packet);
 					buffer_size_ += packet->size;
 				
