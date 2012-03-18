@@ -39,7 +39,7 @@
 
 namespace caspar { namespace core {
 	
-class color_producer : public frame_producer_impl
+class color_producer : public frame_producer_base
 {
 	monitor::basic_subject	event_subject_;
 
