@@ -84,8 +84,8 @@ public:
 
 		data_ = (uint8_t*)GL2(glMapBuffer(target_, usage_ == GL_STREAM_DRAW ? GL_WRITE_ONLY : GL_READ_ONLY));  
 
-		if(timer.elapsed() > 0.01)
-			CASPAR_LOG(warning) << L"[buffer] Performance warning. Buffer mapping blocked more than 10ms: " << timer.elapsed();
+		if(timer.elapsed() > 0.02)
+			CASPAR_LOG(warning) << L"[buffer] Performance warning. Buffer mapping blocked more than 20 ms: " << timer.elapsed();
 
 		GL(glBindBuffer(target_, 0));
 		if(!data_)
