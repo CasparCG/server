@@ -31,7 +31,7 @@
 
 namespace caspar { namespace core {	
 
-class separated_producer : public frame_producer
+class separated_producer : public frame_producer_impl
 {		
 	monitor::basic_subject			event_subject_;
 	monitor::basic_subject			key_event_subject_;
@@ -40,7 +40,6 @@ class separated_producer : public frame_producer
 	spl::shared_ptr<frame_producer>	key_producer_;
 	draw_frame						fill_;
 	draw_frame						key_;
-	draw_frame						last_frame_;
 			
 public:
 	explicit separated_producer(const spl::shared_ptr<frame_producer>& fill, const spl::shared_ptr<frame_producer>& key) 
@@ -49,7 +48,6 @@ public:
 		, key_producer_(key)
 		, fill_(core::draw_frame::late())
 		, key_(core::draw_frame::late())
-		, last_frame_(core::draw_frame::empty())
 	{
 		CASPAR_LOG(info) << print() << L" Initialized";
 
@@ -61,7 +59,7 @@ public:
 
 	// frame_producer
 	
-	draw_frame receive() override
+	draw_frame receive_impl() override
 	{
 		tbb::parallel_invoke(
 		[&]
@@ -83,17 +81,9 @@ public:
 		fill_ = draw_frame::late();
 		key_  = draw_frame::late();
 		
-		if(frame != core::draw_frame::late())
-			last_frame_ = frame;
-
 		return frame;
 	}
-
-	draw_frame last_frame() const override
-	{
-		return draw_frame::still(last_frame_);
-	}
-		
+			
 	uint32_t nb_frames() const override
 	{
 		return std::min(fill_producer_->nb_frames(), key_producer_->nb_frames());
