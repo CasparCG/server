@@ -107,6 +107,12 @@ public:
 
 		return compose(dest, source);
 	}
+	
+	void paused(bool value) override
+	{
+		source_producer_->paused(value);
+		dest_producer_->paused(value);
+	}
 		
 	uint32_t nb_frames() const override
 	{
