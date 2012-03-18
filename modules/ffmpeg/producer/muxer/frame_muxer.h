@@ -54,7 +54,10 @@ public:
 	bool audio_ready() const;
 
 	void clear();
-	bool try_pop(core::draw_frame& result);
+
+	bool empty() const;
+	core::draw_frame front() const;
+	void pop();
 
 	uint32_t calc_nb_frames(uint32_t nb_frames) const;
 private:

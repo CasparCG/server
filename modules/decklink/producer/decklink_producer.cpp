@@ -247,8 +247,11 @@ public:
 			// POLL
 
 			auto frame = core::draw_frame::late();
-			if(muxer_.try_pop(frame))
+			if(!muxer_.empty())
 			{
+				frame = std::move(muxer_.front());
+				muxer_.pop();
+
 				if(!frame_buffer_.try_push(frame))
 				{
 					auto dummy = core::draw_frame::empty();
