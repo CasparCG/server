@@ -216,10 +216,7 @@ struct input::impl : boost::noncopyable
 					eof_ = false;
 
 					THROW_ON_ERROR(ret, "av_read_frame", print());
-
-					if(packet->stream_index == default_stream_index_)
-						++frame_number_;
-
+					
 					THROW_ON_ERROR2(av_dup_packet(packet.get()), print());
 				
 					// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
@@ -234,12 +231,16 @@ struct input::impl : boost::noncopyable
 
 					auto time_base = format_context_->streams[packet->stream_index]->time_base;
 					packet->pts = static_cast<uint64_t>((static_cast<double>(packet->pts * time_base.num)/time_base.den)*fps_);
-					
-					buffer_.try_push(packet);
-					buffer_size_ += packet->size;
+					frame_number_ = static_cast<uint32_t>(packet->pts);
+
+					if(frame_number_ <= frame_number_)
+					{
+						buffer_.try_push(packet);
+						buffer_size_ += packet->size;
 				
-					graph_->set_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
-					graph_->set_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));		
+						graph_->set_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
+						graph_->set_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));
+					}
 				}	
 
 				if(!eof_)
@@ -262,7 +263,7 @@ struct input::impl : boost::noncopyable
 		//if(ret == AVERROR_EOF)
 		//	CASPAR_LOG(trace) << print() << " Received EOF. ";
 
-		return ret == AVERROR_EOF || ret == AVERROR(EIO) || frame_number_ >= length_; // av_read_frame doesn't always correctly return AVERROR_EOF;
+		return ret == AVERROR_EOF || ret == AVERROR(EIO) || frame_number_ > length_; // av_read_frame doesn't always correctly return AVERROR_EOF;
 	}
 };
 
