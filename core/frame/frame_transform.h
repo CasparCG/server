@@ -79,7 +79,8 @@ struct audio_transform sealed
 public:
 	audio_transform();
 
-	double					volume;
+	double	volume;
+	bool	is_still;
 	
 	audio_transform& operator*=(const audio_transform &other);
 	audio_transform operator*(const audio_transform &other) const;

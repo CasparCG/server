@@ -310,6 +310,8 @@ struct frame_muxer::impl : boost::noncopyable
 
 		while(!frame_buffer_.empty())
 			frame_buffer_.pop();
+
+		filter_ = filter(filter_.filter_str());
 	}
 };
 

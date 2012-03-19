@@ -87,6 +87,19 @@ std::shared_ptr<AVFrame>			empty_video()
 	return video;
 }
 
+spl::shared_ptr<AVPacket> flush_packet()
+{
+	static spl::shared_ptr<AVPacket> pkt(new AVPacket());
+	return pkt;
+}
+
+spl::shared_ptr<AVPacket> eof_packet()
+{
+	static spl::shared_ptr<AVPacket> pkt(new AVPacket());
+	return pkt;
+}
+
+
 core::field_mode get_mode(const AVFrame& frame)
 {
 	if(!frame.interlaced_frame)

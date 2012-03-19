@@ -56,30 +56,68 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-static const size_t MAX_BUFFER_COUNT = 100;
-static const size_t MIN_BUFFER_COUNT = 32;
-static const size_t MAX_BUFFER_SIZE  = 32 * 1000000;
-
 namespace caspar { namespace ffmpeg {
+
+static const int MIN_FRAMES = 25;
+
+class stream
+{
+	stream(const stream&);
+	stream& operator=(const stream&);
+
+	typedef tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>::size_type size_type;
+
+	int														 index_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>> packets_;
+public:
+
+	stream(int index) 
+		: index_(index)
+	{
+	}
+	
+	void push(const std::shared_ptr<AVPacket>& packet)
+	{
+		if(packet->stream_index != index_ && packet != flush_packet() && packet != eof_packet())
+			return;
+
+		packets_.push(packet);
+	}
+
+	bool try_pop(std::shared_ptr<AVPacket>& packet)
+	{
+		return packets_.try_pop(packet);
+	}
+
+	void clear()
+	{
+		std::shared_ptr<AVPacket> packet;
+		while(packets_.try_pop(packet));
+	}
+
+	size_type size() const
+	{
+		return index_ != -1 ? packets_.size() : std::numeric_limits<size_type>::max();
+	}
+};
 		
 struct input::impl : boost::noncopyable
 {		
-	const spl::shared_ptr<diagnostics::graph>							graph_;
+	const spl::shared_ptr<diagnostics::graph>					graph_;
 
-	const spl::shared_ptr<AVFormatContext>								format_context_; // Destroy this last
+	const spl::shared_ptr<AVFormatContext>						format_context_; // Destroy this last
 	const int													default_stream_index_;
 			
 	const std::wstring											filename_;
 	tbb::atomic<uint32_t>										start_;		
 	tbb::atomic<uint32_t>										length_;
 	tbb::atomic<bool>											loop_;
-	tbb::atomic<bool>											eof_;
-	uint32_t													frame_number_;
 	double														fps_;
+	uint32_t													frame_number_;
 	
-	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>	buffer_;
-	tbb::atomic<size_t>											buffer_size_;
-		
+	stream														video_stream_;
+	stream														audio_stream_;
+
 	executor													executor_;
 	
 	impl(const spl::shared_ptr<diagnostics::graph> graph, const std::wstring& filename, const bool loop, const uint32_t start, const uint32_t length) 
@@ -88,53 +126,51 @@ struct input::impl : boost::noncopyable
 		, default_stream_index_(av_find_default_stream_index(format_context_.get()))
 		, filename_(filename)
 		, frame_number_(0)
-		, fps_(read_fps(*format_context_, 25))
+		, fps_(read_fps(*format_context_, 0.0))
+		, video_stream_(av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0))
+		, audio_stream_(av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_AUDIO, -1, -1, 0, 0))
 		, executor_(print())
 	{		
 		start_			= start;
 		length_			= length;
 		loop_			= loop;
-		eof_			= false;
-		buffer_size_	= 0;
 
 		if(start_ > 0)			
 			seek(start_, false);
 								
 		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));	
-		graph_->set_color("buffer-count", diagnostics::color(0.7f, 0.4f, 0.4f));
-		graph_->set_color("buffer-size", diagnostics::color(1.0f, 1.0f, 0.0f));	
-
+		graph_->set_color("audio-buffer", diagnostics::color(0.7f, 0.4f, 0.4f));
+		graph_->set_color("video-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));	
+		
 		tick();
 	}
 	
-	bool try_pop(std::shared_ptr<AVPacket>& packet)
-	{
-		auto result = buffer_.try_pop(packet);
-		
+	bool try_pop_video(std::shared_ptr<AVPacket>& packet)
+	{				
+		bool result = video_stream_.try_pop(packet);
 		if(result)
-		{
-			if(packet)
-				buffer_size_ -= packet->size;
 			tick();
-		}
-
-		graph_->set_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
-		graph_->set_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));
 		
+		graph_->set_value("video-buffer", std::min(1.0, static_cast<double>(video_stream_.size()/MIN_FRAMES)));
+				
+		return result;
+	}
+	
+	bool try_pop_audio(std::shared_ptr<AVPacket>& packet)
+	{				
+		bool result = audio_stream_.try_pop(packet);
+		if(result)
+			tick();
+				
+		graph_->set_value("audio-buffer", std::min(1.0, static_cast<double>(audio_stream_.size()/MIN_FRAMES)));
+
 		return result;
 	}
 
 	void seek(uint32_t target, bool clear)
 	{
 		executor_.invoke([=]
-		{
-			if(clear)
-			{
-				std::shared_ptr<AVPacket> packet;
-				while(buffer_.try_pop(packet) && packet)
-					buffer_size_ -= packet->size;
-			}
-			
+		{			
 			CASPAR_LOG(debug) << print() << " Seeking: " << target;
 
 			int flags = AVSEEK_FLAG_FRAME;
@@ -156,10 +192,14 @@ struct input::impl : boost::noncopyable
 		
 			THROW_ON_ERROR2(avformat_seek_file(format_context_.get(), default_stream_index_, std::numeric_limits<int64_t>::min(), fixed_target, fixed_target, 0), print());		
 		
-			auto flush_packet	= create_packet();
-			flush_packet->data	= nullptr;
-			flush_packet->size	= 0;
-			buffer_.push(flush_packet);
+			if(clear)
+			{
+				video_stream_.clear();
+				audio_stream_.clear();
+			}
+
+			video_stream_.push(flush_packet());
+			audio_stream_.push(flush_packet());
 			
 			tick();
 		}, task_priority::high_priority);
@@ -172,7 +212,7 @@ struct input::impl : boost::noncopyable
 	
 	bool full() const
 	{
-		return (buffer_size_ > MAX_BUFFER_SIZE || buffer_.size() > MAX_BUFFER_COUNT) && buffer_.size() > MIN_BUFFER_COUNT;
+		return video_stream_.size() > MIN_FRAMES && audio_stream_.size() > MIN_FRAMES;
 	}
 
 	void tick()
@@ -193,28 +233,17 @@ struct input::impl : boost::noncopyable
 		
 				if(is_eof(ret))														     
 				{
-					frame_number_ = 0;
+					video_stream_.push(eof_packet());
+					audio_stream_.push(eof_packet());
 
 					if(loop_)
 					{
 						seek(start_, false);
 						graph_->set_tag("seek");		
-						CASPAR_LOG(trace) << print() << " Looping.";	
-					}
-					else
-					{
-						auto flush_packet	= create_packet();
-						flush_packet->data	= nullptr;
-						flush_packet->size	= 0;
-						buffer_.push(flush_packet);
-
-						eof_ = true;
 					}
 				}
 				else
 				{		
-					eof_ = false;
-
 					THROW_ON_ERROR(ret, "av_read_frame", print());
 					
 					THROW_ON_ERROR2(av_dup_packet(packet.get()), print());
@@ -228,23 +257,24 @@ struct input::impl : boost::noncopyable
 						packet->size = size;
 						packet->data = data;				
 					});
+					
+					auto stream_time_base = format_context_->streams[packet->stream_index]->time_base;
+					auto packet_frame_number = static_cast<uint32_t>((static_cast<double>(packet->pts * stream_time_base.num)/stream_time_base.den)*fps_);
 
-					auto time_base = format_context_->streams[packet->stream_index]->time_base;
-					packet->pts = static_cast<uint64_t>((static_cast<double>(packet->pts * time_base.num)/time_base.den)*fps_);
-					frame_number_ = static_cast<uint32_t>(packet->pts);
-
-					if(frame_number_ <= frame_number_)
+					if(packet->stream_index == default_stream_index_)
+						frame_number_ = packet_frame_number;
+					
+					if(packet_frame_number >= start_ && packet_frame_number < length_)
 					{
-						buffer_.try_push(packet);
-						buffer_size_ += packet->size;
-				
-						graph_->set_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
-						graph_->set_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));
+						video_stream_.push(packet);
+						audio_stream_.push(packet);
+						
+						graph_->set_value("video-buffer", std::min(1.0, static_cast<double>(video_stream_.size()/MIN_FRAMES)));
+						graph_->set_value("audio-buffer", std::min(1.0, static_cast<double>(audio_stream_.size()/MIN_FRAMES)));
 					}
-				}	
 
-				if(!eof_)
 					tick();		
+				}	
 			}
 			catch(...)
 			{
@@ -269,8 +299,8 @@ struct input::impl : boost::noncopyable
 
 input::input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length) 
 	: impl_(new impl(graph, filename, loop, start, length)){}
-bool input::eof() const {return impl_->eof_;}
-bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
+bool input::try_pop_video(std::shared_ptr<AVPacket>& packet){return impl_->try_pop_video(packet);}
+bool input::try_pop_audio(std::shared_ptr<AVPacket>& packet){return impl_->try_pop_audio(packet);}
 spl::shared_ptr<AVFormatContext> input::context(){return impl_->format_context_;}
 void input::loop(bool value){impl_->loop_ = value;}
 bool input::loop() const{return impl_->loop_;}

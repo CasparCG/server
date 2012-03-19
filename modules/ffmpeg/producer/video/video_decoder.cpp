@@ -24,6 +24,7 @@
 #include "video_decoder.h"
 
 #include "../util/util.h"
+#include "../input/input.h"
 
 #include "../../ffmpeg_error.h"
 
@@ -54,6 +55,7 @@ namespace caspar { namespace ffmpeg {
 struct video_decoder::impl : boost::noncopyable
 {
 	monitor::basic_subject					event_subject_;
+	input*									input_;
 	int										index_;
 	const std::shared_ptr<AVCodecContext>	codec_context_;
 
@@ -64,64 +66,59 @@ struct video_decoder::impl : boost::noncopyable
 	const int								width_;
 	const int								height_;
 	bool									is_progressive_;
-
 	uint32_t								file_frame_number_;
+	double									fps_;
 
 public:
 	explicit impl() 
-		: index_(0)
+		: input_(nullptr)
 		, nb_frames_(0)
 		, width_(0)
 		, height_(0)
-		, is_progressive_(true)
 		, file_frame_number_(0)
+		, fps_(0.0)
 	{
 	}
 
-	explicit impl(const spl::shared_ptr<AVFormatContext>& context) 
-		: codec_context_(open_codec(*context, AVMEDIA_TYPE_VIDEO, index_))
-		, nb_frames_(static_cast<uint32_t>(context->streams[index_]->nb_frames))
+	explicit impl(input& in) 
+		: input_(&in)
+		, codec_context_(open_codec(*input_->context(), AVMEDIA_TYPE_VIDEO, index_))
+		, nb_frames_(static_cast<uint32_t>(input_->context()->streams[index_]->nb_frames))
 		, width_(codec_context_->width)
 		, height_(codec_context_->height)
+		, file_frame_number_(0)
+		, fps_(read_fps(*input_->context(), 0.0))
 	{
-		file_frame_number_ = 0;
 	}
-
-	void push(const std::shared_ptr<AVPacket>& packet)
-	{
-		if(!packet || !codec_context_)
-			return;
-
-		if(packet->stream_index == index_ || packet->data == nullptr)
-			packets_.push(spl::make_shared_ptr(packet));
-	}
-
+	
 	std::shared_ptr<AVFrame> poll()
-	{		
+	{			
 		if(!codec_context_)
 			return empty_video();
 
-		if(packets_.empty())
+		std::shared_ptr<AVPacket> packet;
+		if(!input_->try_pop_video(packet))
 			return nullptr;
-		
-		auto packet = packets_.front();
-		
-		if(packet->data == nullptr)
-		{			
+
+		if(packet == flush_packet())
+		{
+			avcodec_flush_buffers(codec_context_.get());
+			return nullptr;
+		}
+		else if(packet == eof_packet())
+		{
 			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
 			{
-				auto video = decode(*packet);
-				if(video)
-					return video;
+				AVPacket pkt;                
+				av_init_packet(&pkt);
+                pkt.data = nullptr;
+                pkt.size = 0;
+				return decode(pkt);
 			}
-					
-			packets_.pop();
-			avcodec_flush_buffers(codec_context_.get());				
-			return nullptr;	
+			return nullptr;
 		}
-			
-		packets_.pop();
-		return decode(*packet);		
+		
+		return decode(*packet);
 	}
 
 	std::shared_ptr<AVFrame> decode(AVPacket& pkt)
@@ -137,6 +134,11 @@ public:
 
 		if(frame_finished == 0)	
 			return nullptr;
+		
+		auto stream_time_base = input_->context()->streams[pkt.stream_index]->time_base;
+		auto packet_frame_number = static_cast<uint32_t>((static_cast<double>(pkt.pts * stream_time_base.num)/stream_time_base.den)*fps_);
+
+		file_frame_number_ = packet_frame_number;
 
 		is_progressive_ = !decoded_frame->interlaced_frame;
 
@@ -148,27 +150,12 @@ public:
 						<< monitor::event("file/video/field")	% u8(!decoded_frame->interlaced_frame ? "progressive" : (decoded_frame->top_field_first ? "upper" : "lower"))
 						<< monitor::event("file/video/codec")	% u8(codec_context_->codec->long_name);
 		
-		file_frame_number_ = static_cast<uint32_t>(pkt.pts);
-
-		decoded_frame->pts = file_frame_number_;
-
 		return decoded_frame;
 	}
 	
-	bool ready() const
-	{
-		return !codec_context_ || !packets_.empty();
-	}
-
-	void clear()
-	{
-		while(!packets_.empty())
-			packets_.pop();
-	}
-
 	uint32_t nb_frames() const
 	{
-		return std::max<uint32_t>(nb_frames_, file_frame_number_);
+		return std::max(nb_frames_, file_frame_number_);
 	}
 
 	std::wstring print() const
@@ -178,19 +165,16 @@ public:
 };
 
 video_decoder::video_decoder() : impl_(new impl()){}
-video_decoder::video_decoder(const spl::shared_ptr<AVFormatContext>& context) : impl_(new impl(context)){}
+video_decoder::video_decoder(input& in) : impl_(new impl(in)){}
 video_decoder::video_decoder(video_decoder&& other) : impl_(std::move(other.impl_)){}
 video_decoder& video_decoder::operator=(video_decoder&& other){impl_ = std::move(other.impl_); return *this;}
-void video_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
-std::shared_ptr<AVFrame> video_decoder::poll(){return impl_->poll();}
-bool video_decoder::ready() const{return impl_->ready();}
+std::shared_ptr<AVFrame> video_decoder::operator()(){return impl_->poll();}
 int video_decoder::width() const{return impl_->width_;}
 int video_decoder::height() const{return impl_->height_;}
 uint32_t video_decoder::nb_frames() const{return impl_->nb_frames();}
 uint32_t video_decoder::file_frame_number() const{return impl_->file_frame_number_;}
-bool	video_decoder::is_progressive() const{return impl_->is_progressive_;}
+bool video_decoder::is_progressive() const{return impl_->is_progressive_;}
 std::wstring video_decoder::print() const{return impl_->print();}
-void video_decoder::clear(){impl_->clear();}
 void video_decoder::subscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_.subscribe(o);}
 void video_decoder::unsubscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_.unsubscribe(o);}
 

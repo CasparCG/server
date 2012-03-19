@@ -25,7 +25,6 @@
 
 #include "ffmpeg_consumer.h"
 
-#include "../producer/audio/audio_resampler.h"
 #include "../producer/tbb_avcodec.h"
 
 #include <core/frame/frame.h>
@@ -63,6 +62,7 @@ extern "C"
 	#include <libavutil/pixdesc.h>
 	#include <libavutil/parseutils.h>
 	#include <libavutil/samplefmt.h>
+	#include <libswresample/swresample.h>
 }
 #if defined(_MSC_VER)
 #pragma warning (pop)
@@ -249,7 +249,7 @@ struct ffmpeg_consumer : boost::noncopyable
 	byte_vector								audio_buf_;
 	byte_vector								video_outbuf_;
 	byte_vector								picture_buf_;
-	std::shared_ptr<audio_resampler>		swr_;
+	std::shared_ptr<SwrContext>				swr_;
 	std::shared_ptr<SwsContext>				sws_;
 
 	int64_t									in_frame_number_;
@@ -556,28 +556,45 @@ public:
 		return nullptr;
 	}
 		
+	uint64_t get_channel_layout(AVCodecContext* dec)
+	{
+		auto layout = (dec->channel_layout && dec->channels == av_get_channel_layout_nb_channels(dec->channel_layout)) ? dec->channel_layout : av_get_default_channel_layout(dec->channels);
+		return layout;
+	}
+
 	byte_vector convert_audio(core::const_frame& frame, AVCodecContext* c)
 	{
-		if(!swr_) 		
-			swr_.reset(new audio_resampler(c->channels, format_desc_.audio_channels, 
-										   c->sample_rate, format_desc_.audio_sample_rate,
-										   c->sample_fmt, AV_SAMPLE_FMT_S32));
-		
+		if(!swr_) 
+		{
+			swr_ = std::shared_ptr<SwrContext>(swr_alloc_set_opts(nullptr,
+										get_channel_layout(c), c->sample_fmt, c->sample_rate,
+										av_get_default_channel_layout(format_desc_.audio_channels), AV_SAMPLE_FMT_S32, format_desc_.audio_sample_rate,
+										0, nullptr), [](SwrContext* p){swr_free(&p);});
 
-		auto audio_data = frame.audio_data();
+			if(!swr_)
+				BOOST_THROW_EXCEPTION(std::bad_alloc("swr_"));
 
-		std::vector<int8_t,  tbb::cache_aligned_allocator<int8_t>> audio_resample_buffer;
-		std::copy(reinterpret_cast<const uint8_t*>(audio_data.data()), 
-				  reinterpret_cast<const uint8_t*>(audio_data.data()) + audio_data.size()*4, 
-				  std::back_inserter(audio_resample_buffer));
-		
-		audio_resample_buffer = swr_->resample(std::move(audio_resample_buffer));
-		
-		return byte_vector(audio_resample_buffer.begin(), audio_resample_buffer.end());
+			THROW_ON_ERROR2(swr_init(swr_.get()), "[audio_decoder]");
+		}
+				
+		byte_vector buffer(48000);
+
+		const uint8_t *in[] = {reinterpret_cast<const uint8_t*>(frame.audio_data().data())};
+		uint8_t* out[]		= {buffer.data()};
+
+		auto channel_samples = swr_convert(swr_.get(), 
+										   out, static_cast<int>(buffer.size()) / c->channels / av_get_bytes_per_sample(c->sample_fmt), 
+										   in, static_cast<int>(frame.audio_data().size()/format_desc_.audio_channels));
+
+		buffer.resize(channel_samples * c->channels * av_get_bytes_per_sample(c->sample_fmt));	
+
+		return buffer;
 	}
 	
 	std::shared_ptr<AVPacket> encode_audio_frame(core::const_frame frame)
 	{			
+		// TODO: Sometimes audio is missing towards end of resulting file.
+
 		auto c = audio_st_->codec;
 
 		boost::range::push_back(audio_buf_, convert_audio(frame, c));
