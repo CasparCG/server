@@ -66,13 +66,13 @@ struct frame_producer_base::impl
 		if(paused_)
 			return self_.last_frame();
 
-		auto frame = draw_frame::push(self_.receive_impl());
+		auto frame = self_.receive_impl();
 		if(frame == draw_frame::late())
 			return frame;
 
 		++frame_number_;
 
-		return last_frame_ = frame;
+		return last_frame_ = draw_frame::push(frame);
 	}
 
 	void paused(bool value)
