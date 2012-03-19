@@ -176,8 +176,11 @@ public:
 		graph_->set_text(print());
 
 		if(frame != core::draw_frame::late())		
+		{
+			last_frame_ = frame;
 			++frame_number_;		
-				
+		}
+
 		event_subject_	<< monitor::event("file/time")			% monitor::duration(file_frame_number()/fps_) 
 																% monitor::duration(file_nb_frames()/fps_)
 						<< monitor::event("file/frame")			% static_cast<int32_t>(file_frame_number())
@@ -188,10 +191,7 @@ public:
 		
 		if(frame == core::draw_frame::late() && input_.eof())
 			return last_frame();
-		
-		if(frame != core::draw_frame::late())
-			last_frame_ = frame;
-		
+				
 		return frame;
 	}
 
