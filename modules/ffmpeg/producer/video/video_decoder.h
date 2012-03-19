@@ -39,14 +39,12 @@ class video_decoder : public monitor::observable
 {
 public:
 	explicit video_decoder();
-	explicit video_decoder(const spl::shared_ptr<AVFormatContext>& context);
+	explicit video_decoder(class input& input);
 	
 	video_decoder(video_decoder&& other);
 	video_decoder& operator=(video_decoder&& other);
 
-	bool ready() const;
-	void push(const std::shared_ptr<AVPacket>& packet);
-	std::shared_ptr<AVFrame> poll();
+	std::shared_ptr<AVFrame> operator()();
 	
 	int	 width() const;
 	int	 height() const;
@@ -57,9 +55,7 @@ public:
 	bool is_progressive() const;
 
 	std::wstring print() const;
-
-	void clear();
-	
+		
 	// monitor::observable
 	
 	void subscribe(const monitor::observable::observer_ptr& o) override;

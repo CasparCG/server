@@ -47,14 +47,18 @@ class input : boost::noncopyable
 public:
 	explicit input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length);
 
-	bool		try_pop(std::shared_ptr<AVPacket>& packet);
-	bool		eof() const;
+	bool		try_pop_video(std::shared_ptr<AVPacket>& packet);
+	bool		try_pop_audio(std::shared_ptr<AVPacket>& packet);
+
 	void		loop(bool value);
 	bool		loop() const;
+
 	void		start(uint32_t value);
 	uint32_t	start() const;
+
 	void		length(uint32_t value);
 	uint32_t	length() const;
+
 	void		seek(uint32_t target);
 
 	spl::shared_ptr<AVFormatContext> context();

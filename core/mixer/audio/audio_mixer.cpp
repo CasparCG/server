@@ -60,6 +60,12 @@ struct audio_stream
 {
 	audio_transform		prev_transform;
 	audio_buffer_ps		audio_data;
+	bool				is_still;
+
+	audio_stream() 
+		: is_still(false)
+	{
+	}
 };
 
 struct audio_mixer::impl : boost::noncopyable
@@ -90,6 +96,9 @@ public:
 		item.tag		= frame.stream_tag();
 		item.transform	= transform_stack_.top();
 		item.audio_data = frame.audio_data();
+
+		if(item.transform.is_still)
+			item.transform.volume = 0.0;
 		
 		items_.push_back(std::move(item));		
 	}
@@ -151,7 +160,8 @@ public:
 				next_audio.push_back(item.audio_data[n] * (prev_volume + (n/format_desc_.audio_channels) * alpha));
 										
 			next_audio_streams[tag].prev_transform  = std::move(next_transform); // Store all active tags, inactive tags will be removed at the end.
-			next_audio_streams[tag].audio_data		 = std::move(next_audio);			
+			next_audio_streams[tag].audio_data		= std::move(next_audio);	
+			next_audio_streams[tag].is_still		= item.transform.is_still;
 		}				
 
 		items_.clear();
@@ -162,24 +172,20 @@ public:
 			audio_streams_[nullptr].audio_data = audio_buffer_ps(audio_cadence_.front(), 0.0f);
 				
 		{ // sanity check
-
-			auto nb_invalid_streams = boost::count_if(audio_streams_ | boost::adaptors::map_values, [&](const audio_stream& x)
+			BOOST_FOREACH(auto& stream, audio_streams_ | boost::adaptors::map_values)
 			{
-				return x.audio_data.size() < audio_cadence_.front();
-			});
-
-			if(nb_invalid_streams > 0)		
-				CASPAR_LOG(trace) << "[audio_mixer] Incorrect frame audio cadence detected. Appending empty samples.";			
+				if(stream.audio_data.size() < audio_cadence_.front() && !stream.is_still)
+				{
+					stream.audio_data.resize(audio_cadence_.front(), 0.0f);
+					CASPAR_LOG(trace) << "[audio_mixer] Incorrect frame audio cadence detected. Appending empty samples.";		
+				}
+			}		
 		}
 
 		std::vector<float> result_ps(audio_cadence_.front(), 0.0f);
 		BOOST_FOREACH(auto& stream, audio_streams_ | boost::adaptors::map_values)
 		{
-			//CASPAR_LOG(debug) << stream.audio_data.size() << L" : " << result_ps.size();
-
-			if(stream.audio_data.size() < result_ps.size())
-				stream.audio_data.resize(result_ps.size(), 0.0f);
-
+			CASPAR_ASSERT(stream.audio_data.size() == result_ps.size());
 			auto out = boost::range::transform(result_ps, stream.audio_data, std::begin(result_ps), std::plus<float>());
 			stream.audio_data.erase(std::begin(stream.audio_data), std::begin(stream.audio_data) + std::distance(std::begin(result_ps), out));
 		}		

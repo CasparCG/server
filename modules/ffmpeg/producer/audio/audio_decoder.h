@@ -46,23 +46,17 @@ class audio_decoder : public monitor::observable
 {
 public:
 	explicit audio_decoder();
-	explicit audio_decoder(const std::shared_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc);
+	explicit audio_decoder(class input& input, const core::video_format_desc& format_desc);
 	
 	audio_decoder(audio_decoder&& other);
 	audio_decoder& operator=(audio_decoder&& other);
 
-	bool ready() const;
-	void push(const std::shared_ptr<AVPacket>& packet);
-	std::shared_ptr<core::audio_buffer> poll();
+	std::shared_ptr<core::audio_buffer> operator()();
 
 	uint32_t nb_frames() const;
 	
-	uint32_t file_frame_number() const;
-
 	std::wstring print() const;
 	
-	void clear();
-
 	// monitor::observable
 	
 	void subscribe(const monitor::observable::observer_ptr& o) override;
