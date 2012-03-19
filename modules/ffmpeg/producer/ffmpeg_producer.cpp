@@ -163,23 +163,15 @@ public:
 		{
 			frame = std::move(muxer_.front());
 			muxer_.pop();
+			++frame_number_;		
 		}
-		else
-		{
-			if(!input_.eof())		
-				graph_->set_tag("underflow");	
-		}
-							
+		else if(!input_.eof())					
+			graph_->set_tag("underflow");	
+									
 		graph_->set_value("frame-time", frame_timer.elapsed()*format_desc_.fps*0.5);
 		event_subject_	<< monitor::event("profiler/time") % frame_timer.elapsed() % (1.0/format_desc_.fps);			
 								
 		graph_->set_text(print());
-
-		if(frame != core::draw_frame::late())		
-		{
-			last_frame_ = frame;
-			++frame_number_;		
-		}
 
 		event_subject_	<< monitor::event("file/time")			% monitor::duration(file_frame_number()/fps_) 
 																% monitor::duration(file_nb_frames()/fps_)
@@ -189,10 +181,10 @@ public:
 						<< monitor::event("file/path")			% filename_
 						<< monitor::event("loop")				% input_.loop();
 		
-		if(frame == core::draw_frame::late() && input_.eof())
-			return last_frame();
+		if(frame == core::draw_frame::late())
+			return input_.eof() ? last_frame() : core::draw_frame::late();
 				
-		return frame;
+		return last_frame_ = frame;
 	}
 
 	core::draw_frame last_frame() const override
