@@ -78,6 +78,7 @@ public:
 
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
+		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
 		diagnostics::register_graph(graph_);
 		
 		executor_.invoke([=]
@@ -144,6 +145,8 @@ public:
 			}
 			
 			alSourcei(source_, AL_LOOPING, AL_FALSE);
+
+			alSourcePlay(source_);	
 		});
 	}
 	
@@ -154,7 +157,21 @@ public:
 			ALenum state; 
 			alGetSourcei(source_, AL_SOURCE_STATE,&state);
 			if(state != AL_PLAYING)
-				alSourcePlay(source_);			
+			{
+				for(int n = 0; n < buffers_.size()-1; ++n)
+				{					
+					ALuint buffer = 0;  
+					alSourceUnqueueBuffers(source_, 1, &buffer);
+					if(buffer)
+					{
+						std::vector<int16_t> audio(format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()], 0);
+						alBufferData(buffer, AL_FORMAT_STEREO16, audio.data(), static_cast<ALsizei>(audio.size()*sizeof(int16_t)), format_desc_.audio_sample_rate);
+						alSourceQueueBuffers(source_, 1, &buffer);
+					}
+				}
+				alSourcePlay(source_);		
+				graph_->set_tag("late-frame");	
+			}
 
 			auto audio = core::audio_32_to_16(frame.audio_data());
 			
