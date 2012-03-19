@@ -107,6 +107,22 @@ public:
 			});
 		}		
 
+		BOOST_FOREACH(auto& layer, layers)
+		{	
+			// Remove first field stills.
+			boost::range::remove_erase_if(layer.items, [&](const item& item)
+			{
+				return item.transform.is_still && item.transform.field_mode == format_desc.field_mode; // only us last field for stills.
+			});
+		
+			// Stills are progressive
+			BOOST_FOREACH(auto& item, layer.items)
+			{
+				if(item.transform.is_still)
+					item.transform.field_mode = core::field_mode::progressive;
+			}
+		}
+
 		return flatten(ogl_->begin_invoke([=]() mutable -> boost::shared_future<array<const std::uint8_t>>
 		{
 			auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4);
@@ -136,11 +152,11 @@ private:
 			draw(target_texture, std::move(layer), layer_key_texture, format_desc, field_mode);
 	}
 
-	void draw(spl::shared_ptr<texture>&		target_texture,
-			  layer							layer, 
-			  std::shared_ptr<texture>&		layer_key_texture,
+	void draw(spl::shared_ptr<texture>&			target_texture,
+			  layer								layer, 
+			  std::shared_ptr<texture>&			layer_key_texture,
 			  const core::video_format_desc&	format_desc,
-			  core::field_mode				field_mode)
+			  core::field_mode					field_mode)
 	{		
 		// Fix frames		
 		BOOST_FOREACH(auto& item, layer.items)		
@@ -172,22 +188,6 @@ private:
 			return item.transform.field_mode == core::field_mode::empty;
 		});
 		
-		// Remove first field stills.
-		if(format_desc.field_mode != core::field_mode::progressive)
-		{
-			boost::range::remove_erase_if(layer.items, [&](const item& item)
-			{
-				return item.transform.is_still && item.transform.field_mode == format_desc.field_mode; // only use last field for stills.
-			});
-		}
-
-		// Stills are progressive, TODO: deinterlace.
-		BOOST_FOREACH(auto& item, layer.items)
-		{
-			if(item.transform.is_still)
-				item.transform.field_mode = core::field_mode::progressive;
-		}
-
 		if(layer.items.empty())
 			return;
 

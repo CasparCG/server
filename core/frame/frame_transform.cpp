@@ -141,12 +141,14 @@ bool operator!=(const image_transform& lhs, const image_transform& rhs)
 		
 audio_transform::audio_transform() 
 	: volume(1.0)
+	, is_still(false)
 {
 }
 
 audio_transform& audio_transform::operator*=(const audio_transform &other)
 {
-	volume					*= other.volume;	
+	volume	 *= other.volume;	
+	is_still |= other.is_still;
 	return *this;
 }
 
@@ -163,6 +165,7 @@ audio_transform audio_transform::tween(double time, const audio_transform& sourc
 	};
 	
 	audio_transform result;	
+	result.is_still			= source.is_still | dest.is_still;
 	result.volume			= do_tween(time, source.volume,				dest.volume,			duration, tween);
 	
 	return result;
@@ -175,7 +178,7 @@ bool operator==(const audio_transform& lhs, const audio_transform& rhs)
 		return std::abs(lhs - rhs) < 5e-8;
 	};
 
-	return eq(lhs.volume, rhs.volume);
+	return eq(lhs.volume, rhs.volume) && lhs.is_still == rhs.is_still;
 }
 
 bool operator!=(const audio_transform& lhs, const audio_transform& rhs)

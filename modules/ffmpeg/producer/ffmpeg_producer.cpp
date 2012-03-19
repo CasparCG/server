@@ -112,10 +112,13 @@ public:
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
 		diagnostics::register_graph(graph_);
 		
+		video_decoder_.subscribe(event_subject_);
+		audio_decoder_.subscribe(event_subject_);
+
 		try
 		{
-			video_decoder_ = video_decoder(input_.context());
-			video_decoder_.subscribe(event_subject_);
+			video_decoder_ = video_decoder(input_);
+			
 			CASPAR_LOG(info) << print() << L" " << video_decoder_.print();
 		}
 		catch(averror_stream_not_found&)
@@ -130,8 +133,8 @@ public:
 
 		try
 		{
-			audio_decoder_ = audio_decoder(input_.context(), format_desc_);
-			audio_decoder_.subscribe(event_subject_);
+			audio_decoder_ = audio_decoder(input_, format_desc_);
+			
 			CASPAR_LOG(info) << print() << L" " << audio_decoder_.print();
 		}
 		catch(averror_stream_not_found&)
@@ -161,11 +164,12 @@ public:
 		auto frame = core::draw_frame::late();		
 		if(!muxer_.empty())
 		{
-			frame = std::move(muxer_.front());
+			last_frame_ = frame = std::move(muxer_.front());
 			muxer_.pop();
+
 			++frame_number_;		
 		}
-		else if(!input_.eof())					
+		else				
 			graph_->set_tag("underflow");	
 									
 		graph_->set_value("frame-time", frame_timer.elapsed()*format_desc_.fps*0.5);
@@ -180,11 +184,8 @@ public:
 						<< monitor::event("file/fps")			% fps_
 						<< monitor::event("file/path")			% filename_
 						<< monitor::event("loop")				% input_.loop();
-		
-		if(frame == core::draw_frame::late())
-			return input_.eof() ? last_frame() : core::draw_frame::late();
-				
-		return last_frame_ = frame;
+						
+		return frame;
 	}
 
 	core::draw_frame last_frame() const override
@@ -345,21 +346,25 @@ public:
 	void seek(uint32_t target)
 	{
 		muxer_.clear();
-		video_decoder_.clear();
-		audio_decoder_.clear();
-			
-		target = std::min(target, file_nb_frames()-25);
+		
+		// TODO: Fix HACK.
+
+		// BEGIN HACK: There is no way to flush yadif. Need to poll 2 frames.
+		if(target > 0)
+			target -= 1;	
+		// END HACK
+
+		target = std::min(target, file_nb_frames());
 
 		input_.seek(target);
-				
-		decode_next_frame();
-		decode_next_frame();
-		decode_next_frame();
-		decode_next_frame();
-		decode_next_frame();
-		decode_next_frame();
 		muxer_.clear();
+		
+		// BEGIN HACK: There is no way to flush yadif. Need to poll 2 frames.
 		decode_next_frame();
+		if(!muxer_.empty())
+			muxer_.pop();
+		// END HACK
+
 		decode_next_frame();
 
 		last_frame_ = !muxer_.empty() ? muxer_.front() : last_frame_;			
@@ -373,14 +378,7 @@ public:
 	void decode_next_frame()
 	{
 		for(int n = 0; n < 64 && muxer_.empty(); ++n)
-		{
-			std::shared_ptr<AVPacket> pkt;
-			for(int n = 0; n < 32 && (!video_decoder_.ready() || !audio_decoder_.ready()) && input_.try_pop(pkt); ++n)
-			{
-				video_decoder_.push(pkt);
-				audio_decoder_.push(pkt);
-			}
-		
+		{		
 			std::shared_ptr<AVFrame>			video;
 			std::shared_ptr<core::audio_buffer> audio;
 
@@ -389,12 +387,12 @@ public:
 				[&]
 				{
 					if(!muxer_.video_ready())
-						video = video_decoder_.poll();	
+						video = video_decoder_();
 				},
 				[&]
 				{		
 					if(!muxer_.audio_ready())
-						audio = audio_decoder_.poll();		
+						audio = audio_decoder_();		
 				}
 			);
 		

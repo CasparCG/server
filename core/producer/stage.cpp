@@ -101,16 +101,15 @@ public:
 	{
 		auto& layer		= layers_[index];
 		auto& tween		= tweens_[index];
-		auto transform	= tween.fetch_and_tick(1);
 				
 		auto frame  = layer.receive(format_desc);					
 		auto frame1 = frame;
-		frame1.transform() = transform;
+		frame1.transform() *= tween.fetch_and_tick(1);
 
 		if(format_desc.field_mode != core::field_mode::progressive)
 		{				
 			auto frame2 = frame;
-			frame2.transform() = tween.fetch_and_tick(1);
+			frame2.transform() *= tween.fetch_and_tick(1);
 			frame1 = core::draw_frame::interlace(frame1, frame2, format_desc.field_mode);
 		}
 
