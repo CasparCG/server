@@ -105,7 +105,7 @@ public:
 			avcodec_flush_buffers(codec_context_.get());
 			return nullptr;
 		}
-		else if(packet == eof_packet())
+		else if(packet == null_packet())
 		{
 			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
 			{
