@@ -49,7 +49,7 @@ std::shared_ptr<AVFrame>			flush_video();
 std::shared_ptr<AVFrame>			empty_video();
 
 spl::shared_ptr<AVPacket>			flush_packet();	
-spl::shared_ptr<AVPacket>			eof_packet();			
+spl::shared_ptr<AVPacket>			null_packet();			
 
 // Utils
 
