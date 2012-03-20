@@ -154,23 +154,26 @@ public:
 	
 	core::draw_frame receive() override
 	{				
-		if(paused_)
-			return last_frame();
-
-		boost::timer frame_timer;
-						
-		decode_next_frame();
-		
 		auto frame = core::draw_frame::late();		
-		if(!muxer_.empty())
-		{
-			last_frame_ = frame = std::move(muxer_.front());
-			muxer_.pop();
+		
+		boost::timer frame_timer;
 
-			++frame_number_;		
+		if(paused_)
+			frame = last_frame();	
+		else
+		{						
+			decode_next_frame();
+		
+			if(!muxer_.empty())
+			{
+				last_frame_ = frame = std::move(muxer_.front());
+				muxer_.pop();
+
+				++frame_number_;		
+			}
+			else				
+				graph_->set_tag("underflow");
 		}
-		else				
-			graph_->set_tag("underflow");	
 									
 		graph_->set_value("frame-time", frame_timer.elapsed()*format_desc_.fps*0.5);
 		event_subject_	<< monitor::event("profiler/time") % frame_timer.elapsed() % (1.0/format_desc_.fps);			
