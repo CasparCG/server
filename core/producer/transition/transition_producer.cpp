@@ -42,6 +42,8 @@ class transition_producer : public frame_producer_base
 		
 	spl::shared_ptr<frame_producer>		dest_producer_;
 	spl::shared_ptr<frame_producer>		source_producer_;
+
+	bool								paused_;
 		
 public:
 
@@ -51,6 +53,7 @@ public:
 		, info_(info)
 		, dest_producer_(dest)
 		, source_producer_(frame_producer::empty())
+		, paused_(false)
 	{
 		dest->subscribe(event_subject_);
 
@@ -107,12 +110,7 @@ public:
 
 		return compose(dest, source);
 	}
-	
-	void paused(bool value) override
-	{
-		dest_producer_->paused(value);
-	}
-		
+			
 	uint32_t nb_frames() const override
 	{
 		return dest_producer_->nb_frames();
