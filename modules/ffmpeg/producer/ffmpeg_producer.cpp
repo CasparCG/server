@@ -376,27 +376,12 @@ public:
 			
 	void decode_next_frame()
 	{
-		for(int n = 0; n < 64 && muxer_.empty(); ++n)
-		{		
-			std::shared_ptr<AVFrame>			video;
-			std::shared_ptr<core::audio_buffer> audio;
-
-			tbb::parallel_invoke
-			(
-				[&]
-				{
-					if(!muxer_.video_ready())
-						video = video_decoder_();
-				},
-				[&]
-				{		
-					if(!muxer_.audio_ready())
-						audio = audio_decoder_();		
-				}
-			);
-		
-			muxer_.push(video);
-			muxer_.push(audio);
+		for(int n = 0; n < 8 && muxer_.empty(); ++n)
+		{				
+			if(!muxer_.video_ready())
+				muxer_.push(video_decoder_());
+			if(!muxer_.audio_ready())
+				muxer_.push(audio_decoder_());
 		}
 		graph_->set_text(print());
 	}
