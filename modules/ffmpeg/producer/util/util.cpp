@@ -93,7 +93,7 @@ spl::shared_ptr<AVPacket> flush_packet()
 	return pkt;
 }
 
-spl::shared_ptr<AVPacket> eof_packet()
+spl::shared_ptr<AVPacket> null_packet()
 {
 	static spl::shared_ptr<AVPacket> pkt(new AVPacket());
 	return pkt;

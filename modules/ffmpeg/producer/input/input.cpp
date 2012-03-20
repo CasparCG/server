@@ -78,7 +78,7 @@ public:
 	
 	void push(const std::shared_ptr<AVPacket>& packet)
 	{
-		if(packet->stream_index != index_ && packet != flush_packet() && packet != eof_packet())
+		if(packet->stream_index != index_ && packet != flush_packet() && packet != null_packet())
 			return;
 
 		packets_.push(packet);
@@ -233,8 +233,11 @@ struct input::impl : boost::noncopyable
 		
 				if(is_eof(ret))														     
 				{
-					video_stream_.push(eof_packet());
-					audio_stream_.push(eof_packet());
+					for(int n = 0; n < 3; ++n)
+					{
+						video_stream_.push(null_packet());
+						audio_stream_.push(null_packet());
+					}
 
 					if(loop_)
 					{
