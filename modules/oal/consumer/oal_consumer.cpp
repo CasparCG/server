@@ -51,16 +51,57 @@ namespace caspar { namespace oal {
 
 typedef std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>> audio_buffer_16;
 
+class device
+{
+	ALCdevice*											device_;
+	ALCcontext*											context_;
+
+public:
+	device()
+		: device_(0)
+		, context_(0)
+	{
+		device_ = alcOpenDevice(nullptr);
+
+		if(!device_)
+			BOOST_THROW_EXCEPTION(invalid_operation());
+
+		context_ = alcCreateContext(device_, nullptr);
+
+		if(!context_)
+			BOOST_THROW_EXCEPTION(invalid_operation());
+			
+		if(alcMakeContextCurrent(context_) == ALC_FALSE)
+			BOOST_THROW_EXCEPTION(invalid_operation());
+	}
+
+	~device()
+	{
+		alcMakeContextCurrent(nullptr);
+
+		if(context_)
+			alcDestroyContext(context_);
+
+		if(device_)
+			alcCloseDevice(device_);
+	}
+
+	ALCdevice* get()
+	{
+		return device_;
+	}
+};
+
 struct oal_consumer : public core::frame_consumer
 {
+	static device										device_;
+
 	spl::shared_ptr<diagnostics::graph>					graph_;
 	boost::timer										perf_timer_;
 	int													channel_index_;
 	
 	core::video_format_desc								format_desc_;
 
-	ALCdevice*											device_;
-	ALCcontext*											context_;
 	ALuint												source_;
 	std::array<ALuint, 3>								buffers_;
 
@@ -69,8 +110,6 @@ struct oal_consumer : public core::frame_consumer
 public:
 	oal_consumer() 
 		: channel_index_(-1)
-		, device_(0)
-		, context_(0)
 		, source_(0)
 		, executor_(L"oal_consumer")
 	{
@@ -80,22 +119,6 @@ public:
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
 		diagnostics::register_graph(graph_);
-		
-		executor_.invoke([=]
-		{		
-			device_ = alcOpenDevice(nullptr);
-
-			if(!device_)
-				BOOST_THROW_EXCEPTION(invalid_operation());
-
-			context_ = alcCreateContext(device_, nullptr);
-
-			if(!context_)
-				BOOST_THROW_EXCEPTION(invalid_operation());
-			
-			if(alcMakeContextCurrent(context_) == ALC_FALSE)
-				BOOST_THROW_EXCEPTION(invalid_operation());
-		});
 	}
 
 	~oal_consumer()
@@ -113,14 +136,6 @@ public:
 				if(buffer)
 					alDeleteBuffers(1, &buffer);
 			};
-
-			alcMakeContextCurrent(nullptr);
-
-			if(context_)
-				alcDestroyContext(context_);
-
-			if(device_)
-				alcCloseDevice(device_);
 		});
 	}
 
@@ -224,6 +239,8 @@ public:
 		return 500;
 	}
 };
+
+device oal_consumer::device_;
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
 {
