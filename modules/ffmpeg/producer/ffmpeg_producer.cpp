@@ -356,7 +356,7 @@ public:
 		muxer_.clear();
 		
 		// BEGIN HACK: There is no way to flush yadif. Need to poll 2 frames.
-		for(int n = 0; n < 25 && file_frame_number() != target+1; ++n)
+		for(int n = 0; n < 25 && file_frame_number() != target+2; ++n)
 		{
 			decode_next_frame();
 			if(!muxer_.empty())
