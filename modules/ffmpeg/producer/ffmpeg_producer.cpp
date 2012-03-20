@@ -175,8 +175,6 @@ public:
 		graph_->set_value("frame-time", frame_timer.elapsed()*format_desc_.fps*0.5);
 		event_subject_	<< monitor::event("profiler/time") % frame_timer.elapsed() % (1.0/format_desc_.fps);			
 								
-		graph_->set_text(print());
-
 		event_subject_	<< monitor::event("file/time")			% monitor::duration(file_frame_number()/fps_) 
 																% monitor::duration(file_nb_frames()/fps_)
 						<< monitor::event("file/frame")			% static_cast<int32_t>(file_frame_number())
@@ -348,21 +346,19 @@ public:
 		muxer_.clear();
 		
 		// TODO: Fix HACK.
-
-		// BEGIN HACK: There is no way to flush yadif. Need to poll 2 frames.
-		if(target > 0)
-			target -= 1;	
-		// END HACK
-
+		
 		target = std::min(target, file_nb_frames());
 
 		input_.seek(target);
 		muxer_.clear();
 		
 		// BEGIN HACK: There is no way to flush yadif. Need to poll 2 frames.
-		decode_next_frame();
-		if(!muxer_.empty())
-			muxer_.pop();
+		for(int n = 0; n < 25 && file_frame_number() != target+1; ++n)
+		{
+			decode_next_frame();
+			if(!muxer_.empty())
+				muxer_.pop();
+		}
 		// END HACK
 
 		decode_next_frame();
@@ -399,6 +395,7 @@ public:
 			muxer_.push(video);
 			muxer_.push(audio);
 		}
+		graph_->set_text(print());
 	}
 };
 
