@@ -185,7 +185,7 @@ public:
 		std::vector<float> result_ps(audio_cadence_.front(), 0.0f);
 		BOOST_FOREACH(auto& stream, audio_streams_ | boost::adaptors::map_values)
 		{
-			CASPAR_ASSERT(stream.audio_data.size() == result_ps.size());
+			CASPAR_ASSERT(stream.audio_data.size() >= result_ps.size());
 			auto out = boost::range::transform(result_ps, stream.audio_data, std::begin(result_ps), std::plus<float>());
 			stream.audio_data.erase(std::begin(stream.audio_data), std::begin(stream.audio_data) + std::distance(std::begin(result_ps), out));
 		}		
