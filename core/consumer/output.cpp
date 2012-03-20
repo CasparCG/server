@@ -176,11 +176,20 @@ public:
 			{
 				auto consumer	= it->second;
 				auto frame		= frames_.at(consumer->buffer_depth()-minmax.first);
-						
-				if(consumer->send(frame))
-					++it;
-				else
+					
+				try
 				{
+					if(consumer->send(frame))
+						++it;
+					else
+					{
+						CASPAR_LOG(info) << print() << L" " << it->second->print() << L" Removed.";
+						consumers_.erase(it++);
+					}
+				}
+				catch(...)
+				{
+					CASPAR_LOG_CURRENT_EXCEPTION();
 					CASPAR_LOG(info) << print() << L" " << it->second->print() << L" Removed.";
 					consumers_.erase(it++);
 				}
