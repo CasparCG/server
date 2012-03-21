@@ -174,7 +174,7 @@ core::pixel_format_desc pixel_format_desc(PixelFormat pix_fmt, int width, int he
 
 core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, double fps, core::frame_factory& frame_factory)
 {			
-	static tbb::concurrent_unordered_map<int, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contexts_;
+	static tbb::concurrent_unordered_map<int, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contvalid_exts_;
 	
 	if(decoded_frame->width < 1 || decoded_frame->height < 1)
 		return frame_factory.create_frame(tag, core::pixel_format_desc(core::pixel_format::invalid));
@@ -211,7 +211,7 @@ core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& 
 
 		int key = ((width << 22) & 0xFFC00000) | ((height << 6) & 0x003FC000) | ((pix_fmt << 7) & 0x00007F00) | ((target_pix_fmt << 0) & 0x0000007F);
 			
-		auto& pool = sws_contexts_[key];
+		auto& pool = sws_contvalid_exts_[key];
 						
 		if(!pool.try_pop(sws_context))
 		{
@@ -505,13 +505,17 @@ std::wstring print_mode(int width, int height, double fps, bool interlaced)
 
 bool is_valid_file(const std::wstring filename)
 {				
-	static std::vector<std::wstring> exts = boost::assign::list_of(L".m2t")(L".mov")(L".mp4")(L".dv")(L".flv")(L".mpg")(L".wav")(L".mp3")(L".dnxhd")(L".h264")(L".prores");
+	static const std::vector<std::wstring> invalid_exts = boost::assign::list_of(L".png")(L".tga")(L".bmp")(L".jpg")(L".jpeg")(L".gif")(L".tiff")(L".tif")(L".jp2")(L".jpx")(L".j2k")(L".j2c");
+	static std::vector<std::wstring>	   valid_exts   = boost::assign::list_of(L".m2t")(L".mov")(L".mp4")(L".dv")(L".flv")(L".mpg")(L".wav")(L".mp3")(L".dnxhd")(L".h264")(L".prores");
 
 	auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
 		
-	if(std::find(exts.begin(), exts.end(), ext) != exts.end())
+	if(std::find(valid_exts.begin(), valid_exts.end(), ext) != valid_exts.end())
 		return true;	
 	
+	if(std::find(invalid_exts.begin(), invalid_exts.end(), ext) != invalid_exts.end())
+		return false;	
+
 	auto u8filename = u8(filename);
 	
 	int score = 0;
