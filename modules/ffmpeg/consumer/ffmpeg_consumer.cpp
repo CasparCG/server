@@ -615,8 +615,8 @@ public:
 				
 		byte_vector buffer(48000);
 
-		const uint8_t *in[] = {reinterpret_cast<const uint8_t*>(frame.audio_data().data())};
-		uint8_t* out[]		= {buffer.data()};
+		const uint8_t* in[]  = {reinterpret_cast<const uint8_t*>(frame.audio_data().data())};
+		uint8_t*       out[] = {buffer.data()};
 
 		auto channel_samples = swr_convert(swr_.get(), 
 										   out, static_cast<int>(buffer.size()) / c->channels / av_get_bytes_per_sample(c->sample_fmt), 
