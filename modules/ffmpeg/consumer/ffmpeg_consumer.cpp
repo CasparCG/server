@@ -225,7 +225,6 @@ struct ffmpeg_consumer : boost::noncopyable
 	const safe_ptr<diagnostics::graph>		graph_;
 
 	executor								encode_executor_;
-	executor								write_executor_;
 	
 	std::shared_ptr<AVStream>				audio_st_;
 	std::shared_ptr<AVStream>				video_st_;
@@ -250,7 +249,6 @@ public:
 		, oc_(avformat_alloc_context(), av_free)
 		, format_desc_(format_desc)
 		, encode_executor_(print())
-		, write_executor_(print() + L"/output")
 		, in_frame_number_(0)
 		, out_frame_number_(0)
 		, output_format_(format_desc, filename, options)
@@ -263,7 +261,6 @@ public:
 		diagnostics::register_graph(graph_);
 
 		encode_executor_.set_capacity(8);
-		write_executor_.set_capacity(8);
 
 		oc_->oformat = output_format_.format;
 				
@@ -296,9 +293,7 @@ public:
 	~ffmpeg_consumer()
 	{    
 		encode_executor_.stop();
-		write_executor_.stop();
 		encode_executor_.join();
-		write_executor_.join();
 		
 		LOG_ON_ERROR2(av_write_trailer(oc_.get()), "[ffmpeg_consumer]");
 		
@@ -478,7 +473,7 @@ public:
 		return out_frame;
 	}
   
-	std::shared_ptr<AVPacket> encode_video_frame(core::read_frame& frame)
+	void encode_video_frame(core::read_frame& frame)
 	{ 
 		auto c = video_st_->codec;
 		
@@ -488,7 +483,7 @@ public:
 		in_frame_number_++;
 
 		if(out_time - in_time > 0.01)
-			return nullptr;
+			return;
  
 		auto av_frame = convert_video(frame, c);
 		av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
@@ -496,29 +491,27 @@ public:
 		av_frame->pts				= out_frame_number_++;
 
 		int out_size = THROW_ON_ERROR2(avcodec_encode_video(c, video_outbuf_.data(), video_outbuf_.size(), av_frame.get()), "[ffmpeg_consumer]");
-		if(out_size > 0)
+		if(out_size == 0)
+			return;
+				
+		safe_ptr<AVPacket> pkt(new AVPacket, [](AVPacket* p)
 		{
-			safe_ptr<AVPacket> pkt(new AVPacket, [](AVPacket* p)
-			{
-				av_free_packet(p);
-				delete p;
-			});
-			av_init_packet(pkt.get());
+			av_free_packet(p);
+			delete p;
+		});
+		av_init_packet(pkt.get());
  
-			if (c->coded_frame->pts != AV_NOPTS_VALUE)
-				pkt->pts = av_rescale_q(c->coded_frame->pts, c->time_base, video_st_->time_base);
+		if (c->coded_frame->pts != AV_NOPTS_VALUE)
+			pkt->pts = av_rescale_q(c->coded_frame->pts, c->time_base, video_st_->time_base);
 
-			if(c->coded_frame->key_frame)
-				pkt->flags |= AV_PKT_FLAG_KEY;
+		if(c->coded_frame->key_frame)
+			pkt->flags |= AV_PKT_FLAG_KEY;
 
-			pkt->stream_index	= video_st_->index;
-			pkt->data			= video_outbuf_.data();
-			pkt->size			= out_size;
- 
-			av_dup_packet(pkt.get());
-			return pkt;
-		}	
-		return nullptr;
+		pkt->stream_index	= video_st_->index;
+		pkt->data			= video_outbuf_.data();
+		pkt->size			= out_size;
+ 			
+		av_interleaved_write_frame(oc_.get(), pkt.get());		
 	}
 		
 	byte_vector convert_audio(core::read_frame& frame, AVCodecContext* c)
@@ -541,51 +534,49 @@ public:
 		return byte_vector(audio_resample_buffer.begin(), audio_resample_buffer.end());
 	}
 
-	std::shared_ptr<AVPacket> encode_audio_frame(core::read_frame& frame)
+	void encode_audio_frame(core::read_frame& frame)
 	{			
 		auto c = audio_st_->codec;
 
 		boost::range::push_back(audio_buf_, convert_audio(frame, c));
 		
 		std::size_t frame_size = c->frame_size;
+		auto input_audio_size = frame_size * av_get_bytes_per_sample(c->sample_fmt) * c->channels;
 		
-		safe_ptr<AVPacket> pkt(new AVPacket, [](AVPacket* p)
+		while(audio_buf_.size() >= input_audio_size)
 		{
-			av_free_packet(p);
-			delete p;
-		});
-		av_init_packet(pkt.get());
+			safe_ptr<AVPacket> pkt(new AVPacket, [](AVPacket* p)
+			{
+				av_free_packet(p);
+				delete p;
+			});
+			av_init_packet(pkt.get());
 
-		if(frame_size > 1)
-		{			
-			auto input_audio_size = frame_size * av_get_bytes_per_sample(c->sample_fmt) * c->channels;
-		   
-			if(audio_buf_.size() < input_audio_size)
-				return nullptr;
-					
-			pkt->size = avcodec_encode_audio(c, audio_outbuf_.data(), audio_outbuf_.size(), reinterpret_cast<short*>(audio_buf_.data()));
-			audio_buf_.erase(audio_buf_.begin(), audio_buf_.begin() + input_audio_size);
-		}
-		else
-		{
-			audio_outbuf_ = std::move(audio_buf_);		
-			audio_buf_.clear();
-			pkt->size = audio_outbuf_.size();
-			pkt->data = audio_outbuf_.data();
-		}
+			if(frame_size > 1)
+			{								
+				pkt->size = avcodec_encode_audio(c, audio_outbuf_.data(), audio_outbuf_.size(), reinterpret_cast<short*>(audio_buf_.data()));
+				audio_buf_.erase(audio_buf_.begin(), audio_buf_.begin() + input_audio_size);
+			}
+			else
+			{
+				audio_outbuf_ = std::move(audio_buf_);		
+				audio_buf_.clear();
+				pkt->size = audio_outbuf_.size();
+				pkt->data = audio_outbuf_.data();
+			}
 		
-		if(pkt->size == 0)
-			return nullptr;
+			if(pkt->size == 0)
+				return;
 
-		if (c->coded_frame && c->coded_frame->pts != AV_NOPTS_VALUE)
-			pkt->pts = av_rescale_q(c->coded_frame->pts, c->time_base, audio_st_->time_base);
+			if (c->coded_frame && c->coded_frame->pts != AV_NOPTS_VALUE)
+				pkt->pts = av_rescale_q(c->coded_frame->pts, c->time_base, audio_st_->time_base);
 
-		pkt->flags		 |= AV_PKT_FLAG_KEY;
-		pkt->stream_index = audio_st_->index;
-		pkt->data		  = reinterpret_cast<uint8_t*>(audio_outbuf_.data());
+			pkt->flags		 |= AV_PKT_FLAG_KEY;
+			pkt->stream_index = audio_st_->index;
+			pkt->data		  = reinterpret_cast<uint8_t*>(audio_outbuf_.data());
 		
-		av_dup_packet(pkt.get());
-		return pkt;
+			av_interleaved_write_frame(oc_.get(), pkt.get());
+		}
 	}
 		 
 	void send(const safe_ptr<core::read_frame>& frame)
@@ -594,18 +585,10 @@ public:
 		{		
 			boost::timer frame_timer;
 
-			auto video = encode_video_frame(*frame);
-			auto audio = encode_audio_frame(*frame);
+			encode_video_frame(*frame);
+			encode_audio_frame(*frame);
 
-			graph_->set_value("frame-time", frame_timer.elapsed()*format_desc_.fps*0.5);
-			
-			write_executor_.begin_invoke([=]
-			{
-				if(video)
-					av_interleaved_write_frame(oc_.get(), video.get());
-				if(audio)
-					av_interleaved_write_frame(oc_.get(), audio.get());
-			});
+			graph_->set_value("frame-time", frame_timer.elapsed()*format_desc_.fps*0.5);			
 		});
 	}
 };
