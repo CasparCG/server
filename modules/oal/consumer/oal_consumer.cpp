@@ -39,6 +39,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/timer.hpp>
 #include <boost/foreach.hpp>
+#include <boost/thread/once.hpp>
 
 #include <tbb/concurrent_queue.h>
 
@@ -92,10 +93,16 @@ public:
 	}
 };
 
+void init_device()
+{
+	static std::unique_ptr<device> instance;
+	static boost::once_flag f = BOOST_ONCE_INIT;
+	
+	boost::call_once(f, []{instance.reset(new device());});
+}
+
 struct oal_consumer : public core::frame_consumer
 {
-	static device										device_;
-
 	spl::shared_ptr<diagnostics::graph>					graph_;
 	boost::timer										perf_timer_;
 	int													channel_index_;
@@ -114,6 +121,8 @@ public:
 		, executor_(L"oal_consumer")
 	{
 		buffers_.assign(0);
+
+		init_device();
 
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
@@ -239,8 +248,6 @@ public:
 		return 500;
 	}
 };
-
-device oal_consumer::device_;
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
 {
