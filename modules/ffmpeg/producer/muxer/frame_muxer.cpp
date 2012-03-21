@@ -166,7 +166,7 @@ struct frame_muxer::impl : boost::noncopyable
 		
 	void merge()
 	{
-		if(video_ready() && audio_ready() && display_mode_ != display_mode::invalid)
+		while(video_ready() && audio_ready() && display_mode_ != display_mode::invalid)
 		{				
 			auto frame1			= pop_video();
 			frame1.audio_data()	= pop_audio();
