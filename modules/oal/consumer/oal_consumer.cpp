@@ -65,15 +65,15 @@ public:
 		device_ = alcOpenDevice(nullptr);
 
 		if(!device_)
-			BOOST_THROW_EXCEPTION(invalid_operation());
+			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to initialize audio device."));
 
 		context_ = alcCreateContext(device_, nullptr);
 
 		if(!context_)
-			BOOST_THROW_EXCEPTION(invalid_operation());
+			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to create audio context."));
 			
 		if(alcMakeContextCurrent(context_) == ALC_FALSE)
-			BOOST_THROW_EXCEPTION(invalid_operation());
+			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to activate audio context."));
 	}
 
 	~device()
