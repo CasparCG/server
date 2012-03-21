@@ -143,7 +143,7 @@ struct frame_muxer::impl : boost::noncopyable
 		switch(display_mode_)
 		{
 		case display_mode::duplicate:					
-			return audio_stream_.size()/2 >= static_cast<size_t>(audio_cadence_.front());
+			return audio_stream_.size() >= static_cast<size_t>(audio_cadence_[0] + audio_cadence_[1 % audio_cadence_.size()]);
 		default:										
 			return audio_stream_.size() >= static_cast<size_t>(audio_cadence_.front());
 		}
@@ -222,6 +222,9 @@ struct frame_muxer::impl : boost::noncopyable
 
 	core::audio_buffer pop_audio()
 	{
+		if(audio_stream_.size() < audio_cadence_.front())
+			BOOST_THROW_EXCEPTION(out_of_range());
+
 		auto begin = audio_stream_.begin();
 		auto end   = begin + audio_cadence_.front();
 
