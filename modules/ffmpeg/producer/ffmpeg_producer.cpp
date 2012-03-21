@@ -399,7 +399,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 	auto length		= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
 	auto filter_str = get_param(L"FILTER", params, L""); 	
 	
-	return spl::make_shared_ptr(std::make_shared<ffmpeg_producer>(frame_factory, format_desc, filename, filter_str, loop, start, length));
+	return create_destroy_proxy(spl::make_shared_ptr(std::make_shared<ffmpeg_producer>(frame_factory, format_desc, filename, filter_str, loop, start, length)));
 }
 
 }}

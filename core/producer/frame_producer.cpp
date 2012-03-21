@@ -237,7 +237,7 @@ spl::shared_ptr<core::frame_producer> do_create_producer(const spl::shared_ptr<f
 	if(producer == frame_producer::empty())
 		return producer;
 		
-	return create_destroy_proxy(producer);
+	return producer;
 }
 
 spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>& my_frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params)

@@ -506,7 +506,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 	if(!boost::filesystem::exists(filename))
 		BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(u8(filename)));	
 
-	return spl::make_shared<flash_producer>(frame_factory, format_desc, filename, template_host.width, template_host.height);
+	return create_destroy_proxy(spl::make_shared<flash_producer>(frame_factory, format_desc, filename, template_host.width, template_host.height));
 }
 
 std::wstring find_template(const std::wstring& template_name)
