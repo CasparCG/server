@@ -42,6 +42,8 @@ struct pixel_format_def
 		ycbcr,
 		ycbcra,
 		luma,
+		bgr,
+		rgb,
 		count,
 		invalid,
 	};
