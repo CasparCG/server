@@ -113,6 +113,8 @@ core::pixel_format get_pixel_format(PixelFormat pix_fmt)
 	switch(pix_fmt)
 	{
 	case PIX_FMT_GRAY8:			return core::pixel_format::gray;
+	case PIX_FMT_RGB24:			return core::pixel_format::rgb;
+	case PIX_FMT_BGR24:			return core::pixel_format::bgr;
 	case PIX_FMT_BGRA:			return core::pixel_format::bgra;
 	case PIX_FMT_ARGB:			return core::pixel_format::argb;
 	case PIX_FMT_RGBA:			return core::pixel_format::rgba;
@@ -141,6 +143,12 @@ core::pixel_format_desc pixel_format_desc(PixelFormat pix_fmt, int width, int he
 	case core::pixel_format::luma:
 		{
 			desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0], height, 1));						
+			return desc;
+		}
+	case core::pixel_format::bgr:
+	case core::pixel_format::rgb:
+		{
+			desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0]/3, height, 3));						
 			return desc;
 		}
 	case core::pixel_format::bgra:
@@ -302,8 +310,15 @@ spl::shared_ptr<AVFrame> make_av_frame(std::array<uint8_t*, 4> data, const core:
 		av_frame->data[n]	  = data[n];
 		av_frame->linesize[n] = planes[n].linesize;	
 	}
+
 	switch(format)
 	{
+	case core::pixel_format::rgb:
+		av_frame->format = PIX_FMT_RGB24;
+		break;
+	case core::pixel_format::bgr:
+		av_frame->format = PIX_FMT_BGR24;
+		break;
 	case core::pixel_format::rgba:
 		av_frame->format = PIX_FMT_RGBA; 
 		break;
