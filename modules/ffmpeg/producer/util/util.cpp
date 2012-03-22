@@ -174,7 +174,7 @@ core::pixel_format_desc pixel_format_desc(PixelFormat pix_fmt, int width, int he
 
 core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, double fps, core::frame_factory& frame_factory)
 {			
-	static tbb::concurrent_unordered_map<int, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contvalid_exts_;
+	static tbb::concurrent_unordered_map<int64_t, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contvalid_exts_;
 	
 	if(decoded_frame->width < 1 || decoded_frame->height < 1)
 		return frame_factory.create_frame(tag, core::pixel_format_desc(core::pixel_format::invalid));
@@ -208,8 +208,11 @@ core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& 
 		std::shared_ptr<SwsContext> sws_context;
 
 		//CASPAR_LOG(warning) << "Hardware accelerated color transform not supported.";
-
-		int key = ((width << 22) & 0xFFC00000) | ((height << 6) & 0x003FC000) | ((pix_fmt << 7) & 0x00007F00) | ((target_pix_fmt << 0) & 0x0000007F);
+		
+		int64_t key = ((static_cast<int64_t>(width)			 << 32) & 0xFFFF00000000) | 
+					  ((static_cast<int64_t>(height)		 << 16) & 0xFFFF0000) | 
+					  ((static_cast<int64_t>(pix_fmt)		 <<  8) & 0xFF00) | 
+					  ((static_cast<int64_t>(target_pix_fmt) <<  0) & 0xFF);
 			
 		auto& pool = sws_contvalid_exts_[key];
 						
