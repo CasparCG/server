@@ -92,7 +92,7 @@ struct configuration
 class decklink_frame : public IDeckLinkVideoFrame
 {
 	tbb::atomic<int>											ref_count_;
-	core::const_frame										frame_;
+	core::const_frame											frame_;
 	const core::video_format_desc								format_desc_;
 
 	const bool													key_only_;
