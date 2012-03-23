@@ -82,21 +82,22 @@ class executor
 	executor& operator=(const executor&);
 	
 	typedef tbb::concurrent_priority_queue<priority_function>	function_queue_t;
-
+	
+	const std::wstring											name_;
 	tbb::atomic<bool>											is_running_;
 	boost::thread												thread_;	
 	function_queue_t											execution_queue_;
 	tbb::concurrent_bounded_queue<int>							semaphore_;
 		
 public:		
-	executor(const std::wstring& name) // noexcept
+	executor(const std::wstring& name)
+		: name_(name)
 	{
-		name; // TODO: Use to set thread name.
 		is_running_ = true;
 		thread_ = boost::thread([this]{run();});
 	}
 	
-	virtual ~executor() // noexcept
+	virtual ~executor()
 	{
 		stop();
 		thread_.join();
@@ -105,11 +106,11 @@ public:
 	template<typename Func>
 	auto begin_invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> boost::unique_future<decltype(func())> // noexcept
 	{	
-		if(execution_queue_.size() > 256)
-			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("executor overflow."));
+		if(execution_queue_.size() > 128)
+			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("executor overflow.") << source_info(name_));
 
 		if(!is_running_)
-			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("executor not running."));
+			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("executor not running.") << source_info(name_));
 				
 		typedef typename std::remove_reference<Func>::type	function_type;
 		typedef decltype(func())							result_type;
@@ -172,10 +173,10 @@ public:
 		return begin_invoke(std::forward<Func>(func), prioriy).get();
 	}
 
-	void yield() // noexcept
+	void yield()
 	{
 		if(!is_current())
-			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Executor can only yield inside of thread context."));
+			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Executor can only yield inside of thread context.")  << source_info(name_));
 
 		int dummy;
 		semaphore_.pop(dummy);
@@ -185,7 +186,7 @@ public:
 			func();
 	}
 
-	void set_capacity(std::size_t capacity) // noexcept
+	void set_capacity(std::size_t capacity)
 	{
 		semaphore_.set_capacity(capacity);
 	}
