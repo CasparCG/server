@@ -32,13 +32,15 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/video_format.h>
 
+#include <common/array.h>
 #include <common/env.h>
-#include <common/utf.h>
-#include <common/param.h>
+#include <common/except.h>
 #include <common/executor.h>
 #include <common/diagnostics/graph.h>
-#include <common/array.h>
+#include <common/lock.h>
 #include <common/memory.h>
+#include <common/param.h>
+#include <common/utf.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/timer.hpp>
@@ -47,6 +49,8 @@
 #include <boost/range/algorithm.hpp>
 #include <boost/range/algorithm_ext.hpp>
 #include <boost/lexical_cast.hpp>
+
+#include <tbb/spin_mutex.h>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -238,7 +242,9 @@ struct ffmpeg_consumer : boost::noncopyable
 	const core::video_format_desc			format_desc_;
 	
 	const spl::shared_ptr<diagnostics::graph>		graph_;
-
+	
+	tbb::spin_mutex							exception_mutex_;
+	std::exception_ptr						exception_;
 	
 	std::shared_ptr<AVStream>				audio_st_;
 	std::shared_ptr<AVStream>				video_st_;
@@ -454,40 +460,32 @@ public:
 			return;
 		
 		auto enc = video_st_->codec;
+	 
+		auto av_frame				= convert_video(frame, enc);
+		av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
+		av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper;
+		av_frame->pts				= frame_number_++;
 
-		try
-		{		 
-			auto av_frame				= convert_video(frame, enc);
-			av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
-			av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper;
-			av_frame->pts				= frame_number_++;
+		AVPacket pkt;
+		av_init_packet(&pkt);
+		pkt.data = nullptr;
+		pkt.size = 0;
 
-			AVPacket pkt;
-			av_init_packet(&pkt);
-			pkt.data = nullptr;
-			pkt.size = 0;
+		int got_packet = 0;
+		THROW_ON_ERROR2(avcodec_encode_video2(enc, &pkt, av_frame.get(), &got_packet), "[ffmpeg_consumer]");
+		std::shared_ptr<AVPacket> guard(&pkt, av_free_packet);
 
-			int got_packet = 0;
-			THROW_ON_ERROR2(avcodec_encode_video2(enc, &pkt, av_frame.get(), &got_packet), "[ffmpeg_consumer]");
-			std::shared_ptr<AVPacket> guard(&pkt, av_free_packet);
-
-			if(!got_packet)
-				return;
+		if(!got_packet)
+			return;
 		 
-			if (pkt.pts != AV_NOPTS_VALUE)
-				pkt.pts = av_rescale_q(pkt.pts, enc->time_base, video_st_->time_base);
-			if (pkt.dts != AV_NOPTS_VALUE)
-				pkt.dts = av_rescale_q(pkt.dts, enc->time_base, video_st_->time_base);
+		if (pkt.pts != AV_NOPTS_VALUE)
+			pkt.pts = av_rescale_q(pkt.pts, enc->time_base, video_st_->time_base);
+		if (pkt.dts != AV_NOPTS_VALUE)
+			pkt.dts = av_rescale_q(pkt.dts, enc->time_base, video_st_->time_base);
 		 
-			pkt.stream_index = video_st_->index;
+		pkt.stream_index = video_st_->index;
 			
-			THROW_ON_ERROR2(av_interleaved_write_frame(oc_.get(), &pkt), "[ffmpeg_consumer]");
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			executor_.stop();
-		}
+		THROW_ON_ERROR2(av_interleaved_write_frame(oc_.get(), &pkt), "[ffmpeg_consumer]");
 	}
 		
 	uint64_t get_channel_layout(AVCodecContext* dec)
@@ -503,50 +501,42 @@ public:
 		
 		auto enc = audio_st_->codec;
 
-		try
-		{
-			boost::push_back(audio_buffer_, convert_audio(frame, enc));
+		boost::push_back(audio_buffer_, convert_audio(frame, enc));
 			
-			auto frame_size = enc->frame_size != 0 ? enc->frame_size * enc->channels * av_get_bytes_per_sample(enc->sample_fmt) : static_cast<int>(audio_buffer_.size());
+		auto frame_size = enc->frame_size != 0 ? enc->frame_size * enc->channels * av_get_bytes_per_sample(enc->sample_fmt) : static_cast<int>(audio_buffer_.size());
 			
-			while(audio_buffer_.size() >= frame_size)
-			{			
-				std::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);
-				avcodec_get_frame_defaults(av_frame.get());		
-				av_frame->nb_samples = frame_size / (enc->channels * av_get_bytes_per_sample(enc->sample_fmt));
+		while(audio_buffer_.size() >= frame_size)
+		{			
+			std::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);
+			avcodec_get_frame_defaults(av_frame.get());		
+			av_frame->nb_samples = frame_size / (enc->channels * av_get_bytes_per_sample(enc->sample_fmt));
 
-				AVPacket pkt;
-				av_init_packet(&pkt);
-				pkt.data = nullptr;
-				pkt.size = 0;				
+			AVPacket pkt;
+			av_init_packet(&pkt);
+			pkt.data = nullptr;
+			pkt.size = 0;				
 			
-				THROW_ON_ERROR2(avcodec_fill_audio_frame(av_frame.get(), enc->channels, enc->sample_fmt, audio_buffer_.data(), frame_size, 1), "[ffmpeg_consumer]");
+			THROW_ON_ERROR2(avcodec_fill_audio_frame(av_frame.get(), enc->channels, enc->sample_fmt, audio_buffer_.data(), frame_size, 1), "[ffmpeg_consumer]");
 
-				int got_packet = 0;
-				THROW_ON_ERROR2(avcodec_encode_audio2(enc, &pkt, av_frame.get(), &got_packet), "[ffmpeg_consumer]");
-				std::shared_ptr<AVPacket> guard(&pkt, av_free_packet);
+			int got_packet = 0;
+			THROW_ON_ERROR2(avcodec_encode_audio2(enc, &pkt, av_frame.get(), &got_packet), "[ffmpeg_consumer]");
+			std::shared_ptr<AVPacket> guard(&pkt, av_free_packet);
 				
-				audio_buffer_.erase(audio_buffer_.begin(), audio_buffer_.begin() + frame_size);
+			audio_buffer_.erase(audio_buffer_.begin(), audio_buffer_.begin() + frame_size);
 
-				if(!got_packet)
-					return;
+			if(!got_packet)
+				return;
 		
-				if (pkt.pts != AV_NOPTS_VALUE)
-					pkt.pts      = av_rescale_q(pkt.pts, enc->time_base, audio_st_->time_base);
-				if (pkt.dts != AV_NOPTS_VALUE)
-					pkt.dts      = av_rescale_q(pkt.dts, enc->time_base, audio_st_->time_base);
-				if (pkt.duration > 0)
-					pkt.duration = static_cast<int>(av_rescale_q(pkt.duration, enc->time_base, audio_st_->time_base));
+			if (pkt.pts != AV_NOPTS_VALUE)
+				pkt.pts      = av_rescale_q(pkt.pts, enc->time_base, audio_st_->time_base);
+			if (pkt.dts != AV_NOPTS_VALUE)
+				pkt.dts      = av_rescale_q(pkt.dts, enc->time_base, audio_st_->time_base);
+			if (pkt.duration > 0)
+				pkt.duration = static_cast<int>(av_rescale_q(pkt.duration, enc->time_base, audio_st_->time_base));
 		
-				pkt.stream_index = audio_st_->index;
+			pkt.stream_index = audio_st_->index;
 						
-				THROW_ON_ERROR2(av_interleaved_write_frame(oc_.get(), &pkt), "[ffmpeg_consumer]");
-			}
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			executor_.stop();
+			THROW_ON_ERROR2(av_interleaved_write_frame(oc_.get(), &pkt), "[ffmpeg_consumer]");
 		}
 	}		 
 	
@@ -627,17 +617,43 @@ public:
 		return buffer;
 	}
 
-	void send(core::const_frame& frame)
+	void encode(const core::const_frame& frame)
 	{
-		executor_.begin_invoke([=]
-		{		
+		try
+		{
 			boost::timer frame_timer;
 
 			encode_video_frame(frame);
 			encode_audio_frame(frame);
 
 			graph_->set_value("frame-time", frame_timer.elapsed()*format_desc_.fps*0.5);
+		}
+		catch(...)
+		{			
+			lock(exception_mutex_, [&]
+			{
+				exception_ = std::current_exception();
+			});
+			executor_.stop();
+		}
+	}
+
+	bool send(core::const_frame& frame)
+	{
+		auto exception = lock(exception_mutex_, [&]
+		{
+			return exception_;
 		});
+
+		if(exception != nullptr)
+			std::rethrow_exception(exception);
+			
+		executor_.begin_invoke([=]
+		{		
+			encode(frame);
+		});
+		
+		return true;
 	}
 };
 
@@ -664,8 +680,7 @@ public:
 	
 	bool send(core::const_frame frame) override
 	{
-		consumer_->send(frame);
-		return true;
+		return consumer_->send(frame);
 	}
 	
 	std::wstring print() const override
