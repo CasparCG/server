@@ -179,7 +179,8 @@ public:
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Executor can only yield inside of thread context.")  << source_info(name_));
 
 		int dummy;
-		semaphore_.pop(dummy);
+		if(!semaphore_.try_pop(dummy))
+			return;
 
 		priority_function func;
 		if(execution_queue_.try_pop(func))
@@ -239,7 +240,12 @@ private:
 		{
 			try
 			{
-				yield();
+				int dummy;
+				semaphore_.pop(dummy);
+
+				priority_function func;
+				if(execution_queue_.try_pop(func))
+					func();
 			}
 			catch(...)
 			{
