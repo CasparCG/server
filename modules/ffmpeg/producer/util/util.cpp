@@ -173,7 +173,7 @@ int make_alpha_format(int format)
 
 safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVFrame>& decoded_frame, const safe_ptr<core::frame_factory>& frame_factory, int hints)
 {			
-	static tbb::concurrent_unordered_map<size_t, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contexts_;
+	static tbb::concurrent_unordered_map<int64_t, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contexts_;
 	
 	if(decoded_frame->width < 1 || decoded_frame->height < 1)
 		return make_safe<core::write_frame>(tag);
@@ -213,8 +213,11 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 		std::shared_ptr<SwsContext> sws_context;
 
 		//CASPAR_LOG(warning) << "Hardware accelerated color transform not supported.";
-
-		size_t key = ((width << 22) & 0xFFC00000) | ((height << 6) & 0x003FC000) | ((pix_fmt << 7) & 0x00007F00) | ((target_pix_fmt << 0) & 0x0000007F);
+		
+		int64_t key = ((static_cast<int64_t>(width)			 << 32) & 0xFFFF00000000) | 
+					  ((static_cast<int64_t>(height)		 << 16) & 0xFFFF0000) | 
+					  ((static_cast<int64_t>(pix_fmt)		 <<  8) & 0xFF00) | 
+					  ((static_cast<int64_t>(target_pix_fmt) <<  0) & 0xFF);
 			
 		auto& pool = sws_contexts_[key];
 						
