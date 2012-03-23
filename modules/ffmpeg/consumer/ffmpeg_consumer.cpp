@@ -481,7 +481,7 @@ public:
 		 
 			pkt.stream_index = video_st_->index;
 			
-			av_interleaved_write_frame(oc_.get(), &pkt);
+			THROW_ON_ERROR2(av_interleaved_write_frame(oc_.get(), &pkt), "[ffmpeg_consumer]");
 		}
 		catch(...)
 		{
@@ -540,7 +540,7 @@ public:
 		
 				pkt.stream_index = audio_st_->index;
 						
-				av_interleaved_write_frame(oc_.get(), &pkt);
+				THROW_ON_ERROR2(av_interleaved_write_frame(oc_.get(), &pkt), "[ffmpeg_consumer]");
 			}
 		}
 		catch(...)
