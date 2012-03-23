@@ -465,6 +465,17 @@ std::wstring print_mode(size_t width, size_t height, double fps, bool interlaced
 
 bool is_valid_file(const std::wstring filename)
 {			
+	static const std::vector<std::wstring> invalid_exts = boost::assign::list_of(L".png")(L".tga")(L".bmp")(L".jpg")(L".jpeg")(L".gif")(L".tiff")(L".tif")(L".jp2")(L".jpx")(L".j2k")(L".j2c");
+	static std::vector<std::wstring>	   valid_exts   = boost::assign::list_of(L".m2t")(L".mov")(L".mp4")(L".dv")(L".flv")(L".mpg")(L".wav")(L".mp3")(L".dnxhd")(L".h264")(L".prores");
+
+	auto ext = boost::to_lower_copy(boost::filesystem::wpath(filename).extension());
+		
+	if(std::find(valid_exts.begin(), valid_exts.end(), ext) != valid_exts.end())
+		return true;	
+	
+	if(std::find(invalid_exts.begin(), invalid_exts.end(), ext) != invalid_exts.end())
+		return false;	
+
 	auto filename2 = narrow(filename);
 
 	if(boost::filesystem::path(filename2).extension() == ".m2t")
