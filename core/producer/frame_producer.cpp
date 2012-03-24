@@ -68,7 +68,7 @@ struct frame_producer_base::impl
 
 		auto frame = self_.receive_impl();
 		if(frame == draw_frame::late())
-			return frame;
+			return last_frame_;
 
 		++frame_number_;
 
