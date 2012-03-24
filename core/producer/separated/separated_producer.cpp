@@ -83,13 +83,7 @@ public:
 		
 		return frame;
 	}
-
-	void paused(bool value) override
-	{
-		fill_producer_->paused(value);
-		key_producer_->paused(value);
-	}
-			
+				
 	uint32_t nb_frames() const override
 	{
 		return std::min(fill_producer_->nb_frames(), key_producer_->nb_frames());
