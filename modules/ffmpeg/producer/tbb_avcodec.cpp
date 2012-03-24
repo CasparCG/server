@@ -65,6 +65,8 @@ int thread_execute(AVCodecContext* s, int (*func)(AVCodecContext *c2, void *arg2
 
 int thread_execute2(AVCodecContext* s, int (*func)(AVCodecContext* c2, void* arg2, int, int), void* arg, int* ret, int count)
 {	   
+	// TODO: Micro-optimize...
+
 	std::array<std::vector<int>, 16> jobs;
 	
 	for(int n = 0; n < count; ++n)	
