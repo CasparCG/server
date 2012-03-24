@@ -211,7 +211,7 @@ core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& 
 		
 		auto target_desc = pixel_format_desc(target_pix_fmt, width, height);
 
-		auto write = frame_factory.create_frame(tag, target_desc, fps, get_mode(*decoded_frame));
+		auto write = frame_factory.create_frame(tag, target_desc);
 
 		std::shared_ptr<SwsContext> sws_context;
 
@@ -261,7 +261,7 @@ core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& 
 	}
 	else
 	{
-		auto write = frame_factory.create_frame(tag, desc, fps, get_mode(*decoded_frame));
+		auto write = frame_factory.create_frame(tag, desc);
 		
 		for(int n = 0; n < static_cast<int>(desc.planes.size()); ++n)
 		{
