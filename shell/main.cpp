@@ -155,10 +155,12 @@ LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
 			<< L"Flag:" << info->ExceptionRecord->ExceptionFlags << L"\n"
 			<< L"Info:" << info->ExceptionRecord->ExceptionInformation << L"\n"
 			<< L"Continuing execution. \n#######################";
+
+		CASPAR_LOG_CALL_STACK();
 	}
 	catch(...){}
 
-    return EXCEPTION_EXECUTE_HANDLER;
+    return EXCEPTION_CONTINUE_EXECUTION;
 }
 
 void run()

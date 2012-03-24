@@ -43,6 +43,7 @@ namespace caspar { namespace log {
 	
 namespace internal{
 void init();
+std::wstring get_call_stack();
 }
 
 void add_file_sink(const std::wstring& folder);
@@ -91,11 +92,16 @@ BOOST_LOG_DECLARE_GLOBAL_LOGGER_INIT(logger, caspar_logger)
 	BOOST_LOG_STREAM_WITH_PARAMS(::caspar::log::get_logger(),\
 		(::boost::log::keywords::severity = ::caspar::log::lvl))
 
-#define CASPAR_LOG_CURRENT_EXCEPTION() \
-	try\
-	{CASPAR_LOG(error) << caspar::u16(boost::current_exception_diagnostic_information());}\
+#define CASPAR_LOG_CALL_STACK()	try{\
+		CASPAR_LOG(info) << L"callstack:\n" << caspar::log::internal::get_call_stack();\
+	}\
 	catch(...){}
 
+#define CASPAR_LOG_CURRENT_EXCEPTION() try{\
+		CASPAR_LOG(error)  << caspar::u16(boost::current_exception_diagnostic_information()) << L"callstack:\n" << caspar::log::internal::get_call_stack();\
+	}\
+	catch(...){}
+	
 void set_log_level(const std::wstring& lvl);
 
 }}
