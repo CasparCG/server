@@ -25,8 +25,6 @@
 
 #include <common/memory.h>
 
-#include <core/video_format.h>
-
 namespace caspar { namespace core {
 			
 class frame_factory : boost::noncopyable
@@ -43,12 +41,7 @@ public:
 
 	// Methods
 
-	virtual class mutable_frame	create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) = 0;	
-	class mutable_frame			create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc)
-	{
-		auto format_desc = video_format_desc();
-		return create_frame(video_stream_tag, desc, format_desc.fps, format_desc.field_mode);
-	}
+	virtual class mutable_frame	create_frame(const void* video_stream_tag, const struct pixel_format_desc& desc) = 0;	
 
 	// Properties
 };

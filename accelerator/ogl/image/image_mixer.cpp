@@ -57,13 +57,11 @@ typedef boost::shared_future<spl::shared_ptr<texture>> future_texture;
 struct item
 {
 	core::pixel_format_desc								pix_desc;
-	core::field_mode									field_mode;
 	std::vector<future_texture>							textures;
 	core::image_transform								transform;
 
 	item()
 		: pix_desc(core::pixel_format::invalid)
-		, field_mode(core::field_mode::empty)
 	{
 	}
 };
@@ -157,26 +155,27 @@ private:
 			  std::shared_ptr<texture>&			layer_key_texture,
 			  const core::video_format_desc&	format_desc,
 			  core::field_mode					field_mode)
-	{		
-		// Fix frames		
-		BOOST_FOREACH(auto& item, layer.items)		
-		{
+	{			
+		// REMOVED: This is done in frame_muxer. 
+		// Fix frames
+		//BOOST_FOREACH(auto& item, layer.items)		
+		//{
 			//if(std::abs(item.transform.fill_scale[1]-1.0) > 1.0/target_texture->height() ||
 			//   std::abs(item.transform.fill_translation[1]) > 1.0/target_texture->height())		
 			//	CASPAR_LOG(warning) << L"[image_mixer] Frame should be deinterlaced. Send FILTER DEINTERLACE_BOB when creating producer.";	
 
-			if(item.pix_desc.planes.at(0).height == 480) // NTSC DV
-			{
-				item.transform.fill_translation[1] += 2.0/static_cast<double>(format_desc.height);
-				item.transform.fill_scale[1] *= 1.0 - 6.0*1.0/static_cast<double>(format_desc.height);
-			}
+			//if(item.pix_desc.planes.at(0).height == 480) // NTSC DV
+			//{
+			//	item.transform.fill_translation[1] += 2.0/static_cast<double>(format_desc.height);
+			//	item.transform.fill_scale[1] *= 1.0 - 6.0*1.0/static_cast<double>(format_desc.height);
+			//}
 	
-			// Fix field-order if needed
-			if(item.field_mode == core::field_mode::lower && format_desc.field_mode == core::field_mode::upper)
-				item.transform.fill_translation[1] += 1.0/static_cast<double>(format_desc.height);
-			else if(item.field_mode == core::field_mode::upper && format_desc.field_mode == core::field_mode::lower)
-				item.transform.fill_translation[1] -= 1.0/static_cast<double>(format_desc.height);
-		}
+			//// Fix field-order if needed
+			//if(item.field_mode == core::field_mode::lower && format_desc.field_mode == core::field_mode::upper)
+			//	item.transform.fill_translation[1] += 1.0/static_cast<double>(format_desc.height);
+			//else if(item.field_mode == core::field_mode::upper && format_desc.field_mode == core::field_mode::lower)
+			//	item.transform.fill_translation[1] -= 1.0/static_cast<double>(format_desc.height);
+		//}
 
 		// Mask out fields
 		BOOST_FOREACH(auto& item, layer.items)				
@@ -319,7 +318,6 @@ public:
 
 		item item;
 		item.pix_desc	= frame.pixel_format_desc();
-		item.field_mode	= frame.field_mode();
 		item.transform	= transform_stack_.back();
 		
 		// NOTE: Once we have copied the arrays they are no longer valid for reading!!! Check for alternative solution e.g. transfer with AMD_pinned_memory.
@@ -343,13 +341,13 @@ public:
 		return renderer_(std::move(layers_), format_desc);
 	}
 	
-	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) override
+	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc) override
 	{
 		std::vector<array<std::uint8_t>> buffers;
 		BOOST_FOREACH(auto& plane, desc.planes)		
 			buffers.push_back(ogl_->create_array(plane.size));		
 
-		return core::mutable_frame(std::move(buffers), core::audio_buffer(), tag, desc, frame_rate, field_mode);
+		return core::mutable_frame(std::move(buffers), core::audio_buffer(), tag, desc);
 	}
 };
 
@@ -361,6 +359,6 @@ void image_mixer::pop(){impl_->pop();}
 boost::unique_future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
 void image_mixer::begin_layer(core::blend_mode blend_mode){impl_->begin_layer(blend_mode);}
 void image_mixer::end_layer(){impl_->end_layer();}
-core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) {return impl_->create_frame(tag, desc, frame_rate, field_mode);}
+core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->create_frame(tag, desc);}
 
 }}}

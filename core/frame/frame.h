@@ -36,9 +36,7 @@ public:
 	explicit mutable_frame(std::vector<array<std::uint8_t>> image_buffers, 
 						audio_buffer audio_buffer, 
 						const void* tag, 
-						const struct pixel_format_desc& desc, 
-						double frame_rate, 
-						core::field_mode field_mode);
+						const struct pixel_format_desc& desc);
 	~mutable_frame();
 
 	// Methods
@@ -58,9 +56,6 @@ public:
 	array<std::uint8_t>& image_data(std::size_t index = 0);
 	core::audio_buffer& audio_data();
 	
-	double frame_rate() const;
-	core::field_mode field_mode() const;
-
 	std::size_t width() const;
 	std::size_t height() const;
 								
@@ -86,9 +81,7 @@ public:
 	explicit const_frame(boost::shared_future<array<const std::uint8_t>> image, 
 						audio_buffer audio_buffer, 
 						const void* tag, 
-						const struct pixel_format_desc& desc, 
-						double frame_rate, 
-						core::field_mode field_mode);
+						const struct pixel_format_desc& desc);
 	const_frame(mutable_frame&& other);
 	~const_frame();
 
@@ -106,9 +99,6 @@ public:
 	array<const std::uint8_t> image_data(int index = 0) const;
 	const core::audio_buffer& audio_data() const;
 		
-	double frame_rate() const;
-	core::field_mode field_mode() const;
-
 	std::size_t width() const;
 	std::size_t height() const;
 	std::size_t size() const;

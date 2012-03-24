@@ -278,6 +278,12 @@ struct frame_muxer::impl : boost::noncopyable
 			display_mode_ = display_mode::simple;
 		}
 
+		if(frame->height == 480)
+		{
+			auto pad_str = L"PAD=" + boost::lexical_cast<std::wstring>(frame->width) + L":486:0:2:black";
+			filter_str = append_filter(filter_str, pad_str);
+		}
+
 		filter_ = filter(filter_str);
 		CASPAR_LOG(info) << L"[frame_muxer] " << display_mode_ << L" " << print_mode(frame->width, frame->height, in_fps_, frame->interlaced_frame > 0);
 	}

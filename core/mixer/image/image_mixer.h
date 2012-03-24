@@ -66,7 +66,7 @@ public:
 		
 	virtual boost::unique_future<array<const std::uint8_t>> operator()(const struct video_format_desc& format_desc) = 0;
 
-	virtual class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) = 0;
+	virtual class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc) = 0;
 
 	// Properties
 };

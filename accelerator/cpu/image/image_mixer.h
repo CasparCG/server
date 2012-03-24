@@ -44,7 +44,7 @@ public:
 		
 	boost::unique_future<array<const std::uint8_t>> operator()(const core::video_format_desc& format_desc) override;
 		
-	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) override;
+	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc) override;
 
 	// Properties
 

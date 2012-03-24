@@ -290,7 +290,7 @@ public:
 		
 			core::pixel_format_desc desc = core::pixel_format::bgra;
 			desc.planes.push_back(core::pixel_format_desc::plane(width_, height_, 4));
-			auto frame = frame_factory_->create_frame(this, desc, fps(), core::field_mode::progressive);
+			auto frame = frame_factory_->create_frame(this, desc);
 
 			A_memcpy(frame.image_data(0).begin(), bmp_.data(), width_*height_*4);
 			head_ = core::draw_frame(std::move(frame));	
