@@ -58,9 +58,6 @@
     <ClInclude Include="ogl\util\buffer.h">
       <Filter>source\ogl\util</Filter>
     </ClInclude>
-    <ClInclude Include="cpu\image\deinterlacer.h">
-      <Filter>source\cpu\image</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="StdAfx.cpp" />
@@ -90,9 +87,6 @@
     </ClCompile>
     <ClCompile Include="ogl\util\buffer.cpp">
       <Filter>source\ogl\util</Filter>
-    </ClCompile>
-    <ClCompile Include="cpu\image\deinterlacer.cpp">
-      <Filter>source\cpu\image</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
