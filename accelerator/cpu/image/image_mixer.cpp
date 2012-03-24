@@ -359,7 +359,7 @@ public:
 		return renderer_(std::move(items_), format_desc);
 	}
 	
-	virtual core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode)
+	virtual core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc)
 	{
 		std::vector<array<std::uint8_t>> buffers;
 		BOOST_FOREACH(auto& plane, desc.planes)
@@ -367,7 +367,7 @@ public:
 			auto buf = spl::make_shared<buffer>(plane.size);
 			buffers.push_back(array<std::uint8_t>(buf->data(), plane.size, true, buf));
 		}
-		return core::mutable_frame(std::move(buffers), core::audio_buffer(), tag, desc, frame_rate, field_mode);
+		return core::mutable_frame(std::move(buffers), core::audio_buffer(), tag, desc);
 	}
 };
 
@@ -379,6 +379,6 @@ void image_mixer::pop(){impl_->pop();}
 boost::unique_future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
 void image_mixer::begin_layer(core::blend_mode blend_mode){impl_->begin_layer(blend_mode);}
 void image_mixer::end_layer(){impl_->end_layer();}
-core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) {return impl_->create_frame(tag, desc, frame_rate, field_mode);}
+core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->create_frame(tag, desc);}
 
 }}}

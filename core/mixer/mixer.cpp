@@ -99,7 +99,7 @@ public:
 
 				auto desc = core::pixel_format_desc(core::pixel_format::bgra);
 				desc.planes.push_back(core::pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
-				return const_frame(std::move(image), std::move(audio), this, desc, format_desc.fps, format_desc.field_mode);	
+				return const_frame(std::move(image), std::move(audio), this, desc);	
 			}
 			catch(...)
 			{
@@ -134,5 +134,5 @@ mixer::mixer(spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mi
 void mixer::set_blend_mode(int index, blend_mode value){impl_->set_blend_mode(index, value);}
 boost::unique_future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
 const_frame mixer::operator()(std::map<int, draw_frame> frames, const struct video_format_desc& format_desc){return (*impl_)(std::move(frames), format_desc);}
-mutable_frame mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, double frame_rate, core::field_mode field_mode) {return impl_->image_mixer_->create_frame(tag, desc, frame_rate, field_mode);}
+mutable_frame mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->image_mixer_->create_frame(tag, desc);}
 }}
