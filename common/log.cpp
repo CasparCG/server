@@ -174,9 +174,16 @@ std::wstring get_call_stack()
 	};
 
 	static tbb::enumerable_thread_specific<log_call_stack_walker> walkers;
-	auto& walker = walkers.local();
-	walker.ShowCallstack();
-	return u16(walker.flush());
+	try
+	{
+		auto& walker = walkers.local();
+		walker.ShowCallstack();
+		return u16(walker.flush());
+	}
+	catch(...)
+	{
+		return L"!!!";
+	}
 }
 
 }
