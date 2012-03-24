@@ -52,6 +52,9 @@
     <ClCompile Include="except.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="compiler\vs\stack_walker.cpp">
+      <Filter>source\compiler\vs</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="compiler\vs\disable_silly_warnings.h">
@@ -129,6 +132,9 @@
     </ClInclude>
     <ClInclude Include="future_fwd.h">
       <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="compiler\vs\stack_walker.h">
+      <Filter>source\compiler\vs</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

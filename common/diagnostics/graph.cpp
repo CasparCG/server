@@ -231,7 +231,7 @@ public:
 		return color_;
 	}
 		
-	void render(sf::RenderTarget& target)
+	void render(sf::RenderTarget&)
 	{
 		float dx = 1.0f/static_cast<float>(line_data_.capacity());
 		float x = static_cast<float>(line_data_.capacity()-line_data_.size())*dx;
