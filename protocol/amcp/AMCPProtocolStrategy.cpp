@@ -251,6 +251,7 @@ AMCPCommandPtr AMCPProtocolStrategy::InterpretCommandString(const std::wstring& 
 				}
 
 				pCommand->SetChannel(pChannel);
+				pCommand->SetChannels(channels_);
 				pCommand->SetChannelIndex(channelIndex);
 				pCommand->SetLayerIntex(layerIndex);
 

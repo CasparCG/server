@@ -23,15 +23,13 @@
 
 #include <common/memory.h>
 #include <common/forward.h>
-
-#include <core/frame/frame_factory.h>
-#include <core/producer/frame_producer.h>
-#include <core/frame/frame.h>
+#include <common/reactive.h>
 
 FORWARD2(caspar, core, class video_channel);
+FORWARD2(caspar, core, class frame_producer);
 
 namespace caspar { namespace reroute {
 	
-spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, core::video_channel& channel);
+spl::shared_ptr<core::frame_producer> create_producer(core::video_channel& channel);
 
 }}

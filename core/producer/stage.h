@@ -34,14 +34,17 @@
 #include <boost/property_tree/ptree_fwd.hpp>
 
 #include <functional>
+#include <map>
 #include <tuple>
 #include <vector>
 
 FORWARD2(caspar, diagnostics, class graph);
 
 namespace caspar { namespace core {
+
+typedef reactive::observable<std::map<int, class draw_frame>> frame_observable;
 	
-class stage sealed : public monitor::observable
+class stage sealed : public monitor::observable, public frame_observable
 {
 	stage(const stage&);
 	stage& operator=(const stage&);
@@ -79,6 +82,11 @@ public:
 
 	void subscribe(const monitor::observable::observer_ptr& o) override;
 	void unsubscribe(const monitor::observable::observer_ptr& o) override;
+	
+	// frame_observable
+
+	void subscribe(const frame_observable::observer_ptr& o) override;
+	void unsubscribe(const frame_observable::observer_ptr& o) override;
 
 	// Properties
 
