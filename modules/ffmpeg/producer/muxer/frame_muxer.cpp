@@ -80,6 +80,7 @@ struct frame_muxer::impl : boost::noncopyable
 	
 	filter											filter_;
 	const std::wstring								filter_str_;
+	bool											force_deinterlacing_;
 		
 	impl(double in_fps, const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::wstring& filter_str)
 		: display_mode_(display_mode::invalid)
@@ -88,6 +89,7 @@ struct frame_muxer::impl : boost::noncopyable
 		, audio_cadence_(format_desc_.audio_cadence)
 		, frame_factory_(frame_factory)
 		, filter_str_(filter_str)
+		, force_deinterlacing_(env::properties().get(L"configuration.force-deinterlacing", true))
 	{		
 		// Note: Uses 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
 		// This cadence fills the audio mixer most optimally.
@@ -264,7 +266,7 @@ struct frame_muxer::impl : boost::noncopyable
 		}
 
 		// ALWAYS de-interlace, until we have GPU de-interlacing.
-		if(frame->interlaced_frame && display_mode_ != display_mode::deinterlace_bob && display_mode_ != display_mode::deinterlace)
+		if(force_deinterlacing_ && frame->interlaced_frame && display_mode_ != display_mode::deinterlace_bob && display_mode_ != display_mode::deinterlace)
 			display_mode_ = display_mode::deinterlace_bob_reinterlace;
 		
 		if(display_mode_ == display_mode::deinterlace)
