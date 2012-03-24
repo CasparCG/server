@@ -30,6 +30,7 @@
 
 #include "except.h"
 #include "utf.h"
+#include "compiler/vs/stack_walker.h"
 
 #include <ios>
 #include <string>
@@ -64,6 +65,8 @@
 #include <boost/log/utility/init/common_attributes.hpp>
 #include <boost/log/utility/empty_deleter.hpp>
 #include <boost/lambda/lambda.hpp>
+
+#include <tbb/enumerable_thread_specific.h>
 
 namespace caspar { namespace log {
 
@@ -139,6 +142,41 @@ void init()
 	stream_sink->locked_backend()->set_formatter(&my_formatter);
 
 	boost::log::wcore::get()->add_sink(stream_sink);
+}
+
+std::wstring get_call_stack()
+{
+	class log_call_stack_walker : public stack_walker
+	{
+		std::string str_;
+	public:
+		log_call_stack_walker() : stack_walker() {}
+
+		std::string flush()
+		{
+			return std::move(str_);
+		}
+	protected:		
+		virtual void OnSymInit(LPCSTR szSearchPath, DWORD symOptions, LPCSTR szUserName)
+		{
+		}
+		virtual void OnLoadModule(LPCSTR img, LPCSTR mod, DWORD64 baseAddr, DWORD size, DWORD result, LPCSTR symType, LPCSTR pdbName, ULONGLONG fileVersion)
+		{
+		}
+		virtual void OnDbgHelpErr(LPCSTR szFuncName, DWORD gle, DWORD64 addr)
+		{
+		}
+
+		virtual void OnOutput(LPCSTR szText)
+		{
+			str_ += szText;
+		}
+	};
+
+	static tbb::enumerable_thread_specific<log_call_stack_walker> walkers;
+	auto& walker = walkers.local();
+	walker.ShowCallstack();
+	return u16(walker.flush());
 }
 
 }

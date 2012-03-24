@@ -135,6 +135,9 @@
     <PreBuildEvent>
       <Command>"SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir)\version.tmpl" "$(SolutionDir)\version.h"</Command>
     </PreBuildEvent>
+    <ClCompile>
+      <ForcedIncludeFiles>compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+    </ClCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">
     <PostBuildEvent>
@@ -143,11 +146,15 @@
     <PreBuildEvent>
       <Command>"SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir)\version.tmpl" "$(SolutionDir)\version.h"</Command>
     </PreBuildEvent>
+    <ClCompile>
+      <ForcedIncludeFiles>compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+    </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="array.h" />
     <ClInclude Include="assert.h" />
     <ClInclude Include="compiler\vs\disable_silly_warnings.h" />
+    <ClInclude Include="compiler\vs\stack_walker.h" />
     <ClInclude Include="diagnostics\graph.h" />
     <ClInclude Include="enum_class.h" />
     <ClInclude Include="env.h" />
@@ -173,27 +180,80 @@
     <ClInclude Include="utf.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="compiler\vs\stack_walker.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">../../compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">../../compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="diagnostics\graph.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">../compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">../compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
     </ClCompile>
-    <ClCompile Include="env.cpp" />
-    <ClCompile Include="except.cpp" />
+    <ClCompile Include="env.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="except.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="gl\gl_check.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">../compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">../compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
     </ClCompile>
-    <ClCompile Include="log.cpp" />
-    <ClCompile Include="page_locked_allocator.cpp" />
-    <ClCompile Include="prec_timer.cpp" />
+    <ClCompile Include="log.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="page_locked_allocator.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="prec_timer.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+    </ClCompile>
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="tweener.cpp" />
-    <ClCompile Include="utf.cpp" />
+    <ClCompile Include="tweener.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="utf.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+    </ClCompile>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

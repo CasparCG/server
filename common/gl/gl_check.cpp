@@ -34,7 +34,7 @@
 
 namespace caspar { namespace gl {	
 
-void SMFL_GLCheckError(const std::string& expr, const std::string& file, unsigned int line)
+void SMFL_GLCheckError(const std::string&, const std::string& file, unsigned int line)
 {
 	// Get the last error
 	GLenum LastErrorCode = GL_NO_ERROR;
