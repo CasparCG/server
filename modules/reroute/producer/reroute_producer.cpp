@@ -73,13 +73,7 @@ public:
 	void on_next(const std::map<int, core::draw_frame>& frames)
 	{
 		if(!input_buffer_.try_push(frames))
-		{
-			std::map<int, core::draw_frame> dummy;
-			input_buffer_.try_pop(dummy);
-			input_buffer_.try_push(frames);
-
-			graph_->set_tag("dropped-frame");
-		}
+			graph_->set_tag("dropped-frame");		
 	}
 
 	// frame_producer
