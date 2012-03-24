@@ -152,8 +152,8 @@ static void kernel(uint8_t* dest, const uint8_t* source, size_t count)
 
 class image_renderer
 {
-	tbb::concurrent_unordered_map<int, tbb::concurrent_bounded_queue<std::shared_ptr<SwsContext>>>	sws_devices_;
-	tbb::concurrent_bounded_queue<spl::shared_ptr<buffer>>											temp_buffers_;
+	tbb::concurrent_unordered_map<int64_t, tbb::concurrent_bounded_queue<std::shared_ptr<SwsContext>>>	sws_devices_;
+	tbb::concurrent_bounded_queue<spl::shared_ptr<buffer>>												temp_buffers_;
 public:	
 	boost::unique_future<array<const std::uint8_t>> operator()(std::vector<item> items, const core::video_format_desc& format_desc)
 	{	
@@ -257,9 +257,12 @@ private:
 				data2.at(n) = const_cast<uint8_t*>(data[n]);
 
 			auto input_av_frame = ffmpeg::make_av_frame(data2, pix_desc);
-								
-			int key = ((input_av_frame->width << 22) & 0xFFC00000) | ((input_av_frame->height << 6) & 0x003FC000) | ((input_av_frame->format << 7) & 0x00007F00);
-						
+
+		
+			int64_t key = ((static_cast<int64_t>(input_av_frame->width)	 << 32) & 0xFFFF00000000) | 
+						  ((static_cast<int64_t>(input_av_frame->height) << 16) & 0xFFFF0000) | 
+						  ((static_cast<int64_t>(input_av_frame->format) <<  8) & 0xFF00);
+
 			auto& pool = sws_devices_[key];
 
 			std::shared_ptr<SwsContext> sws_device;
