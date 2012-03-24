@@ -60,22 +60,20 @@ public:
 
 	std::map<int, class draw_frame> operator()(const struct video_format_desc& format_desc);
 
-	void apply_transforms(const std::vector<transform_tuple_t>& transforms);
-	void apply_transform(int index, const transform_func_t& transform, unsigned int mix_duration = 0, const tweener& tween = L"linear");
-	void clear_transforms(int index);
-	void clear_transforms();
-				
-	void load(int index, const spl::shared_ptr<class frame_producer>& producer, bool preview = false, const boost::optional<int32_t>& auto_play_delta = nullptr);
-	void pause(int index);
-	void play(int index);
-	void stop(int index);
-	void clear(int index);
-	void clear();	
-	void swap_layers(stage& other);
-	void swap_layer(int index, int other_index);
-	void swap_layer(int index, int other_index, stage& other);
-	
-	boost::unique_future<std::wstring> call(int index, const std::wstring& params);
+	boost::unique_future<void>			apply_transforms(const std::vector<transform_tuple_t>& transforms);
+	boost::unique_future<void>			apply_transform(int index, const transform_func_t& transform, unsigned int mix_duration = 0, const tweener& tween = L"linear");
+	boost::unique_future<void>			clear_transforms(int index);
+	boost::unique_future<void>			clear_transforms();				
+	boost::unique_future<void>			load(int index, const spl::shared_ptr<class frame_producer>& producer, bool preview = false, const boost::optional<int32_t>& auto_play_delta = nullptr);
+	boost::unique_future<void>			pause(int index);
+	boost::unique_future<void>			play(int index);
+	boost::unique_future<void>			stop(int index);
+	boost::unique_future<std::wstring>	call(int index, const std::wstring& params);
+	boost::unique_future<void>			clear(int index);
+	boost::unique_future<void>			clear();	
+	boost::unique_future<void>			swap_layers(stage& other);
+	boost::unique_future<void>			swap_layer(int index, int other_index);
+	boost::unique_future<void>			swap_layer(int index, int other_index, stage& other);	
 
 	// monitor::observable
 
