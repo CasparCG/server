@@ -49,11 +49,12 @@ namespace caspar { namespace core {
 	
 struct stage::impl : public std::enable_shared_from_this<impl>
 {				
-	spl::shared_ptr<diagnostics::graph> graph_;
-	monitor::basic_subject				event_subject_;
-	std::map<int, layer>				layers_;	
-	std::map<int, tweened_transform>	tweens_;	
-	executor							executor_;
+	spl::shared_ptr<diagnostics::graph>							graph_;
+	monitor::basic_subject										event_subject_;
+	reactive::basic_subject<std::map<int, class draw_frame>>	frames_subject_;
+	std::map<int, layer>										layers_;	
+	std::map<int, tweened_transform>							tweens_;	
+	executor													executor_;
 public:
 	impl(spl::shared_ptr<diagnostics::graph> graph) 
 		: graph_(std::move(graph))
@@ -65,7 +66,7 @@ public:
 		
 	std::map<int, draw_frame> operator()(const struct video_format_desc& format_desc)
 	{		
-		return executor_.invoke([=]() -> std::map<int, draw_frame>
+		auto frames = executor_.invoke([=]() -> std::map<int, draw_frame>
 		{
 			boost::timer frame_timer;
 
@@ -95,6 +96,9 @@ public:
 
 			return frames;
 		});
+		
+		frames_subject_ << frames;
+		return frames;
 	}
 
 	void draw(int index, const video_format_desc& format_desc, std::map<int, draw_frame>& frames)
@@ -351,4 +355,6 @@ boost::unique_future<boost::property_tree::wptree> stage::info(int index) const{
 std::map<int, class draw_frame> stage::operator()(const video_format_desc& format_desc){return (*impl_)(format_desc);}
 void stage::subscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_.subscribe(o);}
 void stage::unsubscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_.unsubscribe(o);}
+void stage::subscribe(const frame_observable::observer_ptr& o) {impl_->frames_subject_.subscribe(o);}
+void stage::unsubscribe(const frame_observable::observer_ptr& o) {impl_->frames_subject_.unsubscribe(o);}
 }}
