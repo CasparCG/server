@@ -28,6 +28,8 @@
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
 #include <core/frame/frame.h>
+#include <core/video_channel.h>
+#include <core/producer/stage.h>
 
 #include <common/except.h>
 #include <common/diagnostics/graph.h>
@@ -39,117 +41,96 @@
 #include <tbb/concurrent_queue.h>
 
 #include <boost/property_tree/ptree.hpp>
+#include <boost/foreach.hpp>
+#include <boost/optional.hpp>
 #include <boost/range/algorithm_ext/push_back.hpp>
+#include <boost/range/numeric.hpp>
+#include <boost/range/adaptor/map.hpp>
 
 #include <queue>
 
 namespace caspar { namespace reroute {
-//		
-//class reroute_producer : public reactive::observer<spl::shared_ptr<const core::frame>>
-//					   , public core::frame_producer
-//{
-//	const spl::shared_ptr<diagnostics::graph>									graph_;
-//	const spl::shared_ptr<core::frame_factory>									frame_factory_;
-//	
-//	tbb::concurrent_bounded_queue<std::shared_ptr<const core::frame>>		input_buffer_;
-//	std::queue<core::draw_frame>												frame_buffer_;
-//	uint64_t																	frame_number_;
-//
-//	core::draw_frame															last_frame_;
-//
-//public:
-//	explicit reroute_producer(const spl::shared_ptr<core::frame_factory>& frame_factory) 
-//		: frame_factory_(frame_factory)
-//		, frame_number_(0)
-//		, last_frame_(core::draw_frame::empty())
-//	{
-//		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
-//		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
-//		graph_->set_text(print());
-//		diagnostics::register_graph(graph_);
-//
-//		input_buffer_.set_capacity(1);
-//	}
-//	
-//	// observable
-//
-//	void on_next(const spl::shared_ptr<const core::frame>& frame)
-//	{
-//		if(!input_buffer_.try_push(frame))
-//			graph_->set_tag("dropped-frame");
-//	}
-//
-//	// frame_producer
-//			
-//	core::draw_frame receive(int) override
-//	{
-//		if(!frame_buffer_.empty())
-//		{
-//			auto frame = std::move(frame_buffer_.front());
-//			frame_buffer_.pop();
-//			return last_frame_ = frame;
-//		}
-//		
-//		std::shared_ptr<const core::frame> read_frame;
-//		if(!input_buffer_.try_pop(read_frame))
-//		{
-//			graph_->set_tag("late-frame");
-//			return core::draw_frame::late();		
-//		}
-//		
-//		frame_number_++;
-//		
-//		bool double_speed	= std::abs(frame_factory_->video_format_desc().fps / 2.0 - read_frame->frame_rate()) < 0.01;		
-//		bool half_speed		= std::abs(read_frame->frame_rate() / 2.0 - frame_factory_->video_format_desc().fps) < 0.01;
-//
-//		if(half_speed && frame_number_ % 2 == 0) // Skip frame
-//			return receive(0);
-//
-//		auto frame = frame_factory_->create_frame(this, read_frame->pixel_format_desc());
-//
-//		A_memcpy(frame->image_data(0).begin(), read_frame->image_data().begin(), read_frame->image_data().size());
-//		boost::push_back(frame->audio_data(), read_frame->audio_data());
-//		
-//		auto draw_frame = core::draw_frame(std::move(frame));
-//
-//		frame_buffer_.push(draw_frame);
-//		
-//		if(double_speed)	
-//			frame_buffer_.push(draw_frame);
-//
-//		return receive(0);
-//	}	
-//
-//	core::draw_frame last_frame() const override
-//	{
-//		return core::draw_frame::still(last_frame_);
-//	}
-//	
-//	std::wstring print() const override
-//	{
-//		return L"reroute[]";
-//	}
-//
-//	std::wstring name() const override
-//	{
-//		return L"reroute";
-//	}
-//
-//	boost::property_tree::wptree info() const override
-//	{
-//		boost::property_tree::wptree info;
-//		info.add(L"type", L"rerotue-producer");
-//		return info;
-//	}
-//};
-
-spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, core::video_channel& channel)
+		
+class reroute_producer : public reactive::observer<std::map<int, core::draw_frame>>
+					   , public core::frame_producer_base
 {
-	BOOST_THROW_EXCEPTION(not_implemented());
-	//return core::frame_producer::empty();
-	//auto producer = spl::make_shared<reroute_producer>(frame_factory);
-	//o.subscribe(producer);
-	//return core::wrap_producer(producer);
+	const spl::shared_ptr<diagnostics::graph>						graph_;
+	
+	tbb::concurrent_bounded_queue<std::map<int, core::draw_frame>>	input_buffer_;
+public:
+	explicit reroute_producer() 
+	{
+		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
+		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
+		graph_->set_text(print());
+		diagnostics::register_graph(graph_);
+
+		input_buffer_.set_capacity(1);
+	}
+		
+	// observable
+
+	void on_next(const std::map<int, core::draw_frame>& frames)
+	{
+		if(!input_buffer_.try_push(frames))
+		{
+			std::map<int, core::draw_frame> dummy;
+			input_buffer_.try_pop(dummy);
+			input_buffer_.try_push(frames);
+
+			graph_->set_tag("dropped-frame");
+		}
+	}
+
+	// frame_producer
+			
+	core::draw_frame receive_impl() override
+	{		
+		std::map<int, core::draw_frame> frames;
+		if(!input_buffer_.try_pop(frames))
+		{
+			graph_->set_tag("late-frame");
+			return core::draw_frame::late();		
+		}
+
+		return boost::accumulate(frames | boost::adaptors::map_values, core::draw_frame::empty(), core::draw_frame::over);
+	}	
+		
+	std::wstring print() const override
+	{
+		return L"reroute[]";
+	}
+
+	std::wstring name() const override
+	{
+		return L"reroute";
+	}
+
+	boost::property_tree::wptree info() const override
+	{
+		boost::property_tree::wptree info;
+		info.add(L"type", L"rerotue-producer");
+		return info;
+	}
+		
+	void subscribe(const monitor::observable::observer_ptr& o) override
+	{
+	}
+
+	void unsubscribe(const monitor::observable::observer_ptr& o) override
+	{
+	}
+};
+
+spl::shared_ptr<core::frame_producer> create_producer(core::video_channel& channel)
+{
+	auto producer = spl::make_shared<reroute_producer>();
+	
+	std::weak_ptr<reactive::observer<std::map<int, core::draw_frame>>> o = producer;
+
+	channel.stage().subscribe(o);
+
+	return producer;
 }
 
 }}

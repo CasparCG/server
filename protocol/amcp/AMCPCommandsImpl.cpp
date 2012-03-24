@@ -44,6 +44,7 @@
 #include <core/mixer/mixer.h>
 #include <core/consumer/output.h>
 
+#include <modules/reroute/producer/reroute_producer.h>
 #include <modules/bluefish/bluefish.h>
 #include <modules/decklink/decklink.h>
 #include <modules/ffmpeg/ffmpeg.h>
@@ -229,52 +230,52 @@ bool ChannelGridCommand::DoExecute()
 {
 	BOOST_THROW_EXCEPTION(not_implemented());
 
-	int index = 1;
-	auto self = GetChannels().back();
-	
-	std::vector<std::wstring> params;
-	params.push_back(L"SCREEN");
-	params.push_back(L"NAME");
-	params.push_back(L"Channel Grid Window");
-	auto screen = create_consumer(params);
+	//int index = 1;
+	//auto self = GetChannels().back();
+	//
+	//std::vector<std::wstring> params;
+	//params.push_back(L"SCREEN");
+	//params.push_back(L"NAME");
+	//params.push_back(L"Channel Grid Window");
+	//auto screen = create_consumer(params);
 
-	self->output().add(screen);
+	//self->output().add(screen);
 
-	BOOST_FOREACH(auto channel, GetChannels())
-	{
-		if(channel != self)
-		{
-			auto producer = reroute::create_producer(self->frame_factory(), *channel);		
-			self->stage().load(index, producer, false);
-			self->stage().play(index);
-			index++;
-		}
-	}
+	//BOOST_FOREACH(auto channel, GetChannels())
+	//{
+	//	if(channel != self)
+	//	{
+	//		auto producer = reroute::create_producer(self->frame_factory(), *channel);		
+	//		self->stage().load(index, producer, false);
+	//		self->stage().play(index);
+	//		index++;
+	//	}
+	//}
 
-	int n = GetChannels().size()-1;
-	double delta = 1.0/static_cast<double>(n);
-	for(int x = 0; x < n; ++x)
-	{
-		for(int y = 0; y < n; ++y)
-		{
-			int index = x+y*n+1;
-			auto transform = [=](frame_transform transform) -> frame_transform
-			{		
-				transform.image_transform.fill_translation[0]	= x*delta;
-				transform.image_transform.fill_translation[1]	= y*delta;
-				transform.image_transform.fill_scale[0]			= delta;
-				transform.image_transform.fill_scale[1]			= delta;
-				transform.image_transform.clip_translation[0]	= x*delta;
-				transform.image_transform.clip_translation[1]	= y*delta;
-				transform.image_transform.clip_scale[0]			= delta;
-				transform.image_transform.clip_scale[1]			= delta;			
-				return transform;
-			};
-			self->stage().apply_transform(index, transform);
-		}
-	}
+	//int n = GetChannels().size()-1;
+	//double delta = 1.0/static_cast<double>(n);
+	//for(int x = 0; x < n; ++x)
+	//{
+	//	for(int y = 0; y < n; ++y)
+	//	{
+	//		int index = x+y*n+1;
+	//		auto transform = [=](frame_transform transform) -> frame_transform
+	//		{		
+	//			transform.image_transform.fill_translation[0]	= x*delta;
+	//			transform.image_transform.fill_translation[1]	= y*delta;
+	//			transform.image_transform.fill_scale[0]			= delta;
+	//			transform.image_transform.fill_scale[1]			= delta;
+	//			transform.image_transform.clip_translation[0]	= x*delta;
+	//			transform.image_transform.clip_translation[1]	= y*delta;
+	//			transform.image_transform.clip_scale[0]			= delta;
+	//			transform.image_transform.clip_scale[1]			= delta;			
+	//			return transform;
+	//		};
+	//		self->stage().apply_transform(index, transform);
+	//	}
+	//}
 
-	return true;
+	//return true;
 }
 
 bool CallCommand::DoExecute()
@@ -733,19 +734,31 @@ bool LoadbgCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		_parameters[0] = _parameters[0];
-		auto pFP = create_producer(GetChannel()->frame_factory(), GetChannel()->video_format_desc(), _parameters);
+		std::shared_ptr<core::frame_producer> pFP;
+		
+		static boost::wregex expr(L"\\[(?<CHANNEL>\\d+)\\]", boost::regex::icase);
+			
+		boost::wsmatch what;
+		if(boost::regex_match(_parameters.at(0), what, expr))
+		{
+			auto channel_index = boost::lexical_cast<int>(what["CHANNEL"].str());
+			pFP = reroute::create_producer(*GetChannels().at(channel_index-1)); 
+		}
+		else
+			pFP = create_producer(GetChannel()->frame_factory(), GetChannel()->video_format_desc(), _parameters);
+		
 		if(pFP == frame_producer::empty())
 			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? _parameters[0] : L""));
 
 		bool auto_play = std::find(_parameters.begin(), _parameters.end(), L"AUTO") != _parameters.end();
 
-		auto pFP2 = create_transition_producer(GetChannel()->video_format_desc().field_mode, pFP, transitionInfo);
+		auto pFP2 = create_transition_producer(GetChannel()->video_format_desc().field_mode, spl::make_shared_ptr(pFP), transitionInfo);
 		if(auto_play)
 			GetChannel()->stage().load(GetLayerIndex(), pFP2, false, transitionInfo.duration); // TODO: LOOP
 		else
 			GetChannel()->stage().load(GetLayerIndex(), pFP2, false); // TODO: LOOP
 	
+		
 		SetReplyString(TEXT("202 LOADBG OK\r\n"));
 
 		return true;
@@ -791,6 +804,7 @@ bool PlayCommand::DoExecute()
 		{
 			LoadbgCommand lbg;
 			lbg.SetChannel(GetChannel());
+			lbg.SetChannels(GetChannels());
 			lbg.SetChannelIndex(GetChannelIndex());
 			lbg.SetLayerIntex(GetLayerIndex());
 			lbg.SetClientInfo(GetClientInfo());
