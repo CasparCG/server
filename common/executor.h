@@ -117,7 +117,7 @@ public:
 	template<typename Func>
 	auto begin_invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> boost::unique_future<decltype(func())> // noexcept
 	{	
-		if(execution_queue_.size() > 128)
+		if(execution_queue_.size() > 256)
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("executor overflow.") << source_info(name_));
 		
 		if(!is_running_)
