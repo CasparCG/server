@@ -621,6 +621,13 @@ public:
 	{
 		try
 		{
+			if(frame_number_ % 25 == 0)
+			{
+				auto space = boost::filesystem::space(boost::filesystem::path(filename_).parent_path());
+				if(space.available < 512*1000000)
+					BOOST_THROW_EXCEPTION(file_write_error() << msg_info("out of space"));
+			}
+
 			boost::timer frame_timer;
 
 			encode_video_frame(frame);
@@ -634,7 +641,6 @@ public:
 			{
 				exception_ = std::current_exception();
 			});
-			executor_.stop();
 		}
 	}
 
@@ -674,7 +680,9 @@ public:
 	
 	virtual void initialize(const core::video_format_desc& format_desc, int)
 	{
-		consumer_.reset();
+		if(consumer_)
+			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot reinitialize ffmpeg-consumer."));
+
 		consumer_.reset(new ffmpeg_consumer(u8(filename_), format_desc, options_));
 	}
 	

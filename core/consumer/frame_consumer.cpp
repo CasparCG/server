@@ -142,7 +142,7 @@ public:
 			catch(...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
-				CASPAR_LOG(error) << print() << "Failed to recover consumer.";
+				CASPAR_LOG(error) << print() << " Failed to recover consumer.";
 				return false;
 			}
 		}
