@@ -186,8 +186,15 @@ public:
 			}
 			catch(...){}
 			
-			pointer_guard.reset();
-			CASPAR_LOG(info) << str << L" Destroyed.";
+			try
+			{
+				pointer_guard.reset();
+				CASPAR_LOG(info) << str << L" Destroyed.";
+			}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+			}
 
 			--counter;
 		}).detach(); 
