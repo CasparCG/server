@@ -101,19 +101,16 @@ public:
 	{
 		try
 		{
-			internal_begin_invoke([=]
-			{
-				is_running_ = false;
-			}).wait();
+			wait();
 		}
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
-
-			clear();
-			is_running_ = false;
-			semaphore_.try_push(0);
 		}
+		
+		is_running_ = false;
+		semaphore_.try_push(0);
+
 		thread_.join();
 	}
 						
@@ -197,7 +194,7 @@ public:
 	}
 		
 private:	
-
+	
 	template<typename Func>
 	auto internal_begin_invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> boost::unique_future<decltype(func())> // noexcept
 	{					
