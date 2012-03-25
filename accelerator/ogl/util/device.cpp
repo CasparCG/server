@@ -85,10 +85,10 @@ struct device::impl : public std::enable_shared_from_this<impl>
 			device_->SetActive(true);		
 						
 			if (glewInit() != GLEW_OK)
-				BOOST_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
+				CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
 		
 			if(!GLEW_VERSION_3_0)
-				BOOST_THROW_EXCEPTION(not_supported() << msg_info("Your graphics card does not meet the minimum hardware requirements since it does not support OpenGL 3.0 or higher."));
+				CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Your graphics card does not meet the minimum hardware requirements since it does not support OpenGL 3.0 or higher."));
 	
 			glGenFramebuffers(1, &fbo_);				
 			glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
@@ -107,7 +107,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 			auto ctx2 = wglGetCurrentContext();
 
 			if(!wglShareLists(ctx1, ctx2))
-				BOOST_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to share OpenGL devices."));
+				CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to share OpenGL devices."));
 		});
 
 		render_executor_.invoke([=]
@@ -158,7 +158,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		CASPAR_VERIFY(width > 0 && height > 0);
 
 		if(!render_executor_.is_current())
-			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Operation only valid in an OpenGL Context."));
+			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Operation only valid in an OpenGL Context."));
 					
 		auto pool = &device_pools_[stride-1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
 		
@@ -258,7 +258,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	boost::unique_future<array<const std::uint8_t>> copy_async(const spl::shared_ptr<texture>& source)
 	{
 		if(!render_executor_.is_current())
-			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Operation only valid in an OpenGL Context."));
+			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Operation only valid in an OpenGL Context."));
 
 		auto buffer = create_buffer(source->size(), buffer::usage::read_only); 
 		source->copy_to(*buffer);	

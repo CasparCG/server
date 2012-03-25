@@ -78,7 +78,7 @@ public:
 		SelectObject(static_cast<HDC>(hdc_.get()), bmp_.get());	
 
 		if(!bmp_data_)
-			BOOST_THROW_EXCEPTION(std::bad_alloc());
+			CASPAR_THROW_EXCEPTION(bad_alloc());
 	}
 
 	operator HDC() {return static_cast<HDC>(hdc_.get());}
@@ -155,7 +155,7 @@ class flash_renderer
 			: result_(CoInitialize(nullptr))
 		{
 			if(FAILED(result_))
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to initialize com-context for flash-player"));
+				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to initialize com-context for flash-player"));
 		}
 
 		~com_init()
@@ -199,25 +199,25 @@ public:
 		graph_->set_color("sync", diagnostics::color(0.8f, 0.3f, 0.2f));			
 		
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to create FlashAxContainer"));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to create FlashAxContainer"));
 		
 		ax_->set_print([this]{return print();});
 
 		if(FAILED(ax_->CreateAxControl()))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Create FlashAxControl"));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Create FlashAxControl"));
 		
 		CComPtr<IShockwaveFlash> spFlash;
 		if(FAILED(ax_->QueryControl(&spFlash)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Query FlashAxControl"));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Query FlashAxControl"));
 												
 		if(FAILED(spFlash->put_Playing(true)) )
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to start playing Flash"));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to start playing Flash"));
 
 		if(FAILED(spFlash->put_Movie(CComBSTR(filename.c_str()))))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Load Template Host"));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Load Template Host"));
 										
 		if(FAILED(spFlash->put_ScaleMode(2)))  //Exact fit. Scale without respect to the aspect ratio.
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Set Scale Mode"));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Set Scale Mode"));
 						
 		ax_->SetSize(width_, height_);		
 
@@ -246,7 +246,7 @@ public:
 		CASPAR_LOG(trace) << print() << " Call: " << param;
 
 		if(!ax_->FlashCall(param, result))
-			CASPAR_LOG(warning) << print() << L" Flash call failed:" << param;//BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Flash function call failed.") << arg_name_info("param") << arg_value_info(narrow(param)));
+			CASPAR_LOG(warning) << print() << L" Flash call failed:" << param;//CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Flash function call failed.") << arg_name_info("param") << arg_value_info(narrow(param)));
 		graph_->set_tag("param");
 
 		return result;
@@ -504,7 +504,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 	auto filename = env::template_folder() + L"\\" + template_host.filename;
 	
 	if(!boost::filesystem::exists(filename))
-		BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(u8(filename)));	
+		CASPAR_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(u8(filename)));	
 
 	return create_destroy_proxy(spl::make_shared<flash_producer>(frame_factory, format_desc, filename, template_host.width, template_host.height));
 }

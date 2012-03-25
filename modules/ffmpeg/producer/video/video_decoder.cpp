@@ -61,10 +61,11 @@ struct video_decoder::impl : boost::noncopyable
 
 	std::queue<spl::shared_ptr<AVPacket>>	packets_;
 	
+	const AVStream*							stream_;
 	const uint32_t							nb_frames_;
-
 	const int								width_;
 	const int								height_;
+
 	bool									is_progressive_;
 	uint32_t								file_frame_number_;
 	double									fps_;
@@ -82,12 +83,13 @@ public:
 
 	explicit impl(input& in) 
 		: input_(&in)
-		, codec_context_(open_codec(*input_->context(), AVMEDIA_TYPE_VIDEO, index_))
-		, nb_frames_(static_cast<uint32_t>(input_->context()->streams[index_]->nb_frames))
+		, codec_context_(open_codec(input_->context(), AVMEDIA_TYPE_VIDEO, index_))
+		, stream_(input_->context().streams[index_])
+		, nb_frames_(static_cast<uint32_t>(stream_->nb_frames))
 		, width_(codec_context_->width)
 		, height_(codec_context_->height)
 		, file_frame_number_(0)
-		, fps_(read_fps(*input_->context(), 0.0))
+		, fps_(read_fps(input_->context(), 0.0))
 	{
 	}
 	
@@ -123,34 +125,34 @@ public:
 
 	std::shared_ptr<AVFrame> decode(AVPacket& pkt)
 	{
-		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
+		std::shared_ptr<AVFrame> frame(avcodec_alloc_frame(), av_free);
 
-		int frame_finished = 0;
-		THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), decoded_frame.get(), &frame_finished, &pkt), "[video_decocer]");
+		int got_frame = 0;
+		THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), frame.get(), &got_frame, &pkt), "[video_decocer]");
 		
 		// If a decoder consumes less then the whole packet then something is wrong
 		// that might be just harmless padding at the end, or a problem with the
 		// AVParser or demuxer which puted more then one frame in a AVPacket.
 
-		if(frame_finished == 0)	
+		if(got_frame == 0)	
 			return nullptr;
 		
-		auto stream_time_base = input_->context()->streams[pkt.stream_index]->time_base;
+		auto stream_time_base	 = stream_->time_base;
 		auto packet_frame_number = static_cast<uint32_t>((static_cast<double>(pkt.pts * stream_time_base.num)/stream_time_base.den)*fps_);
 
 		file_frame_number_ = packet_frame_number;
 
-		is_progressive_ = !decoded_frame->interlaced_frame;
+		is_progressive_ = !frame->interlaced_frame;
 
-		if(decoded_frame->repeat_pict > 0)
+		if(frame->repeat_pict > 0)
 			CASPAR_LOG(warning) << "[video_decoder] Field repeat_pict not implemented.";
 				
 		event_subject_  << monitor::event("file/video/width")	% width_
 						<< monitor::event("file/video/height")	% height_
-						<< monitor::event("file/video/field")	% u8(!decoded_frame->interlaced_frame ? "progressive" : (decoded_frame->top_field_first ? "upper" : "lower"))
+						<< monitor::event("file/video/field")	% u8(!frame->interlaced_frame ? "progressive" : (frame->top_field_first ? "upper" : "lower"))
 						<< monitor::event("file/video/codec")	% u8(codec_context_->codec->long_name);
 		
-		return decoded_frame;
+		return frame;
 	}
 	
 	uint32_t nb_frames() const

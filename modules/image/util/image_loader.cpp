@@ -36,11 +36,11 @@ namespace caspar { namespace image {
 std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename)
 {
 	if(!boost::filesystem::exists(filename))
-		BOOST_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(u8(filename)));
+		CASPAR_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(u8(filename)));
 
 	FREE_IMAGE_FORMAT fif = FreeImage_GetFileTypeU(filename.c_str(), 0);		
 	if(fif == FIF_UNKNOWN || !FreeImage_FIFSupportsReading(fif)) 
-		BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
+		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
 		
 	auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_LoadU(fif, filename.c_str(), 0), FreeImage_Unload);
 		  
@@ -48,7 +48,7 @@ std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename)
 	{
 		bitmap = std::shared_ptr<FIBITMAP>(FreeImage_ConvertTo32Bits(bitmap.get()), FreeImage_Unload);
 		if(!bitmap)
-			BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));			
+			CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));			
 	}
 	
 	return bitmap;

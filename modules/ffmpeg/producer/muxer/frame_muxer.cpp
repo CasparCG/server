@@ -210,7 +210,7 @@ struct frame_muxer::impl : boost::noncopyable
 					break;
 				}
 			default:
-				BOOST_THROW_EXCEPTION(invalid_operation());
+				CASPAR_THROW_EXCEPTION(invalid_operation());
 			}
 		}
 	}
@@ -225,7 +225,7 @@ struct frame_muxer::impl : boost::noncopyable
 	core::audio_buffer pop_audio()
 	{
 		if(audio_stream_.size() < audio_cadence_.front())
-			BOOST_THROW_EXCEPTION(out_of_range());
+			CASPAR_THROW_EXCEPTION(out_of_range());
 
 		auto begin = audio_stream_.begin();
 		auto end   = begin + audio_cadence_.front();

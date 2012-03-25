@@ -33,7 +33,7 @@ namespace caspar { namespace flash {
 std::vector<char> decompress_one_file(const std::vector<char>& in_data, uLong buf_size = 5000000)
 {
 	if(buf_size > 300*1000000)
-		BOOST_THROW_EXCEPTION(file_read_error());
+		CASPAR_THROW_EXCEPTION(file_read_error());
 
 	std::vector<char> out_data(buf_size, 0);
 
@@ -43,7 +43,7 @@ std::vector<char> decompress_one_file(const std::vector<char>& in_data, uLong bu
 		return decompress_one_file(in_data, buf_size*2);
 
 	if(ret != Z_OK)
-		BOOST_THROW_EXCEPTION(file_read_error());
+		CASPAR_THROW_EXCEPTION(file_read_error());
 
 	out_data.resize(buf_size);
 
@@ -55,7 +55,7 @@ std::string read_template_meta_info(const std::wstring& filename)
 	auto file = std::fstream(filename, std::ios::in | std::ios::binary);
 
 	if(!file)
-		BOOST_THROW_EXCEPTION(file_read_error());
+		CASPAR_THROW_EXCEPTION(file_read_error());
 	
 	char head[4] = {};
 	file.read(head, 3);
@@ -87,7 +87,7 @@ std::string read_template_meta_info(const std::wstring& filename)
 	auto end_it = std::find_end(beg_it, data.end(), end_str.begin(), end_str.end());
 	
 	if(beg_it == data.end() || end_it == data.end())
-		BOOST_THROW_EXCEPTION(file_read_error());
+		CASPAR_THROW_EXCEPTION(file_read_error());
 			
 	return std::string(beg_it, end_it+end_str.size());
 }

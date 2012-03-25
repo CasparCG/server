@@ -49,7 +49,7 @@ struct mutable_frame::impl : boost::noncopyable
 	{
 		BOOST_FOREACH(auto& buffer, buffers_)
 			if(!buffer.data())
-				BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("mutable_frame: null argument"));
+				CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("mutable_frame: null argument"));
 	}
 };
 	
@@ -102,7 +102,7 @@ struct const_frame::impl : boost::noncopyable
 		, id_(reinterpret_cast<int>(this))
 	{
 		if(desc.format != core::pixel_format::bgra)
-			BOOST_THROW_EXCEPTION(not_implemented());
+			CASPAR_THROW_EXCEPTION(not_implemented());
 		
 		future_buffers_.push_back(std::move(image));
 	}

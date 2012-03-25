@@ -149,7 +149,7 @@ draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& f
 {
 	auto color2 = get_hex_color(color);
 	if(color2.length() != 9 || color2[0] != '#')
-		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(color2) << msg_info("Invalid color."));
+		CASPAR_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(color2) << msg_info("Invalid color."));
 	
 	core::pixel_format_desc desc(pixel_format::bgra);
 	desc.planes.push_back(core::pixel_format_desc::plane(1, 1, 4));
@@ -160,7 +160,7 @@ draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& f
 	auto& value = *reinterpret_cast<uint32_t*>(frame.image_data(0).begin());
 	std::wstringstream str(color2.substr(1));
 	if(!(str >> std::hex >> value) || !str.eof())
-		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(color2) << msg_info("Invalid color."));
+		CASPAR_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(color2) << msg_info("Invalid color."));
 			
 	return core::draw_frame(std::move(frame));
 }

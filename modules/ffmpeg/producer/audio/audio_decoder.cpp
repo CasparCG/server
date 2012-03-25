@@ -80,7 +80,7 @@ public:
 	explicit impl(input& in, const core::video_format_desc& format_desc) 
 		: input_(&in)
 		, format_desc_(format_desc)	
-		, codec_context_(open_codec(*input_->context(), AVMEDIA_TYPE_AUDIO, index_))
+		, codec_context_(open_codec(input_->context(), AVMEDIA_TYPE_AUDIO, index_))
 		, swr_(swr_alloc_set_opts(nullptr,
 										av_get_default_channel_layout(format_desc_.audio_channels), AV_SAMPLE_FMT_S32, format_desc_.audio_sample_rate,
 										get_channel_layout(codec_context_.get()), codec_context_->sample_fmt, codec_context_->sample_rate,
@@ -88,7 +88,7 @@ public:
 		, buffer_(AVCODEC_MAX_AUDIO_FRAME_SIZE*4)
 	{		
 		if(!swr_)
-			BOOST_THROW_EXCEPTION(std::bad_alloc("swr_"));
+			CASPAR_THROW_EXCEPTION(bad_alloc());
 
 		THROW_ON_ERROR2(swr_init(swr_.get()), "[audio_decoder]");
 	}
@@ -131,8 +131,8 @@ public:
 		{		
 			std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
 
-			int frame_finished = 0;
-			auto len = THROW_ON_ERROR2(avcodec_decode_audio4(codec_context_.get(), decoded_frame.get(), &frame_finished, &pkt), "[audio_decoder]");
+			int got_frame = 0;
+			auto len = THROW_ON_ERROR2(avcodec_decode_audio4(codec_context_.get(), decoded_frame.get(), &got_frame, &pkt), "[audio_decoder]");
 					
 			if(len == 0)
 			{
@@ -143,8 +143,8 @@ public:
             pkt.data += len;
             pkt.size -= len;
 
-			if(!frame_finished)
-				return audio;
+			if(!got_frame)
+				continue;
 							
 			const uint8_t *in[] = {decoded_frame->data[0]};
 			uint8_t* out[]		= {buffer_.data()};
