@@ -166,10 +166,12 @@ std::wstring get_call_stack()
 		virtual void OnDbgHelpErr(LPCSTR szFuncName, DWORD gle, DWORD64 addr)
 		{
 		}
-
 		virtual void OnOutput(LPCSTR szText)
 		{
-			str_ += szText;
+			std::string str = szText;
+
+			if(str.find("internal::get_call_stack") == std::string::npos && str.find("stack_walker::ShowCallstack") == std::string::npos)
+				str_ += std::move(str);
 		}
 	};
 
