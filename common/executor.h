@@ -85,9 +85,9 @@ class executor
 	
 	const std::wstring											name_;
 	tbb::atomic<bool>											is_running_;
-	boost::thread												thread_;	
 	function_queue_t											execution_queue_;
 	tbb::concurrent_bounded_queue<int>							semaphore_;
+	boost::thread												thread_;	
 		
 public:		
 	executor(const std::wstring& name)
@@ -99,71 +99,33 @@ public:
 	
 	virtual ~executor()
 	{
-		stop();
+		try
+		{
+			internal_begin_invoke([this]
+			{
+				is_running_ = false;
+			}).wait();
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			is_running_ = false;
+		}
 		thread_.join();
 	}
-						
+	
 	template<typename Func>
 	auto begin_invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> boost::unique_future<decltype(func())> // noexcept
 	{	
 		if(execution_queue_.size() > 128)
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("executor overflow.") << source_info(name_));
-
+		
 		if(!is_running_)
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("executor not running.") << source_info(name_));
-				
-		typedef typename std::remove_reference<Func>::type	function_type;
-		typedef decltype(func())							result_type;
-		typedef boost::packaged_task<result_type>			task_type;
-								
-		std::unique_ptr<task_type> task;
 
-		// Use pointers since the boost thread library doesn't fully support move semantics.
-
-		auto raw_func2 = new function_type(std::forward<Func>(func));
-		try
-		{
-			task.reset(new task_type([raw_func2]() -> result_type
-			{
-				std::unique_ptr<function_type> func2(raw_func2);
-				return (*func2)();
-			}));
-		}
-		catch(...)
-		{
-			delete raw_func2;
-			throw;
-		}
-		
-		task->set_wait_callback(std::function<void(task_type&)>([=](task_type& my_task) // The std::function wrapper is required in order to add ::result_type to functor class.
-		{
-			try
-			{
-				if(is_current())  // Avoids potential deadlock.
-					my_task();
-			}
-			catch(boost::task_already_started&){}
-		}));
-				
-		auto future = task->get_future();
-
-		auto raw_task = task.release();
-		priority_function prio_func(priority.value(), [raw_task]
-		{
-			std::unique_ptr<task_type> task(raw_task);
-			try
-			{
-				(*task)();
-			}
-			catch(boost::task_already_started&){}
-		});
-
-		execution_queue_.push(prio_func);
-		semaphore_.push(0);
-							
-		return std::move(future);		
+		return internal_begin_invoke(std::forward<Func>(func), priority);
 	}
-	
+
 	template<typename Func>
 	auto invoke(Func&& func, task_priority prioriy = task_priority::normal_priority) -> decltype(func()) // noexcept
 	{
@@ -232,6 +194,61 @@ public:
 	}
 		
 private:	
+								
+	template<typename Func>
+	auto internal_begin_invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> boost::unique_future<decltype(func())> // noexcept
+	{					
+		typedef typename std::remove_reference<Func>::type	function_type;
+		typedef decltype(func())							result_type;
+		typedef boost::packaged_task<result_type>			task_type;
+								
+		std::unique_ptr<task_type> task;
+
+		// Use pointers since the boost thread library doesn't fully support move semantics.
+
+		auto raw_func2 = new function_type(std::forward<Func>(func));
+		try
+		{
+			task.reset(new task_type([raw_func2]() -> result_type
+			{
+				std::unique_ptr<function_type> func2(raw_func2);
+				return (*func2)();
+			}));
+		}
+		catch(...)
+		{
+			delete raw_func2;
+			throw;
+		}
+		
+		task->set_wait_callback(std::function<void(task_type&)>([=](task_type& my_task) // The std::function wrapper is required in order to add ::result_type to functor class.
+		{
+			try
+			{
+				if(is_current())  // Avoids potential deadlock.
+					my_task();
+			}
+			catch(boost::task_already_started&){}
+		}));
+				
+		auto future = task->get_future();
+
+		auto raw_task = task.release();
+		priority_function prio_func(priority.value(), [raw_task]
+		{
+			std::unique_ptr<task_type> task(raw_task);
+			try
+			{
+				(*task)();
+			}
+			catch(boost::task_already_started&){}
+		});
+
+		execution_queue_.push(prio_func);
+		semaphore_.push(0);
+							
+		return std::move(future);		
+	}
 
 	void run() // noexcept
 	{
