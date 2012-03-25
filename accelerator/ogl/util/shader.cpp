@@ -56,7 +56,7 @@ public:
 			GL(glDeleteObjectARB(vertex_shader));
 			std::stringstream str;
 			str << "Failed to compile vertex shader:" << std::endl << info << std::endl;
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(str.str()));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(str.str()));
 		}
 			
 		const char* fragment_source = fragment_source_str.c_str();
@@ -74,7 +74,7 @@ public:
 			GL(glDeleteObjectARB(fragmemt_shader));
 			std::stringstream str;
 			str << "Failed to compile fragment shader:" << std::endl << info << std::endl;
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(str.str()));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(str.str()));
 		}
 			
 		program_ = glCreateProgramObjectARB();
@@ -95,7 +95,7 @@ public:
 			GL(glDeleteObjectARB(program_));
 			std::stringstream str;
 			str << "Failed to link shader program:" << std::endl << info << std::endl;
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(str.str()));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(str.str()));
 		}
 		GL(glUseProgramObjectARB(program_));
 	}

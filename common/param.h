@@ -25,7 +25,7 @@ typename std::enable_if<!std::is_convertible<T, std::wstring>::value, typename s
 	}
 	catch(...)
 	{		
-		BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("Failed to parse param.") << arg_name_info(name) << nested_exception(std::current_exception()));
+		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Failed to parse param.") << arg_name_info(name) << nested_exception(std::current_exception()));
 	}
 }
 
@@ -45,7 +45,7 @@ std::wstring get_param(const std::wstring& name, C&& params, const std::wstring&
 	}
 	catch(...)
 	{		
-		BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("Failed to parse param.") << arg_name_info(name) << nested_exception(std::current_exception()));
+		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Failed to parse param.") << arg_name_info(name) << nested_exception(std::current_exception()));
 	}
 }
 

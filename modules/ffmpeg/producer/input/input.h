@@ -61,7 +61,7 @@ public:
 
 	void		seek(uint32_t target);
 
-	spl::shared_ptr<AVFormatContext> context();
+	AVFormatContext& context();
 private:
 	struct impl;
 	std::shared_ptr<impl> impl_;

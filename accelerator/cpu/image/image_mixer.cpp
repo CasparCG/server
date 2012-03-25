@@ -273,7 +273,7 @@ private:
 			}
 			
 			if(!sws_device)				
-				BOOST_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling device.") << boost::errinfo_api_function("sws_getContext"));				
+				CASPAR_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling device.") << boost::errinfo_api_function("sws_getContext"));				
 		
 			auto dest_frame = spl::make_shared<buffer>(width*height*4);
 			temp_buffers_.push(dest_frame);

@@ -232,7 +232,7 @@ core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& 
 			
 		if(!sws_context)
 		{
-			BOOST_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling context.") << 
+			CASPAR_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling context.") << 
 									boost::errinfo_api_function("sws_getContext"));
 		}	
 		

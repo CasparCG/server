@@ -100,7 +100,7 @@ public:
 		, frame_factory_(frame_factory)		
 		, format_desc_(format_desc)
 		, input_(graph_, filename_, loop, start, length)
-		, fps_(read_fps(*input_.context(), format_desc_.fps))
+		, fps_(read_fps(input_.context(), format_desc_.fps))
 		, muxer_(fps_, frame_factory, format_desc_, filter)
 		, start_(start)
 		, last_frame_(core::draw_frame::empty())
@@ -267,7 +267,7 @@ public:
 			result = boost::lexical_cast<std::wstring>(start());
 		}
 		else
-			BOOST_THROW_EXCEPTION(invalid_argument());
+			CASPAR_THROW_EXCEPTION(invalid_argument());
 
 		return async(launch::deferred, [=]{return result;});
 	}

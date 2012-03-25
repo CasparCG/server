@@ -141,7 +141,7 @@ struct filter::impl
 			return;
 
 		if(frame->data[0] == nullptr || frame->width < 1)
-			BOOST_THROW_EXCEPTION(invalid_argument());
+			CASPAR_THROW_EXCEPTION(invalid_argument());
 
 		if(filters_.empty())
 		{
@@ -250,7 +250,7 @@ struct filter::impl
 		}
 		catch(...)
 		{
-			BOOST_THROW_EXCEPTION(ffmpeg_error() << boost::errinfo_nested_exception(boost::current_exception()));
+			CASPAR_THROW_EXCEPTION(ffmpeg_error() << boost::errinfo_nested_exception(boost::current_exception()));
 		}
 	}
 
@@ -309,7 +309,7 @@ struct filter::impl
 		}
 		catch(...)
 		{
-			BOOST_THROW_EXCEPTION(ffmpeg_error() << boost::errinfo_nested_exception(boost::current_exception()));
+			CASPAR_THROW_EXCEPTION(ffmpeg_error() << boost::errinfo_nested_exception(boost::current_exception()));
 		}
 	}
 };

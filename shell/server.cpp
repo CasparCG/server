@@ -120,7 +120,7 @@ struct server::impl : boost::noncopyable
 		{		
 			auto format_desc = video_format_desc(xml_channel.second.get(L"video-mode", L"PAL"));		
 			if(format_desc.format == video_format::invalid)
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid video-mode."));
+				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid video-mode."));
 			
 			auto channel = spl::make_shared<video_channel>(static_cast<int>(channels_.size()+1), format_desc, accelerator_.create_image_mixer());
 			
@@ -192,7 +192,7 @@ struct server::impl : boost::noncopyable
 		else if(boost::iequals(name, L"CLOCK"))
 			return spl::make_shared<CLK::CLKProtocolStrategy>(channels_);
 		
-		BOOST_THROW_EXCEPTION(caspar_exception() << arg_name_info(L"name") << arg_value_info(name) << msg_info(L"Invalid protocol"));
+		CASPAR_THROW_EXCEPTION(caspar_exception() << arg_name_info(L"name") << arg_value_info(name) << msg_info(L"Invalid protocol"));
 	}
 };
 

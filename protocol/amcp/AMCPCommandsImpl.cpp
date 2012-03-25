@@ -228,7 +228,7 @@ bool DiagnosticsCommand::DoExecute()
 
 bool ChannelGridCommand::DoExecute()
 {
-	BOOST_THROW_EXCEPTION(not_implemented());
+	CASPAR_THROW_EXCEPTION(not_implemented());
 
 	//int index = 1;
 	//auto self = GetChannels().back();
@@ -292,7 +292,7 @@ bool CallCommand::DoExecute()
 		auto result = GetChannel()->stage().call(GetLayerIndex(), boost::trim_copy(param));
 		
 		if(!result.timed_wait(boost::posix_time::seconds(2)))
-			BOOST_THROW_EXCEPTION(timed_out());
+			CASPAR_THROW_EXCEPTION(timed_out());
 				
 		std::wstringstream replyString;
 		if(result.get().empty())
@@ -675,7 +675,7 @@ bool LoadCommand::DoExecute()
 //	{	
 //		std::wstring fullFilename = flash::flash_producer::find_template(server::template_folder() + templatename);
 //		if(fullFilename.empty())
-//			BOOST_THROW_EXCEPTION(file_not_found());
+//			CASPAR_THROW_EXCEPTION(file_not_found());
 //	
 //		std::wstring extension = boost::filesystem::wpath(fullFilename).extension();
 //		std::wstring filename = templatename;
@@ -748,7 +748,7 @@ bool LoadbgCommand::DoExecute()
 			pFP = create_producer(GetChannel()->frame_factory(), GetChannel()->video_format_desc(), _parameters);
 		
 		if(pFP == frame_producer::empty())
-			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? _parameters[0] : L""));
+			CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? _parameters[0] : L""));
 
 		bool auto_play = std::find(_parameters.begin(), _parameters.end(), L"AUTO") != _parameters.end();
 

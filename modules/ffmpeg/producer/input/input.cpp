@@ -118,7 +118,12 @@ struct input::impl : boost::noncopyable
 	stream														video_stream_;
 	stream														audio_stream_;
 
-	executor													executor_;
+	tbb::atomic<uint32_t>										seek_target_;
+
+	tbb::atomic<bool>											is_running_;
+	boost::mutex												mutex_;
+	boost::condition_variable									cond_;
+	boost::thread												thread_;
 	
 	impl(const spl::shared_ptr<diagnostics::graph> graph, const std::wstring& filename, const bool loop, const uint32_t start, const uint32_t length) 
 		: graph_(graph)
@@ -129,27 +134,31 @@ struct input::impl : boost::noncopyable
 		, fps_(read_fps(*format_context_, 0.0))
 		, video_stream_(av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0))
 		, audio_stream_(av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_AUDIO, -1, -1, 0, 0))
-		, executor_(print())
 	{		
 		start_			= start;
 		length_			= length;
 		loop_			= loop;
-
-		if(start_ > 0)			
-			seek(start_, false);
-								
+		seek_target_	= start_;
+		is_running_		= true;
+		thread_			= boost::thread([this]{run();});
+										
 		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));	
 		graph_->set_color("audio-buffer", diagnostics::color(0.7f, 0.4f, 0.4f));
-		graph_->set_color("video-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));	
-		
-		tick();
+		graph_->set_color("video-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));			
+	}
+
+	~impl()
+	{
+		is_running_ = false;
+		cond_.notify_one();
+		thread_.join();
 	}
 	
 	bool try_pop_video(std::shared_ptr<AVPacket>& packet)
 	{				
 		bool result = video_stream_.try_pop(packet);
 		if(result)
-			tick();
+			cond_.notify_one();
 		
 		graph_->set_value("video-buffer", std::min(1.0, static_cast<double>(video_stream_.size()/MIN_FRAMES)));
 				
@@ -160,132 +169,138 @@ struct input::impl : boost::noncopyable
 	{				
 		bool result = audio_stream_.try_pop(packet);
 		if(result)
-			tick();
+			cond_.notify_one();
 				
 		graph_->set_value("audio-buffer", std::min(1.0, static_cast<double>(audio_stream_.size()/MIN_FRAMES)));
 
 		return result;
 	}
 
-	void seek(uint32_t target, bool clear)
+	void seek(uint32_t target)
 	{
-		executor_.invoke([=]
-		{			
-			CASPAR_LOG(debug) << print() << " Seeking: " << target;
-
-			int flags = AVSEEK_FLAG_FRAME;
-			if(target == 0)
-			{
-				// Fix VP6 seeking
-				int vid_stream_index = av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
-				if(vid_stream_index >= 0)
-				{
-					auto codec_id = format_context_->streams[vid_stream_index]->codec->codec_id;
-					if(codec_id == CODEC_ID_VP6A || codec_id == CODEC_ID_VP6F || codec_id == CODEC_ID_VP6)
-						flags = AVSEEK_FLAG_BYTE;
-				}
-			}
-		
-			auto stream = format_context_->streams[default_stream_index_];
-			auto codec  = stream->codec;
-			auto fixed_target = (target*stream->time_base.den*codec->time_base.num)/(stream->time_base.num*codec->time_base.den)*codec->ticks_per_frame;
-		
-			THROW_ON_ERROR2(avformat_seek_file(format_context_.get(), default_stream_index_, std::numeric_limits<int64_t>::min(), fixed_target, fixed_target, 0), print());		
-		
-			if(clear)
-			{
-				video_stream_.clear();
-				audio_stream_.clear();
-			}
-
-			video_stream_.push(flush_packet());
-			audio_stream_.push(flush_packet());
-			
-			tick();
-		}, task_priority::high_priority);
+		seek_target_ = target;
+		video_stream_.clear();
+		audio_stream_.clear();
 	}
 		
 	std::wstring print() const
 	{
 		return L"ffmpeg_input[" + filename_ + L")]";
 	}
-	
+
+private:
+	void internal_seek(uint32_t target)
+	{
+		CASPAR_LOG(debug) << print() << " Seeking: " << target;
+
+		int flags = AVSEEK_FLAG_FRAME;
+		if(target == 0)
+		{
+			// Fix VP6 seeking
+			int vid_stream_index = av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
+			if(vid_stream_index >= 0)
+			{
+				auto codec_id = format_context_->streams[vid_stream_index]->codec->codec_id;
+				if(codec_id == CODEC_ID_VP6A || codec_id == CODEC_ID_VP6F || codec_id == CODEC_ID_VP6)
+					flags = AVSEEK_FLAG_BYTE;
+			}
+		}
+		
+		auto stream = format_context_->streams[default_stream_index_];
+		auto codec  = stream->codec;
+		auto fixed_target = (target*stream->time_base.den*codec->time_base.num)/(stream->time_base.num*codec->time_base.den)*codec->ticks_per_frame;
+		
+		THROW_ON_ERROR2(avformat_seek_file(format_context_.get(), default_stream_index_, std::numeric_limits<int64_t>::min(), fixed_target, fixed_target, 0), print());		
+		
+		video_stream_.push(flush_packet());
+		audio_stream_.push(flush_packet());
+	}
+		
 	bool full() const
 	{
 		return video_stream_.size() > MIN_FRAMES && audio_stream_.size() > MIN_FRAMES;
 	}
 
 	void tick()
-	{	
-		if(!executor_.is_running())
-			return;
+	{
+		if(seek_target_.fetch_and_store(std::numeric_limits<uint32_t>::max()) != std::numeric_limits<uint32_t>::max())				
+			internal_seek(seek_target_);
+
+		auto packet = create_packet();
 		
-		executor_.begin_invoke([this]
-		{			
-			if(full())
-				return;
+		auto ret = av_read_frame(format_context_.get(), packet.get()); // packet is only valid until next call of av_read_frame. Use av_dup_packet to extend its life.	
+		
+		if(is_eof(ret))														     
+		{
+			for(int n = 0; n < 3; ++n)
+			{
+				video_stream_.push(null_packet());
+				audio_stream_.push(null_packet());
+			}
+
+			if(loop_)
+			{
+				internal_seek(start_);
+				graph_->set_tag("seek");		
+			}
+		}
+		else
+		{		
+			THROW_ON_ERROR(ret, "av_read_frame", print());
+					
+			THROW_ON_ERROR2(av_dup_packet(packet.get()), print());
+				
+			// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
+			auto size = packet->size;
+			auto data = packet->data;
+			
+			packet = spl::shared_ptr<AVPacket>(packet.get(), [packet, size, data](AVPacket*)
+			{
+				packet->size = size;
+				packet->data = data;				
+			});
+					
+			auto stream_time_base = format_context_->streams[packet->stream_index]->time_base;
+			auto packet_frame_number = static_cast<uint32_t>((static_cast<double>(packet->pts * stream_time_base.num)/stream_time_base.den)*fps_);
+
+			if(packet->stream_index == default_stream_index_)
+				frame_number_ = packet_frame_number;
+					
+			if(packet_frame_number >= start_ && packet_frame_number < length_)
+			{
+				video_stream_.push(packet);
+				audio_stream_.push(packet);
+						
+				graph_->set_value("video-buffer", std::min(1.0, static_cast<double>(video_stream_.size()/MIN_FRAMES)));
+				graph_->set_value("audio-buffer", std::min(1.0, static_cast<double>(audio_stream_.size()/MIN_FRAMES)));
+			}
+		}	
+	}
+
+	void run()
+	{
+		win32_exception::install_handler();
+
+		while(is_running_)
+		{
+			boost::unique_lock<boost::mutex> lock(mutex_);
 
 			try
 			{
-				auto packet = create_packet();
-		
-				auto ret = av_read_frame(format_context_.get(), packet.get()); // packet is only valid until next call of av_read_frame. Use av_dup_packet to extend its life.	
-		
-				if(is_eof(ret))														     
-				{
-					for(int n = 0; n < 3; ++n)
-					{
-						video_stream_.push(null_packet());
-						audio_stream_.push(null_packet());
-					}
+				tick();
 
-					if(loop_)
-					{
-						seek(start_, false);
-						graph_->set_tag("seek");		
-					}
-				}
-				else
-				{		
-					THROW_ON_ERROR(ret, "av_read_frame", print());
-					
-					THROW_ON_ERROR2(av_dup_packet(packet.get()), print());
+				boost::this_thread::sleep(boost::posix_time::milliseconds(1));
 				
-					// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
-					auto size = packet->size;
-					auto data = packet->data;
-			
-					packet = spl::shared_ptr<AVPacket>(packet.get(), [packet, size, data](AVPacket*)
-					{
-						packet->size = size;
-						packet->data = data;				
-					});
-					
-					auto stream_time_base = format_context_->streams[packet->stream_index]->time_base;
-					auto packet_frame_number = static_cast<uint32_t>((static_cast<double>(packet->pts * stream_time_base.num)/stream_time_base.den)*fps_);
-
-					if(packet->stream_index == default_stream_index_)
-						frame_number_ = packet_frame_number;
-					
-					if(packet_frame_number >= start_ && packet_frame_number < length_)
-					{
-						video_stream_.push(packet);
-						audio_stream_.push(packet);
-						
-						graph_->set_value("video-buffer", std::min(1.0, static_cast<double>(video_stream_.size()/MIN_FRAMES)));
-						graph_->set_value("audio-buffer", std::min(1.0, static_cast<double>(audio_stream_.size()/MIN_FRAMES)));
-					}
-
-					tick();		
-				}	
+				while(full() && is_running_)
+					cond_.wait(lock);
 			}
 			catch(...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
-				executor_.stop();
+				is_running_ = false;
 			}
-		});
-	}	
+		}
+	}
 			
 	bool is_eof(int ret)
 	{
@@ -304,10 +319,10 @@ input::input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstrin
 	: impl_(new impl(graph, filename, loop, start, length)){}
 bool input::try_pop_video(std::shared_ptr<AVPacket>& packet){return impl_->try_pop_video(packet);}
 bool input::try_pop_audio(std::shared_ptr<AVPacket>& packet){return impl_->try_pop_audio(packet);}
-spl::shared_ptr<AVFormatContext> input::context(){return impl_->format_context_;}
+AVFormatContext& input::context(){return *impl_->format_context_;}
 void input::loop(bool value){impl_->loop_ = value;}
 bool input::loop() const{return impl_->loop_;}
-void input::seek(uint32_t target){impl_->seek(target, true);}
+void input::seek(uint32_t target){impl_->seek(target);}
 void input::start(uint32_t value){impl_->start_ = value;}
 uint32_t input::start() const{return impl_->start_;}
 void input::length(uint32_t value){impl_->length_ = value;}

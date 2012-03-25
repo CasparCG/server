@@ -61,7 +61,7 @@ public:
 		unbind();
 
 		if(!pbo_)
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to allocate buffer."));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to allocate buffer."));
 
 		//CASPAR_LOG(trace) << "[buffer] [" << ++(usage_ == buffer::usage::write_only ? g_w_total_count : g_r_total_count) << L"] allocated size:" << size_ << " usage: " << (usage == buffer::usage::write_only ? "write_only" : "read_only");
 	}	
@@ -89,7 +89,7 @@ public:
 
 		GL(glBindBuffer(target_, 0));
 		if(!data_)
-			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to map target OpenGL Pixel Buffer Object."));
+			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to map target OpenGL Pixel Buffer Object."));
 
 		return data_;
 	}

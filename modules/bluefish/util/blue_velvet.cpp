@@ -49,7 +49,7 @@ void blue_velvet_initialize()
 	if(!module)
 		LoadLibrary(u16(std::string(getenv("SystemDrive")) + "\\Program Files (x86)\\BlueFish444\\Driver\\" + module_str).c_str());
 	if(!module)
-		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueVelvet3.dll. Required drivers are not installed."));
+		CASPAR_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueVelvet3.dll. Required drivers are not installed."));
 	static std::shared_ptr<void> lib(module, FreeLibrary);
 	BlueVelvetFactory4 = reinterpret_cast<decltype(BlueVelvetFactory4)>(GetProcAddress(module, "BlueVelvetFactory4"));
 	BlueVelvetDestroy  = reinterpret_cast<decltype(BlueVelvetDestroy)>(GetProcAddress(module, "BlueVelvetDestroy"));
@@ -70,7 +70,7 @@ void blue_hanc_initialize()
 	if(!module)
 		LoadLibrary(u16(std::string(getenv("SystemDrive")) + "\\Program Files (x86)\\BlueFish444\\Driver\\" + module_str).c_str());
 	if(!module)
-		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueHancUtils.dll. Required drivers are not installed."));
+		CASPAR_THROW_EXCEPTION(file_not_found() << msg_info("Could not find BlueHancUtils.dll. Required drivers are not installed."));
 	static std::shared_ptr<void> lib(module, FreeLibrary);
 	encode_hanc_frame	 = reinterpret_cast<decltype(encode_hanc_frame)>(GetProcAddress(module, "encode_hanc_frame"));
 	encode_hanc_frame_ex = reinterpret_cast<decltype(encode_hanc_frame_ex)>(GetProcAddress(module, "encode_hanc_frame_ex"));
@@ -179,7 +179,7 @@ EVideoMode get_video_mode(CBlueVelvet4& blue, const core::video_format_desc& for
 			vid_fmt = videoMode;			
 	}
 	if(vid_fmt == VID_FMT_INVALID)
-		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("video-mode not supported.") << arg_value_info(format_desc.name));
+		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("video-mode not supported.") << arg_value_info(format_desc.name));
 
 	return vid_fmt;
 }
@@ -187,7 +187,7 @@ EVideoMode get_video_mode(CBlueVelvet4& blue, const core::video_format_desc& for
 spl::shared_ptr<CBlueVelvet4> create_blue()
 {
 	if(!BlueVelvetFactory4 || !encode_hanc_frame || !encode_hanc_frame)
-		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Bluefish drivers not found."));
+		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Bluefish drivers not found."));
 
 	return spl::shared_ptr<CBlueVelvet4>(BlueVelvetFactory4(), BlueVelvetDestroy);
 }
@@ -197,7 +197,7 @@ spl::shared_ptr<CBlueVelvet4> create_blue(int device_index)
 	auto blue = create_blue();
 	
 	if(BLUE_FAIL(blue->device_attach(device_index, FALSE))) 
-		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to attach device."));
+		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to attach device."));
 
 	return blue;
 }
