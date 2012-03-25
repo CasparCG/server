@@ -74,6 +74,7 @@ struct io_error					: virtual caspar_exception {};
 struct directory_not_found		: virtual io_error {};
 struct file_not_found			: virtual io_error {};
 struct file_read_error          : virtual io_error {};
+struct file_write_error         : virtual io_error {};
 
 struct invalid_argument			: virtual caspar_exception {};
 struct null_argument			: virtual invalid_argument {};
