@@ -312,7 +312,7 @@ public:
 		video_st_.reset();
 			  
 		if (!(oc_->oformat->flags & AVFMT_NOFILE)) 
-			LOG_ON_ERROR2(avio_close(oc_->pb), "[ffmpeg_consumer]"); // Close the output ffmpeg.
+			LOG_ON_ERROR2(avio_close(oc_->pb), "[ffmpeg_consumer]");
 
 		CASPAR_LOG(info) << print() << L" Successfully Uninitialized.";	
 	}
