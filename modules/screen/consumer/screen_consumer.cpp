@@ -334,6 +334,9 @@ public:
 	{			
 		if(static_cast<int>(frame.image_data().size()) != format_desc_.size)
 			return;
+
+		if(screen_width_ == 0 && screen_height_ == 0)
+			return;
 					
 		auto av_frame = get_av_frame();
 		av_frame->data[0] = const_cast<uint8_t*>(frame.image_data().begin());
