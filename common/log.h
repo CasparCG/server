@@ -98,7 +98,7 @@ BOOST_LOG_DECLARE_GLOBAL_LOGGER_INIT(logger, caspar_logger)
 	catch(...){}
 
 #define CASPAR_LOG_CURRENT_EXCEPTION() try{\
-		CASPAR_LOG(error)  << caspar::u16(boost::current_exception_diagnostic_information()) << L"Current callstack:\n" << caspar::log::internal::get_call_stack();\
+		CASPAR_LOG(error)  << caspar::u16(boost::current_exception_diagnostic_information()) << L"Caught at:\n" << caspar::log::internal::get_call_stack();\
 	}\
 	catch(...){}
 	
