@@ -111,7 +111,7 @@ draw_frame frame_producer_base::last_frame() const
 
 boost::unique_future<std::wstring> frame_producer_base::call(const std::wstring&) 
 {
-	BOOST_THROW_EXCEPTION(not_supported());
+	CASPAR_THROW_EXCEPTION(not_supported());
 }
 
 uint32_t frame_producer_base::nb_frames() const
@@ -138,7 +138,7 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
 		void unsubscribe(const monitor::observable::observer_ptr& o) override{}	
 		std::wstring name() const override {return L"empty";}
 		uint32_t frame_number() const override {return 0;}
-		boost::unique_future<std::wstring> call(const std::wstring& params) override{BOOST_THROW_EXCEPTION(not_supported());}
+		boost::unique_future<std::wstring> call(const std::wstring& params) override{CASPAR_THROW_EXCEPTION(not_supported());}
 		draw_frame last_frame() const {return draw_frame::empty();}
 	
 		boost::property_tree::wptree info() const override
@@ -222,7 +222,7 @@ spl::shared_ptr<core::frame_producer> create_destroy_proxy(spl::shared_ptr<core:
 spl::shared_ptr<core::frame_producer> do_create_producer(const spl::shared_ptr<frame_factory>& my_frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params)
 {
 	if(params.empty())
-		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
+		CASPAR_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
 	
 	auto producer = frame_producer::empty();
 	std::any_of(g_factories.begin(), g_factories.end(), [&](const producer_factory_t& factory) -> bool
@@ -276,7 +276,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<fram
 		std::wstring str;
 		BOOST_FOREACH(auto& param, params)
 			str += param + L" ";
-		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax.") << arg_value_info(u8(str)));
+		CASPAR_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax.") << arg_value_info(u8(str)));
 	}
 
 	return producer;

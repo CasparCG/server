@@ -214,7 +214,7 @@ public:
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
 {
 	if(params.empty())
-		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
+		CASPAR_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
 	
 	auto consumer = frame_consumer::empty();
 	std::any_of(g_factories.begin(), g_factories.end(), [&](const consumer_factory_t& factory) -> bool
@@ -231,7 +231,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 		});
 
 	if(consumer == frame_consumer::empty())
-		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax."));
+		CASPAR_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax."));
 
 	return spl::make_shared<destroy_consumer_proxy>(
 			spl::make_shared<print_consumer_proxy>(

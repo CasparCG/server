@@ -168,7 +168,7 @@ struct output_format
 		//		norm = NTSC;
 
 		//	if(norm == UNKNOWN)
-		//		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("target"));
+		//		CASPAR_THROW_EXCEPTION(invalid_argument() << arg_name_info("target"));
 		//	
 		//	if (name.find("-dv") != std::string::npos) 
 		//	{
@@ -184,7 +184,7 @@ struct output_format
 			format = av_guess_format(value.c_str(), nullptr, nullptr);
 
 			if(format == nullptr)
-				BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("f"));
+				CASPAR_THROW_EXCEPTION(invalid_argument() << arg_name_info("f"));
 
 			return true;
 		}
@@ -192,7 +192,7 @@ struct output_format
 		{
 			auto c = avcodec_find_encoder_by_name(value.c_str());
 			if(c == nullptr)
-				BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("vcodec"));
+				CASPAR_THROW_EXCEPTION(invalid_argument() << arg_name_info("vcodec"));
 
 			vcodec = avcodec_find_encoder_by_name(value.c_str())->id;
 			return true;
@@ -202,7 +202,7 @@ struct output_format
 		{
 			auto c = avcodec_find_encoder_by_name(value.c_str());
 			if(c == nullptr)
-				BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("acodec"));
+				CASPAR_THROW_EXCEPTION(invalid_argument() << arg_name_info("acodec"));
 
 			acodec = avcodec_find_encoder_by_name(value.c_str())->id;
 
@@ -211,7 +211,7 @@ struct output_format
 		else if(name == "s")
 		{
 			if(av_parse_video_size(&width, &height, value.c_str()) < 0)
-				BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("s"));
+				CASPAR_THROW_EXCEPTION(invalid_argument() << arg_name_info("s"));
 			
 			return true;
 		}
@@ -329,11 +329,11 @@ public:
 
 		auto st = av_new_stream(oc_.get(), 0);
 		if (!st) 		
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Could not allocate video-stream.") << boost::errinfo_api_function("av_new_stream"));		
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Could not allocate video-stream.") << boost::errinfo_api_function("av_new_stream"));		
 
 		auto encoder = avcodec_find_encoder(output_format_.vcodec);
 		if (!encoder)
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Codec not found."));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Codec not found."));
 
 		auto c = st->codec;
 
@@ -357,7 +357,7 @@ public:
 		else if(c->codec_id == CODEC_ID_DNXHD)
 		{
 			if(c->width < 1280 || c->height < 720)
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Unsupported video dimensions."));
+				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Unsupported video dimensions."));
 
 			c->bit_rate	= 220*1000000;
 			c->pix_fmt	= PIX_FMT_YUV422P;
@@ -415,11 +415,11 @@ public:
 
 		auto st = av_new_stream(oc_.get(), 1);
 		if(!st)
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Could not allocate audio-stream") << boost::errinfo_api_function("av_new_stream"));		
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Could not allocate audio-stream") << boost::errinfo_api_function("av_new_stream"));		
 		
 		auto encoder = avcodec_find_encoder(output_format_.acodec);
 		if (!encoder)
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("codec not found"));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("codec not found"));
 		
 		auto c = st->codec;
 
@@ -553,7 +553,7 @@ public:
 									  SWS_BICUBIC, nullptr, nullptr, nullptr), 
 						sws_freeContext);
 			if (sws_ == nullptr) 
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Cannot initialize the conversion context"));
+				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Cannot initialize the conversion context"));
 		}
 
 		std::shared_ptr<AVFrame> in_frame(avcodec_alloc_frame(), av_free);
@@ -598,7 +598,7 @@ public:
 										0, nullptr), [](SwrContext* p){swr_free(&p);});
 
 			if(!swr_)
-				BOOST_THROW_EXCEPTION(std::bad_alloc("swr_"));
+				CASPAR_THROW_EXCEPTION(bad_alloc());
 
 			THROW_ON_ERROR2(swr_init(swr_.get()), "[audio_decoder]");
 		}

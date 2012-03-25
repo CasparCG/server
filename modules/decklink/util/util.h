@@ -95,14 +95,14 @@ BMDDisplayMode get_display_mode(const T& device, BMDDisplayMode format, BMDPixel
 	}
 
 	if(!mode)
-		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Device could not find requested video-format.") 
+		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Device could not find requested video-format.") 
 												 << arg_value_info(boost::lexical_cast<std::string>(format))
 												 << arg_name_info("format"));
 		
 	BMDDisplayModeSupport displayModeSupport;
 	if(FAILED(device->DoesSupportVideoMode(mode->GetDisplayMode(), pix_fmt, flag, &displayModeSupport, nullptr)) || displayModeSupport == bmdDisplayModeNotSupported)
 		CASPAR_LOG(warning) << L"Device does not support video-format: " << mode->GetDisplayMode();
-		//BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Device does not support requested video-format.")
+		//CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Device does not support requested video-format.")
 		//										 << arg_value_info(boost::lexical_cast<std::string>(format))
 		//										 << arg_name_info("format"));
 	else if(displayModeSupport == bmdDisplayModeSupportedWithConversion)
@@ -134,14 +134,14 @@ static CComPtr<IDeckLink> get_device(size_t device_index)
 {
 	CComPtr<IDeckLinkIterator> pDecklinkIterator;
 	if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
-		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Decklink drivers not found."));
+		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Decklink drivers not found."));
 		
 	size_t n = 0;
 	CComPtr<IDeckLink> decklink;
 	while(n < device_index && pDecklinkIterator->Next(&decklink) == S_OK){++n;}	
 
 	if(n != device_index || !decklink)
-		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Decklink device not found.") << arg_name_info("device_index") << arg_value_info(boost::lexical_cast<std::string>(device_index)));
+		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Decklink device not found.") << arg_name_info("device_index") << arg_value_info(boost::lexical_cast<std::string>(device_index)));
 		
 	return decklink;
 }

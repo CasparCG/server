@@ -101,16 +101,16 @@ public:
 	{
 		try
 		{
-			wait();
+			internal_begin_invoke([=]
+			{
+				is_running_ = false;
+			}).wait();
 		}
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 		
-		is_running_ = false;
-		semaphore_.try_push(0);
-
 		thread_.join();
 	}
 						
@@ -118,10 +118,10 @@ public:
 	auto begin_invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> boost::unique_future<decltype(func())> // noexcept
 	{	
 		if(execution_queue_.size() > 128)
-			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("executor overflow.") << source_info(name_));
+			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("executor overflow.") << source_info(name_));
 
 		if(!is_running_)
-			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("executor not running.") << source_info(name_));
+			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("executor not running.") << source_info(name_));
 				
 		return internal_begin_invoke(std::forward<Func>(func), priority);	
 	}
@@ -138,7 +138,7 @@ public:
 	void yield()
 	{
 		if(!is_current())
-			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Executor can only yield inside of thread context.")  << source_info(name_));
+			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Executor can only yield inside of thread context.")  << source_info(name_));
 
 		int dummy;
 		if(!semaphore_.try_pop(dummy))
