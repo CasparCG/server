@@ -49,7 +49,7 @@ struct task_priority_def
 };
 typedef enum_class<task_priority_def> task_priority;
 
-class executor
+class executor sealed
 {	
 	struct priority_function
 	{
@@ -85,9 +85,9 @@ class executor
 	
 	const std::wstring											name_;
 	tbb::atomic<bool>											is_running_;
+	boost::thread												thread_;	
 	function_queue_t											execution_queue_;
 	tbb::concurrent_bounded_queue<int>							semaphore_;
-	boost::thread												thread_;	
 		
 public:		
 	executor(const std::wstring& name)
@@ -97,11 +97,11 @@ public:
 		thread_ = boost::thread([this]{run();});
 	}
 	
-	virtual ~executor()
+	~executor()
 	{
 		try
 		{
-			internal_begin_invoke([this]
+			internal_begin_invoke([=]
 			{
 				is_running_ = false;
 			}).wait();
@@ -109,23 +109,26 @@ public:
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
+
+			clear();
 			is_running_ = false;
+			semaphore_.try_push(0);
 		}
 		thread_.join();
 	}
-	
+						
 	template<typename Func>
 	auto begin_invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> boost::unique_future<decltype(func())> // noexcept
 	{	
-		if(execution_queue_.size() > 256)
+		if(execution_queue_.size() > 128)
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("executor overflow.") << source_info(name_));
-		
+
 		if(!is_running_)
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("executor not running.") << source_info(name_));
-
-		return internal_begin_invoke(std::forward<Func>(func), priority);
+				
+		return internal_begin_invoke(std::forward<Func>(func), priority);	
 	}
-
+	
 	template<typename Func>
 	auto invoke(Func&& func, task_priority prioriy = task_priority::normal_priority) -> decltype(func()) // noexcept
 	{
@@ -194,7 +197,7 @@ public:
 	}
 		
 private:	
-								
+
 	template<typename Func>
 	auto internal_begin_invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> boost::unique_future<decltype(func())> // noexcept
 	{					
