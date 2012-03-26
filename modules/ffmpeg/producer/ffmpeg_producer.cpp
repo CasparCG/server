@@ -87,6 +87,8 @@ struct ffmpeg_producer : public core::frame_producer
 	tbb::atomic<uint32_t>							frame_number_;
 
 	core::draw_frame								last_frame_;
+
+	boost::optional<uint32_t>						seek_target_;
 	
 public:
 	explicit ffmpeg_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, 
@@ -157,6 +159,8 @@ public:
 		auto frame = core::draw_frame::late();		
 		
 		boost::timer frame_timer;
+		
+		end_seek();
 
 		if(paused_)
 			frame = last_frame();	
@@ -189,8 +193,10 @@ public:
 		return frame;
 	}
 
-	core::draw_frame last_frame() const override
+	core::draw_frame last_frame() override
 	{
+		end_seek();
+
 		return core::draw_frame::still(last_frame_);
 	}
 
@@ -314,6 +320,20 @@ public:
 
 	// ffmpeg_producer
 	
+	void end_seek()
+	{
+		for(int n = 0; n < 16 && (last_frame_ == core::draw_frame::empty() || (seek_target_ && file_frame_number() != *seek_target_)); ++n)
+		{
+			decode_next_frame();
+			if(!muxer_.empty())
+			{
+				last_frame_ = std::move(muxer_.front());
+				muxer_.pop();
+				seek_target_.reset();
+			}
+		}
+	}
+
 	void loop(bool value)
 	{
 		input_.loop(value);
@@ -345,28 +365,11 @@ public:
 	}
 
 	void seek(uint32_t target)
-	{
-		muxer_.clear();
-		
-		// TODO: Fix HACK.
-		
-		target = std::min(target, file_nb_frames());
-		target = std::max<uint32_t>(target, 2) - 2;
+	{		
+		seek_target_ = std::min(target, file_nb_frames());
 
-		input_.seek(target);
+		input_.seek(*seek_target_);
 		muxer_.clear();
-		
-		// BEGIN HACK: There is no way to flush yadif. Need to poll 2 frames.
-		for(int n = 0; n < 25 && file_frame_number() != target+2; ++n)
-		{
-			decode_next_frame();
-			if(!muxer_.empty())
-			{
-				last_frame_ = std::move(muxer_.front());
-				muxer_.pop();
-			}
-		}
-		// END HACK		
 	}
 
 	std::wstring print_mode() const
