@@ -110,7 +110,7 @@ public:
 		return compose(dest, source);
 	}
 
-	draw_frame last_frame() const override
+	draw_frame last_frame() override
 	{
 		if(current_frame_ >= info_.duration)
 			return dest_producer_->last_frame();
