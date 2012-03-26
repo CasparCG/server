@@ -28,6 +28,7 @@
 
 #include <common/diagnostics/graph.h>
 #include <common/executor.h>
+#include <common/lock.h>
 #include <common/except.h>
 #include <common/log.h>
 
@@ -180,11 +181,15 @@ struct input::impl : boost::noncopyable
 
 	void seek(uint32_t target)
 	{
-		seek_target_ = target;
-		video_stream_.clear();
-		audio_stream_.clear();
+		{
+			boost::lock_guard<boost::mutex> lock(mutex_);
 
-		eof_ = false;
+			seek_target_ = target;
+			video_stream_.clear();
+			audio_stream_.clear();
+			eof_ = false;
+		}
+
 		cond_.notify_one();
 	}
 		
@@ -291,16 +296,19 @@ private:
 
 		while(is_running_)
 		{
-			boost::unique_lock<boost::mutex> lock(mutex_);
 
 			try
 			{
-				tick();
-
 				boost::this_thread::sleep(boost::posix_time::milliseconds(1));
 				
-				while((full() || eof_) && is_running_)
-					cond_.wait(lock);
+				{
+					boost::unique_lock<boost::mutex> lock(mutex_);
+
+					while((full() || eof_) && is_running_)
+						cond_.wait(lock);
+					
+					tick();
+				}
 			}
 			catch(...)
 			{
