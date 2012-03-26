@@ -112,6 +112,7 @@ struct input::impl : boost::noncopyable
 	tbb::atomic<uint32_t>										start_;		
 	tbb::atomic<uint32_t>										length_;
 	tbb::atomic<bool>											loop_;
+	tbb::atomic<bool>											eof_;
 	double														fps_;
 	uint32_t													frame_number_;
 	
@@ -138,6 +139,7 @@ struct input::impl : boost::noncopyable
 		start_			= start;
 		length_			= length;
 		loop_			= loop;
+		eof_			= false;
 		seek_target_	= start_;
 		is_running_		= true;
 		thread_			= boost::thread([this]{run();});
@@ -181,6 +183,9 @@ struct input::impl : boost::noncopyable
 		seek_target_ = target;
 		video_stream_.clear();
 		audio_stream_.clear();
+
+		eof_ = false;
+		cond_.notify_one();
 	}
 		
 	std::wstring print() const
@@ -244,6 +249,8 @@ private:
 				internal_seek(start_);
 				graph_->set_tag("seek");		
 			}
+			else
+				eof_ = true;
 		}
 		else
 		{		
@@ -292,7 +299,7 @@ private:
 
 				boost::this_thread::sleep(boost::posix_time::milliseconds(1));
 				
-				while(full() && is_running_)
+				while((full() || eof_) && is_running_)
 					cond_.wait(lock);
 			}
 			catch(...)
