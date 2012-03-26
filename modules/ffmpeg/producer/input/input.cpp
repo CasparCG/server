@@ -143,14 +143,15 @@ struct input::impl : boost::noncopyable
 		eof_			= false;
 		seek_target_	= start_ != 0 ? start_ : std::numeric_limits<uint32_t>::max();
 		is_running_		= true;
-		thread_			= boost::thread([this]{run();});
-										
+
+		while(!full())
+			tick();
+												
 		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));	
 		graph_->set_color("audio-buffer", diagnostics::color(0.7f, 0.4f, 0.4f));
 		graph_->set_color("video-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));	
 		
-		while(!full())
-			tick();
+		thread_			= boost::thread([this]{run();});
 	}
 
 	~impl()
