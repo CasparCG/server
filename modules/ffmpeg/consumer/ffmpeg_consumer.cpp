@@ -268,6 +268,8 @@ public:
 		, output_format_(format_desc, filename, options)
 		, executor_(print())
 	{
+		check_space();
+
 		// TODO: Ask stakeholders about case where file already exists.
 		boost::filesystem::remove(boost::filesystem::path(env::media_folder() + u16(filename))); // Delete the file if it exists
 
@@ -617,16 +619,19 @@ public:
 		return buffer;
 	}
 
+	void check_space()
+	{
+		auto space = boost::filesystem::space(boost::filesystem::path(filename_).parent_path());
+		if(space.available < 512*1000000)
+			BOOST_THROW_EXCEPTION(file_write_error() << msg_info("out of space"));
+	}
+
 	void encode(const core::const_frame& frame)
 	{
 		try
 		{
 			if(frame_number_ % 25 == 0)
-			{
-				auto space = boost::filesystem::space(boost::filesystem::path(filename_).parent_path());
-				if(space.available < 512*1000000)
-					BOOST_THROW_EXCEPTION(file_write_error() << msg_info("out of space"));
-			}
+				check_space();
 
 			boost::timer frame_timer;
 

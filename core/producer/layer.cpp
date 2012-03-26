@@ -71,7 +71,6 @@ public:
 		if(preview)
 		{
 			play();
-			foreground_->receive();
 			foreground_->paused(true);
 		}
 

@@ -95,7 +95,7 @@ public:
 		std::shared_ptr<AVPacket> packet;
 		while(packets_.try_pop(packet));
 	}
-
+		
 	size_type size() const
 	{
 		return index_ != -1 ? packets_.size() : std::numeric_limits<size_type>::max();
@@ -113,14 +113,13 @@ struct input::impl : boost::noncopyable
 	tbb::atomic<uint32_t>										start_;		
 	tbb::atomic<uint32_t>										length_;
 	tbb::atomic<bool>											loop_;
-	tbb::atomic<bool>											eof_;
 	double														fps_;
 	uint32_t													frame_number_;
 	
 	stream														video_stream_;
 	stream														audio_stream_;
 
-	tbb::atomic<uint32_t>										seek_target_;
+	boost::optional<uint32_t>									seek_target_;
 
 	tbb::atomic<bool>											is_running_;
 	boost::mutex												mutex_;
@@ -140,13 +139,11 @@ struct input::impl : boost::noncopyable
 		start_			= start;
 		length_			= length;
 		loop_			= loop;
-		eof_			= false;
-		seek_target_	= start_ != 0 ? start_ : std::numeric_limits<uint32_t>::max();
 		is_running_		= true;
 
-		while(!full())
-			tick();
-												
+		if(start_ != 0)
+			seek_target_ = start_;
+														
 		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));	
 		graph_->set_color("audio-buffer", diagnostics::color(0.7f, 0.4f, 0.4f));
 		graph_->set_color("video-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));	
@@ -191,12 +188,8 @@ struct input::impl : boost::noncopyable
 			seek_target_ = target;
 			video_stream_.clear();
 			audio_stream_.clear();
-			eof_ = false;
 		}
-
-		while(!full())
-			tick();
-
+		
 		cond_.notify_one();
 	}
 		
@@ -240,9 +233,11 @@ private:
 
 	void tick()
 	{
-		auto target = seek_target_.fetch_and_store(std::numeric_limits<uint32_t>::max());
-		if(target != std::numeric_limits<uint32_t>::max())				
-			internal_seek(target);
+		if(seek_target_)				
+		{
+			internal_seek(*seek_target_);
+			seek_target_.reset();
+		}
 
 		auto packet = create_packet();
 		
@@ -261,8 +256,6 @@ private:
 				internal_seek(start_);
 				graph_->set_tag("seek");		
 			}
-			else
-				eof_ = true;
 		}
 		else
 		{		
@@ -311,7 +304,7 @@ private:
 				{
 					boost::unique_lock<boost::mutex> lock(mutex_);
 
-					while((full() || eof_) && is_running_)
+					while(full() && !seek_target_ && is_running_)
 						cond_.wait(lock);
 					
 					tick();
