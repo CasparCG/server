@@ -322,7 +322,7 @@ public:
 	
 	void end_seek()
 	{
-		for(int n = 0; n < 16 && (last_frame_ == core::draw_frame::empty() || (seek_target_ && file_frame_number() != *seek_target_)); ++n)
+		for(int n = 0; n < 8 && (last_frame_ == core::draw_frame::empty() || (seek_target_ && file_frame_number() != *seek_target_)); ++n)
 		{
 			decode_next_frame();
 			if(!muxer_.empty())
