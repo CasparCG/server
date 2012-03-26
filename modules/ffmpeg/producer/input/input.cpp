@@ -223,8 +223,9 @@ private:
 
 	void tick()
 	{
-		if(seek_target_.fetch_and_store(std::numeric_limits<uint32_t>::max()) != std::numeric_limits<uint32_t>::max())				
-			internal_seek(seek_target_);
+		auto target = seek_target_.fetch_and_store(std::numeric_limits<uint32_t>::max());
+		if(target != std::numeric_limits<uint32_t>::max())				
+			internal_seek(target);
 
 		auto packet = create_packet();
 		
