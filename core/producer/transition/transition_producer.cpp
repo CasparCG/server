@@ -110,6 +110,14 @@ public:
 
 		return compose(dest, source);
 	}
+
+	draw_frame last_frame() const override
+	{
+		if(current_frame_ >= info_.duration)
+			return dest_producer_->last_frame();
+
+		return frame_producer_base::last_frame();
+	}
 			
 	uint32_t nb_frames() const override
 	{
@@ -138,7 +146,7 @@ public:
 
 	// transition_producer
 						
-	draw_frame compose(draw_frame dest_frame, draw_frame src_frame) 
+	draw_frame compose(draw_frame dest_frame, draw_frame src_frame) const
 	{	
 		if(info_.type == transition_type::cut)		
 			return src_frame;
