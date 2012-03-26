@@ -356,17 +356,16 @@ public:
 		muxer_.clear();
 		
 		// BEGIN HACK: There is no way to flush yadif. Need to poll 2 frames.
-		for(int n = 0; n < 25 && file_frame_number() != target+2; ++n)
+		for(int n = 0; n < 25 && file_frame_number() != target+3; ++n)
 		{
 			decode_next_frame();
 			if(!muxer_.empty())
+			{
+				last_frame_ = std::move(muxer_.front());
 				muxer_.pop();
+			}
 		}
-		// END HACK
-
-		decode_next_frame();
-
-		last_frame_ = !muxer_.empty() ? muxer_.front() : last_frame_;			
+		// END HACK		
 	}
 
 	std::wstring print_mode() const

@@ -83,6 +83,11 @@ public:
 		
 		return frame;
 	}
+
+	draw_frame last_frame() const
+	{
+		return draw_frame::mask(fill_producer_->last_frame(), key_producer_->last_frame());
+	}
 				
 	uint32_t nb_frames() const override
 	{
