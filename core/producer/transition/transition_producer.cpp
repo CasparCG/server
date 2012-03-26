@@ -46,7 +46,6 @@ class transition_producer : public frame_producer_base
 	bool								paused_;
 		
 public:
-
 	explicit transition_producer(const field_mode& mode, const spl::shared_ptr<frame_producer>& dest, const transition_info& info) 
 		: mode_(mode)
 		, current_frame_(0)

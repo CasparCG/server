@@ -113,14 +113,14 @@ struct input::impl : boost::noncopyable
 	tbb::atomic<uint32_t>										start_;		
 	tbb::atomic<uint32_t>										length_;
 	tbb::atomic<bool>											loop_;
-	tbb::atomic<bool>											eof_;
+	bool														eof_;
 	double														fps_;
 	uint32_t													frame_number_;
 	
 	stream														video_stream_;
 	stream														audio_stream_;
 
-	tbb::atomic<uint32_t>										seek_target_;
+	uint32_t													seek_target_;
 
 	tbb::atomic<bool>											is_running_;
 	boost::mutex												mutex_;
@@ -132,16 +132,16 @@ struct input::impl : boost::noncopyable
 		, format_context_(open_input(filename))		
 		, default_stream_index_(av_find_default_stream_index(format_context_.get()))
 		, filename_(filename)
-		, frame_number_(0)
+		, eof_(false)
 		, fps_(read_fps(*format_context_, 0.0))
+		, frame_number_(0)
+		, seek_target_(start_)
 		, video_stream_(av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0))
 		, audio_stream_(av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_AUDIO, -1, -1, 0, 0))
 	{		
 		start_			= start;
 		length_			= length;
 		loop_			= loop;
-		eof_			= false;
-		seek_target_	= start_;
 		is_running_		= true;
 		thread_			= boost::thread([this]{run();});
 										
@@ -233,9 +233,11 @@ private:
 
 	void tick()
 	{
-		auto target = seek_target_.fetch_and_store(std::numeric_limits<uint32_t>::max());
-		if(target != std::numeric_limits<uint32_t>::max())				
-			internal_seek(target);
+		if(seek_target_ != std::numeric_limits<uint32_t>::max())		
+		{
+			internal_seek(seek_target_);
+			seek_target_ = std::numeric_limits<uint32_t>::max();
+		}
 
 		auto packet = create_packet();
 		
