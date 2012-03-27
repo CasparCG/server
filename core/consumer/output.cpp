@@ -163,10 +163,7 @@ public:
 				sync_timer_.tick(1.0/format_desc_.fps);
 				
 			if(input_frame.size() != format_desc_.size)
-			{
-				sync_timer_.tick(1.0/format_desc_.fps);
 				return;
-			}
 					
 			auto minmax = minmax_buffer_depth();
 
@@ -178,8 +175,8 @@ public:
 
 			for(auto it = ports_.begin(); it != ports_.end();)
 			{
-				auto& port		= it->second;
-				auto& frame		= frames_.at(port.buffer_depth()-minmax.first);
+				auto& port	= it->second;
+				auto& frame	= frames_.at(port.buffer_depth()-minmax.first);
 					
 				try
 				{
