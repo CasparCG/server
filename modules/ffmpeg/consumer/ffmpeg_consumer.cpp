@@ -41,6 +41,7 @@
 #include <common/memory.h>
 #include <common/param.h>
 #include <common/utf.h>
+#include <common/assert.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/timer.hpp>
@@ -615,6 +616,8 @@ private:
 				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Cannot initialize the conversion context"));
 		}
 
+		// #in_frame
+
 		std::shared_ptr<AVFrame> in_frame(avcodec_alloc_frame(), av_free);
 
 		avpicture_fill(reinterpret_cast<AVPicture*>(in_frame.get()), 
@@ -622,19 +625,23 @@ private:
 					   PIX_FMT_BGRA, 
 					   format_desc_.width,
 					   format_desc_.height - output_format_.croptop  - output_format_.cropbot);
+		// crop-top
 
 		for(int n = 0; n < 4; ++n)		
 			in_frame->data[n] += in_frame->linesize[n] * output_format_.croptop;		
-					
-		picture_buffer_.resize(avpicture_get_size(c->pix_fmt, c->width, c->height));
+		
+		// #out_frame
 
 		std::shared_ptr<AVFrame> out_frame(avcodec_alloc_frame(), av_free);
 		
-		avpicture_fill(reinterpret_cast<AVPicture*>(out_frame.get()),
-					   picture_buffer_.data(), 
-					   c->pix_fmt, 
-					   c->width, 
-					   c->height);
+		av_image_fill_linesizes(out_frame->linesize, c->pix_fmt, c->width);
+		for(int n = 0; n < 4; ++n)
+			out_frame->linesize[n] += 32 - (out_frame->linesize[n] % 32); // align
+
+		picture_buffer_.resize(av_image_fill_pointers(out_frame->data, c->pix_fmt, c->height, nullptr, out_frame->linesize));
+		av_image_fill_pointers(out_frame->data, c->pix_fmt, c->height, picture_buffer_.data(), out_frame->linesize);
+		
+		// #scale
 
 		sws_scale(sws_.get(), 
 				  in_frame->data, 
