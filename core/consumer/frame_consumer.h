@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include "../monitor/monitor.h"
+
 #include <common/memory.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
@@ -32,7 +34,7 @@
 namespace caspar { namespace core {
 	
 // Interface
-class frame_consumer
+class frame_consumer : public monitor::observable
 {
 	frame_consumer(const frame_consumer&);
 	frame_consumer& operator=(const frame_consumer&);
@@ -51,6 +53,11 @@ public:
 
 	virtual bool							send(class const_frame frame) = 0;
 	virtual void							initialize(const struct video_format_desc& format_desc, int channel_index) = 0;
+	
+	// monitor::observable
+
+	virtual void subscribe(const monitor::observable::observer_ptr& o) = 0;
+	virtual void unsubscribe(const monitor::observable::observer_ptr& o) = 0;
 
 	// Properties
 
