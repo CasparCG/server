@@ -163,8 +163,11 @@ public:
 				sync_timer_.tick(1.0/format_desc_.fps);
 				
 			if(input_frame.size() != format_desc_.size)
+			{
+				CASPAR_LOG(debug) << print() << L" Invalid input frame dimension.";
 				return;
-					
+			}
+
 			auto minmax = minmax_buffer_depth();
 
 			frames_.set_capacity(std::max(2, minmax.second - minmax.first) + 1); // std::max(2, x) since we want to guarantee some pipeline depth for asycnhronous mixer read-back.
