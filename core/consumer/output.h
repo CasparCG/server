@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include "../monitor/monitor.h"
+
 #include <common/forward.h>
 #include <common/future_fwd.h>
 #include <common/memory.h>
@@ -32,7 +34,7 @@ FORWARD2(caspar, diagnostics, class graph);
 
 namespace caspar { namespace core {
 	
-class output sealed
+class output sealed : public monitor::observable
 {
 	output(const output&);
 	output& operator=(const output&);
@@ -53,6 +55,11 @@ public:
 	void remove(const spl::shared_ptr<class frame_consumer>& consumer);
 	void remove(int index);
 	
+	// monitor::observable
+
+	void subscribe(const monitor::observable::observer_ptr& o) override;
+	void unsubscribe(const monitor::observable::observer_ptr& o) override;
+
 	// Properties
 
 	boost::unique_future<boost::property_tree::wptree> info() const;

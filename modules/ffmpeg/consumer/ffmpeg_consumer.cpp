@@ -236,29 +236,29 @@ typedef std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>	byte_vector;
 
 struct ffmpeg_consumer : boost::noncopyable
 {		
-	const std::string						filename_;
-		
-	const std::shared_ptr<AVFormatContext>	oc_;
-	const core::video_format_desc			format_desc_;
-	
-	const spl::shared_ptr<diagnostics::graph>		graph_;
-	
-	tbb::spin_mutex							exception_mutex_;
-	std::exception_ptr						exception_;
-	
-	std::shared_ptr<AVStream>				audio_st_;
-	std::shared_ptr<AVStream>				video_st_;
-	
-	byte_vector								picture_buffer_;
-	byte_vector								audio_buffer_;
-	std::shared_ptr<SwrContext>				swr_;
-	std::shared_ptr<SwsContext>				sws_;
+	const spl::shared_ptr<diagnostics::graph>	graph_;
+	const std::string							filename_;		
+	const std::shared_ptr<AVFormatContext>		oc_;
+	const core::video_format_desc				format_desc_;	
 
-	int64_t									frame_number_;
-
-	output_format							output_format_;
+	monitor::basic_subject						event_subject_;
 	
-	executor								executor_;
+	tbb::spin_mutex								exception_mutex_;
+	std::exception_ptr							exception_;
+	
+	std::shared_ptr<AVStream>					audio_st_;
+	std::shared_ptr<AVStream>					video_st_;
+	
+	byte_vector									picture_buffer_;
+	byte_vector									audio_buffer_;
+	std::shared_ptr<SwrContext>					swr_;
+	std::shared_ptr<SwsContext>					sws_;
+
+	int64_t										frame_number_;
+
+	output_format								output_format_;
+	
+	executor									executor_;
 public:
 	ffmpeg_consumer(const std::string& filename, const core::video_format_desc& format_desc, std::vector<option> options)
 		: filename_(filename)
@@ -318,12 +318,43 @@ public:
 
 		CASPAR_LOG(info) << print() << L" Successfully Uninitialized.";	
 	}
+	
+	// frame_consumer
+
+	bool send(core::const_frame& frame)
+	{
+		auto exception = lock(exception_mutex_, [&]
+		{
+			return exception_;
+		});
+
+		if(exception != nullptr)
+			std::rethrow_exception(exception);
 			
+		executor_.begin_invoke([=]
+		{		
+			encode(frame);
+		});
+		
+		return true;
+	}
+
 	std::wstring print() const
 	{
 		return L"ffmpeg[" + u16(filename_) + L"]";
 	}
+	
+	void subscribe(const monitor::observable::observer_ptr& o)
+	{
+		event_subject_.subscribe(o);
+	}
 
+	void unsubscribe(const monitor::observable::observer_ptr& o)
+	{
+		event_subject_.unsubscribe(o);
+	}		
+
+private:
 	std::shared_ptr<AVStream> add_video_stream(std::vector<option>& options)
 	{ 
 		if(output_format_.vcodec == CODEC_ID_NONE)
@@ -467,6 +498,9 @@ public:
 		av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
 		av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper;
 		av_frame->pts				= frame_number_++;
+
+		event_subject_ << monitor::event("frame")	% static_cast<int64_t>(frame_number_)
+													% static_cast<int64_t>(std::numeric_limits<int64_t>::max());
 
 		AVPacket pkt;
 		av_init_packet(&pkt);
@@ -648,24 +682,6 @@ public:
 			});
 		}
 	}
-
-	bool send(core::const_frame& frame)
-	{
-		auto exception = lock(exception_mutex_, [&]
-		{
-			return exception_;
-		});
-
-		if(exception != nullptr)
-			std::rethrow_exception(exception);
-			
-		executor_.begin_invoke([=]
-		{		
-			encode(frame);
-		});
-		
-		return true;
-	}
 };
 
 struct ffmpeg_consumer_proxy : public core::frame_consumer
@@ -728,6 +744,16 @@ public:
 	{
 		return 200;
 	}
+
+	void subscribe(const monitor::observable::observer_ptr& o) override
+	{
+		consumer_->subscribe(o);
+	}
+
+	void unsubscribe(const monitor::observable::observer_ptr& o) override
+	{
+		consumer_->unsubscribe(o);
+	}		
 };	
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
 {

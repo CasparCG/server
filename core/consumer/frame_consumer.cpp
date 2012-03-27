@@ -76,14 +76,16 @@ public:
 		}).detach(); 
 	}
 	
-	bool send(const_frame frame) override													{return consumer_->send(std::move(frame));}
+	bool send(const_frame frame) override																{return consumer_->send(std::move(frame));}
 	virtual void initialize(const struct video_format_desc& format_desc, int channel_index)	override	{return consumer_->initialize(format_desc, channel_index);}
-	std::wstring print() const override															{return consumer_->print();}	
-	std::wstring name() const override															{return consumer_->name();}
-	boost::property_tree::wptree info() const override 											{return consumer_->info();}
-	bool has_synchronization_clock() const override												{return consumer_->has_synchronization_clock();}
-	int buffer_depth() const override															{return consumer_->buffer_depth();}
-	int index() const override																	{return consumer_->index();}
+	std::wstring print() const override																	{return consumer_->print();}	
+	std::wstring name() const override																	{return consumer_->name();}
+	boost::property_tree::wptree info() const override 													{return consumer_->info();}
+	bool has_synchronization_clock() const override														{return consumer_->has_synchronization_clock();}
+	int buffer_depth() const override																	{return consumer_->buffer_depth();}
+	int index() const override																			{return consumer_->index();}
+	void subscribe(const monitor::observable::observer_ptr& o) override									{consumer_->subscribe(o);}
+	void unsubscribe(const monitor::observable::observer_ptr& o) override								{consumer_->unsubscribe(o);}			
 };
 
 class print_consumer_proxy : public frame_consumer
@@ -112,6 +114,8 @@ public:
 	bool has_synchronization_clock() const override												{return consumer_->has_synchronization_clock();}
 	int buffer_depth() const override															{return consumer_->buffer_depth();}
 	int index() const override																	{return consumer_->index();}
+	void subscribe(const monitor::observable::observer_ptr& o) override									{consumer_->subscribe(o);}
+	void unsubscribe(const monitor::observable::observer_ptr& o) override								{consumer_->unsubscribe(o);}	
 };
 
 class recover_consumer_proxy : public frame_consumer
@@ -155,12 +159,14 @@ public:
 		return consumer_->initialize(format_desc, channel_index);
 	}
 
-	std::wstring print() const override					{return consumer_->print();}
-	std::wstring name() const override					{return consumer_->name();}
-	boost::property_tree::wptree info() const override 	{return consumer_->info();}
-	bool has_synchronization_clock() const override		{return consumer_->has_synchronization_clock();}
-	int buffer_depth() const override					{return consumer_->buffer_depth();}
-	int index() const override							{return consumer_->index();}
+	std::wstring print() const override										{return consumer_->print();}
+	std::wstring name() const override										{return consumer_->name();}
+	boost::property_tree::wptree info() const override 						{return consumer_->info();}
+	bool has_synchronization_clock() const override							{return consumer_->has_synchronization_clock();}
+	int buffer_depth() const override										{return consumer_->buffer_depth();}
+	int index() const override												{return consumer_->index();}
+	void subscribe(const monitor::observable::observer_ptr& o) override		{consumer_->subscribe(o);}
+	void unsubscribe(const monitor::observable::observer_ptr& o) override	{consumer_->unsubscribe(o);}	
 };
 
 // This class is used to guarantee that audio cadence is correct. This is important for NTSC audio.
@@ -203,12 +209,14 @@ public:
 		return result;
 	}
 	
-	std::wstring print() const override					{return consumer_->print();}
-	std::wstring name() const override					{return consumer_->name();}
-	boost::property_tree::wptree info() const override 	{return consumer_->info();}
-	bool has_synchronization_clock() const override		{return consumer_->has_synchronization_clock();}
-	int buffer_depth() const override					{return consumer_->buffer_depth();}
-	int index() const override							{return consumer_->index();}
+	std::wstring print() const override										{return consumer_->print();}
+	std::wstring name() const override										{return consumer_->name();}
+	boost::property_tree::wptree info() const override 						{return consumer_->info();}
+	bool has_synchronization_clock() const override							{return consumer_->has_synchronization_clock();}
+	int buffer_depth() const override										{return consumer_->buffer_depth();}
+	int index() const override												{return consumer_->index();}
+	void subscribe(const monitor::observable::observer_ptr& o) override		{consumer_->subscribe(o);}
+	void unsubscribe(const monitor::observable::observer_ptr& o) override	{consumer_->unsubscribe(o);}	
 };
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
@@ -252,6 +260,8 @@ const spl::shared_ptr<frame_consumer>& frame_consumer::empty()
 		bool has_synchronization_clock() const override {return false;}
 		int buffer_depth() const override {return 0;};
 		virtual int index() const{return -1;}
+		void subscribe(const monitor::observable::observer_ptr& o) override{}
+		void unsubscribe(const monitor::observable::observer_ptr& o) override{}
 		boost::property_tree::wptree info() const override
 		{
 			boost::property_tree::wptree info;
