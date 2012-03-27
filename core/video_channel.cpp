@@ -78,7 +78,8 @@ public:
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
-
+		
+		output_.subscribe(event_subject_);
 		stage_.subscribe(event_subject_);
 
 		executor_.begin_invoke([=]{tick();});
