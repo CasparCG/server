@@ -52,6 +52,8 @@
 
 #include <tbb/spin_mutex.h>
 
+#include <numeric>
+
 #if defined(_MSC_VER)
 #pragma warning (push)
 #pragma warning (disable : 4244)
@@ -138,6 +140,9 @@ struct output_format
 		, croptop(0)
 		, cropbot(0)
 	{
+		if(boost::iequals(boost::filesystem::path(filename).extension().string(), ".dv"))
+			set_opt("f", "dv");
+
 		boost::range::remove_erase_if(options, [&](const option& o)
 		{
 			return set_opt(o.name, o.value);
@@ -173,12 +178,25 @@ struct output_format
 		//	if (name.find("-dv") != std::string::npos) 
 		//	{
 		//		set_opt("f", "dv");
+		//		if(norm == PAL)
+		//		{
+		//			set_opt("s", "720x576");
+		//		}
+		//		else
+		//		{
+		//			set_opt("s", "720x480");
+		//			if(height == 486)
+		//			{
+		//				set_opt("croptop", "2");
+		//				set_opt("cropbot", "4");
+		//			}
+		//		}
 		//		set_opt("s", norm == PAL ? "720x576" : "720x480");
-		//		//set_opt("pix_fmt", name.find("-dv50") != std::string::npos ? "yuv422p" : norm == PAL ? "yuv420p" : "yuv411p");
-		//		//set_opt("ar", "48000");
-		//		//set_opt("ac", "2");
 		//	} 
+
+		//	return true;
 		//}
+		//else 
 		if(name == "f")
 		{
 			format = av_guess_format(value.c_str(), nullptr, nullptr);
@@ -188,7 +206,7 @@ struct output_format
 
 			return true;
 		}
-		else if(name == "vcodec")
+		else if(name == "vcodec" || name == "v:codec")
 		{
 			auto c = avcodec_find_encoder_by_name(value.c_str());
 			if(c == nullptr)
@@ -198,7 +216,7 @@ struct output_format
 			return true;
 
 		}
-		else if(name == "acodec")
+		else if(name == "acodec" || name == "a:codec")
 		{
 			auto c = avcodec_find_encoder_by_name(value.c_str());
 			if(c == nullptr)
@@ -384,7 +402,7 @@ private:
 
 		if(c->codec_id == CODEC_ID_PRORES)
 		{			
-			c->bit_rate	= c->width < 1280 ? 63*1000000 : 220*1000000;
+			c->bit_rate	= output_format_.width < 1280 ? 63*1000000 : 220*1000000;
 			c->pix_fmt	= PIX_FMT_YUV422P10;
 		}
 		else if(c->codec_id == CODEC_ID_DNXHD)
@@ -400,7 +418,12 @@ private:
 			c->width = c->height == 1280 ? 960  : c->width;
 			
 			if(format_desc_.format == core::video_format::ntsc)
+			{
 				c->pix_fmt = PIX_FMT_YUV411P;
+				output_format_.croptop = 2;
+				output_format_.cropbot = 4;
+				c->height			   = output_format_.height - output_format_.croptop - output_format_.cropbot;
+			}
 			else if(format_desc_.format == core::video_format::pal)
 				c->pix_fmt = PIX_FMT_YUV420P;
 			else // dv50
@@ -757,30 +780,31 @@ public:
 };	
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
 {
-	if(params.size() < 1 || params[0] != L"FILE")
+	auto str = std::accumulate(params.begin(), params.end(), std::wstring(), [](const std::wstring& lhs, const std::wstring& rhs) {return lhs + L" " + rhs;});
+	
+	boost::wregex path_exp(L"(FILE)? (?<PATH>.+\\..+).*", boost::regex::icase);
+
+	boost::wsmatch path;
+	if(!boost::regex_match(str, path, path_exp))
 		return core::frame_consumer::empty();
 	
-	auto filename	= (params.size() > 1 ? params[1] : L"");
-			
-	std::vector<option> options;
+	boost::wregex opt_exp(L"-((?<NAME>[^\\s]+)\\s+(?<VALUE>[^\\s]+))");	
 	
-	if(params.size() >= 3)
+	std::vector<option> options;
+	for(boost::wsregex_iterator it(str.begin(), str.end(), opt_exp); it != boost::wsregex_iterator(); ++it)
 	{
-		for(auto opt_it = params.begin()+2; opt_it != params.end();)
-		{
-			auto name  = u8(boost::trim_copy(boost::to_lower_copy(*opt_it++))).substr(1);
-			auto value = u8(boost::trim_copy(boost::to_lower_copy(*opt_it++)));
-				
-			if(value == "h264")
-				value = "libx264";
-			else if(value == "dvcpro")
-				value = "dvvideo";
-
-			options.push_back(option(name, value));
-		}
-	}
+		auto name  = u8(boost::trim_copy(boost::to_lower_copy((*it)["NAME"].str())));
+		auto value = u8(boost::trim_copy(boost::to_lower_copy((*it)["VALUE"].str())));
 		
-	return spl::make_shared<ffmpeg_consumer_proxy>(env::media_folder() + filename, options);
+		if(value == "h264")
+			value = "libx264";
+		else if(value == "dvcpro")
+			value = "dvvideo";
+
+		options.push_back(option(name, value));
+	}
+				
+	return spl::make_shared<ffmpeg_consumer_proxy>(env::media_folder() + path["PATH"].str(), options);
 }
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree)
