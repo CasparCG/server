@@ -103,6 +103,9 @@
     <ClInclude Include="frame\frame.h">
       <Filter>source\frame</Filter>
     </ClInclude>
+    <ClInclude Include="consumer\port.h">
+      <Filter>source\consumer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
@@ -156,6 +159,9 @@
     </ClCompile>
     <ClCompile Include="frame\frame.cpp">
       <Filter>source\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="consumer\port.cpp">
+      <Filter>source\consumer</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

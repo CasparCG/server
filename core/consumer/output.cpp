@@ -28,6 +28,7 @@
 #include "output.h"
 
 #include "frame_consumer.h"
+#include "port.h"
 
 #include "../video_format.h"
 #include "../frame/frame.h"
@@ -48,83 +49,6 @@
 #include <boost/timer.hpp>
 
 namespace caspar { namespace core {
-	
-class port : public monitor::observable
-{
-	port(const port&);
-	port& operator=(const port&);
-
-	monitor::basic_subject				event_subject_;
-	std::shared_ptr<frame_consumer>		consumer_;
-	int									index_;
-	int									channel_index_;
-public:
-	port(int index, int channel_index, spl::shared_ptr<frame_consumer> consumer)
-		: event_subject_(monitor::path("port") % index)
-		, consumer_(std::move(consumer))
-		, index_(index)
-		, channel_index_(channel_index)
-	{
-		consumer_->subscribe(event_subject_);
-	}
-
-	port(port&& other)
-		: event_subject_(std::move(other.event_subject_))
-		, consumer_(std::move(other.consumer_))
-		, index_(other.index_)
-		, channel_index_(other.channel_index_)
-	{
-	}
-
-	port& operator=(port&& other)
-	{
-		event_subject_	= std::move(other.event_subject_);
-		consumer_		= std::move(other.consumer_);
-		index_			= std::move(other.index_);
-		channel_index_	= std::move(other.channel_index_);
-	}
-
-	void video_format_desc(const struct video_format_desc& format_desc)
-	{
-		consumer_->initialize(format_desc, channel_index_);
-	}
-		
-	bool send(class const_frame frame)
-	{
-		event_subject_ << monitor::event("type") % consumer_->name();
-		return consumer_->send(frame);
-	}
-	
-	int index() const
-	{
-		return index_;
-	}
-
-	int buffer_depth() const
-	{
-		return consumer_->buffer_depth();
-	}
-
-	bool has_synchronization_clock() const
-	{
-		return consumer_->has_synchronization_clock();
-	}
-
-	boost::property_tree::wptree info() const
-	{
-		return consumer_->info();
-	}
-
-	void subscribe(const monitor::observable::observer_ptr& o) override
-	{
-		event_subject_.subscribe(o);
-	}
-
-	void unsubscribe(const monitor::observable::observer_ptr& o) override
-	{
-		event_subject_.unsubscribe(o);
-	}	
-};
 
 struct output::impl
 {		
@@ -285,10 +209,10 @@ public:
 		return std::move(executor_.begin_invoke([&]() -> boost::property_tree::wptree
 		{			
 			boost::property_tree::wptree info;
-			BOOST_FOREACH(auto& port, ports_ | boost::adaptors::map_values)
+			BOOST_FOREACH(auto& port, ports_)
 			{
-				info.add_child(L"consumers.consumer", port.info())
-					.add(L"index", port.index()); 
+				info.add_child(L"consumers.consumer", port.second.info())
+					.add(L"index", port.first); 
 			}
 			return info;
 		}, task_priority::high_priority));
