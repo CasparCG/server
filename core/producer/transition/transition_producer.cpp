@@ -68,9 +68,12 @@ public:
 
 	draw_frame receive_impl() override
 	{
-		if(current_frame_ >= info_.duration)
+		if(++current_frame_ >= info_.duration)
+		{
+			source_producer_ = core::frame_producer::empty();
 			return dest_producer_->receive();		
-		
+		}
+
 		auto dest = draw_frame::empty();
 		auto source = draw_frame::empty();
 
@@ -87,12 +90,7 @@ public:
 			if(source == core::draw_frame::late())
 				source = source_producer_->last_frame();
 		});			
-				
-		current_frame_ += 1;
-
-		if(current_frame_ >= info_.duration)
-			source_producer_ = core::frame_producer::empty();
-		
+						
 		event_subject_	<< monitor::event("transition/frame") % current_frame_ % info_.duration
 						<< monitor::event("transition/type") % [&]() -> std::string
 																{
