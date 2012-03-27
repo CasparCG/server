@@ -327,8 +327,7 @@ public:
 			decode_next_frame();
 			if(!muxer_.empty())
 			{
-				last_frame_ = std::move(muxer_.front());
-				muxer_.pop();
+				last_frame_ = muxer_.front();
 				seek_target_.reset();
 			}
 		}
