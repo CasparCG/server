@@ -149,10 +149,10 @@ struct output_format
 			return set_opt(o.name, o.value);
 		});
 		
-		if(vcodec == CODEC_ID_NONE)
+		if(vcodec == CODEC_ID_NONE && format)
 			vcodec = format->video_codec;
 
-		if(acodec == CODEC_ID_NONE)
+		if(acodec == CODEC_ID_NONE && format)
 			acodec = format->audio_codec;
 		
 		if(vcodec == CODEC_ID_NONE)
@@ -789,7 +789,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 {
 	auto str = std::accumulate(params.begin(), params.end(), std::wstring(), [](const std::wstring& lhs, const std::wstring& rhs) {return lhs + L" " + rhs;});
 	
-	boost::wregex path_exp(L"(FILE)? (?<PATH>.+\\..+).*", boost::regex::icase);
+	boost::wregex path_exp(L"\\s*FILE(\\s(?<PATH>.+\\.[^\\s]+))?.*", boost::regex::icase);
 
 	boost::wsmatch path;
 	if(!boost::regex_match(str, path, path_exp))
