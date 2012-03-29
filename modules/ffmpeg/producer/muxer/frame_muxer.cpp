@@ -89,7 +89,7 @@ struct frame_muxer::impl : boost::noncopyable
 		, audio_cadence_(format_desc_.audio_cadence)
 		, frame_factory_(frame_factory)
 		, filter_str_(filter_str)
-		, force_deinterlacing_(env::properties().get(L"configuration.force-deinterlacing", true))
+		, force_deinterlacing_(env::properties().get(L"configuration.force-deinterlace", true))
 	{		
 		// Note: Uses 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
 		// This cadence fills the audio mixer most optimally.
