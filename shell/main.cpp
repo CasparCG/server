@@ -66,6 +66,8 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/foreach.hpp>
 
+#include <signal.h>
+
 using namespace caspar;
 	
 // NOTE: This is needed in order to make CComObject work since this is not a real ATL project.
@@ -267,9 +269,15 @@ void run()
 	CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
 }
 
+void on_abort(int)
+{
+	CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("abort called"));
+}
+
 int main(int argc, wchar_t* argv[])
 {	
 	SetUnhandledExceptionFilter(UserUnhandledExceptionFilter);
+	signal(SIGABRT, on_abort);
 
 	std::wcout << L"Type \"q\" to close application." << std::endl;
 	
