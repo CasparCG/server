@@ -77,8 +77,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		: render_executor_(executor)
 		, alloc_executor_(L"OpenGL allocation context.")
 	{
-		render_executor_.set_capacity(256);
-		alloc_executor_.set_capacity(512);
+		render_executor_.set_capacity(128);
+		alloc_executor_.set_capacity(256);
 
 		CASPAR_LOG(info) << L"Initializing OpenGL Device.";
 		
