@@ -243,8 +243,12 @@ private:
 		});
 
 		execution_queue_.push(prio_func);
-		semaphore_.push(0);
-							
+
+		if(!semaphore_.try_push(0))
+		{
+			CASPAR_LOG(debug) << L"[executor] Overflow. Blocking caller.";
+			semaphore_.push(0);
+		}					
 		return std::move(future);		
 	}
 
