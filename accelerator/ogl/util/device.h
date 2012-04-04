@@ -49,8 +49,10 @@ public:
 			
 	spl::shared_ptr<texture> create_texture(int width, int height, int stride);
 	array<std::uint8_t>		 create_array(int size);
-
+		
+	// NOTE: Since the returned texture is cached it SHOULD NOT be modified.
 	boost::unique_future<spl::shared_ptr<texture>>	copy_async(const array<const std::uint8_t>& source, int width, int height, int stride);
+
 	boost::unique_future<spl::shared_ptr<texture>>	copy_async(const array<std::uint8_t>& source, int width, int height, int stride);
 	boost::unique_future<array<const std::uint8_t>>	copy_async(const spl::shared_ptr<texture>& source);
 			
