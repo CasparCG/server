@@ -227,7 +227,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		return buf;
 	}
 
-	// TODO: Since the returned texture is cached it CANNOT be modified.
+	// TODO: Since the returned texture is cached it SHOULD NOT be modified.
 	boost::unique_future<spl::shared_ptr<texture>> copy_async(const array<const std::uint8_t>& source, int width, int height, int stride)
 	{
 		std::shared_ptr<buffer> buf = copy_to_buf(source);
