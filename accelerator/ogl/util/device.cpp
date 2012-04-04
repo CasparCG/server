@@ -190,7 +190,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 			buf = alloc_executor_.invoke([&]
 			{
 				return spl::make_shared<buffer>(size, usage);
-			});
+			}, task_priority::high_priority);
 		}
 		
 		auto self = shared_from_this(); // buffers can leave the device context, take a hold on life-time.
