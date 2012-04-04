@@ -165,16 +165,16 @@ struct device::impl : public std::enable_shared_from_this<impl>
 					
 		auto pool = &device_pools_[stride-1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
 		
-		std::shared_ptr<texture> buffer;
-		if(!pool->try_pop(buffer))		
-			buffer = spl::make_shared<texture>(width, height, stride);
+		std::shared_ptr<texture> tex;
+		if(!pool->try_pop(tex))		
+			tex = spl::make_shared<texture>(width, height, stride);
 	
 		if(clear)
-			buffer->clear();
+			tex->clear();
 
-		return spl::shared_ptr<texture>(buffer.get(), [buffer, pool](texture*) mutable
+		return spl::shared_ptr<texture>(tex.get(), [tex, pool](texture*) mutable
 		{		
-			pool->push(buffer);	
+			pool->push(tex);	
 		});
 	}
 		
