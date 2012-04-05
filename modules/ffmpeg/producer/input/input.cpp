@@ -79,7 +79,7 @@ public:
 	
 	void push(const std::shared_ptr<AVPacket>& packet)
 	{
-		if(packet->stream_index != index_ && packet != flush_packet() && packet != null_packet())
+		if(packet && packet->data && packet->stream_index != index_)
 			return;
 
 		packets_.push(packet);
@@ -222,8 +222,8 @@ private:
 		
 		THROW_ON_ERROR2(avformat_seek_file(format_context_.get(), default_stream_index_, std::numeric_limits<int64_t>::min(), fixed_target, fixed_target, 0), print());		
 		
-		video_stream_.push(flush_packet());
-		audio_stream_.push(flush_packet());
+		video_stream_.push(nullptr);
+		audio_stream_.push(nullptr);
 	}
 		
 	bool full() const
@@ -245,8 +245,12 @@ private:
 		
 		if(is_eof(ret))														     
 		{
-			video_stream_.push(null_packet());
-			audio_stream_.push(null_packet());
+			std::shared_ptr<AVPacket> eof_packet(new AVPacket());
+			memset(eof_packet.get(), 0, sizeof(AVPacket));
+			av_init_packet(eof_packet.get());
+
+			video_stream_.push(eof_packet);
+			audio_stream_.push(eof_packet);
 
 			if(loop_)
 			{
@@ -293,7 +297,6 @@ private:
 
 		while(is_running_)
 		{
-
 			try
 			{
 				boost::this_thread::sleep(boost::posix_time::milliseconds(1));

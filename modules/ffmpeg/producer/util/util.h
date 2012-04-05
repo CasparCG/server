@@ -43,13 +43,8 @@ FORWARD2(caspar, core, class frame_factory);
 
 namespace caspar { namespace ffmpeg {
 		
-std::shared_ptr<core::audio_buffer> flush_audio();
 std::shared_ptr<core::audio_buffer> empty_audio();
-std::shared_ptr<AVFrame>			flush_video();
-std::shared_ptr<AVFrame>			empty_video();
-
-spl::shared_ptr<AVPacket>			flush_packet();	
-spl::shared_ptr<AVPacket>			null_packet();			
+std::shared_ptr<AVFrame>			empty_video();	
 
 // Utils
 
