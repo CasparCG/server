@@ -63,22 +63,10 @@ extern "C"
 
 namespace caspar { namespace ffmpeg {
 		
-std::shared_ptr<core::audio_buffer> flush_audio()
-{
-	static std::shared_ptr<core::audio_buffer> audio(new core::audio_buffer());
-	return audio;
-}
-
 std::shared_ptr<core::audio_buffer> empty_audio()
 {
 	static std::shared_ptr<core::audio_buffer> audio(new core::audio_buffer());
 	return audio;
-}
-
-std::shared_ptr<AVFrame>			flush_video()
-{
-	static std::shared_ptr<AVFrame> video(avcodec_alloc_frame(), av_free);
-	return video;
 }
 
 std::shared_ptr<AVFrame>			empty_video()
@@ -86,19 +74,6 @@ std::shared_ptr<AVFrame>			empty_video()
 	static std::shared_ptr<AVFrame> video(avcodec_alloc_frame(), av_free);
 	return video;
 }
-
-spl::shared_ptr<AVPacket> flush_packet()
-{
-	static spl::shared_ptr<AVPacket> pkt(new AVPacket());
-	return pkt;
-}
-
-spl::shared_ptr<AVPacket> null_packet()
-{
-	static spl::shared_ptr<AVPacket> pkt(new AVPacket());
-	return pkt;
-}
-
 
 core::field_mode get_mode(const AVFrame& frame)
 {
