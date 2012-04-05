@@ -75,7 +75,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 				
 	impl(executor& executor) 
 		: render_executor_(executor)
-		, alloc_executor_(L"OpenGL allocation context.")
+		, alloc_executor_(L"OpenGL allocation context")
 	{
 		render_executor_.set_capacity(128);
 		alloc_executor_.set_capacity(256);
@@ -117,7 +117,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		{		
 			device_->SetActive(true);
 		});
-		
+				
 		CASPAR_LOG(info) << L"Successfully initialized OpenGL " << version();
 	}
 
@@ -277,7 +277,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 };
 
 device::device() 
-	: executor_(L"OpenGL Rendering Context.")
+	: executor_(L"OpenGL Rendering Context")
 	, impl_(new impl(executor_)){}
 device::~device(){}
 spl::shared_ptr<texture>							device::create_texture(int width, int height, int stride){return impl_->create_texture(width, height, stride, true);}

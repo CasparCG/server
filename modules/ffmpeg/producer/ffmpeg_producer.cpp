@@ -149,6 +149,8 @@ public:
 			CASPAR_LOG(warning) << print() << " Failed to open audio-stream. Running without audio.";		
 		}	
 		
+		decode_next_frame();
+
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}
 
