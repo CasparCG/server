@@ -245,11 +245,8 @@ private:
 		
 		if(is_eof(ret))														     
 		{
-			for(int n = 0; n < 3; ++n)
-			{
-				video_stream_.push(null_packet());
-				audio_stream_.push(null_packet());
-			}
+			video_stream_.push(null_packet());
+			audio_stream_.push(null_packet());
 
 			if(loop_)
 			{

@@ -44,7 +44,7 @@ public:
 	video_decoder(video_decoder&& other);
 	video_decoder& operator=(video_decoder&& other);
 
-	std::shared_ptr<AVFrame> operator()();
+	std::vector<std::shared_ptr<AVFrame>> operator()();
 	
 	int	 width() const;
 	int	 height() const;
