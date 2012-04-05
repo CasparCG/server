@@ -192,6 +192,11 @@ public:
 	}
 		
 private:	
+
+	std::wstring print() const
+	{
+		return L"executor[" + name_ + L"]";
+	}
 	
 	template<typename Func>
 	auto internal_begin_invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> boost::unique_future<decltype(func())> // noexcept
@@ -246,7 +251,7 @@ private:
 
 		if(!semaphore_.try_push(0))
 		{
-			CASPAR_LOG(debug) << L"[executor] Overflow. Blocking caller.";
+			CASPAR_LOG(debug) << print() << L" Overflow. Blocking caller.";
 			semaphore_.push(0);
 		}					
 		return std::move(future);		
