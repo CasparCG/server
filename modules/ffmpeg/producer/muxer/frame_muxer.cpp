@@ -117,6 +117,12 @@ struct frame_muxer::impl : boost::noncopyable
 		merge();
 	}
 
+	void push(const std::vector<std::shared_ptr<AVFrame>> video_frames)
+	{
+		BOOST_FOREACH(auto& frame, video_frames)
+			push(frame);
+	}
+
 	void push(const std::shared_ptr<core::audio_buffer>& audio)
 	{
 		if(audio == empty_audio())		
@@ -329,6 +335,7 @@ struct frame_muxer::impl : boost::noncopyable
 frame_muxer::frame_muxer(double in_fps, const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::wstring& filter)
 	: impl_(new impl(in_fps, frame_factory, format_desc, filter)){}
 void frame_muxer::push(const std::shared_ptr<AVFrame>& video_frame){impl_->push(video_frame);}
+void frame_muxer::push(const std::vector<std::shared_ptr<AVFrame>>& video_frames){impl_->push(video_frames);}
 void frame_muxer::push(const std::shared_ptr<core::audio_buffer>& audio_samples){return impl_->push(audio_samples);}
 bool frame_muxer::empty() const{return impl_->empty();}
 core::draw_frame frame_muxer::front() const{return impl_->front();}

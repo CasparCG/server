@@ -93,66 +93,87 @@ public:
 	{
 	}
 	
-	std::shared_ptr<AVFrame> poll()
+	std::vector<std::shared_ptr<AVFrame>> poll()
 	{			
+		std::vector<std::shared_ptr<AVFrame>> result;
+
 		if(!codec_context_)
-			return empty_video();
+		{
+			result.push_back(empty_video());
+			return result;
+		}
 
 		std::shared_ptr<AVPacket> packet;
 		if(!input_->try_pop_video(packet))
-			return nullptr;
+			return result;
 
 		if(packet == flush_packet())
 		{
 			avcodec_flush_buffers(codec_context_.get());
-			return nullptr;
+			return result;
 		}
-		else if(packet == null_packet())
+		
+		if(packet == null_packet())
 		{
 			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
 			{
 				AVPacket pkt;                
 				av_init_packet(&pkt);
-                pkt.data = nullptr;
-                pkt.size = 0;
-				return decode(pkt);
+				pkt.data = nullptr;
+				pkt.size = 0;
+				
+				std::shared_ptr<AVFrame> frame;
+				while(decode(pkt, frame))
+					result.push_back(frame);	
 			}
-			return nullptr;
+			return result;
+		}
+
+		while(packet->size > 0)
+		{
+			std::shared_ptr<AVFrame> frame;
+			if(decode(*packet, frame))
+				result.push_back(frame);				
 		}
 		
-		return decode(*packet);
+		return result;
 	}
 
-	std::shared_ptr<AVFrame> decode(AVPacket& pkt)
+	bool decode(AVPacket& pkt, std::shared_ptr<AVFrame>& result)
 	{
-		std::shared_ptr<AVFrame> frame(avcodec_alloc_frame(), av_free);
+		result = std::shared_ptr<AVFrame>(avcodec_alloc_frame(), av_free);
 
 		int got_frame = 0;
-		THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), frame.get(), &got_frame, &pkt), "[video_decocer]");
-		
-		// If a decoder consumes less then the whole packet then something is wrong
-		// that might be just harmless padding at the end, or a problem with the
-		// AVParser or demuxer which puted more then one frame in a AVPacket.
+		auto len = THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), result.get(), &got_frame, &pkt), "[video_decocer]");
+				
+		if(len == 0)
+		{
+			pkt.size = 0;
+			return false;
+		}
+
+        pkt.data += len;
+        pkt.size -= len;
 
 		if(got_frame == 0)	
-			return nullptr;
+			return false;
 		
 		auto stream_time_base	 = stream_->time_base;
 		auto packet_frame_number = static_cast<uint32_t>((static_cast<double>(pkt.pts * stream_time_base.num)/stream_time_base.den)*fps_);
 
 		file_frame_number_ = packet_frame_number;
 
-		is_progressive_ = !frame->interlaced_frame;
-
-		if(frame->repeat_pict > 0)
-			CASPAR_LOG(warning) << "[video_decoder] Field repeat_pict not implemented.";
+		is_progressive_ = !result->interlaced_frame;
+		
+		if(result->repeat_pict > 0)
+			CASPAR_LOG(warning) << "[video_decoder] repeat_pict not implemented.";
 				
 		event_subject_  << monitor::event("file/video/width")	% width_
 						<< monitor::event("file/video/height")	% height_
-						<< monitor::event("file/video/field")	% u8(!frame->interlaced_frame ? "progressive" : (frame->top_field_first ? "upper" : "lower"))
+						<< monitor::event("file/video/field")	% u8(!result->interlaced_frame ? "progressive" : (result->top_field_first ? "upper" : "lower"))
 						<< monitor::event("file/video/codec")	% u8(codec_context_->codec->long_name);
 		
-		return frame;
+		return true;
 	}
 	
 	uint32_t nb_frames() const
@@ -170,7 +191,7 @@ video_decoder::video_decoder() : impl_(new impl()){}
 video_decoder::video_decoder(input& in) : impl_(new impl(in)){}
 video_decoder::video_decoder(video_decoder&& other) : impl_(std::move(other.impl_)){}
 video_decoder& video_decoder::operator=(video_decoder&& other){impl_ = std::move(other.impl_); return *this;}
-std::shared_ptr<AVFrame> video_decoder::operator()(){return impl_->poll();}
+std::vector<std::shared_ptr<AVFrame>> video_decoder::operator()(){return impl_->poll();}
 int video_decoder::width() const{return impl_->width_;}
 int video_decoder::height() const{return impl_->height_;}
 uint32_t video_decoder::nb_frames() const{return impl_->nb_frames();}
