@@ -106,43 +106,27 @@ public:
 		std::shared_ptr<AVPacket> packet;
 		if(!input_->try_pop_video(packet))
 			return result;
-
-		if(packet == flush_packet())
-		{
-			avcodec_flush_buffers(codec_context_.get());
-			return result;
-		}
-		
-		if(packet == null_packet())
-		{
-			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
-			{
-				AVPacket pkt = {0};                
-				av_init_packet(&pkt);
 				
-				std::shared_ptr<AVFrame> frame;
-				while(decode(pkt, frame))
-					result.push_back(frame);	
-			}
-			return result;
-		}
-
-		while(packet->size > 0)
+		if(packet)
 		{
-			std::shared_ptr<AVFrame> frame;
-			if(decode(*packet, frame))
-				result.push_back(frame);				
+			if(!packet->data && (codec_context_->codec->capabilities & CODEC_CAP_DELAY))		
+				while(decode(*packet, result));			
+
+			while(packet->size > 0)
+				decode(*packet, result);	
 		}
+		else
+			avcodec_flush_buffers(codec_context_.get());
 		
 		return result;
 	}
 
-	bool decode(AVPacket& pkt, std::shared_ptr<AVFrame>& result)
+	bool decode(AVPacket& pkt, std::vector<std::shared_ptr<AVFrame>>& result)
 	{
-		result = std::shared_ptr<AVFrame>(avcodec_alloc_frame(), av_free);
+		auto frame = std::shared_ptr<AVFrame>(avcodec_alloc_frame(), av_free);
 
 		int got_frame = 0;
-		auto len = THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), result.get(), &got_frame, &pkt), "[video_decocer]");
+		auto len = THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), frame.get(), &got_frame, &pkt), "[video_decocer]");
 				
 		if(len == 0)
 		{
@@ -161,16 +145,18 @@ public:
 
 		file_frame_number_ = packet_frame_number;
 
-		is_progressive_ = !result->interlaced_frame;
+		is_progressive_ = !frame->interlaced_frame;
 		
-		if(result->repeat_pict > 0)
+		if(frame->repeat_pict > 0)
 			CASPAR_LOG(warning) << "[video_decoder] repeat_pict not implemented.";
 				
 		event_subject_  << monitor::event("file/video/width")	% width_
 						<< monitor::event("file/video/height")	% height_
-						<< monitor::event("file/video/field")	% u8(!result->interlaced_frame ? "progressive" : (result->top_field_first ? "upper" : "lower"))
+						<< monitor::event("file/video/field")	% u8(!frame->interlaced_frame ? "progressive" : (frame->top_field_first ? "upper" : "lower"))
 						<< monitor::event("file/video/codec")	% u8(codec_context_->codec->long_name);
 		
+		result.push_back(frame);
+
 		return true;
 	}
 	

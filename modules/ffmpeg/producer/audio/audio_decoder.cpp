@@ -98,47 +98,23 @@ public:
 		auto result = std::make_shared<core::audio_buffer>();
 
 		if(!codec_context_)
-		{
-			result = empty_audio();
-			return result;
-		}
+			return empty_audio();
 
 		std::shared_ptr<AVPacket> packet;
 		if(!input_->try_pop_audio(packet))
 			return result;
 
-		if(packet == flush_packet())
+		if(packet)
 		{
-			avcodec_flush_buffers(codec_context_.get());
-			return result;
-		}
-		
-		if(packet == null_packet())
-		{
-			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
-			{
-				AVPacket pkt = {0};                
-				av_init_packet(&pkt);
-				
-				core::audio_buffer audio;
-				while(decode(pkt, audio))
-					boost::range::push_back(*result, audio);
-			}
-			return result;
-		}
+			if(!packet->data && (codec_context_->codec->capabilities & CODEC_CAP_DELAY))
+				while(decode(*packet, *result));
 
-		while(packet->size > 0)
-		{
-			core::audio_buffer audio;
-			if(decode(*packet, audio))
-				boost::range::push_back(*result, audio);				
-		}
-		
-		event_subject_  << monitor::event("file/audio/sample-rate")	% codec_context_->sample_rate
-						<< monitor::event("file/audio/channels")	% codec_context_->channels
-						<< monitor::event("file/audio/format")		% u8(av_get_sample_fmt_name(codec_context_->sample_fmt))
-						<< monitor::event("file/audio/codec")		% u8(codec_context_->codec->long_name);		
-		
+			while(packet->size > 0)		
+				decode(*packet, *result);
+		}		
+		else		
+			avcodec_flush_buffers(codec_context_.get());
+
 		return result;
 	}
 
@@ -169,8 +145,13 @@ public:
 											in, decoded_frame->nb_samples);
 			
 		auto ptr = reinterpret_cast<int32_t*>(buffer_.data());
-		result = core::audio_buffer(ptr, ptr + channel_samples * format_desc_.audio_channels);
+		result.insert(result.end(), ptr, ptr + channel_samples * format_desc_.audio_channels);		
 		
+		event_subject_  << monitor::event("file/audio/sample-rate")	% codec_context_->sample_rate
+						<< monitor::event("file/audio/channels")	% codec_context_->channels
+						<< monitor::event("file/audio/format")		% u8(av_get_sample_fmt_name(codec_context_->sample_fmt))
+						<< monitor::event("file/audio/codec")		% u8(codec_context_->codec->long_name);				
+
 		return true;
 	}
 	
