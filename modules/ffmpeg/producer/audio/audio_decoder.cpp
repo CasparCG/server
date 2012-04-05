@@ -117,10 +117,8 @@ public:
 		{
 			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
 			{
-				AVPacket pkt;                
+				AVPacket pkt = {0};                
 				av_init_packet(&pkt);
-				pkt.data = nullptr;
-				pkt.size = 0;
 				
 				core::audio_buffer audio;
 				while(decode(pkt, audio))
