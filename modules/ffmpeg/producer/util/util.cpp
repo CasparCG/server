@@ -457,7 +457,7 @@ void fix_meta_data(AVFormatContext& context)
 
 spl::shared_ptr<AVPacket> create_packet()
 {
-	spl::shared_ptr<AVPacket> packet(new AVPacket, [](AVPacket* p)
+	spl::shared_ptr<AVPacket> packet(new AVPacket(), [](AVPacket* p)
 	{
 		av_free_packet(p);
 		delete p;
