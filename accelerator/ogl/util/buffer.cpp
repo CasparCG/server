@@ -67,6 +67,7 @@ public:
 		
 		if(timer.elapsed() > 0.02)
 			CASPAR_LOG(debug) << L"[buffer] Performance warning. Buffer allocation blocked more than 20 ms: " << timer.elapsed();
+	
 		//CASPAR_LOG(trace) << "[buffer] [" << ++(usage_ == buffer::usage::write_only ? g_w_total_count : g_r_total_count) << L"] allocated size:" << size_ << " usage: " << (usage == buffer::usage::write_only ? "write_only" : "read_only");
 	}	
 

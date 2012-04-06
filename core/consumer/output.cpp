@@ -153,11 +153,12 @@ public:
 		
 	void operator()(const_frame input_frame, const core::video_format_desc& format_desc)
 	{
-		video_format_desc(format_desc);
+		boost::timer frame_timer;
+
+		video_format_desc(format_desc);		
 
 		executor_.invoke([=]
 		{			
-			boost::timer frame_timer;
 
 			if(!has_synchronization_clock())
 				sync_timer_.tick(1.0/format_desc_.fps);
@@ -194,9 +195,9 @@ public:
 					ports_.erase(it++);
 				}
 			}
-
-			graph_->set_value("consume-time", frame_timer.elapsed()*format_desc.fps*0.5);
 		});
+
+		graph_->set_value("consume-time", frame_timer.elapsed()*format_desc.fps*0.5);
 	}
 
 	std::wstring print() const
