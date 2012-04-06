@@ -204,6 +204,8 @@ struct input::impl : boost::noncopyable
 private:
 	void internal_seek(uint32_t target)
 	{
+		graph_->set_tag("seek");	
+
 		CASPAR_LOG(debug) << print() << " Seeking: " << target;
 
 		int flags = AVSEEK_FLAG_FRAME;
@@ -228,11 +230,6 @@ private:
 		video_stream_.push(nullptr);
 		audio_stream_.push(nullptr);
 	}
-		
-	bool full() const
-	{
-		return video_stream_.size() > MIN_FRAMES && audio_stream_.size() > MIN_FRAMES;
-	}
 
 	void tick()
 	{
@@ -251,11 +248,8 @@ private:
 			video_stream_.push(packet);
 			audio_stream_.push(packet);
 
-			if(loop_)
-			{
-				internal_seek(start_);
-				graph_->set_tag("seek");		
-			}
+			if(loop_)			
+				internal_seek(start_);				
 		}
 		else
 		{		
@@ -264,8 +258,8 @@ private:
 			THROW_ON_ERROR2(av_dup_packet(packet.get()), print());
 				
 			// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
-			auto size = packet->size;
-			auto data = packet->data;
+			const auto size = packet->size;
+			const auto data = packet->data;
 			
 			packet = spl::shared_ptr<AVPacket>(packet.get(), [packet, size, data](AVPacket*)
 			{
@@ -273,8 +267,8 @@ private:
 				packet->data = data;				
 			});
 					
-			auto stream_time_base = format_context_->streams[packet->stream_index]->time_base;
-			auto packet_frame_number = static_cast<uint32_t>((static_cast<double>(packet->pts * stream_time_base.num)/stream_time_base.den)*fps_);
+			const auto stream_time_base = format_context_->streams[packet->stream_index]->time_base;
+			const auto packet_frame_number = static_cast<uint32_t>((static_cast<double>(packet->pts * stream_time_base.num)/stream_time_base.den)*fps_);
 
 			if(packet->stream_index == default_stream_index_)
 				frame_number_ = packet_frame_number;
@@ -283,11 +277,16 @@ private:
 			{
 				video_stream_.push(packet);
 				audio_stream_.push(packet);
-						
-				graph_->set_value("video-buffer", std::min(1.0, static_cast<double>(video_stream_.size()/MIN_FRAMES)));
-				graph_->set_value("audio-buffer", std::min(1.0, static_cast<double>(audio_stream_.size()/MIN_FRAMES)));
 			}
 		}	
+						
+		graph_->set_value("video-buffer", std::min(1.0, static_cast<double>(video_stream_.size()/MIN_FRAMES)));
+		graph_->set_value("audio-buffer", std::min(1.0, static_cast<double>(audio_stream_.size()/MIN_FRAMES)));
+	}
+			
+	bool full() const
+	{
+		return video_stream_.size() > MIN_FRAMES && audio_stream_.size() > MIN_FRAMES;
 	}
 
 	void run()
@@ -320,13 +319,7 @@ private:
 	bool is_eof(int ret)
 	{
 		#pragma warning (disable : 4146)
-
-		//if(ret == AVERROR(EIO))
-		//	CASPAR_LOG(trace) << print() << " Received EIO, assuming EOF. ";
-		//if(ret == AVERROR_EOF)
-		//	CASPAR_LOG(trace) << print() << " Received EOF. ";
-
-		return ret == AVERROR_EOF || ret == AVERROR(EIO) || frame_number_ > length_; // av_read_frame doesn't always correctly return AVERROR_EOF;
+		return ret == AVERROR_EOF || ret == AVERROR(EIO) || frame_number_ >= length_; // av_read_frame doesn't always correctly return AVERROR_EOF;
 	}
 };
 
