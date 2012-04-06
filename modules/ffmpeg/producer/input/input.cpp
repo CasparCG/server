@@ -148,6 +148,9 @@ struct input::impl : boost::noncopyable
 		graph_->set_color("audio-buffer", diagnostics::color(0.7f, 0.4f, 0.4f));
 		graph_->set_color("video-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));	
 		
+		for(int n = 0; n < 8; ++n)
+			tick();
+
 		thread_			= boost::thread([this]{run();});
 	}
 

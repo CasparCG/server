@@ -66,7 +66,7 @@ public:
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to allocate buffer."));
 		
 		if(timer.elapsed() > 0.02)
-			CASPAR_LOG(debug) << L"[buffer] Performance warning. Buffer allocation blocked more than 20 ms: " << timer.elapsed();
+			CASPAR_LOG(debug) << L"[buffer] Performance warning. Buffer allocation blocked: " << timer.elapsed();
 	
 		//CASPAR_LOG(trace) << "[buffer] [" << ++(usage_ == buffer::usage::write_only ? g_w_total_count : g_r_total_count) << L"] allocated size:" << size_ << " usage: " << (usage == buffer::usage::write_only ? "write_only" : "read_only");
 	}	
@@ -80,17 +80,17 @@ public:
 	{
 		if(data_ != nullptr)
 			return data_;
+		
+		boost::timer timer;
 
 		GL(glBindBuffer(target_, pbo_));
 		if(usage_ == GL_STREAM_DRAW)			
 			GL(glBufferData(target_, size_, NULL, usage_));	// Notify OpenGL that we don't care about previous data.
 		
-		boost::timer timer;
-
 		data_ = (uint8_t*)GL2(glMapBuffer(target_, usage_ == GL_STREAM_DRAW ? GL_WRITE_ONLY : GL_READ_ONLY));  
 
 		if(timer.elapsed() > 0.02)
-			CASPAR_LOG(debug) << L"[buffer] Performance warning. Buffer mapping blocked more than 20 ms: " << timer.elapsed();
+			CASPAR_LOG(debug) << L"[buffer] Performance warning. Buffer mapping blocked: " << timer.elapsed();
 
 		GL(glBindBuffer(target_, 0));
 		if(!data_)
