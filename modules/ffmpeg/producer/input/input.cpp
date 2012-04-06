@@ -151,7 +151,7 @@ struct input::impl : boost::noncopyable
 		for(int n = 0; n < 8; ++n)
 			tick();
 
-		thread_			= boost::thread([this]{run();});
+		thread_	= boost::thread([this]{run();});
 	}
 
 	~impl()
