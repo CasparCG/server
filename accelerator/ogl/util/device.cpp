@@ -155,10 +155,15 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		std::shared_ptr<buffer> buf;
 		if(!pool->try_pop(buf))	
 		{
+			boost::timer timer;
+
 			buf = executor_.invoke([&]
 			{
 				return spl::make_shared<buffer>(size, usage);
 			}, task_priority::high_priority);
+			
+			if(timer.elapsed() > 0.02)
+				CASPAR_LOG(debug) << L"[device] Performance warning. Buffer allocation blocked: " << timer.elapsed();
 		}
 		
 		auto self = shared_from_this(); // buffers can leave the device context, take a hold on life-time.
@@ -210,7 +215,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 			texture->copy_from(*buf);	
 
 			texture_cache_.insert(std::make_pair(buf.get(), texture));
-
+			
 			return texture;
 		}, task_priority::high_priority);
 	}
@@ -222,7 +227,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		return executor_.begin_invoke([=]() -> spl::shared_ptr<texture>
 		{
 			auto texture = create_texture(width, height, stride, false);
-			texture->copy_from(*buf);				
+			texture->copy_from(*buf);	
+			
 			return texture;
 		}, task_priority::high_priority);
 	}
