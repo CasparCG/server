@@ -24,6 +24,7 @@
 #include "tbb_avcodec.h"
 
 #include <common/assert.h>
+#include <common/except.h>
 #include <common/log.h>
 #include <common/env.h>
 
@@ -106,6 +107,9 @@ void thread_free(AVCodecContext* s)
 
 int tbb_avcodec_open(AVCodecContext* avctx, AVCodec* codec)
 {
+	if(codec->capabilities & CODEC_CAP_EXPERIMENTAL)
+		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Experimental codecs are not supported."));
+
 	avctx->thread_count = 1;
 
 	if(codec->capabilities & CODEC_CAP_SLICE_THREADS) 	
