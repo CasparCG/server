@@ -66,9 +66,10 @@ public:
 		
 	std::map<int, draw_frame> operator()(const struct video_format_desc& format_desc)
 	{		
+		boost::timer frame_timer;
+
 		auto frames = executor_.invoke([=]() -> std::map<int, draw_frame>
 		{
-			boost::timer frame_timer;
 
 			std::map<int, class draw_frame> frames;
 			
@@ -91,13 +92,15 @@ public:
 				CASPAR_LOG_CURRENT_EXCEPTION();
 			}	
 			
-			graph_->set_value("produce-time", frame_timer.elapsed()*format_desc.fps*0.5);
-			event_subject_ << monitor::event("profiler/time") % frame_timer.elapsed() % (1.0/format_desc.fps);
 
 			return frames;
 		});
 		
 		frames_subject_ << frames;
+		
+		graph_->set_value("produce-time", frame_timer.elapsed()*format_desc.fps*0.5);
+		event_subject_ << monitor::event("profiler/time") % frame_timer.elapsed() % (1.0/format_desc.fps);
+
 		return frames;
 	}
 

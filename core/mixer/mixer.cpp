@@ -75,12 +75,12 @@ public:
 	
 	const_frame operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc)
 	{		
-		return executor_.invoke([=]() mutable -> const_frame
+		boost::timer frame_timer;
+
+		auto frame = executor_.invoke([=]() mutable -> const_frame
 		{		
 			try
 			{	
-				boost::timer frame_timer;
-
 				BOOST_FOREACH(auto& frame, frames)
 				{
 					auto blend_it = blend_modes_.find(frame.first);
@@ -94,8 +94,6 @@ public:
 				
 				auto image = (*image_mixer_)(format_desc);
 				auto audio = audio_mixer_(format_desc);
-				
-				graph_->set_value("mix-time", frame_timer.elapsed()*format_desc.fps*0.5);
 
 				auto desc = core::pixel_format_desc(core::pixel_format::bgra);
 				desc.planes.push_back(core::pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
@@ -107,6 +105,10 @@ public:
 				return const_frame::empty();
 			}	
 		});		
+				
+		graph_->set_value("mix-time", frame_timer.elapsed()*format_desc.fps*0.5);
+
+		return frame;
 	}
 					
 	void set_blend_mode(int index, blend_mode value)
