@@ -248,11 +248,8 @@ private:
 		
 		if(is_eof(ret))														     
 		{
-			std::shared_ptr<AVPacket> eof_packet(new AVPacket());
-			av_init_packet(eof_packet.get());
-
-			video_stream_.push(eof_packet);
-			audio_stream_.push(eof_packet);
+			video_stream_.push(packet);
+			audio_stream_.push(packet);
 
 			if(loop_)
 			{
