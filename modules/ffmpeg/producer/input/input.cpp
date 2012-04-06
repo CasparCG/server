@@ -249,7 +249,6 @@ private:
 		if(is_eof(ret))														     
 		{
 			std::shared_ptr<AVPacket> eof_packet(new AVPacket());
-			memset(eof_packet.get(), 0, sizeof(AVPacket));
 			av_init_packet(eof_packet.get());
 
 			video_stream_.push(eof_packet);
