@@ -63,26 +63,22 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	tbb::concurrent_hash_map<buffer*, std::shared_ptr<texture>> texture_cache_;
 
 	std::unique_ptr<sf::Context> device_;
-	std::unique_ptr<sf::Context> host_alloc_device_;
 	
 	std::array<tbb::concurrent_unordered_map<std::size_t, tbb::concurrent_bounded_queue<std::shared_ptr<texture>>>, 4>	device_pools_;
 	std::array<tbb::concurrent_unordered_map<std::size_t, tbb::concurrent_bounded_queue<std::shared_ptr<buffer>>>, 2>	host_pools_;
 	
 	GLuint fbo_;
 
-	executor& render_executor_;
-	executor  alloc_executor_;
+	executor& executor_;
 				
 	impl(executor& executor) 
-		: render_executor_(executor)
-		, alloc_executor_(L"OpenGL allocation context")
+		: executor_(executor)
 	{
-		render_executor_.set_capacity(128);
-		alloc_executor_.set_capacity(256);
+		executor_.set_capacity(256);
 
 		CASPAR_LOG(info) << L"Initializing OpenGL Device.";
 		
-		auto ctx1 = render_executor_.invoke([=]() -> HGLRC 
+		executor_.invoke([=]
 		{
 			device_.reset(new sf::Context());
 			device_->SetActive(true);		
@@ -95,27 +91,6 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	
 			glGenFramebuffers(1, &fbo_);				
 			glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
-			
-			auto ctx1 = wglGetCurrentContext();
-			
-			device_->SetActive(false);
-
-			return ctx1;
-		});
-
-		alloc_executor_.invoke([=]
-		{
-			host_alloc_device_.reset(new sf::Context());
-			host_alloc_device_->SetActive(true);	
-			auto ctx2 = wglGetCurrentContext();
-
-			if(!wglShareLists(ctx1, ctx2))
-				CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to share OpenGL devices."));
-		});
-
-		render_executor_.invoke([=]
-		{		
-			device_->SetActive(true);
 		});
 				
 		CASPAR_LOG(info) << L"Successfully initialized OpenGL " << version();
@@ -123,14 +98,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
 	~impl()
 	{
-		alloc_executor_.invoke([=]
-		{
-			host_alloc_device_.reset();
-			BOOST_FOREACH(auto& pool, host_pools_)
-				pool.clear();
-		});
-
-		render_executor_.invoke([=]
+		executor_.invoke([=]
 		{
 			BOOST_FOREACH(auto& pool, device_pools_)
 				pool.clear();
@@ -144,7 +112,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	{	
 		try
 		{
-			return alloc_executor_.invoke([]
+			return executor_.invoke([]
 			{
 				return u16(reinterpret_cast<const char*>(GL2(glGetString(GL_VERSION)))) + L" " + u16(reinterpret_cast<const char*>(GL2(glGetString(GL_VENDOR))));
 			});	
@@ -160,7 +128,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		CASPAR_VERIFY(stride > 0 && stride < 5);
 		CASPAR_VERIFY(width > 0 && height > 0);
 
-		if(!render_executor_.is_current())
+		if(!executor_.is_current())
 			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Operation only valid in an OpenGL Context."));
 					
 		auto pool = &device_pools_[stride-1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
@@ -187,7 +155,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		std::shared_ptr<buffer> buf;
 		if(!pool->try_pop(buf))	
 		{
-			buf = alloc_executor_.invoke([&]
+			buf = executor_.invoke([&]
 			{
 				return spl::make_shared<buffer>(size, usage);
 			}, task_priority::high_priority);
@@ -232,7 +200,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	{
 		std::shared_ptr<buffer> buf = copy_to_buf(source);
 				
-		return render_executor_.begin_invoke([=]() -> spl::shared_ptr<texture>
+		return executor_.begin_invoke([=]() -> spl::shared_ptr<texture>
 		{
 			tbb::concurrent_hash_map<buffer*, std::shared_ptr<texture>>::const_accessor a;
 			if(texture_cache_.find(a, buf.get()))
@@ -251,7 +219,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	{
 		std::shared_ptr<buffer> buf = copy_to_buf(source);
 
-		return render_executor_.begin_invoke([=]() -> spl::shared_ptr<texture>
+		return executor_.begin_invoke([=]() -> spl::shared_ptr<texture>
 		{
 			auto texture = create_texture(width, height, stride, false);
 			texture->copy_from(*buf);				
@@ -261,7 +229,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
 	boost::unique_future<array<const std::uint8_t>> copy_async(const spl::shared_ptr<texture>& source)
 	{
-		if(!render_executor_.is_current())
+		if(!executor_.is_current())
 			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Operation only valid in an OpenGL Context."));
 
 		auto buffer = create_buffer(source->size(), buffer::usage::read_only); 
@@ -270,7 +238,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		auto self = shared_from_this();
 		return async(launch::deferred, [self, buffer]() mutable -> array<const std::uint8_t>
 		{
-			self->alloc_executor_.invoke(std::bind(&buffer::map, std::ref(buffer))); // Defer blocking "map" call until data is needed.
+			self->executor_.invoke(std::bind(&buffer::map, std::ref(buffer))); // Defer blocking "map" call until data is needed.
 			return array<const std::uint8_t>(buffer->data(), buffer->size(), true, buffer);
 		});
 	}

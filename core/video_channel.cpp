@@ -108,26 +108,43 @@ public:
 	{
 		try
 		{
-			auto format_desc = video_format_desc();
+			boost::timer t;
 
+			auto format_desc = video_format_desc();
+			
 			boost::timer frame_timer;
 
 			// Produce
 			
 			auto stage_frames = stage_(format_desc);
 
+			if(t.elapsed() > 1.0/format_desc.fps*0.9)
+				CASPAR_LOG(trace) << print() << L" Stage is slowing down channel: " << t.elapsed();
+
+			t.restart();
 			// Mix
 			
 			auto mixed_frame  = mixer_(std::move(stage_frames), format_desc);
+			
+			if(t.elapsed() > 1.0/format_desc.fps*0.9)
+				CASPAR_LOG(trace) << print() << L"Mixer is slowing down channel: " << t.elapsed();
 
+			t.restart();
 			// Consume
 						
 			output_(std::move(mixed_frame), format_desc);
 		
+			t.restart();
+
 			graph_->set_value("tick-time", frame_timer.elapsed()*format_desc.fps*0.5);
 
 			event_subject_	<< monitor::event("profiler/time")	% frame_timer.elapsed() % (1.0/format_desc_.fps)
 							<< monitor::event("format")			% format_desc.name;
+			
+			if(t.elapsed() > 0.001)
+				CASPAR_LOG(trace) << L"4## " << t.elapsed();
+
+			t.restart();
 		}
 		catch(...)
 		{

@@ -111,7 +111,12 @@ public:
 	{		
 		try
 		{		
+			boost::timer timer;
+
 			auto frame = foreground_->receive();
+
+			if(timer.elapsed() > 1.0/format_desc.fps*0.9)
+				CASPAR_LOG(trace) << foreground_->print() << L" Is slowing down channel.";
 
 			if(frame == core::draw_frame::late())
 				return foreground_->last_frame();
