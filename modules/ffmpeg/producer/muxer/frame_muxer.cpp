@@ -96,17 +96,9 @@ struct frame_muxer::impl : boost::noncopyable
 		boost::range::rotate(audio_cadence_, std::end(audio_cadence_)-1);
 	}
 	
-	void push(const std::shared_ptr<AVFrame>& frame)
-	{
-		if(frame->nb_samples > 0)
-			push_audio(frame);
-		else
-			push_video(frame);
-	}
-
 	void push_video(const std::shared_ptr<AVFrame>& video)
 	{		
-		if(!video->data)
+		if(!video->data[0])
 		{
 			auto empty_frame = frame_factory_->create_frame(this, core::pixel_format_desc(core::pixel_format::invalid));
 			video_stream_.push(std::move(empty_frame));
@@ -127,8 +119,10 @@ struct frame_muxer::impl : boost::noncopyable
 	
 	void push_audio(const std::shared_ptr<AVFrame>& audio)
 	{
-		if(!audio->data)		
-			boost::range::push_back(audio_stream_, core::audio_buffer(audio_cadence_.front(), 0));		
+		if(!audio->data[0])		
+		{
+			boost::range::push_back(audio_stream_, core::audio_buffer(audio_cadence_.front(), 0));	
+		}
 		else if(audio)	
 		{
 			auto ptr = reinterpret_cast<int32_t*>(audio->data[0]);
@@ -339,7 +333,8 @@ struct frame_muxer::impl : boost::noncopyable
 
 frame_muxer::frame_muxer(double in_fps, const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::wstring& filter)
 	: impl_(new impl(in_fps, frame_factory, format_desc, filter)){}
-void frame_muxer::push(const std::shared_ptr<AVFrame>& frame){impl_->push(frame);}
+void frame_muxer::push_video(const std::shared_ptr<AVFrame>& frame){impl_->push_video(frame);}
+void frame_muxer::push_audio(const std::shared_ptr<AVFrame>& frame){impl_->push_audio(frame);}
 bool frame_muxer::empty() const{return impl_->empty();}
 core::draw_frame frame_muxer::front() const{return impl_->front();}
 void frame_muxer::pop(){return impl_->pop();}

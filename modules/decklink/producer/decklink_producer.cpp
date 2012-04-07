@@ -244,8 +244,8 @@ public:
 			
 			// PUSH
 
-			muxer_.push(video_frame);	
-			muxer_.push(audio_frame);											
+			muxer_.push_video(video_frame);	
+			muxer_.push_audio(audio_frame);											
 			
 			// POLL
 

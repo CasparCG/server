@@ -38,7 +38,6 @@ class video_decoder : public monitor::observable
 					, boost::noncopyable
 {
 public:
-	explicit video_decoder();
 	explicit video_decoder(class input& input);
 	
 	video_decoder(video_decoder&& other);
@@ -48,11 +47,10 @@ public:
 	
 	int	 width() const;
 	int	 height() const;
-
-	uint32_t nb_frames() const;
+	bool is_progressive() const;
 	uint32_t file_frame_number() const;
 
-	bool is_progressive() const;
+	uint32_t nb_frames() const;
 
 	std::wstring print() const;
 		

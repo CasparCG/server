@@ -62,7 +62,7 @@ struct audio_decoder::impl : boost::noncopyable
 	monitor::basic_subject										event_subject_;
 	input*														input_;
 	int															index_;
-	const std::shared_ptr<AVCodecContext>						codec_context_;		
+	const spl::shared_ptr<AVCodecContext>						codec_context_;		
 	const core::video_format_desc								format_desc_;
 
 	std::shared_ptr<SwrContext>									swr_;
@@ -72,11 +72,6 @@ struct audio_decoder::impl : boost::noncopyable
 	std::shared_ptr<AVPacket>									current_packet_;
 	
 public:
-	impl()
-		: input_(nullptr)
-	{
-	}
-
 	explicit impl(input& in, const core::video_format_desc& format_desc) 
 		: input_(&in)
 		, format_desc_(format_desc)	
@@ -95,9 +90,6 @@ public:
 		
 	std::shared_ptr<AVFrame> poll()
 	{		
-		if(!codec_context_)
-			return create_frame();
-
 		if(!current_packet_ && !input_->try_pop_audio(current_packet_))
 			return nullptr;
 		
@@ -176,7 +168,6 @@ public:
 	}
 };
 
-audio_decoder::audio_decoder() : impl_(new impl()){}
 audio_decoder::audio_decoder(input& input, const core::video_format_desc& format_desc) : impl_(new impl(input, format_desc)){}
 audio_decoder::audio_decoder(audio_decoder&& other) : impl_(std::move(other.impl_)){}
 audio_decoder& audio_decoder::operator=(audio_decoder&& other){impl_ = std::move(other.impl_); return *this;}
