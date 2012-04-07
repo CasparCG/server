@@ -98,6 +98,9 @@ struct frame_muxer::impl : boost::noncopyable
 	
 	void push_video(const std::shared_ptr<AVFrame>& video)
 	{		
+		if(!video)
+			return;
+
 		if(!video->data[0])
 		{
 			auto empty_frame = frame_factory_->create_frame(this, core::pixel_format_desc(core::pixel_format::invalid));
@@ -119,6 +122,9 @@ struct frame_muxer::impl : boost::noncopyable
 	
 	void push_audio(const std::shared_ptr<AVFrame>& audio)
 	{
+		if(!audio)
+			return;
+
 		if(!audio->data[0])		
 		{
 			boost::range::push_back(audio_stream_, core::audio_buffer(audio_cadence_.front(), 0));	
