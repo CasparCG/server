@@ -103,8 +103,10 @@ public:
 		
 		std::shared_ptr<core::audio_buffer> audio;
 
-		if(!current_packet_)		
+		if(!current_packet_)	
+		{
 			avcodec_flush_buffers(codec_context_.get());	
+		}
 		else if(!current_packet_->data)
 		{
 			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)			

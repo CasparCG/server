@@ -106,7 +106,9 @@ public:
 		std::shared_ptr<AVFrame> frame;
 
 		if(!current_packet_)		
+		{
 			avcodec_flush_buffers(codec_context_.get());	
+		}
 		else if(!current_packet_->data)
 		{
 			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)			
