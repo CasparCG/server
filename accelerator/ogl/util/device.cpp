@@ -163,7 +163,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 			}, task_priority::high_priority);
 			
 			if(timer.elapsed() > 0.02)
-				CASPAR_LOG(debug) << L"[device] Performance warning. Buffer allocation blocked: " << timer.elapsed();
+				CASPAR_LOG(debug) << L"[ogl-device] Performance warning. Buffer allocation blocked: " << timer.elapsed();
 		}
 		
 		auto self = shared_from_this(); // buffers can leave the device context, take a hold on life-time.
