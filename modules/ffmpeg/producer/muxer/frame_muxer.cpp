@@ -107,7 +107,7 @@ struct frame_muxer::impl : boost::noncopyable
 			video_stream_.push(std::move(empty_frame));
 			display_mode_ = display_mode::simple;
 		}
-		else if(video)
+		else
 		{
 			if(display_mode_ == display_mode::invalid)
 				update_display_mode(video);
@@ -129,7 +129,7 @@ struct frame_muxer::impl : boost::noncopyable
 		{
 			boost::range::push_back(audio_stream_, core::audio_buffer(audio_cadence_.front(), 0));	
 		}
-		else if(audio)	
+		else
 		{
 			auto ptr = reinterpret_cast<int32_t*>(audio->data[0]);
 			audio_stream_.insert(audio_stream_.end(), ptr, ptr + audio->linesize[0]/sizeof(int32_t));
