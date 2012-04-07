@@ -95,10 +95,18 @@ struct frame_muxer::impl : boost::noncopyable
 		// This cadence fills the audio mixer most optimally.
 		boost::range::rotate(audio_cadence_, std::end(audio_cadence_)-1);
 	}
+	
+	void push(const std::shared_ptr<AVFrame>& frame)
+	{
+		if(frame->nb_samples > 0)
+			push_audio(frame);
+		else
+			push_video(frame);
+	}
 
-	void push(const std::shared_ptr<AVFrame>& video)
+	void push_video(const std::shared_ptr<AVFrame>& video)
 	{		
-		if(video == empty_video())
+		if(!video->data)
 		{
 			auto empty_frame = frame_factory_->create_frame(this, core::pixel_format_desc(core::pixel_format::invalid));
 			video_stream_.push(std::move(empty_frame));
@@ -117,12 +125,15 @@ struct frame_muxer::impl : boost::noncopyable
 		merge();
 	}
 	
-	void push(const std::shared_ptr<core::audio_buffer>& audio)
+	void push_audio(const std::shared_ptr<AVFrame>& audio)
 	{
-		if(audio == empty_audio())		
+		if(!audio->data)		
 			boost::range::push_back(audio_stream_, core::audio_buffer(audio_cadence_.front(), 0));		
 		else if(audio)	
-			boost::range::push_back(audio_stream_, *audio);		
+		{
+			auto ptr = reinterpret_cast<int32_t*>(audio->data[0]);
+			audio_stream_.insert(audio_stream_.end(), ptr, ptr + audio->linesize[0]/sizeof(int32_t));
+		}
 
 		merge();
 	}
@@ -328,8 +339,7 @@ struct frame_muxer::impl : boost::noncopyable
 
 frame_muxer::frame_muxer(double in_fps, const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::wstring& filter)
 	: impl_(new impl(in_fps, frame_factory, format_desc, filter)){}
-void frame_muxer::push(const std::shared_ptr<AVFrame>& video_frame){impl_->push(video_frame);}
-void frame_muxer::push(const std::shared_ptr<core::audio_buffer>& audio_samples){return impl_->push(audio_samples);}
+void frame_muxer::push(const std::shared_ptr<AVFrame>& frame){impl_->push(frame);}
 bool frame_muxer::empty() const{return impl_->empty();}
 core::draw_frame frame_muxer::front() const{return impl_->front();}
 void frame_muxer::pop(){return impl_->pop();}
