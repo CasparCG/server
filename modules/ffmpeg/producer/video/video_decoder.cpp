@@ -98,7 +98,7 @@ public:
 	std::shared_ptr<AVFrame> poll()
 	{			
 		if(!codec_context_)
-			return empty_video();
+			return create_frame();
 
 		if(!current_packet_ && !input_->try_pop_video(current_packet_))
 			return nullptr;
@@ -130,7 +130,7 @@ public:
 
 	std::shared_ptr<AVFrame> decode(AVPacket& pkt)
 	{
-		auto frame = std::shared_ptr<AVFrame>(avcodec_alloc_frame(), av_free);
+		auto frame = create_frame();
 
 		int got_frame = 0;
 		auto len = THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), frame.get(), &got_frame, &pkt), "[video_decocer]");

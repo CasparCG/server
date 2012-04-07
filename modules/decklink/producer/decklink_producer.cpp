@@ -189,60 +189,63 @@ public:
 			tick_timer_.restart();
 
 			boost::timer frame_timer;	
+			
+			// Video
 
-			// PUSH
-
-			void* bytes = nullptr;
-			if(FAILED(video->GetBytes(&bytes)) || !bytes)
+			void* video_bytes = nullptr;
+			if(FAILED(video->GetBytes(&video_bytes)) || !video_bytes)
 				return S_OK;
 			
-			std::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
-			avcodec_get_frame_defaults(av_frame.get());
+			auto video_frame = ffmpeg::create_frame();
 						
-			av_frame->data[0]			= reinterpret_cast<uint8_t*>(bytes);
-			av_frame->linesize[0]		= video->GetRowBytes();			
-			av_frame->format			= PIX_FMT_UYVY422;
-			av_frame->width				= video->GetWidth();
-			av_frame->height			= video->GetHeight();
-			av_frame->interlaced_frame	= in_format_desc_.field_mode != core::field_mode::progressive;
-			av_frame->top_field_first	= in_format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
+			video_frame->data[0]			= reinterpret_cast<uint8_t*>(video_bytes);
+			video_frame->linesize[0]		= video->GetRowBytes();			
+			video_frame->format				= PIX_FMT_UYVY422;
+			video_frame->width				= video->GetWidth();
+			video_frame->height				= video->GetHeight();
+			video_frame->interlaced_frame	= in_format_desc_.field_mode != core::field_mode::progressive;
+			video_frame->top_field_first	= in_format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
 				
 			event_subject_	<< monitor::event("file/name")				% model_name_
 							<< monitor::event("file/path")				% device_index_
 							<< monitor::event("file/video/width")		% video->GetWidth()
 							<< monitor::event("file/video/height")		% video->GetHeight()
-							<< monitor::event("file/video/field")		% u8(!av_frame->interlaced_frame ? "progressive" : (av_frame->top_field_first ? "upper" : "lower"))
+							<< monitor::event("file/video/field")		% u8(!video_frame->interlaced_frame ? "progressive" : (video_frame->top_field_first ? "upper" : "lower"))
 							<< monitor::event("file/audio/sample-rate")	% 48000
 							<< monitor::event("file/audio/channels")	% 2
 							<< monitor::event("file/audio/format")		% u8(av_get_sample_fmt_name(AV_SAMPLE_FMT_S32))
 							<< monitor::event("file/fps")				% in_format_desc_.fps;
 
-			std::shared_ptr<core::audio_buffer> audio_buffer;
+			// Audio
 
-			// It is assumed that audio is always equal or ahead of video.
-			if(audio && SUCCEEDED(audio->GetBytes(&bytes)) && bytes)
-			{
-				auto sample_frame_count = audio->GetSampleFrameCount();
-				auto audio_data = reinterpret_cast<int32_t*>(bytes);
-				audio_buffer = std::make_shared<core::audio_buffer>(audio_data, audio_data + sample_frame_count*out_format_desc_.audio_channels);
-			}
-			else			
-				audio_buffer = std::make_shared<core::audio_buffer>(audio_cadence_.front(), 0);
+			std::shared_ptr<core::audio_buffer> audio_buffer;
 			
+			void* audio_bytes = nullptr;
+			if(FAILED(audio->GetBytes(&audio_bytes)) || !audio_bytes)
+				return S_OK;
+			
+			auto audio_frame = ffmpeg::create_frame();
+
+			audio_frame->data[0]		= reinterpret_cast<uint8_t*>(audio_bytes);
+			audio_frame->linesize[0]	= audio->GetSampleFrameCount()*out_format_desc_.audio_channels*sizeof(int32_t);
+			audio_frame->nb_samples		= audio->GetSampleFrameCount();
+			audio_frame->format			= AV_SAMPLE_FMT_S32;
+						
 			// Note: Uses 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
 			// This cadence fills the audio mixer most optimally.
 
-			sync_buffer_.push_back(audio_buffer->size());		
+			sync_buffer_.push_back(audio->GetSampleFrameCount()*out_format_desc_.audio_channels);		
 			if(!boost::range::equal(sync_buffer_, audio_cadence_))
 			{
 				CASPAR_LOG(trace) << print() << L" Syncing audio.";
 				return S_OK;
 			}
-			
-			muxer_.push(av_frame);	
-			muxer_.push(audio_buffer);
-											
 			boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
+			
+			// PUSH
+
+			muxer_.push(video_frame);	
+			muxer_.push(audio_frame);											
 			
 			// POLL
 

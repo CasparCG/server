@@ -51,7 +51,7 @@ public:
 	audio_decoder(audio_decoder&& other);
 	audio_decoder& operator=(audio_decoder&& other);
 
-	std::shared_ptr<core::audio_buffer> operator()();
+	std::shared_ptr<AVFrame> operator()();
 
 	uint32_t nb_frames() const;
 	
