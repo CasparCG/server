@@ -64,7 +64,7 @@
 
 namespace caspar { namespace ffmpeg {
 				
-struct ffmpeg_producer : public core::frame_producer
+struct ffmpeg_producer : public core::frame_producer_base
 {
 	monitor::basic_subject							event_subject_;
 	const std::wstring								filename_;
@@ -76,16 +76,13 @@ struct ffmpeg_producer : public core::frame_producer
 
 	input											input_;	
 
-	tbb::atomic<bool>								paused_;
 	const double									fps_;
 	const uint32_t									start_;
 		
 	video_decoder									video_decoder_;
 	audio_decoder									audio_decoder_;	
 	frame_muxer										muxer_;
-
-	tbb::atomic<uint32_t>							frame_number_;
-
+	
 	core::draw_frame								last_frame_;
 
 	boost::optional<uint32_t>						seek_target_;
@@ -107,9 +104,6 @@ public:
 		, start_(start)
 		, last_frame_(core::draw_frame::empty())
 	{
-		paused_ = false;
-		frame_number_ = 0;
-
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
 		diagnostics::register_graph(graph_);
@@ -156,30 +150,23 @@ public:
 
 	// frame_producer
 	
-	core::draw_frame receive() override
+	core::draw_frame receive_impl() override
 	{				
 		auto frame = core::draw_frame::late();		
 		
 		boost::timer frame_timer;
 		
 		end_seek();
-
-		if(paused_)
-			frame = last_frame();	
-		else
-		{						
-			decode_next_frame();
+				
+		decode_next_frame();
 		
-			if(!muxer_.empty())
-			{
-				last_frame_ = frame = std::move(muxer_.front());
-				muxer_.pop();
-
-				++frame_number_;		
-			}
-			else				
-				graph_->set_tag("underflow");
+		if(!muxer_.empty())
+		{
+			last_frame_ = frame = std::move(muxer_.front());
+			muxer_.pop();	
 		}
+		else				
+			graph_->set_tag("underflow");
 									
 		graph_->set_value("frame-time", frame_timer.elapsed()*format_desc_.fps*0.5);
 		event_subject_	<< monitor::event("profiler/time") % frame_timer.elapsed() % (1.0/format_desc_.fps);			
@@ -198,20 +185,9 @@ public:
 	core::draw_frame last_frame() override
 	{
 		end_seek();
-
 		return core::draw_frame::still(last_frame_);
 	}
-
-	void paused(bool value)
-	{
-		paused_ = value;
-	}
-
-	uint32_t frame_number() const override
-	{
-		return frame_number_;
-	}
-	
+		
 	uint32_t nb_frames() const override
 	{
 		if(input_.loop())
@@ -302,7 +278,7 @@ public:
 		info.add(L"progressive",		video_decoder_.is_progressive());
 		info.add(L"fps",				fps_);
 		info.add(L"loop",				input_.loop());
-		info.add(L"frame-number",		frame_number_);
+		info.add(L"frame-number",		frame_number());
 		auto nb_frames2 = nb_frames();
 		info.add(L"nb-frames",			nb_frames2 == std::numeric_limits<int64_t>::max() ? -1 : nb_frames2);
 		info.add(L"file-frame-number",	file_frame_number());
@@ -324,7 +300,7 @@ public:
 	
 	void end_seek()
 	{
-		for(int n = 0; n < 8 && (last_frame_ == core::draw_frame::empty() || (seek_target_ && file_frame_number() != *seek_target_)); ++n)
+		for(int n = 0; n < 8 && (last_frame_ == core::draw_frame::empty() || (seek_target_ && file_frame_number() != *seek_target_+2)); ++n)
 		{
 			decode_next_frame();
 			if(!muxer_.empty())

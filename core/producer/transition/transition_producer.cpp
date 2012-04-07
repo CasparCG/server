@@ -68,11 +68,13 @@ public:
 
 	draw_frame receive_impl() override
 	{
-		if(++current_frame_ >= info_.duration)
+		if(current_frame_ >= info_.duration)
 		{
 			source_producer_ = core::frame_producer::empty();
 			return dest_producer_->receive();		
 		}
+
+		current_frame_ += 1;
 
 		auto dest = draw_frame::empty();
 		auto source = draw_frame::empty();

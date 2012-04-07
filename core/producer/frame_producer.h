@@ -85,7 +85,6 @@ class frame_producer_base : public frame_producer
 {
 public:
 	frame_producer_base();
-	frame_producer_base(frame_producer_base& self);
 	virtual ~frame_producer_base(){}	
 
 	// Methods	
