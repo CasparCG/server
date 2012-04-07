@@ -93,15 +93,15 @@ public:
 		THROW_ON_ERROR2(swr_init(swr_.get()), "[audio_decoder]");
 	}
 		
-	std::shared_ptr<core::audio_buffer> poll()
+	std::shared_ptr<AVFrame> poll()
 	{		
 		if(!codec_context_)
-			return empty_audio();
+			return create_frame();
 
 		if(!current_packet_ && !input_->try_pop_audio(current_packet_))
 			return nullptr;
 		
-		std::shared_ptr<core::audio_buffer> audio;
+		std::shared_ptr<AVFrame> audio;
 
 		if(!current_packet_)	
 		{
@@ -126,12 +126,12 @@ public:
 		return audio ? audio : poll();
 	}
 
-	std::shared_ptr<core::audio_buffer> decode(AVPacket& pkt)
+	std::shared_ptr<AVFrame> decode(AVPacket& pkt)
 	{		
-		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
+		auto frame = create_frame();
 		
 		int got_frame = 0;
-		auto len = THROW_ON_ERROR2(avcodec_decode_audio4(codec_context_.get(), decoded_frame.get(), &got_frame, &pkt), "[audio_decoder]");
+		auto len = THROW_ON_ERROR2(avcodec_decode_audio4(codec_context_.get(), frame.get(), &got_frame, &pkt), "[audio_decoder]");
 					
 		if(len == 0)
 		{
@@ -145,21 +145,24 @@ public:
 		if(!got_frame)
 			return nullptr;
 							
-		const uint8_t *in[] = {decoded_frame->data[0]};
+		const uint8_t *in[] = {frame->data[0]};
 		uint8_t* out[]		= {buffer_.data()};
 
 		auto channel_samples = swr_convert(swr_.get(), 
 											out, static_cast<int>(buffer_.size()) / format_desc_.audio_channels / av_get_bytes_per_sample(AV_SAMPLE_FMT_S32), 
-											in, decoded_frame->nb_samples);
-			
-		auto ptr = reinterpret_cast<int32_t*>(buffer_.data());
-		
+											in, frame->nb_samples);	
+
+		frame->data[0]		= buffer_.data();
+		frame->linesize[0]	= channel_samples * format_desc_.audio_channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S32);
+		frame->nb_samples	= channel_samples;
+		frame->format		= AV_SAMPLE_FMT_S32;
+							
 		event_subject_  << monitor::event("file/audio/sample-rate")	% codec_context_->sample_rate
 						<< monitor::event("file/audio/channels")	% codec_context_->channels
 						<< monitor::event("file/audio/format")		% u8(av_get_sample_fmt_name(codec_context_->sample_fmt))
-						<< monitor::event("file/audio/codec")		% u8(codec_context_->codec->long_name);				
+						<< monitor::event("file/audio/codec")		% u8(codec_context_->codec->long_name);			
 
-		return std::make_shared<core::audio_buffer>(ptr, ptr + channel_samples * format_desc_.audio_channels);
+		return frame;
 	}
 	
 	uint32_t nb_frames() const
@@ -177,7 +180,7 @@ audio_decoder::audio_decoder() : impl_(new impl()){}
 audio_decoder::audio_decoder(input& input, const core::video_format_desc& format_desc) : impl_(new impl(input, format_desc)){}
 audio_decoder::audio_decoder(audio_decoder&& other) : impl_(std::move(other.impl_)){}
 audio_decoder& audio_decoder::operator=(audio_decoder&& other){impl_ = std::move(other.impl_); return *this;}
-std::shared_ptr<core::audio_buffer> audio_decoder::operator()(){return impl_->poll();}
+std::shared_ptr<AVFrame> audio_decoder::operator()(){return impl_->poll();}
 uint32_t audio_decoder::nb_frames() const{return impl_->nb_frames();}
 std::wstring audio_decoder::print() const{return impl_->print();}
 void audio_decoder::subscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_.subscribe(o);}
