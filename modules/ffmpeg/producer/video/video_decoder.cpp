@@ -69,6 +69,8 @@ struct video_decoder::impl : boost::noncopyable
 	bool									is_progressive_;
 	uint32_t								file_frame_number_;
 	double									fps_;
+	
+	std::shared_ptr<AVPacket>				current_packet_;
 
 public:
 	explicit impl() 
@@ -93,35 +95,38 @@ public:
 	{
 	}
 	
-	std::vector<std::shared_ptr<AVFrame>> poll()
+	std::shared_ptr<AVFrame> poll()
 	{			
-		std::vector<std::shared_ptr<AVFrame>> result;
-
 		if(!codec_context_)
-		{
-			result.push_back(empty_video());
-			return result;
-		}
+			return empty_video();
 
-		std::shared_ptr<AVPacket> packet;
-		if(!input_->try_pop_video(packet))
-			return result;
-				
-		if(packet)
-		{
-			if(!packet->data && (codec_context_->codec->capabilities & CODEC_CAP_DELAY))		
-				while(decode(*packet, result));			
+		if(!current_packet_ && !input_->try_pop_video(current_packet_))
+			return nullptr;
+		
+		std::shared_ptr<AVFrame> frame;
 
-			while(packet->size > 0)
-				decode(*packet, result);	
+		if(!current_packet_)		
+			avcodec_flush_buffers(codec_context_.get());	
+		else if(!current_packet_->data)
+		{
+			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)			
+				frame = decode(*current_packet_);
+			
+			if(!frame)
+				current_packet_.reset();
 		}
 		else
-			avcodec_flush_buffers(codec_context_.get());
-		
-		return result;
+		{
+			frame = decode(*current_packet_);
+			
+			if(current_packet_->size == 0)
+				current_packet_.reset();
+		}
+			
+		return frame ? frame : poll();
 	}
 
-	bool decode(AVPacket& pkt, std::vector<std::shared_ptr<AVFrame>>& result)
+	std::shared_ptr<AVFrame> decode(AVPacket& pkt)
 	{
 		auto frame = std::shared_ptr<AVFrame>(avcodec_alloc_frame(), av_free);
 
@@ -131,14 +136,14 @@ public:
 		if(len == 0)
 		{
 			pkt.size = 0;
-			return false;
+			return nullptr;
 		}
 
         pkt.data += len;
         pkt.size -= len;
 
 		if(got_frame == 0)	
-			return false;
+			return nullptr;
 		
 		auto stream_time_base	 = stream_->time_base;
 		auto packet_frame_number = static_cast<uint32_t>((static_cast<double>(pkt.pts * stream_time_base.num)/stream_time_base.den)*fps_);
@@ -155,9 +160,7 @@ public:
 						<< monitor::event("file/video/field")	% u8(!frame->interlaced_frame ? "progressive" : (frame->top_field_first ? "upper" : "lower"))
 						<< monitor::event("file/video/codec")	% u8(codec_context_->codec->long_name);
 		
-		result.push_back(frame);
-
-		return true;
+		return frame;
 	}
 	
 	uint32_t nb_frames() const
@@ -175,7 +178,7 @@ video_decoder::video_decoder() : impl_(new impl()){}
 video_decoder::video_decoder(input& in) : impl_(new impl(in)){}
 video_decoder::video_decoder(video_decoder&& other) : impl_(std::move(other.impl_)){}
 video_decoder& video_decoder::operator=(video_decoder&& other){impl_ = std::move(other.impl_); return *this;}
-std::vector<std::shared_ptr<AVFrame>> video_decoder::operator()(){return impl_->poll();}
+std::shared_ptr<AVFrame> video_decoder::operator()(){return impl_->poll();}
 int video_decoder::width() const{return impl_->width_;}
 int video_decoder::height() const{return impl_->height_;}
 uint32_t video_decoder::nb_frames() const{return impl_->nb_frames();}

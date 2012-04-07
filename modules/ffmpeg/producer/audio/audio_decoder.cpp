@@ -69,7 +69,7 @@ struct audio_decoder::impl : boost::noncopyable
 
 	std::vector<uint8_t, tbb::cache_aligned_allocator<int8_t>>	buffer_;
 
-	std::queue<spl::shared_ptr<AVPacket>>						packets_;
+	std::shared_ptr<AVPacket>									current_packet_;
 	
 public:
 	impl()
@@ -95,47 +95,53 @@ public:
 		
 	std::shared_ptr<core::audio_buffer> poll()
 	{		
-		auto result = std::make_shared<core::audio_buffer>();
-
 		if(!codec_context_)
 			return empty_audio();
 
-		std::shared_ptr<AVPacket> packet;
-		if(!input_->try_pop_audio(packet))
-			return result;
+		if(!current_packet_ && !input_->try_pop_audio(current_packet_))
+			return nullptr;
+		
+		std::shared_ptr<core::audio_buffer> audio;
 
-		if(packet)
+		if(!current_packet_)		
+			avcodec_flush_buffers(codec_context_.get());	
+		else if(!current_packet_->data)
 		{
-			if(!packet->data && (codec_context_->codec->capabilities & CODEC_CAP_DELAY))
-				while(decode(*packet, *result));
-
-			while(packet->size > 0)		
-				decode(*packet, *result);
-		}		
-		else		
-			avcodec_flush_buffers(codec_context_.get());
-
-		return result;
+			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)			
+				audio = decode(*current_packet_);
+			
+			if(!audio)
+				current_packet_.reset();
+		}
+		else
+		{
+			audio = decode(*current_packet_);
+			
+			if(current_packet_->size == 0)
+				current_packet_.reset();
+		}
+	
+		return audio ? audio : poll();
 	}
 
-	bool decode(AVPacket& pkt, core::audio_buffer& result)
+	std::shared_ptr<core::audio_buffer> decode(AVPacket& pkt)
 	{		
 		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
-
+		
 		int got_frame = 0;
 		auto len = THROW_ON_ERROR2(avcodec_decode_audio4(codec_context_.get(), decoded_frame.get(), &got_frame, &pkt), "[audio_decoder]");
 					
 		if(len == 0)
 		{
 			pkt.size = 0;
-			return false;
+			return nullptr;
 		}
 
         pkt.data += len;
         pkt.size -= len;
 
 		if(!got_frame)
-			return false;
+			return nullptr;
 							
 		const uint8_t *in[] = {decoded_frame->data[0]};
 		uint8_t* out[]		= {buffer_.data()};
@@ -145,14 +151,13 @@ public:
 											in, decoded_frame->nb_samples);
 			
 		auto ptr = reinterpret_cast<int32_t*>(buffer_.data());
-		result.insert(result.end(), ptr, ptr + channel_samples * format_desc_.audio_channels);		
 		
 		event_subject_  << monitor::event("file/audio/sample-rate")	% codec_context_->sample_rate
 						<< monitor::event("file/audio/channels")	% codec_context_->channels
 						<< monitor::event("file/audio/format")		% u8(av_get_sample_fmt_name(codec_context_->sample_fmt))
 						<< monitor::event("file/audio/codec")		% u8(codec_context_->codec->long_name);				
 
-		return true;
+		return std::make_shared<core::audio_buffer>(ptr, ptr + channel_samples * format_desc_.audio_channels);
 	}
 	
 	uint32_t nb_frames() const
