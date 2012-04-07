@@ -45,7 +45,6 @@ class audio_decoder : public monitor::observable
 					, boost::noncopyable
 {
 public:
-	explicit audio_decoder();
 	explicit audio_decoder(class input& input, const core::video_format_desc& format_desc);
 	
 	audio_decoder(audio_decoder&& other);

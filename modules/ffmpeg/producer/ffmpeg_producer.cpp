@@ -79,8 +79,8 @@ struct ffmpeg_producer : public core::frame_producer_base
 	const double									fps_;
 	const uint32_t									start_;
 		
-	video_decoder									video_decoder_;
-	audio_decoder									audio_decoder_;	
+	std::unique_ptr<video_decoder>					video_decoder_;
+	std::unique_ptr<audio_decoder>					audio_decoder_;	
 	frame_muxer										muxer_;
 	
 	core::draw_frame								last_frame_;
@@ -108,14 +108,13 @@ public:
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
 		diagnostics::register_graph(graph_);
 		
-		video_decoder_.subscribe(event_subject_);
-		audio_decoder_.subscribe(event_subject_);
 
 		try
 		{
-			video_decoder_ = video_decoder(input_);
+			video_decoder_.reset(new video_decoder(input_));
+			video_decoder_->subscribe(event_subject_);
 			
-			CASPAR_LOG(info) << print() << L" " << video_decoder_.print();
+			CASPAR_LOG(info) << print() << L" " << video_decoder_->print();
 		}
 		catch(averror_stream_not_found&)
 		{
@@ -129,9 +128,10 @@ public:
 
 		try
 		{
-			audio_decoder_ = audio_decoder(input_, format_desc_);
+			audio_decoder_ .reset(new audio_decoder(input_, format_desc_));
+			audio_decoder_->subscribe(event_subject_);
 			
-			CASPAR_LOG(info) << print() << L" " << audio_decoder_.print();
+			CASPAR_LOG(info) << print() << L" " << audio_decoder_->print();
 		}
 		catch(averror_stream_not_found&)
 		{
@@ -204,14 +204,14 @@ public:
 	uint32_t file_nb_frames() const
 	{
 		uint32_t file_nb_frames = 0;
-		file_nb_frames = std::max(file_nb_frames, video_decoder_.nb_frames());
-		file_nb_frames = std::max(file_nb_frames, audio_decoder_.nb_frames());
+		file_nb_frames = std::max(file_nb_frames, video_decoder_ ? video_decoder_->nb_frames() : 0);
+		file_nb_frames = std::max(file_nb_frames, audio_decoder_ ? audio_decoder_->nb_frames() : 0);
 		return file_nb_frames;
 	}
 
 	uint32_t file_frame_number() const
 	{
-		return video_decoder_.file_frame_number();
+		return video_decoder_ ? video_decoder_->file_frame_number() : 0;
 	}
 		
 	boost::unique_future<std::wstring> call(const std::wstring& param) override
@@ -273,9 +273,9 @@ public:
 		boost::property_tree::wptree info;
 		info.add(L"type",				L"ffmpeg");
 		info.add(L"filename",			filename_);
-		info.add(L"width",				video_decoder_.width());
-		info.add(L"height",				video_decoder_.height());
-		info.add(L"progressive",		video_decoder_.is_progressive());
+		info.add(L"width",				video_decoder_ ? video_decoder_->width() : 0);
+		info.add(L"height",				video_decoder_ ? video_decoder_->height() : 0);
+		info.add(L"progressive",		video_decoder_ ? video_decoder_->is_progressive() : 0);
 		info.add(L"fps",				fps_);
 		info.add(L"loop",				input_.loop());
 		info.add(L"frame-number",		frame_number());
@@ -351,7 +351,10 @@ public:
 
 	std::wstring print_mode() const
 	{
-		return ffmpeg::print_mode(video_decoder_.width(), video_decoder_.height(), fps_, !video_decoder_.is_progressive());
+		return ffmpeg::print_mode(video_decoder_ ? video_decoder_->width() : 0, 
+			video_decoder_ ? video_decoder_->height() : 0, 
+			fps_, 
+			video_decoder_ ? !video_decoder_->is_progressive() : false);
 	}
 			
 	void decode_next_frame()
@@ -359,9 +362,9 @@ public:
 		for(int n = 0; n < 8 && muxer_.empty(); ++n)
 		{				
 			if(!muxer_.video_ready())
-				muxer_.push(video_decoder_());
+				muxer_.push_video(video_decoder_ ? (*video_decoder_)() : create_frame());
 			if(!muxer_.audio_ready())
-				muxer_.push(audio_decoder_());
+				muxer_.push_audio(audio_decoder_ ? (*audio_decoder_)() : create_frame());
 		}
 		graph_->set_text(print());
 	}

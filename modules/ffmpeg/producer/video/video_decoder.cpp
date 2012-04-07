@@ -57,7 +57,7 @@ struct video_decoder::impl : boost::noncopyable
 	monitor::basic_subject					event_subject_;
 	input*									input_;
 	int										index_;
-	const std::shared_ptr<AVCodecContext>	codec_context_;
+	const spl::shared_ptr<AVCodecContext>	codec_context_;
 
 	std::queue<spl::shared_ptr<AVPacket>>	packets_;
 	
@@ -73,16 +73,6 @@ struct video_decoder::impl : boost::noncopyable
 	std::shared_ptr<AVPacket>				current_packet_;
 
 public:
-	explicit impl() 
-		: input_(nullptr)
-		, nb_frames_(0)
-		, width_(0)
-		, height_(0)
-		, file_frame_number_(0)
-		, fps_(0.0)
-	{
-	}
-
 	explicit impl(input& in) 
 		: input_(&in)
 		, codec_context_(open_codec(input_->context(), AVMEDIA_TYPE_VIDEO, index_))
@@ -97,9 +87,6 @@ public:
 	
 	std::shared_ptr<AVFrame> poll()
 	{			
-		if(!codec_context_)
-			return create_frame();
-
 		if(!current_packet_ && !input_->try_pop_video(current_packet_))
 			return nullptr;
 		
@@ -176,7 +163,6 @@ public:
 	}
 };
 
-video_decoder::video_decoder() : impl_(new impl()){}
 video_decoder::video_decoder(input& in) : impl_(new impl(in)){}
 video_decoder::video_decoder(video_decoder&& other) : impl_(std::move(other.impl_)){}
 video_decoder& video_decoder::operator=(video_decoder&& other){impl_ = std::move(other.impl_); return *this;}
