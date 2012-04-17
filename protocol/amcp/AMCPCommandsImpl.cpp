@@ -1366,7 +1366,7 @@ bool InfoCommand::DoExecute()
 	{
 		if(_parameters.size() >= 1 && _parameters[0] == L"TEMPLATE")
 		{		
-			replyString << L"200 INFO TEMPLATE OK\r\n";
+			replyString << L"201 INFO TEMPLATE OK\r\n";
 
 			// Needs to be extended for any file, not just flash.
 
@@ -1381,13 +1381,13 @@ bool InfoCommand::DoExecute()
 		}
 		else if(_parameters.size() >= 1 && _parameters[0] == L"CONFIG")
 		{		
-			replyString << L"200 INFO CONFIG OK\r\n";
+			replyString << L"201 INFO CONFIG OK\r\n";
 
 			boost::property_tree::write_xml(replyString, caspar::env::properties(), w);
 		}
 		else if(_parameters.size() >= 1 && _parameters[0] == L"PATHS")
 		{
-			replyString << L"200 INFO PATHS OK\r\n";
+			replyString << L"201 INFO PATHS OK\r\n";
 
 			boost::property_tree::wptree info;
 			info.add_child(L"paths", caspar::env::properties().get_child(L"configuration.paths"));
@@ -1397,7 +1397,7 @@ bool InfoCommand::DoExecute()
 		}
 		else if(_parameters.size() >= 1 && _parameters[0] == L"SYSTEM")
 		{
-			replyString << L"200 INFO SYSTEM OK\r\n";
+			replyString << L"201 INFO SYSTEM OK\r\n";
 			
 			boost::property_tree::wptree info;
 			
@@ -1424,7 +1424,7 @@ bool InfoCommand::DoExecute()
 		}
 		else if(_parameters.size() >= 1 && _parameters[0] == L"SERVER")
 		{
-			replyString << L"200 INFO SERVER OK\r\n";
+			replyString << L"201 INFO SERVER OK\r\n";
 			
 			boost::property_tree::wptree info;
 
@@ -1439,7 +1439,7 @@ bool InfoCommand::DoExecute()
 		{			
 			if(_parameters.size() >= 1)
 			{
-				replyString << TEXT("200 INFO OK\r\n");
+				replyString << TEXT("201 INFO OK\r\n");
 				boost::property_tree::wptree info;
 
 				std::vector<std::wstring> split;
