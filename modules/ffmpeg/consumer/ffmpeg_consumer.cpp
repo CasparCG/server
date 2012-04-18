@@ -325,8 +325,15 @@ public:
 
 	~ffmpeg_consumer()
 	{    
-		executor_.wait();
-		
+		try
+		{
+			executor_.wait();
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+		}
+
 		LOG_ON_ERROR2(av_write_trailer(oc_.get()), "[ffmpeg_consumer]");
 		
 		audio_st_.reset();
