@@ -1,235 +1,235 @@
 CasparCG 2.0 Stable (w.r.t Beta 3)
 
 ¤ General
-	o Misc stability and performance fixes.	
+    o Misc stability and performance fixes.    
 
 ¤ Consumers
-	o File Consumer
-		+ Changed semantics to more closely follow ffmpeg (see forums).
-		+ Added options, -r, -acodec, -s, -pix_fmt, -f and more.
-	o Screen Consumer
-		+ Added vsync support.
+    o File Consumer
+        + Changed semantics to more closely follow ffmpeg (see forums).
+        + Added options, -r, -acodec, -s, -pix_fmt, -f and more.
+    o Screen Consumer
+        + Added vsync support.
 
 CasparCG 2.0 Beta 3 (w.r.t Beta 1)
 
-¤ Formats		
-		o ProRes Support			
-			+ Both encoding and decoding.
-			
-		o NTSC Support			
-			+ Updated audio-pipeline for native NTSC support. Previous implementation did not fully support NTSC audio and could cause incorrect behaviour or even crashes.
-		
+¤ Formats        
+        o ProRes Support            
+            + Both encoding and decoding.
+            
+        o NTSC Support            
+            + Updated audio-pipeline for native NTSC support. Previous implementation did not fully support NTSC audio and could cause incorrect behaviour or even crashes.
+        
 ¤ Consumers
 
-		o File Consumer added			
-			+ See updated wiki or ask in forum for more information.
-			+ Should support anything ffmpeg supports. However, we will work mainly with DNXHD, PRORES and H264.
-			- Key-only is not supported.
-			
-		o Bluefish Consumer
-			+ 24 bit audio support.
-			- Embedded-audio does not work with Epoch cards.
-			
-		o Decklink Consumer
-			+ Low latency enabled by default.
-			+ Added graphs for driver buffers.
-			
-		o Screen Consumer
-			+ Changed screen consumer square PAL to the more common wide-square PAL.
-			+ Can now be closed.
-			+ Fixed interpolation artifacts when running non-square video-modes.
-			+ Automatically deinterlace interlaced input.
-					
-	¤ Producers
-	
-		o Decklink Producer
-			+ Improved color quality be avoiding uneccessary conversion to BGRA.
-			
-		o FFMPEG Producer
-			+ Fixed missing alpha for (RGB)A formats when deinterlacing.
-			+ Updated buffering to work better with files with long audio/video interleaving.
-			+ Seekable while running and after reaching EOF. CALL 1-1 SEEK 200.
-			+ Enable/disable/query looping while running. CALL 1-1 LOOP 1.
-			+ Fixed bug with duration calculation.
-			+ Fixed bug with fps calculation.
-			+ Improved auto-transcode accuracy.
-			+ Improved seeking accuracy.
-			+ Fixed bug with looping and LENGTH.
-			+ Updated to newer ffmpeg version.
-			+ Fixed incorrect scaling of NTSC DV files.
-			+ Optimized color conversion when using YADIF filters.
-			
-		o Flash Producer
-			+ Release flash-player when empty.
-			+ Use native resolution template-host.
-			+ Template-hosts are now choosen automatically if not configured. The template-host with the corresponding video-mode name is now chosen.
-			+ Use square pixel dimensions.
-			
-	o AMCP
-		+ When possible, commands will no longer wait for rendering pipeline. This reduces command execution latencies, especially when sending a lot of commands in a short timespan.
-		+ Fixed CINF command.
-		+ ADD/REMOVE no longer require subindex, e.g. "ADD 1 SCREEN" / "REMOVE 1 SCREEN" instead of "ADD 1-1 SCREEN" / ...
-		+ PARAM is renamed to CALL.
-		+ STATUS command is replaced by INFO.
-		+ INFO command has been extended:
-			+ INFO (lists channels).
-			+ INFO 1 (channel info).
-			+ INFO 1-1 (layer info).
-			+ INFO 1-1 F (foreground producer info).
-			+ INFO 1-1 B (background producer info).
-			+ INFO TEMPLATE mytemplate (template meta-data info, e.g. field names).
-		+ CG INFO command has been extended.
-			+ CG INFO 1 (template-host information, e.g. what layers are occupied).
-	
-	o Mixer
-		+ Fixed alpha with blend modes.
-		+ Automatically deinterlace for MIXER FILL commands.
-	
-	o Channel
-		+ SET MODE now reverts back to old video-mode on failure.
-	
-	o Diagnostics
-		+ Improved graphs and added more status information.
-		+ Print configuration into log at startup.
-		+ Use the same log file for the entire day, instead of one per startup as previously.
-		+ Diagnostics window is now closable.
-	
-	o Configuration
-		+ Simplified.
-				
+        o File Consumer added            
+            + See updated wiki or ask in forum for more information.
+            + Should support anything ffmpeg supports. However, we will work mainly with DNXHD, PRORES and H264.
+            - Key-only is not supported.
+            
+        o Bluefish Consumer
+            + 24 bit audio support.
+            - Embedded-audio does not work with Epoch cards.
+            
+        o Decklink Consumer
+            + Low latency enabled by default.
+            + Added graphs for driver buffers.
+            
+        o Screen Consumer
+            + Changed screen consumer square PAL to the more common wide-square PAL.
+            + Can now be closed.
+            + Fixed interpolation artifacts when running non-square video-modes.
+            + Automatically deinterlace interlaced input.
+                    
+    ¤ Producers
+    
+        o Decklink Producer
+            + Improved color quality be avoiding uneccessary conversion to BGRA.
+            
+        o FFMPEG Producer
+            + Fixed missing alpha for (RGB)A formats when deinterlacing.
+            + Updated buffering to work better with files with long audio/video interleaving.
+            + Seekable while running and after reaching EOF. CALL 1-1 SEEK 200.
+            + Enable/disable/query looping while running. CALL 1-1 LOOP 1.
+            + Fixed bug with duration calculation.
+            + Fixed bug with fps calculation.
+            + Improved auto-transcode accuracy.
+            + Improved seeking accuracy.
+            + Fixed bug with looping and LENGTH.
+            + Updated to newer ffmpeg version.
+            + Fixed incorrect scaling of NTSC DV files.
+            + Optimized color conversion when using YADIF filters.
+            
+        o Flash Producer
+            + Release flash-player when empty.
+            + Use native resolution template-host.
+            + Template-hosts are now choosen automatically if not configured. The template-host with the corresponding video-mode name is now chosen.
+            + Use square pixel dimensions.
+            
+    o AMCP
+        + When possible, commands will no longer wait for rendering pipeline. This reduces command execution latencies, especially when sending a lot of commands in a short timespan.
+        + Fixed CINF command.
+        + ADD/REMOVE no longer require subindex, e.g. "ADD 1 SCREEN" / "REMOVE 1 SCREEN" instead of "ADD 1-1 SCREEN" / ...
+        + PARAM is renamed to CALL.
+        + STATUS command is replaced by INFO.
+        + INFO command has been extended:
+            + INFO (lists channels).
+            + INFO 1 (channel info).
+            + INFO 1-1 (layer info).
+            + INFO 1-1 F (foreground producer info).
+            + INFO 1-1 B (background producer info).
+            + INFO TEMPLATE mytemplate (template meta-data info, e.g. field names).
+        + CG INFO command has been extended.
+            + CG INFO 1 (template-host information, e.g. what layers are occupied).
+    
+    o Mixer
+        + Fixed alpha with blend modes.
+        + Automatically deinterlace for MIXER FILL commands.
+    
+    o Channel
+        + SET MODE now reverts back to old video-mode on failure.
+    
+    o Diagnostics
+        + Improved graphs and added more status information.
+        + Print configuration into log at startup.
+        + Use the same log file for the entire day, instead of one per startup as previously.
+        + Diagnostics window is now closable.
+    
+    o Configuration
+        + Simplified.
+                
 CasparCG 2.0 Beta 1 (w.r.t Alpha)
 
-	o Blending Modes (needs to be explicitly enabled)
-		+ overlay
-		+ screen
-		+ multiply
-		+ and many more.
-	o Added additive keyer in addition to linear keyer.
-	o Image adjustements
-		+ saturation
-		+ brightness
-		+ contrast
-		+ min input-level
-		+ max input-level
-		+ min output-level
-		+ max output-level
-		+ gamma
-	o Support for ffmpeg-filters such as (ee http://ffmpeg.org/libavfilter.html)
-		+ yadif deinterlacer (optimized in CasparCG for full multi-core support)
-		+ de-noising
-		+ dithering
-		+ box blur
-		+ and many more		
-	o 32-bit SSE optimized audio pipeline.
-	o Decklink-Consumer uses external-key by default.
-	o Decklink-Consumer has 32 bit embedded-audio support.
-	o Decklink-Producer has 32 bit embedded-audio support.
-	o LOADBG with AUTO feature which automatically playes queued clip when foreground clip has ended.
-	o STATUS command for layers.
-	o LOG LEVEL command for log filtering.
-	o MIX transitation work with transparent clips.
-	o Freeze on last frame.
-	o Producer buffering is now configurable.
-	o Consumer buffering is now configurable.
-	o Now possible to configure template-hosts for different video-modes.
-	o Added auto transcoder for ffmpeg-producer which automatically transcodes input video into compatible video format for the channel.
-		+ interlacing (50p -> 50i)
-		+ deinterlacing (50i -> 25p)
-		+ bob-deinterlacing (50i -> 50p)
-		+ bob-deinterlacing and reinterlacing (w1xh150i -> w2xh250i)
-		+ doubling (25p -> 50p)
-		+ halfing (50p -> 25p)
-		+ field-order swap (upper <-> lower)
-	o Screen consumer now automatically deinterlaces when receiveing interlaced content.	
-	o Optimized renderer.
-	o Renderer can now be run asynchronously with producer by using a producer-buffer size greater than 0.
-	o Improved error and crash recovery.
-	o Improved logging.
-	o Added Image-Scroll-Producer
-	o Key-only has now near zery performance overhead.
-	o Reduced memory requirements
-	o Removed "warm up lag" which occured when playing the first media clip after the server has started.
-	o Added read-back fence for OpenGL device for improved multi-channel performance.
-	o Memory support increased from standard 2 GB to 4 GB on 64 bit Win 7 OS.
-	o Added support for 2* Decklink cards in FullHD.
-	o Misc bugs fixes and performance improvements.	
-	o Color producer now support some color codes in addition to color codes, e.g. EMPTY, BLACK, RED etc...
-	o Alpha value in color codes is now optional.
-	
-	* More than 2 Decklink cards might be possible but have not yet been tested.
+    o Blending Modes (needs to be explicitly enabled)
+        + overlay
+        + screen
+        + multiply
+        + and many more.
+    o Added additive keyer in addition to linear keyer.
+    o Image adjustements
+        + saturation
+        + brightness
+        + contrast
+        + min input-level
+        + max input-level
+        + min output-level
+        + max output-level
+        + gamma
+    o Support for ffmpeg-filters such as (ee http://ffmpeg.org/libavfilter.html)
+        + yadif deinterlacer (optimized in CasparCG for full multi-core support)
+        + de-noising
+        + dithering
+        + box blur
+        + and many more        
+    o 32-bit SSE optimized audio pipeline.
+    o Decklink-Consumer uses external-key by default.
+    o Decklink-Consumer has 32 bit embedded-audio support.
+    o Decklink-Producer has 32 bit embedded-audio support.
+    o LOADBG with AUTO feature which automatically playes queued clip when foreground clip has ended.
+    o STATUS command for layers.
+    o LOG LEVEL command for log filtering.
+    o MIX transitation work with transparent clips.
+    o Freeze on last frame.
+    o Producer buffering is now configurable.
+    o Consumer buffering is now configurable.
+    o Now possible to configure template-hosts for different video-modes.
+    o Added auto transcoder for ffmpeg-producer which automatically transcodes input video into compatible video format for the channel.
+        + interlacing (50p -> 50i)
+        + deinterlacing (50i -> 25p)
+        + bob-deinterlacing (50i -> 50p)
+        + bob-deinterlacing and reinterlacing (w1xh150i -> w2xh250i)
+        + doubling (25p -> 50p)
+        + halfing (50p -> 25p)
+        + field-order swap (upper <-> lower)
+    o Screen consumer now automatically deinterlaces when receiveing interlaced content.    
+    o Optimized renderer.
+    o Renderer can now be run asynchronously with producer by using a producer-buffer size greater than 0.
+    o Improved error and crash recovery.
+    o Improved logging.
+    o Added Image-Scroll-Producer
+    o Key-only has now near zery performance overhead.
+    o Reduced memory requirements
+    o Removed "warm up lag" which occured when playing the first media clip after the server has started.
+    o Added read-back fence for OpenGL device for improved multi-channel performance.
+    o Memory support increased from standard 2 GB to 4 GB on 64 bit Win 7 OS.
+    o Added support for 2* Decklink cards in FullHD.
+    o Misc bugs fixes and performance improvements.    
+    o Color producer now support some color codes in addition to color codes, e.g. EMPTY, BLACK, RED etc...
+    o Alpha value in color codes is now optional.
+    
+    * More than 2 Decklink cards might be possible but have not yet been tested.
 ----------------------------------------------------------
 CasparCG 2.0 Alpha (w.r.t 1.8)
 
 ¤ General:
-	o Mayor refactoring for improved readability and mainainability.
-	o Some work towards platorm-independence. Currently the greatest challenge for full platform-independence is flash-producer.
-	o Misc improved scalability.
-	o XML-configuration.
+    o Mayor refactoring for improved readability and mainainability.
+    o Some work towards platorm-independence. Currently the greatest challenge for full platform-independence is flash-producer.
+    o Misc improved scalability.
+    o XML-configuration.
 ¤ Core:
-	o Multiple producers per video_channel.
-	o Multiple consumers per video_channel.
-	o Swap producers between layers and channels during run-time.
-	o Support for upper-field and lower-field interlacing.
-	o Add and remove consumers during run-time.
-	o Preliminary support for NTSC.
+    o Multiple producers per video_channel.
+    o Multiple consumers per video_channel.
+    o Swap producers between layers and channels during run-time.
+    o Support for upper-field and lower-field interlacing.
+    o Add and remove consumers during run-time.
+    o Preliminary support for NTSC.
 ¤ AMCP:
-	o Query flash and template-host version.
-	o Recursive media-folder listing.
-	o Misc changes.
+    o Query flash and template-host version.
+    o Recursive media-folder listing.
+    o Misc changes.
 ¤ Mixer
-	o Animated tween transforms.
+    o Animated tween transforms.
 ¤ Image-Mixer:
-	o Fully GPU accelerated (all features listed below are done on the gpu),
-	o Layer composition.
-	o Colorspaces (rgba, bgra, argb, yuv, yuva, yuv-hd, yuva-hd).
-	o Interlacing.
-	o Per-layer image-transforms:
-		o Opacity
-		o Gain
-		o Scaling
-		o Clipping
-		o Translation
+    o Fully GPU accelerated (all features listed below are done on the gpu),
+    o Layer composition.
+    o Colorspaces (rgba, bgra, argb, yuv, yuva, yuv-hd, yuva-hd).
+    o Interlacing.
+    o Per-layer image-transforms:
+        o Opacity
+        o Gain
+        o Scaling
+        o Clipping
+        o Translation
 ¤ Audio-Mixer
-	o Per-layer and per-sample audio-transforms:
-		o Gain
-	o Fully internal audio-mixing. Single output-video_channel.
+    o Per-layer and per-sample audio-transforms:
+        o Gain
+    o Fully internal audio-mixing. Single output-video_channel.
 ¤ Decklink
-	o Support for multiple decklink-cards.
+    o Support for multiple decklink-cards.
 ¤ Decklink-Consumer
-	o Embedded audio.
-	o HD support.
-	o Hardware clock.
+    o Embedded audio.
+    o HD support.
+    o Hardware clock.
 ¤ Decklink-Producer
-	o Embedded audio.
-	o HD support.
+    o Embedded audio.
+    o HD support.
 ¤ Bluefish-Consumer
-	o Drivers are loaded on-demand (server now runs on computers without installed bluefish-drivers).
-	o Embedded-audio.
-	o Allocated frames are no longer leaked.
+    o Drivers are loaded on-demand (server now runs on computers without installed bluefish-drivers).
+    o Embedded-audio.
+    o Allocated frames are no longer leaked.
 ¤ Color-Producer
-	o GPU accelerated.
+    o GPU accelerated.
 ¤ FFMPEG-Producer
-	o Asynchronous file IO.
-	o Parallel decoding of audio and video.
-	o Colorspace transform are moved to gpu.
+    o Asynchronous file IO.
+    o Parallel decoding of audio and video.
+    o Colorspace transform are moved to gpu.
 ¤ Transition-Producer
-	o Fully interlaced transition (previsously only progressive, even when running in interlaced mode).
-	o Per-sample mixing between source and destination clips.
-	o Tween transitions.
+    o Fully interlaced transition (previsously only progressive, even when running in interlaced mode).
+    o Per-sample mixing between source and destination clips.
+    o Tween transitions.
 ¤ Flash-Producer
-	o DirectDraw access (sligthly improved performance).
-	o Improved time-sync. Smoother animations and proper interlacing.
+    o DirectDraw access (sligthly improved performance).
+    o Improved time-sync. Smoother animations and proper interlacing.
 ¤ Image-Producer
-	o Support for various imageformats through FreeImage library.
+    o Support for various imageformats through FreeImage library.
 ¤ Diagnostics
-	o Graphs for monitoring performance and events.
-	o Misc logging improvements.
-	o Seperate log-file for every run of the server.
-	o Error logging provides full exception details, instead of only printing that an error has occured.
-	o Console with real-time logging output.
-	o Console with AMCP input.
+    o Graphs for monitoring performance and events.
+    o Misc logging improvements.
+    o Seperate log-file for every run of the server.
+    o Error logging provides full exception details, instead of only printing that an error has occured.
+    o Console with real-time logging output.
+    o Console with AMCP input.
 
 ¤ Removed
-	o Registry-configuration (replaced by XML-Configuration).
-	o TGA-Producer (replaced by Image-Producer).
-	o TGA-Scroll-Producer
+    o Registry-configuration (replaced by XML-Configuration).
+    o TGA-Producer (replaced by Image-Producer).
+    o TGA-Scroll-Producer
