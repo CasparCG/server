@@ -33,7 +33,7 @@ you just change the paths in the casparcg.config file.
 Open casparcg.config and use the following node for consumers:
 
 <consumers>
-	<screen/>
+    <screen/>
 </consumers>
 
 * How to enable a DeckLink card and how to get video in and key output.
@@ -41,7 +41,7 @@ Open casparcg.config and use the following node for consumers:
 Open casparcg.config and use the following node for consumers:
 
 <consumers>
-	<decklink/>
+    <decklink/>
 </consumers>
 
 # Tip:
@@ -59,18 +59,18 @@ CasparCG is distributed under the GNU General Public License GPLv3 or higher, se
 AUTHORS - People who have developed the CasparCG Server Software (sorted alphabetically by last name).
 ==========================================================================================================
 
-Niklas 	Andersson 	(Server 1.0-1.8)
-Andreas	Jeansson	(Template-Host)
-Robert 	Nagy	 	(Server 1.7-2.x)
+Niklas 	Andersson   (Server 1.0-1.8)
+Andreas	Jeansson    (Template-Host)
+Robert 	Nagy        (Server 1.7-2.x)
 	
 ==========================================================================================================
 CREDITS - People who have contributed to the CasparCG Project (sorted alphabetically by last name).
 ==========================================================================================================
 
-Niklas	Andersson	 		
-Jonas 	Hummelstrand	(jonas.hummelstrand@svt.se)
-Andreas Jeansson		(andreas.jeansson@svt.se)
-Peter 	Karlsson		(peter.p.karlsson@svt.se)
-Robert 	Nagy			(robert.nagy@dfindredpatch.se, ronag89@gmail.com)
-Olle 	Soprani			
+Niklas	Andersson
+Jonas 	Hummelstrand    (jonas.hummelstrand@svt.se)
+Andreas Jeansson        (andreas.jeansson@svt.se)
+Peter 	Karlsson        (peter.p.karlsson@svt.se)
+Robert 	Nagy            (robert.nagy@dfindredpatch.se, ronag89@gmail.com)
+Olle 	Soprani 
 Thomas 	R. Kaltz III 
