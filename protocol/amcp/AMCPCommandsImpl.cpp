@@ -173,8 +173,7 @@ std::wstring ListTemplates()
 			relativePath = boost::filesystem::wpath(dir + L"/" + file);
 						
 			auto str = relativePath.replace_extension(TEXT("")).native();
-			while(str.size() > 0 && (str[0] == '\\' || str[0] == '/'))
-				str = std::wstring(str.begin() + 1, str.end());
+			boost::trim_if(str, boost::is_any_of("\\/"));
 
 			replyString << TEXT("\"") << str
 						<< TEXT("\" ") << sizeWStr
@@ -1329,7 +1328,7 @@ bool CinfCommand::DoExecute()
 			auto path = itr->path();
 			auto file = path.replace_extension(L"").filename();
 			if(boost::iequals(file.wstring(), _parameters.at(0)))
-				info += MediaInfo(itr->path());
+				info += MediaInfo(itr->path()) + L"\r\n";
 		}
 
 		if(info.empty())
@@ -1337,7 +1336,7 @@ bool CinfCommand::DoExecute()
 			SetReplyString(TEXT("404 CINF ERROR\r\n"));
 			return false;
 		}
-		replyString << TEXT("201 CINF OK\r\n");
+		replyString << TEXT("200 CINF OK\r\n");
 		replyString << info << "\r\n";
 	}
 	catch(...)
