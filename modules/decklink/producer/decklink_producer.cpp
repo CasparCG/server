@@ -104,7 +104,7 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	std::exception_ptr											exception_;		
 
 public:
-	decklink_producer(const core::video_format_desc& format_desc, size_t device_index, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter)
+	decklink_producer(const core::video_format_desc& format_desc, size_t device_index, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter, std::size_t buffer_depth)
 		: decklink_(get_device(device_index))
 		, input_(decklink_)
 		, attributes_(decklink_)
@@ -118,7 +118,7 @@ public:
 		, frame_factory_(frame_factory)
 	{		
 		hints_ = 0;
-		frame_buffer_.set_capacity(2);
+		frame_buffer_.set_capacity(buffer_depth);
 		
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
@@ -281,12 +281,12 @@ class decklink_producer_proxy : public core::frame_producer
 	const uint32_t					length_;
 public:
 
-	explicit decklink_producer_proxy(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str, uint32_t length)
+	explicit decklink_producer_proxy(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str, uint32_t length, std::size_t buffer_depth)
 		: context_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
 		, last_frame_(core::basic_frame::empty())
 		, length_(length)
 	{
-		context_.reset([&]{return new decklink_producer(format_desc, device_index, frame_factory, filter_str);}); 
+		context_.reset([&]{return new decklink_producer(format_desc, device_index, frame_factory, filter_str, buffer_depth);}); 
 	}
 	
 	// frame_producer
@@ -332,6 +332,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 		device_index = boost::lexical_cast<int>(params.at(1));
 	auto filter_str		= get_param(L"FILTER", params); 	
 	auto length			= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max()); 	
+	auto buffer_depth	= get_param(L"BUFFER", params, 2); 	
 	auto format_desc	= core::video_format_desc::get(get_param(L"FORMAT", params, L"INVALID"));
 	
 	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
@@ -342,7 +343,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 			
 	return create_producer_print_proxy(
 		   create_producer_destroy_proxy(
-			make_safe<decklink_producer_proxy>(frame_factory, format_desc, device_index, filter_str, length)));
+			make_safe<decklink_producer_proxy>(frame_factory, format_desc, device_index, filter_str, length, buffer_depth)));
 }
 
 }}
