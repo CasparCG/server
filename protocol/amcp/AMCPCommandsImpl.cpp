@@ -34,6 +34,7 @@
 #include <common/diagnostics/graph.h>
 #include <common/os/windows/current_version.h>
 #include <common/os/windows/system_info.h>
+#include <common/utility/string.h>
 
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>
@@ -980,6 +981,8 @@ bool CGCommand::DoExecuteAdd() {
 
 			//open file
 			std::wifstream datafile(filename.c_str());
+			datafile.imbue(caspar::get_narrow_locale());
+
 			if(datafile) 
 			{
 				//read all data
@@ -1128,6 +1131,8 @@ bool CGCommand::DoExecuteUpdate()
 
 			//open file
 			std::wifstream datafile(filename.c_str());
+			datafile.imbue(caspar::get_narrow_locale());
+
 			if(datafile) 
 			{
 				std::wstringstream data;
@@ -1233,7 +1238,11 @@ bool DataCommand::DoExecuteStore()
 	filename.append(_parameters[1]);
 	filename.append(TEXT(".ftd"));
 
-	std::wofstream datafile(filename.c_str());
+	std::wofstream datafile;
+
+	datafile.imbue(caspar::get_narrow_locale());
+	datafile.open(filename.c_str());
+
 	if(!datafile) 
 	{
 		SetReplyString(TEXT("501 DATA STORE FAILED\r\n"));
@@ -1261,6 +1270,9 @@ bool DataCommand::DoExecuteRetrieve()
 	filename.append(TEXT(".ftd"));
 
 	std::wifstream datafile(filename.c_str());
+
+	datafile.imbue(caspar::get_narrow_locale());
+
 	if(!datafile) 
 	{
 		SetReplyString(TEXT("404 DATA RETRIEVE ERROR\r\n"));

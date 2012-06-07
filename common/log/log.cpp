@@ -63,12 +63,13 @@
 #include <boost/log/utility/init/common_attributes.hpp>
 #include <boost/log/utility/empty_deleter.hpp>
 #include <boost/lambda/lambda.hpp>
+#include <boost/bind.hpp>
 
 namespace caspar { namespace log {
 
 using namespace boost;
 
-void my_formatter(std::wostream& strm, boost::log::basic_record<wchar_t> const& rec)
+void my_formatter(bool print_all_characters, std::wostream& strm, boost::log::basic_record<wchar_t> const& rec)
 {
     namespace lambda = boost::lambda;
 	
@@ -96,7 +97,14 @@ void my_formatter(std::wostream& strm, boost::log::basic_record<wchar_t> const& 
 			strm << L" ";
 	}
 
-    strm << replace_nonprintable_copy(rec.message(), L'?');
+	if (print_all_characters)
+	{
+		strm << rec.message();
+	}
+	else
+	{
+	    strm << replace_nonprintable_copy(rec.message(), L'?');
+	}
 }
 
 namespace internal{
@@ -122,7 +130,7 @@ void init()
 //	stream_sink->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= debug);
 //#endif
 
-	stream_sink->locked_backend()->set_formatter(&my_formatter);
+	stream_sink->locked_backend()->set_formatter(boost::bind(my_formatter, false, _1, _2));
 
 	boost::log::wcore::get()->add_sink(stream_sink);
 }
@@ -147,8 +155,13 @@ void add_file_sink(const std::wstring& folder)
 			boost::log::keywords::auto_flush = true,
 			boost::log::keywords::open_mode = std::ios::app
 		);
-		
-		file_sink->locked_backend()->set_formatter(&my_formatter);
+
+		// TODO: does not seem to affect the character set only date formatting
+		file_sink->locked_backend()->imbue(caspar::get_narrow_locale());
+		// TODO: when UTF-8 log file output is fixed we can enable this
+		bool print_all_characters = false;
+
+		file_sink->locked_backend()->set_formatter(boost::bind(my_formatter, print_all_characters, _1, _2));
 
 //#ifdef NDEBUG
 //		file_sink->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= debug);
