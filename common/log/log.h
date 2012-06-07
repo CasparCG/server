@@ -102,7 +102,13 @@ template<typename T>
 inline void replace_nonprintable(std::basic_string<T, std::char_traits<T>, std::allocator<T>>& str, T with)
 {
 	std::locale loc;
-	std::replace_if(str.begin(), str.end(), [&](T c)->bool { return !std::isprint(c, loc) && c != '\r' && c != '\n'; }, with);
+	std::replace_if(str.begin(), str.end(), [&](T c)->bool {
+		return 
+			(!std::isprint(c, loc) 
+			&& c != '\r' 
+			&& c != '\n')
+			|| c > static_cast<T>(127);
+	}, with);
 }
 
 template<typename T>

@@ -21,6 +21,8 @@
 
 #include "../stdafx.h"
 
+#include <boost/locale.hpp>
+
 #include "utf8conv.h"
 
 namespace caspar {
@@ -43,6 +45,16 @@ std::string narrow(const std::wstring& str)
 std::string narrow(const std::string& str)
 {
 	return str ;
+}
+
+std::locale get_narrow_locale()
+{
+	boost::locale::generator gen;
+
+	gen.locale_cache_enabled(true);
+
+	// TODO: make configurable?
+	return gen.generate("en_GB.UTF-8");
 }
 
 }
