@@ -981,7 +981,6 @@ bool CGCommand::DoExecuteAdd() {
 
 			//open file
 			std::wifstream datafile(filename.c_str());
-			datafile.imbue(caspar::get_narrow_locale());
 
 			if(datafile) 
 			{
@@ -1131,7 +1130,6 @@ bool CGCommand::DoExecuteUpdate()
 
 			//open file
 			std::wifstream datafile(filename.c_str());
-			datafile.imbue(caspar::get_narrow_locale());
 
 			if(datafile) 
 			{
@@ -1238,10 +1236,7 @@ bool DataCommand::DoExecuteStore()
 	filename.append(_parameters[1]);
 	filename.append(TEXT(".ftd"));
 
-	std::wofstream datafile;
-
-	datafile.imbue(caspar::get_narrow_locale());
-	datafile.open(filename.c_str());
+	std::wofstream datafile(filename.c_str());
 
 	if(!datafile) 
 	{
@@ -1270,8 +1265,6 @@ bool DataCommand::DoExecuteRetrieve()
 	filename.append(TEXT(".ftd"));
 
 	std::wifstream datafile(filename.c_str());
-
-	datafile.imbue(caspar::get_narrow_locale());
 
 	if(!datafile) 
 	{

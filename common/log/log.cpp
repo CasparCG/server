@@ -156,10 +156,7 @@ void add_file_sink(const std::wstring& folder)
 			boost::log::keywords::open_mode = std::ios::app
 		);
 
-		// TODO: does not seem to affect the character set only date formatting
-		file_sink->locked_backend()->imbue(caspar::get_narrow_locale());
-		// TODO: when UTF-8 log file output is fixed we can enable this
-		bool print_all_characters = false;
+		bool print_all_characters = true;
 
 		file_sink->locked_backend()->set_formatter(boost::bind(my_formatter, print_all_characters, _1, _2));
 

@@ -38,6 +38,8 @@
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 
+#include <locale>
+
 #include <windows.h>
 #include <winnt.h>
 #include <mmsystem.h>
@@ -65,6 +67,7 @@
 #include <boost/property_tree/detail/file_parser_error.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/foreach.hpp>
+#include <boost/locale.hpp>
 
 // NOTE: This is needed in order to make CComObject work since this is not a real ATL project.
 CComModule _AtlModule;
@@ -77,6 +80,12 @@ void change_icon( const HICON hNewIcon )
    auto pfnSetConsoleIcon = reinterpret_cast<SCI>(::GetProcAddress(hMod, "SetConsoleIcon")); 
    pfnSetConsoleIcon(hNewIcon); 
    ::FreeLibrary(hMod);
+}
+
+void setup_global_locale()
+{
+	std::locale loc = boost::locale::generator()("");
+	std::locale::global(loc);
 }
 
 void setup_console_window()
@@ -165,6 +174,8 @@ int main(int argc, wchar_t* argv[])
 	static_assert(sizeof(void*) == 4, "64-bit code generation is not supported.");
 	
 	SetUnhandledExceptionFilter(UserUnhandledExceptionFilter);
+
+	setup_global_locale();
 
 	std::wcout << L"Type \"q\" to close application." << std::endl;
 	
