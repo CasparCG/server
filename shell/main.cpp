@@ -84,8 +84,10 @@ void change_icon( const HICON hNewIcon )
 
 void setup_global_locale()
 {
-	std::locale loc = boost::locale::generator()("");
-	std::locale::global(loc);
+	boost::locale::generator gen;
+	gen.categories(boost::locale::codepage_facet);
+
+	std::locale::global(gen(""));
 }
 
 void setup_console_window()
