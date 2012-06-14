@@ -46,6 +46,26 @@ void init();
 std::wstring get_call_stack();
 }
 
+template<typename T>
+inline void replace_nonprintable(std::basic_string<T, std::char_traits<T>, std::allocator<T>>& str, T with)
+{
+	std::locale loc;
+	std::replace_if(str.begin(), str.end(), [&](T c)->bool {
+		return 
+			(!std::isprint(c, loc) 
+			&& c != '\r' 
+			&& c != '\n')
+			|| c > static_cast<T>(127);
+	}, with);
+}
+
+template<typename T>
+inline std::basic_string<T> replace_nonprintable_copy(std::basic_string<T, std::char_traits<T>, std::allocator<T>> str, T with)
+{
+	replace_nonprintable(str, with);
+	return str;
+}
+
 void add_file_sink(const std::wstring& folder);
 
 enum severity_level
