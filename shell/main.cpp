@@ -65,6 +65,7 @@
 #include <boost/property_tree/detail/file_parser_error.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/foreach.hpp>
+#include <boost/locale.hpp>
 
 #include <signal.h>
 
@@ -81,6 +82,14 @@ void change_icon( const HICON hNewIcon )
    auto pfnSetConsoleIcon = reinterpret_cast<SCI>(::GetProcAddress(hMod, "SetConsoleIcon")); 
    pfnSetConsoleIcon(hNewIcon); 
    ::FreeLibrary(hMod);
+}
+
+void setup_global_locale()
+{
+	boost::locale::generator gen;
+	gen.categories(boost::locale::codepage_facet);
+
+	std::locale::global(gen(""));
 }
 
 void setup_console_window()
@@ -278,6 +287,8 @@ int main(int argc, wchar_t* argv[])
 {	
 	SetUnhandledExceptionFilter(UserUnhandledExceptionFilter);
 	signal(SIGABRT, on_abort);
+
+	setup_global_locale();
 
 	std::wcout << L"Type \"q\" to close application." << std::endl;
 	

@@ -36,6 +36,7 @@
 #include <string>
 #include <ostream>
 
+#include <boost/bind.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/make_shared.hpp>
 #include <boost/filesystem/convenience.hpp>
@@ -72,21 +73,7 @@ namespace caspar { namespace log {
 
 using namespace boost;
 
-template<typename T>
-inline void replace_nonprintable(std::basic_string<T, std::char_traits<T>, std::allocator<T>>& str, T with)
-{
-	std::locale loc;
-	std::replace_if(str.begin(), str.end(), [&](T c)->bool { return !std::isprint(c, loc) && c != '\r' && c != '\n'; }, with);
-}
-
-template<typename T>
-inline std::basic_string<T> replace_nonprintable_copy(std::basic_string<T, std::char_traits<T>, std::allocator<T>> str, T with)
-{
-	replace_nonprintable(str, with);
-	return str;
-}
-
-void my_formatter(std::wostream& strm, boost::log::basic_record<wchar_t> const& rec)
+void my_formatter(bool print_all_characters, std::wostream& strm, boost::log::basic_record<wchar_t> const& rec)
 {
     namespace lambda = boost::lambda;
 	
@@ -113,7 +100,14 @@ void my_formatter(std::wostream& strm, boost::log::basic_record<wchar_t> const& 
 			strm << L" ";
 	}
 
-    strm << replace_nonprintable_copy(rec.message(), L'?');
+	if (print_all_characters)
+	{
+		strm << rec.message();
+	}
+	else
+	{
+	    strm << replace_nonprintable_copy(rec.message(), L'?');
+	}
 }
 
 namespace internal{
@@ -139,7 +133,7 @@ void init()
 //	stream_sink->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= debug);
 //#endif
 
-	stream_sink->locked_backend()->set_formatter(&my_formatter);
+	stream_sink->locked_backend()->set_formatter(boost::bind(my_formatter, false, _1, _2));
 
 	boost::log::wcore::get()->add_sink(stream_sink);
 }
@@ -209,7 +203,7 @@ void add_file_sink(const std::wstring& folder)
 			boost::log::keywords::open_mode = std::ios::app
 		);
 		
-		file_sink->locked_backend()->set_formatter(&my_formatter);
+		file_sink->locked_backend()->set_formatter(boost::bind(my_formatter, true, _1, _2));
 
 //#ifdef NDEBUG
 //		file_sink->set_filter(boost::log::filters::attr<severity_level>(boost::log::sources::aux::severity_attribute_name<wchar_t>::get()) >= debug);
