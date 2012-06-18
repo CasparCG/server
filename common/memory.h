@@ -30,6 +30,16 @@ namespace caspar { namespace spl {
 	
 // unique_ptr
 
+/**
+ * A wrapper around std::unique_ptr ensuring that the pointer is never null
+ * except in the case of a moved from instance.
+ *
+ * The default constructor will point the wrapped pointer to a default 
+ * contructed instance of T.
+ *
+ * Use the make_unique overloads for perfectly forwarding the contructor 
+ * arguments of T and creating a unique_ptr to the created T instance.
+ */
 template<typename T, typename D = std::default_delete<T>>
 class unique_ptr
 {   
@@ -315,6 +325,15 @@ unique_ptr<T> make_unique(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4, P5&& p5)
 
 // shared_ptr
 
+/**
+ * A wrapper around std::shared_ptr ensuring that it never points to a null 
+ * pointer except in the case of a moved from instance.
+ * 
+ * A default constructed shared_ptr will point to a default constructed T.
+ * 
+ * Use the make_shared overloads for perfect forwarding of the constructor 
+ * arguments of T which will return a shared_ptr pointing to the constructed T.
+ */
 template<typename T>
 class shared_ptr
 {   

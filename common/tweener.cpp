@@ -47,6 +47,7 @@
 #include <boost/assign/list_of.hpp>
 #include <boost/regex.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/range/adaptor/map.hpp>
 
 #include <unordered_map>
 #include <string>
@@ -379,27 +380,10 @@ double ease_out_in_bounce (double t, double b, double c, double d, const std::ve
 	return ease_in_bounce((t*2)-d, b+c/2, c/2, d, params);
 }
 
-tweener_t get_tweener(std::wstring name)
-{
-	std::transform(name.begin(), name.end(), name.begin(), std::tolower);
+typedef std::function<double(double, double, double, double, const std::vector<double>&)> tween_t;	
 
-	if(name == L"linear")
-		return [](double t, double b, double c, double d){return ease_none(t, b, c, d, std::vector<double>());};
-	
-	std::vector<double> params;
-	
-	static const boost::wregex expr(L"(?<NAME>\\w*)(:(?<V0>\\d+\\.?\\d?))?(:(?<V1>\\d+\\.?\\d?))?"); // boost::regex has no repeated captures?
-	boost::wsmatch what;
-	if(boost::regex_match(name, what, expr))
-	{
-		name = what["NAME"].str();
-		if(what["V0"].matched)
-			params.push_back(boost::lexical_cast<double>(what["V0"].str()));
-		if(what["V1"].matched)
-			params.push_back(boost::lexical_cast<double>(what["V1"].str()));
-	}
-		
-	typedef std::function<double(double, double, double, double, const std::vector<double>&)> tween_t;	
+const std::unordered_map<std::wstring, tween_t>& get_tweens()
+{
 	static const std::unordered_map<std::wstring, tween_t> tweens = boost::assign::map_list_of	
 		(L"",					ease_none		   )	
 		(L"linear",				ease_none		   )	
@@ -445,6 +429,31 @@ tweener_t get_tweener(std::wstring name)
 		(L"easeinoutbounce",	ease_in_out_bounce )
 		(L"easeoutinbounce",	ease_out_in_bounce );
 
+	return tweens;
+}
+
+tweener_t get_tweener(std::wstring name)
+{
+	std::transform(name.begin(), name.end(), name.begin(), std::tolower);
+
+	if(name == L"linear")
+		return [](double t, double b, double c, double d){return ease_none(t, b, c, d, std::vector<double>());};
+	
+	std::vector<double> params;
+	
+	static const boost::wregex expr(L"(?<NAME>\\w*)(:(?<V0>\\d+\\.?\\d?))?(:(?<V1>\\d+\\.?\\d?))?"); // boost::regex has no repeated captures?
+	boost::wsmatch what;
+	if(boost::regex_match(name, what, expr))
+	{
+		name = what["NAME"].str();
+		if(what["V0"].matched)
+			params.push_back(boost::lexical_cast<double>(what["V0"].str()));
+		if(what["V1"].matched)
+			params.push_back(boost::lexical_cast<double>(what["V1"].str()));
+	}
+		
+	auto tweens = get_tweens();
+
 	auto it = tweens.find(name);
 	if(it == tweens.end())
 		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Could not find tween.") << arg_value_info(name));
@@ -469,6 +478,17 @@ tweener::tweener(const wchar_t* name)
 double tweener::operator()(double t, double b , double c, double d) const
 {
 	return func_(t, b, c, d);
+}
+
+const std::vector<std::wstring>& tweener::names()
+{
+	using namespace boost::adaptors;
+
+	static const std::vector<std::wstring> names(
+		(get_tweens() | map_keys).begin(),
+		(get_tweens() | map_keys).end());
+
+	return names;
 }
 
 }}
