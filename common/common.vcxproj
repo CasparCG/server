@@ -81,7 +81,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>"SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir)\version.tmpl" "$(SolutionDir)\version.h"</Command>
+      <Command>"SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir).\version.tmpl" "$(SolutionDir).\version.h"</Command>
     </PreBuildEvent>
     <Lib />
     <PostBuildEvent>
@@ -116,7 +116,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PreBuildEvent>
-      <Command>"SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir)\version.tmpl" "$(SolutionDir)\version.h"</Command>
+      <Command>"SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir).\version.tmpl" "$(SolutionDir).\version.h"</Command>
     </PreBuildEvent>
     <Lib>
       <LinkTimeCodeGeneration>false</LinkTimeCodeGeneration>
@@ -131,7 +131,7 @@
       <Command>"SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir)\version.tmpl" "$(SolutionDir)\version.h"</Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>"SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir)\version.tmpl" "$(SolutionDir)\version.h"</Command>
+      <Command>"SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir).\version.tmpl" "$(SolutionDir).\version.h"</Command>
     </PreBuildEvent>
     <ClCompile>
       <ForcedIncludeFiles>compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
@@ -142,7 +142,7 @@
       <Command>"SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir)\version.tmpl" "$(SolutionDir)\version.h"</Command>
     </PostBuildEvent>
     <PreBuildEvent>
-      <Command>"SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir)\version.tmpl" "$(SolutionDir)\version.h"</Command>
+      <Command>"SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir).\version.tmpl" "$(SolutionDir).\version.h"</Command>
     </PreBuildEvent>
     <ClCompile>
       <ForcedIncludeFiles>compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
