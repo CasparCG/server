@@ -107,7 +107,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>"SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir)\version.tmpl" "$(SolutionDir)\version.h"</Command>
+      <Command>"SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir).\version.tmpl" "$(SolutionDir).\version.h"</Command>
     </PreBuildEvent>
     <Lib />
   </ItemDefinitionGroup>
@@ -138,7 +138,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PreBuildEvent>
-      <Command>"SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir)\version.tmpl" "$(SolutionDir)\version.h"</Command>
+      <Command>"SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir).\version.tmpl" "$(SolutionDir).\version.h"</Command>
     </PreBuildEvent>
     <Lib>
       <LinkTimeCodeGeneration>true</LinkTimeCodeGeneration>
@@ -171,7 +171,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PreBuildEvent>
-      <Command>"SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir)\version.tmpl" "$(SolutionDir)\version.h"</Command>
+      <Command>"SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir).\version.tmpl" "$(SolutionDir).\version.h"</Command>
     </PreBuildEvent>
     <Lib />
   </ItemDefinitionGroup>
@@ -203,7 +203,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PreBuildEvent>
-      <Command>"SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir)\version.tmpl" "$(SolutionDir)\version.h"</Command>
+      <Command>"SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir).\version.tmpl" "$(SolutionDir).\version.h"</Command>
     </PreBuildEvent>
     <Lib />
   </ItemDefinitionGroup>
