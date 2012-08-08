@@ -47,5 +47,11 @@
     <ClInclude Include="consumer\image_consumer.h">
       <Filter>source\consumer</Filter>
     </ClInclude>
+    <ClInclude Include="util\image_algorithms.h">
+      <Filter>source\util</Filter>
+    </ClInclude>
+    <ClInclude Include="util\image_view.h">
+      <Filter>source\util</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
