@@ -35,6 +35,7 @@
 #include <common/os/windows/current_version.h>
 #include <common/os/windows/system_info.h>
 #include <common/utility/string.h>
+#include <common/utility/utf8conv.h>
 
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>
@@ -61,6 +62,7 @@
 #include <algorithm>
 #include <locale>
 #include <fstream>
+#include <memory>
 #include <cctype>
 #include <io.h>
 
@@ -68,8 +70,12 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <boost/regex.hpp>
 #include <boost/property_tree/xml_parser.hpp>
+#include <boost/locale.hpp>
+#include <boost/range/adaptor/transformed.hpp>
+#include <boost/range/algorithm/copy.hpp>
 
 #include <tbb/concurrent_unordered_map.h>
 
@@ -98,6 +104,76 @@
 namespace caspar { namespace protocol {
 
 using namespace core;
+
+std::wstring read_utf8_file(const boost::filesystem::wpath& file)
+{
+	std::wstringstream result;
+	boost::filesystem::wifstream filestream(file);
+
+	if (filestream) 
+	{
+		// Consume BOM first
+		filestream.get();
+		// read all data
+		result << filestream.rdbuf();
+	}
+
+	return result.str();
+}
+
+std::wstring read_latin1_file(const boost::filesystem::wpath& file)
+{
+	boost::locale::generator gen;
+	gen.locale_cache_enabled(true);
+	gen.categories(boost::locale::codepage_facet);
+
+	std::stringstream result_stream;
+	boost::filesystem::ifstream filestream(file);
+	filestream.imbue(gen("en_US.ISO8859-1"));
+
+	if (filestream)
+	{
+		// read all data
+		result_stream << filestream.rdbuf();
+	}
+
+	std::string result = result_stream.str();
+	std::wstring widened_result;
+
+	// The first 255 codepoints in unicode is the same as in latin1
+	auto from_signed_to_signed = std::function<unsigned char(char)>(
+		[] (char c) { return static_cast<unsigned char>(c); }
+	);
+	boost::copy(
+		result | boost::adaptors::transformed(from_signed_to_signed),
+		std::back_inserter(widened_result));
+
+	return widened_result;
+}
+
+std::wstring read_file(const boost::filesystem::wpath& file)
+{
+	static const uint8_t BOM[] = {0xef, 0xbb, 0xbf};
+
+	if (!boost::filesystem::exists(file))
+	{
+		return L"";
+	}
+
+	if (boost::filesystem::file_size(file) >= 3)
+	{
+		boost::filesystem::ifstream bom_stream(file);
+
+		char header[3];
+		bom_stream.read(header, 3);
+		bom_stream.close();
+
+		if (std::memcmp(BOM, header, 3) == 0)
+			return read_utf8_file(file);
+	}
+
+	return read_latin1_file(file);
+}
 
 std::wstring MediaInfo(const boost::filesystem::wpath& path)
 {
@@ -979,19 +1055,8 @@ bool CGCommand::DoExecuteAdd() {
 			filename.append(dataString);
 			filename.append(TEXT(".ftd"));
 
-			//open file
-			std::wifstream datafile(filename.c_str());
-
-			if(datafile) 
-			{
-				//read all data
-				data << datafile.rdbuf();
-				datafile.close();
-
-				//extract data to _parameters
-				dataFromFile = data.str();
-				pDataString = dataFromFile.c_str();
-			}
+			dataFromFile = read_file(boost::filesystem::wpath(filename));
+			pDataString = dataFromFile.c_str();
 		}
 	}
 
@@ -1128,19 +1193,7 @@ bool CGCommand::DoExecuteUpdate()
 			filename.append(dataString);
 			filename.append(TEXT(".ftd"));
 
-			//open file
-			std::wifstream datafile(filename.c_str());
-
-			if(datafile) 
-			{
-				std::wstringstream data;
-				//read all data
-				data << datafile.rdbuf();
-				datafile.close();
-
-				//extract data to _parameters
-				dataString = data.str();
-			}
+			dataString = read_file(boost::filesystem::wpath(filename));
 		}		
 
 		int layer = _ttoi(_parameters.at(1).c_str());
@@ -1244,7 +1297,8 @@ bool DataCommand::DoExecuteStore()
 		return false;
 	}
 
-	datafile << _parameters2[2];
+	datafile << static_cast<wchar_t>(65279); // UTF-8 BOM character
+	datafile << _parameters2[2] << std::flush;
 	datafile.close();
 
 	std::wstring replyString = TEXT("202 DATA STORE OK\r\n");
@@ -1264,16 +1318,18 @@ bool DataCommand::DoExecuteRetrieve()
 	filename.append(_parameters[1]);
 	filename.append(TEXT(".ftd"));
 
-	std::wifstream datafile(filename.c_str());
+	std::wstring file_contents = read_file(boost::filesystem::wpath(filename));
 
-	if(!datafile) 
+	//std::wifstream datafile(filename.c_str());
+
+	if (file_contents.empty()) 
 	{
 		SetReplyString(TEXT("404 DATA RETRIEVE ERROR\r\n"));
 		return false;
 	}
 
 	std::wstringstream reply(TEXT("201 DATA RETRIEVE OK\r\n"));
-	std::wstring line;
+	/*std::wstring line;
 	bool bFirstLine = true;
 	while(std::getline(datafile, line))
 	{
@@ -1284,8 +1340,9 @@ bool DataCommand::DoExecuteRetrieve()
 
 		reply << line;
 	}
-	datafile.close();
+	datafile.close();*/
 
+	reply << file_contents;
 	reply << "\r\n";
 	SetReplyString(reply.str());
 	return true;
