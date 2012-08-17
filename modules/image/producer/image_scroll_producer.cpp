@@ -68,6 +68,7 @@ struct image_scroll_producer : public core::frame_producer
 
 	int											start_offset_x_;
 	int											start_offset_y_;
+	bool										progressive_;
 
 	safe_ptr<core::basic_frame>					last_frame_;
 	
@@ -77,11 +78,13 @@ struct image_scroll_producer : public core::frame_producer
 		double speed,
 		double duration,
 		int motion_blur_px = 0,
-		bool premultiply_with_alpha = false) 
+		bool premultiply_with_alpha = false,
+		bool progressive = false) 
 		: filename_(filename)
 		, delta_(0)
 		, format_desc_(frame_factory->get_video_format_desc())
 		, speed_(speed)
+		, progressive_(progressive)
 		, last_frame_(core::basic_frame::empty())
 	{
 		start_offset_x_ = 0;
@@ -323,7 +326,7 @@ struct image_scroll_producer : public core::frame_producer
 
 	virtual safe_ptr<core::basic_frame> receive(int) override
 	{
-		if (format_desc_.field_mode == core::field_mode::progressive)
+		if (format_desc_.field_mode == core::field_mode::progressive || progressive_)
 		{
 			return last_frame_ = render_frame(true, true);
 		}
@@ -423,6 +426,7 @@ safe_ptr<core::frame_producer> create_scroll_producer(const safe_ptr<core::frame
 	}
 
 	bool premultiply_with_alpha = std::find(params.begin(), params.end(), L"PREMULTIPLY") != params.end();
+	bool progressive = std::find(params.begin(), params.end(), L"PROGRESSIVE") != params.end();
 
 	return create_producer_print_proxy(make_safe<image_scroll_producer>(
 		frame_factory, 
@@ -430,7 +434,8 @@ safe_ptr<core::frame_producer> create_scroll_producer(const safe_ptr<core::frame
 		-speed, 
 		-duration, 
 		motion_blur_px, 
-		premultiply_with_alpha));
+		premultiply_with_alpha,
+		progressive));
 }
 
 }}
