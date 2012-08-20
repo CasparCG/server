@@ -134,7 +134,6 @@ struct ogl_consumer : boost::noncopyable
 	safe_ptr<diagnostics::graph>	graph_;
 	boost::timer					perf_timer_;
 	boost::timer					tick_timer_;
-	boost::timer					vblank_timer_;
 
 	caspar::high_prec_timer	wait_timer_;
 
@@ -174,6 +173,7 @@ public:
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
+
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 									
@@ -313,16 +313,20 @@ public:
 
 	void try_sleep_almost_until_vblank()
 	{
-		static const double THRESHOLD = 0.005;
+		static const double THRESHOLD = 0.003;
 		double threshold = config_.vsync ? THRESHOLD : 0.0;
 
-		auto elapsed = vblank_timer_.elapsed();
 		auto frame_time = 1.0 / (format_desc_.fps * format_desc_.field_count);
 
-		if (elapsed + threshold < frame_time)
-		{
-			wait_timer_.tick(frame_time - elapsed - threshold);
-		}
+		wait_timer_.tick(frame_time - threshold);
+	}
+
+	void wait_for_vblank_and_display()
+	{
+		try_sleep_almost_until_vblank();
+		window_.Display();
+		// Make sure that the next tick measures the duration from this point in time.
+		wait_timer_.tick(0.0);
 	}
 	
 	safe_ptr<AVFrame> get_av_frame()
@@ -360,27 +364,21 @@ public:
 			render(frames[0], frame->image_data().size());
 			graph_->set_value("frame-time", perf_timer_.elapsed() * format_desc_.fps * 0.5);
 
-			try_sleep_almost_until_vblank();
-			window_.Display();
-			vblank_timer_.restart();
+			wait_for_vblank_and_display(); // progressive frame
 		}
 		else if (frames.size() == 2)
 		{
 			render(frames[0], frame->image_data().size());
 			double perf_elapsed = perf_timer_.elapsed();
 
-			try_sleep_almost_until_vblank();
-			window_.Display();
-			vblank_timer_.restart();
+			wait_for_vblank_and_display(); // field1
 
 			perf_timer_.restart();
 			render(frames[1], frame->image_data().size());
 			perf_elapsed += perf_timer_.elapsed();
 			graph_->set_value("frame-time", perf_elapsed * format_desc_.fps * 0.5);
 
-			try_sleep_almost_until_vblank();
-			window_.Display();
-			vblank_timer_.restart();
+			wait_for_vblank_and_display(); // field2
 		}
 	}
 
