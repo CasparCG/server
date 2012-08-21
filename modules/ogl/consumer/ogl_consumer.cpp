@@ -567,7 +567,7 @@ public:
 
 	virtual int index() const override
 	{
-		return 600;
+		return 600 + config_.screen_index;
 	}
 };	
 
