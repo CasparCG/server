@@ -578,6 +578,7 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 	
 	configuration config;
 		
+	if(params.size() > 1)		config.screen_index = lexical_cast_or_default<int>(params[1], config.screen_index);
 	auto device_it = std::find(params.begin(), params.end(), L"DEVICE");
 	if(device_it != params.end() && ++device_it != params.end())
 		config.screen_index = boost::lexical_cast<int>(*device_it);
