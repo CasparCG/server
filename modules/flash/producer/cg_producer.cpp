@@ -215,24 +215,36 @@ safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel
 	return make_safe<cg_producer>(flash_producer);
 }
 
-safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params) 
+safe_ptr<core::frame_producer> create_cg_producer_and_autoplay_file(
+		const safe_ptr<core::frame_factory>& frame_factory, 
+		const std::vector<std::wstring>& params,
+		const std::wstring& filename) 
 {
-	std::wstring filename = env::media_folder() + L"\\" + params[0] + L".ct";
 	if(!boost::filesystem::exists(filename))
 		return core::frame_producer::empty();
 		
 	boost::filesystem2::wpath path(filename);
 	path = boost::filesystem2::complete(path);
-	filename = path.file_string();
+	auto filename2 = path.file_string();
 
 	auto flash_producer = flash::create_producer(frame_factory, boost::assign::list_of<std::wstring>());	
 	auto producer = make_safe<cg_producer>(flash_producer);
-	producer->add(0, filename, 1);
+	producer->add(0, filename2, 1);
 
 	return producer;
 }
 
-safe_ptr<core::frame_producer> create_cg_producer(const safe_ptr<core::frame_factory> frame_factory, const std::vector<std::wstring>& params) 
+safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params) 
+{
+	return create_cg_producer_and_autoplay_file(frame_factory, params, env::media_folder() + L"\\" + params[0] + L".ct");
+}
+
+safe_ptr<core::frame_producer> create_swf_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params) 
+{
+	return create_cg_producer_and_autoplay_file(frame_factory, params, env::media_folder() + L"\\" + params[0] + L".swf");
+}
+
+safe_ptr<core::frame_producer> create_cg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params) 
 {
 	if(params.empty() || params.at(0) != L"[CG]")
 		return core::frame_producer::empty();
