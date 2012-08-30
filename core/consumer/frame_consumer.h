@@ -25,6 +25,7 @@
 
 #include <boost/noncopyable.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
+#include <boost/thread/future.hpp>
 
 #include <functional>
 #include <string>
@@ -39,7 +40,7 @@ struct frame_consumer : boost::noncopyable
 {
 	virtual ~frame_consumer() {}
 	
-	virtual bool send(const safe_ptr<read_frame>& frame) = 0;
+	virtual boost::unique_future<bool> send(const safe_ptr<read_frame>& frame) = 0;
 	virtual void initialize(const video_format_desc& format_desc, int channel_index) = 0;
 	virtual std::wstring print() const = 0;
 	virtual boost::property_tree::wptree info() const = 0;

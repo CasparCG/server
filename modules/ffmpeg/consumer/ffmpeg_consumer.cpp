@@ -33,6 +33,7 @@
 #include <core/video_format.h>
 
 #include <common/concurrency/executor.h>
+#include <common/concurrency/future_util.h>
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
 #include <common/utility/string.h>
@@ -615,10 +616,10 @@ public:
 		consumer_.reset(new ffmpeg_consumer(narrow(filename_), format_desc, options_));
 	}
 	
-	virtual bool send(const safe_ptr<core::read_frame>& frame) override
+	virtual boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame) override
 	{
 		consumer_->send(frame);
-		return true;
+		return caspar::wrap_as_future(true);
 	}
 	
 	virtual std::wstring print() const override

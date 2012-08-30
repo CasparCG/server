@@ -29,6 +29,7 @@
 #include <core/mixer/read_frame.h>
 
 #include <common/concurrency/executor.h>
+#include <common/concurrency/future_util.h>
 #include <common/diagnostics/graph.h>
 #include <common/memory/memclr.h>
 #include <common/memory/memcpy.h>
@@ -72,6 +73,7 @@ struct bluefish_consumer : boost::noncopyable
 	const bool							key_only_;
 		
 	executor							executor_;
+	retry_task<bool>					send_completion_;
 public:
 	bluefish_consumer(const core::video_format_desc& format_desc, unsigned int device_index, bool embedded_audio, bool key_only, int channel_index) 
 		: blue_(create_blue(device_index))
@@ -184,10 +186,14 @@ public:
 			CASPAR_LOG(error)<< print() << TEXT(" Failed to disable video output.");		
 	}
 	
-	void send(const safe_ptr<core::read_frame>& frame)
-	{					
-		executor_.begin_invoke([=]
+	boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame)
+	{
+		auto display_command = [=]
 		{
+			// The executor queue now has room so we try to complete the pending send call
+			send_completion_.try_or_fail(
+				caspar_exception() << msg_info(narrow(print()) + " Future send not able to complete."));
+
 			try
 			{	
 				display_frame(frame);				
@@ -198,7 +204,22 @@ public:
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
 			}
+		};
+
+		auto enqueue_command = [=]
+		{
+			return executor_.try_begin_invoke(display_command);
+		};
+
+		if (enqueue_command())
+			return wrap_as_future(true);
+
+		send_completion_.set_task([=]
+		{
+			return enqueue_command() ? boost::optional<bool>(true) : boost::optional<bool>();
 		});
+
+		return std::move(send_completion_.get_future());
 	}
 
 	void display_frame(const safe_ptr<core::read_frame>& frame)
@@ -324,13 +345,12 @@ public:
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 	
-	virtual bool send(const safe_ptr<core::read_frame>& frame) override
+	virtual boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame) override
 	{
 		CASPAR_VERIFY(audio_cadence_.front() == static_cast<size_t>(frame->audio_data().size()));
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 
-		consumer_->send(frame);
-		return true;
+		return consumer_->send(frame);
 	}
 		
 	virtual std::wstring print() const override

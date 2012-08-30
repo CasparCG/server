@@ -32,6 +32,7 @@
 #include <common/memory/memshfl.h>
 #include <common/utility/timer.h>
 #include <common/utility/string.h>
+#include <common/concurrency/future_util.h>
 
 #include <ffmpeg/producer/filter/filter.h>
 
@@ -435,12 +436,12 @@ public:
 		std::rotate(pbos_.begin(), pbos_.begin() + 1, pbos_.end());
 	}
 
-	bool send(const safe_ptr<core::read_frame>& frame)
+	boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame)
 	{
 		if (!frame_buffer_.try_push(frame))
 			graph_->set_tag("dropped-frame"); 
 
-		return is_running_;
+		return wrap_as_future(is_running_.load());
 	}
 		
 	std::wstring print() const
@@ -535,7 +536,7 @@ public:
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 	
-	virtual bool send(const safe_ptr<core::read_frame>& frame) override
+	virtual boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame) override
 	{
 		return consumer_->send(frame);
 	}
@@ -578,7 +579,9 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 	
 	configuration config;
 		
-	if(params.size() > 1)		config.screen_index = lexical_cast_or_default<int>(params[1], config.screen_index);
+	if(params.size() > 1)
+		config.screen_index = lexical_cast_or_default<int>(params[1], config.screen_index);
+
 	auto device_it = std::find(params.begin(), params.end(), L"DEVICE");
 	if(device_it != params.end() && ++device_it != params.end())
 		config.screen_index = boost::lexical_cast<int>(*device_it);

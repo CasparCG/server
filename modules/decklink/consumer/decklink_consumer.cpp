@@ -30,6 +30,7 @@
 #include <core/mixer/read_frame.h>
 
 #include <common/concurrency/com_context.h>
+#include <common/concurrency/future_util.h>
 #include <common/diagnostics/graph.h>
 #include <common/exception/exceptions.h>
 #include <common/memory/memcpy.h>
@@ -203,6 +204,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	
 	safe_ptr<diagnostics::graph> graph_;
 	boost::timer tick_timer_;
+	retry_task<bool> send_completion_;
 
 public:
 	decklink_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index) 
@@ -371,7 +373,8 @@ public:
 				graph_->set_tag("flushed-frame");
 
 			std::shared_ptr<core::read_frame> frame;	
-			video_frame_buffer_.pop(frame);					
+			video_frame_buffer_.pop(frame);
+			send_completion_.try_completion();
 			schedule_next_video(make_safe_ptr(frame));	
 			
 			unsigned long buffered;
@@ -409,6 +412,7 @@ public:
 			{
 				std::shared_ptr<core::read_frame> frame;
 				audio_frame_buffer_.pop(frame);
+				send_completion_.try_completion();
 				schedule_next_audio(frame->audio_data());
 			}
 
@@ -451,7 +455,7 @@ public:
 		tick_timer_.restart();
 	}
 
-	void send(const safe_ptr<core::read_frame>& frame)
+	boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame)
 	{
 		{
 			tbb::spin_mutex::scoped_lock lock(exception_mutex_);
@@ -461,10 +465,30 @@ public:
 
 		if(!is_running_)
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Is not running."));
+
+		bool audio_ready = !config_.embedded_audio;
+		bool video_ready = false;
+
+		auto enqueue_task = [audio_ready, video_ready, frame, this]() mutable -> boost::optional<bool>
+		{
+			if (!audio_ready)
+				audio_ready = audio_frame_buffer_.try_push(frame);
+
+			if (!video_ready)
+				video_ready = video_frame_buffer_.try_push(frame);
+
+			if (audio_ready && video_ready)
+				return true;
+			else
+				return boost::optional<bool>();
+		};
 		
-		if(config_.embedded_audio)
-			audio_frame_buffer_.push(frame);	
-		video_frame_buffer_.push(frame);	
+		if (enqueue_task())
+			return wrap_as_future(true);
+
+		send_completion_.set_task(enqueue_task);
+
+		return send_completion_.get_future();
 	}
 	
 	std::wstring print() const
@@ -507,13 +531,12 @@ public:
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 	
-	virtual bool send(const safe_ptr<core::read_frame>& frame) override
+	virtual boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame) override
 	{
 		CASPAR_VERIFY(audio_cadence_.front() == static_cast<size_t>(frame->audio_data().size()));
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 
-		context_->send(frame);
-		return true;
+		return context_->send(frame);
 	}
 	
 	virtual std::wstring print() const override
