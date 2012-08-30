@@ -25,6 +25,7 @@
 #include <common/env.h>
 #include <common/log/log.h>
 #include <common/utility/string.h>
+#include <common/concurrency/future_util.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/video_format.h>
@@ -53,7 +54,7 @@ public:
 		format_desc_ = format_desc;
 	}
 	
-	virtual bool send(const safe_ptr<core::read_frame>& frame) override
+	virtual boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame) override
 	{				
 		auto format_desc = format_desc_;
 		boost::thread async([format_desc, frame]
@@ -74,7 +75,7 @@ public:
 		});
 		async.detach();
 
-		return false;
+		return wrap_as_future(false);
 	}
 
 	virtual std::wstring print() const override

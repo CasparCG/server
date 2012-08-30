@@ -26,6 +26,7 @@
 #include <common/env.h>
 #include <common/memory/safe_ptr.h>
 #include <common/exception/exceptions.h>
+#include <common/concurrency/future_util.h>
 #include <core/video_format.h>
 #include <core/mixer/read_frame.h>
 
@@ -84,12 +85,12 @@ public:
 		consumer_->initialize(format_desc, channel_index);
 	}
 
-	virtual bool send(const safe_ptr<read_frame>& frame) override
+	virtual boost::unique_future<bool> send(const safe_ptr<read_frame>& frame) override
 	{		
 		if(audio_cadence_.size() == 1)
 			return consumer_->send(frame);
 
-		bool result = true;
+		boost::unique_future<bool> result = caspar::wrap_as_future(true);
 		
 		if(boost::range::equal(sync_buffer_, audio_cadence_) && audio_cadence_.front() == static_cast<size_t>(frame->audio_data().size())) 
 		{	
@@ -102,7 +103,7 @@ public:
 
 		sync_buffer_.push_back(static_cast<size_t>(frame->audio_data().size()));
 		
-		return result;
+		return std::move(result);
 	}
 
 	virtual std::wstring print() const override
@@ -140,7 +141,7 @@ const safe_ptr<frame_consumer>& frame_consumer::empty()
 {
 	struct empty_frame_consumer : public frame_consumer
 	{
-		virtual bool send(const safe_ptr<read_frame>&) override {return false;}
+		virtual boost::unique_future<bool> send(const safe_ptr<read_frame>&) override { return caspar::wrap_as_future(false); }
 		virtual void initialize(const video_format_desc&, int) override{}
 		virtual std::wstring print() const override {return L"empty";}
 		virtual bool has_synchronization_clock() const override {return false;}

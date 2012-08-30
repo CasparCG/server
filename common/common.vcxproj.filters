@@ -142,5 +142,8 @@
     <ClInclude Include="concurrency\lock.h">
       <Filter>source\concurrency</Filter>
     </ClInclude>
+    <ClInclude Include="concurrency\future_util.h">
+      <Filter>source\concurrency</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -26,6 +26,7 @@
 #include <common/log/log.h>
 #include <common/utility/timer.h>
 #include <common/utility/string.h>
+#include <common/concurrency/future_util.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/mixer/audio/audio_util.h>
@@ -38,6 +39,8 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/timer.hpp>
+#include <boost/thread/future.hpp>
+#include <boost/optional.hpp>
 
 #include <tbb/concurrent_queue.h>
 
@@ -55,6 +58,7 @@ struct oal_consumer : public core::frame_consumer,  public sf::SoundStream
 	boost::circular_buffer<audio_buffer_16>				container_;
 	tbb::atomic<bool>									is_running_;
 	core::audio_buffer									temp;
+	retry_task<bool>									send_completion_;
 
 	core::video_format_desc								format_desc_;
 public:
@@ -97,10 +101,17 @@ public:
 		CASPAR_LOG(info) << print() << " Sucessfully Initialized.";
 	}
 	
-	virtual bool send(const safe_ptr<core::read_frame>& frame) override
-	{			
-		input_.push(std::make_shared<audio_buffer_16>(core::audio_32_to_16(frame->audio_data())));
-		return true;
+	virtual boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame) override
+	{
+		auto buffer = std::make_shared<audio_buffer_16>(core::audio_32_to_16(frame->audio_data()));
+
+		if (input_.try_push(buffer))			return wrap_as_future(is_running_.load());
+		send_completion_.set_task([=]
+		{
+			return input_.try_push(buffer) ? boost::optional<bool>(is_running_) : boost::optional<bool>();
+		});
+
+		return send_completion_.get_future();
 	}
 	
 	virtual std::wstring print() const override
@@ -126,7 +137,8 @@ public:
 	{		
 		std::shared_ptr<audio_buffer_16> audio_data;		
 		input_.pop(audio_data);
-				
+		send_completion_.try_completion();
+
 		container_.push_back(std::move(*audio_data));
 		data.Samples = container_.back().data();
 		data.NbSamples = container_.back().size();	

@@ -34,7 +34,7 @@
 
 #include <common/exception/exceptions.h>
 #include <common/memory/memcpy.h>
-
+#include <common/concurrency/future_util.h>
 #include <tbb/concurrent_queue.h>
 
 namespace caspar { namespace core {
@@ -60,10 +60,10 @@ public:
 
 	// frame_consumer
 
-	virtual bool send(const safe_ptr<read_frame>& frame) override
+	virtual boost::unique_future<bool> send(const safe_ptr<read_frame>& frame) override
 	{
 		frame_buffer_.try_push(frame);
-		return is_running_;
+		return caspar::wrap_as_future(is_running_.load());
 	}
 
 	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
