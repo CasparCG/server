@@ -58,7 +58,6 @@ struct oal_consumer : public core::frame_consumer,  public sf::SoundStream
 	boost::circular_buffer<audio_buffer_16>				container_;
 	tbb::atomic<bool>									is_running_;
 	core::audio_buffer									temp;
-	retry_task<bool>									send_completion_;
 
 	core::video_format_desc								format_desc_;
 public:
@@ -67,6 +66,8 @@ public:
 		, channel_index_(-1)
 	{
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
+		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
+		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
 		diagnostics::register_graph(graph_);
 
 		is_running_ = true;
@@ -105,18 +106,21 @@ public:
 	{
 		auto buffer = std::make_shared<audio_buffer_16>(core::audio_32_to_16(frame->audio_data()));
 
-		if (input_.try_push(buffer))			return wrap_as_future(is_running_.load());
-		send_completion_.set_task([=]
-		{
-			return input_.try_push(buffer) ? boost::optional<bool>(is_running_) : boost::optional<bool>();
-		});
+		if (!input_.try_push(buffer))
+			graph_->set_tag("dropped-frame");
 
-		return send_completion_.get_future();
+
+		return wrap_as_future(is_running_.load());
 	}
 	
 	virtual std::wstring print() const override
 	{
 		return L"oal[" + boost::lexical_cast<std::wstring>(channel_index_) + L"|" + format_desc_.name + L"]";
+	}
+
+	virtual bool has_synchronization_clock() const override
+	{
+		return false;
 	}
 
 	virtual boost::property_tree::wptree info() const override
@@ -136,8 +140,12 @@ public:
 	virtual bool OnGetData(sf::SoundStream::Chunk& data) override
 	{		
 		std::shared_ptr<audio_buffer_16> audio_data;		
-		input_.pop(audio_data);
-		send_completion_.try_completion();
+
+		if (!input_.try_pop(audio_data))
+		{
+			graph_->set_tag("late-frame");
+			input_.pop(audio_data); // Block until available
+		}
 
 		container_.push_back(std::move(*audio_data));
 		data.Samples = container_.back().data();
