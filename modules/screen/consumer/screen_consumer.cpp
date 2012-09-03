@@ -31,6 +31,7 @@
 #include <common/array.h>
 #include <common/memshfl.h>
 #include <common/utf.h>
+#include <common/prec_timer.h>
 
 #include <ffmpeg/producer/filter/filter.h>
 
@@ -136,6 +137,8 @@ struct screen_consumer : boost::noncopyable
 	boost::timer						perf_timer_;
 	boost::timer						tick_timer_;
 
+	caspar::prec_timer					wait_timer_;
+
 	tbb::concurrent_bounded_queue<core::const_frame>	frame_buffer_;
 
 	boost::thread						thread_;
@@ -153,7 +156,7 @@ public:
 		, screen_height_(format_desc.height)
 		, square_width_(format_desc.square_width)
 		, square_height_(format_desc.square_height)
-		, filter_(format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? L"" : L"YADIF=0:-1", boost::assign::list_of(PIX_FMT_BGRA))
+		, filter_(format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? L"" : L"YADIF=1:-1", boost::assign::list_of(PIX_FMT_BGRA))
 	{		
 		if(format_desc_.format == core::video_format::ntsc && config_.aspect == configuration::aspect_4_3)
 		{
@@ -290,13 +293,15 @@ public:
 			
 					auto frame = core::const_frame::empty();
 					frame_buffer_.pop(frame);
+
+					render_and_draw_frame(frame);
 					
-					perf_timer_.restart();
+					/*perf_timer_.restart();
 					render(frame);
 					graph_->set_value("frame-time", perf_timer_.elapsed()*format_desc_.fps*0.5);	
 
-					window_.Display();
-					
+					window_.Display();*/
+
 					graph_->set_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);	
 					tick_timer_.restart();
 				}
@@ -314,7 +319,25 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 	}
-	
+
+	void try_sleep_almost_until_vblank()
+	{
+		static const double THRESHOLD = 0.003;
+		double threshold = config_.vsync ? THRESHOLD : 0.0;
+
+		auto frame_time = 1.0 / (format_desc_.fps * format_desc_.field_count);
+
+		wait_timer_.tick(frame_time - threshold);
+	}
+
+	void wait_for_vblank_and_display()
+	{
+		try_sleep_almost_until_vblank();
+		window_.Display();
+		// Make sure that the next tick measures the duration from this point in time.
+		wait_timer_.tick(0.0);
+	}
+
 	spl::shared_ptr<AVFrame> get_av_frame()
 	{		
 		spl::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
@@ -330,25 +353,49 @@ public:
 		return av_frame;
 	}
 
-	void render(core::const_frame frame)
-	{			
-		if(static_cast<int>(frame.image_data().size()) != format_desc_.size)
+	void render_and_draw_frame(core::const_frame frame)
+	{
+		if(static_cast<size_t>(frame.image_data().size()) != format_desc_.size)
 			return;
 
 		if(screen_width_ == 0 && screen_height_ == 0)
 			return;
 					
+		perf_timer_.restart();
 		auto av_frame = get_av_frame();
 		av_frame->data[0] = const_cast<uint8_t*>(frame.image_data().begin());
 
 		filter_.push(av_frame);
 		auto frames = filter_.poll_all();
 
-		if(frames.empty())
+		if (frames.empty())
 			return;
 
-		av_frame = frames[0];
-		
+		if (frames.size() == 1)
+		{
+			render(frames[0]);
+			graph_->set_value("frame-time", perf_timer_.elapsed() * format_desc_.fps * 0.5);
+
+			wait_for_vblank_and_display(); // progressive frame
+		}
+		else if (frames.size() == 2)
+		{
+			render(frames[0]);
+			double perf_elapsed = perf_timer_.elapsed();
+
+			wait_for_vblank_and_display(); // field1
+
+			perf_timer_.restart();
+			render(frames[1]);
+			perf_elapsed += perf_timer_.elapsed();
+			graph_->set_value("frame-time", perf_elapsed * format_desc_.fps * 0.5);
+
+			wait_for_vblank_and_display(); // field2
+		}
+	}
+
+	void render(spl::shared_ptr<AVFrame> av_frame)
+	{
 		GL(glBindTexture(GL_TEXTURE_2D, texture_));
 
 		GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[0]));
@@ -394,6 +441,7 @@ public:
 
 		std::rotate(pbos_.begin(), pbos_.begin() + 1, pbos_.end());
 	}
+
 
 	bool send(core::const_frame frame)
 	{
@@ -520,7 +568,7 @@ public:
 
 	int index() const override
 	{
-		return 600 + (config_.key_only ? 1 : 0);
+		return 600 + (config_.key_only ? 10 : 0) + config_.screen_index;
 	}
 
 	void subscribe(const monitor::observable::observer_ptr& o) override
