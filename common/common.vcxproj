@@ -151,6 +151,7 @@
   <ItemGroup>
     <ClInclude Include="array.h" />
     <ClInclude Include="assert.h" />
+    <ClInclude Include="blocking_bounded_queue_adapter.h" />
     <ClInclude Include="compiler\vs\disable_silly_warnings.h" />
     <ClInclude Include="compiler\vs\stack_walker.h" />
     <ClInclude Include="diagnostics\graph.h" />
@@ -173,6 +174,7 @@
     <ClInclude Include="param.h" />
     <ClInclude Include="prec_timer.h" />
     <ClInclude Include="reactive.h" />
+    <ClInclude Include="semaphore.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="tweener.h" />
     <ClInclude Include="utf.h" />
