@@ -116,7 +116,7 @@ public:
 	}
 	
 	template<typename Func>
-	auto try_begin_invoke(Func&& func, task_priority priority = normal_priority) -> boost::unique_future<decltype(func())>
+	auto try_begin_invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> boost::unique_future<decltype(func())>
 	{	
 		if(!is_running_)
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("executor not running."));
