@@ -26,6 +26,7 @@
 #include <common/log.h>
 #include <common/utf.h>
 #include <common/array.h>
+#include <common/future.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/video_format.h>
@@ -54,7 +55,7 @@ public:
 	{
 	}
 	
-	bool send(core::const_frame frame) override
+	boost::unique_future<bool> send(core::const_frame frame) override
 	{				
 		boost::thread async([frame]
 		{
@@ -74,7 +75,7 @@ public:
 		});
 		async.detach();
 
-		return false;
+		return wrap_as_future(false);
 	}
 
 	std::wstring print() const override

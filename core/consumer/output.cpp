@@ -177,22 +177,37 @@ public:
 			if(!frames_.full())
 				return;
 
-			for(auto it = ports_.begin(); it != ports_.end();)
+			std::map<int, boost::unique_future<bool>> send_results;
+
+			// Start invocations
+			for (auto it = ports_.begin(); it != ports_.end(); ++it)
 			{
 				auto& port	= it->second;
 				auto& frame	= frames_.at(port.buffer_depth()-minmax.first);
 					
 				try
 				{
-					if(port.send(frame))
-						++it;
-					else
-						ports_.erase(it++);					
+					send_results.insert(std::make_pair(it->first, port.send(frame)));
 				}
-				catch(...)
+				catch (...)
 				{
 					CASPAR_LOG_CURRENT_EXCEPTION();
-					ports_.erase(it++);
+					ports_.erase(it);
+				}
+			}
+
+			// Retrieve results
+			for (auto it = send_results.begin(); it != send_results.end(); ++it)
+			{
+				try
+				{
+					if (!it->second.get())
+						ports_.erase(it->first);
+				}
+				catch (...)
+				{
+					CASPAR_LOG_CURRENT_EXCEPTION();
+					ports_.erase(it->first);
 				}
 			}
 		});
