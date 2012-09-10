@@ -152,6 +152,7 @@
     <ClInclude Include="array.h" />
     <ClInclude Include="assert.h" />
     <ClInclude Include="blocking_bounded_queue_adapter.h" />
+    <ClInclude Include="blocking_priority_queue.h" />
     <ClInclude Include="compiler\vs\disable_silly_warnings.h" />
     <ClInclude Include="compiler\vs\stack_walker.h" />
     <ClInclude Include="diagnostics\graph.h" />
