@@ -27,6 +27,7 @@
 #include <common/log.h>
 #include <common/utf.h>
 #include <common/env.h>
+#include <common/future.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
@@ -174,8 +175,10 @@ public:
 		});
 	}
 	
-	bool send(core::const_frame frame) override
-	{			
+	boost::unique_future<bool> send(core::const_frame frame) override
+	{
+		// Will only block if the default executor queue capacity of 512 is
+		// exhausted, which should not happen
 		executor_.begin_invoke([=]
 		{
 			ALenum state; 
@@ -213,7 +216,7 @@ public:
 			perf_timer_.restart();
 		});
 
-		return true;
+		return wrap_as_future(true);
 	}
 	
 	std::wstring print() const override

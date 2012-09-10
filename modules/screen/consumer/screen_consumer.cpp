@@ -32,6 +32,7 @@
 #include <common/memshfl.h>
 #include <common/utf.h>
 #include <common/prec_timer.h>
+#include <common/future.h>
 
 #include <ffmpeg/producer/filter/filter.h>
 
@@ -443,11 +444,12 @@ public:
 	}
 
 
-	bool send(core::const_frame frame)
+	boost::unique_future<bool> send(core::const_frame frame)
 	{
 		if(!frame_buffer_.try_push(frame))
 			graph_->set_tag("dropped-frame");
-		return is_running_;
+
+		return wrap_as_future(is_running_.load());
 	}
 		
 	std::wstring print() const
@@ -531,7 +533,7 @@ public:
 		consumer_.reset(new screen_consumer(config_, format_desc, channel_index));
 	}
 	
-	bool send(core::const_frame frame) override
+	boost::unique_future<bool> send(core::const_frame frame) override
 	{
 		return consumer_->send(frame);
 	}

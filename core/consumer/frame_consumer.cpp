@@ -24,6 +24,7 @@
 #include "frame_consumer.h"
 
 #include <common/except.h>
+#include <common/future.h>
 
 #include <core/video_format.h>
 #include <core/frame/frame.h>
@@ -76,7 +77,7 @@ public:
 		}).detach(); 
 	}
 	
-	bool send(const_frame frame) override																{return consumer_->send(std::move(frame));}
+	boost::unique_future<bool> send(const_frame frame) override											{return consumer_->send(std::move(frame));}
 	virtual void initialize(const struct video_format_desc& format_desc, int channel_index)	override	{return consumer_->initialize(format_desc, channel_index);}
 	std::wstring print() const override																	{return consumer_->print();}	
 	std::wstring name() const override																	{return consumer_->name();}
@@ -106,7 +107,7 @@ public:
 		CASPAR_LOG(info) << str << L" Uninitialized.";
 	}
 	
-	bool send(const_frame frame) override													{return consumer_->send(std::move(frame));}
+	boost::unique_future<bool> send(const_frame frame) override									{return consumer_->send(std::move(frame));}
 	virtual void initialize(const struct video_format_desc& format_desc, int channel_index)	override	{return consumer_->initialize(format_desc, channel_index);}
 	std::wstring print() const override															{return consumer_->print();}
 	std::wstring name() const override															{return consumer_->name();}
@@ -129,7 +130,7 @@ public:
 	{
 	}
 	
-	virtual bool send(const_frame frame)					
+	virtual boost::unique_future<bool> send(const_frame frame)					
 	{
 		try
 		{
@@ -147,7 +148,7 @@ public:
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
 				CASPAR_LOG(error) << print() << " Failed to recover consumer.";
-				return false;
+				return wrap_as_future(false);
 			}
 		}
 	}
@@ -188,12 +189,12 @@ public:
 		consumer_->initialize(format_desc, channel_index);
 	}
 
-	bool send(const_frame frame) override
+	boost::unique_future<bool> send(const_frame frame) override
 	{		
 		if(audio_cadence_.size() == 1)
 			return consumer_->send(frame);
 
-		bool result = true;
+		boost::unique_future<bool> result = wrap_as_future(true);
 		
 		if(boost::range::equal(sync_buffer_, audio_cadence_) && audio_cadence_.front() == static_cast<int>(frame.audio_data().size())) 
 		{	
@@ -206,7 +207,7 @@ public:
 
 		sync_buffer_.push_back(static_cast<int>(frame.audio_data().size()));
 		
-		return result;
+		return std::move(result);
 	}
 	
 	std::wstring print() const override										{return consumer_->print();}
@@ -253,7 +254,7 @@ const spl::shared_ptr<frame_consumer>& frame_consumer::empty()
 	class empty_frame_consumer : public frame_consumer
 	{
 	public:
-		bool send(const_frame) override {return false;}
+		boost::unique_future<bool> send(const_frame) override {return wrap_as_future(false);}
 		void initialize(const video_format_desc&, int) override{}
 		std::wstring print() const override {return L"empty";}
 		std::wstring name() const override {return L"empty";}
