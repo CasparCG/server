@@ -28,7 +28,7 @@ public:
 		consumer_->initialize(format_desc, channel_index_);
 	}
 		
-	bool send(const_frame frame)
+	boost::unique_future<bool> send(const_frame frame)
 	{
 		event_subject_ << monitor::event("type") % consumer_->name();
 		return consumer_->send(std::move(frame));
@@ -59,7 +59,7 @@ port::port(int index, int channel_index, spl::shared_ptr<frame_consumer> consume
 port::port(port&& other) : impl_(std::move(other.impl_)){}
 port::~port(){}
 port& port::operator=(port&& other){impl_ = std::move(other.impl_); return *this;}
-bool port::send(const_frame frame){return impl_->send(std::move(frame));}	
+boost::unique_future<bool> port::send(const_frame frame){return impl_->send(std::move(frame));}	
 void port::subscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_.subscribe(o);}
 void port::unsubscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_.unsubscribe(o);}
 void port::video_format_desc(const struct video_format_desc& format_desc){impl_->video_format_desc(format_desc);}

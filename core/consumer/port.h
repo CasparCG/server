@@ -5,6 +5,7 @@
 #include <common/memory.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
+#include <boost/thread/future.hpp>
 
 namespace caspar { namespace core {
 
@@ -26,7 +27,7 @@ public:
 
 	port& operator=(port&& other);
 
-	bool send(class const_frame frame);	
+	boost::unique_future<bool> send(class const_frame frame);	
 
 	// monitor::observable
 	

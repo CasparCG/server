@@ -347,7 +347,7 @@ public:
 	
 	// frame_consumer
 
-	bool send(core::const_frame& frame)
+	boost::unique_future<bool> send(core::const_frame& frame)
 	{
 		auto exception = lock(exception_mutex_, [&]
 		{
@@ -357,12 +357,12 @@ public:
 		if(exception != nullptr)
 			std::rethrow_exception(exception);
 			
-		executor_.begin_invoke([=]
+		return executor_.begin_invoke([=]() -> bool
 		{		
 			encode(frame);
+
+			return true;
 		});
-		
-		return true;
 	}
 
 	std::wstring print() const
@@ -744,7 +744,7 @@ public:
 		consumer_.reset(new ffmpeg_consumer(u8(filename_), format_desc, options_));
 	}
 	
-	bool send(core::const_frame frame) override
+	boost::unique_future<bool> send(core::const_frame frame) override
 	{
 		return consumer_->send(frame);
 	}

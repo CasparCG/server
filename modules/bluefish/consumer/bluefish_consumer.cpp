@@ -186,9 +186,9 @@ public:
 			CASPAR_LOG(error)<< print() << TEXT(" Failed to disable video output.");		
 	}
 	
-	void send(core::const_frame& frame)
+	boost::unique_future<bool> send(core::const_frame& frame)
 	{					
-		executor_.begin_invoke([=]
+		return executor_.begin_invoke([=]() -> bool
 		{
 			try
 			{	
@@ -200,6 +200,8 @@ public:
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
 			}
+
+			return true;
 		});
 	}
 
@@ -317,10 +319,9 @@ public:
 		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_, key_only_, channel_index));
 	}
 	
-	bool send(core::const_frame frame) override
+	boost::unique_future<bool> send(core::const_frame frame) override
 	{
-		consumer_->send(frame);
-		return true;
+		return consumer_->send(frame);
 	}
 		
 	std::wstring print() const override
