@@ -155,4 +155,44 @@ public:
 	}
 };
 
+/**
+ * Enables RAII-style acquire/release on scope exit unless committed.
+ */
+class acquire_transaction : boost::noncopyable
+{
+	semaphore& semaphore_;
+	bool committed_;
+public:
+	/**
+	 * Constructor.
+	 *
+	 * @param semaphore        The semaphore to acquire one permit from.
+	 * @param already_acquired Whether a permit has already been acquired or not.
+	 */
+	acquire_transaction(semaphore& semaphore, bool already_acquired = false)
+		: semaphore_(semaphore)
+		, committed_(false)
+	{
+		if (!already_acquired)
+			semaphore_.acquire();
+	}
+
+	/**
+	 * Destructor that will release one permit if commit() has not been called.
+	 */
+	~acquire_transaction()
+	{
+		if (!committed_)
+			semaphore_.release();
+	}
+
+	/**
+	 * Ensure that the acquired permit is kept on destruction.
+	 */
+	void commit()
+	{
+		committed_ = true;
+	}
+};
+
 }

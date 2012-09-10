@@ -142,5 +142,8 @@
     <ClInclude Include="blocking_bounded_queue_adapter.h">
       <Filter>source</Filter>
     </ClInclude>
+    <ClInclude Include="blocking_priority_queue.h">
+      <Filter>source</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
