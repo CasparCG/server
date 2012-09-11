@@ -72,7 +72,7 @@ public:
 
 		// The std::map is read-only from now on, so there *should* (it is 
 		// unlikely but possible for a std::map implementor to choose to 
-		// rebalance the tree during read operations) be no race  conditions 
+		// rebalance the tree during read operations) be no race conditions
 		// regarding the map.
 		//
 		// This may be true for vc10 as well:
