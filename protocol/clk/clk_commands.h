@@ -16,48 +16,24 @@
 * You should have received a copy of the GNU General Public License
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
-* Author: Nicklas P Andersson
+* Author: Helge Norberg, helge.norberg@svt.se
 */
 
- 
 #pragma once
+
+#include <core/video_channel.h>
+
+#include "clk_command_processor.h"
 
 namespace caspar { namespace protocol { namespace CLK {
 
-class CLKCommand
-{
-public:
-	enum CLKCommands 
-	{
-		CLKDuration,
-		CLKNewDuration,
-		CLKNextEvent,
-		CLKStop,
-		CLKUntil,
-		CLKAdd,
-		CLKSub,
-		CLKReset,
-		CLKInvalidCommand
-	};
-
-	CLKCommand();
-	virtual ~CLKCommand();
-
-	bool SetCommand();
-	bool NeedsTime() const 
-	{
-		return !(command_ == CLKNextEvent || command_ == CLKStop);
-	}
-
-	void Clear();
-	const std::wstring& GetData();
-
-	std::wstring dataCache_;
-	std::wstring commandString_;
-	CLKCommands command_;
-	int clockID_;
-	std::wstring time_;
-	std::vector<std::wstring> parameters_;
-};
+/**
+ * Add the CLK command handlers to a command processor.
+ *
+ * @param processor The command processor to add the command handlers to.
+ * @param channel   The channel to play the flash graphics on.
+ */
+void add_command_handlers(
+	clk_command_processor& processor, const safe_ptr<core::video_channel>& channel);
 
 }}}
