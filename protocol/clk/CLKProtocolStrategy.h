@@ -22,12 +22,25 @@
  
 #pragma once
 
-#include "CLKCommand.h"
-#include "../util/ProtocolStrategy.h"
+#include <vector>
+#include <string>
+#include <sstream>
+
 #include <core/video_channel.h>
+
+#include "clk_command_processor.h"
+#include "../util/ProtocolStrategy.h"
 
 namespace caspar { namespace protocol { namespace CLK {
 
+/**
+ * TODO:
+ * Can only handle one connection at a time safely. Works with multiple if
+ * every Parse call contains a complete command, but this will not happen if
+ * the client sends one command in multiple chunks, then partial commands can
+ * be interlieved with each other from different clients, causing the parser
+ * to be confused.
+ */
 class CLKProtocolStrategy : public IO::IProtocolStrategy
 {
 public:
@@ -37,22 +50,20 @@ public:
 	UINT GetCodepage() { return 28591; }	//ISO 8859-1
 	
 private:
+	void reset();
+
 	enum ParserState
 	{
 		ExpectingNewCommand,
 		ExpectingCommand,
-		ExpectingClockID,
-		ExpectingTime,
 		ExpectingParameter
 	};
 
 	ParserState	currentState_;
-	CLKCommand currentCommand_;
 	std::wstringstream currentCommandString_;
-
-	safe_ptr<core::video_channel> pChannel_;
-
-	bool bClockLoaded_;
+	std::wstring command_name_;
+	std::vector<std::wstring> parameters_;
+	clk_command_processor command_processor_;
 };
 
 }}}

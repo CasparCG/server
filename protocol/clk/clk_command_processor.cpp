@@ -16,24 +16,34 @@
 * You should have received a copy of the GNU General Public License
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
-* Author: Nicklas P Andersson
+* Author: Helge Norberg, helge.norberg@svt.se
 */
 
- #pragma once
+#include "../stdafx.h"
 
-#include <string>
-#include "ClientInfo.h"
+#include "clk_command_processor.h"
 
-namespace caspar { namespace IO {
+namespace caspar { namespace protocol { namespace CLK {
 
-class IProtocolStrategy
+clk_command_processor& clk_command_processor::add_handler(
+	const std::wstring& command_name, const clk_command_handler& handler)
 {
-public:
-	virtual ~IProtocolStrategy(){}
+	handlers_.insert(std::make_pair(command_name, handler));
 
-	virtual void Parse(const wchar_t* pData, int charCount, ClientInfoPtr pClientInfo) = 0;
-	virtual unsigned int GetCodepage() = 0;
-};
-typedef std::shared_ptr<IProtocolStrategy> ProtocolStrategyPtr;
+	return *this;
+}
 
-}}	//namespace caspar
+bool clk_command_processor::handle(
+	const std::wstring& command_name, const std::vector<std::wstring>& parameters)
+{
+	auto handler = handlers_.find(command_name);
+
+	if (handler == handlers_.end())
+		return false;
+
+	handler->second(parameters);
+
+	return true;
+}
+
+}}}
