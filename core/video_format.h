@@ -35,6 +35,8 @@ struct video_format
 		x576p2500,
 		x720p2500,
 		x720p5000,
+		x720p2398,
+		x720p2400,
 		x720p2997,
 		x720p5994,
 		x720p3000,
@@ -48,6 +50,8 @@ struct video_format
 		x1080p2997,
 		x1080p3000,
 		x1080p5000,
+		x1080p5994,
+		x1080p6000,
 		invalid,
 		count
 	};
