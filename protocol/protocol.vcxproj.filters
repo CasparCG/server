@@ -64,6 +64,9 @@
     <ClInclude Include="clk\clk_commands.h">
       <Filter>source\clk</Filter>
     </ClInclude>
+    <ClInclude Include="util\stateful_protocol_strategy_wrapper.h">
+      <Filter>source\util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="amcp\AMCPCommandQueue.cpp">
@@ -99,6 +102,9 @@
     </ClCompile>
     <ClCompile Include="clk\clk_commands.cpp">
       <Filter>source\clk</Filter>
+    </ClCompile>
+    <ClCompile Include="util\stateful_protocol_strategy_wrapper.cpp">
+      <Filter>source\util</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

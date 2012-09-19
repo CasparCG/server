@@ -34,12 +34,8 @@
 namespace caspar { namespace protocol { namespace CLK {
 
 /**
- * TODO:
- * Can only handle one connection at a time safely. Works with multiple if
- * every Parse call contains a complete command, but this will not happen if
- * the client sends one command in multiple chunks, then partial commands can
- * be interlieved with each other from different clients, causing the parser
- * to be confused.
+ * Can only handle one connection at a time safely, therefore it should be
+ * wrapped in a stateful_protocol_strategy_wrapper.
  */
 class CLKProtocolStrategy : public IO::IProtocolStrategy
 {
