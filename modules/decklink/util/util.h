@@ -44,9 +44,11 @@ static BMDDisplayMode get_decklink_video_format(core::video_format::type fmt)
 	case core::video_format::x576p2500:		return (BMDDisplayMode)ULONG_MAX;
 	case core::video_format::x720p2500:		return (BMDDisplayMode)ULONG_MAX;
 	case core::video_format::x720p5000:		return bmdModeHD720p50;
+	case core::video_format::x720p2997:		return (BMDDisplayMode)ULONG_MAX;
 	case core::video_format::x720p5994:		return bmdModeHD720p5994;
+	case core::video_format::x720p3000:		return (BMDDisplayMode)ULONG_MAX;
 	case core::video_format::x720p6000:		return bmdModeHD720p60;
-	case core::video_format::x1080p2397:	return bmdModeHD1080p2398;
+	case core::video_format::x1080p2398:	return bmdModeHD1080p2398;
 	case core::video_format::x1080p2400:	return bmdModeHD1080p24;
 	case core::video_format::x1080i5000:	return bmdModeHD1080i50;
 	case core::video_format::x1080i5994:	return bmdModeHD1080i5994;
@@ -68,7 +70,7 @@ static core::video_format::type get_caspar_video_format(BMDDisplayMode fmt)
 	case bmdModeHD720p50:					return core::video_format::x720p5000;	
 	case bmdModeHD720p5994:					return core::video_format::x720p5994;	
 	case bmdModeHD720p60:					return core::video_format::x720p6000;	
-	case bmdModeHD1080p2398:				return core::video_format::x1080p2397;	
+	case bmdModeHD1080p2398:				return core::video_format::x1080p2398;	
 	case bmdModeHD1080p24:					return core::video_format::x1080p2400;	
 	case bmdModeHD1080i50:					return core::video_format::x1080i5000;	
 	case bmdModeHD1080i5994:				return core::video_format::x1080i5994;	
