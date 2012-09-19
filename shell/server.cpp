@@ -50,7 +50,7 @@
 #include <protocol/cii/CIIProtocolStrategy.h>
 #include <protocol/CLK/CLKProtocolStrategy.h>
 #include <protocol/util/AsyncEventServer.h>
-
+#include <protocol/util/stateful_protocol_strategy_wrapper.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>
@@ -182,7 +182,11 @@ struct server::implementation : boost::noncopyable
 		else if(boost::iequals(name, L"CII"))
 			return make_safe<cii::CIIProtocolStrategy>(channels_);
 		else if(boost::iequals(name, L"CLOCK"))
-			return make_safe<CLK::CLKProtocolStrategy>(channels_);
+			//return make_safe<CLK::CLKProtocolStrategy>(channels_);
+			return make_safe<IO::stateful_protocol_strategy_wrapper>([=]
+			{
+				return std::make_shared<CLK::CLKProtocolStrategy>(channels_);
+			});
 		
 		BOOST_THROW_EXCEPTION(caspar_exception() << arg_name_info("name") << arg_value_info(narrow(name)) << msg_info("Invalid protocol"));
 	}

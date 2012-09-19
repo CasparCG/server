@@ -110,7 +110,9 @@ void CLKProtocolStrategy::Parse(const TCHAR* pData, int charCount, IO::ClientInf
 				}
 				else
 				{
-					CASPAR_LOG(debug) << L"CLK: Executed valid command: " 						<< currentCommandString_.str();				}
+					CASPAR_LOG(debug) << L"CLK: Executed valid command: " 
+						<< currentCommandString_.str();
+				}
 			} 
 			catch (...)
 			{
