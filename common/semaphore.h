@@ -110,15 +110,18 @@ public:
 		boost::mutex::scoped_lock lock(mutex_);
 		auto num_acquired = 0u;
 
-		while (permits_ == 0u && num_acquired < permits)
+		while (true)
 		{
-			permits_available_.wait(lock);
-
 			auto num_wanted = permits - num_acquired;
 			auto to_drain = std::min(num_wanted, permits_);
 
 			permits_ -= to_drain;
 			num_acquired += to_drain;
+
+			if (num_acquired == permits)
+				break;
+
+			permits_available_.wait(lock);
 		}
 	}
 

@@ -22,16 +22,14 @@
 //////////////////////////////////////////////////////////////////////
 #pragma once
 
-#include <common/memory.h>
+#include "protocol_strategy.h"
 
 namespace caspar { namespace IO {
 
-class IProtocolStrategy;
-	
 class AsyncEventServer
 {
 public:
-	explicit AsyncEventServer(const spl::shared_ptr<IProtocolStrategy>& protocol, unsigned short port);
+	explicit AsyncEventServer(const protocol_strategy_factory<char>::ptr& protocol, unsigned short port);
 	~AsyncEventServer();
 private:
 	struct implementation;
