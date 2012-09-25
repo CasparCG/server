@@ -191,8 +191,7 @@ public:
 				std::map<int, boost::unique_future<bool>> send_results;
 
 				// Start invocations
-				auto it = consumers_.begin();
-				while(it != consumers_.end())
+				for (auto it = consumers_.begin(); it != consumers_.end(); ++it)
 				{
 					auto consumer	= it->second;
 					auto frame		= frames_.at(consumer->buffer_depth()-minmax.first);
@@ -215,13 +214,10 @@ public:
 							consumers_.erase(it);
 						}
 					}
-
-					++it;
 				}
 
 				// Retrieve results
-				auto result_it = send_results.begin();
-				while(result_it != send_results.end())
+				for (auto result_it = send_results.begin(); result_it != send_results.end(); ++result_it)
 				{
 					auto consumer		= consumers_.at(result_it->first);
 					auto frame			= frames_.at(consumer->buffer_depth()-minmax.first);
@@ -254,8 +250,6 @@ public:
 							consumers_.erase(result_it->first);
 						}
 					}
-
-					++result_it;
 				}
 						
 				graph_->set_value("consume-time", consume_timer_.elapsed()*format_desc_.fps*0.5);
