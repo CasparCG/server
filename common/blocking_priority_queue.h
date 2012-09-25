@@ -124,7 +124,6 @@ public:
 	{
 		acquire_transaction transaction(elements_available_);
 
-
 		pop_acquired_any_priority(element, transaction);
 	}
 

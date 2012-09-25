@@ -51,9 +51,6 @@
     <ClInclude Include="clk\CLKProtocolStrategy.h">
       <Filter>source\clk</Filter>
     </ClInclude>
-    <ClInclude Include="clk\CLKCommand.h">
-      <Filter>source\clk</Filter>
-    </ClInclude>
     <ClInclude Include="util\ClientInfo.h">
       <Filter>source\util</Filter>
     </ClInclude>
@@ -88,6 +85,18 @@
     <ClInclude Include="osc\server.h">
       <Filter>source\osc</Filter>
     </ClInclude>
+    <ClInclude Include="clk\clk_command_processor.h">
+      <Filter>source\clk</Filter>
+    </ClInclude>
+    <ClInclude Include="clk\clk_commands.h">
+      <Filter>source\clk</Filter>
+    </ClInclude>
+    <ClInclude Include="util\protocol_strategy.h">
+      <Filter>source\util</Filter>
+    </ClInclude>
+    <ClInclude Include="util\strategy_adapters.h">
+      <Filter>source\util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="amcp\AMCPCommandQueue.cpp">
@@ -108,9 +117,6 @@
     <ClCompile Include="cii\CIIProtocolStrategy.cpp">
       <Filter>source\cii</Filter>
     </ClCompile>
-    <ClCompile Include="clk\CLKCommand.cpp">
-      <Filter>source\clk</Filter>
-    </ClCompile>
     <ClCompile Include="clk\CLKProtocolStrategy.cpp">
       <Filter>source\clk</Filter>
     </ClCompile>
@@ -129,6 +135,15 @@
     </ClCompile>
     <ClCompile Include="osc\server.cpp">
       <Filter>source\osc</Filter>
+    </ClCompile>
+    <ClCompile Include="clk\clk_command_processor.cpp">
+      <Filter>source\clk</Filter>
+    </ClCompile>
+    <ClCompile Include="clk\clk_commands.cpp">
+      <Filter>source\clk</Filter>
+    </ClCompile>
+    <ClCompile Include="util\strategy_adapters.cpp">
+      <Filter>source\util</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -22,39 +22,21 @@
  
 #pragma once
 
-#include "CLKCommand.h"
-#include "../util/ProtocolStrategy.h"
+#include "../util/protocol_strategy.h"
+#include "clk_command_processor.h"
 #include <core/video_channel.h>
-
-#include <string>
 
 namespace caspar { namespace protocol { namespace CLK {
 
-class CLKProtocolStrategy : public IO::IProtocolStrategy
+class clk_protocol_strategy_factory : public IO::protocol_strategy_factory<wchar_t>
 {
+	clk_command_processor command_processor_;
 public:
-	CLKProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>& channels);
+	clk_protocol_strategy_factory(
+			const std::vector<spl::shared_ptr<core::video_channel>>& channels);
 
-	void Parse(const TCHAR* pData, int charCount, IO::ClientInfoPtr pClientInfo);
-	std::string GetCodepage() { return "ISO-8859-1"; }	//ISO 8859-1
-	
-private:
-	enum ParserState
-	{
-		ExpectingNewCommand,
-		ExpectingCommand,
-		ExpectingClockID,
-		ExpectingTime,
-		ExpectingParameter
-	};
-
-	ParserState	currentState_;
-	CLKCommand currentCommand_;
-	std::wstringstream currentCommandString_;
-
-	spl::shared_ptr<core::video_channel> pChannel_;
-
-	bool bClockLoaded_;
+	virtual IO::protocol_strategy<wchar_t>::ptr create(
+		const IO::client_connection<wchar_t>::ptr& client_connection);
 };
 
 }}}
