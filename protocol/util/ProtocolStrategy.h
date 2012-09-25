@@ -22,7 +22,7 @@
  #pragma once
 
 #include <string>
-#include "clientInfo.h"
+#include "ClientInfo.h"
 
 namespace caspar { namespace IO {
 

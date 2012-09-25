@@ -27,10 +27,13 @@
 #include <common/env.h>
 #include <common/except.h>
 #include <common/utf.h>
+#include <common/memory.h>
 
 #include <core/video_channel.h>
 #include <core/video_format.h>
 #include <core/producer/stage.h>
+#include <core/producer/diag/diag_producer.h>
+#include <core/producer/frame_producer.h>
 #include <core/consumer/output.h>
 
 #include <modules/bluefish/bluefish.h>
@@ -51,6 +54,7 @@
 #include <protocol/cii/CIIProtocolStrategy.h>
 #include <protocol/CLK/CLKProtocolStrategy.h>
 #include <protocol/util/AsyncEventServer.h>
+#include <protocol/util/strategy_adapters.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
@@ -94,6 +98,8 @@ struct server::impl : boost::noncopyable
 
 		flash::init();		  
 		CASPAR_LOG(info) << L"Initialized flash module.";
+
+		core::register_producer_factory(core::create_diag_producer);
 
 		setup_channels(env::properties());
 		CASPAR_LOG(info) << L"Initialized channels.";
@@ -183,17 +189,22 @@ struct server::impl : boost::noncopyable
 		}
 	}
 
-	spl::shared_ptr<IO::IProtocolStrategy> create_protocol(const std::wstring& name) const
+	IO::protocol_strategy_factory<char>::ptr create_protocol(const std::wstring& name) const
 	{
+		using namespace IO;
+
 		if(boost::iequals(name, L"AMCP"))
-			return spl::make_shared<amcp::AMCPProtocolStrategy>(channels_);
+			return wrap_legacy_protocol("\r\n", spl::make_shared<amcp::AMCPProtocolStrategy>(channels_));
 		else if(boost::iequals(name, L"CII"))
-			return spl::make_shared<cii::CIIProtocolStrategy>(channels_);
+			return wrap_legacy_protocol("\r\n", spl::make_shared<cii::CIIProtocolStrategy>(channels_));
 		else if(boost::iequals(name, L"CLOCK"))
-			return spl::make_shared<CLK::CLKProtocolStrategy>(channels_);
+			return spl::make_shared<to_unicode_adapter_factory>(
+					"ISO-8859-1",
+					spl::make_shared<CLK::clk_protocol_strategy_factory>(channels_));
 		
 		CASPAR_THROW_EXCEPTION(caspar_exception() << arg_name_info(L"name") << arg_value_info(name) << msg_info(L"Invalid protocol"));
 	}
+
 };
 
 server::server() : impl_(new impl()){}
