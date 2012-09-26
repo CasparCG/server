@@ -89,11 +89,15 @@ EVideoMode vid_fmt_from_video_format(const core::video_format& fmt)
 	case core::video_format::pal:			return VID_FMT_PAL;
 	case core::video_format::ntsc:			return VID_FMT_NTSC;
 	case core::video_format::x576p2500:		return VID_FMT_INVALID;	//not supported
+	case core::video_format::x720p2398:		return VID_FMT_720P_2398;
+	case core::video_format::x720p2400:		return VID_FMT_720P_2400;
 	case core::video_format::x720p2500:		return VID_FMT_720P_2500;
 	case core::video_format::x720p5000:		return VID_FMT_720P_5000;
+	case core::video_format::x720p2997:		return VID_FMT_720P_2997;
 	case core::video_format::x720p5994:		return VID_FMT_720P_5994;
+	case core::video_format::x720p3000:		return VID_FMT_720P_3000;
 	case core::video_format::x720p6000:		return VID_FMT_720P_6000;
-	case core::video_format::x1080p2397:	return VID_FMT_1080P_2397;
+	case core::video_format::x1080p2398:	return VID_FMT_1080P_2397;
 	case core::video_format::x1080p2400:	return VID_FMT_1080P_2400;
 	case core::video_format::x1080i5000:	return VID_FMT_1080I_5000;
 	case core::video_format::x1080i5994:	return VID_FMT_1080I_5994;
@@ -102,6 +106,8 @@ EVideoMode vid_fmt_from_video_format(const core::video_format& fmt)
 	case core::video_format::x1080p2997:	return VID_FMT_1080P_2997;
 	case core::video_format::x1080p3000:	return VID_FMT_1080P_3000;
 	case core::video_format::x1080p5000:	return VID_FMT_1080P_5000;
+	case core::video_format::x1080p5994:	return VID_FMT_1080P_5994;
+	case core::video_format::x1080p6000:	return VID_FMT_1080P_6000;
 	default:								return VID_FMT_INVALID;
 	}
 }

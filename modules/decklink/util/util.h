@@ -42,11 +42,15 @@ static BMDDisplayMode get_decklink_video_format(core::video_format fmt)
 	case core::video_format::pal:			return bmdModePAL;
 	case core::video_format::ntsc:			return bmdModeNTSC;
 	case core::video_format::x576p2500:		return (BMDDisplayMode)ULONG_MAX;
+	case core::video_format::x720p2398:		return (BMDDisplayMode)ULONG_MAX;
+	case core::video_format::x720p2400:		return (BMDDisplayMode)ULONG_MAX;
 	case core::video_format::x720p2500:		return (BMDDisplayMode)ULONG_MAX;
 	case core::video_format::x720p5000:		return bmdModeHD720p50;
+	case core::video_format::x720p2997:		return (BMDDisplayMode)ULONG_MAX;
 	case core::video_format::x720p5994:		return bmdModeHD720p5994;
+	case core::video_format::x720p3000:		return (BMDDisplayMode)ULONG_MAX;
 	case core::video_format::x720p6000:		return bmdModeHD720p60;
-	case core::video_format::x1080p2397:	return bmdModeHD1080p2398;
+	case core::video_format::x1080p2398:	return bmdModeHD1080p2398;
 	case core::video_format::x1080p2400:	return bmdModeHD1080p24;
 	case core::video_format::x1080i5000:	return bmdModeHD1080i50;
 	case core::video_format::x1080i5994:	return bmdModeHD1080i5994;
@@ -55,6 +59,8 @@ static BMDDisplayMode get_decklink_video_format(core::video_format fmt)
 	case core::video_format::x1080p2997:	return bmdModeHD1080p2997;
 	case core::video_format::x1080p3000:	return bmdModeHD1080p30;
 	case core::video_format::x1080p5000:	return bmdModeHD1080p50;
+	case core::video_format::x1080p5994:	return bmdModeHD1080p5994;
+	case core::video_format::x1080p6000:	return bmdModeHD1080p6000;
 	default:								return (BMDDisplayMode)ULONG_MAX;
 	}
 }
@@ -68,15 +74,17 @@ static core::video_format get_caspar_video_format(BMDDisplayMode fmt)
 	case bmdModeHD720p50:					return core::video_format::x720p5000;	
 	case bmdModeHD720p5994:					return core::video_format::x720p5994;	
 	case bmdModeHD720p60:					return core::video_format::x720p6000;	
-	case bmdModeHD1080p2398:				return core::video_format::x1080p2397;	
+	case bmdModeHD1080p2398:				return core::video_format::x1080p2398;	
 	case bmdModeHD1080p24:					return core::video_format::x1080p2400;	
 	case bmdModeHD1080i50:					return core::video_format::x1080i5000;	
 	case bmdModeHD1080i5994:				return core::video_format::x1080i5994;	
 	case bmdModeHD1080i6000:				return core::video_format::x1080i6000;	
-	case bmdModeHD1080p25:					return core::video_format::x1080p2500;	
-	case bmdModeHD1080p2997:				return core::video_format::x1080p2997;	
-	case bmdModeHD1080p30:					return core::video_format::x1080p3000;	
-	case bmdModeHD1080p50:					return core::video_format::x1080p5000;	
+	case bmdModeHD1080p25:					return core::video_format::x1080p2500;
+	case bmdModeHD1080p2997:				return core::video_format::x1080p2997;
+	case bmdModeHD1080p30:					return core::video_format::x1080p3000;
+	case bmdModeHD1080p50:					return core::video_format::x1080p5000;
+	case bmdModeHD1080p5994:				return core::video_format::x1080p5994;
+	case bmdModeHD1080p6000:				return core::video_format::x1080p6000;
 	default:								return core::video_format::invalid;	
 	}
 }
