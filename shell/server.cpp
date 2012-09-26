@@ -32,7 +32,6 @@
 #include <core/video_channel.h>
 #include <core/video_format.h>
 #include <core/producer/stage.h>
-#include <core/producer/diag/diag_producer.h>
 #include <core/producer/frame_producer.h>
 #include <core/consumer/output.h>
 
@@ -98,8 +97,6 @@ struct server::impl : boost::noncopyable
 
 		flash::init();		  
 		CASPAR_LOG(info) << L"Initialized flash module.";
-
-		core::register_producer_factory(core::create_diag_producer);
 
 		setup_channels(env::properties());
 		CASPAR_LOG(info) << L"Initialized channels.";
