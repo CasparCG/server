@@ -1,5 +1,5 @@
-CasparCG 2.0.3 (w.r.t 2.0 Stable)
-=================================
+CasparCG 2.0.3 Alpha (w.r.t 2.0 Stable)
+=======================================
 
 General
 -------
@@ -36,6 +36,7 @@ Consumers
     + Now deinterlaces to two separate frames so for example 50i will no longer
       be converted to 25p but instead to 50p for smooth playback of interlaced
       content.
+  o Decklink consumer now logs whether a reference signal is detected or not.
 
 Producers
 ---------
