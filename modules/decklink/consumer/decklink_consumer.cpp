@@ -204,6 +204,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	
 	safe_ptr<diagnostics::graph> graph_;
 	boost::timer tick_timer_;
+	BMDReferenceStatus last_reference_status_;
 	retry_task<bool> send_completion_;
 
 public:
@@ -222,6 +223,7 @@ public:
 		, audio_scheduled_(0)
 		, preroll_count_(0)
 		, audio_container_(buffer_size_+1)
+		, last_reference_status_(static_cast<BMDReferenceStatus>(-1))
 	{
 		is_running_ = true;
 				
@@ -453,6 +455,31 @@ public:
 
 		graph_->set_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
 		tick_timer_.restart();
+
+		detect_reference_signal_change();
+	}
+
+	void detect_reference_signal_change()
+	{
+		BMDReferenceStatus reference_status;
+
+		if (output_->GetReferenceStatus(&reference_status) != S_OK)
+		{
+			CASPAR_LOG(error) << print() << L" Reference signal: failed while querying status";
+		}
+		else if (reference_status != last_reference_status_)
+		{
+			last_reference_status_ = reference_status;
+
+			if (reference_status == 0)
+				CASPAR_LOG(info) << print() << L" Reference signal: not detected.";
+			else if (reference_status & bmdReferenceNotSupportedByHardware)
+				CASPAR_LOG(info) << print() << L" Reference signal: not supported by hardware.";
+			else if (reference_status & bmdReferenceLocked)
+				CASPAR_LOG(info) << print() << L" Reference signal: locked.";
+			else
+				CASPAR_LOG(info) << print() << L" Reference signal: Unhandled enum bitfield: " << reference_status;
+		}
 	}
 
 	boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame)
