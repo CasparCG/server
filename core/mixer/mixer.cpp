@@ -133,6 +133,22 @@ public:
 			blend_modes_[index] = value;
 		}, high_priority);
 	}
+
+	void clear_blend_mode(int index)
+	{
+		executor_.begin_invoke([=]
+		{
+			blend_modes_.erase(index);
+		}, high_priority);
+	}
+
+	void clear_blend_modes()
+	{
+		executor_.begin_invoke([=]
+		{
+			blend_modes_.clear();
+		}, high_priority);
+	}
 	
 	void set_video_format_desc(const video_format_desc& format_desc)
 	{
@@ -163,6 +179,8 @@ void mixer::send(const std::pair<std::map<int, safe_ptr<core::basic_frame>>, std
 core::video_format_desc mixer::get_video_format_desc() const { return impl_->get_video_format_desc(); }
 safe_ptr<core::write_frame> mixer::create_frame(const void* tag, const core::pixel_format_desc& desc){ return impl_->create_frame(tag, desc); }		
 void mixer::set_blend_mode(int index, blend_mode::type value){impl_->set_blend_mode(index, value);}
+void mixer::clear_blend_mode(int index) { impl_->clear_blend_mode(index); }
+void mixer::clear_blend_modes() { impl_->clear_blend_modes(); }
 void mixer::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 boost::unique_future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
 }}
