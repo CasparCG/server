@@ -129,9 +129,12 @@ void setup_console_window()
 
 void print_info()
 {
-	CASPAR_LOG(info) << L"################################################################################";
-	CASPAR_LOG(info) << L"Copyright (c) 2010 Sveriges Television AB, www.casparcg.com, <info@casparcg.com>";
-	CASPAR_LOG(info) << L"################################################################################";
+	CASPAR_LOG(info) << L"############################################################################";
+	CASPAR_LOG(info) << L"CasparCG Server is distributed by the Swedish Broadcasting Corporation (SVT)";
+	CASPAR_LOG(info) << L"under the GNU General Public License GPLv3 or higher.";
+	CASPAR_LOG(info) << L"Please see LICENSE.TXT for details.";
+	CASPAR_LOG(info) << L"http://www.casparcg.com/";
+	CASPAR_LOG(info) << L"############################################################################";
 	CASPAR_LOG(info) << L"Starting CasparCG Video and Graphics Playout Server " << caspar::env::version();
 	CASPAR_LOG(info) << L"on " << caspar::get_win_product_name() << L" " << caspar::get_win_sp_version();
 	CASPAR_LOG(info) << caspar::get_cpu_info();
