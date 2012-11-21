@@ -36,6 +36,7 @@
 #include <boost/timer.hpp>
 
 #include <tbb/parallel_for_each.h>
+#include <tbb/concurrent_unordered_map.h>
 
 #include <boost/property_tree/ptree.hpp>
 
@@ -88,15 +89,15 @@ public:
 struct stage::implementation : public std::enable_shared_from_this<implementation>
 							 , boost::noncopyable
 {		
-	safe_ptr<diagnostics::graph>	graph_;
-	safe_ptr<stage::target_t>		target_;
-	video_format_desc				format_desc_;
-
-	boost::timer					produce_timer_;
-	boost::timer					tick_timer_;
-
-	std::map<int, layer>			layers_;	
-	std::map<int, tweened_transform<core::frame_transform>> transforms_;	
+	safe_ptr<diagnostics::graph>												 graph_;
+	safe_ptr<stage::target_t>													 target_;
+	video_format_desc															 format_desc_;
+																				 
+	boost::timer																 produce_timer_;
+	boost::timer																 tick_timer_;
+																				 
+	std::map<int, layer>														 layers_;	
+	tbb::concurrent_unordered_map<int, tweened_transform<core::frame_transform>> transforms_;	
 
 	executor						executor_;
 public:
@@ -215,7 +216,7 @@ public:
 	{
 		executor_.begin_invoke([=]
 		{
-			transforms_.erase(index);
+			transforms_[index] = tweened_transform<core::frame_transform>();
 		}, high_priority);
 	}
 
