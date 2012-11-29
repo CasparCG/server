@@ -6,6 +6,13 @@ Stage
 
   o Fixed dead-lock that can occur with multiple mixer tweens.
 
+AMCP
+----
+
+  o DATA STORE now supports creating folders of path specified if they does not
+    exist.
+  o DATA REMOVE command was added.
+
 CasparCG 2.0.3 Alpha (w.r.t 2.0 Stable)
 =======================================
 
