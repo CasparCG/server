@@ -1,3 +1,11 @@
+CasparCG 2.0.3 Stable (w.r.t 2.0.3 Alpha)
+=========================================
+
+Stage
+-----
+
+  o Fixed dead-lock that can occur with multiple mixer tweens.
+
 CasparCG 2.0.3 Alpha (w.r.t 2.0 Stable)
 =======================================
 

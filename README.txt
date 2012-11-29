@@ -62,7 +62,8 @@ AUTHORS - People who have developed the CasparCG Server Software (sorted alphabe
 Niklas 	Andersson   (Server 1.0-1.8)
 Andreas	Jeansson    (Template-Host)
 Robert 	Nagy        (Server 1.7-2.x)
-	
+Helge   Norberg     (Server 2.x)
+
 ==========================================================================================================
 CREDITS - People who have contributed to the CasparCG Project (sorted alphabetically by last name).
 ==========================================================================================================
@@ -72,5 +73,6 @@ Jonas 	Hummelstrand    (jonas.hummelstrand@svt.se)
 Andreas Jeansson        (andreas.jeansson@svt.se)
 Peter 	Karlsson        (peter.p.karlsson@svt.se)
 Robert 	Nagy            (robert.nagy@dfindredpatch.se, ronag89@gmail.com)
+Helge   Norberg         (helge.norberg@svt.se)
 Olle 	Soprani 
 Thomas 	R. Kaltz III 
