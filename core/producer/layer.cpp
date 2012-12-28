@@ -104,8 +104,13 @@ public:
 		try
 		{
 			if(is_paused_)
+			{
+				if(foreground_->last_frame() == basic_frame::empty())
+					foreground_->receive(frame_producer::NO_HINT);
+
 				return disable_audio(foreground_->last_frame());
-		
+			}
+
 			auto frame = receive_and_follow(foreground_, hints);
 			if(frame == core::basic_frame::late())
 				return foreground_->last_frame();
