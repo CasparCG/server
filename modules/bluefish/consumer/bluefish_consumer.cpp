@@ -29,7 +29,6 @@
 #include <core/mixer/read_frame.h>
 
 #include <common/concurrency/executor.h>
-#include <common/concurrency/future_util.h>
 #include <common/diagnostics/graph.h>
 #include <common/memory/memclr.h>
 #include <common/memory/memcpy.h>
@@ -73,7 +72,6 @@ struct bluefish_consumer : boost::noncopyable
 	const bool							key_only_;
 		
 	executor							executor_;
-	retry_task<bool>					send_completion_;
 public:
 	bluefish_consumer(const core::video_format_desc& format_desc, unsigned int device_index, bool embedded_audio, bool key_only, int channel_index) 
 		: blue_(create_blue(device_index))
