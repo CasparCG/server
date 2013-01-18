@@ -258,6 +258,7 @@ public:
 		boost::filesystem2::remove(boost::filesystem2::wpath(env::media_folder() + widen(filename))); // Delete the file if it exists
 
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
+		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 
@@ -583,7 +584,7 @@ public:
 		 
 	void send(const safe_ptr<core::read_frame>& frame)
 	{
-		encode_executor_.begin_invoke([=]
+		bool queued = encode_executor_.try_begin_invoke([=]
 		{		
 			boost::timer frame_timer;
 
@@ -592,6 +593,12 @@ public:
 
 			graph_->set_value("frame-time", frame_timer.elapsed()*format_desc_.fps*0.5);			
 		});
+
+		if (!queued)
+			graph_->set_tag("dropped-frame");
+
+		// TODO: adjust PTS accordingly to make dropped frames contribute
+		//       to the total playing time
 	}
 };
 
