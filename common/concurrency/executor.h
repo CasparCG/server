@@ -86,6 +86,7 @@ class executor : boost::noncopyable
 	const std::string name_;
 	boost::thread thread_;
 	tbb::atomic<bool> is_running_;
+	tbb::atomic<bool> execute_rest_;
 	
 	typedef tbb::concurrent_bounded_queue<std::function<void()>> function_queue;
 	function_queue execution_queue_[priority_count];
@@ -153,7 +154,15 @@ public:
 				
 	void stop() // noexcept
 	{
+		execute_rest_ = false;
 		is_running_ = false;	
+		execution_queue_[normal_priority].try_push([]{}); // Wake the execution thread.
+	}
+				
+	void stop_execute_rest() // noexcept
+	{
+		execute_rest_ = true;
+		is_running_ = false;
 		execution_queue_[normal_priority].try_push([]{}); // Wake the execution thread.
 	}
 
@@ -305,6 +314,15 @@ private:
 			func();
 	}
 
+	void execute_rest(task_priority priority) // noexcept
+	{
+		std::function<void()> func;
+
+		while (execution_queue_[priority].try_pop(func))
+			if (func)
+				func();
+	}
+
 	void run() // noexcept
 	{
 		win32_exception::install_handler();		
@@ -319,6 +337,12 @@ private:
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
 			}
+		}
+
+		if (execute_rest_)
+		{
+			execute_rest(high_priority);
+			execute_rest(normal_priority);
 		}
 	}	
 };
