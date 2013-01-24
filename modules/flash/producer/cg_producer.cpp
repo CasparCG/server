@@ -239,11 +239,6 @@ safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_fac
 	return create_cg_producer_and_autoplay_file(frame_factory, params, env::media_folder() + L"\\" + params[0] + L".ct");
 }
 
-safe_ptr<core::frame_producer> create_swf_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params) 
-{
-	return create_cg_producer_and_autoplay_file(frame_factory, params, env::media_folder() + L"\\" + params[0] + L".swf");
-}
-
 safe_ptr<core::frame_producer> create_cg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params) 
 {
 	if(params.empty() || params.at(0) != L"[CG]")
