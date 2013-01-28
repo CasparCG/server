@@ -68,6 +68,11 @@ struct transition_producer : public frame_producer
 		source_producer_ = producer;
 	}
 
+	virtual boost::unique_future<std::wstring> call(const std::wstring& params) override
+	{
+		return dest_producer_->call(params);
+	}
+
 	virtual safe_ptr<basic_frame> receive(int hints) override
 	{
 		if(++current_frame_ >= info_.duration)
