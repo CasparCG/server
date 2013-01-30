@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Profile|Win32">
@@ -45,6 +45,7 @@
     <CharacterSet>Unicode</CharacterSet>
     <UseIntelTBB>true</UseIntelTBB>
     <InstrumentIntelTBB>false</InstrumentIntelTBB>
+    <PlatformToolset>Windows7.1SDK</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -72,7 +73,7 @@
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\;..\..\dependencies\boost\;..\..\dependencies\ffmpeg 0.8\include\;..\..\dependencies\tbb\include\;..\..\dependencies\zlib\include\;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\;..\..\dependencies\boost\;..\..\dependencies\ffmpeg 0.8\include\;..\..\dependencies\tbb\include\;..\..\dependencies\zlib\include\;C:\src\WinDDK\7600.16385.1\inc\atl71;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\;..\..\dependencies\boost\;..\..\dependencies\ffmpeg 0.8\include\;..\..\dependencies\tbb\include\;..\..\dependencies\zlib\include\;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">..\..\;..\..\dependencies\boost\;..\..\dependencies\ffmpeg 0.8\include\;..\..\dependencies\tbb\include\;..\..\dependencies\zlib\include\;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">..\..\;..\..\dependencies\boost\;..\..\dependencies\ffmpeg 0.8\include\;..\..\dependencies\tbb\include\;..\..\dependencies\zlib\include\;$(IncludePath)</IncludePath>
@@ -109,7 +110,7 @@
       <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <PreprocessorDefinitions>TBB_USE_DEBUG;TBB_USE_CAPTURED_EXCEPTION=0;TBB_USE_ASSERT=1;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <TreatWarningAsError>true</TreatWarningAsError>
+      <TreatWarningAsError>false</TreatWarningAsError>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FloatingPointModel>Fast</FloatingPointModel>
       <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>

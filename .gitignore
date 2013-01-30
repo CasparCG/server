@@ -1,0 +1,7 @@
+*.opensdf
+*.sdf
+*.orig
+tmp
+*.user
+dependencies
+modules/decklink/interop
