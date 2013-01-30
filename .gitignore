@@ -5,3 +5,4 @@ tmp
 *.user
 dependencies
 modules/decklink/interop
+bin
