@@ -7,7 +7,7 @@ EnableISX=true
 #define MyAppURL "http://casparcg.com"
 #define MyAppExeName "casparcg.exe"
 
-#define BuildOutput "..\bin\Debug"
+#define BuildOutput "..\bin\Release"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application.
