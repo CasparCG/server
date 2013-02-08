@@ -95,10 +95,10 @@
 		<Delete Files="$(RootDir)\installer\setup-tmp.iss" TreatErrorsAsWarnings="false" />
 
 		<!-- remove an existing one with the same name, if necessary -->
-		<Delete Files="$(RootDir)\bin\installer\$(ApplicationName)Installer.$(Version).exe" TreatErrorsAsWarnings="false" />
+		<Delete Files="$(RootDir)\bin\installer\CasparCGSetup.$(Version).exe" TreatErrorsAsWarnings="false" />
 		<Copy
-			SourceFiles="$(RootDir)\installer\output\$(ApplicationName)Installer.exe"
-			DestinationFiles="$(RootDir)\bin\installer\$(ApplicationName)Installer.$(Version).exe"
+			SourceFiles="$(RootDir)\installer\output\CasparCGSetup.exe"
+			DestinationFiles="$(RootDir)\bin\installer\CasparCGSetup.$(Version).exe"
 		/>
 
 		<!-- remove the installer which has no version number (wouldn't need this if the copy above was a move, instead) -->
