@@ -1,10 +1,12 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
 	<PropertyGroup>
 		<RootDir>$(teamcity_build_checkoutDir)</RootDir>
+		<LargeFilesDir>c:\BuildDownloads</LargeFilesDir>
 	</PropertyGroup>
 
 	<UsingTask TaskName="Split" AssemblyFile="$(RootDir)/build/Palaso.BuildTasks.dll" />
 	<UsingTask TaskName="FileUpdate" AssemblyFile="$(RootDir)/build/Palaso.BuildTasks.dll" />
+	<UsingTask TaskName="Zip" AssemblyFile="$(RootDir)/build/MSBuild.ExtensionPack.dll" />
 
 	<!-- Note, after some thought, we've decided this is the best place to keep the version number (not on TeamCity, not in the assemblies).     -->
 	<PropertyGroup>
@@ -51,7 +53,15 @@
 		
 	</Target>
 
-	<Target Name="Build" DependsOnTargets="SetVersion">
+	<Target Name="Dependencies" DependsOnTargets="">
+		<Zip
+			Condition="!Exists('$(RootDir)/dependencies')" 
+			TaskAction="Extract" 
+			ExtractPath="$(RootDir)" 
+			ZipFileName="$(LargeFilesDir)/casparcg-dependencies.zip" />
+	</Target>
+	
+	<Target Name="Build" DependsOnTargets="SetVersion;Dependencies">
 		<MSBuild
 			Projects="$(RootDir)/casparcg.sln"
 			Targets="Rebuild"
