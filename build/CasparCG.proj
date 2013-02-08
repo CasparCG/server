@@ -69,13 +69,19 @@
 		<Message Text="Build Complete"/>
 	</Target>
 	
+	<Target Name="CleanInstaller">
+		<ItemGroup>
+			<InstallerBinFiles
+				Include="$(RootDir)/bin/installer/*;$(RootDir)/installer/output/*;"
+				Exclude="" />
+		</ItemGroup>
+		<Delete Files="@(InstallerBinFiles)" TreatErrorsAsWarnings="false" />
+	</Target>
+	
 	<Target Name="Installer" DependsOnTargets="VersionNumbers; Build ">
 
-		<ItemGroup>
-			<InstallerbinFiles Include="$(RootDir)/bin/installer/*;" Exclude="" />
-		</ItemGroup>
-		<Delete Files="@(InstallerbinFiles)" TreatErrorsAsWarnings="false" />
-
+		<CallTarget Targets="CleanInstaller" />
+	
 		<!-- copy it so we aren't modifying the original, which then is a pain on dev machines -->
 		<Copy
 			SourceFiles="$(RootDir)\installer\setup.iss"
