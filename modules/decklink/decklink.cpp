@@ -57,7 +57,7 @@ void init()
 	if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))		
 		return;
 		
-	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
+	core::register_consumer_factory([](core::parameters const& params){return decklink::create_consumer(params);});
 	core::register_producer_factory(create_producer);
 }
 

@@ -71,6 +71,14 @@ std::vector<std::wstring> parameters::protocol_split(std::wstring const& s)
 	return result;
 }
 
+std::wstring parameters::get(std::wstring const& key, std::wstring const& default_value) const
+{	
+	auto it = std::find(std::begin(params_), std::end(params_), key);
+	if (it == params_.end() || ++it == params_.end())	
+		return default_value;
+	return *it;
+}
+
 std::wstring parameters::get_original() const
 {
 	std::wstring str;

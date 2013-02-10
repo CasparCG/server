@@ -66,13 +66,7 @@ public:
 		return value;
 	}
 
-	std::wstring get(std::wstring const& key, std::wstring const& default_value = L"") const
-	{	
-		auto it = std::find(std::begin(params_), std::end(params_), key);
-		if (it == params_.end() || ++it == params_.end())	
-			return default_value;
-		return *it;
-	}
+	std::wstring get(std::wstring const& key, std::wstring const& default_value = L"") const;
 
 	std::wstring get_original() const;
 

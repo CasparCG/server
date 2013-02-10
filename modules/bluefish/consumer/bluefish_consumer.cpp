@@ -25,6 +25,7 @@
 #include "../util/blue_velvet.h"
 #include "../util/memory.h"
 
+#include <core/parameters/parameters.h>
 #include <core/video_format.h>
 #include <core/mixer/read_frame.h>
 
@@ -379,7 +380,7 @@ public:
 	}
 };	
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
+safe_ptr<core::frame_consumer> create_consumer(core::parameters const& params)
 {
 	if(params.size() < 1 || params[0] != L"BLUEFISH")
 		return core::frame_consumer::empty();

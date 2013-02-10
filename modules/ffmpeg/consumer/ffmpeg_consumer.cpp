@@ -27,6 +27,7 @@
 
 #include "../producer/audio/audio_resampler.h"
 
+#include <core/parameters/parameters.h>
 #include <core/mixer/read_frame.h>
 #include <core/mixer/audio/audio_util.h>
 #include <core/consumer/frame_consumer.h>
@@ -648,7 +649,7 @@ public:
 	}
 };	
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
+safe_ptr<core::frame_consumer> create_consumer(core::parameters const& params)
 {
 	if(params.size() < 1 || params[0] != L"FILE")
 		return core::frame_consumer::empty();

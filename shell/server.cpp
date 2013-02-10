@@ -129,7 +129,7 @@ struct server::implementation : boost::noncopyable
 						channels_.back()->output()->add(bluefish::create_consumer(xml_consumer.second));					
 					else if(name == L"decklink")					
 						channels_.back()->output()->add(decklink::create_consumer(xml_consumer.second));				
-					else if(name == L"file")					
+					else if(name == L"file" || name ==L"stream")					
 						channels_.back()->output()->add(ffmpeg::create_consumer(xml_consumer.second));						
 					else if(name == L"system-audio")
 						channels_.back()->output()->add(oal::create_consumer());		
