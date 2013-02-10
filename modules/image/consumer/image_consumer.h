@@ -34,10 +34,11 @@ namespace caspar {
 
 namespace core {
 	struct frame_consumer;
+	class parameters;
 }
 
 namespace image {
 	
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params);
+safe_ptr<core::frame_consumer> create_consumer(core::parameters const& params);
 
 }}

@@ -28,6 +28,7 @@
 #include <common/utility/string.h>
 #include <common/concurrency/future_util.h>
 
+#include <core/parameters/parameters.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/mixer/audio/audio_util.h>
 #include <core/video_format.h>
@@ -163,7 +164,7 @@ public:
 	}
 };
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
+safe_ptr<core::frame_consumer> create_consumer(core::parameters const& params)
 {
 	if(params.size() < 1 || params[0] != L"AUDIO")
 		return core::frame_consumer::empty();

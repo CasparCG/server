@@ -34,6 +34,7 @@
 namespace caspar { namespace core {
 	
 class read_frame;
+class parameters;
 struct video_format_desc;
 
 struct frame_consumer : boost::noncopyable
@@ -53,9 +54,9 @@ struct frame_consumer : boost::noncopyable
 
 safe_ptr<frame_consumer> create_consumer_cadence_guard(const safe_ptr<frame_consumer>& consumer);
 
-typedef std::function<safe_ptr<core::frame_consumer>(const std::vector<std::wstring>&)> consumer_factory_t;
+typedef std::function<safe_ptr<core::frame_consumer>(core::parameters const&)> consumer_factory_t;
 
 void register_consumer_factory(const consumer_factory_t& factory);
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params);
+safe_ptr<core::frame_consumer> create_consumer(core::parameters const& params);
 
 }}
