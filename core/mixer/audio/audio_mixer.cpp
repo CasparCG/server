@@ -72,11 +72,15 @@ struct audio_mixer::implementation
 	std::vector<audio_item>				items_;
 	std::vector<size_t>					audio_cadence_;
 	video_format_desc					format_desc_;
+	float								master_volume_;
+	float								previous_master_volume_;
 	
 public:
 	implementation(const safe_ptr<diagnostics::graph>& graph)
 		: graph_(graph)
 		, format_desc_(video_format_desc::get(video_format::invalid))
+		, master_volume_(1.0f)
+		, previous_master_volume_(master_volume_)
 	{
 		graph_->set_color("volume", diagnostics::color(1.0f, 0.8f, 0.1f));
 		transform_stack_.push(core::frame_transform());
@@ -109,6 +113,11 @@ public:
 	{
 		transform_stack_.pop();
 	}
+
+	void set_master_volume(float volume)
+	{
+		master_volume_ = volume;
+	}
 	
 	audio_buffer mix(const video_format_desc& format_desc)
 	{	
@@ -138,18 +147,22 @@ public:
 			if(prev_transform.volume < 0.001 && next_transform.volume < 0.001)
 				continue;
 			
-			const float prev_volume = static_cast<float>(prev_transform.volume);
-			const float next_volume = static_cast<float>(next_transform.volume);
+			const float prev_volume = static_cast<float>(prev_transform.volume) * previous_master_volume_;
+			const float next_volume = static_cast<float>(next_transform.volume) * master_volume_;
 									
 			auto alpha = (next_volume-prev_volume)/static_cast<float>(item.audio_data.size()/format_desc.audio_channels);
 			
 			for(size_t n = 0; n < item.audio_data.size(); ++n)
-				next_audio.push_back(item.audio_data[n] * (prev_volume + (n/format_desc_.audio_channels) * alpha));
+			{
+				auto sample_multiplier = (prev_volume + (n/format_desc_.audio_channels) * alpha);
+				next_audio.push_back(item.audio_data[n] * sample_multiplier);
+			}
 										
 			next_audio_streams[item.tag].prev_transform  = std::move(next_transform); // Store all active tags, inactive tags will be removed at the end.
 			next_audio_streams[item.tag].audio_data		 = std::move(next_audio);			
-		}				
+		}
 
+		previous_master_volume_ = master_volume_;
 		items_.clear();
 
 		audio_streams_ = std::move(next_audio_streams);
@@ -169,6 +182,7 @@ public:
 		}
 
 		std::vector<float> result_ps(audio_cadence_.front(), 0.0f);
+
 		BOOST_FOREACH(auto& stream, audio_streams_ | boost::adaptors::map_values)
 		{
 			//CASPAR_LOG(debug) << stream.audio_data.size() << L" : " << result_ps.size();
@@ -181,7 +195,7 @@ public:
 
 			auto out = boost::range::transform(result_ps, stream.audio_data, std::begin(result_ps), std::plus<float>());
 			stream.audio_data.erase(std::begin(stream.audio_data), std::begin(stream.audio_data) + std::distance(std::begin(result_ps), out));
-		}		
+		}
 		
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 		
@@ -201,6 +215,7 @@ audio_mixer::audio_mixer(const safe_ptr<diagnostics::graph>& graph) : impl_(new 
 void audio_mixer::begin(core::basic_frame& frame){impl_->begin(frame);}
 void audio_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void audio_mixer::end(){impl_->end();}
+void audio_mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 audio_buffer audio_mixer::operator()(const video_format_desc& format_desc){return impl_->mix(format_desc);}
 
 }}

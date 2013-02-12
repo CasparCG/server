@@ -149,6 +149,14 @@ public:
 			blend_modes_.clear();
 		}, high_priority);
 	}
+
+	void set_master_volume(float volume)
+	{
+		executor_.begin_invoke([=]
+		{
+			audio_mixer_.set_master_volume(volume);
+		}, high_priority);
+	}
 	
 	void set_video_format_desc(const video_format_desc& format_desc)
 	{
@@ -181,6 +189,7 @@ safe_ptr<core::write_frame> mixer::create_frame(const void* tag, const core::pix
 void mixer::set_blend_mode(int index, blend_mode::type value){impl_->set_blend_mode(index, value);}
 void mixer::clear_blend_mode(int index) { impl_->clear_blend_mode(index); }
 void mixer::clear_blend_modes() { impl_->clear_blend_modes(); }
+void mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 void mixer::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 boost::unique_future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
 }}

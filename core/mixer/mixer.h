@@ -68,7 +68,10 @@ public:
 	
 	void set_blend_mode(int index, blend_mode::type value);
 	void clear_blend_mode(int index);
-	void clear_blend_modes();
+	void clear_blend_modes();
+
+	void set_master_volume(float volume);
+
 	boost::unique_future<boost::property_tree::wptree> info() const;
 	
 private:
