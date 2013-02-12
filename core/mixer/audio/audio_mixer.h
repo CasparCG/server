@@ -54,6 +54,8 @@ public:
 	virtual void visit(core::write_frame& frame);
 	virtual void end();
 
+	void set_master_volume(float volume);
+
 	audio_buffer operator()(const video_format_desc& format_desc);
 	
 private:
