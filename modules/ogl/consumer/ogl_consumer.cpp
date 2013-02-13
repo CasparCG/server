@@ -211,7 +211,7 @@ public:
 		if(!GLEW_VERSION_2_1)
 			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 2.1 support."));
 
-		window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(print()), config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
+		window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(L"Screen consumer " + channel_and_format()), config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
 		window_.ShowMouseCursor(false);
 		window_.SetPosition(screen_x_, screen_y_);
 		window_.SetSize(screen_width_, screen_height_);
@@ -443,10 +443,15 @@ public:
 
 		return wrap_as_future(is_running_.load());
 	}
+
+	std::wstring channel_and_format() const
+	{
+		return L"[" + boost::lexical_cast<std::wstring>(channel_index_) + L"|" + format_desc_.name + L"]";
+	}
 		
 	std::wstring print() const
 	{	
-		return config_.name + L"[" + boost::lexical_cast<std::wstring>(channel_index_) + L"|" + format_desc_.name + L"]";
+		return config_.name + channel_and_format();
 	}
 	
 	void calculate_aspect()
