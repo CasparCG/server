@@ -127,6 +127,25 @@ std::string get_vertex()
 	"}																					\n";
 }
 
+std::string get_chroma_func()
+{
+        return get_chroma_glsl()
+
+        +
+
+        "vec4 chroma(vec4 c)                                                    "
+        "{                                                                      "
+        "   switch (chroma)                                                     "
+        "   {                                                                   "
+        "   case 0: return c;                                                   "
+        "   case 1: return ChromaOnGreen(c)                                     "
+        "   case 2: return ChromaOnBlue(c)                                      "
+        "   }                                                                   "
+        "   return c;                                                           "
+        "}                                                                      ";
+}
+
+
 std::string get_fragment(bool blend_modes)
 {
 	return
@@ -157,10 +176,17 @@ std::string get_fragment(bool blend_modes)
 	"uniform float		sat;															\n"
 	"uniform float		con;															\n"
 	"																					\n"	
+    "uniform int        chroma;                                                         \n"
+    "uniform vec2       chroma_blend;                                                   \n"
 
 	+
 		
 	(blend_modes ? get_blend_color_func() : get_simple_blend_color_func())
+
+
+    +
+
+    get_chroma_func()
 
 	+
 	
@@ -242,6 +268,7 @@ std::string get_fragment(bool blend_modes)
 	"		color *= texture2D(local_key, gl_TexCoord[1].st).r;							\n"
 	"	if(has_layer_key)																\n"
 	"		color *= texture2D(layer_key, gl_TexCoord[1].st).r;							\n"
+	"   color = chroma(colour)                                                          \n"
 	"	color *= opacity;																\n"
 	"	color = blend(color);															\n"
 	"	gl_FragColor = color.bgra;														\n"

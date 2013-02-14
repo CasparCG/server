@@ -116,6 +116,9 @@ struct image_kernel::implementation : boost::noncopyable
 		if(params.transform.is_key)
 			params.blend_mode = blend_mode::normal;
 
+        shader_->set("chroma",      params.transform.chroma);
+        shader_->set("chroma_blend",params.transform.chroma.blend_start, params.chroma.transform.blend_stop);
+
 		if(blend_modes_)
 		{
 			params.background->bind(6);

@@ -128,10 +128,20 @@ public:
 		GL(glUniform1f(get_location(name.c_str()), value));
 	}
 
-	void set(const std::string& name, double value)
+    void set(const std::string& name, float value1, float value2)
+    {
+        GL(glUniform2f(get_location(name.c_str()), value1, value2));
+    }
+
+    void set(const std::string& name, double value)
 	{
 		GL(glUniform1f(get_location(name.c_str()), static_cast<float>(value)));
 	}
+
+    void set(const std::string& name, double value1, double value2)
+    {
+        GL(glUniform2f(get_location(name.c_str()), static_cast<float>(value1), static_cast<float>(value2)));
+    }
 };
 
 
@@ -139,7 +149,9 @@ shader::shader(const std::string& vertex_source_str, const std::string& fragment
 void shader::set(const std::string& name, bool value){impl_->set(name, value);}
 void shader::set(const std::string& name, int value){impl_->set(name, value);}
 void shader::set(const std::string& name, float value){impl_->set(name, value);}
+void shader::set(const std::string& name, float value1, float value2){impl_->set(name, value1, value2);}
 void shader::set(const std::string& name, double value){impl_->set(name, value);}
+void shader::set(const std::string& name, double value1, double value2){impl_->set(name, value1, value2);}
 int shader::id() const{return impl_->program_;}
 
 }}

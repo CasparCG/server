@@ -63,4 +63,23 @@ struct blend_mode
 
 blend_mode::type get_blend_mode(const std::wstring& str);
 
+
+struct chroma_mode
+{
+    enum type
+    {
+        none = 0,
+        green,
+        blue,
+    };
+
+    float blend_start, blend_stop;
+    type mode;
+
+    chroma_mode(type m = none) : mode(m) {}
+    operator int() { return mode; }
+};
+
+chroma_mode::type get_chroma_mode(const std::wstring& str);
+
 }}

@@ -509,11 +509,23 @@ bool MixerCommand::DoExecute()
 			int layer = GetLayerIndex();
 			GetChannel()->mixer()->set_blend_mode(GetLayerIndex(), get_blend_mode(blend_str));	
 		}
+        else if(_parameters[0] == L"CHROMA")
+        {
+            auto chroma_str = _parameters.at(1);
+            chroma_mode chroma = get_chroma_mode(chroma_str);
+            chroma.blend_start = _parameters.size() > 3 ? boost::lexical_cast<double>(_parameters[2]) : 0.080f;
+            chroma.blend_stop  = _parameters.size() > 3 ? boost::lexical_cast<double>(_parameters[3]) : 0.220f;
+            transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
+            {
+                transform.chroma = chroma;
+                return transform;
+            }, 0, chroma_str));
+        }
 		else if(_parameters[0] == L"BRIGHTNESS")
 		{
 			auto value = boost::lexical_cast<double>(_parameters.at(1));
 			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
-			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
+			tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
 			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.brightness = value;

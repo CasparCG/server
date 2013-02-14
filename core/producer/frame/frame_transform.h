@@ -66,6 +66,7 @@ public:
 	levels					levels;
 
 	field_mode::type		field_mode;
+	chroma_mode             chroma;
 	bool					is_key;
 	bool					is_mix;
 	

@@ -268,3 +268,44 @@ static std::string get_blend_glsl()
 																																																						   
 		return glsl;
 }
+
+static std::string get_chroma_glsl()
+{
+    static std::string glsl =
+        "\n // Chroma key                                             "
+        "\n // Author: Tim Eves <timseves@googlemail.com>                       "
+        "\n //                                                                  "
+        "\n // This implements the Chroma key algorithm described in the paper: "
+        "\n //      'Software Chroma Keying in an Imersive Virtual Environment' "
+        "\n //      by F. van den Bergh & V. Lalioti                            "
+        "\n // but as a pixel shader algorithm.                                 "
+        "\n //                                                                  "
+
+        "\n // This allows us to implement the paper's alphaMap curve in        "
+        "\n // software rather than a largeish array                            "
+        "\n float alpha_map(float d)                                            "
+        "\n {                                                                   "
+        "\n     if (d >= chroma_blend.y)                                        "
+        "\n         return 0.0;                                                 "
+        "\n     if (d >= chroma_blend.x)                                        "
+        "\n         return 1.0-(d - chroma_blend.x)/(chroma_blend.y - chroma_blend.x);"
+        "\n     return 1.0;                                                     "
+        "\n }                                                                   "
+
+        "\n // Key on green                                                     "
+        "\n float ChromaOnGreen(vec4 c)                                          "
+        "\n {                                                                   "
+        "\n     float a = c.a*alpha_map(((2.0*c.g) - c.r - c.b)/2.0);           "
+        "\n     return vec4(c.rgb*a, a);                                        "
+        "\n }                                                                   "
+
+        "\n //Key on blue                                                       "
+        "\n float ChromaOnBlue(vec4 c)                                           "
+        "\n {                                                                   "
+        "\n     return alpha_map(((2.0*c.b) - c.r - c.g)/2.0);           "
+        "\n     return vec4(c.rgb*a, a);                                        "
+        "\n }                                                                   "
+       ;
+
+        return glsl;
+}
