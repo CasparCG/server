@@ -513,7 +513,7 @@ bool MixerCommand::DoExecute()
         {
             auto chroma_str = _parameters.at(1);
             chroma_mode chroma = get_chroma_mode(chroma_str);
-            chroma.blend_start = _parameters.size() > 3 ? boost::lexical_cast<double>(_parameters[2]) : 0.080f;
+            chroma.blend_start = _parameters.size() > 3 ? boost::lexical_cast<double>(_parameters[2]) : 0.100f;
             chroma.blend_stop  = _parameters.size() > 3 ? boost::lexical_cast<double>(_parameters[3]) : 0.220f;
             transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
             {
