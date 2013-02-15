@@ -133,7 +133,7 @@ std::string get_chroma_func()
 
         +
 
-        "vec4 chroma(vec4 c)                                                    "
+        "vec4 chroma_key(vec4 c)                                                "
         "{                                                                      "
         "   switch (chroma)                                                     "
         "   {                                                                   "
@@ -268,7 +268,7 @@ std::string get_fragment(bool blend_modes)
 	"		color *= texture2D(local_key, gl_TexCoord[1].st).r;							\n"
 	"	if(has_layer_key)																\n"
 	"		color *= texture2D(layer_key, gl_TexCoord[1].st).r;							\n"
-	"   color = chroma(colour)                                                          \n"
+//	"   color = chroma_key(color);                                                      \n"
 	"	color *= opacity;																\n"
 	"	color = blend(color);															\n"
 	"	gl_FragColor = color.bgra;														\n"

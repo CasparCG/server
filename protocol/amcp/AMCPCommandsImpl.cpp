@@ -525,7 +525,7 @@ bool MixerCommand::DoExecute()
 		{
 			auto value = boost::lexical_cast<double>(_parameters.at(1));
 			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
-			tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
+			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
 			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.brightness = value;

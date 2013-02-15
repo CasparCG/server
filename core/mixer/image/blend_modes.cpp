@@ -91,7 +91,7 @@ blend_mode::type get_blend_mode(const std::wstring& str)
 	return blend_mode::normal;
 }
 
-blend_mode::type get_chroma_mode(const std::wstring& str)
+chroma_mode::type get_chroma_mode(const std::wstring& str)
 {
     if     (boost::iequals(str, L"none"))
         return chroma_mode::none;
