@@ -291,13 +291,13 @@ static std::string get_chroma_glsl()
         "\n }                                                                   "
 
         "\n // Key on green                                                     "
-        "\n vec4 ChromaOnGreen(vec4 c)                                         "
+        "\n vec4 ChromaOnGreen(vec4 c)                                          "
         "\n {                                                                   "
         "\n     float a = c.a*alpha_map(((2.0*c.g) - c.r - c.b)/2.0);           "
         "\n     return vec4(c.rgb*a, a);                                        "
         "\n }                                                                   "
 
-        "\n // Key on blue                                                       "
+        "\n // Key on blue                                                      "
         "\n vec4 ChromaOnBlue(vec4 c)                                           "
         "\n {                                                                   "
         "\n     float a = c.a*alpha_map(((2.0*c.b) - c.r - c.g)/2.0);           "

@@ -23,6 +23,21 @@
 
 namespace caspar { namespace core {
 		
+struct chroma
+{
+    enum type
+    {
+        none = 0,
+        green,
+        blue,
+    };
+
+    float blend_start, blend_stop;
+    type mode;
+
+    chroma(type m=none, float start=1.0, float end=1.0) : mode(m), blend_start(start), blend_stop(end) {}
+};
+
 struct blend_mode
 {
 	enum type 
@@ -59,27 +74,15 @@ struct blend_mode
 		mix,
 		blend_mode_count 
 	};
+
+	type	mode;
+	chroma	chroma;
+
+	blend_mode(type t = normal) : mode(t) {}
 };
 
-blend_mode::type get_blend_mode(const std::wstring& str);
+blend_mode get_blend_mode(const std::wstring& str);
 
-
-struct chroma_mode
-{
-    enum type
-    {
-        none = 0,
-        green,
-        blue,
-    };
-
-    float blend_start, blend_stop;
-    type mode;
-
-    chroma_mode(type m = none) : mode(m) {}
-    operator int() { return mode; }
-};
-
-chroma_mode::type get_chroma_mode(const std::wstring& str);
+chroma::type get_chroma_mode(const std::wstring& str);
 
 }}

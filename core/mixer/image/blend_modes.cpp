@@ -27,7 +27,7 @@
 
 namespace caspar { namespace core {
 		
-blend_mode::type get_blend_mode(const std::wstring& str)
+blend_mode get_blend_mode(const std::wstring& str)
 {
 	if(boost::iequals(str, L"normal"))
 		return blend_mode::normal;
@@ -91,16 +91,16 @@ blend_mode::type get_blend_mode(const std::wstring& str)
 	return blend_mode::normal;
 }
 
-chroma_mode::type get_chroma_mode(const std::wstring& str)
+chroma::type get_chroma_mode(const std::wstring& str)
 {
     if     (boost::iequals(str, L"none"))
-        return chroma_mode::none;
+        return chroma::none;
     else if(boost::iequals(str, L"green"))
-        return chroma_mode::green;
+        return chroma::green;
     else if(boost::iequals(str, L"blue"))
-        return chroma_mode::blue;
+        return chroma::blue;
 
-    return chroma_mode::none;
+    return chroma::none;
 }
 
 }}

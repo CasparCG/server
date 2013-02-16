@@ -23,7 +23,6 @@
 
 #include <common/utility/tweener.h>
 #include <core/video_format.h>
-#include <core/mixer/image/blend_modes.h> // TODO this is only to get the chroma in here, maybe move the chroma into here like levels below. CP 2013-02
 
 #include <boost/array.hpp>
 #include <type_traits>
@@ -67,7 +66,6 @@ public:
 	levels					levels;
 
 	field_mode::type		field_mode;
-	chroma_mode             chroma;
 	bool					is_key;
 	bool					is_mix;
 	

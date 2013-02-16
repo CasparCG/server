@@ -110,11 +110,10 @@ struct image_kernel::implementation : boost::noncopyable
 		shader_->set("has_layer_key",	params.layer_key);
 		shader_->set("pixel_format",	params.pix_desc.pix_fmt);	
 		shader_->set("opacity",			params.transform.is_key ? 1.0 : params.transform.opacity);	
-		shader_->set("chroma_mode",		params.transform.chroma.mode);
-		shader_->set("chroma_blend",	params.transform.chroma.blend_start, params.transform.chroma.blend_stop);
+		shader_->set("chroma_mode",		params.blend_mode.chroma.mode);
+		shader_->set("chroma_blend",	params.blend_mode.chroma.blend_start, params.blend_mode.chroma.blend_stop);
 		
-		// Setup blend_func
-		
+		// Setup blend_func		
 		if(params.transform.is_key)
 			params.blend_mode = blend_mode::normal;
 
@@ -123,7 +122,7 @@ struct image_kernel::implementation : boost::noncopyable
 			params.background->bind(6);
 
 			shader_->set("background",	texture_id::background);
-			shader_->set("blend_mode",	params.blend_mode);
+			shader_->set("blend_mode",	params.blend_mode.mode);
 			shader_->set("keyer",		params.keyer);
 		}
 		else

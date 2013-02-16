@@ -507,20 +507,12 @@ bool MixerCommand::DoExecute()
 		{
 			auto blend_str = _parameters.at(1);								
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->set_blend_mode(GetLayerIndex(), get_blend_mode(blend_str));	
+			blend_mode && blend = get_blend_mode(blend_str);
+			blend.chroma.mode		 = _parameters.size() > 2 ? get_chroma_mode(_parameters[2]) : chroma::none;
+			blend.chroma.blend_start = _parameters.size() > 4 ? boost::lexical_cast<double>(_parameters[3]) : 0.100f;
+			blend.chroma.blend_stop	 = _parameters.size() > 4 ? boost::lexical_cast<double>(_parameters[4]) : 0.220f;
+			GetChannel()->mixer()->set_blend_mode(GetLayerIndex(), blend);	
 		}
-        else if(_parameters[0] == L"CHROMA")
-        {
-            auto chroma_str = _parameters.at(1);
-            chroma_mode chroma = get_chroma_mode(chroma_str);
-            chroma.blend_start = _parameters.size() > 3 ? boost::lexical_cast<double>(_parameters[2]) : 0.100f;
-            chroma.blend_stop  = _parameters.size() > 3 ? boost::lexical_cast<double>(_parameters[3]) : 0.220f;
-            transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
-            {
-                transform.chroma = chroma;
-                return transform;
-            }, 0, L"linear"));
-        }
 		else if(_parameters[0] == L"BRIGHTNESS")
 		{
 			auto value = boost::lexical_cast<double>(_parameters.at(1));
