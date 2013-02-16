@@ -283,22 +283,22 @@ static std::string get_chroma_glsl()
 
         "\n // This allows us to implement the paper's alphaMap curve in        "
         "\n // software rather than a largeish array                            "
-        "\n float blend_w = blend.y - blend.x;                                  "
+        "\n float chroma_blend_w = chroma_blend.y - chroma_blend.x;                                  "
 
         "\n float alpha_map(float d)                                            "
         "\n {                                                                   "
-        "\n     return 1.0-clamp((d-blend.x)/blend_w, 0.0, 1.0);                "
+        "\n     return 1.0-clamp((d-chroma_blend.x)/chroma_blend_w, 0.0, 1.0);  "
         "\n }                                                                   "
 
         "\n // Key on green                                                     "
-        "\n float ChromaOnGreen(vec4 c)                                         "
+        "\n vec4 ChromaOnGreen(vec4 c)                                         "
         "\n {                                                                   "
         "\n     float a = c.a*alpha_map(((2.0*c.g) - c.r - c.b)/2.0);           "
         "\n     return vec4(c.rgb*a, a);                                        "
         "\n }                                                                   "
 
-        "\n //Key on blue                                                       "
-        "\n float ChromaOnBlue(vec4 c)                                          "
+        "\n // Key on blue                                                       "
+        "\n vec4 ChromaOnBlue(vec4 c)                                           "
         "\n {                                                                   "
         "\n     float a = c.a*alpha_map(((2.0*c.b) - c.r - c.g)/2.0);           "
         "\n     return vec4(c.rgb*a, a);                                        "

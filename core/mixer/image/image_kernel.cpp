@@ -110,14 +110,13 @@ struct image_kernel::implementation : boost::noncopyable
 		shader_->set("has_layer_key",	params.layer_key);
 		shader_->set("pixel_format",	params.pix_desc.pix_fmt);	
 		shader_->set("opacity",			params.transform.is_key ? 1.0 : params.transform.opacity);	
+		shader_->set("chroma_mode",		params.transform.chroma.mode);
+		shader_->set("chroma_blend",	params.transform.chroma.blend_start, params.transform.chroma.blend_stop);
 		
 		// Setup blend_func
 		
 		if(params.transform.is_key)
 			params.blend_mode = blend_mode::normal;
-
-        shader_->set("chroma",      params.transform.chroma);
-        shader_->set("chroma_blend",params.transform.chroma.blend_start, params.chroma.transform.blend_stop);
 
 		if(blend_modes_)
 		{

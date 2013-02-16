@@ -66,6 +66,10 @@ frame_transform& frame_transform::operator*=(const frame_transform &other)
 	field_mode				 = static_cast<field_mode::type>(field_mode & other.field_mode);
 	is_key					|= other.is_key;
 	is_mix					|= other.is_mix;
+	chroma					 = other.chroma;
+	//chroma.mode				= other.chroma.mode;
+	//chroma.blend_start		= other.chroma.blend_start;
+	//chroma.blend_stop       = other.chroma.blend_stop; 
 	return *this;
 }
 
@@ -103,7 +107,7 @@ frame_transform tween(double time, const frame_transform& source, const frame_tr
 	result.field_mode			= static_cast<field_mode::type>(source.field_mode & dest.field_mode);
 	result.is_key				= source.is_key | dest.is_key;
 	result.is_mix				= source.is_mix | dest.is_mix;
-	
+	result.chroma				= dest.chroma;
 	return result;
 }
 

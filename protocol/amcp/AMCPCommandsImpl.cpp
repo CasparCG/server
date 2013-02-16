@@ -519,7 +519,7 @@ bool MixerCommand::DoExecute()
             {
                 transform.chroma = chroma;
                 return transform;
-            }, 0, chroma_str));
+            }, 0, L"linear"));
         }
 		else if(_parameters[0] == L"BRIGHTNESS")
 		{
