@@ -336,6 +336,8 @@ struct flash_producer : public core::frame_producer_base
 
 	std::queue<core::draw_frame>					frame_buffer_;
 	tbb::concurrent_bounded_queue<core::draw_frame>	output_buffer_;
+
+	core::draw_frame								last_frame_;
 				
 	boost::timer									tick_timer_;
 	std::unique_ptr<flash_renderer>					renderer_;
@@ -374,7 +376,7 @@ public:
 		
 	core::draw_frame receive_impl() override
 	{					
-		auto frame = core::draw_frame::late();
+		auto frame = last_frame_;
 		
 		if(output_buffer_.try_pop(frame))			
 			executor_.begin_invoke(std::bind(&flash_producer::next, this));		
@@ -387,7 +389,7 @@ public:
 					   << monitor::event("host/fps")	% fps_
 					   << monitor::event("buffer")		% output_buffer_.size() % buffer_size_;
 
-		return frame;
+		return last_frame_ = frame;
 	}
 		
 	boost::unique_future<std::wstring> call(const std::wstring& param) override
