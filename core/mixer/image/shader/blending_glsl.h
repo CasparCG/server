@@ -305,7 +305,7 @@ static std::string get_chroma_glsl()
         "{                                                                      \n"
         "    float d = fma(2.0, c.g, -c.r - c.b)/2.0;                           \n"
         "    float a = alpha_map(d);                                            \n"
-        "    return vec4(supress_spill(c.rgb, d),1.0)*a;                        \n"
+        "    return vec4(supress_spill(c.rgb, d),c.a)*a;                        \n"
         "}                                                                      \n"
         "                                                                       \n"
         "//Key on blue                                                          \n"
@@ -313,7 +313,7 @@ static std::string get_chroma_glsl()
         "{                                                                      \n"
         "    float d = fma(2.0, c.b, -c.r - c.g)/2.0;                           \n"
         "    float a = alpha_map(d);                                            \n"
-        "    return vec4(supress_spill(c.rgb, d),1.0)*a;                        \n"
+        "    return vec4(supress_spill(c.rgb, d),c.a)*a;                        \n"
         "}                                                                      \n"
        ;
 
