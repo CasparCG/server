@@ -177,6 +177,7 @@ std::string get_fragment(bool blend_modes)
 	"																					\n"	
     "uniform int        chroma_mode;                                                    \n"
     "uniform vec2       chroma_blend;                                                   \n"
+    "uniform float      chroma_spill;                                                   \n"
 
 	+
 		

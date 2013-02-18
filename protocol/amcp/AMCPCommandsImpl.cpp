@@ -511,6 +511,7 @@ bool MixerCommand::DoExecute()
 			blend.chroma.mode		 = _parameters.size() > 2 ? get_chroma_mode(_parameters[2]) : chroma::none;
 			blend.chroma.blend_start = _parameters.size() > 4 ? boost::lexical_cast<double>(_parameters[3]) : 0.100f;
 			blend.chroma.blend_stop	 = _parameters.size() > 4 ? boost::lexical_cast<double>(_parameters[4]) : 0.220f;
+			blend.chroma.spill       = _parameters.size() > 5 ? boost::lexical_cast<double>(_parameters[5]) : 1.00f;
 			GetChannel()->mixer()->set_blend_mode(GetLayerIndex(), blend);	
 		}
 		else if(_parameters[0] == L"BRIGHTNESS")

@@ -32,10 +32,10 @@ struct chroma
         blue,
     };
 
-    float blend_start, blend_stop;
+    float blend_start, blend_stop, spill;
     type mode;
 
-    chroma(type m=none, float start=1.0, float end=1.0) : mode(m), blend_start(start), blend_stop(end) {}
+    chroma(type m=none, float start=1.0, float end=1.0, float spill=1.0) : mode(m), blend_start(start), blend_stop(end), spill(spill) {}
 };
 
 struct blend_mode
