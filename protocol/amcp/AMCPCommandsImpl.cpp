@@ -509,8 +509,11 @@ bool MixerCommand::DoExecute()
 			int layer = GetLayerIndex();
 			blend_mode && blend = get_blend_mode(blend_str);
 			blend.chroma.mode		 = _parameters.size() > 2 ? get_chroma_mode(_parameters[2]) : chroma::none;
-			blend.chroma.blend_start = _parameters.size() > 4 ? boost::lexical_cast<double>(_parameters[3]) : 0.100f;
-			blend.chroma.blend_stop	 = _parameters.size() > 4 ? boost::lexical_cast<double>(_parameters[4]) : 0.220f;
+			float threshold = _parameters.size() > 4 ? boost::lexical_cast<double>(_parameters[3]) : 0.16f,
+			      spread    = _parameters.size() > 4 ? boost::lexical_cast<double>(_parameters[4]) : 0.2f;
+			spread = std::min(std::min(threshold, spread/2.0f), 1.0f - threshold);
+			blend.chroma.blend_start = threshold - spread;
+			blend.chroma.blend_stop	 = threshold + spread;
 			blend.chroma.spill       = _parameters.size() > 5 ? boost::lexical_cast<double>(_parameters[5]) : 1.00f;
 			GetChannel()->mixer()->set_blend_mode(GetLayerIndex(), blend);	
 		}
