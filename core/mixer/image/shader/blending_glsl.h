@@ -282,7 +282,7 @@ static std::string get_chroma_glsl()
         "//                                                                     \n"
         "                                                                       \n"
         "float       chroma_blend_w = chroma_blend.y - chroma_blend.x;          \n"
-        "const vec3  grey_xfer  = vec3(0.3, 0.59, 0.11);                        \n"
+        "const vec4  grey_xfer  = vec4(0.3, 0.59, 0.11, 0.0);                   \n"
         "                                                                       \n"
         "float fma(float a, float b, float c) { return a*b + c; }               \n"
         "                                                                       \n"
