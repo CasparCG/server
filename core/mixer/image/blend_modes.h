@@ -27,15 +27,25 @@ struct chroma
 {
     enum type
     {
-        none = 0,
-        green,
-        blue,
+        none     = 0x000000,
+        red      = 0xff0000,
+        yellow   = 0xffff00,
+        green    = 0x00ff00,
+        torquise = 0x00ffff,
+        blue     = 0x0000ff,
+        magenta  = 0xff00ff
     };
 
-    float blend_start, blend_stop, spill;
-    type mode;
+    unsigned int    key;
+    float           threshold,
+                    softness,
+                    spill,
+                    blur;
+    bool            show_mask;
 
-    chroma(type m=none, float start=1.0, float end=1.0, float spill=1.0) : mode(m), blend_start(start), blend_stop(end), spill(spill) {}
+    chroma(type m=none)
+    : key(m), threshold(0.0), softness(0.0), spill(0.0),
+      blur(0.0), show_mask(false) {}
 };
 
 struct blend_mode

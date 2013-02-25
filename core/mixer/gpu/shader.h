@@ -37,6 +37,8 @@ public:
 	void set(const std::string& name, int value);
 	void set(const std::string& name, float value);
     void set(const std::string& name, float value1, float value2);
+    void set(const std::string& name, float value1, float value2, float value3);
+    void set(const std::string& name, float value1, float value2, float value3, float value4);
     void set(const std::string& name, double value);
 	void set(const std::string& name, double value1, double value2);
 private:

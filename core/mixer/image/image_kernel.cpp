@@ -106,13 +106,25 @@ struct image_kernel::implementation : boost::noncopyable
 		shader_->set("local_key",		texture_id::local_key);
 		shader_->set("layer_key",		texture_id::layer_key);
 		shader_->set("is_hd",		 	params.pix_desc.planes.at(0).height > 700 ? 1 : 0);
-		shader_->set("has_local_key",	params.local_key);
-		shader_->set("has_layer_key",	params.layer_key);
+		shader_->set("has_local_key",	bool(params.local_key));
+		shader_->set("has_layer_key",	bool(params.layer_key));
 		shader_->set("pixel_format",	params.pix_desc.pix_fmt);	
 		shader_->set("opacity",			params.transform.is_key ? 1.0 : params.transform.opacity);	
-		shader_->set("chroma_mode", 	params.blend_mode.chroma.mode);
-		shader_->set("chroma_blend", 	params.blend_mode.chroma.blend_start, params.blend_mode.chroma.blend_stop);
-		shader_->set("chroma_spill",    params.blend_mode.chroma.spill);
+
+        shader_->set("chroma_mode",    params.blend_mode.chroma.key == chroma::green ? 1 : (params.blend_mode.chroma.key == chroma::blue ? 2 : 0));
+        shader_->set("chroma_blend",   params.blend_mode.chroma.threshold, params.blend_mode.chroma.softness);
+        shader_->set("chroma_spill",   params.blend_mode.chroma.spill);
+//        shader_->set("chroma.key",      ((params.blend_mode.chroma.key >> 24) && 0xff)/255.0f,
+//                                        ((params.blend_mode.chroma.key >> 16) && 0xff)/255.0f,
+//                                        (params.blend_mode.chroma.key & 0xff)/255.0f);
+//		if (params.blend_mode.chroma.key != chroma::none)
+//		{
+//		    shader_->set("chroma.threshold", 	params.blend_mode.chroma.threshold);
+//		    shader_->set("chroma.softness",     params.blend_mode.chroma.softness);
+//            shader_->set("chroma.blur",         params.blend_mode.chroma.blur);
+//		    shader_->set("chroma.spill",        params.blend_mode.chroma.spill);
+//            shader_->set("chroma.show_mask",    params.blend_mode.chroma.show_mask);
+//		}
 		
 		// Setup blend_func		
 		if(params.transform.is_key)

@@ -144,7 +144,7 @@ private:
 		std::shared_ptr<device_buffer> local_key_buffer;
 		std::shared_ptr<device_buffer> local_mix_buffer;
 				
-		if(layer.first.mode != blend_mode::normal || layer.first.chroma.mode != chroma::none)
+		if(layer.first.mode != blend_mode::normal || layer.first.chroma.key != chroma::none)
 		{
 			auto layer_draw_buffer = create_mixer_buffer(4, format_desc);
 

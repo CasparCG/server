@@ -25,7 +25,7 @@
 
 #include <common/gl/gl_check.h>
 
-#include <gl/glew.h>
+#include <GL/glew.h>
 
 #include <unordered_map>
 
@@ -133,6 +133,16 @@ public:
         GL(glUniform2f(get_location(name.c_str()), value1, value2));
     }
 
+    void set(const std::string& name, float value1, float value2, float value3)
+    {
+        GL(glUniform3f(get_location(name.c_str()), value1, value2, value3));
+    }
+
+    void set(const std::string& name, float value1, float value2, float value3, float value4)
+    {
+        GL(glUniform4f(get_location(name.c_str()), value1, value2, value3, value4));
+    }
+
     void set(const std::string& name, double value)
 	{
 		GL(glUniform1f(get_location(name.c_str()), static_cast<float>(value)));
@@ -150,6 +160,8 @@ void shader::set(const std::string& name, bool value){impl_->set(name, value);}
 void shader::set(const std::string& name, int value){impl_->set(name, value);}
 void shader::set(const std::string& name, float value){impl_->set(name, value);}
 void shader::set(const std::string& name, float value1, float value2){impl_->set(name, value1, value2);}
+void shader::set(const std::string& name, float value1, float value2, float value3){impl_->set(name, value1, value2, value3);}
+void shader::set(const std::string& name, float value1, float value2, float value3, float value4){impl_->set(name, value1, value2, value3, value4);}
 void shader::set(const std::string& name, double value){impl_->set(name, value);}
 void shader::set(const std::string& name, double value1, double value2){impl_->set(name, value1, value2);}
 int shader::id() const{return impl_->program_;}

@@ -95,10 +95,18 @@ chroma::type get_chroma_mode(const std::wstring& str)
 {
     if     (boost::iequals(str, L"none"))
         return chroma::none;
+    else if(boost::iequals(str, L"red"))
+        return chroma::red;
+    else if(boost::iequals(str, L"yellow"))
+        return chroma::yellow;
     else if(boost::iequals(str, L"green"))
         return chroma::green;
+    else if(boost::iequals(str, L"torquise"))
+        return chroma::torquise;
     else if(boost::iequals(str, L"blue"))
         return chroma::blue;
+    else if(boost::iequals(str, L"magenta"))
+        return chroma::magenta;
 
     return chroma::none;
 }
