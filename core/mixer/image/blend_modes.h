@@ -91,7 +91,7 @@ struct blend_mode
 	blend_mode(type t = normal) : mode(t) {}
 };
 
-blend_mode get_blend_mode(const std::wstring& str);
+blend_mode::type get_blend_mode(const std::wstring& str);
 
 chroma::type get_chroma_mode(const std::wstring& str);
 

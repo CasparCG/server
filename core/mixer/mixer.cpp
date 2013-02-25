@@ -150,7 +150,7 @@ public:
 		}, high_priority);
 	}
 	
-    void set_chroma(int index, const chroma && value)
+    void set_chroma(int index, const chroma & value)
     {
         executor_.begin_invoke([=]
         {
@@ -186,8 +186,8 @@ mixer::mixer(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>
 void mixer::send(const std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>& frames){ impl_->send(frames);}
 core::video_format_desc mixer::get_video_format_desc() const { return impl_->get_video_format_desc(); }
 safe_ptr<core::write_frame> mixer::create_frame(const void* tag, const core::pixel_format_desc& desc){ return impl_->create_frame(tag, desc); }		
-void mixer::set_blend_mode(int index, blend_mode value){impl_->set_blend_mode(index, value);}
-void mixer::set_chroma(int index, const chroma && value){impl_->set_chroma(index, value);}
+void mixer::set_blend_mode(int index, blend_mode::type value){impl_->set_blend_mode(index, value);}
+void mixer::set_chroma(int index, const chroma & value){impl_->set_chroma(index, value);}
 void mixer::clear_blend_mode(int index) { impl_->clear_blend_mode(index); }
 void mixer::clear_blend_modes() { impl_->clear_blend_modes(); }
 void mixer::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
