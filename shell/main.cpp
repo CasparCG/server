@@ -272,52 +272,60 @@ int main(int argc, wchar_t* argv[])
 				if(wcmd == L"EXIT" || wcmd == L"Q" || wcmd == L"QUIT" || wcmd == L"BYE")
 					break;
 				
-				// This is just dummy code for testing.
-				if(wcmd.substr(0, 1) == L"1")
-					wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" SLIDE 100 LOOP \r\nPLAY 1-1";
-				else if(wcmd.substr(0, 1) == L"2")
-					wcmd = L"MIXER 1-0 VIDEO IS_KEY 1";
-				else if(wcmd.substr(0, 1) == L"3")
-					wcmd = L"CG 1-2 ADD 1 BBTELEFONARE 1";
-				else if(wcmd.substr(0, 1) == L"4")
-					wcmd = L"PLAY 1-1 DV FILTER yadif=1:-1 LOOP";
-				else if(wcmd.substr(0, 1) == L"5")
+				try
 				{
-					auto file = wcmd.substr(2, wcmd.length()-1);
-					wcmd = L"PLAY 1-1 " + file + L" LOOP\r\n" 
-							L"PLAY 1-2 " + file + L" LOOP\r\n" 
-							L"PLAY 1-3 " + file + L" LOOP\r\n"
-							L"PLAY 2-1 " + file + L" LOOP\r\n" 
-							L"PLAY 2-2 " + file + L" LOOP\r\n" 
-							L"PLAY 2-3 " + file + L" LOOP\r\n";
+					// This is just dummy code for testing.
+					if(wcmd.substr(0, 1) == L"1")
+						wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" SLIDE 100 LOOP \r\nPLAY 1-1";
+					else if(wcmd.substr(0, 1) == L"2")
+						wcmd = L"MIXER 1-0 VIDEO IS_KEY 1";
+					else if(wcmd.substr(0, 1) == L"3")
+						wcmd = L"CG 1-2 ADD 1 BBTELEFONARE 1";
+					else if(wcmd.substr(0, 1) == L"4")
+						wcmd = L"PLAY 1-1 DV FILTER yadif=1:-1 LOOP";
+					else if(wcmd.substr(0, 1) == L"5")
+					{
+						auto file = wcmd.substr(2, wcmd.length()-1);
+						wcmd = L"PLAY 1-1 " + file + L" LOOP\r\n" 
+								L"PLAY 1-2 " + file + L" LOOP\r\n" 
+								L"PLAY 1-3 " + file + L" LOOP\r\n"
+								L"PLAY 2-1 " + file + L" LOOP\r\n" 
+								L"PLAY 2-2 " + file + L" LOOP\r\n" 
+								L"PLAY 2-3 " + file + L" LOOP\r\n";
+					}
+					else if(wcmd.substr(0, 1) == L"X")
+					{
+						int num = 0;
+						std::wstring file;
+						try
+						{
+							num = boost::lexical_cast<int>(wcmd.substr(1, 2));
+							file = wcmd.substr(4, wcmd.length()-1);
+						}
+						catch(...)
+						{
+							num = boost::lexical_cast<int>(wcmd.substr(1, 1));
+							file = wcmd.substr(3, wcmd.length()-1);
+						}
+
+						int n = 0;
+						int num2 = num;
+						while(num2 > 0)
+						{
+							num2 >>= 1;
+							n++;
+						}
+
+						wcmd = L"MIXER 1 GRID " + boost::lexical_cast<std::wstring>(n);
+
+						for(int i = 1; i <= num; ++i)
+							wcmd += L"\r\nPLAY 1-" + boost::lexical_cast<std::wstring>(i) + L" " + file + L" LOOP";// + L" SLIDE 100 LOOP";
+					}
 				}
-				else if(wcmd.substr(0, 1) == L"X")
+				catch (...)
 				{
-					int num = 0;
-					std::wstring file;
-					try
-					{
-						num = boost::lexical_cast<int>(wcmd.substr(1, 2));
-						file = wcmd.substr(4, wcmd.length()-1);
-					}
-					catch(...)
-					{
-						num = boost::lexical_cast<int>(wcmd.substr(1, 1));
-						file = wcmd.substr(3, wcmd.length()-1);
-					}
-
-					int n = 0;
-					int num2 = num;
-					while(num2 > 0)
-					{
-						num2 >>= 1;
-						n++;
-					}
-
-					wcmd = L"MIXER 1 GRID " + boost::lexical_cast<std::wstring>(n);
-
-					for(int i = 1; i <= num; ++i)
-						wcmd += L"\r\nPLAY 1-" + boost::lexical_cast<std::wstring>(i) + L" " + file + L" LOOP";// + L" SLIDE 100 LOOP";
+					CASPAR_LOG_CURRENT_EXCEPTION();
+					continue;
 				}
 
 				wcmd += L"\r\n";
