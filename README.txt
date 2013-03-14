@@ -96,16 +96,6 @@ LICENSING
 CasparCG Server is distributed under the GNU General Public License GPLv3 or
 higher, see LICENSE.TXT for details.
 
-
-AUTHORS - People who have developed the CasparCG Server Software
-==========(sorted alphabetically by last name)==================
-
-Niklas 	Andersson   (Server 1.0-1.8)
-Andreas	Jeansson    (Template-Host)
-Robert 	Nagy        (Server 1.7-2.x)
-Helge   Norberg     (Server 2.x)
-
-
 CREDITS - People who have contributed to the CasparCG Project
 ==========(sorted alphabetically by last name)===============
 

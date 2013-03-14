@@ -1,3 +1,54 @@
+CasparCG 2.0.4 Stable (w.r.t 2.0.3 Stable)
+=========================================
+
+General
+-------
+
+  o Logging output now includes milliseconds and has modified format:
+    yyyy-mm-d HH:MM:SS.ZZZ
+  o Added support for generating thumbnails for media files. Currently only
+    video files and images are supported. By default the media directory is
+	scanned every 5 seconds for new/modified/removed files and thumbnails are
+	generated/regenerated/removed accordingly.
+
+Layer
+-----
+
+  o Fixed a problem where the first frame was not always shown on LOAD.
+
+Audio mixer
+-----------
+
+  o Added support for a master volume mixer setting for each channel.
+
+Consumers
+---------
+
+  o Simplified implementation of bluefish consumer, with regards to
+  o Avoid that the ffmpeg consumer blocks the channel output when it can't keep
+    up with the frame rate (drops instead).
+  o Added support for to create a separate key and fill file when recording with
+    the ffmpeg consumer. Add the SEPARATE_KEY parameter to the ffmpeg consumer
+	parameter list. The key file will get the _A suffix to be picked up by the
+	separated_producer when doing playback.
+  o The image consumer now writes to the media folder instead of the data
+    folder.
+
+Producers
+---------
+
+  o Added support for playing .swf files using the flash producer.
+
+AMCP
+----
+
+  o The master volume feature is controlled via the MASTERVOLUME MIXER
+    parameter. Example: MIXER 1 MASTERVOLUME 0.5
+  o THUMBNAIL LIST/RETRIEVE/GENERATE/GENERATE_ALL command was added to support
+    the thumbnail feature.
+  o ADD 1 FILE output.mov SEPARETE_KEY activates the separate key feature of the
+    ffmpeg consumer creating an additional output_a.mov containing only the key.
+
 CasparCG 2.0.3 Stable (w.r.t 2.0.3 Alpha)
 =========================================
 
