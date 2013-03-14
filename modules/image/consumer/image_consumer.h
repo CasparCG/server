@@ -26,6 +26,7 @@
 #include <core/video_format.h>
 
 #include <boost/property_tree/ptree.hpp>
+#include <boost/filesystem.hpp>
 
 #include <string>
 #include <vector>
@@ -34,10 +35,19 @@ namespace caspar {
 
 namespace core {
 	struct frame_consumer;
+	class read_frame;
+	struct video_format_desc;
 }
 
 namespace image {
-	
+
+void write_cropped_png(
+		const safe_ptr<core::read_frame>& frame,
+		const core::video_format_desc& format_desc,
+		const boost::filesystem::wpath& output_file,
+		int width,
+		int height);
+
 safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params);
 
 }}

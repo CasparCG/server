@@ -149,6 +149,16 @@ class DataCommand : public AMCPCommandBase<false, AddToQueue, 1>
 	bool DoExecuteList();
 };
 
+class ThumbnailCommand : public AMCPCommandBase<false, AddToQueue, 1>
+{
+	std::wstring print() const { return L"ThumbnailCommand";}
+	bool DoExecute();
+	bool DoExecuteRetrieve();
+	bool DoExecuteList();
+	bool DoExecuteGenerate();
+	bool DoExecuteGenerateAll();
+};
+
 class ClsCommand : public AMCPCommandBase<false, AddToQueue, 0>
 {
 	std::wstring print() const { return L"ClsCommand";}

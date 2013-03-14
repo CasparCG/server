@@ -40,6 +40,7 @@ public:
 	void set_value(const std::string& name, double value);
 	void set_color(const std::string& name, int color);
 	void set_tag(const std::string& name);
+	void auto_reset();
 private:
 	struct impl;
 	std::shared_ptr<impl> impl_;

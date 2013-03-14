@@ -29,5 +29,6 @@
 namespace caspar { namespace core {
 	
 safe_ptr<frame_producer> create_separated_producer(const safe_ptr<frame_producer>& fill, const safe_ptr<frame_producer>& key);
+safe_ptr<frame_producer> create_separated_thumbnail_producer(const safe_ptr<frame_producer>& fill, const safe_ptr<frame_producer>& key);
 
 }}

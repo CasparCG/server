@@ -37,6 +37,7 @@
 namespace caspar { namespace core {
 	
 std::vector<const producer_factory_t> g_factories;
+std::vector<const producer_factory_t> g_thumbnail_factories;
 	
 class destroy_producer_proxy : public frame_producer
 {	
@@ -97,6 +98,7 @@ public:
 
 	virtual safe_ptr<basic_frame>								receive(int hints) override												{return (*producer_)->receive(hints);}
 	virtual safe_ptr<basic_frame>								last_frame() const override		 										{return (*producer_)->last_frame();}
+	virtual safe_ptr<basic_frame>								create_thumbnail_frame() override										{return (*producer_)->create_thumbnail_frame();}
 	virtual std::wstring										print() const override													{return (*producer_)->print();}
 	virtual boost::property_tree::wptree 						info() const override													{return (*producer_)->info();}
 	virtual boost::unique_future<std::wstring>					call(const std::wstring& str) override									{return (*producer_)->call(str);}
@@ -130,6 +132,7 @@ public:
 
 	virtual safe_ptr<basic_frame>								receive(int hints) override												{return (producer_)->receive(hints);}
 	virtual safe_ptr<basic_frame>								last_frame() const override		 										{return (producer_)->last_frame();}
+	virtual safe_ptr<basic_frame>								create_thumbnail_frame() override										{return (producer_)->create_thumbnail_frame();}
 	virtual std::wstring										print() const override													{return (producer_)->print();}
 	virtual boost::property_tree::wptree 						info() const override													{return (producer_)->info();}
 	virtual boost::unique_future<std::wstring>					call(const std::wstring& str) override									{return (producer_)->call(str);}
@@ -158,6 +161,7 @@ public:
 	
 	virtual safe_ptr<basic_frame> receive(int){return frame_;}
 	virtual safe_ptr<core::basic_frame> last_frame() const{return frame_;}
+	virtual safe_ptr<core::basic_frame> create_thumbnail_frame() {return frame_;}
 	virtual std::wstring print() const{return L"dummy[" + print_ + L"]";}
 	virtual uint32_t nb_frames() const {return nb_frames_;}	
 	virtual boost::property_tree::wptree info() const override
@@ -188,7 +192,12 @@ const safe_ptr<frame_producer>& frame_producer::empty() // nothrow
 {
 	static safe_ptr<frame_producer> producer = make_safe<empty_frame_producer>();
 	return producer;
-}	
+}
+
+safe_ptr<basic_frame> frame_producer::create_thumbnail_frame()
+{
+	return basic_frame::empty();
+}
 
 safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int hints)
 {	
@@ -215,13 +224,18 @@ void register_producer_factory(const producer_factory_t& factory)
 	g_factories.push_back(factory);
 }
 
-safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)
+void register_thumbnail_producer_factory(const producer_factory_t& factory)
+{
+	g_thumbnail_factories.push_back(factory);
+}
+
+safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params, const std::vector<const producer_factory_t>& factories, bool throw_on_fail = false)
 {
 	if(params.empty())
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
 	
 	auto producer = frame_producer::empty();
-	std::any_of(g_factories.begin(), g_factories.end(), [&](const producer_factory_t& factory) -> bool
+	std::any_of(factories.begin(), factories.end(), [&](const producer_factory_t& factory) -> bool
 		{
 			try
 			{
@@ -229,7 +243,10 @@ safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>&
 			}
 			catch(...)
 			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
+				if (throw_on_fail)
+					throw;
+				else
+					CASPAR_LOG_CURRENT_EXCEPTION();
 			}
 			return producer != frame_producer::empty();
 		});
@@ -243,10 +260,9 @@ safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>&
 	return producer;
 }
 
-
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)
 {	
-	auto producer = do_create_producer(my_frame_factory, params);
+	auto producer = do_create_producer(my_frame_factory, params, g_factories);
 	auto key_producer = frame_producer::empty();
 	
 	try // to find a key file.
@@ -255,11 +271,11 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 		if(params_copy.size() > 0)
 		{
 			params_copy[0] += L"_A";
-			key_producer = do_create_producer(my_frame_factory, params_copy);			
+			key_producer = do_create_producer(my_frame_factory, params_copy, g_factories);			
 			if(key_producer == frame_producer::empty())
 			{
 				params_copy[0] += L"LPHA";
-				key_producer = do_create_producer(my_frame_factory, params_copy);	
+				key_producer = do_create_producer(my_frame_factory, params_copy, g_factories);	
 			}
 		}
 	}
@@ -279,6 +295,35 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 	return producer;
 }
 
+safe_ptr<core::frame_producer> create_thumbnail_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::wstring& media_file)
+{
+	std::vector<std::wstring> params;
+	params.push_back(media_file);
+
+	auto producer = do_create_producer(my_frame_factory, params, g_thumbnail_factories, true);
+	auto key_producer = frame_producer::empty();
+	
+	try // to find a key file.
+	{
+		auto params_copy = params;
+		if (params_copy.size() > 0)
+		{
+			params_copy[0] += L"_A";
+			key_producer = do_create_producer(my_frame_factory, params_copy, g_thumbnail_factories, true);
+			if (key_producer == frame_producer::empty())
+			{
+				params_copy[0] += L"LPHA";
+				key_producer = do_create_producer(my_frame_factory, params_copy, g_thumbnail_factories, true);
+			}
+		}
+	}
+	catch(...){}
+
+	if (producer != frame_producer::empty() && key_producer != frame_producer::empty())
+		return create_separated_thumbnail_producer(producer, key_producer);
+	
+	return producer;
+}
 
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& factory, const std::wstring& params)
 {

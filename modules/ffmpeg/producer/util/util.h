@@ -71,7 +71,8 @@ double read_fps(AVFormatContext& context, double fail_value);
 
 std::wstring print_mode(size_t width, size_t height, double fps, bool interlaced);
 
-std::wstring probe_stem(const std::wstring stem);
+std::wstring probe_stem(const std::wstring stem, const std::vector<std::wstring>& invalid_exts);
+bool is_valid_file(const std::wstring filename, const std::vector<std::wstring>& invalid_exts);
 bool is_valid_file(const std::wstring filename);
 
 }}

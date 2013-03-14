@@ -37,6 +37,9 @@
     <Filter Include="source\compiler\vs">
       <UniqueIdentifier>{28c25c8a-1277-4d2c-9e85-5af33f9938ea}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\filesystem">
+      <UniqueIdentifier>{bbca8bcd-702a-4fb7-827a-00b248fcc7f7}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="exception\win32_exception.cpp">
@@ -60,6 +63,9 @@
     </ClCompile>
     <ClCompile Include="utility\tweener.cpp">
       <Filter>source\utility</Filter>
+    </ClCompile>
+    <ClCompile Include="filesystem\polling_filesystem_monitor.cpp">
+      <Filter>source\filesystem</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -144,6 +150,12 @@
     </ClInclude>
     <ClInclude Include="concurrency\future_util.h">
       <Filter>source\concurrency</Filter>
+    </ClInclude>
+    <ClInclude Include="filesystem\filesystem_monitor.h">
+      <Filter>source\filesystem</Filter>
+    </ClInclude>
+    <ClInclude Include="filesystem\polling_filesystem_monitor.h">
+      <Filter>source\filesystem</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

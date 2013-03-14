@@ -76,6 +76,11 @@ struct image_producer : public core::frame_producer
 		return frame_;
 	}
 
+	virtual safe_ptr<core::basic_frame> create_thumbnail_frame() override
+	{
+		return frame_;
+	}
+		
 	virtual std::wstring print() const override
 	{
 		return L"image_producer[" + filename_ + L"]";
@@ -90,7 +95,7 @@ struct image_producer : public core::frame_producer
 	}
 };
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_raw_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
 	static const std::vector<std::wstring> extensions = list_of(L"png")(L"tga")(L"bmp")(L"jpg")(L"jpeg")(L"gif")(L"tiff")(L"tif")(L"jp2")(L"jpx")(L"j2k")(L"j2c");
 	std::wstring filename = env::media_folder() + L"\\" + params[0];
@@ -103,9 +108,22 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 	if(ext == extensions.end())
 		return core::frame_producer::empty();
 
-	return create_producer_print_proxy(
-			make_safe<image_producer>(frame_factory, filename + L"." + *ext));
+	return make_safe<image_producer>(frame_factory, filename + L"." + *ext);
 }
 
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+{
+	auto raw_producer = create_raw_producer(frame_factory, params);
+
+	if (raw_producer == core::frame_producer::empty())
+		return raw_producer;
+
+	return create_producer_print_proxy(raw_producer);
+}
+
+safe_ptr<core::frame_producer> create_thumbnail_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+{
+	return create_raw_producer(frame_factory, params);
+}
 
 }}

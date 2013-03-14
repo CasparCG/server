@@ -266,6 +266,7 @@ struct graph::impl : public drawable
 
 	tbb::spin_mutex mutex_;
 	std::wstring text_;
+	bool auto_reset_;
 
 	impl()
 	{
@@ -294,6 +295,14 @@ struct graph::impl : public drawable
 	{
 		lines_[name].set_color(color);
 	}
+
+	void auto_reset()
+	{
+		lock(mutex_, [this]
+		{
+			auto_reset_ = true;
+		});
+	}
 		
 private:
 	void render(sf::RenderTarget& target)
@@ -303,9 +312,11 @@ private:
 		const size_t text_offset = (text_size+text_margin*2)*2;
 
 		std::wstring text_str;
+		bool auto_reset;
 		{
 			tbb::spin_mutex::scoped_lock lock(mutex_);
 			text_str = text_;
+			auto_reset = auto_reset_;
 		}
 
 		sf::String text(text_str.c_str(), sf::Font::GetDefaultFont(), text_size);
@@ -361,8 +372,13 @@ private:
 			//target.Draw(diagnostics::guide(1.0f, color(1.0f, 1.0f, 1.0f, 0.6f)));
 			//target.Draw(diagnostics::guide(0.0f, color(1.0f, 1.0f, 1.0f, 0.6f)));
 
-			for(auto it = lines_.begin(); it != lines_.end(); ++it)		
+			for(auto it = lines_.begin(); it != lines_.end(); ++it)
+			{
 				target.Draw(it->second);
+
+				if (auto_reset)
+					it->second.set_value(0.0f);
+			}
 		
 		glPopMatrix();
 	}
@@ -379,6 +395,7 @@ void graph::set_text(const std::wstring& value){impl_->set_text(value);}
 void graph::set_value(const std::string& name, double value){impl_->set_value(name, value);}
 void graph::set_color(const std::string& name, int color){impl_->set_color(name, color);}
 void graph::set_tag(const std::string& name){impl_->set_tag(name);}
+void graph::auto_reset(){impl_->auto_reset();}
 
 void register_graph(const safe_ptr<graph>& graph)
 {

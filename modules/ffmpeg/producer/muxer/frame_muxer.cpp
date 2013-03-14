@@ -81,9 +81,10 @@ struct frame_muxer::implementation : boost::noncopyable
 	
 	filter											filter_;
 	const std::wstring								filter_str_;
+	const bool										thumbnail_mode_;
 	bool											force_deinterlacing_;
 		
-	implementation(double in_fps, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter_str)
+	implementation(double in_fps, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter_str, bool thumbnail_mode)
 		: display_mode_(display_mode::invalid)
 		, in_fps_(in_fps)
 		, format_desc_(frame_factory->get_video_format_desc())
@@ -92,6 +93,7 @@ struct frame_muxer::implementation : boost::noncopyable
 		, audio_cadence_(format_desc_.audio_cadence)
 		, frame_factory_(frame_factory)
 		, filter_str_(filter_str)
+		, thumbnail_mode_(thumbnail_mode)
 		, force_deinterlacing_(false)
 	{
 		video_streams_.push(std::queue<safe_ptr<write_frame>>());
@@ -320,7 +322,8 @@ struct frame_muxer::implementation : boost::noncopyable
 			   display_mode_ != display_mode::deinterlace_bob && 
 			   display_mode_ != display_mode::deinterlace_bob_reinterlace)			
 			{	
-				CASPAR_LOG(info) << L"[frame_muxer] Automatically started non bob-deinterlacing. Consider starting producer with bob-deinterlacing (FILTER DEINTERLACE_BOB) for smoothest playback.";
+				if (!thumbnail_mode_)
+					CASPAR_LOG(info) << L"[frame_muxer] Automatically started non bob-deinterlacing. Consider starting producer with bob-deinterlacing (FILTER DEINTERLACE_BOB) for smoothest playback.";
 				display_mode_ = display_mode::deinterlace;
 			}
 
@@ -332,7 +335,8 @@ struct frame_muxer::implementation : boost::noncopyable
 
 		if(display_mode_ == display_mode::invalid)
 		{
-			CASPAR_LOG(warning) << L"[frame_muxer] Auto-transcode: Failed to detect display-mode.";
+			if (!thumbnail_mode_)
+				CASPAR_LOG(warning) << L"[frame_muxer] Auto-transcode: Failed to detect display-mode.";
 			display_mode_ = display_mode::simple;
 		}
 			
@@ -346,7 +350,8 @@ struct frame_muxer::implementation : boost::noncopyable
 					video_streams_.back().push(make_write_frame(this, make_safe_ptr(av_frame), frame_factory_, 0));
 			}
 			filter_ = filter(filter_str);
-			CASPAR_LOG(info) << L"[frame_muxer] " << display_mode::print(display_mode_) << L" " << print_mode(frame->width, frame->height, in_fps_, frame->interlaced_frame > 0);
+			if (!thumbnail_mode_)
+				CASPAR_LOG(info) << L"[frame_muxer] " << display_mode::print(display_mode_) << L" " << print_mode(frame->width, frame->height, in_fps_, frame->interlaced_frame > 0);
 		}
 	}
 	
@@ -373,8 +378,8 @@ struct frame_muxer::implementation : boost::noncopyable
 	}
 };
 
-frame_muxer::frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter)
-	: impl_(new implementation(in_fps, frame_factory, filter)){}
+frame_muxer::frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory, bool thumbnail_mode, const std::wstring& filter)
+	: impl_(new implementation(in_fps, frame_factory, filter, thumbnail_mode)){}
 void frame_muxer::push(const std::shared_ptr<AVFrame>& video_frame, int hints){impl_->push(video_frame, hints);}
 void frame_muxer::push(const std::shared_ptr<core::audio_buffer>& audio_samples){return impl_->push(audio_samples);}
 std::shared_ptr<basic_frame> frame_muxer::poll(){return impl_->poll();}

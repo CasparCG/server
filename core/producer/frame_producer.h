@@ -72,6 +72,7 @@ public:
 	
 	virtual safe_ptr<basic_frame> receive(int hints) = 0;
 	virtual safe_ptr<core::basic_frame> last_frame() const = 0;
+	virtual safe_ptr<basic_frame> create_thumbnail_frame();
 
 	static const safe_ptr<frame_producer>& empty(); // nothrow
 };
@@ -80,9 +81,11 @@ safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int
 
 typedef std::function<safe_ptr<core::frame_producer>(const safe_ptr<frame_factory>&, const std::vector<std::wstring>&)> producer_factory_t;
 void register_producer_factory(const producer_factory_t& factory); // Not thread-safe.
+void register_thumbnail_producer_factory(const producer_factory_t& factory); // Not thread-safe.
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>&, const std::vector<std::wstring>& params);
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>&, const std::wstring& params);
 safe_ptr<core::frame_producer> create_producer_destroy_proxy(safe_ptr<core::frame_producer> producer);
 safe_ptr<core::frame_producer> create_producer_print_proxy(safe_ptr<core::frame_producer> producer);
+safe_ptr<core::frame_producer> create_thumbnail_producer(const safe_ptr<frame_factory>& factory, const std::wstring& media_file);
 
 }}

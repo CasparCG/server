@@ -255,6 +255,7 @@
     <ClInclude Include="mixer\image\shader\image_shader.h" />
     <ClInclude Include="producer\channel\channel_producer.h" />
     <ClInclude Include="producer\playlist\playlist_producer.h" />
+    <ClInclude Include="thumbnail_generator.h" />
     <ClInclude Include="video_channel.h" />
     <ClInclude Include="consumer\output.h" />
     <ClInclude Include="consumer\frame_consumer.h" />
@@ -323,6 +324,7 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../../stdafx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
+    <ClCompile Include="thumbnail_generator.cpp" />
     <ClCompile Include="video_channel.cpp" />
     <ClCompile Include="consumer\frame_consumer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../StdAfx.h</PrecompiledHeaderFile>
