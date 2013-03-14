@@ -22,11 +22,14 @@
 #pragma once
 
 #include <string>
+#include <memory>
 
 namespace caspar { namespace ffmpeg {
 
 void init();
 void uninit();
+void disable_logging_for_thread();
+std::shared_ptr<void> temporary_disable_logging_for_thread(bool disable);
 
 std::wstring get_avcodec_version();
 std::wstring get_avformat_version();

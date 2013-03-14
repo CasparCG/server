@@ -81,6 +81,23 @@ struct separated_producer : public frame_producer
 		return disable_audio(last_frame_);
 	}
 
+	virtual safe_ptr<basic_frame> create_thumbnail_frame() override
+	{
+		auto fill_frame = fill_producer_->create_thumbnail_frame();
+		auto key_frame = key_producer_->create_thumbnail_frame();
+
+		if (fill_frame == basic_frame::empty() || key_frame == basic_frame::empty())
+			return basic_frame::empty();
+
+		if (fill_frame == basic_frame::eof() || key_frame == basic_frame::eof())
+			return basic_frame::eof();
+
+		if (fill_frame == basic_frame::late() || key_frame == basic_frame::late())
+			return basic_frame::late();
+
+		return basic_frame::fill_and_key(fill_frame, key_frame);
+	}
+
 	virtual uint32_t nb_frames() const override
 	{
 		return std::min(fill_producer_->nb_frames(), key_producer_->nb_frames());
@@ -105,6 +122,11 @@ safe_ptr<frame_producer> create_separated_producer(const safe_ptr<frame_producer
 {
 	return create_producer_print_proxy(
 			make_safe<separated_producer>(fill, key));
+}
+
+safe_ptr<frame_producer> create_separated_thumbnail_producer(const safe_ptr<frame_producer>& fill, const safe_ptr<frame_producer>& key)
+{
+	return make_safe<separated_producer>(fill, key);
 }
 
 }}

@@ -142,6 +142,9 @@
     <ClInclude Include="producer\channel\channel_producer.h">
       <Filter>source\producer\channel</Filter>
     </ClInclude>
+    <ClInclude Include="thumbnail_generator.h">
+      <Filter>source</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
@@ -225,6 +228,9 @@
     </ClCompile>
     <ClCompile Include="producer\channel\channel_producer.cpp">
       <Filter>source\producer\channel</Filter>
+    </ClCompile>
+    <ClCompile Include="thumbnail_generator.cpp">
+      <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

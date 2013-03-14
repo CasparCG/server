@@ -76,6 +76,9 @@
 #include <boost/locale.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/algorithm/copy.hpp>
+#include <boost/archive/iterators/base64_from_binary.hpp>
+#include <boost/archive/iterators/insert_linebreaks.hpp>
+#include <boost/archive/iterators/transform_width.hpp>
 
 #include <tbb/concurrent_unordered_map.h>
 
@@ -104,6 +107,48 @@
 namespace caspar { namespace protocol {
 
 using namespace core;
+
+std::wstring read_file_base64(const boost::filesystem::wpath& file)
+{
+	using namespace boost::archive::iterators;
+
+	boost::filesystem::ifstream filestream(file, std::ios::binary);
+
+	if (!filestream)
+		return L"";
+
+	// From http://www.webbiscuit.co.uk/2012/04/02/base64-encoder-and-boost/
+		
+	typedef
+		insert_linebreaks<         // insert line breaks every 76 characters
+			base64_from_binary<    // convert binary values to base64 characters
+				transform_width<   // retrieve 6 bit integers from a sequence of 8 bit bytes
+					const unsigned char *,
+					6,
+					8
+				>
+			>,
+			76
+		>
+        base64_iterator; // compose all the above operations in to a new iterator
+	auto length = boost::filesystem::file_size(file);
+	std::vector<char> bytes;
+	bytes.resize(length);
+	filestream.read(bytes.data(), length);
+
+	int padding = 0;
+
+	while (bytes.size() % 3 != 0)
+	{
+		++padding;
+		bytes.push_back(0x00);
+	}
+
+	std::string result(base64_iterator(bytes.data()), base64_iterator(bytes.data() + length - padding));
+	result.insert(result.end(), padding, '=');
+
+	return widen(result);
+}
 
 std::wstring read_utf8_file(const boost::filesystem::wpath& file)
 {
@@ -1339,18 +1384,19 @@ bool DataCommand::DoExecuteRetrieve()
 
 	std::wstring file_contents = read_file(boost::filesystem::wpath(filename));
 
-	//std::wifstream datafile(filename.c_str());
-
 	if (file_contents.empty()) 
 	{
 		SetReplyString(TEXT("404 DATA RETRIEVE ERROR\r\n"));
 		return false;
 	}
 
-	std::wstringstream reply(TEXT("201 DATA RETRIEVE OK\r\n"));
-	/*std::wstring line;
+	std::wstringstream reply;
+	reply << TEXT("201 DATA RETRIEVE OK\r\n");
+
+	std::wstringstream file_contents_stream(file_contents);
+	std::wstring line;
 	bool bFirstLine = true;
-	while(std::getline(datafile, line))
+	while(std::getline(file_contents_stream, line))
 	{
 		if(!bFirstLine)
 			reply << "\\n";
@@ -1359,9 +1405,7 @@ bool DataCommand::DoExecuteRetrieve()
 
 		reply << line;
 	}
-	datafile.close();*/
 
-	reply << file_contents;
 	reply << "\r\n";
 	SetReplyString(reply.str());
 	return true;
@@ -1422,6 +1466,124 @@ bool DataCommand::DoExecuteList()
 
 	SetReplyString(boost::to_upper_copy(replyString.str()));
 	return true;
+}
+
+bool ThumbnailCommand::DoExecute()
+{
+	std::wstring command = _parameters[0];
+
+	if (command == TEXT("RETRIEVE"))
+		return DoExecuteRetrieve();
+	else if (command == TEXT("LIST"))
+		return DoExecuteList();
+	else if (command == TEXT("GENERATE"))
+		return DoExecuteGenerate();
+	else if (command == TEXT("GENERATE_ALL"))
+		return DoExecuteGenerateAll();
+
+	SetReplyString(TEXT("403 THUMBNAIL ERROR\r\n"));
+	return false;
+}
+
+bool ThumbnailCommand::DoExecuteRetrieve() 
+{
+	if(_parameters.size() < 2) 
+	{
+		SetReplyString(TEXT("402 THUMBNAIL RETRIEVE ERROR\r\n"));
+		return false;
+	}
+
+	std::wstring filename = env::thumbnails_folder();
+	filename.append(_parameters[1]);
+	filename.append(TEXT(".png"));
+
+	std::wstring file_contents = read_file_base64(boost::filesystem::wpath(filename));
+
+	if (file_contents.empty())
+	{
+		SetReplyString(TEXT("404 THUMBNAIL RETRIEVE ERROR\r\n"));
+		return false;
+	}
+
+	std::wstringstream reply;
+
+	reply << L"201 THUMBNAIL RETRIEVE OK\r\n";
+	reply << file_contents;
+	reply << L"\r\n";
+	SetReplyString(reply.str());
+	return true;
+}
+
+bool ThumbnailCommand::DoExecuteList()
+{
+	std::wstringstream replyString;
+	replyString << TEXT("200 THUMBNAIL LIST OK\r\n");
+
+	for (boost::filesystem::wrecursive_directory_iterator itr(env::thumbnails_folder()), end; itr != end; ++itr)
+	{			
+		if(boost::filesystem::is_regular_file(itr->path()))
+		{
+			if(!boost::iequals(itr->path().extension(), L".png"))
+				continue;
+			
+			auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(env::thumbnails_folder().size()-1, itr->path().file_string().size()));
+			
+			auto str = relativePath.replace_extension(L"").external_file_string();
+			if(str[0] == '\\' || str[0] == '/')
+				str = std::wstring(str.begin() + 1, str.end());
+
+			auto mtime = boost::filesystem::last_write_time(itr->path());
+			auto mtime_readable = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(mtime));
+			auto file_size = boost::filesystem::file_size(itr->path());
+
+			replyString << L"\"" << str << L"\" " << widen(mtime_readable) << L" " << file_size << L"\r\n";
+		}
+	}
+	
+	replyString << TEXT("\r\n");
+
+	SetReplyString(boost::to_upper_copy(replyString.str()));
+	return true;
+}
+
+bool ThumbnailCommand::DoExecuteGenerate()
+{
+	if (_parameters.size() < 2) 
+	{
+		SetReplyString(L"402 THUMBNAIL GENERATE ERROR\r\n");
+		return false;
+	}
+
+	auto thumb_gen = GetThumbGenerator();
+
+	if (thumb_gen)
+	{
+		thumb_gen->generate(_parameters[1]);
+		SetReplyString(L"200 THUMBNAIL GENERATE OK\r\n");
+		return true;
+	}
+	else
+	{
+		SetReplyString(L"500 THUMBNAIL GENERATE ERROR\r\n");
+		return false;
+	}
+}
+
+bool ThumbnailCommand::DoExecuteGenerateAll()
+{
+	auto thumb_gen = GetThumbGenerator();
+
+	if (thumb_gen)
+	{
+		thumb_gen->generate_all();
+		SetReplyString(L"200 THUMBNAIL GENERATE_ALL OK\r\n");
+		return true;
+	}
+	else
+	{
+		SetReplyString(L"500 THUMBNAIL GENERATE_ALL ERROR\r\n");
+		return false;
+	}
 }
 
 bool CinfCommand::DoExecute()

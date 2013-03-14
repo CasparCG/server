@@ -257,7 +257,7 @@ int main(int argc, wchar_t* argv[])
 			caspar::server caspar_server;
 				
 			// Create a amcp parser for console commands.
-			caspar::protocol::amcp::AMCPProtocolStrategy amcp(caspar_server.get_channels());
+			caspar::protocol::amcp::AMCPProtocolStrategy amcp(caspar_server.get_channels(), caspar_server.get_thumbnail_generator());
 
 			// Create a dummy client which prints amcp responses to console.
 			auto console_client = std::make_shared<caspar::IO::ConsoleClientInfo>();

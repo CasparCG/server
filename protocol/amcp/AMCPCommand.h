@@ -25,6 +25,7 @@
 
 #include <core/consumer/frame_consumer.h>
 #include <core/video_channel.h>
+#include <core/thumbnail_generator.h>
 
 #include <boost/algorithm/string.hpp>
 
@@ -64,6 +65,9 @@ namespace amcp {
 		void SetChannels(const std::vector<safe_ptr<core::video_channel>>& channels){channels_ = channels;}
 		const std::vector<safe_ptr<core::video_channel>>& GetChannels() { return channels_; }
 
+		void SetThumbGenerator(const std::shared_ptr<core::thumbnail_generator>& thumb_gen) {thumb_gen_ = thumb_gen;}
+		std::shared_ptr<core::thumbnail_generator> GetThumbGenerator() { return thumb_gen_; }
+
 		void SetChannelIndex(unsigned int channelIndex){channelIndex_ = channelIndex;}
 		unsigned int GetChannelIndex(){return channelIndex_;}
 
@@ -92,6 +96,7 @@ namespace amcp {
 		IO::ClientInfoPtr pClientInfo_;
 		std::shared_ptr<core::video_channel> pChannel_;
 		std::vector<safe_ptr<core::video_channel>> channels_;
+		std::shared_ptr<core::thumbnail_generator> thumb_gen_;
 		AMCPCommandScheduling scheduling_;
 		std::wstring replyString_;
 	};

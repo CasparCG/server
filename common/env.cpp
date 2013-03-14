@@ -45,6 +45,7 @@ std::wstring media;
 std::wstring log;
 std::wstring ftemplate;
 std::wstring data;
+std::wstring thumbnails;
 boost::property_tree::wptree pt;
 
 void check_is_configured()
@@ -67,6 +68,7 @@ void configure(const std::wstring& filename)
 		log = widen(paths.get(L"log-path", initialPath + L"\\log\\"));
 		ftemplate = complete(wpath(widen(paths.get(L"template-path", initialPath + L"\\template\\")))).string();		
 		data = widen(paths.get(L"data-path", initialPath + L"\\data\\"));
+		thumbnails = widen(paths.get(L"thumbnails-path", initialPath + L"\\thumbnails\\"));
 
 		try
 		{
@@ -113,6 +115,10 @@ void configure(const std::wstring& filename)
 		auto data_path = boost::filesystem::wpath(data);
 		if(!boost::filesystem::exists(data_path))
 			boost::filesystem::create_directory(data_path);
+		
+		auto thumbnails_path = boost::filesystem::wpath(thumbnails);
+		if(!boost::filesystem::exists(thumbnails_path))
+			boost::filesystem::create_directory(thumbnails_path);
 	}
 	catch(...)
 	{
@@ -143,6 +149,12 @@ const std::wstring& data_folder()
 {
 	check_is_configured();
 	return data;
+}
+
+const std::wstring& thumbnails_folder()
+{
+	check_is_configured();
+	return thumbnails;
 }
 
 #define QUOTE(str) #str

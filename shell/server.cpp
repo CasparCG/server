@@ -22,14 +22,18 @@
 
 #include "server.h"
 
+#include <memory>
+
 #include <common/env.h>
 #include <common/exception/exceptions.h>
 #include <common/utility/string.h>
+#include <common/filesystem/polling_filesystem_monitor.h>
 
 #include <core/mixer/gpu/ogl_device.h>
 #include <core/video_channel.h>
 #include <core/producer/stage.h>
 #include <core/consumer/output.h>
+#include <core/thumbnail_generator.h>
 
 #include <modules/bluefish/bluefish.h>
 #include <modules/decklink/decklink.h>
@@ -39,6 +43,7 @@
 #include <modules/ogl/ogl.h>
 #include <modules/silverlight/silverlight.h>
 #include <modules/image/image.h>
+#include <modules/image/consumer/image_consumer.h>
 
 #include <modules/oal/consumer/oal_consumer.h>
 #include <modules/bluefish/consumer/bluefish_consumer.h>
@@ -50,7 +55,8 @@
 #include <protocol/cii/CIIProtocolStrategy.h>
 #include <protocol/CLK/CLKProtocolStrategy.h>
 #include <protocol/util/AsyncEventServer.h>
-#include <protocol/util/stateful_protocol_strategy_wrapper.h>
+#include <protocol/util/stateful_protocol_strategy_wrapper.h>
+
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>
@@ -67,6 +73,7 @@ struct server::implementation : boost::noncopyable
 	safe_ptr<ogl_device>						ogl_;
 	std::vector<safe_ptr<IO::AsyncEventServer>> async_servers_;	
 	std::vector<safe_ptr<video_channel>>		channels_;
+	std::shared_ptr<thumbnail_generator>		thumbnail_generator_;
 
 	implementation()		
 		: ogl_(ogl_device::create())
@@ -94,6 +101,8 @@ struct server::implementation : boost::noncopyable
 
 		setup_channels(env::properties());
 		CASPAR_LOG(info) << L"Initialized channels.";
+
+		setup_thumbnail_generation(env::properties());
 
 		setup_controllers(env::properties());
 		CASPAR_LOG(info) << L"Initialized controllers.";
@@ -175,10 +184,32 @@ struct server::implementation : boost::noncopyable
 		}
 	}
 
+	void setup_thumbnail_generation(const boost::property_tree::wptree& pt)
+	{
+		if (!pt.get(L"configuration.thumbnails.generate-thumbnails", true))
+			return;
+
+		auto scan_interval_millis = pt.get(L"configuration.thumbnails.scan-interval-millis", 5000);
+
+		polling_filesystem_monitor_factory monitor_factory(scan_interval_millis);
+		thumbnail_generator_.reset(new thumbnail_generator(
+				monitor_factory, 
+				env::media_folder(),
+				env::thumbnails_folder(),
+				pt.get(L"configuration.thumbnails.width", 256),
+				pt.get(L"configuration.thumbnails.height", 144),
+				core::video_format_desc::get(pt.get(L"configuration.thumbnails.video-mode", L"720p2500")),
+				ogl_,
+				pt.get(L"configuration.thumbnails.generate-delay-millis", 2000),
+				&image::write_cropped_png));
+
+		CASPAR_LOG(info) << L"Initialized thumbnail generator.";
+	}
+
 	safe_ptr<IO::IProtocolStrategy> create_protocol(const std::wstring& name) const
 	{
 		if(boost::iequals(name, L"AMCP"))
-			return make_safe<amcp::AMCPProtocolStrategy>(channels_);
+			return make_safe<amcp::AMCPProtocolStrategy>(channels_, thumbnail_generator_);
 		else if(boost::iequals(name, L"CII"))
 			return make_safe<cii::CIIProtocolStrategy>(channels_);
 		else if(boost::iequals(name, L"CLOCK"))
@@ -197,6 +228,11 @@ server::server() : impl_(new implementation()){}
 const std::vector<safe_ptr<video_channel>> server::get_channels() const
 {
 	return impl_->channels_;
+}
+
+std::shared_ptr<thumbnail_generator> server::get_thumbnail_generator() const
+{
+	return impl_->thumbnail_generator_;
 }
 
 }

@@ -31,6 +31,8 @@
 
 #include <tbb/recursive_mutex.h>
 
+#include <boost/thread.hpp>
+
 #if defined(_MSC_VER)
 #pragma warning (disable : 4244)
 #pragma warning (disable : 4603)
@@ -156,6 +158,43 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
     //colored_fputs(av_clip(level>>3, 0, 6), line);
 }
 
+boost::thread_specific_ptr<bool>& get_disable_logging_for_thread()
+{
+	static boost::thread_specific_ptr<bool> disable_logging_for_thread;
+
+	return disable_logging_for_thread;
+}
+
+void disable_logging_for_thread()
+{
+	if (get_disable_logging_for_thread().get() == nullptr)
+		get_disable_logging_for_thread().reset(new bool); // bool value does not matter
+}
+
+bool is_logging_already_disabled_for_thread()
+{
+	return get_disable_logging_for_thread().get() != nullptr;
+}
+
+std::shared_ptr<void> temporary_disable_logging_for_thread(bool disable)
+{
+	if (!disable || is_logging_already_disabled_for_thread())
+		return std::shared_ptr<void>();
+
+	disable_logging_for_thread();
+
+	return std::shared_ptr<void>(nullptr, [] (void*)
+	{
+		get_disable_logging_for_thread().release(); // Only works correctly if destructed in same thread as original caller.
+	});
+}
+
+void log_for_thread(void* ptr, int level, const char* fmt, va_list vl)
+{
+	//if (get_disable_logging_for_thread().get() == nullptr) // It does not matter what the value of the bool is
+		log_callback(ptr, level, fmt, vl);
+}
+
 //static int query_yadif_formats(AVFilterContext *ctx)
 //{
 //    static const int pix_fmts[] = {
@@ -198,7 +237,7 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 void init()
 {
 	av_lockmgr_register(ffmpeg_lock_callback);
-	av_log_set_callback(log_callback);
+	av_log_set_callback(log_for_thread);
 
     avfilter_register_all();
 	//fix_yadif_filter_format_query();
@@ -209,6 +248,7 @@ void init()
 	
 	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
 	core::register_producer_factory(create_producer);
+	core::register_thumbnail_producer_factory(create_thumbnail_producer);
 }
 
 void uninit()

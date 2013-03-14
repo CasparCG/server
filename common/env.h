@@ -33,6 +33,7 @@ const std::wstring& media_folder();
 const std::wstring& log_folder();
 const std::wstring& template_folder();
 const std::wstring& data_folder();
+const std::wstring& thumbnails_folder();
 const std::wstring& version();
 
 const boost::property_tree::wptree& properties();

@@ -38,5 +38,6 @@ struct frame_factory;
 namespace ffmpeg {
 
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params);
+safe_ptr<core::frame_producer> create_thumbnail_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params);
 
 }}
