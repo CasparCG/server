@@ -25,6 +25,7 @@
 #include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
+#include <boost/thread/future.hpp>
 
 #include <vector>
 
@@ -38,7 +39,7 @@ namespace core {
 class server : boost::noncopyable
 {
 public:
-	server();
+	server(boost::promise<bool>& shutdown_server_now);
 	const std::vector<safe_ptr<core::video_channel>> get_channels() const;
 	std::shared_ptr<core::thumbnail_generator> get_thumbnail_generator() const;
 private:

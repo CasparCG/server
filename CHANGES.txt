@@ -1,5 +1,5 @@
 CasparCG 2.0.4 Stable (w.r.t 2.0.3 Stable)
-=========================================
+==========================================
 
 General
 -------
@@ -48,6 +48,7 @@ AMCP
     the thumbnail feature.
   o ADD 1 FILE output.mov SEPARETE_KEY activates the separate key feature of the
     ffmpeg consumer creating an additional output_a.mov containing only the key.
+  o Added KILL command for shutting down the server without console access.
 
 CasparCG 2.0.3 Stable (w.r.t 2.0.3 Alpha)
 =========================================

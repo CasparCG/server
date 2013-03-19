@@ -205,23 +205,11 @@ class SetCommand : public AMCPCommandBase<true, AddToQueue, 2>
 	bool DoExecute();
 };
 
-//class KillCommand : public AMCPCommand
-//{
-//public:
-//	KillCommand() {}
-//	virtual bool DoExecute();
-//	virtual AMCPCommandCondition CheckConditions();
-//
-//	virtual bool NeedChannel() {
-//		return false;
-//	}
-//	virtual AMCPCommandScheduling GetDefaultScheduling() {
-//		return AddToQueue;
-//	}
-//	virtual int GetMinimumParameters() {
-//		return 0;
-//	}
-//};
+class KillCommand : public AMCPCommandBase<false, AddToQueue, 0>
+{
+	std::wstring print() const { return L"KillCommand";}
+	bool DoExecute();
+};
 
 }	//namespace amcp
 }}	//namespace caspar

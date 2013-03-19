@@ -29,6 +29,7 @@
 #include "AMCPCommandQueue.h"
 
 #include <boost/noncopyable.hpp>
+#include <boost/thread/future.hpp>
 
 namespace caspar { namespace protocol { namespace amcp {
 
@@ -47,7 +48,10 @@ class AMCPProtocolStrategy : public IO::IProtocolStrategy, boost::noncopyable
 	AMCPProtocolStrategy& operator=(const AMCPProtocolStrategy&);
 
 public:
-	AMCPProtocolStrategy(const std::vector<safe_ptr<core::video_channel>>& channels, const std::shared_ptr<core::thumbnail_generator>& thumb_gen);
+	AMCPProtocolStrategy(
+			const std::vector<safe_ptr<core::video_channel>>& channels,
+			const std::shared_ptr<core::thumbnail_generator>& thumb_gen,
+			boost::promise<bool>& shutdown_server_now);
 	virtual ~AMCPProtocolStrategy();
 
 	virtual void Parse(const TCHAR* pData, int charCount, IO::ClientInfoPtr pClientInfo);
@@ -68,6 +72,7 @@ private:
 
 	std::vector<safe_ptr<core::video_channel>> channels_;
 	std::shared_ptr<core::thumbnail_generator> thumb_gen_;
+	boost::promise<bool>& shutdown_server_now_;
 	std::vector<AMCPCommandQueuePtr> commandQueues_;
 	static const std::wstring MessageDelimiter;
 };

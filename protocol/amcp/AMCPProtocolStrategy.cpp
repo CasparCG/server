@@ -53,9 +53,14 @@ inline std::shared_ptr<core::video_channel> GetChannelSafe(unsigned int index, c
 	return index < channels.size() ? std::shared_ptr<core::video_channel>(channels[index]) : nullptr;
 }
 
-AMCPProtocolStrategy::AMCPProtocolStrategy(const std::vector<safe_ptr<core::video_channel>>& channels, const std::shared_ptr<core::thumbnail_generator>& thumb_gen)
-		: channels_(channels)
-		, thumb_gen_(thumb_gen) {
+AMCPProtocolStrategy::AMCPProtocolStrategy(
+		const std::vector<safe_ptr<core::video_channel>>& channels,
+		const std::shared_ptr<core::thumbnail_generator>& thumb_gen,
+		boost::promise<bool>& shutdown_server_now)
+	: channels_(channels)
+	, thumb_gen_(thumb_gen)
+	, shutdown_server_now_(shutdown_server_now)
+{
 	AMCPCommandQueuePtr pGeneralCommandQueue(new AMCPCommandQueue());
 	commandQueues_.push_back(pGeneralCommandQueue);
 
@@ -190,6 +195,7 @@ AMCPCommandPtr AMCPProtocolStrategy::InterpretCommandString(const std::wstring& 
 			{
 				pCommand->SetChannels(channels_);
 				pCommand->SetThumbGenerator(thumb_gen_);
+				pCommand->SetShutdownServerNow(shutdown_server_now_);
 				//Set scheduling
 				if(commandSwitch.size() > 0) {
 					transform(commandSwitch.begin(), commandSwitch.end(), commandSwitch.begin(), toupper);
@@ -331,10 +337,7 @@ AMCPCommandPtr AMCPProtocolStrategy::CommandFactory(const std::wstring& str)
 	//{
 	//	result = AMCPCommandPtr(new MonitorCommand());
 	//}
-	//else if(s == TEXT("KILL"))
-	//{
-	//	result = AMCPCommandPtr(new KillCommand());
-	//}
+	else if(s == TEXT("KILL"))			return std::make_shared<KillCommand>();
 	return nullptr;
 }
 

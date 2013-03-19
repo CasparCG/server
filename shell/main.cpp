@@ -67,7 +67,10 @@
 #include <boost/property_tree/detail/file_parser_error.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/foreach.hpp>
+#include <boost/thread.hpp>
+#include <boost/thread/future.hpp>
 #include <boost/locale.hpp>
+#include <boost/algorithm/string/case_conv.hpp>
 
 // NOTE: This is needed in order to make CComObject work since this is not a real ATL project.
 CComModule _AtlModule;
@@ -174,6 +177,11 @@ LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
     return EXCEPTION_EXECUTE_HANDLER;
 }
 
+void make_upper_case(std::wstring& str)
+{
+	boost::to_upper(str);
+}
+
 int main(int argc, wchar_t* argv[])
 {	
 	static_assert(sizeof(void*) == 4, "64-bit code generation is not supported.");
@@ -251,90 +259,110 @@ int main(int argc, wchar_t* argv[])
 		boost::property_tree::xml_writer_settings<wchar_t> w(' ', 3);
 		boost::property_tree::write_xml(str, caspar::env::properties(), w);
 		CASPAR_LOG(info) << L"casparcg.config:\n-----------------------------------------\n" << str.str().c_str() << L"-----------------------------------------";
-				
+		bool wait_for_keypress;
+
 		{
+			boost::promise<bool> shutdown_server_now;
+			boost::unique_future<bool> shutdown_server = shutdown_server_now.get_future();
+
 			// Create server object which initializes channels, protocols and controllers.
-			caspar::server caspar_server;
-				
-			// Create a amcp parser for console commands.
-			caspar::protocol::amcp::AMCPProtocolStrategy amcp(caspar_server.get_channels(), caspar_server.get_thumbnail_generator());
+			caspar::server caspar_server(shutdown_server_now);
 
-			// Create a dummy client which prints amcp responses to console.
-			auto console_client = std::make_shared<caspar::IO::ConsoleClientInfo>();
-
-			std::wstring wcmd;
-			while(true)
+			// Use separate thread for the blocking console input, will be terminated 
+			// anyway when the main thread terminates.
+			boost::thread stdin_thread([&caspar_server, &shutdown_server_now]
 			{
-				std::getline(std::wcin, wcmd); // TODO: It's blocking...
-				
-				boost::to_upper(wcmd);
+				// Create a amcp parser for console commands.
+				caspar::protocol::amcp::AMCPProtocolStrategy amcp(
+						caspar_server.get_channels(),
+						caspar_server.get_thumbnail_generator(),
+						shutdown_server_now);
 
-				if(wcmd == L"EXIT" || wcmd == L"Q" || wcmd == L"QUIT" || wcmd == L"BYE")
-					break;
-				
-				try
+				// Create a dummy client which prints amcp responses to console.
+				auto console_client = std::make_shared<caspar::IO::ConsoleClientInfo>();
+				std::wstring wcmd;
+	
+				while(true)
 				{
-					// This is just dummy code for testing.
-					if(wcmd.substr(0, 1) == L"1")
-						wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" SLIDE 100 LOOP \r\nPLAY 1-1";
-					else if(wcmd.substr(0, 1) == L"2")
-						wcmd = L"MIXER 1-0 VIDEO IS_KEY 1";
-					else if(wcmd.substr(0, 1) == L"3")
-						wcmd = L"CG 1-2 ADD 1 BBTELEFONARE 1";
-					else if(wcmd.substr(0, 1) == L"4")
-						wcmd = L"PLAY 1-1 DV FILTER yadif=1:-1 LOOP";
-					else if(wcmd.substr(0, 1) == L"5")
+					std::getline(std::wcin, wcmd); // TODO: It's blocking...
+				
+					//boost::to_upper(wcmd);  // TODO COMPILER crashes on this line, Strange!
+					make_upper_case(wcmd);
+
+					if(wcmd == L"EXIT" || wcmd == L"Q" || wcmd == L"QUIT" || wcmd == L"BYE")
 					{
-						auto file = wcmd.substr(2, wcmd.length()-1);
-						wcmd = L"PLAY 1-1 " + file + L" LOOP\r\n" 
-								L"PLAY 1-2 " + file + L" LOOP\r\n" 
-								L"PLAY 1-3 " + file + L" LOOP\r\n"
-								L"PLAY 2-1 " + file + L" LOOP\r\n" 
-								L"PLAY 2-2 " + file + L" LOOP\r\n" 
-								L"PLAY 2-3 " + file + L" LOOP\r\n";
+						shutdown_server_now.set_value(true); // True to wait for keypress
+						break;
 					}
-					else if(wcmd.substr(0, 1) == L"X")
+				
+					try
 					{
-						int num = 0;
-						std::wstring file;
-						try
+						// This is just dummy code for testing.
+						if(wcmd.substr(0, 1) == L"1")
+							wcmd = L"LOADBG 1-1 " + wcmd.substr(1, wcmd.length()-1) + L" SLIDE 100 LOOP \r\nPLAY 1-1";
+						else if(wcmd.substr(0, 1) == L"2")
+							wcmd = L"MIXER 1-0 VIDEO IS_KEY 1";
+						else if(wcmd.substr(0, 1) == L"3")
+							wcmd = L"CG 1-2 ADD 1 BBTELEFONARE 1";
+						else if(wcmd.substr(0, 1) == L"4")
+							wcmd = L"PLAY 1-1 DV FILTER yadif=1:-1 LOOP";
+						else if(wcmd.substr(0, 1) == L"5")
 						{
-							num = boost::lexical_cast<int>(wcmd.substr(1, 2));
-							file = wcmd.substr(4, wcmd.length()-1);
+							auto file = wcmd.substr(2, wcmd.length()-1);
+							wcmd = L"PLAY 1-1 " + file + L" LOOP\r\n" 
+									L"PLAY 1-2 " + file + L" LOOP\r\n" 
+									L"PLAY 1-3 " + file + L" LOOP\r\n"
+									L"PLAY 2-1 " + file + L" LOOP\r\n" 
+									L"PLAY 2-2 " + file + L" LOOP\r\n" 
+									L"PLAY 2-3 " + file + L" LOOP\r\n";
 						}
-						catch(...)
+						else if(wcmd.substr(0, 1) == L"X")
 						{
-							num = boost::lexical_cast<int>(wcmd.substr(1, 1));
-							file = wcmd.substr(3, wcmd.length()-1);
+							int num = 0;
+							std::wstring file;
+							try
+							{
+								num = boost::lexical_cast<int>(wcmd.substr(1, 2));
+								file = wcmd.substr(4, wcmd.length()-1);
+							}
+							catch(...)
+							{
+								num = boost::lexical_cast<int>(wcmd.substr(1, 1));
+								file = wcmd.substr(3, wcmd.length()-1);
+							}
+
+							int n = 0;
+							int num2 = num;
+							while(num2 > 0)
+							{
+								num2 >>= 1;
+								n++;
+							}
+
+							wcmd = L"MIXER 1 GRID " + boost::lexical_cast<std::wstring>(n);
+
+							for(int i = 1; i <= num; ++i)
+								wcmd += L"\r\nPLAY 1-" + boost::lexical_cast<std::wstring>(i) + L" " + file + L" LOOP";// + L" SLIDE 100 LOOP";
 						}
-
-						int n = 0;
-						int num2 = num;
-						while(num2 > 0)
-						{
-							num2 >>= 1;
-							n++;
-						}
-
-						wcmd = L"MIXER 1 GRID " + boost::lexical_cast<std::wstring>(n);
-
-						for(int i = 1; i <= num; ++i)
-							wcmd += L"\r\nPLAY 1-" + boost::lexical_cast<std::wstring>(i) + L" " + file + L" LOOP";// + L" SLIDE 100 LOOP";
 					}
-				}
-				catch (...)
-				{
-					CASPAR_LOG_CURRENT_EXCEPTION();
-					continue;
-				}
+					catch (...)
+					{
+						CASPAR_LOG_CURRENT_EXCEPTION();
+						continue;
+					}
 
-				wcmd += L"\r\n";
-				amcp.Parse(wcmd.c_str(), wcmd.length(), console_client);
-			}	
+					wcmd += L"\r\n";
+					amcp.Parse(wcmd.c_str(), wcmd.length(), console_client);
+				}	
+			});
+			stdin_thread.detach();
+			wait_for_keypress = shutdown_server.get();
 		}
 		Sleep(500);
 		CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
-		system("pause");	
+
+		if (wait_for_keypress)
+			system("pause");	
 	}
 	catch(boost::property_tree::file_parser_error&)
 	{
