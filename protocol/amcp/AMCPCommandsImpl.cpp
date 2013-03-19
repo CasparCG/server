@@ -1844,6 +1844,11 @@ bool SetCommand::DoExecute()
 	return true;
 }
 
+bool KillCommand::DoExecute()
+{
+	GetShutdownServerNow().set_value(false); // False for not waiting until a key is pressed before terminating.
+	return true;
+}
 
 }	//namespace amcp
 }}	//namespace caspar

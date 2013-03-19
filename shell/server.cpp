@@ -70,13 +70,15 @@ using namespace protocol;
 
 struct server::implementation : boost::noncopyable
 {
+	boost::promise<bool>&						shutdown_server_now_;
 	safe_ptr<ogl_device>						ogl_;
 	std::vector<safe_ptr<IO::AsyncEventServer>> async_servers_;	
 	std::vector<safe_ptr<video_channel>>		channels_;
 	std::shared_ptr<thumbnail_generator>		thumbnail_generator_;
 
-	implementation()		
-		: ogl_(ogl_device::create())
+	implementation(boost::promise<bool>& shutdown_server_now)
+		: shutdown_server_now_(shutdown_server_now)
+		, ogl_(ogl_device::create())
 	{			
 		ffmpeg::init();
 		CASPAR_LOG(info) << L"Initialized ffmpeg module.";
@@ -209,7 +211,7 @@ struct server::implementation : boost::noncopyable
 	safe_ptr<IO::IProtocolStrategy> create_protocol(const std::wstring& name) const
 	{
 		if(boost::iequals(name, L"AMCP"))
-			return make_safe<amcp::AMCPProtocolStrategy>(channels_, thumbnail_generator_);
+			return make_safe<amcp::AMCPProtocolStrategy>(channels_, thumbnail_generator_, shutdown_server_now_);
 		else if(boost::iequals(name, L"CII"))
 			return make_safe<cii::CIIProtocolStrategy>(channels_);
 		else if(boost::iequals(name, L"CLOCK"))
@@ -223,7 +225,7 @@ struct server::implementation : boost::noncopyable
 	}
 };
 
-server::server() : impl_(new implementation()){}
+server::server(boost::promise<bool>& shutdown_server_now) : impl_(new implementation(shutdown_server_now)){}
 
 const std::vector<safe_ptr<video_channel>> server::get_channels() const
 {
