@@ -1,0 +1,98 @@
+# /
+/bin
+/ipch
+/tmp
+/casparcg.opensdf
+/casparcg.sdf
+/casparcg.sln.docstates.suo
+/casparcg.suo
+/version.h
+/.docstates.suo
+
+# /common/
+/common/bin
+/common/tmp
+
+# /core/
+/core/My Amplifier Results
+/core/bin
+/core/tmp
+/core/core.vcxproj.user
+
+# /modules/bluefish/
+/modules/bluefish/bin
+/modules/bluefish/tmp
+/modules/bluefish/bluefish.vcxproj.user
+
+# /modules/decklink/
+/modules/decklink/bin
+/modules/decklink/tmp
+/modules/decklink/decklink.vcxproj.user
+
+# /modules/decklink/interop/
+/modules/decklink/interop/DeckLinkAPI_h.h
+/modules/decklink/interop/DeckLinkAPI_i.c
+
+# /modules/ffmpeg/
+/modules/ffmpeg/bin
+/modules/ffmpeg/tmp
+/modules/ffmpeg/ffmpeg.vcxproj.user
+
+# /modules/ffmpeg/producer/filter/scalable_yadif/
+
+# /modules/flash/
+/modules/flash/bin
+/modules/flash/tmp
+/modules/flash/flash.vcxproj.user
+
+# /modules/image/
+/modules/image/bin
+/modules/image/tmp
+/modules/image/image.vcxproj.user
+
+# /modules/oal/
+/modules/oal/bin
+/modules/oal/tmp
+/modules/oal/oal.vcxproj.user
+
+# /modules/ogl/
+/modules/ogl/bin
+/modules/ogl/tmp
+/modules/ogl/ogl.vcxproj.user
+
+# /modules/silverlight/
+/modules/silverlight/bin
+/modules/silverlight/tmp
+
+# /protocol/
+/protocol/bin
+/protocol/tmp
+/protocol/protocol.vcxproj.user
+
+# /shell/
+/shell/bin
+/shell/crt_log.txt
+/shell/data
+/shell/log
+/shell/media
+/shell/shell.aps
+/shell/shell.vcxproj.user
+/shell/templates
+/shell/thumbnails
+/shell/tmp
+
+# /dependencies/
+/dependencies/boost
+
+# /dependencies64/ for 2.1.0 branch
+/dependencies64/asmlib
+/dependencies64/bluefish
+/dependencies64/boost
+/dependencies64/ffmpeg
+/dependencies64/freeimage
+/dependencies64/glew
+/dependencies64/media_sdk
+/dependencies64/openal
+/dependencies64/sfml
+/dependencies64/tbb
+
