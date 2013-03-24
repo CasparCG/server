@@ -1,0 +1,317 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>1. FFMPEG Producer &mdash; CasparCG 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/sidebar.js"></script>
+    <link rel="search" type="application/opensearchdescription+xml"
+          title="Search within CasparCG 2.0 documentation"
+          href="../_static/opensearch.xml"/>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="CasparCG 2.0 documentation" href="../index.html" />
+    <link rel="up" title="Producers" href="index.html" />
+    <link rel="next" title="2. Flash Producer" href="flash.html" />
+    <link rel="prev" title="Producers" href="index.html" />
+ 
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="flash.html" title="2. Flash Producer"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Producers"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">CasparCG 2.0 documentation</a> &raquo;</li>
+
+          <li><a href="index.html" accesskey="U">Producers</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="ffmpeg-producer">
+<h1>1. FFMPEG Producer<a class="headerlink" href="#ffmpeg-producer" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="supported-media">
+<h2>1.1. Supported Media<a class="headerlink" href="#supported-media" title="Permalink to this headline">¶</a></h2>
+<p>The ffmpeg producer supports all files that the &#8220;ffmpeg&#8221; library (www.ffmpeg.org) can play.</p>
+</div>
+<div class="section" id="filters">
+<h2>1.2. Filters<a class="headerlink" href="#filters" title="Permalink to this headline">¶</a></h2>
+<p>The ffmpeg producer supports &#8220;libavfilter&#8221; filters through the &#8220;FILTER&#8221; parameter.</p>
+</div>
+<div class="section" id="diagnostics">
+<h2>1.3. Diagnostics<a class="headerlink" href="#diagnostics" title="Permalink to this headline">¶</a></h2>
+<p>ffmpeg[<em>filename</em> | <em>video-mode</em> | <em>file-frame-number</em> / <em>file-nb-frames</em>]</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="67%" />
+<col width="11%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Graph</th>
+<th class="head">Description</th>
+<th class="head">Scale</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>frame-time</td>
+<td>Time spent decoding the current frame.</td>
+<td>fps/2</td>
+</tr>
+<tr class="row-odd"><td>buffer-count</td>
+<td>Number of input packets buffered.</td>
+<td>100</td>
+</tr>
+<tr class="row-even"><td>buffer-size</td>
+<td>Size of buffered input packets.</td>
+<td>64MB</td>
+</tr>
+<tr class="row-odd"><td>underflow</td>
+<td>Frame was not ready in time and is skipped.</td>
+<td>N/A</td>
+</tr>
+<tr class="row-even"><td>seek</td>
+<td>Input has seeked.</td>
+<td>N/A</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="parameters">
+<h2>1.4. Parameters<a class="headerlink" href="#parameters" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="loop">
+<h3>1.4.1. LOOP<a class="headerlink" href="#loop" title="Permalink to this headline">¶</a></h3>
+<p>Sets whether file will loop.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">{</span><span class="n">LOOP</span><span class="p">}</span>
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&lt;&lt; PLAY 1-1 MOVIE LOOP</pre>
+</div>
+</div>
+<div class="section" id="seek">
+<h3>1.4.2. SEEK<a class="headerlink" href="#seek" title="Permalink to this headline">¶</a></h3>
+<p>Sets the start of the file. This point will be used while looping.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">SEEK</span> <span class="p">[</span><span class="n">frames</span><span class="p">:</span><span class="nb">int</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&lt;&lt; PLAY 1-1 MOVIE SEEK 100 LOOP</pre>
+</div>
+</div>
+<div class="section" id="start-casparcg-2-1">
+<h3>1.4.3. START (CasparCG 2.1)<a class="headerlink" href="#start-casparcg-2-1" title="Permalink to this headline">¶</a></h3>
+<p>Sets the start of the file. This point will be used while looping.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">START</span> <span class="p">[</span><span class="n">frames</span><span class="p">:</span><span class="nb">int</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&lt;&lt; PLAY 1-1 MOVIE START 100 LOOP</pre>
+</div>
+</div>
+<div class="section" id="length">
+<h3>1.4.4. LENGTH<a class="headerlink" href="#length" title="Permalink to this headline">¶</a></h3>
+<p>Sets the end of the file.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">LENGTH</span> <span class="p">[</span><span class="n">frames</span><span class="p">:</span><span class="nb">int</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&lt;&lt; PLAY 1-1 MOVIE LENGTH 100</pre>
+</div>
+</div>
+<div class="section" id="filter">
+<h3>1.4.5. FILTER<a class="headerlink" href="#filter" title="Permalink to this headline">¶</a></h3>
+<p>Configures libavfilter which will be used.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">FILTER</span> <span class="p">[</span><span class="n">libavfilter</span><span class="o">-</span><span class="n">parameters</span><span class="p">:</span><span class="n">string</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&lt;&lt; PLAY 1-1 MOVIE FILTER hflip:yadif=0:0</pre>
+</div>
+</div>
+</div>
+<div class="section" id="functions">
+<h2>1.5. Functions<a class="headerlink" href="#functions" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="id1">
+<h3>1.5.1. LOOP<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h3>
+<p>Sets whether file will loop.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">LOOP</span> <span class="p">[</span><span class="n">loop</span><span class="p">:</span><span class="mi">0</span><span class="o">|</span><span class="mi">1</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Returns</p>
+<blockquote>
+<div>The value of LOOP after the command have completed.</div></blockquote>
+<p>Example:</p>
+<div class="highlight-python"><pre>&lt;&lt; CALL 1-1 LOOP 1
+&lt;&lt; CALL 1-1 LOOP   // Queries without changing.
+&gt;&gt; 1</pre>
+</div>
+</div>
+<div class="section" id="id2">
+<h3>1.5.2. SEEK<a class="headerlink" href="#id2" title="Permalink to this headline">¶</a></h3>
+<p>Seeks in the file.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">SEEK</span> <span class="p">[</span><span class="n">frames</span><span class="p">:</span><span class="nb">int</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Returns</p>
+<blockquote>
+<div>Nothing.</div></blockquote>
+<p>Example:</p>
+<div class="highlight-python"><pre>&lt;&lt; CALL 1-1 SEEK 200</pre>
+</div>
+</div>
+<div class="section" id="id3">
+<h3>1.5.3. START (CasparCG 2.1)<a class="headerlink" href="#id3" title="Permalink to this headline">¶</a></h3>
+<p>Sets the start of the file. This point will be used while looping.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">START</span> <span class="p">[</span><span class="n">frames</span><span class="p">:</span><span class="nb">int</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&lt;&lt; CALL 1-1 START 100</pre>
+</div>
+</div>
+<div class="section" id="length-casparcg-2-1">
+<h3>1.5.4. LENGTH (CasparCG 2.1)<a class="headerlink" href="#length-casparcg-2-1" title="Permalink to this headline">¶</a></h3>
+<p>Sets the end of the file.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">LENGTH</span> <span class="p">[</span><span class="n">frames</span><span class="p">:</span><span class="nb">int</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&lt;&lt; CALL 1-1 LENGTH 100P</pre>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../contents.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">1. FFMPEG Producer</a><ul>
+<li><a class="reference internal" href="#supported-media">1.1. Supported Media</a></li>
+<li><a class="reference internal" href="#filters">1.2. Filters</a></li>
+<li><a class="reference internal" href="#diagnostics">1.3. Diagnostics</a></li>
+<li><a class="reference internal" href="#parameters">1.4. Parameters</a><ul>
+<li><a class="reference internal" href="#loop">1.4.1. LOOP</a></li>
+<li><a class="reference internal" href="#seek">1.4.2. SEEK</a></li>
+<li><a class="reference internal" href="#start-casparcg-2-1">1.4.3. START (CasparCG 2.1)</a></li>
+<li><a class="reference internal" href="#length">1.4.4. LENGTH</a></li>
+<li><a class="reference internal" href="#filter">1.4.5. FILTER</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#functions">1.5. Functions</a><ul>
+<li><a class="reference internal" href="#id1">1.5.1. LOOP</a></li>
+<li><a class="reference internal" href="#id2">1.5.2. SEEK</a></li>
+<li><a class="reference internal" href="#id3">1.5.3. START (CasparCG 2.1)</a></li>
+<li><a class="reference internal" href="#length-casparcg-2-1">1.5.4. LENGTH (CasparCG 2.1)</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Producers</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="flash.html"
+                        title="next chapter">2. Flash Producer</a></p>
+<h3>This Page</h3>
+<ul class="this-page-menu">
+  <li><a href="../bugs.html">Report a Bug</a></li>
+  <li><a href="../_sources/producers/ffmpeg.txt"
+         rel="nofollow">Show Source</a></li>
+</ul>
+
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="flash.html" title="2. Flash Producer"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Producers"
+             >previous</a> |</li>
+        <li><a href="../index.html">CasparCG 2.0 documentation</a> &raquo;</li>
+
+          <li><a href="index.html" >Producers</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+    &copy; <a href="../copyright.html">Copyright</a> 2011, Robert Nagy (ronag89@gmail.com).
+    <br />
+    Last updated on Mar 13, 2012.
+    <a href="../bugs.html">Found a bug</a>?
+    <br />
+    Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+
+  </body>
+</html>

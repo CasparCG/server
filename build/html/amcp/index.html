@@ -1,0 +1,207 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>AMCP 2.0 Reference &mdash; CasparCG 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/sidebar.js"></script>
+    <link rel="search" type="application/opensearchdescription+xml"
+          title="Search within CasparCG 2.0 documentation"
+          href="../_static/opensearch.xml"/>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="CasparCG 2.0 documentation" href="../index.html" />
+    <link rel="next" title="1. Communication" href="introduction.html" />
+    <link rel="prev" title="What’s New in CasparCG 2.0" href="../whatsnew/2_0.html" />
+ 
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="introduction.html" title="1. Communication"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="../whatsnew/2_0.html" title="What’s New in CasparCG 2.0"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">CasparCG 2.0 documentation</a> &raquo;</li>
+ 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="amcp-2-0-reference">
+<h1>AMCP 2.0 Reference<a class="headerlink" href="#amcp-2-0-reference" title="Permalink to this headline">¶</a></h1>
+<p>The Advanced Media Control Protocol (AMCP) is the main communication protocol used to control and query CasparCG Server 2.0.</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">1. Communication</a></li>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html#backwards-compatibility">2. Backwards Compatibility</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#breaking-changes">2.1. Breaking Changes</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html#special-sequences">3. Special sequences</a></li>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html#return-codes">4. Return codes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#information">4.1. Information</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#successful">4.2. Successful</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#client-error">4.3. Client Error</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#server-error">4.4. Server Error</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="basic-commands.html">5. Basic Commands</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="basic-commands.html#loadbg">5.1. LOADBG</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic-commands.html#load">5.2. LOAD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic-commands.html#play">5.3. PLAY</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic-commands.html#pause">5.4. PAUSE</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic-commands.html#stop">5.5. STOP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic-commands.html#clear">5.6. CLEAR</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic-commands.html#call">5.7. CALL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic-commands.html#swap">5.8. SWAP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic-commands.html#add">5.9. ADD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="basic-commands.html#remove">5.10. REMOVE</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="template-graphics-commands.html">6. Template Graphics Commands</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="template-graphics-commands.html#cg-add">6.1. CG ADD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="template-graphics-commands.html#cg-remove">6.2. CG REMOVE</a></li>
+<li class="toctree-l2"><a class="reference internal" href="template-graphics-commands.html#cg-clear">6.3. CG CLEAR</a></li>
+<li class="toctree-l2"><a class="reference internal" href="template-graphics-commands.html#cg-play">6.4. CG PLAY</a></li>
+<li class="toctree-l2"><a class="reference internal" href="template-graphics-commands.html#cg-stop">6.5. CG STOP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="template-graphics-commands.html#cg-next">6.6. CG NEXT</a></li>
+<li class="toctree-l2"><a class="reference internal" href="template-graphics-commands.html#cg-goto">6.7. CG GOTO</a></li>
+<li class="toctree-l2"><a class="reference internal" href="template-graphics-commands.html#cg-update">6.8. CG UPDATE</a></li>
+<li class="toctree-l2"><a class="reference internal" href="template-graphics-commands.html#cg-invoke">6.9. CG INVOKE</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="data-commands.html">7. Data Commands</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="data-commands.html#data-store">7.1. DATA STORE</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data-commands.html#data-retrieve">7.2. DATA RETRIEVE</a></li>
+<li class="toctree-l2"><a class="reference internal" href="data-commands.html#data-list">7.3. DATA LIST</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="mixer-commands.html">8. Mixer Commands</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="mixer-commands.html#mixer-keyer">8.1. MIXER KEYER</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mixer-commands.html#mixer-blend">8.2. MIXER BLEND</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mixer-commands.html#mixer-opacity">8.3. MIXER OPACITY</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mixer-commands.html#mixer-brigthness">8.4. MIXER BRIGTHNESS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mixer-commands.html#mixer-saturation">8.5. MIXER SATURATION</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mixer-commands.html#mixer-contrast">8.6. MIXER CONTRAST</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mixer-commands.html#mixer-levels">8.7. MIXER LEVELS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mixer-commands.html#mixer-fill">8.8. MIXER FILL</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mixer-commands.html#mixer-clip">8.9. MIXER CLIP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mixer-commands.html#mixer-grid">8.10. MIXER GRID</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mixer-commands.html#mixer-volume">8.11. MIXER VOLUME</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mixer-commands.html#mixer-clear">8.12. MIXER CLEAR</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="query-commands.html">9. Query Commands</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="query-commands.html#cinf">9.1. CINF</a></li>
+<li class="toctree-l2"><a class="reference internal" href="query-commands.html#cls">9.2. CLS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="query-commands.html#tls">9.3. TLS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="query-commands.html#version">9.4. VERSION</a></li>
+<li class="toctree-l2"><a class="reference internal" href="query-commands.html#info">9.5. INFO</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="misc-commands.html">10. Misc Commands</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="misc-commands.html#diag">10.1. DIAG</a></li>
+<li class="toctree-l2"><a class="reference internal" href="misc-commands.html#bye">10.2. BYE</a></li>
+<li class="toctree-l2"><a class="reference internal" href="misc-commands.html#channel-grid">10.3. CHANNEL_GRID</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="../whatsnew/2_0.html"
+                        title="previous chapter">What&#8217;s New in CasparCG 2.0</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="introduction.html"
+                        title="next chapter">1. Communication</a></p>
+<h3>This Page</h3>
+<ul class="this-page-menu">
+  <li><a href="../bugs.html">Report a Bug</a></li>
+  <li><a href="../_sources/amcp/index.txt"
+         rel="nofollow">Show Source</a></li>
+</ul>
+
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="introduction.html" title="1. Communication"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="../whatsnew/2_0.html" title="What’s New in CasparCG 2.0"
+             >previous</a> |</li>
+        <li><a href="../index.html">CasparCG 2.0 documentation</a> &raquo;</li>
+ 
+      </ul>
+    </div>
+    <div class="footer">
+    &copy; <a href="../copyright.html">Copyright</a> 2011, Robert Nagy (ronag89@gmail.com).
+    <br />
+    Last updated on Mar 13, 2012.
+    <a href="../bugs.html">Found a bug</a>?
+    <br />
+    Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+
+  </body>
+</html>

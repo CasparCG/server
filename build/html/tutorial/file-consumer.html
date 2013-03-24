@@ -1,0 +1,169 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Running the File Consumer &mdash; CasparCG 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/sidebar.js"></script>
+    <link rel="search" type="application/opensearchdescription+xml"
+          title="Search within CasparCG 2.0 documentation"
+          href="../_static/opensearch.xml"/>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="CasparCG 2.0 documentation" href="../index.html" />
+    <link rel="up" title="CasparCG Tutorials" href="index.html" />
+    <link rel="next" title="Producers" href="../producers/index.html" />
+    <link rel="prev" title="CasparCG Tutorials" href="index.html" />
+ 
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../producers/index.html" title="Producers"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="CasparCG Tutorials"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">CasparCG 2.0 documentation</a> &raquo;</li>
+
+          <li><a href="index.html" accesskey="U">CasparCG Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="running-the-file-consumer">
+<span id="tut-file"></span><h1>Running the File Consumer<a class="headerlink" href="#running-the-file-consumer" title="Permalink to this headline">¶</a></h1>
+<p>The file consumer uses ffmpeg to encode video.</p>
+<p>The encoding will automatically take advantage of multi-core CPUs.</p>
+<p>To start the file consumer send the following command:</p>
+<div class="highlight-python"><pre>ADD 1 FILE myfile.mov</pre>
+</div>
+<p>If the &#8220;-f&#8221;  or &#8220;-vcodec/-acodec&#8221; option is not supplied then the container format and appropriate codec will be automatically deduced from the file extension.</p>
+<p>To stop writing to the file send:</p>
+<div class="highlight-python"><pre>REMOVE 1 FILE</pre>
+</div>
+<p>The file consumer follows the commandline argument syntax used by ffmpeg, see ffmpeg.org for more options (note, not all options supported by ffmpeg have been implemented). Some of the available options are:</p>
+<div class="highlight-python"><pre>-f // container format
+-vcodec // vicdeo codec
+-pix_fmt // pixel_format
+-r // video framerate
+-s // size
+-b // video bitrate
+-acodec // audio codec
+-ar // audio samplerate
+-ab // audio bitrate
+-ac // audio channels</pre>
+</div>
+<div class="highlight-python"><pre>ADD 1 FILE myfile.mov -vcodec dnxhd
+ADD 1 FILE myfile.mov -vcodec prores
+ADD 1 FILE myfile.mov -vcodec dvvideo
+ADD 1 FILE myfile.mov -vcodec libx264</pre>
+</div>
+<p>For the above formats have already provided high quality default parameters.</p>
+<p>Another example:</p>
+<div class="highlight-python"><pre>ADD 1 FILE myfile.mov -vcodec libx264 -preset ultrafast -tune fastdecode -crf 5</pre>
+</div>
+<p>In order to run multiple file consumers on the same channel you will need to provide a unique consumer index.</p>
+<div class="highlight-python"><pre>ADD 1-0 FILE myfile.mov -s 1920x1080
+ADD 1-1 FILE myfile.mov -s 1280x720
+...
+REMOVE 1-0
+REMOVE 1-1</pre>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">CasparCG Tutorials</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../producers/index.html"
+                        title="next chapter">Producers</a></p>
+<h3>This Page</h3>
+<ul class="this-page-menu">
+  <li><a href="../bugs.html">Report a Bug</a></li>
+  <li><a href="../_sources/tutorial/file-consumer.txt"
+         rel="nofollow">Show Source</a></li>
+</ul>
+
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../producers/index.html" title="Producers"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="CasparCG Tutorials"
+             >previous</a> |</li>
+        <li><a href="../index.html">CasparCG 2.0 documentation</a> &raquo;</li>
+
+          <li><a href="index.html" >CasparCG Tutorials</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+    &copy; <a href="../copyright.html">Copyright</a> 2011, Robert Nagy (ronag89@gmail.com).
+    <br />
+    Last updated on Mar 13, 2012.
+    <a href="../bugs.html">Found a bug</a>?
+    <br />
+    Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+
+  </body>
+</html>

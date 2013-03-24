@@ -1,0 +1,197 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>5. Decklink Producer &mdash; CasparCG 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/sidebar.js"></script>
+    <link rel="search" type="application/opensearchdescription+xml"
+          title="Search within CasparCG 2.0 documentation"
+          href="../_static/opensearch.xml"/>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="CasparCG 2.0 documentation" href="../index.html" />
+    <link rel="up" title="Producers" href="index.html" />
+    <link rel="next" title="Consumers" href="../consumers/index.html" />
+    <link rel="prev" title="4. Image Scroll Producer" href="image-scroll.html" />
+ 
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../consumers/index.html" title="Consumers"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="image-scroll.html" title="4. Image Scroll Producer"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">CasparCG 2.0 documentation</a> &raquo;</li>
+
+          <li><a href="index.html" accesskey="U">Producers</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="decklink-producer">
+<h1>5. Decklink Producer<a class="headerlink" href="#decklink-producer" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="diagnostics">
+<h2>5.1. Diagnostics<a class="headerlink" href="#diagnostics" title="Permalink to this headline">¶</a></h2>
+<p>flash[<em>model-name</em> | <em>device-index</em> | <em>video-mode</em>]</p>
+</div>
+<div class="section" id="parameters">
+<h2>5.2. Parameters<a class="headerlink" href="#parameters" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="device">
+<h3>5.2.1. DEVICE<a class="headerlink" href="#device" title="Permalink to this headline">¶</a></h3>
+<p>Which BlackMagic device to attach.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><pre>[device:int]</pre>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&lt;&lt; PLAY 1-1 DECKLINK 1</pre>
+</div>
+</div>
+<div class="section" id="length">
+<h3>5.2.2. LENGTH<a class="headerlink" href="#length" title="Permalink to this headline">¶</a></h3>
+<p>Sets the end of the file.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">LENGTH</span> <span class="p">[</span><span class="n">frames</span><span class="p">:</span><span class="nb">int</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&lt;&lt; PLAY 1-1 DECKLINK 1 LENGTH 100</pre>
+</div>
+</div>
+<div class="section" id="filter">
+<h3>5.2.3. FILTER<a class="headerlink" href="#filter" title="Permalink to this headline">¶</a></h3>
+<p>Configures libavfilter which will be used.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">FILTER</span> <span class="p">[</span><span class="n">libavfilter</span><span class="o">-</span><span class="n">parameters</span><span class="p">:</span><span class="n">string</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&lt;&lt; PLAY 1-1 DECKLINK 1 FILTER hflip:yadif=0:0</pre>
+</div>
+</div>
+<div class="section" id="format">
+<h3>5.2.4. FORMAT<a class="headerlink" href="#format" title="Permalink to this headline">¶</a></h3>
+<p>Sets the video-mode. If no video-mode is provided then the parent channels video-mode will be used.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">FORMAT</span> <span class="p">[</span><span class="n">video</span><span class="o">-</span><span class="n">mode</span><span class="p">:</span><span class="n">string</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&lt;&lt; PLAY 1-1 DECKLINK 1 FORMAT PAL LENGTH 100</pre>
+</div>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../contents.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">5. Decklink Producer</a><ul>
+<li><a class="reference internal" href="#diagnostics">5.1. Diagnostics</a></li>
+<li><a class="reference internal" href="#parameters">5.2. Parameters</a><ul>
+<li><a class="reference internal" href="#device">5.2.1. DEVICE</a></li>
+<li><a class="reference internal" href="#length">5.2.2. LENGTH</a></li>
+<li><a class="reference internal" href="#filter">5.2.3. FILTER</a></li>
+<li><a class="reference internal" href="#format">5.2.4. FORMAT</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="image-scroll.html"
+                        title="previous chapter">4. Image Scroll Producer</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../consumers/index.html"
+                        title="next chapter">Consumers</a></p>
+<h3>This Page</h3>
+<ul class="this-page-menu">
+  <li><a href="../bugs.html">Report a Bug</a></li>
+  <li><a href="../_sources/producers/decklink.txt"
+         rel="nofollow">Show Source</a></li>
+</ul>
+
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../consumers/index.html" title="Consumers"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="image-scroll.html" title="4. Image Scroll Producer"
+             >previous</a> |</li>
+        <li><a href="../index.html">CasparCG 2.0 documentation</a> &raquo;</li>
+
+          <li><a href="index.html" >Producers</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+    &copy; <a href="../copyright.html">Copyright</a> 2011, Robert Nagy (ronag89@gmail.com).
+    <br />
+    Last updated on Mar 13, 2012.
+    <a href="../bugs.html">Found a bug</a>?
+    <br />
+    Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+
+  </body>
+</html>

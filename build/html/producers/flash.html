@@ -1,0 +1,205 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>2. Flash Producer &mdash; CasparCG 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/sidebar.js"></script>
+    <link rel="search" type="application/opensearchdescription+xml"
+          title="Search within CasparCG 2.0 documentation"
+          href="../_static/opensearch.xml"/>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="CasparCG 2.0 documentation" href="../index.html" />
+    <link rel="up" title="Producers" href="index.html" />
+    <link rel="next" title="3. Image Producer" href="image.html" />
+    <link rel="prev" title="1. FFMPEG Producer" href="ffmpeg.html" />
+ 
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="image.html" title="3. Image Producer"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="ffmpeg.html" title="1. FFMPEG Producer"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">CasparCG 2.0 documentation</a> &raquo;</li>
+
+          <li><a href="index.html" accesskey="U">Producers</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="flash-producer">
+<h1>2. Flash Producer<a class="headerlink" href="#flash-producer" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="supported-media">
+<h2>2.1. Supported Media<a class="headerlink" href="#supported-media" title="Permalink to this headline">¶</a></h2>
+<table border="1" class="docutils">
+<colgroup>
+<col width="24%" />
+<col width="76%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Extension</th>
+<th class="head">Description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>.ft</td>
+<td>Flash-template.</td>
+</tr>
+<tr class="row-odd"><td>.ct</td>
+<td>Compressed-template.</td>
+</tr>
+<tr class="row-even"><td>.swf</td>
+<td>Flash file.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="diagnostics">
+<h2>2.2. Diagnostics<a class="headerlink" href="#diagnostics" title="Permalink to this headline">¶</a></h2>
+<p>flash[<em>template-host</em> | <em>video-mode</em>]</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="21%" />
+<col width="67%" />
+<col width="11%" />
+</colgroup>
+<thead valign="bottom">
+<tr class="row-odd"><th class="head">Graph</th>
+<th class="head">Description</th>
+<th class="head">Scale</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr class="row-even"><td>frame-time</td>
+<td>Time spent rendering the current frame.</td>
+<td>fps/2</td>
+</tr>
+<tr class="row-odd"><td>tick-time</td>
+<td>Time between rendering two frames.</td>
+<td>fps/2</td>
+</tr>
+<tr class="row-even"><td>param</td>
+<td>Invoked flash command.</td>
+<td>N/A</td>
+</tr>
+<tr class="row-odd"><td>late-frame</td>
+<td>Frame was not ready in time and is skipped.</td>
+<td>N/A</td>
+</tr>
+<tr class="row-even"><td>sync</td>
+<td>Synced time between rendering two frames.</td>
+<td>fps/2</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../contents.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">2. Flash Producer</a><ul>
+<li><a class="reference internal" href="#supported-media">2.1. Supported Media</a></li>
+<li><a class="reference internal" href="#diagnostics">2.2. Diagnostics</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="ffmpeg.html"
+                        title="previous chapter">1. FFMPEG Producer</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="image.html"
+                        title="next chapter">3. Image Producer</a></p>
+<h3>This Page</h3>
+<ul class="this-page-menu">
+  <li><a href="../bugs.html">Report a Bug</a></li>
+  <li><a href="../_sources/producers/flash.txt"
+         rel="nofollow">Show Source</a></li>
+</ul>
+
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="image.html" title="3. Image Producer"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="ffmpeg.html" title="1. FFMPEG Producer"
+             >previous</a> |</li>
+        <li><a href="../index.html">CasparCG 2.0 documentation</a> &raquo;</li>
+
+          <li><a href="index.html" >Producers</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+    &copy; <a href="../copyright.html">Copyright</a> 2011, Robert Nagy (ronag89@gmail.com).
+    <br />
+    Last updated on Mar 13, 2012.
+    <a href="../bugs.html">Found a bug</a>?
+    <br />
+    Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+
+  </body>
+</html>
