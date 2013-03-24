@@ -1,0 +1,259 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>6. Template Graphics Commands &mdash; CasparCG 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/sidebar.js"></script>
+    <link rel="search" type="application/opensearchdescription+xml"
+          title="Search within CasparCG 2.0 documentation"
+          href="../_static/opensearch.xml"/>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="CasparCG 2.0 documentation" href="../index.html" />
+    <link rel="up" title="AMCP 2.0 Reference" href="index.html" />
+    <link rel="next" title="7. Data Commands" href="data-commands.html" />
+    <link rel="prev" title="5. Basic Commands" href="basic-commands.html" />
+ 
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="data-commands.html" title="7. Data Commands"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="basic-commands.html" title="5. Basic Commands"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">CasparCG 2.0 documentation</a> &raquo;</li>
+
+          <li><a href="index.html" accesskey="U">AMCP 2.0 Reference</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="template-graphics-commands">
+<h1>6. Template Graphics Commands<a class="headerlink" href="#template-graphics-commands" title="Permalink to this headline">¶</a></h1>
+<p>Data to templates is sent as xml, formatted as follows:</p>
+<div class="highlight-python"><pre>&lt;templateData&gt;
+        &lt;componentData id="f0"&gt;
+                &lt;data id="text" value="Niklas P Andersson" /&gt;
+        &lt;/componentData&gt;
+        &lt;componentData id="f1"&gt;
+        &lt;data id="text" value="Developer" /&gt;
+        &lt;/componentData&gt;
+        &lt;componentData id="f2"&gt;
+                &lt;data id="text" value="Providing an example" /&gt;
+        &lt;/componentData&gt;
+&lt;/templateData&gt;</pre>
+</div>
+<p>The node under each componentData is sent directly into the specified component.
+This makes it possible to provide completely custom data to templates.
+The data-nodes in this example is just the way the default CasparCG textfield wants its data.
+More information about this will be provided with the tools and ActionScript classes required to build your own templates.
+A complete call to CG ADD (see below), correctly escaped and with the data above would look like this:</p>
+<div class="highlight-python"><pre>CG 1 ADD 0 "demo/test" 1 "&lt;templateData&gt;&lt;componentData id=\"f0\"&gt;&lt;data id=\"text\" value=\"Niklas P Andersson\"&gt;&lt;/data&gt; &lt;/componentData&gt;&lt;componentData id=\"f1\"&gt;&lt;data id=\"text\" value=\"developer\"&gt;&lt;/data&gt;&lt;/componentData&gt;&lt;componentData id=\"f2\"&gt;&lt;data id=\"text\" value=\"Providing an example\"&gt;&lt;/data&gt; &lt;/componentData&gt;&lt;/templateData&gt;"</pre>
+</div>
+<div class="section" id="cg-add">
+<h2>6.1. CG ADD<a class="headerlink" href="#cg-add" title="Permalink to this headline">¶</a></h2>
+<p>Prepares a template for displaying. It won&#8217;t show until you call CG PLAY (unless you supply the play-on-load flag, 1 for true).
+Data is either inline xml or a reference to a saved dataset.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><pre>CG [channel:int]-[layer:int] ADD [template-host-layer:int] [template:string] {[play-on-load:0|1]} {[data:string]}</pre>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&gt;&gt; CG 1-1 ADD 10 svtnews/info 1</pre>
+</div>
+</div>
+<div class="section" id="cg-remove">
+<h2>6.2. CG REMOVE<a class="headerlink" href="#cg-remove" title="Permalink to this headline">¶</a></h2>
+<p>Removes the visible template from a specific layer.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><pre>CG [channel:int]-[layer:int] REMOVE [template-host-layer:int]</pre>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&gt;&gt; CG 1-1 REMOVE 1</pre>
+</div>
+</div>
+<div class="section" id="cg-clear">
+<h2>6.3. CG CLEAR<a class="headerlink" href="#cg-clear" title="Permalink to this headline">¶</a></h2>
+<p>Clears all layers and any state that might be stored. What this actually does behind the scene is to create a new instance of the Adobe Flash player ActiveX controller in memory.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><pre>CG channel:int]-[layer:int]     CLEAR</pre>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&gt;&gt; CG 1-1 CLEAR</pre>
+</div>
+</div>
+<div class="section" id="cg-play">
+<h2>6.4. CG PLAY<a class="headerlink" href="#cg-play" title="Permalink to this headline">¶</a></h2>
+<p>Plays and displays the template in the specified layer.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><pre>CG [channel:int]-[layer:int] PLAY [template-host-layer:int]</pre>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&gt;&gt; CG 1-1 PLAY 1</pre>
+</div>
+</div>
+<div class="section" id="cg-stop">
+<h2>6.5. CG STOP<a class="headerlink" href="#cg-stop" title="Permalink to this headline">¶</a></h2>
+<p>Stops and removes the template from the specified layer. This is different than REMOVE in that the template gets a chance to animate out when it is stopped.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><pre>CG [channel:int]-[layer:int] STOP [template-host-layer:int]</pre>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&gt;&gt; CG 1-1 STOP</pre>
+</div>
+</div>
+<div class="section" id="cg-next">
+<h2>6.6. CG NEXT<a class="headerlink" href="#cg-next" title="Permalink to this headline">¶</a></h2>
+<p>Triggers a &#8220;continue&#8221; in the template on the specified layer. This is used to control animations that has multiple discreet steps.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><pre>CG [channel:int]-[layer:int] NEXT [template-host-layer:int]</pre>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&gt;&gt; CG 1-1 NEXT 1</pre>
+</div>
+</div>
+<div class="section" id="cg-goto">
+<h2>6.7. CG GOTO<a class="headerlink" href="#cg-goto" title="Permalink to this headline">¶</a></h2>
+<p>Jumps to the specified label in the template on the specified layer.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><pre>CG [channel:int]-[layer:int] GOTO [template-host-layer:int] {[label:string]}</pre>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&gt;&gt; CG 1-1 GOTO 1 intro</pre>
+</div>
+</div>
+<div class="section" id="cg-update">
+<h2>6.8. CG UPDATE<a class="headerlink" href="#cg-update" title="Permalink to this headline">¶</a></h2>
+<p>Sends new data to the template on specified layer. Data is either inline xml or a reference to a saved dataset.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><pre>CG [channel:int]-[layer:int] UPDATE [template-host-layer:int] [data:string]</pre>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&gt;&gt; CG 1-1 UPDATE 1 "Some data"</pre>
+</div>
+</div>
+<div class="section" id="cg-invoke">
+<h2>6.9. CG INVOKE<a class="headerlink" href="#cg-invoke" title="Permalink to this headline">¶</a></h2>
+<p>Calls a custom method in the document class of the template on the specified layer. The method must return void and take no parameters.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><pre>CG [channel:int]-[layer:int] INVOKE [template-host-layer:int] [method:string]</pre>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&gt;&gt; CG 1-1 INVOKE 1 start_intro</pre>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../contents.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">6. Template Graphics Commands</a><ul>
+<li><a class="reference internal" href="#cg-add">6.1. CG ADD</a></li>
+<li><a class="reference internal" href="#cg-remove">6.2. CG REMOVE</a></li>
+<li><a class="reference internal" href="#cg-clear">6.3. CG CLEAR</a></li>
+<li><a class="reference internal" href="#cg-play">6.4. CG PLAY</a></li>
+<li><a class="reference internal" href="#cg-stop">6.5. CG STOP</a></li>
+<li><a class="reference internal" href="#cg-next">6.6. CG NEXT</a></li>
+<li><a class="reference internal" href="#cg-goto">6.7. CG GOTO</a></li>
+<li><a class="reference internal" href="#cg-update">6.8. CG UPDATE</a></li>
+<li><a class="reference internal" href="#cg-invoke">6.9. CG INVOKE</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="basic-commands.html"
+                        title="previous chapter">5. Basic Commands</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="data-commands.html"
+                        title="next chapter">7. Data Commands</a></p>
+<h3>This Page</h3>
+<ul class="this-page-menu">
+  <li><a href="../bugs.html">Report a Bug</a></li>
+  <li><a href="../_sources/amcp/template-graphics-commands.txt"
+         rel="nofollow">Show Source</a></li>
+</ul>
+
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="data-commands.html" title="7. Data Commands"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="basic-commands.html" title="5. Basic Commands"
+             >previous</a> |</li>
+        <li><a href="../index.html">CasparCG 2.0 documentation</a> &raquo;</li>
+
+          <li><a href="index.html" >AMCP 2.0 Reference</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+    &copy; <a href="../copyright.html">Copyright</a> 2011, Robert Nagy (ronag89@gmail.com).
+    <br />
+    Last updated on Mar 13, 2012.
+    <a href="../bugs.html">Found a bug</a>?
+    <br />
+    Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+
+  </body>
+</html>

@@ -1,0 +1,227 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>9. Query Commands &mdash; CasparCG 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/sidebar.js"></script>
+    <link rel="search" type="application/opensearchdescription+xml"
+          title="Search within CasparCG 2.0 documentation"
+          href="../_static/opensearch.xml"/>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="CasparCG 2.0 documentation" href="../index.html" />
+    <link rel="up" title="AMCP 2.0 Reference" href="index.html" />
+    <link rel="next" title="10. Misc Commands" href="misc-commands.html" />
+    <link rel="prev" title="8. Mixer Commands" href="mixer-commands.html" />
+ 
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="misc-commands.html" title="10. Misc Commands"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="mixer-commands.html" title="8. Mixer Commands"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">CasparCG 2.0 documentation</a> &raquo;</li>
+
+          <li><a href="index.html" accesskey="U">AMCP 2.0 Reference</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="query-commands">
+<h1>9. Query Commands<a class="headerlink" href="#query-commands" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="cinf">
+<h2>9.1. CINF<a class="headerlink" href="#cinf" title="Permalink to this headline">¶</a></h2>
+<p>Returns information about a mediafile.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">CINF</span> <span class="p">[</span><span class="n">filename</span><span class="p">:</span><span class="n">string</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&gt;&gt; CINF movie
+&lt;&lt; ...</pre>
+</div>
+</div>
+<div class="section" id="cls">
+<h2>9.2. CLS<a class="headerlink" href="#cls" title="Permalink to this headline">¶</a></h2>
+<p>Lists all media files.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">CLS</span>
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&gt;&gt; CLS
+&lt;&lt; ...</pre>
+</div>
+</div>
+<div class="section" id="tls">
+<h2>9.3. TLS<a class="headerlink" href="#tls" title="Permalink to this headline">¶</a></h2>
+<p>Lists all template files.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">TLS</span>
+</pre></div>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&gt;&gt; TLS
+&lt;&lt; ...</pre>
+</div>
+</div>
+<div class="section" id="version">
+<h2>9.4. VERSION<a class="headerlink" href="#version" title="Permalink to this headline">¶</a></h2>
+<p>Returns the version of specified component.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><pre>    VERSION SERVER
+VERSION FLASH
+VERSION TEMPLATEHOST</pre>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&gt;&gt; VERSION
+&lt;&lt; ...
+&gt;&gt; VERSION FLASH
+&lt;&lt; ...</pre>
+</div>
+</div>
+<div class="section" id="info">
+<h2>9.5. INFO<a class="headerlink" href="#info" title="Permalink to this headline">¶</a></h2>
+<p>Returns xml-formatted information about the server.</p>
+<p>INFO TEMPLATE:  Reads meta-data from a flash-template.
+INFO PATHS:     Returns configured paths.
+INFO SYSTEM:    Returns information about the system.
+INFO CONFIG:    Return the configuration.
+INFO:           Returns a list of channels (not xml-formatted due to compatibility issues with older clients).
+INFO 1:         Returns information about specified channl.
+INFO 1-1:       Returns information about specified layer.
+CG 1 INFO       Returns information about flash-producer running on specified channel.</p>
+<p>Syntax:</p>
+<div class="highlight-python"><pre>INFO TEMPLATE [filename:string]
+INFO PATHS
+INFO SYSTEM
+INFO CONFIG
+INFO
+INFO [channel:int]
+INFO [channel:int]-[layer:int]
+CG [channel:int] INFO</pre>
+</div>
+<p>Example:</p>
+<div class="highlight-python"><pre>&gt;&gt; INFO
+&lt;&lt; ...
+&gt;&gt; INFO 1
+&lt;&lt; ...
+&gt;&gt; INFO 1-1
+&lt;&lt; ...
+&gt;&gt; INFO TEMPLATE my_table_template
+&lt;&lt; ...</pre>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../contents.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">9. Query Commands</a><ul>
+<li><a class="reference internal" href="#cinf">9.1. CINF</a></li>
+<li><a class="reference internal" href="#cls">9.2. CLS</a></li>
+<li><a class="reference internal" href="#tls">9.3. TLS</a></li>
+<li><a class="reference internal" href="#version">9.4. VERSION</a></li>
+<li><a class="reference internal" href="#info">9.5. INFO</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="mixer-commands.html"
+                        title="previous chapter">8. Mixer Commands</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="misc-commands.html"
+                        title="next chapter">10. Misc Commands</a></p>
+<h3>This Page</h3>
+<ul class="this-page-menu">
+  <li><a href="../bugs.html">Report a Bug</a></li>
+  <li><a href="../_sources/amcp/query-commands.txt"
+         rel="nofollow">Show Source</a></li>
+</ul>
+
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="misc-commands.html" title="10. Misc Commands"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="mixer-commands.html" title="8. Mixer Commands"
+             >previous</a> |</li>
+        <li><a href="../index.html">CasparCG 2.0 documentation</a> &raquo;</li>
+
+          <li><a href="index.html" >AMCP 2.0 Reference</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+    &copy; <a href="../copyright.html">Copyright</a> 2011, Robert Nagy (ronag89@gmail.com).
+    <br />
+    Last updated on Mar 13, 2012.
+    <a href="../bugs.html">Found a bug</a>?
+    <br />
+    Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+
+  </body>
+</html>

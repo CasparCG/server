@@ -1,0 +1,31 @@
+{% extends "defindex.html" %}
+{% block tables %}
+  <p><strong>Parts of the documentation:</strong></p>
+  <table class="contentstable" align="center"><tr>
+    <td width="50%">
+      <p class="biglink"><a class="biglink" href="{{ pathto("whatsnew/2_0.rst") }}">What's new in CasparCG {{ release }}?</a><br/>
+         <span class="linkdescr">short summary of new features</span></p>
+      <p class="biglink"><a class="biglink" href="{{ pathto("tutorial/index") }}">Tutorial</a><br/>
+         <span class="linkdescr">tutorials</span></p>
+      <p class="biglink"><a class="biglink" href="{{ pathto("amcp/index") }}">AMCP</a><br/>
+         <span class="linkdescr">describes the AMCP control protocol</span></p>
+      <p class="biglink"><a class="biglink" href="{{ pathto("producers/index") }}">Producers</a><br/>
+         <span class="linkdescr">describes all video sources, "producers"</span></p>
+      <p class="biglink"><a class="biglink" href="{{ pathto("consumers/index") }}">Consumers</a><br/>
+         <span class="linkdescr">describes all video outputs, "consumers"</span></p>
+      <p class="biglink"><a class="biglink" href="{{ pathto("faq/index") }}">FAQs</a><br/>
+         <span class="linkdescr">frequently asked questions (with answers!)</span></p>
+    </td></tr>
+  </table>
+
+  <p><strong>Meta information:</strong></p>
+  <table class="contentstable" align="center"><tr>
+    <td width="50%">
+      <p class="biglink"><a class="biglink" href="{{ pathto("bugs") }}">Reporting bugs</a></p>
+      <p class="biglink"><a class="biglink" href="{{ pathto("about") }}">About the documentation</a></p>
+    </td><td width="50%">
+      <p class="biglink"><a class="biglink" href="{{ pathto("license") }}">History and License of CasparCG</a></p>
+      <p class="biglink"><a class="biglink" href="{{ pathto("copyright") }}">Copyright</a></p>
+    </td></tr>
+  </table>
+{% endblock %}

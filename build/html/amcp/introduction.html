@@ -1,0 +1,225 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>1. Communication &mdash; CasparCG 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/sidebar.js"></script>
+    <link rel="search" type="application/opensearchdescription+xml"
+          title="Search within CasparCG 2.0 documentation"
+          href="../_static/opensearch.xml"/>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="copyright" title="Copyright" href="../copyright.html" />
+    <link rel="top" title="CasparCG 2.0 documentation" href="../index.html" />
+    <link rel="up" title="AMCP 2.0 Reference" href="index.html" />
+    <link rel="next" title="5. Basic Commands" href="basic-commands.html" />
+    <link rel="prev" title="AMCP 2.0 Reference" href="index.html" />
+ 
+
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="basic-commands.html" title="5. Basic Commands"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="AMCP 2.0 Reference"
+             accesskey="P">previous</a> |</li>
+        <li><a href="../index.html">CasparCG 2.0 documentation</a> &raquo;</li>
+
+          <li><a href="index.html" accesskey="U">AMCP 2.0 Reference</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="communication">
+<span id="introduction"></span><h1>1. Communication<a class="headerlink" href="#communication" title="Permalink to this headline">¶</a></h1>
+<ul>
+<li><p class="first">All communication is presumed to be encoded in UTF-8.</p>
+</li>
+<li><dl class="first docutils">
+<dt>Each command has to be terminated with both a carriage return and a linefeed character. For example:</dt>
+<dd><ul class="first last simple">
+<li>\r\n</li>
+<li>&lt;CR&gt;&lt;LF&gt;</li>
+<li>&lt;0x0D&gt;&lt;0x0A&gt;</li>
+<li>&lt;13&gt;&lt;10&gt;</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">The whole command string is case insensitive.</p>
+</li>
+<li><p class="first">Since the parameters in a command is separated by spaces, you need to enclose the parameter with quotation marks if you want it to contain spaces.</p>
+</li>
+</ul>
+</div>
+<div class="section" id="backwards-compatibility">
+<h1>2. Backwards Compatibility<a class="headerlink" href="#backwards-compatibility" title="Permalink to this headline">¶</a></h1>
+<p>The AMCP 2.0 protocol implementation is mostly backward compatible with the previous CasparCG 1.7.1 AMCP Protocol and CasparCG 1.8.0 AMCP Protocol. This is achieved by providing default values for parameters used by the AMCP 2.0 protocol.</p>
+<div class="section" id="breaking-changes">
+<h2>2.1. Breaking Changes<a class="headerlink" href="#breaking-changes" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>The &#8216;&#8217;CLEAR&#8217;&#8217; command will also clear any visible template graphic in the specified container.</li>
+</ul>
+</div>
+</div>
+<div class="section" id="special-sequences">
+<h1>3. Special sequences<a class="headerlink" href="#special-sequences" title="Permalink to this headline">¶</a></h1>
+<p>Since bare quotation marks are used to keep parameters with spaces in one piece, there has to be another way to indicate a quotation mark in a string. Enter special sequences. They behave as in most programming languages. The escape character is the backslash character. In order to get a quotation mark you enter &#8221; in the command.
+Valid sequences:</p>
+<ul class="simple">
+<li>\&#8221; Quotation mark</li>
+<li>\\ Backslash</li>
+<li>\n New line</li>
+</ul>
+<p>These sequences apply to all parameters, it doesn&#8217;t matter if it&#8217;s a file name or a long string of xml-data.</p>
+</div>
+<div class="section" id="return-codes">
+<h1>4. Return codes<a class="headerlink" href="#return-codes" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="information">
+<h2>4.1. Information<a class="headerlink" href="#information" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>100 [action] - Information about an event.</li>
+<li>101 [action] - Information about an event. A line of data is being returned.</li>
+</ul>
+</div>
+<div class="section" id="successful">
+<h2>4.2. Successful<a class="headerlink" href="#successful" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>200 [command] OK       - The command has been executed and several lines of data are being returned (terminated by an empty line).</li>
+<li>201 [command] OK       - The command has been executed and a line of data is being returned</li>
+<li>202 [command] OK       - The command has been executed</li>
+</ul>
+</div>
+<div class="section" id="client-error">
+<h2>4.3. Client Error<a class="headerlink" href="#client-error" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>400 ERROR      - Command not understood</li>
+<li>401 [command] ERROR    - Illegal video_channel</li>
+<li>402 [command] ERROR    - Parameter missing</li>
+<li>403 [command] ERROR    - Illegal parameter</li>
+<li>404 [command] ERROR    - Media file not found</li>
+</ul>
+</div>
+<div class="section" id="server-error">
+<h2>4.4. Server Error<a class="headerlink" href="#server-error" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li>500 FAILED     - Internal server error</li>
+<li>501 [command] FAILED  - Internal server error</li>
+<li>502 [command] FAILED  - Media file unreadable</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../contents.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">1. Communication</a></li>
+<li><a class="reference internal" href="#backwards-compatibility">2. Backwards Compatibility</a><ul>
+<li><a class="reference internal" href="#breaking-changes">2.1. Breaking Changes</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#special-sequences">3. Special sequences</a></li>
+<li><a class="reference internal" href="#return-codes">4. Return codes</a><ul>
+<li><a class="reference internal" href="#information">4.1. Information</a></li>
+<li><a class="reference internal" href="#successful">4.2. Successful</a></li>
+<li><a class="reference internal" href="#client-error">4.3. Client Error</a></li>
+<li><a class="reference internal" href="#server-error">4.4. Server Error</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">AMCP 2.0 Reference</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="basic-commands.html"
+                        title="next chapter">5. Basic Commands</a></p>
+<h3>This Page</h3>
+<ul class="this-page-menu">
+  <li><a href="../bugs.html">Report a Bug</a></li>
+  <li><a href="../_sources/amcp/introduction.txt"
+         rel="nofollow">Show Source</a></li>
+</ul>
+
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="basic-commands.html" title="5. Basic Commands"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="AMCP 2.0 Reference"
+             >previous</a> |</li>
+        <li><a href="../index.html">CasparCG 2.0 documentation</a> &raquo;</li>
+
+          <li><a href="index.html" >AMCP 2.0 Reference</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+    &copy; <a href="../copyright.html">Copyright</a> 2011, Robert Nagy (ronag89@gmail.com).
+    <br />
+    Last updated on Mar 13, 2012.
+    <a href="../bugs.html">Found a bug</a>?
+    <br />
+    Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.2.
+    </div>
+
+  </body>
+</html>
