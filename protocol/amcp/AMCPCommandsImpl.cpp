@@ -1396,10 +1396,11 @@ bool DataCommand::DoExecuteRetrieve()
 	std::wstringstream file_contents_stream(file_contents);
 	std::wstring line;
 	bool bFirstLine = true;
+	
 	while(std::getline(file_contents_stream, line))
 	{
 		if(!bFirstLine)
-			reply << "\\n";
+			reply << "\n";
 		else
 			bFirstLine = false;
 
