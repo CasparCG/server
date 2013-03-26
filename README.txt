@@ -100,12 +100,12 @@ CREDITS - People who have contributed to the CasparCG Project
 ==========(sorted alphabetically by last name)===============
 
 Niklas  Andersson
-Jonas   Hummelstrand    (jonas.hummelstrand@svt.se)
-Andreas Jeansson        (andreas.jeansson@svt.se)
-Peter   Karlsson        (peter.p.karlsson@svt.se)
+Jonas   Hummelstrand
+Andreas Jeansson
+Peter   Karlsson
 Jeff    Lafforgue
 Andy    Mace
-Robert 	Nagy            (ronag89@gmail.com)
-Helge   Norberg         (helge.norberg@svt.se)
+Robert 	Nagy
+Helge   Norberg
 Thomas  R. Kaltz III
 Olle    Soprani
