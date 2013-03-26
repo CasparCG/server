@@ -46,7 +46,7 @@ AMCP
     parameter. Example: MIXER 1 MASTERVOLUME 0.5
   o THUMBNAIL LIST/RETRIEVE/GENERATE/GENERATE_ALL command was added to support
     the thumbnail feature.
-  o ADD 1 FILE output.mov SEPARETE_KEY activates the separate key feature of the
+  o ADD 1 FILE output.mov SEPARATE_KEY activates the separate key feature of the
     ffmpeg consumer creating an additional output_a.mov containing only the key.
   o Added KILL command for shutting down the server without console access.
 
