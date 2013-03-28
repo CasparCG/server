@@ -107,7 +107,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
     <PreBuildEvent>
-      <Command>"SubWCRev.exe" "$(SolutionDir)." "$(SolutionDir).\version.tmpl" "$(SolutionDir).\version.h"</Command>
+      <Command>call $(SolutionDir).\gitrev.bat</Command>
     </PreBuildEvent>
     <Lib />
   </ItemDefinitionGroup>
