@@ -267,6 +267,7 @@ copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
       <Command>copy "$(SolutionDir)dependencies\ffmpeg 0.8\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\FreeImage\Dist\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\glew-1.6.0\bin\*.dll" "$(OutDir)"
+copy "$(SolutionDir)dependencies\libjpeg-turbo\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\tbb\bin\ia32\vc10\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\zlib\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\SFML-1.6\lib\*.dll" "$(OutDir)"

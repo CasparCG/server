@@ -167,11 +167,13 @@ namespace caspar { namespace replay {
 				//return _fseeki64_nolock(infile_idx.get(), frame * sizeof(long long), SEEK_CUR);
 				position.QuadPart = frame * sizeof(long long);
 				result = SetFilePointerEx(infile_idx, position, NULL, FILE_CURRENT);
+				break;
 			case FILE_BEGIN:
 			default:
 				//return _fseeki64_nolock(infile_idx.get(), frame * sizeof(long long) + sizeof(mjpeg_file_header), SEEK_SET);
 				position.QuadPart = frame * sizeof(long long) + sizeof(mjpeg_file_header);
 				result = SetFilePointerEx(infile_idx, position, NULL, FILE_BEGIN);
+				break;
 		}
 		return (result ? 0 : 1);
 	}

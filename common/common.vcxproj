@@ -138,7 +138,7 @@
       <OptimizeReferences>true</OptimizeReferences>
     </Link>
     <PreBuildEvent>
-      <Command>$(SolutionDir)./gitrev.bat</Command>
+      <Command>"$(SolutionDir)./gitrev.bat"</Command>
     </PreBuildEvent>
     <Lib>
       <LinkTimeCodeGeneration>true</LinkTimeCodeGeneration>

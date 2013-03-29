@@ -323,14 +323,14 @@ struct replay_producer : public core::frame_producer
 		if ((reverse_) && (framenum_ > 0))
 		{
 			framenum_ -= -(frame_multiplier_ > 1 ? frame_multiplier_ : 1);
-			seek_index(in_idx_file_, -1 - (frame_multiplier_ > 1 ? frame_multiplier_ : 1), SEEK_CUR);
+			seek_index(in_idx_file_, -1 - (frame_multiplier_ > 1 ? frame_multiplier_ : 1), FILE_CURRENT);
 		}
 		else
 		{
 			framenum_ += (frame_multiplier_ > 1 ? frame_multiplier_ : 1);
 			if (frame_multiplier_ > 1)
 			{
-				seek_index(in_idx_file_, frame_multiplier_, SEEK_CUR);
+				seek_index(in_idx_file_, frame_multiplier_, FILE_CURRENT);
 			}
 		}
 	}
@@ -390,7 +390,7 @@ struct replay_producer : public core::frame_producer
 			}
 		}
 
-		int frame_duration = ((1 / speed_) * 64.0f);
+		int frame_duration = ((1 / abs_speed_) * 64.0f);
 
 		while (filled < 64)
 		{
@@ -407,7 +407,7 @@ struct replay_producer : public core::frame_producer
 
 			move_to_next_frame();
 
-			seek_frame(in_file_, field_pos, SEEK_SET);
+			seek_frame(in_file_, field_pos, FILE_BEGIN);
 
 			mmx_uint8_t* field = NULL;
 			size_t field_width;
@@ -581,7 +581,7 @@ struct replay_producer : public core::frame_producer
 			return frame_;
 		}
 
-		move_to_next_frame();
+		move_to_next_frame(); // CHECK THIS
 
 		seek_frame(in_file_, field1_pos, SEEK_SET);
 
@@ -594,26 +594,27 @@ struct replay_producer : public core::frame_producer
 
 		if (!interlaced_)
 		{
-			mmx_uint8_t* full_frame = NULL;
-
-			if (interlaced_) 
-			{
-				full_frame = new mmx_uint8_t[field1_size * 2];
-				field_double(field1, full_frame, index_header_->width, index_header_->height, 4);
-			}
-			else
-			{
-				full_frame = field1;
-				field1 = NULL;
-			}
-
 			result_framenum_++;
 
-			make_frame(full_frame, (interlaced_ ? field1_size * 2 : field1_size), index_header_->width, index_header_->height, (interlaced_ ? (framenum_ % 2 != 1) : false));
+			make_frame(field1, field1_size, index_header_->width, index_header_->height, false);
 
-			if (field1 != NULL)
-				delete field1;
+			delete field1;
 
+			update_diag(frame_timer.elapsed());
+
+			return frame_;
+		}
+
+		if ((speed_ == 0.0f) && (interlaced_))
+		{
+			result_framenum_++;
+
+			mmx_uint8_t* full_frame = new mmx_uint8_t[field1_size * 2];
+
+			field_double(field1, full_frame, index_header_->width, index_header_->height, 4);
+			make_frame(full_frame, field1_size * 2, index_header_->width, index_header_->height, false);
+
+			delete field1;
 			delete full_frame;
 
 			update_diag(frame_timer.elapsed());
@@ -621,29 +622,19 @@ struct replay_producer : public core::frame_producer
 			return frame_;
 		}
 
-		if (interlaced_) 
-		{
-			long long field2_pos = read_index(in_idx_file_);
+		long long field2_pos = read_index(in_idx_file_);
 
-			move_to_next_frame();
+		move_to_next_frame();
 
-			seek_frame(in_file_, field2_pos, SEEK_SET);
+		seek_frame(in_file_, field2_pos, SEEK_SET);
 
-			size_t field2_size = read_frame(in_file_, &field1_width, &field1_height, &field2);
+		size_t field2_size = read_frame(in_file_, &field1_width, &field1_height, &field2);
 
-			full_frame = new mmx_uint8_t[field1_size + field2_size];
+		full_frame = new mmx_uint8_t[field1_size + field2_size];
 
-			proper_interlace(field1, field2, full_frame);
+		proper_interlace(field1, field2, full_frame);
 		
-			make_frame(full_frame, field1_size + field2_size, index_header_->width, index_header_->height, false);
-		}
-		else
-		{
-			full_frame = field1;
-			field1 = NULL;
-
-			make_frame(full_frame, field1_size, index_header_->width, index_header_->height, false);
-		}
+		make_frame(full_frame, field1_size + field2_size, index_header_->width, index_header_->height, false);
 
 		if (field1 != NULL)
 			delete field1;
@@ -651,6 +642,7 @@ struct replay_producer : public core::frame_producer
 			delete field2;
 		delete full_frame;
 
+		result_framenum_++;
 		update_diag(frame_timer.elapsed());
 
 		return frame_;
