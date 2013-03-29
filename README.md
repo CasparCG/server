@@ -1,17 +1,15 @@
-================================================================================
-CasparCG Server 2.0.3
-MAV Edition
-================================================================================
+CasparCG Server 2.0.4 MAV Edition
+=================================
 
-SYSTEM REQUIREMENTS
-===================
+System Requirements
+-------------------
 
 This does require a preety beefy machine, although machines as specified by SVT
 (http://casparcg.com/wiki/CasparCG_Server#System_Requirements) should do just
 fine at least for one (in- and out-) channel.
 
-INSTALLATION
-============
+Installation
+------------
 
 Follow the instalation procedures from README.txt. If this is your first
 installation of a CasparCG Server, please try installing a normal version,
@@ -19,7 +17,7 @@ and learn how to use CasparCG first. I recomend using the MAV Edition only for
 people already fluent in CasparCG.
 
 CONFIGURATION
-=============
+-------------
 
 The casparcg.config has been modified, to specifically target the MAV edition.
 Note the two channels. The minimal configuration for the MAV edition requires
