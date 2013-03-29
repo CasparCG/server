@@ -57,39 +57,38 @@ configurations. Always have only one replay buffer per ingest channel.
 
 You can seek within your replay buffer using the CALL ACMP 2.0 command:
 
+This will seek to the 100th frame in the replay buffer:
+
 	call 2 seek 100
-
-This will seek to the 100th frame in the replay buffer
-
-      call 2 seek |100
 
 This will seek to the 100th frame from the end in the replay buffer
 
-      call 2 seek +50
+    call 2 seek |100
 
 This will move the playhead of your replay 50 frames forward
 
-      call 2 seek -50
+    call 2 seek +50
 
 This will move the playhead of your replay 50 frames backward
 
+    call 2 seek -50
 
 You can also change the speed of your playback (this is somewhat wonky
 right now):
 
-      call 2 speed 1
+Will make the playback go at normal speed:
 
-Will make the playback go at normal speed
-
-      call 2 speed -2
-
+    call 2 speed 1
+	
 Will make the playback go backwards at twice the normal speed
 
-      call 2 speed 0.5
-
+    call 2 speed -2
+	
 Will make the playback go at half the speed
 
-      call 2 speed 0.75
+    call 2 speed 0.5
+	
+Will make the playback go backwards at 3/4 of normal speed
 
-Will make the playback go at 3/4 of normal speed
+    call 2 speed -0.75
    
