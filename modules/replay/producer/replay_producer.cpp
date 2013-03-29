@@ -284,7 +284,8 @@ struct replay_producer : public core::frame_producer
 		{
 			if (((long long)framenum_ + (sign * frame_pos)) > 0)
 			{
-				framenum_ = framenum_ + (sign * (((sign < 0) && interlaced_) ? frame_pos + 2 : frame_pos));
+				//framenum_ = framenum_ + (sign * (((sign < 0) && interlaced_) ? frame_pos + 2 : frame_pos + 1));
+				framenum_ = framenum_ + (sign * ((sign < 0 ? frame_pos + 1 : frame_pos)));
 			}
 			else
 			{
