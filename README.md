@@ -5,8 +5,8 @@ System Requirements
 -------------------
 
 This does require a preety beefy machine, although machines as specified by SVT
-(http://casparcg.com/wiki/CasparCG_Server#System_Requirements) should do just
-fine at least for one (in- and out-) channel.
+(http://casparcg.com/wiki/CasparCG_Server#System_Requirements) should do just fine
+at least for one (in- and out-) channel.
 
 Installation
 ------------
@@ -36,10 +36,12 @@ configurations. Always have only one replay buffer per ingest channel.
  * Start the server
 
  * Play the input from your ingest decklink card on your ingest channel:
-      play 1 decklink 1
+ 
+	play 1 decklink 1
 
  * Add the replay consumer to your ingest channel:
-      add 1 replay test-replay
+      
+	add 1 replay test-replay
 
    The "test-replay" is a file-name for your replay buffer. Two files will be
    created in your CasparCG "media" folder: a TEST-REPLAY.MAV file and a
@@ -48,13 +50,14 @@ configurations. Always have only one replay buffer per ingest channel.
    always copy both files.
 
  * Play your replay buffer on your output channel:
-      play 2 test-replay
+
+	play 2 test-replay
 
  * Voila! You have your own replay system.
 
 You can seek within your replay buffer using the CALL ACMP 2.0 command:
 
-      call 2 seek 100
+	call 2 seek 100
 
 This will seek to the 100th frame in the replay buffer
 
