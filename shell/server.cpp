@@ -38,6 +38,7 @@
 #include <modules/bluefish/bluefish.h>
 #include <modules/decklink/decklink.h>
 #include <modules/ffmpeg/ffmpeg.h>
+#include <modules/replay/replay.h>
 #include <modules/flash/flash.h>
 #include <modules/oal/oal.h>
 #include <modules/ogl/ogl.h>
@@ -97,6 +98,9 @@ struct server::implementation : boost::noncopyable
 
 		image::init();		  
 		CASPAR_LOG(info) << L"Initialized image module.";
+
+		replay::init();		  
+		CASPAR_LOG(info) << L"Initialized replay module.";
 
 		flash::init();		  
 		CASPAR_LOG(info) << L"Initialized flash module.";

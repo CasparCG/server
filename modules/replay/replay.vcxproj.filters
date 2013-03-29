@@ -1,0 +1,47 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="source">
+      <UniqueIdentifier>{9b9cf86c-b679-4e0f-88bc-e0bf48db9173}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\producer">
+      <UniqueIdentifier>{46bdb484-2321-419b-a1c4-4b8d5d49fba9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\util">
+      <UniqueIdentifier>{6abd09ae-2ad7-41fa-bfa5-f4614a07be8c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\consumer">
+      <UniqueIdentifier>{15311b81-1e0d-4114-9bf8-b8f74b292a0f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="replay.cpp" />
+    <ClCompile Include="consumer\replay_consumer.cpp">
+      <Filter>source\consumer</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\replay_producer.cpp">
+      <Filter>source\producer</Filter>
+    </ClCompile>
+    <ClCompile Include="util\frame_operations.cpp">
+      <Filter>source\util</Filter>
+    </ClCompile>
+    <ClCompile Include="util\file_operations.cpp">
+      <Filter>source\util</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="replay.h" />
+    <ClInclude Include="consumer\replay_consumer.h">
+      <Filter>source\consumer</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\replay_producer.h">
+      <Filter>source\producer</Filter>
+    </ClInclude>
+    <ClInclude Include="util\frame_operations.h">
+      <Filter>source\util</Filter>
+    </ClInclude>
+    <ClInclude Include="util\file_operations.h">
+      <Filter>source\util</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

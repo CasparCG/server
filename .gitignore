@@ -38,6 +38,11 @@
 /modules/ffmpeg/tmp
 /modules/ffmpeg/ffmpeg.vcxproj.user
 
+# /modules/replay/
+/modules/replay/bin
+/modules/replay/tmp
+/modules/replay/ffmpeg.vcxproj.user
+
 # /modules/ffmpeg/producer/filter/scalable_yadif/
 
 # /modules/flash/
