@@ -72,7 +72,10 @@ const video_format_desc format_descs[video_format::count] =
 	DEFINE_VIDEOFORMATDESC(video_format::x1080p5000	,1920, 1080, 1920, 1080, field_mode::progressive,	50,		1,		 boost::assign::list_of(1920),							L"1080p5000"),
 	DEFINE_VIDEOFORMATDESC(video_format::x1080p5994	,1920, 1080, 1920, 1080, field_mode::progressive,	60000,	1001,	 boost::assign::list_of(1602)(1601)(1602)(1601)(1602),	L"1080p5994"),
 	DEFINE_VIDEOFORMATDESC(video_format::x1080p6000	,1920, 1080, 1920, 1080, field_mode::progressive,	60,		1,		 boost::assign::list_of(1600),							L"1080p6000"),
-	DEFINE_VIDEOFORMATDESC(video_format::invalid	,0,		0,   0,		0,   field_mode::progressive,	1,		1,		 boost::assign::list_of(1),								L"invalid")
+	DEFINE_VIDEOFORMATDESC(video_format::x2k2398	,2048, 1556, 2048, 1556, field_mode::progressive,	 24000,	1001,	 boost::assign::list_of(4004),							L"2k2398"),
+	DEFINE_VIDEOFORMATDESC(video_format::x2k2400	,2048, 1556, 2048, 1556, field_mode::progressive,	 24,	1,		 boost::assign::list_of(4000),							L"2k2400"),
+	DEFINE_VIDEOFORMATDESC(video_format::x2k2500	,2048, 1556, 2048, 1556, field_mode::progressive,	 25,	1,		 boost::assign::list_of(3840),							L"2k2500"),
+	DEFINE_VIDEOFORMATDESC(video_format::invalid	,0,		0,   0,		0,   field_mode::progressive,	 1,		1,		 boost::assign::list_of(1),								L"invalid")
 };
 
 const video_format_desc& video_format_desc::get(video_format::type format)	

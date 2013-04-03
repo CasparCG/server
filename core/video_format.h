@@ -52,6 +52,9 @@ struct video_format
 		x1080p5000,
 		x1080p5994,
 		x1080p6000,
+		x2k2398,
+		x2k2400,
+		x2k2500,
 		invalid,
 		count
 	};
