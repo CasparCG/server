@@ -273,12 +273,12 @@ struct replay_producer : public core::frame_producer
 		if (sign == 0)
 		{
 			framenum_ = frame_pos;
-			seek_index(in_idx_file_, frame_pos, SEEK_SET);
+			seek_index(in_idx_file_, frame_pos, FILE_BEGIN);
 		}
 		else if (sign == -2)
 		{
 			framenum_ = length_index() - frame_pos - 4;
-			seek_index(in_idx_file_, framenum_, SEEK_SET);
+			seek_index(in_idx_file_, framenum_, FILE_BEGIN);
 		}
 		else
 		{
@@ -295,7 +295,7 @@ struct replay_producer : public core::frame_producer
 			{
 				framenum_ = length_index() - 4;
 			}
-			seek_index(in_idx_file_, framenum_, SEEK_SET);
+			seek_index(in_idx_file_, framenum_, FILE_BEGIN);
 		}
 		first_framenum_ = framenum_;
 		seeked_ = true;
@@ -677,7 +677,7 @@ struct replay_producer : public core::frame_producer
 		boost::property_tree::wptree info;
 		info.add(L"type", L"replay-producer");
 		info.add(L"filename", filename_);
-		info.add(L"play-head", framenum_);
+		info.add(L"play-head", (interlaced_ ? framenum_ / 2 : framenum_));
 		info.add(L"start-timecode", boost::posix_time::to_iso_wstring(index_header_->begin_timecode));
 		info.add(L"speed", speed_);
 		return info;
