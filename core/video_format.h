@@ -55,6 +55,11 @@ struct video_format
 		x2k2398,
 		x2k2400,
 		x2k2500,
+		x4k2398,
+		x4k2400,
+		x4k2500,
+		x4k2997,
+		x4k3000,
 		invalid,
 		count
 	};
