@@ -53,7 +53,7 @@ struct image_producer : public core::frame_producer
 	{
 		auto bitmap = load_image(filename_);
 		FreeImage_FlipVertical(bitmap.get());
-		
+
 		core::pixel_format_desc desc;
 		desc.pix_fmt = core::pixel_format::bgra;
 		desc.planes.push_back(core::pixel_format_desc::plane(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), 4));
