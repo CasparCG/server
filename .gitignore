@@ -81,6 +81,16 @@
 /shell/thumbnails
 /shell/tmp
 
+/tmp
+/accelerator/bin
+/accelerator/tmp
+/modules/reroute/reroute.vcxproj.user
+/modules/reroute/bin
+/modules/reroute/tmp
+/modules/screen/screen.vcxproj.user
+/modules/screen/bin
+/modules/screen/tmp
+
 # /dependencies/
 /dependencies/boost
 
