@@ -36,6 +36,7 @@
 #include <common/env.h>
 #include <common/except.h>
 #include <common/executor.h>
+#include <common/future.h>
 #include <common/diagnostics/graph.h>
 #include <common/lock.h>
 #include <common/memory.h>
@@ -293,6 +294,7 @@ public:
 		boost::filesystem::remove(boost::filesystem::path(env::media_folder() + u16(filename))); // Delete the file if it exists
 
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
+		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 
@@ -356,13 +358,20 @@ public:
 
 		if(exception != nullptr)
 			std::rethrow_exception(exception);
-			
-		return executor_.begin_invoke([=]() -> bool
+
+		if (executor_.is_full())
+		{
+			graph_->set_tag("dropped-frame");
+
+			return wrap_as_future(true);
+		}
+
+		executor_.begin_invoke([=]
 		{		
 			encode(frame);
-
-			return true;
 		});
+
+		return wrap_as_future(true);
 	}
 
 	std::wstring print() const
