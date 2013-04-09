@@ -239,6 +239,38 @@ public:
 	{
 		boost::mutex::scoped_lock lock(mutex_);
 
+		return try_completion_internal();
+	}
+
+	/**
+	 * Call this when it is certain that the result should be ready, and if not
+	 * it should be regarded as an unrecoverable error (retrying again would
+	 * be useless), so the future will be marked as failed.
+	 *
+	 * @param exception The exception to mark the future with *if* the task
+	 *                  completion fails.
+	 */
+	void try_or_fail(const std::exception& exception)
+	{
+		boost::mutex::scoped_lock lock(mutex_);
+
+		if (!try_completion_internal())
+		{
+			try
+			{
+				throw exception;
+			}
+			catch (...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+				promise_.set_exception(boost::current_exception());
+				done_ = true;
+			}
+		}
+	}
+private:
+	bool try_completion_internal()
+	{
 		if (!func_)
 			return false;
 
@@ -267,31 +299,6 @@ public:
 		}
 
 		return done_;
-	}
-
-	/**
-	 * Call this when it is certain that the result should be ready, and if not
-	 * it should be regarded as an unrecoverable error (retrying again would
-	 * be useless), so the future will be marked as failed.
-	 *
-	 * @param exception The exception to mark the future with *if* the task
-	 *                  completion fails.
-	 */
-	void try_or_fail(const std::exception& exception)
-	{
-		if (!try_completion())
-		{
-			try
-			{
-				throw exception;
-			}
-			catch (...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				promise_.set_exception(boost::current_exception());
-				done_ = true;
-			}
-		}
 	}
 private:
 	boost::mutex mutex_;
