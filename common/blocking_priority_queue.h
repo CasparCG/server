@@ -56,7 +56,7 @@ public:
 	 * Constructor.
 	 *
 	 * @param capacity   The initial capacity of the queue.
-	 * @param priorities A forward iterable container with the priorities to 
+	 * @param priorities A forward iterable range with the priorities to 
 	 *                   support.
 	 */
 	template<class PrioList>
@@ -226,6 +226,15 @@ public:
 	size_type size() const
 	{
 		return elements_available_.permits();
+	}
+
+	/**
+	 * @return the current available space in the queue (may have changed at
+	 *         the time of returning).
+	 */
+	size_type space_available() const
+	{
+		return space_available_.permits();
 	}
 private:
 	void push_acquired(Prio priority, const T& element, acquire_transaction& transaction)
