@@ -135,6 +135,11 @@ public:
 	{
 		return execution_queue_.capacity();
 	}
+
+	bool is_full() const
+	{
+		return execution_queue_.space_available() == 0;
+	}
 	
 	void clear()
 	{		
