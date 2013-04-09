@@ -558,10 +558,17 @@ bool MixerCommand::DoExecute()
 		else if(_parameters[0] == L"CLEAR")
 		{
 			int layer = GetLayerIndex(std::numeric_limits<int>::max());
-			if(layer ==	std::numeric_limits<int>::max())
+
+			if (layer == std::numeric_limits<int>::max())
+			{
 				GetChannel()->stage().clear_transforms();
+				GetChannel()->mixer().clear_blend_modes();
+			}
 			else
+			{
 				GetChannel()->stage().clear_transforms(layer);
+				GetChannel()->mixer().clear_blend_mode(layer);
+			}
 		}
 		else if(_parameters[0] == L"COMMIT")
 		{
