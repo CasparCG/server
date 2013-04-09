@@ -145,6 +145,7 @@ class DataCommand : public AMCPCommandBase<false, 1>
 	bool DoExecute();
 	bool DoExecuteStore();
 	bool DoExecuteRetrieve();
+	bool DoExecuteRemove();
 	bool DoExecuteList();
 };
 
