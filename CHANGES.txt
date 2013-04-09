@@ -79,6 +79,13 @@ Producers
     + Added support for motion blur via a new BLUR parameter
     + Added PREMULTIPLY parameter to support images stored with straight alpha.
 
+AMCP
+----
+
+  o DATA STORE now supports creating folders of path specified if they does not
+    exist.
+  o DATA REMOVE command was added.
+
 CasparCG 2.0 Stable (w.r.t Beta 3)
 ==================================
 
