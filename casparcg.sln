@@ -10,7 +10,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "documents", "documents", "{32079541-68ED-4319-91FB-0FF041642679}"
 	ProjectSection(SolutionItems) = preProject
 		CHANGES.txt = CHANGES.txt
-		COPYING.txt = COPYING.txt
+		LICENSE.txt = LICENSE.txt
 		README.txt = README.txt
 	EndProjectSection
 EndProject
@@ -37,10 +37,6 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "screen", "modules\screen\screen.vcxproj", "{88F974F0-D09F-4788-8CF8-F563209E60C1}"
 EndProject
 Global
-	GlobalSection(SubversionScc) = preSolution
-		Svn-Managed = True
-		Manager = AnkhSVN - Subversion Support for Visual Studio
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Mixed Platforms = Debug|Mixed Platforms
 		Debug|Win32 = Debug|Win32
@@ -193,5 +189,9 @@ Global
 		{3E11FF65-A9DA-4F80-87F2-A7C6379ED5E2} = {C54DA43E-4878-45DB-B76D-35970553672C}
 		{7D58BD57-FDD5-46E6-A23B-ED14B5314A0E} = {C54DA43E-4878-45DB-B76D-35970553672C}
 		{88F974F0-D09F-4788-8CF8-F563209E60C1} = {C54DA43E-4878-45DB-B76D-35970553672C}
+	EndGlobalSection
+	GlobalSection(SubversionScc) = preSolution
+		Svn-Managed = True
+		Manager = AnkhSVN - Subversion Support for Visual Studio
 	EndGlobalSection
 EndGlobal
