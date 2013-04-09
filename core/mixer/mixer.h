@@ -56,6 +56,10 @@ public:
 	
 	void set_blend_mode(int index, blend_mode value);
 
+	void clear_blend_mode(int index);
+
+	void clear_blend_modes();
+
 	class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc);
 
 	// Properties
