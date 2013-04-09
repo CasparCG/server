@@ -1277,6 +1277,8 @@ bool DataCommand::DoExecute()
 		return DoExecuteStore();
 	else if(command == TEXT("RETRIEVE"))
 		return DoExecuteRetrieve();
+	else if(command == TEXT("REMOVE"))
+		return DoExecuteRemove();
 	else if(command == TEXT("LIST"))
 		return DoExecuteList();
 
@@ -1295,6 +1297,12 @@ bool DataCommand::DoExecuteStore()
 	std::wstring filename = env::data_folder();
 	filename.append(_parameters[1]);
 	filename.append(TEXT(".ftd"));
+
+	auto data_path = boost::filesystem::wpath(
+		boost::filesystem::wpath(filename).parent_path());
+
+	if(!boost::filesystem::exists(data_path))
+		boost::filesystem::create_directories(data_path);
 
 	std::wofstream datafile(filename.c_str());
 	if(!datafile) 
@@ -1337,6 +1345,35 @@ bool DataCommand::DoExecuteRetrieve()
 	reply << file_contents;
 	reply << "\r\n";
 	SetReplyString(reply.str());
+	return true;
+}
+
+bool DataCommand::DoExecuteRemove()
+{ 
+	if (_parameters.size() < 2)
+	{
+		SetReplyString(TEXT("402 DATA REMOVE ERROR\r\n"));
+		return false;
+	}
+
+	std::wstring filename = env::data_folder();
+	filename.append(_parameters[1]);
+	filename.append(TEXT(".ftd"));
+
+	if (!boost::filesystem::exists(filename))
+	{
+		SetReplyString(TEXT("404 DATA REMOVE ERROR\r\n"));
+		return false;
+	}
+
+	if (!boost::filesystem::remove(filename))
+	{
+		SetReplyString(TEXT("403 DATA REMOVE ERROR\r\n"));
+		return false;
+	}
+
+	SetReplyString(TEXT("201 DATA REMOVE OK\r\n"));
+
 	return true;
 }
 
