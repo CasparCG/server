@@ -250,7 +250,8 @@ public:
 	 * @param exception The exception to mark the future with *if* the task
 	 *                  completion fails.
 	 */
-	void try_or_fail(const std::exception& exception)
+	template <class E>
+	void try_or_fail(const E& exception)
 	{
 		boost::mutex::scoped_lock lock(mutex_);
 
