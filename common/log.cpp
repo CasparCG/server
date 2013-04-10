@@ -33,6 +33,7 @@
 #include "compiler/vs/stack_walker.h"
 
 #include <ios>
+#include <iomanip>
 #include <string>
 #include <ostream>
 
@@ -73,18 +74,35 @@ namespace caspar { namespace log {
 
 using namespace boost;
 
+void append_timestamp(std::wostream& stream)
+{
+	auto timestamp = boost::posix_time::microsec_clock::local_time();
+	auto date = timestamp.date();
+	auto time = timestamp.time_of_day();
+	auto milliseconds = time.fractional_seconds() / 1000; // microseconds to milliseconds
+
+	std::wstringstream buffer;
+
+	buffer
+		<< std::setfill(L'0')
+		<< L"["
+		<< std::setw(4) << date.year() << L"-" << std::setw(2) << date.month().as_number() << "-" << std::setw(2) << date.day().as_number()
+		<< L" "
+		<< std::setw(2) << time.hours() << L":" << std::setw(2) << time.minutes() << L":" << std::setw(2) << time.seconds()
+		<< L"."
+		<< std::setw(3) << milliseconds
+		<< L"] ";
+
+	stream << buffer.str();
+}
+
 void my_formatter(bool print_all_characters, std::wostream& strm, boost::log::basic_record<wchar_t> const& rec)
 {
     namespace lambda = boost::lambda;
 	
 	#pragma warning(disable : 4996)
-	time_t rawtime;
-	struct tm* timeinfo;
-	time(&rawtime );
-	timeinfo = localtime ( &rawtime );
-	char buffer [80];
-	strftime (buffer,80, "%c", timeinfo);
-	strm << L"[" << buffer << L"] ";
+	
+	append_timestamp(strm);
 		
     boost::log::attributes::current_thread_id::held_type thread_id;
     if(boost::log::extract<boost::log::attributes::current_thread_id::held_type>(L"ThreadID", rec.attribute_values(), lambda::var(thread_id) = lambda::_1))
