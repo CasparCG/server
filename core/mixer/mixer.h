@@ -60,6 +60,8 @@ public:
 
 	void clear_blend_modes();
 
+	void set_master_volume(float volume);
+
 	class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc);
 
 	// Properties
