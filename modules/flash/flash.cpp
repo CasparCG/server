@@ -44,7 +44,7 @@ std::wstring cg_version()
 std::wstring version()
 {		
 	std::wstring version = L"Not found";
-#ifdef WIN32
+#ifdef WIN32 
 	HKEY   hkey;
  
 	DWORD dwType, dwSize;

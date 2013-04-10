@@ -186,12 +186,6 @@ spl::shared_ptr<core::frame_producer> create_ct_producer(const spl::shared_ptr<c
 		frame_factory, format_desc, params, env::media_folder() + L"\\" + params[0] + L".ct");
 }
 
-spl::shared_ptr<core::frame_producer> create_swf_producer(const spl::shared_ptr<core::frame_factory> frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params) 
-{
-	return create_cg_producer_and_autoplay_file(
-		frame_factory, format_desc, params, env::media_folder() + L"\\" + params[0] + L".swf");
-}
-
 cg_proxy::cg_proxy(const spl::shared_ptr<core::frame_producer>& frame_producer) : impl_(new impl(frame_producer)){}
 cg_proxy::cg_proxy(cg_proxy&& other) : impl_(std::move(other.impl_)){}
 void cg_proxy::add(int layer, const std::wstring& template_name,  bool play_on_load, const std::wstring& startFromLabel, const std::wstring& data){impl_->add(layer, template_name, play_on_load, startFromLabel, data);}

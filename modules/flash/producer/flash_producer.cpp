@@ -29,6 +29,8 @@
 #include "flash_producer.h"
 #include "FlashAxContainer.h"
 
+#include "../util/swf.h"
+
 #include <core/video_format.h>
 
 #include <core/frame/frame.h>
@@ -509,6 +511,19 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 		CASPAR_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(u8(filename)));	
 
 	return create_destroy_proxy(spl::make_shared<flash_producer>(frame_factory, format_desc, filename, template_host.width, template_host.height));
+}
+
+spl::shared_ptr<core::frame_producer> create_swf_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
+{
+	auto filename = env::media_folder() + L"\\" + params.at(0) + L".swf";
+
+	if (!boost::filesystem::exists(filename))
+		return core::frame_producer::empty();
+
+	swf_t::header_t header(filename);
+
+	return create_destroy_proxy(
+		spl::make_shared<flash_producer>(frame_factory, format_desc, filename, header.frame_width, header.frame_height));
 }
 
 std::wstring find_template(const std::wstring& template_name)
