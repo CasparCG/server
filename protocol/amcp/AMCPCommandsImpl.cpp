@@ -493,6 +493,11 @@ bool MixerCommand::DoExecute()
 			int layer = GetLayerIndex();
 			GetChannel()->mixer().set_blend_mode(GetLayerIndex(), get_blend_mode(blend_str));	
 		}
+		else if(_parameters[0] == L"MASTERVOLUME")
+		{
+			float master_volume = boost::lexical_cast<float>(_parameters.at(1));
+			GetChannel()->mixer().set_master_volume(master_volume);
+		}
 		else if(_parameters[0] == L"BRIGHTNESS")
 		{
 			auto value = boost::lexical_cast<double>(_parameters.at(1));
