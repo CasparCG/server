@@ -21,10 +21,35 @@
 
 #pragma once
 
+#include <cstdint>
 #include <string>
+#include <array>
 
 namespace caspar { namespace flash {
 
 std::string read_template_meta_info(const std::wstring& filename);
+
+struct swf_t
+{
+	struct header_t
+	{
+		header_t(const std::wstring& filename);
+
+		std::array<std::uint8_t, 3>	signature;
+		std::uint8_t				version;
+		std::uint32_t				file_length;
+		std::uint32_t				frame_width;
+		std::uint32_t				frame_height;
+		std::uint16_t				frame_rate;
+		std::uint16_t				frame_count;
+
+		bool						valid;
+
+	} header;
+
+	std::vector<char>				data;
+
+	swf_t(const std::wstring& filename);
+};
 
 }}
