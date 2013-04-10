@@ -47,26 +47,39 @@ namespace caspar { namespace image {
 	
 struct image_consumer : public core::frame_consumer
 {
+	std::wstring filename_;
 public:
 
 	// frame_consumer
+
+	image_consumer(const std::wstring& filename)
+		: filename_(filename)
+	{
+	}
 
 	void initialize(const core::video_format_desc&, int) override
 	{
 	}
 	
 	boost::unique_future<bool> send(core::const_frame frame) override
-	{				
-		boost::thread async([frame]
+	{
+		auto filename = filename_;
+
+		boost::thread async([frame, filename]
 		{
 			try
 			{
-				auto filename = u8(env::data_folder()) +  boost::posix_time::to_iso_string(boost::posix_time::second_clock::local_time()) + ".png";
+				auto filename2 = u8(filename);
+				
+				if (filename2.empty())
+					filename2 = u8(env::media_folder()) +  boost::posix_time::to_iso_string(boost::posix_time::second_clock::local_time()) + ".png";
+				else
+					filename2 = u8(env::media_folder()) + filename2 + ".png";
 
 				auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Allocate(static_cast<int>(frame.width()), static_cast<int>(frame.height()), 32), FreeImage_Unload);
 				A_memcpy(FreeImage_GetBits(bitmap.get()), frame.image_data().begin(), frame.image_data().size());
 				FreeImage_FlipVertical(bitmap.get());
-				FreeImage_Save(FIF_PNG, bitmap.get(), filename.c_str(), 0);
+				FreeImage_Save(FIF_PNG, bitmap.get(), filename2.c_str(), 0);
 			}
 			catch(...)
 			{
@@ -116,10 +129,15 @@ public:
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
 {
-	if(params.size() < 1 || params[0] != L"IMAGE")
+	if (params.size() < 1 || params[0] != L"IMAGE")
 		return core::frame_consumer::empty();
 
-	return spl::make_shared<image_consumer>();
+	std::wstring filename;
+
+	if (params.size() > 1)
+		filename = params[1];
+
+	return spl::make_shared<image_consumer>(filename);
 }
 
 }}
