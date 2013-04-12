@@ -67,6 +67,9 @@
     <ClCompile Include="filesystem\polling_filesystem_monitor.cpp">
       <Filter>source\filesystem</Filter>
     </ClCompile>
+    <ClCompile Include="utility\base64.cpp">
+      <Filter>source\utility</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exception\exceptions.h">
@@ -156,6 +159,9 @@
     </ClInclude>
     <ClInclude Include="filesystem\polling_filesystem_monitor.h">
       <Filter>source\filesystem</Filter>
+    </ClInclude>
+    <ClInclude Include="utility\base64.h">
+      <Filter>source\utility</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

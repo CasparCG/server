@@ -208,7 +208,10 @@ struct playlist_producer : public frame_producer
 	}
 };
 
-safe_ptr<frame_producer> create_playlist_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<frame_producer> create_playlist_producer(
+		const safe_ptr<core::frame_factory>& frame_factory,
+		const std::vector<std::wstring>& params,
+		const std::vector<std::wstring>& original_case_params)
 {
 	if(boost::range::find(params, L"[PLAYLIST]") == params.end())
 		return core::frame_producer::empty();

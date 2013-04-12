@@ -322,7 +322,10 @@ public:
 	}
 };
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_producer(
+		const safe_ptr<core::frame_factory>& frame_factory,
+		const std::vector<std::wstring>& params,
+		const std::vector<std::wstring>& original_case_params)
 {
 	if(params.empty() || !boost::iequals(params[0], "decklink"))
 		return core::frame_producer::empty();
