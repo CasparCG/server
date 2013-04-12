@@ -113,7 +113,10 @@ std::wstring get_hex_color(const std::wstring& str)
 	return str;
 }
 
-safe_ptr<frame_producer> create_color_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<frame_producer> create_color_producer(
+		const safe_ptr<core::frame_factory>& frame_factory,
+		const std::vector<std::wstring>& params,
+		const std::vector<std::wstring>& original_case_params)
 {
 	if(params.size() < 0)
 		return core::frame_producer::empty();

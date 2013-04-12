@@ -422,7 +422,10 @@ public:
 	}
 };
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_producer(
+		const safe_ptr<core::frame_factory>& frame_factory,
+		const std::vector<std::wstring>& params,
+		const std::vector<std::wstring>& original_case_params)
 {		
 	static const std::vector<std::wstring> invalid_exts = boost::assign::list_of(L".png")(L".tga")(L".bmp")(L".jpg")(L".jpeg")(L".gif")(L".tiff")(L".tif")(L".jp2")(L".jpx")(L".j2k")(L".j2c")(L".swf")(L".ct");
 	auto filename = probe_stem(env::media_folder() + L"\\" + params.at(0), invalid_exts);
@@ -441,7 +444,10 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 	return create_producer_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, filename, filter_str, loop, start, length, false));
 }
 
-safe_ptr<core::frame_producer> create_thumbnail_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_thumbnail_producer(
+		const safe_ptr<core::frame_factory>& frame_factory,
+		const std::vector<std::wstring>& params,
+		const std::vector<std::wstring>& original_case_params)
 {		
 	static const std::vector<std::wstring> invalid_exts = boost::assign::list_of
 			(L".png")(L".tga")(L".bmp")(L".jpg")(L".jpeg")(L".gif")(L".tiff")(L".tif")(L".jp2")(L".jpx")(L".j2k")(L".j2c")(L".swf")(L".ct")
