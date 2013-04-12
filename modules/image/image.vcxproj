@@ -236,6 +236,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="producer\image_scroll_producer.cpp" />
+    <ClCompile Include="util\image_algorithms.cpp" />
     <ClCompile Include="util\image_loader.cpp" />
   </ItemGroup>
   <ItemGroup>
