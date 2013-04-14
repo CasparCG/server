@@ -46,6 +46,7 @@
 #include <atlbase.h>
 
 #include <protocol/amcp/AMCPProtocolStrategy.h>
+#include <protocol/osc/server.h>
 
 #include <modules/bluefish/bluefish.h>
 #include <modules/decklink/decklink.h>
@@ -267,6 +268,7 @@ int main(int argc, wchar_t* argv[])
 
 			// Create server object which initializes channels, protocols and controllers.
 			caspar::server caspar_server(shutdown_server_now);
+			
 
 			// Use separate thread for the blocking console input, will be terminated 
 			// anyway when the main thread terminates.

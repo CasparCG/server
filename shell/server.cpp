@@ -56,6 +56,7 @@
 #include <protocol/CLK/CLKProtocolStrategy.h>
 #include <protocol/util/AsyncEventServer.h>
 #include <protocol/util/stateful_protocol_strategy_wrapper.h>
+#include <protocol/osc/server.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
@@ -70,9 +71,11 @@ using namespace protocol;
 
 struct server::implementation : boost::noncopyable
 {
+	core::monitor::subject						monitor_subject_;
 	boost::promise<bool>&						shutdown_server_now_;
 	safe_ptr<ogl_device>						ogl_;
 	std::vector<safe_ptr<IO::AsyncEventServer>> async_servers_;	
+	std::vector<osc::server>					osc_servers_;
 	std::vector<safe_ptr<video_channel>>		channels_;
 	std::shared_ptr<thumbnail_generator>		thumbnail_generator_;
 
@@ -129,6 +132,8 @@ struct server::implementation : boost::noncopyable
 			
 			channels_.push_back(make_safe<video_channel>(channels_.size()+1, format_desc, ogl_));
 			
+			channels_.back()->monitor_output().link_target(&monitor_subject_);
+
 			BOOST_FOREACH(auto& xml_consumer, xml_channel.second.get_child(L"consumers"))
 			{
 				try
@@ -175,6 +180,13 @@ struct server::implementation : boost::noncopyable
 					auto asyncbootstrapper = make_safe<IO::AsyncEventServer>(create_protocol(protocol), port);
 					asyncbootstrapper->Start();
 					async_servers_.push_back(asyncbootstrapper);
+				}
+				else if(name == L"udp")
+				{					
+					const auto address = xml_controller.second.get(L"address", L"127.0.0.1");
+					const auto port = xml_controller.second.get<unsigned short>(L"port", 5253);
+
+					osc_servers_.push_back(osc::server(boost::asio::ip::udp::endpoint(boost::asio::ip::address_v4::from_string(narrow(address)), port), monitor_subject_));
 				}
 				else
 					CASPAR_LOG(warning) << "Invalid controller: " << widen(name);	
@@ -235,6 +247,11 @@ const std::vector<safe_ptr<video_channel>> server::get_channels() const
 std::shared_ptr<thumbnail_generator> server::get_thumbnail_generator() const
 {
 	return impl_->thumbnail_generator_;
+}
+
+core::monitor::source& server::monitor_output()
+{
+	return impl_->monitor_subject_;
 }
 
 }

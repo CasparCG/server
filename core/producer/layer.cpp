@@ -37,14 +37,16 @@ struct layer::implementation
 	int64_t						frame_number_;
 	int32_t						auto_play_delta_;
 	bool						is_paused_;
+	monitor::subject			monitor_subject_;
 
 public:
-	implementation() 
+	implementation(int index) 
 		: foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
 		, frame_number_(0)
 		, auto_play_delta_(-1)
 		, is_paused_(false)
+		, monitor_subject_("/layer/" + boost::lexical_cast<std::string>(index))
 	{
 	}
 	
@@ -80,7 +82,8 @@ public:
 		{
 			background_->set_leading_producer(foreground_);
 			
-			foreground_			= background_;
+			set_foreground(background_);
+
 			background_			= frame_producer::empty();
 			frame_number_		= 0;
 			auto_play_delta_	= -1;	
@@ -91,7 +94,8 @@ public:
 	
 	void stop()
 	{
-		foreground_			= frame_producer::empty();
+		set_foreground(frame_producer::empty());
+
 		background_			= background_;
 		frame_number_		= 0;
 		auto_play_delta_	= -1;
@@ -111,7 +115,13 @@ public:
 				return disable_audio(foreground_->last_frame());
 			}
 
-			auto frame = receive_and_follow(foreground_, hints);
+			auto foreground = foreground_;
+
+			auto frame = receive_and_follow(foreground, hints);
+
+			if(foreground != foreground_)
+				set_foreground(foreground);
+
 			if(frame == core::basic_frame::late())
 				return foreground_->last_frame();
 
@@ -157,20 +167,20 @@ public:
 		info.add_child(L"background.producer", background_->info());
 		return info;
 	}
+
+	void set_foreground(safe_ptr<core::frame_producer> producer)
+	{
+		foreground_->monitor_output().unlink_target(&monitor_subject_);
+		foreground_			= producer;
+		foreground_->monitor_output().link_target(&monitor_subject_);
+	}
 };
 
-layer::layer() : impl_(new implementation()){}
+layer::layer(int index) : impl_(new implementation(index)){}
 layer::layer(layer&& other) : impl_(std::move(other.impl_)){}
 layer& layer::operator=(layer&& other)
 {
 	impl_ = std::move(other.impl_);
-	return *this;
-}
-layer::layer(const layer& other) : impl_(new implementation(*other.impl_)){}
-layer& layer::operator=(const layer& other)
-{
-	layer temp(other);
-	temp.swap(*this);
 	return *this;
 }
 void layer::swap(layer& other)
@@ -189,4 +199,5 @@ safe_ptr<frame_producer> layer::background() const { return impl_->background_;}
 bool layer::empty() const {return impl_->empty();}
 boost::unique_future<std::wstring> layer::call(bool foreground, const std::wstring& param){return impl_->call(foreground, param);}
 boost::property_tree::wptree layer::info() const{return impl_->info();}
+monitor::source& layer::monitor_output(){return impl_->monitor_subject_;}
 }}

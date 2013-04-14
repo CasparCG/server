@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include "../monitor/monitor.h"
+
 #include <common/memory/safe_ptr.h>
 #include <common/exception/exceptions.h>
 
@@ -75,6 +77,8 @@ public:
 	virtual safe_ptr<basic_frame> create_thumbnail_frame();
 
 	static const safe_ptr<frame_producer>& empty(); // nothrow
+
+	virtual monitor::source& monitor_output() = 0;
 };
 
 safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int hints);

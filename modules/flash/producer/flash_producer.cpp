@@ -33,6 +33,7 @@
 
 #include <core/video_format.h>
 
+#include <core/monitor/monitor.h>
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_factory.h>
 #include <core/mixer/write_frame.h>
@@ -320,6 +321,7 @@ public:
 
 struct flash_producer : public core::frame_producer
 {	
+	core::monitor::subject										monitor_subject_;
 	const std::wstring											filename_;	
 	const safe_ptr<core::frame_factory>							frame_factory_;
 	const int													width_;
@@ -379,6 +381,12 @@ public:
 			next();
 		else
 			graph_->set_tag("late-frame");
+		
+		monitor_subject_ << core::monitor::message("/host/path")		% filename_
+					     << core::monitor::message("/host/width")	% width_
+					     << core::monitor::message("/host/height")	% height_
+					     << core::monitor::message("/host/fps")		% fps_
+					     << core::monitor::message("/buffer")		% output_buffer_.size() % buffer_size_;
 
 		return frame;
 	}
@@ -487,6 +495,11 @@ public:
 			last_frame_ = frame;
 		});
 		return frame;
+	}
+
+	core::monitor::source& monitor_output()
+	{
+		return monitor_subject_;
 	}
 };
 

@@ -23,6 +23,8 @@
 
 #include "frame_producer.h"
 
+#include "../monitor/monitor.h"
+
 #include <common/memory/safe_ptr.h>
 #include <common/concurrency/target.h>
 #include <common/diagnostics/graph.h>
@@ -41,13 +43,18 @@ struct frame_transform;
 class stage : boost::noncopyable
 {
 public:
+
+	// Static Members
+
 	typedef std::function<struct frame_transform(struct frame_transform)>							transform_func_t;
 	typedef std::tuple<int, transform_func_t, unsigned int, std::wstring>							transform_tuple_t;
 	typedef target<std::pair<std::map<int, safe_ptr<basic_frame>>, std::shared_ptr<void>>> target_t;
 
+	// Constructors
+
 	explicit stage(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc);
 	
-	// stage
+	// Methods
 	
 	void apply_transforms(const std::vector<transform_tuple_t>& transforms);
 	void apply_transform(int index, const transform_func_t& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
@@ -67,6 +74,9 @@ public:
 	void swap_layer(int index, size_t other_index, const safe_ptr<stage>& other);
 	
 	boost::unique_future<std::wstring>				call(int index, bool foreground, const std::wstring& param);
+
+	// Properties
+
 	boost::unique_future<safe_ptr<frame_producer>>	foreground(int index);
 	boost::unique_future<safe_ptr<frame_producer>>	background(int index);
 
@@ -74,6 +84,8 @@ public:
 	boost::unique_future<boost::property_tree::wptree> info(int layer) const;
 	
 	void set_video_format_desc(const video_format_desc& format_desc);
+		
+	monitor::source& monitor_output();
 
 private:
 	struct implementation;

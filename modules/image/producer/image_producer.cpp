@@ -25,6 +25,7 @@
 
 #include <core/video_format.h>
 
+#include <core/monitor/monitor.h>
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_factory.h>
 #include <core/mixer/write_frame.h>
@@ -44,7 +45,8 @@ namespace caspar { namespace image {
 
 struct image_producer : public core::frame_producer
 {	
-	const std::wstring filename_;
+	core::monitor::subject		monitor_subject_;
+	const std::wstring			filename_;
 	safe_ptr<core::basic_frame> frame_;
 	
 	explicit image_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename) 
@@ -68,6 +70,8 @@ struct image_producer : public core::frame_producer
 
 	virtual safe_ptr<core::basic_frame> receive(int) override
 	{
+		monitor_subject_ << core::monitor::message("/file/path") % filename_;
+
 		return frame_;
 	}
 		
@@ -92,6 +96,11 @@ struct image_producer : public core::frame_producer
 		info.add(L"type", L"image-producer");
 		info.add(L"filename", filename_);
 		return info;
+	}
+
+	core::monitor::source& monitor_output()
+	{
+		return monitor_subject_;
 	}
 };
 

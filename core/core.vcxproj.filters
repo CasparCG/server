@@ -34,14 +34,14 @@
     <Filter Include="source\consumer">
       <UniqueIdentifier>{35d7835f-f813-4b4b-8d8d-8a35dfef68d3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="source\producer\playlist">
-      <UniqueIdentifier>{80ce21ca-5ecd-48c1-97d2-c20ea8e2f2b6}</UniqueIdentifier>
-    </Filter>
     <Filter Include="source\mixer\image\shader">
       <UniqueIdentifier>{e0a140f8-e217-465c-a934-163b7ea786be}</UniqueIdentifier>
     </Filter>
     <Filter Include="source\producer\channel">
       <UniqueIdentifier>{f2380c6b-6ec8-4a47-8394-357a05eb831a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\monitor">
+      <UniqueIdentifier>{d8525088-072a-47d2-b6e1-ad662881f505}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -127,9 +127,6 @@
     <ClInclude Include="mixer\audio\audio_util.h">
       <Filter>source\mixer\audio</Filter>
     </ClInclude>
-    <ClInclude Include="producer\playlist\playlist_producer.h">
-      <Filter>source\producer\playlist</Filter>
-    </ClInclude>
     <ClInclude Include="mixer\image\shader\image_shader.h">
       <Filter>source\mixer\image\shader</Filter>
     </ClInclude>
@@ -144,6 +141,9 @@
     </ClInclude>
     <ClInclude Include="thumbnail_generator.h">
       <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="monitor\monitor.h">
+      <Filter>source\monitor</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -214,9 +214,6 @@
     <ClCompile Include="producer\frame\frame_transform.cpp">
       <Filter>source\producer\frame</Filter>
     </ClCompile>
-    <ClCompile Include="producer\playlist\playlist_producer.cpp">
-      <Filter>source\producer\playlist</Filter>
-    </ClCompile>
     <ClCompile Include="producer\frame_producer.cpp">
       <Filter>source\producer</Filter>
     </ClCompile>
@@ -231,6 +228,9 @@
     </ClCompile>
     <ClCompile Include="thumbnail_generator.cpp">
       <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="monitor\monitor.cpp">
+      <Filter>source\monitor</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

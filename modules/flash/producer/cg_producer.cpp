@@ -191,6 +191,11 @@ public:
 			return result.get();
 		return L"";
 	}
+
+	core::monitor::source& monitor_output()
+	{
+		return flash_producer_->monitor_output();
+	}
 };
 	
 safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel>& video_channel, int render_layer)
@@ -263,5 +268,5 @@ std::wstring cg_producer::invoke(int layer, const std::wstring& label){return im
 std::wstring cg_producer::description(int layer){return impl_->timed_description(layer);}
 std::wstring cg_producer::template_host_info(){return impl_->timed_template_host_info();}
 boost::property_tree::wptree cg_producer::info() const{return impl_->info();}
-
+core::monitor::source& cg_producer::monitor_output(){return impl_->monitor_output();}
 }}
