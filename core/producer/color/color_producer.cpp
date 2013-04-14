@@ -23,6 +23,8 @@
 
 #include "color_producer.h"
 
+#include "../../monitor/monitor.h"
+
 #include "../frame/basic_frame.h"
 #include "../frame/frame_factory.h"
 #include "../../mixer/write_frame.h"
@@ -37,19 +39,23 @@ namespace caspar { namespace core {
 	
 class color_producer : public frame_producer
 {
-	safe_ptr<basic_frame> frame_;
-	const std::wstring color_str_;
+	monitor::subject		monitor_subject_;
+	safe_ptr<basic_frame>	frame_;
+	const std::wstring		color_str_;
 
 public:
 	explicit color_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& color) 
 		: color_str_(color)
 		, frame_(create_color_frame(this, frame_factory, color))
-	{}
+	{
+	}
 
 	// frame_producer
 			
 	virtual safe_ptr<basic_frame> receive(int) override
 	{
+		monitor_subject_ << monitor::message("/color") % color_str_;
+
 		return frame_;
 	}	
 
@@ -69,6 +75,11 @@ public:
 		info.add(L"type", L"color-producer");
 		info.add(L"color", color_str_);
 		return info;
+	}
+
+	monitor::source& monitor_output()
+	{
+		return monitor_subject_;
 	}
 };
 

@@ -38,6 +38,8 @@ namespace caspar { namespace core {
 
 struct transition_producer : public frame_producer
 {	
+	monitor::subject			monitor_subject_;
+
 	const field_mode::type		mode_;
 	unsigned int				current_frame_;
 	
@@ -54,7 +56,10 @@ struct transition_producer : public frame_producer
 		, info_(info)
 		, dest_producer_(dest)
 		, source_producer_(frame_producer::empty())
-		, last_frame_(basic_frame::empty()){}
+		, last_frame_(basic_frame::empty())
+	{
+		dest->monitor_output().link_target(&monitor_subject_);
+	}
 	
 	// frame_producer
 
@@ -94,6 +99,20 @@ struct transition_producer : public frame_producer
 			if(source == core::basic_frame::late())
 				source = source_producer_->last_frame();
 		});
+
+		monitor_subject_ << monitor::message("/transition/frame") % static_cast<std::int32_t>(current_frame_) % static_cast<std::int32_t>(info_.duration)
+						 << monitor::message("/transition/type") % [&]() -> std::string
+																{
+																	switch(info_.type)
+																	{
+																	case transition::mix:	return "mix";
+																	case transition::wipe:	return "wipe";
+																	case transition::slide:	return "slide";
+																	case transition::push:	return "push";
+																	case transition::cut:	return "cut";
+																	default:				return "n/a";
+																	}
+																}();
 
 		return compose(dest, source);
 	}
@@ -185,6 +204,11 @@ struct transition_producer : public frame_producer
 		last_frame_ = basic_frame::combine(s_frame2, d_frame2);
 
 		return basic_frame::combine(s_frame, d_frame);
+	}
+
+	monitor::source& monitor_output()
+	{
+		return monitor_subject_;
 	}
 };
 
