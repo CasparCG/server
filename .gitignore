@@ -5,4 +5,11 @@ dependencies
 *.sdf
 *.orig
 *.user
+*.suo
 modules/decklink/interop
+installer/Output
+_ReSharper.casparcg
+version.h
+ipch/
+shell/crt_log.txt
+shell/log/
