@@ -1,8 +1,8 @@
+bin
+tmp
+dependencies
 *.opensdf
 *.sdf
 *.orig
-tmp
 *.user
-dependencies
 modules/decklink/interop
-bin
