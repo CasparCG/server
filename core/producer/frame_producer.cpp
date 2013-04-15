@@ -25,6 +25,8 @@
 #include "frame/basic_frame.h"
 #include "frame/frame_transform.h"
 
+#include "../parameters/parameters.h"
+
 #include "color/color_producer.h"
 #include "playlist/playlist_producer.h"
 #include "separated/separated_producer.h"
@@ -215,7 +217,7 @@ void register_producer_factory(const producer_factory_t& factory)
 	g_factories.push_back(factory);
 }
 
-safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>& my_frame_factory, core::parameters const& params)
 {
 	if(params.empty())
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
@@ -244,7 +246,7 @@ safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>&
 }
 
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my_frame_factory, parameters const& params)
 {	
 	auto producer = do_create_producer(my_frame_factory, params);
 	auto key_producer = frame_producer::empty();
@@ -254,11 +256,12 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 		auto params_copy = params;
 		if(params_copy.size() > 0)
 		{
-			params_copy[0] += L"_A";
+			auto resource_name = params_copy[0];
+			params_copy.set(0, resource_name + L"_A");
 			key_producer = do_create_producer(my_frame_factory, params_copy);			
 			if(key_producer == frame_producer::empty())
 			{
-				params_copy[0] += L"LPHA";
+				params_copy.set(0, resource_name + L"_ALPHA");
 				key_producer = do_create_producer(my_frame_factory, params_copy);	
 			}
 		}
@@ -270,9 +273,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 	
 	if(producer == frame_producer::empty())
 	{
-		std::wstring str;
-		BOOST_FOREACH(auto& param, params)
-			str += param + L" ";
+		std::wstring str = params.get_original();
 		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax.") << arg_value_info(narrow(str)));
 	}
 

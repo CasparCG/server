@@ -33,10 +33,10 @@
 
 #include <common/env.h>
 #include <common/utility/assert.h>
-#include <common/utility/param.h>
 #include <common/diagnostics/graph.h>
 
 #include <core/video_format.h>
+#include <core/parameters/parameters.h>
 #include <core/producer/frame_producer.h>
 #include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/basic_frame.h>
@@ -309,17 +309,17 @@ public:
 	}
 };
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, core::parameters const& params)
 {		
 	auto filename = probe_stem(env::media_folder() + L"\\" + params.at(0));
 
 	if(filename.empty())
 		return core::frame_producer::empty();
 	
-	auto loop		= boost::range::find(params, L"LOOP") != params.end();
-	auto start		= get_param(L"SEEK", params, static_cast<uint32_t>(0));
-	auto length		= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
-	auto filter_str = get_param(L"FILTER", params, L""); 	
+	auto loop		= params.has(L"LOOP");
+	auto start		= params.get(L"SEEK", static_cast<uint32_t>(0));
+	auto length		= params.get(L"LENGTH", std::numeric_limits<uint32_t>::max());
+	auto filter_str = params.get(L"FILTER", L""); 	
 		
 	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
 	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");

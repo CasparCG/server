@@ -37,7 +37,6 @@
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
 #include <common/utility/string.h>
-#include <common/utility/param.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/timer.hpp>
