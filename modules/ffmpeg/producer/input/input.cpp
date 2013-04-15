@@ -24,6 +24,8 @@
 #include "input.h"
 
 #include "../util/util.h"
+#include "../util/flv.h"
+#include "../util/ffmpeg_producer_params.h"
 #include "../../ffmpeg_error.h"
 
 #include <core/video_format.h>
@@ -32,6 +34,7 @@
 #include <common/concurrency/executor.h>
 #include <common/exception/exceptions.h>
 #include <common/exception/win32_exception.h>
+#include <common/utility/string.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/atomic.h>
@@ -68,11 +71,10 @@ struct input::implementation : boost::noncopyable
 
 	const safe_ptr<AVFormatContext>								format_context_; // Destroy this last
 	const int													default_stream_index_;
-			
-	const std::wstring											filename_;
-	const uint32_t												start_;		
-	const uint32_t												length_;
+	
+	const std::shared_ptr<ffmpeg_producer_params>				params_;
 	tbb::atomic<bool>											loop_;
+	
 	uint32_t													frame_number_;
 	
 	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>	buffer_;
@@ -80,21 +82,21 @@ struct input::implementation : boost::noncopyable
 		
 	executor													executor_;
 	
-	explicit implementation(const safe_ptr<diagnostics::graph> graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length) 
-		: graph_(graph)
-		, format_context_(open_input(filename))		
-		, default_stream_index_(av_find_default_stream_index(format_context_.get()))
-		, filename_(filename)
-		, start_(start)
-		, length_(length)
-		, frame_number_(0)
-		, executor_(print())
+	explicit implementation(
+		const safe_ptr<diagnostics::graph> graph, 
+		const std::shared_ptr<ffmpeg_producer_params>& params
+	) : graph_(graph),
+		params_(params),
+		format_context_(open_input(params)),
+		default_stream_index_(av_find_default_stream_index(format_context_.get())),
+		frame_number_(0),
+		executor_(print())
 	{		
-		loop_			= loop;
+		loop_			= params->loop;
 		buffer_size_	= 0;
 
-		if(start_ > 0)			
-			queued_seek(start_);
+		if(params_->start > 0)			
+			queued_seek(params_->start);
 								
 		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));	
 		graph_->set_color("buffer-count", diagnostics::color(0.7f, 0.4f, 0.4f));
@@ -136,7 +138,7 @@ struct input::implementation : boost::noncopyable
 	
 	std::wstring print() const
 	{
-		return L"ffmpeg_input[" + filename_ + L")]";
+		return L"ffmpeg_input[" + params_->resource_name + L")]";
 	}
 	
 	bool full() const
@@ -164,9 +166,9 @@ struct input::implementation : boost::noncopyable
 				{
 					frame_number_	= 0;
 
-					if(loop_)
+					if(params_->loop)
 					{
-						queued_seek(start_);
+						queued_seek(params_->start);
 						graph_->set_tag("seek");		
 						CASPAR_LOG(trace) << print() << " Looping.";			
 					}		
@@ -208,7 +210,68 @@ struct input::implementation : boost::noncopyable
 			}
 		});
 	}	
-			
+	
+	safe_ptr<AVFormatContext> open_input(const std::shared_ptr<ffmpeg_producer_params> params)
+	{
+		AVFormatContext* weak_context = nullptr;
+
+		switch (params->resource_type) {
+		case FFMPEG_FILE:
+			THROW_ON_ERROR2(avformat_open_input(&weak_context, narrow(params->resource_name).c_str(), nullptr, nullptr), params->resource_name);
+			break;
+		case FFMPEG_DEVICE: {
+			AVDictionary* format_options = NULL;
+			av_dict_set(&format_options, "video_size", narrow(params->size_str).c_str(), 0); // 640x360 for 16:9
+			av_dict_set(&format_options, "pixel_format", narrow(params->pixel_format).c_str(), 0); // yuyv422 for sony
+			av_dict_set(&format_options, "avioflags", "direct", 0);
+			// Don't set framerate here, it is typically set to a fixed rate anyway. Better to insert a fps filter to adjust the frame rate.
+			// av_dict_set(&format_options, "framerate", narrow(params->frame_rate).c_str(), 0);
+			AVInputFormat* input_format = av_find_input_format("dshow");
+			THROW_ON_ERROR2(avformat_open_input(&weak_context, narrow(params->resource_name).c_str(), input_format, &format_options), params->resource_name);
+			av_dict_free(&format_options);
+			} break;
+		case FFMPEG_STREAM:
+			THROW_ON_ERROR2(avformat_open_input(&weak_context, narrow(params->resource_name).c_str(), nullptr, nullptr), params->resource_name);
+			break;
+		};
+		safe_ptr<AVFormatContext> context(weak_context, av_close_input_file);			
+		THROW_ON_ERROR2(avformat_find_stream_info(weak_context, nullptr), params->resource_name);
+		fix_meta_data(*context);
+		return context;
+	}
+
+	void fix_meta_data(AVFormatContext& context)
+	{
+		auto video_index = av_find_best_stream(&context, AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
+
+		if(video_index > -1)
+		{
+			auto video_stream   = context.streams[video_index];
+			auto video_context  = context.streams[video_index]->codec;
+						
+			if(boost::filesystem2::path(context.filename).extension() == ".flv")
+			{
+				try
+				{
+					auto meta = read_flv_meta_info(context.filename);
+					double fps = boost::lexical_cast<double>(meta["framerate"]);
+					video_stream->nb_frames = static_cast<int64_t>(boost::lexical_cast<double>(meta["duration"])*fps);
+				}
+				catch(...){}
+			}
+			else
+			{
+				auto stream_time = video_stream->time_base;
+				auto duration	 = video_stream->duration;
+				auto codec_time  = video_context->time_base;
+				auto ticks		 = video_context->ticks_per_frame;
+
+				if(video_stream->nb_frames == 0)
+					video_stream->nb_frames = (duration*stream_time.num*codec_time.den)/(stream_time.den*codec_time.num*ticks);	
+			}
+		}
+	}
+
 	void queued_seek(const uint32_t target)
 	{  	
 		CASPAR_LOG(debug) << print() << " Seeking: " << target;
@@ -247,12 +310,14 @@ struct input::implementation : boost::noncopyable
 		if(ret == AVERROR_EOF)
 			CASPAR_LOG(trace) << print() << " Received EOF. ";
 
-		return ret == AVERROR_EOF || ret == AVERROR(EIO) || frame_number_ >= length_; // av_read_frame doesn't always correctly return AVERROR_EOF;
+		return ret == AVERROR_EOF || ret == AVERROR(EIO) || frame_number_ >= params_->length; // av_read_frame doesn't always correctly return AVERROR_EOF;
 	}
 };
 
-input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length) 
-	: impl_(new implementation(graph, filename, loop, start, length)){}
+input::input(
+	const safe_ptr<diagnostics::graph>& graph, 
+	const std::shared_ptr<ffmpeg_producer_params>& params
+) : impl_(new implementation(graph, params)){}
 bool input::eof() const {return !impl_->executor_.is_running();}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
 safe_ptr<AVFormatContext> input::context(){return impl_->format_context_;}

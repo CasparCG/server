@@ -79,7 +79,21 @@ std::wstring parameters::get(std::wstring const& key, std::wstring const& defaul
 	return *it;
 }
 
-std::wstring parameters::get_original() const
+std::wstring parameters::get_ic(std::wstring const& key, std::wstring const& default_value) const
+{	
+	auto it = params_original_.begin();
+	for (; it != params_original_.end(); ++it)
+	{
+		if (boost::iequals(*it, key)) {
+			break;
+		}
+	}
+	if (it == params_original_.end() || ++it == params_original_.end())	
+		return default_value;
+	return *it;
+}
+
+std::wstring parameters::original_line() const
 {
 	std::wstring str;
 	BOOST_FOREACH(auto& param, params_)
@@ -96,11 +110,11 @@ std::wstring parameters::at_original(size_t i) const
 
 void parameters::set(size_t index, std::wstring const& value)
 {
-	if (index < params_.size())
+	if (index > params_.size())
 	{
 		params_[index] = value;
 	}
-	if (index < params_original_.size())
+	if (index > params_original_.size())
 	{
 		params_original_[index] = value;
 	}

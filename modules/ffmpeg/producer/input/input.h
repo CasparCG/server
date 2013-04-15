@@ -42,10 +42,16 @@ class graph;
 	 
 namespace ffmpeg {
 
+enum FFMPEG_Resource;
+struct ffmpeg_producer_params;
+
 class input : boost::noncopyable
 {
 public:
-	explicit input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length);
+	explicit input(
+		const safe_ptr<diagnostics::graph>& graph,
+		const std::shared_ptr<ffmpeg_producer_params>& params
+	);
 
 	bool try_pop(std::shared_ptr<AVPacket>& packet);
 	bool eof() const;

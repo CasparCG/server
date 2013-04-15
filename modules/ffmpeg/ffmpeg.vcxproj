@@ -363,6 +363,7 @@
     <ClInclude Include="producer\muxer\display_mode.h" />
     <ClInclude Include="producer\muxer\frame_muxer.h" />
     <ClInclude Include="producer\tbb_avcodec.h" />
+    <ClInclude Include="producer\util\ffmpeg_producer_params.h" />
     <ClInclude Include="producer\util\flv.h" />
     <ClInclude Include="producer\util\util.h" />
     <ClInclude Include="producer\video\video_decoder.h" />

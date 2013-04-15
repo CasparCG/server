@@ -67,8 +67,9 @@ public:
 	}
 
 	std::wstring get(std::wstring const& key, std::wstring const& default_value = L"") const;
+	std::wstring get_ic(std::wstring const& key, std::wstring const& default_value = L"") const;
 
-	std::wstring get_original() const;
+	std::wstring original_line() const;
 
 	std::wstring at_original(size_t i) const;
 

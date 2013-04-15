@@ -93,14 +93,16 @@ public:
 					
 		if(packet->data == nullptr)
 		{			
+			packets_.pop();
 			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
 			{
 				auto video = decode(*packet);
 				if(video)
+				{
 					return video;
+				}
 			}
 					
-			packets_.pop();
 			file_frame_number_ = static_cast<size_t>(packet->pos);
 			avcodec_flush_buffers(codec_context_.get());
 			return flush_video();	
@@ -115,7 +117,7 @@ public:
 		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
 
 		int frame_finished = 0;
-		THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), decoded_frame.get(), &frame_finished, &pkt), "[video_decocer]");
+		THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), decoded_frame.get(), &frame_finished, &pkt), "[video_decoder]");
 		
 		// If a decoder consumes less then the whole packet then something is wrong
 		// that might be just harmless padding at the end, or a problem with the

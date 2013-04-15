@@ -25,11 +25,13 @@
 
 #include "../ffmpeg_error.h"
 
-#include "muxer/frame_muxer.h"
+#include "filter/filter.h"
 #include "input/input.h"
-#include "util/util.h"
+#include "muxer/frame_muxer.h"
 #include "audio/audio_decoder.h"
 #include "video/video_decoder.h"
+#include "util/ffmpeg_producer_params.h"
+#include "util/util.h"
 
 #include <common/env.h>
 #include <common/utility/assert.h>
@@ -61,8 +63,6 @@ namespace caspar { namespace ffmpeg {
 				
 struct ffmpeg_producer : public core::frame_producer
 {
-	const std::wstring											filename_;
-	
 	const safe_ptr<diagnostics::graph>							graph_;
 	boost::timer												frame_timer_;
 					
@@ -74,9 +74,9 @@ struct ffmpeg_producer : public core::frame_producer
 	std::unique_ptr<audio_decoder>								audio_decoder_;	
 	std::unique_ptr<frame_muxer>								muxer_;
 
+	const std::shared_ptr<ffmpeg_producer_params>				params_;
+
 	const double												fps_;
-	const uint32_t												start_;
-	const uint32_t												length_;
 
 	safe_ptr<core::basic_frame>									last_frame_;
 	
@@ -86,16 +86,17 @@ struct ffmpeg_producer : public core::frame_producer
 	uint32_t													file_frame_number_;
 	
 public:
-	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, uint32_t start, uint32_t length) 
-		: filename_(filename)
-		, frame_factory_(frame_factory)		
-		, format_desc_(frame_factory->get_video_format_desc())
-		, input_(graph_, filename_, loop, start, length)
-		, fps_(read_fps(*input_.context(), format_desc_.fps))
-		, start_(start)
-		, length_(length)
-		, last_frame_(core::basic_frame::empty())
-		, frame_number_(0)
+	explicit ffmpeg_producer(
+		const safe_ptr<core::frame_factory>& frame_factory,
+		const std::shared_ptr<ffmpeg_producer_params>& ffmpeg_producer_params
+	) : frame_factory_(frame_factory),
+		params_(ffmpeg_producer_params),
+		format_desc_(frame_factory->get_video_format_desc()),
+		input_(graph_, ffmpeg_producer_params),
+		fps_(read_fps(*input_.context(), format_desc_.fps)),
+		last_frame_(core::basic_frame::empty()),
+		frame_number_(0),
+		file_frame_number_(0)
 	{
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
@@ -134,7 +135,7 @@ public:
 		if(!video_decoder_ && !audio_decoder_)
 			BOOST_THROW_EXCEPTION(averror_stream_not_found() << msg_info("No streams found"));
 
-		muxer_.reset(new frame_muxer(fps_, frame_factory, filter));
+		muxer_.reset(new frame_muxer(fps_, frame_factory, params_->filter_str));
 	}
 
 	// frame_producer
@@ -148,13 +149,19 @@ public:
 		
 		graph_->set_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
 				
-		if(frame_buffer_.empty() && input_.eof())
-			return last_frame();
-
 		if(frame_buffer_.empty())
 		{
-			graph_->set_tag("underflow");	
-			return core::basic_frame::late();			
+			if (input_.eof())
+			{
+				return last_frame();
+			} else if (params_->resource_type == FFMPEG_FILE)
+			{
+				graph_->set_tag("underflow");	
+				return core::basic_frame::late();			
+			} else
+			{
+				return last_frame();
+			}
 		}
 		
 		auto frame = frame_buffer_.front(); 
@@ -175,15 +182,17 @@ public:
 
 	virtual uint32_t nb_frames() const override
 	{
-		if(input_.loop())
+		if(params_->resource_type == FFMPEG_DEVICE || params_->resource_type == FFMPEG_STREAM || input_.loop()) 
+		{
 			return std::numeric_limits<uint32_t>::max();
+		}
 
 		uint32_t nb_frames = file_nb_frames();
 
-		nb_frames = std::min(length_, nb_frames);
+		nb_frames = std::min(params_->length, nb_frames);
 		nb_frames = muxer_->calc_nb_frames(nb_frames);
 		
-		return nb_frames > start_ ? nb_frames - start_ : 0;
+		return nb_frames > params_->start ? nb_frames - params_->start: 0;
 	}
 
 	uint32_t file_nb_frames() const
@@ -203,7 +212,7 @@ public:
 				
 	virtual std::wstring print() const override
 	{
-		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" 
+		return L"ffmpeg[" + params_->resource_name + L"|" 
 						  + print_mode() + L"|" 
 						  + boost::lexical_cast<std::wstring>(file_frame_number_) + L"/" + boost::lexical_cast<std::wstring>(file_nb_frames()) + L"]";
 	}
@@ -212,7 +221,7 @@ public:
 	{
 		boost::property_tree::wptree info;
 		info.add(L"type",				L"ffmpeg-producer");
-		info.add(L"filename",			filename_);
+		info.add(L"filename",			params_->resource_name);
 		info.add(L"width",				video_decoder_ ? video_decoder_->width() : 0);
 		info.add(L"height",				video_decoder_ ? video_decoder_->height() : 0);
 		info.add(L"progressive",		video_decoder_ ? video_decoder_->is_progressive() : false);
@@ -310,21 +319,70 @@ public:
 };
 
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, core::parameters const& params)
-{		
-	auto filename = probe_stem(env::media_folder() + L"\\" + params.at(0));
+{
+	auto ffmpeg_params = std::shared_ptr<ffmpeg_producer_params>(new ffmpeg_producer_params());
 
-	if(filename.empty())
+	// Determine the resource type from the parameters, or infer from the resource_name
+	auto resource_type_str = params.at(0);
+	if (resource_type_str == L"FILE")
+	{
+		ffmpeg_params->resource_type = FFMPEG_FILE;
+		ffmpeg_params->resource_name = params.at_original(1);
+	} else if (resource_type_str == L"DEVICE")
+	{
+		ffmpeg_params->resource_type = FFMPEG_DEVICE;
+		ffmpeg_params->resource_name = params.at_original(1);
+	} else if (resource_type_str == L"STREAM")
+	{
+		ffmpeg_params->resource_type = FFMPEG_STREAM;
+		ffmpeg_params->resource_name = params.at_original(1);
+	} else
+	{
+		ffmpeg_params->resource_type = FFMPEG_FILE;
+		ffmpeg_params->resource_name = params.at_original(0);
+
+		// Infer the resource_type from the resource_name if the resource_name looks like a URI
+		auto tokens = core::parameters::protocol_split(ffmpeg_params->resource_name);
+		if (tokens[0] == L"device")
+		{
+			ffmpeg_params->resource_type = FFMPEG_DEVICE;
+			ffmpeg_params->resource_name = tokens[1];
+		} else if (tokens[0] == L"http" || tokens[0] == L"rtp" || tokens[0] == L"rtps")
+		{
+			ffmpeg_params->resource_type = FFMPEG_STREAM;
+		}
+	}
+
+	switch (ffmpeg_params->resource_type)
+	{
+	case FFMPEG_FILE:
+		ffmpeg_params->resource_name = probe_stem(env::media_folder() + L"\\" + ffmpeg_params->resource_name);
+		ffmpeg_params->loop			= params.has(L"LOOP");
+		ffmpeg_params->start		= params.get(L"SEEK", static_cast<uint32_t>(0));
+		break;
+	case FFMPEG_DEVICE:
+		// Do nothing
+		//resource_name = L"video=Sony Visual Communication Camera";
+		//resource_name = L"video=Logitech QuickCam Easy/Cool";
+		break;
+	case FFMPEG_STREAM:
+		// Do nothing? TODO CP 2013-01
+		break;
+	};
+
+	if(ffmpeg_params->resource_name.empty())
 		return core::frame_producer::empty();
 	
-	auto loop		= params.has(L"LOOP");
-	auto start		= params.get(L"SEEK", static_cast<uint32_t>(0));
-	auto length		= params.get(L"LENGTH", std::numeric_limits<uint32_t>::max());
-	auto filter_str = params.get(L"FILTER", L""); 	
-		
-	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
+	ffmpeg_params->length		= params.get(L"LENGTH", std::numeric_limits<uint32_t>::max());
+	auto filter_str	= params.get(L"FILTER", L""); 	
 	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
+	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
+	ffmpeg_params->filter_str	= filter_str;
+	ffmpeg_params->size_str		= params.get_ic(L"SIZE", L"640x480");
+	ffmpeg_params->pixel_format	= params.get_ic(L"PIXFMT", L"yuyv422");
+	ffmpeg_params->frame_rate	= params.get_ic(L"FRAMERATE", L"25");
 	
-	return create_producer_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, filename, filter_str, loop, start, length));
+	return create_producer_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, ffmpeg_params));
 }
 
 }}

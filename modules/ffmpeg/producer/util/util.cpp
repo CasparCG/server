@@ -390,38 +390,6 @@ double read_fps(AVFormatContext& context, double fail_value)
 	return fail_value;	
 }
 
-void fix_meta_data(AVFormatContext& context)
-{
-	auto video_index = av_find_best_stream(&context, AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
-
-	if(video_index > -1)
-	{
-		auto video_stream   = context.streams[video_index];
-		auto video_context  = context.streams[video_index]->codec;
-						
-		if(boost::filesystem2::path(context.filename).extension() == ".flv")
-		{
-			try
-			{
-				auto meta = read_flv_meta_info(context.filename);
-				double fps = boost::lexical_cast<double>(meta["framerate"]);
-				video_stream->nb_frames = static_cast<int64_t>(boost::lexical_cast<double>(meta["duration"])*fps);
-			}
-			catch(...){}
-		}
-		else
-		{
-			auto stream_time = video_stream->time_base;
-			auto duration	 = video_stream->duration;
-			auto codec_time  = video_context->time_base;
-			auto ticks		 = video_context->ticks_per_frame;
-
-			if(video_stream->nb_frames == 0)
-				video_stream->nb_frames = (duration*stream_time.num*codec_time.den)/(stream_time.den*codec_time.num*ticks);	
-		}
-	}
-}
-
 safe_ptr<AVPacket> create_packet()
 {
 	safe_ptr<AVPacket> packet(new AVPacket, [](AVPacket* p)
@@ -443,16 +411,6 @@ safe_ptr<AVCodecContext> open_codec(AVFormatContext& context, enum AVMediaType t
 
 	THROW_ON_ERROR2(tbb_avcodec_open(context.streams[index]->codec, decoder), "");
 	return safe_ptr<AVCodecContext>(context.streams[index]->codec, tbb_avcodec_close);
-}
-
-safe_ptr<AVFormatContext> open_input(const std::wstring& filename)
-{
-	AVFormatContext* weak_context = nullptr;
-	THROW_ON_ERROR2(avformat_open_input(&weak_context, narrow(filename).c_str(), nullptr, nullptr), filename);
-	safe_ptr<AVFormatContext> context(weak_context, av_close_input_file);			
-	THROW_ON_ERROR2(avformat_find_stream_info(weak_context, nullptr), filename);
-	fix_meta_data(*context);
-	return context;
 }
 
 std::wstring print_mode(size_t width, size_t height, double fps, bool interlaced)
