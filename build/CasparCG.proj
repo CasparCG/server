@@ -1,0 +1,115 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<PropertyGroup>
+		<RootDir>$(teamcity_build_checkoutDir)</RootDir>
+		<LargeFilesDir>c:\BuildDownloads</LargeFilesDir>
+	</PropertyGroup>
+
+	<UsingTask TaskName="Split" AssemblyFile="$(RootDir)/build/Palaso.BuildTasks.dll" />
+	<UsingTask TaskName="FileUpdate" AssemblyFile="$(RootDir)/build/Palaso.BuildTasks.dll" />
+	<UsingTask TaskName="Zip" AssemblyFile="$(RootDir)/build/MSBuild.ExtensionPack.dll" />
+
+	<!-- Note, after some thought, we've decided this is the best place to keep the version number (not on TeamCity, not in the assemblies).     -->
+	<PropertyGroup>
+		<VersionMajor>2</VersionMajor>
+		<VersionMinor>0</VersionMinor>
+	</PropertyGroup>
+	<Target Name="VersionNumbers">
+		<Message Text="BUILD_NUMBER: $(BUILD_NUMBER)" Importance="high"/>
+
+		<Split Input="$(BUILD_NUMBER)" Delimiter="." OutputSubString="2">
+			<Output TaskParameter="ReturnValue" PropertyName="VersionAuto" />
+		</Split>
+
+		<Message Text="Version Major: $(VersionMajor)" Importance="high"/>
+		<Message Text="Version Minor: $(VersionMinor)" Importance="high"/>
+		<Message Text="Version Auto : $(VersionAuto)" Importance="high"/>
+
+		<CreateProperty Value="$(VersionMajor).$(VersionMinor).$(VersionAuto)">
+			<Output PropertyName="Version" TaskParameter="Value"/>
+		</CreateProperty>
+
+		<Message Text="Version: $(Version)" Importance="high"/>
+	</Target>
+  
+  
+	<ItemGroup>
+		<VersionTemplateFile Include="$(RootDir)/version.tmpl"/>
+		<VersionFile Include="$(RootDir)/version.h"/>
+	</ItemGroup>
+	<Target Name="SetVersion" DependsOnTargets="VersionNumbers">
+		<Copy SourceFiles="@(VersionTemplateFile)" DestinationFiles="@(VersionFile)" />
+		<FileUpdate 
+			File="$(RootDir)\version.h"
+			Regex='VERSION_MAJOR'
+			ReplacementText ="$(VersionMajor)" />
+		<FileUpdate 
+			File="$(RootDir)\version.h"
+			Regex='VERSION_MINOR'
+			ReplacementText ="$(VersionMinor)" />
+		<FileUpdate 
+			File="$(RootDir)\version.h"
+			Regex='VERSION_AUTO'
+			ReplacementText ="$(VersionAuto)" />
+		
+	</Target>
+
+	<Target Name="Dependencies" DependsOnTargets="">
+		<Zip
+			Condition="!Exists('$(RootDir)/dependencies')" 
+			TaskAction="Extract" 
+			ExtractPath="$(RootDir)" 
+			ZipFileName="$(LargeFilesDir)/casparcg-dependencies.zip" />
+	</Target>
+	
+	<Target Name="Build" DependsOnTargets="SetVersion;Dependencies">
+		<MSBuild
+			Projects="$(RootDir)/casparcg.sln"
+			Targets="Rebuild"
+			Properties="Configuration=Release" />
+		<Message Text="Build Complete"/>
+	</Target>
+	
+	<Target Name="CleanInstaller">
+		<ItemGroup>
+			<InstallerBinFiles
+				Include="$(RootDir)/bin/installer/*;$(RootDir)/installer/output/*;"
+				Exclude="" />
+		</ItemGroup>
+		<Delete Files="@(InstallerBinFiles)" TreatErrorsAsWarnings="false" />
+	</Target>
+	
+	<Target Name="Installer" DependsOnTargets="VersionNumbers; Build ">
+
+		<CallTarget Targets="CleanInstaller" />
+	
+		<!-- copy it so we aren't modifying the original, which then is a pain on dev machines -->
+		<Copy
+			SourceFiles="$(RootDir)\installer\setup.iss"
+			DestinationFiles="$(RootDir)\installer\setup-tmp.iss"
+		/>
+
+		<FileUpdate
+			File="$(RootDir)\installer\setup-tmp.iss"
+			Regex='#define MyAppVersion.*'
+			ReplacementText = '#define MyAppVersion "$(Version)"' />
+
+		<Message Text="Making Installer Version: $(Version)" Importance="high"  />
+
+		<Exec Command='"C:\Program Files (x86)\Inno Setup 5\ISCC.exe" ..\installer\setup-tmp.iss' />
+
+		<!-- remove the setup-tmp file -->
+		<Delete Files="$(RootDir)\installer\setup-tmp.iss" TreatErrorsAsWarnings="false" />
+
+		<!-- remove an existing one with the same name, if necessary -->
+		<Delete Files="$(RootDir)\bin\installer\CasparCGSetup.$(Version).exe" TreatErrorsAsWarnings="false" />
+		<Copy
+			SourceFiles="$(RootDir)\installer\output\CasparCGSetup.exe"
+			DestinationFiles="$(RootDir)\bin\installer\CasparCGSetup.$(Version).exe"
+		/>
+
+		<!-- remove the installer which has no version number (wouldn't need this if the copy above was a move, instead) -->
+		<Delete Files="$(RootDir)\installer\output\$(ApplicationName)Installer.exe" TreatErrorsAsWarnings="false" />
+
+	</Target>
+
+</Project>

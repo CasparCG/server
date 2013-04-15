@@ -240,7 +240,7 @@ copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
       </Command>
     </PreLinkEvent>
     <Link>
-      <AdditionalDependencies>sfml-system.lib;sfml-audio.lib;sfml-window.lib;sfml-graphics.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;tbb.lib;glew32.lib;zdll.lib</AdditionalDependencies>
+      <AdditionalDependencies>sfml-system.lib;sfml-audio.lib;sfml-window.lib;sfml-graphics.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avdevice.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;tbb.lib;glew32.lib;zdll.lib</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -302,7 +302,7 @@ copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
       </Command>
     </PreLinkEvent>
     <Link>
-      <AdditionalDependencies>sfml-system.lib;sfml-audio.lib;sfml-window.lib;sfml-graphics.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;tbb.lib;glew32.lib;zdll.lib</AdditionalDependencies>
+      <AdditionalDependencies>sfml-system.lib;sfml-audio.lib;sfml-window.lib;sfml-graphics.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avdevice.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;tbb.lib;glew32.lib;zdll.lib</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -363,7 +363,7 @@ copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
       </Command>
     </PreLinkEvent>
     <Link>
-      <AdditionalDependencies>sfml-system.lib;sfml-audio.lib;sfml-window.lib;sfml-graphics.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;tbb.lib;glew32.lib;zdll.lib</AdditionalDependencies>
+      <AdditionalDependencies>sfml-system.lib;sfml-audio.lib;sfml-window.lib;sfml-graphics.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avdevice.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;tbb.lib;glew32.lib;zdll.lib</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
