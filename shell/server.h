@@ -24,6 +24,8 @@
 
 #include <common/memory/safe_ptr.h>
 
+#include <core/monitor/monitor.h>
+
 #include <boost/noncopyable.hpp>
 #include <boost/thread/future.hpp>
 
@@ -42,6 +44,9 @@ public:
 	server(boost::promise<bool>& shutdown_server_now);
 	const std::vector<safe_ptr<core::video_channel>> get_channels() const;
 	std::shared_ptr<core::thumbnail_generator> get_thumbnail_generator() const;
+
+	core::monitor::source& monitor_output();
+
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

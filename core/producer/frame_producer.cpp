@@ -26,7 +26,6 @@
 #include "frame/frame_transform.h"
 
 #include "color/color_producer.h"
-#include "playlist/playlist_producer.h"
 #include "separated/separated_producer.h"
 
 #include <common/memory/safe_ptr.h>
@@ -105,6 +104,7 @@ public:
 	virtual safe_ptr<frame_producer>							get_following_producer() const override									{return (*producer_)->get_following_producer();}
 	virtual void												set_leading_producer(const safe_ptr<frame_producer>& producer) override	{(*producer_)->set_leading_producer(producer);}
 	virtual uint32_t											nb_frames() const override												{return (*producer_)->nb_frames();}
+	virtual monitor::source&									monitor_output()														{return (*producer_)->monitor_output();}
 };
 
 safe_ptr<core::frame_producer> create_producer_destroy_proxy(safe_ptr<core::frame_producer> producer)
@@ -139,6 +139,7 @@ public:
 	virtual safe_ptr<frame_producer>							get_following_producer() const override									{return (producer_)->get_following_producer();}
 	virtual void												set_leading_producer(const safe_ptr<frame_producer>& producer) override	{(producer_)->set_leading_producer(producer);}
 	virtual uint32_t											nb_frames() const override												{return (producer_)->nb_frames();}
+	virtual monitor::source&									monitor_output()														{return (producer_)->monitor_output();}
 };
 
 safe_ptr<core::frame_producer> create_producer_print_proxy(safe_ptr<core::frame_producer> producer)
@@ -170,6 +171,11 @@ public:
 		info.add(L"type", L"last-frame-producer");
 		return info;
 	}
+	virtual monitor::source& monitor_output()
+	{
+		static monitor::subject monitor_subject("");
+		return monitor_subject;
+	}
 };
 
 struct empty_frame_producer : public frame_producer
@@ -185,6 +191,12 @@ struct empty_frame_producer : public frame_producer
 		boost::property_tree::wptree info;
 		info.add(L"type", L"empty-producer");
 		return info;
+	}
+
+	virtual monitor::source& monitor_output()
+	{
+		static monitor::subject monitor_subject("");
+		return monitor_subject;
 	}
 };
 
@@ -253,10 +265,6 @@ safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>&
 
 	if(producer == frame_producer::empty())
 		producer = create_color_producer(my_frame_factory, upper_case_params, original_case_params);
-	
-	if(producer == frame_producer::empty())
-		producer = create_playlist_producer(my_frame_factory, upper_case_params, original_case_params);
-	
 	return producer;
 }
 

@@ -21,6 +21,8 @@
 
 #include "../../stdafx.h"
 
+#include "../../monitor/monitor.h"
+
 #include "separated_producer.h"
 
 #include <core/producer/frame/basic_frame.h>
@@ -31,6 +33,9 @@ namespace caspar { namespace core {
 
 struct separated_producer : public frame_producer
 {		
+	monitor::subject			monitor_subject_;
+	monitor::subject			key_monitor_subject_;
+
 	safe_ptr<frame_producer>	fill_producer_;
 	safe_ptr<frame_producer>	key_producer_;
 	safe_ptr<basic_frame>		fill_;
@@ -38,12 +43,18 @@ struct separated_producer : public frame_producer
 	safe_ptr<basic_frame>		last_frame_;
 		
 	explicit separated_producer(const safe_ptr<frame_producer>& fill, const safe_ptr<frame_producer>& key) 
-		: fill_producer_(fill)
+		: monitor_subject_("")
+		, key_monitor_subject_("/keyer")
+		, fill_producer_(fill)
 		, key_producer_(key)
 		, fill_(core::basic_frame::late())
 		, key_(core::basic_frame::late())
 		, last_frame_(core::basic_frame::empty())
 	{
+		key_monitor_subject_.link_target(&monitor_subject_);
+
+		key_producer_->monitor_output().link_target(&key_monitor_subject_);
+		fill_producer_->monitor_output().link_target(&monitor_subject_);
 	}
 
 	// frame_producer
@@ -115,6 +126,11 @@ struct separated_producer : public frame_producer
 		info.add_child(L"fill.producer",	fill_producer_->info());
 		info.add_child(L"key.producer",	key_producer_->info());
 		return info;
+	}
+
+	monitor::source& monitor_output()
+	{
+		return monitor_subject_;
 	}
 };
 

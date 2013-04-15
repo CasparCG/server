@@ -41,6 +41,7 @@ namespace caspar { namespace core {
 
 struct video_channel::implementation : boost::noncopyable
 {
+	video_channel&							self_;
 	const int								index_;
 	video_format_desc						format_desc_;
 	const safe_ptr<ogl_device>				ogl_;
@@ -49,21 +50,27 @@ struct video_channel::implementation : boost::noncopyable
 	const safe_ptr<caspar::core::output>	output_;
 	const safe_ptr<caspar::core::mixer>		mixer_;
 	const safe_ptr<caspar::core::stage>		stage_;
+
+	monitor::subject						monitor_subject_;
 	
 public:
-	implementation(int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl)  
-		: index_(index)
+	implementation(video_channel& self, int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl)  
+		: self_(self)
+		, index_(index)
 		, format_desc_(format_desc)
 		, ogl_(ogl)
 		, output_(new caspar::core::output(graph_, format_desc, index))
 		, mixer_(new caspar::core::mixer(graph_, output_, format_desc, ogl))
 		, stage_(new caspar::core::stage(graph_, mixer_, format_desc))	
+		, monitor_subject_("/channel/" + boost::lexical_cast<std::string>(index))
 	{
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 
 		for(int n = 0; n < std::max(1, env::properties().get(L"configuration.pipeline-tokens", 2)); ++n)
 			stage_->spawn_token();
+
+		stage_->monitor_output().link_target(&monitor_subject_);
 
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
 	}
@@ -116,7 +123,8 @@ public:
 	}
 };
 
-video_channel::video_channel(int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) : impl_(new implementation(index, format_desc, ogl)){}
+video_channel::video_channel(int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl) 
+	: impl_(new implementation(*this, index, format_desc, ogl)){}
 safe_ptr<stage> video_channel::stage() { return impl_->stage_;} 
 safe_ptr<mixer> video_channel::mixer() { return impl_->mixer_;} 
 safe_ptr<output> video_channel::output() { return impl_->output_;} 
@@ -124,5 +132,5 @@ video_format_desc video_channel::get_video_format_desc() const{return impl_->for
 void video_channel::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 boost::property_tree::wptree video_channel::info() const{return impl_->info();}
 int video_channel::index() const {return impl_->index_;}
-
+monitor::source& video_channel::monitor_output(){return impl_->monitor_subject_;}
 }}

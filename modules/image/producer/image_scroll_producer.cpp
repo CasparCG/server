@@ -28,6 +28,7 @@
 
 #include <core/video_format.h>
 
+#include <core/monitor/monitor.h>
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/frame_transform.h>
@@ -57,6 +58,7 @@ namespace caspar { namespace image {
 
 struct image_scroll_producer : public core::frame_producer
 {	
+	core::monitor::subject						monitor_subject_;
 	const std::wstring							filename_;
 	std::vector<safe_ptr<core::basic_frame>>	frames_;
 	core::video_format_desc						format_desc_;
@@ -380,6 +382,11 @@ struct image_scroll_producer : public core::frame_producer
 			auto length = (width_ + format_desc_.width * 2);
 			return static_cast<uint32_t>(length / std::abs(speed_));// + length % std::abs(delta_));
 		}
+	}
+
+	core::monitor::source& monitor_output()
+	{
+		return monitor_subject_;
 	}
 };
 

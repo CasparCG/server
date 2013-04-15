@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include "../monitor/monitor.h"
+
 #include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
@@ -36,12 +38,12 @@ class basic_frame;
 
 class layer : boost::noncopyable
 {
-public:
-	layer(); // nothrow
-	layer(layer&& other); // nothrow
-	layer& operator=(layer&& other); // nothrow
 	layer(const layer&);
 	layer& operator=(const layer&);
+public:
+	layer(int index = -1); // nothrow
+	layer(layer&& other); // nothrow
+	layer& operator=(layer&& other); // nothrow
 
 	void swap(layer& other); // nothrow 
 		
@@ -62,6 +64,8 @@ public:
 	safe_ptr<basic_frame> receive(int hints); // nothrow
 
 	boost::property_tree::wptree info() const;
+	
+	monitor::source& monitor_output();
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

@@ -38,6 +38,7 @@
 #include <common/memory/memclr.h>
 #include <common/utility/param.h>
 
+#include <core/monitor/monitor.h>
 #include <core/mixer/write_frame.h>
 #include <core/producer/frame/frame_transform.h>
 #include <core/producer/frame/frame_factory.h>
@@ -79,6 +80,7 @@ namespace caspar { namespace decklink {
 		
 class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 {	
+	core::monitor::subject										monitor_subject_;
 	safe_ptr<diagnostics::graph>								graph_;
 	boost::timer												tick_timer_;
 	boost::timer												frame_timer_;
@@ -272,6 +274,11 @@ public:
 	{
 		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"|" + format_desc_.name + L"]";
 	}
+
+	core::monitor::source& monitor_output()
+	{
+		return monitor_subject_;
+	}
 };
 	
 class decklink_producer_proxy : public core::frame_producer
@@ -319,6 +326,11 @@ public:
 		boost::property_tree::wptree info;
 		info.add(L"type", L"decklink-producer");
 		return info;
+	}
+
+	core::monitor::source& monitor_output()
+	{
+		return context_->monitor_output();
 	}
 };
 
