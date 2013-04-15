@@ -60,6 +60,8 @@ public:
 	std::wstring description(int layer);
 	std::wstring template_host_info();
 
+	core::monitor::source& monitor_output();
+
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
