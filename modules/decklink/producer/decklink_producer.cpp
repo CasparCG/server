@@ -36,8 +36,8 @@
 #include <common/exception/exceptions.h>
 #include <common/log/log.h>
 #include <common/memory/memclr.h>
-#include <common/utility/param.h>
 
+#include <core/parameters/parameters.h>
 #include <core/mixer/write_frame.h>
 #include <core/producer/frame/frame_transform.h>
 #include <core/producer/frame/frame_factory.h>
@@ -322,18 +322,18 @@ public:
 	}
 };
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, core::parameters const& params)
 {
 	if(params.empty() || !boost::iequals(params[0], "decklink"))
 		return core::frame_producer::empty();
 
-	auto device_index	= get_param(L"DEVICE", params, -1);
+	auto device_index	= params.get(L"DEVICE", -1);
 	if(device_index == -1)
 		device_index = boost::lexical_cast<int>(params.at(1));
-	auto filter_str		= get_param(L"FILTER", params); 	
-	auto length			= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max()); 	
-	auto buffer_depth	= get_param(L"BUFFER", params, 2); 	
-	auto format_desc	= core::video_format_desc::get(get_param(L"FORMAT", params, L"INVALID"));
+	auto filter_str		= params.get(L"FILTER"); 	
+	auto length			= params.get(L"LENGTH", std::numeric_limits<uint32_t>::max()); 	
+	auto buffer_depth	= params.get(L"BUFFER", 2); 	
+	auto format_desc	= core::video_format_desc::get(params.get(L"FORMAT", L"INVALID"));
 	
 	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
 	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");

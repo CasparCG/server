@@ -25,6 +25,7 @@
 
 #include <core/video_format.h>
 
+#include <core/parameters/parameters.h>
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_factory.h>
 #include <core/mixer/write_frame.h>
@@ -90,7 +91,7 @@ struct image_producer : public core::frame_producer
 	}
 };
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, core::parameters const& params)
 {
 	static const std::vector<std::wstring> extensions = list_of(L"png")(L"tga")(L"bmp")(L"jpg")(L"jpeg")(L"gif")(L"tiff")(L"tif")(L"jp2")(L"jpx")(L"j2k")(L"j2c");
 	std::wstring filename = env::media_folder() + L"\\" + params[0];

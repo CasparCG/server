@@ -27,6 +27,7 @@
 #include "consumer/decklink_consumer.h"
 #include "producer/decklink_producer.h"
 
+#include <core/parameters/parameters.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/producer/frame_producer.h>
 
