@@ -507,8 +507,21 @@ bool MixerCommand::DoExecute()
 		{
 			auto blend_str = _parameters.at(1);								
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->set_blend_mode(GetLayerIndex(), get_blend_mode(blend_str));	
+			blend_mode::type && blend = get_blend_mode(blend_str);
+			GetChannel()->mixer()->set_blend_mode(GetLayerIndex(), blend);	
 		}
+        else if(_parameters[0] == L"CHROMA")
+        {
+            int layer = GetLayerIndex();
+            chroma  chroma;
+            chroma.key          = get_chroma_mode(_parameters[1]);
+            chroma.threshold    = boost::lexical_cast<double>(_parameters[2]);
+            chroma.softness     = boost::lexical_cast<double>(_parameters[3]);
+            chroma.spill        = _parameters.size() > 4 ? boost::lexical_cast<double>(_parameters[4]) : 0.0f;
+            chroma.blur         = _parameters.size() > 5 ? boost::lexical_cast<double>(_parameters[5]) : 0.0f;
+            chroma.show_mask    = _parameters.size() > 6 ? bool(boost::lexical_cast<int>(_parameters[6])) : false;
+            GetChannel()->mixer()->set_chroma(GetLayerIndex(), chroma);
+        }
 		else if(_parameters[0] == L"BRIGHTNESS")
 		{
 			auto value = boost::lexical_cast<double>(_parameters.at(1));
