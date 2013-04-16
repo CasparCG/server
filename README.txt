@@ -34,7 +34,7 @@ INSTALLATION
 
 1. Check that your system meets the requirements.
 
-2. Unzip and place the CasparCG Server 2.0.3 folder anywhere you like.
+2. Unzip and place the "CasparCG Server 2.0.3" folder anywhere you like.
 
 3. Install "Microsoft Visual C++ 2010 Redistributable Package" from
    http://www.microsoft.com/download/en/details.aspx?id=5555
@@ -42,15 +42,16 @@ INSTALLATION
 4. Install "Flash Player 10.3.183.14" from the "Flash Player Installation"
    folder.
 
-5. Make sure you turn off Windows' Aero Theme as it interferes with 
-   CasparCG Server's OpenGL features!
+5. Make sure you turn off Windows' "Aero Theme" and ClearTyper as they can interfere 
+   with CasparCG Server's OpenGL features!
 
 6. Configure the server settings in the "casparcg.config" text file.
 
 7. Start the "CasparCG.exe" program.
 
 8. Connect to the server from a client, such as the included CasparCG 2.0 Demo
-   Client (requires Adobe AIR.)
+   Client (requires Adobe AIR) or the CasparCG Client 2.0 (available as a separate
+   download.)
 
 
 DOCUMENTATION
@@ -105,7 +106,7 @@ Andreas Jeansson
 Peter   Karlsson
 Jeff    Lafforgue
 Andy    Mace
-Robert 	Nagy
+Robert  Nagy
 Helge   Norberg
 Thomas  R. Kaltz III
 Olle    Soprani
