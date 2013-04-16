@@ -211,12 +211,12 @@ public:
 				audio_buffer = std::make_shared<core::audio_buffer>(audio_data, audio_data + sample_frame_count*format_desc_.audio_channels);
 			}
 			else			
-				audio_buffer = std::make_shared<core::audio_buffer>(audio_cadence_.front(), 0);
+				audio_buffer = std::make_shared<core::audio_buffer>(audio_cadence_.front() * format_desc_.audio_channels, 0);
 			
 			// Note: Uses 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
 			// This cadence fills the audio mixer most optimally.
 
-			sync_buffer_.push_back(audio_buffer->size());		
+			sync_buffer_.push_back(audio_buffer->size() / format_desc_.audio_channels);		
 			if(!boost::range::equal(sync_buffer_, audio_cadence_))
 			{
 				CASPAR_LOG(trace) << print() << L" Syncing audio.";
