@@ -168,20 +168,20 @@ public:
 		audio_streams_ = std::move(next_audio_streams);
 		
 		if(audio_streams_.empty())		
-			audio_streams_[nullptr].audio_data = audio_buffer_ps(audio_cadence_.front(), 0.0f);
+			audio_streams_[nullptr].audio_data = audio_buffer_ps(audio_size(audio_cadence_.front()), 0.0f);
 				
 		{ // sanity check
 
 			auto nb_invalid_streams = boost::count_if(audio_streams_ | boost::adaptors::map_values, [&](const audio_stream& x)
 			{
-				return x.audio_data.size() < audio_cadence_.front();
+				return x.audio_data.size() < audio_size(audio_cadence_.front());
 			});
 
 			if(nb_invalid_streams > 0)		
 				CASPAR_LOG(trace) << "[audio_mixer] Incorrect frame audio cadence detected.";			
 		}
 
-		std::vector<float> result_ps(audio_cadence_.front(), 0.0f);
+		std::vector<float> result_ps(audio_size(audio_cadence_.front()), 0.0f);
 
 		BOOST_FOREACH(auto& stream, audio_streams_ | boost::adaptors::map_values)
 		{
@@ -208,6 +208,11 @@ public:
 		graph_->set_value("volume", static_cast<double>(std::abs(*max))/std::numeric_limits<int32_t>::max());
 
 		return result;
+	}
+
+	size_t audio_size(size_t num_samples) const
+	{
+		return num_samples * format_desc_.audio_channels;
 	}
 };
 
