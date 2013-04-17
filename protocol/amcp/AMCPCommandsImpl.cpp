@@ -1823,7 +1823,13 @@ bool SetCommand::DoExecute()
 
 bool KillCommand::DoExecute()
 {
-	GetShutdownServerNow().set_value(false); // False for not waiting until a key is pressed before terminating.
+	GetShutdownServerNow().set_value(false); // False for not attempting to restart.
+	return true;
+}
+
+bool RestartCommand::DoExecute()
+{
+	GetShutdownServerNow().set_value(true); // True for attempting to restart
 	return true;
 }
 

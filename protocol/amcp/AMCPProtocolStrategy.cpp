@@ -338,6 +338,7 @@ AMCPCommandPtr AMCPProtocolStrategy::CommandFactory(const std::wstring& str)
 	//	result = AMCPCommandPtr(new MonitorCommand());
 	//}
 	else if(s == TEXT("KILL"))			return std::make_shared<KillCommand>();
+	else if(s == TEXT("RESTART"))		return std::make_shared<RestartCommand>();
 	return nullptr;
 }
 

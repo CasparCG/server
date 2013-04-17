@@ -65,6 +65,7 @@
       <SubType>Designer</SubType>
     </None>
     <None Include="CasparCG.ico" />
+    <None Include="casparcg_auto_restart.bat" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="server.h" />
@@ -205,7 +206,8 @@ copy "$(SolutionDir)dependencies\tbb\bin\ia32\vc10\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\zlib\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\SFML-1.6\lib\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\SFML-1.6\extlibs\bin\*.dll" "$(OutDir)"
-copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
+copy "$(ProjectDir)casparcg.config" "$(OutDir)"
+copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -267,7 +269,8 @@ copy "$(SolutionDir)dependencies\tbb\bin\ia32\vc10\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\zlib\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\SFML-1.6\lib\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\SFML-1.6\extlibs\bin\*.dll" "$(OutDir)"
-copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
+copy "$(ProjectDir)casparcg.config" "$(OutDir)"
+copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">
@@ -328,7 +331,8 @@ copy "$(SolutionDir)dependencies\tbb\bin\ia32\vc10\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\zlib\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\SFML-1.6\lib\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\SFML-1.6\extlibs\bin\*.dll" "$(OutDir)"
-copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
+copy "$(ProjectDir)casparcg.config" "$(OutDir)"
+copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">
@@ -389,7 +393,8 @@ copy "$(SolutionDir)dependencies\tbb\bin\ia32\vc10\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\zlib\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\SFML-1.6\lib\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\SFML-1.6\extlibs\bin\*.dll" "$(OutDir)"
-copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
+copy "$(ProjectDir)casparcg.config" "$(OutDir)"
+copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
