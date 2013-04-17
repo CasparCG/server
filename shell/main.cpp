@@ -232,6 +232,7 @@ int main(int argc, wchar_t* argv[])
 		}
 	} tbb_thread_installer;
 
+	bool restart = false;
 	tbb::task_scheduler_init init;
 	
 	try 
@@ -260,7 +261,8 @@ int main(int argc, wchar_t* argv[])
 		boost::property_tree::xml_writer_settings<wchar_t> w(' ', 3);
 		boost::property_tree::write_xml(str, caspar::env::properties(), w);
 		CASPAR_LOG(info) << L"casparcg.config:\n-----------------------------------------\n" << str.str().c_str() << L"-----------------------------------------";
-		bool wait_for_keypress;
+		tbb::atomic<bool> wait_for_keypress;
+		wait_for_keypress = false;
 
 		{
 			boost::promise<bool> shutdown_server_now;
@@ -268,11 +270,10 @@ int main(int argc, wchar_t* argv[])
 
 			// Create server object which initializes channels, protocols and controllers.
 			caspar::server caspar_server(shutdown_server_now);
-			
 
 			// Use separate thread for the blocking console input, will be terminated 
 			// anyway when the main thread terminates.
-			boost::thread stdin_thread([&caspar_server, &shutdown_server_now]
+			boost::thread stdin_thread([&caspar_server, &shutdown_server_now, &wait_for_keypress]
 			{
 				// Create a amcp parser for console commands.
 				caspar::protocol::amcp::AMCPProtocolStrategy amcp(
@@ -293,7 +294,8 @@ int main(int argc, wchar_t* argv[])
 
 					if(upper_cmd == L"EXIT" || upper_cmd == L"Q" || upper_cmd == L"QUIT" || upper_cmd == L"BYE")
 					{
-						shutdown_server_now.set_value(true); // True to wait for keypress
+						wait_for_keypress = true;
+						shutdown_server_now.set_value(false); // False to not restart server
 						break;
 					}
 				
@@ -358,7 +360,7 @@ int main(int argc, wchar_t* argv[])
 				}	
 			});
 			stdin_thread.detach();
-			wait_for_keypress = shutdown_server.get();
+			restart = shutdown_server.get();
 		}
 		Sleep(500);
 		CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
@@ -381,5 +383,5 @@ int main(int argc, wchar_t* argv[])
 		Sleep(4000);
 	}	
 	
-	return 0;
+	return restart ? 5 : 0;
 }
