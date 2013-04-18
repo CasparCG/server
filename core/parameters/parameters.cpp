@@ -110,11 +110,11 @@ std::wstring parameters::at_original(size_t i) const
 
 void parameters::set(size_t index, std::wstring const& value)
 {
-	if (index > params_.size())
+	if (index < params_.size())
 	{
 		params_[index] = value;
 	}
-	if (index > params_original_.size())
+	if (index < params_original_.size())
 	{
 		params_original_[index] = value;
 	}
