@@ -25,7 +25,7 @@
 
 #include "../util/util.h"
 #include "../util/flv.h"
-#include "../util/ffmpeg_producer_params.h"
+#include "../../ffmpeg_producer_params.h"
 #include "../../ffmpeg_error.h"
 
 #include <core/video_format.h>

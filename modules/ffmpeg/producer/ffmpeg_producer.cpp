@@ -23,6 +23,8 @@
 
 #include "ffmpeg_producer.h"
 
+#include "../ffmpeg_producer_params.h"
+
 #include "../ffmpeg_error.h"
 
 #include "filter/filter.h"
@@ -30,7 +32,6 @@
 #include "muxer/frame_muxer.h"
 #include "audio/audio_decoder.h"
 #include "video/video_decoder.h"
-#include "util/ffmpeg_producer_params.h"
 #include "util/util.h"
 
 #include <common/env.h>
