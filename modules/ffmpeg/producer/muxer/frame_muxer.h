@@ -45,12 +45,15 @@ struct frame_factory;
 
 namespace ffmpeg {
 
+struct PacketFrame;
+
 class frame_muxer : boost::noncopyable
 {
 public:
 	frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter = L"");
 	
 	void push(const std::shared_ptr<AVFrame>& video_frame, int hints = 0);
+	void push(const std::shared_ptr<PacketFrame>& packet_frame, int hints = 0);
 	void push(const std::shared_ptr<core::audio_buffer>& audio_samples);
 	
 	bool video_ready() const;

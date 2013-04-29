@@ -84,7 +84,7 @@ public:
 			packets_.push(make_safe_ptr(packet));
 	}
 
-	std::shared_ptr<AVFrame> poll()
+	std::shared_ptr<PacketFrame> poll()
 	{		
 		if(packets_.empty())
 			return nullptr;
@@ -99,17 +99,17 @@ public:
 				auto video = decode(*packet);
 				if(video)
 				{
-					return video;
+					return PacketFrame::create(packet, video);
 				}
 			}
 					
 			file_frame_number_ = static_cast<size_t>(packet->pos);
 			avcodec_flush_buffers(codec_context_.get());
-			return flush_video();	
+			return PacketFrame::create(nullptr, flush_video());	
 		}
 			
 		packets_.pop();
-		return decode(*packet);
+		return PacketFrame::create(packet, decode(*packet));
 	}
 
 	std::shared_ptr<AVFrame> decode(AVPacket& pkt)
@@ -154,7 +154,7 @@ public:
 
 video_decoder::video_decoder(const safe_ptr<AVFormatContext>& context) : impl_(new implementation(context)){}
 void video_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
-std::shared_ptr<AVFrame> video_decoder::poll(){return impl_->poll();}
+std::shared_ptr<PacketFrame> video_decoder::poll(){return impl_->poll();}
 bool video_decoder::ready() const{return impl_->ready();}
 size_t video_decoder::width() const{return impl_->width_;}
 size_t video_decoder::height() const{return impl_->height_;}
