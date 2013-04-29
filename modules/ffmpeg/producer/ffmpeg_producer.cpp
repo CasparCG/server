@@ -328,7 +328,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 	ffmpeg_params->resource_name = params.at_original(0);
 
 	auto tokens = core::parameters::protocol_split(ffmpeg_params->resource_name);
-	if (tokens[0] == L"device")
+	if (tokens[0] == L"dshow")
 	{
 		ffmpeg_params->resource_type = FFMPEG_DEVICE;
 		ffmpeg_params->resource_name = tokens[1];
