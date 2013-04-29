@@ -323,35 +323,18 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 {
 	auto ffmpeg_params = std::shared_ptr<ffmpeg_producer_params>(new ffmpeg_producer_params());
 
-	// Determine the resource type from the parameters, or infer from the resource_name
-	auto resource_type_str = params.at(0);
-	if (resource_type_str == L"FILE")
-	{
-		ffmpeg_params->resource_type = FFMPEG_FILE;
-		ffmpeg_params->resource_name = params.at_original(1);
-	} else if (resource_type_str == L"DEVICE")
+	// Infer the resource type from the resource_name
+	ffmpeg_params->resource_type = FFMPEG_FILE;
+	ffmpeg_params->resource_name = params.at_original(0);
+
+	auto tokens = core::parameters::protocol_split(ffmpeg_params->resource_name);
+	if (tokens[0] == L"device")
 	{
 		ffmpeg_params->resource_type = FFMPEG_DEVICE;
-		ffmpeg_params->resource_name = params.at_original(1);
-	} else if (resource_type_str == L"STREAM")
+		ffmpeg_params->resource_name = tokens[1];
+	} else if (tokens[0] == L"http" || tokens[0] == L"rtp" || tokens[0] == L"rtps")
 	{
 		ffmpeg_params->resource_type = FFMPEG_STREAM;
-		ffmpeg_params->resource_name = params.at_original(1);
-	} else
-	{
-		ffmpeg_params->resource_type = FFMPEG_FILE;
-		ffmpeg_params->resource_name = params.at_original(0);
-
-		// Infer the resource_type from the resource_name if the resource_name looks like a URI
-		auto tokens = core::parameters::protocol_split(ffmpeg_params->resource_name);
-		if (tokens[0] == L"device")
-		{
-			ffmpeg_params->resource_type = FFMPEG_DEVICE;
-			ffmpeg_params->resource_name = tokens[1];
-		} else if (tokens[0] == L"http" || tokens[0] == L"rtp" || tokens[0] == L"rtps")
-		{
-			ffmpeg_params->resource_type = FFMPEG_STREAM;
-		}
 	}
 
 	switch (ffmpeg_params->resource_type)
