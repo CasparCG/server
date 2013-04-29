@@ -38,30 +38,6 @@ namespace core {
 
 namespace ffmpeg {
 
-/*
-PacketFrame stores both the AVPacket and the AVFrame produced by the decoder.
-
-This is passed through to the frame muxer so that the AVPacket is not freed until after
-a call to write_frame.  Some codecs, such as the RAW_VIDEO codec, simply return the
-data from the AVPacket. Consequently, this data should not be freed until after it has
-been used by write_frame.
-*/
-struct PacketFrame
-{
-public:
-	PacketFrame(std::shared_ptr<AVPacket> const& p, std::shared_ptr<AVFrame> f) :
-		packet(p),
-		frame(f)
-	{}
-
-	static std::shared_ptr<PacketFrame> create(std::shared_ptr<AVPacket> const& p, std::shared_ptr<AVFrame> const& f) {
-		return std::shared_ptr<PacketFrame>(new PacketFrame(p, f));
-	}
-
-	std::shared_ptr<AVPacket> packet;
-	std::shared_ptr<AVFrame> frame;
-};
-
 class video_decoder : boost::noncopyable
 {
 public:
@@ -69,7 +45,7 @@ public:
 	
 	bool ready() const;
 	void push(const std::shared_ptr<AVPacket>& packet);
-	std::shared_ptr<PacketFrame> poll();
+	std::shared_ptr<AVFrame> poll();
 	
 	size_t	 width()		const;
 	size_t	 height()	const;

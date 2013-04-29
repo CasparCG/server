@@ -24,7 +24,6 @@
 #include "frame_muxer.h"
 
 #include "../filter/filter.h"
-#include "../video/video_decoder.h"
 #include "../util/util.h"
 
 #include <core/producer/frame_producer.h>
@@ -103,17 +102,8 @@ struct frame_muxer::implementation : boost::noncopyable
 		boost::range::rotate(audio_cadence_, std::end(audio_cadence_)-1);
 	}
 
-	void push(const std::shared_ptr<PacketFrame>& packet_frame, int hints)
-	{
-		if (!packet_frame)
-			return;
-
-		auto video_frame = packet_frame->frame;
-		push(video_frame, hints);
-	}
-
 	void push(const std::shared_ptr<AVFrame>& video_frame, int hints)
-	{
+	{		
 		if(!video_frame)
 			return;
 		
@@ -386,7 +376,6 @@ struct frame_muxer::implementation : boost::noncopyable
 frame_muxer::frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter)
 	: impl_(new implementation(in_fps, frame_factory, filter)){}
 void frame_muxer::push(const std::shared_ptr<AVFrame>& video_frame, int hints){impl_->push(video_frame, hints);}
-void frame_muxer::push(const std::shared_ptr<PacketFrame>& packet_frame, int hints){impl_->push(packet_frame, hints);}
 void frame_muxer::push(const std::shared_ptr<core::audio_buffer>& audio_samples){return impl_->push(audio_samples);}
 std::shared_ptr<basic_frame> frame_muxer::poll(){return impl_->poll();}
 uint32_t frame_muxer::calc_nb_frames(uint32_t nb_frames) const {return impl_->calc_nb_frames(nb_frames);}

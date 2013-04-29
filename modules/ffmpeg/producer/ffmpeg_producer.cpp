@@ -276,7 +276,7 @@ public:
 				audio_decoder_->push(pkt);
 		}
 		
-		std::shared_ptr<PacketFrame>		video;
+		std::shared_ptr<AVFrame>			video;
 		std::shared_ptr<core::audio_buffer> audio;
 
 		tbb::parallel_invoke(
@@ -296,7 +296,7 @@ public:
 
 		if(!audio_decoder_)
 		{
-			if(video && video->frame == flush_video())
+			if(video == flush_video())
 				muxer_->push(flush_audio());
 			else if(!muxer_->audio_ready())
 				muxer_->push(empty_audio());
@@ -305,9 +305,9 @@ public:
 		if(!video_decoder_)
 		{
 			if(audio == flush_audio())
-				muxer_->push(PacketFrame::create(nullptr, flush_video()), 0);
+				muxer_->push(flush_video(), 0);
 			else if(!muxer_->video_ready())
-				muxer_->push(PacketFrame::create(nullptr, empty_video()), 0);
+				muxer_->push(empty_video(), 0);
 		}
 		
 		size_t file_frame_number = 0;
