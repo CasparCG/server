@@ -36,6 +36,7 @@
 #include "producer/frame_producer.h"
 #include "consumer/frame_consumer.h"
 #include "mixer/mixer.h"
+#include "mixer/audio/audio_util.h"
 #include "video_format.h"
 #include "producer/frame/basic_frame.h"
 #include "producer/frame/frame_transform.h"
@@ -120,7 +121,12 @@ public:
 		, ogl_(ogl)
 		, format_desc_(render_video_mode)
 		, output_(new thumbnail_output(generate_delay_millis))
-		, mixer_(new mixer(graph_, output_, format_desc_, ogl))
+		, mixer_(new mixer(
+				graph_,
+				output_,
+				format_desc_,
+				ogl,
+				default_channel_layout_repository().get_by_name(L"STEREO")))
 		, thumbnail_creator_(thumbnail_creator)
 		, monitor_(monitor_factory.create(
 				media_path,

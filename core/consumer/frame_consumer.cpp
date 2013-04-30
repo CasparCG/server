@@ -94,7 +94,7 @@ public:
 
 		boost::unique_future<bool> result = caspar::wrap_as_future(true);
 		
-		if(boost::range::equal(sync_buffer_, audio_cadence_) && audio_cadence_.front() * format_desc_.audio_channels == static_cast<size_t>(frame->audio_data().size()))
+		if(boost::range::equal(sync_buffer_, audio_cadence_) && audio_cadence_.front() * frame->num_channels() == static_cast<size_t>(frame->audio_data().size()))
 		{	
 			// Audio sent so far is in sync, now we can send the next chunk.
 			result = consumer_->send(frame);
@@ -103,7 +103,7 @@ public:
 		else
 			CASPAR_LOG(trace) << print() << L" Syncing audio.";
 
-		sync_buffer_.push_back(static_cast<size_t>(frame->audio_data().size() / format_desc_.audio_channels));
+		sync_buffer_.push_back(static_cast<size_t>(frame->audio_data().size() / frame->num_channels()));
 		
 		return std::move(result);
 	}

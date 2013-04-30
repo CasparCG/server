@@ -26,6 +26,7 @@
 #include <core/mixer/write_frame.h>
 #include <core/producer/frame/frame_transform.h>
 #include <common/diagnostics/graph.h>
+#include "audio_util.h"
 
 #include <tbb/cache_aligned_allocator.h>
 
@@ -60,8 +61,8 @@ typedef std::vector<float, tbb::cache_aligned_allocator<float>> audio_buffer_ps;
 	
 struct audio_stream
 {
-	frame_transform		prev_transform;
-	audio_buffer_ps		audio_data;
+	frame_transform prev_transform;
+	audio_buffer_ps audio_data;
 };
 
 struct audio_mixer::implementation
@@ -72,6 +73,7 @@ struct audio_mixer::implementation
 	std::vector<audio_item>				items_;
 	std::vector<size_t>					audio_cadence_;
 	video_format_desc					format_desc_;
+	channel_layout						channel_layout_;
 	float								master_volume_;
 	float								previous_master_volume_;
 	
@@ -99,7 +101,34 @@ public:
 		audio_item item;
 		item.tag		= frame.tag();
 		item.transform	= transform_stack_.top();
-		item.audio_data = std::move(frame.audio_data()); // Note: We don't need to care about upper/lower since audio_data is removed/moved from the last field.
+
+		if (needs_rearranging(frame.get_channel_layout(), channel_layout_))
+		{
+			auto src_view = frame.get_multichannel_view();
+			
+			audio_buffer rearranged_buffer;
+			rearranged_buffer.resize(
+					src_view.num_samples() * channel_layout_.num_channels);
+
+			auto dst_view = make_multichannel_view<int32_t>(
+					rearranged_buffer.begin(),
+					rearranged_buffer.end(),
+					channel_layout_);
+
+			bool rearrange_success = rearrange_or_rearrange_and_mix(
+					src_view, dst_view, default_mix_config_repository());
+
+			if (!rearrange_success)
+			{
+				failed_rearrange(item.tag, src_view.channel_layout());
+			}
+
+			item.audio_data = std::move(rearranged_buffer);
+		}
+		else
+		{
+			item.audio_data = std::move(frame.audio_data()); // Note: We don't need to care about upper/lower since audio_data is removed/moved from the last field.
+		}
 		
 		items_.push_back(std::move(item));		
 	}
@@ -119,14 +148,15 @@ public:
 		master_volume_ = volume;
 	}
 	
-	audio_buffer mix(const video_format_desc& format_desc)
+	audio_buffer mix(const video_format_desc& format_desc, const channel_layout& layout)
 	{	
 		if(format_desc_ != format_desc)
 		{
 			audio_streams_.clear();
 			audio_cadence_ = format_desc.audio_cadence;
 			format_desc_ = format_desc;
-		}		
+			channel_layout_ = layout;
+		}
 		
 		std::map<const void*, audio_stream>	next_audio_streams;
 
@@ -150,11 +180,11 @@ public:
 			const float prev_volume = static_cast<float>(prev_transform.volume) * previous_master_volume_;
 			const float next_volume = static_cast<float>(next_transform.volume) * master_volume_;
 									
-			auto alpha = (next_volume-prev_volume)/static_cast<float>(item.audio_data.size()/format_desc.audio_channels);
+			auto alpha = (next_volume-prev_volume)/static_cast<float>(item.audio_data.size()/channel_layout_.num_channels);
 			
 			for(size_t n = 0; n < item.audio_data.size(); ++n)
 			{
-				auto sample_multiplier = (prev_volume + (n/format_desc_.audio_channels) * alpha);
+				auto sample_multiplier = (prev_volume + (n/channel_layout_.num_channels) * alpha);
 				next_audio.push_back(item.audio_data[n] * sample_multiplier);
 			}
 										
@@ -212,7 +242,20 @@ public:
 
 	size_t audio_size(size_t num_samples) const
 	{
-		return num_samples * format_desc_.audio_channels;
+		return num_samples * channel_layout_.num_channels;
+	}
+
+	void failed_rearrange(const void* tag, const channel_layout& layout)
+	{
+		if (audio_streams_.find(tag) != audio_streams_.end())
+			return; // We don't want to flood the logs.
+
+		CASPAR_LOG(warning)
+				<< L"[audio_mixer] Could not satisfactory down/upmix from " 
+				<< layout.name << L" to " << channel_layout_.name 
+				<< L" because no mix config was found for " 
+				<< layout.layout_type << L" => " << channel_layout_.layout_type 
+				<< L". This might cause audio to be lost.";
 	}
 };
 
@@ -221,6 +264,6 @@ void audio_mixer::begin(core::basic_frame& frame){impl_->begin(frame);}
 void audio_mixer::visit(core::write_frame& frame){impl_->visit(frame);}
 void audio_mixer::end(){impl_->end();}
 void audio_mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
-audio_buffer audio_mixer::operator()(const video_format_desc& format_desc){return impl_->mix(format_desc);}
+audio_buffer audio_mixer::operator()(const video_format_desc& format_desc, const channel_layout& layout){return impl_->mix(format_desc, layout);}
 
 }}

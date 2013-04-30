@@ -40,6 +40,7 @@
 
 #include <core/monitor/monitor.h>
 #include <core/mixer/write_frame.h>
+#include <core/mixer/audio/audio_util.h>
 #include <core/producer/frame/frame_transform.h>
 #include <core/producer/frame/frame_factory.h>
 
@@ -103,10 +104,18 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 
 	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>>	frame_buffer_;
 
-	std::exception_ptr											exception_;		
+	std::exception_ptr											exception_;	
+	int															num_input_channels_;
+	core::channel_layout										audio_channel_layout_;
 
 public:
-	decklink_producer(const core::video_format_desc& format_desc, size_t device_index, const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filter, std::size_t buffer_depth)
+	decklink_producer(
+			const core::video_format_desc& format_desc,
+			const core::channel_layout& audio_channel_layout,
+			size_t device_index,
+			const safe_ptr<core::frame_factory>& frame_factory,
+			const std::wstring& filter,
+			std::size_t buffer_depth)
 		: decklink_(get_device(device_index))
 		, input_(decklink_)
 		, attributes_(decklink_)
@@ -115,12 +124,20 @@ public:
 		, filter_(filter)
 		, format_desc_(format_desc)
 		, audio_cadence_(format_desc.audio_cadence)
-		, muxer_(format_desc.fps, frame_factory, false, filter)
+		, muxer_(format_desc.fps, frame_factory, false, audio_channel_layout, filter)
 		, sync_buffer_(format_desc.audio_cadence.size())
 		, frame_factory_(frame_factory)
+		, audio_channel_layout_(audio_channel_layout)
 	{		
 		hints_ = 0;
 		frame_buffer_.set_capacity(buffer_depth);
+
+		if (audio_channel_layout.num_channels <= 2)
+			num_input_channels_ = 2;
+		else if (audio_channel_layout.num_channels <= 8)
+			num_input_channels_ = 8;
+		else
+			num_input_channels_ = 16;
 		
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
@@ -138,7 +155,7 @@ public:
 									<< msg_info(narrow(print()) + " Could not enable video input.")
 									<< boost::errinfo_api_function("EnableVideoInput"));
 
-		if(FAILED(input_->EnableAudioInput(bmdAudioSampleRate48kHz, bmdAudioSampleType32bitInteger, format_desc_.audio_channels))) 
+		if(FAILED(input_->EnableAudioInput(bmdAudioSampleRate48kHz, bmdAudioSampleType32bitInteger, num_input_channels_))) 
 			BOOST_THROW_EXCEPTION(caspar_exception() 
 									<< msg_info(narrow(print()) + " Could not enable audio input.")
 									<< boost::errinfo_api_function("EnableAudioInput"));
@@ -208,15 +225,37 @@ public:
 			{
 				auto sample_frame_count = audio->GetSampleFrameCount();
 				auto audio_data = reinterpret_cast<int32_t*>(bytes);
-				audio_buffer = std::make_shared<core::audio_buffer>(audio_data, audio_data + sample_frame_count*format_desc_.audio_channels);
+
+				if (num_input_channels_ == audio_channel_layout_.num_channels)
+				{
+					audio_buffer = std::make_shared<core::audio_buffer>(
+							audio_data, 
+							audio_data + sample_frame_count * num_input_channels_);
+				}
+				else
+				{
+					audio_buffer = std::make_shared<core::audio_buffer>();
+					audio_buffer->resize(sample_frame_count * audio_channel_layout_.num_channels, 0);
+					auto src_view = core::make_multichannel_view<int32_t>(
+							audio_data, 
+							audio_data + sample_frame_count * num_input_channels_, 
+							audio_channel_layout_, 
+							num_input_channels_);
+					auto dst_view = core::make_multichannel_view<int32_t>(
+							audio_buffer->begin(),
+							audio_buffer->end(),
+							audio_channel_layout_);
+
+					core::rearrange(src_view, dst_view);
+				}
 			}
 			else			
-				audio_buffer = std::make_shared<core::audio_buffer>(audio_cadence_.front() * format_desc_.audio_channels, 0);
+				audio_buffer = std::make_shared<core::audio_buffer>(audio_cadence_.front() * audio_channel_layout_.num_channels, 0);
 			
 			// Note: Uses 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
 			// This cadence fills the audio mixer most optimally.
 
-			sync_buffer_.push_back(audio_buffer->size() / format_desc_.audio_channels);		
+			sync_buffer_.push_back(audio_buffer->size() / audio_channel_layout_.num_channels);		
 			if(!boost::range::equal(sync_buffer_, audio_cadence_))
 			{
 				CASPAR_LOG(trace) << print() << L" Syncing audio.";
@@ -288,17 +327,25 @@ class decklink_producer_proxy : public core::frame_producer
 	const uint32_t					length_;
 public:
 
-	explicit decklink_producer_proxy(const safe_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, size_t device_index, const std::wstring& filter_str, uint32_t length, std::size_t buffer_depth)
+	explicit decklink_producer_proxy(
+			const safe_ptr<core::frame_factory>& frame_factory,
+			const core::video_format_desc& format_desc,
+			const core::channel_layout& audio_channel_layout,
+			size_t device_index,
+			const std::wstring& filter_str,
+			uint32_t length,
+			std::size_t buffer_depth)
 		: context_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
 		, last_frame_(core::basic_frame::empty())
 		, length_(length)
 	{
-		context_.reset([&]{return new decklink_producer(format_desc, device_index, frame_factory, filter_str, buffer_depth);}); 
+		context_.reset([&]{return new decklink_producer(format_desc, audio_channel_layout, device_index, frame_factory, filter_str, buffer_depth);}); 
 	}
 	
 	// frame_producer
 				
-	virtual safe_ptr<core::basic_frame> receive(int hints) override
+	virtual safe_ptr<core::basic_frame> receive(
+			int hints) override
 	{
 		auto frame = context_->get_frame(hints);
 		if(frame != core::basic_frame::late())
@@ -345,10 +392,13 @@ safe_ptr<core::frame_producer> create_producer(
 	auto device_index	= get_param(L"DEVICE", params, -1);
 	if(device_index == -1)
 		device_index = boost::lexical_cast<int>(params.at(1));
-	auto filter_str		= get_param(L"FILTER", params); 	
-	auto length			= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max()); 	
-	auto buffer_depth	= get_param(L"BUFFER", params, 2); 	
-	auto format_desc	= core::video_format_desc::get(get_param(L"FORMAT", params, L"INVALID"));
+	auto filter_str			= get_param(L"FILTER", params); 	
+	auto length				= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max()); 	
+	auto buffer_depth		= get_param(L"BUFFER", params, 2); 	
+	auto format_desc		= core::video_format_desc::get(get_param(L"FORMAT", params, L"INVALID"));
+	auto audio_layout		= core::create_custom_channel_layout(
+			get_param(L"CHANNEL_LAYOUT", params, L"STEREO"),
+			core::default_channel_layout_repository());
 	
 	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
 	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
@@ -358,7 +408,7 @@ safe_ptr<core::frame_producer> create_producer(
 			
 	return create_producer_print_proxy(
 		   create_producer_destroy_proxy(
-			make_safe<decklink_producer_proxy>(frame_factory, format_desc, device_index, filter_str, length, buffer_depth)));
+			make_safe<decklink_producer_proxy>(frame_factory, format_desc, audio_layout, device_index, filter_str, length, buffer_depth)));
 }
 
 }}

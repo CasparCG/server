@@ -38,13 +38,22 @@ struct read_frame::implementation : boost::noncopyable
 	safe_ptr<host_buffer>		image_data_;
 	tbb::mutex					mutex_;
 	audio_buffer				audio_data_;
+	channel_layout				audio_channel_layout_;
 
 public:
-	implementation(const safe_ptr<ogl_device>& ogl, size_t size, safe_ptr<host_buffer>&& image_data, audio_buffer&& audio_data) 
+	implementation(
+			const safe_ptr<ogl_device>& ogl,
+			size_t size,
+			safe_ptr<host_buffer>&& image_data,
+			audio_buffer&& audio_data,
+			const channel_layout& audio_channel_layout) 
 		: ogl_(ogl)
 		, size_(size)
 		, image_data_(std::move(image_data))
-		, audio_data_(std::move(audio_data)){}	
+		, audio_data_(std::move(audio_data))
+		, audio_channel_layout_(audio_channel_layout)
+	{
+	}	
 	
 	const boost::iterator_range<const uint8_t*> image_data()
 	{
@@ -67,8 +76,16 @@ public:
 	}
 };
 
-read_frame::read_frame(const safe_ptr<ogl_device>& ogl, size_t size, safe_ptr<host_buffer>&& image_data, audio_buffer&& audio_data) 
-	: impl_(new implementation(ogl, size, std::move(image_data), std::move(audio_data))){}
+read_frame::read_frame(
+		const safe_ptr<ogl_device>& ogl,
+		size_t size,
+		safe_ptr<host_buffer>&& image_data,
+		audio_buffer&& audio_data,
+		const channel_layout& audio_channel_layout) 
+	: impl_(new implementation(ogl, size, std::move(image_data), std::move(audio_data), audio_channel_layout))
+{
+}
+
 read_frame::read_frame(){}
 const boost::iterator_range<const uint8_t*> read_frame::image_data()
 {
@@ -81,6 +98,14 @@ const boost::iterator_range<const int32_t*> read_frame::audio_data()
 }
 
 size_t read_frame::image_size() const{return impl_ ? impl_->size_ : 0;}
+int read_frame::num_channels() const { return impl_ ? impl_->audio_channel_layout_.num_channels : 0; }
+const multichannel_view<const int32_t, boost::iterator_range<const int32_t*>::const_iterator> read_frame::multichannel_view() const
+{
+	return make_multichannel_view<const int32_t>(
+			impl_->audio_data().begin(),
+			impl_->audio_data().end(),
+			impl_->audio_channel_layout_);
+}
 
 //#include <tbb/scalable_allocator.h>
 //#include <tbb/parallel_for.h>

@@ -42,6 +42,7 @@ class graph;
 namespace core {
 
 struct video_format_desc;
+struct channel_layout;
 	
 typedef std::vector<int32_t, tbb::cache_aligned_allocator<int32_t>> audio_buffer;
 
@@ -56,7 +57,7 @@ public:
 
 	void set_master_volume(float volume);
 
-	audio_buffer operator()(const video_format_desc& format_desc);
+	audio_buffer operator()(const video_format_desc& format_desc, const channel_layout& layout);
 	
 private:
 	struct implementation;

@@ -40,6 +40,7 @@ namespace core {
 class write_frame;
 class basic_frame;
 struct frame_factory;
+struct channel_layout;
 
 }
 
@@ -48,7 +49,12 @@ namespace ffmpeg {
 class frame_muxer : boost::noncopyable
 {
 public:
-	frame_muxer(double in_fps, const safe_ptr<core::frame_factory>& frame_factory, bool thumbnail_mode, const std::wstring& filter = L"");
+	frame_muxer(
+			double in_fps,
+			const safe_ptr<core::frame_factory>& frame_factory,
+			bool thumbnail_mode,
+			const core::channel_layout& audio_channel_layout,
+			const std::wstring& filter = L"");
 	
 	void push(const std::shared_ptr<AVFrame>& video_frame, int hints = 0);
 	void push(const std::shared_ptr<core::audio_buffer>& audio_samples);

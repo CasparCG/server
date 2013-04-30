@@ -29,6 +29,7 @@
 #include "../../ffmpeg_error.h"
 
 #include <core/video_format.h>
+#include <core/mixer/audio/audio_util.h>
 
 #include <tbb/cache_aligned_allocator.h>
 
@@ -63,17 +64,22 @@ struct audio_decoder::implementation : boost::noncopyable
 
 	const int64_t												nb_frames_;
 	tbb::atomic<size_t>											file_frame_number_;
+	core::channel_layout										channel_layout_;
 public:
-	explicit implementation(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
+	explicit implementation(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc, const std::wstring& custom_channel_order) 
 		: format_desc_(format_desc)	
 		, codec_context_(open_codec(*context, AVMEDIA_TYPE_AUDIO, index_))
-		, resampler_(format_desc.audio_channels,	codec_context_->channels,
+		, resampler_(codec_context_->channels,		codec_context_->channels,
 					 format_desc.audio_sample_rate, codec_context_->sample_rate,
 					 AV_SAMPLE_FMT_S32,				codec_context_->sample_fmt)
 		, buffer1_(AVCODEC_MAX_AUDIO_FRAME_SIZE*2)
 		, nb_frames_(0)//context->streams[index_]->nb_frames)
-	{		
-		file_frame_number_ = 0;   
+		, channel_layout_(get_audio_channel_layout(*codec_context_, custom_channel_order))
+	{
+		file_frame_number_ = 0;
+
+		CASPAR_LOG(debug) << print() 
+				<< " Selected channel layout " << channel_layout_.name;
 	}
 
 	void push(const std::shared_ptr<AVPacket>& packet)
@@ -147,12 +153,13 @@ public:
 	}
 };
 
-audio_decoder::audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) : impl_(new implementation(context, format_desc)){}
+audio_decoder::audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc, const std::wstring& custom_channel_order) : impl_(new implementation(context, format_desc, custom_channel_order)){}
 void audio_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
 bool audio_decoder::ready() const{return impl_->ready();}
 std::shared_ptr<core::audio_buffer> audio_decoder::poll(){return impl_->poll();}
 uint32_t audio_decoder::nb_frames() const{return impl_->nb_frames();}
 uint32_t audio_decoder::file_frame_number() const{return impl_->file_frame_number_;}
+const core::channel_layout& audio_decoder::channel_layout() const { return impl_->channel_layout_; }
 std::wstring audio_decoder::print() const{return impl_->print();}
 
 }}

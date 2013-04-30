@@ -223,6 +223,7 @@ struct ffmpeg_consumer : boost::noncopyable
 		
 	const std::shared_ptr<AVFormatContext>	oc_;
 	const core::video_format_desc			format_desc_;
+	const core::channel_layout				channel_layout_;
 	
 	const safe_ptr<diagnostics::graph>		graph_;
 
@@ -246,12 +247,13 @@ struct ffmpeg_consumer : boost::noncopyable
 	bool									key_only_;
 	
 public:
-	ffmpeg_consumer(const std::string& filename, const core::video_format_desc& format_desc, std::vector<option> options, bool key_only)
+	ffmpeg_consumer(const std::string& filename, const core::video_format_desc& format_desc, std::vector<option> options, bool key_only, const core::channel_layout& audio_channel_layout)
 		: filename_(filename)
 		, video_outbuf_(1920*1080*8)
 		, audio_outbuf_(10000)
 		, oc_(avformat_alloc_context(), av_free)
 		, format_desc_(format_desc)
+		, channel_layout_(audio_channel_layout)
 		, encode_executor_(print())
 		, in_frame_number_(0)
 		, out_frame_number_(0)
@@ -441,7 +443,7 @@ public:
 		c->codec_id			= output_format_.acodec;
 		c->codec_type		= AVMEDIA_TYPE_AUDIO;
 		c->sample_rate		= 48000;
-		c->channels			= 2;
+		c->channels			= channel_layout_.num_channels;
 		c->sample_fmt		= SAMPLE_FMT_S16;
 
 		if(output_format_.vcodec == CODEC_ID_FLV1)		
@@ -543,7 +545,7 @@ public:
 	byte_vector convert_audio(core::read_frame& frame, AVCodecContext* c)
 	{
 		if(!swr_) 		
-			swr_.reset(new audio_resampler(c->channels, format_desc_.audio_channels, 
+			swr_.reset(new audio_resampler(c->channels, frame.num_channels(), 
 										   c->sample_rate, format_desc_.audio_sample_rate,
 										   c->sample_fmt, AV_SAMPLE_FMT_S32));
 		
@@ -639,6 +641,7 @@ struct ffmpeg_consumer_proxy : public core::frame_consumer
 	const std::wstring				filename_;
 	const std::vector<option>		options_;
 	const bool						separate_key_;
+	core::video_format_desc			format_desc_;
 
 	std::unique_ptr<ffmpeg_consumer> consumer_;
 	std::unique_ptr<ffmpeg_consumer> key_only_consumer_;
@@ -654,22 +657,14 @@ public:
 	
 	virtual void initialize(const core::video_format_desc& format_desc, int)
 	{
-		consumer_.reset();
-		key_only_consumer_.reset();
-		consumer_.reset(new ffmpeg_consumer(narrow(filename_), format_desc, options_, false));
-
-		if (separate_key_)
-		{
-			boost::filesystem::wpath fill_file(filename_);
-			auto without_extension = fill_file.stem();
-			auto key_file = env::media_folder() + without_extension + L"_A" + fill_file.extension();
-			
-			key_only_consumer_.reset(new ffmpeg_consumer(narrow(key_file), format_desc, options_, true));
-		}
+		format_desc_ = format_desc;
 	}
 	
 	virtual boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame) override
 	{
+		if (!consumer_)
+			do_initialize(frame->multichannel_view().channel_layout());
+
 		bool ready_for_frame = consumer_->ready_for_frame();
 
 		if (ready_for_frame && separate_key_)
@@ -720,6 +715,32 @@ public:
 	virtual int index() const override
 	{
 		return 200;
+	}
+private:
+	void do_initialize(const core::channel_layout& channel_layout)
+	{
+		consumer_.reset();
+		key_only_consumer_.reset();
+		consumer_.reset(new ffmpeg_consumer(
+				narrow(filename_),
+				format_desc_,
+				options_,
+				false,
+				channel_layout));
+
+		if (separate_key_)
+		{
+			boost::filesystem::wpath fill_file(filename_);
+			auto without_extension = fill_file.stem();
+			auto key_file = env::media_folder() + without_extension + L"_A" + fill_file.extension();
+			
+			key_only_consumer_.reset(new ffmpeg_consumer(
+					narrow(key_file),
+					format_desc_,
+					options_,
+					true,
+					channel_layout));
+		}
 	}
 };	
 

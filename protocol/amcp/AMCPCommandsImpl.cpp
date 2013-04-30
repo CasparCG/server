@@ -1541,7 +1541,7 @@ bool ThumbnailCommand::DoExecuteGenerate()
 	}
 	else
 	{
-		SetReplyString(L"500 THUMBNAIL GENERATE ERROR\r\n");
+		SetReplyString(L"501 THUMBNAIL GENERATE ERROR\r\n");
 		return false;
 	}
 }
@@ -1558,7 +1558,7 @@ bool ThumbnailCommand::DoExecuteGenerateAll()
 	}
 	else
 	{
-		SetReplyString(L"500 THUMBNAIL GENERATE_ALL ERROR\r\n");
+		SetReplyString(L"501 THUMBNAIL GENERATE_ALL ERROR\r\n");
 		return false;
 	}
 }

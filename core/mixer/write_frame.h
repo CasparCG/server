@@ -26,6 +26,7 @@
 #include <core/producer/frame/basic_frame.h>
 #include <core/video_format.h>
 #include <core/mixer/audio/audio_mixer.h>
+#include <core/mixer/audio/audio_util.h>
 
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
@@ -43,8 +44,8 @@ class ogl_device;
 class write_frame : public core::basic_frame, boost::noncopyable
 {
 public:	
-	explicit write_frame(const void* tag);
-	explicit write_frame(const safe_ptr<ogl_device>& ogl, const void* tag, const core::pixel_format_desc& desc);
+	explicit write_frame(const void* tag, const channel_layout& channel_layout);
+	explicit write_frame(const safe_ptr<ogl_device>& ogl, const void* tag, const core::pixel_format_desc& desc, const channel_layout& channel_layout);
 
 	write_frame(const write_frame& other);
 	write_frame(write_frame&& other);
@@ -72,6 +73,8 @@ public:
 	const void* tag() const;
 
 	const core::pixel_format_desc& get_pixel_format_desc() const;
+	const channel_layout& get_channel_layout() const;
+	multichannel_view<int32_t, audio_buffer::iterator> get_multichannel_view();
 	
 private:
 	friend class image_mixer;
