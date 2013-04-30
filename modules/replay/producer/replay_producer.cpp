@@ -64,7 +64,7 @@ namespace caspar { namespace replay {
 
 struct replay_producer : public core::frame_producer
 {	
-	core::monitor::subject										monitor_subject_;
+	core::monitor::subject					monitor_subject_;
 
 	const std::wstring						filename_;
 	safe_ptr<core::basic_frame>				frame_;

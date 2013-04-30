@@ -36,6 +36,7 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/video_format.h>
 #include <core/mixer/read_frame.h>
+#include <core/monitor/monitor.h>
 
 #include <boost/thread.hpp>
 #include <boost/thread/locks.hpp>
@@ -55,6 +56,8 @@ namespace caspar { namespace replay {
 	
 struct replay_consumer : public core::frame_consumer
 {
+	// core::monitor::subject					monitor_subject_;
+
 	core::video_format_desc					format_desc_;
 	std::wstring							filename_;
 	tbb::atomic<uint64_t>					framenum_;
@@ -196,6 +199,13 @@ public:
 			
 					graph_->set_text(print());
 					graph_->set_value("frame-time", frame_timer.elapsed()*0.5*format_desc_.fps);
+
+					/* monitor_subject_	<< core::monitor::message("/profiler/time")		% frame_timer.elapsed() % (1.0/format_desc_.fps);			
+								
+					monitor_subject_	<< core::monitor::message("/file/time")			% (framenum_ / format_desc_.fps) 
+										<< core::monitor::message("/file/frame")		% static_cast<int32_t>(framenum_)
+										<< core::monitor::message("/file/fps")			% format_desc_.fps
+										<< core::monitor::message("/file/path")			% filename_; */
 				});
 			}
 			else
