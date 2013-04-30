@@ -320,6 +320,16 @@ struct replay_producer : public core::frame_producer
 	{
 		graph_->set_text(print());
 		graph_->set_value("frame-time", elapsed*0.5);
+
+		monitor_subject_	<< core::monitor::message("/profiler/time")		% elapsed % (1.0/index_header_->fps);			
+								
+		monitor_subject_	<< core::monitor::message("/file/time")			% ((interlaced_ ? framenum_ / 2 : framenum_) / index_header_->fps) 
+																			% ((last_framenum_ - first_framenum_) / (interlaced_ ? 2 : 1) / index_header_->fps)
+							<< core::monitor::message("/file/frame")		% static_cast<int32_t>((interlaced_ ? framenum_ / 2 : framenum_))
+																			% static_cast<int32_t>((last_framenum_ - first_framenum_) / (interlaced_ ? 2 : 1))
+							<< core::monitor::message("/file/fps")			% index_header_->fps
+							<< core::monitor::message("/file/path")			% filename_
+							<< core::monitor::message("/file/speed")		% speed_;
 	}
 
 	void move_to_next_frame()
