@@ -46,6 +46,7 @@
 #include <atlbase.h>
 
 #include <protocol/amcp/AMCPProtocolStrategy.h>
+#include <protocol/osc/server.h>
 
 #include <modules/bluefish/bluefish.h>
 #include <modules/decklink/decklink.h>
@@ -177,9 +178,9 @@ LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
     return EXCEPTION_EXECUTE_HANDLER;
 }
 
-void make_upper_case(std::wstring& str)
+std::wstring make_upper_case(const std::wstring& str)
 {
-	boost::to_upper(str);
+	return boost::to_upper_copy(str);
 }
 
 int main(int argc, wchar_t* argv[])
@@ -231,6 +232,7 @@ int main(int argc, wchar_t* argv[])
 		}
 	} tbb_thread_installer;
 
+	bool restart = false;
 	tbb::task_scheduler_init init;
 	
 	try 
@@ -259,7 +261,8 @@ int main(int argc, wchar_t* argv[])
 		boost::property_tree::xml_writer_settings<wchar_t> w(' ', 3);
 		boost::property_tree::write_xml(str, caspar::env::properties(), w);
 		CASPAR_LOG(info) << L"casparcg.config:\n-----------------------------------------\n" << str.str().c_str() << L"-----------------------------------------";
-		bool wait_for_keypress;
+		tbb::atomic<bool> wait_for_keypress;
+		wait_for_keypress = false;
 
 		{
 			boost::promise<bool> shutdown_server_now;
@@ -270,7 +273,7 @@ int main(int argc, wchar_t* argv[])
 
 			// Use separate thread for the blocking console input, will be terminated 
 			// anyway when the main thread terminates.
-			boost::thread stdin_thread([&caspar_server, &shutdown_server_now]
+			boost::thread stdin_thread([&caspar_server, &shutdown_server_now, &wait_for_keypress]
 			{
 				// Create a amcp parser for console commands.
 				caspar::protocol::amcp::AMCPProtocolStrategy amcp(
@@ -287,11 +290,12 @@ int main(int argc, wchar_t* argv[])
 					std::getline(std::wcin, wcmd); // TODO: It's blocking...
 				
 					//boost::to_upper(wcmd);  // TODO COMPILER crashes on this line, Strange!
-					make_upper_case(wcmd);
+					auto upper_cmd = make_upper_case(wcmd);
 
-					if(wcmd == L"EXIT" || wcmd == L"Q" || wcmd == L"QUIT" || wcmd == L"BYE")
+					if(upper_cmd == L"EXIT" || upper_cmd == L"Q" || upper_cmd == L"QUIT" || upper_cmd == L"BYE")
 					{
-						shutdown_server_now.set_value(true); // True to wait for keypress
+						wait_for_keypress = true;
+						shutdown_server_now.set_value(false); // False to not restart server
 						break;
 					}
 				
@@ -316,7 +320,7 @@ int main(int argc, wchar_t* argv[])
 									L"PLAY 2-2 " + file + L" LOOP\r\n" 
 									L"PLAY 2-3 " + file + L" LOOP\r\n";
 						}
-						else if(wcmd.substr(0, 1) == L"X")
+						else if(upper_cmd.substr(0, 1) == L"X")
 						{
 							int num = 0;
 							std::wstring file;
@@ -356,7 +360,7 @@ int main(int argc, wchar_t* argv[])
 				}	
 			});
 			stdin_thread.detach();
-			wait_for_keypress = shutdown_server.get();
+			restart = shutdown_server.get();
 		}
 		Sleep(500);
 		CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
@@ -379,5 +383,5 @@ int main(int argc, wchar_t* argv[])
 		Sleep(4000);
 	}	
 	
-	return 0;
+	return restart ? 5 : 0;
 }

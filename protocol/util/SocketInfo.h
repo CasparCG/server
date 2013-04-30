@@ -59,7 +59,7 @@ private:
 	unsigned int currentlySendingOffset_;
 
 	std::vector<wchar_t> wideRecvBuffer_;
-	char recvBuffer_[512];
+	char recvBuffer_[8192];
 	int recvLeftoverOffset_;
 };
 typedef std::tr1::shared_ptr<SocketInfo> SocketInfoPtr;

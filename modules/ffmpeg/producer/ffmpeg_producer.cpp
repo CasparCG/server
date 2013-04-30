@@ -37,6 +37,7 @@
 #include <common/utility/param.h>
 #include <common/diagnostics/graph.h>
 
+#include <core/monitor/monitor.h>
 #include <core/video_format.h>
 #include <core/producer/frame_producer.h>
 #include <core/producer/frame/frame_factory.h>
@@ -62,6 +63,7 @@ namespace caspar { namespace ffmpeg {
 				
 struct ffmpeg_producer : public core::frame_producer
 {
+	core::monitor::subject										monitor_subject_;
 	const std::wstring											filename_;
 	
 	const safe_ptr<diagnostics::graph>							graph_;
@@ -88,7 +90,7 @@ struct ffmpeg_producer : public core::frame_producer
 
 	int64_t														frame_number_;
 	uint32_t													file_frame_number_;
-	
+		
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode)
 		: filename_(filename)
@@ -190,10 +192,20 @@ public:
 		graph_->set_text(print());
 
 		last_frame_ = frame.first;
+					
+		monitor_subject_	<< core::monitor::message("/profiler/time")		% frame_timer_.elapsed() % (1.0/format_desc_.fps);			
+								
+		monitor_subject_	<< core::monitor::message("/file/time")			% (file_frame_number()/fps_) 
+																			% (file_nb_frames()/fps_)
+							<< core::monitor::message("/file/frame")			% static_cast<int32_t>(file_frame_number())
+																			% static_cast<int32_t>(file_nb_frames())
+							<< core::monitor::message("/file/fps")			% fps_
+							<< core::monitor::message("/file/path")			% filename_
+							<< core::monitor::message("/loop")				% input_.loop();
 
 		return frame;
 	}
-
+	
 	safe_ptr<core::basic_frame> render_specific_frame(uint32_t file_position, int hints)
 	{
 		// Some trial and error and undeterministic stuff here
@@ -284,6 +296,11 @@ public:
 		}
 
 		return make_safe<core::basic_frame>(frames);
+	}
+	
+	uint32_t file_frame_number() const
+	{
+		return video_decoder_ ? video_decoder_->file_frame_number() : 0;
 	}
 
 	virtual uint32_t nb_frames() const override
@@ -420,9 +437,17 @@ public:
 		for(auto frame = muxer_->poll(); frame; frame = muxer_->poll())
 			frame_buffer_.push(std::make_pair(make_safe_ptr(frame), file_frame_number));
 	}
+
+	core::monitor::source& monitor_output()
+	{
+		return monitor_subject_;
+	}
 };
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_producer(
+		const safe_ptr<core::frame_factory>& frame_factory,
+		const std::vector<std::wstring>& params,
+		const std::vector<std::wstring>& original_case_params)
 {		
 	static const std::vector<std::wstring> invalid_exts = boost::assign::list_of(L".png")(L".tga")(L".bmp")(L".jpg")(L".jpeg")(L".gif")(L".tiff")(L".tif")(L".jp2")(L".jpx")(L".j2k")(L".j2c")(L".swf")(L".ct");
 	auto filename = probe_stem(env::media_folder() + L"\\" + params.at(0), invalid_exts);
@@ -441,7 +466,10 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 	return create_producer_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, filename, filter_str, loop, start, length, false));
 }
 
-safe_ptr<core::frame_producer> create_thumbnail_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_thumbnail_producer(
+		const safe_ptr<core::frame_factory>& frame_factory,
+		const std::vector<std::wstring>& params,
+		const std::vector<std::wstring>& original_case_params)
 {		
 	static const std::vector<std::wstring> invalid_exts = boost::assign::list_of
 			(L".png")(L".tga")(L".bmp")(L".jpg")(L".jpeg")(L".gif")(L".tiff")(L".tif")(L".jp2")(L".jpx")(L".j2k")(L".j2c")(L".swf")(L".ct")

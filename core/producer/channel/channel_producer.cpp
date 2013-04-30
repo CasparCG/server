@@ -23,6 +23,7 @@
 
 #include "channel_producer.h"
 
+#include "../../monitor/monitor.h"
 #include "../../consumer/frame_consumer.h"
 #include "../../consumer/output.h"
 #include "../../video_channel.h"
@@ -34,7 +35,8 @@
 
 #include <common/exception/exceptions.h>
 #include <common/memory/memcpy.h>
-#include <common/concurrency/future_util.h>
+#include <common/concurrency/future_util.h>
+
 #include <tbb/concurrent_queue.h>
 
 namespace caspar { namespace core {
@@ -125,6 +127,8 @@ public:
 	
 class channel_producer : public frame_producer
 {
+	monitor::subject					monitor_subject_;
+
 	const safe_ptr<frame_factory>		frame_factory_;
 	const safe_ptr<channel_consumer>	consumer_;
 
@@ -205,6 +209,11 @@ public:
 		boost::property_tree::wptree info;
 		info.add(L"type", L"channel-producer");
 		return info;
+	}
+
+	monitor::source& monitor_output() 
+	{
+		return monitor_subject_;
 	}
 };
 

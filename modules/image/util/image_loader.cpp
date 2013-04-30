@@ -31,6 +31,9 @@
 #include <boost/exception/errinfo_file_name.hpp>
 #include <boost/filesystem.hpp>
 
+#include "image_algorithms.h"
+#include "image_view.h"
+
 namespace caspar { namespace image {
 
 std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename)
@@ -54,6 +57,13 @@ std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename)
 		if(!bitmap)
 			BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));			
 	}
+
+	//PNG-images need to be premultiplied with their alpha
+	if(fif == FIF_PNG)
+	{
+		image_view<bgra_pixel> original_view(FreeImage_GetBits(bitmap.get()), FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
+		premultiply(original_view);
+	}
 	
 	return bitmap;
 }
@@ -61,6 +71,26 @@ std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename)
 std::shared_ptr<FIBITMAP> load_image(const std::string& filename)
 {
 	return load_image(widen(filename));
+}
+
+std::shared_ptr<FIBITMAP> load_png_from_memory(const void* memory_location, size_t size)
+{
+	FREE_IMAGE_FORMAT fif = FIF_PNG;
+
+	auto memory = std::unique_ptr<FIMEMORY, decltype(&FreeImage_CloseMemory)>(
+			FreeImage_OpenMemory(static_cast<BYTE*>(const_cast<void*>(memory_location)), size),
+			FreeImage_CloseMemory);
+	auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_LoadFromMemory(fif, memory.get(), 0), FreeImage_Unload);
+
+	if (FreeImage_GetBPP(bitmap.get()) != 32)
+	{
+		bitmap = std::shared_ptr<FIBITMAP>(FreeImage_ConvertTo32Bits(bitmap.get()), FreeImage_Unload);
+
+		if (!bitmap)
+			BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
+	}
+
+	return bitmap;
 }
 
 }}

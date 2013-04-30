@@ -91,4 +91,8 @@ Will make the playback go at half the speed
 Will make the playback go backwards at 3/4 of normal speed
 
     call 2 speed -0.75
+
+Will pause the playback (is the same as setting speed to 0)
+
+	call 2 pause
    

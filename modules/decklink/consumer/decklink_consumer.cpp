@@ -228,7 +228,14 @@ public:
 		is_running_ = true;
 				
 		video_frame_buffer_.set_capacity(1);
-		audio_frame_buffer_.set_capacity(1);
+
+		if (format_desc.fps > 50.0)
+			// Blackmagic calls RenderAudioSamples() 50 times per second
+			// regardless of video mode so we sometimes need to give them
+			// samples from 2 frames in order to keep up
+			audio_frame_buffer_.set_capacity(2); 
+		else
+			audio_frame_buffer_.set_capacity(1);
 
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
@@ -408,19 +415,22 @@ public:
 					start_playback();				
 				}
 				else
-					schedule_next_audio(core::audio_buffer(format_desc_.audio_cadence[preroll % format_desc_.audio_cadence.size()], 0));	
+					schedule_next_audio(core::audio_buffer(format_desc_.audio_cadence[preroll % format_desc_.audio_cadence.size()] * format_desc_.audio_channels, 0));	
 			}
 			else
 			{
 				std::shared_ptr<core::read_frame> frame;
-				audio_frame_buffer_.pop(frame);
-				send_completion_.try_completion();
-				schedule_next_audio(frame->audio_data());
+
+				while (audio_frame_buffer_.try_pop(frame))
+				{
+					send_completion_.try_completion();
+					schedule_next_audio(frame->audio_data());
+				}
 			}
 
 			unsigned long buffered;
 			output_->GetBufferedAudioSampleFrameCount(&buffered);
-			graph_->set_value("buffered-audio", static_cast<double>(buffered)/(format_desc_.audio_cadence[0]*2));
+			graph_->set_value("buffered-audio", static_cast<double>(buffered)/(format_desc_.audio_cadence[0] * format_desc_.audio_channels * 2));
 		}
 		catch(...)
 		{
@@ -530,6 +540,7 @@ struct decklink_consumer_proxy : public core::frame_consumer
 	const configuration				config_;
 	com_context<decklink_consumer>	context_;
 	std::vector<size_t>				audio_cadence_;
+	core::video_format_desc			format_desc_;
 public:
 
 	decklink_consumer_proxy(const configuration& config)
@@ -554,13 +565,14 @@ public:
 	{
 		context_.reset([&]{return new decklink_consumer(config_, format_desc, channel_index);});		
 		audio_cadence_ = format_desc.audio_cadence;		
+		format_desc_ = format_desc;
 
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 	
 	virtual boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame) override
 	{
-		CASPAR_VERIFY(audio_cadence_.front() == static_cast<size_t>(frame->audio_data().size()));
+		CASPAR_VERIFY(audio_cadence_.front() * format_desc_.audio_channels == static_cast<size_t>(frame->audio_data().size()));
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 
 		return context_->send(frame);

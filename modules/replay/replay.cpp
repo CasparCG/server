@@ -37,8 +37,8 @@ namespace caspar { namespace replay {
 
 void init()
 {
-	core::register_producer_factory(create_producer);
 	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
+	core::register_producer_factory(create_producer);
 }
 
 std::wstring get_version()

@@ -38,6 +38,7 @@
 #include <common/memory/memclr.h>
 #include <common/utility/param.h>
 
+#include <core/monitor/monitor.h>
 #include <core/mixer/write_frame.h>
 #include <core/producer/frame/frame_transform.h>
 #include <core/producer/frame/frame_factory.h>
@@ -79,6 +80,7 @@ namespace caspar { namespace decklink {
 		
 class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 {	
+	core::monitor::subject										monitor_subject_;
 	safe_ptr<diagnostics::graph>								graph_;
 	boost::timer												tick_timer_;
 	boost::timer												frame_timer_;
@@ -209,12 +211,12 @@ public:
 				audio_buffer = std::make_shared<core::audio_buffer>(audio_data, audio_data + sample_frame_count*format_desc_.audio_channels);
 			}
 			else			
-				audio_buffer = std::make_shared<core::audio_buffer>(audio_cadence_.front(), 0);
+				audio_buffer = std::make_shared<core::audio_buffer>(audio_cadence_.front() * format_desc_.audio_channels, 0);
 			
 			// Note: Uses 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
 			// This cadence fills the audio mixer most optimally.
 
-			sync_buffer_.push_back(audio_buffer->size());		
+			sync_buffer_.push_back(audio_buffer->size() / format_desc_.audio_channels);		
 			if(!boost::range::equal(sync_buffer_, audio_cadence_))
 			{
 				CASPAR_LOG(trace) << print() << L" Syncing audio.";
@@ -272,6 +274,11 @@ public:
 	{
 		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"|" + format_desc_.name + L"]";
 	}
+
+	core::monitor::source& monitor_output()
+	{
+		return monitor_subject_;
+	}
 };
 	
 class decklink_producer_proxy : public core::frame_producer
@@ -320,9 +327,17 @@ public:
 		info.add(L"type", L"decklink-producer");
 		return info;
 	}
+
+	core::monitor::source& monitor_output()
+	{
+		return context_->monitor_output();
+	}
 };
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_producer(
+		const safe_ptr<core::frame_factory>& frame_factory,
+		const std::vector<std::wstring>& params,
+		const std::vector<std::wstring>& original_case_params)
 {
 	if(params.empty() || !boost::iequals(params[0], "decklink"))
 		return core::frame_producer::empty();

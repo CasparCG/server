@@ -109,7 +109,7 @@ struct video_format_desc
 
 	size_t					audio_sample_rate;
 	size_t					audio_channels;
-	std::vector<size_t>		audio_cadence;
+	std::vector<size_t>		audio_cadence; // rotating optimal number of samples per frame
 
 	static const video_format_desc& get(video_format::type format);
 	static const video_format_desc& get(const std::wstring& name);

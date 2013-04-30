@@ -28,6 +28,7 @@
 
 #include <core/video_format.h>
 
+#include <core/monitor/monitor.h>
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/frame_transform.h>
@@ -57,6 +58,7 @@ namespace caspar { namespace image {
 
 struct image_scroll_producer : public core::frame_producer
 {	
+	core::monitor::subject						monitor_subject_;
 	const std::wstring							filename_;
 	std::vector<safe_ptr<core::basic_frame>>	frames_;
 	core::video_format_desc						format_desc_;
@@ -381,9 +383,17 @@ struct image_scroll_producer : public core::frame_producer
 			return static_cast<uint32_t>(length / std::abs(speed_));// + length % std::abs(delta_));
 		}
 	}
+
+	core::monitor::source& monitor_output()
+	{
+		return monitor_subject_;
+	}
 };
 
-safe_ptr<core::frame_producer> create_scroll_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_scroll_producer(
+		const safe_ptr<core::frame_factory>& frame_factory,
+		const std::vector<std::wstring>& params,
+		const std::vector<std::wstring>& original_case_params)
 {
 	static const std::vector<std::wstring> extensions = list_of(L"png")(L"tga")(L"bmp")(L"jpg")(L"jpeg")(L"gif")(L"tiff")(L"tif")(L"jp2")(L"jpx")(L"j2k")(L"j2c");
 	std::wstring filename = env::media_folder() + L"\\" + params[0];

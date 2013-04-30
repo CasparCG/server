@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include "../monitor/monitor.h"
+
 #include <common/memory/safe_ptr.h>
 #include <common/exception/exceptions.h>
 
@@ -75,14 +77,16 @@ public:
 	virtual safe_ptr<basic_frame> create_thumbnail_frame();
 
 	static const safe_ptr<frame_producer>& empty(); // nothrow
+
+	virtual monitor::source& monitor_output() = 0;
 };
 
 safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int hints);
 
-typedef std::function<safe_ptr<core::frame_producer>(const safe_ptr<frame_factory>&, const std::vector<std::wstring>&)> producer_factory_t;
+typedef std::function<safe_ptr<core::frame_producer>(const safe_ptr<frame_factory>&, const std::vector<std::wstring>& upper_case_params, const std::vector<std::wstring>& original_case_params)> producer_factory_t;
 void register_producer_factory(const producer_factory_t& factory); // Not thread-safe.
 void register_thumbnail_producer_factory(const producer_factory_t& factory); // Not thread-safe.
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>&, const std::vector<std::wstring>& params);
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>&, const std::vector<std::wstring>& upper_case_params, const std::vector<std::wstring>& original_case_params);
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>&, const std::wstring& params);
 safe_ptr<core::frame_producer> create_producer_destroy_proxy(safe_ptr<core::frame_producer> producer);
 safe_ptr<core::frame_producer> create_producer_print_proxy(safe_ptr<core::frame_producer> producer);

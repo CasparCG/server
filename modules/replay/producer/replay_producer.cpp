@@ -61,14 +61,17 @@ using namespace boost::assign;
 
 namespace caspar { namespace replay {
 
+
 struct replay_producer : public core::frame_producer
 {	
+	core::monitor::subject										monitor_subject_;
+
 	const std::wstring						filename_;
 	safe_ptr<core::basic_frame>				frame_;
 	mjpeg_file_handle						in_file_;
 	mjpeg_file_handle						in_idx_file_;
 	boost::shared_ptr<mjpeg_file_header>	index_header_;
-	safe_ptr<core::frame_factory>			frame_factory_;
+	const safe_ptr<core::frame_factory>			frame_factory_;
 	tbb::atomic<uint64_t>					framenum_;
 	tbb::atomic<uint64_t>					first_framenum_;
 	tbb::atomic<uint64_t>					last_framenum_;
@@ -172,7 +175,7 @@ struct replay_producer : public core::frame_producer
 	}
 #pragma warning(default:4244)
 	
-	caspar::safe_ptr<core::basic_frame> make_frame(uint8_t* frame_data, size_t size, size_t width, size_t height, bool drop_first_line)
+	safe_ptr<core::basic_frame> make_frame(uint8_t* frame_data, size_t size, size_t width, size_t height, bool drop_first_line)
 	{
 		core::pixel_format_desc desc;
 		desc.pix_fmt = core::pixel_format::bgra;
@@ -464,7 +467,7 @@ struct replay_producer : public core::frame_producer
 	}
 #pragma warning(default:4244)
 
-	virtual safe_ptr<core::basic_frame> receive(int hint)
+	virtual safe_ptr<core::basic_frame> receive(int hint) override
 	{
 		boost::timer frame_timer;
 
@@ -493,15 +496,6 @@ struct replay_producer : public core::frame_producer
 			}
 		}
 		// IF speed is less than 0.5x and it's not time for a new frame
-		/* else if (abs_speed_ <= 0.5f)
-		{
-			if (result_framenum_ % frame_divider_ > 0)
-			{
-				result_framenum_++;
-				update_diag(frame_timer.elapsed());
-				return frame_; // Return previous frame
-			}
-		} */
 		else if ((abs_speed_ > 0.0f) && (abs_speed_ < 1.0f))
 		{
 			size_t frame_size = index_header_->width * index_header_->height * 4;
@@ -683,6 +677,11 @@ struct replay_producer : public core::frame_producer
 		return info;
 	}
 
+	core::monitor::source& monitor_output()
+	{
+		return monitor_subject_;
+	}
+
 	~replay_producer()
 	{
 		if (in_file_ != NULL)
@@ -693,7 +692,12 @@ struct replay_producer : public core::frame_producer
 	}
 };
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params)
+
+
+safe_ptr<core::frame_producer> create_producer(
+		const safe_ptr<core::frame_factory>& frame_factory,
+		const std::vector<std::wstring>& params,
+		const std::vector<std::wstring>& original_case_params)
 {
 	static const std::vector<std::wstring> extensions = list_of(L"mav");
 	std::wstring filename = env::media_folder() + L"\\" + params[0];

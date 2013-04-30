@@ -26,7 +26,6 @@
 #include "frame/frame_transform.h"
 
 #include "color/color_producer.h"
-#include "playlist/playlist_producer.h"
 #include "separated/separated_producer.h"
 
 #include <common/memory/safe_ptr.h>
@@ -105,6 +104,7 @@ public:
 	virtual safe_ptr<frame_producer>							get_following_producer() const override									{return (*producer_)->get_following_producer();}
 	virtual void												set_leading_producer(const safe_ptr<frame_producer>& producer) override	{(*producer_)->set_leading_producer(producer);}
 	virtual uint32_t											nb_frames() const override												{return (*producer_)->nb_frames();}
+	virtual monitor::source&									monitor_output()														{return (*producer_)->monitor_output();}
 };
 
 safe_ptr<core::frame_producer> create_producer_destroy_proxy(safe_ptr<core::frame_producer> producer)
@@ -139,6 +139,7 @@ public:
 	virtual safe_ptr<frame_producer>							get_following_producer() const override									{return (producer_)->get_following_producer();}
 	virtual void												set_leading_producer(const safe_ptr<frame_producer>& producer) override	{(producer_)->set_leading_producer(producer);}
 	virtual uint32_t											nb_frames() const override												{return (producer_)->nb_frames();}
+	virtual monitor::source&									monitor_output()														{return (producer_)->monitor_output();}
 };
 
 safe_ptr<core::frame_producer> create_producer_print_proxy(safe_ptr<core::frame_producer> producer)
@@ -170,6 +171,11 @@ public:
 		info.add(L"type", L"last-frame-producer");
 		return info;
 	}
+	virtual monitor::source& monitor_output()
+	{
+		static monitor::subject monitor_subject("");
+		return monitor_subject;
+	}
 };
 
 struct empty_frame_producer : public frame_producer
@@ -185,6 +191,12 @@ struct empty_frame_producer : public frame_producer
 		boost::property_tree::wptree info;
 		info.add(L"type", L"empty-producer");
 		return info;
+	}
+
+	virtual monitor::source& monitor_output()
+	{
+		static monitor::subject monitor_subject("");
+		return monitor_subject;
 	}
 };
 
@@ -229,9 +241,9 @@ void register_thumbnail_producer_factory(const producer_factory_t& factory)
 	g_thumbnail_factories.push_back(factory);
 }
 
-safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params, const std::vector<const producer_factory_t>& factories, bool throw_on_fail = false)
+safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& upper_case_params, const std::vector<std::wstring>& original_case_params, const std::vector<const producer_factory_t>& factories, bool throw_on_fail = false)
 {
-	if(params.empty())
+	if(upper_case_params.empty())
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
 	
 	auto producer = frame_producer::empty();
@@ -239,7 +251,7 @@ safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>&
 		{
 			try
 			{
-				producer = factory(my_frame_factory, params);
+				producer = factory(my_frame_factory, upper_case_params, original_case_params);
 			}
 			catch(...)
 			{
@@ -252,30 +264,30 @@ safe_ptr<core::frame_producer> do_create_producer(const safe_ptr<frame_factory>&
 		});
 
 	if(producer == frame_producer::empty())
-		producer = create_color_producer(my_frame_factory, params);
-	
-	if(producer == frame_producer::empty())
-		producer = create_playlist_producer(my_frame_factory, params);
-	
+		producer = create_color_producer(my_frame_factory, upper_case_params, original_case_params);
 	return producer;
 }
 
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& params)
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::vector<std::wstring>& upper_case_params, const std::vector<std::wstring>& original_case_params)
 {	
-	auto producer = do_create_producer(my_frame_factory, params, g_factories);
+	auto producer = do_create_producer(my_frame_factory, upper_case_params, original_case_params, g_factories);
 	auto key_producer = frame_producer::empty();
 	
 	try // to find a key file.
 	{
-		auto params_copy = params;
-		if(params_copy.size() > 0)
+		auto upper_params_copy = upper_case_params;
+		auto original_params_copy = original_case_params;
+
+		if(upper_case_params.size() > 0)
 		{
-			params_copy[0] += L"_A";
-			key_producer = do_create_producer(my_frame_factory, params_copy, g_factories);			
+			upper_params_copy[0] += L"_A";
+			original_params_copy[0] += L"_A";
+			key_producer = do_create_producer(my_frame_factory, upper_params_copy, original_params_copy, g_factories);			
 			if(key_producer == frame_producer::empty())
 			{
-				params_copy[0] += L"LPHA";
-				key_producer = do_create_producer(my_frame_factory, params_copy, g_factories);	
+				upper_params_copy[0] += L"LPHA";
+				original_params_copy[0] += L"LPHA";
+				key_producer = do_create_producer(my_frame_factory, upper_params_copy, original_params_copy, g_factories);	
 			}
 		}
 	}
@@ -287,7 +299,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 	if(producer == frame_producer::empty())
 	{
 		std::wstring str;
-		BOOST_FOREACH(auto& param, params)
+		BOOST_FOREACH(auto& param, original_case_params)
 			str += param + L" ";
 		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax.") << arg_value_info(narrow(str)));
 	}
@@ -300,7 +312,7 @@ safe_ptr<core::frame_producer> create_thumbnail_producer(const safe_ptr<frame_fa
 	std::vector<std::wstring> params;
 	params.push_back(media_file);
 
-	auto producer = do_create_producer(my_frame_factory, params, g_thumbnail_factories, true);
+	auto producer = do_create_producer(my_frame_factory, params, params, g_thumbnail_factories, true);
 	auto key_producer = frame_producer::empty();
 	
 	try // to find a key file.
@@ -309,11 +321,11 @@ safe_ptr<core::frame_producer> create_thumbnail_producer(const safe_ptr<frame_fa
 		if (params_copy.size() > 0)
 		{
 			params_copy[0] += L"_A";
-			key_producer = do_create_producer(my_frame_factory, params_copy, g_thumbnail_factories, true);
+			key_producer = do_create_producer(my_frame_factory, params_copy, params_copy, g_thumbnail_factories, true);
 			if (key_producer == frame_producer::empty())
 			{
 				params_copy[0] += L"LPHA";
-				key_producer = do_create_producer(my_frame_factory, params_copy, g_thumbnail_factories, true);
+				key_producer = do_create_producer(my_frame_factory, params_copy, params_copy, g_thumbnail_factories, true);
 			}
 		}
 	}
@@ -331,7 +343,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& fa
 	std::vector<std::wstring> tokens;
 	typedef std::istream_iterator<std::wstring, wchar_t, std::char_traits<wchar_t> > iterator;
 	std::copy(iterator(iss),  iterator(), std::back_inserter(tokens));
-	return create_producer(factory, tokens);
+	return create_producer(factory, tokens, tokens);
 }
 
 }}

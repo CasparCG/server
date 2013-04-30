@@ -60,13 +60,21 @@ public:
 	std::wstring description(int layer);
 	std::wstring template_host_info();
 
+	core::monitor::source& monitor_output();
+
 private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
 safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel>& video_channel, int layer_index = cg_producer::DEFAULT_LAYER);
 
-safe_ptr<core::frame_producer> create_ct_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params);
-safe_ptr<core::frame_producer> create_cg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params);
+safe_ptr<core::frame_producer> create_ct_producer(
+		const safe_ptr<core::frame_factory>& frame_factory,
+		const std::vector<std::wstring>& params,
+		const std::vector<std::wstring>& original_case_params);
+safe_ptr<core::frame_producer> create_cg_producer(
+		const safe_ptr<core::frame_factory>& frame_factory,
+		const std::vector<std::wstring>& params,
+		const std::vector<std::wstring>& original_case_params);
 
 }}

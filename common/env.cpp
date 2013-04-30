@@ -70,6 +70,18 @@ void configure(const std::wstring& filename)
 		data = widen(paths.get(L"data-path", initialPath + L"\\data\\"));
 		thumbnails = widen(paths.get(L"thumbnails-path", initialPath + L"\\thumbnails\\"));
 
+		//Make sure that all paths have a trailing backslash
+		if(media.at(media.length()-1) != L'\\')
+			media.append(L"\\");
+		if(log.at(log.length()-1) != L'\\')
+			log.append(L"\\");
+		if(ftemplate.at(ftemplate.length()-1) != L'\\')
+			ftemplate.append(L"\\");
+		if(data.at(data.length()-1) != L'\\')
+			data.append(L"\\");
+		if(thumbnails.at(thumbnails.length()-1) != L'\\')
+			thumbnails.append(L"\\");
+
 		try
 		{
 			for(auto it = boost::filesystem2::wdirectory_iterator(initialPath); it != boost::filesystem2::wdirectory_iterator(); ++it)

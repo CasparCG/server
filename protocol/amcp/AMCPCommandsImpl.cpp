@@ -36,6 +36,7 @@
 #include <common/os/windows/system_info.h>
 #include <common/utility/string.h>
 #include <common/utility/utf8conv.h>
+#include <common/utility/base64.h>
 
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>
@@ -117,37 +118,12 @@ std::wstring read_file_base64(const boost::filesystem::wpath& file)
 	if (!filestream)
 		return L"";
 
-	// From http://www.webbiscuit.co.uk/2012/04/02/base64-encoder-and-boost/
-		
-	typedef
-		insert_linebreaks<         // insert line breaks every 76 characters
-			base64_from_binary<    // convert binary values to base64 characters
-				transform_width<   // retrieve 6 bit integers from a sequence of 8 bit bytes
-					const unsigned char *,
-					6,
-					8
-				>
-			>,
-			76
-		>
-        base64_iterator; // compose all the above operations in to a new iterator
 	auto length = boost::filesystem::file_size(file);
 	std::vector<char> bytes;
 	bytes.resize(length);
 	filestream.read(bytes.data(), length);
 
-	int padding = 0;
-
-	while (bytes.size() % 3 != 0)
-	{
-		++padding;
-		bytes.push_back(0x00);
-	}
-
-	std::string result(base64_iterator(bytes.data()), base64_iterator(bytes.data() + length - padding));
-	result.insert(result.end(), padding, '=');
-
-	return widen(result);
+	return widen(to_base64(bytes.data(), length));
 }
 
 std::wstring read_utf8_file(const boost::filesystem::wpath& file)
@@ -777,7 +753,7 @@ bool LoadCommand::DoExecute()
 	try
 	{
 		_parameters[0] = _parameters[0];
-		auto pFP = create_producer(GetChannel()->mixer(), _parameters);		
+		auto pFP = create_producer(GetChannel()->mixer(), _parameters, _parameters2);		
 		GetChannel()->stage()->load(GetLayerIndex(), pFP, true);
 	
 		SetReplyString(TEXT("202 LOAD OK\r\n"));
@@ -883,7 +859,7 @@ bool LoadbgCommand::DoExecute()
 	try
 	{
 		_parameters[0] = _parameters[0];
-		auto pFP = create_producer(GetChannel()->mixer(), _parameters);
+		auto pFP = create_producer(GetChannel()->mixer(), _parameters, _parameters2);
 		if(pFP == frame_producer::empty())
 			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? narrow(_parameters[0]) : ""));
 
@@ -899,7 +875,7 @@ bool LoadbgCommand::DoExecute()
 	catch(file_not_found&)
 	{		
 		std::wstring params2;
-		for(auto it = _parameters.begin(); it != _parameters.end(); ++it)
+		for(auto it = _parameters2.begin(); it != _parameters2.end(); ++it)
 			params2 += L" " + *it;
 		CASPAR_LOG(error) << L"File not found. No match found for parameters. Check syntax:" << params2;
 		SetReplyString(TEXT("404 LOADBG ERROR\r\n"));
@@ -940,7 +916,7 @@ bool PlayCommand::DoExecute()
 			lbg.SetChannelIndex(GetChannelIndex());
 			lbg.SetLayerIntex(GetLayerIndex());
 			lbg.SetClientInfo(GetClientInfo());
-			for(auto it = _parameters.begin(); it != _parameters.end(); ++it)
+			for(auto it = _parameters2.begin(); it != _parameters2.end(); ++it)
 				lbg.AddParameter(*it);
 			if(!lbg.Execute())
 				throw std::exception();
@@ -1849,7 +1825,13 @@ bool SetCommand::DoExecute()
 
 bool KillCommand::DoExecute()
 {
-	GetShutdownServerNow().set_value(false); // False for not waiting until a key is pressed before terminating.
+	GetShutdownServerNow().set_value(false); // False for not attempting to restart.
+	return true;
+}
+
+bool RestartCommand::DoExecute()
+{
+	GetShutdownServerNow().set_value(true); // True for attempting to restart
 	return true;
 }
 

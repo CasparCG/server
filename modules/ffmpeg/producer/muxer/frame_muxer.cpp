@@ -163,14 +163,14 @@ struct frame_muxer::implementation : boost::noncopyable
 		}
 		else if(audio == empty_audio())
 		{
-			boost::range::push_back(audio_streams_.back(), core::audio_buffer(audio_cadence_.front(), 0));
+			boost::range::push_back(audio_streams_.back(), core::audio_buffer(audio_cadence_.front() * format_desc_.audio_channels, 0));
 		}
 		else
 		{
 			boost::range::push_back(audio_streams_.back(), *audio);
 		}
 
-		if(audio_streams_.back().size() > 32*audio_cadence_.front())
+		if(audio_streams_.back().size() > 32*audio_cadence_.front() * format_desc_.audio_channels)
 			BOOST_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("audio-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
 	}
 	
@@ -202,9 +202,9 @@ struct frame_muxer::implementation : boost::noncopyable
 		switch(display_mode_)
 		{
 		case display_mode::duplicate:					
-			return audio_streams_.front().size()/2 >= audio_cadence_.front();
+			return audio_streams_.front().size()/2 >= audio_cadence_.front() * format_desc_.audio_channels;
 		default:										
-			return audio_streams_.front().size() >= audio_cadence_.front();
+			return audio_streams_.front().size() >= audio_cadence_.front() * format_desc_.audio_channels;
 		}
 	}
 		
@@ -279,10 +279,10 @@ struct frame_muxer::implementation : boost::noncopyable
 
 	core::audio_buffer pop_audio()
 	{
-		CASPAR_VERIFY(audio_streams_.front().size() >= audio_cadence_.front());
+		CASPAR_VERIFY(audio_streams_.front().size() >= audio_cadence_.front() * format_desc_.audio_channels);
 
 		auto begin = audio_streams_.front().begin();
-		auto end   = begin + audio_cadence_.front();
+		auto end   = begin + (audio_cadence_.front() * format_desc_.audio_channels);
 
 		core::audio_buffer samples(begin, end);
 		audio_streams_.front().erase(begin, end);
