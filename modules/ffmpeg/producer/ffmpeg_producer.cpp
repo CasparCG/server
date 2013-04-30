@@ -324,35 +324,32 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factor
 	auto ffmpeg_params = std::shared_ptr<ffmpeg_producer_params>(new ffmpeg_producer_params());
 
 	// Infer the resource type from the resource_name
-	ffmpeg_params->resource_type = FFMPEG_FILE;
 	ffmpeg_params->resource_name = params.at_original(0);
-
 	auto tokens = core::parameters::protocol_split(ffmpeg_params->resource_name);
-	if (tokens[0] == L"dshow")
+	if (!tokens[0].empty())
 	{
-		ffmpeg_params->resource_type = FFMPEG_DEVICE;
-		ffmpeg_params->resource_name = tokens[1];
-	} else if (tokens[0] == L"http" || tokens[0] == L"rtp" || tokens[0] == L"rtps")
+		if (tokens[0] == L"dshow")
+		{
+			// Camera
+			ffmpeg_params->resource_type = FFMPEG_DEVICE;
+			ffmpeg_params->resource_name = tokens[1];
+		} else
+		{
+			// Stream
+			ffmpeg_params->resource_type = FFMPEG_STREAM;
+		}
+	} else
 	{
-		ffmpeg_params->resource_type = FFMPEG_STREAM;
-	}
+		// File
+		ffmpeg_params->resource_type = FFMPEG_FILE;
+		auto filename = env::media_folder() + L"\\" + tokens[1];
+		if(!boost::filesystem::exists(filename))
+			filename = probe_stem(filename);
 
-	switch (ffmpeg_params->resource_type)
-	{
-	case FFMPEG_FILE:
-		ffmpeg_params->resource_name = probe_stem(env::media_folder() + L"\\" + ffmpeg_params->resource_name);
-		ffmpeg_params->loop			= params.has(L"LOOP");
-		ffmpeg_params->start		= params.get(L"SEEK", static_cast<uint32_t>(0));
-		break;
-	case FFMPEG_DEVICE:
-		// Do nothing
-		//resource_name = L"video=Sony Visual Communication Camera";
-		//resource_name = L"video=Logitech QuickCam Easy/Cool";
-		break;
-	case FFMPEG_STREAM:
-		// Do nothing? TODO CP 2013-01
-		break;
-	};
+		ffmpeg_params->resource_name = filename;
+		ffmpeg_params->loop			 = params.has(L"LOOP");
+		ffmpeg_params->start		 = params.get(L"SEEK", static_cast<uint32_t>(0));
+	}
 
 	if(ffmpeg_params->resource_name.empty())
 		return core::frame_producer::empty();

@@ -254,7 +254,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 	std::wstring resource_name = L"";
 	// Infer the resource_type from the resource_name if the resource_name looks like a URI
 	auto tokens = core::parameters::protocol_split(params.at_original(0));
-	if (!(tokens[0] == L"dshow" || tokens[0] == L"http" || tokens[0] == L"rtp" || tokens[0] == L"rtps")) 
+	if (tokens[0].empty())
 	{
 		resource_name = params.at(0);
 	}
