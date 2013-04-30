@@ -29,6 +29,7 @@
 
 #include <core/producer/frame/frame_visitor.h>
 #include <core/producer/frame/pixel_format.h>
+#include <core/mixer/audio/audio_util.h>
 
 #include <boost/lexical_cast.hpp>
 
@@ -41,17 +42,20 @@ struct write_frame::implementation
 	std::vector<safe_ptr<device_buffer>>		textures_;
 	audio_buffer								audio_data_;
 	const core::pixel_format_desc				desc_;
+	const channel_layout						channel_layout_;
 	const void*									tag_;
 	core::field_mode::type						mode_;
 
-	implementation(const void* tag)
-		: tag_(tag)
+	implementation(const void* tag, const channel_layout& channel_layout)
+		: channel_layout_(channel_layout)
+		, tag_(tag)
 	{
 	}
 
-	implementation(const safe_ptr<ogl_device>& ogl, const void* tag, const core::pixel_format_desc& desc) 
+	implementation(const safe_ptr<ogl_device>& ogl, const void* tag, const core::pixel_format_desc& desc, const channel_layout& channel_layout) 
 		: ogl_(ogl)
 		, desc_(desc)
+		, channel_layout_(channel_layout)
 		, tag_(tag)
 		, mode_(core::field_mode::progressive)
 	{
@@ -108,9 +112,18 @@ struct write_frame::implementation
 	}
 };
 	
-write_frame::write_frame(const void* tag) : impl_(new implementation(tag)){}
-write_frame::write_frame(const safe_ptr<ogl_device>& ogl, const void* tag, const core::pixel_format_desc& desc) 
-	: impl_(new implementation(ogl, tag, desc)){}
+write_frame::write_frame(const void* tag, const channel_layout& channel_layout)
+	: impl_(new implementation(tag, channel_layout))
+{
+}
+write_frame::write_frame(
+		const safe_ptr<ogl_device>& ogl,
+		const void* tag,
+		const core::pixel_format_desc& desc,
+		const channel_layout& channel_layout)
+	: impl_(new implementation(ogl, tag, desc, channel_layout))
+{
+}
 write_frame::write_frame(const write_frame& other) : impl_(new implementation(*other.impl_)){}
 write_frame::write_frame(write_frame&& other) : impl_(std::move(other.impl_)){}
 write_frame& write_frame::operator=(const write_frame& other)
@@ -131,6 +144,11 @@ boost::iterator_range<uint8_t*> write_frame::image_data(size_t index){return imp
 audio_buffer& write_frame::audio_data() { return impl_->audio_data_; }
 const void* write_frame::tag() const {return impl_->tag_;}
 const core::pixel_format_desc& write_frame::get_pixel_format_desc() const{return impl_->desc_;}
+const channel_layout& write_frame::get_channel_layout() const{return impl_->channel_layout_;}
+multichannel_view<int32_t, audio_buffer::iterator> write_frame::get_multichannel_view()
+{
+	return make_multichannel_view<int32_t>(impl_->audio_data_.begin(), impl_->audio_data_.end(), impl_->channel_layout_);
+}
 const std::vector<safe_ptr<device_buffer>>& write_frame::get_textures() const{return impl_->textures_;}
 void write_frame::commit(size_t plane_index){impl_->commit(plane_index);}
 void write_frame::commit(){impl_->commit();}

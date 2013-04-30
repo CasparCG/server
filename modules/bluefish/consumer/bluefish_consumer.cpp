@@ -34,6 +34,7 @@
 #include <common/memory/memcpy.h>
 #include <common/memory/memshfl.h>
 #include <common/utility/timer.h>
+#include <common/utility/param.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/mixer/audio/audio_util.h>
@@ -42,6 +43,7 @@
 
 #include <boost/timer.hpp>
 #include <boost/range/algorithm.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ptree.hpp>
 
 #include <memory>
@@ -55,6 +57,7 @@ struct bluefish_consumer : boost::noncopyable
 	const unsigned int					device_index_;
 	const core::video_format_desc		format_desc_;
 	const int							channel_index_;
+	const core::channel_layout			channel_layout_;
 
 	const std::wstring					model_name_;
 
@@ -73,11 +76,18 @@ struct bluefish_consumer : boost::noncopyable
 		
 	executor							executor_;
 public:
-	bluefish_consumer(const core::video_format_desc& format_desc, unsigned int device_index, bool embedded_audio, bool key_only, int channel_index) 
+	bluefish_consumer(
+			const core::video_format_desc& format_desc,
+			unsigned int device_index,
+			bool embedded_audio,
+			bool key_only,
+			int channel_index,
+			const core::channel_layout& channel_layout)
 		: blue_(create_blue(device_index))
 		, device_index_(device_index)
 		, format_desc_(format_desc) 
 		, channel_index_(channel_index)
+		, channel_layout_(channel_layout)
 		, model_name_(get_card_desc(*blue_))
 		, vid_fmt_(get_video_mode(*blue_, format_desc))
 		, embedded_audio_(embedded_audio)
@@ -132,7 +142,19 @@ public:
 		}
 		else
 		{
-			if(BLUE_FAIL(set_card_property(blue_, EMBEDEDDED_AUDIO_OUTPUT, blue_emb_audio_enable | blue_emb_audio_group1_enable))) 
+			ULONG audio_value =
+				EMBEDDED_AUDIO_OUTPUT | blue_emb_audio_group1_enable;
+
+			if (channel_layout_.num_channels > 4)
+				audio_value |= blue_emb_audio_group2_enable;
+
+			if (channel_layout_.num_channels > 8)
+				audio_value |= blue_emb_audio_group3_enable;
+
+			if (channel_layout_.num_channels > 12)
+				audio_value |= blue_emb_audio_group4_enable;
+
+			if(BLUE_FAIL(set_card_property(blue_, EMBEDEDDED_AUDIO_OUTPUT, audio_value))) 
 				CASPAR_LOG(warning) << print() << TEXT(" Failed to enable embedded audio.");			
 			CASPAR_LOG(info) << print() << TEXT(" Enabled embedded-audio.");
 		}
@@ -230,9 +252,40 @@ public:
 		// Send and display
 
 		if(embedded_audio_)
-		{		
-			auto frame_audio = core::audio_32_to_24(frame->audio_data());			
-			encode_hanc(reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()), frame_audio.data(), frame->audio_data().size()/format_desc_.audio_channels, format_desc_.audio_channels);
+		{
+			auto src_view = frame->multichannel_view();
+
+			if (core::needs_rearranging(src_view, channel_layout_, channel_layout_.num_channels))
+			{
+				std::vector<int32_t> resulting_audio_data;
+				resulting_audio_data.resize(src_view.num_samples() * channel_layout_.num_channels, 0);
+
+				auto dest_view = core::make_multichannel_view<int32_t>(
+						resulting_audio_data.begin(), 
+						resulting_audio_data.end(),
+						channel_layout_);
+
+				core::rearrange_or_rearrange_and_mix(
+						src_view,
+						dest_view,
+						core::default_mix_config_repository());
+
+				auto frame_audio = core::audio_32_to_24(resulting_audio_data);
+				encode_hanc(
+						reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()),
+						frame_audio.data(),
+						src_view.num_samples(),
+						channel_layout_.num_channels);
+			}
+			else
+			{
+				auto frame_audio = core::audio_32_to_24(frame->audio_data());
+				encode_hanc(
+						reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()),
+						frame_audio.data(),
+						src_view.num_samples(),
+						channel_layout_.num_channels);
+			}
 								
 			blue_->system_buffer_write_async(const_cast<uint8_t*>(reserved_frames_.front()->image_data()), 
 											reserved_frames_.front()->image_size(), 
@@ -266,7 +319,16 @@ public:
 	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, size_t audio_samples, size_t audio_nchannels)
 	{	
 		const auto sample_type = AUDIO_CHANNEL_24BIT | AUDIO_CHANNEL_LITTLEENDIAN;
-		const auto emb_audio_flag = blue_emb_audio_enable | blue_emb_audio_group1_enable;
+		auto emb_audio_flag = blue_emb_audio_enable | blue_emb_audio_group1_enable;
+
+		if (audio_nchannels > 4)
+			emb_audio_flag |= blue_emb_audio_group2_enable;
+
+		if (audio_nchannels > 8)
+			emb_audio_flag |= blue_emb_audio_group3_enable;
+
+		if (audio_nchannels > 12)
+			emb_audio_flag |= blue_emb_audio_group4_enable;
 		
 		hanc_stream_info_struct hanc_stream_info;
 		memset(&hanc_stream_info, 0, sizeof(hanc_stream_info));
@@ -299,12 +361,19 @@ struct bluefish_consumer_proxy : public core::frame_consumer
 	const bool							key_only_;
 	std::vector<size_t>					audio_cadence_;
 	core::video_format_desc				format_desc_;
+	core::channel_layout				channel_layout_;
+
 public:
 
-	bluefish_consumer_proxy(size_t device_index, bool embedded_audio, bool key_only)
+	bluefish_consumer_proxy(
+			size_t device_index,
+			bool embedded_audio,
+			bool key_only,
+			const core::channel_layout& channel_layout)
 		: device_index_(device_index)
 		, embedded_audio_(embedded_audio)
 		, key_only_(key_only)
+		, channel_layout_(channel_layout)
 	{
 	}
 	
@@ -322,7 +391,13 @@ public:
 	
 	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
 	{
-		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_, key_only_, channel_index));
+		consumer_.reset(new bluefish_consumer(
+				format_desc,
+				device_index_,
+				embedded_audio_,
+				key_only_,
+				channel_index,
+				channel_layout_));
 		audio_cadence_ = format_desc.audio_cadence;
 		format_desc_ = format_desc;
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
@@ -330,7 +405,7 @@ public:
 	
 	virtual boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame) override
 	{
-		CASPAR_VERIFY(audio_cadence_.front() * format_desc_.audio_channels == static_cast<size_t>(frame->audio_data().size()));
+		CASPAR_VERIFY(audio_cadence_.front() * frame->num_channels() == static_cast<size_t>(frame->audio_data().size()));
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 
 		return consumer_->send(frame);
@@ -369,10 +444,12 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 		
 	const auto device_index = params.size() > 1 ? lexical_cast_or_default<int>(params[1], 1) : 1;
 
-	const auto embedded_audio = std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
-	const auto key_only		  = std::find(params.begin(), params.end(), L"KEY_ONLY")	   != params.end();
+	const auto embedded_audio	= std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
+	const auto key_only			= std::find(params.begin(), params.end(), L"KEY_ONLY")	   != params.end();
+	const auto audio_layout		= core::default_channel_layout_repository().get_by_name(
+			get_param(L"CHANNEL_LAYOUT", params, L"STEREO"));
 
-	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
+	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only, audio_layout);
 }
 
 safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree) 
@@ -380,8 +457,12 @@ safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptre
 	const auto device_index		= ptree.get(L"device",			1);
 	const auto embedded_audio	= ptree.get(L"embedded-audio",	false);
 	const auto key_only			= ptree.get(L"key-only",		false);
+	const auto audio_layout =
+		core::default_channel_layout_repository().get_by_name(
+				boost::to_upper_copy(ptree.get(L"channel-layout", L"STEREO")));
 
-	return make_safe<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
+	return make_safe<bluefish_consumer_proxy>(
+			device_index, embedded_audio, key_only, audio_layout);
 }
 
 }}

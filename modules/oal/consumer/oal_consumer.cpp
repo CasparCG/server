@@ -60,10 +60,14 @@ struct oal_consumer : public core::frame_consumer,  public sf::SoundStream
 	core::audio_buffer									temp;
 
 	core::video_format_desc								format_desc_;
+	core::channel_layout								channel_layout_;
 public:
 	oal_consumer() 
 		: container_(16)
 		, channel_index_(-1)
+		, channel_layout_(
+				core::default_channel_layout_repository().get_by_name(
+						L"STEREO"))
 	{
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
@@ -104,7 +108,35 @@ public:
 	
 	virtual boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame) override
 	{
-		auto buffer = std::make_shared<audio_buffer_16>(core::audio_32_to_16(frame->audio_data()));
+		std::shared_ptr<audio_buffer_16> buffer;
+
+		if (core::needs_rearranging(
+				frame->multichannel_view(),
+				channel_layout_,
+				channel_layout_.num_channels))
+		{
+			core::audio_buffer downmixed;
+			downmixed.resize(
+					frame->multichannel_view().num_samples() 
+							* channel_layout_.num_channels,
+					0);
+
+			auto dest_view = core::make_multichannel_view<int32_t>(
+					downmixed.begin(), downmixed.end(), channel_layout_);
+
+			core::rearrange_or_rearrange_and_mix(
+					frame->multichannel_view(),
+					dest_view,
+					core::default_mix_config_repository());
+
+			buffer = std::make_shared<audio_buffer_16>(
+					core::audio_32_to_16(downmixed));
+		}
+		else
+		{
+			buffer = std::make_shared<audio_buffer_16>(
+					core::audio_32_to_16(frame->audio_data()));
+		}
 
 		if (!input_.try_push(buffer))
 			graph_->set_tag("dropped-frame");

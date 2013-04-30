@@ -35,6 +35,7 @@ namespace caspar {
 namespace core {
 
 struct video_format_desc;
+struct channel_layout;
 
 }
 
@@ -43,7 +44,7 @@ namespace ffmpeg {
 class audio_decoder : boost::noncopyable
 {
 public:
-	explicit audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc);
+	explicit audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc, const std::wstring& custom_channel_order);
 	
 	bool ready() const;
 	void push(const std::shared_ptr<AVPacket>& packet);
@@ -52,6 +53,8 @@ public:
 	uint32_t nb_frames() const;
 	
 	uint32_t file_frame_number() const;
+
+	const core::channel_layout& channel_layout() const;
 
 	std::wstring print() const;
 private:

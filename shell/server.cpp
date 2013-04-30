@@ -30,6 +30,7 @@
 #include <common/filesystem/polling_filesystem_monitor.h>
 
 #include <core/mixer/gpu/ogl_device.h>
+#include <core/mixer/audio/audio_util.h>
 #include <core/video_channel.h>
 #include <core/producer/stage.h>
 #include <core/consumer/output.h>
@@ -83,6 +84,8 @@ struct server::implementation : boost::noncopyable
 		: shutdown_server_now_(shutdown_server_now)
 		, ogl_(ogl_device::create())
 	{			
+		setup_audio(env::properties());
+
 		ffmpeg::init();
 		CASPAR_LOG(info) << L"Initialized ffmpeg module.";
 							  
@@ -120,6 +123,18 @@ struct server::implementation : boost::noncopyable
 		async_servers_.clear();
 		channels_.clear();
 	}
+
+	void setup_audio(const boost::property_tree::wptree& pt)
+	{
+		register_default_channel_layouts(default_channel_layout_repository());
+		register_default_mix_configs(default_mix_config_repository());
+		parse_channel_layouts(
+				default_channel_layout_repository(),
+				pt.get_child(L"configuration.audio.channel-layouts"));
+		parse_mix_configs(
+				default_mix_config_repository(),
+				pt.get_child(L"configuration.audio.mix-configs"));
+	}
 				
 	void setup_channels(const boost::property_tree::wptree& pt)
 	{   
@@ -129,8 +144,10 @@ struct server::implementation : boost::noncopyable
 			auto format_desc = video_format_desc::get(widen(xml_channel.second.get(L"video-mode", L"PAL")));		
 			if(format_desc.format == video_format::invalid)
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid video-mode."));
+			auto audio_channel_layout = default_channel_layout_repository().get_by_name(
+					boost::to_upper_copy(xml_channel.second.get(L"channel-layout", L"STEREO")));
 			
-			channels_.push_back(make_safe<video_channel>(channels_.size()+1, format_desc, ogl_));
+			channels_.push_back(make_safe<video_channel>(channels_.size()+1, format_desc, ogl_, audio_channel_layout));
 			
 			channels_.back()->monitor_output().link_target(&monitor_subject_);
 
@@ -161,7 +178,7 @@ struct server::implementation : boost::noncopyable
 
 		// Dummy diagnostics channel
 		if(env::properties().get(L"configuration.channel-grid", false))
-			channels_.push_back(make_safe<video_channel>(channels_.size()+1, core::video_format_desc::get(core::video_format::x576p2500), ogl_));
+			channels_.push_back(make_safe<video_channel>(channels_.size()+1, core::video_format_desc::get(core::video_format::x576p2500), ogl_, default_channel_layout_repository().get_by_name(L"STEREO")));
 	}
 		
 	void setup_controllers(const boost::property_tree::wptree& pt)

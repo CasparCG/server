@@ -92,7 +92,7 @@ struct ffmpeg_producer : public core::frame_producer
 	uint32_t													file_frame_number_;
 		
 public:
-	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode)
+	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const std::wstring& custom_channel_order)
 		: filename_(filename)
 		, frame_factory_(frame_factory)		
 		, format_desc_(frame_factory->get_video_format_desc())
@@ -128,11 +128,14 @@ public:
 			}
 		}
 
+		core::channel_layout audio_channel_layout = core::default_channel_layout_repository().get_by_name(L"STEREO");
+
 		if (!thumbnail_mode_)
 		{
 			try
 			{
-				audio_decoder_.reset(new audio_decoder(input_.context(), frame_factory->get_video_format_desc()));
+				audio_decoder_.reset(new audio_decoder(input_.context(), frame_factory->get_video_format_desc(), custom_channel_order));
+				audio_channel_layout = audio_decoder_->channel_layout();
 				CASPAR_LOG(info) << print() << L" " << audio_decoder_->print();
 			}
 			catch(averror_stream_not_found&)
@@ -149,7 +152,7 @@ public:
 		if(!video_decoder_ && !audio_decoder_)
 			BOOST_THROW_EXCEPTION(averror_stream_not_found() << msg_info("No streams found"));
 
-		muxer_.reset(new frame_muxer(fps_, frame_factory, thumbnail_mode_, filter));
+		muxer_.reset(new frame_muxer(fps_, frame_factory, thumbnail_mode_, audio_channel_layout, filter));
 	}
 
 	// frame_producer
@@ -455,15 +458,16 @@ safe_ptr<core::frame_producer> create_producer(
 	if(filename.empty())
 		return core::frame_producer::empty();
 	
-	auto loop		= boost::range::find(params, L"LOOP") != params.end();
-	auto start		= get_param(L"SEEK", params, static_cast<uint32_t>(0));
-	auto length		= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
-	auto filter_str = get_param(L"FILTER", params, L""); 	
-		
+	auto loop					= boost::range::find(params, L"LOOP") != params.end();
+	auto start					= get_param(L"SEEK", params, static_cast<uint32_t>(0));
+	auto length					= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
+	auto filter_str				= get_param(L"FILTER", params, L""); 	
+	auto custom_channel_order	= get_param(L"CHANNEL_LAYOUT", params, L"");
+
 	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
 	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
 	
-	return create_producer_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, filename, filter_str, loop, start, length, false));
+	return create_producer_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, filename, filter_str, loop, start, length, false, custom_channel_order));
 }
 
 safe_ptr<core::frame_producer> create_thumbnail_producer(
@@ -484,7 +488,7 @@ safe_ptr<core::frame_producer> create_thumbnail_producer(
 	auto length		= std::numeric_limits<uint32_t>::max();
 	auto filter_str = L"";
 		
-	return create_producer_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, filename, filter_str, loop, start, length, true));
+	return create_producer_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, filename, filter_str, loop, start, length, true, L""));
 }
 
 }}
