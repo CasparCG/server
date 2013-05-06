@@ -68,6 +68,7 @@ struct replay_producer : public core::frame_producer
 
 	const std::wstring						filename_;
 	safe_ptr<core::basic_frame>				frame_;
+	std::queue<std::pair<safe_ptr<core::basic_frame>, size_t>>	frame_buffer_;
 	mjpeg_file_handle						in_file_;
 	mjpeg_file_handle						in_idx_file_;
 	boost::shared_ptr<mjpeg_file_header>	index_header_;
@@ -336,7 +337,7 @@ struct replay_producer : public core::frame_producer
 	{
 		if ((reverse_) && (framenum_ > 0))
 		{
-			framenum_ -= -(frame_multiplier_ > 1 ? frame_multiplier_ : 1);
+			framenum_ -= (frame_multiplier_ > 1 ? frame_multiplier_ : 1);
 			seek_index(in_idx_file_, -1 - (frame_multiplier_ > 1 ? frame_multiplier_ : 1), FILE_CURRENT);
 		}
 		else
@@ -477,6 +478,12 @@ struct replay_producer : public core::frame_producer
 	}
 #pragma warning(default:4244)
 
+	// TODO: Move the file operations and frame rendering to a separate function and put the rendered frames to a buffer
+	std::pair<safe_ptr<core::basic_frame>, uint32_t> render_frame(int hints)
+	{
+
+	}
+
 	virtual safe_ptr<core::basic_frame> receive(int hint) override
 	{
 		boost::timer frame_timer;
@@ -563,15 +570,12 @@ struct replay_producer : public core::frame_producer
 				}
 			}
 		}
-		else
-		{
-			if (leftovers_ != NULL)
-			{
-				delete leftovers_;
-				leftovers_ = NULL;
-			}
-		}
 
+		if (leftovers_ != NULL)
+		{
+			delete leftovers_;
+			leftovers_ = NULL;
+		}
 
 		// ELSE
 		if (abs_speed_ >= 1.0f)
