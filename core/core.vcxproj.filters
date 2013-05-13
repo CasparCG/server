@@ -232,5 +232,8 @@
     <ClCompile Include="monitor\monitor.cpp">
       <Filter>source\monitor</Filter>
     </ClCompile>
+    <ClCompile Include="mixer\audio\audio_util.cpp">
+      <Filter>source\mixer\audio</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

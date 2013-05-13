@@ -36,8 +36,10 @@
 #include <common/memory/memcpy.h>
 #include <common/memory/memclr.h>
 #include <common/memory/memshfl.h>
+#include <common/utility/param.h>
 
 #include <core/consumer/frame_consumer.h>
+#include <core/mixer/audio/audio_util.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/cache_aligned_allocator.h>
@@ -45,6 +47,7 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/timer.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/algorithm/string.hpp>
 
 namespace caspar { namespace decklink { 
 	
@@ -64,16 +67,18 @@ struct configuration
 		default_latency
 	};
 
-	size_t		device_index;
-	bool		embedded_audio;
-	keyer_t		keyer;
-	latency_t	latency;
-	bool		key_only;
-	size_t		base_buffer_depth;
+	size_t					device_index;
+	bool					embedded_audio;
+	core::channel_layout	audio_layout;
+	keyer_t					keyer;
+	latency_t				latency;
+	bool					key_only;
+	size_t					base_buffer_depth;
 	
 	configuration()
 		: device_index(1)
 		, embedded_audio(false)
+		, audio_layout(core::default_channel_layout_repository().get_by_name(L"STEREO"))
 		, keyer(default_keyer)
 		, latency(default_latency)
 		, key_only(false)
@@ -84,6 +89,17 @@ struct configuration
 	size_t buffer_depth() const
 	{
 		return base_buffer_depth + (latency == low_latency ? 0 : 1) + (embedded_audio ? 1 : 0);
+	}
+
+	int num_out_channels() const
+	{
+		if (audio_layout.num_channels <= 2)
+			return 2;
+		
+		if (audio_layout.num_channels <= 8)
+			return 8;
+
+		return 16;
 	}
 };
 
@@ -323,7 +339,7 @@ public:
 	
 	void enable_audio()
 	{
-		if(FAILED(output_->EnableAudioOutput(bmdAudioSampleRate48kHz, bmdAudioSampleType32bitInteger, 2, bmdAudioOutputStreamTimestamped)))
+		if(FAILED(output_->EnableAudioOutput(bmdAudioSampleRate48kHz, bmdAudioSampleType32bitInteger, config_.num_out_channels(), bmdAudioOutputStreamTimestamped)))
 				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not enable audio output."));
 				
 		if(FAILED(output_->SetAudioCallback(this)))
@@ -371,7 +387,8 @@ public:
 			{
 				graph_->set_tag("late-frame");
 				video_scheduled_ += format_desc_.duration;
-				audio_scheduled_ += reinterpret_cast<decklink_frame*>(completed_frame)->audio_data().size()/format_desc_.audio_channels;
+				auto dframe = reinterpret_cast<decklink_frame*>(completed_frame);
+				audio_scheduled_ += dframe->audio_data().size()/config_.num_out_channels();
 				//++video_scheduled_;
 				//audio_scheduled_ += format_desc_.audio_cadence[0];
 				//++audio_scheduled_;
@@ -415,7 +432,11 @@ public:
 					start_playback();				
 				}
 				else
-					schedule_next_audio(core::audio_buffer(format_desc_.audio_cadence[preroll % format_desc_.audio_cadence.size()] * format_desc_.audio_channels, 0));	
+				{
+					core::audio_buffer silent_audio(format_desc_.audio_cadence[preroll_count_ % format_desc_.audio_cadence.size()] * config_.num_out_channels(), 0);
+					auto view = core::make_multichannel_view<int32_t>(silent_audio.begin(), silent_audio.end(), config_.audio_layout, config_.num_out_channels());
+					schedule_next_audio(view);
+				}
 			}
 			else
 			{
@@ -424,13 +445,13 @@ public:
 				while (audio_frame_buffer_.try_pop(frame))
 				{
 					send_completion_.try_completion();
-					schedule_next_audio(frame->audio_data());
+					schedule_next_audio(frame->multichannel_view());
 				}
 			}
 
 			unsigned long buffered;
 			output_->GetBufferedAudioSampleFrameCount(&buffered);
-			graph_->set_value("buffered-audio", static_cast<double>(buffered)/(format_desc_.audio_cadence[0] * format_desc_.audio_channels * 2));
+			graph_->set_value("buffered-audio", static_cast<double>(buffered)/(format_desc_.audio_cadence[0] * config_.num_out_channels() * 2));
 		}
 		catch(...)
 		{
@@ -442,14 +463,46 @@ public:
 		return S_OK;
 	}
 
-	template<typename T>
-	void schedule_next_audio(const T& audio_data)
+	template<typename View>
+	void schedule_next_audio(const View& view)
 	{
-		const int sample_frame_count = audio_data.size()/format_desc_.audio_channels;
+		const int sample_frame_count = view.num_samples();
 
-		audio_container_.push_back(std::vector<int32_t>(audio_data.begin(), audio_data.end()));
+		if (core::needs_rearranging(
+				view, config_.audio_layout, config_.num_out_channels()))
+		{
+			std::vector<int32_t> resulting_audio_data;
+			resulting_audio_data.resize(
+					sample_frame_count * config_.num_out_channels());
 
-		if(FAILED(output_->ScheduleAudioSamples(audio_container_.back().data(), sample_frame_count, audio_scheduled_, format_desc_.audio_sample_rate, nullptr)))
+			auto dest_view = core::make_multichannel_view<int32_t>(
+					resulting_audio_data.begin(), 
+					resulting_audio_data.end(),
+					config_.audio_layout,
+					config_.num_out_channels());
+
+			core::rearrange_or_rearrange_and_mix(
+					view, dest_view, core::default_mix_config_repository());
+
+			if (config_.audio_layout.num_channels == 1) // mono
+				boost::copy(                            // duplicate L to R
+						dest_view.channel(0),
+						dest_view.channel(1).begin());
+
+			audio_container_.push_back(std::move(resulting_audio_data));
+		}
+		else
+		{
+			audio_container_.push_back(
+					std::vector<int32_t>(view.raw_begin(), view.raw_end()));
+		}
+
+		if(FAILED(output_->ScheduleAudioSamples(
+				audio_container_.back().data(),
+				sample_frame_count,
+				audio_scheduled_,
+				format_desc_.audio_sample_rate,
+				nullptr)))
 			CASPAR_LOG(error) << print() << L" Failed to schedule audio.";
 
 		audio_scheduled_ += sample_frame_count;
@@ -572,7 +625,7 @@ public:
 	
 	virtual boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame) override
 	{
-		CASPAR_VERIFY(audio_cadence_.front() * format_desc_.audio_channels == static_cast<size_t>(frame->audio_data().size()));
+		CASPAR_VERIFY(audio_cadence_.front() * frame->num_channels() == static_cast<size_t>(frame->audio_data().size()));
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 
 		return context_->send(frame);
@@ -629,6 +682,8 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 
 	config.embedded_audio	= std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
 	config.key_only			= std::find(params.begin(), params.end(), L"KEY_ONLY")		 != params.end();
+	config.audio_layout		= core::default_channel_layout_repository().get_by_name(
+			get_param(L"CHANNEL_LAYOUT", params, L"STEREO"));
 
 	return make_safe<decklink_consumer_proxy>(config);
 }
@@ -653,6 +708,9 @@ safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptre
 	config.device_index			= ptree.get(L"device",			config.device_index);
 	config.embedded_audio		= ptree.get(L"embedded-audio",	config.embedded_audio);
 	config.base_buffer_depth	= ptree.get(L"buffer-depth",	config.base_buffer_depth);
+	config.audio_layout =
+		core::default_channel_layout_repository().get_by_name(
+				boost::to_upper_copy(ptree.get(L"channel-layout", L"STEREO")));
 
 	return make_safe<decklink_consumer_proxy>(config);
 }

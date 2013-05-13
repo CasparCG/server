@@ -45,6 +45,7 @@
 #include <boost/timer.hpp>
 
 #include <tbb/concurrent_queue.h>
+#include <tbb/compat/thread>
 
 #include <algorithm>
 
@@ -68,15 +69,18 @@ struct replay_producer : public core::frame_producer
 
 	const std::wstring						filename_;
 	safe_ptr<core::basic_frame>				frame_;
-	std::queue<std::pair<safe_ptr<core::basic_frame>, size_t>>	frame_buffer_;
+	safe_ptr<core::basic_frame>				last_frame_;
+	std::queue<std::pair<safe_ptr<core::basic_frame>, uint64_t>>	frame_buffer_;
 	mjpeg_file_handle						in_file_;
 	mjpeg_file_handle						in_idx_file_;
 	boost::shared_ptr<mjpeg_file_header>	index_header_;
 	const safe_ptr<core::frame_factory>			frame_factory_;
 	tbb::atomic<uint64_t>					framenum_;
+	tbb::atomic<uint64_t>					real_framenum_;
 	tbb::atomic<uint64_t>					first_framenum_;
 	tbb::atomic<uint64_t>					last_framenum_;
 	tbb::atomic<uint64_t>					result_framenum_;
+	tbb::atomic<int>						runstate_;
 	uint8_t*								leftovers_;
 	size_t									leftovers_size_;
 	int										leftovers_duration_;
@@ -88,11 +92,13 @@ struct replay_producer : public core::frame_producer
 	bool									reverse_;
 	bool									seeked_;
 	const safe_ptr<diagnostics::graph>		graph_;
+	std::thread*							decoder_;
 
 #pragma warning(disable:4244)
 	explicit replay_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const int sign, const long long start_frame, const long long last_frame, const float start_speed) 
 		: filename_(filename)
 		, frame_(core::basic_frame::empty())
+		, last_frame_(core::basic_frame::empty())
 		, frame_factory_(frame_factory)
 	{
 		in_file_ = safe_fopen((filename_).c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE);
@@ -127,6 +133,8 @@ struct replay_producer : public core::frame_producer
 						framenum_ = 0;
 						last_framenum_ = 0;
 						first_framenum_ = 0;
+						real_framenum_ = 0;
+						runstate_ = 0;
 						
 						leftovers_ = NULL;
 						leftovers_duration_ = 0;
@@ -152,8 +160,37 @@ struct replay_producer : public core::frame_producer
 						}
 
 						graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
+						graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
 						graph_->set_text(print());
 						diagnostics::register_graph(graph_);
+
+						decoder_ = new std::thread(
+							[&] 
+							{
+								while (runstate_ == 0)
+								{
+									if (frame_buffer_.size() < 2)
+									{
+										try
+										{
+											boost::timer frame_timer;
+											auto frame_pair = render_frame(0);
+											frame_buffer_.push(frame_pair);
+											update_diag(frame_timer.elapsed()*0.5*index_header_->fps);
+										} 
+										catch (...)
+										{
+
+										}
+									}
+									else
+									{
+										Sleep(1000 / (index_header_->fps * 2));
+									}
+								}
+							}
+						);
+						decoder_->detach();
 					}
 					else
 					{
@@ -174,6 +211,7 @@ struct replay_producer : public core::frame_producer
 			throw file_not_found();
 		}
 	}
+
 #pragma warning(default:4244)
 	
 	safe_ptr<core::basic_frame> make_frame(uint8_t* frame_data, size_t size, size_t width, size_t height, bool drop_first_line)
@@ -324,9 +362,9 @@ struct replay_producer : public core::frame_producer
 
 		monitor_subject_	<< core::monitor::message("/profiler/time")		% elapsed % (1.0/index_header_->fps);			
 								
-		monitor_subject_	<< core::monitor::message("/file/time")			% ((interlaced_ ? framenum_ / 2 : framenum_) / index_header_->fps) 
+		monitor_subject_	<< core::monitor::message("/file/time")			% ((interlaced_ ? real_framenum_ / 2 : real_framenum_) / index_header_->fps) 
 																			% ((last_framenum_ - first_framenum_) / (interlaced_ ? 2 : 1) / index_header_->fps)
-							<< core::monitor::message("/file/frame")		% static_cast<int32_t>((interlaced_ ? framenum_ / 2 : framenum_))
+							<< core::monitor::message("/file/frame")		% static_cast<int32_t>((interlaced_ ? real_framenum_ / 2 : real_framenum_))
 																			% static_cast<int32_t>((last_framenum_ - first_framenum_) / (interlaced_ ? 2 : 1))
 							<< core::monitor::message("/file/fps")			% index_header_->fps
 							<< core::monitor::message("/file/path")			% filename_
@@ -478,23 +516,17 @@ struct replay_producer : public core::frame_producer
 	}
 #pragma warning(default:4244)
 
+
+
 	// TODO: Move the file operations and frame rendering to a separate function and put the rendered frames to a buffer
-	std::pair<safe_ptr<core::basic_frame>, uint32_t> render_frame(int hints)
+	std::pair<safe_ptr<core::basic_frame>, uint64_t> render_frame(int hints)
 	{
-
-	}
-
-	virtual safe_ptr<core::basic_frame> receive(int hint) override
-	{
-		boost::timer frame_timer;
-
 		if (last_framenum_ > 0)
 		{
 			if (last_framenum_ <= framenum_)
 			{
-				update_diag(frame_timer.elapsed());
 				frame_ = core::basic_frame::eof();
-				return frame_;
+				return std::make_pair(frame_, framenum_);
 			}
 		}
 
@@ -503,9 +535,7 @@ struct replay_producer : public core::frame_producer
 		{
 			if (!seeked_)
 			{
-				result_framenum_++;
-				update_diag(frame_timer.elapsed());
-				return frame_;
+				return std::make_pair(frame_, framenum_);
 			}
 			else
 			{
@@ -528,9 +558,7 @@ struct replay_producer : public core::frame_producer
 
 			if (!slow_motion_playback(field1))
 			{
-				result_framenum_++;
-				update_diag(frame_timer.elapsed());
-				return frame_;
+				return std::make_pair(frame_, framenum_);
 			}
 			else
 			{
@@ -539,9 +567,7 @@ struct replay_producer : public core::frame_producer
 					make_frame(field1, frame_size, index_header_->width, index_header_->height, false);
 					delete field1;
 
-					result_framenum_++;
-					update_diag(frame_timer.elapsed());
-					return frame_;
+					return std::make_pair(frame_, framenum_);
 				}
 
 				if (!slow_motion_playback(field2))
@@ -550,9 +576,8 @@ struct replay_producer : public core::frame_producer
 					delete field1;
 					delete field2;
 					delete full_frame;
-					result_framenum_++;
-					update_diag(frame_timer.elapsed());
-					return frame_;
+
+					return std::make_pair(frame_, framenum_);
 				}
 				else
 				{
@@ -563,10 +588,7 @@ struct replay_producer : public core::frame_producer
 					delete field2;
 					delete full_frame;
 
-					result_framenum_++;
-					update_diag(frame_timer.elapsed());
-
-					return frame_;
+					return std::make_pair(frame_, framenum_);
 				}
 			}
 		}
@@ -585,9 +607,7 @@ struct replay_producer : public core::frame_producer
 
 		if (field1_pos == -1)
 		{	// There are no more frames
-			result_framenum_++;
-			update_diag(frame_timer.elapsed());
-			return frame_;
+			return std::make_pair(frame_, framenum_);
 		}
 
 		move_to_next_frame(); // CHECK THIS
@@ -603,21 +623,15 @@ struct replay_producer : public core::frame_producer
 
 		if (!interlaced_)
 		{
-			result_framenum_++;
-
 			make_frame(field1, field1_size, index_header_->width, index_header_->height, false);
 
 			delete field1;
 
-			update_diag(frame_timer.elapsed());
-
-			return frame_;
+			return std::make_pair(frame_, framenum_);
 		}
 
 		if ((speed_ == 0.0f) && (interlaced_))
 		{
-			result_framenum_++;
-
 			mmx_uint8_t* full_frame = new mmx_uint8_t[field1_size * 2];
 
 			field_double(field1, full_frame, index_header_->width, index_header_->height, 4);
@@ -626,9 +640,7 @@ struct replay_producer : public core::frame_producer
 			delete field1;
 			delete full_frame;
 
-			update_diag(frame_timer.elapsed());
-
-			return frame_;
+			return std::make_pair(frame_, framenum_);
 		}
 
 		long long field2_pos = read_index(in_idx_file_);
@@ -651,10 +663,29 @@ struct replay_producer : public core::frame_producer
 			delete field2;
 		delete full_frame;
 
-		result_framenum_++;
-		update_diag(frame_timer.elapsed());
+		return std::make_pair(frame_, framenum_);
+	}
 
-		return frame_;
+	virtual safe_ptr<core::basic_frame> receive(int hint) override
+	{
+		safe_ptr<core::basic_frame> frame;
+
+		if (frame_buffer_.size() < 1)
+		{
+			graph_->set_tag("underflow");
+			frame = last_frame_;
+		}
+		else
+		{
+			frame = frame_buffer_.front().first;
+			real_framenum_ = frame_buffer_.front().second;
+			frame_buffer_.pop();
+		}
+
+		result_framenum_++;
+		last_frame_ = frame;
+
+		return frame;
 	}
 		
 	virtual safe_ptr<core::basic_frame> last_frame() const override
@@ -675,7 +706,7 @@ struct replay_producer : public core::frame_producer
 
 	virtual std::wstring print() const override
 	{
-		return L"replay_producer[" + filename_ + L"|" + boost::lexical_cast<std::wstring>(interlaced_ ? framenum_ / 2 : framenum_)
+		return L"replay_producer[" + filename_ + L"|" + boost::lexical_cast<std::wstring>(interlaced_ ? real_framenum_ / 2 : real_framenum_)
 			 + L"|" + boost::lexical_cast<std::wstring>(speed_)
 			 + L"]";
 	}
@@ -685,7 +716,7 @@ struct replay_producer : public core::frame_producer
 		boost::property_tree::wptree info;
 		info.add(L"type", L"replay-producer");
 		info.add(L"filename", filename_);
-		info.add(L"play-head", (interlaced_ ? framenum_ / 2 : framenum_));
+		info.add(L"play-head", (interlaced_ ? real_framenum_ / 2 : real_framenum_));
 		info.add(L"start-timecode", boost::posix_time::to_iso_wstring(index_header_->begin_timecode));
 		info.add(L"speed", speed_);
 		return info;
@@ -698,6 +729,15 @@ struct replay_producer : public core::frame_producer
 
 	~replay_producer()
 	{
+		runstate_ = 1;
+		if (decoder_ != NULL)
+		{
+			if (decoder_->joinable())
+			{
+				decoder_->join();
+			}
+		}
+
 		if (in_file_ != NULL)
 			safe_fclose(in_file_);
 

@@ -1,22 +1,38 @@
 ================================================================================
-CasparCG Server 2.0.3
+   CasparCG Server 2.0.3
 ================================================================================
+
+Thank you for your interest in CasparCG Server, a professional 
+software used to play out and record professional graphics, audio and video 
+to multiple outputs. It has been in 24/7 broadcast production since 2006.
+
+This release is considered tested and stable, and is intended for use in
+professional production.
+
+More information is available at http://casparcg.com/
+
 
 SYSTEM REQUIREMENTS
 ===================
 
-1. Intel processor (while AMD processors should work, CasparCG Server has only
-   been tested on Intel processors.)
+1. Intel processor capable of using SSSE3 instructions. Please refer to
+   http://en.wikipedia.org/wiki/SSSE3 for a complete list.
+   While AMD processors should work, CasparCG Server has only
+   been tested on Intel processors.
 
-2. We recommend Windows 7 (64-bit,) but it has also been successfully used on 
-   Windows 7 (32-bit) and Windows XP SP2 (32-bit only.)
+2. We recommend Windows 7 (64-bit,) but this software has also been used
+   successfully on Windows 7 (32-bit) and Windows XP SP2 (32-bit only.) 
+   Using CasparCG Server on Windows 8 and Windows Vista is untested and 
+   is not recommended!
    
-3. An OpenGL 3.0-capable graphics card from NVIDIA is required to run 
-   CasparCG Server 2.0. Also make sure that you have installed the latest
-   drivers.
+3. An NVIDIA graphics card (GPU) capable of OpenGL 3.0 or higher is required! 
    Please check your card's capabilities at: 
    http://en.wikipedia.org/wiki/Comparison_of_Nvidia_graphics_processing_units
-   Graphics cards from other manufacturers _may_ work but have not been tested.
+
+Also make sure that you have the latest drivers installed:
+   http://www.nvidia.com/Download/index.aspx?lang=en-us%20nVidia%20drivers
+   
+   Graphics cards from other manufacturers _may_ work but have not been tested!
 
 4. Microsoft Visual C++ 2010 Redistributable Package must be installed.
    Free download at:
@@ -25,7 +41,11 @@ SYSTEM REQUIREMENTS
 5. You must have Flash Player 10.3 or later installed (an installer can be found
    in the "Flash Player Installation" folder.)
 
-The latest recommendations are available at:
+6. Make sure you turn off Windows' "Aero" theme and "ClearType" font smoothing 
+   as they have been known to interfere with transparency in Flash templates, 
+   and can also cause problems with Vsync when outputting to computer screens.
+
+The latest system recommendations are available at:
 http://casparcg.com/wiki/CasparCG_Server#System_Requirements
 
 
@@ -93,20 +113,8 @@ additional settings.
 
 LICENSING
 =========
-
-CasparCG Server is distributed under the GNU General Public License GPLv3 or
+CasparCG Client is distributed under the GNU General Public License GPLv3 or
 higher, see LICENSE.TXT for details.
 
-CREDITS - People who have contributed to the CasparCG Project
-==========(sorted alphabetically by last name)===============
-
-Niklas  Andersson
-Jonas   Hummelstrand
-Andreas Jeansson
-Peter   Karlsson
-Jeff    Lafforgue
-Andy    Mace
-Robert  Nagy
-Helge   Norberg
-Thomas  R. Kaltz III
-Olle    Soprani
+The included software is provided as-is by Sveriges Televison AB.
+More information is available at http://casparcg.com/

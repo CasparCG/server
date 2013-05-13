@@ -288,6 +288,12 @@
     <ClInclude Include="StdAfx.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="mixer\audio\audio_util.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
     <ClCompile Include="mixer\gpu\fence.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>

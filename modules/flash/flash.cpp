@@ -28,6 +28,7 @@
 
 #include <core/producer/frame/frame_factory.h>
 #include <core/mixer/write_frame.h>
+#include <core/mixer/audio/audio_util.h>
 
 #include <common/env.h>
 
@@ -52,9 +53,9 @@ std::wstring get_cg_version()
 		struct dummy_factory : public core::frame_factory
 		{
 		
-			virtual safe_ptr<core::write_frame> create_frame(const void* video_stream_tag, const core::pixel_format_desc& desc) 
+			virtual safe_ptr<core::write_frame> create_frame(const void* video_stream_tag, const core::pixel_format_desc& desc, const core::channel_layout& layout) 
 			{
-				return make_safe<core::write_frame>(nullptr);
+				return make_safe<core::write_frame>(nullptr, layout);
 			}
 	
 			virtual core::video_format_desc get_video_format_desc() const

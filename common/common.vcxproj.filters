@@ -163,5 +163,8 @@
     <ClInclude Include="utility\base64.h">
       <Filter>source\utility</Filter>
     </ClInclude>
+    <ClInclude Include="utility\iterator.h">
+      <Filter>source\utility</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
