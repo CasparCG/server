@@ -211,7 +211,7 @@ public:
 						{
 							CASPAR_LOG_CURRENT_EXCEPTION();
 							CASPAR_LOG(error) << "Failed to recover consumer: " << consumer->print() << L". Removing it.";
-							consumers_.erase(it);
+							it = consumers_.erase(it);
 						}
 					}
 				}
