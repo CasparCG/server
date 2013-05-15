@@ -191,7 +191,7 @@ public:
 				std::map<int, boost::unique_future<bool>> send_results;
 
 				// Start invocations
-				for (auto it = consumers_.begin(); it != consumers_.end(); ++it)
+				for (auto it = consumers_.begin(); it != consumers_.end();)
 				{
 					auto consumer	= it->second;
 					auto frame		= frames_.at(consumer->buffer_depth()-minmax.first);
@@ -199,6 +199,7 @@ public:
 					try
 					{
 						send_results.insert(std::make_pair(it->first, consumer->send(frame)));
+						++it;
 					}
 					catch(...)
 					{
@@ -206,6 +207,7 @@ public:
 						try
 						{
 							send_results.insert(std::make_pair(it->first, consumer->send(frame)));
+							++it;
 						}
 						catch(...)
 						{
