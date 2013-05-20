@@ -165,7 +165,7 @@ struct replay_producer : public core::frame_producer
 						diagnostics::register_graph(graph_);
 
 						decoder_ = new std::thread(
-							[&] 
+							[&]
 							{
 								while (runstate_ == 0)
 								{
@@ -190,7 +190,6 @@ struct replay_producer : public core::frame_producer
 								}
 							}
 						);
-						decoder_->detach();
 					}
 					else
 					{
