@@ -1,11 +1,11 @@
 Detected memory leaks!
 Dumping objects ->
-{143} normal block at 0x03BC5388, 20 bytes long.
- Data: < S   S   S      > 88 53 BC 03 88 53 BC 03 88 53 BC 03 CD CD CD CD 
-{142} normal block at 0x03BC5340, 8 bytes long.
- Data: < Q      > 8C 51 BC 03 00 00 00 00 
-{141} normal block at 0x03BC5180, 384 bytes long.
- Data: < =4         @S  > 88 3D 34 00 01 00 00 00 01 00 00 00 40 53 BC 03 
-{140} normal block at 0x03BC5140, 4 bytes long.
- Data: < Q  > 80 51 BC 03 
+{147} normal block at 0x051655F0, 20 bytes long.
+ Data: < U   U   U      > F0 55 16 05 F0 55 16 05 F0 55 16 05 CD CD CD CD 
+{146} normal block at 0x051655A8, 8 bytes long.
+ Data: < S      > F4 53 16 05 00 00 00 00 
+{145} normal block at 0x051653E8, 384 bytes long.
+ Data: < =,          U  > 88 3D 2C 00 01 00 00 00 01 00 00 00 A8 55 16 05 
+{144} normal block at 0x051653A8, 4 bytes long.
+ Data: < S  > E8 53 16 05 
 Object dump complete.

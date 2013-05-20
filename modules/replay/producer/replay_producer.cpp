@@ -169,7 +169,7 @@ struct replay_producer : public core::frame_producer
 							{
 								while (runstate_ == 0)
 								{
-									if (frame_buffer_.size() < 2)
+									if (frame_buffer_.size() < REPLAY_PRODUCER_BUFFER_SIZE)
 									{
 										try
 										{
@@ -180,7 +180,7 @@ struct replay_producer : public core::frame_producer
 										} 
 										catch (...)
 										{
-
+											CASPAR_LOG(error) << print() << L" Unknown exception in the decoding thread!";
 										}
 									}
 									else
@@ -673,7 +673,7 @@ struct replay_producer : public core::frame_producer
 		if (frame_buffer_.size() < 1)
 		{
 			graph_->set_tag("underflow");
-			frame = last_frame_;
+			frame = last_frame_;	// repeat last frame
 		}
 		else
 		{

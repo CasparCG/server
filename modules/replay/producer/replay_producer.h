@@ -28,6 +28,8 @@
 #include <string>
 #include <vector>
 
+#define		REPLAY_PRODUCER_BUFFER_SIZE		3
+
 namespace caspar { namespace replay {
 
 safe_ptr<core::frame_producer> create_producer(
