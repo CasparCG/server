@@ -37,15 +37,14 @@
 #include <common/memory/memcpy.h>
 #include <common/concurrency/future_util.h>
 
+#include <boost/format.hpp>
+
 #include <tbb/concurrent_queue.h>
 
 namespace caspar { namespace core {
 
 class layer_consumer : public write_frame_consumer
 {	
-	const safe_ptr<frame_factory>							frame_factory_;
-	int														layer_index_;
-
 	tbb::concurrent_bounded_queue<safe_ptr<basic_frame>>	frame_buffer_;
 
 public:
@@ -67,7 +66,7 @@ public:
 
 	virtual std::wstring print() const override
 	{
-		return L"[layer_consumer|" + boost::lexical_cast<std::wstring>(layer_index_) + L"]";
+		return L"[layer_consumer]";
 	}
 
 	safe_ptr<basic_frame> receive()
@@ -125,7 +124,7 @@ public:
 
 	virtual std::wstring print() const override
 	{
-		return L"layer[" << layer_ << L"]";
+		return L"layer-producer[" + boost::lexical_cast<std::wstring>(layer_) + L"]";
 	}
 
 	virtual boost::property_tree::wptree info() const override
