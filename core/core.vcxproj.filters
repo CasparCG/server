@@ -43,6 +43,9 @@
     <Filter Include="source\producer\channel">
       <UniqueIdentifier>{f2380c6b-6ec8-4a47-8394-357a05eb831a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\producer\layer">
+      <UniqueIdentifier>{4e098e4c-7467-446f-990d-d4486d179edb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="producer\transition\transition_producer.h">
@@ -142,6 +145,13 @@
     <ClInclude Include="producer\channel\channel_producer.h">
       <Filter>source\producer\channel</Filter>
     </ClInclude>
+    <ClInclude Include="parameters\parameters.h" />
+    <ClInclude Include="producer\layer\layer_producer.h">
+      <Filter>source\producer\layer</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\write_frame_consumer.h">
+      <Filter>source\consumer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
@@ -225,6 +235,10 @@
     </ClCompile>
     <ClCompile Include="producer\channel\channel_producer.cpp">
       <Filter>source\producer\channel</Filter>
+    </ClCompile>
+    <ClCompile Include="parameters\parameters.cpp" />
+    <ClCompile Include="producer\layer\layer_producer.cpp">
+      <Filter>source\producer\layer</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

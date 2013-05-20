@@ -41,6 +41,7 @@
 #include <core/video_format.h>
 #include <core/producer/transition/transition_producer.h>
 #include <core/producer/channel/channel_producer.h>
+#include <core/producer/layer/layer_producer.h>
 #include <core/producer/frame/frame_transform.h>
 #include <core/producer/stage.h>
 #include <core/producer/layer.h>
@@ -715,6 +716,51 @@ bool RemoveCommand::DoExecute()
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
 		SetReplyString(TEXT("502 REMOVE FAILED\r\n"));
+		return false;
+	}
+}
+
+bool CopyCommand::DoExecute()
+{	
+	try
+	{
+		// COPY 1-2 3-4
+		// Creates a producer on Channel 1 Layer 2 that is a copy of the producer on Channel 3 Layer 4
+
+		auto src_channel_layer_token = _parameters[0];
+		std::vector<std::wstring> src_channel_layer;
+		boost::split(src_channel_layer, src_channel_layer_token, boost::is_any_of("-"));
+
+		int src_channel_index = boost::lexical_cast<int>(src_channel_layer[0]);
+		int layer = boost::lexical_cast<int>(src_channel_layer[1]);
+
+		auto channels = GetChannels();
+		auto src_channel = std::find_if(
+			channels.begin(), 
+			channels.end(), 
+			[src_channel_index](const safe_ptr<core::video_channel>& item) { return item->index() == src_channel_index; }
+		);
+		// TODO Check for not exist and throw
+		auto stage = (*src_channel)->stage();
+
+		auto frame_producer = create_layer_producer(GetChannel()->mixer(), stage, layer);
+		GetChannel()->stage()->load(GetLayerIndex(), frame_producer, true);
+		GetChannel()->stage()->play(GetLayerIndex());
+
+		SetReplyString(TEXT("202 COPY OK\r\n"));
+
+		return true;
+	}
+	catch(file_not_found&)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		SetReplyString(TEXT("404 COPY ERROR\r\n"));
+		return false;
+	}
+	catch(...)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		SetReplyString(TEXT("502 COPY FAILED\r\n"));
 		return false;
 	}
 }

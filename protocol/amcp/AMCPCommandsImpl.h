@@ -74,6 +74,12 @@ class SwapCommand : public AMCPCommandBase<true, AddToQueue, 1>
 	bool DoExecute();
 };
 
+class CopyCommand : public AMCPCommandBase<true, AddToQueue, 1>
+{
+	std::wstring print() const { return L"CopyCommand";}
+	bool DoExecute();
+};
+
 class LoadCommand : public AMCPCommandBase<true, AddToQueue, 1>
 {
 	std::wstring print() const { return L"LoadCommand";}

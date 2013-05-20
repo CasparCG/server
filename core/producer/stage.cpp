@@ -31,6 +31,8 @@
 #include <common/concurrency/executor.h>
 
 #include <core/producer/frame/frame_transform.h>
+#include <core/consumer/frame_consumer.h>
+#include <core/consumer/write_frame_consumer.h>
 
 #include <boost/foreach.hpp>
 #include <boost/timer.hpp>
@@ -43,7 +45,7 @@
 #include <map>
 
 namespace caspar { namespace core {
-	
+
 template<typename T>
 class tweened_transform
 {
@@ -100,6 +102,10 @@ struct stage::implementation : public std::enable_shared_from_this<implementatio
 	tbb::concurrent_unordered_map<int, tweened_transform<core::frame_transform>> transforms_;	
 
 	executor						executor_;
+
+private:
+	std::map<int, std::shared_ptr<write_frame_consumer>>						layer_consumers_;
+
 public:
 	implementation(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<stage::target_t>& target, const video_format_desc& format_desc)  
 		: graph_(graph)
@@ -116,7 +122,17 @@ public:
 		std::weak_ptr<implementation> self = shared_from_this();
 		executor_.begin_invoke([=]{tick(self);});
 	}
-							
+	
+	void add_layer_consumer(int layer, const std::shared_ptr<write_frame_consumer>& layer_consumer)
+	{
+		layer_consumers_[layer] = layer_consumer;
+	}
+
+	void remove_layer_consumer(int layer)
+	{
+		layer_consumers_.erase(layer);
+	}
+
 	void tick(const std::weak_ptr<implementation>& self)
 	{		
 		try
@@ -143,7 +159,12 @@ public:
 					hints |= frame_producer::ALPHA_HINT;
 
 				auto frame = layer.second.receive(hints);	
-				
+				auto layer_consumer_it = layer_consumers_.find(layer.first);
+				if (layer_consumer_it != layer_consumers_.end())
+				{
+					layer_consumer_it->second->send(frame);
+				}
+
 				auto frame1 = make_safe<core::basic_frame>(frame);
 				frame1->get_frame_transform() = transform;
 
@@ -158,7 +179,7 @@ public:
 			});
 			
 			graph_->set_value("produce-time", produce_timer_.elapsed()*format_desc_.fps*0.5);
-			
+
 			std::shared_ptr<void> ticket(nullptr, [self](void*)
 			{
 				auto self2 = self.lock();
@@ -384,6 +405,8 @@ void stage::clear(){impl_->clear();}
 void stage::swap_layers(const safe_ptr<stage>& other){impl_->swap_layers(other);}
 void stage::swap_layer(int index, size_t other_index){impl_->swap_layer(index, other_index);}
 void stage::swap_layer(int index, size_t other_index, const safe_ptr<stage>& other){impl_->swap_layer(index, other_index, other);}
+void stage::add_layer_consumer(int layer, const std::shared_ptr<write_frame_consumer>& layer_consumer){impl_->add_layer_consumer(layer, layer_consumer);}
+void stage::remove_layer_consumer(int layer){impl_->remove_layer_consumer(layer);}
 boost::unique_future<safe_ptr<frame_producer>> stage::foreground(int index) {return impl_->foreground(index);}
 boost::unique_future<safe_ptr<frame_producer>> stage::background(int index) {return impl_->background(index);}
 boost::unique_future<std::wstring> stage::call(int index, bool foreground, const std::wstring& param){return impl_->call(index, foreground, param);}
