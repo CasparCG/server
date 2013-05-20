@@ -304,7 +304,7 @@ AMCPCommandPtr AMCPProtocolStrategy::CommandFactory(const std::wstring& str)
 	else if(s == TEXT("CHANNEL_GRID"))	return std::make_shared<ChannelGridCommand>();
 	else if(s == TEXT("CALL"))			return std::make_shared<CallCommand>();
 	else if(s == TEXT("SWAP"))			return std::make_shared<SwapCommand>();
-	else if(s == TEXT("COPY"))			return std::make_shared<CopyCommand>();
+	else if(s == TEXT("ROUTE"))			return std::make_shared<RouteCommand>();
 	else if(s == TEXT("LOAD"))			return std::make_shared<LoadCommand>();
 	else if(s == TEXT("LOADBG"))		return std::make_shared<LoadbgCommand>();
 	else if(s == TEXT("ADD"))			return std::make_shared<AddCommand>();

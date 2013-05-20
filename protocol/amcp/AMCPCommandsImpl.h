@@ -74,9 +74,9 @@ class SwapCommand : public AMCPCommandBase<true, AddToQueue, 1>
 	bool DoExecute();
 };
 
-class CopyCommand : public AMCPCommandBase<true, AddToQueue, 1>
+class RouteCommand : public AMCPCommandBase<true, AddToQueue, 1>
 {
-	std::wstring print() const { return L"CopyCommand";}
+	std::wstring print() const { return L"RouteCommand";}
 	bool DoExecute();
 };
 

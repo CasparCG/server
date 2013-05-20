@@ -720,11 +720,11 @@ bool RemoveCommand::DoExecute()
 	}
 }
 
-bool CopyCommand::DoExecute()
+bool RouteCommand::DoExecute()
 {	
 	try
 	{
-		// COPY 1-2 3-4
+		// ROUTE 1-2 3-4
 		// Creates a producer on Channel 1 Layer 2 that is a copy of the producer on Channel 3 Layer 4
 
 		auto src_channel_layer_token = _parameters[0];
@@ -747,20 +747,20 @@ bool CopyCommand::DoExecute()
 		GetChannel()->stage()->load(GetLayerIndex(), frame_producer, true);
 		GetChannel()->stage()->play(GetLayerIndex());
 
-		SetReplyString(TEXT("202 COPY OK\r\n"));
+		SetReplyString(TEXT("202 ROUTE OK\r\n"));
 
 		return true;
 	}
 	catch(file_not_found&)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("404 COPY ERROR\r\n"));
+		SetReplyString(TEXT("404 ROUTE ERROR\r\n"));
 		return false;
 	}
 	catch(...)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("502 COPY FAILED\r\n"));
+		SetReplyString(TEXT("502 ROUTE FAILED\r\n"));
 		return false;
 	}
 }
