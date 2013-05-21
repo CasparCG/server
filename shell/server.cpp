@@ -201,7 +201,7 @@ struct server::implementation : boost::noncopyable
 				else if(name == L"udp")
 				{					
 					const auto address = xml_controller.second.get(L"address", L"127.0.0.1");
-					const auto port = xml_controller.second.get<unsigned short>(L"port", 5253);
+					const auto port = xml_controller.second.get<unsigned short>(L"port", 6250);
 
 					osc_servers_.push_back(osc::server(boost::asio::ip::udp::endpoint(boost::asio::ip::address_v4::from_string(narrow(address)), port), monitor_subject_));
 				}
