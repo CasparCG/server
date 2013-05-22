@@ -689,7 +689,7 @@ struct replay_producer : public core::frame_producer
 		
 	virtual safe_ptr<core::basic_frame> last_frame() const override
 	{
-		return frame_;
+		return last_frame_;
 	}
 
 #pragma warning (disable: 4244)
