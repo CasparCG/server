@@ -118,5 +118,8 @@
     <ClInclude Include="producer\tbb_avcodec.h">
       <Filter>source\producer</Filter>
     </ClInclude>
+    <ClInclude Include="producer\ffmpeg_params.h">
+      <Filter>source\producer</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
