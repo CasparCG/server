@@ -92,4 +92,6 @@ safe_ptr<core::frame_producer> create_producer_destroy_proxy(safe_ptr<core::fram
 safe_ptr<core::frame_producer> create_producer_print_proxy(safe_ptr<core::frame_producer> producer);
 safe_ptr<core::frame_producer> create_thumbnail_producer(const safe_ptr<frame_factory>& factory, const std::wstring& media_file);
 
+std::vector<std::wstring> protocol_split(std::wstring const& s);
+
 }}
