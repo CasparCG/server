@@ -273,6 +273,14 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 	auto producer = do_create_producer(my_frame_factory, upper_case_params, original_case_params, g_factories);
 	auto key_producer = frame_producer::empty();
 	
+	std::wstring resource_name = L"";
+	auto tokens = protocol_split(original_case_params[0]);
+	if (tokens[0].empty())
+	{
+		resource_name = original_case_params[0];
+	}
+
+	if(!resource_name.empty()) {
 	try // to find a key file.
 	{
 		auto upper_params_copy = upper_case_params;
@@ -292,6 +300,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 		}
 	}
 	catch(...){}
+	}
 
 	if(producer != frame_producer::empty() && key_producer != frame_producer::empty())
 		return create_separated_producer(producer, key_producer);
@@ -345,5 +354,22 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& fa
 	std::copy(iterator(iss),  iterator(), std::back_inserter(tokens));
 	return create_producer(factory, tokens, tokens);
 }
+
+std::vector<std::wstring> protocol_split(std::wstring const& s)
+{
+  std::vector<std::wstring> result;
+  size_t pos;
+  if ((pos = s.find_first_of(L"://")) != std::wstring::npos)
+  {
+    result.push_back(s.substr(0, pos));
+    result.push_back(s.substr(pos + 3));
+  } else
+  {
+    result.push_back(L"");
+    result.push_back(s);
+  }
+  return result;
+}
+
 
 }}

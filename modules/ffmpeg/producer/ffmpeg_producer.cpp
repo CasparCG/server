@@ -25,6 +25,7 @@
 
 #include "../ffmpeg_error.h"
 #include "../ffmpeg.h"
+#include "ffmpeg_params.h"
 
 #include "muxer/frame_muxer.h"
 #include "input/input.h"
@@ -60,11 +61,14 @@
 #include <queue>
 
 namespace caspar { namespace ffmpeg {
+
 				
 struct ffmpeg_producer : public core::frame_producer
 {
 	core::monitor::subject										monitor_subject_;
 	const std::wstring											filename_;
+
+	FFMPEG_Resource												resource_type_;
 	
 	const safe_ptr<diagnostics::graph>							graph_;
 	boost::timer												frame_timer_;
@@ -92,12 +96,13 @@ struct ffmpeg_producer : public core::frame_producer
 	uint32_t													file_frame_number_;
 		
 public:
-	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, const std::wstring& filter, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const std::wstring& custom_channel_order)
+	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, FFMPEG_Resource resource_type, const std::wstring& filter, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const std::wstring& custom_channel_order, const ffmpeg_params& vid_params)
 		: filename_(filename)
+		, resource_type_(resource_type)
 		, frame_factory_(frame_factory)		
 		, format_desc_(frame_factory->get_video_format_desc())
 		, initial_logger_disabler_(temporary_disable_logging_for_thread(thumbnail_mode))
-		, input_(graph_, filename_, loop, start, length, thumbnail_mode)
+		, input_(graph_, filename_, resource_type, loop, start, length, thumbnail_mode, vid_params)
 		, fps_(read_fps(*input_.context(), format_desc_.fps))
 		, start_(start)
 		, length_(length)
@@ -176,14 +181,20 @@ public:
 			try_decode_frame(hints);
 		
 		graph_->set_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
-				
-		if(frame_buffer_.empty() && input_.eof())
-			return std::make_pair(last_frame(), -1);
 
 		if(frame_buffer_.empty())
 		{
-			graph_->set_tag("underflow");	
-			return std::make_pair(core::basic_frame::late(), -1);
+			if (input_.eof())
+			{
+				return std::make_pair(last_frame(), -1);
+			} else if (resource_type_ == FFMPEG_FILE)
+			{
+				graph_->set_tag("underflow");  
+				return std::make_pair(core::basic_frame::late(), -1);     
+			} else
+			{
+				return std::make_pair(last_frame(), -1);
+			}
 		}
 		
 		auto frame = frame_buffer_.front(); 
@@ -308,7 +319,8 @@ public:
 
 	virtual uint32_t nb_frames() const override
 	{
-		if(input_.loop())
+		//if(input_.loop())
+		if(resource_type_ == FFMPEG_DEVICE || resource_type_ == FFMPEG_STREAM || input_.loop()) 
 			return std::numeric_limits<uint32_t>::max();
 
 		uint32_t nb_frames = file_nb_frames();
@@ -453,7 +465,36 @@ safe_ptr<core::frame_producer> create_producer(
 		const std::vector<std::wstring>& original_case_params)
 {		
 	static const std::vector<std::wstring> invalid_exts = boost::assign::list_of(L".png")(L".tga")(L".bmp")(L".jpg")(L".jpeg")(L".gif")(L".tiff")(L".tif")(L".jp2")(L".jpx")(L".j2k")(L".j2c")(L".swf")(L".ct");
-	auto filename = probe_stem(env::media_folder() + L"\\" + params.at(0), invalid_exts);
+
+	// Infer the resource type from the resource_name
+	auto resource_type = FFMPEG_FILE;
+	auto tokens = caspar::core::protocol_split(original_case_params[0]);
+	auto filename = params[0];
+	if (!tokens[0].empty())
+	{
+		if (tokens[0] == L"dshow")
+		{
+			// Camera
+			resource_type = FFMPEG_DEVICE;
+			filename = tokens[1];
+		} else
+		{
+			// Stream
+			resource_type = FFMPEG_STREAM;
+			filename = original_case_params[0];
+		}
+	} else
+	{
+		// File
+		resource_type = FFMPEG_FILE;
+		filename = env::media_folder() + L"\\" + tokens[1];
+		if(!boost::filesystem::exists(filename))
+			filename = probe_stem(filename);
+
+		//TODO fix these?
+		//ffmpeg_params->loop       = params.has(L"LOOP");
+		//ffmpeg_params->start     = params.get(L"SEEK", static_cast<uint32_t>(0));
+	}
 
 	if(filename.empty())
 		return core::frame_producer::empty();
@@ -466,8 +507,13 @@ safe_ptr<core::frame_producer> create_producer(
 
 	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
 	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
+
+	ffmpeg_params vid_params;
+	vid_params.size_str = get_param(L"SIZE", params, L"");
+	vid_params.pixel_format = get_param(L"PIXFMT", params, L"");
+	vid_params.frame_rate = get_param(L"FRAMERATE", params, L"");
 	
-	return create_producer_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, filename, filter_str, loop, start, length, false, custom_channel_order));
+	return create_producer_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, filename, resource_type, filter_str, loop, start, length, false, custom_channel_order, vid_params));
 }
 
 safe_ptr<core::frame_producer> create_thumbnail_producer(
@@ -488,7 +534,9 @@ safe_ptr<core::frame_producer> create_thumbnail_producer(
 	auto length		= std::numeric_limits<uint32_t>::max();
 	auto filter_str = L"";
 		
-	return create_producer_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, filename, filter_str, loop, start, length, true, L""));
+	ffmpeg_params vid_params;
+
+	return create_producer_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, filename, FFMPEG_FILE, filter_str, loop, start, length, true, L"", vid_params));
 }
 
 }}
