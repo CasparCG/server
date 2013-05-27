@@ -36,6 +36,8 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include <common/memory/byte_order.h>
+
 #if defined(__WIN32__) || defined(WIN32)
 #include <malloc.h> // for alloca
 #endif
@@ -48,7 +50,8 @@ namespace osc{
 static void FromInt32( char *p, int32 x )
 {
 #ifdef OSC_HOST_LITTLE_ENDIAN
-    union{
+	*reinterpret_cast<int32*>(p) = caspar::swap_byte_order(x);
+    /*union{
         osc::int32 i;
         char c[4];
     } u;
@@ -58,7 +61,7 @@ static void FromInt32( char *p, int32 x )
     p[3] = u.c[0];
     p[2] = u.c[1];
     p[1] = u.c[2];
-    p[0] = u.c[3];
+    p[0] = u.c[3];*/
 #else
     *reinterpret_cast<int32*>(p) = x;
 #endif
@@ -68,7 +71,8 @@ static void FromInt32( char *p, int32 x )
 static void FromUInt32( char *p, uint32 x )
 {
 #ifdef OSC_HOST_LITTLE_ENDIAN
-    union{
+	*reinterpret_cast<uint32*>(p) = caspar::swap_byte_order(x);
+    /*union{
         osc::uint32 i;
         char c[4];
     } u;
@@ -78,7 +82,7 @@ static void FromUInt32( char *p, uint32 x )
     p[3] = u.c[0];
     p[2] = u.c[1];
     p[1] = u.c[2];
-    p[0] = u.c[3];
+    p[0] = u.c[3];*/
 #else
     *reinterpret_cast<uint32*>(p) = x;
 #endif
@@ -88,7 +92,8 @@ static void FromUInt32( char *p, uint32 x )
 static void FromInt64( char *p, int64 x )
 {
 #ifdef OSC_HOST_LITTLE_ENDIAN
-    union{
+	*reinterpret_cast<int64*>(p) = caspar::swap_byte_order(x);
+    /*union{
         osc::int64 i;
         char c[8];
     } u;
@@ -102,7 +107,7 @@ static void FromInt64( char *p, int64 x )
     p[3] = u.c[4];
     p[2] = u.c[5];
     p[1] = u.c[6];
-    p[0] = u.c[7];
+    p[0] = u.c[7];*/
 #else
     *reinterpret_cast<int64*>(p) = x;
 #endif
@@ -112,7 +117,8 @@ static void FromInt64( char *p, int64 x )
 static void FromUInt64( char *p, uint64 x )
 {
 #ifdef OSC_HOST_LITTLE_ENDIAN
-    union{
+	*reinterpret_cast<uint64*>(p) = caspar::swap_byte_order(x);
+    /*union{
         osc::uint64 i;
         char c[8];
     } u;
@@ -126,7 +132,7 @@ static void FromUInt64( char *p, uint64 x )
     p[3] = u.c[4];
     p[2] = u.c[5];
     p[1] = u.c[6];
-    p[0] = u.c[7];
+    p[0] = u.c[7];*/
 #else
     *reinterpret_cast<uint64*>(p) = x;
 #endif
@@ -463,7 +469,8 @@ OutboundPacketStream& OutboundPacketStream::operator<<( float rhs )
     *(--typeTagsCurrent_) = FLOAT_TYPE_TAG;
 
 #ifdef OSC_HOST_LITTLE_ENDIAN
-    union{
+	*reinterpret_cast<float*>(argumentCurrent_) = caspar::swap_byte_order(rhs);
+    /*union{
         float f;
         char c[4];
     } u;
@@ -473,7 +480,7 @@ OutboundPacketStream& OutboundPacketStream::operator<<( float rhs )
     argumentCurrent_[3] = u.c[0];
     argumentCurrent_[2] = u.c[1];
     argumentCurrent_[1] = u.c[2];
-    argumentCurrent_[0] = u.c[3];
+    argumentCurrent_[0] = u.c[3];*/
 #else
     *reinterpret_cast<float*>(argumentCurrent_) = rhs;
 #endif
@@ -551,7 +558,8 @@ OutboundPacketStream& OutboundPacketStream::operator<<( double rhs )
     *(--typeTagsCurrent_) = DOUBLE_TYPE_TAG;
 
 #ifdef OSC_HOST_LITTLE_ENDIAN
-    union{
+	*reinterpret_cast<double*>(argumentCurrent_) = caspar::swap_byte_order(rhs);
+    /*union{
         double f;
         char c[8];
     } u;
@@ -565,7 +573,7 @@ OutboundPacketStream& OutboundPacketStream::operator<<( double rhs )
     argumentCurrent_[3] = u.c[4];
     argumentCurrent_[2] = u.c[5];
     argumentCurrent_[1] = u.c[6];
-    argumentCurrent_[0] = u.c[7];
+    argumentCurrent_[0] = u.c[7];*/
 #else
     *reinterpret_cast<double*>(argumentCurrent_) = rhs;
 #endif
