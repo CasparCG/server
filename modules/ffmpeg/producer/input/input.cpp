@@ -24,6 +24,7 @@
 #include "input.h"
 
 #include "../util/util.h"
+#include "../util/flv.h"
 #include "../../ffmpeg_error.h"
 #include "../../ffmpeg.h"
 
@@ -83,9 +84,9 @@ struct input::implementation : boost::noncopyable
 		
 	executor													executor_;
 	
-	explicit implementation(const safe_ptr<diagnostics::graph> graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode) 
+	explicit implementation(const safe_ptr<diagnostics::graph> graph, const std::wstring& filename, FFMPEG_Resource resource_type, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_params& vid_params) 
 		: graph_(graph)
-		, format_context_(open_input(filename))		
+		, format_context_(open_input(filename, resource_type, vid_params))		
 		, default_stream_index_(av_find_default_stream_index(format_context_.get()))
 		, filename_(filename)
 		, start_(start)
@@ -234,6 +235,72 @@ struct input::implementation : boost::noncopyable
 			}
 		});
 	}	
+
+	safe_ptr<AVFormatContext> open_input(const std::wstring resource_name, FFMPEG_Resource resource_type, const ffmpeg_params& vid_params)
+  {
+    AVFormatContext* weak_context = nullptr;
+
+    switch (resource_type) {
+    case FFMPEG_FILE:
+      THROW_ON_ERROR2(avformat_open_input(&weak_context, narrow(resource_name).c_str(), nullptr, nullptr), resource_name);
+      break;
+    case FFMPEG_DEVICE: {
+      AVDictionary* format_options = NULL;
+	  if(vid_params.size_str != L"")
+		av_dict_set(&format_options, "video_size", narrow(vid_params.size_str).c_str(), 0); // 640x360 for 16:9
+	  if(vid_params.pixel_format != L"")
+		av_dict_set(&format_options, "pixel_format", narrow(vid_params.pixel_format).c_str(), 0); // yuyv422 for sony
+      av_dict_set(&format_options, "avioflags", "direct", 0);
+
+      // Don't set framerate here, it is typically set to a fixed rate anyway. Better to insert a fps filter to adjust the frame rate.
+	  // Im going to try anyway for now
+      if(vid_params.frame_rate != L"")
+		av_dict_set(&format_options, "framerate", narrow(vid_params.frame_rate).c_str(), 0);
+      AVInputFormat* input_format = av_find_input_format("dshow");
+      THROW_ON_ERROR2(avformat_open_input(&weak_context, narrow(resource_name).c_str(), input_format, &format_options), resource_name);
+      av_dict_free(&format_options);
+      } break;
+    case FFMPEG_STREAM:
+      THROW_ON_ERROR2(avformat_open_input(&weak_context, narrow(resource_name).c_str(), nullptr, nullptr), resource_name);
+      break;
+    };
+    safe_ptr<AVFormatContext> context(weak_context, av_close_input_file);      
+    THROW_ON_ERROR2(avformat_find_stream_info(weak_context, nullptr), resource_name);
+    fix_meta_data(*context);
+    return context;
+  }
+
+  void fix_meta_data(AVFormatContext& context)
+  {
+    auto video_index = av_find_best_stream(&context, AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
+
+    if(video_index > -1)
+    {
+     auto video_stream   = context.streams[video_index];
+      auto video_context  = context.streams[video_index]->codec;
+            
+      if(boost::filesystem2::path(context.filename).extension() == ".flv")
+      {
+        try
+        {
+          auto meta = read_flv_meta_info(context.filename);
+          double fps = boost::lexical_cast<double>(meta["framerate"]);
+          video_stream->nb_frames = static_cast<int64_t>(boost::lexical_cast<double>(meta["duration"])*fps);
+        }
+        catch(...){}
+      }
+      else
+      {
+        auto stream_time = video_stream->time_base;
+        auto duration   = video_stream->duration;
+        auto codec_time  = video_context->time_base;
+        auto ticks     = video_context->ticks_per_frame;
+
+        if(video_stream->nb_frames == 0)
+          video_stream->nb_frames = (duration*stream_time.num*codec_time.den)/(stream_time.den*codec_time.num*ticks);  
+      }
+    }
+  }
 			
 	void queued_seek(const uint32_t target)
 	{  	
@@ -278,8 +345,8 @@ struct input::implementation : boost::noncopyable
 	}
 };
 
-input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode) 
-	: impl_(new implementation(graph, filename, loop, start, length, thumbnail_mode)){}
+input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, FFMPEG_Resource resource_type, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_params& vid_params) 
+	: impl_(new implementation(graph, filename, resource_type, loop, start, length, thumbnail_mode, vid_params)){}
 bool input::eof() const {return !impl_->executor_.is_running();}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
 safe_ptr<AVFormatContext> input::context(){return impl_->format_context_;}
