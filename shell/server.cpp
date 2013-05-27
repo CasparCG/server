@@ -58,7 +58,8 @@
 #include <protocol/CLK/CLKProtocolStrategy.h>
 #include <protocol/util/AsyncEventServer.h>
 #include <protocol/util/stateful_protocol_strategy_wrapper.h>
-#include <protocol/osc/server.h>
+#include <protocol/osc/client.h>
+#include <protocol/asio/io_service_manager.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
@@ -73,18 +74,22 @@ using namespace protocol;
 
 struct server::implementation : boost::noncopyable
 {
+	protocol::asio::io_service_manager			io_service_manager_;
 	core::monitor::subject						monitor_subject_;
+	core::monitor::multi_target					multi_target_;
 	boost::promise<bool>&						shutdown_server_now_;
 	safe_ptr<ogl_device>						ogl_;
 	std::vector<safe_ptr<IO::AsyncEventServer>> async_servers_;	
-	std::vector<osc::server>					osc_servers_;
+	std::shared_ptr<IO::AsyncEventServer>		primary_amcp_server_;
+	std::vector<osc::client>					osc_clients_;
 	std::vector<safe_ptr<video_channel>>		channels_;
 	std::shared_ptr<thumbnail_generator>		thumbnail_generator_;
 
 	implementation(boost::promise<bool>& shutdown_server_now)
 		: shutdown_server_now_(shutdown_server_now)
 		, ogl_(ogl_device::create())
-	{			
+	{
+		monitor_subject_.link_target(&multi_target_);
 		setup_audio(env::properties());
 
 		ffmpeg::init();
@@ -115,6 +120,9 @@ struct server::implementation : boost::noncopyable
 
 		setup_controllers(env::properties());
 		CASPAR_LOG(info) << L"Initialized controllers.";
+
+		setup_osc(env::properties());
+		CASPAR_LOG(info) << L"Initialized osc.";
 	}
 
 	~implementation()
@@ -230,13 +238,9 @@ struct server::implementation : boost::noncopyable
 					auto asyncbootstrapper = make_safe<IO::AsyncEventServer>(create_protocol(protocol), port);
 					asyncbootstrapper->Start();
 					async_servers_.push_back(asyncbootstrapper);
-				}
-				else if(name == L"udp")
-				{					
-					const auto address = xml_controller.second.get(L"address", L"127.0.0.1");
-					const auto port = xml_controller.second.get<unsigned short>(L"port", 6250);
 
-					osc_servers_.push_back(osc::server(boost::asio::ip::udp::endpoint(boost::asio::ip::address_v4::from_string(narrow(address)), port), monitor_subject_));
+					if (!primary_amcp_server_ && boost::iequals(protocol, L"AMCP"))
+						primary_amcp_server_ = asyncbootstrapper;
 				}
 				else
 					CASPAR_LOG(warning) << "Invalid controller: " << widen(name);	
@@ -246,6 +250,49 @@ struct server::implementation : boost::noncopyable
 				CASPAR_LOG_CURRENT_EXCEPTION();
 			}
 		}
+	}
+
+	void setup_osc(const boost::property_tree::wptree& pt)
+	{		
+		using boost::property_tree::wptree;
+		using namespace boost::asio::ip;
+		
+		auto default_port =
+				pt.get<unsigned short>(L"configuration.osc.default-port", 6250);
+		auto predefined_clients =
+				pt.get_child_optional(L"configuration.osc.predefined-clients");
+
+		if (predefined_clients)
+		{
+			BOOST_FOREACH(auto& predefined_client, *predefined_clients)
+			{
+				const auto address =
+						predefined_client.second.get<std::wstring>(L"address");
+				const auto port =
+						predefined_client.second.get<unsigned short>(L"port");
+				osc_clients_.push_back(osc::client(
+						io_service_manager_.service(),
+						udp::endpoint(
+								address_v4::from_string(narrow(address)),
+								port),
+						multi_target_));
+			}
+		}
+
+		if (primary_amcp_server_)
+			primary_amcp_server_->add_lifecycle_factory(
+					[=] (const std::string& ipv4_address)
+							-> std::shared_ptr<void>
+					{
+						using namespace boost::asio::ip;
+
+						return std::make_shared<osc::client>(
+								io_service_manager_.service(),
+								udp::endpoint(
+										address_v4::from_string(ipv4_address),
+										default_port),
+								multi_target_);
+					});
 	}
 
 	void setup_thumbnail_generation(const boost::property_tree::wptree& pt)

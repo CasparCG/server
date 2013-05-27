@@ -60,5 +60,10 @@ void SocketInfo::Disconnect() {
 		pServer_->DisconnectClient(*this);
 }
 
+void SocketInfo::bind_to_lifecycle(const std::shared_ptr<void>& lifecycle_bound)
+{
+	lifecycle_bound_items_.push_back(lifecycle_bound);
+}
+
 }	//namespace IO
 }	//namespace caspar

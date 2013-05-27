@@ -22,6 +22,9 @@
     <Filter Include="source\osc\oscpack">
       <UniqueIdentifier>{6d9a82d4-6805-4de0-b400-6212fac06109}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\asio">
+      <UniqueIdentifier>{9c3a5197-d725-475d-ad5c-6b120e08022f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="amcp\AMCPCommand.h">
@@ -97,7 +100,10 @@
     <ClInclude Include="osc\oscpack\OscOutboundPacketStream.h">
       <Filter>source\osc\oscpack</Filter>
     </ClInclude>
-    <ClInclude Include="osc\server.h">
+    <ClInclude Include="asio\io_service_manager.h">
+      <Filter>source\asio</Filter>
+    </ClInclude>
+    <ClInclude Include="osc\client.h">
       <Filter>source\osc</Filter>
     </ClInclude>
   </ItemGroup>
@@ -151,7 +157,10 @@
     <ClCompile Include="osc\oscpack\OscOutboundPacketStream.cpp">
       <Filter>source\osc\oscpack</Filter>
     </ClCompile>
-    <ClCompile Include="osc\server.cpp">
+    <ClCompile Include="asio\io_service_manager.cpp">
+      <Filter>source\asio</Filter>
+    </ClCompile>
+    <ClCompile Include="osc\client.cpp">
       <Filter>source\osc</Filter>
     </ClCompile>
   </ItemGroup>
