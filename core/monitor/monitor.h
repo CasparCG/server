@@ -89,6 +89,7 @@ public:
 };
 
 typedef Concurrency::ISource<monitor::message> source;
+typedef Concurrency::overwrite_buffer<monitor::message> multi_target;
 
 
 }}}

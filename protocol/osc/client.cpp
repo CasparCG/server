@@ -1,6 +1,27 @@
-#include "..\stdafx.h"
+/*
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+*
+* This file is part of CasparCG (www.casparcg.com).
+*
+* CasparCG is free software: you can redistribute it and/or modify
+* it under the terms of the GNU General Public License as published by
+* the Free Software Foundation, either version 3 of the License, or
+* (at your option) any later version.
+*
+* CasparCG is distributed in the hope that it will be useful,
+* but WITHOUT ANY WARRANTY; without even the implied warranty of
+* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+* GNU General Public License for more details.
+*
+* You should have received a copy of the GNU General Public License
+* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
+*
+* Author: Robert Nagy, ronag89@gmail.com
+*/
 
-#include "server.h"
+#include "../stdafx.h"
+
+#include "client.h"
 
 #include "oscpack/oscOutboundPacketStream.h"
 
@@ -11,12 +32,12 @@
 
 #include <boost/asio.hpp>
 #include <boost/foreach.hpp>
-#include <boost/thread.hpp>
+#include <boost/bind.hpp>
 
 using namespace boost::asio::ip;
 
 namespace caspar { namespace protocol { namespace osc {
-	
+
 template<typename T>
 struct param_visitor : public boost::static_visitor<void>
 {
@@ -55,31 +76,23 @@ std::vector<char> write_osc_event(const core::monitor::message& e)
 	return std::vector<char>(o.Data(), o.Data() + o.Size());
 }
 
-struct server::impl
+struct client::impl
 {
-	boost::asio::io_service						service_;
-
 	udp::endpoint								endpoint_;
 	udp::socket									socket_;	
-
-	boost::thread								thread_;
 
 	Concurrency::call<core::monitor::message>	on_next_;
 	
 public:
-	impl(udp::endpoint endpoint, 
-		 Concurrency::ISource<core::monitor::message>& source)
+	impl(
+			boost::asio::io_service& service,
+			udp::endpoint endpoint,
+			Concurrency::ISource<core::monitor::message>& source)
 		: endpoint_(endpoint)
-		, socket_(service_, endpoint_.protocol())
-		, thread_(std::bind(&boost::asio::io_service::run, &service_))
+		, socket_(service, endpoint_.protocol())
 		, on_next_([this](const core::monitor::message& msg){ on_next(msg); })
 	{
 		source.link_target(&on_next_);
-	}
-
-	~impl()
-	{		
-		thread_.join();
 	}
 	
 	void on_next(const core::monitor::message& msg)
@@ -98,24 +111,24 @@ public:
 	}
 };
 
-server::server(udp::endpoint endpoint, 
+client::client(boost::asio::io_service& service, udp::endpoint endpoint, 
 			   Concurrency::ISource<core::monitor::message>& source) 
-	: impl_(new impl(endpoint, source))
+	: impl_(new impl(service, endpoint, source))
 {
 }
 
-server::server(server&& other)
+client::client(client&& other)
 	: impl_(std::move(other.impl_))
 {
 }
 
-server& server::operator=(server&& other)
+client& client::operator=(client&& other)
 {
 	impl_ = std::move(other.impl_);
 	return *this;
 }
 
-server::~server()
+client::~client()
 {
 }
 

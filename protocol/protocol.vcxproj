@@ -37,6 +37,7 @@
     <ClInclude Include="amcp\AMCPCommandQueue.h" />
     <ClInclude Include="amcp\AMCPCommandsImpl.h" />
     <ClInclude Include="amcp\AMCPProtocolStrategy.h" />
+    <ClInclude Include="asio\io_service_manager.h" />
     <ClInclude Include="cii\CIICommand.h" />
     <ClInclude Include="cii\CIICommandsImpl.h" />
     <ClInclude Include="cii\CIIProtocolStrategy.h" />
@@ -51,7 +52,7 @@
     <ClInclude Include="osc\oscpack\OscPrintReceivedElements.h" />
     <ClInclude Include="osc\oscpack\OscReceivedElements.h" />
     <ClInclude Include="osc\oscpack\OscTypes.h" />
-    <ClInclude Include="osc\server.h" />
+    <ClInclude Include="osc\client.h" />
     <ClInclude Include="StdAfx.h" />
     <ClInclude Include="util\AsyncEventServer.h" />
     <ClInclude Include="util\ClientInfo.h" />
@@ -78,6 +79,12 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="asio\io_service_manager.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="cii\CIICommandsImpl.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
@@ -133,7 +140,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="osc\server.cpp">
+    <ClCompile Include="osc\client.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
