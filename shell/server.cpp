@@ -34,6 +34,7 @@
 #include <core/video_channel.h>
 #include <core/producer/stage.h>
 #include <core/consumer/output.h>
+#include <core/consumer/synchronizing/synchronizing_consumer.h>
 #include <core/thumbnail_generator.h>
 
 #include <modules/bluefish/bluefish.h>
@@ -151,34 +152,66 @@ struct server::implementation : boost::noncopyable
 			
 			channels_.back()->monitor_output().link_target(&monitor_subject_);
 
-			BOOST_FOREACH(auto& xml_consumer, xml_channel.second.get_child(L"consumers"))
-			{
-				try
+			create_consumers(
+				xml_channel.second.get_child(L"consumers"),
+				[&] (const safe_ptr<core::frame_consumer>& consumer)
 				{
-					auto name = xml_consumer.first;
-					if(name == L"screen")
-						channels_.back()->output()->add(ogl::create_consumer(xml_consumer.second));					
-					else if(name == L"bluefish")					
-						channels_.back()->output()->add(bluefish::create_consumer(xml_consumer.second));					
-					else if(name == L"decklink")					
-						channels_.back()->output()->add(decklink::create_consumer(xml_consumer.second));				
-					else if(name == L"file")					
-						channels_.back()->output()->add(ffmpeg::create_consumer(xml_consumer.second));						
-					else if(name == L"system-audio")
-						channels_.back()->output()->add(oal::create_consumer());		
-					else if(name != L"<xmlcomment>")
-						CASPAR_LOG(warning) << "Invalid consumer: " << widen(name);	
-				}
-				catch(...)
-				{
-					CASPAR_LOG_CURRENT_EXCEPTION();
-				}
-			}							
+					channels_.back()->output()->add(consumer);
+				});
+
+			// Add all consumers before starting channel.
+			channels_.back()->start_channel();
 		}
 
 		// Dummy diagnostics channel
 		if(env::properties().get(L"configuration.channel-grid", false))
+		{
 			channels_.push_back(make_safe<video_channel>(channels_.size()+1, core::video_format_desc::get(core::video_format::x576p2500), ogl_, default_channel_layout_repository().get_by_name(L"STEREO")));
+			channels_.back()->start_channel();
+		}
+	}
+
+	template<typename Base>
+	std::vector<safe_ptr<Base>> create_consumers(const boost::property_tree::wptree& pt)
+	{
+		std::vector<safe_ptr<Base>> consumers;
+
+		create_consumers(pt, [&] (const safe_ptr<core::frame_consumer>& consumer)
+		{
+			consumers.push_back(dynamic_pointer_cast<Base>(consumer));
+		});
+
+		return consumers;
+	}
+
+	template<class Func>
+	void create_consumers(const boost::property_tree::wptree& pt, const Func& on_consumer)
+	{
+		BOOST_FOREACH(auto& xml_consumer, pt)
+		{
+			try
+			{
+				auto name = xml_consumer.first;
+				if (name == L"screen")
+					on_consumer(ogl::create_consumer(xml_consumer.second));
+				else if (name == L"bluefish")					
+					on_consumer(bluefish::create_consumer(xml_consumer.second));					
+				else if (name == L"decklink")					
+					on_consumer(decklink::create_consumer(xml_consumer.second));				
+				else if (name == L"file")					
+					on_consumer(ffmpeg::create_consumer(xml_consumer.second));						
+				else if (name == L"system-audio")
+					on_consumer(oal::create_consumer());
+				else if (name == L"synchronizing")
+					on_consumer(make_safe<core::synchronizing_consumer>(create_consumers<core::synchronizable_consumer>(xml_consumer.second)));
+				else if (name != L"<xmlcomment>")
+					CASPAR_LOG(warning) << "Invalid consumer: " << widen(name);	
+			}
+			catch(...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+			}
+		}
 	}
 		
 	void setup_controllers(const boost::property_tree::wptree& pt)

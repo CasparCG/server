@@ -221,6 +221,7 @@
     <ClInclude Include="filesystem\polling_filesystem_monitor.h" />
     <ClInclude Include="gl\gl_check.h" />
     <ClInclude Include="log\log.h" />
+    <ClInclude Include="memory\byte_order.h" />
     <ClInclude Include="memory\memclr.h" />
     <ClInclude Include="memory\memcpy.h" />
     <ClInclude Include="memory\memshfl.h" />
