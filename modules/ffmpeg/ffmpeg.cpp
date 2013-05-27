@@ -47,6 +47,7 @@ extern "C"
 	#include <libswscale/swscale.h>
 	#include <libavutil/avutil.h>
 	#include <libavfilter/avfilter.h>
+	#include <libavdevice/avdevice.h>
 }
 
 namespace caspar { namespace ffmpeg {
@@ -239,11 +240,12 @@ void init()
 	av_lockmgr_register(ffmpeg_lock_callback);
 	av_log_set_callback(log_for_thread);
 
+	avdevice_register_all();
     avfilter_register_all();
 	//fix_yadif_filter_format_query();
 	av_register_all();
     avformat_network_init();
-	avcodec_init();
+	//avcodec_init();
     avcodec_register_all();
 	
 	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
