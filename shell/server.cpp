@@ -136,12 +136,19 @@ struct server::implementation : boost::noncopyable
 	{
 		register_default_channel_layouts(default_channel_layout_repository());
 		register_default_mix_configs(default_mix_config_repository());
-		parse_channel_layouts(
-				default_channel_layout_repository(),
-				pt.get_child(L"configuration.audio.channel-layouts"));
-		parse_mix_configs(
-				default_mix_config_repository(),
-				pt.get_child(L"configuration.audio.mix-configs"));
+
+		auto channel_layouts =
+			pt.get_child_optional(L"configuration.audio.channel-layouts");
+		auto mix_configs =
+			pt.get_child_optional(L"configuration.audio.mix-configs");
+
+		if (channel_layouts)
+			parse_channel_layouts(
+					default_channel_layout_repository(), *channel_layouts);
+
+		if (mix_configs)
+			parse_mix_configs(
+					default_mix_config_repository(), *mix_configs);
 	}
 				
 	void setup_channels(const boost::property_tree::wptree& pt)
