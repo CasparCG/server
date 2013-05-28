@@ -48,7 +48,7 @@ public:
 	virtual void visit(core::write_frame& frame);
 	virtual void end();
 
-	void begin_layer(blend_mode::type blend_mode);
+	void begin_layer(blend_mode blend_mode);
 	void end_layer();
 		
 	boost::unique_future<safe_ptr<host_buffer>> operator()(const video_format_desc& format_desc);
