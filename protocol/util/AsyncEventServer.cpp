@@ -300,8 +300,7 @@ bool AsyncEventServer::OnAccept(SocketInfoPtr& pSI) {
 		{
 			auto lifecycle_bound = lifecycle_factory(ipv4_address);
 
-			if (lifecycle_bound)
-				pClientSocket->bind_to_lifecycle(lifecycle_bound);
+			pClientSocket->bind_to_lifecycle(lifecycle_bound);
 		}
 	}
 

@@ -36,7 +36,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#include <common/memory/byte_order.h>
+#include <common/memory/endian.h>
 
 #if defined(__WIN32__) || defined(WIN32)
 #include <malloc.h> // for alloca

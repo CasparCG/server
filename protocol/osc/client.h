@@ -41,10 +41,22 @@ public:
 
 	client(
 			boost::asio::io_service& service,
-			boost::asio::ip::udp::endpoint endpoint,
 			Concurrency::ISource<core::monitor::message>& source);
 	
 	client(client&&);
+
+	/**
+	 * Get a prenumeration token that ensures that OSC messages are sent to the
+	 * given endpoint as long as the token is alive. It will stop sending when
+	 * the token is dropped unless another token to the same endpoint has
+	 * previously been checked out.
+	 *
+	 * @param endpoint The UDP endpoint to send OSC messages to.
+	 *
+	 * @return The token. It is ok for the token to outlive the client
+	 */
+	std::shared_ptr<void> get_prenumeration_token(
+			const boost::asio::ip::udp::endpoint& endpoint);
 
 	~client();
 
@@ -56,7 +68,7 @@ public:
 
 private:
 	struct impl;
-	std::unique_ptr<impl> impl_;
+	std::shared_ptr<impl> impl_;
 };
 
 }}}
