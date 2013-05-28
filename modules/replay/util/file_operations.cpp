@@ -477,6 +477,15 @@ namespace caspar { namespace replay {
 
 		jpeg_set_defaults(&cinfo);
 
+
+		// Disable chroma subsampling (store in 4:4:4 quality)
+		cinfo.comp_info[0].h_samp_factor = 1;
+		cinfo.comp_info[0].v_samp_factor = 1;
+		cinfo.comp_info[1].h_samp_factor = 1;
+		cinfo.comp_info[1].v_samp_factor = 1;
+		cinfo.comp_info[2].h_samp_factor = 1;
+		cinfo.comp_info[2].v_samp_factor = 1;
+
 		jpeg_set_quality(&cinfo, quality, TRUE);
 
 		jpeg_start_compress(&cinfo, TRUE);
