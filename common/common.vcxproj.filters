@@ -166,7 +166,7 @@
     <ClInclude Include="utility\iterator.h">
       <Filter>source\utility</Filter>
     </ClInclude>
-    <ClInclude Include="memory\byte_order.h">
+    <ClInclude Include="memory\endian.h">
       <Filter>source\memory</Filter>
     </ClInclude>
   </ItemGroup>

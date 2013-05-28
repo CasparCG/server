@@ -23,6 +23,8 @@
 
 #include "io_service_manager.h"
 
+#include <memory>
+
 #include <boost/asio/io_service.hpp>
 #include <boost/thread/thread.hpp>
 
@@ -31,15 +33,21 @@ namespace caspar { namespace protocol { namespace asio {
 struct io_service_manager::impl
 {
 	boost::asio::io_service service_;
+	// To keep the io_service::run() running although no pending async
+	// operations are posted.
+	std::unique_ptr<boost::asio::io_service::work> work_;
 	boost::thread thread_;
 
 	impl()
-		: thread_(std::bind(&boost::asio::io_service::run, &service_))
+		: work_(new boost::asio::io_service::work(service_))
+		, thread_(std::bind(&boost::asio::io_service::run, &service_))
 	{
 	}
 
 	~impl()
 	{
+		work_.reset();
+		service_.stop();
 		thread_.join();
 	}
 };

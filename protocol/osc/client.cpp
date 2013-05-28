@@ -34,6 +34,8 @@
 #include <boost/foreach.hpp>
 #include <boost/bind.hpp>
 
+#include <tbb/spin_mutex.h>
+
 using namespace boost::asio::ip;
 
 namespace caspar { namespace protocol { namespace osc {
@@ -76,44 +78,90 @@ std::vector<char> write_osc_event(const core::monitor::message& e)
 	return std::vector<char>(o.Data(), o.Data() + o.Size());
 }
 
-struct client::impl
+struct client::impl : public std::enable_shared_from_this<client::impl>
 {
-	udp::endpoint								endpoint_;
-	udp::socket									socket_;	
+	tbb::spin_mutex								endpoints_mutex_;
+	std::map<udp::endpoint, int>				reference_counts_by_endpoint_;
+	udp::socket									socket_;
 
 	Concurrency::call<core::monitor::message>	on_next_;
 	
 public:
 	impl(
 			boost::asio::io_service& service,
-			udp::endpoint endpoint,
 			Concurrency::ISource<core::monitor::message>& source)
-		: endpoint_(endpoint)
-		, socket_(service, endpoint_.protocol())
-		, on_next_([this](const core::monitor::message& msg){ on_next(msg); })
+		: socket_(service, udp::v4())
+		, on_next_([this](const core::monitor::message& msg) { on_next(msg); })
 	{
 		source.link_target(&on_next_);
+	}
+
+	std::shared_ptr<void> get_prenumeration_token(
+			const boost::asio::ip::udp::endpoint& endpoint)
+	{
+		tbb::spin_mutex::scoped_lock lock(endpoints_mutex_);
+
+		++reference_counts_by_endpoint_[endpoint];
+
+		std::weak_ptr<impl> weak_self = shared_from_this();
+
+		return std::shared_ptr<void>(nullptr, [weak_self, endpoint] (void*)
+		{
+			auto strong = weak_self.lock();
+
+			if (!strong)
+				return;
+
+			auto& self = *strong;
+
+			tbb::spin_mutex::scoped_lock lock(self.endpoints_mutex_);
+
+			int reference_count_after =
+				--self.reference_counts_by_endpoint_[endpoint];
+
+			if (reference_count_after == 0)
+				self.reference_counts_by_endpoint_.erase(endpoint);
+		});
 	}
 	
 	void on_next(const core::monitor::message& msg)
 	{
 		auto data_ptr = make_safe<std::vector<char>>(write_osc_event(msg));
 
-		socket_.async_send_to(boost::asio::buffer(*data_ptr), 
-							  endpoint_,
-							  boost::bind(&impl::handle_send_to, this,
-							  boost::asio::placeholders::error,
-							  boost::asio::placeholders::bytes_transferred));		
-	}	
+		tbb::spin_mutex::scoped_lock lock(endpoints_mutex_);
 
-	void handle_send_to(const boost::system::error_code& /*error*/, size_t /*bytes_sent*/)
+		BOOST_FOREACH(auto& elem, reference_counts_by_endpoint_)
+		{
+			auto& endpoint = elem.first;
+
+			// TODO: We seem to be lucky here, because according to asio
+			//       documentation only one async operation can be "in flight"
+			//       at any given point in time for a socket. This somehow seems
+			//       to work though in the case of UDP and Windows.
+			socket_.async_send_to(
+					boost::asio::buffer(*data_ptr),
+					endpoint,
+					boost::bind(
+							&impl::handle_send_to,
+							this,
+							data_ptr, // The data_ptr needs to live
+							boost::asio::placeholders::error,
+							boost::asio::placeholders::bytes_transferred));		
+		}
+	}
+
+	void handle_send_to(
+			const safe_ptr<std::vector<char>>& /* sent_buffer */,
+			const boost::system::error_code& /*error*/,
+			size_t /*bytes_sent*/)
 	{
 	}
 };
 
-client::client(boost::asio::io_service& service, udp::endpoint endpoint, 
-			   Concurrency::ISource<core::monitor::message>& source) 
-	: impl_(new impl(service, endpoint, source))
+client::client(
+		boost::asio::io_service& service,
+		Concurrency::ISource<core::monitor::message>& source) 
+	: impl_(new impl(service, source))
 {
 }
 
@@ -130,6 +178,12 @@ client& client::operator=(client&& other)
 
 client::~client()
 {
+}
+
+std::shared_ptr<void> client::get_prenumeration_token(
+			const boost::asio::ip::udp::endpoint& endpoint)
+{
+	return impl_->get_prenumeration_token(endpoint);
 }
 
 }}}
