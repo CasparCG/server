@@ -170,7 +170,7 @@ void parse_channel_layouts(
 	BOOST_FOREACH(auto& layout, layouts_element)
 	{
 		repository.register_layout(create_layout_from_string(
-				layout.first,
+				layout.second.get<std::wstring>(L"name"),
 				layout.second.get<std::wstring>(L"type"),
 				layout.second.get<int>(L"num-channels"),
 				layout.second.get<std::wstring>(L"channels")));
