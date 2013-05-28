@@ -85,14 +85,14 @@
 
 /* Return codes
 
-100 [action]			Information om att något har hänt  
-101 [action]			Information om att något har hänt, en rad data skickas  
+100 [action]			Information om att nï¿½got har hï¿½nt  
+101 [action]			Information om att nï¿½got har hï¿½nt, en rad data skickas  
 
-202 [kommando] OK		Kommandot har utförts  
-201 [kommando] OK		Kommandot har utförts, och en rad data skickas tillbaka  
-200 [kommando] OK		Kommandot har utförts, och flera rader data skickas tillbaka. Avslutas med tomrad  
+202 [kommando] OK		Kommandot har utfï¿½rts  
+201 [kommando] OK		Kommandot har utfï¿½rts, och en rad data skickas tillbaka  
+200 [kommando] OK		Kommandot har utfï¿½rts, och flera rader data skickas tillbaka. Avslutas med tomrad  
 
-400 ERROR				Kommandot kunde inte förstås  
+400 ERROR				Kommandot kunde inte fï¿½rstï¿½s  
 401 [kommando] ERROR	Ogiltig kanal  
 402 [kommando] ERROR	Parameter saknas  
 403 [kommando] ERROR	Ogiltig parameter  
@@ -100,7 +100,7 @@
 
 500 FAILED				Internt configurationfel  
 501 [kommando] FAILED	Internt configurationfel  
-502 [kommando] FAILED	Oläslig mediafil  
+502 [kommando] FAILED	Olï¿½slig mediafil  
 
 600 [kommando] FAILED	funktion ej implementerad
 */
@@ -528,8 +528,21 @@ bool MixerCommand::DoExecute()
 		{
 			auto blend_str = _parameters.at(1);								
 			int layer = GetLayerIndex();
-			GetChannel()->mixer()->set_blend_mode(GetLayerIndex(), get_blend_mode(blend_str));	
+			blend_mode::type && blend = get_blend_mode(blend_str);
+			GetChannel()->mixer()->set_blend_mode(GetLayerIndex(), blend);	
 		}
+        else if(_parameters[0] == L"CHROMA")
+        {
+            int layer = GetLayerIndex();
+            chroma  chroma;
+            chroma.key          = get_chroma_mode(_parameters[1]);
+            chroma.threshold    = boost::lexical_cast<double>(_parameters[2]);
+            chroma.softness     = boost::lexical_cast<double>(_parameters[3]);
+            chroma.spill        = _parameters.size() > 4 ? boost::lexical_cast<double>(_parameters[4]) : 0.0f;
+            chroma.blur         = _parameters.size() > 5 ? boost::lexical_cast<double>(_parameters[5]) : 0.0f;
+            chroma.show_mask    = _parameters.size() > 6 ? bool(boost::lexical_cast<int>(_parameters[6])) : false;
+            GetChannel()->mixer()->set_chroma(GetLayerIndex(), chroma);
+        }
 		else if(_parameters[0] == L"MASTERVOLUME")
 		{
 			float master_volume = boost::lexical_cast<float>(_parameters.at(1));
