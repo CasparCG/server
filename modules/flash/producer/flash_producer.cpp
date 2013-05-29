@@ -105,19 +105,23 @@ template_host get_template_host(const core::video_format_desc& desc)
 	try
 	{
 		std::vector<template_host> template_hosts;
-		BOOST_FOREACH(auto& xml_mapping, env::properties().get_child(L"configuration.template-hosts"))
-		{
-			try
+		auto template_hosts_element = env::properties().get_child_optional(
+				L"configuration.template-hosts");
+
+		if (template_hosts_element)
+			BOOST_FOREACH(auto& xml_mapping, *template_hosts_element)
 			{
-				template_host template_host;
-				template_host.video_mode		= xml_mapping.second.get(L"video-mode", L"");
-				template_host.filename			= xml_mapping.second.get(L"filename",	L"cg.fth");
-				template_host.width				= xml_mapping.second.get(L"width",		desc.width);
-				template_host.height			= xml_mapping.second.get(L"height",		desc.height);
-				template_hosts.push_back(template_host);
+				try
+				{
+					template_host template_host;
+					template_host.video_mode		= xml_mapping.second.get(L"video-mode", L"");
+					template_host.filename			= xml_mapping.second.get(L"filename",	L"cg.fth");
+					template_host.width				= xml_mapping.second.get(L"width",		desc.width);
+					template_host.height			= xml_mapping.second.get(L"height",		desc.height);
+					template_hosts.push_back(template_host);
+				}
+				catch(...){}
 			}
-			catch(...){}
-		}
 
 		auto template_host_it = boost::find_if(template_hosts, [&](template_host template_host){return template_host.video_mode == desc.name;});
 		if(template_host_it == template_hosts.end())
