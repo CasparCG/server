@@ -96,7 +96,7 @@ public:
 		source.link_target(&on_next_);
 	}
 
-	std::shared_ptr<void> get_prenumeration_token(
+	std::shared_ptr<void> get_subscription_token(
 			const boost::asio::ip::udp::endpoint& endpoint)
 	{
 		tbb::spin_mutex::scoped_lock lock(endpoints_mutex_);
@@ -180,10 +180,10 @@ client::~client()
 {
 }
 
-std::shared_ptr<void> client::get_prenumeration_token(
+std::shared_ptr<void> client::get_subscription_token(
 			const boost::asio::ip::udp::endpoint& endpoint)
 {
-	return impl_->get_prenumeration_token(endpoint);
+	return impl_->get_subscription_token(endpoint);
 }
 
 }}}
