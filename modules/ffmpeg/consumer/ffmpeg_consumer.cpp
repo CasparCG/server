@@ -77,6 +77,46 @@ int av_opt_set(void *obj, const char *name, const char *val, int search_flags)
 {
 	AVClass* av_class = *(AVClass**)obj;
 
+	if( strcmp(name, "vtag") == 0 && strcmp(av_class->class_name, "AVCodecContext") == 0)
+	{
+		if( std::string(val).size() == 4 )
+		{
+			AVCodecContext* c = (AVCodecContext*)obj;		
+			if(c->codec_type != AVMEDIA_TYPE_VIDEO)
+				return -1;
+			try
+			{
+				// fourcc (LSB first, so "ABCD" -> ('D'<<24) + ('C'<<16) + ('B'<<8) + 'A').
+				auto codec_tag = val[3]*256*256*256 + val[2]*256*256 + val[1]*256 + val[0];
+				c->codec_tag = codec_tag;
+				return 0;
+			}
+			catch(...)
+			{
+			}
+		}	
+		return -1;
+	}
+	if( strcmp(name, "atag") == 0 && strcmp(av_class->class_name, "AVCodecContext") == 0)
+	{
+		if( std::string(val).size() == 4 )
+		{
+			AVCodecContext* c = (AVCodecContext*)obj;		
+			if(c->codec_type != AVMEDIA_TYPE_AUDIO)
+				return -1;
+			try
+			{
+				// fourcc (LSB first, so "ABCD" -> ('D'<<24) + ('C'<<16) + ('B'<<8) + 'A').
+				auto codec_tag = val[3]*256*256*256 + val[2]*256*256 + val[1]*256 + val[0];
+				c->codec_tag = codec_tag;
+				return 0;
+			}
+			catch(...)
+			{
+			}
+		}	
+		return -1;
+	}
 	if((strcmp(name, "pix_fmt") == 0 || strcmp(name, "pixel_format") == 0) && strcmp(av_class->class_name, "AVCodecContext") == 0)
 	{
 		AVCodecContext* c = (AVCodecContext*)obj;		
@@ -274,11 +314,27 @@ public:
 				
 		THROW_ON_ERROR2(av_set_parameters(oc_.get(), nullptr), "[ffmpeg_consumer]");
 
+		// Add metadata timecode
+		bool bTimecodeOptionFound = false;
+		if(options.size() > 0)
+		{
+			BOOST_FOREACH(auto& option, options)
+			{
+				if( option.name == "timecode" )
+				{
+					bTimecodeOptionFound = true;
+					av_dict_set(&oc_->metadata, option.name.c_str(), option.value.c_str(), 0);
+				}
+			}
+		}
+		if( !bTimecodeOptionFound )
+			av_dict_set(&oc_->metadata, "timecode", "00:00:00:00", 0);
+
 		strcpy_s(oc_->filename, filename_.c_str());
 		
 		//  Add the audio and video streams using the default format codecs	and initialize the codecs.
-		auto options2 = options;
-		video_st_ = add_video_stream(options2);
+		//auto options2 = options;
+		video_st_ = add_video_stream(options);
 
 		if (!key_only)
 			audio_st_ = add_audio_stream(options);
