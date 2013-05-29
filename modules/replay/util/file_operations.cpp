@@ -472,18 +472,19 @@ namespace caspar { namespace replay {
 		cinfo.image_height = height;
 		cinfo.input_components = 3;
 		cinfo.in_color_space = JCS_RGB;
-		cinfo.max_h_samp_factor = 1;
 		cinfo.max_v_samp_factor = 1;
+		cinfo.max_h_samp_factor = 2;
+		cinfo.jpeg_color_space = JCS_YCbCr;
 
 		jpeg_set_defaults(&cinfo);
 
 
-		// Disable chroma subsampling (store in 4:4:4 quality)
+		// Disable chroma subsampling (store in 4:2:2 quality)
 		cinfo.comp_info[0].h_samp_factor = 1;
 		cinfo.comp_info[0].v_samp_factor = 1;
-		cinfo.comp_info[1].h_samp_factor = 1;
+		cinfo.comp_info[1].h_samp_factor = 2; // use 1 for 4:4:4
 		cinfo.comp_info[1].v_samp_factor = 1;
-		cinfo.comp_info[2].h_samp_factor = 1;
+		cinfo.comp_info[2].h_samp_factor = 2; // use 1 for 4:4:4
 		cinfo.comp_info[2].v_samp_factor = 1;
 
 		jpeg_set_quality(&cinfo, quality, TRUE);

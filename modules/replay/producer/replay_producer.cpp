@@ -524,7 +524,7 @@ struct replay_producer : public core::frame_producer
 		{
 			if (last_framenum_ <= framenum_)
 			{
-				frame_ = core::basic_frame::eof();
+				//frame_ = core::basic_frame::eof(); // Uncomment this to keep a steady frame after the length has run through
 				return std::make_pair(frame_, framenum_);
 			}
 		}
@@ -682,6 +682,7 @@ struct replay_producer : public core::frame_producer
 		}
 
 		result_framenum_++;
+		
 		last_frame_ = frame;
 
 		return frame;

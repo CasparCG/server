@@ -73,7 +73,7 @@ struct replay_consumer : public core::frame_consumer
 
 
 #define REPLAY_FRAME_BUFFER					32
-#define REPLAY_JPEG_QUALITY					95
+#define REPLAY_JPEG_QUALITY					90
 
 public:
 
