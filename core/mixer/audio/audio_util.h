@@ -85,6 +85,7 @@ struct channel_layout
 	std::vector<std::wstring> channel_names;
 	int num_channels;
 
+	channel_layout();
 	bool operator==(const channel_layout& other) const;
 	int channel_index(const std::wstring& channel_name) const;
 	bool has_channel(const std::wstring& channel_name) const;
@@ -234,6 +235,8 @@ struct mix_config
 	std::wstring to_layout_type;
 	std::multimap<std::wstring, destination> destination_ch_by_source_ch;
 	mix_strategy strategy;
+
+	mix_config();
 };
 
 bool needs_rearranging(
