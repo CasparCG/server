@@ -80,7 +80,7 @@ struct server::implementation : boost::noncopyable
 	std::vector<safe_ptr<IO::AsyncEventServer>> async_servers_;	
 	std::shared_ptr<IO::AsyncEventServer>		primary_amcp_server_;
 	osc::client									osc_client_;
-	std::vector<std::shared_ptr<void>>			predefined_osc_prenumerations_;
+	std::vector<std::shared_ptr<void>>			predefined_osc_subscriptions_;
 	std::vector<safe_ptr<video_channel>>		channels_;
 	std::shared_ptr<thumbnail_generator>		thumbnail_generator_;
 
@@ -128,8 +128,8 @@ struct server::implementation : boost::noncopyable
 	{		
 		ffmpeg::uninit();
 
-		async_servers_.clear();
 		primary_amcp_server_.reset();
+		async_servers_.clear();
 		channels_.clear();
 	}
 
@@ -269,8 +269,8 @@ struct server::implementation : boost::noncopyable
 						predefined_client.second.get<std::wstring>(L"address");
 				const auto port =
 						predefined_client.second.get<unsigned short>(L"port");
-				predefined_osc_prenumerations_.push_back(
-						osc_client_.get_prenumeration_token(udp::endpoint(
+				predefined_osc_subscriptions_.push_back(
+						osc_client_.get_subscription_token(udp::endpoint(
 								address_v4::from_string(narrow(address)),
 								port)));
 			}
@@ -283,7 +283,7 @@ struct server::implementation : boost::noncopyable
 					{
 						using namespace boost::asio::ip;
 
-						return osc_client_.get_prenumeration_token(
+						return osc_client_.get_subscription_token(
 								udp::endpoint(
 										address_v4::from_string(ipv4_address),
 										default_port));

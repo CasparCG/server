@@ -46,7 +46,7 @@ public:
 	client(client&&);
 
 	/**
-	 * Get a prenumeration token that ensures that OSC messages are sent to the
+	 * Get a subscription token that ensures that OSC messages are sent to the
 	 * given endpoint as long as the token is alive. It will stop sending when
 	 * the token is dropped unless another token to the same endpoint has
 	 * previously been checked out.
@@ -55,7 +55,7 @@ public:
 	 *
 	 * @return The token. It is ok for the token to outlive the client
 	 */
-	std::shared_ptr<void> get_prenumeration_token(
+	std::shared_ptr<void> get_subscription_token(
 			const boost::asio::ip::udp::endpoint& endpoint);
 
 	~client();
