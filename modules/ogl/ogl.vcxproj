@@ -151,7 +151,7 @@
       </Command>
     </PreLinkEvent>
     <Link>
-      <AdditionalDependencies>sfml-window.lib;sfml-graphics.lib;OpenGL32.lib;tbb.lib;Glee.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>sfml-window-s.lib;sfml-graphics-s.lib;OpenGL32.lib;tbb.lib;Glee.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
