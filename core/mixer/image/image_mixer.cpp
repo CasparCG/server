@@ -56,7 +56,7 @@ struct item
 	frame_transform							transform;
 };
 
-typedef std::pair<blend_mode::type, std::vector<item>> layer;
+typedef std::pair<blend_mode, std::vector<item>> layer;
 
 class image_renderer
 {
@@ -144,7 +144,7 @@ private:
 		std::shared_ptr<device_buffer> local_key_buffer;
 		std::shared_ptr<device_buffer> local_mix_buffer;
 				
-		if(layer.first != blend_mode::normal)
+		if(layer.first.mode != blend_mode::normal || layer.first.chroma.key != chroma::none)
 		{
 			auto layer_draw_buffer = create_mixer_buffer(4, format_desc);
 
@@ -159,7 +159,7 @@ private:
 			BOOST_FOREACH(auto& item, layer.second)		
 				draw_item(std::move(item), draw_buffer, layer_key_buffer, local_key_buffer, local_mix_buffer, format_desc);		
 					
-			draw_mixer_buffer(draw_buffer, std::move(local_mix_buffer), blend_mode::normal);
+			draw_mixer_buffer(draw_buffer, std::move(local_mix_buffer), layer.first);
 		}					
 
 		layer_key_buffer = std::move(local_key_buffer);
@@ -213,7 +213,7 @@ private:
 
 	void draw_mixer_buffer(safe_ptr<device_buffer>&			draw_buffer, 
 						   std::shared_ptr<device_buffer>&& source_buffer, 
-						   blend_mode::type					blend_mode = blend_mode::normal)
+						   blend_mode   			        blend_mode = blend_mode::normal)
 	{
 		if(!source_buffer)
 			return;
@@ -251,7 +251,7 @@ public:
 	{
 	}
 
-	void begin_layer(blend_mode::type blend_mode)
+	void begin_layer(blend_mode blend_mode)
 	{
 		layers_.push_back(std::make_pair(blend_mode, std::vector<item>()));
 	}
@@ -291,7 +291,7 @@ void image_mixer::begin(basic_frame& frame){impl_->begin(frame);}
 void image_mixer::visit(write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}
 boost::unique_future<safe_ptr<host_buffer>> image_mixer::operator()(const video_format_desc& format_desc){return impl_->render(format_desc);}
-void image_mixer::begin_layer(blend_mode::type blend_mode){impl_->begin_layer(blend_mode);}
+void image_mixer::begin_layer(blend_mode blend_mode){impl_->begin_layer(blend_mode);}
 void image_mixer::end_layer(){impl_->end_layer();}
 
 }}
