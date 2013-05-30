@@ -23,6 +23,8 @@
 
 #include <common/memory/safe_ptr.h>
 
+#define SHADER_PROGRAM(prog)    #prog
+
 namespace caspar { namespace core {
 
 class shader;

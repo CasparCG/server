@@ -268,3 +268,54 @@ static std::string get_blend_glsl()
 																																																						   
 		return glsl;
 }
+
+static std::string get_chroma_glsl()
+{
+    static std::string glsl =
+        "// Chroma keying                                                       \n"
+        "// Author: Tim Eves <timseves@googlemail.com>                          \n"
+        "//                                                                     \n"
+        "// This implements the Chroma key algorithm described in the paper:    \n"
+        "//      'Software Chroma Keying in an Imersive Virtual Environment'    \n"
+        "//      by F. van den Bergh & V. Lalioti                               \n"
+        "// but as a pixel shader algorithm.                                    \n"
+        "//                                                                     \n"
+        "                                                                       \n"
+        "float       chroma_blend_w = chroma_blend.y - chroma_blend.x;          \n"
+        "const vec4  grey_xfer  = vec4(0.3, 0.59, 0.11, 0.0);                   \n"
+        "                                                                       \n"
+        "float fma(float a, float b, float c) { return a*b + c; }               \n"
+        "                                                                       \n"
+        "// This allows us to implement the paper's alphaMap curve in software  \n"
+        "// rather than a largeish array                                        \n"
+        "float alpha_map(float d)                                               \n"
+        "{                                                                      \n"
+        "    return 1.0-smoothstep(chroma_blend.x, chroma_blend.y, d);          \n"
+        "}                                                                      \n"
+        "                                                                       \n"
+        "vec4 supress_spill(vec4 c, float d)                                    \n"
+        "{                                                                      \n"
+        "    float ds = smoothstep(chroma_spill, 1.0, d/chroma_blend.y);        \n"
+        "    float gl = dot(grey_xfer, c);                                      \n"
+        "    return mix(c, vec4(vec3(gl*gl), gl), ds);                          \n"
+        "}                                                                      \n"
+        "                                                                       \n"
+        "// Key on green                                                        \n"
+        "vec4 ChromaOnGreen(vec4 c)                                             \n"
+        "{                                                                      \n"
+        "    float d = fma(2.0, c.g, -c.r - c.b)/2.0;                           \n"
+        "    c *= alpha_map(d);                                                 \n"
+        "    return supress_spill(c, d);                                        \n"
+        "}                                                                      \n"
+        "                                                                       \n"
+        "//Key on blue                                                          \n"
+        "vec4 ChromaOnBlue(vec4 c)                                              \n"
+        "{                                                                      \n"
+        "    float d = fma(2.0, c.b, -c.r - c.g)/2.0;                           \n"
+        "    c *= alpha_map(d);                                                 \n"
+        "    return supress_spill(c, d);                                        \n"
+        "}                                                                      \n"
+       ;
+
+        return glsl;
+}

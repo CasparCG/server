@@ -39,6 +39,7 @@ typedef boost::error_info<struct errinfo_nested_exception_, std::exception_ptr> 
 struct caspar_exception			: virtual boost::exception, virtual std::exception 
 {
 	caspar_exception(){}
+	virtual ~caspar_exception() throw() {}
 	explicit caspar_exception(const char* msg) : std::exception(msg) {}
 };
 
