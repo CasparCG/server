@@ -135,7 +135,7 @@ safe_ptr<core::frame_producer> create_raw_producer(
 	}
 
 	static const std::vector<std::wstring> extensions = list_of(L"png")(L"tga")(L"bmp")(L"jpg")(L"jpeg")(L"gif")(L"tiff")(L"tif")(L"jp2")(L"jpx")(L"j2k")(L"j2c");
-	std::wstring filename = env::media_folder() + params[0];
+	std::wstring filename = env::media_folder() + params.at_original(0);
 	
 	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
 		{					

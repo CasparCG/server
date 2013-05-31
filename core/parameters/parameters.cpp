@@ -55,6 +55,21 @@ bool parameters::has(std::wstring const& parameter) const
 	return boost::range::find(params_, parameter) != params_.end();
 }
 
+bool parameters::remove_if_exists(std::wstring const& key)
+{
+	auto iter = boost::range::find(params_, key);
+
+	if (iter == params_.end())
+		return false;
+
+	auto index = iter - params_.begin();
+
+	params_.erase(iter);
+	params_original_.erase(params_original_.begin() + index);
+
+	return true;
+}
+
 std::vector<std::wstring> parameters::protocol_split(std::wstring const& s)
 {
 	std::vector<std::wstring> result;
@@ -79,7 +94,7 @@ std::wstring parameters::get(std::wstring const& key, std::wstring const& defaul
 	return *it;
 }
 
-std::wstring parameters::get_original() const
+std::wstring parameters::get_original_string() const
 {
 	std::wstring str;
 	BOOST_FOREACH(auto& param, params_)

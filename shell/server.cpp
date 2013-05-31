@@ -201,13 +201,14 @@ struct server::implementation : boost::noncopyable
 			try
 			{
 				auto name = xml_consumer.first;
+
 				if (name == L"screen")
 					on_consumer(ogl::create_consumer(xml_consumer.second));
 				else if (name == L"bluefish")					
 					on_consumer(bluefish::create_consumer(xml_consumer.second));					
 				else if (name == L"decklink")					
 					on_consumer(decklink::create_consumer(xml_consumer.second));				
-					else if (name == L"file" || name ==L"stream")					
+				else if (name == L"file" || name == L"stream")					
 					on_consumer(ffmpeg::create_consumer(xml_consumer.second));						
 				else if (name == L"system-audio")
 					on_consumer(oal::create_consumer());

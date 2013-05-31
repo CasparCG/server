@@ -333,7 +333,7 @@ bool ChannelGridCommand::DoExecute()
 	int index = 1;
 	auto self = GetChannels().back();
 	
-	std::vector<std::wstring> params;
+	core::parameters params;
 	params.push_back(L"SCREEN");
 	params.push_back(L"NAME");
 	params.push_back(L"Channel Grid Window");
@@ -386,17 +386,18 @@ bool CallCommand::DoExecute()
 		auto what = _parameters.at(0);
 				
 		boost::unique_future<std::wstring> result;
+		auto& params_orig = _parameters.get_original();
 		if(what == L"B" || what == L"F")
 		{
 			std::wstring param;
-			for(auto it = std::begin(_parameters2)+1; it != std::end(_parameters2); ++it, param += L" ")
+			for(auto it = std::begin(params_orig)+1; it != std::end(params_orig); ++it, param += L" ")
 				param += *it;
 			result = GetChannel()->stage()->call(GetLayerIndex(), what == L"F", boost::trim_copy(param));
 		}
 		else
 		{
 			std::wstring param;
-			for(auto it = std::begin(_parameters2); it != std::end(_parameters2); ++it, param += L" ")
+			for(auto it = std::begin(params_orig); it != std::end(params_orig); ++it, param += L" ")
 				param += *it;
 			result = GetChannel()->stage()->call(GetLayerIndex(), true, boost::trim_copy(param));
 		}
@@ -763,7 +764,6 @@ bool LoadCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		//_parameters[0] = _parameters[0]; // REVIEW: Why is this assignment done? CP 2013-01
 		auto pFP = create_producer(GetChannel()->mixer(), _parameters);		
 		GetChannel()->stage()->load(GetLayerIndex(), pFP, true);
 	
@@ -869,7 +869,6 @@ bool LoadbgCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		//_parameters[0] = _parameters[0]; // REVIEW: Why is this assignment done? CP 2013-01
 		auto pFP = create_producer(GetChannel()->mixer(), _parameters);
 		if(pFP == frame_producer::empty())
 			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? narrow(_parameters[0]) : ""));
@@ -885,10 +884,7 @@ bool LoadbgCommand::DoExecute()
 	}
 	catch(file_not_found&)
 	{		
-		std::wstring params2;
-		for(auto it = _parameters2.begin(); it != _parameters2.end(); ++it)
-			params2 += L" " + *it;
-		CASPAR_LOG(error) << L"File not found. No match found for parameters. Check syntax:" << params2;
+		CASPAR_LOG(error) << L"File not found. No match found for parameters. Check syntax:" << _parameters.get_original_string();
 		SetReplyString(TEXT("404 LOADBG ERROR\r\n"));
 		return false;
 	}
@@ -1065,7 +1061,7 @@ bool CGCommand::DoExecuteAdd() {
 
 	if(_parameters[3].length() > 1) 
 	{	//read label
-		label = _parameters2[3];
+		label = _parameters.at_original(3);
 		++dataIndex;
 
 		if(_parameters.size() > 4 && _parameters[4].length() > 0)	//read play-on-load-flag
@@ -1090,7 +1086,7 @@ bool CGCommand::DoExecuteAdd() {
 	std::wstring dataFromFile;
 	if(_parameters.size() > dataIndex) 
 	{	//read data
-		const std::wstring& dataString = _parameters2[dataIndex];
+		const std::wstring& dataString = _parameters.at_original(dataIndex);
 
 		if(dataString[0] == TEXT('<')) //the data is an XML-string
 			pDataString = dataString.c_str();
@@ -1231,7 +1227,7 @@ bool CGCommand::DoExecuteUpdate()
 			return false;
 		}
 						
-		std::wstring dataString = _parameters2.at(2);				
+		std::wstring dataString = _parameters.at_original(2);
 		if(dataString.at(0) != TEXT('<'))
 		{
 			//The data is not an XML-string, it must be a filename
@@ -1268,7 +1264,7 @@ bool CGCommand::DoExecuteInvoke()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		auto result = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->invoke(layer, _parameters2[2]);
+		auto result = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->invoke(layer, _parameters.at_original(2));
 		replyString << result << TEXT("\r\n"); 
 	}
 	else 
@@ -1352,7 +1348,7 @@ bool DataCommand::DoExecuteStore()
 	}
 
 	datafile << static_cast<wchar_t>(65279); // UTF-8 BOM character
-	datafile << _parameters2[2] << std::flush;
+	datafile << _parameters.at_original(2) << std::flush;
 	datafile.close();
 
 	std::wstring replyString = TEXT("202 DATA STORE OK\r\n");

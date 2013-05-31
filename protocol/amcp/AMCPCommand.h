@@ -30,9 +30,7 @@
 
 #include <boost/algorithm/string.hpp>
 
-namespace caspar {
-namespace protocol {
-namespace amcp {
+namespace caspar { namespace protocol { namespace amcp {
 
 	enum AMCPCommandScheduling
 	{
@@ -97,7 +95,6 @@ namespace amcp {
 
 	protected:
 		core::parameters _parameters;
-		std::vector<std::wstring> _parameters2; // TODO this can be deprecated with a small amount of coding CP 2013-01
 
 	private:
 		unsigned int channelIndex_;
@@ -119,7 +116,6 @@ namespace amcp {
 	public:
 		virtual bool Execute()
 		{
-			_parameters2 = _parameters; // TODO Refactor this in terms of the new parameters class CP 2013-01
 			_parameters.to_upper();
 			return (TNeedChannel && !GetChannel()) || _parameters.size() < TMinParameters ? false : DoExecute();
 		}

@@ -306,7 +306,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 	
 	if(producer == frame_producer::empty())
 	{
-		std::wstring str = params.get_original();
+		std::wstring str = params.get_original_string();
 		BOOST_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax.") << arg_value_info(narrow(str)));
 	}
 
@@ -315,7 +315,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 
 safe_ptr<core::frame_producer> create_thumbnail_producer(const safe_ptr<frame_factory>& my_frame_factory, const std::wstring& media_file)
 {
-	std::vector<std::wstring> params;
+	core::parameters params;
 	params.push_back(media_file);
 
 	auto producer = do_create_producer(my_frame_factory, params, g_thumbnail_factories, true);
