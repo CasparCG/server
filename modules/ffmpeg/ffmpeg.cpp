@@ -26,6 +26,7 @@
 
 #include <common/log/log.h>
 
+#include <core/parameters/parameters.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/producer/frame_producer.h>
 
@@ -248,7 +249,7 @@ void init()
 	avcodec_init();
     avcodec_register_all();
 	
-	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
+	core::register_consumer_factory([](const core::parameters& params){return ffmpeg::create_consumer(params);});
 	core::register_producer_factory(create_producer);
 	core::register_thumbnail_producer_factory(create_thumbnail_producer);
 }

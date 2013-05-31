@@ -35,11 +35,11 @@
 
 #include <common/env.h>
 #include <common/utility/assert.h>
-#include <common/utility/param.h>
 #include <common/diagnostics/graph.h>
 
 #include <core/monitor/monitor.h>
 #include <core/video_format.h>
+#include <core/parameters/parameters.h>
 #include <core/producer/frame_producer.h>
 #include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/basic_frame.h>
@@ -461,15 +461,14 @@ public:
 
 safe_ptr<core::frame_producer> create_producer(
 		const safe_ptr<core::frame_factory>& frame_factory,
-		const std::vector<std::wstring>& params,
-		const std::vector<std::wstring>& original_case_params)
+		const core::parameters& params)
 {		
 	static const std::vector<std::wstring> invalid_exts = boost::assign::list_of(L".png")(L".tga")(L".bmp")(L".jpg")(L".jpeg")(L".gif")(L".tiff")(L".tif")(L".jp2")(L".jpx")(L".j2k")(L".j2c")(L".swf")(L".ct");
 
 	// Infer the resource type from the resource_name
 	auto resource_type = FFMPEG_FILE;
-	auto tokens = caspar::core::protocol_split(original_case_params[0]);
-	auto filename = params[0];
+	auto tokens = core::parameters::protocol_split(params.at_original(0));
+	auto filename = params.at_original(0);
 	if (!tokens[0].empty())
 	{
 		if (tokens[0] == L"dshow")
@@ -481,7 +480,7 @@ safe_ptr<core::frame_producer> create_producer(
 		{
 			// Stream
 			resource_type = FFMPEG_STREAM;
-			filename = original_case_params[0];
+			filename = params.at_original(0);
 		}
 	} else
 	{
@@ -499,27 +498,26 @@ safe_ptr<core::frame_producer> create_producer(
 	if(filename.empty())
 		return core::frame_producer::empty();
 	
-	auto loop					= boost::range::find(params, L"LOOP") != params.end();
-	auto start					= get_param(L"SEEK", params, static_cast<uint32_t>(0));
-	auto length					= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
-	auto filter_str				= get_param(L"FILTER", params, L""); 	
-	auto custom_channel_order	= get_param(L"CHANNEL_LAYOUT", params, L"");
+	auto loop		= params.has(L"LOOP");
+	auto start		= params.get(L"SEEK", static_cast<uint32_t>(0));
+	auto length		= params.get(L"LENGTH", std::numeric_limits<uint32_t>::max());
+	auto filter_str = params.get(L"FILTER", L""); 	
+	auto custom_channel_order	= params.get(L"CHANNEL_LAYOUT", L"");
 
 	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
 	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
 
 	ffmpeg_params vid_params;
-	vid_params.size_str = get_param(L"SIZE", params, L"");
-	vid_params.pixel_format = get_param(L"PIXFMT", params, L"");
-	vid_params.frame_rate = get_param(L"FRAMERATE", params, L"");
+	vid_params.size_str = params.get(L"SIZE", L"");
+	vid_params.pixel_format = params.get(L"PIXFMT", L"");
+	vid_params.frame_rate = params.get(L"FRAMERATE", L"");
 	
 	return create_producer_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, filename, resource_type, filter_str, loop, start, length, false, custom_channel_order, vid_params));
 }
 
 safe_ptr<core::frame_producer> create_thumbnail_producer(
 		const safe_ptr<core::frame_factory>& frame_factory,
-		const std::vector<std::wstring>& params,
-		const std::vector<std::wstring>& original_case_params)
+		const core::parameters& params)
 {		
 	static const std::vector<std::wstring> invalid_exts = boost::assign::list_of
 			(L".png")(L".tga")(L".bmp")(L".jpg")(L".jpeg")(L".gif")(L".tiff")(L".tif")(L".jp2")(L".jpx")(L".j2k")(L".j2c")(L".swf")(L".ct")
