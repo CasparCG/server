@@ -77,6 +77,46 @@ int av_opt_set(void *obj, const char *name, const char *val, int search_flags)
 {
 	AVClass* av_class = *(AVClass**)obj;
 
+	if( strcmp(name, "vtag") == 0 && strcmp(av_class->class_name, "AVCodecContext") == 0)
+	{
+		if( std::string(val).size() == 4 )
+		{
+			AVCodecContext* c = (AVCodecContext*)obj;		
+			if(c->codec_type != AVMEDIA_TYPE_VIDEO)
+				return -1;
+			try
+			{
+				// fourcc (LSB first, so "ABCD" -> ('D'<<24) + ('C'<<16) + ('B'<<8) + 'A').
+				auto codec_tag = val[3]*256*256*256 + val[2]*256*256 + val[1]*256 + val[0];
+				c->codec_tag = codec_tag;
+				return 0;
+			}
+			catch(...)
+			{
+			}
+		}	
+		return -1;
+	}
+	if( strcmp(name, "atag") == 0 && strcmp(av_class->class_name, "AVCodecContext") == 0)
+	{
+		if( std::string(val).size() == 4 )
+		{
+			AVCodecContext* c = (AVCodecContext*)obj;		
+			if(c->codec_type != AVMEDIA_TYPE_AUDIO)
+				return -1;
+			try
+			{
+				// fourcc (LSB first, so "ABCD" -> ('D'<<24) + ('C'<<16) + ('B'<<8) + 'A').
+				auto codec_tag = val[3]*256*256*256 + val[2]*256*256 + val[1]*256 + val[0];
+				c->codec_tag = codec_tag;
+				return 0;
+			}
+			catch(...)
+			{
+			}
+		}	
+		return -1;
+	}
 	if((strcmp(name, "pix_fmt") == 0 || strcmp(name, "pixel_format") == 0) && strcmp(av_class->class_name, "AVCodecContext") == 0)
 	{
 		AVCodecContext* c = (AVCodecContext*)obj;		
@@ -274,11 +314,27 @@ public:
 				
 		THROW_ON_ERROR2(av_set_parameters(oc_.get(), nullptr), "[ffmpeg_consumer]");
 
+		// Add metadata timecode
+		bool bTimecodeOptionFound = false;
+		if(options.size() > 0)
+		{
+			BOOST_FOREACH(auto& option, options)
+			{
+				if( option.name == "timecode" )
+				{
+					bTimecodeOptionFound = true;
+					av_dict_set(&oc_->metadata, option.name.c_str(), option.value.c_str(), 0);
+				}
+			}
+		}
+		if( !bTimecodeOptionFound )
+			av_dict_set(&oc_->metadata, "timecode", "00:00:00:00", 0);
+
 		strcpy_s(oc_->filename, filename_.c_str());
 		
 		//  Add the audio and video streams using the default format codecs	and initialize the codecs.
-		auto options2 = options;
-		video_st_ = add_video_stream(options2);
+		//auto options2 = options;
+		video_st_ = add_video_stream(options);
 
 		if (!key_only)
 			audio_st_ = add_audio_stream(options);
@@ -760,9 +816,50 @@ safe_ptr<core::frame_consumer> create_consumer(const core::parameters& params)
 		separate_key = true;
 		params2.erase(separate_key_it);
 	}
-			
+	
+	// Add UDP or RTP Stream output
+	bool bStream = false;
+	if( filename.substr(0,4) == L"UDP:" )
+	{
+		boost::replace_all(filename, L"UDP", L"udp");
+		CASPAR_LOG(info) << L"Stream URL: "+filename;
+		bStream = true;
+	}
+	else
+	if( filename.substr(0,4) == L"RTP:" )
+	{
+		boost::replace_all(filename, L"RTP", L"rtp");
+		bStream = true;
+	}
+
 	std::vector<option> options;
 	
+	// Default stream output format MPEGTS MPEG4 AAC
+	if( bStream && params.size() < 3 )
+	{
+		// -f mpegts -vcodec mpeg4 -acodec mp2 -ab 128000 -s 640x360 -b 1000000
+		auto name  = narrow(L"f");
+		auto value = narrow(L"mpegts");
+		options.push_back(option(name, value));
+		name  = narrow(L"vcodec");
+		value = narrow(L"mpeg4");
+		options.push_back(option(name, value));
+		name  = narrow(L"acodec");
+		value = narrow(L"aac");
+		options.push_back(option(name, value));
+		name  = narrow(L"ab");
+		value = narrow(L"128000");
+		options.push_back(option(name, value));
+		name  = narrow(L"s");
+		//value = narrow(L"720x405");
+		value = narrow(L"640x360");
+		options.push_back(option(name, value));
+		name  = narrow(L"b");
+		//value = narrow(L"1200000");
+		value = narrow(L"1000000");
+		options.push_back(option(name, value));
+	}
+
 	if(params2.size() >= 3)
 	{
 		for(auto opt_it = params2.begin()+2; opt_it != params2.end();)
@@ -779,7 +876,10 @@ safe_ptr<core::frame_consumer> create_consumer(const core::parameters& params)
 		}
 	}
 		
-	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + filename, options, separate_key);
+	if( bStream )
+		return make_safe<ffmpeg_consumer_proxy>(filename, options, separate_key);
+	else
+		return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + filename, options, separate_key);
 }
 
 safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree)
