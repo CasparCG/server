@@ -27,6 +27,7 @@
 #include <common/utility/string.h>
 #include <common/concurrency/future_util.h>
 
+#include <core/parameters/parameters.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/video_format.h>
 #include <core/mixer/read_frame.h>
@@ -133,7 +134,7 @@ public:
 	}
 };
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
+safe_ptr<core::frame_consumer> create_consumer(const core::parameters& params)
 {
 	if(params.size() < 1 || params[0] != L"IMAGE")
 		return core::frame_consumer::empty();
