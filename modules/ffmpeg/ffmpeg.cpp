@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+* Copyright 2013 Sveriges Television AB http://casparcg.com/
 *
 * This file is part of CasparCG (www.casparcg.com).
 *
@@ -245,7 +245,7 @@ void init()
 	//fix_yadif_filter_format_query();
 	av_register_all();
     avformat_network_init();
-	//avcodec_init();
+	avcodec_init();
     avcodec_register_all();
 	
 	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+* Copyright 2013 Sveriges Television AB http://casparcg.com/
 *
 * This file is part of CasparCG (www.casparcg.com).
 *
@@ -39,6 +39,7 @@ typedef boost::error_info<struct errinfo_nested_exception_, std::exception_ptr> 
 struct caspar_exception			: virtual boost::exception, virtual std::exception 
 {
 	caspar_exception(){}
+	virtual ~caspar_exception() throw() {}
 	explicit caspar_exception(const char* msg) : std::exception(msg) {}
 };
 

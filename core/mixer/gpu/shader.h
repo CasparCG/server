@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+* Copyright 2013 Sveriges Television AB http://casparcg.com/
 *
 * This file is part of CasparCG (www.casparcg.com).
 *
@@ -36,7 +36,11 @@ public:
 	void set(const std::string& name, bool value);
 	void set(const std::string& name, int value);
 	void set(const std::string& name, float value);
-	void set(const std::string& name, double value);
+    void set(const std::string& name, float value1, float value2);
+    void set(const std::string& name, float value1, float value2, float value3);
+    void set(const std::string& name, float value1, float value2, float value3, float value4);
+    void set(const std::string& name, double value);
+	void set(const std::string& name, double value1, double value2);
 private:
 	friend class ogl_device;
 	struct implementation;

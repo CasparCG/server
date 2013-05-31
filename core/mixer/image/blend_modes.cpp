@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+* Copyright 2013 Sveriges Television AB http://casparcg.com/
 *
 * This file is part of CasparCG (www.casparcg.com).
 *
@@ -89,6 +89,26 @@ blend_mode::type get_blend_mode(const std::wstring& str)
 		return blend_mode::luminosity;
 		
 	return blend_mode::normal;
+}
+
+chroma::type get_chroma_mode(const std::wstring& str)
+{
+    if     (boost::iequals(str, L"none"))
+        return chroma::none;
+    else if(boost::iequals(str, L"red"))
+        return chroma::red;
+    else if(boost::iequals(str, L"yellow"))
+        return chroma::yellow;
+    else if(boost::iequals(str, L"green"))
+        return chroma::green;
+    else if(boost::iequals(str, L"torquise"))
+        return chroma::torquise;
+    else if(boost::iequals(str, L"blue"))
+        return chroma::blue;
+    else if(boost::iequals(str, L"magenta"))
+        return chroma::magenta;
+
+    return chroma::none;
 }
 
 }}

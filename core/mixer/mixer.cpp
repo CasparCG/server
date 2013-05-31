@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+* Copyright 2013 Sveriges Television AB http://casparcg.com/
 *
 * This file is part of CasparCG (www.casparcg.com).
 *
@@ -70,7 +70,7 @@ struct mixer::implementation : boost::noncopyable
 	audio_mixer	audio_mixer_;
 	image_mixer image_mixer_;
 	
-	std::unordered_map<int, blend_mode::type> blend_modes_;
+	std::unordered_map<int, blend_mode> blend_modes_;
 			
 	executor executor_;
 
@@ -136,7 +136,7 @@ public:
 	{
 		executor_.begin_invoke([=]
 		{
-			blend_modes_[index] = value;
+			blend_modes_[index].mode = value;
 		}, high_priority);
 	}
 
@@ -155,6 +155,14 @@ public:
 			blend_modes_.clear();
 		}, high_priority);
 	}
+
+    void set_chroma(int index, const chroma & value)
+    {
+        executor_.begin_invoke([=]
+        {
+            blend_modes_[index].chroma = value;
+        }, high_priority);
+    }
 
 	void set_master_volume(float volume)
 	{
@@ -193,6 +201,7 @@ void mixer::send(const std::pair<std::map<int, safe_ptr<core::basic_frame>>, std
 core::video_format_desc mixer::get_video_format_desc() const { return impl_->get_video_format_desc(); }
 safe_ptr<core::write_frame> mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, const channel_layout& audio_channel_layout){ return impl_->create_frame(tag, desc, audio_channel_layout); }		
 void mixer::set_blend_mode(int index, blend_mode::type value){impl_->set_blend_mode(index, value);}
+void mixer::set_chroma(int index, const chroma & value){impl_->set_chroma(index, value);}
 void mixer::clear_blend_mode(int index) { impl_->clear_blend_mode(index); }
 void mixer::clear_blend_modes() { impl_->clear_blend_modes(); }
 void mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }

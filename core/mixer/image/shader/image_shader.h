@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+* Copyright 2013 Sveriges Television AB http://casparcg.com/
 *
 * This file is part of CasparCG (www.casparcg.com).
 *
@@ -22,6 +22,8 @@
 #pragma once
 
 #include <common/memory/safe_ptr.h>
+
+#define SHADER_PROGRAM(prog)    #prog
 
 namespace caspar { namespace core {
 

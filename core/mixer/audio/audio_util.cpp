@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+* Copyright 2013 Sveriges Television AB http://casparcg.com/
 *
 * This file is part of CasparCG (www.casparcg.com).
 *
@@ -33,6 +33,11 @@
 
 namespace caspar { namespace core {
 
+channel_layout::channel_layout()
+	: num_channels(0)
+{
+}
+
 bool channel_layout::operator==(const channel_layout& other) const
 {
 	return channel_names == other.channel_names
@@ -58,6 +63,11 @@ bool channel_layout::has_channel(const std::wstring& channel_name) const
 bool channel_layout::no_channel_names() const
 {
 	return channel_names.empty();
+}
+
+mix_config::mix_config()
+	: strategy(add)
+{
 }
 
 bool needs_rearranging(
