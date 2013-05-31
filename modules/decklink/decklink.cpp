@@ -27,6 +27,7 @@
 #include "consumer/decklink_consumer.h"
 #include "producer/decklink_producer.h"
 
+#include <core/parameters/parameters.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/producer/frame_producer.h>
 
@@ -56,7 +57,7 @@ void init()
 	if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))		
 		return;
 		
-	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
+	core::register_consumer_factory([](const core::parameters& params){return decklink::create_consumer(params);});
 	core::register_producer_factory(create_producer);
 }
 

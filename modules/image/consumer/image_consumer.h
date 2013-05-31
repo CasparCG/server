@@ -35,6 +35,7 @@ namespace caspar {
 
 namespace core {
 	struct frame_consumer;
+	class parameters;
 	class read_frame;
 	struct video_format_desc;
 }
@@ -48,6 +49,6 @@ void write_cropped_png(
 		int width,
 		int height);
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params);
+safe_ptr<core::frame_consumer> create_consumer(const core::parameters& params);
 
 }}

@@ -45,6 +45,7 @@ class executor;
 namespace core {
 
 class basic_frame;
+class parameters;
 struct frame_factory;
 
 struct frame_producer : boost::noncopyable
@@ -83,15 +84,13 @@ public:
 
 safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int hints);
 
-typedef std::function<safe_ptr<core::frame_producer>(const safe_ptr<frame_factory>&, const std::vector<std::wstring>& upper_case_params, const std::vector<std::wstring>& original_case_params)> producer_factory_t;
+typedef std::function<safe_ptr<core::frame_producer>(const safe_ptr<frame_factory>&, const core::parameters& params)> producer_factory_t;
 void register_producer_factory(const producer_factory_t& factory); // Not thread-safe.
 void register_thumbnail_producer_factory(const producer_factory_t& factory); // Not thread-safe.
-safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>&, const std::vector<std::wstring>& upper_case_params, const std::vector<std::wstring>& original_case_params);
+safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>&, const core::parameters& params);
 safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>&, const std::wstring& params);
 safe_ptr<core::frame_producer> create_producer_destroy_proxy(safe_ptr<core::frame_producer> producer);
 safe_ptr<core::frame_producer> create_producer_print_proxy(safe_ptr<core::frame_producer> producer);
 safe_ptr<core::frame_producer> create_thumbnail_producer(const safe_ptr<frame_factory>& factory, const std::wstring& media_file);
-
-std::vector<std::wstring> protocol_split(std::wstring const& s);
 
 }}
