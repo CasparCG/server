@@ -36,8 +36,8 @@
 #include <common/memory/memcpy.h>
 #include <common/memory/memclr.h>
 #include <common/memory/memshfl.h>
-#include <common/utility/param.h>
 
+#include <core/parameters/parameters.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/mixer/audio/audio_util.h>
 
@@ -660,7 +660,7 @@ public:
 	}
 };	
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params) 
+safe_ptr<core::frame_consumer> create_consumer(const core::parameters& params) 
 {
 	if(params.size() < 1 || params[0] != L"DECKLINK")
 		return core::frame_consumer::empty();
@@ -683,7 +683,7 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 	config.embedded_audio	= std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
 	config.key_only			= std::find(params.begin(), params.end(), L"KEY_ONLY")		 != params.end();
 	config.audio_layout		= core::default_channel_layout_repository().get_by_name(
-			get_param(L"CHANNEL_LAYOUT", params, L"STEREO"));
+			params.get(L"CHANNEL_LAYOUT", L"STEREO"));
 
 	return make_safe<decklink_consumer_proxy>(config);
 }
