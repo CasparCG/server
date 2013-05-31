@@ -50,6 +50,7 @@ AMCP
     ffmpeg consumer creating an additional output_a.mov containing only the key.
   o Added KILL command for shutting down the server without console access.
 
+
 CasparCG 2.0.3 Stable (w.r.t 2.0.3 Alpha)
 =========================================
 
@@ -64,6 +65,7 @@ AMCP
   o DATA STORE now supports creating folders of path specified if they does not
     exist.
   o DATA REMOVE command was added.
+
 
 CasparCG 2.0.3 Alpha (w.r.t 2.0 Stable)
 =======================================
@@ -119,6 +121,7 @@ Producers
     + Added support for motion blur via a new BLUR parameter
     + Added PREMULTIPLY parameter to support images stored with straight alpha.
 
+
 CasparCG 2.0 Stable (w.r.t Beta 3)
 ==================================
 
@@ -135,6 +138,7 @@ Consumers
     + Added options, -r, -acodec, -s, -pix_fmt, -f and more.
   o Screen Consumer
     + Added vsync support.
+
 
 CasparCG 2.0 Beta 3 (w.r.t Beta 1)
 ==================================
@@ -241,6 +245,7 @@ Configuration
 
   o Simplified.
 
+
 CasparCG 2.0 Beta 1 (w.r.t Alpha)
 =================================
 
@@ -308,6 +313,7 @@ CasparCG 2.0 Beta 1 (w.r.t Alpha)
     EMPTY, BLACK, RED etc...
   o Alpha value in color codes is now optional.
   o More than 2 Decklink cards might be possible but have not yet been tested.
+
 
 CasparCG 2.0 Alpha (w.r.t 1.8)
 ==============================
