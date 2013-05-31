@@ -27,7 +27,7 @@
 #include <set>
 #include <iostream>
 
-#include <boost/thread.hpp>
+#include <boost/asio.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/adaptor/map.hpp>
 #include <boost/range/algorithm/copy.hpp>
@@ -53,13 +53,7 @@ public:
 	{
 		try
 		{
-			boost::this_thread::interruption_point();
 			handler_(event, file);
-			boost::this_thread::interruption_point();
-		}
-		catch (const boost::thread_interrupted&)
-		{
-			throw;
 		}
 		catch (...)
 		{
@@ -210,7 +204,9 @@ private:
 class polling_filesystem_monitor : public filesystem_monitor
 {
 	directory_monitor root_monitor_;
-	boost::thread scanning_thread_;
+	executor executor_;
+	boost::asio::io_service& scheduler_;
+	boost::asio::deadline_timer timer_;
 	tbb::atomic<bool> running_;
 	int scan_interval_millis_;
 	boost::promise<void> initial_scan_completion_;
@@ -222,21 +218,35 @@ public:
 			filesystem_event events_of_interest_mask,
 			bool report_already_existing,
 			int scan_interval_millis,
+			boost::asio::io_service& scheduler,
 			const filesystem_monitor_handler& handler,
 			const initial_files_handler& initial_files_handler)
-		: root_monitor_(report_already_existing, folder_to_watch, events_of_interest_mask, handler, initial_files_handler)
+		: root_monitor_(
+				report_already_existing,
+				folder_to_watch,
+				events_of_interest_mask,
+				handler,
+				initial_files_handler)
+		, executor_(L"polling_filesystem_monitor")
+		, scheduler_(scheduler)
+		, timer_(scheduler)
 		, scan_interval_millis_(scan_interval_millis)
 	{
 		running_ = true;
 		reemmit_all_ = false;
-		scanning_thread_ = boost::thread([this] { scanner(); });
+		executor_.begin_invoke([this]
+		{
+			scan();
+			initial_scan_completion_.set_value();
+			schedule_next();
+		});
 	}
 
 	virtual ~polling_filesystem_monitor()
 	{
 		running_ = false;
-		scanning_thread_.interrupt();
-		scanning_thread_.join();
+		boost::system::error_code e;
+		timer_.cancel(e);
 	}
 
 	virtual boost::unique_future<void> initial_files_processed()
@@ -254,25 +264,27 @@ public:
 		to_reemmit_.push(file);
 	}
 private:
-	void scanner()
+	void schedule_next()
 	{
-		win32_exception::install_handler();
-		detail::SetThreadName(GetCurrentThreadId(), "polling_filesystem_monitor");
+		if (!running_)
+			return;
 
-		bool running = scan(false);
-		initial_scan_completion_.set_value();
-
-		if (running)
-			while (scan(true));
+		timer_.expires_from_now(
+			boost::posix_time::milliseconds(scan_interval_millis_));
+		timer_.async_wait([this](const boost::system::error_code& e)
+		{
+			scan();
+			schedule_next();
+		});
 	}
 
-	bool scan(bool sleep)
+	void scan()
 	{
+		if (!running_)
+			return;
+
 		try
 		{
-			if (sleep)
-				boost::this_thread::sleep(boost::posix_time::milliseconds(scan_interval_millis_));
-
 			if (reemmit_all_.fetch_and_store(false))
 				root_monitor_.reemmit_all();
 			else
@@ -285,30 +297,29 @@ private:
 
 			root_monitor_.scan([=] { return !running_; });
 		}
-		catch (const boost::thread_interrupted&)
-		{
-		}
 		catch (...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
-
-		return running_;
 	}
 };
 
 struct polling_filesystem_monitor_factory::implementation
 {
+	boost::asio::io_service& scheduler_;
 	int scan_interval_millis;
 
-	implementation(int scan_interval_millis)
-		: scan_interval_millis(scan_interval_millis)
+	implementation(
+			boost::asio::io_service& scheduler, int scan_interval_millis)
+		: scheduler_(scheduler), scan_interval_millis(scan_interval_millis)
 	{
 	}
 };
 
-polling_filesystem_monitor_factory::polling_filesystem_monitor_factory(int scan_interval_millis)
-	: impl_(new implementation(scan_interval_millis))
+polling_filesystem_monitor_factory::polling_filesystem_monitor_factory(
+		boost::asio::io_service& scheduler,
+		int scan_interval_millis)
+	: impl_(new implementation(scheduler, scan_interval_millis))
 {
 }
 
@@ -328,6 +339,7 @@ filesystem_monitor::ptr polling_filesystem_monitor_factory::create(
 			events_of_interest_mask,
 			report_already_existing,
 			impl_->scan_interval_millis,
+			impl_->scheduler_,
 			handler,
 			initial_files_handler);
 }

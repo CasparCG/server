@@ -534,7 +534,7 @@ safe_ptr<core::frame_producer> create_thumbnail_producer(
 		
 	ffmpeg_params vid_params;
 
-	return create_producer_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, filename, FFMPEG_FILE, filter_str, loop, start, length, true, L"", vid_params));
+	return make_safe<ffmpeg_producer>(frame_factory, filename, FFMPEG_FILE, filter_str, loop, start, length, true, L"", vid_params);
 }
 
 }}

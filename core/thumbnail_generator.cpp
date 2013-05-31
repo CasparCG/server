@@ -126,7 +126,7 @@ public:
 				output_,
 				format_desc_,
 				ogl,
-				default_channel_layout_repository().get_by_name(L"STEREO")))
+				channel_layout::stereo()))
 		, thumbnail_creator_(thumbnail_creator)
 		, monitor_(monitor_factory.create(
 				media_path,

@@ -128,6 +128,7 @@ struct server::implementation : boost::noncopyable
 	{		
 		ffmpeg::uninit();
 
+		thumbnail_generator_.reset();
 		primary_amcp_server_.reset();
 		async_servers_.clear();
 		channels_.clear();
@@ -298,7 +299,9 @@ struct server::implementation : boost::noncopyable
 
 		auto scan_interval_millis = pt.get(L"configuration.thumbnails.scan-interval-millis", 5000);
 
-		polling_filesystem_monitor_factory monitor_factory(scan_interval_millis);
+		polling_filesystem_monitor_factory monitor_factory(
+				io_service_manager_.service(),
+				scan_interval_millis);
 		thumbnail_generator_.reset(new thumbnail_generator(
 				monitor_factory, 
 				env::media_folder(),
