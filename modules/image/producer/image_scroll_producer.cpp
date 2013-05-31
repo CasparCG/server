@@ -395,57 +395,42 @@ safe_ptr<core::frame_producer> create_scroll_producer(
 		const safe_ptr<core::frame_factory>& frame_factory,
 		const core::parameters& params)
 {
-	static const std::vector<std::wstring> extensions = list_of(L"png")(L"tga")(L"bmp")(L"jpg")(L"jpeg")(L"gif")(L"tiff")(L"tif")(L"jp2")(L"jpx")(L"j2k")(L"j2c");
-	std::wstring filename = env::media_folder() + L"\\" + params[0];
+	static const std::vector<std::wstring> extensions = list_of
+			(L"png")(L"tga")(L"bmp")(L"jpg")(L"jpeg")(L"gif")(L"tiff")(L"tif")
+			(L"jp2")(L"jpx")(L"j2k")(L"j2c");
+	std::wstring filename = env::media_folder() + L"\\" + params.at_original(0);
 	
-	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
-		{					
-			return boost::filesystem::is_regular_file(boost::filesystem::wpath(filename).replace_extension(ex));
-		});
+	auto ext = std::find_if(
+			extensions.begin(),
+			extensions.end(),
+			[&](const std::wstring& ex) -> bool
+			{					
+				return boost::filesystem::is_regular_file(
+						boost::filesystem::wpath(filename)
+								.replace_extension(ex));
+			});
 
 	if(ext == extensions.end())
 		return core::frame_producer::empty();
 	
-	double speed = 0.0;
-	double duration = 0.0;
-	auto speed_it = std::find(params.begin(), params.end(), L"SPEED");
-	if(speed_it != params.end())
-	{
-		if(++speed_it != params.end())
-			speed = boost::lexical_cast<double>(*speed_it);
-	}
-
-	if (speed == 0)
-	{
-		auto duration_it = std::find(params.begin(), params.end(), L"DURATION");
-
-		if (duration_it != params.end() && ++duration_it != params.end())
-		{
-			duration = boost::lexical_cast<double>(*duration_it);
-		}
-	}
+	double speed = params.get(L"SPEED", 0.0);
+	double duration = params.get(L"DURATION", 0.0);
 
 	if(speed == 0 && duration == 0)
 		return core::frame_producer::empty();
 
-	int motion_blur_px = 0;
-	auto blur_it = std::find(params.begin(), params.end(), L"BLUR");
-	if (blur_it != params.end() && ++blur_it != params.end())
-	{
-		motion_blur_px = boost::lexical_cast<int>(*blur_it);
-	}
-
-	bool premultiply_with_alpha = std::find(params.begin(), params.end(), L"PREMULTIPLY") != params.end();
-	bool progressive = std::find(params.begin(), params.end(), L"PROGRESSIVE") != params.end();
+	int motion_blur_px = params.get(L"BLUR", 0);
+	bool premultiply_with_alpha = params.has(L"PREMULTIPLY");
+	bool progressive = params.has(L"PROGRESSIVE");
 
 	return create_producer_print_proxy(make_safe<image_scroll_producer>(
-		frame_factory, 
-		filename + L"." + *ext, 
-		-speed, 
-		-duration, 
-		motion_blur_px, 
-		premultiply_with_alpha,
-		progressive));
+			frame_factory, 
+			filename + L"." + *ext, 
+			-speed, 
+			-duration, 
+			motion_blur_px, 
+			premultiply_with_alpha,
+			progressive));
 }
 
 }}

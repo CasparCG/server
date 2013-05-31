@@ -586,18 +586,13 @@ safe_ptr<core::frame_consumer> create_consumer(const core::parameters& params)
 	configuration config;
 		
 	if(params.size() > 1)
-		config.screen_index = lexical_cast_or_default<int>(params[1], config.screen_index);
+		config.screen_index =
+				lexical_cast_or_default<int>(params[1], config.screen_index);
 
-	auto device_it = std::find(params.begin(), params.end(), L"DEVICE");
-	if(device_it != params.end() && ++device_it != params.end())
-		config.screen_index = boost::lexical_cast<int>(*device_it);
-		
-	config.windowed = std::find(params.begin(), params.end(), L"FULLSCREEN") == params.end();
-	config.key_only = std::find(params.begin(), params.end(), L"KEY_ONLY") != params.end();
-
-	auto name_it	= std::find(params.begin(), params.end(), L"NAME");
-	if(name_it != params.end() && ++name_it != params.end())
-		config.name = *name_it;
+	config.screen_index = params.get(L"DEVICE", config.screen_index);
+	config.windowed = !params.has(L"FULLSCREEN");
+	config.key_only = params.has(L"KEY_ONLY");
+	config.name = params.get(L"NAME", config.name);
 
 	return make_safe<ogl_consumer_proxy>(config);
 }

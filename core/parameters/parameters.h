@@ -25,9 +25,7 @@
 #include <vector>
 #include <stdint.h>
 
-namespace caspar { 
-	
-namespace core {
+namespace caspar { namespace core {
 
 class parameters
 {
@@ -37,7 +35,7 @@ class parameters
 public:
 	parameters() {}
 
-	parameters(std::vector<std::wstring> const& params);
+	explicit parameters(std::vector<std::wstring> const& params);
 
 	std::vector<std::wstring> const& get_params() const {
 		return params_;
@@ -48,6 +46,7 @@ public:
 	void to_upper();
 	
 	bool has(std::wstring const& key) const;
+	bool remove_if_exists(std::wstring const& key);
 
 	template<typename C>
 	typename std::enable_if<!std::is_convertible<C, std::wstring>::value, typename std::decay<C>::type>::type get(std::wstring const& key, C default_value = C()) const
@@ -68,16 +67,15 @@ public:
 
 	std::wstring get(std::wstring const& key, std::wstring const& default_value = L"") const;
 
-	std::wstring get_original() const;
+	std::wstring get_original_string() const;
 
 	std::wstring at_original(size_t i) const;
 
 	void set(size_t index, std::wstring const& value);
 
-	// Type conversion operator for compatibiltiy with existing code not yet updated.
-	operator std::vector<std::wstring> const& () const
+	const std::vector<std::wstring>& get_original() const
 	{
-		return params_;
+		return params_original_;
 	}
 
 	// Compatibility method though likely to be useful
@@ -127,10 +125,9 @@ public:
 	}
 
 	// Compatibility method
-	// Used for the upper casing
-	//std::wstring& operator [] (size_t i) {
-	//	return params_[i];
-	//}
+	std::wstring& operator [] (size_t i) {
+		return params_[i];
+	}
 
 	// Compatibility method
 	std::vector<std::wstring>::const_iterator begin() const
