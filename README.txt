@@ -1,6 +1,5 @@
-================================================================================
-   CasparCG Server 2.0.3
-================================================================================
+CasparCG Server 2.0.3
+=====================
 
 Thank you for your interest in CasparCG Server, a professional 
 software used to play out and record professional graphics, audio and video 
@@ -13,7 +12,7 @@ More information is available at http://casparcg.com/
 
 
 SYSTEM REQUIREMENTS
-===================
+-------------------
 
 1. Intel processor capable of using SSSE3 instructions. Please refer to
    http://en.wikipedia.org/wiki/SSSE3 for a complete list.
@@ -50,7 +49,7 @@ http://casparcg.com/wiki/CasparCG_Server#System_Requirements
 
 
 INSTALLATION
-============
+------------
 
 1. Check that your system meets the requirements.
 
@@ -62,27 +61,27 @@ INSTALLATION
 4. Install "Flash Player 10.3.183.14" from the "Flash Player Installation"
    folder.
 
-5. Make sure you turn off Windows' "Aero Theme" and ClearTyper as they can interfere 
-   with CasparCG Server's OpenGL features!
+5. Make sure you turn off Windows' "Aero Theme" and ClearTyper as they can
+   interfere with CasparCG Server's OpenGL features!
 
 6. Configure the server settings in the "casparcg.config" text file.
 
 7. Start the "CasparCG.exe" program.
 
 8. Connect to the server from a client, such as the included CasparCG 2.0 Demo
-   Client (requires Adobe AIR) or the CasparCG Client 2.0 (available as a separate
-   download.)
+   Client (requires Adobe AIR) or the CasparCG Client 2.0 (available as a
+   separate download.)
 
 
 DOCUMENTATION
-=============
+-------------
 
 The most up-to-date documentation is always available at
 http://casparcg.com/wiki/
 
 
 CONFIGURATION
-=============
+-------------
 
 By default, CasparCG Server will look in the media folder for videos, audio and
 images files. Flash templates are stored in the templates folder. If you want to
@@ -94,7 +93,7 @@ the casparcg.config file.
   Open casparcg.config and use the following node for consumers:
 
   <consumers>
-      <screen/>
+      <screen />
   </consumers>
 
 * How to enable a DeckLink card and how to get video in and key output:
@@ -102,7 +101,7 @@ the casparcg.config file.
   Open casparcg.config and use the following node for consumers:
 
   <consumers>
-      <decklink/>
+      <decklink />
   </consumers>
 
 # Tip:
@@ -112,7 +111,8 @@ additional settings.
 
 
 LICENSING
-=========
+---------
+
 CasparCG Client is distributed under the GNU General Public License GPLv3 or
 higher, see LICENSE.TXT for details.
 
