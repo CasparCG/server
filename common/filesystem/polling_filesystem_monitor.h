@@ -23,6 +23,10 @@
 
 #include "filesystem_monitor.h"
 
+namespace boost { namespace asio {
+	class io_service;
+}}
+
 namespace caspar {
 
 /**
@@ -38,11 +42,15 @@ public:
 	/**
 	 * Constructor.
 	 *
+	 * @param scheduler            The io_service that will be used for
+	 *                             scheduling periodic scans.
 	 * @param scan_interval_millis The number of milliseconds between each
-	 *                             scheduled scan. Lower values lowers the reaction
-	 *                             time but causes more I/O.
+	 *                             scheduled scan. Lower values lowers the
+	 *                             reaction time but causes more I/O.
 	 */
-	polling_filesystem_monitor_factory(int scan_interval_millis = 5000);
+	polling_filesystem_monitor_factory(
+			boost::asio::io_service& scheduler,
+			int scan_interval_millis = 5000);
 	virtual ~polling_filesystem_monitor_factory();
 	virtual filesystem_monitor::ptr create(
 			const boost::filesystem::wpath& folder_to_watch,

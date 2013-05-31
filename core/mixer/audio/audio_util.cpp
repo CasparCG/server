@@ -65,6 +65,14 @@ bool channel_layout::no_channel_names() const
 	return channel_names.empty();
 }
 
+const channel_layout& channel_layout::stereo()
+{
+	static channel_layout layout = create_layout_from_string(
+			L"stereo", L"2.0", 2, L"L R");
+
+	return layout;
+}
+
 mix_config::mix_config()
 	: strategy(add)
 {
@@ -158,8 +166,7 @@ void register_default_channel_layouts(channel_layout_repository& repository)
 {
 	repository.register_layout(create_layout_from_string(
 			L"mono",         L"1.0",           1, L"C"));
-	repository.register_layout(create_layout_from_string(
-			L"stereo",       L"2.0",           2, L"L R"));
+	repository.register_layout(channel_layout::stereo());
 	repository.register_layout(create_layout_from_string(
 			L"dts",          L"5.1",           6, L"C L R Ls Rs LFE"));
 	repository.register_layout(create_layout_from_string(

@@ -81,7 +81,7 @@ public:
 	implementation(const safe_ptr<diagnostics::graph>& graph)
 		: graph_(graph)
 		, format_desc_(video_format_desc::get(video_format::invalid))
-		, channel_layout_(default_channel_layout_repository().get_by_name(L"STEREO"))
+		, channel_layout_(channel_layout::stereo())
 		, master_volume_(1.0f)
 		, previous_master_volume_(master_volume_)
 	{

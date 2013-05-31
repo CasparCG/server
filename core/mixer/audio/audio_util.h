@@ -90,6 +90,8 @@ struct channel_layout
 	int channel_index(const std::wstring& channel_name) const;
 	bool has_channel(const std::wstring& channel_name) const;
 	bool no_channel_names() const;
+
+	static const channel_layout& stereo();
 };
 
 /**

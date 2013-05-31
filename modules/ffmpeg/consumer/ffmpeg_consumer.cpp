@@ -302,7 +302,7 @@ public:
 
 	~ffmpeg_consumer()
 	{    
-		encode_executor_.stop_execute_rest();
+		encode_executor_.stop();
 		encode_executor_.join();
 
 		// Flush
