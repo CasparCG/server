@@ -28,6 +28,7 @@
 #include <common/log/log.h>
 #include <common/utility/string.h>
 
+#include <core/parameters/parameters.h>
 #include <core/consumer/frame_consumer.h>
 
 #include <boost/lexical_cast.hpp>
@@ -39,9 +40,9 @@ void init()
 	try
 	{
 		blue_initialize();
-		core::register_consumer_factory([](const std::vector<std::wstring>& params)
+		core::register_consumer_factory([](const core::parameters& params)
 		{
-			return create_consumer(params);
+			return bluefish::create_consumer(params);
 		});
 	}
 	catch(...){}

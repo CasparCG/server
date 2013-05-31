@@ -26,11 +26,14 @@
 #include <string>
 #include <vector>
 
-namespace caspar { namespace image {
+namespace caspar { 
+namespace core {
+	class parameters;
+}
+namespace image {
 
 safe_ptr<core::frame_producer> create_scroll_producer(
 		const safe_ptr<core::frame_factory>& frame_factory,
-		const std::vector<std::wstring>& params,
-		const std::vector<std::wstring>& original_case_params);
+		const core::parameters& params);
 
 }}

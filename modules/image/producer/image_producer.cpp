@@ -25,6 +25,7 @@
 
 #include <core/video_format.h>
 
+#include <core/parameters/parameters.h>
 #include <core/monitor/monitor.h>
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_factory.h>
@@ -119,16 +120,16 @@ struct image_producer : public core::frame_producer
 	}
 };
 
-safe_ptr<core::frame_producer> create_raw_producer(const safe_ptr<core::frame_factory>& frame_factory,
-		const std::vector<std::wstring>& params,
-		const std::vector<std::wstring>& original_case_params)
+safe_ptr<core::frame_producer> create_raw_producer(
+	const safe_ptr<core::frame_factory>& frame_factory,
+	const core::parameters& params)
 {
 	if (params[0] == L"[PNG_BASE64]")
 	{
 		if (params.size() < 2)
 			return core::frame_producer::empty();
 
-		auto png_data = from_base64(narrow(original_case_params[1]));
+		auto png_data = from_base64(narrow(params.at_original(1)));
 
 		return make_safe<image_producer>(frame_factory, png_data.data(), png_data.size());
 	}
@@ -149,10 +150,9 @@ safe_ptr<core::frame_producer> create_raw_producer(const safe_ptr<core::frame_fa
 
 safe_ptr<core::frame_producer> create_producer(
 		const safe_ptr<core::frame_factory>& frame_factory,
-		const std::vector<std::wstring>& params,
-		const std::vector<std::wstring>& original_case_params)
+		const core::parameters& params)
 {
-	auto raw_producer = create_raw_producer(frame_factory, params, original_case_params);
+	auto raw_producer = create_raw_producer(frame_factory, params);
 
 	if (raw_producer == core::frame_producer::empty())
 		return raw_producer;
@@ -162,10 +162,9 @@ safe_ptr<core::frame_producer> create_producer(
 
 safe_ptr<core::frame_producer> create_thumbnail_producer(
 		const safe_ptr<core::frame_factory>& frame_factory,
-		const std::vector<std::wstring>& params,
-		const std::vector<std::wstring>& original_case_params)
+		const core::parameters& params)
 {
-	return create_raw_producer(frame_factory, params, original_case_params);
+	return create_raw_producer(frame_factory, params);
 }
 
 }}
