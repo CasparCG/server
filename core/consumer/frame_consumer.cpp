@@ -27,6 +27,7 @@
 #include <common/memory/safe_ptr.h>
 #include <common/exception/exceptions.h>
 #include <common/concurrency/future_util.h>
+#include <core/parameters/parameters.h>
 #include <core/video_format.h>
 #include <core/mixer/read_frame.h>
 
@@ -41,7 +42,7 @@ void register_consumer_factory(const consumer_factory_t& factory)
 	g_factories.push_back(factory);
 }
 
-safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
+safe_ptr<core::frame_consumer> create_consumer(const core::parameters& params)
 {
 	if(params.empty())
 		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
