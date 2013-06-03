@@ -8,8 +8,16 @@ General
     yyyy-mm-d HH:MM:SS.ZZZ
   o Added support for generating thumbnails for media files. Currently only
     video files and images are supported. By default the media directory is
-	scanned every 5 seconds for new/modified/removed files and thumbnails are
-	generated/regenerated/removed accordingly.
+    scanned every 5 seconds for new/modified/removed files and thumbnails are
+    generated/regenerated/removed accordingly.
+  o Support for new video modes: 2k2398, 2k2400, 2k2500, 4k2398, 4k2400, 4k2500,
+    4k2997 and 4k3000.
+  o Optimizations in AMCP protocol implementations for large incoming messages
+    like for example base64 encoded PNG-images.
+  o Added support for more than 2 audio channels in caspar. See
+    http://casparcg.com/forum/viewtopic.php?f=3&t=1453 for more information.
+  o ATI graphics card support. Static linking against SFML instead of dynamic.
+    Should inprove ATI card support. Needs testing.
 
 Layer
 -----
@@ -21,6 +29,11 @@ Audio mixer
 
   o Added support for a master volume mixer setting for each channel.
 
+Video mixer
+-----------
+
+  o Added support for chroma keying.
+
 Consumers
 ---------
 
@@ -29,15 +42,22 @@ Consumers
     up with the frame rate (drops instead).
   o Added support for to create a separate key and fill file when recording with
     the ffmpeg consumer. Add the SEPARATE_KEY parameter to the ffmpeg consumer
-	parameter list. The key file will get the _A suffix to be picked up by the
-	separated_producer when doing playback.
+    parameter list. The key file will get the _A suffix to be picked up by the
+    separated_producer when doing playback.
   o The image consumer now writes to the media folder instead of the data
     folder.
+  o Fixed bug in decklink consumer where we submit too few samples to the driver
+    when the video format has a frame rate > 50.
 
 Producers
 ---------
 
   o Added support for playing .swf files using the flash producer.
+  o image producer premultiplies PNG images with their alpha.
+  o image producer can load a PNG image encoded as base64 via:
+    PLAY 1-0 [PNG_BASE64] <base64 string>
+  o ffmpeg producer can now use a directshow input filters:
+    PLAY 1-10 "dshow://video=Some Camera"
 
 AMCP
 ----
@@ -49,7 +69,41 @@ AMCP
   o ADD 1 FILE output.mov SEPARATE_KEY activates the separate key feature of the
     ffmpeg consumer creating an additional output_a.mov containing only the key.
   o Added KILL command for shutting down the server without console access.
+  o Added RESTART command for shutting down the server in the same way as KILL
+    except that the return code from caspar is 5 instead of 0, which can be used
+    by parent process to take other actions. The casparcg_auto_restart.bat
+    script restarts the server if the return code is 5.
+  o DATA RETRIEVE now returns linefeeds encoded as an actual linefeed (the
+    single character 0x0a) instead of the previous two characters \ followed by
+    n.
+  o MIXER CHROMA command added to control the chroma keying. Example:
+    MIXER 1-1 CHROMA GREEN|BLUE 0.10 0.04
+  o Fixed bug where MIXER FILL overrides any previous MIXER CLIP on the same
+    layer. The bugfix also has the side effect of supporting negative scale on
+    MIXER FILL, causing the image to be flipped.
 
+OSC
+---
+
+  o Support for sending OSC messages over UDP to either a predefined set of
+    clients (servers in the OSC sense) or dynamically to the ip addresses of the
+    currently connected AMCP clients.
+  o /channel/[1-9]/stage/layer/[0-9]
+    + color producer     /color            [color string]
+    + ffmpeg producer    /profiler/time    [render time]     [frame duration]
+    + ffmpeg producer    /file/time        [elapsed seconds] [total seconds]
+    + ffmpeg producer    /file/frame       [frame]           [total frames]
+    + ffmpeg producer    /file/fps         [fps]
+    + ffmpeg producer    /file/path        [file path]
+    + ffmpeg producer    /loop             [looping or not]
+    + during transitions /transition/frame [current frame]   [total frames]
+    + during transitions /transition/type  [transition type]
+    + flash producer     /host/path        [filename]
+    + flash producer     /host/width       [width]
+    + flash producer     /host/height      [height]
+    + flash producer     /host/fps         [fps]
+    + flash producer     /buffer           [buffered]        [buffer size]
+    + image producer     /file/path        [file path]
 
 CasparCG 2.0.3 Stable (w.r.t 2.0.3 Alpha)
 =========================================
