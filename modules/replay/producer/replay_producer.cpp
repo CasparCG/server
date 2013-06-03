@@ -768,8 +768,10 @@ safe_ptr<core::frame_producer> create_producer(
 	long long start_frame = 0;
 	long long last_frame = 0;
 	float start_speed = 1.0f;
-	if (params.size() >= 3) {
-		for (uint16_t i=0; i<params.size(); i++) {
+	if (params.size() >= 3)
+	{
+		for (uint16_t i=0; i<params.size(); i++)
+		{
 			if (params[i] == L"SEEK")
 			{
 				static const boost::wregex seek_exp(L"(?<SIGN>[\\|])?(?<VALUE>[\\d]+)", boost::regex::icase);

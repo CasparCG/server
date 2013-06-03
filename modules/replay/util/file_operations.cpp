@@ -449,7 +449,7 @@ namespace caspar { namespace replay {
 	}
 
 	#pragma warning(disable:4267)
-	long long write_frame(mjpeg_file_handle outfile, size_t width, size_t height, const uint8_t* image, short quality, mjpeg_process_mode mode)
+	long long write_frame(mjpeg_file_handle outfile, size_t width, size_t height, const uint8_t* image, short quality, mjpeg_process_mode mode, chroma_subsampling subsampling)
 	{
 
 		long long start_position = tell_frame(outfile);
@@ -472,22 +472,51 @@ namespace caspar { namespace replay {
 		cinfo.image_height = height;
 		cinfo.input_components = 3;
 		cinfo.in_color_space = JCS_RGB;
+
 		cinfo.max_v_samp_factor = 1;
-		cinfo.max_h_samp_factor = 2;
+		cinfo.max_h_samp_factor = 1;
 		cinfo.jpeg_color_space = JCS_YCbCr;
 
 		jpeg_set_defaults(&cinfo);
 
-
-		// Disable chroma subsampling (store in 4:2:2 quality)
-		cinfo.comp_info[0].h_samp_factor = 1;
-		cinfo.comp_info[0].v_samp_factor = 1;
-		cinfo.comp_info[1].h_samp_factor = 2; // use 1 for 4:4:4
-		cinfo.comp_info[1].v_samp_factor = 1;
-		cinfo.comp_info[2].h_samp_factor = 2; // use 1 for 4:4:4
-		cinfo.comp_info[2].v_samp_factor = 1;
-
 		jpeg_set_quality(&cinfo, quality, TRUE);
+
+		if (subsampling == Y444)
+		{
+			cinfo.comp_info[0].h_samp_factor = 1;
+			cinfo.comp_info[0].v_samp_factor = 1;
+			cinfo.comp_info[1].h_samp_factor = 1;
+			cinfo.comp_info[1].v_samp_factor = 1;
+			cinfo.comp_info[2].h_samp_factor = 1;
+			cinfo.comp_info[2].v_samp_factor = 1;
+		}
+		else if (subsampling == Y422)
+		{
+			cinfo.comp_info[0].h_samp_factor = 2;
+			cinfo.comp_info[0].v_samp_factor = 1;
+			cinfo.comp_info[1].h_samp_factor = 1;
+			cinfo.comp_info[1].v_samp_factor = 1;
+			cinfo.comp_info[2].h_samp_factor = 1;
+			cinfo.comp_info[2].v_samp_factor = 1;
+		}
+		else if (subsampling == Y420)
+		{
+			cinfo.comp_info[0].h_samp_factor = 2;
+			cinfo.comp_info[0].v_samp_factor = 2;
+			cinfo.comp_info[1].h_samp_factor = 1;
+			cinfo.comp_info[1].v_samp_factor = 1;
+			cinfo.comp_info[2].h_samp_factor = 1;
+			cinfo.comp_info[2].v_samp_factor = 1;
+		}
+		else if (subsampling == Y411)
+		{
+			cinfo.comp_info[0].h_samp_factor = 4;
+			cinfo.comp_info[0].v_samp_factor = 1;
+			cinfo.comp_info[1].h_samp_factor = 1;
+			cinfo.comp_info[1].v_samp_factor = 1;
+			cinfo.comp_info[2].h_samp_factor = 1;
+			cinfo.comp_info[2].v_samp_factor = 1;
+		}
 
 		jpeg_start_compress(&cinfo, TRUE);
 

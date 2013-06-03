@@ -62,6 +62,7 @@ struct replay_consumer : public core::frame_consumer
 	std::wstring							filename_;
 	tbb::atomic<uint64_t>					framenum_;
 	std::int16_t							quality_;
+	chroma_subsampling						subsampling_;
 	//boost::mutex*							file_mutex_;
 	mjpeg_file_handle						output_file_;
 	mjpeg_file_handle						output_index_file_;
@@ -74,17 +75,19 @@ struct replay_consumer : public core::frame_consumer
 
 #define REPLAY_FRAME_BUFFER					32
 #define REPLAY_JPEG_QUALITY					90
+#define REPLAY_JPEG_SUBSAMPLING				Y422
 
 public:
 
 	// frame_consumer
 
-	replay_consumer(const std::wstring& filename)
+	replay_consumer(const std::wstring& filename, const short quality, const chroma_subsampling subsampling)
 		: filename_(filename)
+		, quality_(quality)
+		, subsampling_(subsampling)
 		, encode_executor_(print())
 	{
 		framenum_ = 0;
-		quality_ = REPLAY_JPEG_QUALITY;
 
 		encode_executor_.set_capacity(REPLAY_FRAME_BUFFER);
 
@@ -148,25 +151,26 @@ public:
 		auto out_file = output_file_;
 		auto idx_file = output_index_file_;
 		auto quality = quality_;
+		auto subsampling = subsampling_;
 		
 		long long written = 0;
 
 		switch (mode_)
 		{
 		case PROGRESSIVE:
-			written = write_frame(out_file, format_desc.width, format_desc.height, frame.image_data().begin(), quality, PROGRESSIVE);
+			written = write_frame(out_file, format_desc.width, format_desc.height, frame.image_data().begin(), quality, PROGRESSIVE, subsampling);
 			write_index(idx_file, written);
 			break;
 		case UPPER:
-			written = write_frame(out_file, format_desc.width, format_desc.height / 2, frame.image_data().begin(), quality, UPPER);
+			written = write_frame(out_file, format_desc.width, format_desc.height / 2, frame.image_data().begin(), quality, UPPER, subsampling);
 			write_index(idx_file, written);
-			written = write_frame(out_file, format_desc.width, format_desc.height / 2, frame.image_data().begin(), quality, LOWER);
+			written = write_frame(out_file, format_desc.width, format_desc.height / 2, frame.image_data().begin(), quality, LOWER, subsampling);
 			write_index(idx_file, written);
 			break;
 		case LOWER:
-			written = write_frame(out_file, format_desc.width, format_desc.height / 2, frame.image_data().begin(), quality, LOWER);
+			written = write_frame(out_file, format_desc.width, format_desc.height / 2, frame.image_data().begin(), quality, LOWER, subsampling);
 			write_index(idx_file, written);
-			written = write_frame(out_file, format_desc.width, format_desc.height / 2, frame.image_data().begin(), quality, UPPER);
+			written = write_frame(out_file, format_desc.width, format_desc.height / 2, frame.image_data().begin(), quality, UPPER, subsampling);
 			write_index(idx_file, written);
 			break;
 		}
@@ -271,10 +275,48 @@ safe_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& 
 
 	std::wstring filename = L"REPLAY";
 
+	short quality = REPLAY_JPEG_QUALITY;
+	chroma_subsampling subsampling = REPLAY_JPEG_SUBSAMPLING;
+	
+
 	if (params.size() > 1)
+	{
 		filename = params[1];
 
-	return make_safe<replay_consumer>(filename);
+		for (uint16_t i=2; i<params.size(); i++)
+		{
+			if (params[i] == L"SUBSAMPLING")
+			{
+				if (params[i+1] == L"444")
+				{
+					subsampling = Y444;
+					i++;
+				}
+				else if (params[i+1] == L"422")
+				{
+					subsampling = Y422;
+					i++;
+				}
+				else if (params[i+1] == L"420")
+				{
+					subsampling = Y420;
+					i++;
+				}
+				else if (params[i+1] == L"411")
+				{
+					subsampling = Y411;
+					i++;
+				}
+			}
+			else if (params[i] == L"QUALITY")
+			{
+				quality = boost::lexical_cast<short>(params[i+1]);
+				i++;
+			}
+		}
+	}
+
+	return make_safe<replay_consumer>(filename, quality, subsampling);
 }
 
 }}
