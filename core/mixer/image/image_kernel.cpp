@@ -224,6 +224,10 @@ struct image_kernel::implementation : boost::noncopyable
 		
 		// Draw
 				
+		/*
+			GL_TEXTURE0 are texture coordinates to the source material, what will be rendered with this call. These are always set to the whole thing.
+			GL_TEXTURE1 are texture coordinates to background- / key-material, that which will have to be taken in consideration when blending. These are set to the rectangle over which the source will be rendered
+		*/
 		glBegin(GL_QUADS);
 			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        ,  f_p[1]        );		glVertex2d( f_p[0]        *2.0-1.0,  f_p[1]        *2.0-1.0);
 			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]),  f_p[1]        );		glVertex2d((f_p[0]+f_s[0])*2.0-1.0,  f_p[1]        *2.0-1.0);

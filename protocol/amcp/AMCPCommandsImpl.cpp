@@ -474,10 +474,6 @@ bool MixerCommand::DoExecute()
 				transform.fill_translation[1]	= y;
 				transform.fill_scale[0]			= x_s;
 				transform.fill_scale[1]			= y_s;
-				transform.clip_translation[0]	= x;
-				transform.clip_translation[1]	= y;
-				transform.clip_scale[0]			= x_s;
-				transform.clip_scale[1]			= y_s;
 				return transform;
 			}, duration, tween));
 		}
@@ -489,6 +485,11 @@ bool MixerCommand::DoExecute()
 			double y	= boost::lexical_cast<double>(_parameters.at(2));
 			double x_s	= boost::lexical_cast<double>(_parameters.at(3));
 			double y_s	= boost::lexical_cast<double>(_parameters.at(4));
+			if(x_s < 0 || y_s < 0)
+			{
+				SetReplyString(L"403 MIXER ERROR\r\n");
+				return false;
+			}
 
 			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
