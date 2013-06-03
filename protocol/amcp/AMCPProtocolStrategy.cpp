@@ -89,7 +89,7 @@ void AMCPProtocolStrategy::Parse(const TCHAR* pData, int charCount, ClientInfoPt
 	size_t oldLength = pClientInfo->currentMessage_.length();
 
 	if(pClientInfo->currentMessage_.capacity() < (oldLength + charCount))
-		pClientInfo->currentMessage_.reserve(8192 * 4);
+		pClientInfo->currentMessage_.reserve(oldLength + 8192 * 4);
 
 	pClientInfo->currentMessage_.append(pData, charCount);
 
