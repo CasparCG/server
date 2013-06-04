@@ -107,6 +107,8 @@ public:
 	{		
 		try
 		{
+			monitor_subject_ << monitor::message("/paused") % is_paused_;
+
 			if(is_paused_)
 			{
 				if(foreground_->last_frame() == basic_frame::empty())

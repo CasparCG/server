@@ -89,6 +89,7 @@ OSC
     clients (servers in the OSC sense) or dynamically to the ip addresses of the
     currently connected AMCP clients.
   o /channel/[1-9]/stage/layer/[0-9]
+    + always             /paused           [paused or not]
     + color producer     /color            [color string]
     + ffmpeg producer    /profiler/time    [render time]     [frame duration]
     + ffmpeg producer    /file/time        [elapsed seconds] [total seconds]
