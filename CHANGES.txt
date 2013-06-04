@@ -33,6 +33,7 @@ Video mixer
 -----------
 
   o Added support for chroma keying.
+  o Fixed bug where MIXER CONTRAST set to < 1 can cause transparency issues.
 
 Consumers
 ---------
@@ -105,6 +106,7 @@ OSC
     + flash producer     /host/fps         [fps]
     + flash producer     /buffer           [buffered]        [buffer size]
     + image producer     /file/path        [file path]
+
 
 CasparCG 2.0.3 Stable (w.r.t 2.0.3 Alpha)
 =========================================
