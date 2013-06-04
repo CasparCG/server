@@ -264,7 +264,7 @@ std::string get_fragment(bool blend_modes)
 	"   if(levels)																		\n"
 	"		color.rgb = LevelsControl(color.rgb, min_input, max_input, gamma, min_output, max_output); \n"
 	"	if(csb)																			\n"
-	"		color.rgb = ContrastSaturationBrightness(color.rgb, brt, sat, con);			\n"
+	"		color.rgb = ContrastSaturationBrightness(color, brt, sat, con);		\n"
 	"	if(has_local_key)																\n"
 	"		color *= texture2D(local_key, gl_TexCoord[1].st).r;							\n"
 	"	if(has_layer_key)																\n"
