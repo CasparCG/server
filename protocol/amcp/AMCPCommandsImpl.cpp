@@ -426,8 +426,14 @@ bool CallCommand::DoExecute()
 // UGLY HACK
 tbb::concurrent_unordered_map<int, std::vector<stage::transform_tuple_t>> deferred_transforms;
 
+core::frame_transform MixerCommand::get_current_transform()
+{
+	return GetChannel()->stage()->get_current_transform(GetLayerIndex());
+}
+
 bool MixerCommand::DoExecute()
-{	
+{
+	using boost::lexical_cast;
 	//Perform loading of the clip
 	try
 	{	
@@ -439,6 +445,9 @@ bool MixerCommand::DoExecute()
 
 		if(_parameters[0] == L"KEYER" || _parameters[0] == L"IS_KEY")
 		{
+			if (_parameters.size() == 1)
+				return reply_value([](const frame_transform& t) { return t.is_key ? 1 : 0; });
+
 			bool value = boost::lexical_cast<int>(_parameters.at(1));
 			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
@@ -448,6 +457,9 @@ bool MixerCommand::DoExecute()
 		}
 		else if(_parameters[0] == L"OPACITY")
 		{
+			if (_parameters.size() == 1)
+				return reply_value([](const frame_transform& t) { return t.opacity; });
+
 			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
 
@@ -461,6 +473,20 @@ bool MixerCommand::DoExecute()
 		}
 		else if(_parameters[0] == L"FILL" || _parameters[0] == L"FILL_RECT")
 		{
+			if (_parameters.size() == 1)
+			{
+				auto transform = get_current_transform();
+				auto translation = transform.fill_translation;
+				auto scale = transform.fill_scale;
+				SetReplyString(
+						L"201 MIXER OK\r\n" 
+						+ lexical_cast<std::wstring>(translation[0]) + L" "
+						+ lexical_cast<std::wstring>(translation[1]) + L" "
+						+ lexical_cast<std::wstring>(scale[0]) + L" "
+						+ lexical_cast<std::wstring>(scale[1]) + L"\r\n");
+				return true;
+			}
+
 			int duration = _parameters.size() > 5 ? boost::lexical_cast<int>(_parameters[5]) : 0;
 			std::wstring tween = _parameters.size() > 6 ? _parameters[6] : L"linear";
 			double x	= boost::lexical_cast<double>(_parameters.at(1));
@@ -479,6 +505,20 @@ bool MixerCommand::DoExecute()
 		}
 		else if(_parameters[0] == L"CLIP" || _parameters[0] == L"CLIP_RECT")
 		{
+			if (_parameters.size() == 1)
+			{
+				auto transform = get_current_transform();
+				auto translation = transform.clip_translation;
+				auto scale = transform.clip_scale;
+				SetReplyString(
+						L"201 MIXER OK\r\n" 
+						+ lexical_cast<std::wstring>(translation[0]) + L" "
+						+ lexical_cast<std::wstring>(translation[1]) + L" "
+						+ lexical_cast<std::wstring>(scale[0]) + L" "
+						+ lexical_cast<std::wstring>(scale[1]) + L"\r\n");
+				return true;
+			}
+
 			int duration = _parameters.size() > 5 ? boost::lexical_cast<int>(_parameters[5]) : 0;
 			std::wstring tween = _parameters.size() > 6 ? _parameters[6] : L"linear";
 			double x	= boost::lexical_cast<double>(_parameters.at(1));
@@ -528,6 +568,15 @@ bool MixerCommand::DoExecute()
 		}
 		else if(_parameters[0] == L"BLEND")
 		{
+			if (_parameters.size() == 1)
+			{
+				auto blend_mode = GetChannel()->mixer()->get_blend_mode(GetLayerIndex());
+				SetReplyString(L"201 MIXER OK\r\n" 
+					+ lexical_cast<std::wstring>(get_blend_mode(blend_mode)) 
+					+ L"\r\n");
+				return true;
+			}
+
 			auto blend_str = _parameters.at(1);								
 			int layer = GetLayerIndex();
 			blend_mode::type && blend = get_blend_mode(blend_str);
@@ -535,23 +584,54 @@ bool MixerCommand::DoExecute()
 		}
         else if(_parameters[0] == L"CHROMA")
         {
-            int layer = GetLayerIndex();
+			if (_parameters.size() == 1)
+			{
+				auto chroma = GetChannel()->mixer()->get_chroma(GetLayerIndex());
+				SetReplyString(L"201 MIXER OK\r\n" 
+					+ get_chroma_mode(chroma.key)
+					+ (chroma.key == chroma::none
+						? L""
+						: L" "
+						+ lexical_cast<std::wstring>(chroma.threshold) + L" "
+						+ lexical_cast<std::wstring>(chroma.softness))
+					+ L"\r\n");
+					// Add the rest when they are actually used and documented
+				return true;
+			}
+
+			int layer = GetLayerIndex();
             chroma  chroma;
-            chroma.key          = get_chroma_mode(_parameters[1]);
-            chroma.threshold    = boost::lexical_cast<double>(_parameters[2]);
-            chroma.softness     = boost::lexical_cast<double>(_parameters[3]);
-            chroma.spill        = _parameters.size() > 4 ? boost::lexical_cast<double>(_parameters[4]) : 0.0f;
-            chroma.blur         = _parameters.size() > 5 ? boost::lexical_cast<double>(_parameters[5]) : 0.0f;
-            chroma.show_mask    = _parameters.size() > 6 ? bool(boost::lexical_cast<int>(_parameters[6])) : false;
+            chroma.key = get_chroma_mode(_parameters[1]);
+
+			if (chroma.key != chroma::none)
+			{
+				chroma.threshold    = boost::lexical_cast<double>(_parameters[2]);
+				chroma.softness     = boost::lexical_cast<double>(_parameters[3]);
+				chroma.spill        = _parameters.size() > 4 ? boost::lexical_cast<double>(_parameters[4]) : 0.0f;
+				chroma.blur         = _parameters.size() > 5 ? boost::lexical_cast<double>(_parameters[5]) : 0.0f;
+				chroma.show_mask    = _parameters.size() > 6 ? bool(boost::lexical_cast<int>(_parameters[6])) : false;
+			}
+
             GetChannel()->mixer()->set_chroma(GetLayerIndex(), chroma);
         }
 		else if(_parameters[0] == L"MASTERVOLUME")
 		{
+			if (_parameters.size() == 1)
+			{
+				auto volume = GetChannel()->mixer()->get_master_volume();
+				SetReplyString(L"201 MIXER OK\r\n" 
+					+ lexical_cast<std::wstring>(volume) + L"\r\n");
+				return true;
+			}
+
 			float master_volume = boost::lexical_cast<float>(_parameters.at(1));
 			GetChannel()->mixer()->set_master_volume(master_volume);
 		}
 		else if(_parameters[0] == L"BRIGHTNESS")
 		{
+			if (_parameters.size() == 1)
+				return reply_value([](const frame_transform& t) { return t.brightness; });
+
 			auto value = boost::lexical_cast<double>(_parameters.at(1));
 			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
@@ -563,6 +643,9 @@ bool MixerCommand::DoExecute()
 		}
 		else if(_parameters[0] == L"SATURATION")
 		{
+			if (_parameters.size() == 1)
+				return reply_value([](const frame_transform& t) { return t.saturation; });
+
 			auto value = boost::lexical_cast<double>(_parameters.at(1));
 			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
@@ -574,6 +657,9 @@ bool MixerCommand::DoExecute()
 		}
 		else if(_parameters[0] == L"CONTRAST")
 		{
+			if (_parameters.size() == 1)
+				return reply_value([](const frame_transform& t) { return t.contrast; });
+
 			auto value = boost::lexical_cast<double>(_parameters.at(1));
 			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
@@ -585,6 +671,18 @@ bool MixerCommand::DoExecute()
 		}
 		else if(_parameters[0] == L"LEVELS")
 		{
+			if (_parameters.size() == 1)
+			{
+				auto levels = get_current_transform().levels;
+				SetReplyString(L"201 MIXER OK\r\n"
+					+ lexical_cast<std::wstring>(levels.min_input) + L" "
+					+ lexical_cast<std::wstring>(levels.max_input) + L" "
+					+ lexical_cast<std::wstring>(levels.gamma) + L" "
+					+ lexical_cast<std::wstring>(levels.min_output) + L" "
+					+ lexical_cast<std::wstring>(levels.max_output) + L"\r\n");
+				return true;
+			}
+
 			levels value;
 			value.min_input  = boost::lexical_cast<double>(_parameters.at(1));
 			value.max_input  = boost::lexical_cast<double>(_parameters.at(2));
@@ -602,6 +700,9 @@ bool MixerCommand::DoExecute()
 		}
 		else if(_parameters[0] == L"VOLUME")
 		{
+			if (_parameters.size() == 1)
+				return reply_value([](const frame_transform& t) { return t.volume; });
+
 			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
 			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
 			double value = boost::lexical_cast<double>(_parameters[1]);

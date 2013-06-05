@@ -60,6 +60,7 @@ public:
 	void apply_transform(int index, const transform_func_t& transform, unsigned int mix_duration = 0, const std::wstring& tween = L"linear");
 	void clear_transforms(int index);
 	void clear_transforms();
+	frame_transform get_current_transform(int index);
 
 	void spawn_token();
 			

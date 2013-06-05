@@ -36,16 +36,22 @@ struct chroma
         magenta  = 0xff00ff
     };
 
-    unsigned int    key;
-    float           threshold,
-                    softness,
-                    spill,
-                    blur;
-    bool            show_mask;
+    type	key;
+    float	threshold;
+    float	softness;
+	float	spill;
+    float	blur;
+    bool	show_mask;
 
-    chroma(type m=none)
-    : key(m), threshold(0.0), softness(0.0), spill(0.0),
-      blur(0.0), show_mask(false) {}
+    chroma(type m = none)
+		: key(m)
+		, threshold(0.0)
+		, softness(0.0)
+		, spill(0.0)
+		, blur(0.0)
+		, show_mask(false)
+	{
+	}
 };
 
 struct blend_mode
@@ -92,7 +98,9 @@ struct blend_mode
 };
 
 blend_mode::type get_blend_mode(const std::wstring& str);
+std::wstring get_blend_mode(blend_mode::type mode);
 
 chroma::type get_chroma_mode(const std::wstring& str);
+std::wstring get_chroma_mode(chroma::type type);
 
 }}
