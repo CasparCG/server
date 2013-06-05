@@ -67,11 +67,14 @@ public:
 	core::video_format_desc get_video_format_desc() const; // nothrow
 	void set_video_format_desc(const video_format_desc& format_desc);
 	
+	blend_mode::type get_blend_mode(int index);
 	void set_blend_mode(int index, blend_mode::type value);
-    void set_chroma(int index, const chroma & value);
+	chroma get_chroma(int index);
+    void set_chroma(int index, const chroma& value);
 	void clear_blend_mode(int index);
 	void clear_blend_modes();
 
+	float get_master_volume();
 	void set_master_volume(float volume);
 
 	boost::unique_future<boost::property_tree::wptree> info() const;

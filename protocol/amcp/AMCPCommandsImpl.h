@@ -25,7 +25,12 @@
 
 #include "AMCPCommand.h"
 
-namespace caspar { namespace protocol {
+namespace caspar {
+namespace core {
+	struct frame_transform;
+}
+
+namespace protocol {
 	
 std::wstring ListMedia();
 std::wstring ListTemplates();
@@ -53,6 +58,17 @@ class CallCommand : public AMCPCommandBase<true, AddToQueue, 1>
 class MixerCommand : public AMCPCommandBase<true, AddToQueue, 1>
 {
 	std::wstring print() const { return L"MixerCommand";}
+	core::frame_transform get_current_transform();
+	template<typename Func>
+	bool reply_value(const Func& extractor)
+	{
+		auto value = extractor(get_current_transform());
+
+		SetReplyString(L"201 MIXER OK\r\n"
+			+ boost::lexical_cast<std::wstring>(value) + L"\r\n");
+
+		return true;
+	}
 	bool DoExecute();
 };
 	

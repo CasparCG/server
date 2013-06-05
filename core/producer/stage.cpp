@@ -230,6 +230,14 @@ public:
 			transforms_.clear();
 		}, high_priority);
 	}
+
+	frame_transform get_current_transform(int index)
+	{
+		return executor_.invoke([=]
+		{
+			return transforms_[index].fetch();
+		});
+	}
 		
 	layer& get_layer(int index)
 	{
@@ -419,6 +427,7 @@ void stage::apply_transforms(const std::vector<stage::transform_tuple_t>& transf
 void stage::apply_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const std::wstring& tween){impl_->apply_transform(index, transform, mix_duration, tween);}
 void stage::clear_transforms(int index){impl_->clear_transforms(index);}
 void stage::clear_transforms(){impl_->clear_transforms();}
+frame_transform stage::get_current_transform(int index) { return impl_->get_current_transform(index); }
 void stage::spawn_token(){impl_->spawn_token();}
 void stage::load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta){impl_->load(index, producer, preview, auto_play_delta);}
 void stage::pause(int index){impl_->pause(index);}
