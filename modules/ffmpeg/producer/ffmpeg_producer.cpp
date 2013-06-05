@@ -182,17 +182,22 @@ public:
 		
 		graph_->set_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
 
-		if(frame_buffer_.empty())
+		if (frame_buffer_.empty())
 		{
 			if (input_.eof())
 			{
+				send_osc();
 				return std::make_pair(last_frame(), -1);
-			} else if (resource_type_ == FFMPEG_FILE)
+			}
+			else if (resource_type_ == FFMPEG_FILE)
 			{
 				graph_->set_tag("underflow");  
+				send_osc();
 				return std::make_pair(core::basic_frame::late(), -1);     
-			} else
+			}
+			else
 			{
+				send_osc();
 				return std::make_pair(last_frame(), -1);
 			}
 		}
@@ -206,7 +211,14 @@ public:
 		graph_->set_text(print());
 
 		last_frame_ = frame.first;
-					
+
+		send_osc();
+
+		return frame;
+	}
+
+	void send_osc()
+	{
 		monitor_subject_	<< core::monitor::message("/profiler/time")		% frame_timer_.elapsed() % (1.0/format_desc_.fps);			
 								
 		monitor_subject_	<< core::monitor::message("/file/time")			% (file_frame_number()/fps_) 
@@ -216,8 +228,6 @@ public:
 							<< core::monitor::message("/file/fps")			% fps_
 							<< core::monitor::message("/file/path")			% filename_
 							<< core::monitor::message("/loop")				% input_.loop();
-
-		return frame;
 	}
 	
 	safe_ptr<core::basic_frame> render_specific_frame(uint32_t file_position, int hints)
