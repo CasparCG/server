@@ -74,7 +74,7 @@ std::vector<std::wstring> parameters::protocol_split(std::wstring const& s)
 {
 	std::vector<std::wstring> result;
 	size_t pos;
-	if ((pos = s.find_first_of(L"://")) != std::wstring::npos)
+	if ((pos = s.find(L"://")) != std::wstring::npos)
 	{
 		result.push_back(s.substr(0, pos));
 		result.push_back(s.substr(pos + 3));

@@ -350,21 +350,4 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& fa
 	return create_producer(factory, params);
 }
 
-std::vector<std::wstring> protocol_split(std::wstring const& s)
-{
-  std::vector<std::wstring> result;
-  size_t pos;
-  if ((pos = s.find_first_of(L"://")) != std::wstring::npos)
-  {
-    result.push_back(s.substr(0, pos));
-    result.push_back(s.substr(pos + 3));
-  } else
-  {
-    result.push_back(L"");
-    result.push_back(s);
-  }
-  return result;
-}
-
-
 }}
