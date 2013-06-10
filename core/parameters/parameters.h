@@ -69,7 +69,7 @@ public:
 
 	std::wstring get_original_string() const;
 
-	std::wstring at_original(size_t i) const;
+	const std::wstring& at_original(size_t i) const;
 
 	void set(size_t index, std::wstring const& value);
 
