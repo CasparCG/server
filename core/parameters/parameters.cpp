@@ -104,7 +104,7 @@ std::wstring parameters::get_original_string() const
 	return str;
 }
 
-std::wstring parameters::at_original(size_t i) const
+const std::wstring& parameters::at_original(size_t i) const
 {
 	return params_original_[i];
 }
