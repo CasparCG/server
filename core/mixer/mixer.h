@@ -73,6 +73,8 @@ public:
     void set_chroma(int index, const chroma& value);
 	void clear_blend_mode(int index);
 	void clear_blend_modes();
+	void set_straight_alpha_output(bool value);
+	bool get_straight_alpha_output();
 
 	float get_master_volume();
 	void set_master_volume(float volume);

@@ -31,6 +31,7 @@
 
 #include <core/mixer/gpu/ogl_device.h>
 #include <core/mixer/audio/audio_util.h>
+#include <core/mixer/mixer.h>
 #include <core/video_channel.h>
 #include <core/producer/stage.h>
 #include <core/consumer/output.h>
@@ -167,6 +168,8 @@ struct server::implementation : boost::noncopyable
 			channels_.push_back(make_safe<video_channel>(channels_.size()+1, format_desc, ogl_, audio_channel_layout));
 			
 			channels_.back()->monitor_output().link_target(&monitor_subject_);
+			channels_.back()->mixer()->set_straight_alpha_output(
+					xml_channel.second.get(L"straight-alpha-output", false));
 
 			create_consumers(
 				xml_channel.second.get_child(L"consumers"),

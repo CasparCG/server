@@ -37,7 +37,7 @@ static std::string get_adjustement_glsl()
 		"\n		const float AvgLumB = 0.5;																																													   "
 		"\n																																																					   "
 		"\n		const vec3 LumCoeff = vec3(0.2125, 0.7154, 0.0721);																																							   "
-		"\n		bool demultiply_remultiply = con < 1.0;																																																		   "
+		"\n		bool demultiply_remultiply = con < 1.0 && color.a != 1.0;																																																		   "
 		"\n																																																					   "
 		"\n		if (demultiply_remultiply && color.a > 0.0)																																																			   "
 		"\n			color.rgb /= color.a;																																																		   "

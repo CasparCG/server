@@ -698,6 +698,20 @@ bool MixerCommand::DoExecute()
 				return transform;
 			}, duration, tween));
 		}
+		else if(_parameters[0] == L"STRAIGHT_ALPHA_OUTPUT")
+		{
+			if (_parameters.size() == 1)
+			{
+				SetReplyString(L"201 MIXER OK\r\n"
+					+ lexical_cast<std::wstring>(
+							GetChannel()->mixer()->get_straight_alpha_output())
+					+ L"\r\n");
+				return true;
+			}
+
+			bool value = boost::lexical_cast<bool>(_parameters[1]);
+			GetChannel()->mixer()->set_straight_alpha_output(value);
+		}
 		else if(_parameters[0] == L"VOLUME")
 		{
 			if (_parameters.size() == 1)

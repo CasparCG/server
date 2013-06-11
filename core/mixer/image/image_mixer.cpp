@@ -70,17 +70,21 @@ public:
 	{
 	}
 	
-	boost::unique_future<safe_ptr<host_buffer>> operator()(std::vector<layer>&& layers, const video_format_desc& format_desc)
+	boost::unique_future<safe_ptr<host_buffer>> operator()(
+			std::vector<layer>&& layers,
+			const video_format_desc& format_desc,
+			bool straighten_alpha)
 	{		
 		auto layers2 = make_move_on_copy(std::move(layers));
 		return ogl_->begin_invoke([=]
 		{
-			return do_render(std::move(layers2.value), format_desc);
+			return do_render(
+					std::move(layers2.value), format_desc, straighten_alpha);
 		});
 	}
 
 private:
-	safe_ptr<host_buffer> do_render(std::vector<layer>&& layers, const video_format_desc& format_desc)
+	safe_ptr<host_buffer> do_render(std::vector<layer>&& layers, const video_format_desc& format_desc, bool straighten_alpha)
 	{
 		auto draw_buffer = create_mixer_buffer(4, format_desc);
 
@@ -108,6 +112,8 @@ private:
 		{
 			draw(std::move(layers), draw_buffer, format_desc);
 		}
+
+		kernel_.post_process(draw_buffer, straighten_alpha);
 
 		auto host_buffer = ogl_->create_host_buffer(format_desc.size, host_buffer::read_only);
 		ogl_->attach(*draw_buffer);
@@ -280,9 +286,9 @@ public:
 	{		
 	}
 	
-	boost::unique_future<safe_ptr<host_buffer>> render(const video_format_desc& format_desc)
+	boost::unique_future<safe_ptr<host_buffer>> render(const video_format_desc& format_desc, bool straighten_alpha)
 	{
-		return renderer_(std::move(layers_), format_desc);
+		return renderer_(std::move(layers_), format_desc, straighten_alpha);
 	}
 };
 
@@ -290,7 +296,7 @@ image_mixer::image_mixer(const safe_ptr<ogl_device>& ogl) : impl_(new implementa
 void image_mixer::begin(basic_frame& frame){impl_->begin(frame);}
 void image_mixer::visit(write_frame& frame){impl_->visit(frame);}
 void image_mixer::end(){impl_->end();}
-boost::unique_future<safe_ptr<host_buffer>> image_mixer::operator()(const video_format_desc& format_desc){return impl_->render(format_desc);}
+boost::unique_future<safe_ptr<host_buffer>> image_mixer::operator()(const video_format_desc& format_desc, bool straighten_alpha){return impl_->render(format_desc, straighten_alpha);}
 void image_mixer::begin_layer(blend_mode blend_mode){impl_->begin_layer(blend_mode);}
 void image_mixer::end_layer(){impl_->end_layer();}
 

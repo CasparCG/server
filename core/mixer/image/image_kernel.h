@@ -67,6 +67,8 @@ class image_kernel : boost::noncopyable
 public:
 	image_kernel(const safe_ptr<ogl_device>& ogl);
 	void draw(draw_params&& params);
+	void post_process(
+			const safe_ptr<device_buffer>& background, bool straighten_alpha);
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;
