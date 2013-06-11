@@ -62,11 +62,36 @@
 
 namespace caspar { namespace ffmpeg {
 
+std::wstring get_relative_or_original(
+		const std::wstring& filename,
+		const boost::filesystem::wpath& relative_to)
+{
+	boost::filesystem::wpath file(filename);
+	auto result = file.filename();
+
+	boost::filesystem::wpath current_path = file;
+
+	while (true)
+	{
+		current_path = current_path.parent_path();
+
+		if (boost::filesystem::equivalent(current_path, relative_to))
+			break;
+
+		if (current_path.empty())
+			return filename;
+
+		result = current_path.filename() + L"/" + result;
+	}
+
+	return result;
+}
 				
 struct ffmpeg_producer : public core::frame_producer
 {
 	core::monitor::subject										monitor_subject_;
 	const std::wstring											filename_;
+	const std::wstring											path_relative_to_media_;
 
 	FFMPEG_Resource												resource_type_;
 	
@@ -98,6 +123,7 @@ struct ffmpeg_producer : public core::frame_producer
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, FFMPEG_Resource resource_type, const std::wstring& filter, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const std::wstring& custom_channel_order, const ffmpeg_params& vid_params)
 		: filename_(filename)
+		, path_relative_to_media_(get_relative_or_original(filename, env::media_folder()))
 		, resource_type_(resource_type)
 		, frame_factory_(frame_factory)		
 		, format_desc_(frame_factory->get_video_format_desc())
@@ -226,7 +252,7 @@ public:
 							<< core::monitor::message("/file/frame")			% static_cast<int32_t>(file_frame_number())
 																			% static_cast<int32_t>(file_nb_frames())
 							<< core::monitor::message("/file/fps")			% fps_
-							<< core::monitor::message("/file/path")			% filename_
+							<< core::monitor::message("/file/path")			% path_relative_to_media_
 							<< core::monitor::message("/loop")				% input_.loop();
 	}
 	
