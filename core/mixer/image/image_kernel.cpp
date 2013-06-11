@@ -59,11 +59,15 @@ struct image_kernel::implementation : boost::noncopyable
 	safe_ptr<ogl_device>	ogl_;
 	safe_ptr<shader>		shader_;
 	bool					blend_modes_;
+	bool					supports_texture_barrier_;
 							
 	implementation(const safe_ptr<ogl_device>& ogl)
 		: ogl_(ogl)
 		, shader_(ogl_->invoke([&]{return get_image_shader(*ogl, blend_modes_);}))
+		, supports_texture_barrier_(glTextureBarrierNV != 0)
 	{
+		if (!supports_texture_barrier_)
+			CASPAR_LOG(warning) << L"[image_mixer] TextureBarrierNV not supported. Post processing will not be available";
 	}
 
 	void draw(draw_params&& params)
@@ -110,8 +114,9 @@ struct image_kernel::implementation : boost::noncopyable
 		shader_->set("has_layer_key",	bool(params.layer_key));
 		shader_->set("pixel_format",	params.pix_desc.pix_fmt);	
 		shader_->set("opacity",			params.transform.is_key ? 1.0 : params.transform.opacity);	
+		shader_->set("post_processing",	false);
 
-        shader_->set("chroma_mode",    params.blend_mode.chroma.key == chroma::green ? 1 : (params.blend_mode.chroma.key == chroma::blue ? 2 : 0));
+		shader_->set("chroma_mode",    params.blend_mode.chroma.key == chroma::green ? 1 : (params.blend_mode.chroma.key == chroma::blue ? 2 : 0));
         shader_->set("chroma_blend",   params.blend_mode.chroma.threshold, params.blend_mode.chroma.softness);
         shader_->set("chroma_spill",   params.blend_mode.chroma.spill);
 //        shader_->set("chroma.key",      ((params.blend_mode.chroma.key >> 24) && 0xff)/255.0f,
@@ -132,7 +137,7 @@ struct image_kernel::implementation : boost::noncopyable
 
 		if(blend_modes_)
 		{
-			params.background->bind(6);
+			params.background->bind(texture_id::background);
 
 			shader_->set("background",	texture_id::background);
 			shader_->set("blend_mode",	params.blend_mode.mode);
@@ -249,12 +254,56 @@ struct image_kernel::implementation : boost::noncopyable
 			glTextureBarrierNV(); 
 		}
 	}
+
+	void post_process(
+			const safe_ptr<device_buffer>& background, bool straighten_alpha)
+	{
+		bool should_post_process = 
+				supports_texture_barrier_ && straighten_alpha;
+
+		if (!should_post_process)
+			return;
+
+		if (!blend_modes_)
+			ogl_->disable(GL_BLEND);
+
+		ogl_->disable(GL_POLYGON_STIPPLE);
+
+		ogl_->attach(*background);
+
+		background->bind(texture_id::background);
+
+		ogl_->use(*shader_);
+		shader_->set("background", texture_id::background);
+		shader_->set("post_processing", should_post_process);
+		shader_->set("straighten_alpha", straighten_alpha);
+
+		ogl_->viewport(0, 0, background->width(), background->height());
+
+		glBegin(GL_QUADS);
+			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 0.0); glVertex2d(-1.0, -1.0);
+			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 0.0); glVertex2d( 1.0, -1.0);
+			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0); glVertex2d( 1.0,  1.0);
+			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glVertex2d(-1.0,  1.0);
+		glEnd();
+
+		glTextureBarrierNV();
+
+		if (!blend_modes_)
+			ogl_->enable(GL_BLEND);
+	}
 };
 
 image_kernel::image_kernel(const safe_ptr<ogl_device>& ogl) : impl_(new implementation(ogl)){}
 void image_kernel::draw(draw_params&& params)
 {
 	impl_->draw(std::move(params));
+}
+
+void image_kernel::post_process(
+		const safe_ptr<device_buffer>& background, bool straighten_alpha)
+{
+	impl_->post_process(background, straighten_alpha);
 }
 
 }}

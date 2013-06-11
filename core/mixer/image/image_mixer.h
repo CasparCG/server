@@ -51,7 +51,8 @@ public:
 	void begin_layer(blend_mode blend_mode);
 	void end_layer();
 		
-	boost::unique_future<safe_ptr<host_buffer>> operator()(const video_format_desc& format_desc);
+	boost::unique_future<safe_ptr<host_buffer>> operator()(
+			const video_format_desc& format_desc, bool straighten_alpha);
 		
 private:
 	struct implementation;

@@ -34,6 +34,7 @@ Video mixer
 
   o Added support for chroma keying.
   o Fixed bug where MIXER CONTRAST set to < 1 can cause transparency issues.
+  o Experimental support for straight alpha output.
 
 Consumers
 ---------
@@ -82,6 +83,8 @@ AMCP
   o Fixed bug where MIXER FILL overrides any previous MIXER CLIP on the same
     layer. The bugfix also has the side effect of supporting negative scale on
     MIXER FILL, causing the image to be flipped.
+  o MIXER <ch> STRAIGHT_ALPHA_OUTPUT added to control whether to output straight
+    alpha or not.
 
 OSC
 ---

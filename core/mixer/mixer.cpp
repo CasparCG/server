@@ -66,6 +66,7 @@ struct mixer::implementation : boost::noncopyable
 	video_format_desc				format_desc_;
 	safe_ptr<ogl_device>			ogl_;
 	channel_layout					audio_channel_layout_;
+	bool							straighten_alpha_;
 	
 	audio_mixer	audio_mixer_;
 	image_mixer image_mixer_;
@@ -81,8 +82,9 @@ public:
 		, format_desc_(format_desc)
 		, ogl_(ogl)
 		, audio_channel_layout_(audio_channel_layout)
-		, image_mixer_(ogl)
+		, straighten_alpha_(false)
 		, audio_mixer_(graph_)
+		, image_mixer_(ogl)
 		, executor_(L"mixer")
 	{			
 		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8));
@@ -109,7 +111,7 @@ public:
 					image_mixer_.end_layer();
 				}
 
-				auto image = image_mixer_(format_desc_);
+				auto image = image_mixer_(format_desc_, straighten_alpha_);
 				auto audio = audio_mixer_(format_desc_, audio_channel_layout_);
 				image.wait();
 
@@ -180,6 +182,22 @@ public:
         }, high_priority);
     }
 
+	void set_straight_alpha_output(bool value)
+	{
+        executor_.begin_invoke([=]
+        {
+			straighten_alpha_ = value;
+        }, high_priority);
+	}
+
+	bool get_straight_alpha_output()
+	{
+		return executor_.invoke([=]
+		{
+			return straighten_alpha_;
+		});
+	}
+
 	float get_master_volume()
 	{
 		return executor_.invoke([=]
@@ -230,6 +248,8 @@ chroma mixer::get_chroma(int index) { return impl_->get_chroma(index); }
 void mixer::set_chroma(int index, const chroma & value){impl_->set_chroma(index, value);}
 void mixer::clear_blend_mode(int index) { impl_->clear_blend_mode(index); }
 void mixer::clear_blend_modes() { impl_->clear_blend_modes(); }
+void mixer::set_straight_alpha_output(bool value) { impl_->set_straight_alpha_output(value); }
+bool mixer::get_straight_alpha_output() { return impl_->get_straight_alpha_output(); }
 float mixer::get_master_volume() { return impl_->get_master_volume(); }
 void mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 void mixer::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
