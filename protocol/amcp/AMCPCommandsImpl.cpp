@@ -823,7 +823,17 @@ bool LoadCommand::DoExecute()
 	try
 	{
 		_parameters[0] = _parameters[0];
-		auto pFP = create_producer(GetChannel()->mixer(), _parameters, _parameters2);		
+		auto uri_tokens = parameters::protocol_split(_parameters2[0]);
+		auto pFP = frame_producer::empty();
+		if (uri_tokens[0].empty() || uri_tokens[0] == L"route")
+		{
+			pFP = RouteCommand::TryCreateProducer(*this, _parameters2[0]);
+		}
+		if (pFP == frame_producer::empty())
+		{
+			pFP = create_producer(GetChannel()->mixer(), _parameters, _parameters2);
+		}
+
 		GetChannel()->stage()->load(GetLayerIndex(), pFP, true);
 	
 		SetReplyString(TEXT("202 LOAD OK\r\n"));

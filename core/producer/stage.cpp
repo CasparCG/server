@@ -128,12 +128,18 @@ public:
 	
 	void add_layer_consumer(int layer, const std::shared_ptr<write_frame_consumer>& layer_consumer)
 	{
-		layer_consumers_[layer] = layer_consumer;
+		executor_.begin_invoke([=]
+		{
+			layer_consumers_[layer] = layer_consumer;
+		}, high_priority);
 	}
 
 	void remove_layer_consumer(int layer)
 	{
-		layer_consumers_.erase(layer);
+		executor_.begin_invoke([=]
+		{
+			layer_consumers_.erase(layer);
+		}, high_priority);
 	}
 
 	void tick(const std::weak_ptr<implementation>& self)

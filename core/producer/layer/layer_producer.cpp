@@ -50,7 +50,7 @@ class layer_consumer : public write_frame_consumer
 public:
 	layer_consumer() 
 	{
-		frame_buffer_.set_capacity(100);
+		frame_buffer_.set_capacity(2);
 	}
 
 	~layer_consumer()
@@ -91,20 +91,24 @@ class layer_producer : public frame_producer
 	safe_ptr<basic_frame>					last_frame_;
 	uint64_t								frame_number_;
 
+	const safe_ptr<stage>                   stage_;
+
 public:
 	explicit layer_producer(const safe_ptr<frame_factory>& frame_factory, const safe_ptr<stage>& stage, int layer) 
 		: frame_factory_(frame_factory)
 		, layer_(layer)
+		, stage_(stage)
 		, consumer_(new layer_consumer())
 		, last_frame_(basic_frame::empty())
 		, frame_number_(0)
 	{
-		stage->add_layer_consumer(layer_, consumer_);
+		stage_->add_layer_consumer(layer_, consumer_);
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}
 
 	~layer_producer()
 	{
+		stage_->remove_layer_consumer(layer_);
 		CASPAR_LOG(info) << print() << L" Uninitialized";
 	}
 
@@ -113,9 +117,10 @@ public:
 	virtual safe_ptr<basic_frame> receive(int) override
 	{
 		auto consumer_frame = consumer_->receive();
+		if (consumer_frame == basic_frame::late())
+			return last_frame_;
 
 		frame_number_++;
-
 		return last_frame_ = consumer_frame;
 	}	
 
