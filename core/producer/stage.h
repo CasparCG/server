@@ -74,8 +74,8 @@ public:
 	void swap_layer(int index, size_t other_index);
 	void swap_layer(int index, size_t other_index, const safe_ptr<stage>& other);
 
-	void add_layer_consumer(int layer, const std::shared_ptr<write_frame_consumer>& layer_consumer);
-	void remove_layer_consumer(int layer);
+	void add_layer_consumer(int token, int layer, const std::shared_ptr<write_frame_consumer>& layer_consumer);
+	void remove_layer_consumer(int token, int layer);
 
 	boost::unique_future<std::wstring>				call(int index, bool foreground, const std::wstring& param);
 

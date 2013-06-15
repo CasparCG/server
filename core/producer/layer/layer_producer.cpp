@@ -102,13 +102,13 @@ public:
 		, last_frame_(basic_frame::empty())
 		, frame_number_(0)
 	{
-		stage_->add_layer_consumer(layer_, consumer_);
+		stage_->add_layer_consumer((int)this, layer_, consumer_);
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}
 
 	~layer_producer()
 	{
-		stage_->remove_layer_consumer(layer_);
+		stage_->remove_layer_consumer((int)this, layer_);
 		CASPAR_LOG(info) << print() << L" Uninitialized";
 	}
 

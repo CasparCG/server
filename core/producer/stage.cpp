@@ -106,7 +106,8 @@ struct stage::implementation : public std::enable_shared_from_this<implementatio
 	executor																	 executor_;
 
 private:
-	std::map<int, std::shared_ptr<write_frame_consumer>>						layer_consumers_;
+	// map of layer -> map of tokens (src ref) -> layer_consumer
+	std::map<int, std::map<int, std::shared_ptr<write_frame_consumer>>>			layer_consumers_;
 
 public:
 	implementation(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<stage::target_t>& target, const video_format_desc& format_desc)  
@@ -126,19 +127,28 @@ public:
 		executor_.begin_invoke([=]{tick(self);});
 	}
 	
-	void add_layer_consumer(int layer, const std::shared_ptr<write_frame_consumer>& layer_consumer)
+	void add_layer_consumer(int token, int layer, const std::shared_ptr<write_frame_consumer>& layer_consumer)
 	{
 		executor_.begin_invoke([=]
 		{
-			layer_consumers_[layer] = layer_consumer;
+			if (layer_consumers_[layer].empty())
+			{
+				layer_consumers_[layer] = std::map<int, std::shared_ptr<write_frame_consumer>>();
+			}
+			layer_consumers_[layer][token] = layer_consumer;
 		}, high_priority);
 	}
 
-	void remove_layer_consumer(int layer)
+	void remove_layer_consumer(int token, int layer)
 	{
 		executor_.begin_invoke([=]
 		{
-			layer_consumers_.erase(layer);
+			auto layer_map = layer_consumers_[layer];
+			layer_map.erase(token);
+			if (layer_map.empty())
+			{
+				layer_consumers_.erase(layer);
+			}
 		}, high_priority);
 	}
 
@@ -168,10 +178,14 @@ public:
 					hints |= frame_producer::ALPHA_HINT;
 
 				auto frame = layer.second->receive(hints);	
-				auto layer_consumer_it = layer_consumers_.find(layer.first);
-				if (layer_consumer_it != layer_consumers_.end())
+				auto layer_consumers_it = layer_consumers_.find(layer.first);
+				if (layer_consumers_it != layer_consumers_.end())
 				{
-					layer_consumer_it->second->send(frame);
+					auto consumer_it = (*layer_consumers_it).second;
+					tbb::parallel_for_each(consumer_it.begin(), consumer_it.end(), [&](std::map<int, std::shared_ptr<write_frame_consumer>>::value_type& layer_consumer) 
+					{
+						layer_consumer.second->send(frame);
+					});
 				}
 
 				auto frame1 = make_safe<core::basic_frame>(frame);
@@ -456,8 +470,8 @@ void stage::clear(){impl_->clear();}
 void stage::swap_layers(const safe_ptr<stage>& other){impl_->swap_layers(*other);}
 void stage::swap_layer(int index, size_t other_index){impl_->swap_layer(index, other_index);}
 void stage::swap_layer(int index, size_t other_index, const safe_ptr<stage>& other){impl_->swap_layer(index, other_index, *other);}
-void stage::add_layer_consumer(int layer, const std::shared_ptr<write_frame_consumer>& layer_consumer){impl_->add_layer_consumer(layer, layer_consumer);}
-void stage::remove_layer_consumer(int layer){impl_->remove_layer_consumer(layer);}
+void stage::add_layer_consumer(int token, int layer, const std::shared_ptr<write_frame_consumer>& layer_consumer){impl_->add_layer_consumer(token, layer, layer_consumer);}
+void stage::remove_layer_consumer(int token, int layer){impl_->remove_layer_consumer(token, layer);}
 boost::unique_future<safe_ptr<frame_producer>> stage::foreground(int index) {return impl_->foreground(index);}
 boost::unique_future<safe_ptr<frame_producer>> stage::background(int index) {return impl_->background(index);}
 boost::unique_future<std::wstring> stage::call(int index, bool foreground, const std::wstring& param){return impl_->call(index, foreground, param);}
