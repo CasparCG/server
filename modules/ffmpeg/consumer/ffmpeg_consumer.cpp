@@ -25,6 +25,7 @@
 
 #include "ffmpeg_consumer.h"
 
+#include "../ffmpeg_params.h"
 #include "../producer/audio/audio_resampler.h"
 
 #include <core/parameters/parameters.h>
@@ -106,18 +107,6 @@ int av_opt_set(void *obj, const char *name, const char *val, int search_flags)
 	return ::av_opt_set(obj, name, val, search_flags);
 }
 
-struct option
-{
-	std::string name;
-	std::string value;
-
-	option(std::string name, std::string value)
-		: name(std::move(name))
-		, value(std::move(value))
-	{
-	}
-};
-	
 struct output_format
 {
 	AVOutputFormat* format;

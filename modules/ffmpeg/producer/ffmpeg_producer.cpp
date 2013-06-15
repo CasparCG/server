@@ -23,9 +23,9 @@
 
 #include "ffmpeg_producer.h"
 
-#include "../ffmpeg_error.h"
 #include "../ffmpeg.h"
-#include "ffmpeg_params.h"
+#include "../ffmpeg_error.h"
+#include "../ffmpeg_params.h"
 
 #include "muxer/frame_muxer.h"
 #include "input/input.h"
@@ -121,7 +121,7 @@ struct ffmpeg_producer : public core::frame_producer
 	uint32_t													file_frame_number_;
 		
 public:
-	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, FFMPEG_Resource resource_type, const std::wstring& filter, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const std::wstring& custom_channel_order, const ffmpeg_params& vid_params)
+	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, FFMPEG_Resource resource_type, const std::wstring& filter, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const std::wstring& custom_channel_order, const ffmpeg_producer_params& vid_params)
 		: filename_(filename)
 		, path_relative_to_media_(get_relative_or_original(filename, env::media_folder()))
 		, resource_type_(resource_type)
@@ -527,8 +527,8 @@ safe_ptr<core::frame_producer> create_producer(
 			filename = probe_stem(filename);
 
 		//TODO fix these?
-		//ffmpeg_params->loop       = params.has(L"LOOP");
-		//ffmpeg_params->start     = params.get(L"SEEK", static_cast<uint32_t>(0));
+		//vid_params->loop       = params.has(L"LOOP");
+		//vid_params->start     = params.get(L"SEEK", static_cast<uint32_t>(0));
 	}
 
 	if(filename.empty())
@@ -542,11 +542,24 @@ safe_ptr<core::frame_producer> create_producer(
 
 	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
 	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
+	
+	ffmpeg_producer_params vid_params;
+	bool haveFFMPEGStartIndicator = false;
+	for (size_t i = 0; i < params.size() - 1; ++i)
+	{
+		if (!haveFFMPEGStartIndicator && params[i] == L"--")
+		{
+			haveFFMPEGStartIndicator = true;
+			continue;
+		}
+		if (haveFFMPEGStartIndicator)
+		{
+			auto name = narrow(params.at_original(i)).substr(1);
+			auto value = narrow(params.at_original(i + 1));
+			vid_params.options.push_back(option(name, value));
+		}
+	}
 
-	ffmpeg_params vid_params;
-	vid_params.size_str = params.get(L"SIZE", L"");
-	vid_params.pixel_format = params.get(L"PIXFMT", L"");
-	vid_params.frame_rate = params.get(L"FRAMERATE", L"");
 	
 	return create_producer_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, filename, resource_type, filter_str, loop, start, length, false, custom_channel_order, vid_params));
 }
@@ -567,9 +580,8 @@ safe_ptr<core::frame_producer> create_thumbnail_producer(
 	auto start		= 0;
 	auto length		= std::numeric_limits<uint32_t>::max();
 	auto filter_str = L"";
-		
-	ffmpeg_params vid_params;
 
+	ffmpeg_producer_params vid_params;
 	return make_safe<ffmpeg_producer>(frame_factory, filename, FFMPEG_FILE, filter_str, loop, start, length, true, L"", vid_params);
 }
 

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Profile|Win32">
@@ -353,9 +353,9 @@
     <ClInclude Include="consumer\ffmpeg_consumer.h" />
     <ClInclude Include="ffmpeg.h" />
     <ClInclude Include="ffmpeg_error.h" />
+    <ClInclude Include="ffmpeg_params.h" />
     <ClInclude Include="producer\audio\audio_decoder.h" />
     <ClInclude Include="producer\audio\audio_resampler.h" />
-    <ClInclude Include="producer\ffmpeg_params.h" />
     <ClInclude Include="producer\ffmpeg_producer.h" />
     <ClInclude Include="producer\filter\filter.h" />
     <ClInclude Include="producer\filter\parallel_yadif.h" />
