@@ -100,14 +100,12 @@ struct stage::implementation : public std::enable_shared_from_this<implementatio
 																				 
 	std::map<int, std::shared_ptr<layer>>										 layers_;	
 	tbb::concurrent_unordered_map<int, tweened_transform<core::frame_transform>> transforms_;	
+	// map of layer -> map of tokens (src ref) -> layer_consumer
+	std::map<int, std::map<void*, std::shared_ptr<write_frame_consumer>>>		 layer_consumers_;
 	
 	monitor::subject															 monitor_subject_;
 
 	executor																	 executor_;
-
-private:
-	// map of layer -> map of tokens (src ref) -> layer_consumer
-	std::map<int, std::map<void*, std::shared_ptr<write_frame_consumer>>>		layer_consumers_;
 
 public:
 	implementation(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<stage::target_t>& target, const video_format_desc& format_desc)  
