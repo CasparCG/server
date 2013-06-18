@@ -56,6 +56,7 @@ public:
 	// basic_frame
 
 	virtual void accept(frame_visitor& visitor) override;
+	virtual int64_t get_and_record_age_millis() override;
 
 	// write _frame
 
@@ -75,7 +76,6 @@ public:
 	const core::pixel_format_desc& get_pixel_format_desc() const;
 	const channel_layout& get_channel_layout() const;
 	multichannel_view<int32_t, audio_buffer::iterator> get_multichannel_view();
-	
 private:
 	friend class image_mixer;
 	

@@ -29,7 +29,17 @@
 
 #include <tbb/mutex.h>
 
+#include <boost/chrono.hpp>
+
 namespace caspar { namespace core {
+
+int64_t get_current_time_millis()
+{
+	using namespace boost::chrono;
+
+	return duration_cast<milliseconds>(
+			high_resolution_clock::now().time_since_epoch()).count();
+}
 																																							
 struct read_frame::implementation : boost::noncopyable
 {
@@ -39,6 +49,7 @@ struct read_frame::implementation : boost::noncopyable
 	tbb::mutex					mutex_;
 	audio_buffer				audio_data_;
 	channel_layout				audio_channel_layout_;
+	int64_t						created_timestamp_;
 
 public:
 	implementation(
@@ -52,6 +63,7 @@ public:
 		, image_data_(std::move(image_data))
 		, audio_data_(std::move(audio_data))
 		, audio_channel_layout_(audio_channel_layout)
+		, created_timestamp_(get_current_time_millis())
 	{
 	}	
 	
@@ -105,6 +117,11 @@ const multichannel_view<const int32_t, boost::iterator_range<const int32_t*>::co
 			impl_->audio_data().begin(),
 			impl_->audio_data().end(),
 			impl_->audio_channel_layout_);
+}
+
+int64_t read_frame::get_age_millis() const
+{
+	return impl_ ? get_current_time_millis() - impl_->created_timestamp_ : 0;
 }
 
 //#include <tbb/scalable_allocator.h>

@@ -80,6 +80,7 @@ public:
 	void set_master_volume(float volume);
 
 	boost::unique_future<boost::property_tree::wptree> info() const;
+	boost::unique_future<boost::property_tree::wptree> delay_info() const;
 	
 private:
 	struct implementation;

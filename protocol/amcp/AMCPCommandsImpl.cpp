@@ -1807,6 +1807,31 @@ bool InfoCommand::DoExecute()
 			
 			boost::property_tree::write_xml(replyString, info, w);
 		}
+		else if(_parameters.size() >= 2 && _parameters[1] == L"DELAY")
+		{
+			replyString << L"201 INFO DELAY OK\r\n";
+			boost::property_tree::wptree info;
+
+			std::vector<std::wstring> split;
+			boost::split(split, _parameters[0], boost::is_any_of("-"));
+					
+			int layer = std::numeric_limits<int>::min();
+			int channel = boost::lexical_cast<int>(split[0]) - 1;
+
+			if(split.size() > 1)
+				layer = boost::lexical_cast<int>(split[1]);
+				
+			if(layer == std::numeric_limits<int>::min())
+			{	
+				info.add_child(L"channel-delay", channels_.at(channel)->delay_info());
+			}
+			else
+			{
+				info.add_child(L"layer-delay", channels_.at(channel)->stage()->delay_info(layer).get())
+					.add(L"index", layer);
+			}
+			boost::property_tree::xml_parser::write_xml(replyString, info, w);
+		}
 		else // channel
 		{			
 			if(_parameters.size() >= 1)

@@ -186,6 +186,11 @@ public:
 	{
 		return frame_->audio_data();
 	}
+
+	int64_t get_age_millis() const
+	{
+		return frame_->get_age_millis();
+	}
 };
 
 struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
@@ -223,6 +228,8 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	BMDReferenceStatus last_reference_status_;
 	retry_task<bool> send_completion_;
 
+	tbb::atomic<int64_t>				current_presentation_delay_;
+
 public:
 	decklink_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index) 
 		: channel_index_(channel_index)
@@ -242,6 +249,7 @@ public:
 		, last_reference_status_(static_cast<BMDReferenceStatus>(-1))
 	{
 		is_running_ = true;
+		current_presentation_delay_ = 0;
 				
 		video_frame_buffer_.set_capacity(1);
 
@@ -383,11 +391,13 @@ public:
 		
 		try
 		{
+			auto dframe = reinterpret_cast<decklink_frame*>(completed_frame);
+			current_presentation_delay_ = dframe->get_age_millis();
+
 			if(result == bmdOutputFrameDisplayedLate)
 			{
 				graph_->set_tag("late-frame");
 				video_scheduled_ += format_desc_.duration;
-				auto dframe = reinterpret_cast<decklink_frame*>(completed_frame);
 				audio_scheduled_ += dframe->audio_data().size()/config_.num_out_channels();
 				//++video_scheduled_;
 				//audio_scheduled_ += format_desc_.audio_cadence[0];
@@ -645,6 +655,7 @@ public:
 		info.add(L"low-latency", config_.low_latency);
 		info.add(L"embedded-audio", config_.embedded_audio);
 		info.add(L"low-latency", config_.low_latency);
+		info.add(L"presentation-frame-age", presentation_frame_age_millis());
 		//info.add(L"internal-key", config_.internal_key);
 		return info;
 	}
@@ -657,6 +668,11 @@ public:
 	virtual int index() const override
 	{
 		return 300 + config_.device_index;
+	}
+
+	virtual int64_t presentation_frame_age_millis() const
+	{
+		return context_ ? context_->current_presentation_delay_ : 0;
 	}
 };	
 

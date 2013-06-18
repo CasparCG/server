@@ -75,7 +75,7 @@ public:
 
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
 	}
-	
+
 	void set_video_format_desc(const video_format_desc& format_desc)
 	{
 		if(format_desc.format == core::video_format::invalid)
@@ -122,6 +122,25 @@ public:
    
 		return info;			   
 	}
+
+	boost::property_tree::wptree delay_info() const
+	{
+		boost::property_tree::wptree info;
+
+		auto stage_info  = stage_->delay_info();
+		auto mixer_info  = mixer_->delay_info();
+		auto output_info = output_->delay_info();
+
+		stage_info.timed_wait(boost::posix_time::seconds(2));
+		mixer_info.timed_wait(boost::posix_time::seconds(2));
+		output_info.timed_wait(boost::posix_time::seconds(2));
+
+		info.add_child(L"layers", stage_info.get());
+		info.add_child(L"mix-time", mixer_info.get());
+		info.add_child(L"consumers", output_info.get());
+
+		return info;
+	}
 };
 
 video_channel::video_channel(int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl, const channel_layout& audio_channel_layout) 
@@ -134,4 +153,5 @@ void video_channel::set_video_format_desc(const video_format_desc& format_desc){
 boost::property_tree::wptree video_channel::info() const{return impl_->info();}
 int video_channel::index() const {return impl_->index_;}
 monitor::source& video_channel::monitor_output(){return impl_->monitor_subject_;}
+boost::property_tree::wptree video_channel::delay_info() const { return impl_->delay_info(); }
 }}

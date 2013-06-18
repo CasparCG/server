@@ -32,6 +32,9 @@
 #include <core/mixer/audio/audio_util.h>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/timer.hpp>
+
+#include <tbb/atomic.h>
 
 namespace caspar { namespace core {
 																																							
@@ -45,11 +48,14 @@ struct write_frame::implementation
 	const channel_layout						channel_layout_;
 	const void*									tag_;
 	core::field_mode::type						mode_;
+	boost::timer								since_created_timer_;
+	tbb::atomic<int64_t>						recorded_frame_age_;
 
 	implementation(const void* tag, const channel_layout& channel_layout)
 		: channel_layout_(channel_layout)
 		, tag_(tag)
 	{
+		recorded_frame_age_ = -1;
 	}
 
 	implementation(const safe_ptr<ogl_device>& ogl, const void* tag, const core::pixel_format_desc& desc, const channel_layout& channel_layout) 
@@ -67,6 +73,8 @@ struct write_frame::implementation
 		{
 			return ogl_->create_device_buffer(plane.width, plane.height, plane.channels);	
 		});
+
+		recorded_frame_age_ = -1;
 	}
 			
 	void accept(write_frame& self, core::frame_visitor& visitor)
@@ -74,6 +82,15 @@ struct write_frame::implementation
 		visitor.begin(self);
 		visitor.visit(self);
 		visitor.end();
+	}
+
+	int64_t get_and_record_age_millis()
+	{
+		if (recorded_frame_age_ == -1)
+			recorded_frame_age_ = static_cast<int64_t>(
+					since_created_timer_.elapsed() * 1000.0);
+
+		return recorded_frame_age_;
 	}
 
 	boost::iterator_range<uint8_t*> image_data(size_t index)
@@ -155,5 +172,6 @@ void write_frame::commit(){impl_->commit();}
 void write_frame::set_type(const field_mode::type& mode){impl_->mode_ = mode;}
 core::field_mode::type write_frame::get_type() const{return impl_->mode_;}
 void write_frame::accept(core::frame_visitor& visitor){impl_->accept(*this, visitor);}
+int64_t write_frame::get_and_record_age_millis() { return impl_->get_and_record_age_millis(); }
 
 }}

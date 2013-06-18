@@ -54,6 +54,7 @@ public:
 
 	virtual size_t image_size() const;
 	virtual int num_channels() const;
+	virtual int64_t get_age_millis() const;
 	virtual const multichannel_view<const int32_t, boost::iterator_range<const int32_t*>::const_iterator> multichannel_view() const;
 		
 private:

@@ -35,6 +35,7 @@
 #include <core/video_channel.h>
 #include <core/producer/stage.h>
 #include <core/consumer/output.h>
+#include <core/consumer/synchronizing/synchronizing_consumer.h>
 #include <core/thumbnail_generator.h>
 
 #include <modules/bluefish/bluefish.h>
@@ -216,6 +217,10 @@ struct server::implementation : boost::noncopyable
 					on_consumer(ffmpeg::create_consumer(xml_consumer.second));						
 				else if (name == L"system-audio")
 					on_consumer(oal::create_consumer());
+				else if (name == L"synchronizing")
+					on_consumer(make_safe<core::synchronizing_consumer>(
+							create_consumers<core::frame_consumer>(
+									xml_consumer.second)));
 				else if (name != L"<xmlcomment>")
 					CASPAR_LOG(warning) << "Invalid consumer: " << widen(name);	
 			}

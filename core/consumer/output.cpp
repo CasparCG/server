@@ -58,6 +58,7 @@ struct output::implementation
 	high_prec_timer									sync_timer_;
 
 	boost::circular_buffer<safe_ptr<read_frame>>	frames_;
+	std::map<int, int64_t>							send_to_consumers_delays_;
 
 	executor										executor_;
 		
@@ -69,8 +70,8 @@ public:
 		, executor_(L"output")
 	{
 		graph_->set_color("consume-time", diagnostics::color(1.0f, 0.4f, 0.0f, 0.8));
-	}	
-	
+	}
+
 	void add(int index, safe_ptr<frame_consumer> consumer)
 	{		
 		remove(index);
@@ -101,6 +102,7 @@ public:
 			if(it != consumers_.end())
 			{
 				old_consumer = it->second;
+				send_to_consumers_delays_.erase(it->first);
 				consumers_.erase(it);
 			}
 		}, high_priority);
@@ -134,6 +136,7 @@ public:
 				{
 					CASPAR_LOG_CURRENT_EXCEPTION();
 					CASPAR_LOG(info) << print() << L" " << it->second->print() << L" Removed.";
+					send_to_consumers_delays_.erase(it->first);
 					consumers_.erase(it++);
 				}
 			}
@@ -142,18 +145,30 @@ public:
 			frames_.clear();
 		});
 	}
+	
+	std::map<int, size_t> buffer_depths_snapshot() const
+	{
+		std::map<int, size_t> result;
 
-	std::pair<size_t, size_t> minmax_buffer_depth() const
+		BOOST_FOREACH(auto& consumer, consumers_)
+			result.insert(std::make_pair(
+					consumer.first,
+					consumer.second->buffer_depth()));
+
+		return std::move(result);
+	}
+
+	std::pair<size_t, size_t> minmax_buffer_depth(
+			const std::map<int, size_t>& buffer_depths) const
 	{		
 		if(consumers_.empty())
 			return std::make_pair(0, 0);
 		
-		auto buffer_depths = consumers_ | 
-							 boost::adaptors::map_values | // std::function is MSVC workaround
-							 boost::adaptors::transformed(std::function<int(const safe_ptr<frame_consumer>&)>([](const safe_ptr<frame_consumer>& x){return x->buffer_depth();})); 
+		auto depths = buffer_depths | boost::adaptors::map_values; 
 		
-
-		return std::make_pair(*boost::range::min_element(buffer_depths), *boost::range::max_element(buffer_depths));
+		return std::make_pair(
+				*boost::range::min_element(depths),
+				*boost::range::max_element(depths));
 	}
 
 	bool has_synchronization_clock() const
@@ -179,8 +194,9 @@ public:
 					sync_timer_.tick(1.0/format_desc_.fps);
 					return;
 				}
-					
-				auto minmax = minmax_buffer_depth();
+				
+				auto buffer_depths = buffer_depths_snapshot();
+				auto minmax = minmax_buffer_depth(buffer_depths);
 
 				frames_.set_capacity(minmax.second - minmax.first + 1);
 				frames_.push_back(input_frame);
@@ -194,7 +210,9 @@ public:
 				for (auto it = consumers_.begin(); it != consumers_.end();)
 				{
 					auto consumer	= it->second;
-					auto frame		= frames_.at(consumer->buffer_depth()-minmax.first);
+					auto frame		= frames_.at(buffer_depths[it->first]-minmax.first);
+
+					send_to_consumers_delays_[it->first] = frame->get_age_millis();
 						
 					try
 					{
@@ -213,6 +231,7 @@ public:
 						{
 							CASPAR_LOG_CURRENT_EXCEPTION();
 							CASPAR_LOG(error) << "Failed to recover consumer: " << consumer->print() << L". Removing it.";
+							send_to_consumers_delays_.erase(it->first);
 							it = consumers_.erase(it);
 						}
 					}
@@ -222,7 +241,7 @@ public:
 				for (auto result_it = send_results.begin(); result_it != send_results.end(); ++result_it)
 				{
 					auto consumer		= consumers_.at(result_it->first);
-					auto frame			= frames_.at(consumer->buffer_depth()-minmax.first);
+					auto frame			= frames_.at(buffer_depths[result_it->first]-minmax.first);
 					auto& result_future	= result_it->second;
 						
 					try
@@ -230,6 +249,7 @@ public:
 						if(!result_future.get())
 						{
 							CASPAR_LOG(info) << print() << L" " << consumer->print() << L" Removed.";
+							send_to_consumers_delays_.erase(result_it->first);
 							consumers_.erase(result_it->first);
 						}
 					}
@@ -242,6 +262,7 @@ public:
 							if(!consumer->send(frame).get())
 							{
 								CASPAR_LOG(info) << print() << L" " << consumer->print() << L" Removed.";
+								send_to_consumers_delays_.erase(result_it->first);
 								consumers_.erase(result_it->first);
 							}
 						}
@@ -249,6 +270,7 @@ public:
 						{
 							CASPAR_LOG_CURRENT_EXCEPTION();
 							CASPAR_LOG(error) << "Failed to recover consumer: " << consumer->print() << L". Removing it.";
+							send_to_consumers_delays_.erase(result_it->first);
 							consumers_.erase(result_it->first);
 						}
 					}
@@ -282,6 +304,30 @@ public:
 		}, high_priority));
 	}
 
+	boost::unique_future<boost::property_tree::wptree> delay_info()
+	{
+		return std::move(executor_.begin_invoke([&]() -> boost::property_tree::wptree
+		{			
+			boost::property_tree::wptree info;
+			BOOST_FOREACH(auto& consumer, consumers_)
+			{
+				auto total_age =
+						consumer.second->presentation_frame_age_millis();
+				auto sendoff_age = send_to_consumers_delays_[consumer.first];
+				auto presentation_time = total_age - sendoff_age;
+
+				boost::property_tree::wptree child;
+				child.add(L"name", consumer.second->print());
+				child.add(L"age-at-arrival", sendoff_age);
+				child.add(L"presentation-time", presentation_time);
+				child.add(L"age-at-presentation", total_age);
+
+				info.add_child(L"consumer", child);
+			}
+			return info;
+		}, high_priority));
+	}
+
 	bool empty()
 	{
 		return executor_.invoke([this]
@@ -299,5 +345,6 @@ void output::remove(const safe_ptr<frame_consumer>& consumer){impl_->remove(cons
 void output::send(const std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>& frame) {impl_->send(frame); }
 void output::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 boost::unique_future<boost::property_tree::wptree> output::info() const{return impl_->info();}
+boost::unique_future<boost::property_tree::wptree> output::delay_info() const{return impl_->delay_info();}
 bool output::empty() const{return impl_->empty();}
 }}

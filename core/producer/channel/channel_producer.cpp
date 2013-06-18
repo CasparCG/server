@@ -47,11 +47,13 @@ class channel_consumer : public frame_consumer
 	core::video_format_desc										format_desc_;
 	int															channel_index_;
 	tbb::atomic<bool>											is_running_;
+	tbb::atomic<int64_t>										current_age_;
 
 public:
 	channel_consumer() 
 	{
 		is_running_ = true;
+		current_age_ = 0;
 		frame_buffer_.set_capacity(3);
 	}
 
@@ -72,6 +74,11 @@ public:
 	{
 		format_desc_    = format_desc;
 		channel_index_  = channel_index;
+	}
+
+	virtual int64_t presentation_frame_age_millis() const override
+	{
+		return current_age_;
 	}
 
 	virtual std::wstring print() const override
@@ -121,6 +128,7 @@ public:
 			return make_safe<read_frame>();
 		std::shared_ptr<read_frame> frame;
 		frame_buffer_.try_pop(frame);
+		current_age_ = frame->get_age_millis();
 		return frame;
 	}
 };

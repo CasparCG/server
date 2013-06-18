@@ -143,6 +143,7 @@ struct ogl_consumer : boost::noncopyable
 
 	boost::thread			thread_;
 	tbb::atomic<bool>		is_running_;
+	tbb::atomic<int64_t>	current_presentation_age_;
 	
 	ffmpeg::filter			filter_;
 public:
@@ -197,6 +198,7 @@ public:
 		screen_height_	= config_.windowed ? square_height_ : devmode.dmPelsHeight;
 
 		is_running_ = true;
+		current_presentation_age_ = 0;
 		thread_ = boost::thread([this]{run();});
 	}
 	
@@ -382,6 +384,8 @@ public:
 
 			wait_for_vblank_and_display(); // field2
 		}
+
+		current_presentation_age_ = frame->get_age_millis();
 	}
 
 	void render(safe_ptr<AVFrame> av_frame, int image_data_size)
@@ -541,7 +545,12 @@ public:
 		consumer_.reset(new ogl_consumer(config_, format_desc, channel_index));
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
-	
+
+	virtual int64_t presentation_frame_age_millis() const override
+	{
+		return consumer_ ? consumer_->current_presentation_age_ : 0;
+	}
+
 	virtual boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame) override
 	{
 		return consumer_->send(frame);

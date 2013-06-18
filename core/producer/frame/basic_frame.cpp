@@ -35,7 +35,6 @@ struct basic_frame::implementation
 	std::vector<safe_ptr<basic_frame>> frames_;
 
 	frame_transform frame_transform_;	
-	
 public:
 	implementation(const std::vector<safe_ptr<basic_frame>>& frames) : frames_(frames) 
 	{
@@ -50,6 +49,19 @@ public:
 	implementation(const safe_ptr<basic_frame>& frame) 		
 	{ 
 		frames_.push_back(frame);
+	}
+
+	int64_t get_and_record_age_millis(const basic_frame& self)
+	{
+		int64_t result = 0;
+
+		BOOST_FOREACH(auto& frame, frames_)
+		{
+			if (is_concrete_frame(frame) && frame.get() != &self)
+				result = std::max(result, frame->get_and_record_age_millis());
+		}
+
+		return result;
 	}
 	
 	void accept(basic_frame& self, frame_visitor& visitor)
@@ -84,6 +96,7 @@ void basic_frame::swap(basic_frame& other){impl_.swap(other.impl_);}
 
 const frame_transform& basic_frame::get_frame_transform() const { return impl_->frame_transform_;}
 frame_transform& basic_frame::get_frame_transform() { return impl_->frame_transform_;}
+int64_t basic_frame::get_and_record_age_millis() { return impl_->get_and_record_age_millis(*this); }
 void basic_frame::accept(frame_visitor& visitor){impl_->accept(*this, visitor);}
 
 safe_ptr<basic_frame> basic_frame::interlace(const safe_ptr<basic_frame>& frame1, const safe_ptr<basic_frame>& frame2, field_mode::type mode)

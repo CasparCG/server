@@ -64,6 +64,7 @@ public:
 	safe_ptr<basic_frame> receive(int hints); // nothrow
 
 	boost::property_tree::wptree info() const;
+	boost::property_tree::wptree delay_info() const;
 	
 	monitor::source& monitor_output();
 private:
