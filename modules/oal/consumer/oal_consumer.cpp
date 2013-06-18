@@ -106,7 +106,12 @@ public:
 		}
 		CASPAR_LOG(info) << print() << " Sucessfully Initialized.";
 	}
-	
+
+	virtual int64_t presentation_frame_age_millis() const override
+	{
+		return 0;
+	}
+
 	virtual boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame) override
 	{
 		std::shared_ptr<audio_buffer_16> buffer;

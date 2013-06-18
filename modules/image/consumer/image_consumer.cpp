@@ -35,8 +35,6 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/thread.hpp>
 
-#include <tbb/concurrent_queue.h>
-
 #include <FreeImage.h>
 #include <vector>
 #include <algorithm>
@@ -78,6 +76,11 @@ public:
 	virtual void initialize(const core::video_format_desc& format_desc, int) override
 	{
 		format_desc_ = format_desc;
+	}
+
+	virtual int64_t presentation_frame_age_millis() const override
+	{
+		return 0;
 	}
 	
 	virtual boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame) override

@@ -46,6 +46,7 @@
 
 #include <tbb/cache_aligned_allocator.h>
 #include <tbb/parallel_invoke.h>
+#include <tbb/atomic.h>
 
 #include <boost/range/algorithm.hpp>
 #include <boost/range/algorithm_ext.hpp>
@@ -245,6 +246,7 @@ struct ffmpeg_consumer : boost::noncopyable
 
 	output_format							output_format_;
 	bool									key_only_;
+	tbb::atomic<int64_t>					current_encoding_delay_;
 	
 public:
 	ffmpeg_consumer(const std::string& filename, const core::video_format_desc& format_desc, std::vector<option> options, bool key_only, const core::channel_layout& audio_channel_layout)
@@ -260,6 +262,8 @@ public:
 		, output_format_(format_desc, filename, options)
 		, key_only_(key_only)
 	{
+		current_encoding_delay_ = 0;
+
 		// TODO: Ask stakeholders about case where file already exists.
 		boost::filesystem2::remove(boost::filesystem2::wpath(env::media_folder() + widen(filename))); // Delete the file if it exists
 
@@ -618,7 +622,8 @@ public:
 			if (!key_only_)
 				encode_audio_frame(*frame);
 
-			graph_->set_value("frame-time", frame_timer.elapsed()*format_desc_.fps*0.5);			
+			graph_->set_value("frame-time", frame_timer.elapsed()*format_desc_.fps*0.5);
+			current_encoding_delay_ = frame->get_age_millis();
 		});
 	}
 
@@ -658,6 +663,11 @@ public:
 	virtual void initialize(const core::video_format_desc& format_desc, int)
 	{
 		format_desc_ = format_desc;
+	}
+
+	virtual int64_t presentation_frame_age_millis() const override
+	{
+		return consumer_ ? consumer_->current_encoding_delay_ : 0;
 	}
 	
 	virtual boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame) override

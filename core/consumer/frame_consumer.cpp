@@ -88,6 +88,11 @@ public:
 		consumer_->initialize(format_desc, channel_index);
 	}
 
+	virtual int64_t presentation_frame_age_millis() const
+	{
+		return consumer_->presentation_frame_age_millis();
+	}
+
 	virtual boost::unique_future<bool> send(const safe_ptr<read_frame>& frame) override
 	{		
 		if(audio_cadence_.size() == 1)
@@ -146,6 +151,7 @@ const safe_ptr<frame_consumer>& frame_consumer::empty()
 	{
 		virtual boost::unique_future<bool> send(const safe_ptr<read_frame>&) override { return caspar::wrap_as_future(false); }
 		virtual void initialize(const video_format_desc&, int) override{}
+		virtual int64_t presentation_frame_age_millis() const { return 0; }
 		virtual std::wstring print() const override {return L"empty";}
 		virtual bool has_synchronization_clock() const override {return false;}
 		virtual size_t buffer_depth() const override {return 0;};

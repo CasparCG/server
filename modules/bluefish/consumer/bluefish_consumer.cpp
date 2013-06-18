@@ -40,6 +40,7 @@
 #include <core/mixer/audio/audio_util.h>
 
 #include <tbb/concurrent_queue.h>
+#include <tbb/atomic.h>
 
 #include <boost/timer.hpp>
 #include <boost/range/algorithm.hpp>
@@ -70,6 +71,8 @@ struct bluefish_consumer : boost::noncopyable
 
 	std::array<blue_dma_buffer_ptr, 4>	reserved_frames_;	
 	tbb::concurrent_bounded_queue<std::shared_ptr<core::read_frame>> frame_buffer_;
+	tbb::atomic<int64_t>				presentation_delay_millis_;
+	std::shared_ptr<core::read_frame>	previous_frame_;
 	
 	const bool							embedded_audio_;
 	const bool							key_only_;
@@ -95,6 +98,7 @@ public:
 		, executor_(print())
 	{
 		executor_.set_capacity(1);
+		presentation_delay_millis_ = 0;
 
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("sync-time", diagnostics::color(1.0f, 0.0f, 0.0f));
@@ -234,7 +238,12 @@ public:
 		blue_->wait_output_video_synch(UPD_FMT_FRAME, n_field);
 		graph_->set_value("sync-time", sync_timer_.elapsed()*format_desc_.fps*0.5);
 		
-		frame_timer_.restart();		
+		frame_timer_.restart();
+
+		if (previous_frame_)
+			presentation_delay_millis_ = previous_frame_->get_age_millis();
+
+		previous_frame_ = frame;
 
 		// Copy to local buffers
 		
@@ -351,6 +360,11 @@ public:
 		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" + 
 			boost::lexical_cast<std::wstring>(device_index_) + L"|" +  format_desc_.name + L"]";
 	}
+
+	int64_t presentation_delay_millis() const
+	{
+		return presentation_delay_millis_;
+	}
 };
 
 struct bluefish_consumer_proxy : public core::frame_consumer
@@ -402,7 +416,7 @@ public:
 		format_desc_ = format_desc;
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
-	
+
 	virtual boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame) override
 	{
 		CASPAR_VERIFY(audio_cadence_.front() * frame->num_channels() == static_cast<size_t>(frame->audio_data().size()));
@@ -423,10 +437,11 @@ public:
 		info.add(L"key-only", key_only_);
 		info.add(L"device", device_index_);
 		info.add(L"embedded-audio", embedded_audio_);
+		info.add(L"presentation-frame-age", presentation_frame_age_millis());
 		return info;
 	}
 
-	size_t buffer_depth() const override
+	virtual size_t buffer_depth() const override
 	{
 		return 1;
 	}
@@ -434,6 +449,11 @@ public:
 	virtual int index() const override
 	{
 		return 400 + device_index_;
+	}
+
+	virtual int64_t presentation_frame_age_millis() const override
+	{
+		return consumer_ ? consumer_->presentation_delay_millis() : 0;
 	}
 };	
 

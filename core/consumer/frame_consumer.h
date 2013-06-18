@@ -43,6 +43,7 @@ struct frame_consumer : boost::noncopyable
 	
 	virtual boost::unique_future<bool> send(const safe_ptr<read_frame>& frame) = 0;
 	virtual void initialize(const video_format_desc& format_desc, int channel_index) = 0;
+	virtual int64_t presentation_frame_age_millis() const = 0;
 	virtual std::wstring print() const = 0;
 	virtual boost::property_tree::wptree info() const = 0;
 	virtual bool has_synchronization_clock() const {return true;}

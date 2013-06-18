@@ -18,6 +18,27 @@ General
     http://casparcg.com/forum/viewtopic.php?f=3&t=1453 for more information.
   o ATI graphics card support. Static linking against SFML instead of dynamic.
     Should inprove ATI card support. Needs testing.
+  o An attempt to improve output synchronization of consumers has been made. Use
+    for example:
+    
+    <consumers>
+      <synchronizing>
+        <decklink>
+          <device>1</device>
+          <embedded-audio>true</embedded-audio>
+        </decklink>
+        <decklink>
+          <device>2</device>
+          <key-only>true</key-only>
+        </decklink>
+      </synchronizing>
+    </consumers>
+    
+    to say that both decklink consumers should be in sync with each other.
+    Consider this experimental, so don't wrap everything in <synchronizing />
+    unless synchronization of consumer outputs is needed. For synchronization to
+    be effective both cards (or same if it is for example a Decklink Quad) must
+    have reference signal connected.
 
 Layer
 -----
@@ -85,6 +106,8 @@ AMCP
     MIXER FILL, causing the image to be flipped.
   o MIXER <ch> STRAIGHT_ALPHA_OUTPUT added to control whether to output straight
     alpha or not.
+  o Added INFO <ch> DELAY and INFO <ch>-<layer> DELAY commands for showing some
+    delay measurements.
 
 OSC
 ---

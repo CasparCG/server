@@ -419,6 +419,26 @@ public:
 			return get_layer(index).info();
 		}, high_priority));
 	}
+
+	boost::unique_future<boost::property_tree::wptree> delay_info()
+	{
+		return std::move(executor_.begin_invoke([this]() -> boost::property_tree::wptree
+		{
+			boost::property_tree::wptree info;
+			BOOST_FOREACH(auto& layer, layers_)			
+				info.add_child(L"layer", layer.second->delay_info())
+					.add(L"index", layer.first);	
+			return info;
+		}, high_priority));
+	}
+
+	boost::unique_future<boost::property_tree::wptree> delay_info(int index)
+	{
+		return std::move(executor_.begin_invoke([=]() -> boost::property_tree::wptree
+		{
+			return get_layer(index).delay_info();
+		}, high_priority));
+	}
 };
 
 stage::stage(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc) 
@@ -444,5 +464,7 @@ boost::unique_future<std::wstring> stage::call(int index, bool foreground, const
 void stage::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 boost::unique_future<boost::property_tree::wptree> stage::info() const{return impl_->info();}
 boost::unique_future<boost::property_tree::wptree> stage::info(int index) const{return impl_->info(index);}
+boost::unique_future<boost::property_tree::wptree> stage::delay_info() const{return impl_->delay_info();}
+boost::unique_future<boost::property_tree::wptree> stage::delay_info(int index) const{return impl_->delay_info(index);}
 monitor::source& stage::monitor_output(){return impl_->monitor_subject_;}
 }}

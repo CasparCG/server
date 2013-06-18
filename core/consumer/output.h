@@ -53,6 +53,7 @@ public:
 	void set_video_format_desc(const video_format_desc& format_desc);
 
 	boost::unique_future<boost::property_tree::wptree> info() const;
+	boost::unique_future<boost::property_tree::wptree> delay_info() const;
 
 	bool empty() const;
 private:

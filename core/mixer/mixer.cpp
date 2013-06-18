@@ -31,6 +31,7 @@
 
 #include <common/env.h>
 #include <common/concurrency/executor.h>
+#include <common/concurrency/future_util.h>
 #include <common/exception/exceptions.h>
 #include <common/gl/gl_check.h>
 #include <common/utility/tweener.h>
@@ -51,6 +52,7 @@
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/spin_mutex.h>
+#include <tbb/atomic.h>
 
 #include <unordered_map>
 
@@ -60,6 +62,7 @@ struct mixer::implementation : boost::noncopyable
 {		
 	safe_ptr<diagnostics::graph>	graph_;
 	boost::timer					mix_timer_;
+	tbb::atomic<int64_t>			current_mix_time_;
 
 	safe_ptr<mixer::target_t>		target_;
 	mutable tbb::spin_mutex			format_desc_mutex_;
@@ -88,6 +91,7 @@ public:
 		, executor_(L"mixer")
 	{			
 		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8));
+		current_mix_time_ = 0;
 	}
 	
 	void send(const std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>& packet)
@@ -115,7 +119,9 @@ public:
 				auto audio = audio_mixer_(format_desc_, audio_channel_layout_);
 				image.wait();
 
-				graph_->set_value("mix-time", mix_timer_.elapsed()*format_desc_.fps*0.5);
+				auto mix_time = mix_timer_.elapsed();
+				graph_->set_value("mix-time", mix_time*format_desc_.fps*0.5);
+				current_mix_time_ = static_cast<int64_t>(mix_time * 1000.0);
 
 				target_->send(std::make_pair(make_safe<read_frame>(ogl_, format_desc_.size, std::move(image.get()), std::move(audio), audio_channel_layout_), packet.second));
 			}
@@ -231,9 +237,18 @@ public:
 
 	boost::unique_future<boost::property_tree::wptree> info() const
 	{
-		boost::promise<boost::property_tree::wptree> info;
-		info.set_value(boost::property_tree::wptree());
-		return info.get_future();
+		boost::property_tree::wptree info;
+		info.add(L"mix-time", current_mix_time_);
+
+		return wrap_as_future(std::move(info));
+	}
+
+	boost::unique_future<boost::property_tree::wptree> delay_info() const
+	{
+		boost::property_tree::wptree info;
+		info.put_value(current_mix_time_);
+
+		return wrap_as_future(std::move(info));
 	}
 };
 	
@@ -254,4 +269,5 @@ float mixer::get_master_volume() { return impl_->get_master_volume(); }
 void mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 void mixer::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 boost::unique_future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
+boost::unique_future<boost::property_tree::wptree> mixer::delay_info() const{return impl_->delay_info();}
 }}
