@@ -43,6 +43,9 @@
     <Filter Include="source\monitor">
       <UniqueIdentifier>{d8525088-072a-47d2-b6e1-ad662881f505}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\producer\layer">
+      <UniqueIdentifier>{4e098e4c-7467-446f-990d-d4486d179edb}</UniqueIdentifier>
+    </Filter>
     <Filter Include="source\consumer\synchronizing">
       <UniqueIdentifier>{19ddc31c-5865-46d5-a8a6-a96d6fa1ffc7}</UniqueIdentifier>
     </Filter>
@@ -145,6 +148,12 @@
     <ClInclude Include="producer\channel\channel_producer.h">
       <Filter>source\producer\channel</Filter>
     </ClInclude>
+    <ClInclude Include="producer\layer\layer_producer.h">
+      <Filter>source\producer\layer</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\write_frame_consumer.h">
+      <Filter>source\consumer</Filter>
+    </ClInclude>
     <ClInclude Include="thumbnail_generator.h">
       <Filter>source</Filter>
     </ClInclude>
@@ -240,6 +249,9 @@
     </ClCompile>
     <ClCompile Include="thumbnail_generator.cpp">
       <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\layer\layer_producer.cpp">
+      <Filter>source\producer\layer</Filter>
     </ClCompile>
     <ClCompile Include="monitor\monitor.cpp">
       <Filter>source\monitor</Filter>
