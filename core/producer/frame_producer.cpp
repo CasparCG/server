@@ -288,7 +288,7 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>& my
 		auto params_copy = params;
 		if(params_copy.size() > 0)
 		{
-			auto resource_name = params_copy[0];
+			auto resource_name = params_copy.at_original(0);
 			params_copy.set(0, resource_name + L"_A");
 			key_producer = do_create_producer(my_frame_factory, params_copy, g_factories);			
 			if(key_producer == frame_producer::empty())
@@ -326,11 +326,12 @@ safe_ptr<core::frame_producer> create_thumbnail_producer(const safe_ptr<frame_fa
 		auto params_copy = params;
 		if (params_copy.size() > 0)
 		{
-			params_copy[0] += L"_A";
+			auto resource_name = params_copy.at_original(0);
+			params_copy.set(0, resource_name + L"_A");
 			key_producer = do_create_producer(my_frame_factory, params_copy, g_thumbnail_factories, true);
 			if (key_producer == frame_producer::empty())
 			{
-				params_copy[0] += L"LPHA";
+				params_copy.set(0, resource_name + L"_ALPHA");
 				key_producer = do_create_producer(my_frame_factory, params_copy, g_thumbnail_factories, true);
 			}
 		}
