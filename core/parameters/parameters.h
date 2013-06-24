@@ -123,12 +123,12 @@ public:
 	{
 		return params_[i];
 	}
-
+/*
 	// Compatibility method
 	std::wstring& operator [] (size_t i) {
 		return params_[i];
 	}
-
+*/
 	// Compatibility method
 	std::vector<std::wstring>::const_iterator begin() const
 	{
@@ -140,6 +140,7 @@ public:
 	{
 		return params_.end();
 	}
+
 
 };
 

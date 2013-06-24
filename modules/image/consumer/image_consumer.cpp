@@ -139,13 +139,13 @@ public:
 
 safe_ptr<core::frame_consumer> create_consumer(const core::parameters& params)
 {
-	if(params.size() < 1 || params[0] != L"IMAGE")
+	if(params.size() < 1 || params.at(0) != L"IMAGE")
 		return core::frame_consumer::empty();
 
 	std::wstring filename;
 
 	if (params.size() > 1)
-		filename = params[1];
+		filename = params.at(1);
 
 	return make_safe<image_consumer>(filename);
 }
