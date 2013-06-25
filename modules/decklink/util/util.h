@@ -23,7 +23,9 @@
 
 #include <common/exception/exceptions.h>
 #include <common/log/log.h>
+#include <common/memory/memshfl.h>
 #include <core/video_format.h>
+#include <core/mixer/read_frame.h>
 
 #include "../interop/DeckLinkAPI_h.h"
 
@@ -177,5 +179,256 @@ static std::wstring get_model_name(const T& device)
 	device->GetModelName(&pModelName);
 	return std::wstring(pModelName);
 }
+
+static std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> extract_key(
+		const safe_ptr<core::read_frame>& frame)
+{
+	std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> result;
+
+	result.resize(frame->image_data().size());
+	fast_memshfl(
+			result.data(),
+			frame->image_data().begin(),
+			frame->image_data().size(),
+			0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+
+	return std::move(result);
+}
+
+class decklink_frame : public IDeckLinkVideoFrame
+{
+	tbb::atomic<int>											ref_count_;
+	std::shared_ptr<core::read_frame>							frame_;
+	const core::video_format_desc								format_desc_;
+
+	const bool													key_only_;
+	std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> data_;
+public:
+	decklink_frame(const safe_ptr<core::read_frame>& frame, const core::video_format_desc& format_desc, bool key_only)
+		: frame_(frame)
+		, format_desc_(format_desc)
+		, key_only_(key_only)
+	{
+		ref_count_ = 0;
+	}
+
+	decklink_frame(const safe_ptr<core::read_frame>& frame, const core::video_format_desc& format_desc, std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>&& key_data)
+		: frame_(frame)
+		, format_desc_(format_desc)
+		, key_only_(true)
+		, data_(std::move(key_data))
+	{
+		ref_count_ = 0;
+	}
+	
+	// IUnknown
+
+	STDMETHOD (QueryInterface(REFIID, LPVOID*))		
+	{
+		return E_NOINTERFACE;
+	}
+	
+	STDMETHOD_(ULONG,			AddRef())			
+	{
+		return ++ref_count_;
+	}
+
+	STDMETHOD_(ULONG,			Release())			
+	{
+		if(--ref_count_ == 0)
+			delete this;
+		return ref_count_;
+	}
+
+	// IDecklinkVideoFrame
+
+	STDMETHOD_(long,			GetWidth())			{return format_desc_.width;}        
+    STDMETHOD_(long,			GetHeight())		{return format_desc_.height;}        
+    STDMETHOD_(long,			GetRowBytes())		{return format_desc_.width*4;}        
+	STDMETHOD_(BMDPixelFormat,	GetPixelFormat())	{return bmdFormat8BitBGRA;}        
+    STDMETHOD_(BMDFrameFlags,	GetFlags())			{return bmdFrameFlagDefault;}
+        
+    STDMETHOD(GetBytes(void** buffer))
+	{
+		try
+		{
+			if(static_cast<size_t>(frame_->image_data().size()) != format_desc_.size)
+			{
+				data_.resize(format_desc_.size, 0);
+				*buffer = data_.data();
+			}
+			else if(key_only_)
+			{
+				if(data_.empty())
+				{
+					data_.resize(frame_->image_data().size());
+					fast_memshfl(data_.data(), frame_->image_data().begin(), frame_->image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+				}
+				*buffer = data_.data();
+			}
+			else
+				*buffer = const_cast<uint8_t*>(frame_->image_data().begin());
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			return E_FAIL;
+		}
+
+		return S_OK;
+	}
+        
+    STDMETHOD(GetTimecode(BMDTimecodeFormat format, IDeckLinkTimecode** timecode)){return S_FALSE;}        
+    STDMETHOD(GetAncillaryData(IDeckLinkVideoFrameAncillary** ancillary))		  {return S_FALSE;}
+
+	// decklink_frame	
+
+	const boost::iterator_range<const int32_t*> audio_data()
+	{
+		return frame_->audio_data();
+	}
+
+	int64_t get_age_millis() const
+	{
+		return frame_->get_age_millis();
+	}
+};
+
+struct configuration
+{
+	enum keyer_t
+	{
+		internal_keyer,
+		external_keyer,
+		default_keyer
+	};
+
+	enum latency_t
+	{
+		low_latency,
+		normal_latency,
+		default_latency
+	};
+
+	size_t					device_index;
+	bool					embedded_audio;
+	core::channel_layout	audio_layout;
+	keyer_t					keyer;
+	latency_t				latency;
+	bool					key_only;
+	size_t					base_buffer_depth;
+	
+	configuration()
+		: device_index(1)
+		, embedded_audio(false)
+		, audio_layout(core::default_channel_layout_repository().get_by_name(L"STEREO"))
+		, keyer(default_keyer)
+		, latency(default_latency)
+		, key_only(false)
+		, base_buffer_depth(3)
+	{
+	}
+	
+	size_t buffer_depth() const
+	{
+		return base_buffer_depth + (latency == low_latency ? 0 : 1) + (embedded_audio ? 1 : 0);
+	}
+
+	int num_out_channels() const
+	{
+		if (audio_layout.num_channels <= 2)
+			return 2;
+		
+		if (audio_layout.num_channels <= 8)
+			return 8;
+
+		return 16;
+	}
+};
+
+static void set_latency(
+		const CComQIPtr<IDeckLinkConfiguration>& config,
+		configuration::latency_t latency,
+		const std::wstring& print)
+{		
+	if (latency == configuration::low_latency)
+	{
+		config->SetFlag(bmdDeckLinkConfigLowLatencyVideoOutput, true);
+		CASPAR_LOG(info) << print << L" Enabled low-latency mode.";
+	}
+	else if (latency == configuration::normal_latency)
+	{			
+		config->SetFlag(bmdDeckLinkConfigLowLatencyVideoOutput, false);
+		CASPAR_LOG(info) << print << L" Disabled low-latency mode.";
+	}
+}
+
+static void set_keyer(
+		const CComQIPtr<IDeckLinkAttributes>& attributes,
+		const CComQIPtr<IDeckLinkKeyer>& decklink_keyer,
+		configuration::keyer_t keyer,
+		const std::wstring& print)
+{
+	if (keyer == configuration::internal_keyer) 
+	{
+		BOOL value = true;
+		if (SUCCEEDED(attributes->GetFlag(BMDDeckLinkSupportsInternalKeying, &value)) && !value)
+			CASPAR_LOG(error) << print << L" Failed to enable internal keyer.";	
+		else if (FAILED(decklink_keyer->Enable(FALSE)))			
+			CASPAR_LOG(error) << print << L" Failed to enable internal keyer.";			
+		else if (FAILED(decklink_keyer->SetLevel(255)))			
+			CASPAR_LOG(error) << print << L" Failed to set key-level to max.";
+		else
+			CASPAR_LOG(info) << print << L" Enabled internal keyer.";		
+	}
+	else if (keyer == configuration::external_keyer)
+	{
+		BOOL value = true;
+		if (SUCCEEDED(attributes->GetFlag(BMDDeckLinkSupportsExternalKeying, &value)) && !value)
+			CASPAR_LOG(error) << print << L" Failed to enable external keyer.";	
+		else if (FAILED(decklink_keyer->Enable(TRUE)))			
+			CASPAR_LOG(error) << print << L" Failed to enable external keyer.";	
+		else if (FAILED(decklink_keyer->SetLevel(255)))			
+			CASPAR_LOG(error) << print << L" Failed to set key-level to max.";
+		else
+			CASPAR_LOG(info) << print << L" Enabled external keyer.";			
+	}
+}
+
+class reference_signal_detector
+{
+	CComQIPtr<IDeckLinkOutput> output_;
+	BMDReferenceStatus last_reference_status_;
+public:
+	reference_signal_detector(const CComQIPtr<IDeckLinkOutput>& output)
+		: output_(output)
+		, last_reference_status_(static_cast<BMDReferenceStatus>(-1))
+	{
+	}
+
+	template<typename Print>
+	void detect_change(const Print& print)
+	{
+		BMDReferenceStatus reference_status;
+
+		if (output_->GetReferenceStatus(&reference_status) != S_OK)
+		{
+			CASPAR_LOG(error) << print() << L" Reference signal: failed while querying status";
+		}
+		else if (reference_status != last_reference_status_)
+		{
+			last_reference_status_ = reference_status;
+
+			if (reference_status == 0)
+				CASPAR_LOG(info) << print() << L" Reference signal: not detected.";
+			else if (reference_status & bmdReferenceNotSupportedByHardware)
+				CASPAR_LOG(info) << print() << L" Reference signal: not supported by hardware.";
+			else if (reference_status & bmdReferenceLocked)
+				CASPAR_LOG(info) << print() << L" Reference signal: locked.";
+			else
+				CASPAR_LOG(info) << print() << L" Reference signal: Unhandled enum bitfield: " << reference_status;
+		}
+	}
+};
 
 }}

@@ -51,6 +51,7 @@
 #include <modules/oal/consumer/oal_consumer.h>
 #include <modules/bluefish/consumer/bluefish_consumer.h>
 #include <modules/decklink/consumer/decklink_consumer.h>
+#include <modules/decklink/consumer/blocking_decklink_consumer.h>
 #include <modules/ogl/consumer/ogl_consumer.h>
 #include <modules/ffmpeg/consumer/ffmpeg_consumer.h>
 
@@ -213,6 +214,8 @@ struct server::implementation : boost::noncopyable
 					on_consumer(bluefish::create_consumer(xml_consumer.second));					
 				else if (name == L"decklink")					
 					on_consumer(decklink::create_consumer(xml_consumer.second));				
+				else if (name == L"blocking-decklink")
+					on_consumer(decklink::create_blocking_consumer(xml_consumer.second));				
 				else if (name == L"file" || name == L"stream")					
 					on_consumer(ffmpeg::create_consumer(xml_consumer.second));						
 				else if (name == L"system-audio")

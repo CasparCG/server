@@ -1,4 +1,4 @@
-CasparCG 2.0.4 Stable (w.r.t 2.0.3 Stable)
+CasparCG 2.0.4 Beta (w.r.t 2.0.3 Stable)
 ==========================================
 
 General
@@ -60,7 +60,6 @@ Video mixer
 Consumers
 ---------
 
-  o Simplified implementation of bluefish consumer, with regards to
   o Avoid that the ffmpeg consumer blocks the channel output when it can't keep
     up with the frame rate (drops instead).
   o Added support for to create a separate key and fill file when recording with
@@ -69,8 +68,15 @@ Consumers
     separated_producer when doing playback.
   o The image consumer now writes to the media folder instead of the data
     folder.
-  o Fixed bug in decklink consumer where we submit too few samples to the driver
-    when the video format has a frame rate > 50.
+  o Fixed bug in decklink consumer where we submit too few audio samples to the
+    driver when the video format has a frame rate > 50.
+  o Added another experimental decklink consumer implementation where scheduled
+    playback is not used, but a similar approach as in the bluefish consumer
+	where we wait for a frame to be displayed and then display the next frame.
+	It is configured via a <blocking-decklink> consumer element. The benefits of
+	this consumer is lower latency and more deterministic synchronization
+	between multiple instances (should not need to be wrapped in a
+	<synchronizing> element when separate key-fill is used).
 
 Producers
 ---------
