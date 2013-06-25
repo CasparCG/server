@@ -299,10 +299,7 @@ public:
 				key = std::move(extract_key(frame));
 
 			if (config_.embedded_audio)
-			{
-				write_audio_samples();
 				queue_audio_samples(frame);
-			}
 
 			double frame_time = frame_timer_.elapsed();
 
