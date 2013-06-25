@@ -111,6 +111,19 @@ public:
 	}
 };
 
+const std::vector<int>& diag_colors()
+{
+	static std::vector<int> colors = boost::assign::list_of<int>
+			(diagnostics::color(0.0f, 0.6f, 0.9f))
+			(diagnostics::color(0.6f, 0.3f, 0.3f))
+			(diagnostics::color(0.3f, 0.6f, 0.3f))
+			(diagnostics::color(0.4f, 0.3f, 0.8f))
+			(diagnostics::color(0.9f, 0.9f, 0.5f))
+			(diagnostics::color(0.2f, 0.9f, 0.9f));
+
+	return colors;
+}
+
 class buffering_consumer_adapter : public delegating_frame_consumer
 {
 	std::queue<safe_ptr<read_frame>>	buffer_;
@@ -208,7 +221,6 @@ public:
 		buffer_depth_ = *boost::max_element(depths);
 		has_synchronization_clock_ = boost::count_if(consumers, std::mem_fn(&frame_consumer::has_synchronization_clock)) > 0;
 
-		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 	}
 
@@ -247,7 +259,9 @@ public:
 			current_diff_ = age_diff;
 
 			for (unsigned i = 0; i < ages.size(); ++i)
-				graph_->set_value(narrow(consumers_[i]->print()), static_cast<double>(ages[i]) / *max_age_iter);
+				graph_->set_value(
+						narrow(consumers_[i]->print()),
+						static_cast<double>(ages[i]) / *max_age_iter);
 
 			bool grace_period_over = grace_period_ == 1;
 
@@ -319,12 +333,16 @@ public:
 
 	void initialize(const video_format_desc& format_desc, int channel_index)
 	{
-		boost::for_each(
-				consumers_, 
-				[&] (const safe_ptr<frame_consumer>& consumer) 
-				{
-					consumer->initialize(format_desc, channel_index); 
-				});
+		for (size_t i = 0; i < consumers_.size(); ++i)
+		{
+			auto& consumer = consumers_.at(i);
+			consumer->initialize(format_desc, channel_index); 
+			graph_->set_color(
+					narrow(consumer->print()),
+					diag_colors().at(i % diag_colors().size()));
+		}
+
+		graph_->set_text(print());
 		format_desc_ = format_desc;
 	}
 
