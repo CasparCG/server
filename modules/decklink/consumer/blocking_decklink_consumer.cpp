@@ -396,7 +396,7 @@ public:
 	virtual boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
-		info.add(L"type", L"decklink-consumer");
+		info.add(L"type", L"blocking-decklink-consumer");
 		info.add(L"key-only", config_.key_only);
 		info.add(L"device", config_.device_index);
 		info.add(L"embedded-audio", config_.embedded_audio);
