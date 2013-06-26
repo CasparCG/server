@@ -884,11 +884,45 @@ safe_ptr<core::frame_producer> RouteCommand::TryCreateProducer(AMCPCommand& comm
 	auto src_channel_layer_token = tokens[0] == L"route" ? tokens[1] : uri;
 	std::vector<std::wstring> src_channel_layer;
 	boost::split(src_channel_layer, src_channel_layer_token, boost::is_any_of("-"));
+	bool is_channel_layer_spec = src_channel_layer.size() == 2;
+	bool is_channel_spec = src_channel_layer.size() == 1;
+	int src_channel_index;
 
-	if (tokens[0] == L"route" || src_channel_layer.size() == 2) // It looks like a route
+	if (is_channel_layer_spec || is_channel_spec)
+	{
+		try
+		{
+			src_channel_index = boost::lexical_cast<int>(src_channel_layer[0]);
+		}
+		catch(const boost::bad_lexical_cast&)
+		{
+			is_channel_layer_spec = false;
+			is_channel_spec = false;
+		}
+	}
+
+	int src_layer_index = -1;
+
+	if (is_channel_layer_spec)
+	{
+		if (!src_channel_layer[1].empty())
+		{
+			try
+			{
+				src_layer_index = boost::lexical_cast<int>(src_channel_layer[1]);
+			}
+			catch(const boost::bad_lexical_cast&)
+			{
+				is_channel_layer_spec = false;
+			}
+		}
+		else
+			is_channel_layer_spec = false;
+	}
+
+	if (tokens[0] == L"route" || is_channel_layer_spec || is_channel_spec) // It looks like a route
 	{
 		// Find the source channel
-		int src_channel_index = boost::lexical_cast<int>(src_channel_layer[0]);
 		auto channels = command.GetChannels();
 		auto src_channel = std::find_if(
 			channels.begin(), 
@@ -899,19 +933,10 @@ safe_ptr<core::frame_producer> RouteCommand::TryCreateProducer(AMCPCommand& comm
 			BOOST_THROW_EXCEPTION(null_argument() << msg_info("src channel not found"));
 
 		// Find the source layer (if one is given)
-		int src_layer_index = -1;
-		if (src_channel_layer.size() > 1 && !src_channel_layer[1].empty())
-		{
-			src_layer_index = boost::lexical_cast<int>(src_channel_layer[1]);
-		}
-
-		if (src_layer_index >= 0)
-		{
+		if (is_channel_layer_spec)
 			pFP = create_layer_producer(command.GetChannel()->mixer(), (*src_channel)->stage(), src_layer_index);
-		} else 
-		{
+		else 
 			pFP = create_channel_producer(command.GetChannel()->mixer(), *src_channel);
-		}
 	}
 	return pFP;
 }
