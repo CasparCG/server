@@ -1,3 +1,5 @@
+C H A N G E S
+
 CasparCG 2.0.4 Beta 1 (as compared to 2.0.3 Stable)
 ===================================================
 
@@ -16,7 +18,7 @@ General
   o Optimizations in AMCP protocol implementations for large incoming messages,
     for example base64 encoded PNG images.
   o Logging output now includes milliseconds and has modified format:
-    YY-MM-DD hh:mm:ss.fff
+    YYYY-MM-DD hh:mm:ss.zzz
   o Improved audio playback with 720p5994 and 720p6000 channels.
   o An attempt to improve output synchronization of consumers has been made. Use
     for example:
@@ -138,6 +140,7 @@ OSC
     + flash producer     /host/fps         [fps]
     + flash producer     /buffer           [buffered]        [buffer size]
     + image producer     /file/path        [file path]
+
 
 
 CasparCG 2.0.3 Stable (as compared to 2.0.3 Alpha)
