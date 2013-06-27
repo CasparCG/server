@@ -1,26 +1,24 @@
-CasparCG 2.0.4 Beta (w.r.t 2.0.3 Stable)
-========================================
+CasparCG 2.0.4 Beta 1 (as compared to 2.0.3 Stable)
+===================================================
 
 General
 -------
-
-  o Logging output now includes milliseconds and has modified format:
-    yyyy-mm-d HH:MM:SS.ZZZ
-  o Added support for generating thumbnails for media files. Currently only
-    video files and images are supported. By default the media directory is
-    scanned every 5 seconds for new/modified/removed files and thumbnails are
-    generated/regenerated/removed accordingly.
+  o Front-end GUI for simplified configuration and easy access to common tasks.
+  o Added support for video and images file thumbnail generation. By default the media 
+    directory is scanned every 5 seconds for new/modified/removed files and thumbnails 
+    are generated/regenerated/removed accordingly.
   o Support for new video modes: 2k2398, 2k2400, 2k2500, 4k2398, 4k2400, 4k2500,
     4k2997 and 4k3000.
-  o Optimizations in AMCP protocol implementations for large incoming messages
-    like for example base64 encoded PNG-images.
-  o Added support for more than 2 audio channels in caspar. See
+  o Experimental ATI graphics card support by using static linking against SFML 
+    instead of dynamic. Should improve ATI GPU support, but needs testing.
+  o Added support for playback and pass-through of up to 16 audio channels. See
     http://casparcg.com/forum/viewtopic.php?f=3&t=1453 for more information.
-  o ATI graphics card support. Static linking against SFML instead of dynamic.
-    Should inprove ATI card support. Needs testing.
+  o Optimizations in AMCP protocol implementations for large incoming messages,
+    for example base64 encoded PNG images.
+  o Logging output now includes milliseconds and has modified format:
+    YY-MM-DD hh:mm:ss.fff
   o An attempt to improve output synchronization of consumers has been made. Use
     for example:
-    
     <consumers>
       <synchronizing>
         <decklink>
@@ -34,21 +32,23 @@ General
       </synchronizing>
     </consumers>
     
-    to say that both decklink consumers should be in sync with each other.
+    ...to instruct both DeckLink consumers to stay in sync with each other.
     Consider this experimental, so don't wrap everything in <synchronizing />
     unless synchronization of consumer outputs is needed. For synchronization to
-    be effective both cards (or same if it is for example a Decklink Quad) must
-    have reference signal connected.
+    be effective all synchronized cards must have genlock reference 
+    signal connected.
 
 Layer
 -----
 
   o Fixed a problem where the first frame was not always shown on LOAD.
 
+
 Audio mixer
 -----------
 
   o Added support for a master volume mixer setting for each channel.
+
 
 Video mixer
 -----------
@@ -60,17 +60,16 @@ Video mixer
 Consumers
 ---------
 
-  o Avoid that the ffmpeg consumer blocks the channel output when it can't keep
-    up with the frame rate (drops instead).
+  o Avoid that the FFmpeg consumer blocks the channel output when it can't keep
+    up with the frame rate (drops frames instead).
   o Added support for to create a separate key and fill file when recording with
-    the ffmpeg consumer. Add the SEPARATE_KEY parameter to the ffmpeg consumer
-    parameter list. The key file will get the _A suffix to be picked up by the
+    the FFmpeg consumer. Add the SEPARATE_KEY parameter to the FFmpeg consumer
+    parameter list. The key file will get the _A file name suffix to be picked up by the
     separated_producer when doing playback.
-  o The image consumer now writes to the media folder instead of the data
-    folder.
-  o Fixed bug in decklink consumer where we submit too few audio samples to the
-    driver when the video format has a frame rate > 50.
-  o Added another experimental decklink consumer implementation where scheduled
+  o The image consumer now writes to the media folder instead of the data folder.
+  o Fixed bug in DeckLink consumer where we submit too few audio samples to the driver 
+    when the video format has a frame rate > 50.
+  o Added another experimental DeckLink consumer implementation where scheduled
     playback is not used, but a similar approach as in the bluefish consumer
 	where we wait for a frame to be displayed and then display the next frame.
 	It is configured via a <blocking-decklink> consumer element. The benefits of
@@ -81,11 +80,11 @@ Consumers
 Producers
 ---------
 
-  o Added support for playing .swf files using the flash producer.
-  o image producer premultiplies PNG images with their alpha.
-  o image producer can load a PNG image encoded as base64 via:
+  o Added support for playing .swf files using the Flash producer.
+  o Image producer premultiplies PNG images with their alpha.
+  o Image producer can load a PNG image encoded as base64 via:
     PLAY 1-0 [PNG_BASE64] <base64 string>
-  o ffmpeg producer can now use a directshow input filters:
+  o FFmpeg producer can now use a directshow input filters:
     PLAY 1-10 "dshow://video=Some Camera"
 
 AMCP
@@ -96,7 +95,7 @@ AMCP
   o THUMBNAIL LIST/RETRIEVE/GENERATE/GENERATE_ALL command was added to support
     the thumbnail feature.
   o ADD 1 FILE output.mov SEPARATE_KEY activates the separate key feature of the
-    ffmpeg consumer creating an additional output_a.mov containing only the key.
+    FFmpeg consumer creating an additional output_a.mov containing only the key.
   o Added KILL command for shutting down the server without console access.
   o Added RESTART command for shutting down the server in the same way as KILL
     except that the return code from caspar is 5 instead of 0, which can be used
@@ -140,8 +139,8 @@ OSC
     + image producer     /file/path        [file path]
 
 
-CasparCG 2.0.3 Stable (w.r.t 2.0.3 Alpha)
-=========================================
+CasparCG 2.0.3 Stable (as compared to 2.0.3 Alpha)
+==================================================
 
 Stage
 -----
@@ -156,8 +155,8 @@ AMCP
   o DATA REMOVE command was added.
 
 
-CasparCG 2.0.3 Alpha (w.r.t 2.0 Stable)
-=======================================
+CasparCG 2.0.3 Alpha (as compared to 2.0 Stable)
+================================================
 
 General
 -------
@@ -166,12 +165,12 @@ General
     supported for backwards compatibility
   o Commands written in UTF-8 to log file but only ascii characters to console.
   o Added supported video formats:
-    + 720p2398 (not supported by decklink)
-    + 720p2400 (not supported by decklink)
+    + 720p2398 (not supported by DeckLink)
+    + 720p2400 (not supported by DeckLink)
     + 1080p5994
     + 1080p6000
-    + 720p30 (not supported by decklink)
-    + 720p29.976 (not supported by decklink)
+    + 720p30 (not supported by DeckLink)
+    + 720p29.976 (not supported by DeckLink)
 
 CLK
 ---
@@ -211,8 +210,8 @@ Producers
     + Added PREMULTIPLY parameter to support images stored with straight alpha.
 
 
-CasparCG 2.0 Stable (w.r.t Beta 3)
-==================================
+CasparCG 2.0 Stable (as compared to Beta 3)
+===========================================
 
 General
 -------
@@ -223,14 +222,14 @@ Consumers
 ---------
 
   o File Consumer
-    + Changed semantics to more closely follow ffmpeg (see forums).
+    + Changed semantics to more closely follow FFmpeg (see forums).
     + Added options, -r, -acodec, -s, -pix_fmt, -f and more.
   o Screen Consumer
     + Added vsync support.
 
 
-CasparCG 2.0 Beta 3 (w.r.t Beta 1)
-==================================
+CasparCG 2.0 Beta 3 (as compared to Beta 1)
+===========================================
 
 Formats
 -------
@@ -247,7 +246,7 @@ Consumers
 
   o File Consumer added
     + See updated wiki or ask in forum for more information.
-    + Should support anything ffmpeg supports. However, we will work mainly with
+    + Should support anything FFmpeg supports. However, we will work mainly with
       DNXHD, PRORES and H264.
     - Key-only is not supported.
   o Bluefish Consumer
@@ -278,14 +277,14 @@ Producers
     + Improved auto-transcode accuracy.
     + Improved seeking accuracy.
     + Fixed bug with looping and LENGTH.
-    + Updated to newer ffmpeg version.
+    + Updated to newer FFmpeg version.
     + Fixed incorrect scaling of NTSC DV files.
     + Optimized color conversion when using YADIF filters.
   o Flash Producer
-    + Release flash-player when empty.
-    + Use native resolution template-host.
-    + Template-hosts are now choosen automatically if not configured. The
-      template-host with the corresponding video-mode name is now chosen.
+    + Release Flash Player when empty.
+    + Use native resolution TemplateHost.
+    + TemplateHosts are now choosen automatically if not configured. The
+      TemplateHost with the corresponding video-mode name is now chosen.
     + Use square pixel dimensions.
 
 AMCP
@@ -329,14 +328,10 @@ Diagnostics
     previously.
   o Diagnostics window is now closable.
 
-Configuration
--------------
-
-  o Simplified.
 
 
-CasparCG 2.0 Beta 1 (w.r.t Alpha)
-=================================
+CasparCG 2.0 Beta 1 (as compared to Alpha)
+==========================================
 
   o Blending Modes (needs to be explicitly enabled)
     + overlay
@@ -353,7 +348,7 @@ CasparCG 2.0 Beta 1 (w.r.t Alpha)
     + min output-level
     + max output-level
     + gamma
-  o Support for ffmpeg-filters such as (ee http://ffmpeg.org/libavfilter.html)
+  o Support for FFmpeg-filters such as (ee http://ffmpeg.org/libavfilter.html)
     + yadif deinterlacer (optimized in CasparCG for full multi-core support)
     + de-noising
     + dithering
@@ -404,8 +399,8 @@ CasparCG 2.0 Beta 1 (w.r.t Alpha)
   o More than 2 Decklink cards might be possible but have not yet been tested.
 
 
-CasparCG 2.0 Alpha (w.r.t 1.8)
-==============================
+CasparCG 2.0 Alpha (as compared to 1.8)
+=======================================
 
 General
 -------
@@ -416,7 +411,7 @@ General
   o Misc improved scalability.
   o XML-configuration.
   o Decklink
-    + Support for multiple decklink-cards.
+    + Support for multiple DeckLink cards.
 
 Core
 ----
