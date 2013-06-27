@@ -1,8 +1,8 @@
-CasparCG Server 2.0.3
-=====================
+CasparCG Server 2.0.4 Beta
+==========================
 
-Thank you for your interest in CasparCG Server, a professional 
-software used to play out and record professional graphics, audio and video 
+Thank you for your interest in CasparCG Server, a professional
+software used to play out and record professional graphics, audio and video
 to multiple outputs. It has been in 24/7 broadcast production since 2006.
 
 This release is considered tested and stable, and is intended for use in
@@ -20,17 +20,19 @@ SYSTEM REQUIREMENTS
    been tested on Intel processors.
 
 2. We recommend Windows 7 (64-bit,) but this software has also been used
-   successfully on Windows 7 (32-bit) and Windows XP SP2 (32-bit only.) 
-   Using CasparCG Server on Windows 8 and Windows Vista is untested and 
+   successfully on Windows 7 (32-bit) and Windows XP SP2 (32-bit only.)
+   Using CasparCG Server on Windows 8 and Windows Vista is untested and
    is not recommended!
-   
-3. An NVIDIA graphics card (GPU) capable of OpenGL 3.0 or higher is required! 
-   Please check your card's capabilities at: 
+
+3. An NVIDIA graphics card (GPU) capable of OpenGL 3.0 or higher is required!
+   Please check your card's capabilities at:
    http://en.wikipedia.org/wiki/Comparison_of_Nvidia_graphics_processing_units
+
+   Experimental support for AMD/ATI cards has been added.
 
 Also make sure that you have the latest drivers installed:
    http://www.nvidia.com/Download/index.aspx?lang=en-us%20nVidia%20drivers
-   
+
    Graphics cards from other manufacturers _may_ work but have not been tested!
 
 4. Microsoft Visual C++ 2010 Redistributable Package must be installed.
@@ -40,8 +42,8 @@ Also make sure that you have the latest drivers installed:
 5. You must have Flash Player 10.3 or later installed (an installer can be found
    in the "Flash Player Installation" folder.)
 
-6. Make sure you turn off Windows' "Aero" theme and "ClearType" font smoothing 
-   as they have been known to interfere with transparency in Flash templates, 
+6. Make sure you turn off Windows' "Aero" theme and "ClearType" font smoothing
+   as they have been known to interfere with transparency in Flash templates,
    and can also cause problems with Vsync when outputting to computer screens.
 
 The latest system recommendations are available at:
@@ -53,11 +55,11 @@ INSTALLATION
 
 1. Check that your system meets the requirements.
 
-2. Unzip and place the "CasparCG Server 2.0.3" folder anywhere you like.
+2. Unzip and place the "CasparCG Server 2.0.4 Beta" folder anywhere you like.
 
 3. Install "Microsoft Visual C++ 2010 Redistributable Package" from
    http://www.microsoft.com/download/en/details.aspx?id=5555
-   
+
 4. Install "Flash Player 10.3.183.14" from the "Flash Player Installation"
    folder.
 
@@ -68,9 +70,8 @@ INSTALLATION
 
 7. Start the "CasparCG.exe" program.
 
-8. Connect to the server from a client, such as the included CasparCG 2.0 Demo
-   Client (requires Adobe AIR) or the CasparCG Client 2.0 (available as a
-   separate download.)
+8. Connect to the server from a client, such as the CasparCG Client 2.0.4
+   (available as a separate download.)
 
 
 DOCUMENTATION
