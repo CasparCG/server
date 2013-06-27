@@ -5,7 +5,7 @@ Thank you for your interest in CasparCG Server, a professional
 software used to play out and record professional graphics, audio and video
 to multiple outputs. It has been in 24/7 broadcast production since 2006.
 
-This release is NOT considered tested and stable, but is NOT intended for use in
+This release is NOT considered tested and stable, and it is NOT intended for use in
 professional production.
 
 More information is available at http://casparcg.com/
