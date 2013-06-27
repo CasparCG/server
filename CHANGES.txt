@@ -6,12 +6,12 @@ CasparCG 2.0.4 Beta 1 (as compared to 2.0.3 Stable)
 General
 -------
   o Front-end GUI for simplified configuration and easy access to common tasks.
-  o Added support for video and images file thumbnail generation. By default the media 
-    directory is scanned every 5 seconds for new/modified/removed files and thumbnails 
-    are generated/regenerated/removed accordingly.
+  o Added support for video and images file thumbnail generation. By default the
+    media directory is scanned every 5 seconds for new/modified/removed files
+    and thumbnails are generated/regenerated/removed accordingly.
   o Support for new video modes: 2k2398, 2k2400, 2k2500, 4k2398, 4k2400, 4k2500,
     4k2997 and 4k3000.
-  o Experimental ATI graphics card support by using static linking against SFML 
+  o Experimental ATI graphics card support by using static linking against SFML
     instead of dynamic. Should improve ATI GPU support, but needs testing.
   o Added support for playback and pass-through of up to 16 audio channels. See
     http://casparcg.com/forum/viewtopic.php?f=3&t=1453 for more information.
@@ -22,6 +22,7 @@ General
   o Improved audio playback with 720p5994 and 720p6000 channels.
   o An attempt to improve output synchronization of consumers has been made. Use
     for example:
+
     <consumers>
       <synchronizing>
         <decklink>
@@ -34,24 +35,22 @@ General
         </decklink>
       </synchronizing>
     </consumers>
-    
-    ...to instruct both DeckLink consumers to stay in sync with each other.
-    Consider this experimental, so don't wrap everything in <synchronizing />
-    unless synchronization of consumer outputs is needed. For synchronization to
-    be effective all synchronized cards must have genlock reference 
-    signal connected.
+
+    ...to instruct the server to keep both DeckLink consumers in sync with each
+    other. Consider this experimental, so don't wrap everything in
+    <synchronizing /> unless synchronization of consumer outputs is needed. For
+    synchronization to be effective all synchronized cards must have genlock
+    reference signal connected.
 
 Layer
 -----
 
   o Fixed a problem where the first frame was not always shown on LOAD.
 
-
 Audio mixer
 -----------
 
   o Added support for a master volume mixer setting for each channel.
-
 
 Video mixer
 -----------
@@ -67,11 +66,12 @@ Consumers
     up with the frame rate (drops frames instead).
   o Added support for to create a separate key and fill file when recording with
     the FFmpeg consumer. Add the SEPARATE_KEY parameter to the FFmpeg consumer
-    parameter list. The key file will get the _A file name suffix to be picked up by the
-    separated_producer when doing playback.
-  o The image consumer now writes to the media folder instead of the data folder.
-  o Fixed bug in DeckLink consumer where we submit too few audio samples to the driver 
-    when the video format has a frame rate > 50.
+    parameter list. The key file will get the _A file name suffix to be picked
+    up by the separated_producer when doing playback.
+  o The image consumer now writes to the media folder instead of the data
+    folder.
+  o Fixed bug in DeckLink consumer where we submit too few audio samples to the
+    driver when the video format has a frame rate > 50.
   o Added another experimental DeckLink consumer implementation where scheduled
     playback is not used, but a similar approach as in the bluefish consumer
 	where we wait for a frame to be displayed and then display the next frame.
@@ -117,6 +117,7 @@ AMCP
   o Added INFO <ch> DELAY and INFO <ch>-<layer> DELAY commands for showing some
     delay measurements.
 
+
 OSC
 ---
 
@@ -140,7 +141,6 @@ OSC
     + flash producer     /host/fps         [fps]
     + flash producer     /buffer           [buffered]        [buffer size]
     + image producer     /file/path        [file path]
-
 
 
 CasparCG 2.0.3 Stable (as compared to 2.0.3 Alpha)
@@ -331,7 +331,6 @@ Diagnostics
   o Use the same log file for the entire day, instead of one per startup as
     previously.
   o Diagnostics window is now closable.
-
 
 
 CasparCG 2.0 Beta 1 (as compared to Alpha)

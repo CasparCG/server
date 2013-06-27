@@ -1,12 +1,12 @@
 CasparCG Server 2.0.4 Beta 1
 ============================
 
-Thank you for your interest in CasparCG Server, a professional
-software used to play out and record professional graphics, audio and video
-to multiple outputs. It has been in 24/7 broadcast production since 2006.
+Thank you for your interest in CasparCG Server, a professional software used to
+play out and record professional graphics, audio and video tomultiple outputs.
+It has been in 24/7 broadcast production since 2006.
 
-This release is NOT considered tested and stable, and it is NOT intended for use in
-professional production.
+This release is NOT considered tested and stable, and it is NOT intended for use
+in professional production.
 
 More information is available at http://casparcg.com/
 
@@ -16,8 +16,8 @@ SYSTEM REQUIREMENTS
 
 1. Intel processor capable of using SSSE3 instructions. Please refer to
    http://en.wikipedia.org/wiki/SSSE3 for a complete list.
-   While AMD processors should work, CasparCG Server has only
-   been tested on Intel processors.
+   While AMD processors should work, CasparCG Server has only been tested on
+   Intel processors.
 
 2. We recommend Windows 7 (64-bit,) but this software has also been used
    successfully on Windows 7 (32-bit) and Windows XP SP2 (32-bit only.)
@@ -76,11 +76,10 @@ INSTALLATION
 DOCUMENTATION
 -------------
 
-The most up-to-date documentation is always available at http://casparcg.com/wiki/
+The most up-to-date documentation is always available at
+http://casparcg.com/wiki/
 
 Ask questions in the forum: http://casparcg.com/forum/
-
-
 
 
 LICENSING
