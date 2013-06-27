@@ -17,6 +17,7 @@ General
     for example base64 encoded PNG images.
   o Logging output now includes milliseconds and has modified format:
     YY-MM-DD hh:mm:ss.fff
+  o Improved audio playback with 720p5994 and 720p6000 channels.
   o An attempt to improve output synchronization of consumers has been made. Use
     for example:
     <consumers>
