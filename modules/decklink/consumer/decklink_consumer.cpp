@@ -56,6 +56,9 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 
 	CComPtr<IDeckLink>					decklink_;
 	CComQIPtr<IDeckLinkOutput>			output_;
+	CComQIPtr<IDeckLinkKeyer>			keyer_;
+	CComQIPtr<IDeckLinkAttributes>		attributes_;
+	CComQIPtr<IDeckLinkConfiguration>	configuration_;
 
 	tbb::spin_mutex						exception_mutex_;
 	std::exception_ptr					exception_;
@@ -89,6 +92,9 @@ public:
 		, config_(config)
 		, decklink_(get_device(config.device_index))
 		, output_(decklink_)
+		, keyer_(decklink_)
+		, attributes_(decklink_)
+		, configuration_(decklink_)
 		, model_name_(get_model_name(decklink_))
 		, format_desc_(format_desc)
 		, buffer_size_(config.buffer_depth()) // Minimum buffer-size 3.
@@ -125,15 +131,8 @@ public:
 		if(config.embedded_audio)
 			enable_audio();
 
-		set_latency(
-				CComQIPtr<IDeckLinkConfiguration>(decklink_),
-				config.latency,
-				print());
-		set_keyer(
-				CComQIPtr<IDeckLinkAttributes>(decklink_),
-				CComQIPtr<IDeckLinkKeyer>(decklink_),
-				config.keyer,
-				print());
+		set_latency(configuration_, config.latency, print());
+		set_keyer(attributes_, keyer_, config.keyer, print());
 				
 		if(config.embedded_audio)		
 			output_->BeginAudioPreroll();		

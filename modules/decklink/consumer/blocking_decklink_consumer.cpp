@@ -61,6 +61,9 @@ struct blocking_decklink_consumer : boost::noncopyable
 
 	CComPtr<IDeckLink>						decklink_;
 	CComQIPtr<IDeckLinkOutput>				output_;
+	CComQIPtr<IDeckLinkKeyer>				keyer_;
+	CComQIPtr<IDeckLinkAttributes>			attributes_;
+	CComQIPtr<IDeckLinkConfiguration>		configuration_;
 
 	const std::wstring						model_name_;
 	const core::video_format_desc			format_desc_;
@@ -84,6 +87,9 @@ public:
 		, config_(config)
 		, decklink_(get_device(config.device_index))
 		, output_(decklink_)
+		, keyer_(decklink_)
+		, attributes_(decklink_)
+		, configuration_(decklink_)
 		, model_name_(get_model_name(decklink_))
 		, format_desc_(format_desc)
 		, buffered_audio_samples_(0)
@@ -112,15 +118,8 @@ public:
 		if(config.embedded_audio)
 			enable_audio();
 
-		set_latency(
-				CComQIPtr<IDeckLinkConfiguration>(decklink_),
-				configuration::low_latency,
-				print());
-		set_keyer(
-				CComQIPtr<IDeckLinkAttributes>(decklink_),
-				CComQIPtr<IDeckLinkKeyer>(decklink_),
-				config.keyer,
-				print());
+		set_latency(configuration_, configuration::low_latency, print());
+		set_keyer(attributes_, keyer_, config.keyer, print());
 	}
 
 	~blocking_decklink_consumer()
@@ -244,8 +243,9 @@ public:
 		BMDTimeValue time_in_frame;
 		BMDTimeValue ticks_per_frame;
 
-		output_->GetHardwareReferenceClock(
-				time_scale, &hardware_time, &time_in_frame, &ticks_per_frame);
+		if (FAILED(output_->GetHardwareReferenceClock(
+				time_scale, &hardware_time, &time_in_frame, &ticks_per_frame)))
+			CASPAR_LOG(error) << print() << L" Failed to determine time in frame.";
 
 		auto reference_clock_value = hardware_time - time_in_frame;
 		auto frame_duration = static_cast<int>(1000 / format_desc_.fps);
