@@ -77,7 +77,7 @@ const video_format_desc format_descs[video_format::count] =
 	DEFINE_VIDEOFORMATDESC(video_format::x2160p2398	,3840, 2160, 3840, 2160, field_mode::progressive,	24000,	1001,	boost::assign::list_of(2002),												L"2160p2398"),
 	DEFINE_VIDEOFORMATDESC(video_format::x2160p2400	,3840, 2160, 3840, 2160, field_mode::progressive,	24,		1,		boost::assign::list_of(2000),												L"2160p2400"),
 	DEFINE_VIDEOFORMATDESC(video_format::x2160p2500	,3840, 2160, 3840, 2160, field_mode::progressive,	25,		1,		boost::assign::list_of(1920),												L"2160p2500"),
-	DEFINE_VIDEOFORMATDESC(video_format::x2160p2997	,3840, 2160, 3840, 2160, field_mode::progressive,	30000,	1001,	boost::assign::list_of(1602)    (1601)    (1602)    (1601)    (1602),		L"2160p2398"),
+	DEFINE_VIDEOFORMATDESC(video_format::x2160p2997	,3840, 2160, 3840, 2160, field_mode::progressive,	30000,	1001,	boost::assign::list_of(1602)    (1601)    (1602)    (1601)    (1602),		L"2160p2997"),
 	DEFINE_VIDEOFORMATDESC(video_format::x2160p3000	,3840, 2160, 3840, 2160, field_mode::progressive,	30,		1,		boost::assign::list_of(1600),												L"2160p3000"),
 	DEFINE_VIDEOFORMATDESC(video_format::invalid	,0,		0,   0,		0,   field_mode::progressive,	1,		1,		boost::assign::list_of(1),													L"invalid")
 };
