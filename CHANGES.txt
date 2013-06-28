@@ -9,8 +9,8 @@ General
   o Added support for video and images file thumbnail generation. By default the
     media directory is scanned every 5 seconds for new/modified/removed files
     and thumbnails are generated/regenerated/removed accordingly.
-  o Support for new video modes: 2k2398, 2k2400, 2k2500, 4k2398, 4k2400, 4k2500,
-    4k2997 and 4k3000.
+  o Support for new video modes: 1556p2398, 1556p2400, 1556p2500, 2160p2398,
+    2160p2400, 2160p2500, 2160p2997 and 2160p3000.
   o Experimental ATI graphics card support by using static linking against SFML
     instead of dynamic. Should improve ATI GPU support, but needs testing.
   o Added support for playback and pass-through of up to 16 audio channels. See
