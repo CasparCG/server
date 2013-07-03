@@ -23,6 +23,8 @@
 
 #include "../monitor/monitor.h"
 #include "../video_format.h"
+#include "../interaction/interaction_sink.h"
+#include "binding.h"
 
 #include <common/forward.h>
 #include <common/future_fwd.h>
@@ -41,9 +43,18 @@
 FORWARD1(caspar, class executor);
 
 namespace caspar { namespace core {
+
+struct constraints
+{
+	binding<double> width;
+	binding<double> height;
+
+	constraints(double width, double height);
+	constraints();
+};
 	
 // Interface
-class frame_producer : public monitor::observable
+class frame_producer : public monitor::observable, public interaction_sink
 {
 	frame_producer(const frame_producer&);
 	frame_producer& operator=(const frame_producer&);
@@ -68,6 +79,10 @@ public:
 	virtual void subscribe(const monitor::observable::observer_ptr& o) = 0;
 	virtual void unsubscribe(const monitor::observable::observer_ptr& o) = 0;
 
+	// interaction_sink
+	virtual void on_interaction(const interaction_event::ptr& event) override { }
+	virtual bool collides(double x, double y) const override { return false; }
+
 	// Properties
 	
 
@@ -78,6 +93,7 @@ public:
 	virtual uint32_t							nb_frames() const = 0;
 	virtual uint32_t							frame_number() const = 0;
 	virtual class draw_frame					last_frame() = 0;
+	virtual constraints&						pixel_constraints() = 0;
 	virtual void								leading_producer(const spl::shared_ptr<frame_producer>&) {}  
 };
 
@@ -116,5 +132,5 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<fram
 spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>&, const video_format_desc& format_desc, const std::wstring& params);
 
 spl::shared_ptr<core::frame_producer> create_destroy_proxy(spl::shared_ptr<core::frame_producer> producer);
-		
+
 }}

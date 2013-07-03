@@ -117,7 +117,12 @@ public:
 
 		return frame_producer_base::last_frame();
 	}
-			
+
+	constraints& pixel_constraints() override
+	{
+		return dest_producer_->pixel_constraints();
+	}
+
 	uint32_t nb_frames() const override
 	{
 		return dest_producer_->nb_frames();
@@ -210,6 +215,16 @@ public:
 	void unsubscribe(const monitor::observable::observer_ptr& o) override		
 	{
 		event_subject_.unsubscribe(o);
+	}
+
+	void on_interaction(const interaction_event::ptr& event) override
+	{
+		dest_producer_->on_interaction(event);
+	}
+
+	bool collides(double x, double y) const override
+	{
+		return dest_producer_->collides(x, y);
 	}
 };
 

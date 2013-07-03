@@ -34,6 +34,15 @@
     <Filter Include="source\monitor">
       <UniqueIdentifier>{e09a01c7-bfd9-4b56-97fd-ec9d060c0bbc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\interaction">
+      <UniqueIdentifier>{2198da6f-eae9-474d-942e-c925b0828d6f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\producer\draw">
+      <UniqueIdentifier>{0138e754-c089-46e6-9540-cf5cf4818381}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\producer\scene">
+      <UniqueIdentifier>{a949a4cd-ede1-41fb-89bb-2fc1c4dc386a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="producer\transition\transition_producer.h">
@@ -106,6 +115,27 @@
     <ClInclude Include="consumer\port.h">
       <Filter>source\consumer</Filter>
     </ClInclude>
+    <ClInclude Include="interaction\interaction_event.h">
+      <Filter>source\interaction</Filter>
+    </ClInclude>
+    <ClInclude Include="interaction\interaction_sink.h">
+      <Filter>source\interaction</Filter>
+    </ClInclude>
+    <ClInclude Include="interaction\util.h">
+      <Filter>source\interaction</Filter>
+    </ClInclude>
+    <ClInclude Include="interaction\interaction_aggregator.h">
+      <Filter>source\interaction</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\draw\freehand_producer.h">
+      <Filter>source\producer\draw</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\scene\scene_producer.h">
+      <Filter>source\producer\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\binding.h">
+      <Filter>source\producer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
@@ -162,6 +192,12 @@
     </ClCompile>
     <ClCompile Include="consumer\port.cpp">
       <Filter>source\consumer</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\draw\freehand_producer.cpp">
+      <Filter>source\producer\draw</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\scene\scene_producer.cpp">
+      <Filter>source\producer\scene</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
