@@ -27,6 +27,7 @@
 #include "../frame/frame_transform.h"
 
 #include "color/color_producer.h"
+#include "draw/freehand_producer.h"
 #include "separated/separated_producer.h"
 
 #include <common/assert.h>
@@ -44,6 +45,15 @@ std::vector<const producer_factory_t> g_factories;
 void register_producer_factory(const producer_factory_t& factory)
 {
 	g_factories.push_back(factory);
+}
+
+constraints::constraints(double width, double height)
+	: width(width), height(height)
+{
+}
+
+constraints::constraints()
+{
 }
 
 struct frame_producer_base::impl
@@ -136,6 +146,7 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
 		uint32_t frame_number() const override {return 0;}
 		boost::unique_future<std::wstring> call(const std::wstring& params) override{CASPAR_THROW_EXCEPTION(not_supported());}
 		draw_frame last_frame() {return draw_frame::empty();}
+		constraints& pixel_constraints() override { static constraints c; return c; }
 	
 		boost::property_tree::wptree info() const override
 		{
@@ -205,9 +216,12 @@ public:
 	boost::unique_future<std::wstring>					call(const std::wstring& str) override											{return producer_->call(str);}
 	void												leading_producer(const spl::shared_ptr<frame_producer>& producer) override		{return producer_->leading_producer(producer);}
 	uint32_t											nb_frames() const override														{return producer_->nb_frames();}
-	class draw_frame									last_frame()																{return producer_->last_frame();}
+	class draw_frame									last_frame()																	{return producer_->last_frame();}
 	void												subscribe(const monitor::observable::observer_ptr& o)							{return producer_->subscribe(o);}
 	void												unsubscribe(const monitor::observable::observer_ptr& o)							{return producer_->unsubscribe(o);}
+	bool												collides(double x, double y)													{return producer_->collides(x, y);}
+	void												on_interaction(const interaction_event::ptr& event)								{return producer_->on_interaction(event);}
+	constraints&										pixel_constraints() override													{return producer_->pixel_constraints();}
 };
 
 spl::shared_ptr<core::frame_producer> create_destroy_proxy(spl::shared_ptr<core::frame_producer> producer)
@@ -236,6 +250,9 @@ spl::shared_ptr<core::frame_producer> do_create_producer(const spl::shared_ptr<f
 
 	if(producer == frame_producer::empty())
 		producer = create_color_producer(my_frame_factory, params);
+
+	if (producer == frame_producer::empty())
+		producer = create_freehand_producer(my_frame_factory, params);
 
 	if(producer == frame_producer::empty())
 		return producer;

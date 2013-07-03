@@ -158,6 +158,16 @@ public:
 		info.add_child(L"background.producer", background_->info());
 		return info;
 	}
+
+	void on_interaction(const interaction_event::ptr& event)
+	{
+		foreground_->on_interaction(event);
+	}
+	
+	bool collides(double x, double y) const
+	{
+		return foreground_->collides(x, y);
+	}
 };
 
 layer::layer(int index) : impl_(new impl(index)){}
@@ -181,4 +191,6 @@ spl::shared_ptr<frame_producer> layer::background() const { return impl_->backgr
 boost::property_tree::wptree layer::info() const{return impl_->info();}
 void layer::subscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_.subscribe(o);}
 void layer::unsubscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_.unsubscribe(o);}
+void layer::on_interaction(const interaction_event::ptr& event) { impl_->on_interaction(event); }
+bool layer::collides(double x, double y) const { return impl_->collides(x, y); }
 }}

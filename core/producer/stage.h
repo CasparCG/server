@@ -24,6 +24,7 @@
 #include "frame_producer.h"
 
 #include "../monitor/monitor.h"
+#include "../interaction/interaction_sink.h"
 
 #include <common/forward.h>
 #include <common/future_fwd.h>
@@ -44,7 +45,7 @@ namespace caspar { namespace core {
 
 typedef reactive::observable<std::map<int, class draw_frame>> frame_observable;
 	
-class stage sealed : public monitor::observable, public frame_observable
+class stage sealed : public monitor::observable, public frame_observable, public interaction_sink
 {
 	stage(const stage&);
 	stage& operator=(const stage&);
@@ -87,6 +88,10 @@ public:
 
 	void subscribe(const frame_observable::observer_ptr& o) override;
 	void unsubscribe(const frame_observable::observer_ptr& o) override;
+
+	// interaction_sink
+
+	void on_interaction(const interaction_event::ptr& event) override;
 
 	// Properties
 

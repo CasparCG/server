@@ -88,6 +88,11 @@ public:
 	{
 		return draw_frame::mask(fill_producer_->last_frame(), key_producer_->last_frame());
 	}
+
+	constraints& pixel_constraints() override
+	{
+		return fill_producer_->pixel_constraints();
+	}
 				
 	uint32_t nb_frames() const override
 	{
