@@ -27,6 +27,7 @@
 
 #include "../frame/draw_frame.h"
 #include "../frame/frame_factory.h"
+#include "../interaction/interaction_aggregator.h"
 
 #include <common/executor.h>
 #include <common/future.h>
@@ -53,12 +54,14 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 	monitor::basic_subject										event_subject_;
 	reactive::basic_subject<std::map<int, class draw_frame>>	frames_subject_;
 	std::map<int, layer>										layers_;	
-	std::map<int, tweened_transform>							tweens_;	
+	std::map<int, tweened_transform>							tweens_;
+	interaction_aggregator										aggregator_;
 	executor													executor_;
 public:
 	impl(spl::shared_ptr<diagnostics::graph> graph) 
 		: graph_(std::move(graph))
 		, event_subject_("stage")
+		, aggregator_([=] (double x, double y) { return collission_detect(x, y); })
 		, executor_(L"stage")
 	{
 		graph_->set_color("produce-time", diagnostics::color(0.0f, 1.0f, 0.0f));
@@ -81,7 +84,9 @@ public:
 				{
 					frames[layer.first] = draw_frame::empty();	
 					indices.push_back(layer.first);
-				}				
+				}
+
+				aggregator_.translate_and_send();
 
 				// WORKAROUND: Compiler doesn't seem to like lambda.
 				tbb::parallel_for_each(indices.begin(), indices.end(), std::bind(&stage::impl::draw, this, std::placeholders::_1, std::ref(format_desc), std::ref(frames)));
@@ -334,6 +339,34 @@ public:
 			return make_shared(layers_[index].foreground()->call(params));
 		}, task_priority::high_priority));
 	}
+
+	void on_interaction(const interaction_event::ptr& event)
+	{
+		executor_.begin_invoke([=]
+		{
+			aggregator_.offer(event);
+		}, task_priority::high_priority);
+	}
+
+	boost::optional<interaction_target> collission_detect(double x, double y)
+	{
+		BOOST_FOREACH(auto& layer, layers_ | boost::adaptors::reversed)
+		{
+			auto transform = tweens_[layer.first].fetch();
+			auto translated = translate(x, y, transform);
+
+			if (translated.first >= 0.0
+				&& translated.first <= 1.0
+				&& translated.second >= 0.0
+				&& translated.second <= 1.0
+				&& layer.second.collides(translated.first, translated.second))
+			{
+				return std::make_pair(transform, &layer.second);
+			}
+		}
+
+		return boost::optional<interaction_target>();
+	}
 };
 
 stage::stage(spl::shared_ptr<diagnostics::graph> graph) : impl_(new impl(std::move(graph))){}
@@ -360,4 +393,5 @@ void stage::subscribe(const monitor::observable::observer_ptr& o) {impl_->event_
 void stage::unsubscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_.unsubscribe(o);}
 void stage::subscribe(const frame_observable::observer_ptr& o) {impl_->frames_subject_.subscribe(o);}
 void stage::unsubscribe(const frame_observable::observer_ptr& o) {impl_->frames_subject_.unsubscribe(o);}
+void stage::on_interaction(const interaction_event::ptr& event) { impl_->on_interaction(event); }
 }}

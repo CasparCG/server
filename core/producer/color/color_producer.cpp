@@ -43,12 +43,14 @@ class color_producer : public frame_producer_base
 {
 	monitor::basic_subject	event_subject_;
 
-	draw_frame				frame_;
 	const std::wstring		color_str_;
+	constraints				constraints_;
+	draw_frame				frame_;
 
 public:
 	explicit color_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& color) 
 		: color_str_(color)
+		, constraints_(1, 1)
 		, frame_(create_color_frame(this, frame_factory, color))
 	{
 		CASPAR_LOG(info) << print() << L" Initialized";
@@ -61,7 +63,12 @@ public:
 		event_subject_ << monitor::event("color") % color_str_;
 
 		return frame_;
-	}	
+	}
+
+	constraints& pixel_constraints() override
+	{
+		return constraints_;
+	}
 	
 	std::wstring print() const override
 	{
