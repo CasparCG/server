@@ -124,9 +124,16 @@
     <ClInclude Include="frame\frame_transform.h" />
     <ClInclude Include="frame\frame_visitor.h" />
     <ClInclude Include="frame\pixel_format.h" />
+    <ClInclude Include="interaction\interaction_aggregator.h" />
+    <ClInclude Include="interaction\interaction_event.h" />
+    <ClInclude Include="interaction\interaction_sink.h" />
+    <ClInclude Include="interaction\util.h" />
     <ClInclude Include="mixer\audio\audio_util.h" />
     <ClInclude Include="mixer\image\blend_modes.h" />
     <ClInclude Include="monitor\monitor.h" />
+    <ClInclude Include="producer\binding.h" />
+    <ClInclude Include="producer\draw\freehand_producer.h" />
+    <ClInclude Include="producer\scene\scene_producer.h" />
     <ClInclude Include="video_channel.h" />
     <ClInclude Include="consumer\output.h" />
     <ClInclude Include="consumer\frame_consumer.h" />
@@ -171,6 +178,14 @@
     <ClCompile Include="monitor\monitor.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="producer\draw\freehand_producer.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="producer\scene\scene_producer.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="video_channel.cpp" />
     <ClCompile Include="consumer\frame_consumer.cpp">
