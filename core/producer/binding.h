@@ -66,6 +66,7 @@ private:
 		std::function<T ()> expression_;
 
 		impl()
+			: value_()
 		{
 		}
 
