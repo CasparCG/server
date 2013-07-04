@@ -33,6 +33,11 @@ layer::layer(const spl::shared_ptr<frame_producer>& producer)
 {
 }
 
+adjustments::adjustments()
+	: opacity(1.0)
+{
+}
+
 struct scene_producer::impl
 {
 	constraints pixel_constraints_;
@@ -71,6 +76,9 @@ struct scene_producer::impl
 				/ static_cast<double>(pixel_constraints_.width.get());
 		scale[1] = static_cast<double>(layer.producer.get()->pixel_constraints().height.get())
 				/ static_cast<double>(pixel_constraints_.height.get());
+
+		transform.image_transform.opacity = layer.adjustments.opacity.get();
+		transform.image_transform.is_key = layer.is_key.get();
 
 		return transform;
 	}

@@ -36,6 +36,8 @@ struct coord
 struct adjustments
 {
 	binding<double> opacity;
+
+	adjustments();
 };
 
 struct layer
@@ -45,6 +47,7 @@ struct layer
 	adjustments adjustments;
 	binding<spl::shared_ptr<frame_producer>> producer;
 	binding<bool> hidden;
+	binding<bool> is_key;
 
 	layer(const spl::shared_ptr<frame_producer>& producer);
 };
