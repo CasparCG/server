@@ -100,6 +100,7 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	spl::shared_ptr<core::frame_factory>			frame_factory_;
 	core::video_format_desc							in_format_desc_;
 	core::video_format_desc							out_format_desc_;
+	core::constraints								constraints_;
 
 	tbb::concurrent_bounded_queue<core::draw_frame>	frame_buffer_;
 
@@ -119,6 +120,7 @@ public:
 		, filter_(filter)
 		, in_format_desc_(in_format_desc)
 		, out_format_desc_(out_format_desc)
+		, constraints_(in_format_desc.width, in_format_desc.height)
 		, muxer_(in_format_desc.fps, frame_factory, out_format_desc, filter)
 		, audio_cadence_(out_format_desc.audio_cadence)
 		, sync_buffer_(out_format_desc.audio_cadence.size())
@@ -167,6 +169,11 @@ public:
 			input_->StopStreams();
 			input_->DisableVideoInput();
 		}
+	}
+
+	core::constraints& pixel_constraints()
+	{
+		return constraints_;
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE	QueryInterface (REFIID, LPVOID*)	{return E_NOINTERFACE;}
@@ -353,6 +360,11 @@ public:
 	core::draw_frame receive_impl() override
 	{		
 		return producer_->get_frame();
+	}
+
+	core::constraints& pixel_constraints() override
+	{
+		return producer_->pixel_constraints();
 	}
 			
 	uint32_t nb_frames() const override

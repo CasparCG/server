@@ -330,6 +330,7 @@ struct flash_producer : public core::frame_producer_base
 	const core::video_format_desc					format_desc_;
 	const int										width_;
 	const int										height_;
+	core::constraints								constraints_;
 	const int										buffer_size_;
 
 	tbb::atomic<int>								fps_;
@@ -352,6 +353,7 @@ public:
 		, format_desc_(format_desc)
 		, width_(width > 0 ? width : format_desc.width)
 		, height_(height > 0 ? height : format_desc.height)
+		, constraints_(width_, height_)
 		, buffer_size_(env::properties().get(L"configuration.flash.buffer-depth", format_desc.fps > 30.0 ? 4 : 2))
 		, executor_(L"flash_producer")
 	{	
@@ -392,6 +394,11 @@ public:
 					   << monitor::event("buffer")		% output_buffer_.size() % buffer_size_;
 
 		return last_frame_ = frame;
+	}
+
+	core::constraints& pixel_constraints() override
+	{
+		return constraints_;
 	}
 		
 	boost::unique_future<std::wstring> call(const std::wstring& param) override
