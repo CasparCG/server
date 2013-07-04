@@ -68,17 +68,17 @@ Consumers
     the FFmpeg consumer. Add the SEPARATE_KEY parameter to the FFmpeg consumer
     parameter list. The key file will get the _A file name suffix to be picked
     up by the separated_producer when doing playback.
-  o The image consumer now writes to the media folder instead of the data
+  o The Image consumer now writes to the media folder instead of the data
     folder.
   o Fixed bug in DeckLink consumer where we submit too few audio samples to the
     driver when the video format has a frame rate > 50.
   o Added another experimental DeckLink consumer implementation where scheduled
     playback is not used, but a similar approach as in the bluefish consumer
-	where we wait for a frame to be displayed and then display the next frame.
-	It is configured via a <blocking-decklink> consumer element. The benefits of
-	this consumer is lower latency and more deterministic synchronization
-	between multiple instances (should not need to be wrapped in a
-	<synchronizing> element when separate key-fill is used).
+    where we wait for a frame to be displayed and then display the next frame.
+    It is configured via a <blocking-decklink> consumer element. The benefits of
+    this consumer is lower latency and more deterministic synchronization
+    between multiple instances (should not need to be wrapped in a
+    <synchronizing> element when separated key/fill is used).
 
 Producers
 ---------
@@ -101,12 +101,13 @@ AMCP
     FFmpeg consumer creating an additional output_a.mov containing only the key.
   o Added KILL command for shutting down the server without console access.
   o Added RESTART command for shutting down the server in the same way as KILL
-    except that the return code from caspar is 5 instead of 0, which can be used
-    by parent process to take other actions. The casparcg_auto_restart.bat
-    script restarts the server if the return code is 5.
+    except that the return code from CasparCG Server is 5 instead of 0, which 
+    can be used by parent process to take other actions. 
+    The 'casparcg_auto_restart.bat' script restarts the server if the 
+    return code is 5.
   o DATA RETRIEVE now returns linefeeds encoded as an actual linefeed (the
-    single character 0x0a) instead of the previous two characters \ followed by
-    n.
+    single character 0x0a) instead of the previous two characters;
+    \ followed by n.
   o MIXER CHROMA command added to control the chroma keying. Example:
     MIXER 1-1 CHROMA GREEN|BLUE 0.10 0.04
   o Fixed bug where MIXER FILL overrides any previous MIXER CLIP on the same
@@ -370,7 +371,7 @@ CasparCG 2.0 Beta 1 (as compared to Alpha)
   o Producer buffering is now configurable.
   o Consumer buffering is now configurable.
   o Now possible to configure template-hosts for different video-modes.
-  o Added auto transcoder for ffmpeg-producer which automatically transcodes
+  o Added auto transcoder for FFmpeg producer which automatically transcodes
     input video into compatible video format for the channel.
     + interlacing (50p -> 50i)
     + deinterlacing (50i -> 25p)
