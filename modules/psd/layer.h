@@ -47,10 +47,6 @@ public:
 	static std::shared_ptr<Layer> create(BEFileInputStream&);
 	void read_channel_data(BEFileInputStream&);
 
-	unsigned long GetTotalDataLength();
-
-	//image_ptr read_image(BEFileInputStream&);
-	
 	const std::wstring& name() const
 	{
 		return name_;
@@ -59,6 +55,9 @@ public:
 	{
 		return rect_;
 	}
+
+	const image8bit_ptr& image() const { return image_; }
+	const image8bit_ptr& mask() const { return mask_; }
 
 private:
 	channel_ptr get_channel(ChannelType);

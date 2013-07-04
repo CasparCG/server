@@ -43,6 +43,7 @@
 #include <modules/oal/oal.h>
 #include <modules/screen/screen.h>
 #include <modules/image/image.h>
+#include <modules/psd/psd.h>
 
 #include <modules/oal/consumer/oal_consumer.h>
 #include <modules/bluefish/consumer/bluefish_consumer.h>
@@ -98,6 +99,9 @@ struct server::impl : boost::noncopyable
 
 		flash::init();		  
 		CASPAR_LOG(info) << L"Initialized flash module.";
+
+		psd::init();		  
+		CASPAR_LOG(info) << L"Initialized psd module.";
 
 		register_producer_factory(&core::scene::create_dummy_scene_producer);
 

@@ -33,8 +33,8 @@ struct rect
 	T right;
 	T bottom;
 	T left;
-	T width() { return right-left; }
-	T height() { return bottom-top; }
+	T width() const { return right-left; }
+	T height() const { return bottom-top; }
 };
 
 class PSDFileFormatException : public std::exception

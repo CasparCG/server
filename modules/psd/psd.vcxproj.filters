@@ -10,6 +10,12 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="util\bigendian_file_input_stream.cpp">
+      <Filter>Source Files\util</Filter>
+    </ClCompile>
+    <ClCompile Include="descriptor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="doc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -19,21 +25,30 @@
     <ClCompile Include="misc.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="util\bigendian_file_input_stream.cpp">
-      <Filter>Source Files\util</Filter>
-    </ClCompile>
     <ClCompile Include="resource.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="descriptor.cpp">
+    <ClCompile Include="psd.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="util\bigendian_file_input_stream.h">
+      <Filter>Source Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
     <ClInclude Include="channel.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="descriptor.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
     <ClInclude Include="doc.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="image.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="layer.h">
@@ -42,16 +57,7 @@
     <ClInclude Include="misc.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="util\bigendian_file_input_stream.h">
-      <Filter>Source Files\util</Filter>
-    </ClInclude>
-    <ClInclude Include="resource.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="descriptor.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
-    <ClInclude Include="image.h">
+    <ClInclude Include="psd.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
