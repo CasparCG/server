@@ -36,7 +36,17 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "accelerator", "accelerator\
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "screen", "modules\screen\screen.vcxproj", "{88F974F0-D09F-4788-8CF8-F563209E60C1}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "psd", "modules\psd\psd.vcxproj", "{866A164B-6F7A-450E-8452-C6AE4E176436}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{BCB4FCF8-987F-40D8-87B5-8F7CE1D5D212}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "psd-test", "test\psd-test\psd-test.vcxproj", "{156C91E0-8CAC-4DBA-A212-AAFDAFACD8BC}"
+EndProject
 Global
+	GlobalSection(SubversionScc) = preSolution
+		Svn-Managed = True
+		Manager = AnkhSVN - Subversion Support for Visual Studio
+	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Mixed Platforms = Debug|Mixed Platforms
 		Debug|Win32 = Debug|Win32
@@ -176,6 +186,26 @@ Global
 		{88F974F0-D09F-4788-8CF8-F563209E60C1}.Release|Win32.ActiveCfg = Release|x64
 		{88F974F0-D09F-4788-8CF8-F563209E60C1}.Release|x64.ActiveCfg = Release|x64
 		{88F974F0-D09F-4788-8CF8-F563209E60C1}.Release|x64.Build.0 = Release|x64
+		{866A164B-6F7A-450E-8452-C6AE4E176436}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{866A164B-6F7A-450E-8452-C6AE4E176436}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{866A164B-6F7A-450E-8452-C6AE4E176436}.Debug|Win32.ActiveCfg = Debug|Win32
+		{866A164B-6F7A-450E-8452-C6AE4E176436}.Debug|Win32.Build.0 = Debug|Win32
+		{866A164B-6F7A-450E-8452-C6AE4E176436}.Debug|x64.ActiveCfg = Debug|Win32
+		{866A164B-6F7A-450E-8452-C6AE4E176436}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{866A164B-6F7A-450E-8452-C6AE4E176436}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{866A164B-6F7A-450E-8452-C6AE4E176436}.Release|Win32.ActiveCfg = Release|Win32
+		{866A164B-6F7A-450E-8452-C6AE4E176436}.Release|Win32.Build.0 = Release|Win32
+		{866A164B-6F7A-450E-8452-C6AE4E176436}.Release|x64.ActiveCfg = Release|Win32
+		{156C91E0-8CAC-4DBA-A212-AAFDAFACD8BC}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{156C91E0-8CAC-4DBA-A212-AAFDAFACD8BC}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{156C91E0-8CAC-4DBA-A212-AAFDAFACD8BC}.Debug|Win32.ActiveCfg = Debug|Win32
+		{156C91E0-8CAC-4DBA-A212-AAFDAFACD8BC}.Debug|Win32.Build.0 = Debug|Win32
+		{156C91E0-8CAC-4DBA-A212-AAFDAFACD8BC}.Debug|x64.ActiveCfg = Debug|Win32
+		{156C91E0-8CAC-4DBA-A212-AAFDAFACD8BC}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{156C91E0-8CAC-4DBA-A212-AAFDAFACD8BC}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{156C91E0-8CAC-4DBA-A212-AAFDAFACD8BC}.Release|Win32.ActiveCfg = Release|Win32
+		{156C91E0-8CAC-4DBA-A212-AAFDAFACD8BC}.Release|Win32.Build.0 = Release|Win32
+		{156C91E0-8CAC-4DBA-A212-AAFDAFACD8BC}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -189,9 +219,7 @@ Global
 		{3E11FF65-A9DA-4F80-87F2-A7C6379ED5E2} = {C54DA43E-4878-45DB-B76D-35970553672C}
 		{7D58BD57-FDD5-46E6-A23B-ED14B5314A0E} = {C54DA43E-4878-45DB-B76D-35970553672C}
 		{88F974F0-D09F-4788-8CF8-F563209E60C1} = {C54DA43E-4878-45DB-B76D-35970553672C}
-	EndGlobalSection
-	GlobalSection(SubversionScc) = preSolution
-		Svn-Managed = True
-		Manager = AnkhSVN - Subversion Support for Visual Studio
+		{866A164B-6F7A-450E-8452-C6AE4E176436} = {C54DA43E-4878-45DB-B76D-35970553672C}
+		{156C91E0-8CAC-4DBA-A212-AAFDAFACD8BC} = {BCB4FCF8-987F-40D8-87B5-8F7CE1D5D212}
 	EndGlobalSection
 EndGlobal
