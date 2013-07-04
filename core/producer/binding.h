@@ -33,14 +33,37 @@ template <typename T>
 class binding
 {
 private:
-	struct impl : std::enable_shared_from_this<impl>
+	struct impl_base : std::enable_shared_from_this<impl_base>
 	{
-		T value_;
-		std::function<T ()> expression_;
-		std::vector<std::shared_ptr<impl>> dependencies_;
+		std::vector<std::shared_ptr<impl_base>> dependencies_;
 		mutable std::vector<std::pair<
 				std::weak_ptr<void>,
 				std::function<void ()>>> on_change_;
+
+		virtual ~impl_base()
+		{
+		}
+
+		virtual void evaluate() = 0;
+
+		void depend_on(const std::shared_ptr<impl_base>& dependency)
+		{
+			dependency->on_change(shared_from_this(), [=] { evaluate(); });
+			dependencies_.push_back(dependency);
+		}
+
+		void on_change(
+				const std::weak_ptr<void>& dependant,
+				const std::function<void ()>& listener) const
+		{
+			on_change_.push_back(std::make_pair(dependant, listener));
+		}
+	};
+
+	struct impl : public impl_base
+	{
+		T value_;
+		std::function<T ()> expression_;
 
 		impl()
 		{
@@ -81,20 +104,7 @@ private:
 			on_change();
 		}
 
-		void depend_on(const std::shared_ptr<impl>& dependency)
-		{
-			dependency->on_change(shared_from_this(), [=] { evaluate(); });
-			dependencies_.push_back(dependency);
-		}
-
-		void on_change(
-				const std::weak_ptr<void>& dependant,
-				const std::function<void ()>& listener) const
-		{
-			on_change_.push_back(std::make_pair(dependant, listener));
-		}
-
-		void evaluate()
+		void evaluate() override
 		{
 			if (expression_)
 			{
@@ -108,6 +118,7 @@ private:
 			}
 		}
 
+		using impl_base::on_change;
 		void on_change()
 		{
 			auto copy = on_change_;
@@ -153,17 +164,19 @@ public:
 	{
 	}
 
-	binding(const std::function<T ()>& expression, const binding<T>& dep)
+	template<typename T2>
+	binding(const std::function<T ()>& expression, const binding<T2>& dep)
 		: impl_(new impl(expression))
 	{
 		depend_on(dep);
 		impl_->evaluate();
 	}
 
+	template<typename T2, typename T3>
 	binding(
 			const std::function<T ()>& expression,
-			const binding<T>& dep1,
-			const binding<T>& dep2)
+			const binding<T2>& dep1,
+			const binding<T3>& dep2)
 		: impl_(new impl(expression))
 	{
 		depend_on(dep1);
@@ -202,7 +215,7 @@ public:
 
 		return binding<T>(
 				[other, self] { return other + self->get(); },
-				other);
+				*this);
 	}
 
 	binding<T> operator+(const binding<T>& other) const
@@ -216,14 +229,108 @@ public:
 				other);
 	}
 
-	void unbind()
+	binding<T> operator-() const
 	{
-		impl_->unbind();
+		auto self = impl_;
+
+		return binding<T>(
+				[self] { return -self->get(); },
+				*this);
+	}
+
+	binding<T> operator-(const binding<T>& other) const
+	{
+		return *this + -other;
 	}
 
 	binding<T> operator-(T other) const
 	{
-		return add(-other);
+		return *this + -other;
+	}
+
+	binding<T> operator*(T other) const
+	{
+		auto self = impl_;
+
+		return binding<T>(
+				[other, self] { return other * self->get(); },
+				*this);
+	}
+
+	binding<T> operator*(const binding<T>& other) const
+	{
+		auto self = impl_;
+		auto o = other.impl_;
+
+		return binding<T>(
+				[self, o] { return o->get() * self->get(); },
+				*this,
+				other);
+	}
+
+	binding<T> operator/(T other) const
+	{
+		auto self = impl_;
+
+		return binding<T>(
+				[other, self] { return self->get() / other; },
+				*this);
+	}
+
+	binding<T> operator/(const binding<T>& other) const
+	{
+		auto self = impl_;
+		auto o = other.impl_;
+
+		return binding<T>(
+				[self, o] { return self->get() / o->get(); },
+				*this,
+				other);
+	}
+
+	binding<bool> operator==(T other) const
+	{
+		auto self = impl_;
+
+		return binding<bool>(
+				[other, self] { return self->get() == other; },
+				*this);
+	}
+
+	binding<bool> operator==(const binding<T>& other) const
+	{
+		auto self = impl_;
+		auto o = other.impl_;
+
+		return binding<bool>(
+				[self, o] { return self->get() == o->get(); },
+				*this,
+				other);
+	}
+
+	binding<bool> operator!=(T other) const
+	{
+		auto self = impl_;
+
+		return binding<bool>(
+				[other, self] { return self->get() != other; },
+				*this);
+	}
+
+	binding<bool> operator!=(const binding<T>& other) const
+	{
+		auto self = impl_;
+		auto o = other.impl_;
+
+		return binding<bool>(
+				[self, o] { return self->get() != o->get(); },
+				*this,
+				other);
+	}
+
+	void unbind()
+	{
+		impl_->unbind();
 	}
 
 	void on_change(
@@ -237,8 +344,8 @@ public:
 			const std::function<void ()>& listener) const
 	{
 		std::shared_ptr<void> subscription(new char);
-		
-		impl_->on_change(subscription, listener);
+
+		on_change(subscription, listener);
 		
 		return subscription;
 	}
