@@ -145,5 +145,8 @@
     <ClInclude Include="blocking_priority_queue.h">
       <Filter>source</Filter>
     </ClInclude>
+    <ClInclude Include="endian.h">
+      <Filter>source</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

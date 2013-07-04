@@ -156,6 +156,7 @@
     <ClInclude Include="compiler\vs\disable_silly_warnings.h" />
     <ClInclude Include="compiler\vs\stack_walker.h" />
     <ClInclude Include="diagnostics\graph.h" />
+    <ClInclude Include="endian.h" />
     <ClInclude Include="enum_class.h" />
     <ClInclude Include="env.h" />
     <ClInclude Include="except.h" />
