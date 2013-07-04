@@ -106,3 +106,8 @@
 /dependencies64/sfml
 /dependencies64/tbb
 
+/modules/psd/psd.vcxproj.user
+
+/test/psd-test/Debug
+
+/test/psd-test/psd-test.vcxproj.user
