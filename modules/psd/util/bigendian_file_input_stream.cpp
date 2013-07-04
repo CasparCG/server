@@ -21,6 +21,7 @@
 
 #include "bigendian_file_input_stream.h"
 #include "..\..\..\common\utf.h"
+#include <common/endian.h>
 #include <boost/locale.hpp>
 
 namespace caspar { namespace psd {
@@ -58,32 +59,34 @@ unsigned char BEFileInputStream::read_byte()
 
 unsigned short SWAP16(unsigned short inVal)
 {
-	unsigned short outVal;
-	__asm{
-		mov ax, inVal;
-		mov bl, ah;
-		mov bh, al;
-		mov outVal, bx;
-	}
-	return outVal;
+	return caspar::swap_byte_order(inVal);
+	//unsigned short outVal;
+	//__asm{
+	//	mov ax, inVal;
+	//	mov bl, ah;
+	//	mov bh, al;
+	//	mov outVal, bx;
+	//}
+	//return outVal;
 }
 
 unsigned long SWAP32(unsigned long inVal)
 {
-	unsigned long outVal;
-	__asm{
-		mov eax, inVal;	//1 2 ah = 3 al = 4
-		mov bl, ah;
-		mov bh, al;
+	return caspar::swap_byte_order(inVal);
+	//unsigned long outVal;
+	//__asm{
+	//	mov eax, inVal;	//1 2 ah = 3 al = 4
+	//	mov bl, ah;
+	//	mov bh, al;
 
-		ror ebx, 16;
-		ror eax, 16;
+	//	ror ebx, 16;
+	//	ror eax, 16;
 
-		mov bl, ah;
-		mov bh, al;
-		mov outVal, ebx;
-	}
-	return outVal;
+	//	mov bl, ah;
+	//	mov bh, al;
+	//	mov outVal, ebx;
+	//}
+	//return outVal;
 }
 
 unsigned short BEFileInputStream::read_short()

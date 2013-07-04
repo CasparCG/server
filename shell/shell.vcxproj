@@ -52,6 +52,9 @@
     <ProjectReference Include="..\modules\oal\oal.vcxproj">
       <Project>{82ed7ed6-8a15-40ec-a8af-f5e712e0da68}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\modules\psd\psd.vcxproj">
+      <Project>{866a164b-6f7a-450e-8452-c6ae4e176436}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\modules\reroute\reroute.vcxproj">
       <Project>{7d58bd57-fdd5-46e6-a23b-ed14b5314a0e}</Project>
     </ProjectReference>

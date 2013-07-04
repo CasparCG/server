@@ -33,10 +33,10 @@
 
 namespace caspar { namespace psd {
 
-class Document
+class psd_document
 {
 public:
-	Document();
+	psd_document();
 
 	std::vector<layer_ptr>& layers()
 	{

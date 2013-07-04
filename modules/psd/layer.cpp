@@ -171,18 +171,21 @@ void Layer::read_channel_data(BEFileInputStream& stream)
 {
 	image8bit_ptr img;
 	image8bit_ptr mask;
-	std::clog << std::endl << "layer: " << std::string(name().begin(), name().end()) << std::endl;
+	//std::clog << std::endl << "layer: " << std::string(name().begin(), name().end()) << std::endl;
 	
 	if(rect_.width() > 0 && rect_.height() > 0)
 	{
 		img = std::make_shared<image8bit>(rect_.width(), rect_.height(), std::min<unsigned char>(channels_.size() - masks_, 4));
-		std::clog << std::dec << "has image: [width: " << rect_.width() << " height: " << rect_.height() << "]" << std::endl;
+		//std::clog << std::dec << "has image: [width: " << rect_.width() << " height: " << rect_.height() << "]" << std::endl;
+
+		if(!get_channel(psd::Transparency))
+			std::memset(img->data(), (unsigned long)(255<<24), rect_.width()*rect_.height());
 	}
 
 	if(masks_ > 0 && mask_rect_.width() > 0 && mask_rect_.height() > 0)
 	{
 		mask = std::make_shared<image8bit>(mask_rect_.width(), mask_rect_.height(), 1);
-		std::clog << std::dec << "has mask: [width: " << mask_rect_.width() << " height: " << mask_rect_.height() << "]" << std::endl;
+		//std::clog << std::dec << "has mask: [width: " << mask_rect_.width() << " height: " << mask_rect_.height() << "]" << std::endl;
 	}
 
 	auto end = channels_.end();
@@ -198,7 +201,7 @@ void Layer::read_channel_data(BEFileInputStream& stream)
 		else if((*it)->id() >= -1)	//RGBA-data
 		{
 			target = img;
-			offset = ((*it)->id() >= 0) ? (*it)->id() : 3;
+			offset = ((*it)->id() >= 0) ? 2 - (*it)->id() : 3;
 		}
 		else if(mask)	//mask
 		{
@@ -212,19 +215,19 @@ void Layer::read_channel_data(BEFileInputStream& stream)
 		}
 
 		unsigned long cp = stream.current_position();	//TODO: remove, for debug purposes only
-		std::clog << std::dec << "channel_id: " << (*it)->id() << ", reading data from: " << std::hex << cp << ", data_length: " << (*it)->data_length() << std::endl;
+		//std::clog << std::dec << "channel_id: " << (*it)->id() << ", reading data from: " << std::hex << cp << ", data_length: " << (*it)->data_length() << std::endl;
 
 		if(!target)
 			discard_channel = true;
 
 		if(discard_channel)
 		{
-			std::clog << "	-> discarding" << std::endl;
+			//std::clog << "	-> discarding" << std::endl;
 			stream.discard_bytes((*it)->data_length());
 		}
 		else
 		{
-			std::clog << "	-> reading...";
+			//std::clog << "	-> reading...";
 			unsigned short encoding = stream.read_short();
 			if(target)
 			{
@@ -235,7 +238,7 @@ void Layer::read_channel_data(BEFileInputStream& stream)
 				else
 					throw PSDFileFormatException();
 			}
-			std::clog << " " << std::hex << (stream.current_position() - cp) << " bytes read" << std::endl;
+			//std::clog << " " << std::hex << (stream.current_position() - cp) << " bytes read" << std::endl;
 		}
 	}
 
