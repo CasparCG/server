@@ -2,11 +2,12 @@ CasparCG Server 2.0.4 Beta 1
 ============================
 
 Thank you for your interest in CasparCG Server, a professional software used to
-play out and record professional graphics, audio and video tomultiple outputs.
+play out and record professional graphics, audio and video to multiple outputs.
 It has been in 24/7 broadcast production since 2006.
 
 This release is NOT considered tested and stable, and it is NOT intended for use
-in professional production.
+in professional production. Please use CasparCG Server 2.0.3 if you need 
+proven stability!
 
 More information is available at http://casparcg.com/
 
@@ -67,7 +68,7 @@ INSTALLATION
 5. Make sure you turn off Windows' "Aero Theme" and "ClearType" font smoothing
    as they can interfere with CasparCG Server's OpenGL features!
 
-6. Start the "CasparCG_Server.exe" program and configure the settings.
+6. Start the "casparcg_server.exe" program and configure the settings.
 
 7. Connect to the Server from a client, such as the CasparCG Client 2.0.4
    (available as a separate download.)
