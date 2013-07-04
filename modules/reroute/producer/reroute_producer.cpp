@@ -54,6 +54,7 @@ namespace caspar { namespace reroute {
 class reroute_producer : public reactive::observer<std::map<int, core::draw_frame>>
 					   , public core::frame_producer_base
 {
+	core::constraints												constraints_;
 	const spl::shared_ptr<diagnostics::graph>						graph_;
 	
 	tbb::concurrent_bounded_queue<std::map<int, core::draw_frame>>	input_buffer_;
@@ -88,7 +89,12 @@ public:
 		}
 
 		return boost::accumulate(frames | boost::adaptors::map_values, core::draw_frame::empty(), core::draw_frame::over);
-	}	
+	}
+
+	core::constraints& pixel_constraints() override
+	{
+		return constraints_;
+	}
 		
 	std::wstring print() const override
 	{
