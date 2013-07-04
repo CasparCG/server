@@ -24,12 +24,12 @@
 
 namespace caspar { namespace psd {
 
-Document::Document() : channels_(0), width_(0), height_(0), depth_(0), color_mode_(InvalidColorMode)
+psd_document::psd_document() : channels_(0), width_(0), height_(0), depth_(0), color_mode_(InvalidColorMode)
 {
 }
 
 
-bool Document::parse(const std::wstring& filename)
+bool psd_document::parse(const std::wstring& filename)
 {
 	bool result = true;
 	
@@ -44,14 +44,13 @@ bool Document::parse(const std::wstring& filename)
 	}
 	catch(std::exception& ex)
 	{
-		std::clog << "ooops!" << std::endl;
 		result = false;
 	}
 
 	return result;
 }
 
-void Document::read_header()
+void psd_document::read_header()
 {
 	unsigned long signature = input_.read_long();
 	unsigned short version = input_.read_short();
@@ -67,13 +66,13 @@ void Document::read_header()
 	color_mode_ = int_to_color_mode(input_.read_short());
 }
 
-void Document::read_color_mode()
+void psd_document::read_color_mode()
 {
 	unsigned long length = input_.read_long();
 	input_.discard_bytes(length);
 }
 
-void Document::read_image_resources()
+void psd_document::read_image_resources()
 {
 	unsigned long section_length = input_.read_long();
 
@@ -180,7 +179,7 @@ void Document::read_image_resources()
 }
 
 
-void Document::read_layers()
+void psd_document::read_layers()
 {
 	//"Layer And Mask information"
 	unsigned long total_length = input_.read_long();	//length of "Layer and Mask information"
@@ -194,12 +193,12 @@ void Document::read_layers()
 			unsigned long end_of_layers_info = input_.current_position() + layer_info_length;
 
 			short layers_count = abs(static_cast<short>(input_.read_short()));
-			std::clog << "Expecting " << layers_count << " layers" << std::endl;
+			//std::clog << "Expecting " << layers_count << " layers" << std::endl;
 
 			for(unsigned short layerIndex = 0; layerIndex < layers_count; ++layerIndex)
 			{
 				layers_.push_back(Layer::create(input_));	//each layer reads it's "layer record"
-				std::clog << "Added layer: " << std::string(layers_[layerIndex]->name().begin(), layers_[layerIndex]->name().end()) << std::endl;
+				//std::clog << "Added layer: " << std::string(layers_[layerIndex]->name().begin(), layers_[layerIndex]->name().end()) << std::endl;
 			}
 
 			unsigned long channel_data_start = input_.current_position();	//TODO: remove. For debug purposes only
@@ -221,7 +220,6 @@ void Document::read_layers()
 	}
 	catch(std::exception& ex)
 	{
-		std::clog << "big oops";
 		input_.set_position(end_of_layers);
 	}
 }
