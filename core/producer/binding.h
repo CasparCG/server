@@ -29,38 +29,43 @@
 
 namespace caspar { namespace core {
 
+namespace detail {
+
+struct impl_base : std::enable_shared_from_this<impl_base>
+{
+	std::vector<std::shared_ptr<impl_base>> dependencies_;
+	mutable std::vector<std::pair<
+			std::weak_ptr<void>,
+			std::function<void ()>>> on_change_;
+
+	virtual ~impl_base()
+	{
+	}
+
+	virtual void evaluate() = 0;
+
+	void depend_on(const std::shared_ptr<impl_base>& dependency)
+	{
+		dependency->on_change(shared_from_this(), [=] { evaluate(); });
+		dependencies_.push_back(dependency);
+	}
+
+	void on_change(
+			const std::weak_ptr<void>& dependant,
+			const std::function<void ()>& listener) const
+	{
+		on_change_.push_back(std::make_pair(dependant, listener));
+	}
+};
+
+}
+
 template <typename T>
 class binding
 {
 private:
-	struct impl_base : std::enable_shared_from_this<impl_base>
-	{
-		std::vector<std::shared_ptr<impl_base>> dependencies_;
-		mutable std::vector<std::pair<
-				std::weak_ptr<void>,
-				std::function<void ()>>> on_change_;
 
-		virtual ~impl_base()
-		{
-		}
-
-		virtual void evaluate() = 0;
-
-		void depend_on(const std::shared_ptr<impl_base>& dependency)
-		{
-			dependency->on_change(shared_from_this(), [=] { evaluate(); });
-			dependencies_.push_back(dependency);
-		}
-
-		void on_change(
-				const std::weak_ptr<void>& dependant,
-				const std::function<void ()>& listener) const
-		{
-			on_change_.push_back(std::make_pair(dependant, listener));
-		}
-	};
-
-	struct impl : public impl_base
+	struct impl : public detail::impl_base
 	{
 		T value_;
 		std::function<T ()> expression_;
@@ -153,6 +158,8 @@ private:
 		}
 	};
 
+	template<typename> friend class binding;
+
 	std::shared_ptr<impl> impl_;
 public:
 	binding()
@@ -205,18 +212,15 @@ public:
 		return impl_->bound();
 	}
 
-	void depend_on(const binding<T>& other)
+	template<typename T2>
+	void depend_on(const binding<T2>& other)
 	{
 		impl_->depend_on(other.impl_);
 	}
 
 	binding<T> operator+(T other) const
 	{
-		auto self = impl_;
-
-		return binding<T>(
-				[other, self] { return other + self->get(); },
-				*this);
+		return transformed([other](T self) { return self + other; });
 	}
 
 	binding<T> operator+(const binding<T>& other) const
@@ -232,11 +236,7 @@ public:
 
 	binding<T> operator-() const
 	{
-		auto self = impl_;
-
-		return binding<T>(
-				[self] { return -self->get(); },
-				*this);
+		return transformed([](T self) { return -self; });
 	}
 
 	binding<T> operator-(const binding<T>& other) const
@@ -251,11 +251,7 @@ public:
 
 	binding<T> operator*(T other) const
 	{
-		auto self = impl_;
-
-		return binding<T>(
-				[other, self] { return other * self->get(); },
-				*this);
+		return transformed([other](T self) { return self * other; });
 	}
 
 	binding<T> operator*(const binding<T>& other) const
@@ -271,11 +267,7 @@ public:
 
 	binding<T> operator/(T other) const
 	{
-		auto self = impl_;
-
-		return binding<T>(
-				[other, self] { return self->get() / other; },
-				*this);
+		return transformed([other](T self) { return self / other; });
 	}
 
 	binding<T> operator/(const binding<T>& other) const
@@ -291,11 +283,7 @@ public:
 
 	binding<bool> operator==(T other) const
 	{
-		auto self = impl_;
-
-		return binding<bool>(
-				[other, self] { return self->get() == other; },
-				*this);
+		return transformed([other](T self) { return self == other; });
 	}
 
 	binding<bool> operator==(const binding<T>& other) const
@@ -311,11 +299,7 @@ public:
 
 	binding<bool> operator!=(T other) const
 	{
-		auto self = impl_;
-
-		return binding<bool>(
-				[other, self] { return self->get() != other; },
-				*this);
+		return transformed([other](T self) { return self != other; });
 	}
 
 	binding<bool> operator!=(const binding<T>& other) const
@@ -327,6 +311,23 @@ public:
 				[self, o] { return self->get() != o->get(); },
 				*this,
 				other);
+	}
+
+	template<typename T2>
+	binding<T2> as() const
+	{
+		return transformed([](T val) { return static_cast<T2>(val); });
+	}
+
+	template<typename Func>
+	auto transformed(const Func& func) const -> binding<decltype(func(impl_->value_))>
+	{
+		typedef decltype(func(impl_->value_)) R;
+		auto self = impl_;
+
+		return binding<R>(
+				[self, func] { return func(self->get()); },
+				*this);
 	}
 
 	void unbind()
