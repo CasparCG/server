@@ -33,6 +33,7 @@
 #include <core/video_format.h>
 #include <core/producer/stage.h>
 #include <core/producer/frame_producer.h>
+#include <core/producer/scene/scene_producer.h>
 #include <core/consumer/output.h>
 
 #include <modules/bluefish/bluefish.h>
@@ -98,6 +99,8 @@ struct server::impl : boost::noncopyable
 		flash::init();		  
 		CASPAR_LOG(info) << L"Initialized flash module.";
 
+		register_producer_factory(&core::scene::create_dummy_scene_producer);
+
 		setup_channels(env::properties());
 		CASPAR_LOG(info) << L"Initialized channels.";
 
@@ -133,7 +136,7 @@ struct server::impl : boost::noncopyable
 				{
 					auto name = xml_consumer.first;
 					if(name == L"screen")
-						channel->output().add(caspar::screen::create_consumer(xml_consumer.second));					
+						channel->output().add(caspar::screen::create_consumer(xml_consumer.second, &channel->stage()));					
 					else if(name == L"bluefish")					
 						channel->output().add(bluefish::create_consumer(xml_consumer.second));					
 					else if(name == L"decklink")					

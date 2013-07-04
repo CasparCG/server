@@ -269,7 +269,7 @@ unique_ptr<T> const_pointer_cast(const unique_ptr<T2>& p)
 template <class T, class T2>
 unique_ptr<T> dynamic_pointer_cast(const unique_ptr<T2>& p)
 {
-    aT2to temp = std::dynamic_pointer_cast<T>(std::unique_ptr<T2>(p));
+    auto temp = std::dynamic_pointer_cast<T>(std::unique_ptr<T2>(p));
     if(!temp)
         throw std::bad_cast();
     return unique_ptr<T>(std::move(temp));
@@ -599,7 +599,7 @@ shared_ptr<T> const_pointer_cast(const shared_ptr<T2>& p)
 template <class T, class T2>
 shared_ptr<T> dynamic_pointer_cast(const shared_ptr<T2>& p)
 {
-    aT2to temp = std::dynamic_pointer_cast<T>(std::shared_ptr<T2>(p));
+    auto temp = std::dynamic_pointer_cast<T>(std::shared_ptr<T2>(p));
     if(!temp)
         throw std::bad_cast();
     return shared_ptr<T>(std::move(temp));

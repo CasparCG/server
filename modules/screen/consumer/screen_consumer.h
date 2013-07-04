@@ -22,6 +22,7 @@
 #pragma once
 
 #include <common/memory.h>
+#include <core/interaction/interaction_sink.h>
 
 #include <vector>
 #include <boost/property_tree/ptree.hpp>
@@ -36,6 +37,6 @@ namespace screen {
 
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params);
-spl::shared_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree);
+spl::shared_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree, core::interaction_sink* sink);
 
 }}
