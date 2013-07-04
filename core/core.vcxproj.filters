@@ -136,6 +136,9 @@
     <ClInclude Include="producer\binding.h">
       <Filter>source\producer</Filter>
     </ClInclude>
+    <ClInclude Include="producer\scene\const_producer.h">
+      <Filter>source\producer\scene</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
@@ -197,6 +200,9 @@
       <Filter>source\producer\draw</Filter>
     </ClCompile>
     <ClCompile Include="producer\scene\scene_producer.cpp">
+      <Filter>source\producer\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\scene\const_producer.cpp">
       <Filter>source\producer\scene</Filter>
     </ClCompile>
   </ItemGroup>
