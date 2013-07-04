@@ -69,6 +69,8 @@ public:
 	void unsubscribe(const monitor::observable::observer_ptr& o) override;
 	layer& create_layer(
 			const spl::shared_ptr<frame_producer>& producer, int x, int y);
+	layer& create_layer(const spl::shared_ptr<frame_producer>& producer);
+	binding<int64_t> frame();
 private:
 	struct impl;
 	std::unique_ptr<impl> impl_;

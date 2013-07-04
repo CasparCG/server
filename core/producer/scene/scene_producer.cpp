@@ -41,8 +41,9 @@ adjustments::adjustments()
 struct scene_producer::impl
 {
 	constraints pixel_constraints_;
-	std::vector<layer> layers_;
+	std::list<layer> layers_;
 	interaction_aggregator aggregator_;
+	binding<int64_t> frame_number_;
 
 	impl(int width, int height)
 		: pixel_constraints_(width, height)
@@ -53,14 +54,26 @@ struct scene_producer::impl
 	layer& create_layer(
 			const spl::shared_ptr<frame_producer>& producer, int x, int y)
 	{
-		layer layer(producer);
+		layer& layer = create_layer(producer);
 
 		layer.position.x.set(x);
 		layer.position.y.set(y);
 
+		return layer;
+	}
+
+	layer& create_layer(const spl::shared_ptr<frame_producer>& producer)
+	{
+		layer layer(producer);
+
 		layers_.push_back(layer);
 
 		return layers_.back();
+	}
+
+	binding<int64_t> frame()
+	{
+		return frame_number_;
 	}
 
 	frame_transform get_transform(const layer& layer) const
@@ -93,6 +106,8 @@ struct scene_producer::impl
 			frame.transform() = get_transform(layer);;
 			frames.push_back(frame);
 		}
+
+		frame_number_.set(frame_number_.get() + 1);
 
 		return draw_frame(frames);
 	}
@@ -168,6 +183,17 @@ layer& scene_producer::create_layer(
 	return impl_->create_layer(producer, x, y);
 }
 
+layer& scene_producer::create_layer(
+		const spl::shared_ptr<frame_producer>& producer)
+{
+	return impl_->create_layer(producer);
+}
+
+binding<int64_t> scene_producer::frame()
+{
+	return impl_->frame();
+}
+
 draw_frame scene_producer::receive_impl()
 {
 	return impl_->render_frame();
@@ -215,13 +241,13 @@ spl::shared_ptr<frame_producer> create_dummy_scene_producer(const spl::shared_pt
 	if (params.size() < 1 || params.at(0) != L"[SCENE]")
 		return core::frame_producer::empty();
 
-	auto scene = spl::make_shared<scene_producer>(160, 90);
+	auto scene = spl::make_shared<scene_producer>(1280, 720);
 
-	std::vector<std::wstring> sub_params;
 
-	binding<int> text_width(10);
-	binding<int> padding(1);
-	binding<int> panel_width = padding + text_width + padding;
+	binding<double> text_width(10);
+	binding<double> padding(1);
+	binding<double> panel_width = padding + text_width + padding;
+	binding<double> panel_height(50);
 
 	auto subscription = panel_width.on_change([&]
 	{
@@ -233,19 +259,47 @@ spl::shared_ptr<frame_producer> create_dummy_scene_producer(const spl::shared_pt
 	padding.set(2);
 	text_width.set(20);
 
+	auto create_param = [](std::wstring elem) -> std::vector<std::wstring>
+	{
+		std::vector<std::wstring> result;
+		result.push_back(elem);
+		return result;
+	};
+
+	scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"car")));
+	std::vector<std::wstring> sub_params;
 	sub_params.push_back(L"[FREEHAND]");
-	sub_params.push_back(L"100");
-	sub_params.push_back(L"50");
+	sub_params.push_back(L"640");
+	sub_params.push_back(L"360");
 	scene->create_layer(create_producer(frame_factory, format_desc, sub_params), 10, 10);
 	sub_params.clear();
 
-	sub_params.push_back(L"BLUE");
-	scene->create_layer(create_producer(frame_factory, format_desc, sub_params), 110, 10);
-	sub_params.clear();
+	scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"BLUE")), 110, 10);
 
-	sub_params.push_back(L"SP");
-	scene->create_layer(create_producer(frame_factory, format_desc, sub_params), 50, 50);
-	sub_params.clear();
+	//scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"SP")), 50, 50);
+
+	auto& upper_left = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"scene/upper_left")));
+	auto& upper_right = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"scene/upper_right")));
+	auto& lower_left = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"scene/lower_left")));
+	auto& lower_right = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"scene/lower_right")));
+
+	binding<double> panel_x = scene->frame()
+			.as<double>()
+			.transformed([](double v) { return std::sin(v / 20.0); })
+			* 20.0
+			+ 40.0;
+	binding<double> panel_y(500);
+	upper_left.position.x = panel_x;
+	upper_left.position.y = panel_y;
+	upper_right.position.x = upper_left.position.x + upper_left.producer.get()->pixel_constraints().width + panel_width;
+	upper_right.position.y = upper_left.position.y;
+	lower_left.position.x = upper_left.position.x;
+	lower_left.position.y = upper_left.position.y + upper_left.producer.get()->pixel_constraints().height + panel_height;
+	lower_right.position.x = upper_right.position.x;
+	lower_right.position.y = lower_left.position.y;
+
+	text_width.set(500);
+	panel_height.set(50);
 
 	return scene;
 }
