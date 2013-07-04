@@ -51,6 +51,7 @@ struct image_producer : public core::frame_producer_base
 	monitor::basic_subject	event_subject_;
 	const std::wstring		filename_;
 	core::draw_frame		frame_;
+	core::constraints		constraints_;
 	
 	explicit image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename) 
 		: filename_(filename)
@@ -60,11 +61,15 @@ struct image_producer : public core::frame_producer_base
 		FreeImage_FlipVertical(bitmap.get());
 		
 		core::pixel_format_desc desc = core::pixel_format::bgra;
-		desc.planes.push_back(core::pixel_format_desc::plane(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), 4));
+		auto width = FreeImage_GetWidth(bitmap.get());
+		auto height = FreeImage_GetHeight(bitmap.get());
+		desc.planes.push_back(core::pixel_format_desc::plane(width, height, 4));
 		auto frame = frame_factory->create_frame(this, desc);
 
 		std::copy_n(FreeImage_GetBits(bitmap.get()), frame.image_data(0).size(), frame.image_data(0).begin());
 		frame_ = core::draw_frame(std::move(frame));
+		constraints_.width.set(width);
+		constraints_.height.set(height);
 
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}
@@ -76,6 +81,11 @@ struct image_producer : public core::frame_producer_base
 		event_subject_ << monitor::event("file/path") % filename_;
 
 		return frame_;
+	}
+
+	core::constraints& pixel_constraints() override
+	{
+		return constraints_;
 	}
 			
 	std::wstring print() const override

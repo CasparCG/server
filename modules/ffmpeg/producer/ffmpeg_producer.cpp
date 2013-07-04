@@ -82,6 +82,7 @@ struct ffmpeg_producer : public core::frame_producer_base
 	std::unique_ptr<video_decoder>					video_decoder_;
 	std::unique_ptr<audio_decoder>					audio_decoder_;	
 	frame_muxer										muxer_;
+	core::constraints								constraints_;
 	
 	core::draw_frame								last_frame_;
 
@@ -113,6 +114,8 @@ public:
 		{
 			video_decoder_.reset(new video_decoder(input_));
 			video_decoder_->subscribe(event_subject_);
+			constraints_.width.set(video_decoder_->width());
+			constraints_.height.set(video_decoder_->height());
 			
 			CASPAR_LOG(info) << print() << L" " << video_decoder_->print();
 		}
@@ -187,7 +190,12 @@ public:
 		end_seek();
 		return core::draw_frame::still(last_frame_);
 	}
-		
+
+	core::constraints& pixel_constraints() override
+	{
+		return constraints_;
+	}
+
 	uint32_t nb_frames() const override
 	{
 		if(input_.loop())
