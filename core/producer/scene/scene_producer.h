@@ -40,7 +40,7 @@ struct adjustments
 
 struct layer
 {
-	binding<const std::wstring> name;
+	binding<std::wstring> name;
 	coord position;
 	adjustments adjustments;
 	binding<spl::shared_ptr<frame_producer>> producer;
