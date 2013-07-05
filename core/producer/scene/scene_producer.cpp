@@ -102,6 +102,9 @@ struct scene_producer::impl
 
 		BOOST_FOREACH(auto& layer, layers_)
 		{
+			if (layer.hidden.get())
+				continue;
+
 			draw_frame frame(layer.producer.get()->receive());
 			frame.transform() = get_transform(layer);;
 			frames.push_back(frame);
@@ -126,6 +129,9 @@ struct scene_producer::impl
 	{
 		BOOST_FOREACH(auto& layer, layers_ | boost::adaptors::reversed)
 		{
+			if (layer.hidden.get())
+				continue;
+
 			auto transform = get_transform(layer);
 			auto translated = translate(x, y, transform);
 
@@ -243,7 +249,6 @@ spl::shared_ptr<frame_producer> create_dummy_scene_producer(const spl::shared_pt
 
 	auto scene = spl::make_shared<scene_producer>(1280, 720);
 
-
 	binding<double> text_width(10);
 	binding<double> padding(1);
 	binding<double> panel_width = padding + text_width + padding;
@@ -266,7 +271,8 @@ spl::shared_ptr<frame_producer> create_dummy_scene_producer(const spl::shared_pt
 		return result;
 	};
 
-	scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"car")));
+	auto& car_layer = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"car")));
+	car_layer.hidden = scene->frame() % 50 > 25 || !(scene->frame() < 1000);
 	std::vector<std::wstring> sub_params;
 	sub_params.push_back(L"[FREEHAND]");
 	sub_params.push_back(L"640");
@@ -283,12 +289,13 @@ spl::shared_ptr<frame_producer> create_dummy_scene_producer(const spl::shared_pt
 	auto& lower_left = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"scene/lower_left")));
 	auto& lower_right = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"scene/lower_right")));
 
-	binding<double> panel_x = scene->frame()
+	binding<double> panel_x = (scene->frame()
 			.as<double>()
 			.transformed([](double v) { return std::sin(v / 20.0); })
 			* 20.0
-			+ 40.0;
-	binding<double> panel_y(500);
+			+ 40.0)
+			.transformed([](double v) { return std::floor(v); }); // snap to pixels instead of subpixels
+	binding<double> panel_y = when(car_layer.hidden).then(500.0).otherwise(-panel_x + 300);
 	upper_left.position.x = panel_x;
 	upper_left.position.y = panel_y;
 	upper_right.position.x = upper_left.position.x + upper_left.producer.get()->pixel_constraints().width + panel_width;
