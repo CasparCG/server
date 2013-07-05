@@ -66,7 +66,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>..\..\;..\..\dependencies64\boost\;C:\Lokala Filer\Utveckling\CasparCG\Server 2.1\dependencies64\tbb\include;$(IncludePath)</IncludePath>
+    <IncludePath>..\..\;..\..\dependencies64\boost\;..\..\dependencies64\tbb\include;$(IncludePath)</IncludePath>
     <OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)tmp\$(Configuration)\</IntDir>
   </PropertyGroup>
