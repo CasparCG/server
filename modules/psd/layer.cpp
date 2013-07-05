@@ -198,14 +198,14 @@ void Layer::read_channel_data(BEFileInputStream& stream)
 		//determine target bitmap and offset
 		if((*it)->id() >= 3)
 			discard_channel = true;	//discard channels that doesn't contribute to the final image
-		else if((*it)->id() >= -1)	//RGBA-data
+		else if((*it)->id() >= -1)	//BGRA-data
 		{
 			target = img;
 			offset = ((*it)->id() >= 0) ? 2 - (*it)->id() : 3;
 		}
 		else if(mask)	//mask
 		{
-			if((*it)->id() == -2 && masks_ == 2)	//if there are two mask-channels, discard the the one that's not the total mask for now
+			if((*it)->id() == -2 && masks_ == 2)	//if there are two mask-channels, discard the the one that's not the total mask
 				discard_channel = true;
 			else
 			{
@@ -214,7 +214,7 @@ void Layer::read_channel_data(BEFileInputStream& stream)
 			}
 		}
 
-		unsigned long cp = stream.current_position();	//TODO: remove, for debug purposes only
+		//unsigned long cp = stream.current_position();	//for debug purposes only
 		//std::clog << std::dec << "channel_id: " << (*it)->id() << ", reading data from: " << std::hex << cp << ", data_length: " << (*it)->data_length() << std::endl;
 
 		if(!target)
@@ -309,35 +309,6 @@ void Layer::read_rle_image_data(BEFileInputStream& stream, const channel_ptr& ch
 		while(colIndex < width);
 	}
 }
-
-//
-//image_ptr Layer::read_image(BEFileInputStream& stream)
-//{
-//	if(image == NULL)
-//	{
-//		unsigned char channels = (channels_.size() > 3) ? 4 : 3;
-//
-//		image = std::make_shared<Image>(static_cast<unsigned short>(rect_.width()), static_cast<unsigned short>(rect_.height()),  channels);
-//
-//		channel_ptr pChannel = get_channel(ColorRed);
-//		if(pChannel != NULL)
-//			pChannel->GetChannelImageData(stream, image, 0);
-//
-//		pChannel = get_channel(ColorGreen);
-//		if(pChannel != NULL)
-//			pChannel->GetChannelImageData(stream, image, 1);
-//
-//		pChannel = get_channel(ColorBlue);
-//		if(pChannel != NULL)
-//			pChannel->GetChannelImageData(stream, image, 2);
-//
-//		pChannel = get_channel(Transparency);
-//		if(channels == 4 && pChannel != NULL)
-//			pChannel->GetChannelImageData(stream, image, 3);
-//	}
-//
-//	return image;
-//}
 
 }	//namespace psd
 }	//namespace caspar
