@@ -42,14 +42,33 @@ public:
 	{
 		return layers_;
 	}
-	unsigned long width()
+	unsigned long width() const
 	{
 		return width_;
 	}
-	unsigned long height()
+	unsigned long height() const
 	{
 		return height_;
 	}
+
+	psd::color_mode color_mode() const
+	{
+		return color_mode_;
+	}
+
+	unsigned short color_depth() const
+	{
+		return depth_;
+	}
+	unsigned short channels_count() const
+	{
+		return channels_;
+	}
+	const std::wstring& filename() const
+	{
+		return filename_;
+	}
+
 
 	bool parse(const std::wstring& s);
 
@@ -68,7 +87,7 @@ private:
 	unsigned long				width_;
 	unsigned long				height_;
 	unsigned short				depth_;
-	color_mode					color_mode_;
+	psd::color_mode				color_mode_;
 };
 
 }	//namespace psd
