@@ -135,6 +135,8 @@ public:
 	{		
 		is_running_ = false;
 
+		cond_.notify_one();
+
 		thread_.join();
 	}
 	
