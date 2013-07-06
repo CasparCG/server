@@ -46,7 +46,7 @@
 #include <atlbase.h>
 
 #include <protocol/amcp/AMCPProtocolStrategy.h>
-#include <protocol/osc/server.h>
+#include <protocol/osc/client.h>
 
 #include <modules/bluefish/bluefish.h>
 #include <modules/decklink/decklink.h>

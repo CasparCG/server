@@ -56,7 +56,7 @@
 #include <protocol/CLK/CLKProtocolStrategy.h>
 #include <protocol/util/AsyncEventServer.h>
 #include <protocol/util/stateful_protocol_strategy_wrapper.h>
-#include <protocol/osc/server.h>
+#include <protocol/osc/client.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
@@ -75,7 +75,7 @@ struct server::implementation : boost::noncopyable
 	boost::promise<bool>&						shutdown_server_now_;
 	safe_ptr<ogl_device>						ogl_;
 	std::vector<safe_ptr<IO::AsyncEventServer>> async_servers_;	
-	std::vector<osc::server>					osc_servers_;
+	std::vector<osc::client>					osc_client_;
 	std::vector<safe_ptr<video_channel>>		channels_;
 	std::shared_ptr<thumbnail_generator>		thumbnail_generator_;
 
@@ -186,7 +186,7 @@ struct server::implementation : boost::noncopyable
 					const auto address = xml_controller.second.get(L"address", L"127.0.0.1");
 					const auto port = xml_controller.second.get<unsigned short>(L"port", 5253);
 
-					osc_servers_.push_back(osc::server(boost::asio::ip::udp::endpoint(boost::asio::ip::address_v4::from_string(narrow(address)), port), monitor_subject_));
+					osc_client_.push_back(osc::client(boost::asio::ip::udp::endpoint(boost::asio::ip::address_v4::from_string(narrow(address)), port), monitor_subject_));
 				}
 				else
 					CASPAR_LOG(warning) << "Invalid controller: " << widen(name);	

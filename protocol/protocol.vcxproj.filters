@@ -97,7 +97,7 @@
     <ClInclude Include="osc\oscpack\OscOutboundPacketStream.h">
       <Filter>source\osc\oscpack</Filter>
     </ClInclude>
-    <ClInclude Include="osc\server.h">
+    <ClInclude Include="osc\client.h">
       <Filter>source\osc</Filter>
     </ClInclude>
   </ItemGroup>
@@ -151,7 +151,7 @@
     <ClCompile Include="osc\oscpack\OscOutboundPacketStream.cpp">
       <Filter>source\osc\oscpack</Filter>
     </ClCompile>
-    <ClCompile Include="osc\server.cpp">
+    <ClCompile Include="osc\client.cpp">
       <Filter>source\osc</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,6 +1,6 @@
 #include "..\stdafx.h"
 
-#include "server.h"
+#include "client.h"
 
 #include "oscpack/oscOutboundPacketStream.h"
 
@@ -55,7 +55,7 @@ std::vector<char> write_osc_event(const core::monitor::message& e)
 	return std::vector<char>(o.Data(), o.Data() + o.Size());
 }
 
-struct server::impl
+struct client::impl
 {
 	boost::asio::io_service						service_;
 
@@ -98,24 +98,24 @@ public:
 	}
 };
 
-server::server(udp::endpoint endpoint, 
+client::client(udp::endpoint endpoint, 
 			   Concurrency::ISource<core::monitor::message>& source) 
 	: impl_(new impl(endpoint, source))
 {
 }
 
-server::server(server&& other)
+client::client(client&& other)
 	: impl_(std::move(other.impl_))
 {
 }
 
-server& server::operator=(server&& other)
+client& client::operator=(client&& other)
 {
 	impl_ = std::move(other.impl_);
 	return *this;
 }
 
-server::~server()
+client::~client()
 {
 }
 
