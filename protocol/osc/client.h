@@ -7,26 +7,26 @@
 
 namespace caspar { namespace protocol { namespace osc {
 
-class server
+class client
 {
-	server(const server&);
-	server& operator=(const server&);
+	client(const client&);
+	client& operator=(const client&);
 public:	
 
 	// Static Members
 
 	// Constructors
 
-	server(boost::asio::ip::udp::endpoint endpoint, 
+	client(boost::asio::ip::udp::endpoint endpoint, 
 		   Concurrency::ISource<core::monitor::message>& source);
 	
-	server(server&&);
+	client(client&&);
 
-	~server();
+	~client();
 
 	// Methods
 		
-	server& operator=(server&&);
+	client& operator=(client&&);
 	
 	// Properties
 
