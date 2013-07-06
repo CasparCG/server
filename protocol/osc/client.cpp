@@ -156,33 +156,25 @@ public:
 
 			boost::unique_lock<boost::mutex> cond_lock(cond_mutex_);
 					
-			if(cond_.timed_wait(cond_lock, boost::posix_time::milliseconds(500)))
-			{					
-				auto& updates = updates_[(++updates_counter_ - 1) % 1];
+			cond_.wait(cond_lock);
+				
+			auto& updates = updates_[(++updates_counter_ - 1) % 1];
 
-				BOOST_FOREACH(auto& slot, updates)		
-				{
-					if(slot.second.empty())
-						continue;
-
-					auto it = state.lower_bound(slot.first);
-					if(it == std::end(state) || state.key_comp()(slot.first, it->first))
-						it = state.insert(it, std::make_pair(slot.first, slot.second));
-					else
-						std::swap(it->second, slot.second);
-
-					slot.second.clear();
-
-					buffers.push_back(boost::asio::buffer(it->second));
-				}
-			}
-			else
+			BOOST_FOREACH(auto& slot, updates)		
 			{
-				BOOST_FOREACH(auto& slot, state)		
-				{
-					buffers.push_back(boost::asio::buffer(slot.second));
-				}
-			}		
+				if(slot.second.empty())
+					continue;
+
+				auto it = state.lower_bound(slot.first);
+				if(it == std::end(state) || state.key_comp()(slot.first, it->first))
+					it = state.insert(it, std::make_pair(slot.first, slot.second));
+				else
+					std::swap(it->second, slot.second);
+
+				slot.second.clear();
+
+				buffers.push_back(boost::asio::buffer(it->second));
+			}
 
 			if(!buffers.empty())
 				socket_.send_to(buffers, endpoint_);
