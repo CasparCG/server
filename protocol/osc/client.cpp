@@ -157,11 +157,10 @@ public:
 		is_running_ = true;
 
 		std::unordered_map<std::string, byte_vector> updates;
+		std::vector<boost::asio::mutable_buffers_1>	 buffers;
 
 		while(true)
 		{
-			std::vector<boost::asio::mutable_buffers_1>	buffers;
-
 			boost::unique_lock<boost::mutex> cond_lock(cond_mutex_);
 					
 			cond_.wait(cond_lock);
@@ -179,7 +178,8 @@ public:
 
 			if(!buffers.empty())
 				socket_.send_to(buffers, endpoint_);
-
+			
+			buffers.clear();
 			updates.clear();
 		}
 	}
