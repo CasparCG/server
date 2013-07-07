@@ -9,7 +9,6 @@
 #include <boost/asio.hpp>
 #include <boost/foreach.hpp>
 #include <boost/thread.hpp>
-#include <boost/timer.hpp>
 
 #include <tbb/atomic.h>
 #include <tbb/cache_aligned_allocator.h>
@@ -159,28 +158,25 @@ public:
 			is_running_ = true;
 
 			std::unordered_map<std::string, byte_vector> updates;
-			std::vector<boost::asio::mutable_buffers_1>	 buffers;
+			
+			boost::unique_lock<boost::mutex> cond_lock(cond_mutex_);
 
-			while(true)
-			{
-				boost::unique_lock<boost::mutex> cond_lock(cond_mutex_);
-					
+			while(is_running_)
+			{					
 				cond_.wait(cond_lock);
-
-				if(!is_running_)
-					break;
-							
+											
 				{
 					boost::lock_guard<boost::mutex> lock(updates_mutex_);
 					std::swap(updates, updates_);
 				}
 						
+				std::vector<boost::asio::mutable_buffers_1>	 buffers;
+
 				BOOST_FOREACH(auto& slot, updates)		
 					buffers.push_back(boost::asio::buffer(slot.second));
 			
 				socket_.send_to(buffers, endpoint_);
 			
-				buffers.clear();
 				updates.clear();
 			}
 		}
