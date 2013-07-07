@@ -59,34 +59,10 @@ struct param_visitor : public boost::static_visitor<void>
 	void operator()(const std::vector<int8_t>& value)	{o << ::osc::Blob(value.data(), static_cast<unsigned long>(value.size()));}
 };
 
-struct size_visitor : public boost::static_visitor<std::size_t>
-{		
-	static inline long round_up(long x)
-	{
-		return ((x-1) & (~0x03L)) + 4;
-	}
-
-	std::size_t operator()(const bool value)					{ return round_up(sizeof(bool)); }
-	std::size_t operator()(const int32_t value)					{ return round_up(sizeof(int64_t)); }
-	std::size_t operator()(const uint32_t value)				{ return round_up(sizeof(int64_t)); }
-	std::size_t operator()(const int64_t value)					{ return round_up(sizeof(int64_t)); }
-	std::size_t operator()(const uint64_t value)				{ return round_up(sizeof(int64_t)); }
-	std::size_t operator()(const float value)					{ return round_up(sizeof(float)); }
-	std::size_t operator()(const double value)					{ return round_up(sizeof(float)); }
-	std::size_t operator()(const std::string& value)			{ return round_up(value.size() + 1); }
-	std::size_t operator()(const std::wstring& value)			{ return round_up(value.size() + 1); }
-	std::size_t operator()(const std::vector<int8_t>& value)	{ return round_up(value.size()); }
-};
 
 void write_osc_event(byte_vector& destination, const core::monitor::message& e)
-{
-	std::size_t size = 256; // This should be enough to cover address, padding and meta-data.
-		
-	size_visitor size_visitor;
-	BOOST_FOREACH(const auto& data, e.data())
-		size += boost::apply_visitor(size_visitor, data);
-
-	destination.resize(size);
+{		
+	destination.resize(4096);
 
 	::osc::OutboundPacketStream o(reinterpret_cast<char*>(destination.data()), static_cast<unsigned long>(destination.size()));
 
