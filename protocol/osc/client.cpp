@@ -170,9 +170,9 @@ public:
 					std::swap(updates, updates_);
 				}
 						
-				std::vector<boost::asio::mutable_buffers_1>	 buffers;
+				std::vector<boost::asio::const_buffers_1>	 buffers;
 
-				BOOST_FOREACH(auto& slot, updates)		
+				BOOST_FOREACH(const auto& slot, updates)		
 					buffers.push_back(boost::asio::buffer(slot.second));
 			
 				socket_.send_to(buffers, endpoint_);
