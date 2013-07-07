@@ -175,7 +175,8 @@ public:
 				BOOST_FOREACH(const auto& slot, updates)		
 					buffers.push_back(boost::asio::buffer(slot.second));
 			
-				socket_.send_to(buffers, endpoint_);
+				boost::system::error_code ec;
+				socket_.send_to(buffers, endpoint_, 0, ec);
 			
 				updates.clear();
 			}
