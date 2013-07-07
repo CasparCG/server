@@ -154,33 +154,39 @@ public:
 
 	void run()
 	{
-		is_running_ = true;
-
-		std::unordered_map<std::string, byte_vector> updates;
-		std::vector<boost::asio::mutable_buffers_1>	 buffers;
-
-		while(true)
+		try
 		{
-			boost::unique_lock<boost::mutex> cond_lock(cond_mutex_);
-					
-			cond_.wait(cond_lock);
+			is_running_ = true;
 
-			if(!is_running_)
-				break;
-							
+			std::unordered_map<std::string, byte_vector> updates;
+			std::vector<boost::asio::mutable_buffers_1>	 buffers;
+
+			while(true)
 			{
-				boost::lock_guard<boost::mutex> lock(updates_mutex_);
-				std::swap(updates, updates_);
-			}
-						
-			BOOST_FOREACH(auto& slot, updates)		
-				buffers.push_back(boost::asio::buffer(slot.second));
+				boost::unique_lock<boost::mutex> cond_lock(cond_mutex_);
+					
+				cond_.wait(cond_lock);
 
-			if(!buffers.empty())
+				if(!is_running_)
+					break;
+							
+				{
+					boost::lock_guard<boost::mutex> lock(updates_mutex_);
+					std::swap(updates, updates_);
+				}
+						
+				BOOST_FOREACH(auto& slot, updates)		
+					buffers.push_back(boost::asio::buffer(slot.second));
+			
 				socket_.send_to(buffers, endpoint_);
 			
-			buffers.clear();
-			updates.clear();
+				buffers.clear();
+				updates.clear();
+			}
+		}
+		catch(...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 	}
 };
