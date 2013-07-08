@@ -85,10 +85,8 @@ struct client::impl
 	udp::socket										socket_;	
 	
 	std::unordered_map<std::string, byte_vector>	updates_;
-	boost::mutex									updates_mutex_;
-								
-	boost::condition_variable						cond_;
-	boost::mutex									cond_mutex_;
+	boost::mutex									updates_mutex_;								
+	boost::condition_variable						updates_cond_;
 
 	tbb::atomic<bool>								is_running_;
 
@@ -111,27 +109,25 @@ public:
 	{		
 		is_running_ = false;
 
-		cond_.notify_all();
+		updates_cond_.notify_one();
 
 		thread_.join();
 	}
 	
 	void on_next(const core::monitor::message& msg)
-	{				
-		{
-			boost::lock_guard<boost::mutex> lock(updates_mutex_);
+	{		
+		boost::lock_guard<boost::mutex> lock(updates_mutex_);
 
-			try
-			{
-				write_osc_event(updates_[msg.path()], msg);
-			}
-			catch(...)
-			{
-				updates_.erase(msg.path());
-			}
+		try
+		{
+			write_osc_event(updates_[msg.path()], msg);
+		}
+		catch(...)
+		{
+			updates_.erase(msg.path());
 		}
 
-		cond_.notify_all();
+		updates_cond_.notify_one();
 	}
 
 	void run()
@@ -142,17 +138,17 @@ public:
 
 			std::unordered_map<std::string, byte_vector> updates;
 			
-			boost::unique_lock<boost::mutex> cond_lock(cond_mutex_);
 
 			while(is_running_)
-			{					
-				cond_.wait(cond_lock);
-											
-				{
-					boost::lock_guard<boost::mutex> lock(updates_mutex_);
+			{		
+				{			
+					boost::unique_lock<boost::mutex> cond_lock(updates_mutex_);
+
+					updates_cond_.wait(cond_lock);		
+
 					std::swap(updates, updates_);
 				}
-						
+
 				std::vector<boost::asio::const_buffers_1> buffers;
 
 				BOOST_FOREACH(const auto& slot, updates)		
