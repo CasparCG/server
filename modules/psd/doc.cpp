@@ -197,7 +197,7 @@ void psd_document::read_layers()
 
 			for(unsigned short layerIndex = 0; layerIndex < layers_count; ++layerIndex)
 			{
-				layers_.push_back(Layer::create(input_));	//each layer reads it's "layer record"
+				layers_.push_back(layer::create(input_));	//each layer reads it's "layer record"
 				//std::clog << "Added layer: " << std::string(layers_[layerIndex]->name().begin(), layers_[layerIndex]->name().end()) << std::endl;
 			}
 

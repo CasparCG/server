@@ -21,13 +21,21 @@
 
 #include "layer.h"
 #include "descriptor.h"
-#include <iostream>
+//#include <iostream>
+
+typedef unsigned char uint8_t;
+#include <algorithm>
+#include "../image/util/image_algorithms.h"
+#include "../image/util/image_view.h"
 
 namespace caspar { namespace psd {
 
-layer_ptr Layer::create(BEFileInputStream& stream)
+void read_raw_image_data(BEFileInputStream& stream, const channel_ptr& channel, image8bit_ptr target, unsigned char offset);
+void read_rle_image_data(BEFileInputStream& stream, const channel_ptr& channel, image8bit_ptr target, unsigned char offset);
+
+layer_ptr layer::create(BEFileInputStream& stream)
 {
-	layer_ptr result(std::make_shared<Layer>());
+	layer_ptr result(std::make_shared<layer>());
 	result->rect_.top = stream.read_long();
 	result->rect_.left = stream.read_long();
 	result->rect_.bottom = stream.read_long();
@@ -52,7 +60,7 @@ layer_ptr Layer::create(BEFileInputStream& stream)
 		throw PSDFileFormatException();
 
 	unsigned long blendModeKey = stream.read_long();
-	result->blendMode_ = IntToBlendMode(blendModeKey);
+	result->blend_mode_ = int_to_blend_mode(blendModeKey);
 
 	result->opacity_ = stream.read_byte();
 	result->baseClipping_ = stream.read_byte() == 1 ? false : true;
@@ -62,8 +70,8 @@ layer_ptr Layer::create(BEFileInputStream& stream)
 
 	unsigned long extraDataSize = stream.read_long();
 	long position1 = stream.current_position();
-	result->read_mask_data(stream);
-	result->ReadBlendingRanges(stream);
+	result->mask_.read_mask_data(stream);
+	result->read_blending_ranges(stream);
 
 	result->name_ = stream.read_pascal_string(4);
 
@@ -118,42 +126,49 @@ layer_ptr Layer::create(BEFileInputStream& stream)
 	return result;
 }
 
-void Layer::read_mask_data(BEFileInputStream& stream)
+void layer::read_mask_data(BEFileInputStream& stream)
 {
 	unsigned long length = stream.read_long();
-	if(length > 0)
+	switch(length)
 	{
-		mask_rect_.top = stream.read_long();
-		mask_rect_.left = stream.read_long();
-		mask_rect_.bottom = stream.read_long();
-		mask_rect_.right = stream.read_long();
+	case 0:
+		break;
 
-		default_mask_value_ = stream.read_byte();
-		mask_flags_ = stream.read_byte();
+	case 20:
+		mask_.rect_.top = stream.read_long();
+		mask_.rect_.left = stream.read_long();
+		mask_.rect_.bottom = stream.read_long();
+		mask_.rect_.right = stream.read_long();
 
-		if(length == 20)
-			stream.discard_bytes(2);
-		else
-		{
-			//Override user mask with total user mask
-			mask_flags_ = stream.read_byte();
-			default_mask_value_ = stream.read_byte();
-			mask_rect_.top = stream.read_long();
-			mask_rect_.left = stream.read_long();
-			mask_rect_.bottom = stream.read_long();
-			mask_rect_.right = stream.read_long();
-		}
-	}
+		mask_.default_value_ = stream.read_byte();
+		mask_.flags_ = stream.read_byte();
+		stream.discard_bytes(2);
+		break;
+
+	case 36:
+		stream.discard_bytes(18);	//we don't care about the user mask if there is a "total user mask"
+		mask_.flags_ = stream.read_byte();
+		mask_.default_value_ = stream.read_byte();
+		mask_.rect_.top = stream.read_long();
+		mask_.rect_.left = stream.read_long();
+		mask_.rect_.bottom = stream.read_long();
+		mask_.rect_.right = stream.read_long();
+		break;
+
+	default:
+		stream.discard_bytes(length);
+		break;
+	};
 }
 
 //TODO: implement
-void Layer::ReadBlendingRanges(BEFileInputStream& stream)
+void layer::read_blending_ranges(BEFileInputStream& stream)
 {
 	unsigned long length = stream.read_long();
 	stream.discard_bytes(length);
 }
 
-channel_ptr Layer::get_channel(ChannelType type)
+channel_ptr layer::get_channel(channel_type type)
 {
 	auto end = channels_.end();
 	for(auto it = channels_.begin(); it != end; ++it)
@@ -167,10 +182,13 @@ channel_ptr Layer::get_channel(ChannelType type)
 	return NULL;
 }
 
-void Layer::read_channel_data(BEFileInputStream& stream)
+void layer::read_channel_data(BEFileInputStream& stream)
 {
 	image8bit_ptr img;
 	image8bit_ptr mask;
+
+	bool has_transparency(get_channel(psd::Transparency));
+
 	//std::clog << std::endl << "layer: " << std::string(name().begin(), name().end()) << std::endl;
 	
 	if(rect_.width() > 0 && rect_.height() > 0)
@@ -178,13 +196,13 @@ void Layer::read_channel_data(BEFileInputStream& stream)
 		img = std::make_shared<image8bit>(rect_.width(), rect_.height(), std::min<unsigned char>(channels_.size() - masks_, 4));
 		//std::clog << std::dec << "has image: [width: " << rect_.width() << " height: " << rect_.height() << "]" << std::endl;
 
-		if(!get_channel(psd::Transparency))
+		if(!has_transparency)
 			std::memset(img->data(), (unsigned long)(255<<24), rect_.width()*rect_.height());
 	}
 
-	if(masks_ > 0 && mask_rect_.width() > 0 && mask_rect_.height() > 0)
+	if(masks_ > 0 && mask_.rect_.width() > 0 && mask_.rect_.height() > 0)
 	{
-		mask = std::make_shared<image8bit>(mask_rect_.width(), mask_rect_.height(), 1);
+		mask = std::make_shared<image8bit>(mask_.rect_.width(), mask_.rect_.height(), 1);
 		//std::clog << std::dec << "has mask: [width: " << mask_rect_.width() << " height: " << mask_rect_.height() << "]" << std::endl;
 	}
 
@@ -242,11 +260,17 @@ void Layer::read_channel_data(BEFileInputStream& stream)
 		}
 	}
 
+	if(img && has_transparency)
+	{
+		caspar::image::image_view<caspar::image::bgra_pixel> view(img->data(), img->width(), img->height());
+		caspar::image::premultiply(view);
+	}
+
 	image_ = img;
-	mask_ = mask;
+	mask_.mask_ = mask;
 }
 
-void Layer::read_raw_image_data(BEFileInputStream& stream, const channel_ptr& channel, image8bit_ptr target, unsigned char offset)
+void read_raw_image_data(BEFileInputStream& stream, const channel_ptr& channel, image8bit_ptr target, unsigned char offset)
 {
 	unsigned long total_length = target->width() * target->height();
 	if(total_length != (channel->data_length() - 2))
@@ -264,7 +288,7 @@ void Layer::read_raw_image_data(BEFileInputStream& stream, const channel_ptr& ch
 	}
 }
 
-void Layer::read_rle_image_data(BEFileInputStream& stream, const channel_ptr& channel, image8bit_ptr target, unsigned char offset)
+void read_rle_image_data(BEFileInputStream& stream, const channel_ptr& channel, image8bit_ptr target, unsigned char offset)
 {
 	unsigned long width = target->width();
 	unsigned char stride = target->channel_count();

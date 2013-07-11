@@ -35,53 +35,68 @@
 
 namespace caspar { namespace psd {
 
-class Layer;
-typedef std::shared_ptr<Layer> layer_ptr;
+class layer;
+typedef std::shared_ptr<layer> layer_ptr;
 
-class Layer
+class layer
 {
 public:
-	Layer() : blendMode_(InvalidBlendMode), opacity_(255), baseClipping_(false), flags_(0), masks_(0)
+	class layer_mask
+	{
+		friend class layer;
+	public:
+
+		bool enabled() { return !((flags_ & 2) == 2); }
+		void read_mask_data(BEFileInputStream&);
+
+	private:
+		char			mask_id_;
+		image8bit_ptr	mask_;
+		psd::rect<long> rect_;
+		unsigned char	default_value_;
+		unsigned char	flags_;
+	};
+
+	layer() : blend_mode_(InvalidBlendMode), opacity_(255), baseClipping_(false), flags_(0), masks_(0)
 	{}
 
-	static std::shared_ptr<Layer> create(BEFileInputStream&);
+	static std::shared_ptr<layer> create(BEFileInputStream&);
 	void read_channel_data(BEFileInputStream&);
 
 	const std::wstring& name() const
 	{
 		return name_;
 	}
-	const rect<long>& rect() const
+	const psd::rect<long>& rect() const
 	{
 		return rect_;
 	}
 
+	unsigned char opacity() const
+	{
+		return opacity_;
+	}
+	bool visible() { return (flags_ & 2) == 2; }
+
 	const image8bit_ptr& image() const { return image_; }
-	const image8bit_ptr& mask() const { return mask_; }
+	const image8bit_ptr& mask() const { return mask_.mask_; }
 
 private:
-	channel_ptr get_channel(ChannelType);
-	void read_mask_data(BEFileInputStream&);
-	void ReadBlendingRanges(BEFileInputStream&);
-
-	void read_raw_image_data(BEFileInputStream& stream, const channel_ptr& channel, image8bit_ptr target, unsigned char offset);
-	void read_rle_image_data(BEFileInputStream& stream, const channel_ptr& channel, image8bit_ptr target, unsigned char offset);
+	channel_ptr get_channel(channel_type);
+	void read_blending_ranges(BEFileInputStream&);
 
 	caspar::psd::rect<long>			rect_;
 	std::vector<channel_ptr>		channels_;
-	BlendMode						blendMode_;
+	blend_mode						blend_mode_;
 	unsigned char					opacity_;
 	bool							baseClipping_;
 	unsigned char					flags_;
 	std::wstring					name_;
+	char							masks_;
 
-	unsigned char					masks_;
-	caspar::psd::rect<long>			mask_rect_;
-	unsigned char					default_mask_value_;
-	unsigned char					mask_flags_;
+	layer_mask						mask_;
 
 	image8bit_ptr					image_;
-	image8bit_ptr					mask_;
 };
 
 }	//namespace psd
