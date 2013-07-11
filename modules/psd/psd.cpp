@@ -54,7 +54,6 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 	spl::shared_ptr<core::scene::scene_producer> root(spl::make_shared<core::scene::scene_producer>(doc.width(), doc.height()));
 
 	auto layers_end = doc.layers().end();
-	int cnt = 0;
 	for(auto it = doc.layers().begin(); it != layers_end; ++it)
 	{
 		if((*it)->image())
@@ -66,12 +65,13 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 			memcpy(frame.image_data().data(), (*it)->image()->data(), frame.image_data().size());
 
 			auto layer_producer = core::create_const_producer(core::draw_frame(std::move(frame)), (*it)->rect().width(), (*it)->rect().height());
-			root->create_layer(layer_producer, (*it)->rect().left, (*it)->rect().top);
+			auto& new_layer = root->create_layer(layer_producer, (*it)->rect().left, (*it)->rect().top);
+			new_layer.adjustments.opacity.set((*it)->opacity() / 255.0);
+			new_layer.hidden.set(!(*it)->visible());
 		}
 	}
 	
 	return root;
-//	return spl::make_shared<scene_producer>(frame_factory, filename + *ext);
 }
 
 }}

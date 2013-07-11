@@ -22,7 +22,6 @@
 #include "bigendian_file_input_stream.h"
 #include "..\..\..\common\utf.h"
 #include <common/endian.h>
-#include <boost/locale.hpp>
 
 namespace caspar { namespace psd {
 
@@ -60,33 +59,11 @@ unsigned char BEFileInputStream::read_byte()
 unsigned short SWAP16(unsigned short inVal)
 {
 	return caspar::swap_byte_order(inVal);
-	//unsigned short outVal;
-	//__asm{
-	//	mov ax, inVal;
-	//	mov bl, ah;
-	//	mov bh, al;
-	//	mov outVal, bx;
-	//}
-	//return outVal;
 }
 
 unsigned long SWAP32(unsigned long inVal)
 {
 	return caspar::swap_byte_order(inVal);
-	//unsigned long outVal;
-	//__asm{
-	//	mov eax, inVal;	//1 2 ah = 3 al = 4
-	//	mov bl, ah;
-	//	mov bh, al;
-
-	//	ror ebx, 16;
-	//	ror eax, 16;
-
-	//	mov bl, ah;
-	//	mov bh, al;
-	//	mov outVal, ebx;
-	//}
-	//return outVal;
 }
 
 unsigned short BEFileInputStream::read_short()
@@ -157,7 +134,7 @@ std::wstring BEFileInputStream::read_pascal_string(unsigned char padding)
 	unsigned char padded_bytes = (padding - ((strLength+1) % padding)) % padding;
 	this->discard_bytes(padded_bytes);
 
-	return boost::locale::conv::utf_to_utf<wchar_t>(strBuffer);
+	return caspar::u16(strBuffer);
 
 
 }
@@ -198,7 +175,7 @@ std::wstring BEFileInputStream::read_id_string()
 			result.append(1, read_byte());
 	}
 
-	return boost::locale::conv::utf_to_utf<wchar_t>(result);
+	return caspar::u16(result);
 }
 
 }	//namespace psd

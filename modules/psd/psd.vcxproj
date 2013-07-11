@@ -18,6 +18,7 @@
     <ClCompile Include="psd.cpp" />
     <ClCompile Include="resource.cpp" />
     <ClCompile Include="util\bigendian_file_input_stream.cpp" />
+    <ClCompile Include="util\pdf_reader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="channel.h" />
@@ -29,6 +30,7 @@
     <ClInclude Include="psd.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="util\bigendian_file_input_stream.h" />
+    <ClInclude Include="util\pdf_reader.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\common\common.vcxproj">
@@ -36,6 +38,9 @@
     </ProjectReference>
     <ProjectReference Include="..\..\core\core.vcxproj">
       <Project>{79388c20-6499-4bf6-b8b9-d8c33d7d4ddd}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\image\image.vcxproj">
+      <Project>{3e11ff65-a9da-4f80-87f2-a7c6379ed5e2}</Project>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
