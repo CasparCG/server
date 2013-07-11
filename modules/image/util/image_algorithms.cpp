@@ -19,9 +19,10 @@
 * Author: Helge Norberg, helge.norberg@svt.se.com
 */
 
+#include "image_algorithms.h"
+
 #include <vector>
-#include <stdint.h>
-#include "../util/image_algorithms.h"
+#include <cstdint>
 
 namespace caspar { namespace image {
 

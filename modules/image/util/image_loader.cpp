@@ -31,6 +31,9 @@
 #include <boost/exception/errinfo_file_name.hpp>
 #include <boost/filesystem.hpp>
 
+#include "image_algorithms.h"
+#include "image_view.h"
+
 namespace caspar { namespace image {
 
 std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename)
@@ -49,6 +52,13 @@ std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename)
 		bitmap = std::shared_ptr<FIBITMAP>(FreeImage_ConvertTo32Bits(bitmap.get()), FreeImage_Unload);
 		if(!bitmap)
 			CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));			
+	}
+
+	//PNG-images need to be premultiplied with their alpha
+	if(fif == FIF_PNG)
+	{
+		image_view<bgra_pixel> original_view(FreeImage_GetBits(bitmap.get()), FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
+		premultiply(original_view);
 	}
 	
 	return bitmap;
