@@ -30,6 +30,9 @@
     <ClCompile Include="consumer\image_consumer.cpp">
       <Filter>source\consumer</Filter>
     </ClCompile>
+    <ClCompile Include="util\image_algorithms.cpp">
+      <Filter>source\util</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="producer\image_producer.h">

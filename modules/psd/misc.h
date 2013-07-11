@@ -48,7 +48,7 @@ public:
 	}
 };
 
-enum ChannelType
+enum channel_type
 {
 	TotalUserMask = -3,
 	UserMask = -2,
@@ -58,7 +58,7 @@ enum ChannelType
 	ColorBlue = 2
 };
 
-enum BlendMode
+enum blend_mode
 {
 	InvalidBlendMode = -1,
 	Normal = 'norm',
@@ -80,8 +80,8 @@ enum BlendMode
 	ColorBurn = 'idiv'
 };
 
-BlendMode IntToBlendMode(unsigned long x);
-std::wstring BlendModeToString(BlendMode b);
+blend_mode int_to_blend_mode(unsigned long x);
+std::wstring blend_mode_to_string(blend_mode b);
 
 enum color_mode
 {

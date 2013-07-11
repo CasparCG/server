@@ -24,9 +24,9 @@
 
 namespace caspar { namespace psd {
 
-BlendMode IntToBlendMode(unsigned long x)
+blend_mode int_to_blend_mode(unsigned long x)
 {
-	BlendMode retVal = InvalidBlendMode;
+	blend_mode retVal = InvalidBlendMode;
 	switch(x)
 	{
 		case Normal: retVal = Normal; break;
@@ -51,7 +51,7 @@ BlendMode IntToBlendMode(unsigned long x)
 	return retVal;
 }
 
-std::wstring BlendModeToString(BlendMode b)
+std::wstring blend_mode_to_string(blend_mode b)
 {
 	std::wstring retVal = L"Invalid";
 	switch(b)
