@@ -80,7 +80,8 @@ private:
 		{
 		}
 
-		impl(const std::function<T ()>& expression)
+		template<typename Expr>
+		impl(const Expr& expression)
 			: expression_(expression)
 		{
 		}
@@ -172,17 +173,27 @@ public:
 	{
 	}
 
-	template<typename T2>
-	binding(const std::function<T ()>& expression, const binding<T2>& dep)
+	// Expr -> T ()
+	template<typename Expr>
+	explicit binding(const Expr& expression)
+		: impl_(new impl(expression))
+	{
+		impl_->evaluate();
+	}
+
+	// Expr -> T ()
+	template<typename Expr, typename T2>
+	binding(const Expr& expression, const binding<T2>& dep)
 		: impl_(new impl(expression))
 	{
 		depend_on(dep);
 		impl_->evaluate();
 	}
 
-	template<typename T2, typename T3>
+	// Expr -> T ()
+	template<typename Expr, typename T2, typename T3>
 	binding(
-			const std::function<T ()>& expression,
+			const Expr& expression,
 			const binding<T2>& dep1,
 			const binding<T3>& dep2)
 		: impl_(new impl(expression))
@@ -225,13 +236,7 @@ public:
 
 	binding<T> operator+(const binding<T>& other) const
 	{
-		auto self = impl_;
-		auto o = other.impl_;
-
-		return binding<T>(
-				[self, o] { return o->get() + self->get(); },
-				*this,
-				other);
+		return composed(other, [](T self, T o) { return self + o; });
 	}
 
 	binding<T> operator-() const
@@ -256,13 +261,7 @@ public:
 
 	binding<T> operator*(const binding<T>& other) const
 	{
-		auto self = impl_;
-		auto o = other.impl_;
-
-		return binding<T>(
-				[self, o] { return o->get() * self->get(); },
-				*this,
-				other);
+		return composed(other, [](T self, T o) { return self * o; });
 	}
 
 	binding<T> operator/(T other) const
@@ -272,13 +271,17 @@ public:
 
 	binding<T> operator/(const binding<T>& other) const
 	{
-		auto self = impl_;
-		auto o = other.impl_;
+		return composed(other, [](T self, T o) { return self / o; });
+	}
 
-		return binding<T>(
-				[self, o] { return self->get() / o->get(); },
-				*this,
-				other);
+	binding<T> operator%(T other) const
+	{
+		return transformed([other](T self) { return self % other; });
+	}
+
+	binding<T> operator%(const binding<T>& other) const
+	{
+		return composed(other, [](T self, T o) { return self % o; });
 	}
 
 	binding<bool> operator==(T other) const
@@ -288,13 +291,7 @@ public:
 
 	binding<bool> operator==(const binding<T>& other) const
 	{
-		auto self = impl_;
-		auto o = other.impl_;
-
-		return binding<bool>(
-				[self, o] { return self->get() == o->get(); },
-				*this,
-				other);
+		return composed(other, [](T self, T o) { return self == o; });
 	}
 
 	binding<bool> operator!=(T other) const
@@ -304,13 +301,47 @@ public:
 
 	binding<bool> operator!=(const binding<T>& other) const
 	{
-		auto self = impl_;
-		auto o = other.impl_;
+		return composed(other, [](T self, T o) { return self != o; });
+	}
 
-		return binding<bool>(
-				[self, o] { return self->get() != o->get(); },
-				*this,
-				other);
+	binding<bool> operator<(T other) const
+	{
+		return transformed([other](T self) { return self < other; });
+	}
+
+	binding<bool> operator<(const binding<T>& other) const
+	{
+		return composed(other, [](T self, T o) { return self < o; });
+	}
+
+	binding<bool> operator>(T other) const
+	{
+		return transformed([other](T self) { return self > other; });
+	}
+
+	binding<bool> operator>(const binding<T>& other) const
+	{
+		return composed(other, [](T self, T o) { return self > o; });
+	}
+
+	binding<bool> operator<=(T other) const
+	{
+		return transformed([other](T self) { return self <= other; });
+	}
+
+	binding<bool> operator<=(const binding<T>& other) const
+	{
+		return composed(other, [](T self, T o) { return self <= o; });
+	}
+
+	binding<bool> operator>=(T other) const
+	{
+		return transformed([other](T self) { return self >= other; });
+	}
+
+	binding<bool> operator>=(const binding<T>& other) const
+	{
+		return composed(other, [](T self, T o) { return self >= o; });
 	}
 
 	template<typename T2>
@@ -319,6 +350,8 @@ public:
 		return transformed([](T val) { return static_cast<T2>(val); });
 	}
 
+	// Func -> R (T self_val)
+	// Returns binding<R>
 	template<typename Func>
 	auto transformed(const Func& func) const -> binding<decltype(func(impl_->value_))>
 	{
@@ -328,6 +361,21 @@ public:
 		return binding<R>(
 				[self, func] { return func(self->get()); },
 				*this);
+	}
+
+	// Func -> R (T self_val, T2 other_val)
+	// Returns binding<R>
+	template<typename Func, typename T2>
+	auto composed(const binding<T2> other, const Func& func) const -> binding<decltype(func(impl_->value_, other.impl_->value_))>
+	{
+		typedef decltype(func(impl_->value_, other.impl_->value_)) R;
+		auto self = impl_;
+		auto o = other.impl_;
+
+		return binding<R>(
+				[self, o, func] { return func(self->get(), o->get()); },
+				*this,
+				other);
 	}
 
 	void unbind()
@@ -355,6 +403,79 @@ private:
 	binding(const std::shared_ptr<impl>& self)
 		: impl_(self)
 	{
+	}
+};
+
+static binding<bool> operator||(const binding<bool>& lhs, const binding<bool>& rhs)
+{
+	return lhs.composed(rhs, [](bool lhs, bool rhs) { return lhs || rhs; });
+}
+
+static binding<bool> operator&&(const binding<bool>& lhs, const binding<bool>& rhs)
+{
+	return lhs.composed(rhs, [](bool lhs, bool rhs) { return lhs && rhs; });
+}
+
+static binding<bool> operator!(const binding<bool>& self)
+{
+	return self.transformed([](bool self) { return !self; });
+}
+
+template<typename T>
+class ternary_builder
+{
+	binding<bool> condition_;
+	binding<T> true_result_;
+public:
+	ternary_builder(
+			const binding<bool>& condition, const binding<T>& true_result)
+		: condition_(condition)
+		, true_result_(true_result)
+	{
+	}
+
+	binding<T> otherwise(const binding<T>& false_result)
+	{
+		auto condition = condition_;
+		auto true_result = true_result_;
+
+		binding<T> result([condition, true_result, false_result]()
+		{
+			return condition.get() ? true_result.get() : false_result.get();		
+		});
+
+		result.depend_on(condition);
+		result.depend_on(true_result);
+		result.depend_on(false_result);
+
+		return result;
+	}
+
+	binding<T> otherwise(T false_result)
+	{
+		return otherwise(binding<T>(false_result))	
+	}
+};
+
+class when
+{
+	binding<bool> condition_;
+public:
+	when(const binding<bool>& condition)
+		: condition_(condition)
+	{
+	}
+
+	template<typename T>
+	ternary_builder<T> then(const binding<T>& true_result)
+	{
+		return ternary_builder<T>(condition_, true_result);
+	}
+
+	template<typename T>
+	ternary_builder<T> then(T true_result)
+	{
+		return then(binding<T>(true_result));
 	}
 };
 
