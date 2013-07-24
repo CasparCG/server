@@ -32,6 +32,7 @@
 #include "image.h"
 #include "misc.h"
 #include "channel.h"
+#include <boost/property_tree/ptree.hpp>
 
 namespace caspar { namespace psd {
 
@@ -46,10 +47,12 @@ public:
 		friend class layer;
 	public:
 
-		bool enabled() { return !((flags_ & 2) == 2); }
+		bool enabled() { return (flags_ & 2) == 0; }
+		bool linked() { return (flags_ & 1) == 0;  }
+		bool inverted() { return (flags_ & 4) == 4; }
+
 		void read_mask_data(BEFileInputStream&);
 
-	private:
 		char			mask_id_;
 		image8bit_ptr	mask_;
 		psd::rect<long> rect_;
@@ -76,9 +79,20 @@ public:
 	{
 		return opacity_;
 	}
-	bool visible() { return (flags_ & 2) == 2; }
+
+	unsigned short flags() const
+	{
+		return flags_;
+	}
+
+	bool visible() { return (flags_ & 2) == 0; }	//the (PSD file-format) documentation is is saying the opposite but what the heck
+	bool is_text() const;
+
+	const boost::property_tree::wptree& text_data() const { return text_layer_info_; }
 
 	const image8bit_ptr& image() const { return image_; }
+
+	const layer_mask& mask_info() const { return mask_; }
 	const image8bit_ptr& mask() const { return mask_.mask_; }
 
 private:
@@ -97,6 +111,8 @@ private:
 	layer_mask						mask_;
 
 	image8bit_ptr					image_;
+
+	boost::property_tree::wptree	text_layer_info_;
 };
 
 }	//namespace psd
