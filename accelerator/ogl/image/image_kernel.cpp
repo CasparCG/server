@@ -215,14 +215,19 @@ struct image_kernel::impl
 
 		params.background->attach();
 		
-		// Draw
-				
-		glBegin(GL_QUADS);
-			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        ,  f_p[1]        );		glVertex2d( f_p[0]        *2.0-1.0,  f_p[1]        *2.0-1.0);
-			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]),  f_p[1]        );		glVertex2d((f_p[0]+f_s[0])*2.0-1.0,  f_p[1]        *2.0-1.0);
-			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]), (f_p[1]+f_s[1]));		glVertex2d((f_p[0]+f_s[0])*2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
-			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        , (f_p[1]+f_s[1]));		glVertex2d( f_p[0]        *2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
-		glEnd();
+		glMatrixMode(GL_MODELVIEW);
+		glPushMatrix();
+			glTranslated(f_p[0], f_p[1], 0);
+			glScaled(f_s[0], f_s[1], 1);
+
+			// Draw
+			glBegin(GL_QUADS);
+				glMultiTexCoord2d(GL_TEXTURE0, 0.0, 0.0); glVertex2d(0, 0);
+				glMultiTexCoord2d(GL_TEXTURE0, 1.0, 0.0); glVertex2d(1, 0);
+				glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0); glVertex2d(1, 1);
+				glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glVertex2d(0, 1);
+			glEnd();
+		glPopMatrix();
 		
 		// Cleanup
 		
