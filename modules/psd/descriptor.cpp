@@ -24,6 +24,16 @@
 
 namespace caspar { namespace psd {
 
+bool descriptor::has_item(const std::wstring& key) const
+{
+	return (items_.find(key) != items_.end());
+}
+
+const descriptor_item& descriptor::get_item(const std::wstring& key) const
+{
+	return (*(items_.find(key))).second;
+}
+
 bool descriptor::populate(BEFileInputStream& stream)
 {
 	bool result = true;

@@ -21,7 +21,7 @@
 
 #include "layer.h"
 #include "descriptor.h"
-//#include <iostream>
+#include "util\pdf_reader.h"
 
 typedef unsigned char uint8_t;
 #include <algorithm>
@@ -103,6 +103,14 @@ layer_ptr layer::create(BEFileInputStream& stream)
 				descriptor text_descriptor;
 				if(!text_descriptor.populate(stream))
 					throw PSDFileFormatException();
+				else
+				{
+					if(text_descriptor.has_item(L"EngineData"))
+					{
+						const descriptor_item& text_data = text_descriptor.get_item(L"EngineData");
+						read_pdf(result->text_layer_info_, text_data.rawdata_data);
+					}
+				}
 
 				stream.read_short();	//"warp version" should be 1
 				stream.read_long();		//"descriptor version" should be 16
@@ -126,7 +134,7 @@ layer_ptr layer::create(BEFileInputStream& stream)
 	return result;
 }
 
-void layer::read_mask_data(BEFileInputStream& stream)
+void layer::layer_mask::read_mask_data(BEFileInputStream& stream)
 {
 	unsigned long length = stream.read_long();
 	switch(length)
@@ -135,30 +143,35 @@ void layer::read_mask_data(BEFileInputStream& stream)
 		break;
 
 	case 20:
-		mask_.rect_.top = stream.read_long();
-		mask_.rect_.left = stream.read_long();
-		mask_.rect_.bottom = stream.read_long();
-		mask_.rect_.right = stream.read_long();
+		rect_.top = stream.read_long();
+		rect_.left = stream.read_long();
+		rect_.bottom = stream.read_long();
+		rect_.right = stream.read_long();
 
-		mask_.default_value_ = stream.read_byte();
-		mask_.flags_ = stream.read_byte();
+		default_value_ = stream.read_byte();
+		flags_ = stream.read_byte();
 		stream.discard_bytes(2);
 		break;
 
 	case 36:
 		stream.discard_bytes(18);	//we don't care about the user mask if there is a "total user mask"
-		mask_.flags_ = stream.read_byte();
-		mask_.default_value_ = stream.read_byte();
-		mask_.rect_.top = stream.read_long();
-		mask_.rect_.left = stream.read_long();
-		mask_.rect_.bottom = stream.read_long();
-		mask_.rect_.right = stream.read_long();
+		flags_ = stream.read_byte();
+		default_value_ = stream.read_byte();
+		rect_.top = stream.read_long();
+		rect_.left = stream.read_long();
+		rect_.bottom = stream.read_long();
+		rect_.right = stream.read_long();
 		break;
 
 	default:
 		stream.discard_bytes(length);
 		break;
 	};
+}
+
+bool layer::is_text() const
+{
+	return !text_layer_info_.empty();
 }
 
 //TODO: implement

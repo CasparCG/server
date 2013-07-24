@@ -56,7 +56,10 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 	auto layers_end = doc.layers().end();
 	for(auto it = doc.layers().begin(); it != layers_end; ++it)
 	{
-		if((*it)->image())
+		if((*it)->is_text())
+		{
+		}
+		else if((*it)->image())
 		{
 			core::pixel_format_desc pfd(core::pixel_format::bgra);
 			pfd.planes.push_back(core::pixel_format_desc::plane((*it)->rect().width(), (*it)->rect().height(), 4));
@@ -65,6 +68,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 			memcpy(frame.image_data().data(), (*it)->image()->data(), frame.image_data().size());
 
 			auto layer_producer = core::create_const_producer(core::draw_frame(std::move(frame)), (*it)->rect().width(), (*it)->rect().height());
+
 			auto& new_layer = root->create_layer(layer_producer, (*it)->rect().left, (*it)->rect().top);
 			new_layer.adjustments.opacity.set((*it)->opacity() / 255.0);
 			new_layer.hidden.set(!(*it)->visible());
