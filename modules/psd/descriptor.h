@@ -49,7 +49,8 @@ class descriptor
 
 public:
 	bool populate(BEFileInputStream& stream);
-
+	const descriptor_item& get_item(const std::wstring& key) const;
+	bool has_item(const std::wstring& key) const;
 private:
 	items_map items_;
 };
