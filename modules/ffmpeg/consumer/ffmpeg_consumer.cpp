@@ -276,7 +276,7 @@ private:
 			}
 		}
 								
-		if (oc_->oformat->flags & AVFMT_GLOBALHEADER)
+		if(oc_->oformat->flags & AVFMT_GLOBALHEADER)
 			enc->flags |= CODEC_FLAG_GLOBAL_HEADER;
 		
 		std::string suffix;
@@ -420,7 +420,7 @@ private:
 
 		try
 		{
-			if (filtergraph) 
+			if(filtergraph) 
 			{
 				outputs = avfilter_inout_alloc();
 				inputs  = avfilter_inout_alloc();
@@ -498,7 +498,7 @@ private:
 			{
 				if(enc->codec->capabilities & CODEC_CAP_DELAY)
 				{
-					while(encode_video_av_frame(nullptr))
+					while(encode_av_frame(video_st_->codec, avcodec_encode_video2, nullptr))
 						boost::this_thread::yield(); // TODO:
 				}		
 			}
@@ -520,34 +520,13 @@ private:
 				if (!enc->me_threshold)
 					filt_frame->pict_type = AV_PICTURE_TYPE_NONE;
 			
-				encode_video_av_frame(filt_frame);
+				encode_av_frame(video_st_->codec, avcodec_encode_video2, filt_frame);
 			}
 
 			boost::this_thread::yield(); // TODO:
 		}
-
 	}
-	
-	bool encode_video_av_frame(const std::shared_ptr<AVFrame>& src_av_frame)
-	{		
-		auto enc = video_st_->codec;
-
-		std::shared_ptr<AVPacket> pkt_ptr(new AVPacket(), [](AVPacket* p){av_free_packet(p); delete p;});
-		av_init_packet(pkt_ptr.get());
-		
-		int got_packet;
-		FF(avcodec_encode_video2(enc, pkt_ptr.get(), src_av_frame.get(), &got_packet));
-
-		if(!got_packet || pkt_ptr->size <= 0)
-			return false;			
-		
-		pkt_ptr->stream_index = video_st_->index;
-			
-		write_packet(std::move(pkt_ptr));
-
-		return true;
-	}
-				
+					
 	void encode_audio(const std::shared_ptr<core::read_frame>& frame_ptr)
 	{		
 		if(!audio_st_)
@@ -598,7 +577,7 @@ private:
 			{
 				if(enc->codec->capabilities & CODEC_CAP_DELAY)
 				{
-					while(encode_audio_av_frame(nullptr))
+					while(encode_av_frame(audio_st_->codec, avcodec_encode_audio2, nullptr))
 						boost::this_thread::yield(); // TODO:
 				}
 			}
@@ -606,22 +585,21 @@ private:
 			{
 				FF_RET(ret, "av_buffersink_get_frame");
 
-				encode_audio_av_frame(filt_frame);
+				encode_av_frame(audio_st_->codec, avcodec_encode_audio2, filt_frame);
 			}
 
 			boost::this_thread::yield(); // TODO:
 		}
 	}
 	
-	bool encode_audio_av_frame(const std::shared_ptr<AVFrame>& src_av_frame)
+	template<typename F>
+	bool encode_av_frame(AVCodecContext* enc, const F& func, const std::shared_ptr<AVFrame>& src_av_frame)
 	{
-		auto enc = audio_st_->codec;
-
 		std::shared_ptr<AVPacket> pkt_ptr(new AVPacket(), [](AVPacket* p){av_free_packet(p); delete p;});
 		av_init_packet(pkt_ptr.get());
 
 		int got_packet = 0;
-		FF(avcodec_encode_audio2(enc, pkt_ptr.get(), src_av_frame.get(), &got_packet));
+		FF(func(enc, pkt_ptr.get(), src_av_frame.get(), &got_packet));
 					
 		if(!got_packet || pkt_ptr->size <= 0)
 			return false;
