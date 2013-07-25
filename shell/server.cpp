@@ -118,7 +118,7 @@ struct server::implementation : boost::noncopyable
 		setup_channels(env::properties());
 		CASPAR_LOG(info) << L"Initialized channels.";
 
-		setup_thumbnail_generation(env::properties());
+		//setup_thumbnail_generation(env::properties());
 
 		setup_controllers(env::properties());
 		CASPAR_LOG(info) << L"Initialized controllers.";

@@ -64,9 +64,6 @@
     <ClCompile Include="util\error.cpp">
       <Filter>source\util</Filter>
     </ClCompile>
-    <ClCompile Include="consumer\options.cpp">
-      <Filter>source\consumer</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="producer\ffmpeg_producer.h">
@@ -111,9 +108,6 @@
     </ClInclude>
     <ClInclude Include="util\error.h">
       <Filter>source\util</Filter>
-    </ClInclude>
-    <ClInclude Include="consumer\options.h">
-      <Filter>source\consumer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

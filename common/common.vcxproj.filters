@@ -166,5 +166,11 @@
     <ClInclude Include="memory\endian.h">
       <Filter>source\memory</Filter>
     </ClInclude>
+    <ClInclude Include="concrt_extras.h" />
+    <ClInclude Include="lock.h" />
+    <ClInclude Include="scope_exit.h" />
+    <ClInclude Include="os\windows\windows.h">
+      <Filter>source\os\windows</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

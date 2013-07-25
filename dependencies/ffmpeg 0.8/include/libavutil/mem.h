@@ -26,9 +26,18 @@
 #ifndef AVUTIL_MEM_H
 #define AVUTIL_MEM_H
 
+#include <limits.h>
+#include <stdint.h>
+
 #include "attributes.h"
 #include "error.h"
 #include "avutil.h"
+
+/**
+ * @addtogroup lavu_mem
+ * @{
+ */
+
 
 #if defined(__INTEL_COMPILER) && __INTEL_COMPILER < 1110 || defined(__SUNPRO_C)
     #define DECLARE_ALIGNED(n,t,v)      t __attribute__ ((aligned (n))) v
@@ -58,9 +67,9 @@
 #endif
 
 #if AV_GCC_VERSION_AT_LEAST(4,3)
-    #define av_alloc_size(n) __attribute__((alloc_size(n)))
+    #define av_alloc_size(...) __attribute__((alloc_size(__VA_ARGS__)))
 #else
-    #define av_alloc_size(n)
+    #define av_alloc_size(...)
 #endif
 
 /**
@@ -72,6 +81,22 @@
  * @see av_mallocz()
  */
 void *av_malloc(size_t size) av_malloc_attrib av_alloc_size(1);
+
+/**
+ * Helper function to allocate a block of size * nmemb bytes with
+ * using av_malloc()
+ * @param nmemb Number of elements
+ * @param size Size of the single element
+ * @return Pointer to the allocated block, NULL if the block cannot
+ * be allocated.
+ * @see av_malloc()
+ */
+av_alloc_size(1, 2) static inline void *av_malloc_array(size_t nmemb, size_t size)
+{
+    if (size <= 0 || nmemb >= INT_MAX / size)
+        return NULL;
+    return av_malloc(nmemb * size);
+}
 
 /**
  * Allocate or reallocate a block of memory.
@@ -130,12 +155,37 @@ void *av_mallocz(size_t size) av_malloc_attrib av_alloc_size(1);
 void *av_calloc(size_t nmemb, size_t size) av_malloc_attrib;
 
 /**
+ * Helper function to allocate a block of size * nmemb bytes with
+ * using av_mallocz()
+ * @param nmemb Number of elements
+ * @param size Size of the single element
+ * @return Pointer to the allocated block, NULL if the block cannot
+ * be allocated.
+ * @see av_mallocz()
+ * @see av_malloc_array()
+ */
+av_alloc_size(1, 2) static inline void *av_mallocz_array(size_t nmemb, size_t size)
+{
+    if (size <= 0 || nmemb >= INT_MAX / size)
+        return NULL;
+    return av_mallocz(nmemb * size);
+}
+
+/**
  * Duplicate the string s.
  * @param s string to be duplicated
  * @return Pointer to a newly allocated string containing a
  * copy of s or NULL if the string cannot be allocated.
  */
 char *av_strdup(const char *s) av_malloc_attrib;
+
+/**
+ * Duplicate the buffer p.
+ * @param p buffer to be duplicated
+ * @return Pointer to a newly allocated buffer containing a
+ * copy of p or NULL if the buffer cannot be allocated.
+ */
+void *av_memdup(const void *p, size_t size);
 
 /**
  * Free a memory block which has been allocated with av_malloc(z)() or
@@ -149,9 +199,22 @@ void av_freep(void *ptr);
 /**
  * Add an element to a dynamic array.
  *
- * @param tab_ptr Pointer to the array.
- * @param nb_ptr  Pointer to the number of elements in the array.
- * @param elem    Element to be added.
+ * The array to grow is supposed to be an array of pointers to
+ * structures, and the element to add must be a pointer to an already
+ * allocated structure.
+ *
+ * The array is reallocated when its sizes reaches powers of 2.
+ * Therefore, the amortized cost of adding an element is constant.
+ *
+ * In case of success, the pointer to the array is updated in order to
+ * point to the new grown array, and the number pointed to by nb_ptr
+ * is incremented.
+ * In case of failure, the array is freed, *tab_ptr is set to NULL and
+ * *nb_ptr is set to 0.
+ *
+ * @param tab_ptr pointer to the array to grow
+ * @param nb_ptr  pointer to the number of elements in the array
+ * @param elem    element to add
  */
 void av_dynarray_add(void *tab_ptr, int *nb_ptr, void *elem);
 
@@ -169,5 +232,25 @@ static inline int av_size_mult(size_t a, size_t b, size_t *r)
     *r = t;
     return 0;
 }
+
+/**
+ * Set the maximum size that may me allocated in one block.
+ */
+void av_max_alloc(size_t max);
+
+/**
+ * @brief deliberately overlapping memcpy implementation
+ * @param dst destination buffer
+ * @param back how many bytes back we start (the initial size of the overlapping window), must be > 0
+ * @param cnt number of bytes to copy, must be >= 0
+ *
+ * cnt > back is valid, this will copy the bytes we just copied,
+ * thus creating a repeating pattern with a period length of back.
+ */
+void av_memcpy_backptr(uint8_t *dst, int back, int cnt);
+
+/**
+ * @}
+ */
 
 #endif /* AVUTIL_MEM_H */

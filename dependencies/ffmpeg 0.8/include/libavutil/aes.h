@@ -23,9 +23,23 @@
 
 #include <stdint.h>
 
+#include "attributes.h"
+#include "version.h"
+
+/**
+ * @defgroup lavu_aes AES
+ * @ingroup lavu_crypto
+ * @{
+ */
+
 extern const int av_aes_size;
 
 struct AVAES;
+
+/**
+ * Allocate an AVAES context.
+ */
+struct AVAES *av_aes_alloc(void);
 
 /**
  * Initialize an AVAES context.
@@ -43,5 +57,9 @@ int av_aes_init(struct AVAES *a, const uint8_t *key, int key_bits, int decrypt);
  * @param decrypt 0 for encryption, 1 for decryption
  */
 void av_aes_crypt(struct AVAES *a, uint8_t *dst, const uint8_t *src, int count, uint8_t *iv, int decrypt);
+
+/**
+ * @}
+ */
 
 #endif /* AVUTIL_AES_H */

@@ -33,7 +33,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <WholeProgramOptimization>false</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'" Label="Configuration">
@@ -126,7 +126,7 @@
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <WholeProgramOptimization>true</WholeProgramOptimization>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
       <TreatWarningAsError>true</TreatWarningAsError>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <ForcedIncludeFiles>compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
@@ -209,6 +209,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="compiler\vs\disable_silly_warnings.h" />
+    <ClInclude Include="concrt_extras.h" />
     <ClInclude Include="concurrency\com_context.h" />
     <ClInclude Include="concurrency\executor.h" />
     <ClInclude Include="concurrency\future_util.h" />
@@ -220,6 +221,7 @@
     <ClInclude Include="filesystem\filesystem_monitor.h" />
     <ClInclude Include="filesystem\polling_filesystem_monitor.h" />
     <ClInclude Include="gl\gl_check.h" />
+    <ClInclude Include="lock.h" />
     <ClInclude Include="log\log.h" />
     <ClInclude Include="memory\endian.h" />
     <ClInclude Include="memory\memclr.h" />
@@ -230,6 +232,8 @@
     <ClInclude Include="env.h" />
     <ClInclude Include="os\windows\current_version.h" />
     <ClInclude Include="os\windows\system_info.h" />
+    <ClInclude Include="os\windows\windows.h" />
+    <ClInclude Include="scope_exit.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="utility\assert.h" />
     <ClInclude Include="utility\base64.h" />

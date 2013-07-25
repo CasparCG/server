@@ -166,6 +166,9 @@
     <ClInclude Include="parameters\parameters.h">
       <Filter>source\parameters</Filter>
     </ClInclude>
+    <ClInclude Include="fwd.h">
+      <Filter>source</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">

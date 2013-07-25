@@ -170,4 +170,14 @@ boost::unique_future<R> wrap_as_future(R&& value)
 	return p.get_future();
 }
 
+template<class R>
+boost::unique_future<R> make_ready_future(R&& value)
+{
+	boost::promise<R> p;
+
+	p.set_value(value);
+
+	return p.get_future();
+}
+
 }
