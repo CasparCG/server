@@ -246,8 +246,7 @@ void init()
 	//fix_yadif_filter_format_query();
 	av_register_all();
     avformat_network_init();
-	avcodec_init();
-    avcodec_register_all();
+	avcodec_register_all();
 	
 	core::register_consumer_factory([](const core::parameters& params){return ffmpeg::create_consumer(params);});
 	core::register_producer_factory(create_producer);

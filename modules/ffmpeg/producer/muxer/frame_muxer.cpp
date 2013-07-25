@@ -23,7 +23,6 @@
 
 #include "frame_muxer.h"
 
-#include "../filter/filter.h"
 #include "../util/util.h"
 
 #include <core/producer/frame_producer.h>
@@ -80,7 +79,6 @@ struct frame_muxer::implementation : boost::noncopyable
 			
 	safe_ptr<core::frame_factory>					frame_factory_;
 	
-	filter											filter_;
 	const std::wstring								filter_str_;
 	const bool										thumbnail_mode_;
 	bool											force_deinterlacing_;
@@ -145,14 +143,13 @@ struct frame_muxer::implementation : boost::noncopyable
 			auto format = video_frame->format;
 			if(video_frame->format == CASPAR_PIX_FMT_LUMA) // CASPAR_PIX_FMT_LUMA is not valid for filter, change it to GRAY8
 				video_frame->format = PIX_FMT_GRAY8;
-
-			filter_.push(video_frame);
-			BOOST_FOREACH(auto& av_frame, filter_.poll_all())
+			
+			if(video_frame)
 			{
 				if(video_frame->format == PIX_FMT_GRAY8 && format == CASPAR_PIX_FMT_LUMA)
-					av_frame->format = format;
+					video_frame->format = format;
 
-				video_streams_.back().push(make_write_frame(this, av_frame, frame_factory_, hints, audio_channel_layout_));
+				video_streams_.back().push(make_write_frame(this, make_safe_ptr(video_frame), frame_factory_, hints, audio_channel_layout_));
 			}
 		}
 
@@ -310,11 +307,11 @@ struct frame_muxer::implementation : boost::noncopyable
 			auto mode = get_mode(*frame);
 			auto fps  = in_fps_;
 
-			if(filter::is_deinterlacing(filter_str_))
-				mode = core::field_mode::progressive;
+			//if(filter::is_deinterlacing(filter_str_))
+			//	mode = core::field_mode::progressive;
 
-			if(filter::is_double_rate(filter_str_))
-				fps *= 2;
+			//if(filter::is_double_rate(filter_str_))
+			//	fps *= 2;
 			
 			display_mode_ = get_display_mode(mode, fps, format_desc_.field_mode, format_desc_.fps);
 			
@@ -335,10 +332,10 @@ struct frame_muxer::implementation : boost::noncopyable
 				display_mode_ = display_mode::deinterlace;
 			}
 
-			if(display_mode_ == display_mode::deinterlace)
-				filter_str = append_filter(filter_str, L"YADIF=0:-1");
-			else if(display_mode_ == display_mode::deinterlace_bob || display_mode_ == display_mode::deinterlace_bob_reinterlace)
-				filter_str = append_filter(filter_str, L"YADIF=1:-1");
+			//if(display_mode_ == display_mode::deinterlace)
+			//	filter_str = append_filter(filter_str, L"YADIF=0:-1");
+			//else if(display_mode_ == display_mode::deinterlace_bob || display_mode_ == display_mode::deinterlace_bob_reinterlace)
+			//	filter_str = append_filter(filter_str, L"YADIF=1:-1");
 		}
 
 		if(display_mode_ == display_mode::invalid)
@@ -348,27 +345,27 @@ struct frame_muxer::implementation : boost::noncopyable
 			display_mode_ = display_mode::simple;
 		}
 			
-		if(!boost::iequals(filter_.filter_str(), filter_str))
-		{
-			for(int n = 0; n < filter_.delay(); ++n)
-			{
-				filter_.push(frame);
-				auto av_frame = filter_.poll();
-				if(av_frame)							
-					video_streams_.back().push(make_write_frame(this, make_safe_ptr(av_frame), frame_factory_, 0, audio_channel_layout_));
-			}
-			filter_ = filter(filter_str);
-			if (!thumbnail_mode_)
-				CASPAR_LOG(info) << L"[frame_muxer] " << display_mode::print(display_mode_) << L" " << print_mode(frame->width, frame->height, in_fps_, frame->interlaced_frame > 0);
-		}
+		//if(!boost::iequals(filter_.filter_str(), filter_str))
+		//{
+		//	for(int n = 0; n < filter_.delay(); ++n)
+		//	{
+		//		filter_.push(frame);
+		//		auto av_frame = filter_.poll();
+		//		if(av_frame)							
+		//			video_streams_.back().push(make_write_frame(this, make_safe_ptr(av_frame), frame_factory_, 0, audio_channel_layout_));
+		//	}
+		//	filter_ = filter(filter_str);
+		//	if (!thumbnail_mode_)
+		//		CASPAR_LOG(info) << L"[frame_muxer] " << display_mode::print(display_mode_) << L" " << print_mode(frame->width, frame->height, in_fps_, frame->interlaced_frame > 0);
+		//}
 	}
 	
 	uint32_t calc_nb_frames(uint32_t nb_frames) const
 	{
 		uint64_t nb_frames2 = nb_frames;
 		
-		if(filter_.is_double_rate()) // Take into account transformations in filter.
-			nb_frames2 *= 2;
+		//if(filter_.is_double_rate()) // Take into account transformations in filter.
+		//	nb_frames2 *= 2;
 
 		switch(display_mode_) // Take into account transformation in run.
 		{

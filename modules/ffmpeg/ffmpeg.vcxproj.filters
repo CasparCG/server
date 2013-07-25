@@ -13,9 +13,6 @@
     <Filter Include="source\producer\audio">
       <UniqueIdentifier>{6937307b-550f-48f8-9cc0-509de0e18ddc}</UniqueIdentifier>
     </Filter>
-    <Filter Include="source\producer\filter">
-      <UniqueIdentifier>{0d46b4fa-2b19-44b7-82ea-52cbd9ad24a4}</UniqueIdentifier>
-    </Filter>
     <Filter Include="source\producer\video">
       <UniqueIdentifier>{4b0f3949-6dc5-4895-837f-4c3ef1759a90}</UniqueIdentifier>
     </Filter>
@@ -27,6 +24,9 @@
     </Filter>
     <Filter Include="source\producer\muxer">
       <UniqueIdentifier>{26599786-a0d9-4cc3-b5a4-633e9c81563a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\util">
+      <UniqueIdentifier>{95d8b648-25c9-4dad-bc86-ec86945b6490}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -43,12 +43,6 @@
     <ClCompile Include="ffmpeg.cpp">
       <Filter>source</Filter>
     </ClCompile>
-    <ClCompile Include="producer\filter\filter.cpp">
-      <Filter>source\producer\filter</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\filter\parallel_yadif.cpp">
-      <Filter>source\producer\filter</Filter>
-    </ClCompile>
     <ClCompile Include="producer\audio\audio_resampler.cpp">
       <Filter>source\producer\audio</Filter>
     </ClCompile>
@@ -64,11 +58,14 @@
     <ClCompile Include="producer\muxer\frame_muxer.cpp">
       <Filter>source\producer\muxer</Filter>
     </ClCompile>
-    <ClCompile Include="producer\tbb_avcodec.cpp">
-      <Filter>source\producer</Filter>
-    </ClCompile>
     <ClCompile Include="producer\ffmpeg_producer.cpp">
       <Filter>source\producer</Filter>
+    </ClCompile>
+    <ClCompile Include="util\error.cpp">
+      <Filter>source\util</Filter>
+    </ClCompile>
+    <ClCompile Include="consumer\options.cpp">
+      <Filter>source\consumer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -91,12 +88,6 @@
     <ClInclude Include="ffmpeg.h">
       <Filter>source</Filter>
     </ClInclude>
-    <ClInclude Include="producer\filter\filter.h">
-      <Filter>source\producer\filter</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\filter\parallel_yadif.h">
-      <Filter>source\producer\filter</Filter>
-    </ClInclude>
     <ClInclude Include="producer\audio\audio_resampler.h">
       <Filter>source\producer\audio</Filter>
     </ClInclude>
@@ -115,11 +106,14 @@
     <ClInclude Include="producer\muxer\display_mode.h">
       <Filter>source\producer\muxer</Filter>
     </ClInclude>
-    <ClInclude Include="producer\tbb_avcodec.h">
-      <Filter>source\producer</Filter>
-    </ClInclude>
     <ClInclude Include="producer\ffmpeg_params.h">
       <Filter>source\producer</Filter>
+    </ClInclude>
+    <ClInclude Include="util\error.h">
+      <Filter>source\util</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\options.h">
+      <Filter>source\consumer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

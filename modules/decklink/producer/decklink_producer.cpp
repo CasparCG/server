@@ -26,7 +26,6 @@
 #include "../interop/DeckLinkAPI_h.h"
 #include "../util/util.h"
 
-#include "../../ffmpeg/producer/filter/filter.h"
 #include "../../ffmpeg/producer/util/util.h"
 #include "../../ffmpeg/producer/muxer/frame_muxer.h"
 #include "../../ffmpeg/producer/muxer/display_mode.h"
@@ -92,7 +91,6 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	
 	const std::wstring											model_name_;
 	const size_t												device_index_;
-	const std::wstring											filter_;
 	
 	core::video_format_desc										format_desc_;
 	std::vector<size_t>											audio_cadence_;
@@ -121,7 +119,6 @@ public:
 		, attributes_(decklink_)
 		, model_name_(get_model_name(decklink_))
 		, device_index_(device_index)
-		, filter_(filter)
 		, format_desc_(format_desc)
 		, audio_cadence_(format_desc.audio_cadence)
 		, muxer_(format_desc.fps, frame_factory, false, audio_channel_layout, filter)

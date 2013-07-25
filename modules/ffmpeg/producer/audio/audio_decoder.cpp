@@ -72,7 +72,7 @@ public:
 		, resampler_(codec_context_->channels,		codec_context_->channels,
 					 format_desc.audio_sample_rate, codec_context_->sample_rate,
 					 AV_SAMPLE_FMT_S32,				codec_context_->sample_fmt)
-		, buffer1_(AVCODEC_MAX_AUDIO_FRAME_SIZE*2)
+		, buffer1_(480000*2)
 		, nb_frames_(0)//context->streams[index_]->nb_frames)
 		, channel_layout_(get_audio_channel_layout(*codec_context_, custom_channel_order))
 	{
@@ -116,7 +116,7 @@ public:
 
 	std::shared_ptr<core::audio_buffer> decode(AVPacket& pkt)
 	{		
-		buffer1_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
+		buffer1_.resize(480000*2);
 		int written_bytes = buffer1_.size() - FF_INPUT_BUFFER_PADDING_SIZE;
 		
 		int ret = THROW_ON_ERROR2(avcodec_decode_audio3(codec_context_.get(), reinterpret_cast<int16_t*>(buffer1_.data()), &written_bytes, &pkt), "[audio_decoder]");

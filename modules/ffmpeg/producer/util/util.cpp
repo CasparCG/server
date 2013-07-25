@@ -25,7 +25,6 @@
 
 #include "flv.h"
 
-#include "../tbb_avcodec.h"
 #include "../../ffmpeg_error.h"
 
 #include <tbb/concurrent_unordered_map.h>
@@ -411,8 +410,8 @@ safe_ptr<AVCodecContext> open_codec(AVFormatContext& context, enum AVMediaType t
 	//if(strcmp(decoder->name, "prores") == 0 && decoder->next && strcmp(decoder->next->name, "prores_lgpl") == 0)
 	//	decoder = decoder->next;
 
-	THROW_ON_ERROR2(tbb_avcodec_open(context.streams[index]->codec, decoder), "");
-	return safe_ptr<AVCodecContext>(context.streams[index]->codec, tbb_avcodec_close);
+	THROW_ON_ERROR2(avcodec_open2(context.streams[index]->codec, decoder, nullptr), "");
+	return safe_ptr<AVCodecContext>(context.streams[index]->codec, avcodec_close);
 }
 
 std::wstring print_mode(size_t width, size_t height, double fps, bool interlaced)

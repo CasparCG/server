@@ -34,8 +34,6 @@
 #include <common/utility/string.h>
 #include <common/concurrency/future_util.h>
 
-#include <ffmpeg/producer/filter/filter.h>
-
 #include <core/parameters/parameters.h>
 #include <core/video_format.h>
 #include <core/mixer/read_frame.h>
@@ -145,7 +143,6 @@ struct ogl_consumer : boost::noncopyable
 	tbb::atomic<bool>		is_running_;
 	tbb::atomic<int64_t>	current_presentation_age_;
 	
-	ffmpeg::filter			filter_;
 public:
 	ogl_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index) 
 		: config_(config)
@@ -157,7 +154,6 @@ public:
 		, screen_height_(format_desc.height)
 		, square_width_(format_desc.square_width)
 		, square_height_(format_desc.square_height)
-		, filter_(format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? L"" : L"YADIF=1:-1", boost::assign::list_of(PIX_FMT_BGRA))
 	{		
 		if(format_desc_.format == core::video_format::ntsc && config_.aspect == configuration::aspect_4_3)
 		{
@@ -357,34 +353,11 @@ public:
 		auto av_frame = get_av_frame();
 		av_frame->data[0] = const_cast<uint8_t*>(frame->image_data().begin());
 
-		filter_.push(av_frame);
-		auto frames = filter_.poll_all();
+		render(av_frame, frame->image_data().size());
+		graph_->set_value("frame-time", perf_timer_.elapsed() * format_desc_.fps * 0.5);
 
-		if (frames.empty())
-			return;
-
-		if (frames.size() == 1)
-		{
-			render(frames[0], frame->image_data().size());
-			graph_->set_value("frame-time", perf_timer_.elapsed() * format_desc_.fps * 0.5);
-
-			wait_for_vblank_and_display(); // progressive frame
-		}
-		else if (frames.size() == 2)
-		{
-			render(frames[0], frame->image_data().size());
-			double perf_elapsed = perf_timer_.elapsed();
-
-			wait_for_vblank_and_display(); // field1
-
-			perf_timer_.restart();
-			render(frames[1], frame->image_data().size());
-			perf_elapsed += perf_timer_.elapsed();
-			graph_->set_value("frame-time", perf_elapsed * format_desc_.fps * 0.5);
-
-			wait_for_vblank_and_display(); // field2
-		}
-
+		wait_for_vblank_and_display(); // progressive frame
+		
 		current_presentation_age_ = frame->get_age_millis();
 	}
 
