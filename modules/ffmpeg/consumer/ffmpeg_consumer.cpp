@@ -265,12 +265,12 @@ private:
 			}
 			case AVMEDIA_TYPE_AUDIO:
 			{
-				enc->time_base		= audio_graph_out_->inputs[0]->time_base;
-				enc->sample_fmt		= static_cast<AVSampleFormat>(audio_graph_out_->inputs[0]->format);
-				enc->sample_rate    = audio_graph_out_->inputs[0]->sample_rate;
-				enc->channel_layout = audio_graph_out_->inputs[0]->channel_layout;
-				enc->channels       = audio_graph_out_->inputs[0]->channels;
-				enc->bit_rate		= 192000;
+				enc->time_base			  = audio_graph_out_->inputs[0]->time_base;
+				enc->sample_fmt			  = static_cast<AVSampleFormat>(audio_graph_out_->inputs[0]->format);
+				enc->sample_rate		  = audio_graph_out_->inputs[0]->sample_rate;
+				enc->channel_layout		  = audio_graph_out_->inputs[0]->channel_layout;
+				enc->channels			  = audio_graph_out_->inputs[0]->channels;
+				enc->bit_rate			  = 192000;
 			
 				break;
 			}
