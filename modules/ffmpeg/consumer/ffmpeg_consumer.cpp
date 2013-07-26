@@ -293,7 +293,7 @@ private:
 		BOOST_FOREACH(const auto& opt, codec_opts)
 			av_dict_set(&av_codec_opts, opt.first.c_str(), opt.second.c_str(), 0);
 								
-        if (!av_dict_get(av_codec_opts, "threads", NULL, 0))
+        if (!av_dict_get(av_codec_opts, "threads", nullptr, 0))
             av_dict_set(&av_codec_opts, "threads", "auto", 0);
 		
 		FF(avcodec_open2(enc, &codec, av_codec_opts ? &av_codec_opts : nullptr));		
