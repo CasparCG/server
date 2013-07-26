@@ -501,7 +501,7 @@ private:
 			{
 				if(enc->codec->capabilities & CODEC_CAP_DELAY)
 				{
-					while(encode_av_frame(video_st_->codec, avcodec_encode_video2, nullptr))
+					while(encode_av_frame(*video_st_, avcodec_encode_video2, nullptr))
 						boost::this_thread::yield(); // TODO:
 				}		
 			}
@@ -524,7 +524,7 @@ private:
 				if (!enc->me_threshold)
 					filt_frame->pict_type = AV_PICTURE_TYPE_NONE;
 			
-				encode_av_frame(video_st_->codec, avcodec_encode_video2, filt_frame);
+				encode_av_frame(*video_st_, avcodec_encode_video2, filt_frame);
 			}
 
 			boost::this_thread::yield(); // TODO:
@@ -579,7 +579,7 @@ private:
 			{
 				if(enc->codec->capabilities & CODEC_CAP_DELAY)
 				{
-					while(encode_av_frame(audio_st_->codec, avcodec_encode_audio2, nullptr))
+					while(encode_av_frame(*audio_st_, avcodec_encode_audio2, nullptr))
 						boost::this_thread::yield(); // TODO:
 				}
 			}
@@ -587,7 +587,7 @@ private:
 			{
 				FF_RET(ret, "av_buffersink_get_frame");
 
-				encode_av_frame(audio_st_->codec, avcodec_encode_audio2, filt_frame);
+				encode_av_frame(*audio_st_, avcodec_encode_audio2, filt_frame);
 			}
 
 			boost::this_thread::yield(); // TODO:
@@ -595,18 +595,18 @@ private:
 	}
 	
 	template<typename F>
-	bool encode_av_frame(AVCodecContext* enc, const F& func, const std::shared_ptr<AVFrame>& src_av_frame)
+	bool encode_av_frame(AVStream& st, const F& func, const std::shared_ptr<AVFrame>& src_av_frame)
 	{
 		std::shared_ptr<AVPacket> pkt_ptr(new AVPacket(), [](AVPacket* p){av_free_packet(p); delete p;});
 		av_init_packet(pkt_ptr.get());
 
 		int got_packet = 0;
-		FF(func(enc, pkt_ptr.get(), src_av_frame.get(), &got_packet));
+		FF(func(st.codec, pkt_ptr.get(), src_av_frame.get(), &got_packet));
 					
 		if(!got_packet || pkt_ptr->size <= 0)
 			return false;
 				
-		pkt_ptr->stream_index = audio_st_->index;
+		pkt_ptr->stream_index = st.index;
 		
 		write_packet(std::move(pkt_ptr));
 
