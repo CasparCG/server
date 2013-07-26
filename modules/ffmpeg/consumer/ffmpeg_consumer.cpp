@@ -369,12 +369,12 @@ private:
 			avfilter_graph_free(&p);
 		});
 		
-		const auto asrc_options = (boost::format("sample_rate=%1%:sample_fmt=%2%:channels=%3%:time_base=%4%/%5%")//:channel_layout=%6%")
+		const auto asrc_options = (boost::format("sample_rate=%1%:sample_fmt=%2%:channels=%3%:time_base=%4%/%5%:channel_layout=%6%")
 			% in_video_format_.audio_sample_rate
 			% av_get_sample_fmt_name(AV_SAMPLE_FMT_S32)
 			% 2 // TODO:
-			% 1	% in_video_format_.audio_sample_rate).str();
-			//% av_get_default_channel_layout(2) /* TODO */).str();
+			% 1	% in_video_format_.audio_sample_rate
+			% "stereo" /* TODO */).str();
 				
 
 		AVFilterContext* filt_asrc = nullptr;
