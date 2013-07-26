@@ -486,14 +486,16 @@ private:
 			FF(av_buffersrc_add_frame(video_graph_in_, src_av_frame.get()));
 		}		
 
-		while(true)
+		int ret = 0;
+
+		while(ret >= 0)
 		{
 			std::shared_ptr<AVFrame> filt_frame(av_frame_alloc(), [](AVFrame* p)
 			{
 				av_frame_free(&p);
 			});
 
-			const auto ret = av_buffersink_get_frame(video_graph_out_, filt_frame.get());
+			ret = av_buffersink_get_frame(video_graph_out_, filt_frame.get());
 						
             if(ret == AVERROR_EOF)
 			{
@@ -506,6 +508,7 @@ private:
 			else if(ret != AVERROR(EAGAIN))
 			{
 				FF_RET(ret, "av_buffersink_get_frame");
+
 				if (filt_frame->interlaced_frame) 
 				{
 					if (enc->codec->id == AV_CODEC_ID_MJPEG)
@@ -559,20 +562,19 @@ private:
 			FF(av_buffersrc_add_frame(audio_graph_in_, src_av_frame.get()));
 		}
 
-		while(true)
+		int ret = 0;
+
+		while(ret >= 0)
 		{
 			std::shared_ptr<AVFrame> filt_frame(av_frame_alloc(), [](AVFrame* p)
 			{
 				av_frame_free(&p);
 			});
 
-			const auto ret = av_buffersink_get_frame(audio_graph_out_, filt_frame.get());
+			ret = av_buffersink_get_frame(audio_graph_out_, filt_frame.get());
 
 			filt_frame->pts = AV_NOPTS_VALUE; // TODO:
 			
-            if(ret == AVERROR(EAGAIN))
-                break;
-
 			if(ret == AVERROR_EOF)
 			{
 				if(enc->codec->capabilities & CODEC_CAP_DELAY)
