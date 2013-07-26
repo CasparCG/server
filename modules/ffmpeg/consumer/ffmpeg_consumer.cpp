@@ -512,10 +512,10 @@ private:
 			const auto sample_aspect_ratio = boost::rational<int>(in_video_format_.square_width, in_video_format_.square_height) /
 											 boost::rational<int>(in_video_format_.width, in_video_format_.height);
 
-			src_av_frame->format = AV_PIX_FMT_BGRA;
-			src_av_frame->width  = in_video_format_.width;
-			src_av_frame->height = in_video_format_.height;
-			src_av_frame->pts	 = counter_++;
+			src_av_frame->format				  = AV_PIX_FMT_BGRA;
+			src_av_frame->width					  = in_video_format_.width;
+			src_av_frame->height				  = in_video_format_.height;
+			src_av_frame->pts					  = counter_++;
 			src_av_frame->sample_aspect_ratio.num = sample_aspect_ratio.numerator();
 			src_av_frame->sample_aspect_ratio.den = sample_aspect_ratio.denominator();
 
