@@ -274,7 +274,6 @@ private:
 				enc->sample_rate		  = audio_graph_out_->inputs[0]->sample_rate;
 				enc->channel_layout		  = audio_graph_out_->inputs[0]->channel_layout;
 				enc->channels			  = audio_graph_out_->inputs[0]->channels;
-				enc->bit_rate			  = 192000;
 			
 				break;
 			}
