@@ -216,7 +216,7 @@ struct server::implementation : boost::noncopyable
 					on_consumer(decklink::create_consumer(xml_consumer.second));				
 				else if (name == L"blocking-decklink")
 					on_consumer(decklink::create_blocking_consumer(xml_consumer.second));				
-				else if (name == L"file" || name == L"stream")					
+				else if (name == L"ffmpeg")					
 					on_consumer(ffmpeg::create_consumer(xml_consumer.second));						
 				else if (name == L"system-audio")
 					on_consumer(oal::create_consumer());
