@@ -55,52 +55,44 @@ class ffmpeg_consumer sealed : public core::frame_consumer
 {
 public:
 	// Static Members
-	
-	struct configuration
-	{
-		std::string				filename;
-		std::string				options;
-
-		configuration()
-		{
-		}
-	};
-	
+		
 private:
+	
+	boost::filesystem::path				path_;
 
-	boost::filesystem::path			 path_;
-									 
-	core::video_format_desc			 in_video_format_;
-									 
-	configuration					 configuration_;
-									 
-	std::shared_ptr<AVFormatContext> oc_;
-	tbb::atomic<bool>				 abort_request_;
-									 
-	std::shared_ptr<AVStream>		 video_st_;
-	std::shared_ptr<AVStream>		 audio_st_;
+	std::map<std::string, std::string>  options_;
+										
+	core::video_format_desc				in_video_format_;
+																			 
+	std::shared_ptr<AVFormatContext>	oc_;
+	tbb::atomic<bool>					abort_request_;
+										
+	std::shared_ptr<AVStream>			video_st_;
+	std::shared_ptr<AVStream>			audio_st_;
 
-	std::int64_t					 counter_;
-									 										
-	std::int64_t					 filter_in_rescale_delta_last_;	
+	std::int64_t						counter_;
+																				
+	std::int64_t						filter_in_rescale_delta_last_;	
 
-    AVFilterContext*				 audio_graph_in_;  
-    AVFilterContext*				 audio_graph_out_; 
-    std::shared_ptr<AVFilterGraph>	 audio_graph_;           
+    AVFilterContext*					audio_graph_in_;  
+    AVFilterContext*					audio_graph_out_; 
+    std::shared_ptr<AVFilterGraph>		audio_graph_;           
 
-    AVFilterContext*				 video_graph_in_;  
-    AVFilterContext*				 video_graph_out_; 
-    std::shared_ptr<AVFilterGraph>	 video_graph_;  
+    AVFilterContext*					video_graph_in_;  
+    AVFilterContext*					video_graph_out_; 
+    std::shared_ptr<AVFilterGraph>		video_graph_;  
 
 public:
 
-	ffmpeg_consumer(const configuration& configuration)
-		: configuration_(configuration)
-		, path_(configuration.filename)
-		, filter_in_rescale_delta_last_(AV_NOPTS_VALUE)
+	ffmpeg_consumer(std::string path, std::string options)
+		: filter_in_rescale_delta_last_(AV_NOPTS_VALUE)
+		, path_(std::move(path))
 		, counter_(0)
 	{		
 		abort_request_ = false;	
+
+		for(auto it = boost::sregex_iterator(options.begin(), options.end(), boost::regex("-(?<NAME>[^-\\s]+)(\\s+(?<VALUE>[^-\\s]+))?")); it != boost::sregex_iterator(); ++it)
+			options_[(*it)["NAME"].str()] = (*it)["VALUE"].matched ? (*it)["VALUE"].str() : "";
 	}
 		
 	~ffmpeg_consumer()
@@ -122,12 +114,14 @@ public:
 			oc_.reset();
 		}
 	}
-		
+
 	void initialize(const core::video_format_desc& format_desc, int channel_index) override 
 	{
 		try
 		{				
 			static boost::regex prot_exp("^.+:.*" );
+			
+			const auto overwrite = try_remove_arg<std::string>(options_, boost::regex("y")) != nullptr;
 
 			if(!boost::regex_match(path_.string(), prot_exp))
 			{
@@ -135,10 +129,15 @@ public:
 					path_ = narrow(env::media_folder()) + path_.string();
 			
 				if(boost::filesystem::exists(path_))
-					BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("File exists"));
+				{
+					if(!overwrite)
+						BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("File exists"));
+						
+					boost::filesystem::remove(path_);
+				}
 			}
 							
-			const auto oformat_name = get_option<std::string>("(f|format)");
+			const auto oformat_name = try_remove_arg<std::string>(options_, boost::regex("^f|format$"));
 
 			AVFormatContext* oc;
 			FF(avformat_alloc_output_context2(&oc, nullptr, oformat_name ? oformat_name->c_str() : nullptr, path_.string().c_str()));
@@ -155,13 +154,13 @@ public:
 							
 			CASPAR_VERIFY(oc_->oformat);
 			
-			const auto video_codec_name = get_option<std::string>("(c:v|vcodec)");
+			const auto video_codec_name = try_remove_arg<std::string>(options_, boost::regex("^c:v|vcodec$"));
 
 			const auto video_codec = video_codec_name 
 									? avcodec_find_encoder_by_name(video_codec_name->c_str())
 									: avcodec_find_encoder(oc_->oformat->video_codec);
 						
-			const auto audio_codec_name = get_option<std::string>("(c:a|acodec)");
+			const auto audio_codec_name = try_remove_arg<std::string>(options_, boost::regex("^c:a|acodec$"));
 			
 			const auto audio_codec = audio_codec_name 
 									? avcodec_find_encoder_by_name(audio_codec_name->c_str())
@@ -175,6 +174,11 @@ public:
 
 			video_st_ = open_encoder(*video_codec);	
 			audio_st_ = open_encoder(*audio_codec);
+
+			av_dump_format(oc_.get(), 0, oc_->filename, 1);
+
+			BOOST_FOREACH(const auto& option, options_)
+				CASPAR_LOG(warning) << L"Invalid option: -" << widen(option.first) << L" " << widen(option.second);
 			
 			av_dump_format(oc_.get(), 0, path_.string().c_str(), 1);
 		
@@ -204,7 +208,7 @@ public:
 
 	std::wstring print() const override
 	{
-		return L"ffmpeg_consumer[" + widen(configuration_.filename) + L"]";
+		return L"ffmpeg_consumer[" + widen(oc_->filename) + L"]";
 	}
 	
 	virtual boost::property_tree::wptree info() const override
@@ -259,7 +263,7 @@ private:
 				enc->sample_aspect_ratio  = video_graph_out_->inputs[0]->sample_aspect_ratio;
 				enc->width				  = video_graph_out_->inputs[0]->w;
 				enc->height				  = video_graph_out_->inputs[0]->h;
-				enc->gop_size			  = get_option("g", enc->gop_size);
+				enc->gop_size			  = try_remove_arg<int>(options_, boost::regex("g")).get_value_or(enc->gop_size);
 			
 				break;
 			}
@@ -279,17 +283,42 @@ private:
 		if(oc_->oformat->flags & AVFMT_GLOBALHEADER)
 			enc->flags |= CODEC_FLAG_GLOBAL_HEADER;
 		
-		static const std::array<std::string, 4> suffix_map = {{"v", "a", "d", "s"}};
-						
-		AVDictionary* codec_opts = nullptr;
+		static const std::array<std::string, 4> char_id_map = {{"v", "a", "d", "s"}};
 
-		parse_options(&codec_opts, "-(?<NAME>[^:\\s]+)\\s(?<VALUE>[^-\\s]+)");
-		parse_options(&codec_opts, "(?<NAME>[^:\\s]+):" + suffix_map.at(enc->codec_type) + "\\s(?<VALUE>[^-\\s]+)");
-				
-        if (!av_dict_get(codec_opts, "threads", NULL, 0))
-            av_dict_set(&codec_opts, "threads", "auto", 0);
+		const auto char_id = char_id_map.at(enc->codec_type);
+								
+		const auto codec_opts   = remove_options(options_, boost::regex("^(" + char_id + "?[^:]+):" + char_id + "$"));
+		const auto general_opts = remove_options(options_, boost::regex("^([^:]+)$"));
 		
-		FF(avcodec_open2(enc, &codec, codec_opts ? &codec_opts : nullptr));		
+		AVDictionary* av_codec_opts = nullptr;
+
+		BOOST_FOREACH(const auto& opt, general_opts)
+			av_dict_set(&av_codec_opts, opt.first.c_str(), opt.second.c_str(), 0);
+
+		BOOST_FOREACH(const auto& opt, codec_opts)
+			av_dict_set(&av_codec_opts, opt.first.c_str(), opt.second.c_str(), 0);
+								
+        if (!av_dict_get(av_codec_opts, "threads", NULL, 0))
+            av_dict_set(&av_codec_opts, "threads", "auto", 0);
+		
+		FF(avcodec_open2(enc, &codec, av_codec_opts ? &av_codec_opts : nullptr));		
+
+		if(av_codec_opts)
+		{
+			auto t = av_dict_get(av_codec_opts, "", nullptr, AV_DICT_IGNORE_SUFFIX);
+			while(t)
+			{
+				if(codec_opts.find(std::string(t->key) + ":" + char_id) != codec_opts.end())
+					options_[std::string(t->key) + ":" + char_id] = t->value;
+				else
+					options_[t->key] = t->value;
+
+				t = av_dict_get(av_codec_opts, "", t, AV_DICT_IGNORE_SUFFIX);
+			}
+
+			if(general_opts.find("threads") == general_opts.end())
+				options_.erase("threads");
+		}
 				
 		if(enc->codec_type == AVMEDIA_TYPE_AUDIO && !(codec.capabilities & CODEC_CAP_VARIABLE_FRAME_SIZE))
 		{
@@ -297,7 +326,7 @@ private:
 			av_buffersink_set_frame_size(audio_graph_out_, enc->frame_size);
 		}
 
-		av_dict_free(&codec_opts);
+		av_dict_free(&av_codec_opts);
 
 		return std::shared_ptr<AVStream>(st, [this](AVStream* st)
 		{
@@ -312,22 +341,19 @@ private:
 			avfilter_graph_free(&p);
 		});
 		
-		const auto asrc_args = (boost::format("sample_rate=%1%:sample_fmt=%2%:channels=%3%:time_base=%4%/%5%")
+		const auto asrc_options = (boost::format("sample_rate=%1%:sample_fmt=%2%:channels=%3%:time_base=%4%/%5%")//:channel_layout=%6%")
 			% in_video_format_.audio_sample_rate
 			% av_get_sample_fmt_name(AV_SAMPLE_FMT_S32)
 			% 2 // TODO:
 			% 1	% in_video_format_.audio_sample_rate).str();
+			//% av_get_default_channel_layout(2) /* TODO */).str();
 				
-		// TODO:
-		//if (is->audio_filter_src.channel_layout)
-		//	snprintf(asrc_args + ret, sizeof(asrc_args) - ret,
-		//			 ":channel_layout=0x%"PRIx64,  is->audio_filter_src.channel_layout);
-				
+
 		AVFilterContext* filt_asrc = nullptr;
 		FF(avfilter_graph_create_filter(&filt_asrc,
 										avfilter_get_by_name("abuffer"), 
 										"ffmpeg_consumer_abuffer",
-										asrc_args.c_str(), 
+										asrc_options.c_str(), 
 										nullptr, 
 										audio_graph_.get()));
 				
@@ -338,17 +364,20 @@ private:
 										NULL, NULL, 
 										audio_graph_.get()));
 		
+#pragma warning (push)
 #pragma warning (disable : 4245)
 		FF(av_opt_set_int(filt_asink,	   "all_channel_counts", 1,	AV_OPT_SEARCH_CHILDREN));
 		FF(av_opt_set_int_list(filt_asink, "sample_fmts",		 codec.sample_fmts,				-1, AV_OPT_SEARCH_CHILDREN));
 		FF(av_opt_set_int_list(filt_asink, "channel_layouts",	 codec.channel_layouts,			-1, AV_OPT_SEARCH_CHILDREN));
 		FF(av_opt_set_int_list(filt_asink, "sample_rates"   ,	 codec.supported_samplerates,	-1, AV_OPT_SEARCH_CHILDREN));
-#pragma warning (default : 4245)
+#pragma warning (pop)
 			
-		configure_filtergraph(*audio_graph_, get_option<std::string>("af"), *filt_asrc, *filt_asink);
+		configure_filtergraph(*audio_graph_, try_remove_arg<std::string>(options_, boost::regex("af|filter:a")).get_value_or(""), *filt_asrc, *filt_asink);
 
 		audio_graph_in_  = filt_asrc;
 		audio_graph_out_ = filt_asink;
+
+		CASPAR_LOG(info) << avfilter_graph_dump(audio_graph_.get(), nullptr);
 	}
 
 	void configure_video_filters(const AVCodec& codec)
@@ -358,7 +387,7 @@ private:
 			avfilter_graph_free(&p);
 		});
 		
-		const auto vsrc_args = (boost::format("video_size=%1%x%2%:pix_fmt=%3%:time_base=%4%/%5%:pixel_aspect=%6%/%7%:frame_rate=%8%/%9%")
+		const auto vsrc_options = (boost::format("video_size=%1%x%2%:pix_fmt=%3%:time_base=%4%/%5%:pixel_aspect=%6%/%7%:frame_rate=%8%/%9%")
 			% in_video_format_.width % in_video_format_.height
 			% AV_PIX_FMT_BGRA
 			% in_video_format_.duration	% in_video_format_.time_scale
@@ -369,7 +398,7 @@ private:
 		FF(avfilter_graph_create_filter(&filt_vsrc,
 										avfilter_get_by_name("buffer"), 
 										"ffmpeg_consumer_buffer",
-										vsrc_args.c_str(), 
+										vsrc_options.c_str(), 
 										nullptr, 
 										video_graph_.get()));
 				
@@ -380,24 +409,27 @@ private:
 										NULL, NULL, 
 										video_graph_.get()));
 		
+#pragma warning (push)
 #pragma warning (disable : 4245)
 		FF(av_opt_set_int_list(filt_vsink, "pix_fmts", codec.pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
-#pragma warning (default : 4245)
+#pragma warning (pop)
 			
-		configure_filtergraph(*video_graph_, get_option<std::string>("vf"), *filt_vsrc, *filt_vsink);
+		configure_filtergraph(*video_graph_, try_remove_arg<std::string>(options_, boost::regex("vf|filter:v")).get_value_or(""), *filt_vsrc, *filt_vsink);
 
 		video_graph_in_  = filt_vsrc;
 		video_graph_out_ = filt_vsink;
+
+		CASPAR_LOG(info) << avfilter_graph_dump(video_graph_.get(), nullptr);
 	}
 
-	void configure_filtergraph(AVFilterGraph& graph, boost::optional<std::string> filtergraph, AVFilterContext& source_ctx, AVFilterContext& sink_ctx)
+	void configure_filtergraph(AVFilterGraph& graph, std::string filtergraph, AVFilterContext& source_ctx, AVFilterContext& sink_ctx)
 	{
 		AVFilterInOut* outputs = nullptr;
 		AVFilterInOut* inputs = nullptr;
 
 		try
 		{
-			if(filtergraph) 
+			if(!filtergraph.empty()) 
 			{
 				outputs = avfilter_inout_alloc();
 				inputs  = avfilter_inout_alloc();
@@ -414,7 +446,7 @@ private:
 				inputs->pad_idx     = 0;
 				inputs->next        = nullptr;
 
-				FF(avfilter_graph_parse(&graph, filtergraph->c_str(), &inputs, &outputs, nullptr));
+				FF(avfilter_graph_parse(&graph, filtergraph.c_str(), &inputs, &outputs, nullptr));
 			} 
 			else 
 			{
@@ -615,39 +647,41 @@ private:
 
 		FF(av_interleaved_write_frame(oc_.get(), pkt_ptr.get()));	
 	}	
-
-	void parse_options(AVDictionary** opts, std::string expr)
-	{
-		std::for_each(
-			boost::sregex_iterator(
-				configuration_.options.begin(),
-				configuration_.options.end(),
-				boost::regex(expr, boost::regex::icase)),
-			boost::sregex_iterator(),
-			[&](const boost::match_results<std::string::const_iterator>& what)
-			{
-				av_dict_set(opts, what["NAME"].str().c_str(), what["VALUE"].str().c_str(), 0);
-			});
-	}
-
-	template<class T>
-	boost::optional<T> get_option(std::string name)
-	{
-		boost::smatch what;
-		if(boost::regex_search(configuration_.options, what, boost::regex("-" + name + "\\s(?<VALUE>[^\\s]*)")))
-			return boost::lexical_cast<T>(what["VALUE"].str());
-
-		return nullptr;
-	}
 	
 	template<typename T>
-	T get_option(std::string name, T default)
+	static boost::optional<T> try_remove_arg(std::map<std::string, std::string>& options, const boost::regex& expr)
 	{
-		boost::smatch what;
-		if(boost::regex_search(configuration_.options, what, boost::regex("-" + name + "\\s(?<VALUE>[^\\s]*)")))
-			return boost::lexical_cast<T>(what["VALUE"].str());
+		for(auto it = options.begin(); it != options.end(); ++it)
+		{			
+			if(boost::regex_search(it->first, expr))
+			{
+				auto arg = it->second;
+				options.erase(it);
+				return boost::lexical_cast<T>(arg);
+			}
+		}
 
-		return default;
+		return boost::optional<T>();
+	}
+		
+	static std::map<std::string, std::string> remove_options(std::map<std::string, std::string>& options, const boost::regex& expr)
+	{
+		std::map<std::string, std::string> result;
+			
+		auto it = options.begin();
+		while(it != options.end())
+		{			
+			boost::smatch what;
+			if(boost::regex_search(it->first, what, expr))
+			{
+				result[what.size() > 0 && what[1].matched ? what[1].str() : it->first] = it->second;
+				it = options.erase(it);
+			}
+			else
+				++it;
+		}
+
+		return result;
 	}
 };
 	
@@ -661,21 +695,16 @@ safe_ptr<core::frame_consumer> create_consumer(const core::parameters& params)
     //if(!boost::regex_match(str, what, path_exp))
     //     return core::frame_consumer::empty();
 	
-	ffmpeg_consumer::configuration configuration;
+	//ffmpeg_consumer::configuration configuration;
 
 	//configuration.filename = narrow(what["PATH"].str());
                            
-    return make_safe<ffmpeg_consumer>(configuration);
+    return make_safe<ffmpeg_consumer>("", "");
 }
 
 safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree)
-{              
-	ffmpeg_consumer::configuration configuration;
-
-	configuration.filename = narrow(ptree.get<std::wstring>(L"path"));
-	configuration.options  = narrow(ptree.get<std::wstring>(L"options", L""));
-	
-    return make_safe<ffmpeg_consumer>(configuration);
+{              	
+    return make_safe<ffmpeg_consumer>(narrow(ptree.get<std::wstring>(L"path")), narrow(ptree.get<std::wstring>(L"args", L"")));
 }
 
 }}
