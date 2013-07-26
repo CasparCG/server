@@ -287,14 +287,10 @@ private:
 
 		const auto char_id = char_id_map.at(enc->codec_type);
 								
-		const auto codec_opts   = remove_options(options_, boost::regex("^(" + char_id + "?[^:]+):" + char_id + "$"));
-		const auto general_opts = remove_options(options_, boost::regex("^([^:]+)$"));
+		const auto codec_opts = remove_options(options_, boost::regex("^(" + char_id + "?[^:]+):" + char_id + "$"));
 		
 		AVDictionary* av_codec_opts = nullptr;
-
-		BOOST_FOREACH(const auto& opt, general_opts)
-			av_dict_set(&av_codec_opts, opt.first.c_str(), opt.second.c_str(), 0);
-
+		
 		BOOST_FOREACH(const auto& opt, codec_opts)
 			av_dict_set(&av_codec_opts, opt.first.c_str(), opt.second.c_str(), 0);
 								
@@ -308,15 +304,12 @@ private:
 			auto t = av_dict_get(av_codec_opts, "", nullptr, AV_DICT_IGNORE_SUFFIX);
 			while(t)
 			{
-				if(codec_opts.find(std::string(t->key) + ":" + char_id) != codec_opts.end())
-					options_[std::string(t->key) + ":" + char_id] = t->value;
-				else
-					options_[t->key] = t->value;
+				options_[std::string(t->key) + ":" + char_id] = t->value;
 
 				t = av_dict_get(av_codec_opts, "", t, AV_DICT_IGNORE_SUFFIX);
 			}
 
-			if(general_opts.find("threads") == general_opts.end())
+			if(codec_opts.find("threads") == codec_opts.end())
 				options_.erase("threads");
 		}
 				
