@@ -369,7 +369,7 @@ private:
 		audio_graph_in_  = filt_asrc;
 		audio_graph_out_ = filt_asink;
 
-		avfilter_graph_dump(audio_graph_.get(), nullptr);
+		CASPAR_LOG(info) << widen(std::string("\n") + avfilter_graph_dump(audio_graph_.get(), nullptr));
 	}
 
 	void configure_video_filters(const AVCodec& codec)
@@ -410,8 +410,8 @@ private:
 
 		video_graph_in_  = filt_vsrc;
 		video_graph_out_ = filt_vsink;
-
-		avfilter_graph_dump(video_graph_.get(), nullptr);
+		
+		CASPAR_LOG(info) << widen(std::string("\n") + avfilter_graph_dump(video_graph_.get(), nullptr));
 	}
 
 	void configure_filtergraph(AVFilterGraph& graph, std::string filtergraph, AVFilterContext& source_ctx, AVFilterContext& sink_ctx)
