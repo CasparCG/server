@@ -266,7 +266,7 @@ private:
 			{
 				enc->time_base			  = video_graph_out_->inputs[0]->time_base;
 				enc->pix_fmt			  = static_cast<AVPixelFormat>(video_graph_out_->inputs[0]->format);
-				enc->sample_aspect_ratio  = video_graph_out_->inputs[0]->sample_aspect_ratio;
+				enc->sample_aspect_ratio  = st->sample_aspect_ratio = video_graph_out_->inputs[0]->sample_aspect_ratio;
 				enc->width				  = video_graph_out_->inputs[0]->w;
 				enc->height				  = video_graph_out_->inputs[0]->h;
 				enc->gop_size			  = try_remove_arg<int>(options_, boost::regex("g")).get_value_or(enc->gop_size);
@@ -284,7 +284,7 @@ private:
 				break;
 			}
 		}
-								
+										
 		if(oc_->oformat->flags & AVFMT_GLOBALHEADER)
 			enc->flags |= CODEC_FLAG_GLOBAL_HEADER;
 		
@@ -414,12 +414,15 @@ private:
 		{
 			avfilter_graph_free(&p);
 		});
+
+		const auto sample_aspect_ratio = boost::rational<int>(in_video_format_.square_width, in_video_format_.square_height) /
+										 boost::rational<int>(in_video_format_.width, in_video_format_.height);
 		
 		const auto vsrc_options = (boost::format("video_size=%1%x%2%:pix_fmt=%3%:time_base=%4%/%5%:pixel_aspect=%6%/%7%:frame_rate=%8%/%9%")
 			% in_video_format_.width % in_video_format_.height
 			% AV_PIX_FMT_BGRA
 			% in_video_format_.duration	% in_video_format_.time_scale
-			% 0 % 1 // TODO:
+			% sample_aspect_ratio.numerator() % sample_aspect_ratio.denominator()
 			% in_video_format_.time_scale % in_video_format_.duration).str();
 					
 		AVFilterContext* filt_vsrc = nullptr;			
@@ -505,11 +508,16 @@ private:
 				av_frame_free(&frame);
 			});
 			avcodec_get_frame_defaults(src_av_frame.get());		
+			
+			const auto sample_aspect_ratio = boost::rational<int>(in_video_format_.square_width, in_video_format_.square_height) /
+											 boost::rational<int>(in_video_format_.width, in_video_format_.height);
 
 			src_av_frame->format = AV_PIX_FMT_BGRA;
 			src_av_frame->width  = in_video_format_.width;
 			src_av_frame->height = in_video_format_.height;
 			src_av_frame->pts	 = counter_++;
+			src_av_frame->sample_aspect_ratio.num = sample_aspect_ratio.numerator();
+			src_av_frame->sample_aspect_ratio.den = sample_aspect_ratio.denominator();
 
 			FF(av_image_fill_arrays(src_av_frame->data,
 									src_av_frame->linesize,
