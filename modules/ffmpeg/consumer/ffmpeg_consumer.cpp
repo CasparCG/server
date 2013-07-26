@@ -58,30 +58,32 @@ public:
 		
 private:
 	
-	boost::filesystem::path				path_;
+	boost::filesystem::path						path_;
 
-	std::map<std::string, std::string>  options_;
-										
-	core::video_format_desc				in_video_format_;
-																			 
-	std::shared_ptr<AVFormatContext>	oc_;
-	tbb::atomic<bool>					abort_request_;
-										
-	std::shared_ptr<AVStream>			video_st_;
-	std::shared_ptr<AVStream>			audio_st_;
+	std::map<std::string, std::string>			options_;
+												
+	core::video_format_desc						in_video_format_;
+																					 
+	std::shared_ptr<AVFormatContext>			oc_;
+	tbb::atomic<bool>							abort_request_;
+												
+	std::shared_ptr<AVStream>					video_st_;
+	std::shared_ptr<AVStream>					audio_st_;
 
-	std::int64_t						counter_;
-																				
-	std::int64_t						filter_in_rescale_delta_last_;	
+	std::int64_t								counter_;
+																						
+	std::int64_t								filter_in_rescale_delta_last_;	
 
-    AVFilterContext*					audio_graph_in_;  
-    AVFilterContext*					audio_graph_out_; 
-    std::shared_ptr<AVFilterGraph>		audio_graph_;           
+    AVFilterContext*							audio_graph_in_;  
+    AVFilterContext*							audio_graph_out_; 
+    std::shared_ptr<AVFilterGraph>				audio_graph_;    
+	std::shared_ptr<AVBitStreamFilterContext>	audio_bitstream_filter_;       
 
-    AVFilterContext*					video_graph_in_;  
-    AVFilterContext*					video_graph_out_; 
-    std::shared_ptr<AVFilterGraph>		video_graph_;  
-
+    AVFilterContext*							video_graph_in_;  
+    AVFilterContext*							video_graph_out_; 
+    std::shared_ptr<AVFilterGraph>				video_graph_;  
+	std::shared_ptr<AVBitStreamFilterContext>	video_bitstream_filter_;
+	
 public:
 
 	ffmpeg_consumer(std::string path, std::string options)
@@ -139,10 +141,11 @@ public:
 							
 			const auto oformat_name = try_remove_arg<std::string>(options_, boost::regex("^f|format$"));
 
+
 			AVFormatContext* oc;
 			FF(avformat_alloc_output_context2(&oc, nullptr, oformat_name ? oformat_name->c_str() : nullptr, path_.string().c_str()));
 			oc_.reset(oc, avformat_free_context);
-		
+					
 			CASPAR_VERIFY(oc_->oformat);
 
 			oc_->interrupt_callback.callback = ffmpeg_consumer::interrupt_cb;
@@ -172,9 +175,12 @@ public:
 			configure_video_filters(*video_codec);
 			configure_audio_filters(*audio_codec);
 
+			configue_audio_bistream_filters();
+			configue_video_bistream_filters();
+
 			video_st_ = open_encoder(*video_codec);	
 			audio_st_ = open_encoder(*audio_codec);
-
+						
 			av_dump_format(oc_.get(), 0, oc_->filename, 1);
 
 			BOOST_FOREACH(const auto& option, options_)
@@ -324,6 +330,36 @@ private:
 		{
 			avcodec_close(st->codec);
 		});
+	}
+
+	void configue_audio_bistream_filters()
+	{
+		const auto audio_bitstream_filter_str = try_remove_arg<std::string>(options_, boost::regex("^bsf:a|absf$"));
+
+		const auto audio_bitstream_filter = audio_bitstream_filter_str ? av_bitstream_filter_init(audio_bitstream_filter_str->c_str()) : nullptr;
+
+		CASPAR_VERIFY(!audio_bitstream_filter_str || audio_bitstream_filter);
+
+		if(audio_bitstream_filter)
+			audio_bitstream_filter_.reset(audio_bitstream_filter, av_bitstream_filter_close);
+		
+		if(audio_bitstream_filter_str && !audio_bitstream_filter_)
+			options_["bsf:a"] = *audio_bitstream_filter_str;
+	}
+	
+	void configue_video_bistream_filters()
+	{
+		const auto video_bitstream_filter_str = try_remove_arg<std::string>(options_, boost::regex("^bsf:v|vbsf$"));
+
+		const auto video_bitstream_filter = video_bitstream_filter_str ? av_bitstream_filter_init(video_bitstream_filter_str->c_str()) : nullptr;
+
+		CASPAR_VERIFY(!video_bitstream_filter_str || video_bitstream_filter);
+
+		if(video_bitstream_filter)
+			video_bitstream_filter_.reset(video_bitstream_filter, av_bitstream_filter_close);
+		
+		if(video_bitstream_filter_str && !video_bitstream_filter_)
+			options_["bsf:v"] = *video_bitstream_filter_str;
 	}
 
 	void configure_audio_filters(const AVCodec& codec)
@@ -501,7 +537,7 @@ private:
 			{
 				if(enc->codec->capabilities & CODEC_CAP_DELAY)
 				{
-					while(encode_av_frame(*video_st_, avcodec_encode_video2, nullptr))
+					while(encode_av_frame(*video_st_, video_bitstream_filter_.get(), avcodec_encode_video2, nullptr))
 						boost::this_thread::yield(); // TODO:
 				}		
 			}
@@ -524,7 +560,7 @@ private:
 				if (!enc->me_threshold)
 					filt_frame->pict_type = AV_PICTURE_TYPE_NONE;
 			
-				encode_av_frame(*video_st_, avcodec_encode_video2, filt_frame);
+				encode_av_frame(*video_st_, video_bitstream_filter_.get(), avcodec_encode_video2, filt_frame);
 			}
 
 			boost::this_thread::yield(); // TODO:
@@ -579,7 +615,7 @@ private:
 			{
 				if(enc->codec->capabilities & CODEC_CAP_DELAY)
 				{
-					while(encode_av_frame(*audio_st_, avcodec_encode_audio2, nullptr))
+					while(encode_av_frame(*audio_st_, audio_bitstream_filter_.get(), avcodec_encode_audio2, nullptr))
 						boost::this_thread::yield(); // TODO:
 				}
 			}
@@ -587,7 +623,7 @@ private:
 			{
 				FF_RET(ret, "av_buffersink_get_frame");
 
-				encode_av_frame(*audio_st_, avcodec_encode_audio2, filt_frame);
+				encode_av_frame(*audio_st_, audio_bitstream_filter_.get(), avcodec_encode_audio2, filt_frame);
 			}
 
 			boost::this_thread::yield(); // TODO:
@@ -595,20 +631,64 @@ private:
 	}
 	
 	template<typename F>
-	bool encode_av_frame(AVStream& st, const F& func, const std::shared_ptr<AVFrame>& src_av_frame)
+	bool encode_av_frame(AVStream& st, AVBitStreamFilterContext* bsfc, const F& func, const std::shared_ptr<AVFrame>& src_av_frame)
 	{
-		std::shared_ptr<AVPacket> pkt_ptr(new AVPacket(), [](AVPacket* p){av_free_packet(p); delete p;});
-		av_init_packet(pkt_ptr.get());
+		AVPacket pkt = {};
+		av_init_packet(&pkt);
 
 		int got_packet = 0;
-		FF(func(st.codec, pkt_ptr.get(), src_av_frame.get(), &got_packet));
+		FF(func(st.codec, &pkt, src_av_frame.get(), &got_packet));
 					
-		if(!got_packet || pkt_ptr->size <= 0)
+		if(!got_packet || pkt.size <= 0)
 			return false;
 				
-		pkt_ptr->stream_index = st.index;
+		pkt.stream_index = st.index;
 		
-		write_packet(std::move(pkt_ptr));
+		if(bsfc)
+		{
+			auto new_pkt = pkt;
+
+			auto a = av_bitstream_filter_filter(bsfc, 
+												st.codec, 
+												nullptr,
+												&new_pkt.data, 
+												&new_pkt.size,
+												pkt.data,
+												pkt.size,
+												pkt.flags & AV_PKT_FLAG_KEY);
+
+			if(a == 0 && new_pkt.data != pkt.data && new_pkt.destruct) 
+			{
+				auto t = reinterpret_cast<std::uint8_t*>(av_malloc(new_pkt.size + FF_INPUT_BUFFER_PADDING_SIZE));
+
+				if(t) 
+				{
+					memcpy(t, new_pkt.data, new_pkt.size);
+					memset(t + new_pkt.size, 0, FF_INPUT_BUFFER_PADDING_SIZE);
+
+					new_pkt.data = t;
+					new_pkt.buf  = nullptr;
+				} 
+				else
+					a = AVERROR(ENOMEM);
+			}
+
+			av_free_packet(&pkt);
+
+			FF_RET(a, "av_bitstream_filter_filter");
+
+			new_pkt.buf = av_buffer_create(new_pkt.data, 
+										   new_pkt.size,
+										   av_buffer_default_free, 
+										   nullptr, 
+										   0);
+
+			CASPAR_VERIFY(new_pkt.buf);
+
+			pkt = new_pkt;
+		}
+
+		write_packet(std::shared_ptr<AVPacket>(new AVPacket(pkt), [](AVPacket* p){av_free_packet(p); delete p;}));
 
 		return true;
 	}
