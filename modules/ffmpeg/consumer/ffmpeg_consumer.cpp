@@ -70,10 +70,9 @@ private:
 	std::shared_ptr<AVStream>					video_st_;
 	std::shared_ptr<AVStream>					audio_st_;
 
-	std::int64_t								counter_;
-																						
-	std::int64_t								filter_in_rescale_delta_last_;	
-
+	std::int64_t								video_pts_;
+	std::int64_t								audio_pts_;
+																					
     AVFilterContext*							audio_graph_in_;  
     AVFilterContext*							audio_graph_out_; 
     std::shared_ptr<AVFilterGraph>				audio_graph_;    
@@ -87,9 +86,9 @@ private:
 public:
 
 	ffmpeg_consumer(std::string path, std::string options)
-		: filter_in_rescale_delta_last_(AV_NOPTS_VALUE)
-		, path_(std::move(path))
-		, counter_(0)
+		: path_(std::move(path))
+		, video_pts_(0)
+		, audio_pts_(0)
 	{		
 		abort_request_ = false;	
 
@@ -185,9 +184,7 @@ public:
 
 			BOOST_FOREACH(const auto& option, options_)
 				CASPAR_LOG(warning) << L"Invalid option: -" << widen(option.first) << L" " << widen(option.second);
-			
-			av_dump_format(oc_.get(), 0, path_.string().c_str(), 1);
-		
+					
 			if (!(oc_->oformat->flags & AVFMT_NOFILE)) 
 				FF(avio_open(&oc_->pb, path_.string().c_str(), AVIO_FLAG_WRITE));
 
@@ -269,7 +266,7 @@ private:
 				enc->sample_aspect_ratio  = st->sample_aspect_ratio = video_graph_out_->inputs[0]->sample_aspect_ratio;
 				enc->width				  = video_graph_out_->inputs[0]->w;
 				enc->height				  = video_graph_out_->inputs[0]->h;
-				enc->gop_size			  = try_remove_arg<int>(options_, boost::regex("g")).get_value_or(enc->gop_size);
+				enc->gop_size			  = try_remove_arg<int>(options_, boost::regex("g|g:v")).get_value_or(enc->gop_size);
 			
 				break;
 			}
@@ -515,9 +512,11 @@ private:
 			src_av_frame->format				  = AV_PIX_FMT_BGRA;
 			src_av_frame->width					  = in_video_format_.width;
 			src_av_frame->height				  = in_video_format_.height;
-			src_av_frame->pts					  = counter_++;
 			src_av_frame->sample_aspect_ratio.num = sample_aspect_ratio.numerator();
 			src_av_frame->sample_aspect_ratio.den = sample_aspect_ratio.denominator();
+			src_av_frame->pts					  = video_pts_;
+
+			video_pts_ += 1;
 
 			FF(av_image_fill_arrays(src_av_frame->data,
 									src_av_frame->linesize,
@@ -594,6 +593,9 @@ private:
 			src_av_frame->sample_rate	 = in_video_format_.audio_sample_rate;
 			src_av_frame->nb_samples	 = frame_ptr->audio_data().size() / src_av_frame->channels;
 			src_av_frame->format		 = AV_SAMPLE_FMT_S32;
+			src_av_frame->pts			 = audio_pts_;
+
+			audio_pts_ += src_av_frame->nb_samples;
 
 			FF(av_samples_fill_arrays(src_av_frame->extended_data, 
 									  src_av_frame->linesize,
@@ -616,9 +618,7 @@ private:
 			});
 
 			ret = av_buffersink_get_frame(audio_graph_out_, filt_frame.get());
-
-			filt_frame->pts = AV_NOPTS_VALUE; // TODO:
-			
+						
 			if(ret == AVERROR_EOF)
 			{
 				if(enc->codec->capabilities & CODEC_CAP_DELAY)
@@ -714,16 +714,6 @@ private:
 			if (pkt_ptr->dts != AV_NOPTS_VALUE)
 				pkt_ptr->dts = av_rescale_q(pkt_ptr->dts, enc->time_base, st->time_base);
 				
-			if (st->codec->codec_type == AVMEDIA_TYPE_AUDIO && pkt_ptr->dts != AV_NOPTS_VALUE) 
-			{
-				int duration = av_get_audio_frame_duration(enc, pkt_ptr->size);
-				if(!duration)
-					duration = enc->frame_size;
-
-				AVRational fs_tb = {1, enc->sample_rate};
-				pkt_ptr->dts = av_rescale_delta(enc->time_base, pkt_ptr->dts, fs_tb, duration, &filter_in_rescale_delta_last_, st->time_base);
-			}
-
 			pkt_ptr->duration = static_cast<int>(av_rescale_q(pkt_ptr->duration, enc->time_base, st->time_base));
 		}
 
