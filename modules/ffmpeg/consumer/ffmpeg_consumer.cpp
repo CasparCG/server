@@ -40,6 +40,7 @@ extern "C"
 	#include <libavutil/frame.h>
 	#include <libavutil/opt.h>
 	#include <libavutil/imgutils.h>
+	#include <libavutil/parseutils.h>
 	#include <libavfilter/avfilter.h>
 	#include <libavfilter/buffersink.h>
 	#include <libavfilter/buffersrc.h>
@@ -94,6 +95,9 @@ public:
 
 		for(auto it = boost::sregex_iterator(options.begin(), options.end(), boost::regex("-(?<NAME>[^-\\s]+)(\\s+(?<VALUE>[^-\\s]+))?")); it != boost::sregex_iterator(); ++it)
 			options_[(*it)["NAME"].str()] = (*it)["VALUE"].matched ? (*it)["VALUE"].str() : "";
+										
+        if (options_.find("threads") == options_.end())
+            options_["threads"] = "auto";
 	}
 		
 	~ffmpeg_consumer()
@@ -156,13 +160,13 @@ public:
 							
 			CASPAR_VERIFY(oc_->oformat);
 			
-			const auto video_codec_name = try_remove_arg<std::string>(options_, boost::regex("^c:v|vcodec$"));
+			const auto video_codec_name = try_remove_arg<std::string>(options_, boost::regex("^c:v|codec:v|vcodec$"));
 
 			const auto video_codec = video_codec_name 
 									? avcodec_find_encoder_by_name(video_codec_name->c_str())
 									: avcodec_find_encoder(oc_->oformat->video_codec);
 						
-			const auto audio_codec_name = try_remove_arg<std::string>(options_, boost::regex("^c:a|acodec$"));
+			const auto audio_codec_name = try_remove_arg<std::string>(options_, boost::regex("^c:a|codec:a|acodec$"));
 			
 			const auto audio_codec = audio_codec_name 
 									? avcodec_find_encoder_by_name(audio_codec_name->c_str())
@@ -170,25 +174,60 @@ public:
 			
 			CASPAR_VERIFY(video_codec);
 			CASPAR_VERIFY(audio_codec);
+			
+			// Filters
 
-			configure_video_filters(*video_codec);
-			configure_audio_filters(*audio_codec);
+			{
+				configure_video_filters(*video_codec, options_);
+				configure_audio_filters(*audio_codec, options_);
+			}
 
-			configue_audio_bistream_filters();
-			configue_video_bistream_filters();
+			// Bistream Filters
+			{
+				configue_audio_bistream_filters(options_);
+				configue_video_bistream_filters(options_);
+			}
 
-			video_st_ = open_encoder(*video_codec);	
-			audio_st_ = open_encoder(*audio_codec);
-						
-			av_dump_format(oc_.get(), 0, oc_->filename, 1);
+			// Encoders
+
+			{
+				auto video_options = options_;
+				auto audio_options = options_;
+
+				video_st_ = open_encoder(*video_codec, video_options);	
+				audio_st_ = open_encoder(*audio_codec, audio_options);
+
+				auto it = options_.begin();
+				while(it != options_.end())
+				{
+					if(video_options.find(it->first) == video_options.end() || audio_options.find(it->first) == audio_options.end())
+						it = options_.erase(it);
+					else
+						++it;
+				}
+			}
+
+			// Output
+			{
+				auto av_opts = to_dict(std::move(options_));
+
+				if (!(oc_->oformat->flags & AVFMT_NOFILE)) 
+					FF(avio_open2(&oc_->pb, path_.string().c_str(), AVIO_FLAG_WRITE, &oc_->interrupt_callback, &av_opts));
+				
+				FF(avformat_write_header(oc_.get(), &av_opts));
+				
+				options_ = to_map(av_opts);
+
+				av_dict_free(&av_opts);
+			}
+
+			// Dump Info
+			
+			av_dump_format(oc_.get(), 0, oc_->filename, 1);		
 
 			BOOST_FOREACH(const auto& option, options_)
 				CASPAR_LOG(warning) << L"Invalid option: -" << widen(option.first) << L" " << widen(option.second);
-					
-			if (!(oc_->oformat->flags & AVFMT_NOFILE)) 
-				FF(avio_open(&oc_->pb, path_.string().c_str(), AVIO_FLAG_WRITE));
 
-			FF(avformat_write_header(oc_.get(), NULL));
 		}
 		catch(...)
 		{
@@ -247,7 +286,7 @@ private:
 		return reinterpret_cast<ffmpeg_consumer*>(ctx)->abort_request_;		
 	}
 		
-	std::shared_ptr<AVStream> open_encoder(const AVCodec& codec)
+	std::shared_ptr<AVStream> open_encoder(const AVCodec& codec, std::map<std::string, std::string>& options)
 	{			
 		auto st = avformat_new_stream(oc_.get(), &codec);
 		if (!st) 		
@@ -260,13 +299,13 @@ private:
 		switch(enc->codec_type)
 		{
 			case AVMEDIA_TYPE_VIDEO:
-			{
+			{				
 				enc->time_base			  = video_graph_out_->inputs[0]->time_base;
 				enc->pix_fmt			  = static_cast<AVPixelFormat>(video_graph_out_->inputs[0]->format);
 				enc->sample_aspect_ratio  = st->sample_aspect_ratio = video_graph_out_->inputs[0]->sample_aspect_ratio;
 				enc->width				  = video_graph_out_->inputs[0]->w;
 				enc->height				  = video_graph_out_->inputs[0]->h;
-				enc->gop_size			  = try_remove_arg<int>(options_, boost::regex("g|g:v")).get_value_or(enc->gop_size);
+				enc->gop_size			  = try_remove_arg<int>(options, boost::regex("g|g:v")).get_value_or(enc->gop_size);
 			
 				break;
 			}
@@ -289,15 +328,14 @@ private:
 
 		const auto char_id = char_id_map.at(enc->codec_type);
 								
-		const auto codec_opts = remove_options(options_, boost::regex("^(" + char_id + "?[^:]+):" + char_id + "$"));
+		const auto codec_opts = remove_options(options, boost::regex("^(" + char_id + "?[^:]+):" + char_id + "$"));
 		
 		AVDictionary* av_codec_opts = nullptr;
-		
-		BOOST_FOREACH(const auto& opt, codec_opts)
-			av_dict_set(&av_codec_opts, opt.first.c_str(), opt.second.c_str(), 0);
-								
-        if (!av_dict_get(av_codec_opts, "threads", nullptr, 0))
-            av_dict_set(&av_codec_opts, "threads", "auto", 0);
+
+		copy_to_dict(&av_codec_opts, options);
+		copy_to_dict(&av_codec_opts, codec_opts);
+
+		options.clear();
 		
 		FF(avcodec_open2(enc, &codec, av_codec_opts ? &av_codec_opts : nullptr));		
 
@@ -306,13 +344,15 @@ private:
 			auto t = av_dict_get(av_codec_opts, "", nullptr, AV_DICT_IGNORE_SUFFIX);
 			while(t)
 			{
-				options_[std::string(t->key) + ":" + char_id] = t->value;
+				if(codec_opts.find(t->key) != codec_opts.end())
+					options[std::string(t->key) + ":" + char_id] = t->value;
+				else
+					options[t->key] = t->value;
 
 				t = av_dict_get(av_codec_opts, "", t, AV_DICT_IGNORE_SUFFIX);
 			}
 
-			if(codec_opts.find("threads") == codec_opts.end())
-				options_.erase("threads");
+			av_dict_free(&av_codec_opts);
 		}
 				
 		if(enc->codec_type == AVMEDIA_TYPE_AUDIO && !(codec.capabilities & CODEC_CAP_VARIABLE_FRAME_SIZE))
@@ -321,7 +361,6 @@ private:
 			av_buffersink_set_frame_size(audio_graph_out_, enc->frame_size);
 		}
 
-		av_dict_free(&av_codec_opts);
 
 		return std::shared_ptr<AVStream>(st, [this](AVStream* st)
 		{
@@ -329,9 +368,9 @@ private:
 		});
 	}
 
-	void configue_audio_bistream_filters()
+	void configue_audio_bistream_filters(std::map<std::string, std::string>& options)
 	{
-		const auto audio_bitstream_filter_str = try_remove_arg<std::string>(options_, boost::regex("^bsf:a|absf$"));
+		const auto audio_bitstream_filter_str = try_remove_arg<std::string>(options, boost::regex("^bsf:a|absf$"));
 
 		const auto audio_bitstream_filter = audio_bitstream_filter_str ? av_bitstream_filter_init(audio_bitstream_filter_str->c_str()) : nullptr;
 
@@ -341,12 +380,12 @@ private:
 			audio_bitstream_filter_.reset(audio_bitstream_filter, av_bitstream_filter_close);
 		
 		if(audio_bitstream_filter_str && !audio_bitstream_filter_)
-			options_["bsf:a"] = *audio_bitstream_filter_str;
+			options["bsf:a"] = *audio_bitstream_filter_str;
 	}
 	
-	void configue_video_bistream_filters()
+	void configue_video_bistream_filters(std::map<std::string, std::string>& options)
 	{
-		const auto video_bitstream_filter_str = try_remove_arg<std::string>(options_, boost::regex("^bsf:v|vbsf$"));
+		const auto video_bitstream_filter_str = try_remove_arg<std::string>(options, boost::regex("^bsf:v|vbsf$"));
 
 		const auto video_bitstream_filter = video_bitstream_filter_str ? av_bitstream_filter_init(video_bitstream_filter_str->c_str()) : nullptr;
 
@@ -356,10 +395,10 @@ private:
 			video_bitstream_filter_.reset(video_bitstream_filter, av_bitstream_filter_close);
 		
 		if(video_bitstream_filter_str && !video_bitstream_filter_)
-			options_["bsf:v"] = *video_bitstream_filter_str;
+			options["bsf:v"] = *video_bitstream_filter_str;
 	}
 
-	void configure_audio_filters(const AVCodec& codec)
+	void configure_audio_filters(const AVCodec& codec, std::map<std::string, std::string>& options)
 	{
 		audio_graph_.reset(avfilter_graph_alloc(), [](AVFilterGraph* p)
 		{
@@ -397,7 +436,7 @@ private:
 		FF(av_opt_set_int_list(filt_asink, "sample_rates"   ,	 codec.supported_samplerates,	-1, AV_OPT_SEARCH_CHILDREN));
 #pragma warning (pop)
 			
-		configure_filtergraph(*audio_graph_, try_remove_arg<std::string>(options_, boost::regex("af|filter:a")).get_value_or(""), *filt_asrc, *filt_asink);
+		configure_filtergraph(*audio_graph_, try_remove_arg<std::string>(options, boost::regex("af|filter:a")).get_value_or(""), *filt_asrc, *filt_asink);
 
 		audio_graph_in_  = filt_asrc;
 		audio_graph_out_ = filt_asink;
@@ -405,7 +444,7 @@ private:
 		CASPAR_LOG(info) << widen(std::string("\n") + avfilter_graph_dump(audio_graph_.get(), nullptr));
 	}
 
-	void configure_video_filters(const AVCodec& codec)
+	void configure_video_filters(const AVCodec& codec, std::map<std::string, std::string>& options)
 	{
 		video_graph_.reset(avfilter_graph_alloc(), [](AVFilterGraph* p)
 		{
@@ -442,7 +481,7 @@ private:
 		FF(av_opt_set_int_list(filt_vsink, "pix_fmts", codec.pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
 #pragma warning (pop)
 			
-		configure_filtergraph(*video_graph_, try_remove_arg<std::string>(options_, boost::regex("vf|filter:v")).get_value_or(""), *filt_vsrc, *filt_vsink);
+		configure_filtergraph(*video_graph_, try_remove_arg<std::string>(options, boost::regex("vf|filter:v")).get_value_or(""), *filt_vsrc, *filt_vsink);
 
 		video_graph_in_  = filt_vsrc;
 		video_graph_out_ = filt_vsink;
@@ -752,6 +791,32 @@ private:
 			else
 				++it;
 		}
+
+		return result;
+	}
+
+	static AVDictionary* to_dict(const std::map<std::string, std::string>& c)
+	{		
+		AVDictionary* result = nullptr;
+
+		BOOST_FOREACH(const auto& entry, c)
+			av_dict_set(&result, entry.first.c_str(), entry.second.c_str(), 0);
+
+		return result;
+	}
+	
+	static void copy_to_dict(AVDictionary** dest, const std::map<std::string, std::string>& c)
+	{		
+		BOOST_FOREACH(const auto& entry, c)
+			av_dict_set(dest, entry.first.c_str(), entry.second.c_str(), 0);
+	}
+
+	static std::map<std::string, std::string> to_map(AVDictionary* dict)
+	{
+		std::map<std::string, std::string> result;
+		
+		for(auto t = dict ? av_dict_get(dict, "", nullptr, AV_DICT_IGNORE_SUFFIX) : nullptr; t; t = av_dict_get(dict, "", t, AV_DICT_IGNORE_SUFFIX))
+			result[t->key] = t->value;
 
 		return result;
 	}
