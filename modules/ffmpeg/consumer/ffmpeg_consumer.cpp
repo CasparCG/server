@@ -420,7 +420,8 @@ private:
 		FF(avfilter_graph_create_filter(&filt_asink,
 										avfilter_get_by_name("abuffersink"), 
 										"ffmpeg_consumer_abuffersink",
-										NULL, NULL, 
+										nullptr, 
+										nullptr, 
 										audio_graph_.get()));
 		
 #pragma warning (push)
@@ -468,7 +469,8 @@ private:
 		FF(avfilter_graph_create_filter(&filt_vsink,
 										avfilter_get_by_name("buffersink"), 
 										"ffmpeg_consumer_buffersink",
-										NULL, NULL, 
+										nullptr, 
+										nullptr, 
 										video_graph_.get()));
 		
 #pragma warning (push)
