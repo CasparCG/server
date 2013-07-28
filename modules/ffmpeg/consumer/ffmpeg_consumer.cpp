@@ -211,14 +211,17 @@ public:
 			{
 				auto av_opts = to_dict(std::move(options_));
 
+				CASPAR_SCOPE_EXIT
+				{
+					av_dict_free(&av_opts);
+				};
+
 				if (!(oc_->oformat->flags & AVFMT_NOFILE)) 
 					FF(avio_open2(&oc_->pb, path_.string().c_str(), AVIO_FLAG_WRITE, &oc_->interrupt_callback, &av_opts));
 				
 				FF(avformat_write_header(oc_.get(), &av_opts));
 				
 				options_ = to_map(av_opts);
-
-				av_dict_free(&av_opts);
 			}
 
 			// Dump Info
