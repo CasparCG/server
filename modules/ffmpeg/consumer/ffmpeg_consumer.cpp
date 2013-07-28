@@ -305,7 +305,6 @@ private:
 				enc->sample_aspect_ratio  = st->sample_aspect_ratio = video_graph_out_->inputs[0]->sample_aspect_ratio;
 				enc->width				  = video_graph_out_->inputs[0]->w;
 				enc->height				  = video_graph_out_->inputs[0]->h;
-				enc->gop_size			  = try_remove_arg<int>(options, boost::regex("g|g:v")).get_value_or(enc->gop_size);
 			
 				break;
 			}
@@ -344,10 +343,7 @@ private:
 			auto t = av_dict_get(av_codec_opts, "", nullptr, AV_DICT_IGNORE_SUFFIX);
 			while(t)
 			{
-				if(codec_opts.find(t->key) != codec_opts.end())
-					options[std::string(t->key) + ":" + char_id] = t->value;
-				else
-					options[t->key] = t->value;
+				options[t->key + (codec_opts.find(t->key) != codec_opts.end() ? ":" + char_id : "")] = t->value;
 
 				t = av_dict_get(av_codec_opts, "", t, AV_DICT_IGNORE_SUFFIX);
 			}
@@ -410,8 +406,7 @@ private:
 			% av_get_sample_fmt_name(AV_SAMPLE_FMT_S32)
 			% 2 // TODO:
 			% 1	% in_video_format_.audio_sample_rate
-			% "stereo" /* TODO */).str();
-				
+			% "stereo" /* TODO */).str();				
 
 		AVFilterContext* filt_asrc = nullptr;
 		FF(avfilter_graph_create_filter(&filt_asrc,
@@ -436,7 +431,7 @@ private:
 		FF(av_opt_set_int_list(filt_asink, "sample_rates"   ,	 codec.supported_samplerates,	-1, AV_OPT_SEARCH_CHILDREN));
 #pragma warning (pop)
 			
-		configure_filtergraph(*audio_graph_, try_remove_arg<std::string>(options, boost::regex("af|filter:a")).get_value_or(""), *filt_asrc, *filt_asink);
+		configure_filtergraph(*audio_graph_, try_remove_arg<std::string>(options, boost::regex("af|f:a|filter:a")).get_value_or(""), *filt_asrc, *filt_asink);
 
 		audio_graph_in_  = filt_asrc;
 		audio_graph_out_ = filt_asink;
@@ -481,7 +476,7 @@ private:
 		FF(av_opt_set_int_list(filt_vsink, "pix_fmts", codec.pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
 #pragma warning (pop)
 			
-		configure_filtergraph(*video_graph_, try_remove_arg<std::string>(options, boost::regex("vf|filter:v")).get_value_or(""), *filt_vsrc, *filt_vsink);
+		configure_filtergraph(*video_graph_, try_remove_arg<std::string>(options, boost::regex("vf|f:v|filter:v")).get_value_or(""), *filt_vsrc, *filt_vsink);
 
 		video_graph_in_  = filt_vsrc;
 		video_graph_out_ = filt_vsink;
