@@ -359,8 +359,7 @@ private:
 			CASPAR_ASSERT(enc->frame_size > 0);
 			av_buffersink_set_frame_size(audio_graph_out_, enc->frame_size);
 		}
-
-
+		
 		return std::shared_ptr<AVStream>(st, [this](AVStream* st)
 		{
 			avcodec_close(st->codec);

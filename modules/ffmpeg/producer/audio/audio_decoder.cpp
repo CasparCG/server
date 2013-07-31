@@ -23,8 +23,6 @@
 
 #include "audio_decoder.h"
 
-#include "audio_resampler.h"
-
 #include "../util/util.h"
 #include "../../ffmpeg_error.h"
 
@@ -43,6 +41,7 @@ extern "C"
 {
 	#include <libavformat/avformat.h>
 	#include <libavcodec/avcodec.h>
+	#include <libswresample/swresample.h>
 }
 #if defined(_MSC_VER)
 #pragma warning (pop)
@@ -55,11 +54,9 @@ struct audio_decoder::implementation : boost::noncopyable
 	int															index_;
 	const safe_ptr<AVCodecContext>								codec_context_;		
 	const core::video_format_desc								format_desc_;
-
-	audio_resampler												resampler_;
-
-	std::vector<int8_t,  tbb::cache_aligned_allocator<int8_t>>	buffer1_;
-
+	
+	std::shared_ptr<SwrContext>									swr_;
+	
 	std::queue<safe_ptr<AVPacket>>								packets_;
 
 	const int64_t												nb_frames_;
@@ -69,10 +66,6 @@ public:
 	explicit implementation(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc, const std::wstring& custom_channel_order) 
 		: format_desc_(format_desc)	
 		, codec_context_(open_codec(*context, AVMEDIA_TYPE_AUDIO, index_))
-		, resampler_(codec_context_->channels,		codec_context_->channels,
-					 format_desc.audio_sample_rate, codec_context_->sample_rate,
-					 AV_SAMPLE_FMT_S32,				codec_context_->sample_fmt)
-		, buffer1_(480000*2)
 		, nb_frames_(0)//context->streams[index_]->nb_frames)
 		, channel_layout_(get_audio_channel_layout(*codec_context_, custom_channel_order))
 	{
@@ -80,6 +73,16 @@ public:
 
 		CASPAR_LOG(debug) << print() 
 				<< " Selected channel layout " << channel_layout_.name;
+
+		codec_context_->refcounted_frames = 1;
+
+		swr_.reset(swr_alloc_set_opts(nullptr,
+										av_get_default_channel_layout(2), AV_SAMPLE_FMT_S32, 48000,
+										codec_context_->channel_layout, codec_context_->sample_fmt, codec_context_->sample_rate, 
+										0, nullptr),
+										[](SwrContext* p){swr_free(&p);});
+			
+		swr_init(swr_.get());
 	}
 
 	void push(const std::shared_ptr<AVPacket>& packet)
@@ -115,26 +118,38 @@ public:
 	}
 
 	std::shared_ptr<core::audio_buffer> decode(AVPacket& pkt)
-	{		
-		buffer1_.resize(480000*2);
-		int written_bytes = buffer1_.size() - FF_INPUT_BUFFER_PADDING_SIZE;
+	{				
+		auto frame = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* frame)
+		{
+			av_frame_free(&frame);
+		});
 		
-		int ret = THROW_ON_ERROR2(avcodec_decode_audio3(codec_context_.get(), reinterpret_cast<int16_t*>(buffer1_.data()), &written_bytes, &pkt), "[audio_decoder]");
-
+		int got_picture = 0;
+		auto len = avcodec_decode_audio4(codec_context_.get(), frame.get(), &got_picture, &pkt);
+		
 		// There might be several frames in one packet.
-		pkt.size -= ret;
-		pkt.data += ret;
+		pkt.size -= len;
+		pkt.data += len;
 			
-		buffer1_.resize(written_bytes);
-
-		buffer1_ = resampler_.resample(std::move(buffer1_));
+		if(!got_picture)
+			return std::make_shared<core::audio_buffer>();
 		
-		const auto n_samples = buffer1_.size() / av_get_bytes_per_sample(AV_SAMPLE_FMT_S32);
-		const auto samples = reinterpret_cast<int32_t*>(buffer1_.data());
+		auto out_buffer = core::audio_buffer(frame->nb_samples * 2 * 2);
+
+		uint8_t* out[] = {reinterpret_cast<uint8_t*>(out_buffer.data())};
+		const auto in = const_cast<const uint8_t**>(frame->extended_data);	
+				
+		auto out_samples2 = swr_convert(swr_.get(), 
+								out, 
+								static_cast<int>(out_buffer.size()) / codec_context_->channels, 
+								in, 
+								frame->nb_samples);	
+			
+		out_buffer.resize(out_samples2 * 2);
 
 		++file_frame_number_;
 
-		return std::make_shared<core::audio_buffer>(samples, samples + n_samples);
+		return std::make_shared<core::audio_buffer>(std::move(out_buffer));
 	}
 
 	bool ready() const
