@@ -72,7 +72,8 @@ public:
 	// Properties
 
 	const core::frame_transform&	transform() const;
-	core::frame_transform&			transform();			
+	core::frame_transform&			transform();
+
 private:
 	struct impl;
 	spl::unique_ptr<impl> impl_;

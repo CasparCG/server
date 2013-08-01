@@ -49,7 +49,8 @@ struct layer
 	binding<bool> hidden;
 	binding<bool> is_key;
 
-	layer(const spl::shared_ptr<frame_producer>& producer);
+	explicit layer(const spl::shared_ptr<frame_producer>& producer);
+	layer(const std::wstring& name, const spl::shared_ptr<frame_producer>& producer);
 };
 
 class scene_producer : public frame_producer_base
@@ -64,11 +65,14 @@ public:
 	bool collides(double x, double y) const override;
 	std::wstring print() const override;
 	std::wstring name() const override;
+	boost::unique_future<std::wstring>	call(const std::wstring& params) override;
 	boost::property_tree::wptree info() const override;
 	void subscribe(const monitor::observable::observer_ptr& o) override;
 	void unsubscribe(const monitor::observable::observer_ptr& o) override;
 	layer& create_layer(
 			const spl::shared_ptr<frame_producer>& producer, int x, int y);
+	layer& create_layer(
+			const spl::shared_ptr<frame_producer>& producer, int x, int y, const std::wstring& name);
 	layer& create_layer(const spl::shared_ptr<frame_producer>& producer);
 	binding<int64_t> frame();
 private:

@@ -206,11 +206,11 @@ void layer::read_channel_data(BEFileInputStream& stream)
 	
 	if(rect_.width() > 0 && rect_.height() > 0)
 	{
-		img = std::make_shared<image8bit>(rect_.width(), rect_.height(), std::min<unsigned char>(channels_.size() - masks_, 4));
+		img = std::make_shared<image8bit>(rect_.width(), rect_.height(), 4);
 		//std::clog << std::dec << "has image: [width: " << rect_.width() << " height: " << rect_.height() << "]" << std::endl;
 
 		if(!has_transparency)
-			std::memset(img->data(), (unsigned long)(255<<24), rect_.width()*rect_.height());
+			std::memset(img->data(), 255, img->width()*img->height()*img->channel_count());
 	}
 
 	if(masks_ > 0 && mask_.rect_.width() > 0 && mask_.rect_.height() > 0)

@@ -26,19 +26,59 @@
 #include <core/frame/pixel_format.h>
 #include <core/frame/frame_factory.h>
 #include <core/producer/frame_producer.h>
+#include <core/producer/text/text_producer.h>
 #include <core/producer/scene/scene_producer.h>
 #include <core/producer/scene/const_producer.h>
 #include <core/frame/draw_frame.h>
 
 #include <common/env.h>
+#include <common/memory.h>
 
 #include <boost/filesystem.hpp>
+#include <boost/foreach.hpp>
 
 namespace caspar { namespace psd {
 
 void init()
 {
 	core::register_producer_factory(create_producer);
+}
+
+core::text::text_info get_text_info(const boost::property_tree::wptree& ptree)
+{
+	core::text::text_info result;
+	int font_index = ptree.get(L"EngineDict.StyleRun.RunArray..StyleSheet.StyleSheetData.Font", 0);
+	result.size = ptree.get(L"EngineDict.StyleRun.RunArray..StyleSheet.StyleSheetData.FontSize", 30.0f);
+
+	int child_index = 0;
+	auto color_node = ptree.get_child(L"EngineDict.StyleRun.RunArray..StyleSheet.StyleSheetData.FillColor.Values");
+	for(auto it = color_node.begin(); it != color_node.end(); ++it, ++child_index)
+	{
+		auto& value_node = (*it).second;
+		float value = value_node.get_value(0.0f);
+		switch(child_index)
+		{
+		case 0: result.color.a = value; break;
+		case 1: result.color.r = value; break;
+		case 2: result.color.g = value; break;
+		case 3: result.color.b = value; break;
+		}
+	}
+
+	//find fontname
+	child_index = 0;
+	auto fontset_node = ptree.get_child(L"ResourceDict.FontSet");
+	for(auto it = fontset_node.begin(); it != fontset_node.end(); ++it, ++child_index)
+	{
+		auto& font_node = (*it).second;
+		if(child_index == font_index)
+		{
+			result.font = font_node.get(L"Name", L"");
+			break;
+		}
+	}
+
+	return result;
 }
 
 spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
@@ -56,10 +96,20 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 	auto layers_end = doc.layers().end();
 	for(auto it = doc.layers().begin(); it != layers_end; ++it)
 	{
-		if((*it)->is_text())
+		if((*it)->is_text() && (*it)->visible())
 		{
+			std::wstring str = (*it)->text_data().get(L"EngineDict.Editor.Text", L"");
+			
+			core::text::text_info text_info(std::move(get_text_info((*it)->text_data())));
+			auto layer_producer = spl::make_shared<core::text_producer>(frame_factory, 0, 0, str, text_info, doc.width(), doc.height());
+			
+			core::text::string_metrics metrics = layer_producer->measure_string(str);
+			
+			auto& new_layer = root->create_layer(layer_producer, (*it)->rect().left - 2, (*it)->rect().top + metrics.bearingY, (*it)->name());	//the 2 offset is just a hack for now. don't know why our text is rendered 2 px to the right of that in photoshop
+			new_layer.adjustments.opacity.set((*it)->opacity() / 255.0);
+			new_layer.hidden.set(!(*it)->visible());
 		}
-		else if((*it)->image())
+		else if((*it)->image() && (*it)->visible())
 		{
 			core::pixel_format_desc pfd(core::pixel_format::bgra);
 			pfd.planes.push_back(core::pixel_format_desc::plane((*it)->rect().width(), (*it)->rect().height(), 4));
