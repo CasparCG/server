@@ -44,12 +44,14 @@
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\;..\dependencies64\boost\;..\dependencies64\tbb\include\;..\dependencies64\sfml\include\;..\dependencies64\glew\include\;..\dependencies64\asmlib\;$(IncludePath)</IncludePath>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\;..\dependencies64\boost\;..\dependencies64\tbb\include\;..\dependencies64\sfml\include\;..\dependencies64\glew\include\;..\dependencies64\asmlib\;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\;..\dependencies64\boost\;..\dependencies64\tbb\include\;..\dependencies64\sfml\include\;..\dependencies64\glew\include\;..\dependencies64\asmlib\;..\dependencies64\freetype\include;..\dependencies64\freeimage\include\;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\;..\dependencies64\boost\;..\dependencies64\tbb\include\;..\dependencies64\sfml\include\;..\dependencies64\glew\include\;..\dependencies64\asmlib\;..\dependencies64\freetype\include;..\dependencies64\freeimage\include\;$(IncludePath)</IncludePath>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectDir)bin\$(Configuration)\</OutDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectDir)bin\$(Configuration)\</OutDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(ProjectName)</TargetName>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(ProjectName)</TargetName>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <PreBuildEvent>
@@ -81,6 +83,9 @@
       </Command>
     </PostBuildEvent>
     <Lib />
+    <Lib>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <PreBuildEvent>
@@ -114,6 +119,7 @@
     </PostBuildEvent>
     <Lib>
       <LinkTimeCodeGeneration>false</LinkTimeCodeGeneration>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Lib>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -123,6 +129,7 @@
     <ClInclude Include="frame\frame_factory.h" />
     <ClInclude Include="frame\frame_transform.h" />
     <ClInclude Include="frame\frame_visitor.h" />
+    <ClInclude Include="frame\geometry.h" />
     <ClInclude Include="frame\pixel_format.h" />
     <ClInclude Include="interaction\interaction_aggregator.h" />
     <ClInclude Include="interaction\interaction_event.h" />
@@ -135,6 +142,11 @@
     <ClInclude Include="producer\draw\freehand_producer.h" />
     <ClInclude Include="producer\scene\const_producer.h" />
     <ClInclude Include="producer\scene\scene_producer.h" />
+    <ClInclude Include="producer\text\text_producer.h" />
+    <ClInclude Include="producer\text\utils\color.h" />
+    <ClInclude Include="producer\text\utils\string_metrics.h" />
+    <ClInclude Include="producer\text\utils\texture_atlas.h" />
+    <ClInclude Include="producer\text\utils\texture_font.h" />
     <ClInclude Include="video_channel.h" />
     <ClInclude Include="consumer\output.h" />
     <ClInclude Include="consumer\frame_consumer.h" />
@@ -172,6 +184,10 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
+    <ClCompile Include="frame\geometry.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
     <ClCompile Include="mixer\image\blend_modes.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
@@ -191,6 +207,18 @@
     <ClCompile Include="producer\scene\scene_producer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="producer\text\text_producer.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="producer\text\utils\texture_atlas.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="producer\text\utils\texture_font.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="video_channel.cpp" />
     <ClCompile Include="consumer\frame_consumer.cpp">

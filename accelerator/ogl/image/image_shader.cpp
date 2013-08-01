@@ -125,8 +125,8 @@ std::string get_vertex()
 //	"	gl_TexCoord[1] = gl_MultiTexCoord1;												\n"
 	"	vec4 pos = ftransform();														\n"
 	"	gl_TexCoord[1] = vec4(pos.xy, 0.0, 0.0);										\n"
-	"	pos.x = pos.x*2 - 1;															\n"
-	"	pos.y = pos.y*2 - 1;															\n"
+	"	pos.x = pos.x*2.0 - 1.0;														\n"
+	"	pos.y = pos.y*2.0 - 1.0;														\n"
 	"	gl_Position    = pos;															\n"
 	"}																					\n";
 }
