@@ -28,6 +28,7 @@
 
 #include <core/frame/pixel_format.h>
 #include <core/frame/frame_transform.h>
+#include <core/frame/geometry.h>
 
 namespace caspar { namespace accelerator { namespace ogl {
 	
@@ -46,6 +47,7 @@ struct draw_params sealed
 	core::pixel_format_desc						pix_desc;
 	std::vector<spl::shared_ptr<class texture>>	textures;
 	core::image_transform						transform;
+	core::frame_geometry						geometry;
 	core::blend_mode							blend_mode;
 	keyer										keyer;
 	std::shared_ptr<class texture>				background;
