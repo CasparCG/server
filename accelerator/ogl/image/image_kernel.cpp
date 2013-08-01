@@ -217,16 +217,60 @@ struct image_kernel::impl
 		
 		glMatrixMode(GL_MODELVIEW);
 		glPushMatrix();
-			glTranslated(f_p[0], f_p[1], 0);
-			glScaled(f_s[0], f_s[1], 1);
+			glTranslated(f_p[0], f_p[1], 0.0);
+			glScaled(f_s[0], f_s[1], 1.0);
+
+			switch(params.geometry.type())
+			{
+			case core::frame_geometry::quad:
+				{
+					const std::vector<float>& data = params.geometry.data();
+					float v_left = data[0], v_top = data[1], t_left = data[2], t_top = data[3];
+					float v_right = data[4], v_bottom = data[5], t_right = data[6], t_bottom = data[7];
+
+					glBegin(GL_QUADS);
+						glMultiTexCoord2d(GL_TEXTURE0, t_left, t_top);		glVertex2d(v_left, v_top);
+						glMultiTexCoord2d(GL_TEXTURE0, t_right, t_top);		glVertex2d(v_right, v_top);
+						glMultiTexCoord2d(GL_TEXTURE0, t_right, t_bottom);	glVertex2d(v_right, v_bottom);
+						glMultiTexCoord2d(GL_TEXTURE0, t_left, t_bottom);	glVertex2d(v_left, v_bottom);
+					glEnd();
+				}
+				break;
+
+			case core::frame_geometry::quad_list:
+				{
+					glClientActiveTexture(GL_TEXTURE0);
+					
+					glDisableClientState(GL_EDGE_FLAG_ARRAY);
+					glDisableClientState(GL_COLOR_ARRAY);
+					glDisableClientState(GL_INDEX_ARRAY);
+					glDisableClientState(GL_NORMAL_ARRAY);
+
+					glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+					glEnableClientState(GL_VERTEX_ARRAY);
+					
+					glTexCoordPointer(2, GL_FLOAT, 4*sizeof(float), &(params.geometry.data().data()[2]));
+					glVertexPointer(2, GL_FLOAT, 4*sizeof(float), params.geometry.data().data());
+					
+					glDrawArrays(GL_QUADS, 0, (GLsizei)params.geometry.data().size()/4);	//each vertex is four floats.
+					
+					glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+					glDisableClientState(GL_VERTEX_ARRAY);
+				}
+				break;
+
+			default:
+				break;
+			}
+
 
 			// Draw
-			glBegin(GL_QUADS);
+			/*glBegin(GL_QUADS);
 				glMultiTexCoord2d(GL_TEXTURE0, 0.0, 0.0); glVertex2d(0, 0);
 				glMultiTexCoord2d(GL_TEXTURE0, 1.0, 0.0); glVertex2d(1, 0);
 				glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0); glVertex2d(1, 1);
 				glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glVertex2d(0, 1);
-			glEnd();
+			glEnd();*/
 		glPopMatrix();
 		
 		// Cleanup

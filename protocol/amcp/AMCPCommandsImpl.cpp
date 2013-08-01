@@ -436,10 +436,6 @@ bool MixerCommand::DoExecute()
 				transform.image_transform.fill_translation[1]	= y;
 				transform.image_transform.fill_scale[0]			= x_s;
 				transform.image_transform.fill_scale[1]			= y_s;
-				transform.image_transform.clip_translation[0]	= x;
-				transform.image_transform.clip_translation[1]	= y;
-				transform.image_transform.clip_scale[0]			= x_s;
-				transform.image_transform.clip_scale[1]			= y_s;
 				return transform;
 			}, duration, tween));
 		}

@@ -22,6 +22,7 @@ FORWARD1(boost, template<typename> class shared_future);
 namespace caspar { namespace core {
 	
 typedef std::vector<int32_t, tbb::cache_aligned_allocator<int32_t>> audio_buffer;
+class frame_geometry;
 
 class mutable_frame sealed
 {
@@ -61,6 +62,9 @@ public:
 								
 	const void* stream_tag() const;
 	const void* data_tag() const;
+
+	const core::frame_geometry& geometry() const;
+	void set_geometry(const frame_geometry& g);
 			
 private:
 	struct impl;
@@ -105,6 +109,9 @@ public:
 								
 	const void* stream_tag() const;
 	const void* data_tag() const;
+
+	const core::frame_geometry& geometry() const;
+	void set_geometry(const frame_geometry& g);
 
 	bool operator==(const const_frame& other);
 	bool operator!=(const const_frame& other);

@@ -21,6 +21,10 @@
 
 #include "../../stdafx.h"
 
+#include <common/future.h>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string.hpp>
+
 #include "scene_producer.h"
 
 #include "../../frame/draw_frame.h"
@@ -30,6 +34,10 @@ namespace caspar { namespace core { namespace scene {
 
 layer::layer(const spl::shared_ptr<frame_producer>& producer)
 	: producer(producer)
+{
+}
+layer::layer(const std::wstring& name, const spl::shared_ptr<frame_producer>& producer)
+	: name(name), producer(producer)
 {
 }
 
@@ -49,6 +57,15 @@ struct scene_producer::impl
 		: pixel_constraints_(width, height)
 		, aggregator_([=] (double x, double y) { return collission_detect(x, y); })
 	{
+	}
+
+	layer& create_layer(
+			const spl::shared_ptr<frame_producer>& producer, int x, int y, const std::wstring& name)
+	{
+		layer& layer = create_layer(producer, x, y);
+		layer.name.set(name);
+
+		return layer;
 	}
 
 	layer& create_layer(
@@ -148,6 +165,30 @@ struct scene_producer::impl
 		return boost::optional<interaction_target>();
 	}
 
+	boost::unique_future<std::wstring> call(const std::wstring& params) 
+	{
+		std::wstring result;
+		
+		std::vector<std::wstring> words;
+		boost::split(words, params, [](wchar_t c) { return c == L' '; }, boost::token_compress_on);
+
+		if(words.size() >= 2)
+		{
+			struct layer_comparer
+			{
+				const std::wstring& str;
+				explicit layer_comparer(const std::wstring& s) : str(s) {}
+				bool operator()(const layer& val) { return boost::iequals(val.name.get(), str); }
+			};
+
+			auto it = std::find_if(layers_.begin(), layers_.end(), layer_comparer(words[0]));
+			if(it != layers_.end())
+				(*it).producer.get()->call(words[1]);
+		}
+
+		return async(launch::deferred, [=]{return result;});
+	}
+
 	std::wstring print() const
 	{
 		return L"scene[]";
@@ -187,6 +228,12 @@ layer& scene_producer::create_layer(
 		const spl::shared_ptr<frame_producer>& producer, int x, int y)
 {
 	return impl_->create_layer(producer, x, y);
+}
+
+layer& scene_producer::create_layer(
+		const spl::shared_ptr<frame_producer>& producer, int x, int y, const std::wstring& name)
+{
+	return impl_->create_layer(producer, x, y, name);
 }
 
 layer& scene_producer::create_layer(
@@ -232,6 +279,11 @@ boost::property_tree::wptree scene_producer::info() const
 	return impl_->info();
 }
 
+boost::unique_future<std::wstring> scene_producer::call(const std::wstring& params) 
+{
+	return impl_->call(params);
+}
+
 void scene_producer::subscribe(const monitor::observable::observer_ptr& o)
 {
 	impl_->subscribe(o);
@@ -247,7 +299,7 @@ spl::shared_ptr<frame_producer> create_dummy_scene_producer(const spl::shared_pt
 	if (params.size() < 1 || params.at(0) != L"[SCENE]")
 		return core::frame_producer::empty();
 
-	auto scene = spl::make_shared<scene_producer>(1280, 720);
+	auto scene = spl::make_shared<scene_producer>(format_desc.width, format_desc.height);
 
 	binding<double> text_width(10);
 	binding<double> padding(1);

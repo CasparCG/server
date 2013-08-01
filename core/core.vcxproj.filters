@@ -40,8 +40,14 @@
     <Filter Include="source\producer\draw">
       <UniqueIdentifier>{0138e754-c089-46e6-9540-cf5cf4818381}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\producer\text">
+      <UniqueIdentifier>{3fcfe649-213d-4ecd-a2d4-95ec24a6b152}</UniqueIdentifier>
+    </Filter>
     <Filter Include="source\producer\scene">
       <UniqueIdentifier>{a949a4cd-ede1-41fb-89bb-2fc1c4dc386a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\producer\text\utils">
+      <UniqueIdentifier>{fc435676-34ca-46fe-bbcf-2fbad8e3cd21}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -139,6 +145,24 @@
     <ClInclude Include="producer\scene\const_producer.h">
       <Filter>source\producer\scene</Filter>
     </ClInclude>
+    <ClInclude Include="frame\geometry.h">
+      <Filter>source\frame</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\text\text_producer.h">
+      <Filter>source\producer\text</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\text\utils\texture_font.h">
+      <Filter>source\producer\text\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\text\utils\texture_atlas.h">
+      <Filter>source\producer\text\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\text\utils\color.h">
+      <Filter>source\producer\text\utils</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\text\utils\string_metrics.h">
+      <Filter>source\producer\text\utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
@@ -204,6 +228,18 @@
     </ClCompile>
     <ClCompile Include="producer\scene\const_producer.cpp">
       <Filter>source\producer\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="frame\geometry.cpp">
+      <Filter>source\frame</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\text\text_producer.cpp">
+      <Filter>source\producer\text</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\text\utils\texture_font.cpp">
+      <Filter>source\producer\text\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\text\utils\texture_atlas.cpp">
+      <Filter>source\producer\text\utils</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

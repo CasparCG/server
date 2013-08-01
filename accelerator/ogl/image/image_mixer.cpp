@@ -36,6 +36,7 @@
 #include <core/frame/frame_transform.h>
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
+#include <core/frame/geometry.h>
 
 #include <asmlib.h>
 
@@ -59,6 +60,7 @@ struct item
 	core::pixel_format_desc								pix_desc;
 	std::vector<future_texture>							textures;
 	core::image_transform								transform;
+	core::frame_geometry								geometry;
 
 	item()
 		: pix_desc(core::pixel_format::invalid)
@@ -226,6 +228,7 @@ private:
 		draw_params draw_params;
 		draw_params.pix_desc	= std::move(item.pix_desc);
 		draw_params.transform	= std::move(item.transform);
+		draw_params.geometry	= item.geometry;
 
 		BOOST_FOREACH(auto& future_texture, item.textures)
 			draw_params.textures.push_back(future_texture.get());
@@ -278,6 +281,7 @@ private:
 		draw_params.transform			= core::image_transform();
 		draw_params.blend_mode			= blend_mode;
 		draw_params.background			= target_texture;
+		draw_params.geometry			= core::frame_geometry::default();
 
 		kernel_.draw(std::move(draw_params));
 	}
@@ -322,6 +326,7 @@ public:
 		item item;
 		item.pix_desc	= frame.pixel_format_desc();
 		item.transform	= transform_stack_.back();
+		item.geometry	= frame.geometry();
 		
 		// NOTE: Once we have copied the arrays they are no longer valid for reading!!! Check for alternative solution e.g. transfer with AMD_pinned_memory.
 		for(int n = 0; n < static_cast<int>(item.pix_desc.planes.size()); ++n)
