@@ -5,6 +5,7 @@
 #include "../util/error.h"
 
 #include <common/exception/win32_exception.h>
+#include <common/concurrency/executor.h>
 #include <common/utility/assert.h>
 #include <common/utility/string.h>
 #include <common/concurrency/future_util.h>
@@ -24,6 +25,8 @@
 
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
+#include <tbb/parallel_invoke.h>
+#include <tbb/parallel_for.h>
 
 #include <agents.h>
 
@@ -84,12 +87,32 @@ private:
     std::shared_ptr<AVFilterGraph>				video_graph_;  
 	std::shared_ptr<AVBitStreamFilterContext>	video_bitstream_filter_;
 	
+	executor									executor_;
+
+	executor									video_filter_executor_;
+	executor									audio_filter_executor_;
+
+	executor									video_encoder_executor_;
+	executor									audio_encoder_executor_;
+
+	tbb::atomic<int>							tokens_;
+	boost::mutex								tokens_mutex_;
+	boost::condition_variable					tokens_cond_;
+
+	executor									write_executor_;
+	
 public:
 
 	ffmpeg_consumer(std::string path, std::string options)
 		: path_(std::move(path))
 		, video_pts_(0)
 		, audio_pts_(0)
+		, executor_(print())
+		, audio_encoder_executor_(print() + L" video_encoder")
+		, video_encoder_executor_(print() + L" audio_encoder")
+		, write_executor_(print() + L" io")
+		, video_filter_executor_(print() + L" video_filter")
+		, audio_filter_executor_(print() + L" audio_filter")
 	{		
 		abort_request_ = false;	
 
@@ -98,15 +121,29 @@ public:
 										
         if (options_.find("threads") == options_.end())
             options_["threads"] = "auto";
+
+		tokens_ = std::max(1, try_remove_arg<int>(options_, boost::regex("-tokens")).get_value_or(1));		
 	}
 		
 	~ffmpeg_consumer()
 	{
 		if(oc_)
 		{
-			encode_video(nullptr);
-			encode_audio(nullptr);								
-			write_packet(nullptr);
+			tokens_ = std::numeric_limits<int>::max();
+			tokens_cond_.notify_all();
+
+			encode_video(nullptr, nullptr);
+			encode_audio(nullptr, nullptr);			
+
+			video_filter_executor_.wait();
+			audio_filter_executor_.wait();
+
+			audio_encoder_executor_.wait();
+			video_encoder_executor_.wait();
+
+			write_packet(nullptr, nullptr);
+
+			write_executor_.wait();
 					
 			FF(av_write_trailer(oc_.get()));
 		
@@ -143,8 +180,7 @@ public:
 			}
 							
 			const auto oformat_name = try_remove_arg<std::string>(options_, boost::regex("^f|format$"));
-
-
+			
 			AVFormatContext* oc;
 			FF(avformat_alloc_output_context2(&oc, nullptr, oformat_name ? oformat_name->c_str() : nullptr, path_.string().c_str()));
 			oc_.reset(oc, avformat_free_context);
@@ -244,16 +280,38 @@ public:
 	boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame) override
 	{		
 		CASPAR_VERIFY(in_video_format_.format != core::video_format::invalid);
+		
+		--tokens_;
+		std::shared_ptr<void> token(nullptr, [this](void*)
+		{
+			++tokens_;
+			tokens_cond_.notify_one();
+		});
+
+		return executor_.begin_invoke([=]() -> bool
+		{
+			boost::unique_lock<boost::mutex> tokens_lock(tokens_mutex_);
+
+			while(tokens_ < 0)
+				tokens_cond_.wait(tokens_lock);
+
+			video_encoder_executor_.begin_invoke([=]() mutable
+			{
+				encode_video(frame, token);
+			});
+		
+			audio_encoder_executor_.begin_invoke([=]() mutable
+			{
+				encode_audio(frame, token);
+			});
 				
-		encode_video(frame);		
-		encode_audio(frame);
-				
-		return make_ready_future(true);
+			return true;
+		});
 	}
 
 	std::wstring print() const override
 	{
-		return L"ffmpeg_consumer[" + widen(oc_->filename) + L"]";
+		return L"ffmpeg_consumer[" + widen(path_.string()) + L"]";
 	}
 	
 	virtual boost::property_tree::wptree info() const override
@@ -403,6 +461,9 @@ private:
 			avfilter_graph_free(&p);
 		});
 		
+		audio_graph_->nb_threads  = boost::thread::hardware_concurrency()/2;
+		audio_graph_->thread_type = AVFILTER_THREAD_SLICE;
+		
 		const auto asrc_options = (boost::format("sample_rate=%1%:sample_fmt=%2%:channels=%3%:time_base=%4%/%5%:channel_layout=%6%")
 			% in_video_format_.audio_sample_rate
 			% av_get_sample_fmt_name(AV_SAMPLE_FMT_S32)
@@ -448,6 +509,9 @@ private:
 		{
 			avfilter_graph_free(&p);
 		});
+		
+		video_graph_->nb_threads  = boost::thread::hardware_concurrency()/2;
+		video_graph_->thread_type = AVFILTER_THREAD_SLICE;
 
 		const auto sample_aspect_ratio = boost::rational<int>(in_video_format_.square_width, in_video_format_.square_height) /
 										 boost::rational<int>(in_video_format_.width, in_video_format_.height);
@@ -529,7 +593,7 @@ private:
 		}
 	}
 	
-	void encode_video(const std::shared_ptr<core::read_frame>& frame_ptr)
+	void encode_video(const std::shared_ptr<core::read_frame>& frame_ptr, std::shared_ptr<void> token)
 	{		
 		if(!video_st_)
 			return;
@@ -582,7 +646,7 @@ private:
 			{
 				if(enc->codec->capabilities & CODEC_CAP_DELAY)
 				{
-					while(encode_av_frame(*video_st_, video_bitstream_filter_.get(), avcodec_encode_video2, nullptr))
+					while(encode_av_frame(*video_st_, video_bitstream_filter_.get(), avcodec_encode_video2, nullptr, token))
 						boost::this_thread::yield(); // TODO:
 				}		
 			}
@@ -605,14 +669,18 @@ private:
 				if (!enc->me_threshold)
 					filt_frame->pict_type = AV_PICTURE_TYPE_NONE;
 			
-				encode_av_frame(*video_st_, video_bitstream_filter_.get(), avcodec_encode_video2, filt_frame);
+				video_encoder_executor_.begin_invoke([=]
+				{
+					encode_av_frame(*video_st_, video_bitstream_filter_.get(), avcodec_encode_video2, filt_frame, token);
+					boost::this_thread::yield(); // TODO:
+				});
 			}
 
 			boost::this_thread::yield(); // TODO:
 		}
 	}
 					
-	void encode_audio(const std::shared_ptr<core::read_frame>& frame_ptr)
+	void encode_audio(const std::shared_ptr<core::read_frame>& frame_ptr, std::shared_ptr<void> token)
 	{		
 		if(!audio_st_)
 			return;
@@ -661,7 +729,7 @@ private:
 			{
 				if(enc->codec->capabilities & CODEC_CAP_DELAY)
 				{
-					while(encode_av_frame(*audio_st_, audio_bitstream_filter_.get(), avcodec_encode_audio2, nullptr))
+					while(encode_av_frame(*audio_st_, audio_bitstream_filter_.get(), avcodec_encode_audio2, nullptr, token))
 						boost::this_thread::yield(); // TODO:
 				}
 			}
@@ -669,7 +737,11 @@ private:
 			{
 				FF_RET(ret, "av_buffersink_get_frame");
 
-				encode_av_frame(*audio_st_, audio_bitstream_filter_.get(), avcodec_encode_audio2, filt_frame);
+				audio_encoder_executor_.begin_invoke([=]
+				{
+					encode_av_frame(*audio_st_, audio_bitstream_filter_.get(), avcodec_encode_audio2, filt_frame, token);
+					boost::this_thread::yield(); // TODO:
+				});
 			}
 
 			boost::this_thread::yield(); // TODO:
@@ -677,7 +749,7 @@ private:
 	}
 	
 	template<typename F>
-	bool encode_av_frame(AVStream& st, AVBitStreamFilterContext* bsfc, const F& func, const std::shared_ptr<AVFrame>& src_av_frame)
+	bool encode_av_frame(AVStream& st, AVBitStreamFilterContext* bsfc, const F& func, const std::shared_ptr<AVFrame>& src_av_frame, std::shared_ptr<void> token)
 	{
 		AVPacket pkt = {};
 		av_init_packet(&pkt);
@@ -734,12 +806,12 @@ private:
 			pkt = new_pkt;
 		}
 
-		write_packet(std::shared_ptr<AVPacket>(new AVPacket(pkt), [](AVPacket* p){av_free_packet(p); delete p;}));
+		write_packet(std::shared_ptr<AVPacket>(new AVPacket(pkt), [](AVPacket* p){av_free_packet(p); delete p;}), token);
 
 		return true;
 	}
 
-	void write_packet(const std::shared_ptr<AVPacket>& pkt_ptr)
+	void write_packet(const std::shared_ptr<AVPacket>& pkt_ptr, std::shared_ptr<void> token)
 	{		
 		if(pkt_ptr)
 		{
@@ -755,7 +827,10 @@ private:
 			pkt_ptr->duration = static_cast<int>(av_rescale_q(pkt_ptr->duration, enc->time_base, st->time_base));
 		}
 
-		FF(av_interleaved_write_frame(oc_.get(), pkt_ptr.get()));	
+		write_executor_.begin_invoke([this, pkt_ptr, token]() mutable
+		{
+			FF(av_interleaved_write_frame(oc_.get(), pkt_ptr.get()));
+		});	
 	}	
 	
 	template<typename T>

@@ -23,11 +23,13 @@
 
 /**
  * @file
- * external API header
+ * @ingroup libavc
+ * Libavcodec external API header
  */
 
 #include <errno.h>
 #include "libavutil/samplefmt.h"
+#include "libavutil/attributes.h"
 #include "libavutil/avutil.h"
 #include "libavutil/buffer.h"
 #include "libavutil/cpu.h"
@@ -269,6 +271,10 @@ enum AVCodecID {
     AV_CODEC_ID_CLLC,
     AV_CODEC_ID_MSS2,
     AV_CODEC_ID_VP9,
+    AV_CODEC_ID_AIC,
+    AV_CODEC_ID_ESCAPE130_DEPRECATED,
+    AV_CODEC_ID_G2M_DEPRECATED,
+
     AV_CODEC_ID_BRENDER_PIX= MKBETAG('B','P','I','X'),
     AV_CODEC_ID_Y41P       = MKBETAG('Y','4','1','P'),
     AV_CODEC_ID_ESCAPE130  = MKBETAG('E','1','3','0'),
@@ -293,6 +299,7 @@ enum AVCodecID {
     AV_CODEC_ID_MVC2       = MKBETAG('M','V','C','2'),
     AV_CODEC_ID_SNOW       = MKBETAG('S','N','O','W'),
     AV_CODEC_ID_WEBP       = MKBETAG('W','E','B','P'),
+    AV_CODEC_ID_SMVJPEG    = MKBETAG('S','M','V','J'),
 
     /* various PCM "codecs" */
     AV_CODEC_ID_FIRST_AUDIO = 0x10000,     ///< A dummy id pointing at the start of audio codecs
@@ -362,6 +369,8 @@ enum AVCodecID {
     AV_CODEC_ID_VIMA       = MKBETAG('V','I','M','A'),
     AV_CODEC_ID_ADPCM_AFC  = MKBETAG('A','F','C',' '),
     AV_CODEC_ID_ADPCM_IMA_OKI = MKBETAG('O','K','I',' '),
+    AV_CODEC_ID_ADPCM_DTK  = MKBETAG('D','T','K',' '),
+    AV_CODEC_ID_ADPCM_IMA_RAD = MKBETAG('R','A','D',' '),
 
     /* AMR */
     AV_CODEC_ID_AMR_NB = 0x12000,
@@ -617,26 +626,6 @@ enum AVColorTransferCharacteristic{
     AVCOL_TRC_GAMMA28     = 5, ///< also ITU-R BT470BG
     AVCOL_TRC_SMPTE240M   = 7,
     AVCOL_TRC_NB             , ///< Not part of ABI
-};
-
-enum AVColorSpace{
-    AVCOL_SPC_RGB         = 0,
-    AVCOL_SPC_BT709       = 1, ///< also ITU-R BT1361 / IEC 61966-2-4 xvYCC709 / SMPTE RP177 Annex B
-    AVCOL_SPC_UNSPECIFIED = 2,
-    AVCOL_SPC_FCC         = 4,
-    AVCOL_SPC_BT470BG     = 5, ///< also ITU-R BT601-6 625 / ITU-R BT1358 625 / ITU-R BT1700 625 PAL & SECAM / IEC 61966-2-4 xvYCC601
-    AVCOL_SPC_SMPTE170M   = 6, ///< also ITU-R BT601-6 525 / ITU-R BT1358 525 / ITU-R BT1700 NTSC / functionally identical to above
-    AVCOL_SPC_SMPTE240M   = 7,
-    AVCOL_SPC_YCOCG       = 8, ///< Used by Dirac / VC-2 and H.264 FRext, see ITU-T SG16
-    AVCOL_SPC_NB             , ///< Not part of ABI
-};
-#define AVCOL_SPC_YCGCO AVCOL_SPC_YCOCG
-
-enum AVColorRange{
-    AVCOL_RANGE_UNSPECIFIED = 0,
-    AVCOL_RANGE_MPEG        = 1, ///< the normal 219*2^(n-8) "MPEG" YUV ranges
-    AVCOL_RANGE_JPEG        = 2, ///< the normal     2^n-1   "JPEG" YUV ranges
-    AVCOL_RANGE_NB             , ///< Not part of ABI
 };
 
 /**
@@ -1001,6 +990,17 @@ enum AVPacketSideDataType {
      * by data.
      */
     AV_PKT_DATA_MATROSKA_BLOCKADDITIONAL,
+
+    /**
+     * The optional first identifier line of a WebVTT cue.
+     */
+    AV_PKT_DATA_WEBVTT_IDENTIFIER,
+
+    /**
+     * The optional settings (rendering instructions) that immediately
+     * follow the timestamp specifier of a WebVTT cue.
+     */
+    AV_PKT_DATA_WEBVTT_SETTINGS,
 };
 
 /**
@@ -1234,7 +1234,7 @@ typedef struct AVCodecContext {
      * rv10: additional flags
      * mpeg4: global headers (they can be in the bitstream or here)
      * The allocated memory should be FF_INPUT_BUFFER_PADDING_SIZE bytes larger
-     * than extradata_size to avoid prolems if it is read with the bitstream reader.
+     * than extradata_size to avoid problems if it is read with the bitstream reader.
      * The bytewise contents of extradata must not depend on the architecture or CPU endianness.
      * - encoding: Set/allocated/freed by libavcodec.
      * - decoding: Set/allocated/freed by user.
@@ -1911,7 +1911,7 @@ typedef struct AVCodecContext {
      * - decoding: Set by user.
      * @deprecated Deprecated in favor of request_channel_layout.
      */
-    int request_channels;
+    attribute_deprecated int request_channels;
 #endif
 
     /**
@@ -2675,6 +2675,8 @@ typedef struct AVCodecContext {
 #define FF_PROFILE_AAC_HE_V2 28
 #define FF_PROFILE_AAC_LD   22
 #define FF_PROFILE_AAC_ELD  38
+#define FF_PROFILE_MPEG2_AAC_LOW 128
+#define FF_PROFILE_MPEG2_AAC_HE  131
 
 #define FF_PROFILE_DTS         20
 #define FF_PROFILE_DTS_ES      30
@@ -2803,7 +2805,7 @@ typedef struct AVCodecContext {
      * Code outside libavcodec should access this field using:
      * av_codec_{get,set}_pkt_timebase(avctx)
      * - encoding unused.
-     * - decodimg set by user
+     * - decoding set by user.
      */
     AVRational pkt_timebase;
 
@@ -3071,11 +3073,13 @@ typedef struct AVHWAccel {
  */
 
 /**
- * four components are given, that's all.
- * the last component is alpha
+ * Picture data structure.
+ *
+ * Up to four components can be stored into it, the last component is
+ * alpha.
  */
 typedef struct AVPicture {
-    uint8_t *data[AV_NUM_DATA_POINTERS];
+    uint8_t *data[AV_NUM_DATA_POINTERS];    ///< pointers to the image data planes
     int linesize[AV_NUM_DATA_POINTERS];     ///< number of bytes per line
 } AVPicture;
 
@@ -3482,6 +3486,13 @@ int av_dup_packet(AVPacket *pkt);
 int av_copy_packet(AVPacket *dst, AVPacket *src);
 
 /**
+ * Copy packet side data
+ *
+ * @return 0 on success, negative AVERROR on fail
+ */
+int av_copy_packet_side_data(AVPacket *dst, AVPacket *src);
+
+/**
  * Free a packet.
  *
  * @param pkt packet to free
@@ -3595,6 +3606,28 @@ void avcodec_align_dimensions(AVCodecContext *s, int *width, int *height);
  */
 void avcodec_align_dimensions2(AVCodecContext *s, int *width, int *height,
                                int linesize_align[AV_NUM_DATA_POINTERS]);
+
+/**
+ * Converts AVChromaLocation to swscale x/y chroma position.
+ *
+ * The positions represent the chroma (0,0) position in a coordinates system
+ * with luma (0,0) representing the origin and luma(1,1) representing 256,256
+ *
+ * @param xpos  horizontal chroma sample position
+ * @param ypos  vertical   chroma sample position
+ */
+int avcodec_enum_to_chroma_pos(int *xpos, int *ypos, enum AVChromaLocation pos);
+
+/**
+ * Converts swscale x/y chroma position to AVChromaLocation.
+ *
+ * The positions represent the chroma (0,0) position in a coordinates system
+ * with luma (0,0) representing the origin and luma(1,1) representing 256,256
+ *
+ * @param xpos  horizontal chroma sample position
+ * @param ypos  vertical   chroma sample position
+ */
+enum AVChromaLocation avcodec_chroma_pos_to_enum(int xpos, int ypos);
 
 #if FF_API_OLD_DECODE_AUDIO
 /**
@@ -3774,6 +3807,13 @@ int avcodec_decode_subtitle2(AVCodecContext *avctx, AVSubtitle *sub,
  * @{
  */
 
+enum AVPictureStructure {
+    AV_PICTURE_STRUCTURE_UNKNOWN,      //< unknown
+    AV_PICTURE_STRUCTURE_TOP_FIELD,    //< coded as top field
+    AV_PICTURE_STRUCTURE_BOTTOM_FIELD, //< coded as bottom field
+    AV_PICTURE_STRUCTURE_FRAME,        //< coded as frame
+};
+
 typedef struct AVCodecParserContext {
     void *priv_data;
     struct AVCodecParser *parser;
@@ -3910,6 +3950,16 @@ typedef struct AVCodecParserContext {
     int duration;
 
     enum AVFieldOrder field_order;
+
+    /**
+     * Indicate whether a picture is coded as a frame, top field or bottom field.
+     *
+     * For example, H.264 field_pic_flag equal to 0 corresponds to
+     * AV_PICTURE_STRUCTURE_FRAME. An H.264 picture with field_pic_flag
+     * equal to 1 and bottom_field_flag equal to 0 corresponds to
+     * AV_PICTURE_STRUCTURE_TOP_FIELD.
+     */
+    enum AVPictureStructure picture_structure;
 } AVCodecParserContext;
 
 typedef struct AVCodecParser {
@@ -4241,15 +4291,18 @@ void av_resample_close(struct AVResampleContext *c);
  */
 
 /**
- * Allocate memory for a picture.  Call avpicture_free() to free it.
+ * Allocate memory for the pixels of a picture and setup the AVPicture
+ * fields for it.
  *
- * @see avpicture_fill()
+ * Call avpicture_free() to free it.
  *
- * @param picture the picture to be filled in
- * @param pix_fmt the format of the picture
- * @param width the width of the picture
- * @param height the height of the picture
- * @return zero if successful, a negative value if not
+ * @param picture            the picture structure to be filled in
+ * @param pix_fmt            the pixel format of the picture
+ * @param width              the width of the picture
+ * @param height             the height of the picture
+ * @return zero if successful, a negative error code otherwise
+ *
+ * @see av_image_alloc(), avpicture_fill()
  */
 int avpicture_alloc(AVPicture *picture, enum AVPixelFormat pix_fmt, int width, int height);
 
@@ -4263,8 +4316,25 @@ int avpicture_alloc(AVPicture *picture, enum AVPixelFormat pix_fmt, int width, i
 void avpicture_free(AVPicture *picture);
 
 /**
- * Fill in the AVPicture fields, always assume a linesize alignment of
- * 1.
+ * Setup the picture fields based on the specified image parameters
+ * and the provided image data buffer.
+ *
+ * The picture fields are filled in by using the image data buffer
+ * pointed to by ptr.
+ *
+ * If ptr is NULL, the function will fill only the picture linesize
+ * array and return the required size for the image buffer.
+ *
+ * To allocate an image buffer and fill the picture data in one call,
+ * use avpicture_alloc().
+ *
+ * @param picture       the picture to be filled in
+ * @param ptr           buffer where the image data is stored, or NULL
+ * @param pix_fmt       the pixel format of the image
+ * @param width         the width of the image in pixels
+ * @param height        the height of the image in pixels
+ * @return the size in bytes required for src, a negative error code
+ * in case of failure
  *
  * @see av_image_fill_arrays()
  */
@@ -4272,19 +4342,36 @@ int avpicture_fill(AVPicture *picture, const uint8_t *ptr,
                    enum AVPixelFormat pix_fmt, int width, int height);
 
 /**
- * Copy pixel data from an AVPicture into a buffer, always assume a
- * linesize alignment of 1.
+ * Copy pixel data from an AVPicture into a buffer.
+ *
+ * avpicture_get_size() can be used to compute the required size for
+ * the buffer to fill.
+ *
+ * @param src        source picture with filled data
+ * @param pix_fmt    picture pixel format
+ * @param width      picture width
+ * @param height     picture height
+ * @param dest       destination buffer
+ * @param dest_size  destination buffer size in bytes
+ * @return the number of bytes written to dest, or a negative value
+ * (error code) on error, for example if the destination buffer is not
+ * big enough
  *
  * @see av_image_copy_to_buffer()
  */
-int avpicture_layout(const AVPicture* src, enum AVPixelFormat pix_fmt,
+int avpicture_layout(const AVPicture *src, enum AVPixelFormat pix_fmt,
                      int width, int height,
                      unsigned char *dest, int dest_size);
 
 /**
  * Calculate the size in bytes that a picture of the given width and height
  * would occupy if stored in the given picture format.
- * Always assume a linesize alignment of 1.
+ *
+ * @param pix_fmt    picture pixel format
+ * @param width      picture width
+ * @param height     picture height
+ * @return the computed picture buffer size or a negative error code
+ * in case of error
  *
  * @see av_image_get_buffer_size().
  */
@@ -4445,7 +4532,7 @@ enum AVPixelFormat avcodec_find_best_pix_fmt_of_2(enum AVPixelFormat dst_pix_fmt
                                             enum AVPixelFormat src_pix_fmt, int has_alpha, int *loss_ptr);
 
 attribute_deprecated
-#if AV_HAVE_INCOMPATIBLE_FORK_ABI
+#if AV_HAVE_INCOMPATIBLE_LIBAV_ABI
 enum AVPixelFormat avcodec_find_best_pix_fmt2(enum AVPixelFormat *pix_fmt_list,
                                               enum AVPixelFormat src_pix_fmt,
                                               int has_alpha, int *loss_ptr);
@@ -4575,14 +4662,78 @@ typedef struct AVBitStreamFilter {
     struct AVBitStreamFilter *next;
 } AVBitStreamFilter;
 
+/**
+ * Register a bitstream filter.
+ *
+ * The filter will be accessible to the application code through
+ * av_bitstream_filter_next() or can be directly initialized with
+ * av_bitstream_filter_init().
+ *
+ * @see avcodec_register_all()
+ */
 void av_register_bitstream_filter(AVBitStreamFilter *bsf);
+
+/**
+ * Create and initialize a bitstream filter context given a bitstream
+ * filter name.
+ *
+ * The returned context must be freed with av_bitstream_filter_close().
+ *
+ * @param name    the name of the bitstream filter
+ * @return a bitstream filter context if a matching filter was found
+ * and successfully initialized, NULL otherwise
+ */
 AVBitStreamFilterContext *av_bitstream_filter_init(const char *name);
+
+/**
+ * Filter bitstream.
+ *
+ * This function filters the buffer buf with size buf_size, and places the
+ * filtered buffer in the buffer pointed to by poutbuf.
+ *
+ * The output buffer must be freed by the caller.
+ *
+ * @param bsfc            bitstream filter context created by av_bitstream_filter_init()
+ * @param avctx           AVCodecContext accessed by the filter, may be NULL.
+ *                        If specified, this must point to the encoder context of the
+ *                        output stream the packet is sent to.
+ * @param args            arguments which specify the filter configuration, may be NULL
+ * @param poutbuf         pointer which is updated to point to the filtered buffer
+ * @param poutbuf_size    pointer which is updated to the filtered buffer size in bytes
+ * @param buf             buffer containing the data to filter
+ * @param buf_size        size in bytes of buf
+ * @param keyframe        set to non-zero if the buffer to filter corresponds to a key-frame packet data
+ * @return >= 0 in case of success, or a negative error code in case of failure
+ *
+ * If the return value is positive, an output buffer is allocated and
+ * is availble in *poutbuf, and is distinct from the input buffer.
+ *
+ * If the return value is 0, the output buffer is not allocated and
+ * should be considered identical to the input buffer, or in case
+ * *poutbuf was set it points to the input buffer (not necessarily to
+ * its starting address).
+ */
 int av_bitstream_filter_filter(AVBitStreamFilterContext *bsfc,
                                AVCodecContext *avctx, const char *args,
                                uint8_t **poutbuf, int *poutbuf_size,
                                const uint8_t *buf, int buf_size, int keyframe);
+
+/**
+ * Release bitstream filter context.
+ *
+ * @param bsf the bitstream filter context created with
+ * av_bitstream_filter_init(), can be NULL
+ */
 void av_bitstream_filter_close(AVBitStreamFilterContext *bsf);
 
+/**
+ * If f is NULL, return the first registered bitstream filter,
+ * if f is non-NULL, return the next registered bitstream filter
+ * after f, or NULL if f is the last one.
+ *
+ * This function can be used to iterate over all registered bitstream
+ * filters.
+ */
 AVBitStreamFilter *av_bitstream_filter_next(AVBitStreamFilter *f);
 
 /* memory */

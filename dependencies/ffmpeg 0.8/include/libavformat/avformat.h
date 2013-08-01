@@ -636,6 +636,13 @@ typedef struct AVIndexEntry {
 #define AV_DISPOSITION_ATTACHED_PIC      0x0400
 
 /**
+ * To specify text track kind (different from subtitles default).
+ */
+#define AV_DISPOSITION_CAPTIONS     0x10000
+#define AV_DISPOSITION_DESCRIPTIONS 0x20000
+#define AV_DISPOSITION_METADATA     0x40000
+
+/**
  * Options for behavior on timestamp wrap detection.
  */
 #define AV_PTS_WRAP_IGNORE      0   ///< ignore the wrap
@@ -733,19 +740,6 @@ typedef struct AVStream {
      */
     AVPacket attached_pic;
 
-    /**
-     * Real base framerate of the stream.
-     * This is the lowest framerate with which all timestamps can be
-     * represented accurately (it is the least common multiple of all
-     * framerates in the stream). Note, this value is just a guess!
-     * For example, if the time base is 1/90000 and all frames have either
-     * approximately 3600 or 1800 timer ticks, then r_frame_rate will be 50/1.
-     *
-     * Code outside avformat should access this field using:
-     * av_stream_get/set_r_frame_rate(stream)
-     */
-    AVRational r_frame_rate;
-
     /*****************************************************************
      * All fields below this line are not part of the public API. They
      * may not be used outside of libavformat and can be changed and
@@ -806,16 +800,6 @@ typedef struct AVStream {
      */
     int codec_info_nb_frames;
 
-    /**
-     * Stream Identifier
-     * This is the MPEG-TS stream identifier +1
-     * 0 means unknown
-     */
-    int stream_identifier;
-
-    int64_t interleaver_chunk_size;
-    int64_t interleaver_chunk_duration;
-
     /* av_read_frame() support */
     enum AVStreamParseType need_parsing;
     struct AVCodecParserContext *parser;
@@ -832,6 +816,29 @@ typedef struct AVStream {
                                     support seeking natively. */
     int nb_index_entries;
     unsigned int index_entries_allocated_size;
+
+    /**
+     * Real base framerate of the stream.
+     * This is the lowest framerate with which all timestamps can be
+     * represented accurately (it is the least common multiple of all
+     * framerates in the stream). Note, this value is just a guess!
+     * For example, if the time base is 1/90000 and all frames have either
+     * approximately 3600 or 1800 timer ticks, then r_frame_rate will be 50/1.
+     *
+     * Code outside avformat should access this field using:
+     * av_stream_get/set_r_frame_rate(stream)
+     */
+    AVRational r_frame_rate;
+
+    /**
+     * Stream Identifier
+     * This is the MPEG-TS stream identifier +1
+     * 0 means unknown
+     */
+    int stream_identifier;
+
+    int64_t interleaver_chunk_size;
+    int64_t interleaver_chunk_duration;
 
     /**
      * stream probing state
@@ -1397,6 +1404,9 @@ const AVClass *avformat_get_class(void);
  * be called in read_packet().
  *
  * When muxing, should be called by the user before avformat_write_header().
+ *
+ * User is required to call avcodec_close() and avformat_free_context() to
+ * clean up the allocation by avformat_new_stream().
  *
  * @param c If non-NULL, the AVCodecContext corresponding to the new stream
  * will be initialized to use this codec. This is needed for e.g. codec-specific
