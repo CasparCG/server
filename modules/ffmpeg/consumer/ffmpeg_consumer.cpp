@@ -677,8 +677,6 @@ private:
 					boost::this_thread::yield(); // TODO:
 				}
 			});
-
-			boost::this_thread::yield(); // TODO:
 		}
 	}
 					
@@ -747,8 +745,6 @@ private:
 					boost::this_thread::yield(); // TODO:
 				}
 			});
-
-			boost::this_thread::yield(); // TODO:
 		}
 	}
 	
