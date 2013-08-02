@@ -600,9 +600,11 @@ private:
 		
 		auto enc = video_st_->codec;
 			
+		std::shared_ptr<AVFrame> src_av_frame;
+
 		if(frame_ptr)
 		{
-			std::shared_ptr<AVFrame> src_av_frame(av_frame_alloc(), [frame_ptr](AVFrame* frame)
+			src_av_frame.reset(av_frame_alloc(), [frame_ptr](AVFrame* frame)
 			{
 				av_frame_free(&frame);
 			});
@@ -627,9 +629,9 @@ private:
 									in_video_format_.width, 
 									in_video_format_.height, 
 									1));
-
-			FF(av_buffersrc_add_frame(video_graph_in_, src_av_frame.get()));
 		}		
+
+		FF(av_buffersrc_add_frame(video_graph_in_, src_av_frame.get()));
 
 		int ret = 0;
 
@@ -642,39 +644,39 @@ private:
 
 			ret = av_buffersink_get_frame(video_graph_out_, filt_frame.get());
 						
-            if(ret == AVERROR_EOF)
+			video_encoder_executor_.begin_invoke([=]
 			{
-				if(enc->codec->capabilities & CODEC_CAP_DELAY)
+				if(ret == AVERROR_EOF)
 				{
-					while(encode_av_frame(*video_st_, video_bitstream_filter_.get(), avcodec_encode_video2, nullptr, token))
-						boost::this_thread::yield(); // TODO:
-				}		
-			}
-			else if(ret != AVERROR(EAGAIN))
-			{
-				FF_RET(ret, "av_buffersink_get_frame");
+					if(enc->codec->capabilities & CODEC_CAP_DELAY)
+					{
+						while(encode_av_frame(*video_st_, video_bitstream_filter_.get(), avcodec_encode_video2, nullptr, token))
+							boost::this_thread::yield(); // TODO:
+					}		
+				}
+				else if(ret != AVERROR(EAGAIN))
+				{
+					FF_RET(ret, "av_buffersink_get_frame");
 
-				if (filt_frame->interlaced_frame) 
-				{
-					if (enc->codec->id == AV_CODEC_ID_MJPEG)
-						enc->field_order = filt_frame->top_field_first ? AV_FIELD_TT : AV_FIELD_BB;
+					if (filt_frame->interlaced_frame) 
+					{
+						if (enc->codec->id == AV_CODEC_ID_MJPEG)
+							enc->field_order = filt_frame->top_field_first ? AV_FIELD_TT : AV_FIELD_BB;
+						else
+							enc->field_order = filt_frame->top_field_first ? AV_FIELD_TB : AV_FIELD_BT;
+					} 
 					else
-						enc->field_order = filt_frame->top_field_first ? AV_FIELD_TB : AV_FIELD_BT;
-				} 
-				else
-					enc->field_order = AV_FIELD_PROGRESSIVE;
+						enc->field_order = AV_FIELD_PROGRESSIVE;
 
-				filt_frame->quality = enc->global_quality;
+					filt_frame->quality = enc->global_quality;
 
-				if (!enc->me_threshold)
-					filt_frame->pict_type = AV_PICTURE_TYPE_NONE;
+					if (!enc->me_threshold)
+						filt_frame->pict_type = AV_PICTURE_TYPE_NONE;
 			
-				video_encoder_executor_.begin_invoke([=]
-				{
 					encode_av_frame(*video_st_, video_bitstream_filter_.get(), avcodec_encode_video2, filt_frame, token);
 					boost::this_thread::yield(); // TODO:
-				});
-			}
+				}
+			});
 
 			boost::this_thread::yield(); // TODO:
 		}
@@ -686,10 +688,12 @@ private:
 			return;
 		
 		auto enc = audio_st_->codec;
-									
+			
+		std::shared_ptr<AVFrame> src_av_frame;
+
 		if(frame_ptr)
 		{
-			std::shared_ptr<AVFrame>  src_av_frame(av_frame_alloc(), [](AVFrame* p)
+			src_av_frame.reset(av_frame_alloc(), [](AVFrame* p)
 			{
 				av_frame_free(&p);
 			});
@@ -709,10 +713,10 @@ private:
 									  2, // TODO
 									  src_av_frame->nb_samples, 
 									  AV_SAMPLE_FMT_S32, 
-									  16)); 
-					
-			FF(av_buffersrc_add_frame(audio_graph_in_, src_av_frame.get()));
+									  16)); 					
 		}
+		
+		FF(av_buffersrc_add_frame(audio_graph_in_, src_av_frame.get()));
 
 		int ret = 0;
 
@@ -724,25 +728,25 @@ private:
 			});
 
 			ret = av_buffersink_get_frame(audio_graph_out_, filt_frame.get());
-						
-			if(ret == AVERROR_EOF)
-			{
-				if(enc->codec->capabilities & CODEC_CAP_DELAY)
+					
+			audio_encoder_executor_.begin_invoke([=]
+			{	
+				if(ret == AVERROR_EOF)
 				{
-					while(encode_av_frame(*audio_st_, audio_bitstream_filter_.get(), avcodec_encode_audio2, nullptr, token))
-						boost::this_thread::yield(); // TODO:
+					if(enc->codec->capabilities & CODEC_CAP_DELAY)
+					{
+						while(encode_av_frame(*audio_st_, audio_bitstream_filter_.get(), avcodec_encode_audio2, nullptr, token))
+							boost::this_thread::yield(); // TODO:
+					}
 				}
-			}
-			else if(ret != AVERROR(EAGAIN))
-			{
-				FF_RET(ret, "av_buffersink_get_frame");
-
-				audio_encoder_executor_.begin_invoke([=]
+				else if(ret != AVERROR(EAGAIN))
 				{
+					FF_RET(ret, "av_buffersink_get_frame");
+
 					encode_av_frame(*audio_st_, audio_bitstream_filter_.get(), avcodec_encode_audio2, filt_frame, token);
 					boost::this_thread::yield(); // TODO:
-				});
-			}
+				}
+			});
 
 			boost::this_thread::yield(); // TODO:
 		}
