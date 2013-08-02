@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -27,17 +27,16 @@
 */
 
 #if !defined(__TBB_machine_H) || defined(__TBB_machine_linux_ia64_H)
-#error Do not include this file directly; include tbb_machine.h instead
+#error Do not #include this internal file directly; use public TBB headers instead.
 #endif
 
 #define __TBB_machine_linux_ia64_H
 
 #include <stdint.h>
-#include <unistd.h>
 #include <ia64intrin.h>
 
 #define __TBB_WORDSIZE 8
-#define __TBB_BIG_ENDIAN 0
+#define __TBB_ENDIANNESS __TBB_ENDIAN_LITTLE
 
 #if __INTEL_COMPILER
     #define __TBB_compiler_fence()
@@ -56,6 +55,7 @@
 #endif /* !__INTEL_COMPILER */
 
 // Most of the functions will be in a .s file
+// TODO: revise dynamic_link, memory pools and etc. if the library dependency is removed.
 
 extern "C" {
     int8_t __TBB_machine_fetchadd1__TBB_full_fence (volatile void *ptr, int8_t addend);
@@ -176,8 +176,9 @@ namespace internal {
 
 #undef __TBB_MACHINE_DEFINE_ATOMICS
 
-#define __TBB_USE_FENCED_ATOMICS 1
-#define __TBB_USE_GENERIC_HALF_FENCED_LOAD_STORE 1
+#define __TBB_USE_FENCED_ATOMICS                            1
+#define __TBB_USE_GENERIC_HALF_FENCED_LOAD_STORE            1
+#define __TBB_USE_GENERIC_SEQUENTIAL_CONSISTENCY_LOAD_STORE 1
 
 // Definition of Lock functions
 #define __TBB_TryLockByte(P) __TBB_machine_trylockbyte(P)

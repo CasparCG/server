@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -40,7 +40,7 @@
 namespace tbb {
     namespace internal {
 #if _WIN32||_WIN64
-        void __TBB_EXPORTED_FUNC itt_set_sync_name_v3( void *obj, const wchar_t* name ); 
+        void __TBB_EXPORTED_FUNC itt_set_sync_name_v3( void *obj, const wchar_t* name );
         inline size_t multibyte_to_widechar( wchar_t* wcs, const char* mbs, size_t bufsize) {
 #if _MSC_VER>=1400
             size_t len;
@@ -54,16 +54,16 @@ namespace tbb {
 #endif
         }
 #else
-        void __TBB_EXPORTED_FUNC itt_set_sync_name_v3( void *obj, const char* name ); 
+        void __TBB_EXPORTED_FUNC itt_set_sync_name_v3( void *obj, const char* name );
 #endif
     } // namespace internal
 } // namespace tbb
 
 //! Macro __TBB_DEFINE_PROFILING_SET_NAME(T) defines "set_name" methods for sync objects of type T
-/** Should be used in the "tbb" namespace only. 
+/** Should be used in the "tbb" namespace only.
     Don't place semicolon after it to avoid compiler warnings. **/
 #if _WIN32||_WIN64
-    #define __TBB_DEFINE_PROFILING_SET_NAME(sync_object_type)    \
+    #define __TBB_DEFINE_PROFILING_SET_NAME(sync_object_type)                       \
         namespace profiling {                                                       \
             inline void set_name( sync_object_type& obj, const wchar_t* name ) {    \
                 tbb::internal::itt_set_sync_name_v3( &obj, name );                  \
@@ -77,7 +77,7 @@ namespace tbb {
             }                                                                       \
         }
 #else /* !WIN */
-    #define __TBB_DEFINE_PROFILING_SET_NAME(sync_object_type)    \
+    #define __TBB_DEFINE_PROFILING_SET_NAME(sync_object_type)                       \
         namespace profiling {                                                       \
             inline void set_name( sync_object_type& obj, const char* name ) {       \
                 tbb::internal::itt_set_sync_name_v3( &obj, name );                  \
@@ -88,13 +88,13 @@ namespace tbb {
 #else /* no tools support */
 
 #if _WIN32||_WIN64
-    #define __TBB_DEFINE_PROFILING_SET_NAME(sync_object_type)    \
+    #define __TBB_DEFINE_PROFILING_SET_NAME(sync_object_type)               \
         namespace profiling {                                               \
             inline void set_name( sync_object_type&, const wchar_t* ) {}    \
             inline void set_name( sync_object_type&, const char* ) {}       \
         }
 #else /* !WIN */
-    #define __TBB_DEFINE_PROFILING_SET_NAME(sync_object_type)    \
+    #define __TBB_DEFINE_PROFILING_SET_NAME(sync_object_type)               \
         namespace profiling {                                               \
             inline void set_name( sync_object_type&, const char* ) {}       \
         }
@@ -109,7 +109,7 @@ namespace tbb {
 
         enum notify_type {prepare=0, cancel, acquired, releasing};
         const uintptr_t NUM_NOTIFY_TYPES = 4; // set to # elements in enum above
-        
+
         void __TBB_EXPORTED_FUNC call_itt_notify_v5(int t, void *ptr);
         void __TBB_EXPORTED_FUNC itt_store_pointer_with_release_v3(void *dst, void *src);
         void* __TBB_EXPORTED_FUNC itt_load_pointer_with_acquire_v3(const void *src);
@@ -133,7 +133,7 @@ namespace tbb {
             // This assertion should be replaced with static_assert
             __TBB_ASSERT(sizeof(T) == sizeof(void *), "Type must be word-sized.");
 #if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
-            // Workaround for overzealous compiler warnings 
+            // Workaround for overzealous compiler warnings
             #pragma warning (push)
             #pragma warning (disable: 4311)
 #endif
@@ -168,7 +168,7 @@ namespace tbb {
             return __TBB_load_with_acquire(src);
 #endif // TBB_USE_THREADING_TOOLS
         }
-        
+
         template <typename T>
         inline void itt_hide_store_word(T& dst, T src) {
 #if TBB_USE_THREADING_TOOLS

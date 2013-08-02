@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -168,9 +168,132 @@ public:
     }
 };
 
+template <typename Key, typename Hasher = tbb::tbb_hash<Key>, typename Key_equality = std::equal_to<Key>,
+         typename Allocator = tbb::tbb_allocator<Key> >
+class concurrent_unordered_multiset :
+    public internal::concurrent_unordered_base< concurrent_unordered_set_traits<Key,
+    internal::hash_compare<Key, Hasher, Key_equality>, Allocator, true> >
+{
+public:
+    // Base type definitions
+    typedef internal::hash_compare<Key, Hasher, Key_equality> hash_compare;
+    typedef concurrent_unordered_set_traits<Key, hash_compare, Allocator, true> traits_type;
+    typedef internal::concurrent_unordered_base< traits_type > base_type;
+    using traits_type::allow_multimapping;
+    using traits_type::my_hash_compare;
+
+    // Type definitions
+    typedef Key key_type;
+    typedef typename base_type::value_type value_type;
+    typedef Key mapped_type;
+    typedef Hasher hasher;
+    typedef Key_equality key_equal;
+    typedef hash_compare key_compare;
+
+    typedef typename base_type::allocator_type allocator_type;
+    typedef typename base_type::pointer pointer;
+    typedef typename base_type::const_pointer const_pointer;
+    typedef typename base_type::reference reference;
+    typedef typename base_type::const_reference const_reference;
+
+    typedef typename base_type::size_type size_type;
+    typedef typename base_type::difference_type difference_type;
+
+    typedef typename base_type::iterator iterator;
+    typedef typename base_type::const_iterator const_iterator;
+    typedef typename base_type::iterator local_iterator;
+    typedef typename base_type::const_iterator const_local_iterator;
+
+    // Construction/destruction/copying
+    explicit concurrent_unordered_multiset(size_type n_of_buckets = 8,
+        const hasher& _Hasher = hasher(), const key_equal& _Key_equality = key_equal(),
+        const allocator_type& a = allocator_type())
+        : base_type(n_of_buckets, key_compare(_Hasher, _Key_equality), a)
+    {
+    }
+
+    concurrent_unordered_multiset(const Allocator& a) : base_type(8, key_compare(), a)
+    {
+    }
+
+    template <typename Iterator>
+    concurrent_unordered_multiset(Iterator first, Iterator last, size_type n_of_buckets = 8,
+        const hasher& _Hasher = hasher(), const key_equal& _Key_equality = key_equal(),
+        const allocator_type& a = allocator_type())
+        : base_type(n_of_buckets, key_compare(_Hasher, _Key_equality), a)
+    {
+        for (; first != last; ++first)
+        {
+            base_type::insert(*first);
+        }
+    }
+
+    concurrent_unordered_multiset(const concurrent_unordered_multiset& table) : base_type(table)
+    {
+    }
+
+    concurrent_unordered_multiset(const concurrent_unordered_multiset& table, const Allocator& a) : base_type(table, a)
+    {
+    }
+
+    concurrent_unordered_multiset& operator=(const concurrent_unordered_multiset& table)
+    {
+        base_type::operator=(table);
+        return (*this);
+    }
+
+    // Modifiers
+    std::pair<iterator, bool> insert(const value_type& value)
+    {
+        return base_type::insert(value);
+    }
+
+    iterator insert(const_iterator where, const value_type& value)
+    {
+        return base_type::insert(where, value);
+    }
+
+    template<class Iterator>
+    void insert(Iterator first, Iterator last)
+    {
+        base_type::insert(first, last);
+    }
+
+    iterator unsafe_erase(const_iterator where)
+    {
+        return base_type::unsafe_erase(where);
+    }
+
+    size_type unsafe_erase(const key_type& key)
+    {
+        return base_type::unsafe_erase(key);
+    }
+
+    iterator unsafe_erase(const_iterator first, const_iterator last)
+    {
+        return base_type::unsafe_erase(first, last);
+    }
+
+    void swap(concurrent_unordered_multiset& table)
+    {
+        base_type::swap(table);
+    }
+
+    // Observers
+    hasher hash_function() const
+    {
+        return my_hash_compare.my_hash_object;
+    }
+
+    key_equal key_eq() const
+    {
+        return my_hash_compare.my_key_compare_object;
+    }
+};
 } // namespace interface5
 
 using interface5::concurrent_unordered_set;
+using interface5::concurrent_unordered_multiset;
 
 } // namespace tbb
 

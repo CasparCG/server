@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -244,6 +244,7 @@ namespace internal {
         //! Miscellaneous state that is not directly visible to users, stored as a byte for compactness.
         /** 0x0 -> version 1.0 task
             0x1 -> version >=2.1 task
+            0x10 -> task was enqueued 
             0x20 -> task_proxy
             0x40 -> task has live ref_count
             0x80 -> a stolen task */
@@ -300,8 +301,8 @@ class task_scheduler_init;
 
     The context can be bound to another one, and other contexts can be bound to it,
     forming a tree-like structure: parent -> this -> children. Arrows here designate
-    cancellation propagation direction. If a task in a cancellation group is canceled
-    all the other tasks in this group and groups bound to it (as children) get canceled too.
+    cancellation propagation direction. If a task in a cancellation group is cancelled
+    all the other tasks in this group and groups bound to it (as children) get cancelled too.
 
     IMPLEMENTATION NOTE:
     When adding new members to task_group_context or changing types of existing ones,
@@ -370,14 +371,14 @@ private:
                           - 2 * sizeof(uintptr_t)- sizeof(void*) - sizeof(internal::context_list_node_t)
                           - sizeof(__itt_caller)];
 
-    //! Specifies whether cancellation was request for this task group.
+    //! Specifies whether cancellation was requested for this task group.
     uintptr_t my_cancellation_requested;
 
     //! Version for run-time checks and behavioral traits of the context.
     /** Version occupies low 16 bits, and traits (zero or more ORed enumerators
         from the traits_type enumerations) take the next 16 bits.
         Original (zeroth) version of the context did not support any traits. **/
-    uintptr_t  my_version_and_traits;
+    uintptr_t my_version_and_traits;
 
     //! Pointer to the container storing exception being propagated across this task group.
     exception_container_type *my_exception;
@@ -414,7 +415,7 @@ public:
 
         Creating isolated contexts involve much less overhead, but they have limited
         utility. Normally when an exception occurs in an algorithm that has nested
-        ones running, it is desirably to have all the nested algorithms canceled
+        ones running, it is desirably to have all the nested algorithms cancelled
         as well. Such a behavior requires nested algorithms to use bound contexts.
 
         There is one good place where using isolated algorithms is beneficial. It is
@@ -466,7 +467,7 @@ public:
 
     //! Records the pending exception, and cancels the task group.
     /** May be called only from inside a catch-block. If the context is already
-        canceled, does nothing.
+        cancelled, does nothing.
         The method brings the task group associated with this context exactly into
         the state it would be in, if one of its tasks threw the currently pending
         exception during its execution. In other words, it emulates the actions
@@ -474,7 +475,7 @@ public:
     void __TBB_EXPORTED_METHOD register_pending_exception ();
 
 #if __TBB_TASK_PRIORITY
-    //! Changes priority of the task grop
+    //! Changes priority of the task group
     void set_priority ( priority_t );
 
     //! Retrieves current priority of the current task group
@@ -549,6 +550,10 @@ public:
         freed,
         //! task to be recycled as continuation
         recycle
+#if __TBB_RECYCLE_TO_ENQUEUE
+        //! task to be scheduled for starvation-resistant execution
+        ,to_enqueue
+#endif
     };
 
     //------------------------------------------------------------------------
@@ -639,6 +644,15 @@ public:
         __TBB_ASSERT( prefix().ref_count==0, "no child tasks allowed when recycled for reexecution" );
         prefix().state = reexecute;
     }
+
+#if __TBB_RECYCLE_TO_ENQUEUE
+    //! Schedule this to enqueue after descendant tasks complete.
+    /** Save enqueue/spawn difference, it has the semantics of recycle_as_safe_continuation. */
+    void recycle_to_enqueue() {
+        __TBB_ASSERT( prefix().state==executing, "execute not running, or already recycled" );
+        prefix().state = to_enqueue;
+    }
+#endif /* __TBB_RECYCLE_TO_ENQUEUE */
 
     // All depth-related methods are obsolete, and are retained for the sake
     // of backward source compatibility only
@@ -816,6 +830,8 @@ public:
 
     //! Returns true if the context has received cancellation request.
     bool is_cancelled () const { return prefix().context->is_group_execution_cancelled(); }
+#else
+    bool is_cancelled () const { return false; }
 #endif /* __TBB_TASK_GROUP_CONTEXT */
 
 #if __TBB_TASK_PRIORITY

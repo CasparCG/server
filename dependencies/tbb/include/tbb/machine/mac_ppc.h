@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -27,7 +27,7 @@
 */
 
 #if !defined(__TBB_machine_H) || defined(__TBB_machine_gcc_power_H)
-#error Do not include this file directly; include tbb_machine.h instead
+#error Do not #include this internal file directly; use public TBB headers instead.
 #endif
 
 #define __TBB_machine_gcc_power_H
@@ -47,12 +47,26 @@
     #define __TBB_WORDSIZE 4
 #endif
 
+// Traditionally Power Architecture is big-endian.
+// Little-endian could be just an address manipulation (compatibility with TBB not verified),
+// or normal little-endian (on more recent systems). Embedded PowerPC systems may support
+// page-specific endianness, but then one endianness must be hidden from TBB so that it still sees only one.
+#if __BIG_ENDIAN__ || (defined(__BYTE_ORDER__) && __BYTE_ORDER__==__ORDER_BIG_ENDIAN__)
+    #define __TBB_ENDIANNESS __TBB_ENDIAN_BIG
+#elif __LITTLE_ENDIAN__ || (defined(__BYTE_ORDER__) && __BYTE_ORDER__==__ORDER_LITTLE_ENDIAN__)
+    #define __TBB_ENDIANNESS __TBB_ENDIAN_LITTLE
+#elif defined(__BYTE_ORDER__)
+    #define __TBB_ENDIANNESS __TBB_ENDIAN_UNSUPPORTED
+#else
+    #define __TBB_ENDIANNESS __TBB_ENDIAN_DETECT
+#endif
+
 // On Power Architecture, (lock-free) 64-bit atomics require 64-bit hardware:
 #if __TBB_WORDSIZE==8
     // Do not change the following definition, because TBB itself will use 64-bit atomics in 64-bit builds.
     #define __TBB_64BIT_ATOMICS 1
 #elif __bgp__
-    // Do not change the following definition on known 32-bit hardware.
+    // Do not change the following definition, because this is known 32-bit hardware.
     #define __TBB_64BIT_ATOMICS 0
 #else
     // To enable 64-bit atomics in 32-bit builds, set the value below to 1 instead of 0.
@@ -148,16 +162,17 @@ inline int64_t __TBB_machine_cmpswp8 (volatile void *ptr, int64_t value, int64_t
                          );
     return result;
 }
+
 #endif /* __TBB_WORDSIZE==4 && __TBB_64BIT_ATOMICS */
 
-#define __TBB_MACHINE_DEFINE_LOAD_STORE(S,load,store,compare)                                                 \
+#define __TBB_MACHINE_DEFINE_LOAD_STORE(S,ldx,stx,cmpx)                                                       \
     template <typename T>                                                                                     \
     struct machine_load_store<T,S> {                                                                          \
         static inline T load_with_acquire(const volatile T& location) {                                       \
             T result;                                                                                         \
-            __asm__ __volatile__(load " %[res],0(%[ptr])\n"                                                   \
+            __asm__ __volatile__(ldx " %[res],0(%[ptr])\n"                                                    \
                                  "0:\n\t"                                                                     \
-                                 compare " %[res],%[res]\n\t"                                                 \
+                                 cmpx " %[res],%[res]\n\t"                                                    \
                                  "bne- 0b\n\t"                                                                \
                                  "isync"                                                                      \
                                  : [res]"=r"(result)                                                          \
@@ -169,7 +184,7 @@ inline int64_t __TBB_machine_cmpswp8 (volatile void *ptr, int64_t value, int64_t
         }                                                                                                     \
         static inline void store_with_release(volatile T &location, T value) {                                \
             __asm__ __volatile__("lwsync\n\t"                                                                 \
-                                 store " %[val],0(%[ptr])"                                                    \
+                                 stx " %[val],0(%[ptr])"                                                      \
                                  : "=m"(location)      /* redundant with "memory" */                          \
                                  : [ptr]"b"(&location) /* cannot use register 0 here */                       \
                                  , [val]"r"(value)                                                            \
@@ -178,10 +193,10 @@ inline int64_t __TBB_machine_cmpswp8 (volatile void *ptr, int64_t value, int64_t
     };                                                                                                        \
                                                                                                               \
     template <typename T>                                                                                     \
-    struct machine_load_store_relaxed<T,S> {                                                            \
+    struct machine_load_store_relaxed<T,S> {                                                                  \
         static inline T load (const __TBB_atomic T& location) {                                               \
             T result;                                                                                         \
-            __asm__ __volatile__(load " %[res],0(%[ptr])"                                                     \
+            __asm__ __volatile__(ldx " %[res],0(%[ptr])"                                                      \
                                  : [res]"=r"(result)                                                          \
                                  : [ptr]"b"(&location) /* cannot use register 0 here */                       \
                                  , "m"(location)                                                              \
@@ -189,7 +204,7 @@ inline int64_t __TBB_machine_cmpswp8 (volatile void *ptr, int64_t value, int64_t
             return result;                                                                                    \
         }                                                                                                     \
         static inline void store (__TBB_atomic T &location, T value) {                                        \
-            __asm__ __volatile__(store " %[val],0(%[ptr])"                                                    \
+            __asm__ __volatile__(stx " %[val],0(%[ptr])"                                                      \
                                  : "=m"(location)                                                             \
                                  : [ptr]"b"(&location) /* cannot use register 0 here */                       \
                                  , [val]"r"(value)                                                            \
@@ -275,14 +290,16 @@ namespace internal {
 
 #undef __TBB_MACHINE_DEFINE_LOAD_STORE
 
-#define __TBB_USE_GENERIC_PART_WORD_CAS 1
-#define __TBB_USE_GENERIC_FETCH_ADD     1
-#define __TBB_USE_GENERIC_FETCH_STORE   1
+#define __TBB_USE_GENERIC_PART_WORD_CAS                     1
+#define __TBB_USE_GENERIC_FETCH_ADD                         1
+#define __TBB_USE_GENERIC_FETCH_STORE                       1
+#define __TBB_USE_GENERIC_SEQUENTIAL_CONSISTENCY_LOAD_STORE 1
 
 #define __TBB_control_consistency_helper() __asm__ __volatile__("isync": : :"memory")
 #define __TBB_full_memory_fence()          __asm__ __volatile__( "sync": : :"memory")
 
 static inline intptr_t __TBB_machine_lg( uintptr_t x ) {
+    __TBB_ASSERT(x, "__TBB_Log2(0) undefined");
     // cntlzd/cntlzw starts counting at 2^63/2^31 (ignoring any higher-order bits), and does not affect cr0
 #if __TBB_WORDSIZE==8
     __asm__ __volatile__ ("cntlzd %0,%0" : "+r"(x));

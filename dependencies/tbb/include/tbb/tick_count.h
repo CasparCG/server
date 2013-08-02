@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -79,6 +79,19 @@ public:
 
         //! Subtraction operator
         interval_t& operator-=( const interval_t& i ) {value -= i.value; return *this;}
+    private:
+        static long long ticks_per_second(){
+#if _WIN32||_WIN64
+            LARGE_INTEGER qpfreq;
+            int rval = QueryPerformanceFrequency(&qpfreq);
+            __TBB_ASSERT_EX(rval, "QueryPerformanceFrequency returned zero");
+            return static_cast<long long>(qpfreq.QuadPart);
+#elif __linux__
+            return static_cast<long long>(1E9);
+#else /* generic Unix */
+            return static_cast<long long>(1E6);
+#endif /* (choice of OS) */
+        }
     };
     
     //! Construct an absolute timestamp initialized to zero.
@@ -90,6 +103,9 @@ public:
     //! Subtract two timestamps to get the time interval between
     friend interval_t operator-( const tick_count& t1, const tick_count& t0 );
 
+    //! Return the resolution of the clock in seconds per tick.
+    static double resolution() { return 1.0 / interval_t::ticks_per_second(); }
+
 private:
     long long my_count;
 };
@@ -98,39 +114,25 @@ inline tick_count tick_count::now() {
     tick_count result;
 #if _WIN32||_WIN64
     LARGE_INTEGER qpcnt;
-    QueryPerformanceCounter(&qpcnt);
+    int rval = QueryPerformanceCounter(&qpcnt);
+    __TBB_ASSERT_EX(rval, "QueryPerformanceCounter failed");
     result.my_count = qpcnt.QuadPart;
 #elif __linux__
     struct timespec ts;
-#if TBB_USE_ASSERT
-    int status = 
-#endif /* TBB_USE_ASSERT */
-        clock_gettime( CLOCK_REALTIME, &ts );
-    __TBB_ASSERT( status==0, "CLOCK_REALTIME not supported" );
+    int status = clock_gettime( CLOCK_REALTIME, &ts );
+    __TBB_ASSERT_EX( status==0, "CLOCK_REALTIME not supported" );
     result.my_count = static_cast<long long>(1000000000UL)*static_cast<long long>(ts.tv_sec) + static_cast<long long>(ts.tv_nsec);
 #else /* generic Unix */
     struct timeval tv;
-#if TBB_USE_ASSERT
-    int status = 
-#endif /* TBB_USE_ASSERT */
-        gettimeofday(&tv, NULL);
-    __TBB_ASSERT( status==0, "gettimeofday failed" );
+    int status = gettimeofday(&tv, NULL);
+    __TBB_ASSERT_EX( status==0, "gettimeofday failed" );
     result.my_count = static_cast<long long>(1000000)*static_cast<long long>(tv.tv_sec) + static_cast<long long>(tv.tv_usec);
 #endif /*(choice of OS) */
     return result;
 }
 
-inline tick_count::interval_t::interval_t( double sec )
-{
-#if _WIN32||_WIN64
-    LARGE_INTEGER qpfreq;
-    QueryPerformanceFrequency(&qpfreq);
-    value = static_cast<long long>(sec*qpfreq.QuadPart);
-#elif __linux__
-    value = static_cast<long long>(sec*1E9);
-#else /* generic Unix */
-    value = static_cast<long long>(sec*1E6);
-#endif /* (choice of OS) */
+inline tick_count::interval_t::interval_t( double sec ) {
+    value = static_cast<long long>(sec*interval_t::ticks_per_second());
 }
 
 inline tick_count::interval_t operator-( const tick_count& t1, const tick_count& t0 ) {
@@ -138,18 +140,9 @@ inline tick_count::interval_t operator-( const tick_count& t1, const tick_count&
 }
 
 inline double tick_count::interval_t::seconds() const {
-#if _WIN32||_WIN64
-    LARGE_INTEGER qpfreq;
-    QueryPerformanceFrequency(&qpfreq);
-    return value/(double)qpfreq.QuadPart;
-#elif __linux__
-    return value*1E-9;
-#else /* generic Unix */
-    return value*1E-6;
-#endif /* (choice of OS) */
+    return value*tick_count::resolution();
 }
 
 } // namespace tbb
 
 #endif /* __TBB_tick_count_H */
-

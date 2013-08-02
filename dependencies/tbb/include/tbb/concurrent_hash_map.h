@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -76,6 +76,7 @@ namespace interface5 {
 
     //! @cond INTERNAL
     namespace internal {
+    using namespace tbb::internal;
 
 
     //! Type of a hash code.
@@ -169,21 +170,21 @@ namespace interface5 {
         static size_type segment_size( segment_index_t k ) {
             return size_type(1)<<k; // fake value for k==0
         }
-        
+
         //! @return true if @arg ptr is valid pointer
         static bool is_valid( void *ptr ) {
-            return reinterpret_cast<size_t>(ptr) > size_t(63);
+            return reinterpret_cast<uintptr_t>(ptr) > uintptr_t(63);
         }
 
         //! Initialize buckets
         static void init_buckets( segment_ptr_t ptr, size_type sz, bool is_initial ) {
             if( is_initial ) std::memset(ptr, 0, sz*sizeof(bucket) );
             else for(size_type i = 0; i < sz; i++, ptr++) {
-                    *reinterpret_cast<intptr_t*>(&ptr->mutex) = 0;
-                    ptr->node_list = rehash_req;
-                }
+                *reinterpret_cast<intptr_t*>(&ptr->mutex) = 0;
+                ptr->node_list = rehash_req;
+            }
         }
-        
+
         //! Add node @arg n to bucket @arg b
         static void add_to_bucket( bucket *b, node_base *n ) {
             __TBB_ASSERT(b->node_list != rehash_req, NULL);
@@ -192,7 +193,7 @@ namespace interface5 {
         }
 
         //! Exception safety helper
-        struct enable_segment_failsafe {
+        struct enable_segment_failsafe : tbb::internal::no_copy {
             segment_ptr_t *my_segment_ptr;
             enable_segment_failsafe(segments_table_t &table, segment_index_t k) : my_segment_ptr(&table[k]) {}
             ~enable_segment_failsafe() {
@@ -282,11 +283,12 @@ namespace interface5 {
             size_type sz = ++my_size; // prefix form is to enforce allocation after the first item inserted
             add_to_bucket( b, n );
             // check load factor
-            if( sz >= mask ) { // TODO: add custom load_factor 
+            if( sz >= mask ) { // TODO: add custom load_factor
                 segment_index_t new_seg = __TBB_Log2( mask+1 ); //optimized segment_index_of
                 __TBB_ASSERT( is_valid(my_table[new_seg-1]), "new allocations must not publish new mask until segment has allocated");
+                static const segment_ptr_t is_allocating = (segment_ptr_t)2;
                 if( !itt_hide_load_word(my_table[new_seg])
-                  && __TBB_CompareAndSwapW(&my_table[new_seg], 2, 0) == 0 )
+                  && as_atomic(my_table[new_seg]).compare_and_swap(is_allocating, NULL) == NULL )
                     return new_seg; // The value must be processed
             }
             return 0;
@@ -315,7 +317,7 @@ namespace interface5 {
 
     //! Meets requirements of a forward iterator for STL */
     /** Value is either the T or const T type of the container.
-        @ingroup containers */ 
+        @ingroup containers */
     template<typename Container, typename Value>
     class hash_map_iterator
         : public std::iterator<std::forward_iterator_tag,Value>
@@ -333,7 +335,7 @@ namespace interface5 {
 
         template<typename C, typename T, typename U>
         friend ptrdiff_t operator-( const hash_map_iterator<C,T>& i, const hash_map_iterator<C,U>& j );
-    
+
         template<typename C, typename U>
         friend class hash_map_iterator;
 
@@ -390,7 +392,7 @@ namespace interface5 {
         }
         Value* operator->() const {return &operator*();}
         hash_map_iterator& operator++();
-        
+
         //! Post increment
         hash_map_iterator operator++(int) {
             hash_map_iterator old(*this);
@@ -428,7 +430,7 @@ namespace interface5 {
     }
 
     //! Range class used with concurrent_hash_map
-    /** @ingroup containers */ 
+    /** @ingroup containers */
     template<typename Iterator>
     class hash_map_range {
         typedef typename Iterator::map_type map_type;
@@ -455,7 +457,7 @@ namespace interface5 {
             return my_midpoint!=my_end;
         }
         //! Split range.
-        hash_map_range( hash_map_range& r, split ) : 
+        hash_map_range( hash_map_range& r, split ) :
             my_end(r.my_end),
             my_grainsize(r.my_grainsize)
         {
@@ -467,7 +469,7 @@ namespace interface5 {
         }
         //! type conversion
         template<typename U>
-        hash_map_range( hash_map_range<U>& r) : 
+        hash_map_range( hash_map_range<U>& r) :
             my_begin(r.my_begin),
             my_end(r.my_end),
             my_midpoint(r.my_midpoint),
@@ -475,8 +477,8 @@ namespace interface5 {
         {}
 #if TBB_DEPRECATED
         //! Init range with iterators and grainsize specified
-        hash_map_range( const Iterator& begin_, const Iterator& end_, size_type grainsize_ = 1 ) : 
-            my_begin(begin_), 
+        hash_map_range( const Iterator& begin_, const Iterator& end_, size_type grainsize_ = 1 ) :
+            my_begin(begin_),
             my_end(end_),
             my_grainsize(grainsize_)
         {
@@ -487,7 +489,7 @@ namespace interface5 {
         }
 #endif
         //! Init range with container and grainsize specified
-        hash_map_range( const map_type &map, size_type grainsize_ = 1 ) : 
+        hash_map_range( const map_type &map, size_type grainsize_ = 1 ) :
             my_begin( Iterator( map, 0, map.my_embedded_segment, map.my_embedded_segment->node_list ) ),
             my_end( Iterator( map, map.my_mask + 1, 0, 0 ) ),
             my_grainsize( grainsize_ )
@@ -550,7 +552,7 @@ namespace interface5 {
     - Added overloaded erase(accessor &) and erase(const_accessor&)
     - Added equal_range() [const]
     - Added [const_]pointer, [const_]reference, and allocator_type types
-    - Added global functions: operator==(), operator!=(), and swap() 
+    - Added global functions: operator==(), operator!=(), and swap()
 
     @ingroup containers */
 template<typename Key, typename T, typename HashCompare, typename Allocator>
@@ -591,12 +593,12 @@ protected:
         // exception-safe allocation, see C++ Standard 2003, clause 5.3.4p17
         void *operator new( size_t /*size*/, node_allocator_type &a ) {
             void *ptr = a.allocate(1);
-            if(!ptr) 
+            if(!ptr)
                 tbb::internal::throw_exception(tbb::internal::eid_bad_alloc);
             return ptr;
         }
         // match placement-new form above to be called if exception thrown in constructor
-        void operator delete( void *ptr, node_allocator_type &a ) {return a.deallocate(static_cast<node*>(ptr),1); }
+        void operator delete( void *ptr, node_allocator_type &a ) { a.deallocate(static_cast<node*>(ptr),1); }
     };
 
     void delete_node( node_base *n ) {
@@ -669,7 +671,7 @@ protected:
     }
 
 public:
-    
+
     class accessor;
     //! Combines data access, locking, and garbage collection.
     class const_accessor : private node::scoped_t /*which derived from no_copy*/ {
@@ -765,7 +767,7 @@ public:
         if( this!=&table ) {
             clear();
             internal_copy(table);
-        } 
+        }
         return *this;
     }
 
@@ -774,11 +776,11 @@ public:
     /** Useful to optimize performance before or after concurrent operations.
         Also enables using of find() and count() concurrent methods in serial context. */
     void rehash(size_type n = 0);
-    
+
     //! Clear table
     void clear();
 
-    //! Clear table and destroy it.  
+    //! Clear table and destroy it.
     ~concurrent_hash_map() { clear(); }
 
     //------------------------------------------------------------------------
@@ -800,7 +802,7 @@ public:
     const_iterator end() const {return const_iterator(*this,0,0,0);}
     std::pair<iterator, iterator> equal_range( const Key& key ) { return internal_equal_range(key, end()); }
     std::pair<const_iterator, const_iterator> equal_range( const Key& key ) const { return internal_equal_range(key, end()); }
-    
+
     //! Number of items in table.
     size_type size() const { return my_size; }
 
@@ -841,7 +843,7 @@ public:
         result.release();
         return lookup(/*insert*/false, key, NULL, &result, /*write=*/true );
     }
-        
+
     //! Insert item (if not already present) and acquire a read lock on the item.
     /** Returns true if item is new. */
     bool insert( const_accessor &result, const Key &key ) {
@@ -1004,10 +1006,9 @@ bool concurrent_hash_map<Key,T,HashCompare,A>::lookup( bool op_insert, const Key
         // TODO: the following seems as generic/regular operation
         // acquire the item
         if( !result->try_acquire( n->mutex, write ) ) {
-            // we are unlucky, prepare for longer wait
-            tbb::internal::atomic_backoff trials;
-            do {
-                if( !trials.bounded_pause() ) {
+            for( tbb::internal::atomic_backoff backoff(true);; ) {
+                if( result->try_acquire( n->mutex, write ) ) break;
+                if( !backoff.bounded_pause() ) {
                     // the wait takes really long, restart the operation
                     b.release();
                     __TBB_ASSERT( !op_insert || !return_value, "Can't acquire new item in locked bucket?" );
@@ -1015,7 +1016,7 @@ bool concurrent_hash_map<Key,T,HashCompare,A>::lookup( bool op_insert, const Key
                     m = (hashcode_t) itt_load_word_with_acquire( my_mask );
                     goto restart;
                 }
-            } while( !result->try_acquire( n->mutex, write ) );
+            }
         }
     }//lock scope
     result->my_node = n;
@@ -1064,7 +1065,7 @@ bool concurrent_hash_map<Key,T,HashCompare,A>::exclude( const_accessor &item_acc
         node_base **p = &b()->node_list;
         while( *p && *p != n )
             p = &(*p)->next;
-        if( !*p ) { // someone else was the first
+        if( !*p ) { // someone else was first
             if( check_mask_race( h, m ) )
                 continue;
             item_accessor.release();
@@ -1131,7 +1132,7 @@ void concurrent_hash_map<Key,T,HashCompare,A>::rehash(size_type sz) {
     reserve( sz ); // TODO: add reduction of number of buckets as well
     hashcode_t mask = my_mask;
     hashcode_t b = (mask+1)>>1; // size or first index of the last segment
-    __TBB_ASSERT((b&(b-1))==0, NULL);
+    __TBB_ASSERT((b&(b-1))==0, NULL); // zero or power of 2
     bucket *bp = get_bucket( b ); // only the last segment should be scanned for rehashing
     for(; b <= mask; b++, bp++ ) {
         node_base *n = bp->node_list;

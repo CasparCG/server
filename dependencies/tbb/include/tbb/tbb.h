@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -37,6 +37,9 @@
     Any header listed below can be included independently of others.
 **/
 
+#if TBB_PREVIEW_AGGREGATOR
+#include "aggregator.h"
+#endif
 #include "aligned_space.h"
 #include "atomic.h"
 #include "blocked_range.h"
@@ -65,9 +68,7 @@
 #include "queuing_mutex.h"
 #include "queuing_rw_mutex.h"
 #include "reader_writer_lock.h"
-#if TBB_PREVIEW_CONCURRENT_PRIORITY_QUEUE
 #include "concurrent_priority_queue.h"
-#endif
 #include "recursive_mutex.h"
 #include "spin_mutex.h"
 #include "spin_rw_mutex.h"

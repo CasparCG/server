@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -410,6 +410,11 @@ inline cv_status condition_variable::wait_for( unique_lock<mutex>& lock, const t
     req.tv_sec  = tv.tv_sec + static_cast<long>(sec);
     req.tv_nsec = tv.tv_usec*1000 + static_cast<long>( (sec - static_cast<long>(sec))*1e9 );
 #endif /*(choice of OS) */
+    if( req.tv_nsec>=1e9 ) {
+        req.tv_sec  += 1;
+        req.tv_nsec -= static_cast<long int>(1e9);
+    }
+    __TBB_ASSERT( 0<=req.tv_nsec && req.tv_nsec<1e9, NULL );
 
     int ec;
     cv_status rc = no_timeout;

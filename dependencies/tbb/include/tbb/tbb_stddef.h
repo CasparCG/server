@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -30,11 +30,11 @@
 #define __TBB_tbb_stddef_H
 
 // Marketing-driven product version
-#define TBB_VERSION_MAJOR 3
-#define TBB_VERSION_MINOR 0
+#define TBB_VERSION_MAJOR 4
+#define TBB_VERSION_MINOR 1
 
 // Engineering-focused interface version
-#define TBB_INTERFACE_VERSION 5008
+#define TBB_INTERFACE_VERSION 6105
 #define TBB_INTERFACE_VERSION_MAJOR TBB_INTERFACE_VERSION/1000
 
 // The oldest major interface version still supported
@@ -99,30 +99,6 @@
     - \subpage parallel_sort_iter_req
 **/
 
-// Define preprocessor symbols used to determine architecture
-#if _WIN32||_WIN64
-#   if defined(_M_X64)||defined(__x86_64__)  // the latter for MinGW support
-#       define __TBB_x86_64 1
-#   elif defined(_M_IA64)
-#       define __TBB_ipf 1
-#   elif defined(_M_IX86)||defined(__i386__) // the latter for MinGW support
-#       define __TBB_x86_32 1
-#   endif
-#else /* Assume generic Unix */
-#   if !__linux__ && !__APPLE__
-#       define __TBB_generic_os 1
-#   endif
-#   if __x86_64__
-#       define __TBB_x86_64 1
-#   elif __ia64__
-#       define __TBB_ipf 1
-#   elif __i386__||__i386  // __i386 is for Sun OS
-#       define __TBB_x86_32 1
-#   else
-#       define __TBB_generic_arch 1
-#   endif
-#endif
-
 // tbb_config.h should be included the first since it contains macro definitions used in other headers
 #include "tbb_config.h"
 
@@ -134,20 +110,72 @@
     #define __TBB_EXPORTED_METHOD
 #endif
 
+#if __INTEL_COMPILER || _MSC_VER
+#define __TBB_NOINLINE(decl) __declspec(noinline) decl
+#elif __GNUC__
+#define __TBB_NOINLINE(decl) decl __attribute__ ((noinline))
+#else
+#define __TBB_NOINLINE(decl) decl
+#endif
+
 #include <cstddef>      /* Need size_t and ptrdiff_t */
 
 #if _MSC_VER
     #define __TBB_tbb_windef_H
     #include "internal/_tbb_windef.h"
     #undef __TBB_tbb_windef_H
-#else
+#endif
+#if !defined(_MSC_VER) || _MSC_VER>=1600
     #include <stdint.h>
 #endif
+
+//! Type for an assertion handler
+typedef void(*assertion_handler_type)( const char* filename, int line, const char* expression, const char * comment );
+
+#if TBB_USE_ASSERT
+
+     #define __TBB_ASSERT_NS(predicate,message,ns) ((predicate)?((void)0) : ns::assertion_failure(__FILE__,__LINE__,#predicate,message))
+    //! Assert that x is true.
+    /** If x is false, print assertion failure message.  
+        If the comment argument is not NULL, it is printed as part of the failure message.  
+        The comment argument has no other effect. */
+#if __TBBMALLOC_BUILD
+namespace rml { namespace internal {
+    #define __TBB_ASSERT(predicate,message) __TBB_ASSERT_NS(predicate,message,rml::internal)
+#else
+namespace tbb {
+    #define __TBB_ASSERT(predicate,message) __TBB_ASSERT_NS(predicate,message,tbb)
+#endif
+
+    #define __TBB_ASSERT_EX __TBB_ASSERT
+
+    //! Set assertion handler and return previous value of it.
+    assertion_handler_type __TBB_EXPORTED_FUNC set_assertion_handler( assertion_handler_type new_handler );
+
+    //! Process an assertion failure.
+    /** Normally called from __TBB_ASSERT macro.
+        If assertion handler is null, print message for assertion failure and abort.
+        Otherwise call the assertion handler. */
+    void __TBB_EXPORTED_FUNC assertion_failure( const char* filename, int line, const char* expression, const char* comment );
+
+#if __TBBMALLOC_BUILD
+}}  // namespace rml::internal
+#else
+} // namespace tbb
+#endif
+#else /* !TBB_USE_ASSERT */
+
+    //! No-op version of __TBB_ASSERT.
+    #define __TBB_ASSERT(predicate,comment) ((void)0)
+    //! "Extended" version is useful to suppress warnings if a variable is only used with an assert
+    #define __TBB_ASSERT_EX(predicate,comment) ((void)(1 && (predicate)))
+
+#endif /* !TBB_USE_ASSERT */
 
 //! The namespace tbb contains all components of the library.
 namespace tbb {
 
-#if _MSC_VER
+#if _MSC_VER && _MSC_VER<1600
     namespace internal {
         typedef __int8 int8_t;
         typedef __int16 int16_t;
@@ -173,36 +201,6 @@ namespace tbb {
 
     using std::size_t;
     using std::ptrdiff_t;
-
-    //! Type for an assertion handler
-    typedef void(*assertion_handler_type)( const char* filename, int line, const char* expression, const char * comment );
-
-#if TBB_USE_ASSERT
-
-    //! Assert that x is true.
-    /** If x is false, print assertion failure message.  
-        If the comment argument is not NULL, it is printed as part of the failure message.  
-        The comment argument has no other effect. */
-    #define __TBB_ASSERT(predicate,message) ((predicate)?((void)0):tbb::assertion_failure(__FILE__,__LINE__,#predicate,message))
-    #define __TBB_ASSERT_EX __TBB_ASSERT
-
-    //! Set assertion handler and return previous value of it.
-    assertion_handler_type __TBB_EXPORTED_FUNC set_assertion_handler( assertion_handler_type new_handler );
-
-    //! Process an assertion failure.
-    /** Normally called from __TBB_ASSERT macro.
-        If assertion handler is null, print message for assertion failure and abort.
-        Otherwise call the assertion handler. */
-    void __TBB_EXPORTED_FUNC assertion_failure( const char* filename, int line, const char* expression, const char* comment );
-
-#else /* !TBB_USE_ASSERT */
-
-    //! No-op version of __TBB_ASSERT.
-    #define __TBB_ASSERT(predicate,comment) ((void)0)
-    //! "Extended" version is useful to suppress warnings if a variable is only used with an assert
-    #define __TBB_ASSERT_EX(predicate,comment) ((void)(1 && (predicate)))
-
-#endif /* !TBB_USE_ASSERT */
 
 //! The function returns the interface version of the TBB shared library being used.
 /**
@@ -243,7 +241,7 @@ const size_t NFS_MaxLineSize = 128;
     both as a way to have the compiler help enforce use of the label and to quickly rule out
     one potential issue.
 
-    Note however that, with some architecture/compiler combinations, e.g. on Itanium, "volatile" 
+    Note however that, with some architecture/compiler combinations, e.g. on IA-64 architecture, "volatile" 
     also has non-portable memory semantics that are needlessly expensive for "relaxed" operations.
 
     Note that this must only be applied to data that will not change bit patterns when cast to/from
@@ -306,9 +304,11 @@ template<typename T>
 inline void poison_pointer( T* ) {/*do nothing*/}
 #endif /* !TBB_USE_ASSERT */
 
-//! Cast pointer from U* to T.
+//! Cast between unrelated pointer types.
 /** This method should be used sparingly as a last resort for dealing with 
     situations that inherently break strict ISO C++ aliasing rules. */
+// T is a pointer type because it will be explicitly provided by the programmer as a template argument;
+// U is a referent type to enable the compiler to check that "ptr" is a pointer, deducing U in the process.
 template<typename T, typename U> 
 inline T punned_cast( U* ptr ) {
     uintptr_t x = reinterpret_cast<uintptr_t>(ptr);
@@ -349,6 +349,49 @@ struct allocator_type<const T> {
 };
 #endif
 
+//! A template to select either 32-bit or 64-bit constant as compile time, depending on machine word size.
+template <unsigned u, unsigned long long ull >
+struct select_size_t_constant {
+    //Explicit cast is needed to avoid compiler warnings about possible truncation.
+    //The value of the right size,   which is selected by ?:, is anyway not truncated or promoted.
+    static const size_t value = (size_t)((sizeof(size_t)==sizeof(u)) ? u : ull);
+};
+
+//! A function to check if passed in pointer is aligned on a specific border
+template<typename T>
+inline bool is_aligned(T* pointer, uintptr_t alignment) {
+    return 0==((uintptr_t)pointer & (alignment-1));
+}
+
+//! A function to check if passed integer is a power of 2
+template<typename integer_type>
+inline bool is_power_of_two(integer_type arg) {
+    return arg && (0 == (arg & (arg - 1)));
+}
+
+//! A function to compute arg modulo divisor where divisor is a power of 2.
+template<typename argument_integer_type, typename divisor_integer_type>
+inline argument_integer_type modulo_power_of_two(argument_integer_type arg, divisor_integer_type divisor) {
+    // Divisor is assumed to be a power of two (which is valid for current uses).
+    __TBB_ASSERT( is_power_of_two(divisor), "Divisor should be a power of two" );
+    return (arg & (divisor - 1));
+}
+
+
+//! A function to determine if "arg is a multiplication of a number and a power of 2".
+// i.e. for strictly positive i and j, with j a power of 2,
+// determines whether i==j<<k for some nonnegative k (so i==j yields true).
+template<typename argument_integer_type, typename divisor_integer_type>
+inline bool is_power_of_two_factor(argument_integer_type arg, divisor_integer_type divisor) {
+    // Divisor is assumed to be a power of two (which is valid for current uses).
+    __TBB_ASSERT( is_power_of_two(divisor), "Divisor should be a power of two" );
+    return 0 == (arg & (arg - divisor));
+}
+
+//! Utility template function to prevent "unused" warnings by various compilers.
+template<typename T>
+void suppress_unused_warning( const T& ) {}
+
 // Struct to be used as a version tag for inline functions.
 /** Version tag can be necessary to prevent loader on Linux from using the wrong 
     symbol in debug builds (when inline functions are compiled as out-of-line). **/
@@ -360,6 +403,29 @@ typedef version_tag_v3 version_tag;
 //! @endcond
 
 } // tbb
+
+namespace tbb { namespace internal {
+template <bool condition>
+struct STATIC_ASSERTION_FAILED;
+
+template <>
+struct STATIC_ASSERTION_FAILED<false> { enum {value=1};};
+
+template<>
+struct STATIC_ASSERTION_FAILED<true>; //intentionally left undefined to cause compile time error
+}} // namespace tbb { namespace internal {
+
+#if    __TBB_STATIC_ASSERT_PRESENT
+#define __TBB_STATIC_ASSERT(condition,msg) static_assert(condition,msg)
+#else
+//please note condition is intentionally inverted to get a bit more understandable error msg
+#define __TBB_STATIC_ASSERT_IMPL1(condition,msg,line)       \
+    enum {static_assert_on_line_##line = tbb::internal::STATIC_ASSERTION_FAILED<!(condition)>::value}
+
+#define __TBB_STATIC_ASSERT_IMPL(condition,msg,line) __TBB_STATIC_ASSERT_IMPL1(condition,msg,line)
+//! Verify at compile time that passed in condition is hold
+#define __TBB_STATIC_ASSERT(condition,msg) __TBB_STATIC_ASSERT_IMPL(condition,msg,__LINE__)
+#endif
 
 #endif /* RC_INVOKED */
 #endif /* __TBB_tbb_stddef_H */

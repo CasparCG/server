@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -77,13 +77,16 @@ protected:
     hash_compare my_hash_compare; // the comparator predicate for keys
 };
 
-template <typename Key, typename T, typename Hasher = tbb::tbb_hash<Key>, typename Key_equality = std::equal_to<Key>, typename Allocator = tbb::tbb_allocator<std::pair<const Key, T> > >
-class concurrent_unordered_map : public internal::concurrent_unordered_base< concurrent_unordered_map_traits<Key, T, internal::hash_compare<Key, Hasher, Key_equality>, Allocator, false> >
+template <typename Key, typename T, typename Hasher = tbb::tbb_hash<Key>, typename Key_equality = std::equal_to<Key>,
+         typename Allocator = tbb::tbb_allocator<std::pair<const Key, T> > >
+class concurrent_unordered_map :
+    public internal::concurrent_unordered_base< concurrent_unordered_map_traits<Key, T,
+    internal::hash_compare<Key, Hasher, Key_equality>, Allocator, false> >
 {
     // Base type definitions
     typedef internal::hash_compare<Key, Hasher, Key_equality> hash_compare;
-    typedef internal::concurrent_unordered_base< concurrent_unordered_map_traits<Key, T, hash_compare, Allocator, false> > base_type;
-    typedef concurrent_unordered_map_traits<Key, T, internal::hash_compare<Key, Hasher, Key_equality>, Allocator, false> traits_type;
+    typedef concurrent_unordered_map_traits<Key, T, hash_compare, Allocator, false> traits_type;
+    typedef internal::concurrent_unordered_base< traits_type > base_type;
     using traits_type::my_hash_compare;
 #if __TBB_EXTRA_DEBUG
 public:
@@ -117,9 +120,10 @@ public:
     typedef typename base_type::const_iterator const_local_iterator;
 
     // Construction/destruction/copying
-    explicit concurrent_unordered_map(size_type n_of_buckets = 8, const hasher& a_hasher = hasher(),
-        const key_equal& a_keyeq = key_equal(), const allocator_type& a = allocator_type())
-        : base_type(n_of_buckets, key_compare(a_hasher, a_keyeq), a)
+    explicit concurrent_unordered_map(size_type n_of_buckets = 8,
+        const hasher& _Hasher = hasher(), const key_equal& _Key_equality = key_equal(),
+        const allocator_type& a = allocator_type())
+        : base_type(n_of_buckets, key_compare(_Hasher, _Key_equality), a)
     {
     }
 
@@ -128,9 +132,10 @@ public:
     }
 
     template <typename Iterator>
-    concurrent_unordered_map(Iterator first, Iterator last, size_type n_of_buckets = 8, const hasher& a_hasher = hasher(),
-        const key_equal& a_keyeq = key_equal(), const allocator_type& a = allocator_type())
-        : base_type(n_of_buckets, key_compare(a_hasher, a_keyeq), a)
+    concurrent_unordered_map(Iterator first, Iterator last, size_type n_of_buckets = 8,
+        const hasher& _Hasher = hasher(), const key_equal& _Key_equality = key_equal(),
+        const allocator_type& a = allocator_type())
+        : base_type(n_of_buckets, key_compare(_Hasher, _Key_equality), a)
     {
         for (; first != last; ++first)
             base_type::insert(*first);
@@ -219,9 +224,120 @@ public:
     }
 };
 
+template < typename Key, typename T, typename Hasher = tbb::tbb_hash<Key>, typename Key_equality = std::equal_to<Key>,
+        typename Allocator = tbb::tbb_allocator<std::pair<const Key, T> > >
+class concurrent_unordered_multimap :
+    public internal::concurrent_unordered_base< concurrent_unordered_map_traits< Key, T,
+    internal::hash_compare<Key, Hasher, Key_equality>, Allocator, true> >
+{
+    // Base type definitions
+    typedef internal::hash_compare<Key, Hasher, Key_equality> hash_compare;
+    typedef concurrent_unordered_map_traits<Key, T, hash_compare, Allocator, true> traits_type;
+    typedef internal::concurrent_unordered_base< traits_type > base_type;
+    using traits_type::my_hash_compare;
+#if __TBB_EXTRA_DEBUG
+public:
+#endif
+    using traits_type::allow_multimapping;
+public:
+    using base_type::end;
+    using base_type::find;
+    using base_type::insert;
+
+    // Type definitions
+    typedef Key key_type;
+    typedef typename base_type::value_type value_type;
+    typedef T mapped_type;
+    typedef Hasher hasher;
+    typedef Key_equality key_equal;
+    typedef hash_compare key_compare;
+
+    typedef typename base_type::allocator_type allocator_type;
+    typedef typename base_type::pointer pointer;
+    typedef typename base_type::const_pointer const_pointer;
+    typedef typename base_type::reference reference;
+    typedef typename base_type::const_reference const_reference;
+
+    typedef typename base_type::size_type size_type;
+    typedef typename base_type::difference_type difference_type;
+
+    typedef typename base_type::iterator iterator;
+    typedef typename base_type::const_iterator const_iterator;
+    typedef typename base_type::iterator local_iterator;
+    typedef typename base_type::const_iterator const_local_iterator;
+
+    // Construction/destruction/copying
+    explicit concurrent_unordered_multimap(size_type n_of_buckets = 8,
+        const hasher& _Hasher = hasher(), const key_equal& _Key_equality = key_equal(),
+        const allocator_type& a = allocator_type())
+        : base_type(n_of_buckets, key_compare(_Hasher, _Key_equality), a)
+    {
+    }
+
+    concurrent_unordered_multimap(const Allocator& a) : base_type(8, key_compare(), a)
+    {
+    }
+
+    template <typename Iterator>
+    concurrent_unordered_multimap(Iterator first, Iterator last, size_type n_of_buckets = 8,
+        const hasher& _Hasher = hasher(), const key_equal& _Key_equality = key_equal(),
+        const allocator_type& a = allocator_type())
+        : base_type(n_of_buckets,key_compare(_Hasher,_Key_equality), a)
+    {
+        for (; first != last; ++first)
+            base_type::insert(*first);
+    }
+
+    concurrent_unordered_multimap(const concurrent_unordered_multimap& table) : base_type(table)
+    {
+    }
+
+    concurrent_unordered_multimap(const concurrent_unordered_multimap& table, const Allocator& a)
+        : base_type(table, a)
+    {
+    }
+
+    concurrent_unordered_multimap& operator=(const concurrent_unordered_multimap& table)
+    {
+        base_type::operator=(table);
+        return (*this);
+    }
+
+    iterator unsafe_erase(const_iterator where)
+    {
+        return base_type::unsafe_erase(where);
+    }
+
+    size_type unsafe_erase(const key_type& key)
+    {
+        return base_type::unsafe_erase(key);
+    }
+
+    iterator unsafe_erase(const_iterator first, const_iterator last)
+    {
+        return base_type::unsafe_erase(first, last);
+    }
+
+    void swap(concurrent_unordered_multimap& table)
+    {
+        base_type::swap(table);
+    }
+
+    // Observers
+    hasher hash_function() const
+    {
+        return my_hash_compare.my_hash_object;
+    }
+
+    key_equal key_eq() const
+    {
+        return my_hash_compare.my_key_compare_object;
+    }
+};
 } // namespace interface5
 
 using interface5::concurrent_unordered_map;
+using interface5::concurrent_unordered_multimap;
 
 } // namespace tbb
 

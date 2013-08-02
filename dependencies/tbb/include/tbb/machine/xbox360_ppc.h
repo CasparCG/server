@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -29,7 +29,7 @@
 // TODO: revise by comparing with mac_ppc.h
 
 #if !defined(__TBB_machine_H) || defined(__TBB_machine_xbox360_ppc_H)
-#error Do not include this file directly; include tbb_machine.h instead
+#error Do not #include this internal file directly; use public TBB headers instead.
 #endif
 
 #define __TBB_machine_xbox360_ppc_H
@@ -50,7 +50,7 @@ extern "C" void _MemoryBarrier();
 #define __TBB_full_memory_fence() __sync()
 
 #define __TBB_WORDSIZE 4
-#define __TBB_BIG_ENDIAN 1
+#define __TBB_ENDIANNESS __TBB_ENDIAN_BIG
 
 //todo: define __TBB_USE_FENCED_ATOMICS and define acquire/release primitives to maximize performance
 
@@ -69,12 +69,13 @@ inline __int64 __TBB_machine_cmpswp8(volatile void *ptr, __int64 value, __int64 
  return result;
 }
 
-#define __TBB_USE_GENERIC_PART_WORD_CAS             1
-#define __TBB_USE_GENERIC_FETCH_ADD                 1
-#define __TBB_USE_GENERIC_FETCH_STORE               1
-#define __TBB_USE_GENERIC_HALF_FENCED_LOAD_STORE    1
-#define __TBB_USE_GENERIC_RELAXED_LOAD_STORE        1
-#define __TBB_USE_GENERIC_DWORD_LOAD_STORE          1
+#define __TBB_USE_GENERIC_PART_WORD_CAS                     1
+#define __TBB_USE_GENERIC_FETCH_ADD                         1
+#define __TBB_USE_GENERIC_FETCH_STORE                       1
+#define __TBB_USE_GENERIC_HALF_FENCED_LOAD_STORE            1
+#define __TBB_USE_GENERIC_RELAXED_LOAD_STORE                1
+#define __TBB_USE_GENERIC_DWORD_LOAD_STORE                  1
+#define __TBB_USE_GENERIC_SEQUENTIAL_CONSISTENCY_LOAD_STORE 1
 
 #pragma optimize( "", off )
 inline void __TBB_machine_pause (__int32 delay ) 

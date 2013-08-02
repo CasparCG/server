@@ -1,5 +1,5 @@
 
-; Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+; Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 ;
 ; The source code contained or described herein and all documents related
 ; to the source code ("Material") are owned by Intel Corporation or its
@@ -19,7 +19,7 @@
 
 EXPORTS
 
-; MemoryAllocator.cpp
+; frontend.cpp
 scalable_calloc
 scalable_free
 scalable_malloc
@@ -31,5 +31,15 @@ scalable_aligned_free
 safer_scalable_free
 safer_scalable_realloc
 scalable_msize
+scalable_allocation_mode
 safer_scalable_msize
 safer_scalable_aligned_realloc
+?pool_create@rml@@YAPAVMemoryPool@1@HPBUMemPoolPolicy@1@@Z
+?pool_create_v1@rml@@YA?AW4MemPoolError@1@HPBUMemPoolPolicy@1@PAPAVMemoryPool@1@@Z
+?pool_destroy@rml@@YA_NPAVMemoryPool@1@@Z
+?pool_malloc@rml@@YAPAXPAVMemoryPool@1@I@Z
+?pool_free@rml@@YA_NPAVMemoryPool@1@PAX@Z
+?pool_reset@rml@@YA_NPAVMemoryPool@1@@Z
+?pool_realloc@rml@@YAPAXPAVMemoryPool@1@PAXI@Z
+?pool_aligned_realloc@rml@@YAPAXPAVMemoryPool@1@PAXII@Z
+?pool_aligned_malloc@rml@@YAPAXPAVMemoryPool@1@II@Z

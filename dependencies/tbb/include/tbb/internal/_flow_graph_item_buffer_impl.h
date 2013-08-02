@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -26,8 +26,12 @@
     the GNU General Public License.
 */
 
-#ifndef __TBB_item_buffer_H
-#define __TBB_item_buffer_H
+#ifndef __TBB__flow_graph_item_buffer_impl_H
+#define __TBB__flow_graph_item_buffer_impl_H
+
+#ifndef __TBB_flow_graph_H
+#error Do not #include this internal file directly; use public TBB headers instead.
+#endif
 
     //! Expandable buffer of items.  The possible operations are push, pop,
     //* tests for empty and so forth.  No mutual exclusion is built in.
@@ -123,6 +127,17 @@
             return true;
         }
 
+        void clean_up_buffer() {
+            if (my_array) {
+                for( size_type i=0; i<my_array_size; ++i ) {
+                    my_array[i].first.~input_type();
+                }
+                allocator_type().deallocate(my_array,my_array_size); 
+            }
+            my_array = NULL;
+            my_head = my_tail = my_array_size = 0;
+        }
+
     public:
         //! Constructor
         item_buffer( ) : my_array(NULL), my_array_size(0),
@@ -131,13 +146,10 @@
         }
 
         ~item_buffer() {
-            if (my_array) {
-                for( size_type i=0; i<my_array_size; ++i ) {
-                    my_array[i].first.~input_type();
-                }
-                allocator_type().deallocate(my_array,my_array_size); 
-            }
+            clean_up_buffer();
         }
+
+        void reset() { clean_up_buffer(); grow_my_array(initial_buffer_size); }
 
     };
 
@@ -156,6 +168,7 @@
 
     public:
         reservable_item_buffer() : item_buffer<T, A>(), my_reserved(false) {}
+        void reset() {my_reserved = false; item_buffer<T,A>::reset(); }
     protected:
 
         bool reserve_front(T &v) {
@@ -183,4 +196,4 @@
         bool my_reserved;
     };
 
-#endif // __TBB_item_buffer_H
+#endif // __TBB__flow_graph_item_buffer_impl_H
