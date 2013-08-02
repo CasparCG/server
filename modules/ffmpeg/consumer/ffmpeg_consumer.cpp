@@ -140,16 +140,16 @@ public:
 			
 			video_encoder_executor_.wait();
 			audio_encoder_executor_.wait();
+			
+			video_st_.reset();
+			audio_st_.reset();
 
 			write_packet(nullptr, nullptr);
 
 			write_executor_.wait();
 					
 			FF(av_write_trailer(oc_.get()));
-		
-			video_st_.reset();
-			audio_st_.reset();
-				
+						
 			if (!(oc_->oformat->flags & AVFMT_NOFILE))
 				avio_close(oc_->pb);
 
