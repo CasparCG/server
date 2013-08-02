@@ -122,24 +122,24 @@ public:
         if (options_.find("threads") == options_.end())
             options_["threads"] = "auto";
 
-		tokens_ = std::max(1, try_remove_arg<int>(options_, boost::regex("-tokens")).get_value_or(1));		
+		tokens_ = std::max(1, try_remove_arg<int>(options_, boost::regex("-tokens")).get_value_or(2));		
 	}
 		
 	~ffmpeg_consumer()
 	{
 		if(oc_)
 		{
-			tokens_ = std::numeric_limits<int>::max();
-			tokens_cond_.notify_all();
-
 			encode_video(nullptr, nullptr);
 			encode_audio(nullptr, nullptr);			
 
 			video_filter_executor_.wait();
 			audio_filter_executor_.wait();
 
-			audio_encoder_executor_.wait();
+			video_graph_.reset();
+			audio_graph_.reset();
+			
 			video_encoder_executor_.wait();
+			audio_encoder_executor_.wait();
 
 			write_packet(nullptr, nullptr);
 
