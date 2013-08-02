@@ -214,8 +214,8 @@ public:
 			// Filters
 
 			{
-				configure_video_filters(*video_codec, options_);
-				configure_audio_filters(*audio_codec, options_);
+				configure_video_filters(*video_codec, try_remove_arg<std::string>(options, boost::regex("vf|f:v|filter:v")).get_value_or(""));
+				configure_audio_filters(*audio_codec, try_remove_arg<std::string>(options, boost::regex("af|f:a|filter:a")).get_value_or(""));
 			}
 
 			// Bistream Filters
@@ -453,57 +453,8 @@ private:
 		if(video_bitstream_filter_str && !video_bitstream_filter_)
 			options["bsf:v"] = *video_bitstream_filter_str;
 	}
-
-	void configure_audio_filters(const AVCodec& codec, std::map<std::string, std::string>& options)
-	{
-		audio_graph_.reset(avfilter_graph_alloc(), [](AVFilterGraph* p)
-		{
-			avfilter_graph_free(&p);
-		});
-		
-		audio_graph_->nb_threads  = boost::thread::hardware_concurrency()/2;
-		audio_graph_->thread_type = AVFILTER_THREAD_SLICE;
-		
-		const auto asrc_options = (boost::format("sample_rate=%1%:sample_fmt=%2%:channels=%3%:time_base=%4%/%5%:channel_layout=%6%")
-			% in_video_format_.audio_sample_rate
-			% av_get_sample_fmt_name(AV_SAMPLE_FMT_S32)
-			% 2 // TODO:
-			% 1	% in_video_format_.audio_sample_rate
-			% "stereo" /* TODO */).str();				
-
-		AVFilterContext* filt_asrc = nullptr;
-		FF(avfilter_graph_create_filter(&filt_asrc,
-										avfilter_get_by_name("abuffer"), 
-										"ffmpeg_consumer_abuffer",
-										asrc_options.c_str(), 
-										nullptr, 
-										audio_graph_.get()));
-				
-		AVFilterContext* filt_asink = nullptr;
-		FF(avfilter_graph_create_filter(&filt_asink,
-										avfilter_get_by_name("abuffersink"), 
-										"ffmpeg_consumer_abuffersink",
-										nullptr, 
-										nullptr, 
-										audio_graph_.get()));
-		
-#pragma warning (push)
-#pragma warning (disable : 4245)
-		FF(av_opt_set_int(filt_asink,	   "all_channel_counts", 1,	AV_OPT_SEARCH_CHILDREN));
-		FF(av_opt_set_int_list(filt_asink, "sample_fmts",		 codec.sample_fmts,				-1, AV_OPT_SEARCH_CHILDREN));
-		FF(av_opt_set_int_list(filt_asink, "channel_layouts",	 codec.channel_layouts,			-1, AV_OPT_SEARCH_CHILDREN));
-		FF(av_opt_set_int_list(filt_asink, "sample_rates"   ,	 codec.supported_samplerates,	-1, AV_OPT_SEARCH_CHILDREN));
-#pragma warning (pop)
-			
-		configure_filtergraph(*audio_graph_, try_remove_arg<std::string>(options, boost::regex("af|f:a|filter:a")).get_value_or(""), *filt_asrc, *filt_asink);
-
-		audio_graph_in_  = filt_asrc;
-		audio_graph_out_ = filt_asink;
-
-		CASPAR_LOG(info) << widen(std::string("\n") + avfilter_graph_dump(audio_graph_.get(), nullptr));
-	}
-
-	void configure_video_filters(const AVCodec& codec, std::map<std::string, std::string>& options)
+	
+	void configure_video_filters(const AVCodec& codec, const std::string& filtergraph)
 	{
 		video_graph_.reset(avfilter_graph_alloc(), [](AVFilterGraph* p)
 		{
@@ -544,7 +495,7 @@ private:
 		FF(av_opt_set_int_list(filt_vsink, "pix_fmts", codec.pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
 #pragma warning (pop)
 			
-		configure_filtergraph(*video_graph_, try_remove_arg<std::string>(options, boost::regex("vf|f:v|filter:v")).get_value_or(""), *filt_vsrc, *filt_vsink);
+		configure_filtergraph(*video_graph_, filtergraph, *filt_vsrc, *filt_vsink);
 
 		video_graph_in_  = filt_vsrc;
 		video_graph_out_ = filt_vsink;
@@ -552,7 +503,56 @@ private:
 		CASPAR_LOG(info) << widen(std::string("\n") + avfilter_graph_dump(video_graph_.get(), nullptr));
 	}
 
-	void configure_filtergraph(AVFilterGraph& graph, std::string filtergraph, AVFilterContext& source_ctx, AVFilterContext& sink_ctx)
+	void configure_audio_filters(const AVCodec& codec, const std::string& filtergraph)
+	{
+		audio_graph_.reset(avfilter_graph_alloc(), [](AVFilterGraph* p)
+		{
+			avfilter_graph_free(&p);
+		});
+		
+		audio_graph_->nb_threads  = boost::thread::hardware_concurrency()/2;
+		audio_graph_->thread_type = AVFILTER_THREAD_SLICE;
+		
+		const auto asrc_options = (boost::format("sample_rate=%1%:sample_fmt=%2%:channels=%3%:time_base=%4%/%5%:channel_layout=%6%")
+			% in_video_format_.audio_sample_rate
+			% av_get_sample_fmt_name(AV_SAMPLE_FMT_S32)
+			% 2 // TODO:
+			% 1	% in_video_format_.audio_sample_rate
+			% "stereo" /* TODO */).str();				
+
+		AVFilterContext* filt_asrc = nullptr;
+		FF(avfilter_graph_create_filter(&filt_asrc,
+										avfilter_get_by_name("abuffer"), 
+										"ffmpeg_consumer_abuffer",
+										asrc_options.c_str(), 
+										nullptr, 
+										audio_graph_.get()));
+				
+		AVFilterContext* filt_asink = nullptr;
+		FF(avfilter_graph_create_filter(&filt_asink,
+										avfilter_get_by_name("abuffersink"), 
+										"ffmpeg_consumer_abuffersink",
+										nullptr, 
+										nullptr, 
+										audio_graph_.get()));
+		
+#pragma warning (push)
+#pragma warning (disable : 4245)
+		FF(av_opt_set_int(filt_asink,	   "all_channel_counts", 1,	AV_OPT_SEARCH_CHILDREN));
+		FF(av_opt_set_int_list(filt_asink, "sample_fmts",		 codec.sample_fmts,				-1, AV_OPT_SEARCH_CHILDREN));
+		FF(av_opt_set_int_list(filt_asink, "channel_layouts",	 codec.channel_layouts,			-1, AV_OPT_SEARCH_CHILDREN));
+		FF(av_opt_set_int_list(filt_asink, "sample_rates"   ,	 codec.supported_samplerates,	-1, AV_OPT_SEARCH_CHILDREN));
+#pragma warning (pop)
+			
+		configure_filtergraph(*audio_graph_, filtergraph, *filt_asrc, *filt_asink);
+
+		audio_graph_in_  = filt_asrc;
+		audio_graph_out_ = filt_asink;
+
+		CASPAR_LOG(info) << widen(std::string("\n") + avfilter_graph_dump(audio_graph_.get(), nullptr));
+	}
+
+	void configure_filtergraph(AVFilterGraph& graph, const std::string& filtergraph, AVFilterContext& source_ctx, AVFilterContext& sink_ctx)
 	{
 		AVFilterInOut* outputs = nullptr;
 		AVFilterInOut* inputs = nullptr;
