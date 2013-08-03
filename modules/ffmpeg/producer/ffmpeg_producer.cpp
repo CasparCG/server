@@ -173,7 +173,7 @@ public:
 		{
 			try
 			{
-				audio_decoder_.reset(new audio_decoder(input_.context(), frame_factory->get_video_format_desc(), afilter));
+				audio_decoder_.reset(new audio_decoder(input_.context(), frame_factory->get_video_format_desc(), boost::to_lower_copy(afilter)));
 				CASPAR_LOG(info) << print() << L" " << audio_decoder_->print();
 			}
 			catch(averror_stream_not_found&)
