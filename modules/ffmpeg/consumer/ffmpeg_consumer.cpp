@@ -513,11 +513,12 @@ private:
 		audio_graph_->nb_threads  = boost::thread::hardware_concurrency()/2;
 		audio_graph_->thread_type = AVFILTER_THREAD_SLICE;
 		
-		const auto asrc_options = (boost::format("sample_rate=%1%:sample_fmt=%2%:channels=%3%:time_base=%4%/%5%") // :channel_layout=%6%
+		const auto asrc_options = (boost::format("sample_rate=%1%:sample_fmt=%2%:channels=%3%:time_base=%4%/%5%:channel_layout=%6%")
 			% in_video_format_.audio_sample_rate
 			% av_get_sample_fmt_name(AV_SAMPLE_FMT_S32)
 			% in_video_format_.audio_nb_channels
-			% 1	% in_video_format_.audio_sample_rate).str();				
+			% 1	% in_video_format_.audio_sample_rate
+			% boost::io::group(std::hex, std::showbase, av_get_default_channel_layout(core::video_format_desc::audio_nb_channels))).str();				
 
 		AVFilterContext* filt_asrc = nullptr;
 		FF(avfilter_graph_create_filter(&filt_asrc,
@@ -695,8 +696,8 @@ private:
 				av_frame_free(&p);
 			});
 		
-			src_av_frame->channels		 = in_video_format_.audio_nb_channels;
-			src_av_frame->channel_layout = 0;//av_get_default_channel_layout(in_video_format_.audio_nb_channels);
+			src_av_frame->channels		 = core::video_format_desc::audio_nb_channels;
+			src_av_frame->channel_layout = av_get_default_channel_layout(core::video_format_desc::audio_nb_channels);
 			src_av_frame->sample_rate	 = in_video_format_.audio_sample_rate;
 			src_av_frame->nb_samples	 = frame_ptr->audio_data().size() / src_av_frame->channels;
 			src_av_frame->format		 = AV_SAMPLE_FMT_S32;

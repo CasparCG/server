@@ -24,8 +24,7 @@
 #include "video_decoder.h"
 
 #include "../util/util.h"
-
-#include "../../ffmpeg_error.h"
+#include "../../util/error.h"
 
 #include <core/producer/frame/frame_transform.h>
 #include <core/producer/frame/frame_factory.h>
@@ -115,7 +114,7 @@ public:
 		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
 
 		int frame_finished = 0;
-		THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), decoded_frame.get(), &frame_finished, pkt.get()), "[video_decoder]");
+		FF(avcodec_decode_video2(codec_context_.get(), decoded_frame.get(), &frame_finished, pkt.get()));
 		
 		// If a decoder consumes less then the whole packet then something is wrong
 		// that might be just harmless padding at the end, or a problem with the

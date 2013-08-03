@@ -340,7 +340,6 @@
   <ItemGroup>
     <ClInclude Include="consumer\ffmpeg_consumer.h" />
     <ClInclude Include="ffmpeg.h" />
-    <ClInclude Include="ffmpeg_error.h" />
     <ClInclude Include="producer\audio\audio_decoder.h" />
     <ClInclude Include="producer\audio\audio_resampler.h" />
     <ClInclude Include="producer\ffmpeg_params.h" />

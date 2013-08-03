@@ -25,7 +25,7 @@
 
 #include "../util/util.h"
 #include "../util/flv.h"
-#include "../../ffmpeg_error.h"
+#include "../../util/error.h"
 #include "../../ffmpeg.h"
 
 #include <core/video_format.h>
@@ -201,12 +201,12 @@ struct input::implementation : boost::noncopyable
 				}
 				else
 				{		
-					THROW_ON_ERROR(ret, "av_read_frame", print());
+					FF_RET(ret, "av_read_frame");
 
 					if(packet->stream_index == default_stream_index_)
 						++frame_number_;
 
-					THROW_ON_ERROR2(av_dup_packet(packet.get()), print());
+					FF(av_dup_packet(packet.get()));
 				
 					// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
 					auto size = packet->size;
@@ -242,7 +242,7 @@ struct input::implementation : boost::noncopyable
 
     switch (resource_type) {
     case FFMPEG_FILE:
-      THROW_ON_ERROR2(avformat_open_input(&weak_context, narrow(resource_name).c_str(), nullptr, nullptr), resource_name);
+      FF(avformat_open_input(&weak_context, narrow(resource_name).c_str(), nullptr, nullptr));
       break;
     case FFMPEG_DEVICE: {
       AVDictionary* format_options = NULL;
@@ -257,15 +257,15 @@ struct input::implementation : boost::noncopyable
       if(vid_params.frame_rate != L"")
 		av_dict_set(&format_options, "framerate", narrow(vid_params.frame_rate).c_str(), 0);
       AVInputFormat* input_format = av_find_input_format("dshow");
-      THROW_ON_ERROR2(avformat_open_input(&weak_context, narrow(resource_name).c_str(), input_format, &format_options), resource_name);
+      FF(avformat_open_input(&weak_context, narrow(resource_name).c_str(), input_format, &format_options));
       av_dict_free(&format_options);
       } break;
     case FFMPEG_STREAM:
-      THROW_ON_ERROR2(avformat_open_input(&weak_context, narrow(resource_name).c_str(), nullptr, nullptr), resource_name);
+      FF(avformat_open_input(&weak_context, narrow(resource_name).c_str(), nullptr, nullptr));
       break;
     };
     safe_ptr<AVFormatContext> context(weak_context, av_close_input_file);      
-    THROW_ON_ERROR2(avformat_find_stream_info(weak_context, nullptr), resource_name);
+    FF(avformat_find_stream_info(weak_context, nullptr));
     fix_meta_data(*context);
     return context;
   }
@@ -324,7 +324,7 @@ struct input::implementation : boost::noncopyable
 		auto codec  = stream->codec;
 		auto fixed_target = (target*stream->time_base.den*codec->time_base.num)/(stream->time_base.num*codec->time_base.den)*codec->ticks_per_frame;
 		
-		THROW_ON_ERROR2(avformat_seek_file(format_context_.get(), default_stream_index_, std::numeric_limits<int64_t>::min(), fixed_target, std::numeric_limits<int64_t>::max(), 0), print());		
+		FF(avformat_seek_file(format_context_.get(), default_stream_index_, std::numeric_limits<int64_t>::min(), fixed_target, std::numeric_limits<int64_t>::max(), 0));		
 		
 		auto flush_packet	= create_packet();
 		flush_packet->data	= nullptr;

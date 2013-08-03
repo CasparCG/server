@@ -23,13 +23,13 @@
 
 #include "ffmpeg_producer.h"
 
-#include "../ffmpeg_error.h"
 #include "../ffmpeg.h"
 #include "ffmpeg_params.h"
 
 #include "muxer/frame_muxer.h"
 #include "input/input.h"
 #include "util/util.h"
+#include "../util/error.h"
 #include "audio/audio_decoder.h"
 #include "video/video_decoder.h"
 

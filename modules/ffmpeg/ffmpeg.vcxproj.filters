@@ -79,9 +79,6 @@
       <Filter>source\consumer</Filter>
     </ClInclude>
     <ClInclude Include="StdAfx.h" />
-    <ClInclude Include="ffmpeg_error.h">
-      <Filter>source</Filter>
-    </ClInclude>
     <ClInclude Include="ffmpeg.h">
       <Filter>source</Filter>
     </ClInclude>

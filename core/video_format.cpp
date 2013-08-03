@@ -40,7 +40,6 @@
 	(m == field_mode::progressive ? 1 : 2),\
 	((w)*(h)*4),\
 	(name),\
-	(48000),\
 	(audio_samples)\
 }
 
