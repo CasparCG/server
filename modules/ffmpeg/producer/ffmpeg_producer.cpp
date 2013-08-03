@@ -121,7 +121,17 @@ struct ffmpeg_producer : public core::frame_producer
 	uint32_t													file_frame_number_;
 		
 public:
-	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, FFMPEG_Resource resource_type, const std::wstring& filter, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_params& vid_params)
+	explicit ffmpeg_producer(
+		const safe_ptr<core::frame_factory>& frame_factory, 
+		const std::wstring& filename, 
+		FFMPEG_Resource resource_type, 
+		const std::wstring& filter, 
+		const std::wstring afilter,
+		bool loop, 
+		uint32_t start,
+		uint32_t length, 
+		bool thumbnail_mode, 
+		const ffmpeg_params& vid_params)
 		: filename_(filename)
 		, path_relative_to_media_(get_relative_or_original(filename, env::media_folder()))
 		, resource_type_(resource_type)
@@ -163,7 +173,7 @@ public:
 		{
 			try
 			{
-				audio_decoder_.reset(new audio_decoder(input_.context(), frame_factory->get_video_format_desc()));
+				audio_decoder_.reset(new audio_decoder(input_.context(), frame_factory->get_video_format_desc(), afilter));
 				CASPAR_LOG(info) << print() << L" " << audio_decoder_->print();
 			}
 			catch(averror_stream_not_found&)
@@ -535,6 +545,7 @@ safe_ptr<core::frame_producer> create_producer(
 	auto start		= params.get(L"SEEK", static_cast<uint32_t>(0));
 	auto length		= params.get(L"LENGTH", std::numeric_limits<uint32_t>::max());
 	auto filter_str = params.get(L"FILTER", L""); 	
+	auto afilter	= params.get(L"AF", L""); 	
 
 	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
 	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
@@ -544,7 +555,7 @@ safe_ptr<core::frame_producer> create_producer(
 	vid_params.pixel_format = params.get(L"PIXFMT", L"");
 	vid_params.frame_rate = params.get(L"FRAMERATE", L"");
 	
-	return create_producer_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, filename, resource_type, filter_str, loop, start, length, false, vid_params));
+	return create_producer_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, filename, resource_type, filter_str, afilter, loop, start, length, false, vid_params));
 }
 
 safe_ptr<core::frame_producer> create_thumbnail_producer(
@@ -566,7 +577,7 @@ safe_ptr<core::frame_producer> create_thumbnail_producer(
 		
 	ffmpeg_params vid_params;
 
-	return make_safe<ffmpeg_producer>(frame_factory, filename, FFMPEG_FILE, filter_str, loop, start, length, true, vid_params);
+	return make_safe<ffmpeg_producer>(frame_factory, filename, FFMPEG_FILE, filter_str, L"", loop, start, length, true, vid_params);
 }
 
 }}

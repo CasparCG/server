@@ -71,7 +71,7 @@ struct audio_decoder::implementation : boost::noncopyable
 	const int64_t								nb_frames_;
 	tbb::atomic<size_t>							file_frame_number_;
 public:
-	explicit implementation(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
+	explicit implementation(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc, const std::string& filtergraph) 
 		: format_desc_(format_desc)	
 		, codec_context_(open_codec(*context, AVMEDIA_TYPE_AUDIO, index_))
 		, nb_frames_(0)//context->streams[index_]->nb_frames)
@@ -80,7 +80,7 @@ public:
 		
 		codec_context_->refcounted_frames = 1;
 
-		configure_audio_filters("");
+		configure_audio_filters(filtergraph);
 	}
 
 	void push(const std::shared_ptr<AVPacket>& packet)
@@ -186,12 +186,17 @@ public:
 		audio_graph_->nb_threads  = boost::thread::hardware_concurrency()/2;
 		audio_graph_->thread_type = AVFILTER_THREAD_SLICE;
 				
-		const auto asrc_options = (boost::format("sample_rate=%1%:sample_fmt=%2%:channels=%3%:time_base=%4%/%5%:channel_layout=%6%")
+		auto asrc_options = (boost::format("sample_rate=%1%:sample_fmt=%2%:channels=%3%:time_base=%4%/%5%")
 			% codec_context_->sample_rate
 			% av_get_sample_fmt_name(codec_context_->sample_fmt)
 			% codec_context_->channels
-			% codec_context_->time_base.num % codec_context_->time_base.den
-			% boost::io::group(std::hex, std::showbase, codec_context_->channel_layout)).str();
+			% codec_context_->time_base.num % codec_context_->time_base.den).str();
+
+		if(codec_context_->channel_layout)
+		{
+			asrc_options += (boost::format(":channel_layout=%6%") 
+				% boost::io::group(std::hex, std::showbase, codec_context_->channel_layout)).str();
+		}
 
 		AVFilterContext* filt_asrc = nullptr;
 		FF(avfilter_graph_create_filter(&filt_asrc,
@@ -220,7 +225,7 @@ public:
 		FF(av_opt_set_int_list(filt_asink, "sample_fmts",		 sample_fmts,					-1, AV_OPT_SEARCH_CHILDREN));
 		FF(av_opt_set_int_list(filt_asink, "channel_layouts",	 channel_layouts,				-1, AV_OPT_SEARCH_CHILDREN));
 		FF(av_opt_set_int_list(filt_asink, "channel_counts",	 channels,						-1, AV_OPT_SEARCH_CHILDREN));
-		FF(av_opt_set_int_list(filt_asink, "sample_rates"   ,	 sample_rates,					-1, AV_OPT_SEARCH_CHILDREN));
+		FF(av_opt_set_int_list(filt_asink, "sample_rates",		 sample_rates,					-1, AV_OPT_SEARCH_CHILDREN));
 #pragma warning (pop)
 			
 		configure_filtergraph(*audio_graph_, filtergraph, *filt_asrc, *filt_asink);
@@ -273,7 +278,7 @@ public:
 	}
 };
 
-audio_decoder::audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) : impl_(new implementation(context, format_desc)){}
+audio_decoder::audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc, const std::wstring& filtergraph) : impl_(new implementation(context, format_desc, narrow(filtergraph))){}
 void audio_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
 bool audio_decoder::ready() const{return impl_->ready();}
 std::shared_ptr<core::audio_buffer> audio_decoder::poll(){return impl_->poll();}
