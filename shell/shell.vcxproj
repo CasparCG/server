@@ -35,12 +35,6 @@
     <ProjectReference Include="..\core\core.vcxproj">
       <Project>{79388c20-6499-4bf6-b8b9-d8c33d7d4ddd}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\modules\bluefish\bluefish.vcxproj">
-      <Project>{69313d25-9f54-4fc9-9872-628a4dd79464}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\modules\decklink\decklink.vcxproj">
-      <Project>{d3611658-8f54-43cf-b9af-a5cf8c1102ea}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\modules\ffmpeg\ffmpeg.vcxproj">
       <Project>{f6223af3-be0b-4b61-8406-98922ce521c2}</Project>
     </ProjectReference>
@@ -49,9 +43,6 @@
     </ProjectReference>
     <ProjectReference Include="..\modules\image\image.vcxproj">
       <Project>{3e11ff65-a9da-4f80-87f2-a7c6379ed5e2}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\modules\oal\oal.vcxproj">
-      <Project>{82ed7ed6-8a15-40ec-a8af-f5e712e0da68}</Project>
     </ProjectReference>
     <ProjectReference Include="..\modules\ogl\ogl.vcxproj">
       <Project>{88f974f0-d09f-4788-8cf8-f563209e60c1}</Project>

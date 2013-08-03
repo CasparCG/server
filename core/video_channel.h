@@ -37,7 +37,6 @@ class mixer;
 class output;
 class ogl_device;
 struct video_format_desc;
-struct channel_layout;
 
 class video_channel : boost::noncopyable
 {
@@ -47,7 +46,7 @@ public:
 
 	// Constructors
 
-	explicit video_channel(int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl, const channel_layout& audio_channel_layout);
+	explicit video_channel(int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl);
 
 	// Methods
 

@@ -172,12 +172,12 @@ int make_alpha_format(int format)
 	}
 }
 
-safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVFrame>& decoded_frame, const safe_ptr<core::frame_factory>& frame_factory, int hints, const core::channel_layout& audio_channel_layout)
+safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVFrame>& decoded_frame, const safe_ptr<core::frame_factory>& frame_factory, int hints)
 {			
 	static tbb::concurrent_unordered_map<int64_t, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contexts_;
 	
 	if(decoded_frame->width < 1 || decoded_frame->height < 1)
-		return make_safe<core::write_frame>(tag, audio_channel_layout);
+		return make_safe<core::write_frame>(tag);
 
 	const auto width  = decoded_frame->width;
 	const auto height = decoded_frame->height;
@@ -208,7 +208,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 		
 		auto target_desc = get_pixel_format_desc(target_pix_fmt, width, height);
 
-		write = frame_factory->create_frame(tag, target_desc, audio_channel_layout);
+		write = frame_factory->create_frame(tag, target_desc);
 		write->set_type(get_mode(*decoded_frame));
 
 		std::shared_ptr<SwsContext> sws_context;
@@ -259,7 +259,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 	}
 	else
 	{
-		write = frame_factory->create_frame(tag, desc, audio_channel_layout);
+		write = frame_factory->create_frame(tag, desc);
 		write->set_type(get_mode(*decoded_frame));
 
 		for(int n = 0; n < static_cast<int>(desc.planes.size()); ++n)
@@ -487,58 +487,5 @@ std::wstring probe_stem(const std::wstring stem)
 	}
 	return L"";
 }
-
-core::channel_layout get_audio_channel_layout(
-		const AVCodecContext& context, const std::wstring& custom_channel_order)
-{
-	if (!custom_channel_order.empty())
-	{
-		auto layout = core::create_custom_channel_layout(
-				custom_channel_order,
-				core::default_channel_layout_repository());
-
-		layout.num_channels = context.channels;
-
-		return layout;
-	}
-
-	int64_t ch_layout = context.channel_layout;
-
-	if (ch_layout == 0)
-		ch_layout = av_get_default_channel_layout(context.channels);
-
-	switch (ch_layout) // TODO: refine this auto-detection
-	{
-	case AV_CH_LAYOUT_MONO:
-		return core::default_channel_layout_repository().get_by_name(L"MONO");
-	case AV_CH_LAYOUT_STEREO:
-		return core::default_channel_layout_repository().get_by_name(L"STEREO");
-	case AV_CH_LAYOUT_5POINT1:
-	case AV_CH_LAYOUT_5POINT1_BACK:
-		return core::default_channel_layout_repository().get_by_name(L"SMPTE");
-	case AV_CH_LAYOUT_7POINT1:
-		return core::default_channel_layout_repository().get_by_name(L"DOLBYE");
-	}
-
-	return core::create_unspecified_layout(context.channels);
-}
-
-//
-//void av_dup_frame(AVFrame* frame)
-//{
-//	AVFrame* new_frame = avcodec_alloc_frame();
-//
-//
-//	const uint8_t *src_data[4] = {0};
-//	memcpy(const_cast<uint8_t**>(&src_data[0]), frame->data, 4);
-//	const int src_linesizes[4] = {0};
-//	memcpy(const_cast<int*>(&src_linesizes[0]), frame->linesize, 4);
-//
-//	av_image_alloc(new_frame->data, new_frame->linesize, new_frame->width, new_frame->height, frame->format, 16);
-//
-//	av_image_copy(new_frame->data, new_frame->linesize, src_data, src_linesizes, frame->format, new_frame->width, new_frame->height);
-//
-//	frame =
-//}
 
 }}

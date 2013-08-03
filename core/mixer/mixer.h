@@ -46,7 +46,6 @@ class basic_frame;
 class ogl_device;
 struct frame_transform;
 struct pixel_format;
-struct channel_layout;
 
 class mixer : public target<std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>>
 			, public core::frame_factory
@@ -54,7 +53,7 @@ class mixer : public target<std::pair<std::map<int, safe_ptr<core::basic_frame>>
 public:	
 	typedef target<std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>> target_t;
 
-	explicit mixer(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl, const channel_layout& audio_channel_layout);
+	explicit mixer(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl);
 		
 	// target
 
@@ -62,7 +61,7 @@ public:
 		
 	// mixer
 
-	safe_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc, const channel_layout& audio_channel_layout);		
+	safe_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc);		
 	
 	core::video_format_desc get_video_format_desc() const; // nothrow
 	void set_video_format_desc(const video_format_desc& format_desc);

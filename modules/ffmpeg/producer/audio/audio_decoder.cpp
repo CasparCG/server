@@ -61,26 +61,21 @@ struct audio_decoder::implementation : boost::noncopyable
 
 	const int64_t												nb_frames_;
 	tbb::atomic<size_t>											file_frame_number_;
-	core::channel_layout										channel_layout_;
 public:
-	explicit implementation(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc, const std::wstring& custom_channel_order) 
+	explicit implementation(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) 
 		: format_desc_(format_desc)	
 		, codec_context_(open_codec(*context, AVMEDIA_TYPE_AUDIO, index_))
 		, nb_frames_(0)//context->streams[index_]->nb_frames)
-		, channel_layout_(get_audio_channel_layout(*codec_context_, custom_channel_order))
 	{
 		file_frame_number_ = 0;
-
-		CASPAR_LOG(debug) << print() 
-				<< " Selected channel layout " << channel_layout_.name;
-
+		
 		codec_context_->refcounted_frames = 1;
 
 		swr_.reset(swr_alloc_set_opts(nullptr,
-										av_get_default_channel_layout(2), AV_SAMPLE_FMT_S32, 48000,
-										codec_context_->channel_layout, codec_context_->sample_fmt, codec_context_->sample_rate, 
-										0, nullptr),
-										[](SwrContext* p){swr_free(&p);});
+					av_get_default_channel_layout(format_desc_.audio_nb_channels), AV_SAMPLE_FMT_S32, 48000,
+					codec_context_->channel_layout != 0 ? codec_context_->channel_layout : av_get_default_channel_layout(codec_context_->channels), codec_context_->sample_fmt, codec_context_->sample_rate, 
+					0, nullptr),
+					[](SwrContext* p){swr_free(&p);});
 			
 		swr_init(swr_.get());
 	}
@@ -134,7 +129,7 @@ public:
 		if(!got_picture)
 			return std::make_shared<core::audio_buffer>();
 		
-		auto out_buffer = core::audio_buffer(frame->nb_samples * 2 * 2);
+		auto out_buffer = core::audio_buffer(frame->nb_samples * core::video_format_desc::audio_nb_channels * 2);
 
 		uint8_t* out[] = {reinterpret_cast<uint8_t*>(out_buffer.data())};
 		const auto in = const_cast<const uint8_t**>(frame->extended_data);	
@@ -145,7 +140,7 @@ public:
 								in, 
 								frame->nb_samples);	
 			
-		out_buffer.resize(out_samples2 * 2);
+		out_buffer.resize(out_samples2 * core::video_format_desc::audio_nb_channels);
 
 		++file_frame_number_;
 
@@ -168,13 +163,12 @@ public:
 	}
 };
 
-audio_decoder::audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc, const std::wstring& custom_channel_order) : impl_(new implementation(context, format_desc, custom_channel_order)){}
+audio_decoder::audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc) : impl_(new implementation(context, format_desc)){}
 void audio_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
 bool audio_decoder::ready() const{return impl_->ready();}
 std::shared_ptr<core::audio_buffer> audio_decoder::poll(){return impl_->poll();}
 uint32_t audio_decoder::nb_frames() const{return impl_->nb_frames();}
 uint32_t audio_decoder::file_frame_number() const{return impl_->file_frame_number_;}
-const core::channel_layout& audio_decoder::channel_layout() const { return impl_->channel_layout_; }
 std::wstring audio_decoder::print() const{return impl_->print();}
 
 }}

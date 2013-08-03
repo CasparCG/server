@@ -122,7 +122,7 @@ public:
         if (options_.find("threads") == options_.end())
             options_["threads"] = "auto";
 
-		tokens_ = std::max(1, try_remove_arg<int>(options_, boost::regex("-tokens")).get_value_or(2));		
+		tokens_ = std::max(1, try_remove_arg<int>(options_, boost::regex("tokens")).get_value_or(2));		
 	}
 		
 	~ffmpeg_consumer()
@@ -214,8 +214,8 @@ public:
 			// Filters
 
 			{
-				configure_video_filters(*video_codec, try_remove_arg<std::string>(options, boost::regex("vf|f:v|filter:v")).get_value_or(""));
-				configure_audio_filters(*audio_codec, try_remove_arg<std::string>(options, boost::regex("af|f:a|filter:a")).get_value_or(""));
+				configure_video_filters(*video_codec, try_remove_arg<std::string>(options_, boost::regex("vf|f:v|filter:v")).get_value_or(""));
+				configure_audio_filters(*audio_codec, try_remove_arg<std::string>(options_, boost::regex("af|f:a|filter:a")).get_value_or(""));
 			}
 
 			// Bistream Filters
@@ -513,12 +513,11 @@ private:
 		audio_graph_->nb_threads  = boost::thread::hardware_concurrency()/2;
 		audio_graph_->thread_type = AVFILTER_THREAD_SLICE;
 		
-		const auto asrc_options = (boost::format("sample_rate=%1%:sample_fmt=%2%:channels=%3%:time_base=%4%/%5%:channel_layout=%6%")
+		const auto asrc_options = (boost::format("sample_rate=%1%:sample_fmt=%2%:channels=%3%:time_base=%4%/%5%") // :channel_layout=%6%
 			% in_video_format_.audio_sample_rate
 			% av_get_sample_fmt_name(AV_SAMPLE_FMT_S32)
-			% 2 // TODO:
-			% 1	% in_video_format_.audio_sample_rate
-			% "stereo" /* TODO */).str();				
+			% in_video_format_.audio_nb_channels
+			% 1	% in_video_format_.audio_sample_rate).str();				
 
 		AVFilterContext* filt_asrc = nullptr;
 		FF(avfilter_graph_create_filter(&filt_asrc,
@@ -696,8 +695,8 @@ private:
 				av_frame_free(&p);
 			});
 		
-			src_av_frame->channels		 = 2; // TODO:
-			src_av_frame->channel_layout = av_get_default_channel_layout(2); // TODO:
+			src_av_frame->channels		 = in_video_format_.audio_nb_channels;
+			src_av_frame->channel_layout = 0;//av_get_default_channel_layout(in_video_format_.audio_nb_channels);
 			src_av_frame->sample_rate	 = in_video_format_.audio_sample_rate;
 			src_av_frame->nb_samples	 = frame_ptr->audio_data().size() / src_av_frame->channels;
 			src_av_frame->format		 = AV_SAMPLE_FMT_S32;
@@ -708,9 +707,9 @@ private:
 			FF(av_samples_fill_arrays(src_av_frame->extended_data, 
 									  src_av_frame->linesize,
 									  reinterpret_cast<const std::uint8_t*>(&*frame_ptr->audio_data().begin()), 
-									  2, // TODO
+									  src_av_frame->channels,
 									  src_av_frame->nb_samples, 
-									  AV_SAMPLE_FMT_S32, 
+									  static_cast<AVSampleFormat>(src_av_frame->format), 
 									  16)); 					
 		}
 		
@@ -805,6 +804,14 @@ private:
 
 			pkt = new_pkt;
 		}
+		
+		if (pkt.pts != AV_NOPTS_VALUE)
+			pkt.pts = av_rescale_q(pkt.pts, st.codec->time_base, st.time_base);
+
+		if (pkt.dts != AV_NOPTS_VALUE)
+			pkt.dts = av_rescale_q(pkt.dts, st.codec->time_base, st.time_base);
+				
+		pkt.duration = static_cast<int>(av_rescale_q(pkt.duration, st.codec->time_base, st.time_base));
 
 		write_packet(std::shared_ptr<AVPacket>(new AVPacket(pkt), [](AVPacket* p){av_free_packet(p); delete p;}), token);
 
@@ -813,20 +820,6 @@ private:
 
 	void write_packet(const std::shared_ptr<AVPacket>& pkt_ptr, std::shared_ptr<void> token)
 	{		
-		if(pkt_ptr)
-		{
-			auto st  = oc_->streams[pkt_ptr->stream_index];
-			auto enc = st->codec;
-
-			if (pkt_ptr->pts != AV_NOPTS_VALUE)
-				pkt_ptr->pts = av_rescale_q(pkt_ptr->pts, enc->time_base, st->time_base);
-
-			if (pkt_ptr->dts != AV_NOPTS_VALUE)
-				pkt_ptr->dts = av_rescale_q(pkt_ptr->dts, enc->time_base, st->time_base);
-				
-			pkt_ptr->duration = static_cast<int>(av_rescale_q(pkt_ptr->duration, enc->time_base, st->time_base));
-		}
-
 		write_executor_.begin_invoke([this, pkt_ptr, token]() mutable
 		{
 			FF(av_interleaved_write_frame(oc_.get(), pkt_ptr.get()));

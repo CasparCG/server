@@ -125,8 +125,7 @@ public:
 				graph_,
 				output_,
 				format_desc_,
-				ogl,
-				channel_layout::stereo()))
+				ogl))
 		, thumbnail_creator_(thumbnail_creator)
 		, monitor_(monitor_factory.create(
 				media_path,

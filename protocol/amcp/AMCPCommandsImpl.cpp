@@ -50,8 +50,8 @@
 #include <core/mixer/gpu/ogl_device.h>
 #include <core/consumer/output.h>
 
-#include <modules/bluefish/bluefish.h>
-#include <modules/decklink/decklink.h>
+//#include <modules/bluefish/bluefish.h>
+//#include <modules/decklink/decklink.h>
 #include <modules/ffmpeg/ffmpeg.h>
 #include <modules/flash/flash.h>
 #include <modules/flash/util/swf.h>
@@ -1895,11 +1895,11 @@ bool InfoCommand::DoExecute()
 			info.add(L"system.windows.service-pack",	caspar::get_win_sp_version());
 			info.add(L"system.cpu",						caspar::get_cpu_info());
 	
-			BOOST_FOREACH(auto device, caspar::decklink::get_device_list())
-				info.add(L"system.caspar.decklink.device", device);
+			//BOOST_FOREACH(auto device, caspar::decklink::get_device_list())
+			//	info.add(L"system.caspar.decklink.device", device);
 
-			BOOST_FOREACH(auto device, caspar::bluefish::get_device_list())
-				info.add(L"system.caspar.bluefish.device", device);
+			//BOOST_FOREACH(auto device, caspar::bluefish::get_device_list())
+			//	info.add(L"system.caspar.bluefish.device", device);
 				
 			info.add(L"system.caspar.flash",					caspar::flash::get_version());
 			info.add(L"system.caspar.template-host",			caspar::flash::get_cg_version());

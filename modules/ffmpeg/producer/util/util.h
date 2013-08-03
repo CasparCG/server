@@ -41,7 +41,6 @@ namespace core {
 struct pixel_format_desc;
 class write_frame;
 struct frame_factory;
-struct channel_layout;
 
 }
 
@@ -58,7 +57,7 @@ static const int CASPAR_PIX_FMT_LUMA = 10; // Just hijack some unual pixel forma
 
 core::field_mode::type		get_mode(const AVFrame& frame);
 int							make_alpha_format(int format); // NOTE: Be careful about CASPAR_PIX_FMT_LUMA, change it to PIX_FMT_GRAY8 if you want to use the frame inside some ffmpeg function.
-safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVFrame>& decoded_frame, const safe_ptr<core::frame_factory>& frame_factory, int hints, const core::channel_layout& audio_channel_layout);
+safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVFrame>& decoded_frame, const safe_ptr<core::frame_factory>& frame_factory, int hints);
 
 safe_ptr<AVPacket> create_packet();
 
@@ -75,7 +74,5 @@ std::wstring probe_stem(const std::wstring stem, const std::vector<std::wstring>
 std::wstring probe_stem(const std::wstring stem);
 bool is_valid_file(const std::wstring filename, const std::vector<std::wstring>& invalid_exts);
 bool is_valid_file(const std::wstring filename);
-
-core::channel_layout get_audio_channel_layout(const AVCodecContext& context, const std::wstring& custom_channel_order);
 
 }}

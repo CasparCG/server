@@ -39,8 +39,7 @@ struct frame_factory : boost::noncopyable
 	virtual ~frame_factory(){}
 	virtual safe_ptr<write_frame> create_frame(
 			const void* video_stream_tag,
-			const pixel_format_desc& desc,
-			const channel_layout& audio_channel_layout = channel_layout::stereo()) = 0;	
+			const pixel_format_desc& desc) = 0;	
 
 	virtual video_format_desc get_video_format_desc() const = 0; // nothrow
 };
