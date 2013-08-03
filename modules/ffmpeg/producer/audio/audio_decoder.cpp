@@ -214,10 +214,10 @@ public:
 										nullptr, 
 										audio_graph_.get()));
 
-		AVSampleFormat sample_fmts[] = { AV_SAMPLE_FMT_S32, AV_SAMPLE_FMT_NONE }; 
-		int sample_rates[2]			 = { core::video_format_desc::audio_sample_rate, -1 };
-		int64_t channel_layouts[2]	 = { av_get_default_channel_layout(core::video_format_desc::audio_nb_channels), -1 };
-		int channels[2]				 = { core::video_format_desc::audio_nb_channels, -1 };
+		const AVSampleFormat sample_fmts[] = { AV_SAMPLE_FMT_S32, AV_SAMPLE_FMT_NONE }; 
+		const int sample_rates[2]		   = { core::video_format_desc::audio_sample_rate, -1 };
+		const int64_t channel_layouts[2]   = { av_get_default_channel_layout(core::video_format_desc::audio_nb_channels), -1 };
+		const int channels[2]			   = { core::video_format_desc::audio_nb_channels, -1 };
 
 #pragma warning (push)
 #pragma warning (disable : 4245)
