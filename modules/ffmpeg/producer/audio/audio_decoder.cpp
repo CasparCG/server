@@ -57,23 +57,29 @@ namespace caspar { namespace ffmpeg {
 	
 struct audio_decoder::implementation : boost::noncopyable
 {	
-	int											index_;
-	const safe_ptr<AVCodecContext>				codec_context_;		
-	const core::video_format_desc				format_desc_;
-			
-    AVFilterContext*							audio_graph_in_;  
-    AVFilterContext*							audio_graph_out_; 
-    std::shared_ptr<AVFilterGraph>				audio_graph_;    
-	std::shared_ptr<AVBitStreamFilterContext>	audio_bitstream_filter_;  
-	
-	std::queue<safe_ptr<AVPacket>>				packets_;
+	int								index_;
+	const safe_ptr<AVCodecContext>	codec_context_;		
+	const core::video_format_desc	format_desc_;
 
-	const int64_t								nb_frames_;
-	tbb::atomic<size_t>							file_frame_number_;
+    AVFilterContext*				audio_graph_in_;  
+    AVFilterContext*				audio_graph_out_; 
+    std::shared_ptr<AVFilterGraph>	audio_graph_;    
+
+	std::queue<safe_ptr<AVPacket>>	packets_;
+
+	const int64_t					nb_frames_;
+	tbb::atomic<size_t>				file_frame_number_;
 public:
-	explicit implementation(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc, const std::string& filtergraph) 
+	explicit implementation(
+		const safe_ptr<AVFormatContext>& context, 
+		const core::video_format_desc& format_desc, 
+		const std::string& filtergraph) 
 		: format_desc_(format_desc)	
-		, codec_context_(open_codec(*context, AVMEDIA_TYPE_AUDIO, index_))
+		, codec_context_(
+			open_codec(
+				*context, 
+				AVMEDIA_TYPE_AUDIO, 
+				index_))
 		, nb_frames_(0)//context->streams[index_]->nb_frames)
 	{
 		file_frame_number_ = 0;
@@ -116,15 +122,21 @@ public:
 	}
 
 	std::shared_ptr<core::audio_buffer> decode(AVPacket& pkt)
-	{	
-		
-		auto frame = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* frame)
-		{
-			av_frame_free(&frame);
-		});
+	{			
+		auto frame = std::shared_ptr<AVFrame>(
+			av_frame_alloc(), 
+			[](AVFrame* frame)
+			{
+				av_frame_free(&frame);
+			});
 		
 		int got_picture = 0;
-		auto len = avcodec_decode_audio4(codec_context_.get(), frame.get(), &got_picture, &pkt);
+
+		auto len = avcodec_decode_audio4(
+				codec_context_.get(), 
+				frame.get(),
+				&got_picture, 
+				&pkt);
 		
 		// There might be several frames in one packet.
 		pkt.size -= len;
@@ -133,19 +145,27 @@ public:
 		if(!got_picture)
 			return std::make_shared<core::audio_buffer>();
 				
-		FF(av_buffersrc_add_frame(audio_graph_in_, frame.get()));
+		FF(av_buffersrc_add_frame(
+			audio_graph_in_, 
+			frame.get()));
 				
 		auto result = std::make_shared<core::audio_buffer>();
 
 		while(true)
 		{
-			std::shared_ptr<AVFrame> filt_frame(av_frame_alloc(), [](AVFrame* p)
-			{
-				av_frame_free(&p);
-			});
+			std::shared_ptr<AVFrame> filt_frame(
+				av_frame_alloc(), 
+				[](AVFrame* p)
+				{
+					av_frame_free(&p);
+				});
 
-			if(av_buffersink_get_frame(audio_graph_out_, filt_frame.get()) < 0)
+			if(av_buffersink_get_frame(
+				audio_graph_out_, 
+				filt_frame.get()) < 0)
+			{
 				break;
+			}
 
 			CASPAR_ASSERT(av_get_bytes_per_sample(static_cast<AVSampleFormat>(filt_frame->format)) == sizeof((*result)[0]));
 
@@ -174,14 +194,15 @@ public:
 	{		
 		return L"[audio-decoder] " + widen(codec_context_->codec->long_name);
 	}
-
-	
+		
 	void configure_audio_filters(const std::string& filtergraph)
 	{
-		audio_graph_.reset(avfilter_graph_alloc(), [](AVFilterGraph* p)
-		{
-			avfilter_graph_free(&p);
-		});
+		audio_graph_.reset(
+			avfilter_graph_alloc(), 
+			[](AVFilterGraph* p)
+			{
+				avfilter_graph_free(&p);
+			});
 
 		audio_graph_->nb_threads  = boost::thread::hardware_concurrency()/2;
 		audio_graph_->thread_type = AVFILTER_THREAD_SLICE;
@@ -195,24 +216,29 @@ public:
 		if(codec_context_->channel_layout)
 		{
 			asrc_options += (boost::format(":channel_layout=%6%") 
-				% boost::io::group(std::hex, std::showbase, codec_context_->channel_layout)).str();
+				% boost::io::group(
+					std::hex, 
+					std::showbase, 
+					codec_context_->channel_layout)).str();
 		}
 
 		AVFilterContext* filt_asrc = nullptr;
-		FF(avfilter_graph_create_filter(&filt_asrc,
-										avfilter_get_by_name("abuffer"), 
-										"ffmpeg_consumer_abuffer",
-										asrc_options.c_str(), 
-										nullptr, 
-										audio_graph_.get()));
+		FF(avfilter_graph_create_filter(
+			&filt_asrc,
+			avfilter_get_by_name("abuffer"), 
+			"ffmpeg_consumer_abuffer",
+			asrc_options.c_str(), 
+			nullptr, 
+			audio_graph_.get()));
 				
 		AVFilterContext* filt_asink = nullptr;
-		FF(avfilter_graph_create_filter(&filt_asink,
-										avfilter_get_by_name("abuffersink"), 
-										"ffmpeg_consumer_abuffersink",
-										nullptr, 
-										nullptr, 
-										audio_graph_.get()));
+		FF(avfilter_graph_create_filter(
+			&filt_asink,
+			avfilter_get_by_name("abuffersink"), 
+			"ffmpeg_consumer_abuffersink",
+			nullptr, 
+			nullptr, 
+			audio_graph_.get()));
 
 		const AVSampleFormat sample_fmts[] = { AV_SAMPLE_FMT_S32, AV_SAMPLE_FMT_NONE }; 
 		const int sample_rates[2]		   = { core::video_format_desc::audio_sample_rate, -1 };
@@ -221,22 +247,64 @@ public:
 
 #pragma warning (push)
 #pragma warning (disable : 4245)
-		FF(av_opt_set_int(filt_asink,	   "all_channel_counts", 0,	AV_OPT_SEARCH_CHILDREN));
-		FF(av_opt_set_int_list(filt_asink, "sample_fmts",		 sample_fmts,					-1, AV_OPT_SEARCH_CHILDREN));
-		FF(av_opt_set_int_list(filt_asink, "channel_layouts",	 channel_layouts,				-1, AV_OPT_SEARCH_CHILDREN));
-		FF(av_opt_set_int_list(filt_asink, "channel_counts",	 channels,						-1, AV_OPT_SEARCH_CHILDREN));
-		FF(av_opt_set_int_list(filt_asink, "sample_rates",		 sample_rates,					-1, AV_OPT_SEARCH_CHILDREN));
+
+		FF(av_opt_set_int(
+			filt_asink,	   
+			"all_channel_counts", 
+			0,	
+			AV_OPT_SEARCH_CHILDREN));
+
+		FF(av_opt_set_int_list(
+			filt_asink, 
+			"sample_fmts",		 
+			sample_fmts,					
+			-1, 
+			AV_OPT_SEARCH_CHILDREN));
+
+		FF(av_opt_set_int_list(
+			filt_asink, 
+			"channel_layouts",	 
+			channel_layouts,				
+			-1, 
+			AV_OPT_SEARCH_CHILDREN));
+
+		FF(av_opt_set_int_list(
+			filt_asink, 
+			"channel_counts",	 
+			channels,						
+			-1, 
+			AV_OPT_SEARCH_CHILDREN));
+
+		FF(av_opt_set_int_list(
+			filt_asink, 
+			"sample_rates",		 
+			sample_rates,					
+			-1,
+			AV_OPT_SEARCH_CHILDREN));
+
 #pragma warning (pop)
 			
-		configure_filtergraph(*audio_graph_, filtergraph, *filt_asrc, *filt_asink);
+		configure_filtergraph(
+			*audio_graph_, 
+			filtergraph, 
+			*filt_asrc, 
+			*filt_asink);
 
 		audio_graph_in_  = filt_asrc;
 		audio_graph_out_ = filt_asink;
 
-		CASPAR_LOG(info) << widen(std::string("\n") + avfilter_graph_dump(audio_graph_.get(), nullptr));
+		CASPAR_LOG(info) 
+			<< widen(std::string("\n") 
+				+ avfilter_graph_dump(
+					audio_graph_.get(),
+					nullptr));
 	}
 
-	void configure_filtergraph(AVFilterGraph& graph, const std::string& filtergraph, AVFilterContext& source_ctx, AVFilterContext& sink_ctx)
+	void configure_filtergraph(
+		AVFilterGraph& graph, 
+		const std::string& filtergraph, 
+		AVFilterContext& source_ctx, 
+		AVFilterContext& sink_ctx)
 	{
 		AVFilterInOut* outputs = nullptr;
 		AVFilterInOut* inputs = nullptr;
@@ -260,14 +328,25 @@ public:
 				inputs->pad_idx     = 0;
 				inputs->next        = nullptr;
 
-				FF(avfilter_graph_parse(&graph, filtergraph.c_str(), &inputs, &outputs, nullptr));
+				FF(avfilter_graph_parse(
+					&graph, 
+					filtergraph.c_str(), 
+					&inputs, 
+					&outputs,
+					nullptr));
 			} 
 			else 
 			{
-				FF(avfilter_link(&source_ctx, 0, &sink_ctx, 0));
+				FF(avfilter_link(
+					&source_ctx, 
+					0, 
+					&sink_ctx, 
+					0));
 			}
 
-			FF(avfilter_graph_config(&graph, nullptr));
+			FF(avfilter_graph_config(
+				&graph, 
+				nullptr));
 		}
 		catch(...)
 		{

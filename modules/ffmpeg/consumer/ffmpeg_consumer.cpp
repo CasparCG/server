@@ -103,7 +103,9 @@ private:
 	
 public:
 
-	ffmpeg_consumer(std::string path, std::string options)
+	ffmpeg_consumer(
+		std::string path, 
+		std::string options)
 		: path_(std::move(path))
 		, video_pts_(0)
 		, audio_pts_(0)
@@ -116,13 +118,26 @@ public:
 	{		
 		abort_request_ = false;	
 
-		for(auto it = boost::sregex_iterator(options.begin(), options.end(), boost::regex("-(?<NAME>[^-\\s]+)(\\s+(?<VALUE>[^-\\s]+))?")); it != boost::sregex_iterator(); ++it)
+		for(auto it = 
+				boost::sregex_iterator(
+					options.begin(), 
+					options.end(), 
+					boost::regex("-(?<NAME>[^-\\s]+)(\\s+(?<VALUE>[^-\\s]+))?")); 
+			it != boost::sregex_iterator(); 
+			++it)
+		{				
 			options_[(*it)["NAME"].str()] = (*it)["VALUE"].matched ? (*it)["VALUE"].str() : "";
+		}
 										
         if (options_.find("threads") == options_.end())
             options_["threads"] = "auto";
 
-		tokens_ = std::max(1, try_remove_arg<int>(options_, boost::regex("tokens")).get_value_or(2));		
+		tokens_ = 
+			std::max(
+				1, 
+				try_remove_arg<int>(
+					options_, 
+					boost::regex("tokens")).get_value_or(2));		
 	}
 		
 	~ffmpeg_consumer()
@@ -150,25 +165,37 @@ public:
 					
 			FF(av_write_trailer(oc_.get()));
 						
-			if (!(oc_->oformat->flags & AVFMT_NOFILE))
+			if (!(oc_->oformat->flags & AVFMT_NOFILE) && oc_->pb)
 				avio_close(oc_->pb);
 
 			oc_.reset();
 		}
 	}
 
-	void initialize(const core::video_format_desc& format_desc, int channel_index) override 
+	void initialize(
+		const core::video_format_desc& format_desc, 
+		int channel_index) override 
 	{
 		try
 		{				
 			static boost::regex prot_exp("^.+:.*" );
 			
-			const auto overwrite = try_remove_arg<std::string>(options_, boost::regex("y")) != nullptr;
+			const auto overwrite = 
+				try_remove_arg<std::string>(
+					options_,
+					boost::regex("y")) != nullptr;
 
-			if(!boost::regex_match(path_.string(), prot_exp))
+			if(!boost::regex_match(
+					path_.string(), 
+					prot_exp))
 			{
 				if(!path_.is_complete())
-					path_ = narrow(env::media_folder()) + path_.string();
+				{
+					path_ = 
+						narrow(
+							env::media_folder()) + 
+							path_.string();
+				}
 			
 				if(boost::filesystem::exists(path_))
 				{
@@ -179,11 +206,22 @@ public:
 				}
 			}
 							
-			const auto oformat_name = try_remove_arg<std::string>(options_, boost::regex("^f|format$"));
+			const auto oformat_name = 
+				try_remove_arg<std::string>(
+					options_, 
+					boost::regex("^f|format$"));
 			
 			AVFormatContext* oc;
-			FF(avformat_alloc_output_context2(&oc, nullptr, oformat_name ? oformat_name->c_str() : nullptr, path_.string().c_str()));
-			oc_.reset(oc, avformat_free_context);
+
+			FF(avformat_alloc_output_context2(
+				&oc, 
+				nullptr, 
+				oformat_name ? oformat_name->c_str() : nullptr, 
+				path_.string().c_str()));
+
+			oc_.reset(
+				oc, 
+				avformat_free_context);
 					
 			CASPAR_VERIFY(oc_->oformat);
 
@@ -196,17 +234,25 @@ public:
 							
 			CASPAR_VERIFY(oc_->oformat);
 			
-			const auto video_codec_name = try_remove_arg<std::string>(options_, boost::regex("^c:v|codec:v|vcodec$"));
+			const auto video_codec_name = 
+				try_remove_arg<std::string>(
+					options_, 
+					boost::regex("^c:v|codec:v|vcodec$"));
 
-			const auto video_codec = video_codec_name 
-									? avcodec_find_encoder_by_name(video_codec_name->c_str())
-									: avcodec_find_encoder(oc_->oformat->video_codec);
+			const auto video_codec = 
+				video_codec_name 
+					? avcodec_find_encoder_by_name(video_codec_name->c_str())
+					: avcodec_find_encoder(oc_->oformat->video_codec);
 						
-			const auto audio_codec_name = try_remove_arg<std::string>(options_, boost::regex("^c:a|codec:a|acodec$"));
+			const auto audio_codec_name = 
+				try_remove_arg<std::string>(
+					options_, 
+					 boost::regex("^c:a|codec:a|acodec$"));
 			
-			const auto audio_codec = audio_codec_name 
-									? avcodec_find_encoder_by_name(audio_codec_name->c_str())
-									: avcodec_find_encoder(oc_->oformat->audio_codec);
+			const auto audio_codec = 
+				audio_codec_name 
+					? avcodec_find_encoder_by_name(audio_codec_name->c_str())
+					: avcodec_find_encoder(oc_->oformat->audio_codec);
 			
 			CASPAR_VERIFY(video_codec);
 			CASPAR_VERIFY(audio_codec);
@@ -214,8 +260,15 @@ public:
 			// Filters
 
 			{
-				configure_video_filters(*video_codec, try_remove_arg<std::string>(options_, boost::regex("vf|f:v|filter:v")).get_value_or(""));
-				configure_audio_filters(*audio_codec, try_remove_arg<std::string>(options_, boost::regex("af|f:a|filter:a")).get_value_or(""));
+				configure_video_filters(
+					*video_codec, 
+					try_remove_arg<std::string>(options_, 
+					boost::regex("vf|f:v|filter:v")).get_value_or(""));
+
+				configure_audio_filters(
+					*audio_codec, 
+					try_remove_arg<std::string>(options_,
+					boost::regex("af|f:a|filter:a")).get_value_or(""));
 			}
 
 			// Bistream Filters
@@ -230,8 +283,13 @@ public:
 				auto video_options = options_;
 				auto audio_options = options_;
 
-				video_st_ = open_encoder(*video_codec, video_options);	
-				audio_st_ = open_encoder(*audio_codec, audio_options);
+				video_st_ = open_encoder(
+					*video_codec, 
+					video_options);
+
+				audio_st_ = open_encoder(
+					*audio_codec, 
+					audio_options);
 
 				auto it = options_.begin();
 				while(it != options_.end())
@@ -245,7 +303,11 @@ public:
 
 			// Output
 			{
-				auto av_opts = to_dict(std::move(options_));
+				AVDictionary* av_opts;
+
+				to_dict(
+					&av_opts, 
+					std::move(options_));
 
 				CASPAR_SCOPE_EXIT
 				{
@@ -253,20 +315,38 @@ public:
 				};
 
 				if (!(oc_->oformat->flags & AVFMT_NOFILE)) 
-					FF(avio_open2(&oc_->pb, path_.string().c_str(), AVIO_FLAG_WRITE, &oc_->interrupt_callback, &av_opts));
+				{
+					FF(avio_open2(
+						&oc_->pb, 
+						path_.string().c_str(), 
+						AVIO_FLAG_WRITE, 
+						&oc_->interrupt_callback, 
+						&av_opts));
+				}
 				
-				FF(avformat_write_header(oc_.get(), &av_opts));
+				FF(avformat_write_header(
+					oc_.get(), 
+					&av_opts));
 				
 				options_ = to_map(av_opts);
 			}
 
 			// Dump Info
 			
-			av_dump_format(oc_.get(), 0, oc_->filename, 1);		
+			av_dump_format(
+				oc_.get(), 
+				0, 
+				oc_->filename, 
+				1);		
 
 			BOOST_FOREACH(const auto& option, options_)
-				CASPAR_LOG(warning) << L"Invalid option: -" << widen(option.first) << L" " << widen(option.second);
-
+			{
+				CASPAR_LOG(warning) 
+					<< L"Invalid option: -" 
+					<< widen(option.first) 
+					<< L" " 
+					<< widen(option.second);
+			}
 		}
 		catch(...)
 		{
@@ -282,11 +362,13 @@ public:
 		CASPAR_VERIFY(in_video_format_.format != core::video_format::invalid);
 		
 		--tokens_;
-		std::shared_ptr<void> token(nullptr, [this](void*)
-		{
-			++tokens_;
-			tokens_cond_.notify_one();
-		});
+		std::shared_ptr<void> token(
+			nullptr, 
+			[this](void*)
+			{
+				++tokens_;
+				tokens_cond_.notify_one();
+			});
 
 		return executor_.begin_invoke([=]() -> bool
 		{
@@ -297,12 +379,16 @@ public:
 
 			video_encoder_executor_.begin_invoke([=]() mutable
 			{
-				encode_video(frame, token);
+				encode_video(
+					frame, 
+					token);
 			});
 		
 			audio_encoder_executor_.begin_invoke([=]() mutable
 			{
-				encode_audio(frame, token);
+				encode_audio(
+					frame, 
+					token);
 			});
 				
 			return true;
@@ -347,9 +433,16 @@ private:
 		return reinterpret_cast<ffmpeg_consumer*>(ctx)->abort_request_;		
 	}
 		
-	std::shared_ptr<AVStream> open_encoder(const AVCodec& codec, std::map<std::string, std::string>& options)
+	std::shared_ptr<AVStream> open_encoder(
+		const AVCodec& codec, 
+		std::map<std::string, 
+		std::string>& options)
 	{			
-		auto st = avformat_new_stream(oc_.get(), &codec);
+		auto st = 
+			avformat_new_stream(
+				oc_.get(), 
+				&codec);
+
 		if (!st) 		
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Could not allocate video-stream.") << boost::errinfo_api_function("av_new_stream"));	
 
@@ -388,25 +481,46 @@ private:
 
 		const auto char_id = char_id_map.at(enc->codec_type);
 								
-		const auto codec_opts = remove_options(options, boost::regex("^(" + char_id + "?[^:]+):" + char_id + "$"));
+		const auto codec_opts = 
+			remove_options(
+				options, 
+				boost::regex("^(" + char_id + "?[^:]+):" + char_id + "$"));
 		
 		AVDictionary* av_codec_opts = nullptr;
 
-		copy_to_dict(&av_codec_opts, options);
-		copy_to_dict(&av_codec_opts, codec_opts);
+		to_dict(
+			&av_codec_opts, 
+			options);
+
+		to_dict(
+			&av_codec_opts,
+			codec_opts);
 
 		options.clear();
 		
-		FF(avcodec_open2(enc, &codec, av_codec_opts ? &av_codec_opts : nullptr));		
+		FF(avcodec_open2(
+			enc,		
+			&codec, 
+			av_codec_opts ? &av_codec_opts : nullptr));		
 
 		if(av_codec_opts)
 		{
-			auto t = av_dict_get(av_codec_opts, "", nullptr, AV_DICT_IGNORE_SUFFIX);
+			auto t = 
+				av_dict_get(
+					av_codec_opts, 
+					"", 
+					 nullptr, 
+					AV_DICT_IGNORE_SUFFIX);
+
 			while(t)
 			{
 				options[t->key + (codec_opts.find(t->key) != codec_opts.end() ? ":" + char_id : "")] = t->value;
 
-				t = av_dict_get(av_codec_opts, "", t, AV_DICT_IGNORE_SUFFIX);
+				t = av_dict_get(
+						av_codec_opts, 
+						"", 
+						t, 
+						AV_DICT_IGNORE_SUFFIX);
 			}
 
 			av_dict_free(&av_codec_opts);
@@ -415,7 +529,8 @@ private:
 		if(enc->codec_type == AVMEDIA_TYPE_AUDIO && !(codec.capabilities & CODEC_CAP_VARIABLE_FRAME_SIZE))
 		{
 			CASPAR_ASSERT(enc->frame_size > 0);
-			av_buffersink_set_frame_size(audio_graph_out_, enc->frame_size);
+			av_buffersink_set_frame_size(audio_graph_out_, 
+										 enc->frame_size);
 		}
 		
 		return std::shared_ptr<AVStream>(st, [this](AVStream* st)
@@ -426,46 +541,76 @@ private:
 
 	void configue_audio_bistream_filters(std::map<std::string, std::string>& options)
 	{
-		const auto audio_bitstream_filter_str = try_remove_arg<std::string>(options, boost::regex("^bsf:a|absf$"));
+		const auto audio_bitstream_filter_str = 
+			try_remove_arg<std::string>(
+				options, 
+				boost::regex("^bsf:a|absf$"));
 
-		const auto audio_bitstream_filter = audio_bitstream_filter_str ? av_bitstream_filter_init(audio_bitstream_filter_str->c_str()) : nullptr;
+		const auto audio_bitstream_filter = 
+			audio_bitstream_filter_str 
+				? av_bitstream_filter_init(audio_bitstream_filter_str->c_str()) 
+				: nullptr;
 
 		CASPAR_VERIFY(!audio_bitstream_filter_str || audio_bitstream_filter);
 
 		if(audio_bitstream_filter)
-			audio_bitstream_filter_.reset(audio_bitstream_filter, av_bitstream_filter_close);
+		{
+			audio_bitstream_filter_.reset(
+				audio_bitstream_filter, 
+				av_bitstream_filter_close);
+		}
 		
 		if(audio_bitstream_filter_str && !audio_bitstream_filter_)
 			options["bsf:a"] = *audio_bitstream_filter_str;
 	}
 	
-	void configue_video_bistream_filters(std::map<std::string, std::string>& options)
+	void configue_video_bistream_filters(
+		std::map<std::string, std::string>& options)
 	{
-		const auto video_bitstream_filter_str = try_remove_arg<std::string>(options, boost::regex("^bsf:v|vbsf$"));
+		const auto video_bitstream_filter_str = 
+				try_remove_arg<std::string>(
+					options, 
+					boost::regex("^bsf:v|vbsf$"));
 
-		const auto video_bitstream_filter = video_bitstream_filter_str ? av_bitstream_filter_init(video_bitstream_filter_str->c_str()) : nullptr;
+		const auto video_bitstream_filter = 
+			video_bitstream_filter_str 
+				? av_bitstream_filter_init(video_bitstream_filter_str->c_str()) 
+				: nullptr;
 
 		CASPAR_VERIFY(!video_bitstream_filter_str || video_bitstream_filter);
 
 		if(video_bitstream_filter)
-			video_bitstream_filter_.reset(video_bitstream_filter, av_bitstream_filter_close);
+		{
+			video_bitstream_filter_.reset(
+				video_bitstream_filter, 
+				av_bitstream_filter_close);
+		}
 		
 		if(video_bitstream_filter_str && !video_bitstream_filter_)
 			options["bsf:v"] = *video_bitstream_filter_str;
 	}
 	
-	void configure_video_filters(const AVCodec& codec, const std::string& filtergraph)
+	void configure_video_filters(
+		const AVCodec& codec, 
+		const std::string& filtergraph)
 	{
-		video_graph_.reset(avfilter_graph_alloc(), [](AVFilterGraph* p)
-		{
-			avfilter_graph_free(&p);
-		});
+		video_graph_.reset(
+			avfilter_graph_alloc(), 
+			[](AVFilterGraph* p)
+			{
+				avfilter_graph_free(&p);
+			});
 		
 		video_graph_->nb_threads  = boost::thread::hardware_concurrency()/2;
 		video_graph_->thread_type = AVFILTER_THREAD_SLICE;
 
-		const auto sample_aspect_ratio = boost::rational<int>(in_video_format_.square_width, in_video_format_.square_height) /
-										 boost::rational<int>(in_video_format_.width, in_video_format_.height);
+		const auto sample_aspect_ratio = 
+			boost::rational<int>(
+				in_video_format_.square_width, 
+				in_video_format_.square_height) /
+			boost::rational<int>(
+				in_video_format_.width, 
+				in_video_format_.height);
 		
 		const auto vsrc_options = (boost::format("video_size=%1%x%2%:pix_fmt=%3%:time_base=%4%/%5%:pixel_aspect=%6%/%7%:frame_rate=%8%/%9%")
 			% in_video_format_.width % in_video_format_.height
@@ -475,40 +620,61 @@ private:
 			% in_video_format_.time_scale % in_video_format_.duration).str();
 					
 		AVFilterContext* filt_vsrc = nullptr;			
-		FF(avfilter_graph_create_filter(&filt_vsrc,
-										avfilter_get_by_name("buffer"), 
-										"ffmpeg_consumer_buffer",
-										vsrc_options.c_str(), 
-										nullptr, 
-										video_graph_.get()));
+		FF(avfilter_graph_create_filter(
+			&filt_vsrc,
+			avfilter_get_by_name("buffer"), 
+			"ffmpeg_consumer_buffer",
+			vsrc_options.c_str(), 
+			nullptr, 
+			video_graph_.get()));
 				
 		AVFilterContext* filt_vsink = nullptr;
-		FF(avfilter_graph_create_filter(&filt_vsink,
-										avfilter_get_by_name("buffersink"), 
-										"ffmpeg_consumer_buffersink",
-										nullptr, 
-										nullptr, 
-										video_graph_.get()));
+		FF(avfilter_graph_create_filter(
+			&filt_vsink,
+			avfilter_get_by_name("buffersink"), 
+			"ffmpeg_consumer_buffersink",
+			nullptr, 
+			nullptr, 
+			video_graph_.get()));
 		
 #pragma warning (push)
 #pragma warning (disable : 4245)
-		FF(av_opt_set_int_list(filt_vsink, "pix_fmts", codec.pix_fmts, -1, AV_OPT_SEARCH_CHILDREN));
+
+		FF(av_opt_set_int_list(
+			filt_vsink, 
+			"pix_fmts", 
+			codec.pix_fmts, 
+			-1,
+			AV_OPT_SEARCH_CHILDREN));
+
 #pragma warning (pop)
 			
-		configure_filtergraph(*video_graph_, filtergraph, *filt_vsrc, *filt_vsink);
+		configure_filtergraph(
+			*video_graph_, 
+			filtergraph,
+			*filt_vsrc,
+			*filt_vsink);
 
 		video_graph_in_  = filt_vsrc;
 		video_graph_out_ = filt_vsink;
 		
-		CASPAR_LOG(info) << widen(std::string("\n") + avfilter_graph_dump(video_graph_.get(), nullptr));
+		CASPAR_LOG(info)
+			<< 	widen(std::string("\n") 
+				+ avfilter_graph_dump(
+						video_graph_.get(), 
+						nullptr));
 	}
 
-	void configure_audio_filters(const AVCodec& codec, const std::string& filtergraph)
+	void configure_audio_filters(
+		const AVCodec& codec, 
+		const std::string& filtergraph)
 	{
-		audio_graph_.reset(avfilter_graph_alloc(), [](AVFilterGraph* p)
-		{
-			avfilter_graph_free(&p);
-		});
+		audio_graph_.reset(
+			avfilter_graph_alloc(), 
+			[](AVFilterGraph* p)
+			{
+				avfilter_graph_free(&p);
+			});
 		
 		audio_graph_->nb_threads  = boost::thread::hardware_concurrency()/2;
 		audio_graph_->thread_type = AVFILTER_THREAD_SLICE;
@@ -518,41 +684,82 @@ private:
 			% av_get_sample_fmt_name(AV_SAMPLE_FMT_S32)
 			% in_video_format_.audio_nb_channels
 			% 1	% in_video_format_.audio_sample_rate
-			% boost::io::group(std::hex, std::showbase, av_get_default_channel_layout(core::video_format_desc::audio_nb_channels))).str();				
+			% boost::io::group(
+				std::hex, 
+				std::showbase, 
+				av_get_default_channel_layout(core::video_format_desc::audio_nb_channels))).str();				
 
 		AVFilterContext* filt_asrc = nullptr;
-		FF(avfilter_graph_create_filter(&filt_asrc,
-										avfilter_get_by_name("abuffer"), 
-										"ffmpeg_consumer_abuffer",
-										asrc_options.c_str(), 
-										nullptr, 
-										audio_graph_.get()));
+		FF(avfilter_graph_create_filter(
+			&filt_asrc,
+			avfilter_get_by_name("abuffer"), 
+			"ffmpeg_consumer_abuffer",
+			asrc_options.c_str(), 
+			nullptr, 
+			audio_graph_.get()));
 				
 		AVFilterContext* filt_asink = nullptr;
-		FF(avfilter_graph_create_filter(&filt_asink,
-										avfilter_get_by_name("abuffersink"), 
-										"ffmpeg_consumer_abuffersink",
-										nullptr, 
-										nullptr, 
-										audio_graph_.get()));
+		FF(avfilter_graph_create_filter(
+			&filt_asink,
+			avfilter_get_by_name("abuffersink"), 
+			"ffmpeg_consumer_abuffersink",
+			nullptr, 
+			nullptr, 
+			audio_graph_.get()));
 		
 #pragma warning (push)
 #pragma warning (disable : 4245)
-		FF(av_opt_set_int(filt_asink,	   "all_channel_counts", 1,	AV_OPT_SEARCH_CHILDREN));
-		FF(av_opt_set_int_list(filt_asink, "sample_fmts",		 codec.sample_fmts,				-1, AV_OPT_SEARCH_CHILDREN));
-		FF(av_opt_set_int_list(filt_asink, "channel_layouts",	 codec.channel_layouts,			-1, AV_OPT_SEARCH_CHILDREN));
-		FF(av_opt_set_int_list(filt_asink, "sample_rates"   ,	 codec.supported_samplerates,	-1, AV_OPT_SEARCH_CHILDREN));
+
+		FF(av_opt_set_int(
+			filt_asink,	   
+			"all_channel_counts",
+			1,	
+			AV_OPT_SEARCH_CHILDREN));
+
+		FF(av_opt_set_int_list(
+			filt_asink, 
+			"sample_fmts",		 
+			codec.sample_fmts,				
+			-1, 
+			AV_OPT_SEARCH_CHILDREN));
+
+		FF(av_opt_set_int_list(
+			filt_asink,
+			"channel_layouts",	 
+			codec.channel_layouts,			
+			-1, 
+			AV_OPT_SEARCH_CHILDREN));
+
+		FF(av_opt_set_int_list(
+			filt_asink, 
+			"sample_rates" ,	 
+			codec.supported_samplerates,	
+			-1, 
+			AV_OPT_SEARCH_CHILDREN));
+
 #pragma warning (pop)
 			
-		configure_filtergraph(*audio_graph_, filtergraph, *filt_asrc, *filt_asink);
+		configure_filtergraph(
+			*audio_graph_, 
+			filtergraph, 
+			*filt_asrc, 
+			*filt_asink);
 
 		audio_graph_in_  = filt_asrc;
 		audio_graph_out_ = filt_asink;
 
-		CASPAR_LOG(info) << widen(std::string("\n") + avfilter_graph_dump(audio_graph_.get(), nullptr));
+		CASPAR_LOG(info) 
+			<< 	widen(std::string("\n") 
+				+ avfilter_graph_dump(
+					audio_graph_.get(), 
+					nullptr));
 	}
 
-	void configure_filtergraph(AVFilterGraph& graph, const std::string& filtergraph, AVFilterContext& source_ctx, AVFilterContext& sink_ctx)
+	void configure_filtergraph(
+		AVFilterGraph& graph, 
+		const std::string& filtergraph, 
+		AVFilterContext& source_ctx, 
+		AVFilterContext& sink_ctx)
 	{
 		AVFilterInOut* outputs = nullptr;
 		AVFilterInOut* inputs = nullptr;
@@ -576,14 +783,25 @@ private:
 				inputs->pad_idx     = 0;
 				inputs->next        = nullptr;
 
-				FF(avfilter_graph_parse(&graph, filtergraph.c_str(), &inputs, &outputs, nullptr));
+				FF(avfilter_graph_parse(
+					&graph, 
+					filtergraph.c_str(), 
+					&inputs, 
+					&outputs, 
+					nullptr));
 			} 
 			else 
 			{
-				FF(avfilter_link(&source_ctx, 0, &sink_ctx, 0));
+				FF(avfilter_link(
+					&source_ctx, 
+					0, 
+					&sink_ctx, 
+					0));
 			}
 
-			FF(avfilter_graph_config(&graph, nullptr));
+			FF(avfilter_graph_config(
+				&graph, 
+				nullptr));
 		}
 		catch(...)
 		{
@@ -593,7 +811,9 @@ private:
 		}
 	}
 	
-	void encode_video(const std::shared_ptr<core::read_frame>& frame_ptr, std::shared_ptr<void> token)
+	void encode_video(
+		const std::shared_ptr<core::read_frame>& frame_ptr, 
+		std::shared_ptr<void> token)
 	{		
 		if(!video_st_)
 			return;
@@ -604,14 +824,22 @@ private:
 
 		if(frame_ptr)
 		{
-			src_av_frame.reset(av_frame_alloc(), [frame_ptr](AVFrame* frame)
-			{
-				av_frame_free(&frame);
-			});
+			src_av_frame.reset(
+				av_frame_alloc(),
+				[frame_ptr](AVFrame* frame)
+				{
+					av_frame_free(&frame);
+				});
+
 			avcodec_get_frame_defaults(src_av_frame.get());		
 			
-			const auto sample_aspect_ratio = boost::rational<int>(in_video_format_.square_width, in_video_format_.square_height) /
-											 boost::rational<int>(in_video_format_.width, in_video_format_.height);
+			const auto sample_aspect_ratio = 
+				boost::rational<int>(
+					in_video_format_.square_width, 
+					in_video_format_.square_height) /
+				boost::rational<int>(
+					in_video_format_.width, 
+					in_video_format_.height);
 
 			src_av_frame->format				  = AV_PIX_FMT_BGRA;
 			src_av_frame->width					  = in_video_format_.width;
@@ -622,27 +850,34 @@ private:
 
 			video_pts_ += 1;
 
-			FF(av_image_fill_arrays(src_av_frame->data,
-									src_av_frame->linesize,
-									frame_ptr->image_data().begin(),
-									static_cast<AVPixelFormat>(src_av_frame->format), 
-									in_video_format_.width, 
-									in_video_format_.height, 
-									1));
+			FF(av_image_fill_arrays(
+				src_av_frame->data,
+				src_av_frame->linesize,
+				frame_ptr->image_data().begin(),
+				static_cast<AVPixelFormat>(src_av_frame->format), 
+				in_video_format_.width, 
+				in_video_format_.height, 
+				1));
 		}		
 
-		FF(av_buffersrc_add_frame(video_graph_in_, src_av_frame.get()));
+		FF(av_buffersrc_add_frame(
+			video_graph_in_, 
+			src_av_frame.get()));
 
 		int ret = 0;
 
 		while(ret >= 0)
 		{
-			std::shared_ptr<AVFrame> filt_frame(av_frame_alloc(), [](AVFrame* p)
-			{
-				av_frame_free(&p);
-			});
+			std::shared_ptr<AVFrame> filt_frame(
+				av_frame_alloc(), 
+				[](AVFrame* p)
+				{
+					av_frame_free(&p);
+				});
 
-			ret = av_buffersink_get_frame(video_graph_out_, filt_frame.get());
+			ret = av_buffersink_get_frame(
+				video_graph_out_, 
+				filt_frame.get());
 						
 			video_encoder_executor_.begin_invoke([=]
 			{
@@ -650,14 +885,20 @@ private:
 				{
 					if(enc->codec->capabilities & CODEC_CAP_DELAY)
 					{
-						while(encode_av_frame(*video_st_, video_bitstream_filter_.get(), avcodec_encode_video2, nullptr, token))
+						while(encode_av_frame(
+								*video_st_, 
+								video_bitstream_filter_.get(),
+								avcodec_encode_video2, 
+								nullptr, token))
+						{
 							boost::this_thread::yield(); // TODO:
+						}
 					}		
 				}
 				else if(ret != AVERROR(EAGAIN))
 				{
 					FF_RET(ret, "av_buffersink_get_frame");
-
+					
 					if (filt_frame->interlaced_frame) 
 					{
 						if (enc->codec->id == AV_CODEC_ID_MJPEG)
@@ -673,14 +914,22 @@ private:
 					if (!enc->me_threshold)
 						filt_frame->pict_type = AV_PICTURE_TYPE_NONE;
 			
-					encode_av_frame(*video_st_, video_bitstream_filter_.get(), avcodec_encode_video2, filt_frame, token);
+					encode_av_frame(
+						*video_st_,
+						video_bitstream_filter_.get(),
+						avcodec_encode_video2,
+						filt_frame, 
+						token);
+
 					boost::this_thread::yield(); // TODO:
 				}
 			});
 		}
 	}
 					
-	void encode_audio(const std::shared_ptr<core::read_frame>& frame_ptr, std::shared_ptr<void> token)
+	void encode_audio(
+		const std::shared_ptr<core::read_frame>& frame_ptr, 
+		std::shared_ptr<void> token)
 	{		
 		if(!audio_st_)
 			return;
@@ -691,10 +940,12 @@ private:
 
 		if(frame_ptr)
 		{
-			src_av_frame.reset(av_frame_alloc(), [](AVFrame* p)
-			{
-				av_frame_free(&p);
-			});
+			src_av_frame.reset(
+				av_frame_alloc(), 
+				[](AVFrame* p)
+				{
+					av_frame_free(&p);
+				});
 		
 			src_av_frame->channels		 = core::video_format_desc::audio_nb_channels;
 			src_av_frame->channel_layout = av_get_default_channel_layout(core::video_format_desc::audio_nb_channels);
@@ -705,27 +956,34 @@ private:
 
 			audio_pts_ += src_av_frame->nb_samples;
 
-			FF(av_samples_fill_arrays(src_av_frame->extended_data, 
-									  src_av_frame->linesize,
-									  reinterpret_cast<const std::uint8_t*>(&*frame_ptr->audio_data().begin()), 
-									  src_av_frame->channels,
-									  src_av_frame->nb_samples, 
-									  static_cast<AVSampleFormat>(src_av_frame->format), 
-									  16)); 					
+			FF(av_samples_fill_arrays(
+				src_av_frame->extended_data, 
+				src_av_frame->linesize,
+				reinterpret_cast<const std::uint8_t*>(&*frame_ptr->audio_data().begin()), 
+				src_av_frame->channels,
+				src_av_frame->nb_samples, 
+				static_cast<AVSampleFormat>(src_av_frame->format), 
+				16)); 					
 		}
 		
-		FF(av_buffersrc_add_frame(audio_graph_in_, src_av_frame.get()));
+		FF(av_buffersrc_add_frame(
+			audio_graph_in_, 
+			src_av_frame.get()));
 
 		int ret = 0;
 
 		while(ret >= 0)
 		{
-			std::shared_ptr<AVFrame> filt_frame(av_frame_alloc(), [](AVFrame* p)
-			{
-				av_frame_free(&p);
-			});
+			std::shared_ptr<AVFrame> filt_frame(
+				av_frame_alloc(), 
+				[](AVFrame* p)
+				{
+					av_frame_free(&p);
+				});
 
-			ret = av_buffersink_get_frame(audio_graph_out_, filt_frame.get());
+			ret = av_buffersink_get_frame(
+				audio_graph_out_, 
+				filt_frame.get());
 					
 			audio_encoder_executor_.begin_invoke([=]
 			{	
@@ -733,15 +991,30 @@ private:
 				{
 					if(enc->codec->capabilities & CODEC_CAP_DELAY)
 					{
-						while(encode_av_frame(*audio_st_, audio_bitstream_filter_.get(), avcodec_encode_audio2, nullptr, token))
+						while(encode_av_frame(
+								*audio_st_, 
+								audio_bitstream_filter_.get(), 
+								avcodec_encode_audio2, 
+								nullptr, 
+								token))
+						{
 							boost::this_thread::yield(); // TODO:
+						}
 					}
 				}
 				else if(ret != AVERROR(EAGAIN))
 				{
-					FF_RET(ret, "av_buffersink_get_frame");
+					FF_RET(
+						ret, 
+						"av_buffersink_get_frame");
 
-					encode_av_frame(*audio_st_, audio_bitstream_filter_.get(), avcodec_encode_audio2, filt_frame, token);
+					encode_av_frame(
+						*audio_st_, 
+						audio_bitstream_filter_.get(), 
+						avcodec_encode_audio2, 
+						filt_frame, 
+						token);
+
 					boost::this_thread::yield(); // TODO:
 				}
 			});
@@ -749,13 +1022,23 @@ private:
 	}
 	
 	template<typename F>
-	bool encode_av_frame(AVStream& st, AVBitStreamFilterContext* bsfc, const F& func, const std::shared_ptr<AVFrame>& src_av_frame, std::shared_ptr<void> token)
+	bool encode_av_frame(
+		AVStream& st,
+		AVBitStreamFilterContext* bsfc, 
+		const F& func, 
+		const std::shared_ptr<AVFrame>& src_av_frame, 
+		std::shared_ptr<void> token)
 	{
 		AVPacket pkt = {};
 		av_init_packet(&pkt);
 
 		int got_packet = 0;
-		FF(func(st.codec, &pkt, src_av_frame.get(), &got_packet));
+
+		FF(func(
+			st.codec, 
+			&pkt, 
+			src_av_frame.get(), 
+			&got_packet));
 					
 		if(!got_packet || pkt.size <= 0)
 			return false;
@@ -766,14 +1049,15 @@ private:
 		{
 			auto new_pkt = pkt;
 
-			auto a = av_bitstream_filter_filter(bsfc, 
-												st.codec, 
-												nullptr,
-												&new_pkt.data, 
-												&new_pkt.size,
-												pkt.data,
-												pkt.size,
-												pkt.flags & AV_PKT_FLAG_KEY);
+			auto a = av_bitstream_filter_filter(
+				bsfc, 
+				st.codec, 
+				nullptr,
+				&new_pkt.data, 
+				&new_pkt.size,
+				pkt.data,
+				pkt.size,
+				pkt.flags & AV_PKT_FLAG_KEY);
 
 			if(a == 0 && new_pkt.data != pkt.data && new_pkt.destruct) 
 			{
@@ -781,8 +1065,15 @@ private:
 
 				if(t) 
 				{
-					memcpy(t, new_pkt.data, new_pkt.size);
-					memset(t + new_pkt.size, 0, FF_INPUT_BUFFER_PADDING_SIZE);
+					memcpy(
+						t, 
+						new_pkt.data,
+						new_pkt.size);
+
+					memset(
+						t + new_pkt.size, 
+						0, 
+						FF_INPUT_BUFFER_PADDING_SIZE);
 
 					new_pkt.data = t;
 					new_pkt.buf  = nullptr;
@@ -793,13 +1084,17 @@ private:
 
 			av_free_packet(&pkt);
 
-			FF_RET(a, "av_bitstream_filter_filter");
+			FF_RET(
+				a, 
+				"av_bitstream_filter_filter");
 
-			new_pkt.buf = av_buffer_create(new_pkt.data, 
-										   new_pkt.size,
-										   av_buffer_default_free, 
-										   nullptr, 
-										   0);
+			new_pkt.buf =
+				av_buffer_create(
+					new_pkt.data, 
+					new_pkt.size,
+					av_buffer_default_free, 
+					nullptr, 
+					0);
 
 			CASPAR_VERIFY(new_pkt.buf);
 
@@ -807,28 +1102,57 @@ private:
 		}
 		
 		if (pkt.pts != AV_NOPTS_VALUE)
-			pkt.pts = av_rescale_q(pkt.pts, st.codec->time_base, st.time_base);
+		{
+			pkt.pts = 
+				av_rescale_q(
+					pkt.pts,
+					st.codec->time_base, 
+					st.time_base);
+		}
 
 		if (pkt.dts != AV_NOPTS_VALUE)
-			pkt.dts = av_rescale_q(pkt.dts, st.codec->time_base, st.time_base);
+		{
+			pkt.dts = 
+				av_rescale_q(
+					pkt.dts, 
+					st.codec->time_base, 
+					st.time_base);
+		}
 				
-		pkt.duration = static_cast<int>(av_rescale_q(pkt.duration, st.codec->time_base, st.time_base));
+		pkt.duration = 
+			static_cast<int>(
+				av_rescale_q(
+					pkt.duration, 
+					st.codec->time_base, st.time_base));
 
-		write_packet(std::shared_ptr<AVPacket>(new AVPacket(pkt), [](AVPacket* p){av_free_packet(p); delete p;}), token);
+		write_packet(
+			std::shared_ptr<AVPacket>(
+				new AVPacket(pkt), 
+				[](AVPacket* p)
+				{
+					av_free_packet(p); 
+					delete p;
+				}), token);
 
 		return true;
 	}
 
-	void write_packet(const std::shared_ptr<AVPacket>& pkt_ptr, std::shared_ptr<void> token)
+	void write_packet(
+		const std::shared_ptr<AVPacket>& pkt_ptr,
+		std::shared_ptr<void> token)
 	{		
 		write_executor_.begin_invoke([this, pkt_ptr, token]() mutable
 		{
-			FF(av_interleaved_write_frame(oc_.get(), pkt_ptr.get()));
+			FF(av_interleaved_write_frame(
+				oc_.get(), 
+				pkt_ptr.get()));
 		});	
 	}	
 	
 	template<typename T>
-	static boost::optional<T> try_remove_arg(std::map<std::string, std::string>& options, const boost::regex& expr)
+	static boost::optional<T> try_remove_arg(
+		std::map<std::string, std::string>& options, 
+		const boost::regex& expr)
 	{
 		for(auto it = options.begin(); it != options.end(); ++it)
 		{			
@@ -843,7 +1167,9 @@ private:
 		return boost::optional<T>();
 	}
 		
-	static std::map<std::string, std::string> remove_options(std::map<std::string, std::string>& options, const boost::regex& expr)
+	static std::map<std::string, std::string> remove_options(
+		std::map<std::string, std::string>& options, 
+		const boost::regex& expr)
 	{
 		std::map<std::string, std::string> result;
 			
@@ -853,7 +1179,10 @@ private:
 			boost::smatch what;
 			if(boost::regex_search(it->first, what, expr))
 			{
-				result[what.size() > 0 && what[1].matched ? what[1].str() : it->first] = it->second;
+				result[
+					what.size() > 0 && what[1].matched 
+						? what[1].str() 
+						: it->first] = it->second;
 				it = options.erase(it);
 			}
 			else
@@ -862,29 +1191,38 @@ private:
 
 		return result;
 	}
-
-	static AVDictionary* to_dict(const std::map<std::string, std::string>& c)
-	{		
-		AVDictionary* result = nullptr;
-
-		BOOST_FOREACH(const auto& entry, c)
-			av_dict_set(&result, entry.first.c_str(), entry.second.c_str(), 0);
-
-		return result;
-	}
-	
-	static void copy_to_dict(AVDictionary** dest, const std::map<std::string, std::string>& c)
+		
+	static void to_dict(AVDictionary** dest, const std::map<std::string, std::string>& c)
 	{		
 		BOOST_FOREACH(const auto& entry, c)
-			av_dict_set(dest, entry.first.c_str(), entry.second.c_str(), 0);
+		{
+			av_dict_set(
+				dest, 
+				entry.first.c_str(), 
+				entry.second.c_str(), 0);
+		}
 	}
 
 	static std::map<std::string, std::string> to_map(AVDictionary* dict)
 	{
 		std::map<std::string, std::string> result;
 		
-		for(auto t = dict ? av_dict_get(dict, "", nullptr, AV_DICT_IGNORE_SUFFIX) : nullptr; t; t = av_dict_get(dict, "", t, AV_DICT_IGNORE_SUFFIX))
+		for(auto t = dict 
+				? av_dict_get(
+					dict, 
+					"", 
+					nullptr, 
+					AV_DICT_IGNORE_SUFFIX) 
+				: nullptr;
+			t; 
+			t = av_dict_get(
+				dict, 
+				"", 
+				t,
+				AV_DICT_IGNORE_SUFFIX))
+		{
 			result[t->key] = t->value;
+		}
 
 		return result;
 	}
@@ -909,7 +1247,9 @@ safe_ptr<core::frame_consumer> create_consumer(const core::parameters& params)
 
 safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree)
 {              	
-    return make_safe<ffmpeg_consumer>(narrow(ptree.get<std::wstring>(L"path")), narrow(ptree.get<std::wstring>(L"args", L"")));
+    return make_safe<ffmpeg_consumer>(
+		narrow(ptree.get<std::wstring>(L"path")), 
+		narrow(ptree.get<std::wstring>(L"args", L"")));
 }
 
 }}
