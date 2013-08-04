@@ -303,7 +303,7 @@ public:
 
 			// Output
 			{
-				AVDictionary* av_opts;
+				AVDictionary* av_opts = nullptr;
 
 				to_dict(
 					&av_opts, 
