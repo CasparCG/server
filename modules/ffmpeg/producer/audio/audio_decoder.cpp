@@ -215,7 +215,7 @@ public:
 
 		if(codec_context_->channel_layout)
 		{
-			asrc_options += (boost::format(":channel_layout=%6%") 
+			asrc_options += (boost::format(":channel_layout=%1%") 
 				% boost::io::group(
 					std::hex, 
 					std::showbase, 
