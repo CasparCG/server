@@ -36,10 +36,16 @@ void read_rle_image_data(BEFileInputStream& stream, const channel_ptr& channel, 
 layer_ptr layer::create(BEFileInputStream& stream)
 {
 	layer_ptr result(std::make_shared<layer>());
-	result->rect_.top = stream.read_long();
-	result->rect_.left = stream.read_long();
-	result->rect_.bottom = stream.read_long();
-	result->rect_.right = stream.read_long();
+	result->populate(stream);
+	return result;
+}
+
+void layer::populate(BEFileInputStream& stream)
+{
+	rect_.top = stream.read_long();
+	rect_.left = stream.read_long();
+	rect_.bottom = stream.read_long();
+	rect_.right = stream.read_long();
 
 	//Get info about the channels in the layer
 	unsigned short channelCount = stream.read_short();
@@ -49,10 +55,10 @@ layer_ptr layer::create(BEFileInputStream& stream)
 		unsigned long data_length = stream.read_long();
 
 		if(channel_id <= -2)
-			result->masks_++;
+			masks_++;
 
 		channel_ptr channel(std::make_shared<Channel>(channel_id, data_length));
-		result->channels_.push_back(channel);
+		channels_.push_back(channel);
 	}
 
 	unsigned long blendModeSignature = stream.read_long();
@@ -60,20 +66,20 @@ layer_ptr layer::create(BEFileInputStream& stream)
 		throw PSDFileFormatException();
 
 	unsigned long blendModeKey = stream.read_long();
-	result->blend_mode_ = int_to_blend_mode(blendModeKey);
+	blend_mode_ = int_to_blend_mode(blendModeKey);
 
-	result->opacity_ = stream.read_byte();
-	result->baseClipping_ = stream.read_byte() == 1 ? false : true;
-	result->flags_ = stream.read_byte();
+	opacity_ = stream.read_byte();
+	baseClipping_ = stream.read_byte() == 1 ? false : true;
+	flags_ = stream.read_byte();
 
 	stream.discard_bytes(1);
 
 	unsigned long extraDataSize = stream.read_long();
 	long position1 = stream.current_position();
-	result->mask_.read_mask_data(stream);
-	result->read_blending_ranges(stream);
+	mask_.read_mask_data(stream);
+	read_blending_ranges(stream);
 
-	result->name_ = stream.read_pascal_string(4);
+	name_ = stream.read_pascal_string(4);
 
 	//Aditional Layer Information
 	unsigned long end_of_layer_info = position1 + extraDataSize;
@@ -90,7 +96,11 @@ layer_ptr layer::create(BEFileInputStream& stream)
 			unsigned long length = stream.read_long();
 			unsigned long end_of_chunk = stream.current_position() + length;
 
-			if(key == 'TySh')	//type tool object settings
+			if(key == 'lspf')
+			{
+				protection_flags_ = stream.read_long();
+			}
+			else if(key == 'TySh')	//type tool object settings
 			{
 				std::wstring text;	//the text in the layer
 
@@ -108,7 +118,7 @@ layer_ptr layer::create(BEFileInputStream& stream)
 					if(text_descriptor.has_item(L"EngineData"))
 					{
 						const descriptor_item& text_data = text_descriptor.get_item(L"EngineData");
-						read_pdf(result->text_layer_info_, text_data.rawdata_data);
+						read_pdf(text_layer_info_, text_data.rawdata_data);
 					}
 				}
 
@@ -130,8 +140,6 @@ layer_ptr layer::create(BEFileInputStream& stream)
 	{
 		stream.set_position(end_of_layer_info);
 	}
-	
-	return result;
 }
 
 void layer::layer_mask::read_mask_data(BEFileInputStream& stream)

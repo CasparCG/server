@@ -97,6 +97,22 @@ void psd_document::read_image_resources()
 				//TODO: read actual data
 				switch(resource_id)
 				{
+				case 1026:		//layer group information. describes linked layers
+					{
+						int layer_count = resource_length / 2;
+						for(int i = 0; i < layer_count; ++i)
+						{
+							short id = input_.read_short();
+
+							if(i == layers_.size())
+								layers_.push_back(std::make_shared<layer>());
+
+							layers_[i]->set_link_group_id(id);
+						}
+
+					}
+					break;
+
 				case 1005:
 					{	
 						////resolutionInfo
@@ -110,51 +126,22 @@ void psd_document::read_image_resources()
 						//int16 heightUnit;
 						//};
 					}
-					break;
-
-				case 1006:
-					{
-						//names of alpha channels
-					}
-					break;
-				
-				case 1008:
-					{} break;	//caption
-
-				case 1010:
-					{} break;	//background color
-
-				case 1024:
-					{} break;	//layer state info (2 bytes containing the index of target layer (0 = bottom layer))
-
-				case 1026:
-					{} break;	//layer group information
-
-				case 1028:
-					{} break;	//IPTC-NAA. File Info...
-				case 1029:	
-					{} break;	//image for raw format files
-				case 1036:
-					break;		//thumbnail resource
+				case 1006:		//names of alpha channels
+				case 1008:		//caption
+				case 1010:		//background color
+				case 1024:		//layer state info (2 bytes containing the index of target layer (0 = bottom layer))
+				case 1028:		//IPTC-NAA. File Info...
+				case 1029:		//image for raw format files
+				case 1036:		//thumbnail resource
 				case 1045:		//unicode Alpha names (Unicode string (4 bytes length followed by string))
-					break;
-				case 1053:
-					break;		//alpha identifiers (4 bytes of length, followed by 4 bytes each for every alpha identifier.)
-				case 1060:
-					break;		//XMP metadata
-				case 1065:
-					break;		//layer comps
-				case 1069:
-					break;		//layer selection ID(s)
+				case 1053:		//alpha identifiers (4 bytes of length, followed by 4 bytes each for every alpha identifier.)
+				case 1060:		//XMP metadata
+				case 1065:		//layer comps
+				case 1069:		//layer selection ID(s)
 				case 1072:		//layer group(s) enabled id
-					break;
 				case 1075:		//timeline information
-					break;
 				case 1077:		//DisplayInfo
-					break;
 				case 2999:		//name of clipping path
-					break;
-
 				default:
 					{
 						if(resource_id >= 2000 && resource_id <=2997)	//path information
@@ -164,10 +151,12 @@ void psd_document::read_image_resources()
 						{
 						}
 					}
+					input_.discard_bytes(resource_length);
 					break;
 				}
 
-				input_.discard_bytes(resource_length);
+				if(resource_length & 1 == 1)	//each resource is padded to an even amount of bytes
+					input_.discard_bytes(1);
 			}
 		}
 		catch(PSDFileFormatException& ex)
@@ -195,9 +184,12 @@ void psd_document::read_layers()
 			short layers_count = abs(static_cast<short>(input_.read_short()));
 			//std::clog << "Expecting " << layers_count << " layers" << std::endl;
 
-			for(unsigned short layerIndex = 0; layerIndex < layers_count; ++layerIndex)
+			for(short layer_index = 0; layer_index < layers_count; ++layer_index)
 			{
-				layers_.push_back(layer::create(input_));	//each layer reads it's "layer record"
+				if(layer_index  == layers_.size())
+					layers_.push_back(std::make_shared<layer>());
+				
+				layers_[layer_index]->populate(input_);
 				//std::clog << "Added layer: " << std::string(layers_[layerIndex]->name().begin(), layers_[layerIndex]->name().end()) << std::endl;
 			}
 
