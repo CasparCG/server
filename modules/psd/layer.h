@@ -60,10 +60,11 @@ public:
 		unsigned char	flags_;
 	};
 
-	layer() : blend_mode_(InvalidBlendMode), opacity_(255), baseClipping_(false), flags_(0), masks_(0)
+	layer() : blend_mode_(InvalidBlendMode), link_group_id_(0), opacity_(255), baseClipping_(false), flags_(0), protection_flags_(0), masks_(0)
 	{}
 
 	static std::shared_ptr<layer> create(BEFileInputStream&);
+	void populate(BEFileInputStream&);
 	void read_channel_data(BEFileInputStream&);
 
 	const std::wstring& name() const
@@ -86,6 +87,7 @@ public:
 	}
 
 	bool visible() { return (flags_ & 2) == 0; }	//the (PSD file-format) documentation is is saying the opposite but what the heck
+	bool is_position_protected() { return (protection_flags_& 4) == 4; }
 	bool is_text() const;
 
 	const boost::property_tree::wptree& text_data() const { return text_layer_info_; }
@@ -95,6 +97,9 @@ public:
 	const layer_mask& mask_info() const { return mask_; }
 	const image8bit_ptr& mask() const { return mask_.mask_; }
 
+	int link_group_id() { return link_group_id_; }
+	void set_link_group_id(int id) { link_group_id_ = id; }
+
 private:
 	channel_ptr get_channel(channel_type);
 	void read_blending_ranges(BEFileInputStream&);
@@ -102,9 +107,11 @@ private:
 	caspar::psd::rect<long>			rect_;
 	std::vector<channel_ptr>		channels_;
 	blend_mode						blend_mode_;
+	int								link_group_id_;
 	unsigned char					opacity_;
 	bool							baseClipping_;
 	unsigned char					flags_;
+	int								protection_flags_;
 	std::wstring					name_;
 	char							masks_;
 
