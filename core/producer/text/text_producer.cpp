@@ -85,6 +85,8 @@ public:
 		, font_(atlas_, find_font_file(text_info.font), text_info.size)
 	{
 		font_.load_glyphs(text::Basic_Latin, text_info.color);
+		font_.load_glyphs(text::Latin_1_Supplement, text_info.color);
+		font_.load_glyphs(text::Latin_Extended_A, text_info.color);
 
 		//generate frame
 		generate_frame(str);
@@ -97,11 +99,14 @@ public:
 		core::pixel_format_desc pfd(core::pixel_format::bgra);
 		pfd.planes.push_back(core::pixel_format_desc::plane((int)atlas_.width(), (int)atlas_.height(), (int)atlas_.depth()));
 
-		std::vector<float> vertex_stream(std::move(font_.create_vertex_stream(str, x_, y_, parent_width_, parent_height_)));
+		text::string_metrics metrics;
+		std::vector<float> vertex_stream(std::move(font_.create_vertex_stream(str, x_, y_, parent_width_, parent_height_, &metrics)));
 		auto frame = frame_factory_->create_frame(vertex_stream.data(), pfd);
 		memcpy(frame.image_data().data(), atlas_.data(), frame.image_data().size());
 		frame.set_geometry(frame_geometry(frame_geometry::quad_list, std::move(vertex_stream)));
 
+		this->constraints_.width.set(metrics.width);
+		this->constraints_.height.set(metrics.height);
 		frame_ = core::draw_frame(std::move(frame));
 	}
 
