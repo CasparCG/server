@@ -20,7 +20,7 @@ class texture_font
 public:
 	texture_font(texture_atlas&, const std::wstring& filename, float size);
 	void load_glyphs(unicode_block block, const color<float>& col);
-	std::vector<float> create_vertex_stream(const std::wstring& str, int x, int y, int parent_width, int parent_height);
+	std::vector<float> create_vertex_stream(const std::wstring& str, int x, int y, int parent_width, int parent_height, string_metrics* metrics);
 	string_metrics measure_string(const std::wstring& str);
 
 private:
