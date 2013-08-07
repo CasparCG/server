@@ -401,8 +401,10 @@ public:
 		return constraints_;
 	}
 		
-	boost::unique_future<std::wstring> call(const std::wstring& param) override
-	{	
+	boost::unique_future<std::wstring> call(const std::vector<std::wstring>& params) override
+	{
+		auto param = boost::algorithm::join(params, L" ");
+
 		return executor_.begin_invoke([this, param]() -> std::wstring
 		{			
 			try
