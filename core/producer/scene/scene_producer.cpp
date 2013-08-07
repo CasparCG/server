@@ -165,14 +165,11 @@ struct scene_producer::impl
 		return boost::optional<interaction_target>();
 	}
 
-	boost::unique_future<std::wstring> call(const std::wstring& params) 
+	boost::unique_future<std::wstring> call(const std::vector<std::wstring>& params) 
 	{
 		std::wstring result;
 		
-		std::vector<std::wstring> words;
-		boost::split(words, params, [](wchar_t c) { return c == L' '; }, boost::token_compress_on);
-
-		if(words.size() >= 2)
+		if(params.size() >= 2)
 		{
 			struct layer_comparer
 			{
@@ -181,9 +178,13 @@ struct scene_producer::impl
 				bool operator()(const layer& val) { return boost::iequals(val.name.get(), str); }
 			};
 
-			auto it = std::find_if(layers_.begin(), layers_.end(), layer_comparer(words[0]));
+			auto it = std::find_if(layers_.begin(), layers_.end(), layer_comparer(params[0]));
 			if(it != layers_.end())
-				(*it).producer.get()->call(words[1]);
+			{
+				auto params2 = params;
+				params2.erase(params2.cbegin());
+				(*it).producer.get()->call(params2);
+			}
 		}
 
 		return async(launch::deferred, [=]{return result;});
@@ -279,7 +280,7 @@ boost::property_tree::wptree scene_producer::info() const
 	return impl_->info();
 }
 
-boost::unique_future<std::wstring> scene_producer::call(const std::wstring& params) 
+boost::unique_future<std::wstring> scene_producer::call(const std::vector<std::wstring>& params) 
 {
 	return impl_->call(params);
 }

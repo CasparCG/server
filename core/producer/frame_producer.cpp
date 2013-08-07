@@ -115,7 +115,7 @@ draw_frame frame_producer_base::last_frame()
 	return impl_->last_frame();
 }
 
-boost::unique_future<std::wstring> frame_producer_base::call(const std::wstring&) 
+boost::unique_future<std::wstring> frame_producer_base::call(const std::vector<std::wstring>&) 
 {
 	CASPAR_THROW_EXCEPTION(not_supported());
 }
@@ -144,7 +144,7 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
 		void unsubscribe(const monitor::observable::observer_ptr& o) override{}	
 		std::wstring name() const override {return L"empty";}
 		uint32_t frame_number() const override {return 0;}
-		boost::unique_future<std::wstring> call(const std::wstring& params) override{CASPAR_THROW_EXCEPTION(not_supported());}
+		boost::unique_future<std::wstring> call(const std::vector<std::wstring>& params) override{CASPAR_THROW_EXCEPTION(not_supported());}
 		draw_frame last_frame() {return draw_frame::empty();}
 		constraints& pixel_constraints() override { static constraints c; return c; }
 	
@@ -213,7 +213,7 @@ public:
 	std::wstring										name() const override															{return producer_->name();}
 	uint32_t											frame_number() const override													{return producer_->frame_number();}
 	boost::property_tree::wptree 						info() const override															{return producer_->info();}
-	boost::unique_future<std::wstring>					call(const std::wstring& str) override											{return producer_->call(str);}
+	boost::unique_future<std::wstring>					call(const std::vector<std::wstring>& params) override							{return producer_->call(params);}
 	void												leading_producer(const spl::shared_ptr<frame_producer>& producer) override		{return producer_->leading_producer(producer);}
 	uint32_t											nb_frames() const override														{return producer_->nb_frames();}
 	class draw_frame									last_frame()																	{return producer_->last_frame();}
