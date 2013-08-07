@@ -172,7 +172,7 @@ public:
 
 spl::shared_ptr<frame_producer> create_freehand_producer(const spl::shared_ptr<frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
-	if(params.size() < 3 || params.at(0) != L"[FREEHAND]")
+	if(params.size() < 3 || !boost::iequals(params.at(0), L"[FREEHAND]"))
 		return core::frame_producer::empty();
 
 	int width = boost::lexical_cast<int>(params.at(1));

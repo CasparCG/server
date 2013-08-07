@@ -178,7 +178,7 @@ spl::shared_ptr<text_producer> text_producer::create(const spl::shared_ptr<frame
 
 spl::shared_ptr<frame_producer> create_text_producer(const spl::shared_ptr<frame_factory>& frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params)
 {
-	if(params.size() < 2 || params.at(0) != L"[TEXT]")
+	if(params.size() < 2 || !boost::iequals(params.at(0), L"[TEXT]"))
 		return core::frame_producer::empty();
 
 	int x = 0, y = 0;
