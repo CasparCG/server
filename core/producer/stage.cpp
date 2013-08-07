@@ -332,7 +332,7 @@ public:
 		}, task_priority::high_priority);
 	}		
 	
-	boost::unique_future<std::wstring> call(int index, const std::wstring& params)
+	boost::unique_future<std::wstring> call(int index, const std::vector<std::wstring>& params)
 	{
 		return flatten(executor_.begin_invoke([=]
 		{
@@ -370,7 +370,7 @@ public:
 };
 
 stage::stage(spl::shared_ptr<diagnostics::graph> graph) : impl_(new impl(std::move(graph))){}
-boost::unique_future<std::wstring> stage::call(int index, const std::wstring& params){return impl_->call(index, params);}
+boost::unique_future<std::wstring> stage::call(int index, const std::vector<std::wstring>& params){return impl_->call(index, params);}
 boost::unique_future<void> stage::apply_transforms(const std::vector<stage::transform_tuple_t>& transforms){return impl_->apply_transforms(transforms);}
 boost::unique_future<void> stage::apply_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const tweener& tween){return impl_->apply_transform(index, transform, mix_duration, tween);}
 boost::unique_future<void> stage::clear_transforms(int index){return impl_->clear_transforms(index);}

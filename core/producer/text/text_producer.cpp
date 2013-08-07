@@ -122,10 +122,10 @@ public:
 		return frame_;
 	}
 
-	boost::unique_future<std::wstring> call(const std::wstring& param)
+	boost::unique_future<std::wstring> call(const std::vector<std::wstring>& param)
 	{
 		std::wstring result;
-		generate_frame(param);
+		generate_frame(param.empty() ? L"" : param[0]);
 
 		return async(launch::deferred, [=]{return result;});
 	}
@@ -159,7 +159,7 @@ text_producer::text_producer(const spl::shared_ptr<frame_factory>& frame_factory
 {}
 
 draw_frame text_producer::receive_impl() { return impl_->receive_impl(); }
-boost::unique_future<std::wstring> text_producer::call(const std::wstring& param) { return impl_->call(param); }
+boost::unique_future<std::wstring> text_producer::call(const std::vector<std::wstring>& param) { return impl_->call(param); }
 text::string_metrics text_producer::measure_string(const std::wstring& str) { return impl_->measure_string(str); }
 
 constraints& text_producer::pixel_constraints() { return impl_->pixel_constraints(); }
