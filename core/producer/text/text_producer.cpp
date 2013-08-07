@@ -27,6 +27,7 @@
 #include <core/frame/geometry.h>
 #include <core/frame/frame.h>
 #include <core/frame/draw_frame.h>
+
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
 #include <core/monitor/monitor.h>
