@@ -205,9 +205,9 @@ void run()
 	{
 		std::getline(std::wcin, wcmd); // TODO: It's blocking...
 				
-		boost::to_upper(wcmd);
+		//boost::to_upper(wcmd);
 
-		if(wcmd == L"EXIT" || wcmd == L"Q" || wcmd == L"QUIT" || wcmd == L"BYE")
+		if(boost::iequals(wcmd, L"EXIT") || boost::iequals(wcmd, L"Q") || boost::iequals(wcmd, L"QUIT") || boost::iequals(wcmd, L"BYE"))
 			break;
 
 		try

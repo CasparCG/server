@@ -297,7 +297,7 @@ void scene_producer::unsubscribe(const monitor::observable::observer_ptr& o)
 
 spl::shared_ptr<frame_producer> create_dummy_scene_producer(const spl::shared_ptr<class frame_factory>& frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params)
 {
-	if (params.size() < 1 || params.at(0) != L"[SCENE]")
+	if (params.size() < 1 || !boost::iequals(params.at(0), L"[SCENE]"))
 		return core::frame_producer::empty();
 
 	auto scene = spl::make_shared<scene_producer>(format_desc.width, format_desc.height);
