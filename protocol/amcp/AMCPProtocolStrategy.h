@@ -56,16 +56,16 @@ public:
 		return "UTF-8";
 	}
 
-	AMCPCommandPtr InterpretCommandString(const std::wstring& str, MessageParserState* pOutState=0);
+	AMCPCommand::ptr_type InterpretCommandString(const std::wstring& str, MessageParserState* pOutState=0);
 
 private:
 	friend class AMCPCommand;
 
 	void ProcessMessage(const std::wstring& message, IO::ClientInfoPtr& pClientInfo);
 	std::size_t TokenizeMessage(const std::wstring& message, std::vector<std::wstring>* pTokenVector);
-	AMCPCommandPtr CommandFactory(const std::wstring& str);
+	AMCPCommand::ptr_type CommandFactory(const std::wstring& str);
 
-	bool QueueCommand(AMCPCommandPtr);
+	bool QueueCommand(AMCPCommand::ptr_type);
 
 	std::vector<spl::shared_ptr<core::video_channel>> channels_;
 	std::vector<AMCPCommandQueuePtr> commandQueues_;

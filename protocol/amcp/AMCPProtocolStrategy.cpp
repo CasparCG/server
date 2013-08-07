@@ -117,9 +117,7 @@ void AMCPProtocolStrategy::ProcessMessage(const std::wstring& message, ClientInf
 	bool bError = true;
 	MessageParserState state = New;
 
-	AMCPCommandPtr pCommand;
-
-	pCommand = InterpretCommandString(message, &state);
+	AMCPCommand::ptr_type pCommand(InterpretCommandString(message, &state));
 
 	if(pCommand != 0) {
 		pCommand->SetClientInfo(pClientInfo);	
@@ -150,13 +148,13 @@ void AMCPProtocolStrategy::ProcessMessage(const std::wstring& message, ClientInf
 	}
 }
 
-AMCPCommandPtr AMCPProtocolStrategy::InterpretCommandString(const std::wstring& message, MessageParserState* pOutState)
+AMCPCommand::ptr_type AMCPProtocolStrategy::InterpretCommandString(const std::wstring& message, MessageParserState* pOutState)
 {
 	std::vector<std::wstring> tokens;
 	unsigned int currentToken = 0;
 	std::wstring commandSwitch;
 
-	AMCPCommandPtr pCommand;
+	AMCPCommand::ptr_type pCommand;
 	MessageParserState state = New;
 
 	std::size_t tokensInMessage = TokenizeMessage(message, &tokens);
@@ -280,7 +278,7 @@ ParseFinnished:
 	return pCommand;
 }
 
-bool AMCPProtocolStrategy::QueueCommand(AMCPCommandPtr pCommand) {
+bool AMCPProtocolStrategy::QueueCommand(AMCPCommand::ptr_type pCommand) {
 	if(pCommand->NeedChannel()) {
 		unsigned int channelIndex = pCommand->GetChannelIndex() + 1;
 		if(commandQueues_.size() > channelIndex) {
@@ -295,7 +293,7 @@ bool AMCPProtocolStrategy::QueueCommand(AMCPCommandPtr pCommand) {
 	return true;
 }
 
-AMCPCommandPtr AMCPProtocolStrategy::CommandFactory(const std::wstring& str)
+AMCPCommand::ptr_type AMCPProtocolStrategy::CommandFactory(const std::wstring& str)
 {
 	std::wstring s = str;
 	transform(s.begin(), s.end(), s.begin(), toupper);
