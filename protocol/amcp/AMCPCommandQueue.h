@@ -37,7 +37,7 @@ public:
 	AMCPCommandQueue();
 	~AMCPCommandQueue();
 
-	void AddCommand(AMCPCommandPtr pCommand);
+	void AddCommand(AMCPCommand::ptr_type pCommand);
 
 private:
 	executor			executor_;

@@ -36,7 +36,7 @@ AMCPCommandQueue::~AMCPCommandQueue()
 {
 }
 
-void AMCPCommandQueue::AddCommand(AMCPCommandPtr pCurrentCommand)
+void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 {
 	if(!pCurrentCommand)
 		return;
