@@ -185,6 +185,7 @@ struct image_kernel::impl
 		// Setup drawing area
 		
 		GL(glViewport(0, 0, params.background->width(), params.background->height()));
+		glDisable(GL_DEPTH_TEST);
 										
 		auto m_p = params.transform.clip_translation;
 		auto m_s = params.transform.clip_scale;
@@ -262,19 +263,9 @@ struct image_kernel::impl
 			default:
 				break;
 			}
-
-
-			// Draw
-			/*glBegin(GL_QUADS);
-				glMultiTexCoord2d(GL_TEXTURE0, 0.0, 0.0); glVertex2d(0, 0);
-				glMultiTexCoord2d(GL_TEXTURE0, 1.0, 0.0); glVertex2d(1, 0);
-				glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0); glVertex2d(1, 1);
-				glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glVertex2d(0, 1);
-			glEnd();*/
 		glPopMatrix();
 		
 		// Cleanup
-		
 		GL(glDisable(GL_SCISSOR_TEST));
 		GL(glDisable(GL_POLYGON_STIPPLE));
 		GL(glDisable(GL_BLEND));
