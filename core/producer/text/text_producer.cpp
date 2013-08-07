@@ -71,18 +71,20 @@ struct text_producer::impl
 	spl::shared_ptr<core::frame_factory>	frame_factory_;
 	constraints constraints_;
 	int x_, y_, parent_width_, parent_height_;
+	bool standalone_;
 	std::wstring text_;
 	draw_frame frame_;
 	text::texture_atlas atlas_;
 	text::texture_font font_;
 
 public:
-	explicit impl(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, const text::text_info& text_info, long parent_width, long parent_height) 
+	explicit impl(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, const text::text_info& text_info, long parent_width, long parent_height, bool standalone) 
 		: frame_factory_(frame_factory)
 		, constraints_(parent_width, parent_height)
 		, x_(x), y_(y), parent_width_(parent_width), parent_height_(parent_height)
+		, standalone_(standalone)
 		, atlas_(512,512,4)
-		, font_(atlas_, find_font_file(text_info.font), text_info.size)
+		, font_(atlas_, find_font_file(text_info.font), text_info.size, !standalone)
 	{
 		font_.load_glyphs(text::Basic_Latin, text_info.color);
 		font_.load_glyphs(text::Latin_1_Supplement, text_info.color);
@@ -154,8 +156,8 @@ public:
 	}
 };
 
-text_producer::text_producer(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, const text::text_info& text_info, long parent_width, long parent_height)
-	: impl_(new impl(frame_factory, x, y, str, text_info, parent_width, parent_height))
+text_producer::text_producer(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, const text::text_info& text_info, long parent_width, long parent_height, bool standalone)
+	: impl_(new impl(frame_factory, x, y, str, text_info, parent_width, parent_height, standalone))
 {}
 
 draw_frame text_producer::receive_impl() { return impl_->receive_impl(); }
@@ -169,11 +171,9 @@ boost::property_tree::wptree text_producer::info() const { return impl_->info();
 void text_producer::subscribe(const monitor::observable::observer_ptr& o) {}
 void text_producer::unsubscribe(const monitor::observable::observer_ptr& o) {}
 
-
-
-spl::shared_ptr<frame_producer> do_create_text_producer(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, const text::text_info& text_info, long parent_width, long parent_height)
+spl::shared_ptr<text_producer> text_producer::create(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, const text::text_info& text_info, long parent_width, long parent_height, bool standalone)
 {
-	return spl::make_shared<text_producer>(frame_factory, x, y, str, text_info, parent_width, parent_height);
+	return spl::make_shared<text_producer>(frame_factory, x, y, str, text_info, parent_width, parent_height, standalone);
 }
 
 spl::shared_ptr<frame_producer> create_text_producer(const spl::shared_ptr<frame_factory>& frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params)
@@ -192,7 +192,7 @@ spl::shared_ptr<frame_producer> create_text_producer(const spl::shared_ptr<frame
 	text_info.font = L"verdana";
 	text_info.size = 30;
 	text_info.color = text::color<float>(1.0f, 0, 0, 1.0f);
-	return do_create_text_producer(frame_factory, x, y, params.at(1), text_info, format_desc.width, format_desc.height);
+	return text_producer::create(frame_factory, x, y, params.at(1), text_info, format_desc.width, format_desc.height, true);
 }
 
 }}

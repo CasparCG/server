@@ -44,10 +44,11 @@ private:
 	FT_Face			face_;
 	texture_atlas	atlas_;
 	float			size_;
+	bool			normalize_;
 	std::map<int, glyph_info> glyphs_;
 
 public:
-	impl::impl(texture_atlas& atlas, const std::wstring& filename, float size) : lib_(nullptr), face_(nullptr), atlas_(atlas), size_(size)
+	impl::impl(texture_atlas& atlas, const std::wstring& filename, float size, bool normalize_coordinates) : lib_(nullptr), face_(nullptr), atlas_(atlas), size_(size), normalize_(normalize_coordinates)
 	{
 		try
 		{
@@ -205,12 +206,15 @@ public:
 			}
 		}
 
-		float ratio_x = parent_width/(pos_x - x);
-		float ratio_y = parent_height/(float)(maxHeight);
-		for(index = 0; index < result.size(); index += 4)
+		if(normalize_)
 		{
-			result[index + 0] *= ratio_x;
-			result[index + 1] *= ratio_y;
+			float ratio_x = parent_width/(pos_x - x);
+			float ratio_y = parent_height/(float)(maxHeight);
+			for(index = 0; index < result.size(); index += 4)
+			{
+				result[index + 0] *= ratio_x;
+				result[index + 1] *= ratio_y;
+			}
 		}
 
 		if(metrics != nullptr)
@@ -269,7 +273,7 @@ public:
 	}
 }; 
 
-texture_font::texture_font(texture_atlas& atlas, const std::wstring& filename, float size) : impl_(new impl(atlas, filename, size)) {}
+texture_font::texture_font(texture_atlas& atlas, const std::wstring& filename, float size, bool normalize_coordinates) : impl_(new impl(atlas, filename, size, normalize_coordinates)) {}
 void texture_font::load_glyphs(unicode_block range, const color<float>& col) { impl_->load_glyphs(range, col); }
 std::vector<float> texture_font::create_vertex_stream(const std::wstring& str, int x, int y, int parent_width, int parent_height, string_metrics* metrics) { return impl_->create_vertex_stream(str, x, y, parent_width, parent_height, metrics); }
 string_metrics texture_font::measure_string(const std::wstring& str) { return impl_->measure_string(str); }
