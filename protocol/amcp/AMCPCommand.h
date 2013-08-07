@@ -35,7 +35,10 @@ namespace amcp {
 	{
 		AMCPCommand(const AMCPCommand&);
 		AMCPCommand& operator=(const AMCPCommand&);
+
 	public:
+		typedef std::shared_ptr<AMCPCommand> ptr_type;
+
 		AMCPCommand();
 		virtual ~AMCPCommand() {}
 		virtual bool Execute() = 0;
@@ -45,7 +48,7 @@ namespace amcp {
 
 		void SendReply();
 
-		void AddParameter(const std::wstring& param){_parameters.push_back(param);}
+		void AddParameter(const std::wstring& param){ parameters_.push_back(param);}
 
 		void SetClientInfo(IO::ClientInfoPtr& s){pClientInfo_ = s;}
 		IO::ClientInfoPtr GetClientInfo(){return pClientInfo_;}
@@ -69,10 +72,10 @@ namespace amcp {
 		void SetReplyString(const std::wstring& str){replyString_ = str;}
 
 	protected:
-		std::vector<std::wstring> _parameters;
-		std::vector<std::wstring> _parameters2;
+		std::vector<std::wstring>& parameters() { return parameters_; }
 
 	private:
+		std::vector<std::wstring> parameters_;
 		unsigned int channelIndex_;
 		int layerIndex_;
 		IO::ClientInfoPtr pClientInfo_;
@@ -81,18 +84,13 @@ namespace amcp {
 		std::wstring replyString_;
 	};
 
-	typedef std::tr1::shared_ptr<AMCPCommand> AMCPCommandPtr;
-
 	template<bool TNeedChannel,int TMinParameters>
 	class AMCPCommandBase : public AMCPCommand
 	{
 	public:
 		virtual bool Execute()
 		{
-			_parameters2 = _parameters;
-			for(size_t n = 0; n < _parameters.size(); ++n)
-				_parameters[n] = boost::to_upper_copy(_parameters[n]);
-			return (TNeedChannel && !GetChannel()) || _parameters.size() < TMinParameters ? false : DoExecute();
+			return (TNeedChannel && !GetChannel()) || parameters().size() < TMinParameters ? false : DoExecute();
 		}
 
 		virtual bool NeedChannel(){return TNeedChannel;}		
