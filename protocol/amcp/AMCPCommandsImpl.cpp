@@ -358,12 +358,7 @@ bool CallCommand::DoExecute()
 	try
 	{
 		auto what = _parameters.at(0);
-				
-		std::wstring param;
-		for(auto it = std::begin(_parameters2); it != std::end(_parameters2); ++it, param += L" ")
-			param += *it;
-
-		auto result = GetChannel()->stage().call(GetLayerIndex(), boost::trim_copy(param));
+		auto result = GetChannel()->stage().call(GetLayerIndex(), _parameters2);
 		
 		if(!result.timed_wait(boost::posix_time::seconds(2)))
 			CASPAR_THROW_EXCEPTION(timed_out());
