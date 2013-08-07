@@ -31,6 +31,7 @@
 #include <common/env.h>
 
 #include <common/log.h>
+#include <common/param.h>
 #include <common/diagnostics/graph.h>
 #include <common/os/windows/current_version.h>
 #include <common/os/windows/system_info.h>
@@ -720,12 +721,6 @@ bool LoadCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		//create_producer still expects all parameters to be uppercase
-		BOOST_FOREACH(std::wstring& str, parameters())
-		{
-			boost::to_upper(str);
-		}
-
 		auto pFP = create_producer(GetChannel()->frame_factory(), GetChannel()->video_format_desc(), parameters());		
 		GetChannel()->stage().load(GetLayerIndex(), pFP, true);
 	
@@ -843,18 +838,13 @@ bool LoadbgCommand::DoExecute()
 		}
 		else
 		{
-			//create_producer still expects all parameters to be uppercase
-			BOOST_FOREACH(std::wstring& str, parameters())
-			{
-				boost::to_upper(str);
-			}
 			pFP = create_producer(GetChannel()->frame_factory(), GetChannel()->video_format_desc(), parameters());
 		}
 		
 		if(pFP == frame_producer::empty())
 			CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(parameters().size() > 0 ? parameters()[0] : L""));
 
-		bool auto_play = std::find_if(parameters().begin(), parameters().end(), [](const std::wstring& p) { return boost::iequals(p, L"AUTO"); }) != parameters().end();
+		bool auto_play = contains_param(L"AUTO", parameters());
 
 		auto pFP2 = create_transition_producer(GetChannel()->video_format_desc().field_mode, spl::make_shared_ptr(pFP), transitionInfo);
 		if(auto_play)
