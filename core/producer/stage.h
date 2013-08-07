@@ -72,7 +72,7 @@ public:
 	boost::unique_future<void>			pause(int index);
 	boost::unique_future<void>			play(int index);
 	boost::unique_future<void>			stop(int index);
-	boost::unique_future<std::wstring>	call(int index, const std::wstring& params);
+	boost::unique_future<std::wstring>	call(int index, const std::vector<std::wstring>& params);
 	boost::unique_future<void>			clear(int index);
 	boost::unique_future<void>			clear();	
 	boost::unique_future<void>			swap_layers(stage& other);

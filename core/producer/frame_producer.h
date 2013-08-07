@@ -72,7 +72,7 @@ public:
 	// Methods	
 
 	virtual class draw_frame					receive() = 0;
-	virtual boost::unique_future<std::wstring>	call(const std::wstring& params) = 0;
+	virtual boost::unique_future<std::wstring>	call(const std::vector<std::wstring>& params) = 0;
 	
 	// monitor::observable
 
@@ -105,7 +105,7 @@ public:
 
 	// Methods	
 
-	virtual boost::unique_future<std::wstring>	call(const std::wstring& params);
+	virtual boost::unique_future<std::wstring>	call(const std::vector<std::wstring>& params);
 	
 	// monitor::observable
 	

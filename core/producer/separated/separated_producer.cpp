@@ -104,10 +104,10 @@ public:
 		return L"separated[fill:" + fill_producer_->print() + L"|key[" + key_producer_->print() + L"]]";
 	}	
 
-	boost::unique_future<std::wstring> call(const std::wstring& str) override
+	boost::unique_future<std::wstring> call(const std::vector<std::wstring>& params) override
 	{
-		key_producer_->call(str);
-		return fill_producer_->call(str);
+		key_producer_->call(params);
+		return fill_producer_->call(params);
 	}
 
 	std::wstring name() const override

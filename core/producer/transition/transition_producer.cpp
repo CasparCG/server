@@ -143,9 +143,9 @@ public:
 		return dest_producer_->info();
 	}
 	
-	boost::unique_future<std::wstring> call(const std::wstring& str) override
+	boost::unique_future<std::wstring> call(const std::vector<std::wstring>& params) override
 	{
-		return dest_producer_->call(str);
+		return dest_producer_->call(params);
 	}
 
 	// transition_producer

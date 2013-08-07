@@ -188,7 +188,9 @@ void CIIProtocolStrategy::WriteTemplateData(const std::wstring& templateName, co
 
 	std::wstringstream flashParam;
 	flashParam << TEXT("<invoke name=\"Add\" returntype=\"xml\"><arguments><number>1</number><string>") << currentProfile_ << '/' <<  templateName << TEXT("</string><number>0</number><true/><string> </string><string><![CDATA[ ") << xmlData << TEXT(" ]]></string></arguments></invoke>");
-	producer->call(flashParam.str());
+	std::vector<std::wstring> params;
+	params.push_back(flashParam.str());
+	producer->call(std::move(params));
 
 	CASPAR_LOG(info) << "Saved an instance of " << templateName << TEXT(" as ") << titleName ;
 
