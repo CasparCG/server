@@ -387,7 +387,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 	if(filename.empty())
 		return core::frame_producer::empty();
 	
-	auto loop		= boost::range::find(params, L"LOOP") != params.end();
+	bool loop		= contains_param(L"LOOP", params);
 	auto start		= get_param(L"START", params, get_param(L"SEEK", params, static_cast<uint32_t>(0)));
 	auto length		= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
 	auto filter_str = get_param(L"FILTER", params, L""); 	

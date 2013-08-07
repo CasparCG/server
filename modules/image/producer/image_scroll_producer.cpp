@@ -40,6 +40,7 @@
 #include <common/except.h>
 #include <common/array.h>
 #include <common/tweener.h>
+#include <common/param.h>
 
 #include <boost/assign.hpp>
 #include <boost/filesystem.hpp>
@@ -417,37 +418,19 @@ spl::shared_ptr<core::frame_producer> create_scroll_producer(const spl::shared_p
 	if(ext == extensions.end())
 		return core::frame_producer::empty();
 	
-	double speed = 0.0;
 	double duration = 0.0;
-	auto speed_it = std::find(params.begin(), params.end(), L"SPEED");
-	if(speed_it != params.end())
-	{
-		if(++speed_it != params.end())
-			speed = boost::lexical_cast<double>(*speed_it);
-	}
+	double speed = get_param(L"SPEED", params, 0.0);
 
 	if (speed == 0)
-	{
-		auto duration_it = std::find(params.begin(), params.end(), L"DURATION");
-
-		if (duration_it != params.end() && ++duration_it != params.end())
-		{
-			duration = boost::lexical_cast<double>(*duration_it);
-		}
-	}
+		duration = get_param(L"DURATION", params, 0.0);
 
 	if(speed == 0 && duration == 0)
 		return core::frame_producer::empty();
 
-	int motion_blur_px = 0;
-	auto blur_it = std::find(params.begin(), params.end(), L"BLUR");
-	if (blur_it != params.end() && ++blur_it != params.end())
-	{
-		motion_blur_px = boost::lexical_cast<int>(*blur_it);
-	}
+	int motion_blur_px = get_param(L"BLUR", params, 0);
 
-	bool premultiply_with_alpha = std::find(params.begin(), params.end(), L"PREMULTIPLY") != params.end();
-	bool progressive = std::find(params.begin(), params.end(), L"PROGRESSIVE") != params.end();
+	bool premultiply_with_alpha = contains_param(L"PREMULTIPLY", params);
+	bool progressive = contains_param(L"PROGRESSIVE", params);
 
 	return core::create_destroy_proxy(spl::make_shared<image_scroll_producer>(
 		frame_factory, 

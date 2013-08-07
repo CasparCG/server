@@ -38,6 +38,7 @@
 #include <common/array.h>
 #include <common/env.h>
 #include <common/future.h>
+#include <common/os/windows/system_info.h>
 #include <memory>
 
 #include <asmlib.h>
@@ -50,21 +51,46 @@
 #include "utils\texture_atlas.h"
 #include "utils\texture_font.h"
 
+class font_comparer {
+	const std::wstring& lhs;
+public:
+	explicit font_comparer(const std::wstring& p) : lhs(p) {}
+	bool operator()(const std::pair<std::wstring, std::wstring>&rhs) { return boost::iequals(lhs, rhs.first); }
+};
+
+
 namespace caspar { namespace core {
+	namespace text {
+		
+		std::map<std::wstring, std::wstring> fonts;
+		
+		void init()
+		{
+			fonts.swap(std::move(caspar::enumerate_fonts()));
+		}
 
-std::wstring find_font_file(const std::wstring& font_name)
-{
-	std::wstring filename = L"c:\\windows\\fonts\\" + font_name;	//TODO: move font-folder setting to settings
-	if(boost::filesystem::exists(filename + L".otf"))
-		return filename + L".otf";
-	if(boost::filesystem::exists(filename + L".ttf"))
-		return filename + L".ttf";
-	if(boost::filesystem::exists(filename + L".fon"))
-		return filename + L".fon";
+		std::wstring find_font_file(const std::wstring& font_name)
+		{
+			auto it = std::find_if(fonts.begin(), fonts.end(), font_comparer(font_name));
+			if(it != fonts.end())
+			{
+				std::wstring filename = L"c:\\windows\\fonts\\" + (*it).second;	//TODO: move font-folder setting to settings
+				return filename;
+			}
+	
+			//try the default font
+			it = std::find_if(fonts.begin(), fonts.end(), font_comparer(L"verdana"));	//TODO: move default-font to settings
+			if(it != fonts.end())
+			{
+				std::wstring filename = L"c:\\windows\\fonts\\" + (*it).second;	//TODO: move font-folder setting to settings
+				return filename;
+			}
 
-	//TODO: Searching by filename is not enough to identify some fonts. we need to extract the font-names somehow
-	return L"";
-}
+			//fail
+			return L"";
+		}
+	}
+	
 
 struct text_producer::impl
 {
@@ -84,7 +110,7 @@ public:
 		, x_(x), y_(y), parent_width_(parent_width), parent_height_(parent_height)
 		, standalone_(standalone)
 		, atlas_(512,512,4)
-		, font_(atlas_, find_font_file(text_info.font), text_info.size, !standalone)
+		, font_(atlas_, text::find_font_file(text_info.font), text_info.size, !standalone)
 	{
 		font_.load_glyphs(text::Basic_Latin, text_info.color);
 		font_.load_glyphs(text::Latin_1_Supplement, text_info.color);
@@ -178,7 +204,7 @@ spl::shared_ptr<text_producer> text_producer::create(const spl::shared_ptr<frame
 
 spl::shared_ptr<frame_producer> create_text_producer(const spl::shared_ptr<frame_factory>& frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params)
 {
-	if(params.size() < 2 || params.at(0) != L"[TEXT]")
+	if(params.size() < 2 || !boost::iequals(params.at(0), L"[TEXT]"))
 		return core::frame_producer::empty();
 
 	int x = 0, y = 0;
