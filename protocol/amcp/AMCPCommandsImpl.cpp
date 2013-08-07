@@ -271,6 +271,7 @@ void AMCPCommand::SendReply()
 
 	if(replyString_.empty())
 		return;
+
 	pClientInfo_->Send(replyString_);
 }
 
@@ -279,7 +280,7 @@ void AMCPCommand::Clear()
 	pChannel_->stage().clear();
 	pClientInfo_.reset();
 	channelIndex_ = 0;
-	_parameters.clear();
+	parameters_.clear();
 }
 
 bool DiagnosticsCommand::DoExecute()
@@ -357,8 +358,8 @@ bool CallCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		auto what = _parameters.at(0);
-		auto result = GetChannel()->stage().call(GetLayerIndex(), _parameters2);
+		//auto what = _parameters.at(0);
+		auto result = GetChannel()->stage().call(GetLayerIndex(), parameters());
 		
 		if(!result.timed_wait(boost::posix_time::seconds(2)))
 			CASPAR_THROW_EXCEPTION(timed_out());
@@ -388,27 +389,27 @@ bool MixerCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{	
-		bool defer = _parameters.back() == L"DEFER";
+		bool defer = boost::iequals(parameters().back(), L"DEFER");
 		if(defer)
-			_parameters.pop_back();
+			parameters().pop_back();
 
 		std::vector<stage::transform_tuple_t> transforms;
 
-		if(_parameters[0] == L"KEYER" || _parameters[0] == L"IS_KEY")
+		if(boost::iequals(parameters()[0], L"KEYER") || boost::iequals(parameters()[0], L"IS_KEY"))
 		{
-			bool value = boost::lexical_cast<int>(_parameters.at(1));
+			bool value = boost::lexical_cast<int>(parameters().at(1));
 			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.image_transform.is_key = value;
 				return transform;					
 			}, 0, L"linear"));
 		}
-		else if(_parameters[0] == L"OPACITY")
+		else if(boost::iequals(parameters()[0], L"OPACITY"))
 		{
-			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
-			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
+			int duration = parameters().size() > 2 ? boost::lexical_cast<int>(parameters()[2]) : 0;
+			std::wstring tween = parameters().size() > 3 ? parameters()[3] : L"linear";
 
-			double value = boost::lexical_cast<double>(_parameters.at(1));
+			double value = boost::lexical_cast<double>(parameters().at(1));
 			
 			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
@@ -416,14 +417,14 @@ bool MixerCommand::DoExecute()
 				return transform;					
 			}, duration, tween));
 		}
-		else if(_parameters[0] == L"FILL" || _parameters[0] == L"FILL_RECT")
+		else if(boost::iequals(parameters()[0], L"FILL") || boost::iequals(parameters()[0], L"FILL_RECT"))
 		{
-			int duration = _parameters.size() > 5 ? boost::lexical_cast<int>(_parameters[5]) : 0;
-			std::wstring tween = _parameters.size() > 6 ? _parameters[6] : L"linear";
-			double x	= boost::lexical_cast<double>(_parameters.at(1));
-			double y	= boost::lexical_cast<double>(_parameters.at(2));
-			double x_s	= boost::lexical_cast<double>(_parameters.at(3));
-			double y_s	= boost::lexical_cast<double>(_parameters.at(4));
+			int duration = parameters().size() > 5 ? boost::lexical_cast<int>(parameters()[5]) : 0;
+			std::wstring tween = parameters().size() > 6 ? parameters()[6] : L"linear";
+			double x	= boost::lexical_cast<double>(parameters().at(1));
+			double y	= boost::lexical_cast<double>(parameters().at(2));
+			double x_s	= boost::lexical_cast<double>(parameters().at(3));
+			double y_s	= boost::lexical_cast<double>(parameters().at(4));
 
 			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) mutable -> frame_transform
 			{
@@ -434,14 +435,14 @@ bool MixerCommand::DoExecute()
 				return transform;
 			}, duration, tween));
 		}
-		else if(_parameters[0] == L"CLIP" || _parameters[0] == L"CLIP_RECT")
+		else if(boost::iequals(parameters()[0], L"CLIP") || boost::iequals(parameters()[0], L"CLIP_RECT"))
 		{
-			int duration = _parameters.size() > 5 ? boost::lexical_cast<int>(_parameters[5]) : 0;
-			std::wstring tween = _parameters.size() > 6 ? _parameters[6] : L"linear";
-			double x	= boost::lexical_cast<double>(_parameters.at(1));
-			double y	= boost::lexical_cast<double>(_parameters.at(2));
-			double x_s	= boost::lexical_cast<double>(_parameters.at(3));
-			double y_s	= boost::lexical_cast<double>(_parameters.at(4));
+			int duration = parameters().size() > 5 ? boost::lexical_cast<int>(parameters()[5]) : 0;
+			std::wstring tween = parameters().size() > 6 ? parameters()[6] : L"linear";
+			double x	= boost::lexical_cast<double>(parameters().at(1));
+			double y	= boost::lexical_cast<double>(parameters().at(2));
+			double x_s	= boost::lexical_cast<double>(parameters().at(3));
+			double y_s	= boost::lexical_cast<double>(parameters().at(4));
 
 			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
@@ -452,11 +453,11 @@ bool MixerCommand::DoExecute()
 				return transform;
 			}, duration, tween));
 		}
-		else if(_parameters[0] == L"GRID")
+		else if(boost::iequals(parameters()[0], L"GRID"))
 		{
-			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
-			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
-			int n = boost::lexical_cast<int>(_parameters.at(1));
+			int duration = parameters().size() > 2 ? boost::lexical_cast<int>(parameters()[2]) : 0;
+			std::wstring tween = parameters().size() > 3 ? parameters()[3] : L"linear";
+			int n = boost::lexical_cast<int>(parameters().at(1));
 			double delta = 1.0/static_cast<double>(n);
 			for(int x = 0; x < n; ++x)
 			{
@@ -478,60 +479,60 @@ bool MixerCommand::DoExecute()
 				}
 			}
 		}
-		else if(_parameters[0] == L"BLEND")
+		else if(boost::iequals(parameters()[0], L"BLEND"))
 		{
-			auto blend_str = _parameters.at(1);								
+			auto blend_str = parameters().at(1);								
 			int layer = GetLayerIndex();
 			GetChannel()->mixer().set_blend_mode(GetLayerIndex(), get_blend_mode(blend_str));	
 		}
-		else if(_parameters[0] == L"MASTERVOLUME")
+		else if(boost::iequals(parameters()[0], L"MASTERVOLUME"))
 		{
-			float master_volume = boost::lexical_cast<float>(_parameters.at(1));
+			float master_volume = boost::lexical_cast<float>(parameters().at(1));
 			GetChannel()->mixer().set_master_volume(master_volume);
 		}
-		else if(_parameters[0] == L"BRIGHTNESS")
+		else if(boost::iequals(parameters()[0], L"BRIGHTNESS"))
 		{
-			auto value = boost::lexical_cast<double>(_parameters.at(1));
-			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
-			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
+			auto value = boost::lexical_cast<double>(parameters().at(1));
+			int duration = parameters().size() > 2 ? boost::lexical_cast<int>(parameters()[2]) : 0;
+			std::wstring tween = parameters().size() > 3 ? parameters()[3] : L"linear";
 			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.image_transform.brightness = value;
 				return transform;
 			}, duration, tween));
 		}
-		else if(_parameters[0] == L"SATURATION")
+		else if(boost::iequals(parameters()[0], L"SATURATION"))
 		{
-			auto value = boost::lexical_cast<double>(_parameters.at(1));
-			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
-			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
+			auto value = boost::lexical_cast<double>(parameters().at(1));
+			int duration = parameters().size() > 2 ? boost::lexical_cast<int>(parameters()[2]) : 0;
+			std::wstring tween = parameters().size() > 3 ? parameters()[3] : L"linear";
 			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.image_transform.saturation = value;
 				return transform;
 			}, duration, tween));	
 		}
-		else if(_parameters[0] == L"CONTRAST")
+		else if(parameters()[0] == L"CONTRAST")
 		{
-			auto value = boost::lexical_cast<double>(_parameters.at(1));
-			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
-			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
+			auto value = boost::lexical_cast<double>(parameters().at(1));
+			int duration = parameters().size() > 2 ? boost::lexical_cast<int>(parameters()[2]) : 0;
+			std::wstring tween = parameters().size() > 3 ? parameters()[3] : L"linear";
 			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.image_transform.contrast = value;
 				return transform;
 			}, duration, tween));	
 		}
-		else if(_parameters[0] == L"LEVELS")
+		else if(boost::iequals(parameters()[0], L"LEVELS"))
 		{
 			levels value;
-			value.min_input  = boost::lexical_cast<double>(_parameters.at(1));
-			value.max_input  = boost::lexical_cast<double>(_parameters.at(2));
-			value.gamma		 = boost::lexical_cast<double>(_parameters.at(3));
-			value.min_output = boost::lexical_cast<double>(_parameters.at(4));
-			value.max_output = boost::lexical_cast<double>(_parameters.at(5));
-			int duration = _parameters.size() > 6 ? boost::lexical_cast<int>(_parameters[6]) : 0;
-			std::wstring tween = _parameters.size() > 7 ? _parameters[7] : L"linear";
+			value.min_input  = boost::lexical_cast<double>(parameters().at(1));
+			value.max_input  = boost::lexical_cast<double>(parameters().at(2));
+			value.gamma		 = boost::lexical_cast<double>(parameters().at(3));
+			value.min_output = boost::lexical_cast<double>(parameters().at(4));
+			value.max_output = boost::lexical_cast<double>(parameters().at(5));
+			int duration = parameters().size() > 6 ? boost::lexical_cast<int>(parameters()[6]) : 0;
+			std::wstring tween = parameters().size() > 7 ? parameters()[7] : L"linear";
 
 			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
@@ -539,11 +540,11 @@ bool MixerCommand::DoExecute()
 				return transform;
 			}, duration, tween));
 		}
-		else if(_parameters[0] == L"VOLUME")
+		else if(boost::iequals(parameters()[0], L"VOLUME"))
 		{
-			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
-			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
-			double value = boost::lexical_cast<double>(_parameters[1]);
+			int duration = parameters().size() > 2 ? boost::lexical_cast<int>(parameters()[2]) : 0;
+			std::wstring tween = parameters().size() > 3 ? parameters()[3] : L"linear";
+			double value = boost::lexical_cast<double>(parameters()[1]);
 
 			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
@@ -551,7 +552,7 @@ bool MixerCommand::DoExecute()
 				return transform;
 			}, duration, tween));
 		}
-		else if(_parameters[0] == L"CLEAR")
+		else if(boost::iequals(parameters()[0], L"CLEAR"))
 		{
 			int layer = GetLayerIndex(std::numeric_limits<int>::max());
 
@@ -566,7 +567,7 @@ bool MixerCommand::DoExecute()
 				GetChannel()->mixer().clear_blend_mode(layer);
 			}
 		}
-		else if(_parameters[0] == L"COMMIT")
+		else if(boost::iequals(parameters()[0], L"COMMIT"))
 		{
 			transforms = std::move(deferred_transforms[GetChannelIndex()]);
 		}
@@ -610,7 +611,7 @@ bool SwapCommand::DoExecute()
 		if(GetLayerIndex(-1) != -1)
 		{
 			std::vector<std::string> strs;
-			boost::split(strs, _parameters[0], boost::is_any_of("-"));
+			boost::split(strs, parameters()[0], boost::is_any_of("-"));
 			
 			auto ch1 = GetChannel();
 			auto ch2 = GetChannels().at(boost::lexical_cast<int>(strs.at(0))-1);
@@ -623,7 +624,7 @@ bool SwapCommand::DoExecute()
 		else
 		{
 			auto ch1 = GetChannel();
-			auto ch2 = GetChannels().at(boost::lexical_cast<int>(_parameters[0])-1);
+			auto ch2 = GetChannels().at(boost::lexical_cast<int>(parameters()[0])-1);
 			ch1->stage().swap_layers(ch2->stage());
 		}
 		
@@ -650,7 +651,13 @@ bool AddCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		auto consumer = create_consumer(_parameters);
+		//create_consumer still expects all parameters to be uppercase
+		BOOST_FOREACH(std::wstring& str, parameters())
+		{
+			boost::to_upper(str);
+		}
+
+		auto consumer = create_consumer(parameters());
 		GetChannel()->output().add(GetLayerIndex(consumer->index()), consumer);
 	
 		SetReplyString(TEXT("202 ADD OK\r\n"));
@@ -678,7 +685,15 @@ bool RemoveCommand::DoExecute()
 	{
 		auto index = GetLayerIndex(std::numeric_limits<int>::min());
 		if(index == std::numeric_limits<int>::min())
-			index = create_consumer(_parameters)->index();
+		{
+			//create_consumer still expects all parameters to be uppercase
+			BOOST_FOREACH(std::wstring& str, parameters())
+			{
+				boost::to_upper(str);
+			}
+
+			index = create_consumer(parameters())->index();
+		}
 
 		GetChannel()->output().remove(index);
 
@@ -705,8 +720,13 @@ bool LoadCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		_parameters[0] = _parameters[0];
-		auto pFP = create_producer(GetChannel()->frame_factory(), GetChannel()->video_format_desc(), _parameters);		
+		//create_producer still expects all parameters to be uppercase
+		BOOST_FOREACH(std::wstring& str, parameters())
+		{
+			boost::to_upper(str);
+		}
+
+		auto pFP = create_producer(GetChannel()->frame_factory(), GetChannel()->video_format_desc(), parameters());		
 		GetChannel()->stage().load(GetLayerIndex(), pFP, true);
 	
 		SetReplyString(TEXT("202 LOAD OK\r\n"));
@@ -774,8 +794,8 @@ bool LoadbgCommand::DoExecute()
 	// TRANSITION
 
 	std::wstring message;
-	for(size_t n = 0; n < _parameters.size(); ++n)
-		message += _parameters[n] + L" ";
+	for(size_t n = 0; n < parameters().size(); ++n)
+		message += boost::to_upper_copy(parameters()[n]) + L" ";
 		
 	static const boost::wregex expr(L".*(?<TRANSITION>CUT|PUSH|SLIDE|WIPE|MIX)\\s*(?<DURATION>\\d+)\\s*(?<TWEEN>(LINEAR)|(EASE[^\\s]*))?\\s*(?<DIRECTION>FROMLEFT|FROMRIGHT|LEFT|RIGHT)?.*");
 	boost::wsmatch what;
@@ -816,18 +836,25 @@ bool LoadbgCommand::DoExecute()
 		static boost::wregex expr(L"\\[(?<CHANNEL>\\d+)\\]", boost::regex::icase);
 			
 		boost::wsmatch what;
-		if(boost::regex_match(_parameters.at(0), what, expr))
+		if(boost::regex_match(parameters().at(0), what, expr))
 		{
 			auto channel_index = boost::lexical_cast<int>(what["CHANNEL"].str());
 			pFP = reroute::create_producer(*GetChannels().at(channel_index-1)); 
 		}
 		else
-			pFP = create_producer(GetChannel()->frame_factory(), GetChannel()->video_format_desc(), _parameters);
+		{
+			//create_producer still expects all parameters to be uppercase
+			BOOST_FOREACH(std::wstring& str, parameters())
+			{
+				boost::to_upper(str);
+			}
+			pFP = create_producer(GetChannel()->frame_factory(), GetChannel()->video_format_desc(), parameters());
+		}
 		
 		if(pFP == frame_producer::empty())
-			CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? _parameters[0] : L""));
+			CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(parameters().size() > 0 ? parameters()[0] : L""));
 
-		bool auto_play = std::find(_parameters.begin(), _parameters.end(), L"AUTO") != _parameters.end();
+		bool auto_play = std::find_if(parameters().begin(), parameters().end(), [](const std::wstring& p) { return boost::iequals(p, L"AUTO"); }) != parameters().end();
 
 		auto pFP2 = create_transition_producer(GetChannel()->video_format_desc().field_mode, spl::make_shared_ptr(pFP), transitionInfo);
 		if(auto_play)
@@ -842,10 +869,7 @@ bool LoadbgCommand::DoExecute()
 	}
 	catch(file_not_found&)
 	{		
-		std::wstring params2;
-		for(auto it = _parameters.begin(); it != _parameters.end(); ++it)
-			params2 += L" " + *it;
-		CASPAR_LOG(error) << L"File not found. No match found for parameters. Check syntax:" << params2;
+		CASPAR_LOG(error) << L"File not found. No match found for parameters. Check syntax.";
 		SetReplyString(TEXT("404 LOADBG ERROR\r\n"));
 		return false;
 	}
@@ -877,7 +901,7 @@ bool PlayCommand::DoExecute()
 {
 	try
 	{
-		if(!_parameters.empty())
+		if(!parameters().empty())
 		{
 			LoadbgCommand lbg;
 			lbg.SetChannel(GetChannel());
@@ -885,7 +909,7 @@ bool PlayCommand::DoExecute()
 			lbg.SetChannelIndex(GetChannelIndex());
 			lbg.SetLayerIntex(GetLayerIndex());
 			lbg.SetClientInfo(GetClientInfo());
-			for(auto it = _parameters.begin(); it != _parameters.end(); ++it)
+			for(auto it = parameters().begin(); it != parameters().end(); ++it)
 				lbg.AddParameter(*it);
 			if(!lbg.Execute())
 				throw std::exception();
@@ -944,8 +968,8 @@ bool PrintCommand::DoExecute()
 
 bool LogCommand::DoExecute()
 {
-	if(_parameters.at(0) == L"LEVEL")
-		log::set_log_level(_parameters.at(1));
+	if(boost::iequals(parameters().at(0), L"LEVEL"))
+		log::set_log_level(parameters().at(1));
 
 	SetReplyString(TEXT("202 LOG OK\r\n"));
 
@@ -956,7 +980,7 @@ bool CGCommand::DoExecute()
 {
 	try
 	{
-		std::wstring command = _parameters[0];
+		std::wstring command = boost::to_upper_copy(parameters()[0]);
 		if(command == TEXT("ADD"))
 			return DoExecuteAdd();
 		else if(command == TEXT("PLAY"))
@@ -1005,36 +1029,36 @@ bool CGCommand::DoExecuteAdd() {
 	bool bDoStart = false;		//_parameters[3] alt. _parameters[4]
 //	std::wstring data;			//_parameters[4] alt. _parameters[5]
 
-	if(_parameters.size() < 4) 
+	if(parameters().size() < 4) 
 	{
 		SetReplyString(TEXT("402 CG ERROR\r\n"));
 		return false;
 	}
 	unsigned int dataIndex = 4;
 
-	if(!ValidateLayer(_parameters[1])) 
+	if(!ValidateLayer(parameters()[1])) 
 	{
 		SetReplyString(TEXT("403 CG ERROR\r\n"));
 		return false;
 	}
 
-	layer = _ttoi(_parameters[1].c_str());
+	layer = boost::lexical_cast<int>(parameters()[1]);
 
-	if(_parameters[3].length() > 1) 
+	if(parameters()[3].length() > 1) 
 	{	//read label
-		label = _parameters2[3];
+		label = parameters()[3];
 		++dataIndex;
 
-		if(_parameters.size() > 4 && _parameters[4].length() > 0)	//read play-on-load-flag
-			bDoStart = (_parameters[4][0]==TEXT('1')) ? true : false;
+		if(parameters().size() > 4 && parameters()[4].length() > 0)	//read play-on-load-flag
+			bDoStart = (parameters()[4][0]==TEXT('1')) ? true : false;
 		else 
 		{
 			SetReplyString(TEXT("402 CG ERROR\r\n"));
 			return false;
 		}
 	}
-	else if(_parameters[3].length() > 0) {	//read play-on-load-flag
-		bDoStart = (_parameters[3][0]==TEXT('1')) ? true : false;
+	else if(parameters()[3].length() > 0) {	//read play-on-load-flag
+		bDoStart = (parameters()[3][0]==TEXT('1')) ? true : false;
 	}
 	else 
 	{
@@ -1045,9 +1069,9 @@ bool CGCommand::DoExecuteAdd() {
 	const TCHAR* pDataString = 0;
 	std::wstringstream data;
 	std::wstring dataFromFile;
-	if(_parameters.size() > dataIndex) 
+	if(parameters().size() > dataIndex) 
 	{	//read data
-		const std::wstring& dataString = _parameters2[dataIndex];
+		const std::wstring& dataString = parameters()[dataIndex];
 
 		if(dataString[0] == TEXT('<')) //the data is an XML-string
 			pDataString = dataString.c_str();
@@ -1063,11 +1087,11 @@ bool CGCommand::DoExecuteAdd() {
 		}
 	}
 
-	std::wstring fullFilename = flash::find_template(env::template_folder() + _parameters[2]);
+	std::wstring fullFilename = flash::find_template(env::template_folder() + parameters()[2]);
 	if(!fullFilename.empty())
 	{
 		std::wstring extension = boost::filesystem::path(fullFilename).extension().wstring();
-		std::wstring filename = _parameters[2];
+		std::wstring filename = parameters()[2];
 		filename.append(extension);
 
 		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_proxy::DEFAULT_LAYER)).add(layer, filename, bDoStart, label, (pDataString!=0) ? pDataString : TEXT(""));
@@ -1075,7 +1099,7 @@ bool CGCommand::DoExecuteAdd() {
 	}
 	else
 	{
-		CASPAR_LOG(warning) << "Could not find template " << _parameters[2];
+		CASPAR_LOG(warning) << "Could not find template " << parameters()[2];
 		SetReplyString(TEXT("404 CG ERROR\r\n"));
 	}
 	return true;
@@ -1083,14 +1107,14 @@ bool CGCommand::DoExecuteAdd() {
 
 bool CGCommand::DoExecutePlay()
 {
-	if(_parameters.size() > 1)
+	if(parameters().size() > 1)
 	{
-		if(!ValidateLayer(_parameters[1])) 
+		if(!ValidateLayer(parameters()[1])) 
 		{
 			SetReplyString(TEXT("403 CG ERROR\r\n"));
 			return false;
 		}
-		int layer = _ttoi(_parameters[1].c_str());
+		int layer = boost::lexical_cast<int>(parameters()[1]);
 		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_proxy::DEFAULT_LAYER)).play(layer);
 	}
 	else
@@ -1105,14 +1129,14 @@ bool CGCommand::DoExecutePlay()
 
 bool CGCommand::DoExecuteStop() 
 {
-	if(_parameters.size() > 1)
+	if(parameters().size() > 1)
 	{
-		if(!ValidateLayer(_parameters[1])) 
+		if(!ValidateLayer(parameters()[1])) 
 		{
 			SetReplyString(TEXT("403 CG ERROR\r\n"));
 			return false;
 		}
-		int layer = _ttoi(_parameters[1].c_str());
+		int layer = boost::lexical_cast<int>(parameters()[1]);
 		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_proxy::DEFAULT_LAYER)).stop(layer, 0);
 	}
 	else 
@@ -1127,15 +1151,15 @@ bool CGCommand::DoExecuteStop()
 
 bool CGCommand::DoExecuteNext()
 {
-	if(_parameters.size() > 1) 
+	if(parameters().size() > 1) 
 	{
-		if(!ValidateLayer(_parameters[1])) 
+		if(!ValidateLayer(parameters()[1])) 
 		{
 			SetReplyString(TEXT("403 CG ERROR\r\n"));
 			return false;
 		}
 
-		int layer = _ttoi(_parameters[1].c_str());
+		int layer = boost::lexical_cast<int>(parameters()[1]);
 		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_proxy::DEFAULT_LAYER)).next(layer);
 	}
 	else 
@@ -1150,15 +1174,15 @@ bool CGCommand::DoExecuteNext()
 
 bool CGCommand::DoExecuteRemove() 
 {
-	if(_parameters.size() > 1) 
+	if(parameters().size() > 1) 
 	{
-		if(!ValidateLayer(_parameters[1])) 
+		if(!ValidateLayer(parameters()[1])) 
 		{
 			SetReplyString(TEXT("403 CG ERROR\r\n"));
 			return false;
 		}
 
-		int layer = _ttoi(_parameters[1].c_str());
+		int layer = boost::lexical_cast<int>(parameters()[1]);
 		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_proxy::DEFAULT_LAYER)).remove(layer);
 	}
 	else 
@@ -1182,13 +1206,13 @@ bool CGCommand::DoExecuteUpdate()
 {
 	try
 	{
-		if(!ValidateLayer(_parameters.at(1)))
+		if(!ValidateLayer(parameters().at(1)))
 		{
 			SetReplyString(TEXT("403 CG ERROR\r\n"));
 			return false;
 		}
 						
-		std::wstring dataString = _parameters2.at(2);				
+		std::wstring dataString = parameters().at(2);				
 		if(dataString.at(0) != TEXT('<'))
 		{
 			//The data is not an XML-string, it must be a filename
@@ -1199,7 +1223,7 @@ bool CGCommand::DoExecuteUpdate()
 			dataString = read_file(boost::filesystem::wpath(filename));
 		}		
 
-		int layer = _ttoi(_parameters.at(1).c_str());
+		int layer = boost::lexical_cast<int>(parameters()[1]);
 		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_proxy::DEFAULT_LAYER)).update(layer, dataString);
 	}
 	catch(...)
@@ -1217,15 +1241,15 @@ bool CGCommand::DoExecuteInvoke()
 	std::wstringstream replyString;
 	replyString << TEXT("201 CG OK\r\n");
 
-	if(_parameters.size() > 2)
+	if(parameters().size() > 2)
 	{
-		if(!ValidateLayer(_parameters[1]))
+		if(!ValidateLayer(parameters()[1]))
 		{
 			SetReplyString(TEXT("403 CG ERROR\r\n"));
 			return false;
 		}
-		int layer = _ttoi(_parameters[1].c_str());
-		auto result = flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_proxy::DEFAULT_LAYER)).invoke(layer, _parameters2[2]);
+		int layer = boost::lexical_cast<int>(parameters()[1]);
+		auto result = flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_proxy::DEFAULT_LAYER)).invoke(layer, parameters()[2]);
 		replyString << result << TEXT("\r\n"); 
 	}
 	else 
@@ -1243,15 +1267,15 @@ bool CGCommand::DoExecuteInfo()
 	std::wstringstream replyString;
 	replyString << TEXT("201 CG OK\r\n");
 
-	if(_parameters.size() > 1)
+	if(parameters().size() > 1)
 	{
-		if(!ValidateLayer(_parameters[1]))
+		if(!ValidateLayer(parameters()[1]))
 		{
 			SetReplyString(TEXT("403 CG ERROR\r\n"));
 			return false;
 		}
 
-		int layer = _ttoi(_parameters[1].c_str());
+		int layer = boost::lexical_cast<int>(parameters()[1]);
 		auto desc = flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_proxy::DEFAULT_LAYER)).description(layer);
 		
 		replyString << desc << TEXT("\r\n"); 
@@ -1268,7 +1292,7 @@ bool CGCommand::DoExecuteInfo()
 
 bool DataCommand::DoExecute()
 {
-	std::wstring command = _parameters[0];
+	std::wstring command = boost::to_upper_copy(parameters()[0]);
 	if(command == TEXT("STORE"))
 		return DoExecuteStore();
 	else if(command == TEXT("RETRIEVE"))
@@ -1284,14 +1308,14 @@ bool DataCommand::DoExecute()
 
 bool DataCommand::DoExecuteStore() 
 {
-	if(_parameters.size() < 3) 
+	if(parameters().size() < 3) 
 	{
 		SetReplyString(TEXT("402 DATA STORE ERROR\r\n"));
 		return false;
 	}
 
 	std::wstring filename = env::data_folder();
-	filename.append(_parameters[1]);
+	filename.append(parameters()[1]);
 	filename.append(TEXT(".ftd"));
 
 	auto data_path = boost::filesystem::wpath(
@@ -1308,7 +1332,7 @@ bool DataCommand::DoExecuteStore()
 	}
 
 	datafile << static_cast<wchar_t>(65279); // UTF-8 BOM character
-	datafile << _parameters2[2] << std::flush;
+	datafile << parameters()[2] << std::flush;
 	datafile.close();
 
 	std::wstring replyString = TEXT("202 DATA STORE OK\r\n");
@@ -1318,14 +1342,14 @@ bool DataCommand::DoExecuteStore()
 
 bool DataCommand::DoExecuteRetrieve() 
 {
-	if(_parameters.size() < 2) 
+	if(parameters().size() < 2) 
 	{
 		SetReplyString(TEXT("402 DATA RETRIEVE ERROR\r\n"));
 		return false;
 	}
 
 	std::wstring filename = env::data_folder();
-	filename.append(_parameters[1]);
+	filename.append(parameters()[1]);
 	filename.append(TEXT(".ftd"));
 
 	std::wstring file_contents = read_file(boost::filesystem::wpath(filename));
@@ -1346,14 +1370,14 @@ bool DataCommand::DoExecuteRetrieve()
 
 bool DataCommand::DoExecuteRemove()
 { 
-	if (_parameters.size() < 2)
+	if (parameters().size() < 2)
 	{
 		SetReplyString(TEXT("402 DATA REMOVE ERROR\r\n"));
 		return false;
 	}
 
 	std::wstring filename = env::data_folder();
-	filename.append(_parameters[1]);
+	filename.append(parameters()[1]);
 	filename.append(TEXT(".ftd"));
 
 	if (!boost::filesystem::exists(filename))
@@ -1412,7 +1436,7 @@ bool CinfCommand::DoExecute()
 		{
 			auto path = itr->path();
 			auto file = path.replace_extension(L"").filename();
-			if(boost::iequals(file.wstring(), _parameters.at(0)))
+			if(boost::iequals(file.wstring(), parameters().at(0)))
 				info += MediaInfo(itr->path()) + L"\r\n";
 		}
 
@@ -1448,13 +1472,13 @@ bool InfoCommand::DoExecute()
 
 	try
 	{
-		if(_parameters.size() >= 1 && _parameters[0] == L"TEMPLATE")
+		if(parameters().size() >= 1 && boost::iequals(parameters()[0], L"TEMPLATE"))
 		{		
 			replyString << L"201 INFO TEMPLATE OK\r\n";
 
 			// Needs to be extended for any file, not just flash.
 
-			auto filename = flash::find_template(env::template_folder() + _parameters.at(1));
+			auto filename = flash::find_template(env::template_folder() + parameters().at(1));
 						
 			std::wstringstream str;
 			str << u16(flash::read_template_meta_info(filename));
@@ -1463,13 +1487,13 @@ bool InfoCommand::DoExecute()
 
 			boost::property_tree::xml_parser::write_xml(replyString, info, w);
 		}
-		else if(_parameters.size() >= 1 && _parameters[0] == L"CONFIG")
+		else if(parameters().size() >= 1 && boost::iequals(parameters()[0], L"CONFIG"))
 		{		
 			replyString << L"201 INFO CONFIG OK\r\n";
 
 			boost::property_tree::write_xml(replyString, caspar::env::properties(), w);
 		}
-		else if(_parameters.size() >= 1 && _parameters[0] == L"PATHS")
+		else if(parameters().size() >= 1 && boost::iequals(parameters()[0], L"PATHS"))
 		{
 			replyString << L"201 INFO PATHS OK\r\n";
 
@@ -1479,7 +1503,7 @@ bool InfoCommand::DoExecute()
 
 			boost::property_tree::write_xml(replyString, info, w);
 		}
-		else if(_parameters.size() >= 1 && _parameters[0] == L"SYSTEM")
+		else if(parameters().size() >= 1 && boost::iequals(parameters()[0], L"SYSTEM"))
 		{
 			replyString << L"201 INFO SYSTEM OK\r\n";
 			
@@ -1506,7 +1530,7 @@ bool InfoCommand::DoExecute()
 						
 			boost::property_tree::write_xml(replyString, info, w);
 		}
-		else if(_parameters.size() >= 1 && _parameters[0] == L"SERVER")
+		else if(parameters().size() >= 1 && boost::iequals(parameters()[0], L"SERVER"))
 		{
 			replyString << L"201 INFO SERVER OK\r\n";
 			
@@ -1521,13 +1545,13 @@ bool InfoCommand::DoExecute()
 		}
 		else // channel
 		{			
-			if(_parameters.size() >= 1)
+			if(parameters().size() >= 1)
 			{
 				replyString << TEXT("201 INFO OK\r\n");
 				boost::property_tree::wptree info;
 
 				std::vector<std::wstring> split;
-				boost::split(split, _parameters[0], boost::is_any_of("-"));
+				boost::split(split, parameters()[0], boost::is_any_of("-"));
 					
 				int layer = std::numeric_limits<int>::min();
 				int channel = boost::lexical_cast<int>(split[0]) - 1;
@@ -1542,9 +1566,9 @@ bool InfoCommand::DoExecute()
 				}
 				else
 				{
-					if(_parameters.size() >= 2)
+					if(parameters().size() >= 2)
 					{
-						if(_parameters[1] == L"B")
+						if(boost::iequals(parameters()[1], L"B"))
 							info.add_child(L"producer", channels_.at(channel)->stage().background(layer).get()->info());
 						else
 							info.add_child(L"producer", channels_.at(channel)->stage().foreground(layer).get()->info());
@@ -1632,13 +1656,13 @@ bool VersionCommand::DoExecute()
 {
 	std::wstring replyString = TEXT("201 VERSION OK\r\n") + env::version() + TEXT("\r\n");
 
-	if(_parameters.size() > 0)
+	if(parameters().size() > 0)
 	{
-		if(_parameters[0] == L"FLASH")
+		if(boost::iequals(parameters()[0], L"FLASH"))
 			replyString = TEXT("201 VERSION OK\r\n") + flash::version() + TEXT("\r\n");
-		else if(_parameters[0] == L"TEMPLATEHOST")
+		else if(boost::iequals(parameters()[0], L"TEMPLATEHOST"))
 			replyString = TEXT("201 VERSION OK\r\n") + flash::cg_version() + TEXT("\r\n");
-		else if(_parameters[0] != L"SERVER")
+		else if(!boost::iequals(parameters()[0], L"SERVER"))
 			replyString = TEXT("403 VERSION ERROR\r\n");
 	}
 
@@ -1656,11 +1680,8 @@ bool SetCommand::DoExecute()
 {
 	try
 	{
-		std::wstring name = _parameters[0];
-		std::transform(name.begin(), name.end(), name.begin(), toupper);
-
-		std::wstring value = _parameters[1];
-		std::transform(value.begin(), value.end(), value.begin(), toupper);
+		std::wstring name = boost::to_upper_copy(parameters()[0]);
+		std::wstring value = boost::to_upper_copy(parameters()[1]);
 
 		if(name == TEXT("MODE"))
 		{
