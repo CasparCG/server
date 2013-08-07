@@ -54,65 +54,82 @@ public:
 			filename += L".ft";
 		
 		auto str = (boost::wformat(L"<invoke name=\"Add\" returntype=\"xml\"><arguments><number>%1%</number><string>%2%</string>%3%<string>%4%</string><string><![CDATA[%5%]]></string></arguments></invoke>") % layer % filename % (play_on_load?L"<true/>":L"<false/>") % label % data).str();
-
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking add-command: " << str;
-		return flash_producer_->call(str);
+		std::vector<std::wstring> params;
+		params.push_back(std::move(str));
+		return flash_producer_->call(std::move(params));
 	}
 
 	boost::unique_future<std::wstring> remove(int layer)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Delete\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking remove-command: " << str;
-		return flash_producer_->call(str);
+		std::vector<std::wstring> params;
+		params.push_back(std::move(str));
+		return flash_producer_->call(std::move(params));
 	}
 
 	boost::unique_future<std::wstring> play(int layer)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Play\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking play-command: " << str;
-		return flash_producer_->call(str);
+		std::vector<std::wstring> params;
+		params.push_back(std::move(str));
+		return flash_producer_->call(std::move(params));
 	}
 
 	boost::unique_future<std::wstring> stop(int layer, unsigned int)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Stop\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><number>0</number></arguments></invoke>") % layer).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking stop-command: " << str;
-		return flash_producer_->call(str);
+		std::vector<std::wstring> params;
+		params.push_back(std::move(str));
+		return flash_producer_->call(std::move(params));
 	}
 
 	boost::unique_future<std::wstring> next(int layer)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Next\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking next-command: " << str;
-		return flash_producer_->call(str);
+		std::vector<std::wstring> params;
+		params.push_back(std::move(str));
+		return flash_producer_->call(std::move(params));
 	}
 
 	boost::unique_future<std::wstring> update(int layer, const std::wstring& data)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"SetData\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><string><![CDATA[%2%]]></string></arguments></invoke>") % layer % data).str();
 		CASPAR_LOG(info) << flash_producer_->print() <<" Invoking update-command: " << str;
-		return flash_producer_->call(str);
+		std::vector<std::wstring> params;
+		params.push_back(std::move(str));
+		return flash_producer_->call(std::move(params));
 	}
 
 	boost::unique_future<std::wstring> invoke(int layer, const std::wstring& label)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Invoke\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><string>%2%</string></arguments></invoke>") % layer % label).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking invoke-command: " << str;
-		return flash_producer_->call(str);
+		std::vector<std::wstring> params;
+		params.push_back(std::move(str));
+		return flash_producer_->call(std::move(params));
 	}
 
 	boost::unique_future<std::wstring> description(int layer)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"GetDescription\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking description-command: " << str;
-		return flash_producer_->call(str);
+		std::vector<std::wstring> params;
+		params.push_back(std::move(str));
+		return flash_producer_->call(std::move(params));
 	}
 
 	boost::unique_future<std::wstring> template_host_info()
 	{
 		auto str = (boost::wformat(L"<invoke name=\"GetInfo\" returntype=\"xml\"><arguments></arguments></invoke>")).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking info-command: " << str;
-		return flash_producer_->call(str);
+		std::vector<std::wstring> params;
+		params.push_back(std::move(str));
+		return flash_producer_->call(std::move(params));
 	}
 		
 	std::wstring timed_invoke(int layer, const std::wstring& label)
