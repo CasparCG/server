@@ -35,6 +35,8 @@
 namespace caspar { namespace core {
 	namespace text 
 	{
+		void init();
+
 		struct text_info
 		{
 			std::wstring font;

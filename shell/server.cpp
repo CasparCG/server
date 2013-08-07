@@ -104,6 +104,8 @@ struct server::impl : boost::noncopyable
 		psd::init();		  
 		CASPAR_LOG(info) << L"Initialized psd module.";
 
+		core::text::init();
+
 		register_producer_factory(&core::scene::create_dummy_scene_producer);
 		register_producer_factory(&core::create_text_producer);
 
