@@ -222,12 +222,14 @@ public:
 		return video_decoder_ ? video_decoder_->file_frame_number() : 0;
 	}
 		
-	boost::unique_future<std::wstring> call(const std::wstring& param) override
+	boost::unique_future<std::wstring> call(const std::vector<std::wstring>& params) override
 	{
 		static const boost::wregex loop_exp(L"LOOP\\s*(?<VALUE>\\d?)?", boost::regex::icase);
 		static const boost::wregex seek_exp(L"SEEK\\s+(?<VALUE>\\d+)", boost::regex::icase);
 		static const boost::wregex length_exp(L"LENGTH\\s+(?<VALUE>\\d+)?", boost::regex::icase);
 		static const boost::wregex start_exp(L"START\\s+(?<VALUE>\\d+)?", boost::regex::icase);
+
+		auto param = boost::algorithm::join(params, L" ");
 		
 		std::wstring result;
 			

@@ -50,7 +50,7 @@ public:
 	static spl::shared_ptr<text_producer> create(const spl::shared_ptr<class frame_factory>& frame_factory, int x, int y, const std::wstring& str, const text::text_info& text_info, long parent_width, long parent_height, bool standalone = false);
 	
 	draw_frame receive_impl() override;
-	boost::unique_future<std::wstring> call(const std::wstring& param) override;
+	boost::unique_future<std::wstring> call(const std::vector<std::wstring>& param) override;
 
 	text::string_metrics measure_string(const std::wstring& str);
 

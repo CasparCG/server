@@ -65,7 +65,7 @@ public:
 	bool collides(double x, double y) const override;
 	std::wstring print() const override;
 	std::wstring name() const override;
-	boost::unique_future<std::wstring>	call(const std::wstring& params) override;
+	boost::unique_future<std::wstring>	call(const std::vector<std::wstring>& params) override;
 	boost::property_tree::wptree info() const override;
 	void subscribe(const monitor::observable::observer_ptr& o) override;
 	void unsubscribe(const monitor::observable::observer_ptr& o) override;
