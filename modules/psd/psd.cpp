@@ -198,7 +198,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 			std::wstring str = (*it)->text_data().get(L"EngineDict.Editor.Text", L"");
 			
 			core::text::text_info text_info(std::move(get_text_info((*it)->text_data())));
-			auto text_producer = spl::make_shared<core::text_producer>(frame_factory, 0, 0, str, text_info, doc.width(), doc.height());
+			auto text_producer = core::text_producer::create(frame_factory, 0, 0, str, text_info, doc.width(), doc.height());
 			
 			core::text::string_metrics metrics = text_producer->measure_string(str);
 			
