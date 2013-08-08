@@ -19,7 +19,7 @@
 * Author: Niklas P Andersson, niklas.p.andersson@svt.se
 */
 
-#include "psd.h"
+#include "psd_scene_producer.h"
 #include "layer.h"
 #include "doc.h"
 
@@ -41,7 +41,7 @@ namespace caspar { namespace psd {
 
 void init()
 {
-	core::register_producer_factory(create_producer);
+	core::register_producer_factory(create_psd_scene_producer);
 }
 
 core::text::text_info get_text_info(const boost::property_tree::wptree& ptree)
@@ -176,7 +176,7 @@ core::text::text_info get_text_info(const boost::property_tree::wptree& ptree)
 		}
 	};
 
-spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
 {
 	std::wstring filename = env::media_folder() + L"\\" + params[0] + L".psd";
 	if(!boost::filesystem::is_regular_file(boost::filesystem::path(filename)))
