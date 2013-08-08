@@ -24,6 +24,7 @@
 #include "text_producer.h"
 
 #include <core/producer/frame_producer.h>
+#include <core/producer/color/color_producer.h>
 #include <core/frame/geometry.h>
 #include <core/frame/frame.h>
 #include <core/frame/draw_frame.h>
@@ -39,6 +40,7 @@
 #include <common/array.h>
 #include <common/env.h>
 #include <common/future.h>
+#include <common/param.h>
 #include <common/os/windows/system_info.h>
 #include <memory>
 
@@ -205,7 +207,7 @@ spl::shared_ptr<text_producer> text_producer::create(const spl::shared_ptr<frame
 
 spl::shared_ptr<frame_producer> create_text_producer(const spl::shared_ptr<frame_factory>& frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params)
 {
-	if(params.size() < 2 || !boost::iequals(params.at(0), L"[TEXT]"))
+	if(params.size() < 2 || !boost::iequals(params.at(0), L"[text]"))
 		return core::frame_producer::empty();
 
 	int x = 0, y = 0;
@@ -217,8 +219,15 @@ spl::shared_ptr<frame_producer> create_text_producer(const spl::shared_ptr<frame
 
 	text::text_info text_info;
 	text_info.font = L"verdana";
-	text_info.size = 30;
-	text_info.color = text::color<float>(1.0f, 0, 0, 1.0f);
+	text_info.size = 30.0f;
+	text_info.font = get_param(L"FONT", params, L"verdana");
+	text_info.size = (float)get_param(L"SIZE", params, 30.0);
+	
+	std::wstring col_str = get_param(L"color", params, L"#ffffffff");
+	uint32_t col_val = 0xffffffff;
+	try_get_color(col_str, col_val);
+	text_info.color = core::text::color<float>(col_val);
+
 	return text_producer::create(frame_factory, x, y, params.at(1), text_info, format_desc.width, format_desc.height, true);
 }
 
