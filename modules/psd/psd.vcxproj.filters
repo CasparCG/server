@@ -28,11 +28,11 @@
     <ClCompile Include="resource.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="psd.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="util\pdf_reader.cpp">
       <Filter>Source Files\util</Filter>
+    </ClCompile>
+    <ClCompile Include="psd_scene_producer.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -60,11 +60,11 @@
     <ClInclude Include="misc.h">
       <Filter>Source Files</Filter>
     </ClInclude>
-    <ClInclude Include="psd.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="util\pdf_reader.h">
       <Filter>Source Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="psd_scene_producer.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

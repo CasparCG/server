@@ -15,7 +15,7 @@
     <ClCompile Include="doc.cpp" />
     <ClCompile Include="layer.cpp" />
     <ClCompile Include="misc.cpp" />
-    <ClCompile Include="psd.cpp" />
+    <ClCompile Include="psd_scene_producer.cpp" />
     <ClCompile Include="resource.cpp" />
     <ClCompile Include="util\bigendian_file_input_stream.cpp" />
     <ClCompile Include="util\pdf_reader.cpp" />
@@ -27,7 +27,7 @@
     <ClInclude Include="image.h" />
     <ClInclude Include="layer.h" />
     <ClInclude Include="misc.h" />
-    <ClInclude Include="psd.h" />
+    <ClInclude Include="psd_scene_producer.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="util\bigendian_file_input_stream.h" />
     <ClInclude Include="util\pdf_reader.h" />
