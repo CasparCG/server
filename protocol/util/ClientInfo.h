@@ -40,9 +40,9 @@ public:
 	virtual void Send(const std::wstring& data) = 0;
 	virtual void Disconnect() = 0;
 	virtual std::wstring print() const = 0;
-
-	std::wstring		currentMessage_;
+	virtual void bind_to_lifecycle(const std::shared_ptr<void>& lifecycle_bound) = 0;
 };
+
 typedef std::shared_ptr<ClientInfo> ClientInfoPtr;
 
 struct ConsoleClientInfo : public caspar::IO::ClientInfo 
@@ -53,6 +53,7 @@ struct ConsoleClientInfo : public caspar::IO::ClientInfo
 	}
 	void Disconnect(){}
 	virtual std::wstring print() const {return L"Console";}
+	virtual void bind_to_lifecycle(const std::shared_ptr<void>& lifecycle_bound) {}
 };
 
 }}

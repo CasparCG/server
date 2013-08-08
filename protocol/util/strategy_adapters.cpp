@@ -58,6 +58,11 @@ public:
 		: client_(client)
 		, codepage_(codepage)
 	{
+		CASPAR_LOG(info) << "from_unicode_client_connection created.";
+	}
+	~from_unicode_client_connection()
+	{
+		CASPAR_LOG(info) << "from_unicode_client_connection destroyed.";
 	}
 
 	virtual void send(std::basic_string<wchar_t>&& data)
@@ -75,6 +80,11 @@ public:
 	virtual std::wstring print() const
 	{
 		return client_->print();
+	}
+
+	virtual void bind_to_lifecycle(const std::shared_ptr<void>& lifecycle_bound)
+	{
+		client_->bind_to_lifecycle(lifecycle_bound);
 	}
 };
 
@@ -101,7 +111,14 @@ public:
 	legacy_client_info(const client_connection<wchar_t>::ptr& client_connection)
 		: client_connection_(client_connection)
 	{
+		CASPAR_LOG(info) << "legacy_client_info created.";
 	}
+
+	~legacy_client_info()
+	{
+		CASPAR_LOG(info) << "legacy_client_info destroyed.";
+	}
+
 
 	virtual void Disconnect()
 	{
@@ -117,6 +134,11 @@ public:
 	{
 		return client_connection_->print();
 	}
+
+	virtual void bind_to_lifecycle(const std::shared_ptr<void>& lifecycle_bound)
+	{
+		client_connection_->bind_to_lifecycle(lifecycle_bound);
+	}
 };
 
 class legacy_strategy_adapter : public protocol_strategy<wchar_t>
@@ -130,12 +152,16 @@ public:
 		: strategy_(strategy)
 		, client_info_(std::make_shared<legacy_client_info>(client_connection))
 	{
+		CASPAR_LOG(info) << "legacy_strategy_adapter created.";
+	}
+	~legacy_strategy_adapter()
+	{
+		CASPAR_LOG(info) << "legacy_strategy_adapter destroyed.";
 	}
 
 	virtual void parse(const std::basic_string<wchar_t>& data)
 	{
-		auto p = data.c_str();
-		strategy_->Parse(p, static_cast<int>(data.length()), client_info_);
+		strategy_->Parse(data, client_info_);
 	}
 };
 

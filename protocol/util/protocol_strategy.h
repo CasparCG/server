@@ -65,6 +65,8 @@ public:
 	virtual void send(std::basic_string<CharT>&& data) = 0;
 	virtual void disconnect() = 0;
 	virtual std::wstring print() const = 0;
+
+	virtual void bind_to_lifecycle(const std::shared_ptr<void>& lifecycle_bound) = 0;
 };
 
 /**

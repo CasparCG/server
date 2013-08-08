@@ -33,6 +33,8 @@
 #include <boost/thread.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <tbb\mutex.h>
+
 using boost::asio::ip::tcp;
 
 namespace caspar { namespace IO {
@@ -41,8 +43,8 @@ class connection;
 
 typedef std::set<spl::shared_ptr<connection>> connection_set;
 
-class connection : public spl::enable_shared_from_this<connection>, public client_connection<char>
-{    
+class connection : public spl::enable_shared_from_this<connection>
+{   
     const spl::shared_ptr<tcp::socket>			socket_; 
 	const spl::shared_ptr<connection_set>		connection_set_;
 	const std::wstring							name_;
@@ -50,6 +52,37 @@ class connection : public spl::enable_shared_from_this<connection>, public clien
 	std::shared_ptr<protocol_strategy<char>>	protocol_;
 
 	std::array<char, 32768>						data_;
+	std::vector<std::shared_ptr<void>>			lifecycle_bound_items_;
+
+	class connection_holder : public client_connection<char>
+	{
+		std::weak_ptr<connection> connection_;
+	public:
+		explicit connection_holder(std::weak_ptr<connection> conn) : connection_(conn)
+		{}
+
+		virtual void send(std::basic_string<char>&& data)
+		{
+			auto conn = connection_.lock();
+			conn->send(std::move(data));
+		}
+		virtual void disconnect()
+		{
+			auto conn = connection_.lock();
+			conn->disconnect();
+		}
+		virtual std::wstring print() const
+		{
+			auto conn = connection_.lock();
+			return conn->print();
+		}
+
+		virtual void bind_to_lifecycle(const std::shared_ptr<void>& lifecycle_bound)
+		{
+			auto conn = connection_.lock();
+			return conn->bind_to_lifecycle(lifecycle_bound);
+		}
+	};
 
 public:
     static spl::shared_ptr<connection> create(spl::shared_ptr<tcp::socket> socket, const protocol_strategy_factory<char>::ptr& protocol, spl::shared_ptr<connection_set> connection_set)
@@ -59,9 +92,19 @@ public:
 		return con;
     }
 
+	~connection()
+	{
+		CASPAR_LOG(info) << print() << L" connection destroyed.";
+	}
+
 	std::wstring print() const
 	{
 		return L"[" + name_ + L"]";
+	}
+
+	const std::string ipv4_address() const
+	{
+		return socket_->is_open() ? socket_->local_endpoint().address().to_string() : "no-address";
 	}
 	
 	/* ClientInfo */
@@ -75,7 +118,11 @@ public:
 	{
 		stop();
 	}
-	
+	void bind_to_lifecycle(const std::shared_ptr<void>& lifecycle_bound)
+	{
+		lifecycle_bound_items_.push_back(lifecycle_bound);
+	}
+
 	/**************/
 	
 	void stop()
@@ -89,15 +136,16 @@ public:
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
+		
 		CASPAR_LOG(info) << print() << L" Disconnected.";
 	}
 
 private:
-    connection(const spl::shared_ptr<tcp::socket>& socket, const protocol_strategy_factory<char>::ptr& protocol, const spl::shared_ptr<connection_set>& connection_set) 
+    connection(const spl::shared_ptr<tcp::socket>& socket, const protocol_strategy_factory<char>::ptr& protocol_factory, const spl::shared_ptr<connection_set>& connection_set) 
 		: socket_(socket)
 		, name_((socket_->is_open() ? u16(socket_->local_endpoint().address().to_string() + ":" + boost::lexical_cast<std::string>(socket_->local_endpoint().port())) : L"no-address"))
 		, connection_set_(connection_set)
-		, protocol_factory_(protocol)
+		, protocol_factory_(protocol_factory)
 	{
 		CASPAR_LOG(info) << print() << L" Connected.";
     }
@@ -105,7 +153,7 @@ private:
 	protocol_strategy<char>& protocol()
 	{
 		if (!protocol_)
-			protocol_ = protocol_factory_->create(shared_from_this());
+			protocol_ = protocol_factory_->create(spl::make_shared<connection_holder>(shared_from_this()));
 
 		return *protocol_;
 	}
@@ -157,13 +205,15 @@ struct AsyncEventServer::implementation
 {
 	boost::asio::io_service					service_;
 	tcp::acceptor							acceptor_;
-	protocol_strategy_factory<char>::ptr	protocol_;
+	protocol_strategy_factory<char>::ptr	protocol_factory_;
 	spl::shared_ptr<connection_set>			connection_set_;
 	boost::thread							thread_;
+	std::vector<lifecycle_factory_t>		lifecycle_factories_;
+	tbb::mutex mutex_;
 
 	implementation(const protocol_strategy_factory<char>::ptr& protocol, unsigned short port)
 		: acceptor_(service_, tcp::endpoint(tcp::v4(), port))
-		, protocol_(protocol)
+		, protocol_factory_(protocol)
 		, thread_(std::bind(&boost::asio::io_service::run, &service_))
 	{
 		start_accept();
@@ -201,21 +251,36 @@ struct AsyncEventServer::implementation
 		if (!acceptor_.is_open())
 			return;
 		
-        if (!error)		
-			connection_set_->insert(connection::create(socket, protocol_, connection_set_));
+        if (!error)
+		{
+			auto conn = connection::create(socket, protocol_factory_, connection_set_);
+			connection_set_->insert(conn);
 
+			{
+				tbb::mutex::scoped_lock lock(mutex_);
+
+				BOOST_FOREACH(auto& lifecycle_factory, lifecycle_factories_)
+				{
+					auto lifecycle_bound = lifecycle_factory(conn->ipv4_address());
+					conn->bind_to_lifecycle(lifecycle_bound);
+				}
+			}
+		}
 		start_accept();
     }
+
+	void add_client_lifecycle_event_factory(const lifecycle_factory_t& factory)
+	{
+		tbb::mutex::scoped_lock lock(mutex_);
+		lifecycle_factories_.push_back(factory);
+	}
 };
 
 AsyncEventServer::AsyncEventServer(
 		const protocol_strategy_factory<char>::ptr& protocol, unsigned short port)
-	: impl_(new implementation(protocol, port))
-{
-}
+	: impl_(new implementation(protocol, port)) {}
 
-AsyncEventServer::~AsyncEventServer()
-{
-}
+AsyncEventServer::~AsyncEventServer() {}
+void AsyncEventServer::add_client_lifecycle_event_factory(const lifecycle_factory_t& factory) { impl_->add_client_lifecycle_event_factory(factory); }
 
 }}
