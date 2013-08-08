@@ -31,6 +31,6 @@ namespace caspar { namespace psd {
 
 void init();
 
-spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params);
+spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params);
 
 }}

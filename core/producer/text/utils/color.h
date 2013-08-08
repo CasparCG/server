@@ -7,7 +7,7 @@ struct color
 {
 	color() {}
 	color(const color& other) : r(other.r), g(other.g), b(other.b), a(other.a) {}
-	color(T red, T green, T blue, T alpha) : r(red), g(green), b(blue), a(alpha) {}
+	color(T alpha, T red, T green, T blue) : r(red), g(green), b(blue), a(alpha) {}
 
 	const color&operator=(const color& other)
 	{
