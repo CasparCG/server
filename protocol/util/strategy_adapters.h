@@ -76,7 +76,7 @@ public:
 		input_ += data;
 
 		std::vector<std::basic_string<CharT>> split;
-		boost::iter_split(split, input_, boost::algorithm::first_finder(delimiter_));
+		boost::iter_split(split, input_, boost::algorithm::first_finder(delimiter_));	//TODO: check if this splits on all instances of delimiter_ in the input_
 
 		input_ = std::move(split.back());
 		split.pop_back();
@@ -84,7 +84,7 @@ public:
 		BOOST_FOREACH(auto cmd, split)
 		{
 			// TODO: perhaps it would be better to not append the delimiter.
-			strategy_->parse(cmd + delimiter_);
+			strategy_->parse(cmd);
 		}
 	}
 };

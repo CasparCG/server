@@ -49,38 +49,16 @@ CIIProtocolStrategy::CIIProtocolStrategy(const std::vector<spl::shared_ptr<core:
 {
 }
 
-void CIIProtocolStrategy::Parse(const TCHAR* pData, int charCount, IO::ClientInfoPtr pClientInfo) 
+//The paser method expects message to be complete messages with the delimiter stripped away.
+//Thesefore the AMCPProtocolStrategy should be decorated with a delimiter_based_chunking_strategy
+void CIIProtocolStrategy::Parse(const std::wstring& message, IO::ClientInfoPtr pClientInfo) 
 {
-	std::size_t pos;
-	std::wstring msg(pData, charCount);
-	std::wstring availibleData = currentMessage_ + msg;
-
-	while(true)
+	if(message.length() > 0)
 	{
-		pos = availibleData.find(MessageDelimiter);
-		if(pos != std::wstring::npos)
-		{
-			std::wstring message = availibleData.substr(0,pos);
-
-			if(message.length() > 0) {
-				ProcessMessage(message, pClientInfo);
-				if(pClientInfo != 0)
-					pClientInfo->Send(TEXT("*\r\n"));
-			}
-
-			std::size_t nextStartPos = pos + MessageDelimiter.length();
-			if(nextStartPos < availibleData.length())
-				availibleData = availibleData.substr(nextStartPos);
-			else 
-			{
-				availibleData.clear();
-				break;
-			}
-		}
-		else
-			break;
+		ProcessMessage(message, pClientInfo);
+		if(pClientInfo != 0)
+			pClientInfo->Send(TEXT("*\r\n"));
 	}
-	currentMessage_ = availibleData;
 }
 
 void CIIProtocolStrategy::ProcessMessage(const std::wstring& message, IO::ClientInfoPtr pClientInfo)

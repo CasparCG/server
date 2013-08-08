@@ -76,42 +76,10 @@ AMCPProtocolStrategy::AMCPProtocolStrategy(const std::vector<spl::shared_ptr<cor
 AMCPProtocolStrategy::~AMCPProtocolStrategy() {
 }
 
-void AMCPProtocolStrategy::Parse(const TCHAR* pData, int charCount, ClientInfoPtr pClientInfo)
+//The paser method expects message to be complete messages with the delimiter stripped away.
+//Thesefore the AMCPProtocolStrategy should be decorated with a delimiter_based_chunking_strategy
+void AMCPProtocolStrategy::Parse(const std::wstring& message, ClientInfoPtr pClientInfo)
 {
-	size_t pos;
-	std::wstring recvData(pData, charCount);
-	std::wstring availibleData = (pClientInfo != nullptr ? pClientInfo->currentMessage_ : L"") + recvData;
-
-	while(true) {
-		pos = availibleData.find(MessageDelimiter);
-		if(pos != std::wstring::npos)
-		{
-			std::wstring message = availibleData.substr(0,pos);
-
-			//This is where a complete message gets taken care of
-			if(message.length() > 0) {
-				ProcessMessage(message, pClientInfo);
-			}
-
-			std::size_t nextStartPos = pos + MessageDelimiter.length();
-			if(nextStartPos < availibleData.length())
-				availibleData = availibleData.substr(nextStartPos);
-			else {
-				availibleData.clear();
-				break;
-			}
-		}
-		else
-		{
-			break;
-		}
-	}
-	if(pClientInfo)
-		pClientInfo->currentMessage_ = availibleData;
-}
-
-void AMCPProtocolStrategy::ProcessMessage(const std::wstring& message, ClientInfoPtr& pClientInfo)
-{	
 	CASPAR_LOG(info) << L"Received message from " << pClientInfo->print() << ": " << message << L"\\r\\n";
 	
 	bool bError = true;

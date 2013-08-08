@@ -51,17 +51,13 @@ public:
 	AMCPProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>& channels);
 	virtual ~AMCPProtocolStrategy();
 
-	virtual void Parse(const TCHAR* pData, int charCount, IO::ClientInfoPtr pClientInfo);
-	virtual std::string GetCodepage() {
-		return "UTF-8";
-	}
-
+	virtual void Parse(const std::wstring& msg, IO::ClientInfoPtr pClientInfo);
+	virtual std::string GetCodepage() {	return "UTF-8"; }
 	AMCPCommand::ptr_type InterpretCommandString(const std::wstring& str, MessageParserState* pOutState=0);
 
 private:
 	friend class AMCPCommand;
 
-	void ProcessMessage(const std::wstring& message, IO::ClientInfoPtr& pClientInfo);
 	std::size_t TokenizeMessage(const std::wstring& message, std::vector<std::wstring>* pTokenVector);
 	AMCPCommand::ptr_type CommandFactory(const std::wstring& str);
 
