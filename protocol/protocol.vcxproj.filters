@@ -97,6 +97,9 @@
     <ClInclude Include="util\strategy_adapters.h">
       <Filter>source\util</Filter>
     </ClInclude>
+    <ClInclude Include="util\lock_container.h">
+      <Filter>source\util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="amcp\AMCPCommandQueue.cpp">
@@ -143,6 +146,9 @@
       <Filter>source\clk</Filter>
     </ClCompile>
     <ClCompile Include="util\strategy_adapters.cpp">
+      <Filter>source\util</Filter>
+    </ClCompile>
+    <ClCompile Include="util\lock_container.cpp">
       <Filter>source\util</Filter>
     </ClCompile>
   </ItemGroup>

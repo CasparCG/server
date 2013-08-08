@@ -31,8 +31,10 @@ class IProtocolStrategy
 public:
 	virtual ~IProtocolStrategy(){}
 
-	virtual void Parse(const wchar_t* pData, int charCount, ClientInfoPtr pClientInfo) = 0;
+	virtual void Parse(const std::wstring& msg, ClientInfoPtr pClientInfo) = 0;
 	virtual std::string GetCodepage() = 0;
+
+	virtual void on_client_disconnect(IO::ClientInfoPtr pClientInfo) {}
 };
 typedef std::shared_ptr<IProtocolStrategy> ProtocolStrategyPtr;
 
