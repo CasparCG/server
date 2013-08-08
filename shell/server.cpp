@@ -44,7 +44,7 @@
 #include <modules/oal/oal.h>
 #include <modules/screen/screen.h>
 #include <modules/image/image.h>
-#include <modules/psd/psd.h>
+#include <modules/psd/psd_scene_producer.h>
 
 #include <modules/oal/consumer/oal_consumer.h>
 #include <modules/bluefish/consumer/bluefish_consumer.h>
