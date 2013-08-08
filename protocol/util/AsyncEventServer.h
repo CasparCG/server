@@ -26,11 +26,17 @@
 
 namespace caspar { namespace IO {
 
+	typedef std::function<std::shared_ptr<void> (const std::string& ipv4_address)>
+		lifecycle_factory_t;
+
 class AsyncEventServer
 {
 public:
 	explicit AsyncEventServer(const protocol_strategy_factory<char>::ptr& protocol, unsigned short port);
 	~AsyncEventServer();
+
+	void add_client_lifecycle_event_factory(const lifecycle_factory_t& lifecycle_factory);
+
 private:
 	struct implementation;
 	std::unique_ptr<implementation> impl_;
