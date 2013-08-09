@@ -101,7 +101,8 @@ struct text_producer::impl
 	constraints constraints_;
 	int x_, y_, parent_width_, parent_height_;
 	bool standalone_;
-	std::wstring text_;
+	binding<std::wstring> text_;
+	std::shared_ptr<void> text_subscription_;
 	draw_frame frame_;
 	text::texture_atlas atlas_;
 	text::texture_font font_;
@@ -119,8 +120,13 @@ public:
 		font_.load_glyphs(text::Latin_1_Supplement, text_info.color);
 		font_.load_glyphs(text::Latin_Extended_A, text_info.color);
 
+		text_subscription_ = text_.on_change([this]()
+		{
+			generate_frame(text_.get());
+		});
+
 		//generate frame
-		generate_frame(str);
+		text_.set(str);
 
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}
@@ -128,7 +134,7 @@ public:
 	void generate_frame(const std::wstring& str)
 	{
 		core::pixel_format_desc pfd(core::pixel_format::bgra);
-		pfd.planes.push_back(core::pixel_format_desc::plane((int)atlas_.width(), (int)atlas_.height(), (int)atlas_.depth()));
+		pfd.planes.push_back(core::pixel_format_desc::plane(static_cast<int>(atlas_.width()), static_cast<int>(atlas_.height()), static_cast<int>(atlas_.depth())));
 
 		text::string_metrics metrics;
 		std::vector<float> vertex_stream(std::move(font_.create_vertex_stream(str, x_, y_, parent_width_, parent_height_, &metrics)));
@@ -156,7 +162,7 @@ public:
 	boost::unique_future<std::wstring> call(const std::vector<std::wstring>& param)
 	{
 		std::wstring result;
-		generate_frame(param.empty() ? L"" : param[0]);
+		text_.set(param.empty() ? L"" : param[0]);
 
 		return async(launch::deferred, [=]{return result;});
 	}
@@ -165,10 +171,15 @@ public:
 	{
 		return constraints_;
 	}
+
+	binding<std::wstring>& text()
+	{
+		return text_;
+	}
 	
 	std::wstring print() const
 	{
-		return L"text[" + text_ + L"]";
+		return L"text[" + text_.get() + L"]";
 	}
 
 	std::wstring name() const
@@ -180,7 +191,7 @@ public:
 	{
 		boost::property_tree::wptree info;
 		info.add(L"type", L"text");
-		info.add(L"text", text_);
+		info.add(L"text", text_.get());
 		return info;
 	}
 };
@@ -199,6 +210,7 @@ std::wstring text_producer::name() const { return impl_->name(); }
 boost::property_tree::wptree text_producer::info() const { return impl_->info(); }
 void text_producer::subscribe(const monitor::observable::observer_ptr& o) {}
 void text_producer::unsubscribe(const monitor::observable::observer_ptr& o) {}
+binding<std::wstring>& text_producer::text() { return impl_->text(); }
 
 spl::shared_ptr<text_producer> text_producer::create(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, const text::text_info& text_info, long parent_width, long parent_height, bool standalone)
 {
@@ -218,10 +230,8 @@ spl::shared_ptr<frame_producer> create_text_producer(const spl::shared_ptr<frame
 	}
 
 	text::text_info text_info;
-	text_info.font = L"verdana";
-	text_info.size = 30.0f;
 	text_info.font = get_param(L"FONT", params, L"verdana");
-	text_info.size = (float)get_param(L"SIZE", params, 30.0);
+	text_info.size = static_cast<float>(get_param(L"SIZE", params, 30.0)); // 30.0f does not seem to work to get as float directly
 	
 	std::wstring col_str = get_param(L"color", params, L"#ffffffff");
 	uint32_t col_val = 0xffffffff;
