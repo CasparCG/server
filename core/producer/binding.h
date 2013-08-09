@@ -489,7 +489,7 @@ public:
 
 	binding<T> otherwise(T false_result)
 	{
-		return otherwise(binding<T>(false_result))	
+		return otherwise(binding<T>(false_result));
 	}
 };
 
