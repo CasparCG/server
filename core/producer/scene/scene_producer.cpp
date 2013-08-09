@@ -345,13 +345,20 @@ spl::shared_ptr<frame_producer> create_dummy_scene_producer(const spl::shared_pt
 	auto& lower_left = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"scene/lower_left")));
 	auto& lower_right = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"scene/lower_right")));
 
+	/*
 	binding<double> panel_x = (scene->frame()
 			.as<double>()
 			.transformed([](double v) { return std::sin(v / 20.0); })
 			* 20.0
 			+ 40.0)
 			.transformed([](double v) { return std::floor(v); }); // snap to pixels instead of subpixels
-	binding<double> panel_y = when(car_layer.hidden).then(500.0).otherwise(-panel_x + 300);
+			*/
+	tweener tween(L"easeinoutsine");
+	binding<double> panel_x = when(scene->frame() < 50)
+		.then(scene->frame().as<double>().transformed([tween](double t) { return tween(t, 0.0, 200, 50); }))
+		.otherwise(200.0);
+	//binding<double> panel_y = when(car_layer.hidden).then(500.0).otherwise(-panel_x + 300);
+	binding<double> panel_y(500.0);
 	upper_left.position.x = panel_x;
 	upper_left.position.y = panel_y;
 	upper_right.position.x = upper_left.position.x + upper_left.producer.get()->pixel_constraints().width + panel_width;
