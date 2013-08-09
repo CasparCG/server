@@ -36,6 +36,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
+#include <boost/thread/future.hpp>
 
 namespace caspar { namespace psd {
 
@@ -114,7 +115,6 @@ core::text::text_info get_text_info(const boost::property_tree::wptree& ptree)
 
 		void calculate()
 		{
-			auto masters_end = masters.end();
 			for(auto it = masters.begin(); it != masters.end(); ++it)
 			{
 				auto& master = (*it);
@@ -190,6 +190,8 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 
 	layer_link_constructor link_constructor;
 
+	std::vector<std::pair<std::wstring, spl::shared_ptr<core::text_producer>>> text_producers_by_layer_name;
+
 	auto layers_end = doc.layers().end();
 	for(auto it = doc.layers().begin(); it != layers_end; ++it)
 	{
@@ -208,6 +210,8 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 
 			if((*it)->link_group_id() != 0)
 				link_constructor.add(&new_layer, (*it)->link_group_id(), true);
+
+			text_producers_by_layer_name.push_back(std::make_pair((*it)->name(), text_producer));
 		}
 		else if((*it)->image() && (*it)->visible())
 		{
@@ -229,6 +233,15 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 	}
 
 	link_constructor.calculate();
+
+	// Reset all dynamic text fields to empty strings and expose them as a scene parameter.
+	BOOST_FOREACH(auto& text_layer, text_producers_by_layer_name)
+		text_layer.second->text().bind(root->create_parameter<std::wstring>(text_layer.first, L""));
+
+	auto params2 = params;
+	params2.erase(params2.cbegin());
+
+	root->call(params2);
 
 	return root;
 }

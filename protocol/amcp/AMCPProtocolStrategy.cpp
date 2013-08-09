@@ -340,7 +340,7 @@ std::size_t AMCPProtocolStrategy::TokenizeMessage(const std::wstring& message, s
 
 	std::wstring currentToken;
 
-	char inQuote = 0;
+	bool inQuote = false;
 	bool getSpecialCode = false;
 
 	for(unsigned int charIndex=0; charIndex<message.size(); ++charIndex)
@@ -384,9 +384,9 @@ std::size_t AMCPProtocolStrategy::TokenizeMessage(const std::wstring& message, s
 
 		if(message[charIndex]==TEXT('\"'))
 		{
-			inQuote ^= 1;
+			inQuote = !inQuote;
 
-			if(currentToken.size()>0)
+			if(currentToken.size() > 0 || !inQuote)
 			{
 				pTokenVector->push_back(currentToken);
 				currentToken.clear();

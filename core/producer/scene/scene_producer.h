@@ -53,6 +53,45 @@ struct layer
 	layer(const std::wstring& name, const spl::shared_ptr<frame_producer>& producer);
 };
 
+template<typename T> class parameter_holder;
+
+class parameter_holder_base
+{
+public:
+	virtual ~parameter_holder_base()
+	{
+	}
+
+	virtual void set(const std::wstring& raw_value) = 0;
+
+	template<typename T>
+	binding<T>& value()
+	{
+		return dynamic_cast<parameter_holder<T>>(*this).value();
+	}
+};
+
+template<typename T>
+class parameter_holder : public parameter_holder_base
+{
+	binding<T> value_;
+public:
+	parameter_holder(T initial_value)
+		: value_(initial_value)
+	{
+	}
+
+	binding<T>& value()
+	{
+		return value_;
+	}
+
+	virtual void set(const std::wstring& raw_value)
+	{
+		value_.set(boost::lexical_cast<T>(raw_value));
+	}
+};
+
 class scene_producer : public frame_producer_base
 {
 public:
@@ -75,7 +114,20 @@ public:
 			const spl::shared_ptr<frame_producer>& producer, int x, int y, const std::wstring& name);
 	layer& create_layer(const spl::shared_ptr<frame_producer>& producer);
 	binding<int64_t> frame();
+
+	template<typename T> binding<T>& create_parameter(const std::wstring& name, T initial_value = T())
+	{
+		auto param = std::make_shared<parameter_holder<T>>(initial_value);
+
+		store_parameter(name, param);
+
+		return param->value();
+	}
 private:
+	void store_parameter(
+			const std::wstring& name,
+			const std::shared_ptr<parameter_holder_base>& param);
+
 	struct impl;
 	std::unique_ptr<impl> impl_;
 };
