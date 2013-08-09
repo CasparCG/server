@@ -52,6 +52,7 @@ struct scene_producer::impl
 	std::list<layer> layers_;
 	interaction_aggregator aggregator_;
 	binding<int64_t> frame_number_;
+	std::map<std::wstring, std::shared_ptr<parameter_holder_base>> parameters_;
 
 	impl(int width, int height)
 		: pixel_constraints_(width, height)
@@ -86,6 +87,13 @@ struct scene_producer::impl
 		layers_.push_back(layer);
 
 		return layers_.back();
+	}
+
+	void store_parameter(
+			const std::wstring& name,
+			const std::shared_ptr<parameter_holder_base>& param)
+	{
+		parameters_.insert(std::make_pair(boost::to_lower_copy(name), param));
 	}
 
 	binding<int64_t> frame()
@@ -127,7 +135,7 @@ struct scene_producer::impl
 			frames.push_back(frame);
 		}
 
-		frame_number_.set(frame_number_.get() + 1);
+		++frame_number_;
 
 		return draw_frame(frames);
 	}
@@ -167,27 +175,15 @@ struct scene_producer::impl
 
 	boost::unique_future<std::wstring> call(const std::vector<std::wstring>& params) 
 	{
-		std::wstring result;
-		
-		if(params.size() >= 2)
+		for (int i = 0; i + 1 < params.size(); i += 2)
 		{
-			struct layer_comparer
-			{
-				const std::wstring& str;
-				explicit layer_comparer(const std::wstring& s) : str(s) {}
-				bool operator()(const layer& val) { return boost::iequals(val.name.get(), str); }
-			};
+			auto found = parameters_.find(boost::to_lower_copy(params[i]));
 
-			auto it = std::find_if(layers_.begin(), layers_.end(), layer_comparer(params[0]));
-			if(it != layers_.end())
-			{
-				auto params2 = params;
-				params2.erase(params2.cbegin());
-				(*it).producer.get()->call(params2);
-			}
+			if (found != parameters_.end())
+				found->second->set(params[i + 1]);
 		}
 
-		return async(launch::deferred, [=]{return result;});
+		return wrap_as_future(std::wstring(L""));
 	}
 
 	std::wstring print() const
@@ -293,6 +289,13 @@ void scene_producer::subscribe(const monitor::observable::observer_ptr& o)
 void scene_producer::unsubscribe(const monitor::observable::observer_ptr& o)
 {
 	impl_->unsubscribe(o);
+}
+
+void scene_producer::store_parameter(
+		const std::wstring& name,
+		const std::shared_ptr<parameter_holder_base>& param)
+{
+	impl_->store_parameter(name, param);
 }
 
 spl::shared_ptr<frame_producer> create_dummy_scene_producer(const spl::shared_ptr<class frame_factory>& frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params)
