@@ -82,9 +82,14 @@ public:
 		return client_->print();
 	}
 
-	virtual void bind_to_lifecycle(const std::shared_ptr<void>& lifecycle_bound)
+
+	void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound)
 	{
-		client_->bind_to_lifecycle(lifecycle_bound);
+		client_->add_lifecycle_bound_object(key, lifecycle_bound);
+	}
+	std::shared_ptr<void> remove_lifecycle_bound_object(const std::wstring& key)
+	{
+		return client_->remove_lifecycle_bound_object(key);
 	}
 };
 
@@ -104,7 +109,7 @@ protocol_strategy<char>::ptr to_unicode_adapter_factory::create(
 	return spl::make_shared<to_unicode_adapter>(codepage_, unicode_strategy_factory_->create(client));
 }
 
-class legacy_client_info : public ClientInfo
+/*class legacy_client_info : public ClientInfo
 {
 	client_connection<wchar_t>::ptr client_connection_;
 public:
@@ -134,12 +139,16 @@ public:
 	{
 		return client_connection_->print();
 	}
-
-	virtual void bind_to_lifecycle(const std::shared_ptr<void>& lifecycle_bound)
+	virtual void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound)
 	{
-		client_connection_->bind_to_lifecycle(lifecycle_bound);
+		client_connection_->add_lifecycle_bound_object(key, lifecycle_bound);
 	}
-};
+	virtual std::shared_ptr<void> remove_lifecycle_bound_object(const std::wstring& key)
+	{
+		return client_connection_->remove_lifecycle_bound_object(key);
+	}
+
+};*/
 
 class legacy_strategy_adapter : public protocol_strategy<wchar_t>
 {
@@ -150,7 +159,7 @@ public:
 			const ProtocolStrategyPtr& strategy, 
 			const client_connection<wchar_t>::ptr& client_connection)
 		: strategy_(strategy)
-		, client_info_(std::make_shared<legacy_client_info>(client_connection))
+		, client_info_(client_connection)
 	{
 		CASPAR_LOG(info) << "legacy_strategy_adapter created.";
 	}

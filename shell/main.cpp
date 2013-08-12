@@ -42,6 +42,7 @@
 #include <mmsystem.h>
 #include <atlbase.h>
 
+#include <protocol/util/strategy_adapters.h>
 #include <protocol/amcp/AMCPProtocolStrategy.h>
 #include <protocol/osc/server.h>
 
@@ -66,6 +67,7 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/foreach.hpp>
 #include <boost/locale.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 
 #include <signal.h>
 
@@ -194,12 +196,13 @@ void run()
 
 	//caspar_server.subscribe(console_obs);
 						
-	// Create a amcp parser for console commands.
-	protocol::amcp::AMCPProtocolStrategy amcp(caspar_server.channels());
-
 	// Create a dummy client which prints amcp responses to console.
-	auto console_client = std::make_shared<IO::ConsoleClientInfo>();
-			
+	auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
+	
+	// Create a amcp parser for console commands.
+	//protocol::amcp::AMCPProtocolStrategy amcp(caspar_server.channels());
+	auto amcp = spl::make_shared<caspar::IO::delimiter_based_chunking_strategy_factory<wchar_t>>(L"\r\n", spl::make_shared<caspar::IO::legacy_strategy_adapter_factory>(spl::make_shared<protocol::amcp::AMCPProtocolStrategy>(caspar_server.channels())))->create(console_client);
+
 	std::wstring wcmd;
 	while(true)
 	{
@@ -284,7 +287,7 @@ void run()
 		}
 
 		wcmd += L"\r\n";
-		amcp.Parse(wcmd, console_client);
+		amcp->parse(wcmd);
 	}	
 	CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
 }

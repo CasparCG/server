@@ -45,14 +45,15 @@ typedef std::set<spl::shared_ptr<connection>> connection_set;
 
 class connection : public spl::enable_shared_from_this<connection>
 {   
-    const spl::shared_ptr<tcp::socket>			socket_; 
-	const spl::shared_ptr<connection_set>		connection_set_;
-	const std::wstring							name_;
-	protocol_strategy_factory<char>::ptr		protocol_factory_;
-	std::shared_ptr<protocol_strategy<char>>	protocol_;
+    const spl::shared_ptr<tcp::socket>				socket_; 
+	boost::asio::io_service&						service_;
+	const spl::shared_ptr<connection_set>			connection_set_;
+	const std::wstring								name_;
+	protocol_strategy_factory<char>::ptr			protocol_factory_;
+	std::shared_ptr<protocol_strategy<char>>		protocol_;
 
-	std::array<char, 32768>						data_;
-	std::vector<std::shared_ptr<void>>			lifecycle_bound_items_;
+	std::array<char, 32768>							data_;
+	std::map<std::wstring, std::shared_ptr<void>>	lifecycle_bound_objects_;
 
 	class connection_holder : public client_connection<char>
 	{
@@ -63,6 +64,7 @@ class connection : public spl::enable_shared_from_this<connection>
 
 		virtual void send(std::basic_string<char>&& data)
 		{
+			//TODO: need to implement a send-queue
 			auto conn = connection_.lock();
 			conn->send(std::move(data));
 		}
@@ -77,10 +79,15 @@ class connection : public spl::enable_shared_from_this<connection>
 			return conn->print();
 		}
 
-		virtual void bind_to_lifecycle(const std::shared_ptr<void>& lifecycle_bound)
+		virtual void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound)
 		{
 			auto conn = connection_.lock();
-			return conn->bind_to_lifecycle(lifecycle_bound);
+			return conn->add_lifecycle_bound_object(key, lifecycle_bound);
+		}
+		virtual std::shared_ptr<void> remove_lifecycle_bound_object(const std::wstring& key)
+		{
+			auto conn = connection_.lock();
+			return conn->remove_lifecycle_bound_object(key);
 		}
 	};
 
@@ -101,13 +108,6 @@ public:
 	{
 		return L"[" + name_ + L"]";
 	}
-
-	const std::string ipv4_address() const
-	{
-		return socket_->is_open() ? socket_->local_endpoint().address().to_string() : "no-address";
-	}
-	
-	/* ClientInfo */
 	
 	virtual void send(std::string&& data)
 	{
@@ -116,15 +116,31 @@ public:
 
 	virtual void disconnect()
 	{
-		stop();
+		service_.dispatch([=] { stop(); });
 	}
-	void bind_to_lifecycle(const std::shared_ptr<void>& lifecycle_bound)
+
+	void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void> lifecycle_bound)
 	{
-		lifecycle_bound_items_.push_back(lifecycle_bound);
+		//TODO: needs protection from evil concurrent access
+		//tbb::concurrent_hash_map ?
+		lifecycle_bound_objects_.insert(std::pair<std::wstring, std::shared_ptr<void>>(key, lifecycle_bound));
+	}
+	std::shared_ptr<void> remove_lifecycle_bound_object(const std::wstring& key)
+	{
+		//TODO: needs protection from evil concurrent access
+		//tbb::concurrent_hash_map ?
+		auto it = lifecycle_bound_objects_.find(key);
+		if(it != lifecycle_bound_objects_.end())
+		{
+			auto result = (*it).second;
+			lifecycle_bound_objects_.erase(it);
+			return result;
+		}
+		return std::shared_ptr<void>();
 	}
 
 	/**************/
-	
+private:
 	void stop()
 	{
 		connection_set_->erase(shared_from_this());
@@ -140,9 +156,14 @@ public:
 		CASPAR_LOG(info) << print() << L" Disconnected.";
 	}
 
-private:
+	const std::string ipv4_address() const
+	{
+		return socket_->is_open() ? socket_->local_endpoint().address().to_string() : "no-address";
+	}
+
     connection(const spl::shared_ptr<tcp::socket>& socket, const protocol_strategy_factory<char>::ptr& protocol_factory, const spl::shared_ptr<connection_set>& connection_set) 
 		: socket_(socket)
+		, service_(socket->get_io_service())
 		, name_((socket_->is_open() ? u16(socket_->local_endpoint().address().to_string() + ":" + boost::lexical_cast<std::string>(socket_->local_endpoint().port())) : L"no-address"))
 		, connection_set_(connection_set)
 		, protocol_factory_(protocol_factory)
@@ -186,7 +207,7 @@ private:
 		if(!error)			
 			CASPAR_LOG(trace) << print() << L" Sent: " << (data->size() < 512 ? u16(*data) : L"more than 512 bytes.");		
 		else if (error != boost::asio::error::operation_aborted)		
-			stop();		
+			stop();
     }
 
 	void read_some()
@@ -199,6 +220,8 @@ private:
 		auto str = spl::make_shared<std::string>(std::move(data));
 		socket_->async_write_some(boost::asio::buffer(str->data(), str->size()), std::bind(&connection::handle_write, shared_from_this(), str, std::placeholders::_1, std::placeholders::_2));
 	}
+
+	friend struct AsyncEventServer::implementation;
 };
 
 struct AsyncEventServer::implementation
@@ -256,23 +279,18 @@ struct AsyncEventServer::implementation
 			auto conn = connection::create(socket, protocol_factory_, connection_set_);
 			connection_set_->insert(conn);
 
+			BOOST_FOREACH(auto& lifecycle_factory, lifecycle_factories_)
 			{
-				tbb::mutex::scoped_lock lock(mutex_);
-
-				BOOST_FOREACH(auto& lifecycle_factory, lifecycle_factories_)
-				{
-					auto lifecycle_bound = lifecycle_factory(conn->ipv4_address());
-					conn->bind_to_lifecycle(lifecycle_bound);
-				}
+				auto lifecycle_bound = lifecycle_factory(conn->ipv4_address());
+				conn->add_lifecycle_bound_object(lifecycle_bound.first, lifecycle_bound.second);
 			}
 		}
 		start_accept();
     }
 
-	void add_client_lifecycle_event_factory(const lifecycle_factory_t& factory)
+	void add_client_lifecycle_object_factory(const lifecycle_factory_t& factory)
 	{
-		tbb::mutex::scoped_lock lock(mutex_);
-		lifecycle_factories_.push_back(factory);
+		service_.post([=]{ lifecycle_factories_.push_back(factory); });
 	}
 };
 
@@ -281,6 +299,6 @@ AsyncEventServer::AsyncEventServer(
 	: impl_(new implementation(protocol, port)) {}
 
 AsyncEventServer::~AsyncEventServer() {}
-void AsyncEventServer::add_client_lifecycle_event_factory(const lifecycle_factory_t& factory) { impl_->add_client_lifecycle_event_factory(factory); }
+void AsyncEventServer::add_client_lifecycle_object_factory(const lifecycle_factory_t& factory) { impl_->add_client_lifecycle_object_factory(factory); }
 
 }}
