@@ -59,6 +59,7 @@
 #include <protocol/util/strategy_adapters.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/thread.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -121,7 +122,8 @@ struct server::impl : boost::noncopyable
 		async_servers_.clear();
 		channels_.clear();
 
-		Sleep(500); // HACK: Wait for asynchronous destruction of producers and consumers.
+		boost::this_thread::sleep(boost::posix_time::milliseconds(500));
+		//Sleep(500); // HACK: Wait for asynchronous destruction of producers and consumers.
 
 		image::uninit();
 		ffmpeg::uninit();
@@ -188,9 +190,9 @@ struct server::impl : boost::noncopyable
 					async_servers_.push_back(asyncbootstrapper);
 
 					//TODO: remove - test
-					asyncbootstrapper->add_client_lifecycle_event_factory([=] (const std::string& ipv4_address) {
-																					return std::shared_ptr<void>(nullptr, [] (void*) 
-																					{ CASPAR_LOG(info) << "Client disconnect (lifecycle)"; });
+					asyncbootstrapper->add_client_lifecycle_object_factory([=] (const std::string& ipv4_address) {
+																					return std::pair<std::wstring, std::shared_ptr<void>>(L"log", std::shared_ptr<void>(nullptr, [] (void*) 
+																					{ CASPAR_LOG(info) << "Client disconnect (lifecycle)"; }));
 																				});
 				}
 				else

@@ -32,6 +32,7 @@
     <ClInclude Include="amcp\AMCPCommandQueue.h" />
     <ClInclude Include="amcp\AMCPCommandsImpl.h" />
     <ClInclude Include="amcp\AMCPProtocolStrategy.h" />
+    <ClInclude Include="amcp\amcp_shared.h" />
     <ClInclude Include="cii\CIICommand.h" />
     <ClInclude Include="cii\CIICommandsImpl.h" />
     <ClInclude Include="cii\CIIProtocolStrategy.h" />

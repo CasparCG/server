@@ -26,9 +26,10 @@
 #include <iostream>
 
 #include <common/log.h>
+#include "protocol_strategy.h"
 
 namespace caspar { namespace IO {
-
+/*
 class ClientInfo 
 {
 protected:
@@ -40,20 +41,22 @@ public:
 	virtual void Send(const std::wstring& data) = 0;
 	virtual void Disconnect() = 0;
 	virtual std::wstring print() const = 0;
-	virtual void bind_to_lifecycle(const std::shared_ptr<void>& lifecycle_bound) = 0;
+	virtual void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound) = 0;
+	virtual std::shared_ptr<void> remove_lifecycle_bound_object(const std::wstring& key) = 0;
 };
+*/
+typedef spl::shared_ptr<client_connection<wchar_t>> ClientInfoPtr;
 
-typedef std::shared_ptr<ClientInfo> ClientInfoPtr;
-
-struct ConsoleClientInfo : public caspar::IO::ClientInfo 
+struct ConsoleClientInfo : public client_connection<wchar_t>
 {
-	void Send(const std::wstring& data)
+	virtual void send(std::wstring&& data)
 	{
 		std::wcout << (L"#" + caspar::log::replace_nonprintable_copy(data, L'?'));
 	}
-	void Disconnect(){}
+	virtual void disconnect() {}
 	virtual std::wstring print() const {return L"Console";}
-	virtual void bind_to_lifecycle(const std::shared_ptr<void>& lifecycle_bound) {}
+	virtual void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound) {}
+	virtual std::shared_ptr<void> remove_lifecycle_bound_object(const std::wstring& key) { return std::shared_ptr<void>(); }
 };
 
 }}
