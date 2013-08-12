@@ -145,7 +145,7 @@ private:
 		{
 			unbind();
 			depend_on(other);
-			expression_ = [&]{ return other.get(); }
+			expression_ = [other]{ return other->get(); };
 			evaluate();
 		}
 
@@ -239,6 +239,24 @@ public:
 		return composed(other, [](T self, T o) { return self + o; });
 	}
 
+	binding<T>& operator++()
+	{
+		T new_value = get();
+		++new_value;
+
+		set(new_value);
+
+		return *this;
+	}
+
+	binding<T> operator++(int)
+	{
+		binding<T> pre_val(get());
+		++*this;
+
+		return pre_val;
+	}
+
 	binding<T> operator-() const
 	{
 		return transformed([](T self) { return -self; });
@@ -252,6 +270,24 @@ public:
 	binding<T> operator-(T other) const
 	{
 		return *this + -other;
+	}
+
+	binding<T>& operator--()
+	{
+		T new_value = get();
+		--new_value;
+
+		set(new_value);
+
+		return *this;
+	}
+
+	binding<T> operator--(int)
+	{
+		binding<T> pre_val(get());
+		--*this;
+
+		return pre_val;
 	}
 
 	binding<T> operator*(T other) const
@@ -453,7 +489,7 @@ public:
 
 	binding<T> otherwise(T false_result)
 	{
-		return otherwise(binding<T>(false_result))	
+		return otherwise(binding<T>(false_result));
 	}
 };
 
