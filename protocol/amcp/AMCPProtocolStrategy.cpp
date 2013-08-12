@@ -271,7 +271,7 @@ private:
 
 		std::wstring currentToken;
 
-		char inQuote = 0;
+		bool inQuote = false;
 		bool getSpecialCode = false;
 
 		for(unsigned int charIndex=0; charIndex<message.size(); ++charIndex)
@@ -315,7 +315,7 @@ private:
 
 			if(message[charIndex]==TEXT('\"'))
 			{
-				inQuote ^= 1;
+				inQuote = !inQuote;
 
 				if(currentToken.size()>0 || !inQuote)
 				{
