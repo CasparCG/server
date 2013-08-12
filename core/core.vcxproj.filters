@@ -163,6 +163,9 @@
     <ClInclude Include="producer\text\utils\string_metrics.h">
       <Filter>source\producer\text\utils</Filter>
     </ClInclude>
+    <ClInclude Include="producer\scene\hotswap_producer.h">
+      <Filter>source\producer\scene</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
@@ -240,6 +243,9 @@
     </ClCompile>
     <ClCompile Include="producer\text\utils\texture_atlas.cpp">
       <Filter>source\producer\text\utils</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\scene\hotswap_producer.cpp">
+      <Filter>source\producer\scene</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
