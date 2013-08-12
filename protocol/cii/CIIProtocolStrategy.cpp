@@ -42,8 +42,8 @@ namespace caspar { namespace protocol { namespace cii {
 	
 using namespace core;
 
-const std::wstring CIIProtocolStrategy::MessageDelimiter = TEXT("\r\n");
-const TCHAR CIIProtocolStrategy::TokenDelimiter = TEXT('\\');
+const std::wstring CIIProtocolStrategy::MessageDelimiter = L"\r\n";
+const wchar_t CIIProtocolStrategy::TokenDelimiter = L'\\';
 
 CIIProtocolStrategy::CIIProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>& channels) : pChannel_(channels.at(0)), executor_(L"CIIProtocolStrategy")
 {
@@ -51,13 +51,12 @@ CIIProtocolStrategy::CIIProtocolStrategy(const std::vector<spl::shared_ptr<core:
 
 //The paser method expects message to be complete messages with the delimiter stripped away.
 //Thesefore the AMCPProtocolStrategy should be decorated with a delimiter_based_chunking_strategy
-void CIIProtocolStrategy::Parse(const std::wstring& message, IO::ClientInfoPtr pClientInfo) 
+void CIIProtocolStrategy::Parse(const std::wstring& message, IO::ClientInfoPtr client) 
 {
 	if(message.length() > 0)
 	{
-		ProcessMessage(message, pClientInfo);
-		if(pClientInfo != 0)
-			pClientInfo->Send(TEXT("*\r\n"));
+		ProcessMessage(message, client);
+		client->send(std::wstring(L"*\r\n"));
 	}
 }
 

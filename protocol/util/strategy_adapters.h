@@ -22,6 +22,7 @@
 #pragma once
 
 #include <boost/algorithm/string/split.hpp>
+#include <boost/foreach.hpp>
 
 #include "protocol_strategy.h"
 #include "ProtocolStrategy.h"
@@ -71,7 +72,7 @@ public:
 	{
 	}
 
-	virtual void parse(const std::basic_string<char>& data)
+	virtual void parse(const std::basic_string<CharT>& data)
 	{
 		input_ += data;
 

@@ -32,98 +32,171 @@ std::wstring ListTemplates();
 
 namespace amcp {
 	
-class ChannelGridCommand : public AMCPCommandBase<false, 0>
+class ChannelGridCommand : public AMCPCommandBase<0>
 {
+public:
+	explicit ChannelGridCommand(IO::ClientInfoPtr client) : AMCPCommandBase(client) {}
 	std::wstring print() const { return L"ChannelGridCommand";}
 	bool DoExecute();
 };
 
-class DiagnosticsCommand : public AMCPCommandBase<false, 0>
+class DiagnosticsCommand : public AMCPCommandBase<0>
 {
+public:
+	explicit DiagnosticsCommand(IO::ClientInfoPtr client) : AMCPCommandBase(client) {}
 	std::wstring print() const { return L"DiagnosticsCommand";}
 	bool DoExecute();
 };
 
-class CallCommand : public AMCPCommandBase<true, 1>
+class CallCommand : public AMCPChannelCommandBase<1>
 {
+public:
+	CallCommand(IO::ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index) : AMCPChannelCommandBase(client, channel, channel_index, layer_index)
+	{}
+
+private:
 	std::wstring print() const { return L"CallCommand";}
 	bool DoExecute();
 };
 
-class MixerCommand : public AMCPCommandBase<true, 1>
+class MixerCommand : public AMCPChannelCommandBase<1>
 {
+public:
+	MixerCommand(IO::ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index) : AMCPChannelCommandBase(client, channel, channel_index, layer_index)
+	{}
+
+private:
 	std::wstring print() const { return L"MixerCommand";}
 	bool DoExecute();
 };
 	
-class AddCommand : public AMCPCommandBase<true, 1>
+class AddCommand : public AMCPChannelCommandBase<1>
 {
+public:
+	AddCommand(IO::ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index) : AMCPChannelCommandBase(client, channel, channel_index, layer_index)
+	{}
+
+private:
 	std::wstring print() const { return L"AddCommand";}
 	bool DoExecute();
 };
 
-class RemoveCommand : public AMCPCommandBase<true, 0>
+class RemoveCommand : public AMCPChannelCommandBase<0>
 {
+public:
+	RemoveCommand(IO::ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index) : AMCPChannelCommandBase(client, channel, channel_index, layer_index)
+	{}
+
+private:
 	std::wstring print() const { return L"RemoveCommand";}
 	bool DoExecute();
 };
 
-class SwapCommand : public AMCPCommandBase<true, 1>
+class SwapCommand : public AMCPChannelCommandBase<1>, AMCPChannelsAwareCommand
 {
+public:
+	SwapCommand(IO::ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index, const std::vector<channel_context>& channels) : AMCPChannelCommandBase(client, channel, channel_index, layer_index), AMCPChannelsAwareCommand(channels)
+	{}
+
+private:
 	std::wstring print() const { return L"SwapCommand";}
 	bool DoExecute();
 };
 
-class LoadCommand : public AMCPCommandBase<true, 1>
+class LoadCommand : public AMCPChannelCommandBase<1>
 {
+public:
+	LoadCommand(IO::ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index) : AMCPChannelCommandBase(client, channel, channel_index, layer_index)
+	{}
+
+private:
 	std::wstring print() const { return L"LoadCommand";}
 	bool DoExecute();
 };
 
-class LoadbgCommand : public AMCPCommandBase<true, 1>
-{
-	std::wstring print() const { return L"LoadbgCommand";}
-	bool DoExecute();
-};
 
-class PlayCommand: public AMCPCommandBase<true, 0>
+class PlayCommand: public AMCPChannelCommandBase<0>, public AMCPChannelsAwareCommand
 {
+public:
+	PlayCommand(IO::ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index, const std::vector<channel_context>& channels) : AMCPChannelCommandBase(client, channel, channel_index, layer_index), AMCPChannelsAwareCommand(channels)
+	{}
+
+private:
 	std::wstring print() const { return L"PlayCommand";}
 	bool DoExecute();
 };
 
-class PauseCommand: public AMCPCommandBase<true, 0>
+class LoadbgCommand : public AMCPChannelCommandBase<1>, public AMCPChannelsAwareCommand
 {
+public:
+	LoadbgCommand(IO::ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index, const std::vector<channel_context>& channels) : AMCPChannelCommandBase(client, channel, channel_index, layer_index), AMCPChannelsAwareCommand(channels)
+	{}
+	LoadbgCommand(const PlayCommand& rhs) : AMCPChannelCommandBase<1>(rhs), AMCPChannelsAwareCommand(rhs) {}
+
+private:
+	std::wstring print() const { return L"LoadbgCommand";}
+	bool DoExecute();
+};
+
+class PauseCommand: public AMCPChannelCommandBase<0>
+{
+public:
+	PauseCommand(IO::ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index) : AMCPChannelCommandBase(client, channel, channel_index, layer_index)
+	{}
+
+private:
 	std::wstring print() const { return L"PauseCommand";}
 	bool DoExecute();
 };
 
-class StopCommand : public AMCPCommandBase<true, 0>
+class StopCommand : public AMCPChannelCommandBase<0>
 {
+public:
+	StopCommand(IO::ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index) : AMCPChannelCommandBase(client, channel, channel_index, layer_index)
+	{}
+
+private:
 	std::wstring print() const { return L"StopCommand";}
 	bool DoExecute();
 };
 
-class ClearCommand : public AMCPCommandBase<true, 0>
+class ClearCommand : public AMCPChannelCommandBase<0>
 {
+public:
+	ClearCommand(IO::ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index) : AMCPChannelCommandBase(client, channel, channel_index, layer_index)
+	{}
+
+private:
 	std::wstring print() const { return L"ClearCommand";}
 	bool DoExecute();
 };
 
-class PrintCommand : public AMCPCommandBase<true, 0>
+class PrintCommand : public AMCPChannelCommandBase<0>
 {
+public:
+	PrintCommand(IO::ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index) : AMCPChannelCommandBase(client, channel, channel_index, layer_index)
+	{}
+
+private:
 	std::wstring print() const { return L"PrintCommand";}
 	bool DoExecute();
 };
 
-class LogCommand : public AMCPCommandBase<false, 0>
+class LogCommand : public AMCPCommandBase<2>
 {
+public:
+	explicit LogCommand(IO::ClientInfoPtr client) : AMCPCommandBase(client) {}
 	std::wstring print() const { return L"LogCommand";}
 	bool DoExecute();
 };
 
-class CGCommand : public AMCPCommandBase<true, 1>
+class CGCommand : public AMCPChannelCommandBase<1>
 {
+public:
+	CGCommand(IO::ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index) : AMCPChannelCommandBase(client, channel, channel_index, layer_index)
+	{}
+
+private:
 	std::wstring print() const { return L"CGCommand";}
 	bool DoExecute();
 	bool ValidateLayer(const std::wstring& layerstring);
@@ -139,8 +212,11 @@ class CGCommand : public AMCPCommandBase<true, 1>
 	bool DoExecuteInfo();
 };
 
-class DataCommand : public AMCPCommandBase<false, 1>
+class DataCommand : public AMCPCommandBase<1>
 {
+public:
+	explicit DataCommand(IO::ClientInfoPtr client) : AMCPCommandBase(client) {}
+
 	std::wstring print() const { return L"DataCommand";}
 	bool DoExecute();
 	bool DoExecuteStore();
@@ -149,49 +225,70 @@ class DataCommand : public AMCPCommandBase<false, 1>
 	bool DoExecuteList();
 };
 
-class ClsCommand : public AMCPCommandBase<false, 0>
+class ClsCommand : public AMCPCommandBase<0>
 {
+public:
+	explicit ClsCommand(IO::ClientInfoPtr client) : AMCPCommandBase(client) {}
 	std::wstring print() const { return L"ClsCommand";}
 	bool DoExecute();
 };
 
-class TlsCommand : public AMCPCommandBase<false, 0>
+class TlsCommand : public AMCPCommandBase<0>
 {
+public:
+	explicit TlsCommand(IO::ClientInfoPtr client) : AMCPCommandBase(client) {}
 	std::wstring print() const { return L"TlsCommand";}
 	bool DoExecute();
 };
 
-class CinfCommand : public AMCPCommandBase<false, 1>
+class CinfCommand : public AMCPCommandBase<1>
 {
+public:
+	explicit CinfCommand(IO::ClientInfoPtr client) : AMCPCommandBase(client) {}
 	std::wstring print() const { return L"CinfCommand";}
 	bool DoExecute();
 };
 
-class InfoCommand : public AMCPCommandBase<false, 0>
+class InfoCommand : public AMCPCommandBase<0>, AMCPChannelsAwareCommand
 {
 public:
+	InfoCommand(IO::ClientInfoPtr client, const std::vector<channel_context>& channels) : AMCPChannelsAwareCommand(channels), AMCPCommandBase(client) {}
 	std::wstring print() const { return L"InfoCommand";}
-	InfoCommand(const std::vector<spl::shared_ptr<core::video_channel>>& channels) : channels_(channels){}
 	bool DoExecute();
-private:
-	const std::vector<spl::shared_ptr<core::video_channel>>& channels_;
 };
 
-class VersionCommand : public AMCPCommandBase<false, 0>
+class VersionCommand : public AMCPCommandBase<0>
 {
+public:
+	explicit VersionCommand(IO::ClientInfoPtr client) : AMCPCommandBase(client) {}
 	std::wstring print() const { return L"VersionCommand";}
 	bool DoExecute();
 };
 
-class ByeCommand : public AMCPCommandBase<false, 0>
+class ByeCommand : public AMCPCommandBase<0>
 {
+public:
+	explicit ByeCommand(IO::ClientInfoPtr client) : AMCPCommandBase(client) {}
 	std::wstring print() const { return L"ByeCommand";}
 	bool DoExecute();
 };
 
-class SetCommand : public AMCPCommandBase<true, 2>
+class SetCommand : public AMCPChannelCommandBase<2>
 {
+public:
+	SetCommand(IO::ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index) : AMCPChannelCommandBase(client, channel, channel_index, layer_index)
+	{}
+
+private:
 	std::wstring print() const { return L"SetCommand";}
+	bool DoExecute();
+};
+
+class LockCommand : public AMCPCommandBase<1>, AMCPChannelsAwareCommand
+{
+public:
+	LockCommand(IO::ClientInfoPtr client, const std::vector<channel_context>& channels) : AMCPChannelsAwareCommand(channels), AMCPCommandBase(client) {}
+	std::wstring print() const { return L"LockCommand";}
 	bool DoExecute();
 };
 

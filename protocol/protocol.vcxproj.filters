@@ -100,6 +100,9 @@
     <ClInclude Include="util\lock_container.h">
       <Filter>source\util</Filter>
     </ClInclude>
+    <ClInclude Include="amcp\amcp_shared.h">
+      <Filter>source\amcp</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="amcp\AMCPCommandQueue.cpp">
