@@ -34,6 +34,8 @@ class AMCPCommandQueue
 	AMCPCommandQueue(const AMCPCommandQueue&);
 	AMCPCommandQueue& operator=(const AMCPCommandQueue&);
 public:
+	typedef std::shared_ptr<AMCPCommandQueue> ptr_type;
+
 	AMCPCommandQueue();
 	~AMCPCommandQueue();
 
@@ -42,6 +44,5 @@ public:
 private:
 	executor			executor_;
 };
-typedef std::tr1::shared_ptr<AMCPCommandQueue> AMCPCommandQueuePtr;
 
 }}}

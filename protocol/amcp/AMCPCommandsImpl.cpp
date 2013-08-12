@@ -96,6 +96,7 @@
 500 FAILED				Internt configurationfel  
 501 [kommando] FAILED	Internt configurationfel  
 502 [kommando] FAILED	Oläslig mediafil  
+503 [kommando] FAILED	access denied
 
 600 [kommando] FAILED	funktion ej implementerad
 */
@@ -262,26 +263,12 @@ std::wstring ListTemplates()
 
 namespace amcp {
 	
-AMCPCommand::AMCPCommand() : channelIndex_(0), layerIndex_(-1)
-{}
-
 void AMCPCommand::SendReply()
 {
-	if(!pClientInfo_) 
-		return;
-
 	if(replyString_.empty())
 		return;
 
-	pClientInfo_->Send(replyString_);
-}
-
-void AMCPCommand::Clear() 
-{
-	pChannel_->stage().clear();
-	pClientInfo_.reset();
-	channelIndex_ = 0;
-	parameters_.clear();
+	client_->send(std::move(replyString_));
 }
 
 bool DiagnosticsCommand::DoExecute()
@@ -307,7 +294,7 @@ bool ChannelGridCommand::DoExecute()
 	CASPAR_THROW_EXCEPTION(not_implemented());
 
 	//int index = 1;
-	//auto self = GetChannels().back();
+	//auto self = channels().back();
 	//
 	//std::vector<std::wstring> params;
 	//params.push_back(L"SCREEN");
@@ -317,7 +304,7 @@ bool ChannelGridCommand::DoExecute()
 
 	//self->output().add(screen);
 
-	//BOOST_FOREACH(auto channel, GetChannels())
+	//BOOST_FOREACH(auto channel, channels())
 	//{
 	//	if(channel != self)
 	//	{
@@ -328,7 +315,7 @@ bool ChannelGridCommand::DoExecute()
 	//	}
 	//}
 
-	//int n = GetChannels().size()-1;
+	//int n = channels().size()-1;
 	//double delta = 1.0/static_cast<double>(n);
 	//for(int x = 0; x < n; ++x)
 	//{
@@ -359,7 +346,7 @@ bool CallCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		auto result = GetChannel()->stage().call(GetLayerIndex(), parameters());
+		auto result = channel()->stage().call(layer_index(), parameters());
 		
 		if(!result.timed_wait(boost::posix_time::seconds(2)))
 			CASPAR_THROW_EXCEPTION(timed_out());
@@ -398,7 +385,7 @@ bool MixerCommand::DoExecute()
 		if(boost::iequals(parameters()[0], L"KEYER") || boost::iequals(parameters()[0], L"IS_KEY"))
 		{
 			bool value = boost::lexical_cast<int>(parameters().at(1));
-			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
+			transforms.push_back(stage::transform_tuple_t(layer_index(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.image_transform.is_key = value;
 				return transform;					
@@ -411,7 +398,7 @@ bool MixerCommand::DoExecute()
 
 			double value = boost::lexical_cast<double>(parameters().at(1));
 			
-			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
+			transforms.push_back(stage::transform_tuple_t(layer_index(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.image_transform.opacity = value;
 				return transform;					
@@ -426,7 +413,7 @@ bool MixerCommand::DoExecute()
 			double x_s	= boost::lexical_cast<double>(parameters().at(3));
 			double y_s	= boost::lexical_cast<double>(parameters().at(4));
 
-			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) mutable -> frame_transform
+			transforms.push_back(stage::transform_tuple_t(layer_index(), [=](frame_transform transform) mutable -> frame_transform
 			{
 				transform.image_transform.fill_translation[0]	= x;
 				transform.image_transform.fill_translation[1]	= y;
@@ -444,7 +431,7 @@ bool MixerCommand::DoExecute()
 			double x_s	= boost::lexical_cast<double>(parameters().at(3));
 			double y_s	= boost::lexical_cast<double>(parameters().at(4));
 
-			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
+			transforms.push_back(stage::transform_tuple_t(layer_index(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.image_transform.clip_translation[0]	= x;
 				transform.image_transform.clip_translation[1]	= y;
@@ -482,20 +469,20 @@ bool MixerCommand::DoExecute()
 		else if(boost::iequals(parameters()[0], L"BLEND"))
 		{
 			auto blend_str = parameters().at(1);								
-			int layer = GetLayerIndex();
-			GetChannel()->mixer().set_blend_mode(GetLayerIndex(), get_blend_mode(blend_str));	
+			int layer = layer_index();
+			channel()->mixer().set_blend_mode(layer_index(), get_blend_mode(blend_str));	
 		}
 		else if(boost::iequals(parameters()[0], L"MASTERVOLUME"))
 		{
 			float master_volume = boost::lexical_cast<float>(parameters().at(1));
-			GetChannel()->mixer().set_master_volume(master_volume);
+			channel()->mixer().set_master_volume(master_volume);
 		}
 		else if(boost::iequals(parameters()[0], L"BRIGHTNESS"))
 		{
 			auto value = boost::lexical_cast<double>(parameters().at(1));
 			int duration = parameters().size() > 2 ? boost::lexical_cast<int>(parameters()[2]) : 0;
 			std::wstring tween = parameters().size() > 3 ? parameters()[3] : L"linear";
-			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
+			transforms.push_back(stage::transform_tuple_t(layer_index(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.image_transform.brightness = value;
 				return transform;
@@ -506,7 +493,7 @@ bool MixerCommand::DoExecute()
 			auto value = boost::lexical_cast<double>(parameters().at(1));
 			int duration = parameters().size() > 2 ? boost::lexical_cast<int>(parameters()[2]) : 0;
 			std::wstring tween = parameters().size() > 3 ? parameters()[3] : L"linear";
-			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
+			transforms.push_back(stage::transform_tuple_t(layer_index(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.image_transform.saturation = value;
 				return transform;
@@ -517,7 +504,7 @@ bool MixerCommand::DoExecute()
 			auto value = boost::lexical_cast<double>(parameters().at(1));
 			int duration = parameters().size() > 2 ? boost::lexical_cast<int>(parameters()[2]) : 0;
 			std::wstring tween = parameters().size() > 3 ? parameters()[3] : L"linear";
-			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
+			transforms.push_back(stage::transform_tuple_t(layer_index(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.image_transform.contrast = value;
 				return transform;
@@ -534,7 +521,7 @@ bool MixerCommand::DoExecute()
 			int duration = parameters().size() > 6 ? boost::lexical_cast<int>(parameters()[6]) : 0;
 			std::wstring tween = parameters().size() > 7 ? parameters()[7] : L"linear";
 
-			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
+			transforms.push_back(stage::transform_tuple_t(layer_index(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.image_transform.levels = value;
 				return transform;
@@ -546,7 +533,7 @@ bool MixerCommand::DoExecute()
 			std::wstring tween = parameters().size() > 3 ? parameters()[3] : L"linear";
 			double value = boost::lexical_cast<double>(parameters()[1]);
 
-			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
+			transforms.push_back(stage::transform_tuple_t(layer_index(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.audio_transform.volume = value;
 				return transform;
@@ -554,22 +541,22 @@ bool MixerCommand::DoExecute()
 		}
 		else if(boost::iequals(parameters()[0], L"CLEAR"))
 		{
-			int layer = GetLayerIndex(std::numeric_limits<int>::max());
+			int layer = layer_index(std::numeric_limits<int>::max());
 
 			if (layer == std::numeric_limits<int>::max())
 			{
-				GetChannel()->stage().clear_transforms();
-				GetChannel()->mixer().clear_blend_modes();
+				channel()->stage().clear_transforms();
+				channel()->mixer().clear_blend_modes();
 			}
 			else
 			{
-				GetChannel()->stage().clear_transforms(layer);
-				GetChannel()->mixer().clear_blend_mode(layer);
+				channel()->stage().clear_transforms(layer);
+				channel()->mixer().clear_blend_mode(layer);
 			}
 		}
 		else if(boost::iequals(parameters()[0], L"COMMIT"))
 		{
-			transforms = std::move(deferred_transforms[GetChannelIndex()]);
+			transforms = std::move(deferred_transforms[channel_index()]);
 		}
 		else
 		{
@@ -579,11 +566,11 @@ bool MixerCommand::DoExecute()
 
 		if(defer)
 		{
-			auto& defer_tranforms = deferred_transforms[GetChannelIndex()];
+			auto& defer_tranforms = deferred_transforms[channel_index()];
 			defer_tranforms.insert(defer_tranforms.end(), transforms.begin(), transforms.end());
 		}
 		else
-			GetChannel()->stage().apply_transforms(transforms);
+			channel()->stage().apply_transforms(transforms);
 	
 		SetReplyString(TEXT("202 MIXER OK\r\n"));
 
@@ -608,24 +595,24 @@ bool SwapCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		if(GetLayerIndex(-1) != -1)
+		if(layer_index(-1) != -1)
 		{
 			std::vector<std::string> strs;
 			boost::split(strs, parameters()[0], boost::is_any_of("-"));
 			
-			auto ch1 = GetChannel();
-			auto ch2 = GetChannels().at(boost::lexical_cast<int>(strs.at(0))-1);
+			auto ch1 = channel();
+			auto ch2 = channels().at(boost::lexical_cast<int>(strs.at(0))-1);
 
-			int l1 = GetLayerIndex();
+			int l1 = layer_index();
 			int l2 = boost::lexical_cast<int>(strs.at(1));
 
-			ch1->stage().swap_layer(l1, l2, ch2->stage());
+			ch1->stage().swap_layer(l1, l2, ch2.channel->stage());
 		}
 		else
 		{
-			auto ch1 = GetChannel();
-			auto ch2 = GetChannels().at(boost::lexical_cast<int>(parameters()[0])-1);
-			ch1->stage().swap_layers(ch2->stage());
+			auto ch1 = channel();
+			auto ch2 = channels().at(boost::lexical_cast<int>(parameters()[0])-1);
+			ch1->stage().swap_layers(ch2.channel->stage());
 		}
 		
 		SetReplyString(TEXT("202 SWAP OK\r\n"));
@@ -658,7 +645,7 @@ bool AddCommand::DoExecute()
 		}
 
 		auto consumer = create_consumer(parameters());
-		GetChannel()->output().add(GetLayerIndex(consumer->index()), consumer);
+		channel()->output().add(layer_index(consumer->index()), consumer);
 	
 		SetReplyString(TEXT("202 ADD OK\r\n"));
 
@@ -683,7 +670,7 @@ bool RemoveCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		auto index = GetLayerIndex(std::numeric_limits<int>::min());
+		auto index = layer_index(std::numeric_limits<int>::min());
 		if(index == std::numeric_limits<int>::min())
 		{
 			//create_consumer still expects all parameters to be uppercase
@@ -695,7 +682,7 @@ bool RemoveCommand::DoExecute()
 			index = create_consumer(parameters())->index();
 		}
 
-		GetChannel()->output().remove(index);
+		channel()->output().remove(index);
 
 		SetReplyString(TEXT("202 REMOVE OK\r\n"));
 
@@ -720,8 +707,8 @@ bool LoadCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		auto pFP = create_producer(GetChannel()->frame_factory(), GetChannel()->video_format_desc(), parameters());		
-		GetChannel()->stage().load(GetLayerIndex(), pFP, true);
+		auto pFP = create_producer(channel()->frame_factory(), channel()->video_format_desc(), parameters());		
+		channel()->stage().load(layer_index(), pFP, true);
 	
 		SetReplyString(TEXT("202 LOAD OK\r\n"));
 
@@ -833,11 +820,11 @@ bool LoadbgCommand::DoExecute()
 		if(boost::regex_match(parameters().at(0), what, expr))
 		{
 			auto channel_index = boost::lexical_cast<int>(what["CHANNEL"].str());
-			pFP = reroute::create_producer(*GetChannels().at(channel_index-1)); 
+			pFP = reroute::create_producer(*channels().at(channel_index-1).channel); 
 		}
 		else
 		{
-			pFP = create_producer(GetChannel()->frame_factory(), GetChannel()->video_format_desc(), parameters());
+			pFP = create_producer(channel()->frame_factory(), channel()->video_format_desc(), parameters());
 		}
 		
 		if(pFP == frame_producer::empty())
@@ -845,11 +832,11 @@ bool LoadbgCommand::DoExecute()
 
 		bool auto_play = contains_param(L"AUTO", parameters());
 
-		auto pFP2 = create_transition_producer(GetChannel()->video_format_desc().field_mode, spl::make_shared_ptr(pFP), transitionInfo);
+		auto pFP2 = create_transition_producer(channel()->video_format_desc().field_mode, spl::make_shared_ptr(pFP), transitionInfo);
 		if(auto_play)
-			GetChannel()->stage().load(GetLayerIndex(), pFP2, false, transitionInfo.duration); // TODO: LOOP
+			channel()->stage().load(layer_index(), pFP2, false, transitionInfo.duration); // TODO: LOOP
 		else
-			GetChannel()->stage().load(GetLayerIndex(), pFP2, false); // TODO: LOOP
+			channel()->stage().load(layer_index(), pFP2, false); // TODO: LOOP
 	
 		
 		SetReplyString(TEXT("202 LOADBG OK\r\n"));
@@ -874,7 +861,7 @@ bool PauseCommand::DoExecute()
 {
 	try
 	{
-		GetChannel()->stage().pause(GetLayerIndex());
+		channel()->stage().pause(layer_index());
 		SetReplyString(TEXT("202 PAUSE OK\r\n"));
 		return true;
 	}
@@ -892,19 +879,13 @@ bool PlayCommand::DoExecute()
 	{
 		if(!parameters().empty())
 		{
-			LoadbgCommand lbg;
-			lbg.SetChannel(GetChannel());
-			lbg.SetChannels(GetChannels());
-			lbg.SetChannelIndex(GetChannelIndex());
-			lbg.SetLayerIntex(GetLayerIndex());
-			lbg.SetClientInfo(GetClientInfo());
-			for(auto it = parameters().begin(); it != parameters().end(); ++it)
-				lbg.AddParameter(*it);
+			LoadbgCommand lbg(*this);
+
 			if(!lbg.Execute())
 				throw std::exception();
 		}
 
-		GetChannel()->stage().play(GetLayerIndex());
+		channel()->stage().play(layer_index());
 		
 		SetReplyString(TEXT("202 PLAY OK\r\n"));
 		return true;
@@ -921,7 +902,7 @@ bool StopCommand::DoExecute()
 {
 	try
 	{
-		GetChannel()->stage().stop(GetLayerIndex());
+		channel()->stage().stop(layer_index());
 		SetReplyString(TEXT("202 STOP OK\r\n"));
 		return true;
 	}
@@ -935,11 +916,11 @@ bool StopCommand::DoExecute()
 
 bool ClearCommand::DoExecute()
 {
-	int index = GetLayerIndex(std::numeric_limits<int>::min());
+	int index = layer_index(std::numeric_limits<int>::min());
 	if(index != std::numeric_limits<int>::min())
-		GetChannel()->stage().clear(index);
+		channel()->stage().clear(index);
 	else
-		GetChannel()->stage().clear();
+		channel()->stage().clear();
 		
 	SetReplyString(TEXT("202 CLEAR OK\r\n"));
 
@@ -948,7 +929,7 @@ bool ClearCommand::DoExecute()
 
 bool PrintCommand::DoExecute()
 {
-	GetChannel()->output().add(create_consumer(boost::assign::list_of(L"IMAGE")));
+	channel()->output().add(create_consumer(boost::assign::list_of(L"IMAGE")));
 		
 	SetReplyString(TEXT("202 PRINT OK\r\n"));
 
@@ -1083,7 +1064,7 @@ bool CGCommand::DoExecuteAdd() {
 		std::wstring filename = parameters()[2];
 		filename.append(extension);
 
-		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_proxy::DEFAULT_LAYER)).add(layer, filename, bDoStart, label, (pDataString!=0) ? pDataString : TEXT(""));
+		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).add(layer, filename, bDoStart, label, (pDataString!=0) ? pDataString : TEXT(""));
 		SetReplyString(TEXT("202 CG OK\r\n"));
 	}
 	else
@@ -1104,7 +1085,7 @@ bool CGCommand::DoExecutePlay()
 			return false;
 		}
 		int layer = boost::lexical_cast<int>(parameters()[1]);
-		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_proxy::DEFAULT_LAYER)).play(layer);
+		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).play(layer);
 	}
 	else
 	{
@@ -1126,7 +1107,7 @@ bool CGCommand::DoExecuteStop()
 			return false;
 		}
 		int layer = boost::lexical_cast<int>(parameters()[1]);
-		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_proxy::DEFAULT_LAYER)).stop(layer, 0);
+		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).stop(layer, 0);
 	}
 	else 
 	{
@@ -1149,7 +1130,7 @@ bool CGCommand::DoExecuteNext()
 		}
 
 		int layer = boost::lexical_cast<int>(parameters()[1]);
-		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_proxy::DEFAULT_LAYER)).next(layer);
+		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).next(layer);
 	}
 	else 
 	{
@@ -1172,7 +1153,7 @@ bool CGCommand::DoExecuteRemove()
 		}
 
 		int layer = boost::lexical_cast<int>(parameters()[1]);
-		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_proxy::DEFAULT_LAYER)).remove(layer);
+		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).remove(layer);
 	}
 	else 
 	{
@@ -1186,7 +1167,7 @@ bool CGCommand::DoExecuteRemove()
 
 bool CGCommand::DoExecuteClear() 
 {
-	GetChannel()->stage().clear(GetLayerIndex(flash::cg_proxy::DEFAULT_LAYER));
+	channel()->stage().clear(layer_index(flash::cg_proxy::DEFAULT_LAYER));
 	SetReplyString(TEXT("202 CG OK\r\n"));
 	return true;
 }
@@ -1213,7 +1194,7 @@ bool CGCommand::DoExecuteUpdate()
 		}		
 
 		int layer = boost::lexical_cast<int>(parameters()[1]);
-		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_proxy::DEFAULT_LAYER)).update(layer, dataString);
+		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).update(layer, dataString);
 	}
 	catch(...)
 	{
@@ -1238,7 +1219,7 @@ bool CGCommand::DoExecuteInvoke()
 			return false;
 		}
 		int layer = boost::lexical_cast<int>(parameters()[1]);
-		auto result = flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_proxy::DEFAULT_LAYER)).invoke(layer, parameters()[2]);
+		auto result = flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).invoke(layer, parameters()[2]);
 		replyString << result << TEXT("\r\n"); 
 	}
 	else 
@@ -1265,13 +1246,13 @@ bool CGCommand::DoExecuteInfo()
 		}
 
 		int layer = boost::lexical_cast<int>(parameters()[1]);
-		auto desc = flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_proxy::DEFAULT_LAYER)).description(layer);
+		auto desc = flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).description(layer);
 		
 		replyString << desc << TEXT("\r\n"); 
 	}
 	else 
 	{
-		auto info = flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(GetChannel()), GetLayerIndex(flash::cg_proxy::DEFAULT_LAYER)).template_host_info();
+		auto info = flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).template_host_info();
 		replyString << info << TEXT("\r\n"); 
 	}	
 
@@ -1526,8 +1507,8 @@ bool InfoCommand::DoExecute()
 			boost::property_tree::wptree info;
 
 			int index = 0;
-			BOOST_FOREACH(auto channel, channels_)
-				info.add_child(L"channels.channel", channel->info())
+			BOOST_FOREACH(auto channel, channels())
+				info.add_child(L"channels.channel", channel.channel->info())
 					.add(L"index", ++index);
 			
 			boost::property_tree::write_xml(replyString, info, w);
@@ -1550,7 +1531,7 @@ bool InfoCommand::DoExecute()
 				
 				if(layer == std::numeric_limits<int>::min())
 				{	
-					info.add_child(L"channel", channels_.at(channel)->info())
+					info.add_child(L"channel", channels().at(channel).channel->info())
 							.add(L"index", channel);
 				}
 				else
@@ -1558,13 +1539,13 @@ bool InfoCommand::DoExecute()
 					if(parameters().size() >= 2)
 					{
 						if(boost::iequals(parameters()[1], L"B"))
-							info.add_child(L"producer", channels_.at(channel)->stage().background(layer).get()->info());
+							info.add_child(L"producer", channels().at(channel).channel->stage().background(layer).get()->info());
 						else
-							info.add_child(L"producer", channels_.at(channel)->stage().foreground(layer).get()->info());
+							info.add_child(L"producer", channels().at(channel).channel->stage().foreground(layer).get()->info());
 					}
 					else
 					{
-						info.add_child(L"layer", channels_.at(channel)->stage().info(layer).get())
+						info.add_child(L"layer", channels().at(channel).channel->stage().info(layer).get())
 							.add(L"index", layer);
 					}
 				}
@@ -1574,8 +1555,8 @@ bool InfoCommand::DoExecute()
 			{
 				// This is needed for backwards compatibility with old clients
 				replyString << TEXT("200 INFO OK\r\n");
-				for(size_t n = 0; n < channels_.size(); ++n)
-					GenerateChannelInfo(n, channels_[n], replyString);
+				for(size_t n = 0; n < channels().size(); ++n)
+					GenerateChannelInfo(n, channels()[n].channel, replyString);
 			}
 
 		}
@@ -1661,7 +1642,7 @@ bool VersionCommand::DoExecute()
 
 bool ByeCommand::DoExecute()
 {
-	GetClientInfo()->Disconnect();
+	client()->disconnect();
 	return true;
 }
 
@@ -1677,7 +1658,7 @@ bool SetCommand::DoExecute()
 			auto format_desc = core::video_format_desc(value);
 			if(format_desc.format != core::video_format::invalid)
 			{
-				GetChannel()->video_format_desc(format_desc);
+				channel()->video_format_desc(format_desc);
 				SetReplyString(TEXT("202 SET MODE OK\r\n"));
 			}
 			else
@@ -1692,6 +1673,108 @@ bool SetCommand::DoExecute()
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
 		SetReplyString(TEXT("501 SET FAILED\r\n"));
+		return false;
+	}
+
+	return true;
+}
+
+bool LockCommand::DoExecute()
+{
+	try
+	{
+		auto it = parameters().begin();
+
+		std::shared_ptr<caspar::IO::lock_container> lock;
+		try
+		{
+			int channel_index = boost::lexical_cast<int>(*it) - 1;
+			lock = channels().at(channel_index).lock;
+		}
+		catch(const boost::bad_lexical_cast&) {}
+		catch(...)
+		{
+			SetReplyString(L"401 LOCK ERROR\r\n");
+			return false;
+		}
+
+		if(lock)
+			++it;
+
+		if(it == parameters().end())	//too few parameters
+		{
+			SetReplyString(L"402 LOCK ERROR\r\n");
+			return false;
+		}
+
+		std::wstring command = boost::to_upper_copy(*it);
+		if(command == L"ACQUIRE")
+		{
+			++it;
+			if(it == parameters().end())	//too few parameters
+			{
+				SetReplyString(L"402 LOCK ACQUIRE ERROR\r\n");
+				return false;
+			}
+			std::wstring lock_phrase = (*it);
+
+			//TODO: read options
+
+			if(lock)
+			{
+				//just lock one channel
+				if(!lock->try_lock(lock_phrase, client()))
+				{
+					SetReplyString(L"503 LOCK ACQUIRE FAILED\r\n");
+					return false;
+				}
+			}
+			else
+			{
+				//TODO: lock all channels
+				CASPAR_THROW_EXCEPTION(not_implemented());
+			}
+			SetReplyString(L"202 LOCK ACQUIRE OK\r\n");
+
+		}
+		else if(command == L"RELEASE")
+		{
+			if(lock)
+			{
+				client()->remove_lifecycle_bound_object(lock->lifecycle_key());
+			}
+			else
+			{
+				//TODO: lock all channels
+				CASPAR_THROW_EXCEPTION(not_implemented());
+			}
+			SetReplyString(L"202 LOCK RELEASE OK\r\n");
+		}
+		else if(command == L"CLEAR")
+		{
+			++it;
+			if(it == parameters().end())
+			{
+				SetReplyString(L"402 LOCK CLEAR ERROR\r\n");
+				return false;
+			}
+			std::wstring override_phrase = (*it);
+
+			//TODO: clear locks
+
+
+			SetReplyString(L"202 LOCK CLEAR OK\r\n");
+		}
+		else
+		{
+			SetReplyString(L"403 LOCK ERROR\r\n");
+			return false;
+		}
+	}
+	catch(...)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		SetReplyString(L"501 LOCK FAILED\r\n");
 		return false;
 	}
 

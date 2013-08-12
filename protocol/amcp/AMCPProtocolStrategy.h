@@ -22,10 +22,10 @@
 #pragma once
 
 #include "../util/protocolstrategy.h"
+
 #include <core/video_channel.h>
 
-#include "AMCPCommand.h"
-#include "AMCPCommandQueue.h"
+#include <common/memory.h>
 
 #include <boost/noncopyable.hpp>
 
@@ -35,37 +35,16 @@ namespace caspar { namespace protocol { namespace amcp {
 
 class AMCPProtocolStrategy : public IO::IProtocolStrategy, boost::noncopyable
 {
-	enum MessageParserState {
-		New = 0,
-		GetSwitch,
-		GetCommand,
-		GetParameters,
-		GetChannel,
-		Done
-	};
-
-	AMCPProtocolStrategy(const AMCPProtocolStrategy&);
-	AMCPProtocolStrategy& operator=(const AMCPProtocolStrategy&);
-
 public:
 	AMCPProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>& channels);
 	virtual ~AMCPProtocolStrategy();
 
 	virtual void Parse(const std::wstring& msg, IO::ClientInfoPtr pClientInfo);
 	virtual std::string GetCodepage() {	return "UTF-8"; }
-	AMCPCommand::ptr_type InterpretCommandString(const std::wstring& str, MessageParserState* pOutState=0);
 
 private:
-	friend class AMCPCommand;
-
-	std::size_t TokenizeMessage(const std::wstring& message, std::vector<std::wstring>* pTokenVector);
-	AMCPCommand::ptr_type CommandFactory(const std::wstring& str);
-
-	bool QueueCommand(AMCPCommand::ptr_type);
-
-	std::vector<spl::shared_ptr<core::video_channel>> channels_;
-	std::vector<AMCPCommandQueuePtr> commandQueues_;
-	static const std::wstring MessageDelimiter;
+	struct impl;
+	spl::unique_ptr<impl> impl_;
 };
 
 }}}

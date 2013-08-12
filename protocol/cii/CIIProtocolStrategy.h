@@ -54,7 +54,7 @@ public:
 public:
 	struct TitleHolder
 	{
-		TitleHolder() : titleName(TEXT("")), pframe_producer(core::frame_producer::empty())	{}
+		TitleHolder() : titleName(L""), pframe_producer(core::frame_producer::empty())	{}
 		TitleHolder(const std::wstring& name, spl::shared_ptr<core::frame_producer> pFP) : titleName(name), pframe_producer(pFP) {}
 		TitleHolder(const TitleHolder& th) : titleName(th.titleName), pframe_producer(th.pframe_producer) {}
 		const TitleHolder& operator=(const TitleHolder& th) 
@@ -78,7 +78,7 @@ private:
 	spl::shared_ptr<core::frame_producer> GetPreparedTemplate(const std::wstring& name);
 	void PutPreparedTemplate(const std::wstring& name, spl::shared_ptr<core::frame_producer>& pframe_producer);
 
-	static const TCHAR TokenDelimiter;
+	static const wchar_t TokenDelimiter;
 	static const std::wstring MessageDelimiter;
 
 	void ProcessMessage(const std::wstring& message, IO::ClientInfoPtr pClientInfo);
