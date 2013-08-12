@@ -63,6 +63,7 @@ public:
 	void subscribe(const monitor::observable::observer_ptr& o) override;
 	void unsubscribe(const monitor::observable::observer_ptr& o) override;
 
+	binding<std::wstring>& text();
 private:
 	struct impl;
 	spl::unique_ptr<impl> impl_;

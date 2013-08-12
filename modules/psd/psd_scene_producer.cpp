@@ -29,6 +29,7 @@
 #include <core/producer/text/text_producer.h>
 #include <core/producer/scene/scene_producer.h>
 #include <core/producer/scene/const_producer.h>
+#include <core/producer/scene/hotswap_producer.h>
 #include <core/frame/draw_frame.h>
 
 #include <common/env.h>
@@ -36,6 +37,8 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
+#include <boost/thread/future.hpp>
+#include <boost/algorithm/string.hpp>
 
 namespace caspar { namespace psd {
 
@@ -114,7 +117,6 @@ core::text::text_info get_text_info(const boost::property_tree::wptree& ptree)
 
 		void calculate()
 		{
-			auto masters_end = masters.end();
 			for(auto it = masters.begin(); it != masters.end(); ++it)
 			{
 				auto& master = (*it);
@@ -190,6 +192,8 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 
 	layer_link_constructor link_constructor;
 
+	std::vector<std::pair<std::wstring, spl::shared_ptr<core::text_producer>>> text_producers_by_layer_name;
+
 	auto layers_end = doc.layers().end();
 	for(auto it = doc.layers().begin(); it != layers_end; ++it)
 	{
@@ -208,18 +212,32 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 
 			if((*it)->link_group_id() != 0)
 				link_constructor.add(&new_layer, (*it)->link_group_id(), true);
+
+			text_producers_by_layer_name.push_back(std::make_pair((*it)->name(), text_producer));
 		}
 		else if((*it)->image() && (*it)->visible())
 		{
-			core::pixel_format_desc pfd(core::pixel_format::bgra);
-			pfd.planes.push_back(core::pixel_format_desc::plane((*it)->rect().width(), (*it)->rect().height(), 4));
+			std::wstring layer_name = (*it)->name();
+			std::shared_ptr<core::frame_producer> layer_producer;
 
-			auto frame = frame_factory->create_frame(it->get(), pfd);
-			memcpy(frame.image_data().data(), (*it)->image()->data(), frame.image_data().size());
+			if (boost::algorithm::istarts_with(layer_name, L"[producer]"))
+			{
+				auto hotswap = std::make_shared<core::hotswap_producer>((*it)->rect().width(), (*it)->rect().height());
+				hotswap->producer().set(core::create_producer(frame_factory, format_desc, layer_name.substr(10)));
+				layer_producer = hotswap;
+			}
+			else
+			{
+				core::pixel_format_desc pfd(core::pixel_format::bgra);
+				pfd.planes.push_back(core::pixel_format_desc::plane((*it)->rect().width(), (*it)->rect().height(), 4));
 
-			auto layer_producer = core::create_const_producer(core::draw_frame(std::move(frame)), (*it)->rect().width(), (*it)->rect().height());
+				auto frame = frame_factory->create_frame(it->get(), pfd);
+				memcpy(frame.image_data().data(), (*it)->image()->data(), frame.image_data().size());
 
-			auto& new_layer = root->create_layer(layer_producer, (*it)->rect().left, (*it)->rect().top);
+				layer_producer = core::create_const_producer(core::draw_frame(std::move(frame)), (*it)->rect().width(), (*it)->rect().height());
+			}
+
+			auto& new_layer = root->create_layer(spl::make_shared_ptr(layer_producer), (*it)->rect().left, (*it)->rect().top);
 			new_layer.adjustments.opacity.set((*it)->opacity() / 255.0);
 			new_layer.hidden.set(!(*it)->visible());
 
@@ -229,6 +247,15 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 	}
 
 	link_constructor.calculate();
+
+	// Reset all dynamic text fields to empty strings and expose them as a scene parameter.
+	BOOST_FOREACH(auto& text_layer, text_producers_by_layer_name)
+		text_layer.second->text().bind(root->create_parameter<std::wstring>(text_layer.first, L""));
+
+	auto params2 = params;
+	params2.erase(params2.cbegin());
+
+	root->call(params2);
 
 	return root;
 }
