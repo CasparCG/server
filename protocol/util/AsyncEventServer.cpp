@@ -34,6 +34,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include <tbb\mutex.h>
+#include <tbb\concurrent_hash_map.h>
 
 using boost::asio::ip::tcp;
 
@@ -45,6 +46,8 @@ typedef std::set<spl::shared_ptr<connection>> connection_set;
 
 class connection : public spl::enable_shared_from_this<connection>
 {   
+	typedef tbb::concurrent_hash_map<std::wstring, std::shared_ptr<void>> lifecycle_map_type;
+
     const spl::shared_ptr<tcp::socket>				socket_; 
 	boost::asio::io_service&						service_;
 	const spl::shared_ptr<connection_set>			connection_set_;
@@ -53,7 +56,8 @@ class connection : public spl::enable_shared_from_this<connection>
 	std::shared_ptr<protocol_strategy<char>>		protocol_;
 
 	std::array<char, 32768>							data_;
-	std::map<std::wstring, std::shared_ptr<void>>	lifecycle_bound_objects_;
+	//std::map<std::wstring, std::shared_ptr<void>>	lifecycle_bound_objects_;
+	lifecycle_map_type lifecycle_bound_objects_;
 
 	class connection_holder : public client_connection<char>
 	{
@@ -121,19 +125,17 @@ public:
 
 	void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void> lifecycle_bound)
 	{
-		//TODO: needs protection from evil concurrent access
-		//tbb::concurrent_hash_map ?
+		//thread-safe tbb_concurrent_hash_map
 		lifecycle_bound_objects_.insert(std::pair<std::wstring, std::shared_ptr<void>>(key, lifecycle_bound));
 	}
 	std::shared_ptr<void> remove_lifecycle_bound_object(const std::wstring& key)
 	{
-		//TODO: needs protection from evil concurrent access
-		//tbb::concurrent_hash_map ?
-		auto it = lifecycle_bound_objects_.find(key);
-		if(it != lifecycle_bound_objects_.end())
+		//thread-safe tbb_concurrent_hash_map
+		lifecycle_map_type::const_accessor acc;
+		if(lifecycle_bound_objects_.find(acc, key))
 		{
-			auto result = (*it).second;
-			lifecycle_bound_objects_.erase(it);
+			auto result = acc->second;
+			lifecycle_bound_objects_.erase(acc);
 			return result;
 		}
 		return std::shared_ptr<void>();
@@ -204,8 +206,10 @@ private:
 
     void handle_write(const spl::shared_ptr<std::string>& data, const boost::system::error_code& error, size_t bytes_transferred)
 	{
-		if(!error)			
+		if(!error)
+		{
 			CASPAR_LOG(trace) << print() << L" Sent: " << (data->size() < 512 ? u16(*data) : L"more than 512 bytes.");		
+		}
 		else if (error != boost::asio::error::operation_aborted)		
 			stop();
     }
