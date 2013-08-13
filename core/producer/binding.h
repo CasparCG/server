@@ -203,6 +203,11 @@ public:
 		impl_->evaluate();
 	}
 
+	void* identity() const
+	{
+		return impl_.get();
+	}
+
 	T get() const
 	{
 		return impl_->get();
@@ -514,5 +519,40 @@ public:
 		return then(binding<T>(true_result));
 	}
 };
+
+template<typename T, typename T2>
+binding<T> add_tween(
+		const binding<T>& to_tween,
+		const binding<T2>& counter,
+		T destination_value,
+		T2 duration,
+		const std::wstring& easing)
+{
+	tweener tween(easing);
+	
+	double start_val = to_tween.as<double>().get();
+	double destination_val = static_cast<double>(destination_value);
+	double start_time = counter.as<double>().get();
+	double dur = static_cast<double>(duration);
+
+	return when(counter < duration)
+		.then(counter.as<double>().transformed([=](double t)
+		{
+			return tween(t - start_time, start_val, destination_val, dur);
+		}).as<T>())
+		.otherwise(destination_value);
+}
+
+template<typename T, typename T2>
+binding<T> delay(
+		const binding<T>& to_delay,
+		const binding<T>& after_delay,
+		const binding<T2>& counter,
+		T2 duration)
+{
+	return when(counter < duration)
+			.then(to_delay)
+			.otherwise(after_delay);
+}
 
 }}
