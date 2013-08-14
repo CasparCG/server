@@ -25,34 +25,54 @@
 #include <map>
 #include <string>
 #include <memory>
+#include <boost\property_tree\ptree.hpp>
 #include "util\bigendian_file_input_stream.h"
 
 namespace caspar { namespace psd {
 
-	struct descriptor_item
-	{
-		unsigned long type;
+	//struct descriptor_item
+	//{
+	//	unsigned long type;
 
-		std::wstring enum_key;
-		std::wstring enum_val;
+	//	std::wstring enum_key;
+	//	std::wstring enum_val;
 
-		std::wstring text_text;
+	//	std::wstring text_text;
 
-		unsigned long long_value;
-		
-		std::vector<char> rawdata_data;
-	};
+	//	unsigned long long_value;
+	//	
+	//	std::vector<char> rawdata_data;
+	//};
 
 class descriptor
 {
-	typedef std::map<std::wstring, descriptor_item> items_map;
+	typedef boost::property_tree::wptree Ptree;
+	struct context
+	{
+		typedef std::shared_ptr<context> ptr_type;
+
+		Ptree root;
+		std::vector<Ptree *> stack;
+
+		friend descriptor;
+		friend class scoped_holder;
+		class scoped_holder;
+	};
+	friend class context::scoped_holder;
+
+	descriptor(const descriptor&);
+	const descriptor& operator=(const descriptor&);
+	explicit descriptor(const std::wstring& key, context::ptr_type context);
 
 public:
+	descriptor();
+	~descriptor();
+
 	bool populate(BEFileInputStream& stream);
-	const descriptor_item& get_item(const std::wstring& key) const;
-	bool has_item(const std::wstring& key) const;
+	Ptree& items() const { return context_->root; }
 private:
-	items_map items_;
+	void read_value(const std::wstring& key, BEFileInputStream& stream);
+	context::ptr_type context_;
 };
 
 }	//namespace psd

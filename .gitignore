@@ -112,3 +112,5 @@
 
 /test/psd-test/psd-test.vcxproj.user
 freetype
+tmp
+bin

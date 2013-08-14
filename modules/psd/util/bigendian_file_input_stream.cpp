@@ -81,6 +81,14 @@ unsigned long BEFileInputStream::read_long()
 
 	return SWAP32(in);
 }
+double BEFileInputStream::read_double()
+{
+	char data[8];
+	for(int i = 0; i < 8; ++i)
+		data[7-i] = read_byte();
+
+	return *reinterpret_cast<double*>(data);
+}
 
 void BEFileInputStream::read(char* buf, unsigned long length)
 {
