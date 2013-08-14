@@ -145,8 +145,17 @@ void descriptor::read_value(const std::wstring& key, BEFileInputStream& stream)
 		}
 		break;
 
-	case 'obj ': 
 	case 'UntF': 
+		{
+			context::scoped_holder list(key, context_);
+			unsigned long unit = stream.read_long();
+			std::string type(reinterpret_cast<char*>(&unit), 4);
+			std::wstring wtype(type.rbegin(), type.rend());
+			context_->stack.back()->put(wtype, stream.read_double());
+		}
+		break;
+
+	case 'obj ': 
 	case 'GlbO': 
 	case 'type':
 	case 'GlbC':
