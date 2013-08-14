@@ -82,64 +82,130 @@ void layer::populate(BEFileInputStream& stream)
 	name_ = stream.read_pascal_string(4);
 
 	//Aditional Layer Information
-	unsigned long end_of_layer_info = position1 + extraDataSize;
+	long end_of_layer_info = position1 + extraDataSize;
 	
 	try
 	{
 		while(stream.current_position() < end_of_layer_info)
 		{
-			unsigned long signature = stream.read_long();
-			if(signature != '8BIM' && signature != '8B64')
-				throw PSDFileFormatException();
-
-			unsigned long key = stream.read_long();
-			unsigned long length = stream.read_long();
-			unsigned long end_of_chunk = stream.current_position() + length;
-
-			if(key == 'lspf')
-			{
-				protection_flags_ = stream.read_long();
-			}
-			else if(key == 'TySh')	//type tool object settings
-			{
-				std::wstring text;	//the text in the layer
-
-				stream.read_short();	//should be 1
-				stream.discard_bytes(6*8);	//just throw transformation info for now
-				stream.read_short();	//"text version" should be 50
-				stream.read_long();		//"descriptor version" should be 16
-
-				//text data descriptor ('descriptor structure')
-				descriptor text_descriptor;
-				if(!text_descriptor.populate(stream))
-					throw PSDFileFormatException();
-				else
-				{
-					if(text_descriptor.has_item(L"EngineData"))
-					{
-						const descriptor_item& text_data = text_descriptor.get_item(L"EngineData");
-						read_pdf(text_layer_info_, text_data.rawdata_data);
-					}
-				}
-
-				stream.read_short();	//"warp version" should be 1
-				stream.read_long();		//"descriptor version" should be 16
-
-				//warp data descriptor ('descriptor structure')
-				descriptor warp_descriptor;
-				if(!text_descriptor.populate(stream))
-					throw PSDFileFormatException();
-
-				stream.discard_bytes(4*8);	//top, left, right, bottom
-			}
-
-			stream.set_position(end_of_chunk);
+			read_chunk(stream);
 		}
 	}
-	catch(PSDFileFormatException& ex)
+	catch(PSDFileFormatException&)
 	{
 		stream.set_position(end_of_layer_info);
 	}
+}
+
+void layer::read_chunk(BEFileInputStream& stream, bool isMetadata)
+{
+	unsigned long signature = stream.read_long();
+	if(signature != '8BIM' && signature != '8B64')
+		throw PSDFileFormatException();
+
+	unsigned long key = stream.read_long();
+	
+	if(isMetadata) stream.read_long();
+
+	unsigned long length = stream.read_long();
+	unsigned long end_of_chunk = stream.current_position() + length;
+
+	try
+	{
+		switch(key)
+		{
+		case 'lspf':	//protection settings
+			protection_flags_ = stream.read_long();
+			break;
+
+		case 'Txt2':	//text engine data
+			break;
+
+		case 'TySh':	//type tool object settings
+			read_text_data(stream);
+			break;
+				
+		case 'shmd':	//metadata
+			read_metadata(stream);
+			break;
+				
+		case 'lyvr':	//layer version
+			break;
+
+		case 'lnkD':	//linked layer
+		case 'lnk2':	//linked layer
+		case 'lnk3':	//linked layer
+			break;
+				
+		case 'tmln':
+			read_timeline_data(stream);
+			break;
+
+		default:
+			break;
+		}
+	}
+	catch(PSDFileFormatException&)
+	{
+		//ignore failed chunks silently
+	}
+
+	stream.set_position(end_of_chunk);
+}
+
+void layer::read_metadata(BEFileInputStream& stream)
+{
+	unsigned long count = stream.read_long();
+	for(int index = 0; index < count; ++index)
+		read_chunk(stream, true);
+}
+
+void layer::read_timeline_data(BEFileInputStream& stream)
+{
+	stream.read_long();					//"descriptor version" should be 16
+	descriptor timeline_descriptor;
+	if(!timeline_descriptor.populate(stream))
+		throw PSDFileFormatException();
+	else
+	{
+		timeline_info_.swap(timeline_descriptor.items());
+	}
+}
+
+void layer::read_text_data(BEFileInputStream& stream)
+{
+	std::wstring text;	//the text in the layer
+
+	stream.read_short();	//should be 1
+	stream.discard_bytes(6*8);	//just throw transformation info for now
+	stream.read_short();	//"text version" should be 50
+
+	//text data descriptor ('descriptor structure')
+	if(stream.read_long() != 16)	//"descriptor version" should be 16
+		throw PSDFileFormatException();
+
+	descriptor text_descriptor;
+	if(!text_descriptor.populate(stream))
+		throw PSDFileFormatException();
+	else
+	{
+		auto text_info = text_descriptor.items().get_optional<std::wstring>(L"EngineData");
+		if(text_info.is_initialized())
+		{
+			std::string str(text_info.get().begin(), text_info.get().end());
+			read_pdf(text_layer_info_, str);
+		}
+	}
+
+	stream.read_short();	//"warp version" should be 1
+
+	//warp data descriptor ('descriptor structure')
+	stream.read_long();					//"descriptor version" should be 16
+	descriptor warp_descriptor;
+	if(!warp_descriptor.populate(stream))
+		throw PSDFileFormatException();
+	else
+		stream.discard_bytes(4*8);	//top, left, right, bottom
 }
 
 void layer::layer_mask::read_mask_data(BEFileInputStream& stream)
@@ -181,6 +247,11 @@ bool layer::is_text() const
 {
 	return !text_layer_info_.empty();
 }
+bool layer::has_timeline() const
+{
+	return !timeline_info_.empty();
+}
+
 
 //TODO: implement
 void layer::read_blending_ranges(BEFileInputStream& stream)

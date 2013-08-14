@@ -20,6 +20,7 @@
 */
 
 #include "doc.h"
+#include "descriptor.h"
 #include <iostream>
 
 namespace caspar { namespace psd {
@@ -93,70 +94,89 @@ void psd_document::read_image_resources()
 				std::wstring name = input_.read_pascal_string(2);
 
 				unsigned long resource_length = input_.read_long();
+				unsigned long end_of_chunk = input_.current_position() + resource_length;
 
-				//TODO: read actual data
-				switch(resource_id)
+				try
 				{
-				case 1026:		//layer group information. describes linked layers
+					//TODO: read actual data
+					switch(resource_id)
 					{
-						int layer_count = resource_length / 2;
-						for(int i = 0; i < layer_count; ++i)
+					case 1026:		//layer group information. describes linked layers
 						{
-							short id = input_.read_short();
+							int layer_count = resource_length / 2;
+							for(int i = 0; i < layer_count; ++i)
+							{
+								short id = input_.read_short();
 
-							if(i == layers_.size())
-								layers_.push_back(std::make_shared<layer>());
+								if(i == layers_.size())
+									layers_.push_back(std::make_shared<layer>());
 
-							layers_[i]->set_link_group_id(id);
+								layers_[i]->set_link_group_id(id);
+							}
+
 						}
-
-					}
-					break;
-
-				case 1005:
-					{	
-						////resolutionInfo
-						//struct ResolutionInfo
-						//{
-						//Fixed hRes;
-						//int16 hResUnit;
-						//int16 widthUnit;
-						//Fixed vRes;
-						//int16 vResUnit;
-						//int16 heightUnit;
-						//};
-					}
-				case 1006:		//names of alpha channels
-				case 1008:		//caption
-				case 1010:		//background color
-				case 1024:		//layer state info (2 bytes containing the index of target layer (0 = bottom layer))
-				case 1028:		//IPTC-NAA. File Info...
-				case 1029:		//image for raw format files
-				case 1036:		//thumbnail resource
-				case 1045:		//unicode Alpha names (Unicode string (4 bytes length followed by string))
-				case 1053:		//alpha identifiers (4 bytes of length, followed by 4 bytes each for every alpha identifier.)
-				case 1060:		//XMP metadata
-				case 1065:		//layer comps
-				case 1069:		//layer selection ID(s)
-				case 1072:		//layer group(s) enabled id
-				case 1075:		//timeline information
-				case 1077:		//DisplayInfo
-				case 2999:		//name of clipping path
-				default:
-					{
-						if(resource_id >= 2000 && resource_id <=2997)	//path information
+						break;
+					case 1075:		//timeline information
 						{
+							int desc_ver = input_.read_long();	//descriptor version, should be 16
+							descriptor timeline_descriptor;
+							if(!timeline_descriptor.populate(input_))
+								throw PSDFileFormatException();
+							else
+							{
+								timeline_desc_.swap(timeline_descriptor.items());
+							}
 						}
-						else if(resource_id >= 4000 && resource_id <= 4999)	//plug-in resources
+						break;
+
+					case 1005:
+						{	
+							////resolutionInfo
+							//struct ResolutionInfo
+							//{
+							//Fixed hRes;
+							//int16 hResUnit;
+							//int16 widthUnit;
+							//Fixed vRes;
+							//int16 vResUnit;
+							//int16 heightUnit;
+							//};
+						}
+					case 1006:		//names of alpha channels
+					case 1008:		//caption
+					case 1010:		//background color
+					case 1024:		//layer state info (2 bytes containing the index of target layer (0 = bottom layer))
+					case 1028:		//IPTC-NAA. File Info...
+					case 1029:		//image for raw format files
+					case 1036:		//thumbnail resource
+					case 1045:		//unicode Alpha names (Unicode string (4 bytes length followed by string))
+					case 1053:		//alpha identifiers (4 bytes of length, followed by 4 bytes each for every alpha identifier.)
+					case 1060:		//XMP metadata
+					case 1065:		//layer comps
+					case 1069:		//layer selection ID(s)
+					case 1072:		//layer group(s) enabled id
+					case 1077:		//DisplayInfo
+					case 2999:		//name of clipping path
+					default:
 						{
+							if(resource_id >= 2000 && resource_id <=2997)	//path information
+							{
+							}
+							else if(resource_id >= 4000 && resource_id <= 4999)	//plug-in resources
+							{
+							}
 						}
+						input_.discard_bytes(resource_length);
+						break;
 					}
-					input_.discard_bytes(resource_length);
-					break;
+
+					if(resource_length & 1 == 1)	//each resource is padded to an even amount of bytes
+						input_.discard_bytes(1);
 				}
-
-				if(resource_length & 1 == 1)	//each resource is padded to an even amount of bytes
-					input_.discard_bytes(1);
+				catch(PSDFileFormatException&)
+				{
+					input_.set_position(end_of_chunk);
+				}
 			}
 		}
 		catch(PSDFileFormatException& ex)
