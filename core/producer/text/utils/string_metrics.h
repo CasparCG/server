@@ -7,6 +7,7 @@ namespace caspar { namespace core { namespace text {
 		string_metrics() : width(0), bearingY(0), height(0) {}
 		int width;
 		int bearingY;
+		int protrudeUnderY;
 		int height;
 	};
 }}}

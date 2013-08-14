@@ -103,6 +103,8 @@ struct text_producer::impl
 	bool standalone_;
 	binding<std::wstring> text_;
 	std::shared_ptr<void> text_subscription_;
+	binding<int> current_bearing_y_;
+	binding<int> current_protrude_under_y_;
 	draw_frame frame_;
 	text::texture_atlas atlas_;
 	text::texture_font font_;
@@ -144,6 +146,8 @@ public:
 
 		this->constraints_.width.set(metrics.width);
 		this->constraints_.height.set(metrics.height);
+		current_bearing_y_.set(metrics.bearingY);
+		current_protrude_under_y_.set(metrics.protrudeUnderY);
 		frame_ = core::draw_frame(std::move(frame));
 	}
 
@@ -175,6 +179,16 @@ public:
 	binding<std::wstring>& text()
 	{
 		return text_;
+	}
+
+	const binding<int>& current_bearing_y() const
+	{
+		return current_bearing_y_;
+	}
+
+	const binding<int>& current_protrude_under_y() const
+	{
+		return current_protrude_under_y_;
 	}
 	
 	std::wstring print() const
@@ -211,6 +225,8 @@ boost::property_tree::wptree text_producer::info() const { return impl_->info();
 void text_producer::subscribe(const monitor::observable::observer_ptr& o) {}
 void text_producer::unsubscribe(const monitor::observable::observer_ptr& o) {}
 binding<std::wstring>& text_producer::text() { return impl_->text(); }
+const binding<int>& text_producer::current_bearing_y() const { return impl_->current_bearing_y(); }
+const binding<int>& text_producer::current_protrude_under_y() const { return impl_->current_protrude_under_y(); }
 
 spl::shared_ptr<text_producer> text_producer::create(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, const text::text_info& text_info, long parent_width, long parent_height, bool standalone)
 {

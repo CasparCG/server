@@ -138,6 +138,7 @@ public:
 		float pos_y = (float)y;
 
 		int maxBearingY = 0;
+		int maxProtrudeUnderY = 0;
 		int maxHeight = 0;
 
 		auto end = str.end();
@@ -191,11 +192,17 @@ public:
 				result[index*16 + 15] = coords.bottom;	//texcoord.s
 
 				int bearingY = face_->glyph->metrics.horiBearingY >> 6;
+
 				if(bearingY > maxBearingY)
 					maxBearingY = bearingY;
 
-				if(coords.height > maxHeight)
-					maxHeight = coords.height;
+				int protrudeUnderY = coords.height - bearingY;
+
+				if (protrudeUnderY > maxProtrudeUnderY)
+					maxProtrudeUnderY = protrudeUnderY;
+
+				if (maxBearingY + maxProtrudeUnderY > maxHeight)
+					maxHeight = maxBearingY + maxProtrudeUnderY;
 
 				pos_x += face_->glyph->advance.x / 64.0f;
 				previous = glyph_index;
@@ -222,6 +229,7 @@ public:
 			metrics->width = (int)(pos_x - x + 0.5f);
 			metrics->bearingY = maxBearingY;
 			metrics->height = maxHeight;
+			metrics->protrudeUnderY = maxProtrudeUnderY;
 		}
 		return result;
 	}
