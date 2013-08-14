@@ -22,11 +22,11 @@
 #pragma once
 
 #include <boost/property_tree/ptree.hpp>
-#include <vector>
+#include <string>
 
 namespace caspar { namespace psd { 
 
-bool read_pdf(boost::property_tree::wptree& tree, const std::vector<char>& v);
+bool read_pdf(boost::property_tree::wptree& tree, const std::string& s);
 
 }	//namespace psd
 }	//namespace caspar

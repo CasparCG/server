@@ -66,6 +66,7 @@ public:
 	std::wstring read_pascal_string(unsigned char padding = 1);
 	std::wstring read_unicode_string();
 	std::wstring read_id_string();
+	double read_double();
 
 	void discard_bytes(unsigned long);
 	void discard_to_next_word();

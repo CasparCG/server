@@ -68,6 +68,14 @@ public:
 	{
 		return filename_;
 	}
+	bool has_timeline() const
+	{
+		return !timeline_desc_.empty();
+	}
+	const boost::property_tree::wptree& timeline() const 
+	{
+		return timeline_desc_;
+	}
 
 
 	bool parse(const std::wstring& s);
@@ -78,16 +86,17 @@ private:
 	void read_image_resources();
 	void read_layers();
 
-	std::wstring				filename_;
-	BEFileInputStream			input_;
+	std::wstring					filename_;
+	BEFileInputStream				input_;
 
-	std::vector<layer_ptr>		layers_;
+	std::vector<layer_ptr>			layers_;
 
-	unsigned short				channels_;
-	unsigned long				width_;
-	unsigned long				height_;
-	unsigned short				depth_;
-	psd::color_mode				color_mode_;
+	unsigned short					channels_;
+	unsigned long					width_;
+	unsigned long					height_;
+	unsigned short					depth_;
+	psd::color_mode					color_mode_;
+	boost::property_tree::wptree	timeline_desc_;
 };
 
 }	//namespace psd

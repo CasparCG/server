@@ -47,9 +47,9 @@ public:
 		friend class layer;
 	public:
 
-		bool enabled() { return (flags_ & 2) == 0; }
-		bool linked() { return (flags_ & 1) == 0;  }
-		bool inverted() { return (flags_ & 4) == 4; }
+		bool enabled() const { return (flags_ & 2) == 0; }
+		bool linked() const { return (flags_ & 1) == 0;  }
+		bool inverted() const { return (flags_ & 4) == 4; }
 
 		void read_mask_data(BEFileInputStream&);
 
@@ -88,9 +88,12 @@ public:
 
 	bool visible() { return (flags_ & 2) == 0; }	//the (PSD file-format) documentation is is saying the opposite but what the heck
 	bool is_position_protected() { return (protection_flags_& 4) == 4; }
+	int	protection_flags() const { return protection_flags_; }
 	bool is_text() const;
+	bool has_timeline() const;
 
 	const boost::property_tree::wptree& text_data() const { return text_layer_info_; }
+	const boost::property_tree::wptree& timeline_data() const { return timeline_info_; }
 
 	const image8bit_ptr& image() const { return image_; }
 
@@ -102,7 +105,11 @@ public:
 
 private:
 	channel_ptr get_channel(channel_type);
+	void read_chunk(BEFileInputStream& stream, bool isMetadata = false);
 	void read_blending_ranges(BEFileInputStream&);
+	void read_text_data(BEFileInputStream&);
+	void read_metadata(BEFileInputStream& stream);
+	void read_timeline_data(BEFileInputStream&);
 
 	caspar::psd::rect<long>			rect_;
 	std::vector<channel_ptr>		channels_;
@@ -120,6 +127,7 @@ private:
 	image8bit_ptr					image_;
 
 	boost::property_tree::wptree	text_layer_info_;
+	boost::property_tree::wptree	timeline_info_;
 };
 
 }	//namespace psd

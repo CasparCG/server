@@ -19,20 +19,43 @@
 * Author: Niklas P Andersson, niklas.p.andersson@svt.se
 */
 
+#include <memory>
 #include "descriptor.h"
+#include <boost\property_tree\ptree.hpp>
 #include "misc.h"
 
 namespace caspar { namespace psd {
 
-bool descriptor::has_item(const std::wstring& key) const
-{
-	return (items_.find(key) != items_.end());
-}
+	class descriptor::context::scoped_holder
+	{
+		descriptor::context::ptr_type ctx_;
+	public:
+		explicit scoped_holder(const std::wstring& key, descriptor::context::ptr_type ctx) : ctx_(ctx) 
+		{
+			Ptree *parent = ctx_->stack.back();
+			Ptree *child = &parent->push_back(std::make_pair(key, Ptree()))->second;
+			ctx_->stack.push_back(child);
+		}
+		~scoped_holder()
+		{
+			ctx_->stack.pop_back();
+		}
+	};
 
-const descriptor_item& descriptor::get_item(const std::wstring& key) const
-{
-	return (*(items_.find(key))).second;
-}
+	descriptor::descriptor() : context_(std::make_shared<context>())
+	{
+		context_->stack.push_back(&context_->root);
+	}
+	descriptor::descriptor(const std::wstring& key, context::ptr_type context) : context_(context)
+	{
+		Ptree *parent = context_->stack.back();
+		Ptree *child = &parent->push_back(std::make_pair(key, Ptree()))->second;
+		context->stack.push_back(child);
+	}
+	descriptor::~descriptor()
+	{
+		context_->stack.pop_back();
+	}
 
 bool descriptor::populate(BEFileInputStream& stream)
 {
@@ -45,58 +68,8 @@ bool descriptor::populate(BEFileInputStream& stream)
 		unsigned long element_count = stream.read_long();
 		for(int element_index = 0; element_index < element_count; ++element_index)
 		{
-			descriptor_item item;
-
 			std::wstring key = stream.read_id_string();
-			item.type = stream.read_long();
-
-			switch(item.type)
-			{
-			case 'obj ': break;
-			case 'Objc': break;
-			case 'VlLs': break;
-			case 'doub': break;
-			case 'UntF': break;
-
-			case 'TEXT':
-				{
-					item.text_text = stream.read_unicode_string();
-				}
-				break;
-			case 'enum':
-				{
-					item.enum_key = stream.read_id_string();
-					item.enum_val = stream.read_id_string();
-				}
-				break;
-
-			case 'long':
-				{
-					item.long_value = stream.read_long();
-				}
-				break;
-
-			case 'bool': break;
-			case 'GlbO': break;
-			case 'type':
-			case 'GlbC':
-				break;
-			case 'alis': break;
-
-			case 'tdta':
-				{
-					unsigned long rawdata_length = stream.read_long();
-					item.rawdata_data.resize(rawdata_length);
-					stream.read(item.rawdata_data.data(), rawdata_length);				
-				}
-				break;
-
-			default:
-				//descriptor type not supported yet
-				throw PSDFileFormatException();
-			}
-
-			items_.insert(std::pair<std::wstring, descriptor_item>(key, item));
+			read_value(key, stream);
 		}
 	}
 	catch(std::exception& ex)
@@ -105,6 +78,83 @@ bool descriptor::populate(BEFileInputStream& stream)
 	}
 
 	return result;
+}
+
+void descriptor::read_value(const std::wstring& key, BEFileInputStream& stream)
+{
+	unsigned int type = stream.read_long();
+
+	switch(type)
+	{
+	case 'Objc': 
+		{
+			descriptor desc(key, context_);
+			desc.populate(stream);
+		}
+		break;
+
+	case 'doub': 
+		{
+			context_->stack.back()->put(key, stream.read_double());
+		}
+		break;
+
+	case 'TEXT':
+		{
+			context_->stack.back()->put(key, stream.read_unicode_string());
+		}
+		break;
+
+	case 'enum':
+		{
+			context_->stack.back()->put(stream.read_id_string(), stream.read_id_string());
+		}
+		break;
+
+	case 'long':
+		{
+			context_->stack.back()->put(key, stream.read_long());
+		}
+		break;
+
+	case 'bool': 
+		{
+			context_->stack.back()->put(key, stream.read_byte());
+		}
+		break;
+
+	case 'VlLs': 
+		{
+			context::scoped_holder list(key, context_);
+			unsigned long count = stream.read_long();
+			for(int i = 0; i < count; ++i)
+			{
+				read_value(L"", stream);
+			}
+		}
+		break;
+
+	case 'tdta':
+		{
+			unsigned long rawdata_length = stream.read_long();
+			std::vector<char> rawdata(rawdata_length);
+			stream.read(rawdata.data(), rawdata_length);
+
+			std::wstring data_str(rawdata.begin(), rawdata.end());
+			context_->stack.back()->put(key, data_str);
+		}
+		break;
+
+	case 'obj ': 
+	case 'UntF': 
+	case 'GlbO': 
+	case 'type':
+	case 'GlbC':
+	case 'alis':
+	default:
+		//descriptor type not supported yet
+		throw PSDFileFormatException();
+	}
 }
 
 }	//namespace psd
