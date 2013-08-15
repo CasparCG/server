@@ -21,6 +21,8 @@
 
 #include "oal_consumer.h"
 
+#include <iterator>
+
 #include <common/exception/exceptions.h>
 #include <common/diagnostics/graph.h>
 #include <common/log/log.h>
@@ -37,7 +39,6 @@
 
 #include <SFML/Audio.hpp>
 
-#include <boost/circular_buffer.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/timer.hpp>
 #include <boost/thread/future.hpp>
@@ -52,20 +53,20 @@ typedef std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>> audio_buffer
 struct oal_consumer : public core::frame_consumer,  public sf::SoundStream
 {
 	safe_ptr<diagnostics::graph>						graph_;
-	boost::timer										perf_timer_;
+	boost::timer										tick_timer_;
 	int													channel_index_;
 
-	tbb::concurrent_bounded_queue<std::shared_ptr<audio_buffer_16>>	input_;
-	boost::circular_buffer<audio_buffer_16>				container_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<std::vector<audio_buffer_16>>>	input_;
+	std::shared_ptr<std::vector<audio_buffer_16>>		chunk_builder_;
+	audio_buffer_16										container_;
 	tbb::atomic<bool>									is_running_;
-	core::audio_buffer									temp;
 
 	core::video_format_desc								format_desc_;
 	core::channel_layout								channel_layout_;
+	size_t												frames_to_buffer_;
 public:
 	oal_consumer() 
-		: container_(16)
-		, channel_index_(-1)
+		: channel_index_(-1)
 		, channel_layout_(
 				core::default_channel_layout_repository().get_by_name(
 						L"STEREO"))
@@ -82,11 +83,11 @@ public:
 	~oal_consumer()
 	{
 		is_running_ = false;
-		input_.try_push(std::make_shared<audio_buffer_16>());
-		input_.try_push(std::make_shared<audio_buffer_16>());
+		input_.try_push(std::make_shared<std::vector<audio_buffer_16>>());
+		input_.try_push(std::make_shared<std::vector<audio_buffer_16>>());
 		Stop();
-		input_.try_push(std::make_shared<audio_buffer_16>());
-		input_.try_push(std::make_shared<audio_buffer_16>());
+		input_.try_push(std::make_shared<std::vector<audio_buffer_16>>());
+		input_.try_push(std::make_shared<std::vector<audio_buffer_16>>());
 
 		CASPAR_LOG(info) << print() << L" Successfully Uninitialized.";	
 	}
@@ -101,8 +102,19 @@ public:
 
 		if(Status() != Playing)
 		{
-			sf::SoundStream::Initialize(2, 48000);
-			Play();		
+			sf::SoundStream::Initialize(2, format_desc.audio_sample_rate);
+
+			// Each time OnGetData is called it seems to no longer be enough
+			// with the samples of one frame (since the change to statically
+			// linked SFML 1.6), so the samples of a few frames is needed to be
+			// collected.
+			static const double SAMPLES_NEEDED_BY_SFML_MULTIPLE = 0.1;
+			int min_num_samples_in_chunk = static_cast<int>(format_desc.audio_sample_rate * SAMPLES_NEEDED_BY_SFML_MULTIPLE);
+			int min_num_samples_in_frame = *std::min_element(format_desc.audio_cadence.begin(), format_desc.audio_cadence.end());
+ 			int min_frames_to_buffer = min_num_samples_in_chunk / min_num_samples_in_frame + (min_num_samples_in_chunk % min_num_samples_in_frame ? 1 : 0);
+			frames_to_buffer_ = min_frames_to_buffer;
+
+			Play();
 		}
 		CASPAR_LOG(info) << print() << " Sucessfully Initialized.";
 	}
@@ -114,7 +126,7 @@ public:
 
 	virtual boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame) override
 	{
-		std::shared_ptr<audio_buffer_16> buffer;
+		audio_buffer_16 buffer;
 
 		if (core::needs_rearranging(
 				frame->multichannel_view(),
@@ -135,18 +147,35 @@ public:
 					dest_view,
 					core::default_mix_config_repository());
 
-			buffer = std::make_shared<audio_buffer_16>(
-					core::audio_32_to_16(downmixed));
+			buffer = core::audio_32_to_16(downmixed);
 		}
 		else
 		{
-			buffer = std::make_shared<audio_buffer_16>(
-					core::audio_32_to_16(frame->audio_data()));
+			buffer = core::audio_32_to_16(frame->audio_data());
 		}
 
-		if (!input_.try_push(buffer))
-			graph_->set_tag("dropped-frame");
+		if (!chunk_builder_)
+		{
+			chunk_builder_.reset(new std::vector<audio_buffer_16>);
+			chunk_builder_->push_back(std::move(buffer));
+		}
+		else
+		{
+			chunk_builder_->push_back(std::move(buffer));
+		}
 
+		if (chunk_builder_->size() == frames_to_buffer_)
+		{
+			if (!input_.try_push(chunk_builder_))
+			{
+				graph_->set_tag("dropped-frame");
+				chunk_builder_->pop_back();
+			}
+			else
+			{
+				chunk_builder_.reset();
+			}
+		}
 
 		return wrap_as_future(is_running_.load());
 	}
@@ -177,7 +206,7 @@ public:
 	
 	virtual bool OnGetData(sf::SoundStream::Chunk& data) override
 	{		
-		std::shared_ptr<audio_buffer_16> audio_data;		
+		std::shared_ptr<std::vector<audio_buffer_16>> audio_data;		
 
 		if (!input_.try_pop(audio_data))
 		{
@@ -185,12 +214,19 @@ public:
 			input_.pop(audio_data); // Block until available
 		}
 
-		container_.push_back(std::move(*audio_data));
-		data.Samples = container_.back().data();
-		data.NbSamples = container_.back().size();	
+		container_.clear();
 		
-		graph_->set_value("tick-time", perf_timer_.elapsed()*format_desc_.fps*0.5);		
-		perf_timer_.restart();
+		// Concatenate to one large buffer.
+		BOOST_FOREACH(auto& buffer, *audio_data)
+		{
+			std::copy(buffer.begin(), buffer.end(), std::back_inserter(container_));
+		}
+
+		data.Samples = container_.data();
+		data.NbSamples = container_.size();	
+		
+		graph_->set_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5 / frames_to_buffer_);		
+		tick_timer_.restart();
 
 		return is_running_;
 	}
