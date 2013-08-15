@@ -1095,7 +1095,7 @@ bool LoadbgCommand::DoExecute()
 	{
 		auto uri_tokens = core::parameters::protocol_split(_parameters.at_original(0));
 		auto pFP = frame_producer::empty();
-		if (uri_tokens[0].empty() || uri_tokens[0] == L"route")
+		if (uri_tokens[0] == L"route")
 		{
 			pFP = RouteCommand::TryCreateProducer(*this, _parameters.at_original(0));
 		}
