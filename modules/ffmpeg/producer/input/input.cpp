@@ -26,6 +26,7 @@
 #include "../util/util.h"
 #include "../util/flv.h"
 #include "../../ffmpeg_error.h"
+#include "../../ffmpeg_params.h"
 #include "../../ffmpeg.h"
 
 #include <core/video_format.h>
@@ -59,9 +60,10 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-static const size_t MAX_BUFFER_COUNT = 100;
-static const size_t MIN_BUFFER_COUNT = 50;
-static const size_t MAX_BUFFER_SIZE  = 64 * 1000000;
+static const size_t MAX_BUFFER_COUNT    = 100;
+static const size_t MAX_BUFFER_COUNT_RT = 3;
+static const size_t MIN_BUFFER_COUNT    = 50;
+static const size_t MAX_BUFFER_SIZE     = 64 * 1000000;
 
 namespace caspar { namespace ffmpeg {
 		
@@ -84,7 +86,7 @@ struct input::implementation : boost::noncopyable
 		
 	executor													executor_;
 	
-	explicit implementation(const safe_ptr<diagnostics::graph> graph, const std::wstring& filename, FFMPEG_Resource resource_type, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_params& vid_params) 
+	explicit implementation(const safe_ptr<diagnostics::graph> graph, const std::wstring& filename, FFMPEG_Resource resource_type, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_producer_params& vid_params) 
 		: graph_(graph)
 		, format_context_(open_input(filename, resource_type, vid_params))		
 		, default_stream_index_(av_find_default_stream_index(format_context_.get()))
@@ -236,39 +238,65 @@ struct input::implementation : boost::noncopyable
 		});
 	}	
 
-	safe_ptr<AVFormatContext> open_input(const std::wstring resource_name, FFMPEG_Resource resource_type, const ffmpeg_params& vid_params)
-  {
-    AVFormatContext* weak_context = nullptr;
+	safe_ptr<AVFormatContext> open_input(const std::wstring resource_name, FFMPEG_Resource resource_type, const ffmpeg_producer_params& vid_params)
+	{
+		AVFormatContext* weak_context = nullptr;
 
-    switch (resource_type) {
-    case FFMPEG_FILE:
-      THROW_ON_ERROR2(avformat_open_input(&weak_context, narrow(resource_name).c_str(), nullptr, nullptr), resource_name);
-      break;
-    case FFMPEG_DEVICE: {
-      AVDictionary* format_options = NULL;
-	  if(vid_params.size_str != L"")
-		av_dict_set(&format_options, "video_size", narrow(vid_params.size_str).c_str(), 0); // 640x360 for 16:9
-	  if(vid_params.pixel_format != L"")
-		av_dict_set(&format_options, "pixel_format", narrow(vid_params.pixel_format).c_str(), 0); // yuyv422 for sony
-      av_dict_set(&format_options, "avioflags", "direct", 0);
-
-      // Don't set framerate here, it is typically set to a fixed rate anyway. Better to insert a fps filter to adjust the frame rate.
-	  // Im going to try anyway for now
-      if(vid_params.frame_rate != L"")
-		av_dict_set(&format_options, "framerate", narrow(vid_params.frame_rate).c_str(), 0);
-      AVInputFormat* input_format = av_find_input_format("dshow");
-      THROW_ON_ERROR2(avformat_open_input(&weak_context, narrow(resource_name).c_str(), input_format, &format_options), resource_name);
-      av_dict_free(&format_options);
-      } break;
-    case FFMPEG_STREAM:
-      THROW_ON_ERROR2(avformat_open_input(&weak_context, narrow(resource_name).c_str(), nullptr, nullptr), resource_name);
-      break;
-    };
-    safe_ptr<AVFormatContext> context(weak_context, av_close_input_file);      
-    THROW_ON_ERROR2(avformat_find_stream_info(weak_context, nullptr), resource_name);
-    fix_meta_data(*context);
-    return context;
-  }
+		switch (resource_type) {
+			case FFMPEG_FILE:
+				THROW_ON_ERROR2(avformat_open_input(&weak_context, narrow(resource_name).c_str(), nullptr, nullptr), resource_name);
+				break;
+			case FFMPEG_DEVICE: {
+				AVDictionary* format_options = NULL;
+				for (auto it = vid_params.options.begin(); it != vid_params.options.end(); ++it)
+				{
+					av_dict_set(&format_options, (*it).name.c_str(), (*it).value.c_str(), 0);
+				}
+				AVInputFormat* input_format = av_find_input_format("dshow");
+				THROW_ON_ERROR2(avformat_open_input(&weak_context, narrow(resource_name).c_str(), input_format, &format_options), resource_name);
+				if (format_options != nullptr)
+				{
+					std::string unsupported_tokens = "";
+					AVDictionaryEntry *t = NULL;
+					while ((t = av_dict_get(format_options, "", t, AV_DICT_IGNORE_SUFFIX)) != nullptr)
+					{
+						if (!unsupported_tokens.empty())
+							unsupported_tokens += ", ";
+						unsupported_tokens += t->key;
+					}
+					av_close_input_file(weak_context);
+					BOOST_THROW_EXCEPTION(ffmpeg_error() << msg_info(unsupported_tokens));
+				}
+				av_dict_free(&format_options);
+			} break;
+			case FFMPEG_STREAM: {
+				AVDictionary* format_options = NULL;
+				for (auto it = vid_params.options.begin(); it != vid_params.options.end(); ++it)
+				{
+					av_dict_set(&format_options, (*it).name.c_str(), (*it).value.c_str(), 0);
+				}
+				THROW_ON_ERROR2(avformat_open_input(&weak_context, narrow(resource_name).c_str(), nullptr, &format_options), resource_name);
+				if (format_options != nullptr)
+				{
+					std::string unsupported_tokens = "";
+					AVDictionaryEntry *t = NULL;
+					while ((t = av_dict_get(format_options, "", t, AV_DICT_IGNORE_SUFFIX)) != nullptr)
+					{
+						if (!unsupported_tokens.empty())
+							unsupported_tokens += ", ";
+						unsupported_tokens += t->key;
+					}
+					av_close_input_file(weak_context);
+					BOOST_THROW_EXCEPTION(ffmpeg_error() << msg_info(unsupported_tokens));
+				}
+				av_dict_free(&format_options);
+			} break;
+		};
+		safe_ptr<AVFormatContext> context(weak_context, av_close_input_file);      
+		THROW_ON_ERROR2(avformat_find_stream_info(weak_context, nullptr), resource_name);
+		fix_meta_data(*context);
+		return context;
+	}
 
   void fix_meta_data(AVFormatContext& context)
   {
@@ -345,7 +373,7 @@ struct input::implementation : boost::noncopyable
 	}
 };
 
-input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, FFMPEG_Resource resource_type, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_params& vid_params) 
+input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, FFMPEG_Resource resource_type, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_producer_params& vid_params) 
 	: impl_(new implementation(graph, filename, resource_type, loop, start, length, thumbnail_mode, vid_params)){}
 bool input::eof() const {return !impl_->executor_.is_running();}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
