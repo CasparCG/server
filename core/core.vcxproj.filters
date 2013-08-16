@@ -166,6 +166,12 @@
     <ClInclude Include="producer\scene\hotswap_producer.h">
       <Filter>source\producer\scene</Filter>
     </ClInclude>
+    <ClInclude Include="producer\scene\xml_scene_producer.h">
+      <Filter>source\producer\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\variable.h">
+      <Filter>source\producer</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
@@ -245,6 +251,9 @@
       <Filter>source\producer\text\utils</Filter>
     </ClCompile>
     <ClCompile Include="producer\scene\hotswap_producer.cpp">
+      <Filter>source\producer\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\scene\xml_scene_producer.cpp">
       <Filter>source\producer\scene</Filter>
     </ClCompile>
   </ItemGroup>
