@@ -29,27 +29,14 @@
 
 namespace caspar { namespace psd {
 
-class Channel
+struct channel
 {
 public:
-	Channel(short id, unsigned long len) : id_(id), data_length_(len)
-	{}
+	channel(short id1, unsigned long len) : id(id1), data_length(len) {}
 
-	short id() const
-	{
-		return id_;
-	}
-	unsigned long data_length() const
-	{
-		return data_length_;
-	}
-
-private:
-	unsigned long data_length_;
-	short id_;
+	short id;
+	unsigned long data_length;
 };
-
-typedef std::shared_ptr<Channel> channel_ptr;
 
 }	//namespace psd
 }	//namespace caspar

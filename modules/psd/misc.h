@@ -25,17 +25,47 @@
 #include <string>
 
 namespace caspar { namespace psd {
+	
+template<typename T>
+struct point
+{
+	point() : x(0), y(0) {}
+	point(T x1, T y1) : x(x1), y(y1) {}
+	T x;
+	T y;
+};
+
+template<typename T>
+struct color
+{
+	color() : red(0), green(0), blue(0), alpha(0)
+	{}
+
+	T red;
+	T green;
+	T blue;
+	T alpha;
+};
+
+template<typename T>
+struct size
+{
+	size() : width(0), height(0) {}
+	size(T w, T h) : width(w), height(h) {}
+	T width;
+	T height;
+};
 
 template<typename T>
 struct rect
 {
-	T top;
-	T right;
-	T bottom;
-	T left;
-	T width() const { return right-left; }
-	T height() const { return bottom-top; }
+	point<T>	location;
+	size<T>		size;
+
+	bool empty() const { return size.width == 0 || size.height == 0; }
 };
+
+
 
 class PSDFileFormatException : public std::exception
 {
@@ -50,12 +80,12 @@ public:
 
 enum channel_type
 {
-	TotalUserMask = -3,
-	UserMask = -2,
-	Transparency = -1,
-	ColorRed = 0,
-	ColorGreen = 1,
-	ColorBlue = 2
+	total_user_mask = -3,
+	user_mask = -2,
+	transparency = -1,
+	color_red = 0,
+	color_green = 1,
+	color_blue = 2
 };
 
 enum blend_mode

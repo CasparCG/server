@@ -38,11 +38,11 @@ int _tmain(int argc, _TCHAR* argv[])
 			for(auto it = doc.layers().begin(); it != end; ++it)
 			{
 				caspar::psd::layer_ptr layer = (*it);
-				trace << L"	<layer name='" << layer->name() << L"' opacity='" << layer->opacity() << L"' visible='" << layer->visible() << L"' protection-flags='" << std::hex << layer->protection_flags() << std::dec << L"'>" << std::endl;
-				if(layer->image())
-					trace << L"		<bounding-box left='" << layer->rect().left << L"' top='" << layer->rect().top << L"' right='" << layer->rect().right << L"' bottom='" << layer->rect().bottom << L"' />" << std::endl;
-				if(layer->mask())
-					trace << L"		<mask default-value='" << layer->mask_info().default_value_ << L"' enabled=" << layer->mask_info().enabled() << L" linked=" << layer->mask_info().linked() << L" inverted=" << layer->mask_info().inverted() << L" left='" << layer->mask_info().rect_.left << L"' top='" << layer->mask_info().rect_.top << "' right='" << layer->mask_info().rect_.right << "' bottom='" << layer->mask_info().rect_.bottom << "' />" << std::endl;
+				trace << L"	<layer name='" << layer->name() << L"' opacity='" << layer->opacity() << L"' visible='" << layer->is_visible() << L"' protected='" << layer->is_position_protected() << L"'>" << std::endl;
+				if(layer->bitmap())
+					trace << L"		<bounding-box x='" << layer->location().x << L"' y='" << layer->location().y << L"' width='" << layer->bitmap()->width() << L"' height='" << layer->bitmap()->height() << L"' />" << std::endl;
+				//if(layer->mask())
+				//	trace << L"		<mask default-value='" << layer->mask_info().default_value_ << L"' enabled=" << layer->mask_info().enabled() << L" linked=" << layer->mask_info().linked() << L" inverted=" << layer->mask_info().inverted() << L" left='" << layer->mask_info().rect_.left << L"' top='" << layer->mask_info().rect_.top << "' right='" << layer->mask_info().rect_.right << "' bottom='" << layer->mask_info().rect_.bottom << "' />" << std::endl;
 				if(layer->is_text())
 				{
 					trace << L"			<text value='" << (*it)->text_data().get(L"EngineDict.Editor.Text", L"") << L"' />" << std::endl;
