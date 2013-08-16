@@ -113,7 +113,7 @@ void descriptor::read_value(const std::wstring& key, BEFileInputStream& stream)
 
 	case 'long':
 		{
-			context_->stack.back()->put(key, stream.read_long());
+			context_->stack.back()->put(key, static_cast<long>(stream.read_long()));
 		}
 		break;
 
@@ -129,7 +129,7 @@ void descriptor::read_value(const std::wstring& key, BEFileInputStream& stream)
 			unsigned long count = stream.read_long();
 			for(int i = 0; i < count; ++i)
 			{
-				read_value(L"", stream);
+				read_value(L"li", stream);
 			}
 		}
 		break;
