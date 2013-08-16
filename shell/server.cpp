@@ -34,6 +34,7 @@
 #include <core/producer/stage.h>
 #include <core/producer/frame_producer.h>
 #include <core/producer/scene/scene_producer.h>
+#include <core/producer/scene/xml_scene_producer.h>
 #include <core/producer/text/text_producer.h>
 #include <core/consumer/output.h>
 
@@ -108,6 +109,7 @@ struct server::impl : boost::noncopyable
 		core::text::init();
 
 		register_producer_factory(&core::scene::create_dummy_scene_producer);
+		register_producer_factory(&core::scene::create_xml_scene_producer);
 		register_producer_factory(&core::create_text_producer);
 
 		setup_channels(env::properties());

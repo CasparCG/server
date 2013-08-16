@@ -21,16 +21,30 @@
 
 #pragma once
 
+#include <common/log.h>
+
 #include "../frame_producer.h"
 
 #include "../binding.h"
+#include "../variable.h"
 
-namespace caspar { namespace core { namespace scene {
+namespace caspar { namespace core {
+
+class frame_factory;
+
+namespace scene {
 
 struct coord
 {
 	binding<double> x;
 	binding<double> y;
+};
+
+struct rect
+{
+	coord upper_left;
+	binding<double> width;
+	binding<double> height;
 };
 
 struct adjustments
@@ -44,13 +58,13 @@ struct layer
 {
 	binding<std::wstring> name;
 	coord position;
+	rect clipping;
 	adjustments adjustments;
 	binding<spl::shared_ptr<frame_producer>> producer;
 	binding<bool> hidden;
 	binding<bool> is_key;
 
-	explicit layer(const spl::shared_ptr<frame_producer>& producer);
-	layer(const std::wstring& name, const spl::shared_ptr<frame_producer>& producer);
+	explicit layer(const std::wstring& name, const spl::shared_ptr<frame_producer>& producer);
 };
 
 struct keyframe
@@ -63,45 +77,6 @@ public:
 	keyframe(int64_t destination_frame)
 		: destination_frame(destination_frame)
 	{
-	}
-};
-
-template<typename T> class parameter_holder;
-
-class parameter_holder_base
-{
-public:
-	virtual ~parameter_holder_base()
-	{
-	}
-
-	virtual void set(const std::wstring& raw_value) = 0;
-
-	template<typename T>
-	binding<T>& value()
-	{
-		return dynamic_cast<parameter_holder<T>>(*this).value();
-	}
-};
-
-template<typename T>
-class parameter_holder : public parameter_holder_base
-{
-	binding<T> value_;
-public:
-	parameter_holder(T initial_value)
-		: value_(initial_value)
-	{
-	}
-
-	binding<T>& value()
-	{
-		return value_;
-	}
-
-	virtual void set(const std::wstring& raw_value)
-	{
-		value_.set(boost::lexical_cast<T>(raw_value));
 	}
 };
 
@@ -122,19 +97,21 @@ public:
 	void subscribe(const monitor::observable::observer_ptr& o) override;
 	void unsubscribe(const monitor::observable::observer_ptr& o) override;
 	layer& create_layer(
-			const spl::shared_ptr<frame_producer>& producer, int x, int y);
-	layer& create_layer(
 			const spl::shared_ptr<frame_producer>& producer, int x, int y, const std::wstring& name);
-	layer& create_layer(const spl::shared_ptr<frame_producer>& producer);
+	layer& create_layer(
+			const spl::shared_ptr<frame_producer>& producer, const std::wstring& name);
 	binding<int64_t> frame();
+	binding<double> speed();
 
-	template<typename T> binding<T>& create_parameter(const std::wstring& name, T initial_value = T())
+	template<typename T> binding<T>& create_variable(
+			const std::wstring& name, bool is_public, const std::wstring& expr = L"")
 	{
-		auto param = std::make_shared<parameter_holder<T>>(initial_value);
+		std::shared_ptr<core::variable> var =
+				std::make_shared<core::variable_impl<T>>(expr, is_public);
 
-		store_parameter(name, param);
+		store_variable(name, var);
 
-		return param->value();
+		return var->as<T>();
 	}
 
 	template<typename T>
@@ -154,6 +131,12 @@ public:
 			int64_t at_frame,
 			const std::wstring& easing)
 	{
+		if (easing.empty())
+		{
+			add_keyframe(to_affect, destination_value, at_frame);
+			return;
+		}
+
 		tweener tween(easing);
 		keyframe k(at_frame);
 
@@ -207,16 +190,17 @@ public:
 
 		store_keyframe(to_affect.identity(), k);
 	}
+
+	core::variable& get_variable(const std::wstring& name);
 private:
-	void store_parameter(
-			const std::wstring& name,
-			const std::shared_ptr<parameter_holder_base>& param);
 	void store_keyframe(void* timeline_identity, const keyframe& k);
+	void store_variable(
+			const std::wstring& name, const std::shared_ptr<core::variable>& var);
 
 	struct impl;
 	std::unique_ptr<impl> impl_;
 };
 
-spl::shared_ptr<frame_producer> create_dummy_scene_producer(const spl::shared_ptr<class frame_factory>& frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params);
+spl::shared_ptr<frame_producer> create_dummy_scene_producer(const spl::shared_ptr<frame_factory>& frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params);
 
 }}}
