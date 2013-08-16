@@ -16,23 +16,24 @@
 * You should have received a copy of the GNU General Public License
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
-* Author: Robert Nagy, ronag89@gmail.com
+* Author: Helge Norberg, helge.norberg@svt.se
 */
 
 #pragma once
 
-#include <common/memory.h>
-
-#include <string>
 #include <vector>
+#include <string>
+
+#include <common/memory.h>
 
 namespace caspar { namespace core {
 
-bool try_get_color(const std::wstring& str, uint32_t& value);
+class frame_producer;
+class frame_factory;
+struct video_format_desc;
 
-spl::shared_ptr<class frame_producer> create_color_producer(const spl::shared_ptr<class frame_factory>& frame_factory, uint32_t value);
-spl::shared_ptr<class frame_producer> create_color_producer(const spl::shared_ptr<class frame_factory>& frame_factory, const std::vector<std::wstring>& params);
-class draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, uint32_t value);
-class draw_frame create_color_frame(void* tag, const spl::shared_ptr<class frame_factory>& frame_factory, const std::wstring& color);
+namespace scene {
 
-}}
+spl::shared_ptr<core::frame_producer> create_xml_scene_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params);
+
+}}}

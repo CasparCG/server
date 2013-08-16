@@ -45,6 +45,11 @@ struct color
 	T green;
 	T blue;
 	T alpha;
+
+	unsigned long to_uint32()
+	{
+		return (alpha << 24) + (red << 16) + (green << 8) + blue;
+	}
 };
 
 template<typename T>
