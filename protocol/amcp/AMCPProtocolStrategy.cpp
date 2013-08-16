@@ -189,7 +189,11 @@ private:
 							++it;
 							if(it == end)
 							{
-								result.error = parameters_error;
+								if(create_channel_command(result.command_name, client, channels_.at(0), 0, 0))	//check if there is a command like this
+									result.error = channel_error;
+								else
+									result.error = command_error;
+
 								break;
 							}
 

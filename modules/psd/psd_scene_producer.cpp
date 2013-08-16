@@ -197,52 +197,55 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 	auto layers_end = doc.layers().end();
 	for(auto it = doc.layers().begin(); it != layers_end; ++it)
 	{
-		if((*it)->is_text() && (*it)->visible())
+		if((*it)->is_visible())
 		{
-			std::wstring str = (*it)->text_data().get(L"EngineDict.Editor.Text", L"");
-			
-			core::text::text_info text_info(std::move(get_text_info((*it)->text_data())));
-			auto text_producer = core::text_producer::create(frame_factory, 0, 0, str, text_info, doc.width(), doc.height());
-			
-			core::text::string_metrics metrics = text_producer->measure_string(str);
-			
-			auto& new_layer = root->create_layer(text_producer, (*it)->rect().left - 2, (*it)->rect().top + metrics.bearingY, (*it)->name());	//the 2 offset is just a hack for now. don't know why our text is rendered 2 px to the right of that in photoshop
-			new_layer.adjustments.opacity.set((*it)->opacity() / 255.0);
-			new_layer.hidden.set(!(*it)->visible());
-
-			if((*it)->link_group_id() != 0)
-				link_constructor.add(&new_layer, (*it)->link_group_id(), true);
-
-			text_producers_by_layer_name.push_back(std::make_pair((*it)->name(), text_producer));
-		}
-		else if((*it)->image() && (*it)->visible())
-		{
-			std::wstring layer_name = (*it)->name();
-			std::shared_ptr<core::frame_producer> layer_producer;
-
-			if (boost::algorithm::istarts_with(layer_name, L"[producer]"))
+			if((*it)->is_text())
 			{
-				auto hotswap = std::make_shared<core::hotswap_producer>((*it)->rect().width(), (*it)->rect().height());
-				hotswap->producer().set(core::create_producer(frame_factory, format_desc, layer_name.substr(10)));
-				layer_producer = hotswap;
+				std::wstring str = (*it)->text_data().get(L"EngineDict.Editor.Text", L"");
+			
+				core::text::text_info text_info(std::move(get_text_info((*it)->text_data())));
+				auto text_producer = core::text_producer::create(frame_factory, 0, 0, str, text_info, doc.width(), doc.height());
+			
+				core::text::string_metrics metrics = text_producer->measure_string(str);
+			
+				auto& new_layer = root->create_layer(text_producer, (*it)->location().x - 2, (*it)->location().y + metrics.bearingY, (*it)->name());	//the 2 offset is just a hack for now. don't know why our text is rendered 2 px to the right of that in photoshop
+				new_layer.adjustments.opacity.set((*it)->opacity() / 255.0);
+				new_layer.hidden.set(!(*it)->is_visible());
+
+				if((*it)->link_group_id() != 0)
+					link_constructor.add(&new_layer, (*it)->link_group_id(), true);
+
+				text_producers_by_layer_name.push_back(std::make_pair((*it)->name(), text_producer));
 			}
-			else
+			else if((*it)->bitmap())
 			{
-				core::pixel_format_desc pfd(core::pixel_format::bgra);
-				pfd.planes.push_back(core::pixel_format_desc::plane((*it)->rect().width(), (*it)->rect().height(), 4));
+				std::wstring layer_name = (*it)->name();
+				std::shared_ptr<core::frame_producer> layer_producer;
 
-				auto frame = frame_factory->create_frame(it->get(), pfd);
-				memcpy(frame.image_data().data(), (*it)->image()->data(), frame.image_data().size());
+				if (boost::algorithm::istarts_with(layer_name, L"[producer]"))
+				{
+					auto hotswap = std::make_shared<core::hotswap_producer>((*it)->bitmap()->width(), (*it)->bitmap()->height());
+					hotswap->producer().set(core::create_producer(frame_factory, format_desc, layer_name.substr(10)));
+					layer_producer = hotswap;
+				}
+				else
+				{
+					core::pixel_format_desc pfd(core::pixel_format::bgra);
+					pfd.planes.push_back(core::pixel_format_desc::plane((*it)->bitmap()->width(), (*it)->bitmap()->height(), 4));
 
-				layer_producer = core::create_const_producer(core::draw_frame(std::move(frame)), (*it)->rect().width(), (*it)->rect().height());
+					auto frame = frame_factory->create_frame(it->get(), pfd);
+					memcpy(frame.image_data().data(), (*it)->bitmap()->data(), frame.image_data().size());
+
+					layer_producer = core::create_const_producer(core::draw_frame(std::move(frame)), (*it)->bitmap()->width(), (*it)->bitmap()->height());
+				}
+
+				auto& new_layer = root->create_layer(spl::make_shared_ptr(layer_producer), (*it)->location().x, (*it)->location().y);
+				new_layer.adjustments.opacity.set((*it)->opacity() / 255.0);
+				new_layer.hidden.set(!(*it)->is_visible());
+
+				if((*it)->link_group_id() != 0)
+					link_constructor.add(&new_layer, (*it)->link_group_id(), false);
 			}
-
-			auto& new_layer = root->create_layer(spl::make_shared_ptr(layer_producer), (*it)->rect().left, (*it)->rect().top);
-			new_layer.adjustments.opacity.set((*it)->opacity() / 255.0);
-			new_layer.hidden.set(!(*it)->visible());
-
-			if((*it)->link_group_id() != 0)
-				link_constructor.add(&new_layer, (*it)->link_group_id(), false);
 		}
 	}
 
