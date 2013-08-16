@@ -218,6 +218,19 @@ public:
 
 	void read_solid_color(BEFileInputStream& stream)
 	{
+		if(stream.read_long() != 16)	//"descriptor version" should be 16
+			throw PSDFileFormatException();
+
+		descriptor solid_descriptor;
+		if(!solid_descriptor.populate(stream))
+			throw PSDFileFormatException();
+		else
+		{
+			solid_color_.red = static_cast<unsigned char>(solid_descriptor.items().get(L"Clr .Rd  ", 0.0) + 0.5);
+			solid_color_.green = static_cast<unsigned char>(solid_descriptor.items().get(L"Clr .Grn ", 0.0) + 0.5);
+			solid_color_.blue = static_cast<unsigned char>(solid_descriptor.items().get(L"Clr .Bl  ", 0.0) + 0.5);
+			solid_color_.alpha = 255;
+		}
 	}
 
 	void read_vector_mask(unsigned long length, BEFileInputStream& stream, long doc_width, long doc_height)
