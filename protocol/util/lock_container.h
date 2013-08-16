@@ -18,9 +18,8 @@ namespace caspar { namespace IO {
 
 		bool check_access(client_connection<wchar_t>::ptr conn);
 		bool try_lock(const std::wstring& lock_phrase, client_connection<wchar_t>::ptr conn);
-		bool release_lock(std::weak_ptr<client_connection<wchar_t>> conn);
-
-		const std::wstring& lifecycle_key() const;
+		void release_lock(client_connection<wchar_t>::ptr conn);
+		void clear_locks();
 
 	private:
 		struct impl;
