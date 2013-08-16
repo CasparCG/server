@@ -80,25 +80,25 @@
 
 /* Return codes
 
-100 [action]			Information om att något har hänt  
-101 [action]			Information om att något har hänt, en rad data skickas  
+102 [action]			Information that [action] has happened
+101 [action]			Information that [action] has happened plus one row of data  
 
-202 [kommando] OK		Kommandot har utförts  
-201 [kommando] OK		Kommandot har utförts, och en rad data skickas tillbaka  
-200 [kommando] OK		Kommandot har utförts, och flera rader data skickas tillbaka. Avslutas med tomrad  
+202 [command] OK		[command] has been executed
+201 [command] OK		[command] has been executed, plus one row of data  
+200 [command] OK		[command] has been executed, plus multiple lines of data. ends with an empty line
 
-400 ERROR				Kommandot kunde inte förstås  
-401 [kommando] ERROR	Ogiltig kanal  
-402 [kommando] ERROR	Parameter saknas  
-403 [kommando] ERROR	Ogiltig parameter  
-404 [kommando] ERROR	Mediafilen hittades inte  
+400 ERROR				the command could not be understood
+401 [command] ERROR		invalid/missing channel
+402 [command] ERROR		parameter missing
+403 [command] ERROR		invalid parameter  
+404 [command] ERROR		file not found
 
-500 FAILED				Internt configurationfel  
-501 [kommando] FAILED	Internt configurationfel  
-502 [kommando] FAILED	Oläslig mediafil  
-503 [kommando] FAILED	access denied
+500 FAILED				internal error
+501 [command] FAILED	internal error
+502 [command] FAILED	could not read file
+503 [command] FAILED	access denied
 
-600 [kommando] FAILED	funktion ej implementerad
+600 [command] FAILED	[command] not implemented
 */
 
 namespace caspar { namespace protocol {
@@ -1741,27 +1741,46 @@ bool LockCommand::DoExecute()
 		{
 			if(lock)
 			{
-				client()->remove_lifecycle_bound_object(lock->lifecycle_key());
+				lock->release_lock(client());
 			}
 			else
 			{
-				//TODO: lock all channels
+				//TODO: release all channels
 				CASPAR_THROW_EXCEPTION(not_implemented());
 			}
 			SetReplyString(L"202 LOCK RELEASE OK\r\n");
 		}
 		else if(command == L"CLEAR")
 		{
-			++it;
-			if(it == parameters().end())
+			std::wstring override_phrase = env::properties().get(L"configuration.lock-clear-phrase", L"");
+			std::wstring client_override_phrase;
+			if(!override_phrase.empty())
 			{
-				SetReplyString(L"402 LOCK CLEAR ERROR\r\n");
-				return false;
+				++it;
+				if(it == parameters().end())
+				{
+					SetReplyString(L"402 LOCK CLEAR ERROR\r\n");
+					return false;
+				}
+				client_override_phrase = (*it);
 			}
-			std::wstring override_phrase = (*it);
 
-			//TODO: clear locks
-
+			if(lock)
+			{
+				//just clear one channel
+				if(client_override_phrase != override_phrase)
+				{
+					SetReplyString(L"503 LOCK CLEAR FAILED\r\n");
+					return false;
+				}
+				
+				lock->clear_locks();
+			}
+			else
+			{
+				//TODO: clear all channels
+				CASPAR_THROW_EXCEPTION(not_implemented());
+			}
 
 			SetReplyString(L"202 LOCK CLEAR OK\r\n");
 		}
@@ -1770,6 +1789,11 @@ bool LockCommand::DoExecute()
 			SetReplyString(L"403 LOCK ERROR\r\n");
 			return false;
 		}
+	}
+	catch(not_implemented&)
+	{
+		SetReplyString(L"600 LOCK FAILED\r\n");
+		return false;
 	}
 	catch(...)
 	{

@@ -36,12 +36,13 @@ namespace caspar { namespace IO {
 						lock_phrase_ = lock_phrase;
 						locks_.insert(weak_ptr);
 					}
-					CASPAR_LOG(info) << lifecycle_key_ << " acquired";
 
 					lock.release();	//risk of reentrancy-deadlock if we don't release prior to trying to attach lifecycle-bound object to connection
 					
+					CASPAR_LOG(info) << lifecycle_key_ << " acquired";
+
 					{
-						std::shared_ptr<void> obj(nullptr, [=](void*) { release_lock(weak_ptr); });
+						std::shared_ptr<void> obj(nullptr, [=](void*) { do_release_lock(weak_ptr); });
 						conn->add_lifecycle_bound_object(lifecycle_key_, obj);
 					}
 				}
@@ -51,19 +52,52 @@ namespace caspar { namespace IO {
 			return false;
 		}
 
-		bool release_lock(std::weak_ptr<client_connection<wchar_t>> conn)
+		void clear_locks()	//TODO: add a function-object parameter to be called for each clients that has it's lock released
+		{
+			std::vector<std::weak_ptr<client_connection<wchar_t>>> clients;
+
+			{	//copy the connections locally and then clear the set
+				tbb::spin_rw_mutex::scoped_lock lock(mutex_, true);
+				clients.resize(locks_.size());
+				std::copy(locks_.begin(), locks_.end(), clients.begin());
+
+				locks_.clear();
+				lock_phrase_.clear();
+			}
+
+			//now we can take our time to inform the clients that their locks have been released.
+			BOOST_FOREACH(std::weak_ptr<client_connection<wchar_t>> conn, clients)
+			{
+				auto ptr = conn.lock();
+				if(ptr)
+				{
+					ptr->remove_lifecycle_bound_object(lifecycle_key_);	//this calls do_relase_lock, which takes a write-lock
+					//TODO: invoke callback
+				}
+			}
+		}
+
+		void release_lock(client_connection<wchar_t>::ptr conn)
+		{
+			conn->remove_lifecycle_bound_object(lifecycle_key_); //this calls do_relase_lock, which takes a write-lock
+		}
+
+	private:
+		void do_release_lock(std::weak_ptr<client_connection<wchar_t>> conn)
 		{
 			{
 				tbb::spin_rw_mutex::scoped_lock lock(mutex_, true);
-				locks_.erase(conn);
-				if(locks_.empty())
-					lock_phrase_.clear();
+				if(!locks_.empty())
+				{
+					locks_.erase(conn);
+					if(locks_.empty())
+						lock_phrase_.clear();
+				}
 			}
 
 			CASPAR_LOG(info) << lifecycle_key_ << " released";
-
-			return true;
 		}
+
 	};
 
 	lock_container::lock_container(const std::wstring& lifecycle_key) : impl_(spl::make_unique<impl>(lifecycle_key)) {}
@@ -71,7 +105,6 @@ namespace caspar { namespace IO {
 
 	bool lock_container::check_access(client_connection<wchar_t>::ptr conn) { return impl_->check_access(conn); }
 	bool lock_container::try_lock(const std::wstring& lock_phrase, client_connection<wchar_t>::ptr conn) { return impl_->try_lock(lock_phrase, conn); }
-	bool lock_container::release_lock(std::weak_ptr<client_connection<wchar_t>> conn) { return impl_->release_lock(conn); }
-
-	const std::wstring& lock_container::lifecycle_key() const { return impl_->lifecycle_key_; }
+	void lock_container::release_lock(client_connection<wchar_t>::ptr conn) { impl_->release_lock(conn); }
+	void lock_container::clear_locks() { return impl_->clear_locks(); }
 }}
