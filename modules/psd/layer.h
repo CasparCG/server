@@ -26,108 +26,71 @@
 
 #include <vector>
 #include <string>
-#include <memory>
+#include "common/memory.h"
 #include "util\bigendian_file_input_stream.h"
 
 #include "image.h"
 #include "misc.h"
 #include "channel.h"
-#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
 
 namespace caspar { namespace psd {
 
 class layer;
 typedef std::shared_ptr<layer> layer_ptr;
+class psd_document;
 
 class layer
 {
-public:
-	class layer_mask
-	{
-		friend class layer;
-	public:
+	struct impl;
+	spl::shared_ptr<impl> impl_;
 
+public:
+	class layer_mask_info
+	{
+		friend struct layer::impl;
+
+		void read_mask_data(BEFileInputStream&);
+
+		image8bit_ptr	bitmap_;
+		unsigned char	default_value_;
+		unsigned char	flags_;
+		char			mask_id_;
+		rect<long>		rect_;
+
+	public:
 		bool enabled() const { return (flags_ & 2) == 0; }
 		bool linked() const { return (flags_ & 1) == 0;  }
 		bool inverted() const { return (flags_ & 4) == 4; }
 
-		void read_mask_data(BEFileInputStream&);
-
-		char			mask_id_;
-		image8bit_ptr	mask_;
-		psd::rect<long> rect_;
-		unsigned char	default_value_;
-		unsigned char	flags_;
+		const point<long>& location() const { return rect_.location; }
+		const image8bit_ptr& bitmap() const { return bitmap_; }
 	};
 
-	layer() : blend_mode_(InvalidBlendMode), link_group_id_(0), opacity_(255), baseClipping_(false), flags_(0), protection_flags_(0), masks_(0)
-	{}
+	layer();
 
-	static std::shared_ptr<layer> create(BEFileInputStream&);
-	void populate(BEFileInputStream&);
+	void populate(BEFileInputStream&, const psd_document&);
 	void read_channel_data(BEFileInputStream&);
 
-	const std::wstring& name() const
-	{
-		return name_;
-	}
-	const psd::rect<long>& rect() const
-	{
-		return rect_;
-	}
+	const std::wstring& name() const;
+	unsigned char opacity() const;
+	bool is_visible();
+	bool is_position_protected();
 
-	unsigned char opacity() const
-	{
-		return opacity_;
-	}
-
-	unsigned short flags() const
-	{
-		return flags_;
-	}
-
-	bool visible() { return (flags_ & 2) == 0; }	//the (PSD file-format) documentation is is saying the opposite but what the heck
-	bool is_position_protected() { return (protection_flags_& 4) == 4; }
-	int	protection_flags() const { return protection_flags_; }
 	bool is_text() const;
+	const boost::property_tree::wptree& text_data() const;
+
+	bool is_solid() const;
+	color<unsigned char> solid_color() const;
+
 	bool has_timeline() const;
+	const boost::property_tree::wptree& timeline_data() const;
 
-	const boost::property_tree::wptree& text_data() const { return text_layer_info_; }
-	const boost::property_tree::wptree& timeline_data() const { return timeline_info_; }
+	const point<long>& location() const;
+	const image8bit_ptr& bitmap() const;
 
-	const image8bit_ptr& image() const { return image_; }
-
-	const layer_mask& mask_info() const { return mask_; }
-	const image8bit_ptr& mask() const { return mask_.mask_; }
-
-	int link_group_id() { return link_group_id_; }
-	void set_link_group_id(int id) { link_group_id_ = id; }
-
-private:
-	channel_ptr get_channel(channel_type);
-	void read_chunk(BEFileInputStream& stream, bool isMetadata = false);
-	void read_blending_ranges(BEFileInputStream&);
-	void read_text_data(BEFileInputStream&);
-	void read_metadata(BEFileInputStream& stream);
-	void read_timeline_data(BEFileInputStream&);
-
-	caspar::psd::rect<long>			rect_;
-	std::vector<channel_ptr>		channels_;
-	blend_mode						blend_mode_;
-	int								link_group_id_;
-	unsigned char					opacity_;
-	bool							baseClipping_;
-	unsigned char					flags_;
-	int								protection_flags_;
-	std::wstring					name_;
-	char							masks_;
-
-	layer_mask						mask_;
-
-	image8bit_ptr					image_;
-
-	boost::property_tree::wptree	text_layer_info_;
-	boost::property_tree::wptree	timeline_info_;
+	int link_group_id() const;
+	void set_link_group_id(int id);
 };
 
 }	//namespace psd

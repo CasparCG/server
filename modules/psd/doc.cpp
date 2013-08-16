@@ -170,7 +170,7 @@ void psd_document::read_image_resources()
 						break;
 					}
 
-					if(resource_length & 1 == 1)	//each resource is padded to an even amount of bytes
+					if((resource_length & 1) == 1)	//each resource is padded to an even amount of bytes
 						input_.discard_bytes(1);
 				}
 				catch(PSDFileFormatException&)
@@ -209,7 +209,7 @@ void psd_document::read_layers()
 				if(layer_index  == layers_.size())
 					layers_.push_back(std::make_shared<layer>());
 				
-				layers_[layer_index]->populate(input_);
+				layers_[layer_index]->populate(input_, *this);
 				//std::clog << "Added layer: " << std::string(layers_[layerIndex]->name().begin(), layers_[layerIndex]->name().end()) << std::endl;
 			}
 

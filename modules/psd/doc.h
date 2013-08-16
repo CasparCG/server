@@ -31,6 +31,9 @@
 #include "misc.h"
 #include "layer.h"
 
+#include <boost/property_tree/ptree.hpp>
+
+
 namespace caspar { namespace psd {
 
 class psd_document
