@@ -40,7 +40,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <LibraryPath>..\..\dependencies64\boost\stage\lib;$(LibraryPath)</LibraryPath>
-    <IncludePath>..\..\dependencies64\boost;$(IncludePath)</IncludePath>
+    <IncludePath>..\..\dependencies64\boost;..\..\;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
