@@ -33,13 +33,11 @@
 
 namespace caspar { namespace core { namespace scene {
 
-layer::layer(const spl::shared_ptr<frame_producer>& producer)
-	: producer(producer)
-{
-}
 layer::layer(const std::wstring& name, const spl::shared_ptr<frame_producer>& producer)
 	: name(name), producer(producer)
 {
+	clipping.width.bind(producer.get()->pixel_constraints().width);
+	clipping.height.bind(producer.get()->pixel_constraints().height);
 }
 
 adjustments::adjustments()
@@ -92,54 +90,53 @@ struct scene_producer::impl
 	std::list<layer> layers_;
 	interaction_aggregator aggregator_;
 	binding<int64_t> frame_number_;
-	std::map<std::wstring, std::shared_ptr<parameter_holder_base>> parameters_;
+	binding<double> speed_;
+	double frame_fraction_;
 	std::map<void*, timeline> timelines_;
+	std::map<std::wstring, std::shared_ptr<core::variable>> variables_;
 
 	impl(int width, int height)
 		: pixel_constraints_(width, height)
 		, aggregator_([=] (double x, double y) { return collission_detect(x, y); })
+		, frame_fraction_(0)
 	{
+		auto speed_variable = std::make_shared<core::variable_impl<double>>(L"", true, 1.0);
+		store_variable(L"scene_speed", speed_variable);
+		speed_ = speed_variable->value();
 	}
 
 	layer& create_layer(
 			const spl::shared_ptr<frame_producer>& producer, int x, int y, const std::wstring& name)
 	{
-		layer& layer = create_layer(producer, x, y);
-		layer.name.set(name);
-
-		return layer;
-	}
-
-	layer& create_layer(
-			const spl::shared_ptr<frame_producer>& producer, int x, int y)
-	{
-		layer& layer = create_layer(producer);
+		layer layer(name, producer);
 
 		layer.position.x.set(x);
 		layer.position.y.set(y);
-
-		return layer;
-	}
-
-	layer& create_layer(const spl::shared_ptr<frame_producer>& producer)
-	{
-		layer layer(producer);
 
 		layers_.push_back(layer);
 
 		return layers_.back();
 	}
 
-	void store_parameter(
-			const std::wstring& name,
-			const std::shared_ptr<parameter_holder_base>& param)
-	{
-		parameters_.insert(std::make_pair(boost::to_lower_copy(name), param));
-	}
-
 	void store_keyframe(void* timeline_identity, const keyframe& k)
 	{
 		timelines_[timeline_identity].keyframes.insert(std::make_pair(k.destination_frame, k));
+	}
+
+	void store_variable(
+			const std::wstring& name, const std::shared_ptr<core::variable>& var)
+	{
+		variables_.insert(std::make_pair(name, var));
+	}
+
+	core::variable& get_variable(const std::wstring& name)
+	{
+		auto found = variables_.find(name);
+
+		if (found == variables_.end())
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(name + L" not found in scene"));
+
+		return *found->second;
 	}
 
 	binding<int64_t> frame()
@@ -184,7 +181,14 @@ struct scene_producer::impl
 			frames.push_back(frame);
 		}
 
-		++frame_number_;
+		frame_fraction_ += speed_.get();
+
+		if (std::abs(frame_fraction_) >= 1.0)
+		{
+			int64_t delta = static_cast<int64_t>(frame_fraction_);
+			frame_number_.set(frame_number_.get() + delta);
+			frame_fraction_ -= delta;
+		}
 
 		return draw_frame(frames);
 	}
@@ -226,10 +230,10 @@ struct scene_producer::impl
 	{
 		for (int i = 0; i + 1 < params.size(); i += 2)
 		{
-			auto found = parameters_.find(boost::to_lower_copy(params[i]));
+			auto found = variables_.find(boost::to_lower_copy(params[i]));
 
-			if (found != parameters_.end())
-				found->second->set(params[i + 1]);
+			if (found != variables_.end() && found->second->is_public())
+				found->second->from_string(params[i + 1]);
 		}
 
 		return wrap_as_future(std::wstring(L""));
@@ -271,21 +275,15 @@ scene_producer::~scene_producer()
 }
 
 layer& scene_producer::create_layer(
-		const spl::shared_ptr<frame_producer>& producer, int x, int y)
-{
-	return impl_->create_layer(producer, x, y);
-}
-
-layer& scene_producer::create_layer(
 		const spl::shared_ptr<frame_producer>& producer, int x, int y, const std::wstring& name)
 {
 	return impl_->create_layer(producer, x, y, name);
 }
 
 layer& scene_producer::create_layer(
-		const spl::shared_ptr<frame_producer>& producer)
+		const spl::shared_ptr<frame_producer>& producer, const std::wstring& name)
 {
-	return impl_->create_layer(producer);
+	return impl_->create_layer(producer, 0, 0, name);
 }
 
 binding<int64_t> scene_producer::frame()
@@ -340,19 +338,23 @@ void scene_producer::unsubscribe(const monitor::observable::observer_ptr& o)
 	impl_->unsubscribe(o);
 }
 
-void scene_producer::store_parameter(
-		const std::wstring& name,
-		const std::shared_ptr<parameter_holder_base>& param)
-{
-	impl_->store_parameter(name, param);
-}
-
 void scene_producer::store_keyframe(void* timeline_identity, const keyframe& k)
 {
 	impl_->store_keyframe(timeline_identity, k);
 }
 
-spl::shared_ptr<frame_producer> create_dummy_scene_producer(const spl::shared_ptr<class frame_factory>& frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params)
+void scene_producer::store_variable(
+		const std::wstring& name, const std::shared_ptr<core::variable>& var)
+{
+	impl_->store_variable(name, var);
+}
+
+core::variable& scene_producer::get_variable(const std::wstring& name)
+{
+	return impl_->get_variable(name);
+}
+
+spl::shared_ptr<core::frame_producer> create_dummy_scene_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params)
 {
 	if (params.size() < 1 || !boost::iequals(params.at(0), L"[SCENE]"))
 		return core::frame_producer::empty();
@@ -393,18 +395,24 @@ spl::shared_ptr<frame_producer> create_dummy_scene_producer(const spl::shared_pt
 	sub_params.push_back(L"[FREEHAND]");
 	sub_params.push_back(L"640");
 	sub_params.push_back(L"360");
-	scene->create_layer(create_producer(frame_factory, format_desc, sub_params), 10, 10);
+	scene->create_layer(create_producer(frame_factory, format_desc, sub_params), 10, 10, L"freehand");
 	sub_params.clear();
 
-	scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"BLUE")), 110, 10);
+	auto& color_layer = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"RED")), 110, 10, L"color");
+	color_layer.producer.get()->pixel_constraints().width.set(1000);
+	color_layer.producer.get()->pixel_constraints().height.set(550);
 
 	//scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"SP")), 50, 50);
 
-	auto& upper_left = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"scene/upper_left")));
-	auto& upper_right = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"scene/upper_right")));
-	auto& lower_left = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"scene/lower_left")));
-	auto& lower_right = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"scene/lower_right")));
-	auto& text_layer = scene->create_layer(text_area);
+	auto& upper_left = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"scene/upper_left")), L"upper_left");
+	auto& upper_right = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"scene/upper_right")), L"upper_right");
+	auto& lower_left = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"scene/lower_left")), L"lower_left");
+	auto& lower_right = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"scene/lower_right")), L"lower_right");
+	auto& text_layer = scene->create_layer(text_area, L"text_area");
+	upper_left.adjustments.opacity.bind(text_layer.adjustments.opacity);
+	upper_right.adjustments.opacity.bind(text_layer.adjustments.opacity);
+	lower_left.adjustments.opacity.bind(text_layer.adjustments.opacity);
+	lower_right.adjustments.opacity.bind(text_layer.adjustments.opacity);
 
 	/*
 	binding<double> panel_x = (scene->frame()
@@ -429,6 +437,11 @@ spl::shared_ptr<frame_producer> create_dummy_scene_producer(const spl::shared_pt
 	binding<double> panel_y(500.0);
 	scene->add_keyframe(panel_y, panel_y.get(), 50 * 4);
 	scene->add_keyframe(panel_y, 720.0, 50 * 5, L"easeinexpo");
+
+	scene->add_keyframe(text_layer.adjustments.opacity, 1.0, 100);
+	scene->add_keyframe(text_layer.adjustments.opacity, 0.0, 125, L"linear");
+	scene->add_keyframe(text_layer.adjustments.opacity, 1.0, 150, L"linear");
+
 	upper_left.position.x = panel_x;
 	upper_left.position.y = panel_y;
 	upper_right.position.x = upper_left.position.x + upper_left.producer.get()->pixel_constraints().width + panel_width;
@@ -440,7 +453,7 @@ spl::shared_ptr<frame_producer> create_dummy_scene_producer(const spl::shared_pt
 	text_layer.position.x = upper_left.position.x + upper_left.producer.get()->pixel_constraints().width + padding;
 	text_layer.position.y = upper_left.position.y + upper_left.producer.get()->pixel_constraints().height + padding + text_area->current_bearing_y().as<double>();
 
-	text_area->text().bind(scene->create_parameter<std::wstring>(L"text"));
+	text_area->text().bind(scene->create_variable<std::wstring>(L"text", true));
 
 	auto params2 = params;
 	params2.erase(params2.begin());

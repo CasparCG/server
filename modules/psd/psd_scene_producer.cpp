@@ -34,11 +34,13 @@
 
 #include <common/env.h>
 #include <common/memory.h>
+#include <common/log.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/rational.hpp>
 
 namespace caspar { namespace psd {
 
@@ -91,18 +93,22 @@ core::text::text_info get_text_info(const boost::property_tree::wptree& ptree)
 			caspar::core::scene::layer* layer;
 			int link_id;
 			bool is_master;
-		};		
+			double adjustment_x;
+			double adjustment_y;
+		};
 
 		std::vector<linked_layer_record> layers;
 		std::vector<linked_layer_record> masters;
 
 	public:
-		void add(caspar::core::scene::layer* layer, int link_group, bool master)
+		void add(caspar::core::scene::layer* layer, int link_group, bool master, double adjustment_x, double adjustment_y)
 		{
 			linked_layer_record rec;
 			rec.layer = layer;
 			rec.link_id = link_group;
 			rec.is_master = master;
+			rec.adjustment_x = adjustment_x;
+			rec.adjustment_y = adjustment_y;
 			layers.push_back(rec);
 
 			if(rec.is_master)
@@ -125,50 +131,50 @@ core::text::text_info get_text_info(const boost::property_tree::wptree& ptree)
 					if(r.link_id == master.link_id && r.layer != master.layer)
 					{
 						{	//x-coords
-							double slave_left = r.layer->position.x.get();
+							double slave_left = r.layer->position.x.get() + r.adjustment_x;
 							double slave_right = slave_left + r.layer->producer.get()->pixel_constraints().width.get();
 
-							double master_left = master.layer->position.x.get();
+							double master_left = master.layer->position.x.get() + master.adjustment_x;
 							double master_right = master_left + master.layer->producer.get()->pixel_constraints().width.get();
 
 							if((slave_left >= master_left && slave_right <= master_right) || (slave_left <= master_left && slave_right >= master_right))
 							{
 								//change width of slave
-								r.layer->position.x = master.layer->position.x + (slave_left - master_left);
-								r.layer->producer.get()->pixel_constraints().width = master.layer->producer.get()->pixel_constraints().width + (slave_right - slave_left - master_right + master_left); 
+								r.layer->position.x.bind(master.layer->position.x - r.adjustment_x + master.adjustment_x + (slave_left - master_left));
+								r.layer->producer.get()->pixel_constraints().width.bind(master.layer->producer.get()->pixel_constraints().width + (slave_right - slave_left - master_right + master_left)); 
 							}
 							else if(slave_left >= master_right)
 							{
 								//push slave ahead of master
-								r.layer->position.x = master.layer->position.x + master.layer->producer.get()->pixel_constraints().width + (slave_left - master_right);
+								r.layer->position.x.bind(master.layer->position.x - r.adjustment_x + master.adjustment_x + master.layer->producer.get()->pixel_constraints().width + (slave_left - master_right));
 							}
 							else if(slave_right <= master_left)
 							{
-								r.layer->position.x = master.layer->position.x - (master_left - slave_left);
+								r.layer->position.x.bind(master.layer->position.x - r.adjustment_x + master.adjustment_x - (master_left - slave_left));
 							}
 						}
 
 						{	//y-coords
-							double slave_top = r.layer->position.y.get();
+							double slave_top = r.layer->position.y.get() + r.adjustment_y;
 							double slave_bottom = slave_top + r.layer->producer.get()->pixel_constraints().height.get();
 
-							double master_top = master.layer->position.y.get();
+							double master_top = master.layer->position.y.get() + master.adjustment_y;
 							double master_bottom = master_top + master.layer->producer.get()->pixel_constraints().height.get();
 
 							if((slave_top >= master_top && slave_bottom <= master_bottom) || (slave_top <= master_top && slave_bottom >= master_bottom))
 							{
-								//change width of slave
-								r.layer->position.y = master.layer->position.y + (slave_top - master_top);
-								r.layer->producer.get()->pixel_constraints().height = master.layer->producer.get()->pixel_constraints().height + (slave_bottom - slave_top - master_bottom + master_top); 
+								//change height of slave
+								r.layer->position.y.bind(master.layer->position.y - r.adjustment_y + master.adjustment_y + (slave_top - master_top));
+								r.layer->producer.get()->pixel_constraints().height.bind(master.layer->producer.get()->pixel_constraints().height + (slave_bottom - slave_top - master_bottom + master_top)); 
 							}
 							else if(slave_top >= master_bottom)
 							{
 								//push slave ahead of master
-								r.layer->position.y = master.layer->position.y + master.layer->producer.get()->pixel_constraints().height + (slave_top - master_bottom);
+								r.layer->position.y.bind(master.layer->position.y - r.adjustment_y + master.adjustment_y + master.layer->producer.get()->pixel_constraints().height + (slave_top - master_bottom));
 							}
 							else if(slave_bottom <= master_top)
 							{
-								r.layer->position.y = master.layer->position.y - (master_top - slave_top);
+								r.layer->position.y.bind(master.layer->position.y - r.adjustment_y + master.adjustment_y - (master_top - slave_top));
 							}
 						}
 
@@ -177,6 +183,108 @@ core::text::text_info get_text_info(const boost::property_tree::wptree& ptree)
 			}
 		}
 	};
+
+int64_t get_frame_number(
+		const core::video_format_desc& format_desc,
+		const boost::rational<int>& at_second)
+{
+	return static_cast<int64_t>(
+			boost::rational_cast<double>(at_second) * format_desc.fps);
+}
+
+boost::rational<int> get_rational(const boost::property_tree::wptree& node)
+{
+	return boost::rational<int>(
+			node.get<int>(L"numerator"), node.get<int>(L"denominator"));
+}
+
+void create_timelines(
+		const spl::shared_ptr<core::scene::scene_producer>& scene,
+		const core::video_format_desc& format_desc,
+		core::scene::layer& layer,
+		const layer_ptr& psd_layer,
+		double adjustment_x,
+		double adjustment_y)
+{
+	auto timeline = psd_layer->timeline_data();
+	auto start = get_rational(timeline.get_child(L"timeScope.Strt"));
+	auto end_offset = get_rational(timeline.get_child(L"timeScope.outTime"));
+	auto end = start + end_offset;
+	auto start_frame = get_frame_number(format_desc, start);
+	auto end_frame = get_frame_number(format_desc, end);
+
+	layer.hidden = scene->frame() < start_frame || scene->frame() > end_frame;
+
+	auto tracklist = timeline.get_child_optional(L"trackList");
+
+	if (!tracklist)
+		return;
+
+	double original_pos_x = psd_layer->rect().left;
+	double original_pos_y = psd_layer->rect().top;
+
+	BOOST_FOREACH(auto& track, *tracklist)
+	{
+		auto track_id = track.second.get<std::wstring>(L"stdTrackID");
+
+		if (track_id == L"sheetPositionTrack")
+		{
+			BOOST_FOREACH(auto& key, track.second.get_child(L"keyList"))
+			{
+				bool tween = key.second.get<std::wstring>(L"animInterpStyle")
+						== L"Lnr ";
+				auto time = get_rational(key.second.get_child(L"time"));
+				auto hrzn = key.second.get<double>(L"animKey.Hrzn");
+				auto vrtc = key.second.get<double>(L"animKey.Vrtc");
+				auto x = original_pos_x + hrzn + adjustment_x;
+				auto y = original_pos_y + vrtc + adjustment_y;
+				auto frame = get_frame_number(format_desc, time);
+
+				if (frame == 0) // Consider as initial value (rewind)
+				{
+					layer.position.x.set(x);
+					layer.position.y.set(y);
+				}
+
+				frame = start_frame + frame; // translate to global timeline
+
+				if (tween)
+				{
+					scene->add_keyframe(layer.position.x, x, frame, L"easeOutSine");
+					scene->add_keyframe(layer.position.y, y, frame, L"easeOutSine");
+				}
+				else
+				{
+					scene->add_keyframe(layer.position.x, x, frame);
+					scene->add_keyframe(layer.position.y, y, frame);
+				}
+			}
+		}
+		else if (track_id == L"opacityTrack")
+		{
+			auto& opacity = layer.adjustments.opacity;
+
+			BOOST_FOREACH(auto& key, track.second.get_child(L"keyList"))
+			{
+				bool tween = key.second.get<std::wstring>(L"animInterpStyle")
+						== L"Lnr ";
+				auto time = get_rational(key.second.get_child(L"time"));
+				auto opct = key.second.get<double>(L"animKey.Opct.#Prc") / 100.0;
+				auto frame = get_frame_number(format_desc, time);
+
+				if (frame == 0) // Consider as initial value (rewind)
+					opacity.set(opct);
+
+				frame = start_frame + frame; // translate to global timeline
+
+				if (tween)
+					scene->add_keyframe(opacity, opct, frame, L"easeOutSine");
+				else
+					scene->add_keyframe(opacity, opct, frame);
+			}
+		}
+	}
+}
 
 spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
 {
@@ -206,12 +314,17 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 			
 			core::text::string_metrics metrics = text_producer->measure_string(str);
 			
-			auto& new_layer = root->create_layer(text_producer, (*it)->rect().left - 2, (*it)->rect().top + metrics.bearingY, (*it)->name());	//the 2 offset is just a hack for now. don't know why our text is rendered 2 px to the right of that in photoshop
+			auto adjustment_x = -2;
+			auto adjustment_y = metrics.bearingY;
+			auto& new_layer = root->create_layer(text_producer, (*it)->rect().left + adjustment_x, (*it)->rect().top + adjustment_y, (*it)->name());	//the 2 offset is just a hack for now. don't know why our text is rendered 2 px to the right of that in photoshop
 			new_layer.adjustments.opacity.set((*it)->opacity() / 255.0);
 			new_layer.hidden.set(!(*it)->visible());
 
+			if ((*it)->has_timeline())
+				create_timelines(root, format_desc, new_layer, (*it), adjustment_x, adjustment_y);
+
 			if((*it)->link_group_id() != 0)
-				link_constructor.add(&new_layer, (*it)->link_group_id(), true);
+				link_constructor.add(&new_layer, (*it)->link_group_id(), (*it)->is_position_protected(), -adjustment_x, -adjustment_y);
 
 			text_producers_by_layer_name.push_back(std::make_pair((*it)->name(), text_producer));
 		}
@@ -220,13 +333,13 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 			std::wstring layer_name = (*it)->name();
 			std::shared_ptr<core::frame_producer> layer_producer;
 
-			if (boost::algorithm::istarts_with(layer_name, L"[producer]"))
+			/*if (boost::algorithm::istarts_with(layer_name, L"[producer]"))
 			{
 				auto hotswap = std::make_shared<core::hotswap_producer>((*it)->rect().width(), (*it)->rect().height());
 				hotswap->producer().set(core::create_producer(frame_factory, format_desc, layer_name.substr(10)));
 				layer_producer = hotswap;
 			}
-			else
+			else*/
 			{
 				core::pixel_format_desc pfd(core::pixel_format::bgra);
 				pfd.planes.push_back(core::pixel_format_desc::plane((*it)->rect().width(), (*it)->rect().height(), 4));
@@ -237,12 +350,15 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 				layer_producer = core::create_const_producer(core::draw_frame(std::move(frame)), (*it)->rect().width(), (*it)->rect().height());
 			}
 
-			auto& new_layer = root->create_layer(spl::make_shared_ptr(layer_producer), (*it)->rect().left, (*it)->rect().top);
+			auto& new_layer = root->create_layer(spl::make_shared_ptr(layer_producer), (*it)->rect().left, (*it)->rect().top, (*it)->name());
 			new_layer.adjustments.opacity.set((*it)->opacity() / 255.0);
 			new_layer.hidden.set(!(*it)->visible());
 
+			if ((*it)->has_timeline())
+				create_timelines(root, format_desc, new_layer, (*it), 0, 0);
+
 			if((*it)->link_group_id() != 0)
-				link_constructor.add(&new_layer, (*it)->link_group_id(), false);
+				link_constructor.add(&new_layer, (*it)->link_group_id(), (*it)->is_position_protected(), 0, 0);
 		}
 	}
 
@@ -250,7 +366,7 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 
 	// Reset all dynamic text fields to empty strings and expose them as a scene parameter.
 	BOOST_FOREACH(auto& text_layer, text_producers_by_layer_name)
-		text_layer.second->text().bind(root->create_parameter<std::wstring>(text_layer.first, L""));
+		text_layer.second->text().bind(root->create_variable<std::wstring>(boost::to_lower_copy(text_layer.first), true, L""));
 
 	auto params2 = params;
 	params2.erase(params2.cbegin());
