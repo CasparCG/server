@@ -38,7 +38,7 @@
 #include <sstream>
 
 namespace caspar { namespace core {
-	
+
 class color_producer : public frame_producer_base
 {
 	monitor::basic_subject	event_subject_;
@@ -48,7 +48,16 @@ class color_producer : public frame_producer_base
 	draw_frame				frame_;
 
 public:
-	explicit color_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& color) 
+	color_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, uint32_t value)
+		: color_str_(L"")
+		, constraints_(1, 1)
+		, frame_(create_color_frame(this, frame_factory, value))
+	{
+		CASPAR_LOG(info) << print() << L" Initialized";
+	}
+
+
+	color_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& color) 
 		: color_str_(color)
 		, constraints_(1, 1)
 		, frame_(create_color_frame(this, frame_factory, color))
@@ -155,6 +164,11 @@ bool try_get_color(const std::wstring& str, uint32_t& value)
 	return true;
 }
 
+spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<frame_factory>& frame_factory, uint32_t value)
+{
+	return spl::make_shared<color_producer>(frame_factory, value);
+}
+
 spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<frame_factory>& frame_factory, const std::vector<std::wstring>& params)
 {
 	if(params.size() < 0)
@@ -167,19 +181,24 @@ spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<fram
 	return spl::make_shared<color_producer>(frame_factory, params[0]);
 }
 
-draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, const std::wstring& str)
+draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, uint32_t value)
 {
 	core::pixel_format_desc desc(pixel_format::bgra);
 	desc.planes.push_back(core::pixel_format_desc::plane(1, 1, 4));
 	auto frame = frame_factory->create_frame(tag, desc);
 	
-	uint32_t value = 0;
-	if(!try_get_color(str, value))
-		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(str) << msg_info("Invalid color."));
-
 	*reinterpret_cast<uint32_t*>(frame.image_data(0).begin()) = value;
 
 	return core::draw_frame(std::move(frame));
+}
+
+draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, const std::wstring& str)
+{
+	uint32_t value = 0;
+	if(!try_get_color(str, value))
+		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(str) << msg_info("Invalid color."));
+	
+	return create_color_frame(tag, frame_factory, value);
 }
 
 }}
