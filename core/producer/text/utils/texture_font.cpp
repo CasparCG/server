@@ -268,8 +268,13 @@ public:
 				if(bearingY > result.bearingY)
 					result.bearingY = bearingY;
 
-				if(coords.height > result.height)
-					result.height = coords.height;
+				int protrudeUnderY = coords.height - bearingY;
+
+				if (protrudeUnderY > result.protrudeUnderY)
+					result.protrudeUnderY = protrudeUnderY;
+
+				if (result.bearingY + result.protrudeUnderY > result.height)
+					 result.height = result.bearingY + result.protrudeUnderY;
 
 				pos_x += face_->glyph->advance.x / 64.0f;
 				previous = glyph_index;

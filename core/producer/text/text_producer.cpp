@@ -51,6 +51,10 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/filesystem.hpp>
 
+#include <ft2build.h>
+#include FT_FREETYPE_H
+#include FT_GLYPH_H
+
 #include "utils\texture_atlas.h"
 #include "utils\texture_font.h"
 
@@ -64,33 +68,59 @@ public:
 
 namespace caspar { namespace core {
 	namespace text {
-		
+
+		using namespace boost::filesystem3;
+
 		std::map<std::wstring, std::wstring> fonts;
-		
+
+		std::map<std::wstring, std::wstring> enumerate_fonts()
+		{
+			std::map<std::wstring, std::wstring> result;
+
+			FT_Library lib;
+			FT_Error err = FT_Init_FreeType(&lib);
+			if(err) 
+				return result;
+
+			auto fonts = directory_iterator(env::system_font_folder());
+			auto end = directory_iterator();
+			for(; fonts != end; ++fonts)
+			{
+				auto file = (*fonts);
+				if(is_regular_file(file.path()))
+				{
+					FT_Face face;
+					err = FT_New_Face(lib, u8(file.path().native()).c_str(), 0, &face);
+					if(err) 
+						continue;
+
+					const char* fontname = FT_Get_Postscript_Name(face);	//this doesn't work for .fon fonts. Ignoring those for now
+					if(fontname != nullptr)
+					{
+						std::string fontname_str(fontname);
+						result.insert(std::pair<std::wstring, std::wstring>(std::wstring(fontname_str.begin(), fontname_str.end()), file.path().native()));
+					}
+
+					FT_Done_Face(face);
+				}
+			}
+
+			FT_Done_FreeType(lib);
+
+			return result;
+		}
+
 		void init()
 		{
-			fonts.swap(std::move(caspar::enumerate_fonts()));
+			fonts.swap(std::move(enumerate_fonts()));
+			if(fonts.size() > 0)
+				register_producer_factory(&create_text_producer);
 		}
 
 		std::wstring find_font_file(const std::wstring& font_name)
 		{
 			auto it = std::find_if(fonts.begin(), fonts.end(), font_comparer(font_name));
-			if(it != fonts.end())
-			{
-				std::wstring filename = L"c:\\windows\\fonts\\" + (*it).second;	//TODO: move font-folder setting to settings
-				return filename;
-			}
-	
-			//try the default font
-			it = std::find_if(fonts.begin(), fonts.end(), font_comparer(L"verdana"));	//TODO: move default-font to settings
-			if(it != fonts.end())
-			{
-				std::wstring filename = L"c:\\windows\\fonts\\" + (*it).second;	//TODO: move font-folder setting to settings
-				return filename;
-			}
-
-			//fail
-			return L"";
+			return (it != fonts.end()) ? (*it).second : L"";
 		}
 	}
 	
@@ -118,6 +148,7 @@ public:
 		, atlas_(512,512,4)
 		, font_(atlas_, text::find_font_file(text_info.font), text_info.size, !standalone)
 	{
+		//TODO: examine str to determine which unicode_blocks to load
 		font_.load_glyphs(text::Basic_Latin, text_info.color);
 		font_.load_glyphs(text::Latin_1_Supplement, text_info.color);
 		font_.load_glyphs(text::Latin_Extended_A, text_info.color);

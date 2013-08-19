@@ -110,7 +110,6 @@ struct server::impl : boost::noncopyable
 
 		register_producer_factory(&core::scene::create_dummy_scene_producer);
 		register_producer_factory(&core::scene::create_xml_scene_producer);
-		register_producer_factory(&core::create_text_producer);
 
 		setup_channels(env::properties());
 		CASPAR_LOG(info) << L"Initialized channels.";
