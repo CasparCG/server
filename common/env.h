@@ -35,6 +35,9 @@ const std::wstring& template_folder();
 const std::wstring& data_folder();
 const std::wstring& version();
 
+const std::wstring& font_folder();
+std::wstring system_font_folder();
+
 const boost::property_tree::wptree& properties();
 
 } }
