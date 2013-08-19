@@ -180,6 +180,10 @@ public:
 			case 'Txt2':	//text engine data
 				break;
 
+			case 'luni':
+				name_ = stream.read_unicode_string();
+				break;
+
 			case 'TySh':	//type tool object settings
 				read_text_data(stream);
 				break;
