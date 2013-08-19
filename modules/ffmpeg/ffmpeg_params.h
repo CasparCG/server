@@ -1,5 +1,5 @@
 /*
-* Copyright 2013 Sveriges Television AB http://casparcg.com/
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
 * This file is part of CasparCG (www.casparcg.com).
 *
@@ -16,13 +16,19 @@
 * You should have received a copy of the GNU General Public License
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
-* Author: Julian Waller
+* Author: Cambell Prince, cambell.prince@gmail.com
 */
+
 #pragma once
 
+#include <common/memory/safe_ptr.h>
+
+#include <stdint.h>
 #include <string>
+#include <vector>
 
 namespace caspar {
+	
 namespace ffmpeg {
 
 enum FFMPEG_Resource {
@@ -31,17 +37,37 @@ enum FFMPEG_Resource {
 	FFMPEG_STREAM
 };
 
-struct ffmpeg_params
+struct option
 {
-	std::wstring  size_str;
-	std::wstring  pixel_format;
-	std::wstring  frame_rate;
+	std::string name;
+	std::string value;
 
+	option(std::string name, std::string value)
+		: name(std::move(name))
+		, value(std::move(value))
+	{
+	}
+};
 
-	ffmpeg_params() 
-		: size_str(L"")
-		, pixel_format(L"")
-		, frame_rate(L"")
+struct ffmpeg_producer_params
+{
+	bool                loop;
+	uint32_t            start;
+	uint32_t            length;
+	std::wstring        filter_str;
+
+	FFMPEG_Resource     resource_type;
+	std::wstring        resource_name;
+
+	std::vector<option> options;
+
+	ffmpeg_producer_params() 
+		: loop(false)
+		, start(0)
+		, length(std::numeric_limits<uint32_t>::max())
+		, filter_str(L"")
+		, resource_type(FFMPEG_FILE)
+		, resource_name(L"")
 	{
 	}
 
