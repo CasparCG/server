@@ -79,7 +79,7 @@ static std::wstring system_product_name()
 	return system_product_name;
 }
 
-static std::map<std::wstring, std::wstring> enumerate_fonts()
+/*static std::map<std::wstring, std::wstring> enumerate_fonts()
 {
 	std::map<std::wstring, std::wstring> result;
 	const DWORD max_str_length = 32766;
@@ -114,6 +114,6 @@ static std::map<std::wstring, std::wstring> enumerate_fonts()
 	}
 
 	return result;
-}
+}*/
 
 }

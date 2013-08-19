@@ -43,6 +43,7 @@ std::wstring media;
 std::wstring log;
 std::wstring ftemplate;
 std::wstring data;
+std::wstring font;
 boost::property_tree::wptree pt;
 
 void check_is_configured()
@@ -65,6 +66,7 @@ void configure(const std::wstring& filename)
 		log			= paths.get(L"log-path", initialPath + L"\\log\\");
 		ftemplate	= boost::filesystem3::complete(paths.get(L"template-path", initialPath + L"\\template\\")).wstring();		
 		data		= paths.get(L"data-path", initialPath + L"\\data\\");
+		font		= paths.get(L"font-path", initialPath + L"\\fonts\\");
 
 		try
 		{
@@ -150,6 +152,12 @@ const std::wstring& data_folder()
 	return data;
 }
 
+const std::wstring& font_folder()
+{
+	check_is_configured();
+	return font;
+}
+
 #define QUOTE(str) #str
 #define EXPAND_AND_QUOTE(str) QUOTE(str)
 
@@ -168,6 +176,11 @@ const boost::property_tree::wptree& properties()
 {
 	check_is_configured();
 	return pt;
+}
+
+std::wstring system_font_folder()
+{
+	return L"C:\\windows\\Fonts\\";
 }
 
 }}
