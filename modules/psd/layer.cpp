@@ -22,6 +22,7 @@
 #include "layer.h"
 #include "doc.h"
 #include "descriptor.h"
+#include <common/log.h>
 #include "util\pdf_reader.h"
 
 #include <algorithm>
@@ -74,7 +75,7 @@ struct layer::impl
 {
 	friend class layer;
 
-	impl() : blend_mode_(InvalidBlendMode), link_group_id_(0), opacity_(255), baseClipping_(false), flags_(0), protection_flags_(0), masks_count_(0)
+	impl() : blend_mode_(InvalidBlendMode), link_group_id_(0), opacity_(255), sheet_color_(0), baseClipping_(false), flags_(0), protection_flags_(0), masks_count_(0), text_scale_(1.0f)
 	{}
 
 private:
@@ -82,11 +83,13 @@ private:
 	blend_mode						blend_mode_;
 	int								link_group_id_;
 	unsigned char					opacity_;
+	unsigned short					sheet_color_;
 	bool							baseClipping_;
 	unsigned char					flags_;
 	int								protection_flags_;
 	std::wstring					name_;
 	char							masks_count_;
+	float							text_scale_;
 
 	rect<long>						vector_mask_;
 	layer::layer_mask_info			mask_;
@@ -191,6 +194,10 @@ public:
 			case 'shmd':	//metadata
 				read_metadata(stream, doc);
 				break;
+
+			case 'lclr':
+				sheet_color_ = stream.read_short();
+				break;
 				
 			case 'lyvr':	//layer version
 				break;
@@ -212,9 +219,10 @@ public:
 				break;
 			}
 		}
-		catch(PSDFileFormatException&)
+		catch(PSDFileFormatException& ex)
 		{
 			//ignore failed chunks silently
+			CASPAR_LOG(warning) << ex.what();
 		}
 
 		stream.set_position(end_of_chunk);
@@ -227,7 +235,7 @@ public:
 
 		descriptor solid_descriptor;
 		if(!solid_descriptor.populate(stream))
-			throw PSDFileFormatException();
+			throw PSDFileFormatException("Failed to read solid color data");
 		else
 		{
 			solid_color_.red = static_cast<unsigned char>(solid_descriptor.items().get(L"Clr .Rd  ", 0.0) + 0.5);
@@ -326,16 +334,20 @@ public:
 		double yy = stream.read_double();
 		double tx = stream.read_double();
 		double ty = stream.read_double();
+		if(xx != yy || (xy != 0 && yx != 0))
+			throw PSDFileFormatException("Rotation and non-uniform scaling of dynamic textfields is not supported yet");
+
+		text_scale_ = static_cast<float>(xx);
 
 		if(stream.read_short() != 50)	//"text version" should be 50
-			throw PSDFileFormatException();
+			throw PSDFileFormatException("invalid text version");
 
 		if(stream.read_long() != 16)	//"descriptor version" should be 16
-			throw PSDFileFormatException();
+			throw PSDFileFormatException("Invalid descriptor version while reading text-data");
 
 		descriptor text_descriptor;
 		if(!text_descriptor.populate(stream))
-			throw PSDFileFormatException();
+			throw PSDFileFormatException("Failed to read text-info");
 		else
 		{
 			auto text_info = text_descriptor.items().get_optional<std::wstring>(L"EngineData");
@@ -347,16 +359,21 @@ public:
 		}
 
 		if(stream.read_short() != 1)	//"warp version" should be 1
-			throw PSDFileFormatException();
+			throw PSDFileFormatException("invalid warp version");
 
 		if(stream.read_long() != 16)	//"descriptor version" should be 16
-			throw PSDFileFormatException();
+			throw PSDFileFormatException("Invalid descriptor version while reading text warp-data");
 
 		descriptor warp_descriptor;
 		if(!warp_descriptor.populate(stream))
-			throw PSDFileFormatException();
+			throw PSDFileFormatException("Failed to read text warp-data");
 		else
-			stream.discard_bytes(4*8);	//top, left, right, bottom
+		{
+			double w_top = stream.read_double();
+			double w_left = stream.read_double();
+			double w_right = stream.read_double();
+			double w_bottom = stream.read_double();
+		}
 	}
 
 	//TODO: implement
@@ -543,11 +560,12 @@ void layer::read_channel_data(BEFileInputStream& stream) { impl_->read_channel_d
 
 const std::wstring& layer::name() const { return impl_->name_; }
 unsigned char layer::opacity() const { return impl_->opacity_; }
+unsigned short layer::sheet_color() const { return impl_->sheet_color_; }
 
 bool layer::is_visible() { return (impl_->flags_ & 2) == 0; }	//the (PSD file-format) documentation is is saying the opposite but what the heck
 bool layer::is_position_protected() { return (impl_->protection_flags_& 4) == 4; }
 
-
+float layer::text_scale() const { return impl_->text_scale_; }
 bool layer::is_text() const { return !impl_->text_layer_info_.empty(); }
 const boost::property_tree::wptree& layer::text_data() const { return impl_->text_layer_info_; }
 
