@@ -312,7 +312,7 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 	{
 		if((*it)->is_visible())
 		{
-			if((*it)->is_text())
+			if((*it)->is_text() && (*it)->sheet_color() == 4)
 			{
 				std::wstring str = (*it)->text_data().get(L"EngineDict.Editor.Text", L"");
 			
