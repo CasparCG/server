@@ -172,6 +172,9 @@
     <ClInclude Include="producer\variable.h">
       <Filter>source\producer</Filter>
     </ClInclude>
+    <ClInclude Include="producer\text\utils\text_info.h">
+      <Filter>source\producer\text\utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
