@@ -55,6 +55,10 @@ core::text::text_info get_text_info(const boost::property_tree::wptree& ptree)
 	core::text::text_info result;
 	int font_index = ptree.get(L"EngineDict.StyleRun.RunArray..StyleSheet.StyleSheetData.Font", 0);
 	result.size = ptree.get(L"EngineDict.StyleRun.RunArray..StyleSheet.StyleSheetData.FontSize", 30.0f);
+	//result.leading = ptree.get(L"EngineDict.StyleRun.RunArray..StyleSheet.StyleSheetData.Leading", 0);
+	//result.tracking = ptree.get(L"EngineDict.StyleRun.RunArray..StyleSheet.StyleSheetData.Tracking", 0);
+	//result.baselineshift = ptree.get(L"EngineDict.StyleRun.RunArray..StyleSheet.StyleSheetData.BaselineShift", 0);
+	//result.kerning = ptree.get(L"EngineDict.StyleRun.RunArray..StyleSheet.StyleSheetData.Kerning", 0);
 
 	int child_index = 0;
 	auto color_node = ptree.get_child(L"EngineDict.StyleRun.RunArray..StyleSheet.StyleSheetData.FillColor.Values");
