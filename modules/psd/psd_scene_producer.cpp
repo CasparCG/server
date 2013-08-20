@@ -56,8 +56,8 @@ core::text::text_info get_text_info(const boost::property_tree::wptree& ptree)
 	int font_index = ptree.get(L"EngineDict.StyleRun.RunArray..StyleSheet.StyleSheetData.Font", 0);
 	result.size = ptree.get(L"EngineDict.StyleRun.RunArray..StyleSheet.StyleSheetData.FontSize", 30.0f);
 	//result.leading = ptree.get(L"EngineDict.StyleRun.RunArray..StyleSheet.StyleSheetData.Leading", 0);
-	//result.tracking = ptree.get(L"EngineDict.StyleRun.RunArray..StyleSheet.StyleSheetData.Tracking", 0);
-	//result.baselineshift = ptree.get(L"EngineDict.StyleRun.RunArray..StyleSheet.StyleSheetData.BaselineShift", 0);
+	result.tracking = ptree.get(L"EngineDict.StyleRun.RunArray..StyleSheet.StyleSheetData.Tracking", 0);
+	result.baseline_shift = ptree.get(L"EngineDict.StyleRun.RunArray..StyleSheet.StyleSheetData.BaselineShift", 0);
 	//result.kerning = ptree.get(L"EngineDict.StyleRun.RunArray..StyleSheet.StyleSheetData.Kerning", 0);
 
 	int child_index = 0;
@@ -317,6 +317,8 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 				std::wstring str = (*it)->text_data().get(L"EngineDict.Editor.Text", L"");
 			
 				core::text::text_info text_info(std::move(get_text_info((*it)->text_data())));
+				text_info.size *= (*it)->text_scale();
+
 				auto text_producer = core::text_producer::create(frame_factory, 0, 0, str, text_info, doc.width(), doc.height());
 			
 				core::text::string_metrics metrics = text_producer->measure_string(str);
