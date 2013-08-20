@@ -42,6 +42,8 @@ namespace caspar { namespace core {
 			std::wstring font;
 			float size;
 			color<float> color;
+			int baseline_shift;
+			int tracking;
 		};
 	}
 
