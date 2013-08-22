@@ -1,5 +1,5 @@
 /*
-* Copyright 2013 Sveriges Television AB http://casparcg.com/
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
 * This file is part of CasparCG (www.casparcg.com).
 *
@@ -33,12 +33,12 @@
 namespace caspar {
 
 namespace core {
-	struct frame_consumer;
 	class parameters;
+	struct frame_consumer;
 }
 
 namespace decklink {
-
+	
 safe_ptr<core::frame_consumer> create_consumer(const core::parameters& params);
 safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree);
 

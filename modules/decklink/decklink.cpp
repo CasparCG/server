@@ -1,5 +1,5 @@
 /*
-* Copyright 2013 Sveriges Television AB http://casparcg.com/
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
 * This file is part of CasparCG (www.casparcg.com).
 *
@@ -25,10 +25,8 @@
 #include "util/util.h"
 
 #include "consumer/decklink_consumer.h"
-#include "consumer/blocking_decklink_consumer.h"
 #include "producer/decklink_producer.h"
 
-#include <core/parameters/parameters.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/producer/frame_producer.h>
 
@@ -59,8 +57,7 @@ void init()
 		return;
 		
 	core::register_consumer_factory([](const core::parameters& params){return decklink::create_consumer(params);});
-	core::register_consumer_factory([](const core::parameters& params){return decklink::create_blocking_consumer(params);});
-	core::register_producer_factory(create_producer);
+	//core::register_producer_factory(create_producer);
 }
 
 std::wstring get_version() 

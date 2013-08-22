@@ -53,7 +53,7 @@ struct video_channel::implementation : boost::noncopyable
 	const safe_ptr<caspar::core::stage>		stage_;
 
 	monitor::subject						monitor_subject_;
-	
+		
 public:
 	implementation(video_channel& self, int index, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl)  
 		: self_(self)

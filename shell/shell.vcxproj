@@ -35,6 +35,9 @@
     <ProjectReference Include="..\core\core.vcxproj">
       <Project>{79388c20-6499-4bf6-b8b9-d8c33d7d4ddd}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\modules\decklink\decklink.vcxproj">
+      <Project>{d3611658-8f54-43cf-b9af-a5cf8c1102ea}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\modules\ffmpeg\ffmpeg.vcxproj">
       <Project>{f6223af3-be0b-4b61-8406-98922ce521c2}</Project>
     </ProjectReference>

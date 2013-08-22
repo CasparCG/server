@@ -105,6 +105,8 @@ struct stage::implementation : public std::enable_shared_from_this<implementatio
 	
 	monitor::subject															 monitor_subject_;
 
+	std::int64_t															     frame_counter_;
+	
 	executor																	 executor_;
 
 public:
@@ -114,6 +116,7 @@ public:
 		, target_(target)
 		, monitor_subject_("/stage")
 		, executor_(L"stage")
+		, frame_counter_(0)
 	{
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f, 0.8));	
 		graph_->set_color("produce-time", diagnostics::color(0.0f, 1.0f, 0.0f));
@@ -150,6 +153,16 @@ public:
 	{		
 		try
 		{
+			if(frame_counter_++ >= 50*60*60)
+			{
+				if (frame_counter_ == 50*60*60)
+				{
+					CASPAR_LOG(warning) << "This build will only run for one hour.";
+				}
+
+				return;
+			}
+
 			produce_timer_.restart();
 
 			std::map<int, safe_ptr<basic_frame>> frames;

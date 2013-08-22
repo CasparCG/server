@@ -48,7 +48,7 @@
 #include <protocol/amcp/AMCPProtocolStrategy.h>
 
 //#include <modules/bluefish/bluefish.h>
-//#include <modules/decklink/decklink.h>
+#include <modules/decklink/decklink.h>
 #include <modules/flash/flash.h>
 #include <modules/ffmpeg/ffmpeg.h>
 #include <modules/image/image.h>
@@ -143,10 +143,10 @@ void print_info()
 	CASPAR_LOG(info) << caspar::get_cpu_info();
 	CASPAR_LOG(info) << caspar::get_system_product_name();
 	
-	//CASPAR_LOG(info) << L"Decklink " << caspar::decklink::get_version();
-	//BOOST_FOREACH(auto device, caspar::decklink::get_device_list())
-	//	CASPAR_LOG(info) << L" - " << device;	
-	//	
+	CASPAR_LOG(info) << L"Decklink " << caspar::decklink::get_version();
+	BOOST_FOREACH(auto device, caspar::decklink::get_device_list())
+		CASPAR_LOG(info) << L" - " << device;	
+		
 	//CASPAR_LOG(info) << L"Bluefish " << caspar::bluefish::get_version();
 	//BOOST_FOREACH(auto device, caspar::bluefish::get_device_list())
 	//	CASPAR_LOG(info) << L" - " << device;	
@@ -234,6 +234,8 @@ int main(int argc, wchar_t* argv[])
 	bool restart = false;
 	tbb::task_scheduler_init init;
 	
+	CoInitializeEx(NULL, COINIT_MULTITHREADED);
+
 	try 
 	{
 		// Configure environment properties from configuration.

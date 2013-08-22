@@ -39,7 +39,7 @@
 #include <core/thumbnail_generator.h>
 
 //#include <modules/bluefish/bluefish.h>
-//#include <modules/decklink/decklink.h>
+#include <modules/decklink/decklink.h>
 #include <modules/ffmpeg/ffmpeg.h>
 #include <modules/flash/flash.h>
 //#include <modules/oal/oal.h>
@@ -97,10 +97,10 @@ struct server::implementation : boost::noncopyable
 							  
 		//bluefish::init();	  
 		//CASPAR_LOG(info) << L"Initialized bluefish module.";
-		//					  
-		//decklink::init();	  
-		//CASPAR_LOG(info) << L"Initialized decklink module.";
-		//				  							  
+							  
+		decklink::init();	  
+		CASPAR_LOG(info) << L"Initialized decklink module.";
+						  							  
 		//oal::init();		  
 		//CASPAR_LOG(info) << L"Initialized oal module.";
 							  
@@ -188,11 +188,11 @@ struct server::implementation : boost::noncopyable
 				if (name == L"screen")
 					on_consumer(ogl::create_consumer(xml_consumer.second));
 /*				else if (name == L"bluefish")					
-					on_consumer(bluefish::create_consumer(xml_consumer.second));					
+					on_consumer(bluefish::create_consumer(xml_consumer.second));		*/						
 				else if (name == L"decklink")					
-					on_consumer(decklink::create_consumer(xml_consumer.second));	*/			
-				//else if (name == L"blocking-decklink")
-				//	on_consumer(decklink::create_blocking_consumer(xml_consumer.second));				
+					on_consumer(decklink::create_consumer(xml_consumer.second));	
+/*				else if (name == L"blocking-decklink")
+					on_consumer(decklink::create_blocking_consumer(xml_consumer.second));*/				
 				else if (name == L"ffmpeg")					
 					on_consumer(ffmpeg::create_consumer(xml_consumer.second));						
 				//else if (name == L"system-audio")

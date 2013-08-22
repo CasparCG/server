@@ -29,6 +29,7 @@
 #include <tbb/parallel_for.h>
 
 #include <agents.h>
+#include <numeric>
 
 #pragma warning(push)
 #pragma warning(disable: 4244)
@@ -216,7 +217,7 @@ public:
 			FF(avformat_alloc_output_context2(
 				&oc, 
 				nullptr, 
-				oformat_name ? oformat_name->c_str() : nullptr, 
+				oformat_name && !oformat_name->empty() ? oformat_name->c_str() : nullptr, 
 				path_.string().c_str()));
 
 			oc_.reset(
@@ -1229,20 +1230,18 @@ private:
 };
 	
 safe_ptr<core::frame_consumer> create_consumer(const core::parameters& params)
-{
-    //auto str = std::accumulate(params.begin(), params.end(), std::wstring(), [](const std::wstring& lhs, const std::wstring& rhs) {return lhs + L" " + rhs;});
-    //   
-    //static boost::wregex path_exp(L"\\s*(FILE\\s)?(?<PATH>.+\\.[^\\s]+|.+:[^\\s]*)?\\s*(?<OPTIONS>-.*)?" , boost::regex::icase);
+{       
+    static boost::wregex path_exp(L"\\s*(FILE\\s)?(?<PATH>.+\\.[^\\s]+|.+:[^\\s]*)\\s*(?<ARGS>.*)" , boost::regex::icase);
 
-    //boost::wsmatch what;
-    //if(!boost::regex_match(str, what, path_exp))
-    //     return core::frame_consumer::empty();
-	
-	//ffmpeg_consumer::configuration configuration;
+	auto str = params.get_original_string();
 
-	//configuration.filename = narrow(what["PATH"].str());
-                           
-    return make_safe<ffmpeg_consumer>("", "");
+    boost::wsmatch what;
+	if(!boost::regex_match(str, what, path_exp))
+         return core::frame_consumer::empty();
+	                           
+    return make_safe<ffmpeg_consumer>(
+		narrow(what["PATH"].str()),
+		narrow(what["ARGS"].str()));
 }
 
 safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree)

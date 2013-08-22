@@ -1,5 +1,5 @@
 /*
-* Copyright 2013 Sveriges Television AB http://casparcg.com/
+* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
 * This file is part of CasparCG (www.casparcg.com).
 *
@@ -21,19 +21,13 @@
 
 #pragma once
 
-#include <core/producer/frame_producer.h>
-
-#include <string>
-#include <vector>
-
-namespace caspar {
-namespace core {
-	class parameters;
-}
-namespace decklink {
-	
-safe_ptr<core::frame_producer> create_producer(
-		const safe_ptr<core::frame_factory>& frame_factory,
-		const core::parameters& params);
-
-}}
+//#include <core/producer/frame_producer.h>
+//
+//#include <string>
+//#include <vector>
+//
+//namespace caspar { namespace decklink {
+//	
+//safe_ptr<core::frame_producer> create_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& params);
+//
+//}}
