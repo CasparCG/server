@@ -75,6 +75,11 @@ struct rect
 class PSDFileFormatException : public std::exception
 {
 public:
+	PSDFileFormatException() : std::exception()
+	{}
+	explicit PSDFileFormatException(const char* msg) : std::exception(msg)
+	{}
+
 	virtual ~PSDFileFormatException()
 	{}
 	virtual const char *what() const

@@ -74,9 +74,11 @@ public:
 
 	const std::wstring& name() const;
 	unsigned char opacity() const;
+	unsigned short sheet_color() const;
 	bool is_visible();
 	bool is_position_protected();
 
+	float text_scale() const;
 	bool is_text() const;
 	const boost::property_tree::wptree& text_data() const;
 

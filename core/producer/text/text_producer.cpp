@@ -118,10 +118,12 @@ namespace caspar { namespace core {
 				register_producer_factory(&create_text_producer);
 		}
 
-		std::wstring find_font_file(const std::wstring& font_name)
+		text_info& find_font_file(text_info& info)
 		{
+			auto& font_name = info.font;
 			auto it = std::find_if(fonts.begin(), fonts.end(), font_comparer(font_name));
-			return (it != fonts.end()) ? (*it).second : L"";
+			info.font_file = (it != fonts.end()) ? (*it).second : L"";
+			return info;
 		}
 	}
 	
@@ -141,13 +143,13 @@ struct text_producer::impl
 	text::texture_font font_;
 
 public:
-	explicit impl(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, const text::text_info& text_info, long parent_width, long parent_height, bool standalone) 
+	explicit impl(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, text::text_info& text_info, long parent_width, long parent_height, bool standalone) 
 		: frame_factory_(frame_factory)
 		, constraints_(parent_width, parent_height)
 		, x_(x), y_(y), parent_width_(parent_width), parent_height_(parent_height)
 		, standalone_(standalone)
 		, atlas_(512,512,4)
-		, font_(atlas_, text::find_font_file(text_info.font), text_info.size, !standalone)
+		, font_(atlas_, text::find_font_file(text_info), !standalone)
 	{
 		//TODO: examine str to determine which unicode_blocks to load
 		font_.load_glyphs(text::Basic_Latin, text_info.color);
@@ -271,7 +273,7 @@ public:
 	}
 };
 
-text_producer::text_producer(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, const text::text_info& text_info, long parent_width, long parent_height, bool standalone)
+text_producer::text_producer(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, text::text_info& text_info, long parent_width, long parent_height, bool standalone)
 	: impl_(new impl(frame_factory, x, y, str, text_info, parent_width, parent_height, standalone))
 {}
 
@@ -291,7 +293,7 @@ binding<std::wstring>& text_producer::text() { return impl_->text(); }
 const binding<int>& text_producer::current_bearing_y() const { return impl_->current_bearing_y(); }
 const binding<int>& text_producer::current_protrude_under_y() const { return impl_->current_protrude_under_y(); }
 
-spl::shared_ptr<text_producer> text_producer::create(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, const text::text_info& text_info, long parent_width, long parent_height, bool standalone)
+spl::shared_ptr<text_producer> text_producer::create(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, text::text_info& text_info, long parent_width, long parent_height, bool standalone)
 {
 	return spl::make_shared<text_producer>(frame_factory, x, y, str, text_info, parent_width, parent_height, standalone);
 }
