@@ -24,8 +24,13 @@
 #include <functional>
 #include <memory>
 #include <vector>
+#include <string>
 #include <map>
 #include <algorithm>
+#include <type_traits>
+
+#include <boost/lexical_cast.hpp>
+#include <boost/foreach.hpp>
 
 namespace caspar { namespace core {
 
@@ -46,8 +51,27 @@ struct impl_base : std::enable_shared_from_this<impl_base>
 
 	void depend_on(const std::shared_ptr<impl_base>& dependency)
 	{
-		dependency->on_change(shared_from_this(), [=] { evaluate(); });
+		auto self = shared_from_this();
+
+		if (dependency->depends_on(self))
+			throw std::exception("Can't have circular dependencies between bindings");
+
+		dependency->on_change(self, [=] { evaluate(); });
 		dependencies_.push_back(dependency);
+	}
+
+	bool depends_on(const std::shared_ptr<impl_base>& other) const
+	{
+		BOOST_FOREACH(auto& dependency, dependencies_)
+		{
+			if (dependency == other)
+				return true;
+			
+			if (dependency->depends_on(other))
+				return true;		
+		}
+
+		return false;
 	}
 
 	void on_change(
@@ -386,9 +410,30 @@ public:
 	}
 
 	template<typename T2>
-	binding<T2> as() const
+	typename std::enable_if<
+			std::is_same<T, T2>::value,
+			binding<T2>
+		>::type as() const
+	{
+		return *this;
+	}
+
+	template<typename T2>
+	typename std::enable_if<
+			(std::is_arithmetic<T>::value || std::is_same<bool, T>::value) && (std::is_arithmetic<T2>::value || std::is_same<bool, T2>::value) && !std::is_same<T, T2>::value,
+			binding<T2>
+		>::type as() const
 	{
 		return transformed([](T val) { return static_cast<T2>(val); });
+	}
+
+	template<typename T2>
+	typename std::enable_if<
+			(std::is_same<std::wstring, T>::value || std::is_same<std::wstring, T2>::value) && !std::is_same<T, T2>::value,
+			binding<T2>
+		>::type as() const
+	{
+		return transformed([](T val) { return boost::lexical_cast<T2>(val); });
 	}
 
 	// Func -> R (T self_val)
@@ -452,9 +497,19 @@ static binding<bool> operator||(const binding<bool>& lhs, const binding<bool>& r
 	return lhs.composed(rhs, [](bool lhs, bool rhs) { return lhs || rhs; });
 }
 
+static binding<bool> operator||(const binding<bool>& lhs, bool rhs)
+{
+	return lhs.transformed([rhs](bool lhs) { return lhs || rhs; });
+}
+
 static binding<bool> operator&&(const binding<bool>& lhs, const binding<bool>& rhs)
 {
 	return lhs.composed(rhs, [](bool lhs, bool rhs) { return lhs && rhs; });
+}
+
+static binding<bool> operator&&(const binding<bool>& lhs, bool rhs)
+{
+	return lhs.transformed([rhs](bool lhs) { return lhs && rhs; });
 }
 
 static binding<bool> operator!(const binding<bool>& self)

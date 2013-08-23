@@ -166,7 +166,7 @@ public:
 
 					to_affect.set(tweened);
 					
-					CASPAR_LOG(info) << relative_frame << L" " << *start_value << L" " << duration << L" " << tweened;
+					//CASPAR_LOG(info) << relative_frame << L" " << *start_value << L" " << duration << L" " << tweened;
 				};
 
 		store_keyframe(to_affect.identity(), k);
@@ -191,7 +191,8 @@ public:
 		store_keyframe(to_affect.identity(), k);
 	}
 
-	core::variable& get_variable(const std::wstring& name);
+	core::variable& get_variable(const std::wstring& name) override;
+	const std::vector<std::wstring>& get_variables() const override;
 private:
 	void store_keyframe(void* timeline_identity, const keyframe& k);
 	void store_variable(
