@@ -44,11 +44,12 @@ private:
 	FT_Face			face_;
 	texture_atlas	atlas_;
 	float			size_;
+	float			tracking_;
 	bool			normalize_;
 	std::map<int, glyph_info> glyphs_;
 
 public:
-	impl::impl(texture_atlas& atlas, const std::wstring& filename, float size, bool normalize_coordinates) : lib_(nullptr), face_(nullptr), atlas_(atlas), size_(size), normalize_(normalize_coordinates)
+	impl::impl(texture_atlas& atlas, const text_info& info, bool normalize_coordinates) : lib_(nullptr), face_(nullptr), atlas_(atlas), size_(info.size), tracking_(info.size*info.tracking/1000.0f), normalize_(normalize_coordinates)
 	{
 		try
 		{
@@ -56,10 +57,10 @@ public:
 			err = FT_Init_FreeType(&lib_);
 			if(err) throw freetype_exception("Failed to initialize freetype");
 
-			err = FT_New_Face(lib_, u8(filename).c_str(), 0, &face_);
+			err = FT_New_Face(lib_, u8(info.font_file).c_str(), 0, &face_);
 			if(err) throw freetype_exception("Failed to load font");
 
-			err = FT_Set_Char_Size(face_, (FT_F26Dot6)(size*64), 0, 72, 72);
+			err = FT_Set_Char_Size(face_, static_cast<FT_F26Dot6>(size_*64), 0, 72, 72);
 			if(err) throw freetype_exception("Failed to set font size");
 		}
 		catch(std::exception& ex)
@@ -205,6 +206,7 @@ public:
 					maxHeight = maxBearingY + maxProtrudeUnderY;
 
 				pos_x += face_->glyph->advance.x / 64.0f;
+				pos_x += tracking_;
 				previous = glyph_index;
 			}
 			else
@@ -286,7 +288,7 @@ public:
 	}
 }; 
 
-texture_font::texture_font(texture_atlas& atlas, const std::wstring& filename, float size, bool normalize_coordinates) : impl_(new impl(atlas, filename, size, normalize_coordinates)) {}
+texture_font::texture_font(texture_atlas& atlas, const text_info& info, bool normalize_coordinates) : impl_(new impl(atlas, info, normalize_coordinates)) {}
 void texture_font::load_glyphs(unicode_block range, const color<float>& col) { impl_->load_glyphs(range, col); }
 std::vector<float> texture_font::create_vertex_stream(const std::wstring& str, int x, int y, int parent_width, int parent_height, string_metrics* metrics) { return impl_->create_vertex_stream(str, x, y, parent_width, parent_height, metrics); }
 string_metrics texture_font::measure_string(const std::wstring& str) { return impl_->measure_string(str); }

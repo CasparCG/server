@@ -5,6 +5,7 @@
 #include <common/memory.h>
 
 #include "string_metrics.h"
+#include "text_info.h"
 
 namespace caspar { namespace core { namespace text {
 
@@ -18,7 +19,7 @@ class texture_font
 	const texture_font& operator=(const texture_font&);
 
 public:
-	texture_font(texture_atlas&, const std::wstring& filename, float size, bool normalize_coordinates);
+	texture_font(texture_atlas&, const text_info&, bool normalize_coordinates);
 	void load_glyphs(unicode_block block, const color<float>& col);
 	std::vector<float> create_vertex_stream(const std::wstring& str, int x, int y, int parent_width, int parent_height, string_metrics* metrics);
 	string_metrics measure_string(const std::wstring& str);
