@@ -150,6 +150,7 @@
     <ClInclude Include="producer\text\utils\string_metrics.h" />
     <ClInclude Include="producer\text\utils\texture_atlas.h" />
     <ClInclude Include="producer\text\utils\texture_font.h" />
+    <ClInclude Include="producer\text\utils\text_info.h" />
     <ClInclude Include="producer\variable.h" />
     <ClInclude Include="video_channel.h" />
     <ClInclude Include="consumer\output.h" />

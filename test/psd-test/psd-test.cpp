@@ -46,8 +46,8 @@ int _tmain(int argc, _TCHAR* argv[])
 				if(layer->is_text())
 				{
 					trace << L"			<text value='" << (*it)->text_data().get(L"EngineDict.Editor.Text", L"") << L"' />" << std::endl;
-					//boost::property_tree::xml_writer_settings<wchar_t> w(' ', 3);
-					//boost::property_tree::write_xml(trace, (*it)->text_data(), w);
+					boost::property_tree::xml_writer_settings<wchar_t> w(' ', 3);
+					boost::property_tree::write_xml(trace, (*it)->text_data(), w);
 				}
 				if(layer->has_timeline())
 				{
