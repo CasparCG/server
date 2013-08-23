@@ -240,10 +240,17 @@ public:
 	{
 		return false;
 	}
+
+	int delay_millis() const
+	{
+		return 60;
+	}
 	
 	int buffer_depth() const override
 	{
-		return 3;
+		int delay_in_frames = static_cast<int>(delay_millis() / (1000.0 / format_desc_.fps));
+		
+		return delay_in_frames;
 	}
 		
 	int index() const override

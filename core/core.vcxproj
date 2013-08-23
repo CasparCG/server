@@ -141,6 +141,7 @@
     <ClInclude Include="producer\binding.h" />
     <ClInclude Include="producer\draw\freehand_producer.h" />
     <ClInclude Include="producer\scene\const_producer.h" />
+    <ClInclude Include="producer\scene\expression_parser.h" />
     <ClInclude Include="producer\scene\hotswap_producer.h" />
     <ClInclude Include="producer\scene\scene_producer.h" />
     <ClInclude Include="producer\scene\xml_scene_producer.h" />
@@ -204,6 +205,10 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="producer\scene\const_producer.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="producer\scene\expression_parser.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
