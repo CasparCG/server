@@ -94,15 +94,19 @@ struct scene_producer::impl
 	double frame_fraction_;
 	std::map<void*, timeline> timelines_;
 	std::map<std::wstring, std::shared_ptr<core::variable>> variables_;
+	std::vector<std::wstring> variable_names_;
 
 	impl(int width, int height)
 		: pixel_constraints_(width, height)
 		, aggregator_([=] (double x, double y) { return collission_detect(x, y); })
 		, frame_fraction_(0)
 	{
-		auto speed_variable = std::make_shared<core::variable_impl<double>>(L"", true, 1.0);
+		auto speed_variable = std::make_shared<core::variable_impl<double>>(L"1.0", true, 1.0);
 		store_variable(L"scene_speed", speed_variable);
 		speed_ = speed_variable->value();
+		auto frame_variable = std::make_shared<core::variable_impl<int64_t>>(L"0", true, 0);
+		store_variable(L"frame", frame_variable);
+		frame_number_ = frame_variable->value();
 	}
 
 	layer& create_layer(
@@ -127,6 +131,7 @@ struct scene_producer::impl
 			const std::wstring& name, const std::shared_ptr<core::variable>& var)
 	{
 		variables_.insert(std::make_pair(name, var));
+		variable_names_.push_back(name);
 	}
 
 	core::variable& get_variable(const std::wstring& name)
@@ -137,6 +142,11 @@ struct scene_producer::impl
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(name + L" not found in scene"));
 
 		return *found->second;
+	}
+
+	const std::vector<std::wstring>& get_variables() const
+	{
+		return variable_names_;
 	}
 
 	binding<int64_t> frame()
@@ -150,6 +160,8 @@ struct scene_producer::impl
 
 		auto& pos = transform.image_transform.fill_translation;
 		auto& scale = transform.image_transform.fill_scale;
+		//auto& clip_pos = transform.image_transform.clip_translation;
+		//auto& clip_scale = transform.image_transform.clip_scale;
 
 		pos[0] = static_cast<double>(layer.position.x.get()) / static_cast<double>(pixel_constraints_.width.get());
 		pos[1] = static_cast<double>(layer.position.y.get()) / static_cast<double>(pixel_constraints_.height.get());
@@ -157,6 +169,11 @@ struct scene_producer::impl
 				/ static_cast<double>(pixel_constraints_.width.get());
 		scale[1] = static_cast<double>(layer.producer.get()->pixel_constraints().height.get())
 				/ static_cast<double>(pixel_constraints_.height.get());
+
+		/*clip_pos[0] = static_cast<double>(layer.clipping.upper_left.x.get()) / static_cast<double>(pixel_constraints_.width.get());
+		clip_pos[1] = static_cast<double>(layer.clipping.upper_left.y.get()) / static_cast<double>(pixel_constraints_.height.get());
+		clip_scale[0] = static_cast<double>(layer.clipping.width.get()) / static_cast<double>(pixel_constraints_.width.get());
+		clip_scale[1] = static_cast<double>(layer.clipping.height.get()) / static_cast<double>(pixel_constraints_.height.get());*/
 
 		transform.image_transform.opacity = layer.adjustments.opacity.get();
 		transform.image_transform.is_key = layer.is_key.get();
@@ -354,6 +371,11 @@ core::variable& scene_producer::get_variable(const std::wstring& name)
 	return impl_->get_variable(name);
 }
 
+const std::vector<std::wstring>& scene_producer::get_variables() const
+{
+	return impl_->get_variables();
+}
+
 spl::shared_ptr<core::frame_producer> create_dummy_scene_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params)
 {
 	if (params.size() < 1 || !boost::iequals(params.at(0), L"[SCENE]"))
@@ -389,7 +411,14 @@ spl::shared_ptr<core::frame_producer> create_dummy_scene_producer(const spl::sha
 		return result;
 	};
 
-	//auto& car_layer = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"car")));
+	auto& car_layer = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"car")), L"car");
+	car_layer.clipping.upper_left.x.set(80);
+	car_layer.clipping.upper_left.y.set(45);
+	car_layer.clipping.width.unbind();
+	car_layer.clipping.width.set(640);
+	car_layer.clipping.height.unbind();
+	car_layer.clipping.height.set(360);
+	car_layer.adjustments.opacity.set(0.5);
 	//car_layer.hidden = scene->frame() % 50 > 25 || !(scene->frame() < 1000);
 	std::vector<std::wstring> sub_params;
 	sub_params.push_back(L"[FREEHAND]");

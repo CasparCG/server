@@ -53,6 +53,8 @@ public:
 	
 	draw_frame receive_impl() override;
 	boost::unique_future<std::wstring> call(const std::vector<std::wstring>& param) override;
+	variable& get_variable(const std::wstring& name) override;
+	const std::vector<std::wstring>& get_variables() const override;
 
 	text::string_metrics measure_string(const std::wstring& str);
 

@@ -26,6 +26,9 @@
 
 #include <boost/lexical_cast.hpp>
 
+#include <common/log.h>
+#include <common/except.h>
+
 #include "binding.h"
 
 namespace caspar { namespace core {
@@ -69,6 +72,12 @@ public:
 		return dynamic_cast<variable_impl<T>&>(*this).value();
 	}
 
+	template<typename T>
+	const binding<T>& as() const
+	{
+		return dynamic_cast<const variable_impl<T>&>(*this).value();
+	}
+
 	virtual void from_string(const std::wstring& raw_value) = 0;
 	virtual std::wstring to_string() const = 0;
 private:
@@ -81,6 +90,11 @@ class variable_impl : public variable
 private:
 	binding<T> value_;
 public:
+	variable_impl()
+		: variable(L"", true)
+	{
+	}
+
 	variable_impl(const std::wstring& expr, bool is_public, T initial_value = T())
 		: variable(expr, is_public)
 		, value_(initial_value)
@@ -92,9 +106,26 @@ public:
 		return value_;
 	}
 
+	const binding<T>& value() const
+	{
+		return value_;
+	}
+
 	virtual void from_string(const std::wstring& raw_value)
 	{
-		value_.set(boost::lexical_cast<T>(raw_value));
+		if (std::is_same<bool, T>::value)
+		{
+			binding<bool>& bool_binding = *reinterpret_cast<binding<bool>*>(&value_);
+
+			if (raw_value == L"true")
+				bool_binding.set(true);
+			else if (raw_value == L"false")
+				bool_binding.set(false);
+			else
+				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(L"bool constants should be true or false"));
+		}
+		else
+			value_.set(boost::lexical_cast<T>(raw_value));
 	}
 
 	virtual std::wstring to_string() const

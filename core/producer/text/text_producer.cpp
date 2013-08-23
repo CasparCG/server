@@ -25,6 +25,7 @@
 
 #include <core/producer/frame_producer.h>
 #include <core/producer/color/color_producer.h>
+#include <core/producer/variable.h>
 #include <core/frame/geometry.h>
 #include <core/frame/frame.h>
 #include <core/frame/draw_frame.h>
@@ -131,10 +132,10 @@ struct text_producer::impl
 	constraints constraints_;
 	int x_, y_, parent_width_, parent_height_;
 	bool standalone_;
-	binding<std::wstring> text_;
+	variable_impl<std::wstring> text_;
 	std::shared_ptr<void> text_subscription_;
-	binding<int> current_bearing_y_;
-	binding<int> current_protrude_under_y_;
+	variable_impl<int> current_bearing_y_;
+	variable_impl<int> current_protrude_under_y_;
 	draw_frame frame_;
 	text::texture_atlas atlas_;
 	text::texture_font font_;
@@ -153,13 +154,18 @@ public:
 		font_.load_glyphs(text::Latin_1_Supplement, text_info.color);
 		font_.load_glyphs(text::Latin_Extended_A, text_info.color);
 
-		text_subscription_ = text_.on_change([this]()
+		text_subscription_ = text_.value().on_change([this]()
 		{
-			generate_frame(text_.get());
+			generate_frame(text_.value().get());
 		});
 
+		constraints_.height.depend_on(text());
+		constraints_.width.depend_on(text());
+		current_bearing_y_.as<int>().depend_on(text());
+		current_protrude_under_y_.as<int>().depend_on(text());
+
 		//generate frame
-		text_.set(str);
+		text_.value().set(str);
 
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}
@@ -177,9 +183,10 @@ public:
 
 		this->constraints_.width.set(metrics.width);
 		this->constraints_.height.set(metrics.height);
-		current_bearing_y_.set(metrics.bearingY);
-		current_protrude_under_y_.set(metrics.protrudeUnderY);
+		current_bearing_y_.value().set(metrics.bearingY);
+		current_protrude_under_y_.value().set(metrics.protrudeUnderY);
 		frame_ = core::draw_frame(std::move(frame));
+		frame_.transform().image_transform.fill_translation[1] = static_cast<double>(metrics.bearingY) / static_cast<double>(metrics.height);
 	}
 
 	text::string_metrics measure_string(const std::wstring& str)
@@ -197,9 +204,32 @@ public:
 	boost::unique_future<std::wstring> call(const std::vector<std::wstring>& param)
 	{
 		std::wstring result;
-		text_.set(param.empty() ? L"" : param[0]);
+		text_.value().set(param.empty() ? L"" : param[0]);
 
 		return async(launch::deferred, [=]{return result;});
+	}
+
+	variable& get_variable(const std::wstring& name)
+	{
+		if (name == L"text")
+			return text_;
+		else if (name == L"current_bearing_y")
+			return current_bearing_y_;
+		else if (name == L"current_protrude_under_y")
+			return current_protrude_under_y_;
+
+		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(L"text_producer does not have a variable called " + name));
+	}
+
+	const std::vector<std::wstring>& get_variables() const
+	{
+		static std::vector<std::wstring> vars =
+				boost::assign::list_of<std::wstring>
+						(L"text")
+						(L"current_bearing_y")
+						(L"current_protrude_under_y");
+
+		return vars;
 	}
 
 	constraints& pixel_constraints()
@@ -209,22 +239,22 @@ public:
 
 	binding<std::wstring>& text()
 	{
-		return text_;
+		return text_.value();
 	}
 
 	const binding<int>& current_bearing_y() const
 	{
-		return current_bearing_y_;
+		return current_bearing_y_.value();
 	}
 
 	const binding<int>& current_protrude_under_y() const
 	{
-		return current_protrude_under_y_;
+		return current_protrude_under_y_.value();
 	}
 	
 	std::wstring print() const
 	{
-		return L"text[" + text_.get() + L"]";
+		return L"text[" + text_.value().get() + L"]";
 	}
 
 	std::wstring name() const
@@ -236,7 +266,7 @@ public:
 	{
 		boost::property_tree::wptree info;
 		info.add(L"type", L"text");
-		info.add(L"text", text_.get());
+		info.add(L"text", text_.value().get());
 		return info;
 	}
 };
@@ -247,6 +277,8 @@ text_producer::text_producer(const spl::shared_ptr<frame_factory>& frame_factory
 
 draw_frame text_producer::receive_impl() { return impl_->receive_impl(); }
 boost::unique_future<std::wstring> text_producer::call(const std::vector<std::wstring>& param) { return impl_->call(param); }
+variable& text_producer::get_variable(const std::wstring& name) { return impl_->get_variable(name); }
+const std::vector<std::wstring>& text_producer::get_variables() const { return impl_->get_variables(); }
 text::string_metrics text_producer::measure_string(const std::wstring& str) { return impl_->measure_string(str); }
 
 constraints& text_producer::pixel_constraints() { return impl_->pixel_constraints(); }
@@ -285,7 +317,9 @@ spl::shared_ptr<frame_producer> create_text_producer(const spl::shared_ptr<frame
 	try_get_color(col_str, col_val);
 	text_info.color = core::text::color<float>(col_val);
 
-	return text_producer::create(frame_factory, x, y, params.at(1), text_info, format_desc.width, format_desc.height, true);
+	bool standalone = get_param(L"STANDALONE", params, false);
+
+	return text_producer::create(frame_factory, x, y, params.at(1), text_info, format_desc.width, format_desc.height, standalone);
 }
 
 }}
