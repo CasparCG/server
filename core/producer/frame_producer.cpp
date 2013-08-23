@@ -29,6 +29,7 @@
 #include "color/color_producer.h"
 #include "draw/freehand_producer.h"
 #include "separated/separated_producer.h"
+#include "variable.h"
 
 #include <common/assert.h>
 #include <common/except.h>
@@ -130,6 +131,19 @@ uint32_t frame_producer_base::frame_number() const
 	return impl_->frame_number_;
 }
 
+variable& frame_producer_base::get_variable(const std::wstring& name)
+{
+	CASPAR_THROW_EXCEPTION(caspar_exception() 
+			<< msg_info(L"No variable called " + name + L" found in " + print()));
+}
+
+const std::vector<std::wstring>& frame_producer_base::get_variables() const
+{
+	static std::vector<std::wstring> empty;
+
+	return empty;
+}
+
 const spl::shared_ptr<frame_producer>& frame_producer::empty() 
 {
 	class empty_frame_producer : public frame_producer
@@ -145,6 +159,8 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
 		std::wstring name() const override {return L"empty";}
 		uint32_t frame_number() const override {return 0;}
 		boost::unique_future<std::wstring> call(const std::vector<std::wstring>& params) override{CASPAR_THROW_EXCEPTION(not_supported());}
+		variable& get_variable(const std::wstring& name) override { CASPAR_THROW_EXCEPTION(not_supported()); }
+		const std::vector<std::wstring>& get_variables() const override { static std::vector<std::wstring> empty; return empty; }
 		draw_frame last_frame() {return draw_frame::empty();}
 		constraints& pixel_constraints() override { static constraints c; return c; }
 	
@@ -214,6 +230,8 @@ public:
 	uint32_t											frame_number() const override													{return producer_->frame_number();}
 	boost::property_tree::wptree 						info() const override															{return producer_->info();}
 	boost::unique_future<std::wstring>					call(const std::vector<std::wstring>& params) override							{return producer_->call(params);}
+	variable&											get_variable(const std::wstring& name) override									{return producer_->get_variable(name);}
+	const std::vector<std::wstring>&					get_variables() const override													{return producer_->get_variables();}
 	void												leading_producer(const spl::shared_ptr<frame_producer>& producer) override		{return producer_->leading_producer(producer);}
 	uint32_t											nb_frames() const override														{return producer_->nb_frames();}
 	class draw_frame									last_frame()																	{return producer_->last_frame();}

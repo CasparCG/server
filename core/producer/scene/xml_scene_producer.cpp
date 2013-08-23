@@ -22,6 +22,7 @@
 #include "../../stdafx.h"
 
 #include "xml_scene_producer.h"
+#include "expression_parser.h"
 
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -33,6 +34,28 @@
 #include "scene_producer.h"
 
 namespace caspar { namespace core { namespace scene {
+
+void deduce_expression(variable& var, const variable_repository& repo)
+{
+	auto expr_str = var.original_expr();
+	auto trimmed = boost::trim_copy(expr_str);
+
+	if (boost::starts_with(trimmed, L"${") && boost::ends_with(trimmed, L"}"))
+	{
+		expr_str = trimmed.substr(2, expr_str.length() - 3);
+
+		if (var.is<double>())
+			var.as<double>().bind(parse_expression<double>(expr_str, repo));
+		else if (var.is<bool>())
+			var.as<bool>().bind(parse_expression<bool>(expr_str, repo));
+		else if (var.is<std::wstring>())
+			var.as<std::wstring>().bind(parse_expression<std::wstring>(expr_str, repo));
+	}
+	else if (!expr_str.empty())
+	{
+		var.from_string(expr_str);
+	}
+}
 
 spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 		const spl::shared_ptr<core::frame_factory>& frame_factory,
@@ -63,12 +86,19 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 	BOOST_FOREACH(auto elem, root.get_child(L"scene.variables"))
 	{
 		auto type = elem.second.get<std::wstring>(L"<xmlattr>.type");
+		auto id = elem.second.get<std::wstring>(L"<xmlattr>.id");
+		auto is_public = elem.second.get(L"<xmlattr>.public", false);
+		auto expr = elem.second.get_value<std::wstring>();
 
-		if (type == L"double")
-			scene->create_variable<double>(
-					L"variable." + elem.second.get<std::wstring>(L"<xmlattr>.id"),
-					false,
-					elem.second.get_value<std::wstring>());
+		if (!is_public)
+			id = L"variable." + id;
+
+		if (type == L"number")
+			scene->create_variable<double>(id, is_public, expr);
+		else if (type == L"string")
+			scene->create_variable<std::wstring>(id, is_public, expr);
+		else if (type == L"bool")
+			scene->create_variable<bool>(id, is_public, expr);
 	}
 
 	BOOST_FOREACH(auto elem, root.get_child(L"scene.layers"))
@@ -82,8 +112,25 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 		layer.position.x = scene->create_variable<double>(variable_prefix + L"x", false, elem.second.get<std::wstring>(L"x"));
 		layer.position.y = scene->create_variable<double>(variable_prefix + L"y", false, elem.second.get<std::wstring>(L"y"));
 
+		layer.adjustments.opacity = scene->create_variable<double>(variable_prefix + L"adjustment.opacity", false, elem.second.get(L"adjustments.opacity", L"1.0"));
+
 		scene->create_variable<double>(variable_prefix + L"width", false) = layer.producer.get()->pixel_constraints().width;
 		scene->create_variable<double>(variable_prefix + L"height", false) = layer.producer.get()->pixel_constraints().height;
+
+		BOOST_FOREACH(auto& var_name, producer->get_variables())
+		{
+			auto& var = producer->get_variable(var_name);
+			auto expr = elem.second.get<std::wstring>(L"parameters." + var_name, L"");
+
+			if (var.is<double>())
+				scene->create_variable<double>(variable_prefix + L"parameter." + var_name, false, expr) = var.as<double>();
+			else if (var.is<std::wstring>())
+				scene->create_variable<std::wstring>(variable_prefix + L"parameter." + var_name, false, expr) = var.as<std::wstring>();
+			else if (var.is<bool>())
+				scene->create_variable<bool>(variable_prefix + L"parameter." + var_name, false, expr) = var.as<bool>();
+			else if (var.is<int>())
+				scene->create_variable<double>(variable_prefix + L"parameter." + var_name, false, expr) = var.as<int>().as<double>();
+		}
 	}
 
 	BOOST_FOREACH(auto& elem, root.get_child(L"scene.timelines"))
@@ -105,16 +152,20 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 		}
 	}
 
-	BOOST_FOREACH(auto& elem, root.get_child(L"scene.parameters"))
+	auto repo = [&scene](const std::wstring& name) -> variable&
 	{
-		auto& variable = scene->get_variable(elem.second.get<std::wstring>(L"<xmlattr>.variable"));
-		auto id = elem.second.get<std::wstring>(L"<xmlattr>.id");
+		return scene->get_variable(name); 
+	};
 
-		if (variable.is<double>())
-			scene->create_variable<double>(id, true) = variable.as<double>();
-		else if (variable.is<std::wstring>())
-			scene->create_variable<std::wstring>(id, true) = variable.as<std::wstring>();
+	BOOST_FOREACH(auto& var_name, scene->get_variables())
+	{
+		deduce_expression(scene->get_variable(var_name), repo);
 	}
+
+	auto params2 = params;
+	params2.erase(params2.begin());
+
+	scene->call(params2);
 
 	return scene;
 }
