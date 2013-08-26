@@ -42,13 +42,13 @@
 #include <modules/decklink/decklink.h>
 #include <modules/ffmpeg/ffmpeg.h>
 #include <modules/flash/flash.h>
-#include <modules/oal/oal.h>
+#include <modules/portaudio/portaudio.h>
 #include <modules/ogl/ogl.h>
 #include <modules/silverlight/silverlight.h>
 #include <modules/image/image.h>
 #include <modules/image/consumer/image_consumer.h>
 
-#include <modules/oal/consumer/oal_consumer.h>
+#include <modules/portaudio/consumer/portaudio_consumer.h>
 #include <modules/bluefish/consumer/bluefish_consumer.h>
 #include <modules/decklink/consumer/decklink_consumer.h>
 #include <modules/decklink/consumer/blocking_decklink_consumer.h>
@@ -102,9 +102,9 @@ struct server::implementation : boost::noncopyable
 							  
 		decklink::init();	  
 		CASPAR_LOG(info) << L"Initialized decklink module.";
-							  							  
-		oal::init();		  
-		CASPAR_LOG(info) << L"Initialized oal module.";
+
+		portaudio::init();
+		CASPAR_LOG(info) << L"Initialized portaudio module.";
 							  
 		ogl::init();		  
 		CASPAR_LOG(info) << L"Initialized ogl module.";
@@ -219,7 +219,7 @@ struct server::implementation : boost::noncopyable
 				else if (name == L"file" || name == L"stream")					
 					on_consumer(ffmpeg::create_consumer(xml_consumer.second));						
 				else if (name == L"system-audio")
-					on_consumer(oal::create_consumer());
+					on_consumer(portaudio::create_consumer());
 				else if (name == L"synchronizing")
 					on_consumer(make_safe<core::synchronizing_consumer>(
 							create_consumers<core::frame_consumer>(
