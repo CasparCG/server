@@ -96,3 +96,6 @@
 /dependencies64/sfml
 /dependencies64/tbb
 
+/modules/portaudio/portaudio.vcxproj.user
+/modules/portaudio/bin
+/modules/portaudio/tmp
