@@ -152,6 +152,7 @@
     <ClInclude Include="producer\text\utils\texture_font.h" />
     <ClInclude Include="producer\text\utils\text_info.h" />
     <ClInclude Include="producer\variable.h" />
+    <ClInclude Include="thumbnail_generator.h" />
     <ClInclude Include="video_channel.h" />
     <ClInclude Include="consumer\output.h" />
     <ClInclude Include="consumer\frame_consumer.h" />
@@ -237,6 +238,7 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\..\..\StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\..\..\StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
+    <ClCompile Include="thumbnail_generator.cpp" />
     <ClCompile Include="video_channel.cpp" />
     <ClCompile Include="consumer\frame_consumer.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>

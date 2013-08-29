@@ -161,6 +161,7 @@
     <ClInclude Include="env.h" />
     <ClInclude Include="except.h" />
     <ClInclude Include="executor.h" />
+    <ClInclude Include="filesystem_monitor.h" />
     <ClInclude Include="forward.h" />
     <ClInclude Include="future.h" />
     <ClInclude Include="future_fwd.h" />
@@ -174,6 +175,7 @@
     <ClInclude Include="os\windows\windows.h" />
     <ClInclude Include="page_locked_allocator.h" />
     <ClInclude Include="param.h" />
+    <ClInclude Include="polling_filesystem_monitor.h" />
     <ClInclude Include="prec_timer.h" />
     <ClInclude Include="reactive.h" />
     <ClInclude Include="semaphore.h" />
@@ -232,6 +234,7 @@
       <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Develop|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
       <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Profile|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
     </ClCompile>
+    <ClCompile Include="polling_filesystem_monitor.cpp" />
     <ClCompile Include="prec_timer.cpp">
       <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
       <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>

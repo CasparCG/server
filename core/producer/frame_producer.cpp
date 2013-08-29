@@ -42,10 +42,15 @@
 namespace caspar { namespace core {
 	
 std::vector<const producer_factory_t> g_factories;
+std::vector<const producer_factory_t> g_thumbnail_factories;
 
 void register_producer_factory(const producer_factory_t& factory)
 {
 	g_factories.push_back(factory);
+}
+void register_thumbnail_producer_factory(const producer_factory_t& factory)
+{
+	g_thumbnail_factories.push_back(factory);
 }
 
 constraints::constraints(double width, double height)
@@ -95,6 +100,10 @@ struct frame_producer_base::impl
 	{
 		return draw_frame::still(last_frame_);
 	}
+	draw_frame create_thumbnail_frame()
+	{
+		return draw_frame::empty();
+	}
 };
 
 frame_producer_base::frame_producer_base() : impl_(new impl(*this))
@@ -114,6 +123,10 @@ void frame_producer_base::paused(bool value)
 draw_frame frame_producer_base::last_frame()
 {
 	return impl_->last_frame();
+}
+draw_frame frame_producer_base::create_thumbnail_frame()
+{
+	return impl_->create_thumbnail_frame();
 }
 
 boost::unique_future<std::wstring> frame_producer_base::call(const std::vector<std::wstring>&) 
@@ -162,6 +175,7 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
 		variable& get_variable(const std::wstring& name) override { CASPAR_THROW_EXCEPTION(not_supported()); }
 		const std::vector<std::wstring>& get_variables() const override { static std::vector<std::wstring> empty; return empty; }
 		draw_frame last_frame() {return draw_frame::empty();}
+		draw_frame create_thumbnail_frame() {return draw_frame::empty();}
 		constraints& pixel_constraints() override { static constraints c; return c; }
 	
 		boost::property_tree::wptree info() const override
@@ -235,6 +249,7 @@ public:
 	void												leading_producer(const spl::shared_ptr<frame_producer>& producer) override		{return producer_->leading_producer(producer);}
 	uint32_t											nb_frames() const override														{return producer_->nb_frames();}
 	class draw_frame									last_frame()																	{return producer_->last_frame();}
+	draw_frame											create_thumbnail_frame()														{return producer_->create_thumbnail_frame();}
 	void												subscribe(const monitor::observable::observer_ptr& o)							{return producer_->subscribe(o);}
 	void												unsubscribe(const monitor::observable::observer_ptr& o)							{return producer_->unsubscribe(o);}
 	bool												collides(double x, double y)													{return producer_->collides(x, y);}
@@ -247,13 +262,13 @@ spl::shared_ptr<core::frame_producer> create_destroy_proxy(spl::shared_ptr<core:
 	return spl::make_shared<destroy_producer_proxy>(std::move(producer));
 }
 
-spl::shared_ptr<core::frame_producer> do_create_producer(const spl::shared_ptr<frame_factory>& my_frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> do_create_producer(const spl::shared_ptr<frame_factory>& my_frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params, const std::vector<const producer_factory_t>& factories, bool throw_on_fail = false)
 {
 	if(params.empty())
 		CASPAR_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
 	
 	auto producer = frame_producer::empty();
-	std::any_of(g_factories.begin(), g_factories.end(), [&](const producer_factory_t& factory) -> bool
+	std::any_of(factories.begin(), factories.end(), [&](const producer_factory_t& factory) -> bool
 		{
 			try
 			{
@@ -261,7 +276,10 @@ spl::shared_ptr<core::frame_producer> do_create_producer(const spl::shared_ptr<f
 			}
 			catch(...)
 			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
+				if(throw_on_fail)
+					throw;
+				else
+					CASPAR_LOG_CURRENT_EXCEPTION();
 			}
 			return producer != frame_producer::empty();
 		});
@@ -278,9 +296,39 @@ spl::shared_ptr<core::frame_producer> do_create_producer(const spl::shared_ptr<f
 	return producer;
 }
 
+spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const spl::shared_ptr<frame_factory>& my_frame_factory, const video_format_desc& format_desc, const std::wstring& media_file)
+{
+  std::vector<std::wstring> params;
+  params.push_back(media_file);
+
+  auto producer = do_create_producer(my_frame_factory, format_desc, params, g_thumbnail_factories, true);
+  auto key_producer = frame_producer::empty();
+  
+  try // to find a key file.
+  {
+    auto params_copy = params;
+    if (params_copy.size() > 0)
+    {
+      params_copy[0] += L"_A";
+      key_producer = do_create_producer(my_frame_factory, format_desc, params_copy, g_thumbnail_factories, true);
+      if (key_producer == frame_producer::empty())
+      {
+        params_copy[0] += L"LPHA";
+        key_producer = do_create_producer(my_frame_factory, format_desc, params_copy, g_thumbnail_factories, true);
+      }
+    }
+  }
+  catch(...){}
+
+  if (producer != frame_producer::empty() && key_producer != frame_producer::empty())
+    return create_separated_producer(producer, key_producer);
+  
+  return producer;
+}
+
 spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>& my_frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params)
 {	
-	auto producer = do_create_producer(my_frame_factory, format_desc, params);
+	auto producer = do_create_producer(my_frame_factory, format_desc, params, g_factories);
 	auto key_producer = frame_producer::empty();
 	
 	try // to find a key file.
@@ -289,11 +337,11 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<fram
 		if(params_copy.size() > 0)
 		{
 			params_copy[0] += L"_A";
-			key_producer = do_create_producer(my_frame_factory, format_desc, params_copy);			
+			key_producer = do_create_producer(my_frame_factory, format_desc, params_copy, g_factories);			
 			if(key_producer == frame_producer::empty())
 			{
 				params_copy[0] += L"LPHA";
-				key_producer = do_create_producer(my_frame_factory, format_desc, params_copy);	
+				key_producer = do_create_producer(my_frame_factory, format_desc, params_copy, g_factories);	
 			}
 		}
 	}

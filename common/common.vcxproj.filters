@@ -55,6 +55,9 @@
     <ClCompile Include="compiler\vs\stack_walker.cpp">
       <Filter>source\compiler\vs</Filter>
     </ClCompile>
+    <ClCompile Include="polling_filesystem_monitor.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="compiler\vs\disable_silly_warnings.h">
@@ -146,6 +149,12 @@
       <Filter>source</Filter>
     </ClInclude>
     <ClInclude Include="endian.h">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="filesystem_monitor.h">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="polling_filesystem_monitor.h">
       <Filter>source</Filter>
     </ClInclude>
   </ItemGroup>

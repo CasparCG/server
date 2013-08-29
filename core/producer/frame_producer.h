@@ -97,6 +97,7 @@ public:
 	virtual uint32_t							nb_frames() const = 0;
 	virtual uint32_t							frame_number() const = 0;
 	virtual class draw_frame					last_frame() = 0;
+	virtual class draw_frame					create_thumbnail_frame() = 0;
 	virtual constraints&						pixel_constraints() = 0;
 	virtual void								leading_producer(const spl::shared_ptr<frame_producer>&) {}  
 };
@@ -121,6 +122,7 @@ public:
 	uint32_t					nb_frames() const override;
 	uint32_t					frame_number() const override;
 	virtual class draw_frame	last_frame() override;
+	virtual class draw_frame	create_thumbnail_frame() override;
 
 private:
 	virtual class draw_frame	receive() override;
@@ -133,10 +135,12 @@ private:
 
 typedef std::function<spl::shared_ptr<core::frame_producer>(const spl::shared_ptr<class frame_factory>&, const video_format_desc& format_desc, const std::vector<std::wstring>&)> producer_factory_t;
 void register_producer_factory(const producer_factory_t& factory); // Not thread-safe.
+void register_thumbnail_producer_factory(const producer_factory_t& factory); // Not thread-safe.
 
 spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>&, const video_format_desc& format_desc, const std::vector<std::wstring>& params);
 spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>&, const video_format_desc& format_desc, const std::wstring& params);
 
 spl::shared_ptr<core::frame_producer> create_destroy_proxy(spl::shared_ptr<core::frame_producer> producer);
+spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const spl::shared_ptr<frame_factory>&, const video_format_desc& format_desc, const std::wstring& media_file);
 
 }}

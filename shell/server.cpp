@@ -28,6 +28,7 @@
 #include <common/except.h>
 #include <common/utf.h>
 #include <common/memory.h>
+#include <common/polling_filesystem_monitor.h>
 
 #include <core/video_channel.h>
 #include <core/video_format.h>
@@ -37,6 +38,7 @@
 #include <core/producer/scene/xml_scene_producer.h>
 #include <core/producer/text/text_producer.h>
 #include <core/consumer/output.h>
+#include <core/thumbnail_generator.h>
 
 #include <modules/bluefish/bluefish.h>
 #include <modules/decklink/decklink.h>
@@ -45,6 +47,7 @@
 #include <modules/oal/oal.h>
 #include <modules/screen/screen.h>
 #include <modules/image/image.h>
+#include <modules/image/consumer/image_consumer.h>
 #include <modules/psd/psd_scene_producer.h>
 
 #include <modules/oal/consumer/oal_consumer.h>
@@ -77,6 +80,7 @@ struct server::impl : boost::noncopyable
 	accelerator::accelerator							accelerator_;
 	std::vector<spl::shared_ptr<IO::AsyncEventServer>>	async_servers_;	
 	std::vector<spl::shared_ptr<video_channel>>			channels_;
+	std::shared_ptr<thumbnail_generator>				thumbnail_generator_;
 
 	impl()		
 		: accelerator_(env::properties().get(L"configuration.accelerator", L"auto"))
@@ -113,6 +117,9 @@ struct server::impl : boost::noncopyable
 
 		setup_channels(env::properties());
 		CASPAR_LOG(info) << L"Initialized channels.";
+
+		setup_thumbnail_generation(env::properties());
+		CASPAR_LOG(info) << L"Initialized thumbnail generator.";
 
 		setup_controllers(env::properties());
 		CASPAR_LOG(info) << L"Initialized controllers.";
@@ -173,6 +180,28 @@ struct server::impl : boost::noncopyable
 		if(env::properties().get(L"configuration.channel-grid", false))
 			channels_.push_back(spl::make_shared<video_channel>(static_cast<int>(channels_.size()+1), core::video_format_desc(core::video_format::x576p2500), accelerator_.create_image_mixer()));
 	}
+
+	void setup_thumbnail_generation(const boost::property_tree::wptree& pt)
+	{
+		if (!pt.get(L"configuration.thumbnails.generate-thumbnails", true))
+			return;
+
+		auto scan_interval_millis = pt.get(L"configuration.thumbnails.scan-interval-millis", 5000);
+
+		polling_filesystem_monitor_factory monitor_factory(scan_interval_millis);
+		thumbnail_generator_.reset(new thumbnail_generator(
+			monitor_factory, 
+			env::media_folder(),
+			env::thumbnails_folder(),
+			pt.get(L"configuration.thumbnails.width", 256),
+			pt.get(L"configuration.thumbnails.height", 144),
+			core::video_format_desc(pt.get(L"configuration.thumbnails.video-mode", L"720p2500")),
+			accelerator_.create_image_mixer(),
+			pt.get(L"configuration.thumbnails.generate-delay-millis", 2000),
+			&image::write_cropped_png));
+
+		CASPAR_LOG(info) << L"Initialized thumbnail generator.";
+	}
 		
 	void setup_controllers(const boost::property_tree::wptree& pt)
 	{		
@@ -211,7 +240,7 @@ struct server::impl : boost::noncopyable
 		using namespace IO;
 
 		if(boost::iequals(name, L"AMCP"))
-			return wrap_legacy_protocol("\r\n", spl::make_shared<amcp::AMCPProtocolStrategy>(channels_));
+			return wrap_legacy_protocol("\r\n", spl::make_shared<amcp::AMCPProtocolStrategy>(channels_, thumbnail_generator_));
 		else if(boost::iequals(name, L"CII"))
 			return wrap_legacy_protocol("\r\n", spl::make_shared<cii::CIIProtocolStrategy>(channels_));
 		else if(boost::iequals(name, L"CLOCK"))
@@ -230,6 +259,7 @@ const std::vector<spl::shared_ptr<video_channel>> server::channels() const
 {
 	return impl_->channels_;
 }
+std::shared_ptr<core::thumbnail_generator> server::get_thumbnail_generator() const {return impl_->thumbnail_generator_; }
 void server::subscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_.subscribe(o);}
 void server::unsubscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_.unsubscribe(o);}
 
