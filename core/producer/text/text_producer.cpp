@@ -130,17 +130,20 @@ namespace caspar { namespace core {
 
 struct text_producer::impl
 {
-	spl::shared_ptr<core::frame_factory>	frame_factory_;
+	spl::shared_ptr<core::frame_factory> frame_factory_;
 	constraints constraints_;
 	int x_, y_, parent_width_, parent_height_;
 	bool standalone_;
 	variable_impl<std::wstring> text_;
 	std::shared_ptr<void> text_subscription_;
-	variable_impl<int> current_bearing_y_;
-	variable_impl<int> current_protrude_under_y_;
+	variable_impl<double> tracking_;
+	std::shared_ptr<void> tracking_subscription_;
+	variable_impl<double> current_bearing_y_;
+	variable_impl<double> current_protrude_under_y_;
 	draw_frame frame_;
 	text::texture_atlas atlas_;
 	text::texture_font font_;
+	bool dirty_;
 
 public:
 	explicit impl(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, text::text_info& text_info, long parent_width, long parent_height, bool standalone) 
@@ -150,21 +153,27 @@ public:
 		, standalone_(standalone)
 		, atlas_(512,512,4)
 		, font_(atlas_, text::find_font_file(text_info), !standalone)
+		, dirty_(false)
 	{
 		//TODO: examine str to determine which unicode_blocks to load
 		font_.load_glyphs(text::Basic_Latin, text_info.color);
 		font_.load_glyphs(text::Latin_1_Supplement, text_info.color);
 		font_.load_glyphs(text::Latin_Extended_A, text_info.color);
 
+		tracking_.value().set(text_info.tracking);
 		text_subscription_ = text_.value().on_change([this]()
 		{
-			generate_frame(text_.value().get());
+			dirty_ = true;
+		});
+		tracking_subscription_ = tracking_.value().on_change([this]()
+		{
+			dirty_ = true;
 		});
 
 		constraints_.height.depend_on(text());
 		constraints_.width.depend_on(text());
-		current_bearing_y_.as<int>().depend_on(text());
-		current_protrude_under_y_.as<int>().depend_on(text());
+		current_bearing_y_.as<double>().depend_on(text());
+		current_protrude_under_y_.as<double>().depend_on(text());
 
 		//generate frame
 		text_.value().set(str);
@@ -172,13 +181,14 @@ public:
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}
 
-	void generate_frame(const std::wstring& str)
+	void generate_frame()
 	{
 		core::pixel_format_desc pfd(core::pixel_format::bgra);
 		pfd.planes.push_back(core::pixel_format_desc::plane(static_cast<int>(atlas_.width()), static_cast<int>(atlas_.height()), static_cast<int>(atlas_.depth())));
 
 		text::string_metrics metrics;
-		std::vector<float> vertex_stream(std::move(font_.create_vertex_stream(str, x_, y_, parent_width_, parent_height_, &metrics)));
+		font_.set_tracking(static_cast<int>(tracking_.value().get()));
+		std::vector<float> vertex_stream(std::move(font_.create_vertex_stream(text_.value().get(), x_, y_, parent_width_, parent_height_, &metrics)));
 		auto frame = frame_factory_->create_frame(vertex_stream.data(), pfd);
 		memcpy(frame.image_data().data(), atlas_.data(), frame.image_data().size());
 		frame.set_geometry(frame_geometry(frame_geometry::quad_list, std::move(vertex_stream)));
@@ -200,6 +210,9 @@ public:
 			
 	draw_frame receive_impl()
 	{
+		if (dirty_)
+			generate_frame();
+
 		return frame_;
 	}
 
@@ -219,6 +232,8 @@ public:
 			return current_bearing_y_;
 		else if (name == L"current_protrude_under_y")
 			return current_protrude_under_y_;
+		else if (name == L"tracking")
+			return tracking_;
 
 		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(L"text_producer does not have a variable called " + name));
 	}
@@ -228,6 +243,7 @@ public:
 		static std::vector<std::wstring> vars =
 				boost::assign::list_of<std::wstring>
 						(L"text")
+						(L"tracking")
 						(L"current_bearing_y")
 						(L"current_protrude_under_y");
 
@@ -244,12 +260,17 @@ public:
 		return text_.value();
 	}
 
-	const binding<int>& current_bearing_y() const
+	binding<double>& tracking()
+	{
+		return tracking_.value();
+	}
+
+	const binding<double>& current_bearing_y() const
 	{
 		return current_bearing_y_.value();
 	}
 
-	const binding<int>& current_protrude_under_y() const
+	const binding<double>& current_protrude_under_y() const
 	{
 		return current_protrude_under_y_.value();
 	}
@@ -290,8 +311,9 @@ boost::property_tree::wptree text_producer::info() const { return impl_->info();
 void text_producer::subscribe(const monitor::observable::observer_ptr& o) {}
 void text_producer::unsubscribe(const monitor::observable::observer_ptr& o) {}
 binding<std::wstring>& text_producer::text() { return impl_->text(); }
-const binding<int>& text_producer::current_bearing_y() const { return impl_->current_bearing_y(); }
-const binding<int>& text_producer::current_protrude_under_y() const { return impl_->current_protrude_under_y(); }
+binding<double>& text_producer::tracking() { return impl_->tracking(); }
+const binding<double>& text_producer::current_bearing_y() const { return impl_->current_bearing_y(); }
+const binding<double>& text_producer::current_protrude_under_y() const { return impl_->current_protrude_under_y(); }
 
 spl::shared_ptr<text_producer> text_producer::create(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, text::text_info& text_info, long parent_width, long parent_height, bool standalone)
 {
