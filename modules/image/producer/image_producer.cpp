@@ -26,6 +26,7 @@
 #include <core/video_format.h>
 
 #include <core/producer/frame_producer.h>
+#include <core/producer/scene/const_producer.h>
 #include <core/frame/frame.h>
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
@@ -39,12 +40,36 @@
 #include <boost/assign.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <algorithm>
 
 using namespace boost::assign;
 
 namespace caspar { namespace image {
+
+std::pair<core::draw_frame, core::constraints> load_image(
+		const spl::shared_ptr<core::frame_factory>& frame_factory,
+		const std::wstring& filename)
+{
+	auto bitmap = load_image(filename);
+	FreeImage_FlipVertical(bitmap.get());
+		
+	core::pixel_format_desc desc = core::pixel_format::bgra;
+	auto width = FreeImage_GetWidth(bitmap.get());
+	auto height = FreeImage_GetHeight(bitmap.get());
+	desc.planes.push_back(core::pixel_format_desc::plane(width, height, 4));
+	auto frame = frame_factory->create_frame(bitmap.get(), desc);
+
+	std::copy_n(
+			FreeImage_GetBits(bitmap.get()),
+			frame.image_data(0).size(),
+			frame.image_data(0).begin());
+	
+	return std::make_pair(
+			core::draw_frame(std::move(frame)),
+			core::constraints(width, height));
+}
 
 struct image_producer : public core::frame_producer_base
 {	
@@ -57,19 +82,10 @@ struct image_producer : public core::frame_producer_base
 		: filename_(filename)
 		, frame_(core::draw_frame::empty())	
 	{
-		auto bitmap = load_image(filename_);
-		FreeImage_FlipVertical(bitmap.get());
-		
-		core::pixel_format_desc desc = core::pixel_format::bgra;
-		auto width = FreeImage_GetWidth(bitmap.get());
-		auto height = FreeImage_GetHeight(bitmap.get());
-		desc.planes.push_back(core::pixel_format_desc::plane(width, height, 4));
-		auto frame = frame_factory->create_frame(this, desc);
+		auto frame = load_image(frame_factory, filename);
 
-		std::copy_n(FreeImage_GetBits(bitmap.get()), frame.image_data(0).size(), frame.image_data(0).begin());
-		frame_ = core::draw_frame(std::move(frame));
-		constraints_.width.set(width);
-		constraints_.height.set(height);
+		frame_ = frame.first;
+		constraints_ = frame.second;
 
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}
@@ -117,11 +133,76 @@ struct image_producer : public core::frame_producer_base
 	}
 };
 
+class ieq
+{
+	std::wstring test_;
+public:
+	ieq(const std::wstring& test)
+		: test_(test)
+	{
+	}
+
+	bool operator()(const std::wstring& elem) const
+	{
+		return boost::iequals(elem, test_);
+	}
+};
+
 spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
 {
 	static const std::vector<std::wstring> extensions = list_of(L".png")(L".tga")(L".bmp")(L".jpg")(L".jpeg")(L".gif")(L".tiff")(L".tif")(L".jp2")(L".jpx")(L".j2k")(L".j2c");
+
+	if (boost::iequals(params[0], L"[IMG_SEQUENCE]"))
+	{
+		if (params.size() != 2)
+			return core::frame_producer::empty();
+
+		auto dir = boost::filesystem::path(env::media_folder() + L"\\" + params[1]).parent_path();
+		auto basename = boost::filesystem3::basename(params[1]);
+		std::set<std::wstring> files;
+		boost::filesystem::directory_iterator end;
+
+		for (boost::filesystem::directory_iterator it(dir); it != end; ++it)
+		{
+			auto name = it->path().filename().wstring();
+
+			if (!boost::algorithm::istarts_with(name, basename))
+				continue;
+
+			auto extension = it->path().extension().wstring();
+
+			if (std::find_if(extensions.begin(), extensions.end(), ieq(extension)) == extensions.end())
+				continue;
+
+			files.insert(it->path().wstring());
+		}
+
+		if (files.empty())
+			return core::frame_producer::empty();
+
+		int width = -1;
+		int height = -1;
+		std::vector<core::draw_frame> frames;
+		frames.reserve(files.size());
+
+		BOOST_FOREACH(auto& file, files)
+		{
+			auto frame = load_image(frame_factory, file);
+
+			if (width == -1)
+			{
+				width = static_cast<int>(frame.second.width.get());
+				height = static_cast<int>(frame.second.height.get());
+			}
+
+			frames.push_back(std::move(frame.first));
+		}
+
+		return core::create_const_producer(std::move(frames), width, height);
+	}
+
 	std::wstring filename = env::media_folder() + L"\\" + params[0];
-	
+
 	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
 		{			
 			return boost::filesystem::is_regular_file(boost::filesystem::path(filename).replace_extension(ex));
