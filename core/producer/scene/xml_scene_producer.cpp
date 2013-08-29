@@ -128,8 +128,6 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 				scene->create_variable<std::wstring>(variable_prefix + L"parameter." + var_name, false, expr) = var.as<std::wstring>();
 			else if (var.is<bool>())
 				scene->create_variable<bool>(variable_prefix + L"parameter." + var_name, false, expr) = var.as<bool>();
-			else if (var.is<int>())
-				scene->create_variable<double>(variable_prefix + L"parameter." + var_name, false, expr) = var.as<int>().as<double>();
 		}
 	}
 
