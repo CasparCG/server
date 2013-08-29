@@ -82,6 +82,11 @@ public:
 			FT_Done_FreeType(lib_);
 	}
 
+	void set_tracking(int tracking)
+	{
+		tracking_ = size_ * tracking / 1000.0f;
+	}
+
 	int count_glyphs_in_range(unicode_block block)
 	{ 
 		unicode_range range = get_range(block);
@@ -290,6 +295,7 @@ public:
 
 texture_font::texture_font(texture_atlas& atlas, const text_info& info, bool normalize_coordinates) : impl_(new impl(atlas, info, normalize_coordinates)) {}
 void texture_font::load_glyphs(unicode_block range, const color<float>& col) { impl_->load_glyphs(range, col); }
+void texture_font::set_tracking(int tracking) { impl_->set_tracking(tracking); }
 std::vector<float> texture_font::create_vertex_stream(const std::wstring& str, int x, int y, int parent_width, int parent_height, string_metrics* metrics) { return impl_->create_vertex_stream(str, x, y, parent_width, parent_height, metrics); }
 string_metrics texture_font::measure_string(const std::wstring& str) { return impl_->measure_string(str); }
 
