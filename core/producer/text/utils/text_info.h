@@ -12,6 +12,10 @@ namespace caspar { namespace core { namespace text {
 
 		float size;
 		color<float> color;
+		//int shadow_distance;
+		//int shadow_size;
+		//float shadow_spread;
+		//color<float> shadow_color;
 		int baseline_shift;
 		int tracking;
 	};

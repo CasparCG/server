@@ -176,7 +176,7 @@ LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
 	}
 	catch(...){}
 
-    return EXCEPTION_CONTINUE_EXECUTION;
+	return EXCEPTION_CONTINUE_EXECUTION;
 }
 
 void run()
@@ -201,7 +201,7 @@ void run()
 	
 	// Create a amcp parser for console commands.
 	//protocol::amcp::AMCPProtocolStrategy amcp(caspar_server.channels());
-	auto amcp = spl::make_shared<caspar::IO::delimiter_based_chunking_strategy_factory<wchar_t>>(L"\r\n", spl::make_shared<caspar::IO::legacy_strategy_adapter_factory>(spl::make_shared<protocol::amcp::AMCPProtocolStrategy>(caspar_server.channels())))->create(console_client);
+	auto amcp = spl::make_shared<caspar::IO::delimiter_based_chunking_strategy_factory<wchar_t>>(L"\r\n", spl::make_shared<caspar::IO::legacy_strategy_adapter_factory>(spl::make_shared<protocol::amcp::AMCPProtocolStrategy>(caspar_server.channels(), caspar_server.get_thumbnail_generator())))->create(console_client);
 
 	std::wstring wcmd;
 	while(true)
