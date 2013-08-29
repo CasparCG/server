@@ -526,6 +526,7 @@ public:
 	{
 		executor_.invoke([=]
 		{
+			consumer_.reset();
 			::CoUninitialize();
 		});
 	}

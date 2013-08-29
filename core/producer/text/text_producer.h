@@ -60,8 +60,9 @@ public:
 	void unsubscribe(const monitor::observable::observer_ptr& o) override;
 
 	binding<std::wstring>& text();
-	const binding<int>& current_bearing_y() const;
-	const binding<int>& current_protrude_under_y() const;
+	binding<double>& tracking();
+	const binding<double>& current_bearing_y() const;
+	const binding<double>& current_protrude_under_y() const;
 private:
 	struct impl;
 	spl::unique_ptr<impl> impl_;
