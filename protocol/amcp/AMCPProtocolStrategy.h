@@ -24,6 +24,7 @@
 #include "../util/protocolstrategy.h"
 
 #include <core/video_channel.h>
+#include <core/thumbnail_generator.h>
 
 #include <common/memory.h>
 
@@ -36,7 +37,7 @@ namespace caspar { namespace protocol { namespace amcp {
 class AMCPProtocolStrategy : public IO::IProtocolStrategy, boost::noncopyable
 {
 public:
-	AMCPProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>& channels);
+	AMCPProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>& channels, const std::shared_ptr<core::thumbnail_generator>& thumb_gen);
 	virtual ~AMCPProtocolStrategy();
 
 	virtual void Parse(const std::wstring& msg, IO::ClientInfoPtr pClientInfo);

@@ -24,20 +24,24 @@
 #include <common/memory.h>
 
 #include <core/video_format.h>
-
+#include <core/consumer/frame_consumer.h>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/filesystem.hpp>
 
 #include <string>
 #include <vector>
 
 namespace caspar { 
 
-namespace core {
-	class frame_consumer;
-}
-
 namespace image {
 	
+	void write_cropped_png(
+		const class core::const_frame& frame,
+		const core::video_format_desc& format_desc,
+		const boost::filesystem::wpath& output_file,
+		int width,
+		int height);
+
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params);
 
 }}

@@ -33,6 +33,7 @@ namespace caspar {
 
 namespace core {
 	class video_channel;
+	class thumbnail_generator;
 }
 
 class server sealed : public monitor::observable
@@ -41,7 +42,7 @@ class server sealed : public monitor::observable
 public:
 	server();
 	const std::vector<spl::shared_ptr<core::video_channel>> channels() const;
-
+	std::shared_ptr<core::thumbnail_generator> get_thumbnail_generator() const;
 	// monitor::observable
 
 	void subscribe(const monitor::observable::observer_ptr& o) override;

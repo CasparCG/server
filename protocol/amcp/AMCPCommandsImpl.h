@@ -25,6 +25,8 @@
 
 #include "AMCPCommand.h"
 
+#include <core/thumbnail_generator.h>
+
 namespace caspar { namespace protocol {
 	
 std::wstring ListMedia();
@@ -279,7 +281,6 @@ public:
 	SetCommand(IO::ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index) : AMCPChannelCommandBase(client, channel, channel_index, layer_index)
 	{}
 
-private:
 	std::wstring print() const { return L"SetCommand";}
 	bool DoExecute();
 };
@@ -290,6 +291,23 @@ public:
 	LockCommand(IO::ClientInfoPtr client, const std::vector<channel_context>& channels) : AMCPChannelsAwareCommand(channels), AMCPCommandBase(client) {}
 	std::wstring print() const { return L"LockCommand";}
 	bool DoExecute();
+};
+
+class ThumbnailCommand : public AMCPCommandBase<1>
+{
+public:
+	ThumbnailCommand::ThumbnailCommand(IO::ClientInfoPtr client, std::shared_ptr<core::thumbnail_generator> thumb_gen) : AMCPCommandBase(client), thumb_gen_(thumb_gen) 
+	{}
+	std::wstring print() const { return L"ThumbnailCommand";}
+	bool DoExecute();
+
+private:
+	bool DoExecuteRetrieve();
+	bool DoExecuteList();
+	bool DoExecuteGenerate();
+	bool DoExecuteGenerateAll();
+
+	std::shared_ptr<core::thumbnail_generator> thumb_gen_;
 };
 
 //class KillCommand : public AMCPCommand
