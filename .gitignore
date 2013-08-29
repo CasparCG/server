@@ -105,6 +105,7 @@
 /dependencies64/openal
 /dependencies64/sfml
 /dependencies64/tbb
+/dependencies64/freetype
 
 /modules/psd/psd.vcxproj.user
 
