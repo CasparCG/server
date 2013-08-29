@@ -30,11 +30,21 @@ namespace caspar { namespace core {
 
 class const_producer : public frame_producer_base
 {
-	draw_frame frame_;
+	std::vector<draw_frame> frames_;
+	std::vector<draw_frame>::const_iterator seek_position_;
 	constraints constraints_;
 public:
 	const_producer(const draw_frame& frame, int width, int height)
-		: frame_(frame)
+		: constraints_(width, height)
+	{
+		frames_.push_back(frame);
+		seek_position_ = frames_.begin();
+		CASPAR_LOG(info) << print() << L" Initialized";
+	}
+
+	const_producer(std::vector<draw_frame>&& frames, int width, int height)
+		: frames_(std::move(frames))
+		, seek_position_(frames_.begin())
 		, constraints_(width, height)
 	{
 		CASPAR_LOG(info) << print() << L" Initialized";
@@ -42,7 +52,12 @@ public:
 
 	draw_frame receive_impl() override
 	{
-		return frame_;
+		auto result = *seek_position_;
+
+		if (seek_position_ + 1 != frames_.end())
+			++seek_position_;
+
+		return result;
 	}
 
 	constraints& pixel_constraints() override
@@ -80,6 +95,12 @@ spl::shared_ptr<class frame_producer> create_const_producer(
 		const class draw_frame& frame, int width, int height)
 {
 	return spl::make_shared<const_producer>(frame, width, height);
+}
+
+spl::shared_ptr<class frame_producer> create_const_producer(
+		std::vector<class draw_frame>&& frames, int width, int height)
+{
+	return spl::make_shared<const_producer>(std::move(frames), width, height);
 }
 
 }}

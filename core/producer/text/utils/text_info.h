@@ -18,6 +18,13 @@ namespace caspar { namespace core { namespace text {
 		//color<float> shadow_color;
 		int baseline_shift;
 		int tracking;
+
+		text_info()
+			: size(0.0f)
+			, baseline_shift(0)
+			, tracking(0)
+		{
+		}
 	};
 
 }}}
