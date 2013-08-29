@@ -178,6 +178,9 @@
     <ClInclude Include="producer\text\utils\text_info.h">
       <Filter>source\producer\text\utils</Filter>
     </ClInclude>
+    <ClInclude Include="thumbnail_generator.h">
+      <Filter>source</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
@@ -264,6 +267,9 @@
     </ClCompile>
     <ClCompile Include="producer\scene\expression_parser.cpp">
       <Filter>source\producer\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="thumbnail_generator.cpp">
+      <Filter>source</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

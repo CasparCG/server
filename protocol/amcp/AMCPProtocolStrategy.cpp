@@ -50,11 +50,12 @@ using IO::ClientInfoPtr;
 struct AMCPProtocolStrategy::impl
 {
 private:
-	std::vector<channel_context> channels_;
-	std::vector<AMCPCommandQueue::ptr_type> commandQueues_;
+	std::vector<channel_context>				channels_;
+	std::vector<AMCPCommandQueue::ptr_type>		commandQueues_;
+	std::shared_ptr<core::thumbnail_generator>	thumb_gen_;
 
 public:
-	impl(const std::vector<spl::shared_ptr<core::video_channel>>& channels)
+	impl(const std::vector<spl::shared_ptr<core::video_channel>>& channels, const std::shared_ptr<core::thumbnail_generator>& thumb_gen) : thumb_gen_(thumb_gen)
 	{
 		commandQueues_.push_back(std::make_shared<AMCPCommandQueue>());
 
@@ -355,6 +356,7 @@ private:
 		else if(s == TEXT("BYE"))			return std::make_shared<ByeCommand>(client);
 		else if(s == TEXT("LOCK"))			return std::make_shared<LockCommand>(client, channels_);
 		else if(s == TEXT("LOG"))			return std::make_shared<LogCommand>(client);
+		else if(s == TEXT("THUMBNAIL"))		return std::make_shared<ThumbnailCommand>(client, thumb_gen_);
 		//else if(s == TEXT("KILL"))
 		//{
 		//	result = AMCPCommandPtr(new KillCommand());
@@ -387,7 +389,7 @@ private:
 };
 
 
-AMCPProtocolStrategy::AMCPProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>& channels) : impl_(spl::make_unique<impl>(channels)) {}
+AMCPProtocolStrategy::AMCPProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>& channels, const std::shared_ptr<core::thumbnail_generator>& thumb_gen) : impl_(spl::make_unique<impl>(channels, thumb_gen)) {}
 AMCPProtocolStrategy::~AMCPProtocolStrategy() {}
 void AMCPProtocolStrategy::Parse(const std::wstring& msg, IO::ClientInfoPtr pClientInfo) { impl_->Parse(msg, pClientInfo); }
 

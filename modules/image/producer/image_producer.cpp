@@ -83,6 +83,11 @@ struct image_producer : public core::frame_producer_base
 		return frame_;
 	}
 
+	core::draw_frame create_thumbnail_frame() override
+	{
+		return frame_;
+	}
+
 	core::constraints& pixel_constraints() override
 	{
 		return constraints_;
@@ -117,7 +122,7 @@ struct image_producer : public core::frame_producer_base
 	}
 };
 
-spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_raw_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
 {
 	static const std::vector<std::wstring> extensions = list_of(L".png")(L".tga")(L".bmp")(L".jpg")(L".jpeg")(L".gif")(L".tiff")(L".tif")(L".jp2")(L".jpx")(L".j2k")(L".j2c");
 	std::wstring filename = env::media_folder() + L"\\" + params[0];
@@ -133,5 +138,14 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 	return spl::make_shared<image_producer>(frame_factory, filename + *ext);
 }
 
+spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
+{
+	return create_raw_producer(frame_factory, format_desc, params);
+}
+
+spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
+{
+	return create_raw_producer(frame_factory, format_desc, params);
+}
 
 }}
