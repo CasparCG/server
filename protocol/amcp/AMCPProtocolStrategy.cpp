@@ -53,9 +53,10 @@ private:
 	std::vector<channel_context>				channels_;
 	std::vector<AMCPCommandQueue::ptr_type>		commandQueues_;
 	std::shared_ptr<core::thumbnail_generator>	thumb_gen_;
+	boost::promise<bool>&						shutdown_server_now_;
 
 public:
-	impl(const std::vector<spl::shared_ptr<core::video_channel>>& channels, const std::shared_ptr<core::thumbnail_generator>& thumb_gen) : thumb_gen_(thumb_gen)
+	impl(const std::vector<spl::shared_ptr<core::video_channel>>& channels, const std::shared_ptr<core::thumbnail_generator>& thumb_gen, boost::promise<bool>& shutdown_server_now) : thumb_gen_(thumb_gen), shutdown_server_now_(shutdown_server_now)
 	{
 		commandQueues_.push_back(std::make_shared<AMCPCommandQueue>());
 
@@ -357,10 +358,7 @@ private:
 		else if(s == TEXT("LOCK"))			return std::make_shared<LockCommand>(client, channels_);
 		else if(s == TEXT("LOG"))			return std::make_shared<LogCommand>(client);
 		else if(s == TEXT("THUMBNAIL"))		return std::make_shared<ThumbnailCommand>(client, thumb_gen_);
-		//else if(s == TEXT("KILL"))
-		//{
-		//	result = AMCPCommandPtr(new KillCommand());
-		//}
+		else if(s == TEXT("KILL"))			return std::make_shared<KillCommand>(client, shutdown_server_now_);
 
 		return nullptr;
 	}
@@ -389,7 +387,7 @@ private:
 };
 
 
-AMCPProtocolStrategy::AMCPProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>& channels, const std::shared_ptr<core::thumbnail_generator>& thumb_gen) : impl_(spl::make_unique<impl>(channels, thumb_gen)) {}
+AMCPProtocolStrategy::AMCPProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>& channels, const std::shared_ptr<core::thumbnail_generator>& thumb_gen, boost::promise<bool>& shutdown_server_now) : impl_(spl::make_unique<impl>(channels, thumb_gen, shutdown_server_now)) {}
 AMCPProtocolStrategy::~AMCPProtocolStrategy() {}
 void AMCPProtocolStrategy::Parse(const std::wstring& msg, IO::ClientInfoPtr pClientInfo) { impl_->Parse(msg, pClientInfo); }
 

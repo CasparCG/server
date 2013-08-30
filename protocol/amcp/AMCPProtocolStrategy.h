@@ -29,6 +29,7 @@
 #include <common/memory.h>
 
 #include <boost/noncopyable.hpp>
+#include <boost/thread/future.hpp>
 
 #include <string>
 
@@ -37,7 +38,11 @@ namespace caspar { namespace protocol { namespace amcp {
 class AMCPProtocolStrategy : public IO::IProtocolStrategy, boost::noncopyable
 {
 public:
-	AMCPProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>& channels, const std::shared_ptr<core::thumbnail_generator>& thumb_gen);
+	AMCPProtocolStrategy(
+		const std::vector<spl::shared_ptr<core::video_channel>>& channels, 
+		const std::shared_ptr<core::thumbnail_generator>& thumb_gen,
+		boost::promise<bool>& shutdown_server_now);
+
 	virtual ~AMCPProtocolStrategy();
 
 	virtual void Parse(const std::wstring& msg, IO::ClientInfoPtr pClientInfo);
