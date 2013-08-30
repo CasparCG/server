@@ -70,6 +70,20 @@ void configure(const std::wstring& filename)
 		font		= paths.get(L"font-path", initialPath + L"\\fonts\\");
 		thumbnails	= paths.get(L"thumbnails-path", initialPath + L"\\data\\");
 
+		//Make sure that all paths have a trailing backslash
+		if(media.at(media.length()-1) != L'\\')
+			media.append(L"\\");
+		if(log.at(log.length()-1) != L'\\')
+			log.append(L"\\");
+		if(ftemplate.at(ftemplate.length()-1) != L'\\')
+			ftemplate.append(L"\\");
+		if(data.at(data.length()-1) != L'\\')
+			data.append(L"\\");
+		if(font.at(font.length()-1) != L'\\')
+			font.append(L"\\");
+		if(thumbnails.at(thumbnails.length()-1) != L'\\')
+			thumbnails.append(L"\\");
+
 		try
 		{
 			for(auto it = boost::filesystem::directory_iterator(initialPath); it != boost::filesystem::directory_iterator(); ++it)
@@ -122,6 +136,10 @@ void configure(const std::wstring& filename)
 		auto data_path = boost::filesystem::path(data);
 		if(!boost::filesystem::exists(data_path))
 			boost::filesystem::create_directories(data_path);
+
+		auto font_path = boost::filesystem::path(font);
+		if(!boost::filesystem::exists(font_path))
+			boost::filesystem::create_directories(font_path);
 
 		auto thumbnails_path = boost::filesystem::path(thumbnails);
 		if(!boost::filesystem::exists(thumbnails_path))
