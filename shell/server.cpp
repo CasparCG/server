@@ -81,9 +81,10 @@ struct server::impl : boost::noncopyable
 	std::vector<spl::shared_ptr<IO::AsyncEventServer>>	async_servers_;	
 	std::vector<spl::shared_ptr<video_channel>>			channels_;
 	std::shared_ptr<thumbnail_generator>				thumbnail_generator_;
+	boost::promise<bool>&								shutdown_server_now_;
 
-	impl()		
-		: accelerator_(env::properties().get(L"configuration.accelerator", L"auto"))
+	explicit impl(boost::promise<bool>& shutdown_server_now)		
+		: accelerator_(env::properties().get(L"configuration.accelerator", L"auto")), shutdown_server_now_(shutdown_server_now)
 	{	
 
 		ffmpeg::init();
@@ -240,7 +241,7 @@ struct server::impl : boost::noncopyable
 		using namespace IO;
 
 		if(boost::iequals(name, L"AMCP"))
-			return wrap_legacy_protocol("\r\n", spl::make_shared<amcp::AMCPProtocolStrategy>(channels_, thumbnail_generator_));
+			return wrap_legacy_protocol("\r\n", spl::make_shared<amcp::AMCPProtocolStrategy>(channels_, thumbnail_generator_, shutdown_server_now_));
 		else if(boost::iequals(name, L"CII"))
 			return wrap_legacy_protocol("\r\n", spl::make_shared<cii::CIIProtocolStrategy>(channels_));
 		else if(boost::iequals(name, L"CLOCK"))
@@ -253,7 +254,7 @@ struct server::impl : boost::noncopyable
 
 };
 
-server::server() : impl_(new impl()){}
+server::server(boost::promise<bool>& shutdown_server_now) : impl_(new impl(shutdown_server_now)){}
 
 const std::vector<spl::shared_ptr<video_channel>> server::channels() const
 {
