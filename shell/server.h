@@ -26,6 +26,7 @@
 #include <core/monitor/monitor.h>
 
 #include <boost/noncopyable.hpp>
+#include <boost/thread/future.hpp>
 
 #include <vector>
 
@@ -40,7 +41,7 @@ class server sealed : public monitor::observable
 					, boost::noncopyable
 {
 public:
-	server();
+	explicit server(boost::promise<bool>& shutdown_server_now);
 	const std::vector<spl::shared_ptr<core::video_channel>> channels() const;
 	std::shared_ptr<core::thumbnail_generator> get_thumbnail_generator() const;
 	// monitor::observable

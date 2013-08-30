@@ -54,7 +54,6 @@
 
 #include <common/env.h>
 #include <common/except.h>
-#include <common/except.h>
 #include <common/log.h>
 #include <common/gl/gl_check.h>
 #include <common/os/windows/current_version.h>
@@ -68,6 +67,9 @@
 #include <boost/foreach.hpp>
 #include <boost/locale.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/thread.hpp>
+#include <boost/thread/future.hpp>
+#include <boost/algorithm/string/case_conv.hpp>
 
 #include <signal.h>
 
@@ -179,29 +181,14 @@ LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
 	return EXCEPTION_CONTINUE_EXECUTION;
 }
 
-void run()
+void do_run(server& caspar_server, boost::promise<bool>& shutdown_server_now)
 {
-	// Create server object which initializes channels, protocols and controllers.
-	server caspar_server;
-				
-	auto server = spl::make_shared<protocol::osc::server>(5253);
-	caspar_server.subscribe(server);
-						
-	//auto console_obs = reactive::make_observer([](const monitor::event& e)
-	//{
-	//	std::stringstream str;
-	//	str << e;
-	//	CASPAR_LOG(trace) << str.str().c_str();
-	//});
-
-	//caspar_server.subscribe(console_obs);
-						
 	// Create a dummy client which prints amcp responses to console.
 	auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
 	
 	// Create a amcp parser for console commands.
 	//protocol::amcp::AMCPProtocolStrategy amcp(caspar_server.channels());
-	auto amcp = spl::make_shared<caspar::IO::delimiter_based_chunking_strategy_factory<wchar_t>>(L"\r\n", spl::make_shared<caspar::IO::legacy_strategy_adapter_factory>(spl::make_shared<protocol::amcp::AMCPProtocolStrategy>(caspar_server.channels(), caspar_server.get_thumbnail_generator())))->create(console_client);
+	auto amcp = spl::make_shared<caspar::IO::delimiter_based_chunking_strategy_factory<wchar_t>>(L"\r\n", spl::make_shared<caspar::IO::legacy_strategy_adapter_factory>(spl::make_shared<protocol::amcp::AMCPProtocolStrategy>(caspar_server.channels(), caspar_server.get_thumbnail_generator(), shutdown_server_now)))->create(console_client);
 
 	std::wstring wcmd;
 	while(true)
@@ -211,7 +198,10 @@ void run()
 		//boost::to_upper(wcmd);
 
 		if(boost::iequals(wcmd, L"EXIT") || boost::iequals(wcmd, L"Q") || boost::iequals(wcmd, L"QUIT") || boost::iequals(wcmd, L"BYE"))
+		{
+			shutdown_server_now.set_value(true);	//true to wait for keypress
 			break;
+		}
 
 		try
 		{
@@ -288,8 +278,35 @@ void run()
 
 		wcmd += L"\r\n";
 		amcp->parse(wcmd);
-	}	
-	CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
+	}
+};
+
+bool run()
+{
+	boost::promise<bool> shutdown_server_now;
+	boost::unique_future<bool> shutdown_server = shutdown_server_now.get_future();
+
+	// Create server object which initializes channels, protocols and controllers.
+	server caspar_server(shutdown_server_now);
+				
+	auto server = spl::make_shared<protocol::osc::server>(5253);
+	caspar_server.subscribe(server);
+						
+	//auto console_obs = reactive::make_observer([](const monitor::event& e)
+	//{
+	//	std::stringstream str;
+	//	str << e;
+	//	CASPAR_LOG(trace) << str.str().c_str();
+	//});
+
+	//caspar_server.subscribe(console_obs);
+
+
+	// Use separate thread for the blocking console input, will be terminated 
+	// anyway when the main thread terminates.
+	boost::thread stdin_thread(std::bind(do_run, std::ref(caspar_server), std::ref(shutdown_server_now)));	//compiler didn't like lambda here...
+	stdin_thread.detach();
+	return shutdown_server.get();
 }
 
 void on_abort(int)
@@ -374,9 +391,12 @@ int main(int argc, wchar_t* argv[])
 		boost::property_tree::write_xml(str, env::properties(), w);
 		CASPAR_LOG(info) << L"casparcg.config:\n-----------------------------------------\n" << str.str().c_str() << L"-----------------------------------------";
 		
-		run();
+		auto wait = run();
 		
-		system("pause");	
+		Sleep(500);
+		CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
+
+		if(wait) system("pause");	
 	}
 	catch(boost::property_tree::file_parser_error&)
 	{
