@@ -151,24 +151,6 @@
     <ClInclude Include="util\util.h" />
   </ItemGroup>
   <ItemGroup>
-    <Midl Include="interop\DeckLinkAPI.idl">
-      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">interop\</OutputDirectory>
-      <OutputDirectory Condition="'$(Configuration)|$(Platform)'=='Release|x64'">interop\</OutputDirectory>
-    </Midl>
-    <Midl Include="interop\DeckLinkAPI_v7_1.idl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </Midl>
-    <Midl Include="interop\DeckLinkAPI_v7_3.idl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </Midl>
-    <Midl Include="interop\DeckLinkAPI_v7_6.idl">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </Midl>
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\..\common\common.vcxproj">
       <Project>{02308602-7fe0-4253-b96e-22134919f56a}</Project>
     </ProjectReference>
