@@ -1380,8 +1380,17 @@ bool DataCommand::DoExecuteRetrieve()
 
 	std::wstringstream file_contents_stream(file_contents);
 	std::wstring line;
+	
+	bool firstLine = true;
 	while(std::getline(file_contents_stream, line))
-		reply << line << L"\n";
+	{
+		if(firstLine)
+			firstLine = false;
+		else
+			reply << "\n";
+
+		reply << line;
+	}
 
 	reply << "\r\n";
 	SetReplyString(reply.str());
