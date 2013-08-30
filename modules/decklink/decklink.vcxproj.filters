@@ -53,18 +53,4 @@
       <Filter>source</Filter>
     </ClInclude>
   </ItemGroup>
-  <ItemGroup>
-    <Midl Include="interop\DeckLinkAPI_v7_1.idl">
-      <Filter>source\interop</Filter>
-    </Midl>
-    <Midl Include="interop\DeckLinkAPI_v7_3.idl">
-      <Filter>source\interop</Filter>
-    </Midl>
-    <Midl Include="interop\DeckLinkAPI_v7_6.idl">
-      <Filter>source\interop</Filter>
-    </Midl>
-    <Midl Include="interop\DeckLinkAPI.idl">
-      <Filter>source\interop</Filter>
-    </Midl>
-  </ItemGroup>
 </Project>
