@@ -25,6 +25,7 @@
 
 #include "AMCPCommand.h"
 
+#include <boost/thread/future.hpp>
 #include <core/thumbnail_generator.h>
 
 namespace caspar { namespace protocol {
@@ -308,6 +309,17 @@ private:
 	bool DoExecuteGenerateAll();
 
 	std::shared_ptr<core::thumbnail_generator> thumb_gen_;
+};
+
+class KillCommand : public AMCPCommandBase<0> 
+{
+public:
+	KillCommand(IO::ClientInfoPtr client, boost::promise<bool>& shutdown_server_now) : AMCPCommandBase(client), shutdown_server_now_(&shutdown_server_now) {}
+	std::wstring print() const { return L"KillCommand";}
+	bool DoExecute();
+
+private:
+	boost::promise<bool>* shutdown_server_now_;
 };
 
 //class KillCommand : public AMCPCommand

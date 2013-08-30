@@ -1969,5 +1969,12 @@ bool ThumbnailCommand::DoExecuteGenerateAll()
 	}
 }
 
+bool KillCommand::DoExecute()
+{
+	shutdown_server_now_->set_value(false);	//false for not waiting for keypress
+	SetReplyString(TEXT("202 KILL OK\r\n"));
+	return true;
+}
+
 }	//namespace amcp
 }}	//namespace caspar
