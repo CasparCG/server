@@ -63,4 +63,25 @@ std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename)
 	
 	return bitmap;
 }
+
+std::shared_ptr<FIBITMAP> load_png_from_memory(const void* memory_location, size_t size)
+{
+	FREE_IMAGE_FORMAT fif = FIF_PNG;
+
+	auto memory = std::unique_ptr<FIMEMORY, decltype(&FreeImage_CloseMemory)>(
+			FreeImage_OpenMemory(static_cast<BYTE*>(const_cast<void*>(memory_location)), static_cast<DWORD>(size)),
+			FreeImage_CloseMemory);
+	auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_LoadFromMemory(fif, memory.get(), 0), FreeImage_Unload);
+
+	if (FreeImage_GetBPP(bitmap.get()) != 32)
+	{
+		bitmap = std::shared_ptr<FIBITMAP>(FreeImage_ConvertTo32Bits(bitmap.get()), FreeImage_Unload);
+
+		if (!bitmap)
+			BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
+	}
+
+	return bitmap;
+}
+
 }}
