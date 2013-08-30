@@ -162,7 +162,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 		if (params.size() != 2)
 			return core::frame_producer::empty();
 
-		auto dir = boost::filesystem::path(env::media_folder() + L"\\" + params[1]).parent_path();
+		auto dir = boost::filesystem::path(env::media_folder() + params[1]).parent_path();
 		auto basename = boost::filesystem3::basename(params[1]);
 		std::set<std::wstring> files;
 		boost::filesystem::directory_iterator end;
@@ -206,7 +206,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 		return core::create_const_producer(std::move(frames), width, height);
 	}
 
-	std::wstring filename = env::media_folder() + L"\\" + params[0];
+	std::wstring filename = env::media_folder() + params[0];
 
 	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
 		{			
