@@ -35,6 +35,7 @@
 #include <common/diagnostics/graph.h>
 #include <common/os/windows/current_version.h>
 #include <common/os/windows/system_info.h>
+#include <common/base64.h>
 
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>
@@ -118,36 +119,12 @@ std::wstring read_file_base64(const boost::filesystem::wpath& file)
 	if (!filestream)
 		return L"";
 
-	// From http://www.webbiscuit.co.uk/2012/04/02/base64-encoder-and-boost/
-
-	typedef
-		insert_linebreaks<         // insert line breaks every 76 characters
-		base64_from_binary<    // convert binary values to base64 characters
-		transform_width<   // retrieve 6 bit integers from a sequence of 8 bit bytes
-		const unsigned char *,
-		6,
-		8
-		>
-		>,
-		76
-		>
-		base64_iterator; // compose all the above operations in to a new iterator
 	auto length = boost::filesystem::file_size(file);
 	std::vector<char> bytes;
 	bytes.resize(length);
 	filestream.read(bytes.data(), length);
 
-	int padding = 0;
-
-	while (bytes.size() % 3 != 0)
-	{
-		++padding;
-		bytes.push_back(0x00);
-	}
-
-	std::string result(base64_iterator(bytes.data()), base64_iterator(bytes.data() + length - padding));
-	result.insert(result.end(), padding, '=');
-
+	std::string result(to_base64(bytes.data(), length));
 	return std::wstring(result.begin(), result.end());
 }
 

@@ -36,6 +36,7 @@
 #include <common/env.h>
 #include <common/log.h>
 #include <common/array.h>
+#include <common/base64.h>
 
 #include <boost/assign.hpp>
 #include <boost/filesystem.hpp>
@@ -74,27 +75,48 @@ std::pair<core::draw_frame, core::constraints> load_image(
 struct image_producer : public core::frame_producer_base
 {	
 	monitor::basic_subject	event_subject_;
-	const std::wstring		filename_;
+	const std::wstring		description_;
+	const spl::shared_ptr<core::frame_factory> frame_factory_;
 	core::draw_frame		frame_;
 	core::constraints		constraints_;
 	
-	explicit image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename) 
-		: filename_(filename)
+	image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& description) 
+		: description_(description)
+		, frame_factory_(frame_factory)
 		, frame_(core::draw_frame::empty())	
 	{
-		auto frame = load_image(frame_factory, filename);
-
-		frame_ = frame.first;
-		constraints_ = frame.second;
+		load(load_image(description_));
 
 		CASPAR_LOG(info) << print() << L" Initialized";
+	}
+
+	image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const void* png_data, size_t size) 
+		: description_(L"png from memory")
+		, frame_factory_(frame_factory)
+		, frame_(core::draw_frame::empty())	
+	{
+		load(load_png_from_memory(png_data, size));
+
+		CASPAR_LOG(info) << print() << L" Initialized";
+	}
+
+	void load(const std::shared_ptr<FIBITMAP>& bitmap)
+	{
+		FreeImage_FlipVertical(bitmap.get());
+		core::pixel_format_desc desc;
+		desc.format = core::pixel_format::bgra;
+		desc.planes.push_back(core::pixel_format_desc::plane(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), 4));
+		auto frame = frame_factory_->create_frame(this, desc);
+ 
+		std::copy_n(FreeImage_GetBits(bitmap.get()), frame.image_data().size(), frame.image_data().begin());
+		frame_ = core::draw_frame(std::move(frame));
 	}
 	
 	// frame_producer
 
 	core::draw_frame receive_impl() override
 	{
-		event_subject_ << monitor::event("file/path") % filename_;
+		event_subject_ << monitor::event("file/path") % description_;
 
 		return frame_;
 	}
@@ -111,7 +133,7 @@ struct image_producer : public core::frame_producer_base
 			
 	std::wstring print() const override
 	{
-		return L"image_producer[" + filename_ + L"]";
+		return L"image_producer[" + description_ + L"]";
 	}
 
 	std::wstring name() const override
@@ -123,7 +145,7 @@ struct image_producer : public core::frame_producer_base
 	{
 		boost::property_tree::wptree info;
 		info.add(L"type", L"image");
-		info.add(L"filename", filename_);
+		info.add(L"location", description_);
 		return info;
 	}
 
@@ -204,6 +226,15 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 		}
 
 		return core::create_const_producer(std::move(frames), width, height);
+	}
+	else if(boost::iequals(params[0], L"[PNG_BASE64]"))
+	{
+		if (params.size() < 2)
+			return core::frame_producer::empty();
+
+		auto png_data = from_base64(std::string(params[1].begin(), params[1].end()));
+
+		return spl::make_shared<image_producer>(frame_factory, png_data.data(), png_data.size());
 	}
 
 	std::wstring filename = env::media_folder() + params[0];
