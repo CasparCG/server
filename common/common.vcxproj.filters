@@ -58,6 +58,9 @@
     <ClCompile Include="polling_filesystem_monitor.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="base64.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="compiler\vs\disable_silly_warnings.h">
@@ -155,6 +158,9 @@
       <Filter>source</Filter>
     </ClInclude>
     <ClInclude Include="polling_filesystem_monitor.h">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="base64.h">
       <Filter>source</Filter>
     </ClInclude>
   </ItemGroup>

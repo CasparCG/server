@@ -306,22 +306,22 @@ spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const spl::share
   
   try // to find a key file.
   {
-    auto params_copy = params;
-    if (params_copy.size() > 0)
-    {
-      params_copy[0] += L"_A";
-      key_producer = do_create_producer(my_frame_factory, format_desc, params_copy, g_thumbnail_factories, true);
-      if (key_producer == frame_producer::empty())
-      {
-        params_copy[0] += L"LPHA";
-        key_producer = do_create_producer(my_frame_factory, format_desc, params_copy, g_thumbnail_factories, true);
-      }
-    }
+	auto params_copy = params;
+	if (params_copy.size() > 0)
+	{
+	  params_copy[0] += L"_A";
+	  key_producer = do_create_producer(my_frame_factory, format_desc, params_copy, g_thumbnail_factories, true);
+	  if (key_producer == frame_producer::empty())
+	  {
+		params_copy[0] += L"LPHA";
+		key_producer = do_create_producer(my_frame_factory, format_desc, params_copy, g_thumbnail_factories, true);
+	  }
+	}
   }
   catch(...){}
 
   if (producer != frame_producer::empty() && key_producer != frame_producer::empty())
-    return create_separated_producer(producer, key_producer);
+	return create_separated_producer(producer, key_producer);
   
   return producer;
 }
