@@ -76,16 +76,15 @@ public:
 	{
 		input_ += data;
 
-		std::vector<std::basic_string<CharT>> split;
-		boost::iter_split(split, input_, boost::algorithm::first_finder(delimiter_));	//TODO: check if this splits on all instances of delimiter_ in the input_
+		//boost::iter_split(split, input_, boost::algorithm::first_finder(delimiter_)) was painfully slow in debug-build
 
-		input_ = std::move(split.back());
-		split.pop_back();
-
-		BOOST_FOREACH(auto cmd, split)
+		auto delim_pos = input_.find_first_of(delimiter_);
+		while(delim_pos != std::string::npos)
 		{
-			// TODO: perhaps it would be better to not append the delimiter.
-			strategy_->parse(cmd);
+			strategy_->parse(input_.substr(0, delim_pos));
+
+			input_ = std::move(input_.substr(delim_pos+delimiter_.size()));
+			delim_pos = input_.find_first_of(delimiter_);
 		}
 	}
 };
