@@ -37,6 +37,7 @@ public:
 	// Properties
 
 	void video_format_desc(const struct video_format_desc& format_desc);
+	std::wstring print() const;
 	int buffer_depth() const;
 	bool has_synchronization_clock() const;
 	boost::property_tree::wptree info() const;

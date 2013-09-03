@@ -33,7 +33,11 @@ public:
 		event_subject_ << monitor::event("type") % consumer_->name();
 		return consumer_->send(std::move(frame));
 	}
-	
+	std::wstring print() const
+	{
+		return consumer_->print();
+	}
+
 	int index() const
 	{
 		return index_;
@@ -64,6 +68,7 @@ void port::subscribe(const monitor::observable::observer_ptr& o){impl_->event_su
 void port::unsubscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_.unsubscribe(o);}
 void port::video_format_desc(const struct video_format_desc& format_desc){impl_->video_format_desc(format_desc);}
 int port::buffer_depth() const{return impl_->buffer_depth();}
+std::wstring port::print() const{ return impl_->print();}
 bool port::has_synchronization_clock() const{return impl_->has_synchronization_clock();}
 boost::property_tree::wptree port::info() const{return impl_->info();}
 }}

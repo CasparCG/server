@@ -322,23 +322,16 @@ private:
 	boost::promise<bool>* shutdown_server_now_;
 };
 
-//class KillCommand : public AMCPCommand
-//{
-//public:
-//	KillCommand() {}
-//	virtual bool DoExecute();
-//	virtual AMCPCommandCondition CheckConditions();
-//
-//	virtual bool NeedChannel() {
-//		return false;
-//	}
-//	virtual AMCPCommandScheduling GetDefaultScheduling() {
-//		return AddToQueue;
-//	}
-//	virtual int GetMinimumParameters() {
-//		return 0;
-//	}
-//};
+class RestartCommand : public AMCPCommandBase<0> 
+{
+public:
+	RestartCommand(IO::ClientInfoPtr client, boost::promise<bool>& shutdown_server_now) : AMCPCommandBase(client), shutdown_server_now_(&shutdown_server_now) {}
+	std::wstring print() const { return L"RestartCommand";}
+	bool DoExecute();
+
+private:
+	boost::promise<bool>* shutdown_server_now_;
+};
 
 }	//namespace amcp
 }}	//namespace caspar
