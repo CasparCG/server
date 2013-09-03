@@ -316,6 +316,7 @@ void on_abort(int)
 
 int main(int argc, wchar_t* argv[])
 {	
+	int return_code = 0;
 	SetUnhandledExceptionFilter(UserUnhandledExceptionFilter);
 	signal(SIGABRT, on_abort);
 
@@ -391,12 +392,10 @@ int main(int argc, wchar_t* argv[])
 		boost::property_tree::write_xml(str, env::properties(), w);
 		CASPAR_LOG(info) << L"casparcg.config:\n-----------------------------------------\n" << str.str().c_str() << L"-----------------------------------------";
 		
-		auto wait = run();
+		return_code = run() ? 5 : 0;
 		
 		Sleep(500);
 		CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
-
-		if(wait) system("pause");	
 	}
 	catch(boost::property_tree::file_parser_error&)
 	{
@@ -413,5 +412,5 @@ int main(int argc, wchar_t* argv[])
 		Sleep(4000);
 	}		
 	
-	return 0;
+	return return_code;
 }
