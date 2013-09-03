@@ -127,7 +127,7 @@ struct frame_muxer::impl : boost::noncopyable
 
 		if(!audio->data[0])		
 		{
-			boost::range::push_back(audio_stream_, core::audio_buffer(audio_cadence_.front(), 0));	
+			boost::range::push_back(audio_stream_, core::audio_buffer(audio_cadence_.front() * format_desc_.audio_channels, 0));	
 		}
 		else
 		{
@@ -156,9 +156,9 @@ struct frame_muxer::impl : boost::noncopyable
 		switch(display_mode_)
 		{
 		case display_mode::duplicate:					
-			return audio_stream_.size() >= static_cast<size_t>(audio_cadence_[0] + audio_cadence_[1 % audio_cadence_.size()]);
+			return audio_stream_.size() >= static_cast<size_t>(audio_cadence_[0] + audio_cadence_[1 % audio_cadence_.size()])*format_desc_.audio_channels;
 		default:										
-			return audio_stream_.size() >= static_cast<size_t>(audio_cadence_.front());
+			return audio_stream_.size() >= static_cast<size_t>(audio_cadence_.front()) * format_desc_.audio_channels;
 		}
 	}
 
@@ -235,11 +235,11 @@ struct frame_muxer::impl : boost::noncopyable
 
 	core::audio_buffer pop_audio()
 	{
-		if(audio_stream_.size() < audio_cadence_.front())
+		if(audio_stream_.size() < audio_cadence_.front() * format_desc_.audio_channels)
 			CASPAR_THROW_EXCEPTION(out_of_range());
 
 		auto begin = audio_stream_.begin();
-		auto end   = begin + audio_cadence_.front();
+		auto end   = begin + audio_cadence_.front() * format_desc_.audio_channels;
 
 		core::audio_buffer samples(begin, end);
 		audio_stream_.erase(begin, end);

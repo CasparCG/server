@@ -241,7 +241,7 @@ public:
 			// Note: Uses 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
 			// This cadence fills the audio mixer most optimally.
 
-			sync_buffer_.push_back(audio->GetSampleFrameCount()*out_format_desc_.audio_channels);		
+			sync_buffer_.push_back(audio->GetSampleFrameCount());		
 			if(!boost::range::equal(sync_buffer_, audio_cadence_))
 			{
 				CASPAR_LOG(trace) << print() << L" Syncing audio.";

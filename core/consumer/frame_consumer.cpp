@@ -175,6 +175,7 @@ class cadence_guard : public frame_consumer
 {
 	spl::shared_ptr<frame_consumer>		consumer_;
 	std::vector<int>					audio_cadence_;
+	video_format_desc					format_desc_;
 	boost::circular_buffer<std::size_t>	sync_buffer_;
 public:
 	cadence_guard(const spl::shared_ptr<frame_consumer>& consumer)
@@ -186,6 +187,7 @@ public:
 	{
 		audio_cadence_	= format_desc.audio_cadence;
 		sync_buffer_	= boost::circular_buffer<std::size_t>(format_desc.audio_cadence.size());
+		format_desc_	= format_desc;
 		consumer_->initialize(format_desc, channel_index);
 	}
 
@@ -196,7 +198,7 @@ public:
 
 		boost::unique_future<bool> result = wrap_as_future(true);
 		
-		if(boost::range::equal(sync_buffer_, audio_cadence_) && audio_cadence_.front() == static_cast<int>(frame.audio_data().size())) 
+		if(boost::range::equal(sync_buffer_, audio_cadence_) && audio_cadence_.front() * format_desc_.audio_channels == static_cast<int>(frame.audio_data().size())) 
 		{	
 			// Audio sent so far is in sync, now we can send the next chunk.
 			result = consumer_->send(frame);
@@ -205,7 +207,7 @@ public:
 		else
 			CASPAR_LOG(trace) << print() << L" Syncing audio.";
 
-		sync_buffer_.push_back(static_cast<int>(frame.audio_data().size()));
+		sync_buffer_.push_back(static_cast<int>(frame.audio_data().size() / format_desc_.audio_channels));
 		
 		return std::move(result);
 	}

@@ -14,6 +14,7 @@
   <ItemGroup>
     <None Include="casparcg.config" />
     <None Include="CasparCG.ico" />
+    <None Include="casparcg_auto_restart.bat" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="server.h">

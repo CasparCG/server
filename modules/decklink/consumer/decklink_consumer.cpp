@@ -129,12 +129,12 @@ public:
 	// IDecklinkVideoFrame
 
 	STDMETHOD_(long,			GetWidth())			{return static_cast<long>(format_desc_.width);}        
-    STDMETHOD_(long,			GetHeight())		{return static_cast<long>(format_desc_.height);}        
-    STDMETHOD_(long,			GetRowBytes())		{return static_cast<long>(format_desc_.width*4);}        
+	STDMETHOD_(long,			GetHeight())		{return static_cast<long>(format_desc_.height);}        
+	STDMETHOD_(long,			GetRowBytes())		{return static_cast<long>(format_desc_.width*4);}        
 	STDMETHOD_(BMDPixelFormat,	GetPixelFormat())	{return bmdFormat8BitBGRA;}        
-    STDMETHOD_(BMDFrameFlags,	GetFlags())			{return bmdFrameFlagDefault;}
-        
-    STDMETHOD(GetBytes(void** buffer))
+	STDMETHOD_(BMDFrameFlags,	GetFlags())			{return bmdFrameFlagDefault;}
+		
+	STDMETHOD(GetBytes(void** buffer))
 	{
 		try
 		{
@@ -163,9 +163,9 @@ public:
 
 		return S_OK;
 	}
-        
-    STDMETHOD(GetTimecode(BMDTimecodeFormat format, IDeckLinkTimecode** timecode)){return S_FALSE;}        
-    STDMETHOD(GetAncillaryData(IDeckLinkVideoFrameAncillary** ancillary))		  {return S_FALSE;}
+		
+	STDMETHOD(GetTimecode(BMDTimecodeFormat format, IDeckLinkTimecode** timecode)){return S_FALSE;}        
+	STDMETHOD(GetAncillaryData(IDeckLinkVideoFrameAncillary** ancillary))		  {return S_FALSE;}
 
 	// decklink_frame	
 
@@ -229,7 +229,11 @@ public:
 		is_running_ = true;
 				
 		video_frame_buffer_.set_capacity(1);
-		audio_frame_buffer_.set_capacity(1);
+
+		// Blackmagic calls RenderAudioSamples() 50 times per second
+		// regardless of video mode so we sometimes need to give them
+		// samples from 2 frames in order to keep up
+		audio_frame_buffer_.set_capacity((format_desc.fps > 50.0) ? 2 : 1);
 
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
@@ -411,19 +415,24 @@ public:
 					start_playback();				
 				}
 				else
-					schedule_next_audio(core::audio_buffer(format_desc_.audio_cadence[preroll % format_desc_.audio_cadence.size()], 0));	
+				{
+					schedule_next_audio(core::audio_buffer(format_desc_.audio_cadence[preroll % format_desc_.audio_cadence.size()] * format_desc_.audio_channels, 0));
+				}
 			}
 			else
 			{
 				auto frame = core::const_frame::empty();
-				audio_frame_buffer_.pop(frame);
-				send_completion_.try_completion();
-				schedule_next_audio(frame.audio_data());
+
+				while(audio_frame_buffer_.try_pop(frame))
+				{
+					send_completion_.try_completion();
+					schedule_next_audio(frame.audio_data());
+				}
 			}
 
 			unsigned long buffered;
 			output_->GetBufferedAudioSampleFrameCount(&buffered);
-			graph_->set_value("buffered-audio", static_cast<double>(buffered)/(format_desc_.audio_cadence[0]*2));
+			graph_->set_value("buffered-audio", static_cast<double>(buffered)/(format_desc_.audio_cadence[0]*format_desc_.audio_channels*2));
 		}
 		catch(...)
 		{
