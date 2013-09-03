@@ -70,6 +70,7 @@
       <SubType>Designer</SubType>
     </None>
     <None Include="CasparCG.ico" />
+    <None Include="casparcg_auto_restart.bat" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="server.h" />
@@ -176,7 +177,9 @@ copy "$(SolutionDir)dependencies64\tbb\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies64\glew\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies64\freeimage\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies64\openal\bin\*.dll" "$(OutDir)"
-copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
+copy "$(ProjectDir)casparcg.config" "$(OutDir)"
+copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -223,7 +226,8 @@ copy "$(SolutionDir)dependencies64\tbb\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies64\glew\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies64\freeimage\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies64\openal\bin\*.dll" "$(OutDir)"
-copy "$(ProjectDir)casparcg.config" "$(OutDir)"</Command>
+copy "$(ProjectDir)casparcg.config" "$(OutDir)"
+copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

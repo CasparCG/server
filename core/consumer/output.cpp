@@ -180,7 +180,7 @@ public:
 			std::map<int, boost::unique_future<bool>> send_results;
 
 			// Start invocations
-			for (auto it = ports_.begin(); it != ports_.end(); ++it)
+			for (auto it = ports_.begin(); it != ports_.end();)
 			{
 				auto& port	= it->second;
 				auto& frame	= frames_.at(port.buffer_depth()-minmax.first);
@@ -188,11 +188,22 @@ public:
 				try
 				{
 					send_results.insert(std::make_pair(it->first, port.send(frame)));
+					++it;
 				}
 				catch (...)
 				{
 					CASPAR_LOG_CURRENT_EXCEPTION();
-					ports_.erase(it);
+					try
+					{
+						send_results.insert(std::make_pair(it->first, port.send(frame)));
+						++it;
+					}
+					catch(...)
+					{
+						CASPAR_LOG_CURRENT_EXCEPTION();
+						CASPAR_LOG(error) << "Failed to recover consumer: " << port.print() << L". Removing it.";
+						it = ports_.erase(it);
+					}
 				}
 			}
 

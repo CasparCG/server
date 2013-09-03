@@ -359,6 +359,7 @@ private:
 		else if(s == TEXT("LOG"))			return std::make_shared<LogCommand>(client);
 		else if(s == TEXT("THUMBNAIL"))		return std::make_shared<ThumbnailCommand>(client, thumb_gen_);
 		else if(s == TEXT("KILL"))			return std::make_shared<KillCommand>(client, shutdown_server_now_);
+		else if(s == TEXT("RESTART"))		return std::make_shared<RestartCommand>(client, shutdown_server_now_);
 
 		return nullptr;
 	}

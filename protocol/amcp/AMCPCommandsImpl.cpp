@@ -1957,8 +1957,15 @@ bool ThumbnailCommand::DoExecuteGenerateAll()
 
 bool KillCommand::DoExecute()
 {
-	shutdown_server_now_->set_value(false);	//false for not waiting for keypress
+	shutdown_server_now_->set_value(false);	//false for not attempting to restart
 	SetReplyString(TEXT("202 KILL OK\r\n"));
+	return true;
+}
+
+bool RestartCommand::DoExecute()
+{
+	shutdown_server_now_->set_value(true);	//true for attempting to restart
+	SetReplyString(TEXT("202 RESTART OK\r\n"));
 	return true;
 }
 
