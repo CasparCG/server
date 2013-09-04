@@ -39,6 +39,18 @@ namespace caspar { namespace core {
 	
 std::vector<const producer_factory_t> g_factories;
 std::vector<const producer_factory_t> g_thumbnail_factories;
+
+tbb::atomic<bool>& destroy_producers_in_separate_thread()
+{
+	static tbb::atomic<bool> state;
+
+	return state;
+}
+
+void destroy_producers_synchronously()
+{
+	destroy_producers_in_separate_thread() = false;
+}
 	
 class destroy_producer_proxy : public frame_producer
 {	
@@ -47,12 +59,33 @@ public:
 	destroy_producer_proxy(safe_ptr<frame_producer>&& producer) 
 		: producer_(new std::shared_ptr<frame_producer>(std::move(producer)))
 	{
+		destroy_producers_in_separate_thread() = true;
 	}
 
 	~destroy_producer_proxy()
-	{		
+	{
 		static auto destroyers = std::make_shared<tbb::concurrent_bounded_queue<std::shared_ptr<executor>>>();
 		static tbb::atomic<int> destroyer_count;
+
+		if (!destroy_producers_in_separate_thread())
+		{
+			try
+			{
+				producer_.reset();
+
+				std::shared_ptr<executor> destroyer;
+
+				// Destruct any executors, causing them to execute pending tasks
+				while (destroyers->try_pop(destroyer))
+					--destroyer_count;
+			}
+			catch (...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+			}
+
+			return;
+		}
 
 		try
 		{
