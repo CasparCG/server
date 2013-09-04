@@ -92,5 +92,6 @@ safe_ptr<core::frame_producer> create_producer(const safe_ptr<frame_factory>&, c
 safe_ptr<core::frame_producer> create_producer_destroy_proxy(safe_ptr<core::frame_producer> producer);
 safe_ptr<core::frame_producer> create_producer_print_proxy(safe_ptr<core::frame_producer> producer);
 safe_ptr<core::frame_producer> create_thumbnail_producer(const safe_ptr<frame_factory>& factory, const std::wstring& media_file);
+void destroy_producers_synchronously();
 
 }}

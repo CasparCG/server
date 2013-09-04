@@ -129,12 +129,13 @@ struct server::implementation : boost::noncopyable
 
 	~implementation()
 	{		
-		ffmpeg::uninit();
-
 		thumbnail_generator_.reset();
 		primary_amcp_server_.reset();
 		async_servers_.clear();
+		destroy_producers_synchronously();
 		channels_.clear();
+
+		ffmpeg::uninit();
 	}
 
 	void setup_audio(const boost::property_tree::wptree& pt)
