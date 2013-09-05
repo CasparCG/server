@@ -127,8 +127,10 @@ public:
 		if(!is_running_)
 			return make_safe<read_frame>();
 		std::shared_ptr<read_frame> frame;
-		frame_buffer_.try_pop(frame);
-		current_age_ = frame->get_age_millis();
+		
+		if (frame_buffer_.try_pop(frame))
+			current_age_ = frame->get_age_millis();
+
 		return frame;
 	}
 };
