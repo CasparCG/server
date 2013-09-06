@@ -44,12 +44,14 @@
 #include <modules/flash/flash.h>
 #include <modules/portaudio/portaudio.h>
 #include <modules/ogl/ogl.h>
+#include <modules/newtek/newtek.h>
 #include <modules/silverlight/silverlight.h>
 #include <modules/image/image.h>
 #include <modules/image/consumer/image_consumer.h>
 
 #include <modules/portaudio/consumer/portaudio_consumer.h>
 #include <modules/bluefish/consumer/bluefish_consumer.h>
+#include <modules/newtek/consumer/newtek_consumer.h>
 #include <modules/decklink/consumer/decklink_consumer.h>
 #include <modules/decklink/consumer/blocking_decklink_consumer.h>
 #include <modules/ogl/consumer/ogl_consumer.h>
@@ -106,6 +108,9 @@ struct server::implementation : boost::noncopyable
 		portaudio::init();
 		CASPAR_LOG(info) << L"Initialized portaudio module.";
 							  
+		newtek::init();
+		CASPAR_LOG(info) << L"Initialized newtek module.";
+
 		ogl::init();		  
 		CASPAR_LOG(info) << L"Initialized ogl module.";
 
@@ -214,6 +219,8 @@ struct server::implementation : boost::noncopyable
 					on_consumer(bluefish::create_consumer(xml_consumer.second));					
 				else if (name == L"decklink")					
 					on_consumer(decklink::create_consumer(xml_consumer.second));				
+				else if (name == L"newtek")					
+					on_consumer(newtek::create_consumer(xml_consumer.second));			
 				else if (name == L"blocking-decklink")
 					on_consumer(decklink::create_blocking_consumer(xml_consumer.second));				
 				else if (name == L"file" || name == L"stream")					
