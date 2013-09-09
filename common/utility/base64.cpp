@@ -35,6 +35,7 @@
 #include <boost/range/adaptor/sliced.hpp>
 
 #include "../exception/exceptions.h"
+#include "assert.h"
 
 namespace caspar {
 
@@ -68,18 +69,35 @@ std::string to_base64(const char* data, size_t length)
 		bytes.push_back(0x00);
 	}
 
-	std::string result(base64_iterator(bytes.data()), base64_iterator(bytes.data() + length - padding));
+	std::string result(
+			base64_iterator(bytes.data()),
+			base64_iterator(bytes.data() + length));
 	result.insert(result.end(), padding, '=');
+
+	CASPAR_VERIFY((result.length() - result.length() / 77) % 4 == 0);
 
 	return std::move(result);
 }
 
 std::vector<unsigned char> from_base64(const std::string& data)
 {
+	if (data.length() % 4 != 0)
+	{
+		auto length = std::count_if(
+				data.begin(),
+				data.end(),
+				[] (char c) { return !std::isspace(c); });
+
+		if (length % 4 != 0)
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(
+					"The length of a base64 sequence must be a multiple of 4"));
+	}
+
 	int padding = 0;
 	std::string zero_padding;
 
-	// binary_from_base64 does not support padding characters so we have to append base64 0 -> 'A' and then remove it after decoding
+	// binary_from_base64 does not support padding characters so we have to
+	// append base64 0 -> 'A' and then remove it after decoding
 	if (data.length() >= 2)
 	{
 		if (data[data.length() - 1] == '=')
