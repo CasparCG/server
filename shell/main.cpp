@@ -211,7 +211,7 @@ int main(int argc, wchar_t* argv[])
 	SetPriorityClass(GetCurrentProcess(), ABOVE_NORMAL_PRIORITY_CLASS);
 
 	// Install structured exception handler.
-	caspar::win32_exception::install_handler();
+	caspar::win32_exception::ensure_handler_installed_for_thread("main-thread");
 				
 	// Increase time precision. This will increase accuracy of function like Sleep(1) from 10 ms to 1 ms.
 	struct inc_prec
@@ -226,8 +226,7 @@ int main(int argc, wchar_t* argv[])
 		tbb_thread_installer(){observe(true);}
 		void on_scheduler_entry(bool is_worker)
 		{
-			//caspar::detail::SetThreadName(GetCurrentThreadId(), "tbb-worker-thread");
-			caspar::win32_exception::install_handler();
+			caspar::win32_exception::ensure_handler_installed_for_thread("tbb-worker-thread");
 		}
 	} tbb_thread_installer;
 
@@ -274,6 +273,8 @@ int main(int argc, wchar_t* argv[])
 			// anyway when the main thread terminates.
 			boost::thread stdin_thread([&caspar_server, &shutdown_server_now, &wait_for_keypress]
 			{
+				caspar::win32_exception::ensure_handler_installed_for_thread("stdin-thread");
+
 				// Create a amcp parser for console commands.
 				caspar::protocol::amcp::AMCPProtocolStrategy amcp(
 						caspar_server.get_channels(),

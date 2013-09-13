@@ -25,6 +25,7 @@
 #include "producer/ffmpeg_producer.h"
 
 #include <common/log/log.h>
+#include <common/exception/win32_exception.h>
 
 #include <core/parameters/parameters.h>
 #include <core/consumer/frame_consumer.h>
@@ -55,6 +56,7 @@ namespace caspar { namespace ffmpeg {
 	
 int ffmpeg_lock_callback(void **mutex, enum AVLockOp op) 
 { 
+	win32_exception::ensure_handler_installed_for_thread("ffmpeg-thread");
 	if(!mutex)
 		return 0;
 
@@ -193,6 +195,7 @@ std::shared_ptr<void> temporary_disable_logging_for_thread(bool disable)
 
 void log_for_thread(void* ptr, int level, const char* fmt, va_list vl)
 {
+	win32_exception::ensure_handler_installed_for_thread("ffmpeg-thread");
 	//if (get_disable_logging_for_thread().get() == nullptr) // It does not matter what the value of the bool is
 		log_callback(ptr, level, fmt, vl);
 }

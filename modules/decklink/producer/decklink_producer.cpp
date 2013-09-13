@@ -25,6 +25,7 @@
 
 #include "../interop/DeckLinkAPI_h.h"
 #include "../util/util.h"
+#include "../util/decklink_allocator.h"
 
 #include "../../ffmpeg/producer/filter/filter.h"
 #include "../../ffmpeg/producer/util/util.h"
@@ -34,6 +35,7 @@
 #include <common/concurrency/com_context.h>
 #include <common/diagnostics/graph.h>
 #include <common/exception/exceptions.h>
+#include <common/exception/win32_exception.h>
 #include <common/log/log.h>
 #include <common/memory/memclr.h>
 
@@ -86,6 +88,7 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	boost::timer												tick_timer_;
 	boost::timer												frame_timer_;
 
+	std::unique_ptr<thread_safe_decklink_allocator>				allocator_;
 	CComPtr<IDeckLink>											decklink_;
 	CComQIPtr<IDeckLinkInput>									input_;
 	CComQIPtr<IDeckLinkAttributes >								attributes_;
@@ -148,7 +151,14 @@ public:
 		diagnostics::register_graph(graph_);
 		
 		auto display_mode = get_display_mode(input_, format_desc_.format, bmdFormat8BitYUV, bmdVideoInputFlagDefault);
-				
+		
+		allocator_.reset(new thread_safe_decklink_allocator(print()));
+
+		if(FAILED(input_->SetVideoInputFrameMemoryAllocator(allocator_.get()))) 
+			BOOST_THROW_EXCEPTION(caspar_exception()
+									<< msg_info(narrow(print()) + " Could not enable use of custom allocator.")
+									<< boost::errinfo_api_function("SetVideoInputFrameMemoryAllocator"));
+
 		// NOTE: bmdFormat8BitARGB is currently not supported by any decklink card. (2011-05-08)
 		if(FAILED(input_->EnableVideoInput(display_mode, bmdFormat8BitYUV, bmdVideoInputFlagDefault))) 
 			BOOST_THROW_EXCEPTION(caspar_exception() 
@@ -191,6 +201,7 @@ public:
 
 	virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame* video, IDeckLinkAudioInputPacket* audio)
 	{	
+		win32_exception::ensure_handler_installed_for_thread("decklink-VideoInputFrameArrived");
 		if(!video)
 			return S_OK;
 

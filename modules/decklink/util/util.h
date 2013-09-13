@@ -317,6 +317,7 @@ struct configuration
 	latency_t				latency;
 	bool					key_only;
 	size_t					base_buffer_depth;
+	bool					custom_allocator;
 	
 	configuration()
 		: device_index(1)
@@ -326,6 +327,7 @@ struct configuration
 		, latency(default_latency)
 		, key_only(false)
 		, base_buffer_depth(3)
+		, custom_allocator(true)
 	{
 	}
 	

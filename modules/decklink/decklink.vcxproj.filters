@@ -58,5 +58,8 @@
     <ClInclude Include="consumer\blocking_decklink_consumer.h">
       <Filter>source\consumer</Filter>
     </ClInclude>
+    <ClInclude Include="util\decklink_allocator.h">
+      <Filter>source\util</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

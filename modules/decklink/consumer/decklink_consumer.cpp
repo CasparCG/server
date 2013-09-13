@@ -24,6 +24,7 @@
 #include "decklink_consumer.h"
 
 #include "../util/util.h"
+#include "../util/decklink_allocator.h"
 
 #include "../interop/DeckLinkAPI_h.h"
 
@@ -33,6 +34,7 @@
 #include <common/concurrency/future_util.h>
 #include <common/diagnostics/graph.h>
 #include <common/exception/exceptions.h>
+#include <common/exception/win32_exception.h>
 #include <common/utility/assert.h>
 
 #include <core/parameters/parameters.h>
@@ -50,10 +52,11 @@
 namespace caspar { namespace decklink { 
 
 struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
-{		
+{
 	const int							channel_index_;
 	const configuration					config_;
 
+	std::unique_ptr<thread_safe_decklink_allocator>	allocator_;
 	CComPtr<IDeckLink>					decklink_;
 	CComQIPtr<IDeckLinkOutput>			output_;
 	CComQIPtr<IDeckLinkKeyer>			keyer_;
@@ -172,6 +175,16 @@ public:
 
 	void enable_video(BMDDisplayMode display_mode)
 	{
+		if (config_.custom_allocator)
+		{
+			allocator_.reset(new thread_safe_decklink_allocator(print()));
+
+			if (FAILED(output_->SetVideoOutputFrameMemoryAllocator(allocator_.get())))
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not set custom memory allocator."));
+
+			CASPAR_LOG(info) << print() << L" Using custom allocator.";
+		}
+
 		if(FAILED(output_->EnableVideoOutput(display_mode, bmdVideoOutputFlagDefault))) 
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Could not enable video output."));
 		
@@ -200,6 +213,7 @@ public:
 
 	STDMETHOD(ScheduledFrameCompleted(IDeckLinkVideoFrame* completed_frame, BMDOutputFrameCompletionResult result))
 	{
+		win32_exception::ensure_handler_installed_for_thread("decklink-ScheduledFrameCompleted");
 		if(!is_running_)
 			return E_FAIL;
 		
@@ -243,6 +257,8 @@ public:
 		
 	STDMETHOD(RenderAudioSamples(BOOL preroll))
 	{
+		win32_exception::ensure_handler_installed_for_thread("decklink-RenderAudioSamples");
+
 		if(!is_running_)
 			return E_FAIL;
 		
@@ -510,10 +526,11 @@ safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptre
 	else if(latency == L"normal")
 		config.latency = configuration::normal_latency;
 
-	config.key_only				= ptree.get(L"key-only",		config.key_only);
-	config.device_index			= ptree.get(L"device",			config.device_index);
-	config.embedded_audio		= ptree.get(L"embedded-audio",	config.embedded_audio);
-	config.base_buffer_depth	= ptree.get(L"buffer-depth",	config.base_buffer_depth);
+	config.key_only				= ptree.get(L"key-only",			config.key_only);
+	config.device_index			= ptree.get(L"device",				config.device_index);
+	config.embedded_audio		= ptree.get(L"embedded-audio",		config.embedded_audio);
+	config.base_buffer_depth	= ptree.get(L"buffer-depth",		config.base_buffer_depth);
+	config.custom_allocator		= ptree.get(L"custom-allocator",	config.custom_allocator);
 	config.audio_layout =
 		core::default_channel_layout_repository().get_by_name(
 				boost::to_upper_copy(ptree.get(L"channel-layout", L"STEREO")));

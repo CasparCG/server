@@ -251,8 +251,8 @@ private:
 
 	void run() // noexcept
 	{
-		win32_exception::install_handler();		
-		detail::SetThreadName(GetCurrentThreadId(), name_.c_str());
+		win32_exception::ensure_handler_installed_for_thread(name_.c_str());
+
 		while(is_running_)
 		{
 			try

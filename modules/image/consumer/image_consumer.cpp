@@ -21,6 +21,7 @@
 
 #include "image_consumer.h"
 
+#include <common/exception/win32_exception.h>
 #include <common/exception/exceptions.h>
 #include <common/env.h>
 #include <common/log/log.h>
@@ -90,6 +91,8 @@ public:
 
 		boost::thread async([format_desc, frame, filename]
 		{
+			win32_exception::ensure_handler_installed_for_thread("image-consumer-thread");
+
 			try
 			{
 				auto filename2 = filename;

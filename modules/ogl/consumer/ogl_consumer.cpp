@@ -33,6 +33,8 @@
 #include <common/utility/timer.h>
 #include <common/utility/string.h>
 #include <common/concurrency/future_util.h>
+#include <common/concurrency/executor.h>
+#include <common/exception/win32_exception.h>
 
 #include <ffmpeg/producer/filter/filter.h>
 
@@ -273,6 +275,9 @@ public:
 
 	void run()
 	{
+		win32_exception::ensure_handler_installed_for_thread(
+				"ogl-consumer-thread");
+
 		try
 		{
 			init();

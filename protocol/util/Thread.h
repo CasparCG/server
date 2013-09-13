@@ -73,8 +73,6 @@ public:
 
 	bool IsRunning();
 
-	static void EnableWin32ExceptionHandler(bool bEnable);
-
 	void SetTimeout(DWORD timeout) {
 		timeout_ = timeout;
 	}
@@ -92,7 +90,6 @@ private:
 	Event			stopEvent_;
 
 	DWORD			timeout_;
-	static bool		static_bInstallWin32ExceptionHandler_;
 };
 
 }

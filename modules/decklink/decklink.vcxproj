@@ -259,6 +259,7 @@
     <ClInclude Include="interop\DeckLinkAPI_h.h" />
     <ClInclude Include="producer\decklink_producer.h" />
     <ClInclude Include="StdAfx.h" />
+    <ClInclude Include="util\decklink_allocator.h" />
     <ClInclude Include="util\util.h" />
   </ItemGroup>
   <ItemGroup>

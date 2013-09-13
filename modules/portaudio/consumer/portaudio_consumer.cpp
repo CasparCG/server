@@ -32,6 +32,7 @@
 
 #include <common/log/log.h>
 #include <common/exception/exceptions.h>
+#include <common/exception/win32_exception.h>
 #include <common/concurrency/future_util.h>
 #include <common/diagnostics/graph.h>
 
@@ -296,6 +297,8 @@ int callback(
 		PaStreamCallbackFlags status_flags,
 		void* user_data)
 {
+	win32_exception::ensure_handler_installed_for_thread(
+			"portaudio-callback-thread");
 	auto consumer = static_cast<portaudio_consumer*>(user_data);
 
 	consumer->write_samples(
