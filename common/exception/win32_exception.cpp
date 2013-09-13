@@ -21,17 +21,48 @@
 
 #include "../stdafx.h"
 
+#include <boost/thread.hpp>
+
 #include "win32_exception.h"
 
 #include "../log/log.h"
+#include "../concurrency/executor.h"
 
 namespace caspar {
+
+bool& installed_for_thread()
+{
+	static boost::thread_specific_ptr<bool> installed;
+
+	auto for_thread = installed.get();
+	
+	if (!for_thread)
+	{
+		for_thread = new bool(false);
+		installed.reset(for_thread);
+	}
+
+	return *for_thread;
+}
 
 void win32_exception::install_handler() 
 {
 //#ifndef _DEBUG
 	_set_se_translator(win32_exception::Handler);
+	installed_for_thread() = true;
 //#endif
+}
+
+void win32_exception::ensure_handler_installed_for_thread(
+		const char* thread_description)
+{
+	if (!installed_for_thread())
+	{
+		install_handler();
+
+		if (thread_description)
+			detail::SetThreadName(GetCurrentThreadId(), thread_description);
+	}
 }
 
 void win32_exception::Handler(unsigned int errorCode, EXCEPTION_POINTERS* pInfo) {

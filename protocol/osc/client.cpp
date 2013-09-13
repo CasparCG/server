@@ -27,6 +27,7 @@
 #include "oscpack/oscOutboundPacketStream.h"
 
 #include <common/utility/string.h>
+#include <common/exception/win32_exception.h>
 
 #include <functional>
 #include <vector>
@@ -127,6 +128,7 @@ public:
 	
 	void on_next(const core::monitor::message& msg)
 	{
+		win32_exception::ensure_handler_installed_for_thread("agents-thread");
 		auto data_ptr = make_safe<std::vector<char>>(write_osc_event(msg));
 
 		tbb::spin_mutex::scoped_lock lock(endpoints_mutex_);

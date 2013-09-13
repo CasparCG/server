@@ -28,6 +28,8 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/thread/thread.hpp>
 
+#include <common/exception/win32_exception.h>
+
 namespace caspar { namespace protocol { namespace asio {
 
 struct io_service_manager::impl
@@ -40,8 +42,15 @@ struct io_service_manager::impl
 
 	impl()
 		: work_(new boost::asio::io_service::work(service_))
-		, thread_(std::bind(&boost::asio::io_service::run, &service_))
+		, thread_([this] { run(); })
 	{
+	}
+
+	void run()
+	{
+		win32_exception::ensure_handler_installed_for_thread("asio-thread");
+
+		service_.run();
 	}
 
 	~impl()

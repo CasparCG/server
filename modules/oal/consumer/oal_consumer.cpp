@@ -29,6 +29,7 @@
 #include <common/utility/timer.h>
 #include <common/utility/string.h>
 #include <common/concurrency/future_util.h>
+#include <common/exception/win32_exception.h>
 
 #include <core/parameters/parameters.h>
 #include <core/consumer/frame_consumer.h>
@@ -205,7 +206,9 @@ public:
 	// oal_consumer
 	
 	virtual bool OnGetData(sf::SoundStream::Chunk& data) override
-	{		
+	{
+		win32_exception::ensure_handler_installed_for_thread(
+				"sfml-audio-thread");
 		std::shared_ptr<std::vector<audio_buffer_16>> audio_data;		
 
 		if (!input_.try_pop(audio_data))

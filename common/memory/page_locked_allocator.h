@@ -84,6 +84,8 @@ public:
 	pointer           address(reference x) const { return &x; }
 	const_pointer     address(const_reference x) const { return &x; }
 	page_locked_allocator<T>&  operator=(const page_locked_allocator&) { return *this; }
+	bool                       operator!=(const page_locked_allocator&) const { return false; }
+	bool                       operator==(const page_locked_allocator&) const { return true; }
 	void              construct(pointer p, const T& val) { new ((T*) p) T(val); }
 	void              destroy(pointer p) { p->~T(); }
 

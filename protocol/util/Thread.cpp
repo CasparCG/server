@@ -51,8 +51,6 @@ Event::~Event()
 	CloseHandle(handle_);
 }
 
-bool Thread::static_bInstallWin32ExceptionHandler_ = true;
-
 Thread::Thread() : pRunnable_(0), hThread_(0), stopEvent_(TRUE, FALSE), timeout_(10000)  {
 }
 
@@ -108,15 +106,10 @@ bool Thread::Stop(bool bWait) {
 	return returnValue;
 }
 
-void Thread::EnableWin32ExceptionHandler(bool bEnable) {
-	static_bInstallWin32ExceptionHandler_ = bEnable;
-}
-
 DWORD WINAPI Thread::ThreadEntrypoint(LPVOID pParam) {
 	Thread* pThis = reinterpret_cast<Thread*>(pParam);
 	
-	if(Thread::static_bInstallWin32ExceptionHandler_)
-		win32_exception::install_handler();
+	win32_exception::install_handler();
 
 	_configthreadlocale(_DISABLE_PER_THREAD_LOCALE);
 

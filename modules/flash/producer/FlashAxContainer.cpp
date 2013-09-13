@@ -453,6 +453,7 @@ DEFINE_GUID2(IID_IDirectDraw7,0x15e65ec0,0x3b9c,0x11d2,0xb9,0x2f,0x00,0x60,0x97,
 ///////////////////
 HRESULT STDMETHODCALLTYPE FlashAxContainer::QueryService( REFGUID rsid, REFIID riid, void** ppvObj) 
 {
+	win32_exception::ensure_handler_installed_for_thread("flash-player-thread");
 //	ATLTRACE(_T("IServiceProvider::QueryService\n"));
 	//the flashcontrol asks for an interface {618F8AD4-8B7A-11D0-8FCC-00C04FD9189D}, this is IID for a DirectDraw3 object
 
@@ -600,6 +601,7 @@ void FlashAxContainer::EnterFullscreen()
 
 void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 {
+	win32_exception::ensure_handler_installed_for_thread("flash-player-thread");
 	std::wstring str(request);
 	if(str.find(TEXT("DisplayedTemplate")) != std::wstring::npos)
 	{
