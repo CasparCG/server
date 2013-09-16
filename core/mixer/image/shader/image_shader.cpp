@@ -38,6 +38,7 @@ namespace caspar { namespace core {
 std::shared_ptr<shader> g_shader;
 tbb::mutex				g_shader_mutex;
 bool					g_blend_modes = false;
+bool					g_post_processing = false;
 
 std::string get_blend_color_func()
 {
@@ -145,7 +146,7 @@ std::string get_chroma_func()
 		"}                                                                      \n";
 }
 
-std::string get_fragment(bool blend_modes)
+std::string get_fragment(bool blend_modes, bool chroma_key, bool post_processing)
 {
 	return
 
@@ -272,14 +273,19 @@ std::string get_fragment(bool blend_modes)
 	"																					\n"
 	"void main()																		\n"
 	"{																					\n"
+	+
+	(post_processing ? 
 	"	if (post_processing)															\n"
 	"	{																				\n"
 	"		gl_FragColor = post_process().bgra;											\n"
 	"	}																				\n"
-	"	else																			\n"
+	"	else																			\n" : "")
+	+
 	"	{																				\n"
 	"		vec4 color = get_rgba_color();												\n"
-	"		color = chroma_key(color);													\n"
+	+
+	(chroma_key ? "		color = chroma_key(color);\n" : "")
+	+
 	"		if(levels)																	\n"
 	"			color.rgb = LevelsControl(												\n"
 	"					color.rgb, min_input, max_input, gamma, min_output, max_output);\n"
@@ -296,20 +302,27 @@ std::string get_fragment(bool blend_modes)
 	"}																					\n";
 }
 
-safe_ptr<shader> get_image_shader(ogl_device& ogl, bool& blend_modes)
+safe_ptr<shader> get_image_shader(
+		ogl_device& ogl, bool& blend_modes, bool& post_processing)
 {
 	tbb::mutex::scoped_lock lock(g_shader_mutex);
 
 	if(g_shader)
 	{
 		blend_modes = g_blend_modes;
+		post_processing = g_post_processing;
+
 		return make_safe_ptr(g_shader);
 	}
 		
+	bool chroma_key = env::properties().get(L"configuration.mixer.chroma-key", false);
+	bool straight_alpha = env::properties().get(L"configuration.mixer.straight-alpha", false);
+	g_post_processing = straight_alpha;
+
 	try
 	{				
-		g_blend_modes  = glTextureBarrierNV ? env::properties().get(L"configuration.blend-modes", false) : false;
-		g_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes)));
+		g_blend_modes  = glTextureBarrierNV ? env::properties().get(L"configuration.mixer.blend-modes", false) : false;
+		g_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes, chroma_key, g_post_processing)));
 	}
 	catch(...)
 	{
@@ -317,7 +330,7 @@ safe_ptr<shader> get_image_shader(ogl_device& ogl, bool& blend_modes)
 		CASPAR_LOG(warning) << "Failed to compile shader. Trying to compile without blend-modes.";
 				
 		g_blend_modes = false;
-		g_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes)));
+		g_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes, chroma_key, g_post_processing)));
 	}
 						
 	ogl.enable(GL_TEXTURE_2D);
@@ -330,6 +343,8 @@ safe_ptr<shader> get_image_shader(ogl_device& ogl, bool& blend_modes)
 	}
 
 	blend_modes = g_blend_modes;
+	post_processing = g_post_processing;
+
 	return make_safe_ptr(g_shader);
 }
 

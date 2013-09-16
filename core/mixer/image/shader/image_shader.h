@@ -44,7 +44,8 @@ struct texture_id
 	};
 };
 
-safe_ptr<shader> get_image_shader(ogl_device& ogl, bool& blend_modes);
+safe_ptr<shader> get_image_shader(
+		ogl_device& ogl, bool& blend_modes, bool& post_processing);
 
 
 }}
