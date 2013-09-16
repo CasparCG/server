@@ -59,11 +59,12 @@ struct image_kernel::implementation : boost::noncopyable
 	safe_ptr<ogl_device>	ogl_;
 	safe_ptr<shader>		shader_;
 	bool					blend_modes_;
+	bool					post_processing_;
 	bool					supports_texture_barrier_;
 							
 	implementation(const safe_ptr<ogl_device>& ogl)
 		: ogl_(ogl)
-		, shader_(ogl_->invoke([&]{return get_image_shader(*ogl, blend_modes_);}))
+		, shader_(ogl_->invoke([&]{return get_image_shader(*ogl, blend_modes_, post_processing_);}))
 		, supports_texture_barrier_(glTextureBarrierNV != 0)
 	{
 		if (!supports_texture_barrier_)
@@ -259,7 +260,9 @@ struct image_kernel::implementation : boost::noncopyable
 			const safe_ptr<device_buffer>& background, bool straighten_alpha)
 	{
 		bool should_post_process = 
-				supports_texture_barrier_ && straighten_alpha;
+				supports_texture_barrier_
+				&& straighten_alpha
+				&& post_processing_;
 
 		if (!should_post_process)
 			return;
