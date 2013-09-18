@@ -70,7 +70,7 @@ private:
 	struct implementation;
 	std::shared_ptr<implementation> impl_;
 };
-safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel>& video_channel, int layer_index = cg_producer::DEFAULT_LAYER);
+safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel>& video_channel, bool expect_existing, int layer_index = cg_producer::DEFAULT_LAYER);
 
 safe_ptr<core::frame_producer> create_ct_producer(
 		const safe_ptr<core::frame_factory>& frame_factory,

@@ -118,15 +118,15 @@ public:
 
 	boost::unique_future<std::wstring> call(const std::wstring& str)
 	{		
-		static const boost::wregex add_exp			(L"ADD (?<LAYER>\\d+) (?<FILENAME>[^\\s]+) (?<PLAY_ON_LOAD>\\d)( (?<DATA>.*))?");
-		static const boost::wregex remove_exp		(L"REMOVE (?<LAYER>\\d+)");
-		static const boost::wregex play_exp			(L"PLAY (?<LAYER>\\d+)");
-		static const boost::wregex stop_exp			(L"STOP (?<LAYER>\\d+)");
-		static const boost::wregex next_exp			(L"NEXT (?<LAYER>\\d+)");
-		static const boost::wregex update_exp		(L"UPDATE (?<LAYER>\\d+) (?<DATA>.+)");
-		static const boost::wregex invoke_exp		(L"INVOKE (?<LAYER>\\d+) (?<LABEL>.+)");
-		static const boost::wregex description_exp	(L"INFO (?<LAYER>\\d+)");
-		static const boost::wregex info_exp			(L"INFO");
+		static const boost::wregex add_exp			(L"ADD (?<LAYER>\\d+) (?<FILENAME>[^\\s]+) (?<PLAY_ON_LOAD>\\d)( (?<DATA>.*))?", boost::regex::perl|boost::regex::icase);
+		static const boost::wregex remove_exp		(L"REMOVE (?<LAYER>\\d+)", boost::regex::perl|boost::regex::icase);
+		static const boost::wregex play_exp			(L"PLAY (?<LAYER>\\d+)", boost::regex::perl|boost::regex::icase);
+		static const boost::wregex stop_exp			(L"STOP (?<LAYER>\\d+)", boost::regex::perl|boost::regex::icase);
+		static const boost::wregex next_exp			(L"NEXT (?<LAYER>\\d+)", boost::regex::perl|boost::regex::icase);
+		static const boost::wregex update_exp		(L"UPDATE (?<LAYER>\\d+) (?<DATA>.+)", boost::regex::perl|boost::regex::icase);
+		static const boost::wregex invoke_exp		(L"INVOKE (?<LAYER>\\d+) (?<LABEL>.+)", boost::regex::perl|boost::regex::icase);
+		static const boost::wregex description_exp	(L"INFO (?<LAYER>\\d+)", boost::regex::perl|boost::regex::icase);
+		static const boost::wregex info_exp			(L"INFO", boost::regex::perl|boost::regex::icase);
 		
 		boost::wsmatch what;
 		if(boost::regex_match(str, what, add_exp))
@@ -199,7 +199,10 @@ public:
 	}
 };
 	
-safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel>& video_channel, int render_layer)
+safe_ptr<cg_producer> get_default_cg_producer(
+		const safe_ptr<core::video_channel>& video_channel,
+		bool expect_existing,
+		int render_layer)
 {	
 	auto flash_producer = video_channel->stage()->foreground(render_layer).get();
 
@@ -207,10 +210,20 @@ safe_ptr<cg_producer> get_default_cg_producer(const safe_ptr<core::video_channel
 	{
 		if(flash_producer->print().find(L"flash[") == std::string::npos) // UGLY hack
 		{
+			if (expect_existing)
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(
+						"No flash producer on layer "
+						+ boost::lexical_cast<std::string>(render_layer)));
+
 			flash_producer = flash::create_producer(video_channel->mixer(), boost::assign::list_of<std::wstring>());	
 			video_channel->stage()->load(render_layer, flash_producer); 
 			video_channel->stage()->play(render_layer);
 		}
+
+		if (expect_existing && flash_producer->call(L"?").get() == L"0")
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(
+					"No flash player on layer "
+					+ boost::lexical_cast<std::string>(render_layer)));
 	}
 	catch(...)
 	{
