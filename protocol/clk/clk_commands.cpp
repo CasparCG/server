@@ -49,13 +49,13 @@ public:
 	{
 		if (!clock_loaded_) 
 		{
-			flash::get_default_cg_producer(channel_)->add(
+			flash::get_default_cg_producer(channel_, false)->add(
 				0, L"hawrysklocka/clock.ft", true, L"", data);
 			clock_loaded_ = true;
 		}
 		else
 		{
-			flash::get_default_cg_producer(channel_)->update(0, data);
+			flash::get_default_cg_producer(channel_, false)->update(0, data);
 		}
 				
 		CASPAR_LOG(debug) << L"CLK: Clockdata sent: " << data;

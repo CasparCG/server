@@ -42,6 +42,7 @@
 #include <common/env.h>
 #include <common/concurrency/executor.h>
 #include <common/concurrency/lock.h>
+#include <common/concurrency/future_util.h>
 #include <common/diagnostics/graph.h>
 #include <common/memory/memcpy.h>
 #include <common/memory/memclr.h>
@@ -344,6 +345,7 @@ struct flash_producer : public core::frame_producer
 	safe_ptr<core::basic_frame>									last_frame_;
 		
 	std::unique_ptr<flash_renderer>								renderer_;
+	tbb::atomic<bool>											has_renderer_;
 
 	executor													executor_;	
 public:
@@ -363,6 +365,7 @@ public:
 		diagnostics::register_graph(graph_);
 		
 		renderer_.reset(new flash_renderer(graph_, frame_factory_, filename_, width_, height_));
+		has_renderer_ = true;
 
 		while(output_buffer_.size() < buffer_size_)
 			output_buffer_.push(core::basic_frame::empty());
@@ -406,8 +409,11 @@ public:
 	
 	virtual boost::unique_future<std::wstring> call(const std::wstring& param) override
 	{	
+		if (param == L"?")
+			return wrap_as_future(std::wstring(has_renderer_ ? L"1" : L"0"));
+
 		return executor_.begin_invoke([this, param]() -> std::wstring
-		{			
+		{
 			try
 			{
 				if(!renderer_)
@@ -416,6 +422,8 @@ public:
 
 					while(output_buffer_.size() < buffer_size_)
 						output_buffer_.push(core::basic_frame::empty());
+
+					has_renderer_ = true;
 				}
 
 				return renderer_->call(param);	
@@ -428,6 +436,7 @@ public:
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
 				renderer_.reset(nullptr);
+				has_renderer_ = false;
 			}
 
 			return L"";
@@ -480,8 +489,11 @@ public:
 				fps_.fetch_and_store(static_cast<int>(renderer_->fps()*100.0));				
 				graph_->set_text(print());
 			
-				if(renderer_->is_empty())			
+				if(renderer_->is_empty())
+				{
 					renderer_.reset();
+					has_renderer_ = false;
+				}
 			}
 
 			output_buffer_.push(std::move(frame_buffer_.front()));
