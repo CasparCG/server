@@ -109,11 +109,11 @@ struct server::implementation : boost::noncopyable
 		ogl::init();		  
 		CASPAR_LOG(info) << L"Initialized ogl module.";
 
-		image::init();		  
-		CASPAR_LOG(info) << L"Initialized image module.";
-
 		flash::init();		  
 		CASPAR_LOG(info) << L"Initialized flash module.";
+
+		image::init();		  
+		CASPAR_LOG(info) << L"Initialized image module.";
 
 		setup_channels(env::properties());
 		CASPAR_LOG(info) << L"Initialized channels.";
