@@ -47,7 +47,7 @@
 
 namespace caspar { namespace core {
 
-struct video_channel::impl sealed
+struct video_channel::impl /* final */
 {
 	monitor::basic_subject							event_subject_;
 

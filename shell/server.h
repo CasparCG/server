@@ -37,8 +37,8 @@ namespace core {
 	class thumbnail_generator;
 }
 
-class server sealed : public monitor::observable
-					, boost::noncopyable
+class server /* final */ : public monitor::observable
+						 , boost::noncopyable
 {
 public:
 	explicit server(boost::promise<bool>& shutdown_server_now);

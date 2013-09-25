@@ -53,7 +53,7 @@ struct task_priority_def
 };
 typedef enum_class<task_priority_def> task_priority;
 
-class executor sealed
+class executor /* final */
 {	
 	executor(const executor&);
 	executor& operator=(const executor&);
