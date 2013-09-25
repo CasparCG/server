@@ -28,6 +28,7 @@
 #include <vector>
 #include <functional>
 #include <typeinfo>
+#include <cstdint>
 
 #include <boost/any.hpp>
 
