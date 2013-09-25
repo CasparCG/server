@@ -26,7 +26,7 @@
 
 #include <vector>
 #include <string>
-#include "common/memory.h"
+#include <common/memory.h>
 #include "util\bigendian_file_input_stream.h"
 
 #include "image.h"
