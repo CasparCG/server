@@ -44,7 +44,7 @@ const frame_geometry& frame_geometry::operator=(const frame_geometry& rhs) { imp
 frame_geometry::geometry_type frame_geometry::type() { return impl_->type_; }
 const std::vector<float>& frame_geometry::data() { return impl_->data_; }
 	
-const frame_geometry& frame_geometry::default()
+const frame_geometry& frame_geometry::get_default()
 {
 	const float d[] = {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f};
 	static frame_geometry g(frame_geometry::quad, std::move(std::vector<float>(d, d+8)));

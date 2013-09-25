@@ -29,6 +29,7 @@
 #include <tbb/cache_aligned_allocator.h>
 
 #include <vector>
+#include <cstdint>
 
 FORWARD2(caspar, diagnostics, class graph);
 
