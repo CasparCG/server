@@ -28,7 +28,7 @@
 
 namespace caspar { namespace core {
 			
-struct levels sealed
+struct levels /* final */
 {
 	levels() 
 		: min_input(0.0)
@@ -45,7 +45,7 @@ struct levels sealed
 	double max_output;
 };
 
-struct image_transform sealed
+struct image_transform /* final */
 {
 public:
 	image_transform();
@@ -74,7 +74,7 @@ public:
 bool operator==(const image_transform& lhs, const image_transform& rhs);
 bool operator!=(const image_transform& lhs, const image_transform& rhs);
 
-struct audio_transform sealed
+struct audio_transform /* final */
 {
 public:
 	audio_transform();
@@ -92,7 +92,7 @@ bool operator==(const audio_transform& lhs, const audio_transform& rhs);
 bool operator!=(const audio_transform& lhs, const audio_transform& rhs);
 
 //__declspec(align(16)) 
-struct frame_transform sealed
+struct frame_transform /* final */
 {
 public:
 	frame_transform();

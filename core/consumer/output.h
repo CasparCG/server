@@ -34,7 +34,7 @@ FORWARD2(caspar, diagnostics, class graph);
 
 namespace caspar { namespace core {
 	
-class output sealed : public monitor::observable
+class output /* final */ : public monitor::observable
 {
 	output(const output&);
 	output& operator=(const output&);
