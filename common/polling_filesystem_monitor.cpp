@@ -26,6 +26,7 @@
 #include <map>
 #include <set>
 #include <iostream>
+#include <cstdint>
 
 #include <boost/thread.hpp>
 #include <boost/foreach.hpp>

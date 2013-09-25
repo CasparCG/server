@@ -44,7 +44,7 @@ public:
 	geometry_type type();
 	const std::vector<float>& data();
 	
-	static const frame_geometry& default();
+	static const frame_geometry& get_default();
 
 private:
 	struct impl;
