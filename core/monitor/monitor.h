@@ -42,7 +42,7 @@ namespace caspar { namespace monitor {
 	
 // path
 
-class path sealed
+class path /* final */
 {
 public:	
 
@@ -106,7 +106,7 @@ std::ostream& operator<<(std::ostream& o, const param& p);
 
 // event
 
-class event sealed
+class event /* final */
 {	
 public:	
 	
@@ -153,7 +153,7 @@ typedef reactive::observable<monitor::event>	observable;
 typedef reactive::observer<monitor::event>		observer;
 typedef reactive::subject<monitor::event>		subject;
 	
-class basic_subject sealed : public reactive::subject<monitor::event>
+class basic_subject /* final */ : public reactive::subject<monitor::event>
 {	    
 	basic_subject(const basic_subject&);
 	basic_subject& operator=(const basic_subject&);
