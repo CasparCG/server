@@ -8,6 +8,7 @@
 #include <string>
 #include <type_traits>
 #include <vector>
+#include <cstdint>
 
 #include <boost/variant.hpp>
 #include <boost/lexical_cast.hpp>

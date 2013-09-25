@@ -306,7 +306,7 @@ public:
 	{
 	}
 		
-	basic_subject(subject&& other)
+	basic_subject(basic_subject&& other)
 		: impl_(std::move(other.impl_))
 	{
 	}
