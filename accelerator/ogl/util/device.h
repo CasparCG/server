@@ -30,7 +30,7 @@ namespace caspar { namespace accelerator { namespace ogl {
 
 class texture;
 
-class device sealed : public std::enable_shared_from_this<device>
+class device /* final */ : public std::enable_shared_from_this<device>
 {	
 	device(const device&);
 	device& operator=(const device&);

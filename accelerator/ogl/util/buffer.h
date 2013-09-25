@@ -28,7 +28,7 @@
 
 namespace caspar { namespace accelerator { namespace ogl {
 			
-class buffer sealed
+class buffer /* final */
 {
 	buffer(const buffer&);
 	buffer& operator=(const buffer&);

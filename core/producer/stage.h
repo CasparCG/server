@@ -45,7 +45,7 @@ namespace caspar { namespace core {
 
 typedef reactive::observable<std::map<int, class draw_frame>> frame_observable;
 	
-class stage sealed : public monitor::observable, public frame_observable, public interaction_sink
+class stage /* final */ : public monitor::observable, public frame_observable, public interaction_sink
 {
 	stage(const stage&);
 	stage& operator=(const stage&);

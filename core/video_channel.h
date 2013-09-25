@@ -39,7 +39,7 @@ FORWARD2(caspar, core, class frame_factory);
 
 namespace caspar { namespace core {
 	
-class video_channel sealed : public monitor::observable
+class video_channel /* final */ : public monitor::observable
 {
 	video_channel(const video_channel&);
 	video_channel& operator=(const video_channel&);
