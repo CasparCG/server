@@ -178,6 +178,8 @@ class basic_subject /* final */ : public reactive::subject<monitor::event>
 		{
 			impl_ = std::move(other.impl_);		
 			path_ = std::move(other.path_);
+
+			return *this;
 		}
 							
 		void on_next(const monitor::event& e) override
@@ -222,6 +224,8 @@ public:
 	basic_subject& operator=(basic_subject&& other)
 	{
 		impl_ = std::move(other.impl_);
+
+		return *this;
 	}
 
 	operator std::weak_ptr<observer>()

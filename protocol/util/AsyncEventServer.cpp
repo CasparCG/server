@@ -126,7 +126,7 @@ public:
 		service_.dispatch([=] { stop(); });
 	}
 
-	void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void> lifecycle_bound)
+	void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound)
 	{
 		//thread-safe tbb_concurrent_hash_map
 		lifecycle_bound_objects_.insert(std::pair<std::wstring, std::shared_ptr<void>>(key, lifecycle_bound));

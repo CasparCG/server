@@ -100,7 +100,7 @@ public:
 	image_transform image_transform;
 	audio_transform audio_transform;
 
-	char padding[3];
+	//char padding[(sizeof(core::image_transform) + sizeof(core::audio_transform)) % 16];
 	
 	frame_transform& operator*=(const frame_transform &other);
 	frame_transform operator*(const frame_transform &other) const;
