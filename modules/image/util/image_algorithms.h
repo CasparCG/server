@@ -106,7 +106,7 @@ template<class SrcView, class DstView>
 void blur(
 	const SrcView& src,
 	DstView& dst,
-	const std::vector<std::pair<int, int>> motion_trail_coordinates, 
+	const std::vector<std::pair<int, int>>& motion_trail_coordinates, 
 	const core::tweener& tweener)
 {
 	auto blur_px = motion_trail_coordinates.size();
