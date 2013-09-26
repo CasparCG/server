@@ -347,7 +347,7 @@ private:
 	{
 		std::wstring s = boost::to_upper_copy(str);
 		if(s == TEXT("DIAG"))				return std::make_shared<DiagnosticsCommand>(client);
-		else if(s == TEXT("CHANNEL_GRID"))	return std::make_shared<ChannelGridCommand>(client);
+		else if(s == TEXT("CHANNEL_GRID"))	return std::make_shared<ChannelGridCommand>(client, channels_);
 		else if(s == TEXT("DATA"))			return std::make_shared<DataCommand>(client);
 		else if(s == TEXT("CINF"))			return std::make_shared<CinfCommand>(client);
 		else if(s == TEXT("INFO"))			return std::make_shared<InfoCommand>(client, channels_);

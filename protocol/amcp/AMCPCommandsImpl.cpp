@@ -314,54 +314,53 @@ bool DiagnosticsCommand::DoExecute()
 
 bool ChannelGridCommand::DoExecute()
 {
-	CASPAR_THROW_EXCEPTION(not_implemented());
+	int index = 1;
+	auto self = channels().back().channel;
+	
+	std::vector<std::wstring> params;
+	params.push_back(L"SCREEN");
+	params.push_back(L"0");
+	params.push_back(L"NAME");
+	params.push_back(L"Channel Grid Window");
+	auto screen = create_consumer(params);
 
-	//int index = 1;
-	//auto self = channels().back();
-	//
-	//std::vector<std::wstring> params;
-	//params.push_back(L"SCREEN");
-	//params.push_back(L"NAME");
-	//params.push_back(L"Channel Grid Window");
-	//auto screen = create_consumer(params);
+	self->output().add(screen);
 
-	//self->output().add(screen);
+	BOOST_FOREACH(auto channel, channels())
+	{
+		if(channel.channel != self)
+		{
+			auto producer = reroute::create_producer(*channel.channel);
+			self->stage().load(index, producer, false);
+			self->stage().play(index);
+			index++;
+		}
+	}
 
-	//BOOST_FOREACH(auto channel, channels())
-	//{
-	//	if(channel != self)
-	//	{
-	//		auto producer = reroute::create_producer(self->frame_factory(), *channel);		
-	//		self->stage().load(index, producer, false);
-	//		self->stage().play(index);
-	//		index++;
-	//	}
-	//}
+	int n = channels().size()-1;
+	double delta = 1.0/static_cast<double>(n);
+	for(int x = 0; x < n; ++x)
+	{
+		for(int y = 0; y < n; ++y)
+		{
+			int index = x+y*n+1;
+			auto transform = [=](frame_transform transform) -> frame_transform
+			{		
+				transform.image_transform.fill_translation[0]	= x*delta;
+				transform.image_transform.fill_translation[1]	= y*delta;
+				transform.image_transform.fill_scale[0]			= delta;
+				transform.image_transform.fill_scale[1]			= delta;
+				transform.image_transform.clip_translation[0]	= x*delta;
+				transform.image_transform.clip_translation[1]	= y*delta;
+				transform.image_transform.clip_scale[0]			= delta;
+				transform.image_transform.clip_scale[1]			= delta;			
+				return transform;
+			};
+			self->stage().apply_transform(index, transform);
+		}
+	}
 
-	//int n = channels().size()-1;
-	//double delta = 1.0/static_cast<double>(n);
-	//for(int x = 0; x < n; ++x)
-	//{
-	//	for(int y = 0; y < n; ++y)
-	//	{
-	//		int index = x+y*n+1;
-	//		auto transform = [=](frame_transform transform) -> frame_transform
-	//		{		
-	//			transform.image_transform.fill_translation[0]	= x*delta;
-	//			transform.image_transform.fill_translation[1]	= y*delta;
-	//			transform.image_transform.fill_scale[0]			= delta;
-	//			transform.image_transform.fill_scale[1]			= delta;
-	//			transform.image_transform.clip_translation[0]	= x*delta;
-	//			transform.image_transform.clip_translation[1]	= y*delta;
-	//			transform.image_transform.clip_scale[0]			= delta;
-	//			transform.image_transform.clip_scale[1]			= delta;			
-	//			return transform;
-	//		};
-	//		self->stage().apply_transform(index, transform);
-	//	}
-	//}
-
-	//return true;
+	return true;
 }
 
 bool CallCommand::DoExecute()
