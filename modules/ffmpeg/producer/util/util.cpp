@@ -491,7 +491,7 @@ std::wstring print_mode(int width, int height, double fps, bool interlaced)
 	return boost::lexical_cast<std::wstring>(width) + L"x" + boost::lexical_cast<std::wstring>(height) + (!interlaced ? L"p" : L"i") + fps_ss.str();
 }
 
-bool is_valid_file(const std::wstring filename)
+bool is_valid_file(const std::wstring& filename)
 {				
 	static const std::vector<std::wstring> invalid_exts = boost::assign::list_of(L".png")(L".tga")(L".bmp")(L".jpg")(L".jpeg")(L".gif")(L".tiff")(L".tif")(L".jp2")(L".jpx")(L".j2k")(L".j2c")(L".swf")(L".ct");
 	static std::vector<std::wstring>	   valid_exts   = boost::assign::list_of(L".m2t")(L".mov")(L".mp4")(L".dv")(L".flv")(L".mpg")(L".wav")(L".mp3")(L".dnxhd")(L".h264")(L".prores");
@@ -528,7 +528,7 @@ bool is_valid_file(const std::wstring filename)
 	return av_probe_input_format2(&pb, true, &score) != nullptr;
 }
 
-std::wstring probe_stem(const std::wstring stem)
+std::wstring probe_stem(const std::wstring& stem)
 {
 	auto stem2 = boost::filesystem::path(stem);
 	auto dir = stem2.parent_path();

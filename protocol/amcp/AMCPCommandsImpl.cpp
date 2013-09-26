@@ -492,7 +492,7 @@ bool MixerCommand::DoExecute()
 		{
 			auto blend_str = parameters().at(1);								
 			int layer = layer_index();
-			channel()->mixer().set_blend_mode(layer_index(), get_blend_mode(blend_str));	
+			channel()->mixer().set_blend_mode(layer, get_blend_mode(blend_str));	
 		}
 		else if(boost::iequals(parameters()[0], L"MASTERVOLUME"))
 		{
@@ -792,8 +792,6 @@ bool LoadbgCommand::DoExecute()
 {
 	transition_info transitionInfo;
 	
-	bool bLoop = false;
-
 	// TRANSITION
 
 	std::wstring message;
@@ -1059,7 +1057,6 @@ bool CGCommand::DoExecuteAdd() {
 	}
 
 	const TCHAR* pDataString = 0;
-	std::wstringstream data;
 	std::wstring dataFromFile;
 	if(parameters().size() > dataIndex) 
 	{	//read data

@@ -28,21 +28,23 @@ namespace caspar { namespace core {
 
 struct frame_geometry::impl
 {
-	impl() : type_(frame_geometry::none) {}
-	impl(frame_geometry::geometry_type t, std::vector<float> d) : type_(t), data_(std::move(d)) {}
+	impl(frame_geometry::geometry_type t, std::vector<float>&& d) : type_(t), data_(std::move(d)) {}
 	
 	frame_geometry::geometry_type type_;
 	std::vector<float> data_;
 };
 
-frame_geometry::frame_geometry() : impl_(new impl()) {}
-frame_geometry::frame_geometry(const frame_geometry& rhs) : impl_(rhs.impl_) {}
-frame_geometry::frame_geometry(geometry_type t, std::vector<float> d) : impl_(new impl(t, std::move(d))) {}
+frame_geometry::frame_geometry() {}
+frame_geometry::frame_geometry(geometry_type t, std::vector<float>&& d) : impl_(new impl(t, std::move(d))) {}
 
-const frame_geometry& frame_geometry::operator=(const frame_geometry& rhs) { impl_ = rhs.impl_; return *this; }
-
-frame_geometry::geometry_type frame_geometry::type() { return impl_->type_; }
-const std::vector<float>& frame_geometry::data() { return impl_->data_; }
+frame_geometry::geometry_type frame_geometry::type() const { return impl_ ? impl_->type_ : none; }
+const std::vector<float>& frame_geometry::data() const
+{
+	if (impl_)
+		return impl_->data_;
+	else
+		CASPAR_THROW_EXCEPTION(invalid_operation());
+}
 	
 const frame_geometry& frame_geometry::get_default()
 {

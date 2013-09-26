@@ -98,10 +98,10 @@ static void sanitize(uint8_t *line)
 void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 {
     static int print_prefix=1;
-    static int count;
+    //static int count;
     static char prev[1024];
     char line[8192];
-    static int is_atty;
+    //static int is_atty;
     AVClass* avc= ptr ? *(AVClass**)ptr : NULL;
     if(level > av_log_get_level())
         return;
