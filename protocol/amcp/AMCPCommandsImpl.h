@@ -297,7 +297,7 @@ public:
 class ThumbnailCommand : public AMCPCommandBase<1>
 {
 public:
-	ThumbnailCommand::ThumbnailCommand(IO::ClientInfoPtr client, std::shared_ptr<core::thumbnail_generator> thumb_gen) : AMCPCommandBase(client), thumb_gen_(thumb_gen) 
+	ThumbnailCommand(IO::ClientInfoPtr client, std::shared_ptr<core::thumbnail_generator> thumb_gen) : AMCPCommandBase(client), thumb_gen_(thumb_gen) 
 	{}
 	std::wstring print() const { return L"ThumbnailCommand";}
 	bool DoExecute();

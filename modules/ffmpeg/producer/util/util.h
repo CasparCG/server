@@ -66,7 +66,7 @@ double read_fps(AVFormatContext& context, double fail_value);
 
 std::wstring print_mode(int width, int height, double fps, bool interlaced);
 
-std::wstring probe_stem(const std::wstring stem);
-bool is_valid_file(const std::wstring filename);
+std::wstring probe_stem(const std::wstring& stem);
+bool is_valid_file(const std::wstring& filename);
 
 }}

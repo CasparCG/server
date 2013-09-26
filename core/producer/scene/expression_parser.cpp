@@ -239,7 +239,6 @@ struct op
 
 op parse_operator(std::wstring::const_iterator& cursor, const std::wstring& str)
 {
-	std::wstring characters;
 	static const wchar_t NONE = L' ';
 	wchar_t first = NONE;
 
@@ -267,7 +266,7 @@ op parse_operator(std::wstring::const_iterator& cursor, const std::wstring& str)
 						L"Did not expect -" + at_position(cursor, str)));
 			else
 				first = ch;
-			
+
 			++cursor;
 			break;
 		case L'!':

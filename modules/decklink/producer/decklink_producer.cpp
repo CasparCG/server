@@ -225,8 +225,6 @@ public:
 
 			// Audio
 
-			std::shared_ptr<core::audio_buffer> audio_buffer;
-			
 			void* audio_bytes = nullptr;
 			if(FAILED(audio->GetBytes(&audio_bytes)) || !audio_bytes)
 				return S_OK;

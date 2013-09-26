@@ -40,46 +40,33 @@ private:
 		int width, height;
 	};
 
-	FT_Library		lib_;
-	FT_Face			face_;
-	texture_atlas	atlas_;
-	float			size_;
-	float			tracking_;
-	bool			normalize_;
-	std::map<int, glyph_info> glyphs_;
+	std::shared_ptr<FT_LibraryRec_>	lib_;
+	std::shared_ptr<FT_FaceRec_>	face_;
+	texture_atlas					atlas_;
+	float							size_;
+	float							tracking_;
+	bool							normalize_;
+	std::map<int, glyph_info>		glyphs_;
 
 public:
-	impl::impl(texture_atlas& atlas, const text_info& info, bool normalize_coordinates) : lib_(nullptr), face_(nullptr), atlas_(atlas), size_(info.size), tracking_(info.size*info.tracking/1000.0f), normalize_(normalize_coordinates)
+	impl(texture_atlas& atlas, const text_info& info, bool normalize_coordinates) : atlas_(atlas), size_(info.size), tracking_(info.size*info.tracking/1000.0f), normalize_(normalize_coordinates)
 	{
-		try
-		{
-			FT_Error err;
-			err = FT_Init_FreeType(&lib_);
-			if(err) throw freetype_exception("Failed to initialize freetype");
+		FT_Library lib;
+			
+		if (FT_Init_FreeType(&lib))
+			throw freetype_exception("Failed to initialize freetype");
 
-			err = FT_New_Face(lib_, u8(info.font_file).c_str(), 0, &face_);
-			if(err) throw freetype_exception("Failed to load font");
+		lib_.reset(lib, [](FT_Library ptr) { FT_Done_FreeType(ptr); });
 
-			err = FT_Set_Char_Size(face_, static_cast<FT_F26Dot6>(size_*64), 0, 72, 72);
-			if(err) throw freetype_exception("Failed to set font size");
-		}
-		catch(std::exception& ex)
-		{
-			if(face_ != nullptr)
-				FT_Done_Face(face_);
-			if(lib_ != nullptr)
-				FT_Done_FreeType(lib_);
+		FT_Face face;
+			
+		if (FT_New_Face(lib_.get(), u8(info.font_file).c_str(), 0, &face))
+			throw freetype_exception("Failed to load font");
 
-			throw ex;
-		}
-	}
+		face_.reset(face, [](FT_Face ptr) { FT_Done_Face(ptr); });
 
-	~impl()
-	{
-		if(face_ != nullptr)
-			FT_Done_Face(face_);
-		if(lib_ != nullptr)
-			FT_Done_FreeType(lib_);
+		if (FT_Set_Char_Size(face_.get(), static_cast<FT_F26Dot6>(size_*64), 0, 72, 72))
+			throw freetype_exception("Failed to set font size");
 	}
 
 	void set_tracking(int tracking)
@@ -105,11 +92,11 @@ public:
 
 		for(int i = range.first; i <= range.last; ++i)
 		{
-			FT_UInt glyph_index = FT_Get_Char_Index(face_, i);
+			FT_UInt glyph_index = FT_Get_Char_Index(face_.get(), i);
 			if(!glyph_index)	//ignore codes that doesn't have a glyph for now. Might want to map these to a special glyph later.
 				continue;
 			
-			err = FT_Load_Glyph(face_, glyph_index, flags);
+			err = FT_Load_Glyph(face_.get(), glyph_index, flags);
 			if(err) continue;	//igonore glyphs that fail to load
 
 			const FT_Bitmap& bitmap = face_->glyph->bitmap;	//shorthand notation
@@ -155,17 +142,17 @@ public:
 			{	
 				const glyph_info& coords = glyph_it->second;
 
-				FT_UInt glyph_index = FT_Get_Char_Index(face_, (*it));
+				FT_UInt glyph_index = FT_Get_Char_Index(face_.get(), (*it));
 
 				if(use_kerning && previous && glyph_index)
 				{
 					FT_Vector delta;
-					FT_Get_Kerning(face_, previous, glyph_index, FT_KERNING_DEFAULT, &delta);
+					FT_Get_Kerning(face_.get(), previous, glyph_index, FT_KERNING_DEFAULT, &delta);
 
 					pos_x += delta.x / 64.0f;
 				}
 
-				FT_Load_Glyph(face_, glyph_index, FT_LOAD_NO_BITMAP | FT_LOAD_FORCE_AUTOHINT | FT_LOAD_TARGET_NORMAL);
+				FT_Load_Glyph(face_.get(), glyph_index, FT_LOAD_NO_BITMAP | FT_LOAD_FORCE_AUTOHINT | FT_LOAD_TARGET_NORMAL);
 
 				float left = (pos_x + face_->glyph->metrics.horiBearingX/64.0f) / parent_width ;
 				float right = ((pos_x + face_->glyph->metrics.horiBearingX/64.0f) + coords.width) / parent_width;
@@ -259,17 +246,17 @@ public:
 			{	
 				const glyph_info& coords = glyph_it->second;
 
-				FT_UInt glyph_index = FT_Get_Char_Index(face_, (*it));
+				FT_UInt glyph_index = FT_Get_Char_Index(face_.get(), (*it));
 
 				if(use_kerning && previous && glyph_index)
 				{
 					FT_Vector delta;
-					FT_Get_Kerning(face_, previous, glyph_index, FT_KERNING_DEFAULT, &delta);
+					FT_Get_Kerning(face_.get(), previous, glyph_index, FT_KERNING_DEFAULT, &delta);
 
 					pos_x += delta.x / 64.0f;
 				}
 
-				FT_Load_Glyph(face_, glyph_index, FT_LOAD_NO_BITMAP | FT_LOAD_FORCE_AUTOHINT | FT_LOAD_TARGET_NORMAL);
+				FT_Load_Glyph(face_.get(), glyph_index, FT_LOAD_NO_BITMAP | FT_LOAD_FORCE_AUTOHINT | FT_LOAD_TARGET_NORMAL);
 
 				int bearingY = face_->glyph->metrics.horiBearingY >> 6;
 				if(bearingY > result.bearingY)
