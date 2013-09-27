@@ -37,7 +37,7 @@ public:
 	};
 
 	frame_geometry();
-	frame_geometry(geometry_type, std::vector<float>&&);
+	frame_geometry(geometry_type, std::vector<float>);
 
 	geometry_type type() const ;
 	const std::vector<float>& data() const;
