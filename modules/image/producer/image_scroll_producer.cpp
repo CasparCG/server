@@ -385,7 +385,7 @@ struct image_scroll_producer : public core::frame_producer
 		}
 	}
 
-	core::monitor::source& monitor_output()
+	core::monitor::subject& monitor_output()
 	{
 		return monitor_subject_;
 	}

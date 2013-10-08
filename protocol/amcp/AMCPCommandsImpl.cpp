@@ -1343,7 +1343,12 @@ bool CGCommand::DoExecuteAdd() {
 		std::wstring filename = _parameters[2];
 		filename.append(extension);
 
-		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), false, GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->add(layer, filename, bDoStart, label, (pDataString!=0) ? pDataString : TEXT(""));
+		flash::with_default_cg_producer(
+				[&](safe_ptr<flash::cg_producer> producer)
+				{
+					producer->add(layer, filename, bDoStart, label, (pDataString!=0) ? pDataString : TEXT(""));
+				},
+				safe_ptr<core::video_channel>(GetChannel()), false, GetLayerIndex(flash::cg_producer::DEFAULT_LAYER));
 		SetReplyString(TEXT("202 CG OK\r\n"));
 	}
 	else

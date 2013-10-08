@@ -30,8 +30,6 @@
 #include <string>
 #include <vector>
 
-#include <agents.h>
-
 namespace caspar { namespace core { namespace monitor {
 		
 typedef boost::variant<bool, 
@@ -88,26 +86,49 @@ private:
 	safe_ptr<std::vector<data_t>>	data_ptr_;
 };
 
-class subject : public Concurrency::transformer<monitor::message, monitor::message>
+struct sink
 {
+	virtual ~sink() { }
+
+	virtual void propagate(const message& msg) = 0;
+};
+
+class subject : public sink
+{
+private:
+	std::weak_ptr<sink> parent_;
+	const std::string path_;
 public:
 	subject(std::string path = "")
-		: Concurrency::transformer<monitor::message, monitor::message>([=](const message& msg)
-		{
-			return msg.propagate(path);
-		})
+		: path_(std::move(path))
 	{
 		CASPAR_ASSERT(path.empty() || path[0] == '/');
 	}
 
-	template<typename T>
-	subject& operator<<(T&& msg)
+	void attach_parent(const safe_ptr<sink>& parent)
 	{
-		Concurrency::send(*this, std::forward<T>(msg));
+		parent_ = parent;
+	}
+
+	void detach_parent()
+	{
+		parent_.reset();
+	}
+
+	subject& operator<<(const message& msg)
+	{
+		propagate(msg);
+
 		return *this;
 	}
-};
 
-typedef Concurrency::ISource<monitor::message> source;
+	virtual void propagate(const message& msg) override
+	{
+		auto parent = parent_.lock();
+
+		if (parent)
+			parent->propagate(msg.propagate(path_));
+	}
+};
 
 }}}

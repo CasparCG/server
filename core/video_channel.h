@@ -65,7 +65,7 @@ public:
 
 	int index() const;
 	
-	monitor::source& monitor_output();
+	monitor::subject& monitor_output();
 
 private:
 	struct implementation;

@@ -93,7 +93,7 @@ public:
 	
 	void set_video_format_desc(const video_format_desc& format_desc);
 		
-	monitor::source& monitor_output();
+	monitor::subject& monitor_output();
 
 private:
 	struct implementation;

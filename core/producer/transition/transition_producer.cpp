@@ -38,7 +38,7 @@ namespace caspar { namespace core {
 
 struct transition_producer : public frame_producer
 {	
-	monitor::subject			monitor_subject_;
+	safe_ptr<monitor::subject>	monitor_subject_;
 
 	const field_mode::type		mode_;
 	unsigned int				current_frame_;
@@ -58,7 +58,7 @@ struct transition_producer : public frame_producer
 		, source_producer_(frame_producer::empty())
 		, last_frame_(basic_frame::empty())
 	{
-		dest->monitor_output().link_target(&monitor_subject_);
+		dest->monitor_output().attach_parent(monitor_subject_);
 	}
 	
 	// frame_producer
@@ -100,8 +100,8 @@ struct transition_producer : public frame_producer
 				source = source_producer_->last_frame();
 		});
 
-		monitor_subject_ << monitor::message("/transition/frame") % static_cast<std::int32_t>(current_frame_) % static_cast<std::int32_t>(info_.duration)
-						 << monitor::message("/transition/type") % [&]() -> std::string
+		*monitor_subject_ << monitor::message("/transition/frame") % static_cast<std::int32_t>(current_frame_) % static_cast<std::int32_t>(info_.duration)
+		                  << monitor::message("/transition/type") % [&]() -> std::string
 																{
 																	switch(info_.type)
 																	{
@@ -206,9 +206,9 @@ struct transition_producer : public frame_producer
 		return basic_frame::combine(s_frame, d_frame);
 	}
 
-	monitor::source& monitor_output()
+	monitor::subject& monitor_output()
 	{
-		return monitor_subject_;
+		return *monitor_subject_;
 	}
 };
 

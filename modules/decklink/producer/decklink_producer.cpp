@@ -325,7 +325,7 @@ public:
 		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"|" + format_desc_.name + L"]";
 	}
 
-	core::monitor::source& monitor_output()
+	core::monitor::subject& monitor_output()
 	{
 		return monitor_subject_;
 	}
@@ -386,7 +386,7 @@ public:
 		return info;
 	}
 
-	core::monitor::source& monitor_output()
+	core::monitor::subject& monitor_output()
 	{
 		return context_->monitor_output();
 	}

@@ -33,8 +33,8 @@ namespace caspar { namespace core {
 
 struct separated_producer : public frame_producer
 {		
-	monitor::subject			monitor_subject_;
-	monitor::subject			key_monitor_subject_;
+	safe_ptr<monitor::subject>	monitor_subject_;
+	safe_ptr<monitor::subject>	key_monitor_subject_;
 
 	safe_ptr<frame_producer>	fill_producer_;
 	safe_ptr<frame_producer>	key_producer_;
@@ -43,18 +43,17 @@ struct separated_producer : public frame_producer
 	safe_ptr<basic_frame>		last_frame_;
 		
 	explicit separated_producer(const safe_ptr<frame_producer>& fill, const safe_ptr<frame_producer>& key) 
-		: monitor_subject_("")
-		, key_monitor_subject_("/keyer")
+		: key_monitor_subject_(make_safe<monitor::subject>("/keyer"))
 		, fill_producer_(fill)
 		, key_producer_(key)
 		, fill_(core::basic_frame::late())
 		, key_(core::basic_frame::late())
 		, last_frame_(core::basic_frame::empty())
 	{
-		key_monitor_subject_.link_target(&monitor_subject_);
+		key_monitor_subject_->attach_parent(monitor_subject_);
 
-		key_producer_->monitor_output().link_target(&key_monitor_subject_);
-		fill_producer_->monitor_output().link_target(&monitor_subject_);
+		key_producer_->monitor_output().attach_parent(key_monitor_subject_);
+		fill_producer_->monitor_output().attach_parent(monitor_subject_);
 	}
 
 	// frame_producer
@@ -128,9 +127,9 @@ struct separated_producer : public frame_producer
 		return info;
 	}
 
-	monitor::source& monitor_output()
+	monitor::subject& monitor_output()
 	{
-		return monitor_subject_;
+		return *monitor_subject_;
 	}
 };
 
