@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="StdAfx.cpp" />
+    <ClCompile Include="newtek.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="consumer\newtek_consumer.cpp">
+      <Filter>source\consumer</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="StdAfx.h" />
+    <ClInclude Include="newtek.h">
+      <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\newtek_consumer.h">
+      <Filter>source\consumer</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="source">
+      <UniqueIdentifier>{2b647728-2513-4a6f-8fcd-0bd4decd163e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\consumer">
+      <UniqueIdentifier>{c4a0a6b8-00cd-475e-a6a4-775bba93dbc2}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

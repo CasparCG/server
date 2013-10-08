@@ -99,3 +99,7 @@
 /modules/portaudio/portaudio.vcxproj.user
 /modules/portaudio/bin
 /modules/portaudio/tmp
+
+/modules/newtek/newtek.vcxproj.user
+/modules/newtek/bin
+/modules/newtek/tmp
