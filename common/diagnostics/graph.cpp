@@ -282,6 +282,7 @@ struct graph::impl : public drawable
 	bool auto_reset_;
 
 	impl()
+		: auto_reset_(false)
 	{
 	}
 		

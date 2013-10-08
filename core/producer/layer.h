@@ -66,7 +66,7 @@ public:
 	boost::property_tree::wptree info() const;
 	boost::property_tree::wptree delay_info() const;
 	
-	monitor::source& monitor_output();
+	monitor::subject& monitor_output();
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;

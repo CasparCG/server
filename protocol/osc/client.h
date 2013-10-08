@@ -40,9 +40,7 @@ public:
 
 	// Constructors
 
-	client(
-			boost::asio::io_service& service,
-			Concurrency::ISource<core::monitor::message>& source);
+	client(boost::asio::io_service& service);
 	
 	client(client&&);
 
@@ -67,9 +65,10 @@ public:
 	
 	// Properties
 
+	safe_ptr<core::monitor::sink> sink();
 private:
 	struct impl;
-	std::shared_ptr<impl> impl_;
+	safe_ptr<impl> impl_;
 };
 
 }}}

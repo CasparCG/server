@@ -38,7 +38,7 @@ struct layer::implementation
 	int32_t						auto_play_delta_;
 	bool						is_paused_;
 	int64_t						current_frame_age_;
-	monitor::subject			monitor_subject_;
+	safe_ptr<monitor::subject>	monitor_subject_;
 
 public:
 	implementation(int index) 
@@ -47,7 +47,7 @@ public:
 		, frame_number_(0)
 		, auto_play_delta_(-1)
 		, is_paused_(false)
-		, monitor_subject_("/layer/" + boost::lexical_cast<std::string>(index))
+		, monitor_subject_(make_safe<monitor::subject>("/layer/" + boost::lexical_cast<std::string>(index)))
 	{
 	}
 	
@@ -108,7 +108,7 @@ public:
 	{		
 		try
 		{
-			monitor_subject_ << monitor::message("/paused") % is_paused_;
+			*monitor_subject_ << monitor::message("/paused") % is_paused_;
 
 			if(is_paused_)
 			{
@@ -184,9 +184,9 @@ public:
 
 	void set_foreground(safe_ptr<core::frame_producer> producer)
 	{
-		foreground_->monitor_output().unlink_target(&monitor_subject_);
+		foreground_->monitor_output().detach_parent();
 		foreground_			= producer;
-		foreground_->monitor_output().link_target(&monitor_subject_);
+		foreground_->monitor_output().attach_parent(monitor_subject_);
 	}
 };
 
@@ -214,5 +214,5 @@ bool layer::empty() const {return impl_->empty();}
 boost::unique_future<std::wstring> layer::call(bool foreground, const std::wstring& param){return impl_->call(foreground, param);}
 boost::property_tree::wptree layer::info() const{return impl_->info();}
 boost::property_tree::wptree layer::delay_info() const{return impl_->delay_info();}
-monitor::source& layer::monitor_output(){return impl_->monitor_subject_;}
+monitor::subject& layer::monitor_output(){return *impl_->monitor_subject_;}
 }}

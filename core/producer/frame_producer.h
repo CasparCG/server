@@ -79,7 +79,7 @@ public:
 
 	static const safe_ptr<frame_producer>& empty(); // nothrow
 
-	virtual monitor::source& monitor_output() = 0;
+	virtual monitor::subject& monitor_output() = 0;
 };
 
 safe_ptr<basic_frame> receive_and_follow(safe_ptr<frame_producer>& producer, int hints);

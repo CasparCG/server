@@ -77,7 +77,7 @@ using namespace protocol;
 struct server::implementation : boost::noncopyable
 {
 	protocol::asio::io_service_manager			io_service_manager_;
-	core::monitor::subject						monitor_subject_;
+	safe_ptr<core::monitor::subject>			monitor_subject_;
 	boost::promise<bool>&						shutdown_server_now_;
 	safe_ptr<ogl_device>						ogl_;
 	std::vector<safe_ptr<IO::AsyncEventServer>> async_servers_;	
@@ -90,7 +90,7 @@ struct server::implementation : boost::noncopyable
 	implementation(boost::promise<bool>& shutdown_server_now)
 		: shutdown_server_now_(shutdown_server_now)
 		, ogl_(ogl_device::create())
-		, osc_client_(io_service_manager_.service(), monitor_subject_)
+		, osc_client_(io_service_manager_.service())
 	{
 		setup_audio(env::properties());
 
@@ -170,7 +170,7 @@ struct server::implementation : boost::noncopyable
 			
 			channels_.push_back(make_safe<video_channel>(channels_.size()+1, format_desc, ogl_, audio_channel_layout));
 			
-			channels_.back()->monitor_output().link_target(&monitor_subject_);
+			channels_.back()->monitor_output().attach_parent(monitor_subject_);
 			channels_.back()->mixer()->set_straight_alpha_output(
 					xml_channel.second.get(L"straight-alpha-output", false));
 
@@ -269,6 +269,8 @@ struct server::implementation : boost::noncopyable
 	{		
 		using boost::property_tree::wptree;
 		using namespace boost::asio::ip;
+
+		monitor_subject_->attach_parent(osc_client_.sink());
 		
 		auto default_port =
 				pt.get<unsigned short>(L"configuration.osc.default-port", 6250);
@@ -357,9 +359,9 @@ std::shared_ptr<thumbnail_generator> server::get_thumbnail_generator() const
 	return impl_->thumbnail_generator_;
 }
 
-core::monitor::source& server::monitor_output()
+core::monitor::subject& server::monitor_output()
 {
-	return impl_->monitor_subject_;
+	return *impl_->monitor_subject_;
 }
 
 }

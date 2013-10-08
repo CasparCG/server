@@ -114,7 +114,7 @@ struct image_producer : public core::frame_producer
 		return info;
 	}
 
-	core::monitor::source& monitor_output()
+	core::monitor::subject& monitor_output()
 	{
 		return monitor_subject_;
 	}

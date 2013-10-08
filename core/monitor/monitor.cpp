@@ -22,6 +22,36 @@
 
 #include "monitor.h"
 
-namespace caspar { namespace core {
-	
-}}
+namespace caspar { namespace core { namespace monitor {
+
+/*class in_callers_thread_schedule_group : public Concurrency::ScheduleGroup
+{
+	virtual void ScheduleTask(Concurrency::TaskProc proc, void* data) override
+	{
+		proc(data);
+	}
+
+    virtual unsigned int Id() const override
+	{
+		return 1;
+	}
+
+    virtual unsigned int Reference() override
+	{
+		return 1;
+	}
+
+    virtual unsigned int Release() override
+	{
+		return 1;
+	}
+};
+
+Concurrency::ScheduleGroup& get_in_callers_thread_schedule_group()
+{
+	static in_callers_thread_schedule_group group;
+
+	return group;
+}*/
+
+}}}

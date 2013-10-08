@@ -489,7 +489,7 @@ public:
 			frame_buffer_.push(std::make_pair(make_safe_ptr(frame), file_frame_number));
 	}
 
-	core::monitor::source& monitor_output()
+	core::monitor::subject& monitor_output()
 	{
 		return monitor_subject_;
 	}

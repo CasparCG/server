@@ -45,7 +45,7 @@ public:
 	const std::vector<safe_ptr<core::video_channel>> get_channels() const;
 	std::shared_ptr<core::thumbnail_generator> get_thumbnail_generator() const;
 
-	core::monitor::source& monitor_output();
+	core::monitor::subject& monitor_output();
 
 private:
 	struct implementation;

@@ -151,6 +151,13 @@ template_host get_template_host(const core::video_format_desc& desc)
 	return template_host;
 }
 
+boost::mutex& get_global_init_destruct_mutex()
+{
+	static boost::mutex m;
+
+	return m;
+}
+
 class flash_renderer
 {	
 	struct com_init
@@ -183,8 +190,6 @@ class flash_renderer
 	
 	boost::timer									frame_timer_;
 	boost::timer									tick_timer_;
-
-	high_prec_timer									timer_;
 	
 public:
 	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
@@ -194,21 +199,27 @@ public:
 		, filename_(filename)
 		, frame_factory_(frame_factory)
 		, ax_(nullptr)
-		, head_(core::basic_frame::empty())
+		, head_(core::basic_frame::late())
 		, bmp_(width, height)
 	{		
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
-		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));	
-		graph_->set_color("sync", diagnostics::color(0.8f, 0.3f, 0.2f));			
-		
-		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to create FlashAxContainer"));
-		
-		ax_->set_print([this]{return print();});
+		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));
+		graph_->set_color("buffered", diagnostics::color(0.8f, 0.3f, 0.2f));
 
-		if(FAILED(ax_->CreateAxControl()))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Create FlashAxControl"));
+		lock(get_global_init_destruct_mutex(), [this]
+		{
+
+			CoInitialize(nullptr);
+
+			if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to create FlashAxContainer"));
+		
+			if(FAILED(ax_->CreateAxControl()))
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Create FlashAxControl"));
+		});
+
+		ax_->set_print([this]{return print();});
 		
 		CComPtr<IShockwaveFlash> spFlash;
 		if(FAILED(ax_->QueryControl(&spFlash)))
@@ -224,7 +235,7 @@ public:
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Set Scale Mode"));
 						
 		ax_->SetSize(width_, height_);		
-		render_frame(false);
+		render_frame();
 	
 		CASPAR_LOG(info) << print() << L" Initialized.";
 	}
@@ -233,8 +244,11 @@ public:
 	{		
 		if(ax_)
 		{
-			ax_->DestroyAxControl();
-			ax_->Release();
+			lock(get_global_init_destruct_mutex(), [this]
+			{
+				ax_->DestroyAxControl();
+				ax_->Release();
+			});
 		}
 		graph_->set_value("tick-time", 0.0f);
 		graph_->set_value("frame-time", 0.0f);
@@ -249,28 +263,24 @@ public:
 
 		if(!ax_->FlashCall(param, result))
 			CASPAR_LOG(warning) << print() << L" Flash call failed:" << param;//BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Flash function call failed.") << arg_name_info("param") << arg_value_info(narrow(param)));
-		graph_->set_tag("param");
+ 		graph_->set_tag("param");
 
 		return result;
 	}
 	
-	safe_ptr<core::basic_frame> render_frame(double sync)
+	safe_ptr<core::basic_frame> render_frame()
 	{
 		float frame_time = 1.0f/ax_->GetFPS();
 
 		graph_->set_value("tick-time", static_cast<float>(tick_timer_.elapsed()/frame_time)*0.5f);
 		tick_timer_.restart();
 
-		if(ax_->IsEmpty())
-			return core::basic_frame::empty();		
-		
-		if(sync > 0.00001)			
-			timer_.tick(frame_time*sync); // This will block the thread.
-		else
-			graph_->set_tag("sync");
+		if (!ax_->IsReadyToRender())
+			return head_;
 
-		graph_->set_value("sync", sync);
-			
+		if(ax_->IsEmpty())
+			return core::basic_frame::empty();
+		
 		frame_timer_.restart();
 
 		ax_->Tick();
@@ -341,7 +351,6 @@ struct flash_producer : public core::frame_producer
 	std::queue<safe_ptr<core::basic_frame>>						frame_buffer_;
 	tbb::concurrent_bounded_queue<safe_ptr<core::basic_frame>>	output_buffer_;
 	
-	mutable tbb::spin_mutex										last_frame_mutex_;
 	safe_ptr<core::basic_frame>									last_frame_;
 		
 	std::unique_ptr<flash_renderer>								renderer_;
@@ -364,11 +373,7 @@ public:
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 		
-		renderer_.reset(new flash_renderer(graph_, frame_factory_, filename_, width_, height_));
-		has_renderer_ = true;
-
-		while(output_buffer_.size() < buffer_size_)
-			output_buffer_.push(core::basic_frame::empty());
+		has_renderer_ = false;
 	}
 
 	~flash_producer()
@@ -385,10 +390,16 @@ public:
 	{					
 		auto frame = core::basic_frame::late();
 		
-		if(output_buffer_.try_pop(frame))	
-			next();
+		double buffered = output_buffer_.size();
+		auto ratio = buffered / buffer_size_;
+		graph_->set_value("buffered", ratio);
+
+		if(output_buffer_.try_pop(frame))
+			last_frame_ = frame;
 		else
 			graph_->set_tag("late-frame");
+
+		fill_buffer();
 		
 		monitor_subject_ << core::monitor::message("/host/path")		% filename_
 					     << core::monitor::message("/host/width")	% width_
@@ -401,10 +412,7 @@ public:
 
 	virtual safe_ptr<core::basic_frame> last_frame() const override
 	{
-		return lock(last_frame_mutex_, [this]
-		{
-			return last_frame_;
-		});
+		return last_frame_;
 	}		
 	
 	virtual boost::unique_future<std::wstring> call(const std::wstring& param) override
@@ -416,18 +424,24 @@ public:
 		{
 			try
 			{
-				if(!renderer_)
+				bool initialize_renderer = !renderer_;
+
+				if(initialize_renderer)
 				{
 					renderer_.reset(new flash_renderer(graph_, frame_factory_, filename_, width_, height_));
-
-					while(output_buffer_.size() < buffer_size_)
-						output_buffer_.push(core::basic_frame::empty());
 
 					has_renderer_ = true;
 				}
 
-				return renderer_->call(param);	
+				std::wstring result = param == L"start_rendering"
+						? L"" : renderer_->call(param);
 
+				if (initialize_renderer)
+				{
+					do_fill_buffer();
+				}
+
+				return result;
 				//const auto& format_desc = frame_factory_->get_video_format_desc();
 				//if(abs(context_->fps() - format_desc.fps) > 0.01 && abs(context_->fps()/2.0 - format_desc.fps) > 0.01)
 				//	CASPAR_LOG(warning) << print() << " Invalid frame-rate: " << context_->fps() << L". Should be either " << format_desc.fps << L" or " << format_desc.fps*2.0 << L".";
@@ -440,7 +454,7 @@ public:
 			}
 
 			return L"";
-		});
+		}, high_priority);
 	}
 		
 	virtual std::wstring print() const override
@@ -456,65 +470,112 @@ public:
 	}
 
 	// flash_producer
-	
-	void next()
-	{	
+
+	void fill_buffer()
+	{
 		executor_.begin_invoke([this]
 		{
-			if(!renderer_)
-				frame_buffer_.push(core::basic_frame::empty());
+			do_fill_buffer();
+		});
+	}
 
-			if(frame_buffer_.empty())
+	void do_fill_buffer()
+	{
+		int nothing_rendered = 0;
+		const int MAX_NOTHING_RENDERED_RETRIES = 4;
+
+		auto to_render = buffer_size_ - output_buffer_.size();
+		int rendered = 0;
+
+		while (rendered < to_render)
+		{
+			bool was_rendered = next();
+
+			if (was_rendered)
 			{
-				auto format_desc = frame_factory_->get_video_format_desc();
-					
-				if(abs(renderer_->fps()/2.0 - format_desc.fps) < 2.0) // flash == 2 * format -> interlace
+				++rendered;
+			}
+			else
+			{
+				if (nothing_rendered++ < MAX_NOTHING_RENDERED_RETRIES)
 				{
-					auto frame1 = render_frame();
+					// Flash player not ready with first frame, sleep to not busy-loop;
+					boost::this_thread::sleep(boost::posix_time::milliseconds(10));
+					boost::this_thread::yield();
+				}
+				else
+					return;
+			}
+
+			executor_.yield();
+		}
+	}
+	
+	bool next()
+	{	
+		if(!renderer_)
+			frame_buffer_.push(core::basic_frame::empty());
+
+		if(frame_buffer_.empty())
+		{
+			auto format_desc = frame_factory_->get_video_format_desc();
+					
+			if(abs(renderer_->fps()/2.0 - format_desc.fps) < 2.0) // flash == 2 * format -> interlace
+			{
+				auto frame1 = render_frame();
+
+				if (frame1 != core::basic_frame::late())
+				{
 					auto frame2 = render_frame();
 					frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, format_desc.field_mode));
 				}
-				else if(abs(renderer_->fps() - format_desc.fps/2.0) < 2.0) // format == 2 * flash -> duplicate
+			}
+			else if(abs(renderer_->fps() - format_desc.fps/2.0) < 2.0) // format == 2 * flash -> duplicate
+			{
+				auto frame = render_frame();
+
+				if (frame != core::basic_frame::late())
 				{
-					auto frame = render_frame();
 					frame_buffer_.push(frame);
 					frame_buffer_.push(frame);
-				}
-				else //if(abs(renderer_->fps() - format_desc_.fps) < 0.1) // format == flash -> simple
-				{
-					auto frame = render_frame();
-					frame_buffer_.push(frame);
-				}
-						
-				fps_.fetch_and_store(static_cast<int>(renderer_->fps()*100.0));				
-				graph_->set_text(print());
-			
-				if(renderer_->is_empty())
-				{
-					renderer_.reset();
-					has_renderer_ = false;
 				}
 			}
+			else //if(abs(renderer_->fps() - format_desc_.fps) < 0.1) // format == flash -> simple
+			{
+				auto frame = render_frame();
 
+				if (frame != core::basic_frame::late())
+					frame_buffer_.push(frame);
+			}
+						
+			fps_.fetch_and_store(static_cast<int>(renderer_->fps()*100.0));				
+			graph_->set_text(print());
+			
+			if(renderer_->is_empty())
+			{
+				renderer_.reset();
+				has_renderer_ = false;
+			}
+		}
+
+		if (frame_buffer_.empty())
+		{
+			return false;
+		}
+		else
+		{
 			output_buffer_.push(std::move(frame_buffer_.front()));
 			frame_buffer_.pop();
-		});
+			return true;
+		}
 	}
 
 	safe_ptr<core::basic_frame> render_frame()
 	{	
-		double ratio = std::min(1.0, static_cast<double>(output_buffer_.size())/static_cast<double>(std::max(1, buffer_size_ - 1)));
-		double sync  = 2*ratio - ratio*ratio;
-
-		auto frame = renderer_->render_frame(sync);
-		lock(last_frame_mutex_, [&]
-		{
-			last_frame_ = frame;
-		});
-		return frame;
+		return renderer_->render_frame();
 	}
 
-	core::monitor::source& monitor_output()
+	core::monitor::subject& monitor_output()
 	{
 		return monitor_subject_;
 	}
@@ -545,9 +606,12 @@ safe_ptr<core::frame_producer> create_swf_producer(
 
 	swf_t::header_t header(filename);
 
-	return create_producer_destroy_proxy(
-		   create_producer_print_proxy(
-			make_safe<flash_producer>(frame_factory, filename, header.frame_width, header.frame_height)));
+	auto producer = make_safe<flash_producer>(
+			frame_factory, filename, header.frame_width, header.frame_height);
+
+	producer->call(L"start_rendering").get();
+
+	return create_producer_destroy_proxy(create_producer_print_proxy(producer));
 }
 
 std::wstring find_template(const std::wstring& template_name)

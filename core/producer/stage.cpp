@@ -103,7 +103,7 @@ struct stage::implementation : public std::enable_shared_from_this<implementatio
 	// map of layer -> map of tokens (src ref) -> layer_consumer
 	std::map<int, std::map<void*, std::shared_ptr<write_frame_consumer>>>		 layer_consumers_;
 	
-	monitor::subject															 monitor_subject_;
+	safe_ptr<monitor::subject>													 monitor_subject_;
 
 	executor																	 executor_;
 
@@ -112,7 +112,7 @@ public:
 		: graph_(graph)
 		, format_desc_(format_desc)
 		, target_(target)
-		, monitor_subject_("/stage")
+		, monitor_subject_(make_safe<monitor::subject>("/stage"))
 		, executor_(L"stage")
 	{
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f, 0.8));	
@@ -280,7 +280,7 @@ public:
 		if(it == std::end(layers_))
 		{
 			it = layers_.insert(std::make_pair(index, std::make_shared<layer>(index))).first;
-			it->second->monitor_output().link_target(&monitor_subject_);
+			it->second->monitor_output().attach_parent(monitor_subject_);
 		}
 		return *it->second;
 	}
@@ -354,18 +354,18 @@ public:
 			auto other_layers	= other_impl->layers_ | boost::adaptors::map_values;
 
 			BOOST_FOREACH(auto& layer, layers)
-				layer->monitor_output().unlink_target(&monitor_subject_);
+				layer->monitor_output().detach_parent();
 			
 			BOOST_FOREACH(auto& layer, other_layers)
-				layer->monitor_output().unlink_target(&monitor_subject_);
+				layer->monitor_output().attach_parent(monitor_subject_);
 			
 			std::swap(layers_, other_impl->layers_);
 						
 			BOOST_FOREACH(auto& layer, layers)
-				layer->monitor_output().link_target(&monitor_subject_);
+				layer->monitor_output().detach_parent();
 			
 			BOOST_FOREACH(auto& layer, other_layers)
-				layer->monitor_output().link_target(&monitor_subject_);
+				layer->monitor_output().detach_parent();
 		};		
 
 		executor_.begin_invoke([=]
@@ -395,13 +395,13 @@ public:
 				auto& my_layer		= get_layer(index);
 				auto& other_layer	= other_impl->get_layer(other_index);
 
-				my_layer.monitor_output().unlink_target(&monitor_subject_);
-				other_layer.monitor_output().unlink_target(&other_impl->monitor_subject_);
+				my_layer.monitor_output().detach_parent();
+				other_layer.monitor_output().attach_parent(other_impl->monitor_subject_);
 
 				std::swap(my_layer, other_layer);
 
-				my_layer.monitor_output().link_target(&monitor_subject_);
-				other_layer.monitor_output().link_target(&other_impl->monitor_subject_);
+				my_layer.monitor_output().detach_parent();
+				other_layer.monitor_output().attach_parent(other_impl->monitor_subject_);
 			};		
 
 			executor_.begin_invoke([=]
@@ -503,5 +503,5 @@ boost::unique_future<boost::property_tree::wptree> stage::info() const{return im
 boost::unique_future<boost::property_tree::wptree> stage::info(int index) const{return impl_->info(index);}
 boost::unique_future<boost::property_tree::wptree> stage::delay_info() const{return impl_->delay_info();}
 boost::unique_future<boost::property_tree::wptree> stage::delay_info(int index) const{return impl_->delay_info(index);}
-monitor::source& stage::monitor_output(){return impl_->monitor_subject_;}
+monitor::subject& stage::monitor_output(){return *impl_->monitor_subject_;}
 }}

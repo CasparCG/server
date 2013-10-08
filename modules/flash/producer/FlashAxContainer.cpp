@@ -674,12 +674,8 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 
 void STDMETHODCALLTYPE FlashAxContainer::OnReadyStateChange(long newState)
 {
-	if(newState == 4)
-	{
+	if (newState == 4)
 		bReadyToRender_ = true;
-	}
-	else
-		bReadyToRender_ = false;
 }
 
 void FlashAxContainer::DestroyAxControl()
