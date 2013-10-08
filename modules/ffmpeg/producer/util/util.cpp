@@ -273,7 +273,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 			CASPAR_ASSERT(decoded);
 			CASPAR_ASSERT(write->image_data(n).begin());
 
-			if(decoded_linesize != static_cast<int>(plane.width))
+			if(decoded_linesize != static_cast<int>(plane.linesize))
 			{
 				// Copy line by line since ffmpeg sometimes pads each line.
 				tbb::parallel_for<size_t>(0, desc.planes[n].height, [&](size_t y)
