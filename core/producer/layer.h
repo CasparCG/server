@@ -38,7 +38,7 @@ FORWARD1(boost, template<typename T> class optional);
 
 namespace caspar { namespace core {
 	
-class layer sealed : public monitor::observable, public interaction_sink
+class layer sealed : public interaction_sink
 {
 	layer(const layer&);
 	layer& operator=(const layer&);
@@ -65,8 +65,7 @@ public:
 	
 	// monitor::observable
 
-	void subscribe(const monitor::observable::observer_ptr& o) override;
-	void unsubscribe(const monitor::observable::observer_ptr& o) override;
+	monitor::source& monitor_output();
 
 	// interaction_sink
 

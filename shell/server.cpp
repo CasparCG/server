@@ -61,6 +61,7 @@
 #include <protocol/CLK/CLKProtocolStrategy.h>
 #include <protocol/util/AsyncEventServer.h>
 #include <protocol/util/strategy_adapters.h>
+#include <protocol/osc/server.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/thread.hpp>
@@ -76,9 +77,10 @@ using namespace protocol;
 
 struct server::impl : boost::noncopyable
 {
-	monitor::basic_subject								event_subject_;
+	monitor::subject									monitor_subject_;
 	accelerator::accelerator							accelerator_;
-	std::vector<spl::shared_ptr<IO::AsyncEventServer>>	async_servers_;	
+	std::vector<spl::shared_ptr<IO::AsyncEventServer>>	async_servers_;
+	std::vector<osc::server>							osc_servers_;
 	std::vector<spl::shared_ptr<video_channel>>			channels_;
 	std::shared_ptr<thumbnail_generator>				thumbnail_generator_;
 	boost::promise<bool>&								shutdown_server_now_;
@@ -173,7 +175,7 @@ struct server::impl : boost::noncopyable
 				}
 			}		
 
-		    channel->subscribe(monitor::observable::observer_ptr(event_subject_));
+		    channel->monitor_output().link_target(&monitor_subject_);
 			channels_.push_back(channel);
 		}
 
@@ -226,6 +228,13 @@ struct server::impl : boost::noncopyable
 																					{ CASPAR_LOG(info) << "Client disconnect (lifecycle)"; }));
 																				});
 				}
+				else if(name == L"udp")
+				{
+					const auto address = xml_controller.second.get(L"address", L"127.0.0.1");
+					const auto port = xml_controller.second.get<unsigned short>(L"port", 6250);
+
+					osc_servers_.push_back(osc::server(boost::asio::ip::udp::endpoint(boost::asio::ip::address_v4::from_string(std::string(address.begin(), address.end())), port), monitor_subject_));
+				}
 				else
 					CASPAR_LOG(warning) << "Invalid controller: " << name;	
 			}
@@ -261,7 +270,6 @@ const std::vector<spl::shared_ptr<video_channel>> server::channels() const
 	return impl_->channels_;
 }
 std::shared_ptr<core::thumbnail_generator> server::get_thumbnail_generator() const {return impl_->thumbnail_generator_; }
-void server::subscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_.subscribe(o);}
-void server::unsubscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_.unsubscribe(o);}
+monitor::source& server::monitor_output() { return impl_->monitor_subject_; }
 
 }

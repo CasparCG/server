@@ -33,8 +33,8 @@ namespace caspar { namespace core {
 
 class separated_producer : public frame_producer_base
 {		
-	monitor::basic_subject			event_subject_;
-	monitor::basic_subject			key_event_subject_;
+	monitor::subject				monitor_subject_;
+	monitor::subject				key_monitor_subject_;
 
 	spl::shared_ptr<frame_producer>	fill_producer_;
 	spl::shared_ptr<frame_producer>	key_producer_;
@@ -43,7 +43,8 @@ class separated_producer : public frame_producer_base
 			
 public:
 	explicit separated_producer(const spl::shared_ptr<frame_producer>& fill, const spl::shared_ptr<frame_producer>& key) 
-		: key_event_subject_("keyer")		
+		: monitor_subject_("")
+		, key_monitor_subject_("/keyer")		
 		, fill_producer_(fill)
 		, key_producer_(key)
 		, fill_(core::draw_frame::late())
@@ -51,10 +52,10 @@ public:
 	{
 		CASPAR_LOG(info) << print() << L" Initialized";
 
-		key_event_subject_.subscribe(event_subject_);
+		key_monitor_subject_.link_target(&monitor_subject_);
 
-		key_producer_->subscribe(key_event_subject_);
-		fill_producer_->subscribe(event_subject_);
+		key_producer_->monitor_output().link_target(&key_monitor_subject_);
+		fill_producer_->monitor_output().link_target(&monitor_subject_);
 	}
 
 	// frame_producer
@@ -134,15 +135,7 @@ public:
 		return fill_producer_->info();;
 	}
 
-	void subscribe(const monitor::observable::observer_ptr& o) override															
-	{
-		return event_subject_.subscribe(o);
-	}
-
-	void unsubscribe(const monitor::observable::observer_ptr& o) override		
-	{
-		return event_subject_.unsubscribe(o);
-	}
+	monitor::source& monitor_output() { return monitor_subject_; }
 };
 
 spl::shared_ptr<frame_producer> create_separated_producer(const spl::shared_ptr<frame_producer>& fill, const spl::shared_ptr<frame_producer>& key)

@@ -589,13 +589,10 @@ public:
 		return 300 + config_.device_index;
 	}
 
-	void subscribe(const monitor::observable::observer_ptr& o) override
+	monitor::source& monitor_output()
 	{
+		static monitor::subject monitor_subject(""); return monitor_subject;
 	}
-
-	void unsubscribe(const monitor::observable::observer_ptr& o) override
-	{
-	}	
 };	
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params) 

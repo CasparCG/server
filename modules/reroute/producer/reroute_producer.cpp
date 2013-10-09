@@ -113,12 +113,9 @@ public:
 		return info;
 	}
 		
-	void subscribe(const monitor::observable::observer_ptr& o) override
+	monitor::source& monitor_output()
 	{
-	}
-
-	void unsubscribe(const monitor::observable::observer_ptr& o) override
-	{
+		static monitor::subject monitor_subject(""); return monitor_subject;
 	}
 };
 
@@ -128,7 +125,7 @@ spl::shared_ptr<core::frame_producer> create_producer(core::video_channel& chann
 	
 	std::weak_ptr<reactive::observer<std::map<int, core::draw_frame>>> o = producer;
 
-	channel.stage().subscribe(o);
+	//channel.stage().monitor_output().link_target.subscribe(o);
 
 	return producer;
 }
