@@ -288,7 +288,7 @@ std::string get_fragment(bool blend_modes, bool chroma_key, bool post_processing
 	+
 	"		if(levels)																	\n"
 	"			color.rgb = LevelsControl(												\n"
-	"					color.rgb, min_input, max_input, gamma, min_output, max_output);\n"
+	"					color.rgb, min_input, gamma, max_input, min_output, max_output);\n"
 	"		if(csb)																		\n"
 	"			color.rgb = ContrastSaturationBrightness(color, brt, sat, con);			\n"
 	"		if(has_local_key)															\n"
