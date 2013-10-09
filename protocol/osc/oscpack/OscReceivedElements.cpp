@@ -631,12 +631,12 @@ void ReceivedMessage::Init( const char *message, unsigned long size )
                     case BLOB_TYPE_TAG:
                         {
                             if( argument + 4 > end )
-                                MalformedMessageException( "arguments exceed message size" );
+                                throw MalformedMessageException( "arguments exceed message size" );
                                 
                             uint32 blobSize = ToUInt32( argument );
                             argument = argument + 4 + RoundUp4( (unsigned long)blobSize );
                             if( argument > end )
-                                MalformedMessageException( "arguments exceed message size" );
+                                throw MalformedMessageException( "arguments exceed message size" );
                         }
                         break;
                         

@@ -27,7 +27,7 @@
 
 namespace caspar { namespace accelerator { namespace ogl {
 		
-class shader sealed
+class shader /* final */
 {
 	shader(const shader&);
 	shader& operator=(const shader&);

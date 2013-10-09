@@ -113,8 +113,8 @@ namespace caspar { namespace core {
 
 		void init()
 		{
-			fonts.swap(std::move(enumerate_fonts()));
-			if(fonts.size() > 0)
+			fonts = enumerate_fonts();
+			if(!fonts.empty())
 				register_producer_factory(&create_text_producer);
 		}
 
@@ -188,7 +188,7 @@ public:
 
 		text::string_metrics metrics;
 		font_.set_tracking(static_cast<int>(tracking_.value().get()));
-		std::vector<float> vertex_stream(std::move(font_.create_vertex_stream(text_.value().get(), x_, y_, parent_width_, parent_height_, &metrics)));
+		auto vertex_stream = font_.create_vertex_stream(text_.value().get(), x_, y_, parent_width_, parent_height_, &metrics);
 		auto frame = frame_factory_->create_frame(vertex_stream.data(), pfd);
 		memcpy(frame.image_data().data(), atlas_.data(), frame.image_data().size());
 		frame.set_geometry(frame_geometry(frame_geometry::quad_list, std::move(vertex_stream)));
