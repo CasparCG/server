@@ -1,13 +1,12 @@
-CasparCG Server 2.0.4 Beta 1
-============================
+CasparCG Server 2.0.4
+=====================
 
 Thank you for your interest in CasparCG Server, a professional software used to
 play out and record professional graphics, audio and video to multiple outputs.
 It has been in 24/7 broadcast production since 2006.
 
-This release is NOT considered tested and stable, and it is NOT intended for use
-in professional production. Please use CasparCG Server 2.0.3 if you need 
-proven stability!
+This release is considered tested and stable, and is intended for use in
+professional production.
 
 More information is available at http://casparcg.com/
 
@@ -57,12 +56,12 @@ INSTALLATION
 
 1. Check that your system meets the requirements above.
 
-2. Unzip and place the "CasparCG Server 2.0.4 Beta 1" folder anywhere you like.
+2. Unzip and place the "CasparCG Server 2.0.4" folder anywhere you like.
 
 3. Install "Microsoft Visual C++ 2010 Redistributable Package" from
    http://www.microsoft.com/download/en/details.aspx?id=5555
 
-4. Install "Flash Player 10.3.183.14" from the "Flash Player Installation"
+4. Install "Flash Player 11.8.800.94" from the "Flash Player Installation"
    folder.
 
 5. Make sure you turn off Windows' "Aero Theme" and "ClearType" font smoothing
