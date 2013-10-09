@@ -181,7 +181,7 @@ private:
 };
 
 template<typename I, typename O = I>
-class basic_subject_impl sealed : public subject<I, O>
+class basic_subject_impl /* final */ : public subject<I, O>
 {	
     template <typename, typename> friend class basic_subject_impl;
 
@@ -283,7 +283,7 @@ private:
 };
 
 template<typename I, typename O = I>
-class basic_subject sealed : public subject<I, O>
+class basic_subject : public subject<I, O>
 {	
     template <typename, typename> friend class basic_subject;
 
@@ -306,7 +306,7 @@ public:
 	{
 	}
 		
-	basic_subject(subject&& other)
+	basic_subject(basic_subject&& other)
 		: impl_(std::move(other.impl_))
 	{
 	}

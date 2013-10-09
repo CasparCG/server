@@ -82,7 +82,7 @@ struct field_mode_def
 };
 typedef enum_class<field_mode_def> field_mode;
 
-struct video_format_desc sealed
+struct video_format_desc /* final */
 {
 	video_format		format;		
 

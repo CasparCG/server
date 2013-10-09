@@ -30,7 +30,7 @@ namespace caspar { namespace accelerator { namespace ogl {
 class buffer;
 class device;
 
-class texture sealed
+class texture /* final */
 {
 	texture(const texture&);
 	texture& operator=(const texture&);

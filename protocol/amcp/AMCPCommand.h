@@ -105,7 +105,7 @@ namespace amcp {
 	class AMCPChannelsAwareCommand
 	{
 	protected:
-		AMCPChannelsAwareCommand(const std::vector<channel_context>& c) : channels_(c) {}
+		AMCPChannelsAwareCommand(const std::vector<channel_context>& channels) : channels_(channels) {}
 		AMCPChannelsAwareCommand(const AMCPChannelsAwareCommand& rhs) : channels_(rhs.channels_) {}
 
 		const std::vector<channel_context>& channels() { return channels_; }

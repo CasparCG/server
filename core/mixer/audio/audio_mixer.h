@@ -29,6 +29,7 @@
 #include <tbb/cache_aligned_allocator.h>
 
 #include <vector>
+#include <cstdint>
 
 FORWARD2(caspar, diagnostics, class graph);
 
@@ -36,7 +37,7 @@ namespace caspar { namespace core {
 		
 typedef std::vector<int32_t, tbb::cache_aligned_allocator<int32_t>> audio_buffer;
 
-class audio_mixer sealed : public frame_visitor
+class audio_mixer /* final */ : public frame_visitor
 {
 	audio_mixer(const audio_mixer&);
 	audio_mixer& operator=(const audio_mixer&);

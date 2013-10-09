@@ -48,7 +48,7 @@ struct mutable_frame::impl : boost::noncopyable
 		, audio_data_(std::move(audio_buffer))
 		, desc_(desc)
 		, tag_(tag)
-		, geometry_(frame_geometry::default())
+		, geometry_(frame_geometry::get_default())
 	{
 		BOOST_FOREACH(auto& buffer, buffers_)
 			if(!buffer.data())
@@ -98,7 +98,7 @@ struct const_frame::impl : boost::noncopyable
 		: desc_(core::pixel_format::invalid)
 		, tag_(tag)	
 		, id_(0)
-		, geometry_(frame_geometry::default())
+		, geometry_(frame_geometry::get_default())
 	{
 	}
 	
@@ -107,7 +107,7 @@ struct const_frame::impl : boost::noncopyable
 		, desc_(desc)
 		, tag_(tag)
 		, id_(reinterpret_cast<int>(this))
-		, geometry_(frame_geometry::default())
+		, geometry_(frame_geometry::get_default())
 	{
 		if(desc.format != core::pixel_format::bgra)
 			CASPAR_THROW_EXCEPTION(not_implemented());
