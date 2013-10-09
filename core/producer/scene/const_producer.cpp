@@ -82,12 +82,9 @@ public:
 		return info;
 	}
 
-	void subscribe(const monitor::observable::observer_ptr& o) override															
+	monitor::source& monitor_output()
 	{
-	}
-
-	void unsubscribe(const monitor::observable::observer_ptr& o) override		
-	{
+		static monitor::subject monitor_subject(""); return monitor_subject;
 	}
 };
 

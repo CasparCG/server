@@ -273,12 +273,9 @@ struct scene_producer::impl
 		return info;
 	}
 
-	void subscribe(const monitor::observable::observer_ptr& o)
+	monitor::source& monitor_output()
 	{
-	}
-
-	void unsubscribe(const monitor::observable::observer_ptr& o)
-	{
+		static monitor::subject monitor_subject(""); return monitor_subject;
 	}
 };
 
@@ -345,14 +342,9 @@ boost::unique_future<std::wstring> scene_producer::call(const std::vector<std::w
 	return impl_->call(params);
 }
 
-void scene_producer::subscribe(const monitor::observable::observer_ptr& o)
+monitor::source& scene_producer::monitor_output()
 {
-	impl_->subscribe(o);
-}
-
-void scene_producer::unsubscribe(const monitor::observable::observer_ptr& o)
-{
-	impl_->unsubscribe(o);
+	return impl_->monitor_output();
 }
 
 void scene_producer::store_keyframe(void* timeline_identity, const keyframe& k)

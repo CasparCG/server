@@ -41,8 +41,7 @@ struct video_format_desc;
 
 namespace ffmpeg {
 	
-class audio_decoder : public monitor::observable
-					, boost::noncopyable
+class audio_decoder : public boost::noncopyable
 {
 public:
 	explicit audio_decoder(class input& input, const core::video_format_desc& format_desc);
@@ -56,10 +55,7 @@ public:
 	
 	std::wstring print() const;
 	
-	// monitor::observable
-	
-	void subscribe(const monitor::observable::observer_ptr& o) override;
-	void unsubscribe(const monitor::observable::observer_ptr& o) override;
+	monitor::source& monitor_output();
 
 private:
 	struct impl;

@@ -41,7 +41,7 @@ namespace caspar { namespace core {
 
 class color_producer : public frame_producer_base
 {
-	monitor::basic_subject	event_subject_;
+	monitor::subject		monitor_subject_;
 
 	const std::wstring		color_str_;
 	constraints				constraints_;
@@ -69,7 +69,7 @@ public:
 			
 	draw_frame receive_impl() override
 	{
-		event_subject_ << monitor::event("color") % color_str_;
+		monitor_subject_ << monitor::message("color") % color_str_;
 
 		return frame_;
 	}
@@ -97,15 +97,7 @@ public:
 		return info;
 	}
 
-	void subscribe(const monitor::observable::observer_ptr& o) override															
-	{
-		return event_subject_.subscribe(o);
-	}
-
-	void unsubscribe(const monitor::observable::observer_ptr& o) override		
-	{
-		return event_subject_.unsubscribe(o);
-	}
+	monitor::source& monitor_output() override {return monitor_subject_;}										
 };
 
 std::wstring get_hex_color(const std::wstring& str)

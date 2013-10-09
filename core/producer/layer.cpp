@@ -36,23 +36,28 @@ namespace caspar { namespace core {
 
 struct layer::impl
 {				
-	monitor::basic_subject				event_subject_;
-	monitor::basic_subject				foreground_event_subject_;
-	monitor::basic_subject				background_event_subject_;
+	monitor::subject					monitor_subject_;
 	spl::shared_ptr<frame_producer>		foreground_;
 	spl::shared_ptr<frame_producer>		background_;
 	boost::optional<int32_t>			auto_play_delta_;
 
 public:
 	impl(int index) 
-		: event_subject_(monitor::path("layer") % index)
-		, foreground_event_subject_("")
-		, background_event_subject_("background")
+		: monitor_subject_("/layer/" + boost::lexical_cast<std::string>(index))
+//		, foreground_event_subject_("")
+//		, background_event_subject_("background")
 		, foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
 	{
-		foreground_event_subject_.subscribe(event_subject_);
-		background_event_subject_.subscribe(event_subject_);
+//		foreground_event_subject_.subscribe(event_subject_);
+//		background_event_subject_.subscribe(event_subject_);
+	}
+
+	void set_foreground(spl::shared_ptr<frame_producer> producer)
+	{
+		foreground_->monitor_output().unlink_target(&monitor_subject_);
+		foreground_ = std::move(producer);
+		foreground_->monitor_output().link_target(&monitor_subject_);
 	}
 
 	void pause()
@@ -62,9 +67,9 @@ public:
 	
 	void load(spl::shared_ptr<frame_producer> producer, bool preview, const boost::optional<int32_t>& auto_play_delta)
 	{		
-		background_->unsubscribe(background_event_subject_);
+//		background_->unsubscribe(background_event_subject_);
 		background_ = std::move(producer);
-		background_->subscribe(background_event_subject_);
+//		background_->subscribe(background_event_subject_);
 
 		auto_play_delta_ = auto_play_delta;
 
@@ -84,13 +89,8 @@ public:
 		{
 			background_->leading_producer(foreground_);
 
-			background_->unsubscribe(background_event_subject_);
-			foreground_->unsubscribe(foreground_event_subject_);
-
-			foreground_ = std::move(background_);
+			set_foreground(background_);
 			background_ = std::move(frame_producer::empty());
-			
-			foreground_->subscribe(foreground_event_subject_);
 
 			auto_play_delta_.reset();
 		}
@@ -100,9 +100,7 @@ public:
 	
 	void stop()
 	{
-		foreground_->unsubscribe(foreground_event_subject_);
-
-		foreground_ = std::move(frame_producer::empty());
+		set_foreground(frame_producer::empty());
 
 		auto_play_delta_.reset();
 	}
@@ -126,13 +124,13 @@ public:
 				}
 			}
 
-			event_subject_	<< monitor::event("time")	% monitor::duration(foreground_->frame_number()/format_desc.fps)
-														% monitor::duration(static_cast<int64_t>(foreground_->nb_frames()) - static_cast<int64_t>(auto_play_delta_ ? *auto_play_delta_ : 0)/format_desc.fps)
-							<< monitor::event("frame")	% static_cast<int64_t>(foreground_->frame_number())
-														% static_cast<int64_t>((static_cast<int64_t>(foreground_->nb_frames()) - static_cast<int64_t>(auto_play_delta_ ? *auto_play_delta_ : 0)));
+			//event_subject_	<< monitor::event("time")	% monitor::duration(foreground_->frame_number()/format_desc.fps)
+			//											% monitor::duration(static_cast<int64_t>(foreground_->nb_frames()) - static_cast<int64_t>(auto_play_delta_ ? *auto_play_delta_ : 0)/format_desc.fps)
+			//				<< monitor::event("frame")	% static_cast<int64_t>(foreground_->frame_number())
+			//											% static_cast<int64_t>((static_cast<int64_t>(foreground_->nb_frames()) - static_cast<int64_t>(auto_play_delta_ ? *auto_play_delta_ : 0)));
 
-			foreground_event_subject_ << monitor::event("type") % foreground_->name();
-			background_event_subject_ << monitor::event("type") % background_->name();
+			//foreground_event_subject_ << monitor::event("type") % foreground_->name();
+			//background_event_subject_ << monitor::event("type") % background_->name();
 				
 			return frame;
 		}
@@ -189,8 +187,7 @@ draw_frame layer::receive(const video_format_desc& format_desc) {return impl_->r
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_;}
 boost::property_tree::wptree layer::info() const{return impl_->info();}
-void layer::subscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_.subscribe(o);}
-void layer::unsubscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_.unsubscribe(o);}
+monitor::source& layer::monitor_output() {return impl_->monitor_subject_;}
 void layer::on_interaction(const interaction_event::ptr& event) { impl_->on_interaction(event); }
 bool layer::collides(double x, double y) const { return impl_->collides(x, y); }
 }}

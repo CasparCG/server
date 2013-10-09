@@ -54,7 +54,7 @@ namespace caspar { namespace ffmpeg {
 	
 struct video_decoder::impl : boost::noncopyable
 {
-	monitor::basic_subject					event_subject_;
+	monitor::subject						monitor_subject_;
 	input*									input_;
 	int										index_;
 	const spl::shared_ptr<AVCodecContext>	codec_context_;
@@ -144,10 +144,10 @@ public:
 		if(frame->repeat_pict > 0)
 			CASPAR_LOG(warning) << "[video_decoder] repeat_pict not implemented.";
 				
-		event_subject_  << monitor::event("file/video/width")	% width_
-						<< monitor::event("file/video/height")	% height_
-						<< monitor::event("file/video/field")	% u8(!frame->interlaced_frame ? "progressive" : (frame->top_field_first ? "upper" : "lower"))
-						<< monitor::event("file/video/codec")	% u8(codec_context_->codec->long_name);
+		monitor_subject_  << monitor::message("/file/video/width")	% width_
+						<< monitor::message("/file/video/height")	% height_
+						<< monitor::message("/file/video/field")	% u8(!frame->interlaced_frame ? "progressive" : (frame->top_field_first ? "upper" : "lower"))
+						<< monitor::message("/file/video/codec")	% u8(codec_context_->codec->long_name);
 		
 		return frame;
 	}
@@ -173,7 +173,5 @@ uint32_t video_decoder::nb_frames() const{return impl_->nb_frames();}
 uint32_t video_decoder::file_frame_number() const{return impl_->file_frame_number_;}
 bool video_decoder::is_progressive() const{return impl_->is_progressive_;}
 std::wstring video_decoder::print() const{return impl_->print();}
-void video_decoder::subscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_.subscribe(o);}
-void video_decoder::unsubscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_.unsubscribe(o);}
-
+monitor::source& video_decoder::monitor_output() { return impl_->monitor_subject_; }
 }}

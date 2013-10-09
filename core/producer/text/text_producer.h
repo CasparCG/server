@@ -56,8 +56,7 @@ public:
 	std::wstring print() const override;
 	std::wstring name() const override;
 	boost::property_tree::wptree info() const override;
-	void subscribe(const monitor::observable::observer_ptr& o) override;
-	void unsubscribe(const monitor::observable::observer_ptr& o) override;
+	monitor::source& monitor_output();
 
 	binding<std::wstring>& text();
 	binding<double>& tracking();

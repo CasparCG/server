@@ -9,7 +9,7 @@
 
 namespace caspar { namespace core {
 
-class port : public monitor::observable
+class port
 {
 	port(const port&);
 	port& operator=(const port&);
@@ -29,10 +29,7 @@ public:
 
 	boost::unique_future<bool> send(class const_frame frame);	
 
-	// monitor::observable
-	
-	void subscribe(const monitor::observable::observer_ptr& o) override;
-	void unsubscribe(const monitor::observable::observer_ptr& o) override;
+	monitor::source& monitor_output();
 
 	// Properties
 

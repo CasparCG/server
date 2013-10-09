@@ -34,8 +34,7 @@ struct AVPacket;
 
 namespace caspar { namespace ffmpeg {
 
-class video_decoder : public monitor::observable
-					, boost::noncopyable
+class video_decoder : public boost::noncopyable
 {
 public:
 	explicit video_decoder(class input& input);
@@ -54,10 +53,7 @@ public:
 
 	std::wstring print() const;
 		
-	// monitor::observable
-	
-	void subscribe(const monitor::observable::observer_ptr& o) override;
-	void unsubscribe(const monitor::observable::observer_ptr& o) override;
+	monitor::source& monitor_output();
 
 private:
 	struct impl;

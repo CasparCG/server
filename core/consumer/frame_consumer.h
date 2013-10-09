@@ -35,7 +35,7 @@
 namespace caspar { namespace core {
 
 // Interface
-class frame_consumer : public monitor::observable
+class frame_consumer
 {
 	frame_consumer(const frame_consumer&);
 	frame_consumer& operator=(const frame_consumer&);
@@ -57,8 +57,7 @@ public:
 	
 	// monitor::observable
 
-	virtual void subscribe(const monitor::observable::observer_ptr& o) = 0;
-	virtual void unsubscribe(const monitor::observable::observer_ptr& o) = 0;
+	virtual monitor::source& monitor_output() = 0;
 
 	// Properties
 

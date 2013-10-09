@@ -43,9 +43,9 @@ FORWARD2(caspar, diagnostics, class graph);
 
 namespace caspar { namespace core {
 
-typedef reactive::observable<std::map<int, class draw_frame>> frame_observable;
+//typedef reactive::observable<std::map<int, class draw_frame>> frame_observable;
 	
-class stage sealed : public monitor::observable, public frame_observable, public interaction_sink
+class stage sealed : public interaction_sink
 {
 	stage(const stage&);
 	stage& operator=(const stage&);
@@ -79,15 +79,11 @@ public:
 	boost::unique_future<void>			swap_layer(int index, int other_index);
 	boost::unique_future<void>			swap_layer(int index, int other_index, stage& other);	
 
-	// monitor::observable
+	monitor::source& monitor_output();	
 
-	void subscribe(const monitor::observable::observer_ptr& o) override;
-	void unsubscribe(const monitor::observable::observer_ptr& o) override;
-	
 	// frame_observable
-
-	void subscribe(const frame_observable::observer_ptr& o) override;
-	void unsubscribe(const frame_observable::observer_ptr& o) override;
+	//void subscribe(const frame_observable::observer_ptr& o) override;
+	//void unsubscribe(const frame_observable::observer_ptr& o) override;
 
 	// interaction_sink
 
