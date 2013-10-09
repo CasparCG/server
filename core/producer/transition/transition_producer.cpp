@@ -34,7 +34,7 @@ namespace caspar { namespace core {
 
 class transition_producer : public frame_producer_base
 {	
-	monitor::basic_subject				event_subject_;
+	monitor::subject					monitor_subject_;
 	const field_mode					mode_;
 	int									current_frame_;
 	
@@ -54,7 +54,7 @@ public:
 		, source_producer_(frame_producer::empty())
 		, paused_(false)
 	{
-		dest->subscribe(event_subject_);
+		dest->monitor_output().link_target(&monitor_subject_);
 
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}
@@ -93,8 +93,8 @@ public:
 				source = source_producer_->last_frame();
 		});			
 						
-		event_subject_	<< monitor::event("transition/frame") % current_frame_ % info_.duration
-						<< monitor::event("transition/type") % [&]() -> std::string
+		monitor_subject_	<< monitor::message("/transition/frame") % current_frame_ % info_.duration
+						<< monitor::message("/transition/type") % [&]() -> std::string
 																{
 																	switch(info_.type.value())
 																	{
@@ -207,14 +207,9 @@ public:
 		return draw_frame::over(s_frame, d_frame);
 	}
 
-	void subscribe(const monitor::observable::observer_ptr& o) override															
+	monitor::source& monitor_output()
 	{
-		event_subject_.subscribe(o);
-	}
-
-	void unsubscribe(const monitor::observable::observer_ptr& o) override		
-	{
-		event_subject_.unsubscribe(o);
+		return monitor_subject_;
 	}
 
 	void on_interaction(const interaction_event::ptr& event) override

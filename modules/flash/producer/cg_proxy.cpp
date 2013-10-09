@@ -153,6 +153,11 @@ public:
 			return result.get();
 		return L"";
 	}
+
+	monitor::source& monitor_output()
+	{
+		return flash_producer_->monitor_output();
+	}
 };
 	
 cg_proxy create_cg_proxy(const spl::shared_ptr<core::video_channel>& video_channel, int render_layer)
@@ -214,5 +219,6 @@ void cg_proxy::update(int layer, const std::wstring& data){impl_->update(layer, 
 std::wstring cg_proxy::invoke(int layer, const std::wstring& label){return impl_->timed_invoke(layer, label);}
 std::wstring cg_proxy::description(int layer){return impl_->timed_description(layer);}
 std::wstring cg_proxy::template_host_info(){return impl_->timed_template_host_info();}
+monitor::source& cg_proxy::monitor_output(){return impl_->monitor_output();}
 
 }}

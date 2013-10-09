@@ -167,8 +167,7 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
 		void paused(bool value) override{}
 		uint32_t nb_frames() const override {return 0;}
 		std::wstring print() const override { return L"empty";}
-		void subscribe(const monitor::observable::observer_ptr& o) override{}
-		void unsubscribe(const monitor::observable::observer_ptr& o) override{}	
+		monitor::source& monitor_output() override {static monitor::subject monitor_subject(""); return monitor_subject;}										
 		std::wstring name() const override {return L"empty";}
 		uint32_t frame_number() const override {return 0;}
 		boost::unique_future<std::wstring> call(const std::vector<std::wstring>& params) override{CASPAR_THROW_EXCEPTION(not_supported());}
@@ -250,8 +249,7 @@ public:
 	uint32_t											nb_frames() const override														{return producer_->nb_frames();}
 	class draw_frame									last_frame()																	{return producer_->last_frame();}
 	draw_frame											create_thumbnail_frame()														{return producer_->create_thumbnail_frame();}
-	void												subscribe(const monitor::observable::observer_ptr& o)							{return producer_->subscribe(o);}
-	void												unsubscribe(const monitor::observable::observer_ptr& o)							{return producer_->unsubscribe(o);}
+	monitor::source&									monitor_output() override														{return producer_->monitor_output();}										
 	bool												collides(double x, double y)													{return producer_->collides(x, y);}
 	void												on_interaction(const interaction_event::ptr& event)								{return producer_->on_interaction(event);}
 	constraints&										pixel_constraints() override													{return producer_->pixel_constraints();}

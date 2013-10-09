@@ -37,17 +37,14 @@ namespace core {
 	class thumbnail_generator;
 }
 
-class server sealed : public monitor::observable
-					, boost::noncopyable
+class server sealed : public boost::noncopyable
 {
 public:
 	explicit server(boost::promise<bool>& shutdown_server_now);
 	const std::vector<spl::shared_ptr<core::video_channel>> channels() const;
 	std::shared_ptr<core::thumbnail_generator> get_thumbnail_generator() const;
-	// monitor::observable
 
-	void subscribe(const monitor::observable::observer_ptr& o) override;
-	void unsubscribe(const monitor::observable::observer_ptr& o) override;
+	monitor::source& monitor_output();
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

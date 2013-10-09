@@ -87,12 +87,9 @@ boost::property_tree::wptree hotswap_producer::info() const
 	return info;
 }
 
-void hotswap_producer::subscribe(const monitor::observable::observer_ptr& o)
+monitor::source& hotswap_producer::monitor_output()
 {
-}
-
-void hotswap_producer::unsubscribe(const monitor::observable::observer_ptr& o)
-{
+	static monitor::subject monitor_subject(""); return monitor_subject;
 }
 
 binding<std::shared_ptr<frame_producer>>& hotswap_producer::producer()

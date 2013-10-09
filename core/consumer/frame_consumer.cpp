@@ -85,8 +85,7 @@ public:
 	bool has_synchronization_clock() const override														{return consumer_->has_synchronization_clock();}
 	int buffer_depth() const override																	{return consumer_->buffer_depth();}
 	int index() const override																			{return consumer_->index();}
-	void subscribe(const monitor::observable::observer_ptr& o) override									{consumer_->subscribe(o);}
-	void unsubscribe(const monitor::observable::observer_ptr& o) override								{consumer_->unsubscribe(o);}			
+	monitor::source& monitor_output() override															{return consumer_->monitor_output();}										
 };
 
 class print_consumer_proxy : public frame_consumer
@@ -115,8 +114,7 @@ public:
 	bool has_synchronization_clock() const override												{return consumer_->has_synchronization_clock();}
 	int buffer_depth() const override															{return consumer_->buffer_depth();}
 	int index() const override																	{return consumer_->index();}
-	void subscribe(const monitor::observable::observer_ptr& o) override									{consumer_->subscribe(o);}
-	void unsubscribe(const monitor::observable::observer_ptr& o) override								{consumer_->unsubscribe(o);}	
+	monitor::source& monitor_output() override													{return consumer_->monitor_output();}										
 };
 
 class recover_consumer_proxy : public frame_consumer
@@ -166,8 +164,7 @@ public:
 	bool has_synchronization_clock() const override							{return consumer_->has_synchronization_clock();}
 	int buffer_depth() const override										{return consumer_->buffer_depth();}
 	int index() const override												{return consumer_->index();}
-	void subscribe(const monitor::observable::observer_ptr& o) override		{consumer_->subscribe(o);}
-	void unsubscribe(const monitor::observable::observer_ptr& o) override	{consumer_->unsubscribe(o);}	
+	monitor::source& monitor_output() override								{return consumer_->monitor_output();}										
 };
 
 // This class is used to guarantee that audio cadence is correct. This is important for NTSC audio.
@@ -218,8 +215,7 @@ public:
 	bool has_synchronization_clock() const override							{return consumer_->has_synchronization_clock();}
 	int buffer_depth() const override										{return consumer_->buffer_depth();}
 	int index() const override												{return consumer_->index();}
-	void subscribe(const monitor::observable::observer_ptr& o) override		{consumer_->subscribe(o);}
-	void unsubscribe(const monitor::observable::observer_ptr& o) override	{consumer_->unsubscribe(o);}	
+	monitor::source& monitor_output() override								{return consumer_->monitor_output();}										
 };
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
@@ -263,8 +259,7 @@ const spl::shared_ptr<frame_consumer>& frame_consumer::empty()
 		bool has_synchronization_clock() const override {return false;}
 		int buffer_depth() const override {return 0;};
 		virtual int index() const{return -1;}
-		void subscribe(const monitor::observable::observer_ptr& o) override{}
-		void unsubscribe(const monitor::observable::observer_ptr& o) override{}
+		monitor::source& monitor_output() override {static monitor::subject monitor_subject(""); return monitor_subject;}										
 		boost::property_tree::wptree info() const override
 		{
 			boost::property_tree::wptree info;

@@ -44,7 +44,6 @@
 
 #include <protocol/util/strategy_adapters.h>
 #include <protocol/amcp/AMCPProtocolStrategy.h>
-#include <protocol/osc/server.h>
 
 #include <modules/bluefish/bluefish.h>
 #include <modules/decklink/decklink.h>
@@ -66,6 +65,7 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/foreach.hpp>
 #include <boost/locale.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/thread.hpp>
 #include <boost/thread/future.hpp>
@@ -288,10 +288,7 @@ bool run()
 
 	// Create server object which initializes channels, protocols and controllers.
 	server caspar_server(shutdown_server_now);
-				
-	auto server = spl::make_shared<protocol::osc::server>(5253);
-	caspar_server.subscribe(server);
-						
+	
 	//auto console_obs = reactive::make_observer([](const monitor::event& e)
 	//{
 	//	std::stringstream str;

@@ -34,7 +34,7 @@ FORWARD2(caspar, diagnostics, class graph);
 
 namespace caspar { namespace core {
 	
-class output sealed : public monitor::observable
+class output sealed
 {
 	output(const output&);
 	output& operator=(const output&);
@@ -55,10 +55,7 @@ public:
 	void remove(const spl::shared_ptr<class frame_consumer>& consumer);
 	void remove(int index);
 	
-	// monitor::observable
-
-	void subscribe(const monitor::observable::observer_ptr& o) override;
-	void unsubscribe(const monitor::observable::observer_ptr& o) override;
+	monitor::source& monitor_output();
 
 	// Properties
 
