@@ -57,10 +57,12 @@ public:
 		TitleHolder() : titleName(L""), pframe_producer(core::frame_producer::empty())	{}
 		TitleHolder(const std::wstring& name, spl::shared_ptr<core::frame_producer> pFP) : titleName(name), pframe_producer(pFP) {}
 		TitleHolder(const TitleHolder& th) : titleName(th.titleName), pframe_producer(th.pframe_producer) {}
-		const TitleHolder& operator=(const TitleHolder& th) 
+		TitleHolder& operator=(const TitleHolder& th) 
 		{
 			titleName = th.titleName;
 			pframe_producer = th.pframe_producer;
+
+			return *this;
 		}
 		bool operator==(const TitleHolder& rhs) 
 		{

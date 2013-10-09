@@ -470,7 +470,7 @@ public:
 	}
 
 	void on_change(
-			const std::weak_ptr<void> dependant,
+			const std::weak_ptr<void>& dependant,
 			const std::function<void ()>& listener) const
 	{
 		impl_->on_change(dependant, listener);

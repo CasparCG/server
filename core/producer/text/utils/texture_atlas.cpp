@@ -62,18 +62,16 @@ public:
 
 	rect get_region(int width, int height)
 	{
-		int y, best_height, best_width;
-    
 		rect region = {0,0,(int)width,(int)height};
 
-		best_height = INT_MAX;
-		best_width = INT_MAX;
+		int best_height = INT_MAX;
+		int best_width = INT_MAX;
 		node_iterator best_it = nodes_.end();
 
 		auto it = nodes_.begin();
 		for(; it != nodes_.end(); ++it)
 		{
-			y = fit(it, width, height);
+			int y = fit(it, width, height);
 			if( y >= 0 )
 			{
 				if( ( (y + height) < best_height ) ||
@@ -166,11 +164,9 @@ public:
 private:
 	int fit(node_iterator it, const size_t width, const size_t height)
 	{
-		int x, y, width_left;
-
-		x = (*it).x;
-		y = (*it).y;
-		width_left = (int)width;
+		int x = (*it).x;
+		int y = (*it).y;
+		int width_left = (int)width;
 
 		if ((x + width) > (width_ - 1))
 			return -1;

@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <common/memory.h>
+#include <memory>
 #include <vector>
 
 namespace caspar { namespace core {
@@ -37,18 +37,16 @@ public:
 	};
 
 	frame_geometry();
-	frame_geometry(const frame_geometry&);
 	frame_geometry(geometry_type, std::vector<float>);
-	const frame_geometry& operator=(const frame_geometry&);
 
-	geometry_type type();
-	const std::vector<float>& data();
-	
-	static const frame_geometry& default();
+	geometry_type type() const ;
+	const std::vector<float>& data() const;
+
+	static const frame_geometry& get_default();
 
 private:
 	struct impl;
-	spl::shared_ptr<impl> impl_;
+	std::shared_ptr<impl> impl_;
 };
 
 }}

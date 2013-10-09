@@ -516,10 +516,10 @@ public:
 				break;
 
 			unsigned long colIndex = 0;
-			unsigned char length = 0;
+
 			do
 			{
-				length = 0;
+				unsigned char length = 0;
 
 				//Get controlbyte
 				char controlByte = static_cast<char>(stream.read_byte());

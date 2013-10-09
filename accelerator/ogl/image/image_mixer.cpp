@@ -281,7 +281,7 @@ private:
 		draw_params.transform			= core::image_transform();
 		draw_params.blend_mode			= blend_mode;
 		draw_params.background			= target_texture;
-		draw_params.geometry			= core::frame_geometry::default();
+		draw_params.geometry			= core::frame_geometry::get_default();
 
 		kernel_.draw(std::move(draw_params));
 	}

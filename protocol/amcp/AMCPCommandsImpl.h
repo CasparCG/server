@@ -35,10 +35,10 @@ std::wstring ListTemplates();
 
 namespace amcp {
 	
-class ChannelGridCommand : public AMCPCommandBase<0>
+class ChannelGridCommand : public AMCPCommandBase<0>, AMCPChannelsAwareCommand
 {
 public:
-	explicit ChannelGridCommand(IO::ClientInfoPtr client) : AMCPCommandBase(client) {}
+	ChannelGridCommand(IO::ClientInfoPtr client, const std::vector<channel_context>& channels) : AMCPCommandBase(client), AMCPChannelsAwareCommand(channels) {}
 	std::wstring print() const { return L"ChannelGridCommand";}
 	bool DoExecute();
 };
@@ -297,7 +297,7 @@ public:
 class ThumbnailCommand : public AMCPCommandBase<1>
 {
 public:
-	ThumbnailCommand::ThumbnailCommand(IO::ClientInfoPtr client, std::shared_ptr<core::thumbnail_generator> thumb_gen) : AMCPCommandBase(client), thumb_gen_(thumb_gen) 
+	ThumbnailCommand(IO::ClientInfoPtr client, std::shared_ptr<core::thumbnail_generator> thumb_gen) : AMCPCommandBase(client), thumb_gen_(thumb_gen) 
 	{}
 	std::wstring print() const { return L"ThumbnailCommand";}
 	bool DoExecute();

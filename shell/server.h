@@ -37,7 +37,7 @@ namespace core {
 	class thumbnail_generator;
 }
 
-class server sealed : public boost::noncopyable
+class server /* final */ : public boost::noncopyable
 {
 public:
 	explicit server(boost::promise<bool>& shutdown_server_now);

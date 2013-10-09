@@ -39,7 +39,7 @@ FORWARD2(caspar, core, struct frame_transform);
 
 namespace caspar { namespace accelerator { namespace ogl {
 	
-class image_mixer sealed : public core::image_mixer
+class image_mixer /* final */ : public core::image_mixer
 {
 	image_mixer(const image_mixer&);
 	image_mixer& operator=(const image_mixer&);

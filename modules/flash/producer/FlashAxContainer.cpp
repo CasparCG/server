@@ -863,9 +863,7 @@ bool FlashAxContainer::DrawControl(HDC targetDC)
 {
 //	ATLTRACE(_T("FlashAxContainer::DrawControl\n"));
 	DVASPECTINFO aspectInfo = {sizeof(DVASPECTINFO), DVASPECTINFOFLAG_CANOPTIMIZE};
-	HRESULT hr = S_OK;
-
-	hr = m_spViewObject->Draw(DVASPECT_CONTENT, -1, &aspectInfo, NULL, NULL, targetDC, NULL, NULL, NULL, NULL); 
+	HRESULT hr = m_spViewObject->Draw(DVASPECT_CONTENT, -1, &aspectInfo, NULL, NULL, targetDC, NULL, NULL, NULL, NULL); 
 	bInvalidRect_ = false;
 /*	const video_format_desc& fmtDesc = video_format_desc::FormatDescriptions[format_];
 
