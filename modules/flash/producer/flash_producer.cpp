@@ -167,7 +167,7 @@ class flash_renderer
 		}
 	} com_init_;
 
-	monitor::basic_subject&						event_subject_;
+	monitor::subject&							monitor_subject_;
 
 	const std::wstring							filename_;
 
@@ -185,8 +185,8 @@ class flash_renderer
 	const int									height_;
 	
 public:
-	flash_renderer(monitor::basic_subject& event_subject, const spl::shared_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
-		: event_subject_(event_subject)
+	flash_renderer(monitor::subject& monitor_subject, const spl::shared_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
+		: monitor_subject_(monitor_subject)
 		, graph_(graph)
 		, filename_(filename)
 		, frame_factory_(frame_factory)
@@ -264,7 +264,7 @@ public:
 			graph_->set_tag("sync");
 
 		graph_->set_value("sync", sync);
-		event_subject_ << monitor::event("sync") % sync;
+		monitor_subject_ << monitor::message("/sync") % sync;
 		
 		ax_->Tick();
 					
@@ -299,7 +299,7 @@ public:
 		}		
 										
 		graph_->set_value("frame-time", static_cast<float>(frame_timer.elapsed()/frame_time)*0.5f);
-		event_subject_ << monitor::event("renderer/profiler/time") % frame_timer.elapsed() % frame_time;
+		monitor_subject_ << monitor::message("/renderer/profiler/time") % frame_timer.elapsed() % frame_time;
 		return head_;
 	}
 	
@@ -324,7 +324,7 @@ public:
 
 struct flash_producer : public core::frame_producer_base
 {	
-	monitor::basic_subject							event_subject_;
+	monitor::subject								monitor_subject_;
 	const std::wstring								filename_;	
 	const spl::shared_ptr<core::frame_factory>		frame_factory_;
 	const core::video_format_desc					format_desc_;
@@ -387,11 +387,11 @@ public:
 		else		
 			graph_->set_tag("late-frame");		
 				
-		event_subject_ << monitor::event("host/path")	% filename_
-					   << monitor::event("host/width")	% width_
-					   << monitor::event("host/height") % height_
-					   << monitor::event("host/fps")	% fps_
-					   << monitor::event("buffer")		% output_buffer_.size() % buffer_size_;
+		monitor_subject_ << monitor::message("/host/path")	% filename_
+						<< monitor::message("/host/width")	% width_
+						<< monitor::message("/host/height") % height_
+						<< monitor::message("/host/fps")	% fps_
+						<< monitor::message("/buffer")		% output_buffer_.size() % buffer_size_;
 
 		return last_frame_ = frame;
 	}
@@ -411,7 +411,7 @@ public:
 			{
 				if(!renderer_)
 				{
-					renderer_.reset(new flash_renderer(event_subject_, graph_, frame_factory_, filename_, width_, height_));
+					renderer_.reset(new flash_renderer(monitor_subject_, graph_, frame_factory_, filename_, width_, height_));
 
 					while(output_buffer_.size() < buffer_size_)
 						output_buffer_.push(core::draw_frame::empty());
@@ -446,14 +446,9 @@ public:
 		return info;
 	}
 
-	void subscribe(const monitor::observable::observer_ptr& o) override
+	monitor::source& monitor_output()
 	{
-		event_subject_.subscribe(o);
-	}
-
-	void unsubscribe(const monitor::observable::observer_ptr& o) override
-	{
-		event_subject_.unsubscribe(o);
+		return monitor_subject_;
 	}
 
 	// flash_producer
@@ -503,7 +498,7 @@ public:
 		}
 
 		graph_->set_value("tick-time", static_cast<float>(tick_timer_.elapsed()/fps_)*0.5f);
-		event_subject_ << monitor::event("profiler/time") % tick_timer_.elapsed() % fps_;
+		monitor_subject_ << monitor::message("/profiler/time") % tick_timer_.elapsed() % fps_;
 
 		output_buffer_.push(std::move(frame_buffer_.front()));
 		frame_buffer_.pop();

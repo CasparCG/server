@@ -262,7 +262,7 @@ struct ffmpeg_consumer : boost::noncopyable
 	const std::shared_ptr<AVFormatContext>		oc_;
 	const core::video_format_desc				format_desc_;	
 
-	monitor::basic_subject						event_subject_;
+	monitor::subject							monitor_subject_;
 	
 	tbb::spin_mutex								exception_mutex_;
 	std::exception_ptr							exception_;
@@ -388,15 +388,10 @@ public:
 		return L"ffmpeg[" + u16(filename_) + L"]";
 	}
 	
-	void subscribe(const monitor::observable::observer_ptr& o)
+	monitor::source& monitor_output()
 	{
-		event_subject_.subscribe(o);
+		return monitor_subject_;
 	}
-
-	void unsubscribe(const monitor::observable::observer_ptr& o)
-	{
-		event_subject_.unsubscribe(o);
-	}		
 
 private:
 	std::shared_ptr<AVStream> add_video_stream(std::vector<option>& options)
@@ -548,7 +543,7 @@ private:
 		av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper;
 		av_frame->pts				= frame_number_++;
 
-		event_subject_ << monitor::event("frame")	% static_cast<int64_t>(frame_number_)
+		monitor_subject_ << monitor::message("/frame")	% static_cast<int64_t>(frame_number_)
 													% static_cast<int64_t>(std::numeric_limits<int64_t>::max());
 
 		AVPacket pkt;
@@ -848,15 +843,10 @@ public:
 		return 200;
 	}
 
-	void subscribe(const monitor::observable::observer_ptr& o) override
+	monitor::source& monitor_output()
 	{
-		consumer_->subscribe(o);
+		return consumer_->monitor_output();
 	}
-
-	void unsubscribe(const monitor::observable::observer_ptr& o) override
-	{
-		consumer_->unsubscribe(o);
-	}		
 };	
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
 {

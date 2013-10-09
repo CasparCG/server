@@ -74,7 +74,7 @@ std::pair<core::draw_frame, core::constraints> load_image(
 
 struct image_producer : public core::frame_producer_base
 {	
-	monitor::basic_subject	event_subject_;
+	monitor::subject		monitor_subject_;
 	const std::wstring		description_;
 	const spl::shared_ptr<core::frame_factory> frame_factory_;
 	core::draw_frame		frame_;
@@ -116,7 +116,7 @@ struct image_producer : public core::frame_producer_base
 
 	core::draw_frame receive_impl() override
 	{
-		event_subject_ << monitor::event("file/path") % description_;
+		monitor_subject_ << monitor::message("/file/path") % description_;
 
 		return frame_;
 	}
@@ -149,14 +149,9 @@ struct image_producer : public core::frame_producer_base
 		return info;
 	}
 
-	void subscribe(const monitor::observable::observer_ptr& o) override															
+	monitor::source& monitor_output() 
 	{
-		return event_subject_.subscribe(o);
-	}
-
-	void unsubscribe(const monitor::observable::observer_ptr& o) override		
-	{
-		return event_subject_.unsubscribe(o);
+		return monitor_subject_;
 	}
 };
 

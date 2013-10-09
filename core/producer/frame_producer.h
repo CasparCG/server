@@ -56,7 +56,7 @@ struct constraints
 };
 	
 // Interface
-class frame_producer : public monitor::observable, public interaction_sink
+class frame_producer : public interaction_sink
 {
 	frame_producer(const frame_producer&);
 	frame_producer& operator=(const frame_producer&);
@@ -80,8 +80,7 @@ public:
 	
 	// monitor::observable
 
-	virtual void subscribe(const monitor::observable::observer_ptr& o) = 0;
-	virtual void unsubscribe(const monitor::observable::observer_ptr& o) = 0;
+	virtual monitor::source& monitor_output() = 0;
 
 	// interaction_sink
 	virtual void on_interaction(const interaction_event::ptr& event) override { }

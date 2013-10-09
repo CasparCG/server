@@ -94,8 +94,8 @@ public:
 	std::wstring name() const override;
 	boost::unique_future<std::wstring>	call(const std::vector<std::wstring>& params) override;
 	boost::property_tree::wptree info() const override;
-	void subscribe(const monitor::observable::observer_ptr& o) override;
-	void unsubscribe(const monitor::observable::observer_ptr& o) override;
+	monitor::source& monitor_output();
+
 	layer& create_layer(
 			const spl::shared_ptr<frame_producer>& producer, int x, int y, const std::wstring& name);
 	layer& create_layer(

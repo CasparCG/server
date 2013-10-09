@@ -66,7 +66,7 @@ namespace caspar { namespace ffmpeg {
 				
 struct ffmpeg_producer : public core::frame_producer_base
 {
-	monitor::basic_subject							event_subject_;
+	monitor::subject								monitor_subject_;
 	const std::wstring								filename_;
 	
 	const spl::shared_ptr<diagnostics::graph>		graph_;
@@ -113,7 +113,7 @@ public:
 		try
 		{
 			video_decoder_.reset(new video_decoder(input_));
-			video_decoder_->subscribe(event_subject_);
+			video_decoder_->monitor_output().link_target(&monitor_subject_);
 			constraints_.width.set(video_decoder_->width());
 			constraints_.height.set(video_decoder_->height());
 			
@@ -132,7 +132,7 @@ public:
 		try
 		{
 			audio_decoder_ .reset(new audio_decoder(input_, format_desc_));
-			audio_decoder_->subscribe(event_subject_);
+			audio_decoder_->monitor_output().link_target(&monitor_subject_);
 			
 			CASPAR_LOG(info) << print() << L" " << audio_decoder_->print();
 		}
@@ -172,15 +172,15 @@ public:
 			graph_->set_tag("underflow");
 									
 		graph_->set_value("frame-time", frame_timer.elapsed()*format_desc_.fps*0.5);
-		event_subject_	<< monitor::event("profiler/time") % frame_timer.elapsed() % (1.0/format_desc_.fps);			
+		monitor_subject_	<< monitor::message("/profiler/time") % frame_timer.elapsed() % (1.0/format_desc_.fps);			
 								
-		event_subject_	<< monitor::event("file/time")			% monitor::duration(file_frame_number()/fps_) 
-																% monitor::duration(file_nb_frames()/fps_)
-						<< monitor::event("file/frame")			% static_cast<int32_t>(file_frame_number())
+		monitor_subject_	<< monitor::message("/file/time")			% (file_frame_number()/fps_) 
+																% (file_nb_frames()/fps_)
+							<< monitor::message("/file/frame")			% static_cast<int32_t>(file_frame_number())
 																% static_cast<int32_t>(file_nb_frames())
-						<< monitor::event("file/fps")			% fps_
-						<< monitor::event("file/path")			% filename_
-						<< monitor::event("loop")				% input_.loop();
+							<< monitor::message("/file/fps")			% fps_
+							<< monitor::message("/file/path")			% filename_
+							<< monitor::message("/loop")				% input_.loop();
 						
 		return frame;
 	}
@@ -296,14 +296,9 @@ public:
 		return info;
 	}
 	
-	void subscribe(const monitor::observable::observer_ptr& o) override
+	monitor::source& monitor_output()
 	{
-		event_subject_.subscribe(o);
-	}
-
-	void unsubscribe(const monitor::observable::observer_ptr& o) override
-	{
-		event_subject_.unsubscribe(o);
+		return monitor_subject_;
 	}
 
 	// ffmpeg_producer

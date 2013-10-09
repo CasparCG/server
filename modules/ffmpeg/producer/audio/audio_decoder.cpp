@@ -59,7 +59,7 @@ uint64_t get_channel_layout(AVCodecContext* dec)
 
 struct audio_decoder::impl : boost::noncopyable
 {	
-	monitor::basic_subject										event_subject_;
+	monitor::subject											monitor_subject_;
 	input*														input_;
 	int															index_;
 	const spl::shared_ptr<AVCodecContext>						codec_context_;		
@@ -149,10 +149,10 @@ public:
 		frame->nb_samples	= channel_samples;
 		frame->format		= AV_SAMPLE_FMT_S32;
 							
-		event_subject_  << monitor::event("file/audio/sample-rate")	% codec_context_->sample_rate
-						<< monitor::event("file/audio/channels")	% codec_context_->channels
-						<< monitor::event("file/audio/format")		% u8(av_get_sample_fmt_name(codec_context_->sample_fmt))
-						<< monitor::event("file/audio/codec")		% u8(codec_context_->codec->long_name);			
+		monitor_subject_  << monitor::message("/file/audio/sample-rate")	% codec_context_->sample_rate
+						<< monitor::message("/file/audio/channels")	% codec_context_->channels
+						<< monitor::message("/file/audio/format")		% u8(av_get_sample_fmt_name(codec_context_->sample_fmt))
+						<< monitor::message("/file/audio/codec")		% u8(codec_context_->codec->long_name);			
 
 		return frame;
 	}
@@ -174,7 +174,5 @@ audio_decoder& audio_decoder::operator=(audio_decoder&& other){impl_ = std::move
 std::shared_ptr<AVFrame> audio_decoder::operator()(){return impl_->poll();}
 uint32_t audio_decoder::nb_frames() const{return impl_->nb_frames();}
 std::wstring audio_decoder::print() const{return impl_->print();}
-void audio_decoder::subscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_.subscribe(o);}
-void audio_decoder::unsubscribe(const monitor::observable::observer_ptr& o){impl_->event_subject_.unsubscribe(o);}
-
+monitor::source& audio_decoder::monitor_output() { return impl_->monitor_subject_;}
 }}

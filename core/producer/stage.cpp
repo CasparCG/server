@@ -51,8 +51,8 @@ namespace caspar { namespace core {
 struct stage::impl : public std::enable_shared_from_this<impl>
 {				
 	spl::shared_ptr<diagnostics::graph>							graph_;
-	monitor::basic_subject										event_subject_;
-	reactive::basic_subject<std::map<int, class draw_frame>>	frames_subject_;
+	monitor::subject											monitor_subject_;
+	//reactive::basic_subject<std::map<int, class draw_frame>>	frames_subject_;
 	std::map<int, layer>										layers_;	
 	std::map<int, tweened_transform>							tweens_;
 	interaction_aggregator										aggregator_;
@@ -60,7 +60,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 public:
 	impl(spl::shared_ptr<diagnostics::graph> graph) 
 		: graph_(std::move(graph))
-		, event_subject_("stage")
+		, monitor_subject_("/stage")
 		, aggregator_([=] (double x, double y) { return collission_detect(x, y); })
 		, executor_(L"stage")
 	{
@@ -101,10 +101,10 @@ public:
 			return frames;
 		});
 		
-		frames_subject_ << frames;
+		//frames_subject_ << frames;
 		
 		graph_->set_value("produce-time", frame_timer.elapsed()*format_desc.fps*0.5);
-		event_subject_ << monitor::event("profiler/time") % frame_timer.elapsed() % (1.0/format_desc.fps);
+		monitor_subject_ << monitor::message("/profiler/time") % frame_timer.elapsed() % (1.0/format_desc.fps);
 
 		return frames;
 	}
@@ -134,7 +134,7 @@ public:
 		if(it == std::end(layers_))
 		{
 			it = layers_.insert(std::make_pair(index, layer(index))).first;
-			it->second.subscribe(event_subject_);
+			it->second.monitor_output().link_target(&monitor_subject_);
 		}
 		return it->second;
 	}
@@ -190,7 +190,7 @@ public:
 	{		
 		return executor_.begin_invoke([=]
 		{
-			layers_[index].pause();
+			get_layer(index).pause();
 		}, task_priority::high_priority);
 	}
 
@@ -198,7 +198,7 @@ public:
 	{		
 		return executor_.begin_invoke([=]
 		{
-			layers_[index].play();
+			get_layer(index).play();
 		}, task_priority::high_priority);
 	}
 
@@ -206,7 +206,7 @@ public:
 	{		
 		return executor_.begin_invoke([=]
 		{
-			layers_[index].stop();
+			get_layer(index).stop();
 		}, task_priority::high_priority);
 	}
 
@@ -239,18 +239,18 @@ public:
 			auto other_layers	= other_impl->layers_ | boost::adaptors::map_values;
 
 			BOOST_FOREACH(auto& layer, layers)
-				layer.unsubscribe(event_subject_);
+				layer.monitor_output().unlink_target(&monitor_subject_);
 			
 			BOOST_FOREACH(auto& layer, other_layers)
-				layer.unsubscribe(event_subject_);
+				layer.monitor_output().unlink_target(&monitor_subject_);
 			
 			std::swap(layers_, other_impl->layers_);
 						
 			BOOST_FOREACH(auto& layer, layers)
-				layer.subscribe(event_subject_);
+				layer.monitor_output().link_target(&monitor_subject_);
 			
 			BOOST_FOREACH(auto& layer, other_layers)
-				layer.subscribe(event_subject_);
+				layer.monitor_output().link_target(&monitor_subject_);
 		};		
 
 		return executor_.begin_invoke([=]
@@ -263,7 +263,7 @@ public:
 	{
 		return executor_.begin_invoke([=]
 		{
-			std::swap(layers_[index], layers_[other_index]);
+			std::swap(get_layer(index), get_layer(other_index));
 		}, task_priority::high_priority);
 	}
 
@@ -280,13 +280,13 @@ public:
 				auto& my_layer		= get_layer(index);
 				auto& other_layer	= other_impl->get_layer(other_index);
 
-				my_layer.unsubscribe(event_subject_);
-				other_layer.unsubscribe(other_impl->event_subject_);
+				my_layer.monitor_output().unlink_target(&monitor_subject_);
+				other_layer.monitor_output().unlink_target(&other_impl->monitor_subject_);
 
 				std::swap(my_layer, other_layer);
 
-				my_layer.subscribe(event_subject_);
-				other_layer.subscribe(other_impl->event_subject_);
+				my_layer.monitor_output().link_target(&monitor_subject_);
+				other_layer.monitor_output().link_target(&other_impl->monitor_subject_);
 			};		
 
 			return executor_.begin_invoke([=]
@@ -300,7 +300,7 @@ public:
 	{
 		return executor_.begin_invoke([=]
 		{
-			return layers_[index].foreground();
+			return get_layer(index).foreground();
 		}, task_priority::high_priority);
 	}
 	
@@ -308,7 +308,7 @@ public:
 	{
 		return executor_.begin_invoke([=]
 		{
-			return layers_[index].background();
+			return get_layer(index).background();
 		}, task_priority::high_priority);
 	}
 
@@ -328,7 +328,7 @@ public:
 	{
 		return executor_.begin_invoke([=]
 		{
-			return layers_[index].info();
+			return get_layer(index).info();
 		}, task_priority::high_priority);
 	}		
 	
@@ -336,7 +336,7 @@ public:
 	{
 		return flatten(executor_.begin_invoke([=]
 		{
-			return make_shared(layers_[index].foreground()->call(params));
+			return make_shared(get_layer(index).foreground()->call(params));
 		}, task_priority::high_priority));
 	}
 
@@ -389,9 +389,8 @@ boost::unique_future<spl::shared_ptr<frame_producer>> stage::background(int inde
 boost::unique_future<boost::property_tree::wptree> stage::info() const{return impl_->info();}
 boost::unique_future<boost::property_tree::wptree> stage::info(int index) const{return impl_->info(index);}
 std::map<int, class draw_frame> stage::operator()(const video_format_desc& format_desc){return (*impl_)(format_desc);}
-void stage::subscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_.subscribe(o);}
-void stage::unsubscribe(const monitor::observable::observer_ptr& o) {impl_->event_subject_.unsubscribe(o);}
-void stage::subscribe(const frame_observable::observer_ptr& o) {impl_->frames_subject_.subscribe(o);}
-void stage::unsubscribe(const frame_observable::observer_ptr& o) {impl_->frames_subject_.unsubscribe(o);}
+monitor::source& stage::monitor_output(){return impl_->monitor_subject_;}
+//void stage::subscribe(const frame_observable::observer_ptr& o) {impl_->frames_subject_.subscribe(o);}
+//void stage::unsubscribe(const frame_observable::observer_ptr& o) {impl_->frames_subject_.unsubscribe(o);}
 void stage::on_interaction(const interaction_event::ptr& event) { impl_->on_interaction(event); }
 }}
