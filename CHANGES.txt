@@ -1,10 +1,67 @@
 C H A N G E S
 
+CasparCG 2.0.4 Stable (as compared to 2.0.4 Beta 1)
+===================================================
+
+General
+-------
+
+  o Can now open media with digit only names.
+  o Misc stability and performance improvements.
+
+Video mixer
+-----------
+
+  o Conditional compilation of chroma key support and straight alpha output
+    support in shader (just like with blend-modes) because of performance impact
+    even when not in use on a layer/on a channel. New <mixer /> element added to
+    configuration for turning on mixer features that not everybody would want to
+    pay for (performance-wise). blend-modes also moved into this element.
+  o MIXER LEVELS interpretet arguments in the wrong order, so that gamma was
+    interpreted as max_input and vice versa.
+
+Consumers
+---------
+
+  o Replaced usage of SFML for <system-audio /> with PortAudio, because of
+    problems with SFML since change to static linkage. Also PortAudio seems to
+    give lower latency.
+  o Added support for NewTek AirPlay. Enables the use of the CasparCG Server
+    output as an input source in a NewTek TriCaster without requiring a video
+    card. <newtek /> element in config enables AirPlay on a channel.
+  o Decklink: Created custom decklink allocator for reducing memory footprint.
+
+Producers
+---------
+
+  o ffmpeg: Added support for arbitrary ffmpeg options in ffmpeg_producer.
+  o flash: No longer starts a flash player to service CG commands that means
+    nothing without an already running flash player.
+  o flash: globally serialize initialization and destruction of flash players,
+    to avoid race conditions in flash.
+  o flash: changed so that the flash buffer is filled with flash player
+    generated content at initialization instead of empty frames.
+
+OSC
+---
+
+  o Performance improvements.
+  o Never send old values to OSC reveivers, collect the latest value of each
+    path logged since last UDP send, and send the new UDP packet (to each
+    subscribing OSC receiver) with the values collected.
+  o Batch as many OSC messages as possible in an OSC bundle to reduce the number
+    of UDP packets sent. Breakup into separate packages if necessary to avoid
+    fragmentation.
+  o Removed usage of Microsoft Agents library (server ran out of memory after a
+    while) in favour of direct synchronous invocations.
+
+
 CasparCG 2.0.4 Beta 1 (as compared to 2.0.3 Stable)
 ===================================================
 
 General
 -------
+
   o Front-end GUI for simplified configuration and easy access to common tasks.
   o Added support for video and images file thumbnail generation. By default the
     media directory is scanned every 5 seconds for new/modified/removed files
@@ -101,12 +158,12 @@ AMCP
     FFmpeg consumer creating an additional output_a.mov containing only the key.
   o Added KILL command for shutting down the server without console access.
   o Added RESTART command for shutting down the server in the same way as KILL
-    except that the return code from CasparCG Server is 5 instead of 0, which 
-    can be used by parent process to take other actions. 
-    The 'casparcg_auto_restart.bat' script restarts the server if the 
-    return code is 5.
+    except that the return code from CasparCG Server is 5 instead of 0, which
+    can be used by parent process to take other actions. The
+    'casparcg_auto_restart.bat' script restarts the server if the return code is
+    5.
   o DATA RETRIEVE now returns linefeeds encoded as an actual linefeed (the
-    single character 0x0a) instead of the previous two characters;
+    single character 0x0a) instead of the previous two characters:
     \ followed by n.
   o MIXER CHROMA command added to control the chroma keying. Example:
     MIXER 1-1 CHROMA GREEN|BLUE 0.10 0.04
