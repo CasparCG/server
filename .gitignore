@@ -116,3 +116,4 @@ freetype
 tmp
 bin
 x64
+/clang-analyze.out

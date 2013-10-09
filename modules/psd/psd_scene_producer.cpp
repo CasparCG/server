@@ -343,7 +343,7 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 				std::shared_ptr<core::frame_producer> layer_producer;
 				if((*it)->is_solid())
 				{
-					layer_producer = layer_producer = core::create_const_producer(core::create_color_frame(it->get(), frame_factory, (*it)->solid_color().to_uint32()), (*it)->bitmap()->width(), (*it)->bitmap()->height());
+					layer_producer = core::create_const_producer(core::create_color_frame(it->get(), frame_factory, (*it)->solid_color().to_uint32()), (*it)->bitmap()->width(), (*it)->bitmap()->height());
 				}
 				else if((*it)->bitmap())
 				{

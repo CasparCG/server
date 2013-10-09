@@ -53,6 +53,7 @@
 #include <string>
 #include <locale>
 #include <functional>
+#include <algorithm>
 #include <vector>
 
 namespace caspar { namespace core {

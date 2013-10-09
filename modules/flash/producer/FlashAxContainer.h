@@ -56,7 +56,7 @@ namespace caspar {
 namespace flash {
 
 class TimerHelper;
-struct DirtyRect {
+/*struct DirtyRect {
 	DirtyRect(LONG l, LONG t, LONG r, LONG b, bool e) : bErase(e), bWhole(false) { 
 		rect.left = l;
 		rect.top = t;
@@ -74,7 +74,7 @@ struct DirtyRect {
 	RECT	rect;
 	bool	bErase;
 	bool	bWhole;
-};
+};*/
 
 extern _ATL_FUNC_INFO fnInfoFlashCallEvent;
 extern _ATL_FUNC_INFO fnInfoReadyStateChangeEvent;
@@ -273,7 +273,7 @@ private:
 	volatile bool bReadyToRender_;
 	volatile bool bIsEmpty_;
 	volatile bool bHasNewTiming_;
-	std::vector<DirtyRect> bDirtyRects_;
+	//std::vector<DirtyRect> bDirtyRects_;
 
 
 	IDirectDraw4Ptr *m_lpDD4;
