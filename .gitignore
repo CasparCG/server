@@ -81,6 +81,11 @@
 /shell/thumbnails
 /shell/tmp
 
+# /unit-test/
+/unit-test/bin
+/unit-test/tmp
+/unit-test/unit-test.vcxproj.user
+
 /tmp
 /accelerator/bin
 /accelerator/tmp
