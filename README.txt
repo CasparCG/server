@@ -40,7 +40,7 @@ SYSTEM REQUIREMENTS
    Free download at:
    http://www.microsoft.com/download/en/details.aspx?id=5555
 
-5. You must have Flash Player 10.3 or later installed (an installer can be found
+5. You must have Flash Player 11.8 or later installed (an installer can be found
    in the "Flash Player Installation" folder.)
 
 6. Make sure you turn off Windows' "Aero" theme and "ClearType" font smoothing
@@ -67,7 +67,7 @@ INSTALLATION
 5. Make sure you turn off Windows' "Aero Theme" and "ClearType" font smoothing
    as they can interfere with CasparCG Server's OpenGL features!
 
-6. Start the "casparcg_server.exe" program and configure the settings.
+6. Start the "casparcg_frontend.exe" program and configure the settings.
 
 7. Connect to the Server from a client, such as the CasparCG Client 2.0.4
    (available as a separate download.)
