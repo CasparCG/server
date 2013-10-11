@@ -35,7 +35,7 @@
 
 namespace caspar { namespace accelerator { namespace ogl {
 
-std::shared_ptr<shader> g_shader;
+std::weak_ptr<shader>	g_shader;
 tbb::mutex				g_shader_mutex;
 bool					g_blend_modes = false;
 
@@ -258,7 +258,7 @@ std::string get_fragment(bool blend_modes)
 	"{																					\n"
 	"	vec4 color = get_rgba_color();													\n"
 	"   if(levels)																		\n"
-	"		color.rgb = LevelsControl(color.rgb, min_input, max_input, gamma, min_output, max_output); \n"
+	"		color.rgb = LevelsControl(color.rgb, min_input, gamma, max_input, min_output, max_output); \n"
 	"	if(csb)																			\n"
 	"		color.rgb = ContrastSaturationBrightness(color.rgb, brt, sat, con);			\n"
 	"	if(has_local_key)																\n"
@@ -271,20 +271,22 @@ std::string get_fragment(bool blend_modes)
 	"}																					\n";
 }
 
-spl::shared_ptr<shader> get_image_shader(bool& blend_modes)
+spl::shared_ptr<shader> get_image_shader(
+		bool& blend_modes, bool blend_modes_wanted)
 {
 	tbb::mutex::scoped_lock lock(g_shader_mutex);
+	auto existing_shader = g_shader.lock();
 
-	if(g_shader)
+	if(existing_shader)
 	{
 		blend_modes = g_blend_modes;
-		return spl::make_shared_ptr(g_shader);
+		return spl::make_shared_ptr(existing_shader);
 	}
 		
 	try
 	{				
-		g_blend_modes  = glTextureBarrierNV ? env::properties().get(L"configuration.blend-modes", true) : false;
-		g_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes)));
+		g_blend_modes  = glTextureBarrierNV ? blend_modes_wanted : false;
+		existing_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes)));
 	}
 	catch(...)
 	{
@@ -292,7 +294,7 @@ spl::shared_ptr<shader> get_image_shader(bool& blend_modes)
 		CASPAR_LOG(warning) << "Failed to compile shader. Trying to compile without blend-modes.";
 				
 		g_blend_modes = false;
-		g_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes)));
+		existing_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes)));
 	}
 						
 	//if(!g_blend_modes)
@@ -302,7 +304,8 @@ spl::shared_ptr<shader> get_image_shader(bool& blend_modes)
 	//}
 
 	blend_modes = g_blend_modes;
-	return spl::make_shared_ptr(g_shader);
+	g_shader = existing_shader;
+	return spl::make_shared_ptr(existing_shader);
 }
 
 }}}

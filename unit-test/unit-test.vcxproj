@@ -12,7 +12,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="base64_test.cpp" />
+    <ClCompile Include="image_mixer_test.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="param_test.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
     </ClCompile>
@@ -134,7 +136,7 @@
       <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>alibcof64.lib;freetype248_d.lib;sfml-system-d.lib;sfml-window-d.lib;sfml-graphics-d.lib;sfml-audio-d.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;swresample.lib;tbb.lib;OpenGL32.lib;FreeImaged.lib;glew32.lib;openal32.lib;gtestd.lib;Advapi32.lib</AdditionalDependencies>
+      <AdditionalDependencies>alibcof64.lib;freetype248_d.lib;sfml-system-d.lib;sfml-window-d.lib;sfml-graphics-d.lib;sfml-audio-d.lib;Winmm.lib;Ws2_32.lib;user32.lib;gdi32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;swresample.lib;tbb.lib;OpenGL32.lib;FreeImaged.lib;glew32.lib;openal32.lib;gtestd.lib;Advapi32.lib</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -190,7 +192,7 @@ copy "$(SolutionDir)dependencies64\openal\bin\*.dll" "$(OutDir)"
     </ClCompile>
     <Link>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>alibcof64.lib;freetype250.lib;sfml-system.lib;sfml-window.lib;sfml-graphics.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;swresample.lib;tbb.lib;OpenGL32.lib;glew32.lib;openal32.lib;freeimage.lib;gtest.lib;Advapi32.lib</AdditionalDependencies>
+      <AdditionalDependencies>alibcof64.lib;freetype250.lib;sfml-system.lib;sfml-window.lib;sfml-graphics.lib;Winmm.lib;Ws2_32.lib;user32.lib;gdi32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;swresample.lib;tbb.lib;OpenGL32.lib;glew32.lib;openal32.lib;freeimage.lib;gtest.lib;Advapi32.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>

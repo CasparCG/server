@@ -7,6 +7,8 @@
 
 #include "ogl/util/device.h"
 
+#include <common/env.h>
+
 #include <tbb/mutex.h>
 
 namespace caspar { namespace accelerator {
@@ -33,7 +35,7 @@ struct accelerator::impl
 				if(!ogl_device_)
 					ogl_device_.reset(new ogl::device());
 
-				return std::unique_ptr<core::image_mixer>(new ogl::image_mixer(spl::make_shared_ptr(ogl_device_)));
+				return std::unique_ptr<core::image_mixer>(new ogl::image_mixer(spl::make_shared_ptr(ogl_device_), env::properties().get(L"configuration.blend-modes", false)));
 			}
 		}
 		catch(...)
