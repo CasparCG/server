@@ -90,9 +90,9 @@ class image_renderer
 	spl::shared_ptr<device>	ogl_;
 	image_kernel			kernel_;
 public:
-	image_renderer(const spl::shared_ptr<device>& ogl)
+	image_renderer(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted)
 		: ogl_(ogl)
-		, kernel_(ogl_)
+		, kernel_(ogl_, blend_modes_wanted)
 	{
 	}
 	
@@ -294,9 +294,9 @@ struct image_mixer::impl : public core::frame_factory
 	std::vector<core::image_transform>	transform_stack_;
 	std::vector<layer>					layers_; // layer/stream/items
 public:
-	impl(const spl::shared_ptr<device>& ogl) 
+	impl(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted) 
 		: ogl_(ogl)
-		, renderer_(ogl)
+		, renderer_(ogl, blend_modes_wanted)
 		, transform_stack_(1)	
 	{
 		CASPAR_LOG(info) << L"Initialized OpenGL Accelerated GPU Image Mixer";
@@ -359,7 +359,7 @@ public:
 	}
 };
 
-image_mixer::image_mixer(const spl::shared_ptr<device>& ogl) : impl_(new impl(ogl)){}
+image_mixer::image_mixer(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted) : impl_(new impl(ogl, blend_modes_wanted)){}
 image_mixer::~image_mixer(){}
 void image_mixer::push(const core::frame_transform& transform){impl_->push(transform);}
 void image_mixer::visit(const core::const_frame& frame){impl_->visit(frame);}

@@ -60,9 +60,9 @@ struct image_kernel::impl
 	spl::shared_ptr<shader>	shader_;
 	bool					blend_modes_;
 							
-	impl(const spl::shared_ptr<device>& ogl)
+	impl(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted)
 		: ogl_(ogl)
-		, shader_(ogl_->invoke([&]{return get_image_shader(blend_modes_);}))
+		, shader_(ogl_->invoke([&]{return get_image_shader(blend_modes_, blend_modes_wanted);}))
 	{
 	}
 
@@ -272,7 +272,7 @@ struct image_kernel::impl
 	}
 };
 
-image_kernel::image_kernel(const spl::shared_ptr<device>& ogl) : impl_(new impl(ogl)){}
+image_kernel::image_kernel(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted) : impl_(new impl(ogl, blend_modes_wanted)){}
 image_kernel::~image_kernel(){}
 void image_kernel::draw(const draw_params& params){impl_->draw(params);}
 bool image_kernel::has_blend_modes() const{return impl_->blend_modes_;}
