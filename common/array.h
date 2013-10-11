@@ -8,6 +8,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "assert.h"
+
 namespace caspar {
 	
 template<typename T>

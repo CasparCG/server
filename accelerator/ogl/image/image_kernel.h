@@ -72,7 +72,7 @@ public:
 
 	// Constructors
 
-	image_kernel(const spl::shared_ptr<class device>& ogl);
+	image_kernel(const spl::shared_ptr<class device>& ogl, bool blend_modes_wanted);
 	~image_kernel();
 
 	// Methods
