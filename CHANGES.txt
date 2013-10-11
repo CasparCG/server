@@ -5,24 +5,21 @@ CasparCG 2.0.4 Stable (as compared to 2.0.4 Beta 1)
 
 General
 -------
-
-  o Can now open media with digit only names.
-  o Misc stability and performance improvements.
+  o Can now open media with file names that only consist of digits.
+  o Miscellaneous stability and performance improvements.
 
 Video mixer
 -----------
-
   o Conditional compilation of chroma key support and straight alpha output
     support in shader (just like with blend-modes) because of performance impact
     even when not in use on a layer/on a channel. New <mixer /> element added to
     configuration for turning on mixer features that not everybody would want to
     pay for (performance-wise). blend-modes also moved into this element.
-  o MIXER LEVELS interpretet arguments in the wrong order, so that gamma was
+  o MIXER LEVELS interpreted arguments in the wrong order, so that gamma was
     interpreted as max_input and vice versa.
 
 Consumers
 ---------
-
   o Replaced usage of SFML for <system-audio /> with PortAudio, because of
     problems with SFML since change to static linkage. Also PortAudio seems to
     give lower latency.
@@ -33,18 +30,16 @@ Consumers
 
 Producers
 ---------
-
-  o ffmpeg: Added support for arbitrary ffmpeg options in ffmpeg_producer.
-  o flash: No longer starts a flash player to service CG commands that means
-    nothing without an already running flash player.
-  o flash: globally serialize initialization and destruction of flash players,
-    to avoid race conditions in flash.
-  o flash: changed so that the flash buffer is filled with flash player
+  o FFmpeg: Added support for arbitrary FFmpeg options in ffmpeg_producer.
+  o Flash: No longer starts a Flash Player to service CG commands that means
+    nothing without an already running Flash Player.
+  o Flash: globally serialize initialization and destruction of Flash Players,
+    to avoid race conditions in Flash.
+  o flash: changed so that the Flash buffer is filled with Flash Player
     generated content at initialization instead of empty frames.
 
 OSC
 ---
-
   o Performance improvements.
   o Never send old values to OSC reveivers, collect the latest value of each
     path logged since last UDP send, and send the new UDP packet (to each
@@ -56,12 +51,14 @@ OSC
     while) in favour of direct synchronous invocations.
 
 
+
+
+
 CasparCG 2.0.4 Beta 1 (as compared to 2.0.3 Stable)
 ===================================================
 
 General
 -------
-
   o Front-end GUI for simplified configuration and easy access to common tasks.
   o Added support for video and images file thumbnail generation. By default the
     media directory is scanned every 5 seconds for new/modified/removed files
@@ -101,24 +98,20 @@ General
 
 Layer
 -----
-
   o Fixed a problem where the first frame was not always shown on LOAD.
 
 Audio mixer
 -----------
-
   o Added support for a master volume mixer setting for each channel.
 
 Video mixer
 -----------
-
   o Added support for chroma keying.
   o Fixed bug where MIXER CONTRAST set to < 1 can cause transparency issues.
   o Experimental support for straight alpha output.
 
 Consumers
 ---------
-
   o Avoid that the FFmpeg consumer blocks the channel output when it can't keep
     up with the frame rate (drops frames instead).
   o Added support for to create a separate key and fill file when recording with
@@ -139,7 +132,6 @@ Consumers
 
 Producers
 ---------
-
   o Added support for playing .swf files using the Flash producer.
   o Image producer premultiplies PNG images with their alpha.
   o Image producer can load a PNG image encoded as base64 via:
@@ -149,7 +141,6 @@ Producers
 
 AMCP
 ----
-
   o The master volume feature is controlled via the MASTERVOLUME MIXER
     parameter. Example: MIXER 1 MASTERVOLUME 0.5
   o THUMBNAIL LIST/RETRIEVE/GENERATE/GENERATE_ALL command was added to support
@@ -178,7 +169,6 @@ AMCP
 
 OSC
 ---
-
   o Support for sending OSC messages over UDP to either a predefined set of
     clients (servers in the OSC sense) or dynamically to the ip addresses of the
     currently connected AMCP clients.
@@ -199,6 +189,7 @@ OSC
     + flash producer     /host/fps         [fps]
     + flash producer     /buffer           [buffered]        [buffer size]
     + image producer     /file/path        [file path]
+
 
 
 CasparCG 2.0.3 Stable (as compared to 2.0.3 Alpha)
