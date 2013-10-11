@@ -23,13 +23,33 @@
 
 #include <gtest/gtest.h>
 
-#include <common/log.h>
+#include <boost/assign.hpp>
 
-int main(int argc, char** argv)
+#include <common/param.h>
+
+namespace {
+	static auto params = boost::assign::list_of<std::wstring>
+			(L"param1")(L"1")
+			(L"param2")(L"string value");
+}
+
+namespace caspar {
+
+TEST(ParamTest, GetExisting)
 {
-	testing::InitGoogleTest(&argc, argv);
+	EXPECT_EQ(L"string value", get_param(L"param2", params));
+	EXPECT_EQ(1, get_param<int>(L"param1", params));
+}
 
-	caspar::log::set_log_level(L"error");
+TEST(ParamTest, GetDefaultValue)
+{
+	EXPECT_EQ(L"fail_val", get_param(L"param3", params, L"fail_val"));
+	EXPECT_EQ(1, get_param(L"param3", params, 1));
+}
 
-	return RUN_ALL_TESTS();
+TEST(ParamTest, InvalidLexicalCast)
+{
+	EXPECT_THROW(get_param<bool>(L"param2", params), invalid_argument);
+}
+
 }

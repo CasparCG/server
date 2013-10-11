@@ -49,7 +49,7 @@ public:
 	
 	// Constructors
 
-	image_mixer(const spl::shared_ptr<class device>& ogl);
+	image_mixer(const spl::shared_ptr<class device>& ogl, bool blend_modes_wanted);
 	~image_mixer();
 
 	// Methods

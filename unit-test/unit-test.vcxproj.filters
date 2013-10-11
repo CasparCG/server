@@ -16,6 +16,12 @@
     <ClCompile Include="base64_test.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="param_test.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="image_mixer_test.cpp">
+      <Filter>source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
