@@ -21,7 +21,7 @@
 
 #include "newtek.h"
 
-#include "consumer/newtek_consumer.h"
+#include "consumer/newtek_ivga_consumer.h"
 
 #include <core/parameters/parameters.h>
 #include <core/consumer/frame_consumer.h>
@@ -34,7 +34,7 @@ void init()
 	{
 		core::register_consumer_factory([](const core::parameters& params)
 		{
-			return newtek::create_consumer(params);
+			return newtek::create_ivga_consumer(params);
 		});
 	}
 	catch(...){}

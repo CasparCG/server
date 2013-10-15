@@ -21,7 +21,7 @@
  
 #include "../StdAfx.h"
 
-#include "newtek_consumer.h"
+#include "newtek_ivga_consumer.h"
 
 #include <core/consumer/frame_consumer.h>
 #include <core/parameters/parameters.h>
@@ -37,7 +37,7 @@
 
 namespace caspar { namespace newtek { 
 			
-struct newtek_consumer : public core::frame_consumer
+struct newtek_ivga_consumer : public core::frame_consumer
 {
 	std::shared_ptr<void>	air_send_;
 	core::video_format_desc format_desc_;
@@ -46,13 +46,13 @@ struct newtek_consumer : public core::frame_consumer
 
 public:
 
-	newtek_consumer(core::channel_layout channel_layout)
+	newtek_ivga_consumer(core::channel_layout channel_layout)
 		: executor_(print())
 		, channel_layout_(channel_layout)
 	{
 	}
 	
-	~newtek_consumer()
+	~newtek_ivga_consumer()
 	{
 	}
 
@@ -129,13 +129,13 @@ public:
 		
 	virtual std::wstring print() const override
 	{
-		return L"newtek";
+		return L"newtek-ivga";
 	}
 
 	virtual boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
-		info.add(L"type", L"newtek-consumer");
+		info.add(L"type", L"newtek-ivga-consumer");
 		return info;
 	}
 
@@ -155,26 +155,26 @@ public:
 	}
 };	
 
-safe_ptr<core::frame_consumer> create_consumer(const core::parameters& params)
+safe_ptr<core::frame_consumer> create_ivga_consumer(const core::parameters& params)
 {
-	if(params.size() < 1 || params[0] != L"NEWTEK")
+	if(params.size() < 1 || params[0] != L"NEWTEK_IVGA")
 		return core::frame_consumer::empty();
 		
 	const auto channel_layout = core::default_channel_layout_repository()
 		.get_by_name(
 			params.get(L"CHANNEL_LAYOUT", L"STEREO"));
 
-	return make_safe<newtek_consumer>(channel_layout);
+	return make_safe<newtek_ivga_consumer>(channel_layout);
 }
 
-safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree) 
+safe_ptr<core::frame_consumer> create_ivga_consumer(const boost::property_tree::wptree& ptree) 
 {	
 	const auto channel_layout =
 		core::default_channel_layout_repository()
 			.get_by_name(
 				boost::to_upper_copy(ptree.get(L"channel-layout", L"STEREO")));
 
-	return make_safe<newtek_consumer>(channel_layout);
+	return make_safe<newtek_ivga_consumer>(channel_layout);
 }
 
 }}

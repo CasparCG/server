@@ -23,9 +23,9 @@ Consumers
   o Replaced usage of SFML for <system-audio /> with PortAudio, because of
     problems with SFML since change to static linkage. Also PortAudio seems to
     give lower latency.
-  o Added support for NewTek AirPlay. Enables the use of the CasparCG Server
+  o Added support for NewTek iVGA. Enables the use of the CasparCG Server
     output as an input source in a NewTek TriCaster without requiring a video
-    card. <newtek /> element in config enables AirPlay on a channel.
+    card. <newtek-ivga /> element in config enables iVGA on a channel.
   o Decklink: Created custom decklink allocator for reducing memory footprint.
 
 Producers
