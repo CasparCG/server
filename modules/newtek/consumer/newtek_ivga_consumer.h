@@ -36,7 +36,7 @@ namespace core {
 	 
 namespace newtek {
 
-safe_ptr<core::frame_consumer> create_consumer(const core::parameters& params);
-safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree);
+safe_ptr<core::frame_consumer> create_ivga_consumer(const core::parameters& params);
+safe_ptr<core::frame_consumer> create_ivga_consumer(const boost::property_tree::wptree& ptree);
 
 }}

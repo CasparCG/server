@@ -2,20 +2,20 @@
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <ClCompile Include="StdAfx.cpp" />
+    <ClCompile Include="consumer\newtek_ivga_consumer.cpp">
+      <Filter>source\consumer</Filter>
+    </ClCompile>
     <ClCompile Include="newtek.cpp">
       <Filter>source</Filter>
-    </ClCompile>
-    <ClCompile Include="consumer\newtek_consumer.cpp">
-      <Filter>source\consumer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="StdAfx.h" />
+    <ClInclude Include="consumer\newtek_ivga_consumer.h">
+      <Filter>source\consumer</Filter>
+    </ClInclude>
     <ClInclude Include="newtek.h">
       <Filter>source</Filter>
-    </ClInclude>
-    <ClInclude Include="consumer\newtek_consumer.h">
-      <Filter>source\consumer</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
