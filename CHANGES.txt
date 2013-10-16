@@ -12,42 +12,44 @@ Video mixer
 -----------
   o Conditional compilation of chroma key support and straight alpha output
     support in shader (just like with blend-modes) because of performance impact
-    even when not in use on a layer/on a channel. New <mixer /> element added to
-    configuration for turning on mixer features that not everybody would want to
-    pay for (performance-wise). blend-modes also moved into this element.
-  o MIXER LEVELS interpreted arguments in the wrong order, so that gamma was
-    interpreted as max_input and vice versa.
+    even when not in use on a layer or on a channel. New <mixer /> element added
+    to configuration for turning on mixer features that not everybody would want
+    to pay for (performance-wise.) blend-modes also moved into this element.
+  o Fixed bug where MIXER LEVELS interpreted arguments in the wrong order, so 
+    that gamma was interpreted as max_input and vice versa.
 
 Consumers
 ---------
+  o Added support for NewTek iVGA, which enables the use of CasparCG Server 
+    fill+key output(s) as input source(s) to a NewTek TriCaster without 
+    requiring video card(s) in the CasparCG Server machine, or taking up inputs
+    in the TriCaster. <newtek-ivga /> element in config enables iVGA on a channel.
+  o Decklink: Created custom decklink allocator to reduce the memory footprint.
   o Replaced usage of SFML for <system-audio /> with PortAudio, because of
     problems with SFML since change to static linkage. Also PortAudio seems to
     give lower latency.
-  o Added support for NewTek iVGA. Enables the use of the CasparCG Server
-    output as an input source in a NewTek TriCaster without requiring a video
-    card. <newtek-ivga /> element in config enables iVGA on a channel.
-  o Decklink: Created custom decklink allocator for reducing memory footprint.
 
 Producers
 ---------
   o FFmpeg: Added support for arbitrary FFmpeg options in ffmpeg_producer.
+  o Flash: Flash Player 11.8 now tested and fully supported.
   o Flash: No longer starts a Flash Player to service CG commands that means
     nothing without an already running Flash Player.
   o Flash: globally serialize initialization and destruction of Flash Players,
     to avoid race conditions in Flash.
-  o flash: changed so that the Flash buffer is filled with Flash Player
+  o Flash: changed so that the Flash buffer is filled with Flash Player
     generated content at initialization instead of empty frames.
 
 OSC
 ---
   o Performance improvements.
-  o Never send old values to OSC reveivers, collect the latest value of each
-    path logged since last UDP send, and send the new UDP packet (to each
+  o Never sends old values to OSC reveivers. Collects the latest value of each
+    path logged since last UDP send, and sends the new UDP packet (to each
     subscribing OSC receiver) with the values collected.
-  o Batch as many OSC messages as possible in an OSC bundle to reduce the number
-    of UDP packets sent. Breakup into separate packages if necessary to avoid
-    fragmentation.
-  o Removed usage of Microsoft Agents library (server ran out of memory after a
+  o Batches as many OSC messages as possible in an OSC bundle to reduce the 
+    number of UDP packets sent. Breakup into separate packages if necessary to 
+    avoid fragmentation.
+  o Removed usage of Microsoft Agents library (Server ran out of memory after a
     while) in favour of direct synchronous invocations.
 
 
