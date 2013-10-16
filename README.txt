@@ -1,5 +1,5 @@
-CasparCG Server 2.0.4
-=====================
+CasparCG Server 2.0.4 Stable
+============================
 
 Thank you for your interest in CasparCG Server, a professional software used to
 play out and record professional graphics, audio and video to multiple outputs.
@@ -21,29 +21,23 @@ SYSTEM REQUIREMENTS
 
 2. We recommend Windows 7 (64-bit,) but this software has also been used
    successfully on Windows 7 (32-bit) and Windows XP SP2 (32-bit only.)
-   Using CasparCG Server on Windows 8 and Windows Vista is untested and
-   is not recommended!
+   Using CasparCG Server on Windows 8 and Windows Vista is NOT recommended!
 
-3. An NVIDIA graphics card (GPU) capable of OpenGL 3.0 or higher is strongly
+3. A graphics card (GPU) capable of OpenGL 3.0 or higher is strongly
    recommended!
-   Please check your card's capabilities at:
-   http://en.wikipedia.org/wiki/Comparison_of_Nvidia_graphics_processing_units
-   Make sure that you have the latest drivers installed:
-   http://www.nvidia.com/Download/index.aspx?lang=en-us%20nVidia%20drivers
-
-   Experimental support for AMD/ATI cards has been added, but it has not been
-   fully tested.
-
-   Graphics cards from other manufacturers _may_ work but have not been tested!
 
 4. Microsoft Visual C++ 2010 Redistributable Package must be installed.
    Free download at:
    http://www.microsoft.com/download/en/details.aspx?id=5555
 
-5. You must have Flash Player 11.8 or later installed (an installer can be found
-   in the "Flash Player Installation" folder.)
+5. Microsoft .NET Framework 4.0 or later must be installed
+   Free download at: 
+   http://go.microsoft.com/fwlink/?LinkId=225702
 
-6. Make sure you turn off Windows' "Aero" theme and "ClearType" font smoothing
+6. You must have Flash Player 11.8 or later installed.
+   (Included "Flash Player Installation" folder.)
+
+7. Make sure you turn off Windows' "Aero" theme and "ClearType" font smoothing
    as they have been known to interfere with transparency in Flash templates,
    and can also cause problems with Vsync when outputting to computer screens.
 
@@ -60,16 +54,20 @@ INSTALLATION
 
 3. Install "Microsoft Visual C++ 2010 Redistributable Package" from
    http://www.microsoft.com/download/en/details.aspx?id=5555
+   
+4. Install "Microsoft .NET Framework" (version 4.0 or later.)
+   Free download at: 
+   http://go.microsoft.com/fwlink/?LinkId=225702
 
-4. Install "Flash Player 11.8.800.94" from the "Flash Player Installation"
-   folder.
+5. Install "Flash Player 11.8.800.94" 
+   "flashplayer11_8r800_94_winax.exe" in the "Flash Player Installation" folder.
 
-5. Make sure you turn off Windows' "Aero Theme" and "ClearType" font smoothing
+6. Make sure you turn off Windows' "Aero Theme" and "ClearType" font smoothing
    as they can interfere with CasparCG Server's OpenGL features!
 
-6. Start the "casparcg_frontend.exe" program and configure the settings.
+7. Start the "CasparCG_Server.exe" program and configure the settings.
 
-7. Connect to the Server from a client, such as the CasparCG Client 2.0.4
+7. Connect to the Server from a client, such as the CasparCG Client 2.0.5
    (available as a separate download.)
 
 
