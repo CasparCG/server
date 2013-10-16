@@ -193,6 +193,9 @@ TYPED_TEST(MixerTestEveryImpl, HalfAlpha)
 	add_layer(red_under);
 	add_layer(half_green_over);
 	assert_all_pixels_eq(127, 127, 0, 255, get_result(16, 16));
+
+	add_layer(half_green_over);
+	assert_all_pixels_eq(0, 127, 0, 127, get_result(16, 16));
 }
 
 // Tests for use cases that currently *only* works on GPU mixer
@@ -214,6 +217,9 @@ TYPED_TEST(MixerTestOgl, HalfOpacity)
 	add_layer(red_under);
 	add_layer(green_over);
 	assert_all_pixels_eq(127, 127, 0, 255, get_result(1, 1));
+
+	add_layer(green_over);
+	assert_all_pixels_eq(0, 127, 0, 127, get_result(1, 1));
 }
 
 TYPED_TEST(MixerTestOgl, MakeGrayscaleWithSaturation)
@@ -229,7 +235,7 @@ TYPED_TEST(MixerTestOgl, MakeGrayscaleWithSaturation)
 
 TYPED_TEST(MixerTestOgl, TransformFillScale)
 {
-	core::draw_frame frame(create_single_color_frame(255, 255, 255, 255, 2, 2));
+	core::draw_frame frame(create_single_color_frame(255, 255, 255, 255, 1, 1));
 	frame.transform().image_transform.fill_translation[0] = 0.5;
 	frame.transform().image_transform.fill_translation[1] = 0.5;
 	frame.transform().image_transform.fill_scale[0] = 0.5;
