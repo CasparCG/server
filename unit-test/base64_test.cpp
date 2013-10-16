@@ -54,11 +54,11 @@ namespace caspar {
 TEST(Base64Test, InvalidInputLength)
 {
 	// 0 and 4 characters should be ok
-	/*EXPECT_THROW(from_base64("1"), caspar_exception);
+	EXPECT_THROW(from_base64("1"), caspar_exception);
 	EXPECT_THROW(from_base64("12"), caspar_exception);
 	EXPECT_THROW(from_base64("123"), caspar_exception);
 	EXPECT_THROW(from_base64("1234\n567"), caspar_exception);
-	EXPECT_THROW(from_base64("12345"), caspar_exception);*/
+	EXPECT_THROW(from_base64("12345"), caspar_exception);
 }
 
 TEST(Base64Test, InvalidInputCharacters)
@@ -73,7 +73,7 @@ TEST(Base64Test, InvalidInputCharacters)
 		{
 			auto invalid = PREFIX + static_cast<char>(i);
 
-			//EXPECT_THROW(from_base64(invalid), std::exception);
+			EXPECT_THROW(from_base64(invalid), std::exception);
 		}
 	}
 }
