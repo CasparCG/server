@@ -67,7 +67,7 @@ INSTALLATION
 
 7. Start the "CasparCG_Server.exe" program and configure the settings.
 
-7. Connect to the Server from a client, such as the CasparCG Client 2.0.5
+8. Connect to the Server from a client, such as the CasparCG Client 2.0.5
    (available as a separate download.)
 
 

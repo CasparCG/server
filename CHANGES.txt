@@ -23,7 +23,8 @@ Consumers
   o Added support for NewTek iVGA, which enables the use of CasparCG Server 
     fill+key output(s) as input source(s) to a NewTek TriCaster without 
     requiring video card(s) in the CasparCG Server machine, or taking up inputs
-    in the TriCaster. <newtek-ivga /> element in config enables iVGA on a channel.
+    in the TriCaster. <newtek-ivga /> element in config enables iVGA on a
+    channel.
   o Decklink: Created custom decklink allocator to reduce the memory footprint.
   o Replaced usage of SFML for <system-audio /> with PortAudio, because of
     problems with SFML since change to static linkage. Also PortAudio seems to
@@ -52,8 +53,6 @@ OSC
     avoid fragmentation.
   o Removed usage of Microsoft Agents library (Server ran out of memory after a
     while) in favour of direct synchronous invocations.
-
-
 
 
 
@@ -211,6 +210,7 @@ AMCP
   o DATA REMOVE command was added.
 
 
+
 CasparCG 2.0.3 Alpha (as compared to 2.0 Stable)
 ================================================
 
@@ -266,6 +266,7 @@ Producers
     + Added PREMULTIPLY parameter to support images stored with straight alpha.
 
 
+
 CasparCG 2.0 Stable (as compared to Beta 3)
 ===========================================
 
@@ -282,6 +283,7 @@ Consumers
     + Added options, -r, -acodec, -s, -pix_fmt, -f and more.
   o Screen Consumer
     + Added vsync support.
+
 
 
 CasparCG 2.0 Beta 3 (as compared to Beta 1)
@@ -385,6 +387,7 @@ Diagnostics
   o Diagnostics window is now closable.
 
 
+
 CasparCG 2.0 Beta 1 (as compared to Alpha)
 ==========================================
 
@@ -452,6 +455,7 @@ CasparCG 2.0 Beta 1 (as compared to Alpha)
     EMPTY, BLACK, RED etc...
   o Alpha value in color codes is now optional.
   o More than 2 Decklink cards might be possible but have not yet been tested.
+
 
 
 CasparCG 2.0 Alpha (as compared to 1.8)
