@@ -14,30 +14,31 @@ More information is available at http://casparcg.com/
 SYSTEM REQUIREMENTS
 -------------------
 
-1. Intel processor capable of using SSSE3 instructions. Please refer to
+1. Intel processor capable of using SSSE3 instructions. 
+   Please refer to
    http://en.wikipedia.org/wiki/SSSE3 for a complete list.
-   While AMD processors should work, CasparCG Server has only been tested on
+   While AMD processors probably work, CasparCG Server has only been tested on
    Intel processors.
 
-2. We recommend Windows 7 (64-bit,) but this software has also been used
-   successfully on Windows 7 (32-bit) and Windows XP SP2 (32-bit only.)
-   Using CasparCG Server on Windows 8 and Windows Vista is NOT recommended!
+2. Windows 7 (64-bit) recommended.
+   CasparCG Server has also been used successfully on Windows 7 (32-bit) 
+   and Windows XP SP2 (32-bit only.)
+   NOT SUPPORTED: Windows 8, Windows 2003 Server and Windows Vista.
 
-3. A graphics card (GPU) capable of OpenGL 3.0 or higher is strongly
-   recommended!
+3. A graphics card (GPU) capable of OpenGL 3.0 is required.
 
 4. Microsoft Visual C++ 2010 Redistributable Package must be installed.
    Free download at:
    http://www.microsoft.com/download/en/details.aspx?id=5555
 
-5. Microsoft .NET Framework 4.0 or later must be installed
+5. Microsoft .NET Framework 4.0 or later must be installed.
    Free download at: 
    http://go.microsoft.com/fwlink/?LinkId=225702
 
-6. You must have Flash Player 11.8 or later installed.
-   (Included "Flash Player Installation" folder.)
+6. Flash Player 11.8 or later must be installed.
+   Included "Flash Player Installation" folder.
 
-7. Make sure you turn off Windows' "Aero" theme and "ClearType" font smoothing
+7. Turn off Windows' "Aero" theme and "ClearType" font smoothing
    as they have been known to interfere with transparency in Flash templates,
    and can also cause problems with Vsync when outputting to computer screens.
 
