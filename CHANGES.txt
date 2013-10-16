@@ -31,9 +31,10 @@ Consumers
 
 Producers
 ---------
-  o FFmpeg: Added support for arbitrary FFmpeg options in ffmpeg_producer.
+  o FFmpeg: Added support for arbitrary FFmpeg options/parameters
+    in ffmpeg_producer.
   o Flash: Flash Player 11.8 now tested and fully supported.
-  o Flash: No longer starts a Flash Player to service CG commands that means
+  o Flash: No longer starts a Flash Player to service CG commands that mean
     nothing without an already running Flash Player.
   o Flash: globally serialize initialization and destruction of Flash Players,
     to avoid race conditions in Flash.
