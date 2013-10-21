@@ -33,10 +33,10 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include <AirSend_api.h>
+#include "../util/air_send.h"
 
-namespace caspar { namespace newtek { 
-			
+namespace caspar { namespace newtek {
+
 struct newtek_ivga_consumer : public core::frame_consumer
 {
 	std::shared_ptr<void>	air_send_;
@@ -50,6 +50,8 @@ public:
 		: executor_(print())
 		, channel_layout_(channel_layout)
 	{
+		if (!airsend::is_available())
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(airsend::dll_name()) + " not available"));
 	}
 	
 	~newtek_ivga_consumer()
@@ -61,7 +63,7 @@ public:
 	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
 	{
 		air_send_.reset(
-			AirSend_Create(
+			airsend::create(
 				format_desc.width,
 				format_desc.height,
 				format_desc.time_scale,
@@ -71,7 +73,7 @@ public:
 				true,
 				channel_layout_.num_channels,
 				format_desc.audio_sample_rate),
-			AirSend_Destroy);
+				airsend::destroy);
 
 		CASPAR_VERIFY(air_send_);
 
@@ -117,11 +119,11 @@ public:
 				audio_buffer = core::audio_32_to_16(frame->audio_data());
 			}
 
-			AirSend_add_audio(air_send_.get(), audio_buffer.data(), audio_buffer.size() / channel_layout_.num_channels);
+			airsend::add_audio(air_send_.get(), audio_buffer.data(), audio_buffer.size() / channel_layout_.num_channels);
 
 			// VIDEO
 
-			AirSend_add_frame_bgra(air_send_.get(), frame->image_data().begin());
+			airsend::add_frame_bgra(air_send_.get(), frame->image_data().begin());
 			
 			return true;
 		});
