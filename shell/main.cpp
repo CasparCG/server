@@ -52,6 +52,7 @@
 #include <modules/flash/flash.h>
 #include <modules/ffmpeg/ffmpeg.h>
 #include <modules/image/image.h>
+#include <modules/newtek/util/air_send.h>
 
 #include <common/env.h>
 #include <common/exception/win32_exception.h>
@@ -159,6 +160,7 @@ void print_info()
 	CASPAR_LOG(info) << L"FFMPEG-swscale "  << caspar::ffmpeg::get_swscale_version();
 	CASPAR_LOG(info) << L"Flash "			<< caspar::flash::get_version();
 	CASPAR_LOG(info) << L"Template-Host "	<< caspar::flash::get_cg_version();
+	CASPAR_LOG(info) << L"NewTek iVGA "		<< (caspar::newtek::airsend::is_available() ? L"available" : L"unavailable (" + caspar::newtek::airsend::dll_name() + L")");
 }
 
 LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)

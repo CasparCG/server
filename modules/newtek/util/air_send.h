@@ -16,30 +16,28 @@
 * You should have received a copy of the GNU General Public License
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
-* Author: Robert Nagy, ronag89@gmail.com
+* Author: Helge Norberg, helge.norberg@svt.se
 */
+#pragma once
 
-#include "newtek.h"
+#include <string>
 
-#include "consumer/newtek_ivga_consumer.h"
-#include "util/air_send.h"
+namespace caspar { namespace newtek { namespace airsend {
 
-#include <core/parameters/parameters.h>
-#include <core/consumer/frame_consumer.h>
+const std::wstring& dll_name();
+bool is_available();
 
-namespace caspar { namespace newtek {
+extern void* (*create)(
+		const int width, const int height,
+		const int timescale, const int duration,
+		const bool progressive,
+		const float aspect_ratio,
+		const bool audio_enabled,
+		const int num_channels,
+		const int sample_rate);
+extern void (*destroy)(void* instance);
+extern bool (*add_audio)(
+		void* instance, const short* samples, const int num_samples);
+extern bool (*add_frame_bgra)(void* instance, const unsigned char* data);
 
-void init()
-{
-	try
-	{
-		if (airsend::is_available())
-			core::register_consumer_factory([](const core::parameters& params)
-			{
-				return newtek::create_ivga_consumer(params);
-			});
-	}
-	catch(...){}
-}
-
-}}
+}}}

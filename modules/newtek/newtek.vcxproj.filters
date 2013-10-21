@@ -8,6 +8,9 @@
     <ClCompile Include="newtek.cpp">
       <Filter>source</Filter>
     </ClCompile>
+    <ClCompile Include="util\air_send.cpp">
+      <Filter>source\util</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="StdAfx.h" />
@@ -17,6 +20,9 @@
     <ClInclude Include="newtek.h">
       <Filter>source</Filter>
     </ClInclude>
+    <ClInclude Include="util\air_send.h">
+      <Filter>source\util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="source">
@@ -24,6 +30,9 @@
     </Filter>
     <Filter Include="source\consumer">
       <UniqueIdentifier>{c4a0a6b8-00cd-475e-a6a4-775bba93dbc2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="source\util">
+      <UniqueIdentifier>{05a7aae8-a23c-4aa2-81c4-fd0710306ce7}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
