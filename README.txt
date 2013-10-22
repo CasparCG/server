@@ -1,4 +1,4 @@
-CasparCG Server 2.0.4 Stable
+CasparCG Server 2.0.6 Stable
 ============================
 
 Thank you for your interest in CasparCG Server, a professional software used to
@@ -51,7 +51,7 @@ INSTALLATION
 
 1. Check that your system meets the requirements above.
 
-2. Unzip and place the "CasparCG Server 2.0.4" folder anywhere you like.
+2. Unzip and place the "CasparCG Server 2.0.6" folder anywhere you like.
 
 3. Install "Microsoft Visual C++ 2010 Redistributable Package" from
    http://www.microsoft.com/download/en/details.aspx?id=5555
@@ -68,7 +68,7 @@ INSTALLATION
 
 7. Start the "CasparCG_Server.exe" program and configure the settings.
 
-8. Connect to the Server from a client, such as the CasparCG Client 2.0.5
+8. Connect to the Server from a client, such as the CasparCG Client 2.0.6
    (available as a separate download.)
 
 

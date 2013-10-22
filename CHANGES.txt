@@ -1,5 +1,16 @@
 C H A N G E S
 
+CasparCG 2.0.6 Stable (as compared to 2.0.4 Stable)
+===================================================
+
+General
+-------
+  o Allow for the server to work without Processing.AirSend.x86.dll to prevent a
+    possible GPL violation.
+  o Version bump to keep up with CasparCG Client version.
+
+
+
 CasparCG 2.0.4 Stable (as compared to 2.0.4 Beta 1)
 ===================================================
 
