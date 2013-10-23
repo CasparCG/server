@@ -104,6 +104,8 @@ void init_device()
 
 struct oal_consumer : public core::frame_consumer
 {
+	monitor::subject									monitor_subject_;
+
 	spl::shared_ptr<diagnostics::graph>					graph_;
 	boost::timer										perf_timer_;
 	int													channel_index_;
@@ -260,7 +262,7 @@ public:
 
 	monitor::source& monitor_output()
 	{
-		static monitor::subject monitor_subject(""); return monitor_subject;
+		return monitor_subject_;
 	}
 };
 

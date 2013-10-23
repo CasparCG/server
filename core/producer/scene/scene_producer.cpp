@@ -95,6 +95,7 @@ struct scene_producer::impl
 	std::map<void*, timeline> timelines_;
 	std::map<std::wstring, std::shared_ptr<core::variable>> variables_;
 	std::vector<std::wstring> variable_names_;
+	monitor::subject monitor_subject_;
 
 	impl(int width, int height)
 		: pixel_constraints_(width, height)
@@ -275,7 +276,7 @@ struct scene_producer::impl
 
 	monitor::source& monitor_output()
 	{
-		static monitor::subject monitor_subject(""); return monitor_subject;
+		return monitor_subject_;
 	}
 };
 
