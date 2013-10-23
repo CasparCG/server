@@ -45,6 +45,7 @@ std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> empty_drawing(
 
 class freehand_producer : public frame_producer_base
 {
+	monitor::subject											monitor_subject_;
 	std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>	drawing_;
 	spl::shared_ptr<core::frame_factory>						frame_factory_;
 	constraints													constraints_;
@@ -163,7 +164,7 @@ public:
 
 	monitor::source& monitor_output()
 	{
-		static monitor::subject monitor_subject(""); return monitor_subject;
+		return monitor_subject_;
 	}
 };
 

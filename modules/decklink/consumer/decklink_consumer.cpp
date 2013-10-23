@@ -516,6 +516,7 @@ public:
 
 struct decklink_consumer_proxy : public core::frame_consumer
 {
+	monitor::subject					monitor_subject_;
 	const configuration					config_;
 	std::unique_ptr<decklink_consumer>	consumer_;
 	executor							executor_;
@@ -591,7 +592,7 @@ public:
 
 	monitor::source& monitor_output()
 	{
-		static monitor::subject monitor_subject(""); return monitor_subject;
+		return monitor_subject_;
 	}
 };	
 
