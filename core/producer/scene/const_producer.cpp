@@ -30,6 +30,7 @@ namespace caspar { namespace core {
 
 class const_producer : public frame_producer_base
 {
+	monitor::subject monitor_subject_;
 	std::vector<draw_frame> frames_;
 	std::vector<draw_frame>::const_iterator seek_position_;
 	constraints constraints_;
@@ -84,7 +85,7 @@ public:
 
 	monitor::source& monitor_output()
 	{
-		static monitor::subject monitor_subject(""); return monitor_subject;
+		return monitor_subject_;
 	}
 };
 
