@@ -30,6 +30,7 @@ namespace caspar { namespace core {
 
 struct hotswap_producer::impl
 {
+	monitor::subject monitor_subject;
 	binding<std::shared_ptr<frame_producer>> producer;
 	constraints size;
 
@@ -89,7 +90,7 @@ boost::property_tree::wptree hotswap_producer::info() const
 
 monitor::source& hotswap_producer::monitor_output()
 {
-	static monitor::subject monitor_subject(""); return monitor_subject;
+	return impl_->monitor_subject;
 }
 
 binding<std::shared_ptr<frame_producer>>& hotswap_producer::producer()

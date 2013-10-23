@@ -554,6 +554,7 @@ public:
 
 struct screen_consumer_proxy : public core::frame_consumer
 {
+	monitor::subject monitor_subject_;
 	const configuration config_;
 	std::unique_ptr<screen_consumer> consumer_;
 	core::interaction_sink* sink_;
@@ -616,7 +617,7 @@ public:
 
 	monitor::source& monitor_output()
 	{
-		static monitor::subject monitor_subject(""); return monitor_subject;
+		return monitor_subject_;
 	}
 };	
 

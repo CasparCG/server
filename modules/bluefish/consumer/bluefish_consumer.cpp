@@ -298,6 +298,8 @@ public:
 
 struct bluefish_consumer_proxy : public core::frame_consumer
 {
+	monitor::subject					monitor_subject_;
+
 	std::unique_ptr<bluefish_consumer>	consumer_;
 	const int							device_index_;
 	const bool							embedded_audio_;
@@ -365,7 +367,7 @@ public:
 
 	monitor::source& monitor_output()
 	{
-		static monitor::subject monitor_subject(""); return monitor_subject;
+		return monitor_subject_;
 	}
 };	
 
