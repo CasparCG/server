@@ -350,13 +350,6 @@ struct frame_muxer::implementation : boost::noncopyable
 			
 		if(!boost::iequals(filter_.filter_str(), filter_str))
 		{
-			for(int n = 0; n < filter_.delay(); ++n)
-			{
-				filter_.push(frame);
-				auto av_frame = filter_.poll();
-				if(av_frame)							
-					video_streams_.back().push(make_write_frame(this, make_safe_ptr(av_frame), frame_factory_, 0, audio_channel_layout_));
-			}
 			filter_ = filter(filter_str);
 			if (!thumbnail_mode_)
 				CASPAR_LOG(info) << L"[frame_muxer] " << display_mode::print(display_mode_) << L" " << print_mode(frame->width, frame->height, in_fps_, frame->interlaced_frame > 0);
