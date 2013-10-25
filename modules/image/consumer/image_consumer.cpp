@@ -67,8 +67,8 @@ namespace caspar { namespace image {
 
 struct image_consumer : public core::frame_consumer
 {
-	monitor::subject	monitor_subject_;
-	std::wstring		filename_;
+	core::monitor::subject	monitor_subject_;
+	std::wstring			filename_;
 public:
 
 	// frame_consumer
@@ -139,7 +139,7 @@ public:
 		return 100;
 	}
 
-	monitor::source& monitor_output()
+	core::monitor::subject& monitor_output()
 	{
 		return monitor_subject_;
 	}

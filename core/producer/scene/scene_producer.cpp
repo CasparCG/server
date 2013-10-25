@@ -274,7 +274,7 @@ struct scene_producer::impl
 		return info;
 	}
 
-	monitor::source& monitor_output()
+	monitor::subject& monitor_output()
 	{
 		return monitor_subject_;
 	}
@@ -343,7 +343,7 @@ boost::unique_future<std::wstring> scene_producer::call(const std::vector<std::w
 	return impl_->call(params);
 }
 
-monitor::source& scene_producer::monitor_output()
+monitor::subject& scene_producer::monitor_output()
 {
 	return impl_->monitor_output();
 }

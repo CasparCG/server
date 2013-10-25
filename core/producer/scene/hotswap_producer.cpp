@@ -88,7 +88,7 @@ boost::property_tree::wptree hotswap_producer::info() const
 	return info;
 }
 
-monitor::source& hotswap_producer::monitor_output()
+monitor::subject& hotswap_producer::monitor_output()
 {
 	return impl_->monitor_subject;
 }

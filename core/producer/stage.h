@@ -79,7 +79,7 @@ public:
 	boost::unique_future<void>			swap_layer(int index, int other_index);
 	boost::unique_future<void>			swap_layer(int index, int other_index, stage& other);	
 
-	monitor::source& monitor_output();	
+	monitor::subject& monitor_output();	
 
 	// frame_observable
 	//void subscribe(const frame_observable::observer_ptr& o) override;

@@ -154,7 +154,7 @@ public:
 		return L"";
 	}
 
-	monitor::source& monitor_output()
+	core::monitor::subject& monitor_output()
 	{
 		return flash_producer_->monitor_output();
 	}
@@ -219,6 +219,6 @@ void cg_proxy::update(int layer, const std::wstring& data){impl_->update(layer, 
 std::wstring cg_proxy::invoke(int layer, const std::wstring& label){return impl_->timed_invoke(layer, label);}
 std::wstring cg_proxy::description(int layer){return impl_->timed_description(layer);}
 std::wstring cg_proxy::template_host_info(){return impl_->timed_template_host_info();}
-monitor::source& cg_proxy::monitor_output(){return impl_->monitor_output();}
+core::monitor::subject& cg_proxy::monitor_output(){return impl_->monitor_output();}
 
 }}

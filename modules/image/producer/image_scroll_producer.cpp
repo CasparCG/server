@@ -58,7 +58,7 @@ namespace caspar { namespace image {
 		
 struct image_scroll_producer : public core::frame_producer_base
 {	
-	monitor::subject				monitor_subject_;
+	core::monitor::subject			monitor_subject_;
 
 	const std::wstring				filename_;
 	std::vector<core::draw_frame>	frames_;
@@ -350,9 +350,9 @@ struct image_scroll_producer : public core::frame_producer_base
 			result = core::draw_frame::interlace(field1, field2, format_desc_.field_mode);
 		}
 		
-		monitor_subject_ << monitor::message("/file/path") % filename_
-						 << monitor::message("/delta") % delta_ 
-						 << monitor::message("/speed") % speed_;
+		monitor_subject_ << core::monitor::message("/file/path") % filename_
+						 << core::monitor::message("/delta") % delta_ 
+						 << core::monitor::message("/speed") % speed_;
 
 		return result;
 	}
@@ -394,7 +394,7 @@ struct image_scroll_producer : public core::frame_producer_base
 		}
 	}
 
-	monitor::source& monitor_output()
+	core::monitor::subject& monitor_output()
 	{
 		return monitor_subject_;
 	}
