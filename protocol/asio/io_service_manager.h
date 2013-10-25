@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+* Copyright 2013 Sveriges Television AB http://casparcg.com/
 *
 * This file is part of CasparCG (www.casparcg.com).
 *
@@ -16,50 +16,30 @@
 * You should have received a copy of the GNU General Public License
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
-* Author: Robert Nagy, ronag89@gmail.com
+* Author: Helge Norberg, helge.norberg@svt.se
 */
 
 #pragma once
 
-#include <core/mixer/audio/audio_mixer.h>
-#include <core/monitor/monitor.h>
-
-#include <common/memory.h>
+#include <memory>
 
 #include <boost/noncopyable.hpp>
 
-struct AVPacket;
-struct AVFormatContext;
+namespace boost { namespace asio {
+	class io_service;
+}}
 
-namespace caspar { 
-			
-namespace core {
+namespace caspar { namespace protocol { namespace asio {
 
-struct video_format_desc;
-
-}
-
-namespace ffmpeg {
-	
-class audio_decoder : public boost::noncopyable
+class io_service_manager : boost::noncopyable
 {
 public:
-	explicit audio_decoder(class input& input, const core::video_format_desc& format_desc);
-	
-	audio_decoder(audio_decoder&& other);
-	audio_decoder& operator=(audio_decoder&& other);
-
-	std::shared_ptr<AVFrame> operator()();
-
-	uint32_t nb_frames() const;
-	
-	std::wstring print() const;
-	
-	core::monitor::subject& monitor_output();
-
+	io_service_manager();
+	~io_service_manager();
+	boost::asio::io_service& service();
 private:
 	struct impl;
-	spl::shared_ptr<impl> impl_;
+	std::unique_ptr<impl> impl_;
 };
 
-}}
+}}}

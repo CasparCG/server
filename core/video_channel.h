@@ -54,7 +54,7 @@ public:
 
 	// Methods
 			
-	monitor::source& monitor_output();
+	monitor::subject& monitor_output();
 
 	// Properties
 

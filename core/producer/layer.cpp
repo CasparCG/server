@@ -36,18 +36,21 @@ namespace caspar { namespace core {
 
 struct layer::impl
 {				
-	monitor::subject					monitor_subject_;
+	spl::shared_ptr<monitor::subject>	monitor_subject_;
 	spl::shared_ptr<frame_producer>		foreground_;
 	spl::shared_ptr<frame_producer>		background_;
 	boost::optional<int32_t>			auto_play_delta_;
+	bool								is_paused_;
 
 public:
 	impl(int index) 
-		: monitor_subject_("/layer/" + boost::lexical_cast<std::string>(index))
+		: monitor_subject_(spl::make_shared<monitor::subject>(
+				"/layer/" + boost::lexical_cast<std::string>(index)))
 //		, foreground_event_subject_("")
 //		, background_event_subject_("background")
 		, foreground_(frame_producer::empty())
 		, background_(frame_producer::empty())
+		, is_paused_(false)
 	{
 //		foreground_event_subject_.subscribe(event_subject_);
 //		background_event_subject_.subscribe(event_subject_);
@@ -55,14 +58,15 @@ public:
 
 	void set_foreground(spl::shared_ptr<frame_producer> producer)
 	{
-		foreground_->monitor_output().unlink_target(&monitor_subject_);
+		foreground_->monitor_output().detach_parent();
 		foreground_ = std::move(producer);
-		foreground_->monitor_output().link_target(&monitor_subject_);
+		foreground_->monitor_output().attach_parent(monitor_subject_);
 	}
 
 	void pause()
 	{
 		foreground_->paused(true);
+		is_paused_ = true;
 	}
 	
 	void load(spl::shared_ptr<frame_producer> producer, bool preview, const boost::optional<int32_t>& auto_play_delta)
@@ -77,6 +81,7 @@ public:
 		{
 			play();
 			foreground_->paused(true);
+			is_paused_ = true;
 		}
 
 		if(auto_play_delta_ && foreground_ == frame_producer::empty())
@@ -96,6 +101,7 @@ public:
 		}
 
 		foreground_->paused(false);
+		is_paused_ = false;
 	}
 	
 	void stop()
@@ -109,6 +115,8 @@ public:
 	{		
 		try
 		{		
+			*monitor_subject_ << monitor::message("/paused") % is_paused_;
+
 			auto frame = foreground_->receive();
 			
 			if(frame == core::draw_frame::late())
@@ -187,7 +195,7 @@ draw_frame layer::receive(const video_format_desc& format_desc) {return impl_->r
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_;}
 boost::property_tree::wptree layer::info() const{return impl_->info();}
-monitor::source& layer::monitor_output() {return impl_->monitor_subject_;}
+monitor::subject& layer::monitor_output() {return *impl_->monitor_subject_;}
 void layer::on_interaction(const interaction_event::ptr& event) { impl_->on_interaction(event); }
 bool layer::collides(double x, double y) const { return impl_->collides(x, y); }
 }}

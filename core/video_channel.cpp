@@ -49,7 +49,7 @@ namespace caspar { namespace core {
 
 struct video_channel::impl /* final */
 {
-	monitor::subject								monitor_subject_;
+	spl::shared_ptr<monitor::subject>				monitor_subject_;
 
 	const int										index_;
 
@@ -66,7 +66,8 @@ struct video_channel::impl /* final */
 	executor										executor_;
 public:
 	impl(int index, const core::video_format_desc& format_desc, std::unique_ptr<image_mixer> image_mixer)  
-		: monitor_subject_("/channel" + boost::lexical_cast<std::string>(index))
+		: monitor_subject_(spl::make_shared<monitor::subject>(
+				"/channel/" + boost::lexical_cast<std::string>(index)))
 		, index_(index)
 		, format_desc_(format_desc)
 		, output_(graph_, format_desc, index)
@@ -79,8 +80,8 @@ public:
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 		
-		output_.monitor_output().link_target(&monitor_subject_);
-		stage_.monitor_output().link_target(&monitor_subject_);
+		output_.monitor_output().attach_parent(monitor_subject_);
+		stage_.monitor_output().attach_parent(monitor_subject_);
 
 		executor_.begin_invoke([=]{tick();});
 
@@ -127,7 +128,7 @@ public:
 		
 			graph_->set_value("tick-time", frame_timer.elapsed()*format_desc.fps*0.5);
 
-			monitor_subject_	<< monitor::message("/profiler/time")	% frame_timer.elapsed() % (1.0/format_desc_.fps)
+			*monitor_subject_	<< monitor::message("/profiler/time")	% frame_timer.elapsed() % (1.0/format_desc_.fps)
 								<< monitor::message("/format")			% format_desc.name;
 		}
 		catch(...)
@@ -172,6 +173,6 @@ spl::shared_ptr<frame_factory> video_channel::frame_factory() { return impl_->im
 core::video_format_desc video_channel::video_format_desc() const{return impl_->video_format_desc();}
 void core::video_channel::video_format_desc(const core::video_format_desc& format_desc){impl_->video_format_desc(format_desc);}
 boost::property_tree::wptree video_channel::info() const{return impl_->info();}		
-monitor::source& video_channel::monitor_output(){return impl_->monitor_subject_;}
+monitor::subject& video_channel::monitor_output(){return *impl_->monitor_subject_;}
 
 }}

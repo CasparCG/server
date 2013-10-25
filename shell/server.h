@@ -44,7 +44,7 @@ public:
 	const std::vector<spl::shared_ptr<core::video_channel>> channels() const;
 	std::shared_ptr<core::thumbnail_generator> get_thumbnail_generator() const;
 
-	monitor::source& monitor_output();
+	core::monitor::subject& monitor_output();
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;
