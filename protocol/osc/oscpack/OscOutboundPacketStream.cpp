@@ -36,6 +36,8 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#include <common/endian.h>
+
 #if defined(__WIN32__) || defined(WIN32)
 #include <malloc.h> // for alloca
 #endif
@@ -48,7 +50,7 @@ namespace osc{
 static void FromInt32( char *p, int32 x )
 {
 #ifdef OSC_HOST_LITTLE_ENDIAN
-    union{
+    /*union{
         osc::int32 i;
         char c[4];
     } u;
@@ -58,7 +60,8 @@ static void FromInt32( char *p, int32 x )
     p[3] = u.c[0];
     p[2] = u.c[1];
     p[1] = u.c[2];
-    p[0] = u.c[3];
+    p[0] = u.c[3];*/
+	*reinterpret_cast<int32*>(p) = caspar::swap_byte_order(x); 
 #else
     *reinterpret_cast<int32*>(p) = x;
 #endif
@@ -68,7 +71,7 @@ static void FromInt32( char *p, int32 x )
 static void FromUInt32( char *p, uint32 x )
 {
 #ifdef OSC_HOST_LITTLE_ENDIAN
-    union{
+    /*union{
         osc::uint32 i;
         char c[4];
     } u;
@@ -78,7 +81,8 @@ static void FromUInt32( char *p, uint32 x )
     p[3] = u.c[0];
     p[2] = u.c[1];
     p[1] = u.c[2];
-    p[0] = u.c[3];
+    p[0] = u.c[3];*/
+	*reinterpret_cast<uint32*>(p) = caspar::swap_byte_order(x); 
 #else
     *reinterpret_cast<uint32*>(p) = x;
 #endif
@@ -88,7 +92,7 @@ static void FromUInt32( char *p, uint32 x )
 static void FromInt64( char *p, int64 x )
 {
 #ifdef OSC_HOST_LITTLE_ENDIAN
-    union{
+    /*union{
         osc::int64 i;
         char c[8];
     } u;
@@ -102,7 +106,8 @@ static void FromInt64( char *p, int64 x )
     p[3] = u.c[4];
     p[2] = u.c[5];
     p[1] = u.c[6];
-    p[0] = u.c[7];
+    p[0] = u.c[7];*/
+	*reinterpret_cast<int64*>(p) = caspar::swap_byte_order(x); 
 #else
     *reinterpret_cast<int64*>(p) = x;
 #endif
@@ -112,7 +117,7 @@ static void FromInt64( char *p, int64 x )
 static void FromUInt64( char *p, uint64 x )
 {
 #ifdef OSC_HOST_LITTLE_ENDIAN
-    union{
+    /*union{
         osc::uint64 i;
         char c[8];
     } u;
@@ -126,7 +131,8 @@ static void FromUInt64( char *p, uint64 x )
     p[3] = u.c[4];
     p[2] = u.c[5];
     p[1] = u.c[6];
-    p[0] = u.c[7];
+    p[0] = u.c[7];*/
+	*reinterpret_cast<uint64*>(p) = caspar::swap_byte_order(x); 
 #else
     *reinterpret_cast<uint64*>(p) = x;
 #endif
