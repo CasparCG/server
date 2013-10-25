@@ -81,7 +81,7 @@ namespace caspar { namespace decklink {
 		
 class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 {	
-	monitor::subject								monitor_subject_;
+	core::monitor::subject							monitor_subject_;
 	spl::shared_ptr<diagnostics::graph>				graph_;
 	boost::timer									tick_timer_;
 
@@ -213,15 +213,16 @@ public:
 			video_frame->interlaced_frame	= in_format_desc_.field_mode != core::field_mode::progressive;
 			video_frame->top_field_first	= in_format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
 				
-			monitor_subject_	<< monitor::message("/file/name")				% model_name_
-								<< monitor::message("/file/path")				% device_index_
-								<< monitor::message("/file/video/width")			% video->GetWidth()
-								<< monitor::message("/file/video/height")		% video->GetHeight()
-								<< monitor::message("/file/video/field")			% u8(!video_frame->interlaced_frame ? "progressive" : (video_frame->top_field_first ? "upper" : "lower"))
-								<< monitor::message("/file/audio/sample-rate")	% 48000
-								<< monitor::message("/file/audio/channels")		% 2
-								<< monitor::message("/file/audio/format")		% u8(av_get_sample_fmt_name(AV_SAMPLE_FMT_S32))
-								<< monitor::message("/file/fps")					% in_format_desc_.fps;
+			monitor_subject_
+					<< core::monitor::message("/file/name")					% model_name_
+					<< core::monitor::message("/file/path")					% device_index_
+					<< core::monitor::message("/file/video/width")			% video->GetWidth()
+					<< core::monitor::message("/file/video/height")			% video->GetHeight()
+					<< core::monitor::message("/file/video/field")			% u8(!video_frame->interlaced_frame ? "progressive" : (video_frame->top_field_first ? "upper" : "lower"))
+					<< core::monitor::message("/file/audio/sample-rate")	% 48000
+					<< core::monitor::message("/file/audio/channels")		% 2
+					<< core::monitor::message("/file/audio/format")			% u8(av_get_sample_fmt_name(AV_SAMPLE_FMT_S32))
+					<< core::monitor::message("/file/fps")					% in_format_desc_.fps;
 
 			// Audio
 
@@ -271,10 +272,10 @@ public:
 			}
 			
 			graph_->set_value("frame-time", frame_timer.elapsed()*out_format_desc_.fps*0.5);	
-			monitor_subject_ << monitor::message("/profiler/time") % frame_timer.elapsed() % out_format_desc_.fps;
+			monitor_subject_ << core::monitor::message("/profiler/time") % frame_timer.elapsed() % out_format_desc_.fps;
 
 			graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
-			monitor_subject_ << monitor::message("/buffer") % frame_buffer_.size() % frame_buffer_.capacity();
+			monitor_subject_ << core::monitor::message("/buffer") % frame_buffer_.size() % frame_buffer_.capacity();
 		}
 		catch(...)
 		{
@@ -302,7 +303,7 @@ public:
 		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"|" + in_format_desc_.name + L"]";
 	}
 
-	monitor::source& monitor_output()
+	core::monitor::subject& monitor_output()
 	{
 		return monitor_subject_;
 	}
@@ -338,7 +339,7 @@ public:
 		});
 	}
 
-	monitor::source& monitor_output()
+	core::monitor::subject& monitor_output()
 	{
 		return producer_->monitor_output();
 	}

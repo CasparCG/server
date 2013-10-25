@@ -51,7 +51,7 @@ public:
 	std::wstring invoke(int layer, const std::wstring& label);
 	std::wstring description(int layer);
 	std::wstring template_host_info();
-	monitor::source& monitor_output();
+	core::monitor::subject& monitor_output();
 
 private:
 	struct impl;

@@ -65,7 +65,7 @@ public:
 	
 	// monitor::observable
 
-	monitor::source& monitor_output();
+	monitor::subject& monitor_output();
 
 	// interaction_sink
 

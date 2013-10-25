@@ -298,7 +298,7 @@ public:
 
 struct bluefish_consumer_proxy : public core::frame_consumer
 {
-	monitor::subject					monitor_subject_;
+	core::monitor::subject				monitor_subject_;
 
 	std::unique_ptr<bluefish_consumer>	consumer_;
 	const int							device_index_;
@@ -365,7 +365,7 @@ public:
 		return 400 + device_index_;
 	}
 
-	monitor::source& monitor_output()
+	core::monitor::subject& monitor_output()
 	{
 		return monitor_subject_;
 	}

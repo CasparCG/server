@@ -104,18 +104,18 @@ void init_device()
 
 struct oal_consumer : public core::frame_consumer
 {
-	monitor::subject									monitor_subject_;
+	core::monitor::subject				monitor_subject_;
 
-	spl::shared_ptr<diagnostics::graph>					graph_;
-	boost::timer										perf_timer_;
-	int													channel_index_;
+	spl::shared_ptr<diagnostics::graph>	graph_;
+	boost::timer						perf_timer_;
+	int									channel_index_;
 	
-	core::video_format_desc								format_desc_;
+	core::video_format_desc				format_desc_;
 
-	ALuint												source_;
-	std::array<ALuint, 3>								buffers_;
+	ALuint								source_;
+	std::array<ALuint, 3>				buffers_;
 
-	executor											executor_;
+	executor							executor_;
 
 public:
 	oal_consumer() 
@@ -260,7 +260,7 @@ public:
 		return 500;
 	}
 
-	monitor::source& monitor_output()
+	core::monitor::subject& monitor_output()
 	{
 		return monitor_subject_;
 	}

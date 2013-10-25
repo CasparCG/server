@@ -309,7 +309,7 @@ constraints& text_producer::pixel_constraints() { return impl_->pixel_constraint
 std::wstring text_producer::print() const { return impl_->print(); }
 std::wstring text_producer::name() const { return impl_->name(); }
 boost::property_tree::wptree text_producer::info() const { return impl_->info(); }
-monitor::source& text_producer::monitor_output() { return impl_->monitor_subject_; }
+monitor::subject& text_producer::monitor_output() { return impl_->monitor_subject_; }
 binding<std::wstring>& text_producer::text() { return impl_->text(); }
 binding<double>& text_producer::tracking() { return impl_->tracking(); }
 const binding<double>& text_producer::current_bearing_y() const { return impl_->current_bearing_y(); }

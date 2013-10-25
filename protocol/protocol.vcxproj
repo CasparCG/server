@@ -33,12 +33,14 @@
     <ClInclude Include="amcp\AMCPCommandsImpl.h" />
     <ClInclude Include="amcp\AMCPProtocolStrategy.h" />
     <ClInclude Include="amcp\amcp_shared.h" />
+    <ClInclude Include="asio\io_service_manager.h" />
     <ClInclude Include="cii\CIICommand.h" />
     <ClInclude Include="cii\CIICommandsImpl.h" />
     <ClInclude Include="cii\CIIProtocolStrategy.h" />
     <ClInclude Include="clk\CLKProtocolStrategy.h" />
     <ClInclude Include="clk\clk_commands.h" />
     <ClInclude Include="clk\clk_command_processor.h" />
+    <ClInclude Include="osc\client.h" />
     <ClInclude Include="osc\oscpack\MessageMappingOscPacketListener.h" />
     <ClInclude Include="osc\oscpack\OscException.h" />
     <ClInclude Include="osc\oscpack\OscHostEndianness.h" />
@@ -47,7 +49,6 @@
     <ClInclude Include="osc\oscpack\OscPrintReceivedElements.h" />
     <ClInclude Include="osc\oscpack\OscReceivedElements.h" />
     <ClInclude Include="osc\oscpack\OscTypes.h" />
-    <ClInclude Include="osc\server.h" />
     <ClInclude Include="StdAfx.h" />
     <ClInclude Include="util\AsyncEventServer.h" />
     <ClInclude Include="util\ClientInfo.h" />
@@ -66,6 +67,10 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="amcp\AMCPProtocolStrategy.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="asio\io_service_manager.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
@@ -89,6 +94,10 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
+    <ClCompile Include="osc\client.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
     <ClCompile Include="osc\oscpack\OscOutboundPacketStream.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
@@ -104,10 +113,6 @@
     <ClCompile Include="osc\oscpack\OscTypes.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="osc\server.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="StdAfx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

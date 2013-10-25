@@ -22,6 +22,9 @@
     <Filter Include="source\osc\oscpack">
       <UniqueIdentifier>{d6dede65-7a93-4494-aa2d-d18d5267902c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\asio">
+      <UniqueIdentifier>{982ff369-f4a0-418b-b613-81ec322208c5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="amcp\AMCPCommand.h">
@@ -82,9 +85,6 @@
     <ClInclude Include="osc\oscpack\OscException.h">
       <Filter>source\osc\oscpack</Filter>
     </ClInclude>
-    <ClInclude Include="osc\server.h">
-      <Filter>source\osc</Filter>
-    </ClInclude>
     <ClInclude Include="clk\clk_command_processor.h">
       <Filter>source\clk</Filter>
     </ClInclude>
@@ -102,6 +102,12 @@
     </ClInclude>
     <ClInclude Include="amcp\amcp_shared.h">
       <Filter>source\amcp</Filter>
+    </ClInclude>
+    <ClInclude Include="osc\client.h">
+      <Filter>source\osc</Filter>
+    </ClInclude>
+    <ClInclude Include="asio\io_service_manager.h">
+      <Filter>source\asio</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -139,9 +145,6 @@
     <ClCompile Include="osc\oscpack\OscTypes.cpp">
       <Filter>source\osc\oscpack</Filter>
     </ClCompile>
-    <ClCompile Include="osc\server.cpp">
-      <Filter>source\osc</Filter>
-    </ClCompile>
     <ClCompile Include="clk\clk_command_processor.cpp">
       <Filter>source\clk</Filter>
     </ClCompile>
@@ -153,6 +156,12 @@
     </ClCompile>
     <ClCompile Include="util\lock_container.cpp">
       <Filter>source\util</Filter>
+    </ClCompile>
+    <ClCompile Include="osc\client.cpp">
+      <Filter>source\osc</Filter>
+    </ClCompile>
+    <ClCompile Include="asio\io_service_manager.cpp">
+      <Filter>source\asio</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -554,10 +554,10 @@ public:
 
 struct screen_consumer_proxy : public core::frame_consumer
 {
-	monitor::subject monitor_subject_;
-	const configuration config_;
-	std::unique_ptr<screen_consumer> consumer_;
-	core::interaction_sink* sink_;
+	core::monitor::subject				monitor_subject_;
+	const configuration					config_;
+	std::unique_ptr<screen_consumer>	consumer_;
+	core::interaction_sink*				sink_;
 
 public:
 
@@ -615,7 +615,7 @@ public:
 		return 600 + (config_.key_only ? 10 : 0) + config_.screen_index;
 	}
 
-	monitor::source& monitor_output()
+	core::monitor::subject& monitor_output()
 	{
 		return monitor_subject_;
 	}

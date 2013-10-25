@@ -51,7 +51,7 @@ namespace caspar { namespace core {
 struct stage::impl : public std::enable_shared_from_this<impl>
 {				
 	spl::shared_ptr<diagnostics::graph>							graph_;
-	monitor::subject											monitor_subject_;
+	spl::shared_ptr<monitor::subject>							monitor_subject_;
 	//reactive::basic_subject<std::map<int, class draw_frame>>	frames_subject_;
 	std::map<int, layer>										layers_;	
 	std::map<int, tweened_transform>							tweens_;
@@ -60,7 +60,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 public:
 	impl(spl::shared_ptr<diagnostics::graph> graph) 
 		: graph_(std::move(graph))
-		, monitor_subject_("/stage")
+		, monitor_subject_(spl::make_shared<monitor::subject>("/stage"))
 		, aggregator_([=] (double x, double y) { return collission_detect(x, y); })
 		, executor_(L"stage")
 	{
@@ -104,7 +104,7 @@ public:
 		//frames_subject_ << frames;
 		
 		graph_->set_value("produce-time", frame_timer.elapsed()*format_desc.fps*0.5);
-		monitor_subject_ << monitor::message("/profiler/time") % frame_timer.elapsed() % (1.0/format_desc.fps);
+		*monitor_subject_ << monitor::message("/profiler/time") % frame_timer.elapsed() % (1.0/format_desc.fps);
 
 		return frames;
 	}
@@ -134,7 +134,7 @@ public:
 		if(it == std::end(layers_))
 		{
 			it = layers_.insert(std::make_pair(index, layer(index))).first;
-			it->second.monitor_output().link_target(&monitor_subject_);
+			it->second.monitor_output().attach_parent(monitor_subject_);
 		}
 		return it->second;
 	}
@@ -239,18 +239,18 @@ public:
 			auto other_layers	= other_impl->layers_ | boost::adaptors::map_values;
 
 			BOOST_FOREACH(auto& layer, layers)
-				layer.monitor_output().unlink_target(&monitor_subject_);
+				layer.monitor_output().detach_parent();
 			
 			BOOST_FOREACH(auto& layer, other_layers)
-				layer.monitor_output().unlink_target(&monitor_subject_);
+				layer.monitor_output().detach_parent();
 			
 			std::swap(layers_, other_impl->layers_);
 						
 			BOOST_FOREACH(auto& layer, layers)
-				layer.monitor_output().link_target(&monitor_subject_);
+				layer.monitor_output().attach_parent(monitor_subject_);
 			
 			BOOST_FOREACH(auto& layer, other_layers)
-				layer.monitor_output().link_target(&monitor_subject_);
+				layer.monitor_output().attach_parent(monitor_subject_);
 		};		
 
 		return executor_.begin_invoke([=]
@@ -280,13 +280,13 @@ public:
 				auto& my_layer		= get_layer(index);
 				auto& other_layer	= other_impl->get_layer(other_index);
 
-				my_layer.monitor_output().unlink_target(&monitor_subject_);
-				other_layer.monitor_output().unlink_target(&other_impl->monitor_subject_);
+				my_layer.monitor_output().detach_parent();
+				other_layer.monitor_output().detach_parent();
 
 				std::swap(my_layer, other_layer);
 
-				my_layer.monitor_output().link_target(&monitor_subject_);
-				other_layer.monitor_output().link_target(&other_impl->monitor_subject_);
+				my_layer.monitor_output().attach_parent(monitor_subject_);
+				other_layer.monitor_output().attach_parent(other_impl->monitor_subject_);
 			};		
 
 			return executor_.begin_invoke([=]
@@ -389,7 +389,7 @@ boost::unique_future<spl::shared_ptr<frame_producer>> stage::background(int inde
 boost::unique_future<boost::property_tree::wptree> stage::info() const{return impl_->info();}
 boost::unique_future<boost::property_tree::wptree> stage::info(int index) const{return impl_->info(index);}
 std::map<int, class draw_frame> stage::operator()(const video_format_desc& format_desc){return (*impl_)(format_desc);}
-monitor::source& stage::monitor_output(){return impl_->monitor_subject_;}
+monitor::subject& stage::monitor_output(){return *impl_->monitor_subject_;}
 //void stage::subscribe(const frame_observable::observer_ptr& o) {impl_->frames_subject_.subscribe(o);}
 //void stage::unsubscribe(const frame_observable::observer_ptr& o) {impl_->frames_subject_.unsubscribe(o);}
 void stage::on_interaction(const interaction_event::ptr& event) { impl_->on_interaction(event); }
