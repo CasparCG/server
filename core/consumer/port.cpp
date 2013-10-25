@@ -10,18 +10,19 @@ namespace caspar { namespace core {
 
 struct port::impl
 {
-	monitor::subject					monitor_subject_;
+	spl::shared_ptr<monitor::subject>	monitor_subject_;
 	std::shared_ptr<frame_consumer>		consumer_;
 	int									index_;
 	int									channel_index_;
 public:
 	impl(int index, int channel_index, spl::shared_ptr<frame_consumer> consumer)
-		: monitor_subject_("/port" + boost::lexical_cast<std::string>(index))
+		: monitor_subject_(spl::make_shared<monitor::subject>(
+				"/port" + boost::lexical_cast<std::string>(index)))
 		, consumer_(std::move(consumer))
 		, index_(index)
 		, channel_index_(channel_index)
 	{
-		consumer_->monitor_output().link_target(&monitor_subject_);
+		consumer_->monitor_output().attach_parent(monitor_subject_);
 	}
 	
 	void video_format_desc(const struct video_format_desc& format_desc)
@@ -31,7 +32,7 @@ public:
 		
 	boost::unique_future<bool> send(const_frame frame)
 	{
-		monitor_subject_ << monitor::message("/type") % consumer_->name();
+		*monitor_subject_ << monitor::message("/type") % consumer_->name();
 		return consumer_->send(std::move(frame));
 	}
 	std::wstring print() const
@@ -65,7 +66,7 @@ port::port(port&& other) : impl_(std::move(other.impl_)){}
 port::~port(){}
 port& port::operator=(port&& other){impl_ = std::move(other.impl_); return *this;}
 boost::unique_future<bool> port::send(const_frame frame){return impl_->send(std::move(frame));}	
-monitor::source& port::monitor_output() {return impl_->monitor_subject_;}
+monitor::subject& port::monitor_output() {return *impl_->monitor_subject_;}
 void port::video_format_desc(const struct video_format_desc& format_desc){impl_->video_format_desc(format_desc);}
 int port::buffer_depth() const{return impl_->buffer_depth();}
 std::wstring port::print() const{ return impl_->print();}

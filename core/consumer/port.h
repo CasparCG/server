@@ -29,7 +29,7 @@ public:
 
 	boost::unique_future<bool> send(class const_frame frame);	
 
-	monitor::source& monitor_output();
+	monitor::subject& monitor_output();
 
 	// Properties
 

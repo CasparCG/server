@@ -53,7 +53,7 @@ public:
 
 	std::wstring print() const;
 		
-	monitor::source& monitor_output();
+	core::monitor::subject& monitor_output();
 
 private:
 	struct impl;

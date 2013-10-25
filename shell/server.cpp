@@ -56,12 +56,13 @@
 #include <modules/screen/consumer/screen_consumer.h>
 #include <modules/ffmpeg/consumer/ffmpeg_consumer.h>
 
+#include <protocol/asio/io_service_manager.h>
 #include <protocol/amcp/AMCPProtocolStrategy.h>
 #include <protocol/cii/CIIProtocolStrategy.h>
 #include <protocol/CLK/CLKProtocolStrategy.h>
 #include <protocol/util/AsyncEventServer.h>
 #include <protocol/util/strategy_adapters.h>
-#include <protocol/osc/server.h>
+#include <protocol/osc/client.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/thread.hpp>
@@ -77,16 +78,21 @@ using namespace protocol;
 
 struct server::impl : boost::noncopyable
 {
-	monitor::subject									monitor_subject_;
+	protocol::asio::io_service_manager					io_service_manager_;
+	spl::shared_ptr<monitor::subject>					monitor_subject_;
 	accelerator::accelerator							accelerator_;
 	std::vector<spl::shared_ptr<IO::AsyncEventServer>>	async_servers_;
-	std::vector<osc::server>							osc_servers_;
+	std::shared_ptr<IO::AsyncEventServer>				primary_amcp_server_;
+	osc::client											osc_client_;
+	std::vector<std::shared_ptr<void>>					predefined_osc_subscriptions_;
 	std::vector<spl::shared_ptr<video_channel>>			channels_;
 	std::shared_ptr<thumbnail_generator>				thumbnail_generator_;
 	boost::promise<bool>&								shutdown_server_now_;
 
 	explicit impl(boost::promise<bool>& shutdown_server_now)		
-		: accelerator_(env::properties().get(L"configuration.accelerator", L"auto")), shutdown_server_now_(shutdown_server_now)
+		: accelerator_(env::properties().get(L"configuration.accelerator", L"auto"))
+		, osc_client_(io_service_manager_.service())
+		, shutdown_server_now_(shutdown_server_now)
 	{	
 
 		ffmpeg::init();
@@ -126,10 +132,15 @@ struct server::impl : boost::noncopyable
 
 		setup_controllers(env::properties());
 		CASPAR_LOG(info) << L"Initialized controllers.";
+
+		setup_osc(env::properties());
+		CASPAR_LOG(info) << L"Initialized osc.";
 	}
 
 	~impl()
-	{		
+	{
+		thumbnail_generator_.reset();
+		primary_amcp_server_.reset();
 		async_servers_.clear();
 		channels_.clear();
 
@@ -175,13 +186,57 @@ struct server::impl : boost::noncopyable
 				}
 			}		
 
-		    channel->monitor_output().link_target(&monitor_subject_);
+		    channel->monitor_output().attach_parent(monitor_subject_);
 			channels_.push_back(channel);
 		}
 
 		// Dummy diagnostics channel
 		if(env::properties().get(L"configuration.channel-grid", false))
 			channels_.push_back(spl::make_shared<video_channel>(static_cast<int>(channels_.size()+1), core::video_format_desc(core::video_format::x576p2500), accelerator_.create_image_mixer()));
+	}
+
+	void setup_osc(const boost::property_tree::wptree& pt)
+	{		
+		using boost::property_tree::wptree;
+		using namespace boost::asio::ip;
+
+		monitor_subject_->attach_parent(osc_client_.sink());
+		
+		auto default_port =
+				pt.get<unsigned short>(L"configuration.osc.default-port", 6250);
+		auto predefined_clients =
+				pt.get_child_optional(L"configuration.osc.predefined-clients");
+
+		if (predefined_clients)
+		{
+			BOOST_FOREACH(auto& predefined_client, *predefined_clients)
+			{
+				const auto address =
+						predefined_client.second.get<std::wstring>(L"address");
+				const auto port =
+						predefined_client.second.get<unsigned short>(L"port");
+				predefined_osc_subscriptions_.push_back(
+						osc_client_.get_subscription_token(udp::endpoint(
+								address_v4::from_string(u8(address)),
+								port)));
+			}
+		}
+
+		if (primary_amcp_server_)
+			primary_amcp_server_->add_client_lifecycle_object_factory(
+					[=] (const std::string& ipv4_address)
+							-> std::pair<std::wstring, std::shared_ptr<void>>
+					{
+						using namespace boost::asio::ip;
+
+						return std::make_pair(
+								std::wstring(L"osc_subscribe"),
+								osc_client_.get_subscription_token(
+										udp::endpoint(
+												address_v4::from_string(
+														ipv4_address),
+												default_port)));
+					});
 	}
 
 	void setup_thumbnail_generation(const boost::property_tree::wptree& pt)
@@ -222,18 +277,8 @@ struct server::impl : boost::noncopyable
 					auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(create_protocol(protocol), port);
 					async_servers_.push_back(asyncbootstrapper);
 
-					//TODO: remove - test
-					asyncbootstrapper->add_client_lifecycle_object_factory([=] (const std::string& ipv4_address) {
-																					return std::pair<std::wstring, std::shared_ptr<void>>(L"log", std::shared_ptr<void>(nullptr, [] (void*) 
-																					{ CASPAR_LOG(info) << "Client disconnect (lifecycle)"; }));
-																				});
-				}
-				else if(name == L"udp")
-				{
-					const auto address = xml_controller.second.get(L"address", L"127.0.0.1");
-					const auto port = xml_controller.second.get<unsigned short>(L"port", 6250);
-
-					osc_servers_.push_back(osc::server(boost::asio::ip::udp::endpoint(boost::asio::ip::address_v4::from_string(std::string(address.begin(), address.end())), port), monitor_subject_));
+					if (!primary_amcp_server_ && boost::iequals(protocol, L"AMCP"))
+						primary_amcp_server_ = asyncbootstrapper;
 				}
 				else
 					CASPAR_LOG(warning) << "Invalid controller: " << name;	
@@ -270,6 +315,6 @@ const std::vector<spl::shared_ptr<video_channel>> server::channels() const
 	return impl_->channels_;
 }
 std::shared_ptr<core::thumbnail_generator> server::get_thumbnail_generator() const {return impl_->thumbnail_generator_; }
-monitor::source& server::monitor_output() { return impl_->monitor_subject_; }
+core::monitor::subject& server::monitor_output() { return *impl_->monitor_subject_; }
 
 }

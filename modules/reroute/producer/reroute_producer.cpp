@@ -54,7 +54,7 @@ namespace caspar { namespace reroute {
 class reroute_producer : public reactive::observer<std::map<int, core::draw_frame>>
 					   , public core::frame_producer_base
 {
-	monitor::subject												monitor_subject_;
+	core::monitor::subject											monitor_subject_;
 
 	core::constraints												constraints_;
 	const spl::shared_ptr<diagnostics::graph>						graph_;
@@ -115,7 +115,7 @@ public:
 		return info;
 	}
 		
-	monitor::source& monitor_output()
+	core::monitor::subject& monitor_output()
 	{
 		return monitor_subject_;
 	}
