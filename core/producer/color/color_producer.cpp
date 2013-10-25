@@ -97,7 +97,7 @@ public:
 		return info;
 	}
 
-	monitor::source& monitor_output() override {return monitor_subject_;}										
+	monitor::subject& monitor_output() override {return monitor_subject_;}										
 };
 
 std::wstring get_hex_color(const std::wstring& str)

@@ -53,7 +53,7 @@ namespace caspar { namespace core {
 struct output::impl
 {		
 	spl::shared_ptr<diagnostics::graph>	graph_;
-	monitor::subject					monitor_subject_;
+	spl::shared_ptr<monitor::subject>	monitor_subject_;
 	const int							channel_index_;
 	video_format_desc					format_desc_;
 	std::map<int, port>					ports_;	
@@ -63,7 +63,7 @@ struct output::impl
 public:
 	impl(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index) 
 		: graph_(std::move(graph))
-		, monitor_subject_("/output")
+		, monitor_subject_(spl::make_shared<monitor::subject>("/output"))
 		, channel_index_(channel_index)
 		, format_desc_(format_desc)
 		, executor_(L"output")
@@ -80,7 +80,7 @@ public:
 		executor_.begin_invoke([this, index, consumer]
 		{			
 			port p(index, channel_index_, std::move(consumer));
-			p.monitor_output().link_target(&monitor_subject_);
+			p.monitor_output().attach_parent(monitor_subject_);
 			ports_.insert(std::make_pair(index, std::move(p)));
 		}, task_priority::high_priority);
 	}
@@ -253,5 +253,5 @@ void output::remove(int index){impl_->remove(index);}
 void output::remove(const spl::shared_ptr<frame_consumer>& consumer){impl_->remove(consumer);}
 boost::unique_future<boost::property_tree::wptree> output::info() const{return impl_->info();}
 void output::operator()(const_frame frame, const video_format_desc& format_desc){(*impl_)(std::move(frame), format_desc);}
-monitor::source& output::monitor_output() {return impl_->monitor_subject_;}
+monitor::subject& output::monitor_output() {return *impl_->monitor_subject_;}
 }}

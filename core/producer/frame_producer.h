@@ -80,7 +80,7 @@ public:
 	
 	// monitor::observable
 
-	virtual monitor::source& monitor_output() = 0;
+	virtual monitor::subject& monitor_output() = 0;
 
 	// interaction_sink
 	virtual void on_interaction(const interaction_event::ptr& event) override { }

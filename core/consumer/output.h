@@ -55,7 +55,7 @@ public:
 	void remove(const spl::shared_ptr<class frame_consumer>& consumer);
 	void remove(int index);
 	
-	monitor::source& monitor_output();
+	monitor::subject& monitor_output();
 
 	// Properties
 

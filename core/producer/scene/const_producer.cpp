@@ -83,7 +83,7 @@ public:
 		return info;
 	}
 
-	monitor::source& monitor_output()
+	monitor::subject& monitor_output()
 	{
 		return monitor_subject_;
 	}

@@ -516,7 +516,7 @@ public:
 
 struct decklink_consumer_proxy : public core::frame_consumer
 {
-	monitor::subject					monitor_subject_;
+	core::monitor::subject				monitor_subject_;
 	const configuration					config_;
 	std::unique_ptr<decklink_consumer>	consumer_;
 	executor							executor_;
@@ -590,7 +590,7 @@ public:
 		return 300 + config_.device_index;
 	}
 
-	monitor::source& monitor_output()
+	core::monitor::subject& monitor_output()
 	{
 		return monitor_subject_;
 	}
