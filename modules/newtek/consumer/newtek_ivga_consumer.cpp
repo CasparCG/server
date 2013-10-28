@@ -33,6 +33,8 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include <tbb/atomic.h>
+
 #include "../util/air_send.h"
 
 namespace caspar { namespace newtek {
@@ -43,6 +45,7 @@ struct newtek_ivga_consumer : public core::frame_consumer
 	core::video_format_desc format_desc_;
 	core::channel_layout	channel_layout_;
 	executor				executor_;
+	tbb::atomic<bool>		connected_;
 
 public:
 
@@ -52,6 +55,8 @@ public:
 	{
 		if (!airsend::is_available())
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(airsend::dll_name()) + " not available"));
+
+		connected_ = false;
 	}
 	
 	~newtek_ivga_consumer()
@@ -123,7 +128,7 @@ public:
 
 			// VIDEO
 
-			airsend::add_frame_bgra(air_send_.get(), frame->image_data().begin());
+			connected_ = airsend::add_frame_bgra(air_send_.get(), frame->image_data().begin());
 			
 			return true;
 		});
@@ -154,6 +159,11 @@ public:
 	virtual int64_t presentation_frame_age_millis() const override
 	{
 		return 0;
+	}
+
+	virtual bool has_synchronization_clock() const override
+	{
+		return connected_;
 	}
 };	
 
