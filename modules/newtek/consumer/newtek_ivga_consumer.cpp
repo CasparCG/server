@@ -30,8 +30,10 @@
 
 #include <common/utility/assert.h>
 #include <common/concurrency/executor.h>
+#include <common/diagnostics/graph.h>
 
 #include <boost/algorithm/string.hpp>
+#include <boost/timer.hpp>
 
 #include <tbb/atomic.h>
 
@@ -41,11 +43,15 @@ namespace caspar { namespace newtek {
 
 struct newtek_ivga_consumer : public core::frame_consumer
 {
-	std::shared_ptr<void>	air_send_;
-	core::video_format_desc format_desc_;
-	core::channel_layout	channel_layout_;
-	executor				executor_;
-	tbb::atomic<bool>		connected_;
+	std::shared_ptr<void>			air_send_;
+	core::video_format_desc			format_desc_;
+	core::channel_layout			channel_layout_;
+	executor						executor_;
+	tbb::atomic<bool>				connected_;
+
+	safe_ptr<diagnostics::graph>	graph_;
+	boost::timer					tick_timer_;
+	boost::timer					frame_timer_;
 
 public:
 
@@ -57,6 +63,11 @@ public:
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(airsend::dll_name()) + " not available"));
 
 		connected_ = false;
+
+		graph_->set_text(print());
+		graph_->set_color("frame-time", diagnostics::color(0.5f, 1.0f, 0.2f));
+		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
+		diagnostics::register_graph(graph_);
 	}
 	
 	~newtek_ivga_consumer()
@@ -93,6 +104,10 @@ public:
 
 		return executor_.begin_invoke([=]() -> bool
 		{			
+			graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
+			tick_timer_.restart();
+			frame_timer_.restart();
+
 			// AUDIO
 
 			std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>> audio_buffer;
@@ -129,6 +144,9 @@ public:
 			// VIDEO
 
 			connected_ = airsend::add_frame_bgra(air_send_.get(), frame->image_data().begin());
+
+			graph_->set_text(print());
+			graph_->set_value("frame-time", frame_timer_.elapsed() * format_desc_.fps * 0.5);
 			
 			return true;
 		});
@@ -136,13 +154,15 @@ public:
 		
 	virtual std::wstring print() const override
 	{
-		return L"newtek-ivga";
+		return connected_ ?
+				L"newtek-ivga[connected]" : L"newtek-ivga[not connected]";
 	}
 
 	virtual boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
 		info.add(L"type", L"newtek-ivga-consumer");
+		info.add(L"connected", connected_ ? L"true" : L"false");
 		return info;
 	}
 
