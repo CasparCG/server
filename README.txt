@@ -35,10 +35,7 @@ SYSTEM REQUIREMENTS
    Free download at: 
    http://go.microsoft.com/fwlink/?LinkId=225702
 
-6. Flash Player 11.8 or later must be installed.
-   Included "Flash Player Installation" folder.
-
-7. Turn off Windows' "Aero" theme and "ClearType" font smoothing
+6. Turn off Windows' "Aero" theme and "ClearType" font smoothing
    as they have been known to interfere with transparency in Flash templates,
    and can also cause problems with Vsync when outputting to computer screens.
 
@@ -60,16 +57,29 @@ INSTALLATION
    Free download at: 
    http://go.microsoft.com/fwlink/?LinkId=225702
 
-5. Install "Flash Player 11.8.800.94" 
-   "flashplayer11_8r800_94_winax.exe" in the "Flash Player Installation" folder.
-
-6. Make sure you turn off Windows' "Aero Theme" and "ClearType" font smoothing
+5. Make sure you turn off Windows' "Aero Theme" and "ClearType" font smoothing
    as they can interfere with CasparCG Server's OpenGL features!
 
-7. Start the "CasparCG_Server.exe" program and configure the settings.
+6. Start the "CasparCG_Server.exe" program and configure the settings.
 
-8. Connect to the Server from a client, such as the CasparCG Client 2.0.6
+7. Connect to the Server from a client, such as the CasparCG Client 2.0.6
    (available as a separate download.)
+
+
+INSTALLATION OF ADDITIONAL NON-GPL SOFTWARE
+-------------------------------------------
+
+- For Flash template support:
+
+  1. Uninstall any previous version of the Adobe Flash Player using this file:
+     http://download.macromedia.com/get/flashplayer/current/support/uninstall_flash_player.exe
+  2. Download and unpack
+     http://download.macromedia.com/pub/flashplayer/installers/archive/fp_11.8.800.94_archive.zip
+  3. Install Adobe Flash Player 11.8.800.94 from the unpacked archive:
+     fp_11.8.800.94_archive/11_8_r800_94/flashplayer11_8r800_94_winax.exe
+
+- For NewTek iVGA support download and install:
+  http://new.tk/NetworkSendRedist
 
 
 DOCUMENTATION
