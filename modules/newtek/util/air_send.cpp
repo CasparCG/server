@@ -54,11 +54,17 @@ const std::wstring& dll_name()
 std::shared_ptr<void> load_library()
 {
 	auto module = LoadLibrary(dll_name().c_str());
-	
+
 	if (!module)
 		return nullptr;
 
 	std::shared_ptr<void> lib(module, FreeLibrary);
+
+	wchar_t actualFilename[256];
+
+	GetModuleFileNameW(module, actualFilename, sizeof(actualFilename));
+
+	CASPAR_LOG(debug) << L"Loaded " << actualFilename;
 
 	create = reinterpret_cast<decltype(create)>(
 			GetProcAddress(module, "AirSend_Create"));
