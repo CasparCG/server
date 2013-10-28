@@ -6,7 +6,11 @@ CasparCG 2.0.6 Stable (as compared to 2.0.4 Stable)
 General
 -------
   o Allow for the server to work without Processing.AirSend.x86.dll to prevent a
-    possible GPL violation.
+    possible GPL violation. It is available as a separate optional download.
+  o Fixed bug during deinterlace-bob-reinterlace where output fields were offset
+    by one field in relation to input fields.
+  o Frontend: Only writes elements to casparcg.config which overrides a default
+    value to keep the file as compact as possible.
   o Version bump to keep up with CasparCG Client version.
 
 
