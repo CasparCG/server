@@ -12,6 +12,8 @@ General
     ticking too fast.
   o FFmpeg: Fixed bug during deinterlace-bob-reinterlace where output fields
     were offset by one field in relation to input fields.
+  o FFmpeg: Fixed bug in ffmpeg_consumer where an access violation occurred
+    during destruction.
   o Frontend: Only writes elements to casparcg.config which overrides a default
     value to keep the file as compact as possible.
   o Version bump to keep up with CasparCG Client version.
