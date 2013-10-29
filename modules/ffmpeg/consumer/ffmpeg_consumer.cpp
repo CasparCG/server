@@ -298,9 +298,6 @@ public:
 		encode_executor_.stop();
 		encode_executor_.join();
 
-		// Flush
-		LOG_ON_ERROR2(av_interleaved_write_frame(oc_.get(), nullptr), "[ffmpeg_consumer]");
-		
 		LOG_ON_ERROR2(av_write_trailer(oc_.get()), "[ffmpeg_consumer]");
 		
 		if (!key_only_)
