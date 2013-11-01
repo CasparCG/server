@@ -103,7 +103,7 @@ struct configuration
 	bool			vsync;
 
 	configuration()
-		: name(L"ogl")
+		: name(L"Screen consumer")
 		, screen_index(0)
 		, stretch(fill)
 		, windowed(true)
@@ -216,7 +216,7 @@ public:
 		if(!GLEW_VERSION_2_1)
 			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 2.1 support."));
 
-		window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(L"Screen consumer " + channel_and_format()), config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
+		window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(print()), config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
 		window_.ShowMouseCursor(false);
 		window_.SetPosition(screen_x_, screen_y_);
 		window_.SetSize(screen_width_, screen_height_);
@@ -461,7 +461,7 @@ public:
 		
 	std::wstring print() const
 	{	
-		return config_.name + channel_and_format();
+		return config_.name + L" " + channel_and_format();
 	}
 	
 	void calculate_aspect()
