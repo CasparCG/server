@@ -101,6 +101,7 @@ struct configuration
 	bool			key_only;
 	aspect_ratio	aspect;	
 	bool			vsync;
+	bool			borderless;
 
 	configuration()
 		: name(L"Screen consumer")
@@ -111,6 +112,7 @@ struct configuration
 		, key_only(false)
 		, aspect(aspect_invalid)
 		, vsync(false)
+		, borderless(false)
 	{
 	}
 };
@@ -216,7 +218,7 @@ public:
 		if(!GLEW_VERSION_2_1)
 			BOOST_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 2.1 support."));
 
-		window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(print()), config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
+		window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), narrow(print()), config_.borderless ? sf::Style::None : (config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen));
 		window_.ShowMouseCursor(false);
 		window_.SetPosition(screen_x_, screen_y_);
 		window_.SetSize(screen_width_, screen_height_);
@@ -607,6 +609,7 @@ safe_ptr<core::frame_consumer> create_consumer(const core::parameters& params)
 	config.windowed = !params.has(L"FULLSCREEN");
 	config.key_only = params.has(L"KEY_ONLY");
 	config.name = params.get(L"NAME", config.name);
+	config.borderless = params.has(L"BORDERLESS");
 
 	return make_safe<ogl_consumer_proxy>(config);
 }
@@ -620,6 +623,7 @@ safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptre
 	config.key_only			= ptree.get(L"key-only", config.key_only);
 	config.auto_deinterlace	= ptree.get(L"auto-deinterlace", config.auto_deinterlace);
 	config.vsync			= ptree.get(L"vsync", config.vsync);
+	config.borderless       = ptree.get(L"borderless", config.borderless);
 
 	auto stretch_str = ptree.get(L"stretch", L"default");
 	if(stretch_str == L"uniform")
