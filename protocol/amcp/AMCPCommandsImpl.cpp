@@ -201,20 +201,30 @@ std::wstring MediaInfo(const boost::filesystem::wpath& path)
 {
 	if(boost::filesystem::is_regular_file(path))
 	{
+		std::int64_t duration = 0;
+		boost::rational<std::int64_t> time_base;
+				
 		std::wstring clipttype = TEXT(" N/A ");
 		std::wstring extension = boost::to_upper_copy(path.extension());
 		if(extension == TEXT(".TGA") || extension == TEXT(".COL") || extension == L".PNG" || extension == L".JPEG" || extension == L".JPG" ||
 			extension == L"GIF" || extension == L"BMP")
-			clipttype = TEXT(" STILL ");
+		{
+			clipttype = TEXT(" STILL ");			
+		}
 		else if(extension == TEXT(".WAV") || extension == TEXT(".MP3"))
+		{
 			clipttype = TEXT(" AUDIO ");
+		}
 		else if(extension == TEXT(".SWF") || extension == TEXT(".CT") || 
 			    extension == TEXT(".DV") || extension == TEXT(".MOV") || 
 				extension == TEXT(".MPG") || extension == TEXT(".AVI") || 
 				extension == TEXT(".MP4") || extension == TEXT(".FLV") || 
 				extension == TEXT(".STGA") || 
 				caspar::ffmpeg::is_valid_file(path.file_string()))
+		{
+			ffmpeg::try_get_duration(path.file_string(), duration, time_base);
 			clipttype = TEXT(" MOVIE ");
+		}
 
 		if(clipttype != TEXT(" N/A "))
 		{		
@@ -233,19 +243,22 @@ std::wstring MediaInfo(const boost::filesystem::wpath& path)
 			auto str = relativePath.replace_extension(TEXT("")).external_file_string();
 			if(str[0] == '\\' || str[0] == '/')
 				str = std::wstring(str.begin() + 1, str.end());
-
-			return std::wstring() + TEXT("\"") + str +
-					+ TEXT("\" ") + clipttype +
-					+ TEXT(" ") + sizeStr +
-					+ TEXT(" ") + writeTimeWStr +
-					+ TEXT("\r\n"); 	
+			
+			return std::wstring() 
+					+ L"\""		+ str +
+					+ L"\" "	+ clipttype +
+					+ L" "		+ sizeStr +
+					+ L" "		+ writeTimeWStr +
+					+ L" "		+ boost::lexical_cast<std::wstring>(duration) +
+					+ L" "		+ boost::lexical_cast<std::wstring>(time_base.numerator()) + L"/" + boost::lexical_cast<std::wstring>(time_base.denominator())
+					+ L"\r\n"; 	
 		}	
 	}
 	return L"";
 }
 
 std::wstring ListMedia()
-{	
+{		
 	std::wstringstream replyString;
 	for (boost::filesystem::wrecursive_directory_iterator itr(env::media_folder()), end; itr != end; ++itr)	
 		replyString << MediaInfo(itr->path());

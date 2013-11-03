@@ -336,7 +336,15 @@ double read_fps(AVFormatContext& context, double fail_value)
 	{
 		const auto video_context = context.streams[video_index]->codec;
 		const auto video_stream  = context.streams[video_index];
-						
+				
+		auto frame_rate_time_base = video_stream->avg_frame_rate;
+		std::swap(frame_rate_time_base.num, frame_rate_time_base.den);
+
+		if(is_sane_fps(frame_rate_time_base))
+		{
+			return static_cast<double>(frame_rate_time_base.den) / static_cast<double>(frame_rate_time_base.num);
+		}
+
 		AVRational time_base = video_context->time_base;
 
 		if(boost::filesystem2::path(context.filename).extension() == ".flv")
@@ -463,6 +471,30 @@ bool is_valid_file(const std::wstring filename)
 	static const std::vector<std::wstring> invalid_exts = boost::assign::list_of(L".png")(L".tga")(L".bmp")(L".jpg")(L".jpeg")(L".gif")(L".tiff")(L".tif")(L".jp2")(L".jpx")(L".j2k")(L".j2c")(L".swf")(L".ct");
 	
 	return is_valid_file(filename, invalid_exts);
+}
+
+bool try_get_duration(const std::wstring filename, std::int64_t& duration, boost::rational<std::int64_t>& time_base)
+{		
+	AVFormatContext* weak_context = nullptr;
+	if(avformat_open_input(&weak_context, narrow(filename).c_str(), nullptr, nullptr) < 0)
+		return false;
+
+	std::shared_ptr<AVFormatContext> context(weak_context, av_close_input_file);
+	
+	context->probesize = context->probesize / 10;
+	context->max_analyze_duration = context->probesize / 10;
+
+	if(avformat_find_stream_info(context.get(), nullptr) < 0)
+		return false;
+
+	const auto fps = read_fps(*context, 1.0);
+		
+	const auto rational_fps = boost::rational<std::int64_t>(static_cast<int>(fps * AV_TIME_BASE), AV_TIME_BASE);
+	
+	duration = boost::rational_cast<std::int64_t>(context->duration * rational_fps / AV_TIME_BASE);
+	time_base = 1/rational_fps;
+
+	return true;
 }
 
 std::wstring probe_stem(const std::wstring stem, const std::vector<std::wstring>& invalid_exts)
