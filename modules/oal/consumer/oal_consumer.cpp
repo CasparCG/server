@@ -242,7 +242,7 @@ public:
 
 safe_ptr<core::frame_consumer> create_consumer(const core::parameters& params)
 {
-	if(params.size() < 1 || params[0] != L"AUDIO")
+	if(params.size() < 1 || params[0] != L"OAL")
 		return core::frame_consumer::empty();
 
 	return make_safe<oal_consumer>();

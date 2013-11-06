@@ -42,6 +42,7 @@
 #include <modules/decklink/decklink.h>
 #include <modules/ffmpeg/ffmpeg.h>
 #include <modules/flash/flash.h>
+#include <modules/oal/oal.h>
 #include <modules/portaudio/portaudio.h>
 #include <modules/ogl/ogl.h>
 #include <modules/newtek/newtek.h>
@@ -49,6 +50,7 @@
 #include <modules/image/image.h>
 #include <modules/image/consumer/image_consumer.h>
 
+#include <modules/oal/consumer/oal_consumer.h>
 #include <modules/portaudio/consumer/portaudio_consumer.h>
 #include <modules/bluefish/consumer/bluefish_consumer.h>
 #include <modules/newtek/consumer/newtek_ivga_consumer.h>
@@ -104,6 +106,9 @@ struct server::implementation : boost::noncopyable
 							  
 		decklink::init();	  
 		CASPAR_LOG(info) << L"Initialized decklink module.";
+
+		oal::init();      
+	    CASPAR_LOG(info) << L"Initialized oal module.";
 
 		portaudio::init();
 		CASPAR_LOG(info) << L"Initialized portaudio module.";
@@ -226,6 +231,8 @@ struct server::implementation : boost::noncopyable
 					on_consumer(decklink::create_blocking_consumer(xml_consumer.second));				
 				else if (name == L"file" || name == L"stream")					
 					on_consumer(ffmpeg::create_consumer(xml_consumer.second));						
+				else if (name == L"oal")
+					on_consumer(oal::create_consumer());
 				else if (name == L"system-audio")
 					on_consumer(portaudio::create_consumer());
 				else if (name == L"synchronizing")
