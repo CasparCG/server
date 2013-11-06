@@ -35,6 +35,7 @@
 #include <common/exception/exceptions.h>
 #include <common/gl/gl_check.h>
 #include <common/utility/tweener.h>
+#include <common/memory/safe_ptr.h>
 
 #include <core/mixer/audio/audio_util.h>
 #include <core/mixer/read_frame.h>
@@ -43,6 +44,8 @@
 #include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/frame_transform.h>
 #include <core/producer/frame/pixel_format.h>
+
+#include <core/monitor/monitor.h>
 
 #include <core/video_format.h>
 
@@ -77,6 +80,7 @@ struct mixer::implementation : boost::noncopyable
 	std::unordered_map<int, blend_mode> blend_modes_;
 			
 	executor executor_;
+	safe_ptr<monitor::subject>		 monitor_subject_;
 
 public:
 	implementation(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<mixer::target_t>& target, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl, const channel_layout& audio_channel_layout) 
@@ -89,6 +93,7 @@ public:
 		, audio_mixer_(graph_)
 		, image_mixer_(ogl)
 		, executor_(L"mixer")
+		, monitor_subject_(make_safe<monitor::subject>("/mixer"))
 	{			
 		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8));
 		current_mix_time_ = 0;
@@ -270,4 +275,5 @@ void mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); 
 void mixer::set_video_format_desc(const video_format_desc& format_desc){impl_->set_video_format_desc(format_desc);}
 boost::unique_future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
 boost::unique_future<boost::property_tree::wptree> mixer::delay_info() const{return impl_->delay_info();}
+monitor::subject& mixer::monitor_output(){return *impl_->monitor_subject_;}
 }}
