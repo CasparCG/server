@@ -25,6 +25,7 @@
 
 #include <core/mixer/write_frame.h>
 #include <core/producer/frame/frame_transform.h>
+#include <core/monitor/monitor.h>
 #include <common/diagnostics/graph.h>
 #include "audio_util.h"
 
@@ -76,6 +77,7 @@ struct audio_mixer::implementation
 	channel_layout						channel_layout_;
 	float								master_volume_;
 	float								previous_master_volume_;
+	safe_ptr<monitor::subject>			monitor_subject_;
 	
 public:
 	implementation(const safe_ptr<diagnostics::graph>& graph)
@@ -84,6 +86,7 @@ public:
 		, channel_layout_(channel_layout::stereo())
 		, master_volume_(1.0f)
 		, previous_master_volume_(master_volume_)
+		, monitor_subject_(make_safe<monitor::subject>("/audio"))
 	{
 		graph_->set_color("volume", diagnostics::color(1.0f, 0.8f, 0.1f));
 		transform_stack_.push(core::frame_transform());
@@ -272,5 +275,6 @@ void audio_mixer::end(){impl_->end();}
 float audio_mixer::get_master_volume() const { return impl_->get_master_volume(); }
 void audio_mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 audio_buffer audio_mixer::operator()(const video_format_desc& format_desc, const channel_layout& layout){return impl_->mix(format_desc, layout);}
+monitor::subject& audio_mixer::monitor_output(){return *impl_->monitor_subject_;}
 
 }}
