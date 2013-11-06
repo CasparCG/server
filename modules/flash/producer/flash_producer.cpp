@@ -190,7 +190,8 @@ class flash_renderer
 	
 	boost::timer									frame_timer_;
 	boost::timer									tick_timer_;
-	
+
+	high_prec_timer									timer_;
 public:
 	flash_renderer(const safe_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
 		: graph_(graph)
@@ -205,7 +206,6 @@ public:
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
 		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));
-		graph_->set_color("buffered", diagnostics::color(0.8f, 0.3f, 0.2f));
 
 		lock(get_global_init_destruct_mutex(), [this]
 		{
@@ -235,7 +235,7 @@ public:
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Set Scale Mode"));
 						
 		ax_->SetSize(width_, height_);		
-		render_frame();
+		render_frame(0.0);
 	
 		CASPAR_LOG(info) << print() << L" Initialized.";
 	}
@@ -268,19 +268,22 @@ public:
 		return result;
 	}
 	
-	safe_ptr<core::basic_frame> render_frame()
+	safe_ptr<core::basic_frame> render_frame(double sync)
 	{
 		float frame_time = 1.0f/ax_->GetFPS();
-
-		graph_->set_value("tick-time", static_cast<float>(tick_timer_.elapsed()/frame_time)*0.5f);
-		tick_timer_.restart();
 
 		if (!ax_->IsReadyToRender())
 			return head_;
 
 		if(ax_->IsEmpty())
 			return core::basic_frame::empty();
+
+		if (sync > 0.00001)
+			timer_.tick(frame_time*sync); // This will block the thread.
 		
+		graph_->set_value("tick-time", static_cast<float>(tick_timer_.elapsed()/frame_time)*0.5f);
+		tick_timer_.restart();
+
 		frame_timer_.restart();
 
 		ax_->Tick();
@@ -370,6 +373,7 @@ public:
 		fps_ = 0;
 	 
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.9f));
+		graph_->set_color("buffered", diagnostics::color(0.8f, 0.3f, 0.2f));
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 		
@@ -385,14 +389,17 @@ public:
 	}
 
 	// frame_producer
+
+	void log_buffered()
+	{
+		double buffered = output_buffer_.size();
+		auto ratio = buffered / buffer_size_;
+		graph_->set_value("buffered", ratio);
+	}
 		
 	virtual safe_ptr<core::basic_frame> receive(int) override
 	{					
 		auto frame = core::basic_frame::late();
-		
-		double buffered = output_buffer_.size();
-		auto ratio = buffered / buffer_size_;
-		graph_->set_value("buffered", ratio);
 
 		if(output_buffer_.try_pop(frame))
 			last_frame_ = frame;
@@ -438,7 +445,7 @@ public:
 
 				if (initialize_renderer)
 				{
-					do_fill_buffer();
+					do_fill_buffer(true);
 				}
 
 				return result;
@@ -475,21 +482,23 @@ public:
 	{
 		executor_.begin_invoke([this]
 		{
-			do_fill_buffer();
+			do_fill_buffer(false);
 		});
 	}
 
-	void do_fill_buffer()
+	void do_fill_buffer(bool initial_buffer_fill)
 	{
 		int nothing_rendered = 0;
 		const int MAX_NOTHING_RENDERED_RETRIES = 4;
 
 		auto to_render = buffer_size_ - output_buffer_.size();
+		bool allow_faster_rendering = !initial_buffer_fill;
 		int rendered = 0;
 
 		while (rendered < to_render)
 		{
-			bool was_rendered = next();
+			bool was_rendered = next(allow_faster_rendering);
+			log_buffered();
 
 			if (was_rendered)
 			{
@@ -511,7 +520,7 @@ public:
 		}
 	}
 	
-	bool next()
+	bool next(bool allow_faster_rendering)
 	{	
 		if(!renderer_)
 			frame_buffer_.push(core::basic_frame::empty());
@@ -522,17 +531,17 @@ public:
 					
 			if(abs(renderer_->fps()/2.0 - format_desc.fps) < 2.0) // flash == 2 * format -> interlace
 			{
-				auto frame1 = render_frame();
+				auto frame1 = render_frame(allow_faster_rendering);
 
 				if (frame1 != core::basic_frame::late())
 				{
-					auto frame2 = render_frame();
+					auto frame2 = render_frame(allow_faster_rendering);
 					frame_buffer_.push(core::basic_frame::interlace(frame1, frame2, format_desc.field_mode));
 				}
 			}
 			else if(abs(renderer_->fps() - format_desc.fps/2.0) < 2.0) // format == 2 * flash -> duplicate
 			{
-				auto frame = render_frame();
+				auto frame = render_frame(allow_faster_rendering);
 
 				if (frame != core::basic_frame::late())
 				{
@@ -542,7 +551,7 @@ public:
 			}
 			else //if(abs(renderer_->fps() - format_desc_.fps) < 0.1) // format == flash -> simple
 			{
-				auto frame = render_frame();
+				auto frame = render_frame(allow_faster_rendering);
 
 				if (frame != core::basic_frame::late())
 					frame_buffer_.push(frame);
@@ -570,9 +579,24 @@ public:
 		}
 	}
 
-	safe_ptr<core::basic_frame> render_frame()
-	{	
-		return renderer_->render_frame();
+	safe_ptr<core::basic_frame> render_frame(bool allow_faster_rendering)
+	{
+		double sync;
+
+		if (allow_faster_rendering)
+		{
+			double ratio = std::min(
+					1.0,
+					static_cast<double>(output_buffer_.size())
+							/ static_cast<double>(std::max(1, buffer_size_ - 1)));
+			sync  = 2 * ratio - ratio * ratio;
+		}
+		else
+		{
+			sync = 1.0;
+		}
+
+		return renderer_->render_frame(sync);
 	}
 
 	core::monitor::subject& monitor_output()
