@@ -97,6 +97,8 @@ public:
 	{			
 		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8));
 		current_mix_time_ = 0;
+
+		audio_mixer_.monitor_output().attach_parent(monitor_subject_);
 	}
 	
 	void send(const std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>& packet)
