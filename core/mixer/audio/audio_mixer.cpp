@@ -86,7 +86,7 @@ public:
 		, channel_layout_(channel_layout::stereo())
 		, master_volume_(1.0f)
 		, previous_master_volume_(master_volume_)
-		, monitor_subject_(monitor::subject("/audio"))
+		, monitor_subject_("/audio")
 	{
 		graph_->set_color("volume", diagnostics::color(1.0f, 0.8f, 0.1f));
 		transform_stack_.push(core::frame_transform());
@@ -243,31 +243,31 @@ public:
 		result.reserve(result_ps.size());
 		boost::range::transform(result_ps, std::back_inserter(result), [](float sample){return static_cast<int32_t>(sample);});		
 		
-		const int nb_channels = channel_layout_.num_channels;
+		const int num_channels = channel_layout_.num_channels;
+		monitor_subject_ << monitor::message("/nb_channels") % num_channels;
 
-		auto min = std::vector<int32_t>(nb_channels, std::numeric_limits<int32_t>::max());
-		auto max = std::vector<int32_t>(nb_channels, std::numeric_limits<int32_t>::min());
+		auto max = std::vector<int32_t>(num_channels, std::numeric_limits<int32_t>::min());
 
-		for (int n = 0; n < boost::lexical_cast<int>(result.size()); n += nb_channels)
-		{
-			for (int k = 0; k < nb_channels; ++k)
-			{
-				min[k] = std::min(min[k], result[n+k]);
-				max[k] = std::max(max[k], result[n+k]);
-			}
-		}
+		for (size_t n = 0; n < result.size(); n += num_channels)
+			for (int ch = 0; ch < num_channels; ++ch)
+				max[ch] = std::max(max[ch], std::abs(result[n + ch]));
 		
-		for (int k = 0; k < nb_channels; ++k)
-		{
-			const auto pFS  = std::max(-min[k], max[k]) / static_cast<float>(std::numeric_limits<int32_t>::max());
-			const auto dBFS = 20.0f * std::log10(pFS);
-			
-			auto chan_str = boost::lexical_cast<std::string>(k+1);
+		// Makes the dBFS of silence => -dynamic range of 32bit LPCM => about -192 dBFS
+		// Otherwise it would be -infinity
+		static const auto MIN_PFS = 0.5f / static_cast<float>(std::numeric_limits<int32_t>::max());
 
-			monitor_subject_ << monitor::message("/nb_channels") % nb_channels;
-			monitor_subject_ << monitor::message("/"+ chan_str +"/pFS") % pFS;
-			monitor_subject_ << monitor::message("/"+ chan_str +"/dBFS") % dBFS;
+		for (int i = 0; i < num_channels; ++i)
+		{
+			const auto pFS  = max[i] / static_cast<float>(std::numeric_limits<int32_t>::max());
+			const auto dBFS = 20.0f * std::log10(std::max(MIN_PFS, pFS));
+			
+			auto chan_str = boost::lexical_cast<std::string>(i + 1);
+
+			monitor_subject_ << monitor::message("/" + chan_str + "/pFS") % pFS;
+			monitor_subject_ << monitor::message("/" + chan_str + "/dBFS") % dBFS;
 		}
+
+		graph_->set_value("volume", static_cast<double>(*boost::max_element(max)) / std::numeric_limits<int32_t>::max());
 
 		return result;
 	}
