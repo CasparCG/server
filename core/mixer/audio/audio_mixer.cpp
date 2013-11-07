@@ -77,7 +77,7 @@ struct audio_mixer::implementation
 	channel_layout						channel_layout_;
 	float								master_volume_;
 	float								previous_master_volume_;
-	safe_ptr<monitor::subject>			monitor_subject_;
+	monitor::subject					monitor_subject_;
 	
 public:
 	implementation(const safe_ptr<diagnostics::graph>& graph)
@@ -86,7 +86,7 @@ public:
 		, channel_layout_(channel_layout::stereo())
 		, master_volume_(1.0f)
 		, previous_master_volume_(master_volume_)
-		, monitor_subject_(make_safe<monitor::subject>("/audio"))
+		, monitor_subject_(monitor::subject("/audio"))
 	{
 		graph_->set_color("volume", diagnostics::color(1.0f, 0.8f, 0.1f));
 		transform_stack_.push(core::frame_transform());
@@ -238,13 +238,36 @@ public:
 		
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 		
+
 		audio_buffer result;
 		result.reserve(result_ps.size());
 		boost::range::transform(result_ps, std::back_inserter(result), [](float sample){return static_cast<int32_t>(sample);});		
+		
+		const int nb_channels = channel_layout_.num_channels;
 
-		auto max = boost::range::max_element(result);
+		auto min = std::vector<int32_t>(nb_channels, std::numeric_limits<int32_t>::max());
+		auto max = std::vector<int32_t>(nb_channels, std::numeric_limits<int32_t>::min());
 
-		graph_->set_value("volume", static_cast<double>(std::abs(*max))/std::numeric_limits<int32_t>::max());
+		for (int n = 0; n < boost::lexical_cast<int>(result.size()); n += nb_channels)
+		{
+			for (int k = 0; k < nb_channels; ++k)
+			{
+				min[k] = std::min(min[k], result[n+k]);
+				max[k] = std::max(max[k], result[n+k]);
+			}
+		}
+		
+		for (int k = 0; k < nb_channels; ++k)
+		{
+			const auto pFS  = std::max(-min[k], max[k]) / static_cast<float>(std::numeric_limits<int32_t>::max());
+			const auto dBFS = 20.0f * std::log10(pFS);
+			
+			auto chan_str = boost::lexical_cast<std::string>(k+1);
+
+			monitor_subject_ << monitor::message("/nb_channels") % nb_channels;
+			monitor_subject_ << monitor::message("/"+ chan_str +"/pFS") % pFS;
+			monitor_subject_ << monitor::message("/"+ chan_str +"/dBFS") % dBFS;
+		}
 
 		return result;
 	}
@@ -275,6 +298,6 @@ void audio_mixer::end(){impl_->end();}
 float audio_mixer::get_master_volume() const { return impl_->get_master_volume(); }
 void audio_mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 audio_buffer audio_mixer::operator()(const video_format_desc& format_desc, const channel_layout& layout){return impl_->mix(format_desc, layout);}
-monitor::subject& audio_mixer::monitor_output(){return *impl_->monitor_subject_;}
+monitor::subject& audio_mixer::monitor_output(){return impl_->monitor_subject_;}
 
 }}
