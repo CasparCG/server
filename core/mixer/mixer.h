@@ -24,6 +24,7 @@
 #include "image/blend_modes.h"
 
 #include "../producer/frame/frame_factory.h"
+#include "../monitor/monitor.h"
 
 #include <common/memory/safe_ptr.h>
 #include <common/concurrency/target.h>
@@ -81,6 +82,8 @@ public:
 
 	boost::unique_future<boost::property_tree::wptree> info() const;
 	boost::unique_future<boost::property_tree::wptree> delay_info() const;
+
+	monitor::subject& monitor_output();
 	
 private:
 	struct implementation;
