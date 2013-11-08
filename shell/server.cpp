@@ -63,22 +63,45 @@
 #include <protocol/util/AsyncEventServer.h>
 #include <protocol/util/stateful_protocol_strategy_wrapper.h>
 #include <protocol/osc/client.h>
-#include <protocol/asio/io_service_manager.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/foreach.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
+#include <boost/asio.hpp>
 
 namespace caspar {
 
 using namespace core;
 using namespace protocol;
 
+std::shared_ptr<boost::asio::io_service> create_running_io_service()
+{
+	auto service = std::make_shared<boost::asio::io_service>();
+	// To keep the io_service::run() running although no pending async
+	// operations are posted.
+	auto work = std::make_shared<boost::asio::io_service::work>(*service);
+	auto thread = std::make_shared<boost::thread>([service]
+	{
+		win32_exception::ensure_handler_installed_for_thread("asio-thread");
+
+		service->run();
+	});
+
+	return std::shared_ptr<boost::asio::io_service>(
+			service.get(),
+			[service, work, thread] (void*) mutable
+			{
+				work.reset();
+				service->stop();
+				thread->join();
+			});
+}
+
 struct server::implementation : boost::noncopyable
 {
-	protocol::asio::io_service_manager			io_service_manager_;
+	std::shared_ptr<boost::asio::io_service>	io_service_;
 	safe_ptr<core::monitor::subject>			monitor_subject_;
 	boost::promise<bool>&						shutdown_server_now_;
 	safe_ptr<ogl_device>						ogl_;
@@ -90,9 +113,10 @@ struct server::implementation : boost::noncopyable
 	std::shared_ptr<thumbnail_generator>		thumbnail_generator_;
 
 	implementation(boost::promise<bool>& shutdown_server_now)
-		: shutdown_server_now_(shutdown_server_now)
+		: io_service_(create_running_io_service())
+		, shutdown_server_now_(shutdown_server_now)
 		, ogl_(ogl_device::create())
-		, osc_client_(io_service_manager_.service())
+		, osc_client_(io_service_)
 	{
 		setup_audio(env::properties());
 
@@ -133,7 +157,7 @@ struct server::implementation : boost::noncopyable
 	}
 
 	~implementation()
-	{		
+	{
 		thumbnail_generator_.reset();
 		primary_amcp_server_.reset();
 		async_servers_.clear();
@@ -321,8 +345,7 @@ struct server::implementation : boost::noncopyable
 		auto scan_interval_millis = pt.get(L"configuration.thumbnails.scan-interval-millis", 5000);
 
 		polling_filesystem_monitor_factory monitor_factory(
-				io_service_manager_.service(),
-				scan_interval_millis);
+				io_service_, scan_interval_millis);
 		thumbnail_generator_.reset(new thumbnail_generator(
 				monitor_factory, 
 				env::media_folder(),

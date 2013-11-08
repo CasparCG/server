@@ -49,7 +49,7 @@ public:
 	 *                             reaction time but causes more I/O.
 	 */
 	polling_filesystem_monitor_factory(
-			boost::asio::io_service& scheduler,
+			std::shared_ptr<boost::asio::io_service> scheduler,
 			int scan_interval_millis = 5000);
 	virtual ~polling_filesystem_monitor_factory();
 	virtual filesystem_monitor::ptr create(
