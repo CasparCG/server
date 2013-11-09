@@ -194,6 +194,11 @@ public:
 
 				frames[layer.first] = frame1;
 			});
+
+			// Tick the transforms that does not have a corresponding layer.
+			BOOST_FOREACH(auto& elem, transforms_)
+				if (layers_.find(elem.first) == layers_.end())
+					elem.second.fetch_and_tick(format_desc_.field_mode != core::field_mode::progressive ? 2 : 1);
 			
 			graph_->set_value("produce-time", produce_timer_.elapsed()*format_desc_.fps*0.5);
 
@@ -254,7 +259,7 @@ public:
 	{
 		executor_.begin_invoke([=]
 		{
-			transforms_[index] = tweened_transform<core::frame_transform>();
+			transforms_.unsafe_erase(index);
 		}, high_priority);
 	}
 
