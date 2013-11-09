@@ -72,6 +72,7 @@ public:
 			stage_->spawn_token();
 
 		stage_->monitor_output().attach_parent(monitor_subject_);
+		mixer_->monitor_output().attach_parent(monitor_subject_);
 
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
 	}

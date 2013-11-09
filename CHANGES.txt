@@ -16,6 +16,20 @@ General
     during destruction.
   o Frontend: Only writes elements to casparcg.config which overrides a default
     value to keep the file as compact as possible.
+  o System audio: Patched sfml-audio to work better with oal-consumer and
+    therefore removed portaudio as the system audio implementation and went back
+    to oal.
+  o Flash: Changed so that the initial buffer fill of frames is rendered at a
+    frame-duration pace instead of as fast as possible. Otherwise time based
+    animations render incorrectly. During buffer recovery, a higher paced
+    rendering takes place, but still not as fast as possible, which can cause
+    animations to be somewhat incorrectly rendered. This is the only way though
+    if we want the buffer to be able to recover after depletion.
+  o Fixed race condition during server shutdown.
+  o OSC: outgoing audio levels from the audio mixer for each audio channel is
+    now transmitted (pFS and dBFS).
+  o Stage: Fixed bug where tweened transforms were only ticked when a
+    corresponding layer existed.
   o Version bump to keep up with CasparCG Client version.
 
 

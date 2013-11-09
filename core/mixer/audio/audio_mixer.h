@@ -23,6 +23,8 @@
 
 #include <common/memory/safe_ptr.h>
 
+#include "../../monitor/monitor.h"
+
 #include <core/producer/frame/frame_visitor.h>
 
 #include <boost/noncopyable.hpp>
@@ -59,6 +61,8 @@ public:
 	void set_master_volume(float volume);
 
 	audio_buffer operator()(const video_format_desc& format_desc, const channel_layout& layout);
+
+	monitor::subject& monitor_output();
 	
 private:
 	struct implementation;

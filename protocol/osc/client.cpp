@@ -129,6 +129,7 @@ void write_osc_bundle_element_start(byte_vector& destination, const byte_vector&
 
 struct client::impl : public std::enable_shared_from_this<client::impl>, core::monitor::sink
 {
+	std::shared_ptr<boost::asio::io_service>		service_;
 	udp::socket socket_;
 	tbb::spin_mutex									endpoints_mutex_;
 	std::map<udp::endpoint, int>					reference_counts_by_endpoint_;
@@ -142,8 +143,9 @@ struct client::impl : public std::enable_shared_from_this<client::impl>, core::m
 	boost::thread									thread_;
 	
 public:
-	impl(boost::asio::io_service& service)
-		: socket_(service, udp::v4())
+	impl(std::shared_ptr<boost::asio::io_service> service)
+		: service_(std::move(service))
+		, socket_(*service_, udp::v4())
 		, thread_(boost::bind(&impl::run, this))
 	{
 	}
@@ -291,8 +293,8 @@ private:
 	}
 };
 
-client::client(boost::asio::io_service& service) 
-	: impl_(new impl(service))
+client::client(std::shared_ptr<boost::asio::io_service> service) 
+	: impl_(new impl(std::move(service)))
 {
 }
 
