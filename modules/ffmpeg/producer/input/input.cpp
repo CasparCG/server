@@ -41,6 +41,7 @@
 #include <tbb/atomic.h>
 #include <tbb/recursive_mutex.h>
 
+#include <boost/rational.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/thread/condition_variable.hpp>
 #include <boost/thread/mutex.hpp>
@@ -349,11 +350,18 @@ struct input::implementation : boost::noncopyable
 		}
 		
 		auto stream = format_context_->streams[default_stream_index_];
-		auto codec  = stream->codec;
-		auto fixed_target = (target*stream->time_base.den*codec->time_base.num)/(stream->time_base.num*codec->time_base.den)*codec->ticks_per_frame;
 		
-		THROW_ON_ERROR2(avformat_seek_file(format_context_.get(), default_stream_index_, std::numeric_limits<int64_t>::min(), fixed_target, std::numeric_limits<int64_t>::max(), 0), print());		
 		
+		auto fps = read_fps(*format_context_, 0.0);
+				
+		THROW_ON_ERROR2(avformat_seek_file(
+			format_context_.get(), 
+			default_stream_index_, 
+			std::numeric_limits<int64_t>::min(),
+			static_cast<int64_t>((target / fps * stream->time_base.den) / stream->time_base.num),
+			std::numeric_limits<int64_t>::max(), 
+			0), print());
+
 		auto flush_packet	= create_packet();
 		flush_packet->data	= nullptr;
 		flush_packet->size	= 0;
