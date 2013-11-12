@@ -32,6 +32,8 @@ General
     corresponding layer existed.
   o Screen consumer: Added borderless option and correct handling of name
     option.
+  o AMCP: CLS now reports duration and framerate for MOVIE files were
+    information is possible to extract.
   o Version bump to keep up with CasparCG Client version.
 
 

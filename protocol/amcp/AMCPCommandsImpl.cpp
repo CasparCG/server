@@ -207,7 +207,7 @@ std::wstring MediaInfo(const boost::filesystem::wpath& path)
 		std::wstring clipttype = TEXT(" N/A ");
 		std::wstring extension = boost::to_upper_copy(path.extension());
 		if(extension == TEXT(".TGA") || extension == TEXT(".COL") || extension == L".PNG" || extension == L".JPEG" || extension == L".JPG" ||
-			extension == L"GIF" || extension == L"BMP")
+			extension == L".GIF" || extension == L".BMP")
 		{
 			clipttype = TEXT(" STILL ");			
 		}
@@ -215,11 +215,13 @@ std::wstring MediaInfo(const boost::filesystem::wpath& path)
 		{
 			clipttype = TEXT(" AUDIO ");
 		}
-		else if(extension == TEXT(".SWF") || extension == TEXT(".CT") || 
-			    extension == TEXT(".DV") || extension == TEXT(".MOV") || 
+		else if(extension == TEXT(".SWF") || extension == TEXT(".CT"))
+		{
+			clipttype = TEXT(" MOVIE ");
+		}
+		else if(extension == TEXT(".DV") || extension == TEXT(".MOV") || 
 				extension == TEXT(".MPG") || extension == TEXT(".AVI") || 
 				extension == TEXT(".MP4") || extension == TEXT(".FLV") || 
-				extension == TEXT(".STGA") || 
 				caspar::ffmpeg::is_valid_file(path.file_string()))
 		{
 			ffmpeg::try_get_duration(path.file_string(), duration, time_base);
