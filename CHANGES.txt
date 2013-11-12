@@ -30,6 +30,8 @@ General
     now transmitted (pFS and dBFS).
   o Stage: Fixed bug where tweened transforms were only ticked when a
     corresponding layer existed.
+  o Screen consumer: Added borderless option and correct handling of name
+    option.
   o Version bump to keep up with CasparCG Client version.
 
 
