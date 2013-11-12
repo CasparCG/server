@@ -492,6 +492,10 @@ bool try_get_duration(const std::wstring filename, std::int64_t& duration, boost
 	const auto rational_fps = boost::rational<std::int64_t>(static_cast<int>(fps * AV_TIME_BASE), AV_TIME_BASE);
 	
 	duration = boost::rational_cast<std::int64_t>(context->duration * rational_fps / AV_TIME_BASE);
+
+	if (rational_fps == 0)
+		return false;
+
 	time_base = 1/rational_fps;
 
 	return true;
