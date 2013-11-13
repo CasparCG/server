@@ -40,6 +40,8 @@
 #include "video_format.h"
 #include "producer/frame/basic_frame.h"
 #include "producer/frame/frame_transform.h"
+#include "producer/media_info/media_info.h"
+#include "producer/media_info/media_info_repository.h"
 
 namespace caspar { namespace core {
 
@@ -102,6 +104,7 @@ private:
 	safe_ptr<thumbnail_output> output_;
 	safe_ptr<mixer> mixer_;
 	thumbnail_creator thumbnail_creator_;
+	safe_ptr<media_info_repository> media_info_repo_;
 	filesystem_monitor::ptr monitor_;
 public:
 	implementation(
@@ -113,7 +116,8 @@ public:
 			const video_format_desc& render_video_mode,
 			const safe_ptr<ogl_device>& ogl,
 			int generate_delay_millis,
-			const thumbnail_creator& thumbnail_creator)
+			const thumbnail_creator& thumbnail_creator,
+			safe_ptr<media_info_repository> media_info_repo)
 		: media_path_(media_path)
 		, thumbnails_path_(thumbnails_path)
 		, width_(width)
@@ -128,6 +132,7 @@ public:
 				ogl,
 				channel_layout::stereo()))
 		, thumbnail_creator_(thumbnail_creator)
+		, media_info_repo_(std::move(media_info_repo))
 		, monitor_(monitor_factory.create(
 				media_path,
 				ALL,
@@ -172,7 +177,7 @@ public:
 					== relative_without_extensions.end();
 
 			if (no_corresponding_media_file)
-				remove(thumbnails_path_ / (relative_without_extension + L".png"));
+				remove_thumbnail(relative_without_extension);
 		}
 	}
 
@@ -210,11 +215,16 @@ public:
 
 			break;
 		case REMOVED:
-			auto relative_without_extension = get_relative_without_extension(file, media_path_);
-			boost::filesystem::remove(thumbnails_path_ / (relative_without_extension + L".png"));
+			remove_thumbnail(get_relative_without_extension(file, media_path_));
 
 			break;
 		}
+	}
+
+	void remove_thumbnail(const std::wstring& relative_without_extension)
+	{
+		boost::filesystem::remove(thumbnails_path_ / (relative_without_extension + L".png"));
+		media_info_repo_->remove(relative_without_extension);
 	}
 
 	bool needs_to_be_generated(const boost::filesystem::wpath& file)
@@ -286,10 +296,12 @@ public:
 
 			std::map<int, safe_ptr<basic_frame>> frames;
 			auto raw_frame = basic_frame::empty();
+			media_info additional_info;
 
 			try
 			{
-				raw_frame = producer->create_thumbnail_frame();
+				raw_frame = producer->create_thumbnail_frame(additional_info);
+				media_info_repo_->store(media_file, additional_info);
 			}
 			catch (const boost::thread_interrupted&)
 			{
@@ -352,7 +364,8 @@ thumbnail_generator::thumbnail_generator(
 		const video_format_desc& render_video_mode,
 		const safe_ptr<ogl_device>& ogl,
 		int generate_delay_millis,
-		const thumbnail_creator& thumbnail_creator)
+		const thumbnail_creator& thumbnail_creator,
+		safe_ptr<media_info_repository> media_info_repo)
 		: impl_(new implementation(
 				monitor_factory,
 				media_path,
@@ -361,7 +374,8 @@ thumbnail_generator::thumbnail_generator(
 				render_video_mode,
 				ogl,
 				generate_delay_millis,
-				thumbnail_creator))
+				thumbnail_creator,
+				media_info_repo))
 {
 }
 

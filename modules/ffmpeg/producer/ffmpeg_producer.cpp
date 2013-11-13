@@ -44,6 +44,7 @@
 #include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_transform.h>
+#include <core/producer/media_info/media_info.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/assign.hpp>
@@ -301,11 +302,14 @@ public:
 		return core::basic_frame::empty();
 	}
 
-	virtual safe_ptr<core::basic_frame> create_thumbnail_frame() override
+	virtual safe_ptr<core::basic_frame> create_thumbnail_frame(core::media_info& additional_info) override
 	{
 		auto disable_logging = temporary_disable_logging_for_thread(thumbnail_mode_);
+
 		auto total_frames = nb_frames();
 		auto grid = env::properties().get(L"configuration.thumbnails.video-grid", 2);
+
+		try_get_duration(*input_.context(), additional_info.duration, additional_info.time_base);
 
 		if (grid < 1)
 		{

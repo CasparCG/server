@@ -26,6 +26,7 @@
 #include "separated_producer.h"
 
 #include <core/producer/frame/basic_frame.h>
+#include <core/producer/media_info/media_info.h>
 
 #include <tbb/parallel_invoke.h>
 
@@ -91,10 +92,11 @@ struct separated_producer : public frame_producer
 		return disable_audio(last_frame_);
 	}
 
-	virtual safe_ptr<basic_frame> create_thumbnail_frame() override
+	virtual safe_ptr<basic_frame> create_thumbnail_frame(media_info& additional_info) override
 	{
-		auto fill_frame = fill_producer_->create_thumbnail_frame();
-		auto key_frame = key_producer_->create_thumbnail_frame();
+		auto fill_frame = fill_producer_->create_thumbnail_frame(additional_info);
+		media_info dummy;
+		auto key_frame = key_producer_->create_thumbnail_frame(dummy);
 
 		if (fill_frame == basic_frame::empty() || key_frame == basic_frame::empty())
 			return basic_frame::empty();

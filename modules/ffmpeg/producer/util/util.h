@@ -82,6 +82,7 @@ std::wstring probe_stem(const std::wstring stem, const std::vector<std::wstring>
 std::wstring probe_stem(const std::wstring stem);
 bool is_valid_file(const std::wstring filename, const std::vector<std::wstring>& invalid_exts);
 bool is_valid_file(const std::wstring filename);
+bool try_get_duration(AVFormatContext& context, std::int64_t& duration, boost::rational<std::int64_t>& time_base);
 bool try_get_duration(const std::wstring filename, std::int64_t& duration, boost::rational<std::int64_t>& time_base);
 
 core::channel_layout get_audio_channel_layout(const AVCodecContext& context, const std::wstring& custom_channel_order);

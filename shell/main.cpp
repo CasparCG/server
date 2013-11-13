@@ -281,6 +281,7 @@ int main(int argc, wchar_t* argv[])
 				caspar::protocol::amcp::AMCPProtocolStrategy amcp(
 						caspar_server.get_channels(),
 						caspar_server.get_thumbnail_generator(),
+						caspar_server.get_media_info_repo(),
 						shutdown_server_now);
 
 				// Create a dummy client which prints amcp responses to console.

@@ -29,6 +29,7 @@
 #include <core/monitor/monitor.h>
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_factory.h>
+#include <core/producer/media_info/media_info.h>
 #include <core/mixer/write_frame.h>
 
 #include <common/env.h>
@@ -96,7 +97,7 @@ struct image_producer : public core::frame_producer
 		return frame_;
 	}
 
-	virtual safe_ptr<core::basic_frame> create_thumbnail_frame() override
+	virtual safe_ptr<core::basic_frame> create_thumbnail_frame(core::media_info& additional_info) override
 	{
 		return frame_;
 	}
