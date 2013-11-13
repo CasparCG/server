@@ -37,6 +37,8 @@
 #include <core/consumer/output.h>
 #include <core/consumer/synchronizing/synchronizing_consumer.h>
 #include <core/thumbnail_generator.h>
+#include <core/producer/media_info/media_info_repository.h>
+#include <core/producer/media_info/file_based_media_info_repository.h>
 
 #include <modules/bluefish/bluefish.h>
 #include <modules/decklink/decklink.h>
@@ -110,6 +112,7 @@ struct server::implementation : boost::noncopyable
 	osc::client									osc_client_;
 	std::vector<std::shared_ptr<void>>			predefined_osc_subscriptions_;
 	std::vector<safe_ptr<video_channel>>		channels_;
+	safe_ptr<media_info_repository>				media_info_repo_;
 	std::shared_ptr<thumbnail_generator>		thumbnail_generator_;
 
 	implementation(boost::promise<bool>& shutdown_server_now)
@@ -117,6 +120,8 @@ struct server::implementation : boost::noncopyable
 		, shutdown_server_now_(shutdown_server_now)
 		, ogl_(ogl_device::create())
 		, osc_client_(io_service_)
+		, media_info_repo_(create_file_based_media_info_repository(
+				env::thumbnails_folder() + L"media_info.csv"))
 	{
 		setup_audio(env::properties());
 
@@ -355,7 +360,8 @@ struct server::implementation : boost::noncopyable
 				core::video_format_desc::get(pt.get(L"configuration.thumbnails.video-mode", L"720p2500")),
 				ogl_,
 				pt.get(L"configuration.thumbnails.generate-delay-millis", 2000),
-				&image::write_cropped_png));
+				&image::write_cropped_png,
+				media_info_repo_));
 
 		CASPAR_LOG(info) << L"Initialized thumbnail generator.";
 	}
@@ -363,7 +369,7 @@ struct server::implementation : boost::noncopyable
 	safe_ptr<IO::IProtocolStrategy> create_protocol(const std::wstring& name) const
 	{
 		if(boost::iequals(name, L"AMCP"))
-			return make_safe<amcp::AMCPProtocolStrategy>(channels_, thumbnail_generator_, shutdown_server_now_);
+			return make_safe<amcp::AMCPProtocolStrategy>(channels_, thumbnail_generator_, media_info_repo_, shutdown_server_now_);
 		else if(boost::iequals(name, L"CII"))
 			return make_safe<cii::CIIProtocolStrategy>(channels_);
 		else if(boost::iequals(name, L"CLOCK"))
@@ -387,6 +393,11 @@ const std::vector<safe_ptr<video_channel>> server::get_channels() const
 std::shared_ptr<thumbnail_generator> server::get_thumbnail_generator() const
 {
 	return impl_->thumbnail_generator_;
+}
+
+safe_ptr<media_info_repository> server::get_media_info_repo() const
+{
+	return impl_->media_info_repo_;
 }
 
 core::monitor::subject& server::monitor_output()

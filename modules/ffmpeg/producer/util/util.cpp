@@ -473,25 +473,12 @@ bool is_valid_file(const std::wstring filename)
 	return is_valid_file(filename, invalid_exts);
 }
 
-bool try_get_duration(const std::wstring filename, std::int64_t& duration, boost::rational<std::int64_t>& time_base)
+bool try_get_duration(AVFormatContext& context, std::int64_t& duration, boost::rational<std::int64_t>& time_base)
 {		
-	AVFormatContext* weak_context = nullptr;
-	if(avformat_open_input(&weak_context, narrow(filename).c_str(), nullptr, nullptr) < 0)
-		return false;
-
-	std::shared_ptr<AVFormatContext> context(weak_context, av_close_input_file);
-	
-	context->probesize = context->probesize / 10;
-	context->max_analyze_duration = context->probesize / 10;
-
-	if(avformat_find_stream_info(context.get(), nullptr) < 0)
-		return false;
-
-	const auto fps = read_fps(*context, 1.0);
-		
+	const auto fps = read_fps(context, 1.0);
 	const auto rational_fps = boost::rational<std::int64_t>(static_cast<int>(fps * AV_TIME_BASE), AV_TIME_BASE);
 	
-	duration = boost::rational_cast<std::int64_t>(context->duration * rational_fps / AV_TIME_BASE);
+	duration = boost::rational_cast<std::int64_t>(context.duration * rational_fps / AV_TIME_BASE);
 
 	if (rational_fps == 0)
 		return false;
@@ -499,6 +486,23 @@ bool try_get_duration(const std::wstring filename, std::int64_t& duration, boost
 	time_base = 1/rational_fps;
 
 	return true;
+}
+
+bool try_get_duration(const std::wstring filename, std::int64_t& duration, boost::rational<std::int64_t>& time_base)
+{		
+	AVFormatContext* weak_context = nullptr;
+	if(avformat_open_input(&weak_context, narrow(filename).c_str(), nullptr, nullptr) < 0)
+		return false;
+
+	std::shared_ptr<AVFormatContext> context(weak_context, av_close_input_file);
+
+	context->probesize = context->probesize / 10;
+	context->max_analyze_duration = context->probesize / 10;
+
+	if(avformat_find_stream_info(context.get(), nullptr) < 0)
+		return false;
+	
+	return try_get_duration(*context, duration, time_base);
 }
 
 std::wstring probe_stem(const std::wstring stem, const std::vector<std::wstring>& invalid_exts)
