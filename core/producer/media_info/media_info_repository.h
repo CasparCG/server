@@ -22,18 +22,19 @@
 #pragma once
 
 #include <string>
+#include <functional>
 
 namespace caspar { namespace core {
 
 struct media_info;
+typedef std::function<bool (const std::wstring& f, media_info& info)> media_info_extractor;
 
 struct media_info_repository
 {
 	virtual ~media_info_repository() { }
-	virtual void store(std::wstring media_file, media_info info) = 0;
-	virtual bool try_load(
-			const std::wstring& media_file, media_info& info) const = 0;
-	virtual void remove(const std::wstring& media_file) = 0;
+	virtual void register_extractor(media_info_extractor extractor) = 0;
+	virtual media_info get(const std::wstring& file) = 0;
+	virtual void remove(const std::wstring& file) = 0;
 };
 
 }}
