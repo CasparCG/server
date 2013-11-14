@@ -175,7 +175,7 @@
     <ClInclude Include="producer\media_info\media_info_repository.h">
       <Filter>source\producer\media_info</Filter>
     </ClInclude>
-    <ClInclude Include="producer\media_info\file_based_media_info_repository.h">
+    <ClInclude Include="producer\media_info\in_memory_media_info_repository.h">
       <Filter>source\producer\media_info</Filter>
     </ClInclude>
   </ItemGroup>
@@ -277,7 +277,7 @@
     <ClCompile Include="parameters\parameters.cpp">
       <Filter>source\parameters</Filter>
     </ClCompile>
-    <ClCompile Include="producer\media_info\file_based_media_info_repository.cpp">
+    <ClCompile Include="producer\media_info\in_memory_media_info_repository.cpp">
       <Filter>source\producer\media_info</Filter>
     </ClCompile>
   </ItemGroup>

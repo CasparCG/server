@@ -240,8 +240,7 @@ std::wstring MediaInfo(const boost::filesystem::wpath& path, const std::shared_p
 			auto str = relativePath.replace_extension(TEXT("")).external_file_string();
 			if(str[0] == '\\' || str[0] == '/')
 				str = std::wstring(str.begin() + 1, str.end());
-			core::media_info media_info;
-			media_info_repo->try_load(boost::replace_all_copy(str, "\\", "/"), media_info);
+			auto media_info = media_info_repo->get(path.file_string());
 			
 			return std::wstring() 
 					+ L"\""		+ str +

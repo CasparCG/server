@@ -47,7 +47,6 @@ namespace core {
 class basic_frame;
 class parameters;
 struct frame_factory;
-struct media_info;
 
 struct frame_producer : boost::noncopyable
 {
@@ -76,7 +75,7 @@ public:
 	
 	virtual safe_ptr<basic_frame> receive(int hints) = 0;
 	virtual safe_ptr<core::basic_frame> last_frame() const = 0;
-	virtual safe_ptr<basic_frame> create_thumbnail_frame(media_info& additional_info);
+	virtual safe_ptr<basic_frame> create_thumbnail_frame();
 
 	static const safe_ptr<frame_producer>& empty(); // nothrow
 

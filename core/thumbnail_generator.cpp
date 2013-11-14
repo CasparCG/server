@@ -177,7 +177,7 @@ public:
 					== relative_without_extensions.end();
 
 			if (no_corresponding_media_file)
-				remove_thumbnail(relative_without_extension);
+				remove(thumbnails_path_ / (relative_without_extension + L".png"));
 		}
 	}
 
@@ -215,16 +215,12 @@ public:
 
 			break;
 		case REMOVED:
-			remove_thumbnail(get_relative_without_extension(file, media_path_));
+			auto relative_without_extension = get_relative_without_extension(file, media_path_);
+			boost::filesystem::remove(thumbnails_path_ / (relative_without_extension + L".png"));
+			media_info_repo_->remove(file.file_string());
 
 			break;
 		}
-	}
-
-	void remove_thumbnail(const std::wstring& relative_without_extension)
-	{
-		boost::filesystem::remove(thumbnails_path_ / (relative_without_extension + L".png"));
-		media_info_repo_->remove(relative_without_extension);
 	}
 
 	bool needs_to_be_generated(const boost::filesystem::wpath& file)
@@ -296,12 +292,12 @@ public:
 
 			std::map<int, safe_ptr<basic_frame>> frames;
 			auto raw_frame = basic_frame::empty();
-			media_info additional_info;
 
 			try
 			{
-				raw_frame = producer->create_thumbnail_frame(additional_info);
-				media_info_repo_->store(media_file, additional_info);
+				raw_frame = producer->create_thumbnail_frame();
+				media_info_repo_->remove(file.file_string());
+				media_info_repo_->get(file.file_string());
 			}
 			catch (const boost::thread_interrupted&)
 			{

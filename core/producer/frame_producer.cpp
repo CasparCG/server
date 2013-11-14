@@ -29,7 +29,6 @@
 
 #include "color/color_producer.h"
 #include "separated/separated_producer.h"
-#include "media_info/media_info.h"
 
 #include <common/memory/safe_ptr.h>
 #include <common/concurrency/executor.h>
@@ -133,7 +132,7 @@ public:
 
 	virtual safe_ptr<basic_frame>								receive(int hints) override												{return (*producer_)->receive(hints);}
 	virtual safe_ptr<basic_frame>								last_frame() const override		 										{return (*producer_)->last_frame();}
-	virtual safe_ptr<basic_frame>								create_thumbnail_frame(media_info& additional_info) override			{return (*producer_)->create_thumbnail_frame(additional_info);}
+	virtual safe_ptr<basic_frame>								create_thumbnail_frame() override										{return (*producer_)->create_thumbnail_frame();}
 	virtual std::wstring										print() const override													{return (*producer_)->print();}
 	virtual boost::property_tree::wptree 						info() const override													{return (*producer_)->info();}
 	virtual boost::unique_future<std::wstring>					call(const std::wstring& str) override									{return (*producer_)->call(str);}
@@ -168,7 +167,7 @@ public:
 
 	virtual safe_ptr<basic_frame>								receive(int hints) override												{return (producer_)->receive(hints);}
 	virtual safe_ptr<basic_frame>								last_frame() const override		 										{return (producer_)->last_frame();}
-	virtual safe_ptr<basic_frame>								create_thumbnail_frame(media_info& additional_info) override			{return (producer_)->create_thumbnail_frame(additional_info);}
+	virtual safe_ptr<basic_frame>								create_thumbnail_frame() override										{return (producer_)->create_thumbnail_frame();}
 	virtual std::wstring										print() const override													{return (producer_)->print();}
 	virtual boost::property_tree::wptree 						info() const override													{return (producer_)->info();}
 	virtual boost::unique_future<std::wstring>					call(const std::wstring& str) override									{return (producer_)->call(str);}
@@ -198,7 +197,7 @@ public:
 	
 	virtual safe_ptr<basic_frame> receive(int){return frame_;}
 	virtual safe_ptr<core::basic_frame> last_frame() const{return frame_;}
-	virtual safe_ptr<core::basic_frame> create_thumbnail_frame(media_info&) {return frame_;}
+	virtual safe_ptr<core::basic_frame> create_thumbnail_frame() {return frame_;}
 	virtual std::wstring print() const{return L"dummy[" + print_ + L"]";}
 	virtual uint32_t nb_frames() const {return nb_frames_;}	
 	virtual boost::property_tree::wptree info() const override
@@ -242,7 +241,7 @@ const safe_ptr<frame_producer>& frame_producer::empty() // nothrow
 	return producer;
 }
 
-safe_ptr<basic_frame> frame_producer::create_thumbnail_frame(media_info&)
+safe_ptr<basic_frame> frame_producer::create_thumbnail_frame()
 {
 	return basic_frame::empty();
 }

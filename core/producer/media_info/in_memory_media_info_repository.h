@@ -27,7 +27,6 @@
 
 namespace caspar { namespace core {
 
-safe_ptr<struct media_info_repository> create_file_based_media_info_repository(
-		std::wstring csv_file);
+safe_ptr<struct media_info_repository> create_in_memory_media_info_repository();
 
 }}
