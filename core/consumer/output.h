@@ -22,6 +22,7 @@
 #pragma once
 
 #include "../consumer/frame_consumer.h"
+#include "../monitor/monitor.h"
 
 #include <common/memory/safe_ptr.h>
 #include <common/concurrency/target.h>
@@ -56,6 +57,8 @@ public:
 	boost::unique_future<boost::property_tree::wptree> delay_info() const;
 
 	bool empty() const;
+
+	monitor::subject& monitor_output();
 private:
 	struct implementation;
 	safe_ptr<implementation> impl_;
