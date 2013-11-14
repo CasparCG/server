@@ -37,6 +37,9 @@
 #include <core/consumer/output.h>
 #include <core/consumer/synchronizing/synchronizing_consumer.h>
 #include <core/thumbnail_generator.h>
+#include <core/producer/media_info/media_info.h>
+#include <core/producer/media_info/media_info_repository.h>
+#include <core/producer/media_info/in_memory_media_info_repository.h>
 
 #include <modules/bluefish/bluefish.h>
 #include <modules/decklink/decklink.h>
@@ -63,22 +66,48 @@
 #include <protocol/util/AsyncEventServer.h>
 #include <protocol/util/stateful_protocol_strategy_wrapper.h>
 #include <protocol/osc/client.h>
-#include <protocol/asio/io_service_manager.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
+#include <boost/asio.hpp>
+
+#include <tbb/atomic.h>
 
 namespace caspar {
 
 using namespace core;
 using namespace protocol;
 
+std::shared_ptr<boost::asio::io_service> create_running_io_service()
+{
+	auto service = std::make_shared<boost::asio::io_service>();
+	// To keep the io_service::run() running although no pending async
+	// operations are posted.
+	auto work = std::make_shared<boost::asio::io_service::work>(*service);
+	auto thread = std::make_shared<boost::thread>([service]
+	{
+		win32_exception::ensure_handler_installed_for_thread("asio-thread");
+
+		service->run();
+	});
+
+	return std::shared_ptr<boost::asio::io_service>(
+			service.get(),
+			[service, work, thread] (void*) mutable
+			{
+				work.reset();
+				service->stop();
+				thread->join();
+			});
+}
+
 struct server::implementation : boost::noncopyable
 {
-	protocol::asio::io_service_manager			io_service_manager_;
+	std::shared_ptr<boost::asio::io_service>	io_service_;
 	safe_ptr<core::monitor::subject>			monitor_subject_;
 	boost::promise<bool>&						shutdown_server_now_;
 	safe_ptr<ogl_device>						ogl_;
@@ -87,16 +116,22 @@ struct server::implementation : boost::noncopyable
 	osc::client									osc_client_;
 	std::vector<std::shared_ptr<void>>			predefined_osc_subscriptions_;
 	std::vector<safe_ptr<video_channel>>		channels_;
+	safe_ptr<media_info_repository>				media_info_repo_;
+	boost::thread								initial_media_info_thread_;
+	tbb::atomic<bool>							running_;
 	std::shared_ptr<thumbnail_generator>		thumbnail_generator_;
 
 	implementation(boost::promise<bool>& shutdown_server_now)
-		: shutdown_server_now_(shutdown_server_now)
+		: io_service_(create_running_io_service())
+		, shutdown_server_now_(shutdown_server_now)
 		, ogl_(ogl_device::create())
-		, osc_client_(io_service_manager_.service())
+		, osc_client_(io_service_)
+		, media_info_repo_(create_in_memory_media_info_repository())
 	{
+		running_ = true;
 		setup_audio(env::properties());
 
-		ffmpeg::init();
+		ffmpeg::init(media_info_repo_);
 		CASPAR_LOG(info) << L"Initialized ffmpeg module.";
 							  
 		bluefish::init();	  
@@ -130,10 +165,15 @@ struct server::implementation : boost::noncopyable
 
 		setup_osc(env::properties());
 		CASPAR_LOG(info) << L"Initialized osc.";
+
+		start_initial_media_info_scan();
+		CASPAR_LOG(info) << L"Started initial media information retrieval.";
 	}
 
 	~implementation()
-	{		
+	{
+		running_ = false;
+		initial_media_info_thread_.join();
 		thumbnail_generator_.reset();
 		primary_amcp_server_.reset();
 		async_servers_.clear();
@@ -321,8 +361,7 @@ struct server::implementation : boost::noncopyable
 		auto scan_interval_millis = pt.get(L"configuration.thumbnails.scan-interval-millis", 5000);
 
 		polling_filesystem_monitor_factory monitor_factory(
-				io_service_manager_.service(),
-				scan_interval_millis);
+				io_service_, scan_interval_millis);
 		thumbnail_generator_.reset(new thumbnail_generator(
 				monitor_factory, 
 				env::media_folder(),
@@ -332,7 +371,8 @@ struct server::implementation : boost::noncopyable
 				core::video_format_desc::get(pt.get(L"configuration.thumbnails.video-mode", L"720p2500")),
 				ogl_,
 				pt.get(L"configuration.thumbnails.generate-delay-millis", 2000),
-				&image::write_cropped_png));
+				&image::write_cropped_png,
+				media_info_repo_));
 
 		CASPAR_LOG(info) << L"Initialized thumbnail generator.";
 	}
@@ -340,7 +380,7 @@ struct server::implementation : boost::noncopyable
 	safe_ptr<IO::IProtocolStrategy> create_protocol(const std::wstring& name) const
 	{
 		if(boost::iequals(name, L"AMCP"))
-			return make_safe<amcp::AMCPProtocolStrategy>(channels_, thumbnail_generator_, shutdown_server_now_);
+			return make_safe<amcp::AMCPProtocolStrategy>(channels_, thumbnail_generator_, media_info_repo_, shutdown_server_now_);
 		else if(boost::iequals(name, L"CII"))
 			return make_safe<cii::CIIProtocolStrategy>(channels_);
 		else if(boost::iequals(name, L"CLOCK"))
@@ -351,6 +391,25 @@ struct server::implementation : boost::noncopyable
 			});
 		
 		BOOST_THROW_EXCEPTION(caspar_exception() << arg_name_info("name") << arg_value_info(narrow(name)) << msg_info("Invalid protocol"));
+	}
+
+	void start_initial_media_info_scan()
+	{
+		initial_media_info_thread_ = boost::thread([this]
+		{
+			for (boost::filesystem::wrecursive_directory_iterator iter(env::media_folder()), end; iter != end; ++iter)
+			{
+				if (running_)
+					media_info_repo_->get(iter->path().file_string());
+				else
+				{
+					CASPAR_LOG(info) << L"Initial media information retrieval aborted.";
+					return;
+				}
+			}
+
+			CASPAR_LOG(info) << L"Initial media information retrieval finished.";
+		});
 	}
 };
 
@@ -364,6 +423,11 @@ const std::vector<safe_ptr<video_channel>> server::get_channels() const
 std::shared_ptr<thumbnail_generator> server::get_thumbnail_generator() const
 {
 	return impl_->thumbnail_generator_;
+}
+
+safe_ptr<media_info_repository> server::get_media_info_repo() const
+{
+	return impl_->media_info_repo_;
 }
 
 core::monitor::subject& server::monitor_output()

@@ -72,6 +72,9 @@ namespace caspar { namespace protocol { namespace amcp {
 		void SetThumbGenerator(const std::shared_ptr<core::thumbnail_generator>& thumb_gen) {thumb_gen_ = thumb_gen;}
 		std::shared_ptr<core::thumbnail_generator> GetThumbGenerator() { return thumb_gen_; }
 
+		void SetMediaInfoRepo(const safe_ptr<core::media_info_repository>& media_info_repo) {media_info_repo_ = media_info_repo;}
+		std::shared_ptr<core::media_info_repository> GetMediaInfoRepo() { return media_info_repo_; }
+
 		void SetShutdownServerNow(boost::promise<bool>& shutdown_server_now) {shutdown_server_now_ = &shutdown_server_now;}
 		boost::promise<bool>& GetShutdownServerNow() { return *shutdown_server_now_; }
 
@@ -103,6 +106,7 @@ namespace caspar { namespace protocol { namespace amcp {
 		std::shared_ptr<core::video_channel> pChannel_;
 		std::vector<safe_ptr<core::video_channel>> channels_;
 		std::shared_ptr<core::thumbnail_generator> thumb_gen_;
+		std::shared_ptr<core::media_info_repository> media_info_repo_;
 		boost::promise<bool>* shutdown_server_now_;
 		AMCPCommandScheduling scheduling_;
 		std::wstring replyString_;

@@ -31,6 +31,7 @@ namespace caspar { namespace core {
 class ogl_device;
 class read_frame;
 struct video_format_desc;
+struct media_info_repository;
 
 typedef std::function<void (
 		const safe_ptr<read_frame>& frame,
@@ -51,7 +52,8 @@ public:
 			const video_format_desc& render_video_mode,
 			const safe_ptr<ogl_device>& ogl,
 			int generate_delay_millis,
-			const thumbnail_creator& thumbnail_creator);
+			const thumbnail_creator& thumbnail_creator,
+			safe_ptr<media_info_repository> media_info_repo);
 	~thumbnail_generator();
 	void generate(const std::wstring& media_file);
 	void generate_all();

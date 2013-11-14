@@ -56,9 +56,11 @@ inline std::shared_ptr<core::video_channel> GetChannelSafe(unsigned int index, c
 AMCPProtocolStrategy::AMCPProtocolStrategy(
 		const std::vector<safe_ptr<core::video_channel>>& channels,
 		const std::shared_ptr<core::thumbnail_generator>& thumb_gen,
+		const safe_ptr<core::media_info_repository>& media_info_repo,
 		boost::promise<bool>& shutdown_server_now)
 	: channels_(channels)
 	, thumb_gen_(thumb_gen)
+	, media_info_repo_(media_info_repo)
 	, shutdown_server_now_(shutdown_server_now)
 {
 	AMCPCommandQueuePtr pGeneralCommandQueue(new AMCPCommandQueue());
@@ -200,6 +202,7 @@ AMCPCommandPtr AMCPProtocolStrategy::InterpretCommandString(const std::wstring& 
 			{
 				pCommand->SetChannels(channels_);
 				pCommand->SetThumbGenerator(thumb_gen_);
+				pCommand->SetMediaInfoRepo(media_info_repo_);
 				pCommand->SetShutdownServerNow(shutdown_server_now_);
 				//Set scheduling
 				if(commandSwitch.size() > 0) {

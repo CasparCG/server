@@ -304,6 +304,7 @@ public:
 	virtual safe_ptr<core::basic_frame> create_thumbnail_frame() override
 	{
 		auto disable_logging = temporary_disable_logging_for_thread(thumbnail_mode_);
+
 		auto total_frames = nb_frames();
 		auto grid = env::properties().get(L"configuration.thumbnails.video-grid", 2);
 

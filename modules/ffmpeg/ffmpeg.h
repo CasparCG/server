@@ -24,9 +24,16 @@
 #include <string>
 #include <memory>
 
-namespace caspar { namespace ffmpeg {
+namespace caspar { 
+namespace core {
 
-void init();
+struct media_info_repository;
+
+}
+
+namespace ffmpeg {
+
+void init(const safe_ptr<core::media_info_repository>& media_info_repo);
 void uninit();
 void disable_logging_for_thread();
 std::shared_ptr<void> temporary_disable_logging_for_thread(bool disable);

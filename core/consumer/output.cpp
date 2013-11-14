@@ -49,6 +49,7 @@ struct output::implementation
 {		
 	const int										channel_index_;
 	const safe_ptr<diagnostics::graph>				graph_;
+	monitor::subject								monitor_subject_;
 	boost::timer									consume_timer_;
 
 	video_format_desc								format_desc_;
@@ -66,6 +67,7 @@ public:
 	implementation(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index) 
 		: channel_index_(channel_index)
 		, graph_(graph)
+		, monitor_subject_("/output")
 		, format_desc_(format_desc)
 		, executor_(L"output")
 	{
@@ -277,6 +279,7 @@ public:
 				}
 						
 				graph_->set_value("consume-time", consume_timer_.elapsed()*format_desc_.fps*0.5);
+				monitor_subject_ << monitor::message("/consume_time") % (consume_timer_.elapsed());
 			}
 			catch(...)
 			{
@@ -335,6 +338,11 @@ public:
 			return consumers_.empty();
 		});
 	}
+
+	monitor::subject& monitor_output()
+	{ 
+		return monitor_subject_;
+	}
 };
 
 output::output(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index) : impl_(new implementation(graph, format_desc, channel_index)){}
@@ -347,4 +355,5 @@ void output::set_video_format_desc(const video_format_desc& format_desc){impl_->
 boost::unique_future<boost::property_tree::wptree> output::info() const{return impl_->info();}
 boost::unique_future<boost::property_tree::wptree> output::delay_info() const{return impl_->delay_info();}
 bool output::empty() const{return impl_->empty();}
+monitor::subject& output::monitor_output() { return impl_->monitor_output(); }
 }}

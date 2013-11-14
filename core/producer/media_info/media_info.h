@@ -21,25 +21,21 @@
 
 #pragma once
 
-#include <memory>
+#include <cstdint>
 
-#include <boost/noncopyable.hpp>
+#include <boost/rational.hpp>
 
-namespace boost { namespace asio {
-	class io_service;
-}}
+namespace caspar { namespace core {
 
-namespace caspar { namespace protocol { namespace asio {
-
-class io_service_manager : boost::noncopyable
+struct media_info
 {
-public:
-	io_service_manager();
-	~io_service_manager();
-	boost::asio::io_service& service();
-private:
-	struct impl;
-	std::unique_ptr<impl> impl_;
+	std::int64_t duration;
+	boost::rational<std::int64_t> time_base;
+
+	media_info()
+		: duration(0)
+	{
+	}
 };
 
-}}}
+}}

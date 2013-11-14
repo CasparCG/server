@@ -25,6 +25,15 @@ General
     rendering takes place, but still not as fast as possible, which can cause
     animations to be somewhat incorrectly rendered. This is the only way though
     if we want the buffer to be able to recover after depletion.
+  o Fixed race condition during server shutdown.
+  o OSC: outgoing audio levels from the audio mixer for each audio channel is
+    now transmitted (pFS and dBFS).
+  o Stage: Fixed bug where tweened transforms were only ticked when a
+    corresponding layer existed.
+  o Screen consumer: Added borderless option and correct handling of name
+    option.
+  o AMCP: CLS now reports duration and framerate for MOVIE files were
+    information is possible to extract.
   o Version bump to keep up with CasparCG Client version.
 
 
