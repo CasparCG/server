@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Profile|Win32">
@@ -258,6 +258,9 @@
     <ClInclude Include="parameters\parameters.h" />
     <ClInclude Include="monitor\monitor.h" />
     <ClInclude Include="producer\channel\channel_producer.h" />
+    <ClInclude Include="producer\media_info\in_memory_media_info_repository.h" />
+    <ClInclude Include="producer\media_info\media_info.h" />
+    <ClInclude Include="producer\media_info\media_info_repository.h" />
     <ClInclude Include="thumbnail_generator.h" />
     <ClInclude Include="producer\layer\layer_producer.h" />
     <ClInclude Include="video_channel.h" />
@@ -341,6 +344,12 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../stdafx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="producer\channel\channel_producer.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
+    <ClCompile Include="producer\media_info\in_memory_media_info_repository.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../../StdAfx.h</PrecompiledHeaderFile>

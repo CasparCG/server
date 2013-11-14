@@ -37,7 +37,6 @@
     <ClInclude Include="amcp\AMCPCommandQueue.h" />
     <ClInclude Include="amcp\AMCPCommandsImpl.h" />
     <ClInclude Include="amcp\AMCPProtocolStrategy.h" />
-    <ClInclude Include="asio\io_service_manager.h" />
     <ClInclude Include="cii\CIICommand.h" />
     <ClInclude Include="cii\CIICommandsImpl.h" />
     <ClInclude Include="cii\CIIProtocolStrategy.h" />
@@ -79,12 +78,6 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="asio\io_service_manager.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="cii\CIICommandsImpl.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>

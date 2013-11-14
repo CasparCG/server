@@ -23,6 +23,7 @@
 
 #include "consumer/ffmpeg_consumer.h"
 #include "producer/ffmpeg_producer.h"
+#include "producer/util/util.h"
 
 #include <common/log/log.h>
 #include <common/exception/win32_exception.h>
@@ -30,6 +31,8 @@
 #include <core/parameters/parameters.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/producer/frame_producer.h>
+#include <core/producer/media_info/media_info.h>
+#include <core/producer/media_info/media_info_repository.h>
 
 #include <tbb/recursive_mutex.h>
 
@@ -239,7 +242,7 @@ void log_for_thread(void* ptr, int level, const char* fmt, va_list vl)
 //}
 //#pragma warning (pop)
 
-void init()
+void init(const safe_ptr<core::media_info_repository>& media_info_repo)
 {
 	av_lockmgr_register(ffmpeg_lock_callback);
 	av_log_set_callback(log_for_thread);
@@ -255,6 +258,14 @@ void init()
 	core::register_consumer_factory([](const core::parameters& params){return ffmpeg::create_consumer(params);});
 	core::register_producer_factory(create_producer);
 	core::register_thumbnail_producer_factory(create_thumbnail_producer);
+
+	media_info_repo->register_extractor(
+			[](const std::wstring& file, core::media_info& info) -> bool
+			{
+				auto disable_logging = temporary_disable_logging_for_thread(true);
+
+				return is_valid_file(file) && try_get_duration(file, info.duration, info.time_base);
+			});
 }
 
 void uninit()

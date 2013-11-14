@@ -46,6 +46,8 @@
 #include <core/producer/frame/frame_transform.h>
 #include <core/producer/stage.h>
 #include <core/producer/layer.h>
+#include <core/producer/media_info/media_info.h>
+#include <core/producer/media_info/media_info_repository.h>
 #include <core/mixer/mixer.h>
 #include <core/mixer/gpu/ogl_device.h>
 #include <core/consumer/output.h>
@@ -197,24 +199,29 @@ std::wstring read_file(const boost::filesystem::wpath& file)
 	return read_latin1_file(file);
 }
 
-std::wstring MediaInfo(const boost::filesystem::wpath& path)
+std::wstring MediaInfo(const boost::filesystem::wpath& path, const std::shared_ptr<core::media_info_repository>& media_info_repo)
 {
 	if(boost::filesystem::is_regular_file(path))
 	{
 		std::wstring clipttype = TEXT(" N/A ");
 		std::wstring extension = boost::to_upper_copy(path.extension());
 		if(extension == TEXT(".TGA") || extension == TEXT(".COL") || extension == L".PNG" || extension == L".JPEG" || extension == L".JPG" ||
-			extension == L"GIF" || extension == L"BMP")
-			clipttype = TEXT(" STILL ");
+			extension == L".GIF" || extension == L".BMP")
+		{
+			clipttype = TEXT(" STILL ");			
+		}
 		else if(extension == TEXT(".WAV") || extension == TEXT(".MP3"))
+		{
 			clipttype = TEXT(" AUDIO ");
-		else if(extension == TEXT(".SWF") || extension == TEXT(".CT") || 
-			    extension == TEXT(".DV") || extension == TEXT(".MOV") || 
+		}
+		else if(extension == TEXT(".SWF") || extension == TEXT(".CT") ||
+				extension == TEXT(".DV") || extension == TEXT(".MOV") || 
 				extension == TEXT(".MPG") || extension == TEXT(".AVI") || 
 				extension == TEXT(".MP4") || extension == TEXT(".FLV") || 
-				extension == TEXT(".STGA") || 
 				caspar::ffmpeg::is_valid_file(path.file_string()))
+		{
 			clipttype = TEXT(" MOVIE ");
+		}
 
 		if(clipttype != TEXT(" N/A "))
 		{		
@@ -233,22 +240,26 @@ std::wstring MediaInfo(const boost::filesystem::wpath& path)
 			auto str = relativePath.replace_extension(TEXT("")).external_file_string();
 			if(str[0] == '\\' || str[0] == '/')
 				str = std::wstring(str.begin() + 1, str.end());
-
-			return std::wstring() + TEXT("\"") + str +
-					+ TEXT("\" ") + clipttype +
-					+ TEXT(" ") + sizeStr +
-					+ TEXT(" ") + writeTimeWStr +
-					+ TEXT("\r\n"); 	
+			auto media_info = media_info_repo->get(path.file_string());
+			
+			return std::wstring() 
+					+ L"\""		+ str +
+					+ L"\" "	+ clipttype +
+					+ L" "		+ sizeStr +
+					+ L" "		+ writeTimeWStr +
+					+ L" "		+ boost::lexical_cast<std::wstring>(media_info.duration) +
+					+ L" "		+ boost::lexical_cast<std::wstring>(media_info.time_base.numerator()) + L"/" + boost::lexical_cast<std::wstring>(media_info.time_base.denominator())
+					+ L"\r\n"; 	
 		}	
 	}
 	return L"";
 }
 
-std::wstring ListMedia()
-{	
+std::wstring ListMedia(const std::shared_ptr<core::media_info_repository>& media_info_repo)
+{		
 	std::wstringstream replyString;
 	for (boost::filesystem::wrecursive_directory_iterator itr(env::media_folder()), end; itr != end; ++itr)	
-		replyString << MediaInfo(itr->path());
+		replyString << MediaInfo(itr->path(), media_info_repo);
 	
 	return boost::to_upper_copy(replyString.str());
 }
@@ -1824,7 +1835,7 @@ bool CinfCommand::DoExecute()
 			auto path = itr->path();
 			auto file = path.replace_extension(L"").filename();
 			if(boost::iequals(file, _parameters.at(0)))
-				info += MediaInfo(itr->path()) + L"\r\n";
+				info += MediaInfo(itr->path(), GetMediaInfoRepo()) + L"\r\n";
 		}
 
 		if(info.empty())
@@ -2026,7 +2037,7 @@ bool ClsCommand::DoExecute()
 	*/
 	std::wstringstream replyString;
 	replyString << TEXT("200 CLS OK\r\n");
-	replyString << ListMedia();
+	replyString << ListMedia(GetMediaInfoRepo());
 	replyString << TEXT("\r\n");
 	SetReplyString(boost::to_upper_copy(replyString.str()));
 	return true;

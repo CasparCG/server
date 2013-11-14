@@ -203,9 +203,9 @@ private:
 
 class polling_filesystem_monitor : public filesystem_monitor
 {
+	std::shared_ptr<boost::asio::io_service> scheduler_;
 	directory_monitor root_monitor_;
 	executor executor_;
-	boost::asio::io_service& scheduler_;
 	boost::asio::deadline_timer timer_;
 	tbb::atomic<bool> running_;
 	int scan_interval_millis_;
@@ -218,18 +218,18 @@ public:
 			filesystem_event events_of_interest_mask,
 			bool report_already_existing,
 			int scan_interval_millis,
-			boost::asio::io_service& scheduler,
+			std::shared_ptr<boost::asio::io_service> scheduler,
 			const filesystem_monitor_handler& handler,
 			const initial_files_handler& initial_files_handler)
-		: root_monitor_(
+		: scheduler_(std::move(scheduler))
+		, root_monitor_(
 				report_already_existing,
 				folder_to_watch,
 				events_of_interest_mask,
 				handler,
 				initial_files_handler)
 		, executor_(L"polling_filesystem_monitor")
-		, scheduler_(scheduler)
-		, timer_(scheduler)
+		, timer_(*scheduler_)
 		, scan_interval_millis_(scan_interval_millis)
 	{
 		running_ = true;
@@ -273,6 +273,17 @@ private:
 			boost::posix_time::milliseconds(scan_interval_millis_));
 		timer_.async_wait([this](const boost::system::error_code& e)
 		{
+			begin_scan();
+		});
+	}
+
+	void begin_scan()
+	{
+		if (!running_)
+			return;
+
+		executor_.begin_invoke([this] ()
+		{
 			scan();
 			schedule_next();
 		});
@@ -306,20 +317,22 @@ private:
 
 struct polling_filesystem_monitor_factory::implementation
 {
-	boost::asio::io_service& scheduler_;
+	std::shared_ptr<boost::asio::io_service> scheduler_;
 	int scan_interval_millis;
 
 	implementation(
-			boost::asio::io_service& scheduler, int scan_interval_millis)
-		: scheduler_(scheduler), scan_interval_millis(scan_interval_millis)
+			std::shared_ptr<boost::asio::io_service> scheduler,
+			int scan_interval_millis)
+		: scheduler_(std::move(scheduler))
+		, scan_interval_millis(scan_interval_millis)
 	{
 	}
 };
 
 polling_filesystem_monitor_factory::polling_filesystem_monitor_factory(
-		boost::asio::io_service& scheduler,
+		std::shared_ptr<boost::asio::io_service> scheduler,
 		int scan_interval_millis)
-	: impl_(new implementation(scheduler, scan_interval_millis))
+	: impl_(new implementation(std::move(scheduler), scan_interval_millis))
 {
 }
 

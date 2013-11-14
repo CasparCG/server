@@ -52,6 +52,9 @@
     <Filter Include="source\parameters">
       <UniqueIdentifier>{d04737a6-96b2-40cd-b1e7-e90b69006cd1}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\producer\media_info">
+      <UniqueIdentifier>{7c832327-1c6a-4538-8ce8-553de2c4b5f0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="producer\transition\transition_producer.h">
@@ -166,6 +169,15 @@
     <ClInclude Include="parameters\parameters.h">
       <Filter>source\parameters</Filter>
     </ClInclude>
+    <ClInclude Include="producer\media_info\media_info.h">
+      <Filter>source\producer\media_info</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\media_info\media_info_repository.h">
+      <Filter>source\producer\media_info</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\media_info\in_memory_media_info_repository.h">
+      <Filter>source\producer\media_info</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
@@ -264,6 +276,9 @@
     </ClCompile>
     <ClCompile Include="parameters\parameters.cpp">
       <Filter>source\parameters</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\media_info\in_memory_media_info_repository.cpp">
+      <Filter>source\producer\media_info</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
