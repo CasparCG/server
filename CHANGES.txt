@@ -14,7 +14,7 @@ General
     were offset by one field in relation to input fields.
   o FFmpeg: Fixed bug in ffmpeg_consumer where an access violation occurred
     during destruction.
-  o FFmpeg: Improved seeking.
+  o FFmpeg: Improved seeking. (Robert Nagy and Thomas Kaltz III)
   o Frontend: Only writes elements to casparcg.config which overrides a default
     value to keep the file as compact as possible.
   o System audio: Patched sfml-audio to work better with oal-consumer and
@@ -28,13 +28,13 @@ General
     if we want the buffer to be able to recover after depletion.
   o Fixed race condition during server shutdown.
   o OSC: outgoing audio levels from the audio mixer for each audio channel is
-    now transmitted (pFS and dBFS).
+    now transmitted (pFS and dBFS). (Thomas Kaltz III)
   o Stage: Fixed bug where tweened transforms were only ticked when a
     corresponding layer existed.
   o Screen consumer: Added borderless option and correct handling of name
-    option.
+    option. (Thomas Kaltz III)
   o AMCP: CLS now reports duration and framerate for MOVIE files were
-    information is possible to extract.
+    information is possible to extract. (Robert Nagy)
   o Version bump to keep up with CasparCG Client version.
 
 
@@ -45,6 +45,7 @@ CasparCG 2.0.4 Stable (as compared to 2.0.4 Beta 1)
 General
 -------
   o Can now open media with file names that only consist of digits.
+    (Cambell Prince)
   o Miscellaneous stability and performance improvements.
 
 Video mixer
@@ -63,7 +64,7 @@ Consumers
     fill+key output(s) as input source(s) to a NewTek TriCaster without 
     requiring video card(s) in the CasparCG Server machine, or taking up inputs
     in the TriCaster. <newtek-ivga /> element in config enables iVGA on a
-    channel.
+    channel. (Robert Nagy sponsored by NewTek)
   o Decklink: Created custom decklink allocator to reduce the memory footprint.
   o Replaced usage of SFML for <system-audio /> with PortAudio, because of
     problems with SFML since change to static linkage. Also PortAudio seems to
@@ -72,7 +73,7 @@ Consumers
 Producers
 ---------
   o FFmpeg: Added support for arbitrary FFmpeg options/parameters
-    in ffmpeg_producer.
+    in ffmpeg_producer. (Cambell Prince)
   o Flash: Flash Player 11.8 now tested and fully supported.
   o Flash: No longer starts a Flash Player to service CG commands that mean
     nothing without an already running Flash Player.
@@ -83,13 +84,14 @@ Producers
 
 OSC
 ---
-  o Performance improvements.
+  o Performance improvements. (Robert Nagy sponsored by Boffins Technologies)
   o Never sends old values to OSC reveivers. Collects the latest value of each
     path logged since last UDP send, and sends the new UDP packet (to each
-    subscribing OSC receiver) with the values collected.
+    subscribing OSC receiver) with the values collected. (Robert Nagy sponsored
+    by Boffins Technologies)
   o Batches as many OSC messages as possible in an OSC bundle to reduce the 
     number of UDP packets sent. Breakup into separate packages if necessary to 
-    avoid fragmentation.
+    avoid fragmentation. (Robert Nagy sponsored by Boffins Technologies)
   o Removed usage of Microsoft Agents library (Server ran out of memory after a
     while) in favour of direct synchronous invocations.
 
@@ -101,6 +103,7 @@ CasparCG 2.0.4 Beta 1 (as compared to 2.0.3 Stable)
 General
 -------
   o Front-end GUI for simplified configuration and easy access to common tasks.
+    (Thomas Kaltz III and Jeff Lafforgue)
   o Added support for video and images file thumbnail generation. By default the
     media directory is scanned every 5 seconds for new/modified/removed files
     and thumbnails are generated/regenerated/removed accordingly.
@@ -136,10 +139,18 @@ General
     <synchronizing /> unless synchronization of consumer outputs is needed. For
     synchronization to be effective all synchronized cards must have genlock
     reference signal connected.
+  o Transfer of source code and issue tracker to github. (Thomas Kaltz III)
 
 Layer
 -----
   o Fixed a problem where the first frame was not always shown on LOAD.
+    (Robert Nagy)
+
+Stage
+-----
+
+  o Support for layer consumers for listening to frames coming out of producers.
+    (Cambell Prince)
 
 Audio mixer
 -----------
@@ -147,7 +158,7 @@ Audio mixer
 
 Video mixer
 -----------
-  o Added support for chroma keying.
+  o Added support for chroma keying. (Cambell Prince)
   o Fixed bug where MIXER CONTRAST set to < 1 can cause transparency issues.
   o Experimental support for straight alpha output.
 
@@ -173,12 +184,15 @@ Consumers
 
 Producers
 ---------
-  o Added support for playing .swf files using the Flash producer.
+  o Added support for playing .swf files using the Flash producer. (Robert Nagy)
   o Image producer premultiplies PNG images with their alpha.
   o Image producer can load a PNG image encoded as base64 via:
     PLAY 1-0 [PNG_BASE64] <base64 string>
   o FFmpeg producer can now use a directshow input filters:
     PLAY 1-10 "dshow://video=Some Camera"
+    (Cambell Prince, Julian Waller and Robert Nagy)
+  o New layer producer which directs the output of a layer to another layer via
+    a layer consumer. (Cambell Prince)
 
 AMCP
 ----
@@ -199,6 +213,7 @@ AMCP
     \ followed by n.
   o MIXER CHROMA command added to control the chroma keying. Example:
     MIXER 1-1 CHROMA GREEN|BLUE 0.10 0.04
+    (Cambell Prince)
   o Fixed bug where MIXER FILL overrides any previous MIXER CLIP on the same
     layer. The bugfix also has the side effect of supporting negative scale on
     MIXER FILL, causing the image to be flipped.
@@ -206,6 +221,8 @@ AMCP
     alpha or not.
   o Added INFO <ch> DELAY and INFO <ch>-<layer> DELAY commands for showing some
     delay measurements.
+  o PLAY 1-1 2-10 creates a layer producer on 1-1 redirecting the output of
+    2-10. (Cambell Prince)
 
 
 OSC
@@ -213,6 +230,7 @@ OSC
   o Support for sending OSC messages over UDP to either a predefined set of
     clients (servers in the OSC sense) or dynamically to the ip addresses of the
     currently connected AMCP clients.
+    (Robert Nagy sponsored by Boffins Technologies)
   o /channel/[1-9]/stage/layer/[0-9]
     + always             /paused           [paused or not]
     + color producer     /color            [color string]
@@ -239,14 +257,14 @@ CasparCG 2.0.3 Stable (as compared to 2.0.3 Alpha)
 Stage
 -----
 
-  o Fixed dead-lock that can occur with multiple mixer tweens.
+  o Fixed dead-lock that can occur with multiple mixer tweens. (Robert Nagy)
 
 AMCP
 ----
 
   o DATA STORE now supports creating folders of path specified if they does not
-    exist.
-  o DATA REMOVE command was added.
+    exist. (Jeff Lafforgue)
+  o DATA REMOVE command was added. (Jeff Lafforgue)
 
 
 
@@ -257,8 +275,8 @@ General
 -------
 
   o Data files are now stored in UTF-8 with BOM. Latin1 files are still
-    supported for backwards compatibility
-  o Commands written in UTF-8 to log file but only ascii characters to console.
+    supported for backwards compatibility.
+  o Commands written in UTF-8 to log file but only ASCII characters to console.
   o Added supported video formats:
     + 720p2398 (not supported by DeckLink)
     + 720p2400 (not supported by DeckLink)
@@ -453,8 +471,8 @@ CasparCG 2.0 Beta 1 (as compared to Alpha)
     + and many more
   o 32-bit SSE optimized audio pipeline.
   o Decklink-Consumer uses external-key by default.
-  o Decklink-Consumer has 32 bit embedded-audio support.
-  o Decklink-Producer has 32 bit embedded-audio support.
+  o Decklink-Consumer has 24 bit embedded-audio support.
+  o Decklink-Producer has 24 bit embedded-audio support.
   o LOADBG with AUTO feature which automatically playes queued clip when
     foreground clip has ended.
   o STATUS command for layers.
@@ -480,9 +498,9 @@ CasparCG 2.0 Beta 1 (as compared to Alpha)
     producer-buffer size greater than 0.
   o Improved error and crash recovery.
   o Improved logging.
-  o Added Image-Scroll-Producer
-  o Key-only has now near zery performance overhead.
-  o Reduced memory requirements
+  o Added Image-Scroll-Producer.
+  o Key-only has now near zero performance overhead.
+  o Reduced memory requirements.
   o Removed "warm up lag" which occured when playing the first media clip after
     the server has started.
   o Added read-back fence for OpenGL device for improved multi-channel
