@@ -20,7 +20,7 @@ SYSTEM REQUIREMENTS
    While AMD processors probably work, CasparCG Server has only been tested on
    Intel processors.
 
-2. Windows 7 (64-bit) recommended.
+2. Windows 7 (64-bit) strongly recommended.
    CasparCG Server has also been used successfully on Windows 7 (32-bit) 
    and Windows XP SP2 (32-bit only.)
    NOT SUPPORTED: Windows 8, Windows 2003 Server and Windows Vista.
@@ -53,24 +53,18 @@ INSTALLATION
 3. Install "Microsoft Visual C++ 2010 Redistributable Package" from
    http://www.microsoft.com/download/en/details.aspx?id=5555
    
-4. Install "Microsoft .NET Framework" (version 4.0 or later.)
-   Free download at: 
+4. Install "Microsoft .NET Framework" (version 4.0 or later) from
    http://go.microsoft.com/fwlink/?LinkId=225702
 
 5. Make sure you turn off Windows' "Aero Theme" and "ClearType" font smoothing
    as they can interfere with CasparCG Server's OpenGL features!
 
-6. Start the "CasparCG_Server.exe" program and configure the settings.
-
-7. Connect to the Server from a client, such as the CasparCG Client 2.0.6
-   (available as a separate download.)
 
 
 INSTALLATION OF ADDITIONAL NON-GPL SOFTWARE
 -------------------------------------------
 
 - For Flash template support:
-
   1. Uninstall any previous version of the Adobe Flash Player using this file:
      http://download.macromedia.com/get/flashplayer/current/support/uninstall_flash_player.exe
   2. Download and unpack
@@ -78,8 +72,22 @@ INSTALLATION OF ADDITIONAL NON-GPL SOFTWARE
   3. Install Adobe Flash Player 11.8.800.94 from the unpacked archive:
      fp_11.8.800.94_archive/11_8_r800_94/flashplayer11_8r800_94_winax.exe
 
-- For NewTek iVGA support download and install:
+
+- For NewTek iVGA support, please download and install the following driver:
   http://new.tk/NetworkSendRedist
+
+
+CONFIGURATION
+-------------
+
+1. Start the "CasparCG_Server.exe" program and configure the settings. Then 
+   Click the "Restart" button to save the configuration and restart
+   the CasparCG Server software.
+
+2. Connect to the Server from a client software, such as the "CasparCG Client"
+   which is available as a separate download.
+
+
 
 
 DOCUMENTATION
@@ -91,11 +99,12 @@ http://casparcg.com/wiki/
 Ask questions in the forum: http://casparcg.com/forum/
 
 
+
 LICENSING
 ---------
 
 CasparCG is distributed under the GNU General Public License GPLv3 or
-higher, see LICENSE.TXT for details.
+higher, please see LICENSE.TXT for details.
 
 The included software is provided as-is by Sveriges Televison AB.
 More information is available at http://casparcg.com/
