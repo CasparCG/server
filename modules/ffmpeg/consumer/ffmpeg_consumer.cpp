@@ -123,6 +123,10 @@ struct output_format
 		, vcodec(CODEC_ID_NONE)
 		, acodec(CODEC_ID_NONE)
 	{
+		if (format == nullptr)
+			BOOST_THROW_EXCEPTION(caspar_exception()
+				<< msg_info(filename + " not a supported file for recording"));
+
 		boost::range::remove_erase_if(options, [&](const option& o)
 		{
 			return set_opt(o.name, o.value);
