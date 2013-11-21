@@ -71,7 +71,7 @@ INSTALLATION OF ADDITIONAL NON-GPL SOFTWARE
   2. Download and unpack
      http://download.macromedia.com/pub/flashplayer/installers/archive/fp_11.8.800.94_archive.zip
   3. Install Adobe Flash Player 11.8.800.94 from the unpacked archive:
-     fp_11.8.800.94_archive/11_8_r800_94/flashplayer11_8r800_94_winax.exe
+     fp_11.8.800.94_archive\11_8_r800_94\flashplayer11_8r800_94_winax.exe
 
 
 - For NewTek iVGA support, please download and install the following driver:
