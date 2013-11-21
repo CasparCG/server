@@ -26,16 +26,17 @@ SYSTEM REQUIREMENTS
    NOT SUPPORTED: Windows 8, Windows 2003 Server and Windows Vista.
 
 3. A graphics card (GPU) capable of OpenGL 3.0 is required.
+   We strongly recommend that you use a separate graphics card, and avoid
+   using the built-in GPU that exists in many CPUs, since your performance
+   will suffer.
 
 4. Microsoft Visual C++ 2010 Redistributable Package must be installed.
-   Free download at:
-   http://www.microsoft.com/download/en/details.aspx?id=5555
-
+   See link in the Installation section below.
+   
 5. Microsoft .NET Framework 4.0 or later must be installed.
-   Free download at: 
-   http://go.microsoft.com/fwlink/?LinkId=225702
-
-6. Turn off Windows' "Aero" theme and "ClearType" font smoothing
+   See link in the Installation section below.
+   
+6. Windows' "Aero" theme and "ClearType" font smoothing must be disabled
    as they have been known to interfere with transparency in Flash templates,
    and can also cause problems with Vsync when outputting to computer screens.
 
