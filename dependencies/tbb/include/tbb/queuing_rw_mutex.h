@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -48,7 +48,7 @@
 
 namespace tbb {
 
-//! Reader-writer lock with local-only spinning.
+//! Queuing reader-writer mutex with local-only spinning.
 /** Adapted from Krieger, Stumm, et al. pseudocode at
     http://www.eecg.toronto.edu/parallel/pubs_abs.html#Krieger_etal_ICPP93
     @ingroup synchronization */
@@ -69,14 +69,11 @@ public:
 #endif
     }
 
-    class scoped_lock;
-    friend class scoped_lock;
-
     //! The scoped locking pattern
     /** It helps to avoid the common problem of forgetting to release lock.
         It also nicely provides the "node" for queuing locks. */
     class scoped_lock: internal::no_copy {
-        //! Initialize fields
+        //! Initialize fields to mean "no lock held".
         void initialize() {
             my_mutex = NULL;
 #if TBB_USE_ASSERT
@@ -85,6 +82,7 @@ public:
             internal::poison_pointer(my_prev);
 #endif /* TBB_USE_ASSERT */
         }
+
     public:
         //! Construct lock that has not acquired a mutex.
         /** Equivalent to zero-initialization of *this. */
@@ -104,21 +102,21 @@ public:
         //! Acquire lock on given mutex.
         void acquire( queuing_rw_mutex& m, bool write=true );
 
-        //! Try acquire lock on given mutex.
+        //! Acquire lock on given mutex if free (i.e. non-blocking)
         bool try_acquire( queuing_rw_mutex& m, bool write=true );
 
         //! Release lock.
         void release();
 
         //! Upgrade reader to become a writer.
-        /** Returns true if the upgrade happened without re-acquiring the lock and false if opposite */
+        /** Returns whether the upgrade happened without releasing and re-acquiring the lock */
         bool upgrade_to_writer();
 
         //! Downgrade writer to become a reader.
         bool downgrade_to_reader();
 
     private:
-        //! The pointer to the current mutex to work
+        //! The pointer to the mutex owned, or NULL if not holding a mutex.
         queuing_rw_mutex* my_mutex;
 
         //! The pointer to the previous and next competitors for a mutex

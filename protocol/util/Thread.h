@@ -21,8 +21,6 @@
 
 #pragma once
 
-#include "event.h"
-
 #include <exception>
 #include <memory>
 

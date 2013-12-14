@@ -29,22 +29,26 @@
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>false</WholeProgramOptimization>
+    <PlatformToolset>v110</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>false</WholeProgramOptimization>
+    <PlatformToolset>v110</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
     <WholeProgramOptimization>false</WholeProgramOptimization>
+    <PlatformToolset>v110</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
     <UseIntelTBB>true</UseIntelTBB>
     <InstrumentIntelTBB>false</InstrumentIntelTBB>
+    <PlatformToolset>v110</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -72,14 +76,14 @@
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">$(ProjectDir)tmp\$(Configuration)\</IntDir>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\;..\..\dependencies\boost\;..\..\dependencies\glew-1.6.0\include;..\..\dependencies\tbb\include\;..\..\dependencies\SFML-1.6\include;..\..\dependencies\ffmpeg 0.8\include;$(IncludePath)</IncludePath>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\;..\..\dependencies\boost\;..\..\dependencies\glew-1.6.0\include;..\..\dependencies\tbb\include\;..\..\dependencies\SFML-1.6\include;..\..\dependencies\ffmpeg 0.8\include;$(IncludePath)</IncludePath>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">..\..\;..\..\dependencies\boost\;..\..\dependencies\glew-1.6.0\include;..\..\dependencies\tbb\include\;..\..\dependencies\SFML-1.6\include;..\..\dependencies\ffmpeg 0.8\include;$(IncludePath)</IncludePath>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">..\..\;..\..\dependencies\boost\;..\..\dependencies\glew-1.6.0\include;..\..\dependencies\tbb\include\;..\..\dependencies\SFML-1.6\include;..\..\dependencies\ffmpeg 0.8\include;$(IncludePath)</IncludePath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\dependencies\boost\stage\lib\;..\..\dependencies\ffmpeg 0.8\lib\;..\..\dependencies\tbb\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\dependencies\boost\stage\lib\;..\..\dependencies\ffmpeg 0.8\lib\;..\..\dependencies\tbb\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">..\..\dependencies\boost\stage\lib\;..\..\dependencies\ffmpeg 0.8\lib\;..\..\dependencies\tbb\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">..\..\dependencies\boost\stage\lib\;..\..\dependencies\ffmpeg 0.8\lib\;..\..\dependencies\tbb\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\;..\..\dependencies\boost 1.52\;..\..\dependencies\glew-1.6.0\include;..\..\dependencies\tbb\include\;..\..\dependencies\SFML-1.6\include;..\..\dependencies\ffmpeg 0.8\include;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\;..\..\dependencies\boost 1.52\;..\..\dependencies\glew-1.6.0\include;..\..\dependencies\tbb\include\;..\..\dependencies\SFML-1.6\include;..\..\dependencies\ffmpeg 0.8\include;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">..\..\;..\..\dependencies\boost 1.52\;..\..\dependencies\glew-1.6.0\include;..\..\dependencies\tbb\include\;..\..\dependencies\SFML-1.6\include;..\..\dependencies\ffmpeg 0.8\include;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">..\..\;..\..\dependencies\boost 1.52\;..\..\dependencies\glew-1.6.0\include;..\..\dependencies\tbb\include\;..\..\dependencies\SFML-1.6\include;..\..\dependencies\ffmpeg 0.8\include;$(IncludePath)</IncludePath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">..\..\dependencies\boost 1.52\stage\lib\;..\..\dependencies\ffmpeg 0.8\lib\;..\..\dependencies\tbb\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\..\dependencies\boost 1.52\stage\lib\;..\..\dependencies\ffmpeg 0.8\lib\;..\..\dependencies\tbb\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">..\..\dependencies\boost 1.52\stage\lib\;..\..\dependencies\ffmpeg 0.8\lib\;..\..\dependencies\tbb\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">..\..\dependencies\boost 1.52\stage\lib\;..\..\dependencies\ffmpeg 0.8\lib\;..\..\dependencies\tbb\lib\ia32\vc10\;$(LibraryPath)</LibraryPath>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(ProjectDir)bin\$(Configuration)\</OutDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(ProjectDir)bin\$(Configuration)\</OutDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">$(ProjectDir)bin\$(Configuration)\</OutDir>

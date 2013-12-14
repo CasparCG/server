@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -29,17 +29,22 @@
 #ifndef __TBB_tbb_thread_H
 #define __TBB_tbb_thread_H
 
+#include "tbb_stddef.h"
 #if _WIN32||_WIN64
 #include "machine/windows_api.h"
 #define __TBB_NATIVE_THREAD_ROUTINE unsigned WINAPI
 #define __TBB_NATIVE_THREAD_ROUTINE_PTR(r) unsigned (WINAPI* r)( void* )
+#if __TBB_WIN8UI_SUPPORT
+typedef size_t thread_id_type;
+#else  // __TBB_WIN8UI_SUPPORT
+typedef DWORD thread_id_type;
+#endif // __TBB_WIN8UI_SUPPORT
 #else
 #define __TBB_NATIVE_THREAD_ROUTINE void*
 #define __TBB_NATIVE_THREAD_ROUTINE_PTR(r) void* (*r)( void* )
 #include <pthread.h>
 #endif // _WIN32||_WIN64
 
-#include "tbb_stddef.h"
 #include "tick_count.h"
 
 #if !TBB_USE_EXCEPTIONS && _MSC_VER
@@ -63,7 +68,7 @@ namespace internal {
 
 } // namespace internal
 
-void swap( internal::tbb_thread_v3& t1, internal::tbb_thread_v3& t2 ); 
+inline void swap( internal::tbb_thread_v3& t1, internal::tbb_thread_v3& t2 ); 
 
 namespace internal {
 
@@ -183,7 +188,7 @@ namespace internal {
     private:
         native_handle_type my_handle; 
 #if _WIN32||_WIN64
-        DWORD my_thread_id;
+        thread_id_type my_thread_id;
 #endif // _WIN32||_WIN64
 
         /** Runs start_routine(closure) on another thread and sets my_handle to the handle of the created thread. */
@@ -195,8 +200,8 @@ namespace internal {
         
     class tbb_thread_v3::id { 
 #if _WIN32||_WIN64
-        DWORD my_id;
-        id( DWORD id_ ) : my_id(id_) {}
+        thread_id_type my_id;
+        id( thread_id_type id_ ) : my_id(id_) {}
 #else
         pthread_t my_id;
         id( pthread_t id_ ) : my_id(id_) {}
@@ -281,9 +286,9 @@ inline void swap( internal::tbb_thread_v3& t1, internal::tbb_thread_v3& t2 ) {
     t1.my_handle = t2.my_handle;
     t2.my_handle = h;
 #if _WIN32||_WIN64
-    DWORD i = t1.my_thread_id;
-    t1.my_thread_id = t2.my_thread_id;
-    t2.my_thread_id = i;
+    thread_id_type i = t1.my_thread_id;
+    t1.my_thread_id  = t2.my_thread_id;
+    t2.my_thread_id  = i;
 #endif /* _WIN32||_WIN64 */
 }
 

@@ -49,7 +49,7 @@ std::wstring get_relative_without_extension(
 		const boost::filesystem::wpath& file,
 		const boost::filesystem::wpath& relative_to)
 {
-	auto result = file.stem();
+	auto result = file.stem().wstring();
 		
 	boost::filesystem::wpath current_path = file;
 
@@ -63,7 +63,7 @@ std::wstring get_relative_without_extension(
 		if (current_path.empty())
 			throw std::runtime_error("File not relative to folder");
 
-		result = current_path.filename() + L"/" + result;
+		result = current_path.filename().wstring() + L"/" + result;
 	}
 
 	return result;
@@ -187,12 +187,12 @@ public:
 		auto base_file = media_path_ / media_file;
 		auto folder = base_file.parent_path();
 
-		for (wdirectory_iterator iter(folder); iter != wdirectory_iterator(); ++iter)
+		for (directory_iterator iter(folder); iter != directory_iterator(); ++iter)
 		{
-			auto stem = iter->path().stem();
+			auto stem = iter->path().stem().wstring();
 
-			if (boost::iequals(stem, base_file.filename()))
-				monitor_->reemmit(iter->path());
+			if (boost::iequals(stem, base_file.filename().wstring()))
+				monitor_->reemmit(iter->path().wstring());
 		}
 	}
 
@@ -217,7 +217,7 @@ public:
 		case REMOVED:
 			auto relative_without_extension = get_relative_without_extension(file, media_path_);
 			boost::filesystem::remove(thumbnails_path_ / (relative_without_extension + L".png"));
-			media_info_repo_->remove(file.file_string());
+			media_info_repo_->remove(file.wstring());
 
 			break;
 		}
@@ -296,8 +296,8 @@ public:
 			try
 			{
 				raw_frame = producer->create_thumbnail_frame();
-				media_info_repo_->remove(file.file_string());
-				media_info_repo_->get(file.file_string());
+				media_info_repo_->remove(file.wstring());
+				media_info_repo_->get(file.wstring());
 			}
 			catch (const boost::thread_interrupted&)
 			{

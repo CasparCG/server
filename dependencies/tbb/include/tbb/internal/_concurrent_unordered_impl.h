@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -29,8 +29,11 @@
 /* Container implementations in this header are based on PPL implementations 
    provided by Microsoft. */
 
-#ifndef __TBB_concurrent_unordered_internal_H
-#define __TBB_concurrent_unordered_internal_H
+#ifndef __TBB__concurrent_unordered_impl_H
+#define __TBB__concurrent_unordered_impl_H
+#if !defined(__TBB_concurrent_unordered_map_H) && !defined(__TBB_concurrent_unordered_set_H) && !defined(__TBB_concurrent_hash_map_H)
+#error Do not #include this internal file directly; use public TBB headers instead.
+#endif
 
 #include "../tbb_stddef.h"
 
@@ -42,7 +45,7 @@
 
 #include <iterator>
 #include <utility>      // Need std::pair
-#include <functional>
+#include <functional>   // Need std::equal_to (in ../concurrent_unordered_*.h)
 #include <string>       // For tbb_hasher
 #include <cstring>      // Need std::memset
 
@@ -53,6 +56,7 @@
 #include "../atomic.h"
 #include "../tbb_exception.h"
 #include "../tbb_allocator.h"
+#include "tbb/atomic.h"
 
 namespace tbb {
 namespace interface5 {
@@ -186,6 +190,7 @@ bool operator!=( const solist_iterator<Solist,T>& i, const solist_iterator<Solis
 // Forward type and class definitions
 typedef size_t sokey_t;
 
+
 // Forward list in which elements are sorted in a split-order
 template <typename T, typename Allocator>
 class split_ordered_list
@@ -212,6 +217,10 @@ public:
     // Node that holds the element in a split-ordered list
     struct node : tbb::internal::no_assign
     {
+    private:
+        // for compilers that try to generate default constructors though they are not needed.
+        node();  // VS 2008, 2010, 2012
+    public:
         // Initialize the node with the given order key
         void init(sokey_t order_key) {
             my_order_key = order_key;
@@ -227,7 +236,7 @@ public:
         nodeptr_t atomic_set_next(nodeptr_t new_node, nodeptr_t current_node)
         {
             // Try to change the next pointer on the current element to a new element, only if it still points to the cached next
-            nodeptr_t exchange_node = (nodeptr_t) __TBB_CompareAndSwapW((void *) &my_next, (uintptr_t)new_node, (uintptr_t)current_node);
+            nodeptr_t exchange_node = tbb::internal::as_atomic(my_next).compare_and_swap(new_node, current_node);
 
             if (exchange_node == current_node) // TODO: why this branch?
             {
@@ -271,15 +280,7 @@ public:
     // Allocate a new node with the given order key; used to allocate dummy nodes
     nodeptr_t create_node(sokey_t order_key) {
         nodeptr_t pnode = my_node_allocator.allocate(1);
-
-        __TBB_TRY {
-            new(static_cast<void*>(&pnode->my_element)) T();
-            pnode->init(order_key);
-        } __TBB_CATCH(...) {
-            my_node_allocator.deallocate(pnode, 1);
-            __TBB_RETHROW();
-        }
-
+        pnode->init(order_key);
         return (pnode);
     }
 
@@ -380,8 +381,8 @@ public:
             return;
         }
 
-        std::swap(my_element_count, other.my_element_count);
-        std::swap(my_head, other.my_head);
+            std::swap(my_element_count, other.my_element_count);
+            std::swap(my_head, other.my_head);
     }
 
     // Split-order list functions
@@ -409,7 +410,7 @@ public:
     }
 
     static sokey_t get_safe_order_key(const raw_const_iterator& it) {
-        if( !it.get_node_ptr() ) return sokey_t(~0U);
+        if( !it.get_node_ptr() )  return ~sokey_t(0);
         return it.get_node_ptr()->get_order_key();
     }
 
@@ -461,7 +462,7 @@ public:
 
     // Erase an element using the allocator
     void destroy_node(nodeptr_t pnode) {
-        my_node_allocator.destroy(pnode);
+        if (!pnode->is_dummy()) my_node_allocator.destroy(pnode);
         my_node_allocator.deallocate(pnode, 1);
     }
 
@@ -818,11 +819,16 @@ public:
                 sokey_t end_key = solist_t::get_safe_order_key(my_end_node);
                 size_t mid_bucket = __TBB_ReverseBits( begin_key + (end_key-begin_key)/2 ) % my_table.my_number_of_buckets;
                 while ( !my_table.is_initialized(mid_bucket) ) mid_bucket = my_table.get_parent(mid_bucket);
-                my_midpoint_node = my_table.my_solist.first_real_iterator(my_table.get_bucket( mid_bucket ));
-                if( my_midpoint_node == my_begin_node )
-                    my_midpoint_node = my_end_node;
-#if TBB_USE_ASSERT
+                if(__TBB_ReverseBits(mid_bucket) > begin_key) {
+                    // found a dummy_node between begin and end
+                    my_midpoint_node = my_table.my_solist.first_real_iterator(my_table.get_bucket( mid_bucket ));
+                }
                 else {
+                    // didn't find a dummy node between begin and end.
+                    my_midpoint_node = my_end_node;
+                }
+#if TBB_USE_ASSERT
+                {
                     sokey_t mid_key = solist_t::get_safe_order_key(my_midpoint_node);
                     __TBB_ASSERT( begin_key < mid_key, "my_begin_node is after my_midpoint_node" );
                     __TBB_ASSERT( mid_key <= end_key, "my_midpoint_node is after my_end_node" );
@@ -1015,11 +1021,11 @@ public:
         return my_solist.first_real_iterator(it);
     }
 
-    const_local_iterator unsafe_cbegin(size_type bucket) const {
+    const_local_iterator unsafe_cbegin(size_type /*bucket*/) const {
         return ((const self_type *) this)->begin();
     }
 
-    const_local_iterator unsafe_cend(size_type bucket) const {
+    const_local_iterator unsafe_cend(size_type /*bucket*/) const {
         return ((const self_type *) this)->end();
     }
 
@@ -1119,7 +1125,7 @@ private:
         if (!is_initialized(bucket))
             init_bucket(bucket);
 
-        size_type new_count;
+        size_type new_count = 0;
         order_key = split_order_key_regular(order_key);
         raw_iterator it = get_bucket(bucket);
         raw_iterator last = my_solist.raw_end();
@@ -1292,8 +1298,8 @@ private:
         // Grow the table by a factor of 2 if possible and needed
         if ( ((float) total_elements / (float) current_size) > my_maximum_bucket_size )
         {
-            // Double the size of the hash only if size has not changed inbetween loads
-            __TBB_CompareAndSwapW((uintptr_t*)&my_number_of_buckets, uintptr_t(2u*current_size), uintptr_t(current_size) );
+            // Double the size of the hash only if size has not changed in between loads
+            my_number_of_buckets.compare_and_swap(2u*current_size, current_size);
             //Simple "my_number_of_buckets.compare_and_swap( current_size<<1, current_size );" does not work for VC8
             //due to overzealous compiler warnings in /Wp64 mode
         }
@@ -1339,7 +1345,7 @@ private:
             raw_iterator * new_segment = my_allocator.allocate(sz);
             std::memset(new_segment, 0, sz*sizeof(raw_iterator));
 
-            if (__TBB_CompareAndSwapW((void *) &my_buckets[segment], (uintptr_t)new_segment, 0) != 0)
+            if (my_buckets[segment].compare_and_swap( new_segment, NULL) != NULL)
                 my_allocator.deallocate(new_segment, sz);
         }
 
@@ -1366,7 +1372,7 @@ private:
 
     // A dummy order key has its original hash value reversed and the last bit unset
     sokey_t split_order_key_dummy(sokey_t order_key) const {
-        return __TBB_ReverseBits(order_key) & ~(0x1);
+        return __TBB_ReverseBits(order_key) & ~sokey_t(0x1);
     }
 
     // Shared variables
@@ -1381,7 +1387,7 @@ private:
 #endif
 
 //! Hash multiplier
-static const size_t hash_multiplier = sizeof(size_t)==4? 2654435769U : 11400714819323198485ULL;
+static const size_t hash_multiplier = tbb::internal::select_size_t_constant<2654435769U, 11400714819323198485ULL>::value;
 } // namespace internal
 //! @endcond
 //! Hasher functions
@@ -1423,4 +1429,4 @@ public:
 };
 
 } // namespace tbb
-#endif// __TBB_concurrent_unordered_internal_H
+#endif// __TBB__concurrent_unordered_impl_H

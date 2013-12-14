@@ -51,7 +51,7 @@ public:
 		if(filename.size() > 0 && filename[0] == L'/')
 			filename = filename.substr(1, filename.size()-1);
 
-		if(boost::filesystem::wpath(filename).extension() == L"")
+		if(boost::filesystem::path(filename).extension() == L"")
 			filename += L".ft";
 		
 		auto str = (boost::wformat(L"<invoke name=\"Add\" returntype=\"xml\"><arguments><number>%1%</number><string>%2%</string>%3%<string>%4%</string><string><![CDATA[%5%]]></string></arguments></invoke>") % layer % filename % (play_on_load?TEXT("<true/>"):TEXT("<false/>")) % label % data).str();
@@ -266,9 +266,9 @@ safe_ptr<core::frame_producer> create_cg_producer_and_autoplay_file(
 	if(!boost::filesystem::exists(filename))
 		return core::frame_producer::empty();
 		
-	boost::filesystem2::wpath path(filename);
-	path = boost::filesystem2::complete(path);
-	auto filename2 = path.file_string();
+	boost::filesystem::path path(filename);
+	path = boost::filesystem::complete(path);
+	auto filename2 = path.wstring();
 
 	auto flash_producer = flash::create_producer(frame_factory, boost::assign::list_of<std::wstring>());	
 	auto producer = make_safe<cg_producer>(flash_producer);

@@ -376,67 +376,67 @@ safe_ptr<T> make_safe_ptr(std::shared_ptr<T>&& ptr)
 template<typename T>
 safe_ptr<T> make_safe()
 {
-    return safe_ptr<T>(std::make_shared<T>());
+    return safe_ptr<T>(new T());
 }
 
 template<typename T, typename P0>
 safe_ptr<T> make_safe(P0&& p0)
 {
-    return safe_ptr<T>(std::make_shared<T>(std::forward<P0>(p0)));
+    return safe_ptr<T>(new T(std::forward<P0>(p0)));
 }
 
 template<typename T, typename P0, typename P1>
 safe_ptr<T> make_safe(P0&& p0, P1&& p1)
 {
-    return safe_ptr<T>(std::make_shared<T>(std::forward<P0>(p0), std::forward<P1>(p1)));
+    return safe_ptr<T>(new T(std::forward<P0>(p0), std::forward<P1>(p1)));
 }
 
 template<typename T, typename P0, typename P1, typename P2>
 safe_ptr<T> make_safe(P0&& p0, P1&& p1, P2&& p2)
 {
-    return safe_ptr<T>(std::make_shared<T>(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2)));
+    return safe_ptr<T>(new T(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2)));
 }
 
 template<typename T, typename P0, typename P1, typename P2, typename P3>
 safe_ptr<T> make_safe(P0&& p0, P1&& p1, P2&& p2, P3&& p3)
 {
-    return safe_ptr<T>(std::make_shared<T>(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3)));
+    return safe_ptr<T>(new T(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3)));
 }
 
 template<typename T, typename P0, typename P1, typename P2, typename P3, typename P4>
 safe_ptr<T> make_safe(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4)
 {
-    return safe_ptr<T>(std::make_shared<T>(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4)));
+    return safe_ptr<T>(new T(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4)));
 }
 
 template<typename T, typename P0, typename P1, typename P2, typename P3, typename P4, typename P5>
 safe_ptr<T> make_safe(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4, P5&& p5)
 {
-    return safe_ptr<T>(std::make_shared<T>(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4), std::forward<P5>(p5)));
+    return safe_ptr<T>(new T(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4), std::forward<P5>(p5)));
 }
 
 template<typename T, typename P0, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
 safe_ptr<T> make_safe(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4, P5&& p5, P6&& p6)
 {
-	return safe_ptr<T>(std::make_shared<T>(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4), std::forward<P5>(p5), std::forward<P6>(p6)));
+	return safe_ptr<T>(new T(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4), std::forward<P5>(p5), std::forward<P6>(p6)));
 }
 
 template<typename T, typename P0, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
 safe_ptr<T> make_safe(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4, P5&& p5, P6&& p6, P7&& p7)
 {
-	return safe_ptr<T>(std::make_shared<T>(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4), std::forward<P5>(p5), std::forward<P6>(p6), std::forward<P7>(p7)));
+	return safe_ptr<T>(new T(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4), std::forward<P5>(p5), std::forward<P6>(p6), std::forward<P7>(p7)));
 }
 
 template<typename T, typename P0, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
 safe_ptr<T> make_safe(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4, P5&& p5, P6&& p6, P7&& p7, P8&& p8)
 {
-	return safe_ptr<T>(std::make_shared<T>(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4), std::forward<P5>(p5), std::forward<P6>(p6), std::forward<P7>(p7), std::forward<P8>(p8)));
+	return safe_ptr<T>(new T(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4), std::forward<P5>(p5), std::forward<P6>(p6), std::forward<P7>(p7), std::forward<P8>(p8)));
 }
 
 template<typename T, typename P0, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9>
 safe_ptr<T> make_safe(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4, P5&& p5, P6&& p6, P7&& p7, P8&& p8, P9&& p9)
 {
-	return safe_ptr<T>(std::make_shared<T>(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4), std::forward<P5>(p5), std::forward<P6>(p6), std::forward<P7>(p7), std::forward<P8>(p8), std::forward<P9>(p9)));
+	return safe_ptr<T>(new T(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4), std::forward<P5>(p5), std::forward<P6>(p6), std::forward<P7>(p7), std::forward<P8>(p8), std::forward<P9>(p9)));
 }
 
 template<typename T>

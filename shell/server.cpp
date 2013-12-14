@@ -45,6 +45,7 @@
 #include <modules/decklink/decklink.h>
 #include <modules/ffmpeg/ffmpeg.h>
 #include <modules/flash/flash.h>
+#include <modules/html/html.h>
 #include <modules/oal/oal.h>
 #include <modules/ogl/ogl.h>
 #include <modules/newtek/newtek.h>
@@ -61,8 +62,6 @@
 #include <modules/ffmpeg/consumer/ffmpeg_consumer.h>
 
 #include <protocol/amcp/AMCPProtocolStrategy.h>
-#include <protocol/cii/CIIProtocolStrategy.h>
-#include <protocol/CLK/CLKProtocolStrategy.h>
 #include <protocol/util/AsyncEventServer.h>
 #include <protocol/util/stateful_protocol_strategy_wrapper.h>
 #include <protocol/osc/client.h>
@@ -130,6 +129,9 @@ struct server::implementation : boost::noncopyable
 	{
 		running_ = true;
 		setup_audio(env::properties());
+		
+		html::init();
+		CASPAR_LOG(info) << L"Initialized html module.";
 
 		ffmpeg::init(media_info_repo_);
 		CASPAR_LOG(info) << L"Initialized ffmpeg module.";
@@ -180,6 +182,9 @@ struct server::implementation : boost::noncopyable
 		destroy_producers_synchronously();
 		channels_.clear();
 
+		Sleep(1000); // TODO: Implement wait for destroyers.
+
+		html::uninit();
 		ffmpeg::uninit();
 	}
 
@@ -381,14 +386,6 @@ struct server::implementation : boost::noncopyable
 	{
 		if(boost::iequals(name, L"AMCP"))
 			return make_safe<amcp::AMCPProtocolStrategy>(channels_, thumbnail_generator_, media_info_repo_, shutdown_server_now_);
-		else if(boost::iequals(name, L"CII"))
-			return make_safe<cii::CIIProtocolStrategy>(channels_);
-		else if(boost::iequals(name, L"CLOCK"))
-			//return make_safe<CLK::CLKProtocolStrategy>(channels_);
-			return make_safe<IO::stateful_protocol_strategy_wrapper>([=]
-			{
-				return std::make_shared<CLK::CLKProtocolStrategy>(channels_);
-			});
 		
 		BOOST_THROW_EXCEPTION(caspar_exception() << arg_name_info("name") << arg_value_info(narrow(name)) << msg_info("Invalid protocol"));
 	}
@@ -400,7 +397,7 @@ struct server::implementation : boost::noncopyable
 			for (boost::filesystem::wrecursive_directory_iterator iter(env::media_folder()), end; iter != end; ++iter)
 			{
 				if (running_)
-					media_info_repo_->get(iter->path().file_string());
+					media_info_repo_->get(iter->path().wstring());
 				else
 				{
 					CASPAR_LOG(info) << L"Initial media information retrieval aborted.";

@@ -38,9 +38,7 @@
 #include <iostream>
 
 namespace caspar { namespace env {
-
-using namespace boost::filesystem2;
-
+	
 std::wstring media;
 std::wstring log;
 std::wstring ftemplate;
@@ -58,7 +56,7 @@ void configure(const std::wstring& filename)
 {
 	try
 	{
-		auto initialPath = boost::filesystem::initial_path<boost::filesystem2::wpath>().file_string();
+		auto initialPath = boost::filesystem::initial_path<boost::filesystem::path>().wstring();
 	
 		std::wifstream file(initialPath + L"\\" + filename);
 		boost::property_tree::read_xml(file, pt, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
@@ -66,7 +64,7 @@ void configure(const std::wstring& filename)
 		auto paths = pt.get_child(L"configuration.paths");
 		media = widen(paths.get(L"media-path", initialPath + L"\\media\\"));
 		log = widen(paths.get(L"log-path", initialPath + L"\\log\\"));
-		ftemplate = complete(wpath(widen(paths.get(L"template-path", initialPath + L"\\template\\")))).string();		
+		ftemplate = boost::filesystem::absolute(boost::filesystem::path(widen(paths.get(L"template-path", initialPath + L"\\template\\")))).wstring();		
 		data = widen(paths.get(L"data-path", initialPath + L"\\data\\"));
 		thumbnails = widen(paths.get(L"thumbnails-path", initialPath + L"\\thumbnails\\"));
 
@@ -84,17 +82,17 @@ void configure(const std::wstring& filename)
 
 		try
 		{
-			for(auto it = boost::filesystem2::wdirectory_iterator(initialPath); it != boost::filesystem2::wdirectory_iterator(); ++it)
+			for(auto it = boost::filesystem::directory_iterator(initialPath); it != boost::filesystem::directory_iterator(); ++it)
 			{
-				if(it->filename().find(L".fth") != std::wstring::npos)			
+				if(it->path().filename().wstring().find(L".fth") != std::wstring::npos)			
 				{
 					auto from_path = *it;
-					auto to_path = boost::filesystem2::wpath(ftemplate + L"/" + it->filename());
+					auto to_path = boost::filesystem::path(ftemplate + L"/" + it->path().filename().wstring());
 				
-					if(boost::filesystem2::exists(to_path))
-						boost::filesystem2::remove(to_path);
+					if(boost::filesystem::exists(to_path))
+						boost::filesystem::remove(to_path);
 
-					boost::filesystem2::copy_file(from_path, to_path);
+					boost::filesystem::copy_file(from_path, to_path);
 				}	
 			}
 		}

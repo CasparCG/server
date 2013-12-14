@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -58,7 +58,7 @@ namespace interface5 {
         invalid: the end state for all nodes; this is set in the
           destructor so if we encounter this state, we are looking at
           memory that has already been freed
-        
+
         The state diagrams below describe the status transitions.
         Single arrows indicate that the thread that owns the node is
         responsible for the transition; double arrows indicate that
@@ -70,12 +70,12 @@ namespace interface5 {
           |     _____________/       |
           V    V                     V
         active -----------------> invalid
-  
+
         State diagram for scoped_lock_read status:
 
-        waiting 
-          |                        
-          V                        
+        waiting
+          |
+          V
         active ----------------->invalid
 
     */
@@ -97,12 +97,12 @@ namespace interface5 {
     class scoped_lock : tbb::internal::no_copy {
     public:
         friend class reader_writer_lock;
- 
-        //! Construct with blocking attempt to acquire write lock on the passed-in lock 
+
+        //! Construct with blocking attempt to acquire write lock on the passed-in lock
         scoped_lock(reader_writer_lock& lock) {
             internal_construct(lock);
         }
-        
+
         //! Destructor, releases the write lock
         ~scoped_lock() {
             internal_destroy();
@@ -135,16 +135,16 @@ namespace interface5 {
     public:
         friend class reader_writer_lock;
 
-        //! Construct with blocking attempt to acquire read lock on the passed-in lock 
+        //! Construct with blocking attempt to acquire read lock on the passed-in lock
         scoped_lock_read(reader_writer_lock& lock) {
             internal_construct(lock);
         }
 
         //! Destructor, releases the read lock
-        ~scoped_lock_read() { 
+        ~scoped_lock_read() {
             internal_destroy();
         }
-        
+
         void* operator new(size_t s) {
             return tbb::internal::allocate_via_handler_v3(s);
         }
@@ -166,8 +166,8 @@ namespace interface5 {
         void __TBB_EXPORTED_METHOD internal_construct(reader_writer_lock&);
         void __TBB_EXPORTED_METHOD internal_destroy();
     };
-    
-    //! Acquires the reader_writer_lock for write.  
+
+    //! Acquires the reader_writer_lock for write.
     /** If the lock is currently held in write mode by another
         context, the writer will block by spinning on a local
         variable.  Exceptions thrown: improper_lock The context tries
@@ -175,21 +175,21 @@ namespace interface5 {
         ownership of.*/
     void __TBB_EXPORTED_METHOD lock();
 
-    //! Tries to acquire the reader_writer_lock for write.   
+    //! Tries to acquire the reader_writer_lock for write.
     /** This function does not block.  Return Value: True or false,
         depending on whether the lock is acquired or not.  If the lock
         is already held by this acquiring context, try_lock() returns
         false. */
     bool __TBB_EXPORTED_METHOD try_lock();
 
-    //! Acquires the reader_writer_lock for read.    
+    //! Acquires the reader_writer_lock for read.
     /** If the lock is currently held by a writer, this reader will
         block and wait until the writers are done.  Exceptions thrown:
         improper_lock The context tries to acquire a
         reader_writer_lock that it already has write ownership of. */
-    void __TBB_EXPORTED_METHOD lock_read(); 
+    void __TBB_EXPORTED_METHOD lock_read();
 
-    //! Tries to acquire the reader_writer_lock for read.  
+    //! Tries to acquire the reader_writer_lock for read.
     /** This function does not block.  Return Value: True or false,
         depending on whether the lock is acquired or not.  */
     bool __TBB_EXPORTED_METHOD try_lock_read();
@@ -206,7 +206,7 @@ namespace interface5 {
     bool start_write(scoped_lock *);
     //! Sets writer_head to w and attempts to unblock
     void set_next_writer(scoped_lock *w);
-    //! Relinquishes write lock to next waiting writer or group of readers 
+    //! Relinquishes write lock to next waiting writer or group of readers
     void end_write(scoped_lock *);
     //! Checks if current thread holds write lock
     bool is_current_writer();
@@ -228,7 +228,7 @@ namespace interface5 {
     //! Writer that owns the mutex; tbb_thread::id() otherwise.
     tbb_thread::id my_current_writer;
     //! Status of mutex
-    atomic<unsigned> rdr_count_and_flags;
+    atomic<uintptr_t> rdr_count_and_flags; // used with __TBB_AtomicOR, which assumes uintptr_t
 };
 
 } // namespace interface5

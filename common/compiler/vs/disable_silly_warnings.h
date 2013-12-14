@@ -32,6 +32,7 @@
 #pragma warning (disable : 4505) //  unreferenced local function has been removed
 #pragma warning (disable : 4481) //  nonstandard extension used: override specifier 'override'
 #pragma warning (disable : 4996) // Function call with parameters that may be unsafe - this call relies on the caller to check that the passed values are correct
+#pragma warning (disable : 4913)
 
 #endif
 

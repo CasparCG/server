@@ -29,9 +29,6 @@
     <ClCompile Include="producer\FlashAxContainer.cpp">
       <Filter>source\producer</Filter>
     </ClCompile>
-    <ClCompile Include="producer\cg_producer.cpp">
-      <Filter>source\producer</Filter>
-    </ClCompile>
     <ClCompile Include="StdAfx.cpp" />
     <ClCompile Include="flash.cpp">
       <Filter>source</Filter>
@@ -46,9 +43,6 @@
     </ClInclude>
     <ClInclude Include="interop\axflash.h">
       <Filter>source\interop</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\cg_producer.h">
-      <Filter>source\producer</Filter>
     </ClInclude>
     <ClInclude Include="producer\flash_producer.h">
       <Filter>source\producer</Filter>

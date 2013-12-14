@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -30,6 +30,13 @@
 // list-based, with elements of list held in std::vector (for destruction management),
 // multiplicative hashing (like ets).  No synchronization built-in.
 //
+
+#ifndef __TBB__flow_graph_tagged_buffer_impl_H
+#define __TBB__flow_graph_tagged_buffer_impl_H
+
+#ifndef __TBB_flow_graph_H
+#error Do not #include this internal file directly; use public TBB headers instead.
+#endif
 
 template<typename TagType, typename ValueType, size_t NoTagMark>
 struct buffer_element {
@@ -66,17 +73,8 @@ private:
 
     size_t mask() { return my_size - 1; }
 
-// #define ABYSMAL 1
     static size_t hash(TagType t) {
-#if ABYSMAL
-        return (size_t)1;
-#else
-#if __TBB_WORDSIZE == 4
-        return uintptr_t(t)*0x9E3779B9;
-#else
-        return uintptr_t(t)*0x9E3779B97F4A7C15;
-#endif
-#endif
+        return uintptr_t(t)*tbb::internal::select_size_t_constant<0x9E3779B9,0x9E3779B97F4A7C15ULL>::value;
     }
 
     void set_up_free_list( element_type **p_free_list, list_array_type *la, size_t sz) {
@@ -122,21 +120,38 @@ private:
         ar[h] = my_elem;
     }
 
-public:
-    tagged_buffer() : my_size(INITIAL_SIZE), nelements(0) {
+    void internal_initialize_buffer() {
         array = pointer_array_allocator_type().allocate(my_size);
         for(size_t i = 0; i < my_size; ++i) array[i] = NULL;
         lists = new list_array_type(INITIAL_SIZE/2, element_type(), Allocator());
         set_up_free_list(&free_list, lists, INITIAL_SIZE/2);
     }
 
-    ~tagged_buffer() {
+    void internal_free_buffer() {
         if(array) {
             pointer_array_allocator_type().deallocate(array, my_size); 
+            array = NULL;
         }
         if(lists) {
             delete lists;
+            lists = NULL;
         }
+        my_size = INITIAL_SIZE;
+        nelements = 0;
+    }
+
+public:
+    tagged_buffer() : my_size(INITIAL_SIZE), nelements(0) {
+        internal_initialize_buffer();
+    }
+
+    ~tagged_buffer() {
+        internal_free_buffer();
+    }
+
+    void reset() {
+        internal_free_buffer();
+        internal_initialize_buffer();
     }
 
     bool tagged_insert(TagType t, value_type v) {
@@ -202,3 +217,4 @@ public:
         return false;
     }
 };
+#endif // __TBB__flow_graph_tagged_buffer_impl_H

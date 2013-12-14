@@ -58,7 +58,7 @@ void write_cropped_png(
 
 	std::copy(thumbnail_view.begin(), thumbnail_view.end(), destination_view.begin());
 	FreeImage_FlipVertical(bitmap.get());
-	FreeImage_SaveU(FIF_PNG, bitmap.get(), output_file.string().c_str(), 0);
+	FreeImage_SaveU(FIF_PNG, bitmap.get(), output_file.wstring().c_str(), 0);
 }
 
 struct image_consumer : public core::frame_consumer

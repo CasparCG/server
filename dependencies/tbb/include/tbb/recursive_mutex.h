@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -52,7 +52,7 @@ public:
         internal_construct();
 #else
   #if _WIN32||_WIN64
-        InitializeCriticalSection(&impl);
+        InitializeCriticalSectionEx(&impl, 4000, 0);
   #else
         pthread_mutexattr_t mtx_attr;
         int error_code = pthread_mutexattr_init( &mtx_attr );
