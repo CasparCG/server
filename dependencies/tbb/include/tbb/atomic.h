@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -30,9 +30,8 @@
 #define __TBB_atomic_H
 
 #include <cstddef>
-#include "tbb_stddef.h"
 
-#if _MSC_VER 
+#if _MSC_VER
 #define __TBB_LONG_LONG __int64
 #else
 #define __TBB_LONG_LONG long long
@@ -41,20 +40,20 @@
 #include "tbb_machine.h"
 
 #if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
-    // Workaround for overzealous compiler warnings 
+    // Workaround for overzealous compiler warnings
     #pragma warning (push)
-    #pragma warning (disable: 4244 4267)
+    #pragma warning (disable: 4244 4267 4512)
 #endif
 
 namespace tbb {
 
-//! Specifies memory fencing.
+//! Specifies memory semantics.
 enum memory_semantics {
-    //! Sequentially consistent fence.
+    //! Sequential consistency
     full_fence,
-    //! Acquire fence
+    //! Acquire
     acquire,
-    //! Release fence
+    //! Release
     release,
     //! No ordering
     relaxed
@@ -67,7 +66,7 @@ namespace internal {
     #define __TBB_DECL_ATOMIC_FIELD(t,f,a) t f  __attribute__ ((aligned(a)));
 #elif __TBB_DECLSPEC_ALIGN_PRESENT
     #define __TBB_DECL_ATOMIC_FIELD(t,f,a) __declspec(align(a)) t f;
-#else 
+#else
     #error Do not know syntax for forcing alignment.
 #endif
 
@@ -77,29 +76,62 @@ struct atomic_rep;           // Primary template declared, but never defined.
 template<>
 struct atomic_rep<1> {       // Specialization
     typedef int8_t word;
-    int8_t value;
 };
 template<>
 struct atomic_rep<2> {       // Specialization
     typedef int16_t word;
-    __TBB_DECL_ATOMIC_FIELD(int16_t,value,2)
 };
 template<>
 struct atomic_rep<4> {       // Specialization
-#if _MSC_VER && __TBB_WORDSIZE==4
+#if _MSC_VER && !_WIN64
     // Work-around that avoids spurious /Wp64 warnings
     typedef intptr_t word;
 #else
     typedef int32_t word;
 #endif
-    __TBB_DECL_ATOMIC_FIELD(int32_t,value,4)
 };
 #if __TBB_64BIT_ATOMICS
 template<>
 struct atomic_rep<8> {       // Specialization
     typedef int64_t word;
-    __TBB_DECL_ATOMIC_FIELD(int64_t,value,8)
 };
+#endif
+
+template<typename value_type, size_t size>
+struct aligned_storage;
+
+//the specializations are needed to please MSVC syntax of __declspec(align()) which accept _literal_ constants only
+#if __TBB_ATOMIC_CTORS
+    #define ATOMIC_STORAGE_PARTIAL_SPECIALIZATION(S)                  \
+    template<typename value_type>                                     \
+    struct aligned_storage<value_type,S> {                            \
+        __TBB_DECL_ATOMIC_FIELD(value_type,my_value,S)                \
+        aligned_storage() = default ;                                 \
+        constexpr aligned_storage(value_type value):my_value(value){} \
+    };                                                                \
+
+#else
+    #define ATOMIC_STORAGE_PARTIAL_SPECIALIZATION(S)                  \
+    template<typename value_type>                                     \
+    struct aligned_storage<value_type,S> {                            \
+        __TBB_DECL_ATOMIC_FIELD(value_type,my_value,S)                \
+    };                                                                \
+
+#endif
+
+template<typename value_type>
+struct aligned_storage<value_type,1> {
+    value_type my_value;
+#if __TBB_ATOMIC_CTORS
+    aligned_storage() = default ;
+    constexpr aligned_storage(value_type value):my_value(value){}
+#endif
+};
+
+ATOMIC_STORAGE_PARTIAL_SPECIALIZATION(2)
+ATOMIC_STORAGE_PARTIAL_SPECIALIZATION(4)
+#if __TBB_64BIT_ATOMICS
+ATOMIC_STORAGE_PARTIAL_SPECIALIZATION(8)
 #endif
 
 template<size_t Size, memory_semantics M>
@@ -188,27 +220,71 @@ __TBB_DECL_ATOMIC_LOAD_STORE_PRIMITIVES(relaxed);
 #define __TBB_MINUS_ONE(T) (T(T(0)-T(1)))
 
 //! Base class that provides basic functionality for atomic<T> without fetch_and_add.
-/** Works for any type T that has the same size as an integral type, has a trivial constructor/destructor, 
+/** Works for any type T that has the same size as an integral type, has a trivial constructor/destructor,
     and can be copied/compared by memcpy/memcmp. */
 template<typename T>
 struct atomic_impl {
 protected:
-    atomic_rep<sizeof(T)> rep;
+    aligned_storage<T,sizeof(T)> my_storage;
 private:
+    //TODO: rechecks on recent versions of gcc if union is still the _only_ way to do a conversion without warnings
     //! Union type used to convert type T to underlying integral type.
+    template<typename value_type>
     union converter {
-        T value;
-        typename atomic_rep<sizeof(T)>::word bits;
+        typedef typename atomic_rep<sizeof(value_type)>::word bits_type;
+        converter(){}
+        converter(value_type a_value) : value(a_value) {}
+        value_type value;
+        bits_type bits;
     };
+
+    template<typename value_t>
+    static typename converter<value_t>::bits_type to_bits(value_t value){
+        return converter<value_t>(value).bits;
+    }
+    template<typename value_t>
+    static value_t to_value(typename converter<value_t>::bits_type bits){
+        converter<value_t> u;
+        u.bits = bits;
+        return u.value;
+    }
+
+    template<typename value_t>
+    union ptr_converter;            //Primary template declared, but never defined.
+
+    template<typename value_t>
+    union ptr_converter<value_t *> {
+        ptr_converter(){}
+        ptr_converter(value_t* a_value) : value(a_value) {}
+        value_t* value;
+        uintptr_t bits;
+    };
+    //TODO: check if making to_bits accepting reference (thus unifying it with to_bits_ref)
+    //does not hurt performance
+    template<typename value_t>
+    static typename converter<value_t>::bits_type & to_bits_ref(value_t& value){
+        //TODO: this #ifdef is temporary workaround, as union conversion seems to fail
+        //on suncc for 64 bit types for 32 bit target
+        #if !__SUNPRO_CC
+            return *(typename converter<value_t>::bits_type*)ptr_converter<value_t*>(&value).bits;
+        #else
+            return *(typename converter<value_t>::bits_type*)(&value);
+        #endif
+    }
+
+
 public:
     typedef T value_type;
 
+#if __TBB_ATOMIC_CTORS
+    atomic_impl() = default ;
+    constexpr atomic_impl(value_type value):my_storage(value){}
+#endif
     template<memory_semantics M>
     value_type fetch_and_store( value_type value ) {
-        converter u, w;
-        u.value = value;
-        w.bits = internal::atomic_traits<sizeof(value_type),M>::fetch_and_store(&rep.value,u.bits);
-        return w.value;
+          return to_value<value_type>(
+                  internal::atomic_traits<sizeof(value_type),M>::fetch_and_store( &my_storage.my_value, to_bits(value) )
+          );
     }
 
     value_type fetch_and_store( value_type value ) {
@@ -217,28 +293,26 @@ public:
 
     template<memory_semantics M>
     value_type compare_and_swap( value_type value, value_type comparand ) {
-        converter u, v, w;
-        u.value = value;
-        v.value = comparand;
-        w.bits = internal::atomic_traits<sizeof(value_type),M>::compare_and_swap(&rep.value,u.bits,v.bits);
-        return w.value;
+        return to_value<value_type>(
+                internal::atomic_traits<sizeof(value_type),M>::compare_and_swap( &my_storage.my_value, to_bits(value), to_bits(comparand) )
+        );
     }
 
     value_type compare_and_swap( value_type value, value_type comparand ) {
         return compare_and_swap<full_fence>(value,comparand);
     }
 
-    operator value_type() const volatile {                // volatile qualifier here for backwards compatibility 
-        converter w;
-        w.bits = __TBB_load_with_acquire( rep.value );
-        return w.value;
+    operator value_type() const volatile {                // volatile qualifier here for backwards compatibility
+        return  to_value<value_type>(
+                __TBB_load_with_acquire( to_bits_ref(my_storage.my_value) )
+        );
     }
 
     template<memory_semantics M>
     value_type load () const {
-        converter u;
-        u.bits = internal::atomic_load_store_traits<M>::load( rep.value );
-        return u.value;
+        return to_value<value_type>(
+                internal::atomic_load_store_traits<M>::load( to_bits_ref(my_storage.my_value) )
+        );
     }
 
     value_type load () const {
@@ -247,9 +321,7 @@ public:
 
     template<memory_semantics M>
     void store ( value_type value ) {
-        converter u;
-        u.value = value;
-        internal::atomic_load_store_traits<M>::store( rep.value, u.bits );
+        internal::atomic_load_store_traits<M>::store( to_bits_ref(my_storage.my_value), to_bits(value));
     }
 
     void store ( value_type value ) {
@@ -258,9 +330,8 @@ public:
 
 protected:
     value_type store_with_release( value_type rhs ) {
-        converter u;
-        u.value = rhs;
-        __TBB_store_with_release(rep.value,u.bits);
+       //TODO: unify with store<release>
+        __TBB_store_with_release( to_bits_ref(my_storage.my_value), to_bits(rhs) );
         return rhs;
     }
 };
@@ -273,10 +344,13 @@ template<typename I, typename D, typename StepType>
 struct atomic_impl_with_arithmetic: atomic_impl<I> {
 public:
     typedef I value_type;
-
+#if    __TBB_ATOMIC_CTORS
+    atomic_impl_with_arithmetic() = default ;
+    constexpr atomic_impl_with_arithmetic(value_type value): atomic_impl<I>(value){}
+#endif
     template<memory_semantics M>
     value_type fetch_and_add( D addend ) {
-        return value_type(internal::atomic_traits<sizeof(value_type),M>::fetch_and_add( &this->rep.value, addend*sizeof(StepType) ));
+        return value_type(internal::atomic_traits<sizeof(value_type),M>::fetch_and_add( &this->my_storage.my_value, addend*sizeof(StepType) ));
     }
 
     value_type fetch_and_add( D addend ) {
@@ -302,14 +376,14 @@ public:
     }
 
 public:
-    value_type operator+=( D addend ) {
-        return fetch_and_add(addend)+addend;
+    value_type operator+=( D value ) {
+        return fetch_and_add(value)+value;
     }
 
-    value_type operator-=( D addend ) {
-        // Additive inverse of addend computed using binary minus,
+    value_type operator-=( D value ) {
+        // Additive inverse of value computed using binary minus,
         // instead of unary minus, for sake of avoiding compiler warnings.
-        return operator+=(D(0)-addend);    
+        return operator+=(D(0)-value);
     }
 
     value_type operator++() {
@@ -337,6 +411,10 @@ public:
     @ingroup synchronization */
 template<typename T>
 struct atomic: internal::atomic_impl<T> {
+#if __TBB_ATOMIC_CTORS
+    atomic() = default;
+    constexpr atomic(T arg): internal::atomic_impl<T>(arg) {}
+#endif
     T operator=( T rhs ) {
         // "this" required here in strict ISO C++ because store_with_release is a dependent name
         return this->store_with_release(rhs);
@@ -344,13 +422,25 @@ struct atomic: internal::atomic_impl<T> {
     atomic<T>& operator=( const atomic<T>& rhs ) {this->store_with_release(rhs); return *this;}
 };
 
-#define __TBB_DECL_ATOMIC(T) \
-    template<> struct atomic<T>: internal::atomic_impl_with_arithmetic<T,T,char> {  \
-        T operator=( T rhs ) {return store_with_release(rhs);}  \
-        atomic<T>& operator=( const atomic<T>& rhs ) {store_with_release(rhs); return *this;}  \
-    };
+#if __TBB_ATOMIC_CTORS
+    #define __TBB_DECL_ATOMIC(T)                                                                    \
+        template<> struct atomic<T>: internal::atomic_impl_with_arithmetic<T,T,char> {              \
+            atomic() = default;                                                                             \
+            constexpr atomic(T arg): internal::atomic_impl_with_arithmetic<T,T,char>(arg) {}        \
+                                                                                                    \
+            T operator=( T rhs ) {return store_with_release(rhs);}                                  \
+            atomic<T>& operator=( const atomic<T>& rhs ) {store_with_release(rhs); return *this;}   \
+        };
+#else
+    #define __TBB_DECL_ATOMIC(T)                                                                    \
+        template<> struct atomic<T>: internal::atomic_impl_with_arithmetic<T,T,char> {              \
+            T operator=( T rhs ) {return store_with_release(rhs);}                                  \
+            atomic<T>& operator=( const atomic<T>& rhs ) {store_with_release(rhs); return *this;}   \
+        };
+#endif
 
 #if __TBB_64BIT_ATOMICS
+//TODO: consider adding non-default (and atomic) copy constructor for 32bit platform
 __TBB_DECL_ATOMIC(__TBB_LONG_LONG)
 __TBB_DECL_ATOMIC(unsigned __TBB_LONG_LONG)
 #else
@@ -359,23 +449,33 @@ __TBB_DECL_ATOMIC(unsigned __TBB_LONG_LONG)
 __TBB_DECL_ATOMIC(long)
 __TBB_DECL_ATOMIC(unsigned long)
 
-#if defined(_MSC_VER) && __TBB_WORDSIZE==4
-/* Special version of __TBB_DECL_ATOMIC that avoids gratuitous warnings from cl /Wp64 option. 
-   It is identical to __TBB_DECL_ATOMIC(unsigned) except that it replaces operator=(T) 
+#if _MSC_VER && !_WIN64
+#if __TBB_ATOMIC_CTORS
+/* Special version of __TBB_DECL_ATOMIC that avoids gratuitous warnings from cl /Wp64 option.
+   It is identical to __TBB_DECL_ATOMIC(unsigned) except that it replaces operator=(T)
    with an operator=(U) that explicitly converts the U to a T.  Types T and U should be
    type synonyms on the platform.  Type U should be the wider variant of T from the
    perspective of /Wp64. */
 #define __TBB_DECL_ATOMIC_ALT(T,U) \
-    template<> struct atomic<T>: internal::atomic_impl_with_arithmetic<T,T,char> {  \
-        T operator=( U rhs ) {return store_with_release(T(rhs));}  \
+    template<> struct atomic<T>: internal::atomic_impl_with_arithmetic<T,T,char> {             \
+        atomic() = default ;                                                                            \
+        constexpr atomic(T arg): internal::atomic_impl_with_arithmetic<T,T,char>(arg) {}       \
+        T operator=( U rhs ) {return store_with_release(T(rhs));}                              \
         atomic<T>& operator=( const atomic<T>& rhs ) {store_with_release(rhs); return *this;}  \
     };
+#else
+#define __TBB_DECL_ATOMIC_ALT(T,U) \
+    template<> struct atomic<T>: internal::atomic_impl_with_arithmetic<T,T,char> {             \
+        T operator=( U rhs ) {return store_with_release(T(rhs));}                              \
+        atomic<T>& operator=( const atomic<T>& rhs ) {store_with_release(rhs); return *this;}  \
+    };
+#endif
 __TBB_DECL_ATOMIC_ALT(unsigned,size_t)
 __TBB_DECL_ATOMIC_ALT(int,ptrdiff_t)
 #else
 __TBB_DECL_ATOMIC(unsigned)
 __TBB_DECL_ATOMIC(int)
-#endif /* defined(_MSC_VER) && __TBB_WORDSIZE==4 */
+#endif /* _MSC_VER && !_WIN64 */
 
 __TBB_DECL_ATOMIC(unsigned short)
 __TBB_DECL_ATOMIC(short)
@@ -383,12 +483,16 @@ __TBB_DECL_ATOMIC(char)
 __TBB_DECL_ATOMIC(signed char)
 __TBB_DECL_ATOMIC(unsigned char)
 
-#if !defined(_MSC_VER)||defined(_NATIVE_WCHAR_T_DEFINED) 
+#if !_MSC_VER || defined(_NATIVE_WCHAR_T_DEFINED)
 __TBB_DECL_ATOMIC(wchar_t)
 #endif /* _MSC_VER||!defined(_NATIVE_WCHAR_T_DEFINED) */
 
 //! Specialization for atomic<T*> with arithmetic and operator->.
 template<typename T> struct atomic<T*>: internal::atomic_impl_with_arithmetic<T*,ptrdiff_t,T> {
+#if __TBB_ATOMIC_CTORS
+    atomic() = default ;
+    constexpr atomic(T* arg): internal::atomic_impl_with_arithmetic<T*,ptrdiff_t,T>(arg) {}
+#endif
     T* operator=( T* rhs ) {
         // "this" required here in strict ISO C++ because store_with_release is a dependent name
         return this->store_with_release(rhs);
@@ -403,6 +507,10 @@ template<typename T> struct atomic<T*>: internal::atomic_impl_with_arithmetic<T*
 
 //! Specialization for atomic<void*>, for sake of not allowing arithmetic or operator->.
 template<> struct atomic<void*>: internal::atomic_impl<void*> {
+#if __TBB_ATOMIC_CTORS
+    atomic() = default ;
+    constexpr atomic(void* arg): internal::atomic_impl<void*>(arg) {}
+#endif
     void* operator=( void* rhs ) {
         // "this" required here in strict ISO C++ because store_with_release is a dependent name
         return this->store_with_release(rhs);
@@ -421,9 +529,29 @@ T load ( const atomic<T>& a ) { return a.template load<M>(); }
 template <memory_semantics M, typename T>
 void store ( atomic<T>& a, T value ) { return a.template store<M>(value); }
 
+namespace interface6{
+//! Make an atomic for use in an initialization (list), as an alternative to zero-initializaton or normal assignment.
+template<typename T>
+atomic<T> make_atomic(T t) {
+    atomic<T> a;
+    store<relaxed>(a,t);
+    return a;
+}
+}
+using interface6::make_atomic;
+
+namespace internal {
+
+// only to aid in the gradual conversion of ordinary variables to proper atomics
+template<typename T>
+inline atomic<T>& as_atomic( T& t ) {
+    return (atomic<T>&)t;
+}
+} // namespace tbb::internal
+
 } // namespace tbb
 
-#if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
+#if _MSC_VER && !__INTEL_COMPILER
     #pragma warning (pop)
 #endif // warnings 4244, 4267 are back
 

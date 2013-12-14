@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -64,6 +64,11 @@ class task_scheduler_init: internal::no_copy {
         propagation_mode_captured = 2u,
         propagation_mode_mask = propagation_mode_exact | propagation_mode_captured
     };
+#if __TBB_SUPPORTS_WORKERS_WAITING_IN_TERMINATE
+    enum {
+        wait_workers_in_terminate_flag = 128u
+    };
+#endif
 
     /** NULL if not currently initialized. */
     internal::scheduler* my_scheduler;
@@ -97,7 +102,12 @@ public:
     void __TBB_EXPORTED_METHOD terminate();
 
     //! Shorthand for default constructor followed by call to initialize(number_of_threads).
-    task_scheduler_init( int number_of_threads=automatic, stack_size_type thread_stack_size=0 ) : my_scheduler(NULL)  {
+#if __TBB_SUPPORTS_WORKERS_WAITING_IN_TERMINATE
+    task_scheduler_init( int number_of_threads=automatic, stack_size_type thread_stack_size=0, bool wait_workers_in_terminate = false )
+#else
+    task_scheduler_init( int number_of_threads=automatic, stack_size_type thread_stack_size=0 )
+#endif
+  : my_scheduler(NULL)  {
         // Two lowest order bits of the stack size argument may be taken to communicate
         // default exception propagation mode of the client to be used when the
         // client manually creates tasks in the master thread and does not use
@@ -109,6 +119,10 @@ public:
 #if TBB_USE_EXCEPTIONS
         thread_stack_size |= TBB_USE_CAPTURED_EXCEPTION ? propagation_mode_captured : propagation_mode_exact;
 #endif /* TBB_USE_EXCEPTIONS */
+#if __TBB_SUPPORTS_WORKERS_WAITING_IN_TERMINATE
+        if (wait_workers_in_terminate)
+            my_scheduler = (internal::scheduler*)wait_workers_in_terminate_flag;
+#endif
         initialize( number_of_threads, thread_stack_size );
     }
 

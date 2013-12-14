@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -31,6 +31,9 @@
 
 #include "tbb_stddef.h"
 #include <new>
+#if __TBB_CPP11_RVALUE_REF_PRESENT && !__TBB_CPP11_STD_FORWARD_BROKEN
+ #include <utility> // std::forward
+#endif
 
 #if !TBB_USE_EXCEPTIONS && _MSC_VER
     // Suppress "C++ exception handler used, but unwind semantics are not enabled" warning in STL headers
@@ -118,7 +121,17 @@ public:
     }
     
     //! Copy-construct value at location pointed to by p.
+#if __TBB_CPP11_VARIADIC_TEMPLATES_PRESENT && __TBB_CPP11_RVALUE_REF_PRESENT
+    template<typename U, typename... Args>
+    void construct(U *p, Args&&... args)
+ #if __TBB_CPP11_STD_FORWARD_BROKEN
+        { ::new((void *)p) U((args)...); }
+ #else
+        { ::new((void *)p) U(std::forward<Args>(args)...); }
+ #endif
+#else // __TBB_CPP11_VARIADIC_TEMPLATES_PRESENT && __TBB_CPP11_RVALUE_REF_PRESENT
     void construct( pointer p, const value_type& value ) {::new((void*)(p)) value_type(value);}
+#endif // __TBB_CPP11_VARIADIC_TEMPLATES_PRESENT && __TBB_CPP11_RVALUE_REF_PRESENT
 
     //! Destroy value at location pointed to by p.
     void destroy( pointer p ) {p->~value_type();}

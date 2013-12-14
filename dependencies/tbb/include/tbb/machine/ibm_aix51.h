@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -29,13 +29,13 @@
 // TODO: revise by comparing with mac_ppc.h
 
 #if !defined(__TBB_machine_H) || defined(__TBB_machine_ibm_aix51_H)
-#error Do not include this file directly; include tbb_machine.h instead
+#error Do not #include this internal file directly; use public TBB headers instead.
 #endif
 
 #define __TBB_machine_ibm_aix51_H
 
 #define __TBB_WORDSIZE 8
-#define __TBB_BIG_ENDIAN 1
+#define __TBB_ENDIANNESS __TBB_ENDIAN_BIG // assumption based on operating system
 
 #include <stdint.h>
 #include <unistd.h>
@@ -55,11 +55,12 @@ void __TBB_machine_isync ();
 
 #define __TBB_Yield() sched_yield()
 
-#define __TBB_USE_GENERIC_PART_WORD_CAS             1
-#define __TBB_USE_GENERIC_FETCH_ADD                 1
-#define __TBB_USE_GENERIC_FETCH_STORE               1
-#define __TBB_USE_GENERIC_HALF_FENCED_LOAD_STORE    1
-#define __TBB_USE_GENERIC_RELAXED_LOAD_STORE        1
+#define __TBB_USE_GENERIC_PART_WORD_CAS                     1
+#define __TBB_USE_GENERIC_FETCH_ADD                         1
+#define __TBB_USE_GENERIC_FETCH_STORE                       1
+#define __TBB_USE_GENERIC_HALF_FENCED_LOAD_STORE            1
+#define __TBB_USE_GENERIC_RELAXED_LOAD_STORE                1
+#define __TBB_USE_GENERIC_SEQUENTIAL_CONSISTENCY_LOAD_STORE 1
 
 #if __GNUC__
     #define __TBB_control_consistency_helper() __asm__ __volatile__( "isync": : :"memory")

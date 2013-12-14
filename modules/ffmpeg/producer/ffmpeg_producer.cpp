@@ -67,7 +67,7 @@ std::wstring get_relative_or_original(
 		const boost::filesystem::wpath& relative_to)
 {
 	boost::filesystem::wpath file(filename);
-	auto result = file.filename();
+	auto result = file.filename().wstring();
 
 	boost::filesystem::wpath current_path = file;
 
@@ -81,7 +81,7 @@ std::wstring get_relative_or_original(
 		if (current_path.empty())
 			return filename;
 
-		result = current_path.filename() + L"/" + result;
+		result = current_path.filename().wstring() + L"/" + result;
 	}
 
 	return result;
@@ -385,7 +385,7 @@ public:
 				
 	virtual std::wstring print() const override
 	{
-		return L"ffmpeg[" + boost::filesystem::wpath(filename_).filename() + L"|" 
+		return L"ffmpeg[" + boost::filesystem::path(filename_).filename().wstring() + L"|" 
 						  + print_mode() + L"|" 
 						  + boost::lexical_cast<std::wstring>(file_frame_number_) + L"/" + boost::lexical_cast<std::wstring>(file_nb_frames()) + L"]";
 	}

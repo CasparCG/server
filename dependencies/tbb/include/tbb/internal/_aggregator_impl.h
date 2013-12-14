@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -26,8 +26,8 @@
     the GNU General Public License.
 */
 
-#ifndef __TBB_aggregator_internal_H
-#define __TBB_aggregator_internal_H
+#ifndef __TBB__aggregator_impl_H
+#define __TBB__aggregator_impl_H
 
 #include "../atomic.h"
 #include "../tbb_profiling.h"
@@ -53,12 +53,12 @@ class aggregated_operation {
     aggregated_operation. The parameter handler_type is a functor that will be passed the
     list of operations and is expected to handle each operation appropriately, setting the
     status of each operation to non-zero.*/
- template < typename handler_type, typename operation_type >
+template < typename handler_type, typename operation_type >
 class aggregator {
  public:
     aggregator() : handler_busy(false) { pending_operations = NULL; }
     explicit aggregator(handler_type h) : handler_busy(false), handle_operations(h) {
-        pending_operations = NULL; 
+        pending_operations = NULL;
     }
 
     void initialize_handler(handler_type h) { handle_operations = h; }
@@ -79,7 +79,7 @@ class aggregator {
         do {
             // ITT may flag the following line as a race; it is a false positive:
             // This is an atomic read; we don't provide itt_hide_load_word for atomics
-            op->next = res = pending_operations; // NOT A RACE 
+            op->next = res = pending_operations; // NOT A RACE
         } while (pending_operations.compare_and_swap(op, res) != res);
         if (!res) { // first in the list; handle the operations
             // ITT note: &pending_operations tag covers access to the handler_busy flag,
@@ -159,4 +159,4 @@ namespace internal {
 
 } // namespace tbb
 
-#endif
+#endif  // __TBB__aggregator_impl_H

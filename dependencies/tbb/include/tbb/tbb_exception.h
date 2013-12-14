@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -37,7 +37,8 @@
     #pragma warning (disable: 4530)
 #endif
 
-#include <stdexcept>
+#include <exception>
+#include <new>    //required for bad_alloc definition, operators new
 #include <string> // required to construct std exception classes
 
 #if !TBB_USE_EXCEPTIONS && _MSC_VER
@@ -57,6 +58,12 @@ public:
 
 //! Exception for PPL locks
 class improper_lock : public std::exception {
+public:
+    /*override*/ const char* what() const throw();
+};
+
+//! Exception for user-initiated abort
+class user_abort : public std::exception {
 public:
     /*override*/ const char* what() const throw();
 };
@@ -95,6 +102,13 @@ enum exception_id {
     eid_invalid_swap,
     eid_reservation_length_error,
     eid_invalid_key,
+    eid_user_abort,
+    eid_reserved1,
+#if __TBB_SUPPORTS_WORKERS_WAITING_IN_TERMINATE
+    // This id is used only inside library and only for support of CPF functionality.
+    // So, if we drop the functionality, eid_reserved1 can be safely renamed and reused.
+    eid_blocking_sch_init = eid_reserved1,
+#endif
     //! The last enumerator tracks the number of defined IDs. It must remain the last one.
     /** When adding new IDs, place them immediately _before_ this comment (that is
         _after_ all the existing IDs. NEVER insert new IDs between the existing ones. **/
@@ -114,9 +128,7 @@ inline void throw_exception ( exception_id eid ) { throw_exception_v4(eid); }
 
 #if __TBB_TASK_GROUP_CONTEXT
 #include "tbb_allocator.h"
-#include <exception>
-#include <typeinfo>
-#include <new>
+#include <typeinfo> //for typeid
 
 namespace tbb {
 
@@ -149,6 +161,14 @@ class tbb_exception : public std::exception
     void* operator new ( size_t );
 
 public:
+#if __clang__
+    // At -O3 or even -O2 optimization level, Clang may fully throw away an empty destructor
+    // of tbb_exception from destructors of derived classes. As a result, it does not create
+    // vtable for tbb_exception, which is a required part of TBB binary interface.
+    // Making the destructor non-empty (with just a semicolon) prevents that optimization.
+    ~tbb_exception() throw() { /* keep the semicolon! */ ; }
+#endif
+
     //! Creates and returns pointer to the deep copy of this exception object.
     /** Move semantics is allowed. **/
     virtual tbb_exception* move () throw() = 0;
@@ -347,7 +367,13 @@ public:
 
 private:
     tbb_exception_ptr ( const std::exception_ptr& src ) : my_ptr(src) {}
-    tbb_exception_ptr ( const captured_exception& src ) : my_ptr(std::copy_exception(src)) {}
+    tbb_exception_ptr ( const captured_exception& src ) :
+        #if __TBB_MAKE_EXCEPTION_PTR_PRESENT
+            my_ptr(std::make_exception_ptr(src))  // the final function name in C++11
+        #else
+            my_ptr(std::copy_exception(src))      // early C++0x drafts name
+        #endif
+    {}
 }; // class tbb::internal::tbb_exception_ptr
 
 } // namespace internal

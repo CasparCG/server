@@ -23,7 +23,6 @@
 
 #include "flash.h"
 
-#include "producer/cg_producer.h"
 #include "producer/flash_producer.h"
 
 #include <core/producer/frame/frame_factory.h>
@@ -41,8 +40,8 @@ namespace caspar { namespace flash {
 
 void init()
 {
-	core::register_producer_factory(create_ct_producer);
-	core::register_producer_factory(create_cg_producer);
+	// TODO:
+	//core::register_producer_factory(create_ct_producer);
 	core::register_producer_factory(create_swf_producer);
 }
 
@@ -64,15 +63,16 @@ std::wstring get_cg_version()
 			}
 		};
 
-		std::vector<std::wstring> params;
-		auto producer = make_safe<cg_producer>(flash::create_producer(make_safe<dummy_factory>(), params));
+		// TODO:
+		//std::vector<std::wstring> params;
+		//auto producer = flash::create_producer(make_safe<dummy_factory>(), params);
 
-		auto info = producer->template_host_info();
+		//auto info = producer->template_host_info();
 	
-		boost::wregex ver_exp(L"version=&quot;(?<VERSION>[^&]*)");
-		boost::wsmatch what;
-		if(boost::regex_search(info, what, ver_exp))
-			return what[L"VERSION"];
+		//boost::wregex ver_exp(L"version=&quot;(?<VERSION>[^&]*)");
+		//boost::wsmatch what;
+		//if(boost::regex_search(info, what, ver_exp))
+		//	return what[L"VERSION"];
 	}
 	catch(...)
 	{

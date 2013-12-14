@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -31,6 +31,9 @@
 /** @file */
 
 #include <stddef.h> /* Need ptrdiff_t and size_t from here. */
+#if !_MSC_VER
+#include <stdint.h> /* Need intptr_t from here. */
+#endif
 
 #if !defined(__cplusplus) && __ICC==1100
     #pragma warning (push)
@@ -85,11 +88,81 @@ void __TBB_EXPORTED_FUNC scalable_aligned_free (void* ptr);
     @ingroup memory_allocation */
 size_t __TBB_EXPORTED_FUNC scalable_msize (void* ptr);
 
+/* Setting TBB_MALLOC_USE_HUGE_PAGES environment variable to 1 enables huge pages.
+   scalable_allocation_mode call has priority over environment variable. */
+enum AllocationModeParam {
+    USE_HUGE_PAGES /* value turns using huge pages on and off */
+};
+
+/** Set TBB allocator-specific allocation modes.
+    @ingroup memory_allocation */
+int __TBB_EXPORTED_FUNC scalable_allocation_mode(int param, intptr_t value);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif /* __cplusplus */
 
 #ifdef __cplusplus
+
+namespace rml {
+class MemoryPool;
+
+typedef void *(*rawAllocType)(intptr_t pool_id, size_t &bytes);
+typedef int   (*rawFreeType)(intptr_t pool_id, void* raw_ptr, size_t raw_bytes);
+
+/*
+MemPoolPolicy extension must be compatible with such structure fields layout
+
+struct MemPoolPolicy {
+    rawAllocType pAlloc;
+    rawFreeType  pFree;
+    size_t       granularity;   // granularity of pAlloc allocations
+};
+*/
+
+struct MemPoolPolicy {
+    enum {
+        TBBMALLOC_POOL_VERSION = 1
+    };
+
+    rawAllocType pAlloc;
+    rawFreeType  pFree;
+                 // granularity of pAlloc allocations. 0 means default used.
+    size_t       granularity;
+    int          version;
+                 // all memory consumed at 1st pAlloc call and never returned,
+                 // no more pAlloc calls after 1st
+    unsigned     fixedPool : 1,
+                 // memory consumed but returned only at pool termination
+                 keepAllMemory : 1,
+                 reserved : 30;
+
+    MemPoolPolicy(rawAllocType pAlloc_, rawFreeType pFree_,
+                  size_t granularity_ = 0, bool fixedPool_ = false,
+                  bool keepAllMemory_ = false) :
+        pAlloc(pAlloc_), pFree(pFree_), granularity(granularity_), version(TBBMALLOC_POOL_VERSION),
+        fixedPool(fixedPool_), keepAllMemory(keepAllMemory_),
+        reserved(0) {}
+};
+
+enum MemPoolError {
+    POOL_OK,            // pool created successfully
+    INVALID_POLICY,     // invalid policy parameters found
+    UNSUPPORTED_POLICY, // requested pool policy is not supported by allocator library
+    NO_MEMORY           // lack of memory during pool creation
+};
+
+MemPoolError pool_create_v1(intptr_t pool_id, const MemPoolPolicy *policy,
+                            rml::MemoryPool **pool);
+
+bool  pool_destroy(MemoryPool* memPool);
+void *pool_malloc(MemoryPool* memPool, size_t size);
+void *pool_realloc(MemoryPool* memPool, void *object, size_t size);
+void *pool_aligned_malloc(MemoryPool* mPool, size_t size, size_t alignment);
+void *pool_aligned_realloc(MemoryPool* mPool, void *ptr, size_t size, size_t alignment);
+bool  pool_reset(MemoryPool* memPool);
+bool  pool_free(MemoryPool *memPool, void *object);
+}
 
 #include <new>      /* To use new with the placement argument */
 
@@ -102,6 +175,9 @@ size_t __TBB_EXPORTED_FUNC scalable_msize (void* ptr);
     #include "tbb_stddef.h"
 #endif
 
+#if __TBB_CPP11_RVALUE_REF_PRESENT && !__TBB_CPP11_STD_FORWARD_BROKEN
+ #include <utility> // std::forward
+#endif
 
 namespace tbb {
 
@@ -151,7 +227,17 @@ public:
         size_type absolutemax = static_cast<size_type>(-1) / sizeof (value_type);
         return (absolutemax > 0 ? absolutemax : 1);
     }
+#if __TBB_CPP11_VARIADIC_TEMPLATES_PRESENT && __TBB_CPP11_RVALUE_REF_PRESENT
+    template<typename U, typename... Args>
+    void construct(U *p, Args&&... args)
+ #if __TBB_CPP11_STD_FORWARD_BROKEN
+        { ::new((void *)p) U((args)...); }
+ #else
+        { ::new((void *)p) U(std::forward<Args>(args)...); }
+ #endif
+#else // __TBB_CPP11_VARIADIC_TEMPLATES_PRESENT && __TBB_CPP11_RVALUE_REF_PRESENT
     void construct( pointer p, const value_type& value ) {::new((void*)(p)) value_type(value);}
+#endif // __TBB_CPP11_VARIADIC_TEMPLATES_PRESENT && __TBB_CPP11_RVALUE_REF_PRESENT
     void destroy( pointer p ) {p->~value_type();}
 };
 
@@ -181,7 +267,7 @@ inline bool operator!=( const scalable_allocator<T>&, const scalable_allocator<U
 } // namespace tbb
 
 #if _MSC_VER
-    #if __TBB_BUILD && !defined(__TBBMALLOC_NO_IMPLICIT_LINKAGE)
+    #if (__TBB_BUILD || __TBBMALLOC_BUILD) && !defined(__TBBMALLOC_NO_IMPLICIT_LINKAGE)
         #define __TBBMALLOC_NO_IMPLICIT_LINKAGE 1
     #endif
 

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -63,7 +63,10 @@ public:
         //! Points to currently held mutex, or NULL if no lock is held.
         spin_mutex* my_mutex; 
 
-        //! Value to store into spin_mutex::flag to unlock the mutex.
+        //! Value to store into spin_mutex::flag to unlock the mutex. 
+        /** This variable is no longer used. Instead, 0 and 1 are used to 
+            represent that the lock is free and acquired, respectively. 
+            We keep the member variable here to ensure backward compatibility */
         __TBB_Flag my_unlock_value;
 
         //! Like acquire, but with ITT instrumentation.
@@ -82,12 +85,13 @@ public:
         scoped_lock() : my_mutex(NULL), my_unlock_value(0) {}
 
         //! Construct and acquire lock on a mutex.
-        scoped_lock( spin_mutex& m ) { 
+        scoped_lock( spin_mutex& m ) : my_unlock_value(0) { 
+            internal::suppress_unused_warning(my_unlock_value);
 #if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
             my_mutex=NULL;
             internal_acquire(m);
 #else
-            my_unlock_value = __TBB_LockByte(m.flag);
+            __TBB_LockByte(m.flag);
             my_mutex=&m;
 #endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT*/
         }
@@ -97,7 +101,7 @@ public:
 #if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
             internal_acquire(m);
 #else
-            my_unlock_value = __TBB_LockByte(m.flag);
+            __TBB_LockByte(m.flag);
             my_mutex = &m;
 #endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT*/
         }
@@ -109,10 +113,8 @@ public:
             return internal_try_acquire(m);
 #else
             bool result = __TBB_TryLockByte(m.flag);
-            if( result ) {
-                my_unlock_value = 0;
+            if( result )
                 my_mutex = &m;
-            }
             return result;
 #endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT*/
         }
@@ -122,7 +124,7 @@ public:
 #if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
             internal_release();
 #else
-            __TBB_UnlockByte(my_mutex->flag, my_unlock_value);
+            __TBB_UnlockByte(my_mutex->flag);
             my_mutex = NULL;
 #endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT */
         }
@@ -133,7 +135,7 @@ public:
 #if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
                 internal_release();
 #else
-                __TBB_UnlockByte(my_mutex->flag, my_unlock_value);
+                __TBB_UnlockByte(my_mutex->flag);
 #endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT */
             }
         }
@@ -175,7 +177,6 @@ public:
         aligned_space<scoped_lock,1> tmp;
         scoped_lock& s = *tmp.begin();
         s.my_mutex = this;
-        s.my_unlock_value = 0;
         s.internal_release();
 #else
         __TBB_store_with_release(flag, 0);

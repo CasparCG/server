@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -46,8 +46,8 @@ class spin_rw_mutex_v3 {
     //! Internal acquire write lock.
     bool __TBB_EXPORTED_METHOD internal_acquire_writer();
 
-    //! Out of line code for releasing a write lock.  
-    /** This code is has debug checking and instrumentation for Intel(R) Thread Checker and Intel(R) Thread Profiler. */
+    //! Out of line code for releasing a write lock.
+    /** This code has debug checking and instrumentation for Intel(R) Thread Checker and Intel(R) Thread Profiler. */
     void __TBB_EXPORTED_METHOD internal_release_writer();
 
     //! Internal acquire read lock.
@@ -56,8 +56,8 @@ class spin_rw_mutex_v3 {
     //! Internal upgrade reader to become a writer.
     bool __TBB_EXPORTED_METHOD internal_upgrade();
 
-    //! Out of line code for downgrading a writer to a reader.   
-    /** This code is has debug checking and instrumentation for Intel(R) Thread Checker and Intel(R) Thread Profiler. */
+    //! Out of line code for downgrading a writer to a reader.
+    /** This code has debug checking and instrumentation for Intel(R) Thread Checker and Intel(R) Thread Profiler. */
     void __TBB_EXPORTED_METHOD internal_downgrade();
 
     //! Internal release read lock.
@@ -107,18 +107,18 @@ public:
         //! Acquire lock on given mutex.
         void acquire( spin_rw_mutex& m, bool write = true ) {
             __TBB_ASSERT( !mutex, "holding mutex already" );
-            is_writer = write; 
+            is_writer = write;
             mutex = &m;
             if( write ) mutex->internal_acquire_writer();
             else        mutex->internal_acquire_reader();
         }
 
         //! Upgrade reader to become a writer.
-        /** Returns true if the upgrade happened without re-acquiring the lock and false if opposite */
+        /** Returns whether the upgrade happened without releasing and re-acquiring the lock */
         bool upgrade_to_writer() {
             __TBB_ASSERT( mutex, "lock is not acquired" );
             __TBB_ASSERT( !is_writer, "not a reader" );
-            is_writer = true; 
+            is_writer = true;
             return mutex->internal_upgrade();
         }
 
@@ -138,15 +138,14 @@ public:
 
         //! Downgrade writer to become a reader.
         bool downgrade_to_reader() {
-#if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
             __TBB_ASSERT( mutex, "lock is not acquired" );
             __TBB_ASSERT( is_writer, "not a writer" );
+#if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
             mutex->internal_downgrade();
 #else
             __TBB_FetchAndAddW( &mutex->state, ((intptr_t)ONE_READER-WRITER));
 #endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT */
             is_writer = false;
-
             return true;
         }
 

@@ -1,6 +1,6 @@
 @echo off
 REM
-REM Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+REM Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 REM
 REM This file is part of Threading Building Blocks.
 REM
@@ -30,9 +30,9 @@ REM
 set SCRIPT_NAME=%~nx0
 if (%1) == () goto Syntax
 
-SET TBB30_BIN_DIR=%~d0%~p0
+SET TBB_BIN_DIR=%~d0%~p0
 
-SET TBB30_INSTALL_DIR=%TBB30_BIN_DIR%..
+SET TBBROOT=%TBB_BIN_DIR%..
 
 :ParseArgs
 :: Parse the incoming arguments
@@ -42,6 +42,7 @@ if /i "%1"=="intel64"      (set TBB_TARGET_ARCH=intel64) & shift & goto ParseArg
 if /i "%1"=="vs2005"       (set TBB_TARGET_VS=vc8)       & shift & goto ParseArgs
 if /i "%1"=="vs2008"       (set TBB_TARGET_VS=vc9)       & shift & goto ParseArgs
 if /i "%1"=="vs2010"       (set TBB_TARGET_VS=vc10)      & shift & goto ParseArgs
+if /i "%1"=="vs2012"       (set TBB_TARGET_VS=vc11)      & shift & goto ParseArgs
 if /i "%1"=="all"          (set TBB_TARGET_VS=vc_mt)     & shift & goto ParseArgs
 
 :SetEnv
@@ -49,12 +50,13 @@ if /i "%1"=="all"          (set TBB_TARGET_VS=vc_mt)     & shift & goto ParseArg
 if  ("%TBB_TARGET_VS%") == ("") set TBB_TARGET_VS=vc_mt
 
 SET TBB_ARCH_PLATFORM=%TBB_TARGET_ARCH%\%TBB_TARGET_VS%
-if exist "%TBB30_BIN_DIR%\%TBB_ARCH_PLATFORM%\tbb.dll" SET PATH=%TBB30_BIN_DIR%\%TBB_ARCH_PLATFORM%;%PATH%
-if exist "%TBB30_INSTALL_DIR%\..\redist\%TBB_TARGET_ARCH%\tbb\%TBB_TARGET_VS%\tbb.dll" SET PATH=%TBB30_INSTALL_DIR%\..\redist\%TBB_TARGET_ARCH%\tbb\%TBB_TARGET_VS%;%PATH%
-SET LIB=%TBB30_INSTALL_DIR%\lib\%TBB_ARCH_PLATFORM%;%LIB%
-SET INCLUDE=%TBB30_INSTALL_DIR%\include;%INCLUDE%
+if exist "%TBB_BIN_DIR%\%TBB_ARCH_PLATFORM%\tbb.dll" SET PATH=%TBB_BIN_DIR%\%TBB_ARCH_PLATFORM%;%PATH%
+if exist "%TBBROOT%\..\redist\%TBB_TARGET_ARCH%\tbb\%TBB_TARGET_VS%\tbb.dll" SET PATH=%TBBROOT%\..\redist\%TBB_TARGET_ARCH%\tbb\%TBB_TARGET_VS%;%PATH%
+SET LIB=%TBBROOT%\lib\%TBB_ARCH_PLATFORM%;%LIB%
+SET INCLUDE=%TBBROOT%\include;%INCLUDE%
 IF ("%ICPP_COMPILER11%") NEQ ("") SET TBB_CXX=icl.exe
 IF ("%ICPP_COMPILER12%") NEQ ("") SET TBB_CXX=icl.exe
+IF ("%ICPP_COMPILER13%") NEQ ("") SET TBB_CXX=icl.exe
 goto End
 
 :Syntax
@@ -67,6 +69,7 @@ echo    ^<vs^> should be one of the following
 echo        vs2005      : Set to use with Microsoft Visual Studio 2005 runtime DLLs
 echo        vs2008      : Set to use with Microsoft Visual Studio 2008 runtime DLLs
 echo        vs2010      : Set to use with Microsoft Visual Studio 2010 runtime DLLs
+echo        vs2012      : Set to use with Microsoft Visual Studio 2012 runtime DLLs
 echo        all         : Set to use TBB statically linked with Microsoft Visual C++ runtime
 echo    if ^<vs^> is not set TBB statically linked with Microsoft Visual C++ runtime will be used.
 exit /B 1

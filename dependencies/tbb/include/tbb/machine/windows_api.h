@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -43,10 +43,41 @@
 
 #endif // _XBOX
 
-#if !defined(_WIN32_WINNT)
+#if _WIN32_WINNT < 0x0600
 // The following Windows API function is declared explicitly;
-// otherwise any user would have to specify /D_WIN32_WINNT=0x0400
-extern "C" BOOL WINAPI TryEnterCriticalSection( LPCRITICAL_SECTION );
+// otherwise it fails to compile by VS2005.
+#if !defined(WINBASEAPI) || (_WIN32_WINNT < 0x0501 && _MSC_VER == 1400)
+#define __TBB_WINBASEAPI extern "C"
+#else
+#define __TBB_WINBASEAPI WINBASEAPI
+#endif
+__TBB_WINBASEAPI BOOL WINAPI TryEnterCriticalSection( LPCRITICAL_SECTION );
+__TBB_WINBASEAPI BOOL WINAPI InitializeCriticalSectionAndSpinCount( LPCRITICAL_SECTION, DWORD );
+// Overloading WINBASEAPI macro and using local functions missing in Windows XP/2003
+#define InitializeCriticalSectionEx inlineInitializeCriticalSectionEx
+#define CreateSemaphoreEx inlineCreateSemaphoreEx
+#define CreateEventEx inlineCreateEventEx
+inline BOOL WINAPI inlineInitializeCriticalSectionEx( LPCRITICAL_SECTION lpCriticalSection, DWORD dwSpinCount, DWORD )
+{
+    return InitializeCriticalSectionAndSpinCount( lpCriticalSection, dwSpinCount );
+}
+inline HANDLE WINAPI inlineCreateSemaphoreEx( LPSECURITY_ATTRIBUTES lpSemaphoreAttributes, LONG lInitialCount, LONG lMaximumCount, LPCTSTR lpName, DWORD, DWORD )
+{
+    return CreateSemaphore( lpSemaphoreAttributes, lInitialCount, lMaximumCount, lpName );
+}
+inline HANDLE WINAPI inlineCreateEventEx( LPSECURITY_ATTRIBUTES lpEventAttributes, LPCTSTR lpName, DWORD dwFlags, DWORD )
+{
+    BOOL manual_reset = dwFlags&0x00000001 ? TRUE : FALSE; // CREATE_EVENT_MANUAL_RESET
+    BOOL initial_set  = dwFlags&0x00000002 ? TRUE : FALSE; // CREATE_EVENT_INITIAL_SET
+    return CreateEvent( lpEventAttributes, manual_reset, initial_set, lpName );
+}
+#endif
+
+#if defined(RTL_SRWLOCK_INIT)
+#ifndef __TBB_USE_SRWLOCK
+// TODO: turn it on when bug 1952 will be fixed
+#define __TBB_USE_SRWLOCK 0
+#endif
 #endif
 
 #else

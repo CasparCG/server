@@ -145,7 +145,7 @@ write_frame::write_frame(const write_frame& other) : impl_(new implementation(*o
 write_frame::write_frame(write_frame&& other) : impl_(std::move(other.impl_)){}
 write_frame& write_frame::operator=(const write_frame& other)
 {
-	basic_frame temp(other);
+	basic_frame temp(other); // TODO: This is nonsense...
 	temp.swap(*this);
 	return *this;
 }

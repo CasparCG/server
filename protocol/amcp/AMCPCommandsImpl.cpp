@@ -56,9 +56,9 @@
 #include <modules/decklink/decklink.h>
 #include <modules/ffmpeg/ffmpeg.h>
 #include <modules/flash/flash.h>
+#include <modules/html/producer/html_producer.h>
 #include <modules/flash/util/swf.h>
 #include <modules/flash/producer/flash_producer.h>
-#include <modules/flash/producer/cg_producer.h>
 #include <modules/ffmpeg/producer/util/util.h>
 #include <modules/image/image.h>
 #include <modules/ogl/ogl.h>
@@ -83,6 +83,7 @@
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/insert_linebreaks.hpp>
 #include <boost/archive/iterators/transform_width.hpp>
+#include <boost/format.hpp>
 
 #include <tbb/concurrent_unordered_map.h>
 
@@ -112,7 +113,7 @@ namespace caspar { namespace protocol {
 
 using namespace core;
 
-std::wstring read_file_base64(const boost::filesystem::wpath& file)
+std::wstring read_file_base64(const boost::filesystem::path& file)
 {
 	using namespace boost::archive::iterators;
 
@@ -129,7 +130,7 @@ std::wstring read_file_base64(const boost::filesystem::wpath& file)
 	return widen(to_base64(bytes.data(), length));
 }
 
-std::wstring read_utf8_file(const boost::filesystem::wpath& file)
+std::wstring read_utf8_file(const boost::filesystem::path& file)
 {
 	std::wstringstream result;
 	boost::filesystem::wifstream filestream(file);
@@ -145,7 +146,7 @@ std::wstring read_utf8_file(const boost::filesystem::wpath& file)
 	return result.str();
 }
 
-std::wstring read_latin1_file(const boost::filesystem::wpath& file)
+std::wstring read_latin1_file(const boost::filesystem::path& file)
 {
 	boost::locale::generator gen;
 	gen.locale_cache_enabled(true);
@@ -175,7 +176,7 @@ std::wstring read_latin1_file(const boost::filesystem::wpath& file)
 	return widened_result;
 }
 
-std::wstring read_file(const boost::filesystem::wpath& file)
+std::wstring read_file(const boost::filesystem::path& file)
 {
 	static const uint8_t BOM[] = {0xef, 0xbb, 0xbf};
 
@@ -204,7 +205,7 @@ std::wstring MediaInfo(const boost::filesystem::wpath& path, const std::shared_p
 	if(boost::filesystem::is_regular_file(path))
 	{
 		std::wstring clipttype = TEXT(" N/A ");
-		std::wstring extension = boost::to_upper_copy(path.extension());
+		std::wstring extension = boost::to_upper_copy(path.extension().wstring());
 		if(extension == TEXT(".TGA") || extension == TEXT(".COL") || extension == L".PNG" || extension == L".JPEG" || extension == L".JPG" ||
 			extension == L".GIF" || extension == L".BMP")
 		{
@@ -218,7 +219,7 @@ std::wstring MediaInfo(const boost::filesystem::wpath& path, const std::shared_p
 				extension == TEXT(".DV") || extension == TEXT(".MOV") || 
 				extension == TEXT(".MPG") || extension == TEXT(".AVI") || 
 				extension == TEXT(".MP4") || extension == TEXT(".FLV") || 
-				caspar::ffmpeg::is_valid_file(path.file_string()))
+				caspar::ffmpeg::is_valid_file(path.wstring()))
 		{
 			clipttype = TEXT(" MOVIE ");
 		}
@@ -227,7 +228,7 @@ std::wstring MediaInfo(const boost::filesystem::wpath& path, const std::shared_p
 		{		
 			auto is_not_digit = [](char c){ return std::isdigit(c) == 0; };
 
-			auto relativePath = boost::filesystem::wpath(path.file_string().substr(env::media_folder().size()-1, path.file_string().size()));
+			auto relativePath = boost::filesystem::path(path.wstring().substr(env::media_folder().size()-1, path.wstring().size()));
 
 			auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(path)));
 			writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), is_not_digit), writeTimeStr.end());
@@ -237,10 +238,10 @@ std::wstring MediaInfo(const boost::filesystem::wpath& path, const std::shared_p
 			sizeStr.erase(std::remove_if(sizeStr.begin(), sizeStr.end(), is_not_digit), sizeStr.end());
 			auto sizeWStr = std::wstring(sizeStr.begin(), sizeStr.end());
 				
-			auto str = relativePath.replace_extension(TEXT("")).external_file_string();
+			auto str = relativePath.replace_extension(TEXT("")).native();
 			if(str[0] == '\\' || str[0] == '/')
 				str = std::wstring(str.begin() + 1, str.end());
-			auto media_info = media_info_repo->get(path.file_string());
+			auto media_info = media_info_repo->get(path.wstring());
 			
 			return std::wstring() 
 					+ L"\""		+ str +
@@ -270,9 +271,9 @@ std::wstring ListTemplates()
 
 	for (boost::filesystem::wrecursive_directory_iterator itr(env::template_folder()), end; itr != end; ++itr)
 	{		
-		if(boost::filesystem::is_regular_file(itr->path()) && (itr->path().extension() == L".ft" || itr->path().extension() == L".ct"))
+		if(boost::filesystem::is_regular_file(itr->path()) && (itr->path().extension() == L".ft" || itr->path().extension() == L".ct" || itr->path().extension() == L".html"))
 		{
-			auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(env::template_folder().size()-1, itr->path().file_string().size()));
+			auto relativePath = boost::filesystem::path(itr->path().wstring().substr(env::template_folder().size()-1, itr->path().wstring().size()));
 
 			auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(itr->path())));
 			writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), [](char c){ return std::isdigit(c) == 0;}), writeTimeStr.end());
@@ -283,11 +284,11 @@ std::wstring ListTemplates()
 
 			auto sizeWStr = std::wstring(sizeStr.begin(), sizeStr.end());
 
-			std::wstring dir = relativePath.parent_path().external_directory_string();
-			std::wstring file = boost::to_upper_copy(relativePath.filename());
-			relativePath = boost::filesystem::wpath(dir + L"/" + file);
+			std::wstring dir = relativePath.parent_path().native();
+			std::wstring file = boost::to_upper_copy(relativePath.filename().wstring());
+			relativePath = boost::filesystem::path(dir + L"/" + file);
 						
-			auto str = relativePath.replace_extension(TEXT("")).external_file_string();
+			auto str = relativePath.replace_extension(TEXT("")).native();
 			boost::trim_if(str, boost::is_any_of("\\/"));
 
 			replyString << TEXT("\"") << str
@@ -1047,7 +1048,7 @@ bool LoadCommand::DoExecute()
 //		if(fullFilename.empty())
 //			BOOST_THROW_EXCEPTION(file_not_found());
 //	
-//		std::wstring extension = boost::filesystem::wpath(fullFilename).extension();
+//		std::wstring extension = boost::filesystem::path(fullFilename).extension();
 //		std::wstring filename = templatename;
 //		filename.append(extension);
 //
@@ -1342,31 +1343,61 @@ bool CGCommand::DoExecuteAdd() {
 			filename.append(dataString);
 			filename.append(TEXT(".ftd"));
 
-			dataFromFile = read_file(boost::filesystem::wpath(filename));
+			dataFromFile = read_file(boost::filesystem::path(filename));
 			pDataString = dataFromFile.c_str();
 		}
 	}
-
+	
 	std::wstring fullFilename = flash::find_template(env::template_folder() + _parameters[2]);
+	std::wstring extension = boost::filesystem::path(fullFilename).extension().wstring();
+	std::wstring filename = _parameters[2];
+	filename.append(extension);
+
 	if(!fullFilename.empty())
 	{
-		std::wstring extension = boost::filesystem::wpath(fullFilename).extension();
-		std::wstring filename = _parameters[2];
-		filename.append(extension);
+				
+		auto producer = GetChannel()->stage()->foreground(GetLayerIndex(9999)).get();
 
-		flash::with_default_cg_producer(
-				[&](safe_ptr<flash::cg_producer> producer)
-				{
-					producer->add(layer, filename, bDoStart, label, (pDataString!=0) ? pDataString : TEXT(""));
-				},
-				safe_ptr<core::video_channel>(GetChannel()), false, GetLayerIndex(flash::cg_producer::DEFAULT_LAYER));
+		if(producer->print().find(L"flash") == std::string::npos)
+		{ 
+			producer = flash::create_producer(GetChannel()->mixer(), boost::assign::list_of<std::wstring>());	
+		}
+			
+		GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"ADD %1% %2% %3% %4% %5%") % layer % filename % bDoStart % label % (std::wstring() + L"\"" + (pDataString ? pDataString : L"") + L"\"")).str()).wait();
+		
 		SetReplyString(TEXT("202 CG OK\r\n"));
+
+		return true;
 	}
 	else
-	{
-		CASPAR_LOG(warning) << "Could not find template " << _parameters[2];
-		SetReplyString(TEXT("404 CG ERROR\r\n"));
+	{			
+		std::vector<std::wstring> parameters = boost::assign::list_of<std::wstring>(filename);
+		auto producer = html::create_producer(GetChannel()->mixer(), core::parameters(parameters));	
+				
+		if (producer != core::frame_producer::empty())
+		{
+			if (pDataString)
+			{
+				producer->call((boost::wformat(L"UPDATE %1% \"%2%\"") % layer % pDataString).str()).wait();
+			}
+
+			if (bDoStart)
+			{
+				producer->call((boost::wformat(L"PLAY %1%") % layer).str()).wait();
+			}
+			
+			GetChannel()->stage()->load(GetLayerIndex(9999), producer);
+			GetChannel()->stage()->play(GetLayerIndex(9999));
+
+			SetReplyString(TEXT("202 CG OK\r\n"));
+
+			return true;
+		};
 	}
+
+	CASPAR_LOG(warning) << "Could not find template " << _parameters[2];
+	SetReplyString(TEXT("404 CG ERROR\r\n"));
+	
 	return true;
 }
 
@@ -1380,7 +1411,8 @@ bool CGCommand::DoExecutePlay()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), true, GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->play(layer);
+		
+		GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"PLAY %1%") % layer).str()).wait();
 	}
 	else
 	{
@@ -1402,7 +1434,8 @@ bool CGCommand::DoExecuteStop()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), true, GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->stop(layer, 0);
+		
+		GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"STOP %1%") % layer).str()).wait();
 	}
 	else 
 	{
@@ -1425,7 +1458,8 @@ bool CGCommand::DoExecuteNext()
 		}
 
 		int layer = _ttoi(_parameters[1].c_str());
-		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), true, GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->next(layer);
+
+		GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"NEXT %1%") % layer).str()).wait();
 	}
 	else 
 	{
@@ -1448,7 +1482,7 @@ bool CGCommand::DoExecuteRemove()
 		}
 
 		int layer = _ttoi(_parameters[1].c_str());
-		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), true, GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->remove(layer);
+		GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"REMOVE %1%") % layer).str()).wait();
 	}
 	else 
 	{
@@ -1462,7 +1496,7 @@ bool CGCommand::DoExecuteRemove()
 
 bool CGCommand::DoExecuteClear() 
 {
-	GetChannel()->stage()->clear(GetLayerIndex(flash::cg_producer::DEFAULT_LAYER));
+	GetChannel()->stage()->clear(GetLayerIndex(9999));
 	SetReplyString(TEXT("202 CG OK\r\n"));
 	return true;
 }
@@ -1485,11 +1519,12 @@ bool CGCommand::DoExecuteUpdate()
 			filename.append(dataString);
 			filename.append(TEXT(".ftd"));
 
-			dataString = read_file(boost::filesystem::wpath(filename));
+			dataString = read_file(boost::filesystem::path(filename));
 		}		
 
 		int layer = _ttoi(_parameters.at(1).c_str());
-		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), true, GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->update(layer, dataString);
+		
+		GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"UPDATE %1% \"%2%\"") % layer % dataString).str()).wait();
 	}
 	catch(...)
 	{
@@ -1514,7 +1549,8 @@ bool CGCommand::DoExecuteInvoke()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		auto result = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), true, GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->invoke(layer, _parameters.at_original(2));
+
+		auto result = GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"INVOKE %1% \"%2%\"") % layer % _parameters.at_original(2)).str()).get();
 		replyString << result << TEXT("\r\n"); 
 	}
 	else 
@@ -1541,13 +1577,13 @@ bool CGCommand::DoExecuteInfo()
 		}
 
 		int layer = _ttoi(_parameters[1].c_str());
-		auto desc = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), false, GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->description(layer);
-		
+		auto desc = GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"INFO %1%") % layer).str()).get();
+				
 		replyString << desc << TEXT("\r\n"); 
 	}
 	else 
 	{
-		auto info = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), false, GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->template_host_info();
+		auto info = GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"INFO")).str()).get();
 		replyString << info << TEXT("\r\n"); 
 	}	
 
@@ -1583,8 +1619,8 @@ bool DataCommand::DoExecuteStore()
 	filename.append(_parameters[1]);
 	filename.append(TEXT(".ftd"));
 
-	auto data_path = boost::filesystem::wpath(
-			boost::filesystem::wpath(filename).parent_path());
+	auto data_path = boost::filesystem::path(
+			boost::filesystem::path(filename).parent_path());
 	
 	if(!boost::filesystem::exists(data_path))
 		boost::filesystem::create_directories(data_path);
@@ -1618,7 +1654,7 @@ bool DataCommand::DoExecuteRetrieve()
 	filename.append(_parameters[1]);
 	filename.append(TEXT(".ftd"));
 
-	std::wstring file_contents = read_file(boost::filesystem::wpath(filename));
+	std::wstring file_contents = read_file(boost::filesystem::path(filename));
 
 	if (file_contents.empty()) 
 	{
@@ -1686,12 +1722,12 @@ bool DataCommand::DoExecuteList()
 	{			
 		if(boost::filesystem::is_regular_file(itr->path()))
 		{
-			if(!boost::iequals(itr->path().extension(), L".ftd"))
+			if(!boost::iequals(itr->path().extension().wstring(), L".ftd"))
 				continue;
 			
-			auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(env::data_folder().size()-1, itr->path().file_string().size()));
+			auto relativePath = boost::filesystem::path(itr->path().wstring().substr(env::data_folder().size()-1, itr->path().wstring().size()));
 			
-			auto str = relativePath.replace_extension(TEXT("")).external_file_string();
+			auto str = relativePath.replace_extension(TEXT("")).native();
 			if(str[0] == '\\' || str[0] == '/')
 				str = std::wstring(str.begin() + 1, str.end());
 
@@ -1734,7 +1770,7 @@ bool ThumbnailCommand::DoExecuteRetrieve()
 	filename.append(_parameters[1]);
 	filename.append(TEXT(".png"));
 
-	std::wstring file_contents = read_file_base64(boost::filesystem::wpath(filename));
+	std::wstring file_contents = read_file_base64(boost::filesystem::path(filename));
 
 	if (file_contents.empty())
 	{
@@ -1760,12 +1796,12 @@ bool ThumbnailCommand::DoExecuteList()
 	{			
 		if(boost::filesystem::is_regular_file(itr->path()))
 		{
-			if(!boost::iequals(itr->path().extension(), L".png"))
+			if(!boost::iequals(itr->path().extension().wstring(), L".png"))
 				continue;
 			
-			auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(env::thumbnails_folder().size()-1, itr->path().file_string().size()));
+			auto relativePath = boost::filesystem::path(itr->path().wstring().substr(env::thumbnails_folder().size()-1, itr->path().wstring().size()));
 			
-			auto str = relativePath.replace_extension(L"").external_file_string();
+			auto str = relativePath.replace_extension(L"").native();
 			if(str[0] == '\\' || str[0] == '/')
 				str = std::wstring(str.begin() + 1, str.end());
 
@@ -1834,7 +1870,7 @@ bool CinfCommand::DoExecute()
 		{
 			auto path = itr->path();
 			auto file = path.replace_extension(L"").filename();
-			if(boost::iequals(file, _parameters.at(0)))
+			if(boost::iequals(file.wstring(), _parameters.at(0)))
 				info += MediaInfo(itr->path(), GetMediaInfoRepo()) + L"\r\n";
 		}
 
@@ -1896,7 +1932,7 @@ bool InfoCommand::DoExecute()
 
 			boost::property_tree::wptree info;
 			info.add_child(L"paths", caspar::env::properties().get_child(L"configuration.paths"));
-			info.add(L"paths.initial-path", boost::filesystem2::initial_path<boost::filesystem2::wpath>().directory_string() + L"\\");
+			//info.add(L"paths.initial-path", boost::filesystem::initial_path<boost::filesystem::path>().directory_string() + L"\\");
 
 			boost::property_tree::write_xml(replyString, info, w);
 		}

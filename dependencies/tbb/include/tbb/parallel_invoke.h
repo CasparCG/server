@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2013 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks.
 
@@ -139,8 +139,8 @@ namespace internal {
             spawn_and_wait_for_all(*invoker);
         }
     };
-    // The class destroys root if exception occured as well as in normal case
-    class parallel_invoke_cleaner: internal::no_copy { 
+    // The class destroys root if exception occurred as well as in normal case
+    class parallel_invoke_cleaner: internal::no_copy {
     public:
 #if __TBB_TASK_GROUP_CONTEXT
         parallel_invoke_cleaner(int number_of_children, tbb::task_group_context& context)
@@ -337,7 +337,7 @@ void parallel_invoke(const F0& f0, const F1& f1, const F2& f2, const F3& f3, con
     parallel_invoke<F0, F1, F2, F3, F4, F5, F6>(f0, f1, f2, f3, f4, f5, f6, context);
 }
 // eigth arguments
-template<typename F0, typename F1, typename F2, typename F3, typename F4, 
+template<typename F0, typename F1, typename F2, typename F3, typename F4,
          typename F5, typename F6, typename F7>
 void parallel_invoke(const F0& f0, const F1& f1, const F2& f2, const F3& f3, const F4& f4,
                      const F5& f5, const F6& f6, const F7& f7)
