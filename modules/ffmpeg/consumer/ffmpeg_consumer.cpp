@@ -113,8 +113,8 @@ struct output_format
 	AVOutputFormat* format;
 	int				width;
 	int				height;
-	CodecID			vcodec;
-	CodecID			acodec;
+	AVCodecID		vcodec;
+	AVCodecID		acodec;
 
 	output_format(const core::video_format_desc& format_desc, const std::string& filename, std::vector<option>& options)
 		: format(av_guess_format(nullptr, filename.c_str(), nullptr))
@@ -246,7 +246,6 @@ public:
 		: filename_(filename)
 		, video_outbuf_(1920*1080*8)
 		, audio_outbuf_(10000)
-		, oc_(avformat_alloc_context(), av_free)
 		, format_desc_(format_desc)
 		, channel_layout_(audio_channel_layout)
 		, encode_executor_(print())
@@ -258,7 +257,7 @@ public:
 		current_encoding_delay_ = 0;
 
 		// TODO: Ask stakeholders about case where file already exists.
-		boost::filesystem2::remove(boost::filesystem2::wpath(env::media_folder() + widen(filename))); // Delete the file if it exists
+		boost::filesystem::remove(boost::filesystem::wpath(env::media_folder() + widen(filename))); // Delete the file if it exists
 
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
@@ -266,13 +265,15 @@ public:
 		diagnostics::register_graph(graph_);
 
 		encode_executor_.set_capacity(8);
-
-		oc_->oformat = output_format_.format;
 				
-		THROW_ON_ERROR2(av_set_parameters(oc_.get(), nullptr), "[ffmpeg_consumer]");
+		AVFormatContext* oc;
 
-		strcpy_s(oc_->filename, filename_.c_str());
-		
+		THROW_ON_ERROR2(avformat_alloc_output_context2(
+			&oc, 
+			output_format_.format, 
+			nullptr, 
+			filename_.c_str()), "[ffmpeg_consumer]");
+								
 		//  Add the audio and video streams using the default format codecs	and initialize the codecs.
 		auto options2 = options;
 		video_st_ = add_video_stream(options2);
@@ -280,13 +281,13 @@ public:
 		if (!key_only)
 			audio_st_ = add_audio_stream(options);
 				
-		dump_format(oc_.get(), 0, filename_.c_str(), 1);
+		av_dump_format(oc_.get(), 0, filename_.c_str(), 1);
 		 
 		// Open the output ffmpeg, if needed.
 		if (!(oc_->oformat->flags & AVFMT_NOFILE)) 
-			THROW_ON_ERROR2(avio_open(&oc_->pb, filename_.c_str(), URL_WRONLY), "[ffmpeg_consumer]");
+			THROW_ON_ERROR2(avio_open2(&oc_->pb, filename_.c_str(), AVIO_FLAG_WRITE, NULL, NULL), "[ffmpeg_consumer]");
 				
-		THROW_ON_ERROR2(av_write_header(oc_.get()), "[ffmpeg_consumer]");
+		THROW_ON_ERROR2(avformat_write_header(oc_.get(), nullptr), "[ffmpeg_consumer]");
 
 		if(options.size() > 0)
 		{
@@ -403,10 +404,10 @@ public:
 			c->flags |= CODEC_FLAG_GLOBAL_HEADER;
 		
 		c->thread_count = boost::thread::hardware_concurrency();
-		if(avcodec_open(c, encoder) < 0)
+		if(avcodec_open2(c, encoder, nullptr) < 0)
 		{
 			c->thread_count = 1;
-			THROW_ON_ERROR2(avcodec_open(c, encoder), "[ffmpeg_consumer]");
+			THROW_ON_ERROR2(avcodec_open2(c, encoder, nullptr), "[ffmpeg_consumer]");
 		}
 
 		return std::shared_ptr<AVStream>(st, [](AVStream* st)
@@ -438,7 +439,7 @@ public:
 		c->codec_type		= AVMEDIA_TYPE_AUDIO;
 		c->sample_rate		= 48000;
 		c->channels			= channel_layout_.num_channels;
-		c->sample_fmt		= SAMPLE_FMT_S16;
+		c->sample_fmt		= AV_SAMPLE_FMT_S16;
 
 		if(output_format_.vcodec == CODEC_ID_FLV1)		
 			c->sample_rate	= 44100;		
@@ -451,7 +452,7 @@ public:
 			return ffmpeg::av_opt_set(c, o.name.c_str(), o.value.c_str(), AV_OPT_SEARCH_CHILDREN) > -1;
 		});
 
-		THROW_ON_ERROR2(avcodec_open(c, encoder), "[ffmpeg_consumer]");
+		THROW_ON_ERROR2(avcodec_open2(c, encoder, nullptr), "[ffmpeg_consumer]");
 
 		return std::shared_ptr<AVStream>(st, [](AVStream* st)
 		{
