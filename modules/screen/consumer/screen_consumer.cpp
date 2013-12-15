@@ -156,8 +156,27 @@ public:
 		, screen_width_(format_desc.width)
 		, screen_height_(format_desc.height)
 		, square_width_(format_desc.square_width)
-		, square_height_(format_desc.square_height)
-		, filter_(format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? L"" : L"YADIF=1:-1", boost::assign::list_of(PIX_FMT_BGRA))
+		, square_height_(format_desc.square_height)		
+		, filter_([&]() -> ffmpeg::filter
+		{			
+			const auto sample_aspect_ratio = 
+				boost::rational<int>(
+					format_desc.square_width, 
+					format_desc.square_height) /
+				boost::rational<int>(
+					format_desc.width, 
+					format_desc.height);
+
+			return ffmpeg::filter(
+				format_desc.width,
+				format_desc.height,
+				boost::rational<int>(format_desc.duration, format_desc.time_scale),
+				boost::rational<int>(format_desc.time_scale, format_desc.duration),
+				sample_aspect_ratio,
+				AV_PIX_FMT_BGRA,
+				boost::assign::list_of(AV_PIX_FMT_BGRA),
+				format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? "" : "YADIF=1:-1");
+		}())
 	{		
 		if(format_desc_.format == core::video_format::ntsc && config_.aspect == configuration::aspect_4_3)
 		{

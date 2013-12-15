@@ -75,4 +75,15 @@ void throw_on_ffmpeg_error(int ret, const std::wstring& source, const char* func
 		return ret;															\
 	}()
 
+#define FF_RET(ret, func) \
+		caspar::ffmpeg::throw_on_ffmpeg_error(ret, L"", func, __FUNCTION__, __FILE__, __LINE__);		
+
+#define FF(call)										\
+	[&]() -> int														\
+	{																		\
+		auto ret = call;														\
+		caspar::ffmpeg::throw_on_ffmpeg_error(static_cast<int>(ret), L"", THROW_ON_ERROR_STR(call), __FUNCTION__, __FILE__, __LINE__);	\
+		return ret;															\
+	}()
+
 }}

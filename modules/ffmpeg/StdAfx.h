@@ -30,7 +30,6 @@
 
 #include <algorithm>
 #include <array>
-#include <asmlib.h>
 #include <assert.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
@@ -89,7 +88,6 @@ extern "C"
 	#include <libavfilter/avfilter.h>
 	#include <libavfilter/avfiltergraph.h>
 	#include <libavfilter/buffersink.h>
-	#include <libavfilter/vsrc_buffer.h>
 	#include <libavformat/avformat.h>
 	#include <libavutil/avutil.h>
 	#include <libavutil/common.h>
