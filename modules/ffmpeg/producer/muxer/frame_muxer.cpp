@@ -80,7 +80,7 @@ struct frame_muxer::implementation : boost::noncopyable
 			
 	safe_ptr<core::frame_factory>					frame_factory_;
 	
-	filter											filter_;
+	std::unique_ptr<filter>							filter_;
 	const std::wstring								filter_str_;
 	const bool										thumbnail_mode_;
 	bool											force_deinterlacing_;
@@ -136,7 +136,7 @@ struct frame_muxer::implementation : boost::noncopyable
 				display_mode_ = display_mode::invalid;
 			}
 
-			if(display_mode_ == display_mode::invalid)
+			if(!filter_ || display_mode_ == display_mode::invalid)
 				update_display_mode(video_frame, force_deinterlacing_);
 				
 			if(hints & core::frame_producer::ALPHA_HINT)
@@ -146,13 +146,16 @@ struct frame_muxer::implementation : boost::noncopyable
 			if(video_frame->format == CASPAR_PIX_FMT_LUMA) // CASPAR_PIX_FMT_LUMA is not valid for filter, change it to GRAY8
 				video_frame->format = PIX_FMT_GRAY8;
 
-			filter_.push(video_frame);
-			BOOST_FOREACH(auto& av_frame, filter_.poll_all())
+			if (filter_)
 			{
-				if(video_frame->format == PIX_FMT_GRAY8 && format == CASPAR_PIX_FMT_LUMA)
-					av_frame->format = format;
+				filter_->push(video_frame);
+				BOOST_FOREACH(auto& av_frame, filter_->poll_all())
+				{
+					if(video_frame->format == PIX_FMT_GRAY8 && format == CASPAR_PIX_FMT_LUMA)
+						av_frame->format = format;
 
-				video_streams_.back().push(make_write_frame(this, av_frame, frame_factory_, hints, audio_channel_layout_));
+					video_streams_.back().push(make_write_frame(this, av_frame, frame_factory_, hints, audio_channel_layout_));
+				}
 			}
 		}
 
@@ -348,9 +351,17 @@ struct frame_muxer::implementation : boost::noncopyable
 			display_mode_ = display_mode::simple;
 		}
 			
-		if(!boost::iequals(filter_.filter_str(), filter_str))
+		if(!filter_ || !boost::iequals(filter_->filter_str(), filter_str))
 		{
-			filter_ = filter(filter_str);
+			filter_.reset(new filter(
+				frame->width, 
+				frame->height,
+				boost::rational<int>(1000000, static_cast<int>(in_fps_ * 1000000)),
+				boost::rational<int>(static_cast<int>(in_fps_ * 1000000), 1000000),
+				boost::rational<int>(frame->sample_aspect_ratio.num, frame->sample_aspect_ratio.den),
+				static_cast<AVPixelFormat>(frame->format),
+				std::vector<AVPixelFormat>(),
+				narrow(filter_str)));
 			if (!thumbnail_mode_)
 				CASPAR_LOG(info) << L"[frame_muxer] " << display_mode::print(display_mode_) << L" " << print_mode(frame->width, frame->height, in_fps_, frame->interlaced_frame > 0);
 		}
@@ -360,7 +371,7 @@ struct frame_muxer::implementation : boost::noncopyable
 	{
 		uint64_t nb_frames2 = nb_frames;
 		
-		if(filter_.is_double_rate()) // Take into account transformations in filter.
+		if(filter_ && filter_->is_double_rate()) // Take into account transformations in filter.
 			nb_frames2 *= 2;
 
 		switch(display_mode_) // Take into account transformation in run.

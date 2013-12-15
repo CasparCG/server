@@ -67,7 +67,7 @@ struct audio_resampler::implementation
 													output_sample_format,	input_sample_format,
 													16, 10, 0, 0.8);
 
-			buffer2_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
+			buffer2_.resize(480000*2);
 
 			char sample_fmt_string[200];
 			av_get_sample_fmt_string(sample_fmt_string, 200, input_sample_format);
@@ -88,7 +88,7 @@ struct audio_resampler::implementation
 	{
 		if(resampler_ && !data.empty())
 		{
-			buffer2_.resize(AVCODEC_MAX_AUDIO_FRAME_SIZE*2);
+			buffer2_.resize(480000*2);
 			auto ret = audio_resample(resampler_.get(),
 									  reinterpret_cast<short*>(buffer2_.data()), 
 									  reinterpret_cast<short*>(data.data()), 
