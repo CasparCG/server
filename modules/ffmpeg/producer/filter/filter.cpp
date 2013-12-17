@@ -153,11 +153,11 @@ struct filter::implementation
 		video_graph_in_  = filt_vsrc;
 		video_graph_out_ = filt_vsink;
 		
-		CASPAR_LOG(info)
-			<< 	widen(std::string("\n") 
-				+ avfilter_graph_dump(
-						video_graph_.get(), 
-						nullptr));
+		//CASPAR_LOG(info)
+		//	<< 	widen(std::string("\n") 
+		//		+ avfilter_graph_dump(
+		//				video_graph_.get(), 
+		//				nullptr));
 	}
 	
 	void configure_filtergraph(

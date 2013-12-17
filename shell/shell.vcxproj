@@ -183,7 +183,7 @@
       <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>sfml-system-s-d.lib;sfml-audio-s-d.lib;sfml-window-s-d.lib;sfml-graphics-s-d.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avdevice.lib;avutil.lib;avfilter.lib;swscale.lib;tbb.lib;glew32.lib;zdll.lib</AdditionalDependencies>
+      <AdditionalDependencies>sfml-system-s-d.lib;sfml-audio-s-d.lib;sfml-window-s-d.lib;sfml-graphics-s-d.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avdevice.lib;avutil.lib;avfilter.lib;swscale.lib;swresample.lib;tbb.lib;glew32.lib;zdll.lib</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -242,7 +242,7 @@ copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
       </Command>
     </PreLinkEvent>
     <Link>
-      <AdditionalDependencies>sfml-system-s.lib;sfml-audio-s.lib;sfml-window-s.lib;sfml-graphics-s.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avdevice.lib;avutil.lib;avfilter.lib;swscale.lib;tbb.lib;glew32.lib;zdll.lib</AdditionalDependencies>
+      <AdditionalDependencies>sfml-system-s.lib;sfml-audio-s.lib;sfml-window-s.lib;sfml-graphics-s.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avdevice.lib;avutil.lib;avfilter.lib;swscale.lib;swresample.lib;tbb.lib;glew32.lib;zdll.lib</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
