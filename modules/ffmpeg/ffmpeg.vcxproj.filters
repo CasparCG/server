@@ -46,9 +46,6 @@
     <ClCompile Include="producer\filter\filter.cpp">
       <Filter>source\producer\filter</Filter>
     </ClCompile>
-    <ClCompile Include="producer\audio\audio_resampler.cpp">
-      <Filter>source\producer\audio</Filter>
-    </ClCompile>
     <ClCompile Include="producer\util\util.cpp">
       <Filter>source\producer\util</Filter>
     </ClCompile>
@@ -66,6 +63,9 @@
     </ClCompile>
     <ClCompile Include="producer\ffmpeg_producer.cpp">
       <Filter>source\producer</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\audio\audio_resampler.cpp">
+      <Filter>source\producer\audio</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -94,9 +94,6 @@
     <ClInclude Include="producer\filter\filter.h">
       <Filter>source\producer\filter</Filter>
     </ClInclude>
-    <ClInclude Include="producer\audio\audio_resampler.h">
-      <Filter>source\producer\audio</Filter>
-    </ClInclude>
     <ClInclude Include="producer\util\flv.h">
       <Filter>source\producer\util</Filter>
     </ClInclude>
@@ -114,6 +111,9 @@
     </ClInclude>
     <ClInclude Include="producer\tbb_avcodec.h">
       <Filter>source\producer</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\audio\audio_resampler.h">
+      <Filter>source\producer\audio</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
