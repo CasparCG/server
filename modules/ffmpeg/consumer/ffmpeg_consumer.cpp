@@ -215,7 +215,7 @@ struct ffmpeg_consumer : boost::noncopyable
 {		
 	const std::string						filename_;
 		
-	const std::shared_ptr<AVFormatContext>	oc_;
+	std::shared_ptr<AVFormatContext>		oc_;
 	const core::video_format_desc			format_desc_;
 	const core::channel_layout				channel_layout_;
 	
@@ -273,6 +273,8 @@ public:
 			output_format_.format, 
 			nullptr, 
 			filename_.c_str()), "[ffmpeg_consumer]");
+
+		oc_.reset(oc);
 								
 		//  Add the audio and video streams using the default format codecs	and initialize the codecs.
 		auto options2 = options;
