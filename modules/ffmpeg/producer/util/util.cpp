@@ -163,14 +163,16 @@ core::pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, size_t width,
 
 int make_alpha_format(int format)
 {
-	switch(get_pixel_format(static_cast<PixelFormat>(format)))
-	{
-	case core::pixel_format::ycbcr:
-	case core::pixel_format::ycbcra:
-		return CASPAR_PIX_FMT_LUMA;
-	default:
-		return format;
-	}
+	return format;
+
+	//switch(get_pixel_format(static_cast<PixelFormat>(format)))
+	//{
+	//case core::pixel_format::ycbcr:
+	//case core::pixel_format::ycbcra:
+	//	return CASPAR_PIX_FMT_LUMA;
+	//default:
+	//	return format;
+	//}
 }
 
 safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVFrame>& decoded_frame, const safe_ptr<core::frame_factory>& frame_factory, int hints, const core::channel_layout& audio_channel_layout)

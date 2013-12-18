@@ -73,6 +73,8 @@ public:
 		, height_(codec_context_->height)
 	{
 		file_frame_number_ = 0;
+
+		codec_context_->refcounted_frames = 1;
 	}
 
 	void push(const std::shared_ptr<AVPacket>& packet)
@@ -112,8 +114,11 @@ public:
 
 	std::shared_ptr<AVFrame> decode(safe_ptr<AVPacket> pkt)
 	{
-		std::shared_ptr<AVFrame> decoded_frame(avcodec_alloc_frame(), av_free);
-
+		auto decoded_frame = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* frame)
+		{
+			av_frame_free(&frame);
+		});
+		
 		int frame_finished = 0;
 		THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), decoded_frame.get(), &frame_finished, pkt.get()), "[video_decoder]");
 		

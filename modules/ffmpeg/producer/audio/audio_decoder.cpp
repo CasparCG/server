@@ -86,6 +86,8 @@ public:
 
 		file_frame_number_ = 0;
 
+		codec_context_->refcounted_frames = 1;
+
 		CASPAR_LOG(debug) << print() 
 				<< " Selected channel layout " << channel_layout_.name;
 	}
@@ -124,15 +126,13 @@ public:
 
 	std::shared_ptr<core::audio_buffer> decode(AVPacket& pkt)
 	{				
-		std::shared_ptr<AVFrame> frame(
-			av_frame_alloc(), 
-			[](AVFrame* p)
-			{
-				av_frame_free(&p);
-			});
-		
+		auto decoded_frame = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* frame)
+		{
+			av_frame_free(&frame);
+		});
+				
 		int got_frame = 0;
-		auto len = THROW_ON_ERROR2(avcodec_decode_audio4(codec_context_.get(), frame.get(), &got_frame, &pkt), "[audio_decoder]");
+		auto len = THROW_ON_ERROR2(avcodec_decode_audio4(codec_context_.get(), decoded_frame.get(), &got_frame, &pkt), "[audio_decoder]");
 					
 		if(len == 0)
 		{
@@ -146,16 +146,16 @@ public:
 		if(!got_frame)
 			return nullptr;
 				
-		const uint8_t **in = const_cast<const uint8_t**>(frame->extended_data);			
+		const uint8_t **in = const_cast<const uint8_t**>(decoded_frame->extended_data);			
 		uint8_t* out[]	   = { reinterpret_cast<uint8_t*>(buffer_.data()) };
 		
 		const auto channel_samples = swr_convert(swr_.get(), 
 												 out, static_cast<int>(buffer_.size()) / codec_context_->channels, 
-												 in, frame->nb_samples);
+												 in, decoded_frame->nb_samples);
 		
 		++file_frame_number_;
 
-		return std::make_shared<core::audio_buffer>(buffer_.begin(), buffer_.begin() + channel_samples * frame->channels);
+		return std::make_shared<core::audio_buffer>(buffer_.begin(), buffer_.begin() + channel_samples * decoded_frame->channels);
 	}
 
 	bool ready() const
