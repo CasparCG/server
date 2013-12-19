@@ -136,6 +136,8 @@ struct ogl_consumer : boost::noncopyable
 	size_t					square_height_;				
 	
 	sf::Window				window_;
+
+	std::int64_t			pts_;
 	
 	safe_ptr<diagnostics::graph>	graph_;
 	boost::timer					perf_timer_;
@@ -161,6 +163,7 @@ public:
 		, screen_height_(format_desc.height)
 		, square_width_(format_desc.square_width)
 		, square_height_(format_desc.square_height)
+		, pts_(0)
 		, filter_([&]() -> ffmpeg::filter
 		{			
 			const auto sample_aspect_ratio = 
@@ -179,7 +182,7 @@ public:
 				sample_aspect_ratio,
 				AV_PIX_FMT_BGRA,
 				boost::assign::list_of(AV_PIX_FMT_BGRA),
-				format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? "" : "YADIF=1:-1");
+				format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? "" : "format=pix_fmts=gbrp,YADIF=1:-1");
 		}())
 	{		
 		if(format_desc_.format == core::video_format::ntsc && config_.aspect == configuration::aspect_4_3)
@@ -320,9 +323,43 @@ public:
 					safe_ptr<core::read_frame> frame;
 
 					frame_buffer_.pop(frame);
-
-					render_and_draw_frame(frame);
 					
+					if(static_cast<size_t>(frame->image_data().size()) != format_desc_.size)
+						continue;
+					
+					{
+						auto av_frame = safe_ptr<AVFrame>(av_frame_alloc(), [frame](AVFrame* frame)
+						{
+							av_frame_free(&frame);
+						});
+						
+						av_frame->linesize[0]		= format_desc_.width*4;			
+						av_frame->format			= PIX_FMT_BGRA;
+						av_frame->width				= format_desc_.width;
+						av_frame->height			= format_desc_.height;
+						av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
+						av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
+						av_frame->data[0]			= const_cast<uint8_t*>(frame->image_data().begin());
+						av_frame->pts				= pts_++;
+						filter_.push(av_frame);
+					}
+
+					while(true)
+					{
+						perf_timer_.restart();
+						auto av_frame = filter_.poll();
+
+						if (!av_frame)
+							break;
+						
+						render(make_safe_ptr(av_frame), frame->image_data().size());
+						graph_->set_value("frame-time", perf_timer_.elapsed() * format_desc_.fps * 0.5);
+
+						wait_for_vblank_and_display(); // progressive fram
+					}
+						
+					current_presentation_age_ = frame->get_age_millis();
+										
 					graph_->set_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);	
 					tick_timer_.restart();
 				}
@@ -358,81 +395,9 @@ public:
 		// Make sure that the next tick measures the duration from this point in time.
 		wait_timer_.tick(0.0);
 	}
-	
-	safe_ptr<AVFrame> get_av_frame()
-	{		
-		safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
-		avcodec_get_frame_defaults(av_frame.get());
-						
-		av_frame->linesize[0]		= format_desc_.width*4;			
-		av_frame->format			= PIX_FMT_BGRA;
-		av_frame->width				= format_desc_.width;
-		av_frame->height			= format_desc_.height;
-		av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
-		av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
-
-		return av_frame;
-	}
-
-	void render_and_draw_frame(const safe_ptr<core::read_frame>& frame)
-	{
-		if(static_cast<size_t>(frame->image_data().size()) != format_desc_.size)
-			return;
-					
-		perf_timer_.restart();
-		auto av_frame = get_av_frame();
-		av_frame->data[0] = const_cast<uint8_t*>(frame->image_data().begin());
-
-		filter_.push(av_frame);
-		auto frames = filter_.poll_all();
-
-		if (frames.empty())
-			return;
-
-		if (frames.size() == 1)
-		{
-			render(frames[0], frame->image_data().size());
-			graph_->set_value("frame-time", perf_timer_.elapsed() * format_desc_.fps * 0.5);
-
-			wait_for_vblank_and_display(); // progressive frame
-		}
-		else if (frames.size() == 2)
-		{
-			render(frames[0], frame->image_data().size());
-			double perf_elapsed = perf_timer_.elapsed();
-
-			wait_for_vblank_and_display(); // field1
-
-			perf_timer_.restart();
-			render(frames[1], frame->image_data().size());
-			perf_elapsed += perf_timer_.elapsed();
-			graph_->set_value("frame-time", perf_elapsed * format_desc_.fps * 0.5);
-
-			wait_for_vblank_and_display(); // field2
-		}
-
-		current_presentation_age_ = frame->get_age_millis();
-	}
 
 	void render(safe_ptr<AVFrame> av_frame, int image_data_size)
 	{
-		if(av_frame->linesize[0] != static_cast<int>(format_desc_.width*4))
-		{
-			const uint8_t *src_data[4] = {0};
-			memcpy(const_cast<uint8_t**>(&src_data[0]), av_frame->data, 4);
-			const int src_linesizes[4] = {0};
-			memcpy(const_cast<int*>(&src_linesizes[0]), av_frame->linesize, 4);
-
-			auto av_frame2 = get_av_frame();
-			av_image_alloc(av_frame2->data, av_frame2->linesize, av_frame2->width, av_frame2->height, PIX_FMT_BGRA, 16);
-			av_frame = safe_ptr<AVFrame>(av_frame2.get(), [=](AVFrame*)
-			{
-				av_freep(&av_frame2->data[0]);
-			});
-
-			av_image_copy(av_frame2->data, av_frame2->linesize, src_data, src_linesizes, PIX_FMT_BGRA, av_frame2->width, av_frame2->height);
-		}
-
 		glBindTexture(GL_TEXTURE_2D, texture_);
 
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[0]);
@@ -441,13 +406,24 @@ public:
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[1]);
 		glBufferData(GL_PIXEL_UNPACK_BUFFER, format_desc_.size, 0, GL_STREAM_DRAW);
 
+
 		auto ptr = glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
 		if(ptr)
 		{
 			if(config_.key_only)
-				fast_memshfl(reinterpret_cast<char*>(ptr), av_frame->data[0], image_data_size, 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+			{				
+				tbb::parallel_for(0, av_frame->height, 1, [&](int y)
+				{
+					fast_memshfl(reinterpret_cast<char*>(ptr) + y * format_desc_.width * 4, av_frame->data[0] + y * av_frame->linesize[0], format_desc_.width * 4, 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+				});
+			}
 			else
-				fast_memcpy(reinterpret_cast<char*>(ptr), av_frame->data[0], image_data_size);
+			{
+				tbb::parallel_for(0, av_frame->height, 1, [&](int y)
+				{
+					fast_memcpy(reinterpret_cast<char*>(ptr) + y * format_desc_.width * 4, av_frame->data[0] + y * av_frame->linesize[0], format_desc_.width * 4);
+				});
+			}
 
 			glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
 		}
