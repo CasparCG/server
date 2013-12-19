@@ -33,7 +33,6 @@
 #include <boost/assign.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
-#include <boost/thread.hpp>
 #include <boost/format.hpp>
 #include <boost/rational.hpp>
 
@@ -104,7 +103,7 @@ struct filter::implementation
 				avfilter_graph_free(&p);
 			});
 		
-		video_graph_->nb_threads  = boost::thread::hardware_concurrency();
+		video_graph_->nb_threads  = 0;
 		video_graph_->thread_type = AVFILTER_THREAD_SLICE;
 
 		const auto vsrc_options = (boost::format("video_size=%1%x%2%:pix_fmt=%3%:time_base=%4%/%5%:pixel_aspect=%6%/%7%:frame_rate=%8%/%9%")
@@ -149,15 +148,15 @@ struct filter::implementation
 			filtergraph_,
 			*filt_vsrc,
 			*filt_vsink);
-
+		
 		video_graph_in_  = filt_vsrc;
 		video_graph_out_ = filt_vsink;
 		
-		//CASPAR_LOG(info)
-		//	<< 	widen(std::string("\n") 
-		//		+ avfilter_graph_dump(
-		//				video_graph_.get(), 
-		//				nullptr));
+		CASPAR_LOG(info)
+			<< 	widen(std::string("\n") 
+				+ avfilter_graph_dump(
+						video_graph_.get(), 
+						nullptr));
 	}
 	
 	void configure_filtergraph(
