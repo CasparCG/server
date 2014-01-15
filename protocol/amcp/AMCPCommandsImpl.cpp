@@ -56,9 +56,9 @@
 #include <modules/decklink/decklink.h>
 #include <modules/ffmpeg/ffmpeg.h>
 #include <modules/flash/flash.h>
+#include <modules/html/producer/html_producer.h>
 #include <modules/flash/util/swf.h>
 #include <modules/flash/producer/flash_producer.h>
-#include <modules/flash/producer/cg_producer.h>
 #include <modules/ffmpeg/producer/util/util.h>
 #include <modules/image/image.h>
 #include <modules/ogl/ogl.h>
@@ -83,6 +83,7 @@
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/insert_linebreaks.hpp>
 #include <boost/archive/iterators/transform_width.hpp>
+#include <boost/format.hpp>
 
 #include <tbb/concurrent_unordered_map.h>
 
@@ -270,7 +271,7 @@ std::wstring ListTemplates()
 
 	for (boost::filesystem::wrecursive_directory_iterator itr(env::template_folder()), end; itr != end; ++itr)
 	{		
-		if(boost::filesystem::is_regular_file(itr->path()) && (itr->path().extension() == L".ft" || itr->path().extension() == L".ct"))
+		if(boost::filesystem::is_regular_file(itr->path()) && (itr->path().extension() == L".ft" || itr->path().extension() == L".ct" || itr->path().extension() == L".html"))
 		{
 			auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(env::template_folder().size()-1, itr->path().file_string().size()));
 
@@ -1346,27 +1347,57 @@ bool CGCommand::DoExecuteAdd() {
 			pDataString = dataFromFile.c_str();
 		}
 	}
-
+	
 	std::wstring fullFilename = flash::find_template(env::template_folder() + _parameters[2]);
+	std::wstring extension = boost::filesystem::wpath(fullFilename).extension();
+	std::wstring filename = _parameters[2];
+	filename.append(extension);
+
 	if(!fullFilename.empty())
 	{
-		std::wstring extension = boost::filesystem::wpath(fullFilename).extension();
-		std::wstring filename = _parameters[2];
-		filename.append(extension);
+				
+		auto producer = GetChannel()->stage()->foreground(GetLayerIndex(9999)).get();
 
-		flash::with_default_cg_producer(
-				[&](safe_ptr<flash::cg_producer> producer)
-				{
-					producer->add(layer, filename, bDoStart, label, (pDataString!=0) ? pDataString : TEXT(""));
-				},
-				safe_ptr<core::video_channel>(GetChannel()), false, GetLayerIndex(flash::cg_producer::DEFAULT_LAYER));
+		if(producer->print().find(L"flash") == std::string::npos)
+		{ 
+			producer = flash::create_producer(GetChannel()->mixer(), boost::assign::list_of<std::wstring>());	
+		}
+			
+		GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"ADD %1% %2% %3% %4% %5%") % layer % filename % bDoStart % label % (std::wstring() + L"\"" + (pDataString ? pDataString : L"") + L"\"")).str()).wait();
+		
 		SetReplyString(TEXT("202 CG OK\r\n"));
+
+		return true;
 	}
 	else
-	{
-		CASPAR_LOG(warning) << "Could not find template " << _parameters[2];
-		SetReplyString(TEXT("404 CG ERROR\r\n"));
+	{			
+		std::vector<std::wstring> parameters = boost::assign::list_of<std::wstring>(filename);
+		auto producer = html::create_producer(GetChannel()->mixer(), core::parameters(parameters));	
+				
+		if (producer != core::frame_producer::empty())
+		{
+			if (pDataString)
+			{
+				producer->call((boost::wformat(L"UPDATE %1% \"%2%\"") % layer % pDataString).str()).wait();
+			}
+
+			if (bDoStart)
+			{
+				producer->call((boost::wformat(L"PLAY %1%") % layer).str()).wait();
+			}
+			
+			GetChannel()->stage()->load(GetLayerIndex(9999), producer);
+			GetChannel()->stage()->play(GetLayerIndex(9999));
+
+			SetReplyString(TEXT("202 CG OK\r\n"));
+
+			return true;
+		};
 	}
+
+	CASPAR_LOG(warning) << "Could not find template " << _parameters[2];
+	SetReplyString(TEXT("404 CG ERROR\r\n"));
+	
 	return true;
 }
 
@@ -1380,7 +1411,8 @@ bool CGCommand::DoExecutePlay()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), true, GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->play(layer);
+		
+		GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"PLAY %1%") % layer).str()).wait();
 	}
 	else
 	{
@@ -1402,7 +1434,8 @@ bool CGCommand::DoExecuteStop()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), true, GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->stop(layer, 0);
+		
+		GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"STOP %1%") % layer).str()).wait();
 	}
 	else 
 	{
@@ -1425,7 +1458,8 @@ bool CGCommand::DoExecuteNext()
 		}
 
 		int layer = _ttoi(_parameters[1].c_str());
-		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), true, GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->next(layer);
+
+		GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"NEXT %1%") % layer).str()).wait();
 	}
 	else 
 	{
@@ -1448,7 +1482,7 @@ bool CGCommand::DoExecuteRemove()
 		}
 
 		int layer = _ttoi(_parameters[1].c_str());
-		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), true, GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->remove(layer);
+		GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"REMOVE %1%") % layer).str()).wait();
 	}
 	else 
 	{
@@ -1462,7 +1496,7 @@ bool CGCommand::DoExecuteRemove()
 
 bool CGCommand::DoExecuteClear() 
 {
-	GetChannel()->stage()->clear(GetLayerIndex(flash::cg_producer::DEFAULT_LAYER));
+	GetChannel()->stage()->clear(GetLayerIndex(9999));
 	SetReplyString(TEXT("202 CG OK\r\n"));
 	return true;
 }
@@ -1489,7 +1523,8 @@ bool CGCommand::DoExecuteUpdate()
 		}		
 
 		int layer = _ttoi(_parameters.at(1).c_str());
-		flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), true, GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->update(layer, dataString);
+		
+		GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"UPDATE %1% \"%2%\"") % layer % dataString).str()).wait();
 	}
 	catch(...)
 	{
@@ -1514,7 +1549,8 @@ bool CGCommand::DoExecuteInvoke()
 			return false;
 		}
 		int layer = _ttoi(_parameters[1].c_str());
-		auto result = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), true, GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->invoke(layer, _parameters.at_original(2));
+
+		auto result = GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"INVOKE %1% \"%2%\"") % layer % _parameters.at_original(2)).str()).get();
 		replyString << result << TEXT("\r\n"); 
 	}
 	else 
@@ -1541,13 +1577,13 @@ bool CGCommand::DoExecuteInfo()
 		}
 
 		int layer = _ttoi(_parameters[1].c_str());
-		auto desc = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), false, GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->description(layer);
-		
+		auto desc = GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"INFO %1%") % layer).str()).get();
+				
 		replyString << desc << TEXT("\r\n"); 
 	}
 	else 
 	{
-		auto info = flash::get_default_cg_producer(safe_ptr<core::video_channel>(GetChannel()), false, GetLayerIndex(flash::cg_producer::DEFAULT_LAYER))->template_host_info();
+		auto info = GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"INFO")).str()).get();
 		replyString << info << TEXT("\r\n"); 
 	}	
 

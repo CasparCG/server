@@ -45,6 +45,7 @@
 #include <modules/decklink/decklink.h>
 #include <modules/ffmpeg/ffmpeg.h>
 #include <modules/flash/flash.h>
+#include <modules/html/html.h>
 #include <modules/oal/oal.h>
 #include <modules/ogl/ogl.h>
 #include <modules/newtek/newtek.h>
@@ -129,6 +130,9 @@ struct server::implementation : boost::noncopyable
 	{
 		running_ = true;
 		setup_audio(env::properties());
+		
+		html::init();
+		CASPAR_LOG(info) << L"Initialized html module.";
 
 		ffmpeg::init(media_info_repo_);
 		CASPAR_LOG(info) << L"Initialized ffmpeg module.";
@@ -179,6 +183,7 @@ struct server::implementation : boost::noncopyable
 		destroy_producers_synchronously();
 		channels_.clear();
 
+		html::uninit();
 		ffmpeg::uninit();
 	}
 
