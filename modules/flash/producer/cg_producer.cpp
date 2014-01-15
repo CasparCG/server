@@ -130,7 +130,7 @@ public:
 		
 		boost::wsmatch what;
 		if(boost::regex_match(str, what, add_exp))
-			return add(boost::lexical_cast<int>(what["LAYER"].str()), flash::find_template(env::template_folder() + what["FILENAME"].str()), boost::lexical_cast<bool>(what["PLAY_ON_LOAD"].str()), L"", what["DATA"].str()); 
+			return add(boost::lexical_cast<int>(what["LAYER"].str()), what["FILENAME"].str(), boost::lexical_cast<bool>(what["PLAY_ON_LOAD"].str()), L"", what["DATA"].str()); 
 		else if(boost::regex_match(str, what, remove_exp))
 			return remove(boost::lexical_cast<int>(what["LAYER"].str())); 
 		else if(boost::regex_match(str, what, stop_exp))

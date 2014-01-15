@@ -59,6 +59,7 @@
 #include <modules/html/producer/html_producer.h>
 #include <modules/flash/util/swf.h>
 #include <modules/flash/producer/flash_producer.h>
+#include <modules/flash/producer/cg_producer.h>
 #include <modules/ffmpeg/producer/util/util.h>
 #include <modules/image/image.h>
 #include <modules/ogl/ogl.h>
@@ -1351,19 +1352,28 @@ bool CGCommand::DoExecuteAdd() {
 	std::wstring fullFilename = flash::find_template(env::template_folder() + _parameters[2]);
 	std::wstring extension = boost::filesystem::wpath(fullFilename).extension();
 	std::wstring filename = _parameters[2];
-	filename.append(extension);
 
 	if(!fullFilename.empty())
 	{
-				
+		auto call = (boost::wformat(L"ADD %1% %2% %3% %4% %5%") % layer % filename % bDoStart % label % (std::wstring() + (pDataString ? pDataString : L""))).str();
 		auto producer = GetChannel()->stage()->foreground(GetLayerIndex(9999)).get();
 
 		if(producer->print().find(L"flash") == std::string::npos)
 		{ 
-			producer = flash::create_producer(GetChannel()->mixer(), boost::assign::list_of<std::wstring>());	
+			producer = flash::create_producer(GetChannel()->mixer(), boost::assign::list_of<std::wstring>());
+
+			if (producer != core::frame_producer::empty())
+			{
+				producer = make_safe<flash::cg_producer>(producer);
+				producer->call(call).wait();
+				GetChannel()->stage()->load(GetLayerIndex(9999), producer);
+				GetChannel()->stage()->play(GetLayerIndex(9999));
+			}
 		}
-			
-		GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"ADD %1% %2% %3% %4% %5%") % layer % filename % bDoStart % label % (std::wstring() + L"\"" + (pDataString ? pDataString : L"") + L"\"")).str()).wait();
+		else
+		{
+			GetChannel()->stage()->call(GetLayerIndex(9999), true, call).wait();
+		}
 		
 		SetReplyString(TEXT("202 CG OK\r\n"));
 
@@ -1371,6 +1381,7 @@ bool CGCommand::DoExecuteAdd() {
 	}
 	else
 	{			
+		filename.append(extension);
 		std::vector<std::wstring> parameters = boost::assign::list_of<std::wstring>(filename);
 		auto producer = html::create_producer(GetChannel()->mixer(), core::parameters(parameters));	
 				
