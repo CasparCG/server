@@ -60,10 +60,6 @@
 /modules/ogl/tmp
 /modules/ogl/ogl.vcxproj.user
 
-# /modules/silverlight/
-/modules/silverlight/bin
-/modules/silverlight/tmp
-
 # /protocol/
 /protocol/bin
 /protocol/tmp
