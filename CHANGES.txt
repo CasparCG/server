@@ -8,6 +8,12 @@ General
   o FFmpeg: Upgraded to master and adapted CasparCG to FFmpeg API changes
     (Robert Nagy)
 
+Producers
+---------
+
+  o New HTML producer has been created (Robert Nagy sponsored by Flemish Radio
+    and Television Broadcasting Organization, VRT)
+
 
 
 CasparCG 2.0.6 Stable (as compared to 2.0.4 Stable)
