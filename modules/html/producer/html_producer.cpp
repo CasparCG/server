@@ -74,8 +74,6 @@ class html_producer
 
 	std::unique_ptr<Berkelium::Window>	window_;
 
-	high_prec_timer						timer_;
-
 	executor							executor_;
 	
 public:
@@ -132,6 +130,8 @@ public:
 		
 	safe_ptr<core::basic_frame> receive(int) override
 	{				
+		executor_.begin_invoke([this]{ tick(); });
+
 		return last_frame();
 	}
 
@@ -240,7 +240,7 @@ public:
 						bitmap_in + ((y + copy_rects[i].top() - bitmap_rect.top()) * bitmap_rect.width() + copy_rects[i].left() - bitmap_rect.left()) * 4,
 						copy_rects[i].width() * 4);
 				});
-			});		
+			});
 		});
 	}
 
@@ -253,6 +253,15 @@ public:
 	}
 
 	// html_producer
+
+	void invoke_on_enter_frame()
+	{
+		html::invoke([this]
+		{
+			static const std::wstring javascript = L"onEnterFrame()";
+			window_->executeJavascript(Berkelium::WideString::point_to(javascript.data(), javascript.length()));
+		});
+	}
 		
 	safe_ptr<core::basic_frame> draw(
 		safe_ptr<core::write_frame> frame, 
@@ -264,6 +273,8 @@ public:
 				
 		const auto& height = pixel_desc.planes[0].height;
 		const auto& linesize = pixel_desc.planes[0].linesize;
+
+		invoke_on_enter_frame();
 
 		lock(frame_mutex_, [&]
 		{				
@@ -287,6 +298,9 @@ public:
 	{
 		if(invalidated_.fetch_and_store(false))
 		{
+			high_prec_timer timer;
+			timer.tick(0.0);
+
 			core::pixel_format_desc pixel_desc;
 			pixel_desc.pix_fmt = core::pixel_format::bgra;
 			pixel_desc.planes.push_back(
@@ -304,7 +318,7 @@ public:
 				draw(frame, format_desc.field_mode);
 				
 				executor_.yield();
-				timer_.tick(1.0 / (format_desc.fps * format_desc.field_count));
+				timer.tick(1.0 / (format_desc.fps * format_desc.field_count));
 		
 				draw(frame, static_cast<core::field_mode::type>(format_desc.field_mode ^ core::field_mode::progressive));
 			}
@@ -319,13 +333,7 @@ public:
 			{	
 				last_frame_ = frame;
 			});
-			
-			executor_.yield();
-
-			timer_.tick(1.0 / (format_desc.fps * format_desc.field_count));
 		}
-
-		executor_.begin_invoke([this]{ tick(); });
 	}
 };
 
