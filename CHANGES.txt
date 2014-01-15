@@ -1,5 +1,15 @@
 C H A N G E S
 
+CasparCG 2.0.7 Beta (as compared to 2.0.6 Stable)
+=================================================
+
+General
+-------
+  o FFmpeg: Upgraded to master and adapted CasparCG to FFmpeg API changes
+    (Robert Nagy)
+
+
+
 CasparCG 2.0.6 Stable (as compared to 2.0.4 Stable)
 ===================================================
 

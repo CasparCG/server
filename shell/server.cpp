@@ -48,7 +48,6 @@
 #include <modules/oal/oal.h>
 #include <modules/ogl/ogl.h>
 #include <modules/newtek/newtek.h>
-#include <modules/silverlight/silverlight.h>
 #include <modules/image/image.h>
 #include <modules/image/consumer/image_consumer.h>
 
