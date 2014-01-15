@@ -263,6 +263,10 @@ public:
 
 		if(!ax_->FlashCall(param, result))
 			CASPAR_LOG(warning) << print() << L" Flash call failed:" << param;//BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Flash function call failed.") << arg_name_info("param") << arg_value_info(narrow(param)));
+
+		if (boost::starts_with(result, L"<exception>"))
+			CASPAR_LOG(warning) << print() << L" Flash call failed:" << result;
+
  		graph_->set_tag("param");
 
 		return result;
