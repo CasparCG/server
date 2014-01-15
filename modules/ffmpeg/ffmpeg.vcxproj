@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Profile|Win32">
@@ -284,8 +284,8 @@
     </ClCompile>
     <ClCompile Include="producer\audio\audio_resampler.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="producer\ffmpeg_producer.cpp">
@@ -295,12 +295,6 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
     <ClCompile Include="producer\filter\filter.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
-    <ClCompile Include="producer\filter\parallel_yadif.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
@@ -358,7 +352,6 @@
     <ClInclude Include="producer\audio\audio_resampler.h" />
     <ClInclude Include="producer\ffmpeg_producer.h" />
     <ClInclude Include="producer\filter\filter.h" />
-    <ClInclude Include="producer\filter\parallel_yadif.h" />
     <ClInclude Include="producer\input\input.h" />
     <ClInclude Include="producer\muxer\display_mode.h" />
     <ClInclude Include="producer\muxer\frame_muxer.h" />

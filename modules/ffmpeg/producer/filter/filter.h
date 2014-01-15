@@ -23,6 +23,7 @@
 
 #include <common/memory/safe_ptr.h>
 
+#include <boost/rational.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
 
@@ -30,7 +31,7 @@
 #include <vector>
 
 struct AVFrame;
-enum PixelFormat;
+enum AVPixelFormat;
 
 namespace caspar { namespace ffmpeg {
 
@@ -42,7 +43,15 @@ static std::wstring append_filter(const std::wstring& filters, const std::wstrin
 class filter : boost::noncopyable
 {
 public:
-	filter(const std::wstring& filters = L"", const std::vector<PixelFormat>& pix_fmts = std::vector<PixelFormat>());
+	filter(
+		int in_width,
+		int in_height,
+		boost::rational<int> in_time_base,
+		boost::rational<int> in_frame_rate,
+		boost::rational<int> in_sample_aspect_ratio,
+		AVPixelFormat in_pix_fmt,
+		std::vector<AVPixelFormat> out_pix_fmts,
+		const std::string& filtergraph);
 	filter(filter&& other);
 	filter& operator=(filter&& other);
 

@@ -246,14 +246,12 @@ void init(const safe_ptr<core::media_info_repository>& media_info_repo)
 {
 	av_lockmgr_register(ffmpeg_lock_callback);
 	av_log_set_callback(log_for_thread);
-
-	avdevice_register_all();
+		
+    avcodec_register_all();	
+    avdevice_register_all();
     avfilter_register_all();
-	//fix_yadif_filter_format_query();
-	av_register_all();
+    av_register_all();
     avformat_network_init();
-	avcodec_init();
-    avcodec_register_all();
 	
 	core::register_consumer_factory([](const core::parameters& params){return ffmpeg::create_consumer(params);});
 	core::register_producer_factory(create_producer);

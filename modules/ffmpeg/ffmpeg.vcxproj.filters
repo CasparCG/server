@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="source">
@@ -46,12 +46,6 @@
     <ClCompile Include="producer\filter\filter.cpp">
       <Filter>source\producer\filter</Filter>
     </ClCompile>
-    <ClCompile Include="producer\filter\parallel_yadif.cpp">
-      <Filter>source\producer\filter</Filter>
-    </ClCompile>
-    <ClCompile Include="producer\audio\audio_resampler.cpp">
-      <Filter>source\producer\audio</Filter>
-    </ClCompile>
     <ClCompile Include="producer\util\util.cpp">
       <Filter>source\producer\util</Filter>
     </ClCompile>
@@ -69,6 +63,9 @@
     </ClCompile>
     <ClCompile Include="producer\ffmpeg_producer.cpp">
       <Filter>source\producer</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\audio\audio_resampler.cpp">
+      <Filter>source\producer\audio</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -97,12 +94,6 @@
     <ClInclude Include="producer\filter\filter.h">
       <Filter>source\producer\filter</Filter>
     </ClInclude>
-    <ClInclude Include="producer\filter\parallel_yadif.h">
-      <Filter>source\producer\filter</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\audio\audio_resampler.h">
-      <Filter>source\producer\audio</Filter>
-    </ClInclude>
     <ClInclude Include="producer\util\flv.h">
       <Filter>source\producer\util</Filter>
     </ClInclude>
@@ -120,6 +111,9 @@
     </ClInclude>
     <ClInclude Include="producer\tbb_avcodec.h">
       <Filter>source\producer</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\audio\audio_resampler.h">
+      <Filter>source\producer\audio</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
