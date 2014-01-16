@@ -1423,7 +1423,15 @@ bool CGCommand::DoExecutePlay()
 		}
 		int layer = _ttoi(_parameters[1].c_str());
 		
-		GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"PLAY %1%") % layer).str()).wait();
+		try
+		{
+			GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"PLAY %1%") % layer).str()).wait();
+		}
+		catch (const caspar::not_supported&)
+		{
+			SetReplyString(TEXT("404 CG ERROR\r\n"));
+			return true;
+		}
 	}
 	else
 	{
@@ -1446,7 +1454,15 @@ bool CGCommand::DoExecuteStop()
 		}
 		int layer = _ttoi(_parameters[1].c_str());
 		
-		GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"STOP %1%") % layer).str()).wait();
+		try
+		{
+			GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"STOP %1%") % layer).str()).wait();
+		}
+		catch (const caspar::not_supported&)
+		{
+			SetReplyString(TEXT("404 CG ERROR\r\n"));
+			return true;
+		}
 	}
 	else 
 	{
@@ -1470,7 +1486,15 @@ bool CGCommand::DoExecuteNext()
 
 		int layer = _ttoi(_parameters[1].c_str());
 
-		GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"NEXT %1%") % layer).str()).wait();
+		try
+		{
+			GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"NEXT %1%") % layer).str()).wait();
+		}
+		catch (const caspar::not_supported&)
+		{
+			SetReplyString(TEXT("404 CG ERROR\r\n"));
+			return true;
+		}
 	}
 	else 
 	{
@@ -1493,7 +1517,16 @@ bool CGCommand::DoExecuteRemove()
 		}
 
 		int layer = _ttoi(_parameters[1].c_str());
-		GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"REMOVE %1%") % layer).str()).wait();
+
+		try
+		{
+			GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"REMOVE %1%") % layer).str()).wait();
+		}
+		catch (const caspar::not_supported&)
+		{
+			SetReplyString(TEXT("404 CG ERROR\r\n"));
+			return true;
+		}
 	}
 	else 
 	{
@@ -1535,7 +1568,15 @@ bool CGCommand::DoExecuteUpdate()
 
 		int layer = _ttoi(_parameters.at(1).c_str());
 		
-		GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"UPDATE %1% \"%2%\"") % layer % dataString).str()).wait();
+		try
+		{
+			GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"UPDATE %1% \"%2%\"") % layer % dataString).str()).wait();
+		}
+		catch (const caspar::not_supported&)
+		{
+			SetReplyString(TEXT("404 CG ERROR\r\n"));
+			return true;
+		}
 	}
 	catch(...)
 	{
@@ -1559,10 +1600,19 @@ bool CGCommand::DoExecuteInvoke()
 			SetReplyString(TEXT("403 CG ERROR\r\n"));
 			return false;
 		}
+
 		int layer = _ttoi(_parameters[1].c_str());
 
-		auto result = GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"INVOKE %1% \"%2%\"") % layer % _parameters.at_original(2)).str()).get();
-		replyString << result << TEXT("\r\n"); 
+		try
+		{
+			auto result = GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"INVOKE %1% \"%2%\"") % layer % _parameters.at_original(2)).str()).get();
+			replyString << result << TEXT("\r\n"); 
+		}
+		catch (const caspar::not_supported&)
+		{
+			SetReplyString(TEXT("404 CG ERROR\r\n"));
+			return true;
+		}
 	}
 	else 
 	{
@@ -1588,14 +1638,31 @@ bool CGCommand::DoExecuteInfo()
 		}
 
 		int layer = _ttoi(_parameters[1].c_str());
-		auto desc = GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"INFO %1%") % layer).str()).get();
+
+		try
+		{
+			auto desc = GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"INFO %1%") % layer).str()).get();
 				
-		replyString << desc << TEXT("\r\n"); 
+			replyString << desc << TEXT("\r\n"); 
+		}
+		catch (const caspar::not_supported&)
+		{
+			SetReplyString(TEXT("404 CG ERROR\r\n"));
+			return true;
+		}
 	}
 	else 
 	{
-		auto info = GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"INFO")).str()).get();
-		replyString << info << TEXT("\r\n"); 
+		try
+		{
+			auto info = GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"INFO")).str()).get();
+			replyString << info << TEXT("\r\n"); 
+		}
+		catch (const caspar::not_supported&)
+		{
+			SetReplyString(TEXT("404 CG ERROR\r\n"));
+			return true;
+		}
 	}	
 
 	SetReplyString(replyString.str());
