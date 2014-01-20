@@ -8,7 +8,6 @@ General
   o FFmpeg: Upgraded to master and adapted CasparCG to FFmpeg API changes
     (Robert Nagy sponsored by SVT)
   o FFmpeg: Fixed problem with frame count calculation (Thomas Kaltz III)
-  o FFmpeg: Disable audio decoding if no audio is decoded (Thomas Kaltz III)
 
 Producers
 ---------
