@@ -119,8 +119,6 @@ struct ffmpeg_producer : public core::frame_producer
 
 	int64_t														frame_number_;
 	uint32_t													file_frame_number_;
-
-	uint32_t													audio_poll_tries_;
 		
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, FFMPEG_Resource resource_type, const std::wstring& filter, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const std::wstring& custom_channel_order, const ffmpeg_producer_params& vid_params)
@@ -137,7 +135,6 @@ public:
 		, thumbnail_mode_(thumbnail_mode)
 		, last_frame_(core::basic_frame::empty())
 		, frame_number_(0)
-		, audio_poll_tries_(0)
 	{
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
@@ -463,18 +460,8 @@ public:
 		[&]
 		{		
 			if(!muxer_->audio_ready() && audio_decoder_)
-			{
 				audio = audio_decoder_->poll();
-				if(audio == nullptr)
-					audio_poll_tries_++;
-			}
 		});
-		
-		if(audio_decoder_ && audio_poll_tries_ > 7)
-		{
-			CASPAR_LOG(warning) << print() << "Failed to get valid packets from audio stream. Removing audio decoder.";
-			audio_decoder_.reset(nullptr);
-		}
 		
 		muxer_->push(video, hints);
 		muxer_->push(audio);
