@@ -1,12 +1,13 @@
-CasparCG Server 2.0.6 Stable
-============================
+CasparCG Server 2.0.7 Beta
+==========================
 
 Thank you for your interest in CasparCG Server, a professional software used to
 play out and record professional graphics, audio and video to multiple outputs.
 It has been in 24/7 broadcast production since 2006.
 
-This release is considered tested and stable, and is intended for use in
-professional production.
+This release is NOT considered tested and stable, and it is NOT intended for use
+in professional production. Please use CasparCG Server 2.0.6 if you need 
+proven stability!
 
 More information is available at http://casparcg.com/
 
@@ -49,7 +50,7 @@ INSTALLATION
 
 1. Check that your system meets the requirements above.
 
-2. Unzip and place the "CasparCG Server 2.0.6" folder anywhere you like.
+2. Unzip and place the "CasparCG Server 2.0.7 Beta" folder anywhere you like.
 
 3. Install "Microsoft Visual C++ 2010 Redistributable Package" from
    http://www.microsoft.com/download/en/details.aspx?id=5555
