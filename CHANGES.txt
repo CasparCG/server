@@ -6,7 +6,8 @@ CasparCG 2.0.7 Beta (as compared to 2.0.6 Stable)
 General
 -------
   o FFmpeg: Upgraded to master and adapted CasparCG to FFmpeg API changes
-    (Robert Nagy)
+    (Robert Nagy sponsored by SVT)
+  o FFmpeg: Fixed problem with frame count calculation (Thomas Kaltz III)
 
 Producers
 ---------
