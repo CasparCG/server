@@ -1570,7 +1570,7 @@ bool CGCommand::DoExecuteUpdate()
 		
 		try
 		{
-			GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"UPDATE %1% \"%2%\"") % layer % dataString).str()).wait();
+			GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"UPDATE %1% %2%") % layer % dataString).str()).wait();
 		}
 		catch (const caspar::not_supported&)
 		{
