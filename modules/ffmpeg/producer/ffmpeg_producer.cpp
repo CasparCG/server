@@ -362,7 +362,7 @@ public:
 
 		uint32_t nb_frames = file_nb_frames();
 
-		nb_frames = std::min(length_, nb_frames);
+		nb_frames = std::min(length_, nb_frames - start_);
 		nb_frames = muxer_->calc_nb_frames(nb_frames);
 		
 		return nb_frames;
