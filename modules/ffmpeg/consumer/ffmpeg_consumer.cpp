@@ -84,12 +84,26 @@ struct output_format
 	AVCodecID		acodec;
 
 	output_format(const core::video_format_desc& format_desc, const std::string& filename, std::vector<option>& options)
-		: format(av_guess_format(nullptr, filename.c_str(), nullptr))
-		, width(format_desc.width)
+		: width(format_desc.width)
 		, height(format_desc.height)
 		, vcodec(CODEC_ID_NONE)
 		, acodec(CODEC_ID_NONE)
 	{
+		const char *output_filename = filename.c_str();
+
+		boost::range::for_each(options, [&](const option& o)
+		{
+			if (o.name == "f") // try the output format provided by the user
+			{
+				format = av_guess_format(o.value.c_str(), output_filename, nullptr);
+				if(format == nullptr)
+					BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("f"));
+			}
+		});
+
+		if (format == nullptr)
+			format = av_guess_format(nullptr, output_filename, nullptr);
+
 		if (format == nullptr)
 			BOOST_THROW_EXCEPTION(caspar_exception()
 				<< msg_info(filename + " not a supported file for recording"));
@@ -137,11 +151,7 @@ struct output_format
 		//}
 		if(name == "f")
 		{
-			format = av_guess_format(value.c_str(), nullptr, nullptr);
-
-			if(format == nullptr)
-				BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("f"));
-
+			// This option is already processed
 			return true;
 		}
 		else if(name == "vcodec")
@@ -224,7 +234,8 @@ public:
 		current_encoding_delay_ = 0;
 
 		// TODO: Ask stakeholders about case where file already exists.
-		boost::filesystem::remove(boost::filesystem::wpath(env::media_folder() + widen(filename))); // Delete the file if it exists
+		if (filename.find("://") != std::string::npos) // Try to delete only local files
+			boost::filesystem::remove(boost::filesystem::wpath(widen(filename))); // Delete the file if it exists
 
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
@@ -780,6 +791,7 @@ safe_ptr<core::frame_consumer> create_consumer(const core::parameters& params)
 	
 	auto filename	= (params2.size() > 1 ? params2[1] : L"");
 	bool separate_key = params2.remove_if_exists(L"SEPARATE_KEY");
+	bool changed_output = false;
 
 	std::vector<option> options;
 	
@@ -799,11 +811,27 @@ safe_ptr<core::frame_consumer> create_consumer(const core::parameters& params)
 			else if (value == "dvcpro")
 				value = "dvvideo";
 
-			options.push_back(option(name, value));
+			auto o = option(name, value);
+
+			if (name == "o") {
+				if (value.find("://") != std::string::npos) {
+					std::wstring temp_wstring(value.length(), L' ');
+					std::copy(value.begin(), value.end(), temp_wstring.begin());
+					filename = temp_wstring;
+					CASPAR_LOG(info) << L" Setting output to: " << filename;
+					changed_output = true;
+				}
+				continue;
+			}
+
+			options.push_back(o);
 		}
 	}
 		
-	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + filename, options, separate_key);
+	if (changed_output)
+		return make_safe<ffmpeg_consumer_proxy>(filename, options, separate_key);
+	else
+		return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + filename, options, separate_key);
 }
 
 safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree)
