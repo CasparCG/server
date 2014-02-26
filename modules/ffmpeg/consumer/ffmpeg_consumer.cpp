@@ -75,39 +75,6 @@ extern "C"
 
 namespace caspar { namespace ffmpeg {
 	
-int av_opt_set(void *obj, const char *name, const char *val, int search_flags)
-{
-	AVClass* av_class = *(AVClass**)obj;
-
-	if((strcmp(name, "pix_fmt") == 0 || strcmp(name, "pixel_format") == 0) && strcmp(av_class->class_name, "AVCodecContext") == 0)
-	{
-		AVCodecContext* c = (AVCodecContext*)obj;		
-		auto pix_fmt = av_get_pix_fmt(val);
-		if(pix_fmt == PIX_FMT_NONE)
-			return -1;		
-		c->pix_fmt = pix_fmt;
-		return 0;
-	}
-	if((strcmp(name, "r") == 0 || strcmp(name, "frame_rate") == 0) && strcmp(av_class->class_name, "AVCodecContext") == 0)
-	{
-		AVCodecContext* c = (AVCodecContext*)obj;	
-
-		if(c->codec_type != AVMEDIA_TYPE_VIDEO)
-			return -1;
-
-		AVRational rate;
-		int ret = av_parse_video_rate(&rate, val);
-		if(ret < 0)
-			return ret;
-
-		c->time_base.num = rate.den;
-		c->time_base.den = rate.num;
-		return 0;
-	}
-
-	return ::av_opt_set(obj, name, val, search_flags);
-}
-
 struct output_format
 {
 	AVOutputFormat* format;
@@ -281,7 +248,7 @@ public:
 		video_st_ = add_video_stream(options2);
 
 		if (!key_only)
-			audio_st_ = add_audio_stream(options);
+			audio_st_ = add_audio_stream(options2);
 				
 		av_dump_format(oc_.get(), 0, filename_.c_str(), 1);
 		 
@@ -291,10 +258,10 @@ public:
 				
 		THROW_ON_ERROR2(avformat_write_header(oc_.get(), nullptr), "[ffmpeg_consumer]");
 
-		if(options.size() > 0)
+		if(options2.size() > 0)
 		{
-			BOOST_FOREACH(auto& option, options)
-				CASPAR_LOG(warning) << L"Invalid option: -" << widen(option.name) << L" " << widen(option.value);
+			BOOST_FOREACH(auto& option, options2)
+				CASPAR_LOG(warning) << L"Unknown or invalid option: -" << widen(option.name) << L" " << widen(option.value);
 		}
 
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
@@ -320,6 +287,60 @@ public:
 	std::wstring print() const
 	{
 		return L"ffmpeg[" + widen(filename_) + L"]";
+	}
+
+	bool set_video_opt(AVCodecContext *c, const std::string& name, const std::string& value)
+	{
+		if (name == "g") {
+			c->gop_size = strtoul(value.c_str(), NULL, 10);
+			return true;
+		}
+		if (name == "vb" || name == "b:v") {
+			const char *v = value.c_str();
+			int multiplier = v[strlen(v) - 1] == 'k' ? 1000 : 0;
+			c->bit_rate = strtoul(value.c_str(), NULL, 10) * multiplier;
+			return true;
+		}
+		if (name == "aspect") {
+			int ar_num, ar_den;
+			sscanf( value.c_str(), "%d:%d", &ar_num, &ar_den );
+			if ((ar_num == 16 && ar_den == 9) || (ar_num == 4 && ar_den == 3))
+			{
+				c->sample_aspect_ratio.num = ar_num;
+				c->sample_aspect_ratio.den = ar_den;
+				return true;
+			}
+		}
+		if (name == "pix_fmt" || name == "pixel_format")
+		{
+			auto pix_fmt = av_get_pix_fmt(value.c_str());
+			if (pix_fmt == PIX_FMT_NONE)
+				return false;
+			c->pix_fmt = pix_fmt;
+			return true;
+		}
+		if (name == "r" || name == "frame_rate")
+		{
+			AVRational rate;
+			int ret = av_parse_video_rate(&rate, value.c_str());
+			if (ret < 0)
+				return false;
+			c->time_base.num = rate.den;
+			c->time_base.den = rate.num;
+			return true;
+		}
+		return false;
+	}
+
+	bool audio_opt(AVCodecContext *c, const std::string& name, const std::string& value)
+	{
+		if (name == "ab" || name == "b:a") {
+			const char *v = value.c_str();
+			int multiplier = v[strlen(v) - 1] == 'k' ? 1000 : 0;
+			c->bit_rate = strtoul(value.c_str(), NULL, 10) * multiplier;
+			return true;
+		}
+		return false;
 	}
 
 	std::shared_ptr<AVStream> add_video_stream(std::vector<option>& options)
@@ -398,8 +419,9 @@ public:
 				
 		boost::range::remove_erase_if(options, [&](const option& o)
 		{
-			return ffmpeg::av_opt_set(c, o.name.c_str(), o.value.c_str(), AV_OPT_SEARCH_CHILDREN) > -1 ||
-				   ffmpeg::av_opt_set(c->priv_data, o.name.c_str(), o.value.c_str(), AV_OPT_SEARCH_CHILDREN) > -1;
+			return set_video_opt(c, o.name, o.value) ||
+			       av_opt_set(c, o.name.c_str(), o.value.c_str(), AV_OPT_SEARCH_CHILDREN) > -1 ||
+			       av_opt_set(c->priv_data, o.name.c_str(), o.value.c_str(), AV_OPT_SEARCH_CHILDREN) > -1;
 		});
 				
 		if(output_format_.format->flags & AVFMT_GLOBALHEADER)
@@ -451,7 +473,9 @@ public:
 				
 		boost::range::remove_erase_if(options, [&](const option& o)
 		{
-			return ffmpeg::av_opt_set(c, o.name.c_str(), o.value.c_str(), AV_OPT_SEARCH_CHILDREN) > -1;
+			return audio_opt(c, o.name, o.value) ||
+			       av_opt_set(c, o.name.c_str(), o.value.c_str(), AV_OPT_SEARCH_CHILDREN) > -1 ||
+			       av_opt_set(c->priv_data, o.name.c_str(), o.value.c_str(), AV_OPT_SEARCH_CHILDREN) > -1;
 		});
 
 		THROW_ON_ERROR2(avcodec_open2(c, encoder, nullptr), "[ffmpeg_consumer]");
