@@ -787,11 +787,30 @@ safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptre
 	auto filename		= ptree.get<std::wstring>(L"path");
 	auto codec			= ptree.get(L"vcodec", L"libx264");
 	auto separate_key	= ptree.get(L"separate-key", false);
+	auto extra_params	= ptree.get(L"extra-params", L"");
 
-	std::vector<option> options;
-	options.push_back(option("vcodec", narrow(codec)));
-	
-	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + filename, options, separate_key);
+	core::parameters params;
+	params.push_back(L"FILE");
+	params.push_back(filename);
+
+	if (separate_key)
+		params.push_back(L"SEPARATE_KEY");
+
+	if (extra_params.find(L"-vcodec") == std::string::npos)
+	{
+		params.push_back(L"-vcodec");
+		params.push_back(codec);
+	}
+
+	std::vector<std::wstring> parts;
+	boost::algorithm::split(parts, extra_params, boost::algorithm::is_any_of(L" "));
+	BOOST_FOREACH( std::wstring &s, parts )
+	{
+		if (s.length())
+			params.push_back(s);
+	}
+
+	return caspar::ffmpeg::create_consumer(params);
 }
 
 }}
