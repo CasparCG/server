@@ -204,6 +204,7 @@ void layer::swap(layer& other)
 void layer::load(const safe_ptr<frame_producer>& frame_producer, bool preview, int auto_play_delta){return impl_->load(frame_producer, preview, auto_play_delta);}	
 void layer::play(){impl_->play();}
 void layer::pause(){impl_->pause();}
+void layer::resume(){impl_->resume();}
 void layer::stop(){impl_->stop();}
 bool layer::is_paused() const{return impl_->is_paused_;}
 int64_t layer::frame_number() const{return impl_->frame_number_;}

@@ -167,7 +167,7 @@
     </PreBuildEvent>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>../</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>E:\Software\WinDDK\inc\mfc42;E:\Software\WinDDK\inc\atl71;../</AdditionalIncludeDirectories>
       <MinimalRebuild>false</MinimalRebuild>
       <ExceptionHandling>Async</ExceptionHandling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -189,7 +189,7 @@
       <AdditionalDependencies>sfml-system-s-d.lib;sfml-audio-s-d.lib;sfml-window-s-d.lib;sfml-graphics-s-d.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avdevice.lib;avutil.lib;avfilter.lib;swscale.lib;swresample.lib;tbb.lib;glew32.lib;zdll.lib;berkelium.lib</AdditionalDependencies>
       <Version>
       </Version>
-      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>E:\Software\WinDDK\lib\ATL\i386;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>LIBC.lib;libcmt.lib</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
@@ -216,6 +216,9 @@ copy "$(SolutionDir)dependencies\SFML-1.6\extlibs\bin\*.dll" "$(OutDir)"
 copy "$(ProjectDir)casparcg.config" "$(OutDir)"
 copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
     </PostBuildEvent>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>E:\Software\WinDDK\inc\mfc42;E:\Software\WinDDK\inc\atl71;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <PreBuildEvent>

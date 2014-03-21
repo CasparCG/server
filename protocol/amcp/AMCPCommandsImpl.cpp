@@ -1158,6 +1158,22 @@ bool PauseCommand::DoExecute()
 	return false;
 }
 
+bool ResumeCommand::DoExecute()
+{
+	try
+	{
+		GetChannel()->stage()->resume(GetLayerIndex());
+		SetReplyString(TEXT("202 RESUME OK\r\n"));
+		return true;
+	}
+	catch(...)
+	{
+		SetReplyString(TEXT("501 RESUME FAILED\r\n"));
+	}
+
+	return false;
+}
+
 bool PlayCommand::DoExecute()
 {
 	try
