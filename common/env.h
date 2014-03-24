@@ -35,6 +35,7 @@ const std::wstring& template_folder();
 const std::wstring& data_folder();
 const std::wstring& thumbnails_folder();
 const std::wstring& version();
+const std::wstring& macros_folder();
 
 const boost::property_tree::wptree& properties();
 

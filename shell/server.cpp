@@ -64,6 +64,7 @@
 #include <protocol/util/AsyncEventServer.h>
 #include <protocol/util/stateful_protocol_strategy_wrapper.h>
 #include <protocol/osc/client.h>
+#include <protocol/pbus/server.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
@@ -118,6 +119,7 @@ struct server::implementation : boost::noncopyable
 	boost::thread								initial_media_info_thread_;
 	tbb::atomic<bool>							running_;
 	std::shared_ptr<thumbnail_generator>		thumbnail_generator_;
+	std::vector<pbus::server>					pbus_servers_;
 
 	implementation(const std::function<void (bool)>& shutdown_server_now)
 		: io_service_(create_running_io_service())
@@ -303,8 +305,70 @@ struct server::implementation : boost::noncopyable
 					if (!primary_amcp_server_ && boost::iequals(protocol, L"AMCP"))
 						primary_amcp_server_ = asyncbootstrapper;
 				}
+				else if (name == L"serial")
+				{
+					const auto port_str = xml_controller.second.get<std::wstring>(L"port", L"COM1");
+
+					const auto baud_rate = xml_controller.second.get(L"baudrate", 38400);
+					const auto flow_control_str = xml_controller.second.get<std::wstring>(L"flowcontrol", L"none");
+					const auto parity_str = xml_controller.second.get<std::wstring>(L"parity", L"even");
+					const auto stop_bits_str = xml_controller.second.get<std::wstring>(L"stopbits", L"one");
+					const auto character_size = xml_controller.second.get(L"databits", 8);
+					const auto device_mask_str = xml_controller.second.get(L"devicemask", L"");
+
+					unsigned device_mask = 0xFFF;
+
+					if (!device_mask_str.empty())
+					{
+						device_mask = 0;
+						std::vector<std::wstring> device_strs;
+						boost::algorithm::split(device_strs, device_mask_str, boost::is_any_of(","));
+						BOOST_FOREACH(auto device_str, device_strs)
+							device_mask |= 1 << boost::lexical_cast<int>(device_str);
+					}
+
+					const auto amcp_ptr = std::make_shared<caspar::protocol::amcp::AMCPProtocolStrategy>(channels_,
+						thumbnail_generator_,
+						media_info_repo_,
+						shutdown_server_now_);
+
+					const auto client_ptr = std::make_shared<caspar::IO::ConsoleClientInfo>();
+
+					pbus_servers_.push_back(pbus::server(narrow(port_str), device_mask, [=](const std::string& cmd)
+					{
+						auto wcmd = widen(cmd) + L"\r\n";
+						amcp_ptr->Parse(wcmd.c_str(), wcmd.length(), client_ptr);
+					}));
+
+					if (baud_rate > 0)
+						pbus_servers_.back().set_baud_rate(baud_rate);
+
+					if (flow_control_str == L"none")
+						pbus_servers_.back().set_flow_control(pbus::server::flow_control::none);
+					else if (flow_control_str == L"software")
+						pbus_servers_.back().set_flow_control(pbus::server::flow_control::software);
+					else if (flow_control_str == L"hardware")
+						pbus_servers_.back().set_flow_control(pbus::server::flow_control::hardware);
+
+					if (parity_str == L"none")
+						pbus_servers_.back().set_parity(pbus::server::parity::none);
+					else if (parity_str == L"even")
+						pbus_servers_.back().set_parity(pbus::server::parity::even);
+					else if (parity_str == L"odd")
+						pbus_servers_.back().set_parity(pbus::server::parity::odd);
+
+					if (stop_bits_str == L"one")
+						pbus_servers_.back().set_stop_bits(pbus::server::stop_bits::one);
+					else if (stop_bits_str == L"onepointfive")
+						pbus_servers_.back().set_stop_bits(pbus::server::stop_bits::onepointfive);
+					else if (stop_bits_str == L"two")
+						pbus_servers_.back().set_stop_bits(pbus::server::stop_bits::two);
+
+					if (character_size > 0)
+						pbus_servers_.back().set_character_size(character_size);
+				}
 				else
-					CASPAR_LOG(warning) << "Invalid controller: " << widen(name);	
+					CASPAR_LOG(warning) << "Invalid controller: " << widen(name);
 			}
 			catch(...)
 			{

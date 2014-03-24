@@ -22,6 +22,9 @@
     <Filter Include="source\osc\oscpack">
       <UniqueIdentifier>{6d9a82d4-6805-4de0-b400-6212fac06109}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\pbus">
+      <UniqueIdentifier>{6edec8aa-b08c-470c-bd67-b007e61b8370}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="amcp\AMCPCommand.h">
@@ -100,6 +103,9 @@
     <ClInclude Include="osc\client.h">
       <Filter>source\osc</Filter>
     </ClInclude>
+    <ClInclude Include="pbus\server.h">
+      <Filter>source\pbus</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="amcp\AMCPCommandQueue.cpp">
@@ -153,6 +159,9 @@
     </ClCompile>
     <ClCompile Include="osc\client.cpp">
       <Filter>source\osc</Filter>
+    </ClCompile>
+    <ClCompile Include="pbus\server.cpp">
+      <Filter>source\pbus</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

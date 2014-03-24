@@ -336,7 +336,7 @@ struct input::implementation : boost::noncopyable
 		if (!thumbnail_mode_)
 			CASPAR_LOG(debug) << print() << " Seeking: " << target;
 
-		int flags = AVSEEK_FLAG_FRAME;
+		int flags = 0;
 		if(target == 0)
 		{
 			// Fix VP6 seeking
@@ -351,16 +351,15 @@ struct input::implementation : boost::noncopyable
 		
 		auto stream = format_context_->streams[default_stream_index_];
 		
-		
-		auto fps = read_fps(*format_context_, 0.0);
+		auto fps = read_fps(*format_context_, 25.0);
 				
 		THROW_ON_ERROR2(avformat_seek_file(
 			format_context_.get(), 
 			default_stream_index_, 
 			std::numeric_limits<int64_t>::min(),
-			static_cast<int64_t>((target / fps * stream->time_base.den) / stream->time_base.num),
+			static_cast<int64_t>((target * stream->time_base.den) / (fps * stream->time_base.num)),
 			std::numeric_limits<int64_t>::max(), 
-			0), print());
+			flags), print());
 
 		auto flush_packet	= create_packet();
 		flush_packet->data	= nullptr;
@@ -377,7 +376,7 @@ struct input::implementation : boost::noncopyable
 		if(ret == AVERROR_EOF)
 			CASPAR_LOG(trace) << print() << " Received EOF. ";
 
-		return ret == AVERROR_EOF || ret == AVERROR(EIO) || frame_number_ >= length_; // av_read_frame doesn't always correctly return AVERROR_EOF;
+		return url_feof(format_context_->pb) || ret == AVERROR_EOF || ret == AVERROR(EIO) || frame_number_ >= length_; // av_read_frame doesn't always correctly return AVERROR_EOF;
 	}
 };
 
