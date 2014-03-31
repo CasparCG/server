@@ -33,6 +33,8 @@
 #include "../../mixer/write_frame.h"
 #include "../../mixer/read_frame.h"
 
+#include <boost/thread/once.hpp>
+
 #include <common/exception/exceptions.h>
 #include <common/memory/memcpy.h>
 #include <common/concurrency/future_util.h>
@@ -46,6 +48,7 @@ class channel_consumer : public frame_consumer
 	tbb::concurrent_bounded_queue<std::shared_ptr<read_frame>>	frame_buffer_;
 	core::video_format_desc										format_desc_;
 	int															channel_index_;
+	int															consumer_index_;
 	tbb::atomic<bool>											is_running_;
 	tbb::atomic<int64_t>										current_age_;
 
@@ -54,7 +57,21 @@ public:
 	{
 		is_running_ = true;
 		current_age_ = 0;
+		consumer_index_ = next_consumer_index();
 		frame_buffer_.set_capacity(3);
+	}
+
+	static int next_consumer_index()
+	{
+		static tbb::atomic<int> consumer_index_counter;
+		static boost::once_flag consumer_index_counter_initialized;
+
+		boost::call_once(consumer_index_counter_initialized, [&]()
+		{
+			consumer_index_counter = 0;
+		});
+
+		return ++consumer_index_counter;
 	}
 
 	~channel_consumer()
@@ -106,7 +123,7 @@ public:
 
 	virtual int index() const override
 	{
-		return 78500 + channel_index_;
+		return 78500 + consumer_index_;
 	}
 
 	// channel_consumer
