@@ -53,11 +53,11 @@ class channel_consumer : public frame_consumer
 	tbb::atomic<int64_t>										current_age_;
 
 public:
-	channel_consumer() 
+	channel_consumer()
+		: consumer_index_(next_consumer_index())
 	{
 		is_running_ = true;
 		current_age_ = 0;
-		consumer_index_ = next_consumer_index();
 		frame_buffer_.set_capacity(3);
 	}
 
