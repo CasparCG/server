@@ -306,6 +306,14 @@ public:
 		}, high_priority);
 	}
 
+	void resume(int index)
+	{		
+		executor_.begin_invoke([=]
+		{
+			get_layer(index).resume();
+		}, high_priority);
+	}
+
 	void play(int index)
 	{		
 		executor_.begin_invoke([=]
@@ -491,6 +499,7 @@ frame_transform stage::get_current_transform(int index) { return impl_->get_curr
 void stage::spawn_token(){impl_->spawn_token();}
 void stage::load(int index, const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta){impl_->load(index, producer, preview, auto_play_delta);}
 void stage::pause(int index){impl_->pause(index);}
+void stage::resume(int index){impl_->resume(index);}
 void stage::play(int index){impl_->play(index);}
 void stage::stop(int index){impl_->stop(index);}
 void stage::clear(int index){impl_->clear(index);}

@@ -50,6 +50,7 @@ public:
 	void load(const safe_ptr<frame_producer>& producer, bool preview, int auto_play_delta); // nothrow
 	void play(); // nothrow
 	void pause(); // nothrow
+	void resume(); // nothrow
 	void stop(); // nothrow
 	boost::unique_future<std::wstring> call(bool foreground, const std::wstring& param);
 

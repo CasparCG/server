@@ -130,6 +130,12 @@ class PauseCommand: public AMCPCommandBase<true, AddToQueue, 0>
 	bool DoExecute();
 };
 
+class ResumeCommand: public AMCPCommandBase<true, AddToQueue, 0>
+{
+	std::wstring print() const { return L"ResumeCommand";}
+	bool DoExecute();
+};
+
 class StopCommand : public AMCPCommandBase<true, AddToQueue, 0>
 {
 	std::wstring print() const { return L"StopCommand";}
