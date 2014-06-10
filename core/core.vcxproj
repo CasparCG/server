@@ -248,7 +248,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="consumer\write_frame_consumer.h" />
-    <ClInclude Include="consumer\synchronizing\synchronizing_consumer.h" />
     <ClInclude Include="mixer\audio\audio_util.h" />
     <ClInclude Include="mixer\gpu\fence.h" />
     <ClInclude Include="mixer\gpu\shader.h" />
@@ -295,12 +294,6 @@
     <ClInclude Include="StdAfx.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="consumer\synchronizing\synchronizing_consumer.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
     <ClCompile Include="mixer\audio\audio_util.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../../StdAfx.h</PrecompiledHeaderFile>

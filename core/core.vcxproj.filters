@@ -46,9 +46,6 @@
     <Filter Include="source\producer\layer">
       <UniqueIdentifier>{4e098e4c-7467-446f-990d-d4486d179edb}</UniqueIdentifier>
     </Filter>
-    <Filter Include="source\consumer\synchronizing">
-      <UniqueIdentifier>{19ddc31c-5865-46d5-a8a6-a96d6fa1ffc7}</UniqueIdentifier>
-    </Filter>
     <Filter Include="source\parameters">
       <UniqueIdentifier>{d04737a6-96b2-40cd-b1e7-e90b69006cd1}</UniqueIdentifier>
     </Filter>
@@ -163,9 +160,6 @@
     <ClInclude Include="monitor\monitor.h">
       <Filter>source\monitor</Filter>
     </ClInclude>
-    <ClInclude Include="consumer\synchronizing\synchronizing_consumer.h">
-      <Filter>source\consumer\synchronizing</Filter>
-    </ClInclude>
     <ClInclude Include="parameters\parameters.h">
       <Filter>source\parameters</Filter>
     </ClInclude>
@@ -270,9 +264,6 @@
     </ClCompile>
     <ClCompile Include="mixer\audio\audio_util.cpp">
       <Filter>source\mixer\audio</Filter>
-    </ClCompile>
-    <ClCompile Include="consumer\synchronizing\synchronizing_consumer.cpp">
-      <Filter>source\consumer\synchronizing</Filter>
     </ClCompile>
     <ClCompile Include="parameters\parameters.cpp">
       <Filter>source\parameters</Filter>
