@@ -300,6 +300,7 @@ struct configuration
 	{
 		internal_keyer,
 		external_keyer,
+		external_separate_device_keyer,
 		default_keyer
 	};
 
@@ -311,6 +312,7 @@ struct configuration
 	};
 
 	size_t					device_index;
+	size_t					key_device_idx;
 	bool					embedded_audio;
 	core::channel_layout	audio_layout;
 	keyer_t					keyer;
@@ -321,6 +323,7 @@ struct configuration
 	
 	configuration()
 		: device_index(1)
+		, key_device_idx(0)
 		, embedded_audio(false)
 		, audio_layout(core::default_channel_layout_repository().get_by_name(L"STEREO"))
 		, keyer(default_keyer)
@@ -334,6 +337,11 @@ struct configuration
 	size_t buffer_depth() const
 	{
 		return base_buffer_depth + (latency == low_latency ? 0 : 1) + (embedded_audio ? 1 : 0);
+	}
+
+	size_t key_device_index() const
+	{
+		return key_device_idx == 0 ? device_index + 1 : key_device_idx;
 	}
 
 	int num_out_channels() const
@@ -371,7 +379,8 @@ static void set_keyer(
 		configuration::keyer_t keyer,
 		const std::wstring& print)
 {
-	if (keyer == configuration::internal_keyer) 
+	if (keyer == configuration::internal_keyer
+			|| keyer == configuration::external_separate_device_keyer) 
 	{
 		BOOL value = true;
 		if (SUCCEEDED(attributes->GetFlag(BMDDeckLinkSupportsInternalKeying, &value)) && !value)
