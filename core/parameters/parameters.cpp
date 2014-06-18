@@ -94,19 +94,21 @@ std::wstring parameters::get(std::wstring const& key, std::wstring const& defaul
 	return *it;
 }
 
-std::wstring parameters::get_original_string() const
+std::wstring parameters::get_original_string(int num_skip) const
 {
+	int left_to_skip = num_skip;
 	std::wstring str;
 	BOOST_FOREACH(auto& param, params_original_)
 	{
-		str += param + L" ";
+		if (left_to_skip-- <= 0)
+			str += param + L" ";
 	}
 	return str;
 }
 
 const std::wstring& parameters::at_original(size_t i) const
 {
-	return params_original_[i];
+	return params_original_.at(i);
 }
 
 void parameters::set(size_t index, std::wstring const& value)
