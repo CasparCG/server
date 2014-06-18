@@ -36,13 +36,14 @@ namespace caspar { namespace core {
 class read_frame;
 class parameters;
 struct video_format_desc;
+struct channel_layout;
 
 struct frame_consumer : boost::noncopyable
 {
 	virtual ~frame_consumer() {}
 	
 	virtual boost::unique_future<bool> send(const safe_ptr<read_frame>& frame) = 0;
-	virtual void initialize(const video_format_desc& format_desc, int channel_index) = 0;
+	virtual void initialize(const video_format_desc& format_desc, const channel_layout& audio_channel_layout, int channel_index) = 0;
 	virtual int64_t presentation_frame_age_millis() const = 0;
 	virtual std::wstring print() const = 0;
 	virtual boost::property_tree::wptree info() const = 0;

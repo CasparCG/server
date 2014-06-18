@@ -69,6 +69,9 @@ public:
 		if(boost::to_upper_copy(filters).find(L"YADIF=3") != std::string::npos)
 			return true;
 
+		if(boost::to_upper_copy(filters).find(L"SEPARATEFIELDS") != std::string::npos)
+			return true;
+
 		return false;
 	}
 

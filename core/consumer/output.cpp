@@ -53,6 +53,7 @@ struct output::implementation
 	boost::timer									consume_timer_;
 
 	video_format_desc								format_desc_;
+	channel_layout									audio_channel_layout_;
 
 	std::map<int, safe_ptr<frame_consumer>>			consumers_;
 	
@@ -64,11 +65,16 @@ struct output::implementation
 	executor										executor_;
 		
 public:
-	implementation(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index) 
+	implementation(
+			const safe_ptr<diagnostics::graph>& graph,
+			const video_format_desc& format_desc,
+			const channel_layout& audio_channel_layout,
+			int channel_index) 
 		: channel_index_(channel_index)
 		, graph_(graph)
 		, monitor_subject_("/output")
 		, format_desc_(format_desc)
+		, audio_channel_layout_(audio_channel_layout)
 		, executor_(L"output")
 	{
 		graph_->set_color("consume-time", diagnostics::color(1.0f, 0.4f, 0.0f, 0.8));
@@ -79,7 +85,7 @@ public:
 		remove(index);
 
 		consumer = create_consumer_cadence_guard(consumer);
-		consumer->initialize(format_desc_, channel_index_);
+		consumer->initialize(format_desc_, audio_channel_layout_, channel_index_);
 
 		executor_.invoke([&]
 		{
@@ -131,7 +137,7 @@ public:
 			{						
 				try
 				{
-					it->second->initialize(format_desc, channel_index_);
+					it->second->initialize(format_desc, audio_channel_layout_, channel_index_);
 					++it;
 				}
 				catch(...)
@@ -260,7 +266,7 @@ public:
 						CASPAR_LOG_CURRENT_EXCEPTION();
 						try
 						{
-							consumer->initialize(format_desc_, channel_index_);
+							consumer->initialize(format_desc_, audio_channel_layout_, channel_index_);
 							if(!consumer->send(frame).get())
 							{
 								CASPAR_LOG(info) << print() << L" " << consumer->print() << L" Removed.";
@@ -345,7 +351,7 @@ public:
 	}
 };
 
-output::output(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, int channel_index) : impl_(new implementation(graph, format_desc, channel_index)){}
+output::output(const safe_ptr<diagnostics::graph>& graph, const video_format_desc& format_desc, const channel_layout& audio_channel_layout, int channel_index) : impl_(new implementation(graph, format_desc, audio_channel_layout, channel_index)){}
 void output::add(int index, const safe_ptr<frame_consumer>& consumer){impl_->add(index, consumer);}
 void output::add(const safe_ptr<frame_consumer>& consumer){impl_->add(consumer);}
 void output::remove(int index){impl_->remove(index);}

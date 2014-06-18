@@ -553,6 +553,44 @@ bool rearrange_or_rearrange_and_mix(
 	}
 }
 
+template<typename SrcView>
+std::vector<int32_t, tbb::cache_aligned_allocator<int32_t>> get_rearranged_and_mixed(
+		const SrcView& view,
+		const channel_layout& destination_layout,
+		int num_out_channels)
+{
+	const int sample_frame_count = view.num_samples();
+
+	if (needs_rearranging(view, destination_layout, num_out_channels))
+	{
+		std::vector<int32_t, tbb::cache_aligned_allocator<int32_t>> resulting_audio_data;
+		resulting_audio_data.resize(sample_frame_count * num_out_channels);
+
+		auto dest_view = make_multichannel_view<int32_t>(
+				resulting_audio_data.begin(), 
+				resulting_audio_data.end(),
+				destination_layout,
+				num_out_channels);
+
+		rearrange_or_rearrange_and_mix(
+				view, dest_view, default_mix_config_repository());
+
+		if (destination_layout.num_channels == 1 && num_out_channels >= 2)
+		{
+			// mono: duplicate L to R
+			boost::copy(                                                     
+					dest_view.channel(0),
+					dest_view.channel(1).begin());
+		}
+
+		return std::move(resulting_audio_data);
+	}
+	else
+	{
+		return std::vector<int32_t, tbb::cache_aligned_allocator<int32_t>>(view.raw_begin(), view.raw_end());
+	}
+}
+
 channel_layout create_custom_channel_layout(
 		const std::wstring& custom_channel_order,
 		const channel_layout_repository& repository);
