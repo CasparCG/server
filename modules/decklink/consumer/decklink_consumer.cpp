@@ -162,7 +162,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 
 	size_t								preroll_count_;
 		
-	boost::circular_buffer<std::vector<int32_t>>	audio_container_;
+	boost::circular_buffer<std::vector<int32_t, tbb::cache_aligned_allocator<int32_t>>>	audio_container_;
 
 	tbb::concurrent_bounded_queue<std::shared_ptr<core::read_frame>> video_frame_buffer_;
 	tbb::concurrent_bounded_queue<std::shared_ptr<core::read_frame>> audio_frame_buffer_;
@@ -420,34 +420,10 @@ public:
 	{
 		const int sample_frame_count = view.num_samples();
 
-		if (core::needs_rearranging(
-				view, config_.audio_layout, config_.num_out_channels()))
-		{
-			std::vector<int32_t> resulting_audio_data;
-			resulting_audio_data.resize(
-					sample_frame_count * config_.num_out_channels());
-
-			auto dest_view = core::make_multichannel_view<int32_t>(
-					resulting_audio_data.begin(), 
-					resulting_audio_data.end(),
-					config_.audio_layout,
-					config_.num_out_channels());
-
-			core::rearrange_or_rearrange_and_mix(
-					view, dest_view, core::default_mix_config_repository());
-
-			if (config_.audio_layout.num_channels == 1) // mono
-				boost::copy(                            // duplicate L to R
-						dest_view.channel(0),
-						dest_view.channel(1).begin());
-
-			audio_container_.push_back(std::move(resulting_audio_data));
-		}
-		else
-		{
-			audio_container_.push_back(
-					std::vector<int32_t>(view.raw_begin(), view.raw_end()));
-		}
+		audio_container_.push_back(core::get_rearranged_and_mixed(
+				view,
+				config_.audio_layout,
+				config_.num_out_channels()));
 
 		if(FAILED(output_->ScheduleAudioSamples(
 				audio_container_.back().data(),
@@ -558,7 +534,10 @@ public:
 
 	// frame_consumer
 	
-	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
+	virtual void initialize(
+			const core::video_format_desc& format_desc,
+			const core::channel_layout& audio_channel_layout,
+			int channel_index) override
 	{
 		context_.reset([&]{return new decklink_consumer(config_, format_desc, channel_index);});		
 		audio_cadence_ = format_desc.audio_cadence;		

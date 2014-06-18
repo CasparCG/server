@@ -53,7 +53,9 @@
 namespace caspar { namespace decklink { 
 
 // second is the index in the array to consume the next time
-typedef std::pair<std::vector<int32_t>, size_t> audio_buffer;
+typedef std::pair<
+		std::vector<int32_t, tbb::cache_aligned_allocator<int32_t>>,
+		size_t> audio_buffer;
 
 struct blocking_decklink_consumer : boost::noncopyable
 {		
@@ -170,38 +172,13 @@ public:
 			buffered_audio_samples_ = 0;
 		}
 
-		if (core::needs_rearranging(
-				view, config_.audio_layout, config_.num_out_channels()))
-		{
-			std::vector<int32_t> resulting_audio_data;
-			resulting_audio_data.resize(
-					sample_frame_count * config_.num_out_channels());
-
-			auto dest_view = core::make_multichannel_view<int32_t>(
-					resulting_audio_data.begin(), 
-					resulting_audio_data.end(),
-					config_.audio_layout,
-					config_.num_out_channels());
-
-			core::rearrange_or_rearrange_and_mix(
-					view, dest_view, core::default_mix_config_repository());
-
-			if (config_.audio_layout.num_channels == 1) // mono
-				boost::copy(                            // duplicate L to R
-						dest_view.channel(0),
-						dest_view.channel(1).begin());
-
-			audio_samples_.push_back(
-					std::make_pair(std::move(resulting_audio_data), 0));
-		}
-		else
-		{
-			audio_samples_.push_back(std::make_pair(
-					std::vector<int32_t>(
-							frame->audio_data().begin(),
-							frame->audio_data().end()),
-					0));
-		}
+		audio_samples_.push_back(
+				std::make_pair(
+						core::get_rearranged_and_mixed(
+								view,
+								config_.audio_layout,
+								config_.num_out_channels()),
+						0));
 
 		buffered_audio_samples_ += sample_frame_count;
 		graph_->set_value("buffered-audio",
@@ -209,7 +186,8 @@ public:
 						/ format_desc_.audio_cadence[0] * 0.5);
 	}
 
-	bool try_consume_audio(std::pair<std::vector<int32_t>, size_t>& buffer)
+	template<typename Buffer>
+	bool try_consume_audio(Buffer& buffer)
 	{
 		size_t to_offer = (buffer.first.size() - buffer.second)
 				/ config_.num_out_channels();
@@ -238,7 +216,7 @@ public:
 	{
 		while (!audio_samples_.empty())
 		{
-			auto buffer = audio_samples_.front();
+			auto& buffer = audio_samples_.front();
 
 			if (try_consume_audio(buffer))
 				audio_samples_.pop_front();
@@ -383,7 +361,10 @@ public:
 
 	// frame_consumer
 	
-	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
+	virtual void initialize(
+			const core::video_format_desc& format_desc,
+			const core::channel_layout& audio_channel_layout,
+			int channel_index) override
 	{
 		context_.reset([&]{return new blocking_decklink_consumer(config_, format_desc, channel_index);});		
 		audio_cadence_ = format_desc.audio_cadence;		

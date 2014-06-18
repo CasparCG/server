@@ -74,7 +74,7 @@ public:
 	{
 	}
 
-	virtual void initialize(const core::video_format_desc& format_desc, int) override
+	virtual void initialize(const core::video_format_desc& format_desc, const core::channel_layout&, int) override
 	{
 		format_desc_ = format_desc;
 	}

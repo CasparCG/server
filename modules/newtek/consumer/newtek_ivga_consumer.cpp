@@ -76,7 +76,10 @@ public:
 
 	// frame_consumer
 	
-	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
+	virtual void initialize(
+			const core::video_format_desc& format_desc,
+			const core::channel_layout& audio_channel_layout,
+			int channel_index) override
 	{
 		air_send_.reset(
 			airsend::create(
@@ -110,34 +113,11 @@ public:
 
 			// AUDIO
 
-			std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>> audio_buffer;
-
-			if (core::needs_rearranging(
-					frame->multichannel_view(),
-					channel_layout_,
-					channel_layout_.num_channels))
-			{
-				core::audio_buffer downmixed;
-
-				downmixed.resize(
-						frame->multichannel_view().num_samples() 
-								* channel_layout_.num_channels,
-						0);
-
-				auto dest_view = core::make_multichannel_view<int32_t>(
-						downmixed.begin(), downmixed.end(), channel_layout_);
-
-				core::rearrange_or_rearrange_and_mix(
-						frame->multichannel_view(),
-						dest_view,
-						core::default_mix_config_repository());
-
-				audio_buffer = core::audio_32_to_16(downmixed);
-			}
-			else
-			{
-				audio_buffer = core::audio_32_to_16(frame->audio_data());
-			}
+			auto audio_buffer = core::audio_32_to_16(
+					core::get_rearranged_and_mixed(
+							frame->multichannel_view(),
+							channel_layout_,
+							channel_layout_.num_channels));
 
 			airsend::add_audio(air_send_.get(), audio_buffer.data(), audio_buffer.size() / channel_layout_.num_channels);
 

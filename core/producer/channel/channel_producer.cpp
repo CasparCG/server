@@ -87,7 +87,10 @@ public:
 		return caspar::wrap_as_future(is_running_.load());
 	}
 
-	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
+	virtual void initialize(
+			const video_format_desc& format_desc,
+			const channel_layout& audio_channel_layout,
+			int channel_index) override
 	{
 		format_desc_    = format_desc;
 		channel_index_  = channel_index;

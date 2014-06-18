@@ -639,7 +639,6 @@ struct ffmpeg_consumer_proxy : public core::frame_consumer
 	const std::wstring				filename_;
 	const std::vector<option>		options_;
 	const bool						separate_key_;
-	core::video_format_desc			format_desc_;
 
 	std::unique_ptr<ffmpeg_consumer> consumer_;
 	std::unique_ptr<ffmpeg_consumer> key_only_consumer_;
@@ -653,9 +652,33 @@ public:
 	{
 	}
 	
-	virtual void initialize(const core::video_format_desc& format_desc, int)
+	virtual void initialize(
+			const core::video_format_desc& format_desc,
+			const core::channel_layout& audio_channel_layout,
+			int)
 	{
-		format_desc_ = format_desc;
+		consumer_.reset();
+		key_only_consumer_.reset();
+		consumer_.reset(new ffmpeg_consumer(
+				narrow(filename_),
+				format_desc,
+				options_,
+				false,
+				audio_channel_layout));
+
+		if (separate_key_)
+		{
+			boost::filesystem::wpath fill_file(filename_);
+			auto without_extension = fill_file.stem();
+			auto key_file = env::media_folder() + without_extension + L"_A" + fill_file.extension();
+			
+			key_only_consumer_.reset(new ffmpeg_consumer(
+					narrow(key_file),
+					format_desc,
+					options_,
+					true,
+					audio_channel_layout));
+		}
 	}
 
 	virtual int64_t presentation_frame_age_millis() const override
@@ -665,9 +688,6 @@ public:
 	
 	virtual boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame) override
 	{
-		if (!consumer_)
-			do_initialize(frame->multichannel_view().channel_layout());
-
 		bool ready_for_frame = consumer_->ready_for_frame();
 
 		if (ready_for_frame && separate_key_)
@@ -722,28 +742,6 @@ public:
 private:
 	void do_initialize(const core::channel_layout& channel_layout)
 	{
-		consumer_.reset();
-		key_only_consumer_.reset();
-		consumer_.reset(new ffmpeg_consumer(
-				narrow(filename_),
-				format_desc_,
-				options_,
-				false,
-				channel_layout));
-
-		if (separate_key_)
-		{
-			boost::filesystem::wpath fill_file(filename_);
-			auto without_extension = fill_file.stem();
-			auto key_file = env::media_folder() + without_extension + L"_A" + fill_file.extension();
-			
-			key_only_consumer_.reset(new ffmpeg_consumer(
-					narrow(key_file),
-					format_desc_,
-					options_,
-					true,
-					channel_layout));
-		}
 	}
 };	
 

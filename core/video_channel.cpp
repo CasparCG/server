@@ -60,7 +60,7 @@ public:
 		, index_(index)
 		, format_desc_(format_desc)
 		, ogl_(ogl)
-		, output_(new caspar::core::output(graph_, format_desc, index))
+		, output_(new caspar::core::output(graph_, format_desc, audio_channel_layout, index))
 		, mixer_(new caspar::core::mixer(graph_, output_, format_desc, ogl, audio_channel_layout))
 		, stage_(new caspar::core::stage(graph_, mixer_, format_desc))	
 		, monitor_subject_(make_safe<monitor::subject>("/channel/" + boost::lexical_cast<std::string>(index)))

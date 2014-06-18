@@ -97,7 +97,10 @@ public:
 
 	// frame consumer
 
-	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
+	virtual void initialize(
+			const core::video_format_desc& format_desc,
+			const core::channel_layout& audio_channel_layout,
+			int channel_index) override
 	{
 		format_desc_	= format_desc;		
 		channel_index_	= channel_index;
@@ -118,35 +121,8 @@ public:
 
 	virtual boost::unique_future<bool> send(const safe_ptr<core::read_frame>& frame) override
 	{
-		std::shared_ptr<audio_buffer_16> buffer;
-
-		if (core::needs_rearranging(
-				frame->multichannel_view(),
-				channel_layout_,
-				channel_layout_.num_channels))
-		{
-			core::audio_buffer downmixed;
-			downmixed.resize(
-					frame->multichannel_view().num_samples() 
-							* channel_layout_.num_channels,
-					0);
-
-			auto dest_view = core::make_multichannel_view<int32_t>(
-					downmixed.begin(), downmixed.end(), channel_layout_);
-
-			core::rearrange_or_rearrange_and_mix(
-					frame->multichannel_view(),
-					dest_view,
-					core::default_mix_config_repository());
-
-			buffer = std::make_shared<audio_buffer_16>(
-					core::audio_32_to_16(downmixed));
-		}
-		else
-		{
-			buffer = std::make_shared<audio_buffer_16>(
-					core::audio_32_to_16(frame->audio_data()));
-		}
+		auto buffer = std::make_shared<audio_buffer_16>(
+			core::audio_32_to_16(core::get_rearranged_and_mixed(frame->multichannel_view(), channel_layout_, channel_layout_.num_channels)));
 
 		if (!input_.try_push(std::make_pair(frame, buffer)))
 			graph_->set_tag("dropped-frame");

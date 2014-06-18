@@ -263,39 +263,17 @@ public:
 		if(embedded_audio_)
 		{
 			auto src_view = frame->multichannel_view();
+			auto frame_audio = core::audio_32_to_24(
+					core::get_rearranged_and_mixed(
+							src_view,
+							channel_layout_,
+							channel_layout_.num_channels));
+			encode_hanc(
+					reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()),
+					frame_audio.data(),
+					src_view.num_samples(),
+					channel_layout_.num_channels);
 
-			if (core::needs_rearranging(src_view, channel_layout_, channel_layout_.num_channels))
-			{
-				std::vector<int32_t> resulting_audio_data;
-				resulting_audio_data.resize(src_view.num_samples() * channel_layout_.num_channels, 0);
-
-				auto dest_view = core::make_multichannel_view<int32_t>(
-						resulting_audio_data.begin(), 
-						resulting_audio_data.end(),
-						channel_layout_);
-
-				core::rearrange_or_rearrange_and_mix(
-						src_view,
-						dest_view,
-						core::default_mix_config_repository());
-
-				auto frame_audio = core::audio_32_to_24(resulting_audio_data);
-				encode_hanc(
-						reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()),
-						frame_audio.data(),
-						src_view.num_samples(),
-						channel_layout_.num_channels);
-			}
-			else
-			{
-				auto frame_audio = core::audio_32_to_24(frame->audio_data());
-				encode_hanc(
-						reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()),
-						frame_audio.data(),
-						src_view.num_samples(),
-						channel_layout_.num_channels);
-			}
-								
 			blue_->system_buffer_write_async(const_cast<uint8_t*>(reserved_frames_.front()->image_data()), 
 											reserved_frames_.front()->image_size(), 
 											nullptr, 
@@ -403,7 +381,10 @@ public:
 
 	// frame_consumer
 	
-	virtual void initialize(const core::video_format_desc& format_desc, int channel_index) override
+	virtual void initialize(
+			const core::video_format_desc& format_desc,
+			const core::channel_layout& audio_channel_layout,
+			int channel_index) override
 	{
 		consumer_.reset(new bluefish_consumer(
 				format_desc,
