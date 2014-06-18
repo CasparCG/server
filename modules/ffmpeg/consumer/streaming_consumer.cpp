@@ -91,9 +91,6 @@ private:
 	
 	executor									executor_;
 
-	executor									video_filter_executor_;
-	executor									audio_filter_executor_;
-
 	executor									video_encoder_executor_;
 	executor									audio_encoder_executor_;
 
@@ -115,8 +112,6 @@ public:
 		, audio_encoder_executor_(print() + L" video_encoder")
 		, video_encoder_executor_(print() + L" audio_encoder")
 		, write_executor_(print() + L" io")
-		, video_filter_executor_(print() + L" video_filter")
-		, audio_filter_executor_(print() + L" audio_filter")
 	{		
 		abort_request_ = false;	
 
@@ -124,7 +119,7 @@ public:
 				boost::sregex_iterator(
 					options.begin(), 
 					options.end(), 
-					boost::regex("-(?<NAME>[^-\\s]+)(\\s+(?<VALUE>[^-\\s]+))?")); 
+					boost::regex("-(?<NAME>[^-\\s]+)(\\s+(?<VALUE>[^\\s]+))?")); 
 			it != boost::sregex_iterator(); 
 			++it)
 		{				
@@ -148,9 +143,6 @@ public:
 		{
 			encode_video(nullptr, nullptr);
 			encode_audio(nullptr, nullptr);			
-
-			video_filter_executor_.wait();
-			audio_filter_executor_.wait();
 
 			video_graph_.reset();
 			audio_graph_.reset();
@@ -1234,17 +1226,13 @@ private:
 	
 safe_ptr<core::frame_consumer> create_streaming_consumer(const core::parameters& params)
 {       
-    static boost::wregex path_exp(L"\\s*(STREAM\\s)?(?<PATH>.+\\.[^\\s]+|.+:[^\\s]*)\\s*(?<ARGS>.*)" , boost::regex::icase);
+	if (params.size() < 1 || params[0] != L"STREAM")
+		return core::frame_consumer::empty();
 
-	auto str = params.get_original_string();
+	auto path = narrow(params.at_original(1));
+	auto args = narrow(params.get_original_string(2));
 
-    boost::wsmatch what;
-	if(!boost::regex_match(str, what, path_exp))
-         return core::frame_consumer::empty();
-	                           
-    return make_safe<streaming_consumer>(
-		narrow(what["PATH"].str()),
-		narrow(what["ARGS"].str()));
+	return make_safe<streaming_consumer>(path, args);
 }
 
 safe_ptr<core::frame_consumer> create_streaming_consumer(const boost::property_tree::wptree& ptree)
