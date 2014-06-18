@@ -97,7 +97,7 @@ std::wstring parameters::get(std::wstring const& key, std::wstring const& defaul
 std::wstring parameters::get_original_string() const
 {
 	std::wstring str;
-	BOOST_FOREACH(auto& param, params_)
+	BOOST_FOREACH(auto& param, params_original_)
 	{
 		str += param + L" ";
 	}

@@ -248,6 +248,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="consumer\write_frame_consumer.h" />
+    <ClInclude Include="fwd.h" />
     <ClInclude Include="mixer\audio\audio_util.h" />
     <ClInclude Include="mixer\gpu\fence.h" />
     <ClInclude Include="mixer\gpu\shader.h" />
