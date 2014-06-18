@@ -172,6 +172,9 @@
     <ClInclude Include="producer\media_info\in_memory_media_info_repository.h">
       <Filter>source\producer\media_info</Filter>
     </ClInclude>
+    <ClInclude Include="fwd.h">
+      <Filter>source</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">

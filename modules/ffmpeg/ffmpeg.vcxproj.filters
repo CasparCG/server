@@ -28,6 +28,9 @@
     <Filter Include="source\producer\muxer">
       <UniqueIdentifier>{26599786-a0d9-4cc3-b5a4-633e9c81563a}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\util">
+      <UniqueIdentifier>{705c5729-22cc-46bc-8920-da5be59244e1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\video\video_decoder.cpp">
@@ -66,6 +69,12 @@
     </ClCompile>
     <ClCompile Include="producer\audio\audio_resampler.cpp">
       <Filter>source\producer\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="util\error.cpp">
+      <Filter>source\util</Filter>
+    </ClCompile>
+    <ClCompile Include="consumer\streaming_consumer.cpp">
+      <Filter>source\consumer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -114,6 +123,12 @@
     </ClInclude>
     <ClInclude Include="producer\audio\audio_resampler.h">
       <Filter>source\producer\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="util\error.h">
+      <Filter>source\util</Filter>
+    </ClInclude>
+    <ClInclude Include="consumer\streaming_consumer.h">
+      <Filter>source\consumer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
