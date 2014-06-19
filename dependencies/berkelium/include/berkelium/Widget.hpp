@@ -64,7 +64,7 @@ public:
     virtual bool hasFocus() const = 0;
 
     virtual void mouseMoved(int xPos, int yPos)=0;
-    virtual void mouseButton(unsigned int buttonID, bool down)=0;
+    virtual void mouseButton(unsigned int buttonID, bool down, int clickCount = 1)=0;
     virtual void mouseWheel(int xScroll, int yScroll)=0;
 
     virtual void textEvent(const wchar_t* evt, size_t evtLength)=0;

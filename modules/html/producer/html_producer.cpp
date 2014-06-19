@@ -52,6 +52,8 @@
 
 #include "html.h"
 
+#include <common/log/log.h>
+
 namespace caspar { namespace html {
 		
 class html_producer 
@@ -103,6 +105,8 @@ public:
 				frame_factory->get_video_format_desc().height);
 			window_->setDelegate(this);
 			window_->setTransparent(true);
+
+			window_->addBindOnStartLoading(Berkelium::WideString::point_to(L"AMCP"), Berkelium::Script::Variant::bindFunction(Berkelium::WideString::point_to(L"AMCP"), false));
 			
 			const auto narrow_url = narrow(url);
 			
@@ -217,6 +221,92 @@ public:
 	
 	// Berkelium::WindowDelegate
 	
+	void onConsoleMessage(
+		Berkelium::Window* wini, 
+		Berkelium::WideString message,
+		Berkelium::WideString sourceId,
+		int line_no) override
+	{
+		CASPAR_LOG(info) <<  message << L": " << sourceId;
+	}
+
+
+	void onScriptAlert(
+		Berkelium::Window* wini, 
+		Berkelium::WideString message,
+		Berkelium::WideString defaultValue,
+		Berkelium::URLString origin,
+		int flags,
+		bool &success,
+		Berkelium::WideString &value)
+	{
+		CASPAR_LOG(info) <<  L"Got alert: " << message;
+	}
+	
+	void onJavascriptCallback(
+		Berkelium::Window* wini,
+		void* replyMsg,
+		Berkelium::URLString url,
+		Berkelium::WideString funcName,
+		Berkelium::Script::Variant *args,
+		size_t numArgs)
+	{
+        CASPAR_LOG(info) <<  L"Function called: " << funcName << L" Argument: " << args[0].toString();
+		/*
+		CASPAR_LOG(info) << "*** onJavascriptCallback at URL " << url << ", "
+                  << (replyMsg?"synchronous":"async") << std::endl;
+        CASPAR_LOG(info) << L"    Function name: " << funcName << std::endl;
+        for (size_t i = 0; i < numArgs; i++) {
+            CASPAR_LOG(info) << L"    Argument " << i << ": ";
+            if (args[i].type() == Berkelium::Script::Variant::JSSTRING) {
+                CASPAR_LOG(info) << L"(string) " << args[i].toString() << std::endl;
+            }
+        }
+		*/
+        if (replyMsg) {
+            wini->synchronousScriptReturn(replyMsg, numArgs ? args[0] : Berkelium::Script::Variant());
+        }
+    }
+	
+
+	void onCrashed(
+		Berkelium::Window* wini)
+	{
+		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Berkelium's renderer instance has crashed."));
+	}
+
+	void onCrashedPlugin(
+		Berkelium::Window* wini,
+		Berkelium::WideString pluginName)
+	{
+		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Berkelium plugin has crashed."));
+	}
+
+	void onProvisionalLoadError(
+		Berkelium::Window* wini,
+		Berkelium::URLString newUrl,
+		int errorCode,
+		bool isMainFrame
+		)
+	{
+		CASPAR_LOG(info) <<  L"Berkelium provisionalLoadError: " << newUrl << L" - error code:" << errorCode;
+	}
+
+	void onUnresponsive(Berkelium::Window* wini) {
+		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Berkelium is unresponsive."));
+	}
+
+	void onStartLoading(
+		Berkelium::Window* wini,
+		Berkelium::URLString newUrl)
+	{
+		CASPAR_LOG(info) <<  L"Berkelium started loading: " << newUrl;
+	}
+
+	void onLoad(Berkelium::Window* wini) {
+		invoke_on_enter_frame(); // Right place for onEnterFrame call, though I'm not certain of it's use, it will need to be defined in the HTML file
+	}
+
 	void onPaint(
 		Berkelium::Window* wini, 
 		const unsigned char* bitmap_in, 
@@ -273,8 +363,6 @@ public:
 				
 		const auto& height = pixel_desc.planes[0].height;
 		const auto& linesize = pixel_desc.planes[0].linesize;
-
-		invoke_on_enter_frame();
 
 		lock(frame_mutex_, [&]
 		{				

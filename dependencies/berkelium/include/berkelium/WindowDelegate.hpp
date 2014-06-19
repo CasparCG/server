@@ -289,7 +289,7 @@ public:
      * into application (video) memory before returning.
      *
      * \param win  Window instance that fired this event.
-     * \param sourceBuffer  BGRA buffer with width/height of sourceBufferRect.
+     * \param sourceBuffer  ARGB buffer with width/height of sourceBufferRect.
      * \param sourceBufferRect  Rect containing the buffer.
      * \param numCopyRects  Length of copyRects.
      * \param copyRects  Array of valid+changed rectangles of sourceBuffer.

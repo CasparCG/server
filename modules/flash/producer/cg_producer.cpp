@@ -144,7 +144,7 @@ public:
 		else if(boost::regex_match(str, what, description_exp))
 			return description(boost::lexical_cast<int>(what["LAYER"].str())); 
 		else if(boost::regex_match(str, what, invoke_exp))
-			return template_host_info(); 
+			return invoke(boost::lexical_cast<int>(what["LAYER"].str()), what["LABEL"].str());
 
 		return flash_producer_->call(str);
 	}

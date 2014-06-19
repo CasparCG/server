@@ -249,8 +249,10 @@ public:
 								
 		monitor_subject_	<< core::monitor::message("/file/time")			% (file_frame_number()/fps_) 
 																			% (file_nb_frames()/fps_)
-							<< core::monitor::message("/file/frame")			% static_cast<int32_t>(file_frame_number())
+							<< core::monitor::message("/file/frame")		% static_cast<int32_t>(file_frame_number())
 																			% static_cast<int32_t>(file_nb_frames())
+							<< core::monitor::message("/file/play")			% static_cast<double>(frame_number_)// Changed from uint32_t, not ideal but valid
+																			% static_cast<double>(nb_frames())// Changed from uint32_t, not ideal but valid
 							<< core::monitor::message("/file/fps")			% fps_
 							<< core::monitor::message("/file/path")			% path_relative_to_media_
 							<< core::monitor::message("/loop")				% input_.loop();

@@ -161,7 +161,7 @@ public:
     virtual int getId() const = 0;
 
     /** Sets the transparency flag for this Window. Note that the buffer will
-     * be BGRA regardless of transparency, but if the window is not set as
+     * be ARGB regardless of transparency, but if the window is not set as
      * transparent, the alpha channel should always be 1.
      * Transparency defaults to false and must be enabled on each Window.
      * \param istrans  Whether to enable a transparent background.
@@ -185,8 +185,10 @@ public:
      *  \param buttonID index of the button that caused the event
      *  \param down if true, indicates the mouse button was pressed, if false
      *         indicates it was released
+     *  \param clickCount the number of clicks to send, e.g. 1 for single click,
+     *         2 for double click
      */
-    virtual void mouseButton(unsigned int buttonID, bool down)=0;
+    virtual void mouseButton(unsigned int buttonID, bool down, int clickCount=1)=0;
     /** Inject a mouse wheel scroll event into the Window.
      *  \param xScroll amount scrolled horizontally
      *  \param yScroll amount scrolled vertically
