@@ -138,18 +138,18 @@ public:
 					what["DATA"].str());
 		else if(boost::regex_match(str, what, remove_exp))
 			return remove(boost::lexical_cast<int>(what["LAYER"].str()));
+		else if(boost::regex_match(str, what, play_exp))
+			return play(boost::lexical_cast<int>(what["LAYER"].str()));
 		else if(boost::regex_match(str, what, stop_exp))
 			return stop(boost::lexical_cast<int>(what["LAYER"].str()), 0);
 		else if(boost::regex_match(str, what, next_exp))
 			return next(boost::lexical_cast<int>(what["LAYER"].str()));
 		else if(boost::regex_match(str, what, update_exp))
 			return update(boost::lexical_cast<int>(what["LAYER"].str()), what["DATA"].str());
-		else if(boost::regex_match(str, what, next_exp))
+		else if(boost::regex_match(str, what, invoke_exp))
 			return invoke(boost::lexical_cast<int>(what["LAYER"].str()), what["LABEL"].str());
 		else if(boost::regex_match(str, what, description_exp))
 			return description(boost::lexical_cast<int>(what["LAYER"].str()));
-		else if(boost::regex_match(str, what, invoke_exp))
-			return invoke(boost::lexical_cast<int>(what["LAYER"].str()), what["LABEL"].str());
 		else if(boost::regex_match(str, what, info_exp))
 			return template_host_info(); 
 
