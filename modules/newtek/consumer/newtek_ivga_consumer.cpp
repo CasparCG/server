@@ -45,8 +45,9 @@ struct newtek_ivga_consumer : public core::frame_consumer
 {
 	std::shared_ptr<void>			air_send_;
 	core::video_format_desc			format_desc_;
-	core::channel_layout			channel_layout_;
 	executor						executor_;
+	core::channel_layout			channel_layout_;
+	bool							provide_sync_;
 	tbb::atomic<bool>				connected_;
 
 	safe_ptr<diagnostics::graph>	graph_;
@@ -55,9 +56,10 @@ struct newtek_ivga_consumer : public core::frame_consumer
 
 public:
 
-	newtek_ivga_consumer(core::channel_layout channel_layout)
+	newtek_ivga_consumer(core::channel_layout channel_layout, bool provide_sync)
 		: executor_(print())
 		, channel_layout_(channel_layout)
+		, provide_sync_(provide_sync)
 	{
 		if (!airsend::is_available())
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(airsend::dll_name()) + " not available"));
@@ -163,7 +165,7 @@ public:
 
 	virtual bool has_synchronization_clock() const override
 	{
-		return connected_;
+		return provide_sync_ && connected_;
 	}
 };	
 
@@ -175,8 +177,9 @@ safe_ptr<core::frame_consumer> create_ivga_consumer(const core::parameters& para
 	const auto channel_layout = core::default_channel_layout_repository()
 		.get_by_name(
 			params.get(L"CHANNEL_LAYOUT", L"STEREO"));
+	const auto provide_sync = params.get(L"PROVIDE_SYNC", true);
 
-	return make_safe<newtek_ivga_consumer>(channel_layout);
+	return make_safe<newtek_ivga_consumer>(channel_layout, provide_sync);
 }
 
 safe_ptr<core::frame_consumer> create_ivga_consumer(const boost::property_tree::wptree& ptree) 
@@ -185,8 +188,9 @@ safe_ptr<core::frame_consumer> create_ivga_consumer(const boost::property_tree::
 		core::default_channel_layout_repository()
 			.get_by_name(
 				boost::to_upper_copy(ptree.get(L"channel-layout", L"STEREO")));
+	const auto provide_sync = ptree.get(L"provide-sync", true);
 
-	return make_safe<newtek_ivga_consumer>(channel_layout);
+	return make_safe<newtek_ivga_consumer>(channel_layout, provide_sync);
 }
 
 }}
