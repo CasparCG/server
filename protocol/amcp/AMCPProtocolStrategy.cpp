@@ -96,7 +96,11 @@ void AMCPProtocolStrategy::Parse(const TCHAR* pData, int charCount, ClientInfoPt
 	pClientInfo->currentMessage_.append(pData, charCount);
 
 	while(true) {
-		pos = pClientInfo->currentMessage_.find(MessageDelimiter, (oldLength>(MessageDelimiter.size()-1)) ? oldLength-(MessageDelimiter.size()-1) : 0);
+		pos = pClientInfo->currentMessage_.find(
+				MessageDelimiter,
+				oldLength > MessageDelimiter.size() - 1
+						? oldLength - (MessageDelimiter.size() - 1)
+						: 0);
 		if(pos != std::wstring::npos)
 		{
 			std::wstring message = pClientInfo->currentMessage_.substr(0,pos);
@@ -108,8 +112,12 @@ void AMCPProtocolStrategy::Parse(const TCHAR* pData, int charCount, ClientInfoPt
 
 			std::size_t nextStartPos = pos + MessageDelimiter.length();
 			if(nextStartPos < pClientInfo->currentMessage_.length())
+			{
 				pClientInfo->currentMessage_ = pClientInfo->currentMessage_.substr(nextStartPos);
-			else {
+				oldLength = 0;
+			}
+			else
+			{
 				pClientInfo->currentMessage_.clear();
 				break;
 			}
