@@ -130,20 +130,27 @@ public:
 		
 		boost::wsmatch what;
 		if(boost::regex_match(str, what, add_exp))
-			return add(boost::lexical_cast<int>(what["LAYER"].str()), what["FILENAME"].str(), boost::lexical_cast<bool>(what["PLAY_ON_LOAD"].str()), L"", what["DATA"].str()); 
+			return add(
+					boost::lexical_cast<int>(what["LAYER"].str()),
+					what["FILENAME"].str(),
+					boost::lexical_cast<bool>(what["PLAY_ON_LOAD"].str()),
+					L"",
+					what["DATA"].str());
 		else if(boost::regex_match(str, what, remove_exp))
-			return remove(boost::lexical_cast<int>(what["LAYER"].str())); 
+			return remove(boost::lexical_cast<int>(what["LAYER"].str()));
 		else if(boost::regex_match(str, what, stop_exp))
-			return stop(boost::lexical_cast<int>(what["LAYER"].str()), 0); 
+			return stop(boost::lexical_cast<int>(what["LAYER"].str()), 0);
 		else if(boost::regex_match(str, what, next_exp))
-			return next(boost::lexical_cast<int>(what["LAYER"].str())); 
+			return next(boost::lexical_cast<int>(what["LAYER"].str()));
 		else if(boost::regex_match(str, what, update_exp))
-			return update(boost::lexical_cast<int>(what["LAYER"].str()), what["DATA"].str()); 
+			return update(boost::lexical_cast<int>(what["LAYER"].str()), what["DATA"].str());
 		else if(boost::regex_match(str, what, next_exp))
-			return invoke(boost::lexical_cast<int>(what["LAYER"].str()), what["LABEL"].str()); 
+			return invoke(boost::lexical_cast<int>(what["LAYER"].str()), what["LABEL"].str());
 		else if(boost::regex_match(str, what, description_exp))
-			return description(boost::lexical_cast<int>(what["LAYER"].str())); 
+			return description(boost::lexical_cast<int>(what["LAYER"].str()));
 		else if(boost::regex_match(str, what, invoke_exp))
+			return invoke(boost::lexical_cast<int>(what["LAYER"].str()), what["LABEL"].str());
+		else if(boost::regex_match(str, what, info_exp))
 			return template_host_info(); 
 
 		return flash_producer_->call(str);
