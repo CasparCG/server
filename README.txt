@@ -1,4 +1,4 @@
-CasparCG Server 2.0.7 Beta 1
+CasparCG Server 2.0.7 Beta 2
 ============================
 
 Thank you for your interest in CasparCG Server, a professional software used to
@@ -50,7 +50,7 @@ INSTALLATION
 
 1. Check that your system meets the requirements above.
 
-2. Unzip and place the "CasparCG Server 2.0.7 Beta 1" folder anywhere you like.
+2. Unzip and place the "CasparCG Server 2.0.7 Beta 2" folder anywhere you like.
 
 3. Install "Microsoft Visual C++ 2010 Redistributable Package" from
    http://www.microsoft.com/download/en/details.aspx?id=5555
