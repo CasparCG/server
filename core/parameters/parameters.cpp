@@ -50,12 +50,29 @@ void parameters::to_upper()
 	}
 }
 
-bool parameters::has(std::wstring const& parameter) const
+void parameters::replace_placeholders(
+		const std::wstring& placeholder, const std::wstring& replacement)
+{
+	for (size_t i = 0; i < params_.size(); ++i)
+	{
+		auto& param = params_.at(i);
+		auto& param_original = params_original_.at(i);
+
+		if (boost::contains(param, placeholder))
+		{
+			boost::replace_all(
+					param, placeholder, boost::to_upper_copy(replacement));
+			boost::ireplace_all(param_original, placeholder, replacement);
+		}
+	}
+}
+
+bool parameters::has(const std::wstring& parameter) const
 {
 	return boost::range::find(params_, parameter) != params_.end();
 }
 
-bool parameters::remove_if_exists(std::wstring const& key)
+bool parameters::remove_if_exists(const std::wstring& key)
 {
 	auto iter = boost::range::find(params_, key);
 
@@ -70,7 +87,7 @@ bool parameters::remove_if_exists(std::wstring const& key)
 	return true;
 }
 
-std::vector<std::wstring> parameters::protocol_split(std::wstring const& s)
+std::vector<std::wstring> parameters::protocol_split(const std::wstring& s)
 {
 	std::vector<std::wstring> result;
 	size_t pos;
@@ -86,7 +103,8 @@ std::vector<std::wstring> parameters::protocol_split(std::wstring const& s)
 	return result;
 }
 
-std::wstring parameters::get(std::wstring const& key, std::wstring const& default_value) const
+std::wstring parameters::get(
+		const std::wstring& key, const std::wstring& default_value) const
 {	
 	auto it = std::find(std::begin(params_), std::end(params_), key);
 	if (it == params_.end() || ++it == params_.end())	
@@ -111,7 +129,7 @@ const std::wstring& parameters::at_original(size_t i) const
 	return params_original_.at(i);
 }
 
-void parameters::set(size_t index, std::wstring const& value)
+void parameters::set(size_t index, const std::wstring& value)
 {
 	if (index < params_.size())
 	{

@@ -839,6 +839,10 @@ bool AddCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
+		_parameters.replace_placeholders(
+				L"<CLIENT_IP_ADDRESS>",
+				this->GetClientInfo()->print());
+
 		auto consumer = create_consumer(_parameters);
 		GetChannel()->output()->add(GetLayerIndex(consumer->index()), consumer);
 	
@@ -866,8 +870,15 @@ bool RemoveCommand::DoExecute()
 	try
 	{
 		auto index = GetLayerIndex(std::numeric_limits<int>::min());
-		if(index == std::numeric_limits<int>::min())
+
+		if (index == std::numeric_limits<int>::min())
+		{
+			_parameters.replace_placeholders(
+					L"<CLIENT_IP_ADDRESS>",
+					this->GetClientInfo()->print());
+
 			index = create_consumer(_parameters)->index();
+		}
 
 		GetChannel()->output()->remove(index);
 
