@@ -1,13 +1,81 @@
 C H A N G E S
 
-CasparCG 2.0.7 Beta (as compared to 2.0.6 Stable)
-=================================================
+CasparCG 2.0.7 Beta 2 (as compared to CasparCG 2.0.7 Beta 1)
+============================================================
+
+General
+-------
+
+  o Added sendings of OSC messages for channel_grid channel in addition to
+    regular channels.
+
+Producers
+---------
+
+  o FFmpeg: Reports correct nb_frames() when using SEEK (Thomas Kaltz III)
+  o Flash: Fixed bug wherer CG PLAY, CG INVOKE
+
+Consumers
+---------
+
+  o channel_consumer: Added support for more than one channel_consumer per
+    channel.
+  o decklink_consumer: Added support for a single instance of the consumer to
+    manage a separate key output for use with decklink duo/quad cards:
+
+    <decklink>
+	  <device>1</device>
+	  <key-device>2</key-device>
+	  <keyer>external_separate_device</keyer>
+	</decklink>
+
+	...in the configuration will enable the feature. The value of <key-device />
+	defaults to the value of <device /> + 1.
+  o synchronizing_consumer: Removed in favour of a single decklink_consumer
+    managing both fill and key device.
+  o streaming_consumer: A new implementation of ffmpeg_consumer with added
+    support for streaming and other PTS dependent protocols. Examples:
+
+    <stream>
+      <path>udp://localhost:5004</path>
+      <args>-vcodec libx264 -tune zerolatency -preset ultrafast -crf 25 -format mpegts -vf scale=240:180</args>
+    </stream>
+
+    ...in configuration or:
+
+    ADD 1 STREAM udp://localhost:5004 -vcodec libx264 -tune zerolatency -preset ultrafast -crf 25 -format mpegts -vf scale=240:180
+
+	...via AMCP. (Robert Nagy sponsored by Ericsson Broadcasting Services)
+  o newtek_ivga_consumer: Added support for iVGA consumer to not provide channel
+    sync even though connected. Useful for iVGA clients that downloads as fast
+	as possible instead of in frame-rate pace, like Wirecast. To enable:
+
+    <newtek-ivga>
+	  <provide-sync>false</provide-sync>
+	</newtek-ivga>
+
+    ...in config to not provide channel sync when connected. The default is
+	true.
+
+AMCP
+----
+
+  o Added support in ADD and REMOVE for a placeholder <CLIENT_IP_ADDRESS> which
+    will resolve to the connected AMCP client's IPV4 address.
+  o Fixed bug where AMCP commands split into multiple TCP packets where not
+    correctly parsed (http://casparcg.com/forum/viewtopic.php?f=3&t=2480)
+
+
+
+CasparCG 2.0.7 Beta 1 (as compared to 2.0.6 Stable)
+===================================================
 
 General
 -------
   o FFmpeg: Upgraded to master and adapted CasparCG to FFmpeg API changes
     (Robert Nagy sponsored by SVT)
   o FFmpeg: Fixed problem with frame count calculation (Thomas Kaltz III)
+  o Fixed broken CG UPDATE.
 
 Producers
 ---------
@@ -240,7 +308,6 @@ AMCP
     delay measurements.
   o PLAY 1-1 2-10 creates a layer producer on 1-1 redirecting the output of
     2-10. (Cambell Prince)
-
 
 OSC
 ---
