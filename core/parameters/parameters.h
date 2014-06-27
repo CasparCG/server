@@ -35,21 +35,24 @@ class parameters
 public:
 	parameters() {}
 
-	explicit parameters(std::vector<std::wstring> const& params);
+	explicit parameters(const std::vector<std::wstring>& params);
 
-	std::vector<std::wstring> const& get_params() const {
+	const std::vector<std::wstring>& get_params() const {
 		return params_;
 	}
 
-	static std::vector<std::wstring> protocol_split(std::wstring const& s);
+	static std::vector<std::wstring> protocol_split(const std::wstring& s);
 
 	void to_upper();
+
+	void replace_placeholders(
+			const std::wstring& placeholder, const std::wstring& replacement);
 	
-	bool has(std::wstring const& key) const;
-	bool remove_if_exists(std::wstring const& key);
+	bool has(const std::wstring& key) const;
+	bool remove_if_exists(const std::wstring& key);
 
 	template<typename C>
-	typename std::enable_if<!std::is_convertible<C, std::wstring>::value, typename std::decay<C>::type>::type get(std::wstring const& key, C default_value = C()) const
+	typename std::enable_if<!std::is_convertible<C, std::wstring>::value, typename std::decay<C>::type>::type get(const std::wstring& key, C default_value = C()) const
 	{	
 		auto it = std::find(std::begin(params_), std::end(params_), key);
 		if(it == params_.end() || ++it == params_.end())	
@@ -65,13 +68,13 @@ public:
 		return value;
 	}
 
-	std::wstring get(std::wstring const& key, std::wstring const& default_value = L"") const;
+	std::wstring get(const std::wstring& key, const std::wstring& default_value = L"") const;
 
 	std::wstring get_original_string(int num_skip = 0) const;
 
 	const std::wstring& at_original(size_t i) const;
 
-	void set(size_t index, std::wstring const& value);
+	void set(size_t index, const std::wstring& value);
 
 	const std::vector<std::wstring>& get_original() const
 	{
@@ -94,20 +97,20 @@ public:
 	}
 
 	// Compatibility method
-	void push_back(std::wstring const& s)
+	void push_back(const std::wstring& s)
 	{
 		params_.push_back(s);
 		params_original_.push_back(s);
 	}
 
 	// Compatibility method
-	std::wstring const& at(int i) const
+	const std::wstring& at(int i) const
 	{
 		return params_.at(i);
 	}
 
 	// Compatibility method
-	std::wstring const& back() const
+	const std::wstring& back() const
 	{
 		return params_.back();
 	}
@@ -119,7 +122,7 @@ public:
 	}
 
 	// Compatibility method
-	std::wstring const& operator [] (size_t i) const
+	const std::wstring& operator [] (size_t i) const
 	{
 		return params_[i];
 	}

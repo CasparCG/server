@@ -23,6 +23,12 @@
 #include <boost/format.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
+#pragma warning(push)
+#pragma warning(disable: 4244)
+#pragma warning(disable: 4245)
+#include <boost/crc.hpp>
+#pragma warning(pop)
+
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
 #include <tbb/parallel_invoke.h>
@@ -55,7 +61,16 @@ extern "C"
 using namespace Concurrency;
 
 namespace caspar { namespace ffmpeg {
-	
+
+int crc16(const std::string& str)
+{
+	boost::crc_16_type result;
+
+	result.process_bytes(str.data(), str.length());
+
+	return result.checksum();
+}
+
 class streaming_consumer sealed : public core::frame_consumer
 {
 public:
@@ -64,6 +79,7 @@ public:
 private:
 	
 	boost::filesystem::path						path_;
+	int											consumer_index_offset_;
 
 	std::map<std::string, std::string>			options_;
 												
@@ -105,7 +121,8 @@ public:
 	streaming_consumer(
 		std::string path, 
 		std::string options)
-		: path_(std::move(path))
+		: path_(path)
+		, consumer_index_offset_(crc16(path))
 		, video_pts_(0)
 		, audio_pts_(0)
 		, executor_(print())
@@ -413,7 +430,7 @@ public:
 
 	int index() const override
 	{
-		return 200;
+		return 100000 + consumer_index_offset_;
 	}
 
 	int64_t presentation_frame_age_millis() const override
