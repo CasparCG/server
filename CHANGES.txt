@@ -1,6 +1,6 @@
 C H A N G E S
 
-CasparCG 2.0.7 Beta 2 (as compared to CasparCG 2.0.7 Beta 1)
+CasparCG Server 2.0.7 Beta 2 (as compared to CasparCG Server 2.0.7 Beta 1)
 ============================================================
 
 General
@@ -67,7 +67,7 @@ AMCP
 
 
 
-CasparCG 2.0.7 Beta 1 (as compared to 2.0.6 Stable)
+CasparCG Server 2.0.7 Beta 1 (as compared to 2.0.6 Stable)
 ===================================================
 
 General
@@ -85,7 +85,7 @@ Producers
 
 
 
-CasparCG 2.0.6 Stable (as compared to 2.0.4 Stable)
+CasparCG Server 2.0.6 Stable (as compared to 2.0.4 Stable)
 ===================================================
 
 General
@@ -124,7 +124,7 @@ General
 
 
 
-CasparCG 2.0.4 Stable (as compared to 2.0.4 Beta 1)
+CasparCG Server 2.0.4 Stable (as compared to 2.0.4 Beta 1)
 ===================================================
 
 General
@@ -182,7 +182,7 @@ OSC
 
 
 
-CasparCG 2.0.4 Beta 1 (as compared to 2.0.3 Stable)
+CasparCG Server 2.0.4 Beta 1 (as compared to 2.0.3 Stable)
 ===================================================
 
 General
@@ -335,7 +335,7 @@ OSC
 
 
 
-CasparCG 2.0.3 Stable (as compared to 2.0.3 Alpha)
+CasparCG Server 2.0.3 Stable (as compared to 2.0.3 Alpha)
 ==================================================
 
 Stage
@@ -352,7 +352,7 @@ AMCP
 
 
 
-CasparCG 2.0.3 Alpha (as compared to 2.0 Stable)
+CasparCG Server 2.0.3 Alpha (as compared to 2.0 Stable)
 ================================================
 
 General
@@ -408,7 +408,7 @@ Producers
 
 
 
-CasparCG 2.0 Stable (as compared to Beta 3)
+CasparCG Server 2.0 Stable (as compared to Beta 3)
 ===========================================
 
 General
@@ -427,7 +427,7 @@ Consumers
 
 
 
-CasparCG 2.0 Beta 3 (as compared to Beta 1)
+CasparCG Server 2.0 Beta 3 (as compared to Beta 1)
 ===========================================
 
 Formats
@@ -529,7 +529,7 @@ Diagnostics
 
 
 
-CasparCG 2.0 Beta 1 (as compared to Alpha)
+CasparCG Server 2.0 Beta 1 (as compared to Alpha)
 ==========================================
 
   o Blending Modes (needs to be explicitly enabled)
@@ -599,7 +599,7 @@ CasparCG 2.0 Beta 1 (as compared to Alpha)
 
 
 
-CasparCG 2.0 Alpha (as compared to 1.8)
+CasparCG Server 2.0 Alpha (as compared to 1.8)
 =======================================
 
 General
