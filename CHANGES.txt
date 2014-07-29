@@ -1,7 +1,7 @@
 C H A N G E S
 
 CasparCG Server 2.0.7 Beta 2 (as compared to CasparCG Server 2.0.7 Beta 1)
-============================================================
+==========================================================================
 
 General
 -------
@@ -24,13 +24,13 @@ Consumers
     manage a separate key output for use with decklink duo/quad cards:
 
     <decklink>
-	  <device>1</device>
-	  <key-device>2</key-device>
-	  <keyer>external_separate_device</keyer>
-	</decklink>
+      <device>1</device>
+      <key-device>2</key-device>
+      <keyer>external_separate_device</keyer>
+    </decklink>
 
-	...in the configuration will enable the feature. The value of <key-device />
-	defaults to the value of <device /> + 1.
+    ...in the configuration will enable the feature. The value of <key-device />
+    defaults to the value of <device /> + 1.
   o synchronizing_consumer: Removed in favour of a single decklink_consumer
     managing both fill and key device.
   o streaming_consumer: A new implementation of ffmpeg_consumer with added
@@ -45,17 +45,17 @@ Consumers
 
     ADD 1 STREAM udp://localhost:5004 -vcodec libx264 -tune zerolatency -preset ultrafast -crf 25 -format mpegts -vf scale=240:180
 
-	...via AMCP. (Robert Nagy sponsored by Ericsson Broadcasting Services)
+    ...via AMCP. (Robert Nagy sponsored by Ericsson Broadcasting Services)
   o newtek_ivga_consumer: Added support for iVGA consumer to not provide channel
     sync even though connected. Useful for iVGA clients that downloads as fast
-	as possible instead of in frame-rate pace, like Wirecast. To enable:
+    as possible instead of in frame-rate pace, like Wirecast. To enable:
 
     <newtek-ivga>
-	  <provide-sync>false</provide-sync>
-	</newtek-ivga>
+      <provide-sync>false</provide-sync>
+    </newtek-ivga>
 
     ...in config to not provide channel sync when connected. The default is
-	true.
+    true.
 
 AMCP
 ----
@@ -68,7 +68,7 @@ AMCP
 
 
 CasparCG Server 2.0.7 Beta 1 (as compared to 2.0.6 Stable)
-===================================================
+==========================================================
 
 General
 -------
@@ -86,7 +86,7 @@ Producers
 
 
 CasparCG Server 2.0.6 Stable (as compared to 2.0.4 Stable)
-===================================================
+==========================================================
 
 General
 -------
@@ -125,7 +125,7 @@ General
 
 
 CasparCG Server 2.0.4 Stable (as compared to 2.0.4 Beta 1)
-===================================================
+==========================================================
 
 General
 -------
@@ -183,7 +183,7 @@ OSC
 
 
 CasparCG Server 2.0.4 Beta 1 (as compared to 2.0.3 Stable)
-===================================================
+==========================================================
 
 General
 -------
@@ -336,7 +336,7 @@ OSC
 
 
 CasparCG Server 2.0.3 Stable (as compared to 2.0.3 Alpha)
-==================================================
+=========================================================
 
 Stage
 -----
@@ -353,7 +353,7 @@ AMCP
 
 
 CasparCG Server 2.0.3 Alpha (as compared to 2.0 Stable)
-================================================
+=======================================================
 
 General
 -------
@@ -409,7 +409,7 @@ Producers
 
 
 CasparCG Server 2.0 Stable (as compared to Beta 3)
-===========================================
+==================================================
 
 General
 -------
@@ -428,7 +428,7 @@ Consumers
 
 
 CasparCG Server 2.0 Beta 3 (as compared to Beta 1)
-===========================================
+==================================================
 
 Formats
 -------
@@ -530,7 +530,7 @@ Diagnostics
 
 
 CasparCG Server 2.0 Beta 1 (as compared to Alpha)
-==========================================
+=================================================
 
   o Blending Modes (needs to be explicitly enabled)
     + overlay
@@ -600,7 +600,7 @@ CasparCG Server 2.0 Beta 1 (as compared to Alpha)
 
 
 CasparCG Server 2.0 Alpha (as compared to 1.8)
-=======================================
+==============================================
 
 General
 -------
