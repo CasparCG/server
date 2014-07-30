@@ -184,7 +184,7 @@ std::wstring make_upper_case(const std::wstring& str)
 	return boost::to_upper_copy(str);
 }
 
-int main(int argc, wchar_t* argv[])
+int main(int argc, char* argv[])
 {	
 	static_assert(sizeof(void*) == 4, "64-bit code generation is not supported.");
 	
@@ -234,11 +234,17 @@ int main(int argc, wchar_t* argv[])
 
 	bool restart = false;
 	tbb::task_scheduler_init init;
+	std::wstring config_file_name(L"casparcg.config");
 	
 	try 
 	{
 		// Configure environment properties from configuration.
-		caspar::env::configure(L"casparcg.config");
+		if (argc >= 2)
+		{
+			config_file_name = caspar::widen(argv[1]);
+		}
+
+		caspar::env::configure(config_file_name);
 				
 		caspar::log::set_log_level(caspar::env::properties().get(L"configuration.log-level", L"debug"));
 
@@ -260,7 +266,7 @@ int main(int argc, wchar_t* argv[])
 		std::wstringstream str;
 		boost::property_tree::xml_writer_settings<wchar_t> w(' ', 3);
 		boost::property_tree::write_xml(str, caspar::env::properties(), w);
-		CASPAR_LOG(info) << L"casparcg.config:\n-----------------------------------------\n" << str.str().c_str() << L"-----------------------------------------";
+		CASPAR_LOG(info) << config_file_name << L":\n-----------------------------------------\n" << str.str().c_str() << L"-----------------------------------------";
 		tbb::atomic<bool> wait_for_keypress;
 		wait_for_keypress = false;
 
@@ -374,7 +380,7 @@ int main(int argc, wchar_t* argv[])
 	catch(boost::property_tree::file_parser_error&)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		CASPAR_LOG(fatal) << L"Unhandled configuration error in main thread. Please check the configuration file (casparcg.config) for errors.";
+		CASPAR_LOG(fatal) << L"Unhandled configuration error in main thread. Please check the configuration file (" << config_file_name << L") for errors.";
 		system("pause");	
 	}
 	catch(...)
