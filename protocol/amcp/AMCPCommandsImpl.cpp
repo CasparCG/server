@@ -1960,7 +1960,7 @@ bool CinfCommand::DoExecute()
 			auto path = itr->path();
 			auto file = path.replace_extension(L"").filename();
 			if(boost::iequals(file, _parameters.at(0)))
-				info += MediaInfo(itr->path(), GetMediaInfoRepo()) + L"\r\n";
+				info += MediaInfo(itr->path(), GetMediaInfoRepo());
 		}
 
 		if(info.empty())
