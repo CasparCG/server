@@ -1,5 +1,17 @@
 C H A N G E S
 
+CasparCG Server 2.0.7 (as compared to CasparCG Server 2.0.7 Beta 2)
+===================================================================
+
+General
+-------
+
+  o Added support for using a different configuration file at startup than the
+    default casparcg.config by simply adding the name of the file to use as the
+    first command line argument to casparcg.exe.
+
+
+
 CasparCG Server 2.0.7 Beta 2 (as compared to CasparCG Server 2.0.7 Beta 1)
 ==========================================================================
 
