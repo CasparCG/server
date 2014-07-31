@@ -35,8 +35,7 @@ namespace caspar { namespace protocol { namespace amcp {
 	enum AMCPCommandScheduling
 	{
 		Default = 0,
-		AddToQueue,
-		ImmediatelyAndClear
+		AddToQueue
 	};
 
 	class AMCPCommand

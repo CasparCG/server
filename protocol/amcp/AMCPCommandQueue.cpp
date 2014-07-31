@@ -39,9 +39,6 @@ void AMCPCommandQueue::AddCommand(AMCPCommandPtr pCurrentCommand)
 	if(!pCurrentCommand)
 		return;
 
-	if(pCurrentCommand->GetScheduling() == ImmediatelyAndClear)
-		executor_.clear();
-
 	if(executor_.size() > 64)
 	{
 		try

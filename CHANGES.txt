@@ -9,6 +9,7 @@ General
   o Added support for using a different configuration file at startup than the
     default casparcg.config by simply adding the name of the file to use as the
     first command line argument to casparcg.exe.
+  o Fixed various bugs.
 
 
 
