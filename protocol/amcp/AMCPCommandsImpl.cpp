@@ -1921,7 +1921,7 @@ bool ThumbnailCommand::DoExecuteGenerate()
 	if (thumb_gen)
 	{
 		thumb_gen->generate(_parameters[1]);
-		SetReplyString(L"200 THUMBNAIL GENERATE OK\r\n");
+		SetReplyString(L"202 THUMBNAIL GENERATE OK\r\n");
 		return true;
 	}
 	else
@@ -1938,7 +1938,7 @@ bool ThumbnailCommand::DoExecuteGenerateAll()
 	if (thumb_gen)
 	{
 		thumb_gen->generate_all();
-		SetReplyString(L"200 THUMBNAIL GENERATE_ALL OK\r\n");
+		SetReplyString(L"202 THUMBNAIL GENERATE_ALL OK\r\n");
 		return true;
 	}
 	else
