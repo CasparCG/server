@@ -1616,7 +1616,7 @@ bool CGCommand::DoExecuteInvoke()
 
 		try
 		{
-			auto result = GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"INVOKE %1% \"%2%\"") % layer % _parameters.at_original(2)).str()).get();
+			auto result = GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"INVOKE %1% %2%") % layer % _parameters.at_original(2)).str()).get();
 			replyString << result << TEXT("\r\n"); 
 		}
 		catch (const caspar::not_supported&)
