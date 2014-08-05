@@ -207,17 +207,14 @@ public:
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
 		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));
 
-		lock(get_global_init_destruct_mutex(), [this]
-		{
 
-			CoInitialize(nullptr);
+		CoInitialize(nullptr);
 
-			if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to create FlashAxContainer"));
+		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to create FlashAxContainer"));
 		
-			if(FAILED(ax_->CreateAxControl()))
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Create FlashAxControl"));
-		});
+		if(FAILED(ax_->CreateAxControl()))
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Create FlashAxControl"));
 
 		ax_->set_print([this]{return print();});
 		
@@ -228,8 +225,14 @@ public:
 		if(FAILED(spFlash->put_Playing(true)) )
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to start playing Flash"));
 
-		if(FAILED(spFlash->put_Movie(CComBSTR(filename.c_str()))))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Load Template Host"));
+		// Concurrent initialization of two template hosts causes a
+		// SecurityException later when CG ADD is performed. Initialization is
+		// therefore serialized via a global mutex.
+		lock(get_global_init_destruct_mutex(), [&]
+		{
+			if(FAILED(spFlash->put_Movie(CComBSTR(filename.c_str()))))
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Load Template Host"));
+		});
 										
 		if(FAILED(spFlash->put_ScaleMode(2)))  //Exact fit. Scale without respect to the aspect ratio.
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + " Failed to Set Scale Mode"));
@@ -244,11 +247,8 @@ public:
 	{		
 		if(ax_)
 		{
-			lock(get_global_init_destruct_mutex(), [this]
-			{
-				ax_->DestroyAxControl();
-				ax_->Release();
-			});
+			ax_->DestroyAxControl();
+			ax_->Release();
 		}
 		graph_->set_value("tick-time", 0.0f);
 		graph_->set_value("frame-time", 0.0f);
