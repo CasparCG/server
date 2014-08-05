@@ -343,12 +343,12 @@ safe_ptr<core::frame_producer> create_producer(
 {
 	const auto filename = env::template_folder() + L"\\" + params.at_original(0) + L".html";
 	
-	if (!boost::filesystem::exists(filename))
+	if (!boost::filesystem::exists(filename) && params.at(0) != L"[HTML]")
 		return core::frame_producer::empty();
 
 	const auto url = boost::filesystem::exists(filename) 
-		? filename 
-		: params.at_original(0);
+		? filename
+		: params.at_original(1);
 		
 	if(!boost::algorithm::contains(url, ".") || boost::algorithm::ends_with(url, "_A") || boost::algorithm::ends_with(url, "_ALPHA"))
 		return core::frame_producer::empty();
