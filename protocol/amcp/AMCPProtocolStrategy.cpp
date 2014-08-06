@@ -333,6 +333,7 @@ AMCPCommandPtr AMCPProtocolStrategy::CommandFactory(const std::wstring& str)
 	else if(s == TEXT("ADD"))			return std::make_shared<AddCommand>();
 	else if(s == TEXT("REMOVE"))		return std::make_shared<RemoveCommand>();
 	else if(s == TEXT("PAUSE"))			return std::make_shared<PauseCommand>();
+	else if(s == TEXT("RESUME"))		return std::make_shared<ResumeCommand>();
 	else if(s == TEXT("PLAY"))			return std::make_shared<PlayCommand>();
 	else if(s == TEXT("STOP"))			return std::make_shared<StopCommand>();
 	else if(s == TEXT("CLEAR"))			return std::make_shared<ClearCommand>();
