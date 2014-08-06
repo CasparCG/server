@@ -16,6 +16,13 @@ AMCP
 
   o Added RESUME command to complement PAUSE. (Peter Keuter)
 
+Producers
+---------
+
+  o The html_producer no longer tries to play all files with a . in their name.
+    (Georgi Chorbadzhiyski)
+
+
 
 CasparCG Server 2.0.7 Beta 2 (as compared to CasparCG Server 2.0.7 Beta 1)
 ==========================================================================
