@@ -11,6 +11,10 @@ General
     first command line argument to casparcg.exe.
   o Fixed various bugs.
 
+AMCP
+----
+
+  o Added RESUME command to complement PAUSE. (Peter Keuter)
 
 
 CasparCG Server 2.0.7 Beta 2 (as compared to CasparCG Server 2.0.7 Beta 1)
