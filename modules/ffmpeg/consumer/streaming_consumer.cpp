@@ -267,8 +267,18 @@ public:
 					? avcodec_find_encoder_by_name(audio_codec_name->c_str())
 					: avcodec_find_encoder(oc_->oformat->audio_codec);
 			
-			CASPAR_VERIFY(video_codec);
-			CASPAR_VERIFY(audio_codec);
+			if (!video_codec)
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(
+						"Failed to find video codec " + (video_codec_name
+								? *video_codec_name
+								: "with id " + boost::lexical_cast<std::string>(
+										oc_->oformat->video_codec))));
+			if (!audio_codec)
+				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(
+						"Failed to find audio codec " + (audio_codec_name
+								? *audio_codec_name
+								: "with id " + boost::lexical_cast<std::string>(
+										oc_->oformat->audio_codec))));
 			
 			// Filters
 
