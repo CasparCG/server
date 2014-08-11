@@ -118,7 +118,7 @@ public:
 
 	boost::unique_future<std::wstring> call(const std::wstring& str)
 	{		
-		static const boost::wregex add_exp			(L"ADD (?<LAYER>\\d+) (?<FILENAME>[^\\s]+) (?<PLAY_ON_LOAD>\\d)( (?<DATA>.*))?", boost::regex::perl|boost::regex::icase);
+		static const boost::wregex add_exp			(L"ADD (?<LAYER>\\d+) \"(?<FILENAME>[^\"]*)\" (?<PLAY_ON_LOAD>\\d)( (?<DATA>.*))?", boost::regex::perl|boost::regex::icase);
 		static const boost::wregex remove_exp		(L"REMOVE (?<LAYER>\\d+)", boost::regex::perl|boost::regex::icase);
 		static const boost::wregex play_exp			(L"PLAY (?<LAYER>\\d+)", boost::regex::perl|boost::regex::icase);
 		static const boost::wregex stop_exp			(L"STOP (?<LAYER>\\d+)", boost::regex::perl|boost::regex::icase);
