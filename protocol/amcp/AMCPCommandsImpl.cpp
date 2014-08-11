@@ -1382,7 +1382,7 @@ bool CGCommand::DoExecuteAdd() {
 
 	if(!fullFilename.empty())
 	{
-		auto call = (boost::wformat(L"ADD %1% %2% %3% %4% %5%") % layer % filename % bDoStart % label % (std::wstring() + (pDataString ? pDataString : L""))).str();
+		auto call = (boost::wformat(L"ADD %1% \"%2%\" %3% %4% %5%") % layer % filename % bDoStart % label % (std::wstring() + (pDataString ? pDataString : L""))).str();
 		auto producer = GetChannel()->stage()->foreground(GetLayerIndex(9999)).get();
 
 		if(producer->print().find(L"flash") == std::string::npos)
