@@ -301,10 +301,12 @@ namespace caspar {
 				return false;
 			}
 
-			void invoke_on_enter_frame()
+			void invoke_requested_animation_frames()
 			{
 				if (browser_)
-					browser_->SendProcessMessage(CefProcessId::PID_RENDERER, CefProcessMessage::Create(TICK_MESSAGE_NAME));
+					browser_->SendProcessMessage(
+							CefProcessId::PID_RENDERER,
+							CefProcessMessage::Create(TICK_MESSAGE_NAME));
 				graph_->set_value("tick-time", tick_timer_.elapsed()
 						* frame_factory_->get_video_format_desc().fps
 						* frame_factory_->get_video_format_desc().field_count
@@ -342,7 +344,7 @@ namespace caspar {
 
 			void update()
 			{
-				invoke_on_enter_frame();
+				invoke_requested_animation_frames();
 
 				high_prec_timer timer;
 				timer.tick(0.0);
@@ -361,7 +363,7 @@ namespace caspar {
 
 						executor_.yield();
 						timer.tick(1.0 / (format_desc.fps * format_desc.field_count));
-						invoke_on_enter_frame();
+						invoke_requested_animation_frames();
 
 						auto frame2 = pop();
 
@@ -393,7 +395,7 @@ namespace caspar {
 						});
 
 						timer.tick(1.0 / (format_desc.fps * format_desc.field_count));
-						invoke_on_enter_frame();
+						invoke_requested_animation_frames();
 					}
 				}
 			}
