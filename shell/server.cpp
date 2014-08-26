@@ -171,6 +171,7 @@ struct server::implementation : boost::noncopyable
 
 	~implementation()
 	{
+		diagnostics::show_graphs(false);
 		running_ = false;
 		initial_media_info_thread_.join();
 		thumbnail_generator_.reset();

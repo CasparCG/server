@@ -16,11 +16,18 @@ AMCP
 
   o Added RESUME command to complement PAUSE. (Peter Keuter)
 
-Producers
----------
+HTML producer
+-------------
 
-  o The html_producer no longer tries to play all files with a . in their name.
+  o No longer tries to play all files with a . in their name.
     (Georgi Chorbadzhiyski)
+  o Reimplemented using CEF3 instead of Berkelium, which enables use of WebGL
+    and more. CEF3 is actively maintained, which Berkelium is not. (Robert Nagy)
+  o Implements a custom version of window.requestAnimationFrame which will
+    follow the pace of the channel, for perfectly smooth animations.
+  o No longer manually interlaces frames, to allow for mixer fill transforms
+    without artifacts.
+  o Now uses CEF3 event loop to avoid 100% CPU core usage.
 
 
 

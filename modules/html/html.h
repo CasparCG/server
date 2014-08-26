@@ -24,10 +24,19 @@
 #include <functional>
 #include <string>
 
+#include <boost/thread/future.hpp>
+
 namespace caspar { namespace html {
+
+const std::string TICK_MESSAGE_NAME = "CasparCGTick";
+const std::string ANIMATION_FRAME_REQUESTED_MESSAGE_NAME =
+		"CasparCGAnimationFrameRequested";
+const std::string REMOVE_MESSAGE_NAME = "CasparCGRemove";
+const std::string LOG_MESSAGE_NAME = "CasparCGLog";
 
 bool init();
 void uninit();
 void invoke(const std::function<void()>& func);
-void begin_invoke(const std::function<void()>& func);
+boost::unique_future<void> begin_invoke(const std::function<void()>& func);
+
 }}
