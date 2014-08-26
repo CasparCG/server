@@ -207,6 +207,7 @@
     <PostBuildEvent>
       <Command>copy "$(SolutionDir)dependencies\ffmpeg\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\cef\bin\debug\*.*" "$(OutDir)"
+mkdir "$(OutDir)\locales"
 copy "$(SolutionDir)dependencies\cef\bin\debug\locales\*.*" "$(OutDir)\locales"
 copy "$(SolutionDir)dependencies\FreeImage\Dist\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\glew-1.6.0\bin\*.dll" "$(OutDir)"
@@ -271,6 +272,7 @@ copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
     <PostBuildEvent>
       <Command>copy "$(SolutionDir)dependencies\ffmpeg\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\cef\bin\release\*.*" "$(OutDir)"
+mkdir "$(OutDir)\locales"
 copy "$(SolutionDir)dependencies\cef\bin\release\locales\*.*" "$(OutDir)\locales"
 copy "$(SolutionDir)dependencies\FreeImage\Dist\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\glew-1.6.0\bin\*.dll" "$(OutDir)"
@@ -311,7 +313,7 @@ copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
       </Command>
     </PreLinkEvent>
     <Link>
-      <AdditionalDependencies>sfml-system-s.lib;sfml-audio-s.lib;sfml-window-s.lib;sfml-graphics-s.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avdevice.lib;avutil.lib;avfilter.lib;swscale.lib;tbb.lib;glew32.lib;zdll.lib;berkelium.lib</AdditionalDependencies>
+      <AdditionalDependencies>sfml-system-s.lib;sfml-audio-s.lib;sfml-window-s.lib;sfml-graphics-s.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avdevice.lib;avutil.lib;avfilter.lib;swscale.lib;swresample.lib;tbb.lib;glew32.lib;zdll.lib</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -334,6 +336,7 @@ copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
     <PostBuildEvent>
       <Command>copy "$(SolutionDir)dependencies\ffmpeg\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\cef\bin\release\*.*" "$(OutDir)"
+mkdir "$(OutDir)\locales"
 copy "$(SolutionDir)dependencies\cef\bin\release\locales\*.*" "$(OutDir)\locales"
 copy "$(SolutionDir)dependencies\FreeImage\Dist\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\glew-1.6.0\bin\*.dll" "$(OutDir)"
@@ -374,7 +377,7 @@ copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
       </Command>
     </PreLinkEvent>
     <Link>
-      <AdditionalDependencies>sfml-system-s.lib;sfml-audio-s.lib;sfml-window-s.lib;sfml-graphics-s.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avdevice.lib;avutil.lib;avfilter.lib;swscale.lib;tbb.lib;glew32.lib;zdll.lib;berkelium.lib</AdditionalDependencies>
+      <AdditionalDependencies>sfml-system-s.lib;sfml-audio-s.lib;sfml-window-s.lib;sfml-graphics-s.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avdevice.lib;avutil.lib;avfilter.lib;swscale.lib;swresample.lib;tbb.lib;glew32.lib;zdll.lib</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -397,7 +400,8 @@ copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
     <PostBuildEvent>
       <Command>copy "$(SolutionDir)dependencies\ffmpeg\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\cef\bin\release\*.*" "$(OutDir)"
-copy "$(SolutionDir)dependencies\cef\bin\release\locales\*.*" "$(OutDir)\locales"
+mkdir "$(OutDir)\locales"
+copy "$(SolutionDir)dependencies\cef\bin\release\locales" "$(OutDir)\locales"
 copy "$(SolutionDir)dependencies\FreeImage\Dist\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\glew-1.6.0\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\tbb\bin\ia32\vc10\*.dll" "$(OutDir)"

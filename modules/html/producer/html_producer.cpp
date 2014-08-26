@@ -34,22 +34,27 @@
 #include <common/env.h>
 #include <common/concurrency/executor.h>
 #include <common/concurrency/lock.h>
+#include <common/concurrency/future_util.h>
 #include <common/diagnostics/graph.h>
 #include <common/utility/timer.h>
 #include <common/memory/memcpy.h>
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/trim.hpp>
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
+#include <boost/timer.hpp>
 
 #include <tbb/atomic.h>
-#include <tbb/parallel_for.h>
+#include <tbb/concurrent_queue.h>
 
 #include <cef_task.h>
 #include <cef_app.h>
 #include <cef_client.h>
 #include <cef_render_handler.h>
+
+#include <queue>
 
 #include "html.h"
 
@@ -63,33 +68,52 @@ namespace caspar {
 			: public CefClient
 			, public CefRenderHandler
 			, public CefLifeSpanHandler
+			, public CefLoadHandler
 		{
+			std::wstring							url_;
+			safe_ptr<diagnostics::graph>			graph_;
+			boost::timer							tick_timer_;
+			boost::timer							frame_timer_;
+			boost::timer							paint_timer_;
 
-			safe_ptr<core::frame_factory>	frame_factory_;
-			tbb::atomic<bool>				invalidated_;
-			std::vector<unsigned char>		frame_;
-			mutable boost::mutex			frame_mutex_;
+			safe_ptr<core::frame_factory>			frame_factory_;
+			tbb::concurrent_queue<std::wstring>		javascript_before_load_;
+			tbb::atomic<bool>						loaded_;
+			tbb::atomic<bool>						removed_;
+			tbb::atomic<bool>						animation_frame_requested_;
+			std::queue<safe_ptr<core::basic_frame>>	frames_;
+			mutable boost::mutex					frames_mutex_;
 
-			safe_ptr<core::basic_frame>		last_frame_;
-			mutable boost::mutex			last_frame_mutex_;
+			safe_ptr<core::basic_frame>				last_frame_;
+			safe_ptr<core::basic_frame>				last_progressive_frame_;
+			mutable boost::mutex					last_frame_mutex_;
 
-			CefRefPtr<CefBrowser>			browser_;
+			CefRefPtr<CefBrowser>					browser_;
 
-			executor						executor_;
+			executor								executor_;
 
 		public:
 
-			html_client(safe_ptr<core::frame_factory> frame_factory)
-				: frame_factory_(frame_factory)
-				, frame_(frame_factory->get_video_format_desc().width * frame_factory->get_video_format_desc().height * 4, 0)
+			html_client(safe_ptr<core::frame_factory> frame_factory, const std::wstring& url)
+				: url_(url)
+				, frame_factory_(frame_factory)
 				, last_frame_(core::basic_frame::empty())
+				, last_progressive_frame_(core::basic_frame::empty())
 				, executor_(L"html_producer")
 			{
-				invalidated_ = true;
+				graph_->set_color("browser-tick-time", diagnostics::color(0.1f, 1.0f, 0.1f));
+				graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
+				graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.9f));
+				graph_->set_text(print());
+				diagnostics::register_graph(graph_);
+
+				loaded_ = false;
+				removed_ = false;
+				animation_frame_requested_ = false;
 				executor_.begin_invoke([&]{ update(); });
 			}
 
-			safe_ptr<core::basic_frame> receive(int)
+			safe_ptr<core::basic_frame> receive()
 			{
 				auto frame = last_frame();
 				executor_.begin_invoke([&]{ update(); });
@@ -106,15 +130,24 @@ namespace caspar {
 
 			void execute_javascript(const std::wstring& javascript)
 			{
-				html::begin_invoke([=]
+				if (!loaded_)
 				{
-					if (browser_ != nullptr)
-						browser_->GetMainFrame()->ExecuteJavaScript(narrow(javascript).c_str(), browser_->GetMainFrame()->GetURL(), 0);
-				});
+					javascript_before_load_.push(javascript);
+				}
+				else
+				{
+					execute_queued_javascript();
+					do_execute_javascript(javascript);
+				}
 			}
 
 			void close()
 			{
+				if (!animation_frame_requested_)
+					CASPAR_LOG(warning) << print()
+							<< " window.requestAnimationFrame() never called. "
+							<< "Animations might have been laggy";
+
 				html::invoke([=]
 				{
 					if (browser_ != nullptr)
@@ -124,25 +157,67 @@ namespace caspar {
 				});
 			}
 
+			void remove()
+			{
+				close();
+				removed_ = true;
+			}
+
+			bool is_removed() const
+			{
+				return removed_;
+			}
+
 		private:
 
 			bool GetViewRect(CefRefPtr<CefBrowser> browser, CefRect &rect)
 			{
 				CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
 
-				rect = CefRect(0, 0, frame_factory_->get_video_format_desc().width, frame_factory_->get_video_format_desc().height);
+				rect = CefRect(0, 0, frame_factory_->get_video_format_desc().square_width, frame_factory_->get_video_format_desc().square_height);
 				return true;
 			}
 
-			void OnPaint(CefRefPtr<CefBrowser> browser, PaintElementType type, const RectList &dirtyRects, const void *buffer, int width, int height)
+			void OnPaint(
+					CefRefPtr<CefBrowser> browser,
+					PaintElementType type,
+					const RectList &dirtyRects,
+					const void *buffer,
+					int width,
+					int height)
 			{
+				graph_->set_value("browser-tick-time", paint_timer_.elapsed()
+						* frame_factory_->get_video_format_desc().fps
+						* frame_factory_->get_video_format_desc().field_count
+						* 0.5);
+				paint_timer_.restart();
 				CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
 
-				lock(frame_mutex_, [&]
+				boost::timer copy_timer;
+				core::pixel_format_desc pixel_desc;
+					pixel_desc.pix_fmt = core::pixel_format::bgra;
+					pixel_desc.planes.push_back(
+						core::pixel_format_desc::plane(width, height, 4));
+				auto frame = frame_factory_->create_frame(this, pixel_desc);
+				fast_memcpy(frame->image_data().begin(), buffer, width * height * 4);
+				frame->commit();
+
+				lock(frames_mutex_, [&]
 				{
-					invalidated_ = true;
-					fast_memcpy(frame_.data(), buffer, width * height * 4);
+					frames_.push(frame);
+
+					size_t max_in_queue = frame_factory_->get_video_format_desc().field_count;
+
+					while (frames_.size() > max_in_queue)
+					{
+						frames_.pop();
+						graph_->set_tag("dropped-frame");
+					}
 				});
+				graph_->set_value("copy-time", copy_timer.elapsed()
+						* frame_factory_->get_video_format_desc().fps
+						* frame_factory_->get_video_format_desc().field_count
+						* 0.5);
 			}
 
 			void OnAfterCreated(CefRefPtr<CefBrowser> browser) override
@@ -176,38 +251,91 @@ namespace caspar {
 				return this;
 			}
 
-			void invoke_on_enter_frame()
-			{
-				//html::invoke([this]
-				//{
-				//	static const std::wstring javascript = L"onEnterFrame()";
-				//	execute_javascript(javascript);
-				//});
+			CefRefPtr<CefLoadHandler> GetLoadHandler() override {
+				return this;
 			}
 
-			safe_ptr<core::basic_frame> draw(safe_ptr<core::write_frame> frame, core::field_mode::type field_mode)
+			void OnLoadEnd(
+					CefRefPtr<CefBrowser> browser,
+					CefRefPtr<CefFrame> frame,
+					int httpStatusCode) override
 			{
-				const auto& pixel_desc = frame->get_pixel_format_desc();
+				loaded_ = true;
+				execute_queued_javascript();
+			}
 
-				CASPAR_ASSERT(pixel_desc.pix_fmt == core::pixel_format::bgra);
+			bool OnProcessMessageReceived(
+					CefRefPtr<CefBrowser> browser,
+					CefProcessId source_process,
+					CefRefPtr<CefProcessMessage> message) override
+			{
+				auto name = message->GetName().ToString();
 
-				const auto& height = pixel_desc.planes[0].height;
-				const auto& linesize = pixel_desc.planes[0].linesize;
-				
-				lock(frame_mutex_, [&]
+				if (name == ANIMATION_FRAME_REQUESTED_MESSAGE_NAME)
 				{
-					tbb::parallel_for<int>(
-						field_mode == core::field_mode::upper ? 0 : 1,
-						height,
-						field_mode == core::field_mode::progressive ? 1 : 2,
-						[&](int y)
+					CASPAR_LOG(trace)
+							<< print() << L" Requested animation frame";
+					animation_frame_requested_ = true;
+
+					return true;
+				}
+				else if (name == REMOVE_MESSAGE_NAME)
+				{
+					remove();
+
+					return true;
+				}
+				else if (name == LOG_MESSAGE_NAME)
+				{
+					auto args = message->GetArgumentList();
+					auto severity =
+						static_cast<log::severity_level>(args->GetInt(0));
+					auto msg = args->GetString(1).ToWString();
+
+					BOOST_LOG_STREAM_WITH_PARAMS(
+							log::get_logger(),
+							(boost::log::keywords::severity = severity))
+						<< print() << L" [renderer_process] " << msg;
+				}
+
+				return false;
+			}
+
+			void invoke_on_enter_frame()
+			{
+				if (browser_)
+					browser_->SendProcessMessage(CefProcessId::PID_RENDERER, CefProcessMessage::Create(TICK_MESSAGE_NAME));
+				graph_->set_value("tick-time", tick_timer_.elapsed()
+						* frame_factory_->get_video_format_desc().fps
+						* frame_factory_->get_video_format_desc().field_count
+						* 0.5);
+				tick_timer_.restart();
+			}
+
+			bool try_pop(safe_ptr<core::basic_frame>& result)
+			{
+				return lock(frames_mutex_, [&]() -> bool
+				{
+					if (!frames_.empty())
 					{
-						fast_memcpy(
-							frame->image_data().begin() + y * linesize,
-							frame_.data() + y * linesize,
-							linesize);
-					});
+						result = frames_.front();
+						frames_.pop();
+
+						return true;
+					}
+
+					return false;
 				});
+			}
+
+			safe_ptr<core::basic_frame> pop()
+			{
+				safe_ptr<core::basic_frame> frame;
+
+				if (!try_pop(frame))
+				{
+					BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(narrow(print()) + "No frame in buffer"));
+				}
 
 				return frame;
 			}
@@ -216,44 +344,80 @@ namespace caspar {
 			{
 				invoke_on_enter_frame();
 
-				if (invalidated_.fetch_and_store(false))
+				high_prec_timer timer;
+				timer.tick(0.0);
+				const auto& format_desc = frame_factory_->get_video_format_desc();
+
+				bool has_frames = lock(frames_mutex_, [&]
 				{
-					high_prec_timer timer;
-					timer.tick(0.0);
+					return frames_.size() >= format_desc.field_count;
+				});
 
-					core::pixel_format_desc pixel_desc;
-					pixel_desc.pix_fmt = core::pixel_format::bgra;
-					pixel_desc.planes.push_back(
-						core::pixel_format_desc::plane(
-						frame_factory_->get_video_format_desc().width,
-						frame_factory_->get_video_format_desc().height,
-						4));
-
-					auto frame = frame_factory_->create_frame(this, pixel_desc);
-
-					const auto& format_desc = frame_factory_->get_video_format_desc();
-
+				if (has_frames)
+				{
 					if (format_desc.field_mode != core::field_mode::progressive)
 					{
-						draw(frame, format_desc.field_mode);
+						auto frame1 = pop();
 
 						executor_.yield();
 						timer.tick(1.0 / (format_desc.fps * format_desc.field_count));
+						invoke_on_enter_frame();
 
-						draw(frame, static_cast<core::field_mode::type>(format_desc.field_mode ^ core::field_mode::progressive));
+						auto frame2 = pop();
+
+						lock(last_frame_mutex_, [&]
+						{
+							last_progressive_frame_ = frame2;
+							last_frame_ = core::basic_frame::interlace(frame1, frame2, format_desc.field_mode);
+						});
 					}
 					else
 					{
-						draw(frame, format_desc.field_mode);
+						auto frame = pop();
+
+						lock(last_frame_mutex_, [&]
+						{
+							last_frame_ = frame;
+						});
 					}
-
-					frame->commit();
-
-					lock(last_frame_mutex_, [&]
-					{
-						last_frame_ = frame;
-					});
 				}
+				else
+				{
+					graph_->set_tag("late-frame");
+
+					if (format_desc.field_mode != core::field_mode::progressive)
+					{
+						lock(last_frame_mutex_, [&]
+						{
+							last_frame_ = last_progressive_frame_;
+						});
+
+						timer.tick(1.0 / (format_desc.fps * format_desc.field_count));
+						invoke_on_enter_frame();
+					}
+				}
+			}
+
+			void do_execute_javascript(const std::wstring& javascript)
+			{
+				html::begin_invoke([=]
+				{
+					if (browser_ != nullptr)
+						browser_->GetMainFrame()->ExecuteJavaScript(narrow(javascript).c_str(), browser_->GetMainFrame()->GetURL(), 0);
+				});
+			}
+
+			void execute_queued_javascript()
+			{
+				std::wstring javascript;
+
+				while (javascript_before_load_.try_pop(javascript))
+					do_execute_javascript(javascript);
+			}
+
+			std::wstring print() const
+			{
+				return L"html[" + url_ + L"]";
 			}
 
 			IMPLEMENT_REFCOUNTING(html_client);
@@ -264,7 +428,6 @@ namespace caspar {
 		{
 			core::monitor::subject				monitor_subject_;
 			const std::wstring					url_;
-			safe_ptr<diagnostics::graph>		graph_;
 
 			CefRefPtr<html_client>				client_;
 
@@ -274,12 +437,9 @@ namespace caspar {
 				const std::wstring& url)
 				: url_(url)
 			{
-				graph_->set_text(print());
-				diagnostics::register_graph(graph_);
-
 				html::invoke([&]
 				{
-					client_ = new html_client(frame_factory);
+					client_ = new html_client(frame_factory, url_);
 
 					CefWindowInfo window_info;
 
@@ -287,26 +447,40 @@ namespace caspar {
 					window_info.SetAsOffScreen(nullptr);
 					//window_info.SetAsWindowless(nullptr, true);
 					
-					CefBrowserSettings browser_settings;	
+					CefBrowserSettings browser_settings;
 					CefBrowserHost::CreateBrowser(window_info, client_.get(), url, browser_settings, nullptr);
 				});
 			}
 
 			~html_producer()
 			{
-				client_->close();
+				if (client_)
+					client_->close();
 			}
 
 			// frame_producer
 
 			safe_ptr<core::basic_frame> receive(int) override
 			{
-				return client_->receive(0);
+				if (client_)
+				{
+					if (client_->is_removed())
+					{
+						client_ = nullptr;
+						return core::basic_frame::empty();
+					}
+
+					return client_->receive();
+				}
+
+				return core::basic_frame::empty();
 			}
 
 			safe_ptr<core::basic_frame> last_frame() const override
 			{
-				return client_->last_frame();
+				return client_
+						? client_->last_frame()
+						: core::basic_frame::empty();
 			}
 
 			boost::unique_future<std::wstring> call(const std::wstring& param) override
@@ -318,49 +492,42 @@ namespace caspar {
 				static const boost::wregex update_exp(L"UPDATE\\s+(\\d+)?\"?(?<VALUE>.*)\"?", boost::regex::icase);
 				static const boost::wregex invoke_exp(L"INVOKE\\s+(\\d+)?\"?(?<VALUE>.*)\"?", boost::regex::icase);
 
-				auto command = [=]
+				if (!client_)
+					return wrap_as_future(std::wstring(L""));
+
+				auto javascript = param;
+
+				boost::wsmatch what;
+
+				if (boost::regex_match(param, what, play_exp))
 				{
-					auto javascript = param;
-
-					boost::wsmatch what;
-
-					if (boost::regex_match(param, what, play_exp))
-					{
-						javascript = (boost::wformat(L"play()")).str();
-					}
-					else if (boost::regex_match(param, what, stop_exp))
-					{
-						javascript = (boost::wformat(L"stop()")).str();
-					}
-					else if (boost::regex_match(param, what, next_exp))
-					{
-						javascript = (boost::wformat(L"next()")).str();
-					}
-					else if (boost::regex_match(param, what, remove_exp))
-					{
-						javascript = (boost::wformat(L"remove()")).str();
-					}
-					else if (boost::regex_match(param, what, update_exp))
-					{
-						javascript = (boost::wformat(L"update(\"%1%\")") % boost::algorithm::trim_copy_if(what["VALUE"].str(), boost::is_any_of(" \""))).str();
-					}
-					else if (boost::regex_match(param, what, invoke_exp))
-					{
-						javascript = (boost::wformat(L"invoke(\"%1%\")") % boost::algorithm::trim_copy_if(what["VALUE"].str(), boost::is_any_of(" \""))).str();
-					}
-
-					client_->execute_javascript(javascript);
-				};
-
-				boost::packaged_task<std::wstring> task([=]() -> std::wstring
+					javascript = (boost::wformat(L"play()")).str();
+				}
+				else if (boost::regex_match(param, what, stop_exp))
 				{
-					html::invoke(command);
-					return L"";
-				});
+					javascript = (boost::wformat(L"stop()")).str();
+				}
+				else if (boost::regex_match(param, what, next_exp))
+				{
+					javascript = (boost::wformat(L"next()")).str();
+				}
+				else if (boost::regex_match(param, what, remove_exp))
+				{
+					client_->remove();
+					return wrap_as_future(std::wstring(L""));
+				}
+				else if (boost::regex_match(param, what, update_exp))
+				{
+					javascript = (boost::wformat(L"update(\"%1%\")") % boost::algorithm::replace_all_copy(boost::algorithm::trim_copy_if(what["VALUE"].str(), boost::is_any_of(" \"")), "\"", "\\\"")).str();
+				}
+				else if (boost::regex_match(param, what, invoke_exp))
+				{
+					javascript = (boost::wformat(L"%1%()") % boost::algorithm::trim_copy_if(what["VALUE"].str(), boost::is_any_of(" \""))).str();
+				}
 
-				task();
+				client_->execute_javascript(javascript);
 
-				return task.get_future();
+				return wrap_as_future(std::wstring(L""));
 			}
 
 			std::wstring print() const override
