@@ -26,8 +26,8 @@
 
 namespace caspar { namespace html {
 
-void init();
+bool init();
 void uninit();
 void invoke(const std::function<void()>& func);
-
+void begin_invoke(const std::function<void()>& func);
 }}
