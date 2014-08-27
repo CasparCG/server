@@ -135,10 +135,10 @@
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">..\dependencies\BluefishSDK_V5_10_0_42\Inc\;..\dependencies\boost\;..\dependencies\ffmpeg\include\;..\dependencies\FreeImage\Dist\;..\dependencies\glew-1.6.0\include;..\dependencies\SFML-1.6\include\;..\dependencies\tbb\include\;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">..\dependencies\BluefishSDK_V5_10_0_42\Inc\;..\dependencies\boost\;..\dependencies\ffmpeg\include\;..\dependencies\FreeImage\Dist\;..\dependencies\glew-1.6.0\include;..\dependencies\SFML-1.6\include\;..\dependencies\tbb\include\;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">..\dependencies\BluefishSDK_V5_10_0_42\Inc\;..\dependencies\boost\;..\dependencies\ffmpeg\include\;..\dependencies\FreeImage\Dist\;..\dependencies\glew-1.6.0\include;..\dependencies\SFML-1.6\include\;..\dependencies\tbb\include\;$(IncludePath)</IncludePath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">C:\Program\Microsoft DirectX SDK (June 2010)\Lib\x86;..\dependencies\BluefishSDK_V5_10_0_42\Lib\;..\dependencies\boost\stage\lib\;..\dependencies\ffmpeg\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\glew-1.6.0\lib;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb\lib\ia32\vc10\;..\dependencies\zlib\lib;..\dependencies\berkelium\lib;$(LibraryPath)</LibraryPath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">C:\Program\Microsoft DirectX SDK (June 2010)\Lib\x86;..\dependencies\BluefishSDK_V5_10_0_42\Lib\;..\dependencies\boost\stage\lib\;..\dependencies\ffmpeg\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\glew-1.6.0\lib;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb\lib\ia32\vc10\;..\dependencies\zlib\lib;..\dependencies\berkelium\lib;$(LibraryPath)</LibraryPath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">C:\Program\Microsoft DirectX SDK (June 2010)\Lib\x86;..\dependencies\BluefishSDK_V5_10_0_42\Lib\;..\dependencies\boost\stage\lib\;..\dependencies\ffmpeg\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\glew-1.6.0\lib;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb\lib\ia32\vc10\;..\dependencies\zlib\lib;..\dependencies\berkelium\lib;$(LibraryPath)</LibraryPath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">C:\Program\Microsoft DirectX SDK (June 2010)\Lib\x86;..\dependencies\BluefishSDK_V5_10_0_42\Lib\;..\dependencies\boost\stage\lib\;..\dependencies\ffmpeg\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\glew-1.6.0\lib;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb\lib\ia32\vc10\;..\dependencies\zlib\lib;..\dependencies\berkelium\lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">C:\Program\Microsoft DirectX SDK (June 2010)\Lib\x86;..\dependencies\BluefishSDK_V5_10_0_42\Lib\;..\dependencies\boost\stage\lib\;..\dependencies\ffmpeg\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\glew-1.6.0\lib;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb\lib\ia32\vc10\;..\dependencies\zlib\lib;..\dependencies\cef\lib\debug;$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">C:\Program\Microsoft DirectX SDK (June 2010)\Lib\x86;..\dependencies\BluefishSDK_V5_10_0_42\Lib\;..\dependencies\boost\stage\lib\;..\dependencies\ffmpeg\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\glew-1.6.0\lib;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb\lib\ia32\vc10\;..\dependencies\zlib\lib;..\dependencies\cef\lib\release;$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">C:\Program\Microsoft DirectX SDK (June 2010)\Lib\x86;..\dependencies\BluefishSDK_V5_10_0_42\Lib\;..\dependencies\boost\stage\lib\;..\dependencies\ffmpeg\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\glew-1.6.0\lib;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb\lib\ia32\vc10\;..\dependencies\zlib\lib;..\dependencies\cef\lib\release;$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">C:\Program\Microsoft DirectX SDK (June 2010)\Lib\x86;..\dependencies\BluefishSDK_V5_10_0_42\Lib\;..\dependencies\boost\stage\lib\;..\dependencies\ffmpeg\lib\;..\dependencies\FreeImage\Dist\;..\dependencies\glew-1.6.0\lib;..\dependencies\SFML-1.6\lib\;..\dependencies\tbb\lib\ia32\vc10\;..\dependencies\zlib\lib;..\dependencies\cef\lib\release;$(LibraryPath)</LibraryPath>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(SolutionDir)bin\$(Configuration)\</OutDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(SolutionDir)bin\$(Configuration)\</OutDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">$(SolutionDir)bin\$(Configuration)\</OutDir>
@@ -186,7 +186,7 @@
       <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>sfml-system-s-d.lib;sfml-audio-s-d.lib;sfml-window-s-d.lib;sfml-graphics-s-d.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avdevice.lib;avutil.lib;avfilter.lib;swscale.lib;swresample.lib;tbb.lib;glew32.lib;zdll.lib;berkelium.lib</AdditionalDependencies>
+      <AdditionalDependencies>sfml-system-s-d.lib;sfml-audio-s-d.lib;sfml-window-s-d.lib;sfml-graphics-s-d.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avdevice.lib;avutil.lib;avfilter.lib;swscale.lib;swresample.lib;tbb.lib;glew32.lib;zdll.lib</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -206,8 +206,8 @@
     </Link>
     <PostBuildEvent>
       <Command>copy "$(SolutionDir)dependencies\ffmpeg\bin\*.dll" "$(OutDir)"
-copy "$(SolutionDir)dependencies\berkelium\bin\*.dll" "$(OutDir)"
-copy "$(SolutionDir)dependencies\berkelium\bin\berkelium.exe" "$(OutDir)"
+copy "$(SolutionDir)dependencies\cef\bin\debug\*.*" "$(OutDir)"
+copy "$(SolutionDir)dependencies\cef\bin\debug\locales\*.*" "$(OutDir)\locales"
 copy "$(SolutionDir)dependencies\FreeImage\Dist\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\glew-1.6.0\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\tbb\bin\ia32\vc10\*.dll" "$(OutDir)"
@@ -247,7 +247,7 @@ copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
       </Command>
     </PreLinkEvent>
     <Link>
-      <AdditionalDependencies>sfml-system-s.lib;sfml-audio-s.lib;sfml-window-s.lib;sfml-graphics-s.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avdevice.lib;avutil.lib;avfilter.lib;swscale.lib;swresample.lib;tbb.lib;glew32.lib;zdll.lib;berkelium.lib</AdditionalDependencies>
+      <AdditionalDependencies>sfml-system-s.lib;sfml-audio-s.lib;sfml-window-s.lib;sfml-graphics-s.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avdevice.lib;avutil.lib;avfilter.lib;swscale.lib;swresample.lib;tbb.lib;glew32.lib;zdll.lib</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -270,8 +270,8 @@ copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(SolutionDir)dependencies\ffmpeg\bin\*.dll" "$(OutDir)"
-copy "$(SolutionDir)dependencies\berkelium\bin\*.dll" "$(OutDir)"
-copy "$(SolutionDir)dependencies\berkelium\bin\berkelium.exe" "$(OutDir)"
+copy "$(SolutionDir)dependencies\cef\bin\release\*.*" "$(OutDir)"
+copy "$(SolutionDir)dependencies\cef\bin\release\locales\*.*" "$(OutDir)\locales"
 copy "$(SolutionDir)dependencies\FreeImage\Dist\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\glew-1.6.0\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\tbb\bin\ia32\vc10\*.dll" "$(OutDir)"
@@ -333,8 +333,8 @@ copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(SolutionDir)dependencies\ffmpeg\bin\*.dll" "$(OutDir)"
-copy "$(SolutionDir)dependencies\berkelium\bin\*.dll" "$(OutDir)"
-copy "$(SolutionDir)dependencies\berkelium\bin\berkelium.exe" "$(OutDir)"
+copy "$(SolutionDir)dependencies\cef\bin\release\*.*" "$(OutDir)"
+copy "$(SolutionDir)dependencies\cef\bin\release\locales\*.*" "$(OutDir)\locales"
 copy "$(SolutionDir)dependencies\FreeImage\Dist\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\glew-1.6.0\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\tbb\bin\ia32\vc10\*.dll" "$(OutDir)"
@@ -396,8 +396,8 @@ copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
     </Link>
     <PostBuildEvent>
       <Command>copy "$(SolutionDir)dependencies\ffmpeg\bin\*.dll" "$(OutDir)"
-copy "$(SolutionDir)dependencies\berkelium\bin\*.dll" "$(OutDir)"
-copy "$(SolutionDir)dependencies\berkelium\bin\berkelium.exe" "$(OutDir)"
+copy "$(SolutionDir)dependencies\cef\bin\release\*.*" "$(OutDir)"
+copy "$(SolutionDir)dependencies\cef\bin\release\locales\*.*" "$(OutDir)\locales"
 copy "$(SolutionDir)dependencies\FreeImage\Dist\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\glew-1.6.0\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies\tbb\bin\ia32\vc10\*.dll" "$(OutDir)"

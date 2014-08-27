@@ -25,67 +25,77 @@
 
 #include <common/concurrency/executor.h>
 
-#include <berkelium/Berkelium.hpp>
-
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
+#include <cef_app.h>
+
+#include <tbb/atomic.h>
+
+#pragma comment(lib, "libcef.lib")
+#pragma comment(lib, "libcef_dll_wrapper.lib")
+
 namespace caspar { namespace html {
-	
-std::unique_ptr<executor> g_berkelium_executor;
-std::unique_ptr<executor> g_berkelium_timer_executor;
+
+tbb::atomic<bool>		  g_cef_running;
+std::unique_ptr<executor> g_cef_executor;
 
 void tick()
 {
-	g_berkelium_timer_executor->begin_invoke([&]
-	{
-		static boost::asio::io_service io;
+	if (!g_cef_running)
+		return;
 
-		boost::asio::deadline_timer t(io, boost::posix_time::milliseconds(10));
-
-		g_berkelium_executor->invoke(std::bind(&Berkelium::update));
-
-		t.wait();
-
-		tick();
-	});
+	CefDoMessageLoopWork();
+	g_cef_executor->begin_invoke([&]{ tick(); });
 }
 
-void init()
+bool init()
 {
+	CefMainArgs main_args;
+
+	if (CefExecuteProcess(main_args, nullptr, nullptr) >= 0)
+		return false;
+
 	core::register_producer_factory(html::create_producer);
+	
+	g_cef_executor.reset(new executor(L"cef"));
+	g_cef_running = true;
 
-	g_berkelium_executor.reset(new executor(L"berkelium"));
-	g_berkelium_timer_executor.reset(new executor(L"g_berkelium_timer"));
-	
-	g_berkelium_executor->invoke([&]
+	g_cef_executor->invoke([&]
 	{
-		if (!Berkelium::init(Berkelium::FileString::empty()))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to initialize Berkelium"));
+		CefSettings settings;
+		//settings.windowless_rendering_enabled = true;
+		CefInitialize(main_args, settings, nullptr, nullptr);
 	});
-	
-	g_berkelium_timer_executor->begin_invoke([&]
+
+	g_cef_executor->begin_invoke([&]
 	{
 		tick();
 	});
-}
 
-void invoke(const std::function<void()>& func)
-{
-	g_berkelium_executor->invoke(func);
+	return true;
 }
 
 void uninit()
 {
-	g_berkelium_timer_executor.reset();
-
-	g_berkelium_executor->invoke([&]
+	g_cef_executor->invoke([=]
 	{
-		Berkelium::destroy();
+		g_cef_running = false;
+		g_cef_executor->wait();
+		CefShutdown();
 	});
-
-	g_berkelium_executor.reset();
 }
 
+
+void invoke(const std::function<void()>& func)
+{
+	g_cef_executor->invoke(func);
+}
+
+
+void begin_invoke(const std::function<void()>& func)
+{
+	g_cef_executor->begin_invoke(func);
+}
 }}

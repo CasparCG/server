@@ -53,6 +53,7 @@
 #include <modules/ffmpeg/ffmpeg.h>
 #include <modules/image/image.h>
 #include <modules/newtek/util/air_send.h>
+#include <modules/html/html.h>
 
 #include <common/env.h>
 #include <common/exception/win32_exception.h>
@@ -72,6 +73,8 @@
 #include <boost/thread/future.hpp>
 #include <boost/locale.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
+
+#include <functional>
 
 // NOTE: This is needed in order to make CComObject work since this is not a real ATL project.
 CComModule _AtlModule;
@@ -184,8 +187,33 @@ std::wstring make_upper_case(const std::wstring& str)
 	return boost::to_upper_copy(str);
 }
 
+struct init_t
+{
+	std::wstring name;
+	std::function<void()> uninit;
+
+	init_t(std::wstring name, std::function<void()> init, std::function<void()> uninit)
+		: name(name)
+		, uninit(uninit)
+	{
+		if (init)
+			init();
+		CASPAR_LOG(info) << L"Initialized " << name << L" module.";
+	}
+
+	~init_t()
+	{
+		if (uninit)
+			uninit();
+		CASPAR_LOG(info) << L"Uninitialized " << name << L" module.";
+	}
+};
+
 int main(int argc, char* argv[])
-{	
+{
+	if (!caspar::html::init())
+		return 0;
+
 	static_assert(sizeof(void*) == 4, "64-bit code generation is not supported.");
 	
 	SetUnhandledExceptionFilter(UserUnhandledExceptionFilter);
@@ -271,6 +299,8 @@ int main(int argc, char* argv[])
 		wait_for_keypress = false;
 
 		{
+			init_t html_init(L"html", nullptr, caspar::html::uninit);
+
 			boost::promise<bool> shutdown_server_now;
 			boost::unique_future<bool> shutdown_server = shutdown_server_now.get_future();
 
