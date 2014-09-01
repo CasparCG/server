@@ -354,9 +354,8 @@ namespace caspar {
 				{
 					return frames_.size();
 				});
-				bool has_frames = num_frames >= format_desc.field_count;
 
-				if (has_frames)
+				if (num_frames >= format_desc.field_count)
 				{
 					if (format_desc.field_mode != core::field_mode::progressive)
 					{
@@ -384,9 +383,9 @@ namespace caspar {
 						});
 					}
 				}
-				else if (num_frames == 1) // Interlaced but only on frame
+				else if (num_frames == 1) // Interlaced but only one frame
 				{                         // available. Probably the last frame
-					                      // of end of some animation sequence
+				                          // of some animation sequence.
 					auto frame = pop();
 
 					lock(last_frame_mutex_, [&]
