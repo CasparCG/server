@@ -350,10 +350,11 @@ namespace caspar {
 				timer.tick(0.0);
 				const auto& format_desc = frame_factory_->get_video_format_desc();
 
-				bool has_frames = lock(frames_mutex_, [&]
+				auto num_frames = lock(frames_mutex_, [&]
 				{
-					return frames_.size() >= format_desc.field_count;
+					return frames_.size();
 				});
+				bool has_frames = num_frames >= format_desc.field_count;
 
 				if (has_frames)
 				{
@@ -382,6 +383,20 @@ namespace caspar {
 							last_frame_ = frame;
 						});
 					}
+				}
+				else if (num_frames == 1) // Interlaced but only on frame
+				{                         // available. Probably the last frame
+					                      // of end of some animation sequence
+					auto frame = pop();
+
+					lock(last_frame_mutex_, [&]
+					{
+						last_progressive_frame_ = frame;
+						last_frame_ = frame;
+					});
+
+					timer.tick(1.0 / (format_desc.fps * format_desc.field_count));
+					invoke_requested_animation_frames();
 				}
 				else
 				{
