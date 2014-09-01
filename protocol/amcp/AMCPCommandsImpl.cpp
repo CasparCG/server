@@ -1630,9 +1630,18 @@ bool CGCommand::DoExecuteInvoke()
 
 		int layer = _ttoi(_parameters[1].c_str());
 
+		auto& params_orig = _parameters.get_original();
+		std::wstring param;
+		for (auto it = std::begin(params_orig) + 2; it != std::end(params_orig); ++it, param += L" ")
+		{
+			param += *it;
+		}
+
+		boost::trim_right(param);
+
 		try
 		{
-			auto result = GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"INVOKE %1% %2%") % layer % _parameters.at_original(2)).str()).get();
+			auto result = GetChannel()->stage()->call(GetLayerIndex(9999), true, (boost::wformat(L"INVOKE %1% %2%") % layer % param).str()).get();
 			replyString << result << TEXT("\r\n"); 
 		}
 		catch (const caspar::not_supported&)
