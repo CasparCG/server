@@ -539,7 +539,10 @@ namespace caspar {
 				}
 				else if (boost::regex_match(param, what, invoke_exp))
 				{
-					javascript = (boost::wformat(L"%1%()") % boost::algorithm::trim_copy_if(what["VALUE"].str(), boost::is_any_of(" \""))).str();
+					auto function_call = boost::algorithm::trim_copy_if(what["VALUE"].str(), boost::is_any_of(" \""));
+
+					// Append empty () if no parameter list has been given
+					javascript = boost::ends_with(function_call, ")") ? function_call : function_call + L"()";
 				}
 
 				client_->execute_javascript(javascript);
