@@ -16,6 +16,12 @@ AMCP
 
   o Added RESUME command to complement PAUSE. (Peter Keuter)
 
+Consumers
+---------
+
+  o Removed blocking_decklink_consumer. It was more like an experiment at best
+    and its usefulness was questionable.
+
 HTML producer
 -------------
 

@@ -31,9 +31,6 @@
     <ClCompile Include="interop\DeckLinkAPI_i.c">
       <Filter>source\interop</Filter>
     </ClCompile>
-    <ClCompile Include="consumer\blocking_decklink_consumer.cpp">
-      <Filter>source\consumer</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="consumer\decklink_consumer.h">
@@ -54,9 +51,6 @@
     </ClInclude>
     <ClInclude Include="interop\DeckLinkAPI_h.h">
       <Filter>source\interop</Filter>
-    </ClInclude>
-    <ClInclude Include="consumer\blocking_decklink_consumer.h">
-      <Filter>source\consumer</Filter>
     </ClInclude>
     <ClInclude Include="util\decklink_allocator.h">
       <Filter>source\util</Filter>
