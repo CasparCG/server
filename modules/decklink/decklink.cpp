@@ -25,7 +25,6 @@
 #include "util/util.h"
 
 #include "consumer/decklink_consumer.h"
-#include "consumer/blocking_decklink_consumer.h"
 #include "producer/decklink_producer.h"
 
 #include <core/parameters/parameters.h>
@@ -59,7 +58,6 @@ void init()
 		return;
 		
 	core::register_consumer_factory([](const core::parameters& params){return decklink::create_consumer(params);});
-	core::register_consumer_factory([](const core::parameters& params){return decklink::create_blocking_consumer(params);});
 	core::register_producer_factory(create_producer);
 }
 

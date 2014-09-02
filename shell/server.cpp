@@ -54,7 +54,6 @@
 #include <modules/bluefish/consumer/bluefish_consumer.h>
 #include <modules/newtek/consumer/newtek_ivga_consumer.h>
 #include <modules/decklink/consumer/decklink_consumer.h>
-#include <modules/decklink/consumer/blocking_decklink_consumer.h>
 #include <modules/ogl/consumer/ogl_consumer.h>
 #include <modules/ffmpeg/consumer/ffmpeg_consumer.h>
 #include <modules/ffmpeg/consumer/streaming_consumer.h>
@@ -265,8 +264,6 @@ struct server::implementation : boost::noncopyable
 					on_consumer(decklink::create_consumer(xml_consumer.second));				
 				else if (name == L"newtek-ivga")					
 					on_consumer(newtek::create_ivga_consumer(xml_consumer.second));			
-				else if (name == L"blocking-decklink")
-					on_consumer(decklink::create_blocking_consumer(xml_consumer.second));				
 				else if (name == L"file")					
 					on_consumer(ffmpeg::create_consumer(xml_consumer.second));						
 				else if (name == L"stream")					
