@@ -94,9 +94,15 @@ public:
 		, image_mixer_(ogl)
 		, executor_(L"mixer")
 		, monitor_subject_(make_safe<monitor::subject>("/mixer"))
-	{			
+	{
 		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8));
 		current_mix_time_ = 0;
+		executor_.invoke([&]
+		{
+			set_current_aspect_ratio(
+					static_cast<double>(format_desc.square_width)
+							/ static_cast<double>(format_desc.square_height));
+		});
 
 		audio_mixer_.monitor_output().attach_parent(monitor_subject_);
 	}
@@ -233,6 +239,9 @@ public:
 		{
 			tbb::spin_mutex::scoped_lock lock(format_desc_mutex_);
 			format_desc_ = format_desc;
+			set_current_aspect_ratio(
+					static_cast<double>(format_desc.square_width)
+							/ static_cast<double>(format_desc.square_height));
 		});
 	}
 

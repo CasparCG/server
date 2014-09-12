@@ -54,10 +54,12 @@ struct draw_params
 	std::shared_ptr<device_buffer>			background;
 	std::shared_ptr<device_buffer>			local_key;
 	std::shared_ptr<device_buffer>			layer_key;
+	double									aspect_ratio;
 
 	draw_params() 
 		: blend_mode(blend_mode::normal)
 		, keyer(keyer::linear)
+		, aspect_ratio(1.0)
 	{
 	}
 };
