@@ -59,10 +59,12 @@ public:
 	double					contrast;
 	double					brightness;
 	double					saturation;
-	boost::array<double, 2>	fill_translation; 
-	boost::array<double, 2>	fill_scale; 
-	boost::array<double, 2>	clip_translation;  
-	boost::array<double, 2>	clip_scale;  
+	boost::array<double, 2>	anchor;
+	boost::array<double, 2>	fill_translation;
+	boost::array<double, 2>	fill_scale;
+	boost::array<double, 2>	clip_translation;
+	boost::array<double, 2>	clip_scale;
+	double					angle;
 	levels					levels;
 
 	field_mode::type		field_mode;
@@ -78,5 +80,8 @@ frame_transform tween(double time, const frame_transform& source, const frame_tr
 bool operator<(const frame_transform& lhs, const frame_transform& rhs);
 bool operator==(const frame_transform& lhs, const frame_transform& rhs);
 bool operator!=(const frame_transform& lhs, const frame_transform& rhs);
+
+void set_current_aspect_ratio(double aspect_ratio);
+double get_current_aspect_ratio();
 
 }}

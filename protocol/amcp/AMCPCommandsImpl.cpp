@@ -485,6 +485,31 @@ bool MixerCommand::DoExecute()
 				return transform;					
 			}, duration, tween));
 		}
+		else if(_parameters[0] == L"ANCHOR")
+		{
+			if (_parameters.size() == 1)
+			{
+				auto transform = get_current_transform();
+				auto anchor = transform.anchor;
+				SetReplyString(
+						L"201 MIXER OK\r\n" 
+						+ lexical_cast<std::wstring>(anchor[0]) + L" "
+						+ lexical_cast<std::wstring>(anchor[1]) + L"\r\n");
+				return true;
+			}
+
+			int duration = _parameters.size() > 3 ? boost::lexical_cast<int>(_parameters[3]) : 0;
+			std::wstring tween = _parameters.size() > 4 ? _parameters[4] : L"linear";
+			double x	= boost::lexical_cast<double>(_parameters.at(1));
+			double y	= boost::lexical_cast<double>(_parameters.at(2));
+
+			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) mutable -> frame_transform
+			{
+				transform.anchor[0]	= x;
+				transform.anchor[1]	= y;
+				return transform;
+			}, duration, tween));
+		}
 		else if(_parameters[0] == L"FILL" || _parameters[0] == L"FILL_RECT")
 		{
 			if (_parameters.size() == 1)
@@ -680,6 +705,22 @@ bool MixerCommand::DoExecute()
 			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
 			{
 				transform.contrast = value;
+				return transform;
+			}, duration, tween));	
+		}
+		else if(_parameters[0] == L"ROTATION")
+		{
+			static const double PI = 3.141592653589793;
+
+			if (_parameters.size() == 1)
+				return reply_value([](const frame_transform& t) { return t.angle / PI * 180.0; });
+
+			auto value = boost::lexical_cast<double>(_parameters.at(1)) * PI / 180.0;
+			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
+			std::wstring tween = _parameters.size() > 3 ? _parameters[3] : L"linear";
+			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) -> frame_transform
+			{
+				transform.angle = value;
 				return transform;
 			}, duration, tween));	
 		}

@@ -11,10 +11,28 @@ General
     first command line argument to casparcg.exe.
   o Fixed various bugs.
 
+Mixer
+-----
+
+  o Added support for rotation.
+  o Added support for changing the anchor point around which fill_translation,
+    fill_scale and rotation will be done from.
+
 AMCP
 ----
 
   o Added RESUME command to complement PAUSE. (Peter Keuter)
+  o To support the new mixer features the following commands has been added:
+
+    - MIXER ANCHOR -- will return or modify the anchor point for a layer
+      (default is 0 0 for backwards compatibility). Example:
+      MIXER 1-10 ANCHOR 0.5 0.5
+      ...for changing the anchor to the middle of the layer
+      (a MIXER 1-10 FILL 0.5 0.5 1 1 will be necessary to place the layer at the
+      same place on screen as it was before).
+
+    - MIXER ROTATION -- will return or modify the angle of which a layer is
+      rotated by (clockwise degrees) around the point specified by ANCHOR.
 
 Consumers
 ---------

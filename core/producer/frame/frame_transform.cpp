@@ -25,6 +25,8 @@
 
 #include <common/utility/assert.h>
 
+#include <boost/thread.hpp>
+
 namespace caspar { namespace core {
 		
 frame_transform::frame_transform() 
@@ -33,10 +35,12 @@ frame_transform::frame_transform()
 	, brightness(1.0)
 	, contrast(1.0)
 	, saturation(1.0)
+	, angle(0.0)
 	, field_mode(field_mode::progressive)
 	, is_key(false)
 	, is_mix(false)
 {
+	std::fill(anchor.begin(), anchor.end(), 0.0);
 	std::fill(fill_translation.begin(), fill_translation.end(), 0.0);
 	std::fill(fill_scale.begin(), fill_scale.end(), 1.0);
 	std::fill(clip_translation.begin(), clip_translation.end(), 0.0);
@@ -50,14 +54,29 @@ frame_transform& frame_transform::operator*=(const frame_transform &other)
 	brightness				*= other.brightness;
 	contrast				*= other.contrast;
 	saturation				*= other.saturation;
-	fill_translation[0]		+= other.fill_translation[0]*fill_scale[0];
-	fill_translation[1]		+= other.fill_translation[1]*fill_scale[1];
+
+	// TODO: can this be done in any way without knowing the aspect ratio of the
+	// actual video mode? Thread local to the rescue
+	auto aspect_ratio = get_current_aspect_ratio();
+	boost::array<double, 2> rotated;
+	auto orig_x = other.fill_translation[0];
+	auto orig_y = other.fill_translation[1] / aspect_ratio;
+	rotated[0] = orig_x * std::cos(angle) - orig_y * std::sin(angle);
+	rotated[1] = orig_x * std::sin(angle) + orig_y * std::cos(angle);
+	rotated[1]  *= aspect_ratio;
+
+	anchor[0]				+= other.anchor[0]*fill_scale[0];
+	anchor[1]				+= other.anchor[1]*fill_scale[1];
+
+	fill_translation[0]		+= rotated[0] * fill_scale[0];
+	fill_translation[1]		+= rotated[1] * fill_scale[1];
 	fill_scale[0]			*= other.fill_scale[0];
 	fill_scale[1]			*= other.fill_scale[1];
 	clip_translation[0]		+= other.clip_translation[0]*clip_scale[0];
 	clip_translation[1]		+= other.clip_translation[1]*clip_scale[1];
 	clip_scale[0]			*= other.clip_scale[0];
 	clip_scale[1]			*= other.clip_scale[1];
+	angle					+= other.angle;
 	levels.min_input		 = std::max(levels.min_input,  other.levels.min_input);
 	levels.max_input		 = std::min(levels.max_input,  other.levels.max_input);	
 	levels.min_output		 = std::max(levels.min_output, other.levels.min_output);
@@ -88,6 +107,8 @@ frame_transform tween(double time, const frame_transform& source, const frame_tr
 	result.contrast				= do_tween(time, source.contrast,				dest.contrast,				duration, tweener);
 	result.saturation			= do_tween(time, source.saturation,				dest.saturation,			duration, tweener);
 	result.opacity				= do_tween(time, source.opacity,				dest.opacity,				duration, tweener);	
+	result.anchor[0]			= do_tween(time, source.anchor[0],				dest.anchor[0],				duration, tweener), 
+	result.anchor[1]			= do_tween(time, source.anchor[1],				dest.anchor[1],				duration, tweener);		
 	result.fill_translation[0]	= do_tween(time, source.fill_translation[0],	dest.fill_translation[0],	duration, tweener), 
 	result.fill_translation[1]	= do_tween(time, source.fill_translation[1],	dest.fill_translation[1],	duration, tweener);		
 	result.fill_scale[0]		= do_tween(time, source.fill_scale[0],			dest.fill_scale[0],			duration, tweener), 
@@ -96,6 +117,7 @@ frame_transform tween(double time, const frame_transform& source, const frame_tr
 	result.clip_translation[1]	= do_tween(time, source.clip_translation[1],	dest.clip_translation[1],	duration, tweener);		
 	result.clip_scale[0]		= do_tween(time, source.clip_scale[0],			dest.clip_scale[0],			duration, tweener), 
 	result.clip_scale[1]		= do_tween(time, source.clip_scale[1],			dest.clip_scale[1],			duration, tweener);
+	result.angle				= do_tween(time, source.angle,					dest.angle,					duration, tweener);	
 	result.levels.max_input		= do_tween(time, source.levels.max_input,		dest.levels.max_input,		duration, tweener);
 	result.levels.min_input		= do_tween(time, source.levels.min_input,		dest.levels.min_input,		duration, tweener);	
 	result.levels.max_output	= do_tween(time, source.levels.max_output,		dest.levels.max_output,		duration, tweener);
@@ -120,6 +142,26 @@ bool operator==(const frame_transform& lhs, const frame_transform& rhs)
 bool operator!=(const frame_transform& lhs, const frame_transform& rhs)
 {
 	return !(lhs == rhs);
+}
+
+boost::thread_specific_ptr<double>& get_thread_local_aspect_ratio()
+{
+	static boost::thread_specific_ptr<double> aspect_ratio;
+
+	if (!aspect_ratio.get())
+		aspect_ratio.reset(new double(1.0));
+
+	return aspect_ratio;
+}
+
+void set_current_aspect_ratio(double aspect_ratio)
+{
+	*get_thread_local_aspect_ratio() = aspect_ratio;
+}
+
+double get_current_aspect_ratio()
+{
+	return *get_thread_local_aspect_ratio();
 }
 
 }}

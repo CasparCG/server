@@ -228,17 +228,46 @@ struct image_kernel::implementation : boost::noncopyable
 		
 		ogl_->attach(*params.background);
 		
+		// Calculate rotation
+		auto aspect = params.aspect_ratio;
+		auto angle = params.transform.angle;
+
+		auto rotate = [angle, aspect](double orig_x, double orig_y) -> boost::array<double, 2>
+		{
+			boost::array<double, 2> result;
+			result[0] = orig_x * std::cos(angle) - orig_y * std::sin(angle);
+			result[1] = orig_x * std::sin(angle) + orig_y * std::cos(angle);
+			result[1] *= aspect;
+
+			return result;
+		};
+
+		auto anchor = params.transform.anchor;
+
+		auto ul = rotate( -anchor[0]      * f_s[0],  -anchor[1]      *f_s[1] / aspect);
+		auto ur = rotate((-anchor[0] + 1) * f_s[0],  -anchor[1]      *f_s[1] / aspect);
+		auto lr = rotate((-anchor[0] + 1) * f_s[0], (-anchor[1] + 1) *f_s[1] / aspect);
+		auto ll = rotate( -anchor[0]      * f_s[0], (-anchor[1] + 1) *f_s[1] / aspect);
+
+		auto upper_left_x =  f_p[0] + ul[0];
+		auto upper_left_y =  f_p[1] + ul[1];
+		auto upper_right_x = f_p[0] + ur[0];
+		auto upper_right_y = f_p[1] + ur[1];
+		auto lower_right_x = f_p[0] + lr[0];
+		auto lower_right_y = f_p[1] + lr[1];
+		auto lower_left_x =  f_p[0] + ll[0];
+		auto lower_left_y =  f_p[1] + ll[1];
+
 		// Draw
-				
 		/*
 			GL_TEXTURE0 are texture coordinates to the source material, what will be rendered with this call. These are always set to the whole thing.
 			GL_TEXTURE1 are texture coordinates to background- / key-material, that which will have to be taken in consideration when blending. These are set to the rectangle over which the source will be rendered
 		*/
 		glBegin(GL_QUADS);
-			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        ,  f_p[1]        );		glVertex2d( f_p[0]        *2.0-1.0,  f_p[1]        *2.0-1.0);
-			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]),  f_p[1]        );		glVertex2d((f_p[0]+f_s[0])*2.0-1.0,  f_p[1]        *2.0-1.0);
-			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1, (f_p[0]+f_s[0]), (f_p[1]+f_s[1]));		glVertex2d((f_p[0]+f_s[0])*2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
-			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1,  f_p[0]        , (f_p[1]+f_s[1]));		glVertex2d( f_p[0]        *2.0-1.0, (f_p[1]+f_s[1])*2.0-1.0);
+			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1, upper_left_x,  upper_left_y );		glVertex2d(upper_left_x  * 2.0 - 1.0, upper_left_y  * 2.0 - 1.0);
+			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1, upper_right_x, upper_right_y);		glVertex2d(upper_right_x * 2.0 - 1.0, upper_right_y * 2.0 - 1.0);
+			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1, lower_right_x, lower_right_y);		glVertex2d(lower_right_x * 2.0 - 1.0, lower_right_y * 2.0 - 1.0);
+			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1, lower_left_x,  lower_left_y );		glVertex2d(lower_left_x  * 2.0 - 1.0, lower_left_y  * 2.0 - 1.0);
 		glEnd();
 		
 		// Cleanup
