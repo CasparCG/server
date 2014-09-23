@@ -285,6 +285,7 @@ enum AVCodecID {
     AV_CODEC_ID_WEBP_DEPRECATED,
     AV_CODEC_ID_HNM4_VIDEO,
     AV_CODEC_ID_HEVC_DEPRECATED,
+    AV_CODEC_ID_FIC,
 
     AV_CODEC_ID_BRENDER_PIX= MKBETAG('B','P','I','X'),
     AV_CODEC_ID_Y41P       = MKBETAG('Y','4','1','P'),
@@ -513,6 +514,7 @@ enum AVCodecID {
     AV_CODEC_ID_OTF        = MKBETAG( 0 ,'O','T','F'),
     AV_CODEC_ID_SMPTE_KLV  = MKBETAG('K','L','V','A'),
     AV_CODEC_ID_DVD_NAV    = MKBETAG('D','N','A','V'),
+    AV_CODEC_ID_TIMED_ID3  = MKBETAG('T','I','D','3'),
 
 
     AV_CODEC_ID_PROBE = 0x19000, ///< codec_id is not known (like AV_CODEC_ID_NONE) but lavf should attempt to identify it
@@ -728,7 +730,13 @@ typedef struct RcOverride{
 #define CODEC_FLAG_PASS1           0x0200   ///< Use internal 2pass ratecontrol in first pass mode.
 #define CODEC_FLAG_PASS2           0x0400   ///< Use internal 2pass ratecontrol in second pass mode.
 #define CODEC_FLAG_GRAY            0x2000   ///< Only decode/encode grayscale.
-#define CODEC_FLAG_EMU_EDGE        0x4000   ///< Don't draw edges.
+#if FF_API_EMU_EDGE
+/**
+ * @deprecated edges are not used/required anymore. I.e. this flag is now always
+ * set.
+ */
+#define CODEC_FLAG_EMU_EDGE        0x4000
+#endif
 #define CODEC_FLAG_PSNR            0x8000   ///< error[?] variables will be set during encoding.
 #define CODEC_FLAG_TRUNCATED       0x00010000 /** Input bitstream might be truncated at a random
                                                   location instead of only at frame boundaries. */
@@ -767,7 +775,13 @@ typedef struct RcOverride{
 #define CODEC_CAP_DR1             0x0002
 #define CODEC_CAP_TRUNCATED       0x0008
 #if FF_API_XVMC
-/* Codec can export data for HW decoding (XvMC). */
+/* Codec can export data for HW decoding. This flag indicates that
+ * the codec would call get_format() with list that might contain HW accelerated
+ * pixel formats (XvMC, VDPAU, VAAPI, etc). The application can pick any of them
+ * including raw image format.
+ * The application can use the passed context to determine bitstream version,
+ * chroma format, resolution etc.
+ */
 #define CODEC_CAP_HWACCEL         0x0010
 #endif /* FF_API_XVMC */
 /**
@@ -1695,7 +1709,7 @@ typedef struct AVCodecContext {
      * XVideo Motion Acceleration
      * - encoding: forbidden
      * - decoding: set by decoder
-     * @deprecated XvMC support is slated for removal.
+     * @deprecated XvMC doesn't need it anymore.
      */
     attribute_deprecated int xvmc_acceleration;
 #endif /* FF_API_XVMC */
@@ -2145,11 +2159,10 @@ typedef struct AVCodecContext {
      * If AV_GET_BUFFER_FLAG_REF is set in flags then the frame may be reused
      * (read and/or written to if it is writable) later by libavcodec.
      *
-     * If CODEC_FLAG_EMU_EDGE is not set in s->flags, the buffer must contain an
-     * edge of the size returned by avcodec_get_edge_width() on all sides.
-     *
      * avcodec_align_dimensions2() should be used to find the required width and
      * height, as they normally need to be rounded up to the next multiple of 16.
+     *
+     * Some decoders do not support linesizes changing between frames.
      *
      * If frame multithreading is used and thread_safe_callbacks is set,
      * this callback may be called from a different thread, but not from more
@@ -2975,6 +2988,14 @@ typedef struct AVCodecContext {
 #define FF_DEBUG_VIS_MV_B_FOR  0x00000002 //visualize forward predicted MVs of B frames
 #define FF_DEBUG_VIS_MV_B_BACK 0x00000004 //visualize backward predicted MVs of B frames
 #endif
+
+    /**
+     * custom intra quantization matrix
+     * Code outside libavcodec should access this field using av_codec_g/set_chroma_intra_matrix()
+     * - encoding: Set by user, can be NULL.
+     * - decoding: unused.
+     */
+    uint16_t *chroma_intra_matrix;
 } AVCodecContext;
 
 AVRational av_codec_get_pkt_timebase         (const AVCodecContext *avctx);
@@ -2988,6 +3009,9 @@ void av_codec_set_lowres(AVCodecContext *avctx, int val);
 
 int  av_codec_get_seek_preroll(const AVCodecContext *avctx);
 void av_codec_set_seek_preroll(AVCodecContext *avctx, int val);
+
+uint16_t *av_codec_get_chroma_intra_matrix(const AVCodecContext *avctx);
+void av_codec_set_chroma_intra_matrix(AVCodecContext *avctx, uint16_t *val);
 
 /**
  * AVProfile.
@@ -3100,6 +3124,8 @@ typedef struct AVCodec {
 
 int av_codec_get_max_lowres(const AVCodec *codec);
 
+struct MpegEncContext;
+
 /**
  * AVHWAccel.
  */
@@ -3161,6 +3187,7 @@ typedef struct AVHWAccel {
      *
      * Meaningful slice information (codec specific) is guaranteed to
      * be parsed at this point. This function is mandatory.
+     * The only exception is XvMC, that works on MB level.
      *
      * @param avctx the codec context
      * @param buf the slice data buffer base
@@ -3188,6 +3215,17 @@ typedef struct AVHWAccel {
      * AVCodecContext.release_buffer().
      */
     int priv_data_size;
+
+    /**
+     * Called for every Macroblock in a slice.
+     *
+     * XvMC uses it to replace the ff_MPV_decode_mb().
+     * Instead of decoding to raw picture, MB parameters are
+     * stored in an array provided by the video driver.
+     *
+     * @param s the mpeg context
+     */
+    void (*decode_mb)(struct MpegEncContext *s);
 } AVHWAccel;
 
 /**
@@ -3715,14 +3753,20 @@ attribute_deprecated int avcodec_default_reget_buffer(AVCodecContext *s, AVFrame
  */
 int avcodec_default_get_buffer2(AVCodecContext *s, AVFrame *frame, int flags);
 
+#if FF_API_EMU_EDGE
 /**
  * Return the amount of padding in pixels which the get_buffer callback must
  * provide around the edge of the image for codecs which do not have the
  * CODEC_FLAG_EMU_EDGE flag.
  *
  * @return Required padding in pixels.
+ *
+ * @deprecated CODEC_FLAG_EMU_EDGE is deprecated, so this function is no longer
+ * needed
  */
+attribute_deprecated
 unsigned avcodec_get_edge_width(void);
+#endif
 
 /**
  * Modify width and height values so that they will result in a memory
@@ -3730,8 +3774,6 @@ unsigned avcodec_get_edge_width(void);
  * padding.
  *
  * May only be used if a codec with CODEC_CAP_DR1 has been opened.
- * If CODEC_FLAG_EMU_EDGE is not set, the dimensions must have been increased
- * according to avcodec_get_edge_width() before.
  */
 void avcodec_align_dimensions(AVCodecContext *s, int *width, int *height);
 
@@ -3741,8 +3783,6 @@ void avcodec_align_dimensions(AVCodecContext *s, int *width, int *height);
  * line sizes are a multiple of the respective linesize_align[i].
  *
  * May only be used if a codec with CODEC_CAP_DR1 has been opened.
- * If CODEC_FLAG_EMU_EDGE is not set, the dimensions must have been increased
- * according to avcodec_get_edge_width() before.
  */
 void avcodec_align_dimensions2(AVCodecContext *s, int *width, int *height,
                                int linesize_align[AV_NUM_DATA_POINTERS]);
@@ -4717,7 +4757,9 @@ void avcodec_set_dimensions(AVCodecContext *s, int width, int height);
 /**
  * Put a string representing the codec tag codec_tag in buf.
  *
+ * @param buf       buffer to place codec tag in
  * @param buf_size size in bytes of buf
+ * @param codec_tag codec tag to assign
  * @return the length of the string that would have been generated if
  * enough space had been available, excluding the trailing null
  */

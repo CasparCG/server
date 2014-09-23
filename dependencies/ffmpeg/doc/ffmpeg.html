@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-<!-- Created on December 14, 2013 by texi2html 1.82 -->
+<!-- Created on June 19, 2014 by texi2html 1.82 -->
 <!--
 texi2html was written by: 
             Lionel Cons <Lionel.Cons@cern.ch> (original author)
@@ -141,11 +141,22 @@ to 1 fps and the frame rate of the output file to 24 fps:
 <p>The transcoding process in <code>ffmpeg</code> for each output can be described by
 the following diagram:
 </p>
-<table><tr><td>&nbsp;</td><td><pre class="example"> _______              ______________               _________              ______________            ________
-|       |            |              |             |         |            |              |          |        |
-| input |  demuxer   | encoded data |   decoder   | decoded |  encoder   | encoded data |  muxer   | output |
-| file  | ---------&gt; | packets      |  ---------&gt; | frames  | ---------&gt; | packets      | -------&gt; | file   |
-|_______|            |______________|             |_________|            |______________|          |________|
+<table><tr><td>&nbsp;</td><td><pre class="example"> _______              ______________
+|       |            |              |
+| input |  demuxer   | encoded data |   decoder
+| file  | ---------&gt; | packets      | -----+
+|_______|            |______________|      |
+                                           v
+                                       _________
+                                      |         |
+                                      | decoded |
+                                      | frames  |
+ ________             ______________  |_________|
+|        |           |              |      |
+| output | &lt;-------- | encoded data | &lt;----+
+| file   |   muxer   | packets      |   encoder
+|________|           |______________|
+
 
 </pre></td></tr></table>
 
@@ -174,11 +185,11 @@ simple and complex.
 the same type. In the above diagram they can be represented by simply inserting
 an additional step between decoding and encoding:
 </p>
-<table><tr><td>&nbsp;</td><td><pre class="example"> _________                        __________              ______________
-|         |                      |          |            |              |
-| decoded |  simple filtergraph  | filtered |  encoder   | encoded data |
-| frames  | -------------------&gt; | frames   | ---------&gt; | packets      |
-|_________|                      |__________|            |______________|
+<table><tr><td>&nbsp;</td><td><pre class="example"> _________               __________              ______________
+|         |  simple     |          |            |              |
+| decoded |  fltrgrph   | filtered |  encoder   | encoded data |
+| frames  | ----------&gt; | frames   | ---------&gt; | packets      |
+|_________|             |__________|            |______________|
 
 </pre></td></tr></table>
 
@@ -186,10 +197,10 @@ an additional step between decoding and encoding:
 (with &lsquo;<samp>-vf</samp>&rsquo; and &lsquo;<samp>-af</samp>&rsquo; aliases for video and audio respectively).
 A simple filtergraph for video can look for example like this:
 </p>
-<table><tr><td>&nbsp;</td><td><pre class="example"> _______        _____________        _______        _____        ________
-|       |      |             |      |       |      |     |      |        |
-| input | ---&gt; | deinterlace | ---&gt; | scale | ---&gt; | fps | ---&gt; | output |
-|_______|      |_____________|      |_______|      |_____|      |________|
+<table><tr><td>&nbsp;</td><td><pre class="example"> _______        _____________        _______        ________
+|       |      |             |      |       |      |        |
+| input | ---&gt; | deinterlace | ---&gt; | scale | ---&gt; | output |
+|_______|      |_____________|      |_______|      |________|
 
 </pre></td></tr></table>
 
@@ -506,6 +517,14 @@ to a plain <code>%</code>
 appear in the report.
 </p>
 </dd>
+<dt> &lsquo;<samp>-hide_banner</samp>&rsquo;</dt>
+<dd><p>Suppress printing banner.
+</p>
+<p>All FFmpeg tools will normally show a copyright notice, build options
+and library versions. This option can be used to suppress printing
+this information.
+</p>
+</dd>
 <dt> &lsquo;<samp>-cpuflags flags (<em>global</em>)</samp>&rsquo;</dt>
 <dd><p>Allows setting and clearing cpu flags. This option is intended
 for testing. Do not use it unless you know what you&rsquo;re doing.
@@ -691,23 +710,21 @@ input until the timestamps reach <var>position</var>.
 </p>
 </dd>
 <dt> &lsquo;<samp>-itsoffset <var>offset</var> (<em>input</em>)</samp>&rsquo;</dt>
-<dd><p>Set the input time offset in seconds.
-<code>[-]hh:mm:ss[.xxx]</code> syntax is also supported.
-The offset is added to the timestamps of the input files.
-Specifying a positive offset means that the corresponding
-streams are delayed by <var>offset</var> seconds.
+<dd><p>Set the input time offset.
+</p>
+<p><var>offset</var> must be a time duration specification,
+see <a href="ffmpeg-utils.html#time-duration-syntax">(ffmpeg-utils)time duration syntax</a>.
+</p>
+<p>The offset is added to the timestamps of the input files. Specifying
+a positive offset means that the corresponding streams are delayed by
+the time duration specified in <var>offset</var>.
 </p>
 </dd>
-<dt> &lsquo;<samp>-timestamp <var>time</var> (<em>output</em>)</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>-timestamp <var>date</var> (<em>output</em>)</samp>&rsquo;</dt>
 <dd><p>Set the recording timestamp in the container.
-The syntax for <var>time</var> is:
-</p><table><tr><td>&nbsp;</td><td><pre class="example">now|([(YYYY-MM-DD|YYYYMMDD)[T|t| ]]((HH:MM:SS[.m...])|(HHMMSS[.m...]))[Z|z])
-</pre></td></tr></table>
-<p>If the value is &quot;now&quot; it takes the current time.
-Time is local time unless &rsquo;Z&rsquo; or &rsquo;z&rsquo; is appended, in which case it is
-interpreted as UTC.
-If the year-month-day part is not specified it takes the current
-year-month-day.
+</p>
+<p><var>date</var> must be a time duration specification,
+see <a href="ffmpeg-utils.html#date-syntax">(ffmpeg-utils)date syntax</a>.
 </p>
 </dd>
 <dt> &lsquo;<samp>-metadata[:metadata_specifier] <var>key</var>=<var>value</var> (<em>output,per-metadata</em>)</samp>&rsquo;</dt>
@@ -928,10 +945,6 @@ ffmpeg -i foo.mov -c:v libxvid -pass 1 -an -f rawvideo -y /dev/null
 prefix is &ldquo;ffmpeg2pass&rdquo;. The complete file name will be
 &lsquo;<tt>PREFIX-N.log</tt>&rsquo;, where N is a number specific to the output
 stream
-</p>
-</dd>
-<dt> &lsquo;<samp>-vlang <var>code</var></samp>&rsquo;</dt>
-<dd><p>Set the ISO 639 language code (3 letters) of the current video stream.
 </p>
 </dd>
 <dt> &lsquo;<samp>-vf <var>filtergraph</var> (<em>output</em>)</samp>&rsquo;</dt>
@@ -1171,9 +1184,6 @@ stereo but not 6 channels as 5.1. The default is to always try to guess. Use
 <h2 class="section"><a href="ffmpeg.html#toc-Subtitle-options_003a">5.9 Subtitle options:</a></h2>
 
 <dl compact="compact">
-<dt> &lsquo;<samp>-slang <var>code</var></samp>&rsquo;</dt>
-<dd><p>Set the ISO 639 language code (3 letters) of the current subtitle stream.
-</p></dd>
 <dt> &lsquo;<samp>-scodec <var>codec</var> (<em>input/output</em>)</samp>&rsquo;</dt>
 <dd><p>Set the subtitle codec. This is an alias for <code>-codec:s</code>.
 </p></dd>
@@ -1527,7 +1537,7 @@ to get the list of bitstream filters.
 </pre></td></tr></table>
 
 </dd>
-<dt> &lsquo;<samp>-tag[:<var>stream_specifier</var>] <var>codec_tag</var> (<em>per-stream</em>)</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>-tag[:<var>stream_specifier</var>] <var>codec_tag</var> (<em>input/output,per-stream</em>)</samp>&rsquo;</dt>
 <dd><p>Force a tag/fourcc for matching streams.
 </p>
 </dd>
@@ -1928,4 +1938,4 @@ online repository at <a href="http://source.ffmpeg.org">http://source.ffmpeg.org
 </p>
 
 <footer class="footer pagination-right">
-<span class="label label-info">This document was generated by <em>Kyle Schwarz</em> on <em>December 14, 2013</em> using <a href="http://www.nongnu.org/texi2html/"><em>texi2html 1.82</em></a>.</span></footer></div></div></body>
+<span class="label label-info">This document was generated by <em>Kyle Schwarz</em> on <em>June 19, 2014</em> using <a href="http://www.nongnu.org/texi2html/"><em>texi2html 1.82</em></a>.</span></footer></div></div></body>

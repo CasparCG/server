@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-<!-- Created on December 14, 2013 by texi2html 1.82 -->
+<!-- Created on June 19, 2014 by texi2html 1.82 -->
 <!--
 texi2html was written by: 
             Lionel Cons <Lionel.Cons@cern.ch> (original author)
@@ -49,8 +49,10 @@ Send bugs and suggestions to <texi2html-bug@nongnu.org>
     <li><a name="toc-libvpx" href="#libvpx">1.5 libvpx</a></li>
     <li><a name="toc-libwavpack" href="#libwavpack">1.6 libwavpack</a></li>
     <li><a name="toc-x264" href="#x264">1.7 x264</a></li>
-    <li><a name="toc-libilbc" href="#libilbc">1.8 libilbc</a></li>
-    <li><a name="toc-libzvbi" href="#libzvbi">1.9 libzvbi</a></li>
+    <li><a name="toc-x265" href="#x265">1.8 x265</a></li>
+    <li><a name="toc-libilbc" href="#libilbc">1.9 libilbc</a></li>
+    <li><a name="toc-libzvbi" href="#libzvbi">1.10 libzvbi</a></li>
+    <li><a name="toc-AviSynth" href="#AviSynth">1.11 AviSynth</a></li>
   </ul></li>
   <li><a name="toc-Supported-File-Formats_002c-Codecs-or-Features" href="#Supported-File-Formats_002c-Codecs-or-Features">2. Supported File Formats, Codecs or Features</a>
   <ul class="toc">
@@ -190,8 +192,22 @@ configure to enable it.
 (see <a href="http://www.gnu.org/licenses/old-licenses/gpl-2.0.html">http://www.gnu.org/licenses/old-licenses/gpl-2.0.html</a> for
 details), you must upgrade FFmpeg&rsquo;s license to GPL in order to use it.
 </p></div>
+<a name="x265"></a>
+<h2 class="section"><a href="general.html#toc-x265">1.8 x265</a></h2>
+
+<p>FFmpeg can make use of the x265 library for HEVC encoding.
+</p>
+<p>Go to <a href="http://x265.org/developers.html">http://x265.org/developers.html</a> and follow the instructions
+for installing the library. Then pass <code>--enable-libx265</code> to configure
+to enable it.
+</p>
+<div class="float ">
+<p>x265 is under the GNU Public License Version 2 or later
+(see <a href="http://www.gnu.org/licenses/old-licenses/gpl-2.0.html">http://www.gnu.org/licenses/old-licenses/gpl-2.0.html</a> for
+details), you must upgrade FFmpeg&rsquo;s license to GPL in order to use it.
+</p></div>
 <a name="libilbc"></a>
-<h2 class="section"><a href="general.html#toc-libilbc">1.8 libilbc</a></h2>
+<h2 class="section"><a href="general.html#toc-libilbc">1.9 libilbc</a></h2>
 
 <p>iLBC is a narrowband speech codec that has been made freely available
 by Google as part of the WebRTC project. libilbc is a packaging friendly
@@ -203,7 +219,7 @@ installing the library. Then pass <code>--enable-libilbc</code> to configure to
 enable it.
 </p>
 <a name="libzvbi"></a>
-<h2 class="section"><a href="general.html#toc-libzvbi">1.9 libzvbi</a></h2>
+<h2 class="section"><a href="general.html#toc-libzvbi">1.10 libzvbi</a></h2>
 
 <p>libzvbi is a VBI decoding library which can be used by FFmpeg to decode DVB
 teletext pages and DVB teletext subtitles.
@@ -216,6 +232,27 @@ enable it.
 <p>libzvbi is licensed under the GNU General Public License Version 2 or later
 (see <a href="http://www.gnu.org/licenses/old-licenses/gpl-2.0.html">http://www.gnu.org/licenses/old-licenses/gpl-2.0.html</a> for details),
 you must upgrade FFmpeg&rsquo;s license to GPL in order to use it.
+</p></div>
+<a name="AviSynth"></a>
+<h2 class="section"><a href="general.html#toc-AviSynth">1.11 AviSynth</a></h2>
+
+<p>FFmpeg can read AviSynth scripts as input. To enable support, pass
+<code>--enable-avisynth</code> to configure.  The correct headers are
+included in compat/avisynth/, which allows the user to enable support
+without needing to search for these headers themselves.
+</p>
+<p>For Windows, supported AviSynth variants are
+<a href="http://avisynth.nl">AviSynth 2.5 or 2.6</a> for 32-bit builds and
+<a href="http://avs-plus.net">AviSynth+ 0.1</a> for 32-bit and 64-bit builds.
+</p>
+<p>For Linux and OS X, the supported AviSynth variant is
+<a href="https://github.com/avxsynth/avxsynth">AvxSynth</a>.
+</p>
+<div class="float alert alert-info">
+<p>AviSynth and AvxSynth are loaded dynamically.  Distributors can build FFmpeg
+with <code>--enable-avisynth</code>, and the binaries will work regardless of the
+end user having AviSynth or AvxSynth installed - they&rsquo;ll only need to be
+installed to use AviSynth scripts (obviously).
 </p></div>
 
 <a name="Supported-File-Formats_002c-Codecs-or-Features"></a>
@@ -323,6 +360,7 @@ library:
 <tr><td width="40%">MPEG-PS (program stream)</td><td width="10%">X</td><td width="10%">X</td><td width="40%">also known as <code>VOB</code> file, SVCD and DVD format supported</td></tr>
 <tr><td width="40%">MPEG-TS (transport stream)</td><td width="10%">X</td><td width="10%">X</td><td width="40%">also known as DVB Transport Stream</td></tr>
 <tr><td width="40%">MPEG-4</td><td width="10%">X</td><td width="10%">X</td><td width="40%">MPEG-4 is a variant of QuickTime.</td></tr>
+<tr><td width="40%">Mirillis FIC video</td><td width="10%"></td><td width="10%">X</td><td width="40%">No cursor rendering.</td></tr>
 <tr><td width="40%">MIME multipart JPEG</td><td width="10%">X</td><td width="10%"></td></tr>
 <tr><td width="40%">MSN TCP webcam</td><td width="10%"></td><td width="10%">X</td><td width="40%">Used by MSN Messenger webcam streams.</td></tr>
 <tr><td width="40%">MTV</td><td width="10%"></td><td width="10%">X</td></tr>
@@ -355,7 +393,7 @@ library:
 <tr><td width="40%">raw H.261</td><td width="10%">X</td><td width="10%">X</td></tr>
 <tr><td width="40%">raw H.263</td><td width="10%">X</td><td width="10%">X</td></tr>
 <tr><td width="40%">raw H.264</td><td width="10%">X</td><td width="10%">X</td></tr>
-<tr><td width="40%">raw HEVC</td><td width="10%"></td><td width="10%">X</td></tr>
+<tr><td width="40%">raw HEVC</td><td width="10%">X</td><td width="10%">X</td></tr>
 <tr><td width="40%">raw Ingenient MJPEG</td><td width="10%"></td><td width="10%">X</td></tr>
 <tr><td width="40%">raw MJPEG</td><td width="10%">X</td><td width="10%">X</td></tr>
 <tr><td width="40%">raw MLP</td><td width="10%"></td><td width="10%">X</td></tr>
@@ -471,7 +509,7 @@ following image formats are supported:
 <tr><td width="40%">Sun Rasterfile</td><td width="10%">X</td><td width="10%">X</td><td width="40%">Sun RAS image format</td></tr>
 <tr><td width="40%">TIFF</td><td width="10%">X</td><td width="10%">X</td><td width="40%">YUV, JPEG and some extension is not supported yet.</td></tr>
 <tr><td width="40%">Truevision Targa</td><td width="10%">X</td><td width="10%">X</td><td width="40%">Targa (.TGA) image format</td></tr>
-<tr><td width="40%">WebP</td><td width="10%"></td><td width="10%">X</td><td width="40%">WebP image format</td></tr>
+<tr><td width="40%">WebP</td><td width="10%">E</td><td width="10%">X</td><td width="40%">WebP image format, encoding supported through external library libwebp</td></tr>
 <tr><td width="40%">XBM</td><td width="10%">X</td><td width="10%">X</td><td width="40%">X BitMap image format</td></tr>
 <tr><td width="40%">XFace</td><td width="10%">X</td><td width="10%">X</td><td width="40%">X-Face image format</td></tr>
 <tr><td width="40%">XWD</td><td width="10%">X</td><td width="10%">X</td><td width="40%">X Window Dump image format</td></tr>
@@ -553,7 +591,7 @@ following image formats are supported:
 <tr><td width="40%">H.263 / H.263-1996</td><td width="10%">X</td><td width="10%">X</td></tr>
 <tr><td width="40%">H.263+ / H.263-1998 / H.263 version 2</td><td width="10%">X</td><td width="10%">X</td></tr>
 <tr><td width="40%">H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10</td><td width="10%">E</td><td width="10%">X</td><td width="40%">encoding supported through external library libx264</td></tr>
-<tr><td width="40%">HEVC</td><td width="10%"></td><td width="10%">X</td></tr>
+<tr><td width="40%">HEVC</td><td width="10%">X</td><td width="10%">X</td><td width="40%">encoding supported through the external library libx265</td></tr>
 <tr><td width="40%">HNM version 4</td><td width="10%"></td><td width="10%">X</td></tr>
 <tr><td width="40%">HuffYUV</td><td width="10%">X</td><td width="10%">X</td></tr>
 <tr><td width="40%">HuffYUV FFmpeg variant</td><td width="10%">X</td><td width="10%">X</td></tr>
@@ -714,6 +752,7 @@ following image formats are supported:
 <tr><td width="40%">Apple lossless audio</td><td width="10%">X</td><td width="10%">X</td><td width="40%">QuickTime fourcc &rsquo;alac&rsquo;</td></tr>
 <tr><td width="40%">ATRAC1</td><td width="10%"></td><td width="10%">X</td></tr>
 <tr><td width="40%">ATRAC3</td><td width="10%"></td><td width="10%">X</td></tr>
+<tr><td width="40%">ATRAC3+</td><td width="10%"></td><td width="10%">X</td></tr>
 <tr><td width="40%">Bink Audio</td><td width="10%"></td><td width="10%">X</td><td width="40%">Used in Bink and Smacker files in many games.</td></tr>
 <tr><td width="40%">CELT</td><td width="10%"></td><td width="10%">E</td><td width="40%">decoding supported through external library libcelt</td></tr>
 <tr><td width="40%">Delphine Software International CIN audio</td><td width="10%"></td><td width="10%">X</td><td width="40%">Codec used in Delphine Software International games.</td></tr>
@@ -853,6 +892,7 @@ performance on systems without hardware floating point support).
 <table>
 <tr><td width="40%">Name</td><td width="10%">Support</td></tr>
 <tr><td width="40%">file</td><td width="10%">X</td></tr>
+<tr><td width="40%">FTP</td><td width="10%">X</td></tr>
 <tr><td width="40%">Gopher</td><td width="10%">X</td></tr>
 <tr><td width="40%">HLS</td><td width="10%">X</td></tr>
 <tr><td width="40%">HTTP</td><td width="10%">X</td></tr>
@@ -868,6 +908,7 @@ performance on systems without hardware floating point support).
 <tr><td width="40%">RTMPTS</td><td width="10%">X</td></tr>
 <tr><td width="40%">RTP</td><td width="10%">X</td></tr>
 <tr><td width="40%">SCTP</td><td width="10%">X</td></tr>
+<tr><td width="40%">SFTP</td><td width="10%">E</td></tr>
 <tr><td width="40%">TCP</td><td width="10%">X</td></tr>
 <tr><td width="40%">TLS</td><td width="10%">X</td></tr>
 <tr><td width="40%">UDP</td><td width="10%">X</td></tr>
@@ -888,13 +929,14 @@ performance on systems without hardware floating point support).
 <tr><td width="40%">caca</td><td width="10%"></td><td width="10%">X</td></tr>
 <tr><td width="40%">DV1394</td><td width="10%">X</td><td width="10%"></td></tr>
 <tr><td width="40%">Lavfi virtual device</td><td width="10%">X</td><td width="10%"></td></tr>
-<tr><td width="40%">Linux framebuffer</td><td width="10%">X</td><td width="10%"></td></tr>
+<tr><td width="40%">Linux framebuffer</td><td width="10%">X</td><td width="10%">X</td></tr>
 <tr><td width="40%">JACK</td><td width="10%">X</td><td width="10%"></td></tr>
 <tr><td width="40%">LIBCDIO</td><td width="10%">X</td></tr>
 <tr><td width="40%">LIBDC1394</td><td width="10%">X</td><td width="10%"></td></tr>
 <tr><td width="40%">OpenAL</td><td width="10%">X</td></tr>
+<tr><td width="40%">OpenGL</td><td width="10%"></td><td width="10%">X</td></tr>
 <tr><td width="40%">OSS</td><td width="10%">X</td><td width="10%">X</td></tr>
-<tr><td width="40%">Pulseaudio</td><td width="10%">X</td><td width="10%"></td></tr>
+<tr><td width="40%">PulseAudio</td><td width="10%">X</td><td width="10%">X</td></tr>
 <tr><td width="40%">SDL</td><td width="10%"></td><td width="10%">X</td></tr>
 <tr><td width="40%">Video4Linux2</td><td width="10%">X</td><td width="10%">X</td></tr>
 <tr><td width="40%">VfW capture</td><td width="10%">X</td><td width="10%"></td></tr>
@@ -917,4 +959,4 @@ performance on systems without hardware floating point support).
 </table>
 
 <footer class="footer pagination-right">
-<span class="label label-info">This document was generated by <em>Kyle Schwarz</em> on <em>December 14, 2013</em> using <a href="http://www.nongnu.org/texi2html/"><em>texi2html 1.82</em></a>.</span></footer></div></div></body>
+<span class="label label-info">This document was generated by <em>Kyle Schwarz</em> on <em>June 19, 2014</em> using <a href="http://www.nongnu.org/texi2html/"><em>texi2html 1.82</em></a>.</span></footer></div></div></body>

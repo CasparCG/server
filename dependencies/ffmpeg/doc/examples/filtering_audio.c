@@ -25,7 +25,7 @@
 /**
  * @file
  * API example for audio decoding and filtering
- * @example doc/examples/filtering_audio.c
+ * @example filtering_audio.c
  */
 
 #include <unistd.h>
@@ -210,7 +210,6 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    avcodec_register_all();
     av_register_all();
     avfilter_register_all();
 
@@ -230,7 +229,6 @@ int main(int argc, char **argv)
         }
 
         if (packet.stream_index == audio_stream_index) {
-            avcodec_get_frame_defaults(frame);
             got_frame = 0;
             ret = avcodec_decode_audio4(dec_ctx, frame, &got_frame, &packet);
             if (ret < 0) {

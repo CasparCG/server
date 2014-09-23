@@ -1,5 +1,6 @@
 EXPORTS
     av_add_q
+    av_add_stable
     av_adler32_update
     av_aes_alloc
     av_aes_crypt
@@ -73,6 +74,7 @@ EXPORTS
     av_dict_set
     av_dirname
     av_div_q
+    av_downmix_info_update_side_data
     av_dynarray2_add
     av_dynarray_add
     av_escape
@@ -104,6 +106,7 @@ EXPORTS
     av_force_cpu_flags
     av_frame_alloc
     av_frame_clone
+    av_frame_copy
     av_frame_copy_props
     av_frame_free
     av_frame_get_best_effort_timestamp

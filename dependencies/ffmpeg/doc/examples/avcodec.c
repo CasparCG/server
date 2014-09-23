@@ -24,10 +24,10 @@
  * @file
  * libavcodec API use example.
  *
+ * @example avcodec.c
  * Note that libavcodec only handles codecs (mpeg, mpeg4, etc...),
  * not file formats (avi, vob, mp4, mov, mkv, mxf, flv, mpegts, mpegps, etc...). See library 'libavformat' for the
  * format handling
- * @example doc/examples/decoding_encoding.c
  */
 
 #include <math.h>
@@ -170,7 +170,7 @@ static void audio_encode_example(const char *filename)
      * we calculate the size of the samples buffer in bytes */
     buffer_size = av_samples_get_buffer_size(NULL, c->channels, c->frame_size,
                                              c->sample_fmt, 0);
-    if (!buffer_size) {
+    if (buffer_size < 0) {
         fprintf(stderr, "Could not get sample buffer size\n");
         exit(1);
     }
@@ -191,7 +191,7 @@ static void audio_encode_example(const char *filename)
     /* encode a single tone sound */
     t = 0;
     tincr = 2 * M_PI * 440.0 / c->sample_rate;
-    for(i=0;i<200;i++) {
+    for (i = 0; i < 200; i++) {
         av_init_packet(&pkt);
         pkt.data = NULL; // packet data will be allocated by the encoder
         pkt.size = 0;
@@ -307,6 +307,11 @@ static void audio_decode_example(const char *outfilename, const char *filename)
             int data_size = av_samples_get_buffer_size(NULL, c->channels,
                                                        decoded_frame->nb_samples,
                                                        c->sample_fmt, 1);
+            if (data_size < 0) {
+                /* This should not occur, checking just for paranoia */
+                fprintf(stderr, "Failed to calculate data size\n");
+                exit(1);
+            }
             fwrite(decoded_frame->data[0], 1, data_size, outfile);
         }
         avpkt.size -= len;
@@ -369,12 +374,12 @@ static void video_encode_example(const char *filename, int codec_id)
     c->width = 352;
     c->height = 288;
     /* frames per second */
-    c->time_base= (AVRational){1,25};
+    c->time_base = (AVRational){1,25};
     c->gop_size = 10; /* emit one intra frame every ten frames */
-    c->max_b_frames=1;
+    c->max_b_frames = 1;
     c->pix_fmt = AV_PIX_FMT_YUV420P;
 
-    if(codec_id == AV_CODEC_ID_H264)
+    if (codec_id == AV_CODEC_ID_H264)
         av_opt_set(c->priv_data, "preset", "slow", 0);
 
     /* open it */
@@ -408,7 +413,7 @@ static void video_encode_example(const char *filename, int codec_id)
     }
 
     /* encode 1 second of video */
-    for(i=0;i<25;i++) {
+    for (i = 0; i < 25; i++) {
         av_init_packet(&pkt);
         pkt.data = NULL;    // packet data will be allocated by the encoder
         pkt.size = 0;
@@ -416,15 +421,15 @@ static void video_encode_example(const char *filename, int codec_id)
         fflush(stdout);
         /* prepare a dummy image */
         /* Y */
-        for(y=0;y<c->height;y++) {
-            for(x=0;x<c->width;x++) {
+        for (y = 0; y < c->height; y++) {
+            for (x = 0; x < c->width; x++) {
                 frame->data[0][y * frame->linesize[0] + x] = x + y + i * 3;
             }
         }
 
         /* Cb and Cr */
-        for(y=0;y<c->height/2;y++) {
-            for(x=0;x<c->width/2;x++) {
+        for (y = 0; y < c->height/2; y++) {
+            for (x = 0; x < c->width/2; x++) {
                 frame->data[1][y * frame->linesize[1] + x] = 128 + y + i * 2;
                 frame->data[2][y * frame->linesize[2] + x] = 64 + x + i * 5;
             }
@@ -484,10 +489,10 @@ static void pgm_save(unsigned char *buf, int wrap, int xsize, int ysize,
     FILE *f;
     int i;
 
-    f=fopen(filename,"w");
-    fprintf(f,"P5\n%d %d\n%d\n",xsize,ysize,255);
-    for(i=0;i<ysize;i++)
-        fwrite(buf + i * wrap,1,xsize,f);
+    f = fopen(filename,"w");
+    fprintf(f, "P5\n%d %d\n%d\n", xsize, ysize, 255);
+    for (i = 0; i < ysize; i++)
+        fwrite(buf + i * wrap, 1, xsize, f);
     fclose(f);
 }
 
@@ -575,7 +580,7 @@ static void video_decode_example(const char *outfilename, const char *filename)
     }
 
     frame_count = 0;
-    for(;;) {
+    for (;;) {
         avpkt.size = fread(inbuf, 1, INBUF_SIZE, f);
         if (avpkt.size == 0)
             break;

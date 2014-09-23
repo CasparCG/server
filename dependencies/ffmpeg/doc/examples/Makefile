@@ -11,12 +11,14 @@ CFLAGS += -Wall -g
 CFLAGS := $(shell pkg-config --cflags $(FFMPEG_LIBS)) $(CFLAGS)
 LDLIBS := $(shell pkg-config --libs $(FFMPEG_LIBS)) $(LDLIBS)
 
-EXAMPLES=       decoding_encoding                  \
+EXAMPLES=       avio_reading                       \
+                avcodec                            \
                 demuxing_decoding                  \
                 filtering_video                    \
                 filtering_audio                    \
                 metadata                           \
                 muxing                             \
+                remuxing                           \
                 resampling_audio                   \
                 scaling_video                      \
                 transcode_aac                      \
@@ -24,7 +26,7 @@ EXAMPLES=       decoding_encoding                  \
 OBJS=$(addsuffix .o,$(EXAMPLES))
 
 # the following examples make explicit use of the math library
-decoding_encoding: LDLIBS += -lm
+avcodec:           LDLIBS += -lm
 muxing:            LDLIBS += -lm
 resampling_audio:  LDLIBS += -lm
 
