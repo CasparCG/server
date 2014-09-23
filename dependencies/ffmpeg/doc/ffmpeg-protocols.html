@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-<!-- Created on December 14, 2013 by texi2html 1.82 -->
+<!-- Created on June 19, 2014 by texi2html 1.82 -->
 <!--
 texi2html was written by: 
             Lionel Cons <Lionel.Cons@cern.ch> (original author)
@@ -63,7 +63,10 @@ Send bugs and suggestions to <texi2html-bug@nongnu.org>
     <li><a name="toc-libssh" href="#libssh">2.21 libssh</a></li>
     <li><a name="toc-librtmp-rtmp_002c-rtmpe_002c-rtmps_002c-rtmpt_002c-rtmpte" href="#librtmp-rtmp_002c-rtmpe_002c-rtmps_002c-rtmpt_002c-rtmpte">2.22 librtmp rtmp, rtmpe, rtmps, rtmpt, rtmpte</a></li>
     <li><a name="toc-rtp" href="#rtp">2.23 rtp</a></li>
-    <li><a name="toc-rtsp" href="#rtsp">2.24 rtsp</a></li>
+    <li><a name="toc-rtsp" href="#rtsp">2.24 rtsp</a>
+    <ul class="toc">
+      <li><a name="toc-Examples" href="#Examples">2.24.1 Examples</a></li>
+    </ul></li>
     <li><a name="toc-sap" href="#sap">2.25 sap</a>
     <ul class="toc">
       <li><a name="toc-Muxer" href="#Muxer">2.25.1 Muxer</a></li>
@@ -73,7 +76,10 @@ Send bugs and suggestions to <texi2html-bug@nongnu.org>
     <li><a name="toc-srtp" href="#srtp">2.27 srtp</a></li>
     <li><a name="toc-tcp" href="#tcp">2.28 tcp</a></li>
     <li><a name="toc-tls" href="#tls">2.29 tls</a></li>
-    <li><a name="toc-udp" href="#udp">2.30 udp</a></li>
+    <li><a name="toc-udp" href="#udp">2.30 udp</a>
+    <ul class="toc">
+      <li><a name="toc-Examples-1" href="#Examples-1">2.30.1 Examples</a></li>
+    </ul></li>
     <li><a name="toc-unix" href="#unix">2.31 unix</a></li>
   </ul></li>
   <li><a name="toc-See-Also" href="#See-Also">3. See Also</a></li>
@@ -210,17 +216,24 @@ crypto+<var>URL</var>
 
 <p>File access protocol.
 </p>
-<p>Allow to read from or read to a file.
+<p>Allow to read from or write to a file.
+</p>
+<p>A file URL can have the form:
+</p><table><tr><td>&nbsp;</td><td><pre class="example">file:<var>filename</var>
+</pre></td></tr></table>
+
+<p>where <var>filename</var> is the path of the file to read.
+</p>
+<p>An URL that does not have a protocol prefix will be assumed to be a
+file URL. Depending on the build, an URL that looks like a Windows
+path with the drive letter at the beginning will also be assumed to be
+a file URL (usually not the case in builds for unix-like systems).
 </p>
 <p>For example to read from a file &lsquo;<tt>input.mpeg</tt>&rsquo; with <code>ffmpeg</code>
 use the command:
 </p><table><tr><td>&nbsp;</td><td><pre class="example">ffmpeg -i file:input.mpeg output.mpeg
 </pre></td></tr></table>
 
-<p>The ff* tools default to the file protocol, that is a resource
-specified with the name &quot;FILE.mpeg&quot; is interpreted as the URL
-&quot;file:FILE.mpeg&quot;.
-</p>
 <p>This protocol accepts the following options:
 </p>
 <dl compact="compact">
@@ -304,7 +317,7 @@ m3u8 files.
 
 <p>HTTP (Hyper Text Transfer Protocol).
 </p>
-<p>This protocol accepts the following options.
+<p>This protocol accepts the following options:
 </p>
 <dl compact="compact">
 <dt> &lsquo;<samp>seekable</samp>&rsquo;</dt>
@@ -315,7 +328,11 @@ value is -1.
 </p>
 </dd>
 <dt> &lsquo;<samp>chunked_post</samp>&rsquo;</dt>
-<dd><p>If set to 1 use chunked transfer-encoding for posts, default is 1.
+<dd><p>If set to 1 use chunked Transfer-Encoding for posts, default is 1.
+</p>
+</dd>
+<dt> &lsquo;<samp>content_type</samp>&rsquo;</dt>
+<dd><p>Set a specific content type for the POST messages.
 </p>
 </dd>
 <dt> &lsquo;<samp>headers</samp>&rsquo;</dt>
@@ -323,21 +340,18 @@ value is -1.
 value must be a string encoding the headers.
 </p>
 </dd>
-<dt> &lsquo;<samp>content_type</samp>&rsquo;</dt>
-<dd><p>Force a content type.
-</p>
-</dd>
-<dt> &lsquo;<samp>user-agent</samp>&rsquo;</dt>
-<dd><p>Override User-Agent header. If not specified the protocol will use a
-string describing the libavformat build.
-</p>
-</dd>
 <dt> &lsquo;<samp>multiple_requests</samp>&rsquo;</dt>
-<dd><p>Use persistent connections if set to 1. By default it is 0.
+<dd><p>Use persistent connections if set to 1, default is 0.
 </p>
 </dd>
 <dt> &lsquo;<samp>post_data</samp>&rsquo;</dt>
 <dd><p>Set custom HTTP post data.
+</p>
+</dd>
+<dt> &lsquo;<samp>user-agent</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>user_agent</samp>&rsquo;</dt>
+<dd><p>Override the User-Agent header. If not specified the protocol will use a
+string describing the libavformat build. (&quot;Lavf/&lt;version&gt;&quot;)
 </p>
 </dd>
 <dt> &lsquo;<samp>timeout</samp>&rsquo;</dt>
@@ -347,7 +361,7 @@ not specified.
 </p>
 </dd>
 <dt> &lsquo;<samp>mime_type</samp>&rsquo;</dt>
-<dd><p>Set MIME type.
+<dd><p>Export the MIME type.
 </p>
 </dd>
 <dt> &lsquo;<samp>icy</samp>&rsquo;</dt>
@@ -358,19 +372,29 @@ The default is 0.
 </p>
 </dd>
 <dt> &lsquo;<samp>icy_metadata_headers</samp>&rsquo;</dt>
-<dd><p>If the server supports ICY metadata, this contains the ICY specific HTTP reply
-headers, separated with newline characters.
+<dd><p>If the server supports ICY metadata, this contains the ICY-specific HTTP reply
+headers, separated by newline characters.
 </p>
 </dd>
 <dt> &lsquo;<samp>icy_metadata_packet</samp>&rsquo;</dt>
 <dd><p>If the server supports ICY metadata, and &lsquo;<samp>icy</samp>&rsquo; was set to 1, this
-contains the last non-empty metadata packet sent by the server.
+contains the last non-empty metadata packet sent by the server. It should be
+polled in regular intervals by applications interested in mid-stream metadata
+updates.
 </p>
 </dd>
 <dt> &lsquo;<samp>cookies</samp>&rsquo;</dt>
 <dd><p>Set the cookies to be sent in future requests. The format of each cookie is the
 same as the value of a Set-Cookie HTTP response field. Multiple cookies can be
 delimited by a newline character.
+</p>
+</dd>
+<dt> &lsquo;<samp>offset</samp>&rsquo;</dt>
+<dd><p>Set initial byte offset.
+</p>
+</dd>
+<dt> &lsquo;<samp>end_offset</samp>&rsquo;</dt>
+<dd><p>Try to limit the request to bytes preceding this offset.
 </p></dd>
 </dl>
 
@@ -681,6 +705,11 @@ is not specified.
 truncating. Default value is 1.
 </p>
 </dd>
+<dt> &lsquo;<samp>private_key</samp>&rsquo;</dt>
+<dd><p>Specify the path of the file containing private key to use during authorization.
+By default libssh searches for keys in the &lsquo;<tt>~/.ssh/</tt>&rsquo; directory.
+</p>
+</dd>
 </dl>
 
 <p>Example: Play a file stored on remote server.
@@ -805,6 +834,8 @@ set to the the local RTP port value plus 1.
 <a name="rtsp"></a>
 <h2 class="section"><a href="ffmpeg-protocols.html#toc-rtsp">2.24 rtsp</a></h2>
 
+<p>Real-Time Streaming Protocol.
+</p>
 <p>RTSP is not technically a protocol handler in libavformat, it is a demuxer
 and muxer. The demuxer supports both normal RTSP (with data transferred
 over RTP; this is used by e.g. Apple and Microsoft) and Real-RTSP (with
@@ -818,13 +849,23 @@ supporting it (currently Darwin Streaming Server and Mischa Spiegelmock&rsquo;s
 </p><table><tr><td>&nbsp;</td><td><pre class="example">rtsp://<var>hostname</var>[:<var>port</var>]/<var>path</var>
 </pre></td></tr></table>
 
-<p>The following options (set on the <code>ffmpeg</code>/<code>ffplay</code> command
-line, or set in code via <code>AVOption</code>s or in <code>avformat_open_input</code>),
-are supported:
+<p>Options can be set on the <code>ffmpeg</code>/<code>ffplay</code> command
+line, or set in code via <code>AVOption</code>s or in
+<code>avformat_open_input</code>.
 </p>
-<p>Flags for <code>rtsp_transport</code>:
+<p>The following options are supported.
 </p>
 <dl compact="compact">
+<dt> &lsquo;<samp>initial_pause</samp>&rsquo;</dt>
+<dd><p>Do not start playing the stream immediately if set to 1. Default value
+is 0.
+</p>
+</dd>
+<dt> &lsquo;<samp>rtsp_transport</samp>&rsquo;</dt>
+<dd><p>Set RTSP trasport protocols.
+</p>
+<p>It accepts the following values:
+</p><dl compact="compact">
 <dt> &lsquo;<samp>udp</samp>&rsquo;</dt>
 <dd><p>Use UDP as lower transport protocol.
 </p>
@@ -846,16 +887,64 @@ passing proxies.
 
 <p>Multiple lower transport protocols may be specified, in that case they are
 tried one at a time (if the setup of one fails, the next one is tried).
-For the muxer, only the <code>tcp</code> and <code>udp</code> options are supported.
+For the muxer, only the &lsquo;<samp>tcp</samp>&rsquo; and &lsquo;<samp>udp</samp>&rsquo; options are supported.
 </p>
-<p>Flags for <code>rtsp_flags</code>:
+</dd>
+<dt> &lsquo;<samp>rtsp_flags</samp>&rsquo;</dt>
+<dd><p>Set RTSP flags.
 </p>
-<dl compact="compact">
+<p>The following values are accepted:
+</p><dl compact="compact">
 <dt> &lsquo;<samp>filter_src</samp>&rsquo;</dt>
 <dd><p>Accept packets only from negotiated peer address and port.
 </p></dd>
 <dt> &lsquo;<samp>listen</samp>&rsquo;</dt>
 <dd><p>Act as a server, listening for an incoming connection.
+</p></dd>
+</dl>
+
+<p>Default value is &lsquo;<samp>none</samp>&rsquo;.
+</p>
+</dd>
+<dt> &lsquo;<samp>allowed_media_types</samp>&rsquo;</dt>
+<dd><p>Set media types to accept from the server.
+</p>
+<p>The following flags are accepted:
+</p><dl compact="compact">
+<dt> &lsquo;<samp>video</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>audio</samp>&rsquo;</dt>
+<dt> &lsquo;<samp>data</samp>&rsquo;</dt>
+</dl>
+
+<p>By default it accepts all media types.
+</p>
+</dd>
+<dt> &lsquo;<samp>min_port</samp>&rsquo;</dt>
+<dd><p>Set minimum local UDP port. Default value is 5000.
+</p>
+</dd>
+<dt> &lsquo;<samp>max_port</samp>&rsquo;</dt>
+<dd><p>Set maximum local UDP port. Default value is 65000.
+</p>
+</dd>
+<dt> &lsquo;<samp>timeout</samp>&rsquo;</dt>
+<dd><p>Set maximum timeout (in seconds) to wait for incoming connections.
+</p>
+<p>A value of -1 mean infinite (default). This option implies the
+&lsquo;<samp>rtsp_flags</samp>&rsquo; set to &lsquo;<samp>listen</samp>&rsquo;.
+</p>
+</dd>
+<dt> &lsquo;<samp>reorder_queue_size</samp>&rsquo;</dt>
+<dd><p>Set number of packets to buffer for handling of reordered packets.
+</p>
+</dd>
+<dt> &lsquo;<samp>stimeout</samp>&rsquo;</dt>
+<dd><p>Set socket TCP I/O timeout in micro seconds.
+</p>
+</dd>
+<dt> &lsquo;<samp>user-agent</samp>&rsquo;</dt>
+<dd><p>Override User-Agent header. If not specified, it default to the
+libavformat identifier string.
 </p></dd>
 </dl>
 
@@ -869,33 +958,33 @@ streams to display can be chosen with <code>-vst</code> <var>n</var> and
 <code>-ast</code> <var>n</var> for video and audio respectively, and can be switched
 on the fly by pressing <code>v</code> and <code>a</code>.
 </p>
-<p>Example command lines:
+<a name="Examples"></a>
+<h3 class="subsection"><a href="ffmpeg-protocols.html#toc-Examples">2.24.1 Examples</a></h3>
+
+<p>The following examples all make use of the <code>ffplay</code> and
+<code>ffmpeg</code> tools.
 </p>
-<p>To watch a stream over UDP, with a max reordering delay of 0.5 seconds:
-</p>
+<ul>
+<li>
+Watch a stream over UDP, with a max reordering delay of 0.5 seconds:
 <table><tr><td>&nbsp;</td><td><pre class="example">ffplay -max_delay 500000 -rtsp_transport udp rtsp://server/video.mp4
 </pre></td></tr></table>
 
-<p>To watch a stream tunneled over HTTP:
-</p>
+</li><li>
+Watch a stream tunneled over HTTP:
 <table><tr><td>&nbsp;</td><td><pre class="example">ffplay -rtsp_transport http rtsp://server/video.mp4
 </pre></td></tr></table>
 
-<p>To send a stream in realtime to a RTSP server, for others to watch:
-</p>
+</li><li>
+Send a stream in realtime to a RTSP server, for others to watch:
 <table><tr><td>&nbsp;</td><td><pre class="example">ffmpeg -re -i <var>input</var> -f rtsp -muxdelay 0.1 rtsp://server/live.sdp
 </pre></td></tr></table>
 
-<p>To receive a stream in realtime:
-</p>
+</li><li>
+Receive a stream in realtime:
 <table><tr><td>&nbsp;</td><td><pre class="example">ffmpeg -rtsp_flags listen -i rtsp://ownaddress/live.sdp <var>output</var>
 </pre></td></tr></table>
-
-<dl compact="compact">
-<dt> &lsquo;<samp>stimeout</samp>&rsquo;</dt>
-<dd><p>Socket IO timeout in micro seconds.
-</p></dd>
-</dl>
+</li></ul>
 
 <a name="sap"></a>
 <h2 class="section"><a href="ffmpeg-protocols.html#toc-sap">2.25 sap</a></h2>
@@ -1040,28 +1129,39 @@ used as master salt.
 <a name="tcp"></a>
 <h2 class="section"><a href="ffmpeg-protocols.html#toc-tcp">2.28 tcp</a></h2>
 
-<p>Trasmission Control Protocol.
+<p>Transmission Control Protocol.
 </p>
 <p>The required syntax for a TCP url is:
 </p><table><tr><td>&nbsp;</td><td><pre class="example">tcp://<var>hostname</var>:<var>port</var>[?<var>options</var>]
 </pre></td></tr></table>
 
+<p><var>options</var> contains a list of &amp;-separated options of the form
+<var>key</var>=<var>val</var>.
+</p>
+<p>The list of supported options follows.
+</p>
 <dl compact="compact">
-<dt> &lsquo;<samp>listen</samp>&rsquo;</dt>
-<dd><p>Listen for an incoming connection
+<dt> &lsquo;<samp>listen=<var>1|0</var></samp>&rsquo;</dt>
+<dd><p>Listen for an incoming connection. Default value is 0.
 </p>
 </dd>
 <dt> &lsquo;<samp>timeout=<var>microseconds</var></samp>&rsquo;</dt>
-<dd><p>In read mode: if no data arrived in more than this time interval, raise error.
-In write mode: if socket cannot be written in more than this time interval, raise error.
-This also sets timeout on TCP connection establishing.
+<dd><p>Set raise error timeout, expressed in microseconds.
 </p>
-<table><tr><td>&nbsp;</td><td><pre class="example">ffmpeg -i <var>input</var> -f <var>format</var> tcp://<var>hostname</var>:<var>port</var>?listen
+<p>This option is only relevant in read mode: if no data arrived in more
+than this time interval, raise error.
+</p>
+</dd>
+<dt> &lsquo;<samp>listen_timeout=<var>microseconds</var></samp>&rsquo;</dt>
+<dd><p>Set listen timeout, expressed in microseconds.
+</p></dd>
+</dl>
+
+<p>The following example shows how to setup a listening TCP connection
+with <code>ffmpeg</code>, which is then accessed with <code>ffplay</code>:
+</p><table><tr><td>&nbsp;</td><td><pre class="example">ffmpeg -i <var>input</var> -f <var>format</var> tcp://<var>hostname</var>:<var>port</var>?listen
 ffplay tcp://<var>hostname</var>:<var>port</var>
 </pre></td></tr></table>
-
-</dd>
-</dl>
 
 <a name="tls"></a>
 <h2 class="section"><a href="ffmpeg-protocols.html#toc-tls">2.29 tls</a></h2>
@@ -1131,14 +1231,14 @@ the server role in the handshake instead of the client role.
 
 <p>User Datagram Protocol.
 </p>
-<p>The required syntax for a UDP url is:
+<p>The required syntax for an UDP URL is:
 </p><table><tr><td>&nbsp;</td><td><pre class="example">udp://<var>hostname</var>:<var>port</var>[?<var>options</var>]
 </pre></td></tr></table>
 
 <p><var>options</var> contains a list of &amp;-separated options of the form <var>key</var>=<var>val</var>.
 </p>
 <p>In case threading is enabled on the system, a circular buffer is used
-to store the incoming data, which allows to reduce loss of data due to
+to store the incoming data, which allows one to reduce loss of data due to
 UDP socket buffer overruns. The <var>fifo_size</var> and
 <var>overrun_nonfatal</var> options are related to this buffer.
 </p>
@@ -1205,23 +1305,33 @@ value is 0.
 </p>
 </dd>
 <dt> &lsquo;<samp>timeout=<var>microseconds</var></samp>&rsquo;</dt>
-<dd><p>In read mode: if no data arrived in more than this time interval, raise error.
+<dd><p>Set raise error timeout, expressed in microseconds.
+</p>
+<p>This option is only relevant in read mode: if no data arrived in more
+than this time interval, raise error.
 </p></dd>
 </dl>
 
-<p>Some usage examples of the UDP protocol with <code>ffmpeg</code> follow.
-</p>
-<p>To stream over UDP to a remote endpoint:
-</p><table><tr><td>&nbsp;</td><td><pre class="example">ffmpeg -i <var>input</var> -f <var>format</var> udp://<var>hostname</var>:<var>port</var>
+<a name="Examples-1"></a>
+<h3 class="subsection"><a href="ffmpeg-protocols.html#toc-Examples-1">2.30.1 Examples</a></h3>
+
+<ul>
+<li>
+Use <code>ffmpeg</code> to stream over UDP to a remote endpoint:
+<table><tr><td>&nbsp;</td><td><pre class="example">ffmpeg -i <var>input</var> -f <var>format</var> udp://<var>hostname</var>:<var>port</var>
 </pre></td></tr></table>
 
-<p>To stream in mpegts format over UDP using 188 sized UDP packets, using a large input buffer:
-</p><table><tr><td>&nbsp;</td><td><pre class="example">ffmpeg -i <var>input</var> -f mpegts udp://<var>hostname</var>:<var>port</var>?pkt_size=188&amp;buffer_size=65535
+</li><li>
+Use <code>ffmpeg</code> to stream in mpegts format over UDP using 188
+sized UDP packets, using a large input buffer:
+<table><tr><td>&nbsp;</td><td><pre class="example">ffmpeg -i <var>input</var> -f mpegts udp://<var>hostname</var>:<var>port</var>?pkt_size=188&amp;buffer_size=65535
 </pre></td></tr></table>
 
-<p>To receive over UDP from a remote endpoint:
-</p><table><tr><td>&nbsp;</td><td><pre class="example">ffmpeg -i udp://[<var>multicast-address</var>]:<var>port</var>
+</li><li>
+Use <code>ffmpeg</code> to receive over UDP from a remote endpoint:
+<table><tr><td>&nbsp;</td><td><pre class="example">ffmpeg -i udp://[<var>multicast-address</var>]:<var>port</var> ...
 </pre></td></tr></table>
+</li></ul>
 
 <a name="unix"></a>
 <h2 class="section"><a href="ffmpeg-protocols.html#toc-unix">2.31 unix</a></h2>
@@ -1268,4 +1378,4 @@ online repository at <a href="http://source.ffmpeg.org">http://source.ffmpeg.org
 </p>
 
 <footer class="footer pagination-right">
-<span class="label label-info">This document was generated by <em>Kyle Schwarz</em> on <em>December 14, 2013</em> using <a href="http://www.nongnu.org/texi2html/"><em>texi2html 1.82</em></a>.</span></footer></div></div></body>
+<span class="label label-info">This document was generated by <em>Kyle Schwarz</em> on <em>June 19, 2014</em> using <a href="http://www.nongnu.org/texi2html/"><em>texi2html 1.82</em></a>.</span></footer></div></div></body>

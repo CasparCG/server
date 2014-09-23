@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-<!-- Created on December 14, 2013 by texi2html 1.82 -->
+<!-- Created on June 19, 2014 by texi2html 1.82 -->
 <!--
 texi2html was written by: 
             Lionel Cons <Lionel.Cons@cern.ch> (original author)
@@ -68,10 +68,9 @@ Send bugs and suggestions to <texi2html-bug@nongnu.org>
       <li><a name="toc-Concatenating-using-the-concat-protocol-_0028file-level_0029" href="#Concatenating-using-the-concat-protocol-_0028file-level_0029">3.14.3 Concatenating using the concat <em>protocol</em> (file level)</a></li>
       <li><a name="toc-Concatenating-using-raw-audio-and-video" href="#Concatenating-using-raw-audio-and-video">3.14.4 Concatenating using raw audio and video</a></li>
     </ul></li>
-    <li><a name="toc-_002dprofile-option-fails-when-encoding-H_002e264-video-with-AAC-audio" href="#g_t_002dprofile-option-fails-when-encoding-H_002e264-video-with-AAC-audio">3.15 -profile option fails when encoding H.264 video with AAC audio</a></li>
-    <li><a name="toc-Using-_002df-lavfi_002c-audio-becomes-mono-for-no-apparent-reason_002e" href="#Using-_002df-lavfi_002c-audio-becomes-mono-for-no-apparent-reason_002e">3.16 Using &lsquo;<samp>-f lavfi</samp>&rsquo;, audio becomes mono for no apparent reason.</a></li>
-    <li><a name="toc-Why-does-FFmpeg-not-see-the-subtitles-in-my-VOB-file_003f" href="#Why-does-FFmpeg-not-see-the-subtitles-in-my-VOB-file_003f">3.17 Why does FFmpeg not see the subtitles in my VOB file?</a></li>
-    <li><a name="toc-Why-was-the-ffmpeg-_002dsameq-option-removed_003f-What-to-use-instead_003f" href="#Why-was-the-ffmpeg-_002dsameq-option-removed_003f-What-to-use-instead_003f">3.18 Why was the <code>ffmpeg</code> &lsquo;<samp>-sameq</samp>&rsquo; option removed? What to use instead?</a></li>
+    <li><a name="toc-Using-_002df-lavfi_002c-audio-becomes-mono-for-no-apparent-reason_002e" href="#Using-_002df-lavfi_002c-audio-becomes-mono-for-no-apparent-reason_002e">3.15 Using &lsquo;<samp>-f lavfi</samp>&rsquo;, audio becomes mono for no apparent reason.</a></li>
+    <li><a name="toc-Why-does-FFmpeg-not-see-the-subtitles-in-my-VOB-file_003f" href="#Why-does-FFmpeg-not-see-the-subtitles-in-my-VOB-file_003f">3.16 Why does FFmpeg not see the subtitles in my VOB file?</a></li>
+    <li><a name="toc-Why-was-the-ffmpeg-_002dsameq-option-removed_003f-What-to-use-instead_003f" href="#Why-was-the-ffmpeg-_002dsameq-option-removed_003f-What-to-use-instead_003f">3.17 Why was the <code>ffmpeg</code> &lsquo;<samp>-sameq</samp>&rsquo; option removed? What to use instead?</a></li>
   </ul></li>
   <li><a name="toc-Development" href="#Development">4. Development</a>
   <ul class="toc">
@@ -473,28 +472,8 @@ ffmpeg -f u16le -acodec pcm_s16le -ac 2 -ar 44100 -i all.a \
 rm temp[12].[av] all.[av]
 </pre></td></tr></table>
 
-<a name="g_t_002dprofile-option-fails-when-encoding-H_002e264-video-with-AAC-audio"></a>
-<h2 class="section"><a href="faq.html#toc-_002dprofile-option-fails-when-encoding-H_002e264-video-with-AAC-audio">3.15 -profile option fails when encoding H.264 video with AAC audio</a></h2>
-
-<p><code>ffmpeg</code> prints an error like
-</p>
-<table><tr><td>&nbsp;</td><td><pre class="example">Undefined constant or missing '(' in 'baseline'
-Unable to parse option value &quot;baseline&quot;
-Error setting option profile to value baseline.
-</pre></td></tr></table>
-
-<p>Short answer: write &lsquo;<samp>-profile:v</samp>&rsquo; instead of &lsquo;<samp>-profile</samp>&rsquo;.
-</p>
-<p>Long answer: this happens because the &lsquo;<samp>-profile</samp>&rsquo; option can apply to both
-video and audio.  Specifically the AAC encoder also defines some profiles, none
-of which are named <var>baseline</var>.
-</p>
-<p>The solution is to apply the &lsquo;<samp>-profile</samp>&rsquo; option to the video stream only
-by using <a href="http://ffmpeg.org/ffmpeg.html#Stream-specifiers-1">Stream specifiers</a>.
-Appending <code>:v</code> to it will do exactly that.
-</p>
 <a name="Using-_002df-lavfi_002c-audio-becomes-mono-for-no-apparent-reason_002e"></a>
-<h2 class="section"><a href="faq.html#toc-Using-_002df-lavfi_002c-audio-becomes-mono-for-no-apparent-reason_002e">3.16 Using &lsquo;<samp>-f lavfi</samp>&rsquo;, audio becomes mono for no apparent reason.</a></h2>
+<h2 class="section"><a href="faq.html#toc-Using-_002df-lavfi_002c-audio-becomes-mono-for-no-apparent-reason_002e">3.15 Using &lsquo;<samp>-f lavfi</samp>&rsquo;, audio becomes mono for no apparent reason.</a></h2>
 
 <p>Use &lsquo;<samp>-dumpgraph -</samp>&rsquo; to find out exactly where the channel layout is
 lost.
@@ -512,7 +491,7 @@ specifying the exact format.
 </pre></td></tr></table>
 
 <a name="Why-does-FFmpeg-not-see-the-subtitles-in-my-VOB-file_003f"></a>
-<h2 class="section"><a href="faq.html#toc-Why-does-FFmpeg-not-see-the-subtitles-in-my-VOB-file_003f">3.17 Why does FFmpeg not see the subtitles in my VOB file?</a></h2>
+<h2 class="section"><a href="faq.html#toc-Why-does-FFmpeg-not-see-the-subtitles-in-my-VOB-file_003f">3.16 Why does FFmpeg not see the subtitles in my VOB file?</a></h2>
 
 <p>VOB and a few other formats do not have a global header that describes
 everything present in the file. Instead, applications are supposed to scan
@@ -529,7 +508,7 @@ are detected later are ignored.
 the subtitle stream to be detected, both values must be large enough.
 </p>
 <a name="Why-was-the-ffmpeg-_002dsameq-option-removed_003f-What-to-use-instead_003f"></a>
-<h2 class="section"><a href="faq.html#toc-Why-was-the-ffmpeg-_002dsameq-option-removed_003f-What-to-use-instead_003f">3.18 Why was the <code>ffmpeg</code> &lsquo;<samp>-sameq</samp>&rsquo; option removed? What to use instead?</a></h2>
+<h2 class="section"><a href="faq.html#toc-Why-was-the-ffmpeg-_002dsameq-option-removed_003f-What-to-use-instead_003f">3.17 Why was the <code>ffmpeg</code> &lsquo;<samp>-sameq</samp>&rsquo; option removed? What to use instead?</a></h2>
 
 <p>The &lsquo;<samp>-sameq</samp>&rsquo; option meant &quot;same quantizer&quot;, and made sense only in a
 very limited set of cases. Unfortunately, a lot of people mistook it for
@@ -677,4 +656,4 @@ home directory? The value is used in ways where the shell cannot expand it,
 causing FATE to not find files. Just replace <code>~</code> by the full path.
 </p>
 <footer class="footer pagination-right">
-<span class="label label-info">This document was generated by <em>Kyle Schwarz</em> on <em>December 14, 2013</em> using <a href="http://www.nongnu.org/texi2html/"><em>texi2html 1.82</em></a>.</span></footer></div></div></body>
+<span class="label label-info">This document was generated by <em>Kyle Schwarz</em> on <em>June 19, 2014</em> using <a href="http://www.nongnu.org/texi2html/"><em>texi2html 1.82</em></a>.</span></footer></div></div></body>

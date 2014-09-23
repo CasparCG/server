@@ -16,10 +16,16 @@ EXPORTS
     av_find_stream_info
     av_fmt_ctx_get_duration_estimation_method
     av_format_get_audio_codec
+    av_format_get_control_message_cb
+    av_format_get_metadata_header_padding
+    av_format_get_opaque
     av_format_get_probe_score
     av_format_get_subtitle_codec
     av_format_get_video_codec
     av_format_set_audio_codec
+    av_format_set_control_message_cb
+    av_format_set_metadata_header_padding
+    av_format_set_opaque
     av_format_set_subtitle_codec
     av_format_set_video_codec
     av_get_frame_filename
@@ -34,6 +40,7 @@ EXPORTS
     av_iformat_next
     av_index_search_timestamp
     av_interleaved_write_frame
+    av_interleaved_write_uncoded_frame
     av_match_ext
     av_new_program
     av_new_stream
@@ -60,6 +67,8 @@ EXPORTS
     av_url_split
     av_write_frame
     av_write_trailer
+    av_write_uncoded_frame
+    av_write_uncoded_frame_query
     avformat_alloc_context
     avformat_alloc_output_context
     avformat_alloc_output_context2
@@ -68,6 +77,8 @@ EXPORTS
     avformat_find_stream_info
     avformat_free_context
     avformat_get_class
+    avformat_get_mov_audio_tags
+    avformat_get_mov_video_tags
     avformat_get_riff_audio_tags
     avformat_get_riff_video_tags
     avformat_license
@@ -87,6 +98,7 @@ EXPORTS
     avio_close_dyn_buf
     avio_closep
     avio_enum_protocols
+    avio_find_protocol_name
     avio_flush
     avio_get_str
     avio_get_str16be
@@ -145,6 +157,7 @@ EXPORTS
     ffurl_seek
     ffurl_size
     ffurl_write
+    get_codec_guid
     get_crc_table
     get_extension
     url_feof

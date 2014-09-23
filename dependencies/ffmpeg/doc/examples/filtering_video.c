@@ -24,7 +24,7 @@
 /**
  * @file
  * API example for decoding and filtering
- * @example doc/examples/filtering_video.c
+ * @example filtering_video.c
  */
 
 #define _XOPEN_SOURCE 600 /* for usleep */
@@ -200,7 +200,6 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    avcodec_register_all();
     av_register_all();
     avfilter_register_all();
 
@@ -215,7 +214,6 @@ int main(int argc, char **argv)
             break;
 
         if (packet.stream_index == video_stream_index) {
-            avcodec_get_frame_defaults(frame);
             got_frame = 0;
             ret = avcodec_decode_video2(dec_ctx, frame, &got_frame, &packet);
             if (ret < 0) {

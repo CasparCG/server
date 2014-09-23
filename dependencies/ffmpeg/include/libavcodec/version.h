@@ -26,11 +26,11 @@
  * Libavcodec version macros.
  */
 
-#include "libavutil/avutil.h"
+#include "libavutil/version.h"
 
 #define LIBAVCODEC_VERSION_MAJOR 55
-#define LIBAVCODEC_VERSION_MINOR  45
-#define LIBAVCODEC_VERSION_MICRO 101
+#define LIBAVCODEC_VERSION_MINOR  52
+#define LIBAVCODEC_VERSION_MICRO 102
 
 #define LIBAVCODEC_VERSION_INT  AV_VERSION_INT(LIBAVCODEC_VERSION_MAJOR, \
                                                LIBAVCODEC_VERSION_MINOR, \
@@ -137,6 +137,9 @@
 #endif
 #ifndef FF_API_NEG_LINESIZES
 #define FF_API_NEG_LINESIZES     (LIBAVCODEC_VERSION_MAJOR < 56)
+#endif
+#ifndef FF_API_EMU_EDGE
+#define FF_API_EMU_EDGE          (LIBAVCODEC_VERSION_MAJOR < 56)
 #endif
 
 #endif /* AVCODEC_VERSION_H */
