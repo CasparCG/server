@@ -224,7 +224,7 @@ void with_default_cg_producer(
 						"No flash producer on layer "
 						+ boost::lexical_cast<std::string>(layer_index)));
 
-			flash_producer = flash::create_producer(video_channel->mixer(), boost::assign::list_of<std::wstring>());
+			flash_producer = flash::create_producer(video_channel->mixer()->get_frame_factory(layer_index), boost::assign::list_of<std::wstring>());
 		}
 
 		if (expect_existing && flash_producer->call(L"?").get() == L"0")

@@ -45,7 +45,7 @@ class write_frame : public core::basic_frame, boost::noncopyable
 {
 public:	
 	explicit write_frame(const void* tag, const channel_layout& channel_layout);
-	explicit write_frame(const safe_ptr<ogl_device>& ogl, const void* tag, const core::pixel_format_desc& desc, const channel_layout& channel_layout);
+	explicit write_frame(const safe_ptr<ogl_device>& ogl, const void* tag, const core::pixel_format_desc& desc, const channel_layout& channel_layout, bool mipmapping);
 
 	write_frame(const write_frame& other);
 	write_frame(write_frame&& other);

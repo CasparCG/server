@@ -370,7 +370,8 @@ struct server::implementation : boost::noncopyable
 				ogl_,
 				pt.get(L"configuration.thumbnails.generate-delay-millis", 2000),
 				&image::write_cropped_png,
-				media_info_repo_));
+				media_info_repo_,
+				pt.get(L"configuration.thumbnails.mipmap", true)));
 
 		CASPAR_LOG(info) << L"Initialized thumbnail generator.";
 	}

@@ -28,6 +28,26 @@
 #include <boost/thread.hpp>
 
 namespace caspar { namespace core {
+
+corners::corners()
+{
+	ul[0] = 0.0;
+	ul[1] = 0.0;
+	ur[0] = 1.0;
+	ur[1] = 0.0;
+	lr[0] = 1.0;
+	lr[1] = 1.0;
+	ll[0] = 0.0;
+	ll[1] = 1.0;
+}
+
+rectangle::rectangle()
+{
+	ul[0] = 0.0;
+	ul[1] = 0.0;
+	lr[0] = 1.0;
+	lr[1] = 1.0;
+}
 		
 frame_transform::frame_transform() 
 	: volume(1.0)
@@ -47,6 +67,27 @@ frame_transform::frame_transform()
 	std::fill(clip_scale.begin(), clip_scale.end(), 1.0);
 }
 
+template<typename Rect>
+void transform_rect(Rect& self, const Rect& other)
+{
+	self.ul[0] += other.ul[0];
+	self.ul[1] += other.ul[1];
+	self.lr[0] *= other.lr[0];
+	self.lr[1] *= other.lr[1];
+}
+
+void transform_corners(corners& self, const corners& other)
+{
+	transform_rect(self, other);
+
+	self.ur[0] *= other.ur[0];
+	self.ur[1] += other.ur[1];
+	self.ll[0] += other.ll[0];
+	self.ll[1] *= other.ll[1];
+
+	// TODO: figure out the math to compose perspective transforms correctly.
+}
+
 frame_transform& frame_transform::operator*=(const frame_transform &other)
 {
 	volume					*= other.volume;
@@ -57,13 +98,14 @@ frame_transform& frame_transform::operator*=(const frame_transform &other)
 
 	// TODO: can this be done in any way without knowing the aspect ratio of the
 	// actual video mode? Thread local to the rescue
-	auto aspect_ratio = get_current_aspect_ratio();
+	auto aspect_ratio = detail::get_current_aspect_ratio();
+	aspect_ratio *= fill_scale[0] / fill_scale[1];
 	boost::array<double, 2> rotated;
 	auto orig_x = other.fill_translation[0];
 	auto orig_y = other.fill_translation[1] / aspect_ratio;
 	rotated[0] = orig_x * std::cos(angle) - orig_y * std::sin(angle);
 	rotated[1] = orig_x * std::sin(angle) + orig_y * std::cos(angle);
-	rotated[1]  *= aspect_ratio;
+	rotated[1] *= aspect_ratio;
 
 	anchor[0]				+= other.anchor[0]*fill_scale[0];
 	anchor[1]				+= other.anchor[1]*fill_scale[1];
@@ -77,6 +119,8 @@ frame_transform& frame_transform::operator*=(const frame_transform &other)
 	clip_scale[0]			*= other.clip_scale[0];
 	clip_scale[1]			*= other.clip_scale[1];
 	angle					+= other.angle;
+	transform_rect(crop, other.crop);
+	transform_corners(perspective, other.perspective);
 	levels.min_input		 = std::max(levels.min_input,  other.levels.min_input);
 	levels.max_input		 = std::min(levels.max_input,  other.levels.max_input);	
 	levels.min_output		 = std::max(levels.min_output, other.levels.min_output);
@@ -94,13 +138,31 @@ frame_transform frame_transform::operator*(const frame_transform &other) const
 	return frame_transform(*this) *= other;
 }
 
+double do_tween(double time, double source, double dest, double duration, const tweener_t& tweener)
+{
+	return tweener(time, source, dest-source, duration);
+};
+
+template<typename Rect>
+void do_tween_rectangle(const Rect& source, const Rect& dest, Rect& out, double time, double duration, const tweener_t& tweener)
+{
+	out.ul[0] = do_tween(time, source.ul[0], dest.ul[0], duration, tweener);
+	out.ul[1] = do_tween(time, source.ul[1], dest.ul[1], duration, tweener);
+	out.lr[0] = do_tween(time, source.lr[0], dest.lr[0], duration, tweener);
+	out.lr[1] = do_tween(time, source.lr[1], dest.lr[1], duration, tweener);
+}
+
+void do_tween_corners(const corners& source, const corners& dest, corners& out, double time, double duration, const tweener_t& tweener)
+{
+	do_tween_rectangle(source, dest, out, time, duration, tweener);
+	out.ur[0] = do_tween(time, source.ur[0], dest.ur[0], duration, tweener);
+	out.ur[1] = do_tween(time, source.ur[1], dest.ur[1], duration, tweener);
+	out.ll[0] = do_tween(time, source.ll[0], dest.ll[0], duration, tweener);
+	out.ll[1] = do_tween(time, source.ll[1], dest.ll[1], duration, tweener);
+};
+
 frame_transform tween(double time, const frame_transform& source, const frame_transform& dest, double duration, const tweener_t& tweener)
 {	
-	auto do_tween = [](double time, double source, double dest, double duration, const tweener_t& tweener)
-	{
-		return tweener(time, source, dest-source, duration);
-	};
-	
 	frame_transform result;	
 	result.volume				= do_tween(time, source.volume,					dest.volume,				duration, tweener);
 	result.brightness			= do_tween(time, source.brightness,				dest.brightness,			duration, tweener);
@@ -126,6 +188,10 @@ frame_transform tween(double time, const frame_transform& source, const frame_tr
 	result.field_mode			= static_cast<field_mode::type>(source.field_mode & dest.field_mode);
 	result.is_key				= source.is_key | dest.is_key;
 	result.is_mix				= source.is_mix | dest.is_mix;
+
+	do_tween_rectangle(source.crop, dest.crop, result.crop, time, duration, tweener);
+	do_tween_corners(source.perspective, dest.perspective, result.perspective, time, duration, tweener);
+
 	return result;
 }
 
@@ -143,6 +209,8 @@ bool operator!=(const frame_transform& lhs, const frame_transform& rhs)
 {
 	return !(lhs == rhs);
 }
+
+namespace detail {
 
 boost::thread_specific_ptr<double>& get_thread_local_aspect_ratio()
 {
@@ -164,4 +232,4 @@ double get_current_aspect_ratio()
 	return *get_thread_local_aspect_ratio();
 }
 
-}}
+}}}

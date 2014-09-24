@@ -58,7 +58,7 @@ struct write_frame::implementation
 		recorded_frame_age_ = -1;
 	}
 
-	implementation(const safe_ptr<ogl_device>& ogl, const void* tag, const core::pixel_format_desc& desc, const channel_layout& channel_layout) 
+	implementation(const safe_ptr<ogl_device>& ogl, const void* tag, const core::pixel_format_desc& desc, const channel_layout& channel_layout, bool mipmapping) 
 		: ogl_(ogl)
 		, desc_(desc)
 		, channel_layout_(channel_layout)
@@ -71,7 +71,7 @@ struct write_frame::implementation
 		});
 		std::transform(desc.planes.begin(), desc.planes.end(), std::back_inserter(textures_), [&](const core::pixel_format_desc::plane& plane)
 		{
-			return ogl_->create_device_buffer(plane.width, plane.height, plane.channels);	
+			return ogl_->create_device_buffer(plane.width, plane.height, plane.channels, mipmapping);	
 		});
 
 		recorded_frame_age_ = -1;
@@ -137,8 +137,9 @@ write_frame::write_frame(
 		const safe_ptr<ogl_device>& ogl,
 		const void* tag,
 		const core::pixel_format_desc& desc,
-		const channel_layout& channel_layout)
-	: impl_(new implementation(ogl, tag, desc, channel_layout))
+		const channel_layout& channel_layout,
+		bool mipmapping)
+	: impl_(new implementation(ogl, tag, desc, channel_layout, mipmapping))
 {
 }
 write_frame::write_frame(const write_frame& other) : impl_(new implementation(*other.impl_)){}

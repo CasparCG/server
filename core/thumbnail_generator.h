@@ -53,7 +53,8 @@ public:
 			const safe_ptr<ogl_device>& ogl,
 			int generate_delay_millis,
 			const thumbnail_creator& thumbnail_creator,
-			safe_ptr<media_info_repository> media_info_repo);
+			safe_ptr<media_info_repository> media_info_repo,
+			bool mipmap);
 	~thumbnail_generator();
 	void generate(const std::wstring& media_file);
 	void generate_all();

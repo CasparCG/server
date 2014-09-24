@@ -359,7 +359,7 @@ bool ChannelGridCommand::DoExecute()
 	{
 		if(channel != self)
 		{
-			auto producer = create_channel_producer(self->mixer(), channel);		
+			auto producer = create_channel_producer(self->mixer()->get_frame_factory(index), channel);		
 			self->stage()->load(index, producer, false);
 			self->stage()->play(index);
 			index++;
@@ -579,6 +579,78 @@ bool MixerCommand::DoExecute()
 				return transform;
 			}, duration, tween));
 		}
+		else if(_parameters[0] == L"CROP")
+		{
+			if (_parameters.size() == 1)
+			{
+				auto crop = get_current_transform().crop;
+				SetReplyString(
+						L"201 MIXER OK\r\n" 
+						+ lexical_cast<std::wstring>(crop.ul[0]) + L" "
+						+ lexical_cast<std::wstring>(crop.ul[1]) + L" "
+						+ lexical_cast<std::wstring>(crop.lr[0]) + L" "
+						+ lexical_cast<std::wstring>(crop.lr[1]) + L"\r\n");
+				return true;
+			}
+
+			int duration = _parameters.size() > 5 ? boost::lexical_cast<int>(_parameters[5]) : 0;
+			std::wstring tween = _parameters.size() > 6 ? _parameters[6] : L"linear";
+			double ul_x	= boost::lexical_cast<double>(_parameters.at(1));
+			double ul_y	= boost::lexical_cast<double>(_parameters.at(2));
+			double lr_x	= boost::lexical_cast<double>(_parameters.at(3));
+			double lr_y	= boost::lexical_cast<double>(_parameters.at(4));
+
+			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) mutable -> frame_transform
+			{
+				transform.crop.ul[0] = ul_x;
+				transform.crop.ul[1] = ul_y;
+				transform.crop.lr[0] = lr_x;
+				transform.crop.lr[1] = lr_y;
+				return transform;
+			}, duration, tween));
+		}
+		else if(_parameters[0] == L"PERSPECTIVE")
+		{
+			if (_parameters.size() == 1)
+			{
+				auto perspective = get_current_transform().perspective;
+				SetReplyString(
+						L"201 MIXER OK\r\n" 
+						+ lexical_cast<std::wstring>(perspective.ul[0]) + L" "
+						+ lexical_cast<std::wstring>(perspective.ul[1]) + L" "
+						+ lexical_cast<std::wstring>(perspective.ur[0]) + L" "
+						+ lexical_cast<std::wstring>(perspective.ur[1]) + L" "
+						+ lexical_cast<std::wstring>(perspective.lr[0]) + L" "
+						+ lexical_cast<std::wstring>(perspective.lr[1]) + L" "
+						+ lexical_cast<std::wstring>(perspective.ll[0]) + L" "
+						+ lexical_cast<std::wstring>(perspective.ll[1]) + L"\r\n");
+				return true;
+			}
+
+			int duration = _parameters.size() > 9 ? boost::lexical_cast<int>(_parameters[9]) : 0;
+			std::wstring tween = _parameters.size() > 10 ? _parameters[10] : L"linear";
+			double ul_x	= boost::lexical_cast<double>(_parameters.at(1));
+			double ul_y	= boost::lexical_cast<double>(_parameters.at(2));
+			double ur_x	= boost::lexical_cast<double>(_parameters.at(3));
+			double ur_y	= boost::lexical_cast<double>(_parameters.at(4));
+			double lr_x	= boost::lexical_cast<double>(_parameters.at(5));
+			double lr_y	= boost::lexical_cast<double>(_parameters.at(6));
+			double ll_x	= boost::lexical_cast<double>(_parameters.at(7));
+			double ll_y	= boost::lexical_cast<double>(_parameters.at(8));
+
+			transforms.push_back(stage::transform_tuple_t(GetLayerIndex(), [=](frame_transform transform) mutable -> frame_transform
+			{
+				transform.perspective.ul[0] = ul_x;
+				transform.perspective.ul[1] = ul_y;
+				transform.perspective.ur[0] = ur_x;
+				transform.perspective.ur[1] = ur_y;
+				transform.perspective.lr[0] = lr_x;
+				transform.perspective.lr[1] = lr_y;
+				transform.perspective.ll[0] = ll_x;
+				transform.perspective.ll[1] = ll_y;
+				return transform;
+			}, duration, tween));
+		}
 		else if(_parameters[0] == L"GRID")
 		{
 			int duration = _parameters.size() > 2 ? boost::lexical_cast<int>(_parameters[2]) : 0;
@@ -620,6 +692,19 @@ bool MixerCommand::DoExecute()
 			int layer = GetLayerIndex();
 			blend_mode::type blend = get_blend_mode(blend_str);
 			GetChannel()->mixer()->set_blend_mode(GetLayerIndex(), blend);	
+		}
+		else if(_parameters[0] == L"MIPMAP")
+		{
+			if (_parameters.size() == 1)
+			{
+				auto mipmap = GetChannel()->mixer()->get_mipmap(GetLayerIndex());
+				SetReplyString(L"201 MIXER OK\r\n" 
+					+ boost::lexical_cast<std::wstring>(mipmap)
+					+ L"\r\n");
+				return true;
+			}
+
+			GetChannel()->mixer()->set_mipmap(GetLayerIndex(), _parameters.at(1) == L"1");
 		}
         else if(_parameters[0] == L"CHROMA")
         {
@@ -789,11 +874,13 @@ bool MixerCommand::DoExecute()
 			{
 				GetChannel()->stage()->clear_transforms();
 				GetChannel()->mixer()->clear_blend_modes();
+				GetChannel()->mixer()->clear_mipmap();
 			}
 			else
 			{
 				GetChannel()->stage()->clear_transforms(layer);
 				GetChannel()->mixer()->clear_blend_mode(layer);
+				GetChannel()->mixer()->clear_mipmap(layer);
 			}
 		}
 		else if(_parameters[0] == L"COMMIT")
@@ -999,9 +1086,9 @@ safe_ptr<core::frame_producer> RouteCommand::TryCreateProducer(AMCPCommand& comm
 
 		// Find the source layer (if one is given)
 		if (is_channel_layer_spec)
-			pFP = create_layer_producer(command.GetChannel()->mixer(), (*src_channel)->stage(), src_layer_index);
+			pFP = create_layer_producer(command.GetChannel()->mixer()->get_frame_factory(command.GetLayerIndex()), (*src_channel)->stage(), src_layer_index);
 		else 
-			pFP = create_channel_producer(command.GetChannel()->mixer(), *src_channel);
+			pFP = create_channel_producer(command.GetChannel()->mixer()->get_frame_factory(command.GetLayerIndex()), *src_channel);
 	}
 	return pFP;
 }
@@ -1052,7 +1139,7 @@ bool LoadCommand::DoExecute()
 		}
 		if (pFP == frame_producer::empty())
 		{
-			pFP = create_producer(GetChannel()->mixer(), _parameters);
+			pFP = create_producer(GetChannel()->mixer()->get_frame_factory(GetLayerIndex()), _parameters);
 		}
 		GetChannel()->stage()->load(GetLayerIndex(), pFP, true);
 	
@@ -1166,7 +1253,7 @@ bool LoadbgCommand::DoExecute()
 		}
 		if (pFP == frame_producer::empty())
 		{
-			pFP = create_producer(GetChannel()->mixer(), _parameters);
+			pFP = create_producer(GetChannel()->mixer()->get_frame_factory(GetLayerIndex()), _parameters);
 		}
 		if(pFP == frame_producer::empty())
 			BOOST_THROW_EXCEPTION(file_not_found() << msg_info(_parameters.size() > 0 ? narrow(_parameters[0]) : ""));
@@ -1423,12 +1510,13 @@ bool CGCommand::DoExecuteAdd() {
 
 	if(!fullFilename.empty())
 	{
+		filename.append(extension);
 		auto call = (boost::wformat(L"ADD %1% \"%2%\" %3% %4% %5%") % layer % filename % bDoStart % label % (std::wstring() + (pDataString ? pDataString : L""))).str();
 		auto producer = GetChannel()->stage()->foreground(GetLayerIndex(9999)).get();
 
 		if(producer->print().find(L"flash") == std::string::npos)
 		{ 
-			producer = flash::create_producer(GetChannel()->mixer(), boost::assign::list_of<std::wstring>());
+			producer = flash::create_producer(GetChannel()->mixer()->get_frame_factory(GetLayerIndex(9999)), boost::assign::list_of<std::wstring>());
 
 			if (producer != core::frame_producer::empty())
 			{
@@ -1451,7 +1539,7 @@ bool CGCommand::DoExecuteAdd() {
 	{			
 		filename.append(extension);
 		std::vector<std::wstring> parameters = boost::assign::list_of<std::wstring>(filename);
-		auto producer = html::create_producer(GetChannel()->mixer(), core::parameters(parameters));	
+		auto producer = html::create_producer(GetChannel()->mixer()->get_frame_factory(GetLayerIndex(9999)), core::parameters(parameters));	
 				
 		if (producer != core::frame_producer::empty())
 		{

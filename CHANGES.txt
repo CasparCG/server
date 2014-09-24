@@ -18,6 +18,10 @@ Mixer
   o Added support for rotation.
   o Added support for changing the anchor point around which fill_translation,
     fill_scale and rotation will be done from.
+  o Added support for perspective correct corner pinning.
+  o Added support for mipmapped textures with anisotropic filtering for
+    increased downscaling quality.
+  o Added support for cropping a layer. Not the same as clipping.
 
 AMCP
 ----
@@ -34,6 +38,20 @@ AMCP
 
     - MIXER ROTATION -- will return or modify the angle of which a layer is
       rotated by (clockwise degrees) around the point specified by ANCHOR.
+
+    - MIXER PERSPECTIVE -- will return or modify the corners of the perspective
+      transformation of a layer. One X Y pair for each corner (order upper left,
+      upper right, lower right and lower left). Example:
+      MIXER 1-10 PERSPECTIVE 0.4 0.4 0.6 0.4 1 1 0 1
+
+    - MIXER MIPMAP -- will return or modify whether to enable mipmapping of
+      textures produced on a layer. Only frames produced after a change will be
+      affected. So for example image_producer will not be affected while the
+      image is displayed.
+
+    - MIXER CROP -- will return or modify how textures on a layer will be
+      cropped. One X Y pair each for the upper left corner and for the lower
+      right corner.
 
 Consumers
 ---------

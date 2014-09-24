@@ -117,7 +117,8 @@ public:
 			const safe_ptr<ogl_device>& ogl,
 			int generate_delay_millis,
 			const thumbnail_creator& thumbnail_creator,
-			safe_ptr<media_info_repository> media_info_repo)
+			safe_ptr<media_info_repository> media_info_repo,
+			bool mipmap)
 		: media_path_(media_path)
 		, thumbnails_path_(thumbnails_path)
 		, width_(width)
@@ -149,6 +150,7 @@ public:
 		graph_->set_text(L"thumbnail-channel");
 		graph_->auto_reset();
 		diagnostics::register_graph(graph_);
+		mixer_->set_mipmap(0, mipmap);
 		//monitor_->initial_scan_completion().get();
 		//output_->sleep_millis = 2000;
 	}
@@ -266,7 +268,7 @@ public:
 
 			try
 			{
-				producer = create_thumbnail_producer(mixer_, media_file);
+				producer = create_thumbnail_producer(mixer_->get_frame_factory(0), media_file);
 			}
 			catch (const boost::thread_interrupted&)
 			{
@@ -361,7 +363,8 @@ thumbnail_generator::thumbnail_generator(
 		const safe_ptr<ogl_device>& ogl,
 		int generate_delay_millis,
 		const thumbnail_creator& thumbnail_creator,
-		safe_ptr<media_info_repository> media_info_repo)
+		safe_ptr<media_info_repository> media_info_repo,
+		bool mipmap)
 		: impl_(new implementation(
 				monitor_factory,
 				media_path,
@@ -371,7 +374,8 @@ thumbnail_generator::thumbnail_generator(
 				ogl,
 				generate_delay_millis,
 				thumbnail_creator,
-				media_info_repo))
+				media_info_repo,
+				mipmap))
 {
 }
 

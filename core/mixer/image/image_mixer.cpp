@@ -238,7 +238,7 @@ private:
 			
 	safe_ptr<device_buffer> create_mixer_buffer(size_t stride, const video_format_desc& format_desc)
 	{
-		auto buffer = ogl_->create_device_buffer(format_desc.width, format_desc.height, stride);
+		auto buffer = ogl_->create_device_buffer(format_desc.width, format_desc.height, stride, false);
 		ogl_->clear(*buffer);
 		return buffer;
 	}

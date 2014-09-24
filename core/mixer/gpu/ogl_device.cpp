@@ -83,12 +83,12 @@ ogl_device::~ogl_device()
 	});
 }
 
-safe_ptr<device_buffer> ogl_device::allocate_device_buffer(size_t width, size_t height, size_t stride)
+safe_ptr<device_buffer> ogl_device::allocate_device_buffer(size_t width, size_t height, size_t stride, bool mipmapped)
 {
 	std::shared_ptr<device_buffer> buffer;
 	try
 	{
-		buffer.reset(new device_buffer(width, height, stride));
+		buffer.reset(new device_buffer(width, height, stride, mipmapped));
 	}
 	catch(...)
 	{
@@ -98,7 +98,7 @@ safe_ptr<device_buffer> ogl_device::allocate_device_buffer(size_t width, size_t 
 			gc().wait();
 					
 			// Try again
-			buffer.reset(new device_buffer(width, height, stride));
+			buffer.reset(new device_buffer(width, height, stride, mipmapped));
 		}
 		catch(...)
 		{
@@ -109,14 +109,14 @@ safe_ptr<device_buffer> ogl_device::allocate_device_buffer(size_t width, size_t 
 	return make_safe_ptr(buffer);
 }
 				
-safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t height, size_t stride)
+safe_ptr<device_buffer> ogl_device::create_device_buffer(size_t width, size_t height, size_t stride, bool mipmapped)
 {
 	CASPAR_VERIFY(stride > 0 && stride < 5);
 	CASPAR_VERIFY(width > 0 && height > 0);
-	auto& pool = device_pools_[stride-1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
+	auto& pool = device_pools_[stride-1 + (mipmapped ? 4 : 0)][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
 	std::shared_ptr<device_buffer> buffer;
 	if(!pool->items.try_pop(buffer))		
-		buffer = executor_.invoke([&]{return allocate_device_buffer(width, height, stride);}, high_priority);			
+		buffer = executor_.invoke([&]{return allocate_device_buffer(width, height, stride, mipmapped);}, high_priority);			
 	
 	//++pool->usage_count;
 

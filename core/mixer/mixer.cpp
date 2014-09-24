@@ -60,6 +60,52 @@
 #include <unordered_map>
 
 namespace caspar { namespace core {
+
+class layer_specific_frame_factory : public frame_factory
+{
+	safe_ptr<ogl_device>	ogl_;
+	mutable tbb::spin_mutex	format_desc_mutex_;
+	video_format_desc		format_desc_;
+	tbb::atomic<bool>		mipmapping_;
+public:
+	layer_specific_frame_factory(const safe_ptr<ogl_device>& ogl, const video_format_desc& format_desc)
+		: ogl_(ogl)
+		, format_desc_(format_desc)
+	{
+		mipmapping_ = false;
+	}
+
+	void set_mipmapping(bool mipmapping)
+	{
+		mipmapping_ = mipmapping;
+	}
+
+	bool get_mipmapping() const
+	{
+		return mipmapping_;
+	}
+
+	void set_video_format_desc(const video_format_desc& format_desc)
+	{
+		tbb::spin_mutex::scoped_lock lock(format_desc_mutex_);
+		format_desc_ = format_desc;
+	}
+
+	safe_ptr<core::write_frame> create_frame(
+			const void* tag,
+			const core::pixel_format_desc& desc,
+			const channel_layout& audio_channel_layout) override
+	{
+		return make_safe<write_frame>(
+				ogl_, tag, desc, audio_channel_layout, mipmapping_);
+	}
+
+	video_format_desc get_video_format_desc() const override
+	{
+		tbb::spin_mutex::scoped_lock lock(format_desc_mutex_);
+		return format_desc_;
+	}
+};
 		
 struct mixer::implementation : boost::noncopyable
 {		
@@ -68,7 +114,6 @@ struct mixer::implementation : boost::noncopyable
 	tbb::atomic<int64_t>			current_mix_time_;
 
 	safe_ptr<mixer::target_t>		target_;
-	mutable tbb::spin_mutex			format_desc_mutex_;
 	video_format_desc				format_desc_;
 	safe_ptr<ogl_device>			ogl_;
 	channel_layout					audio_channel_layout_;
@@ -77,7 +122,8 @@ struct mixer::implementation : boost::noncopyable
 	audio_mixer	audio_mixer_;
 	image_mixer image_mixer_;
 	
-	std::unordered_map<int, blend_mode> blend_modes_;
+	std::unordered_map<int, blend_mode>								blend_modes_;
+	std::unordered_map<int, safe_ptr<layer_specific_frame_factory>> frame_factories_;
 			
 	executor executor_;
 	safe_ptr<monitor::subject>		 monitor_subject_;
@@ -99,7 +145,7 @@ public:
 		current_mix_time_ = 0;
 		executor_.invoke([&]
 		{
-			set_current_aspect_ratio(
+			detail::set_current_aspect_ratio(
 					static_cast<double>(format_desc.square_width)
 							/ static_cast<double>(format_desc.square_height));
 		});
@@ -144,13 +190,24 @@ public:
 			}	
 		});		
 	}
-					
-	safe_ptr<core::write_frame> create_frame(
-			const void* tag,
-			const core::pixel_format_desc& desc,
-			const channel_layout& audio_channel_layout)
-	{		
-		return make_safe<write_frame>(ogl_, tag, desc, audio_channel_layout);
+
+	safe_ptr<layer_specific_frame_factory> get_frame_factory(int layer_index)
+	{
+		return executor_.invoke([=]() -> safe_ptr<layer_specific_frame_factory>
+		{
+			auto found = frame_factories_.find(layer_index);
+
+			if (found == frame_factories_.end())
+			{
+				auto factory = make_safe<layer_specific_frame_factory>(ogl_, format_desc_);
+
+				frame_factories_.insert(std::make_pair(layer_index, factory));
+
+				return factory;
+			}
+
+			return found->second;
+		});
 	}
 
 	blend_mode::type get_blend_mode(int index)
@@ -201,6 +258,32 @@ public:
         }, high_priority);
     }
 
+	bool get_mipmap(int index)
+	{
+		return get_frame_factory(index)->get_mipmapping();
+	}
+
+	void set_mipmap(int index, bool mipmap)
+	{
+		get_frame_factory(index)->set_mipmapping(mipmap);
+	}
+
+	void clear_mipmap(int index)
+	{
+		executor_.begin_invoke([=]
+		{
+			frame_factories_.erase(index);
+		}, high_priority);
+	}
+
+	void clear_mipmap()
+	{
+		executor_.begin_invoke([=]
+		{
+			frame_factories_.clear();
+		}, high_priority);
+	}
+
 	void set_straight_alpha_output(bool value)
 	{
         executor_.begin_invoke([=]
@@ -237,18 +320,14 @@ public:
 	{
 		executor_.begin_invoke([=]
 		{
-			tbb::spin_mutex::scoped_lock lock(format_desc_mutex_);
 			format_desc_ = format_desc;
-			set_current_aspect_ratio(
+			detail::set_current_aspect_ratio(
 					static_cast<double>(format_desc.square_width)
 							/ static_cast<double>(format_desc.square_height));
-		});
-	}
 
-	core::video_format_desc get_video_format_desc() const // nothrow
-	{
-		tbb::spin_mutex::scoped_lock lock(format_desc_mutex_);
-		return format_desc_;
+			BOOST_FOREACH(auto& factory, frame_factories_)
+				factory.second->set_video_format_desc(format_desc);
+		});
 	}
 
 	boost::unique_future<boost::property_tree::wptree> info() const
@@ -271,14 +350,17 @@ public:
 mixer::mixer(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl, const channel_layout& audio_channel_layout) 
 	: impl_(new implementation(graph, target, format_desc, ogl, audio_channel_layout)){}
 void mixer::send(const std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>& frames){ impl_->send(frames);}
-core::video_format_desc mixer::get_video_format_desc() const { return impl_->get_video_format_desc(); }
-safe_ptr<core::write_frame> mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, const channel_layout& audio_channel_layout){ return impl_->create_frame(tag, desc, audio_channel_layout); }		
+safe_ptr<frame_factory> mixer::get_frame_factory(int layer_index) { return impl_->get_frame_factory(layer_index); }
 blend_mode::type mixer::get_blend_mode(int index) { return impl_->get_blend_mode(index); }
 void mixer::set_blend_mode(int index, blend_mode::type value){impl_->set_blend_mode(index, value);}
 chroma mixer::get_chroma(int index) { return impl_->get_chroma(index); }
 void mixer::set_chroma(int index, const chroma & value){impl_->set_chroma(index, value);}
 void mixer::clear_blend_mode(int index) { impl_->clear_blend_mode(index); }
 void mixer::clear_blend_modes() { impl_->clear_blend_modes(); }
+bool mixer::get_mipmap(int index) { return impl_->get_mipmap(index); }
+void mixer::set_mipmap(int index, bool mipmap) { impl_->set_mipmap(index, mipmap); }
+void mixer::clear_mipmap(int index) { impl_->clear_mipmap(index); }
+void mixer::clear_mipmap() { impl_->clear_mipmap(); }
 void mixer::set_straight_alpha_output(bool value) { impl_->set_straight_alpha_output(value); }
 bool mixer::get_straight_alpha_output() { return impl_->get_straight_alpha_output(); }
 float mixer::get_master_volume() { return impl_->get_master_volume(); }

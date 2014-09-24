@@ -241,42 +241,6 @@ struct image_scroll_producer : public core::frame_producer
 
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}
-
-	std::vector<safe_ptr<core::basic_frame>> get_visible()
-	{
-		std::vector<safe_ptr<core::basic_frame>> result;
-		result.reserve(frames_.size());
-
-		BOOST_FOREACH(auto& frame, frames_)
-		{
-			auto& fill_translation = frame->get_frame_transform().fill_translation;
-
-			if (width_ == format_desc_.width)
-			{
-				auto motion_offset_in_screens = (static_cast<double>(start_offset_y_) + delta_) / static_cast<double>(format_desc_.height);
-				auto vertical_offset = fill_translation[1] + motion_offset_in_screens;
-
-				if (vertical_offset < -1.0 || vertical_offset > 1.0)
-				{
-					continue;
-				}
-			}
-			else
-			{
-				auto motion_offset_in_screens = (static_cast<double>(start_offset_x_) + delta_) / static_cast<double>(format_desc_.width);
-				auto horizontal_offset = fill_translation[0] + motion_offset_in_screens;
-
-				if (horizontal_offset < -1.0 || horizontal_offset > 1.0)
-				{
-					continue;
-				}
-			}
-
-			result.push_back(frame);
-		}
-
-		return std::move(result);
-	}
 	
 	// frame_producer
 
@@ -285,7 +249,7 @@ struct image_scroll_producer : public core::frame_producer
 		if(frames_.empty())
 			return core::basic_frame::eof();
 		
-		auto result = make_safe<core::basic_frame>(get_visible());
+		auto result = make_safe<core::basic_frame>(frames_);
 		auto& fill_translation = result->get_frame_transform().fill_translation;
 
 		if (width_ == format_desc_.width)
