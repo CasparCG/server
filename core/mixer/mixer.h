@@ -50,7 +50,6 @@ struct pixel_format;
 struct channel_layout;
 
 class mixer : public target<std::pair<std::map<int, safe_ptr<core::basic_frame>>, std::shared_ptr<void>>>
-			, public core::frame_factory
 {
 public:	
 	typedef target<std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>> target_t;
@@ -63,17 +62,20 @@ public:
 		
 	// mixer
 
-	safe_ptr<core::write_frame> create_frame(const void* tag, const core::pixel_format_desc& desc, const channel_layout& audio_channel_layout);		
+	safe_ptr<frame_factory> get_frame_factory(int layer_index);
 	
-	core::video_format_desc get_video_format_desc() const; // nothrow
 	void set_video_format_desc(const video_format_desc& format_desc);
 	
 	blend_mode::type get_blend_mode(int index);
 	void set_blend_mode(int index, blend_mode::type value);
 	chroma get_chroma(int index);
     void set_chroma(int index, const chroma& value);
+	bool get_mipmap(int index);
+	void set_mipmap(int index, bool mipmap);
 	void clear_blend_mode(int index);
 	void clear_blend_modes();
+	void clear_mipmap(int index);
+	void clear_mipmap();
 	void set_straight_alpha_output(bool value);
 	bool get_straight_alpha_output();
 

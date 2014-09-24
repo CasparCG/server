@@ -36,7 +36,8 @@ public:
 	size_t stride() const;	
 	size_t width() const;
 	size_t height() const;
-		
+	bool mipmapped() const;
+
 	void bind(int index);
 	void unbind();
 		
@@ -44,7 +45,7 @@ public:
 	bool ready() const;
 private:
 	friend class ogl_device;
-	device_buffer(size_t width, size_t height, size_t stride);
+	device_buffer(size_t width, size_t height, size_t stride, bool mipmapped);
 
 	int id() const;
 

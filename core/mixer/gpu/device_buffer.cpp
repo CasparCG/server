@@ -46,30 +46,56 @@ static tbb::atomic<int> g_total_count;
 
 struct device_buffer::implementation : boost::noncopyable
 {
-	GLuint id_;
+	GLuint			id_;
 
-	const size_t width_;
-	const size_t height_;
-	const size_t stride_;
+	const size_t	width_;
+	const size_t	height_;
+	const size_t	stride_;
+	const bool		mipmapped_;
 
-	fence		 fence_;
+	fence			fence_;
 
 public:
-	implementation(size_t width, size_t height, size_t stride) 
+	implementation(size_t width, size_t height, size_t stride, bool mipmapped) 
 		: width_(width)
 		, height_(height)
 		, stride_(stride)
+		, mipmapped_(mipmapped)
 	{	
 		GL(glGenTextures(1, &id_));
 		GL(glBindTexture(GL_TEXTURE_2D, id_));
-		GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-		GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-		GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
-		GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (mipmapped ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR)));
+		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
 		GL(glTexImage2D(GL_TEXTURE_2D, 0, INTERNAL_FORMAT[stride_], width_, height_, 0, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
+
+		if (mipmapped)
+		{
+			enable_anosotropic_filtering_if_available();
+			GL(glGenerateMipmap(GL_TEXTURE_2D));
+		}
+
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
 		CASPAR_LOG(trace) << "[device_buffer] [" << ++g_total_count << L"] allocated size:" << width*height*stride;	
-	}	
+	}
+
+	void enable_anosotropic_filtering_if_available()
+	{
+		static auto AVAILABLE = glewIsSupported("GL_EXT_texture_filter_anisotropic");
+
+		if (!AVAILABLE)
+			return;
+
+		static GLfloat MAX_ANISOTROPY = []() -> GLfloat
+		{
+			GLfloat anisotropy;
+			glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &anisotropy);
+			return anisotropy;
+		}();
+
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, MAX_ANISOTROPY);
+	}
 
 	~implementation()
 	{
@@ -104,6 +130,10 @@ public:
 	{
 		bind();
 		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width_, height_, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
+
+		if (mipmapped_)
+			GL(glGenerateMipmap(GL_TEXTURE_2D));
+
 		unbind();
 		fence_.set();
 	}
@@ -114,7 +144,7 @@ public:
 	}
 };
 
-device_buffer::device_buffer(size_t width, size_t height, size_t stride) : impl_(new implementation(width, height, stride)){}
+device_buffer::device_buffer(size_t width, size_t height, size_t stride, bool mipmapped) : impl_(new implementation(width, height, stride, mipmapped)){}
 size_t device_buffer::stride() const { return impl_->stride_; }
 size_t device_buffer::width() const { return impl_->width_; }
 size_t device_buffer::height() const { return impl_->height_; }

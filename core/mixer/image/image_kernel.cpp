@@ -41,7 +41,81 @@
 #include <boost/noncopyable.hpp>
 
 namespace caspar { namespace core {
-	
+
+// http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
+bool get_line_intersection(
+		double p0_x, double p0_y,
+		double p1_x, double p1_y, 
+		double p2_x, double p2_y,
+		double p3_x, double p3_y,
+		double& result_x, double& result_y)
+{
+	double s1_x = p1_x - p0_x;
+	double s1_y = p1_y - p0_y;
+	double s2_x = p3_x - p2_x;
+	double s2_y = p3_y - p2_y;
+
+	double s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) / (-s2_x * s1_y + s1_x * s2_y);
+	double t = ( s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) / (-s2_x * s1_y + s1_x * s2_y);
+
+	if (s >= 0 && s <= 1 && t >= 0 && t <= 1)
+	{
+		// Collision detected
+		result_x = p0_x + (t * s1_x);
+		result_y = p0_y + (t * s1_y);
+
+		return true;
+	}
+
+	return false; // No collision
+}
+
+double hypotenuse(double x1, double y1, double x2, double y2)
+{
+	auto x = x2 - x1;
+	auto y = y2 - y1;
+
+	return std::sqrt(x * x + y * y);
+}
+
+double calc_q(double close_diagonal, double distant_diagonal)
+{
+	return (close_diagonal + distant_diagonal) / distant_diagonal;
+}
+
+bool is_above_screen(double y)
+{
+	return y < 0.0;
+}
+
+bool is_below_screen(double y)
+{
+	return y > 1.0;
+}
+
+bool is_left_of_screen(double x)
+{
+	return x < 0.0;
+}
+
+bool is_right_of_screen(double x)
+{
+	return x > 1.0;
+}
+
+bool is_outside_screen(
+		double x1, double y1,
+		double x2, double y2,
+		double x3, double y3,
+		double x4, double y4)
+{
+	// Every point needs to be outside the screen on the *same* side in order to be considered outside the screen.
+	return (is_above_screen(y1) && is_above_screen(y2) && is_above_screen(y3) && is_above_screen(y4))
+		|| (is_below_screen(y1) && is_below_screen(y2) && is_below_screen(y3) && is_below_screen(y4))
+		|| (is_left_of_screen(x1) && is_left_of_screen(x2) && is_left_of_screen(x3) && is_left_of_screen(x4))
+		|| (is_right_of_screen(x1) && is_right_of_screen(x2) && is_right_of_screen(x3) && is_right_of_screen(x4));
+}
+
 GLubyte upper_pattern[] = {
 	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
 	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
@@ -82,6 +156,51 @@ struct image_kernel::implementation : boost::noncopyable
 
 		if(params.transform.opacity < epsilon)
 			return;
+
+		auto f_p = params.transform.fill_translation;
+		auto f_s = params.transform.fill_scale;
+
+		// Calculate rotation
+		auto aspect = params.aspect_ratio;
+		auto angle = params.transform.angle;
+
+		auto rotate = [angle, aspect](double orig_x, double orig_y) -> boost::array<double, 2>
+		{
+			boost::array<double, 2> result;
+			result[0] = orig_x * std::cos(angle) - orig_y * std::sin(angle);
+			result[1] = orig_x * std::sin(angle) + orig_y * std::cos(angle);
+			result[1] *= aspect;
+
+			return result;
+		};
+
+		auto anchor = params.transform.anchor;
+		auto crop = params.transform.crop;
+		auto pers = params.transform.perspective;
+
+		auto ul = rotate((-anchor[0] + pers.ul[0]) * f_s[0], (-anchor[1] + pers.ul[1]) * f_s[1] / aspect);
+		auto ur = rotate((-anchor[0] + pers.ur[0]) * f_s[0], (-anchor[1] + pers.ur[1]) * f_s[1] / aspect);
+		auto lr = rotate((-anchor[0] + pers.lr[0]) * f_s[0], (-anchor[1] + pers.lr[1]) * f_s[1] / aspect);
+		auto ll = rotate((-anchor[0] + pers.ll[0]) * f_s[0], (-anchor[1] + pers.ll[1]) * f_s[1] / aspect);
+
+		auto upper_left_x =  f_p[0] + ul[0];
+		auto upper_left_y =  f_p[1] + ul[1];
+		auto upper_right_x = f_p[0] + ur[0];
+		auto upper_right_y = f_p[1] + ur[1];
+		auto lower_right_x = f_p[0] + lr[0];
+		auto lower_right_y = f_p[1] + lr[1];
+		auto lower_left_x =  f_p[0] + ll[0];
+		auto lower_left_y =  f_p[1] + ll[1];
+
+		// Skip drawing if the QUAD will be outside the screen.
+		if (is_outside_screen(
+					upper_left_x, upper_left_y,
+					upper_right_x, upper_right_y,
+					lower_right_x, lower_right_y,
+					lower_left_x, lower_left_y))
+		{
+			return;
+		}
 		
 		if(!std::all_of(params.textures.begin(), params.textures.end(), std::mem_fn(&device_buffer::ready)))
 		{
@@ -221,42 +340,37 @@ struct image_kernel::implementation : boost::noncopyable
 			ogl_->scissor(static_cast<size_t>(m_p[0]*w), static_cast<size_t>(m_p[1]*h), static_cast<size_t>(m_s[0]*w), static_cast<size_t>(m_s[1]*h));
 		}
 
-		auto f_p = params.transform.fill_translation;
-		auto f_s = params.transform.fill_scale;
-		
 		// Set render target
 		
 		ogl_->attach(*params.background);
 		
-		// Calculate rotation
-		auto aspect = params.aspect_ratio;
-		auto angle = params.transform.angle;
+		// Perspective correction
+		auto ulq = 1.0;
+		auto urq = 1.0;
+		auto lrq = 1.0;
+		auto llq = 1.0;
+		double diagonal_intersection_x;
+		double diagonal_intersection_y;
 
-		auto rotate = [angle, aspect](double orig_x, double orig_y) -> boost::array<double, 2>
+		if (get_line_intersection(
+				pers.ul[0], pers.ul[1],
+				pers.lr[0], pers.lr[1],
+				pers.ur[0], pers.ur[1],
+				pers.ll[0], pers.ll[1],
+				diagonal_intersection_x,
+				diagonal_intersection_y))
 		{
-			boost::array<double, 2> result;
-			result[0] = orig_x * std::cos(angle) - orig_y * std::sin(angle);
-			result[1] = orig_x * std::sin(angle) + orig_y * std::cos(angle);
-			result[1] *= aspect;
+			// http://www.reedbeta.com/blog/2012/05/26/quadrilateral-interpolation-part-1/
+			auto d0 = hypotenuse(pers.ll[0], pers.ll[1], diagonal_intersection_x, diagonal_intersection_y);
+			auto d1 = hypotenuse(pers.lr[0], pers.lr[1], diagonal_intersection_x, diagonal_intersection_y);
+			auto d2 = hypotenuse(pers.ur[0], pers.ur[1], diagonal_intersection_x, diagonal_intersection_y);
+			auto d3 = hypotenuse(pers.ul[0], pers.ul[1], diagonal_intersection_x, diagonal_intersection_y);
 
-			return result;
-		};
-
-		auto anchor = params.transform.anchor;
-
-		auto ul = rotate( -anchor[0]      * f_s[0],  -anchor[1]      *f_s[1] / aspect);
-		auto ur = rotate((-anchor[0] + 1) * f_s[0],  -anchor[1]      *f_s[1] / aspect);
-		auto lr = rotate((-anchor[0] + 1) * f_s[0], (-anchor[1] + 1) *f_s[1] / aspect);
-		auto ll = rotate( -anchor[0]      * f_s[0], (-anchor[1] + 1) *f_s[1] / aspect);
-
-		auto upper_left_x =  f_p[0] + ul[0];
-		auto upper_left_y =  f_p[1] + ul[1];
-		auto upper_right_x = f_p[0] + ur[0];
-		auto upper_right_y = f_p[1] + ur[1];
-		auto lower_right_x = f_p[0] + lr[0];
-		auto lower_right_y = f_p[1] + lr[1];
-		auto lower_left_x =  f_p[0] + ll[0];
-		auto lower_left_y =  f_p[1] + ll[1];
+			ulq = calc_q(d3, d1);
+			urq = calc_q(d2, d0);
+			lrq = calc_q(d1, d3);
+			llq = calc_q(d0, d2);
+		}
 
 		// Draw
 		/*
@@ -264,15 +378,15 @@ struct image_kernel::implementation : boost::noncopyable
 			GL_TEXTURE1 are texture coordinates to background- / key-material, that which will have to be taken in consideration when blending. These are set to the rectangle over which the source will be rendered
 		*/
 		glBegin(GL_QUADS);
-			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1, upper_left_x,  upper_left_y );		glVertex2d(upper_left_x  * 2.0 - 1.0, upper_left_y  * 2.0 - 1.0);
-			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 0.0); glMultiTexCoord2d(GL_TEXTURE1, upper_right_x, upper_right_y);		glVertex2d(upper_right_x * 2.0 - 1.0, upper_right_y * 2.0 - 1.0);
-			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1, lower_right_x, lower_right_y);		glVertex2d(lower_right_x * 2.0 - 1.0, lower_right_y * 2.0 - 1.0);
-			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glMultiTexCoord2d(GL_TEXTURE1, lower_left_x,  lower_left_y );		glVertex2d(lower_left_x  * 2.0 - 1.0, lower_left_y  * 2.0 - 1.0);
+			glMultiTexCoord4d(GL_TEXTURE0, crop.ul[0] * ulq, crop.ul[1] * ulq, 0, ulq); glMultiTexCoord2d(GL_TEXTURE1, upper_left_x,  upper_left_y);		glVertex2d(upper_left_x  * 2.0 - 1.0, upper_left_y  * 2.0 - 1.0);
+			glMultiTexCoord4d(GL_TEXTURE0, crop.lr[0] * urq, crop.ul[1] * urq, 0, urq); glMultiTexCoord2d(GL_TEXTURE1, upper_right_x, upper_right_y);		glVertex2d(upper_right_x * 2.0 - 1.0, upper_right_y * 2.0 - 1.0);
+			glMultiTexCoord4d(GL_TEXTURE0, crop.lr[0] * lrq, crop.lr[1] * lrq, 0, lrq); glMultiTexCoord2d(GL_TEXTURE1, lower_right_x, lower_right_y);		glVertex2d(lower_right_x * 2.0 - 1.0, lower_right_y * 2.0 - 1.0);
+			glMultiTexCoord4d(GL_TEXTURE0, crop.ul[0] * llq, crop.lr[1] * llq, 0, llq); glMultiTexCoord2d(GL_TEXTURE1, lower_left_x,  lower_left_y);		glVertex2d(lower_left_x  * 2.0 - 1.0, lower_left_y  * 2.0 - 1.0);
 		glEnd();
 		
 		// Cleanup
 
-		ogl_->disable(GL_SCISSOR_TEST);	
+		ogl_->disable(GL_SCISSOR_TEST);
 						
 		params.textures.clear();
 		ogl_->yield(); // Return resources to pool as early as possible.
