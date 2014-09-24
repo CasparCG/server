@@ -10,6 +10,7 @@ General
     default casparcg.config by simply adding the name of the file to use as the
     first command line argument to casparcg.exe.
   o Fixed various bugs.
+  o Upgraded FFmpeg to latest stable.
 
 Mixer
 -----
