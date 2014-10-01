@@ -5,7 +5,7 @@ set BUILD_ARCHIVE_NAME=CasparCG Server
 set BUILD_7ZIP=C:\Program Files\7-Zip\7z.exe
 
 :: Uncomment if using Visual Studio Express. And install WDK 7.1.0
-::set BUILD_ATL_INCLUDE_PATH=BUILD_ATL_INCLUDE_PATH
+::set BUILD_ATL_INCLUDE_PATH=C:\WinDDK\7600.16385.1\inc\atl71
 
 build-windows.bat
 
