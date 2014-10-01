@@ -31,6 +31,9 @@
     <ProjectReference Include="..\modules\flash\flash.vcxproj">
       <Project>{816deaba-3757-4306-afe0-c27cf96c4dea}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\modules\WASP\WASP.vcxproj">
+      <Project>{ea8e49de-40df-4456-ac91-8e6feda3cf3b}</Project>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="amcp\AMCPCommand.h" />
@@ -215,7 +218,7 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>../;..\dependencies/tbb/include;..\dependencies\boost;..\dependencies\glew-1.6.0\include;..\dependencies\SFML-1.6\include;$(IncludePath)</IncludePath>
+    <IncludePath>../;..\dependencies/tbb/include;..\dependencies\boost;..\dependencies\glew-1.6.0\include;..\dependencies\SFML-1.6\include;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSdkDir)include;$(FrameworkSDKDir)\include</IncludePath>
     <OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)tmp\$(Configuration)\</IntDir>
   </PropertyGroup>
