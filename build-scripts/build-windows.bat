@@ -22,6 +22,8 @@ call "%BUILD_VCVARSALL%" x86 || goto :error
 
 if defined BUILD_ATL_INCLUDE_PATH set INCLUDE=%BUILD_ATL_INCLUDE_PATH%;%INCLUDE%
 
+echo INCLUDE path is %INCLUDE%
+
 :: Build with MSBuild
 echo Building...
 msbuild /t:Clean /p:Configuration=Release || goto :error
