@@ -3,6 +3,7 @@
 :: Fail early if environment not set
 if not defined BUILD_VCVARSALL exit /b 1
 if not defined BUILD_ARCHIVE_NAME exit /b 1
+if not defined BUILD_PARALLEL_THREADS exit /b 1
 if not defined BUILD_7ZIP exit /b 1
 
 :: Clean and enter shadow build folder
@@ -25,7 +26,7 @@ call "%BUILD_VCVARSALL%" x86 || goto :error
 :: Build with MSBuild
 echo Building...
 msbuild /t:Clean /p:Configuration=Release || goto :error
-msbuild /p:Configuration=Release || goto :error
+msbuild /p:Configuration=Release /m:%BUILD_PARALLEL_THREADS% || goto :error
 
 :: Create server folder to later zip
 cd build || goto :error
