@@ -72,7 +72,7 @@ public:
 		: ogl_(ogl)
 		, format_desc_(format_desc)
 	{
-		mipmapping_ = false;
+		mipmapping_ = env::properties().get(L"configuration.mixer.mipmapping_default_on", false);
 	}
 
 	void set_mipmapping(bool mipmapping)
