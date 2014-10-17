@@ -54,6 +54,8 @@ struct video_decoder::implementation : boost::noncopyable
 {
 	int										index_;
 	const safe_ptr<AVCodecContext>			codec_context_;
+	const safe_ptr<AVFormatContext>			context_;
+	const AVStream*							stream_;
 
 	std::queue<safe_ptr<AVPacket>>			packets_;
 	
@@ -64,6 +66,8 @@ struct video_decoder::implementation : boost::noncopyable
 	bool									is_progressive_;
 
 	tbb::atomic<size_t>						file_frame_number_;
+	tbb::atomic<int64_t>					packet_time_;
+	int64_t									pts_correction_;
 
 public:
 	explicit implementation(const safe_ptr<AVFormatContext>& context) 
@@ -71,8 +75,14 @@ public:
 		, nb_frames_(static_cast<uint32_t>(context->streams[index_]->nb_frames))
 		, width_(codec_context_->width)
 		, height_(codec_context_->height)
+		, context_(context)
+		, stream_(context->streams[index_])
 	{
 		file_frame_number_ = 0;
+		packet_time_ = 0;
+		pts_correction_ = stream_->first_dts;
+		if (pts_correction_ == AV_NOPTS_VALUE)
+			pts_correction_ = 0;
 
 		codec_context_->refcounted_frames = 1;
 	}
@@ -134,7 +144,19 @@ public:
 		if(decoded_frame->repeat_pict > 0)
 			CASPAR_LOG(warning) << "[video_decoder] Field repeat_pict not implemented.";
 		
-		++file_frame_number_;
+		if (!(stream_->avg_frame_rate.den == 0 || pkt->pts == AV_NOPTS_VALUE))
+			file_frame_number_ = static_cast<size_t>(((pkt->pts + pts_correction_) * stream_->time_base.num * stream_->avg_frame_rate.num) / (stream_->time_base.den*stream_->avg_frame_rate.den));
+		else
+			++file_frame_number_;
+
+		if (pkt->pts == AV_NOPTS_VALUE)
+			if (stream_->avg_frame_rate.num > 0)
+				packet_time_ = (AV_TIME_BASE * static_cast<int64_t>(file_frame_number_) * stream_->avg_frame_rate.den)/stream_->avg_frame_rate.num - pts_correction_;
+			else
+				packet_time_ = std::numeric_limits<int64_t>().max();
+		else
+			packet_time_ = ((pkt->pts + pts_correction_) * AV_TIME_BASE * stream_->time_base.num)/stream_->time_base.den;
+
 
 		// This ties the life of the decoded_frame to the packet that it came from. For the
 		// current version of ffmpeg (0.8 or c17808c) the RAW_VIDEO codec returns frame data
@@ -145,6 +167,11 @@ public:
 	bool ready() const
 	{
 		return packets_.size() >= 8;
+	}
+
+	bool empty() const
+	{
+		return packets_.size() == 0;
 	}
 
 	uint32_t nb_frames() const
@@ -162,10 +189,12 @@ video_decoder::video_decoder(const safe_ptr<AVFormatContext>& context) : impl_(n
 void video_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
 std::shared_ptr<AVFrame> video_decoder::poll(){return impl_->poll();}
 bool video_decoder::ready() const{return impl_->ready();}
+bool video_decoder::empty() const{return impl_->empty();}
 size_t video_decoder::width() const{return impl_->width_;}
 size_t video_decoder::height() const{return impl_->height_;}
 uint32_t video_decoder::nb_frames() const{return impl_->nb_frames();}
 uint32_t video_decoder::file_frame_number() const{return impl_->file_frame_number_;}
+int64_t video_decoder::packet_time() const{return impl_->packet_time_;}
 bool	video_decoder::is_progressive() const{return impl_->is_progressive_;}
 std::wstring video_decoder::print() const{return impl_->print();}
 

@@ -51,6 +51,7 @@ public:
 
 	bool try_pop(std::shared_ptr<AVPacket>& packet);
 	bool eof() const;
+	bool empty() const;
 
 	void loop(bool value);
 	bool loop() const;
