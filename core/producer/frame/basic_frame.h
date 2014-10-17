@@ -87,6 +87,8 @@ private:
 
 safe_ptr<basic_frame> disable_audio(const safe_ptr<basic_frame>& frame);
 
+safe_ptr<basic_frame> pause(const safe_ptr<basic_frame>& frame);
+
 inline bool is_concrete_frame(const safe_ptr<basic_frame>& frame)
 {
 	return frame != basic_frame::empty() && frame != basic_frame::eof() && frame != basic_frame::late();

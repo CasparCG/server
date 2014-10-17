@@ -323,7 +323,7 @@ struct image_kernel::implementation : boost::noncopyable
 
 		// Setup drawing area
 		
-		ogl_->viewport(0, 0, params.background->width(), params.background->height());
+		ogl_->viewport(0, (params.transform.is_paused && params.transform.field_mode == core::field_mode::upper) ? 1 : 0, params.background->width(), params.background->height());
 								
 		auto m_p = params.transform.clip_translation;
 		auto m_s = params.transform.clip_scale;
