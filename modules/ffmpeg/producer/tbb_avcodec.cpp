@@ -116,7 +116,7 @@ int tbb_avcodec_open(AVCodecContext* avctx, AVCodec* codec)
 		thread_init(avctx);
 	
 	// ff_thread_init will not be executed since thread_opaque != nullptr || thread_count == 1.
-	return avcodec_open(avctx, codec); 
+	return avcodec_open2(avctx, codec, nullptr); 
 }
 
 int tbb_avcodec_close(AVCodecContext* avctx)

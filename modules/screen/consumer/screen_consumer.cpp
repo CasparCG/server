@@ -39,7 +39,6 @@
 #include <core/video_format.h>
 #include <core/frame/frame.h>
 #include <core/consumer/frame_consumer.h>
-#include <core/consumer/frame_consumer.h>
 
 #include <boost/timer.hpp>
 #include <boost/circular_buffer.hpp>
@@ -118,40 +117,44 @@ struct configuration
 };
 
 struct screen_consumer : boost::noncopyable
-{		
-	const configuration					config_;
-	core::video_format_desc				format_desc_;
-	int									channel_index_;
+{
+	const configuration									config_;
+	core::video_format_desc								format_desc_;
+	int													channel_index_;
 
-	GLuint								texture_;
-	std::vector<GLuint>					pbos_;
+	GLuint												texture_;
+	std::vector<GLuint>									pbos_;
 			
-	float								width_;
-	float								height_;	
-	int									screen_x_;
-	int									screen_y_;
-	int									screen_width_;
-	int									screen_height_;
-	int									square_width_;
-	int									square_height_;				
-	
-	sf::Window							window_;
-	
-	spl::shared_ptr<diagnostics::graph>	graph_;
-	boost::timer						perf_timer_;
-	boost::timer						tick_timer_;
+	float												width_;
+	float												height_;
+	int													screen_x_;
+	int													screen_y_;
+	int													screen_width_;
+	int													screen_height_;
+	int													square_width_;
+	int													square_height_;
 
-	caspar::prec_timer					wait_timer_;
+	sf::Window											window_;
+
+	spl::shared_ptr<diagnostics::graph>					graph_;
+	boost::timer										perf_timer_;
+	boost::timer										tick_timer_;
+
+	caspar::prec_timer									wait_timer_;
 
 	tbb::concurrent_bounded_queue<core::const_frame>	frame_buffer_;
 	core::interaction_sink*								sink_;
 
-	boost::thread						thread_;
-	tbb::atomic<bool>					is_running_;
-	
-	ffmpeg::filter						filter_;
+	boost::thread										thread_;
+	tbb::atomic<bool>									is_running_;
+
+	ffmpeg::filter										filter_;
 public:
-	screen_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index, core::interaction_sink* sink) 
+	screen_consumer(
+			const configuration& config,
+			const core::video_format_desc& format_desc,
+			int channel_index,
+			core::interaction_sink* sink) 
 		: config_(config)
 		, format_desc_(format_desc)
 		, channel_index_(channel_index)
@@ -160,9 +163,28 @@ public:
 		, screen_width_(format_desc.width)
 		, screen_height_(format_desc.height)
 		, square_width_(format_desc.square_width)
-		, square_height_(format_desc.square_height)
+		, square_height_(format_desc.square_height)		
 		, sink_(sink)
-		, filter_(format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? L"" : L"YADIF=1:-1", boost::assign::list_of(PIX_FMT_BGRA))
+		, filter_([&]() -> ffmpeg::filter
+		{			
+			const auto sample_aspect_ratio = 
+				boost::rational<int>(
+					format_desc.square_width, 
+					format_desc.square_height) /
+				boost::rational<int>(
+					format_desc.width, 
+					format_desc.height);
+
+			return ffmpeg::filter(
+				format_desc.width,
+				format_desc.height,
+				boost::rational<int>(format_desc.duration, format_desc.time_scale),
+				boost::rational<int>(format_desc.time_scale, format_desc.duration),
+				sample_aspect_ratio,
+				AV_PIX_FMT_BGRA,
+				boost::assign::list_of(AV_PIX_FMT_BGRA),
+				format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? "" : "YADIF=1:-1");
+		}())
 	{		
 		if(format_desc_.format == core::video_format::ntsc && config_.aspect == configuration::aspect_4_3)
 		{

@@ -78,7 +78,7 @@ struct frame_muxer::impl : boost::noncopyable
 			
 	spl::shared_ptr<core::frame_factory>			frame_factory_;
 	
-	filter											filter_;
+	std::unique_ptr<filter>							filter_;
 	const std::wstring								filter_str_;
 	bool											force_deinterlacing_;
 		
@@ -109,11 +109,11 @@ struct frame_muxer::impl : boost::noncopyable
 		}
 		else
 		{
-			if(display_mode_ == display_mode::invalid)
+			if(!filter_ || display_mode_ == display_mode::invalid)
 				update_display_mode(video);
 				
-			filter_.push(video);
-			BOOST_FOREACH(auto& av_frame, filter_.poll_all())			
+			filter_->push(video);
+			BOOST_FOREACH(auto& av_frame, filter_->poll_all())			
 				video_stream_.push(make_frame(this, av_frame, format_desc_.fps, *frame_factory_));			
 		}
 
@@ -127,7 +127,7 @@ struct frame_muxer::impl : boost::noncopyable
 
 		if(!audio->data[0])		
 		{
-			boost::range::push_back(audio_stream_, core::audio_buffer(audio_cadence_.front() * format_desc_.audio_channels, 0));	
+			boost::range::push_back(audio_stream_, core::audio_buffer(audio_cadence_.front(), 0));	
 		}
 		else
 		{
@@ -156,9 +156,9 @@ struct frame_muxer::impl : boost::noncopyable
 		switch(display_mode_)
 		{
 		case display_mode::duplicate:					
-			return audio_stream_.size() >= static_cast<size_t>(audio_cadence_[0] + audio_cadence_[1 % audio_cadence_.size()])*format_desc_.audio_channels;
+			return audio_stream_.size() >= static_cast<size_t>(audio_cadence_[0] + audio_cadence_[1 % audio_cadence_.size()]);
 		default:										
-			return audio_stream_.size() >= static_cast<size_t>(audio_cadence_.front()) * format_desc_.audio_channels;
+			return audio_stream_.size() >= static_cast<size_t>(audio_cadence_.front());
 		}
 	}
 
@@ -235,11 +235,11 @@ struct frame_muxer::impl : boost::noncopyable
 
 	core::audio_buffer pop_audio()
 	{
-		if(audio_stream_.size() < audio_cadence_.front() * format_desc_.audio_channels)
+		if(audio_stream_.size() < audio_cadence_.front())
 			CASPAR_THROW_EXCEPTION(out_of_range());
 
 		auto begin = audio_stream_.begin();
-		auto end   = begin + audio_cadence_.front() * format_desc_.audio_channels;
+		auto end   = begin + audio_cadence_.front();
 
 		core::audio_buffer samples(begin, end);
 		audio_stream_.erase(begin, end);
@@ -297,7 +297,16 @@ struct frame_muxer::impl : boost::noncopyable
 			filter_str = append_filter(filter_str, pad_str);
 		}
 
-		filter_ = filter(filter_str);
+		filter_.reset (new filter(
+			frame->width,
+			frame->height,
+			boost::rational<int>(1000000, static_cast<int>(in_fps_ * 1000000)),
+			boost::rational<int>(static_cast<int>(in_fps_ * 1000000), 1000000),
+			boost::rational<int>(frame->sample_aspect_ratio.num, frame->sample_aspect_ratio.den),
+			static_cast<AVPixelFormat>(frame->format),
+			std::vector<AVPixelFormat>(),
+			u8(filter_str)));
+
 		CASPAR_LOG(info) << L"[frame_muxer] " << display_mode_ << L" " << print_mode(frame->width, frame->height, in_fps_, frame->interlaced_frame > 0);
 	}
 	
@@ -305,7 +314,7 @@ struct frame_muxer::impl : boost::noncopyable
 	{
 		uint64_t nb_frames2 = nb_frames;
 		
-		if(filter_.is_double_rate()) // Take into account transformations in filter.
+		if(filter_ && filter_->is_double_rate()) // Take into account transformations in filter.
 			nb_frames2 *= 2;
 
 		switch(display_mode_) // Take into account transformation in run.
@@ -332,8 +341,8 @@ struct frame_muxer::impl : boost::noncopyable
 
 		while(!frame_buffer_.empty())
 			frame_buffer_.pop();
-
-		filter_ = filter(filter_.filter_str());
+		
+		filter_.reset();
 	}
 };
 
