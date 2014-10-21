@@ -1,19 +1,19 @@
 /*
  *
- * This file is part of Libav.
+ * This file is part of FFmpeg.
  *
- * Libav is free software; you can redistribute it and/or
+ * FFmpeg is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
  *
- * Libav is distributed in the hope that it will be useful,
+ * FFmpeg is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with Libav; if not, write to the Free Software
+ * License along with FFmpeg; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
@@ -22,11 +22,18 @@
 
 /**
  * @file
+ * @ingroup lavfi_buffersrc
  * Memory buffer source API.
  */
 
 #include "libavcodec/avcodec.h"
 #include "avfilter.h"
+
+/**
+ * @defgroup lavfi_buffersrc Buffer source API
+ * @ingroup lavfi
+ * @{
+ */
 
 enum {
 
@@ -79,8 +86,9 @@ unsigned av_buffersrc_get_nb_failed_requests(AVFilterContext *buffer_src);
 
 #if FF_API_AVFILTERBUFFER
 /**
- * Add a buffer to the filtergraph s.
+ * Add a buffer to a filtergraph.
  *
+ * @param ctx an instance of the buffersrc filter
  * @param buf buffer containing frame data to be passed down the filtergraph.
  * This function will take ownership of buf, the user must not free it.
  * A NULL buf signals EOF -- i.e. no more frames will be sent to this filter.
@@ -88,13 +96,13 @@ unsigned av_buffersrc_get_nb_failed_requests(AVFilterContext *buffer_src);
  * @deprecated use av_buffersrc_write_frame() or av_buffersrc_add_frame()
  */
 attribute_deprecated
-int av_buffersrc_buffer(AVFilterContext *s, AVFilterBufferRef *buf);
+int av_buffersrc_buffer(AVFilterContext *ctx, AVFilterBufferRef *buf);
 #endif
 
 /**
  * Add a frame to the buffer source.
  *
- * @param s an instance of the buffersrc filter.
+ * @param ctx   an instance of the buffersrc filter
  * @param frame frame to be added. If the frame is reference counted, this
  * function will make a new reference to it. Otherwise the frame data will be
  * copied.
@@ -104,12 +112,12 @@ int av_buffersrc_buffer(AVFilterContext *s, AVFilterBufferRef *buf);
  * This function is equivalent to av_buffersrc_add_frame_flags() with the
  * AV_BUFFERSRC_FLAG_KEEP_REF flag.
  */
-int av_buffersrc_write_frame(AVFilterContext *s, const AVFrame *frame);
+int av_buffersrc_write_frame(AVFilterContext *ctx, const AVFrame *frame);
 
 /**
  * Add a frame to the buffer source.
  *
- * @param s an instance of the buffersrc filter.
+ * @param ctx   an instance of the buffersrc filter
  * @param frame frame to be added. If the frame is reference counted, this
  * function will take ownership of the reference(s) and reset the frame.
  * Otherwise the frame data will be copied. If this function returns an error,
@@ -144,5 +152,9 @@ int av_buffersrc_add_frame(AVFilterContext *ctx, AVFrame *frame);
 int av_buffersrc_add_frame_flags(AVFilterContext *buffer_src,
                                  AVFrame *frame, int flags);
 
+
+/**
+ * @}
+ */
 
 #endif /* AVFILTER_BUFFERSRC_H */
