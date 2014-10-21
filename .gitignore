@@ -96,28 +96,11 @@
 /modules/screen/bin
 /modules/screen/tmp
 
-# /dependencies/
-/dependencies/boost
-
-# /dependencies64/ for 2.1.0 branch
-/dependencies64/asmlib
-/dependencies64/bluefish
-/dependencies64/boost
-/dependencies64/ffmpeg
-/dependencies64/freeimage
-/dependencies64/glew
-/dependencies64/media_sdk
-/dependencies64/openal
-/dependencies64/sfml
-/dependencies64/tbb
-/dependencies64/freetype
-
 /modules/psd/psd.vcxproj.user
 
 /test/psd-test/Debug
 
 /test/psd-test/psd-test.vcxproj.user
-freetype
 tmp
 bin
 x64
