@@ -129,10 +129,6 @@
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../stdafx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
     </ClCompile>
-    <ClCompile Include="producer\filter\parallel_yadif.cpp">
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../stdafx.h</PrecompiledHeaderFile>
-      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
-    </ClCompile>
     <ClCompile Include="producer\input\input.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">../../stdafx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|x64'">../../StdAfx.h</PrecompiledHeaderFile>
@@ -169,7 +165,6 @@
     <ClInclude Include="producer\audio\audio_decoder.h" />
     <ClInclude Include="producer\ffmpeg_producer.h" />
     <ClInclude Include="producer\filter\filter.h" />
-    <ClInclude Include="producer\filter\parallel_yadif.h" />
     <ClInclude Include="producer\input\input.h" />
     <ClInclude Include="producer\muxer\display_mode.h" />
     <ClInclude Include="producer\muxer\frame_muxer.h" />

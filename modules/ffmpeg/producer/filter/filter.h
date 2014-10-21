@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+* Copyright 2013 Sveriges Television AB http://casparcg.com/
 *
 * This file is part of CasparCG (www.casparcg.com).
 *
@@ -23,6 +23,7 @@
 
 #include <common/memory.h>
 
+#include <boost/rational.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
 
@@ -30,7 +31,7 @@
 #include <vector>
 
 struct AVFrame;
-enum PixelFormat;
+enum AVPixelFormat;
 
 namespace caspar { namespace ffmpeg {
 
@@ -42,7 +43,15 @@ static std::wstring append_filter(const std::wstring& filters, const std::wstrin
 class filter : boost::noncopyable
 {
 public:
-	filter(const std::wstring& filters = L"", const std::vector<PixelFormat>& pix_fmts = std::vector<PixelFormat>());
+	filter(
+		int in_width,
+		int in_height,
+		boost::rational<int> in_time_base,
+		boost::rational<int> in_frame_rate,
+		boost::rational<int> in_sample_aspect_ratio,
+		AVPixelFormat in_pix_fmt,
+		std::vector<AVPixelFormat> out_pix_fmts,
+		const std::string& filtergraph);
 	filter(filter&& other);
 	filter& operator=(filter&& other);
 
@@ -72,7 +81,7 @@ public:
 	
 	static int delay(const std::wstring& filters)
 	{
-		return is_double_rate(filters) ? 1 : 0;
+		return is_double_rate(filters) ? 1 : 1;
 	}
 
 	int delay() const
@@ -90,8 +99,8 @@ public:
 		return is_deinterlacing(filter_str());
 	}
 private:
-	struct impl;
-	spl::shared_ptr<impl> impl_;
+	struct implementation;
+	spl::shared_ptr<implementation> impl_;
 };
 
 }}
