@@ -80,7 +80,7 @@ public:
 										av_get_default_channel_layout(format_desc_.audio_channels), AV_SAMPLE_FMT_S32, format_desc_.audio_sample_rate,
 										get_channel_layout(codec_context_.get()), codec_context_->sample_fmt, codec_context_->sample_rate,
 										0, nullptr), [](SwrContext* p){swr_free(&p);})
-		, buffer_(AVCODEC_MAX_AUDIO_FRAME_SIZE*4)
+		, buffer_(480000*4)
 	{		
 		if(!swr_)
 			CASPAR_THROW_EXCEPTION(bad_alloc());

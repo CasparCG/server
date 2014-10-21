@@ -43,9 +43,6 @@
     <ClCompile Include="producer\filter\filter.cpp">
       <Filter>source\producer\filter</Filter>
     </ClCompile>
-    <ClCompile Include="producer\filter\parallel_yadif.cpp">
-      <Filter>source\producer\filter</Filter>
-    </ClCompile>
     <ClCompile Include="producer\util\util.cpp">
       <Filter>source\producer\util</Filter>
     </ClCompile>
@@ -89,9 +86,6 @@
       <Filter>source</Filter>
     </ClInclude>
     <ClInclude Include="producer\filter\filter.h">
-      <Filter>source\producer\filter</Filter>
-    </ClInclude>
-    <ClInclude Include="producer\filter\parallel_yadif.h">
       <Filter>source\producer\filter</Filter>
     </ClInclude>
     <ClInclude Include="producer\util\flv.h">
