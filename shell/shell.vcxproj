@@ -209,7 +209,7 @@ copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"
       <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
     </ClCompile>
     <Link>
-      <OptimizeReferences>true</OptimizeReferences>
+      <OptimizeReferences>false</OptimizeReferences>
       <AdditionalDependencies>alibcof64.lib;freetype250.lib;sfml-system.lib;sfml-window.lib;sfml-graphics.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;swresample.lib;tbb.lib;OpenGL32.lib;glew32.lib;openal32.lib;freeimage.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>

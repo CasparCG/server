@@ -125,7 +125,7 @@ typedef struct AVPixFmtDescriptor{
 
 #if FF_API_PIX_FMT
 /**
- * @deprecate use the AV_PIX_FMT_FLAG_* flags
+ * @deprecated use the AV_PIX_FMT_FLAG_* flags
  */
 #define PIX_FMT_BE        AV_PIX_FMT_FLAG_BE
 #define PIX_FMT_PAL       AV_PIX_FMT_FLAG_PAL
@@ -203,7 +203,7 @@ const char *av_get_pix_fmt_name(enum AVPixelFormat pix_fmt);
 
 /**
  * Print in buf the string corresponding to the pixel format with
- * number pix_fmt, or an header if pix_fmt is negative.
+ * number pix_fmt, or a header if pix_fmt is negative.
  *
  * @param buf the buffer where to write the string
  * @param buf_size the size of buf
