@@ -97,11 +97,11 @@
 /modules/screen/tmp
 
 /modules/psd/psd.vcxproj.user
+/modules/psd/bin
 
 /test/psd-test/Debug
 
 /test/psd-test/psd-test.vcxproj.user
 tmp
-bin
 x64
 /clang-analyze.out
