@@ -1,0 +1,95 @@
+﻿Build started 2013-07-23 10:37:36.
+     1>Project "C:\Lokala Filer\Utveckling\CasparCG\Server 2.1\dependencies64\freetype\builds\win32\vc2010\freetype.vcxproj" on node 2 (build target(s)).
+     1>InitializeBuildStatus:
+         Creating ".\..\..\..\objs\debug_st\freetype.unsuccessfulbuild" because "AlwaysCreate" was specified.
+       ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /I..\..\..\include /Zi /nologo /W4 /WX- /MP /Od /Oy- /D _DEBUG /D WIN32 /D _LIB /D _CRT_SECURE_NO_WARNINGS /D FT_DEBUG_LEVEL_ERROR /D FT_DEBUG_LEVEL_TRACE /D FT2_BUILD_LIBRARY /D _MBCS /Gm- /EHsc /RTC1 /MTd /GS /fp:precise /Za /Zc:wchar_t /Zc:forScope /Fo".\..\..\..\objs\debug_st\\" /Fd".\..\..\..\objs\debug_st\vc100.pdb" /Gd /TC /wd4001 /analyze- /errorReport:prompt ..\..\..\src\autofit\autofit.c ..\..\..\src\bdf\bdf.c ..\..\..\src\cff\cff.c ..\..\..\src\base\ftbase.c ..\..\..\src\base\ftbitmap.c ..\..\..\src\cache\ftcache.c ..\..\..\src\base\ftfstype.c ..\..\..\src\base\ftgasp.c ..\..\..\src\base\ftglyph.c ..\..\..\src\gzip\ftgzip.c ..\..\..\src\base\ftinit.c ..\..\..\src\lzw\ftlzw.c ..\..\..\src\base\ftstroke.c ..\..\..\src\base\ftsystem.c ..\..\..\src\smooth\smooth.c ..\..\..\src\base\ftbbox.c ..\..\..\src\base\ftmm.c ..\..\..\src\base\ftpfr.c ..\..\..\src\base\ftsynth.c ..\..\..\src\base\fttype1.c ..\..\..\src\base\ftwinfnt.c ..\..\..\src\base\ftxf86.c ..\..\..\src\base\ftlcdfil.c ..\..\..\src\base\ftgxval.c ..\..\..\src\base\ftotval.c ..\..\..\src\base\ftpatent.c ..\..\..\src\pcf\pcf.c ..\..\..\src\pfr\pfr.c ..\..\..\src\psaux\psaux.c ..\..\..\src\pshinter\pshinter.c ..\..\..\src\psnames\psmodule.c ..\..\..\src\raster\raster.c ..\..\..\src\sfnt\sfnt.c ..\..\..\src\truetype\truetype.c ..\..\..\src\type1\type1.c ..\..\..\src\cid\type1cid.c ..\..\..\src\type42\type42.c ..\..\..\src\winfonts\winfnt.c
+         autofit.c
+         bdf.c
+         cff.c
+         ftbase.c
+         ftbitmap.c
+         ftcache.c
+         ftfstype.c
+         ftgasp.c
+         ftglyph.c
+         ftgzip.c
+         ftinit.c
+         ftlzw.c
+         ftstroke.c
+         ftsystem.c
+         smooth.c
+         ftbbox.c
+         ftmm.c
+         ftpfr.c
+         ftsynth.c
+         fttype1.c
+         ftwinfnt.c
+         ftxf86.c
+         ftlcdfil.c
+         ftgxval.c
+         ftotval.c
+         ftpatent.c
+         pcf.c
+         pfr.c
+         psaux.c
+         pshinter.c
+         psmodule.c
+         raster.c
+         sfnt.c
+         truetype.c
+         type1.c
+         type1cid.c
+         type42.c
+         winfnt.c
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /I..\..\..\include /Zi /nologo /W4 /WX- /MP /Od /Oy- /D _DEBUG /D WIN32 /D _LIB /D _CRT_SECURE_NO_WARNINGS /D FT_DEBUG_LEVEL_ERROR /D FT_DEBUG_LEVEL_TRACE /D FT2_BUILD_LIBRARY /D _MBCS /Gm- /EHsc /RTC1 /MTd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo".\..\..\..\objs\debug_st\\" /Fd".\..\..\..\objs\debug_st\vc100.pdb" /Gd /TC /wd4001 /analyze- /errorReport:prompt ..\ftdebug.c
+         ftdebug.c
+       Lib:
+         C:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\bin\Lib.exe /OUT:".\..\..\..\objs\win32\vc2010\freetype250ST_D.lib" /NOLOGO .\..\..\..\objs\debug_st\autofit.obj
+         .\..\..\..\objs\debug_st\bdf.obj
+         .\..\..\..\objs\debug_st\cff.obj
+         .\..\..\..\objs\debug_st\ftbase.obj
+         .\..\..\..\objs\debug_st\ftbitmap.obj
+         .\..\..\..\objs\debug_st\ftcache.obj
+         .\..\..\..\objs\debug_st\ftdebug.obj
+         .\..\..\..\objs\debug_st\ftfstype.obj
+         .\..\..\..\objs\debug_st\ftgasp.obj
+         .\..\..\..\objs\debug_st\ftglyph.obj
+         .\..\..\..\objs\debug_st\ftgzip.obj
+         .\..\..\..\objs\debug_st\ftinit.obj
+         .\..\..\..\objs\debug_st\ftlzw.obj
+         .\..\..\..\objs\debug_st\ftstroke.obj
+         .\..\..\..\objs\debug_st\ftsystem.obj
+         .\..\..\..\objs\debug_st\smooth.obj
+         .\..\..\..\objs\debug_st\ftbbox.obj
+         .\..\..\..\objs\debug_st\ftmm.obj
+         .\..\..\..\objs\debug_st\ftpfr.obj
+         .\..\..\..\objs\debug_st\ftsynth.obj
+         .\..\..\..\objs\debug_st\fttype1.obj
+         .\..\..\..\objs\debug_st\ftwinfnt.obj
+         .\..\..\..\objs\debug_st\ftxf86.obj
+         .\..\..\..\objs\debug_st\ftlcdfil.obj
+         .\..\..\..\objs\debug_st\ftgxval.obj
+         .\..\..\..\objs\debug_st\ftotval.obj
+         .\..\..\..\objs\debug_st\ftpatent.obj
+         .\..\..\..\objs\debug_st\pcf.obj
+         .\..\..\..\objs\debug_st\pfr.obj
+         .\..\..\..\objs\debug_st\psaux.obj
+         .\..\..\..\objs\debug_st\pshinter.obj
+         .\..\..\..\objs\debug_st\psmodule.obj
+         .\..\..\..\objs\debug_st\raster.obj
+         .\..\..\..\objs\debug_st\sfnt.obj
+         .\..\..\..\objs\debug_st\truetype.obj
+         .\..\..\..\objs\debug_st\type1.obj
+         .\..\..\..\objs\debug_st\type1cid.obj
+         .\..\..\..\objs\debug_st\type42.obj
+         .\..\..\..\objs\debug_st\winfnt.obj
+         freetype.vcxproj -> C:\Lokala Filer\Utveckling\CasparCG\Server 2.1\dependencies64\freetype\builds\win32\vc2010\.\..\..\..\objs\win32\vc2010\freetype250ST_D.lib
+       FinalizeBuildStatus:
+         Deleting file ".\..\..\..\objs\debug_st\freetype.unsuccessfulbuild".
+         Touching ".\..\..\..\objs\debug_st\freetype.lastbuildstate".
+     1>Done Building Project "C:\Lokala Filer\Utveckling\CasparCG\Server 2.1\dependencies64\freetype\builds\win32\vc2010\freetype.vcxproj" (build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:02.75
