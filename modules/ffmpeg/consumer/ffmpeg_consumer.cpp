@@ -129,8 +129,8 @@ struct output_format
 	AVOutputFormat* format;
 	int				width;
 	int				height;
-	CodecID			vcodec;
-	CodecID			acodec;
+	AVCodecID		vcodec;
+	AVCodecID		acodec;
 	int				croptop;
 	int				cropbot;
 
@@ -521,7 +521,7 @@ private:
 			return ffmpeg::av_opt_set(c, o.name.c_str(), o.value.c_str(), AV_OPT_SEARCH_CHILDREN) > -1;
 		});
 
-		THROW_ON_ERROR2(avcodec_open(c, encoder), "[ffmpeg_consumer]");
+		THROW_ON_ERROR2(avcodec_open2(c, encoder, nullptr), "[ffmpeg_consumer]");
 
 		return std::shared_ptr<AVStream>(st, [](AVStream* st)
 		{
