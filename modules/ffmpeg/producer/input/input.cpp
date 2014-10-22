@@ -121,7 +121,7 @@ struct input::implementation : boost::noncopyable
 		{
 				start_time_ = (AV_TIME_BASE * static_cast<int64_t>(start) * default_stream_->avg_frame_rate.den)/default_stream_->avg_frame_rate.num;
 				if (length_ != std::numeric_limits<uint32_t>().max())
-					end_time_ = (AV_TIME_BASE * static_cast<int64_t>(start+length) * default_stream_->avg_frame_rate.den)/default_stream_->avg_frame_rate.num;
+					end_time_ = (AV_TIME_BASE * static_cast<int64_t>(start+length-1) * default_stream_->avg_frame_rate.den)/default_stream_->avg_frame_rate.num;
 		}
 
 		if(start_ > 0)			
