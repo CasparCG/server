@@ -178,10 +178,10 @@ struct image_kernel::implementation : boost::noncopyable
 		auto crop = params.transform.crop;
 		auto pers = params.transform.perspective;
 
-		auto ul = rotate((-anchor[0] + pers.ul[0]) * f_s[0], (-anchor[1] + pers.ul[1]) * f_s[1] / aspect);
-		auto ur = rotate((-anchor[0] + pers.ur[0]) * f_s[0], (-anchor[1] + pers.ur[1]) * f_s[1] / aspect);
-		auto lr = rotate((-anchor[0] + pers.lr[0]) * f_s[0], (-anchor[1] + pers.lr[1]) * f_s[1] / aspect);
-		auto ll = rotate((-anchor[0] + pers.ll[0]) * f_s[0], (-anchor[1] + pers.ll[1]) * f_s[1] / aspect);
+		auto ul = rotate((-anchor[0] + pers.ul[0] + crop.ul[0]      ) * f_s[0], (-anchor[1] + pers.ul[1] + crop.ul[1]      ) * f_s[1] / aspect);
+		auto ur = rotate((-anchor[0] + pers.ur[0] + crop.lr[0] - 1.0) * f_s[0], (-anchor[1] + pers.ur[1] + crop.ul[1]      ) * f_s[1] / aspect);
+		auto lr = rotate((-anchor[0] + pers.lr[0] + crop.lr[0] - 1.0) * f_s[0], (-anchor[1] + pers.lr[1] + crop.lr[1] - 1.0) * f_s[1] / aspect);
+		auto ll = rotate((-anchor[0] + pers.ll[0] + crop.ul[0]      ) * f_s[0], (-anchor[1] + pers.ll[1] + crop.lr[1] - 1.0) * f_s[1] / aspect);
 
 		auto upper_left_x =  f_p[0] + ul[0];
 		auto upper_left_y =  f_p[1] + ul[1];
@@ -353,18 +353,18 @@ struct image_kernel::implementation : boost::noncopyable
 		double diagonal_intersection_y;
 
 		if (get_line_intersection(
-				pers.ul[0], pers.ul[1],
-				pers.lr[0], pers.lr[1],
-				pers.ur[0], pers.ur[1],
-				pers.ll[0], pers.ll[1],
+				pers.ul[0] + crop.ul[0]      , pers.ul[1] + crop.ul[1]      ,
+				pers.lr[0] + crop.lr[0] - 1.0, pers.lr[1] + crop.lr[1] - 1.0,
+				pers.ur[0] + crop.lr[0] - 1.0, pers.ur[1] + crop.ul[1]      ,
+				pers.ll[0] + crop.ul[0]      , pers.ll[1] + crop.lr[1] - 1.0,
 				diagonal_intersection_x,
 				diagonal_intersection_y))
 		{
 			// http://www.reedbeta.com/blog/2012/05/26/quadrilateral-interpolation-part-1/
-			auto d0 = hypotenuse(pers.ll[0], pers.ll[1], diagonal_intersection_x, diagonal_intersection_y);
-			auto d1 = hypotenuse(pers.lr[0], pers.lr[1], diagonal_intersection_x, diagonal_intersection_y);
-			auto d2 = hypotenuse(pers.ur[0], pers.ur[1], diagonal_intersection_x, diagonal_intersection_y);
-			auto d3 = hypotenuse(pers.ul[0], pers.ul[1], diagonal_intersection_x, diagonal_intersection_y);
+			auto d0 = hypotenuse(pers.ll[0] + crop.ul[0]      , pers.ll[1] + crop.lr[1] - 1.0, diagonal_intersection_x, diagonal_intersection_y);
+			auto d1 = hypotenuse(pers.lr[0] + crop.lr[0] - 1.0, pers.lr[1] + crop.lr[1] - 1.0, diagonal_intersection_x, diagonal_intersection_y);
+			auto d2 = hypotenuse(pers.ur[0] + crop.lr[0] - 1.0, pers.ur[1] + crop.ul[1]      , diagonal_intersection_x, diagonal_intersection_y);
+			auto d3 = hypotenuse(pers.ul[0] + crop.ul[0]      , pers.ul[1] + crop.ul[1]      , diagonal_intersection_x, diagonal_intersection_y);
 
 			ulq = calc_q(d3, d1);
 			urq = calc_q(d2, d0);
