@@ -254,27 +254,39 @@ public:
 						
 					try
 					{
-						if(!result_future.get())
+						if (!result_future.timed_wait(boost::posix_time::seconds(2)))
+						{
+							BOOST_THROW_EXCEPTION(timed_out() << msg_info(narrow(print()) + " " + narrow(consumer->print()) + " Timed out during send"));
+						}
+
+						if (!result_future.get())
 						{
 							CASPAR_LOG(info) << print() << L" " << consumer->print() << L" Removed.";
 							send_to_consumers_delays_.erase(result_it->first);
 							consumers_.erase(result_it->first);
 						}
 					}
-					catch(...)
+					catch (...)
 					{
 						CASPAR_LOG_CURRENT_EXCEPTION();
 						try
 						{
 							consumer->initialize(format_desc_, audio_channel_layout_, channel_index_);
-							if(!consumer->send(frame).get())
+							auto retry_future = consumer->send(frame);
+
+							if (!retry_future.timed_wait(boost::posix_time::seconds(2)))
+							{
+								BOOST_THROW_EXCEPTION(timed_out() << msg_info(narrow(print()) + " " + narrow(consumer->print()) + " Timed out during retry"));
+							}
+
+							if (!retry_future.get())
 							{
 								CASPAR_LOG(info) << print() << L" " << consumer->print() << L" Removed.";
 								send_to_consumers_delays_.erase(result_it->first);
 								consumers_.erase(result_it->first);
 							}
 						}
-						catch(...)
+						catch (...)
 						{
 							CASPAR_LOG_CURRENT_EXCEPTION();
 							CASPAR_LOG(error) << "Failed to recover consumer: " << consumer->print() << L". Removing it.";
