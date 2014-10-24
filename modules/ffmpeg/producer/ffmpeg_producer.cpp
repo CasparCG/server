@@ -129,7 +129,7 @@ public:
 		, frame_factory_(frame_factory)		
 		, format_desc_(frame_factory->get_video_format_desc())
 		, initial_logger_disabler_(temporary_disable_logging_for_thread(thumbnail_mode))
-		, input_(graph_, filename_, resource_type, loop, start, length, thumbnail_mode, vid_params)
+		, input_(graph_, filename_, resource_type, loop, start, length, thumbnail_mode, vid_params, format_desc_.fps)
 		, fps_(read_fps(*input_.context(), format_desc_.fps))
 		, start_(start)
 		, length_(length)
