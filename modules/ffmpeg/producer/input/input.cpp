@@ -85,13 +85,14 @@ struct input::implementation : boost::noncopyable
 	int64_t														pts_correction_;
 	int64_t														start_time_;
 	int64_t														end_time_;
+	const double												channel_fps_;
 
 	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>	buffer_;
 	tbb::atomic<size_t>											buffer_size_;
 		
 	executor													executor_;
 	
-	explicit implementation(const safe_ptr<diagnostics::graph> graph, const std::wstring& filename, FFMPEG_Resource resource_type, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_producer_params& vid_params) 
+	explicit implementation(const safe_ptr<diagnostics::graph> graph, const std::wstring& filename, FFMPEG_Resource resource_type, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_producer_params& vid_params, double fps) 
 		: graph_(graph)
 		, format_context_(open_input(filename, resource_type, vid_params))		
 		, default_stream_index_(av_find_default_stream_index(format_context_.get()))
@@ -104,6 +105,7 @@ struct input::implementation : boost::noncopyable
 		, executor_(print())
 		, start_time_(0)
 		, end_time_(std::numeric_limits<int64_t>().max())
+		, channel_fps_(fps)
 	{
 		if (thumbnail_mode_)
 			executor_.invoke([]
@@ -122,6 +124,12 @@ struct input::implementation : boost::noncopyable
 				start_time_ = (AV_TIME_BASE * static_cast<int64_t>(start) * default_stream_->avg_frame_rate.den)/default_stream_->avg_frame_rate.num;
 				if (length_ != std::numeric_limits<uint32_t>().max())
 					end_time_ = (AV_TIME_BASE * static_cast<int64_t>(start+length-1) * default_stream_->avg_frame_rate.den)/default_stream_->avg_frame_rate.num;
+		}
+		else  // in case no video == no frame rate
+		{
+				start_time_ = static_cast<int64_t>((AV_TIME_BASE * static_cast<int64_t>(start))/channel_fps_);
+				if (length_ != std::numeric_limits<uint32_t>().max())
+					end_time_ = static_cast<int64_t>((AV_TIME_BASE * static_cast<int64_t>(start+length-1))/channel_fps_);
 		}
 
 		if(start_ > 0)			
@@ -368,9 +376,11 @@ struct input::implementation : boost::noncopyable
 					flags = AVSEEK_FLAG_BYTE;
 			}
 		}
-		
-		int64_t seek = (static_cast<int64_t>(target) * default_stream_->time_base.den * default_stream_->avg_frame_rate.den)/(default_stream_->time_base.num * default_stream_->avg_frame_rate.num) + pts_correction_;		
-				
+		int64_t seek;
+		if (default_stream_->avg_frame_rate.num != 0)
+			seek = (static_cast<int64_t>(target) * default_stream_->time_base.den * default_stream_->avg_frame_rate.den)/(default_stream_->time_base.num * default_stream_->avg_frame_rate.num) + pts_correction_;		
+		else
+			seek = static_cast<int64_t>((static_cast<int64_t>(target) * default_stream_->time_base.den )/(default_stream_->time_base.num * channel_fps_) + pts_correction_);
 		THROW_ON_ERROR2(avformat_seek_file(
 			format_context_.get(), 
 			default_stream_index_, 
@@ -398,8 +408,8 @@ struct input::implementation : boost::noncopyable
 	}
 };
 
-input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, FFMPEG_Resource resource_type, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_producer_params& vid_params) 
-	: impl_(new implementation(graph, filename, resource_type, loop, start, length, thumbnail_mode, vid_params)){}
+input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, FFMPEG_Resource resource_type, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_producer_params& vid_params, double fps) 
+	: impl_(new implementation(graph, filename, resource_type, loop, start, length, thumbnail_mode, vid_params, fps)){}
 bool input::eof() const {return !impl_->executor_.is_running();}
 bool input::empty() const {return impl_->buffer_size_ == 0;}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
