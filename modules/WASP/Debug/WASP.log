@@ -1,0 +1,18 @@
+﻿Build started 27-Oct-14 1:42:41 PM.
+     1>Project "E:\R&D\CasparCG\Latest\Server-master\Server-master\modules\WASP\WASP.vcxproj" on node 2 (build target(s)).
+     1>InitializeBuildStatus:
+         Creating "Debug\WASP.unsuccessfulbuild" because "AlwaysCreate" was specified.
+       ClCompile:
+         All outputs are up-to-date.
+         All outputs are up-to-date.
+       Lib:
+         All outputs are up-to-date.
+         WASP.vcxproj -> E:\R&D\CasparCG\Latest\Server-master\Server-master\Debug\WASP.lib
+       FinalizeBuildStatus:
+         Deleting file "Debug\WASP.unsuccessfulbuild".
+         Touching "Debug\WASP.lastbuildstate".
+     1>Done Building Project "E:\R&D\CasparCG\Latest\Server-master\Server-master\modules\WASP\WASP.vcxproj" (build target(s)).
+
+Build succeeded.
+
+Time Elapsed 00:00:00.04
