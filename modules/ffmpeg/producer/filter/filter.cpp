@@ -24,6 +24,7 @@
 #include "filter.h"
 
 #include "../../ffmpeg_error.h"
+#include "../../ffmpeg.h"
 
 #include <common/exception/exceptions.h>
 
@@ -152,11 +153,9 @@ struct filter::implementation
 		video_graph_in_  = filt_vsrc;
 		video_graph_out_ = filt_vsink;
 		
-		CASPAR_LOG(info)
-			<< 	widen(std::string("\n") 
-				+ avfilter_graph_dump(
-						video_graph_.get(), 
-						nullptr));
+		if (!is_logging_disabled_for_thread())
+			CASPAR_LOG(info) << widen(std::string("\n") + avfilter_graph_dump(
+					video_graph_.get(), nullptr));
 	}
 	
 	void configure_filtergraph(

@@ -37,6 +37,7 @@ void init(const safe_ptr<core::media_info_repository>& media_info_repo);
 void uninit();
 void disable_logging_for_thread();
 std::shared_ptr<void> temporary_disable_logging_for_thread(bool disable);
+bool is_logging_disabled_for_thread();
 
 std::wstring get_avcodec_version();
 std::wstring get_avformat_version();

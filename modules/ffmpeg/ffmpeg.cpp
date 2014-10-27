@@ -179,14 +179,14 @@ void disable_logging_for_thread()
 		get_disable_logging_for_thread().reset(new bool); // bool value does not matter
 }
 
-bool is_logging_already_disabled_for_thread()
+bool is_logging_disabled_for_thread()
 {
 	return get_disable_logging_for_thread().get() != nullptr;
 }
 
 std::shared_ptr<void> temporary_disable_logging_for_thread(bool disable)
 {
-	if (!disable || is_logging_already_disabled_for_thread())
+	if (!disable || is_logging_disabled_for_thread())
 		return std::shared_ptr<void>();
 
 	disable_logging_for_thread();

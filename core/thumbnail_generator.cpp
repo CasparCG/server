@@ -341,7 +341,7 @@ public:
 			try
 			{
 				boost::filesystem::last_write_time(png_file, boost::filesystem::last_write_time(file));
-				CASPAR_LOG(debug) << L"Generated thumbnail for " << media_file;
+				CASPAR_LOG(trace) << L"Generated thumbnail for " << media_file;
 			}
 			catch (...)
 			{
