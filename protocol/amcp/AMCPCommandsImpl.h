@@ -25,6 +25,9 @@
 
 #include "AMCPCommand.h"
 
+#include <modules/WASP/WASP.h>
+#include <modules/WASP/producer/WASP_producer.h>
+
 namespace caspar {
 
 namespace core {
@@ -253,6 +256,27 @@ class RestartCommand : public AMCPCommandBase<false, AddToQueue, 0>
 {
 	std::wstring print() const { return L"RestartCommand";}
 	bool DoExecute();
+};
+
+class WaspCommand : public AMCPCommandBase<true, AddToQueue, 1>
+{
+	std::wstring print() const { return L"WASPCommand";}
+	bool DoExecute();
+
+	 virtual bool NeedChannel()override
+	 {
+		const std::vector<safe_ptr<core::video_channel>> channnels = GetChannels();
+
+		std::shared_ptr<core::video_channel> pChannel = 0 < channnels.size() ? std::shared_ptr<core::video_channel>(channnels[0]) : nullptr;
+		SetChannel(pChannel);
+		SetChannelIndex(0);
+		SetLayerIntex(0);
+
+		 return false;
+	 }
+	
+	//bool ValidateLayer(const std::wstring& layerstring);
+
 };
 
 }	//namespace amcp

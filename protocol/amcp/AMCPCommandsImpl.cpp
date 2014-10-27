@@ -63,6 +63,8 @@
 #include <modules/ffmpeg/producer/util/util.h>
 #include <modules/image/image.h>
 #include <modules/ogl/ogl.h>
+#include <modules/WASP/WASP.h>
+#include <modules/WASP/producer/WASP_producer.h>
 
 #include <algorithm>
 #include <locale>
@@ -2397,5 +2399,47 @@ bool RestartCommand::DoExecute()
 	return true;
 }
 
-}	//namespace amcp
-}}	//namespace caspar
+bool WaspCommand::DoExecute()
+{
+	try
+	{
+		std::wstring msgString;
+
+		msgString = _parameters.get_original_string();
+		msgString.append(L"\r\n");
+
+		std::wstring command = _parameters[0];
+		if(command == TEXT("INIT"))
+		{
+			std::wstring layerIndex = (boost::wformat(L"%1%") % GetLayerIndex()).str();
+			std::vector<std::wstring> parameters = boost::assign::list_of<std::wstring>(layerIndex);
+
+			auto producer = WASP::create_producer(GetChannel()->mixer()->get_frame_factory(GetLayerIndex()), core::parameters(parameters));
+			caspar::core::frame_producer* pFrameProducer = producer.get();
+			if (producer != core::frame_producer::empty())
+			{
+				producer->call(msgString);
+				GetChannel()->stage()->load(GetLayerIndex(9999), producer);
+				GetChannel()->stage()->play(GetLayerIndex(9999));
+			}
+		}
+		else
+		{
+			GetChannel()->stage()->call(GetLayerIndex(9999), true, msgString).wait();
+		}
+	}
+			
+	catch(...)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		return false;
+	}
+
+	//SetReplyString(TEXT("403 CG ERROR\r\n"));
+	return true;
+}
+
+}
+//namespace amcp
+}
+}	//namespace caspar
