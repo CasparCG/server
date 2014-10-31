@@ -22,6 +22,7 @@
 #pragma once
 
 #include <boost/noncopyable.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
 
 #include <common/memory/safe_ptr.h>
 
@@ -51,6 +52,8 @@ public:
 	void begin_read(size_t width, size_t height, unsigned int format);
 	bool ready() const;
 	void wait(ogl_device& ogl);
+
+	static boost::property_tree::wptree info();
 private:
 	friend class ogl_device;
 	host_buffer(size_t size, usage_t usage);

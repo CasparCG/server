@@ -24,6 +24,7 @@
 #include <common/memory/safe_ptr.h>
 
 #include <boost/noncopyable.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
 
 #include <memory>
 
@@ -36,6 +37,7 @@ public:
 	size_t stride() const;	
 	size_t width() const;
 	size_t height() const;
+	size_t size() const;
 	bool mipmapped() const;
 
 	void bind(int index);
@@ -43,6 +45,8 @@ public:
 		
 	void begin_read();
 	bool ready() const;
+
+	static boost::property_tree::wptree info();
 private:
 	friend class ogl_device;
 	device_buffer(size_t width, size_t height, size_t stride, bool mipmapped);

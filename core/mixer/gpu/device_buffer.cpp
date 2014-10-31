@@ -32,6 +32,8 @@
 
 #include <tbb/atomic.h>
 
+#include <boost/property_tree/ptree.hpp>
+
 namespace caspar { namespace core {
 	
 static GLenum FORMAT[] = {0, GL_RED, GL_RG, GL_BGR, GL_BGRA};
@@ -42,24 +44,30 @@ unsigned int format(size_t stride)
 	return FORMAT[stride];
 }
 
+static tbb::atomic<int> g_instance_id;
 static tbb::atomic<int> g_total_count;
+static tbb::atomic<int> g_total_size;
 
 struct device_buffer::implementation : boost::noncopyable
 {
 	GLuint			id_;
+	int				instance_id_;
 
 	const size_t	width_;
 	const size_t	height_;
 	const size_t	stride_;
+	const size_t	size_;
 	const bool		mipmapped_;
 
 	fence			fence_;
 
 public:
 	implementation(size_t width, size_t height, size_t stride, bool mipmapped) 
-		: width_(width)
+		: instance_id_(++instance_id_)
+		, width_(width)
 		, height_(height)
 		, stride_(stride)
+		, size_(static_cast<size_t>(width * height * stride * (mipmapped ? 1.33 : 1.0)))
 		, mipmapped_(mipmapped)
 	{	
 		GL(glGenTextures(1, &id_));
@@ -77,7 +85,9 @@ public:
 		}
 
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
-		CASPAR_LOG(trace) << "[device_buffer] [" << ++g_total_count << L"] allocated size:" << width*height*stride;	
+		g_total_size += size_;
+		++g_total_count;
+		CASPAR_LOG(trace) << "[device_buffer] [" << instance_id_ << L"] allocated size:" << size_ << " for a total of: " << g_total_size;
 	}
 
 	void enable_anosotropic_filtering_if_available()
@@ -102,7 +112,9 @@ public:
 		try
 		{
 			GL(glDeleteTextures(1, &id_));
-			//CASPAR_LOG(trace) << "[device_buffer] [" << --g_total_count << L"] deallocated size:" << width_*height_*stride_;
+			g_total_size -= size_;
+			--g_total_count;
+			CASPAR_LOG(trace) << "[device_buffer] [" << instance_id_ << L"] deallocated size:" << size_ << " for a remaining total of: " << g_total_size;
 		}
 		catch(...)
 		{
@@ -148,11 +160,21 @@ device_buffer::device_buffer(size_t width, size_t height, size_t stride, bool mi
 size_t device_buffer::stride() const { return impl_->stride_; }
 size_t device_buffer::width() const { return impl_->width_; }
 size_t device_buffer::height() const { return impl_->height_; }
+size_t device_buffer::size() const { return impl_->size_; }
 void device_buffer::bind(int index){impl_->bind(index);}
 void device_buffer::unbind(){impl_->unbind();}
 void device_buffer::begin_read(){impl_->begin_read();}
 bool device_buffer::ready() const{return impl_->ready();}
 int device_buffer::id() const{ return impl_->id_;}
 
+boost::property_tree::wptree device_buffer::info()
+{
+	boost::property_tree::wptree info;
+
+	info.add(L"total_count", g_total_count);
+	info.add(L"total_size", g_total_size);
+
+	return info;
+}
 
 }}

@@ -26,6 +26,7 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/parameters/parameters.h>
 #include <core/video_channel.h>
+#include <core/mixer/gpu/ogl_device.h>
 #include <core/thumbnail_generator.h>
 
 #include <boost/algorithm/string.hpp>
@@ -83,6 +84,9 @@ namespace caspar { namespace protocol { namespace amcp {
 		void SetLayerIntex(int layerIndex){layerIndex_ = layerIndex;}
 		int GetLayerIndex(int defaultValue = 0) const{return layerIndex_ != -1 ? layerIndex_ : defaultValue;}
 
+		void SetOglDevice(const safe_ptr<core::ogl_device>& device){ogl_ = device;}
+		std::shared_ptr<core::ogl_device> GetOglDevice() const { return ogl_; }
+
 		virtual void Clear();
 
 		AMCPCommandScheduling GetScheduling()
@@ -102,6 +106,7 @@ namespace caspar { namespace protocol { namespace amcp {
 		unsigned int channelIndex_;
 		int layerIndex_;
 		IO::ClientInfoPtr pClientInfo_;
+		std::shared_ptr<core::ogl_device> ogl_;
 		std::shared_ptr<core::video_channel> pChannel_;
 		std::vector<safe_ptr<core::video_channel>> channels_;
 		std::shared_ptr<core::thumbnail_generator> thumb_gen_;

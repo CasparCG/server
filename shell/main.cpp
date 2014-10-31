@@ -318,6 +318,7 @@ int main(int argc, char* argv[])
 						caspar_server.get_channels(),
 						caspar_server.get_thumbnail_generator(),
 						caspar_server.get_media_info_repo(),
+						caspar_server.get_ogl_device(),
 						shutdown_server_now);
 
 				// Create a dummy client which prints amcp responses to console.
