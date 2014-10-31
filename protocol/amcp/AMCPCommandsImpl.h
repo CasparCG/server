@@ -249,6 +249,14 @@ class KillCommand : public AMCPCommandBase<false, AddToQueue, 0>
 	bool DoExecute();
 };
 
+class GlCommand : public AMCPCommandBase<false, AddToQueue, 0>
+{
+	std::wstring print() const { return L"GlCommand";}
+	bool DoExecute();
+	bool DoExecuteInfo();
+	bool DoExecuteGc();
+};
+
 class RestartCommand : public AMCPCommandBase<false, AddToQueue, 0>
 {
 	std::wstring print() const { return L"RestartCommand";}

@@ -44,6 +44,8 @@
 #include <boost/property_tree/ptree.hpp>
 
 namespace caspar { namespace core {
+
+const long SEND_TIMEOUT_MILLIS = 10000L;
 	
 struct output::implementation
 {		
@@ -254,7 +256,7 @@ public:
 						
 					try
 					{
-						if (!result_future.timed_wait(boost::posix_time::seconds(2)))
+						if (!result_future.timed_wait(boost::posix_time::seconds(SEND_TIMEOUT_MILLIS)))
 						{
 							BOOST_THROW_EXCEPTION(timed_out() << msg_info(narrow(print()) + " " + narrow(consumer->print()) + " Timed out during send"));
 						}
@@ -274,7 +276,7 @@ public:
 							consumer->initialize(format_desc_, audio_channel_layout_, channel_index_);
 							auto retry_future = consumer->send(frame);
 
-							if (!retry_future.timed_wait(boost::posix_time::seconds(2)))
+							if (!retry_future.timed_wait(boost::posix_time::seconds(SEND_TIMEOUT_MILLIS)))
 							{
 								BOOST_THROW_EXCEPTION(timed_out() << msg_info(narrow(print()) + " " + narrow(consumer->print()) + " Timed out during retry"));
 							}

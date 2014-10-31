@@ -36,6 +36,7 @@
 
 #include <boost/noncopyable.hpp>
 #include <boost/thread/future.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
 
 #include <array>
 #include <unordered_map>
@@ -121,6 +122,7 @@ public:
 	safe_ptr<host_buffer> create_host_buffer(size_t size, host_buffer::usage_t usage);
 	
 	void yield();
+	boost::property_tree::wptree info() const;
 	boost::unique_future<void> gc();
 
 	std::wstring version();

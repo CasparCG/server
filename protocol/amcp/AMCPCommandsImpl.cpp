@@ -2385,6 +2385,51 @@ bool SetCommand::DoExecute()
 	return true;
 }
 
+bool GlCommand::DoExecute()
+{
+	try
+	{
+		std::wstring command = _parameters.at(0);
+
+		if (command == TEXT("GC"))
+			return DoExecuteGc();
+		else if (command == TEXT("INFO"))
+			return DoExecuteInfo();
+	}
+	catch(...)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+	}
+
+	SetReplyString(TEXT("403 GL ERROR\r\n"));
+	return false;
+}
+
+bool GlCommand::DoExecuteGc()
+{
+	if (!GetOglDevice()->gc().timed_wait(boost::posix_time::seconds(2)))
+		BOOST_THROW_EXCEPTION(timed_out());
+
+	SetReplyString(TEXT("202 GL GC OK\r\n"));
+	return true;
+}
+
+bool GlCommand::DoExecuteInfo()
+{
+	std::wstringstream reply_string;
+	boost::property_tree::xml_writer_settings<wchar_t> w(' ', 3);
+
+	auto info = GetOglDevice()->info();
+
+	reply_string << L"201 GL INFO OK\r\n";
+	boost::property_tree::write_xml(reply_string, info, w);
+	reply_string << L"\r\n";
+
+	SetReplyString(reply_string.str());
+
+	return true;
+}
+
 bool KillCommand::DoExecute()
 {
 	GetShutdownServerNow().set_value(false); // False for not attempting to restart.

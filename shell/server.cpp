@@ -379,7 +379,7 @@ struct server::implementation : boost::noncopyable
 	safe_ptr<IO::IProtocolStrategy> create_protocol(const std::wstring& name) const
 	{
 		if(boost::iequals(name, L"AMCP"))
-			return make_safe<amcp::AMCPProtocolStrategy>(channels_, thumbnail_generator_, media_info_repo_, shutdown_server_now_);
+			return make_safe<amcp::AMCPProtocolStrategy>(channels_, thumbnail_generator_, media_info_repo_, ogl_, shutdown_server_now_);
 		else if(boost::iequals(name, L"CII"))
 			return make_safe<cii::CIIProtocolStrategy>(channels_);
 		else if(boost::iequals(name, L"CLOCK"))
@@ -427,6 +427,11 @@ std::shared_ptr<thumbnail_generator> server::get_thumbnail_generator() const
 safe_ptr<media_info_repository> server::get_media_info_repo() const
 {
 	return impl_->media_info_repo_;
+}
+
+safe_ptr<ogl_device> server::get_ogl_device() const
+{
+	return impl_->ogl_;
 }
 
 core::monitor::subject& server::monitor_output()
