@@ -131,7 +131,7 @@ public:
 		}
 		else
 		{
-			item.audio_data = std::move(frame.audio_data()); // Note: We don't need to care about upper/lower since audio_data is removed/moved from the last field.
+			item.audio_data = frame.audio_data(); // Note: We don't need to care about upper/lower since audio_data is removed/moved from the last field.
 		}
 		
 		items_.push_back(std::move(item));		

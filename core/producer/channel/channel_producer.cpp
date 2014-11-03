@@ -231,7 +231,15 @@ public:
 
 		desc.pix_fmt = core::pixel_format::bgra;
 		desc.planes.push_back(core::pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
-		auto frame = frame_factory_->create_frame(this, desc);
+		auto frame = frame_factory_->create_frame(this, desc, read_frame->multichannel_view().channel_layout());
+
+		bool copy_audio = !double_speed && !half_speed;
+
+		if (copy_audio)
+		{
+			frame->audio_data().reserve(read_frame->audio_data().size());
+			boost::copy(read_frame->audio_data(), std::back_inserter(frame->audio_data()));
+		}
 
 		fast_memcpy(frame->image_data().begin(), read_frame->image_data().begin(), read_frame->image_data().size());
 		frame->commit();
