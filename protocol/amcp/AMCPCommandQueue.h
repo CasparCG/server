@@ -27,7 +27,10 @@
 
 #include <common/concurrency/executor.h>
 
-#include <tbb\mutex.h>
+#include <boost/property_tree/ptree_fwd.hpp>
+#include <boost/timer.hpp>
+
+#include <tbb/spin_mutex.h>
 
 namespace caspar { namespace protocol { namespace amcp {
 
@@ -36,13 +39,21 @@ class AMCPCommandQueue
 	AMCPCommandQueue(const AMCPCommandQueue&);
 	AMCPCommandQueue& operator=(const AMCPCommandQueue&);
 public:
-	AMCPCommandQueue();
+	AMCPCommandQueue(const std::wstring& name);
 	~AMCPCommandQueue();
 
 	void AddCommand(AMCPCommandPtr pCommand);
 
+	boost::property_tree::wptree info() const;
+
+	static boost::property_tree::wptree info_all_queues();
 private:
-	executor			executor_;
+	executor				executor_;
+	mutable tbb::spin_mutex	running_command_mutex_;
+	bool					running_command_;
+	std::wstring			running_command_name_;
+	std::wstring			running_command_params_;
+	boost::timer			running_command_since_;
 };
 typedef std::tr1::shared_ptr<AMCPCommandQueue> AMCPCommandQueuePtr;
 

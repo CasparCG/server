@@ -60,6 +60,8 @@ namespace caspar { namespace protocol { namespace amcp {
 			_parameters = p;
 		}
 
+		const core::parameters& GetParameters() const { return _parameters; }
+
 		void SetClientInfo(IO::ClientInfoPtr& s){pClientInfo_ = s;}
 		IO::ClientInfoPtr GetClientInfo(){return pClientInfo_;}
 

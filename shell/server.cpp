@@ -293,7 +293,10 @@ struct server::implementation : boost::noncopyable
 				if(name == L"tcp")
 				{					
 					unsigned int port = xml_controller.second.get(L"port", 5250);
-					auto asyncbootstrapper = make_safe<IO::AsyncEventServer>(create_protocol(protocol), port);
+					auto asyncbootstrapper = make_safe<IO::AsyncEventServer>(create_protocol(
+							protocol,
+							L"TCP Port " + boost::lexical_cast<std::wstring>(port)),
+							port);
 					asyncbootstrapper->Start();
 					async_servers_.push_back(asyncbootstrapper);
 
@@ -376,10 +379,16 @@ struct server::implementation : boost::noncopyable
 		CASPAR_LOG(info) << L"Initialized thumbnail generator.";
 	}
 
-	safe_ptr<IO::IProtocolStrategy> create_protocol(const std::wstring& name) const
+	safe_ptr<IO::IProtocolStrategy> create_protocol(const std::wstring& name, const std::wstring& port_description) const
 	{
 		if(boost::iequals(name, L"AMCP"))
-			return make_safe<amcp::AMCPProtocolStrategy>(channels_, thumbnail_generator_, media_info_repo_, ogl_, shutdown_server_now_);
+			return make_safe<amcp::AMCPProtocolStrategy>(
+					port_description,
+					channels_,
+					thumbnail_generator_,
+					media_info_repo_,
+					ogl_,
+					shutdown_server_now_);
 		else if(boost::iequals(name, L"CII"))
 			return make_safe<cii::CIIProtocolStrategy>(channels_);
 		else if(boost::iequals(name, L"CLOCK"))

@@ -226,6 +226,7 @@ public:
 	function_queue::size_type size() const /*noexcept*/ { return execution_queue_[normal_priority].size();	}
 	bool empty() const /*noexcept*/	{ return execution_queue_[normal_priority].empty();	}
 	bool is_running() const /*noexcept*/ { return is_running_; }	
+	const std::string& name() const { return name_; }
 		
 private:
 	

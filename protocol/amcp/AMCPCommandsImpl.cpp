@@ -2179,6 +2179,13 @@ bool InfoCommand::DoExecute()
 
 			boost::property_tree::write_xml(replyString, info, w);
 		}
+		else if(_parameters.size() >= 1 && _parameters[0] == L"QUEUES")
+		{
+			replyString << L"201 INFO QUEUES OK\r\n";
+
+			boost::property_tree::wptree info = AMCPCommandQueue::info_all_queues();
+			boost::property_tree::write_xml(replyString, info, w);
+		}
 		else if(_parameters.size() >= 1 && _parameters[0] == L"SYSTEM")
 		{
 			replyString << L"201 INFO SYSTEM OK\r\n";
