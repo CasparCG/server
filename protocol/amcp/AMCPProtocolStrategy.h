@@ -50,6 +50,7 @@ class AMCPProtocolStrategy : public IO::IProtocolStrategy, boost::noncopyable
 
 public:
 	AMCPProtocolStrategy(
+			const std::wstring& name,
 			const std::vector<safe_ptr<core::video_channel>>& channels,
 			const std::shared_ptr<core::thumbnail_generator>& thumb_gen,
 			const safe_ptr<core::media_info_repository>& media_info_repo,

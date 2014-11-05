@@ -315,6 +315,7 @@ int main(int argc, char* argv[])
 
 				// Create a amcp parser for console commands.
 				caspar::protocol::amcp::AMCPProtocolStrategy amcp(
+						L"Console",
 						caspar_server.get_channels(),
 						caspar_server.get_thumbnail_generator(),
 						caspar_server.get_media_info_repo(),

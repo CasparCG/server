@@ -54,6 +54,7 @@ inline std::shared_ptr<core::video_channel> GetChannelSafe(unsigned int index, c
 }
 
 AMCPProtocolStrategy::AMCPProtocolStrategy(
+		const std::wstring& name,
 		const std::vector<safe_ptr<core::video_channel>>& channels,
 		const std::shared_ptr<core::thumbnail_generator>& thumb_gen,
 		const safe_ptr<core::media_info_repository>& media_info_repo,
@@ -65,7 +66,7 @@ AMCPProtocolStrategy::AMCPProtocolStrategy(
 	, ogl_(ogl_device)
 	, shutdown_server_now_(shutdown_server_now)
 {
-	AMCPCommandQueuePtr pGeneralCommandQueue(new AMCPCommandQueue());
+	AMCPCommandQueuePtr pGeneralCommandQueue(new AMCPCommandQueue(L"General Queue for " + name));
 	commandQueues_.push_back(pGeneralCommandQueue);
 
 
@@ -73,7 +74,7 @@ AMCPProtocolStrategy::AMCPProtocolStrategy(
 	unsigned int index = -1;
 	//Create a commandpump for each video_channel
 	while((pChannel = GetChannelSafe(++index, channels_)) != 0) {
-		AMCPCommandQueuePtr pChannelCommandQueue(new AMCPCommandQueue());
+		AMCPCommandQueuePtr pChannelCommandQueue(new AMCPCommandQueue(L"Channel " + boost::lexical_cast<std::wstring>(index + 1) + L" for " + name));
 		std::wstring title = TEXT("video_channel ");
 
 		//HACK: Perform real conversion from int to string
