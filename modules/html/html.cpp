@@ -296,10 +296,11 @@ void uninit()
 	{
 		CefQuitMessageLoop();
 	});
-	g_cef_executor->begin_invoke([&]
+	g_cef_executor->invoke([&]
 	{
 		CefShutdown();
 	});
+	g_cef_executor.reset();
 }
 
 class cef_task : public CefTask

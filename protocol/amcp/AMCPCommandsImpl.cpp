@@ -2439,13 +2439,13 @@ bool GlCommand::DoExecuteInfo()
 
 bool KillCommand::DoExecute()
 {
-	GetShutdownServerNow().set_value(false); // False for not attempting to restart.
+	GetShutdownServerNow()(false); // False for not attempting to restart.
 	return true;
 }
 
 bool RestartCommand::DoExecute()
 {
-	GetShutdownServerNow().set_value(true); // True for attempting to restart
+	GetShutdownServerNow()(true); // True for attempting to restart
 	return true;
 }
 

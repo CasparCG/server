@@ -55,7 +55,7 @@ public:
 			const std::shared_ptr<core::thumbnail_generator>& thumb_gen,
 			const safe_ptr<core::media_info_repository>& media_info_repo,
 			const safe_ptr<core::ogl_device>& ogl_device,
-			boost::promise<bool>& shutdown_server_now);
+			const std::function<void (bool)>& shutdown_server_now);
 	virtual ~AMCPProtocolStrategy();
 
 	virtual void Parse(const TCHAR* pData, int charCount, IO::ClientInfoPtr pClientInfo);
@@ -78,7 +78,7 @@ private:
 	std::shared_ptr<core::thumbnail_generator> thumb_gen_;
 	safe_ptr<core::media_info_repository> media_info_repo_;
 	safe_ptr<core::ogl_device> ogl_;
-	boost::promise<bool>& shutdown_server_now_;
+	std::function<void (bool)> shutdown_server_now_;
 	std::vector<AMCPCommandQueuePtr> commandQueues_;
 	static const std::wstring MessageDelimiter;
 };

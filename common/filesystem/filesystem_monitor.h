@@ -26,7 +26,6 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/noncopyable.hpp>
-#include <boost/thread/future.hpp>
 
 #include "../memory/safe_ptr.h"
 
@@ -41,12 +40,6 @@ public:
 	typedef safe_ptr<filesystem_monitor> ptr;
 
 	virtual ~filesystem_monitor() {}
-
-	/**
-	 * @return a future made available when the initially available files have been
-	 *         processed.
-	 */
-	virtual boost::unique_future<void> initial_files_processed() = 0;
 
 	/**
 	 * Reemmit the already known files as MODIFIED events.

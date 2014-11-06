@@ -209,7 +209,6 @@ class polling_filesystem_monitor : public filesystem_monitor
 	boost::asio::deadline_timer timer_;
 	tbb::atomic<bool> running_;
 	int scan_interval_millis_;
-	boost::promise<void> initial_scan_completion_;
 	tbb::concurrent_queue<boost::filesystem::wpath> to_reemmit_;
 	tbb::atomic<bool> reemmit_all_;
 public:
@@ -237,7 +236,6 @@ public:
 		executor_.begin_invoke([this]
 		{
 			scan();
-			initial_scan_completion_.set_value();
 			schedule_next();
 		});
 	}
@@ -247,11 +245,6 @@ public:
 		running_ = false;
 		boost::system::error_code e;
 		timer_.cancel(e);
-	}
-
-	virtual boost::unique_future<void> initial_files_processed()
-	{
-		return initial_scan_completion_.get_future();
 	}
 
 	virtual void reemmit_all()

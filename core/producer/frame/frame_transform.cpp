@@ -25,7 +25,7 @@
 
 #include <common/utility/assert.h>
 
-#include <boost/thread.hpp>
+#include <tbb/enumerable_thread_specific.h>
 
 namespace caspar { namespace core {
 
@@ -212,24 +212,21 @@ bool operator!=(const frame_transform& lhs, const frame_transform& rhs)
 
 namespace detail {
 
-boost::thread_specific_ptr<double>& get_thread_local_aspect_ratio()
+double& get_thread_local_aspect_ratio()
 {
-	static boost::thread_specific_ptr<double> aspect_ratio;
+	static tbb::enumerable_thread_specific<double> aspect_ratio(1.0);
 
-	if (!aspect_ratio.get())
-		aspect_ratio.reset(new double(1.0));
-
-	return aspect_ratio;
+	return aspect_ratio.local();
 }
 
 void set_current_aspect_ratio(double aspect_ratio)
 {
-	*get_thread_local_aspect_ratio() = aspect_ratio;
+	get_thread_local_aspect_ratio() = aspect_ratio;
 }
 
 double get_current_aspect_ratio()
 {
-	return *get_thread_local_aspect_ratio();
+	return get_thread_local_aspect_ratio();
 }
 
 }}}

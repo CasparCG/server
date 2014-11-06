@@ -36,8 +36,7 @@
 #include <core/producer/media_info/media_info_repository.h>
 
 #include <tbb/recursive_mutex.h>
-
-#include <boost/thread.hpp>
+#include <tbb/enumerable_thread_specific.h>
 
 #if defined(_MSC_VER)
 #pragma warning (disable : 4244)
@@ -166,22 +165,21 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
     //colored_fputs(av_clip(level>>3, 0, 6), line);
 }
 
-boost::thread_specific_ptr<bool>& get_disable_logging_for_thread()
+bool& get_disable_logging_for_thread()
 {
-	static boost::thread_specific_ptr<bool> disable_logging_for_thread;
+	static tbb::enumerable_thread_specific<bool> disable_logging_for_thread(false);
 
-	return disable_logging_for_thread;
+	return disable_logging_for_thread.local();
 }
 
 void disable_logging_for_thread()
 {
-	if (get_disable_logging_for_thread().get() == nullptr)
-		get_disable_logging_for_thread().reset(new bool); // bool value does not matter
+	get_disable_logging_for_thread() = true;
 }
 
 bool is_logging_disabled_for_thread()
 {
-	return get_disable_logging_for_thread().get() != nullptr;
+	return get_disable_logging_for_thread();
 }
 
 std::shared_ptr<void> temporary_disable_logging_for_thread(bool disable)
@@ -193,14 +191,14 @@ std::shared_ptr<void> temporary_disable_logging_for_thread(bool disable)
 
 	return std::shared_ptr<void>(nullptr, [] (void*)
 	{
-		get_disable_logging_for_thread().release(); // Only works correctly if destructed in same thread as original caller.
+		get_disable_logging_for_thread() = false; // Only works correctly if destructed in same thread as original caller.
 	});
 }
 
 void log_for_thread(void* ptr, int level, const char* fmt, va_list vl)
 {
 	win32_exception::ensure_handler_installed_for_thread("ffmpeg-thread");
-	if (get_disable_logging_for_thread().get() == nullptr) // It does not matter what the value of the bool is
+	if (!get_disable_logging_for_thread()) // It does not matter what the value of the bool is
 		log_callback(ptr, level, fmt, vl);
 }
 
