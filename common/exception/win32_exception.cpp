@@ -21,7 +21,7 @@
 
 #include "../stdafx.h"
 
-#include <boost/thread.hpp>
+#include <tbb/enumerable_thread_specific.h>
 
 #include "win32_exception.h"
 
@@ -32,17 +32,9 @@ namespace caspar {
 
 bool& installed_for_thread()
 {
-	static boost::thread_specific_ptr<bool> installed;
+	static tbb::enumerable_thread_specific<bool> installed(false);
 
-	auto for_thread = installed.get();
-	
-	if (!for_thread)
-	{
-		for_thread = new bool(false);
-		installed.reset(for_thread);
-	}
-
-	return *for_thread;
+	return installed.local();
 }
 
 void win32_exception::install_handler() 

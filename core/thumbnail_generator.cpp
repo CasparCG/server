@@ -151,8 +151,6 @@ public:
 		graph_->auto_reset();
 		diagnostics::register_graph(graph_);
 		mixer_->set_mipmap(0, mipmap);
-		//monitor_->initial_scan_completion().get();
-		//output_->sleep_millis = 2000;
 	}
 
 	void on_initial_files(const std::set<boost::filesystem::wpath>& initial_files)

@@ -59,7 +59,7 @@ AMCPProtocolStrategy::AMCPProtocolStrategy(
 		const std::shared_ptr<core::thumbnail_generator>& thumb_gen,
 		const safe_ptr<core::media_info_repository>& media_info_repo,
 		const safe_ptr<core::ogl_device>& ogl_device,
-		boost::promise<bool>& shutdown_server_now)
+		const std::function<void (bool)>& shutdown_server_now)
 	: channels_(channels)
 	, thumb_gen_(thumb_gen)
 	, media_info_repo_(media_info_repo)

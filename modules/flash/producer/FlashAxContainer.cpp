@@ -47,7 +47,7 @@ FlashAxContainer::~FlashAxContainer()
 	if(m_lpDD4)
 	{
 		m_lpDD4->Release();
-		m_lpDD4 = nullptr;
+		delete m_lpDD4;
 	}
 
 	if(pTimerHelper != 0)
