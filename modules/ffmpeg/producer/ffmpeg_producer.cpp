@@ -541,8 +541,8 @@ safe_ptr<core::frame_producer> create_producer(
 	auto filter_str = params.get(L"FILTER", L""); 	
 	auto custom_channel_order	= params.get(L"CHANNEL_LAYOUT", L"");
 
-	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
 	boost::replace_all(filter_str, L"DEINTERLACE_BOB", L"YADIF=1:-1");
+	boost::replace_all(filter_str, L"DEINTERLACE", L"YADIF=0:-1");
 	
 	ffmpeg_producer_params vid_params;
 	bool haveFFMPEGStartIndicator = false;
