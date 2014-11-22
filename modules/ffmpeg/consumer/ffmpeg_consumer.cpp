@@ -75,39 +75,6 @@ extern "C"
 
 namespace caspar { namespace ffmpeg {
 	
-int av_opt_set(void *obj, const char *name, const char *val, int search_flags)
-{
-	AVClass* av_class = *(AVClass**)obj;
-
-	if((strcmp(name, "pix_fmt") == 0 || strcmp(name, "pixel_format") == 0) && strcmp(av_class->class_name, "AVCodecContext") == 0)
-	{
-		AVCodecContext* c = (AVCodecContext*)obj;		
-		auto pix_fmt = av_get_pix_fmt(val);
-		if(pix_fmt == PIX_FMT_NONE)
-			return -1;		
-		c->pix_fmt = pix_fmt;
-		return 0;
-	}
-	if((strcmp(name, "r") == 0 || strcmp(name, "frame_rate") == 0) && strcmp(av_class->class_name, "AVCodecContext") == 0)
-	{
-		AVCodecContext* c = (AVCodecContext*)obj;	
-
-		if(c->codec_type != AVMEDIA_TYPE_VIDEO)
-			return -1;
-
-		AVRational rate;
-		int ret = av_parse_video_rate(&rate, val);
-		if(ret < 0)
-			return ret;
-
-		c->time_base.num = rate.den;
-		c->time_base.den = rate.num;
-		return 0;
-	}
-
-	return ::av_opt_set(obj, name, val, search_flags);
-}
-
 struct output_format
 {
 	AVOutputFormat* format;
@@ -117,12 +84,26 @@ struct output_format
 	AVCodecID		acodec;
 
 	output_format(const core::video_format_desc& format_desc, const std::string& filename, std::vector<option>& options)
-		: format(av_guess_format(nullptr, filename.c_str(), nullptr))
-		, width(format_desc.width)
+		: width(format_desc.width)
 		, height(format_desc.height)
 		, vcodec(CODEC_ID_NONE)
 		, acodec(CODEC_ID_NONE)
 	{
+		const char *output_filename = filename.c_str();
+
+		boost::range::for_each(options, [&](const option& o)
+		{
+			if (o.name == "f") // try the output format provided by the user
+			{
+				format = av_guess_format(o.value.c_str(), output_filename, nullptr);
+				if(format == nullptr)
+					BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("f"));
+			}
+		});
+
+		if (format == nullptr)
+			format = av_guess_format(nullptr, output_filename, nullptr);
+
 		if (format == nullptr)
 			BOOST_THROW_EXCEPTION(caspar_exception()
 				<< msg_info(filename + " not a supported file for recording"));
@@ -170,11 +151,7 @@ struct output_format
 		//}
 		if(name == "f")
 		{
-			format = av_guess_format(value.c_str(), nullptr, nullptr);
-
-			if(format == nullptr)
-				BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("f"));
-
+			// This option is already processed
 			return true;
 		}
 		else if(name == "vcodec")
@@ -257,7 +234,8 @@ public:
 		current_encoding_delay_ = 0;
 
 		// TODO: Ask stakeholders about case where file already exists.
-		boost::filesystem::remove(boost::filesystem::wpath(env::media_folder() + widen(filename))); // Delete the file if it exists
+		if (filename.find("://") != std::string::npos) // Try to delete only local files
+			boost::filesystem::remove(boost::filesystem::wpath(widen(filename))); // Delete the file if it exists
 
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
@@ -281,7 +259,7 @@ public:
 		video_st_ = add_video_stream(options2);
 
 		if (!key_only)
-			audio_st_ = add_audio_stream(options);
+			audio_st_ = add_audio_stream(options2);
 				
 		av_dump_format(oc_.get(), 0, filename_.c_str(), 1);
 		 
@@ -291,10 +269,10 @@ public:
 				
 		THROW_ON_ERROR2(avformat_write_header(oc_.get(), nullptr), "[ffmpeg_consumer]");
 
-		if(options.size() > 0)
+		if(options2.size() > 0)
 		{
-			BOOST_FOREACH(auto& option, options)
-				CASPAR_LOG(warning) << L"Invalid option: -" << widen(option.name) << L" " << widen(option.value);
+			BOOST_FOREACH(auto& option, options2)
+				CASPAR_LOG(warning) << L"Unknown or invalid option: -" << widen(option.name) << L" " << widen(option.value);
 		}
 
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
@@ -320,6 +298,60 @@ public:
 	std::wstring print() const
 	{
 		return L"ffmpeg[" + widen(filename_) + L"]";
+	}
+
+	bool set_video_opt(AVCodecContext *c, const std::string& name, const std::string& value)
+	{
+		if (name == "g") {
+			c->gop_size = strtoul(value.c_str(), NULL, 10);
+			return true;
+		}
+		if (name == "vb" || name == "b:v") {
+			const char *v = value.c_str();
+			int multiplier = v[strlen(v) - 1] == 'k' ? 1000 : 0;
+			c->bit_rate = strtoul(value.c_str(), NULL, 10) * multiplier;
+			return true;
+		}
+		if (name == "aspect") {
+			int ar_num, ar_den;
+			sscanf( value.c_str(), "%d:%d", &ar_num, &ar_den );
+			if ((ar_num == 16 && ar_den == 9) || (ar_num == 4 && ar_den == 3))
+			{
+				c->sample_aspect_ratio.num = ar_num;
+				c->sample_aspect_ratio.den = ar_den;
+				return true;
+			}
+		}
+		if (name == "pix_fmt" || name == "pixel_format")
+		{
+			auto pix_fmt = av_get_pix_fmt(value.c_str());
+			if (pix_fmt == PIX_FMT_NONE)
+				return false;
+			c->pix_fmt = pix_fmt;
+			return true;
+		}
+		if (name == "r" || name == "frame_rate")
+		{
+			AVRational rate;
+			int ret = av_parse_video_rate(&rate, value.c_str());
+			if (ret < 0)
+				return false;
+			c->time_base.num = rate.den;
+			c->time_base.den = rate.num;
+			return true;
+		}
+		return false;
+	}
+
+	bool audio_opt(AVCodecContext *c, const std::string& name, const std::string& value)
+	{
+		if (name == "ab" || name == "b:a") {
+			const char *v = value.c_str();
+			int multiplier = v[strlen(v) - 1] == 'k' ? 1000 : 0;
+			c->bit_rate = strtoul(value.c_str(), NULL, 10) * multiplier;
+			return true;
+		}
+		return false;
 	}
 
 	std::shared_ptr<AVStream> add_video_stream(std::vector<option>& options)
@@ -398,8 +430,9 @@ public:
 				
 		boost::range::remove_erase_if(options, [&](const option& o)
 		{
-			return ffmpeg::av_opt_set(c, o.name.c_str(), o.value.c_str(), AV_OPT_SEARCH_CHILDREN) > -1 ||
-				   ffmpeg::av_opt_set(c->priv_data, o.name.c_str(), o.value.c_str(), AV_OPT_SEARCH_CHILDREN) > -1;
+			return set_video_opt(c, o.name, o.value) ||
+			       av_opt_set(c, o.name.c_str(), o.value.c_str(), AV_OPT_SEARCH_CHILDREN) > -1 ||
+			       av_opt_set(c->priv_data, o.name.c_str(), o.value.c_str(), AV_OPT_SEARCH_CHILDREN) > -1;
 		});
 				
 		if(output_format_.format->flags & AVFMT_GLOBALHEADER)
@@ -451,7 +484,9 @@ public:
 				
 		boost::range::remove_erase_if(options, [&](const option& o)
 		{
-			return ffmpeg::av_opt_set(c, o.name.c_str(), o.value.c_str(), AV_OPT_SEARCH_CHILDREN) > -1;
+			return audio_opt(c, o.name, o.value) ||
+			       av_opt_set(c, o.name.c_str(), o.value.c_str(), AV_OPT_SEARCH_CHILDREN) > -1 ||
+			       av_opt_set(c->priv_data, o.name.c_str(), o.value.c_str(), AV_OPT_SEARCH_CHILDREN) > -1;
 		});
 
 		THROW_ON_ERROR2(avcodec_open2(c, encoder, nullptr), "[ffmpeg_consumer]");
@@ -754,6 +789,7 @@ safe_ptr<core::frame_consumer> create_consumer(const core::parameters& params)
 	
 	auto filename	= (params2.size() > 1 ? params2[1] : L"");
 	bool separate_key = params2.remove_if_exists(L"SEPARATE_KEY");
+	bool changed_output = false;
 
 	std::vector<option> options;
 	
@@ -773,11 +809,27 @@ safe_ptr<core::frame_consumer> create_consumer(const core::parameters& params)
 			else if (value == "dvcpro")
 				value = "dvvideo";
 
-			options.push_back(option(name, value));
+			auto o = option(name, value);
+
+			if (name == "o") {
+				if (value.find("://") != std::string::npos) {
+					std::wstring temp_wstring(value.length(), L' ');
+					std::copy(value.begin(), value.end(), temp_wstring.begin());
+					filename = temp_wstring;
+					CASPAR_LOG(info) << L" Setting output to: " << filename;
+					changed_output = true;
+				}
+				continue;
+			}
+
+			options.push_back(o);
 		}
 	}
 		
-	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + filename, options, separate_key);
+	if (changed_output)
+		return make_safe<ffmpeg_consumer_proxy>(filename, options, separate_key);
+	else
+		return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + filename, options, separate_key);
 }
 
 safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree)
@@ -785,11 +837,30 @@ safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptre
 	auto filename		= ptree.get<std::wstring>(L"path");
 	auto codec			= ptree.get(L"vcodec", L"libx264");
 	auto separate_key	= ptree.get(L"separate-key", false);
+	auto extra_params	= ptree.get(L"extra-params", L"");
 
-	std::vector<option> options;
-	options.push_back(option("vcodec", narrow(codec)));
-	
-	return make_safe<ffmpeg_consumer_proxy>(env::media_folder() + filename, options, separate_key);
+	core::parameters params;
+	params.push_back(L"FILE");
+	params.push_back(filename);
+
+	if (separate_key)
+		params.push_back(L"SEPARATE_KEY");
+
+	if (extra_params.find(L"-vcodec") == std::string::npos)
+	{
+		params.push_back(L"-vcodec");
+		params.push_back(codec);
+	}
+
+	std::vector<std::wstring> parts;
+	boost::algorithm::split(parts, extra_params, boost::algorithm::is_any_of(L" "));
+	BOOST_FOREACH( std::wstring &s, parts )
+	{
+		if (s.length())
+			params.push_back(s);
+	}
+
+	return caspar::ffmpeg::create_consumer(params);
 }
 
 }}
