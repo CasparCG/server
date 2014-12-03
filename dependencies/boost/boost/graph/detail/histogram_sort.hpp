@@ -54,12 +54,12 @@ count_starts
    KeyFilter key_filter,
    KeyTransform key_transform) {
 
-  typedef VerticesSize vertices_size_type;
   typedef typename std::iterator_traits<RowstartIterator>::value_type EdgeIndex;
 
   // Put the degree of each vertex v into m_rowstart[v + 1]
   for (KeyIterator i = begin; i != end; ++i) {
     if (key_filter(*i)) {
+      BOOST_ASSERT (key_transform(*i) < numkeys);
       ++starts[key_transform(*i) + 1];
     }
   }
@@ -68,7 +68,7 @@ count_starts
   // m_rowstart
   EdgeIndex start_of_this_row = 0;
   starts[0] = start_of_this_row;
-  for (vertices_size_type i = 1; i <= numkeys; ++i) {
+  for (VerticesSize i = 1; i < numkeys + 1; ++i) {
     start_of_this_row += starts[i];
     starts[i] = start_of_this_row;
   }
@@ -87,7 +87,6 @@ histogram_sort(KeyIterator key_begin, KeyIterator key_end,
                KeyFilter key_filter,
                KeyTransform key_transform) {
 
-  typedef NumKeys vertices_size_type;
   typedef typename std::iterator_traits<RowstartIterator>::value_type EdgeIndex;
 
   // Histogram sort the edges by their source vertices, putting the targets
@@ -98,7 +97,8 @@ histogram_sort(KeyIterator key_begin, KeyIterator key_end,
   Value1InputIter v1i = values1_begin;
   for (KeyIterator i = key_begin; i != key_end; ++i, ++v1i) {
     if (key_filter(*i)) {
-      vertices_size_type source = key_transform(*i);
+      NumKeys source = key_transform(*i);
+      BOOST_ASSERT (source < numkeys);
       EdgeIndex insert_pos = current_insert_positions[source];
       ++current_insert_positions[source];
       values1_out[insert_pos] = *v1i;
@@ -124,7 +124,6 @@ histogram_sort(KeyIterator key_begin, KeyIterator key_end,
                KeyFilter key_filter,
                KeyTransform key_transform) {
 
-  typedef NumKeys vertices_size_type;
   typedef typename std::iterator_traits<RowstartIterator>::value_type EdgeIndex;
 
   // Histogram sort the edges by their source vertices, putting the targets
@@ -136,7 +135,8 @@ histogram_sort(KeyIterator key_begin, KeyIterator key_end,
   Value2InputIter v2i = values2_begin;
   for (KeyIterator i = key_begin; i != key_end; ++i, ++v1i, ++v2i) {
     if (key_filter(*i)) {
-      vertices_size_type source = key_transform(*i);
+      NumKeys source = key_transform(*i);
+      BOOST_ASSERT (source < numkeys);
       EdgeIndex insert_pos = current_insert_positions[source];
       ++current_insert_positions[source];
       values1_out[insert_pos] = *v1i;
@@ -156,13 +156,13 @@ histogram_sort_inplace(KeyIterator key_begin,
                        Value1Iter values1,
                        KeyTransform key_transform) {
 
-  typedef NumKeys vertices_size_type;
   typedef typename std::iterator_traits<RowstartIterator>::value_type EdgeIndex;
 
   // 1. Copy m_rowstart (except last element) to get insert positions
   std::vector<EdgeIndex> insert_positions(rowstart, rowstart + numkeys);
   // 2. Swap the sources and targets into place
   for (size_t i = 0; i < rowstart[numkeys]; ++i) {
+    BOOST_ASSERT (key_transform(key_begin[i]) < numkeys);
     // While edge i is not in the right bucket:
     while (!(i >= rowstart[key_transform(key_begin[i])] && i < insert_positions[key_transform(key_begin[i])])) {
       // Add a slot in the right bucket
@@ -190,13 +190,13 @@ histogram_sort_inplace(KeyIterator key_begin,
                        Value2Iter values2,
                        KeyTransform key_transform) {
 
-  typedef NumKeys vertices_size_type;
   typedef typename std::iterator_traits<RowstartIterator>::value_type EdgeIndex;
 
   // 1. Copy m_rowstart (except last element) to get insert positions
   std::vector<EdgeIndex> insert_positions(rowstart, rowstart + numkeys);
   // 2. Swap the sources and targets into place
   for (size_t i = 0; i < rowstart[numkeys]; ++i) {
+    BOOST_ASSERT (key_transform(key_begin[i]) < numkeys);
     // While edge i is not in the right bucket:
     while (!(i >= rowstart[key_transform(key_begin[i])] && i < insert_positions[key_transform(key_begin[i])])) {
       // Add a slot in the right bucket
@@ -269,16 +269,21 @@ void split_into_separate_coords_filtered
   }
 }
 
+// The versions of operator()() here can't return by reference because the
+// actual type passed in may not match Pair, in which case the reference
+// parameter is bound to a temporary that could end up dangling after the
+// operator returns.
+
 template <typename Pair>
 struct project1st {
   typedef typename Pair::first_type result_type;
-  const result_type& operator()(const Pair& p) const {return p.first;}
+  result_type operator()(const Pair& p) const {return p.first;}
 };
 
 template <typename Pair>
 struct project2nd {
   typedef typename Pair::second_type result_type;
-  const result_type& operator()(const Pair& p) const {return p.second;}
+  result_type operator()(const Pair& p) const {return p.second;}
 };
 
     }

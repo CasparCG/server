@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2011-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2011-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2011-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2011-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2011-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2011-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -21,11 +21,11 @@
 #include <boost/geometry/util/select_most_precise.hpp>
 
 
-namespace boost{ namespace geometry 
-{ 
+namespace boost{ namespace geometry
+{
 
 
-// Specialize for Boost.Geometry's coordinate cast 
+// Specialize for Boost.Geometry's coordinate cast
 // (from string to coordinate type)
 namespace detail
 {
@@ -39,13 +39,13 @@ struct coordinate_cast<rational<T> >
         std::string before_part = source.substr(0, p);
         std::string const after_part = source.substr(p + 1);
 
-		negate = false;
+        negate = false;
 
-		if (before_part.size() > 0 && before_part[0] == '-')
-		{
-			negate = true;
-			before_part.erase(0, 1);
-		}
+        if (before_part.size() > 0 && before_part[0] == '-')
+        {
+            negate = true;
+            before_part.erase(0, 1);
+        }
         before = atol(before_part.c_str());
         after = atol(after_part.c_str());
         len = after_part.length();
@@ -70,10 +70,10 @@ struct coordinate_cast<rational<T> >
             }
             split_parts(source, p, before, after, negate, len);
 
-            return negate 
-			    ? -rational<T>(before, after)
-			    : rational<T>(before, after)
-			    ;
+            return negate
+                ? -rational<T>(before, after)
+                : rational<T>(before, after)
+                ;
 
         }
 
@@ -85,10 +85,10 @@ struct coordinate_cast<rational<T> >
             den *= 10;
         }
 
-        return negate 
-			? -rational<T>(before) - rational<T>(after, den)
-			: rational<T>(before) + rational<T>(after, den)
-			;
+        return negate
+            ? -rational<T>(before) - rational<T>(after, den)
+            : rational<T>(before) + rational<T>(after, den)
+            ;
     }
 };
 
@@ -115,19 +115,19 @@ struct select_most_precise<boost::rational<T>, double>
 
 
 // Specializes boost::rational to boost::numeric::bounds
-namespace boost { namespace numeric 
+namespace boost { namespace numeric
 {
 
 template<class T>
 struct bounds<rational<T> >
 {
-    static inline rational<T> lowest() 
-    { 
-        return rational<T>(bounds<T>::lowest(), 1); 
+    static inline rational<T> lowest()
+    {
+        return rational<T>(bounds<T>::lowest(), 1);
     }
-    static inline rational<T> highest() 
-    { 
-        return rational<T>(bounds<T>::highest(), 1); 
+    static inline rational<T> highest()
+    {
+        return rational<T>(bounds<T>::highest(), 1);
     }
 };
 

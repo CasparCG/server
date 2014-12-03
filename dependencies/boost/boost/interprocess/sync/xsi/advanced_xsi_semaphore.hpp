@@ -30,6 +30,10 @@
 #ifndef BOOST_INTERPROCESS_SYNC_XSI_ADVANCED_XSI_SEMAPHORE_HPP
 #define BOOST_INTERPROCESS_SYNC_XSI_ADVANCED_XSI_SEMAPHORE_HPP
 
+#if defined(_MSC_VER)
+#  pragma once
+#endif
+
 #include <sys/ipc.h>
 #include <sys/sem.h>
 #include <errno.h>

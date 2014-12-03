@@ -46,12 +46,12 @@
 namespace caspar { namespace core {
 
 std::wstring get_relative_without_extension(
-		const boost::filesystem::wpath& file,
-		const boost::filesystem::wpath& relative_to)
+		const boost::filesystem::path& file,
+		const boost::filesystem::path& relative_to)
 {
-	auto result = file.stem();
+	auto result = file.stem().wstring();
 		
-	boost::filesystem::wpath current_path = file;
+	boost::filesystem::path current_path = file;
 
 	while (true)
 	{
@@ -63,7 +63,7 @@ std::wstring get_relative_without_extension(
 		if (current_path.empty())
 			throw std::runtime_error("File not relative to folder");
 
-		result = current_path.filename() + L"/" + result;
+		result = current_path.filename().wstring() + L"/" + result;
 	}
 
 	return result;
@@ -94,8 +94,8 @@ struct thumbnail_output : public mixer::target_t
 struct thumbnail_generator::implementation
 {
 private:
-	boost::filesystem::wpath media_path_;
-	boost::filesystem::wpath thumbnails_path_;
+	boost::filesystem::path media_path_;
+	boost::filesystem::path thumbnails_path_;
 	int width_;
 	int height_;
 	safe_ptr<ogl_device> ogl_;
@@ -109,8 +109,8 @@ private:
 public:
 	implementation(
 			filesystem_monitor_factory& monitor_factory,
-			const boost::filesystem::wpath& media_path,
-			const boost::filesystem::wpath& thumbnails_path,
+			const boost::filesystem::path& media_path,
+			const boost::filesystem::path& thumbnails_path,
 			int width,
 			int height,
 			const video_format_desc& render_video_mode,
@@ -131,18 +131,19 @@ public:
 				output_,
 				format_desc_,
 				ogl,
-				channel_layout::stereo()))
+				channel_layout::stereo(),
+				0))
 		, thumbnail_creator_(thumbnail_creator)
 		, media_info_repo_(std::move(media_info_repo))
 		, monitor_(monitor_factory.create(
 				media_path,
 				ALL,
 				true,
-				[this] (filesystem_event event, const boost::filesystem::wpath& file)
+				[this] (filesystem_event event, const boost::filesystem::path& file)
 				{
 					this->on_file_event(event, file);
 				},
-				[this] (const std::set<boost::filesystem::wpath>& initial_files) 
+				[this] (const std::set<boost::filesystem::path>& initial_files) 
 				{
 					this->on_initial_files(initial_files);
 				}))
@@ -153,7 +154,7 @@ public:
 		mixer_->set_mipmap(0, mipmap);
 	}
 
-	void on_initial_files(const std::set<boost::filesystem::wpath>& initial_files)
+	void on_initial_files(const std::set<boost::filesystem::path>& initial_files)
 	{
 		using namespace boost::filesystem;
 
@@ -165,7 +166,7 @@ public:
 						relative_without_extensions.end()),
 				boost::bind(&get_relative_without_extension, _1, media_path_));
 
-		for (wrecursive_directory_iterator iter(thumbnails_path_); iter != wrecursive_directory_iterator(); ++iter)
+		for (recursive_directory_iterator iter(thumbnails_path_); iter != recursive_directory_iterator(); ++iter)
 		{
 			auto& path = iter->path();
 
@@ -187,11 +188,11 @@ public:
 		auto base_file = media_path_ / media_file;
 		auto folder = base_file.parent_path();
 
-		for (wdirectory_iterator iter(folder); iter != wdirectory_iterator(); ++iter)
+		for (directory_iterator iter(folder); iter != directory_iterator(); ++iter)
 		{
-			auto stem = iter->path().stem();
+			auto stem = iter->path().stem().wstring();
 
-			if (boost::iequals(stem, base_file.filename()))
+			if (boost::iequals(stem, base_file.filename().wstring()))
 				monitor_->reemmit(iter->path());
 		}
 	}
@@ -201,7 +202,7 @@ public:
 		monitor_->reemmit_all();
 	}
 
-	void on_file_event(filesystem_event event, const boost::filesystem::wpath& file)
+	void on_file_event(filesystem_event event, const boost::filesystem::path& file)
 	{
 		switch (event)
 		{
@@ -217,13 +218,13 @@ public:
 		case REMOVED:
 			auto relative_without_extension = get_relative_without_extension(file, media_path_);
 			boost::filesystem::remove(thumbnails_path_ / (relative_without_extension + L".png"));
-			media_info_repo_->remove(file.file_string());
+			media_info_repo_->remove(file.wstring());
 
 			break;
 		}
 	}
 
-	bool needs_to_be_generated(const boost::filesystem::wpath& file)
+	bool needs_to_be_generated(const boost::filesystem::path& file)
 	{
 		using namespace boost::filesystem;
 
@@ -255,7 +256,7 @@ public:
 		}
 	}
 
-	void generate_thumbnail(const boost::filesystem::wpath& file)
+	void generate_thumbnail(const boost::filesystem::path& file)
 	{
 		auto media_file = get_relative_without_extension(file, media_path_);
 		auto png_file = thumbnails_path_ / (media_file + L".png");
@@ -296,8 +297,8 @@ public:
 			try
 			{
 				raw_frame = producer->create_thumbnail_frame();
-				media_info_repo_->remove(file.file_string());
-				media_info_repo_->get(file.file_string());
+				media_info_repo_->remove(file.wstring());
+				media_info_repo_->get(file.wstring());
 			}
 			catch (const boost::thread_interrupted&)
 			{
@@ -353,8 +354,8 @@ public:
 
 thumbnail_generator::thumbnail_generator(
 		filesystem_monitor_factory& monitor_factory,
-		const boost::filesystem::wpath& media_path,
-		const boost::filesystem::wpath& thumbnails_path,
+		const boost::filesystem::path& media_path,
+		const boost::filesystem::path& thumbnails_path,
 		int width,
 		int height,
 		const video_format_desc& render_video_mode,

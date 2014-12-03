@@ -1,5 +1,5 @@
 /*
- *          Copyright Andrey Semashev 2007 - 2010.
+ *          Copyright Andrey Semashev 2007 - 2014.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -15,88 +15,74 @@
  * required by OS-specific sink backends.
  */
 
-#if (defined(_MSC_VER) && _MSC_VER > 1000)
-#pragma once
-#endif // _MSC_VER > 1000
-
 #ifndef BOOST_LOG_SINKS_ATTRIBUTE_MAPPING_HPP_INCLUDED_
 #define BOOST_LOG_SINKS_ATTRIBUTE_MAPPING_HPP_INCLUDED_
 
 #include <map>
-#include <string>
-#include <functional>
-#include <boost/log/detail/prologue.hpp>
-#include <boost/log/attributes/attribute_values_view.hpp>
-#include <boost/log/utility/attribute_value_extractor.hpp>
+#include <boost/log/detail/config.hpp>
+#include <boost/log/detail/tagged_integer.hpp>
+#include <boost/log/core/record_view.hpp>
+#include <boost/log/attributes/attribute_name.hpp>
+#include <boost/log/attributes/attribute_value_set.hpp>
+#include <boost/log/attributes/value_visitation.hpp>
+#include <boost/log/detail/header.hpp>
 
-#ifdef _MSC_VER
-#pragma warning(push)
-// 'm_A' : class 'A' needs to have dll-interface to be used by clients of class 'B'
-#pragma warning(disable: 4251)
-// non dll-interface class 'A' used as base for dll-interface class 'B'
-#pragma warning(disable: 4275)
-#endif // _MSC_VER
+#ifdef BOOST_HAS_PRAGMA_ONCE
+#pragma once
+#endif
 
 namespace boost {
 
-namespace BOOST_LOG_NAMESPACE {
+BOOST_LOG_OPEN_NAMESPACE
 
 namespace sinks {
 
 //! Base class for attribute mapping function objects
-template< typename CharT, typename MappedT >
-struct basic_mapping :
-    public std::unary_function< basic_attribute_values_view< CharT >, MappedT >
+template< typename MappedT >
+struct basic_mapping
 {
-    //! Char type
-    typedef CharT char_type;
-    //! String type
-    typedef std::basic_string< char_type > string_type;
-    //! Attribute values view type
-    typedef basic_attribute_values_view< char_type > values_view_type;
     //! Mapped value type
     typedef MappedT mapped_type;
+    //! Result type
+    typedef mapped_type result_type;
 };
 
-/*!
- * \brief Straightforward mapping
- *
- * This type of mapping assumes that attribute with a particular name always
- * provides values that map directly onto the native values. The mapping
- * simply returns the extracted attribute value converted to the native value.
- */
-template< typename CharT, typename MappedT, typename AttributeValueT = int >
-class basic_direct_mapping :
-    public basic_mapping< CharT, MappedT >
-{
-    //! Base type
-    typedef basic_direct_mapping< CharT, MappedT > base_type;
+namespace aux {
 
-public:
-    //! Attribute contained value type
-    typedef AttributeValueT attribute_value_type;
-    //! Char type
-    typedef typename base_type::char_type char_type;
-    //! String type
-    typedef typename base_type::string_type string_type;
-    //! Attribute values view type
-    typedef typename base_type::values_view_type values_view_type;
-    //! Mapped value type
-    typedef typename base_type::mapped_type mapped_type;
-
-private:
-    //! \cond
-
-    //! Attribute value receiver
-    struct receiver
+    //! Attribute value visitor
+    template< typename MappedT >
+    struct direct_mapping_visitor
     {
         typedef void result_type;
+        typedef MappedT mapped_type;
 
-        explicit receiver(mapped_type& extracted) : m_Extracted(extracted) {}
+        explicit direct_mapping_visitor(mapped_type& extracted) :
+            m_Extracted(extracted)
+        {
+        }
         template< typename T >
         void operator() (T const& val) const
         {
-            // TODO: Make this thing work with non-POD mapped_types
+            m_Extracted = mapped_type(val);
+        }
+
+    private:
+        mapped_type& m_Extracted;
+    };
+    //  Specialization for the tagged integer
+    template< typename IntT, typename TagT >
+    struct direct_mapping_visitor< boost::log::aux::tagged_integer< IntT, TagT > >
+    {
+        typedef void result_type;
+        typedef boost::log::aux::tagged_integer< IntT, TagT > mapped_type;
+
+        explicit direct_mapping_visitor(mapped_type& extracted) :
+            m_Extracted(extracted)
+        {
+        }
+        template< typename T >
+        void operator() (T const& val) const
+        {
             mapped_type v = { val };
             m_Extracted = v;
         }
@@ -105,11 +91,33 @@ private:
         mapped_type& m_Extracted;
     };
 
-    //! \endcond
+} // namespace aux
+
+/*!
+ * \brief Straightforward mapping
+ *
+ * This type of mapping assumes that attribute with a particular name always
+ * provides values that map directly onto the native values. The mapping
+ * simply returns the extracted attribute value converted to the native value.
+ */
+template< typename MappedT, typename AttributeValueT = int >
+class basic_direct_mapping :
+    public basic_mapping< MappedT >
+{
+    //! Base type
+    typedef basic_direct_mapping< MappedT > base_type;
+
+public:
+    //! Attribute contained value type
+    typedef AttributeValueT attribute_value_type;
+    //! Mapped value type
+    typedef typename base_type::mapped_type mapped_type;
 
 private:
-    //! Attribute value extractor
-    attribute_value_extractor< char_type, attribute_value_type > m_Extractor;
+    //! Attribute name
+    const attribute_name m_Name;
+    //! Visitor invoker for the attribute value
+    value_visitor_invoker< attribute_value_type > m_Invoker;
     //! Default native value
     mapped_type m_DefaultValue;
 
@@ -120,8 +128,8 @@ public:
      * \param name Attribute name
      * \param default_value The default native value that is returned if the attribute value is not found
      */
-    explicit basic_direct_mapping(string_type const& name, mapped_type const& default_value) :
-        m_Extractor(name),
+    explicit basic_direct_mapping(attribute_name const& name, mapped_type const& default_value) :
+        m_Name(name),
         m_DefaultValue(default_value)
     {
     }
@@ -129,14 +137,14 @@ public:
     /*!
      * Extraction operator
      *
-     * \param values A set of attribute values attached to a logging record
+     * \param rec A log record to extract value from
      * \return An extracted attribute value
      */
-    mapped_type operator() (values_view_type const& values) const
+    mapped_type operator() (record_view const& rec) const
     {
         mapped_type res = m_DefaultValue;
-        receiver rcv(res);
-        m_Extractor(values, rcv);
+        aux::direct_mapping_visitor< mapped_type > vis(res);
+        m_Invoker(m_Name, rec.attribute_values(), vis);
         return res;
     }
 };
@@ -152,22 +160,16 @@ public:
  *       must be specified in the template parameter \c AttributeValueT. Type sequences
  *       are not supported.
  */
-template< typename CharT, typename MappedT, typename AttributeValueT = int >
+template< typename MappedT, typename AttributeValueT = int >
 class basic_custom_mapping :
-    public basic_mapping< CharT, MappedT >
+    public basic_mapping< MappedT >
 {
     //! Base type
-    typedef basic_mapping< CharT, MappedT > base_type;
+    typedef basic_mapping< MappedT > base_type;
 
 public:
     //! Attribute contained value type
     typedef AttributeValueT attribute_value_type;
-    //! Char type
-    typedef typename base_type::char_type char_type;
-    //! String type
-    typedef typename base_type::string_type string_type;
-    //! Attribute values view type
-    typedef typename base_type::values_view_type values_view_type;
     //! Mapped value type
     typedef typename base_type::mapped_type mapped_type;
 
@@ -195,14 +197,14 @@ private:
         }
     };
 
-    //! Attribute value receiver
-    struct receiver;
-    friend struct receiver;
-    struct receiver
+    //! Attribute value visitor
+    struct visitor;
+    friend struct visitor;
+    struct visitor
     {
         typedef void result_type;
 
-        receiver(mapping_type const& mapping, mapped_type& extracted) :
+        visitor(mapping_type const& mapping, mapped_type& extracted) :
             m_Mapping(mapping),
             m_Extracted(extracted)
         {
@@ -223,8 +225,10 @@ private:
     //! \endcond
 
 private:
-    //! Attribute value extractor
-    attribute_value_extractor< char_type, attribute_value_type > m_Extractor;
+    //! Attribute name
+    const attribute_name m_Name;
+    //! Visitor invoker for the attribute value
+    value_visitor_invoker< attribute_value_type > m_Invoker;
     //! Default native value
     mapped_type m_DefaultValue;
     //! Conversion mapping
@@ -237,8 +241,8 @@ public:
      * \param name Attribute name
      * \param default_value The default native value that is returned if the conversion cannot be performed
      */
-    explicit basic_custom_mapping(string_type const& name, mapped_type const& default_value) :
-        m_Extractor(name),
+    explicit basic_custom_mapping(attribute_name const& name, mapped_type const& default_value) :
+        m_Name(name),
         m_DefaultValue(default_value)
     {
     }
@@ -246,15 +250,15 @@ public:
      * Extraction operator. Extracts the attribute value and attempts to map it onto
      * the native value.
      *
-     * \param values A set of attribute values attached to a logging record
-     * \return A mapped value, if mapping was successfull, or the default value if
+     * \param rec A log record to extract value from
+     * \return A mapped value, if mapping was successful, or the default value if
      *         mapping did not succeed.
      */
-    mapped_type operator() (values_view_type const& values) const
+    mapped_type operator() (record_view const& rec) const
     {
         mapped_type res = m_DefaultValue;
-        receiver rcv(m_Mapping, res);
-        m_Extractor(values, rcv);
+        visitor vis(m_Mapping, res);
+        m_Invoker(m_Name, rec.attribute_values(), vis);
         return res;
     }
     /*!
@@ -277,12 +281,10 @@ public:
 
 } // namespace sinks
 
-} // namespace log
+BOOST_LOG_CLOSE_NAMESPACE // namespace log
 
 } // namespace boost
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif // _MSC_VER
+#include <boost/log/detail/footer.hpp>
 
 #endif // BOOST_LOG_SINKS_ATTRIBUTE_MAPPING_HPP_INCLUDED_

@@ -99,11 +99,12 @@ public:
 
 		GL(glBindBuffer(target_, pbo_));
 
-		if(usage_ == write_only)			
-			GL(glBufferData(target_, size_, NULL, GL_STREAM_DRAW));	// Notify OpenGL that we don't care about previous data.
+		//if(usage_ == write_only)			
+		//	GL(glBufferData(target_, size_, NULL, GL_STREAM_DRAW));	// Notify OpenGL that we don't care about previous data.
 		
 		data_ = GL2(glMapBuffer(target_, usage_ == host_buffer::write_only ? GL_WRITE_ONLY : GL_READ_ONLY));
-		GL(glBindBuffer(target_, 0)); 
+
+		GL(glBindBuffer(target_, 0));
 		if(!data_)
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to map target_ OpenGL Pixel Buffer Object."));
 	}

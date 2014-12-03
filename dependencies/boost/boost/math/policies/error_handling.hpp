@@ -12,6 +12,7 @@
 #include <iomanip>
 #include <string>
 #include <cerrno>
+#include <boost/config/no_tr1/complex.hpp>
 #include <boost/config/no_tr1/cmath.hpp>
 #include <stdexcept>
 #include <boost/math/tools/config.hpp>
@@ -23,7 +24,7 @@
 #  pragma warning(disable: 4996) // _SCL_SECURE_NO_DEPRECATE
 #  pragma warning(disable: 4512) // assignment operator could not be generated.
 // And warnings in error handling:
-#  pragma warning(disable: 4702) // unreachable code
+#  pragma warning(disable: 4702) // unreachable code.
 // Note that this only occurs when the compiler can deduce code is unreachable,
 // for example when policy macros are used to ignore errors rather than throw.
 #endif
@@ -45,7 +46,7 @@ public:
 
 namespace policies{
 //
-// Forward declarations of user error handlers, 
+// Forward declarations of user error handlers,
 // it's up to the user to provide the definition of these:
 //
 template <class T>
@@ -69,13 +70,34 @@ namespace detail
 {
 //
 // Helper function to avoid binding rvalue to non-const-reference,
-// in other words a warning suppression mechansim:
+// in other words a warning suppression mechanism:
 //
 template <class Formatter, class Group>
 inline std::string do_format(Formatter f, const Group& g)
 {
    return (f % g).str();
 }
+
+template <class T>
+inline const char* name_of()
+{
+#ifndef BOOST_NO_RTTI
+   return typeid(T).name();
+#else
+   return "unknown";
+#endif
+}
+template <> inline const char* name_of<float>(){ return "float"; }
+template <> inline const char* name_of<double>(){ return "double"; }
+template <> inline const char* name_of<long double>(){ return "long double"; }
+
+#ifdef BOOST_MATH_USE_FLOAT128
+template <>
+inline const char* name_of<BOOST_MATH_FLOAT128_TYPE>()
+{
+   return "__float128";
+}
+#endif
 
 template <class E, class T>
 void raise_error(const char* function, const char* message)
@@ -86,7 +108,11 @@ void raise_error(const char* function, const char* message)
        message = "Cause unknown";
 
   std::string msg("Error in function ");
-  msg += (boost::format(function) % typeid(T).name()).str();
+#ifndef BOOST_NO_RTTI
+  msg += (boost::format(function) % boost::math::policies::detail::name_of<T>()).str();
+#else
+  msg += function;
+#endif
   msg += ": ";
   msg += message;
 
@@ -103,7 +129,11 @@ void raise_error(const char* function, const char* message, const T& val)
      message = "Cause unknown: error caused by bad argument with value %1%";
 
   std::string msg("Error in function ");
-  msg += (boost::format(function) % typeid(T).name()).str();
+#ifndef BOOST_NO_RTTI
+  msg += (boost::format(function) % boost::math::policies::detail::name_of<T>()).str();
+#else
+  msg += function;
+#endif
   msg += ": ";
   msg += message;
 
@@ -116,9 +146,9 @@ void raise_error(const char* function, const char* message, const T& val)
 
 template <class T>
 inline T raise_domain_error(
-           const char* function, 
-           const char* message, 
-           const T& val, 
+           const char* function,
+           const char* message,
+           const T& val,
            const ::boost::math::policies::domain_error< ::boost::math::policies::throw_on_error>&)
 {
    raise_error<std::domain_error, T>(function, message, val);
@@ -128,9 +158,9 @@ inline T raise_domain_error(
 
 template <class T>
 inline T raise_domain_error(
-           const char* , 
-           const char* , 
-           const T& , 
+           const char* ,
+           const char* ,
+           const T& ,
            const ::boost::math::policies::domain_error< ::boost::math::policies::ignore_error>&)
 {
    // This may or may not do the right thing, but the user asked for the error
@@ -140,9 +170,9 @@ inline T raise_domain_error(
 
 template <class T>
 inline T raise_domain_error(
-           const char* , 
-           const char* , 
-           const T& , 
+           const char* ,
+           const char* ,
+           const T& ,
            const ::boost::math::policies::domain_error< ::boost::math::policies::errno_on_error>&)
 {
    errno = EDOM;
@@ -153,9 +183,9 @@ inline T raise_domain_error(
 
 template <class T>
 inline T raise_domain_error(
-           const char* function, 
-           const char* message, 
-           const T& val, 
+           const char* function,
+           const char* message,
+           const T& val,
            const  ::boost::math::policies::domain_error< ::boost::math::policies::user_error>&)
 {
    return user_domain_error(function, message, val);
@@ -163,9 +193,9 @@ inline T raise_domain_error(
 
 template <class T>
 inline T raise_pole_error(
-           const char* function, 
-           const char* message, 
-           const T& val, 
+           const char* function,
+           const char* message,
+           const T& val,
            const  ::boost::math::policies::pole_error< ::boost::math::policies::throw_on_error>&)
 {
    return boost::math::policies::detail::raise_domain_error(function, message, val,  ::boost::math::policies::domain_error< ::boost::math::policies::throw_on_error>());
@@ -173,9 +203,9 @@ inline T raise_pole_error(
 
 template <class T>
 inline T raise_pole_error(
-           const char* function, 
-           const char* message, 
-           const T& val, 
+           const char* function,
+           const char* message,
+           const T& val,
            const  ::boost::math::policies::pole_error< ::boost::math::policies::ignore_error>&)
 {
    return  ::boost::math::policies::detail::raise_domain_error(function, message, val,  ::boost::math::policies::domain_error< ::boost::math::policies::ignore_error>());
@@ -183,9 +213,9 @@ inline T raise_pole_error(
 
 template <class T>
 inline T raise_pole_error(
-           const char* function, 
-           const char* message, 
-           const T& val, 
+           const char* function,
+           const char* message,
+           const T& val,
            const  ::boost::math::policies::pole_error< ::boost::math::policies::errno_on_error>&)
 {
    return  ::boost::math::policies::detail::raise_domain_error(function, message, val,  ::boost::math::policies::domain_error< ::boost::math::policies::errno_on_error>());
@@ -193,29 +223,42 @@ inline T raise_pole_error(
 
 template <class T>
 inline T raise_pole_error(
-           const char* function, 
-           const char* message, 
-           const T& val, 
+           const char* function,
+           const char* message,
+           const T& val,
            const  ::boost::math::policies::pole_error< ::boost::math::policies::user_error>&)
 {
    return user_pole_error(function, message, val);
 }
 
+
 template <class T>
 inline T raise_overflow_error(
-           const char* function, 
-           const char* message, 
+           const char* function,
+           const char* message,
            const  ::boost::math::policies::overflow_error< ::boost::math::policies::throw_on_error>&)
 {
    raise_error<std::overflow_error, T>(function, message ? message : "numeric overflow");
-   // we never get here:
+   // We should never get here:
    return std::numeric_limits<T>::has_infinity ? std::numeric_limits<T>::infinity() : boost::math::tools::max_value<T>();
 }
 
 template <class T>
 inline T raise_overflow_error(
-           const char* , 
-           const char* , 
+           const char* function,
+           const char* message,
+           const T& val,
+           const ::boost::math::policies::overflow_error< ::boost::math::policies::throw_on_error>&)
+{
+   raise_error<std::overflow_error, T>(function, message ? message : "numeric overflow", val);
+   // We should never get here:
+   return std::numeric_limits<T>::has_infinity ? std::numeric_limits<T>::infinity() : boost::math::tools::max_value<T>();
+}
+
+template <class T>
+inline T raise_overflow_error(
+           const char* ,
+           const char* ,
            const  ::boost::math::policies::overflow_error< ::boost::math::policies::ignore_error>&)
 {
    // This may or may not do the right thing, but the user asked for the error
@@ -225,8 +268,20 @@ inline T raise_overflow_error(
 
 template <class T>
 inline T raise_overflow_error(
-           const char* , 
-           const char* , 
+           const char* ,
+           const char* ,
+           const T&,
+           const  ::boost::math::policies::overflow_error< ::boost::math::policies::ignore_error>&)
+{
+   // This may or may not do the right thing, but the user asked for the error
+   // to be ignored so here we go anyway:
+   return std::numeric_limits<T>::has_infinity ? std::numeric_limits<T>::infinity() : boost::math::tools::max_value<T>();
+}
+
+template <class T>
+inline T raise_overflow_error(
+           const char* ,
+           const char* ,
            const  ::boost::math::policies::overflow_error< ::boost::math::policies::errno_on_error>&)
 {
    errno = ERANGE;
@@ -237,28 +292,59 @@ inline T raise_overflow_error(
 
 template <class T>
 inline T raise_overflow_error(
-           const char* function, 
-           const char* message, 
+           const char* ,
+           const char* ,
+           const T&,
+           const  ::boost::math::policies::overflow_error< ::boost::math::policies::errno_on_error>&)
+{
+   errno = ERANGE;
+   // This may or may not do the right thing, but the user asked for the error
+   // to be silent so here we go anyway:
+   return std::numeric_limits<T>::has_infinity ? std::numeric_limits<T>::infinity() : boost::math::tools::max_value<T>();
+}
+
+template <class T>
+inline T raise_overflow_error(
+           const char* function,
+           const char* message,
            const  ::boost::math::policies::overflow_error< ::boost::math::policies::user_error>&)
 {
    return user_overflow_error(function, message, std::numeric_limits<T>::infinity());
 }
 
 template <class T>
+inline T raise_overflow_error(
+           const char* function,
+           const char* message,
+           const T& val,
+           const  ::boost::math::policies::overflow_error< ::boost::math::policies::user_error>&)
+{
+   std::string fmsg("Error in function ");
+#ifndef BOOST_NO_RTTI
+   fmsg += (boost::format(function) % boost::math::policies::detail::name_of<T>()).str();
+#else
+   fmsg += function;
+#endif
+   int prec = 2 + (boost::math::policies::digits<T, boost::math::policies::policy<> >() * 30103UL) / 100000UL;
+   std::string msg = do_format(boost::format(message), boost::io::group(std::setprecision(prec), val));
+   return user_overflow_error(fmsg.c_str(), msg.c_str(), std::numeric_limits<T>::infinity());
+}
+
+template <class T>
 inline T raise_underflow_error(
-           const char* function, 
-           const char* message, 
+           const char* function,
+           const char* message,
            const  ::boost::math::policies::underflow_error< ::boost::math::policies::throw_on_error>&)
 {
    raise_error<std::underflow_error, T>(function, message ? message : "numeric underflow");
-   // we never get here:
+   // We should never get here:
    return 0;
 }
 
 template <class T>
 inline T raise_underflow_error(
-           const char* , 
-           const char* , 
+           const char* ,
+           const char* ,
            const  ::boost::math::policies::underflow_error< ::boost::math::policies::ignore_error>&)
 {
    // This may or may not do the right thing, but the user asked for the error
@@ -268,8 +354,8 @@ inline T raise_underflow_error(
 
 template <class T>
 inline T raise_underflow_error(
-           const char* /* function */, 
-           const char* /* message */, 
+           const char* /* function */,
+           const char* /* message */,
            const  ::boost::math::policies::underflow_error< ::boost::math::policies::errno_on_error>&)
 {
    errno = ERANGE;
@@ -280,8 +366,8 @@ inline T raise_underflow_error(
 
 template <class T>
 inline T raise_underflow_error(
-           const char* function, 
-           const char* message, 
+           const char* function,
+           const char* message,
            const  ::boost::math::policies::underflow_error< ::boost::math::policies::user_error>&)
 {
    return user_underflow_error(function, message, T(0));
@@ -289,8 +375,8 @@ inline T raise_underflow_error(
 
 template <class T>
 inline T raise_denorm_error(
-           const char* function, 
-           const char* message, 
+           const char* function,
+           const char* message,
            const T& /* val */,
            const  ::boost::math::policies::denorm_error< ::boost::math::policies::throw_on_error>&)
 {
@@ -301,8 +387,8 @@ inline T raise_denorm_error(
 
 template <class T>
 inline T raise_denorm_error(
-           const char* , 
-           const char* , 
+           const char* ,
+           const char* ,
            const T&  val,
            const  ::boost::math::policies::denorm_error< ::boost::math::policies::ignore_error>&)
 {
@@ -313,8 +399,8 @@ inline T raise_denorm_error(
 
 template <class T>
 inline T raise_denorm_error(
-           const char* , 
-           const char* , 
+           const char* ,
+           const char* ,
            const T& val,
            const  ::boost::math::policies::denorm_error< ::boost::math::policies::errno_on_error>&)
 {
@@ -326,8 +412,8 @@ inline T raise_denorm_error(
 
 template <class T>
 inline T raise_denorm_error(
-           const char* function, 
-           const char* message, 
+           const char* function,
+           const char* message,
            const T& val,
            const  ::boost::math::policies::denorm_error< ::boost::math::policies::user_error>&)
 {
@@ -336,9 +422,9 @@ inline T raise_denorm_error(
 
 template <class T>
 inline T raise_evaluation_error(
-           const char* function, 
-           const char* message, 
-           const T& val, 
+           const char* function,
+           const char* message,
+           const T& val,
            const  ::boost::math::policies::evaluation_error< ::boost::math::policies::throw_on_error>&)
 {
    raise_error<boost::math::evaluation_error, T>(function, message, val);
@@ -348,9 +434,9 @@ inline T raise_evaluation_error(
 
 template <class T>
 inline T raise_evaluation_error(
-           const char* , 
-           const char* , 
-           const T& val, 
+           const char* ,
+           const char* ,
+           const T& val,
            const  ::boost::math::policies::evaluation_error< ::boost::math::policies::ignore_error>&)
 {
    // This may or may not do the right thing, but the user asked for the error
@@ -360,9 +446,9 @@ inline T raise_evaluation_error(
 
 template <class T>
 inline T raise_evaluation_error(
-           const char* , 
-           const char* , 
-           const T& val, 
+           const char* ,
+           const char* ,
+           const T& val,
            const  ::boost::math::policies::evaluation_error< ::boost::math::policies::errno_on_error>&)
 {
    errno = EDOM;
@@ -373,59 +459,61 @@ inline T raise_evaluation_error(
 
 template <class T>
 inline T raise_evaluation_error(
-           const char* function, 
-           const char* message, 
-           const T& val, 
+           const char* function,
+           const char* message,
+           const T& val,
            const  ::boost::math::policies::evaluation_error< ::boost::math::policies::user_error>&)
 {
    return user_evaluation_error(function, message, val);
 }
 
 template <class T, class TargetType>
-inline T raise_rounding_error(
-           const char* function, 
-           const char* message, 
-           const T& val, 
+inline TargetType raise_rounding_error(
+           const char* function,
+           const char* message,
+           const T& val,
            const TargetType&,
            const  ::boost::math::policies::rounding_error< ::boost::math::policies::throw_on_error>&)
 {
    raise_error<boost::math::rounding_error, T>(function, message, val);
    // we never get here:
-   return T(0);
+   return TargetType(0);
 }
 
 template <class T, class TargetType>
-inline T raise_rounding_error(
-           const char* , 
-           const char* , 
-           const T& val, 
+inline TargetType raise_rounding_error(
+           const char* ,
+           const char* ,
+           const T& val,
            const TargetType&,
            const  ::boost::math::policies::rounding_error< ::boost::math::policies::ignore_error>&)
 {
    // This may or may not do the right thing, but the user asked for the error
    // to be ignored so here we go anyway:
-   return std::numeric_limits<T>::is_specialized ? (val > 0 ? (std::numeric_limits<T>::max)() : -(std::numeric_limits<T>::max)()): val;
+   BOOST_STATIC_ASSERT(std::numeric_limits<TargetType>::is_specialized);
+   return  val > 0 ? (std::numeric_limits<TargetType>::max)() : (std::numeric_limits<TargetType>::is_integer ? (std::numeric_limits<TargetType>::min)() : -(std::numeric_limits<TargetType>::max)());
 }
 
 template <class T, class TargetType>
-inline T raise_rounding_error(
-           const char* , 
-           const char* , 
-           const T& val, 
+inline TargetType raise_rounding_error(
+           const char* ,
+           const char* ,
+           const T& val,
            const TargetType&,
            const  ::boost::math::policies::rounding_error< ::boost::math::policies::errno_on_error>&)
 {
    errno = ERANGE;
    // This may or may not do the right thing, but the user asked for the error
    // to be silent so here we go anyway:
-   return std::numeric_limits<T>::is_specialized ? (val > 0 ? (std::numeric_limits<T>::max)() : -(std::numeric_limits<T>::max)()): val;
+   BOOST_STATIC_ASSERT(std::numeric_limits<TargetType>::is_specialized);
+   return  val > 0 ? (std::numeric_limits<TargetType>::max)() : (std::numeric_limits<TargetType>::is_integer ? (std::numeric_limits<TargetType>::min)() : -(std::numeric_limits<TargetType>::max)());
 }
 
 template <class T, class TargetType>
-inline T raise_rounding_error(
-           const char* function, 
-           const char* message, 
-           const T& val, 
+inline TargetType raise_rounding_error(
+           const char* function,
+           const char* message,
+           const T& val,
            const TargetType& t,
            const  ::boost::math::policies::rounding_error< ::boost::math::policies::user_error>&)
 {
@@ -434,9 +522,9 @@ inline T raise_rounding_error(
 
 template <class T, class R>
 inline T raise_indeterminate_result_error(
-           const char* function, 
-           const char* message, 
-           const T& val, 
+           const char* function,
+           const char* message,
+           const T& val,
            const R& ,
            const ::boost::math::policies::indeterminate_result_error< ::boost::math::policies::throw_on_error>&)
 {
@@ -447,10 +535,10 @@ inline T raise_indeterminate_result_error(
 
 template <class T, class R>
 inline T raise_indeterminate_result_error(
-           const char* , 
-           const char* , 
-           const T& , 
-           const R& result, 
+           const char* ,
+           const char* ,
+           const T& ,
+           const R& result,
            const ::boost::math::policies::indeterminate_result_error< ::boost::math::policies::ignore_error>&)
 {
    // This may or may not do the right thing, but the user asked for the error
@@ -460,10 +548,10 @@ inline T raise_indeterminate_result_error(
 
 template <class T, class R>
 inline T raise_indeterminate_result_error(
-           const char* , 
-           const char* , 
-           const T& , 
-           const R& result, 
+           const char* ,
+           const char* ,
+           const T& ,
+           const R& result,
            const ::boost::math::policies::indeterminate_result_error< ::boost::math::policies::errno_on_error>&)
 {
    errno = EDOM;
@@ -474,10 +562,10 @@ inline T raise_indeterminate_result_error(
 
 template <class T, class R>
 inline T raise_indeterminate_result_error(
-           const char* function, 
-           const char* message, 
-           const T& val, 
-           const R& , 
+           const char* function,
+           const char* message,
+           const T& val,
+           const R& ,
            const ::boost::math::policies::indeterminate_result_error< ::boost::math::policies::user_error>&)
 {
    return user_indeterminate_result_error(function, message, val);
@@ -490,7 +578,7 @@ inline T raise_domain_error(const char* function, const char* message, const T& 
 {
    typedef typename Policy::domain_error_type policy_type;
    return detail::raise_domain_error(
-      function, message ? message : "Domain Error evaluating function at %1%", 
+      function, message ? message : "Domain Error evaluating function at %1%",
       val, policy_type());
 }
 
@@ -499,7 +587,7 @@ inline T raise_pole_error(const char* function, const char* message, const T& va
 {
    typedef typename Policy::pole_error_type policy_type;
    return detail::raise_pole_error(
-      function, message ? message : "Evaluation of function at pole %1%", 
+      function, message ? message : "Evaluation of function at pole %1%",
       val, policy_type());
 }
 
@@ -508,8 +596,17 @@ inline T raise_overflow_error(const char* function, const char* message, const P
 {
    typedef typename Policy::overflow_error_type policy_type;
    return detail::raise_overflow_error<T>(
-      function, message ? message : "Overflow Error", 
+      function, message ? message : "Overflow Error",
       policy_type());
+}
+
+template <class T, class Policy>
+inline T raise_overflow_error(const char* function, const char* message, const T& val, const Policy&)
+{
+   typedef typename Policy::overflow_error_type policy_type;
+   return detail::raise_overflow_error(
+      function, message ? message : "Overflow evaluating function at %1%",
+      val, policy_type());
 }
 
 template <class T, class Policy>
@@ -517,7 +614,7 @@ inline T raise_underflow_error(const char* function, const char* message, const 
 {
    typedef typename Policy::underflow_error_type policy_type;
    return detail::raise_underflow_error<T>(
-      function, message ? message : "Underflow Error", 
+      function, message ? message : "Underflow Error",
       policy_type());
 }
 
@@ -526,7 +623,7 @@ inline T raise_denorm_error(const char* function, const char* message, const T& 
 {
    typedef typename Policy::denorm_error_type policy_type;
    return detail::raise_denorm_error<T>(
-      function, message ? message : "Denorm Error", 
+      function, message ? message : "Denorm Error",
       val,
       policy_type());
 }
@@ -536,16 +633,16 @@ inline T raise_evaluation_error(const char* function, const char* message, const
 {
    typedef typename Policy::evaluation_error_type policy_type;
    return detail::raise_evaluation_error(
-      function, message ? message : "Internal Evaluation Error, best value so far was %1%", 
+      function, message ? message : "Internal Evaluation Error, best value so far was %1%",
       val, policy_type());
 }
 
 template <class T, class TargetType, class Policy>
-inline T raise_rounding_error(const char* function, const char* message, const T& val, const TargetType& t, const Policy&)
+inline TargetType raise_rounding_error(const char* function, const char* message, const T& val, const TargetType& t, const Policy&)
 {
    typedef typename Policy::rounding_error_type policy_type;
    return detail::raise_rounding_error(
-      function, message ? message : "Value %1% can not be represented in the target integer type.", 
+      function, message ? message : "Value %1% can not be represented in the target integer type.",
       val, t, policy_type());
 }
 
@@ -570,10 +667,21 @@ inline bool check_overflow(T val, R* result, const char* function, const Policy&
    BOOST_MATH_STD_USING
    if(fabs(val) > tools::max_value<R>())
    {
-      *result = static_cast<R>(boost::math::policies::detail::raise_overflow_error<R>(function, 0, pol));
+      boost::math::policies::detail::raise_overflow_error<R>(function, 0, pol);
+      *result = static_cast<R>(val);
       return true;
    }
    return false;
+}
+template <class R, class T, class Policy>
+inline bool check_overflow(std::complex<T> val, R* result, const char* function, const Policy& pol)
+{
+   typedef typename R::value_type r_type;
+   r_type re, im;
+   bool r = check_overflow<r_type>(val.real(), &re, function, pol);
+   r = check_overflow<r_type>(val.imag(), &im, function, pol) || r;
+   *result = R(re, im);
+   return r;
 }
 template <class R, class T, class Policy>
 inline bool check_underflow(T val, R* result, const char* function, const Policy& pol)
@@ -586,6 +694,16 @@ inline bool check_underflow(T val, R* result, const char* function, const Policy
    return false;
 }
 template <class R, class T, class Policy>
+inline bool check_underflow(std::complex<T> val, R* result, const char* function, const Policy& pol)
+{
+   typedef typename R::value_type r_type;
+   r_type re, im;
+   bool r = check_underflow<r_type>(val.real(), &re, function, pol);
+   r = check_underflow<r_type>(val.imag(), &im, function, pol) || r;
+   *result = R(re, im);
+   return r;
+}
+template <class R, class T, class Policy>
 inline bool check_denorm(T val, R* result, const char* function, const Policy& pol)
 {
    BOOST_MATH_STD_USING
@@ -596,14 +714,30 @@ inline bool check_denorm(T val, R* result, const char* function, const Policy& p
    }
    return false;
 }
+template <class R, class T, class Policy>
+inline bool check_denorm(std::complex<T> val, R* result, const char* function, const Policy& pol)
+{
+   typedef typename R::value_type r_type;
+   r_type re, im;
+   bool r = check_denorm<r_type>(val.real(), &re, function, pol);
+   r = check_denorm<r_type>(val.imag(), &im, function, pol) || r;
+   *result = R(re, im);
+   return r;
+}
 
 // Default instantiations with ignore_error policy.
 template <class R, class T>
 inline bool check_overflow(T /* val */, R* /* result */, const char* /* function */, const overflow_error<ignore_error>&){ return false; }
 template <class R, class T>
+inline bool check_overflow(std::complex<T> /* val */, R* /* result */, const char* /* function */, const overflow_error<ignore_error>&){ return false; }
+template <class R, class T>
 inline bool check_underflow(T /* val */, R* /* result */, const char* /* function */, const underflow_error<ignore_error>&){ return false; }
 template <class R, class T>
+inline bool check_underflow(std::complex<T> /* val */, R* /* result */, const char* /* function */, const underflow_error<ignore_error>&){ return false; }
+template <class R, class T>
 inline bool check_denorm(T /* val */, R* /* result*/, const char* /* function */, const denorm_error<ignore_error>&){ return false; }
+template <class R, class T>
+inline bool check_denorm(std::complex<T> /* val */, R* /* result*/, const char* /* function */, const denorm_error<ignore_error>&){ return false; }
 
 } // namespace detail
 
@@ -646,6 +780,20 @@ inline void check_root_iterations(const char* function, boost::uintmax_t max_ite
 }
 
 } //namespace policies
+
+namespace detail{
+
+//
+// Simple helper function to assist in returning a pair from a single value,
+// that value usually comes from one of the error handlers above:
+//
+template <class T>
+std::pair<T, T> pair_from_single(const T& val)
+{
+   return std::make_pair(val, val);
+}
+
+}
 
 #ifdef BOOST_MSVC
 #  pragma warning(pop)

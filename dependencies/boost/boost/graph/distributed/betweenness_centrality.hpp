@@ -197,21 +197,21 @@ namespace boost {
     // have not yet been received.
     void synchronize()
     {
-      using boost::graph::parallel::synchronize;
+      using boost::parallel::synchronize;
       synchronize(pg);
     }
     
     // Setup triggers for msg_relax messages
     void setup_triggers()
     {
-      using boost::graph::parallel::simple_trigger;
+      using boost::parallel::simple_trigger;
       simple_trigger(pg, msg_relax, this, 
                      &betweenness_centrality_delta_stepping_impl::handle_msg_relax);
     }
 
     void handle_msg_relax(int /*source*/, int /*tag*/,
                           const std::pair<Vertex, typename MessageValue::type>& data,
-                          trigger_receive_context)
+                          boost::parallel::trigger_receive_context)
     { relax(data.second.second, data.first, data.second.first); }
 
     const Graph& g;
@@ -281,7 +281,7 @@ namespace boost {
       vertex_index(vertex_index),
 #endif
       delta(delta),
-      pg(boost::graph::parallel::process_group_adl(g), attach_distributed_object()),
+      pg(boost::graph::parallel::process_group_adl(g), boost::parallel::attach_distributed_object()),
       owner(get(vertex_owner, g)),
       local(get(vertex_local, g))
 
@@ -621,12 +621,6 @@ namespace boost {
 #endif
                )
     {  
-      typedef typename property_traits<DistanceMap>::value_type 
-        distance_type;
-
-      typedef std::plus<distance_type> Combine;
-      typedef std::less<distance_type> Compare;
-
       // The "distance" map needs to act like one, retrieving the default
       // value of infinity.
       set_property_map_role(vertex_distance, distance);
@@ -717,7 +711,6 @@ namespace boost {
     using boost::graph::parallel::process_group;
 
     typedef typename graph_traits<Graph>::vertex_descriptor vertex_descriptor;
-    typedef typename graph_traits<Graph>::vertex_iterator vertex_iterator;
     typedef typename graph_traits<Graph>::edges_size_type edges_size_type;
 
     typedef typename property_traits<IncomingMap>::value_type incoming_type;
@@ -974,10 +967,7 @@ namespace boost {
     using boost::detail::graph::divide_centrality_by_two;       
     using boost::graph::parallel::process_group;
     
-    typedef typename graph_traits<Graph>::vertex_iterator vertex_iterator;
-    typedef typename graph_traits<Graph>::edge_iterator edge_iterator;
     typedef typename graph_traits<Graph>::vertex_descriptor vertex_descriptor;
-    typedef typename graph_traits<Graph>::vertices_size_type vertices_size_type;
 
     typedef typename property_traits<DistanceMap>::value_type distance_type;
     typedef typename property_traits<DependencyMap>::value_type dependency_type;
@@ -1064,10 +1054,7 @@ namespace boost {
   {
     using boost::detail::graph::update_centrality;
 
-    typedef typename graph_traits<Graph>::vertex_iterator vertex_iterator;
     typedef typename graph_traits<Graph>::vertex_descriptor vertex_descriptor;
-
-    typedef typename property_traits<IncomingMap>::value_type incoming_type;
 
     // Initialize for this iteration
     BGL_FORALL_VERTICES_T(w, g, Graph) {
@@ -1137,12 +1124,7 @@ namespace boost {
     using boost::detail::graph::divide_centrality_by_two;       
     using boost::graph::parallel::process_group;
 
-    typedef typename graph_traits<Graph>::vertex_iterator vertex_iterator;
-    typedef typename graph_traits<Graph>::edge_iterator edge_iterator;
     typedef typename graph_traits<Graph>::vertex_descriptor vertex_descriptor;
-    typedef typename graph_traits<Graph>::vertices_size_type vertices_size_type;
-
-    typedef typename property_traits<DistanceMap>::value_type distance_type;
 
     typedef ProcessGroup process_group_type;
 
@@ -1352,10 +1334,6 @@ namespace graph { namespace parallel { namespace detail {
     typedef typename graph_traits<Graph>::degree_size_type degree_size_type;
     typedef typename graph_traits<Graph>::edges_size_type edges_size_type;
     typedef typename graph_traits<Graph>::vertex_descriptor vertex_descriptor;
-    typedef typename mpl::if_c<(is_same<CentralityMap, 
-                                        dummy_property_map>::value),
-                                         EdgeCentralityMap, 
-                               CentralityMap>::type a_centrality_map;
 
     typename graph_traits<Graph>::vertices_size_type V = num_vertices(g);
     
@@ -1389,7 +1367,7 @@ namespace graph { namespace parallel { namespace detail {
   };
 
   template<>
-  struct brandes_betweenness_centrality_dispatch1<boost::detail::error_property_not_found> 
+  struct brandes_betweenness_centrality_dispatch1<boost::param_not_found> 
   {
     template<typename Graph, typename CentralityMap, typename EdgeCentralityMap, 
              typename VertexIndexMap, typename Buffer>
@@ -1397,7 +1375,7 @@ namespace graph { namespace parallel { namespace detail {
     run(const Graph& g, CentralityMap centrality, EdgeCentralityMap edge_centrality_map, 
         VertexIndexMap vertex_index, Buffer sources,
         typename graph_traits<Graph>::edges_size_type delta,
-        boost::detail::error_property_not_found)
+        boost::param_not_found)
     {
       boost::graph::parallel::detail::brandes_betweenness_centrality_dispatch2(
        g, centrality, edge_centrality_map, vertex_index, sources, delta);
@@ -1417,7 +1395,8 @@ brandes_betweenness_centrality(const Graph& g,
   typedef queue<typename graph_traits<Graph>::vertex_descriptor> queue_t;
   queue_t q;
 
-  typedef typename property_value<named_params, edge_weight_t>::type ew;
+  typedef typename get_param_type<edge_weight_t, named_params>::type ew_param;
+  typedef typename detail::choose_impl_result<mpl::true_, Graph, ew_param, edge_weight_t>::type ew;
   graph::parallel::detail::brandes_betweenness_centrality_dispatch1<ew>::run(
     g, 
     choose_param(get_param(params, vertex_centrality), 
@@ -1427,7 +1406,7 @@ brandes_betweenness_centrality(const Graph& g,
     choose_const_pmap(get_param(params, vertex_index), g, vertex_index),
     choose_param(get_param(params, buffer_param_t()), boost::ref(q)),
     choose_param(get_param(params, lookahead_t()), 0),
-    get_param(params, edge_weight));
+    choose_const_pmap(get_param(params, edge_weight), g, edge_weight));
 }
 
 template<typename Graph, typename CentralityMap>
@@ -1471,9 +1450,6 @@ non_distributed_brandes_betweenness_centrality(const ProcessGroup& pg,
                                                VertexIndexMap vertex_index,
                                                Buffer sources)
 {
-  typedef typename property_traits<DistanceMap>::value_type distance_type;
-  typedef static_property_map<distance_type> WeightMap;
-  
   detail::graph::brandes_unweighted_shortest_paths shortest_paths;
   
   graph::parallel::detail::non_distributed_brandes_betweenness_centrality_impl(pg, g, centrality, 
@@ -1527,7 +1503,6 @@ namespace detail { namespace graph {
                                                            Buffer sources)
   {
     typedef typename graph_traits<Graph>::degree_size_type degree_size_type;
-    typedef typename graph_traits<Graph>::vertex_descriptor vertex_descriptor;
     typedef typename graph_traits<Graph>::edge_descriptor edge_descriptor;
     typedef typename mpl::if_c<(is_same<CentralityMap, 
                                         dummy_property_map>::value),
@@ -1564,7 +1539,6 @@ namespace detail { namespace graph {
                                                            Buffer sources)
   {
     typedef typename graph_traits<Graph>::degree_size_type degree_size_type;
-    typedef typename graph_traits<Graph>::vertex_descriptor vertex_descriptor;
     typedef typename graph_traits<Graph>::edge_descriptor edge_descriptor;
     typedef typename mpl::if_c<(is_same<CentralityMap, 
                                         dummy_property_map>::value),
@@ -1605,14 +1579,14 @@ namespace detail { namespace graph {
   };
 
   template<>
-  struct non_distributed_brandes_betweenness_centrality_dispatch1<detail::error_property_not_found>
+  struct non_distributed_brandes_betweenness_centrality_dispatch1<param_not_found>
   {
     template<typename ProcessGroup, typename Graph, typename CentralityMap, 
              typename EdgeCentralityMap, typename VertexIndexMap, typename Buffer>
     static void 
     run(const ProcessGroup& pg, const Graph& g, CentralityMap centrality, 
         EdgeCentralityMap edge_centrality_map, VertexIndexMap vertex_index,
-        Buffer sources, detail::error_property_not_found)
+        Buffer sources, param_not_found)
     {
       non_distributed_brandes_betweenness_centrality_dispatch2(pg, g, centrality, edge_centrality_map,
                                                                vertex_index, sources);
@@ -1631,7 +1605,8 @@ non_distributed_brandes_betweenness_centrality(const ProcessGroup& pg, const Gra
   typedef queue<int> queue_t;
   queue_t q;
 
-  typedef typename property_value<named_params, edge_weight_t>::type ew;
+  typedef typename get_param_type<edge_weight_t, named_params>::type ew_param;
+  typedef typename detail::choose_impl_result<mpl::true_, Graph, ew_param, edge_weight_t>::type ew;
   detail::graph::non_distributed_brandes_betweenness_centrality_dispatch1<ew>::run(
     pg, g, 
     choose_param(get_param(params, vertex_centrality), 
@@ -1640,7 +1615,7 @@ non_distributed_brandes_betweenness_centrality(const ProcessGroup& pg, const Gra
                  dummy_property_map()),
     choose_const_pmap(get_param(params, vertex_index), g, vertex_index),
     choose_param(get_param(params, buffer_param_t()),  boost::ref(q)),
-    get_param(params, edge_weight));
+    choose_const_pmap(get_param(params, edge_weight), g, edge_weight));
 }
 
 template<typename ProcessGroup, typename Graph, typename CentralityMap>

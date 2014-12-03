@@ -1,6 +1,6 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
 
 // Use, modification and distribution is subject to the Boost Software License,
 // Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
@@ -35,7 +35,6 @@ namespace detail { namespace overlay
     template <typename P>
     std::ostream& operator<<(std::ostream &os, turn_info<P> const& info)
     {
-        typename geometry::coordinate_type<P>::type d = info.distance;
         os  << "\t"
             << " src " << info.seg_id.source_index
             << " seg " << info.seg_id.segment_index
@@ -54,7 +53,7 @@ namespace detail { namespace overlay
             << " nxt seg " << info.travels_to_vertex_index
             << " , ip " << info.travels_to_ip_index
             << " , or " << info.next_ip_index
-            << " dst " << double(d)
+            << " frac " << info.fraction
             << info.visit_state;
         if (info.flagged)
         {

@@ -135,9 +135,9 @@ void AMCPProtocolStrategy::Parse(const TCHAR* pData, int charCount, ClientInfoPt
 void AMCPProtocolStrategy::ProcessMessage(const std::wstring& message, ClientInfoPtr& pClientInfo)
 {	
 	if(message.length() < 512)
-		CASPAR_LOG(info) << L"Received message from " << pClientInfo->print() << ": " << message << L"\\r\\n";
+		CASPAR_LOG(info) << L"Received message from " << pClientInfo->print() << L": " << message << L"\\r\\n";
 	else
-		CASPAR_LOG(info) << L"Received long message from " << pClientInfo->print() << ": " << message.substr(0, 510) << " [...]\\r\\n";
+		CASPAR_LOG(info) << L"Received long message from " << pClientInfo->print() << L": " << message.substr(0, 510) << L" [...]\\r\\n";
 	
 	bool bError = true;
 	MessageParserState state = New;

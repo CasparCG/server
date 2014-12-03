@@ -374,7 +374,7 @@ struct server::implementation : boost::noncopyable
 				pt.get(L"configuration.thumbnails.generate-delay-millis", 2000),
 				&image::write_cropped_png,
 				media_info_repo_,
-				pt.get(L"configuration.thumbnails.mipmap", true)));
+				pt.get(L"configuration.thumbnails.mipmap", false)));
 
 		CASPAR_LOG(info) << L"Initialized thumbnail generator.";
 	}
@@ -405,10 +405,13 @@ struct server::implementation : boost::noncopyable
 	{
 		initial_media_info_thread_ = boost::thread([this]
 		{
-			for (boost::filesystem::wrecursive_directory_iterator iter(env::media_folder()), end; iter != end; ++iter)
+			for (boost::filesystem::recursive_directory_iterator iter(env::media_folder()), end; iter != end; ++iter)
 			{
 				if (running_)
-					media_info_repo_->get(iter->path().file_string());
+				{
+					CASPAR_LOG(trace) << L"Retrieving information about file " << iter->path();
+					media_info_repo_->get(iter->path().wstring());
+				}
 				else
 				{
 					CASPAR_LOG(info) << L"Initial media information retrieval aborted.";

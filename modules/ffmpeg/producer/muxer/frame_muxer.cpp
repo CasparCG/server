@@ -82,6 +82,7 @@ struct frame_muxer::implementation : boost::noncopyable
 	
 	std::unique_ptr<filter>							filter_;
 	const std::wstring								filter_str_;
+	const bool										multithreaded_filter_;
 	const bool										thumbnail_mode_;
 	bool											force_deinterlacing_;
 	const core::channel_layout						audio_channel_layout_;
@@ -90,6 +91,7 @@ struct frame_muxer::implementation : boost::noncopyable
 			double in_fps,
 			const safe_ptr<core::frame_factory>& frame_factory,
 			const std::wstring& filter_str,
+			bool multithreaded_filter,
 			bool thumbnail_mode,
 			const core::channel_layout& audio_channel_layout)
 		: display_mode_(display_mode::invalid)
@@ -100,6 +102,7 @@ struct frame_muxer::implementation : boost::noncopyable
 		, audio_cadence_(format_desc_.audio_cadence)
 		, frame_factory_(frame_factory)
 		, filter_str_(filter_str)
+		, multithreaded_filter_(multithreaded_filter)
 		, thumbnail_mode_(thumbnail_mode)
 		, force_deinterlacing_(false)
 		, audio_channel_layout_(audio_channel_layout)
@@ -361,7 +364,8 @@ struct frame_muxer::implementation : boost::noncopyable
 				boost::rational<int>(frame->sample_aspect_ratio.num, frame->sample_aspect_ratio.den),
 				static_cast<AVPixelFormat>(frame->format),
 				std::vector<AVPixelFormat>(),
-				narrow(filter_str)));
+				narrow(filter_str),
+				multithreaded_filter_));
 			if (!thumbnail_mode_)
 				CASPAR_LOG(info) << L"[frame_muxer] " << display_mode::print(display_mode_) << L" " << print_mode(frame->width, frame->height, in_fps_, frame->interlaced_frame > 0);
 		}
@@ -395,8 +399,9 @@ frame_muxer::frame_muxer(
 		const safe_ptr<core::frame_factory>& frame_factory,
 		bool thumbnail_mode,
 		const core::channel_layout& audio_channel_layout,
-		const std::wstring& filter)
-	: impl_(new implementation(in_fps, frame_factory, filter, thumbnail_mode, audio_channel_layout)){}
+		const std::wstring& filter,
+		bool multithreaded_filter)
+	: impl_(new implementation(in_fps, frame_factory, filter, multithreaded_filter, thumbnail_mode, audio_channel_layout)){}
 void frame_muxer::push(const std::shared_ptr<AVFrame>& video_frame, int hints){impl_->push(video_frame, hints);}
 void frame_muxer::push(const std::shared_ptr<core::audio_buffer>& audio_samples){return impl_->push(audio_samples);}
 std::shared_ptr<basic_frame> frame_muxer::poll(){return impl_->poll();}

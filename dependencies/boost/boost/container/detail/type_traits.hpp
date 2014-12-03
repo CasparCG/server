@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 // (C) Copyright John Maddock 2000.
-// (C) Copyright Ion Gaztanaga 2005-2011.
+// (C) Copyright Ion Gaztanaga 2005-2013.
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
@@ -12,22 +12,28 @@
 //
 //////////////////////////////////////////////////////////////////////////////
 
-#ifndef BOOST_CONTAINERS_CONTAINER_DETAIL_TYPE_TRAITS_HPP
-#define BOOST_CONTAINERS_CONTAINER_DETAIL_TYPE_TRAITS_HPP
+#ifndef BOOST_CONTAINER_CONTAINER_DETAIL_TYPE_TRAITS_HPP
+#define BOOST_CONTAINER_CONTAINER_DETAIL_TYPE_TRAITS_HPP
 
-#if (defined _MSC_VER) && (_MSC_VER >= 1200)
+#if defined(_MSC_VER)
 #  pragma once
 #endif
 
-#include "config_begin.hpp"
-
-#include <boost/move/move.hpp>
+#include <boost/container/detail/config_begin.hpp>
+#include <boost/container/detail/workaround.hpp>
 
 namespace boost {
-namespace container { 
-namespace containers_detail {
+namespace container {
+namespace container_detail {
 
 struct nat{};
+
+template <typename U>
+struct LowPriorityConversion
+{
+   // Convertible from T with user-defined-conversion rank.
+   LowPriorityConversion(const U&) { }
+};
 
 //boost::alignment_of yields to 10K lines of preprocessed code, so we
 //need an alternative
@@ -83,7 +89,7 @@ struct remove_reference<T&>
    typedef T type;
 };
 
-#ifndef BOOST_NO_RVALUE_REFERENCES
+#ifndef BOOST_NO_CXX11_RVALUE_REFERENCES
 
 template<class T>
 struct remove_reference<T&&>
@@ -92,6 +98,15 @@ struct remove_reference<T&&>
 };
 
 #else
+
+} // namespace container_detail {
+}  //namespace container {
+
+template<class T>
+class rv;
+
+namespace container {
+namespace container_detail {
 
 template<class T>
 struct remove_reference< ::boost::rv<T> >
@@ -157,6 +172,10 @@ template <class T>
 struct add_const_reference<T&>
 {  typedef T& type;   };
 
+template <class T>
+struct add_const
+{  typedef const T type;   };
+
 template <typename T, typename U>
 struct is_same
 {
@@ -194,10 +213,25 @@ struct remove_ref_const
    typedef typename remove_const< typename remove_reference<T>::type >::type type;
 };
 
-} // namespace containers_detail
-}  //namespace container { 
+template <class T>
+struct make_unsigned
+{
+   typedef T type;
+};
+
+template <> struct make_unsigned<bool> {};
+template <> struct make_unsigned<signed char>      {typedef unsigned char      type;};
+template <> struct make_unsigned<signed short>     {typedef unsigned short     type;};
+template <> struct make_unsigned<signed int>       {typedef unsigned int       type;};
+template <> struct make_unsigned<signed long>      {typedef unsigned long      type;};
+#ifdef BOOST_HAS_LONG_LONG
+template <> struct make_unsigned<signed long long> {typedef unsigned long long type;};
+#endif
+
+} // namespace container_detail
+}  //namespace container {
 }  //namespace boost {
 
 #include <boost/container/detail/config_end.hpp>
 
-#endif   //#ifndef BOOST_CONTAINERS_CONTAINER_DETAIL_TYPE_TRAITS_HPP
+#endif   //#ifndef BOOST_CONTAINER_CONTAINER_DETAIL_TYPE_TRAITS_HPP

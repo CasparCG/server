@@ -242,7 +242,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 		if(target_pix_fmt == PIX_FMT_BGRA)
 		{
 			auto size = avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write->image_data().begin(), PIX_FMT_BGRA, width, height);
-			CASPAR_VERIFY(size == write->image_data().size()); 
+			CASPAR_VERIFY(size == static_cast<int>(write->image_data().size()));
 		}
 		else
 		{
@@ -349,7 +349,7 @@ double read_fps(AVFormatContext& context, double fail_value)
 
 		AVRational time_base = video_context->time_base;
 
-		if(boost::filesystem2::path(context.filename).extension() == ".flv")
+		if(boost::filesystem::path(context.filename).extension().string() == ".flv")
 		{
 			try
 			{
@@ -437,7 +437,7 @@ bool is_valid_file(const std::wstring filename, const std::vector<std::wstring>&
 {
 	static std::vector<std::wstring> valid_exts = boost::assign::list_of(L".m2t")(L".mov")(L".mp4")(L".dv")(L".flv")(L".mpg")(L".wav")(L".mp3")(L".dnxhd")(L".h264")(L".prores");
 
-	auto ext = boost::to_lower_copy(boost::filesystem::wpath(filename).extension());
+	auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
 		
 	if(std::find(invalid_exts.begin(), invalid_exts.end(), ext) != invalid_exts.end())
 		return false;	
@@ -505,24 +505,24 @@ bool try_get_duration(const std::wstring filename, std::int64_t& duration, boost
 
 std::wstring probe_stem(const std::wstring stem, const std::vector<std::wstring>& invalid_exts)
 {
-	auto stem2 = boost::filesystem2::wpath(stem);
+	auto stem2 = boost::filesystem::path(stem);
 	auto dir = stem2.parent_path();
-	for(auto it = boost::filesystem2::wdirectory_iterator(dir); it != boost::filesystem2::wdirectory_iterator(); ++it)
+	for(auto it = boost::filesystem::directory_iterator(dir); it != boost::filesystem::directory_iterator(); ++it)
 	{
-		if(boost::iequals(it->path().stem(), stem2.filename()) && is_valid_file(it->path().file_string(), invalid_exts))
-			return it->path().file_string();
+		if(boost::iequals(it->path().stem().wstring(), stem2.filename().wstring()) && is_valid_file(it->path().wstring(), invalid_exts))
+			return it->path().wstring();
 	}
 	return L"";
 }
 
 std::wstring probe_stem(const std::wstring stem)
 {
-	auto stem2 = boost::filesystem2::wpath(stem);
+	auto stem2 = boost::filesystem::path(stem);
 	auto dir = stem2.parent_path();
-	for(auto it = boost::filesystem2::wdirectory_iterator(dir); it != boost::filesystem2::wdirectory_iterator(); ++it)
+	for(auto it = boost::filesystem::directory_iterator(dir); it != boost::filesystem::directory_iterator(); ++it)
 	{
-		if(boost::iequals(it->path().stem(), stem2.filename()) && is_valid_file(it->path().file_string()))
-			return it->path().file_string();
+		if(boost::iequals(it->path().stem().wstring(), stem2.filename().wstring()) && is_valid_file(it->path().wstring()))
+			return it->path().wstring();
 	}
 	return L"";
 }

@@ -20,6 +20,7 @@
 #include <boost/type_traits/is_floating_point.hpp>
 #include <boost/utility/enable_if.hpp>
 #include <boost/typeof/typeof.hpp>
+#include <boost/accumulators/accumulators_fwd.hpp>
 #include <boost/accumulators/numeric/functional_fwd.hpp>
 #include <boost/accumulators/numeric/detail/function1.hpp>
 #include <boost/accumulators/numeric/detail/function2.hpp>
@@ -166,6 +167,7 @@ namespace boost { namespace numeric
     {                                                                                           \
         op::Name const &Name = boost::detail::pod_singleton<op::Name>::instance;                \
     }                                                                                           \
+    BOOST_ACCUMULATORS_IGNORE_GLOBAL(Name)                                                      \
     /**/
 
     /// INTERNAL ONLY
@@ -243,14 +245,14 @@ namespace boost { namespace numeric
         };
 
         template<typename Left, typename Right, typename EnableIf>
-        struct average_base
+        struct fdiv_base
           : functional::divides<Left, Right>
         {};
 
         // partial specialization that promotes the arguments to double for
         // integral division.
         template<typename Left, typename Right>
-        struct average_base<Left, Right, typename enable_if<are_integral<Left, Right> >::type>
+        struct fdiv_base<Left, Right, typename enable_if<are_integral<Left, Right> >::type>
           : functional::divides<double const, double const>
         {};
 
@@ -346,8 +348,15 @@ namespace boost { namespace numeric
         {};
 
         template<typename Left, typename Right, typename LeftTag, typename RightTag>
+        struct fdiv
+          : fdiv_base<Left, Right, void>
+        {};
+
+        /// INTERNAL ONLY 
+        /// For back-compat only. Use fdiv.
+        template<typename Left, typename Right, typename LeftTag, typename RightTag>
         struct average
-          : average_base<Left, Right, void>
+          : fdiv<Left, Right, LeftTag, RightTag>
         {};
 
         template<typename Arg, typename Tag>
@@ -386,8 +395,13 @@ namespace boost { namespace numeric
           : boost::detail::function2<functional::max_assign<_1, _2, functional::tag<_1>, functional::tag<_2> > >
         {};
 
+        struct fdiv
+          : boost::detail::function2<functional::fdiv<_1, _2, functional::tag<_1>, functional::tag<_2> > >
+        {};
+
+        /// INTERNAL ONLY
         struct average
-          : boost::detail::function2<functional::average<_1, _2, functional::tag<_1>, functional::tag<_2> > >
+          : boost::detail::function2<functional::fdiv<_1, _2, functional::tag<_1>, functional::tag<_2> > >
         {};
 
         struct as_min
@@ -411,11 +425,21 @@ namespace boost { namespace numeric
     {
         op::min_assign const &min_assign = boost::detail::pod_singleton<op::min_assign>::instance;
         op::max_assign const &max_assign = boost::detail::pod_singleton<op::max_assign>::instance;
-        op::average const &average = boost::detail::pod_singleton<op::average>::instance;
+        op::fdiv const &fdiv = boost::detail::pod_singleton<op::fdiv>::instance;
+        op::fdiv const &average = boost::detail::pod_singleton<op::fdiv>::instance; ///< INTERNAL ONLY
         op::as_min const &as_min = boost::detail::pod_singleton<op::as_min>::instance;
         op::as_max const &as_max = boost::detail::pod_singleton<op::as_max>::instance;
         op::as_zero const &as_zero = boost::detail::pod_singleton<op::as_zero>::instance;
         op::as_one const &as_one = boost::detail::pod_singleton<op::as_one>::instance;
+
+        BOOST_ACCUMULATORS_IGNORE_GLOBAL(min_assign)
+        BOOST_ACCUMULATORS_IGNORE_GLOBAL(max_assign)
+        BOOST_ACCUMULATORS_IGNORE_GLOBAL(fdiv)
+        BOOST_ACCUMULATORS_IGNORE_GLOBAL(average)
+        BOOST_ACCUMULATORS_IGNORE_GLOBAL(as_min)
+        BOOST_ACCUMULATORS_IGNORE_GLOBAL(as_max)
+        BOOST_ACCUMULATORS_IGNORE_GLOBAL(as_zero)
+        BOOST_ACCUMULATORS_IGNORE_GLOBAL(as_one)
     }
 
     ///////////////////////////////////////////////////////////////////////////////

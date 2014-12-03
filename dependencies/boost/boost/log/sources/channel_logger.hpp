@@ -1,5 +1,5 @@
 /*
- *          Copyright Andrey Semashev 2007 - 2010.
+ *          Copyright Andrey Semashev 2007 - 2014.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -12,14 +12,10 @@
  * The header contains implementation of a logger with channel support.
  */
 
-#if (defined(_MSC_VER) && _MSC_VER > 1000)
-#pragma once
-#endif // _MSC_VER > 1000
-
 #ifndef BOOST_LOG_SOURCES_CHANNEL_LOGGER_HPP_INCLUDED_
 #define BOOST_LOG_SOURCES_CHANNEL_LOGGER_HPP_INCLUDED_
 
-#include <boost/log/detail/prologue.hpp>
+#include <boost/log/detail/config.hpp>
 #if !defined(BOOST_LOG_NO_THREADS)
 #include <boost/log/detail/light_rw_mutex.hpp>
 #endif // !defined(BOOST_LOG_NO_THREADS)
@@ -28,10 +24,15 @@
 #include <boost/log/sources/threading_models.hpp>
 #include <boost/log/sources/channel_feature.hpp>
 #include <boost/log/keywords/channel.hpp>
+#include <boost/log/detail/header.hpp>
+
+#ifdef BOOST_HAS_PRAGMA_ONCE
+#pragma once
+#endif
 
 namespace boost {
 
-namespace BOOST_LOG_NAMESPACE {
+BOOST_LOG_OPEN_NAMESPACE
 
 namespace sources {
 
@@ -46,13 +47,13 @@ class channel_logger :
         char,
         channel_logger< ChannelT >,
         single_thread_model,
-        typename features< channel< ChannelT > >::type
+        features< channel< ChannelT > >
     >
 {
     typedef typename channel_logger::logger_base base_type;
 
 public:
-    BOOST_LOG_FORWARD_LOGGER_CONSTRUCTORS_TEMPLATE(channel_logger)
+    BOOST_LOG_FORWARD_LOGGER_MEMBERS_TEMPLATE(channel_logger)
 
     explicit channel_logger(ChannelT const& channel) : base_type(keywords::channel = channel)
     {
@@ -68,13 +69,13 @@ class channel_logger_mt :
         char,
         channel_logger_mt< ChannelT >,
         multi_thread_model< boost::log::aux::light_rw_mutex >,
-        typename features< channel< ChannelT > >::type
+        features< channel< ChannelT > >
     >
 {
     typedef typename channel_logger_mt::logger_base base_type;
 
 public:
-    BOOST_LOG_FORWARD_LOGGER_CONSTRUCTORS_TEMPLATE(channel_logger_mt)
+    BOOST_LOG_FORWARD_LOGGER_MEMBERS_TEMPLATE(channel_logger_mt)
 
     explicit channel_logger_mt(ChannelT const& channel) : base_type(keywords::channel = channel)
     {
@@ -94,13 +95,13 @@ class wchannel_logger :
         wchar_t,
         wchannel_logger< ChannelT >,
         single_thread_model,
-        typename features< channel< ChannelT > >::type
+        features< channel< ChannelT > >
     >
 {
     typedef typename wchannel_logger::logger_base base_type;
 
 public:
-    BOOST_LOG_FORWARD_LOGGER_CONSTRUCTORS_TEMPLATE(wchannel_logger)
+    BOOST_LOG_FORWARD_LOGGER_MEMBERS_TEMPLATE(wchannel_logger)
 
     explicit wchannel_logger(ChannelT const& channel) : base_type(keywords::channel = channel)
     {
@@ -116,13 +117,13 @@ class wchannel_logger_mt :
         wchar_t,
         wchannel_logger< ChannelT >,
         multi_thread_model< boost::log::aux::light_rw_mutex >,
-        typename features< channel< ChannelT > >::type
+        features< channel< ChannelT > >
     >
 {
     typedef typename wchannel_logger_mt::logger_base base_type;
 
 public:
-    BOOST_LOG_FORWARD_LOGGER_CONSTRUCTORS_TEMPLATE(wchannel_logger_mt)
+    BOOST_LOG_FORWARD_LOGGER_MEMBERS_TEMPLATE(wchannel_logger_mt)
 
     explicit wchannel_logger_mt(ChannelT const& channel) : base_type(keywords::channel = channel)
     {
@@ -315,8 +316,10 @@ public:
 
 } // namespace sources
 
-} // namespace log
+BOOST_LOG_CLOSE_NAMESPACE // namespace log
 
 } // namespace boost
+
+#include <boost/log/detail/footer.hpp>
 
 #endif // BOOST_LOG_SOURCES_CHANNEL_LOGGER_HPP_INCLUDED_

@@ -20,7 +20,11 @@
 #include <boost/graph/numeric_values.hpp>
 #include <boost/graph/buffer_concepts.hpp>
 #include <boost/concept_check.hpp>
+#include <boost/type_traits/is_same.hpp>
+#include <boost/mpl/not.hpp>
+#include <boost/static_assert.hpp>
 #include <boost/detail/workaround.hpp>
+#include <boost/concept/assert.hpp>
 
 #include <boost/concept/detail/concept_def.hpp>
 namespace boost
@@ -34,7 +38,6 @@ namespace boost
 // It is needed in order to allow us to write using boost::vertices as
 // needed for ADL when using vector_as_graph below.
 #if !defined(BOOST_NO_ARGUMENT_DEPENDENT_LOOKUP)            \
- && !BOOST_WORKAROUND(__GNUC__, <= 2)                       \
  && !BOOST_WORKAROUND(__BORLANDC__, BOOST_TESTED_AT(0x564))
 # define BOOST_VECTOR_AS_GRAPH_GRAPH_ADL_HACK
 #endif
@@ -54,12 +57,10 @@ typename T::ThereReallyIsNoMemberByThisNameInT vertices(T const&);
     BOOST_concept(Graph,(G))
     {
         typedef typename graph_traits<G>::vertex_descriptor vertex_descriptor;
+        typedef typename graph_traits<G>::edge_descriptor edge_descriptor;
         typedef typename graph_traits<G>::directed_category directed_category;
-        typedef typename graph_traits<G>::edge_parallel_category
-        edge_parallel_category;
-
-        typedef typename graph_traits<G>::traversal_category
-        traversal_category;
+        typedef typename graph_traits<G>::edge_parallel_category edge_parallel_category; 
+        typedef typename graph_traits<G>::traversal_category traversal_category;
 
         BOOST_CONCEPT_USAGE(Graph)
         {
@@ -74,11 +75,12 @@ typename T::ThereReallyIsNoMemberByThisNameInT vertices(T const&);
         : Graph<G>
     {
         typedef typename graph_traits<G>::edge_descriptor edge_descriptor;
-        typedef typename graph_traits<G>::out_edge_iterator
-        out_edge_iterator;
+        typedef typename graph_traits<G>::out_edge_iterator out_edge_iterator;
+        typedef typename graph_traits<G>::degree_size_type degree_size_type;
+        typedef typename graph_traits<G>::traversal_category traversal_category;
 
-        typedef typename graph_traits<G>::traversal_category
-        traversal_category;
+        BOOST_STATIC_ASSERT((boost::mpl::not_<boost::is_same<out_edge_iterator, void> >::value));
+        BOOST_STATIC_ASSERT((boost::mpl::not_<boost::is_same<degree_size_type, void> >::value));
 
         BOOST_CONCEPT_USAGE(IncidenceGraph) {
             BOOST_CONCEPT_ASSERT((MultiPassInputIterator<out_edge_iterator>));
@@ -122,6 +124,8 @@ typename T::ThereReallyIsNoMemberByThisNameInT vertices(T const&);
         BOOST_CONCEPT_ASSERT((Convertible<traversal_category,
             bidirectional_graph_tag>));
 
+        BOOST_STATIC_ASSERT((boost::mpl::not_<boost::is_same<in_edge_iterator, void> >::value));
+
         p = in_edges(v, g);
         n = in_degree(v, g);
         e = *p.first;
@@ -152,6 +156,8 @@ typename T::ThereReallyIsNoMemberByThisNameInT vertices(T const&);
         BOOST_CONCEPT_ASSERT((Convertible<traversal_category,
             adjacency_graph_tag>));
 
+        BOOST_STATIC_ASSERT((boost::mpl::not_<boost::is_same<adjacency_iterator, void> >::value));
+
         p = adjacent_vertices(v, g);
         v = *p.first;
         const_constraints(g);
@@ -176,6 +182,9 @@ typename T::ThereReallyIsNoMemberByThisNameInT vertices(T const&);
         BOOST_CONCEPT_ASSERT((MultiPassInputIterator<vertex_iterator>));
         BOOST_CONCEPT_ASSERT((Convertible<traversal_category,
             vertex_list_graph_tag>));
+
+        BOOST_STATIC_ASSERT((boost::mpl::not_<boost::is_same<vertex_iterator, void> >::value));
+        BOOST_STATIC_ASSERT((boost::mpl::not_<boost::is_same<vertices_size_type, void> >::value));
 
 #ifdef BOOST_VECTOR_AS_GRAPH_GRAPH_ADL_HACK
         // dwa 2003/7/11 -- This clearly shouldn't be necessary, but if
@@ -225,6 +234,9 @@ typename T::ThereReallyIsNoMemberByThisNameInT vertices(T const&);
         BOOST_CONCEPT_ASSERT((Assignable<edge_descriptor>));
         BOOST_CONCEPT_ASSERT((Convertible<traversal_category,
             edge_list_graph_tag>));
+
+        BOOST_STATIC_ASSERT((boost::mpl::not_<boost::is_same<edge_iterator, void> >::value));
+        BOOST_STATIC_ASSERT((boost::mpl::not_<boost::is_same<edges_size_type, void> >::value));
 
         p = edges(g);
         e = *p.first;
@@ -457,10 +469,10 @@ typename T::ThereReallyIsNoMemberByThisNameInT vertices(T const&);
 
             const_constraints(g);
         }
-        void const_constraints(const Graph& g)
+        void const_constraints(const Graph& g_)
         {
             typedef typename property_map<Graph, vertex_index_t>::const_type Map;
-            Map m = get(vertex_index, g);
+            Map m = get(vertex_index, g_);
             ignore_unused_variable_warning(m);
         }
     private:
@@ -484,10 +496,10 @@ typename T::ThereReallyIsNoMemberByThisNameInT vertices(T const&);
 
             const_constraints(g);
         }
-        void const_constraints(const Graph& g)
+        void const_constraints(const Graph& g_)
         {
             typedef typename property_map<Graph, edge_index_t>::const_type Map;
-            Map m = get(edge_index, g);
+            Map m = get(edge_index, g_);
             ignore_unused_variable_warning(m);
         }
     private:
@@ -529,8 +541,8 @@ typename T::ThereReallyIsNoMemberByThisNameInT vertices(T const&);
     {
         BOOST_CONCEPT_USAGE(NumericValue)
         {
-            function_requires< DefaultConstructible<Numeric> >();
-            function_requires< CopyConstructible<Numeric> >();
+            BOOST_CONCEPT_ASSERT(( DefaultConstructible<Numeric> ));
+            BOOST_CONCEPT_ASSERT(( CopyConstructible<Numeric> ));
             numeric_values<Numeric>::zero();
             numeric_values<Numeric>::infinity();
         }

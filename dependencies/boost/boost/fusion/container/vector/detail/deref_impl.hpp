@@ -7,9 +7,11 @@
 #if !defined(FUSION_DEREF_IMPL_05042005_1037)
 #define FUSION_DEREF_IMPL_05042005_1037
 
+#include <boost/fusion/support/config.hpp>
 #include <boost/mpl/at.hpp>
 #include <boost/fusion/support/detail/access.hpp>
 #include <boost/type_traits/is_const.hpp>
+#include <boost/mpl/if.hpp>
 
 namespace boost { namespace fusion
 {
@@ -29,17 +31,18 @@ namespace boost { namespace fusion
                 typedef typename Iterator::vector vector;
                 typedef typename Iterator::index index;
                 typedef typename mpl::at<
-                    typename vector::types, index> 
+                    typename vector::types, index>::type
                 element;
                 
                 typedef typename
-                    mpl::eval_if<
+                    mpl::if_<
                         is_const<vector>
-                      , fusion::detail::cref_result<element>
-                      , fusion::detail::ref_result<element>
+                      , typename fusion::detail::cref_result<element>::type
+                      , typename fusion::detail::ref_result<element>::type
                     >::type
                 type;
 
+                BOOST_FUSION_GPU_ENABLED
                 static type
                 call(Iterator const& i)
                 {

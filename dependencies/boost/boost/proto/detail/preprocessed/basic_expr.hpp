@@ -44,19 +44,21 @@
         typedef basic_expr proto_grammar;
         typedef basic_default_domain proto_domain;
         typedef default_generator proto_generator;
-        typedef proto::tag::proto_expr fusion_tag;
+        typedef proto::tag::proto_expr<Tag, proto_domain> fusion_tag;
         typedef basic_expr proto_derived_expr;
         typedef void proto_is_expr_; 
         typedef Arg0 proto_child0; proto_child0 child0;
         typedef void proto_child1; typedef void proto_child2; typedef void proto_child3; typedef void proto_child4; typedef void proto_child5; typedef void proto_child6; typedef void proto_child7; typedef void proto_child8; typedef void proto_child9;
         
         
+        BOOST_FORCEINLINE
         basic_expr const &proto_base() const
         {
             return *this;
         }
         
         
+        BOOST_FORCEINLINE
         basic_expr &proto_base()
         {
             return *this;
@@ -65,6 +67,7 @@
         
         
         template<typename A0>
+        BOOST_FORCEINLINE
         static basic_expr const make(A0 &a0)
         {
             return detail::make_terminal(a0, static_cast<basic_expr *>(0), static_cast<proto_args *>(0));
@@ -72,6 +75,7 @@
         
         
         template<typename A0>
+        BOOST_FORCEINLINE
         static basic_expr const make(A0 const &a0)
         {
             return detail::make_terminal(a0, static_cast<basic_expr *>(0), static_cast<proto_args *>(0));
@@ -118,19 +122,21 @@
         typedef basic_expr proto_grammar;
         typedef basic_default_domain proto_domain;
         typedef default_generator proto_generator;
-        typedef proto::tag::proto_expr fusion_tag;
+        typedef proto::tag::proto_expr<Tag, proto_domain> fusion_tag;
         typedef basic_expr proto_derived_expr;
         typedef void proto_is_expr_; 
         typedef Arg0 proto_child0; proto_child0 child0;
         typedef void proto_child1; typedef void proto_child2; typedef void proto_child3; typedef void proto_child4; typedef void proto_child5; typedef void proto_child6; typedef void proto_child7; typedef void proto_child8; typedef void proto_child9;
         
         
+        BOOST_FORCEINLINE
         basic_expr const &proto_base() const
         {
             return *this;
         }
         
         
+        BOOST_FORCEINLINE
         basic_expr &proto_base()
         {
             return *this;
@@ -139,6 +145,7 @@
         
         
         template<typename A0>
+        BOOST_FORCEINLINE
         static basic_expr const make(A0 const &a0)
         {
             basic_expr that = {a0};
@@ -155,6 +162,7 @@
         
         
         
+        BOOST_FORCEINLINE
         operator address_of_hack_type_() const
         {
             return boost::addressof(this->child0);
@@ -198,19 +206,21 @@
         typedef basic_expr proto_grammar;
         typedef basic_default_domain proto_domain;
         typedef default_generator proto_generator;
-        typedef proto::tag::proto_expr fusion_tag;
+        typedef proto::tag::proto_expr<Tag, proto_domain> fusion_tag;
         typedef basic_expr proto_derived_expr;
         typedef void proto_is_expr_; 
         typedef Arg0 proto_child0; proto_child0 child0; typedef Arg1 proto_child1; proto_child1 child1;
         typedef void proto_child2; typedef void proto_child3; typedef void proto_child4; typedef void proto_child5; typedef void proto_child6; typedef void proto_child7; typedef void proto_child8; typedef void proto_child9;
         
         
+        BOOST_FORCEINLINE
         basic_expr const &proto_base() const
         {
             return *this;
         }
         
         
+        BOOST_FORCEINLINE
         basic_expr &proto_base()
         {
             return *this;
@@ -219,6 +229,7 @@
         
         
         template<typename A0 , typename A1>
+        BOOST_FORCEINLINE
         static basic_expr const make(A0 const &a0 , A1 const &a1)
         {
             basic_expr that = {a0 , a1};
@@ -266,19 +277,21 @@
         typedef basic_expr proto_grammar;
         typedef basic_default_domain proto_domain;
         typedef default_generator proto_generator;
-        typedef proto::tag::proto_expr fusion_tag;
+        typedef proto::tag::proto_expr<Tag, proto_domain> fusion_tag;
         typedef basic_expr proto_derived_expr;
         typedef void proto_is_expr_; 
         typedef Arg0 proto_child0; proto_child0 child0; typedef Arg1 proto_child1; proto_child1 child1; typedef Arg2 proto_child2; proto_child2 child2;
         typedef void proto_child3; typedef void proto_child4; typedef void proto_child5; typedef void proto_child6; typedef void proto_child7; typedef void proto_child8; typedef void proto_child9;
         
         
+        BOOST_FORCEINLINE
         basic_expr const &proto_base() const
         {
             return *this;
         }
         
         
+        BOOST_FORCEINLINE
         basic_expr &proto_base()
         {
             return *this;
@@ -287,6 +300,7 @@
         
         
         template<typename A0 , typename A1 , typename A2>
+        BOOST_FORCEINLINE
         static basic_expr const make(A0 const &a0 , A1 const &a1 , A2 const &a2)
         {
             basic_expr that = {a0 , a1 , a2};
@@ -334,19 +348,21 @@
         typedef basic_expr proto_grammar;
         typedef basic_default_domain proto_domain;
         typedef default_generator proto_generator;
-        typedef proto::tag::proto_expr fusion_tag;
+        typedef proto::tag::proto_expr<Tag, proto_domain> fusion_tag;
         typedef basic_expr proto_derived_expr;
         typedef void proto_is_expr_; 
         typedef Arg0 proto_child0; proto_child0 child0; typedef Arg1 proto_child1; proto_child1 child1; typedef Arg2 proto_child2; proto_child2 child2; typedef Arg3 proto_child3; proto_child3 child3;
         typedef void proto_child4; typedef void proto_child5; typedef void proto_child6; typedef void proto_child7; typedef void proto_child8; typedef void proto_child9;
         
         
+        BOOST_FORCEINLINE
         basic_expr const &proto_base() const
         {
             return *this;
         }
         
         
+        BOOST_FORCEINLINE
         basic_expr &proto_base()
         {
             return *this;
@@ -355,6 +371,7 @@
         
         
         template<typename A0 , typename A1 , typename A2 , typename A3>
+        BOOST_FORCEINLINE
         static basic_expr const make(A0 const &a0 , A1 const &a1 , A2 const &a2 , A3 const &a3)
         {
             basic_expr that = {a0 , a1 , a2 , a3};
@@ -402,19 +419,21 @@
         typedef basic_expr proto_grammar;
         typedef basic_default_domain proto_domain;
         typedef default_generator proto_generator;
-        typedef proto::tag::proto_expr fusion_tag;
+        typedef proto::tag::proto_expr<Tag, proto_domain> fusion_tag;
         typedef basic_expr proto_derived_expr;
         typedef void proto_is_expr_; 
         typedef Arg0 proto_child0; proto_child0 child0; typedef Arg1 proto_child1; proto_child1 child1; typedef Arg2 proto_child2; proto_child2 child2; typedef Arg3 proto_child3; proto_child3 child3; typedef Arg4 proto_child4; proto_child4 child4;
         typedef void proto_child5; typedef void proto_child6; typedef void proto_child7; typedef void proto_child8; typedef void proto_child9;
         
         
+        BOOST_FORCEINLINE
         basic_expr const &proto_base() const
         {
             return *this;
         }
         
         
+        BOOST_FORCEINLINE
         basic_expr &proto_base()
         {
             return *this;
@@ -423,6 +442,7 @@
         
         
         template<typename A0 , typename A1 , typename A2 , typename A3 , typename A4>
+        BOOST_FORCEINLINE
         static basic_expr const make(A0 const &a0 , A1 const &a1 , A2 const &a2 , A3 const &a3 , A4 const &a4)
         {
             basic_expr that = {a0 , a1 , a2 , a3 , a4};
@@ -470,19 +490,21 @@
         typedef basic_expr proto_grammar;
         typedef basic_default_domain proto_domain;
         typedef default_generator proto_generator;
-        typedef proto::tag::proto_expr fusion_tag;
+        typedef proto::tag::proto_expr<Tag, proto_domain> fusion_tag;
         typedef basic_expr proto_derived_expr;
         typedef void proto_is_expr_; 
         typedef Arg0 proto_child0; proto_child0 child0; typedef Arg1 proto_child1; proto_child1 child1; typedef Arg2 proto_child2; proto_child2 child2; typedef Arg3 proto_child3; proto_child3 child3; typedef Arg4 proto_child4; proto_child4 child4; typedef Arg5 proto_child5; proto_child5 child5;
         typedef void proto_child6; typedef void proto_child7; typedef void proto_child8; typedef void proto_child9;
         
         
+        BOOST_FORCEINLINE
         basic_expr const &proto_base() const
         {
             return *this;
         }
         
         
+        BOOST_FORCEINLINE
         basic_expr &proto_base()
         {
             return *this;
@@ -491,6 +513,7 @@
         
         
         template<typename A0 , typename A1 , typename A2 , typename A3 , typename A4 , typename A5>
+        BOOST_FORCEINLINE
         static basic_expr const make(A0 const &a0 , A1 const &a1 , A2 const &a2 , A3 const &a3 , A4 const &a4 , A5 const &a5)
         {
             basic_expr that = {a0 , a1 , a2 , a3 , a4 , a5};
@@ -538,19 +561,21 @@
         typedef basic_expr proto_grammar;
         typedef basic_default_domain proto_domain;
         typedef default_generator proto_generator;
-        typedef proto::tag::proto_expr fusion_tag;
+        typedef proto::tag::proto_expr<Tag, proto_domain> fusion_tag;
         typedef basic_expr proto_derived_expr;
         typedef void proto_is_expr_; 
         typedef Arg0 proto_child0; proto_child0 child0; typedef Arg1 proto_child1; proto_child1 child1; typedef Arg2 proto_child2; proto_child2 child2; typedef Arg3 proto_child3; proto_child3 child3; typedef Arg4 proto_child4; proto_child4 child4; typedef Arg5 proto_child5; proto_child5 child5; typedef Arg6 proto_child6; proto_child6 child6;
         typedef void proto_child7; typedef void proto_child8; typedef void proto_child9;
         
         
+        BOOST_FORCEINLINE
         basic_expr const &proto_base() const
         {
             return *this;
         }
         
         
+        BOOST_FORCEINLINE
         basic_expr &proto_base()
         {
             return *this;
@@ -559,6 +584,7 @@
         
         
         template<typename A0 , typename A1 , typename A2 , typename A3 , typename A4 , typename A5 , typename A6>
+        BOOST_FORCEINLINE
         static basic_expr const make(A0 const &a0 , A1 const &a1 , A2 const &a2 , A3 const &a3 , A4 const &a4 , A5 const &a5 , A6 const &a6)
         {
             basic_expr that = {a0 , a1 , a2 , a3 , a4 , a5 , a6};
@@ -606,19 +632,21 @@
         typedef basic_expr proto_grammar;
         typedef basic_default_domain proto_domain;
         typedef default_generator proto_generator;
-        typedef proto::tag::proto_expr fusion_tag;
+        typedef proto::tag::proto_expr<Tag, proto_domain> fusion_tag;
         typedef basic_expr proto_derived_expr;
         typedef void proto_is_expr_; 
         typedef Arg0 proto_child0; proto_child0 child0; typedef Arg1 proto_child1; proto_child1 child1; typedef Arg2 proto_child2; proto_child2 child2; typedef Arg3 proto_child3; proto_child3 child3; typedef Arg4 proto_child4; proto_child4 child4; typedef Arg5 proto_child5; proto_child5 child5; typedef Arg6 proto_child6; proto_child6 child6; typedef Arg7 proto_child7; proto_child7 child7;
         typedef void proto_child8; typedef void proto_child9;
         
         
+        BOOST_FORCEINLINE
         basic_expr const &proto_base() const
         {
             return *this;
         }
         
         
+        BOOST_FORCEINLINE
         basic_expr &proto_base()
         {
             return *this;
@@ -627,6 +655,7 @@
         
         
         template<typename A0 , typename A1 , typename A2 , typename A3 , typename A4 , typename A5 , typename A6 , typename A7>
+        BOOST_FORCEINLINE
         static basic_expr const make(A0 const &a0 , A1 const &a1 , A2 const &a2 , A3 const &a3 , A4 const &a4 , A5 const &a5 , A6 const &a6 , A7 const &a7)
         {
             basic_expr that = {a0 , a1 , a2 , a3 , a4 , a5 , a6 , a7};
@@ -674,19 +703,21 @@
         typedef basic_expr proto_grammar;
         typedef basic_default_domain proto_domain;
         typedef default_generator proto_generator;
-        typedef proto::tag::proto_expr fusion_tag;
+        typedef proto::tag::proto_expr<Tag, proto_domain> fusion_tag;
         typedef basic_expr proto_derived_expr;
         typedef void proto_is_expr_; 
         typedef Arg0 proto_child0; proto_child0 child0; typedef Arg1 proto_child1; proto_child1 child1; typedef Arg2 proto_child2; proto_child2 child2; typedef Arg3 proto_child3; proto_child3 child3; typedef Arg4 proto_child4; proto_child4 child4; typedef Arg5 proto_child5; proto_child5 child5; typedef Arg6 proto_child6; proto_child6 child6; typedef Arg7 proto_child7; proto_child7 child7; typedef Arg8 proto_child8; proto_child8 child8;
         typedef void proto_child9;
         
         
+        BOOST_FORCEINLINE
         basic_expr const &proto_base() const
         {
             return *this;
         }
         
         
+        BOOST_FORCEINLINE
         basic_expr &proto_base()
         {
             return *this;
@@ -695,6 +726,7 @@
         
         
         template<typename A0 , typename A1 , typename A2 , typename A3 , typename A4 , typename A5 , typename A6 , typename A7 , typename A8>
+        BOOST_FORCEINLINE
         static basic_expr const make(A0 const &a0 , A1 const &a1 , A2 const &a2 , A3 const &a3 , A4 const &a4 , A5 const &a5 , A6 const &a6 , A7 const &a7 , A8 const &a8)
         {
             basic_expr that = {a0 , a1 , a2 , a3 , a4 , a5 , a6 , a7 , a8};
@@ -742,19 +774,21 @@
         typedef basic_expr proto_grammar;
         typedef basic_default_domain proto_domain;
         typedef default_generator proto_generator;
-        typedef proto::tag::proto_expr fusion_tag;
+        typedef proto::tag::proto_expr<Tag, proto_domain> fusion_tag;
         typedef basic_expr proto_derived_expr;
         typedef void proto_is_expr_; 
         typedef Arg0 proto_child0; proto_child0 child0; typedef Arg1 proto_child1; proto_child1 child1; typedef Arg2 proto_child2; proto_child2 child2; typedef Arg3 proto_child3; proto_child3 child3; typedef Arg4 proto_child4; proto_child4 child4; typedef Arg5 proto_child5; proto_child5 child5; typedef Arg6 proto_child6; proto_child6 child6; typedef Arg7 proto_child7; proto_child7 child7; typedef Arg8 proto_child8; proto_child8 child8; typedef Arg9 proto_child9; proto_child9 child9;
         
         
         
+        BOOST_FORCEINLINE
         basic_expr const &proto_base() const
         {
             return *this;
         }
         
         
+        BOOST_FORCEINLINE
         basic_expr &proto_base()
         {
             return *this;
@@ -763,6 +797,7 @@
         
         
         template<typename A0 , typename A1 , typename A2 , typename A3 , typename A4 , typename A5 , typename A6 , typename A7 , typename A8 , typename A9>
+        BOOST_FORCEINLINE
         static basic_expr const make(A0 const &a0 , A1 const &a1 , A2 const &a2 , A3 const &a3 , A4 const &a4 , A5 const &a5 , A6 const &a6 , A7 const &a7 , A8 const &a8 , A9 const &a9)
         {
             basic_expr that = {a0 , a1 , a2 , a3 , a4 , a5 , a6 , a7 , a8 , a9};

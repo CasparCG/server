@@ -51,7 +51,8 @@ public:
 		boost::rational<int> in_sample_aspect_ratio,
 		AVPixelFormat in_pix_fmt,
 		std::vector<AVPixelFormat> out_pix_fmts,
-		const std::string& filtergraph);
+		const std::string& filtergraph,
+		bool multithreaded = true);
 	filter(filter&& other);
 	filter& operator=(filter&& other);
 

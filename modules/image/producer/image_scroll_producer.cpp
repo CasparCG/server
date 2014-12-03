@@ -178,7 +178,7 @@ struct image_scroll_producer : public core::frame_producer
 				desc.planes.push_back(core::pixel_format_desc::plane(width_, format_desc_.height, 4));
 				auto frame = frame_factory->create_frame(reinterpret_cast<void*>(rand()), desc);
 
-				if(count >= frame->image_data().size())
+				if(count >= static_cast<int>(frame->image_data().size()))
 				{	
 					std::copy_n(bytes + count - frame->image_data().size(), frame->image_data().size(), frame->image_data().begin());
 					count -= frame->image_data().size();
@@ -207,7 +207,7 @@ struct image_scroll_producer : public core::frame_producer
 				desc.pix_fmt = core::pixel_format::bgra;
 				desc.planes.push_back(core::pixel_format_desc::plane(format_desc_.width, height_, 4));
 				auto frame = frame_factory->create_frame(reinterpret_cast<void*>(rand()), desc);
-				if(count >= frame->image_data().size())
+				if(count >= static_cast<int>(frame->image_data().size()))
 				{	
 					for(size_t y = 0; y < height_; ++y)
 						std::copy_n(bytes + i * format_desc_.width*4 + y * width_*4, format_desc_.width*4, frame->image_data().begin() + y * format_desc_.width*4);
@@ -370,7 +370,7 @@ safe_ptr<core::frame_producer> create_scroll_producer(
 			[&](const std::wstring& ex) -> bool
 			{					
 				return boost::filesystem::is_regular_file(
-						boost::filesystem::wpath(filename)
+						boost::filesystem::path(filename)
 								.replace_extension(ex));
 			});
 

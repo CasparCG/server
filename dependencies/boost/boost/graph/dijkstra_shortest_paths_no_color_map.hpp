@@ -41,7 +41,6 @@ namespace boost {
   {
     typedef typename graph_traits<Graph>::vertex_descriptor Vertex;
     typedef typename property_traits<DistanceMap>::value_type Distance;
-    typedef typename property_traits<WeightMap>::value_type Weight;
     
     typedef indirect_cmp<DistanceMap, DistanceCompare> DistanceIndirectCompare;
     DistanceIndirectCompare
@@ -92,7 +91,6 @@ namespace boost {
       }
   
       // Examine neighbors of min_vertex
-      typedef typename graph_traits<Graph>::edge_descriptor Edge;
       BGL_FORALL_OUTEDGES_T(min_vertex, current_edge, graph, Graph) {
         visitor.examine_edge(current_edge, graph);
         
@@ -113,16 +111,17 @@ namespace boost {
           distance_weight_combine, distance_compare);
   
         if (was_edge_relaxed) {
-          vertex_queue.update(neighbor_vertex);
           visitor.edge_relaxed(current_edge, graph);
+          if (is_neighbor_undiscovered) {
+            visitor.discover_vertex(neighbor_vertex, graph);
+            vertex_queue.push(neighbor_vertex);
+          } else {
+            vertex_queue.update(neighbor_vertex);
+          }
         } else {
           visitor.edge_not_relaxed(current_edge, graph);
         }
   
-        if (is_neighbor_undiscovered) {
-          visitor.discover_vertex(neighbor_vertex, graph);
-          vertex_queue.push(neighbor_vertex);
-        }
       } // end out edge iteration
   
       visitor.finish_vertex(min_vertex, graph);

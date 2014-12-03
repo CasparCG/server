@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2008-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2008-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -20,9 +20,9 @@
 #include <boost/mpl/assert.hpp>
 #include <boost/mpl/equal_to.hpp>
 #include <boost/static_assert.hpp>
-#include <boost/type_traits/remove_const.hpp>
 
 #include <boost/geometry/core/point_type.hpp>
+#include <boost/geometry/util/bare_type.hpp>
 
 namespace boost { namespace geometry
 {
@@ -58,7 +58,15 @@ template <typename T, typename G>
 struct dimension : dimension<point_tag, typename point_type<T, G>::type> {};
 
 template <typename P>
-struct dimension<point_tag, P> : traits::dimension<P> {};
+struct dimension<point_tag, P>
+    : traits::dimension<typename geometry::util::bare_type<P>::type>
+{
+    BOOST_MPL_ASSERT_MSG(
+        (traits::dimension<typename geometry::util::bare_type<P>::type>::value > 0),
+        INVALID_DIMENSION_VALUE,
+        (traits::dimension<typename geometry::util::bare_type<P>::type>)
+    );
+};
 
 } // namespace core_dispatch
 #endif
@@ -75,7 +83,7 @@ struct dimension
     : core_dispatch::dimension
         <
             typename tag<Geometry>::type,
-            typename boost::remove_const<Geometry>::type
+            typename geometry::util::bare_type<Geometry>::type
         >
 {};
 
@@ -89,7 +97,7 @@ inline void assert_dimension()
     BOOST_STATIC_ASSERT((
         boost::mpl::equal_to
         <
-            geometry::dimension<Geometry>,
+            boost::mpl::int_<geometry::dimension<Geometry>::value>,
             boost::mpl::int_<Dimensions>
         >::type::value
         ));
@@ -102,13 +110,13 @@ inline void assert_dimension()
 template <typename Geometry, int Dimensions>
 inline void assert_dimension_less_equal()
 {
-    BOOST_STATIC_ASSERT(( dimension<Geometry>::type::value <= Dimensions ));
+    BOOST_STATIC_ASSERT(( static_cast<int>(dimension<Geometry>::type::value) <= Dimensions ));
 }
 
 template <typename Geometry, int Dimensions>
 inline void assert_dimension_greater_equal()
 {
-    BOOST_STATIC_ASSERT(( dimension<Geometry>::type::value >= Dimensions ));
+    BOOST_STATIC_ASSERT(( static_cast<int>(dimension<Geometry>::type::value) >= Dimensions ));
 }
 
 /*!
@@ -118,7 +126,7 @@ inline void assert_dimension_greater_equal()
 template <typename G1, typename G2>
 inline void assert_dimension_equal()
 {
-    BOOST_STATIC_ASSERT(( dimension<G1>::type::value == dimension<G2>::type::value ));
+    BOOST_STATIC_ASSERT(( static_cast<size_t>(dimension<G1>::type::value) == static_cast<size_t>(dimension<G2>::type::value) ));
 }
 
 }} // namespace boost::geometry

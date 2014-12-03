@@ -101,7 +101,7 @@ void AMCPCommandQueue::AddCommand(AMCPCommandPtr pCurrentCommand)
 				}
 
 				if(pCurrentCommand->Execute()) 
-					CASPAR_LOG(debug) << "Executed command: " << print << L" on " << widen(executor_.name());
+					CASPAR_LOG(debug) << "Executed command: " << print;
 				else 
 					CASPAR_LOG(warning) << "Failed to execute command: " << print << L" on " << widen(executor_.name());
 			}

@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2005-2009. Distributed under the Boost
+// (C) Copyright Ion Gaztanaga 2005-2012. Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -11,7 +11,7 @@
 #ifndef BOOST_INTERPROCESS_DETAIL_MANAGED_MEMORY_IMPL_HPP
 #define BOOST_INTERPROCESS_DETAIL_MANAGED_MEMORY_IMPL_HPP
 
-#if (defined _MSC_VER) && (_MSC_VER >= 1200)
+#if defined(_MSC_VER)
 #  pragma once
 #endif
 
@@ -19,14 +19,10 @@
 #include <boost/interprocess/detail/workaround.hpp>
 
 #include <boost/interprocess/interprocess_fwd.hpp>
-#include <boost/interprocess/mem_algo/rbtree_best_fit.hpp>
-#include <boost/interprocess/sync/mutex_family.hpp>
 #include <boost/interprocess/detail/utilities.hpp>
 #include <boost/interprocess/detail/os_file_functions.hpp>
 #include <boost/interprocess/creation_tags.hpp>
-#include <boost/interprocess/sync/interprocess_mutex.hpp>
 #include <boost/interprocess/exceptions.hpp>
-#include <boost/interprocess/offset_ptr.hpp>
 #include <boost/interprocess/segment_manager.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
 //
@@ -38,7 +34,7 @@
 #include <boost/assert.hpp>
 
 //!\file
-//!Describes a named shared memory allocation user class. 
+//!Describes a named shared memory allocation user class.
 //!
 
 namespace boost {
@@ -49,7 +45,7 @@ template<class BasicManagedMemoryImpl>
 class create_open_func;
 
 template<
-         class CharType, 
+         class CharType,
          class MemoryAlgorithm,
          template<class IndexConfig> class IndexType
         >
@@ -58,14 +54,14 @@ struct segment_manager_type
    typedef segment_manager<CharType, MemoryAlgorithm, IndexType> type;
 };
 
-//!This class is designed to be a base class to classes that manage 
-//!creation of objects in a fixed size memory buffer. Apart 
-//!from allocating raw memory, the user can construct named objects. To 
+//!This class is designed to be a base class to classes that manage
+//!creation of objects in a fixed size memory buffer. Apart
+//!from allocating raw memory, the user can construct named objects. To
 //!achieve this, this class uses the reserved space provided by the allocation
 //!algorithm to place a named_allocator_algo, who takes care of name mappings.
 //!The class can be customized with the char type used for object names
 //!and the memory allocation algorithm to be used.*/
-template <  class CharType 
+template <  class CharType
          ,  class MemoryAlgorithm
          ,  template<class IndexConfig> class IndexType
          ,  std::size_t Offset = 0
@@ -94,15 +90,15 @@ class basic_managed_memory_impl
    typedef typename segment_manager::
       const_unique_iterator                           const_unique_iterator;
 
-   /// @cond
+   #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
 
-   typedef typename 
+   typedef typename
            segment_manager::char_ptr_holder_t         char_ptr_holder_t;
    //Experimental. Don't use.
 
    typedef typename segment_manager::multiallocation_chain  multiallocation_chain;
 
-   /// @endcond
+   #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 
    static const size_type PayloadPerAllocation = segment_manager::PayloadPerAllocation;
 
@@ -137,10 +133,10 @@ class basic_managed_memory_impl
    static bool shrink_to_fit(const char *filename)
    {
       typedef typename ManagedMemory::device_type device_type;
-      size_type new_size, old_size;
+      size_type new_size;
       try{
          ManagedMemory managed_memory(open_only, filename);
-         old_size = managed_memory.get_size();
+         managed_memory.get_size();
          managed_memory.self_t::shrink_to_fit();
          new_size = managed_memory.get_size();
       }
@@ -157,7 +153,7 @@ class basic_managed_memory_impl
    }
 
    //!Constructor. Allocates basic resources. Never throws.
-   basic_managed_memory_impl() 
+   basic_managed_memory_impl()
       : mp_header(0){}
 
    //!Destructor. Calls close. Never throws.
@@ -173,19 +169,19 @@ class basic_managed_memory_impl
       if(size < segment_manager::get_min_size())
          return false;
 
-      //This function should not throw. The index construction can 
+      //This function should not throw. The index construction can
       //throw if constructor allocates memory. So we must catch it.
       BOOST_TRY{
-         //Let's construct the allocator in memory            
+         //Let's construct the allocator in memory
          mp_header       = new(addr) segment_manager(size);
       }
       BOOST_CATCH(...){
          return false;
       }
       BOOST_CATCH_END
-      return true;    
+      return true;
    }
- 
+
    //!Connects to a segment manager in the reserved buffer. Never throws.
    bool  open_impl     (void *addr, size_type)
    {
@@ -196,7 +192,7 @@ class basic_managed_memory_impl
 
    //!Frees resources. Never throws.
    bool close_impl()
-   {  
+   {
       bool ret = mp_header != 0;
       mp_header = 0;
       return ret;
@@ -253,40 +249,40 @@ class basic_managed_memory_impl
    void zero_free_memory()
    {   mp_header->zero_free_memory(); }
 
-   //!Transforms an absolute address into an offset from base address. 
+   //!Transforms an absolute address into an offset from base address.
    //!The address must belong to the memory segment. Never throws.
    handle_t get_handle_from_address   (const void *ptr) const
    {
-      return (handle_t)(reinterpret_cast<const char*>(ptr) - 
-             reinterpret_cast<const char*>(this->get_address()));  
+      return (handle_t)(reinterpret_cast<const char*>(ptr) -
+             reinterpret_cast<const char*>(this->get_address()));
    }
 
    //!Returns true if the address belongs to the managed memory segment
    bool belongs_to_segment (const void *ptr) const
-   {  
-      return ptr >= this->get_address() && 
+   {
+      return ptr >= this->get_address() &&
              ptr <  (reinterpret_cast<const char*>(this->get_address()) + this->get_size());
    }
 
-   //!Transforms previously obtained offset into an absolute address in the 
+   //!Transforms previously obtained offset into an absolute address in the
    //!process space of the current process. Never throws.*/
    void *    get_address_from_handle (handle_t offset) const
    {  return reinterpret_cast<char*>(this->get_address()) + offset; }
 
    //!Searches for nbytes of free memory in the segment, marks the
-   //!memory as used and return the pointer to the memory. If no 
+   //!memory as used and return the pointer to the memory. If no
    //!memory is available throws a boost::interprocess::bad_alloc exception
    void* allocate             (size_type nbytes)
    {   return mp_header->allocate(nbytes);   }
 
-   //!Searches for nbytes of free memory in the segment, marks the 
-   //!memory as used and return the pointer to the memory. If no memory 
+   //!Searches for nbytes of free memory in the segment, marks the
+   //!memory as used and return the pointer to the memory. If no memory
    //!is available returns 0. Never throws.
    void* allocate             (size_type nbytes, std::nothrow_t nothrow)
    {   return mp_header->allocate(nbytes, nothrow);  }
 
    //!Allocates nbytes bytes aligned to "alignment" bytes. "alignment"
-   //!must be power of two. If no memory 
+   //!must be power of two. If no memory
    //!is available returns 0. Never throws.
    void * allocate_aligned (size_type nbytes, size_type alignment, std::nothrow_t nothrow)
    {   return mp_header->allocate_aligned(nbytes, alignment, nothrow);  }
@@ -296,42 +292,48 @@ class basic_managed_memory_impl
       allocation_command  (boost::interprocess::allocation_type command,   size_type limit_size,
                            size_type preferred_size,size_type &received_size,
                            T *reuse_ptr = 0)
-   {  
+   {
       return mp_header->allocation_command
          (command, limit_size, preferred_size, received_size, reuse_ptr);
    }
 
    //!Allocates nbytes bytes aligned to "alignment" bytes. "alignment"
-   //!must be power of two. If no 
+   //!must be power of two. If no
    //!memory is available throws a boost::interprocess::bad_alloc exception
    void * allocate_aligned(size_type nbytes, size_type alignment)
    {   return mp_header->allocate_aligned(nbytes, alignment);  }
 
-   /// @cond
+   #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
 
    //Experimental. Don't use.
 
-   //!Allocates n_elements of elem_size bytes.
-   multiallocation_chain allocate_many(size_type elem_bytes, size_type num_elements)
-   {  return mp_header->allocate_many(elem_bytes, num_elements); }
+   //!Allocates n_elements of elem_bytes bytes.
+   //!Throws bad_alloc on failure. chain.size() is not increased on failure.
+   void allocate_many(size_type elem_bytes, size_type n_elements, multiallocation_chain &chain)
+   {  mp_header->allocate_many(elem_bytes, n_elements, chain); }
 
-   //!Allocates n_elements, each one of elem_sizes[i] bytes.
-   multiallocation_chain allocate_many(const size_type *elem_sizes, size_type n_elements)
-   {  return mp_header->allocate_many(elem_sizes, n_elements); }
+   //!Allocates n_elements, each one of element_lengths[i]*sizeof_element bytes.
+   //!Throws bad_alloc on failure. chain.size() is not increased on failure.
+   void allocate_many(const size_type *element_lengths, size_type n_elements, size_type sizeof_element, multiallocation_chain &chain)
+   {  mp_header->allocate_many(element_lengths, n_elements, sizeof_element, chain); }
 
-   //!Allocates n_elements of elem_size bytes.
-   multiallocation_chain allocate_many(size_type elem_bytes, size_type num_elements, std::nothrow_t nothrow)
-   {  return mp_header->allocate_many(elem_bytes, num_elements, nothrow); }
+   //!Allocates n_elements of elem_bytes bytes.
+   //!Non-throwing version. chain.size() is not increased on failure.
+   void allocate_many(std::nothrow_t, size_type elem_bytes, size_type n_elements, multiallocation_chain &chain)
+   {  mp_header->allocate_many(std::nothrow_t(), elem_bytes, n_elements, chain); }
 
-   //!Allocates n_elements, each one of elem_sizes[i] bytes.
-   multiallocation_chain allocate_many(const size_type *elem_sizes, size_type n_elements, std::nothrow_t nothrow)
-   {  return mp_header->allocate_many(elem_sizes, n_elements, nothrow); }
+   //!Allocates n_elements, each one of
+   //!element_lengths[i]*sizeof_element bytes.
+   //!Non-throwing version. chain.size() is not increased on failure.
+   void allocate_many(std::nothrow_t, const size_type *elem_sizes, size_type n_elements, size_type sizeof_element, multiallocation_chain &chain)
+   {  mp_header->allocate_many(std::nothrow_t(), elem_sizes, n_elements, sizeof_element, chain); }
 
-   //!Allocates n_elements, each one of elem_sizes[i] bytes.
-   void deallocate_many(multiallocation_chain chain)
-   {  return mp_header->deallocate_many(boost::interprocess::move(chain)); }
+   //!Deallocates all elements contained in chain.
+   //!Never throws.
+   void deallocate_many(multiallocation_chain &chain)
+   {  mp_header->deallocate_many(chain); }
 
-   /// @endcond
+   #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 
    //!Marks previously allocated memory as free. Never throws.
    void  deallocate           (void *addr)
@@ -346,18 +348,18 @@ class basic_managed_memory_impl
 
    //!Creates a named object or array in memory
    //!
-   //!Allocates and constructs a T object or an array of T in memory, 
-   //!associates this with the given name and returns a pointer to the 
+   //!Allocates and constructs a T object or an array of T in memory,
+   //!associates this with the given name and returns a pointer to the
    //!created object. If an array is being constructed all objects are
    //!created using the same parameters given to this function.
    //!
    //!-> If the name was previously used, returns 0.
    //!
-   //!-> Throws boost::interprocess::bad_alloc if there is no available memory 
+   //!-> Throws boost::interprocess::bad_alloc if there is no available memory
    //!
    //!-> If T's constructor throws, the function throws that exception.
    //!
-   //!Memory is freed automatically if T's constructor throws and if an 
+   //!Memory is freed automatically if T's constructor throws and if an
    //!array was being constructed, destructors of created objects are called
    //!before freeing the memory.
    template <class T>
@@ -367,18 +369,18 @@ class basic_managed_memory_impl
 
    //!Finds or creates a named object or array in memory
    //!
-   //!Tries to find an object with the given name in memory. If 
-   //!found, returns the pointer to this pointer. If the object is not found, 
-   //!allocates and constructs a T object or an array of T in memory, 
-   //!associates this with the given name and returns a pointer to the 
+   //!Tries to find an object with the given name in memory. If
+   //!found, returns the pointer to this pointer. If the object is not found,
+   //!allocates and constructs a T object or an array of T in memory,
+   //!associates this with the given name and returns a pointer to the
    //!created object. If an array is being constructed all objects are
    //!created using the same parameters given to this function.
    //!
-   //!-> Throws boost::interprocess::bad_alloc if there is no available memory 
+   //!-> Throws boost::interprocess::bad_alloc if there is no available memory
    //!
    //!-> If T's constructor throws, the function throws that exception.
    //!
-   //!Memory is freed automatically if T's constructor throws and if an 
+   //!Memory is freed automatically if T's constructor throws and if an
    //!array was being constructed, destructors of created objects are called
    //!before freeing the memory.
    template <class T>
@@ -388,18 +390,18 @@ class basic_managed_memory_impl
 
    //!Creates a named object or array in memory
    //!
-   //!Allocates and constructs a T object or an array of T in memory, 
-   //!associates this with the given name and returns a pointer to the 
+   //!Allocates and constructs a T object or an array of T in memory,
+   //!associates this with the given name and returns a pointer to the
    //!created object. If an array is being constructed all objects are
    //!created using the same parameters given to this function.
    //!
    //!-> If the name was previously used, returns 0.
    //!
-   //!-> Returns 0 if there is no available memory 
+   //!-> Returns 0 if there is no available memory
    //!
    //!-> If T's constructor throws, the function throws that exception.
    //!
-   //!Memory is freed automatically if T's constructor throws and if an 
+   //!Memory is freed automatically if T's constructor throws and if an
    //!array was being constructed, destructors of created objects are called
    //!before freeing the memory.
    template <class T>
@@ -409,18 +411,18 @@ class basic_managed_memory_impl
 
    //!Finds or creates a named object or array in memory
    //!
-   //!Tries to find an object with the given name in memory. If 
-   //!found, returns the pointer to this pointer. If the object is not found, 
-   //!allocates and constructs a T object or an array of T in memory, 
-   //!associates this with the given name and returns a pointer to the 
+   //!Tries to find an object with the given name in memory. If
+   //!found, returns the pointer to this pointer. If the object is not found,
+   //!allocates and constructs a T object or an array of T in memory,
+   //!associates this with the given name and returns a pointer to the
    //!created object. If an array is being constructed all objects are
    //!created using the same parameters given to this function.
    //!
-   //!-> Returns 0 if there is no available memory 
+   //!-> Returns 0 if there is no available memory
    //!
    //!-> If T's constructor throws, the function throws that exception.
    //!
-   //!Memory is freed automatically if T's constructor throws and if an 
+   //!Memory is freed automatically if T's constructor throws and if an
    //!array was being constructed, destructors of created objects are called
    //!before freeing the memory.
    template <class T>
@@ -428,54 +430,54 @@ class basic_managed_memory_impl
       find_or_construct(char_ptr_holder_t name, std::nothrow_t nothrow)
    {   return mp_header->template find_or_construct<T>(name, nothrow);  }
 
-   //!Creates a named array from iterators in memory 
+   //!Creates a named array from iterators in memory
    //!
-   //!Allocates and constructs an array of T in memory, 
-   //!associates this with the given name and returns a pointer to the 
+   //!Allocates and constructs an array of T in memory,
+   //!associates this with the given name and returns a pointer to the
    //!created object. Each element in the array is created using the
    //!objects returned when dereferencing iterators as parameters
    //!and incrementing all iterators for each element.
    //!
    //!-> If the name was previously used, returns 0.
    //!
-   //!-> Throws boost::interprocess::bad_alloc if there is no available memory 
+   //!-> Throws boost::interprocess::bad_alloc if there is no available memory
    //!
    //!-> If T's constructor throws, the function throws that exception.
    //!
-   //!Memory is freed automatically if T's constructor throws and 
+   //!Memory is freed automatically if T's constructor throws and
    //!destructors of created objects are called before freeing the memory.
    template <class T>
    typename segment_manager::template construct_iter_proxy<T>::type
       construct_it(char_ptr_holder_t name)
    {   return mp_header->template construct_it<T>(name);  }
 
-   //!Finds or creates a named array from iterators in memory 
+   //!Finds or creates a named array from iterators in memory
    //!
-   //!Tries to find an object with the given name in memory. If 
-   //!found, returns the pointer to this pointer. If the object is not found, 
-   //!allocates and constructs an array of T in memory, 
-   //!associates this with the given name and returns a pointer to the 
+   //!Tries to find an object with the given name in memory. If
+   //!found, returns the pointer to this pointer. If the object is not found,
+   //!allocates and constructs an array of T in memory,
+   //!associates this with the given name and returns a pointer to the
    //!created object. Each element in the array is created using the
    //!objects returned when dereferencing iterators as parameters
    //!and incrementing all iterators for each element.
    //!
    //!-> If the name was previously used, returns 0.
    //!
-   //!-> Throws boost::interprocess::bad_alloc if there is no available memory 
+   //!-> Throws boost::interprocess::bad_alloc if there is no available memory
    //!
    //!-> If T's constructor throws, the function throws that exception.
    //!
-   //!Memory is freed automatically if T's constructor throws and 
+   //!Memory is freed automatically if T's constructor throws and
    //!destructors of created objects are called before freeing the memory.
    template <class T>
    typename segment_manager::template construct_iter_proxy<T>::type
       find_or_construct_it(char_ptr_holder_t name)
    {   return mp_header->template find_or_construct_it<T>(name);  }
 
-   //!Creates a named array from iterators in memory 
+   //!Creates a named array from iterators in memory
    //!
-   //!Allocates and constructs an array of T in memory, 
-   //!associates this with the given name and returns a pointer to the 
+   //!Allocates and constructs an array of T in memory,
+   //!associates this with the given name and returns a pointer to the
    //!created object. Each element in the array is created using the
    //!objects returned when dereferencing iterators as parameters
    //!and incrementing all iterators for each element.
@@ -486,19 +488,19 @@ class basic_managed_memory_impl
    //!
    //!-> If T's constructor throws, the function throws that exception.
    //!
-   //!Memory is freed automatically if T's constructor throws and 
+   //!Memory is freed automatically if T's constructor throws and
    //!destructors of created objects are called before freeing the memory.*/
    template <class T>
    typename segment_manager::template construct_iter_proxy<T>::type
       construct_it(char_ptr_holder_t name, std::nothrow_t nothrow)
    {   return mp_header->template construct_it<T>(name, nothrow);  }
 
-   //!Finds or creates a named array from iterators in memory 
+   //!Finds or creates a named array from iterators in memory
    //!
-   //!Tries to find an object with the given name in memory. If 
-   //!found, returns the pointer to this pointer. If the object is not found, 
-   //!allocates and constructs an array of T in memory, 
-   //!associates this with the given name and returns a pointer to the 
+   //!Tries to find an object with the given name in memory. If
+   //!found, returns the pointer to this pointer. If the object is not found,
+   //!allocates and constructs an array of T in memory,
+   //!associates this with the given name and returns a pointer to the
    //!created object. Each element in the array is created using the
    //!objects returned when dereferencing iterators as parameters
    //!and incrementing all iterators for each element.
@@ -509,7 +511,7 @@ class basic_managed_memory_impl
    //!
    //!-> If T's constructor throws, the function throws that exception.
    //!
-   //!Memory is freed automatically if T's constructor throws and 
+   //!Memory is freed automatically if T's constructor throws and
    //!destructors of created objects are called before freeing the memory.*/
    template <class T>
    typename segment_manager::template construct_iter_proxy<T>::type
@@ -541,11 +543,11 @@ class basic_managed_memory_impl
    //!
    //!Exception Handling:
    //!
-   //!When deleting a dynamically object or array, the Standard 
+   //!When deleting a dynamically object or array, the Standard
    //!does not guarantee that dynamically allocated memory, will be released.
-   //!Also, when deleting arrays, the Standard doesn't require calling 
-   //!destructors for the rest of the objects if for one of them the destructor 
-   //!terminated with an exception. 
+   //!Also, when deleting arrays, the Standard doesn't require calling
+   //!destructors for the rest of the objects if for one of them the destructor
+   //!terminated with an exception.
    //!
    //!Destroying an object:
    //!
@@ -554,13 +556,13 @@ class basic_managed_memory_impl
    //!
    //!Destroying an array:
    //!
-   //!When destroying an array, if a destructor throws, the rest of 
+   //!When destroying an array, if a destructor throws, the rest of
    //!destructors are called. If any of these throws, the exceptions are
    //!ignored. The name association will be erased, memory will be freed and
    //!the first exception will be thrown. This guarantees the unlocking of
    //!mutexes and other resources.
    //!
-   //!For all theses reasons, classes with throwing destructors are not 
+   //!For all theses reasons, classes with throwing destructors are not
    //!recommended.
    template <class T>
    bool destroy(const CharType *name)
@@ -572,7 +574,7 @@ class basic_managed_memory_impl
    //!
    //!Exception Handling:
    //!
-   //!When deleting a dynamically object, the Standard does not 
+   //!When deleting a dynamically object, the Standard does not
    //!guarantee that dynamically allocated memory will be released.
    //!
    //!Destroying an object:
@@ -580,10 +582,10 @@ class basic_managed_memory_impl
    //!If the destructor throws, the memory will be freed and that exception
    //!will be thrown.
    //!
-   //!For all theses reasons, classes with throwing destructors are not 
+   //!For all theses reasons, classes with throwing destructors are not
    //!recommended for  memory.
    template <class T>
-   bool destroy(const ipcdetail::unique_instance_t *const )
+   bool destroy(const unique_instance_t *const )
    {   return mp_header->template destroy<T>(unique_instance);  }
 
    //!Destroys the object (named, unique, or anonymous)
@@ -592,7 +594,7 @@ class basic_managed_memory_impl
    //!
    //!Exception Handling:
    //!
-   //!When deleting a dynamically object, the Standard does not 
+   //!When deleting a dynamically object, the Standard does not
    //!guarantee that dynamically allocated memory will be released.
    //!
    //!Destroying an object:
@@ -600,14 +602,14 @@ class basic_managed_memory_impl
    //!If the destructor throws, the memory will be freed and that exception
    //!will be thrown.
    //!
-   //!For all theses reasons, classes with throwing destructors are not 
+   //!For all theses reasons, classes with throwing destructors are not
    //!recommended for  memory.
    template <class T>
    void destroy_ptr(const T *ptr)
    {  mp_header->template destroy_ptr<T>(ptr); }
 
    //!Returns the name of an object created with construct/find_or_construct
-   //!functions. Does not throw
+   //!functions. If ptr points to an unique instance typeid(T).name() is returned.
    template<class T>
    static const char_type *get_instance_name(const T *ptr)
    {  return segment_manager::get_instance_name(ptr);   }
@@ -624,13 +626,13 @@ class basic_managed_memory_impl
    static size_type get_instance_length(const T *ptr)
    {  return segment_manager::get_instance_length(ptr); }
 
-   //!Preallocates needed index resources to optimize the 
+   //!Preallocates needed index resources to optimize the
    //!creation of "num" named objects in the  memory segment.
    //!Can throw boost::interprocess::bad_alloc if there is no enough memory.
    void reserve_named_objects(size_type num)
    {  mp_header->reserve_named_objects(num);  }
 
-   //!Preallocates needed index resources to optimize the 
+   //!Preallocates needed index resources to optimize the
    //!creation of "num" unique objects in the  memory segment.
    //!Can throw boost::interprocess::bad_alloc if there is no enough memory.
    void reserve_unique_objects(size_type num)
@@ -656,7 +658,7 @@ class basic_managed_memory_impl
    const_named_iterator named_begin() const
    {  return mp_header->named_begin(); }
 
-   //!Returns a constant iterator to the end of the index 
+   //!Returns a constant iterator to the end of the index
    //!storing the named allocations. NOT thread-safe. Never throws.
    const_named_iterator named_end() const
    {  return mp_header->named_end(); }
@@ -666,7 +668,7 @@ class basic_managed_memory_impl
    const_unique_iterator unique_begin() const
    {  return mp_header->unique_begin(); }
 
-   //!Returns a constant iterator to the end of the index 
+   //!Returns a constant iterator to the end of the index
    //!storing the unique allocations. NOT thread-safe. Never throws.
    const_unique_iterator unique_end() const
    {  return mp_header->unique_end(); }
@@ -701,14 +703,14 @@ class basic_managed_memory_impl
       get_deleter()
    {   return mp_header->template get_deleter<T>(); }
 
-   /// @cond
+   #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
    //!Tries to find a previous named allocation address. Returns a memory
    //!buffer and the object count. If not found returned pointer is 0.
    //!Never throws.
    template <class T>
    std::pair<T*, size_type> find_no_lock  (char_ptr_holder_t name)
    {   return mp_header->template find_no_lock<T>(name); }
-   /// @endcond
+   #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 
    protected:
    //!Swaps the segment manager's managed by this managed memory segment.
@@ -723,25 +725,45 @@ class basic_managed_memory_impl
 template<class BasicManagedMemoryImpl>
 class create_open_func
 {
+   typedef typename BasicManagedMemoryImpl::size_type size_type;
+
    public:
-   create_open_func(BasicManagedMemoryImpl * const frontend, ipcdetail::create_enum_t type)
+
+   create_open_func(BasicManagedMemoryImpl * const frontend, create_enum_t type)
       : m_frontend(frontend), m_type(type){}
 
-   bool operator()(void *addr, typename BasicManagedMemoryImpl::size_type size, bool created) const
-   {  
-      if(((m_type == ipcdetail::DoOpen)   &&  created) || 
-         ((m_type == ipcdetail::DoCreate) && !created))
+   bool operator()(void *addr, std::size_t size, bool created) const
+   {
+      if( ((m_type == DoOpen)   &&  created) ||
+          ((m_type == DoCreate) && !created) ||
+          //Check for overflow
+          size_type(-1) < size ){
          return false;
+      }
+      else if(created){
+         return m_frontend->create_impl(addr, static_cast<size_type>(size));
+      }
+      else{
+         return m_frontend->open_impl  (addr, static_cast<size_type>(size));
+      }
+   }
 
-      if(created)
-         return m_frontend->create_impl(addr, size);
-      else
-         return m_frontend->open_impl  (addr, size);
+   std::size_t get_min_size() const
+   {
+      const size_type sz = m_frontend->get_segment_manager()->get_min_size();
+      if(sz > std::size_t(-1)){
+         //The minimum size is not representable by std::size_t
+         BOOST_ASSERT(false);
+         return std::size_t(-1);
+      }
+      else{
+         return static_cast<std::size_t>(sz);
+      }
    }
 
    private:
    BasicManagedMemoryImpl *m_frontend;
-   ipcdetail::create_enum_t           m_type;
+   create_enum_t           m_type;
 };
 
 }  //namespace ipcdetail {

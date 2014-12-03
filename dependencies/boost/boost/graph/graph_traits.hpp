@@ -15,8 +15,12 @@
 #include <utility> /* Primarily for std::pair */
 #include <boost/tuple/tuple.hpp>
 #include <boost/mpl/if.hpp>
+#include <boost/mpl/eval_if.hpp>
 #include <boost/mpl/bool.hpp>
 #include <boost/mpl/not.hpp>
+#include <boost/mpl/has_xxx.hpp>
+#include <boost/mpl/void.hpp>
+#include <boost/mpl/identity.hpp>
 #include <boost/type_traits/is_same.hpp>
 #include <boost/iterator/iterator_categories.hpp>
 #include <boost/iterator/iterator_adaptor.hpp>
@@ -25,23 +29,47 @@
 
 namespace boost {
 
+    namespace detail {
+#define BOOST_GRAPH_MEMBER_OR_VOID(name) \
+      BOOST_MPL_HAS_XXX_TRAIT_DEF(name) \
+      template <typename T> struct BOOST_JOIN(get_member_, name) {typedef typename T::name type;}; \
+      template <typename T> struct BOOST_JOIN(get_opt_member_, name): \
+        boost::mpl::eval_if_c< \
+          BOOST_JOIN(has_, name)<T>::value, \
+          BOOST_JOIN(get_member_, name)<T>, \
+          boost::mpl::identity<void> > \
+        {};
+      BOOST_GRAPH_MEMBER_OR_VOID(adjacency_iterator)
+      BOOST_GRAPH_MEMBER_OR_VOID(out_edge_iterator)
+      BOOST_GRAPH_MEMBER_OR_VOID(in_edge_iterator)
+      BOOST_GRAPH_MEMBER_OR_VOID(vertex_iterator)
+      BOOST_GRAPH_MEMBER_OR_VOID(edge_iterator)
+      BOOST_GRAPH_MEMBER_OR_VOID(vertices_size_type)
+      BOOST_GRAPH_MEMBER_OR_VOID(edges_size_type)
+      BOOST_GRAPH_MEMBER_OR_VOID(degree_size_type)
+    }
+
     template <typename G>
     struct graph_traits {
+#define BOOST_GRAPH_PULL_OPT_MEMBER(name) \
+        typedef typename detail::BOOST_JOIN(get_opt_member_, name)<G>::type name;
+
         typedef typename G::vertex_descriptor      vertex_descriptor;
         typedef typename G::edge_descriptor        edge_descriptor;
-        typedef typename G::adjacency_iterator     adjacency_iterator;
-        typedef typename G::out_edge_iterator      out_edge_iterator;
-        typedef typename G::in_edge_iterator       in_edge_iterator;
-        typedef typename G::vertex_iterator        vertex_iterator;
-        typedef typename G::edge_iterator          edge_iterator;
+        BOOST_GRAPH_PULL_OPT_MEMBER(adjacency_iterator)
+        BOOST_GRAPH_PULL_OPT_MEMBER(out_edge_iterator)
+        BOOST_GRAPH_PULL_OPT_MEMBER(in_edge_iterator)
+        BOOST_GRAPH_PULL_OPT_MEMBER(vertex_iterator)
+        BOOST_GRAPH_PULL_OPT_MEMBER(edge_iterator)
 
         typedef typename G::directed_category      directed_category;
         typedef typename G::edge_parallel_category edge_parallel_category;
         typedef typename G::traversal_category     traversal_category;
 
-        typedef typename G::vertices_size_type     vertices_size_type;
-        typedef typename G::edges_size_type        edges_size_type;
-        typedef typename G::degree_size_type       degree_size_type;
+        BOOST_GRAPH_PULL_OPT_MEMBER(vertices_size_type)
+        BOOST_GRAPH_PULL_OPT_MEMBER(edges_size_type)
+        BOOST_GRAPH_PULL_OPT_MEMBER(degree_size_type)
+#undef BOOST_GRAPH_PULL_OPT_MEMBER
 
         static inline vertex_descriptor null_vertex();
     };
@@ -138,7 +166,13 @@ namespace boost {
     struct edge_list_graph_tag { };
     struct adjacency_matrix_tag { };
 
-    /** @name Taversal Category Traits
+    // Parallel traversal_category tags
+    struct distributed_graph_tag { };
+    struct distributed_vertex_list_graph_tag { };
+    struct distributed_edge_list_graph_tag { };
+#define BOOST_GRAPH_SEQUENTIAL_TRAITS_DEFINES_DISTRIBUTED_TAGS // Disable these from external versions of PBGL
+
+    /** @name Traversal Category Traits
      * These traits classify graph types by their supported methods of
      * vertex and edge traversal.
      */
@@ -218,28 +252,31 @@ namespace boost {
     //?? not the right place ?? Lee
     typedef boost::forward_traversal_tag multi_pass_input_iterator_tag;
 
-    // Forward declare graph_bundle_t property name (from
-    // boost/graph/properties.hpp, which includes this file) for
-    // bundled_result.
-    enum graph_bundle_t {graph_bundle};
+    namespace detail {
+      BOOST_MPL_HAS_XXX_TRAIT_DEF(graph_property_type)
+      BOOST_MPL_HAS_XXX_TRAIT_DEF(edge_property_type)
+      BOOST_MPL_HAS_XXX_TRAIT_DEF(vertex_property_type)
+
+      template <typename G> struct get_graph_property_type {typedef typename G::graph_property_type type;};
+      template <typename G> struct get_edge_property_type {typedef typename G::edge_property_type type;};
+      template <typename G> struct get_vertex_property_type {typedef typename G::vertex_property_type type;};
+    }
 
     template <typename G>
-    struct graph_property_type {
-      typedef typename G::graph_property_type type;
-    };
+    struct graph_property_type
+      : boost::mpl::eval_if<detail::has_graph_property_type<G>,
+                            detail::get_graph_property_type<G>,
+                            no_property> {};
     template <typename G>
-    struct edge_property_type {
-      typedef typename G::edge_property_type type;
-    };
+    struct edge_property_type
+      : boost::mpl::eval_if<detail::has_edge_property_type<G>,
+                            detail::get_edge_property_type<G>,
+                            no_property> {};
     template <typename G>
-    struct vertex_property_type {
-      typedef typename G::vertex_property_type type;
-    };
-
-    struct no_bundle { };
-    struct no_graph_bundle : no_bundle { };
-    struct no_vertex_bundle : no_bundle { };
-    struct no_edge_bundle : no_bundle { };
+    struct vertex_property_type
+      : boost::mpl::eval_if<detail::has_vertex_property_type<G>,
+                            detail::get_vertex_property_type<G>,
+                            no_property> {};
 
     template<typename G>
     struct graph_bundle_type {
@@ -281,7 +318,7 @@ namespace boost {
       // A helper metafunction for determining whether or not a type is
       // bundled.
       template <typename T>
-      struct is_no_bundle : mpl::bool_<is_convertible<T, no_bundle>::value>
+      struct is_no_bundle : mpl::bool_<is_same<T, no_property>::value>
       { };
     } // namespace graph_detail
 

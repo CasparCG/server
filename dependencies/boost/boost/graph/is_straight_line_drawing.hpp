@@ -9,7 +9,7 @@
 #define __IS_STRAIGHT_LINE_DRAWING_HPP__
 
 #include <boost/config.hpp>
-#include <boost/utility.hpp> //for next and prior
+#include <boost/next_prior.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/tuple/tuple_comparison.hpp>
 #include <boost/property_map/property_map.hpp>
@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <vector>
 #include <set>
+#include <map>
 
 
 
@@ -34,12 +35,12 @@ namespace boost
   // defines how far away from the endpoints of s1 and s2 we want to consider
   // an intersection.
 
-  bool intersects(double x1, double y1,
-                  double x2, double y2,
-                  double a1, double b1,
-                  double a2, double b2,
-                  double epsilon = 0.000001
-                  )
+  inline bool intersects(double x1, double y1,
+                         double x2, double y2,
+                         double a1, double b1,
+                         double a2, double b2,
+                         double epsilon = 0.000001
+                         )
   {
 
     if (x1 - x2 == 0)
@@ -105,11 +106,8 @@ namespace boost
   {
 
     typedef typename graph_traits<Graph>::vertex_descriptor vertex_t;
-    typedef typename graph_traits<Graph>::vertex_iterator vertex_iterator_t;
     typedef typename graph_traits<Graph>::edge_descriptor edge_t;
     typedef typename graph_traits<Graph>::edge_iterator edge_iterator_t;
-    typedef typename graph_traits<Graph>::edges_size_type e_size_t;
-    typedef typename graph_traits<Graph>::vertices_size_type v_size_t;
 
     typedef std::size_t x_coord_t;
     typedef std::size_t y_coord_t;

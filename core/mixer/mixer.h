@@ -54,7 +54,13 @@ class mixer : public target<std::pair<std::map<int, safe_ptr<core::basic_frame>>
 public:	
 	typedef target<std::pair<safe_ptr<read_frame>, std::shared_ptr<void>>> target_t;
 
-	explicit mixer(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc, const safe_ptr<ogl_device>& ogl, const channel_layout& audio_channel_layout);
+	explicit mixer(
+			const safe_ptr<diagnostics::graph>& graph,
+			const safe_ptr<target_t>& target,
+			const video_format_desc& format_desc,
+			const safe_ptr<ogl_device>& ogl,
+			const channel_layout& audio_channel_layout,
+			int channel_index);
 		
 	// target
 
@@ -69,7 +75,7 @@ public:
 	blend_mode::type get_blend_mode(int index);
 	void set_blend_mode(int index, blend_mode::type value);
 	chroma get_chroma(int index);
-    void set_chroma(int index, const chroma& value);
+	void set_chroma(int index, const chroma& value);
 	bool get_mipmap(int index);
 	void set_mipmap(int index, bool mipmap);
 	void clear_blend_mode(int index);

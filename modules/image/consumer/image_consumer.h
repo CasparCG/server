@@ -45,7 +45,7 @@ namespace image {
 void write_cropped_png(
 		const safe_ptr<core::read_frame>& frame,
 		const core::video_format_desc& format_desc,
-		const boost::filesystem::wpath& output_file,
+		const boost::filesystem::path& output_file,
 		int width,
 		int height);
 

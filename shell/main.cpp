@@ -294,7 +294,7 @@ int main(int argc, char* argv[])
 		print_info();
 			
 		std::wstringstream str;
-		boost::property_tree::xml_writer_settings<wchar_t> w(' ', 3);
+		boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
 		boost::property_tree::write_xml(str, caspar::env::properties(), w);
 		CASPAR_LOG(info) << config_file_name << L":\n-----------------------------------------\n" << str.str().c_str() << L"-----------------------------------------";
 		tbb::atomic<bool> wait_for_keypress;
@@ -411,7 +411,7 @@ int main(int argc, char* argv[])
 					{
 						break;
 					}
-				}	
+				}
 			});
 			stdin_thread.detach();
 			restart = shutdown_server.get();
@@ -438,7 +438,7 @@ int main(int argc, char* argv[])
 		Sleep(1000);
 		std::wcout << L"\n\nCasparCG will automatically shutdown. See the log file located at the configured log-file folder for more information.\n\n";
 		Sleep(4000);
-	}	
+	}
 	
 	return restart ? 5 : 0;
 }

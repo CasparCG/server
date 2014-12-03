@@ -789,7 +789,7 @@ private:
 
 		try
 		{
-			if(!filtergraph.empty()) 
+			if(!filtergraph.empty())
 			{
 				outputs = avfilter_inout_alloc();
 				inputs  = avfilter_inout_alloc();

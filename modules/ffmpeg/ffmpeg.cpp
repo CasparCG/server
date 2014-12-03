@@ -36,7 +36,7 @@
 #include <core/producer/media_info/media_info_repository.h>
 
 #include <tbb/recursive_mutex.h>
-#include <tbb/enumerable_thread_specific.h>
+#include <boost/thread/tss.hpp>
 
 #if defined(_MSC_VER)
 #pragma warning (disable : 4244)
@@ -167,9 +167,17 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 
 bool& get_disable_logging_for_thread()
 {
-	static tbb::enumerable_thread_specific<bool> disable_logging_for_thread(false);
+	static boost::thread_specific_ptr<bool> disable_logging_for_thread;
 
-	return disable_logging_for_thread.local();
+	auto local = disable_logging_for_thread.get();
+
+	if (!local)
+	{
+		local = new bool(false);
+		disable_logging_for_thread.reset(local);
+	}
+
+	return *local;
 }
 
 void disable_logging_for_thread()

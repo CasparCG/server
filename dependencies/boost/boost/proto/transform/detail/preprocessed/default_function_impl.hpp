@@ -47,9 +47,9 @@
         ) const
         {
             BOOST_PROTO_USE_GET_POINTER();
-            typedef typename detail::classtypeof<function_type>::type class_type;
+            typedef typename detail::class_member_traits<function_type>::class_type class_type;
             return (
-                BOOST_PROTO_GET_POINTER(class_type, BOOST_PROTO_DEFAULT_EVAL(~, 1, e)) ->* 
+                BOOST_PROTO_GET_POINTER(class_type, (typename Grammar::template impl<e1, State, Data>()( proto::child_c< 1>( e), s, d ))) ->* 
                 typename Grammar::template impl<e0, State, Data>()( proto::child_c< 0>( e), s, d )
             )(typename Grammar::template impl<e2, State, Data>()( proto::child_c< 2>( e), s, d ));
         }
@@ -95,9 +95,9 @@
         ) const
         {
             BOOST_PROTO_USE_GET_POINTER();
-            typedef typename detail::classtypeof<function_type>::type class_type;
+            typedef typename detail::class_member_traits<function_type>::class_type class_type;
             return (
-                BOOST_PROTO_GET_POINTER(class_type, BOOST_PROTO_DEFAULT_EVAL(~, 1, e)) ->* 
+                BOOST_PROTO_GET_POINTER(class_type, (typename Grammar::template impl<e1, State, Data>()( proto::child_c< 1>( e), s, d ))) ->* 
                 typename Grammar::template impl<e0, State, Data>()( proto::child_c< 0>( e), s, d )
             )(typename Grammar::template impl<e2, State, Data>()( proto::child_c< 2>( e), s, d ) , typename Grammar::template impl<e3, State, Data>()( proto::child_c< 3>( e), s, d ));
         }
@@ -143,9 +143,9 @@
         ) const
         {
             BOOST_PROTO_USE_GET_POINTER();
-            typedef typename detail::classtypeof<function_type>::type class_type;
+            typedef typename detail::class_member_traits<function_type>::class_type class_type;
             return (
-                BOOST_PROTO_GET_POINTER(class_type, BOOST_PROTO_DEFAULT_EVAL(~, 1, e)) ->* 
+                BOOST_PROTO_GET_POINTER(class_type, (typename Grammar::template impl<e1, State, Data>()( proto::child_c< 1>( e), s, d ))) ->* 
                 typename Grammar::template impl<e0, State, Data>()( proto::child_c< 0>( e), s, d )
             )(typename Grammar::template impl<e2, State, Data>()( proto::child_c< 2>( e), s, d ) , typename Grammar::template impl<e3, State, Data>()( proto::child_c< 3>( e), s, d ) , typename Grammar::template impl<e4, State, Data>()( proto::child_c< 4>( e), s, d ));
         }
@@ -191,9 +191,9 @@
         ) const
         {
             BOOST_PROTO_USE_GET_POINTER();
-            typedef typename detail::classtypeof<function_type>::type class_type;
+            typedef typename detail::class_member_traits<function_type>::class_type class_type;
             return (
-                BOOST_PROTO_GET_POINTER(class_type, BOOST_PROTO_DEFAULT_EVAL(~, 1, e)) ->* 
+                BOOST_PROTO_GET_POINTER(class_type, (typename Grammar::template impl<e1, State, Data>()( proto::child_c< 1>( e), s, d ))) ->* 
                 typename Grammar::template impl<e0, State, Data>()( proto::child_c< 0>( e), s, d )
             )(typename Grammar::template impl<e2, State, Data>()( proto::child_c< 2>( e), s, d ) , typename Grammar::template impl<e3, State, Data>()( proto::child_c< 3>( e), s, d ) , typename Grammar::template impl<e4, State, Data>()( proto::child_c< 4>( e), s, d ) , typename Grammar::template impl<e5, State, Data>()( proto::child_c< 5>( e), s, d ));
         }
@@ -239,9 +239,9 @@
         ) const
         {
             BOOST_PROTO_USE_GET_POINTER();
-            typedef typename detail::classtypeof<function_type>::type class_type;
+            typedef typename detail::class_member_traits<function_type>::class_type class_type;
             return (
-                BOOST_PROTO_GET_POINTER(class_type, BOOST_PROTO_DEFAULT_EVAL(~, 1, e)) ->* 
+                BOOST_PROTO_GET_POINTER(class_type, (typename Grammar::template impl<e1, State, Data>()( proto::child_c< 1>( e), s, d ))) ->* 
                 typename Grammar::template impl<e0, State, Data>()( proto::child_c< 0>( e), s, d )
             )(typename Grammar::template impl<e2, State, Data>()( proto::child_c< 2>( e), s, d ) , typename Grammar::template impl<e3, State, Data>()( proto::child_c< 3>( e), s, d ) , typename Grammar::template impl<e4, State, Data>()( proto::child_c< 4>( e), s, d ) , typename Grammar::template impl<e5, State, Data>()( proto::child_c< 5>( e), s, d ) , typename Grammar::template impl<e6, State, Data>()( proto::child_c< 6>( e), s, d ));
         }
@@ -287,9 +287,9 @@
         ) const
         {
             BOOST_PROTO_USE_GET_POINTER();
-            typedef typename detail::classtypeof<function_type>::type class_type;
+            typedef typename detail::class_member_traits<function_type>::class_type class_type;
             return (
-                BOOST_PROTO_GET_POINTER(class_type, BOOST_PROTO_DEFAULT_EVAL(~, 1, e)) ->* 
+                BOOST_PROTO_GET_POINTER(class_type, (typename Grammar::template impl<e1, State, Data>()( proto::child_c< 1>( e), s, d ))) ->* 
                 typename Grammar::template impl<e0, State, Data>()( proto::child_c< 0>( e), s, d )
             )(typename Grammar::template impl<e2, State, Data>()( proto::child_c< 2>( e), s, d ) , typename Grammar::template impl<e3, State, Data>()( proto::child_c< 3>( e), s, d ) , typename Grammar::template impl<e4, State, Data>()( proto::child_c< 4>( e), s, d ) , typename Grammar::template impl<e5, State, Data>()( proto::child_c< 5>( e), s, d ) , typename Grammar::template impl<e6, State, Data>()( proto::child_c< 6>( e), s, d ) , typename Grammar::template impl<e7, State, Data>()( proto::child_c< 7>( e), s, d ));
         }
@@ -335,9 +335,9 @@
         ) const
         {
             BOOST_PROTO_USE_GET_POINTER();
-            typedef typename detail::classtypeof<function_type>::type class_type;
+            typedef typename detail::class_member_traits<function_type>::class_type class_type;
             return (
-                BOOST_PROTO_GET_POINTER(class_type, BOOST_PROTO_DEFAULT_EVAL(~, 1, e)) ->* 
+                BOOST_PROTO_GET_POINTER(class_type, (typename Grammar::template impl<e1, State, Data>()( proto::child_c< 1>( e), s, d ))) ->* 
                 typename Grammar::template impl<e0, State, Data>()( proto::child_c< 0>( e), s, d )
             )(typename Grammar::template impl<e2, State, Data>()( proto::child_c< 2>( e), s, d ) , typename Grammar::template impl<e3, State, Data>()( proto::child_c< 3>( e), s, d ) , typename Grammar::template impl<e4, State, Data>()( proto::child_c< 4>( e), s, d ) , typename Grammar::template impl<e5, State, Data>()( proto::child_c< 5>( e), s, d ) , typename Grammar::template impl<e6, State, Data>()( proto::child_c< 6>( e), s, d ) , typename Grammar::template impl<e7, State, Data>()( proto::child_c< 7>( e), s, d ) , typename Grammar::template impl<e8, State, Data>()( proto::child_c< 8>( e), s, d ));
         }
@@ -383,9 +383,9 @@
         ) const
         {
             BOOST_PROTO_USE_GET_POINTER();
-            typedef typename detail::classtypeof<function_type>::type class_type;
+            typedef typename detail::class_member_traits<function_type>::class_type class_type;
             return (
-                BOOST_PROTO_GET_POINTER(class_type, BOOST_PROTO_DEFAULT_EVAL(~, 1, e)) ->* 
+                BOOST_PROTO_GET_POINTER(class_type, (typename Grammar::template impl<e1, State, Data>()( proto::child_c< 1>( e), s, d ))) ->* 
                 typename Grammar::template impl<e0, State, Data>()( proto::child_c< 0>( e), s, d )
             )(typename Grammar::template impl<e2, State, Data>()( proto::child_c< 2>( e), s, d ) , typename Grammar::template impl<e3, State, Data>()( proto::child_c< 3>( e), s, d ) , typename Grammar::template impl<e4, State, Data>()( proto::child_c< 4>( e), s, d ) , typename Grammar::template impl<e5, State, Data>()( proto::child_c< 5>( e), s, d ) , typename Grammar::template impl<e6, State, Data>()( proto::child_c< 6>( e), s, d ) , typename Grammar::template impl<e7, State, Data>()( proto::child_c< 7>( e), s, d ) , typename Grammar::template impl<e8, State, Data>()( proto::child_c< 8>( e), s, d ) , typename Grammar::template impl<e9, State, Data>()( proto::child_c< 9>( e), s, d ));
         }

@@ -91,7 +91,7 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	std::unique_ptr<thread_safe_decklink_allocator>				allocator_;
 	CComPtr<IDeckLink>											decklink_;
 	CComQIPtr<IDeckLinkInput>									input_;
-	CComQIPtr<IDeckLinkAttributes >								attributes_;
+	CComQIPtr<IDeckLinkAttributes>								attributes_;
 	
 	const std::wstring											model_name_;
 	const size_t												device_index_;
@@ -127,7 +127,7 @@ public:
 		, filter_(filter)
 		, format_desc_(format_desc)
 		, audio_cadence_(format_desc.audio_cadence)
-		, muxer_(format_desc.fps, frame_factory, false, audio_channel_layout, filter)
+		, muxer_(format_desc.fps, frame_factory, false, audio_channel_layout, filter, ffmpeg::filter::is_deinterlacing(filter))
 		, sync_buffer_(format_desc.audio_cadence.size())
 		, frame_factory_(frame_factory)
 		, audio_channel_layout_(audio_channel_layout)
@@ -218,8 +218,8 @@ public:
 			if(FAILED(video->GetBytes(&bytes)) || !bytes)
 				return S_OK;
 			
-			safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
-			avcodec_get_frame_defaults(av_frame.get());
+			safe_ptr<AVFrame> av_frame(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
+			//avcodec_get_frame_defaults(av_frame.get());
 						
 			av_frame->data[0]			= reinterpret_cast<uint8_t*>(bytes);
 			av_frame->linesize[0]		= video->GetRowBytes();			
@@ -228,6 +228,7 @@ public:
 			av_frame->height			= video->GetHeight();
 			av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
 			av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
+			av_frame->key_frame = 1;
 				
 			std::shared_ptr<core::audio_buffer> audio_buffer;
 
@@ -295,7 +296,7 @@ public:
 
 			graph_->set_value("frame-time", frame_timer_.elapsed()*format_desc_.fps*0.5);
 
-			graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
+			graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 		}
 		catch(...)
 		{

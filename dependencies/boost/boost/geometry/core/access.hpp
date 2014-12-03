@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2008-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2008-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -18,12 +18,13 @@
 #include <cstddef>
 
 #include <boost/mpl/assert.hpp>
-#include <boost/type_traits/remove_const.hpp>
 #include <boost/concept_check.hpp>
+#include <boost/type_traits/is_pointer.hpp>
 
 #include <boost/geometry/core/coordinate_type.hpp>
 #include <boost/geometry/core/point_type.hpp>
 #include <boost/geometry/core/tag.hpp>
+#include <boost/geometry/util/bare_type.hpp>
 
 
 namespace boost { namespace geometry
@@ -79,6 +80,52 @@ struct indexed_access {};
 
 } // namespace traits
 
+#ifndef DOXYGEN_NO_DETAIL
+namespace detail
+{
+
+template
+<
+    typename Geometry,
+    typename CoordinateType,
+    std::size_t Index,
+    std::size_t Dimension
+>
+struct indexed_access_non_pointer
+{
+    static inline CoordinateType get(Geometry const& geometry)
+    {
+        return traits::indexed_access<Geometry, Index, Dimension>::get(geometry);
+    }
+    static inline void set(Geometry& b, CoordinateType const& value)
+    {
+        traits::indexed_access<Geometry, Index, Dimension>::set(b, value);
+    }
+};
+
+template
+<
+    typename Geometry,
+    typename CoordinateType,
+    std::size_t Index,
+    std::size_t Dimension
+>
+struct indexed_access_pointer
+{
+    static inline CoordinateType get(Geometry const* geometry)
+    {
+        return traits::indexed_access<typename boost::remove_pointer<Geometry>::type, Index, Dimension>::get(*geometry);
+    }
+    static inline void set(Geometry* geometry, CoordinateType const& value)
+    {
+        traits::indexed_access<typename boost::remove_pointer<Geometry>::type, Index, Dimension>::set(*geometry, value);
+    }
+};
+
+
+} // namespace detail
+#endif // DOXYGEN_NO_DETAIL
+
 
 #ifndef DOXYGEN_NO_DISPATCH
 namespace core_dispatch
@@ -89,7 +136,9 @@ template
     typename Tag,
     typename Geometry,
     typename
-    CoordinateType, std::size_t Dimension
+    CoordinateType,
+    std::size_t Dimension,
+    typename IsPointer
 >
 struct access
 {
@@ -103,7 +152,8 @@ template
     typename Geometry,
     typename CoordinateType,
     std::size_t Index,
-    std::size_t Dimension
+    std::size_t Dimension,
+    typename IsPointer
 >
 struct indexed_access
 {
@@ -112,7 +162,7 @@ struct indexed_access
 };
 
 template <typename Point, typename CoordinateType, std::size_t Dimension>
-struct access<point_tag, Point, CoordinateType, Dimension>
+struct access<point_tag, Point, CoordinateType, Dimension, boost::false_type>
 {
     static inline CoordinateType get(Point const& point)
     {
@@ -124,6 +174,20 @@ struct access<point_tag, Point, CoordinateType, Dimension>
     }
 };
 
+template <typename Point, typename CoordinateType, std::size_t Dimension>
+struct access<point_tag, Point, CoordinateType, Dimension, boost::true_type>
+{
+    static inline CoordinateType get(Point const* point)
+    {
+        return traits::access<typename boost::remove_pointer<Point>::type, Dimension>::get(*point);
+    }
+    static inline void set(Point* p, CoordinateType const& value)
+    {
+        traits::access<typename boost::remove_pointer<Point>::type, Dimension>::set(*p, value);
+    }
+};
+
+
 template
 <
     typename Box,
@@ -131,17 +195,21 @@ template
     std::size_t Index,
     std::size_t Dimension
 >
-struct indexed_access<box_tag, Box, CoordinateType, Index, Dimension>
-{
-    static inline CoordinateType get(Box const& box)
-    {
-        return traits::indexed_access<Box, Index, Dimension>::get(box);
-    }
-    static inline void set(Box& b, CoordinateType const& value)
-    {
-        traits::indexed_access<Box, Index, Dimension>::set(b, value);
-    }
-};
+struct indexed_access<box_tag, Box, CoordinateType, Index, Dimension, boost::false_type>
+    : detail::indexed_access_non_pointer<Box, CoordinateType, Index, Dimension>
+{};
+
+template
+<
+    typename Box,
+    typename CoordinateType,
+    std::size_t Index,
+    std::size_t Dimension
+>
+struct indexed_access<box_tag, Box, CoordinateType, Index, Dimension, boost::true_type>
+    : detail::indexed_access_pointer<Box, CoordinateType, Index, Dimension>
+{};
+
 
 template
 <
@@ -150,17 +218,21 @@ template
     std::size_t Index,
     std::size_t Dimension
 >
-struct indexed_access<segment_tag, Segment, CoordinateType, Index, Dimension>
-{
-    static inline CoordinateType get(Segment const& segment)
-    {
-        return traits::indexed_access<Segment, Index, Dimension>::get(segment);
-    }
-    static inline void set(Segment& segment, CoordinateType const& value)
-    {
-        traits::indexed_access<Segment, Index, Dimension>::set(segment, value);
-    }
-};
+struct indexed_access<segment_tag, Segment, CoordinateType, Index, Dimension, boost::false_type>
+    : detail::indexed_access_non_pointer<Segment, CoordinateType, Index, Dimension>
+{};
+
+
+template
+<
+    typename Segment,
+    typename CoordinateType,
+    std::size_t Index,
+    std::size_t Dimension
+>
+struct indexed_access<segment_tag, Segment, CoordinateType, Index, Dimension, boost::true_type>
+    : detail::indexed_access_pointer<Segment, CoordinateType, Index, Dimension>
+{};
 
 } // namespace core_dispatch
 #endif // DOXYGEN_NO_DISPATCH
@@ -188,25 +260,26 @@ struct signature_getset_index_dimension {};
 \tparam Dimension \tparam_dimension_required
 \tparam Geometry \tparam_geometry (usually a Point Concept)
 \param geometry \param_geometry (usually a point)
-\param dummy \qbk_skip
 \return The coordinate value of specified dimension of specified geometry
+
 \qbk{[include reference/core/get_point.qbk]}
 */
 template <std::size_t Dimension, typename Geometry>
 inline typename coordinate_type<Geometry>::type get(Geometry const& geometry
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
         , detail::signature_getset_dimension* dummy = 0
+#endif
         )
 {
     boost::ignore_unused_variable_warning(dummy);
 
-    typedef typename boost::remove_const<Geometry>::type ncg_type;
-
     typedef core_dispatch::access
         <
             typename tag<Geometry>::type,
-            ncg_type,
-            typename coordinate_type<ncg_type>::type,
-            Dimension
+            typename geometry::util::bare_type<Geometry>::type,
+            typename coordinate_type<Geometry>::type,
+            Dimension,
+            typename boost::is_pointer<Geometry>::type
         > coord_access_type;
 
     return coord_access_type::get(geometry);
@@ -221,7 +294,6 @@ inline typename coordinate_type<Geometry>::type get(Geometry const& geometry
 \param geometry geometry to assign coordinate to
 \param geometry \param_geometry (usually a point)
 \param value The coordinate value to set
-\param dummy \qbk_skip
 \ingroup set
 
 \qbk{[include reference/core/set_point.qbk]}
@@ -229,19 +301,20 @@ inline typename coordinate_type<Geometry>::type get(Geometry const& geometry
 template <std::size_t Dimension, typename Geometry>
 inline void set(Geometry& geometry
         , typename coordinate_type<Geometry>::type const& value
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
         , detail::signature_getset_dimension* dummy = 0
+#endif
         )
 {
     boost::ignore_unused_variable_warning(dummy);
 
-    typedef typename boost::remove_const<Geometry>::type ncg_type;
-
     typedef core_dispatch::access
         <
             typename tag<Geometry>::type,
-            ncg_type,
-            typename coordinate_type<ncg_type>::type,
-            Dimension
+            typename geometry::util::bare_type<Geometry>::type,
+            typename coordinate_type<Geometry>::type,
+            Dimension,
+            typename boost::is_pointer<Geometry>::type
         > coord_access_type;
 
     coord_access_type::set(geometry, value);
@@ -255,7 +328,6 @@ inline void set(Geometry& geometry
 \tparam Dimension \tparam_dimension_required
 \tparam Geometry \tparam_box_or_segment
 \param geometry \param_geometry
-\param dummy \qbk_skip
 \return coordinate value
 \ingroup get
 
@@ -264,20 +336,21 @@ inline void set(Geometry& geometry
 */
 template <std::size_t Index, std::size_t Dimension, typename Geometry>
 inline typename coordinate_type<Geometry>::type get(Geometry const& geometry
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
         , detail::signature_getset_index_dimension* dummy = 0
+#endif
         )
 {
     boost::ignore_unused_variable_warning(dummy);
 
-    typedef typename boost::remove_const<Geometry>::type ncg_type;
-
     typedef core_dispatch::indexed_access
         <
             typename tag<Geometry>::type,
-            ncg_type,
-            typename coordinate_type<ncg_type>::type,
+            typename geometry::util::bare_type<Geometry>::type,
+            typename coordinate_type<Geometry>::type,
             Index,
-            Dimension
+            Dimension,
+            typename boost::is_pointer<Geometry>::type
         > coord_access_type;
 
     return coord_access_type::get(geometry);
@@ -292,7 +365,6 @@ inline typename coordinate_type<Geometry>::type get(Geometry const& geometry
 \param geometry geometry to assign coordinate to
 \param geometry \param_geometry
 \param value The coordinate value to set
-\param dummy \qbk_skip
 \ingroup set
 
 \qbk{distinguish,with index}
@@ -301,19 +373,21 @@ inline typename coordinate_type<Geometry>::type get(Geometry const& geometry
 template <std::size_t Index, std::size_t Dimension, typename Geometry>
 inline void set(Geometry& geometry
         , typename coordinate_type<Geometry>::type const& value
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
         , detail::signature_getset_index_dimension* dummy = 0
+#endif
         )
 {
     boost::ignore_unused_variable_warning(dummy);
 
-    typedef typename boost::remove_const<Geometry>::type ncg_type;
-
     typedef core_dispatch::indexed_access
         <
-            typename tag<Geometry>::type, ncg_type,
-            typename coordinate_type<ncg_type>::type,
+            typename tag<Geometry>::type,
+            typename geometry::util::bare_type<Geometry>::type,
+            typename coordinate_type<Geometry>::type,
             Index,
-            Dimension
+            Dimension,
+            typename boost::is_pointer<Geometry>::type
         > coord_access_type;
 
     coord_access_type::set(geometry, value);

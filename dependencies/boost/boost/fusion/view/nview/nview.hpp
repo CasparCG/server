@@ -8,6 +8,7 @@
 #if !defined(BOOST_FUSION_NVIEW_SEP_23_2009_0948PM)
 #define BOOST_FUSION_NVIEW_SEP_23_2009_0948PM
 
+#include <boost/fusion/support/config.hpp>
 #include <boost/mpl/size.hpp>
 #include <boost/mpl/if.hpp>
 #include <boost/mpl/vector_c.hpp>
@@ -23,6 +24,8 @@
 #include <boost/fusion/container/vector.hpp>
 #include <boost/fusion/view/transform_view.hpp>
 
+#include <boost/config.hpp>
+
 namespace boost { namespace fusion
 {
     namespace detail
@@ -35,12 +38,23 @@ namespace boost { namespace fusion
             template<typename U>
             struct result<addref(U)> : add_reference<U> {};
 
+#ifdef BOOST_NO_CXX11_RVALUE_REFERENCES
             template <typename T>
+            BOOST_FUSION_GPU_ENABLED
             typename add_reference<T>::type 
             operator()(T& x) const
             {
                 return x;
             }
+#else
+            template <typename T>
+            BOOST_FUSION_GPU_ENABLED
+            typename result<addref(T)>::type
+            operator()(T&& x) const
+            {
+                return x;
+            }
+#endif
         };
 
         struct addconstref
@@ -54,6 +68,7 @@ namespace boost { namespace fusion
             {};
 
             template <typename T>
+            BOOST_FUSION_GPU_ENABLED
             typename add_reference<typename add_const<T>::type>::type 
             operator()(T& x) const
             {
@@ -61,6 +76,7 @@ namespace boost { namespace fusion
             }
 
             template <typename T>
+            BOOST_FUSION_GPU_ENABLED
             typename add_reference<typename add_const<T>::type>::type 
             operator()(T const& x) const
             {
@@ -92,7 +108,7 @@ namespace boost { namespace fusion
         typedef typename result_of::as_vector<transform_view_type>::type 
             sequence_type;
 
-        explicit nview(Sequence& val)
+        BOOST_FUSION_GPU_ENABLED explicit nview(Sequence& val)
           : seq(sequence_type(transform_view_type(val, transform_type()))) 
         {}
 

@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2009. Distributed under the Boost
+// (C) Copyright Ion Gaztanaga 2009-2012. Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -10,6 +10,10 @@
 
 #ifndef BOOST_INTERPROCESS_XSI_SHARED_MEMORY_HPP
 #define BOOST_INTERPROCESS_XSI_SHARED_MEMORY_HPP
+
+#if defined(_MSC_VER)
+#  pragma once
+#endif
 
 #include <boost/interprocess/detail/config_begin.hpp>
 #include <boost/interprocess/detail/workaround.hpp>
@@ -22,7 +26,7 @@
 #include <boost/interprocess/creation_tags.hpp>
 #include <boost/interprocess/exceptions.hpp>
 #include <boost/interprocess/detail/utilities.hpp>
-#include <boost/interprocess/detail/move.hpp>
+#include <boost/move/utility_core.hpp>
 #include <boost/interprocess/detail/os_file_functions.hpp>
 #include <boost/interprocess/interprocess_fwd.hpp>
 #include <boost/interprocess/exceptions.hpp>
@@ -47,10 +51,10 @@ namespace interprocess {
 //!can't communicate between them.
 class xsi_shared_memory
 {
-   /// @cond
+   #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
    //Non-copyable and non-assignable
    BOOST_MOVABLE_BUT_NOT_COPYABLE(xsi_shared_memory)
-   /// @endcond
+   #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 
    public:
    //!Default constructor.
@@ -78,21 +82,21 @@ class xsi_shared_memory
    xsi_shared_memory(open_only_t, const xsi_key &key)
    {  this->priv_open_or_create(ipcdetail::DoOpen, key, permissions(), 0);  }
 
-   //!Moves the ownership of "moved"'s shared memory object to *this. 
-   //!After the call, "moved" does not represent any shared memory object. 
+   //!Moves the ownership of "moved"'s shared memory object to *this.
+   //!After the call, "moved" does not represent any shared memory object.
    //!Does not throw
    xsi_shared_memory(BOOST_RV_REF(xsi_shared_memory) moved)
       : m_shmid(-1)
    {  this->swap(moved);   }
 
    //!Moves the ownership of "moved"'s shared memory to *this.
-   //!After the call, "moved" does not represent any shared memory. 
+   //!After the call, "moved" does not represent any shared memory.
    //!Does not throw
    xsi_shared_memory &operator=(BOOST_RV_REF(xsi_shared_memory) moved)
-   {  
-      xsi_shared_memory tmp(boost::interprocess::move(moved));
+   {
+      xsi_shared_memory tmp(boost::move(moved));
       this->swap(tmp);
-      return *this;  
+      return *this;
    }
 
    //!Swaps two xsi_shared_memorys. Does not throw
@@ -115,7 +119,7 @@ class xsi_shared_memory
    //!Returns false on error. Never throws
    static bool remove(int shmid);
 
-   /// @cond
+   #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
    private:
 
    //!Closes a previously opened file mapping. Never throws.
@@ -124,16 +128,16 @@ class xsi_shared_memory
                            , const permissions& perm
                            , std::size_t size);
    int            m_shmid;
-   /// @endcond
+   #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 };
 
-/// @cond
+#if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
 
-inline xsi_shared_memory::xsi_shared_memory() 
+inline xsi_shared_memory::xsi_shared_memory()
    :  m_shmid(-1)
 {}
 
-inline xsi_shared_memory::~xsi_shared_memory() 
+inline xsi_shared_memory::~xsi_shared_memory()
 {}
 
 inline int xsi_shared_memory::get_shmid() const
@@ -191,7 +195,7 @@ inline bool xsi_shared_memory::priv_open_or_create
 inline bool xsi_shared_memory::remove(int shmid)
 {  return -1 != ::shmctl(shmid, IPC_RMID, 0); }
 
-///@endcond
+#endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 
 }  //namespace interprocess {
 }  //namespace boost {

@@ -25,6 +25,7 @@
 
 #include "../util/util.h"
 #include "../util/decklink_allocator.h"
+#include "../decklink.h"
 
 #include "../interop/DeckLinkAPI_h.h"
 
@@ -36,6 +37,7 @@
 #include <common/exception/exceptions.h>
 #include <common/exception/win32_exception.h>
 #include <common/utility/assert.h>
+#include <common/utility/software_version.h>
 
 #include <core/parameters/parameters.h>
 #include <core/consumer/frame_consumer.h>
@@ -51,11 +53,12 @@
 
 namespace caspar { namespace decklink { 
 
+template<typename Output>
 struct key_video_context
 		: public IDeckLinkVideoOutputCallback, boost::noncopyable
 {
 	CComPtr<IDeckLink>										decklink_;
-	CComQIPtr<IDeckLinkOutput>								output_;
+	CComQIPtr<Output>										output_;
 	CComQIPtr<IDeckLinkKeyer>								keyer_;
 	CComQIPtr<IDeckLinkAttributes>							attributes_;
 	CComQIPtr<IDeckLinkConfiguration>						configuration_;
@@ -136,31 +139,32 @@ struct key_video_context
 	}
 };
 
+template<typename Output>
 struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
 {
-	const int							channel_index_;
-	const configuration					config_;
+	const int										channel_index_;
+	const configuration								config_;
 
 	std::unique_ptr<thread_safe_decklink_allocator>	allocator_;
-	CComPtr<IDeckLink>					decklink_;
-	CComQIPtr<IDeckLinkOutput>			output_;
-	CComQIPtr<IDeckLinkKeyer>			keyer_;
-	CComQIPtr<IDeckLinkAttributes>		attributes_;
-	CComQIPtr<IDeckLinkConfiguration>	configuration_;
+	CComPtr<IDeckLink>								decklink_;
+	CComQIPtr<Output>								output_;
+	CComQIPtr<IDeckLinkKeyer>						keyer_;
+	CComQIPtr<IDeckLinkAttributes>					attributes_;
+	CComQIPtr<IDeckLinkConfiguration>				configuration_;
 
-	tbb::spin_mutex						exception_mutex_;
-	std::exception_ptr					exception_;
+	tbb::spin_mutex									exception_mutex_;
+	std::exception_ptr								exception_;
 
-	tbb::atomic<bool>					is_running_;
+	tbb::atomic<bool>								is_running_;
 		
-	const std::wstring					model_name_;
-	const core::video_format_desc		format_desc_;
-	const size_t						buffer_size_;
+	const std::wstring								model_name_;
+	const core::video_format_desc					format_desc_;
+	const size_t									buffer_size_;
 
-	long long							video_scheduled_;
-	long long							audio_scheduled_;
+	long long										video_scheduled_;
+	long long										audio_scheduled_;
 
-	size_t								preroll_count_;
+	size_t											preroll_count_;
 		
 	boost::circular_buffer<std::vector<int32_t, tbb::cache_aligned_allocator<int32_t>>>	audio_container_;
 
@@ -170,14 +174,17 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	safe_ptr<diagnostics::graph> graph_;
 	boost::timer tick_timer_;
 	retry_task<bool> send_completion_;
-	reference_signal_detector reference_signal_detector_;
+	reference_signal_detector<Output> reference_signal_detector_;
 
-	tbb::atomic<int64_t>				current_presentation_delay_;
-	tbb::atomic<int64_t>				scheduled_frames_completed_;
-	std::unique_ptr<key_video_context>	key_context_;
+	tbb::atomic<int64_t>						current_presentation_delay_;
+	tbb::atomic<int64_t>						scheduled_frames_completed_;
+	std::unique_ptr<key_video_context<Output>>	key_context_;
 
 public:
-	decklink_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index) 
+	decklink_consumer(
+			const configuration& config,
+			const core::video_format_desc& format_desc,
+			int channel_index) 
 		: channel_index_(channel_index)
 		, config_(config)
 		, decklink_(get_device(config.device_index))
@@ -209,7 +216,7 @@ public:
 			audio_frame_buffer_.set_capacity(1);
 
 		if (config.keyer == configuration::external_separate_device_keyer)
-			key_context_.reset(new key_video_context(config, print(), allocator_));
+			key_context_.reset(new key_video_context<Output>(config, print(), allocator_));
 
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
@@ -508,12 +515,13 @@ public:
 	}
 };
 
+template<typename Output>
 struct decklink_consumer_proxy : public core::frame_consumer
 {
-	const configuration				config_;
-	com_context<decklink_consumer>	context_;
-	std::vector<size_t>				audio_cadence_;
-	core::video_format_desc			format_desc_;
+	const configuration						config_;
+	com_context<decklink_consumer<Output>>	context_;
+	std::vector<size_t>						audio_cadence_;
+	core::video_format_desc					format_desc_;
 public:
 
 	decklink_consumer_proxy(const configuration& config)
@@ -539,7 +547,8 @@ public:
 			const core::channel_layout& audio_channel_layout,
 			int channel_index) override
 	{
-		context_.reset([&]{return new decklink_consumer(config_, format_desc, channel_index);});		
+		context_.reset([&]{return new decklink_consumer<Output>(config_, format_desc, channel_index);});
+
 		audio_cadence_ = format_desc.audio_cadence;		
 		format_desc_ = format_desc;
 
@@ -592,7 +601,21 @@ public:
 	{
 		return context_ ? context_->current_presentation_delay_ : 0;
 	}
-};	
+};
+
+const software_version<3>& get_driver_version()
+{
+	static software_version<3> version(narrow(get_version()));
+
+	return version;
+}
+
+const software_version<3> get_new_output_api_version()
+{
+	static software_version<3> NEW_OUTPUT_API("10.0");
+
+	return NEW_OUTPUT_API;
+}
 
 safe_ptr<core::frame_consumer> create_consumer(const core::parameters& params) 
 {
@@ -621,7 +644,12 @@ safe_ptr<core::frame_consumer> create_consumer(const core::parameters& params)
 	config.audio_layout		= core::default_channel_layout_repository().get_by_name(
 			params.get(L"CHANNEL_LAYOUT", L"STEREO"));
 
-	return make_safe<decklink_consumer_proxy>(config);
+	bool old_output_api = get_driver_version() < get_new_output_api_version();
+
+	if (old_output_api)
+		return make_safe<decklink_consumer_proxy<IDeckLinkOutput_v9_9>>(config);
+	else
+		return make_safe<decklink_consumer_proxy<IDeckLinkOutput>>(config);
 }
 
 safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree) 
@@ -652,7 +680,12 @@ safe_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptre
 		core::default_channel_layout_repository().get_by_name(
 				boost::to_upper_copy(ptree.get(L"channel-layout", L"STEREO")));
 
-	return make_safe<decklink_consumer_proxy>(config);
+	bool old_output_api = get_driver_version() < get_new_output_api_version();
+
+	if (old_output_api)
+		return make_safe<decklink_consumer_proxy<IDeckLinkOutput_v9_9>>(config);
+	else
+		return make_safe<decklink_consumer_proxy<IDeckLinkOutput>>(config);
 }
 
 }}

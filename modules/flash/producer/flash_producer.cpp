@@ -137,11 +137,11 @@ template_host get_template_host(const core::video_format_desc& desc)
 	template_host template_host;
 	template_host.filename = L"cg.fth";
 
-	for(auto it = boost::filesystem2::wdirectory_iterator(env::template_folder()); it != boost::filesystem2::wdirectory_iterator(); ++it)
+	for(auto it = boost::filesystem::directory_iterator(env::template_folder()); it != boost::filesystem::directory_iterator(); ++it)
 	{
-		if(boost::iequals(it->path().extension(), L"." + desc.name))
+		if(boost::iequals(it->path().extension().wstring(), L"." + desc.name))
 		{
-			template_host.filename = it->filename();
+			template_host.filename = it->path().filename().wstring();
 			break;
 		}
 	}
@@ -335,7 +335,7 @@ public:
 	
 	std::wstring print()
 	{
-		return L"flash-player[" + boost::filesystem::wpath(filename_).filename() 
+		return L"flash-player[" + boost::filesystem::path(filename_).filename().wstring()
 				  + L"|" + boost::lexical_cast<std::wstring>(width_)
 				  + L"x" + boost::lexical_cast<std::wstring>(height_)
 				  + L"]";		
@@ -470,7 +470,7 @@ public:
 		
 	virtual std::wstring print() const override
 	{ 
-		return L"flash[" + boost::filesystem::wpath(filename_).filename() + L"|" + boost::lexical_cast<std::wstring>(fps_) + L"]";		
+		return L"flash[" + boost::filesystem::path(filename_).filename().wstring() + L"|" + boost::lexical_cast<std::wstring>(fps_) + L"]";		
 	}	
 
 	virtual boost::property_tree::wptree info() const override
