@@ -247,6 +247,7 @@
       <ExceptionHandling>Async</ExceptionHandling>
       <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <AdditionalOptions>-Zm128 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -271,6 +272,7 @@
       <ExceptionHandling>Async</ExceptionHandling>
       <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <AdditionalOptions>-Zm128 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -299,6 +301,7 @@
       <ExceptionHandling>Async</ExceptionHandling>
       <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
       <TreatWarningAsError>true</TreatWarningAsError>
+      <AdditionalOptions>-Zm128 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -326,6 +329,7 @@
       <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
       <TreatWarningAsError>true</TreatWarningAsError>
       <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
+      <AdditionalOptions>-Zm128 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

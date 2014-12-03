@@ -308,7 +308,7 @@ struct input::implementation : boost::noncopyable
      auto video_stream   = context.streams[video_index];
       auto video_context  = context.streams[video_index]->codec;
             
-      if(boost::filesystem2::path(context.filename).extension() == ".flv")
+      if(boost::filesystem::path(context.filename).extension().string() == ".flv")
       {
         try
         {

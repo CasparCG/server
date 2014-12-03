@@ -40,7 +40,7 @@ public:
 	typedef const void* address;
 	static void install_handler();
 	static void ensure_handler_installed_for_thread(
-			const char* thread_description = nullptr);
+			const char* thread_description);
 
 	address location() const { return location_; }
 	unsigned int error_code() const { return errorCode_; }

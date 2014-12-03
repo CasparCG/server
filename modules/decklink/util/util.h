@@ -66,11 +66,17 @@ static BMDDisplayMode get_decklink_video_format(core::video_format::type fmt)
 	case core::video_format::x1556p2398:	return bmdMode2k2398;
 	case core::video_format::x1556p2400:	return bmdMode2k24;
 	case core::video_format::x1556p2500:	return bmdMode2k25;
+	case core::video_format::dci1080p2398:	return bmdMode2kDCI2398;
+	case core::video_format::dci1080p2400:	return bmdMode2kDCI24;
+	case core::video_format::dci1080p2500:	return bmdMode2kDCI25;
 	case core::video_format::x2160p2398:	return bmdMode4K2160p2398;
 	case core::video_format::x2160p2400:	return bmdMode4K2160p24;
 	case core::video_format::x2160p2500:	return bmdMode4K2160p25;
 	case core::video_format::x2160p2997:	return bmdMode4K2160p2997;
 	case core::video_format::x2160p3000:	return bmdMode4K2160p30;
+	case core::video_format::dci2160p2398:	return bmdMode4kDCI2398;
+	case core::video_format::dci2160p2400:	return bmdMode4kDCI24;
+	case core::video_format::dci2160p2500:	return bmdMode4kDCI25;
 	default:								return (BMDDisplayMode)ULONG_MAX;
 	}
 }
@@ -98,11 +104,17 @@ static core::video_format::type get_caspar_video_format(BMDDisplayMode fmt)
 	case bmdMode2k2398:						return core::video_format::x1556p2398;	
 	case bmdMode2k24:						return core::video_format::x1556p2400;	
 	case bmdMode2k25:						return core::video_format::x1556p2500;	
+	case bmdMode2kDCI2398:					return core::video_format::dci1080p2398;	
+	case bmdMode2kDCI24:					return core::video_format::dci1080p2400;	
+	case bmdMode2kDCI25:					return core::video_format::dci1080p2500;	
 	case bmdMode4K2160p2398:				return core::video_format::x2160p2398;	
 	case bmdMode4K2160p24:					return core::video_format::x2160p2400;	
 	case bmdMode4K2160p25:					return core::video_format::x2160p2500;	
 	case bmdMode4K2160p2997:				return core::video_format::x2160p2997;	
 	case bmdMode4K2160p30:					return core::video_format::x2160p3000;	
+	case bmdMode4kDCI2398:					return core::video_format::dci2160p2398;	
+	case bmdMode4kDCI24:					return core::video_format::dci2160p2400;	
+	case bmdMode4kDCI25:					return core::video_format::dci2160p2500;	
 	default:								return core::video_format::invalid;	
 	}
 }
@@ -117,7 +129,10 @@ BMDDisplayMode get_display_mode(const T& device, BMDDisplayMode format, BMDPixel
 	{
 		while(SUCCEEDED(iterator->Next(&mode)) && 
 				mode != nullptr && 
-				mode->GetDisplayMode() != format){}
+				mode->GetDisplayMode() != format)
+		{
+			mode.Release();
+		}
 	}
 
 	if(!mode)
@@ -164,7 +179,13 @@ static CComPtr<IDeckLink> get_device(size_t device_index)
 		
 	size_t n = 0;
 	CComPtr<IDeckLink> decklink;
-	while(n < device_index && pDecklinkIterator->Next(&decklink) == S_OK){++n;}	
+	CComPtr<IDeckLink> current;
+	while (n < device_index && pDecklinkIterator->Next(&current) == S_OK)
+	{
+		++n;
+		decklink = current;
+		current.Release();
+	}
 
 	if(n != device_index || !decklink)
 		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Decklink device not found.") << arg_name_info("device_index") << arg_value_info(boost::lexical_cast<std::string>(device_index)));
@@ -236,7 +257,11 @@ public:
 	STDMETHOD_(ULONG,			Release())			
 	{
 		if(--ref_count_ == 0)
+		{
 			delete this;
+			return 0;
+		}
+
 		return ref_count_;
 	}
 
@@ -406,12 +431,13 @@ static void set_keyer(
 	}
 }
 
+template<typename Output>
 class reference_signal_detector
 {
-	CComQIPtr<IDeckLinkOutput> output_;
+	CComQIPtr<Output> output_;
 	BMDReferenceStatus last_reference_status_;
 public:
-	reference_signal_detector(const CComQIPtr<IDeckLinkOutput>& output)
+	reference_signal_detector(const CComQIPtr<Output>& output)
 		: output_(output)
 		, last_reference_status_(static_cast<BMDReferenceStatus>(-1))
 	{

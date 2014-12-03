@@ -70,6 +70,9 @@
     <ClCompile Include="utility\base64.cpp">
       <Filter>source\utility</Filter>
     </ClCompile>
+    <ClCompile Include="concurrency\thread_info.cpp">
+      <Filter>source\concurrency</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exception\exceptions.h">
@@ -168,6 +171,12 @@
     </ClInclude>
     <ClInclude Include="scope_exit.h">
       <Filter>source</Filter>
+    </ClInclude>
+    <ClInclude Include="concurrency\thread_info.h">
+      <Filter>source\concurrency</Filter>
+    </ClInclude>
+    <ClInclude Include="utility\software_version.h">
+      <Filter>source\utility</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

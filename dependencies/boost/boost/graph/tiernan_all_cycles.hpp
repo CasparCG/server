@@ -13,6 +13,7 @@
 #include <boost/graph/graph_concepts.hpp>
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/properties.hpp>
+#include <boost/concept/assert.hpp>
 
 #include <boost/concept/detail/concept_def.hpp>
 namespace boost {
@@ -63,7 +64,7 @@ namespace boost
 // basically modernized it to use real data structures (no more arrays and matrices).
 // Oh... and there's explicit control structures - not just gotos.
 //
-// The problem is definitely NP-complete, an an unbounded implementation of this
+// The problem is definitely NP-complete, an unbounded implementation of this
 // will probably run for quite a while on a large graph. The conclusions
 // of this paper also reference a Paton algorithm for undirected graphs as being
 // much more efficient (apparently based on spanning trees). Although not implemented,
@@ -84,7 +85,7 @@ namespace boost
 //         }
 
 /**
- * The default cycle visitor providse an empty visit function for cycle
+ * The default cycle visitor provides an empty visit function for cycle
  * visitors.
  */
 struct cycle_visitor
@@ -156,8 +157,8 @@ namespace detail
                     const Path& p,
                     const ClosedMatrix& m)
     {
-        function_requires< IncidenceGraphConcept<Graph> >();
-        function_requires< VertexIndexGraphConcept<Graph> >();
+        BOOST_CONCEPT_ASSERT(( IncidenceGraphConcept<Graph> ));
+        BOOST_CONCEPT_ASSERT(( VertexIndexGraphConcept<Graph> ));
         typedef typename graph_traits<Graph>::vertex_descriptor Vertex;
 
         // get the vertices in question
@@ -167,7 +168,7 @@ namespace detail
 
         // conditions for allowing a traversal along this edge are:
         // 1. the index of v must be greater than that at which the
-        //    the path is rooted (p.front()).
+        //    path is rooted (p.front()).
         // 2. the vertex v cannot already be in the path
         // 3. the vertex v cannot be closed to the vertex u
 
@@ -181,7 +182,7 @@ namespace detail
     inline bool
     can_wrap_path(const Graph& g, const Path& p)
     {
-        function_requires< IncidenceGraphConcept<Graph> >();
+        BOOST_CONCEPT_ASSERT(( IncidenceGraphConcept<Graph> ));
         typedef typename graph_traits<Graph>::vertex_descriptor Vertex;
         typedef typename graph_traits<Graph>::out_edge_iterator OutIterator;
 
@@ -209,9 +210,8 @@ namespace detail
                 Path& p,
                 ClosedMatrix& closed)
     {
-        function_requires< IncidenceGraphConcept<Graph> >();
+        BOOST_CONCEPT_ASSERT(( IncidenceGraphConcept<Graph> ));
         typedef typename graph_traits<Graph>::vertex_descriptor Vertex;
-        typedef typename graph_traits<Graph>::edge_descriptor Edge;
         typedef typename graph_traits<Graph>::out_edge_iterator OutIterator;
 
         // get the current vertex
@@ -238,7 +238,7 @@ namespace detail
     inline bool
     exhaust_paths(const Graph& g, Path& p, ClosedMatrix& closed)
     {
-        function_requires< GraphConcept<Graph> >();
+        BOOST_CONCEPT_ASSERT(( GraphConcept<Graph> ));
         typedef typename graph_traits<Graph>::vertex_descriptor Vertex;
 
         // if there's more than one vertex in the path, this closes
@@ -272,10 +272,10 @@ namespace detail
                             std::size_t minlen,
                             std::size_t maxlen)
     {
-        function_requires< VertexListGraphConcept<Graph> >();
+        BOOST_CONCEPT_ASSERT(( VertexListGraphConcept<Graph> ));
         typedef typename graph_traits<Graph>::vertex_descriptor Vertex;
         typedef std::vector<Vertex> Path;
-        function_requires< CycleVisitorConcept<Visitor,Path,Graph> >();
+        BOOST_CONCEPT_ASSERT(( CycleVisitorConcept<Visitor,Path,Graph> ));
         typedef std::vector<Vertex> VertexList;
         typedef std::vector<VertexList> ClosedMatrix;
 
@@ -320,7 +320,7 @@ tiernan_all_cycles(const Graph& g,
                     std::size_t minlen,
                     std::size_t maxlen)
 {
-    function_requires< VertexListGraphConcept<Graph> >();
+    BOOST_CONCEPT_ASSERT(( VertexListGraphConcept<Graph> ));
     typedef typename graph_traits<Graph>::vertex_iterator VertexIterator;
 
     VertexIterator i, end;

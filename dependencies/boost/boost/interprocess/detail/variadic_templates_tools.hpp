@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2008-2009. Distributed under the Boost
+// (C) Copyright Ion Gaztanaga 2008-2012. Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -11,7 +11,7 @@
 #ifndef BOOST_INTERPROCESS_DETAIL_VARIADIC_TEMPLATES_TOOLS_HPP
 #define BOOST_INTERPROCESS_DETAIL_VARIADIC_TEMPLATES_TOOLS_HPP
 
-#if (defined _MSC_VER) && (_MSC_VER >= 1200)
+#if defined(_MSC_VER)
 #  pragma once
 #endif
 
@@ -21,7 +21,7 @@
 #include <cstddef>   //std::size_t
 
 namespace boost {
-namespace interprocess { 
+namespace interprocess {
 namespace ipcdetail {
 
 template<typename... Values>
@@ -136,7 +136,7 @@ struct index_tuple{};
 template<std::size_t Num, typename Tuple = index_tuple<> >
 struct build_number_seq;
 
-template<std::size_t Num, int... Indexes> 
+template<std::size_t Num, int... Indexes>
 struct build_number_seq<Num, index_tuple<Indexes...> >
    : build_number_seq<Num - 1, index_tuple<Indexes..., sizeof...(Indexes)> >
 {};

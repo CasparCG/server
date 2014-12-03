@@ -46,7 +46,7 @@ std::unique_ptr<executor> g_cef_executor;
 
 void caspar_log(
 		const CefRefPtr<CefBrowser>& browser,
-		log::severity_level level,
+		boost::log::trivial::severity_level level,
 		const std::string& message)
 {
 	if (browser)
@@ -179,7 +179,7 @@ public:
 			CefRefPtr<CefFrame> frame,
 			CefRefPtr<CefV8Context> context) override
 	{
-		caspar_log(browser, log::trace,
+		caspar_log(browser, boost::log::trivial::trace,
 				"context for frame "
 				+ boost::lexical_cast<std::string>(frame->GetIdentifier())
 				+ " created");
@@ -227,12 +227,12 @@ public:
 		});
 
 		if (removed != contexts_per_handlers_.end())
-			caspar_log(browser, log::trace,
+			caspar_log(browser, boost::log::trivial::trace,
 					"context for frame "
 					+ boost::lexical_cast<std::string>(frame->GetIdentifier())
 					+ " released");
 		else
-			caspar_log(browser, log::warning,
+			caspar_log(browser, boost::log::trivial::warning,
 					"context for frame "
 					+ boost::lexical_cast<std::string>(frame->GetIdentifier())
 					+ " released, but not found");

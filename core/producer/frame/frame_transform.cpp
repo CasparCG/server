@@ -25,7 +25,7 @@
 
 #include <common/utility/assert.h>
 
-#include <tbb/enumerable_thread_specific.h>
+#include <boost/thread/tss.hpp>
 
 namespace caspar { namespace core {
 
@@ -214,9 +214,17 @@ namespace detail {
 
 double& get_thread_local_aspect_ratio()
 {
-	static tbb::enumerable_thread_specific<double> aspect_ratio(1.0);
+	static boost::thread_specific_ptr<double> aspect_ratio;
 
-	return aspect_ratio.local();
+	auto local = aspect_ratio.get();
+
+	if (!local)
+	{
+		local = new double(1.0);
+		aspect_ratio.reset(local);
+	}
+
+	return *local;
 }
 
 void set_current_aspect_ratio(double aspect_ratio)

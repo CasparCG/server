@@ -6,16 +6,26 @@
 #ifndef BOOST_UNORDERED_SET_FWD_HPP_INCLUDED
 #define BOOST_UNORDERED_SET_FWD_HPP_INCLUDED
 
-#if defined(_MSC_VER) && (_MSC_VER >= 1020)
-# pragma once
+#include <boost/config.hpp>
+#if defined(BOOST_HAS_PRAGMA_ONCE)
+#pragma once
 #endif
 
+#include <memory>
+#include <functional>
+#include <boost/functional/hash_fwd.hpp>
 #include <boost/unordered/detail/fwd.hpp>
 
 namespace boost
 {
     namespace unordered
     {
+        template <class T,
+            class H = boost::hash<T>,
+            class P = std::equal_to<T>,
+            class A = std::allocator<T> >
+        class unordered_set;
+
         template <class T, class H, class P, class A>
         inline bool operator==(unordered_set<T, H, P, A> const&,
             unordered_set<T, H, P, A> const&);
@@ -25,6 +35,12 @@ namespace boost
         template <class T, class H, class P, class A>
         inline void swap(unordered_set<T, H, P, A> &m1,
                 unordered_set<T, H, P, A> &m2);
+
+        template <class T,
+            class H = boost::hash<T>,
+            class P = std::equal_to<T>,
+            class A = std::allocator<T> >
+        class unordered_multiset;
 
         template <class T, class H, class P, class A>
         inline bool operator==(unordered_multiset<T, H, P, A> const&,

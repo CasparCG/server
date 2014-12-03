@@ -139,7 +139,7 @@ safe_ptr<core::frame_producer> create_raw_producer(
 	
 	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
 		{					
-			return boost::filesystem::is_regular_file(boost::filesystem::wpath(filename).replace_extension(ex));
+			return boost::filesystem::is_regular_file(boost::filesystem::path(filename).replace_extension(ex));
 		});
 
 	if(ext == extensions.end())

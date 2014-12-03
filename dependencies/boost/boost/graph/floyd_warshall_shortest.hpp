@@ -34,6 +34,7 @@
 #include <boost/graph/named_function_params.hpp>
 #include <boost/graph/graph_concepts.hpp>
 #include <boost/graph/relax.hpp>
+#include <boost/concept/assert.hpp>
 
 namespace boost
 {
@@ -84,7 +85,7 @@ namespace boost
     const BinaryFunction& combine, const Infinity& inf, 
     const Zero& zero)
   {
-    function_requires<VertexListGraphConcept<VertexListGraph> >();
+    BOOST_CONCEPT_ASSERT(( VertexListGraphConcept<VertexListGraph> ));
   
     return detail::floyd_warshall_dispatch(g, d, compare, combine, 
     inf, zero);
@@ -101,9 +102,9 @@ namespace boost
     const BinaryPredicate& compare, const BinaryFunction& combine, 
     const Infinity& inf, const Zero& zero)
   {
-    function_requires<VertexListGraphConcept<VertexAndEdgeListGraph> >();
-    function_requires<EdgeListGraphConcept<VertexAndEdgeListGraph> >();
-    function_requires<IncidenceGraphConcept<VertexAndEdgeListGraph> >();
+    BOOST_CONCEPT_ASSERT(( VertexListGraphConcept<VertexAndEdgeListGraph> ));
+    BOOST_CONCEPT_ASSERT(( EdgeListGraphConcept<VertexAndEdgeListGraph> ));
+    BOOST_CONCEPT_ASSERT(( IncidenceGraphConcept<VertexAndEdgeListGraph> ));
   
     typename graph_traits<VertexAndEdgeListGraph>::vertex_iterator 
       firstv, lastv, firstv2, lastv2;

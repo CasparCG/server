@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -31,22 +31,23 @@ namespace strategy { namespace transform
 {
 
 /*!
-\brief Transformation strategy to do an inverse ransformation in Cartesian system
+\brief Transformation strategy to do an inverse transformation in a Cartesian coordinate system
 \ingroup strategies
-\tparam P1 first point type
-\tparam P2 second point type
  */
-template <typename P1, typename P2>
+template
+<
+    typename CalculationType,
+    std::size_t Dimension1,
+    std::size_t Dimension2
+>
 class inverse_transformer
-    : public ublas_transformer<P1, P2, dimension<P1>::type::value, dimension<P2>::type::value>
+    : public ublas_transformer<CalculationType, Dimension1, Dimension2>
 {
-    typedef typename select_coordinate_type<P1, P2>::type T;
-
 public :
     template <typename Transformer>
     inline inverse_transformer(Transformer const& input)
     {
-        typedef boost::numeric::ublas::matrix<T> matrix_type;
+        typedef boost::numeric::ublas::matrix<CalculationType> matrix_type;
 
         // create a working copy of the input
         matrix_type copy(input.matrix());
@@ -60,7 +61,7 @@ public :
         if( res == 0 )
         {
             // create identity matrix
-            this->m_matrix.assign(boost::numeric::ublas::identity_matrix<T>(copy.size1()));
+            this->m_matrix.assign(boost::numeric::ublas::identity_matrix<CalculationType>(copy.size1()));
 
             // backsubstitute to get the inverse
             boost::numeric::ublas::lu_substitute(copy, pm, this->m_matrix);

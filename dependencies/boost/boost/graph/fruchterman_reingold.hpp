@@ -282,7 +282,6 @@ fruchterman_reingold_force_directed_layout
   Cooling         cool,
   DisplacementMap displacement)
 {
-  typedef typename Topology::point_type Point;
   typedef typename graph_traits<Graph>::vertex_iterator   vertex_iterator;
   typedef typename graph_traits<Graph>::vertex_descriptor vertex_descriptor;
   typedef typename graph_traits<Graph>::edge_iterator     edge_iterator;
@@ -363,7 +362,7 @@ namespace detail {
   };
 
   template<>
-  struct fr_force_directed_layout<error_property_not_found>
+  struct fr_force_directed_layout<param_not_found>
   {
     template<typename Topology, typename Graph, typename PositionMap, 
              typename AttractiveForce, typename RepulsiveForce,
@@ -377,7 +376,7 @@ namespace detail {
         RepulsiveForce  repulsive_force,
         ForcePairs      force_pairs,
         Cooling         cool,
-        error_property_not_found,
+        param_not_found,
         const bgl_named_params<Param, Tag, Rest>& params)
     {
       typedef typename Topology::point_difference_type PointDiff;
@@ -404,8 +403,7 @@ fruchterman_reingold_force_directed_layout
    const Topology& topology,
    const bgl_named_params<Param, Tag, Rest>& params)
 {
-  typedef typename property_value<bgl_named_params<Param,Tag,Rest>,
-                                  vertex_displacement_t>::type D;
+  typedef typename get_param_type<vertex_displacement_t, bgl_named_params<Param,Tag,Rest> >::type D;
 
   detail::fr_force_directed_layout<D>::run
     (g, position, topology, 

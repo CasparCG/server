@@ -3,7 +3,7 @@
 
     http://www.boost.org/
 
-    Copyright (c) 2001-2011 Hartmut Kaiser. Distributed under the Boost
+    Copyright (c) 2001-2012 Hartmut Kaiser. Distributed under the Boost
     Software License, Version 1.0. (See accompanying file
     LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 =============================================================================*/
@@ -13,6 +13,7 @@
 
 #include <boost/wave/wave_config.hpp>
 #include <boost/wave/util/cpp_include_paths.hpp>
+#include <boost/wave/cpp_exceptions.hpp>
 
 #include <vector>
 

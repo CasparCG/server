@@ -5,7 +5,7 @@
 
     http://www.boost.org/
 
-    Copyright (c) 2001-2011 Hartmut Kaiser. Distributed under the Boost
+    Copyright (c) 2001-2012 Hartmut Kaiser. Distributed under the Boost
     Software License, Version 1.0. (See accompanying file
     LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 =============================================================================*/
@@ -287,7 +287,7 @@ enum token_id {
 // import is needed to be a keyword for the C++ module Standards proposal
     T_IMPORT       = TOKEN_FROM_ID(421, KeywordTokenType),
 
-// C++0x keywords
+// C++11 keywords
     T_ALIGNAS      = TOKEN_FROM_ID(422, KeywordTokenType),
     T_ALIGNOF      = TOKEN_FROM_ID(423, KeywordTokenType),
     T_CHAR16_T     = TOKEN_FROM_ID(424, KeywordTokenType),

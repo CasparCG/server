@@ -113,6 +113,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FloatingPointModel>Fast</FloatingPointModel>
       <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <AdditionalOptions>-Zm128 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <PostBuildEvent>
       <Command>
@@ -145,6 +146,7 @@
       <OmitFramePointers>true</OmitFramePointers>
       <FloatingPointModel>Fast</FloatingPointModel>
       <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <AdditionalOptions>-Zm128 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <PostBuildEvent>
       <Command>
@@ -179,6 +181,7 @@
       <OmitFramePointers>true</OmitFramePointers>
       <FloatingPointModel>Fast</FloatingPointModel>
       <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <AdditionalOptions>-Zm128 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <PreLinkEvent>
       <Command>
@@ -235,6 +238,7 @@
       <OmitFramePointers>true</OmitFramePointers>
       <FloatingPointModel>Fast</FloatingPointModel>
       <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <AdditionalOptions>-Zm128 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <PreLinkEvent>
       <Command>

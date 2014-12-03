@@ -37,6 +37,7 @@
 #include <common/utility/string.h>
 #include <common/utility/utf8conv.h>
 #include <common/utility/base64.h>
+#include <common/concurrency/thread_info.h>
 
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>
@@ -114,7 +115,7 @@ namespace caspar { namespace protocol {
 
 using namespace core;
 
-std::wstring read_file_base64(const boost::filesystem::wpath& file)
+std::wstring read_file_base64(const boost::filesystem::path& file)
 {
 	using namespace boost::archive::iterators;
 
@@ -131,7 +132,7 @@ std::wstring read_file_base64(const boost::filesystem::wpath& file)
 	return widen(to_base64(bytes.data(), length));
 }
 
-std::wstring read_utf8_file(const boost::filesystem::wpath& file)
+std::wstring read_utf8_file(const boost::filesystem::path& file)
 {
 	std::wstringstream result;
 	boost::filesystem::wifstream filestream(file);
@@ -147,7 +148,7 @@ std::wstring read_utf8_file(const boost::filesystem::wpath& file)
 	return result.str();
 }
 
-std::wstring read_latin1_file(const boost::filesystem::wpath& file)
+std::wstring read_latin1_file(const boost::filesystem::path& file)
 {
 	boost::locale::generator gen;
 	gen.locale_cache_enabled(true);
@@ -177,7 +178,7 @@ std::wstring read_latin1_file(const boost::filesystem::wpath& file)
 	return widened_result;
 }
 
-std::wstring read_file(const boost::filesystem::wpath& file)
+std::wstring read_file(const boost::filesystem::path& file)
 {
 	static const uint8_t BOM[] = {0xef, 0xbb, 0xbf};
 
@@ -201,12 +202,12 @@ std::wstring read_file(const boost::filesystem::wpath& file)
 	return read_latin1_file(file);
 }
 
-std::wstring MediaInfo(const boost::filesystem::wpath& path, const std::shared_ptr<core::media_info_repository>& media_info_repo)
+std::wstring MediaInfo(const boost::filesystem::path& path, const std::shared_ptr<core::media_info_repository>& media_info_repo)
 {
 	if(boost::filesystem::is_regular_file(path))
 	{
 		std::wstring clipttype = TEXT(" N/A ");
-		std::wstring extension = boost::to_upper_copy(path.extension());
+		std::wstring extension = boost::to_upper_copy(path.extension().wstring());
 		if(extension == TEXT(".TGA") || extension == TEXT(".COL") || extension == L".PNG" || extension == L".JPEG" || extension == L".JPG" ||
 			extension == L".GIF" || extension == L".BMP")
 		{
@@ -220,7 +221,7 @@ std::wstring MediaInfo(const boost::filesystem::wpath& path, const std::shared_p
 				extension == TEXT(".DV") || extension == TEXT(".MOV") || 
 				extension == TEXT(".MPG") || extension == TEXT(".AVI") || 
 				extension == TEXT(".MP4") || extension == TEXT(".FLV") || 
-				caspar::ffmpeg::is_valid_file(path.file_string()))
+				caspar::ffmpeg::is_valid_file(path.wstring()))
 		{
 			clipttype = TEXT(" MOVIE ");
 		}
@@ -229,7 +230,7 @@ std::wstring MediaInfo(const boost::filesystem::wpath& path, const std::shared_p
 		{		
 			auto is_not_digit = [](char c){ return std::isdigit(c) == 0; };
 
-			auto relativePath = boost::filesystem::wpath(path.file_string().substr(env::media_folder().size()-1, path.file_string().size()));
+			auto relativePath = boost::filesystem::path(path.wstring().substr(env::media_folder().size()-1, path.wstring().size()));
 
 			auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(path)));
 			writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), is_not_digit), writeTimeStr.end());
@@ -239,10 +240,10 @@ std::wstring MediaInfo(const boost::filesystem::wpath& path, const std::shared_p
 			sizeStr.erase(std::remove_if(sizeStr.begin(), sizeStr.end(), is_not_digit), sizeStr.end());
 			auto sizeWStr = std::wstring(sizeStr.begin(), sizeStr.end());
 				
-			auto str = relativePath.replace_extension(TEXT("")).external_file_string();
+			auto str = relativePath.replace_extension(TEXT("")).native();
 			if(str[0] == '\\' || str[0] == '/')
 				str = std::wstring(str.begin() + 1, str.end());
-			auto media_info = media_info_repo->get(path.file_string());
+			auto media_info = media_info_repo->get(path.wstring());
 			
 			return std::wstring() 
 					+ L"\""		+ str +
@@ -260,7 +261,7 @@ std::wstring MediaInfo(const boost::filesystem::wpath& path, const std::shared_p
 std::wstring ListMedia(const std::shared_ptr<core::media_info_repository>& media_info_repo)
 {		
 	std::wstringstream replyString;
-	for (boost::filesystem::wrecursive_directory_iterator itr(env::media_folder()), end; itr != end; ++itr)	
+	for (boost::filesystem::recursive_directory_iterator itr(env::media_folder()), end; itr != end; ++itr)	
 		replyString << MediaInfo(itr->path(), media_info_repo);
 	
 	return boost::to_upper_copy(replyString.str());
@@ -270,11 +271,11 @@ std::wstring ListTemplates()
 {
 	std::wstringstream replyString;
 
-	for (boost::filesystem::wrecursive_directory_iterator itr(env::template_folder()), end; itr != end; ++itr)
+	for (boost::filesystem::recursive_directory_iterator itr(env::template_folder()), end; itr != end; ++itr)
 	{		
 		if(boost::filesystem::is_regular_file(itr->path()) && (itr->path().extension() == L".ft" || itr->path().extension() == L".ct" || itr->path().extension() == L".html"))
 		{
-			auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(env::template_folder().size()-1, itr->path().file_string().size()));
+			auto relativePath = boost::filesystem::path(itr->path().wstring().substr(env::template_folder().size()-1, itr->path().wstring().size()));
 
 			auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(itr->path())));
 			writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), [](char c){ return std::isdigit(c) == 0;}), writeTimeStr.end());
@@ -285,11 +286,11 @@ std::wstring ListTemplates()
 
 			auto sizeWStr = std::wstring(sizeStr.begin(), sizeStr.end());
 
-			std::wstring dir = relativePath.parent_path().external_directory_string();
-			std::wstring file = boost::to_upper_copy(relativePath.filename());
-			relativePath = boost::filesystem::wpath(dir + L"/" + file);
+			std::wstring dir = relativePath.parent_path().native();
+			std::wstring file = boost::to_upper_copy(relativePath.filename().wstring());
+			relativePath = boost::filesystem::path(dir + L"/" + file);
 						
-			auto str = relativePath.replace_extension(TEXT("")).external_file_string();
+			std::wstring str = relativePath.replace_extension(TEXT("")).native();
 			boost::trim_if(str, boost::is_any_of("\\/"));
 
 			replyString << TEXT("\"") << str
@@ -1499,13 +1500,13 @@ bool CGCommand::DoExecuteAdd() {
 			filename.append(dataString);
 			filename.append(TEXT(".ftd"));
 
-			dataFromFile = read_file(boost::filesystem::wpath(filename));
+			dataFromFile = read_file(boost::filesystem::path(filename));
 			pDataString = dataFromFile.c_str();
 		}
 	}
 	
 	std::wstring fullFilename = flash::find_template(env::template_folder() + _parameters[2]);
-	std::wstring extension = boost::filesystem::wpath(fullFilename).extension();
+	std::wstring extension = boost::filesystem::path(fullFilename).extension().wstring();
 	std::wstring filename = _parameters[2];
 
 	if(!fullFilename.empty())
@@ -1719,7 +1720,7 @@ bool CGCommand::DoExecuteUpdate()
 			filename.append(dataString);
 			filename.append(TEXT(".ftd"));
 
-			dataString = read_file(boost::filesystem::wpath(filename));
+			dataString = read_file(boost::filesystem::path(filename));
 		}		
 
 		int layer = _ttoi(_parameters.at(1).c_str());
@@ -1862,8 +1863,7 @@ bool DataCommand::DoExecuteStore()
 	filename.append(_parameters[1]);
 	filename.append(TEXT(".ftd"));
 
-	auto data_path = boost::filesystem::wpath(
-			boost::filesystem::wpath(filename).parent_path());
+	auto data_path = boost::filesystem::path(filename).parent_path();
 	
 	if(!boost::filesystem::exists(data_path))
 		boost::filesystem::create_directories(data_path);
@@ -1897,7 +1897,7 @@ bool DataCommand::DoExecuteRetrieve()
 	filename.append(_parameters[1]);
 	filename.append(TEXT(".ftd"));
 
-	std::wstring file_contents = read_file(boost::filesystem::wpath(filename));
+	std::wstring file_contents = read_file(boost::filesystem::path(filename));
 
 	if (file_contents.empty()) 
 	{
@@ -1961,16 +1961,16 @@ bool DataCommand::DoExecuteList()
 	std::wstringstream replyString;
 	replyString << TEXT("200 DATA LIST OK\r\n");
 
-	for (boost::filesystem::wrecursive_directory_iterator itr(env::data_folder()), end; itr != end; ++itr)
+	for (boost::filesystem::recursive_directory_iterator itr(env::data_folder()), end; itr != end; ++itr)
 	{			
 		if(boost::filesystem::is_regular_file(itr->path()))
 		{
-			if(!boost::iequals(itr->path().extension(), L".ftd"))
+			if(!boost::iequals(itr->path().extension().wstring(), L".ftd"))
 				continue;
 			
-			auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(env::data_folder().size()-1, itr->path().file_string().size()));
+			auto relativePath = boost::filesystem::path(itr->path().wstring().substr(env::data_folder().size()-1, itr->path().wstring().size()));
 			
-			auto str = relativePath.replace_extension(TEXT("")).external_file_string();
+			auto str = relativePath.replace_extension(TEXT("")).native();
 			if(str[0] == '\\' || str[0] == '/')
 				str = std::wstring(str.begin() + 1, str.end());
 
@@ -2013,7 +2013,7 @@ bool ThumbnailCommand::DoExecuteRetrieve()
 	filename.append(_parameters[1]);
 	filename.append(TEXT(".png"));
 
-	std::wstring file_contents = read_file_base64(boost::filesystem::wpath(filename));
+	std::wstring file_contents = read_file_base64(boost::filesystem::path(filename));
 
 	if (file_contents.empty())
 	{
@@ -2035,16 +2035,16 @@ bool ThumbnailCommand::DoExecuteList()
 	std::wstringstream replyString;
 	replyString << TEXT("200 THUMBNAIL LIST OK\r\n");
 
-	for (boost::filesystem::wrecursive_directory_iterator itr(env::thumbnails_folder()), end; itr != end; ++itr)
+	for (boost::filesystem::recursive_directory_iterator itr(env::thumbnails_folder()), end; itr != end; ++itr)
 	{			
 		if(boost::filesystem::is_regular_file(itr->path()))
 		{
-			if(!boost::iequals(itr->path().extension(), L".png"))
+			if(!boost::iequals(itr->path().extension().wstring(), L".png"))
 				continue;
 			
-			auto relativePath = boost::filesystem::wpath(itr->path().file_string().substr(env::thumbnails_folder().size()-1, itr->path().file_string().size()));
+			auto relativePath = boost::filesystem::path(itr->path().wstring().substr(env::thumbnails_folder().size()-1, itr->path().wstring().size()));
 			
-			auto str = relativePath.replace_extension(L"").external_file_string();
+			auto str = relativePath.replace_extension(L"").native();
 			if(str[0] == '\\' || str[0] == '/')
 				str = std::wstring(str.begin() + 1, str.end());
 
@@ -2109,11 +2109,11 @@ bool CinfCommand::DoExecute()
 	try
 	{
 		std::wstring info;
-		for (boost::filesystem::wrecursive_directory_iterator itr(env::media_folder()), end; itr != end; ++itr)
+		for (boost::filesystem::recursive_directory_iterator itr(env::media_folder()), end; itr != end; ++itr)
 		{
 			auto path = itr->path();
 			auto file = path.replace_extension(L"").filename();
-			if(boost::iequals(file, _parameters.at(0)))
+			if(boost::iequals(file.wstring(), _parameters.at(0)))
 				info += MediaInfo(itr->path(), GetMediaInfoRepo());
 		}
 
@@ -2144,7 +2144,7 @@ bool InfoCommand::DoExecute()
 {
 	std::wstringstream replyString;
 	
-	boost::property_tree::xml_writer_settings<wchar_t> w(' ', 3);
+	boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
 
 	try
 	{
@@ -2175,7 +2175,7 @@ bool InfoCommand::DoExecute()
 
 			boost::property_tree::wptree info;
 			info.add_child(L"paths", caspar::env::properties().get_child(L"configuration.paths"));
-			info.add(L"paths.initial-path", boost::filesystem2::initial_path<boost::filesystem2::wpath>().directory_string() + L"\\");
+			info.add(L"paths.initial-path", boost::filesystem::initial_path<boost::filesystem::path>().wstring() + L"\\");
 
 			boost::property_tree::write_xml(replyString, info, w);
 		}
@@ -2185,6 +2185,17 @@ bool InfoCommand::DoExecute()
 
 			boost::property_tree::wptree info = AMCPCommandQueue::info_all_queues();
 			boost::property_tree::write_xml(replyString, info, w);
+		}
+		else if(_parameters.size() >= 1 && _parameters[0] == L"THREADS")
+		{
+			replyString << L"200 INFO THREADS OK\r\n";
+
+			BOOST_FOREACH(auto& thread, get_thread_infos())
+			{
+				replyString << thread->native_id << L"\t" << widen(thread->name) << L"\r\n";
+			}
+
+			replyString << L"\r\n";
 		}
 		else if(_parameters.size() >= 1 && _parameters[0] == L"SYSTEM")
 		{
@@ -2424,7 +2435,7 @@ bool GlCommand::DoExecuteGc()
 bool GlCommand::DoExecuteInfo()
 {
 	std::wstringstream reply_string;
-	boost::property_tree::xml_writer_settings<wchar_t> w(' ', 3);
+	boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
 
 	auto info = GetOglDevice()->info();
 

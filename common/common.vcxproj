@@ -101,6 +101,7 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <ExceptionHandling>Async</ExceptionHandling>
       <ForcedIncludeFiles>compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <AdditionalOptions>-Zm128 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -130,6 +131,7 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <ForcedIncludeFiles>compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <AdditionalOptions>-Zm128 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -163,6 +165,7 @@
       <TreatWarningAsError>true</TreatWarningAsError>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <ForcedIncludeFiles>compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <AdditionalOptions>-Zm128 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -195,6 +198,7 @@
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FloatingPointModel>Fast</FloatingPointModel>
       <ForcedIncludeFiles>compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
+      <AdditionalOptions>-Zm128 %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -214,6 +218,7 @@
     <ClInclude Include="concurrency\future_util.h" />
     <ClInclude Include="concurrency\lock.h" />
     <ClInclude Include="concurrency\target.h" />
+    <ClInclude Include="concurrency\thread_info.h" />
     <ClInclude Include="diagnostics\graph.h" />
     <ClInclude Include="exception\exceptions.h" />
     <ClInclude Include="exception\win32_exception.h" />
@@ -236,6 +241,7 @@
     <ClInclude Include="utility\base64.h" />
     <ClInclude Include="utility\iterator.h" />
     <ClInclude Include="utility\move_on_copy.h" />
+    <ClInclude Include="utility\software_version.h" />
     <ClInclude Include="utility\string.h" />
     <ClInclude Include="utility\timer.h" />
     <ClInclude Include="utility\tweener.h" />
@@ -243,6 +249,12 @@
     <ClInclude Include="utility\utf8conv_inl.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="concurrency\thread_info.cpp">
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Profile|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+      <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">../StdAfx.h</PrecompiledHeaderFile>
+    </ClCompile>
     <ClCompile Include="diagnostics\graph.cpp">
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">../StdAfx.h</PrecompiledHeaderFile>
       <PrecompiledHeaderFile Condition="'$(Configuration)|$(Platform)'=='Develop|Win32'">../StdAfx.h</PrecompiledHeaderFile>

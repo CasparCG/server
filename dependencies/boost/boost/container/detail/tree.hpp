@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2005-2011. Distributed under the Boost
+// (C) Copyright Ion Gaztanaga 2005-2013. Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -8,26 +8,39 @@
 //
 //////////////////////////////////////////////////////////////////////////////
 
-#ifndef BOOST_CONTAINERS_TREE_HPP
-#define BOOST_CONTAINERS_TREE_HPP
+#ifndef BOOST_CONTAINER_TREE_HPP
+#define BOOST_CONTAINER_TREE_HPP
 
-#include "config_begin.hpp"
+#if defined(_MSC_VER)
+#  pragma once
+#endif
+
+#include <boost/container/detail/config_begin.hpp>
 #include <boost/container/detail/workaround.hpp>
 #include <boost/container/container_fwd.hpp>
 
-#include <boost/move/move.hpp>
-#include <boost/pointer_to_other.hpp>
-#include <boost/type_traits/has_trivial_destructor.hpp>
-#include <boost/detail/no_exceptions_support.hpp>
-#include <boost/intrusive/rbtree.hpp>
-
 #include <boost/container/detail/utilities.hpp>
+#include <boost/container/detail/iterators.hpp>
 #include <boost/container/detail/algorithms.hpp>
 #include <boost/container/detail/node_alloc_holder.hpp>
 #include <boost/container/detail/destroyers.hpp>
 #include <boost/container/detail/pair.hpp>
 #include <boost/container/detail/type_traits.hpp>
-#ifndef BOOST_CONTAINERS_PERFECT_FORWARDING
+#include <boost/container/allocator_traits.hpp>
+#include <boost/container/options.hpp>
+
+//
+#include <boost/intrusive/pointer_traits.hpp>
+#include <boost/intrusive/rbtree.hpp>
+#include <boost/intrusive/avltree.hpp>
+#include <boost/intrusive/splaytree.hpp>
+#include <boost/intrusive/sgtree.hpp>
+//
+#include <boost/move/utility_core.hpp>
+#include <boost/type_traits/has_trivial_destructor.hpp>
+#include <boost/core/no_exceptions_support.hpp>
+//
+#ifndef BOOST_CONTAINER_PERFECT_FORWARDING
 #include <boost/container/detail/preprocessor.hpp>
 #endif
 
@@ -37,19 +50,23 @@
 
 namespace boost {
 namespace container {
-namespace containers_detail {
+namespace container_detail {
 
 template<class Key, class Value, class KeyCompare, class KeyOfValue>
-struct value_compare_impl
+struct tree_value_compare
    :  public KeyCompare
 {
    typedef Value        value_type;
-   typedef KeyCompare   key_compare; 
+   typedef KeyCompare   key_compare;
    typedef KeyOfValue   key_of_value;
    typedef Key          key_type;
 
-   value_compare_impl(const key_compare &kcomp)
-      :  key_compare(kcomp)
+   explicit tree_value_compare(const key_compare &kcomp)
+      :  KeyCompare(kcomp)
+   {}
+
+   tree_value_compare()
+      :  KeyCompare()
    {}
 
    const key_compare &key_comp() const
@@ -79,72 +96,78 @@ struct value_compare_impl
    {  return key_compare::operator()(this->key_forward(key1), this->key_forward(key2));  }
 };
 
-template<class VoidPointer>
-struct rbtree_hook
+template<class VoidPointer, boost::container::tree_type_enum tree_type_value, bool OptimizeSize>
+struct intrusive_tree_hook;
+
+template<class VoidPointer, bool OptimizeSize>
+struct intrusive_tree_hook<VoidPointer, boost::container::red_black_tree, OptimizeSize>
 {
-   typedef typename containers_detail::bi::make_set_base_hook
-      < containers_detail::bi::void_pointer<VoidPointer>
-      , containers_detail::bi::link_mode<containers_detail::bi::normal_link>
-      , containers_detail::bi::optimize_size<true>
+   typedef typename container_detail::bi::make_set_base_hook
+      < container_detail::bi::void_pointer<VoidPointer>
+      , container_detail::bi::link_mode<container_detail::bi::normal_link>
+      , container_detail::bi::optimize_size<OptimizeSize>
       >::type  type;
 };
 
+template<class VoidPointer, bool OptimizeSize>
+struct intrusive_tree_hook<VoidPointer, boost::container::avl_tree, OptimizeSize>
+{
+   typedef typename container_detail::bi::make_avl_set_base_hook
+      < container_detail::bi::void_pointer<VoidPointer>
+      , container_detail::bi::link_mode<container_detail::bi::normal_link>
+      , container_detail::bi::optimize_size<OptimizeSize>
+      >::type  type;
+};
+
+template<class VoidPointer, bool OptimizeSize>
+struct intrusive_tree_hook<VoidPointer, boost::container::scapegoat_tree, OptimizeSize>
+{
+   typedef typename container_detail::bi::make_bs_set_base_hook
+      < container_detail::bi::void_pointer<VoidPointer>
+      , container_detail::bi::link_mode<container_detail::bi::normal_link>
+      >::type  type;
+};
+
+template<class VoidPointer, bool OptimizeSize>
+struct intrusive_tree_hook<VoidPointer, boost::container::splay_tree, OptimizeSize>
+{
+   typedef typename container_detail::bi::make_bs_set_base_hook
+      < container_detail::bi::void_pointer<VoidPointer>
+      , container_detail::bi::link_mode<container_detail::bi::normal_link>
+      >::type  type;
+};
+
+//This trait is used to type-pun std::pair because in C++03
+//compilers std::pair is useless for C++11 features
 template<class T>
-struct rbtree_type
+struct tree_internal_data_type
 {
    typedef T type;
 };
 
 template<class T1, class T2>
-struct rbtree_type< std::pair<T1, T2> >
+struct tree_internal_data_type< std::pair<T1, T2> >
 {
    typedef pair<T1, T2> type;
 };
 
-template <class T, class VoidPointer>
-struct rbtree_node
-   :  public rbtree_hook<VoidPointer>::type
+//The node to be store in the tree
+template <class T, class VoidPointer, boost::container::tree_type_enum tree_type_value, bool OptimizeSize>
+struct tree_node
+   :  public intrusive_tree_hook<VoidPointer, tree_type_value, OptimizeSize>::type
 {
-   typedef typename rbtree_hook<VoidPointer>::type hook_type;
+   private:
+   //BOOST_COPYABLE_AND_MOVABLE(tree_node)
+   tree_node();
 
+   public:
+   typedef typename intrusive_tree_hook
+      <VoidPointer, tree_type_value, OptimizeSize>::type hook_type;
    typedef T value_type;
-   typedef typename rbtree_type<T>::type internal_type;
+   typedef typename tree_internal_data_type<T>::type     internal_type;
 
-   typedef rbtree_node<T, VoidPointer> node_type;
-
-   #ifndef BOOST_CONTAINERS_PERFECT_FORWARDING
-
-   rbtree_node()
-      : m_data()
-   {}
-
-   rbtree_node(const rbtree_node &other)
-      : m_data(other.m_data)
-   {}
-
-   #define BOOST_PP_LOCAL_MACRO(n)                                                           \
-   template<BOOST_PP_ENUM_PARAMS(n, class P)>                                                \
-   rbtree_node(BOOST_PP_ENUM(n, BOOST_CONTAINERS_PP_PARAM_LIST, _))                        \
-      : m_data(BOOST_PP_ENUM(n, BOOST_CONTAINERS_PP_PARAM_FORWARD, _))                     \
-   {}                                                                                        \
-   //!
-   #define BOOST_PP_LOCAL_LIMITS (1, BOOST_CONTAINERS_MAX_CONSTRUCTOR_PARAMETERS)
-   #include BOOST_PP_LOCAL_ITERATE()
-
-   #else //#ifndef BOOST_CONTAINERS_PERFECT_FORWARDING
-
-   rbtree_node()
-      : m_data()
-   {}
-
-   template<class ...Args>
-   rbtree_node(Args &&...args)
-      : m_data(boost::forward<Args>(args)...)
-   {}
-   #endif//#ifndef BOOST_CONTAINERS_PERFECT_FORWARDING
-
-   rbtree_node &operator=(const rbtree_node &other)
-   {  do_assign(other.m_data);   return *this;  }
+   typedef tree_node< T, VoidPointer
+                    , tree_type_value, OptimizeSize>     node_type;
 
    T &get_data()
    {
@@ -158,7 +181,6 @@ struct rbtree_node
       return *ptr;
    }
 
-   private:
    internal_type m_data;
 
    template<class A, class B>
@@ -179,112 +201,292 @@ struct rbtree_node
    void do_assign(const V &v)
    {  m_data = v; }
 
+   template<class A, class B>
+   void do_move_assign(std::pair<const A, B> &p)
+   {
+      const_cast<A&>(m_data.first) = ::boost::move(p.first);
+      m_data.second = ::boost::move(p.second);
+   }
+
+   template<class A, class B>
+   void do_move_assign(pair<const A, B> &p)
+   {
+      const_cast<A&>(m_data.first) = ::boost::move(p.first);
+      m_data.second  = ::boost::move(p.second);
+   }
+
+   template<class V>
+   void do_move_assign(V &v)
+   {  m_data = ::boost::move(v); }
+};
+
+template <class T, class VoidPointer, boost::container::tree_type_enum tree_type_value, bool OptimizeSize>
+struct iiterator_node_value_type< tree_node<T, VoidPointer, tree_type_value, OptimizeSize> > {
+  typedef T type;
+};
+
+template<class Node, class Icont>
+class insert_equal_end_hint_functor
+{
+   Icont &icont_;
+
    public:
-   template<class Convertible>
-   static void construct(node_type *ptr, BOOST_FWD_REF(Convertible) convertible)
-   {  new(ptr) node_type(boost::forward<Convertible>(convertible));  }
+   insert_equal_end_hint_functor(Icont &icont)
+      :  icont_(icont)
+   {}
+
+   void operator()(Node &n)
+   {  this->icont_.insert_equal(this->icont_.cend(), n); }
 };
 
-}//namespace containers_detail {
-#if defined(BOOST_NO_RVALUE_REFERENCES)
-template<class T, class VoidPointer>
-struct has_own_construct_from_it
-   < boost::container::containers_detail::rbtree_node<T, VoidPointer> >
+template<class Node, class Icont>
+class push_back_functor
 {
-   static const bool value = true;
-};
-#endif
-namespace containers_detail {
+   Icont &icont_;
 
-template<class A, class ValueCompare>
-struct intrusive_rbtree_type
+   public:
+   push_back_functor(Icont &icont)
+      :  icont_(icont)
+   {}
+
+   void operator()(Node &n)
+   {  this->icont_.push_back(n); }
+};
+
+}//namespace container_detail {
+
+namespace container_detail {
+
+template< class NodeType, class NodeCompareType
+        , class SizeType,  class HookType
+        , boost::container::tree_type_enum tree_type_value>
+struct intrusive_tree_dispatch;
+
+template<class NodeType, class NodeCompareType, class SizeType, class HookType>
+struct intrusive_tree_dispatch
+   <NodeType, NodeCompareType, SizeType, HookType, boost::container::red_black_tree>
 {
-   typedef typename A::value_type                  value_type;
-   typedef typename boost::pointer_to_other
-      <typename A::pointer, void>::type            void_pointer;
-   typedef typename containers_detail::rbtree_node
-         <value_type, void_pointer>                node_type;
+   typedef typename container_detail::bi::make_rbtree
+      <NodeType
+      ,container_detail::bi::compare<NodeCompareType>
+      ,container_detail::bi::base_hook<HookType>
+      ,container_detail::bi::constant_time_size<true>
+      ,container_detail::bi::size_type<SizeType>
+      >::type  type;
+};
+
+template<class NodeType, class NodeCompareType, class SizeType, class HookType>
+struct intrusive_tree_dispatch
+   <NodeType, NodeCompareType, SizeType, HookType, boost::container::avl_tree>
+{
+   typedef typename container_detail::bi::make_avltree
+      <NodeType
+      ,container_detail::bi::compare<NodeCompareType>
+      ,container_detail::bi::base_hook<HookType>
+      ,container_detail::bi::constant_time_size<true>
+      ,container_detail::bi::size_type<SizeType>
+      >::type  type;
+};
+
+template<class NodeType, class NodeCompareType, class SizeType, class HookType>
+struct intrusive_tree_dispatch
+   <NodeType, NodeCompareType, SizeType, HookType, boost::container::scapegoat_tree>
+{
+   typedef typename container_detail::bi::make_sgtree
+      <NodeType
+      ,container_detail::bi::compare<NodeCompareType>
+      ,container_detail::bi::base_hook<HookType>
+      ,container_detail::bi::floating_point<true>
+      ,container_detail::bi::size_type<SizeType>
+      >::type  type;
+};
+
+template<class NodeType, class NodeCompareType, class SizeType, class HookType>
+struct intrusive_tree_dispatch
+   <NodeType, NodeCompareType, SizeType, HookType, boost::container::splay_tree>
+{
+   typedef typename container_detail::bi::make_splaytree
+      <NodeType
+      ,container_detail::bi::compare<NodeCompareType>
+      ,container_detail::bi::base_hook<HookType>
+      ,container_detail::bi::constant_time_size<true>
+      ,container_detail::bi::size_type<SizeType>
+      >::type  type;
+};
+
+template<class A, class ValueCompare, boost::container::tree_type_enum tree_type_value, bool OptimizeSize>
+struct intrusive_tree_type
+{
+   private:
+   typedef typename boost::container::
+      allocator_traits<A>::value_type              value_type;
+   typedef typename boost::container::
+      allocator_traits<A>::void_pointer            void_pointer;
+   typedef typename boost::container::
+      allocator_traits<A>::size_type               size_type;
+   typedef typename container_detail::tree_node
+         < value_type, void_pointer
+         , tree_type_value, OptimizeSize>          node_type;
    typedef node_compare<ValueCompare, node_type>   node_compare_type;
-   typedef typename containers_detail::bi::make_rbtree
-      <node_type
-      ,containers_detail::bi::compare<node_compare_type>
-      ,containers_detail::bi::base_hook<typename rbtree_hook<void_pointer>::type>
-      ,containers_detail::bi::constant_time_size<true>
-      ,containers_detail::bi::size_type<typename A::size_type>
-      >::type                                      container_type;
-   typedef container_type                          type ;
+   //Deducing the hook type from node_type (e.g. node_type::hook_type) would
+   //provoke an early instantiation of node_type that could ruin recursive
+   //tree definitions, so retype the complete type to avoid any problem.
+   typedef typename intrusive_tree_hook
+      <void_pointer, tree_type_value
+      , OptimizeSize>::type                        hook_type;
+   public:
+   typedef typename intrusive_tree_dispatch
+      < node_type, node_compare_type
+      , size_type, hook_type
+      , tree_type_value>::type                     type;
 };
 
-}  //namespace containers_detail {
+//Trait to detect manually rebalanceable tree types
+template<boost::container::tree_type_enum tree_type_value>
+struct is_manually_balanceable
+{  static const bool value = true;  };
 
-namespace containers_detail {
+template<>  struct is_manually_balanceable<red_black_tree>
+{  static const bool value = false; };
 
-template <class Key, class Value, class KeyOfValue, 
-          class KeyCompare, class A>
-class rbtree
-   : protected containers_detail::node_alloc_holder
-      <A, typename containers_detail::intrusive_rbtree_type
-         <A, value_compare_impl<Key, Value, KeyCompare, KeyOfValue>  
-         >::type
+template<>  struct is_manually_balanceable<avl_tree>
+{  static const bool value = false; };
+
+//Proxy traits to implement different operations depending on the
+//is_manually_balanceable<>::value
+template< boost::container::tree_type_enum tree_type_value
+        , bool IsManuallyRebalanceable = is_manually_balanceable<tree_type_value>::value>
+struct intrusive_tree_proxy
+{
+   template<class Icont>
+   static void rebalance(Icont &)   {}
+};
+
+template<boost::container::tree_type_enum tree_type_value>
+struct intrusive_tree_proxy<tree_type_value, true>
+{
+   template<class Icont>
+   static void rebalance(Icont &c)
+   {  c.rebalance(); }
+};
+
+}  //namespace container_detail {
+
+namespace container_detail {
+
+//This functor will be used with Intrusive clone functions to obtain
+//already allocated nodes from a intrusive container instead of
+//allocating new ones. When the intrusive container runs out of nodes
+//the node holder is used instead.
+template<class AllocHolder, bool DoMove>
+class RecyclingCloner
+{
+   typedef typename AllocHolder::intrusive_container  intrusive_container;
+   typedef typename AllocHolder::Node                 node_type;
+   typedef typename AllocHolder::NodePtr              node_ptr_type;
+
+   public:
+   RecyclingCloner(AllocHolder &holder, intrusive_container &itree)
+      :  m_holder(holder), m_icont(itree)
+   {}
+
+   static void do_assign(node_ptr_type &p, const node_type &other, bool_<true>)
+   {  p->do_assign(other.m_data);   }
+
+   static void do_assign(node_ptr_type &p, const node_type &other, bool_<false>)
+   {  p->do_move_assign(const_cast<node_type &>(other).m_data);   }
+
+   node_ptr_type operator()(const node_type &other) const
+   {
+      if(node_ptr_type p = m_icont.unlink_leftmost_without_rebalance()){
+         //First recycle a node (this can't throw)
+         BOOST_TRY{
+            //This can throw
+            this->do_assign(p, other, bool_<DoMove>());
+            return p;
+         }
+         BOOST_CATCH(...){
+            //If there is an exception destroy the whole source
+            m_holder.destroy_node(p);
+            while((p = m_icont.unlink_leftmost_without_rebalance())){
+               m_holder.destroy_node(p);
+            }
+            BOOST_RETHROW
+         }
+         BOOST_CATCH_END
+      }
+      else{
+         return m_holder.create_node(other.m_data);
+      }
+   }
+
+   AllocHolder &m_holder;
+   intrusive_container &m_icont;
+};
+
+template<class KeyValueCompare, class Node>
+//where KeyValueCompare is tree_value_compare<Key, Value, KeyCompare, KeyOfValue>
+struct key_node_compare
+   :  private KeyValueCompare
+{
+   explicit key_node_compare(const KeyValueCompare &comp)
+      :  KeyValueCompare(comp)
+   {}
+
+   template<class T>
+   struct is_node
+   {
+      static const bool value = is_same<T, Node>::value;
+   };
+
+   template<class T>
+   typename enable_if_c<is_node<T>::value, const typename KeyValueCompare::value_type &>::type
+      key_forward(const T &node) const
+   {  return node.get_data();  }
+
+   template<class T>
+   typename enable_if_c<!is_node<T>::value, const T &>::type
+      key_forward(const T &key) const
+   {  return key; }
+
+   template<class KeyType, class KeyType2>
+   bool operator()(const KeyType &key1, const KeyType2 &key2) const
+   {  return KeyValueCompare::operator()(this->key_forward(key1), this->key_forward(key2));  }
+};
+
+template <class Key, class Value, class KeyOfValue,
+          class KeyCompare, class A,
+          class Options = tree_assoc_defaults>
+class tree
+   : protected container_detail::node_alloc_holder
+      < A
+      , typename container_detail::intrusive_tree_type
+         < A, tree_value_compare<Key, Value, KeyCompare, KeyOfValue> //ValComp
+         , Options::tree_type, Options::optimize_size>::type
       >
 {
-   typedef typename containers_detail::intrusive_rbtree_type
-         <A, value_compare_impl
-            <Key, Value, KeyCompare, KeyOfValue>
-         >::type                                      Icont;
-   typedef containers_detail::node_alloc_holder<A, Icont>        AllocHolder;
-   typedef typename AllocHolder::NodePtr              NodePtr;
-   typedef rbtree < Key, Value, KeyOfValue
-                  , KeyCompare, A>                    ThisType;
-   typedef typename AllocHolder::NodeAlloc            NodeAlloc;
-   typedef typename AllocHolder::ValAlloc             ValAlloc;
-   typedef typename AllocHolder::Node                 Node;
-   typedef typename Icont::iterator                   iiterator;
-   typedef typename Icont::const_iterator             iconst_iterator;
-   typedef containers_detail::allocator_destroyer<NodeAlloc>     Destroyer;
-   typedef typename AllocHolder::allocator_v1         allocator_v1;
-   typedef typename AllocHolder::allocator_v2         allocator_v2;
-   typedef typename AllocHolder::alloc_version        alloc_version;
+   typedef tree_value_compare
+            <Key, Value, KeyCompare, KeyOfValue>            ValComp;
+   typedef typename container_detail::intrusive_tree_type
+         < A, ValComp, Options::tree_type
+         , Options::optimize_size>::type                    Icont;
+   typedef container_detail::node_alloc_holder
+      <A, Icont>                                            AllocHolder;
+   typedef typename AllocHolder::NodePtr                    NodePtr;
+   typedef tree < Key, Value, KeyOfValue
+                , KeyCompare, A, Options>                   ThisType;
+   typedef typename AllocHolder::NodeAlloc                  NodeAlloc;
+   typedef typename AllocHolder::ValAlloc                   ValAlloc;
+   typedef typename AllocHolder::Node                       Node;
+   typedef typename Icont::iterator                         iiterator;
+   typedef typename Icont::const_iterator                   iconst_iterator;
+   typedef container_detail::allocator_destroyer<NodeAlloc> Destroyer;
+   typedef typename AllocHolder::allocator_v1               allocator_v1;
+   typedef typename AllocHolder::allocator_v2               allocator_v2;
+   typedef typename AllocHolder::alloc_version              alloc_version;
+   typedef intrusive_tree_proxy<Options::tree_type>         intrusive_tree_proxy_t;
 
-   class RecyclingCloner;
-   friend class RecyclingCloner;
-   
-   class RecyclingCloner
-   {
-      public:
-      RecyclingCloner(AllocHolder &holder, Icont &irbtree)
-         :  m_holder(holder), m_icont(irbtree)
-      {}
-
-      NodePtr operator()(const Node &other) const
-      {
-//         if(!m_icont.empty()){
-         if(NodePtr p = m_icont.unlink_leftmost_without_rebalance()){
-            //First recycle a node (this can't throw)
-            //NodePtr p = m_icont.unlink_leftmost_without_rebalance();
-            try{
-               //This can throw
-               *p = other;
-               return p;
-            }
-            catch(...){
-               //If there is an exception destroy the whole source
-               m_holder.destroy_node(p);
-               while((p = m_icont.unlink_leftmost_without_rebalance())){
-                  m_holder.destroy_node(p);
-               }
-               throw;
-            }
-         }
-         else{
-            return m_holder.create_node(other);
-         }
-      }
-
-      AllocHolder &m_holder;
-      Icont &m_icont;
-   };
-   BOOST_COPYABLE_AND_MOVABLE(rbtree)
+   BOOST_COPYABLE_AND_MOVABLE(tree)
 
    public:
 
@@ -292,201 +494,193 @@ class rbtree
    typedef Value                                      value_type;
    typedef A                                          allocator_type;
    typedef KeyCompare                                 key_compare;
-   typedef value_compare_impl< Key, Value
-                        , KeyCompare, KeyOfValue>     value_compare;
-   typedef typename A::pointer                        pointer;
-   typedef typename A::const_pointer                  const_pointer;
-   typedef typename A::reference                      reference;
-   typedef typename A::const_reference                const_reference;
-   typedef typename A::size_type                      size_type;
-   typedef typename A::difference_type                difference_type;
-   typedef difference_type                            rbtree_difference_type;
-   typedef pointer                                    rbtree_pointer;
-   typedef const_pointer                              rbtree_const_pointer;
-   typedef reference                                  rbtree_reference;
-   typedef const_reference                            rbtree_const_reference;
+   typedef ValComp                                    value_compare;
+   typedef typename boost::container::
+      allocator_traits<A>::pointer                    pointer;
+   typedef typename boost::container::
+      allocator_traits<A>::const_pointer              const_pointer;
+   typedef typename boost::container::
+      allocator_traits<A>::reference                  reference;
+   typedef typename boost::container::
+      allocator_traits<A>::const_reference            const_reference;
+   typedef typename boost::container::
+      allocator_traits<A>::size_type                  size_type;
+   typedef typename boost::container::
+      allocator_traits<A>::difference_type            difference_type;
+   typedef difference_type                            tree_difference_type;
+   typedef pointer                                    tree_pointer;
+   typedef const_pointer                              tree_const_pointer;
+   typedef reference                                  tree_reference;
+   typedef const_reference                            tree_const_reference;
    typedef NodeAlloc                                  stored_allocator_type;
 
    private:
 
-   template<class KeyValueCompare>
-   struct key_node_compare
-      :  private KeyValueCompare
-   {
-      key_node_compare(const KeyValueCompare &comp)
-         :  KeyValueCompare(comp)
-      {}
-
-      template<class T>
-      struct is_node
-      {
-         static const bool value = is_same<T, Node>::value;
-      };
-
-      template<class T>
-      typename enable_if_c<is_node<T>::value, const value_type &>::type
-         key_forward(const T &node) const
-      {  return node.get_data();  }
-
-      template<class T>
-      typename enable_if_c<!is_node<T>::value, const T &>::type
-         key_forward(const T &key) const
-      {  return key; }
-
-      template<class KeyType, class KeyType2>
-      bool operator()(const KeyType &key1, const KeyType2 &key2) const
-      {  return KeyValueCompare::operator()(this->key_forward(key1), this->key_forward(key2));  }
-   };
-
-   typedef key_node_compare<value_compare>  KeyNodeCompare;
+   typedef key_node_compare<value_compare, Node>  KeyNodeCompare;
 
    public:
-   //rbtree const_iterator
-   class const_iterator
-      : public std::iterator
-         < std::bidirectional_iterator_tag
-         , value_type            , rbtree_difference_type
-         , rbtree_const_pointer  , rbtree_const_reference>
-   {
-      protected:
-      typedef typename Icont::iterator  iiterator;
-      iiterator m_it;
-      explicit const_iterator(iiterator it)  : m_it(it){}
-      void prot_incr() { ++m_it; }
-      void prot_decr() { --m_it; }
+   typedef container_detail::iterator<iiterator, false>        iterator;
+   typedef container_detail::iterator<iiterator, true >        const_iterator;
+   typedef container_detail::reverse_iterator<iterator>        reverse_iterator;
+   typedef container_detail::reverse_iterator<const_iterator>  const_reverse_iterator;
 
-      private:
-      iiterator get()
-      {  return this->m_it;   }
+   tree()
+      : AllocHolder(ValComp(key_compare()))
+   {}
 
-      public:
-      friend class rbtree <Key, Value, KeyOfValue, KeyCompare, A>;
-      typedef rbtree_difference_type        difference_type;
+   explicit tree(const key_compare& comp, const allocator_type& a = allocator_type())
+      : AllocHolder(a, ValComp(comp))
+   {}
 
-      //Constructors
-      const_iterator()
-         :  m_it()
-      {}
-
-      //Pointer like operators
-      const_reference operator*()  const 
-      { return  m_it->get_data();  }
-
-      const_pointer   operator->() const 
-      { return  const_pointer(&m_it->get_data()); }
-
-      //Increment / Decrement
-      const_iterator& operator++()       
-      { prot_incr();  return *this; }
-
-      const_iterator operator++(int)      
-      { iiterator tmp = m_it; ++*this; return const_iterator(tmp);  }
-
-      const_iterator& operator--()
-      {   prot_decr(); return *this;   }
-
-      const_iterator operator--(int)
-      {  iiterator tmp = m_it; --*this; return const_iterator(tmp); }
-
-      //Comparison operators
-      bool operator==   (const const_iterator& r)  const
-      {  return m_it == r.m_it;  }
-
-      bool operator!=   (const const_iterator& r)  const
-      {  return m_it != r.m_it;  }
-   };
-
-   //rbtree iterator
-   class iterator : public const_iterator
-   {
-      private:
-      explicit iterator(iiterator it)
-         :  const_iterator(it)
-      {}
-   
-      iiterator get()
-      {  return this->m_it;   }
-
-      public:
-      friend class rbtree <Key, Value, KeyOfValue, KeyCompare, A>;
-      typedef rbtree_pointer       pointer;
-      typedef rbtree_reference     reference;
-
-      //Constructors
-      iterator(){}
-
-      //Pointer like operators
-      reference operator*()  const {  return  this->m_it->get_data();  }
-      pointer   operator->() const {  return  pointer(&this->m_it->get_data());  }
-
-      //Increment / Decrement
-      iterator& operator++()  
-         { this->prot_incr(); return *this;  }
-
-      iterator operator++(int)
-         { iiterator tmp = this->m_it; ++*this; return iterator(tmp); }
-      
-      iterator& operator--()
-         {  this->prot_decr(); return *this;  }
-
-      iterator operator--(int)
-         {  iterator tmp = *this; --*this; return tmp; }
-   };
-
-   typedef std::reverse_iterator<iterator>        reverse_iterator;
-   typedef std::reverse_iterator<const_iterator>  const_reverse_iterator;
-
-   rbtree(const key_compare& comp = key_compare(), 
-           const allocator_type& a = allocator_type())
-      : AllocHolder(a, comp)
+   explicit tree(const allocator_type& a)
+      : AllocHolder(a)
    {}
 
    template <class InputIterator>
-   rbtree(InputIterator first, InputIterator last, const key_compare& comp,
-          const allocator_type& a, bool unique_insertion)
-      : AllocHolder(a, comp)
+   tree(bool unique_insertion, InputIterator first, InputIterator last, const key_compare& comp,
+          const allocator_type& a
+      #if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
+      , typename container_detail::enable_if_c
+         < container_detail::is_input_iterator<InputIterator>::value
+            || container_detail::is_same<alloc_version, allocator_v1>::value
+         >::type * = 0
+      #endif
+         )
+      : AllocHolder(a, value_compare(comp))
    {
-      typedef typename std::iterator_traits<InputIterator>::iterator_category ItCat;
-      priv_create_and_insert_nodes(first, last, unique_insertion, alloc_version(), ItCat());
+      //Use cend() as hint to achieve linear time for
+      //ordered ranges as required by the standard
+      //for the constructor
+      const const_iterator end_it(this->cend());
+      if(unique_insertion){
+         for ( ; first != last; ++first){
+            this->insert_unique(end_it, *first);
+         }
+      }
+      else{
+         for ( ; first != last; ++first){
+            this->insert_equal(end_it, *first);
+         }
+      }
    }
 
    template <class InputIterator>
-   rbtree( ordered_range_t, InputIterator first, InputIterator last
-         , const key_compare& comp = key_compare(), const allocator_type& a = allocator_type())
-      : AllocHolder(a, comp)
+   tree(bool unique_insertion, InputIterator first, InputIterator last, const key_compare& comp,
+          const allocator_type& a
+      #if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
+      , typename container_detail::enable_if_c
+         < !(container_detail::is_input_iterator<InputIterator>::value
+            || container_detail::is_same<alloc_version, allocator_v1>::value)
+         >::type * = 0
+      #endif
+         )
+      : AllocHolder(a, value_compare(comp))
    {
-      typedef typename std::iterator_traits<InputIterator>::iterator_category ItCat;
-      priv_create_and_insert_ordered_nodes(first, last, alloc_version(), ItCat());
+      if(unique_insertion){
+         //Use cend() as hint to achieve linear time for
+         //ordered ranges as required by the standard
+         //for the constructor
+         const const_iterator end_it(this->cend());
+         for ( ; first != last; ++first){
+            this->insert_unique(end_it, *first);
+         }
+      }
+      else{
+         //Optimized allocation and construction
+         this->allocate_many_and_construct
+            ( first, std::distance(first, last)
+            , insert_equal_end_hint_functor<Node, Icont>(this->icont()));
+      }
    }
 
-   rbtree(const rbtree& x) 
-      :  AllocHolder(x, x.key_comp())
+   template <class InputIterator>
+   tree( ordered_range_t, InputIterator first, InputIterator last
+         , const key_compare& comp = key_compare(), const allocator_type& a = allocator_type()
+         #if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
+         , typename container_detail::enable_if_c
+            < container_detail::is_input_iterator<InputIterator>::value
+               || container_detail::is_same<alloc_version, allocator_v1>::value
+            >::type * = 0
+         #endif
+         )
+      : AllocHolder(a, value_compare(comp))
+   {
+      for ( ; first != last; ++first){
+         this->push_back_impl(*first);
+      }
+   }
+
+   template <class InputIterator>
+   tree( ordered_range_t, InputIterator first, InputIterator last
+         , const key_compare& comp = key_compare(), const allocator_type& a = allocator_type()
+         #if !defined(BOOST_CONTAINER_DOXYGEN_INVOKED)
+         , typename container_detail::enable_if_c
+            < !(container_detail::is_input_iterator<InputIterator>::value
+               || container_detail::is_same<alloc_version, allocator_v1>::value)
+            >::type * = 0
+         #endif
+         )
+      : AllocHolder(a, value_compare(comp))
+   {
+      //Optimized allocation and construction
+      this->allocate_many_and_construct
+         ( first, std::distance(first, last)
+         , container_detail::push_back_functor<Node, Icont>(this->icont()));
+   }
+
+   tree(const tree& x)
+      :  AllocHolder(x, x.value_comp())
    {
       this->icont().clone_from
          (x.icont(), typename AllocHolder::cloner(*this), Destroyer(this->node_alloc()));
    }
 
-   rbtree(BOOST_RV_REF(rbtree) x) 
-      :  AllocHolder(x, x.key_comp())
-   {  this->swap(x);  }
+   tree(BOOST_RV_REF(tree) x)
+      :  AllocHolder(::boost::move(static_cast<AllocHolder&>(x)), x.value_comp())
+   {}
 
-   ~rbtree()
+   tree(const tree& x, const allocator_type &a)
+      :  AllocHolder(a, x.value_comp())
+   {
+      this->icont().clone_from
+         (x.icont(), typename AllocHolder::cloner(*this), Destroyer(this->node_alloc()));
+   }
+
+   tree(BOOST_RV_REF(tree) x, const allocator_type &a)
+      :  AllocHolder(a, x.value_comp())
+   {
+      if(this->node_alloc() == x.node_alloc()){
+         this->icont().swap(x.icont());
+      }
+      else{
+         this->icont().clone_from
+            (x.icont(), typename AllocHolder::cloner(*this), Destroyer(this->node_alloc()));
+      }
+   }
+
+   ~tree()
    {} //AllocHolder clears the tree
 
-   rbtree& operator=(BOOST_COPY_ASSIGN_REF(rbtree) x)
+   tree& operator=(BOOST_COPY_ASSIGN_REF(tree) x)
    {
-      if (this != &x) {
+      if (&x != this){
+         NodeAlloc &this_alloc     = this->get_stored_allocator();
+         const NodeAlloc &x_alloc  = x.get_stored_allocator();
+         container_detail::bool_<allocator_traits<NodeAlloc>::
+            propagate_on_container_copy_assignment::value> flag;
+         if(flag && this_alloc != x_alloc){
+            this->clear();
+         }
+         this->AllocHolder::copy_assign_alloc(x);
          //Transfer all the nodes to a temporary tree
          //If anything goes wrong, all the nodes will be destroyed
          //automatically
-         Icont other_tree(this->icont().value_comp());
-         other_tree.swap(this->icont());
+         Icont other_tree(::boost::move(this->icont()));
 
          //Now recreate the source tree reusing nodes stored by other_tree
          this->icont().clone_from
             (x.icont()
-            , RecyclingCloner(*this, other_tree)
-            //, AllocHolder::cloner(*this)
+            , RecyclingCloner<AllocHolder, false>(*this, other_tree)
             , Destroyer(this->node_alloc()));
 
          //If there are remaining nodes, destroy them
@@ -498,21 +692,58 @@ class rbtree
       return *this;
    }
 
-   rbtree& operator=(BOOST_RV_REF(rbtree) mx)
-   {  this->clear(); this->swap(mx);   return *this;  }
+   tree& operator=(BOOST_RV_REF(tree) x)
+   {
+      BOOST_ASSERT(this != &x);
+      NodeAlloc &this_alloc = this->node_alloc();
+      NodeAlloc &x_alloc    = x.node_alloc();
+      const bool propagate_alloc = allocator_traits<NodeAlloc>::
+            propagate_on_container_move_assignment::value;
+      const bool allocators_equal = this_alloc == x_alloc; (void)allocators_equal;
+      //Resources can be transferred if both allocators are
+      //going to be equal after this function (either propagated or already equal)
+      if(propagate_alloc || allocators_equal){
+         //Destroy
+         this->clear();
+         //Move allocator if needed
+         this->AllocHolder::move_assign_alloc(x);
+         //Obtain resources
+         this->icont() = boost::move(x.icont());
+      }
+      //Else do a one by one move
+      else{
+         //Transfer all the nodes to a temporary tree
+         //If anything goes wrong, all the nodes will be destroyed
+         //automatically
+         Icont other_tree(::boost::move(this->icont()));
 
-   public:    
+         //Now recreate the source tree reusing nodes stored by other_tree
+         this->icont().clone_from
+            (x.icont()
+            , RecyclingCloner<AllocHolder, true>(*this, other_tree)
+            , Destroyer(this->node_alloc()));
+
+         //If there are remaining nodes, destroy them
+         NodePtr p;
+         while((p = other_tree.unlink_leftmost_without_rebalance())){
+            AllocHolder::destroy_node(p);
+         }
+      }
+      return *this;
+   }
+
+   public:
    // accessors:
-   value_compare value_comp() const 
+   value_compare value_comp() const
    {  return this->icont().value_comp().value_comp(); }
 
-   key_compare key_comp() const 
+   key_compare key_comp() const
    {  return this->icont().value_comp().value_comp().key_comp(); }
 
-   allocator_type get_allocator() const 
+   allocator_type get_allocator() const
    {  return allocator_type(this->node_alloc()); }
 
-   const stored_allocator_type &get_stored_allocator() const 
+   const stored_allocator_type &get_stored_allocator() const
    {  return this->node_alloc(); }
 
    stored_allocator_type &get_stored_allocator()
@@ -543,46 +774,46 @@ class rbtree
    {  return this->crend();   }
 
    //! <b>Effects</b>: Returns a const_iterator to the first element contained in the container.
-   //! 
+   //!
    //! <b>Throws</b>: Nothing.
-   //! 
+   //!
    //! <b>Complexity</b>: Constant.
-   const_iterator cbegin() const 
+   const_iterator cbegin() const
    { return const_iterator(this->non_const_icont().begin()); }
 
    //! <b>Effects</b>: Returns a const_iterator to the end of the container.
-   //! 
+   //!
    //! <b>Throws</b>: Nothing.
-   //! 
+   //!
    //! <b>Complexity</b>: Constant.
-   const_iterator cend() const 
+   const_iterator cend() const
    { return const_iterator(this->non_const_icont().end()); }
 
-   //! <b>Effects</b>: Returns a const_reverse_iterator pointing to the beginning 
-   //! of the reversed container. 
-   //! 
+   //! <b>Effects</b>: Returns a const_reverse_iterator pointing to the beginning
+   //! of the reversed container.
+   //!
    //! <b>Throws</b>: Nothing.
-   //! 
+   //!
    //! <b>Complexity</b>: Constant.
-   const_reverse_iterator crbegin() const 
-   { return const_reverse_iterator(cend()); } 
+   const_reverse_iterator crbegin() const
+   { return const_reverse_iterator(cend()); }
 
    //! <b>Effects</b>: Returns a const_reverse_iterator pointing to the end
-   //! of the reversed container. 
-   //! 
+   //! of the reversed container.
+   //!
    //! <b>Throws</b>: Nothing.
-   //! 
+   //!
    //! <b>Complexity</b>: Constant.
-   const_reverse_iterator crend() const 
+   const_reverse_iterator crend() const
    { return const_reverse_iterator(cbegin()); }
 
-   bool empty() const 
+   bool empty() const
    {  return !this->size();  }
 
-   size_type size() const 
+   size_type size() const
    {  return this->icont().size();   }
 
-   size_type max_size() const 
+   size_type max_size() const
    {  return AllocHolder::max_size();  }
 
    void swap(ThisType& x)
@@ -596,7 +827,7 @@ class rbtree
    std::pair<iterator,bool> insert_unique_check
       (const key_type& key, insert_commit_data &data)
    {
-      std::pair<iiterator, bool> ret = 
+      std::pair<iiterator, bool> ret =
          this->icont().insert_unique_check(key, KeyNodeCompare(value_comp()), data);
       return std::pair<iterator, bool>(iterator(ret.first), ret.second);
    }
@@ -604,7 +835,7 @@ class rbtree
    std::pair<iterator,bool> insert_unique_check
       (const_iterator hint, const key_type& key, insert_commit_data &data)
    {
-      std::pair<iiterator, bool> ret = 
+      std::pair<iiterator, bool> ret =
          this->icont().insert_unique_check(hint.get(), key, KeyNodeCompare(value_comp()), data);
       return std::pair<iterator, bool>(iterator(ret.first), ret.second);
    }
@@ -612,8 +843,10 @@ class rbtree
    iterator insert_unique_commit(const value_type& v, insert_commit_data &data)
    {
       NodePtr tmp = AllocHolder::create_node(v);
-      iiterator it(this->icont().insert_unique_commit(*tmp, data));
-      return iterator(it);
+      scoped_destroy_deallocator<NodeAlloc> destroy_deallocator(tmp, this->node_alloc());
+      iterator ret(this->icont().insert_unique_commit(*tmp, data));
+      destroy_deallocator.release();
+      return ret;
    }
 
    template<class MovableConvertible>
@@ -621,8 +854,10 @@ class rbtree
       (BOOST_FWD_REF(MovableConvertible) mv, insert_commit_data &data)
    {
       NodePtr tmp = AllocHolder::create_node(boost::forward<MovableConvertible>(mv));
-      iiterator it(this->icont().insert_unique_commit(*tmp, data));
-      return iterator(it);
+      scoped_destroy_deallocator<NodeAlloc> destroy_deallocator(tmp, this->node_alloc());
+      iterator ret(this->icont().insert_unique_commit(*tmp, data));
+      destroy_deallocator.release();
+      return ret;
    }
 
    std::pair<iterator,bool> insert_unique(const value_type& v)
@@ -630,10 +865,10 @@ class rbtree
       insert_commit_data data;
       std::pair<iterator,bool> ret =
          this->insert_unique_check(KeyOfValue()(v), data);
-      if(!ret.second)
-         return ret;
-      return std::pair<iterator,bool>
-         (this->insert_unique_commit(v, data), true);
+      if(ret.second){
+         ret.first = this->insert_unique_commit(v, data);
+      }
+      return ret;
    }
 
    template<class MovableConvertible>
@@ -642,24 +877,37 @@ class rbtree
       insert_commit_data data;
       std::pair<iterator,bool> ret =
          this->insert_unique_check(KeyOfValue()(mv), data);
-      if(!ret.second)
-         return ret;
-      return std::pair<iterator,bool>
-         (this->insert_unique_commit(boost::forward<MovableConvertible>(mv), data), true);
+      if(ret.second){
+         ret.first = this->insert_unique_commit(boost::forward<MovableConvertible>(mv), data);
+      }
+      return ret;
    }
 
    private:
-   iterator emplace_unique_impl(NodePtr p)
+
+   template<class MovableConvertible>
+   void push_back_impl(BOOST_FWD_REF(MovableConvertible) mv)
+   {
+      NodePtr tmp(AllocHolder::create_node(boost::forward<MovableConvertible>(mv)));
+      //push_back has no-throw guarantee so avoid any deallocator/destroyer
+      this->icont().push_back(*tmp);
+   }
+
+   std::pair<iterator, bool> emplace_unique_impl(NodePtr p)
    {
       value_type &v = p->get_data();
       insert_commit_data data;
+      scoped_destroy_deallocator<NodeAlloc> destroy_deallocator(p, this->node_alloc());
       std::pair<iterator,bool> ret =
          this->insert_unique_check(KeyOfValue()(v), data);
       if(!ret.second){
-         Destroyer(this->node_alloc())(p);
-         return ret.first;
+         return ret;
       }
-      return iterator(iiterator(this->icont().insert_unique_commit(*p, data)));
+      //No throw insertion part, release rollback
+      destroy_deallocator.release();
+      return std::pair<iterator,bool>
+         ( iterator(iiterator(this->icont().insert_unique_commit(*p, data)))
+         , true );
    }
 
    iterator emplace_unique_hint_impl(const_iterator hint, NodePtr p)
@@ -677,10 +925,10 @@ class rbtree
 
    public:
 
-   #ifdef BOOST_CONTAINERS_PERFECT_FORWARDING
+   #ifdef BOOST_CONTAINER_PERFECT_FORWARDING
 
    template <class... Args>
-   iterator emplace_unique(Args&&... args)
+   std::pair<iterator, bool> emplace_unique(Args&&... args)
    {  return this->emplace_unique_impl(AllocHolder::create_node(boost::forward<Args>(args)...));   }
 
    template <class... Args>
@@ -690,70 +938,66 @@ class rbtree
    template <class... Args>
    iterator emplace_equal(Args&&... args)
    {
-      NodePtr p(AllocHolder::create_node(boost::forward<Args>(args)...));
-      return iterator(this->icont().insert_equal(this->icont().end(), *p));
+      NodePtr tmp(AllocHolder::create_node(boost::forward<Args>(args)...));
+      scoped_destroy_deallocator<NodeAlloc> destroy_deallocator(tmp, this->node_alloc());
+      iterator ret(this->icont().insert_equal(this->icont().end(), *tmp));
+      destroy_deallocator.release();
+      return ret;
    }
 
    template <class... Args>
    iterator emplace_hint_equal(const_iterator hint, Args&&... args)
    {
-      NodePtr p(AllocHolder::create_node(boost::forward<Args>(args)...));
-      return iterator(this->icont().insert_equal(hint.get(), *p));
+      NodePtr tmp(AllocHolder::create_node(boost::forward<Args>(args)...));
+      scoped_destroy_deallocator<NodeAlloc> destroy_deallocator(tmp, this->node_alloc());
+      iterator ret(this->icont().insert_equal(hint.get(), *tmp));
+      destroy_deallocator.release();
+      return ret;
    }
 
-   #else //#ifdef BOOST_CONTAINERS_PERFECT_FORWARDING
-
-   iterator emplace_unique()
-   {  return this->emplace_unique_impl(AllocHolder::create_node());   }
-
-   iterator emplace_hint_unique(const_iterator hint)
-   {  return this->emplace_unique_hint_impl(hint, AllocHolder::create_node());   }
-
-   iterator emplace_equal()
-   {
-      NodePtr p(AllocHolder::create_node());
-      return iterator(this->icont().insert_equal(this->icont().end(), *p));
-   }
-
-   iterator emplace_hint_equal(const_iterator hint)
-   {
-      NodePtr p(AllocHolder::create_node());
-      return iterator(this->icont().insert_equal(hint.get(), *p));
-   }
+   #else //#ifdef BOOST_CONTAINER_PERFECT_FORWARDING
 
    #define BOOST_PP_LOCAL_MACRO(n)                                                                          \
-   template<BOOST_PP_ENUM_PARAMS(n, class P)>                                                               \
-   iterator emplace_unique(BOOST_PP_ENUM(n, BOOST_CONTAINERS_PP_PARAM_LIST, _))                           \
+   BOOST_PP_EXPR_IF(n, template<) BOOST_PP_ENUM_PARAMS(n, class P) BOOST_PP_EXPR_IF(n, >)                   \
+   std::pair<iterator, bool> emplace_unique(BOOST_PP_ENUM(n, BOOST_CONTAINER_PP_PARAM_LIST, _))             \
    {                                                                                                        \
       return this->emplace_unique_impl                                                                      \
-         (AllocHolder::create_node(BOOST_PP_ENUM(n, BOOST_CONTAINERS_PP_PARAM_FORWARD, _)));              \
+         (AllocHolder::create_node(BOOST_PP_ENUM(n, BOOST_CONTAINER_PP_PARAM_FORWARD, _)));                 \
    }                                                                                                        \
                                                                                                             \
-   template<BOOST_PP_ENUM_PARAMS(n, class P)>                                                               \
-   iterator emplace_hint_unique(const_iterator hint, BOOST_PP_ENUM(n, BOOST_CONTAINERS_PP_PARAM_LIST, _)) \
+   BOOST_PP_EXPR_IF(n, template<) BOOST_PP_ENUM_PARAMS(n, class P) BOOST_PP_EXPR_IF(n, >)                   \
+   iterator emplace_hint_unique(const_iterator hint                                                         \
+                       BOOST_PP_ENUM_TRAILING(n, BOOST_CONTAINER_PP_PARAM_LIST, _))                         \
    {                                                                                                        \
       return this->emplace_unique_hint_impl                                                                 \
-         (hint, AllocHolder::create_node(BOOST_PP_ENUM(n, BOOST_CONTAINERS_PP_PARAM_FORWARD, _)));        \
+         (hint, AllocHolder::create_node(BOOST_PP_ENUM(n, BOOST_CONTAINER_PP_PARAM_FORWARD, _)));           \
    }                                                                                                        \
                                                                                                             \
-   template<BOOST_PP_ENUM_PARAMS(n, class P)>                                                               \
-   iterator emplace_equal(BOOST_PP_ENUM(n, BOOST_CONTAINERS_PP_PARAM_LIST, _))                            \
+   BOOST_PP_EXPR_IF(n, template<) BOOST_PP_ENUM_PARAMS(n, class P) BOOST_PP_EXPR_IF(n, >)                   \
+   iterator emplace_equal(BOOST_PP_ENUM(n, BOOST_CONTAINER_PP_PARAM_LIST, _))                               \
    {                                                                                                        \
-      NodePtr p(AllocHolder::create_node(BOOST_PP_ENUM(n, BOOST_CONTAINERS_PP_PARAM_FORWARD, _)));        \
-      return iterator(this->icont().insert_equal(this->icont().end(), *p));                                 \
+      NodePtr tmp(AllocHolder::create_node(BOOST_PP_ENUM(n, BOOST_CONTAINER_PP_PARAM_FORWARD, _)));         \
+      scoped_destroy_deallocator<NodeAlloc> destroy_deallocator(tmp, this->node_alloc());                   \
+      iterator ret(this->icont().insert_equal(this->icont().end(), *tmp));                                  \
+      destroy_deallocator.release();                                                                        \
+      return ret;                                                                                           \
    }                                                                                                        \
                                                                                                             \
-   template<BOOST_PP_ENUM_PARAMS(n, class P)>                                                               \
-   iterator emplace_hint_equal(const_iterator hint, BOOST_PP_ENUM(n, BOOST_CONTAINERS_PP_PARAM_LIST, _))  \
+   BOOST_PP_EXPR_IF(n, template<) BOOST_PP_ENUM_PARAMS(n, class P) BOOST_PP_EXPR_IF(n, >)                   \
+   iterator emplace_hint_equal(const_iterator hint                                                          \
+                       BOOST_PP_ENUM_TRAILING(n, BOOST_CONTAINER_PP_PARAM_LIST, _))                         \
    {                                                                                                        \
-      NodePtr p(AllocHolder::create_node(BOOST_PP_ENUM(n, BOOST_CONTAINERS_PP_PARAM_FORWARD, _)));        \
-      return iterator(this->icont().insert_equal(hint.get(), *p));                                          \
+      NodePtr tmp(AllocHolder::create_node(BOOST_PP_ENUM(n, BOOST_CONTAINER_PP_PARAM_FORWARD, _)));         \
+      scoped_destroy_deallocator<NodeAlloc> destroy_deallocator(tmp, this->node_alloc());                   \
+      iterator ret(this->icont().insert_equal(hint.get(), *tmp));                                           \
+      destroy_deallocator.release();                                                                        \
+      return ret;                                                                                           \
    }                                                                                                        \
    //!
-   #define BOOST_PP_LOCAL_LIMITS (1, BOOST_CONTAINERS_MAX_CONSTRUCTOR_PARAMETERS)
+   #define BOOST_PP_LOCAL_LIMITS (0, BOOST_CONTAINER_MAX_CONSTRUCTOR_PARAMETERS)
    #include BOOST_PP_LOCAL_ITERATE()
 
-   #endif   //#ifdef BOOST_CONTAINERS_PERFECT_FORWARDING
+   #endif   //#ifdef BOOST_CONTAINER_PERFECT_FORWARDING
 
    iterator insert_unique(const_iterator hint, const value_type& v)
    {
@@ -779,53 +1023,53 @@ class rbtree
    template <class InputIterator>
    void insert_unique(InputIterator first, InputIterator last)
    {
-      if(this->empty()){
-         //Insert with end hint, to achieve linear
-         //complexity if [first, last) is ordered
-         const_iterator end(this->end());
-         for( ; first != last; ++first)
-            this->insert_unique(end, *first);
-      }
-      else{
-         for( ; first != last; ++first)
-            this->insert_unique(*first);
-      }
+      for( ; first != last; ++first)
+         this->insert_unique(*first);
    }
 
    iterator insert_equal(const value_type& v)
    {
-      NodePtr p(AllocHolder::create_node(v));
-      return iterator(this->icont().insert_equal(this->icont().end(), *p));
+      NodePtr tmp(AllocHolder::create_node(v));
+      scoped_destroy_deallocator<NodeAlloc> destroy_deallocator(tmp, this->node_alloc());
+      iterator ret(this->icont().insert_equal(this->icont().end(), *tmp));
+      destroy_deallocator.release();
+      return ret;
    }
 
    template<class MovableConvertible>
    iterator insert_equal(BOOST_FWD_REF(MovableConvertible) mv)
    {
-      NodePtr p(AllocHolder::create_node(boost::forward<MovableConvertible>(mv)));
-      return iterator(this->icont().insert_equal(this->icont().end(), *p));
+      NodePtr tmp(AllocHolder::create_node(boost::forward<MovableConvertible>(mv)));
+      scoped_destroy_deallocator<NodeAlloc> destroy_deallocator(tmp, this->node_alloc());
+      iterator ret(this->icont().insert_equal(this->icont().end(), *tmp));
+      destroy_deallocator.release();
+      return ret;
    }
 
    iterator insert_equal(const_iterator hint, const value_type& v)
    {
-      NodePtr p(AllocHolder::create_node(v));
-      return iterator(this->icont().insert_equal(hint.get(), *p));
+      NodePtr tmp(AllocHolder::create_node(v));
+      scoped_destroy_deallocator<NodeAlloc> destroy_deallocator(tmp, this->node_alloc());
+      iterator ret(this->icont().insert_equal(hint.get(), *tmp));
+      destroy_deallocator.release();
+      return ret;
    }
 
    template<class MovableConvertible>
    iterator insert_equal(const_iterator hint, BOOST_FWD_REF(MovableConvertible) mv)
    {
-      NodePtr p(AllocHolder::create_node(boost::forward<MovableConvertible>(mv)));
-      return iterator(this->icont().insert_equal(hint.get(), *p));
+      NodePtr tmp(AllocHolder::create_node(boost::forward<MovableConvertible>(mv)));
+      scoped_destroy_deallocator<NodeAlloc> destroy_deallocator(tmp, this->node_alloc());
+      iterator ret(this->icont().insert_equal(hint.get(), *tmp));
+      destroy_deallocator.release();
+      return ret;
    }
 
    template <class InputIterator>
    void insert_equal(InputIterator first, InputIterator last)
    {
-      //Insert with end hint, to achieve linear
-      //complexity if [first, last) is ordered
-      const_iterator end(this->cend());
       for( ; first != last; ++first)
-         this->insert_equal(end, *first);
+         this->insert_equal(*first);
    }
 
    iterator erase(const_iterator position)
@@ -837,10 +1081,11 @@ class rbtree
    iterator erase(const_iterator first, const_iterator last)
    {  return iterator(AllocHolder::erase_range(first.get(), last.get(), alloc_version())); }
 
-   void clear() 
+   void clear()
    {  AllocHolder::clear(alloc_version());  }
 
-   // set operations:
+   // search operations. Const and non-const overloads even if no iterator is returned
+   // so splay implementations can to their rebalancing when searching in non-const versions
    iterator find(const key_type& k)
    {  return iterator(this->icont().find(k, KeyNodeCompare(value_comp())));  }
 
@@ -863,202 +1108,75 @@ class rbtree
    {  return const_iterator(this->non_const_icont().upper_bound(k, KeyNodeCompare(value_comp())));  }
 
    std::pair<iterator,iterator> equal_range(const key_type& k)
-   {  
+   {
       std::pair<iiterator, iiterator> ret =
          this->icont().equal_range(k, KeyNodeCompare(value_comp()));
       return std::pair<iterator,iterator>(iterator(ret.first), iterator(ret.second));
    }
 
    std::pair<const_iterator, const_iterator> equal_range(const key_type& k) const
-   {  
+   {
       std::pair<iiterator, iiterator> ret =
          this->non_const_icont().equal_range(k, KeyNodeCompare(value_comp()));
       return std::pair<const_iterator,const_iterator>
          (const_iterator(ret.first), const_iterator(ret.second));
    }
 
-   private:
-   //Iterator range version
-   template<class InpIterator>
-   void priv_create_and_insert_nodes
-      (InpIterator beg, InpIterator end, bool unique, allocator_v1, std::input_iterator_tag)
+   std::pair<iterator,iterator> lower_bound_range(const key_type& k)
    {
-      if(unique){
-         for (; beg != end; ++beg){
-            this->insert_unique(*beg);
-         }
-      }
-      else{
-         for (; beg != end; ++beg){
-            this->insert_equal(*beg);
-         }
-      }
+      std::pair<iiterator, iiterator> ret =
+         this->icont().lower_bound_range(k, KeyNodeCompare(value_comp()));
+      return std::pair<iterator,iterator>(iterator(ret.first), iterator(ret.second));
    }
 
-   template<class InpIterator>
-   void priv_create_and_insert_nodes
-      (InpIterator beg, InpIterator end, bool unique, allocator_v2, std::input_iterator_tag)
-   {  //Just forward to the default one
-      priv_create_and_insert_nodes(beg, end, unique, allocator_v1(), std::input_iterator_tag());
+   std::pair<const_iterator, const_iterator> lower_bound_range(const key_type& k) const
+   {
+      std::pair<iiterator, iiterator> ret =
+         this->non_const_icont().lower_bound_range(k, KeyNodeCompare(value_comp()));
+      return std::pair<const_iterator,const_iterator>
+         (const_iterator(ret.first), const_iterator(ret.second));
    }
 
-   class insertion_functor;
-   friend class insertion_functor;
+   void rebalance()
+   {  intrusive_tree_proxy_t::rebalance(this->icont());   }
 
-   class insertion_functor
-   {
-      Icont &icont_;
+   friend bool operator==(const tree& x, const tree& y)
+   {  return x.size() == y.size() && std::equal(x.begin(), x.end(), y.begin());  }
 
-      public:
-      insertion_functor(Icont &icont)
-         :  icont_(icont)
-      {}
+   friend bool operator<(const tree& x, const tree& y)
+   {  return std::lexicographical_compare(x.begin(), x.end(), y.begin(), y.end());  }
 
-      void operator()(Node &n)
-      {  this->icont_.insert_equal(this->icont_.cend(), n); }
-   };
+   friend bool operator!=(const tree& x, const tree& y)
+   {  return !(x == y);  }
 
+   friend bool operator>(const tree& x, const tree& y)
+   {  return y < x;  }
 
-   template<class FwdIterator>
-   void priv_create_and_insert_nodes
-      (FwdIterator beg, FwdIterator end, bool unique, allocator_v2, std::forward_iterator_tag)
-   {
-      if(beg != end){
-         if(unique){
-            priv_create_and_insert_nodes(beg, end, unique, allocator_v2(), std::input_iterator_tag());
-         }
-         else{
-            //Optimized allocation and construction
-            this->allocate_many_and_construct
-               (beg, std::distance(beg, end), insertion_functor(this->icont()));
-         }
-      }
-   }
+   friend bool operator<=(const tree& x, const tree& y)
+   {  return !(y < x);  }
 
-   //Iterator range version
-   template<class InpIterator>
-   void priv_create_and_insert_ordered_nodes
-      (InpIterator beg, InpIterator end, allocator_v1, std::input_iterator_tag)
-   {
-      const_iterator cend_n(this->cend());
-      for (; beg != end; ++beg){
-         this->insert_before(cend_n, *beg);
-      }
-   }
+   friend bool operator>=(const tree& x, const tree& y)
+   {  return !(x < y);  }
 
-   template<class InpIterator>
-   void priv_create_and_insert_ordered_nodes
-      (InpIterator beg, InpIterator end, allocator_v2, std::input_iterator_tag)
-   {  //Just forward to the default one
-      priv_create_and_insert_ordered_nodes(beg, end, allocator_v1(), std::input_iterator_tag());
-   }
-
-   class back_insertion_functor;
-   friend class back_insertion_functor;
-
-   class back_insertion_functor
-   {
-      Icont &icont_;
-
-      public:
-      back_insertion_functor(Icont &icont)
-         :  icont_(icont)
-      {}
-
-      void operator()(Node &n)
-      {  this->icont_.push_back(n); }
-   };
-
-
-   template<class FwdIterator>
-   void priv_create_and_insert_ordered_nodes
-      (FwdIterator beg, FwdIterator end, allocator_v2, std::forward_iterator_tag)
-   {
-      if(beg != end){
-         //Optimized allocation and construction
-         this->allocate_many_and_construct
-            (beg, std::distance(beg, end), back_insertion_functor(this->icont()));
-      }
-   }
+   friend void swap(tree& x, tree& y)
+   {  x.swap(y);  }
 };
 
-template <class Key, class Value, class KeyOfValue, 
-          class KeyCompare, class A>
-inline bool 
-operator==(const rbtree<Key,Value,KeyOfValue,KeyCompare,A>& x, 
-           const rbtree<Key,Value,KeyOfValue,KeyCompare,A>& y)
-{
-  return x.size() == y.size() &&
-         std::equal(x.begin(), x.end(), y.begin());
-}
-
-template <class Key, class Value, class KeyOfValue, 
-          class KeyCompare, class A>
-inline bool 
-operator<(const rbtree<Key,Value,KeyOfValue,KeyCompare,A>& x, 
-          const rbtree<Key,Value,KeyOfValue,KeyCompare,A>& y)
-{
-  return std::lexicographical_compare(x.begin(), x.end(), 
-                                      y.begin(), y.end());
-}
-
-template <class Key, class Value, class KeyOfValue, 
-          class KeyCompare, class A>
-inline bool 
-operator!=(const rbtree<Key,Value,KeyOfValue,KeyCompare,A>& x, 
-           const rbtree<Key,Value,KeyOfValue,KeyCompare,A>& y) {
-  return !(x == y);
-}
-
-template <class Key, class Value, class KeyOfValue, 
-          class KeyCompare, class A>
-inline bool 
-operator>(const rbtree<Key,Value,KeyOfValue,KeyCompare,A>& x, 
-          const rbtree<Key,Value,KeyOfValue,KeyCompare,A>& y) {
-  return y < x;
-}
-
-template <class Key, class Value, class KeyOfValue, 
-          class KeyCompare, class A>
-inline bool 
-operator<=(const rbtree<Key,Value,KeyOfValue,KeyCompare,A>& x, 
-           const rbtree<Key,Value,KeyOfValue,KeyCompare,A>& y) {
-  return !(y < x);
-}
-
-template <class Key, class Value, class KeyOfValue, 
-          class KeyCompare, class A>
-inline bool 
-operator>=(const rbtree<Key,Value,KeyOfValue,KeyCompare,A>& x, 
-           const rbtree<Key,Value,KeyOfValue,KeyCompare,A>& y) {
-  return !(x < y);
-}
-
-
-template <class Key, class Value, class KeyOfValue, 
-          class KeyCompare, class A>
-inline void 
-swap(rbtree<Key,Value,KeyOfValue,KeyCompare,A>& x, 
-     rbtree<Key,Value,KeyOfValue,KeyCompare,A>& y)
-{
-  x.swap(y);
-}
-
-} //namespace containers_detail {
+} //namespace container_detail {
 } //namespace container {
 /*
 //!has_trivial_destructor_after_move<> == true_type
 //!specialization for optimizations
-template <class K, class V, class KOV, 
+template <class K, class V, class KOV,
 class C, class A>
 struct has_trivial_destructor_after_move
-   <boost::container::containers_detail::rbtree<K, V, KOV, C, A> >
+   <boost::container::container_detail::tree<K, V, KOV, C, A> >
 {
-   static const bool value = has_trivial_destructor<A>::value && has_trivial_destructor<C>::value;
+   static const bool value = has_trivial_destructor_after_move<A>::value && has_trivial_destructor_after_move<C>::value;
 };
 */
 } //namespace boost  {
 
 #include <boost/container/detail/config_end.hpp>
 
-#endif //BOOST_CONTAINERS_TREE_HPP
+#endif //BOOST_CONTAINER_TREE_HPP

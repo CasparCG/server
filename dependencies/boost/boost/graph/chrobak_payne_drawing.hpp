@@ -11,8 +11,8 @@
 
 #include <vector>
 #include <list>
+#include <stack>
 #include <boost/config.hpp>
-#include <boost/utility.hpp>  //for next and prior
 #include <boost/graph/graph_traits.hpp>
 #include <boost/property_map/property_map.hpp>
 
@@ -73,7 +73,6 @@ namespace boost
   {
 
     typedef typename graph_traits<Graph>::vertex_descriptor vertex_t;
-    typedef typename graph_traits<Graph>::edge_descriptor edge_t;
     typedef typename graph_traits<Graph>::vertex_iterator vertex_iterator_t;
     typedef typename PlanarEmbedding::value_type::const_iterator 
       edge_permutation_iterator_t;

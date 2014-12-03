@@ -47,6 +47,7 @@
 #include <boost/graph/graph_concepts.hpp>
 #include <boost/graph/named_function_params.hpp>
 #include <boost/graph/lookup_edge.hpp>
+#include <boost/concept/assert.hpp>
 
 // The algorithm impelemented here is described in:
 //
@@ -441,11 +442,11 @@ class bk_max_flow {
               for(boost::tie(ei, e_end) = out_edges(current_node, m_g); ei != e_end; ++ei){
                 edge_descriptor in_edge = get(m_rev_edge_map, *ei);
                 vertex_descriptor other_node = source(in_edge, m_g);
-                if(get_tree(other_node) == tColorTraits::black() && has_parent(other_node)){
+                if(get_tree(other_node) == tColorTraits::black() && other_node != m_source){
                   if(get(m_res_cap_map, in_edge) > 0){
                     add_active_node(other_node);
                   }
-                  if(source(get_edge_to_parent(other_node), m_g) == current_node){
+                  if(has_parent(other_node) && source(get_edge_to_parent(other_node), m_g) == current_node){
                     //we are the parent of that node
                     //it has to find a new parent, too
                     set_no_parent(other_node);
@@ -482,11 +483,11 @@ class bk_max_flow {
               for(boost::tie(ei, e_end) = out_edges(current_node, m_g); ei != e_end; ++ei){
                 const edge_descriptor out_edge = *ei;
                 const vertex_descriptor other_node = target(out_edge, m_g);
-                if(get_tree(other_node) == tColorTraits::white() && has_parent(other_node)){
+                if(get_tree(other_node) == tColorTraits::white() && other_node != m_sink){
                   if(get(m_res_cap_map, out_edge) > 0){
                     add_active_node(other_node);
                   }
-                  if(target(get_edge_to_parent(other_node), m_g) == current_node){
+                  if(has_parent(other_node) && target(get_edge_to_parent(other_node), m_g) == current_node){
                     //we were it's parent, so it has to find a new one, too
                     set_no_parent(other_node);
                     m_child_orphans.push(other_node);
@@ -525,6 +526,9 @@ class bk_max_flow {
       inline void add_active_node(vertex_descriptor v){
         BOOST_ASSERT(get_tree(v) != tColorTraits::gray());
         if(get(m_in_active_list_map, v)){
+          if (m_last_grow_vertex == v) {
+              m_last_grow_vertex = graph_traits<Graph>::null_vertex();
+          }
           return;
         } else{
           put(m_in_active_list_map, v, true);
@@ -743,16 +747,16 @@ boykov_kolmogorov_max_flow(Graph& g,
   typedef typename graph_traits<Graph>::edge_descriptor edge_descriptor;
 
   //as this method is the last one before we instantiate the solver, we do the concept checks here
-  function_requires<VertexListGraphConcept<Graph> >(); //to have vertices(), num_vertices(),
-  function_requires<EdgeListGraphConcept<Graph> >(); //to have edges()
-  function_requires<IncidenceGraphConcept<Graph> >(); //to have source(), target() and out_edges()
-  function_requires<ReadablePropertyMapConcept<CapacityEdgeMap, edge_descriptor> >(); //read flow-values from edges
-  function_requires<ReadWritePropertyMapConcept<ResidualCapacityEdgeMap, edge_descriptor> >(); //write flow-values to residuals
-  function_requires<ReadablePropertyMapConcept<ReverseEdgeMap, edge_descriptor> >(); //read out reverse edges
-  function_requires<ReadWritePropertyMapConcept<PredecessorMap, vertex_descriptor> >(); //store predecessor there
-  function_requires<ReadWritePropertyMapConcept<ColorMap, vertex_descriptor> >(); //write corresponding tree
-  function_requires<ReadWritePropertyMapConcept<DistanceMap, vertex_descriptor> >(); //write distance to source/sink
-  function_requires<ReadablePropertyMapConcept<IndexMap, vertex_descriptor> >(); //get index 0...|V|-1
+  BOOST_CONCEPT_ASSERT(( VertexListGraphConcept<Graph> )); //to have vertices(), num_vertices(),
+  BOOST_CONCEPT_ASSERT(( EdgeListGraphConcept<Graph> )); //to have edges()
+  BOOST_CONCEPT_ASSERT(( IncidenceGraphConcept<Graph> )); //to have source(), target() and out_edges()
+  BOOST_CONCEPT_ASSERT(( ReadablePropertyMapConcept<CapacityEdgeMap, edge_descriptor> )); //read flow-values from edges
+  BOOST_CONCEPT_ASSERT(( ReadWritePropertyMapConcept<ResidualCapacityEdgeMap, edge_descriptor> )); //write flow-values to residuals
+  BOOST_CONCEPT_ASSERT(( ReadablePropertyMapConcept<ReverseEdgeMap, edge_descriptor> )); //read out reverse edges
+  BOOST_CONCEPT_ASSERT(( ReadWritePropertyMapConcept<PredecessorMap, vertex_descriptor> )); //store predecessor there
+  BOOST_CONCEPT_ASSERT(( ReadWritePropertyMapConcept<ColorMap, vertex_descriptor> )); //write corresponding tree
+  BOOST_CONCEPT_ASSERT(( ReadWritePropertyMapConcept<DistanceMap, vertex_descriptor> )); //write distance to source/sink
+  BOOST_CONCEPT_ASSERT(( ReadablePropertyMapConcept<IndexMap, vertex_descriptor> )); //get index 0...|V|-1
   BOOST_ASSERT(num_vertices(g) >= 2 && src != sink);
 
   detail::bk_max_flow<

@@ -1,5 +1,5 @@
 /*
- *          Copyright Andrey Semashev 2007 - 2010.
+ *          Copyright Andrey Semashev 2007 - 2014.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -14,47 +14,23 @@
  * on a function callee.
  */
 
-#if (defined(_MSC_VER) && _MSC_VER > 1000)
-#pragma once
-#endif // _MSC_VER > 1000
-
 #ifndef BOOST_LOG_SOURCES_THREADING_MODELS_HPP_INCLUDED_
 #define BOOST_LOG_SOURCES_THREADING_MODELS_HPP_INCLUDED_
 
-#include <boost/noncopyable.hpp>
-#include <boost/mpl/int.hpp>
-#include <boost/mpl/less.hpp>
-#include <boost/mpl/if.hpp>
-#include <boost/preprocessor/arithmetic/sub.hpp>
-#include <boost/preprocessor/punctuation/comma_if.hpp>
-#include <boost/preprocessor/repetition/enum_params.hpp>
-#include <boost/preprocessor/repetition/enum_params_with_a_default.hpp>
-#include <boost/preprocessor/repetition/enum_trailing.hpp>
-#include <boost/preprocessor/repetition/enum_trailing_params.hpp>
-#include <boost/preprocessor/repetition/repeat_from_to.hpp>
-#include <boost/log/detail/prologue.hpp>
+#include <boost/log/detail/config.hpp>
+#include <boost/log/detail/locks.hpp> // is_mutex_type
 #if !defined(BOOST_LOG_NO_THREADS)
 #include <boost/mpl/bool.hpp>
-#include <boost/thread/locks.hpp>
-#include <boost/log/detail/shared_lock_guard.hpp>
 #endif
+#include <boost/log/detail/header.hpp>
 
-#ifdef _MSC_VER
-#pragma warning(push)
-// 'm_A' : class 'A' needs to have dll-interface to be used by clients of class 'B'
-#pragma warning(disable: 4251)
-#endif // _MSC_VER
-
-#ifndef BOOST_LOG_STRICTEST_LOCK_LIMIT
-#define BOOST_LOG_STRICTEST_LOCK_LIMIT 10
-#endif // BOOST_LOG_STRICTEST_LOCK_LIMIT
-#if BOOST_LOG_STRICTEST_LOCK_LIMIT < 3
-#error The BOOST_LOG_STRICTEST_LOCK_LIMIT macro should not be less than 3
+#ifdef BOOST_HAS_PRAGMA_ONCE
+#pragma once
 #endif
 
 namespace boost {
 
-namespace BOOST_LOG_NAMESPACE {
+BOOST_LOG_OPEN_NAMESPACE
 
 namespace sources {
 
@@ -124,135 +100,9 @@ private:
 
 #endif // !defined(BOOST_LOG_NO_THREADS)
 
-//! An auxiliary pseudo-lock to express no locking requirements in logger features
-struct no_lock : noncopyable
-{
-    /*!
-     * Constructs the pseudo-lock with any type of mutex. The mutex is not affected during construction.
-     */
-    template< typename T >
-    explicit no_lock(T&) {}
-};
-
-namespace aux {
-
-    enum thread_access_mode
-    {
-        unlocked_access,
-        shared_access,
-        exclusive_access
-    };
-
-    template< typename LockT >
-    struct thread_access_mode_of;
-
-    template< >
-    struct thread_access_mode_of< no_lock > : mpl::int_< unlocked_access >
-    {
-    };
-
-#if !defined(BOOST_LOG_NO_THREADS)
-
-    template< typename MutexT >
-    struct thread_access_mode_of< lock_guard< MutexT > > : mpl::int_< exclusive_access >
-    {
-    };
-
-    template< typename MutexT >
-    struct thread_access_mode_of< unique_lock< MutexT > > : mpl::int_< exclusive_access >
-    {
-    };
-
-    template< typename MutexT >
-    struct thread_access_mode_of< shared_lock< MutexT > > : mpl::int_< shared_access >
-    {
-    };
-
-    template< typename MutexT >
-    struct thread_access_mode_of< upgrade_lock< MutexT > > : mpl::int_< shared_access >
-    {
-    };
-
-    template< typename MutexT >
-    struct thread_access_mode_of< boost::log::aux::shared_lock_guard< MutexT > > : mpl::int_< shared_access >
-    {
-    };
-
-#endif // !defined(BOOST_LOG_NO_THREADS)
-
-    //! The metafunction selects the most strict lock type of the two
-    template< typename LeftLockT, typename RightLockT >
-    struct strictest_lock_impl :
-        mpl::if_<
-            mpl::less< aux::thread_access_mode_of< LeftLockT >, aux::thread_access_mode_of< RightLockT > >,
-            RightLockT,
-            LeftLockT
-        >
-    {
-    };
-
-} // namespace aux
-
-#if defined(BOOST_LOG_DOXYGEN_PASS)
-
-/*!
- * \brief The metafunction selects the most strict lock type of the specified.
- *
- * The template supports all lock types provided by the Boost.Thread
- * library (except for \c upgrade_to_unique_lock), plus additional
- * pseudo-lock \c no_lock that indicates no locking at all.
- * Exclusive locks are considered the strictest, shared locks are weaker,
- * and \c no_lock is the weakest.
- */
-template< typename... LocksT >
-struct strictest_lock
-{
-    typedef implementation_defined type;
-};
-
-#else
-
-#define BOOST_LOG_IDENTITY_INTERNAL(z, i, data) data
-
-template<
-    typename TT0,
-    typename TT1,
-    BOOST_PP_ENUM_PARAMS_WITH_A_DEFAULT(BOOST_PP_SUB(BOOST_LOG_STRICTEST_LOCK_LIMIT, 2), typename T, void)
->
-struct strictest_lock
-{
-    typedef
-        BOOST_PP_ENUM_PARAMS(BOOST_PP_SUB(BOOST_LOG_STRICTEST_LOCK_LIMIT, 2), typename aux::strictest_lock_impl< T),
-            typename aux::strictest_lock_impl< TT0, TT1 >::type
-        BOOST_PP_REPEAT_FROM_TO(2, BOOST_LOG_STRICTEST_LOCK_LIMIT, BOOST_LOG_IDENTITY_INTERNAL, >::type)
-    type;
-};
-
-#define BOOST_LOG_DEFINE_STRICTEST_LOG_SPEC_INTERNAL(z, i, data)\
-    template< typename TT0, typename TT1 BOOST_PP_ENUM_TRAILING_PARAMS(BOOST_PP_SUB(i, 2), typename T) >\
-    struct strictest_lock<\
-        TT0, TT1\
-        BOOST_PP_ENUM_TRAILING_PARAMS(BOOST_PP_SUB(i, 2), T)\
-        BOOST_PP_ENUM_TRAILING(BOOST_PP_SUB(BOOST_LOG_STRICTEST_LOCK_LIMIT, i), BOOST_LOG_IDENTITY_INTERNAL, void)\
-    >\
-    {\
-        typedef\
-            BOOST_PP_ENUM_PARAMS(BOOST_PP_SUB(i, 2), typename aux::strictest_lock_impl< T)\
-                BOOST_PP_COMMA_IF(BOOST_PP_SUB(i, 2)) typename aux::strictest_lock_impl< TT0, TT1 >::type\
-            BOOST_PP_REPEAT_FROM_TO(2, i, BOOST_LOG_IDENTITY_INTERNAL, >::type)\
-        type;\
-    };
-
-BOOST_PP_REPEAT_FROM_TO(2, BOOST_PP_SUB(BOOST_LOG_STRICTEST_LOCK_LIMIT, 1), BOOST_LOG_DEFINE_STRICTEST_LOG_SPEC_INTERNAL, ~)
-
-#undef BOOST_LOG_DEFINE_STRICTEST_LOG_SPEC_INTERNAL
-#undef BOOST_LOG_IDENTITY_INTERNAL
-
-#endif // BOOST_LOG_DOXYGEN_PASS
-
 } // namespace sources
 
-} // namespace log
+BOOST_LOG_CLOSE_NAMESPACE // namespace log
 
 #if !defined(BOOST_LOG_NO_THREADS) && !defined(BOOST_LOG_DOXYGEN_PASS)
 
@@ -270,8 +120,6 @@ struct is_mutex_type< boost::log::sources::multi_thread_model< T > > : mpl::true
 
 } // namespace boost
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif // _MSC_VER
+#include <boost/log/detail/footer.hpp>
 
 #endif // BOOST_LOG_SOURCES_THREADING_MODELS_HPP_INCLUDED_

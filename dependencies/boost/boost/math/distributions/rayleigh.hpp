@@ -28,11 +28,11 @@ namespace detail
   template <class RealType, class Policy>
   inline bool verify_sigma(const char* function, RealType sigma, RealType* presult, const Policy& pol)
   {
-     if(sigma <= 0)
+     if((sigma <= 0) || (!(boost::math::isfinite)(sigma)))
      {
         *presult = policies::raise_domain_error<RealType>(
            function,
-           "The scale parameter \"sigma\" must be > 0, but was: %1%.", sigma, pol);
+           "The scale parameter \"sigma\" must be > 0 and finite, but was: %1%.", sigma, pol);
         return false;
      }
      return true;
@@ -41,7 +41,7 @@ namespace detail
   template <class RealType, class Policy>
   inline bool verify_rayleigh_x(const char* function, RealType x, RealType* presult, const Policy& pol)
   {
-     if(x < 0)
+     if((x < 0) || (boost::math::isnan)(x))
      {
         *presult = policies::raise_domain_error<RealType>(
            function,
@@ -59,11 +59,11 @@ public:
    typedef RealType value_type;
    typedef Policy policy_type;
 
-   rayleigh_distribution(RealType sigma = 1)
-      : m_sigma(sigma)
+   rayleigh_distribution(RealType l_sigma = 1)
+      : m_sigma(l_sigma)
    {
       RealType err;
-      detail::verify_sigma("boost::math::rayleigh_distribution<%1%>::rayleigh_distribution", sigma, &err, Policy());
+      detail::verify_sigma("boost::math::rayleigh_distribution<%1%>::rayleigh_distribution", l_sigma, &err, Policy());
    } // rayleigh_distribution
 
    RealType sigma()const
@@ -81,7 +81,7 @@ template <class RealType, class Policy>
 inline const std::pair<RealType, RealType> range(const rayleigh_distribution<RealType, Policy>& /*dist*/)
 { // Range of permissible values for random variable x.
    using boost::math::tools::max_value;
-   return std::pair<RealType, RealType>(static_cast<RealType>(0), max_value<RealType>());
+   return std::pair<RealType, RealType>(static_cast<RealType>(0), std::numeric_limits<RealType>::has_infinity ? std::numeric_limits<RealType>::infinity() : max_value<RealType>());
 }
 
 template <class RealType, class Policy>
@@ -107,6 +107,10 @@ inline RealType pdf(const rayleigh_distribution<RealType, Policy>& dist, const R
    if(false == detail::verify_rayleigh_x(function, x, &result, Policy()))
    {
       return result;
+   }
+   if((boost::math::isinf)(x))
+   {
+      return 0;
    }
    RealType sigmasqr = sigma * sigma;
    result = x * (exp(-(x * x) / ( 2 * sigmasqr))) / sigmasqr;
@@ -175,7 +179,11 @@ inline RealType cdf(const complemented2_type<rayleigh_distribution<RealType, Pol
    {
       return result;
    }
-   result =  exp(-x * x / ( 2 * sigma * sigma));
+   RealType ea = x * x / (2 * sigma * sigma);
+   // Fix for VC11/12 x64 bug in exp(float):
+   if (ea >= tools::max_value<RealType>())
+	   return 0;
+   result =  exp(-ea);
    return result;
 } // cdf complement
 

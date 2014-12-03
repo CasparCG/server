@@ -77,7 +77,7 @@ public:
 		, monitor_subject_("/output")
 		, format_desc_(format_desc)
 		, audio_channel_layout_(audio_channel_layout)
-		, executor_(L"output")
+		, executor_(L"output " + boost::lexical_cast<std::wstring>(channel_index))
 	{
 		graph_->set_color("consume-time", diagnostics::color(1.0f, 0.4f, 0.0f, 0.8));
 	}

@@ -7,6 +7,7 @@
 #if !defined(FUSION_EQUAL_TO_05052005_1208)
 #define FUSION_EQUAL_TO_05052005_1208
 
+#include <boost/fusion/support/config.hpp>
 #include <boost/type_traits/is_same.hpp>
 #include <boost/fusion/support/tag_of.hpp>
 #include <boost/type_traits/add_const.hpp>
@@ -73,8 +74,9 @@ namespace boost { namespace fusion
     namespace iterator_operators
     {
         template <typename Iter1, typename Iter2>
+        BOOST_FUSION_GPU_ENABLED
         inline typename
-        enable_if<
+        boost::enable_if<
             mpl::and_<is_fusion_iterator<Iter1>, is_fusion_iterator<Iter2> >
             , bool
             >::type
@@ -84,8 +86,9 @@ namespace boost { namespace fusion
         }
 
         template <typename Iter1, typename Iter2>
+        BOOST_FUSION_GPU_ENABLED
         inline typename
-        enable_if<
+        boost::enable_if<
             mpl::and_<is_fusion_iterator<Iter1>, is_fusion_iterator<Iter2> >
             , bool
             >::type

@@ -1,8 +1,13 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
+
+// This file was modified by Oracle on 2014.
+// Modifications copyright (c) 2014 Oracle and/or its affiliates.
+
+// Contributed and/or modified by Adam Wulkiewicz, on behalf of Oracle
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -46,17 +51,17 @@ class ConvexHullStrategy
     {
         static void apply()
         {
-            Strategy const* str;
+            Strategy const* str = 0;
 
-            state_type* st;
-            geometry_type* sp;
-            std::vector<point_type> *v;
+            state_type* st = 0;
+            geometry_type* sp = 0;
+            std::vector<point_type> *v = 0;
 
             // 4) must implement a method apply, iterating over a range
             str->apply(*sp, *st);
 
             // 5) must implement a method result, with an output iterator
-            str->result(*st, std::back_inserter(*v), true);
+            str->result(*st, std::back_inserter(*v), true, true);
         }
     };
 

@@ -257,7 +257,7 @@ public:
 		current_encoding_delay_ = 0;
 
 		// TODO: Ask stakeholders about case where file already exists.
-		boost::filesystem::remove(boost::filesystem::wpath(env::media_folder() + widen(filename))); // Delete the file if it exists
+		boost::filesystem::remove(boost::filesystem::path(env::media_folder() + widen(filename))); // Delete the file if it exists
 
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
@@ -668,9 +668,9 @@ public:
 
 		if (separate_key_)
 		{
-			boost::filesystem::wpath fill_file(filename_);
-			auto without_extension = fill_file.stem();
-			auto key_file = env::media_folder() + without_extension + L"_A" + fill_file.extension();
+			boost::filesystem::path fill_file(filename_);
+			auto without_extension = fill_file.stem().wstring();
+			auto key_file = env::media_folder() + without_extension + L"_A" + fill_file.extension().wstring();
 			
 			key_only_consumer_.reset(new ffmpeg_consumer(
 					narrow(key_file),

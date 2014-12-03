@@ -53,7 +53,11 @@ public:
 
 	// Constructors
 
-	explicit stage(const safe_ptr<diagnostics::graph>& graph, const safe_ptr<target_t>& target, const video_format_desc& format_desc);
+	explicit stage(
+			const safe_ptr<diagnostics::graph>& graph,
+			const safe_ptr<target_t>& target,
+			const video_format_desc& format_desc,
+			int channel_index);
 	
 	// Methods
 	

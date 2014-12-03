@@ -212,61 +212,69 @@ namespace boost { namespace phoenix
     };
 
     template <typename Env, typename Actions>
+    inline
     typename result_of::context<Env const &, Actions const&>::type const
-    inline context(Env const& env, Actions const& actions)
+    context(Env const& env, Actions const& actions)
     {
         vector2<Env const&, Actions const &> e = {env, actions};
         return e;
     }
 
     template <typename Env, typename Actions>
+    inline
     typename result_of::context<Env const &, Actions const&>::type const
-    inline make_context(Env const& env, Actions const& actions)
+    make_context(Env const& env, Actions const& actions)
     {
         return context(env, actions);
     }
 
     template <typename Env, typename Actions>
+    inline
     typename result_of::context<Env &, Actions const&>::type const
-    inline context(Env & env, Actions const& actions)
+    context(Env & env, Actions const& actions)
     {
         vector2<Env &, Actions const &> e = {env, actions};
         return e;
     }
     
     template <typename Env, typename Actions>
+    inline
     typename result_of::context<Env &, Actions const&>::type const
-    inline make_context(Env & env, Actions const& actions)
+    make_context(Env & env, Actions const& actions)
     {
         return context(env, actions);
     }
 
     template <typename Env, typename Actions>
+    inline
     typename result_of::context<Env const &, Actions &>::type const
-    inline context(Env const& env, Actions & actions)
+    context(Env const& env, Actions & actions)
     {
         vector2<Env const&, Actions &> e = {env, actions};
         return e;
     }
     
     template <typename Env, typename Actions>
+    inline
     typename result_of::context<Env const &, Actions &>::type const
-    inline make_context(Env const& env, Actions & actions)
+    make_context(Env const& env, Actions & actions)
     {
         return context(env, actions);
     }
     
     template <typename Env, typename Actions>
+    inline
     typename result_of::context<Env &, Actions &>::type const
-    inline context(Env & env, Actions & actions)
+    context(Env & env, Actions & actions)
     {
         vector2<Env &, Actions &> e = {env, actions};
         return e;
     }
     
     template <typename Env, typename Actions>
+    inline
     typename result_of::context<Env &, Actions &>::type const
-    inline make_context(Env & env, Actions & actions)
+    make_context(Env & env, Actions & actions)
     {
         return context(env, actions);
     }
@@ -292,8 +300,8 @@ namespace boost { namespace phoenix
     };
 
     template <typename Expr, typename State>
-    struct _env::impl<Expr, State, int>
-        : proto::transform_impl<Expr, State, int>
+    struct _env::impl<Expr, State, proto::empty_env>
+        : proto::transform_impl<Expr, State, proto::empty_env>
     {
             typedef
                 typename fusion::result_of::at_c<
@@ -314,19 +322,21 @@ namespace boost { namespace phoenix
 
     template <typename Expr, typename State>
     struct _env::impl<Expr, State, unused>
-        : _env::impl<Expr, State, int>
+        : _env::impl<Expr, State, proto::empty_env>
     {};
 
     template <typename Context>
+    inline
     typename fusion::result_of::at_c<Context, 0>::type
-    inline env(Context & ctx)
+    env(Context & ctx)
     {
         return fusion::at_c<0>(ctx);
     }
 
     template <typename Context>
+    inline
     typename fusion::result_of::at_c<Context const, 0>::type
-    inline env(Context const & ctx)
+    env(Context const & ctx)
     {
         return fusion::at_c<0>(ctx);
     }
@@ -352,8 +362,8 @@ namespace boost { namespace phoenix
     };
 
     template <typename Expr, typename State>
-    struct _actions::impl<Expr, State, int>
-        : proto::transform_impl<Expr, State, int>
+    struct _actions::impl<Expr, State, proto::empty_env>
+        : proto::transform_impl<Expr, State, proto::empty_env>
     {
             typedef
                 typename fusion::result_of::at_c<
@@ -374,19 +384,21 @@ namespace boost { namespace phoenix
 
     template <typename Expr, typename State>
     struct _actions::impl<Expr, State, unused>
-        : _actions::impl<Expr, State, int>
+        : _actions::impl<Expr, State, proto::empty_env>
     {};
 
     template <typename Context>
+    inline
     typename fusion::result_of::at_c<Context, 1>::type
-    inline actions(Context & ctx)
+    actions(Context & ctx)
     {
         return fusion::at_c<1>(ctx);
     }
 
     template <typename Context>
+    inline
     typename fusion::result_of::at_c<Context const, 1>::type
-    inline actions(Context const & ctx)
+    actions(Context const & ctx)
     {
         return fusion::at_c<1>(ctx);
     }
@@ -403,26 +415,28 @@ namespace boost { namespace phoenix
         >
         struct make_env;
         
-    #define BOOST_PHOENIX_M0(Z, N, D)                                           \
+    #define M0(Z, N, D)                                                         \
         template <BOOST_PHOENIX_typename_A(N)>                                  \
         struct make_env<BOOST_PHOENIX_A(N)>                                     \
         {                                                                       \
             typedef BOOST_PP_CAT(vector, N)<BOOST_PHOENIX_A(N)> type;           \
         };                                                                      \
     /**/
-        BOOST_PP_REPEAT_FROM_TO(1, BOOST_PHOENIX_LIMIT, BOOST_PHOENIX_M0, _)
-    #undef BOOST_PHOENIX_M0
+        BOOST_PP_REPEAT_FROM_TO(1, BOOST_PHOENIX_LIMIT, M0, _)
+    #undef M0
     }
 
+    inline
     result_of::make_env<>::type
-    inline make_env()
+    make_env()
     {
         return result_of::make_env<>::type();
     }
-#define BOOST_PHOENIX_M0(Z, N, D)                                               \
+#define M0(Z, N, D)                                                             \
     template <BOOST_PHOENIX_typename_A(N)>                                      \
+    inline                                                                      \
     typename result_of::make_env<BOOST_PHOENIX_A_ref(N)>::type                  \
-    inline make_env(BOOST_PHOENIX_A_ref_a(N))                                   \
+    make_env(BOOST_PHOENIX_A_ref_a(N))                                          \
     {                                                                           \
         typename result_of::make_env<BOOST_PHOENIX_A_ref(N)>::type              \
             env =                                                               \
@@ -432,8 +446,9 @@ namespace boost { namespace phoenix
         return env;                                                             \
     }                                                                           \
     template <BOOST_PHOENIX_typename_A(N)>                                      \
+    inline                                                                      \
     typename result_of::make_env<BOOST_PHOENIX_A_const_ref(N)>::type            \
-    inline make_env(BOOST_PHOENIX_A_const_ref_a(N))                             \
+    make_env(BOOST_PHOENIX_A_const_ref_a(N))                                    \
     {                                                                           \
         typename result_of::make_env<BOOST_PHOENIX_A_const_ref(N)>::type        \
             env =                                                               \
@@ -443,8 +458,8 @@ namespace boost { namespace phoenix
         return env;                                                             \
     }                                                                           \
     /**/
-        BOOST_PP_REPEAT_FROM_TO(1, BOOST_PHOENIX_LIMIT, BOOST_PHOENIX_M0, _)
-    #undef BOOST_PHOENIX_M0
+        BOOST_PP_REPEAT_FROM_TO(1, BOOST_PHOENIX_LIMIT, M0, _)
+    #undef M0
 
     template <typename T, typename Enable = void>
     struct is_environment : fusion::traits::is_sequence<T> {};

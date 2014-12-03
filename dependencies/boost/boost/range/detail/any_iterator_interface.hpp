@@ -11,8 +11,12 @@
 #define BOOST_RANGE_DETAIL_ANY_ITERATOR_INTERFACE_HPP_INCLUDED
 
 #include <boost/range/detail/any_iterator_buffer.hpp>
-#include <boost/type_traits/add_reference.hpp>
+#include <boost/iterator/iterator_categories.hpp>
 #include <boost/type_traits/add_const.hpp>
+#include <boost/type_traits/add_reference.hpp>
+#include <boost/type_traits/is_reference.hpp>
+#include <boost/type_traits/remove_const.hpp>
+#include <boost/type_traits/remove_reference.hpp>
 
 namespace boost
 {
@@ -23,12 +27,23 @@ namespace boost
         {
             typedef typename mpl::if_<
                 typename is_reference<T>::type,
-                typename add_reference<
-                    typename add_const<
-                        typename remove_reference<T>::type
-                    >::type
-                >::type,
+                typename add_const<
+                    typename remove_reference<T>::type
+                >::type&,
                 T
+            >::type type;
+        };
+
+        template<class T>
+        struct mutable_reference_type_generator
+        {
+            typedef typename mpl::if_<
+                typename mpl::and_<
+                    typename is_const<T>::type,
+                    typename mpl::not_<typename is_reference<T>::type>::type
+                >::type,
+                T,
+                typename add_reference<T>::type
             >::type type;
         };
 
@@ -38,10 +53,14 @@ namespace boost
         >
         struct any_incrementable_iterator_interface
         {
-            typedef Reference reference;
+            typedef typename mutable_reference_type_generator<
+                Reference
+            >::type reference;
+
             typedef typename const_reference_type_generator<
                 Reference
             >::type const_reference;
+
             typedef typename remove_const<
                 typename remove_reference<Reference>::type
             >::type reference_as_value_type;
@@ -83,7 +102,7 @@ namespace boost
             virtual any_single_pass_iterator_interface<reference_as_value_type, Buffer>*
                         clone_reference_as_value(buffer_type& buffer) const = 0;
 
-            virtual Reference dereference() const = 0;
+            virtual reference dereference() const = 0;
 
             virtual bool equal(const any_single_pass_iterator_interface& other) const = 0;
         };

@@ -776,7 +776,6 @@ void save_in_edges(Archive& ar, Graph const& g, bidirectionalS)
 
     process_id_type id = g.processor();
 
-    typedef std::pair<local_vertex_descriptor, vertex_descriptor> in_edge;
     std::vector<edge_descriptor> saved_in_edges;
 
     BGL_FORALL_VERTICES_T(v, g, Graph) 
@@ -830,15 +829,8 @@ void save_edges(Archive& ar, Graph const& g, DirectedS)
         process_id_type;
     typedef typename graph_traits<
         Graph>::vertex_descriptor vertex_descriptor;
-    typedef typename graph_traits<
-        Graph>::edge_descriptor edge_descriptor;
 
-    // We retag the property list here so that bundled properties are
-    // properly placed into property<edge_bundle_t, Bundle>.
-    typedef typename boost::detail::retag_property_list<
-              edge_bundle_t,
-              typename Graph::edge_property_type>::type
-      edge_property_type;
+    typedef typename Graph::edge_property_type edge_property_type;
 
     int E = num_edges(g);
     ar << BOOST_SERIALIZATION_NVP(E);
@@ -885,8 +877,6 @@ template <PBGL_DISTRIB_ADJLIST_TEMPLATE_PARMS>
 template <class IStreamConstructibleArchive>
 void PBGL_DISTRIB_ADJLIST_TYPE::load(std::string const& filename)
 {
-    typedef typename config_type::VertexListS vertex_list_selector;
-
     process_group_type pg = process_group();
     process_id_type id = process_id(pg);
 
@@ -947,12 +937,6 @@ template <PBGL_DISTRIB_ADJLIST_TEMPLATE_PARMS>
 template <class OStreamConstructibleArchive>
 void PBGL_DISTRIB_ADJLIST_TYPE::save(std::string const& filename) const
 {
-    // We retag the property list here so that bundled properties are
-    // properly placed into property<vertex_bundle_t, Bundle>.
-    typedef typename boost::detail::retag_property_list<
-        vertex_bundle_t, vertex_property_type
-    >::type vertex_property_type;
-
     typedef typename config_type::VertexListS vertex_list_selector;
 
     process_group_type pg = process_group();

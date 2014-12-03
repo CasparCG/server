@@ -21,20 +21,56 @@
 
 #include "../stdafx.h"
 
-#include <tbb/enumerable_thread_specific.h>
+#include <boost/thread/tss.hpp>
 
 #include "win32_exception.h"
 
 #include "../log/log.h"
-#include "../concurrency/executor.h"
+#include "../concurrency/thread_info.h"
 
 namespace caspar {
 
+namespace detail {
+
+typedef struct tagTHREADNAME_INFO
+{
+	DWORD dwType; // must be 0x1000
+	LPCSTR szName; // pointer to name (in user addr space)
+	DWORD dwThreadID; // thread ID (-1=caller thread)
+	DWORD dwFlags; // reserved for future use, must be zero
+} THREADNAME_INFO;
+
+inline void SetThreadName(DWORD dwThreadID, LPCSTR szThreadName)
+{
+	THREADNAME_INFO info;
+	{
+		info.dwType = 0x1000;
+		info.szName = szThreadName;
+		info.dwThreadID = dwThreadID;
+		info.dwFlags = 0;
+	}
+	__try
+	{
+		RaiseException( 0x406D1388, 0, sizeof(info)/sizeof(DWORD), (DWORD*)&info );
+	}
+	__except (EXCEPTION_CONTINUE_EXECUTION){}	
+}
+
+}
+
 bool& installed_for_thread()
 {
-	static tbb::enumerable_thread_specific<bool> installed(false);
+	static boost::thread_specific_ptr<bool> installed;
 
-	return installed.local();
+	auto local = installed.get();
+
+	if (!local)
+	{
+		local = new bool(false);
+		installed.reset(local);
+	}
+
+	return *local;
 }
 
 void win32_exception::install_handler() 
@@ -53,7 +89,10 @@ void win32_exception::ensure_handler_installed_for_thread(
 		install_handler();
 
 		if (thread_description)
+		{
 			detail::SetThreadName(GetCurrentThreadId(), thread_description);
+			get_thread_info().name = thread_description;
+		}
 	}
 }
 

@@ -179,7 +179,6 @@ PBGL_DISTRIB_ADJLIST_TYPE
   typedef detail::parallel::redistributed_descriptor<edge_descriptor, 
                                                      edge_property_type>
     redistributed_edge;
-  typedef std::pair<vertices_size_type, edges_size_type> num_relocated_pair;
 
   vertex_iterator vi, vi_end;
   edge_iterator ei, ei_end;
@@ -237,8 +236,8 @@ PBGL_DISTRIB_ADJLIST_TYPE
         || get(vertex_to_processor, src) != src.owner
         || get(vertex_to_processor, tgt) != tgt.owner)
       redistributed_edges[get(vertex_to_processor, source(*ei, *this))]
-        .push_back(redistributed_edge(*ei, get(edge_all_t(), base(),
-                                               ei->local)));
+        .push_back(redistributed_edge(*ei, split_edge_property(get(edge_all_t(), base(),
+                                                                   ei->local))));
   }
   inplace_all_to_all(pg, redistributed_edges);
 

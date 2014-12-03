@@ -55,11 +55,17 @@ struct video_format
 		x1556p2398,
 		x1556p2400,
 		x1556p2500,
+		dci1080p2398,
+		dci1080p2400,
+		dci1080p2500,
 		x2160p2398,
 		x2160p2400,
 		x2160p2500,
 		x2160p2997,
 		x2160p3000,
+		dci2160p2398,
+		dci2160p2400,
+		dci2160p2500,
 		invalid,
 		count
 	};

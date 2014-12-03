@@ -50,7 +50,7 @@ namespace boost { namespace phoenix
 
         template <typename ThrowExpr, typename Context>
         result_type
-        operator()(ThrowExpr const& throw_expr, Context & ctx) const
+        operator()(ThrowExpr const& throw_expr, Context const & ctx) const
         {
             throw boost::phoenix::eval(throw_expr, ctx);
         }
@@ -90,6 +90,9 @@ namespace boost { namespace phoenix
     struct custom_terminal<detail::rethrow, Dummy>
     {
         typedef void result_type;
+      //#ifndef BOOST_PHOENIX_NO_SPECIALIZE_CUSTOM_TERMINAL
+        typedef void _is_throw_custom_terminal; // fix for #7730
+      //#endif
 
         template <typename Context>
         void operator()(detail::rethrow, Context &) const

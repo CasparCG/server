@@ -39,7 +39,7 @@
 
 namespace caspar { namespace env {
 
-using namespace boost::filesystem2;
+namespace fs = boost::filesystem;
 
 std::wstring media;
 std::wstring log;
@@ -58,7 +58,7 @@ void configure(const std::wstring& filename)
 {
 	try
 	{
-		auto initialPath = boost::filesystem::initial_path<boost::filesystem2::wpath>().file_string();
+		auto initialPath = fs::initial_path<fs::path>().wstring();
 	
 		std::wifstream file(initialPath + L"\\" + filename);
 		boost::property_tree::read_xml(file, pt, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
@@ -66,7 +66,7 @@ void configure(const std::wstring& filename)
 		auto paths = pt.get_child(L"configuration.paths");
 		media = widen(paths.get(L"media-path", initialPath + L"\\media\\"));
 		log = widen(paths.get(L"log-path", initialPath + L"\\log\\"));
-		ftemplate = complete(wpath(widen(paths.get(L"template-path", initialPath + L"\\template\\")))).string();		
+		ftemplate = fs::complete(fs::path(widen(paths.get(L"template-path", initialPath + L"\\template\\")))).wstring();		
 		data = widen(paths.get(L"data-path", initialPath + L"\\data\\"));
 		thumbnails = widen(paths.get(L"thumbnails-path", initialPath + L"\\thumbnails\\"));
 
@@ -84,17 +84,17 @@ void configure(const std::wstring& filename)
 
 		try
 		{
-			for(auto it = boost::filesystem2::wdirectory_iterator(initialPath); it != boost::filesystem2::wdirectory_iterator(); ++it)
+			for(auto it = fs::directory_iterator(initialPath); it != fs::directory_iterator(); ++it)
 			{
-				if(it->filename().find(L".fth") != std::wstring::npos)			
+				if(it->path().filename().wstring().find(L".fth") != std::wstring::npos)			
 				{
 					auto from_path = *it;
-					auto to_path = boost::filesystem2::wpath(ftemplate + L"/" + it->filename());
+					auto to_path = fs::path(ftemplate + L"/" + it->path().filename().wstring());
 				
-					if(boost::filesystem2::exists(to_path))
-						boost::filesystem2::remove(to_path);
+					if(fs::exists(to_path))
+						fs::remove(to_path);
 
-					boost::filesystem2::copy_file(from_path, to_path);
+					fs::copy_file(from_path, to_path);
 				}	
 			}
 		}
@@ -112,25 +112,25 @@ void configure(const std::wstring& filename)
 
 	try
 	{
-		auto media_path = boost::filesystem::wpath(media);
-		if(!boost::filesystem::exists(media_path))
-			boost::filesystem::create_directory(media_path);
+		auto media_path = fs::path(media);
+		if(!fs::exists(media_path))
+			fs::create_directory(media_path);
 		
-		auto log_path = boost::filesystem::wpath(log);
-		if(!boost::filesystem::exists(log_path))
-			boost::filesystem::create_directory(log_path);
+		auto log_path = fs::path(log);
+		if(!fs::exists(log_path))
+			fs::create_directory(log_path);
 		
-		auto template_path = boost::filesystem::wpath(ftemplate);
-		if(!boost::filesystem::exists(template_path))
-			boost::filesystem::create_directory(template_path);
+		auto template_path = fs::path(ftemplate);
+		if(!fs::exists(template_path))
+			fs::create_directory(template_path);
 		
-		auto data_path = boost::filesystem::wpath(data);
-		if(!boost::filesystem::exists(data_path))
-			boost::filesystem::create_directory(data_path);
+		auto data_path = fs::path(data);
+		if(!fs::exists(data_path))
+			fs::create_directory(data_path);
 		
-		auto thumbnails_path = boost::filesystem::wpath(thumbnails);
-		if(!boost::filesystem::exists(thumbnails_path))
-			boost::filesystem::create_directory(thumbnails_path);
+		auto thumbnails_path = fs::path(thumbnails);
+		if(!fs::exists(thumbnails_path))
+			fs::create_directory(thumbnails_path);
 	}
 	catch(...)
 	{

@@ -77,7 +77,8 @@ struct filter::implementation
 		boost::rational<int> in_sample_aspect_ratio,
 		AVPixelFormat in_pix_fmt,
 		std::vector<AVPixelFormat> out_pix_fmts,
-		const std::string& filtergraph) 
+		const std::string& filtergraph,
+		bool multithreaded) 
 		: filtergraph_(boost::to_lower_copy(filtergraph))
 	{
 		if(out_pix_fmts.empty())
@@ -104,8 +105,15 @@ struct filter::implementation
 				avfilter_graph_free(&p);
 			});
 		
-		video_graph_->nb_threads  = 0;
-		video_graph_->thread_type = AVFILTER_THREAD_SLICE;
+		if (multithreaded)
+		{
+			video_graph_->nb_threads  = 0;
+			video_graph_->thread_type = AVFILTER_THREAD_SLICE;
+		}
+		else
+		{
+			video_graph_->nb_threads  = 1;
+		}
 
 		const auto vsrc_options = (boost::format("video_size=%1%x%2%:pix_fmt=%3%:time_base=%4%/%5%:pixel_aspect=%6%/%7%:frame_rate=%8%/%9%")
 			% in_width % in_height
@@ -251,7 +259,8 @@ filter::filter(
 		boost::rational<int> in_sample_aspect_ratio,
 		AVPixelFormat in_pix_fmt,
 		std::vector<AVPixelFormat> out_pix_fmts,
-		const std::string& filtergraph) 
+		const std::string& filtergraph,
+		bool multithreaded) 
 		: impl_(new implementation(
 			in_width,
 			in_height,
@@ -260,7 +269,8 @@ filter::filter(
 			in_sample_aspect_ratio,
 			in_pix_fmt,
 			out_pix_fmts,
-			filtergraph)){}
+			filtergraph,
+			multithreaded)){}
 filter::filter(filter&& other) : impl_(std::move(other.impl_)){}
 filter& filter::operator=(filter&& other){impl_ = std::move(other.impl_); return *this;}
 void filter::push(const std::shared_ptr<AVFrame>& frame){impl_->push(frame);}
