@@ -9,8 +9,15 @@ General
   o Added support for using a different configuration file at startup than the
     default casparcg.config by simply adding the name of the file to use as the
     first command line argument to casparcg.exe.
-  o Fixed various bugs.
   o Upgraded FFmpeg to latest stable.
+  o Created build script.
+  o Fixed bug where both layer_producer and channel_producer display:s and
+    empty/late first frame when the producer is called before the consumer in
+    the other end has received the first frame.
+  o Added rudimentary support for audio for layer_producer and channel_producer.
+  o Upgraded Decklink SDK to 10.1.4, bringing new 2K and 4K DCI video modes.
+  o General bug fixes (mostly memory and resource leaks, some serious).
+  o Updated Boost to version 1.57
 
 Mixer
 -----
@@ -20,7 +27,8 @@ Mixer
     fill_scale and rotation will be done from.
   o Added support for perspective correct corner pinning.
   o Added support for mipmapped textures with anisotropic filtering for
-    increased downscaling quality.
+    increased downscaling quality. Whether to enable by default can be
+    configured in casparcg.config.
   o Added support for cropping a layer. Not the same as clipping.
 
 AMCP
@@ -53,11 +61,23 @@ AMCP
       cropped. One X Y pair each for the upper left corner and for the lower
       right corner.
 
+  o Added INFO QUEUES command for debugging AMCP command queues. Useful for
+    debugging command queue overflows, where a command is deadlocked. Hopefully
+    always accessible via console, even though the TCP command queue may be
+    full.
+  o Added GL command:
+    - GL INFO prints information about device buffers and host buffers.
+    - GL GC garbage collects pooled but unused GL resources.
+  o Added INFO THREADS command listing the known threads and their descriptive
+    names. Can be matched against the thread id column of log entries.
+
 Consumers
 ---------
 
   o Removed blocking_decklink_consumer. It was more like an experiment at best
     and its usefulness was questionable.
+  o Added a 10 second time-out for consumer sends, to detect/recover from
+    blocked consumers.
 
 HTML producer
 -------------

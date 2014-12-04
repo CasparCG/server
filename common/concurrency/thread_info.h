@@ -37,7 +37,6 @@ struct thread_info
 	std::int64_t	native_id;
 
 	thread_info();
-	~thread_info();
 };
 
 thread_info& get_thread_info();
