@@ -96,7 +96,9 @@ safe_ptr<device_buffer> ogl_device::allocate_device_buffer(size_t width, size_t 
 		try
 		{
 			yield();
-			gc().wait();
+			auto future = gc();
+			yield();
+			future.wait();
 					
 			// Try again
 			buffer.reset(new device_buffer(width, height, stride, mipmapped));
@@ -144,7 +146,9 @@ safe_ptr<host_buffer> ogl_device::allocate_host_buffer(size_t size, host_buffer:
 		try
 		{
 			yield();
-			gc().wait();
+			auto future = gc();
+			yield();
+			future.wait();
 
 			// Try again
 			buffer.reset(new host_buffer(size, usage));
