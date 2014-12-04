@@ -66,6 +66,8 @@ public:
 			}
 		}
 
+		std::sort(result.begin(), result.end(), [](const safe_ptr<thread_info>& lhs, const safe_ptr<thread_info>& rhs) { return lhs->native_id < rhs->native_id; });
+
 		return result;
 	}
 
@@ -94,10 +96,6 @@ public:
 
 thread_info::thread_info()
 	: native_id(GetCurrentThreadId())
-{
-}
-
-thread_info::~thread_info()
 {
 }
 
