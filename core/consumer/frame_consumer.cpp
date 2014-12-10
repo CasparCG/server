@@ -132,7 +132,7 @@ public:
 		return consumer_->has_synchronization_clock();
 	}
 
-	virtual size_t buffer_depth() const override
+	virtual int buffer_depth() const override
 	{
 		return consumer_->buffer_depth();
 	}
@@ -157,7 +157,7 @@ const safe_ptr<frame_consumer>& frame_consumer::empty()
 		virtual int64_t presentation_frame_age_millis() const { return 0; }
 		virtual std::wstring print() const override {return L"empty";}
 		virtual bool has_synchronization_clock() const override {return false;}
-		virtual size_t buffer_depth() const override {return 0;};
+		virtual int buffer_depth() const override {return 0;};
 		virtual int index() const{return -1;}
 		virtual boost::property_tree::wptree info() const override
 		{

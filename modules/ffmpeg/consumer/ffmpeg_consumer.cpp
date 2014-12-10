@@ -730,9 +730,9 @@ public:
 		return false;
 	}
 
-	virtual size_t buffer_depth() const override
+	virtual int buffer_depth() const override
 	{
-		return 1;
+		return -1;
 	}
 
 	virtual int index() const override

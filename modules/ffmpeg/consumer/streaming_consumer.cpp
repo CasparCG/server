@@ -126,8 +126,8 @@ public:
 		, video_pts_(0)
 		, audio_pts_(0)
 		, executor_(print())
-		, audio_encoder_executor_(print() + L" video_encoder")
-		, video_encoder_executor_(print() + L" audio_encoder")
+		, audio_encoder_executor_(print() + L" audio_encoder")
+		, video_encoder_executor_(print() + L" video_encoder")
 		, write_executor_(print() + L" io")
 	{		
 		abort_request_ = false;	
@@ -158,24 +158,26 @@ public:
 	{
 		if(oc_)
 		{
-			encode_video(nullptr, nullptr);
-			encode_audio(nullptr, nullptr);			
+			video_encoder_executor_.begin_invoke([&] { encode_video(nullptr, nullptr); });
+			audio_encoder_executor_.begin_invoke([&] { encode_audio(nullptr, nullptr); });
+
+			video_encoder_executor_.stop();
+			audio_encoder_executor_.stop();
+			video_encoder_executor_.join();
+			audio_encoder_executor_.join();
 
 			video_graph_.reset();
 			audio_graph_.reset();
-			
-			video_encoder_executor_.wait();
-			audio_encoder_executor_.wait();
-			
 			video_st_.reset();
 			audio_st_.reset();
 
 			write_packet(nullptr, nullptr);
 
-			write_executor_.wait();
-					
+			write_executor_.stop();
+			write_executor_.join();
+
 			FF(av_write_trailer(oc_.get()));
-						
+
 			if (!(oc_->oformat->flags & AVFMT_NOFILE) && oc_->pb)
 				avio_close(oc_->pb);
 
@@ -420,7 +422,7 @@ public:
 
 	std::wstring print() const override
 	{
-		return L"ffmpeg_consumer[" + widen(path_.string()) + L"]";
+		return L"streaming_consumer[" + widen(path_.string()) + L"]";
 	}
 	
 	virtual boost::property_tree::wptree info() const override
@@ -433,9 +435,9 @@ public:
 		return false;
 	}
 
-	size_t buffer_depth() const override
+	int buffer_depth() const override
 	{
-		return 0;
+		return -1;
 	}
 
 	int index() const override
@@ -881,11 +883,11 @@ private:
 				in_video_format_.width, 
 				in_video_format_.height, 
 				1));
-		}		
 
-		FF(av_buffersrc_add_frame(
-			video_graph_in_, 
-			src_av_frame.get()));
+			FF(av_buffersrc_add_frame(
+				video_graph_in_, 
+				src_av_frame.get()));
+		}		
 
 		int ret = 0;
 
@@ -987,11 +989,11 @@ private:
 				src_av_frame->nb_samples, 
 				static_cast<AVSampleFormat>(src_av_frame->format), 
 				16)); 					
-		}
 		
-		FF(av_buffersrc_add_frame(
-			audio_graph_in_, 
-			src_av_frame.get()));
+			FF(av_buffersrc_add_frame(
+				audio_graph_in_, 
+				src_av_frame.get()));
+		}
 
 		int ret = 0;
 
