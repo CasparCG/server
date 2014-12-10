@@ -156,25 +156,30 @@ public:
 		});
 	}
 	
-	std::map<int, size_t> buffer_depths_snapshot() const
+	std::map<int, int> buffer_depths_snapshot() const
 	{
-		std::map<int, size_t> result;
+		std::map<int, int> result;
 
 		BOOST_FOREACH(auto& consumer, consumers_)
 			result.insert(std::make_pair(
 					consumer.first,
 					consumer.second->buffer_depth()));
 
-		return std::move(result);
+		return result;
 	}
 
-	std::pair<size_t, size_t> minmax_buffer_depth(
-			const std::map<int, size_t>& buffer_depths) const
+	std::pair<int, int> minmax_buffer_depth(
+			const std::map<int, int>& buffer_depths) const
 	{		
 		if(consumers_.empty())
 			return std::make_pair(0, 0);
 		
-		auto depths = buffer_depths | boost::adaptors::map_values; 
+		auto depths = buffer_depths
+				| boost::adaptors::map_values
+				| boost::adaptors::filtered([](int v) { return v >= 0; });
+
+		if (depths.empty())
+			return std::make_pair(0, 0);
 		
 		return std::make_pair(
 				*boost::range::min_element(depths),
@@ -220,7 +225,8 @@ public:
 				for (auto it = consumers_.begin(); it != consumers_.end();)
 				{
 					auto consumer	= it->second;
-					auto frame		= frames_.at(buffer_depths[it->first]-minmax.first);
+					auto depth		= buffer_depths[it->first];
+					auto frame		= depth < 0 ? frames_.back() : frames_.at(depth - minmax.first);
 
 					send_to_consumers_delays_[it->first] = frame->get_age_millis();
 						
@@ -251,7 +257,8 @@ public:
 				for (auto result_it = send_results.begin(); result_it != send_results.end(); ++result_it)
 				{
 					auto consumer		= consumers_.at(result_it->first);
-					auto frame			= frames_.at(buffer_depths[result_it->first]-minmax.first);
+					auto depth			= buffer_depths[result_it->first];
+					auto frame			= depth < 0 ? frames_.back() : frames_.at(depth - minmax.first);
 					auto& result_future	= result_it->second;
 						
 					try

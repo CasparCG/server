@@ -359,7 +359,7 @@ struct configuration
 	{
 	}
 	
-	size_t buffer_depth() const
+	int buffer_depth() const
 	{
 		return base_buffer_depth + (latency == low_latency ? 0 : 1) + (embedded_audio ? 1 : 0);
 	}
