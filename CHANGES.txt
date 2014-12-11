@@ -1,7 +1,7 @@
 C H A N G E S
 
-CasparCG Server 2.0.7 (as compared to CasparCG Server 2.0.7 Beta 2)
-===================================================================
+CasparCG Server 2.0.7 Stable (as compared to CasparCG Server 2.0.7 Beta 2)
+==========================================================================
 
 General
 -------
@@ -15,9 +15,11 @@ General
     empty/late first frame when the producer is called before the consumer in
     the other end has received the first frame.
   o Added rudimentary support for audio for layer_producer and channel_producer.
-  o Upgraded Decklink SDK to 10.1.4, bringing new 2K and 4K DCI video modes.
+  o Upgraded Decklink SDK to 10.1.4, bringing new 2K and 4K DCI video modes. New
+    template hosts also availble for those modes.
   o General bug fixes (mostly memory and resource leaks, some serious).
   o Updated Boost to version 1.57
+  o Frontend no longer maintained and therefore not included in the release.
 
 Mixer
 -----
@@ -78,6 +80,10 @@ Consumers
     and its usefulness was questionable.
   o Added a 10 second time-out for consumer sends, to detect/recover from
     blocked consumers.
+  o Some consumers which are usually added and removed during playout (for
+    example ffmpeg_consumer, streaming_consumer and channel_consumer) no longer
+    affect the presentation time on other consumers. Previously a lag on the SDI
+    output could be seen when adding such consumers.
 
 HTML producer
 -------------
@@ -107,7 +113,7 @@ Producers
 ---------
 
   o FFmpeg: Reports correct nb_frames() when using SEEK (Thomas Kaltz III)
-  o Flash: Fixed bug wherer CG PLAY, CG INVOKE
+  o Flash: Fixed bug where CG PLAY, CG INVOKE did not work.
 
 Consumers
 ---------

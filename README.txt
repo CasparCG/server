@@ -1,13 +1,12 @@
-CasparCG Server 2.0.7 Beta 2
+CasparCG Server 2.0.7 Stable
 ============================
 
 Thank you for your interest in CasparCG Server, a professional software used to
 play out and record professional graphics, audio and video to multiple outputs.
 It has been in 24/7 broadcast production since 2006.
 
-This release is NOT considered tested and stable, and it is NOT intended for use
-in professional production. Please use CasparCG Server 2.0.6 if you need 
-proven stability!
+This release is considered tested and stable, and is intended for use in
+professional production.
 
 More information is available at http://casparcg.com/
 
@@ -50,7 +49,7 @@ INSTALLATION
 
 1. Check that your system meets the requirements above.
 
-2. Unzip and place the "CasparCG Server 2.0.7 Beta 2" folder anywhere you like.
+2. Unzip and place the "CasparCG Server" folder anywhere you like.
 
 3. Install "Microsoft Visual C++ 2010 Redistributable Package" from
    http://www.microsoft.com/download/en/details.aspx?id=5555
@@ -62,18 +61,17 @@ INSTALLATION
    as they can interfere with CasparCG Server's OpenGL features!
 
 
-
 INSTALLATION OF ADDITIONAL NON-GPL SOFTWARE
 -------------------------------------------
 
 - For Flash template support:
+
   1. Uninstall any previous version of the Adobe Flash Player using this file:
      http://download.macromedia.com/get/flashplayer/current/support/uninstall_flash_player.exe
   2. Download and unpack
      http://download.macromedia.com/pub/flashplayer/installers/archive/fp_11.8.800.94_archive.zip
   3. Install Adobe Flash Player 11.8.800.94 from the unpacked archive:
      fp_11.8.800.94_archive\11_8_r800_94\flashplayer11_8r800_94_winax.exe
-
 
 - For NewTek iVGA support, please download and install the following driver:
   http://new.tk/NetworkSendRedist
@@ -82,14 +80,13 @@ INSTALLATION OF ADDITIONAL NON-GPL SOFTWARE
 CONFIGURATION
 -------------
 
-1. Start the "CasparCG_Server.exe" program and configure the settings. Then 
-   Click the "Restart" button to save the configuration and restart
-   the CasparCG Server software.
+1. Configure the server by editing the self documented casparcg.config file in a
+   text editor.
 
-2. Connect to the Server from a client software, such as the "CasparCG Client"
+2. Start the "casparcg.exe" program.
+
+3. Connect to the Server from a client software, such as the "CasparCG Client"
    which is available as a separate download.
-
-
 
 
 DOCUMENTATION
@@ -99,7 +96,6 @@ The most up-to-date documentation is always available at
 http://casparcg.com/wiki/
 
 Ask questions in the forum: http://casparcg.com/forum/
-
 
 
 LICENSING
