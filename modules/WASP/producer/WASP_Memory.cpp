@@ -1,14 +1,11 @@
 #include "..\stdafx.h"
+#include "winbase.h"
 #include <atlbase.h>
-//You may derive a class from CComModule and use it if you want to override
-//something, but do not change the name of _Module
-//extern CComModule _Module;
 #include <atlcom.h>
 #include <string>
 #include <comutil.h>
 
 #include "WASP_Memory.h"
-//#include "../../video_format.h"
 #include "QueryPerformanceCounter.h"
 
 #define PIPE_WASPCG  L"\\\\.\\pipe\\listener"
@@ -40,122 +37,105 @@ struct COMMANDINFO
 
 BOOL CWASP_Memory::GetSharedMemoryHandles()
 {
-	//ERR_LOG_START()
-
-	/*if(g_stGlobalObjects.m_hMappedFile)
-		return true;*/
-
-	m_hReadThread = NULL;
-
-	
-	// Create Handle To memory mapped file
-	m_hMappedFile = CreateFileMapping(INVALID_HANDLE_VALUE,				// use paging file
-														NULL,								// default security 
-														PAGE_READWRITE,						// read/write access
-														0,									// max. object size 
-														sizeof(OUTPUTINFO) + MAX_VIDEO_SIZE,// buffer size  
-														WASPOUTPUTFILE);					// name of mapping object
-
-
-	if (m_hMappedFile == NULL || m_hMappedFile == INVALID_HANDLE_VALUE) 
+	try
 	{
-		/*g_stGlobalObjects.m_hMappedFile = NULL;
-		TCHAR szTestHrNo[MAX_PATH];
-		_stprintf(szTestHrNo,_T(" Line [%d] in fn: %s()  CreateFileMapping failed") ,_T(__FILE__) , dwErrorCntr); */
-		//LOG_ENTRY_ERROR(E_FAIL,szTestHrNo)
-		OutputDebugString(L"CreateFileMapping failed");
 
-		return false;
-	}
-	
-
-	m_pFileBuff = (BYTE*) MapViewOfFile(m_hMappedFile, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+		// Opens the "WaspMemoryOutputFile" File Mapping Object.
+		// If it is not present and a new one is created instead, then do not proceeed further
+		m_hMappedFile = CreateFileMapping(INVALID_HANDLE_VALUE,				// use paging file
+															NULL,								// default security 
+															PAGE_READWRITE,						// read/write access
+															0,									// max. object size 
+															sizeof(OUTPUTINFO) + MAX_VIDEO_SIZE,// buffer size  
+															WASPOUTPUTFILE);					// name of mapping object
 
 
-	/*if (g_stGlobalObjects.m_pFileBuff == NULL) 
-	{
-		CloseHandle(g_stGlobalObjects.m_hMappedFile);
-		g_stGlobalObjects.m_hMappedFile = NULL;
-		TCHAR szTestHrNo[MAX_PATH];
-		_stprintf(szTestHrNo,_T(" Line [%d] in fn: %s()  MapViewOfFile failed ") ,_T(__FILE__) , dwErrorCntr); 
-		LOG_ENTRY_ERROR(E_FAIL,szTestHrNo)
-		return false;
-	}*/
+		//return if a new object is created
+		if(!(GetLastError() == ERROR_ALREADY_EXISTS))
+			return false;
 
-	// Read header from mapped file
-	m_pOutPut = (OUTPUTINFO*)m_pFileBuff;
-    InitializeCriticalSection(&m_csfreeBuffers);
+		if (m_hMappedFile == NULL || m_hMappedFile == INVALID_HANDLE_VALUE) 
+		{
+			OutputDebugString(L"CreateFileMapping failed");
+			return false;
+		}
+
+		m_pFileBuff = (BYTE*) MapViewOfFile(m_hMappedFile, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+
+		// Read header from mapped file
+		m_pOutPut = (OUTPUTINFO*)m_pFileBuff;
 		
+		CreateBufferPool();
+		
+		//Create Read Thread
+		m_hReadThread = CreateThread(NULL, 0, ReadThread, this, 0, 0);
+		m_bRunning = true;
 
+		// Create Events to Read and Write data to Shared memory 
+		m_hReadEvt  = CreateEvent(NULL,TRUE,FALSE,WASPREADEVENT);	
+		m_hWriteEvt = CreateEvent(NULL,TRUE,FALSE,WASPWRITEEVENT);
 
-	CreateBufferPool();
-	m_bRunning = true;
-	m_hReadThread = CreateThread(NULL, 0, ReadThread, this, 0, 0);
-	
+		//Connect to Pipe
+		m_hPipe = CreateFile( 
+				 PIPE_WASPCG,	 // pipe name 
+				 GENERIC_READ |  // read and write access 
+				 GENERIC_WRITE, 
+				 0,              // no sharing 
+				 NULL,           // default security attributes
+				 OPEN_EXISTING,  // opens existing pipe 
+				 0,              // default attributes 
+				 NULL);          // no template file 
 
-	// Create Events to Read and Write data to Shared memory 
-	m_hReadEvt  = CreateEvent(NULL,TRUE,FALSE,WASPREADEVENT);	
-	m_hWriteEvt = CreateEvent(NULL,TRUE,FALSE,WASPWRITEEVENT);
+		if(m_hPipe == INVALID_HANDLE_VALUE )
+		{
+			TCHAR szTestHrNo[MAX_PATH];
+			_stprintf(szTestHrNo,_T("@@@ No Pipe available for connection %d "), GetLastError());
+			OutputDebugString(szTestHrNo);
 
-
-	//Connect ro Pipe
-	m_hPipe = CreateFile( 
-			 PIPE_WASPCG,   // pipe name 
-			 GENERIC_READ |  // read and write access 
-			 GENERIC_WRITE, 
-			 0,              // no sharing 
-			 NULL,           // default security attributes
-			 OPEN_EXISTING,  // opens existing pipe 
-			 0,              // default attributes 
-			 NULL);          // no template file 
-
-	if(m_hPipe == INVALID_HANDLE_VALUE )
-	{
-		TCHAR szTestHrNo[MAX_PATH];
-		_stprintf(szTestHrNo,_T(" No Pipe available for connection %d "), GetLastError());
-		OutputDebugString(szTestHrNo);
-
+		}
 	}
-
-
-
-	////create a new namepipe
-	//m_hPipe = CreateNamedPipeW( 
-	//				 PIPE_WASPCG,     // pipe name 
-	//				 PIPE_ACCESS_DUPLEX ,     // read/write access 
-	//				 PIPE_TYPE_MESSAGE |      // message-type pipe 
-	//				 PIPE_READMODE_MESSAGE |  // message-read mode 
-	//				 PIPE_WAIT,               // blocking mode 
-	//				 PIPE_UNLIMITED_INSTANCES,// number of instances 
-	//				 sizeof(COMMANDINFO),   // output buffer size 
-	//				 sizeof(COMMANDINFO) ,   // input buffer size 
-	//				 PIPE_TIMEOUT,            // client time-out 
-	//				 NULL);                   // default security attributes 
-
-
-	////connect to pipe..
-	//if( !ConnectNamedPipe(m_hPipe, NULL) )
-	//{
-	//	return false;
-	//	DWORD dwERRor = GetLastError();
-	//}
+	catch(...)
+	{
+		OutputDebugString(L"@@@ Exception in CWASP_Memory::GetSharedMemoryHandles");
+	}
 		
 	return true;
-
-	//ERR_LOG_END()
 }
 
-BOOL g_bInit = TRUE;
+
 
 CStopwatch g_objWatch;
 
 safe_ptr<core::basic_frame> CWASP_Memory::receive(const safe_ptr<core::frame_factory> frame_factory_)
 {
+
+	float fTime = g_objWatch.Now();
 	g_objWatch.Start();
+	if(fTime < 38 || (fTime>42))
+	{
+		TCHAR sz[256];
+		_stprintf( sz , L"@@@ receive time %f" , fTime);
+			OutputDebugString( sz );
+	}
+
+
+	/*if(m_bInit && m_lockedBuffers.size() >=1)
+	{
+		m_bInit = FALSE;
+
+		TCHAR sz[256];
+		_stprintf( sz , L"@@@ Init %d" , m_lockedBuffers.size());
+		OutputDebugString( sz );
+	}
+	
+	if(m_bInit)
+		return frame_;
+*/
+	
 	try
 	{
 		BYTE *pBuff  = NULL;
-		while(TryEnterCriticalSection(&m_csfreeBuffers)==0)
+		while(TryEnterCriticalSection(m_csfreeBuffers) ==0)
 				Sleep(1);
 		try
 		{
@@ -168,7 +148,7 @@ safe_ptr<core::basic_frame> CWASP_Memory::receive(const safe_ptr<core::frame_fac
 		catch(...)
 		{
 		}
-		LeaveCriticalSection(&m_csfreeBuffers);
+		LeaveCriticalSection(m_csfreeBuffers);
 		if(!pBuff)
 		{
 			OutputDebugString(L"@@@ No locked buffers ");
@@ -197,6 +177,9 @@ safe_ptr<core::basic_frame> CWASP_Memory::receive(const safe_ptr<core::frame_fac
 		//copy field 0 to  field 0 offset in frame
 		if(frame->image_data().begin() != NULL && pBuff != NULL)
 		{
+			/*TCHAR sz[256];
+			_stprintf( sz , L"@@@ copying field 0 %d" , dwSize);
+			OutputDebugString( sz );*/
 			//std::copy_n(pBuff, dwSize, frame->image_data().begin());	
 			memcpy(frame->image_data().begin(), pBuff, dwSize);
 		}
@@ -213,6 +196,10 @@ safe_ptr<core::basic_frame> CWASP_Memory::receive(const safe_ptr<core::frame_fac
 			//copy field 1 to  field 1 offset in frame
 			if(frame1->image_data().begin() != NULL && pBuff != NULL)
 			{
+				/*TCHAR sz[256];
+				_stprintf( sz , L"@@@ copying field 1 %d" , dwSize);
+				OutputDebugString( sz );*/
+
 				//std::copy_n(pBuff+dwOffset, dwSize, frame1->image_data().begin());
 				memcpy(frame1->image_data().begin(), pBuff+dwOffset, dwSize);
 			}
@@ -221,7 +208,7 @@ safe_ptr<core::basic_frame> CWASP_Memory::receive(const safe_ptr<core::frame_fac
 
 			//push back to locked q
 			//memset(pBuff, 0, m_dwSize);
-			while(TryEnterCriticalSection(&m_csfreeBuffers)==0)
+			while(TryEnterCriticalSection(m_csfreeBuffers) == 0)
 				Sleep(1);
 			try
 			{
@@ -230,26 +217,20 @@ safe_ptr<core::basic_frame> CWASP_Memory::receive(const safe_ptr<core::frame_fac
 			catch(...)
 			{
 			}
-			LeaveCriticalSection(&m_csfreeBuffers);
+			LeaveCriticalSection(m_csfreeBuffers);
 
 
 			format_desc.field_mode = caspar::core::field_mode::upper;
 			frame_ = core::basic_frame::interlace(frame, frame1, format_desc.field_mode);
 
 
-			float fTime = g_objWatch.Now();
-			if(fTime > 5)
-			{
-				TCHAR sz[256];
-				_stprintf( sz , L"@@@ receive time %f" , fTime);
-					OutputDebugString( sz );
-			}
+			
 			
 			return  frame_;
 		}
 
 		//push back to locked q
-		while(TryEnterCriticalSection(&m_csfreeBuffers)==0)
+		while(TryEnterCriticalSection(m_csfreeBuffers) ==0)
 			Sleep(1);
 		try
 		{
@@ -258,7 +239,7 @@ safe_ptr<core::basic_frame> CWASP_Memory::receive(const safe_ptr<core::frame_fac
 		catch(...)
 		{
 		}
-		LeaveCriticalSection(&m_csfreeBuffers);
+		LeaveCriticalSection(m_csfreeBuffers);
 
 		frame_ = std::move(frame);
 	}
@@ -281,10 +262,10 @@ BOOL CWASP_Memory::SendCommandToPipe( std::wstring strCommand)
 
 		 DWORD dwBytesSent =0; 
 		 bool bSuccess = WriteFile( 
-							m_hPipe,               // pipe handle 
-							pDataCmd,             // message  //pCmdBuff
-							iLen,     // message length 
-							&dwBytesSent,             // bytes written 
+							m_hPipe,				// pipe handle 
+							pDataCmd,				// message  
+							iLen,					// message length 
+							&dwBytesSent,           // bytes written 
 							NULL);                  // not overlapped 
 
 		 if( !bSuccess )
@@ -292,8 +273,6 @@ BOOL CWASP_Memory::SendCommandToPipe( std::wstring strCommand)
 			 TCHAR sz[256];
 			 _stprintf( sz , L"WriteFile Error : %d" , GetLastError() );
 			 OutputDebugString( sz );
-
-			// hr = GetLastError();
 		 }
 
 		  TCHAR sz[1000];
@@ -318,10 +297,10 @@ BOOL CWASP_Memory::ReadCommandFromPipe( )
 
 	 DWORD cbWritten=0; 
 	 bool bSuccess = ReadFile( 
-					m_hPipe,               // pipe handle 
-					pCmdBuff,             // message 
-					RESPONSELEN,     // message length 
-					&cbWritten,             // bytes written 
+					m_hPipe,				// pipe handle 
+					pCmdBuff,				// message 
+					RESPONSELEN,			// message length 
+					&cbWritten,				// bytes written 
 					NULL);                  // not overlapped 
 
 	 if( !bSuccess /*|| (stricmp(pCmdBuff, "RESPONSE") != 0)*/)
@@ -329,7 +308,6 @@ BOOL CWASP_Memory::ReadCommandFromPipe( )
 		 TCHAR sz[256];
 		 _stprintf( sz , L"ReadFile Error : %d" , GetLastError() );
 		 OutputDebugString( sz );
-		// hr = GetLastError();
 	 }
 
 	 return bSuccess;
@@ -353,7 +331,7 @@ BOOL  CWASP_Memory::CreateBufferPool()
 		/*if(m_pOutPut->bInterlaced)
 			m_dwSize = m_dwSize/2;*/
 
-		for(int iCnt = 0; iCnt < 5; iCnt++)
+		for(int iCnt = 0; iCnt < 3; iCnt++)
 		{
 			BYTE* pBuff = new BYTE[m_dwSize];
 			m_freeBuffers.push(pBuff);
@@ -372,17 +350,33 @@ DWORD WINAPI CWASP_Memory::ReadThread(LPVOID lpParameter)
 	CWASP_Memory *pThis = (CWASP_Memory *)lpParameter;
 
 	pThis->Readproc();
-
+	
 	return 0;	
 }
 
 CStopwatch g_objThrdWatch;
+
 void CWASP_Memory::Readproc()
 {
 	while(m_bRunning)
 	{
 		try
 		{
+			if(m_freeBuffers.size() <= 0)
+			{
+				/*TCHAR sz[256];
+				_stprintf( sz , L"@@@ no free buffers  locked cnt %d" , m_lockedBuffers.size());
+				 OutputDebugString( sz );*/
+				Sleep(1);
+				continue;
+			}
+			else
+			{
+				//signal memory output to write the frame
+				InterlockedExchange(&(m_pOutPut->iVal), 1);				
+			}
+
+
 			//Wait for the read event from memory out	
 			CStopwatch objwatch;
 			if(WAIT_TIMEOUT == WaitForSingleObject (m_hReadEvt, 1000))
@@ -390,12 +384,13 @@ void CWASP_Memory::Readproc()
 				CASPAR_LOG(info) <<"*** Waiting MemoryOutPut Data Event TimeOVER ***";
 				OutputDebugString(L"@@@ Waiting MemoryOutPut Data Event TimeOVER");
 			}
+			InterlockedExchange(&(m_pOutPut->iVal), 0);	
 
 			float fTime = g_objThrdWatch.Now();
-			//if(fTime > 5)
+			if(fTime > 41 || fTime < 38)
 			{
 				TCHAR sz[256];
-				_stprintf( sz , L"@@@ Event signalled in  %f wait time %f" , fTime, objwatch.Now());
+				_stprintf( sz , L"@@@ Event signalled in  %f %d" , fTime,  m_lockedBuffers.size());
 				 OutputDebugString( sz );
 			}
 			g_objThrdWatch.Start();
@@ -404,8 +399,8 @@ void CWASP_Memory::Readproc()
 			ResetEvent(m_hReadEvt);
 			DWORD dwOffset = sizeof(OUTPUTINFO);
 
-			//lock.........................................
-			while(TryEnterCriticalSection(&m_csfreeBuffers)==0)
+			//lock CricSec
+			while(TryEnterCriticalSection(m_csfreeBuffers)==0)
 					Sleep(1);
 
 			try
@@ -420,22 +415,105 @@ void CWASP_Memory::Readproc()
 						memcpy(pBuff, m_pFileBuff+dwOffset, m_dwSize);
 						m_lockedBuffers.push(pBuff);
 					}
-								
-				}
-				else
-					OutputDebugString(L"@@@ No free buffers");
+				}				
 			}
 			catch(...)
 			{
 
 			}
-  			LeaveCriticalSection(&m_csfreeBuffers);
+  			LeaveCriticalSection(m_csfreeBuffers);
+
+			
 		}
 		catch(...)
 		{
-			CASPAR_LOG(info)<<(L"@@@ Exception in read proc");
-		
+			OutputDebugString(L"@@@ Exception in CWASP_Memory::Readproc");
+			CASPAR_LOG(info)<<(L"Exception in CWASP_Memory::Readproc");
 		}
 	}
 }
 
+void CWASP_Memory::FreeResources()
+{
+	try
+	{
+		//Stop the Read Thread
+		m_bRunning = false;
+
+		//Wait for the Read Thread handle to be signalled
+		if(WaitForSingleObject(m_hReadThread, INFINITE) == WAIT_OBJECT_0)
+		{
+			CloseHandle(m_hReadThread);
+			m_hReadThread = NULL;
+		}
+
+		//After closing the thread handles, close all other handles
+		//Close the Pipe Handle
+		if (m_hPipe && (m_hPipe != INVALID_HANDLE_VALUE))
+		{
+			CloseHandle(m_hPipe);
+			m_hPipe = NULL;
+		}
+
+		//Unmapvieoffile
+		if(m_pFileBuff)
+			UnmapViewOfFile(m_pFileBuff);
+
+		//Close the shared memory Handle
+		if (m_hMappedFile && (m_hMappedFile != INVALID_HANDLE_VALUE))
+		{
+			CloseHandle(m_hMappedFile);
+			m_hMappedFile = NULL;
+		}
+
+		//Close the Read Event handle
+		if (m_hReadEvt && (m_hReadEvt != INVALID_HANDLE_VALUE))
+		{
+			CloseHandle(m_hReadEvt);
+			m_hReadEvt = NULL;
+		}
+
+		//Close the Write Event handle
+		if (m_hWriteEvt && (m_hWriteEvt != INVALID_HANDLE_VALUE))
+		{
+			CloseHandle(m_hReadThread);
+			m_hWriteEvt = NULL;
+		}
+
+		//clearing the buffers
+		for(int i = 0;i < m_lockedBuffers.size(); i++)
+		{
+			BYTE* pByte = m_lockedBuffers.front();
+			
+			if(pByte)
+				delete pByte;
+			
+			pByte = NULL;
+
+			m_lockedBuffers.pop();
+		}
+
+		for(int i = 0;i < m_freeBuffers.size(); i++)
+		{
+			BYTE* pByte = m_freeBuffers.front();
+			
+			if(pByte)
+				delete pByte;
+			
+			pByte = NULL;
+
+			m_freeBuffers.pop();
+		}
+
+		//delete Critical Section
+		if(m_csfreeBuffers)
+			DeleteCriticalSection(m_csfreeBuffers);
+
+		m_csfreeBuffers = NULL;
+	}
+
+	catch(...)
+	{
+		CASPAR_LOG(info) <<L"Exception in CWASP_Memory::FreeResources";
+	}
+}
