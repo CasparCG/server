@@ -46,7 +46,7 @@
     <IntDir>$(ProjectDir)tmp\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>..\..\;..\..\dependencies\boost;..\..\dependencies\tbb\include;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSdkDir)include;$(FrameworkSDKDir)\include;C:\Program Files %28x86%29\Microsoft SDKs\Windows\v7.1\Include</IncludePath>
+    <IncludePath>..\..\;..\..\dependencies\boost;..\..\dependencies\tbb\include;$(IncludePath)</IncludePath>
     <OutDir>$(ProjectDir)bin\$(Configuration)\</OutDir>
     <IntDir>$(ProjectDir)tmp\$(Configuration)\</IntDir>
   </PropertyGroup>

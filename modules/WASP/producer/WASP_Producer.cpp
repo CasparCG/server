@@ -1,6 +1,15 @@
+
 #include "..\stdafx.h"
 #include "WASP_Producer.h"
+
+
 #include "WASP_Memory.h"
+
+
+CWASP_Memory * g_pWaspMemory;
+// TODO: reference additional headers your program requires here
+// Header Containing Information about Image in Shared Memory
+
 
 using namespace boost::assign;
 
@@ -8,7 +17,6 @@ namespace caspar { namespace WASP {
 
 struct WASP_producer : public core::frame_producer
 {
-	CWASP_Memory  m_objWaspMemory;
 	const std::wstring description_;
 	std::wstring layerindex;
 	core::monitor::subject		monitor_subject_;
@@ -18,35 +26,34 @@ struct WASP_producer : public core::frame_producer
 	 WASP_producer(const safe_ptr<core::frame_factory>& frame_factory, const core::parameters& params) 
 		: frame_factory_(frame_factory)
 	{
-		try
+		layerindex = params.get_original_string();
+
+		CASPAR_LOG(info) <<"#######  WASP WASP_producer"<<layerindex;
+		if(!g_pWaspMemory)
 		{
-			layerindex = params.get_original_string();
+			g_pWaspMemory = new CWASP_Memory();
+			g_pWaspMemory->GetSharedMemoryHandles();
+
+		}
+
+		//GetSharedMemoryHandles();
 		
-			CASPAR_LOG(info) <<"#######  WASP WASP_producer"<<layerindex;
-			m_objWaspMemory.GetSharedMemoryHandles();
-		}
-		catch(...)
-		{
-			OutputDebugString(L"@@@ Exception in WASP_producer constructor");
-		}
 	}
-
-	 //Free wasp Memory
-	 ~WASP_producer()
-	 {
-		 m_objWaspMemory.FreeResources();
-	 }
-
 	 virtual safe_ptr<core::basic_frame> receive(int) override
 	{
+		//CASPAR_LOG(info) <<"#######  WASP receive";
+
 		try
 		{
-			return m_objWaspMemory.receive(frame_factory_);
+			if(g_pWaspMemory)
+				return g_pWaspMemory->receive(frame_factory_);
 		}
 		catch(...)
 		{
 			CASPAR_LOG(info) <<"#######Exception in   WASP receive";
+
 		}
+		
 	}
 		
 	virtual safe_ptr<core::basic_frame> last_frame() const override
@@ -80,14 +87,17 @@ struct WASP_producer : public core::frame_producer
 	virtual boost::unique_future<std::wstring>  call(const std::wstring& param) override 
 	{
 		std::wstring result = L"";
+		//CASPAR_LOG(info) <<L"#######  WASP  call "<< param;
 		std::wstring msg = L"";
 		try
 		{
-			m_objWaspMemory.SendCommandToPipe(param);
+			if(g_pWaspMemory)
+			{
+				g_pWaspMemory->SendCommandToPipe(param);
+			}
 		}
 		catch(...)
 		{
-			OutputDebugString(L"@@@@  Exception WASP  call ");
 			CASPAR_LOG(info) <<L"@@@@  Exception WASP  call "<< msg;	
 		}
 		return wrap_as_future(std::wstring(result));
@@ -108,11 +118,13 @@ safe_ptr<core::frame_producer> create_producer(
 	CASPAR_LOG(info) <<L"#######  WASP  create_producer" <<params.get_original_string();
 
 	auto raw_producer = create_raw_producer(frame_factory, params);
-	
+
 	if (raw_producer == core::frame_producer::empty())
 		return raw_producer;
 
 	return create_producer_print_proxy(raw_producer);		
+
+	
 }
 
 safe_ptr<core::frame_producer> create_thumbnail_producer(
@@ -122,5 +134,10 @@ safe_ptr<core::frame_producer> create_thumbnail_producer(
 	CASPAR_LOG(info) <<"#######  WASP  create_thumbnail_producer";
 	return create_raw_producer(frame_factory, params);
 }
+
+
+
+
+
 
 }}
