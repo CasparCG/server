@@ -78,6 +78,7 @@ private:
 	boost::promise<bool>& shutdown_server_now_;
 	std::vector<AMCPCommandQueuePtr> commandQueues_;
 	static const std::wstring MessageDelimiter;
+	static bool	m_producer;
 };
 
 }}}

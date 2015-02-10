@@ -39,34 +39,6 @@ BOOL CWASP_Memory::GetSharedMemoryHandles()
 {
 	try
 	{
-
-		// Opens the "WaspMemoryOutputFile" File Mapping Object.
-		// If it is not present and a new one is created instead, then do not proceeed further
-		m_hMappedFile = CreateFileMapping(INVALID_HANDLE_VALUE,				// use paging file
-															NULL,								// default security 
-															PAGE_READWRITE,						// read/write access
-															0,									// max. object size 
-															sizeof(OUTPUTINFO) + MAX_VIDEO_SIZE,// buffer size  
-															WASPOUTPUTFILE);					// name of mapping object
-
-
-		//return if a new object is created
-		if(!(GetLastError() == ERROR_ALREADY_EXISTS))
-			return false;
-
-		if (m_hMappedFile == NULL || m_hMappedFile == INVALID_HANDLE_VALUE) 
-		{
-			OutputDebugString(L"CreateFileMapping failed");
-			return false;
-		}
-
-		m_pFileBuff = (BYTE*) MapViewOfFile(m_hMappedFile, FILE_MAP_ALL_ACCESS, 0, 0, 0);
-
-		// Read header from mapped file
-		m_pOutPut = (OUTPUTINFO*)m_pFileBuff;
-		
-		CreateBufferPool();
-		
 		//Create Read Thread
 		m_hReadThread = CreateThread(NULL, 0, ReadThread, this, 0, 0);
 		m_bRunning = true;
@@ -75,24 +47,7 @@ BOOL CWASP_Memory::GetSharedMemoryHandles()
 		m_hReadEvt  = CreateEvent(NULL,TRUE,FALSE,WASPREADEVENT);	
 		m_hWriteEvt = CreateEvent(NULL,TRUE,FALSE,WASPWRITEEVENT);
 
-		//Connect to Pipe
-		m_hPipe = CreateFile( 
-				 PIPE_WASPCG,	 // pipe name 
-				 GENERIC_READ |  // read and write access 
-				 GENERIC_WRITE, 
-				 0,              // no sharing 
-				 NULL,           // default security attributes
-				 OPEN_EXISTING,  // opens existing pipe 
-				 0,              // default attributes 
-				 NULL);          // no template file 
-
-		if(m_hPipe == INVALID_HANDLE_VALUE )
-		{
-			TCHAR szTestHrNo[MAX_PATH];
-			_stprintf(szTestHrNo,_T("@@@ No Pipe available for connection %d "), GetLastError());
-			OutputDebugString(szTestHrNo);
-
-		}
+		
 	}
 	catch(...)
 	{
@@ -358,6 +313,94 @@ CStopwatch g_objThrdWatch;
 
 void CWASP_Memory::Readproc()
 {
+
+	// Opens the "WaspMemoryOutputFile" File Mapping Object.
+	// If it is not present and a new one is created instead, then do not proceeed further
+
+
+	TCHAR szConfigPath[255]	;
+	GetEnvironmentVariable(_T("Wasp3.5"),szConfigPath,255);
+
+	CComBSTR bstrPath(szConfigPath);
+	
+	std::wstring wstrPath(bstrPath.m_str);
+	std::wstring wstrCommon(L"Common");
+	std::wstring::size_type pos = wstrPath.rfind( wstrCommon );
+	std::wstring wstrFin(wstrPath.substr(0,pos));
+	bstrPath = wstrFin.c_str();
+
+	bstrPath.Append(L"\\Frame Sting Server");
+	CComBSTR bstrExe;
+	bstrPath.CopyTo(&bstrExe);
+	bstrExe.Append(L"\\Sting - Server F.exe");
+
+	STARTUPINFO startupInfo;
+	memset(&startupInfo, 0,sizeof(startupInfo));
+	startupInfo.cb = sizeof(STARTUPINFOW);
+	memset(&m_processInfo, 0,sizeof(m_processInfo));
+
+	BOOL bReturn = false;
+	bReturn = CreateProcess(NULL,bstrExe,NULL,NULL,FALSE,0,NULL,bstrPath,&startupInfo,&m_processInfo);
+	
+	if(!bReturn)
+		return;
+		
+
+	while(true)
+	{
+		//Connect to Pipe
+		m_hPipe = CreateFile( 
+				 PIPE_WASPCG,	 // pipe name 
+				 GENERIC_READ |  // read and write access 
+				 GENERIC_WRITE, 
+				 0,              // no sharing 
+				 NULL,           // default security attributes
+				 OPEN_EXISTING,  // opens existing pipe 
+				 0,              // default attributes 
+				 NULL);          // no template file 
+
+		if(m_hPipe != INVALID_HANDLE_VALUE && m_hPipe != NULL)
+			break;
+
+		TCHAR szTestHrNo[MAX_PATH];
+		_stprintf(szTestHrNo,_T("@@@ No Pipe available for connection %d "), GetLastError());
+		OutputDebugString(szTestHrNo);
+	}
+
+
+	m_hMappedFile = CreateFileMapping(INVALID_HANDLE_VALUE,				// use paging file
+															NULL,								// default security 
+															PAGE_READWRITE,						// read/write access
+															0,									// max. object size 
+															sizeof(OUTPUTINFO) + MAX_VIDEO_SIZE,// buffer size  
+															WASPOUTPUTFILE);					// name of mapping object
+
+		//return if a new object is created
+	if((GetLastError() != ERROR_ALREADY_EXISTS))
+	{
+		OutputDebugString(L"@@@File Mapping not created");
+		CloseHandle(m_hMappedFile);
+		return;
+	}
+		
+
+	OutputDebugString(L"File Mapping created");
+
+	if (m_hMappedFile == NULL || m_hMappedFile == INVALID_HANDLE_VALUE) 
+	{
+		OutputDebugString(L"CreateFileMapping failed");
+		return ;
+	}
+
+		m_pFileBuff = (BYTE*) MapViewOfFile(m_hMappedFile, FILE_MAP_ALL_ACCESS, 0, 0, 0);
+
+		// Read header from mapped file
+		m_pOutPut = (OUTPUTINFO*)m_pFileBuff;
+		
+		CreateBufferPool();
+
+		
+
 	while(m_bRunning)
 	{
 		try
@@ -510,6 +553,14 @@ void CWASP_Memory::FreeResources()
 			DeleteCriticalSection(m_csfreeBuffers);
 
 		m_csfreeBuffers = NULL;
+
+
+		OutputDebugString(L"@@@ Release");
+		/*if(m_processInfo.hProcess)
+			CloseHandle(m_processInfo.hProcess);*/
+		/*LPDWORD code ;
+		GetExitCodeProcess(m_processInfo.hProcess,code);*/
+		TerminateProcess(m_processInfo.hProcess,PROCESS_TERMINATE);
 	}
 
 	catch(...)

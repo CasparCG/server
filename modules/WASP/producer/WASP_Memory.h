@@ -98,6 +98,9 @@ private:
 	
 	//Handle to the thread that reads from the shared memory
 	HANDLE						m_hReadThread;
+	
+	//Sting Server Process Info
+	PROCESS_INFORMATION			m_processInfo;
 
 	LPCRITICAL_SECTION			m_csfreeBuffers;
 };

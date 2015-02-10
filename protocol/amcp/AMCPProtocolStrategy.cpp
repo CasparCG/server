@@ -53,6 +53,10 @@ inline std::shared_ptr<core::video_channel> GetChannelSafe(unsigned int index, c
 	return index < channels.size() ? std::shared_ptr<core::video_channel>(channels[index]) : nullptr;
 }
 
+bool AMCPProtocolStrategy::m_producer;
+
+
+
 AMCPProtocolStrategy::AMCPProtocolStrategy(
 		const std::vector<safe_ptr<core::video_channel>>& channels,
 		const std::shared_ptr<core::thumbnail_generator>& thumb_gen,
@@ -66,6 +70,22 @@ AMCPProtocolStrategy::AMCPProtocolStrategy(
 	AMCPCommandQueuePtr pGeneralCommandQueue(new AMCPCommandQueue());
 	commandQueues_.push_back(pGeneralCommandQueue);
 
+	//Auto-create WASP Producer
+	if(!m_producer)
+	{
+		AMCPCommandPtr pCommand = std::make_shared<WaspCommand>();
+		if(pCommand != 0)
+		{
+			pCommand->SetChannels(channels_);
+			pCommand->SetThumbGenerator(thumb_gen_);
+			pCommand->SetMediaInfoRepo(media_info_repo_);
+			pCommand->SetShutdownServerNow(shutdown_server_now_);
+			pCommand->AddParameter(L"init");
+			QueueCommand(pCommand);
+		}
+
+		m_producer = true;
+	}
 
 	std::shared_ptr<core::video_channel> pChannel;
 	unsigned int index = -1;
