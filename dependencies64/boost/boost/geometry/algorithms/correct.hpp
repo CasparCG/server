@@ -1,8 +1,9 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
+// Copyright (c) 2014 Adam Wulkiewicz, Lodz, Poland.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -21,24 +22,36 @@
 
 #include <boost/mpl/assert.hpp>
 #include <boost/range.hpp>
-#include <boost/typeof/typeof.hpp>
+#include <boost/type_traits/remove_reference.hpp>
+#include <boost/variant/static_visitor.hpp>
+#include <boost/variant/apply_visitor.hpp>
+#include <boost/variant/variant_fwd.hpp>
+
+#include <boost/geometry/algorithms/detail/interior_iterator.hpp>
 
 #include <boost/geometry/core/closure.hpp>
 #include <boost/geometry/core/cs.hpp>
-#include <boost/geometry/core/mutable_range.hpp>
-#include <boost/geometry/core/ring_type.hpp>
 #include <boost/geometry/core/exterior_ring.hpp>
 #include <boost/geometry/core/interior_rings.hpp>
+#include <boost/geometry/core/mutable_range.hpp>
+#include <boost/geometry/core/ring_type.hpp>
+#include <boost/geometry/core/tags.hpp>
 
 #include <boost/geometry/geometries/concepts/check.hpp>
 
 #include <boost/geometry/algorithms/area.hpp>
 #include <boost/geometry/algorithms/disjoint.hpp>
+#include <boost/geometry/algorithms/detail/multi_modify.hpp>
 #include <boost/geometry/util/order_as_direction.hpp>
-
 
 namespace boost { namespace geometry
 {
+
+// Silence warning C4127: conditional expression is constant
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4127)
+#endif
 
 #ifndef DOXYGEN_NO_DETAIL
 namespace detail { namespace correct
@@ -80,7 +93,7 @@ struct correct_box_loop
 template <typename Box, std::size_t DimensionCount>
 struct correct_box_loop<Box, DimensionCount, DimensionCount>
 {
-    static inline void apply(Box& box)
+    static inline void apply(Box& )
     {}
 
 };
@@ -119,10 +132,8 @@ struct correct_ring
 
     typedef detail::area::ring_area
             <
-                Ring,
                 order_as_direction<geometry::point_order<Ring>::value>::value,
-                geometry::closure<Ring>::value,
-                strategy_type
+                geometry::closure<Ring>::value
             > ring_area_type;
 
 
@@ -139,7 +150,7 @@ struct correct_ring
             {
                 geometry::append(r, *boost::begin(r));
             }
-            if (! disjoint && geometry::closure<Ring>::value != closed)
+            if (! disjoint && s != closed)
             {
                 // Open it by removing last point
                 geometry::traits::resize<Ring>::apply(r, boost::size(r) - 1);
@@ -147,7 +158,8 @@ struct correct_ring
         }
         // Check area
         Predicate predicate;
-        coordinate_type const zero = 0;
+        typedef typename default_area_result<Ring>::type area_result_type;
+        area_result_type const zero = area_result_type();
         if (predicate(ring_area_type::apply(r, strategy_type()), zero))
         {
             std::reverse(boost::begin(r), boost::end(r));
@@ -161,24 +173,25 @@ template <typename Polygon>
 struct correct_polygon
 {
     typedef typename ring_type<Polygon>::type ring_type;
-    typedef typename coordinate_type<Polygon>::type coordinate_type;
+    typedef typename default_area_result<Polygon>::type area_result_type;
 
     static inline void apply(Polygon& poly)
     {
         correct_ring
             <
                 ring_type,
-                std::less<coordinate_type>
+                std::less<area_result_type>
             >::apply(exterior_ring(poly));
 
-        typename interior_return_type<Polygon>::type rings
-                    = interior_rings(poly);
-        for (BOOST_AUTO_TPL(it, boost::begin(rings)); it != boost::end(rings); ++it)
+        typename interior_return_type<Polygon>::type
+            rings = interior_rings(poly);
+        for (typename detail::interior_iterator<Polygon>::type
+                it = boost::begin(rings); it != boost::end(rings); ++it)
         {
             correct_ring
                 <
                     ring_type,
-                    std::greater<coordinate_type>
+                    std::greater<area_result_type>
                 >::apply(*it);
         }
     }
@@ -193,54 +206,107 @@ struct correct_polygon
 namespace dispatch
 {
 
-template <typename Tag, typename Geometry>
-struct correct
-{
-    BOOST_MPL_ASSERT_MSG
-        (
-            false, NOT_OR_NOT_YET_IMPLEMENTED_FOR_THIS_GEOMETRY_TYPE
-            , (types<Geometry>)
-        );
-};
+template <typename Geometry, typename Tag = typename tag<Geometry>::type>
+struct correct: not_implemented<Tag>
+{};
 
 template <typename Point>
-struct correct<point_tag, Point>
+struct correct<Point, point_tag>
     : detail::correct::correct_nop<Point>
 {};
 
 template <typename LineString>
-struct correct<linestring_tag, LineString>
+struct correct<LineString, linestring_tag>
     : detail::correct::correct_nop<LineString>
 {};
 
 template <typename Segment>
-struct correct<segment_tag, Segment>
+struct correct<Segment, segment_tag>
     : detail::correct::correct_nop<Segment>
 {};
 
 
 template <typename Box>
-struct correct<box_tag, Box>
+struct correct<Box, box_tag>
     : detail::correct::correct_box<Box>
 {};
 
 template <typename Ring>
-struct correct<ring_tag, Ring>
+struct correct<Ring, ring_tag>
     : detail::correct::correct_ring
         <
             Ring,
-            std::less<typename coordinate_type<Ring>::type>
+            std::less<typename default_area_result<Ring>::type>
         >
 {};
 
 template <typename Polygon>
-struct correct<polygon_tag, Polygon>
+struct correct<Polygon, polygon_tag>
     : detail::correct::correct_polygon<Polygon>
+{};
+
+
+template <typename MultiPoint>
+struct correct<MultiPoint, multi_point_tag>
+    : detail::correct::correct_nop<MultiPoint>
+{};
+
+
+template <typename MultiLineString>
+struct correct<MultiLineString, multi_linestring_tag>
+    : detail::correct::correct_nop<MultiLineString>
+{};
+
+
+template <typename Geometry>
+struct correct<Geometry, multi_polygon_tag>
+    : detail::multi_modify
+        <
+            Geometry,
+            detail::correct::correct_polygon
+                <
+                    typename boost::range_value<Geometry>::type
+                >
+        >
 {};
 
 
 } // namespace dispatch
 #endif // DOXYGEN_NO_DISPATCH
+
+
+namespace resolve_variant {
+
+template <typename Geometry>
+struct correct
+{
+    static inline void apply(Geometry& geometry)
+    {
+        concept::check<Geometry const>();
+        dispatch::correct<Geometry>::apply(geometry);
+    }
+};
+
+template <BOOST_VARIANT_ENUM_PARAMS(typename T)>
+struct correct<boost::variant<BOOST_VARIANT_ENUM_PARAMS(T)> >
+{
+    struct visitor: boost::static_visitor<void>
+    {
+        template <typename Geometry>
+        void operator()(Geometry& geometry) const
+        {
+            correct<Geometry>::apply(geometry);
+        }
+    };
+
+    static inline void
+    apply(boost::variant<BOOST_VARIANT_ENUM_PARAMS(T)>& geometry)
+    {
+        boost::apply_visitor(visitor(), geometry);
+    }
+};
+
+} // namespace resolve_variant
 
 
 /*!
@@ -258,11 +324,12 @@ struct correct<polygon_tag, Polygon>
 template <typename Geometry>
 inline void correct(Geometry& geometry)
 {
-    concept::check<Geometry const>();
-
-    dispatch::correct<typename tag<Geometry>::type, Geometry>::apply(geometry);
+    resolve_variant::correct<Geometry>::apply(geometry);
 }
 
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 }} // namespace boost::geometry
 

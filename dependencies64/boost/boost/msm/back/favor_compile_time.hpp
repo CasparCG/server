@@ -38,7 +38,8 @@ struct process_any_event_helper
         if ( ! finished && ::boost::any_cast<Event>(&any_event)!=0)
         {
             finished = true;
-            res = self->process_event(::boost::any_cast<Event>(any_event));
+            res = self->process_event_internal(::boost::any_cast<Event>(any_event),false);
+ 
         }
     }
 private:
@@ -93,7 +94,7 @@ struct dispatch_table < Fsm, Stt, Event, ::boost::msm::back::favor_compile_time>
         {
             HandledEnum res = HANDLED_FALSE;
             typename std::deque<cell>::const_iterator it = one_state.begin();
-            while (it != one_state.end() && res != HANDLED_TRUE)
+            while (it != one_state.end() && (res != HANDLED_TRUE && res != HANDLED_DEFERRED ))
             {
                 HandledEnum handled = (*it)(fsm,region,state,evt);
                 // reject is considered as erasing an error (HANDLED_FALSE)
@@ -108,7 +109,7 @@ struct dispatch_table < Fsm, Stt, Event, ::boost::msm::back::favor_compile_time>
         std::deque<cell> one_state;
     };
     template <class TransitionState>
-    static HandledEnum call_submachine(Fsm& fsm, int region, int state, Event const& evt)
+    static HandledEnum call_submachine(Fsm& fsm, int , int , Event const& evt)
     {
         return (fsm.template get_state<TransitionState&>()).process_any_event( ::boost::any(evt));
     }

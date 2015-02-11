@@ -14,6 +14,7 @@
 #include <boost/locale/boundary/segment.hpp>
 #include <boost/locale/boundary/boundary_point.hpp>
 #include <boost/iterator/iterator_facade.hpp>
+#include <boost/type_traits/is_same.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/assert.hpp>
@@ -59,38 +60,16 @@ namespace boost {
 
                 template<typename CharType,typename SomeIteratorType>
                 struct linear_iterator_traits {
-                    static const bool is_linear = false;
+                    static const bool is_linear =
+                        is_same<SomeIteratorType,CharType*>::value
+                        || is_same<SomeIteratorType,CharType const*>::value
+                        || is_same<SomeIteratorType,typename std::basic_string<CharType>::iterator>::value
+                        || is_same<SomeIteratorType,typename std::basic_string<CharType>::const_iterator>::value
+                        || is_same<SomeIteratorType,typename std::vector<CharType>::iterator>::value
+                        || is_same<SomeIteratorType,typename std::vector<CharType>::const_iterator>::value
+                        ;
                 };
 
-                template<typename CharType>
-                struct linear_iterator_traits<CharType,typename std::basic_string<CharType>::iterator> {
-                    static const bool is_linear = true;
-                };
-
-                template<typename CharType>
-                struct linear_iterator_traits<CharType,typename std::basic_string<CharType>::const_iterator> {
-                    static const bool is_linear = true;
-                };
-                
-                template<typename CharType>
-                struct linear_iterator_traits<CharType,typename std::vector<CharType>::iterator> {
-                    static const bool is_linear = true;
-                };
-
-                template<typename CharType>
-                struct linear_iterator_traits<CharType,typename std::vector<CharType>::const_iterator> {
-                    static const bool is_linear = true;
-                };
-
-                template<typename CharType>
-                struct linear_iterator_traits<CharType,CharType *> {
-                    static const bool is_linear = true;
-                };
-
-                template<typename CharType>
-                struct linear_iterator_traits<CharType,CharType const *> {
-                    static const bool is_linear = true;
-                };
 
 
                 template<typename IteratorType>

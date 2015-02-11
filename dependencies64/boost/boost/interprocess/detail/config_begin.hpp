@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2005-2009. Distributed under the Boost
+// (C) Copyright Ion Gaztanaga 2005-2012. Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -13,10 +13,6 @@
 #endif
 
 #ifdef BOOST_MSVC
-   #ifndef _CRT_SECURE_NO_DEPRECATE
-   #define  BOOST_INTERPROCESS_CRT_SECURE_NO_DEPRECATE
-   #define _CRT_SECURE_NO_DEPRECATE
-   #endif
    #pragma warning (push)
    #pragma warning (disable : 4702) // unreachable code
    #pragma warning (disable : 4706) // assignment within conditional expression
@@ -44,4 +40,5 @@
                                     //    with /GR-; unpredictable behavior may result
    #pragma warning (disable : 4673) //  throwing '' the following types will not be considered at the catch site
    #pragma warning (disable : 4671) //  the copy constructor is inaccessible
+   #pragma warning (disable : 4250) //  inherits 'x' via dominance
 #endif

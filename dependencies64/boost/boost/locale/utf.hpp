@@ -29,7 +29,7 @@ namespace utf {
     /// \endcond
 
     ///
-    /// \brief The integral type type that can hold a Unicode code point
+    /// \brief The integral type that can hold a Unicode code point
     ///
     typedef uint32_t code_point;
 
@@ -219,16 +219,22 @@ namespace utf {
                 if(BOOST_LOCALE_UNLIKELY(p==e))
                     return incomplete;
                 tmp = *p++;
+                if (!is_trail(tmp))
+                    return illegal;
                 c = (c << 6) | ( tmp & 0x3F);
             case 2:
                 if(BOOST_LOCALE_UNLIKELY(p==e))
                     return incomplete;
                 tmp = *p++;
+                if (!is_trail(tmp))
+                    return illegal;
                 c = (c << 6) | ( tmp & 0x3F);
             case 1:
                 if(BOOST_LOCALE_UNLIKELY(p==e))
                     return incomplete;
                 tmp = *p++;
+                if (!is_trail(tmp))
+                    return illegal;
                 c = (c << 6) | ( tmp & 0x3F);
             }
 
@@ -280,23 +286,23 @@ namespace utf {
         template<typename Iterator>
         static Iterator encode(code_point value,Iterator out)
         {
-            if(value <=0x7F) {
-                *out++ = value;
+            if(value <= 0x7F) {
+                *out++ = static_cast<char_type>(value);
             }
-            else if(value <=0x7FF) {
-                *out++=(value >> 6) | 0xC0;
-                *out++=(value & 0x3F) | 0x80;
+            else if(value <= 0x7FF) {
+                *out++ = static_cast<char_type>((value >> 6) | 0xC0);
+                *out++ = static_cast<char_type>((value & 0x3F) | 0x80);
             }
-            else if(BOOST_LOCALE_LIKELY(value <=0xFFFF)) {
-                *out++=(value >> 12) | 0xE0;
-                *out++=((value >> 6) & 0x3F) | 0x80;
-                *out++=(value & 0x3F) | 0x80;
+            else if(BOOST_LOCALE_LIKELY(value <= 0xFFFF)) {
+                *out++ = static_cast<char_type>((value >> 12) | 0xE0);
+                *out++ = static_cast<char_type>(((value >> 6) & 0x3F) | 0x80);
+                *out++ = static_cast<char_type>((value & 0x3F) | 0x80);
             }
             else {
-                *out++=(value >> 18) | 0xF0;
-                *out++=((value >> 12) & 0x3F) | 0x80;
-                *out++=((value >> 6) & 0x3F) | 0x80;
-                *out++=(value & 0x3F) | 0x80;
+                *out++ = static_cast<char_type>((value >> 18) | 0xF0);
+                *out++ = static_cast<char_type>(((value >> 12) & 0x3F) | 0x80);
+                *out++ = static_cast<char_type>(((value >> 6) & 0x3F) | 0x80);
+                *out++ = static_cast<char_type>((value & 0x3F) | 0x80);
             }
             return out;
         }
@@ -380,12 +386,12 @@ namespace utf {
         static It encode(code_point u,It out)
         {
             if(BOOST_LOCALE_LIKELY(u<=0xFFFF)) {
-                *out++ = u;
+                *out++ = static_cast<char_type>(u);
             }
             else {
-                u-=0x10000;
-                *out++=0xD800 | (u>>10);
-                *out++=0xDC00 | (u & 0x3FF);
+                u -= 0x10000;
+                *out++ = static_cast<char_type>(0xD800 | (u>>10));
+                *out++ = static_cast<char_type>(0xDC00 | (u & 0x3FF));
             }
             return out;
         }
@@ -434,7 +440,7 @@ namespace utf {
         template<typename It>
         static It encode(code_point u,It out)
         {
-            *out++ = u;
+            *out++ = static_cast<char_type>(u);
             return out;
         }
 

@@ -9,6 +9,7 @@
 #if !defined(BOOST_OUT_05042005_0120)
 #define BOOST_OUT_05042005_0120
 
+#include <boost/fusion/support/config.hpp>
 #include <ostream>
 #include <boost/fusion/sequence/io/detail/out.hpp>
 #include <boost/fusion/support/is_sequence.hpp>
@@ -29,7 +30,7 @@ namespace boost { namespace fusion
     {
         template <typename Sequence>
         inline typename
-            enable_if<
+            boost::enable_if<
                fusion::traits::is_sequence<Sequence>
               , std::ostream&
             >::type

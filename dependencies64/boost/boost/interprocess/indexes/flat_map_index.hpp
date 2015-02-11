@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2005-2009. Distributed under the Boost
+// (C) Copyright Ion Gaztanaga 2005-2012. Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -9,6 +9,10 @@
 //////////////////////////////////////////////////////////////////////////////
 #ifndef BOOST_INTERPROCESS_FLAT_MAP_INDEX_HPP
 #define BOOST_INTERPROCESS_FLAT_MAP_INDEX_HPP
+
+#if defined(_MSC_VER)
+#  pragma once
+#endif
 
 #include <boost/interprocess/detail/config_begin.hpp>
 #include <boost/interprocess/detail/workaround.hpp>
@@ -24,6 +28,8 @@
 
 //[flat_map_index
 namespace boost { namespace interprocess {
+
+#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 
 //!Helper class to define typedefs from IndexTraits
 template <class MapConfig>
@@ -41,6 +47,8 @@ struct flat_map_index_aux
                     key_less, allocator_type>      index_t;
 };
 
+#endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
+
 //!Index type based in flat_map. Just derives from flat_map and
 //!defines the interface needed by managed memory segments.
 template <class MapConfig>
@@ -48,12 +56,12 @@ class flat_map_index
    //Derive class from flat_map specialization
    : public flat_map_index_aux<MapConfig>::index_t
 {
-   /// @cond
+   #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
    typedef flat_map_index_aux<MapConfig>  index_aux;
    typedef typename index_aux::index_t    base_type;
    typedef typename index_aux::
       segment_manager_base          segment_manager_base;
-   /// @endcond
+   #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 
    public:
    //!Constructor. Takes a pointer to the segment manager. Can throw

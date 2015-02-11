@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2009-2010. Distributed under the Boost
+// (C) Copyright Ion Gaztanaga 2009-2012. Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -10,6 +10,10 @@
 
 #ifndef BOOST_INTERPROCESS_XSI_SHARED_MEMORY_DEVICE_HPP
 #define BOOST_INTERPROCESS_XSI_SHARED_MEMORY_DEVICE_HPP
+
+#if defined(_MSC_VER)
+#  pragma once
+#endif
 
 #include <boost/interprocess/detail/config_begin.hpp>
 #include <boost/interprocess/detail/workaround.hpp>
@@ -23,7 +27,7 @@
 #include <boost/interprocess/exceptions.hpp>
 #include <boost/interprocess/detail/utilities.hpp>
 #include <boost/interprocess/detail/os_file_functions.hpp>
-#include <boost/interprocess/detail/tmp_dir_helpers.hpp>
+#include <boost/interprocess/detail/shared_dir_helpers.hpp>
 #include <boost/interprocess/interprocess_fwd.hpp>
 #include <boost/interprocess/exceptions.hpp>
 
@@ -44,9 +48,9 @@ namespace interprocess {
 
 class xsi_shared_memory_device
 {
-   /// @cond
+   #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
    BOOST_MOVABLE_BUT_NOT_COPYABLE(xsi_shared_memory_file_wrapper)
-   /// @endcond 
+   #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 
    public:
 
@@ -74,10 +78,10 @@ class xsi_shared_memory_device
    {  this->swap(moved);   }
 
    xsi_shared_memory_device &operator=(BOOST_RV_REF(xsi_shared_memory_device) moved)
-   {  
-      xsi_shared_memory_device tmp(boost::interprocess::move(moved));
+   {
+      xsi_shared_memory_device tmp(boost::move(moved));
       this->swap(tmp);
-      return *this;  
+      return *this;
    }
 
    //!Swaps two xsi_shared_memory_device. Does not throw
@@ -113,7 +117,7 @@ class xsi_shared_memory_device
    //!Returns false on error. Never throws
    static bool remove(int shmid);
 
-   /// @cond
+   #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
    private:
    template<int Dummy>
    struct info_constants_t
@@ -147,7 +151,7 @@ class xsi_shared_memory_device
    xsi_shared_memory m_shm;
    mode_t            m_mode;
    std::string       m_name;
-   /// @endcond
+   #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 };
 
 template<int Dummy>
@@ -162,13 +166,13 @@ const std::size_t xsi_shared_memory_device::info_constants_t<Dummy>::LastID;
 template<int Dummy>
 const std::size_t xsi_shared_memory_device::info_constants_t<Dummy>::NumID;
 
-/// @cond
+#if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
 
 inline xsi_shared_memory_device::xsi_shared_memory_device()
    : m_shm(), m_mode(invalid_mode), m_name()
 {}
 
-inline xsi_shared_memory_device::~xsi_shared_memory_device() 
+inline xsi_shared_memory_device::~xsi_shared_memory_device()
 {}
 
 inline const char *xsi_shared_memory_device::get_name() const
@@ -178,7 +182,7 @@ inline void xsi_shared_memory_device::swap(xsi_shared_memory_device &other)
 {
    m_shm.swap(other.m_shm);
    std::swap(m_mode,  other.m_mode);
-   m_name.swap(other.m_name);   
+   m_name.swap(other.m_name);
 }
 
 inline mapping_handle_t xsi_shared_memory_device::get_mapping_handle() const
@@ -197,15 +201,15 @@ inline void xsi_shared_memory_device::priv_obtain_index
    permissions p;
    p.set_unrestricted();
    std::string xsi_shm_emulation_file_path;
-   ipcdetail::create_tmp_and_clean_old_and_get_filename(filename, xsi_shm_emulation_file_path);
+   ipcdetail::create_shared_dir_cleaning_old_and_get_filepath(filename, xsi_shm_emulation_file_path);
    ipcdetail::create_or_open_file(xsi_shm_emulation_file_path.c_str(), read_write, p);
    const std::size_t MemSize = sizeof(info_t);
 
    xsi_shared_memory index_shm(open_or_create, xsi_shm_emulation_file_path.c_str(), 1, MemSize, 0666);
    mapped_region r(index_shm, read_write, 0, MemSize, 0);
    xsi_named_mutex m(open_or_create, xsi_shm_emulation_file_path.c_str(), 2, 0666);
-   reg = boost::interprocess::move(r);
-   mut = boost::interprocess::move(m);
+   reg = boost::move(r);
+   mut = boost::move(m);
    path.swap(xsi_shm_emulation_file_path);
 }
 
@@ -246,17 +250,17 @@ inline bool xsi_shared_memory_device::priv_open_or_create_name_id
          throw interprocess_exception(err);
       }
       xsi_shared_memory temp(open_only, filepath, id, perm);
-      m_shm = boost::interprocess::move(temp);
+      m_shm = boost::move(temp);
    }
    else if(type == ipcdetail::DoCreate){
       //Try to reuse slot
       xsi_shared_memory temp(create_only, filepath, id, size, perm);
       std::strcpy(info->names[target_entry].buf, shmname);
-      m_shm = boost::interprocess::move(temp);
+      m_shm = boost::move(temp);
    }
    else{ // if(type == ipcdetail::DoOpenOrCreate){
       xsi_shared_memory temp(open_or_create, filepath, id, size, perm);
-      m_shm = boost::interprocess::move(temp);
+      m_shm = boost::move(temp);
    }
 
    m_mode = mode;
@@ -318,7 +322,7 @@ inline bool xsi_shared_memory_device::priv_open_or_create_name_only
          }
          xsi_shared_memory temp( open_only, xsi_shm_emulation_file_path.c_str()
                                , target_entry+info_constants_t<0>::FirstID, perm);
-         m_shm = boost::interprocess::move(temp);
+         m_shm = boost::move(temp);
       }
       else{
 
@@ -327,7 +331,7 @@ inline bool xsi_shared_memory_device::priv_open_or_create_name_only
             xsi_shared_memory temp( create_only, xsi_shm_emulation_file_path.c_str()
                                   , target_entry+info_constants_t<0>::FirstID, size, perm);
             std::strcpy(info->names[target_entry].buf, shmname);
-            m_shm = boost::interprocess::move(temp);
+            m_shm = boost::move(temp);
          }
          else{ // if(type == ipcdetail::DoOpenOrCreate){
             xsi_shared_memory temp( open_or_create, xsi_shm_emulation_file_path.c_str()
@@ -336,7 +340,7 @@ inline bool xsi_shared_memory_device::priv_open_or_create_name_only
                std::memset(info->names[target_entry].buf, 0, info_constants_t<0>::MaxName);
                std::strcpy(info->names[target_entry].buf, shmname);
             }
-            m_shm = boost::interprocess::move(temp);
+            m_shm = boost::move(temp);
          }
       }
    }
@@ -382,7 +386,7 @@ inline bool xsi_shared_memory_device::remove(const char *shmname)
 inline bool xsi_shared_memory_device::remove(int shmid)
 {  return xsi_shared_memory::remove(shmid);  }
 
-///@endcond
+#endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 
 }  //namespace interprocess {
 }  //namespace boost {

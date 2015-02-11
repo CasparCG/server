@@ -2,7 +2,7 @@
 #define BOOST_SERIALIZATION_EXPORT_HPP
 
 // MS compatible compilers support #pragma once
-#if defined(_MSC_VER) && (_MSC_VER >= 1020)
+#if defined(_MSC_VER)
 # pragma once
 #endif
 
@@ -103,14 +103,14 @@ ptr_serialization_support<Archive,Serializable>::instantiate()
 {
     export_impl<Archive,Serializable>::enable_save(
         #if ! defined(__BORLANDC__)
-        BOOST_DEDUCED_TYPENAME 
+        typename 
         #endif
         Archive::is_saving()
     );
 
     export_impl<Archive,Serializable>::enable_load(
         #if ! defined(__BORLANDC__)
-        BOOST_DEDUCED_TYPENAME 
+        typename 
         #endif
         Archive::is_loading()
     );
@@ -124,7 +124,7 @@ namespace extra_detail {
 
 template<class T>
 struct guid_initializer
-{  
+{
     void export_guid(mpl::false_) const {
         // generates the statically-initialized objects whose constructors
         // register the information allowing serialization of T objects

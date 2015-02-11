@@ -1,8 +1,14 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2014 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2014 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2014 Mateusz Loskot, London, UK.
+
+// This file was modified by Oracle on 2014.
+// Modifications copyright (c) 2014, Oracle and/or its affiliates.
+
+// Contributed and/or modified by Menelaos Karavelas, on behalf of Oracle
+// Contributed and/or modified by Adam Wulkiewicz, on behalf of Oracle
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -18,6 +24,9 @@
 #include <limits>
 
 #include <boost/math/constants/constants.hpp>
+#include <boost/math/special_functions/round.hpp>
+#include <boost/numeric/conversion/cast.hpp>
+#include <boost/type_traits/is_fundamental.hpp>
 
 #include <boost/geometry/util/select_most_precise.hpp>
 
@@ -44,17 +53,112 @@ struct equals
 template <typename Type>
 struct equals<Type, true>
 {
+    static inline Type get_max(Type const& a, Type const& b, Type const& c)
+    {
+        return (std::max)((std::max)(a, b), c);
+    }
+
     static inline bool apply(Type const& a, Type const& b)
     {
+        if (a == b)
+        {
+            return true;
+        }
+
         // See http://www.parashift.com/c++-faq-lite/newbie.html#faq-29.17,
         // FUTURE: replace by some boost tool or boost::test::close_at_tolerance
-        return std::abs(a - b) <= std::numeric_limits<Type>::epsilon() * std::abs(a);
+        return std::abs(a - b) <= std::numeric_limits<Type>::epsilon() * get_max(std::abs(a), std::abs(b), 1.0);
+    }
+};
+
+template <typename Type, bool IsFloatingPoint>
+struct smaller
+{
+    static inline bool apply(Type const& a, Type const& b)
+    {
+        return a < b;
+    }
+};
+
+template <typename Type>
+struct smaller<Type, true>
+{
+    static inline bool apply(Type const& a, Type const& b)
+    {
+        if (equals<Type, true>::apply(a, b))
+        {
+            return false;
+        }
+        return a < b;
     }
 };
 
 
-template <typename Type, bool IsFloatingPoint> 
+template <typename Type, bool IsFloatingPoint>
 struct equals_with_epsilon : public equals<Type, IsFloatingPoint> {};
+
+template
+<
+    typename T,
+    bool IsFundemantal = boost::is_fundamental<T>::value /* false */
+>
+struct square_root
+{
+    typedef T return_type;
+
+    static inline T apply(T const& value)
+    {
+        // for non-fundamental number types assume that sqrt is
+        // defined either:
+        // 1) at T's scope, or
+        // 2) at global scope, or
+        // 3) in namespace std
+        using ::sqrt;
+        using std::sqrt;
+
+        return sqrt(value);
+    }
+};
+
+template <>
+struct square_root<float, true>
+{
+    typedef float return_type;
+
+    static inline float apply(float const& value)
+    {
+        // for float use std::sqrt
+        return std::sqrt(value);
+    }
+};
+
+template <>
+struct square_root<long double, true>
+{
+    typedef long double return_type;
+
+    static inline long double apply(long double const& value)
+    {
+        // for long double use std::sqrt
+        return std::sqrt(value);
+    }
+};
+
+template <typename T>
+struct square_root<T, true>
+{
+    typedef double return_type;
+
+    static inline double apply(T const& value)
+    {
+        // for all other fundamental number types use also std::sqrt
+        //
+        // Note: in C++98 the only other possibility is double;
+        //       in C++11 there are also overloads for integral types;
+        //       this specialization works for those as well.
+        return std::sqrt(boost::numeric_cast<double>(value));
+    }
+};
 
 
 /*!
@@ -70,6 +174,39 @@ struct define_pi
     }
 };
 
+template <typename T>
+struct relaxed_epsilon
+{
+    static inline T apply(const T& factor)
+    {
+        return factor * std::numeric_limits<T>::epsilon();
+    }
+};
+
+// ItoF ItoI FtoF
+template <typename Result, typename Source,
+          bool ResultIsInteger = std::numeric_limits<Result>::is_integer,
+          bool SourceIsInteger = std::numeric_limits<Source>::is_integer>
+struct round
+{
+    static inline Result apply(Source const& v)
+    {
+        return boost::numeric_cast<Result>(v);
+    }
+};
+
+// FtoI
+template <typename Result, typename Source>
+struct round<Result, Source, true, false>
+{
+    static inline Result apply(Source const& v)
+    {
+        namespace bmp = boost::math::policies;
+        // ignore rounding errors for backward compatibility
+        typedef bmp::policy< bmp::rounding_error<bmp::ignore_error> > policy;
+        return boost::numeric_cast<Result>(boost::math::round(v, policy()));
+    }
+};
 
 } // namespace detail
 #endif
@@ -77,6 +214,12 @@ struct define_pi
 
 template <typename T>
 inline T pi() { return detail::define_pi<T>::apply(); }
+
+template <typename T>
+inline T relaxed_epsilon(T const& factor)
+{
+    return detail::relaxed_epsilon<T>::apply(factor);
+}
 
 
 // Maybe replace this by boost equals or boost ublas numeric equals or so
@@ -111,9 +254,31 @@ inline bool equals_with_epsilon(T1 const& a, T2 const& b)
     typedef typename select_most_precise<T1, T2>::type select_type;
     return detail::equals_with_epsilon
         <
-            select_type, 
+            select_type,
             boost::is_floating_point<select_type>::type::value
         >::apply(a, b);
+}
+
+template <typename T1, typename T2>
+inline bool smaller(T1 const& a, T2 const& b)
+{
+    typedef typename select_most_precise<T1, T2>::type select_type;
+    return detail::smaller
+        <
+            select_type,
+            boost::is_floating_point<select_type>::type::value
+        >::apply(a, b);
+}
+
+template <typename T1, typename T2>
+inline bool larger(T1 const& a, T2 const& b)
+{
+    typedef typename select_most_precise<T1, T2>::type select_type;
+    return detail::smaller
+        <
+            select_type,
+            boost::is_floating_point<select_type>::type::value
+        >::apply(b, a);
 }
 
 
@@ -147,18 +312,58 @@ inline T sqr(T const& value)
     return value * value;
 }
 
+/*!
+\brief Short utility to return the square root
+\ingroup utility
+\param value Value to calculate the square root from
+\return The square root value
+*/
+template <typename T>
+inline typename detail::square_root<T>::return_type
+sqrt(T const& value)
+{
+    return detail::square_root
+        <
+            T, boost::is_fundamental<T>::value
+        >::apply(value);
+}
 
 /*!
 \brief Short utility to workaround gcc/clang problem that abs is converting to integer
+       and that older versions of MSVC does not support abs of long long...
 \ingroup utility
 */
 template<typename T>
-inline T abs(const T& t)
+inline T abs(T const& value)
 {
-    using std::abs;
-    return abs(t);
+    T const zero = T();
+    return value < zero ? -value : value;
 }
 
+/*!
+\brief Short utility to calculate the sign of a number: -1 (negative), 0 (zero), 1 (positive)
+\ingroup utility
+*/
+template <typename T>
+static inline int sign(T const& value)
+{
+    T const zero = T();
+    return value > zero ? 1 : value < zero ? -1 : 0;
+}
+
+/*!
+\brief Short utility to calculate the rounded value of a number.
+\ingroup utility
+\note If the source T is NOT an integral type and Result is an integral type
+      the value is rounded towards the closest integral value. Otherwise it's
+      just casted.
+*/
+template <typename Result, typename T>
+inline Result round(T const& v)
+{
+    // NOTE: boost::round() could be used instead but it throws in some situations
+    return detail::round<Result, T>::apply(v);
+}
 
 } // namespace math
 

@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -23,7 +23,9 @@
 #include <boost/geometry/algorithms/convert.hpp>
 #include <boost/geometry/arithmetic/arithmetic.hpp>
 #include <boost/geometry/core/access.hpp>
+#include <boost/geometry/core/radian_access.hpp>
 #include <boost/geometry/core/coordinate_dimension.hpp>
+#include <boost/geometry/strategies/transform.hpp>
 
 #include <boost/geometry/util/math.hpp>
 #include <boost/geometry/util/select_coordinate_type.hpp>
@@ -66,7 +68,7 @@ template
 struct transform_coordinates<Src, Dst, N, N, F>
 {
     template <typename T>
-    static inline void transform(Src const& source, Dst& dest, T value)
+    static inline void transform(Src const& , Dst& , T )
     {
     }
 };
@@ -163,7 +165,7 @@ namespace detail
         // http://www.vias.org/comp_geometry/math_coord_convert_3d.htm
         // https://moodle.polymtl.ca/file.php/1183/Autres_Documents/Derivation_for_Spherical_Co-ordinates.pdf
         // http://en.citizendium.org/wiki/Spherical_polar_coordinates
-        
+
         // Phi = first, theta is second, r is third, see documentation on cs::spherical
 
         // (calculations are splitted to implement ttmath)
@@ -177,7 +179,7 @@ namespace detail
         set<1>(p, r_sin_theta * sin(phi));
         set<2>(p, r_cos_theta);
     }
-    
+
     /// Helper function for conversion, lambda/delta (lon lat) are in radians
     template <typename P, typename T, typename R>
     inline void spherical_equatorial_to_cartesian(T lambda, T delta, R r, P& p)
@@ -186,7 +188,7 @@ namespace detail
 
         // http://mathworld.wolfram.com/GreatCircle.html
         // http://www.spenvis.oma.be/help/background/coortran/coortran.html WRONG
-        
+
         T r_cos_delta = r;
         T r_sin_delta = r;
         r_cos_delta *= cos(delta);
@@ -196,7 +198,7 @@ namespace detail
         set<1>(p, r_cos_delta * sin(lambda));
         set<2>(p, r_sin_delta);
     }
-    
+
 
     /// Helper function for conversion
     template <typename P, typename T>
@@ -222,7 +224,7 @@ namespace detail
         set_from_radian<1>(p, acos(z));
         return true;
     }
-    
+
     template <typename P, typename T>
     inline bool cartesian_to_spherical_equatorial2(T x, T y, T z, P& p)
     {
@@ -232,7 +234,7 @@ namespace detail
         set_from_radian<1>(p, asin(z));
         return true;
     }
-    
+
 
     template <typename P, typename T>
     inline bool cartesian_to_spherical3(T x, T y, T z, P& p)
@@ -240,12 +242,29 @@ namespace detail
         assert_dimension<P, 3>();
 
         // http://en.wikipedia.org/wiki/List_of_canonical_coordinate_transformations#From_Cartesian_coordinates
-        T const r = sqrt(x * x + y * y + z * z);
+        T const r = math::sqrt(x * x + y * y + z * z);
         set<2>(p, r);
         set_from_radian<0>(p, atan2(y, x));
         if (r > 0.0)
         {
             set_from_radian<1>(p, acos(z / r));
+            return true;
+        }
+        return false;
+    }
+
+    template <typename P, typename T>
+    inline bool cartesian_to_spherical_equatorial3(T x, T y, T z, P& p)
+    {
+        assert_dimension<P, 3>();
+
+        // http://en.wikipedia.org/wiki/List_of_canonical_coordinate_transformations#From_Cartesian_coordinates
+        T const r = math::sqrt(x * x + y * y + z * z);
+        set<2>(p, r);
+        set_from_radian<0>(p, atan2(y, x));
+        if (r > 0.0)
+        {
+            set_from_radian<1>(p, asin(z / r));
             return true;
         }
         return false;
@@ -361,6 +380,16 @@ struct from_cartesian_3_to_spherical_polar_3
     }
 };
 
+template <typename P1, typename P2>
+struct from_cartesian_3_to_spherical_equatorial_3
+{
+    inline bool apply(P1 const& p1, P2& p2) const
+    {
+        assert_dimension<P1, 3>();
+        return detail::cartesian_to_spherical_equatorial3(get<0>(p1), get<1>(p1), get<2>(p1), p2);
+    }
+};
+
 #ifndef DOXYGEN_NO_STRATEGY_SPECIALIZATIONS
 
 namespace services
@@ -453,6 +482,11 @@ template <typename CoordSys1, typename CoordSys2, typename P1, typename P2>
 struct default_strategy<cartesian_tag, spherical_polar_tag, CoordSys1, CoordSys2, 3, 3, P1, P2>
 {
     typedef from_cartesian_3_to_spherical_polar_3<P1, P2> type;
+};
+template <typename CoordSys1, typename CoordSys2, typename P1, typename P2>
+struct default_strategy<cartesian_tag, spherical_equatorial_tag, CoordSys1, CoordSys2, 3, 3, P1, P2>
+{
+    typedef from_cartesian_3_to_spherical_equatorial_3<P1, P2> type;
 };
 
 

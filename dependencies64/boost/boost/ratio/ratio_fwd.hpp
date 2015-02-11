@@ -32,12 +32,7 @@ time2_demo contained this comment:
 #ifndef BOOST_RATIO_RATIO_FWD_HPP
 #define BOOST_RATIO_RATIO_FWD_HPP
 
-#include <boost/cstdint.hpp>
-#ifdef INTMAX_C
-#define BOOST_RATIO_INTMAX_C(a) INTMAX_C(a)
-#else
-#define BOOST_RATIO_INTMAX_C(a) a##LL
-#endif
+#include <boost/ratio/config.hpp>
 
 namespace boost
 {
@@ -56,6 +51,14 @@ template <class R1, class R2> struct ratio_add;
 template <class R1, class R2> struct ratio_subtract;
 template <class R1, class R2> struct ratio_multiply;
 template <class R1, class R2> struct ratio_divide;
+#ifdef BOOST_RATIO_EXTENSIONS
+template <class R1, class R2> struct ratio_gcd;
+template <class R1, class R2> struct ratio_lcm;
+template <class R> struct ratio_negate;
+template <class R> struct ratio_abs;
+template <class R> struct ratio_sign;
+template <class R, int P> struct ratio_power;
+#endif
 
 // ratio comparison
 template <class R1, class R2> struct ratio_equal;
@@ -82,7 +85,20 @@ typedef ratio<         BOOST_RATIO_INTMAX_C(1000000000), BOOST_RATIO_INTMAX_C(1)
 typedef ratio<      BOOST_RATIO_INTMAX_C(1000000000000), BOOST_RATIO_INTMAX_C(1)> tera;
 typedef ratio<   BOOST_RATIO_INTMAX_C(1000000000000000), BOOST_RATIO_INTMAX_C(1)> peta;
 typedef ratio<BOOST_RATIO_INTMAX_C(1000000000000000000), BOOST_RATIO_INTMAX_C(1)> exa;
-    
+
+#ifdef BOOST_RATIO_EXTENSIONS
+
+#define BOOST_RATIO_1024 BOOST_RATIO_INTMAX_C(1024)
+
+// convenience IEC typedefs
+typedef ratio<                                                                                     BOOST_RATIO_1024> kibi;
+typedef ratio<                                                                    BOOST_RATIO_1024*BOOST_RATIO_1024> mebi;
+typedef ratio<                                                   BOOST_RATIO_1024*BOOST_RATIO_1024*BOOST_RATIO_1024> gibi;
+typedef ratio<                                  BOOST_RATIO_1024*BOOST_RATIO_1024*BOOST_RATIO_1024*BOOST_RATIO_1024> tebi;
+typedef ratio<                 BOOST_RATIO_1024*BOOST_RATIO_1024*BOOST_RATIO_1024*BOOST_RATIO_1024*BOOST_RATIO_1024> pebi;
+typedef ratio<BOOST_RATIO_1024*BOOST_RATIO_1024*BOOST_RATIO_1024*BOOST_RATIO_1024*BOOST_RATIO_1024*BOOST_RATIO_1024> exbi;
+
+#endif
 }  // namespace boost
 
 

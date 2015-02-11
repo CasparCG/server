@@ -54,9 +54,9 @@ namespace impl
         K. E. E. Raatikainen, Simultaneous estimation of several quantiles, Simulation, Volume 49,
         Number 4 (October), 1986, p. 159-164.
 
-        The extended \f$ P^2 \f$ algorithm generalizess the \f$ P^2 \f$ algorithm of
+        The extended \f$ P^2 \f$ algorithm generalizes the \f$ P^2 \f$ algorithm of
 
-        R. Jain and I. Chlamtac, The P^2 algorithmus for dynamic calculation of quantiles and
+        R. Jain and I. Chlamtac, The P^2 algorithm for dynamic calculation of quantiles and
         histograms without storing observations, Communications of the ACM,
         Volume 28 (October), Number 10, 1985, p. 1076-1085.
 
@@ -67,7 +67,7 @@ namespace impl
       : accumulator_base
     {
         typedef typename numeric::functional::multiplies<Sample, Weight>::result_type weighted_sample;
-        typedef typename numeric::functional::average<weighted_sample, std::size_t>::result_type float_type;
+        typedef typename numeric::functional::fdiv<weighted_sample, std::size_t>::result_type float_type;
         typedef std::vector<float_type> array_type;
         // for boost::result_of
         typedef iterator_range<

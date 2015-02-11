@@ -13,7 +13,7 @@
 #include <emmintrin.h>
 
 #if defined(__GNUC__) || defined(__PGI)
-#define ALIGN16 __attribute__((aligned(16)))
+#define ALIGN16 __attribute__((__aligned__(16)))
 #else
 #define ALIGN16 __declspec(align(16))
 #endif
@@ -51,11 +51,11 @@ inline double lanczos13m53::lanczos_sum<double>(const double& x)
       static_cast<double>(23531376880.41075968857200767445163675473L),
       static_cast<double>(0u)
    };
-   register __m128d vx = _mm_load1_pd(&x);
-   register __m128d sum_even = _mm_load_pd(coeff);
-   register __m128d sum_odd = _mm_load_pd(coeff+2);
-   register __m128d nc_odd, nc_even;
-   register __m128d vx2 = _mm_mul_pd(vx, vx);
+   __m128d vx = _mm_load1_pd(&x);
+   __m128d sum_even = _mm_load_pd(coeff);
+   __m128d sum_odd = _mm_load_pd(coeff+2);
+   __m128d nc_odd, nc_even;
+   __m128d vx2 = _mm_mul_pd(vx, vx);
 
    sum_even = _mm_mul_pd(sum_even, vx2);
    nc_even = _mm_load_pd(coeff + 4);
@@ -136,11 +136,11 @@ inline double lanczos13m53::lanczos_sum_expG_scaled<double>(const double& x)
          static_cast<double>(56906521.91347156388090791033559122686859L),
          static_cast<double>(0u)
    };
-   register __m128d vx = _mm_load1_pd(&x);
-   register __m128d sum_even = _mm_load_pd(coeff);
-   register __m128d sum_odd = _mm_load_pd(coeff+2);
-   register __m128d nc_odd, nc_even;
-   register __m128d vx2 = _mm_mul_pd(vx, vx);
+   __m128d vx = _mm_load1_pd(&x);
+   __m128d sum_even = _mm_load_pd(coeff);
+   __m128d sum_odd = _mm_load_pd(coeff+2);
+   __m128d nc_odd, nc_even;
+   __m128d vx2 = _mm_mul_pd(vx, vx);
 
    sum_even = _mm_mul_pd(sum_even, vx2);
    nc_even = _mm_load_pd(coeff + 4);
@@ -194,7 +194,10 @@ inline double lanczos13m53::lanczos_sum_expG_scaled<double>(const double& x)
 } // namespace math
 } // namespace boost
 
+#undef ALIGN16
+
 #endif // BOOST_MATH_SPECIAL_FUNCTIONS_LANCZOS
+
 
 
 

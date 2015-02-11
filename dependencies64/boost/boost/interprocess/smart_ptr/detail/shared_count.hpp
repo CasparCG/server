@@ -4,7 +4,7 @@
 //
 // (C) Copyright Peter Dimov and Multi Media Ltd. 2001, 2002, 2003
 // (C) Copyright Peter Dimov 2004-2005
-// (C) Copyright Ion Gaztanaga 2006-2009. Distributed under the Boost
+// (C) Copyright Ion Gaztanaga 2006-2012. Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -16,7 +16,7 @@
 
 // MS compatible compilers support #pragma once
 
-#if defined(_MSC_VER) && (_MSC_VER >= 1020)
+#if defined(_MSC_VER)
 # pragma once
 #endif
 
@@ -24,10 +24,11 @@
 #include <boost/interprocess/detail/workaround.hpp>
 
 #include <boost/checked_delete.hpp>
-#include <boost/pointer_to_other.hpp>
+#include <boost/intrusive/pointer_traits.hpp>
 #include <boost/interprocess/smart_ptr/detail/bad_weak_ptr.hpp>
 #include <boost/interprocess/smart_ptr/detail/sp_counted_impl.hpp>
 #include <boost/interprocess/detail/utilities.hpp>
+#include <boost/container/allocator_traits.hpp>
 #include <boost/detail/no_exceptions_support.hpp>
 #include <functional>       // std::less
 
@@ -42,21 +43,32 @@ template<class T, class VoidAllocator, class Deleter>
 class shared_count
 {
    public:
-   typedef typename boost::pointer_to_other
-      <typename VoidAllocator::pointer, T>::type               pointer;
+   typedef typename boost::intrusive::
+      pointer_traits<typename VoidAllocator::pointer>::template
+         rebind_pointer<T>::type                         pointer;
 
    private:
    typedef sp_counted_impl_pd<VoidAllocator, Deleter>       counted_impl;
-   typedef typename boost::pointer_to_other
-      <typename VoidAllocator::pointer, counted_impl>::type    counted_impl_ptr;
-   typedef typename boost::pointer_to_other
-      <typename VoidAllocator::pointer, sp_counted_base>::type counted_base_ptr;
-   typedef typename VoidAllocator::template rebind
-      <counted_impl>::other                        counted_impl_allocator;
-   typedef typename boost::pointer_to_other
-            <typename VoidAllocator::pointer, const Deleter>::type   const_deleter_pointer;
-   typedef typename boost::pointer_to_other
-            <typename VoidAllocator::pointer, const VoidAllocator>::type   const_allocator_pointer;
+
+   typedef typename boost::intrusive::
+      pointer_traits<typename VoidAllocator::pointer>::template
+         rebind_pointer<counted_impl>::type                         counted_impl_ptr;
+   typedef typename boost::intrusive::
+      pointer_traits<typename VoidAllocator::pointer>::template
+         rebind_pointer<sp_counted_base>::type                       counted_base_ptr;
+
+   typedef boost::container::allocator_traits<VoidAllocator>         vallocator_traits;
+
+   typedef typename vallocator_traits::template
+      portable_rebind_alloc<counted_impl>::type                      counted_impl_allocator;
+
+   typedef typename boost::intrusive::
+      pointer_traits<typename VoidAllocator::pointer>::template
+         rebind_pointer<const Deleter>::type                         const_deleter_pointer;
+
+   typedef typename boost::intrusive::
+      pointer_traits<typename VoidAllocator::pointer>::template
+         rebind_pointer<const VoidAllocator>::type                   const_allocator_pointer;
 
    pointer           m_px;
    counted_impl_ptr  m_pi;
@@ -87,12 +99,12 @@ class shared_count
             counted_impl_allocator alloc(a);
             m_pi = alloc.allocate(1);
             //Anti-exception deallocator
-            scoped_ptr<counted_impl, 
+            scoped_ptr<counted_impl,
                      scoped_ptr_dealloc_functor<counted_impl_allocator> >
                         deallocator(m_pi, alloc);
             //It's more correct to use VoidAllocator::construct but
             //this needs copy constructor and we don't like it
-            new(ipcdetail::get_pointer(m_pi))counted_impl(p, a, d);
+            new(ipcdetail::to_raw_pointer(m_pi))counted_impl(p, a, d);
             deallocator.release();
          }
       }
@@ -104,8 +116,8 @@ class shared_count
    }
 
    ~shared_count() // nothrow
-   {  
-      if( m_pi != 0 ) 
+   {
+      if(m_pi)
          m_pi->release();
    }
 
@@ -145,10 +157,10 @@ class shared_count
       }
    }
 
-   const pointer &get_pointer() const
+   const pointer &to_raw_pointer() const
    {  return m_px;   }
 
-   pointer &get_pointer()
+   pointer &to_raw_pointer()
    {  return m_px;   }
 
    shared_count & operator= (shared_count const & r) // nothrow
@@ -213,15 +225,20 @@ template<class T, class VoidAllocator, class Deleter>
 class weak_count
 {
    public:
-   typedef typename boost::pointer_to_other
-      <typename VoidAllocator::pointer, T>::type            pointer;
+   typedef typename boost::intrusive::
+      pointer_traits<typename VoidAllocator::pointer>::template
+         rebind_pointer<T>::type                         pointer;
 
    private:
-   typedef sp_counted_impl_pd<VoidAllocator, Deleter>    counted_impl;
-   typedef typename boost::pointer_to_other
-      <typename VoidAllocator::pointer, counted_impl>::type    counted_impl_ptr;
-   typedef typename boost::pointer_to_other
-      <typename VoidAllocator::pointer, sp_counted_base>::type counted_base_ptr;
+
+   typedef sp_counted_impl_pd<VoidAllocator, Deleter>                counted_impl;
+
+   typedef typename boost::intrusive::
+      pointer_traits<typename VoidAllocator::pointer>::template
+         rebind_pointer<counted_impl>::type                          counted_impl_ptr;
+   typedef typename boost::intrusive::
+      pointer_traits<typename VoidAllocator::pointer>::template
+         rebind_pointer<sp_counted_base>::type                       counted_base_ptr;
 
    pointer           m_px;
    counted_impl_ptr  m_pi;
@@ -267,6 +284,7 @@ class weak_count
 
    weak_count & operator= (weak_count const & r) // nothrow
    {
+      m_px = r.m_px;
       counted_impl_ptr tmp = r.m_pi;
       if(tmp != 0) tmp->weak_add_ref();
       if(m_pi != 0) m_pi->weak_release();

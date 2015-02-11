@@ -7,7 +7,7 @@
  *
  * See http://www.boost.org for most recent version including documentation.
  *
- * $Id: integer_log2.hpp 73268 2011-07-21 07:49:59Z danieljames $
+ * $Id$
  *
  */
 
@@ -22,12 +22,12 @@ namespace boost {
 namespace random {
 namespace detail {
 
-#if !defined(BOOST_NO_CONSTEXPR)
+#if !defined(BOOST_NO_CXX11_CONSTEXPR)
 #define BOOST_RANDOM_DETAIL_CONSTEXPR constexpr
 #elif defined(BOOST_MSVC)
 #define BOOST_RANDOM_DETAIL_CONSTEXPR __forceinline
 #elif defined(__GNUC__) && __GNUC__ >= 4
-#define BOOST_RANDOM_DETAIL_CONSTEXPR __attribute__((const)) __attribute__((always_inline))
+#define BOOST_RANDOM_DETAIL_CONSTEXPR inline __attribute__((__const__)) __attribute__((__always_inline__))
 #else
 #define BOOST_RANDOM_DETAIL_CONSTEXPR inline
 #endif
@@ -35,13 +35,26 @@ namespace detail {
 template<int Shift>
 struct integer_log2_impl
 {
+#if defined(BOOST_NO_CXX11_CONSTEXPR)
     template<class T>
-    BOOST_RANDOM_DETAIL_CONSTEXPR static int apply(T t, int accum,
-            int update = 0)
+    BOOST_RANDOM_DETAIL_CONSTEXPR static int apply(T t, int accum)
     {
-        return update = ((t >> Shift) != 0) * Shift,
-            integer_log2_impl<Shift / 2>::apply(t >> update, accum + update);
+        int update = ((t >> Shift) != 0) * Shift;
+        return integer_log2_impl<Shift / 2>::apply(t >> update, accum + update);
     }
+#else
+    template<class T>
+    BOOST_RANDOM_DETAIL_CONSTEXPR static int apply2(T t, int accum, int update)
+    {
+        return integer_log2_impl<Shift / 2>::apply(t >> update, accum + update);
+    }
+
+    template<class T>
+    BOOST_RANDOM_DETAIL_CONSTEXPR static int apply(T t, int accum)
+    {
+        return apply2(t, accum, ((t >> Shift) != 0) * Shift);
+    }
+#endif
 };
 
 template<>
