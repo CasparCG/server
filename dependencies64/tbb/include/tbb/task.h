@@ -1,29 +1,21 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
 
-    This file is part of Threading Building Blocks.
+    This file is part of Threading Building Blocks. Threading Building Blocks is free software;
+    you can redistribute it and/or modify it under the terms of the GNU General Public License
+    version 2  as  published  by  the  Free Software Foundation.  Threading Building Blocks is
+    distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+    implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+    See  the GNU General Public License for more details.   You should have received a copy of
+    the  GNU General Public License along with Threading Building Blocks; if not, write to the
+    Free Software Foundation, Inc.,  51 Franklin St,  Fifth Floor,  Boston,  MA 02110-1301 USA
 
-    Threading Building Blocks is free software; you can redistribute it
-    and/or modify it under the terms of the GNU General Public License
-    version 2 as published by the Free Software Foundation.
-
-    Threading Building Blocks is distributed in the hope that it will be
-    useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with Threading Building Blocks; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-    As a special exception, you may use this file as part of a free software
-    library without restriction.  Specifically, if other files instantiate
-    templates or use macros or inline functions from this file, or you compile
-    this file and link it with other files to produce an executable, this
-    file does not by itself cause the resulting executable to be covered by
-    the GNU General Public License.  This exception does not however
-    invalidate any other reasons why the executable file might be covered by
-    the GNU General Public License.
+    As a special exception,  you may use this file  as part of a free software library without
+    restriction.  Specifically,  if other files instantiate templates  or use macros or inline
+    functions from this file, or you compile this file and link it with other files to produce
+    an executable,  this file does not by itself cause the resulting executable to be covered
+    by the GNU General Public License. This exception does not however invalidate any other
+    reasons why the executable file might be covered by the GNU General Public License.
 */
 
 #ifndef __TBB_task_H
@@ -39,10 +31,7 @@ namespace tbb {
 
 class task;
 class task_list;
-
-#if __TBB_TASK_GROUP_CONTEXT
 class task_group_context;
-#endif /* __TBB_TASK_GROUP_CONTEXT */
 
 // MSVC does not allow taking the address of a member that was defined
 // privately in task_base and made public in class task via a using declaration.
@@ -52,7 +41,7 @@ class task_group_context;
 #define __TBB_TASK_BASE_ACCESS private
 #endif
 
-namespace internal {
+namespace internal { //< @cond INTERNAL
 
     class allocate_additional_child_of_proxy: no_assign {
         //! No longer used, but retained for binary layout compatibility.  Always NULL.
@@ -64,7 +53,8 @@ namespace internal {
         void __TBB_EXPORTED_METHOD free( task& ) const;
     };
 
-}
+    struct cpu_ctl_env_space { int space[sizeof(internal::uint64_t)/sizeof(int)]; };
+} //< namespace internal @endcond
 
 namespace interface5 {
     namespace internal {
@@ -244,6 +234,7 @@ namespace internal {
         //! Miscellaneous state that is not directly visible to users, stored as a byte for compactness.
         /** 0x0 -> version 1.0 task
             0x1 -> version >=2.1 task
+            0x10 -> task was enqueued
             0x20 -> task_proxy
             0x40 -> task has live ref_count
             0x80 -> a stolen task */
@@ -285,6 +276,7 @@ enum priority_t {
 #endif /* !TBB_USE_CAPTURED_EXCEPTION */
 
 class task_scheduler_init;
+namespace interface7 { class task_arena; }
 
 //! Used to form groups of tasks
 /** @ingroup task_scheduling
@@ -300,8 +292,8 @@ class task_scheduler_init;
 
     The context can be bound to another one, and other contexts can be bound to it,
     forming a tree-like structure: parent -> this -> children. Arrows here designate
-    cancellation propagation direction. If a task in a cancellation group is canceled
-    all the other tasks in this group and groups bound to it (as children) get canceled too.
+    cancellation propagation direction. If a task in a cancellation group is cancelled
+    all the other tasks in this group and groups bound to it (as children) get cancelled too.
 
     IMPLEMENTATION NOTE:
     When adding new members to task_group_context or changing types of existing ones,
@@ -311,6 +303,7 @@ class task_group_context : internal::no_copy {
 private:
     friend class internal::generic_scheduler;
     friend class task_scheduler_init;
+    friend class interface7::task_arena;
 
 #if TBB_USE_CAPTURED_EXCEPTION
     typedef tbb_exception exception_container_type;
@@ -332,6 +325,9 @@ public:
 
     enum traits_type {
         exact_exception = 0x0001ul << traits_offset,
+#if __TBB_FP_CONTEXT
+        fp_settings     = 0x0002ul << traits_offset,
+#endif
         concurrent_wait = 0x0004ul << traits_offset,
 #if TBB_USE_CAPTURED_EXCEPTION
         default_traits = 0
@@ -342,12 +338,15 @@ public:
 
 private:
     enum state {
-        may_have_children = 1
+        may_have_children = 1,
+        // the following enumerations must be the last, new 2^x values must go above
+        next_state_value, low_unused_state_bit = (next_state_value-1)*2
     };
 
     union {
         //! Flavor of this context: bound or isolated.
-        kind_type my_kind;
+        // TODO: describe asynchronous use, and whether any memory semantics are needed
+        __TBB_atomic kind_type my_kind;
         uintptr_t _my_kind_aligner;
     };
 
@@ -368,16 +367,27 @@ private:
         line with a local variable that is frequently written to. **/
     char _leading_padding[internal::NFS_MaxLineSize
                           - 2 * sizeof(uintptr_t)- sizeof(void*) - sizeof(internal::context_list_node_t)
-                          - sizeof(__itt_caller)];
+                          - sizeof(__itt_caller)
+#if __TBB_FP_CONTEXT
+                          - sizeof(internal::cpu_ctl_env_space)
+#endif
+                         ];
 
-    //! Specifies whether cancellation was request for this task group.
+#if __TBB_FP_CONTEXT
+    //! Space for platform-specific FPU settings.
+    /** Must only be accessed inside TBB binaries, and never directly in user
+        code or inline methods. */
+    internal::cpu_ctl_env_space my_cpu_ctl_env;
+#endif
+
+    //! Specifies whether cancellation was requested for this task group.
     uintptr_t my_cancellation_requested;
 
     //! Version for run-time checks and behavioral traits of the context.
     /** Version occupies low 16 bits, and traits (zero or more ORed enumerators
         from the traits_type enumerations) take the next 16 bits.
         Original (zeroth) version of the context did not support any traits. **/
-    uintptr_t  my_version_and_traits;
+    uintptr_t my_version_and_traits;
 
     //! Pointer to the container storing exception being propagated across this task group.
     exception_container_type *my_exception;
@@ -385,7 +395,7 @@ private:
     //! Scheduler instance that registered this context in its thread specific list.
     internal::generic_scheduler *my_owner;
 
-    //! Internal state (combination of state flags).
+    //! Internal state (combination of state flags, currently only may_have_children).
     uintptr_t my_state;
 
 #if __TBB_TASK_PRIORITY
@@ -414,7 +424,7 @@ public:
 
         Creating isolated contexts involve much less overhead, but they have limited
         utility. Normally when an exception occurs in an algorithm that has nested
-        ones running, it is desirably to have all the nested algorithms canceled
+        ones running, it is desirably to have all the nested algorithms cancelled
         as well. Such a behavior requires nested algorithms to use bound contexts.
 
         There is one good place where using isolated algorithms is beneficial. It is
@@ -434,11 +444,12 @@ public:
     task_group_context ( kind_type relation_with_parent = bound,
                          uintptr_t traits = default_traits )
         : my_kind(relation_with_parent)
-        , my_version_and_traits(1 | traits)
+        , my_version_and_traits(2 | traits)
     {
         init();
     }
 
+    // Do not introduce standalone unbind method since it will break state propagation assumptions
     __TBB_EXPORTED_METHOD ~task_group_context ();
 
     //! Forcefully reinitializes the context after the task tree it was associated with is completed.
@@ -466,15 +477,27 @@ public:
 
     //! Records the pending exception, and cancels the task group.
     /** May be called only from inside a catch-block. If the context is already
-        canceled, does nothing.
+        cancelled, does nothing.
         The method brings the task group associated with this context exactly into
         the state it would be in, if one of its tasks threw the currently pending
         exception during its execution. In other words, it emulates the actions
         of the scheduler's dispatch loop exception handler. **/
     void __TBB_EXPORTED_METHOD register_pending_exception ();
 
+#if __TBB_FP_CONTEXT
+    //! Captures the current FPU control settings to the context.
+    /** Because the method assumes that all the tasks that used to be associated with
+        this context have already finished, calling it while the context is still
+        in use somewhere in the task hierarchy leads to undefined behavior.
+
+        IMPORTANT: This method is not thread safe!
+
+        The method does not change the FPU control settings of the context's parent. **/
+    void __TBB_EXPORTED_METHOD capture_fp_settings ();
+#endif
+
 #if __TBB_TASK_PRIORITY
-    //! Changes priority of the task grop
+    //! Changes priority of the task group
     void set_priority ( priority_t );
 
     //! Retrieves current priority of the current task group
@@ -495,14 +518,9 @@ private:
     static const kind_type detached = kind_type(binding_completed+1);
     static const kind_type dying = kind_type(detached+1);
 
-    //! Propagates state change (if any) from an ancestor
-    /** Checks if one of this object's ancestors is in a new state, and propagates
-        the new state to all its descendants in this object's heritage line. **/
+    //! Propagates any state change detected to *this, and as an optimisation possibly also upward along the heritage line.
     template <typename T>
-    void propagate_state_from_ancestors ( T task_group_context::*mptr_state, T new_state );
-
-    //! Makes sure that the context is registered with a scheduler instance.
-    inline void finish_initialization ( internal::generic_scheduler *local_sched );
+    void propagate_task_group_state ( T task_group_context::*mptr_state, task_group_context& src, T new_state );
 
     //! Registers this context with the local scheduler and binds it to its parent context
     void bind_to ( internal::generic_scheduler *local_sched );
@@ -510,6 +528,11 @@ private:
     //! Registers this context with the local scheduler
     void register_with ( internal::generic_scheduler *local_sched );
 
+#if __TBB_FP_CONTEXT
+    //! Copies FPU control setting from another context
+    // TODO: Consider adding #else stub in order to omit #if sections in other code
+    void copy_fp_settings( const task_group_context &src );
+#endif /* __TBB_FP_CONTEXT */
 }; // class task_group_context
 
 #endif /* __TBB_TASK_GROUP_CONTEXT */
@@ -549,6 +572,10 @@ public:
         freed,
         //! task to be recycled as continuation
         recycle
+#if __TBB_RECYCLE_TO_ENQUEUE
+        //! task to be scheduled for starvation-resistant execution
+        ,to_enqueue
+#endif
     };
 
     //------------------------------------------------------------------------
@@ -640,12 +667,14 @@ public:
         prefix().state = reexecute;
     }
 
-    // All depth-related methods are obsolete, and are retained for the sake
-    // of backward source compatibility only
-    intptr_t depth() const {return 0;}
-    void set_depth( intptr_t ) {}
-    void add_to_depth( int ) {}
-
+#if __TBB_RECYCLE_TO_ENQUEUE
+    //! Schedule this to enqueue after descendant tasks complete.
+    /** Save enqueue/spawn difference, it has the semantics of recycle_as_safe_continuation. */
+    void recycle_to_enqueue() {
+        __TBB_ASSERT( prefix().state==executing, "execute not running, or already recycled" );
+        prefix().state = to_enqueue;
+    }
+#endif /* __TBB_RECYCLE_TO_ENQUEUE */
 
     //------------------------------------------------------------------------
     // Spawning and blocking
@@ -816,6 +845,8 @@ public:
 
     //! Returns true if the context has received cancellation request.
     bool is_cancelled () const { return prefix().context->is_group_execution_cancelled(); }
+#else
+    bool is_cancelled () const { return false; }
 #endif /* __TBB_TASK_GROUP_CONTEXT */
 
 #if __TBB_TASK_PRIORITY
@@ -853,6 +884,21 @@ class empty_task: public task {
         return NULL;
     }
 };
+
+//! @cond INTERNAL
+namespace internal {
+    template<typename F>
+    class function_task : public task {
+        F my_func;
+        /*override*/ task* execute() {
+            my_func();
+            return NULL;
+        }
+    public:
+        function_task( const F& f ) : my_func(f) {}
+    };
+} // namespace internal
+//! @endcond
 
 //! A list of children.
 /** Used for method task::spawn_children

@@ -1,29 +1,21 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
 
-    This file is part of Threading Building Blocks.
+    This file is part of Threading Building Blocks. Threading Building Blocks is free software;
+    you can redistribute it and/or modify it under the terms of the GNU General Public License
+    version 2  as  published  by  the  Free Software Foundation.  Threading Building Blocks is
+    distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+    implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+    See  the GNU General Public License for more details.   You should have received a copy of
+    the  GNU General Public License along with Threading Building Blocks; if not, write to the
+    Free Software Foundation, Inc.,  51 Franklin St,  Fifth Floor,  Boston,  MA 02110-1301 USA
 
-    Threading Building Blocks is free software; you can redistribute it
-    and/or modify it under the terms of the GNU General Public License
-    version 2 as published by the Free Software Foundation.
-
-    Threading Building Blocks is distributed in the hope that it will be
-    useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with Threading Building Blocks; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-    As a special exception, you may use this file as part of a free software
-    library without restriction.  Specifically, if other files instantiate
-    templates or use macros or inline functions from this file, or you compile
-    this file and link it with other files to produce an executable, this
-    file does not by itself cause the resulting executable to be covered by
-    the GNU General Public License.  This exception does not however
-    invalidate any other reasons why the executable file might be covered by
-    the GNU General Public License.
+    As a special exception,  you may use this file  as part of a free software library without
+    restriction.  Specifically,  if other files instantiate templates  or use macros or inline
+    functions from this file, or you compile this file and link it with other files to produce
+    an executable,  this file does not by itself cause the resulting executable to be covered
+    by the GNU General Public License. This exception does not however invalidate any other
+    reasons why the executable file might be covered by the GNU General Public License.
 */
 
 #ifndef __TBB_spin_rw_mutex_H
@@ -32,22 +24,29 @@
 #include "tbb_stddef.h"
 #include "tbb_machine.h"
 #include "tbb_profiling.h"
+#include "internal/_mutex_padding.h"
 
 namespace tbb {
+
+#if __TBB_TSX_AVAILABLE
+namespace interface8 { namespace internal {
+    class x86_rtm_rw_mutex;
+}}
+#endif
 
 class spin_rw_mutex_v3;
 typedef spin_rw_mutex_v3 spin_rw_mutex;
 
 //! Fast, unfair, spinning reader-writer lock with backoff and writer-preference
 /** @ingroup synchronization */
-class spin_rw_mutex_v3 {
+class spin_rw_mutex_v3 : internal::mutex_copy_deprecated_and_disabled {
     //! @cond INTERNAL
 
     //! Internal acquire write lock.
     bool __TBB_EXPORTED_METHOD internal_acquire_writer();
 
-    //! Out of line code for releasing a write lock.  
-    /** This code is has debug checking and instrumentation for Intel(R) Thread Checker and Intel(R) Thread Profiler. */
+    //! Out of line code for releasing a write lock.
+    /** This code has debug checking and instrumentation for Intel(R) Thread Checker and Intel(R) Thread Profiler. */
     void __TBB_EXPORTED_METHOD internal_release_writer();
 
     //! Internal acquire read lock.
@@ -56,8 +55,8 @@ class spin_rw_mutex_v3 {
     //! Internal upgrade reader to become a writer.
     bool __TBB_EXPORTED_METHOD internal_upgrade();
 
-    //! Out of line code for downgrading a writer to a reader.   
-    /** This code is has debug checking and instrumentation for Intel(R) Thread Checker and Intel(R) Thread Profiler. */
+    //! Out of line code for downgrading a writer to a reader.
+    /** This code has debug checking and instrumentation for Intel(R) Thread Checker and Intel(R) Thread Profiler. */
     void __TBB_EXPORTED_METHOD internal_downgrade();
 
     //! Internal release read lock.
@@ -89,6 +88,12 @@ public:
     /** It helps to avoid the common problem of forgetting to release lock.
         It also nicely provides the "node" for queuing locks. */
     class scoped_lock : internal::no_copy {
+#if __TBB_TSX_AVAILABLE
+        friend class tbb::interface8::internal::x86_rtm_rw_mutex;
+        // helper methods for x86_rtm_rw_mutex
+        spin_rw_mutex *internal_get_mutex() const { return mutex; }
+        void internal_set_mutex(spin_rw_mutex* m) { mutex = m; }
+#endif
     public:
         //! Construct lock that has not acquired a mutex.
         /** Equivalent to zero-initialization of *this. */
@@ -107,18 +112,18 @@ public:
         //! Acquire lock on given mutex.
         void acquire( spin_rw_mutex& m, bool write = true ) {
             __TBB_ASSERT( !mutex, "holding mutex already" );
-            is_writer = write; 
+            is_writer = write;
             mutex = &m;
             if( write ) mutex->internal_acquire_writer();
             else        mutex->internal_acquire_reader();
         }
 
         //! Upgrade reader to become a writer.
-        /** Returns true if the upgrade happened without re-acquiring the lock and false if opposite */
+        /** Returns whether the upgrade happened without releasing and re-acquiring the lock */
         bool upgrade_to_writer() {
             __TBB_ASSERT( mutex, "lock is not acquired" );
             __TBB_ASSERT( !is_writer, "not a reader" );
-            is_writer = true; 
+            is_writer = true;
             return mutex->internal_upgrade();
         }
 
@@ -138,15 +143,14 @@ public:
 
         //! Downgrade writer to become a reader.
         bool downgrade_to_reader() {
-#if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
             __TBB_ASSERT( mutex, "lock is not acquired" );
             __TBB_ASSERT( is_writer, "not a writer" );
+#if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
             mutex->internal_downgrade();
 #else
             __TBB_FetchAndAddW( &mutex->state, ((intptr_t)ONE_READER-WRITER));
 #endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT */
             is_writer = false;
-
             return true;
         }
 
@@ -163,6 +167,7 @@ public:
         }
 
     protected:
+
         //! The pointer to the current mutex that is held, or NULL if no mutex is held.
         spin_rw_mutex* mutex;
 
@@ -205,7 +210,7 @@ public:
     /** Return true if reader lock acquired; false otherwise. */
     bool try_lock_read() {return internal_try_acquire_reader();}
 
-private:
+protected:
     typedef intptr_t state_t;
     static const state_t WRITER = 1;
     static const state_t WRITER_PENDING = 2;
@@ -218,6 +223,7 @@ private:
         Bit 2..N = number of readers holding lock */
     state_t state;
 
+private:
     void __TBB_EXPORTED_METHOD internal_construct();
 };
 
@@ -225,4 +231,29 @@ __TBB_DEFINE_PROFILING_SET_NAME(spin_rw_mutex)
 
 } // namespace tbb
 
+#if __TBB_TSX_AVAILABLE
+#include "internal/_x86_rtm_rw_mutex_impl.h"
+#endif
+
+namespace tbb {
+namespace interface8 {
+//! A cross-platform spin reader/writer mutex with speculative lock acquisition.
+/** On platforms with proper HW support, this lock may speculatively execute
+    its critical sections, using HW mechanisms to detect real data races and
+    ensure atomicity of the critical sections. In particular, it uses
+    Intel(R) Transactional Synchronization Extensions (Intel(R) TSX).
+    Without such HW support, it behaves like a spin_rw_mutex.
+    It should be used for locking short critical sections where the lock is 
+    contended but the data it protects are not.
+    @ingroup synchronization */
+#if __TBB_TSX_AVAILABLE
+typedef interface7::internal::padded_mutex<tbb::interface8::internal::x86_rtm_rw_mutex,true> speculative_spin_rw_mutex;
+#else
+typedef interface7::internal::padded_mutex<tbb::spin_rw_mutex,true> speculative_spin_rw_mutex;
+#endif
+}  // namespace interface8
+
+using interface8::speculative_spin_rw_mutex;
+__TBB_DEFINE_PROFILING_SET_NAME(speculative_spin_rw_mutex)
+} // namespace tbb
 #endif /* __TBB_spin_rw_mutex_H */
