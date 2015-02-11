@@ -5,7 +5,7 @@
  * Subject to the Boost Software License, Version 1.0. 
  * (See accompanying file LICENSE_1_0.txt or http://www.boost.org/LICENSE_1_0.txt)
  * Author: Jeff Garland, Bart Garst
- * $Date: 2011-11-13 01:10:55 -0500 (Sun, 13 Nov 2011) $
+ * $Date$
  */
 
 #include <map>
@@ -180,7 +180,6 @@ namespace boost {
       /*! May throw data_not_accessible, or bad_field_count exceptions */
       void load_from_file(const std::string& pathspec)
       {
-        string_type in_str;
         std::string  buff;
         
         std::ifstream ifs(pathspec.c_str());
@@ -261,8 +260,12 @@ namespace boost {
         e_wn = get_week_num(e_nth);
         
         
-        return new rule_type(start_rule(s_wn, s_d, s_m),
-                             end_rule(e_wn, e_d, e_m));
+        return new rule_type(start_rule(s_wn,
+                                        static_cast<unsigned short>(s_d),
+                                        static_cast<unsigned short>(s_m)),
+                             end_rule(e_wn,
+                                      static_cast<unsigned short>(e_d),
+                                      static_cast<unsigned short>(e_m)));
       }
       //! helper function for parse_rules()
       week_num get_week_num(int nth) const
@@ -301,7 +304,15 @@ namespace boost {
         const char_type sep_char[] = { ';', '\0'};
         char_separator_type sep(sep_char);
         tokenizer tokens(rule, sep); // 3 fields
-        
+
+        if ( std::distance ( tokens.begin(), tokens.end ()) != 3 ) {
+          std::ostringstream msg;
+          msg << "Expecting 3 fields, got " 
+              << std::distance ( tokens.begin(), tokens.end ()) 
+              << " fields in line: " << rule;
+          boost::throw_exception(bad_field_count(msg.str()));
+        }
+
         tokenizer_iterator tok_iter = tokens.begin(); 
         nth = std::atoi(tok_iter->c_str()); ++tok_iter;
         d   = std::atoi(tok_iter->c_str()); ++tok_iter;

@@ -1,5 +1,5 @@
 /*-----------------------------------------------------------------------------+
-Copyright (c) 2007-2010: Joachim Faulhaber
+Copyright (c) 2007-2012: Joachim Faulhaber
 Copyright (c) 1999-2006: Cortex Software GmbH, Kantstrasse 57, Berlin
 +------------------------------------------------------------------------------+
    Distributed under the Boost Software License, Version 1.0.
@@ -193,6 +193,7 @@ public:
     BOOST_STATIC_CONSTANT(int, fineness = 0); 
 
 public:
+
     //==========================================================================
     //= Construct, copy, destruct
     //==========================================================================
@@ -214,12 +215,38 @@ public:
         BOOST_CONCEPT_ASSERT((EqualComparableConcept<CodomainT>));
     }
 
-    /** Assignment operator */
+#   ifndef BOOST_ICL_NO_CXX11_RVALUE_REFERENCES
+    //==========================================================================
+    //= Move semantics
+    //==========================================================================
+
+    /** Move constructor */
+    interval_base_map(interval_base_map&& src): _map(boost::move(src._map))
+    {
+        BOOST_CONCEPT_ASSERT((DefaultConstructibleConcept<DomainT>));
+        BOOST_CONCEPT_ASSERT((LessThanComparableConcept<DomainT>));
+        BOOST_CONCEPT_ASSERT((DefaultConstructibleConcept<CodomainT>));
+        BOOST_CONCEPT_ASSERT((EqualComparableConcept<CodomainT>));
+    }
+
+    /** Move assignment operator */
+    interval_base_map& operator = (interval_base_map src) 
+    {                           //call by value sice 'src' is a "sink value" 
+        this->_map = boost::move(src._map);
+        return *this; 
+    }
+
+    //==========================================================================
+#   else 
+
+    /** Copy assignment operator */
     interval_base_map& operator = (const interval_base_map& src) 
     { 
         this->_map = src._map;
         return *this; 
     }
+
+#   endif // BOOST_ICL_NO_CXX11_RVALUE_REFERENCES
 
     /** swap the content of containers */
     void swap(interval_base_map& object) { _map.swap(object._map); }
@@ -820,7 +847,7 @@ inline void interval_base_map<SubType,DomainT,CodomainT,Traits,Compare,Combine,S
     {
         // [lead_gap--- . . .
         //          [-- it_ ...
-        iterator prior_ = prior(it_); 
+        iterator prior_ = it_==this->_map.begin()? it_ : prior(it_); 
         iterator inserted_ = this->template gap_insert<Combiner>(prior_, lead_gap, co_val);
         that()->handle_inserted(prior_, inserted_);
     }
@@ -932,7 +959,7 @@ inline typename interval_base_map<SubType,DomainT,CodomainT,Traits,Compare,Combi
     {
         // Detect the first and the end iterator of the collision sequence
         iterator first_ = this->_map.lower_bound(inter_val),
-                 last_  = insertion.first;
+                 last_  = prior(this->_map.upper_bound(inter_val));
         //assert(end_ == this->_map.upper_bound(inter_val));
         iterator it_ = first_;
         interval_type rest_interval = inter_val;
@@ -1071,9 +1098,7 @@ inline void interval_base_map<SubType,DomainT,CodomainT,Traits,Compare,Combine,S
                   iterator& it_, const iterator& last_)
 {
     iterator end_   = boost::next(last_);
-    iterator prior_ = it_, inserted_;
-    if(prior_ != this->_map.end())
-        --prior_;
+    iterator prior_ = cyclic_prior(*this,it_), inserted_;
     interval_type rest_interval = inter_val, left_gap, cur_itv;
     interval_type last_interval = last_ ->first;
 
@@ -1127,7 +1152,7 @@ inline typename interval_base_map<SubType,DomainT,CodomainT,Traits,Compare,Combi
     {
         // Detect the first and the end iterator of the collision sequence
         iterator first_ = this->_map.lower_bound(inter_val),
-                 last_  = insertion.first;
+                 last_  = prior(this->_map.upper_bound(inter_val));
         //assert((++last_) == this->_map.upper_bound(inter_val));
         iterator it_ = first_;
         insert_main(inter_val, co_val, it_, last_);

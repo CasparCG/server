@@ -240,7 +240,7 @@ namespace boost { namespace spirit { namespace karma
             return r;
         }
 
-#if defined(BOOST_NO_RVALUE_REFERENCES)
+#if defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
         // non-const version needed to suppress proto's %= kicking in
         template <typename Expr>
         friend rule& operator%=(rule& r, Expr& expr)
@@ -436,7 +436,7 @@ namespace boost { namespace spirit { namespace traits
             typename attribute_of<
                 karma::rule<IteratorA, T1, T2, T3, T4>
               , Context, IteratorB
-          >::type, Attribute>
+            >::type, Attribute>
     {};
 }}}
 

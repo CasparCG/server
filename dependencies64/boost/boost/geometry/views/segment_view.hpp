@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -28,7 +28,7 @@ namespace boost { namespace geometry
 
 /*!
 \brief Makes a segment behave like a linestring or a range
-\details Adapts a segment to the Boost.Range concept, enabling the user to 
+\details Adapts a segment to the Boost.Range concept, enabling the user to
     iterate the two segment points. The segment_view is registered as a LineString Concept
 \tparam Segment \tparam_geometry{Segment}
 \ingroup views
@@ -45,26 +45,26 @@ template <typename Segment>
 struct segment_view
     : public detail::points_view
         <
-            typename geometry::point_type<Segment>::type, 
+            typename geometry::point_type<Segment>::type,
             2
         >
 {
     typedef typename geometry::point_type<Segment>::type point_type;
-    
+
     /// Constructor accepting the segment to adapt
     explicit segment_view(Segment const& segment)
         : detail::points_view<point_type, 2>(copy_policy(segment))
     {}
-    
-private :    
-    
+
+private :
+
     class copy_policy
     {
     public :
         inline copy_policy(Segment const& segment)
             : m_segment(segment)
         {}
-        
+
         inline void apply(point_type* points) const
         {
             geometry::detail::assign_point_from_index<0>(m_segment, points[0]);

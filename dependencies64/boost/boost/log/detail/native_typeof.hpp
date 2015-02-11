@@ -1,5 +1,5 @@
 /*
- *          Copyright Andrey Semashev 2007 - 2010.
+ *          Copyright Andrey Semashev 2007 - 2014.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -10,24 +10,23 @@
  * \date   08.03.2009
  *
  * This header is the Boost.Log library implementation, see the library documentation
- * at http://www.boost.org/libs/log/doc/log.html.
+ * at http://www.boost.org/doc/libs/release/libs/log/doc/html/index.html.
  */
-
-#if (defined(_MSC_VER) && _MSC_VER > 1000)
-#pragma once
-#endif // _MSC_VER > 1000
 
 #ifndef BOOST_LOG_DETAIL_NATIVE_TYPEOF_HPP_INCLUDED_
 #define BOOST_LOG_DETAIL_NATIVE_TYPEOF_HPP_INCLUDED_
 
-#include <boost/version.hpp>
-#include <boost/log/detail/prologue.hpp>
+#include <boost/log/detail/config.hpp>
 
-#if (BOOST_VERSION / 100 >= 1039 && !defined(BOOST_NO_DECLTYPE)) || defined(BOOST_HAS_DECLTYPE) // the latter macro is deprecated
+#ifdef BOOST_HAS_PRAGMA_ONCE
+#pragma once
+#endif
+
+#if !defined(BOOST_NO_CXX11_DECLTYPE)
 
 namespace boost {
 
-namespace BOOST_LOG_NAMESPACE {
+BOOST_LOG_OPEN_NAMESPACE
 
 namespace aux {
 
@@ -36,7 +35,7 @@ T get_root_type(T const&);
 
 } // namespace aux
 
-} // namespace log
+BOOST_LOG_CLOSE_NAMESPACE // namespace log
 
 } // namespace boost
 
@@ -53,12 +52,12 @@ T get_root_type(T const&);
 #endif
 
 
-#if BOOST_VERSION / 100 >= 1039 && !defined(BOOST_NO_AUTO_DECLARATIONS)
+#if !defined(BOOST_NO_CXX11_AUTO_DECLARATIONS)
 #define BOOST_LOG_AUTO(var, expr) auto var = (expr)
 #endif
 
 #if !defined(BOOST_LOG_AUTO) && defined(BOOST_LOG_TYPEOF)
 #define BOOST_LOG_AUTO(var, expr) BOOST_LOG_TYPEOF((expr)) var = (expr)
-#endif // defined(BOOST_LOG_TYPEOF)
+#endif
 
 #endif // BOOST_LOG_DETAIL_NATIVE_TYPEOF_HPP_INCLUDED_

@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2005-2009. Distributed under the Boost
+// (C) Copyright Ion Gaztanaga 2005-2012. Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -11,15 +11,19 @@
 #ifndef BOOST_INTERPROCESS_SHARED_MEMORY_OBJECT_HPP
 #define BOOST_INTERPROCESS_SHARED_MEMORY_OBJECT_HPP
 
+#if defined(_MSC_VER)
+#  pragma once
+#endif
+
 #include <boost/interprocess/detail/config_begin.hpp>
 #include <boost/interprocess/detail/workaround.hpp>
 #include <boost/interprocess/creation_tags.hpp>
 #include <boost/interprocess/exceptions.hpp>
-#include <boost/interprocess/detail/move.hpp>
+#include <boost/move/utility_core.hpp>
 #include <boost/interprocess/interprocess_fwd.hpp>
 #include <boost/interprocess/exceptions.hpp>
 #include <boost/interprocess/detail/os_file_functions.hpp>
-#include <boost/interprocess/detail/tmp_dir_helpers.hpp>
+#include <boost/interprocess/detail/shared_dir_helpers.hpp>
 #include <boost/interprocess/permissions.hpp>
 #include <cstddef>
 #include <string>
@@ -28,7 +32,7 @@
 #if defined(BOOST_INTERPROCESS_XSI_SHARED_MEMORY_OBJECTS_ONLY)
 #  include <sys/shm.h>      //System V shared memory...
 #elif defined(BOOST_INTERPROCESS_POSIX_SHARED_MEMORY_OBJECTS)
-#  include <fcntl.h>        //O_CREAT, O_*... 
+#  include <fcntl.h>        //O_CREAT, O_*...
 #  include <sys/mman.h>     //shm_xxx
 #  include <unistd.h>       //ftruncate, close
 #  include <sys/stat.h>     //mode_t, S_IRWXG, S_IRWXO, S_IRWXU,
@@ -51,10 +55,10 @@ namespace interprocess {
 //!create mapped regions from the mapped files
 class shared_memory_object
 {
-   /// @cond
+   #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
    //Non-copyable and non-assignable
    BOOST_MOVABLE_BUT_NOT_COPYABLE(shared_memory_object)
-   /// @endcond
+   #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 
    public:
    //!Default constructor. Represents an empty shared_memory_object.
@@ -71,26 +75,27 @@ class shared_memory_object
    shared_memory_object(open_or_create_t, const char *name, mode_t mode, const permissions &perm = permissions())
    {  this->priv_open_or_create(ipcdetail::DoOpenOrCreate, name, mode, perm);  }
 
-   //!Tries to open a shared memory object with name "name", with the access mode "mode". 
+   //!Tries to open a shared memory object with name "name", with the access mode "mode".
    //!If the file does not previously exist, it throws an error.
    shared_memory_object(open_only_t, const char *name, mode_t mode)
    {  this->priv_open_or_create(ipcdetail::DoOpen, name, mode, permissions());  }
 
-   //!Moves the ownership of "moved"'s shared memory object to *this. 
-   //!After the call, "moved" does not represent any shared memory object. 
+   //!Moves the ownership of "moved"'s shared memory object to *this.
+   //!After the call, "moved" does not represent any shared memory object.
    //!Does not throw
    shared_memory_object(BOOST_RV_REF(shared_memory_object) moved)
       :  m_handle(file_handle_t(ipcdetail::invalid_file()))
+      ,  m_mode(read_only)
    {  this->swap(moved);   }
 
    //!Moves the ownership of "moved"'s shared memory to *this.
-   //!After the call, "moved" does not represent any shared memory. 
+   //!After the call, "moved" does not represent any shared memory.
    //!Does not throw
    shared_memory_object &operator=(BOOST_RV_REF(shared_memory_object) moved)
-   {  
-      shared_memory_object tmp(boost::interprocess::move(moved));
+   {
+      shared_memory_object tmp(boost::move(moved));
       this->swap(tmp);
-      return *this;  
+      return *this;
    }
 
    //!Swaps the shared_memory_objects. Does not throw
@@ -99,7 +104,7 @@ class shared_memory_object
    //!Erases a shared memory object from the system.
    //!Returns false on error. Never throws
    static bool remove(const char *name);
-   
+
    //!Sets the size of the shared memory mapping
    void truncate(offset_t length);
 
@@ -125,28 +130,29 @@ class shared_memory_object
    //!Returns mapping handle. Never throws.
    mapping_handle_t get_mapping_handle() const;
 
-   /// @cond
+   #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
    private:
 
    //!Closes a previously opened file mapping. Never throws.
    void priv_close();
 
-   //!Closes a previously opened file mapping. Never throws.
+   //!Opens or creates a shared memory object.
    bool priv_open_or_create(ipcdetail::create_enum_t type, const char *filename, mode_t mode, const permissions &perm);
 
    file_handle_t  m_handle;
    mode_t         m_mode;
    std::string    m_filename;
-   /// @endcond
+   #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 };
 
-/// @cond
+#if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
 
-inline shared_memory_object::shared_memory_object() 
+inline shared_memory_object::shared_memory_object()
    :  m_handle(file_handle_t(ipcdetail::invalid_file()))
+   ,  m_mode(read_only)
 {}
 
-inline shared_memory_object::~shared_memory_object() 
+inline shared_memory_object::~shared_memory_object()
 {  this->priv_close(); }
 
 
@@ -157,10 +163,10 @@ inline bool shared_memory_object::get_size(offset_t &size) const
 {  return ipcdetail::get_file_size((file_handle_t)m_handle, size);  }
 
 inline void shared_memory_object::swap(shared_memory_object &other)
-{  
+{
    std::swap(m_handle,  other.m_handle);
    std::swap(m_mode,    other.m_mode);
-   m_filename.swap(other.m_filename);   
+   m_filename.swap(other.m_filename);
 }
 
 inline mapping_handle_t shared_memory_object::get_mapping_handle() const
@@ -178,7 +184,7 @@ inline bool shared_memory_object::priv_open_or_create
 {
    m_filename = filename;
    std::string shmfile;
-   ipcdetail::create_tmp_and_clean_old_and_get_filename(filename, shmfile);
+   ipcdetail::create_shared_dir_cleaning_old_and_get_filepath(filename, shmfile);
 
    //Set accesses
    if (mode != read_write && mode != read_only){
@@ -219,7 +225,7 @@ inline bool shared_memory_object::remove(const char *filename)
    try{
       //Make sure a temporary path is created for shared memory
       std::string shmfile;
-      ipcdetail::tmp_filename(filename, shmfile);
+      ipcdetail::shared_filepath(filename, shmfile);
       return ipcdetail::delete_file(shmfile.c_str());
    }
    catch(...){
@@ -251,7 +257,7 @@ namespace shared_memory_object_detail {
 
 #if defined(__FreeBSD__)
 
-inline bool use_filesistem_based_posix()
+inline bool use_filesystem_based_posix()
 {
    int jailed = 0;
    std::size_t len = sizeof(jailed);
@@ -268,14 +274,14 @@ inline bool use_filesistem_based_posix()
 }  //shared_memory_object_detail
 
 inline bool shared_memory_object::priv_open_or_create
-   (ipcdetail::create_enum_t type, 
+   (ipcdetail::create_enum_t type,
     const char *filename,
     mode_t mode, const permissions &perm)
 {
    #if defined(BOOST_INTERPROCESS_FILESYSTEM_BASED_POSIX_SHARED_MEMORY)
    const bool add_leading_slash = false;
    #elif defined(BOOST_INTERPROCESS_RUNTIME_FILESYSTEM_BASED_POSIX_SHARED_MEMORY)
-   const bool add_leading_slash = !shared_memory_object_ipcdetail::use_filesistem_based_posix();
+   const bool add_leading_slash = !shared_memory_object_detail::use_filesystem_based_posix();
    #else
    const bool add_leading_slash = true;
    #endif
@@ -283,7 +289,7 @@ inline bool shared_memory_object::priv_open_or_create
       ipcdetail::add_leading_slash(filename, m_filename);
    }
    else{
-      ipcdetail::create_tmp_and_clean_old_and_get_filename(filename, m_filename);
+      ipcdetail::create_shared_dir_cleaning_old_and_get_filepath(filename, m_filename);
    }
 
    //Create new mapping
@@ -318,20 +324,26 @@ inline bool shared_memory_object::priv_open_or_create
       break;
       case ipcdetail::DoOpenOrCreate:
       {
-         oflag |= O_CREAT;
-         //We need a loop to change permissions correctly using fchmod, since
-         //with "O_CREAT only" shm_open we don't know if we've created or opened the file.
+         //We need a create/open loop to change permissions correctly using fchmod, since
+         //with "O_CREAT" only we don't know if we've created or opened the shm.
          while(1){
-            m_handle = shm_open(m_filename.c_str(), oflag, unix_perm);
+            //Try to create shared memory
+            m_handle = shm_open(m_filename.c_str(), oflag | (O_CREAT | O_EXCL), unix_perm);
+            //If successful change real permissions
             if(m_handle >= 0){
                ::fchmod(m_handle, unix_perm);
-               break;
             }
+            //If already exists, try to open
             else if(errno == EEXIST){
-               if((m_handle = shm_open(m_filename.c_str(), oflag, unix_perm)) >= 0 || errno != ENOENT){
-                  break;
+               m_handle = shm_open(m_filename.c_str(), oflag, unix_perm);
+               //If open fails and errno tells the file does not exist
+               //(shm was removed between creation and opening tries), just retry
+               if(m_handle < 0 && errno == ENOENT){
+                  continue;
                }
             }
+            //Exit retries
+            break;
          }
       }
       break;
@@ -343,7 +355,7 @@ inline bool shared_memory_object::priv_open_or_create
    }
 
    //Check for error
-   if(m_handle == -1){
+   if(m_handle < 0){
       error_info err = errno;
       this->priv_close();
       throw interprocess_exception(err);
@@ -357,21 +369,21 @@ inline bool shared_memory_object::priv_open_or_create
 inline bool shared_memory_object::remove(const char *filename)
 {
    try{
-      std::string file_str;
+      std::string filepath;
       #if defined(BOOST_INTERPROCESS_FILESYSTEM_BASED_POSIX_SHARED_MEMORY)
       const bool add_leading_slash = false;
       #elif defined(BOOST_INTERPROCESS_RUNTIME_FILESYSTEM_BASED_POSIX_SHARED_MEMORY)
-      const bool add_leading_slash = !shared_memory_object_ipcdetail::use_filesistem_based_posix();
+      const bool add_leading_slash = !shared_memory_object_detail::use_filesystem_based_posix();
       #else
       const bool add_leading_slash = true;
       #endif
       if(add_leading_slash){
-         ipcdetail::add_leading_slash(filename, file_str);
+         ipcdetail::add_leading_slash(filename, filepath);
       }
       else{
-         ipcdetail::tmp_filename(filename, file_str);
+         ipcdetail::shared_filepath(filename, filepath);
       }
-      return 0 == shm_unlink(file_str.c_str());
+      return 0 == shm_unlink(filepath.c_str());
    }
    catch(...){
       return false;
@@ -396,8 +408,6 @@ inline void shared_memory_object::priv_close()
 
 #endif
 
-///@endcond
-
 //!A class that stores the name of a shared memory
 //!and calls shared_memory_object::remove(name) in its destructor
 //!Useful to remove temporary shared memory objects in the presence
@@ -413,6 +423,8 @@ class remove_shared_memory_on_destroy
    ~remove_shared_memory_on_destroy()
    {  shared_memory_object::remove(m_name);  }
 };
+
+#endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 
 }  //namespace interprocess {
 }  //namespace boost {

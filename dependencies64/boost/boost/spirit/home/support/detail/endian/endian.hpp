@@ -122,12 +122,86 @@ namespace boost { namespace spirit
         (static_cast<const unsigned char*>(bytes) + n_bytes);
     }
 
+    template <>
+    inline
+    float load_big_endian<float, 4>(const void* bytes)
+    {
+        const unsigned char *b = reinterpret_cast<const unsigned char *>(
+            bytes);
+        b += 3;
+
+        float value;
+        unsigned char *v = reinterpret_cast<unsigned char *>(&value);
+
+        for(std::size_t i = 0; i < 4; ++i)
+        {
+            *v++ = *b--;
+        }
+
+        return value;
+    }
+
+    template <>
+    inline
+    double load_big_endian<double, 8>(const void* bytes)
+    {
+        const unsigned char *b = reinterpret_cast<const unsigned char *>(
+            bytes);
+        b += 7;
+
+        double value;
+        unsigned char *v = reinterpret_cast<unsigned char *>(&value);
+
+        for(std::size_t i = 0; i < 8; ++i)
+        {
+            *v++ = *b--;
+        }
+
+        return value;
+    }
+
     template <typename T, std::size_t n_bytes>
     inline
     T load_little_endian(const void* bytes)
     {
       return unrolled_byte_loops<T, n_bytes>::load_little
         (static_cast<const unsigned char*>(bytes));
+    }
+
+    template <>
+    inline
+    float load_little_endian<float, 4>(const void* bytes)
+    {
+        const unsigned char *b = reinterpret_cast<const unsigned char *>(
+            bytes);
+
+        float value;
+        unsigned char *v = reinterpret_cast<unsigned char *>(&value);
+
+        for(std::size_t i = 0; i < 4; ++i)
+        {
+            *v++ = *b++;
+        }
+
+        return value;
+    }
+
+    template <>
+    inline
+    double load_little_endian<double, 8>(const void* bytes)
+    {
+        const unsigned char *b = reinterpret_cast<const unsigned char *>(
+            bytes);
+
+        double value;
+        unsigned char *v = reinterpret_cast<unsigned char *>(&value);
+
+        for(std::size_t i = 0; i < 8; ++i)
+        {
+            *v++ = *b++;
+        }
+
+        return value;
     }
 
     template <typename T, std::size_t n_bytes>
@@ -138,12 +212,74 @@ namespace boost { namespace spirit
         (static_cast<char*>(bytes) + n_bytes, value);
     }
 
+    template <>
+    inline
+    void store_big_endian<float, 4>(void* bytes, float value)
+    {
+        unsigned char *b = reinterpret_cast<unsigned char *>(bytes);
+        b += 3;
+
+        const unsigned char *v = reinterpret_cast<const unsigned char *>(
+            &value);
+
+        for(std::size_t i = 0; i < 4; ++i)
+        {
+            *b-- = *v++;
+        }
+    }
+
+    template <>
+    inline
+    void store_big_endian<double, 8>(void* bytes, double value)
+    {
+        unsigned char *b = reinterpret_cast<unsigned char *>(bytes);
+        b += 7;
+
+        const unsigned char *v = reinterpret_cast<const unsigned char *>(
+            &value);
+
+        for(std::size_t i = 0; i < 8; ++i)
+        {
+            *b-- = *v++;
+        }
+    }
+
     template <typename T, std::size_t n_bytes>
     inline
     void store_little_endian(void* bytes, T value)
     {
       unrolled_byte_loops<T, n_bytes>::store_little
         (static_cast<char*>(bytes), value);
+    }
+
+    template <>
+    inline
+    void store_little_endian<float, 4>(void* bytes, float value)
+    {
+        unsigned char *b = reinterpret_cast<unsigned char *>(bytes);
+
+        const unsigned char *v = reinterpret_cast<const unsigned char *>(
+            &value);
+
+        for(std::size_t i = 0; i < 4; ++i)
+        {
+            *b++ = *v++;
+        }
+    }
+
+    template <>
+    inline
+    void store_little_endian<double, 8>(void* bytes, double value)
+    {
+        unsigned char *b = reinterpret_cast<unsigned char *>(bytes);
+
+        const unsigned char *v = reinterpret_cast<const unsigned char *>(
+            &value);
+
+        for(std::size_t i = 0; i < 8; ++i)
+        {
+            *b++ = *v++;
+        }
     }
 
   } // namespace detail
@@ -181,7 +317,7 @@ namespace boost { namespace spirit
 #     ifndef BOOST_ENDIAN_NO_CTORS
         endian() BOOST_ENDIAN_DEFAULT_CONSTRUCT
         explicit endian(T val)
-        { 
+        {
 #       ifdef BOOST_ENDIAN_LOG
           if ( endian_log )
             std::clog << "big, unaligned, " << n_bits << "-bits, construct(" << val << ")\n";
@@ -191,7 +327,7 @@ namespace boost { namespace spirit
 #     endif
         endian & operator=(T val) { detail::store_big_endian<T, n_bits/8>(m_value, val); return *this; }
         operator T() const
-        { 
+        {
 #       ifdef BOOST_ENDIAN_LOG
           if ( endian_log )
             std::clog << "big, unaligned, " << n_bits << "-bits, convert(" << detail::load_big_endian<T, n_bits/8>(m_value) << ")\n";
@@ -213,7 +349,7 @@ namespace boost { namespace spirit
 #     ifndef BOOST_ENDIAN_NO_CTORS
         endian() BOOST_ENDIAN_DEFAULT_CONSTRUCT
         explicit endian(T val)
-        { 
+        {
 #       ifdef BOOST_ENDIAN_LOG
           if ( endian_log )
             std::clog << "little, unaligned, " << n_bits << "-bits, construct(" << val << ")\n";
@@ -223,7 +359,7 @@ namespace boost { namespace spirit
 #     endif
         endian & operator=(T val) { detail::store_little_endian<T, n_bits/8>(m_value, val); return *this; }
         operator T() const
-        { 
+        {
 #       ifdef BOOST_ENDIAN_LOG
           if ( endian_log )
             std::clog << "little, unaligned, " << n_bits << "-bits, convert(" << detail::load_little_endian<T, n_bits/8>(m_value) << ")\n";
@@ -250,7 +386,7 @@ namespace boost { namespace spirit
         explicit endian(T val)    { detail::store_little_endian<T, n_bits/8>(m_value, val); }
 #     endif
 #   endif
-#   ifdef BOOST_BIG_ENDIAN  
+#   ifdef BOOST_BIG_ENDIAN
         endian & operator=(T val) { detail::store_big_endian<T, n_bits/8>(m_value, val); return *this; }
         operator T() const        { return detail::load_big_endian<T, n_bits/8>(m_value); }
 #   else
@@ -281,13 +417,13 @@ namespace boost { namespace spirit
         explicit endian(T val)    { detail::store_big_endian<T, sizeof(T)>(&m_value, val); }
 #     endif
 #   endif
-#   ifdef BOOST_BIG_ENDIAN  
+#   ifdef BOOST_BIG_ENDIAN
         endian & operator=(T val) { m_value = val; return *this; }
         operator T() const        { return m_value; }
-#   else  
+#   else
         endian & operator=(T val) { detail::store_big_endian<T, sizeof(T)>(&m_value, val); return *this; }
         operator T() const        { return detail::load_big_endian<T, sizeof(T)>(&m_value); }
-#   endif  
+#   endif
       private:
         T m_value;
     };
@@ -385,7 +521,7 @@ namespace boost { namespace spirit
 #define BOOST_HAS_INT16_T
 #define BOOST_HAS_INT32_T
 #define BOOST_HAS_INT64_T
-  
+
   //  These types only present if platform has exact size integers:
   //     aligned big endian signed integer types
   //     aligned big endian unsigned integer types

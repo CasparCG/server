@@ -1,10 +1,10 @@
 //////////////////////////////////////////////////////////////////////////////
 //
 // (C) Copyright Stephen Cleary 2000.
-// (C) Copyright Ion Gaztanaga 2007-2009.
+// (C) Copyright Ion Gaztanaga 2007-2012.
 //
 // Distributed under the Boost Software License, Version 1.0.
-//    (See accompanying file LICENSE_1_0.txt or copy at 
+//    (See accompanying file LICENSE_1_0.txt or copy at
 //    http://www.boost.org/LICENSE_1_0.txt)
 //
 // See http://www.boost.org/libs/interprocess for documentation.
@@ -15,6 +15,10 @@
 
 #ifndef BOOST_INTERPROCESS_DETAIL_MATH_FUNCTIONS_HPP
 #define BOOST_INTERPROCESS_DETAIL_MATH_FUNCTIONS_HPP
+
+#if defined(_MSC_VER)
+#  pragma once
+#endif
 
 #include <climits>
 #include <boost/static_assert.hpp>
@@ -93,7 +97,7 @@ inline std::size_t floor_log2 (std::size_t x)
 
    std::size_t n = x;
    std::size_t log2 = 0;
-   
+
    for(std::size_t shift = Bits >> 1; shift; shift >>= 1){
       std::size_t tmp = n >> shift;
       if (tmp)

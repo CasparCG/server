@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2005-2009. Distributed under the Boost
+// (C) Copyright Ion Gaztanaga 2005-2012. Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -11,7 +11,7 @@
 #ifndef BOOST_INTERPROCESS_MANAGED_MAPPED_FILE_HPP
 #define BOOST_INTERPROCESS_MANAGED_MAPPED_FILE_HPP
 
-#if (defined _MSC_VER) && (_MSC_VER >= 1200)
+#if defined(_MSC_VER)
 #  pragma once
 #endif
 
@@ -21,39 +21,54 @@
 #include <boost/interprocess/detail/managed_memory_impl.hpp>
 #include <boost/interprocess/creation_tags.hpp>
 #include <boost/interprocess/detail/file_wrapper.hpp>
-#include <boost/interprocess/detail/move.hpp>
+#include <boost/move/utility_core.hpp>
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/permissions.hpp>
+//These includes needed to fulfill default template parameters of
+//predeclarations in interprocess_fwd.hpp
+#include <boost/interprocess/mem_algo/rbtree_best_fit.hpp>
+#include <boost/interprocess/sync/mutex_family.hpp>
+#include <boost/interprocess/indexes/iset_index.hpp>
 
 namespace boost {
 namespace interprocess {
+namespace ipcdetail {
 
-//!A basic mapped file named object creation class. Initializes the 
-//!mapped file. Inherits all basic functionality from 
+template<class AllocationAlgorithm>
+struct mfile_open_or_create
+{
+   typedef  ipcdetail::managed_open_or_create_impl
+      < file_wrapper, AllocationAlgorithm::Alignment, true, false> type;
+};
+
+}  //namespace ipcdetail {
+
+//!A basic mapped file named object creation class. Initializes the
+//!mapped file. Inherits all basic functionality from
 //!basic_managed_memory_impl<CharType, AllocationAlgorithm, IndexType>
 template
       <
-         class CharType, 
-         class AllocationAlgorithm, 
+         class CharType,
+         class AllocationAlgorithm,
          template<class IndexConfig> class IndexType
       >
-class basic_managed_mapped_file 
+class basic_managed_mapped_file
+   #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
    : public ipcdetail::basic_managed_memory_impl
       <CharType, AllocationAlgorithm, IndexType
-      ,ipcdetail::managed_open_or_create_impl<ipcdetail::file_wrapper>::ManagedOpenOrCreateUserOffset>
+      ,ipcdetail::mfile_open_or_create<AllocationAlgorithm>::type::ManagedOpenOrCreateUserOffset>
+   #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 {
-   /// @cond
+   #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
    public:
-   typedef ipcdetail::basic_managed_memory_impl 
+   typedef ipcdetail::basic_managed_memory_impl
       <CharType, AllocationAlgorithm, IndexType,
-      ipcdetail::managed_open_or_create_impl<ipcdetail::file_wrapper>::ManagedOpenOrCreateUserOffset>   base_t;
+      ipcdetail::mfile_open_or_create<AllocationAlgorithm>::type::ManagedOpenOrCreateUserOffset>   base_t;
    typedef ipcdetail::file_wrapper device_type;
-   typedef typename base_t::size_type              size_type;
 
    private:
 
-   typedef ipcdetail::create_open_func<base_t>        create_open_func_t;   
-   typedef ipcdetail::managed_open_or_create_impl<ipcdetail::file_wrapper> managed_open_or_create_type;
+   typedef ipcdetail::create_open_func<base_t>        create_open_func_t;
 
    basic_managed_mapped_file *get_this_pointer()
    {  return this;   }
@@ -61,20 +76,24 @@ class basic_managed_mapped_file
    private:
    typedef typename base_t::char_ptr_holder_t   char_ptr_holder_t;
    BOOST_MOVABLE_BUT_NOT_COPYABLE(basic_managed_mapped_file)
-   /// @endcond
+   #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 
    public: //functions
 
-   //!Creates mapped file and creates and places the segment manager. 
+   //!Unsigned integral type enough to represent
+   //!the size of a basic_managed_mapped_file.
+   typedef typename BOOST_INTERPROCESS_IMPDEF(base_t::size_type) size_type;
+
+   //!Creates mapped file and creates and places the segment manager.
    //!This can throw.
    basic_managed_mapped_file()
    {}
 
-   //!Creates mapped file and creates and places the segment manager. 
+   //!Creates mapped file and creates and places the segment manager.
    //!This can throw.
-   basic_managed_mapped_file(create_only_t create_only, const char *name,
+   basic_managed_mapped_file(create_only_t, const char *name,
                              size_type size, const void *addr = 0, const permissions &perm = permissions())
-      : m_mfile(create_only, name, size, read_write, addr, 
+      : m_mfile(create_only, name, size, read_write, addr,
                 create_open_func_t(get_this_pointer(), ipcdetail::DoCreate), perm)
    {}
 
@@ -82,40 +101,40 @@ class basic_managed_mapped_file
    //!segment was not created. If segment was created it connects to the
    //!segment.
    //!This can throw.
-   basic_managed_mapped_file (open_or_create_t open_or_create,
-                              const char *name, size_type size, 
+   basic_managed_mapped_file (open_or_create_t,
+                              const char *name, size_type size,
                               const void *addr = 0, const permissions &perm = permissions())
       : m_mfile(open_or_create, name, size, read_write, addr,
-                create_open_func_t(get_this_pointer(), 
+                create_open_func_t(get_this_pointer(),
                 ipcdetail::DoOpenOrCreate), perm)
    {}
 
    //!Connects to a created mapped file and its segment manager.
    //!This can throw.
-   basic_managed_mapped_file (open_only_t open_only, const char* name, 
+   basic_managed_mapped_file (open_only_t, const char* name,
                               const void *addr = 0)
       : m_mfile(open_only, name, read_write, addr,
-                create_open_func_t(get_this_pointer(), 
+                create_open_func_t(get_this_pointer(),
                 ipcdetail::DoOpen))
    {}
 
    //!Connects to a created mapped file and its segment manager
    //!in copy_on_write mode.
    //!This can throw.
-   basic_managed_mapped_file (open_copy_on_write_t, const char* name, 
+   basic_managed_mapped_file (open_copy_on_write_t, const char* name,
                               const void *addr = 0)
-      : m_mfile(open_only, name, copy_on_write, addr, 
-                create_open_func_t(get_this_pointer(), 
+      : m_mfile(open_only, name, copy_on_write, addr,
+                create_open_func_t(get_this_pointer(),
                 ipcdetail::DoOpen))
    {}
 
    //!Connects to a created mapped file and its segment manager
    //!in read-only mode.
    //!This can throw.
-   basic_managed_mapped_file (open_read_only_t, const char* name, 
+   basic_managed_mapped_file (open_read_only_t, const char* name,
                               const void *addr = 0)
-      : m_mfile(open_only, name, read_only, addr, 
-                create_open_func_t(get_this_pointer(), 
+      : m_mfile(open_only, name, read_only, addr,
+                create_open_func_t(get_this_pointer(),
                 ipcdetail::DoOpen))
    {}
 
@@ -130,7 +149,7 @@ class basic_managed_mapped_file
    //!Does not throw
    basic_managed_mapped_file &operator=(BOOST_RV_REF(basic_managed_mapped_file) moved)
    {
-      basic_managed_mapped_file tmp(boost::interprocess::move(moved));
+      basic_managed_mapped_file tmp(boost::move(moved));
       this->swap(tmp);
       return *this;
    }
@@ -157,8 +176,8 @@ class basic_managed_mapped_file
    bool flush()
    {  return m_mfile.flush();  }
 
-   //!Tries to resize mapped file so that we have room for 
-   //!more objects. 
+   //!Tries to resize mapped file so that we have room for
+   //!more objects.
    //!
    //!This function is not synchronized so no other thread or process should
    //!be reading or writing the file
@@ -178,7 +197,7 @@ class basic_managed_mapped_file
          <basic_managed_mapped_file>(filename);
    }
 
-   /// @cond
+   #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
 
    //!Tries to find a previous named allocation address. Returns a memory
    //!buffer and the object count. If not found returned pointer is 0.
@@ -195,9 +214,29 @@ class basic_managed_mapped_file
    }
 
    private:
-   managed_open_or_create_type m_mfile;
-   /// @endcond
+   typename ipcdetail::mfile_open_or_create<AllocationAlgorithm>::type m_mfile;
+   #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 };
+
+#ifdef BOOST_INTERPROCESS_DOXYGEN_INVOKED
+
+//!Typedef for a default basic_managed_mapped_file
+//!of narrow characters
+typedef basic_managed_mapped_file
+   <char
+   ,rbtree_best_fit<mutex_family>
+   ,iset_index>
+managed_mapped_file;
+
+//!Typedef for a default basic_managed_mapped_file
+//!of wide characters
+typedef basic_managed_mapped_file
+   <wchar_t
+   ,rbtree_best_fit<mutex_family>
+   ,iset_index>
+wmanaged_mapped_file;
+
+#endif   //#ifdef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 
 }  //namespace interprocess {
 }  //namespace boost {

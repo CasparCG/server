@@ -1,7 +1,7 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
-// Copyright (c) 2009-2011 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
+// Copyright (c) 2009-2012 Barend Gehrels, Amsterdam, the Netherlands.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -13,7 +13,8 @@
 #ifndef BOOST_GEOMETRY_STRATEGIES_CARTESIAN_CENTROID_WEIGHTED_LENGTH_HPP
 #define BOOST_GEOMETRY_STRATEGIES_CARTESIAN_CENTROID_WEIGHTED_LENGTH_HPP
 
-#include <boost/geometry/algorithms/distance.hpp>
+#include <boost/geometry/algorithms/detail/distance/interface.hpp>
+#include <boost/geometry/algorithms/detail/distance/point_to_geometry.hpp>
 #include <boost/geometry/arithmetic/arithmetic.hpp>
 #include <boost/geometry/util/select_most_precise.hpp>
 #include <boost/geometry/strategies/centroid.hpp>

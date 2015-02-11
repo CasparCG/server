@@ -31,7 +31,7 @@ namespace boost { namespace iostreams {
 
 //
 // Template name: tee_filter.
-// Template paramters:
+// Template parameters:
 //      Device - A blocking Sink.
 //
 template<typename Device>
@@ -99,7 +99,7 @@ BOOST_IOSTREAMS_PIPABLE(tee_filter, 1)
 
 //
 // Template name: tee_device.
-// Template paramters:
+// Template parameters:
 //      Device - A blocking Device.
 //      Sink - A blocking Sink.
 //
@@ -204,8 +204,24 @@ private:
 };
 
 template<typename Sink>
+tee_filter<Sink> tee(Sink& snk) 
+{ return tee_filter<Sink>(snk); }
+
+template<typename Sink>
 tee_filter<Sink> tee(const Sink& snk) 
 { return tee_filter<Sink>(snk); }
+
+template<typename Device, typename Sink>
+tee_device<Device, Sink> tee(Device& dev, Sink& sink) 
+{ return tee_device<Device, Sink>(dev, sink); }
+
+template<typename Device, typename Sink>
+tee_device<Device, Sink> tee(const Device& dev, Sink& sink) 
+{ return tee_device<Device, Sink>(dev, sink); }
+
+template<typename Device, typename Sink>
+tee_device<Device, Sink> tee(Device& dev, const Sink& sink) 
+{ return tee_device<Device, Sink>(dev, sink); }
 
 template<typename Device, typename Sink>
 tee_device<Device, Sink> tee(const Device& dev, const Sink& sink) 

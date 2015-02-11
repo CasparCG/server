@@ -1,5 +1,5 @@
 /*=============================================================================
-    Copyright (c) 2005-2011 Joel de Guzman
+    Copyright (c) 2005-2012 Joel de Guzman
     Copyright (c) 2005-2006 Dan Marsden
 
     Distributed under the Boost Software License, Version 1.0. (See accompanying
@@ -8,20 +8,23 @@
 #if !defined(BOOST_FUSION_DEQUE_26112006_1649)
 #define BOOST_FUSION_DEQUE_26112006_1649
 
-#include <boost/fusion/container/deque/limits.hpp>
-#include <boost/fusion/container/deque/front_extended_deque.hpp>
-#include <boost/fusion/container/deque/back_extended_deque.hpp>
-#include <boost/fusion/container/deque/detail/deque_keyed_values.hpp>
-#include <boost/fusion/container/deque/detail/deque_initial_size.hpp>
-#include <boost/fusion/support/sequence_base.hpp>
-#include <boost/fusion/container/deque/detail/keyed_element.hpp>
-#include <boost/preprocessor/repetition/enum_params.hpp>
-#include <boost/preprocessor/repetition/enum_binary_params.hpp>
-#include <boost/preprocessor/repetition/enum_params_with_a_default.hpp>
-#include <boost/type_traits/add_reference.hpp>
-#include <boost/type_traits/add_const.hpp>
-#include <boost/type_traits/is_convertible.hpp>
+# include <boost/fusion/container/deque/deque_fwd.hpp>
 
+///////////////////////////////////////////////////////////////////////////////
+// Without variadics, we will use the PP version
+///////////////////////////////////////////////////////////////////////////////
+#if !defined(BOOST_FUSION_HAS_VARIADIC_DEQUE)
+# include <boost/fusion/container/deque/detail/cpp03/deque.hpp>
+#else
+
+///////////////////////////////////////////////////////////////////////////////
+// C++11 interface
+///////////////////////////////////////////////////////////////////////////////
+#include <boost/fusion/support/sequence_base.hpp>
+#include <boost/fusion/support/detail/access.hpp>
+#include <boost/fusion/support/is_sequence.hpp>
+#include <boost/fusion/container/deque/detail/keyed_element.hpp>
+#include <boost/fusion/container/deque/detail/deque_keyed_values.hpp>
 #include <boost/fusion/container/deque/deque_fwd.hpp>
 #include <boost/fusion/container/deque/detail/value_at_impl.hpp>
 #include <boost/fusion/container/deque/detail/at_impl.hpp>
@@ -29,93 +32,144 @@
 #include <boost/fusion/container/deque/detail/end_impl.hpp>
 #include <boost/fusion/container/deque/detail/is_sequence_impl.hpp>
 #include <boost/fusion/sequence/intrinsic/begin.hpp>
-#include <boost/mpl/bool.hpp>
+#include <boost/fusion/sequence/intrinsic/empty.hpp>
 
-#include <boost/fusion/support/sequence_base.hpp>
-#include <boost/fusion/support/void.hpp>
+#include <boost/mpl/int.hpp>
+#include <boost/mpl/and.hpp>
 #include <boost/utility/enable_if.hpp>
+#include <boost/type_traits/is_convertible.hpp>
 
-#if !defined(BOOST_FUSION_DONT_USE_PREPROCESSED_FILES)
-#include <boost/fusion/container/deque/detail/preprocessed/deque.hpp>
-#else
-#if defined(__WAVE__) && defined(BOOST_FUSION_CREATE_PREPROCESSED_FILES)
-#pragma wave option(preserve: 2, line: 0, output: "detail/preprocessed/deque" FUSION_MAX_DEQUE_SIZE_STR ".hpp")
-#endif
-
-/*=============================================================================
-    Copyright (c) 2001-2011 Joel de Guzman
-
-    Distributed under the Boost Software License, Version 1.0. (See accompanying
-    file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-
-    This is an auto-generated file. Do not edit!
-==============================================================================*/
-
-#if defined(__WAVE__) && defined(BOOST_FUSION_CREATE_PREPROCESSED_FILES)
-#pragma wave option(preserve: 1)
-#endif
-
-namespace boost { namespace fusion {
-
+namespace boost { namespace fusion
+{
     struct deque_tag;
 
-    template<BOOST_PP_ENUM_PARAMS(FUSION_MAX_DEQUE_SIZE, typename T)>
-    struct deque
-        :
-        detail::deque_keyed_values<BOOST_PP_ENUM_PARAMS(FUSION_MAX_DEQUE_SIZE, T)>::type,
-        sequence_base<deque<BOOST_PP_ENUM_PARAMS(FUSION_MAX_DEQUE_SIZE, T)> >
+    template <typename ...Elements>
+    struct deque : detail::nil_keyed_element
     {
         typedef deque_tag fusion_tag;
         typedef bidirectional_traversal_tag category;
-        typedef typename detail::deque_keyed_values<BOOST_PP_ENUM_PARAMS(FUSION_MAX_DEQUE_SIZE, T)>::type base;
-        typedef typename detail::deque_initial_size<BOOST_PP_ENUM_PARAMS(FUSION_MAX_DEQUE_SIZE, T)>::type size;
-        typedef mpl::int_<size::value> next_up;
-        typedef mpl::int_<
-            mpl::if_<mpl::equal_to<size, mpl::int_<0> >, mpl::int_<0>, mpl::int_<-1> >::type::value> next_down;
+        typedef mpl::int_<0> size;
+        typedef mpl::int_<0> next_up;
+        typedef mpl::int_<0> next_down;
         typedef mpl::false_ is_view;
 
-#include <boost/fusion/container/deque/detail/deque_forward_ctor.hpp>
+        template <typename Sequence>
+        BOOST_FUSION_GPU_ENABLED
+        deque(Sequence const&,
+            typename enable_if<
+                mpl::and_<
+                    traits::is_sequence<Sequence>
+                  , result_of::empty<Sequence>>>::type* /*dummy*/ = 0)
+        {}
 
+        BOOST_FUSION_GPU_ENABLED
+        deque() {}
+    };
+
+    template <typename Head, typename ...Tail>
+    struct deque<Head, Tail...>
+      : detail::deque_keyed_values<Head, Tail...>::type
+      , sequence_base<deque<Head, Tail...>>
+    {
+        typedef deque_tag fusion_tag;
+        typedef bidirectional_traversal_tag category;
+        typedef typename detail::deque_keyed_values<Head, Tail...>::type base;
+        typedef mpl::int_<(sizeof ...(Tail) + 1)> size;
+        typedef mpl::int_<size::value> next_up;
+        typedef mpl::int_<((size::value == 0) ? 0 : -1)> next_down;
+        typedef mpl::false_ is_view;
+
+        BOOST_FUSION_GPU_ENABLED
         deque()
-            {}
+        {}
 
-        explicit deque(typename add_reference<typename add_const<T0>::type>::type t0)
-            : base(t0, detail::nil_keyed_element())
-            {}
+        template <typename ...Elements>
+        BOOST_FUSION_GPU_ENABLED
+        deque(deque<Elements...> const& seq)
+          : base(seq)
+        {}
 
-        template<BOOST_PP_ENUM_PARAMS(FUSION_MAX_DEQUE_SIZE, typename U)>
-            deque(deque<BOOST_PP_ENUM_PARAMS(FUSION_MAX_DEQUE_SIZE, U)> const& seq)
-            : base(seq)
-            {}
+        template <typename ...Elements>
+        BOOST_FUSION_GPU_ENABLED
+        deque(deque<Elements...>& seq)
+          : base(seq)
+        {}
 
-        template<typename Sequence>
-            deque(Sequence const& seq, typename disable_if<is_convertible<Sequence, T0> >::type* /*dummy*/ = 0)
-            : base(base::from_iterator(fusion::begin(seq)))
-            {}
+#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
+        template <typename ...Elements>
+        BOOST_FUSION_GPU_ENABLED
+        deque(deque<Elements...>&& seq)
+          : base(std::forward<deque<Elements...>>(seq))
+        {}
+#endif
 
-        template <BOOST_PP_ENUM_PARAMS(FUSION_MAX_DEQUE_SIZE, typename U)>
-        deque&
-        operator=(deque<BOOST_PP_ENUM_PARAMS(FUSION_MAX_DEQUE_SIZE, U)> const& rhs)
+        BOOST_FUSION_GPU_ENABLED
+        deque(deque const& seq)
+          : base(seq)
+        {}
+
+#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
+        BOOST_FUSION_GPU_ENABLED
+        deque(deque&& seq)
+          : base(std::forward<deque>(seq))
+        {}
+#endif
+
+        BOOST_FUSION_GPU_ENABLED
+        explicit deque(Head const& head, Tail const&... tail)
+          : base(detail::deque_keyed_values<Head, Tail...>::construct(head, tail...))
+        {}
+
+        template <typename Head_, typename ...Tail_>
+        BOOST_FUSION_GPU_ENABLED
+        explicit deque(Head_ const& head, Tail_ const&... tail)
+          : base(detail::deque_keyed_values<Head_, Tail_...>::construct(head, tail...))
+        {}
+
+#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
+        template <typename Head_, typename ...Tail_>
+        BOOST_FUSION_GPU_ENABLED
+        explicit deque(Head_&& head, Tail_&&... tail)
+          : base(detail::deque_keyed_values<Head, Tail...>
+                ::forward_(std::forward<Head_>(head), std::forward<Tail_>(tail)...))
+        {}
+#endif
+
+        template <typename Sequence>
+        BOOST_FUSION_GPU_ENABLED
+        explicit deque(Sequence const& seq
+          , typename disable_if<is_convertible<Sequence, Head> >::type* /*dummy*/ = 0)
+          : base(base::from_iterator(fusion::begin(seq)))
+        {}
+
+        template <typename ...Elements>
+        BOOST_FUSION_GPU_ENABLED
+        deque& operator=(deque<Elements...> const& rhs)
         {
             base::operator=(rhs);
             return *this;
         }
 
         template <typename T>
-        deque&
-        operator=(T const& rhs)
+        BOOST_FUSION_GPU_ENABLED
+        deque& operator=(T const& rhs)
         {
             base::operator=(rhs);
             return *this;
         }
 
+#if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
+        template <typename T>
+        BOOST_FUSION_GPU_ENABLED
+        deque& operator=(T&& rhs)
+        {
+            base::operator=(std::forward<T>(rhs));
+            return *this;
+        }
+#endif
+
     };
 }}
 
-#if defined(__WAVE__) && defined(BOOST_FUSION_CREATE_PREPROCESSED_FILES)
-#pragma wave option(output: null)
 #endif
-
-#endif // BOOST_FUSION_DONT_USE_PREPROCESSED_FILES
-
 #endif

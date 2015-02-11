@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -19,13 +19,15 @@
 
 #include <boost/range.hpp>
 
+#include <boost/geometry/core/tags.hpp>
 #include <boost/geometry/core/point_type.hpp>
 #include <boost/geometry/core/ring_type.hpp>
 
 #include <boost/geometry/geometries/concepts/check.hpp>
 
 #include <boost/geometry/algorithms/assign.hpp>
-#include <boost/geometry/algorithms/detail/disjoint.hpp>
+#include <boost/geometry/algorithms/detail/convert_point_to_point.hpp>
+#include <boost/geometry/algorithms/detail/equals/point_point.hpp>
 
 
 namespace boost { namespace geometry
@@ -50,7 +52,8 @@ struct get_point
 template<typename Point, std::size_t Dimension, std::size_t DimensionCount>
 struct midpoint_helper
 {
-    static inline bool apply(Point& p, Point const& p1, Point const& p2)
+    template <typename InputPoint>
+    static inline bool apply(Point& p, InputPoint const& p1, InputPoint const& p2)
     {
         typename coordinate_type<Point>::type const two = 2;
         set<Dimension>(p,
@@ -63,7 +66,8 @@ struct midpoint_helper
 template <typename Point, std::size_t DimensionCount>
 struct midpoint_helper<Point, DimensionCount, DimensionCount>
 {
-    static inline bool apply(Point& , Point const& , Point const& )
+    template <typename InputPoint>
+    static inline bool apply(Point& , InputPoint const& , InputPoint const& )
     {
         return true;
     }
@@ -102,7 +106,7 @@ struct point_on_range
 
         if (n > 0)
         {
-            point = *boost::begin(range);
+            geometry::detail::conversion::convert_point_to_point(*boost::begin(range), point);
             return true;
         }
         return false;
@@ -146,6 +150,35 @@ struct point_on_box
         }
 
         return true;
+    }
+};
+
+
+template
+<
+    typename Point,
+    typename MultiGeometry,
+    typename Policy
+>
+struct point_on_multi
+{
+    static inline bool apply(Point& point, MultiGeometry const& multi, bool midpoint)
+    {
+        // Take a point on the first multi-geometry
+        // (i.e. the first that is not empty)
+        for (typename boost::range_iterator
+                <
+                    MultiGeometry const
+                >::type it = boost::begin(multi);
+            it != boost::end(multi);
+            ++it)
+        {
+            if (Policy::apply(point, *it, midpoint))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 };
 
@@ -200,6 +233,36 @@ struct point_on_border<box_tag, Point, Box>
 {};
 
 
+template<typename Point, typename Multi>
+struct point_on_border<multi_polygon_tag, Point, Multi>
+    : detail::point_on_border::point_on_multi
+        <
+            Point,
+            Multi,
+            detail::point_on_border::point_on_polygon
+                <
+                    Point,
+                    typename boost::range_value<Multi>::type
+                >
+        >
+{};
+
+
+template<typename Point, typename Multi>
+struct point_on_border<multi_linestring_tag, Point, Multi>
+    : detail::point_on_border::point_on_multi
+        <
+            Point,
+            Multi,
+            detail::point_on_border::point_on_range
+                <
+                    Point,
+                    typename boost::range_value<Multi>::type
+                >
+        >
+{};
+
+
 } // namespace dispatch
 #endif // DOXYGEN_NO_DISPATCH
 
@@ -225,8 +288,6 @@ inline bool point_on_border(Point& point,
 {
     concept::check<Point>();
     concept::check<Geometry const>();
-
-    typedef typename point_type<Geometry>::type point_type;
 
     return dispatch::point_on_border
             <

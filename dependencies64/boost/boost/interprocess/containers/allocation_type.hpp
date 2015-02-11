@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2008-2009. Distributed under the Boost
+// (C) Copyright Ion Gaztanaga 2008-2012. Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -11,7 +11,7 @@
 #ifndef BOOST_INTERPROCESS_CONTAINERS_ALLOCATION_TYPE_HPP
 #define BOOST_INTERPROCESS_CONTAINERS_ALLOCATION_TYPE_HPP
 
-#if (defined _MSC_VER) && (_MSC_VER >= 1200)
+#if defined(_MSC_VER)
 #  pragma once
 #endif
 
@@ -21,9 +21,9 @@
 namespace boost {
 namespace interprocess {
 
-/// @cond
+#if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
 typedef int allocation_type;
-/// @endcond
+#endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 static const allocation_type allocate_new       = boost::container::allocate_new;
 static const allocation_type expand_fwd         = boost::container::expand_fwd;
 static const allocation_type expand_bwd         = boost::container::expand_bwd;

@@ -46,11 +46,11 @@ namespace boost { namespace spirit { namespace karma
         call (OutputIterator& sink, U n, Policies const& p = Policies())
         {
             if (traits::test_nan(n)) {
-                return Policies::template nan<CharEncoding, Tag>(
+                return p.template nan<CharEncoding, Tag>(
                     sink, n, p.force_sign(n));
             }
             else if (traits::test_infinite(n)) {
-                return Policies::template inf<CharEncoding, Tag>(
+                return p.template inf<CharEncoding, Tag>(
                     sink, n, p.force_sign(n));
             }
             return p.template call<real_inserter>(sink, n, p);
@@ -152,10 +152,12 @@ namespace boost { namespace spirit { namespace karma
             }
 
         // call the actual generating functions to output the different parts
-            if (sign_val && traits::test_zero(long_int_part) && 
+            if ((force_sign || sign_val) &&
+                traits::test_zero(long_int_part) &&
                 traits::test_zero(long_frac_part))
             {
                 sign_val = false;     // result is zero, no sign please
+                force_sign = false;
             }
 
         // generate integer part

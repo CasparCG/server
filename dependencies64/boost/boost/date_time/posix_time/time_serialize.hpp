@@ -6,7 +6,7 @@
  * Boost Software License, Version 1.0. (See accompanying
  * file LICENSE_1_0.txt or http://www.boost.org/LICENSE_1_0.txt)
  * Author: Jeff Garland, Bart Garst
- * $Date: 2011-11-13 01:10:55 -0500 (Sun, 13 Nov 2011) $
+ * $Date$
  */
 
 #include "boost/date_time/posix_time/posix_time.hpp"
@@ -184,7 +184,7 @@ void load(Archive & ar,
 
 //!override needed b/c no default constructor
 template<class Archive>
-inline void load_construct_data(Archive & ar, 
+inline void load_construct_data(Archive & /*ar*/, 
                                 boost::posix_time::time_period* tp, 
                                 const unsigned int /*file_version*/)
 {

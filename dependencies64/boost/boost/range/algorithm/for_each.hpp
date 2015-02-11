@@ -13,8 +13,8 @@
 #include <boost/range/begin.hpp>
 #include <boost/range/end.hpp>
 #include <boost/range/concepts.hpp>
+#include <boost/utility/enable_if.hpp>
 #include <boost/ref.hpp>
-#include <boost/utility.hpp>
 #include <algorithm>
 
 #if BOOST_WORKAROUND(BOOST_MSVC, == 1600)
@@ -32,7 +32,7 @@ namespace boost
             template<typename Iterator, typename UnaryFunction>
             inline UnaryFunction
             for_each_impl(Iterator first, Iterator last, UnaryFunction fun,
-                          typename enable_if<
+                          typename ::boost::enable_if<
                             is_reference_wrapper<UnaryFunction>,
                             void
                           >::type* = 0)

@@ -1,5 +1,5 @@
 /*
- *          Copyright Andrey Semashev 2007 - 2010.
+ *          Copyright Andrey Semashev 2007 - 2014.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -12,32 +12,31 @@
  * The header contains implementation of an exception handler support feature.
  */
 
-#if (defined(_MSC_VER) && _MSC_VER > 1000)
-#pragma once
-#endif // _MSC_VER > 1000
-
 #ifndef BOOST_LOG_SOURCES_EXCEPTION_HANDLER_FEATURE_HPP_INCLUDED_
 #define BOOST_LOG_SOURCES_EXCEPTION_HANDLER_FEATURE_HPP_INCLUDED_
 
 #include <boost/mpl/if.hpp>
-#include <boost/function/function0.hpp>
+#include <boost/move/core.hpp>
+#include <boost/move/utility.hpp>
 #include <boost/type_traits/is_same.hpp>
-#include <boost/log/detail/prologue.hpp>
+#include <boost/log/detail/config.hpp>
+#include <boost/log/detail/light_function.hpp>
+#include <boost/log/detail/locks.hpp>
+#include <boost/log/core/record.hpp>
 #include <boost/log/sources/threading_models.hpp>
+#include <boost/log/utility/strictest_lock.hpp>
 #if !defined(BOOST_LOG_NO_THREADS)
-#include <boost/thread/locks.hpp>
 #include <boost/thread/exceptions.hpp>
 #endif
+#include <boost/log/detail/header.hpp>
 
-#ifdef _MSC_VER
-#pragma warning(push)
-// 'm_A' : class 'A' needs to have dll-interface to be used by clients of class 'B'
-#pragma warning(disable: 4251)
-#endif // _MSC_VER
+#ifdef BOOST_HAS_PRAGMA_ONCE
+#pragma once
+#endif
 
 namespace boost {
 
-namespace BOOST_LOG_NAMESPACE {
+BOOST_LOG_OPEN_NAMESPACE
 
 namespace sources {
 
@@ -50,34 +49,37 @@ class basic_exception_handler_logger :
 {
     //! Base type
     typedef BaseT base_type;
+    typedef basic_exception_handler_logger this_type;
+    BOOST_COPYABLE_AND_MOVABLE_ALT(this_type)
 
 public:
-    //! Log record type
-    typedef typename base_type::record_type record_type;
     //! Threading model being used
     typedef typename base_type::threading_model threading_model;
     //! Final logger type
     typedef typename base_type::final_type final_type;
     //! Exception handler function type
-    typedef function0< void > exception_handler_type;
+    typedef boost::log::aux::light_function< void () > exception_handler_type;
 
+#if defined(BOOST_LOG_DOXYGEN_PASS)
     //! Lock requirement for the open_record_unlocked method
     typedef typename strictest_lock<
         typename base_type::open_record_lock,
-        no_lock
+        no_lock< threading_model >
     >::type open_record_lock;
     //! Lock requirement for the push_record_unlocked method
     typedef typename strictest_lock<
         typename base_type::push_record_lock,
-        no_lock
+        no_lock< threading_model >
     >::type push_record_lock;
+#endif // defined(BOOST_LOG_DOXYGEN_PASS)
+
     //! Lock requirement for the swap_unlocked method
     typedef typename strictest_lock<
         typename base_type::swap_lock,
 #ifndef BOOST_LOG_NO_THREADS
-        lock_guard< threading_model >
+        boost::log::aux::exclusive_lock_guard< threading_model >
 #else
-        no_lock
+        no_lock< threading_model >
 #endif // !defined(BOOST_LOG_NO_THREADS)
     >::type swap_lock;
 
@@ -98,6 +100,14 @@ public:
     basic_exception_handler_logger(basic_exception_handler_logger const& that) :
         base_type(static_cast< base_type const& >(that)),
         m_ExceptionHandler(that.m_ExceptionHandler)
+    {
+    }
+    /*!
+     * Move constructor
+     */
+    basic_exception_handler_logger(BOOST_RV_REF(basic_exception_handler_logger) that) :
+        base_type(boost::move(static_cast< base_type& >(that))),
+        m_ExceptionHandler(boost::move(that.m_ExceptionHandler))
     {
     }
     /*!
@@ -128,7 +138,7 @@ public:
     void set_exception_handler(HandlerT const& handler)
     {
 #ifndef BOOST_LOG_NO_THREADS
-        lock_guard< threading_model > _(this->get_threading_model());
+        boost::log::aux::exclusive_lock_guard< threading_model > lock(this->get_threading_model());
 #endif
         m_ExceptionHandler = handler;
     }
@@ -138,7 +148,7 @@ protected:
      * Unlocked \c open_record
      */
     template< typename ArgsT >
-    record_type open_record_unlocked(ArgsT const& args)
+    record open_record_unlocked(ArgsT const& args)
     {
         try
         {
@@ -153,18 +163,18 @@ protected:
         catch (...)
         {
             handle_exception();
-            return record_type();
+            return record();
         }
     }
 
     /*!
      * Unlocked \c push_record
      */
-    void push_record_unlocked(record_type const& record)
+    void push_record_unlocked(BOOST_RV_REF(record) rec)
     {
         try
         {
-            base_type::push_record_unlocked(record);
+            base_type::push_record_unlocked(boost::move(rec));
         }
 #ifndef BOOST_LOG_NO_THREADS
         catch (thread_interrupted&)
@@ -201,11 +211,11 @@ private:
         // If other features do require locking, the thread model is
         // already locked by now, and we don't do locking at all.
         typedef typename mpl::if_<
-            is_same< no_lock, typename final_type::push_record_lock >,
+            is_same< no_lock< threading_model >, typename final_type::push_record_lock >,
             boost::log::aux::shared_lock_guard< threading_model >,
-            no_lock
+            no_lock< threading_model >
         >::type lock_type;
-        lock_type _(base_type::get_threading_model());
+        lock_type lock(base_type::get_threading_model());
 #endif // !defined(BOOST_LOG_NO_THREADS)
 
         if (m_ExceptionHandler.empty())
@@ -234,12 +244,10 @@ struct exception_handler
 
 } // namespace sources
 
-} // namespace log
+BOOST_LOG_CLOSE_NAMESPACE // namespace log
 
 } // namespace boost
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif // _MSC_VER
+#include <boost/log/detail/footer.hpp>
 
 #endif // BOOST_LOG_SOURCES_EXCEPTION_HANDLER_FEATURE_HPP_INCLUDED_

@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -18,8 +18,6 @@
 
 #include <boost/mpl/assert.hpp>
 #include <boost/mpl/int.hpp>
-#include <boost/type_traits.hpp>
-
 
 #include <boost/geometry/core/tag.hpp>
 #include <boost/geometry/core/tags.hpp>
@@ -45,28 +43,39 @@ struct geometry_id
 
 
 template <>
-struct geometry_id<point_tag>      : boost::mpl::int_<1> {};
+struct geometry_id<point_tag>            : boost::mpl::int_<1> {};
 
 
 template <>
-struct geometry_id<linestring_tag> : boost::mpl::int_<2> {};
+struct geometry_id<linestring_tag>       : boost::mpl::int_<2> {};
 
 
 template <>
-struct geometry_id<polygon_tag>    : boost::mpl::int_<3> {};
+struct geometry_id<polygon_tag>          : boost::mpl::int_<3> {};
 
 
 template <>
-struct geometry_id<segment_tag>    : boost::mpl::int_<92> {};
+struct geometry_id<multi_point_tag>      : boost::mpl::int_<4> {};
 
 
 template <>
-struct geometry_id<ring_tag>       : boost::mpl::int_<93> {};
+struct geometry_id<multi_linestring_tag> : boost::mpl::int_<5> {};
 
 
 template <>
-struct geometry_id<box_tag>        : boost::mpl::int_<94> {};
+struct geometry_id<multi_polygon_tag>    : boost::mpl::int_<6> {};
 
+
+template <>
+struct geometry_id<segment_tag>          : boost::mpl::int_<92> {};
+
+
+template <>
+struct geometry_id<ring_tag>             : boost::mpl::int_<93> {};
+
+
+template <>
+struct geometry_id<box_tag>              : boost::mpl::int_<94> {};
 
 
 } // namespace core_dispatch
@@ -76,9 +85,9 @@ struct geometry_id<box_tag>        : boost::mpl::int_<94> {};
 
 /*!
 \brief Meta-function returning the id of a geometry type
-\details The meta-function geometry_id defines a numerical ID (based on 
-    boost::mpl::int_<...> ) for each geometry concept. A numerical ID is 
-    sometimes useful, and within Boost.Geometry it is used for the 
+\details The meta-function geometry_id defines a numerical ID (based on
+    boost::mpl::int_<...> ) for each geometry concept. A numerical ID is
+    sometimes useful, and within Boost.Geometry it is used for the
     reverse_dispatch metafuntion.
 \note Used for e.g. reverse meta-function
 \ingroup core

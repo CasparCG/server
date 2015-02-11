@@ -23,6 +23,7 @@
 #include <boost/math/distributions/fisher_f.hpp>
 #include <boost/math/distributions/gamma.hpp>
 #include <boost/math/distributions/geometric.hpp>
+#include <boost/math/distributions/hyperexponential.hpp>
 #include <boost/math/distributions/hypergeometric.hpp>
 #include <boost/math/distributions/inverse_chi_squared.hpp>
 #include <boost/math/distributions/inverse_gamma.hpp>
@@ -39,6 +40,7 @@
 #include <boost/math/distributions/pareto.hpp>
 #include <boost/math/distributions/poisson.hpp>
 #include <boost/math/distributions/rayleigh.hpp>
+#include <boost/math/distributions/skew_normal.hpp>
 #include <boost/math/distributions/students_t.hpp>
 #include <boost/math/distributions/triangular.hpp>
 #include <boost/math/distributions/uniform.hpp>

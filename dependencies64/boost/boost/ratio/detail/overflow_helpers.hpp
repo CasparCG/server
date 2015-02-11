@@ -32,6 +32,7 @@ time2_demo contained this comment:
 #ifndef BOOST_RATIO_DETAIL_RATIO_OPERATIONS_HPP
 #define BOOST_RATIO_DETAIL_RATIO_OPERATIONS_HPP
 
+#include <boost/ratio/config.hpp>
 #include <boost/ratio/detail/mpl/abs.hpp>
 #include <boost/ratio/detail/mpl/sign.hpp>
 #include <cstdlib>
@@ -39,37 +40,8 @@ time2_demo contained this comment:
 #include <limits>
 #include <boost/cstdint.hpp>
 #include <boost/type_traits/integral_constant.hpp>
-#include <boost/utility/enable_if.hpp>
+#include <boost/core/enable_if.hpp>
 #include <boost/integer_traits.hpp>
-
-#if !defined(BOOST_NO_STATIC_ASSERT) || !defined(BOOST_RATIO_USES_MPL_ASSERT)
-#define BOOST_RATIO_OVERFLOW_IN_ADD "overflow in ratio add"
-#define BOOST_RATIO_OVERFLOW_IN_SUB "overflow in ratio sub"
-#define BOOST_RATIO_OVERFLOW_IN_MUL "overflow in ratio mul"
-#define BOOST_RATIO_OVERFLOW_IN_DIV "overflow in ratio div"
-#define BOOST_RATIO_NUMERATOR_IS_OUT_OF_RANGE "ratio numerator is out of range"
-#define BOOST_RATIO_DIVIDE_BY_0 "ratio divide by 0"
-#define BOOST_RATIO_DENOMINATOR_IS_OUT_OF_RANGE "ratio denominator is out of range"
-#endif
-
-#ifndef BOOST_NO_STATIC_ASSERT
-#define BOOST_RATIO_STATIC_ASSERT(CND, MSG, TYPES) static_assert(CND,MSG)
-#elif defined(BOOST_RATIO_USES_STATIC_ASSERT)
-#include <boost/static_assert.hpp>
-#define BOOST_RATIO_STATIC_ASSERT(CND, MSG, TYPES) BOOST_STATIC_ASSERT(CND)
-#elif defined(BOOST_RATIO_USES_MPL_ASSERT)
-#include <boost/mpl/assert.hpp>
-#include <boost/mpl/bool.hpp>
-#define BOOST_RATIO_STATIC_ASSERT(CND, MSG, TYPES)                                 \
-    BOOST_MPL_ASSERT_MSG(boost::mpl::bool_< (CND) >::type::value, MSG, TYPES)
-#else
-//~ #elif defined(BOOST_RATIO_USES_ARRAY_ASSERT)
-#define BOOST_RATIO_CONCAT(A,B) A##B
-#define BOOST_RATIO_NAME(A,B) BOOST_RATIO_CONCAT(A,B)
-#define BOOST_RATIO_STATIC_ASSERT(CND, MSG, TYPES) static char BOOST_RATIO_NAME(__boost_ratio_test_,__LINE__)[(CND)?1:-1]
-//~ #define BOOST_RATIO_STATIC_ASSERT(CND, MSG, TYPES)
-#endif
-
 
 //
 // We simply cannot include this header on gcc without getting copious warnings of the kind:
@@ -161,7 +133,7 @@ namespace ratio_detail
   class br_mul
   {
       static const boost::intmax_t nan =
-        (BOOST_RATIO_INTMAX_C(1) << (sizeof(boost::intmax_t) * CHAR_BIT - 1));
+          boost::intmax_t(BOOST_RATIO_UINTMAX_C(1) << (sizeof(boost::intmax_t) * CHAR_BIT - 1));
       static const boost::intmax_t min = boost::integer_traits<boost::intmax_t>::const_min;
       static const boost::intmax_t max = boost::integer_traits<boost::intmax_t>::const_max;
 
@@ -200,7 +172,7 @@ namespace ratio_detail
   template <boost::intmax_t X, boost::intmax_t Y>
   class br_div
   {
-      static const boost::intmax_t nan = (1LL << (sizeof(boost::intmax_t) * CHAR_BIT - 1));
+      static const boost::intmax_t nan = boost::intmax_t(BOOST_RATIO_UINTMAX_C(1) << (sizeof(boost::intmax_t) * CHAR_BIT - 1));
       static const boost::intmax_t min = boost::integer_traits<boost::intmax_t>::const_min;
       static const boost::intmax_t max = boost::integer_traits<boost::intmax_t>::const_max;
 
@@ -216,7 +188,7 @@ namespace ratio_detail
   template <class R1, class R2> struct ratio_subtract;
   template <class R1, class R2> struct ratio_multiply;
   template <class R1, class R2> struct ratio_divide;
-  
+
   template <class R1, class R2>
   struct ratio_add
   {
@@ -241,6 +213,11 @@ namespace ratio_detail
                  R2::den
              >
          >::type type;
+  };
+  template <class R, boost::intmax_t D>
+  struct ratio_add<R, ratio<0,D> >
+  {
+    typedef R type;
   };
 
   template <class R1, class R2>
@@ -267,6 +244,12 @@ namespace ratio_detail
                  R2::den
              >
          >::type type;
+  };
+
+  template <class R, boost::intmax_t D>
+  struct ratio_subtract<R, ratio<0,D> >
+  {
+    typedef R type;
   };
 
   template <class R1, class R2>
@@ -300,12 +283,23 @@ namespace ratio_detail
              boost::ratio_detail::br_mul<R2::num / gcd_n1_n2, R1::den / gcd_d1_d2>::value
          >::type type;
   };
-  
+  template <class R1, class R2>
+  struct is_evenly_divisible_by
+  {
+  private:
+      static const boost::intmax_t gcd_n1_n2 = mpl::gcd_c<boost::intmax_t, R1::num, R2::num>::value;
+      static const boost::intmax_t gcd_d1_d2 = mpl::gcd_c<boost::intmax_t, R1::den, R2::den>::value;
+  public:
+      typedef integral_constant<bool,
+             ((R2::num / gcd_n1_n2 ==1) && (R1::den / gcd_d1_d2)==1)
+      > type;
+  };
+
   template <class T>
-  struct is_ratio : public boost::false_type 
+  struct is_ratio : public boost::false_type
   {};
   template <boost::intmax_t N, boost::intmax_t D>
-  struct is_ratio<ratio<N, D> > : public boost::true_type  
+  struct is_ratio<ratio<N, D> > : public boost::true_type
   {};
 
   template <class R1, class R2,
@@ -339,11 +333,11 @@ namespace ratio_detail
   {
     static const bool value = ratio_less1<ratio<R2::den, M2>, ratio<R1::den, M1>
                                             >::value;
-  };  
-  
+  };
+
   template <
-      class R1, 
-      class R2, 
+      class R1,
+      class R2,
       boost::intmax_t S1 = mpl::sign_c<boost::intmax_t, R1::num>::value,
     boost::intmax_t S2 = mpl::sign_c<boost::intmax_t, R2::num>::value
 >

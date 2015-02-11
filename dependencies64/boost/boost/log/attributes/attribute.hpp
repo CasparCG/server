@@ -1,5 +1,5 @@
 /*
- *          Copyright Andrey Semashev 2007 - 2010.
+ *          Copyright Andrey Semashev 2007 - 2014.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -9,163 +9,183 @@
  * \author Andrey Semashev
  * \date   15.04.2007
  *
- * The header contains attribute and attribute_value interfaces definition.
+ * The header contains attribute interface definition.
  */
 
-#if (defined(_MSC_VER) && _MSC_VER > 1000)
+#ifndef BOOST_LOG_ATTRIBUTES_ATTRIBUTE_HPP_INCLUDED_
+#define BOOST_LOG_ATTRIBUTES_ATTRIBUTE_HPP_INCLUDED_
+
+#include <new>
+#include <boost/move/core.hpp>
+#include <boost/smart_ptr/intrusive_ptr.hpp>
+#include <boost/smart_ptr/intrusive_ref_counter.hpp>
+#include <boost/log/detail/config.hpp>
+#include <boost/utility/explicit_operator_bool.hpp>
+#include <boost/log/detail/header.hpp>
+
+#ifdef BOOST_HAS_PRAGMA_ONCE
 #pragma once
-#endif // _MSC_VER > 1000
-
-#ifndef BOOST_LOG_ATTRIBUTE_HPP_INCLUDED_
-#define BOOST_LOG_ATTRIBUTE_HPP_INCLUDED_
-
-#include <boost/optional.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/type_traits/remove_cv.hpp>
-#include <boost/type_traits/remove_reference.hpp>
-#include <boost/log/detail/prologue.hpp>
-#include <boost/log/utility/type_dispatch/type_dispatcher.hpp>
+#endif
 
 namespace boost {
 
-namespace BOOST_LOG_NAMESPACE {
+BOOST_LOG_OPEN_NAMESPACE
 
-/*!
- * \brief A base class for an attribute value
- *
- * An attribute value is an object that contains a piece of data that represents an attribute state
- * at the point of the value acquision. All major operations with log records, such as filtering and
- * formatting, involve attribute values contained in a single view. Most likely an attribute value is
- * implemented as a simple holder of some typed value. This holder implements attribute_value interface
- * and provides type dispatching support in order to allow to extract the stored value.
- *
- * Normally, attributes and their values shall be designed in order to exclude as much interference as
- * reasonable. Such approach allows to have more than one attribute value simultaneously, which improves
- * scalability and allows to implement generating attributes.
- *
- * However, there are cases when this approach does not help to achieve the required level of independency
- * of attribute values and attribute itself from each other at a reasonable performance tradeoff.
- * For example, an attribute or its values may use thread-specific data, which is global and shared
- * between all the instances of the attribute/value. Passing such an attribute value to another thread
- * would be a disaster. To solve this the library defines an additional method for attribute values,
- * namely \c detach_from_thread. This method is called for all attribute values that are passed to
- * another thread. The method is called only once per attribute value, on the first thread change.
- * It is assumed that the value does not depend on any thread-specific data after this call.
- */
-struct BOOST_LOG_NO_VTABLE attribute_value
-{
-private:
-    //! \cond
-
-    //! A simple type dispatcher to support the get method
-    template< typename T >
-    struct extractor :
-        public type_dispatcher,
-        public type_visitor< T >
-    {
-        //! Constructor
-        explicit extractor(optional< T >& res) : res_(res) {}
-        //! Returns itself if the value type matches the requested type
-        void* get_visitor(std::type_info const& type)
-        {
-            BOOST_LOG_ASSUME(this != 0);
-            if (type == typeid(T))
-                return static_cast< type_visitor< T >* >(this);
-            else
-                return 0;
-        }
-        //! Extracts the value
-        void visit(T const& value)
-        {
-            res_ = value;
-        }
-
-    private:
-        //! The reference to the extracted value
-        optional< T >& res_;
-    };
-
-    //! \endcond
-
-public:
-    /*!
-     * Destructor. Destroys the value.
-     */
-    virtual ~attribute_value() {}
-
-    /*!
-     * The method dispatches the value to the given object.
-     *
-     * \param dispatcher The object that attempts to dispatch the stored value.
-     * \return true if \a dispatcher was capable to consume the real attribute value type and false otherwise.
-     */
-    virtual bool dispatch(type_dispatcher& dispatcher) = 0;
-
-    /*!
-     * The method is called when the attribute value is passed to another thread (e.g.
-     * in case of asynchronous logging). The value should ensure it properly owns all thread-specific data.
-     *
-     * \return An actual pointer to the attribute value. It may either point to this object or another.
-     *         In the latter case the returned pointer replaces the pointer used by caller to invoke this
-     *         method and is considered to be a functional equivalent to the previous pointer.
-     */
-    virtual shared_ptr< attribute_value > detach_from_thread() = 0;
-
-    /*!
-     * An alternative to type dispatching. This is a simpler way to get the stored value in case if one knows its exact type.
-     *
-     * \return An optionally specified stored value. The returned value is present if the
-     *         requested type matches the stored type, otherwise the returned value is absent.
-     */
-    template< typename T >
-    optional<
 #ifndef BOOST_LOG_DOXYGEN_PASS
-        typename remove_cv<
-            typename remove_reference< T >::type
-        >::type
-#else
-        T
-#endif // BOOST_LOG_DOXYGEN_PASS
-    > get()
-    {
-        typedef typename remove_cv<
-            typename remove_reference< T >::type
-        >::type requested_type;
 
-        optional< requested_type > res;
-        extractor< requested_type > disp(res);
-        this->dispatch(disp);
-        return res;
-    }
-};
+class attribute_value;
+
+namespace aux {
+
+//! Reference proxy object to implement \c operator[]
+class attribute_set_reference_proxy;
+
+} // namespace aux
+
+#endif // BOOST_LOG_DOXYGEN_PASS
 
 /*!
- * \brief A base class for an attribute
+ * \brief A base class for an attribute value factory
  *
- * An attribute is basically a wrapper for some logic of values acquision. The sole purpose of
- * an attribute is to return an actual value when requested. A simpliest attribute
- * can always return the same value that it stores internally, but more complex species may
- * perform a considirable amount of work to return a value, and their values may differ.
+ * Every attribute is represented with a factory that is basically an attribute value generator.
+ * The sole purpose of an attribute is to return an actual value when requested. A simplest attribute
+ * can always return the same value that it stores internally, but more complex ones can
+ * perform a considerable amount of work to return a value, and the returned values may differ
+ * each time requested.
  *
  * A word about thread safety. An attribute should be prepared to be requested a value from
  * multiple threads concurrently.
  */
-struct BOOST_LOG_NO_VTABLE attribute
+class attribute
 {
+    BOOST_COPYABLE_AND_MOVABLE(attribute)
+
+public:
     /*!
-     * Destructor. Destroys the attribute.
+     * \brief A base class for an attribute value factory
+     *
+     * All attributes must derive their implementation from this class.
      */
-    virtual ~attribute() {}
+    struct BOOST_LOG_NO_VTABLE BOOST_SYMBOL_VISIBLE impl :
+        public boost::intrusive_ref_counter< impl >
+    {
+        /*!
+         * \brief Virtual destructor
+         */
+        virtual ~impl() {}
+
+        /*!
+         * \return The actual attribute value. It shall not return empty values (exceptions
+         *         shall be used to indicate errors).
+         */
+        virtual attribute_value get_value() = 0;
+
+        BOOST_LOG_API static void* operator new (std::size_t size);
+        BOOST_LOG_API static void operator delete (void* p, std::size_t size) BOOST_NOEXCEPT;
+    };
+
+private:
+    //! Pointer to the attribute factory implementation
+    intrusive_ptr< impl > m_pImpl;
+
+public:
+    /*!
+     * Default constructor. Creates an empty attribute value factory, which is not usable until
+     * \c set_impl is called.
+     */
+    BOOST_DEFAULTED_FUNCTION(attribute(), {})
 
     /*!
-     * \return The actual attribute value. It shall not return NULL (exceptions
-     * shall be used to indicate errors).
+     * Copy constructor
      */
-    virtual shared_ptr< attribute_value > get_value() = 0;
+    attribute(attribute const& that) BOOST_NOEXCEPT : m_pImpl(that.m_pImpl) {}
+
+    /*!
+     * Move constructor
+     */
+    attribute(BOOST_RV_REF(attribute) that) BOOST_NOEXCEPT { m_pImpl.swap(that.m_pImpl); }
+
+    /*!
+     * Initializing constructor
+     *
+     * \param p Pointer to the implementation. Must not be \c NULL.
+     */
+    explicit attribute(intrusive_ptr< impl > p) BOOST_NOEXCEPT { m_pImpl.swap(p); }
+
+    /*!
+     * Copy assignment
+     */
+    attribute& operator= (BOOST_COPY_ASSIGN_REF(attribute) that) BOOST_NOEXCEPT
+    {
+        m_pImpl = that.m_pImpl;
+        return *this;
+    }
+
+    /*!
+     * Move assignment
+     */
+    attribute& operator= (BOOST_RV_REF(attribute) that) BOOST_NOEXCEPT
+    {
+        m_pImpl.swap(that.m_pImpl);
+        return *this;
+    }
+
+#ifndef BOOST_LOG_DOXYGEN_PASS
+    attribute& operator= (aux::attribute_set_reference_proxy const& that) BOOST_NOEXCEPT;
+#endif
+
+    /*!
+     * Verifies that the factory is not in empty state
+     */
+    BOOST_EXPLICIT_OPERATOR_BOOL_NOEXCEPT()
+
+    /*!
+     * Verifies that the factory is in empty state
+     */
+    bool operator! () const BOOST_NOEXCEPT { return !m_pImpl; }
+
+    /*!
+     * \return The actual attribute value. It shall not return empty values (exceptions
+     *         shall be used to indicate errors).
+     */
+    attribute_value get_value() const;
+
+    /*!
+     * The method swaps two factories (i.e. their implementations).
+     */
+    void swap(attribute& that) BOOST_NOEXCEPT { m_pImpl.swap(that.m_pImpl); }
+
+protected:
+    /*!
+     * \returns The pointer to the implementation
+     */
+    impl* get_impl() const BOOST_NOEXCEPT { return m_pImpl.get(); }
+    /*!
+     * Sets the pointer to the factory implementation.
+     *
+     * \param p Pointer to the implementation. Must not be \c NULL.
+     */
+    void set_impl(intrusive_ptr< impl > p) BOOST_NOEXCEPT { m_pImpl.swap(p); }
+
+    template< typename T >
+    friend T attribute_cast(attribute const&);
 };
 
-} // namespace log
+/*!
+ * The function swaps two attribute value factories
+ */
+inline void swap(attribute& left, attribute& right) BOOST_NOEXCEPT
+{
+    left.swap(right);
+}
+
+BOOST_LOG_CLOSE_NAMESPACE // namespace log
 
 } // namespace boost
 
-#endif // BOOST_LOG_ATTRIBUTE_HPP_INCLUDED_
+#include <boost/log/detail/footer.hpp>
+#if defined(BOOST_LOG_ATTRIBUTES_ATTRIBUTE_VALUE_HPP_INCLUDED_)
+#include <boost/log/detail/attribute_get_value_impl.hpp>
+#endif
+
+#endif // BOOST_LOG_ATTRIBUTES_ATTRIBUTE_HPP_INCLUDED_

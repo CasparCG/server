@@ -10,6 +10,7 @@
 #include "size_t.hpp"
 #include "consts.hpp" // num_chars, num_wchar_ts
 #include <string>
+#include <limits>
 
 namespace boost
 {
@@ -55,11 +56,7 @@ struct basic_string_token
         if (_charset.length () == max_chars_)
         {
             _negated = !_negated;
-#if defined _MSC_VER && _MSC_VER <= 1200
-            _charset.erase ();
-#else
             _charset.clear ();
-#endif
         }
         else if (_charset.length () > max_chars_ / 2)
         {
@@ -71,7 +68,7 @@ struct basic_string_token
     {
         const std::size_t max_chars_ = sizeof (CharT) == 1 ?
             num_chars : num_wchar_ts;
-        CharT curr_char_ = sizeof (CharT) == 1 ? -128 : 0;
+        CharT curr_char_ = (std::numeric_limits<CharT>::min)();
         string temp_;
         const CharT *curr_ = _charset.c_str ();
         const CharT *chars_end_ = curr_ + _charset.size ();
@@ -126,11 +123,7 @@ struct basic_string_token
     void clear ()
     {
         _negated = false;
-#if defined _MSC_VER && _MSC_VER <= 1200
-            _charset.erase ();
-#else
-            _charset.clear ();
-#endif
+        _charset.clear ();
     }
 
     void intersect (basic_string_token &rhs_, basic_string_token &overlap_)
