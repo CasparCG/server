@@ -1,8 +1,9 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
+// Copyright (c) 2014 Adam Wulkiewicz, Lodz, Poland.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -18,10 +19,14 @@
 #include <iterator>
 
 #include <boost/range.hpp>
-#include <boost/typeof/typeof.hpp>
+#include <boost/type_traits/remove_reference.hpp>
+#include <boost/variant/static_visitor.hpp>
+#include <boost/variant/apply_visitor.hpp>
+#include <boost/variant/variant_fwd.hpp>
 
 #include <boost/geometry/algorithms/assign.hpp>
 #include <boost/geometry/algorithms/clear.hpp>
+#include <boost/geometry/algorithms/detail/interior_iterator.hpp>
 #include <boost/geometry/algorithms/num_interior_rings.hpp>
 
 #include <boost/geometry/core/cs.hpp>
@@ -30,7 +35,9 @@
 #include <boost/geometry/core/mutable_range.hpp>
 #include <boost/geometry/core/ring_type.hpp>
 #include <boost/geometry/core/tag_cast.hpp>
+#include <boost/geometry/core/tags.hpp>
 #include <boost/geometry/geometries/concepts/check.hpp>
+#include <boost/geometry/strategies/default_strategy.hpp>
 #include <boost/geometry/strategies/transform.hpp>
 
 
@@ -41,9 +48,9 @@ namespace boost { namespace geometry
 namespace detail { namespace transform
 {
 
-template <typename Point1, typename Point2, typename Strategy>
 struct transform_point
 {
+    template <typename Point1, typename Point2, typename Strategy>
     static inline bool apply(Point1 const& p1, Point2& p2,
                 Strategy const& strategy)
     {
@@ -52,9 +59,9 @@ struct transform_point
 };
 
 
-template <typename Box1, typename Box2, typename Strategy>
 struct transform_box
 {
+    template <typename Box1, typename Box2, typename Strategy>
     static inline bool apply(Box1 const& b1, Box2& b2,
                 Strategy const& strategy)
     {
@@ -91,9 +98,9 @@ struct transform_box
     }
 };
 
-template <typename Geometry1, typename Geometry2, typename Strategy>
 struct transform_box_or_segment
 {
+    template <typename Geometry1, typename Geometry2, typename Strategy>
     static inline bool apply(Geometry1 const& source, Geometry2& target,
                 Strategy const& strategy)
     {
@@ -133,12 +140,7 @@ inline bool transform_range_out(Range const& range,
         it != boost::end(range);
         ++it)
     {
-        if (! transform_point
-                <
-                    typename point_type<Range>::type,
-                    PointOut,
-                    Strategy
-                >::apply(*it, point_out, strategy))
+        if (! transform_point::apply(*it, point_out, strategy))
         {
             return false;
         }
@@ -148,14 +150,12 @@ inline bool transform_range_out(Range const& range,
 }
 
 
-template <typename Polygon1, typename Polygon2, typename Strategy>
 struct transform_polygon
 {
+    template <typename Polygon1, typename Polygon2, typename Strategy>
     static inline bool apply(Polygon1 const& poly1, Polygon2& poly2,
                 Strategy const& strategy)
     {
-        typedef typename ring_type<Polygon1>::type ring1_type;
-        typedef typename ring_type<Polygon2>::type ring2_type;
         typedef typename point_type<Polygon2>::type point2_type;
 
         geometry::clear(poly2);
@@ -175,16 +175,20 @@ struct transform_polygon
                 >::type
             >::apply(interior_rings(poly2), num_interior_rings(poly1));
 
-        typename interior_return_type<Polygon1 const>::type rings1
-                    = interior_rings(poly1);
-        typename interior_return_type<Polygon2>::type rings2
-                    = interior_rings(poly2);
-        BOOST_AUTO_TPL(it1, boost::begin(rings1));
-        BOOST_AUTO_TPL(it2, boost::begin(rings2));
-        for ( ; it1 != boost::end(interior_rings(poly1)); ++it1, ++it2)
+        typename interior_return_type<Polygon1 const>::type
+            rings1 = interior_rings(poly1);
+        typename interior_return_type<Polygon2>::type
+            rings2 = interior_rings(poly2);
+
+        typename detail::interior_iterator<Polygon1 const>::type
+            it1 = boost::begin(rings1);
+        typename detail::interior_iterator<Polygon2>::type
+            it2 = boost::begin(rings2);
+        for ( ; it1 != boost::end(rings1); ++it1, ++it2)
         {
-            if (!transform_range_out<point2_type>(*it1,
-                std::back_inserter(*it2), strategy))
+            if ( ! transform_range_out<point2_type>(*it1,
+                                                    std::back_inserter(*it2),
+                                                    strategy) )
             {
                 return false;
             }
@@ -211,9 +215,9 @@ struct select_strategy
         >::type type;
 };
 
-template <typename Range1, typename Range2, typename Strategy>
 struct transform_range
 {
+    template <typename Range1, typename Range2, typename Strategy>
     static inline bool apply(Range1 const& range1,
             Range2& range2, Strategy const& strategy)
     {
@@ -226,6 +230,36 @@ struct transform_range
     }
 };
 
+
+/*!
+    \brief Is able to transform any multi-geometry, calling the single-version as policy
+*/
+template <typename Policy>
+struct transform_multi
+{
+    template <typename Multi1, typename Multi2, typename S>
+    static inline bool apply(Multi1 const& multi1, Multi2& multi2, S const& strategy)
+    {
+        traits::resize<Multi2>::apply(multi2, boost::size(multi1));
+
+        typename boost::range_iterator<Multi1 const>::type it1
+                = boost::begin(multi1);
+        typename boost::range_iterator<Multi2>::type it2
+                = boost::begin(multi2);
+
+        for (; it1 != boost::end(multi1); ++it1, ++it2)
+        {
+            if (! Policy::apply(*it1, *it2, strategy))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+};
+
+
 }} // namespace detail::transform
 #endif // DOXYGEN_NO_DETAIL
 
@@ -236,56 +270,164 @@ namespace dispatch
 
 template
 <
-    typename Tag1, typename Tag2,
     typename Geometry1, typename Geometry2,
-    typename Strategy
+    typename Tag1 = typename tag_cast<typename tag<Geometry1>::type, multi_tag>::type,
+    typename Tag2 = typename tag_cast<typename tag<Geometry2>::type, multi_tag>::type
 >
 struct transform {};
 
-template <typename Point1, typename Point2, typename Strategy>
-struct transform<point_tag, point_tag, Point1, Point2, Strategy>
-    : detail::transform::transform_point<Point1, Point2, Strategy>
+template <typename Point1, typename Point2>
+struct transform<Point1, Point2, point_tag, point_tag>
+    : detail::transform::transform_point
 {
 };
 
 
-template <typename Linestring1, typename Linestring2, typename Strategy>
+template <typename Linestring1, typename Linestring2>
 struct transform
     <
-        linestring_tag, linestring_tag,
-        Linestring1, Linestring2, Strategy
+        Linestring1, Linestring2,
+        linestring_tag, linestring_tag
     >
-    : detail::transform::transform_range<Linestring1, Linestring2, Strategy>
+    : detail::transform::transform_range
 {
 };
 
-template <typename Range1, typename Range2, typename Strategy>
-struct transform<ring_tag, ring_tag, Range1, Range2, Strategy>
-    : detail::transform::transform_range<Range1, Range2, Strategy>
+template <typename Range1, typename Range2>
+struct transform<Range1, Range2, ring_tag, ring_tag>
+    : detail::transform::transform_range
 {
 };
 
-template <typename Polygon1, typename Polygon2, typename Strategy>
-struct transform<polygon_tag, polygon_tag, Polygon1, Polygon2, Strategy>
-    : detail::transform::transform_polygon<Polygon1, Polygon2, Strategy>
+template <typename Polygon1, typename Polygon2>
+struct transform<Polygon1, Polygon2, polygon_tag, polygon_tag>
+    : detail::transform::transform_polygon
 {
 };
 
-template <typename Box1, typename Box2, typename Strategy>
-struct transform<box_tag, box_tag, Box1, Box2, Strategy>
-    : detail::transform::transform_box<Box1, Box2, Strategy>
+template <typename Box1, typename Box2>
+struct transform<Box1, Box2, box_tag, box_tag>
+    : detail::transform::transform_box
 {
 };
 
-template <typename Segment1, typename Segment2, typename Strategy>
-struct transform<segment_tag, segment_tag, Segment1, Segment2, Strategy>
-    : detail::transform::transform_box_or_segment<Segment1, Segment2, Strategy>
+template <typename Segment1, typename Segment2>
+struct transform<Segment1, Segment2, segment_tag, segment_tag>
+    : detail::transform::transform_box_or_segment
 {
 };
+
+template <typename Multi1, typename Multi2>
+struct transform
+    <
+        Multi1, Multi2,
+        multi_tag, multi_tag
+    >
+    : detail::transform::transform_multi
+        <
+            dispatch::transform
+                <
+                    typename boost::range_value<Multi1>::type,
+                    typename boost::range_value<Multi2>::type
+                >
+        >
+{};
 
 
 } // namespace dispatch
 #endif // DOXYGEN_NO_DISPATCH
+
+
+namespace resolve_strategy {
+
+struct transform
+{
+    template <typename Geometry1, typename Geometry2, typename Strategy>
+    static inline bool apply(Geometry1 const& geometry1,
+                             Geometry2& geometry2,
+                             Strategy const& strategy)
+    {
+        concept::check<Geometry1 const>();
+        concept::check<Geometry2>();
+
+        return dispatch::transform<Geometry1, Geometry2>::apply(
+            geometry1,
+            geometry2,
+            strategy
+        );
+    }
+
+    template <typename Geometry1, typename Geometry2>
+    static inline bool apply(Geometry1 const& geometry1,
+                             Geometry2& geometry2,
+                             default_strategy)
+    {
+        return apply(
+            geometry1,
+            geometry2,
+            typename detail::transform::select_strategy<Geometry1, Geometry2>::type()
+        );
+    }
+};
+
+} // namespace resolve_strategy
+
+
+namespace resolve_variant {
+
+template <typename Geometry1, typename Geometry2>
+struct transform
+{
+    template <typename Strategy>
+    static inline bool apply(Geometry1 const& geometry1,
+                             Geometry2& geometry2,
+                             Strategy const& strategy)
+    {
+        return resolve_strategy::transform::apply(
+            geometry1,
+            geometry2,
+            strategy
+        );
+    }
+};
+
+template <BOOST_VARIANT_ENUM_PARAMS(typename T), typename Geometry2>
+struct transform<boost::variant<BOOST_VARIANT_ENUM_PARAMS(T)>, Geometry2>
+{
+    template <typename Strategy>
+    struct visitor: static_visitor<bool>
+    {
+        Geometry2& m_geometry2;
+        Strategy const& m_strategy;
+
+        visitor(Geometry2& geometry2, Strategy const& strategy)
+            : m_geometry2(geometry2)
+            , m_strategy(strategy)
+        {}
+
+        template <typename Geometry1>
+        inline bool operator()(Geometry1 const& geometry1) const
+        {
+            return transform<Geometry1, Geometry2>::apply(
+                geometry1,
+                m_geometry2,
+                m_strategy
+            );
+        }
+    };
+
+    template <typename Strategy>
+    static inline bool apply(
+        boost::variant<BOOST_VARIANT_ENUM_PARAMS(T)> const& geometry1,
+        Geometry2& geometry2,
+        Strategy const& strategy
+    )
+    {
+        return apply_visitor(visitor<Strategy>(geometry2, strategy), geometry1);
+    }
+};
+
+} // namespace resolve_variant
 
 
 /*!
@@ -307,19 +449,8 @@ template <typename Geometry1, typename Geometry2, typename Strategy>
 inline bool transform(Geometry1 const& geometry1, Geometry2& geometry2,
             Strategy const& strategy)
 {
-    concept::check<Geometry1 const>();
-    concept::check<Geometry2>();
-
-    typedef dispatch::transform
-        <
-            typename tag_cast<typename tag<Geometry1>::type, multi_tag>::type,
-            typename tag_cast<typename tag<Geometry2>::type, multi_tag>::type,
-            Geometry1,
-            Geometry2,
-            Strategy
-        > transform_type;
-
-    return transform_type::apply(geometry1, geometry2, strategy);
+    return resolve_variant::transform<Geometry1, Geometry2>
+                          ::apply(geometry1, geometry2, strategy);
 }
 
 
@@ -337,11 +468,7 @@ inline bool transform(Geometry1 const& geometry1, Geometry2& geometry2,
 template <typename Geometry1, typename Geometry2>
 inline bool transform(Geometry1 const& geometry1, Geometry2& geometry2)
 {
-    concept::check<Geometry1 const>();
-    concept::check<Geometry2>();
-
-    typename detail::transform::select_strategy<Geometry1, Geometry2>::type strategy;
-    return transform(geometry1, geometry2, strategy);
+    return transform(geometry1, geometry2, default_strategy());
 }
 
 

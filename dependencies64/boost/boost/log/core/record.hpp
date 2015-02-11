@@ -1,5 +1,5 @@
 /*
- *          Copyright Andrey Semashev 2007 - 2010.
+ *          Copyright Andrey Semashev 2007 - 2014.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -12,191 +12,48 @@
  * This header contains a logging record class definition.
  */
 
-#if (defined(_MSC_VER) && _MSC_VER > 1000)
-#pragma once
-#endif // _MSC_VER > 1000
-
 #ifndef BOOST_LOG_CORE_RECORD_HPP_INCLUDED_
 #define BOOST_LOG_CORE_RECORD_HPP_INCLUDED_
 
-#include <string>
-#include <boost/assert.hpp>
-#include <boost/intrusive_ptr.hpp>
-#include <boost/log/detail/prologue.hpp>
-#include <boost/log/detail/unspecified_bool.hpp>
-#include <boost/log/utility/intrusive_ref_counter.hpp>
-#include <boost/log/attributes/attribute_values_view.hpp>
+#include <boost/move/core.hpp>
+#include <boost/log/detail/config.hpp>
+#include <boost/utility/explicit_operator_bool.hpp>
+#include <boost/log/attributes/attribute_value_set.hpp>
+#include <boost/log/expressions/keyword_fwd.hpp>
+#include <boost/log/core/record_view.hpp>
+#include <boost/log/detail/header.hpp>
 
-#ifdef _MSC_VER
-#pragma warning(push)
- // non dll-interface class 'A' used as base for dll-interface class 'B'
-#pragma warning(disable: 4275)
-#endif // _MSC_VER
+#ifdef BOOST_HAS_PRAGMA_ONCE
+#pragma once
+#endif
 
 namespace boost {
 
-namespace BOOST_LOG_NAMESPACE {
+BOOST_LOG_OPEN_NAMESPACE
 
-template< typename >
-class basic_core;
-template< typename >
-class basic_record;
-template< typename >
-class basic_attribute_values_view;
-
-/*!
- * \brief A logging record handle class
- *
- * This class is used to identify a log record in calls to the logging core. Consider using
- * the \c basic_record wrapper class for user-scope needs.
- */
-class record_handle
-{
-    template< typename >
-    friend class basic_core;
-    template< typename >
-    friend class basic_record;
-
-private:
-    //! Pointer to the log record data
-    intrusive_ptr< intrusive_ref_counter > m_pData;
-
-public:
-    /*!
-     * Equality comparison
-     *
-     * \param that Comparand
-     * \return \c true if both <tt>*this</tt> and \a that identify the same log record or do not
-     *         identify any record, \c false otherwise.
-     */
-    bool operator== (record_handle const& that) const
-    {
-        return m_pData == that.m_pData;
-    }
-    /*!
-     * Inequality comparison
-     *
-     * \param that Comparand
-     * \return <tt>!(*this == that)</tt>
-     */
-    bool operator!= (record_handle const& that) const
-    {
-        return !operator== (that);
-    }
-
-    /*!
-     * Conversion to an unspecified boolean type
-     *
-     * \return \c true, if the handle identifies a log record, \c false, if the handle is not valid
-     */
-    BOOST_LOG_OPERATOR_UNSPECIFIED_BOOL()
-
-    /*!
-     * Inverted conversion to an unspecified boolean type
-     *
-     * \return \c false, if the handle identifies a log record, \c true, if the handle is not valid
-     */
-    bool operator! () const
-    {
-        return !m_pData;
-    }
-
-    /*!
-     * Swaps two handles
-     *
-     * \param that Another handle to swap with
-     * <b>Throws:</b> Nothing
-     */
-    void swap(record_handle& that)
-    {
-        m_pData.swap(that.m_pData);
-    }
-
-    /*!
-     * Resets the log record handle. If there are no other handles left, the log record is closed
-     * and all resources referenced by the record are released.
-     *
-     * \post <tt>!*this == true</tt>
-     */
-    void reset()
-    {
-        m_pData.reset();
-    }
-
-    /*!
-     * Returns a non-<tt>NULL</tt> pointer if the handle is valid, <tt>NULL</tt> otherwise.
-     */
-    void* get() const
-    {
-        return m_pData.get();
-    }
-
-#ifndef BOOST_LOG_DOXYGEN_PASS
-private:
-    explicit record_handle(intrusive_ref_counter* p) : m_pData(p)
-    {
-    }
-#endif // BOOST_LOG_DOXYGEN_PASS
-};
-
-/*!
- * A free-standing swap function overload for \c record_handle
- */
-inline void swap(record_handle& left, record_handle& right)
-{
-    left.swap(right);
-}
-
+class core;
 
 /*!
  * \brief Logging record class
  *
- * The logging record incapsulates all information related to a single logging statement,
- * in particular, attribute values view and the log message string.
+ * The logging record encapsulates all information related to a single logging statement,
+ * in particular, attribute values view and the log message string. The record can be updated before pushing
+ * for further processing to the logging core.
  */
-template< typename CharT >
-class basic_record
+class record
 {
-    friend class basic_core< CharT >;
+    BOOST_MOVABLE_BUT_NOT_COPYABLE(record)
 
-public:
-    //! Character type
-    typedef CharT char_type;
-    //! Logging core type
-    typedef basic_core< char_type > core_type;
-    //! String type to be used as a message text holder
-    typedef std::basic_string< char_type > string_type;
-    //! Attribute values view type
-    typedef basic_attribute_values_view< char_type > values_view_type;
+    friend class core;
 
 #ifndef BOOST_LOG_DOXYGEN_PASS
 private:
-    //! Publicly available record data
-    struct public_data :
-        public intrusive_ref_counter
-    {
-        //! Shows if the record has already been detached from thread
-        bool m_Detached;
-        //! Attribute values view
-        values_view_type m_AttributeValues;
-        //! Record message
-        string_type m_Message;
-
-        //! Constructor from the attribute sets
-        explicit public_data(values_view_type const& values) :
-            m_Detached(false),
-            m_AttributeValues(values)
-        {
-        }
-    };
-
     //! Private data
-    struct private_data;
-    friend struct private_data;
+    typedef record_view::public_data public_data;
 
 private:
-    //! A pointer to the log record data
-    intrusive_ptr< public_data > m_pData;
+    //! A pointer to the log record implementation
+    public_data* m_impl;
 
 #endif // BOOST_LOG_DOXYGEN_PASS
 
@@ -206,40 +63,31 @@ public:
      *
      * \post <tt>!*this == true</tt>
      */
-    basic_record() {}
+    record() : m_impl(NULL) {}
 
     /*!
-     * Conversion from a record handle. Adopts the record referenced by the handle.
-     *
-     * \pre The handle, if valid, have been issued by the logging core with the same character type as the record being constructed.
-     * \post <tt>this->handle() == rec</tt>
-     * \param rec The record handle being adopted
+     * Move constructor. Source record contents unspecified after the operation.
      */
-    explicit basic_record(record_handle const& rec) :
-#ifdef NDEBUG
-        m_pData(static_cast< public_data* >(rec.m_pData.get()))
-#else
-        m_pData(dynamic_cast< public_data* >(rec.m_pData.get()))
-#endif // NDEBUG
+    record(BOOST_RV_REF(record) that) BOOST_NOEXCEPT : m_impl(that.m_impl)
     {
-#ifndef NDEBUG
-        // In debug builds we check that the handle was created by the proper core instance
-        if (rec)
-            BOOST_ASSERT(!!m_pData);
-#endif // NDEBUG
+        that.m_impl = NULL;
     }
 
     /*!
      * Destructor. Destroys the record, releases any sinks and attribute values that were involved in processing this record.
      */
-    ~basic_record() {}
+    ~record() BOOST_NOEXCEPT
+    {
+        reset();
+    }
 
     /*!
-     * \return The handle to the record
+     * Move assignment. Source record contents unspecified after the operation.
      */
-    record_handle handle() const
+    record& operator= (BOOST_RV_REF(record) that) BOOST_NOEXCEPT
     {
-        return record_handle(m_pData.get());
+        swap(static_cast< record& >(that));
+        return *this;
     }
 
     /*!
@@ -247,50 +95,19 @@ public:
      *
      * \pre <tt>!!*this</tt>
      */
-    values_view_type const& attribute_values() const
+    attribute_value_set& attribute_values() BOOST_NOEXCEPT
     {
-        return m_pData->m_AttributeValues;
+        return m_impl->m_attribute_values;
     }
 
     /*!
-     * \return A reference to the log record message string
+     * \return A reference to the set of attribute values attached to this record
      *
      * \pre <tt>!!*this</tt>
      */
-    string_type& message()
+    attribute_value_set const& attribute_values() const BOOST_NOEXCEPT
     {
-        return m_pData->m_Message;
-    }
-    /*!
-     * \return A reference to the log record message string
-     *
-     * \pre <tt>!!*this</tt>
-     */
-    string_type const& message() const
-    {
-        return m_pData->m_Message;
-    }
-
-    /*!
-     * Equality comparison
-     *
-     * \param that Comparand
-     * \return \c true if both <tt>*this</tt> and \a that identify the same log record or do not
-     *         identify any record, \c false otherwise.
-     */
-    bool operator== (basic_record const& that) const
-    {
-        return m_pData == that.m_pData;
-    }
-    /*!
-     * Inequality comparison
-     *
-     * \param that Comparand
-     * \return <tt>!(*this == that)</tt>
-     */
-    bool operator!= (basic_record const& that) const
-    {
-        return !operator== (that);
+        return m_impl->m_attribute_values;
     }
 
     /*!
@@ -298,16 +115,16 @@ public:
      *
      * \return \c true, if the <tt>*this</tt> identifies a log record, \c false, if the <tt>*this</tt> is not valid
      */
-    BOOST_LOG_OPERATOR_UNSPECIFIED_BOOL()
+    BOOST_EXPLICIT_OPERATOR_BOOL_NOEXCEPT()
 
     /*!
      * Inverted conversion to an unspecified boolean type
      *
      * \return \c false, if the <tt>*this</tt> identifies a log record, \c true, if the <tt>*this</tt> is not valid
      */
-    bool operator! () const
+    bool operator! () const BOOST_NOEXCEPT
     {
-        return !m_pData;
+        return !m_impl;
     }
 
     /*!
@@ -316,9 +133,11 @@ public:
      * \param that Another record to swap with
      * <b>Throws:</b> Nothing
      */
-    void swap(basic_record& that)
+    void swap(record& that) BOOST_NOEXCEPT
     {
-        m_pData.swap(that.m_pData);
+        public_data* p = m_impl;
+        m_impl = that.m_impl;
+        that.m_impl = p;
     }
 
     /*!
@@ -327,58 +146,62 @@ public:
      *
      * \post <tt>!*this == true</tt>
      */
-    void reset()
+    void reset() BOOST_NOEXCEPT
     {
-        m_pData.reset();
+        if (m_impl)
+        {
+            public_data::destroy(m_impl);
+            m_impl = NULL;
+        }
     }
 
     /*!
-     * The function ensures that the log record does not depend on any thread-specific data.
+     * Attribute value lookup.
+     *
+     * \param name Attribute name.
+     * \return An \c attribute_value, non-empty if it is found, empty otherwise.
+     */
+    attribute_value_set::mapped_type operator[] (attribute_value_set::key_type name) const
+    {
+        return m_impl->m_attribute_values[name];
+    }
+
+    /*!
+     * Attribute value lookup.
+     *
+     * \param keyword Attribute keyword.
+     * \return A \c value_ref with extracted attribute value if it is found, empty \c value_ref otherwise.
+     */
+    template< typename DescriptorT, template< typename > class ActorT >
+    typename result_of::extract< typename expressions::attribute_keyword< DescriptorT, ActorT >::value_type, DescriptorT >::type
+    operator[] (expressions::attribute_keyword< DescriptorT, ActorT > const& keyword) const
+    {
+        return m_impl->m_attribute_values[keyword];
+    }
+
+    /*!
+     * The function ensures that the log record does not depend on any thread-specific data. Then the record contents
+     * are used to construct a \c record_view which is returned from the function. The record is no longer valid after the call.
      *
      * \pre <tt>!!*this</tt>
+     * \post <tt>!*this</tt>
+     * \returns The record view that contains all attribute values from the original record.
      */
-    void detach_from_thread()
-    {
-        if (!m_pData->m_Detached)
-        {
-            typename values_view_type::const_iterator
-                it = m_pData->m_AttributeValues.begin(),
-                end = m_pData->m_AttributeValues.end();
-            for (; it != end; ++it)
-            {
-                // Yep, a bit hackish. I'll need a better backdoor to do it gracefully.
-                it->second->detach_from_thread().swap(
-                    const_cast< typename values_view_type::mapped_type& >(it->second));
-            }
-
-            m_pData->m_Detached = true;
-        }
-    }
+    BOOST_LOG_API record_view lock();
 };
 
 /*!
- * A free-standing swap function overload for \c basic_record
+ * A free-standing swap function overload for \c record
  */
-template< typename CharT >
-inline void swap(basic_record< CharT >& left, basic_record< CharT >& right)
+inline void swap(record& left, record& right) BOOST_NOEXCEPT
 {
     left.swap(right);
 }
 
-
-#ifdef BOOST_LOG_USE_CHAR
-typedef basic_record< char > record;        //!< Convenience typedef for narrow-character logging
-#endif
-#ifdef BOOST_LOG_USE_WCHAR_T
-typedef basic_record< wchar_t > wrecord;    //!< Convenience typedef for wide-character logging
-#endif
-
-} // namespace log
+BOOST_LOG_CLOSE_NAMESPACE // namespace log
 
 } // namespace boost
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif // _MSC_VER
+#include <boost/log/detail/footer.hpp>
 
 #endif // BOOST_LOG_CORE_RECORD_HPP_INCLUDED_

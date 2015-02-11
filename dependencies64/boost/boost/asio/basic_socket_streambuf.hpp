@@ -2,7 +2,7 @@
 // basic_socket_streambuf.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2011 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2014 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -17,32 +17,25 @@
 
 #include <boost/asio/detail/config.hpp>
 
-#if !defined(BOOST_NO_IOSTREAM)
+#if !defined(BOOST_ASIO_NO_IOSTREAM)
 
 #include <streambuf>
-#include <boost/utility/base_from_member.hpp>
 #include <boost/asio/basic_socket.hpp>
 #include <boost/asio/deadline_timer_service.hpp>
 #include <boost/asio/detail/array.hpp>
 #include <boost/asio/detail/throw_error.hpp>
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/stream_socket_service.hpp>
-#include <boost/asio/time_traits.hpp>
 
-#include <boost/asio/detail/push_options.hpp>
-#include <boost/date_time/posix_time/posix_time_types.hpp>
-#include <boost/asio/detail/pop_options.hpp>
+#if defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
+# include <boost/asio/deadline_timer.hpp>
+#else
+# include <boost/asio/steady_timer.hpp>
+#endif
 
 #if !defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES)
 
-# include <boost/preprocessor/arithmetic/inc.hpp>
-# include <boost/preprocessor/repetition/enum_binary_params.hpp>
-# include <boost/preprocessor/repetition/enum_params.hpp>
-# include <boost/preprocessor/repetition/repeat_from_to.hpp>
-
-# if !defined(BOOST_ASIO_SOCKET_STREAMBUF_MAX_ARITY)
-#  define BOOST_ASIO_SOCKET_STREAMBUF_MAX_ARITY 5
-# endif // !defined(BOOST_ASIO_SOCKET_STREAMBUF_MAX_ARITY)
+# include <boost/asio/detail/variadic_templates.hpp>
 
 // A macro that should expand to:
 //   template <typename T1, ..., typename Tn>
@@ -60,17 +53,16 @@
 //   }
 // This macro should only persist within this file.
 
-# define BOOST_ASIO_PRIVATE_CONNECT_DEF( z, n, data ) \
-  template <BOOST_PP_ENUM_PARAMS(n, typename T)> \
+# define BOOST_ASIO_PRIVATE_CONNECT_DEF(n) \
+  template <BOOST_ASIO_VARIADIC_TPARAMS(n)> \
   basic_socket_streambuf<Protocol, StreamSocketService, \
-    Time, TimeTraits, TimerService>* connect( \
-      BOOST_PP_ENUM_BINARY_PARAMS(n, T, x)) \
+    Time, TimeTraits, TimerService>* connect(BOOST_ASIO_VARIADIC_PARAMS(n)) \
   { \
     init_buffers(); \
     this->basic_socket<Protocol, StreamSocketService>::close(ec_); \
     typedef typename Protocol::resolver resolver_type; \
     typedef typename resolver_type::query resolver_query; \
-    resolver_query query(BOOST_PP_ENUM_PARAMS(n, x)); \
+    resolver_query query(BOOST_ASIO_VARIADIC_ARGS(n)); \
     resolve_and_connect(query); \
     return !ec_ ? this : 0; \
   } \
@@ -82,32 +74,64 @@
 
 namespace boost {
 namespace asio {
+namespace detail {
+
+// A separate base class is used to ensure that the io_service is initialised
+// prior to the basic_socket_streambuf's basic_socket base class.
+class socket_streambuf_base
+{
+protected:
+  io_service io_service_;
+};
+
+} // namespace detail
 
 /// Iostream streambuf for a socket.
 template <typename Protocol,
     typename StreamSocketService = stream_socket_service<Protocol>,
+#if defined(BOOST_ASIO_HAS_BOOST_DATE_TIME) \
+  || defined(GENERATING_DOCUMENTATION)
     typename Time = boost::posix_time::ptime,
     typename TimeTraits = boost::asio::time_traits<Time>,
     typename TimerService = deadline_timer_service<Time, TimeTraits> >
+#else
+    typename Time = steady_timer::clock_type,
+    typename TimeTraits = steady_timer::traits_type,
+    typename TimerService = steady_timer::service_type>
+#endif
 class basic_socket_streambuf
   : public std::streambuf,
-    private boost::base_from_member<io_service>,
+    private detail::socket_streambuf_base,
     public basic_socket<Protocol, StreamSocketService>
 {
+private:
+  // These typedefs are intended keep this class's implementation independent
+  // of whether it's using Boost.DateTime, Boost.Chrono or std::chrono.
+#if defined(BOOST_ASIO_HAS_BOOST_DATE_TIME)
+  typedef TimeTraits traits_helper;
+#else
+  typedef detail::chrono_time_traits<Time, TimeTraits> traits_helper;
+#endif
+
 public:
   /// The endpoint type.
   typedef typename Protocol::endpoint endpoint_type;
 
+#if defined(GENERATING_DOCUMENTATION)
   /// The time type.
   typedef typename TimeTraits::time_type time_type;
 
   /// The duration type.
   typedef typename TimeTraits::duration_type duration_type;
+#else
+  typedef typename traits_helper::time_type time_type;
+  typedef typename traits_helper::duration_type duration_type;
+#endif
 
   /// Construct a basic_socket_streambuf without establishing a connection.
   basic_socket_streambuf()
     : basic_socket<Protocol, StreamSocketService>(
-        boost::base_from_member<boost::asio::io_service>::member),
+        this->detail::socket_streambuf_base::io_service_),
       unbuffered_(false),
       timer_service_(0),
       timer_state_(no_timer)
@@ -184,9 +208,7 @@ public:
     return !ec_ ? this : 0;
   }
 #else
-  BOOST_PP_REPEAT_FROM_TO(
-      1, BOOST_PP_INC(BOOST_ASIO_SOCKET_STREAMBUF_MAX_ARITY),
-      BOOST_ASIO_PRIVATE_CONNECT_DEF, _ )
+  BOOST_ASIO_VARIADIC_GENERATE(BOOST_ASIO_PRIVATE_CONNECT_DEF)
 #endif
 
   /// Close the connection.
@@ -252,7 +274,7 @@ public:
    */
   duration_type expires_from_now() const
   {
-    return TimeTraits::subtract(expires_at(), TimeTraits::now());
+    return traits_helper::subtract(expires_at(), traits_helper::now());
   }
 
   /// Set the stream buffer's expiry time relative to now.
@@ -424,8 +446,7 @@ private:
   {
     typedef typename Protocol::resolver resolver_type;
     typedef typename resolver_type::iterator iterator_type;
-    resolver_type resolver(
-        boost::base_from_member<boost::asio::io_service>::member);
+    resolver_type resolver(detail::socket_streambuf_base::io_service_);
     iterator_type i = resolver.resolve(query, ec_);
     if (!ec_)
     {
@@ -477,12 +498,12 @@ private:
 
     void operator()(const boost::system::error_code&)
     {
-      time_type now = TimeTraits::now();
+      time_type now = traits_helper::now();
 
       time_type expiry_time = this_->timer_service_->expires_at(
             this_->timer_implementation_);
 
-      if (TimeTraits::less_than(now, expiry_time))
+      if (traits_helper::less_than(now, expiry_time))
       {
         this_->timer_state_ = timer_is_pending;
         this_->timer_service_->async_wait(this_->timer_implementation_, *this);
@@ -501,7 +522,7 @@ private:
     if (timer_service_ == 0)
     {
       TimerService& timer_service = use_service<TimerService>(
-          boost::base_from_member<boost::asio::io_service>::member);
+          detail::socket_streambuf_base::io_service_);
       timer_service.construct(timer_implementation_);
       timer_service_ = &timer_service;
     }
@@ -543,6 +564,6 @@ private:
 # undef BOOST_ASIO_PRIVATE_CONNECT_DEF
 #endif // !defined(BOOST_ASIO_HAS_VARIADIC_TEMPLATES)
 
-#endif // !defined(BOOST_NO_IOSTREAM)
+#endif // !defined(BOOST_ASIO_NO_IOSTREAM)
 
 #endif // BOOST_ASIO_BASIC_SOCKET_STREAMBUF_HPP

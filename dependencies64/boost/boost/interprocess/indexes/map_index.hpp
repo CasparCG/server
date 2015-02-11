@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2005-2009. Distributed under the Boost
+// (C) Copyright Ion Gaztanaga 2005-2012. Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -10,6 +10,10 @@
 
 #ifndef BOOST_INTERPROCESS_MAP_INDEX_HPP
 #define BOOST_INTERPROCESS_MAP_INDEX_HPP
+
+#if defined(_MSC_VER)
+#  pragma once
+#endif
 
 #include <boost/interprocess/detail/config_begin.hpp>
 #include <boost/interprocess/detail/workaround.hpp>
@@ -48,19 +52,19 @@ struct map_index_aux
 
 }  //namespace ipcdetail {
 
-//!Index type based in boost::interprocess::map. Just derives from boost::interprocess::map 
+//!Index type based in boost::interprocess::map. Just derives from boost::interprocess::map
 //!and defines the interface needed by managed memory segments
 template <class MapConfig>
 class map_index
    //Derive class from map specialization
    : public ipcdetail::map_index_aux<MapConfig>::index_t
 {
-   /// @cond
+   #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
    typedef ipcdetail::map_index_aux<MapConfig>  index_aux;
    typedef typename index_aux::index_t       base_type;
    typedef typename MapConfig::
       segment_manager_base          segment_manager_base;
-   /// @endcond
+   #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 
    public:
    //!Constructor. Takes a pointer to the
@@ -80,7 +84,7 @@ class map_index
    {  base_type::get_stored_allocator().deallocate_free_blocks(); }
 };
 
-/// @cond
+#if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
 
 //!Trait class to detect if an index is a node
 //!index. This allows more efficient operations
@@ -89,9 +93,9 @@ template<class MapConfig>
 struct is_node_index
    <boost::interprocess::map_index<MapConfig> >
 {
-   enum {   value = true };
+   static const bool value = true;
 };
-/// @endcond
+#endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 
 }}   //namespace boost { namespace interprocess {
 

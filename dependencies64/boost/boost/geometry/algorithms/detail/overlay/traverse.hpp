@@ -1,6 +1,6 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
 
 // Use, modification and distribution is subject to the Boost Software License,
 // Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
@@ -9,55 +9,59 @@
 #ifndef BOOST_GEOMETRY_ALGORITHMS_DETAIL_OVERLAY_TRAVERSE_HPP
 #define BOOST_GEOMETRY_ALGORITHMS_DETAIL_OVERLAY_TRAVERSE_HPP
 
-
 #include <cstddef>
 
 #include <boost/range.hpp>
 
-#include <boost/geometry/algorithms/detail/overlay/append_no_duplicates.hpp>
 #include <boost/geometry/algorithms/detail/overlay/backtrack_check_si.hpp>
 #include <boost/geometry/algorithms/detail/overlay/copy_segments.hpp>
 #include <boost/geometry/algorithms/detail/overlay/turn_info.hpp>
+#include <boost/geometry/algorithms/num_points.hpp>
 #include <boost/geometry/core/access.hpp>
+#include <boost/geometry/core/closure.hpp>
 #include <boost/geometry/core/coordinate_dimension.hpp>
 #include <boost/geometry/geometries/concepts/check.hpp>
 
-
-#if defined(BOOST_GEOMETRY_DEBUG_INTERSECTION) || defined(BOOST_GEOMETRY_OVERLAY_REPORT_WKT)
+#if defined(BOOST_GEOMETRY_DEBUG_INTERSECTION) \
+    || defined(BOOST_GEOMETRY_OVERLAY_REPORT_WKT) \
+    || defined(BOOST_GEOMETRY_DEBUG_TRAVERSE)
 #  include <string>
 #  include <boost/geometry/algorithms/detail/overlay/debug_turn_info.hpp>
-#  include <boost/geometry/domains/gis/io/wkt/wkt.hpp>
+#  include <boost/geometry/io/wkt/wkt.hpp>
 #endif
-
-
 
 namespace boost { namespace geometry
 {
-
 
 #ifndef DOXYGEN_NO_DETAIL
 namespace detail { namespace overlay
 {
 
 template <typename Turn, typename Operation>
-inline void debug_traverse(Turn const& turn, Operation op, 
+#ifdef BOOST_GEOMETRY_DEBUG_TRAVERSE
+inline void debug_traverse(Turn const& turn, Operation op,
                 std::string const& header)
 {
-#ifdef BOOST_GEOMETRY_DEBUG_TRAVERSE
     std::cout << header
         << " at " << op.seg_id
+        << " meth: " << method_char(turn.method)
         << " op: " << operation_char(op.operation)
         << " vis: " << visited_char(op.visited)
         << " of:  " << operation_char(turn.operations[0].operation)
         << operation_char(turn.operations[1].operation)
+        << " " << geometry::wkt(turn.point)
         << std::endl;
 
     if (boost::contains(header, "Finished"))
     {
         std::cout << std::endl;
     }
-#endif
 }
+#else
+inline void debug_traverse(Turn const& , Operation, const char*)
+{
+}
+#endif
 
 
 template <typename Info, typename Turn>
@@ -89,14 +93,16 @@ template
     typename G1,
     typename G2,
     typename Turns,
-    typename IntersectionInfo
+    typename IntersectionInfo,
+    typename RobustPolicy
 >
 inline bool assign_next_ip(G1 const& g1, G2 const& g2,
             Turns& turns,
             typename boost::range_iterator<Turns>::type& ip,
             GeometryOut& current_output,
             IntersectionInfo& info,
-            segment_identifier& seg_id)
+            segment_identifier& seg_id,
+            RobustPolicy const& robust_policy)
 {
     info.visited.set_visited();
     set_visited_for_continue(*ip, info);
@@ -104,7 +110,7 @@ inline bool assign_next_ip(G1 const& g1, G2 const& g2,
     // If there is no next IP on this segment
     if (info.enriched.next_ip_index < 0)
     {
-        if (info.enriched.travels_to_vertex_index < 0 
+        if (info.enriched.travels_to_vertex_index < 0
             || info.enriched.travels_to_ip_index < 0)
         {
             return false;
@@ -117,12 +123,14 @@ inline bool assign_next_ip(G1 const& g1, G2 const& g2,
         {
             geometry::copy_segments<Reverse1>(g1, info.seg_id,
                     info.enriched.travels_to_vertex_index,
+                    robust_policy,
                     current_output);
         }
         else
         {
             geometry::copy_segments<Reverse2>(g2, info.seg_id,
                     info.enriched.travels_to_vertex_index,
+                    robust_policy,
                     current_output);
         }
         seg_id = info.seg_id;
@@ -134,12 +142,16 @@ inline bool assign_next_ip(G1 const& g1, G2 const& g2,
         seg_id = info.seg_id;
     }
 
-    detail::overlay::append_no_duplicates(current_output, ip->point);
+    detail::overlay::append_no_dups_or_spikes(current_output, ip->point,
+        robust_policy);
+
     return true;
 }
 
 
-inline bool select_source(operation_type operation, int source1, int source2)
+inline bool select_source(operation_type operation,
+                          signed_index_type source1,
+                          signed_index_type source2)
 {
     return (operation == operation_intersection && source1 != source2)
         || (operation == operation_union && source1 == source2)
@@ -224,18 +236,26 @@ template
 class traverse
 {
 public :
-    template <typename Turns, typename Rings>
+    template <typename RobustPolicy, typename Turns, typename Rings>
     static inline void apply(Geometry1 const& geometry1,
                 Geometry2 const& geometry2,
                 detail::overlay::operation_type operation,
+                RobustPolicy const& robust_policy,
                 Turns& turns, Rings& rings)
     {
+        typedef typename boost::range_value<Rings>::type ring_type;
         typedef typename boost::range_iterator<Turns>::type turn_iterator;
         typedef typename boost::range_value<Turns>::type turn_type;
         typedef typename boost::range_iterator
             <
                 typename turn_type::container_type
             >::type turn_operation_iterator_type;
+
+        std::size_t const min_num_points
+                = core_detail::closure::minimum_ring_size
+                        <
+                            geometry::closure<ring_type>::value
+                        >::value;
 
         std::size_t size_at_start = boost::size(rings);
 
@@ -250,7 +270,7 @@ public :
                 ++it)
             {
                 // Skip discarded ones
-                if (! (it->is_discarded() || it->blocked()))
+                if (! (it->discarded || ! it->selectable_start || it->blocked()))
                 {
                     for (turn_operation_iterator_type iit = boost::begin(it->operations);
                         state.good() && iit != boost::end(it->operations);
@@ -264,9 +284,9 @@ public :
                         {
                             set_visited_for_continue(*it, *iit);
 
-                            typename boost::range_value<Rings>::type current_output;
-                            detail::overlay::append_no_duplicates(current_output, 
-                                        it->point, true);
+                            ring_type current_output;
+                            detail::overlay::append_no_dups_or_spikes(current_output,
+                                it->point, robust_policy);
 
                             turn_iterator current = it;
                             turn_operation_iterator_type current_iit = iit;
@@ -276,13 +296,14 @@ public :
                                         geometry1, geometry2,
                                         turns,
                                         current, current_output,
-                                        *iit, current_seg_id))
+                                        *iit, current_seg_id,
+                                        robust_policy))
                             {
                                 Backtrack::apply(
-                                    size_at_start, 
+                                    size_at_start,
                                     rings, current_output, turns, *current_iit,
                                     "No next IP",
-                                    geometry1, geometry2, state);
+                                    geometry1, geometry2, robust_policy, state);
                             }
 
                             if (! detail::overlay::select_next_ip(
@@ -292,10 +313,10 @@ public :
                                             current_iit))
                             {
                                 Backtrack::apply(
-                                    size_at_start, 
+                                    size_at_start,
                                     rings, current_output, turns, *iit,
                                     "Dead end at start",
-                                    geometry1, geometry2, state);
+                                    geometry1, geometry2, robust_policy, state);
                             }
                             else
                             {
@@ -305,7 +326,7 @@ public :
                                 detail::overlay::debug_traverse(*current, *current_iit, "Selected  ");
 
 
-                                unsigned int i = 0;
+                                typename boost::range_size<Turns>::type i = 0;
 
                                 while (current_iit != iit && state.good())
                                 {
@@ -314,10 +335,10 @@ public :
                                         // It visits a visited node again, without passing the start node.
                                         // This makes it suspicious for endless loops
                                         Backtrack::apply(
-                                            size_at_start, 
+                                            size_at_start,
                                             rings,  current_output, turns, *iit,
                                             "Visit again",
-                                            geometry1, geometry2, state);
+                                            geometry1, geometry2, robust_policy, state);
                                     }
                                     else
                                     {
@@ -336,7 +357,8 @@ public :
                                         detail::overlay::assign_next_ip<Reverse1, Reverse2>(
                                             geometry1, geometry2,
                                             turns, current, current_output,
-                                            *current_iit, current_seg_id);
+                                            *current_iit, current_seg_id,
+                                            robust_policy);
 
                                         if (! detail::overlay::select_next_ip(
                                                     operation,
@@ -348,12 +370,15 @@ public :
                                             // Should not occur in self-intersecting polygons without spikes
                                             // Might occur in polygons with spikes
                                             Backtrack::apply(
-                                                size_at_start, 
+                                                size_at_start,
                                                 rings,  current_output, turns, *iit,
                                                 "Dead end",
-                                                geometry1, geometry2, state);
+                                                geometry1, geometry2, robust_policy, state);
                                         }
-                                        detail::overlay::debug_traverse(*current, *current_iit, "Selected  ");
+                                        else
+                                        {
+                                            detail::overlay::debug_traverse(*current, *current_iit, "Selected  ");
+                                        }
 
                                         if (i++ > 2 + 2 * turns.size())
                                         {
@@ -361,10 +386,10 @@ public :
                                             // than turn points.
                                             // Turn points marked as "ii" can be visited twice.
                                             Backtrack::apply(
-                                                size_at_start, 
+                                                size_at_start,
                                                 rings,  current_output, turns, *iit,
                                                 "Endless loop",
-                                                geometry1, geometry2, state);
+                                                geometry1, geometry2, robust_policy, state);
                                         }
                                     }
                                 }
@@ -373,7 +398,11 @@ public :
                                 {
                                     iit->visited.set_finished();
                                     detail::overlay::debug_traverse(*current, *iit, "->Finished");
-                                    rings.push_back(current_output);
+                                    if (geometry::num_points(current_output) >= min_num_points)
+                                    {
+                                        clean_closing_dups_and_spikes(current_output, robust_policy);
+                                        rings.push_back(current_output);
+                                    }
                                 }
                             }
                         }
@@ -387,8 +416,6 @@ public :
 }} // namespace detail::overlay
 #endif // DOXYGEN_NO_DETAIL
 
-
 }} // namespace boost::geometry
-
 
 #endif // BOOST_GEOMETRY_ALGORITHMS_DETAIL_OVERLAY_TRAVERSE_HPP

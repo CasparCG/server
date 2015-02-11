@@ -736,7 +736,7 @@ mpfr::mpreal erf_inv_imp(const mpfr::mpreal& p, const mpfr::mpreal& q, const Pol
    return result;
 }
 
-mpfr::mpreal bessel_i0(mpfr::mpreal x)
+inline mpfr::mpreal bessel_i0(mpfr::mpreal x)
 {
     static const mpfr::mpreal P1[] = {
         boost::lexical_cast<mpfr::mpreal>("-2.2335582639474375249e+15"),
@@ -802,7 +802,7 @@ mpfr::mpreal bessel_i0(mpfr::mpreal x)
     }
     else                                // x in (15, \infty)
     {
-        mpfr::mpreal y = 1 / x - 1 / 15;
+        mpfr::mpreal y = 1 / x - mpfr::mpreal(1) / 15;
         r = evaluate_polynomial(P2, y) / evaluate_polynomial(Q2, y);
         factor = exp(x) / sqrt(x);
         value = factor * r;
@@ -811,7 +811,7 @@ mpfr::mpreal bessel_i0(mpfr::mpreal x)
     return value;
 }
 
-mpfr::mpreal bessel_i1(mpfr::mpreal x)
+inline mpfr::mpreal bessel_i1(mpfr::mpreal x)
 {
     static const mpfr::mpreal P1[] = {
         static_cast<mpfr::mpreal>("-1.4577180278143463643e+15"),

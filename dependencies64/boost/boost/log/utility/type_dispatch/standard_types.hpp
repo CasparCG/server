@@ -1,5 +1,5 @@
 /*
- *          Copyright Andrey Semashev 2007 - 2010.
+ *          Copyright Andrey Semashev 2007 - 2014.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -12,22 +12,24 @@
  * The header contains definition of standard types supported by the library by default.
  */
 
-#if (defined(_MSC_VER) && _MSC_VER > 1000)
-#pragma once
-#endif // _MSC_VER > 1000
-
 #ifndef BOOST_LOG_STANDARD_TYPES_HPP_INCLUDED_
 #define BOOST_LOG_STANDARD_TYPES_HPP_INCLUDED_
 
 #include <string>
 #include <boost/mpl/vector.hpp>
-#include <boost/mpl/joint_view.hpp>
-#include <boost/log/detail/prologue.hpp>
-#include <boost/log/utility/string_literal.hpp>
+#include <boost/mpl/copy.hpp>
+#include <boost/mpl/back_inserter.hpp>
+#include <boost/log/detail/config.hpp>
+#include <boost/log/utility/string_literal_fwd.hpp>
+#include <boost/log/detail/header.hpp>
+
+#ifdef BOOST_HAS_PRAGMA_ONCE
+#pragma once
+#endif
 
 namespace boost {
 
-namespace BOOST_LOG_NAMESPACE {
+BOOST_LOG_OPEN_NAMESPACE
 
 /*!
  * An MPL-sequence of integral types of attributes, supported by default
@@ -50,7 +52,7 @@ typedef mpl::vector<
     , long long
     , unsigned long long
 #endif // defined(BOOST_HAS_LONG_LONG)
->::type integral_types;
+> integral_types;
 
 /*!
  * An MPL-sequence of FP types of attributes, supported by default
@@ -59,50 +61,45 @@ typedef mpl::vector<
     float,
     double,
     long double
->::type floating_point_types;
+> floating_point_types;
 
 /*!
  * An MPL-sequence of all numeric types of attributes, supported by default
  */
-typedef mpl::joint_view<
-    integral_types,
-    floating_point_types
+typedef mpl::copy<
+    floating_point_types,
+    mpl::back_inserter< integral_types >
 >::type numeric_types;
 
 /*!
  * An MPL-sequence of string types of attributes, supported by default
  */
-template< typename CharT >
-struct basic_string_types :
-    public mpl::vector<
-        std::basic_string< CharT >,
-        basic_string_literal< CharT >
-    >::type
-{
-};
-
+typedef mpl::vector<
 #ifdef BOOST_LOG_USE_CHAR
-typedef basic_string_types< char > string_types;        //!< Convenience typedef for narrow-character string types
+    std::string,
+    string_literal
+#ifdef BOOST_LOG_USE_WCHAR_T
+    ,
+#endif
 #endif
 #ifdef BOOST_LOG_USE_WCHAR_T
-typedef basic_string_types< wchar_t > wstring_types;    //!< Convenience typedef for wide-character string types
+    std::wstring,
+    wstring_literal
 #endif
+> string_types;
 
 /*!
- * An auxiliary type sequence maker. The sequence contains all
- * attribute value types that are supported by the library by default.
+ * An MPL-sequence of all attribute value types that are supported by the library by default.
  */
-template< typename CharT >
-struct make_default_attribute_types :
-    public mpl::joint_view<
-        numeric_types,
-        basic_string_types< CharT >
-    >
-{
-};
+typedef mpl::copy<
+    string_types,
+    mpl::back_inserter< numeric_types >
+>::type default_attribute_types;
 
-} // namespace log
+BOOST_LOG_CLOSE_NAMESPACE // namespace log
 
 } // namespace boost
+
+#include <boost/log/detail/footer.hpp>
 
 #endif // BOOST_LOG_STANDARD_TYPES_HPP_INCLUDED_

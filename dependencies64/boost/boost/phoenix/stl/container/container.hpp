@@ -2,7 +2,7 @@
     Copyright (c) 2004 Angus Leeming
     Copyright (c) 2004 Joel de Guzman
 
-    Distributed under the Boost Software License, Version 1.0. (See accompanying 
+    Distributed under the Boost Software License, Version 1.0. (See accompanying
     file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 ==============================================================================*/
 #ifndef BOOST_PHOENIX_STL_CONTAINER_CONTAINER_HPP
@@ -98,7 +98,7 @@ namespace boost { namespace phoenix
             {
                 typedef typename add_reference<C>::type type;
             };
-            
+
             template <
                 typename This
               , typename C
@@ -109,7 +109,7 @@ namespace boost { namespace phoenix
             {
                 typedef typename add_reference<C>::type type;
             };
-            
+
             template <
                 typename This
               , typename C
@@ -189,7 +189,7 @@ namespace boost { namespace phoenix
             template <typename This, typename C>
             struct result<This(C&)>
             {
-                typedef 
+                typedef
                     typename const_qualified_reference_of<C>::type
                 type;
             };
@@ -349,17 +349,39 @@ namespace boost { namespace phoenix
             {};
 
             template <typename C, typename Arg1>
-            typename result_of::erase<C, Arg1>::type
+            typename stl_impl::disable_if_is_void<
+                typename result_of::erase<C, Arg1>::type
+            >::type
             operator()(C& c, Arg1 arg1) const
             {
                 return c.erase(arg1);
             }
 
+            template <typename C, typename Arg1>
+            typename stl_impl::enable_if_is_void<
+                typename result_of::erase<C, Arg1>::type
+            >::type
+            operator()(C& c, Arg1 arg1) const
+            {
+                c.erase(arg1);
+            }
+
             template <typename C, typename Arg1, typename Arg2>
-            typename result_of::erase<C, Arg1, Arg2>::type
+            typename stl_impl::disable_if_is_void<
+                typename result_of::erase<C, Arg1, Arg2>::type
+            >::type
             operator()(C& c, Arg1 arg1, Arg2 arg2) const
             {
                 return c.erase(arg1, arg2);
+            }
+
+            template <typename C, typename Arg1, typename Arg2>
+            typename stl_impl::enable_if_is_void<
+                typename result_of::erase<C, Arg1, Arg2>::type
+            >::type
+            operator()(C& c, Arg1 arg1, Arg2 arg2) const
+            {
+                c.erase(arg1, arg2);
             }
         };
 
@@ -482,7 +504,7 @@ namespace boost { namespace phoenix
             struct result<This(C &, Arg1)>
                 : result_of::insert<C, Arg1>
             {};
-            
+
             template <
                 typename This
               , typename C
@@ -492,7 +514,7 @@ namespace boost { namespace phoenix
             struct result<This(C &, Arg1, Arg2)>
                 : result_of::insert<C, Arg1, Arg2>
             {};
-            
+
             template <
                 typename This
               , typename C
@@ -512,18 +534,41 @@ namespace boost { namespace phoenix
             }
 
             template <typename C, typename Arg1, typename Arg2>
-            typename result<insert(C&, Arg1, Arg2)>::type
+            typename stl_impl::disable_if_is_void<
+                typename result<insert(C&, Arg1, Arg2)>::type
+            >::type
             operator()(C& c, Arg1 arg1, Arg2 arg2) const
             {
                 return c.insert(arg1, arg2);
             }
 
+            template <typename C, typename Arg1, typename Arg2>
+            typename stl_impl::enable_if_is_void<
+                typename result<insert(C&, Arg1, Arg2)>::type
+            >::type
+            operator()(C& c, Arg1 arg1, Arg2 arg2) const
+            {
+                c.insert(arg1, arg2);
+            }
+
             template <typename C, typename Arg1, typename Arg2, typename Arg3>
-            typename result<insert(C&, Arg1, Arg2, Arg3)>::type
+            typename stl_impl::disable_if_is_void<
+                typename result<insert(C&, Arg1, Arg2, Arg3)>::type
+            >::type
             operator()(
                 C& c, Arg1 arg1, Arg2 arg2, Arg3 arg3) const
             {
                 return c.insert(arg1, arg2, arg3);
+            }
+
+            template <typename C, typename Arg1, typename Arg2, typename Arg3>
+            typename stl_impl::enable_if_is_void<
+                typename result<insert(C&, Arg1, Arg2, Arg3)>::type
+            >::type
+            operator()(
+                C& c, Arg1 arg1, Arg2 arg2, Arg3 arg3) const
+            {
+                c.insert(arg1, arg2, arg3);
             }
         };
 
@@ -666,7 +711,7 @@ namespace boost { namespace phoenix
             template <typename C, typename Arg>
             void operator()(C& c, Arg const& count) const
             {
-                return c.reserve(count);
+                c.reserve(count);
             }
         };
 
@@ -677,13 +722,13 @@ namespace boost { namespace phoenix
             template <typename C, typename Arg1>
             void operator()(C& c, Arg1 const& arg1) const
             {
-                return c.resize(arg1);
+                c.resize(arg1);
             }
 
             template <typename C, typename Arg1, typename Arg2>
             void operator()(C& c, Arg1 const& arg1, Arg2 const& arg2) const
             {
-                return c.resize(arg1, arg2);
+                c.resize(arg1, arg2);
             }
         };
 
@@ -786,41 +831,45 @@ namespace boost { namespace phoenix
     //  The lazy functions themselves.
     //
     ///////////////////////////////////////////////////////////////////////////////
-    BOOST_PHOENIX_ADAPT_CALLABLE(assign, boost::phoenix::stl::assign, 2)
-    BOOST_PHOENIX_ADAPT_CALLABLE(assign, boost::phoenix::stl::assign, 3)
-    BOOST_PHOENIX_ADAPT_CALLABLE(assign, boost::phoenix::stl::assign, 4)
-    BOOST_PHOENIX_ADAPT_CALLABLE(at, ::boost::phoenix::stl::at_impl, 2)
-    BOOST_PHOENIX_ADAPT_CALLABLE(back, stl::back, 1)
-    BOOST_PHOENIX_ADAPT_CALLABLE(begin, stl::begin, 1)
-    BOOST_PHOENIX_ADAPT_CALLABLE(capacity, stl::capacity, 1)
-    BOOST_PHOENIX_ADAPT_CALLABLE(clear, stl::clear, 1)
-    BOOST_PHOENIX_ADAPT_CALLABLE(empty, stl::empty, 1)
-    BOOST_PHOENIX_ADAPT_CALLABLE(end, stl::end, 1)
-    BOOST_PHOENIX_ADAPT_CALLABLE(erase, stl::erase, 2)
-    BOOST_PHOENIX_ADAPT_CALLABLE(erase, stl::erase, 3)
-    BOOST_PHOENIX_ADAPT_CALLABLE(front, stl::front, 1)
-    BOOST_PHOENIX_ADAPT_CALLABLE(get_allocator, stl::get_allocator, 1)
-    BOOST_PHOENIX_ADAPT_CALLABLE(insert, stl::insert, 2)
-    BOOST_PHOENIX_ADAPT_CALLABLE(insert, stl::insert, 3)
-    BOOST_PHOENIX_ADAPT_CALLABLE(insert, stl::insert, 4)
-    BOOST_PHOENIX_ADAPT_CALLABLE(key_comp, stl::key_comp, 1)
-    BOOST_PHOENIX_ADAPT_CALLABLE(max_size, stl::max_size, 1)
-    BOOST_PHOENIX_ADAPT_CALLABLE(pop_back, stl::pop_back, 1)
-    BOOST_PHOENIX_ADAPT_CALLABLE(pop_front, stl::pop_front, 1)
-    BOOST_PHOENIX_ADAPT_CALLABLE(push_back, stl::push_back, 2)
-    BOOST_PHOENIX_ADAPT_CALLABLE(push_front, stl::push_front, 2)
-    BOOST_PHOENIX_ADAPT_CALLABLE(rbegin, stl::rbegin, 1)
-    BOOST_PHOENIX_ADAPT_CALLABLE(rend, stl::rend, 1)
-    BOOST_PHOENIX_ADAPT_CALLABLE(reserve, stl::reserve, 2)
-    BOOST_PHOENIX_ADAPT_CALLABLE(resize, stl::resize, 2)
-    BOOST_PHOENIX_ADAPT_CALLABLE(resize, stl::resize, 3)
-    BOOST_PHOENIX_ADAPT_CALLABLE(size, stl::size, 1)
-    BOOST_PHOENIX_ADAPT_CALLABLE(splice, stl::splice, 2)
-    BOOST_PHOENIX_ADAPT_CALLABLE(splice, stl::splice, 3)
-    BOOST_PHOENIX_ADAPT_CALLABLE(splice, stl::splice, 4)
-    BOOST_PHOENIX_ADAPT_CALLABLE(splice, stl::splice, 5)
-    BOOST_PHOENIX_ADAPT_CALLABLE(value_comp, stl::value_comp, 1)
+    namespace adl_barrier
+    {
+        BOOST_PHOENIX_ADAPT_CALLABLE(assign, boost::phoenix::stl::assign, 2)
+        BOOST_PHOENIX_ADAPT_CALLABLE(assign, boost::phoenix::stl::assign, 3)
+        BOOST_PHOENIX_ADAPT_CALLABLE(assign, boost::phoenix::stl::assign, 4)
+        BOOST_PHOENIX_ADAPT_CALLABLE(at, ::boost::phoenix::stl::at_impl, 2)
+        BOOST_PHOENIX_ADAPT_CALLABLE(back, stl::back, 1)
+        BOOST_PHOENIX_ADAPT_CALLABLE(begin, stl::begin, 1)
+        BOOST_PHOENIX_ADAPT_CALLABLE(capacity, stl::capacity, 1)
+        BOOST_PHOENIX_ADAPT_CALLABLE(clear, stl::clear, 1)
+        BOOST_PHOENIX_ADAPT_CALLABLE(empty, stl::empty, 1)
+        BOOST_PHOENIX_ADAPT_CALLABLE(end, stl::end, 1)
+        BOOST_PHOENIX_ADAPT_CALLABLE(erase, stl::erase, 2)
+        BOOST_PHOENIX_ADAPT_CALLABLE(erase, stl::erase, 3)
+        BOOST_PHOENIX_ADAPT_CALLABLE(front, stl::front, 1)
+        BOOST_PHOENIX_ADAPT_CALLABLE(get_allocator, stl::get_allocator, 1)
+        BOOST_PHOENIX_ADAPT_CALLABLE(insert, stl::insert, 2)
+        BOOST_PHOENIX_ADAPT_CALLABLE(insert, stl::insert, 3)
+        BOOST_PHOENIX_ADAPT_CALLABLE(insert, stl::insert, 4)
+        BOOST_PHOENIX_ADAPT_CALLABLE(key_comp, stl::key_comp, 1)
+        BOOST_PHOENIX_ADAPT_CALLABLE(max_size, stl::max_size, 1)
+        BOOST_PHOENIX_ADAPT_CALLABLE(pop_back, stl::pop_back, 1)
+        BOOST_PHOENIX_ADAPT_CALLABLE(pop_front, stl::pop_front, 1)
+        BOOST_PHOENIX_ADAPT_CALLABLE(push_back, stl::push_back, 2)
+        BOOST_PHOENIX_ADAPT_CALLABLE(push_front, stl::push_front, 2)
+        BOOST_PHOENIX_ADAPT_CALLABLE(rbegin, stl::rbegin, 1)
+        BOOST_PHOENIX_ADAPT_CALLABLE(rend, stl::rend, 1)
+        BOOST_PHOENIX_ADAPT_CALLABLE(reserve, stl::reserve, 2)
+        BOOST_PHOENIX_ADAPT_CALLABLE(resize, stl::resize, 2)
+        BOOST_PHOENIX_ADAPT_CALLABLE(resize, stl::resize, 3)
+        BOOST_PHOENIX_ADAPT_CALLABLE(size, stl::size, 1)
+        BOOST_PHOENIX_ADAPT_CALLABLE(splice, stl::splice, 2)
+        BOOST_PHOENIX_ADAPT_CALLABLE(splice, stl::splice, 3)
+        BOOST_PHOENIX_ADAPT_CALLABLE(splice, stl::splice, 4)
+        BOOST_PHOENIX_ADAPT_CALLABLE(splice, stl::splice, 5)
+        BOOST_PHOENIX_ADAPT_CALLABLE(value_comp, stl::value_comp, 1)
+    }
 
+    using namespace phoenix::adl_barrier;
 }} // namespace boost::phoenix
 
 #endif // BOOST_PHOENIX_STL_CONTAINERS_HPP

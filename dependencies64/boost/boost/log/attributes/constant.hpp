@@ -1,5 +1,5 @@
 /*
- *          Copyright Andrey Semashev 2007 - 2010.
+ *          Copyright Andrey Semashev 2007 - 2014.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -12,71 +12,111 @@
  * The header contains implementation of a constant attribute.
  */
 
-#if (defined(_MSC_VER) && _MSC_VER > 1000)
-#pragma once
-#endif // _MSC_VER > 1000
-
 #ifndef BOOST_LOG_ATTRIBUTES_CONSTANT_HPP_INCLUDED_
 #define BOOST_LOG_ATTRIBUTES_CONSTANT_HPP_INCLUDED_
 
-#include <boost/shared_ptr.hpp>
-#include <boost/make_shared.hpp>
-#include <boost/log/detail/prologue.hpp>
+#include <boost/move/core.hpp>
+#include <boost/move/utility.hpp>
+#include <boost/type_traits/remove_reference.hpp>
+#include <boost/log/detail/config.hpp>
+#include <boost/log/detail/embedded_string_type.hpp>
 #include <boost/log/attributes/attribute.hpp>
-#include <boost/log/attributes/basic_attribute_value.hpp>
+#include <boost/log/attributes/attribute_cast.hpp>
+#include <boost/log/attributes/attribute_value_impl.hpp>
+#include <boost/log/detail/header.hpp>
+
+#ifdef BOOST_HAS_PRAGMA_ONCE
+#pragma once
+#endif
 
 namespace boost {
 
-namespace BOOST_LOG_NAMESPACE {
+BOOST_LOG_OPEN_NAMESPACE
 
 namespace attributes {
 
 /*!
  * \brief A class of an attribute that holds a single constant value
  *
- * The constant is a simpliest and one of the most frequently types of attributes.
+ * The constant is a simplest and one of the most frequently used types of attributes.
  * It stores a constant value, which it eventually returns as its value each time
  * requested.
- *
- * \internal The attribute attempts to optimize memory allocations and implements both
- *           attribute and \c attribute_value interfaces. However, the value can be detached from
- *           the attribute if \c detach_from_thread is called.
  */
 template< typename T >
 class constant :
-    public attribute,
-    public basic_attribute_value< T >
+    public attribute
 {
-    //! Base type
-    typedef basic_attribute_value< T > base_type;
-
 public:
-    //! A held constant type
-    typedef typename base_type::held_type held_type;
+    //! Attribute value type
+    typedef T value_type;
+
+protected:
+    //! Factory implementation
+    class BOOST_SYMBOL_VISIBLE impl :
+        public attribute_value_impl< value_type >
+    {
+        //! Base type
+        typedef attribute_value_impl< value_type > base_type;
+
+    public:
+        /*!
+         * Constructor with the stored value initialization
+         */
+        explicit impl(value_type const& value) : base_type(value) {}
+        /*!
+         * Constructor with the stored value initialization
+         */
+        explicit impl(BOOST_RV_REF(value_type) value) : base_type(boost::move(value)) {}
+    };
 
 public:
     /*!
      * Constructor with the stored value initialization
      */
-    explicit constant(held_type const& value) : base_type(value) {}
-
-    shared_ptr< attribute_value > get_value()
+    explicit constant(value_type const& value) : attribute(new impl(value)) {}
+    /*!
+     * Constructor with the stored value initialization
+     */
+    explicit constant(BOOST_RV_REF(value_type) value) : attribute(new impl(boost::move(value))) {}
+    /*!
+     * Constructor for casting support
+     */
+    explicit constant(cast_source const& source) : attribute(source.as< impl >())
     {
-        return this->BOOST_NESTED_TEMPLATE shared_from_this< base_type >();
     }
 
-    shared_ptr< attribute_value > detach_from_thread()
+    /*!
+     * \return Reference to the contained value.
+     */
+    value_type const& get() const
     {
-        // We have to create a copy of the constant because the attribute object
-        // can be created on the stack and get destroyed even if there are shared_ptrs that point to it.
-        return boost::make_shared< base_type >(static_cast< base_type const& >(*this));
+        return static_cast< impl* >(this->get_impl())->get();
     }
 };
 
+/*!
+ * The function constructs a \c constant attribute containing the provided value.
+ * The function automatically converts C string arguments to \c std::basic_string objects.
+ */
+template< typename T >
+inline constant<
+    typename boost::log::aux::make_embedded_string_type<
+        typename remove_reference< T >::type
+    >::type
+> make_constant(BOOST_FWD_REF(T) val)
+{
+    typedef typename boost::log::aux::make_embedded_string_type<
+        typename remove_reference< T >::type
+    >::type value_type;
+    return constant< value_type >(boost::forward< T >(val));
+}
+
 } // namespace attributes
 
-} // namespace log
+BOOST_LOG_CLOSE_NAMESPACE // namespace log
 
 } // namespace boost
+
+#include <boost/log/detail/footer.hpp>
 
 #endif // BOOST_LOG_ATTRIBUTES_CONSTANT_HPP_INCLUDED_

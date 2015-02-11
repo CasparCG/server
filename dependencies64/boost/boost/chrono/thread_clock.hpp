@@ -7,18 +7,17 @@
 
 //  See http://www.boost.org/libs/system for documentation.
 
+#include <boost/chrono/config.hpp>
+
 #ifndef BOOST_CHRONO_THREAD_CLOCK_HPP
 #define BOOST_CHRONO_THREAD_CLOCK_HPP
 
-#include <boost/chrono/config.hpp>
 #if defined(BOOST_CHRONO_HAS_THREAD_CLOCK)
 
+#include <boost/chrono/config.hpp>
 #include <boost/chrono/duration.hpp>
 #include <boost/chrono/time_point.hpp>
-#if !defined BOOST_CHRONO_DONT_PROVIDE_HYBRID_ERROR_HANDLING
-#include <boost/system/error_code.hpp>
 #include <boost/chrono/detail/system.hpp>
-#endif
 #include <boost/chrono/clock_string.hpp>
 
 #ifndef BOOST_CHRONO_HEADER_ONLY
@@ -33,9 +32,9 @@ public:
     typedef duration::rep                        rep;
     typedef duration::period                     period;
     typedef chrono::time_point<thread_clock>    time_point;
-    BOOST_CHRONO_STATIC_CONSTEXPR bool is_steady =             BOOST_CHRONO_THREAD_CLOCK_IS_STEADY;
+    BOOST_STATIC_CONSTEXPR bool is_steady =             BOOST_CHRONO_THREAD_CLOCK_IS_STEADY;
 
-    static BOOST_CHRONO_INLINE time_point now( ) BOOST_CHRONO_NOEXCEPT;
+    static BOOST_CHRONO_INLINE time_point now( ) BOOST_NOEXCEPT;
 #if !defined BOOST_CHRONO_DONT_PROVIDE_HYBRID_ERROR_HANDLING
     static BOOST_CHRONO_INLINE time_point now( system::error_code & ec );
 #endif
@@ -47,7 +46,7 @@ struct clock_string<thread_clock, CharT>
   static std::basic_string<CharT> name()
   {
     static const CharT u[] =
-    { 't', 'h', 'r', 'e', 'd', '_',
+    { 't', 'h', 'r', 'e', 'a', 'd', '_',
       'c', 'l','o', 'c', 'k'};
     static const std::basic_string<CharT> str(u, u + sizeof(u)/sizeof(u[0]));
     return str;
@@ -55,7 +54,7 @@ struct clock_string<thread_clock, CharT>
   static std::basic_string<CharT> since()
   {
     const CharT u[] =
-    { ' ', 's', 'i', 'n', 'c', 'e', ' ', 't', 'r', 'e', 'a', 'd', ' ', 's', 't', 'a', 'r', 't', '-', 'u', 'p'};
+    { ' ', 's', 'i', 'n', 'c', 'e', ' ', 't', 'h', 'r', 'e', 'a', 'd', ' ', 's', 't', 'a', 'r', 't', '-', 'u', 'p'};
     const std::basic_string<CharT> str(u, u + sizeof(u)/sizeof(u[0]));
     return str;
   }

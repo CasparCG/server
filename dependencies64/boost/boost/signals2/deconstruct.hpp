@@ -26,7 +26,6 @@
 
 #include <boost/config.hpp>
 #include <boost/shared_ptr.hpp>
-#include <boost/signals2/deconstruct_ptr.hpp>
 #include <boost/type_traits/alignment_of.hpp>
 #include <boost/type_traits/remove_const.hpp>
 #include <boost/type_traits/type_with_alignment.hpp>
@@ -63,7 +62,7 @@ public:
         }
         return _sp;
     }
-#if !defined(BOOST_NO_VARIADIC_TEMPLATES) && !defined(BOOST_NO_RVALUE_REFERENCES)
+#if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) && !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
     template<class... Args>
       const shared_ptr<T>& postconstruct(Args && ... args)
     {
@@ -75,7 +74,7 @@ public:
         }
         return _sp;
     }
-#else // !defined(BOOST_NO_VARIADIC_TEMPLATES) && !defined(BOOST_NO_RVALUE_REFERENCES)
+#else // !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) && !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
     template<typename A1>
       const shared_ptr<T>& postconstruct(const A1 &a1) const
     {
@@ -183,7 +182,7 @@ public:
         }
         return _sp;
     }
-#endif // !defined(BOOST_NO_VARIADIC_TEMPLATES) && !defined(BOOST_NO_RVALUE_REFERENCES)
+#endif // !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) && !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
 private:
     friend class boost::signals2::deconstruct_access;
     postconstructor_invoker(const shared_ptr<T> & sp):
@@ -284,7 +283,7 @@ public:
 
     }
 
-#if !defined(BOOST_NO_VARIADIC_TEMPLATES) && !defined(BOOST_NO_RVALUE_REFERENCES)
+#if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) && !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
 
     // Variadic templates, rvalue reference
 
@@ -472,7 +471,7 @@ template< class T > postconstructor_invoker<T> deconstruct()
     return deconstruct_access::deconstruct<T>();
 }
 
-#if !defined(BOOST_NO_VARIADIC_TEMPLATES) && !defined(BOOST_NO_RVALUE_REFERENCES)
+#if !defined(BOOST_NO_CXX11_VARIADIC_TEMPLATES) && !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
 
 // Variadic templates, rvalue reference
 

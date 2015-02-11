@@ -1,5 +1,5 @@
 /*
- *          Copyright Andrey Semashev 2007 - 2010.
+ *          Copyright Andrey Semashev 2007 - 2014.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -10,66 +10,116 @@
  * \date   16.08.2009
  *
  * This header is the Boost.Log library implementation, see the library documentation
- * at http://www.boost.org/libs/log/doc/log.html.
+ * at http://www.boost.org/doc/libs/release/libs/log/doc/html/index.html.
  */
-
-#if (defined(_MSC_VER) && _MSC_VER > 1000)
-#pragma once
-#endif // _MSC_VER > 1000
 
 #ifndef BOOST_LOG_DETAIL_EMBEDDED_STRING_TYPE_HPP_INCLUDED_
 #define BOOST_LOG_DETAIL_EMBEDDED_STRING_TYPE_HPP_INCLUDED_
 
 #include <string>
-#include <boost/mpl/bool.hpp>
-#include <boost/mpl/eval_if.hpp>
-#include <boost/mpl/equal_to.hpp>
-#include <boost/mpl/identity.hpp>
-#include <boost/type_traits/is_array.hpp>
-#include <boost/type_traits/is_pointer.hpp>
 #include <boost/type_traits/remove_cv.hpp>
-#include <boost/type_traits/remove_extent.hpp>
-#include <boost/type_traits/remove_pointer.hpp>
-#include <boost/log/detail/prologue.hpp>
+#include <boost/log/detail/config.hpp>
+#include <boost/log/detail/header.hpp>
+
+#ifdef BOOST_HAS_PRAGMA_ONCE
+#pragma once
+#endif
 
 namespace boost {
 
-namespace BOOST_LOG_NAMESPACE {
+BOOST_LOG_OPEN_NAMESPACE
 
 namespace aux {
 
-    template< typename > struct is_char : mpl::false_ {};
-    template< > struct is_char< char > : mpl::true_ {};
-    template< > struct is_char< wchar_t > : mpl::true_ {};
+template< typename T, typename ArgT >
+struct make_embedded_string_type_impl
+{
+    typedef ArgT type;
+};
 
-    //! An auxiliary type translator to store strings by value in function objects
-    template< typename ArgT >
-    struct make_embedded_string_type
-    {
-        // Make sure that string literals and C strings are converted to STL strings
-        typedef typename remove_cv<
-            typename mpl::eval_if<
-                is_array< ArgT >,
-                remove_extent< ArgT >,
-                mpl::eval_if<
-                    is_pointer< ArgT >,
-                    remove_pointer< ArgT >,
-                    mpl::identity< void >
-                >
-            >::type
-        >::type root_type;
+template< typename ArgT >
+struct make_embedded_string_type_impl< char, ArgT >
+{
+    typedef std::basic_string< char > type;
+};
 
-        typedef typename mpl::eval_if<
-            is_char< root_type >,
-            mpl::identity< std::basic_string< root_type > >,
-            remove_cv< ArgT >
-        >::type type;
-    };
+template< typename ArgT >
+struct make_embedded_string_type_impl< const char, ArgT >
+{
+    typedef std::basic_string< char > type;
+};
+
+template< typename ArgT >
+struct make_embedded_string_type_impl< wchar_t, ArgT >
+{
+    typedef std::basic_string< wchar_t > type;
+};
+
+template< typename ArgT >
+struct make_embedded_string_type_impl< const wchar_t, ArgT >
+{
+    typedef std::basic_string< wchar_t > type;
+};
+
+#if !defined(BOOST_NO_CXX11_CHAR16_T)
+template< typename ArgT >
+struct make_embedded_string_type_impl< char16_t, ArgT >
+{
+    typedef std::basic_string< char16_t > type;
+};
+
+template< typename ArgT >
+struct make_embedded_string_type_impl< const char16_t, ArgT >
+{
+    typedef std::basic_string< char16_t > type;
+};
+#endif
+
+#if !defined(BOOST_NO_CXX11_CHAR32_T)
+template< typename ArgT >
+struct make_embedded_string_type_impl< char32_t, ArgT >
+{
+    typedef std::basic_string< char32_t > type;
+};
+
+template< typename ArgT >
+struct make_embedded_string_type_impl< const char32_t, ArgT >
+{
+    typedef std::basic_string< char32_t > type;
+};
+#endif
+
+//! An auxiliary type translator to store strings by value in function objects and attribute values
+template< typename ArgT >
+struct make_embedded_string_type :
+    public remove_cv< ArgT >
+{
+};
+
+template< typename ArgT >
+struct make_embedded_string_type< ArgT* > :
+    public make_embedded_string_type_impl< ArgT, ArgT* >
+{
+};
+
+template< typename ArgT, unsigned int CountV >
+struct make_embedded_string_type< ArgT[CountV] > :
+    public make_embedded_string_type_impl< ArgT, ArgT[CountV] >
+{
+};
+
+template< typename ArgT, unsigned int CountV >
+struct make_embedded_string_type< ArgT(&)[CountV] > :
+    public make_embedded_string_type_impl< ArgT, ArgT(&)[CountV] >
+{
+};
 
 } // namespace aux
 
-} // namespace log
+BOOST_LOG_CLOSE_NAMESPACE // namespace log
 
 } // namespace boost
+
+#include <boost/log/detail/footer.hpp>
 
 #endif // BOOST_LOG_DETAIL_EMBEDDED_STRING_TYPE_HPP_INCLUDED_

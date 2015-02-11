@@ -11,7 +11,7 @@
 #define BOOST_XPRESSIVE_REGEX_CONSTANTS_HPP_EAN_10_04_2005
 
 // MS compatible compilers support #pragma once
-#if defined(_MSC_VER) && (_MSC_VER >= 1020)
+#if defined(_MSC_VER)
 # pragma once
 #endif
 
@@ -232,7 +232,7 @@ enum error_type
                                 ///<
     error_badattr,              ///< Tried to read from an uninitialized attribute.
                                 ///<
-    error_internal              ///< An internal error has occured.
+    error_internal              ///< An internal error has occurred.
                                 ///<
 };
 

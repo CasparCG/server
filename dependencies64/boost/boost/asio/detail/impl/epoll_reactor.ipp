@@ -2,7 +2,7 @@
 // detail/impl/epoll_reactor.ipp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2011 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2014 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -127,7 +127,7 @@ void epoll_reactor::fork_service(boost::asio::io_service::fork_event fork_ev)
     for (descriptor_state* state = registered_descriptors_.first();
         state != 0; state = state->next_)
     {
-      ev.events = EPOLLIN | EPOLLERR | EPOLLHUP | EPOLLOUT | EPOLLPRI | EPOLLET;
+      ev.events = state->registered_events_;
       ev.data.ptr = state;
       int result = epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, state->descriptor_, &ev);
       if (result != 0)
@@ -156,14 +156,11 @@ int epoll_reactor::register_descriptor(socket_type descriptor,
     descriptor_data->reactor_ = this;
     descriptor_data->descriptor_ = descriptor;
     descriptor_data->shutdown_ = false;
-
-    for (int i = 0; i < max_ops; ++i)
-      descriptor_data->op_queue_is_empty_[i] =
-        descriptor_data->op_queue_[i].empty();
   }
 
   epoll_event ev = { 0, { 0 } };
-  ev.events = EPOLLIN | EPOLLERR | EPOLLHUP | EPOLLOUT | EPOLLPRI | EPOLLET;
+  ev.events = EPOLLIN | EPOLLERR | EPOLLHUP | EPOLLPRI | EPOLLET;
+  descriptor_data->registered_events_ = ev.events;
   ev.data.ptr = descriptor_data;
   int result = epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, descriptor, &ev);
   if (result != 0)
@@ -185,14 +182,11 @@ int epoll_reactor::register_internal_descriptor(
     descriptor_data->descriptor_ = descriptor;
     descriptor_data->shutdown_ = false;
     descriptor_data->op_queue_[op_type].push(op);
-
-    for (int i = 0; i < max_ops; ++i)
-      descriptor_data->op_queue_is_empty_[i] =
-        descriptor_data->op_queue_[i].empty();
   }
 
   epoll_event ev = { 0, { 0 } };
-  ev.events = EPOLLIN | EPOLLERR | EPOLLHUP | EPOLLOUT | EPOLLPRI | EPOLLET;
+  ev.events = EPOLLIN | EPOLLERR | EPOLLHUP | EPOLLPRI | EPOLLET;
+  descriptor_data->registered_events_ = ev.events;
   ev.data.ptr = descriptor_data;
   int result = epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, descriptor, &ev);
   if (result != 0)
@@ -210,72 +204,73 @@ void epoll_reactor::move_descriptor(socket_type,
 }
 
 void epoll_reactor::start_op(int op_type, socket_type descriptor,
-    epoll_reactor::per_descriptor_data& descriptor_data,
-    reactor_op* op, bool allow_speculative)
+    epoll_reactor::per_descriptor_data& descriptor_data, reactor_op* op,
+    bool is_continuation, bool allow_speculative)
 {
   if (!descriptor_data)
   {
     op->ec_ = boost::asio::error::bad_descriptor;
-    post_immediate_completion(op);
+    post_immediate_completion(op, is_continuation);
     return;
-  }
-
-  bool perform_speculative = allow_speculative;
-  if (perform_speculative)
-  {
-    if (descriptor_data->op_queue_is_empty_[op_type]
-        && (op_type != read_op
-          || descriptor_data->op_queue_is_empty_[except_op]))
-    {
-      if (op->perform())
-      {
-        io_service_.post_immediate_completion(op);
-        return;
-      }
-      perform_speculative = false;
-    }
   }
 
   mutex::scoped_lock descriptor_lock(descriptor_data->mutex_);
 
   if (descriptor_data->shutdown_)
   {
-    post_immediate_completion(op);
+    post_immediate_completion(op, is_continuation);
     return;
   }
 
-  for (int i = 0; i < max_ops; ++i)
-    descriptor_data->op_queue_is_empty_[i] =
-      descriptor_data->op_queue_[i].empty();
-
-  if (descriptor_data->op_queue_is_empty_[op_type])
+  if (descriptor_data->op_queue_[op_type].empty())
   {
-    if (allow_speculative)
+    if (allow_speculative
+        && (op_type != read_op
+          || descriptor_data->op_queue_[except_op].empty()))
     {
-      if (perform_speculative
-          && (op_type != read_op
-            || descriptor_data->op_queue_is_empty_[except_op]))
+      if (op->perform())
       {
-        if (op->perform())
+        descriptor_lock.unlock();
+        io_service_.post_immediate_completion(op, is_continuation);
+        return;
+      }
+
+      if (op_type == write_op)
+      {
+        if ((descriptor_data->registered_events_ & EPOLLOUT) == 0)
         {
-          descriptor_lock.unlock();
-          io_service_.post_immediate_completion(op);
-          return;
+          epoll_event ev = { 0, { 0 } };
+          ev.events = descriptor_data->registered_events_ | EPOLLOUT;
+          ev.data.ptr = descriptor_data;
+          if (epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, descriptor, &ev) == 0)
+          {
+            descriptor_data->registered_events_ |= ev.events;
+          }
+          else
+          {
+            op->ec_ = boost::system::error_code(errno,
+                boost::asio::error::get_system_category());
+            io_service_.post_immediate_completion(op, is_continuation);
+            return;
+          }
         }
       }
     }
     else
     {
+      if (op_type == write_op)
+      {
+        descriptor_data->registered_events_ |= EPOLLOUT;
+      }
+
       epoll_event ev = { 0, { 0 } };
-      ev.events = EPOLLIN | EPOLLERR | EPOLLHUP
-        | EPOLLOUT | EPOLLPRI | EPOLLET;
+      ev.events = descriptor_data->registered_events_;
       ev.data.ptr = descriptor_data;
       epoll_ctl(epoll_fd_, EPOLL_CTL_MOD, descriptor, &ev);
     }
   }
 
   descriptor_data->op_queue_[op_type].push(op);
-  descriptor_data->op_queue_is_empty_[op_type] = false;
   io_service_.work_started();
 }
 
@@ -471,7 +466,7 @@ int epoll_reactor::do_epoll_create()
   errno = EINVAL;
 #endif // defined(EPOLL_CLOEXEC)
 
-  if (fd == -1 && errno == EINVAL)
+  if (fd == -1 && (errno == EINVAL || errno == ENOSYS))
   {
     fd = epoll_create(epoll_size);
     if (fd != -1)
@@ -612,8 +607,9 @@ epoll_reactor::descriptor_state::descriptor_state()
 
 operation* epoll_reactor::descriptor_state::perform_io(uint32_t events)
 {
+  mutex_.lock();
   perform_io_cleanup_on_block_exit io_cleanup(reactor_);
-  mutex::scoped_lock descriptor_lock(mutex_);
+  mutex::scoped_lock descriptor_lock(mutex_, mutex::scoped_lock::adopt_lock);
 
   // Exception operations must be processed first to ensure that any
   // out-of-band data is read before normal data.

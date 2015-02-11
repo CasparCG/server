@@ -3,7 +3,7 @@
 
 /////////1/////////2/////////3/////////4/////////5/////////6/////////7/////////8
 // MS compatible compilers support #pragma once
-#if defined(_MSC_VER) && (_MSC_VER >= 1020)
+#if defined(_MSC_VER)
 # pragma once
 #endif
 
@@ -24,7 +24,7 @@
 #include <boost/preprocessor/facilities/empty.hpp>
 
 namespace std{
-    #if defined(__LIBCOMO__) || defined(__QNXNTO__) 
+    #if defined(__LIBCOMO__)
         using ::va_list;
     #endif
 } // namespace std

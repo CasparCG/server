@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -19,14 +19,14 @@
 
 #include <boost/geometry/geometries/concepts/check.hpp>
 #include <boost/geometry/algorithms/detail/assign_values.hpp>
-
+#include <boost/geometry/util/range.hpp>
 
 
 namespace boost { namespace geometry
 {
 
 #ifndef DOXYGEN_NO_DETAIL
-namespace detail 
+namespace detail
 {
 // Note: this is moved to namespace detail because the names and parameter orders
 // are not yet 100% clear.
@@ -67,20 +67,34 @@ inline void assign_box_corners(Box const& box,
             <max_corner, max_corner>(box, upper_right);
 }
 
+// Silence warning C4127: conditional expression is constant
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4127)
+#endif
+
+
 template <bool Reverse, typename Box, typename Range>
 inline void assign_box_corners_oriented(Box const& box, Range& corners)
 {
     if (Reverse)
     {
         // make counterclockwise ll,lr,ur,ul
-        assign_box_corners(box, corners[0], corners[1], corners[3], corners[2]);
+        assign_box_corners(box,
+                           range::at(corners, 0), range::at(corners, 1),
+                           range::at(corners, 3), range::at(corners, 2));
     }
     else
     {
         // make clockwise ll,ul,ur,lr
-        assign_box_corners(box, corners[0], corners[3], corners[1], corners[2]);
+        assign_box_corners(box,
+                           range::at(corners, 0), range::at(corners, 3),
+                           range::at(corners, 1), range::at(corners, 2));
     }
 }
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 
 } // namespace detail
