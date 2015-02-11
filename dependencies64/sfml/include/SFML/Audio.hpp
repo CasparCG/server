@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2009 Laurent Gomila (laurent.gom@gmail.com)
+// Copyright (C) 2007-2014 Laurent Gomila (laurent.gom@gmail.com)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -31,9 +31,20 @@
 
 #include <SFML/System.hpp>
 #include <SFML/Audio/Listener.hpp>
+#include <SFML/Audio/Music.hpp>
 #include <SFML/Audio/Sound.hpp>
 #include <SFML/Audio/SoundBuffer.hpp>
+#include <SFML/Audio/SoundBufferRecorder.hpp>
+#include <SFML/Audio/SoundRecorder.hpp>
 #include <SFML/Audio/SoundStream.hpp>
 
 
 #endif // SFML_AUDIO_HPP
+
+////////////////////////////////////////////////////////////
+/// \defgroup audio Audio module
+///
+/// Sounds, streaming (musics or custom sources), recording,
+/// spatialization.
+/// 
+////////////////////////////////////////////////////////////

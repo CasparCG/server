@@ -1,29 +1,21 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
 
-    This file is part of Threading Building Blocks.
+    This file is part of Threading Building Blocks. Threading Building Blocks is free software;
+    you can redistribute it and/or modify it under the terms of the GNU General Public License
+    version 2  as  published  by  the  Free Software Foundation.  Threading Building Blocks is
+    distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+    implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+    See  the GNU General Public License for more details.   You should have received a copy of
+    the  GNU General Public License along with Threading Building Blocks; if not, write to the
+    Free Software Foundation, Inc.,  51 Franklin St,  Fifth Floor,  Boston,  MA 02110-1301 USA
 
-    Threading Building Blocks is free software; you can redistribute it
-    and/or modify it under the terms of the GNU General Public License
-    version 2 as published by the Free Software Foundation.
-
-    Threading Building Blocks is distributed in the hope that it will be
-    useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with Threading Building Blocks; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-    As a special exception, you may use this file as part of a free software
-    library without restriction.  Specifically, if other files instantiate
-    templates or use macros or inline functions from this file, or you compile
-    this file and link it with other files to produce an executable, this
-    file does not by itself cause the resulting executable to be covered by
-    the GNU General Public License.  This exception does not however
-    invalidate any other reasons why the executable file might be covered by
-    the GNU General Public License.
+    As a special exception,  you may use this file  as part of a free software library without
+    restriction.  Specifically,  if other files instantiate templates  or use macros or inline
+    functions from this file, or you compile this file and link it with other files to produce
+    an executable,  this file does not by itself cause the resulting executable to be covered
+    by the GNU General Public License. This exception does not however invalidate any other
+    reasons why the executable file might be covered by the GNU General Public License.
 */
 
 #ifndef __TBB_spin_mutex_H
@@ -35,16 +27,17 @@
 #include "tbb_stddef.h"
 #include "tbb_machine.h"
 #include "tbb_profiling.h"
+#include "internal/_mutex_padding.h"
 
 namespace tbb {
 
 //! A lock that occupies a single byte.
-/** A spin_mutex is a spin mutex that fits in a single byte.  
-    It should be used only for locking short critical sections 
-    (typically less than 20 instructions) when fairness is not an issue.  
+/** A spin_mutex is a spin mutex that fits in a single byte.
+    It should be used only for locking short critical sections
+    (typically less than 20 instructions) when fairness is not an issue.
     If zero-initialized, the mutex is considered unheld.
     @ingroup synchronization */
-class spin_mutex {
+class spin_mutex : internal::mutex_copy_deprecated_and_disabled {
     //! 0 if lock is released, 1 if lock is acquired.
     __TBB_atomic_flag flag;
 
@@ -61,9 +54,12 @@ public:
     class scoped_lock : internal::no_copy {
     private:
         //! Points to currently held mutex, or NULL if no lock is held.
-        spin_mutex* my_mutex; 
+        spin_mutex* my_mutex;
 
         //! Value to store into spin_mutex::flag to unlock the mutex.
+        /** This variable is no longer used. Instead, 0 and 1 are used to
+            represent that the lock is free and acquired, respectively.
+            We keep the member variable here to ensure backward compatibility */
         __TBB_Flag my_unlock_value;
 
         //! Like acquire, but with ITT instrumentation.
@@ -82,13 +78,14 @@ public:
         scoped_lock() : my_mutex(NULL), my_unlock_value(0) {}
 
         //! Construct and acquire lock on a mutex.
-        scoped_lock( spin_mutex& m ) { 
+        scoped_lock( spin_mutex& m ) : my_unlock_value(0) {
+            internal::suppress_unused_warning(my_unlock_value);
 #if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
             my_mutex=NULL;
             internal_acquire(m);
 #else
-            my_unlock_value = __TBB_LockByte(m.flag);
             my_mutex=&m;
+            __TBB_LockByte(m.flag);
 #endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT*/
         }
 
@@ -97,8 +94,8 @@ public:
 #if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
             internal_acquire(m);
 #else
-            my_unlock_value = __TBB_LockByte(m.flag);
             my_mutex = &m;
+            __TBB_LockByte(m.flag);
 #endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT*/
         }
 
@@ -109,10 +106,8 @@ public:
             return internal_try_acquire(m);
 #else
             bool result = __TBB_TryLockByte(m.flag);
-            if( result ) {
-                my_unlock_value = 0;
+            if( result )
                 my_mutex = &m;
-            }
             return result;
 #endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT*/
         }
@@ -122,7 +117,7 @@ public:
 #if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
             internal_release();
 #else
-            __TBB_UnlockByte(my_mutex->flag, my_unlock_value);
+            __TBB_UnlockByte(my_mutex->flag);
             my_mutex = NULL;
 #endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT */
         }
@@ -133,12 +128,13 @@ public:
 #if TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT
                 internal_release();
 #else
-                __TBB_UnlockByte(my_mutex->flag, my_unlock_value);
+                __TBB_UnlockByte(my_mutex->flag);
 #endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT */
             }
         }
     };
 
+    //! Internal constructor with ITT instrumentation.
     void __TBB_EXPORTED_METHOD internal_construct();
 
     // Mutex traits
@@ -151,7 +147,7 @@ public:
     //! Acquire lock
     void lock() {
 #if TBB_USE_THREADING_TOOLS
-        aligned_space<scoped_lock,1> tmp;
+        aligned_space<scoped_lock> tmp;
         new(tmp.begin()) scoped_lock(*this);
 #else
         __TBB_LockByte(flag);
@@ -162,7 +158,7 @@ public:
     /** Return true if lock acquired; false otherwise. */
     bool try_lock() {
 #if TBB_USE_THREADING_TOOLS
-        aligned_space<scoped_lock,1> tmp;
+        aligned_space<scoped_lock> tmp;
         return (new(tmp.begin()) scoped_lock)->internal_try_acquire(*this);
 #else
         return __TBB_TryLockByte(flag);
@@ -172,10 +168,9 @@ public:
     //! Release lock
     void unlock() {
 #if TBB_USE_THREADING_TOOLS
-        aligned_space<scoped_lock,1> tmp;
+        aligned_space<scoped_lock> tmp;
         scoped_lock& s = *tmp.begin();
         s.my_mutex = this;
-        s.my_unlock_value = 0;
         s.internal_release();
 #else
         __TBB_store_with_release(flag, 0);
@@ -183,9 +178,34 @@ public:
     }
 
     friend class scoped_lock;
-};
+}; // end of spin_mutex
 
 __TBB_DEFINE_PROFILING_SET_NAME(spin_mutex)
+
+} // namespace tbb
+
+#if ( __TBB_x86_32 || __TBB_x86_64 )
+#include "internal/_x86_eliding_mutex_impl.h"
+#endif
+
+namespace tbb {
+//! A cross-platform spin mutex with speculative lock acquisition.
+/** On platforms with proper HW support, this lock may speculatively execute
+    its critical sections, using HW mechanisms to detect real data races and
+    ensure atomicity of the critical sections. In particular, it uses
+    Intel(R) Transactional Synchronization Extensions (Intel(R) TSX).
+    Without such HW support, it behaves like a spin_mutex.
+    It should be used for locking short critical sections where the lock is
+    contended but the data it protects are not.  If zero-initialized, the
+    mutex is considered unheld.
+    @ingroup synchronization */
+
+#if ( __TBB_x86_32 || __TBB_x86_64 )
+typedef interface7::internal::padded_mutex<interface7::internal::x86_eliding_mutex,false> speculative_spin_mutex;
+#else
+typedef interface7::internal::padded_mutex<spin_mutex,false> speculative_spin_mutex;
+#endif
+__TBB_DEFINE_PROFILING_SET_NAME(speculative_spin_mutex)
 
 } // namespace tbb
 

@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2009 Laurent Gomila (laurent.gom@gmail.com)
+// Copyright (C) 2007-2014 Laurent Gomila (laurent.gom@gmail.com)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -31,13 +31,25 @@
 
 #include <SFML/System.hpp>
 #include <SFML/Window/Context.hpp>
+#include <SFML/Window/ContextSettings.hpp>
 #include <SFML/Window/Event.hpp>
-#include <SFML/Window/Input.hpp>
+#include <SFML/Window/Joystick.hpp>
+#include <SFML/Window/Keyboard.hpp>
+#include <SFML/Window/Mouse.hpp>
+#include <SFML/Window/Touch.hpp>
+#include <SFML/Window/Sensor.hpp>
 #include <SFML/Window/VideoMode.hpp>
 #include <SFML/Window/Window.hpp>
-#include <SFML/Window/WindowListener.hpp>
 #include <SFML/Window/WindowStyle.hpp>
-#include <SFML/Window/OpenGL.hpp>
+
 
 
 #endif // SFML_SFML_WINDOW_HPP
+
+////////////////////////////////////////////////////////////
+/// \defgroup window Window module
+///
+/// Provides OpenGL-based windows, and abstractions for
+/// events and input handling.
+///
+////////////////////////////////////////////////////////////

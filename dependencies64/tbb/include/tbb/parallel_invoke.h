@@ -1,35 +1,31 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
 
-    This file is part of Threading Building Blocks.
+    This file is part of Threading Building Blocks. Threading Building Blocks is free software;
+    you can redistribute it and/or modify it under the terms of the GNU General Public License
+    version 2  as  published  by  the  Free Software Foundation.  Threading Building Blocks is
+    distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+    implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+    See  the GNU General Public License for more details.   You should have received a copy of
+    the  GNU General Public License along with Threading Building Blocks; if not, write to the
+    Free Software Foundation, Inc.,  51 Franklin St,  Fifth Floor,  Boston,  MA 02110-1301 USA
 
-    Threading Building Blocks is free software; you can redistribute it
-    and/or modify it under the terms of the GNU General Public License
-    version 2 as published by the Free Software Foundation.
-
-    Threading Building Blocks is distributed in the hope that it will be
-    useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with Threading Building Blocks; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-    As a special exception, you may use this file as part of a free software
-    library without restriction.  Specifically, if other files instantiate
-    templates or use macros or inline functions from this file, or you compile
-    this file and link it with other files to produce an executable, this
-    file does not by itself cause the resulting executable to be covered by
-    the GNU General Public License.  This exception does not however
-    invalidate any other reasons why the executable file might be covered by
-    the GNU General Public License.
+    As a special exception,  you may use this file  as part of a free software library without
+    restriction.  Specifically,  if other files instantiate templates  or use macros or inline
+    functions from this file, or you compile this file and link it with other files to produce
+    an executable,  this file does not by itself cause the resulting executable to be covered
+    by the GNU General Public License. This exception does not however invalidate any other
+    reasons why the executable file might be covered by the GNU General Public License.
 */
 
 #ifndef __TBB_parallel_invoke_H
 #define __TBB_parallel_invoke_H
 
 #include "task.h"
+
+#if __TBB_VARIADIC_PARALLEL_INVOKE
+    #include <utility>
+#endif
 
 namespace tbb {
 
@@ -103,9 +99,40 @@ namespace internal {
         {
             set_ref_count(number_of_children + 1);
         }
+
+#if __TBB_VARIADIC_PARALLEL_INVOKE
+        void add_children() {}
+        void add_children(tbb::task_group_context&) {}
+
+        template <typename function>
+        void add_children(function&& _func)
+        {
+            internal::function_invoker<function>* invoker = new (allocate_child()) internal::function_invoker<function>(std::forward<function>(_func));
+            __TBB_ASSERT(invoker, "Child task allocation failed");
+            spawn(*invoker);
+        }
+
+        template<typename function>
+        void add_children(function&& _func, tbb::task_group_context&)
+        {
+            add_children(std::forward<function>(_func));
+        }
+
+        // Adds child(ren) task(s) and spawns them
+        template <typename function1, typename function2, typename... function>
+        void add_children(function1&& _func1, function2&& _func2, function&&... _func)
+        {
+            // The third argument is dummy, it is ignored actually.
+            parallel_invoke_noop noop;
+            typedef internal::spawner<2, function1, function2, parallel_invoke_noop> spawner_type;
+            spawner_type & sub_root = *new(allocate_child()) spawner_type(std::forward<function1>(_func1), std::forward<function2>(_func2), noop);
+            spawn(sub_root);
+            add_children(std::forward<function>(_func)...);
+        }
+#else
         // Adds child task and spawns it
         template <typename function>
-        void add_child (const function &_func)
+        void add_children (const function &_func)
         {
             internal::function_invoker<function>* invoker = new (allocate_child()) internal::function_invoker<function>(_func);
             __TBB_ASSERT(invoker, "Child task allocation failed");
@@ -129,6 +156,7 @@ namespace internal {
             internal::spawner<3, function1, function2, function3>& sub_root = *new(allocate_child())internal::spawner<3, function1, function2, function3>(_func1, _func2, _func3);
             spawn(sub_root);
         }
+#endif // __TBB_VARIADIC_PARALLEL_INVOKE
 
         // Waits for all child tasks
         template <typename F0>
@@ -139,8 +167,8 @@ namespace internal {
             spawn_and_wait_for_all(*invoker);
         }
     };
-    // The class destroys root if exception occured as well as in normal case
-    class parallel_invoke_cleaner: internal::no_copy { 
+    // The class destroys root if exception occurred as well as in normal case
+    class parallel_invoke_cleaner: internal::no_copy {
     public:
 #if __TBB_TASK_GROUP_CONTEXT
         parallel_invoke_cleaner(int number_of_children, tbb::task_group_context& context)
@@ -156,6 +184,51 @@ namespace internal {
         }
         internal::parallel_invoke_helper& root;
     };
+
+#if __TBB_VARIADIC_PARALLEL_INVOKE
+//  Determine whether the last parameter in a pack is task_group_context
+    template<typename... T> struct impl_selector; // to workaround a GCC bug
+
+    template<typename T1, typename... T> struct impl_selector<T1, T...> {
+        typedef typename impl_selector<T...>::type type;
+    };
+
+    template<typename T> struct impl_selector<T> {
+        typedef false_type type;
+    };
+    template<> struct impl_selector<task_group_context&> {
+        typedef true_type  type;
+    };
+
+    // Select task_group_context parameter from the back of a pack
+    inline task_group_context& get_context( task_group_context& tgc ) { return tgc; }
+
+    template<typename T1, typename... T>
+    task_group_context& get_context( T1&& /*ignored*/, T&&... t )
+    { return get_context( std::forward<T>(t)... ); }
+
+    // task_group_context is known to be at the back of the parameter pack
+    template<typename F0, typename F1, typename... F>
+    void parallel_invoke_impl(true_type, F0&& f0, F1&& f1, F&&... f) {
+        __TBB_STATIC_ASSERT(sizeof...(F)>0, "Variadic parallel_invoke implementation broken?");
+        // # of child tasks: f0, f1, and a task for each two elements of the pack except the last
+        const size_t number_of_children = 2 + sizeof...(F)/2;
+        parallel_invoke_cleaner cleaner(number_of_children, get_context(std::forward<F>(f)...));
+        parallel_invoke_helper& root = cleaner.root;
+
+        root.add_children(std::forward<F>(f)...);
+        root.add_children(std::forward<F1>(f1));
+        root.run_and_finish(std::forward<F0>(f0));
+    }
+
+    // task_group_context is not in the pack, needs to be added
+    template<typename F0, typename F1, typename... F>
+    void parallel_invoke_impl(false_type, F0&& f0, F1&& f1, F&&... f) {
+        tbb::task_group_context context;
+        // Add context to the arguments, and redirect to the other overload
+        parallel_invoke_impl(true_type(), std::forward<F0>(f0), std::forward<F1>(f1), std::forward<F>(f)..., context);
+    }
+#endif
 } // namespace internal
 //! @endcond
 
@@ -165,6 +238,18 @@ namespace internal {
 //! Executes a list of tasks in parallel and waits for all tasks to complete.
 /** @ingroup algorithms */
 
+#if __TBB_VARIADIC_PARALLEL_INVOKE
+
+// parallel_invoke for two or more arguments via variadic templates
+// presence of task_group_context is defined automatically
+template<typename F0, typename F1, typename... F>
+void parallel_invoke(F0&& f0, F1&& f1, F&&... f) {
+    typedef typename internal::impl_selector<internal::false_type, F...>::type selector_type;
+    internal::parallel_invoke_impl(selector_type(), std::forward<F0>(f0), std::forward<F1>(f1), std::forward<F>(f)...);
+}
+
+#else
+
 // parallel_invoke with user-defined context
 // two arguments
 template<typename F0, typename F1 >
@@ -172,7 +257,7 @@ void parallel_invoke(const F0& f0, const F1& f1, tbb::task_group_context& contex
     internal::parallel_invoke_cleaner cleaner(2, context);
     internal::parallel_invoke_helper& root = cleaner.root;
 
-    root.add_child(f1);
+    root.add_children(f1);
 
     root.run_and_finish(f0);
 }
@@ -183,8 +268,8 @@ void parallel_invoke(const F0& f0, const F1& f1, const F2& f2, tbb::task_group_c
     internal::parallel_invoke_cleaner cleaner(3, context);
     internal::parallel_invoke_helper& root = cleaner.root;
 
-    root.add_child(f2);
-    root.add_child(f1);
+    root.add_children(f2);
+    root.add_children(f1);
 
     root.run_and_finish(f0);
 }
@@ -197,9 +282,9 @@ void parallel_invoke(const F0& f0, const F1& f1, const F2& f2, const F3& f3,
     internal::parallel_invoke_cleaner cleaner(4, context);
     internal::parallel_invoke_helper& root = cleaner.root;
 
-    root.add_child(f3);
-    root.add_child(f2);
-    root.add_child(f1);
+    root.add_children(f3);
+    root.add_children(f2);
+    root.add_children(f1);
 
     root.run_and_finish(f0);
 }
@@ -336,8 +421,8 @@ void parallel_invoke(const F0& f0, const F1& f1, const F2& f2, const F3& f3, con
     task_group_context context;
     parallel_invoke<F0, F1, F2, F3, F4, F5, F6>(f0, f1, f2, f3, f4, f5, f6, context);
 }
-// eigth arguments
-template<typename F0, typename F1, typename F2, typename F3, typename F4, 
+// eight arguments
+template<typename F0, typename F1, typename F2, typename F3, typename F4,
          typename F5, typename F6, typename F7>
 void parallel_invoke(const F0& f0, const F1& f1, const F2& f2, const F3& f3, const F4& f4,
                      const F5& f5, const F6& f6, const F7& f7)
@@ -363,7 +448,7 @@ void parallel_invoke(const F0& f0, const F1& f1, const F2& f2, const F3& f3, con
     task_group_context context;
     parallel_invoke<F0, F1, F2, F3, F4, F5, F6, F7, F8, F9>(f0, f1, f2, f3, f4, f5, f6, f7, f8, f9, context);
 }
-
+#endif // __TBB_VARIADIC_PARALLEL_INVOKE
 //@}
 
 } // namespace
