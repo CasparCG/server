@@ -1,29 +1,21 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
 
-    This file is part of Threading Building Blocks.
+    This file is part of Threading Building Blocks. Threading Building Blocks is free software;
+    you can redistribute it and/or modify it under the terms of the GNU General Public License
+    version 2  as  published  by  the  Free Software Foundation.  Threading Building Blocks is
+    distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+    implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+    See  the GNU General Public License for more details.   You should have received a copy of
+    the  GNU General Public License along with Threading Building Blocks; if not, write to the
+    Free Software Foundation, Inc.,  51 Franklin St,  Fifth Floor,  Boston,  MA 02110-1301 USA
 
-    Threading Building Blocks is free software; you can redistribute it
-    and/or modify it under the terms of the GNU General Public License
-    version 2 as published by the Free Software Foundation.
-
-    Threading Building Blocks is distributed in the hope that it will be
-    useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with Threading Building Blocks; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-    As a special exception, you may use this file as part of a free software
-    library without restriction.  Specifically, if other files instantiate
-    templates or use macros or inline functions from this file, or you compile
-    this file and link it with other files to produce an executable, this
-    file does not by itself cause the resulting executable to be covered by
-    the GNU General Public License.  This exception does not however
-    invalidate any other reasons why the executable file might be covered by
-    the GNU General Public License.
+    As a special exception,  you may use this file  as part of a free software library without
+    restriction.  Specifically,  if other files instantiate templates  or use macros or inline
+    functions from this file, or you compile this file and link it with other files to produce
+    an executable,  this file does not by itself cause the resulting executable to be covered
+    by the GNU General Public License. This exception does not however invalidate any other
+    reasons why the executable file might be covered by the GNU General Public License.
 */
 
 #ifndef __TBB_parallel_scan_H
@@ -56,29 +48,29 @@ namespace internal {
     template<typename Range, typename Body>
     class final_sum: public task {
     public:
-        Body body;
+        Body my_body;
     private:
-        aligned_space<Range,1> range;
+        aligned_space<Range> my_range;
         //! Where to put result of last subrange, or NULL if not last subrange.
-        Body* stuff_last;
+        Body* my_stuff_last;
     public:
         final_sum( Body& body_ ) :
-            body(body_,split())
+            my_body(body_,split())
         {
-            poison_pointer(stuff_last);
+            poison_pointer(my_stuff_last);
         }
         ~final_sum() {
-            range.begin()->~Range();
+            my_range.begin()->~Range();
         }     
         void finish_construction( const Range& range_, Body* stuff_last_ ) {
-            new( range.begin() ) Range(range_);
-            stuff_last = stuff_last_;
+            new( my_range.begin() ) Range(range_);
+            my_stuff_last = stuff_last_;
         }
     private:
         /*override*/ task* execute() {
-            body( *range.begin(), final_scan_tag() );
-            if( stuff_last )
-                stuff_last->assign(body);
+            my_body( *my_range.begin(), final_scan_tag() );
+            if( my_stuff_last )
+                my_stuff_last->assign(my_body);
             return NULL;
         }
     };       
@@ -89,25 +81,25 @@ namespace internal {
     class sum_node: public task {
         typedef final_sum<Range,Body> final_sum_type;
     public:
-        final_sum_type *incoming; 
-        final_sum_type *body;
-        Body *stuff_last;
+        final_sum_type *my_incoming; 
+        final_sum_type *my_body;
+        Body *my_stuff_last;
     private:
-        final_sum_type *left_sum;
-        sum_node *left;
-        sum_node *right;     
-        bool left_is_final;
-        Range range;
+        final_sum_type *my_left_sum;
+        sum_node *my_left;
+        sum_node *my_right;     
+        bool my_left_is_final;
+        Range my_range;
         sum_node( const Range range_, bool left_is_final_ ) : 
-            left_sum(NULL), 
-            left(NULL), 
-            right(NULL), 
-            left_is_final(left_is_final_), 
-            range(range_)
+            my_left_sum(NULL), 
+            my_left(NULL), 
+            my_right(NULL), 
+            my_left_is_final(left_is_final_), 
+            my_range(range_)
         {
             // Poison fields that will be set by second pass.
-            poison_pointer(body);
-            poison_pointer(incoming);
+            poison_pointer(my_body);
+            poison_pointer(my_incoming);
         }
         task* create_child( const Range& range_, final_sum_type& f, sum_node* n, final_sum_type* incoming_, Body* stuff_last_ ) {
             if( !n ) {
@@ -115,22 +107,22 @@ namespace internal {
                 f.finish_construction( range_, stuff_last_ );
                 return &f;
             } else {
-                n->body = &f;
-                n->incoming = incoming_;
-                n->stuff_last = stuff_last_;
+                n->my_body = &f;
+                n->my_incoming = incoming_;
+                n->my_stuff_last = stuff_last_;
                 return n;
             }
         }
         /*override*/ task* execute() {
-            if( body ) {
-                if( incoming )
-                    left_sum->body.reverse_join( incoming->body );
+            if( my_body ) {
+                if( my_incoming )
+                    my_left_sum->my_body.reverse_join( my_incoming->my_body );
                 recycle_as_continuation();
                 sum_node& c = *this;
-                task* b = c.create_child(Range(range,split()),*left_sum,right,left_sum,stuff_last);
-                task* a = left_is_final ? NULL : c.create_child(range,*body,left,incoming,NULL);
+                task* b = c.create_child(Range(my_range,split()),*my_left_sum,my_right,my_left_sum,my_stuff_last);
+                task* a = my_left_is_final ? NULL : c.create_child(my_range,*my_body,my_left,my_incoming,NULL);
                 set_ref_count( (a!=NULL)+(b!=NULL) );
-                body = NULL; 
+                my_body = NULL; 
                 if( a ) spawn(*b);
                 else a = b;
                 return a;
@@ -151,35 +143,38 @@ namespace internal {
     class finish_scan: public task {
         typedef sum_node<Range,Body> sum_node_type;
         typedef final_sum<Range,Body> final_sum_type;
-        final_sum_type** const sum;
-        sum_node_type*& return_slot;
+        final_sum_type** const my_sum;
+        sum_node_type*& my_return_slot;
     public:
-        final_sum_type* right_zombie;
-        sum_node_type& result;
+        final_sum_type* my_right_zombie;
+        sum_node_type& my_result;
 
         /*override*/ task* execute() {
-            __TBB_ASSERT( result.ref_count()==(result.left!=NULL)+(result.right!=NULL), NULL );
-            if( result.left )
-                result.left_is_final = false;
-            if( right_zombie && sum ) 
-                ((*sum)->body).reverse_join(result.left_sum->body);
-            __TBB_ASSERT( !return_slot, NULL );
-            if( right_zombie || result.right ) {
-                return_slot = &result;
+            __TBB_ASSERT( my_result.ref_count()==(my_result.my_left!=NULL)+(my_result.my_right!=NULL), NULL );
+            if( my_result.my_left )
+                my_result.my_left_is_final = false;
+            if( my_right_zombie && my_sum ) 
+                ((*my_sum)->my_body).reverse_join(my_result.my_left_sum->my_body);
+            __TBB_ASSERT( !my_return_slot, NULL );
+            if( my_right_zombie || my_result.my_right ) {
+                my_return_slot = &my_result;
             } else {
-                destroy( result );
+                destroy( my_result );
             }
-            if( right_zombie && !sum && !result.right ) destroy(*right_zombie);
+            if( my_right_zombie && !my_sum && !my_result.my_right ) {
+                destroy(*my_right_zombie);
+                my_right_zombie = NULL;
+            }
             return NULL;
         }
 
         finish_scan( sum_node_type*& return_slot_, final_sum_type** sum_, sum_node_type& result_ ) : 
-            sum(sum_),
-            return_slot(return_slot_), 
-            right_zombie(NULL),
-            result(result_)
+            my_sum(sum_),
+            my_return_slot(return_slot_), 
+            my_right_zombie(NULL),
+            my_result(result_)
         {
-            __TBB_ASSERT( !return_slot, NULL );
+            __TBB_ASSERT( !my_return_slot, NULL );
         }
     };
 
@@ -189,64 +184,64 @@ namespace internal {
     class start_scan: public task {
         typedef sum_node<Range,Body> sum_node_type;
         typedef final_sum<Range,Body> final_sum_type;
-        final_sum_type* body;
+        final_sum_type* my_body;
         /** Non-null if caller is requesting total. */
-        final_sum_type** sum; 
-        sum_node_type** return_slot;
+        final_sum_type** my_sum; 
+        sum_node_type** my_return_slot;
         /** Null if computing root. */
-        sum_node_type* parent_sum;
-        bool is_final;
-        bool is_right_child;
-        Range range;
-        typename Partitioner::partition_type partition;
+        sum_node_type* my_parent_sum;
+        bool my_is_final;
+        bool my_is_right_child;
+        Range my_range;
+        typename Partitioner::partition_type my_partition;
         /*override*/ task* execute();
     public:
         start_scan( sum_node_type*& return_slot_, start_scan& parent_, sum_node_type* parent_sum_ ) :
-            body(parent_.body),
-            sum(parent_.sum),
-            return_slot(&return_slot_),
-            parent_sum(parent_sum_),
-            is_final(parent_.is_final),
-            is_right_child(false),
-            range(parent_.range,split()),
-            partition(parent_.partition,split())
+            my_body(parent_.my_body),
+            my_sum(parent_.my_sum),
+            my_return_slot(&return_slot_),
+            my_parent_sum(parent_sum_),
+            my_is_final(parent_.my_is_final),
+            my_is_right_child(false),
+            my_range(parent_.my_range,split()),
+            my_partition(parent_.my_partition,split())
         {
-            __TBB_ASSERT( !*return_slot, NULL );
+            __TBB_ASSERT( !*my_return_slot, NULL );
         }
 
         start_scan( sum_node_type*& return_slot_, const Range& range_, final_sum_type& body_, const Partitioner& partitioner_) :
-            body(&body_),
-            sum(NULL),
-            return_slot(&return_slot_),
-            parent_sum(NULL),
-            is_final(true),
-            is_right_child(false),
-            range(range_),
-            partition(partitioner_)
+            my_body(&body_),
+            my_sum(NULL),
+            my_return_slot(&return_slot_),
+            my_parent_sum(NULL),
+            my_is_final(true),
+            my_is_right_child(false),
+            my_range(range_),
+            my_partition(partitioner_)
         {
-            __TBB_ASSERT( !*return_slot, NULL );
+            __TBB_ASSERT( !*my_return_slot, NULL );
         }
 
-        static void run(  const Range& range, Body& body, const Partitioner& partitioner ) {
-            if( !range.empty() ) {
+        static void run( const Range& range_, Body& body_, const Partitioner& partitioner_ ) {
+            if( !range_.empty() ) {
                 typedef internal::start_scan<Range,Body,Partitioner> start_pass1_type;
                 internal::sum_node<Range,Body>* root = NULL;
                 typedef internal::final_sum<Range,Body> final_sum_type;
-                final_sum_type* temp_body = new(task::allocate_root()) final_sum_type( body );
+                final_sum_type* temp_body = new(task::allocate_root()) final_sum_type( body_ );
                 start_pass1_type& pass1 = *new(task::allocate_root()) start_pass1_type(
-                    /*return_slot=*/root,
-                    range,
+                    /*my_return_slot=*/root,
+                    range_,
                     *temp_body,
-                    partitioner );
+                    partitioner_ );
                 task::spawn_root_and_wait( pass1 );
                 if( root ) {
-                    root->body = temp_body;
-                    root->incoming = NULL;
-                    root->stuff_last = &body;
+                    root->my_body = temp_body;
+                    root->my_incoming = NULL;
+                    root->my_stuff_last = &body_;
                     task::spawn_root_and_wait( *root );
                 } else {
-                    body.assign(temp_body->body);
-                    temp_body->finish_construction( range, NULL );
+                    body_.assign(temp_body->my_body);
+                    temp_body->finish_construction( range_, NULL );
                     temp_body->destroy(*temp_body);
                 }
             }
@@ -256,47 +251,47 @@ namespace internal {
     template<typename Range, typename Body, typename Partitioner>
     task* start_scan<Range,Body,Partitioner>::execute() {
         typedef internal::finish_scan<Range,Body> finish_pass1_type;
-        finish_pass1_type* p = parent_sum ? static_cast<finish_pass1_type*>( parent() ) : NULL;
+        finish_pass1_type* p = my_parent_sum ? static_cast<finish_pass1_type*>( parent() ) : NULL;
         // Inspecting p->result.left_sum would ordinarily be a race condition.
         // But we inspect it only if we are not a stolen task, in which case we
         // know that task assigning to p->result.left_sum has completed.
-        bool treat_as_stolen = is_right_child && (is_stolen_task() || body!=p->result.left_sum);
+        bool treat_as_stolen = my_is_right_child && (is_stolen_task() || my_body!=p->my_result.my_left_sum);
         if( treat_as_stolen ) {
             // Invocation is for right child that has been really stolen or needs to be virtually stolen
-            p->right_zombie = body = new( allocate_root() ) final_sum_type(body->body);
-            is_final = false;
+            p->my_right_zombie = my_body = new( allocate_root() ) final_sum_type(my_body->my_body);
+            my_is_final = false;
         }
         task* next_task = NULL;
-        if( (is_right_child && !treat_as_stolen) || !range.is_divisible() || partition.should_execute_range(*this) ) {
-            if( is_final )
-                (body->body)( range, final_scan_tag() );
-            else if( sum )
-                (body->body)( range, pre_scan_tag() );
-            if( sum ) 
-                *sum = body;
-            __TBB_ASSERT( !*return_slot, NULL );
+        if( (my_is_right_child && !treat_as_stolen) || !my_range.is_divisible() || my_partition.should_execute_range(*this) ) {
+            if( my_is_final )
+                (my_body->my_body)( my_range, final_scan_tag() );
+            else if( my_sum )
+                (my_body->my_body)( my_range, pre_scan_tag() );
+            if( my_sum ) 
+                *my_sum = my_body;
+            __TBB_ASSERT( !*my_return_slot, NULL );
         } else {
             sum_node_type* result;
-            if( parent_sum ) 
-                result = new(allocate_additional_child_of(*parent_sum)) sum_node_type(range,/*left_is_final=*/is_final);
+            if( my_parent_sum ) 
+                result = new(allocate_additional_child_of(*my_parent_sum)) sum_node_type(my_range,/*my_left_is_final=*/my_is_final);
             else
-                result = new(task::allocate_root()) sum_node_type(range,/*left_is_final=*/is_final);
-            finish_pass1_type& c = *new( allocate_continuation()) finish_pass1_type(*return_slot,sum,*result);
+                result = new(task::allocate_root()) sum_node_type(my_range,/*my_left_is_final=*/my_is_final);
+            finish_pass1_type& c = *new( allocate_continuation()) finish_pass1_type(*my_return_slot,my_sum,*result);
             // Split off right child
-            start_scan& b = *new( c.allocate_child() ) start_scan( /*return_slot=*/result->right, *this, result );
-            b.is_right_child = true;    
+            start_scan& b = *new( c.allocate_child() ) start_scan( /*my_return_slot=*/result->my_right, *this, result );
+            b.my_is_right_child = true;    
             // Left child is recycling of *this.  Must recycle this before spawning b, 
             // otherwise b might complete and decrement c.ref_count() to zero, which
             // would cause c.execute() to run prematurely.
             recycle_as_child_of(c);
             c.set_ref_count(2);
             c.spawn(b);
-            sum = &result->left_sum;
-            return_slot = &result->left;
-            is_right_child = false;
+            my_sum = &result->my_left_sum;
+            my_return_slot = &result->my_left;
+            my_is_right_child = false;
             next_task = this;
-            parent_sum = result; 
-            __TBB_ASSERT( !*return_slot, NULL );
+            my_parent_sum = result; 
+            __TBB_ASSERT( !*my_return_slot, NULL );
         }
         return next_task;
     } 
