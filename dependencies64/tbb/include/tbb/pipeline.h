@@ -1,29 +1,21 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
 
-    This file is part of Threading Building Blocks.
+    This file is part of Threading Building Blocks. Threading Building Blocks is free software;
+    you can redistribute it and/or modify it under the terms of the GNU General Public License
+    version 2  as  published  by  the  Free Software Foundation.  Threading Building Blocks is
+    distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+    implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+    See  the GNU General Public License for more details.   You should have received a copy of
+    the  GNU General Public License along with Threading Building Blocks; if not, write to the
+    Free Software Foundation, Inc.,  51 Franklin St,  Fifth Floor,  Boston,  MA 02110-1301 USA
 
-    Threading Building Blocks is free software; you can redistribute it
-    and/or modify it under the terms of the GNU General Public License
-    version 2 as published by the Free Software Foundation.
-
-    Threading Building Blocks is distributed in the hope that it will be
-    useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with Threading Building Blocks; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-    As a special exception, you may use this file as part of a free software
-    library without restriction.  Specifically, if other files instantiate
-    templates or use macros or inline functions from this file, or you compile
-    this file and link it with other files to produce an executable, this
-    file does not by itself cause the resulting executable to be covered by
-    the GNU General Public License.  This exception does not however
-    invalidate any other reasons why the executable file might be covered by
-    the GNU General Public License.
+    As a special exception,  you may use this file  as part of a free software library without
+    restriction.  Specifically,  if other files instantiate templates  or use macros or inline
+    functions from this file, or you compile this file and link it with other files to produce
+    an executable,  this file does not by itself cause the resulting executable to be covered
+    by the GNU General Public License. This exception does not however invalidate any other
+    reasons why the executable file might be covered by the GNU General Public License.
 */
 
 #ifndef __TBB_pipeline_H 
@@ -34,6 +26,10 @@
 #include "tbb_allocator.h"
 #include <cstddef>
 
+#if __TBB_CPP11_TYPE_PROPERTIES_PRESENT || __TBB_TR1_TYPE_PROPERTIES_IN_STD_PRESENT
+#include <type_traits>
+#endif
+
 namespace tbb {
 
 class pipeline;
@@ -43,7 +39,7 @@ class filter;
 namespace internal {
 
 // The argument for PIPELINE_VERSION should be an integer between 2 and 9
-#define __TBB_PIPELINE_VERSION(x) (unsigned char)(x-2)<<1
+#define __TBB_PIPELINE_VERSION(x) ((unsigned char)(x-2)<<1)
 
 typedef unsigned long Token;
 typedef long tokendiff_t;
@@ -211,7 +207,9 @@ public:
 protected:
     thread_bound_filter(mode filter_mode): 
          filter(static_cast<mode>(filter_mode | filter::filter_is_bound))
-    {}
+    {
+        __TBB_ASSERT(filter_mode & filter::filter_is_serial, "thread-bound filters must be serial");
+    }
 public:
     //! If a data item is available, invoke operator() on that item.  
     /** This interface is non-blocking.
@@ -294,7 +292,7 @@ private:
     void __TBB_EXPORTED_METHOD inject_token( task& self );
 
 #if __TBB_TASK_GROUP_CONTEXT
-    //! Does clean up if pipeline is cancelled or exception occured
+    //! Does clean up if pipeline is cancelled or exception occurred
     void clear_filters();
 #endif
 };
@@ -321,7 +319,28 @@ public:
 //! @cond INTERNAL
 namespace internal {
 
-template<typename T> struct is_large_object { enum { r = sizeof(T) > sizeof(void *) }; };
+template<typename T> struct tbb_large_object {enum { value = sizeof(T) > sizeof(void *) }; };
+
+// Obtain type properties in one or another way
+#if   __TBB_CPP11_TYPE_PROPERTIES_PRESENT
+template<typename T> struct tbb_trivially_copyable { enum { value = std::is_trivially_copyable<T>::value }; };
+#elif __TBB_TR1_TYPE_PROPERTIES_IN_STD_PRESENT
+template<typename T> struct tbb_trivially_copyable { enum { value = std::has_trivial_copy_constructor<T>::value }; };
+#else
+// Explicitly list the types we wish to be placed as-is in the pipeline input_buffers.
+template<typename T> struct tbb_trivially_copyable { enum { value = false }; };
+template<typename T> struct tbb_trivially_copyable <T*> { enum { value = true }; };
+template<> struct tbb_trivially_copyable <short> { enum { value = true }; };
+template<> struct tbb_trivially_copyable <unsigned short> { enum { value = true }; };
+template<> struct tbb_trivially_copyable <int> { enum { value = !tbb_large_object<int>::value }; };
+template<> struct tbb_trivially_copyable <unsigned int> { enum { value = !tbb_large_object<int>::value }; };
+template<> struct tbb_trivially_copyable <long> { enum { value = !tbb_large_object<long>::value }; };
+template<> struct tbb_trivially_copyable <unsigned long> { enum { value = !tbb_large_object<long>::value }; };
+template<> struct tbb_trivially_copyable <float> { enum { value = !tbb_large_object<float>::value }; };
+template<> struct tbb_trivially_copyable <double> { enum { value = !tbb_large_object<double>::value }; };
+#endif // Obtaining type properties
+
+template<typename T> struct is_large_object {enum { value = tbb_large_object<T>::value || !tbb_trivially_copyable<T>::value }; };
 
 template<typename T, bool> class token_helper;
 
@@ -388,9 +407,9 @@ class token_helper<T, false> {
 template<typename T, typename U, typename Body>
 class concrete_filter: public tbb::filter {
     const Body& my_body;
-    typedef token_helper<T,is_large_object<T>::r > t_helper;
+    typedef token_helper<T,is_large_object<T>::value > t_helper;
     typedef typename t_helper::pointer t_pointer;
-    typedef token_helper<U,is_large_object<U>::r > u_helper;
+    typedef token_helper<U,is_large_object<U>::value > u_helper;
     typedef typename u_helper::pointer u_pointer;
 
     /*override*/ void* operator()(void* input) {
@@ -398,6 +417,11 @@ class concrete_filter: public tbb::filter {
         u_pointer output_u = u_helper::create_token(my_body(t_helper::token(temp_input)));
         t_helper::destroy_token(temp_input);
         return u_helper::cast_to_void_ptr(output_u);
+    }
+
+    /*override*/ void finalize(void * input) {
+        t_pointer temp_input = t_helper::cast_from_void_ptr(input);
+        t_helper::destroy_token(temp_input);
     }
 
 public:
@@ -408,7 +432,7 @@ public:
 template<typename U, typename Body>
 class concrete_filter<void,U,Body>: public filter {
     const Body& my_body;
-    typedef token_helper<U, is_large_object<U>::r > u_helper;
+    typedef token_helper<U, is_large_object<U>::value > u_helper;
     typedef typename u_helper::pointer u_pointer;
 
     /*override*/void* operator()(void*) {
@@ -432,7 +456,7 @@ public:
 template<typename T, typename Body>
 class concrete_filter<T,void,Body>: public filter {
     const Body& my_body;
-    typedef token_helper<T, is_large_object<T>::r > t_helper;
+    typedef token_helper<T, is_large_object<T>::value > t_helper;
     typedef typename t_helper::pointer t_pointer;
    
     /*override*/ void* operator()(void* input) {
@@ -441,6 +465,11 @@ class concrete_filter<T,void,Body>: public filter {
         t_helper::destroy_token(temp_input);
         return NULL;
     }
+    /*override*/ void finalize(void* input) {
+        t_pointer temp_input = t_helper::cast_from_void_ptr(input);
+        t_helper::destroy_token(temp_input);
+    }
+
 public:
     concrete_filter(tbb::filter::mode filter_mode, const Body& body) : filter(filter_mode), my_body(body) {}
 };

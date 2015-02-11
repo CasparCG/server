@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2009 Laurent Gomila (laurent.gom@gmail.com)
+// Copyright (C) 2007-2014 Laurent Gomila (laurent.gom@gmail.com)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -28,149 +28,252 @@
 ////////////////////////////////////////////////////////////
 // Headers
 ////////////////////////////////////////////////////////////
-#include <SFML/System/Resource.hpp>
+#include <SFML/Graphics/Export.hpp>
 #include <SFML/Graphics/Drawable.hpp>
+#include <SFML/Graphics/Transformable.hpp>
+#include <SFML/Graphics/Vertex.hpp>
 #include <SFML/Graphics/Rect.hpp>
 
 
 namespace sf
 {
-class Image;
+class Texture;
 
 ////////////////////////////////////////////////////////////
-/// Sprite defines a sprite : texture, transformations,
-/// color, and draw on screen
+/// \brief Drawable representation of a texture, with its
+///        own transformations, color, etc.
+///
 ////////////////////////////////////////////////////////////
-class SFML_API Sprite : public Drawable
+class SFML_GRAPHICS_API Sprite : public Drawable, public Transformable
 {
-public :
+public:
 
     ////////////////////////////////////////////////////////////
-    /// Default constructor
+    /// \brief Default constructor
+    ///
+    /// Creates an empty sprite with no source texture.
     ///
     ////////////////////////////////////////////////////////////
     Sprite();
 
     ////////////////////////////////////////////////////////////
-    /// Construct the sprite from a source image
+    /// \brief Construct the sprite from a source texture
     ///
-    /// \param Img :      Image of the sprite
-    /// \param Position : Position of the sprite (0, 0 by default)
-    /// \param Scale :    Scale factor (1, 1 by default)
-    /// \param Rotation : Orientation, in degrees (0 by default)
-    /// \param Col :      Color of the sprite (white by default)
+    /// \param texture Source texture
+    ///
+    /// \see setTexture
     ///
     ////////////////////////////////////////////////////////////
-    explicit Sprite(const Image& Img, const Vector2f& Position = Vector2f(0, 0), const Vector2f& Scale = Vector2f(1, 1), float Rotation = 0.f, const Color& Col = Color(255, 255, 255, 255));
+    explicit Sprite(const Texture& texture);
 
     ////////////////////////////////////////////////////////////
-    /// Change the image of the sprite
+    /// \brief Construct the sprite from a sub-rectangle of a source texture
     ///
-    /// \param Img : New image
+    /// \param texture   Source texture
+    /// \param rectangle Sub-rectangle of the texture to assign to the sprite
+    ///
+    /// \see setTexture, setTextureRect
     ///
     ////////////////////////////////////////////////////////////
-    void SetImage(const Image& Img);
+    Sprite(const Texture& texture, const IntRect& rectangle);
 
     ////////////////////////////////////////////////////////////
-    /// Set the sub-rectangle of the sprite inside the source image.
-    /// By default, the subrect covers the entire source image
+    /// \brief Change the source texture of the sprite
     ///
-    /// \param SubRect : New sub-rectangle
+    /// The \a texture argument refers to a texture that must
+    /// exist as long as the sprite uses it. Indeed, the sprite
+    /// doesn't store its own copy of the texture, but rather keeps
+    /// a pointer to the one that you passed to this function.
+    /// If the source texture is destroyed and the sprite tries to
+    /// use it, the behavior is undefined.
+    /// If \a resetRect is true, the TextureRect property of
+    /// the sprite is automatically adjusted to the size of the new
+    /// texture. If it is false, the texture rect is left unchanged.
+    ///
+    /// \param texture   New texture
+    /// \param resetRect Should the texture rect be reset to the size of the new texture?
+    ///
+    /// \see getTexture, setTextureRect
     ///
     ////////////////////////////////////////////////////////////
-    void SetSubRect(const IntRect& SubRect);
+    void setTexture(const Texture& texture, bool resetRect = false);
 
     ////////////////////////////////////////////////////////////
-    /// Resize the sprite (by changing its scale factors) (take 2 values).
-    /// The default size is defined by the subrect
+    /// \brief Set the sub-rectangle of the texture that the sprite will display
     ///
-    /// \param Width :  New width (must be strictly positive)
-    /// \param Height : New height (must be strictly positive)
+    /// The texture rect is useful when you don't want to display
+    /// the whole texture, but rather a part of it.
+    /// By default, the texture rect covers the entire texture.
+    ///
+    /// \param rectangle Rectangle defining the region of the texture to display
+    ///
+    /// \see getTextureRect, setTexture
     ///
     ////////////////////////////////////////////////////////////
-    void Resize(float Width, float Height);
+    void setTextureRect(const IntRect& rectangle);
 
     ////////////////////////////////////////////////////////////
-    /// Resize the sprite (by changing its scale factors) (take a 2D vector).
-    /// The default size is defined by the subrect
+    /// \brief Set the global color of the sprite
     ///
-    /// \param Size : New size (both coordinates must be strictly positive)
+    /// This color is modulated (multiplied) with the sprite's
+    /// texture. It can be used to colorize the sprite, or change
+    /// its global opacity.
+    /// By default, the sprite's color is opaque white.
+    ///
+    /// \param color New color of the sprite
+    ///
+    /// \see getColor
     ///
     ////////////////////////////////////////////////////////////
-    void Resize(const Vector2f& Size);
+    void setColor(const Color& color);
 
     ////////////////////////////////////////////////////////////
-    /// Flip the sprite horizontally
+    /// \brief Get the source texture of the sprite
     ///
-    /// \param Flipped : True to flip the sprite
+    /// If the sprite has no source texture, a NULL pointer is returned.
+    /// The returned pointer is const, which means that you can't
+    /// modify the texture when you retrieve it with this function.
+    ///
+    /// \return Pointer to the sprite's texture
+    ///
+    /// \see setTexture
     ///
     ////////////////////////////////////////////////////////////
-    void FlipX(bool Flipped);
+    const Texture* getTexture() const;
 
     ////////////////////////////////////////////////////////////
-    /// Flip the sprite vertically
+    /// \brief Get the sub-rectangle of the texture displayed by the sprite
     ///
-    /// \param Flipped : True to flip the sprite
+    /// \return Texture rectangle of the sprite
+    ///
+    /// \see setTextureRect
     ///
     ////////////////////////////////////////////////////////////
-    void FlipY(bool Flipped);
+    const IntRect& getTextureRect() const;
 
     ////////////////////////////////////////////////////////////
-    /// Get the source image of the sprite
+    /// \brief Get the global color of the sprite
     ///
-    /// \return Pointer to the image (can be NULL)
+    /// \return Global color of the sprite
+    ///
+    /// \see setColor
     ///
     ////////////////////////////////////////////////////////////
-    const Image* GetImage() const;
+    const Color& getColor() const;
 
     ////////////////////////////////////////////////////////////
-    /// Get the sub-rectangle of the sprite inside the source image
+    /// \brief Get the local bounding rectangle of the entity
     ///
-    /// \return Sub-rectangle
+    /// The returned rectangle is in local coordinates, which means
+    /// that it ignores the transformations (translation, rotation,
+    /// scale, ...) that are applied to the entity.
+    /// In other words, this function returns the bounds of the
+    /// entity in the entity's coordinate system.
+    ///
+    /// \return Local bounding rectangle of the entity
     ///
     ////////////////////////////////////////////////////////////
-    const IntRect& GetSubRect() const;
+    FloatRect getLocalBounds() const;
 
     ////////////////////////////////////////////////////////////
-    /// Get the sprite size
+    /// \brief Get the global bounding rectangle of the entity
     ///
-    /// \return Size of the sprite
+    /// The returned rectangle is in global coordinates, which means
+    /// that it takes in account the transformations (translation,
+    /// rotation, scale, ...) that are applied to the entity.
+    /// In other words, this function returns the bounds of the
+    /// sprite in the global 2D world's coordinate system.
+    ///
+    /// \return Global bounding rectangle of the entity
     ///
     ////////////////////////////////////////////////////////////
-    Vector2f GetSize() const;
+    FloatRect getGlobalBounds() const;
+
+private:
 
     ////////////////////////////////////////////////////////////
-    /// Get the color of a given pixel in the sprite
-    /// (point is in local coordinates)
+    /// \brief Draw the sprite to a render target
     ///
-    /// \param X : X coordinate of the pixel to get
-    /// \param Y : Y coordinate of the pixel to get
-    ///
-    /// \return Color of pixel (X, Y)
+    /// \param target Render target to draw to
+    /// \param states Current render states
     ///
     ////////////////////////////////////////////////////////////
-    Color GetPixel(unsigned int X, unsigned int Y) const;
-
-protected :
+    virtual void draw(RenderTarget& target, RenderStates states) const;
 
     ////////////////////////////////////////////////////////////
-    /// /see Drawable::Render
+    /// \brief Update the vertices' positions
     ///
     ////////////////////////////////////////////////////////////
-    virtual void Render(RenderTarget& Target) const;
+    void updatePositions();
 
-private :
+    ////////////////////////////////////////////////////////////
+    /// \brief Update the vertices' texture coordinates
+    ///
+    ////////////////////////////////////////////////////////////
+    void updateTexCoords();
 
     ////////////////////////////////////////////////////////////
     // Member data
     ////////////////////////////////////////////////////////////
-    ResourcePtr<Image> myImage;      ///< Image used to draw the sprite
-    IntRect            mySubRect;    ///< Sub-rectangle of source image to assign to the sprite
-    bool               myIsFlippedX; ///< Is the sprite flipped on the X axis ?
-    bool               myIsFlippedY; ///< Is the sprite flipped on the Y axis ?
+    Vertex         m_vertices[4]; ///< Vertices defining the sprite's geometry
+    const Texture* m_texture;     ///< Texture of the sprite
+    IntRect        m_textureRect; ///< Rectangle defining the area of the source texture to display
 };
 
 } // namespace sf
 
 
 #endif // SFML_SPRITE_HPP
+
+
+////////////////////////////////////////////////////////////
+/// \class sf::Sprite
+/// \ingroup graphics
+///
+/// sf::Sprite is a drawable class that allows to easily display
+/// a texture (or a part of it) on a render target.
+///
+/// It inherits all the functions from sf::Transformable:
+/// position, rotation, scale, origin. It also adds sprite-specific
+/// properties such as the texture to use, the part of it to display,
+/// and some convenience functions to change the overall color of the
+/// sprite, or to get its bounding rectangle.
+///
+/// sf::Sprite works in combination with the sf::Texture class, which
+/// loads and provides the pixel data of a given texture.
+///
+/// The separation of sf::Sprite and sf::Texture allows more flexibility
+/// and better performances: indeed a sf::Texture is a heavy resource,
+/// and any operation on it is slow (often too slow for real-time
+/// applications). On the other side, a sf::Sprite is a lightweight
+/// object which can use the pixel data of a sf::Texture and draw
+/// it with its own transformation/color/blending attributes.
+///
+/// It is important to note that the sf::Sprite instance doesn't
+/// copy the texture that it uses, it only keeps a reference to it.
+/// Thus, a sf::Texture must not be destroyed while it is
+/// used by a sf::Sprite (i.e. never write a function that
+/// uses a local sf::Texture instance for creating a sprite).
+///
+/// See also the note on coordinates and undistorted rendering in sf::Transformable.
+///
+/// Usage example:
+/// \code
+/// // Declare and load a texture
+/// sf::Texture texture;
+/// texture.loadFromFile("texture.png");
+/// 
+/// // Create a sprite
+/// sf::Sprite sprite;
+/// sprite.setTexture(texture);
+/// sprite.setTextureRect(sf::IntRect(10, 10, 50, 30));
+/// sprite.setColor(sf::Color(255, 255, 255, 200));
+/// sprite.setPosition(100, 25);
+///
+/// // Draw it
+/// window.draw(sprite);
+/// \endcode
+///
+/// \see sf::Texture, sf::Transformable
+///
+////////////////////////////////////////////////////////////
