@@ -1,29 +1,21 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
 
-    This file is part of Threading Building Blocks.
+    This file is part of Threading Building Blocks. Threading Building Blocks is free software;
+    you can redistribute it and/or modify it under the terms of the GNU General Public License
+    version 2  as  published  by  the  Free Software Foundation.  Threading Building Blocks is
+    distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+    implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+    See  the GNU General Public License for more details.   You should have received a copy of
+    the  GNU General Public License along with Threading Building Blocks; if not, write to the
+    Free Software Foundation, Inc.,  51 Franklin St,  Fifth Floor,  Boston,  MA 02110-1301 USA
 
-    Threading Building Blocks is free software; you can redistribute it
-    and/or modify it under the terms of the GNU General Public License
-    version 2 as published by the Free Software Foundation.
-
-    Threading Building Blocks is distributed in the hope that it will be
-    useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with Threading Building Blocks; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-    As a special exception, you may use this file as part of a free software
-    library without restriction.  Specifically, if other files instantiate
-    templates or use macros or inline functions from this file, or you compile
-    this file and link it with other files to produce an executable, this
-    file does not by itself cause the resulting executable to be covered by
-    the GNU General Public License.  This exception does not however
-    invalidate any other reasons why the executable file might be covered by
-    the GNU General Public License.
+    As a special exception,  you may use this file  as part of a free software library without
+    restriction.  Specifically,  if other files instantiate templates  or use macros or inline
+    functions from this file, or you compile this file and link it with other files to produce
+    an executable,  this file does not by itself cause the resulting executable to be covered
+    by the GNU General Public License. This exception does not however invalidate any other
+    reasons why the executable file might be covered by the GNU General Public License.
 */
 
 #ifndef __TBB_task_group_H
@@ -40,9 +32,14 @@ namespace internal {
     template<typename F> class task_handle_task;
 }
 
+class task_group;
+class structured_task_group;
+
 template<typename F>
 class task_handle : internal::no_assign {
     template<typename _F> friend class internal::task_handle_task;
+    friend class task_group;
+    friend class structured_task_group;
 
     static const intptr_t scheduled = 0x1;
 
@@ -68,20 +65,6 @@ enum task_group_status {
 };
 
 namespace internal {
-
-// Suppress gratuitous warnings from icc 11.0 when lambda expressions are used in instances of function_task.
-//#pragma warning(disable: 588)
-
-template<typename F>
-class function_task : public task {
-    F my_func;
-    /*override*/ task* execute() {
-        my_func();
-        return NULL;
-    }
-public:
-    function_task( const F& f ) : my_func(f) {}
-};
 
 template<typename F>
 class task_handle_task : public task {
@@ -125,7 +108,7 @@ public:
         my_root->set_ref_count(1);
     }
 
-    ~task_group_base() {
+    ~task_group_base() __TBB_NOEXCEPT(false) {
         if( my_root->ref_count() > 1 ) {
             bool stack_unwinding_in_progress = std::uncaught_exception();
             // Always attempt to do proper cleanup to avoid inevitable memory corruption 
@@ -181,21 +164,6 @@ class task_group : public internal::task_group_base {
 public:
     task_group () : task_group_base( task_group_context::concurrent_wait ) {}
 
-#if TBB_DEPRECATED
-    ~task_group() __TBB_TRY {
-        __TBB_ASSERT( my_root->ref_count() != 0, NULL );
-        if( my_root->ref_count() > 1 )
-            my_root->wait_for_all();
-    }
-#if TBB_USE_EXCEPTIONS
-    catch (...) {
-        // Have to destroy my_root here as the base class destructor won't be called
-        task::destroy(*my_root);
-        throw;
-    }
-#endif /* TBB_USE_EXCEPTIONS */
-#endif /* TBB_DEPRECATED */
-
 #if __SUNPRO_CC
     template<typename F>
     void run( task_handle<F>& h ) {
@@ -217,6 +185,7 @@ public:
 
     template<typename F>
     task_group_status run_and_wait( task_handle<F>& h ) {
+      h.mark_scheduled();
       return internal_run_and_wait< task_handle<F> >( h );
     }
 }; // class task_group
@@ -225,6 +194,7 @@ class structured_task_group : public internal::task_group_base {
 public:
     template<typename F>
     task_group_status run_and_wait ( task_handle<F>& h ) {
+        h.mark_scheduled();
         return internal_run_and_wait< task_handle<F> >( h );
     }
 
