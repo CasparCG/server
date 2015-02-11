@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -85,10 +85,10 @@ class WithinStrategyPolygonal
 
 
             // CHECK: calling method apply and result
-            Strategy const* str;
-            state_type* st;
-            point_type const* p;
-            segment_point_type const* sp;
+            Strategy const* str = 0;
+            state_type* st = 0;
+            point_type const* p = 0;
+            segment_point_type const* sp = 0;
 
             bool b = str->apply(*p, *sp, *sp, *st);
             int r = str->result(*st);
@@ -143,7 +143,7 @@ class WithinStrategyPointBox
                 (
                     (boost::is_same
                         <
-                            bool, 
+                            bool,
                             typename boost::function_types::result_type<ApplyMethod>::type
                         >::type::value),
                     WRONG_RETURN_TYPE
@@ -152,9 +152,9 @@ class WithinStrategyPointBox
 
 
             // CHECK: calling method apply
-            Strategy const* str;
-            point_type const* p;
-            box_type const* bx;
+            Strategy const* str = 0;
+            point_type const* p = 0;
+            box_type const* bx = 0;
 
             bool b = str->apply(*p, *bx);
 
@@ -207,7 +207,7 @@ class WithinStrategyBoxBox
                 (
                     (boost::is_same
                         <
-                            bool, 
+                            bool,
                             typename boost::function_types::result_type<ApplyMethod>::type
                         >::type::value),
                     WRONG_RETURN_TYPE
@@ -216,9 +216,9 @@ class WithinStrategyBoxBox
 
 
             // CHECK: calling method apply
-            Strategy const* str;
-            box_type1 const* b1;
-            box_type2 const* b2;
+            Strategy const* str = 0;
+            box_type1 const* b1 = 0;
+            box_type2 const* b2 = 0;
 
             bool b = str->apply(*b1, *b2);
 
@@ -237,8 +237,8 @@ public :
 };
 
 // So now: boost::geometry::concept::within
-namespace within 
-{ 
+namespace within
+{
 
 #ifndef DOXYGEN_NO_DISPATCH
 namespace dispatch

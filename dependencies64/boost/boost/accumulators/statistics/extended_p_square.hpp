@@ -18,7 +18,7 @@
 #include <boost/iterator/permutation_iterator.hpp>
 #include <boost/parameter/keyword.hpp>
 #include <boost/mpl/placeholders.hpp>
-#include <boost/accumulators/framework/accumulator_base.hpp>
+#include <boost/accumulators/accumulators_fwd.hpp>
 #include <boost/accumulators/framework/extractor.hpp>
 #include <boost/accumulators/numeric/functional.hpp>
 #include <boost/accumulators/framework/parameters/sample.hpp>
@@ -33,6 +33,8 @@ namespace boost { namespace accumulators
 // probabilities named parameter
 //
 BOOST_PARAMETER_NESTED_KEYWORD(tag, extended_p_square_probabilities, probabilities)
+
+BOOST_ACCUMULATORS_IGNORE_GLOBAL(extended_p_square_probabilities)
 
 namespace impl
 {
@@ -55,9 +57,9 @@ namespace impl
         K. E. E. Raatikainen, Simultaneous estimation of several quantiles, Simulation, Volume 49,
         Number 4 (October), 1986, p. 159-164.
 
-        The extended \f$ P^2 \f$ algorithm generalizess the \f$ P^2 \f$ algorithm of
+        The extended \f$ P^2 \f$ algorithm generalizes the \f$ P^2 \f$ algorithm of
 
-        R. Jain and I. Chlamtac, The P^2 algorithmus for dynamic calculation of quantiles and
+        R. Jain and I. Chlamtac, The P^2 algorithm for dynamic calculation of quantiles and
         histograms without storing observations, Communications of the ACM,
         Volume 28 (October), Number 10, 1985, p. 1076-1085.
 
@@ -67,7 +69,7 @@ namespace impl
     struct extended_p_square_impl
       : accumulator_base
     {
-        typedef typename numeric::functional::average<Sample, std::size_t>::result_type float_type;
+        typedef typename numeric::functional::fdiv<Sample, std::size_t>::result_type float_type;
         typedef std::vector<float_type> array_type;
         // for boost::result_of
         typedef iterator_range<
@@ -256,7 +258,7 @@ namespace tag
         typedef accumulators::impl::extended_p_square_impl<mpl::_1> impl;
 
         #ifdef BOOST_ACCUMULATORS_DOXYGEN_INVOKED
-        /// tag::extended_p_square::probabilities named paramter
+        /// tag::extended_p_square::probabilities named parameter
         static boost::parameter::keyword<tag::probabilities> const probabilities;
         #endif
     };

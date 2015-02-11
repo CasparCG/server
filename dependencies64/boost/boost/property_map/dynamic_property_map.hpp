@@ -117,6 +117,15 @@ struct dynamic_const_put_error  : public dynamic_property_exception {
 
 namespace detail {
 
+// Trying to work around VC++ problem that seems to relate to having too many
+// functions named "get"
+template <typename PMap, typename Key>
+typename boost::property_traits<PMap>::reference
+get_wrapper_xxx(const PMap& pmap, const Key& key) {
+  using boost::get;
+  return get(pmap, key);
+}
+
 //
 // dynamic_property_map_adaptor -
 //   property-map adaptor to support runtime polymorphism.
@@ -135,32 +144,18 @@ class dynamic_property_map_adaptor : public dynamic_property_map
   //   can be converted to value_type via iostreams.
   void do_put(const any& in_key, const any& in_value, mpl::bool_<true>)
   {
-#if !(defined(__GNUC__) && (__GNUC__ == 2) && (__GNUC_MINOR__ == 95))
     using boost::put;
-#endif
 
-    key_type key = any_cast<key_type>(in_key);
+    key_type key_ = any_cast<key_type>(in_key);
     if (in_value.type() == typeid(value_type)) {
-#if defined(__GNUC__) && (__GNUC__ == 2) && (__GNUC_MINOR__ == 95)
-      boost::put(property_map, key, any_cast<value_type>(in_value));
-#else
-      put(property_map, key, any_cast<value_type>(in_value));
-#endif
+      put(property_map_, key_, any_cast<value_type>(in_value));
     } else {
       //  if in_value is an empty string, put a default constructed value_type.
       std::string v = any_cast<std::string>(in_value);
       if (v.empty()) {
-#if defined(__GNUC__) && (__GNUC__ == 2) && (__GNUC_MINOR__ == 95)
-        boost::put(property_map, key, value_type());
-#else
-        put(property_map, key, value_type());
-#endif
+        put(property_map_, key_, value_type());
       } else {
-#if defined(__GNUC__) && (__GNUC__ == 2) && (__GNUC_MINOR__ == 95)
-        boost::put(property_map, key, detail::read_value<value_type>(v));
-#else
-        put(property_map, key, detail::read_value<value_type>(v));
-#endif
+        put(property_map_, key_, detail::read_value<value_type>(v));
       }
     }
   }
@@ -171,33 +166,19 @@ class dynamic_property_map_adaptor : public dynamic_property_map
   }
 
 public:
-  explicit dynamic_property_map_adaptor(const PropertyMap& property_map)
-    : property_map(property_map) { }
+  explicit dynamic_property_map_adaptor(const PropertyMap& property_map_)
+    : property_map_(property_map_) { }
 
-  virtual boost::any get(const any& key)
+  virtual boost::any get(const any& key_)
   {
-#if defined(__GNUC__) && (__GNUC__ == 2) && (__GNUC_MINOR__ == 95)
-    return boost::get(property_map, any_cast<key_type>(key));
-#else
-    using boost::get;
-
-    return get(property_map, any_cast<key_type>(key));
-#endif
+    return get_wrapper_xxx(property_map_, any_cast<typename boost::property_traits<PropertyMap>::key_type>(key_));
   }
 
-  virtual std::string get_string(const any& key)
+  virtual std::string get_string(const any& key_)
   {
-#if defined(__GNUC__) && (__GNUC__ == 2) && (__GNUC_MINOR__ == 95)
     std::ostringstream out;
-    out << boost::get(property_map, any_cast<key_type>(key));
+    out << get_wrapper_xxx(property_map_, any_cast<typename boost::property_traits<PropertyMap>::key_type>(key_));
     return out.str();
-#else
-    using boost::get;
-
-    std::ostringstream out;
-    out << get(property_map, any_cast<key_type>(key));
-    return out.str();
-#endif
   }
 
   virtual void put(const any& in_key, const any& in_value)
@@ -210,11 +191,11 @@ public:
   virtual const std::type_info& key()   const { return typeid(key_type); }
   virtual const std::type_info& value() const { return typeid(value_type); }
 
-  PropertyMap&       base()       { return property_map; }
-  const PropertyMap& base() const { return property_map; }
+  PropertyMap&       base()       { return property_map_; }
+  const PropertyMap& base() const { return property_map_; }
 
 private:
-  PropertyMap property_map;
+  PropertyMap property_map_;
 };
 
 } // namespace detail
@@ -243,14 +224,23 @@ public:
 
   template<typename PropertyMap>
   dynamic_properties&
-  property(const std::string& name, PropertyMap property_map)
+  property(const std::string& name, PropertyMap property_map_)
   {
-    // Tbd: exception safety
     boost::shared_ptr<dynamic_property_map> pm(
-      new detail::dynamic_property_map_adaptor<PropertyMap>(property_map));
+      boost::static_pointer_cast<dynamic_property_map>(
+        boost::make_shared<detail::dynamic_property_map_adaptor<PropertyMap> >(property_map_)));
     property_maps.insert(property_maps_type::value_type(name, pm));
 
     return *this;
+  }
+
+  template<typename PropertyMap>
+  dynamic_properties
+  property(const std::string& name, PropertyMap property_map_) const
+  {
+    dynamic_properties result = *this;
+    result.property(name, property_map_);
+    return result;
   }
 
   iterator       begin()       { return property_maps.begin(); }
@@ -309,7 +299,6 @@ put(const std::string& name, dynamic_properties& dp, const Key& key,
   }
 }
 
-#ifndef BOOST_NO_EXPLICIT_FUNCTION_TEMPLATE_ARGUMENTS 
 template<typename Value, typename Key>
 Value
 get(const std::string& name, const dynamic_properties& dp, const Key& key)
@@ -322,7 +311,6 @@ get(const std::string& name, const dynamic_properties& dp, const Key& key)
 
   BOOST_THROW_EXCEPTION(dynamic_get_failure(name));
 }
-#endif
 
 template<typename Value, typename Key>
 Value
@@ -352,7 +340,7 @@ get(const std::string& name, const dynamic_properties& dp, const Key& key)
 
 // The easy way to ignore properties.
 inline
-boost::shared_ptr<boost::dynamic_property_map> 
+boost::shared_ptr<boost::dynamic_property_map>
 ignore_other_properties(const std::string&,
                         const boost::any&,
                         const boost::any&) {

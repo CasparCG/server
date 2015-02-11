@@ -1,5 +1,5 @@
 /*
- *          Copyright Andrey Semashev 2007 - 2010.
+ *          Copyright Andrey Semashev 2007 - 2014.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -9,70 +9,41 @@
  * \author Andrey Semashev
  * \date   14.07.2009
  *
- * The header contains implementation of an unlocked sink frontend.
+ * The header contains declaration of an unlocked sink frontend.
  */
-
-#if (defined(_MSC_VER) && _MSC_VER > 1000)
-#pragma once
-#endif // _MSC_VER > 1000
 
 #ifndef BOOST_LOG_SINKS_UNLOCKED_FRONTEND_HPP_INCLUDED_
 #define BOOST_LOG_SINKS_UNLOCKED_FRONTEND_HPP_INCLUDED_
 
-#include <boost/shared_ptr.hpp>
-#include <boost/make_shared.hpp>
-#include <boost/mpl/assert.hpp>
-#include <boost/log/detail/prologue.hpp>
+#include <boost/static_assert.hpp>
+#include <boost/smart_ptr/shared_ptr.hpp>
+#include <boost/smart_ptr/make_shared_object.hpp>
+#include <boost/log/detail/config.hpp>
 #include <boost/log/detail/parameter_tools.hpp>
+#include <boost/log/detail/fake_mutex.hpp>
 #include <boost/log/sinks/basic_sink_frontend.hpp>
-#include <boost/log/sinks/threading_models.hpp>
+#include <boost/log/sinks/frontend_requirements.hpp>
+#include <boost/log/detail/header.hpp>
 
-#ifdef _MSC_VER
-#pragma warning(push)
-// 'm_A' : class 'A' needs to have dll-interface to be used by clients of class 'B'
-#pragma warning(disable: 4251)
-// non dll-interface class 'A' used as base for dll-interface class 'B'
-#pragma warning(disable: 4275)
-#endif // _MSC_VER
+#ifdef BOOST_HAS_PRAGMA_ONCE
+#pragma once
+#endif
 
 namespace boost {
 
-namespace BOOST_LOG_NAMESPACE {
+BOOST_LOG_OPEN_NAMESPACE
 
 namespace sinks {
 
-namespace aux {
+#ifndef BOOST_LOG_DOXYGEN_PASS
 
-    //! Unlocked sink frontend implementation
-    template< typename CharT >
-    class BOOST_LOG_NO_VTABLE unlocked_frontend :
-        public basic_sink_frontend< CharT >
-    {
-        typedef basic_sink_frontend< CharT > base_type;
-
-    public:
-        typedef typename base_type::record_type record_type;
-
-    protected:
-        typedef void (*consume_trampoline_t)(void*, record_type const&);
-
-    private:
-        struct implementation;
-
-    protected:
-        BOOST_LOG_EXPORT unlocked_frontend(shared_ptr< void > const& backend, consume_trampoline_t consume_tramp);
-        BOOST_LOG_EXPORT shared_ptr< void > const& get_backend() const;
-        BOOST_LOG_EXPORT void consume(record_type const& record);
-    };
-
-} // namespace aux
-
-//! \cond
 #define BOOST_LOG_SINK_CTOR_FORWARD_INTERNAL(z, n, types)\
     template< BOOST_PP_ENUM_PARAMS(n, typename T) >\
     explicit unlocked_sink(BOOST_PP_ENUM_BINARY_PARAMS(n, T, const& arg)) :\
-        base_type(boost::make_shared< sink_backend_type >(BOOST_PP_ENUM_PARAMS(n, arg)), &unlocked_sink::consume_trampoline) {}
-//! \endcond
+        base_type(false),\
+        m_pBackend(boost::make_shared< sink_backend_type >(BOOST_PP_ENUM_PARAMS(n, arg))) {}
+
+#endif // BOOST_LOG_DOXYGEN_PASS
 
 /*!
  * \brief Non-blocking logging sink frontend
@@ -82,22 +53,23 @@ namespace aux {
  */
 template< typename SinkBackendT >
 class unlocked_sink :
-    public aux::unlocked_frontend< typename SinkBackendT::char_type >
+    public aux::make_sink_frontend_base< SinkBackendT >::type
 {
-    typedef aux::unlocked_frontend< typename SinkBackendT::char_type > base_type;
+    typedef typename aux::make_sink_frontend_base< SinkBackendT >::type base_type;
 
 public:
     //! Sink implementation type
     typedef SinkBackendT sink_backend_type;
     //! \cond
-    BOOST_MPL_ASSERT((is_model_supported< typename sink_backend_type::threading_model, backend_synchronization_tag >));
+    BOOST_STATIC_ASSERT_MSG((has_requirement< typename sink_backend_type::frontend_requirements, concurrent_feeding >::value), "Unlocked sink frontend is incompatible with the specified backend: thread synchronization requirements are not met");
     //! \endcond
 
-    typedef typename base_type::record_type record_type;
-    typedef typename base_type::string_type string_type;
-
-    //! A type of pointer to the backend
+    //! Type of pointer to the backend
     typedef shared_ptr< sink_backend_type > locked_backend_ptr;
+
+private:
+    //! Pointer to the backend
+    const shared_ptr< sink_backend_type > m_pBackend;
 
 public:
     /*!
@@ -105,7 +77,8 @@ public:
      * Requires the backend to be default-constructible.
      */
     unlocked_sink() :
-        base_type(boost::make_shared< sink_backend_type >(), &unlocked_sink::consume_trampoline)
+        base_type(false),
+        m_pBackend(boost::make_shared< sink_backend_type >())
     {
     }
     /*!
@@ -116,7 +89,8 @@ public:
      * \pre \a backend is not \c NULL.
      */
     explicit unlocked_sink(shared_ptr< sink_backend_type > const& backend) :
-        base_type(backend, &unlocked_sink::consume_trampoline)
+        base_type(false),
+        m_pBackend(backend)
     {
     }
 
@@ -124,33 +98,45 @@ public:
     BOOST_LOG_PARAMETRIZED_CONSTRUCTORS_GEN(BOOST_LOG_SINK_CTOR_FORWARD_INTERNAL, ~)
 
     /*!
-     * Locking accessor to the attached backend
+     * Locking accessor to the attached backend.
+     *
+     * \note Does not do any actual locking, provided only for interface consistency
+     *       with other frontends.
      */
-    locked_backend_ptr locked_backend() const
+    locked_backend_ptr locked_backend()
     {
-        return boost::static_pointer_cast< sink_backend_type >(base_type::get_backend());
+        return m_pBackend;
     }
 
-private:
-#ifndef BOOST_LOG_DOXYGEN_PASS
-    //! The method puts logging message to the sink
-    static void consume_trampoline(void* backend, record_type const& record)
+    /*!
+     * Passes the log record to the backend
+     */
+    void consume(record_view const& rec)
     {
-        static_cast< sink_backend_type* >(backend)->consume(record);
+        boost::log::aux::fake_mutex m;
+        base_type::feed_record(rec, m, *m_pBackend);
     }
-#endif // BOOST_LOG_DOXYGEN_PASS
+
+    /*!
+     * The method performs flushing of any internal buffers that may hold log records. The method
+     * may take considerable time to complete and may block both the calling thread and threads
+     * attempting to put new records into the sink while this call is in progress.
+     */
+    void flush()
+    {
+        boost::log::aux::fake_mutex m;
+        base_type::flush_backend(m, *m_pBackend);
+    }
 };
 
 #undef BOOST_LOG_SINK_CTOR_FORWARD_INTERNAL
 
 } // namespace sinks
 
-} // namespace log
+BOOST_LOG_CLOSE_NAMESPACE // namespace log
 
 } // namespace boost
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif // _MSC_VER
+#include <boost/log/detail/footer.hpp>
 
 #endif // BOOST_LOG_SINKS_UNLOCKED_FRONTEND_HPP_INCLUDED_

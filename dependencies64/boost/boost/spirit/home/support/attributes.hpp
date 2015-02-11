@@ -1,6 +1,6 @@
 /*=============================================================================
     Copyright (c) 2001-2011 Joel de Guzman
-    Copyright (c) 2001-2011 Hartmut Kaiser
+    Copyright (c) 2001-2012 Hartmut Kaiser
 
     Distributed under the Boost Software License, Version 1.0. (See accompanying
     file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -45,6 +45,7 @@
 #include <boost/utility/enable_if.hpp>
 #include <boost/variant.hpp>
 #include <boost/range/iterator_range.hpp>
+#include <boost/config.hpp>
 #include <vector>
 #include <utility>
 #include <ios>
@@ -201,6 +202,19 @@ namespace boost { namespace spirit { namespace traits
     struct is_weak_substitute<T, optional<Expected> >
       : is_weak_substitute<T, Expected> {};
 
+#if !defined(BOOST_VARIANT_DO_NOT_USE_VARIADIC_TEMPLATES)
+    template <typename T, typename Expected>
+    struct is_weak_substitute<boost::variant<T>, Expected>
+      : is_weak_substitute<T, Expected>
+    {};
+
+    template <typename T0, typename T1, typename ...TN, typename Expected>
+    struct is_weak_substitute<boost::variant<T0, T1, TN...>,
+            Expected>
+      : mpl::bool_<is_weak_substitute<T0, Expected>::type::value &&
+            is_weak_substitute<boost::variant<T1, TN...>, Expected>::type::value>
+    {};
+#else
 #define BOOST_SPIRIT_IS_WEAK_SUBSTITUTE(z, N, _)                              \
     is_weak_substitute<BOOST_PP_CAT(T, N), Expected>::type::value &&          \
     /***/
@@ -219,6 +233,7 @@ namespace boost { namespace spirit { namespace traits
     {};
 
 #undef BOOST_SPIRIT_IS_WEAK_SUBSTITUTE
+#endif
 
     template <typename T>
     struct is_weak_substitute<T, T
@@ -515,7 +530,30 @@ namespace boost { namespace spirit { namespace traits
         {
             if (!val)
                 return 0;
-            return val.get();
+            return traits::size(val.get());
+        }
+    };
+
+    namespace detail
+    {
+        struct attribute_size_visitor : static_visitor<std::size_t>
+        {
+            template <typename T>
+            std::size_t operator()(T const& val) const
+            {
+                return spirit::traits::size(val);
+            }
+        };
+    }
+
+    template <BOOST_VARIANT_ENUM_PARAMS(typename T)>
+    struct attribute_size<variant<BOOST_VARIANT_ENUM_PARAMS(T)> >
+    {
+        typedef std::size_t type;
+
+        static type call(variant<BOOST_VARIANT_ENUM_PARAMS(T)> const& val)
+        {
+            return apply_visitor(detail::attribute_size_visitor(), val);
         }
     };
 
@@ -747,9 +785,11 @@ namespace boost { namespace spirit { namespace traits
             };
 
             // never called, but needed for decltype-based result_of (C++0x)
+#ifndef BOOST_NO_CXX11_RVALUE_REFERENCES
             template <typename Element>
             typename result<element_attribute(Element)>::type
-            operator()(Element&) const;
+            operator()(Element&&) const;
+#endif
         };
 
         // Compute the list of attributes of all sub-components
@@ -1155,8 +1195,8 @@ namespace boost { namespace spirit { namespace traits
         template <typename Out>
         struct print_fusion_sequence
         {
-            print_fusion_sequence(Out& out)
-              : out(out), is_first(true) {}
+            print_fusion_sequence(Out& out_)
+              : out(out_), is_first(true) {}
 
             typedef void result_type;
 
@@ -1178,7 +1218,7 @@ namespace boost { namespace spirit { namespace traits
         template <typename Out>
         struct print_visitor : static_visitor<>
         {
-            print_visitor(Out& out) : out(out) {}
+            print_visitor(Out& out_) : out(out_) {}
 
             template <typename T>
             void operator()(T const& val) const

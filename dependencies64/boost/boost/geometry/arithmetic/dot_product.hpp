@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2008-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2008-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -59,21 +59,23 @@ struct dot_product_maker<P1, P2, DimensionCount, DimensionCount>
 /*!
     \brief Computes the dot product (or scalar product) of 2 vectors (points).
     \ingroup arithmetic
+    \tparam Point1 \tparam_point
+    \tparam Point2 \tparam_point
     \param p1 first point
     \param p2 second point
     \return the dot product
  */
-template <typename P1, typename P2>
-inline typename select_coordinate_type<P1, P2>::type dot_product(
-        P1 const& p1, P2 const& p2)
+template <typename Point1, typename Point2>
+inline typename select_coordinate_type<Point1, Point2>::type dot_product(
+        Point1 const& p1, Point2 const& p2)
 {
-    BOOST_CONCEPT_ASSERT( (concept::ConstPoint<P1>) );
-    BOOST_CONCEPT_ASSERT( (concept::ConstPoint<P2>) );
+    BOOST_CONCEPT_ASSERT( (concept::ConstPoint<Point1>) );
+    BOOST_CONCEPT_ASSERT( (concept::ConstPoint<Point2>) );
 
     return detail::dot_product_maker
         <
-            P1, P2,
-            0, dimension<P1>::type::value - 1
+            Point1, Point2,
+            0, dimension<Point1>::type::value - 1
         >::apply(p1, p2);
 }
 

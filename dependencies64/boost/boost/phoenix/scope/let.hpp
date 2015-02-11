@@ -130,8 +130,8 @@ namespace boost { namespace phoenix
     template <typename Locals, typename Map>
     struct let_actor_gen
     {
-        let_actor_gen(Locals const & locals)
-            : locals(locals)
+        let_actor_gen(Locals const & locals_)
+            : locals(locals_)
         {}
 
         let_actor_gen(let_actor_gen const & o)
@@ -174,7 +174,7 @@ namespace boost { namespace phoenix
                                 evaluator(
                                     proto::_
                                   , _context
-                                  , proto::make<int()>
+                                  , proto::make<proto::empty_env()>
                                 )
                             >
                         >()
@@ -193,7 +193,7 @@ namespace boost { namespace phoenix
                         )
                     >
                   , proto::make<
-                        int()
+                        proto::empty_env()
                     >
                 )
             >()

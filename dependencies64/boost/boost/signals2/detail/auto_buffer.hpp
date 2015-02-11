@@ -8,7 +8,7 @@
 
 #include <boost/detail/workaround.hpp>
 
-#if defined(_MSC_VER) && (_MSC_VER >= 1200)
+#if defined(_MSC_VER)
 # pragma once
 #endif
 
@@ -562,7 +562,7 @@ namespace detail
               buffer_( allocate(members_.capacity_) ),
               size_( 0 )
         {
-            std::uninitialized_fill( buffer_, buffer_ + size, init_value );
+            std::uninitialized_fill( buffer_, buffer_ + size_arg, init_value );
             size_ = size_arg;
             BOOST_ASSERT( is_valid() );
         }

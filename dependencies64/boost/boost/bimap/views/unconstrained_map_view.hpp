@@ -29,8 +29,10 @@ class unconstrained_map_view
 {
     public:
     template< class T >
-    unconstrained_map_view(const T & t) {}
+    unconstrained_map_view(const T &) {}
 
+    typedef void iterator;
+    typedef void const_iterator;
     typedef void reference;
     typedef void const_reference;
     typedef void info_type;

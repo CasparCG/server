@@ -8,6 +8,7 @@
 #if !defined(FUSION_ZIP_VIEW_23012006_0813)
 #define FUSION_ZIP_VIEW_23012006_0813
 
+#include <boost/fusion/support/config.hpp>
 #include <boost/fusion/support/sequence_base.hpp>
 #include <boost/fusion/support/unused.hpp>
 #include <boost/fusion/iterator/equal_to.hpp>
@@ -37,6 +38,8 @@
 #include <boost/type_traits/remove_reference.hpp>
 #include <boost/type_traits/is_reference.hpp>
 
+#include <boost/config.hpp>
+
 namespace boost { namespace fusion {
 
     namespace detail
@@ -64,6 +67,14 @@ namespace boost { namespace fusion {
                     result_of::size<SeqClass>,
                     mpl::int_<high_int> >::type type;
             };
+
+            // never called, but needed for decltype-based result_of (C++0x)
+#ifndef BOOST_NO_CXX11_RVALUE_REFERENCES
+            template<typename Seq>
+            BOOST_FUSION_GPU_ENABLED
+            typename result<seq_ref_size(Seq)>::type
+            operator()(Seq&&) const;
+#endif
         };
 
         struct poly_min
@@ -78,6 +89,14 @@ namespace boost { namespace fusion {
                 typedef typename remove_reference<Rhs>::type rhs;
                 typedef typename mpl::min<lhs, rhs>::type type;
             };
+
+            // never called, but needed for decltype-based result_of (C++0x)
+#ifndef BOOST_NO_CXX11_RVALUE_REFERENCES
+            template<typename Lhs, typename Rhs>
+            BOOST_FUSION_GPU_ENABLED
+            typename result<poly_min(Lhs, Rhs)>::type
+            operator()(Lhs&&, Rhs&&) const;
+#endif
         };
 
         template<typename Sequences>
@@ -103,6 +122,7 @@ namespace boost { namespace fusion {
         typedef typename fusion::result_of::as_vector<Sequences>::type sequences;
         typedef typename detail::min_size<real_sequences>::type size;
 
+        BOOST_FUSION_GPU_ENABLED
         zip_view(
             const Sequences& seqs)
             : sequences_(seqs)

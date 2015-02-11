@@ -16,14 +16,71 @@
 #include <boost/mpl/at.hpp>
 #include <boost/mpl/if.hpp>
 #include <boost/mpl/map.hpp>
+#include <boost/mpl/eval_if.hpp>
 #include <boost/proto/proto_fwd.hpp>
 #include <boost/proto/traits.hpp>
 #include <boost/proto/transform/call.hpp>
 #include <boost/proto/transform/make.hpp>
 #include <boost/proto/transform/impl.hpp>
+#include <boost/proto/transform/env.hpp>
+
+#if defined(_MSC_VER)
+# pragma warning(push)
+# pragma warning(disable : 4714) // function 'xxx' marked as __forceinline not inlined
+#endif
 
 namespace boost { namespace proto
 {
+    namespace detail
+    {
+        template<typename Grammar, typename R, typename Fun>
+        struct when_impl
+          : transform<when<Grammar, Fun> >
+        {
+            typedef Grammar first;
+            typedef Fun second;
+            typedef typename Grammar::proto_grammar proto_grammar;
+
+            // Note: do not evaluate is_callable<R> in this scope.
+            // R may be an incomplete type at this point.
+
+            template<typename Expr, typename State, typename Data>
+            struct impl : transform_impl<Expr, State, Data>
+            {
+                // OK to evaluate is_callable<R> here. R should be compete by now.
+                typedef
+                    typename mpl::if_c<
+                        is_callable<R>::value
+                      , proto::call<Fun> // "R" is a function to call
+                      , proto::make<Fun> // "R" is an object to construct
+                    >::type
+                which;
+
+                typedef typename which::template impl<Expr, State, Data>::result_type result_type;
+
+                /// Evaluate <tt>R(A0,A1,...)</tt> as a transform either with
+                /// <tt>call\<\></tt> or with <tt>make\<\></tt> depending on
+                /// whether <tt>is_callable\<R\>::value</tt> is \c true or
+                /// \c false.
+                ///
+                /// \param e The current expression
+                /// \param s The current state
+                /// \param d An arbitrary data
+                /// \pre <tt>matches\<Expr, Grammar\>::value</tt> is \c true
+                /// \return <tt>which()(e, s, d)</tt>
+                BOOST_FORCEINLINE
+                result_type operator ()(
+                    typename impl::expr_param   e
+                  , typename impl::state_param  s
+                  , typename impl::data_param   d
+                ) const
+                {
+                    return typename which::template impl<Expr, State, Data>()(e, s, d);
+                }
+            };
+        };
+    }
+
     /// \brief A grammar element and a PrimitiveTransform that associates
     /// a transform with the grammar.
     ///
@@ -100,6 +157,14 @@ namespace boost { namespace proto
       : when<_, Fun>
     {};
 
+    namespace envns_
+    {
+        // Define the transforms global
+        BOOST_PROTO_DEFINE_ENV_VAR(transforms_type, transforms);
+    }
+
+    using envns_::transforms;
+
     /// \brief This specialization uses the Data parameter as a collection
     /// of transforms that can be indexed by the specified rule.
     ///
@@ -119,12 +184,13 @@ namespace boost { namespace proto
 
         template<typename Expr, typename State, typename Data>
         struct impl
-          : Data::template when<Grammar>::template impl<Expr, State, Data>
-        {};
-
-        template<typename Expr, typename State, typename Data>
-        struct impl<Expr, State, Data &>
-          : Data::template when<Grammar>::template impl<Expr, State, Data &>
+          : remove_reference<
+                typename mpl::eval_if_c<
+                    proto::result_of::has_env_var<Data, transforms_type>::value
+                  , proto::result_of::env_var<Data, transforms_type>
+                  , proto::result_of::env_var<Data, data_type>
+                >::type
+            >::type::template when<Grammar>::template impl<Expr, State, Data>
         {};
     };
 
@@ -193,5 +259,9 @@ namespace boost { namespace proto
     {};
 
 }} // namespace boost::proto
+
+#if defined(_MSC_VER)
+# pragma warning(pop)
+#endif
 
 #endif

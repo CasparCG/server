@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2006. Distributed under the Boost
+// (C) Copyright Ion Gaztanaga 2006-2012. Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -10,6 +10,10 @@
 
 #ifndef BOOST_INTERPROCESS_MANAGED_OPEN_OR_CREATE_IMPL
 #define BOOST_INTERPROCESS_MANAGED_OPEN_OR_CREATE_IMPL
+
+#if defined(_MSC_VER)
+#  pragma once
+#endif
 
 #include <boost/interprocess/detail/config_begin.hpp>
 #include <boost/interprocess/detail/os_thread_functions.hpp>
@@ -22,16 +26,17 @@
 #include <boost/interprocess/detail/interprocess_tester.hpp>
 #include <boost/interprocess/creation_tags.hpp>
 #include <boost/interprocess/detail/mpl.hpp>
-#include <boost/interprocess/detail/move.hpp>
 #include <boost/interprocess/permissions.hpp>
 #include <boost/type_traits/alignment_of.hpp>
 #include <boost/type_traits/type_with_alignment.hpp>
+#include <boost/interprocess/sync/spin/wait.hpp>
+#include <boost/move/move.hpp>
 #include <boost/cstdint.hpp>
 
 namespace boost {
 namespace interprocess {
 
-/// @cond
+#if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
 namespace ipcdetail{ class interprocess_tester; }
 
 
@@ -48,13 +53,13 @@ class xsi_key;
 
 template<>
 struct managed_open_or_create_impl_device_id_t<xsi_shared_memory_file_wrapper>
-{  
+{
    typedef xsi_key type;
 };
 
 #endif   //BOOST_INTERPROCESS_XSI_SHARED_MEMORY_OBJECTS
-   
-/// @endcond
+
+#endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 
 namespace ipcdetail {
 
@@ -79,12 +84,12 @@ class managed_open_or_create_impl_device_holder<true, DeviceAbstraction>
 
    const DeviceAbstraction &get_device() const
    {  return dev; }
-   
+
    private:
    DeviceAbstraction dev;
 };
 
-template<class DeviceAbstraction, bool FileBased = true, bool StoreDevice = true>
+template<class DeviceAbstraction, std::size_t MemAlignment, bool FileBased, bool StoreDevice>
 class managed_open_or_create_impl
    : public managed_open_or_create_impl_device_holder<StoreDevice, DeviceAbstraction>
 {
@@ -94,24 +99,26 @@ class managed_open_or_create_impl
    typedef typename managed_open_or_create_impl_device_id_t<DeviceAbstraction>::type device_id_t;
    typedef managed_open_or_create_impl_device_holder<StoreDevice, DeviceAbstraction> DevHolder;
    enum
-   {  
-      UninitializedSegment,  
-      InitializingSegment,  
+   {
+      UninitializedSegment,
+      InitializingSegment,
       InitializedSegment,
       CorruptedSegment
    };
 
    public:
    static const std::size_t
-      ManagedOpenOrCreateUserOffset = 
-         ipcdetail::ct_rounded_size
+      ManagedOpenOrCreateUserOffset =
+         ct_rounded_size
             < sizeof(boost::uint32_t)
-			, ::boost::alignment_of< ::boost::detail::max_align >::value >::value;
+            , MemAlignment ? (MemAlignment) :
+               (::boost::alignment_of< ::boost::detail::max_align >::value)
+            >::value;
 
    managed_open_or_create_impl()
    {}
 
-   managed_open_or_create_impl(create_only_t, 
+   managed_open_or_create_impl(create_only_t,
                  const device_id_t & id,
                  std::size_t size,
                  mode_t mode,
@@ -119,7 +126,7 @@ class managed_open_or_create_impl
                  const permissions &perm)
    {
       priv_open_or_create
-         ( ipcdetail::DoCreate
+         ( DoCreate
          , id
          , size
          , mode
@@ -128,13 +135,13 @@ class managed_open_or_create_impl
          , null_mapped_region_function());
    }
 
-   managed_open_or_create_impl(open_only_t, 
+   managed_open_or_create_impl(open_only_t,
                  const device_id_t & id,
                  mode_t mode,
                  const void *addr)
    {
       priv_open_or_create
-         ( ipcdetail::DoOpen
+         ( DoOpen
          , id
          , 0
          , mode
@@ -144,7 +151,7 @@ class managed_open_or_create_impl
    }
 
 
-   managed_open_or_create_impl(open_or_create_t, 
+   managed_open_or_create_impl(open_or_create_t,
                  const device_id_t & id,
                  std::size_t size,
                  mode_t mode,
@@ -152,7 +159,7 @@ class managed_open_or_create_impl
                  const permissions &perm)
    {
       priv_open_or_create
-         ( ipcdetail::DoOpenOrCreate
+         ( DoOpenOrCreate
          , id
          , size
          , mode
@@ -162,7 +169,7 @@ class managed_open_or_create_impl
    }
 
    template <class ConstructFunc>
-   managed_open_or_create_impl(create_only_t, 
+   managed_open_or_create_impl(create_only_t,
                  const device_id_t & id,
                  std::size_t size,
                  mode_t mode,
@@ -171,7 +178,7 @@ class managed_open_or_create_impl
                  const permissions &perm)
    {
       priv_open_or_create
-         (ipcdetail::DoCreate
+         (DoCreate
          , id
          , size
          , mode
@@ -181,14 +188,14 @@ class managed_open_or_create_impl
    }
 
    template <class ConstructFunc>
-   managed_open_or_create_impl(open_only_t, 
+   managed_open_or_create_impl(open_only_t,
                  const device_id_t & id,
                  mode_t mode,
                  const void *addr,
                  const ConstructFunc &construct_func)
    {
       priv_open_or_create
-         ( ipcdetail::DoOpen
+         ( DoOpen
          , id
          , 0
          , mode
@@ -198,7 +205,7 @@ class managed_open_or_create_impl
    }
 
    template <class ConstructFunc>
-   managed_open_or_create_impl(open_or_create_t, 
+   managed_open_or_create_impl(open_or_create_t,
                  const device_id_t & id,
                  std::size_t size,
                  mode_t mode,
@@ -207,7 +214,7 @@ class managed_open_or_create_impl
                  const permissions &perm)
    {
       priv_open_or_create
-         ( ipcdetail::DoOpenOrCreate
+         ( DoOpenOrCreate
          , id
          , size
          , mode
@@ -220,10 +227,10 @@ class managed_open_or_create_impl
    {  this->swap(moved);   }
 
    managed_open_or_create_impl &operator=(BOOST_RV_REF(managed_open_or_create_impl) moved)
-   {  
-      managed_open_or_create_impl tmp(boost::interprocess::move(moved));
+   {
+      managed_open_or_create_impl tmp(boost::move(moved));
       this->swap(tmp);
-      return *this;  
+      return *this;
    }
 
    ~managed_open_or_create_impl()
@@ -263,88 +270,95 @@ class managed_open_or_create_impl
 
    //These are templatized to allow explicit instantiations
    template<bool dummy>
-   static void truncate_device(DeviceAbstraction &, offset_t, ipcdetail::false_)
+   static void truncate_device(DeviceAbstraction &, offset_t, false_)
    {} //Empty
 
    template<bool dummy>
-   static void truncate_device(DeviceAbstraction &dev, offset_t size, ipcdetail::true_)
+   static void truncate_device(DeviceAbstraction &dev, offset_t size, true_)
    {  dev.truncate(size);  }
 
 
    template<bool dummy>
-   static bool check_offset_t_size(std::size_t , ipcdetail::false_)
+   static bool check_offset_t_size(std::size_t , false_)
    { return true; } //Empty
 
    template<bool dummy>
-   static bool check_offset_t_size(std::size_t size, ipcdetail::true_)
+   static bool check_offset_t_size(std::size_t size, true_)
    { return size == std::size_t(offset_t(size)); }
 
    //These are templatized to allow explicit instantiations
    template<bool dummy>
-   static void create_device(DeviceAbstraction &dev, const device_id_t & id, std::size_t size, const permissions &perm, ipcdetail::false_)
+   static void create_device(DeviceAbstraction &dev, const device_id_t & id, std::size_t size, const permissions &perm, false_ file_like)
    {
+      (void)file_like;
       DeviceAbstraction tmp(create_only, id, read_write, size, perm);
       tmp.swap(dev);
    }
 
    template<bool dummy>
-   static void create_device(DeviceAbstraction &dev, const device_id_t & id, std::size_t, const permissions &perm, ipcdetail::true_)
+   static void create_device(DeviceAbstraction &dev, const device_id_t & id, std::size_t, const permissions &perm, true_ file_like)
    {
+      (void)file_like;
       DeviceAbstraction tmp(create_only, id, read_write, perm);
       tmp.swap(dev);
    }
 
-   template <class ConstructFunc> inline 
+   template <class ConstructFunc> inline
    void priv_open_or_create
-      (ipcdetail::create_enum_t type, 
-       const device_id_t & id, 
+      (create_enum_t type,
+       const device_id_t & id,
        std::size_t size,
        mode_t mode, const void *addr,
        const permissions &perm,
        ConstructFunc construct_func)
    {
-      typedef ipcdetail::bool_<FileBased> file_like_t;
+      typedef bool_<FileBased> file_like_t;
       (void)mode;
-      error_info err;
       bool created = false;
       bool ronly   = false;
       bool cow     = false;
       DeviceAbstraction dev;
 
-      if(type != ipcdetail::DoOpen && size < ManagedOpenOrCreateUserOffset){
-         throw interprocess_exception(error_info(size_error));
+      if(type != DoOpen){
+         //Check if the requested size is enough to build the managed metadata
+         const std::size_t func_min_size = construct_func.get_min_size();
+         if( (std::size_t(-1) - ManagedOpenOrCreateUserOffset) < func_min_size ||
+             size < (func_min_size + ManagedOpenOrCreateUserOffset) ){
+            throw interprocess_exception(error_info(size_error));
+         }
       }
       //Check size can be represented by offset_t (used by truncate)
-      if(type != ipcdetail::DoOpen && !check_offset_t_size<FileBased>(size, file_like_t())){
+      if(type != DoOpen && !check_offset_t_size<FileBased>(size, file_like_t())){
          throw interprocess_exception(error_info(size_error));
       }
-      if(type == ipcdetail::DoOpen && mode == read_write){
+      if(type == DoOpen && mode == read_write){
          DeviceAbstraction tmp(open_only, id, read_write);
          tmp.swap(dev);
          created = false;
       }
-      else if(type == ipcdetail::DoOpen && mode == read_only){
+      else if(type == DoOpen && mode == read_only){
          DeviceAbstraction tmp(open_only, id, read_only);
          tmp.swap(dev);
          created = false;
          ronly   = true;
       }
-      else if(type == ipcdetail::DoOpen && mode == copy_on_write){
+      else if(type == DoOpen && mode == copy_on_write){
          DeviceAbstraction tmp(open_only, id, read_only);
          tmp.swap(dev);
          created = false;
          cow     = true;
       }
-      else if(type == ipcdetail::DoCreate){
+      else if(type == DoCreate){
          create_device<FileBased>(dev, id, size, perm, file_like_t());
          created = true;
       }
-      else if(type == ipcdetail::DoOpenOrCreate){
+      else if(type == DoOpenOrCreate){
          //This loop is very ugly, but brute force is sometimes better
          //than diplomacy. If someone knows how to open or create a
          //file and know if we have really created it or just open it
          //drop me a e-mail!
          bool completed = false;
+         spin_wait swait;
          while(!completed){
             try{
                create_device<FileBased>(dev, id, size, perm, file_like_t());
@@ -362,14 +376,20 @@ class managed_open_or_create_impl
                      created     = false;
                      completed   = true;
                   }
-                  catch(interprocess_exception &ex){
-                     if(ex.get_error_code() != not_found_error){
+                  catch(interprocess_exception &e){
+                     if(e.get_error_code() != not_found_error){
                         throw;
                      }
                   }
+                  catch(...){
+                     throw;
+                  }
                }
             }
-            ipcdetail::thread_yield();
+            catch(...){
+               throw;
+            }
+            swait.yield();
          }
       }
 
@@ -382,19 +402,20 @@ class managed_open_or_create_impl
             mapped_region        region(dev, read_write, 0, 0, addr);
             boost::uint32_t *patomic_word = 0;  //avoid gcc warning
             patomic_word = static_cast<boost::uint32_t*>(region.get_address());
-            boost::uint32_t previous = ipcdetail::atomic_cas32(patomic_word, InitializingSegment, UninitializedSegment);
+            boost::uint32_t previous = atomic_cas32(patomic_word, InitializingSegment, UninitializedSegment);
 
             if(previous == UninitializedSegment){
                try{
-                  construct_func(static_cast<char*>(region.get_address()) + ManagedOpenOrCreateUserOffset, size - ManagedOpenOrCreateUserOffset, true);
+                  construct_func( static_cast<char*>(region.get_address()) + ManagedOpenOrCreateUserOffset
+                                , size - ManagedOpenOrCreateUserOffset, true);
                   //All ok, just move resources to the external mapped region
                   m_mapped_region.swap(region);
                }
                catch(...){
-                  ipcdetail::atomic_write32(patomic_word, CorruptedSegment);
+                  atomic_write32(patomic_word, CorruptedSegment);
                   throw;
                }
-               ipcdetail::atomic_write32(patomic_word, InitializedSegment);
+               atomic_write32(patomic_word, InitializedSegment);
             }
             else if(previous == InitializingSegment || previous == InitializedSegment){
                throw interprocess_exception(error_info(already_exists_error));
@@ -415,11 +436,13 @@ class managed_open_or_create_impl
       else{
          if(FileBased){
             offset_t filesize = 0;
+            spin_wait swait;
             while(filesize == 0){
-               if(!ipcdetail::get_file_size(ipcdetail::file_handle_from_mapping_handle(dev.get_mapping_handle()), filesize)){
-                  throw interprocess_exception(error_info(system_error_code()));
+               if(!get_file_size(file_handle_from_mapping_handle(dev.get_mapping_handle()), filesize)){
+                  error_info err = system_error_code();
+                  throw interprocess_exception(err);
                }
-               ipcdetail::thread_yield();
+               swait.yield();
             }
             if(filesize == 1){
                throw interprocess_exception(error_info(corrupted_error));
@@ -429,11 +452,12 @@ class managed_open_or_create_impl
          mapped_region  region(dev, ronly ? read_only : (cow ? copy_on_write : read_write), 0, 0, addr);
 
          boost::uint32_t *patomic_word = static_cast<boost::uint32_t*>(region.get_address());
-         boost::uint32_t value = ipcdetail::atomic_read32(patomic_word);
+         boost::uint32_t value = atomic_read32(patomic_word);
 
+         spin_wait swait;
          while(value == InitializingSegment || value == UninitializedSegment){
-            ipcdetail::thread_yield();
-            value = ipcdetail::atomic_read32(patomic_word);
+            swait.yield();
+            value = atomic_read32(patomic_word);
          }
 
          if(value != InitializedSegment)
@@ -446,22 +470,22 @@ class managed_open_or_create_impl
          m_mapped_region.swap(region);
       }
       if(StoreDevice){
-         this->DevHolder::get_device() = boost::interprocess::move(dev);
+         this->DevHolder::get_device() = boost::move(dev);
       }
    }
 
+   friend void swap(managed_open_or_create_impl &left, managed_open_or_create_impl &right)
+   {
+      left.swap(right);
+   }
+
    private:
-   friend class ipcdetail::interprocess_tester;
+   friend class interprocess_tester;
    void dont_close_on_destruction()
-   {  ipcdetail::interprocess_tester::dont_close_on_destruction(m_mapped_region);  }
+   {  interprocess_tester::dont_close_on_destruction(m_mapped_region);  }
 
    mapped_region     m_mapped_region;
 };
-
-template<class DeviceAbstraction>
-inline void swap(managed_open_or_create_impl<DeviceAbstraction> &x
-                ,managed_open_or_create_impl<DeviceAbstraction> &y)
-{  x.swap(y);  }
 
 }  //namespace ipcdetail {
 

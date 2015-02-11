@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -21,6 +21,11 @@
 namespace boost { namespace geometry
 {
 
+// Silence warning C4512: assignment operator could not be generated
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4512)
+#endif
 
 /*!
 \brief View on a range, not modifying anything
@@ -46,6 +51,9 @@ private :
     Range& m_range;
 };
 
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 }} // namespace boost::geometry
 

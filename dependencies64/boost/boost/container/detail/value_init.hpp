@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2005-2011.
+// (C) Copyright Ion Gaztanaga 2005-2013.
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
@@ -10,19 +10,19 @@
 //
 //////////////////////////////////////////////////////////////////////////////
 
-#ifndef BOOST_CONTAINERS_DETAIL_VALUE_INIT_HPP
-#define BOOST_CONTAINERS_DETAIL_VALUE_INIT_HPP
+#ifndef BOOST_CONTAINER_DETAIL_VALUE_INIT_HPP
+#define BOOST_CONTAINER_DETAIL_VALUE_INIT_HPP
 
-#if (defined _MSC_VER) && (_MSC_VER >= 1200)
+#if defined(_MSC_VER)
 #  pragma once
 #endif
 
-#include "config_begin.hpp"
+#include <boost/container/detail/config_begin.hpp>
 #include <boost/container/detail/workaround.hpp>
 
 namespace boost {
-namespace container { 
-namespace containers_detail {
+namespace container {
+namespace container_detail {
 
 template<class T>
 struct value_init
@@ -31,13 +31,15 @@ struct value_init
       : m_t()
    {}
 
+   operator T &() { return m_t; }
+
    T m_t;
 };
 
-}  //namespace containers_detail { 
-}  //namespace container { 
+}  //namespace container_detail {
+}  //namespace container {
 }  //namespace boost {
 
 #include <boost/container/detail/config_end.hpp>
 
-#endif   //#ifndef BOOST_CONTAINERS_DETAIL_VALUE_INIT_HPP
+#endif   //#ifndef BOOST_CONTAINER_DETAIL_VALUE_INIT_HPP

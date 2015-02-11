@@ -119,7 +119,7 @@ namespace boost { namespace phoenix
                     mpl::true_
                   , boost::phoenix::is_nullary
                 >
-              , int
+              , proto::empty_env
             >::result_type
         {};
         
@@ -137,12 +137,12 @@ namespace boost { namespace phoenix
         struct is_nullary<T const >
             : is_nullary<T>
         {};
-        
+
         template <typename T>
         struct is_nullary<custom_terminal<T> >
             : mpl::true_
         {};
-        
+
         template <typename T>
         struct is_nullary<custom_terminal<actor<T> > >
             : evaluator

@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -15,29 +15,7 @@
 #define BOOST_GEOMETRY_MULTI_ALGORITHMS_CLEAR_HPP
 
 
-#include <boost/geometry/multi/core/tags.hpp>
 #include <boost/geometry/algorithms/clear.hpp>
-
-
-namespace boost { namespace geometry
-{
-
-
-#ifndef DOXYGEN_NO_DISPATCH
-namespace dispatch
-{
-
-template <typename Geometry>
-struct clear<multi_tag, Geometry>
-    : detail::clear::collection_clear<Geometry>
-{};
-
-
-} // namespace dispatch
-#endif
-
-
-}} // namespace boost::geometry
 
 
 #endif // BOOST_GEOMETRY_MULTI_ALGORITHMS_CLEAR_HPP

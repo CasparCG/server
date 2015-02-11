@@ -194,9 +194,9 @@ inline T bessel_y_small_z_series(T v, T x, T* pscale, const Policy& pol)
    }
    else
    {
-      int s;
-      prefix = boost::math::lgamma(-v, &s, pol) + p;
-      prefix = exp(prefix) * s / constants::pi<T>();
+      int sgn;
+      prefix = boost::math::lgamma(-v, &sgn, pol) + p;
+      prefix = exp(prefix) * sgn / constants::pi<T>();
    }
    bessel_y_small_z_series_term_b<T, Policy> s2(v, x);
    max_iter = policies::get_max_series_iterations<Policy>();
@@ -235,7 +235,7 @@ T bessel_yn_small_z(int n, T z, T* scale, const Policy& pol)
    {
       return (z * z) / (4 * constants::pi<T>()) * log(z / 2) 
          - (4 / (constants::pi<T>() * z * z)) 
-         - ((z * z) / (8 * constants::pi<T>())) * (3/2 - 2 * constants::euler<T>());
+         - ((z * z) / (8 * constants::pi<T>())) * (T(3)/2 - 2 * constants::euler<T>());
    }
    else
    {

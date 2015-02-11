@@ -1,5 +1,5 @@
 /*
- *          Copyright Andrey Semashev 2007 - 2010.
+ *          Copyright Andrey Semashev 2007 - 2014.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -12,27 +12,20 @@
  * This header defines tools for trivial logging support
  */
 
-#if (defined(_MSC_VER) && _MSC_VER > 1000)
-#pragma once
-#endif // _MSC_VER > 1000
-
 #ifndef BOOST_LOG_TRIVIAL_HPP_INCLUDED_
 #define BOOST_LOG_TRIVIAL_HPP_INCLUDED_
 
+#include <iosfwd>
 #include <ostream>
-#include <boost/log/detail/prologue.hpp>
+#include <boost/log/detail/config.hpp>
 #include <boost/log/keywords/severity.hpp>
-#include <boost/log/sources/global_logger_storage.hpp>
 #include <boost/log/sources/severity_logger.hpp>
 #include <boost/log/sources/record_ostream.hpp>
+#include <boost/log/detail/header.hpp>
 
-#ifdef _MSC_VER
-#pragma warning(push)
-// 'm_A' : class 'A' needs to have dll-interface to be used by clients of class 'B'
-#pragma warning(disable: 4251)
-// non dll-interface class 'A' used as base for dll-interface class 'B'
-#pragma warning(disable: 4275)
-#endif // _MSC_VER
+#ifdef BOOST_HAS_PRAGMA_ONCE
+#pragma once
+#endif
 
 #if !defined(BOOST_LOG_USE_CHAR)
 #error Boost.Log: Trivial logging is available for narrow-character builds only. Use advanced initialization routines to setup wide-character logging.
@@ -40,16 +33,9 @@
 
 namespace boost {
 
-namespace BOOST_LOG_NAMESPACE {
+BOOST_LOG_OPEN_NAMESPACE
 
 namespace trivial {
-
-namespace aux {
-
-    //! Initialization routine
-    BOOST_LOG_EXPORT void init();
-
-} // namespace aux
 
 //! Trivial severity levels
 enum severity_level
@@ -62,62 +48,80 @@ enum severity_level
     fatal
 };
 
+//! Returns stringized enumeration value or \c NULL, if the value is not valid
+BOOST_LOG_API const char* to_string(severity_level lvl);
+
+//! Outputs stringized representation of the severity level to the stream
 template< typename CharT, typename TraitsT >
 inline std::basic_ostream< CharT, TraitsT >& operator<< (
     std::basic_ostream< CharT, TraitsT >& strm, severity_level lvl)
 {
-    switch (lvl)
-    {
-    case trace:
-        strm << "trace"; break;
-    case debug:
-        strm << "debug"; break;
-    case info:
-        strm << "info"; break;
-    case warning:
-        strm << "warning"; break;
-    case error:
-        strm << "error"; break;
-    case fatal:
-        strm << "fatal"; break;
-    default:
-        strm << static_cast< int >(lvl); break;
-    }
-
+    const char* str = boost::log::trivial::to_string(lvl);
+    if (str)
+        strm << str;
+    else
+        strm << static_cast< int >(lvl);
     return strm;
 }
 
+//! Reads stringized representation of the severity level from the stream
+template< typename CharT, typename TraitsT >
+BOOST_LOG_API std::basic_istream< CharT, TraitsT >& operator>> (
+    std::basic_istream< CharT, TraitsT >& strm, severity_level& lvl);
+
 //! Trivial logger type
 #if !defined(BOOST_LOG_NO_THREADS)
-typedef sources::severity_logger_mt< severity_level > trivial_logger;
+typedef sources::severity_logger_mt< severity_level > logger_type;
 #else
-typedef sources::severity_logger< severity_level > trivial_logger;
+typedef sources::severity_logger< severity_level > logger_type;
 #endif
 
-#if !defined(BOOST_LOG_BUILDING_THE_LIB)
-
-//! Global logger instance
-BOOST_LOG_DECLARE_GLOBAL_LOGGER_INIT(logger, trivial_logger)
+/*!
+ * \brief Trivial logger tag
+ *
+ * This tag can be used to acquire the logger that is used with lrivial logging macros.
+ * This may be useful when the logger is used with other macros which require a logger.
+ */
+struct logger
 {
-    trivial::aux::init();
-    return trivial_logger(keywords::severity = info);
-}
+    //! Logger type
+    typedef trivial::logger_type logger_type;
 
-//! The macro is used to initiate logging
+    /*!
+     * Returns a reference to the trivial logger instance
+     */
+    static BOOST_LOG_API logger_type& get();
+
+    // Implementation details - never use these
+#if !defined(BOOST_LOG_DOXYGEN_PASS)
+    enum registration_line_t { registration_line = __LINE__ };
+    static const char* registration_file() { return __FILE__; }
+    static BOOST_LOG_API logger_type construct_logger();
+#endif
+};
+
+/*!
+ * The macro is used to initiate logging. The \c lvl argument of the macro specifies one of the following
+ * severity levels: \c trace, \c debug, \c info, \c warning, \c error or \c fatal (see \c severity_level enum).
+ * Following the macro, there may be a streaming expression that composes the record message string. For example:
+ *
+ * \code
+ * BOOST_LOG_TRIVIAL(info) << "Hello, world!";
+ * \endcode
+ */
 #define BOOST_LOG_TRIVIAL(lvl)\
-    BOOST_LOG_STREAM_WITH_PARAMS(::boost::log::trivial::get_logger(),\
+    BOOST_LOG_STREAM_WITH_PARAMS(::boost::log::trivial::logger::get(),\
         (::boost::log::keywords::severity = ::boost::log::trivial::lvl))
-
-#endif // !defined(BOOST_LOG_BUILDING_THE_LIB)
 
 } // namespace trivial
 
-} // namespace log
+BOOST_LOG_CLOSE_NAMESPACE // namespace log
 
 } // namespace boost
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif // _MSC_VER
+#include <boost/log/detail/footer.hpp>
+#if defined(BOOST_LOG_EXPRESSIONS_KEYWORD_HPP_INCLUDED_)
+#include <boost/log/detail/trivial_keyword.hpp>
+#endif
 
 #endif // BOOST_LOG_TRIVIAL_HPP_INCLUDED_

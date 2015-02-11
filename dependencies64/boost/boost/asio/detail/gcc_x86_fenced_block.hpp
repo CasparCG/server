@@ -2,7 +2,7 @@
 // detail/gcc_x86_fenced_block.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2011 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2014 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -40,17 +40,17 @@ public:
   // Constructor for a full fenced block.
   explicit gcc_x86_fenced_block(full_t)
   {
-    barrier1();
+    lbarrier();
   }
 
   // Destructor.
   ~gcc_x86_fenced_block()
   {
-    barrier2();
+    sbarrier();
   }
 
 private:
-  static int barrier1()
+  static int barrier()
   {
     int r = 0, m = 1;
     __asm__ __volatile__ (
@@ -61,12 +61,29 @@ private:
     return r;
   }
 
-  static void barrier2()
+  static void lbarrier()
   {
 #if defined(__SSE2__)
-    __asm__ __volatile__ ("mfence" ::: "memory");
+# if (__GNUC__ >= 4) && !defined(__INTEL_COMPILER) && !defined(__ICL)
+    __builtin_ia32_lfence();
+# else // (__GNUC__ >= 4) && !defined(__INTEL_COMPILER) && !defined(__ICL)
+    __asm__ __volatile__ ("lfence" ::: "memory");
+# endif // (__GNUC__ >= 4) && !defined(__INTEL_COMPILER) && !defined(__ICL)
 #else // defined(__SSE2__)
-    barrier1();
+    barrier();
+#endif // defined(__SSE2__)
+  }
+
+  static void sbarrier()
+  {
+#if defined(__SSE2__)
+# if (__GNUC__ >= 4) && !defined(__INTEL_COMPILER) && !defined(__ICL)
+    __builtin_ia32_sfence();
+# else // (__GNUC__ >= 4) && !defined(__INTEL_COMPILER) && !defined(__ICL)
+    __asm__ __volatile__ ("sfence" ::: "memory");
+# endif // (__GNUC__ >= 4) && !defined(__INTEL_COMPILER) && !defined(__ICL)
+#else // defined(__SSE2__)
+    barrier();
 #endif // defined(__SSE2__)
   }
 };

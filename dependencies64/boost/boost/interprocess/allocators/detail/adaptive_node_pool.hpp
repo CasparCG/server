@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2005-2009. Distributed under the Boost
+// (C) Copyright Ion Gaztanaga 2005-2012. Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -11,13 +11,12 @@
 #ifndef BOOST_INTERPROCESS_DETAIL_ADAPTIVE_NODE_POOL_HPP
 #define BOOST_INTERPROCESS_DETAIL_ADAPTIVE_NODE_POOL_HPP
 
-#if (defined _MSC_VER) && (_MSC_VER >= 1200)
+#if defined(_MSC_VER)
 #  pragma once
 #endif
 
 #include <boost/interprocess/detail/config_begin.hpp>
 #include <boost/interprocess/detail/workaround.hpp>
-#include <boost/pointer_to_other.hpp>
 #include <boost/interprocess/detail/utilities.hpp>
 #include <boost/interprocess/detail/math_functions.hpp>
 #include <boost/intrusive/set.hpp>
@@ -45,11 +44,17 @@ template< class SegmentManager
         , unsigned char OverheadPercent
         >
 class private_adaptive_node_pool
-   :  public boost::container::containers_detail::private_adaptive_node_pool_impl
-         <typename SegmentManager::segment_manager_base_type>
+   :  public boost::container::container_detail::private_adaptive_node_pool_impl
+         < typename SegmentManager::segment_manager_base_type
+         , ::boost::container::adaptive_pool_flag::size_ordered |
+           ::boost::container::adaptive_pool_flag::address_ordered
+         >
 {
-   typedef boost::container::containers_detail::private_adaptive_node_pool_impl
-      <typename SegmentManager::segment_manager_base_type> base_t;
+   typedef boost::container::container_detail::private_adaptive_node_pool_impl
+      < typename SegmentManager::segment_manager_base_type
+      , ::boost::container::adaptive_pool_flag::size_ordered |
+        ::boost::container::adaptive_pool_flag::address_ordered
+      > base_t;
    //Non-copyable
    private_adaptive_node_pool();
    private_adaptive_node_pool(const private_adaptive_node_pool &);
@@ -75,7 +80,7 @@ class private_adaptive_node_pool
 };
 
 //!Pooled shared memory allocator using adaptive pool. Includes
-//!a reference count but the class does not delete itself, this is  
+//!a reference count but the class does not delete itself, this is
 //!responsibility of user classes. Node size (NodeSize) and the number of
 //!nodes allocated per block (NodesPerBlock) are known at compile time
 template< class SegmentManager
@@ -84,7 +89,7 @@ template< class SegmentManager
         , std::size_t MaxFreeBlocks
         , unsigned char OverheadPercent
         >
-class shared_adaptive_node_pool 
+class shared_adaptive_node_pool
    :  public ipcdetail::shared_pool_impl
       < private_adaptive_node_pool
          <SegmentManager, NodeSize, NodesPerBlock, MaxFreeBlocks, OverheadPercent>

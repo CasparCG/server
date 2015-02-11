@@ -7,12 +7,16 @@
 #if !defined(FUSION_COPY_02162011_2308)
 #define FUSION_COPY_02162011_2308
 
+#include <boost/fusion/support/config.hpp>
 #include <boost/fusion/sequence/intrinsic/begin.hpp>
 #include <boost/fusion/sequence/intrinsic/end.hpp>
 #include <boost/fusion/sequence/intrinsic/size.hpp>
 #include <boost/fusion/sequence/comparison/detail/equal_to.hpp>
+#include <boost/fusion/support/is_sequence.hpp>
 #include <boost/config.hpp>
 #include <boost/static_assert.hpp>
+#include <boost/utility/enable_if.hpp>
+#include <boost/type_traits/ice.hpp>
 
 #if defined (BOOST_MSVC)
 #  pragma warning(push)
@@ -30,12 +34,14 @@ namespace boost { namespace fusion
             typedef typename result_of::end<Seq2>::type end2_type;
 
             template <typename I1, typename I2>
+            BOOST_FUSION_GPU_ENABLED
             static void
             call(I1 const&, I2 const&, mpl::true_)
             {
             }
 
             template <typename I1, typename I2>
+            BOOST_FUSION_GPU_ENABLED
             static void
             call(I1 const& src, I2 const& dest, mpl::false_)
             {
@@ -44,6 +50,7 @@ namespace boost { namespace fusion
             }
 
             template <typename I1, typename I2>
+            BOOST_FUSION_GPU_ENABLED
             static void
             call(I1 const& src, I2 const& dest)
             {
@@ -54,11 +61,20 @@ namespace boost { namespace fusion
     }
 
     template <typename Seq1, typename Seq2>
-    inline void
+    BOOST_FUSION_GPU_ENABLED
+    inline
+    typename
+        enable_if_c<
+            type_traits::ice_and<
+                traits::is_sequence<Seq1>::value
+              , traits::is_sequence<Seq2>::value
+            >::value,
+            void
+        >::type
     copy(Seq1 const& src, Seq2& dest)
     {
         BOOST_STATIC_ASSERT(
-            result_of::size<Seq1>::value == result_of::size<Seq2>::value);
+            result_of::size<Seq1>::value <= result_of::size<Seq2>::value);
 
         detail::sequence_copy<
             Seq1 const, Seq2>::

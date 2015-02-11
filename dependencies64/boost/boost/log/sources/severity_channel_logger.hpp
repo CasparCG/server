@@ -1,5 +1,5 @@
 /*
- *          Copyright Andrey Semashev 2007 - 2010.
+ *          Copyright Andrey Semashev 2007 - 2014.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -12,14 +12,11 @@
  * The header contains implementation of a logger with severity level and channel support.
  */
 
-#if (defined(_MSC_VER) && _MSC_VER > 1000)
-#pragma once
-#endif // _MSC_VER > 1000
-
 #ifndef BOOST_LOG_SOURCES_SEVERITY_CHANNEL_LOGGER_HPP_INCLUDED_
 #define BOOST_LOG_SOURCES_SEVERITY_CHANNEL_LOGGER_HPP_INCLUDED_
 
-#include <boost/log/detail/prologue.hpp>
+#include <string>
+#include <boost/log/detail/config.hpp>
 #if !defined(BOOST_LOG_NO_THREADS)
 #include <boost/log/detail/light_rw_mutex.hpp>
 #endif // !defined(BOOST_LOG_NO_THREADS)
@@ -28,16 +25,15 @@
 #include <boost/log/sources/threading_models.hpp>
 #include <boost/log/sources/severity_feature.hpp>
 #include <boost/log/sources/channel_feature.hpp>
+#include <boost/log/detail/header.hpp>
 
-#ifdef _MSC_VER
-#pragma warning(push)
-// 'm_A' : class 'A' needs to have dll-interface to be used by clients of class 'B'
-#pragma warning(disable: 4251)
-#endif // _MSC_VER
+#ifdef BOOST_HAS_PRAGMA_ONCE
+#pragma once
+#endif
 
 namespace boost {
 
-namespace BOOST_LOG_NAMESPACE {
+BOOST_LOG_OPEN_NAMESPACE
 
 namespace sources {
 
@@ -52,13 +48,13 @@ class severity_channel_logger :
         char,
         severity_channel_logger< LevelT, ChannelT >,
         single_thread_model,
-        typename features<
+        features<
             severity< LevelT >,
             channel< ChannelT >
-        >::type
+        >
     >
 {
-    BOOST_LOG_FORWARD_LOGGER_CONSTRUCTORS_TEMPLATE(severity_channel_logger)
+    BOOST_LOG_FORWARD_LOGGER_MEMBERS_TEMPLATE(severity_channel_logger)
 };
 
 #if !defined(BOOST_LOG_NO_THREADS)
@@ -70,13 +66,13 @@ class severity_channel_logger_mt :
         char,
         severity_channel_logger_mt< LevelT, ChannelT >,
         multi_thread_model< boost::log::aux::light_rw_mutex >,
-        typename features<
+        features<
             severity< LevelT >,
             channel< ChannelT >
-        >::type
+        >
     >
 {
-    BOOST_LOG_FORWARD_LOGGER_CONSTRUCTORS_TEMPLATE(severity_channel_logger_mt)
+    BOOST_LOG_FORWARD_LOGGER_MEMBERS_TEMPLATE(severity_channel_logger_mt)
 };
 
 #endif // !defined(BOOST_LOG_NO_THREADS)
@@ -92,13 +88,13 @@ class wseverity_channel_logger :
         wchar_t,
         wseverity_channel_logger< LevelT, ChannelT >,
         single_thread_model,
-        typename features<
+        features<
             severity< LevelT >,
             channel< ChannelT >
-        >::type
+        >
     >
 {
-    BOOST_LOG_FORWARD_LOGGER_CONSTRUCTORS_TEMPLATE(wseverity_channel_logger)
+    BOOST_LOG_FORWARD_LOGGER_MEMBERS_TEMPLATE(wseverity_channel_logger)
 };
 
 #if !defined(BOOST_LOG_NO_THREADS)
@@ -110,13 +106,13 @@ class wseverity_channel_logger_mt :
         wchar_t,
         wseverity_channel_logger_mt< LevelT, ChannelT >,
         multi_thread_model< boost::log::aux::light_rw_mutex >,
-        typename features<
+        features<
             severity< LevelT >,
             channel< ChannelT >
-        >::type
+        >
     >
 {
-    BOOST_LOG_FORWARD_LOGGER_CONSTRUCTORS_TEMPLATE(wseverity_channel_logger_mt)
+    BOOST_LOG_FORWARD_LOGGER_MEMBERS_TEMPLATE(wseverity_channel_logger_mt)
 };
 
 #endif // !defined(BOOST_LOG_NO_THREADS)
@@ -293,12 +289,21 @@ public:
 
 } // namespace sources
 
-} // namespace log
+BOOST_LOG_CLOSE_NAMESPACE // namespace log
 
 } // namespace boost
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif // _MSC_VER
+//! The macro allows to put a record with a specific channel name into log
+#define BOOST_LOG_STREAM_CHANNEL_SEV(logger, chan, lvl)\
+    BOOST_LOG_STREAM_WITH_PARAMS((logger), (::boost::log::keywords::channel = (chan))(::boost::log::keywords::severity = (lvl)))
+
+#ifndef BOOST_LOG_NO_SHORTHAND_NAMES
+
+//! An equivalent to BOOST_LOG_STREAM_CHANNEL_SEV(logger, chan, lvl)
+#define BOOST_LOG_CHANNEL_SEV(logger, chan, lvl) BOOST_LOG_STREAM_CHANNEL_SEV(logger, chan, lvl)
+
+#endif // BOOST_LOG_NO_SHORTHAND_NAMES
+
+#include <boost/log/detail/footer.hpp>
 
 #endif // BOOST_LOG_SOURCES_SEVERITY_CHANNEL_LOGGER_HPP_INCLUDED_

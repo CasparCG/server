@@ -2,7 +2,7 @@
 // detail/task_io_service.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2011 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2014 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -23,10 +23,10 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/asio/detail/atomic_count.hpp>
 #include <boost/asio/detail/call_stack.hpp>
+#include <boost/asio/detail/event.hpp>
 #include <boost/asio/detail/mutex.hpp>
 #include <boost/asio/detail/op_queue.hpp>
 #include <boost/asio/detail/reactor_fwd.hpp>
-#include <boost/asio/detail/task_io_service_fwd.hpp>
 #include <boost/asio/detail/task_io_service_operation.hpp>
 
 #include <boost/asio/detail/push_options.hpp>
@@ -34,6 +34,8 @@
 namespace boost {
 namespace asio {
 namespace detail {
+
+struct task_io_service_thread_info;
 
 class task_io_service
   : public boost::asio::detail::service_base<task_io_service>
@@ -89,20 +91,21 @@ public:
   // Return whether a handler can be dispatched immediately.
   bool can_dispatch()
   {
-    return thread_call_stack::contains(this);
+    return thread_call_stack::contains(this) != 0;
   }
 
   // Request invocation of the given handler.
   template <typename Handler>
-  void dispatch(Handler handler);
+  void dispatch(Handler& handler);
 
   // Request invocation of the given handler and return immediately.
   template <typename Handler>
-  void post(Handler handler);
+  void post(Handler& handler);
 
   // Request invocation of the given operation and return immediately. Assumes
   // that work_started() has not yet been called for the operation.
-  BOOST_ASIO_DECL void post_immediate_completion(operation* op);
+  BOOST_ASIO_DECL void post_immediate_completion(
+      operation* op, bool is_continuation);
 
   // Request invocation of the given operation and return immediately. Assumes
   // that work_started() was previously called for the operation.
@@ -117,27 +120,23 @@ public:
   BOOST_ASIO_DECL void abandon_operations(op_queue<operation>& ops);
 
 private:
-  // Structure containing information about an idle thread.
-  struct thread_info;
+  // Structure containing thread-specific data.
+  typedef task_io_service_thread_info thread_info;
 
-  // Run at most one operation. Blocks only if this_idle_thread is non-null.
+  // Enqueue the given operation following a failed attempt to dispatch the
+  // operation for immediate invocation.
+  BOOST_ASIO_DECL void do_dispatch(operation* op);
+
+  // Run at most one operation. May block.
   BOOST_ASIO_DECL std::size_t do_run_one(mutex::scoped_lock& lock,
-      thread_info& this_thread, op_queue<operation>& private_op_queue,
-      const boost::system::error_code& ec);
+      thread_info& this_thread, const boost::system::error_code& ec);
 
   // Poll for at most one operation.
   BOOST_ASIO_DECL std::size_t do_poll_one(mutex::scoped_lock& lock,
-      op_queue<operation>& private_op_queue,
-      const boost::system::error_code& ec);
+      thread_info& this_thread, const boost::system::error_code& ec);
 
   // Stop the task and all idle threads.
   BOOST_ASIO_DECL void stop_all_threads(mutex::scoped_lock& lock);
-
-  // Wakes a single idle thread and unlocks the mutex. Returns true if an idle
-  // thread was found. If there is no idle thread, returns false and leaves the
-  // mutex locked.
-  BOOST_ASIO_DECL bool wake_one_idle_thread_and_unlock(
-      mutex::scoped_lock& lock);
 
   // Wake a single idle thread, or the task, and always unlock the mutex.
   BOOST_ASIO_DECL void wake_one_thread_and_unlock(
@@ -156,6 +155,9 @@ private:
 
   // Mutex to protect access to internal data.
   mutable mutex mutex_;
+
+  // Event to wake up blocked threads.
+  event wakeup_event_;
 
   // The task to be run by this service.
   reactor* task_;
@@ -183,9 +185,6 @@ private:
 
   // Per-thread call stack to track the state of each thread in the io_service.
   typedef call_stack<task_io_service, thread_info> thread_call_stack;
-
-  // The threads that are currently idle.
-  thread_info* first_idle_thread_;
 };
 
 } // namespace detail
