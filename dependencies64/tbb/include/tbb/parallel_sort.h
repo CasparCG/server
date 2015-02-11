@@ -1,29 +1,21 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
 
-    This file is part of Threading Building Blocks.
+    This file is part of Threading Building Blocks. Threading Building Blocks is free software;
+    you can redistribute it and/or modify it under the terms of the GNU General Public License
+    version 2  as  published  by  the  Free Software Foundation.  Threading Building Blocks is
+    distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+    implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+    See  the GNU General Public License for more details.   You should have received a copy of
+    the  GNU General Public License along with Threading Building Blocks; if not, write to the
+    Free Software Foundation, Inc.,  51 Franklin St,  Fifth Floor,  Boston,  MA 02110-1301 USA
 
-    Threading Building Blocks is free software; you can redistribute it
-    and/or modify it under the terms of the GNU General Public License
-    version 2 as published by the Free Software Foundation.
-
-    Threading Building Blocks is distributed in the hope that it will be
-    useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with Threading Building Blocks; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-    As a special exception, you may use this file as part of a free software
-    library without restriction.  Specifically, if other files instantiate
-    templates or use macros or inline functions from this file, or you compile
-    this file and link it with other files to produce an executable, this
-    file does not by itself cause the resulting executable to be covered by
-    the GNU General Public License.  This exception does not however
-    invalidate any other reasons why the executable file might be covered by
-    the GNU General Public License.
+    As a special exception,  you may use this file  as part of a free software library without
+    restriction.  Specifically,  if other files instantiate templates  or use macros or inline
+    functions from this file, or you compile this file and link it with other files to produce
+    an executable,  this file does not by itself cause the resulting executable to be covered
+    by the GNU General Public License. This exception does not however invalidate any other
+    reasons why the executable file might be covered by the GNU General Public License.
 */
 
 #ifndef __TBB_parallel_sort_H
@@ -31,6 +23,7 @@
 
 #include "parallel_for.h"
 #include "blocked_range.h"
+#include "internal/_range_iterator.h"
 #include <algorithm>
 #include <iterator>
 #include <functional>
@@ -75,10 +68,11 @@ public:
     bool is_divisible() const {return size>=grainsize;}
 
     quick_sort_range( quick_sort_range& range, split ) : comp(range.comp) {
+        using std::swap;
         RandomAccessIterator array = range.begin;
         RandomAccessIterator key0 = range.begin; 
         size_t m = pseudo_median_of_nine(array, range);
-        if (m) std::swap ( array[0], array[m] );
+        if (m) swap ( array[0], array[m] );
 
         size_t i=0;
         size_t j=range.size;
@@ -96,11 +90,11 @@ public:
                 ++i;
             } while( comp( array[i],*key0 ));
             if( i==j ) goto partition;
-            std::swap( array[i], array[j] );
+            swap( array[i], array[j] );
         }
 partition:
         // Put the partition key were it belongs
-        std::swap( array[j], *key0 );
+        swap( array[j], *key0 );
         // array[l..j) is less or equal to key.
         // array(j..r) is greater or equal to key.
         // array[j] is equal to key
@@ -214,6 +208,34 @@ void parallel_sort( RandomAccessIterator begin, RandomAccessIterator end, const 
 template<typename RandomAccessIterator>
 inline void parallel_sort( RandomAccessIterator begin, RandomAccessIterator end ) { 
     parallel_sort( begin, end, std::less< typename std::iterator_traits<RandomAccessIterator>::value_type >() );
+}
+
+//! Sorts the data in rng using the given comparator
+/** @ingroup algorithms **/
+template<typename Range, typename Compare>
+void parallel_sort(Range& rng, const Compare& comp) {
+    parallel_sort(tbb::internal::first(rng), tbb::internal::last(rng), comp);
+}
+
+//! Sorts the data in const rng using the given comparator
+/** @ingroup algorithms **/
+template<typename Range, typename Compare>
+void parallel_sort(const Range& rng, const Compare& comp) {
+    parallel_sort(tbb::internal::first(rng), tbb::internal::last(rng), comp);
+}
+
+//! Sorts the data in rng with a default comparator \c std::less<RandomAccessIterator>
+/** @ingroup algorithms **/
+template<typename Range>
+void parallel_sort(Range& rng) {
+    parallel_sort(tbb::internal::first(rng), tbb::internal::last(rng));
+}
+
+//! Sorts the data in const rng with a default comparator \c std::less<RandomAccessIterator>
+/** @ingroup algorithms **/
+template<typename Range>
+void parallel_sort(const Range& rng) {
+    parallel_sort(tbb::internal::first(rng), tbb::internal::last(rng));
 }
 
 //! Sorts the data in the range \c [begin,end) with a default comparator \c std::less<T>

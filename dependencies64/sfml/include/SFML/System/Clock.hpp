@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2009 Laurent Gomila (laurent.gom@gmail.com)
+// Copyright (C) 2007-2014 Laurent Gomila (laurent.gom@gmail.com)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -28,47 +28,90 @@
 ////////////////////////////////////////////////////////////
 // Headers
 ////////////////////////////////////////////////////////////
-#include <SFML/Config.hpp>
+#include <SFML/System/Export.hpp>
+#include <SFML/System/Time.hpp>
 
 
 namespace sf
 {
 ////////////////////////////////////////////////////////////
-/// Clock is an utility class for manipulating time
+/// \brief Utility class that measures the elapsed time
+///
 ////////////////////////////////////////////////////////////
-class SFML_API Clock
+class SFML_SYSTEM_API Clock
 {
-public :
+public:
 
     ////////////////////////////////////////////////////////////
-    /// Default constructor
+    /// \brief Default constructor
+    ///
+    /// The clock starts automatically after being constructed.
     ///
     ////////////////////////////////////////////////////////////
     Clock();
 
     ////////////////////////////////////////////////////////////
-    /// Get the time elapsed since last reset
+    /// \brief Get the elapsed time
     ///
-    /// \return Time elapsed, in seconds
+    /// This function returns the time elapsed since the last call
+    /// to restart() (or the construction of the instance if restart()
+    /// has not been called).
+    ///
+    /// \return Time elapsed
     ///
     ////////////////////////////////////////////////////////////
-    float GetElapsedTime() const;
+    Time getElapsedTime() const;
 
     ////////////////////////////////////////////////////////////
-    /// Restart the timer
+    /// \brief Restart the clock
+    ///
+    /// This function puts the time counter back to zero.
+    /// It also returns the time elapsed since the clock was started.
+    ///
+    /// \return Time elapsed
     ///
     ////////////////////////////////////////////////////////////
-    void Reset();
+    Time restart();
 
-private :
+private:
 
     ////////////////////////////////////////////////////////////
     // Member data
     ////////////////////////////////////////////////////////////
-    double myStartTime; ///< Time of last reset
+    Time m_startTime; ///< Time of last reset, in microseconds
 };
 
 } // namespace sf
 
 
 #endif // SFML_CLOCK_HPP
+
+
+////////////////////////////////////////////////////////////
+/// \class sf::Clock
+/// \ingroup system
+///
+/// sf::Clock is a lightweight class for measuring time.
+///
+/// Its provides the most precise time that the underlying
+/// OS can achieve (generally microseconds or nanoseconds).
+/// It also ensures monotonicity, which means that the returned
+/// time can never go backward, even if the system time is
+/// changed.
+///
+/// Usage example:
+/// \code
+/// sf::Clock clock;
+/// ...
+/// Time time1 = clock.getElapsedTime();
+/// ...
+/// Time time2 = clock.restart();
+/// \endcode
+///
+/// The sf::Time value returned by the clock can then be
+/// converted to a number of seconds, milliseconds or even
+/// microseconds.
+///
+/// \see sf::Time
+///
+////////////////////////////////////////////////////////////

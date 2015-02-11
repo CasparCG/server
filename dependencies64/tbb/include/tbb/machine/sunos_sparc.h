@@ -1,29 +1,21 @@
 /*
-    Copyright 2005-2011 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
 
-    This file is part of Threading Building Blocks.
+    This file is part of Threading Building Blocks. Threading Building Blocks is free software;
+    you can redistribute it and/or modify it under the terms of the GNU General Public License
+    version 2  as  published  by  the  Free Software Foundation.  Threading Building Blocks is
+    distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+    implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+    See  the GNU General Public License for more details.   You should have received a copy of
+    the  GNU General Public License along with Threading Building Blocks; if not, write to the
+    Free Software Foundation, Inc.,  51 Franklin St,  Fifth Floor,  Boston,  MA 02110-1301 USA
 
-    Threading Building Blocks is free software; you can redistribute it
-    and/or modify it under the terms of the GNU General Public License
-    version 2 as published by the Free Software Foundation.
-
-    Threading Building Blocks is distributed in the hope that it will be
-    useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with Threading Building Blocks; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-
-    As a special exception, you may use this file as part of a free software
-    library without restriction.  Specifically, if other files instantiate
-    templates or use macros or inline functions from this file, or you compile
-    this file and link it with other files to produce an executable, this
-    file does not by itself cause the resulting executable to be covered by
-    the GNU General Public License.  This exception does not however
-    invalidate any other reasons why the executable file might be covered by
-    the GNU General Public License.
+    As a special exception,  you may use this file  as part of a free software library without
+    restriction.  Specifically,  if other files instantiate templates  or use macros or inline
+    functions from this file, or you compile this file and link it with other files to produce
+    an executable,  this file does not by itself cause the resulting executable to be covered
+    by the GNU General Public License. This exception does not however invalidate any other
+    reasons why the executable file might be covered by the GNU General Public License.
 */
 
 
@@ -37,7 +29,9 @@
 #include <unistd.h>
 
 #define __TBB_WORDSIZE 8
-#define __TBB_BIG_ENDIAN 1
+// Big endian is assumed for SPARC.
+// While hardware may support page-specific bi-endianness, only big endian pages may be exposed to TBB  
+#define __TBB_ENDIANNESS __TBB_ENDIAN_BIG
 
 /** To those working on SPARC hardware. Consider relaxing acquire and release
     consistency helpers to no-op (as this port covers TSO mode only). **/
@@ -97,12 +91,12 @@ static inline int64_t __TBB_machine_cmpswp8(volatile void *ptr, int64_t value, i
  */
 static inline int32_t __TBB_machine_fetchadd4(volatile void *ptr, int32_t addend){
   int32_t result;
-  __asm__ __volatile__ (                                 
-                        "0:\t add\t %3, %4, %0\n"    // do addition
-                        "\t cas\t [%2], %3, %0\n"        // cas to store result in memory
-                        "\t cmp\t %3, %0\n"            // check if value from memory is original
-                        "\t bne,a,pn\t %%icc, 0b\n"        // if not try again
-                        "\t mov %0, %3\n"            // use branch delay slot to move new value in memory to be added
+  __asm__ __volatile__ (
+                        "0:\t add\t %3, %4, %0\n"           // do addition
+                        "\t cas\t [%2], %3, %0\n"           // cas to store result in memory
+                        "\t cmp\t %3, %0\n"                 // check if value from memory is original
+                        "\t bne,a,pn\t %%icc, 0b\n"         // if not try again
+                        "\t mov %0, %3\n"                   // use branch delay slot to move new value in memory to be added
                : "=&r"(result), "=m"(*(int32_t *)ptr)
                : "r"(ptr), "r"(*(int32_t *)ptr), "r"(addend), "m"(*(int32_t *)ptr)
                : "ccr", "memory");
@@ -118,11 +112,11 @@ static inline int32_t __TBB_machine_fetchadd4(volatile void *ptr, int32_t addend
 static inline int64_t __TBB_machine_fetchadd8(volatile void *ptr, int64_t addend){
   int64_t result;
   __asm__ __volatile__ (
-                        "0:\t add\t %3, %4, %0\n"    // do addition
-                        "\t casx\t [%2], %3, %0\n"        // cas to store result in memory
-                        "\t cmp\t %3, %0\n"            // check if value from memory is original
-                        "\t bne,a,pn\t %%xcc, 0b\n"        // if not try again
-                        "\t mov %0, %3\n"            // use branch delay slot to move new value in memory to be added
+                        "0:\t add\t %3, %4, %0\n"           // do addition
+                        "\t casx\t [%2], %3, %0\n"          // cas to store result in memory
+                        "\t cmp\t %3, %0\n"                 // check if value from memory is original
+                        "\t bne,a,pn\t %%xcc, 0b\n"         // if not try again
+                        "\t mov %0, %3\n"                   // use branch delay slot to move new value in memory to be added
                 : "=&r"(result), "=m"(*(int64_t *)ptr)
                 : "r"(ptr), "r"(*(int64_t *)ptr), "r"(addend), "m"(*(int64_t *)ptr)
                 : "ccr", "memory");
@@ -134,6 +128,7 @@ static inline int64_t __TBB_machine_fetchadd8(volatile void *ptr, int64_t addend
 //--------------------------------------------------------
 
 static inline int64_t __TBB_machine_lg( uint64_t x ) {
+    __TBB_ASSERT(x, "__TBB_Log2(0) undefined");
     uint64_t count;
     // one hot encode
     x |= (x >> 1);
@@ -149,33 +144,33 @@ static inline int64_t __TBB_machine_lg( uint64_t x ) {
 
 //--------------------------------------------------------
 
-static inline void __TBB_machine_or( volatile void *ptr, uint64_t addend ) {
+static inline void __TBB_machine_or( volatile void *ptr, uint64_t value ) {
   __asm__ __volatile__ (
-                        "0:\t or\t %2, %3, %%g1\n" // do addition
-                        "\t casx\t [%1], %2, %%g1\n"            // cas to store result in memory
-                        "\t cmp\t %2, %%g1\n"                   // check if value from memory is original
-                        "\t bne,a,pn\t %%xcc, 0b\n" // if not try again
-                        "\t mov %%g1, %2\n"                     // use branch delay slot to move new value in memory to be added
+                        "0:\t or\t %2, %3, %%g1\n"          // do operation
+                        "\t casx\t [%1], %2, %%g1\n"        // cas to store result in memory
+                        "\t cmp\t %2, %%g1\n"               // check if value from memory is original
+                        "\t bne,a,pn\t %%xcc, 0b\n"         // if not try again
+                        "\t mov %%g1, %2\n"                 // use branch delay slot to move new value in memory to be added
                 : "=m"(*(int64_t *)ptr)
-                : "r"(ptr), "r"(*(int64_t *)ptr), "r"(addend), "m"(*(int64_t *)ptr)
+                : "r"(ptr), "r"(*(int64_t *)ptr), "r"(value), "m"(*(int64_t *)ptr)
                 : "ccr", "g1", "memory");
 }
 
-static inline void __TBB_machine_and( volatile void *ptr, uint64_t addend ) {
+static inline void __TBB_machine_and( volatile void *ptr, uint64_t value ) {
   __asm__ __volatile__ (
-                        "0:\t and\t %2, %3, %%g1\n"        // do addition
-                        "\t casx\t [%1], %2, %%g1\n"            // cas to store result in memory
-                        "\t cmp\t %2, %%g1\n"                   // check if value from memory is original
+                        "0:\t and\t %2, %3, %%g1\n"         // do operation
+                        "\t casx\t [%1], %2, %%g1\n"        // cas to store result in memory
+                        "\t cmp\t %2, %%g1\n"               // check if value from memory is original
                         "\t bne,a,pn\t %%xcc, 0b\n"         // if not try again
-                        "\t mov %%g1, %2\n"                     // use branch delay slot to move new value in memory to be added
+                        "\t mov %%g1, %2\n"                 // use branch delay slot to move new value in memory to be added
                 : "=m"(*(int64_t *)ptr)
-                : "r"(ptr), "r"(*(int64_t *)ptr), "r"(addend), "m"(*(int64_t *)ptr)
+                : "r"(ptr), "r"(*(int64_t *)ptr), "r"(value), "m"(*(int64_t *)ptr)
                 : "ccr", "g1", "memory");
 }
 
 
 static inline void __TBB_machine_pause( int32_t delay ) {
-    // do nothing, inlined, doesnt matter
+    // do nothing, inlined, doesn't matter
 }
 
 // put 0xff in memory location, return memory value,
@@ -191,11 +186,12 @@ static inline bool __TBB_machine_trylockbyte(unsigned char &flag){
     return result == 0;
 }
 
-#define __TBB_USE_GENERIC_PART_WORD_CAS             1
-#define __TBB_USE_GENERIC_PART_WORD_FETCH_ADD       1
-#define __TBB_USE_GENERIC_FETCH_STORE               1
-#define __TBB_USE_GENERIC_HALF_FENCED_LOAD_STORE    1
-#define __TBB_USE_GENERIC_RELAXED_LOAD_STORE        1
+#define __TBB_USE_GENERIC_PART_WORD_CAS                     1
+#define __TBB_USE_GENERIC_PART_WORD_FETCH_ADD               1
+#define __TBB_USE_GENERIC_FETCH_STORE                       1
+#define __TBB_USE_GENERIC_HALF_FENCED_LOAD_STORE            1
+#define __TBB_USE_GENERIC_RELAXED_LOAD_STORE                1
+#define __TBB_USE_GENERIC_SEQUENTIAL_CONSISTENCY_LOAD_STORE 1
 
 #define __TBB_AtomicOR(P,V) __TBB_machine_or(P,V)
 #define __TBB_AtomicAND(P,V) __TBB_machine_and(P,V)

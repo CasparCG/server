@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2009 Laurent Gomila (laurent.gom@gmail.com)
+// Copyright (C) 2007-2014 Laurent Gomila (laurent.gom@gmail.com)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -28,161 +28,316 @@
 ////////////////////////////////////////////////////////////
 // Headers
 ////////////////////////////////////////////////////////////
-#include <SFML/Config.hpp>
+#include <SFML/Graphics/Export.hpp>
 #include <SFML/Graphics/Rect.hpp>
-#include <SFML/Graphics/Matrix3.hpp>
+#include <SFML/Graphics/Transform.hpp>
 #include <SFML/System/Vector2.hpp>
 
 
 namespace sf
 {
-class RenderTarget;
-
 ////////////////////////////////////////////////////////////
-/// This class defines a view (position, size, etc.) ;
-/// you can consider it as a 2D camera
+/// \brief 2D camera that defines what region is shown on screen
+///
 ////////////////////////////////////////////////////////////
-class SFML_API View
+class SFML_GRAPHICS_API View
 {
-public :
+public:
 
     ////////////////////////////////////////////////////////////
-    /// Construct the view from a rectangle
+    /// \brief Default constructor
     ///
-    /// \param ViewRect : Rectangle defining the position and size of the view (1000x1000 by default)
+    /// This constructor creates a default view of (0, 0, 1000, 1000)
     ///
     ////////////////////////////////////////////////////////////
-    explicit View(const FloatRect& ViewRect = FloatRect(0, 0, 1000, 1000));
+    View();
 
     ////////////////////////////////////////////////////////////
-    /// Construct the view from its center and half-size
+    /// \brief Construct the view from a rectangle
     ///
-    /// \param Center :   Center of the view
-    /// \param HalfSize : Half-size of the view (from center to corner)
+    /// \param rectangle Rectangle defining the zone to display
     ///
     ////////////////////////////////////////////////////////////
-    View(const sf::Vector2f& Center, const sf::Vector2f& HalfSize);
+    explicit View(const FloatRect& rectangle);
 
     ////////////////////////////////////////////////////////////
-    /// Change the center of the view (take 2 values)
+    /// \brief Construct the view from its center and size
     ///
-    /// \param X : X coordinate of the new center
-    /// \param Y : Y coordinate of the new center
+    /// \param center Center of the zone to display
+    /// \param size   Size of zone to display
     ///
     ////////////////////////////////////////////////////////////
-    void SetCenter(float X, float Y);
+    View(const Vector2f& center, const Vector2f& size);
 
     ////////////////////////////////////////////////////////////
-    /// Change the center of the view (take a vector)
+    /// \brief Set the center of the view
     ///
-    /// \param Center : New center
+    /// \param x X coordinate of the new center
+    /// \param y Y coordinate of the new center
+    ///
+    /// \see setSize, getCenter
     ///
     ////////////////////////////////////////////////////////////
-    void SetCenter(const sf::Vector2f& Center);
+    void setCenter(float x, float y);
 
     ////////////////////////////////////////////////////////////
-    /// Change the half-size of the view (take 2 values)
+    /// \brief Set the center of the view
     ///
-    /// \param HalfWidth :  New half-width
-    /// \param HalfHeight : New half-height
+    /// \param center New center
+    ///
+    /// \see setSize, getCenter
     ///
     ////////////////////////////////////////////////////////////
-    void SetHalfSize(float HalfWidth, float HalfHeight);
+    void setCenter(const Vector2f& center);
 
     ////////////////////////////////////////////////////////////
-    /// Change the half-size of the view (take a vector)
+    /// \brief Set the size of the view
     ///
-    /// \param HalfSize : New half-size
+    /// \param width  New width of the view
+    /// \param height New height of the view
+    ///
+    /// \see setCenter, getCenter
     ///
     ////////////////////////////////////////////////////////////
-    void SetHalfSize(const sf::Vector2f& HalfSize);
+    void setSize(float width, float height);
 
     ////////////////////////////////////////////////////////////
-    /// Rebuild the view from a rectangle
+    /// \brief Set the size of the view
     ///
-    /// \param ViewRect : Rectangle defining the position and size of the view
+    /// \param size New size
+    ///
+    /// \see setCenter, getCenter
     ///
     ////////////////////////////////////////////////////////////
-    void SetFromRect(const FloatRect& ViewRect);
+    void setSize(const Vector2f& size);
 
     ////////////////////////////////////////////////////////////
-    /// Get the center of the view
+    /// \brief Set the orientation of the view
+    ///
+    /// The default rotation of a view is 0 degree.
+    ///
+    /// \param angle New angle, in degrees
+    ///
+    /// \see getRotation
+    ///
+    ////////////////////////////////////////////////////////////
+    void setRotation(float angle);
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Set the target viewport
+    ///
+    /// The viewport is the rectangle into which the contents of the
+    /// view are displayed, expressed as a factor (between 0 and 1)
+    /// of the size of the RenderTarget to which the view is applied.
+    /// For example, a view which takes the left side of the target would
+    /// be defined with View.setViewport(sf::FloatRect(0, 0, 0.5, 1)).
+    /// By default, a view has a viewport which covers the entire target.
+    ///
+    /// \param viewport New viewport rectangle
+    ///
+    /// \see getViewport
+    ///
+    ////////////////////////////////////////////////////////////
+    void setViewport(const FloatRect& viewport);
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Reset the view to the given rectangle
+    ///
+    /// Note that this function resets the rotation angle to 0.
+    ///
+    /// \param rectangle Rectangle defining the zone to display
+    ///
+    /// \see setCenter, setSize, setRotation
+    ///
+    ////////////////////////////////////////////////////////////
+    void reset(const FloatRect& rectangle);
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Get the center of the view
     ///
     /// \return Center of the view
     ///
+    /// \see getSize, setCenter
+    ///
     ////////////////////////////////////////////////////////////
-    const sf::Vector2f& GetCenter() const;
+    const Vector2f& getCenter() const;
 
     ////////////////////////////////////////////////////////////
-    /// Get the half-size of the view
+    /// \brief Get the size of the view
     ///
-    /// \return Half-size of the view
+    /// \return Size of the view
+    ///
+    /// \see getCenter, setSize
     ///
     ////////////////////////////////////////////////////////////
-    const sf::Vector2f& GetHalfSize() const;
+    const Vector2f& getSize() const;
 
     ////////////////////////////////////////////////////////////
-    /// Get the bounding rectangle of the view
+    /// \brief Get the current orientation of the view
     ///
-    /// \return Bounding rectangle of the view
+    /// \return Rotation angle of the view, in degrees
+    ///
+    /// \see setRotation
     ///
     ////////////////////////////////////////////////////////////
-    const sf::FloatRect& GetRect() const;
+    float getRotation() const;
 
     ////////////////////////////////////////////////////////////
-    /// Move the view (take 2 values)
+    /// \brief Get the target viewport rectangle of the view
     ///
-    /// \param OffsetX : Offset to move the view, on X axis
-    /// \param OffsetY : Offset to move the view, on Y axis
+    /// \return Viewport rectangle, expressed as a factor of the target size
+    ///
+    /// \see setViewport
     ///
     ////////////////////////////////////////////////////////////
-    void Move(float OffsetX, float OffsetY);
+    const FloatRect& getViewport() const;
 
     ////////////////////////////////////////////////////////////
-    /// Move the view (take a vector)
+    /// \brief Move the view relatively to its current position
     ///
-    /// \param Offset : Offset to move the view
+    /// \param offsetX X coordinate of the move offset
+    /// \param offsetY Y coordinate of the move offset
+    ///
+    /// \see setCenter, rotate, zoom
     ///
     ////////////////////////////////////////////////////////////
-    void Move(const sf::Vector2f& Offset);
+    void move(float offsetX, float offsetY);
 
     ////////////////////////////////////////////////////////////
-    /// Resize the view rectangle to simulate a zoom / unzoom effect
+    /// \brief Move the view relatively to its current position
     ///
-    /// \param Factor : Zoom factor to apply, relative to the current zoom
+    /// \param offset Move offset
+    ///
+    /// \see setCenter, rotate, zoom
     ///
     ////////////////////////////////////////////////////////////
-    void Zoom(float Factor);
-
-private :
-
-    friend class RenderTarget;
+    void move(const Vector2f& offset);
 
     ////////////////////////////////////////////////////////////
-    /// Get the projection matrix of the view
+    /// \brief Rotate the view relatively to its current orientation
     ///
-    /// \return Projection matrix containing the view settings
+    /// \param angle Angle to rotate, in degrees
+    ///
+    /// \see setRotation, move, zoom
     ///
     ////////////////////////////////////////////////////////////
-    const Matrix3& GetMatrix() const;
+    void rotate(float angle);
 
     ////////////////////////////////////////////////////////////
-    /// Recompute the view rectangle and the projection matrix
+    /// \brief Resize the view rectangle relatively to its current size
+    ///
+    /// Resizing the view simulates a zoom, as the zone displayed on
+    /// screen grows or shrinks.
+    /// \a factor is a multiplier:
+    /// \li 1 keeps the size unchanged
+    /// \li > 1 makes the view bigger (objects appear smaller)
+    /// \li < 1 makes the view smaller (objects appear bigger)
+    ///
+    /// \param factor Zoom factor to apply
+    ///
+    /// \see setSize, move, rotate
     ///
     ////////////////////////////////////////////////////////////
-    void RecomputeMatrix();
+    void zoom(float factor);
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Get the projection transform of the view
+    ///
+    /// This function is meant for internal use only.
+    ///
+    /// \return Projection transform defining the view
+    ///
+    /// \see getInverseTransform
+    ///
+    ////////////////////////////////////////////////////////////
+    const Transform& getTransform() const;
+
+    ////////////////////////////////////////////////////////////
+    /// \brief Get the inverse projection transform of the view
+    ///
+    /// This function is meant for internal use only.
+    ///
+    /// \return Inverse of the projection transform defining the view
+    ///
+    /// \see getTransform
+    ///
+    ////////////////////////////////////////////////////////////
+    const Transform& getInverseTransform() const;
+
+private:
 
     ////////////////////////////////////////////////////////////
     // Member data
     ////////////////////////////////////////////////////////////
-    sf::Vector2f myCenter;     ///< Center of the view
-    sf::Vector2f myHalfSize;   ///< Half-size of the view
-    FloatRect    myRect;       ///< Rectangle defining the bounds of the view
-    Matrix3      myMatrix;     ///< Precomputed projection matrix corresponding to the view
-    bool         myNeedUpdate; ///< Internal state telling if the matrix needs to be updated
+    Vector2f          m_center;              ///< Center of the view, in scene coordinates
+    Vector2f          m_size;                ///< Size of the view, in scene coordinates
+    float             m_rotation;            ///< Angle of rotation of the view rectangle, in degrees
+    FloatRect         m_viewport;            ///< Viewport rectangle, expressed as a factor of the render-target's size
+    mutable Transform m_transform;           ///< Precomputed projection transform corresponding to the view
+    mutable Transform m_inverseTransform;    ///< Precomputed inverse projection transform corresponding to the view
+    mutable bool      m_transformUpdated;    ///< Internal state telling if the transform needs to be updated
+    mutable bool      m_invTransformUpdated; ///< Internal state telling if the inverse transform needs to be updated
 };
 
 } // namespace sf
 
 
 #endif // SFML_VIEW_HPP
+
+
+////////////////////////////////////////////////////////////
+/// \class sf::View
+/// \ingroup graphics
+///
+/// sf::View defines a camera in the 2D scene. This is a
+/// very powerful concept: you can scroll, rotate or zoom
+/// the entire scene without altering the way that your
+/// drawable objects are drawn.
+///
+/// A view is composed of a source rectangle, which defines
+/// what part of the 2D scene is shown, and a target viewport,
+/// which defines where the contents of the source rectangle
+/// will be displayed on the render target (window or texture).
+///
+/// The viewport allows to map the scene to a custom part
+/// of the render target, and can be used for split-screen
+/// or for displaying a minimap, for example. If the source
+/// rectangle has not the same size as the viewport, its
+/// contents will be stretched to fit in.
+///
+/// To apply a view, you have to assign it to the render target.
+/// Then, every objects drawn in this render target will be
+/// affected by the view until you use another view.
+///
+/// Usage example:
+/// \code
+/// sf::RenderWindow window;
+/// sf::View view;
+/// 
+/// // Initialize the view to a rectangle located at (100, 100) and with a size of 400x200
+/// view.reset(sf::FloatRect(100, 100, 400, 200));
+///
+/// // Rotate it by 45 degrees
+/// view.rotate(45);
+///
+/// // Set its target viewport to be half of the window
+/// view.setViewport(sf::FloatRect(0.f, 0.f, 0.5f, 1.f));
+///
+/// // Apply it
+/// window.setView(view);
+///
+/// // Render stuff
+/// window.draw(someSprite);
+///
+/// // Set the default view back
+/// window.setView(window.getDefaultView());
+///
+/// // Render stuff not affected by the view
+/// window.draw(someText);
+/// \endcode
+///
+/// See also the note on coordinates and undistorted rendering in sf::Transformable.
+///
+/// \see sf::RenderWindow, sf::RenderTexture
+///
+////////////////////////////////////////////////////////////

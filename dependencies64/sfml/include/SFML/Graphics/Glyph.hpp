@@ -1,7 +1,7 @@
 ////////////////////////////////////////////////////////////
 //
 // SFML - Simple and Fast Multimedia Library
-// Copyright (C) 2007-2009 Laurent Gomila (laurent.gom@gmail.com)
+// Copyright (C) 2007-2014 Laurent Gomila (laurent.gom@gmail.com)
 //
 // This software is provided 'as-is', without any express or implied warranty.
 // In no event will the authors be held liable for any damages arising from the use of this software.
@@ -28,34 +28,52 @@
 ////////////////////////////////////////////////////////////
 // Headers
 ////////////////////////////////////////////////////////////
-#include <SFML/Config.hpp>
+#include <SFML/Graphics/Export.hpp>
 #include <SFML/Graphics/Rect.hpp>
 
 
 namespace sf
 {
 ////////////////////////////////////////////////////////////
-/// Structure describing a glyph (a visual character)
+/// \brief Structure describing a glyph
+///
 ////////////////////////////////////////////////////////////
-class SFML_API Glyph
+class SFML_GRAPHICS_API Glyph
 {
-public :
+public:
 
     ////////////////////////////////////////////////////////////
-    /// Default constructor
+    /// \brief Default constructor
     ///
     ////////////////////////////////////////////////////////////
-    Glyph() : Advance(0) {}
+    Glyph() : advance(0) {}
 
     ////////////////////////////////////////////////////////////
     // Member data
     ////////////////////////////////////////////////////////////
-    int       Advance;   ///< Offset to move horizontically to the next character
-    IntRect   Rectangle; ///< Bounding rectangle of the glyph, in relative coordinates
-    FloatRect TexCoords; ///< Texture coordinates of the glyph inside the bitmap font
+    float     advance;     ///< Offset to move horizontally to the next character
+    FloatRect bounds;      ///< Bounding rectangle of the glyph, in coordinates relative to the baseline
+    IntRect   textureRect; ///< Texture coordinates of the glyph inside the font's texture
 };
 
 } // namespace sf
 
 
 #endif // SFML_GLYPH_HPP
+
+
+////////////////////////////////////////////////////////////
+/// \class sf::Glyph
+/// \ingroup graphics
+///
+/// A glyph is the visual representation of a character.
+///
+/// The sf::Glyph structure provides the information needed
+/// to handle the glyph:
+/// \li its coordinates in the font's texture
+/// \li its bounding rectangle
+/// \li the offset to apply to get the starting position of the next glyph
+///
+/// \see sf::Font
+///
+////////////////////////////////////////////////////////////
