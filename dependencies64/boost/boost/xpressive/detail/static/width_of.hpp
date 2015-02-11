@@ -9,7 +9,7 @@
 #define BOOST_XPRESSIVE_DETAIL_STATIC_WIDTH_OF_HPP_EAN_10_04_2005
 
 // MS compatible compilers support #pragma once
-#if defined(_MSC_VER) && (_MSC_VER >= 1020)
+#if defined(_MSC_VER)
 # pragma once
 #endif
 
@@ -23,6 +23,7 @@
 #include <boost/mpl/equal_to.hpp>
 #include <boost/type_traits/is_same.hpp>
 #include <boost/xpressive/detail/detail_fwd.hpp>
+#include <boost/xpressive/detail/static/type_traits.hpp>
 #include <boost/proto/traits.hpp>
 
 namespace boost { namespace xpressive { namespace detail
@@ -64,24 +65,6 @@ namespace boost { namespace xpressive { namespace detail
     template<std::size_t N>
     struct or_widths<N, N>
       : mpl::size_t<N>
-    {};
-
-    ///////////////////////////////////////////////////////////////////////////////
-    // is_char
-    //
-    template<typename T>
-    struct is_char
-      : mpl::false_
-    {};
-
-    template<>
-    struct is_char<char>
-      : mpl::true_
-    {};
-
-    template<>
-    struct is_char<wchar_t>
-      : mpl::true_
     {};
 
     ///////////////////////////////////////////////////////////////////////////////

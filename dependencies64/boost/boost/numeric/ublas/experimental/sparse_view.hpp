@@ -190,11 +190,11 @@ namespace boost { namespace numeric { namespace ublas {
 
         BOOST_UBLAS_INLINE
         compressed_matrix_view(const compressed_matrix_view& o) :
-            size1_(size1_), size2_(size2_),
-            nnz_(nnz_),
-            index1_data_(index1_data_),
-            index2_data_(index2_data_),
-            value_data_(value_data_)
+            size1_(o.size1_), size2_(o.size2_),
+            nnz_(o.nnz_),
+            index1_data_(o.index1_data_),
+            index2_data_(o.index2_data_),
+            value_data_(o.value_data_)
         {}
 
         //

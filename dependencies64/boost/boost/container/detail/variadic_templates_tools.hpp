@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2008-2011. Distributed under the Boost
+// (C) Copyright Ion Gaztanaga 2008-2013. Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -8,21 +8,22 @@
 //
 //////////////////////////////////////////////////////////////////////////////
 
-#ifndef BOOST_CONTAINERS_DETAIL_VARIADIC_TEMPLATES_TOOLS_HPP
-#define BOOST_CONTAINERS_DETAIL_VARIADIC_TEMPLATES_TOOLS_HPP
+#ifndef BOOST_CONTAINER_DETAIL_VARIADIC_TEMPLATES_TOOLS_HPP
+#define BOOST_CONTAINER_DETAIL_VARIADIC_TEMPLATES_TOOLS_HPP
 
-#if (defined _MSC_VER) && (_MSC_VER >= 1200)
+#if defined(_MSC_VER)
 #  pragma once
 #endif
 
-#include "config_begin.hpp"
+#include <boost/container/detail/config_begin.hpp>
 #include <boost/container/detail/workaround.hpp>
+
 #include <boost/container/detail/type_traits.hpp>
 #include <cstddef>   //std::size_t
 
 namespace boost {
-namespace container { 
-namespace containers_detail {
+namespace container {
+namespace container_detail {
 
 template<typename... Values>
 class tuple;
@@ -136,7 +137,7 @@ struct index_tuple{};
 template<std::size_t Num, typename Tuple = index_tuple<> >
 struct build_number_seq;
 
-template<std::size_t Num, int... Indexes> 
+template<std::size_t Num, int... Indexes>
 struct build_number_seq<Num, index_tuple<Indexes...> >
    : build_number_seq<Num - 1, index_tuple<Indexes..., sizeof...(Indexes)> >
 {};
@@ -146,8 +147,8 @@ struct build_number_seq<0, index_tuple<Indexes...> >
 {  typedef index_tuple<Indexes...> type;  };
 
 
-}}}   //namespace boost { namespace container { namespace containers_detail {
+}}}   //namespace boost { namespace container { namespace container_detail {
 
 #include <boost/container/detail/config_end.hpp>
 
-#endif   //#ifndef BOOST_CONTAINERS_DETAIL_VARIADIC_TEMPLATES_TOOLS_HPP
+#endif   //#ifndef BOOST_CONTAINER_DETAIL_VARIADIC_TEMPLATES_TOOLS_HPP

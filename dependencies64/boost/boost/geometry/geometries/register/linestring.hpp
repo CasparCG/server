@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -22,7 +22,7 @@
 /*!
 \brief \brief_macro{linestring}
 \ingroup register
-\details \details_macro{BOOST_GEOMETRY_REGISTER_LINESTRING, linestring} The 
+\details \details_macro{BOOST_GEOMETRY_REGISTER_LINESTRING, linestring} The
     linestring may contain template parameters, which must be specified then.
 \param Linestring \param_macro_type{linestring}
 
@@ -41,7 +41,7 @@ namespace boost { namespace geometry { namespace traits {  \
 /*!
 \brief \brief_macro{templated linestring}
 \ingroup register
-\details \details_macro{BOOST_GEOMETRY_REGISTER_LINESTRING_TEMPLATED, templated linestring} 
+\details \details_macro{BOOST_GEOMETRY_REGISTER_LINESTRING_TEMPLATED, templated linestring}
     \details_macro_templated{linestring, point}
 \param Linestring \param_macro_type{linestring (without template parameters)}
 

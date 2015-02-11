@@ -76,7 +76,7 @@
 /// \brief Repeatedly invoke the specified macro.
 ///
 /// BOOST_PROTO_REPEAT_FROM_TO_EX() is used generate the kind of repetitive code that is typical
-/// of DSELs built with Proto. BOOST_PROTO_REPEAT_FROM_TO_EX(FROM, TO, MACRO, typename_A, A, A_a, a)  is equivalent to:
+/// of EDSLs built with Proto. BOOST_PROTO_REPEAT_FROM_TO_EX(FROM, TO, MACRO, typename_A, A, A_a, a)  is equivalent to:
 ///
 /// \code
 /// MACRO(FROM, typename_A, A, A_a, a)
@@ -90,7 +90,7 @@
 /// \brief Repeatedly invoke the specified macro.
 ///
 /// BOOST_PROTO_REPEAT_FROM_TO() is used generate the kind of repetitive code that is typical
-/// of DSELs built with Proto. BOOST_PROTO_REPEAT_FROM_TO(FROM, TO, MACRO)  is equivalent to:
+/// of EDSLs built with Proto. BOOST_PROTO_REPEAT_FROM_TO(FROM, TO, MACRO)  is equivalent to:
 ///
 /// \code
 /// MACRO(FROM, BOOST_PROTO_typename_A, BOOST_PROTO_A_const_ref, BOOST_PROTO_A_const_ref_a, BOOST_PROTO_ref_a)
@@ -172,7 +172,7 @@ BOOST_PROTO_REPEAT_FROM_TO(1, BOOST_PROTO_MAX_ARITY, M0)
 /// \brief Repeatedly invoke the specified macro.
 ///
 /// BOOST_PROTO_REPEAT_EX() is used generate the kind of repetitive code that is typical
-/// of DSELs built with Proto. BOOST_PROTO_REPEAT_EX(MACRO, typename_A, A, A_a, a)  is equivalent to:
+/// of EDSLs built with Proto. BOOST_PROTO_REPEAT_EX(MACRO, typename_A, A, A_a, a)  is equivalent to:
 ///
 /// \code
 /// MACRO(1, typename_A, A, A_a, a)
@@ -186,7 +186,7 @@ BOOST_PROTO_REPEAT_FROM_TO(1, BOOST_PROTO_MAX_ARITY, M0)
 /// \brief Repeatedly invoke the specified macro.
 ///
 /// BOOST_PROTO_REPEAT() is used generate the kind of repetitive code that is typical
-/// of DSELs built with Proto. BOOST_PROTO_REPEAT(MACRO)  is equivalent to:
+/// of EDSLs built with Proto. BOOST_PROTO_REPEAT(MACRO)  is equivalent to:
 ///
 /// \code
 /// MACRO(1, BOOST_PROTO_typename_A, BOOST_PROTO_A_const_ref, BOOST_PROTO_A_const_ref_a, BOOST_PROTO_ref_a)
@@ -200,7 +200,7 @@ BOOST_PROTO_REPEAT_FROM_TO(1, BOOST_PROTO_MAX_ARITY, M0)
 /// \brief Repeatedly invoke the specified macro.
 ///
 /// BOOST_PROTO_LOCAL_ITERATE() is used generate the kind of repetitive code that is typical
-/// of DSELs built with Proto. This macro causes the user-defined macro BOOST_PROTO_LOCAL_MACRO to
+/// of EDSLs built with Proto. This macro causes the user-defined macro BOOST_PROTO_LOCAL_MACRO to
 /// be expanded with values in the range specified by BOOST_PROTO_LOCAL_LIMITS.
 ///
 /// Usage:

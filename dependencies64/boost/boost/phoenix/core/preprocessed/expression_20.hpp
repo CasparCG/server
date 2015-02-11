@@ -46,8 +46,9 @@ namespace boost { namespace phoenix
             proto_grammar;
         
         static type make(typename call_traits<A0>::param_type a0)
-        {
-            actor<base_type> const e =
+      { 
+        
+                actor<base_type> const e =
                 {
                     proto::make_expr<
                         Tag
@@ -58,7 +59,7 @@ namespace boost { namespace phoenix
         }
         template<typename Expr, typename State, typename Data>
         struct impl
-          : proto::detail::pass_through_impl<expr_ext, Expr, State, Data>
+          : proto::pass_through<expr_ext>::template impl<Expr, State, Data>
         {};
         
         typedef Tag proto_tag;
@@ -88,8 +89,9 @@ namespace boost { namespace phoenix
             proto_grammar;
         
         static type make(typename call_traits<A0>::param_type a0 , typename call_traits<A1>::param_type a1)
-        {
-            actor<base_type> const e =
+      { 
+        
+                actor<base_type> const e =
                 {
                     proto::make_expr<
                         Tag
@@ -100,7 +102,7 @@ namespace boost { namespace phoenix
         }
         template<typename Expr, typename State, typename Data>
         struct impl
-          : proto::detail::pass_through_impl<expr_ext, Expr, State, Data>
+          : proto::pass_through<expr_ext>::template impl<Expr, State, Data>
         {};
         
         typedef Tag proto_tag;
@@ -130,8 +132,9 @@ namespace boost { namespace phoenix
             proto_grammar;
         
         static type make(typename call_traits<A0>::param_type a0 , typename call_traits<A1>::param_type a1 , typename call_traits<A2>::param_type a2)
-        {
-            actor<base_type> const e =
+      { 
+        
+                actor<base_type> const e =
                 {
                     proto::make_expr<
                         Tag
@@ -142,7 +145,7 @@ namespace boost { namespace phoenix
         }
         template<typename Expr, typename State, typename Data>
         struct impl
-          : proto::detail::pass_through_impl<expr_ext, Expr, State, Data>
+          : proto::pass_through<expr_ext>::template impl<Expr, State, Data>
         {};
         
         typedef Tag proto_tag;
@@ -172,8 +175,9 @@ namespace boost { namespace phoenix
             proto_grammar;
         
         static type make(typename call_traits<A0>::param_type a0 , typename call_traits<A1>::param_type a1 , typename call_traits<A2>::param_type a2 , typename call_traits<A3>::param_type a3)
-        {
-            actor<base_type> const e =
+      { 
+        
+                actor<base_type> const e =
                 {
                     proto::make_expr<
                         Tag
@@ -184,7 +188,7 @@ namespace boost { namespace phoenix
         }
         template<typename Expr, typename State, typename Data>
         struct impl
-          : proto::detail::pass_through_impl<expr_ext, Expr, State, Data>
+          : proto::pass_through<expr_ext>::template impl<Expr, State, Data>
         {};
         
         typedef Tag proto_tag;
@@ -214,8 +218,9 @@ namespace boost { namespace phoenix
             proto_grammar;
         
         static type make(typename call_traits<A0>::param_type a0 , typename call_traits<A1>::param_type a1 , typename call_traits<A2>::param_type a2 , typename call_traits<A3>::param_type a3 , typename call_traits<A4>::param_type a4)
-        {
-            actor<base_type> const e =
+      { 
+        
+                actor<base_type> const e =
                 {
                     proto::make_expr<
                         Tag
@@ -226,7 +231,7 @@ namespace boost { namespace phoenix
         }
         template<typename Expr, typename State, typename Data>
         struct impl
-          : proto::detail::pass_through_impl<expr_ext, Expr, State, Data>
+          : proto::pass_through<expr_ext>::template impl<Expr, State, Data>
         {};
         
         typedef Tag proto_tag;
@@ -256,8 +261,9 @@ namespace boost { namespace phoenix
             proto_grammar;
         
         static type make(typename call_traits<A0>::param_type a0 , typename call_traits<A1>::param_type a1 , typename call_traits<A2>::param_type a2 , typename call_traits<A3>::param_type a3 , typename call_traits<A4>::param_type a4 , typename call_traits<A5>::param_type a5)
-        {
-            actor<base_type> const e =
+      { 
+        
+                actor<base_type> const e =
                 {
                     proto::make_expr<
                         Tag
@@ -268,7 +274,7 @@ namespace boost { namespace phoenix
         }
         template<typename Expr, typename State, typename Data>
         struct impl
-          : proto::detail::pass_through_impl<expr_ext, Expr, State, Data>
+          : proto::pass_through<expr_ext>::template impl<Expr, State, Data>
         {};
         
         typedef Tag proto_tag;
@@ -298,8 +304,9 @@ namespace boost { namespace phoenix
             proto_grammar;
         
         static type make(typename call_traits<A0>::param_type a0 , typename call_traits<A1>::param_type a1 , typename call_traits<A2>::param_type a2 , typename call_traits<A3>::param_type a3 , typename call_traits<A4>::param_type a4 , typename call_traits<A5>::param_type a5 , typename call_traits<A6>::param_type a6)
-        {
-            actor<base_type> const e =
+      { 
+        
+                actor<base_type> const e =
                 {
                     proto::make_expr<
                         Tag
@@ -310,7 +317,7 @@ namespace boost { namespace phoenix
         }
         template<typename Expr, typename State, typename Data>
         struct impl
-          : proto::detail::pass_through_impl<expr_ext, Expr, State, Data>
+          : proto::pass_through<expr_ext>::template impl<Expr, State, Data>
         {};
         
         typedef Tag proto_tag;
@@ -340,8 +347,9 @@ namespace boost { namespace phoenix
             proto_grammar;
         
         static type make(typename call_traits<A0>::param_type a0 , typename call_traits<A1>::param_type a1 , typename call_traits<A2>::param_type a2 , typename call_traits<A3>::param_type a3 , typename call_traits<A4>::param_type a4 , typename call_traits<A5>::param_type a5 , typename call_traits<A6>::param_type a6 , typename call_traits<A7>::param_type a7)
-        {
-            actor<base_type> const e =
+      { 
+        
+                actor<base_type> const e =
                 {
                     proto::make_expr<
                         Tag
@@ -352,7 +360,7 @@ namespace boost { namespace phoenix
         }
         template<typename Expr, typename State, typename Data>
         struct impl
-          : proto::detail::pass_through_impl<expr_ext, Expr, State, Data>
+          : proto::pass_through<expr_ext>::template impl<Expr, State, Data>
         {};
         
         typedef Tag proto_tag;
@@ -382,8 +390,9 @@ namespace boost { namespace phoenix
             proto_grammar;
         
         static type make(typename call_traits<A0>::param_type a0 , typename call_traits<A1>::param_type a1 , typename call_traits<A2>::param_type a2 , typename call_traits<A3>::param_type a3 , typename call_traits<A4>::param_type a4 , typename call_traits<A5>::param_type a5 , typename call_traits<A6>::param_type a6 , typename call_traits<A7>::param_type a7 , typename call_traits<A8>::param_type a8)
-        {
-            actor<base_type> const e =
+      { 
+        
+                actor<base_type> const e =
                 {
                     proto::make_expr<
                         Tag
@@ -394,7 +403,7 @@ namespace boost { namespace phoenix
         }
         template<typename Expr, typename State, typename Data>
         struct impl
-          : proto::detail::pass_through_impl<expr_ext, Expr, State, Data>
+          : proto::pass_through<expr_ext>::template impl<Expr, State, Data>
         {};
         
         typedef Tag proto_tag;
@@ -424,8 +433,9 @@ namespace boost { namespace phoenix
             proto_grammar;
         
         static type make(typename call_traits<A0>::param_type a0 , typename call_traits<A1>::param_type a1 , typename call_traits<A2>::param_type a2 , typename call_traits<A3>::param_type a3 , typename call_traits<A4>::param_type a4 , typename call_traits<A5>::param_type a5 , typename call_traits<A6>::param_type a6 , typename call_traits<A7>::param_type a7 , typename call_traits<A8>::param_type a8 , typename call_traits<A9>::param_type a9)
-        {
-            actor<base_type> const e =
+      { 
+        
+                actor<base_type> const e =
                 {
                     proto::make_expr<
                         Tag
@@ -436,7 +446,7 @@ namespace boost { namespace phoenix
         }
         template<typename Expr, typename State, typename Data>
         struct impl
-          : proto::detail::pass_through_impl<expr_ext, Expr, State, Data>
+          : proto::pass_through<expr_ext>::template impl<Expr, State, Data>
         {};
         
         typedef Tag proto_tag;
@@ -466,8 +476,9 @@ namespace boost { namespace phoenix
             proto_grammar;
         
         static type make(typename call_traits<A0>::param_type a0 , typename call_traits<A1>::param_type a1 , typename call_traits<A2>::param_type a2 , typename call_traits<A3>::param_type a3 , typename call_traits<A4>::param_type a4 , typename call_traits<A5>::param_type a5 , typename call_traits<A6>::param_type a6 , typename call_traits<A7>::param_type a7 , typename call_traits<A8>::param_type a8 , typename call_traits<A9>::param_type a9 , typename call_traits<A10>::param_type a10)
-        {
-            actor<base_type> const e =
+      { 
+        
+                actor<base_type> const e =
                 {
                     proto::make_expr<
                         Tag
@@ -478,7 +489,7 @@ namespace boost { namespace phoenix
         }
         template<typename Expr, typename State, typename Data>
         struct impl
-          : proto::detail::pass_through_impl<expr_ext, Expr, State, Data>
+          : proto::pass_through<expr_ext>::template impl<Expr, State, Data>
         {};
         
         typedef Tag proto_tag;
@@ -508,8 +519,9 @@ namespace boost { namespace phoenix
             proto_grammar;
         
         static type make(typename call_traits<A0>::param_type a0 , typename call_traits<A1>::param_type a1 , typename call_traits<A2>::param_type a2 , typename call_traits<A3>::param_type a3 , typename call_traits<A4>::param_type a4 , typename call_traits<A5>::param_type a5 , typename call_traits<A6>::param_type a6 , typename call_traits<A7>::param_type a7 , typename call_traits<A8>::param_type a8 , typename call_traits<A9>::param_type a9 , typename call_traits<A10>::param_type a10 , typename call_traits<A11>::param_type a11)
-        {
-            actor<base_type> const e =
+      { 
+        
+                actor<base_type> const e =
                 {
                     proto::make_expr<
                         Tag
@@ -520,7 +532,7 @@ namespace boost { namespace phoenix
         }
         template<typename Expr, typename State, typename Data>
         struct impl
-          : proto::detail::pass_through_impl<expr_ext, Expr, State, Data>
+          : proto::pass_through<expr_ext>::template impl<Expr, State, Data>
         {};
         
         typedef Tag proto_tag;
@@ -550,8 +562,9 @@ namespace boost { namespace phoenix
             proto_grammar;
         
         static type make(typename call_traits<A0>::param_type a0 , typename call_traits<A1>::param_type a1 , typename call_traits<A2>::param_type a2 , typename call_traits<A3>::param_type a3 , typename call_traits<A4>::param_type a4 , typename call_traits<A5>::param_type a5 , typename call_traits<A6>::param_type a6 , typename call_traits<A7>::param_type a7 , typename call_traits<A8>::param_type a8 , typename call_traits<A9>::param_type a9 , typename call_traits<A10>::param_type a10 , typename call_traits<A11>::param_type a11 , typename call_traits<A12>::param_type a12)
-        {
-            actor<base_type> const e =
+      { 
+        
+                actor<base_type> const e =
                 {
                     proto::make_expr<
                         Tag
@@ -562,7 +575,7 @@ namespace boost { namespace phoenix
         }
         template<typename Expr, typename State, typename Data>
         struct impl
-          : proto::detail::pass_through_impl<expr_ext, Expr, State, Data>
+          : proto::pass_through<expr_ext>::template impl<Expr, State, Data>
         {};
         
         typedef Tag proto_tag;
@@ -592,8 +605,9 @@ namespace boost { namespace phoenix
             proto_grammar;
         
         static type make(typename call_traits<A0>::param_type a0 , typename call_traits<A1>::param_type a1 , typename call_traits<A2>::param_type a2 , typename call_traits<A3>::param_type a3 , typename call_traits<A4>::param_type a4 , typename call_traits<A5>::param_type a5 , typename call_traits<A6>::param_type a6 , typename call_traits<A7>::param_type a7 , typename call_traits<A8>::param_type a8 , typename call_traits<A9>::param_type a9 , typename call_traits<A10>::param_type a10 , typename call_traits<A11>::param_type a11 , typename call_traits<A12>::param_type a12 , typename call_traits<A13>::param_type a13)
-        {
-            actor<base_type> const e =
+      { 
+        
+                actor<base_type> const e =
                 {
                     proto::make_expr<
                         Tag
@@ -604,7 +618,7 @@ namespace boost { namespace phoenix
         }
         template<typename Expr, typename State, typename Data>
         struct impl
-          : proto::detail::pass_through_impl<expr_ext, Expr, State, Data>
+          : proto::pass_through<expr_ext>::template impl<Expr, State, Data>
         {};
         
         typedef Tag proto_tag;
@@ -634,8 +648,9 @@ namespace boost { namespace phoenix
             proto_grammar;
         
         static type make(typename call_traits<A0>::param_type a0 , typename call_traits<A1>::param_type a1 , typename call_traits<A2>::param_type a2 , typename call_traits<A3>::param_type a3 , typename call_traits<A4>::param_type a4 , typename call_traits<A5>::param_type a5 , typename call_traits<A6>::param_type a6 , typename call_traits<A7>::param_type a7 , typename call_traits<A8>::param_type a8 , typename call_traits<A9>::param_type a9 , typename call_traits<A10>::param_type a10 , typename call_traits<A11>::param_type a11 , typename call_traits<A12>::param_type a12 , typename call_traits<A13>::param_type a13 , typename call_traits<A14>::param_type a14)
-        {
-            actor<base_type> const e =
+      { 
+        
+                actor<base_type> const e =
                 {
                     proto::make_expr<
                         Tag
@@ -646,7 +661,7 @@ namespace boost { namespace phoenix
         }
         template<typename Expr, typename State, typename Data>
         struct impl
-          : proto::detail::pass_through_impl<expr_ext, Expr, State, Data>
+          : proto::pass_through<expr_ext>::template impl<Expr, State, Data>
         {};
         
         typedef Tag proto_tag;
@@ -676,8 +691,9 @@ namespace boost { namespace phoenix
             proto_grammar;
         
         static type make(typename call_traits<A0>::param_type a0 , typename call_traits<A1>::param_type a1 , typename call_traits<A2>::param_type a2 , typename call_traits<A3>::param_type a3 , typename call_traits<A4>::param_type a4 , typename call_traits<A5>::param_type a5 , typename call_traits<A6>::param_type a6 , typename call_traits<A7>::param_type a7 , typename call_traits<A8>::param_type a8 , typename call_traits<A9>::param_type a9 , typename call_traits<A10>::param_type a10 , typename call_traits<A11>::param_type a11 , typename call_traits<A12>::param_type a12 , typename call_traits<A13>::param_type a13 , typename call_traits<A14>::param_type a14 , typename call_traits<A15>::param_type a15)
-        {
-            actor<base_type> const e =
+      { 
+        
+                actor<base_type> const e =
                 {
                     proto::make_expr<
                         Tag
@@ -688,7 +704,7 @@ namespace boost { namespace phoenix
         }
         template<typename Expr, typename State, typename Data>
         struct impl
-          : proto::detail::pass_through_impl<expr_ext, Expr, State, Data>
+          : proto::pass_through<expr_ext>::template impl<Expr, State, Data>
         {};
         
         typedef Tag proto_tag;
@@ -718,8 +734,9 @@ namespace boost { namespace phoenix
             proto_grammar;
         
         static type make(typename call_traits<A0>::param_type a0 , typename call_traits<A1>::param_type a1 , typename call_traits<A2>::param_type a2 , typename call_traits<A3>::param_type a3 , typename call_traits<A4>::param_type a4 , typename call_traits<A5>::param_type a5 , typename call_traits<A6>::param_type a6 , typename call_traits<A7>::param_type a7 , typename call_traits<A8>::param_type a8 , typename call_traits<A9>::param_type a9 , typename call_traits<A10>::param_type a10 , typename call_traits<A11>::param_type a11 , typename call_traits<A12>::param_type a12 , typename call_traits<A13>::param_type a13 , typename call_traits<A14>::param_type a14 , typename call_traits<A15>::param_type a15 , typename call_traits<A16>::param_type a16)
-        {
-            actor<base_type> const e =
+      { 
+        
+                actor<base_type> const e =
                 {
                     proto::make_expr<
                         Tag
@@ -730,7 +747,7 @@ namespace boost { namespace phoenix
         }
         template<typename Expr, typename State, typename Data>
         struct impl
-          : proto::detail::pass_through_impl<expr_ext, Expr, State, Data>
+          : proto::pass_through<expr_ext>::template impl<Expr, State, Data>
         {};
         
         typedef Tag proto_tag;
@@ -760,8 +777,9 @@ namespace boost { namespace phoenix
             proto_grammar;
         
         static type make(typename call_traits<A0>::param_type a0 , typename call_traits<A1>::param_type a1 , typename call_traits<A2>::param_type a2 , typename call_traits<A3>::param_type a3 , typename call_traits<A4>::param_type a4 , typename call_traits<A5>::param_type a5 , typename call_traits<A6>::param_type a6 , typename call_traits<A7>::param_type a7 , typename call_traits<A8>::param_type a8 , typename call_traits<A9>::param_type a9 , typename call_traits<A10>::param_type a10 , typename call_traits<A11>::param_type a11 , typename call_traits<A12>::param_type a12 , typename call_traits<A13>::param_type a13 , typename call_traits<A14>::param_type a14 , typename call_traits<A15>::param_type a15 , typename call_traits<A16>::param_type a16 , typename call_traits<A17>::param_type a17)
-        {
-            actor<base_type> const e =
+      { 
+        
+                actor<base_type> const e =
                 {
                     proto::make_expr<
                         Tag
@@ -772,7 +790,7 @@ namespace boost { namespace phoenix
         }
         template<typename Expr, typename State, typename Data>
         struct impl
-          : proto::detail::pass_through_impl<expr_ext, Expr, State, Data>
+          : proto::pass_through<expr_ext>::template impl<Expr, State, Data>
         {};
         
         typedef Tag proto_tag;
@@ -802,8 +820,9 @@ namespace boost { namespace phoenix
             proto_grammar;
         
         static type make(typename call_traits<A0>::param_type a0 , typename call_traits<A1>::param_type a1 , typename call_traits<A2>::param_type a2 , typename call_traits<A3>::param_type a3 , typename call_traits<A4>::param_type a4 , typename call_traits<A5>::param_type a5 , typename call_traits<A6>::param_type a6 , typename call_traits<A7>::param_type a7 , typename call_traits<A8>::param_type a8 , typename call_traits<A9>::param_type a9 , typename call_traits<A10>::param_type a10 , typename call_traits<A11>::param_type a11 , typename call_traits<A12>::param_type a12 , typename call_traits<A13>::param_type a13 , typename call_traits<A14>::param_type a14 , typename call_traits<A15>::param_type a15 , typename call_traits<A16>::param_type a16 , typename call_traits<A17>::param_type a17 , typename call_traits<A18>::param_type a18)
-        {
-            actor<base_type> const e =
+      { 
+        
+                actor<base_type> const e =
                 {
                     proto::make_expr<
                         Tag
@@ -814,7 +833,7 @@ namespace boost { namespace phoenix
         }
         template<typename Expr, typename State, typename Data>
         struct impl
-          : proto::detail::pass_through_impl<expr_ext, Expr, State, Data>
+          : proto::pass_through<expr_ext>::template impl<Expr, State, Data>
         {};
         
         typedef Tag proto_tag;
@@ -844,8 +863,9 @@ namespace boost { namespace phoenix
             proto_grammar;
         
         static type make(typename call_traits<A0>::param_type a0 , typename call_traits<A1>::param_type a1 , typename call_traits<A2>::param_type a2 , typename call_traits<A3>::param_type a3 , typename call_traits<A4>::param_type a4 , typename call_traits<A5>::param_type a5 , typename call_traits<A6>::param_type a6 , typename call_traits<A7>::param_type a7 , typename call_traits<A8>::param_type a8 , typename call_traits<A9>::param_type a9 , typename call_traits<A10>::param_type a10 , typename call_traits<A11>::param_type a11 , typename call_traits<A12>::param_type a12 , typename call_traits<A13>::param_type a13 , typename call_traits<A14>::param_type a14 , typename call_traits<A15>::param_type a15 , typename call_traits<A16>::param_type a16 , typename call_traits<A17>::param_type a17 , typename call_traits<A18>::param_type a18 , typename call_traits<A19>::param_type a19)
-        {
-            actor<base_type> const e =
+      { 
+        
+                actor<base_type> const e =
                 {
                     proto::make_expr<
                         Tag
@@ -856,7 +876,7 @@ namespace boost { namespace phoenix
         }
         template<typename Expr, typename State, typename Data>
         struct impl
-          : proto::detail::pass_through_impl<expr_ext, Expr, State, Data>
+          : proto::pass_through<expr_ext>::template impl<Expr, State, Data>
         {};
         
         typedef Tag proto_tag;

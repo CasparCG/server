@@ -1,6 +1,6 @@
 #if !defined(BOOST_PROTO_DONT_USE_PREPROCESSED_FILES)
 
-    #if BOOST_WORKAROUND(__GNUC__, == 3) || (__GNUC__ == 4 && __GNUC_MINOR__ == 0)
+    #if BOOST_WORKAROUND(__GNUC__, == 3) || (BOOST_WORKAROUND(__GNUC__, == 4) && __GNUC_MINOR__ == 0)
         #include <boost/proto/transform/detail/preprocessed/make_gcc_workaround.hpp>
     #endif
 
@@ -29,7 +29,7 @@
         #pragma wave option(preserve: 1)
     #endif
 
-    #if BOOST_WORKAROUND(__GNUC__, == 3) || (__GNUC__ == 4 && __GNUC_MINOR__ == 0) ||               \
+    #if BOOST_WORKAROUND(__GNUC__, == 3) || (BOOST_WORKAROUND(__GNUC__, == 4) && __GNUC_MINOR__ == 0) || \
         (defined(__WAVE__) && defined(BOOST_PROTO_CREATE_PREPROCESSED_FILES))
 
         #define BOOST_PP_ITERATION_PARAMS_1                                                         \
@@ -58,6 +58,7 @@
         {
             typedef proto::expr<Tag, Args, Arity> result_type;
 
+            BOOST_FORCEINLINE
             result_type operator ()(
                 typename impl::expr_param   e
               , typename impl::state_param  s
@@ -80,6 +81,7 @@
         {
             typedef proto::basic_expr<Tag, Args, Arity> result_type;
 
+            BOOST_FORCEINLINE
             result_type operator ()(
                 typename impl::expr_param   e
               , typename impl::state_param  s

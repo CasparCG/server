@@ -31,7 +31,7 @@ namespace impl
         @brief Skewness estimation
 
         The skewness of a sample distribution is defined as the ratio of the 3rd central moment and the \f$ 3/2 \f$-th power
-        of the 2nd central moment (the variance) of the sampless 3. The skewness can also be expressed by the simple moments:
+        of the 2nd central moment (the variance) of the samples 3. The skewness can also be expressed by the simple moments:
 
         \f[
             \hat{g}_1 =
@@ -48,7 +48,7 @@ namespace impl
       : accumulator_base
     {
         // for boost::result_of
-        typedef typename numeric::functional::average<Sample, Sample>::result_type result_type;
+        typedef typename numeric::functional::fdiv<Sample, Sample>::result_type result_type;
 
         skewness_impl(dont_care)
         {
@@ -57,7 +57,7 @@ namespace impl
         template<typename Args>
         result_type result(Args const &args) const
         {
-            return numeric::average(
+            return numeric::fdiv(
                         accumulators::moment<3>(args)
                         - 3. * accumulators::moment<2>(args) * mean(args)
                         + 2. * mean(args) * mean(args) * mean(args)

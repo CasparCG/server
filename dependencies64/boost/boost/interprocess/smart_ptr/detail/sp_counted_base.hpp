@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2007-2009.
+// (C) Copyright Ion Gaztanaga 2007-2012.
 //
 // Distributed under the Boost Software License, Version 1.0.
 // (See accompanying file LICENSE_1_0.txt or copy at
@@ -11,6 +11,10 @@
 //////////////////////////////////////////////////////////////////////////////
 #ifndef BOOST_INTERPROCESS_DETAIL_SP_COUNTED_BASE_HPP_INCLUDED
 #define BOOST_INTERPROCESS_DETAIL_SP_COUNTED_BASE_HPP_INCLUDED
+
+#if defined(_MSC_VER)
+#  pragma once
+#endif
 
 # include <boost/interprocess/smart_ptr/detail/sp_counted_base_atomic.hpp>
 

@@ -248,7 +248,7 @@ class slice : public detail::slice_base
     get_indicies( const RandomAccessIterator& begin, 
         const RandomAccessIterator& end) const
     {
-        get_indices(begin, end);
+        return get_indices(begin, end);
     }
         
  public:

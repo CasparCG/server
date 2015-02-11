@@ -46,6 +46,8 @@
 #include <boost/type_traits/is_same.hpp>
 #include <boost/utility/enable_if.hpp>
 
+#include <boost/msm/row_tags.hpp>
+
 // mpl_graph graph implementation and depth first search
 #include <boost/msm/mpl_graph/incidence_list_graph.hpp>
 #include <boost/msm/mpl_graph/depth_first_search.hpp>
@@ -202,7 +204,6 @@ struct get_initial_states
         States,
         typename ::boost::mpl::push_back< ::boost::mpl::vector0<>,States>::type >::type type;
 };
-
 // returns a mpl::int_ containing the size of a region. If the argument is not a sequence, returns 1
 template <class region>
 struct get_number_of_regions 
@@ -632,11 +633,22 @@ struct has_exit_pseudo_states
         ::boost::mpl::bool_<false> >::type type;
 };
 
+// builds flags (add internal_flag_list and flag_list). internal_flag_list is used for terminate/interrupt states
+template <class StateType>
+struct get_flag_list 
+{
+    typedef typename ::boost::mpl::insert_range< 
+        typename StateType::flag_list, 
+        typename ::boost::mpl::end< typename StateType::flag_list >::type,
+        typename StateType::internal_flag_list
+    >::type type;
+};
+
 template <class StateType>
 struct is_state_blocking 
 {
     typedef typename ::boost::mpl::fold<
-        typename StateType::flag_list, ::boost::mpl::set<>,
+        typename get_flag_list<StateType>::type, ::boost::mpl::set<>,
         ::boost::mpl::if_<
                  has_event_blocking_flag< ::boost::mpl::placeholders::_2>,
                  ::boost::mpl::insert< ::boost::mpl::placeholders::_1, ::boost::mpl::placeholders::_2 >, 
@@ -923,6 +935,41 @@ is_exit_state_active(FSM&)
 {
     return false;
 }
+
+// transformation metafunction to end interrupt flags
+template <class Event>
+struct transform_to_end_interrupt 
+{
+    typedef boost::msm::EndInterruptFlag<Event> type;
+};
+// transform a sequence of events into another one of EndInterruptFlag<Event>
+template <class Events>
+struct apply_end_interrupt_flag 
+{
+    typedef typename 
+        ::boost::mpl::transform<
+        Events,transform_to_end_interrupt< ::boost::mpl::placeholders::_1> >::type type;
+};
+// returns a mpl vector containing all end interrupt events if sequence, otherwise the same event
+template <class Event>
+struct get_interrupt_events 
+{
+    typedef typename ::boost::mpl::eval_if<
+        ::boost::mpl::is_sequence<Event>,
+        boost::msm::back::apply_end_interrupt_flag<Event>,
+        boost::mpl::vector1<boost::msm::EndInterruptFlag<Event> > >::type type;
+};
+
+template <class Events>
+struct build_interrupt_state_flag_list
+{
+    typedef ::boost::mpl::vector<boost::msm::InterruptedFlag> first_part;
+    typedef typename ::boost::mpl::insert_range< 
+        first_part, 
+        typename ::boost::mpl::end< first_part >::type,
+        Events
+    >::type type;
+};
 
 } } }//boost::msm::back
 

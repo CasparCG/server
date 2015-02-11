@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -16,8 +16,7 @@
 #define BOOST_GEOMETRY_CORE_IS_AREAL_HPP
 
 
-#include <boost/type_traits.hpp>
-
+#include <boost/type_traits/integral_constant.hpp>
 
 #include <boost/geometry/core/tag.hpp>
 #include <boost/geometry/core/tags.hpp>
@@ -36,7 +35,7 @@ template <typename GeometryTag> struct is_areal : boost::false_type {};
 template <> struct is_areal<ring_tag> : boost::true_type {};
 template <> struct is_areal<box_tag> : boost::true_type {};
 template <> struct is_areal<polygon_tag> : boost::true_type {};
-
+template <> struct is_areal<multi_polygon_tag> : boost::true_type {};
 
 } // namespace core_dispatch
 #endif

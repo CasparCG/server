@@ -1,5 +1,5 @@
 /*
- *          Copyright Andrey Semashev 2007 - 2010.
+ *          Copyright Andrey Semashev 2007 - 2014.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -10,33 +10,27 @@
  * \date   01.03.2008
  *
  * \brief  This header is the Boost.Log library implementation, see the library documentation
- *         at http://www.boost.org/libs/log/doc/log.html.
+ *         at http://www.boost.org/doc/libs/release/libs/log/doc/html/index.html.
  */
-
-#if (defined(_MSC_VER) && _MSC_VER > 1000)
-#pragma once
-#endif // _MSC_VER > 1000
 
 #ifndef BOOST_LOG_DETAIL_THREAD_SPECIFIC_HPP_INCLUDED_
 #define BOOST_LOG_DETAIL_THREAD_SPECIFIC_HPP_INCLUDED_
 
 #include <boost/static_assert.hpp>
 #include <boost/type_traits/is_pod.hpp>
-#include <boost/log/detail/prologue.hpp>
+#include <boost/log/detail/config.hpp>
+
+#ifdef BOOST_HAS_PRAGMA_ONCE
+#pragma once
+#endif
 
 #if !defined(BOOST_LOG_NO_THREADS)
 
-#ifdef _MSC_VER
-#pragma warning(push)
-// 'm_A' : class 'A' needs to have dll-interface to be used by clients of class 'B'
-#pragma warning(disable: 4251)
-// non dll-interface class 'A' used as base for dll-interface class 'B'
-#pragma warning(disable: 4275)
-#endif // _MSC_VER
+#include <boost/log/detail/header.hpp>
 
 namespace boost {
 
-namespace BOOST_LOG_NAMESPACE {
+BOOST_LOG_OPEN_NAMESPACE
 
 namespace aux {
 
@@ -53,15 +47,14 @@ private:
     key_storage m_Key;
 
 protected:
-    BOOST_LOG_EXPORT thread_specific_base();
-    BOOST_LOG_EXPORT ~thread_specific_base();
-    BOOST_LOG_EXPORT void* get_content() const;
-    BOOST_LOG_EXPORT void set_content(void* value) const;
+    BOOST_LOG_API thread_specific_base();
+    BOOST_LOG_API ~thread_specific_base();
+    BOOST_LOG_API void* get_content() const;
+    BOOST_LOG_API void set_content(void* value) const;
 
-private:
     //  Copying prohibited
-    thread_specific_base(thread_specific_base const&);
-    thread_specific_base& operator= (thread_specific_base const&);
+    BOOST_DELETED_FUNCTION(thread_specific_base(thread_specific_base const&))
+    BOOST_DELETED_FUNCTION(thread_specific_base& operator= (thread_specific_base const&))
 };
 
 //! A TLS wrapper for small POD types with least possible overhead
@@ -69,7 +62,7 @@ template< typename T >
 class thread_specific :
     public thread_specific_base
 {
-    BOOST_STATIC_ASSERT(sizeof(T) <= sizeof(void*) && is_pod< T >::value);
+    BOOST_STATIC_ASSERT_MSG(sizeof(T) <= sizeof(void*) && is_pod< T >::value, "Boost.Log: Thread-specific values must be PODs and must not exceed the size of a pointer");
 
     //! Union to perform type casting
     union value_storage
@@ -80,7 +73,7 @@ class thread_specific :
 
 public:
     //! Default constructor
-    thread_specific() {}
+    BOOST_DEFAULTED_FUNCTION(thread_specific(), {})
     //! Initializing constructor
     thread_specific(T const& value)
     {
@@ -96,7 +89,7 @@ public:
     //! Accessor
     T get() const
     {
-        value_storage cast;
+        value_storage cast = {};
         cast.as_pointer = thread_specific_base::get_content();
         return cast.as_value;
     }
@@ -104,7 +97,7 @@ public:
     //! Setter
     void set(T const& value)
     {
-        value_storage cast;
+        value_storage cast = {};
         cast.as_value = value;
         thread_specific_base::set_content(cast.as_pointer);
     }
@@ -112,13 +105,11 @@ public:
 
 } // namespace aux
 
-} // namespace log
+BOOST_LOG_CLOSE_NAMESPACE // namespace log
 
 } // namespace boost
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif // _MSC_VER
+#include <boost/log/detail/footer.hpp>
 
 #endif // !defined(BOOST_LOG_NO_THREADS)
 

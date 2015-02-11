@@ -9,9 +9,11 @@
 #if !defined(BOOST_FUSION_SUPPORT_DEDUCE_SEQUENCE_HPP_INCLUDED)
 #define BOOST_FUSION_SUPPORT_DEDUCE_SEQUENCE_HPP_INCLUDED
 
+#include <boost/fusion/support/config.hpp>
 #include <boost/fusion/support/deduce.hpp>
 #include <boost/fusion/container/vector/convert.hpp>
 #include <boost/fusion/view/transform_view.hpp>
+#include <boost/config.hpp>
 
 
 namespace boost { namespace fusion { namespace traits
@@ -29,6 +31,14 @@ namespace boost { namespace fusion { namespace traits
             struct result< Self(T) >
                 : fusion::traits::deduce<T>
             { };
+
+            // never called, but needed for decltype-based result_of (C++0x)
+#ifndef BOOST_NO_CXX11_RVALUE_REFERENCES
+            template <typename T>
+            BOOST_FUSION_GPU_ENABLED
+            typename result< deducer(T) >::type
+            operator()(T&&) const;
+#endif
         };
     }
 
