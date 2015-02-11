@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2005-2009.
+// (C) Copyright Ion Gaztanaga 2005-2012.
 // (C) Copyright Gennaro Prota 2003 - 2004.
 //
 // Distributed under the Boost Software License, Version 1.0.
@@ -14,7 +14,7 @@
 #ifndef BOOST_INTERPROCESS_DETAIL_UTILITIES_HPP
 #define BOOST_INTERPROCESS_DETAIL_UTILITIES_HPP
 
-#if (defined _MSC_VER) && (_MSC_VER >= 1200)
+#if defined(_MSC_VER)
 #  pragma once
 #endif
 
@@ -22,44 +22,32 @@
 #include <boost/interprocess/detail/workaround.hpp>
 
 #include <boost/interprocess/interprocess_fwd.hpp>
-#include <boost/interprocess/detail/move.hpp>
+#include <boost/move/utility_core.hpp>
 #include <boost/type_traits/has_trivial_destructor.hpp>
 #include <boost/interprocess/detail/min_max.hpp>
 #include <boost/interprocess/detail/type_traits.hpp>
 #include <boost/interprocess/detail/transform_iterator.hpp>
 #include <boost/interprocess/detail/mpl.hpp>
 #include <boost/interprocess/containers/version_type.hpp>
-#include <boost/interprocess/detail/move.hpp>
+#include <boost/intrusive/pointer_traits.hpp>
+#include <boost/move/utility_core.hpp>
+#include <boost/static_assert.hpp>
 #include <utility>
 #include <algorithm>
+#include <climits>
 
 namespace boost {
-namespace interprocess { 
+namespace interprocess {
 namespace ipcdetail {
 
-template<class SmartPtr>
-struct smart_ptr_type
-{
-   typedef typename SmartPtr::value_type value_type;
-   typedef value_type *pointer;
-   static pointer get (const SmartPtr &smartptr)
-   {  return smartptr.get();}
-};
+template <class T>
+inline T* to_raw_pointer(T* p)
+{  return p; }
 
-template<class T>
-struct smart_ptr_type<T*>
-{
-   typedef T value_type;
-   typedef value_type *pointer;
-   static pointer get (pointer ptr)
-   {  return ptr;}
-};
-
-//!Overload for smart pointers to avoid ADL problems with get_pointer
-template<class Ptr>
-inline typename smart_ptr_type<Ptr>::pointer
-get_pointer(const Ptr &ptr)
-{  return smart_ptr_type<Ptr>::get(ptr);   }
+template <class Pointer>
+inline typename boost::intrusive::pointer_traits<Pointer>::element_type*
+to_raw_pointer(const Pointer &p)
+{  return boost::interprocess::ipcdetail::to_raw_pointer(p.operator->());  }
 
 //!To avoid ADL problems with swap
 template <class T>
@@ -100,14 +88,17 @@ inline SizeType get_truncated_size_po2(SizeType orig_size, SizeType multiple)
 template <std::size_t OrigSize, std::size_t RoundTo>
 struct ct_rounded_size
 {
-   enum { value = ((OrigSize-1)/RoundTo+1)*RoundTo };
+   BOOST_STATIC_ASSERT((RoundTo != 0));
+   static const std::size_t intermediate_value = (OrigSize-1)/RoundTo+1;
+   BOOST_STATIC_ASSERT(intermediate_value <= std::size_t(-1)/RoundTo);
+   static const std::size_t value = intermediate_value*RoundTo;
 };
 
 // Gennaro Prota wrote this. Thanks!
 template <int p, int n = 4>
 struct ct_max_pow2_less
 {
-   enum { c = 2*n < p };
+   static const std::size_t c = 2*n < p;
 
    static const std::size_t value =
          c ? (ct_max_pow2_less< c*p, 2*c*n>::value) : n;
@@ -127,7 +118,7 @@ struct ct_max_pow2_less<0, 0>
 template <class Index>
 struct is_node_index
 {
-   enum {   value = false };
+   static const bool value = false;
 };
 
 //!Trait class to detect if an index is an intrusive
@@ -137,7 +128,7 @@ struct is_node_index
 template <class Index>
 struct is_intrusive_index
 {
-   enum {   value = false };
+   static const bool value = false;
 };
 
 template <typename T> T*
@@ -147,14 +138,69 @@ addressof(T& v)
        &const_cast<char&>(reinterpret_cast<const volatile char &>(v)));
 }
 
+template<class SizeType>
+struct sqrt_size_type_max
+{
+   static const SizeType value = (SizeType(1) << (sizeof(SizeType)*(CHAR_BIT/2)))-1;
+};
+
+template<class SizeType>
+inline bool multiplication_overflows(SizeType a, SizeType b)
+{
+   const SizeType sqrt_size_max = sqrt_size_type_max<SizeType>::value;
+   return   //Fast runtime check
+         (  (a | b) > sqrt_size_max &&
+            //Slow division check
+            b && a > SizeType(-1)/b
+         );
+}
+
+template<std::size_t SztSizeOfType, class SizeType>
+inline bool size_overflows(SizeType count)
+{
+   //Compile time-check
+   BOOST_STATIC_ASSERT(SztSizeOfType <= SizeType(-1));
+   //Runtime check
+   return multiplication_overflows(SizeType(SztSizeOfType), count);
+}
+
+template<class RawPointer>
+class pointer_size_t_caster
+{
+   public:
+   BOOST_STATIC_ASSERT(sizeof(std::size_t) == sizeof(void*));
+
+   explicit pointer_size_t_caster(std::size_t sz)
+      : m_ptr(reinterpret_cast<RawPointer>(sz))
+   {}
+
+   explicit pointer_size_t_caster(RawPointer p)
+      : m_ptr(p)
+   {}
+
+   std::size_t size() const
+   {   return reinterpret_cast<std::size_t>(m_ptr);   }
+
+   RawPointer pointer() const
+   {   return m_ptr;   }
+
+   private:
+   RawPointer m_ptr;
+};
+
+
+template<class SizeType>
+inline bool sum_overflows(SizeType a, SizeType b)
+{  return SizeType(-1) - a < b;  }
+
 //Anti-exception node eraser
 template<class Cont>
 class value_eraser
 {
    public:
-   value_eraser(Cont & cont, typename Cont::iterator it) 
+   value_eraser(Cont & cont, typename Cont::iterator it)
       : m_cont(cont), m_index_it(it), m_erase(true){}
-   ~value_eraser()  
+   ~value_eraser()
    {  if(m_erase) m_cont.erase(m_index_it);  }
 
    void release() {  m_erase = false;  }
@@ -165,7 +211,7 @@ class value_eraser
    bool                    m_erase;
 };
 
-}  //namespace interprocess { 
+}  //namespace interprocess {
 }  //namespace boost {
 
 #include <boost/interprocess/detail/config_end.hpp>

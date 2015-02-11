@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2005-2009. Distributed under the Boost
+// (C) Copyright Ion Gaztanaga 2005-2012. Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -11,7 +11,7 @@
 #ifndef BOOST_INTERPROCESS_CACHED_NODE_ALLOCATOR_HPP
 #define BOOST_INTERPROCESS_CACHED_NODE_ALLOCATOR_HPP
 
-#if (defined _MSC_VER) && (_MSC_VER >= 1200)
+#if defined(_MSC_VER)
 #  pragma once
 #endif
 
@@ -28,13 +28,13 @@
 #include <cstddef>
 
 //!\file
-//!Describes cached_cached_node_allocator pooled shared memory STL compatible allocator 
+//!Describes cached_cached_node_allocator pooled shared memory STL compatible allocator
 
 namespace boost {
 namespace interprocess {
 
 
-/// @cond
+#if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
 
 namespace ipcdetail {
 
@@ -64,7 +64,7 @@ class cached_node_allocator_v1
 
    template<class T2>
    struct rebind
-   {  
+   {
       typedef cached_node_allocator_v1
          <T2, SegmentManager, NodesPerBlock>  other;
    };
@@ -72,7 +72,7 @@ class cached_node_allocator_v1
    typedef typename base_t::size_type size_type;
 
    cached_node_allocator_v1(SegmentManager *segment_mngr,
-                         size_type max_cached_nodes = base_t::DEFAULT_MAX_CACHED_NODES) 
+                         size_type max_cached_nodes = base_t::DEFAULT_MAX_CACHED_NODES)
       : base_t(segment_mngr, max_cached_nodes)
    {}
 
@@ -86,14 +86,14 @@ class cached_node_allocator_v1
 
 }  //namespace ipcdetail{
 
-/// @endcond
+#endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 
 template < class T
          , class SegmentManager
          , std::size_t NodesPerBlock
          >
 class cached_node_allocator
-   /// @cond
+   #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
    :  public ipcdetail::cached_allocator_impl
          < T
          , ipcdetail::shared_node_pool
@@ -102,7 +102,7 @@ class cached_node_allocator
             , NodesPerBlock
             >
          , 2>
-   /// @endcond
+   #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 {
 
    #ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
@@ -122,12 +122,12 @@ class cached_node_allocator
 
    template<class T2>
    struct rebind
-   {  
+   {
       typedef cached_node_allocator<T2, SegmentManager, NodesPerBlock>  other;
    };
 
    cached_node_allocator(SegmentManager *segment_mngr,
-                         size_type max_cached_nodes = base_t::DEFAULT_MAX_CACHED_NODES) 
+                         size_type max_cached_nodes = base_t::DEFAULT_MAX_CACHED_NODES)
       : base_t(segment_mngr, max_cached_nodes)
    {}
 
@@ -151,11 +151,11 @@ class cached_node_allocator
    typedef typename SegmentManager::size_type            size_type;
    typedef typename SegmentManager::difference_type      difference_type;
 
-   //!Obtains cached_node_allocator from 
+   //!Obtains cached_node_allocator from
    //!cached_node_allocator
    template<class T2>
    struct rebind
-   {  
+   {
       typedef cached_node_allocator<T2, SegmentManager> other;
    };
 
@@ -166,7 +166,7 @@ class cached_node_allocator
    cached_node_allocator& operator=
       (const cached_node_allocator<T2, SegmentManager2, N2>&);
 
-   //!Not assignable from 
+   //!Not assignable from
    //!other cached_node_allocator
    cached_node_allocator& operator=(const cached_node_allocator&);
 
@@ -176,7 +176,7 @@ class cached_node_allocator
    //!Can throw boost::interprocess::bad_alloc
    cached_node_allocator(segment_manager *segment_mngr);
 
-   //!Copy constructor from other cached_node_allocator. Increments the reference 
+   //!Copy constructor from other cached_node_allocator. Increments the reference
    //!count of the associated node pool. Never throws
    cached_node_allocator(const cached_node_allocator &other);
 
@@ -203,7 +203,7 @@ class cached_node_allocator
    //!Never throws
    size_type max_size() const;
 
-   //!Allocate memory for an array of count elements. 
+   //!Allocate memory for an array of count elements.
    //!Throws boost::interprocess::bad_alloc if there is no enough memory
    pointer allocate(size_type count, cvoid_pointer hint = 0);
 
@@ -227,7 +227,7 @@ class cached_node_allocator
    //!Never throws
    const_pointer address(const_reference value) const;
 
-   //!Default construct an object. 
+   //!Default construct an object.
    //!Throws if T's default constructor throws
    void construct(const pointer &ptr, const_reference v);
 
@@ -242,7 +242,7 @@ class cached_node_allocator
 
    std::pair<pointer, bool>
       allocation_command(boost::interprocess::allocation_type command,
-                         size_type limit_size, 
+                         size_type limit_size,
                          size_type preferred_size,
                          size_type &received_size, const pointer &reuse = 0);
 
@@ -252,12 +252,12 @@ class cached_node_allocator
    //!preferred_elements. The number of actually allocated elements is
    //!will be assigned to received_size. The elements must be deallocated
    //!with deallocate(...)
-   multiallocation_chain allocate_many(size_type elem_size, size_type num_elements);
+   void allocate_many(size_type elem_size, size_type num_elements, multiallocation_chain &chain);
 
    //!Allocates n_elements elements, each one of size elem_sizes[i]in a
    //!contiguous block
    //!of memory. The elements must be deallocated
-   multiallocation_chain allocate_many(const size_type *elem_sizes, size_type n_elements);
+   void allocate_many(const size_type *elem_sizes, size_type n_elements, multiallocation_chain &chain);
 
    //!Allocates many elements of size elem_size in a contiguous block
    //!of memory. The minimum number to be allocated is min_elements,
@@ -265,7 +265,7 @@ class cached_node_allocator
    //!preferred_elements. The number of actually allocated elements is
    //!will be assigned to received_size. The elements must be deallocated
    //!with deallocate(...)
-   void deallocate_many(multiallocation_chain chain);
+   void deallocate_many(multiallocation_chain &chain);
 
    //!Allocates just one object. Memory allocated with this function
    //!must be deallocated only with deallocate_one().
@@ -307,13 +307,13 @@ class cached_node_allocator
 //!Equality test for same type
 //!of cached_node_allocator
 template<class T, class S, std::size_t NPC> inline
-bool operator==(const cached_node_allocator<T, S, NPC> &alloc1, 
+bool operator==(const cached_node_allocator<T, S, NPC> &alloc1,
                 const cached_node_allocator<T, S, NPC> &alloc2);
 
 //!Inequality test for same type
 //!of cached_node_allocator
 template<class T, class S, std::size_t NPC> inline
-bool operator!=(const cached_node_allocator<T, S, NPC> &alloc1, 
+bool operator!=(const cached_node_allocator<T, S, NPC> &alloc1,
                 const cached_node_allocator<T, S, NPC> &alloc2);
 
 #endif

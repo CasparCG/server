@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2005-2009. Distributed under the Boost
+// (C) Copyright Ion Gaztanaga 2005-2012. Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -10,13 +10,17 @@
 #ifndef BOOST_INTERPROCESS_NULL_INDEX_HPP
 #define BOOST_INTERPROCESS_NULL_INDEX_HPP
 
+#if defined(_MSC_VER)
+#  pragma once
+#endif
+
 #include <boost/interprocess/detail/config_begin.hpp>
 #include <boost/interprocess/detail/workaround.hpp>
 
 #include <boost/interprocess/offset_ptr.hpp>
 
 //!\file
-//!Describes a null index adaptor, so that if we don't want to construct 
+//!Describes a null index adaptor, so that if we don't want to construct
 //!named objects, we can use this null index type to save resources.
 
 namespace boost {
@@ -28,14 +32,14 @@ namespace interprocess {
 template <class MapConfig>
 class null_index
 {
-   /// @cond
+   #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
    typedef typename MapConfig::
       segment_manager_base    segment_manager_base;
-   /// @endcond
+   #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 
    public:
-   typedef void * iterator;
-   typedef const void * const_iterator;
+   typedef int * iterator;
+   typedef const int * const_iterator;
 
    //!begin() is equal
    //!to end()

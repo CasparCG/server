@@ -1,5 +1,5 @@
 /*
- *          Copyright Andrey Semashev 2007 - 2010.
+ *          Copyright Andrey Semashev 2007 - 2014.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -12,10 +12,6 @@
  * The header contains implementation of a text multi-file sink backend.
  */
 
-#if (defined(_MSC_VER) && _MSC_VER > 1000)
-#pragma once
-#endif // _MSC_VER > 1000
-
 #ifndef BOOST_LOG_SINKS_TEXT_MULTIFILE_BACKEND_HPP_INCLUDED_
 #define BOOST_LOG_SINKS_TEXT_MULTIFILE_BACKEND_HPP_INCLUDED_
 
@@ -26,26 +22,21 @@
 #include <boost/mpl/if.hpp>
 #include <boost/mpl/bool.hpp>
 #include <boost/type_traits/is_same.hpp>
-#include <boost/function/function1.hpp>
-#include <boost/log/detail/prologue.hpp>
-#include <boost/log/detail/universal_path.hpp>
+#include <boost/filesystem/path.hpp>
+#include <boost/log/detail/config.hpp>
+#include <boost/log/detail/light_function.hpp>
 #include <boost/log/detail/cleanup_scope_guard.hpp>
-#include <boost/log/detail/code_conversion.hpp>
-#include <boost/log/detail/attachable_sstream_buf.hpp>
-#include <boost/log/formatters/basic_formatters.hpp> // is_formatter
 #include <boost/log/sinks/basic_sink_backend.hpp>
+#include <boost/log/utility/formatting_ostream.hpp>
+#include <boost/log/detail/header.hpp>
 
-#ifdef _MSC_VER
-#pragma warning(push)
-// 'm_A' : class 'A' needs to have dll-interface to be used by clients of class 'B'
-#pragma warning(disable: 4251)
-// non dll-interface class 'A' used as base for dll-interface class 'B'
-#pragma warning(disable: 4275)
-#endif // _MSC_VER
+#ifdef BOOST_HAS_PRAGMA_ONCE
+#pragma once
+#endif
 
 namespace boost {
 
-namespace BOOST_LOG_NAMESPACE {
+BOOST_LOG_OPEN_NAMESPACE
 
 namespace sinks {
 
@@ -59,32 +50,19 @@ namespace file {
     {
     public:
         //! Functor result type
-        typedef boost::log::aux::universal_path result_type;
+        typedef filesystem::path result_type;
+        //! File name character type
+        typedef result_type::string_type::value_type native_char_type;
         //! The adopted formatter type
         typedef FormatterT formatter_type;
-        //! Character type used by the formatter
-        typedef typename formatter_type::char_type char_type;
-        //! String type used by the formatter
-        typedef typename formatter_type::string_type string_type;
-        //! Log record type
-        typedef typename formatter_type::record_type record_type;
-
-        //! Stream buffer type used to store formatted data
-        typedef typename mpl::if_<
-            is_same< char_type, result_type::string_type::value_type >,
-            boost::log::aux::basic_ostringstreambuf< char_type >,
-            boost::log::aux::converting_ostringstreambuf< char_type >
-        >::type streambuf_type;
-        //! Stream type used for formatting
-        typedef std::basic_ostream< char_type > stream_type;
+        //! Formatting stream type
+        typedef basic_formatting_ostream< native_char_type > stream_type;
 
     private:
         //! The adopted formatter
         formatter_type m_Formatter;
         //! Formatted file name storage
         mutable result_type::string_type m_FileName;
-        //! Stream buffer to fill the storage
-        mutable streambuf_type m_StreamBuf;
         //! Formatting stream
         mutable stream_type m_FormattingStream;
 
@@ -94,8 +72,7 @@ namespace file {
          */
         explicit file_name_composer_adapter(formatter_type const& formatter, std::locale const& loc = std::locale()) :
             m_Formatter(formatter),
-            m_StreamBuf(m_FileName),
-            m_FormattingStream(&m_StreamBuf)
+            m_FormattingStream(m_FileName)
         {
             m_FormattingStream.exceptions(std::ios_base::badbit | std::ios_base::failbit);
             m_FormattingStream.imbue(loc);
@@ -105,8 +82,7 @@ namespace file {
          */
         file_name_composer_adapter(file_name_composer_adapter const& that) :
             m_Formatter(that.m_Formatter),
-            m_StreamBuf(m_FileName),
-            m_FormattingStream(&m_StreamBuf)
+            m_FormattingStream(m_FileName)
         {
             m_FormattingStream.exceptions(std::ios_base::badbit | std::ios_base::failbit);
             m_FormattingStream.imbue(that.m_FormattingStream.getloc());
@@ -123,13 +99,12 @@ namespace file {
         /*!
          * The operator generates a file name based on the log record
          */
-        result_type operator() (record_type const& record) const
+        result_type operator() (record_view const& rec) const
         {
             boost::log::aux::cleanup_guard< stream_type > cleanup1(m_FormattingStream);
-            boost::log::aux::cleanup_guard< streambuf_type > cleanup2(m_StreamBuf);
-            boost::log::aux::cleanup_guard< result_type::string_type > cleanup3(m_FileName);
+            boost::log::aux::cleanup_guard< result_type::string_type > cleanup2(m_FileName);
 
-            m_Formatter(m_FormattingStream, record);
+            m_Formatter(rec, m_FormattingStream);
             m_FormattingStream.flush();
 
             return result_type(m_FileName);
@@ -157,27 +132,20 @@ namespace file {
  * to distribute records into individual files or to group records related to
  * some entity or process in a separate file.
  */
-template< typename CharT >
-class basic_text_multifile_backend :
-    public basic_formatting_sink_backend< CharT >
+class text_multifile_backend :
+    public basic_formatted_sink_backend< char >
 {
     //! Base type
-    typedef basic_formatting_sink_backend< CharT > base_type;
+    typedef basic_formatted_sink_backend< char > base_type;
 
 public:
     //! Character type
-    typedef typename base_type::char_type char_type;
+    typedef base_type::char_type char_type;
     //! String type to be used as a message text holder
-    typedef typename base_type::string_type string_type;
-    //! String type to be used as a message text holder
-    typedef typename base_type::target_string_type target_string_type;
-    //! Log record type
-    typedef typename base_type::record_type record_type;
-    //! Path type that is used by Boost.Log
-    typedef boost::log::aux::universal_path path_type;
+    typedef base_type::string_type string_type;
 
     //! File name composer functor type
-    typedef function1< path_type, record_type const& > file_name_composer_type;
+    typedef boost::log::aux::light_function< filesystem::path (record_view const&) > file_name_composer_type;
 
 private:
     //! \cond
@@ -192,12 +160,12 @@ public:
      * Default constructor. The constructed sink backend has no file name composer and
      * thus will not write any files.
      */
-    BOOST_LOG_EXPORT basic_text_multifile_backend();
+    BOOST_LOG_API text_multifile_backend();
 
     /*!
      * Destructor
      */
-    BOOST_LOG_EXPORT ~basic_text_multifile_backend();
+    BOOST_LOG_API ~text_multifile_backend();
 
     /*!
      * The method sets file name composer functional object. Log record formatters are accepted, too.
@@ -207,46 +175,27 @@ public:
     template< typename ComposerT >
     void set_file_name_composer(ComposerT const& composer)
     {
-        set_file_name_composer_internal(composer, typename formatters::is_formatter< ComposerT >::type());
+        set_file_name_composer_internal(composer);
     }
+
+    /*!
+     * The method writes the message to the sink
+     */
+    BOOST_LOG_API void consume(record_view const& rec, string_type const& formatted_message);
 
 private:
 #ifndef BOOST_LOG_DOXYGEN_PASS
-    //! The method writes the message to the sink
-    BOOST_LOG_EXPORT void do_consume(record_type const& record, target_string_type const& formatted_message);
-
     //! The method sets the file name composer
-    template< typename ComposerT >
-    void set_file_name_composer_internal(ComposerT const& composer, mpl::true_ const&)
-    {
-        set_file_name_composer_internal(file::as_file_name_composer(composer));
-    }
-    //! The method sets the file name composer
-    template< typename ComposerT >
-    void set_file_name_composer(ComposerT const& composer, mpl::false_ const&)
-    {
-        set_file_name_composer_internal(composer);
-    }
-    //! The method sets the file name composer
-    BOOST_LOG_EXPORT void set_file_name_composer_internal(file_name_composer_type const& composer);
+    BOOST_LOG_API void set_file_name_composer_internal(file_name_composer_type const& composer);
 #endif // BOOST_LOG_DOXYGEN_PASS
 };
 
-#ifdef BOOST_LOG_USE_CHAR
-typedef basic_text_multifile_backend< char > text_multifile_backend;     //!< Convenience typedef for narrow-character logging
-#endif
-#ifdef BOOST_LOG_USE_WCHAR_T
-typedef basic_text_multifile_backend< wchar_t > wtext_multifile_backend; //!< Convenience typedef for wide-character logging
-#endif
-
 } // namespace sinks
 
-} // namespace log
+BOOST_LOG_CLOSE_NAMESPACE // namespace log
 
 } // namespace boost
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif // _MSC_VER
+#include <boost/log/detail/footer.hpp>
 
 #endif // BOOST_LOG_SINKS_TEXT_MULTIFILE_BACKEND_HPP_INCLUDED_

@@ -1,5 +1,5 @@
 /*
- *          Copyright Andrey Semashev 2007 - 2010.
+ *          Copyright Andrey Semashev 2007 - 2014.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -13,102 +13,89 @@
  * used in other places without the Syslog backend.
  */
 
-#if (defined(_MSC_VER) && _MSC_VER > 1000)
-#pragma once
-#endif // _MSC_VER > 1000
-
 #ifndef BOOST_LOG_SINKS_SYSLOG_CONSTANTS_HPP_INCLUDED_HPP_
 #define BOOST_LOG_SINKS_SYSLOG_CONSTANTS_HPP_INCLUDED_HPP_
 
-#include <boost/log/detail/prologue.hpp>
-#include <boost/log/detail/tagged_integer.hpp>
+#include <boost/log/detail/config.hpp>
 
-#ifdef _MSC_VER
-#pragma warning(push)
-// 'm_A' : class 'A' needs to have dll-interface to be used by clients of class 'B'
-#pragma warning(disable: 4251)
-// non dll-interface class 'A' used as base for dll-interface class 'B'
-#pragma warning(disable: 4275)
-#endif // _MSC_VER
+#ifdef BOOST_HAS_PRAGMA_ONCE
+#pragma once
+#endif
+
+#ifndef BOOST_LOG_WITHOUT_SYSLOG
+
+#include <boost/log/detail/header.hpp>
 
 namespace boost {
 
-namespace BOOST_LOG_NAMESPACE {
+BOOST_LOG_OPEN_NAMESPACE
 
 namespace sinks {
 
 namespace syslog {
 
-    struct level_tag;
-    //! A tagged integal type that represents log record level for the syslog API
-    typedef boost::log::aux::tagged_integer< int, level_tag > level_t;
+    //! Syslog record levels
+    enum level
+    {
+        emergency = 0,                //!< Equivalent to LOG_EMERG in syslog API
+        alert = 1,                    //!< Equivalent to LOG_ALERT in syslog API
+        critical = 2,                 //!< Equivalent to LOG_CRIT in syslog API
+        error = 3,                    //!< Equivalent to LOG_ERROR in syslog API
+        warning = 4,                  //!< Equivalent to LOG_WARNING in syslog API
+        notice = 5,                   //!< Equivalent to LOG_NOTICE in syslog API
+        info = 6,                     //!< Equivalent to LOG_INFO in syslog API
+        debug = 7                     //!< Equivalent to LOG_DEBUG in syslog API
+    };
+
     /*!
      * The function constructs log record level from an integer
      */
-    inline level_t make_level(int lev)
-    {
-        level_t level = { lev };
-        return level;
-    }
+    BOOST_LOG_API level make_level(int lev);
 
-    struct facility_tag;
-    //! A tagged integal type that represents log source facility for the syslog API
-    typedef boost::log::aux::tagged_integer< int, facility_tag > facility_t;
+    //! Syslog facility codes
+    enum facility
+    {
+        kernel = 0 * 8,               //!< Kernel messages
+        user = 1 * 8,                 //!< User-level messages. Equivalent to LOG_USER in syslog API.
+        mail = 2 * 8,                 //!< Mail system messages. Equivalent to LOG_MAIL in syslog API.
+        daemon = 3 * 8,               //!< System daemons. Equivalent to LOG_DAEMON in syslog API.
+        security0 = 4 * 8,            //!< Security/authorization messages
+        syslogd = 5 * 8,              //!< Messages from the syslogd daemon. Equivalent to LOG_SYSLOG in syslog API.
+        printer = 6 * 8,              //!< Line printer subsystem. Equivalent to LOG_LPR in syslog API.
+        news = 7 * 8,                 //!< Network news subsystem. Equivalent to LOG_NEWS in syslog API.
+        uucp = 8 * 8,                 //!< Messages from UUCP subsystem. Equivalent to LOG_UUCP in syslog API.
+        clock0 = 9 * 8,               //!< Messages from the clock daemon
+        security1 = 10 * 8,           //!< Security/authorization messages
+        ftp = 11 * 8,                 //!< Messages from FTP daemon
+        ntp = 12 * 8,                 //!< Messages from NTP daemon
+        log_audit = 13 * 8,           //!< Security/authorization messages
+        log_alert = 14 * 8,           //!< Security/authorization messages
+        clock1 = 15 * 8,              //!< Messages from the clock daemon
+        local0 = 16 * 8,              //!< For local use. Equivalent to LOG_LOCAL0 in syslog API
+        local1 = 17 * 8,              //!< For local use. Equivalent to LOG_LOCAL1 in syslog API
+        local2 = 18 * 8,              //!< For local use. Equivalent to LOG_LOCAL2 in syslog API
+        local3 = 19 * 8,              //!< For local use. Equivalent to LOG_LOCAL3 in syslog API
+        local4 = 20 * 8,              //!< For local use. Equivalent to LOG_LOCAL4 in syslog API
+        local5 = 21 * 8,              //!< For local use. Equivalent to LOG_LOCAL5 in syslog API
+        local6 = 22 * 8,              //!< For local use. Equivalent to LOG_LOCAL6 in syslog API
+        local7 = 23 * 8               //!< For local use. Equivalent to LOG_LOCAL7 in syslog API
+    };
+
     /*!
      * The function constructs log source facility from an integer
      */
-    inline facility_t make_facility(int fac)
-    {
-        facility_t facility = { fac };
-        return facility;
-    }
-
-    //  Syslog record levels
-    BOOST_LOG_EXPORT extern const level_t emergency;                //!< Equivalent to LOG_EMERG in syslog API
-    BOOST_LOG_EXPORT extern const level_t alert;                    //!< Equivalent to LOG_ALERT in syslog API
-    BOOST_LOG_EXPORT extern const level_t critical;                 //!< Equivalent to LOG_CRIT in syslog API
-    BOOST_LOG_EXPORT extern const level_t error;                    //!< Equivalent to LOG_ERROR in syslog API
-    BOOST_LOG_EXPORT extern const level_t warning;                  //!< Equivalent to LOG_WARNING in syslog API
-    BOOST_LOG_EXPORT extern const level_t notice;                   //!< Equivalent to LOG_NOTICE in syslog API
-    BOOST_LOG_EXPORT extern const level_t info;                     //!< Equivalent to LOG_INFO in syslog API
-    BOOST_LOG_EXPORT extern const level_t debug;                    //!< Equivalent to LOG_DEBUG in syslog API
-
-    //  Syslog facility codes
-    BOOST_LOG_EXPORT extern const facility_t kernel;                //!< Kernel messages
-    BOOST_LOG_EXPORT extern const facility_t user;                  //!< User-level messages. Equivalent to LOG_USER in syslog API.
-    BOOST_LOG_EXPORT extern const facility_t mail;                  //!< Mail system messages. Equivalent to LOG_MAIL in syslog API.
-    BOOST_LOG_EXPORT extern const facility_t daemon;                //!< System daemons. Equivalent to LOG_DAEMON in syslog API.
-    BOOST_LOG_EXPORT extern const facility_t security0;             //!< Security/authorization messages
-    BOOST_LOG_EXPORT extern const facility_t syslogd;               //!< Messages from the syslogd daemon. Equivalent to LOG_SYSLOG in syslog API.
-    BOOST_LOG_EXPORT extern const facility_t printer;               //!< Line printer subsystem. Equivalent to LOG_LPR in syslog API.
-    BOOST_LOG_EXPORT extern const facility_t news;                  //!< Network news subsystem. Equivalent to LOG_NEWS in syslog API.
-    BOOST_LOG_EXPORT extern const facility_t uucp;                  //!< Messages from UUCP subsystem. Equivalent to LOG_UUCP in syslog API.
-    BOOST_LOG_EXPORT extern const facility_t clock0;                //!< Messages from the clock daemon
-    BOOST_LOG_EXPORT extern const facility_t security1;             //!< Security/authorization messages
-    BOOST_LOG_EXPORT extern const facility_t ftp;                   //!< Messages from FTP daemon
-    BOOST_LOG_EXPORT extern const facility_t ntp;                   //!< Messages from NTP daemon
-    BOOST_LOG_EXPORT extern const facility_t log_audit;             //!< Security/authorization messages
-    BOOST_LOG_EXPORT extern const facility_t log_alert;             //!< Security/authorization messages
-    BOOST_LOG_EXPORT extern const facility_t clock1;                //!< Messages from the clock daemon
-    BOOST_LOG_EXPORT extern const facility_t local0;                //!< For local use. Equivalent to LOG_LOCAL0 in syslog API
-    BOOST_LOG_EXPORT extern const facility_t local1;                //!< For local use. Equivalent to LOG_LOCAL1 in syslog API
-    BOOST_LOG_EXPORT extern const facility_t local2;                //!< For local use. Equivalent to LOG_LOCAL2 in syslog API
-    BOOST_LOG_EXPORT extern const facility_t local3;                //!< For local use. Equivalent to LOG_LOCAL3 in syslog API
-    BOOST_LOG_EXPORT extern const facility_t local4;                //!< For local use. Equivalent to LOG_LOCAL4 in syslog API
-    BOOST_LOG_EXPORT extern const facility_t local5;                //!< For local use. Equivalent to LOG_LOCAL5 in syslog API
-    BOOST_LOG_EXPORT extern const facility_t local6;                //!< For local use. Equivalent to LOG_LOCAL6 in syslog API
-    BOOST_LOG_EXPORT extern const facility_t local7;                //!< For local use. Equivalent to LOG_LOCAL7 in syslog API
+    BOOST_LOG_API facility make_facility(int fac);
 
 } // namespace syslog
 
 } // namespace sinks
 
-} // namespace log
+BOOST_LOG_CLOSE_NAMESPACE // namespace log
 
 } // namespace boost
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif // _MSC_VER
+#include <boost/log/detail/footer.hpp>
+
+#endif // BOOST_LOG_WITHOUT_SYSLOG
 
 #endif // BOOST_LOG_SINKS_SYSLOG_CONSTANTS_HPP_INCLUDED_HPP_

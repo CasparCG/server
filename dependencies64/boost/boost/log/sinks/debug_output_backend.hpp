@@ -1,5 +1,5 @@
 /*
- *          Copyright Andrey Semashev 2007 - 2010.
+ *          Copyright Andrey Semashev 2007 - 2014.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -12,31 +12,27 @@
  * The header contains a logging sink backend that outputs log records to the debugger.
  */
 
-#if (defined(_MSC_VER) && _MSC_VER > 1000)
-#pragma once
-#endif // _MSC_VER > 1000
-
 #ifndef BOOST_LOG_SINKS_DEBUG_OUTPUT_BACKEND_HPP_INCLUDED_
 #define BOOST_LOG_SINKS_DEBUG_OUTPUT_BACKEND_HPP_INCLUDED_
 
 #include <string>
-#include <boost/weak_ptr.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/log/detail/prologue.hpp>
-#include <boost/log/filters/basic_filters.hpp>
-#include <boost/log/sinks/basic_sink_backend.hpp>
+#include <boost/log/detail/config.hpp>
 
-#ifdef _MSC_VER
-#pragma warning(push)
-// 'm_A' : class 'A' needs to have dll-interface to be used by clients of class 'B'
-#pragma warning(disable: 4251)
-// non dll-interface class 'A' used as base for dll-interface class 'B'
-#pragma warning(disable: 4275)
-#endif // _MSC_VER
+#ifdef BOOST_HAS_PRAGMA_ONCE
+#pragma once
+#endif
+
+#ifndef BOOST_LOG_WITHOUT_DEBUG_OUTPUT
+
+#include <boost/log/sinks/basic_sink_backend.hpp>
+#include <boost/log/sinks/frontend_requirements.hpp>
+#include <boost/log/attributes/attribute_value_set.hpp>
+#include <boost/log/core/record_view.hpp>
+#include <boost/log/detail/header.hpp>
 
 namespace boost {
 
-namespace BOOST_LOG_NAMESPACE {
+BOOST_LOG_OPEN_NAMESPACE
 
 namespace sinks {
 
@@ -50,54 +46,31 @@ namespace sinks {
  */
 template< typename CharT >
 class basic_debug_output_backend :
-    public basic_formatting_sink_backend< CharT >
+    public basic_formatted_sink_backend< CharT, concurrent_feeding >
 {
     //! Base type
-    typedef basic_formatting_sink_backend< CharT > base_type;
+    typedef basic_formatted_sink_backend< CharT, concurrent_feeding > base_type;
 
 public:
     //! Character type
     typedef typename base_type::char_type char_type;
     //! String type to be used as a message text holder
-    typedef typename base_type::target_string_type target_string_type;
-    //! Attribute values view type
-    typedef typename base_type::values_view_type values_view_type;
-    //! Log record type
-    typedef typename base_type::record_type record_type;
-
-public:
-#ifndef BOOST_LOG_DOXYGEN_PASS
-
-    //! A filter that checks whether the debugger is available
-    class debugger_presence_filter :
-        public filters::basic_filter< char_type, debugger_presence_filter >
-    {
-    public:
-        BOOST_LOG_EXPORT bool operator() (values_view_type const& values) const;
-    };
-
-#endif // BOOST_LOG_DOXYGEN_PASS
+    typedef typename base_type::string_type string_type;
 
 public:
     /*!
      * Constructor. Initializes the sink backend.
      */
-    BOOST_LOG_EXPORT basic_debug_output_backend();
+    BOOST_LOG_API basic_debug_output_backend();
     /*!
      * Destructor
      */
-    BOOST_LOG_EXPORT ~basic_debug_output_backend();
+    BOOST_LOG_API ~basic_debug_output_backend();
 
     /*!
-     * \return A filter that checks whether the debugger is available
+     * The method passes the formatted message to debugger
      */
-    BOOST_LOG_EXPORT debugger_presence_filter get_debugger_presence_filter() const;
-
-private:
-#ifndef BOOST_LOG_DOXYGEN_PASS
-    //! The method puts the formatted message to debugger
-    BOOST_LOG_EXPORT void do_consume(record_type const& rec, target_string_type const& formatted_message);
-#endif
+    BOOST_LOG_API void consume(record_view const& rec, string_type const& formatted_message);
 };
 
 #ifdef BOOST_LOG_USE_CHAR
@@ -109,12 +82,12 @@ typedef basic_debug_output_backend< wchar_t > wdebug_output_backend;  //!< Conve
 
 } // namespace sinks
 
-} // namespace log
+BOOST_LOG_CLOSE_NAMESPACE // namespace log
 
 } // namespace boost
 
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif // _MSC_VER
+#include <boost/log/detail/footer.hpp>
+
+#endif // BOOST_LOG_WITHOUT_DEBUG_OUTPUT
 
 #endif // BOOST_LOG_SINKS_DEBUG_OUTPUT_BACKEND_HPP_INCLUDED_

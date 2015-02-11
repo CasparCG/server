@@ -31,18 +31,23 @@ std::complex<T> acos(const std::complex<T>& z)
    //
 
    //
-   // These static constants should really be in a maths constants library:
+   // These static constants should really be in a maths constants library,
+   // note that we have tweaked a_crossover as per: https://svn.boost.org/trac/boost/ticket/7290
    //
    static const T one = static_cast<T>(1);
    //static const T two = static_cast<T>(2);
    static const T half = static_cast<T>(0.5L);
-   static const T a_crossover = static_cast<T>(1.5L);
+   static const T a_crossover = static_cast<T>(10);
    static const T b_crossover = static_cast<T>(0.6417L);
-   static const T s_pi = static_cast<T>(3.141592653589793238462643383279502884197L);
-   static const T half_pi = static_cast<T>(1.57079632679489661923132169163975144L);
-   static const T log_two = static_cast<T>(0.69314718055994530941723212145817657L);
-   static const T quarter_pi = static_cast<T>(0.78539816339744830961566084581987572L);
+   static const T s_pi = boost::math::constants::pi<T>();
+   static const T half_pi = s_pi / 2;
+   static const T log_two = boost::math::constants::ln_two<T>();
+   static const T quarter_pi = s_pi / 4;
    
+#ifdef BOOST_MSVC
+#pragma warning(push)
+#pragma warning(disable:4127)
+#endif
    //
    // Get real and imaginary parts, discard the signs as we can 
    // figure out the sign of the result later:
@@ -58,14 +63,14 @@ std::complex<T> acos(const std::complex<T>& z)
    // but doing it this way prevents overflow/underflow arithmetic
    // in the main body of the logic, which may trip up some machines:
    //
-   if(std::numeric_limits<T>::has_infinity && (x == std::numeric_limits<T>::infinity()))
+   if((boost::math::isinf)(x))
    {
-      if(y == std::numeric_limits<T>::infinity())
+      if((boost::math::isinf)(y))
       {
          real = quarter_pi;
          imag = std::numeric_limits<T>::infinity();
       }
-      else if(detail::test_is_nan(y))
+      else if((boost::math::isnan)(y))
       {
          return std::complex<T>(y, -std::numeric_limits<T>::infinity());
       }
@@ -76,18 +81,18 @@ std::complex<T> acos(const std::complex<T>& z)
          imag = std::numeric_limits<T>::infinity();
       }
    }
-   else if(detail::test_is_nan(x))
+   else if((boost::math::isnan)(x))
    {
-      if(y == std::numeric_limits<T>::infinity())
-         return std::complex<T>(x, (z.imag() < 0) ? std::numeric_limits<T>::infinity() :  -std::numeric_limits<T>::infinity());
+      if((boost::math::isinf)(y))
+         return std::complex<T>(x, ((boost::math::signbit)(z.imag())) ? std::numeric_limits<T>::infinity() :  -std::numeric_limits<T>::infinity());
       return std::complex<T>(x, x);
    }
-   else if(std::numeric_limits<T>::has_infinity && (y == std::numeric_limits<T>::infinity()))
+   else if((boost::math::isinf)(y))
    {
       real = half_pi;
       imag = std::numeric_limits<T>::infinity();
    }
-   else if(detail::test_is_nan(y))
+   else if((boost::math::isnan)(y))
    {
       return std::complex<T>((x == 0) ? half_pi : y, y);
    }
@@ -98,7 +103,7 @@ std::complex<T> acos(const std::complex<T>& z)
       // begin with the special case for real numbers:
       //
       if((y == 0) && (x <= one))
-         return std::complex<T>((x == 0) ? half_pi : std::acos(z.real()));
+         return std::complex<T>((x == 0) ? half_pi : std::acos(z.real()), (boost::math::changesign)(z.imag()));
       //
       // Figure out if our input is within the "safe area" identified by Hull et al.
       // This would be more efficient with portable floating point exception handling;
@@ -168,14 +173,16 @@ std::complex<T> acos(const std::complex<T>& z)
             }
             else
             {
-               real = 0;
+               // This deviates from Hull et al's paper as per https://svn.boost.org/trac/boost/ticket/7290
                if(((std::numeric_limits<T>::max)() / xp1) > xm1)
                {
                   // xp1 * xm1 won't overflow:
+                  real = y / std::sqrt(xm1*xp1);
                   imag = boost::math::log1p(xm1 + std::sqrt(xp1*xm1));
                }
                else
                {
+                  real = y / x;
                   imag = log_two + std::log(x);
                }
             }
@@ -222,12 +229,15 @@ std::complex<T> acos(const std::complex<T>& z)
    //
    // Finish off by working out the sign of the result:
    //
-   if(z.real() < 0)
+   if((boost::math::signbit)(z.real()))
       real = s_pi - real;
-   if(z.imag() > 0)
-      imag = -imag;
+   if(!(boost::math::signbit)(z.imag()))
+      imag = (boost::math::changesign)(imag);
 
    return std::complex<T>(real, imag);
+#ifdef BOOST_MSVC
+#pragma warning(pop)
+#endif
 }
 
 } } // namespaces

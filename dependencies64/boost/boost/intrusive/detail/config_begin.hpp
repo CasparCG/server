@@ -1,6 +1,6 @@
 /////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga  2006-2009
+// (C) Copyright Ion Gaztanaga  2006-2013
 //
 // Distributed under the Boost Software License, Version 1.0.
 //    (See accompanying file LICENSE_1_0.txt or copy at
@@ -10,8 +10,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////
 
-#ifndef BOOST_INTRUSIVE_CONFIG_INCLUDED
-#define BOOST_INTRUSIVE_CONFIG_INCLUDED
+#ifndef BOOST_CONFIG_HPP
 #include <boost/config.hpp>
 #endif
 
@@ -20,10 +19,10 @@
    #pragma warning (push)
    //
    //'function' : resolved overload was found by argument-dependent lookup
-   //A function found by argument-dependent lookup (Koenig lookup) was eventually 
+   //A function found by argument-dependent lookup (Koenig lookup) was eventually
    //chosen by overload resolution.
    //
-   //In Visual C++ .NET and earlier compilers, a different function would have 
+   //In Visual C++ .NET and earlier compilers, a different function would have
    //been called. To pick the original function, use an explicitly qualified name.
    //
 

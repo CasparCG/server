@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2005-2009. Distributed under the Boost
+// (C) Copyright Ion Gaztanaga 2005-2012. Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -11,11 +11,15 @@
 #ifndef BOOST_INTERPROCESS_POSIX_TIMES_WRK_HPP
 #define BOOST_INTERPROCESS_POSIX_TIMES_WRK_HPP
 
+#if defined(_MSC_VER)
+#  pragma once
+#endif
+
 //workaround to avoid winsock redefines when using date-time
 
 #ifdef _WIN32
 #ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN 
+#define WIN32_LEAN_AND_MEAN
 #define BOOST_INTERPROCESS_WIN32_LEAN_AND_MEAN
 #endif   //#ifndef WIN32_LEAN_AND_MEAN
 #endif   //#ifdef _WIN32

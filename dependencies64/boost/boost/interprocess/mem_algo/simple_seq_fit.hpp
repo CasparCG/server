@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2005-2009. Distributed under the Boost
+// (C) Copyright Ion Gaztanaga 2005-2012. Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -11,7 +11,7 @@
 #ifndef BOOST_INTERPROCESS_SIMPLE_SEQ_FIT_HPP
 #define BOOST_INTERPROCESS_SIMPLE_SEQ_FIT_HPP
 
-#if (defined _MSC_VER) && (_MSC_VER >= 1200)
+#if defined(_MSC_VER)
 #  pragma once
 #endif
 
@@ -31,21 +31,21 @@ namespace interprocess {
 //!This class implements the simple sequential fit algorithm with a simply
 //!linked list of free buffers.
 template<class MutexFamily, class VoidPointer>
-class simple_seq_fit 
+class simple_seq_fit
    : public ipcdetail::simple_seq_fit_impl<MutexFamily, VoidPointer>
 {
-   /// @cond
+   #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
    typedef ipcdetail::simple_seq_fit_impl<MutexFamily, VoidPointer> base_t;
-   /// @endcond
+   #endif   //#ifndef BOOST_INTERPROCESS_DOXYGEN_INVOKED
 
    public:
    typedef typename base_t::size_type                            size_type;
 
-   //!Constructor. "size" is the total size of the managed memory segment, 
+   //!Constructor. "size" is the total size of the managed memory segment,
    //!"extra_hdr_bytes" indicates the extra bytes beginning in the sizeof(simple_seq_fit)
    //!offset that the allocator should not use at all.*/
-   simple_seq_fit           (size_type size, size_type extra_hdr_bytes)
-      : base_t(size, extra_hdr_bytes){}
+   simple_seq_fit(size_type segment_size, size_type extra_hdr_bytes)
+      : base_t(segment_size, extra_hdr_bytes){}
 };
 
 }  //namespace interprocess {

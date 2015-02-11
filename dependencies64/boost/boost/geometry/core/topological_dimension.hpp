@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -49,10 +49,12 @@ struct top_dim<segment_tag>    : boost::mpl::int_<1> {};
 
 
 // ring: topological dimension of two, but some people say: 1 !!
+// NOTE: This is not OGC LinearRing!
 template <>
 struct top_dim<ring_tag>       : boost::mpl::int_<2> {};
 
 
+// TODO: This is wrong! Boxes may have various topological dimensions
 template <>
 struct top_dim<box_tag>        : boost::mpl::int_<2> {};
 
@@ -60,6 +62,17 @@ struct top_dim<box_tag>        : boost::mpl::int_<2> {};
 template <>
 struct top_dim<polygon_tag>    : boost::mpl::int_<2> {};
 
+
+template <>
+struct top_dim<multi_point_tag> : boost::mpl::int_<0> {};
+
+
+template <>
+struct top_dim<multi_linestring_tag> : boost::mpl::int_<1> {};
+
+
+template <>
+struct top_dim<multi_polygon_tag> : boost::mpl::int_<2> {};
 
 
 } // namespace core_dispatch

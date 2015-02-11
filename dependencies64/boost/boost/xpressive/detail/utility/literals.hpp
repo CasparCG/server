@@ -9,7 +9,7 @@
 #define BOOST_XPRESSIVE_DETAIL_UTILITY_LITERALS_HPP_EAN_10_04_2005
 
 // MS compatible compilers support #pragma once
-#if defined(_MSC_VER) && (_MSC_VER >= 1020)
+#if defined(_MSC_VER)
 # pragma once
 #endif
 
@@ -43,12 +43,12 @@ struct string_literal;
 template<>
 struct string_literal<char>
 {
-    static char const *pick(char const *cstr, wchar_t const *)
+    static BOOST_CONSTEXPR char const *pick(char const *cstr, wchar_t const *)
     {
         return cstr;
     }
 
-    static char pick(char ch, wchar_t)
+    static BOOST_CONSTEXPR char pick(char ch, wchar_t)
     {
         return ch;
     }
@@ -57,12 +57,12 @@ struct string_literal<char>
 template<>
 struct string_literal<wchar_t>
 {
-    static wchar_t const *pick(char const *, wchar_t const *cstr)
+    static BOOST_CONSTEXPR wchar_t const *pick(char const *, wchar_t const *cstr)
     {
         return cstr;
     }
 
-    static wchar_t pick(char, wchar_t ch)
+    static BOOST_CONSTEXPR wchar_t pick(char, wchar_t ch)
     {
         return ch;
     }

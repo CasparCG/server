@@ -7,12 +7,13 @@
 #if !defined(FUSION_STD_TUPLE_ITERATOR_09112011_1905)
 #define FUSION_STD_TUPLE_ITERATOR_09112011_1905
 
+#include <boost/fusion/support/config.hpp>
 #include <boost/fusion/iterator/iterator_facade.hpp>
 #include <boost/type_traits/is_const.hpp>
 #include <boost/type_traits/remove_const.hpp>
 #include <boost/fusion/support/detail/access.hpp>
 #include <boost/mpl/int.hpp>
-#include <boost/mpl/eval_if.hpp>
+#include <boost/mpl/if.hpp>
 #include <tuple>
 #include <utility>
 
@@ -35,7 +36,7 @@ namespace boost { namespace fusion
             typename add_const<Tuple>::type, Index>
         identity;
 
-        explicit std_tuple_iterator(Tuple& tuple)
+        BOOST_FUSION_GPU_ENABLED explicit std_tuple_iterator(Tuple& tuple)
           : tuple(tuple) {}
 
         Tuple& tuple;
@@ -48,15 +49,16 @@ namespace boost { namespace fusion
         template <typename Iterator>
         struct deref
         {
-            typedef value_of<Iterator> element;
+            typedef typename value_of<Iterator>::type element;
             typedef typename
-                mpl::eval_if<
+                mpl::if_<
                     is_const<typename Iterator::tuple_type>
-                  , fusion::detail::cref_result<element>
-                  , fusion::detail::ref_result<element>
+                  , typename fusion::detail::cref_result<element>::type
+                  , typename fusion::detail::ref_result<element>::type
                 >::type
             type;
 
+            BOOST_FUSION_GPU_ENABLED
             static type
             call(Iterator const& iter)
             {
@@ -71,6 +73,7 @@ namespace boost { namespace fusion
             typedef typename Iterator::tuple_type tuple_type;
             typedef std_tuple_iterator<tuple_type, index+N::value> type;
 
+            BOOST_FUSION_GPU_ENABLED
             static type
             call(Iterator const& i)
             {
@@ -93,6 +96,7 @@ namespace boost { namespace fusion
         {
             typedef mpl::int_<Last::index-First::index> type;
 
+            BOOST_FUSION_GPU_ENABLED
             static type
             call(First const&, Last const&)
             {

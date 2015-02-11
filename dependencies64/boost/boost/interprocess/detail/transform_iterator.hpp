@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2005-2009.
+// (C) Copyright Ion Gaztanaga 2005-2012.
 // (C) Copyright Gennaro Prota 2003 - 2004.
 //
 // Distributed under the Boost Software License, Version 1.0.
@@ -14,7 +14,7 @@
 #ifndef BOOST_INTERPROCESS_DETAIL_TRANSFORM_ITERATORS_HPP
 #define BOOST_INTERPROCESS_DETAIL_TRANSFORM_ITERATORS_HPP
 
-#if (defined _MSC_VER) && (_MSC_VER >= 1200)
+#if defined(_MSC_VER)
 #  pragma once
 #endif
 
@@ -27,7 +27,7 @@
 #include <boost/interprocess/detail/type_traits.hpp>
 
 namespace boost {
-namespace interprocess { 
+namespace interprocess {
 
 template <class PseudoReference>
 struct operator_arrow_proxy
@@ -61,9 +61,9 @@ template <class Iterator, class UnaryFunction>
 class transform_iterator
    : public UnaryFunction
    , public std::iterator
-      < typename Iterator::iterator_category
+      < typename std::iterator_traits<Iterator>::iterator_category
       , typename ipcdetail::remove_reference<typename UnaryFunction::result_type>::type
-      , typename Iterator::difference_type
+      , typename std::iterator_traits<Iterator>::difference_type
       , operator_arrow_proxy<typename UnaryFunction::result_type>
       , typename UnaryFunction::result_type>
 {
@@ -77,7 +77,7 @@ class transform_iterator
    {}
 
    //Constructors
-   transform_iterator& operator++() 
+   transform_iterator& operator++()
    { increment();   return *this;   }
 
    transform_iterator operator++(int)
@@ -87,7 +87,7 @@ class transform_iterator
       return result;
    }
 
-   transform_iterator& operator--() 
+   transform_iterator& operator--()
    { decrement();   return *this;   }
 
    transform_iterator operator--(int)
@@ -115,33 +115,33 @@ class transform_iterator
    friend bool operator>= (const transform_iterator& i, const transform_iterator& i2)
    { return !(i < i2); }
 
-   friend typename Iterator::difference_type operator- (const transform_iterator& i, const transform_iterator& i2)
+   friend typename std::iterator_traits<Iterator>::difference_type operator- (const transform_iterator& i, const transform_iterator& i2)
    { return i2.distance_to(i); }
 
    //Arithmetic
-   transform_iterator& operator+=(typename Iterator::difference_type off)
+   transform_iterator& operator+=(typename std::iterator_traits<Iterator>::difference_type off)
    {  this->advance(off); return *this;   }
 
-   transform_iterator operator+(typename Iterator::difference_type off) const
+   transform_iterator operator+(typename std::iterator_traits<Iterator>::difference_type off) const
    {
       transform_iterator other(*this);
       other.advance(off);
       return other;
    }
 
-   friend transform_iterator operator+(typename Iterator::difference_type off, const transform_iterator& right)
+   friend transform_iterator operator+(typename std::iterator_traits<Iterator>::difference_type off, const transform_iterator& right)
    {  return right + off; }
 
-   transform_iterator& operator-=(typename Iterator::difference_type off)
+   transform_iterator& operator-=(typename std::iterator_traits<Iterator>::difference_type off)
    {  this->advance(-off); return *this;   }
 
-   transform_iterator operator-(typename Iterator::difference_type off) const
+   transform_iterator operator-(typename std::iterator_traits<Iterator>::difference_type off) const
    {  return *this + (-off);  }
 
    typename UnaryFunction::result_type operator*() const
    { return dereference(); }
 
-   typename UnaryFunction::result_type operator[](typename Iterator::difference_type off) const
+   typename UnaryFunction::result_type operator[](typename std::iterator_traits<Iterator>::difference_type off) const
    { return UnaryFunction::operator()(m_it[off]); }
 
    operator_arrow_proxy<typename UnaryFunction::result_type>
@@ -172,10 +172,10 @@ class transform_iterator
    typename UnaryFunction::result_type dereference() const
    { return UnaryFunction::operator()(*m_it); }
 
-   void advance(typename Iterator::difference_type n)
+   void advance(typename std::iterator_traits<Iterator>::difference_type n)
    {  std::advance(m_it, n); }
 
-   typename Iterator::difference_type distance_to(const transform_iterator &other)const
+   typename std::iterator_traits<Iterator>::difference_type distance_to(const transform_iterator &other)const
    {  return std::distance(other.m_it, m_it); }
 };
 
@@ -186,7 +186,7 @@ make_transform_iterator(Iterator it, UnaryFunc fun)
    return transform_iterator<Iterator, UnaryFunc>(it, fun);
 }
 
-}  //namespace interprocess { 
+}  //namespace interprocess {
 }  //namespace boost {
 
 #include <boost/interprocess/detail/config_end.hpp>

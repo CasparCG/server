@@ -21,6 +21,7 @@
 #include <boost/math/policies/error_handling.hpp>
 #include <boost/math/special_functions/math_fwd.hpp>
 #include <boost/math/special_functions/log1p.hpp>
+#include <boost/math/constants/constants.hpp>
 
 // This is the inverse of the hyperbolic cosine function.
 
@@ -30,17 +31,6 @@ namespace boost
     {
        namespace detail
        {
-#if defined(__GNUC__) && (__GNUC__ < 3)
-        // gcc 2.x ignores function scope using declarations,
-        // put them in the scope of the enclosing namespace instead:
-        
-        using    ::std::abs;
-        using    ::std::sqrt;
-        using    ::std::log;
-        
-        using    ::std::numeric_limits;
-#endif
-        
         template<typename T, typename Policy>
         inline T    acosh_imp(const T x, const Policy& pol)
         {
@@ -58,7 +48,7 @@ namespace boost
                 {
                     // http://functions.wolfram.com/ElementaryFunctions/ArcCosh/06/01/06/01/0001/
                     // approximation by laurent series in 1/x at 0+ order from -1 to 0
-                    return( log( x * 2) );
+                    return log(x) + constants::ln_two<T>();
                 }
                 else if(x < 1.5f)
                 {

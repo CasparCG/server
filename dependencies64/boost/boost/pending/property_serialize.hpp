@@ -24,8 +24,8 @@ namespace boost {
   serialize(Archive& ar, property<Tag, T, Base>& prop, 
             const unsigned int /*version*/) 
   {
-    ar & serialization::make_nvp( "property_base" , boost::serialization::base_object<Base>(prop) );
     ar & serialization::make_nvp( "property_value" , prop.m_value );
+    ar & serialization::make_nvp( "property_base" , prop.m_base );
   }
 
 #ifdef BOOST_GRAPH_USE_MPI

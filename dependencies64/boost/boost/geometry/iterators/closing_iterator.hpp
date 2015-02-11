@@ -1,8 +1,8 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
-// Copyright (c) 2008-2011 Bruno Lalande, Paris, France.
-// Copyright (c) 2009-2011 Mateusz Loskot, London, UK.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2008-2012 Bruno Lalande, Paris, France.
+// Copyright (c) 2009-2012 Mateusz Loskot, London, UK.
 
 // Parts of Boost.Geometry are redesigned from Geodan's Geographic Library
 // (geolib/GGL), copyright (c) 1995-2010 Geodan, Amsterdam, the Netherlands.
@@ -28,8 +28,9 @@ namespace boost { namespace geometry
 \brief Iterator which iterates through a range, but adds first element at end of the range
 \tparam Range range on which this class is based on
 \ingroup iterators
-\note Use with "closing_iterator<Range> or "closing_iterator<Range const>
-        to get non-const / const behaviour
+\note It's const iterator treating the Range as one containing non-mutable elements.
+        For both "closing_iterator<Range> and "closing_iterator<Range const>
+        const reference is always returned when dereferenced.
 \note This class is normally used from "closeable_view" if Close==true
 */
 template <typename Range>

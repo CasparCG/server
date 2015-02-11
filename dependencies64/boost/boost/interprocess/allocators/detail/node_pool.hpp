@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2005-2009. Distributed under the Boost
+// (C) Copyright Ion Gaztanaga 2005-2012. Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -11,7 +11,7 @@
 #ifndef BOOST_INTERPROCESS_DETAIL_NODE_POOL_HPP
 #define BOOST_INTERPROCESS_DETAIL_NODE_POOL_HPP
 
-#if (defined _MSC_VER) && (_MSC_VER >= 1200)
+#if defined(_MSC_VER)
 #  pragma once
 #endif
 
@@ -19,9 +19,6 @@
 #include <boost/interprocess/detail/workaround.hpp>
 
 #include <boost/intrusive/slist.hpp>
-#include <boost/math/common_factor_ct.hpp>
-#include <boost/pointer_to_other.hpp>
-
 #include <boost/interprocess/detail/utilities.hpp>
 #include <boost/interprocess/allocators/detail/allocator_common.hpp>
 #include <boost/container/detail/node_pool_impl.hpp>
@@ -38,16 +35,16 @@ namespace ipcdetail {
 
 
 //!Pooled shared memory allocator using single segregated storage. Includes
-//!a reference count but the class does not delete itself, this is  
+//!a reference count but the class does not delete itself, this is
 //!responsibility of user classes. Node size (NodeSize) and the number of
 //!nodes allocated per block (NodesPerBlock) are known at compile time
 template< class SegmentManager, std::size_t NodeSize, std::size_t NodesPerBlock >
 class private_node_pool
    //Inherit from the implementation to avoid template bloat
-   :  public boost::container::containers_detail::
+   :  public boost::container::container_detail::
          private_node_pool_impl<typename SegmentManager::segment_manager_base_type>
 {
-   typedef boost::container::containers_detail::private_node_pool_impl
+   typedef boost::container::container_detail::private_node_pool_impl
       <typename SegmentManager::segment_manager_base_type> base_t;
    //Non-copyable
    private_node_pool();
@@ -74,18 +71,18 @@ class private_node_pool
 
 
 //!Pooled shared memory allocator using single segregated storage. Includes
-//!a reference count but the class does not delete itself, this is  
+//!a reference count but the class does not delete itself, this is
 //!responsibility of user classes. Node size (NodeSize) and the number of
 //!nodes allocated per block (NodesPerBlock) are known at compile time
 //!Pooled shared memory allocator using adaptive pool. Includes
-//!a reference count but the class does not delete itself, this is  
+//!a reference count but the class does not delete itself, this is
 //!responsibility of user classes. Node size (NodeSize) and the number of
 //!nodes allocated per block (NodesPerBlock) are known at compile time
 template< class SegmentManager
         , std::size_t NodeSize
         , std::size_t NodesPerBlock
         >
-class shared_node_pool 
+class shared_node_pool
    :  public ipcdetail::shared_pool_impl
       < private_node_pool
          <SegmentManager, NodeSize, NodesPerBlock>

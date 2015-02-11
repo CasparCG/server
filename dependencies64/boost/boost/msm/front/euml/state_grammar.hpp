@@ -59,6 +59,7 @@ struct func_state :  public ::boost::msm::front::detail::state_base<BASE,Attribu
     typedef StateNameTag state_name_tag;
     // flags
     typedef Flags       flag_list;
+    typedef ::boost::mpl::vector0<> internal_flag_list;
     // deferred events
     typedef Defer       deferred_events;
 
@@ -99,6 +100,7 @@ struct entry_func_state :  public ::boost::msm::front::detail::state_base<BASE,A
 
     // flags
     typedef Flags       flag_list;
+    typedef ::boost::mpl::vector0<> internal_flag_list;
     // deferred events
     typedef Defer       deferred_events;
 
@@ -135,6 +137,7 @@ struct explicit_entry_func_state :  public ::boost::msm::front::detail::state_ba
     typedef StateNameTag state_name_tag;
     // flags
     typedef Flags       flag_list;
+    typedef ::boost::mpl::vector0<> internal_flag_list;
     // deferred events
     typedef Defer       deferred_events;
 
@@ -175,6 +178,7 @@ struct exit_func_state :   public ::boost::msm::front::detail::state_base<BASE,A
 
     // flags
     typedef Flags       flag_list;
+    typedef ::boost::mpl::vector0<> internal_flag_list;
     // deferred events
     typedef Defer       deferred_events;
 
@@ -562,13 +566,13 @@ struct BuildActions
 {};
 
 // attributes building
-#define BOOST_MSM_EUML_DECLARE_ATTRIBUTE(attr_type,attr_name)                                           \
-struct attr_name ## _                                                                                   \
-    : proto::extends< proto::terminal<msm::front::action_tag>::type, attr_name ## _, sm_domain>         \
-    {typedef  attr_name ## _ action_name;                                                               \
-        typedef ::boost::fusion::pair<attr_name ## _,attr_type> attribute_type;                         \
-        attr_name ## _ (){}                                                                             \
-    };                                                                                                  \
+#define BOOST_MSM_EUML_DECLARE_ATTRIBUTE(attr_type,attr_name)                                                           \
+struct attr_name ## _                                                                                                   \
+    : proto::extends< proto::terminal< ::boost::msm::front::action_tag>::type, attr_name ## _, boost::msm::sm_domain>   \
+    {typedef  attr_name ## _ action_name;                                                                               \
+        typedef ::boost::fusion::pair<attr_name ## _,attr_type> attribute_type;                                         \
+        attr_name ## _ (){}                                                                                             \
+    };                                                                                                                  \
 attr_name ## _ const attr_name = attr_name ## _();
 
 struct make_attributes_tag
@@ -597,7 +601,7 @@ struct attribute
    BOOST_PROTO_BASIC_EXTENDS(
        proto::terminal<make_attributes_tag>::type
      , attribute
-     , sm_domain
+     , boost::msm::sm_domain
    )
    typedef ::boost::fusion::pair<int,int> attribute_type;
 };
@@ -668,7 +672,7 @@ struct configure
    BOOST_PROTO_BASIC_EXTENDS(
        proto::terminal<make_configure_tag>::type
      , configure
-     , sm_domain
+     , boost::msm::sm_domain
    )
 };
 
@@ -700,7 +704,7 @@ struct define_init
    BOOST_PROTO_BASIC_EXTENDS(
        proto::terminal<state_tag>::type
      , define_init
-     , sm_domain
+     , boost::msm::sm_domain
    )
 };
 
@@ -867,6 +871,7 @@ struct func_state_machine :  public ::boost::msm::front::detail::state_base<BASE
     // flags
     typedef StateNameTag state_name_tag;
     typedef Flags                        flag_list;
+    typedef ::boost::mpl::vector0<>      internal_flag_list;
     // deferred events
     typedef Defer                        deferred_events;
     // customization (message queue, exceptions)

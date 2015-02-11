@@ -1,6 +1,6 @@
 // Boost.Geometry (aka GGL, Generic Geometry Library)
 
-// Copyright (c) 2007-2011 Barend Gehrels, Amsterdam, the Netherlands.
+// Copyright (c) 2007-2012 Barend Gehrels, Amsterdam, the Netherlands.
 
 // Use, modification and distribution is subject to the Boost Software License,
 // Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
@@ -28,7 +28,8 @@ enum operation_type
     operation_union,
     operation_intersection,
     operation_blocked,
-    operation_continue
+    operation_continue,
+    operation_opposite
 };
 
 
@@ -53,11 +54,12 @@ enum method_type
         The class is to be included in the turn_info class, either direct
         or a derived or similar class with more (e.g. enrichment) information.
  */
+template <typename SegmentRatio>
 struct turn_operation
 {
     operation_type operation;
     segment_identifier seg_id;
-    segment_identifier other_id;
+    SegmentRatio fraction;
 
     inline turn_operation()
         : operation(operation_none)
@@ -77,7 +79,8 @@ struct turn_operation
 template
 <
     typename Point,
-    typename Operation = turn_operation,
+    typename SegmentRatio,
+    typename Operation = turn_operation<SegmentRatio>,
     typename Container = boost::array<Operation, 2>
 >
 struct turn_info
@@ -89,6 +92,7 @@ struct turn_info
     Point point;
     method_type method;
     bool discarded;
+    bool selectable_start; // Can be used as starting-turn in traverse
 
 
     Container operations;
@@ -96,6 +100,7 @@ struct turn_info
     inline turn_info()
         : method(method_none)
         , discarded(false)
+        , selectable_start(true)
     {}
 
     inline bool both(operation_type type) const
@@ -103,21 +108,28 @@ struct turn_info
         return has12(type, type);
     }
 
+    inline bool has(operation_type type) const
+    {
+        return this->operations[0].operation == type
+            || this->operations[1].operation == type;
+    }
+
     inline bool combination(operation_type type1, operation_type type2) const
     {
         return has12(type1, type2) || has12(type2, type1);
     }
 
-
-    inline bool is_discarded() const { return discarded; }
     inline bool blocked() const
     {
         return both(operation_blocked);
     }
+    inline bool opposite() const
+    {
+        return both(operation_opposite);
+    }
     inline bool any_blocked() const
     {
-        return this->operations[0].operation == operation_blocked
-            || this->operations[1].operation == operation_blocked;
+        return has(operation_blocked);
     }
 
 

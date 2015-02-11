@@ -24,6 +24,11 @@
 #include <boost/proto/proto_fwd.hpp>
 #include <boost/proto/args.hpp>
 
+#if defined(_MSC_VER)
+# pragma warning(push)
+# pragma warning(disable : 4714) // function 'xxx' marked as __forceinline not inlined
+#endif
+
 namespace boost { namespace proto
 {
 
@@ -43,6 +48,7 @@ namespace boost { namespace proto
                 >
             type;
 
+            BOOST_FORCEINLINE
             static type const call(proto::expr<Tag, term<Arg>, 0> const &e)
             {
                 type that = {e.child0};
@@ -61,6 +67,7 @@ namespace boost { namespace proto
                 >
             type;
 
+            BOOST_FORCEINLINE
             static type const call(proto::basic_expr<Tag, term<Arg>, 0> const &e)
             {
                 type that = {e.child0};
@@ -108,11 +115,8 @@ namespace boost { namespace proto
         /// \param expr A Proto expression
         /// \return expr
         template<typename Expr>
-        #ifdef BOOST_PROTO_STRICT_RESULT_OF
-        Expr
-        #else
-        Expr const &
-        #endif
+        BOOST_FORCEINLINE
+        BOOST_PROTO_RETURN_TYPE_STRICT_LOOSE(Expr, Expr const &)
         operator ()(Expr const &e) const
         {
             return e;
@@ -170,6 +174,7 @@ namespace boost { namespace proto
         /// \param expr A Proto expression
         /// \return Extends<Expr>(expr)
         template<typename Expr>
+        BOOST_FORCEINLINE
         Extends<Expr> operator ()(Expr const &e) const
         {
             return Extends<Expr>(e);
@@ -216,11 +221,34 @@ namespace boost { namespace proto
         /// \param expr The expression to wrap
         /// \return <tt>Extends\<Expr\> that = {expr}; return that;</tt>
         template<typename Expr>
+        BOOST_FORCEINLINE
         Extends<Expr> operator ()(Expr const &e) const
         {
             Extends<Expr> that = {e};
             return that;
         }
+
+        // Work-around for:
+        // https://connect.microsoft.com/VisualStudio/feedback/details/765449/codegen-stack-corruption-using-runtime-checks-when-aggregate-initializing-struct
+    #if BOOST_WORKAROUND(BOOST_MSVC, BOOST_TESTED_AT(1700))
+        template<typename Class, typename Member>
+        BOOST_FORCEINLINE
+        Extends<expr<tag::terminal, proto::term<Member Class::*> > > operator ()(expr<tag::terminal, proto::term<Member Class::*> > const &e) const
+        {
+            Extends<expr<tag::terminal, proto::term<Member Class::*> > > that;
+            proto::value(that.proto_expr_) = proto::value(e);
+            return that;
+        }
+
+        template<typename Class, typename Member>
+        BOOST_FORCEINLINE
+        Extends<basic_expr<tag::terminal, proto::term<Member Class::*> > > operator ()(basic_expr<tag::terminal, proto::term<Member Class::*> > const &e) const
+        {
+            Extends<basic_expr<tag::terminal, proto::term<Member Class::*> > > that;
+            proto::value(that.proto_expr_) = proto::value(e);
+            return that;
+        }
+    #endif
     };
 
     /// \brief A generator that replaces child nodes held by
@@ -269,6 +297,7 @@ namespace boost { namespace proto
         /// \param expr The expression to modify.
         /// \return <tt>deep_copy(expr)</tt>
         template<typename Expr>
+        BOOST_FORCEINLINE
         typename result<by_value_generator(Expr)>::type operator ()(Expr const &e) const
         {
             return detail::by_value_generator_<Expr>::call(e);
@@ -326,6 +355,7 @@ namespace boost { namespace proto
         /// \param expr The expression to modify.
         /// \return Second()(First()(expr))
         template<typename Expr>
+        BOOST_FORCEINLINE
         typename result<compose_generators(Expr)>::type operator ()(Expr const &e) const
         {
             return Second()(First()(e));
@@ -432,5 +462,9 @@ namespace boost
     };
     #endif
 }
+
+#if defined(_MSC_VER)
+# pragma warning(pop)
+#endif
 
 #endif // BOOST_PROTO_GENERATE_HPP_EAN_02_13_2007

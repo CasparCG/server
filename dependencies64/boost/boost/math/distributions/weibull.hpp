@@ -28,7 +28,7 @@ inline bool check_weibull_shape(
       RealType shape,
       RealType* result, const Policy& pol)
 {
-   if((shape < 0) || !(boost::math::isfinite)(shape))
+   if((shape <= 0) || !(boost::math::isfinite)(shape))
    {
       *result = policies::raise_domain_error<RealType>(
          function,
@@ -73,11 +73,11 @@ public:
    typedef RealType value_type;
    typedef Policy policy_type;
 
-   weibull_distribution(RealType shape, RealType scale = 1)
-      : m_shape(shape), m_scale(scale)
+   weibull_distribution(RealType l_shape, RealType l_scale = 1)
+      : m_shape(l_shape), m_scale(l_scale)
    {
       RealType result;
-      detail::check_weibull("boost::math::weibull_distribution<%1%>::weibull_distribution", scale, shape, &result, Policy());
+      detail::check_weibull("boost::math::weibull_distribution<%1%>::weibull_distribution", l_scale, l_shape, &result, Policy());
    }
 
    RealType shape()const
@@ -133,11 +133,19 @@ inline RealType pdf(const weibull_distribution<RealType, Policy>& dist, const Re
       return result;
 
    if(x == 0)
-   { // Special case, but x == min, pdf = 1 for shape = 1,
-      return 0;
+   {
+      if(shape == 1)
+      {
+         return 1 / scale;
+      }
+      if(shape > 1)
+      {
+         return 0;
+      }
+      return policies::raise_overflow_error<RealType>(function, 0, Policy());
    }
    result = exp(-pow(x / scale, shape));
-   result *= pow(x / scale, shape) * shape / x;
+   result *= pow(x / scale, shape - 1) * shape / scale;
 
    return result;
 }

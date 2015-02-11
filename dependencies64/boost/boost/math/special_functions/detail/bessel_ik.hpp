@@ -120,6 +120,17 @@ int temme_ik(T v, T x, T* K, T* K1, const Policy& pol)
     sum = coef * f;
     sum1 = coef * h;
 
+    BOOST_MATH_INSTRUMENT_VARIABLE(p);
+    BOOST_MATH_INSTRUMENT_VARIABLE(q);
+    BOOST_MATH_INSTRUMENT_VARIABLE(f);
+    BOOST_MATH_INSTRUMENT_VARIABLE(sigma);
+    BOOST_MATH_INSTRUMENT_CODE(sinh(sigma));
+    BOOST_MATH_INSTRUMENT_VARIABLE(gamma1);
+    BOOST_MATH_INSTRUMENT_VARIABLE(gamma2);
+    BOOST_MATH_INSTRUMENT_VARIABLE(c);
+    BOOST_MATH_INSTRUMENT_VARIABLE(d);
+    BOOST_MATH_INSTRUMENT_VARIABLE(a);
+
     // series summation
     tolerance = tools::epsilon<T>();
     for (k = 1; k < policies::get_max_series_iterations<Policy>(); k++)
@@ -223,6 +234,7 @@ int CF2_ik(T v, T x, T* Kv, T* Kv1, const Policy& pol)
     BOOST_MATH_INSTRUMENT_VARIABLE(b);
     BOOST_MATH_INSTRUMENT_VARIABLE(D);
     BOOST_MATH_INSTRUMENT_VARIABLE(f);
+
     for (k = 2; k < policies::get_max_series_iterations<Policy>(); k++)     // starting from 2
     {
         // continued fraction f = z1 / z0
@@ -239,10 +251,27 @@ int CF2_ik(T v, T x, T* Kv, T* Kv1, const Policy& pol)
         C *= -a / k;
         Q += C * q;
         S += Q * delta;
+        //
+        // Under some circumstances q can grow very small and C very
+        // large, leading to under/overflow.  This is particularly an
+        // issue for types which have many digits precision but a narrow
+        // exponent range.  A typical example being a "double double" type.
+        // To avoid this situation we can normalise q (and related prev/current)
+        // and C.  All other variables remain unchanged in value.  A typical
+        // test case occurs when x is close to 2, for example cyl_bessel_k(9.125, 2.125).
+        //
+        if(q < tools::epsilon<T>())
+        {
+           C *= q;
+           prev /= q;
+           current /= q;
+           q = 1;
+        }
 
         // S converges slower than f
         BOOST_MATH_INSTRUMENT_VARIABLE(Q * delta);
         BOOST_MATH_INSTRUMENT_VARIABLE(abs(S) * tolerance);
+        BOOST_MATH_INSTRUMENT_VARIABLE(S);
         if (abs(Q * delta) < abs(S) * tolerance) 
         { 
            break; 
@@ -250,7 +279,10 @@ int CF2_ik(T v, T x, T* Kv, T* Kv1, const Policy& pol)
     }
     policies::check_series_iterations<T>("boost::math::bessel_ik<%1%>(%1%,%1%) in CF2_ik", k, pol);
 
-    *Kv = sqrt(pi<T>() / (2 * x)) * exp(-x) / S;
+    if(x >= tools::log_max_value<T>())
+       *Kv = exp(0.5f * log(pi<T>() / (2 * x)) - x - log(S));
+    else
+      *Kv = sqrt(pi<T>() / (2 * x)) * exp(-x) / S;
     *Kv1 = *Kv * (0.5f + v + x + (v * v - 0.25f) * f) / x;
     BOOST_MATH_INSTRUMENT_VARIABLE(*Kv);
     BOOST_MATH_INSTRUMENT_VARIABLE(*Kv1);
@@ -337,6 +369,8 @@ int bessel_ik(T v, T x, T* I, T* K, int kind, const Policy& pol)
     {
         CF2_ik(u, x, &Ku, &Ku1, pol);               // continued fraction CF2_ik
     }
+    BOOST_MATH_INSTRUMENT_VARIABLE(Ku);
+    BOOST_MATH_INSTRUMENT_VARIABLE(Ku1);
     prev = Ku;
     current = Ku1;
     T scale = 1;
@@ -355,6 +389,8 @@ int bessel_ik(T v, T x, T* I, T* K, int kind, const Policy& pol)
     }
     Kv = prev;
     Kv1 = current;
+    BOOST_MATH_INSTRUMENT_VARIABLE(Kv);
+    BOOST_MATH_INSTRUMENT_VARIABLE(Kv1);
     if(kind & need_i)
     {
        T lim = (4 * v * v + 10) / (8 * x);
@@ -370,7 +406,7 @@ int bessel_ik(T v, T x, T* I, T* K, int kind, const Policy& pol)
           // to get here - probably we're going to overflow:
           Iv = asymptotic_bessel_i_large_x(v, x, pol);
        }
-       else if((x / v < 0.25) && (v > 0))
+       else if((v > 0) && (x / v < 0.25))
        {
           Iv = bessel_i_small_z_series(v, x, pol);
        }

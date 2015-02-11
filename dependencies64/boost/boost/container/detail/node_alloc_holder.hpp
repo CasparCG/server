@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////
 //
-// (C) Copyright Ion Gaztanaga 2005-2011. Distributed under the Boost
+// (C) Copyright Ion Gaztanaga 2005-2013. Distributed under the Boost
 // Software License, Version 1.0. (See accompanying file
 // LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
 //
@@ -8,387 +8,284 @@
 //
 //////////////////////////////////////////////////////////////////////////////
 
-#ifndef BOOST_CONTAINERS_DETAIL_NODE_ALLOC_HPP_
-#define BOOST_CONTAINERS_DETAIL_NODE_ALLOC_HPP_
+#ifndef BOOST_CONTAINER_DETAIL_NODE_ALLOC_HPP_
+#define BOOST_CONTAINER_DETAIL_NODE_ALLOC_HPP_
 
-#if (defined _MSC_VER) && (_MSC_VER >= 1200)
+#if defined(_MSC_VER)
 #  pragma once
 #endif
 
-#include "config_begin.hpp"
+#include <boost/container/detail/config_begin.hpp>
 #include <boost/container/detail/workaround.hpp>
 
 #include <utility>
 #include <functional>
 
-#include <boost/move/move.hpp>
+#include <boost/move/utility_core.hpp>
 #include <boost/intrusive/options.hpp>
 
 #include <boost/container/detail/version_type.hpp>
 #include <boost/container/detail/type_traits.hpp>
 #include <boost/container/detail/utilities.hpp>
+#include <boost/container/allocator_traits.hpp>
+#include <boost/container/detail/allocator_version_traits.hpp>
 #include <boost/container/detail/mpl.hpp>
 #include <boost/container/detail/destroyers.hpp>
+#include <boost/container/detail/memory_util.hpp>
+#include <boost/container/detail/placement_new.hpp>
+#include <boost/core/no_exceptions_support.hpp>
 
-#ifndef BOOST_CONTAINERS_PERFECT_FORWARDING
+#ifndef BOOST_CONTAINER_PERFECT_FORWARDING
 #include <boost/container/detail/preprocessor.hpp>
 #endif
 
 #include <boost/container/detail/algorithms.hpp>
 
 
+
 namespace boost {
 namespace container {
-namespace containers_detail {
-
-//!A deleter for scoped_ptr that deallocates the memory
-//!allocated for an object using a STL allocator.
-template <class Allocator>
-struct scoped_deallocator
-{
-   typedef typename Allocator::pointer pointer;
-   typedef containers_detail::integral_constant<unsigned,
-      boost::container::containers_detail::
-         version<Allocator>::value>                   alloc_version;
-   typedef containers_detail::integral_constant<unsigned, 1>     allocator_v1;
-   typedef containers_detail::integral_constant<unsigned, 2>     allocator_v2;
-
-   private:
-   void priv_deallocate(allocator_v1)
-   {  m_alloc.deallocate(m_ptr, 1); }
-
-   void priv_deallocate(allocator_v2)
-   {  m_alloc.deallocate_one(m_ptr); }
-
-   BOOST_MOVABLE_BUT_NOT_COPYABLE(scoped_deallocator)
-
-   public:
-
-   pointer     m_ptr;
-   Allocator&  m_alloc;
-
-   scoped_deallocator(pointer p, Allocator& a)
-      : m_ptr(p), m_alloc(a)
-   {}
-
-   ~scoped_deallocator()
-   {  if (m_ptr)priv_deallocate(alloc_version());  }
-
-   scoped_deallocator(BOOST_RV_REF(scoped_deallocator) o)
-      :  m_ptr(o.m_ptr), m_alloc(o.m_alloc)
-   {  o.release();  }
-
-   pointer get() const
-   {  return m_ptr;  }
-
-   void release()
-   {  m_ptr = 0; }
-};
-
-template <class A>
-class allocator_destroyer_and_chain_builder
-{
-   typedef typename A::value_type value_type;
-   typedef typename A::multiallocation_chain    multiallocation_chain;
-
-   A & a_;
-   multiallocation_chain &c_;
-
-   public:
-   allocator_destroyer_and_chain_builder(A &a, multiallocation_chain &c)
-      :  a_(a), c_(c)
-   {}
-
-   void operator()(const typename A::pointer &p)
-   {  
-      value_type *vp = containers_detail::get_pointer(p);
-      vp->~value_type();
-      c_.push_front(vp);
-   }
-};
-
-template <class A>
-class allocator_multialloc_chain_node_deallocator
-{
-   typedef typename A::value_type value_type;
-   typedef typename A::multiallocation_chain    multiallocation_chain;
-   typedef allocator_destroyer_and_chain_builder<A> chain_builder;
-
-   A & a_;
-   multiallocation_chain c_;
-
-   public:
-   allocator_multialloc_chain_node_deallocator(A &a)
-      :  a_(a), c_()
-   {}
-
-   chain_builder get_chain_builder()
-   {  return chain_builder(a_, c_);  }
-
-   ~allocator_multialloc_chain_node_deallocator()
-   {
-      if(!c_.empty())
-         a_.deallocate_individual(boost::move(c_));
-   }
-};
-
+namespace container_detail {
 
 template<class ValueCompare, class Node>
 struct node_compare
    :  private ValueCompare
 {
-   typedef typename ValueCompare::key_type     key_type;
-   typedef typename ValueCompare::value_type   value_type;
-   typedef typename ValueCompare::key_of_value key_of_value;
+   typedef ValueCompare                                 wrapped_value_compare;
+   typedef typename wrapped_value_compare::key_type     key_type;
+   typedef typename wrapped_value_compare::value_type   value_type;
+   typedef typename wrapped_value_compare::key_of_value key_of_value;
 
-   node_compare(const ValueCompare &pred)
-      :  ValueCompare(pred)
+   explicit node_compare(const wrapped_value_compare &pred)
+      :  wrapped_value_compare(pred)
    {}
 
-   ValueCompare &value_comp()
-   {  return static_cast<ValueCompare &>(*this);  }
+   node_compare()
+      :  wrapped_value_compare()
+   {}
 
-   ValueCompare &value_comp() const
-   {  return static_cast<const ValueCompare &>(*this);  }
+   wrapped_value_compare &value_comp()
+   {  return static_cast<wrapped_value_compare &>(*this);  }
+
+   wrapped_value_compare &value_comp() const
+   {  return static_cast<const wrapped_value_compare &>(*this);  }
 
    bool operator()(const Node &a, const Node &b) const
-   {  return ValueCompare::operator()(a.get_data(), b.get_data());  }
+   {  return wrapped_value_compare::operator()(a.get_data(), b.get_data());  }
 };
 
 template<class A, class ICont>
 struct node_alloc_holder
 {
-   typedef node_alloc_holder<A, ICont>                self_t;
-   typedef typename A::value_type                     value_type;
-   typedef typename ICont::value_type                 Node;
-   typedef typename A::template rebind<Node>::other   NodeAlloc;
-   typedef A                                          ValAlloc;
-   typedef typename NodeAlloc::pointer                NodePtr;
-   typedef containers_detail::scoped_deallocator<NodeAlloc>      Deallocator;
-   typedef typename NodeAlloc::size_type              size_type;
-   typedef typename NodeAlloc::difference_type        difference_type;
-   typedef containers_detail::integral_constant<unsigned, 1>     allocator_v1;
-   typedef containers_detail::integral_constant<unsigned, 2>     allocator_v2;
-   typedef containers_detail::integral_constant<unsigned,
-      boost::container::containers_detail::
+   //If the intrusive container is an associative container, obtain the predicate, which will
+   //be of type node_compare<>. If not an associative container value_compare will be a "nat" type.
+   typedef BOOST_INTRUSIVE_OBTAIN_TYPE_WITH_DEFAULT(boost::container::container_detail::, ICont,
+      value_compare, container_detail::nat)                       intrusive_value_compare;
+   //In that case obtain the value predicate from the node predicate via wrapped_value_compare
+   //if intrusive_value_compare is node_compare<>, nat otherwise
+   typedef BOOST_INTRUSIVE_OBTAIN_TYPE_WITH_DEFAULT(boost::container::container_detail::, ICont,
+      wrapped_value_compare, container_detail::nat)               value_compare;
+
+   typedef allocator_traits<A>                                    allocator_traits_type;
+   typedef typename allocator_traits_type::value_type             value_type;
+   typedef ICont                                                  intrusive_container;
+   typedef typename ICont::value_type                             Node;
+   typedef typename allocator_traits_type::template
+      portable_rebind_alloc<Node>::type                           NodeAlloc;
+   typedef allocator_traits<NodeAlloc>                            node_allocator_traits_type;
+   typedef container_detail::allocator_version_traits<NodeAlloc>  node_allocator_version_traits_type;
+   typedef A                                                      ValAlloc;
+   typedef typename node_allocator_traits_type::pointer           NodePtr;
+   typedef container_detail::scoped_deallocator<NodeAlloc>        Deallocator;
+   typedef typename node_allocator_traits_type::size_type         size_type;
+   typedef typename node_allocator_traits_type::difference_type   difference_type;
+   typedef container_detail::integral_constant<unsigned, 1>       allocator_v1;
+   typedef container_detail::integral_constant<unsigned, 2>       allocator_v2;
+   typedef container_detail::integral_constant<unsigned,
+      boost::container::container_detail::
          version<NodeAlloc>::value>                   alloc_version;
    typedef typename ICont::iterator                   icont_iterator;
    typedef typename ICont::const_iterator             icont_citerator;
    typedef allocator_destroyer<NodeAlloc>             Destroyer;
+   typedef allocator_traits<NodeAlloc>                NodeAllocTraits;
+   typedef allocator_version_traits<NodeAlloc>        AllocVersionTraits;
 
    private:
    BOOST_COPYABLE_AND_MOVABLE(node_alloc_holder)
 
    public:
 
-   node_alloc_holder(const ValAlloc &a) 
+   //Constructors for sequence containers
+   node_alloc_holder()
+      : members_()
+   {}
+
+   explicit node_alloc_holder(const ValAlloc &a)
       : members_(a)
    {}
 
-   node_alloc_holder(const node_alloc_holder &other)
-      : members_(other.node_alloc())
+   explicit node_alloc_holder(const node_alloc_holder &x)
+      : members_(NodeAllocTraits::select_on_container_copy_construction(x.node_alloc()))
    {}
 
-   node_alloc_holder(BOOST_RV_REF(node_alloc_holder) other)
-      : members_(boost::move(other.node_alloc()))
-   {  this->swap(other);  }
+   explicit node_alloc_holder(BOOST_RV_REF(node_alloc_holder) x)
+      : members_(boost::move(x.node_alloc()))
+   {  this->icont().swap(x.icont());  }
 
-   node_alloc_holder & operator=(BOOST_COPY_ASSIGN_REF(node_alloc_holder) other)
-   {  members_.assign(other.node_alloc());   }
-
-   node_alloc_holder & operator=(BOOST_RV_REF(node_alloc_holder) other)
-   {  members_.assign(other.node_alloc());   }
-
-   template<class Pred>
-   node_alloc_holder(const ValAlloc &a, const Pred &c) 
-      : members_(a, typename ICont::value_compare(c))
+   //Constructors for associative containers
+   explicit node_alloc_holder(const ValAlloc &a, const value_compare &c)
+      : members_(a, c)
    {}
 
-   template<class Pred>
-   node_alloc_holder(BOOST_RV_REF(ValAlloc) a, const Pred &c) 
-      : members_(a, typename ICont::value_compare(c))
+   explicit node_alloc_holder(const node_alloc_holder &x, const value_compare &c)
+      : members_(NodeAllocTraits::select_on_container_copy_construction(x.node_alloc()), c)
    {}
 
-   template<class Pred>
-   node_alloc_holder(const node_alloc_holder &other, const Pred &c)
-      : members_(other.node_alloc(), typename ICont::value_compare(c))
+   explicit node_alloc_holder(const value_compare &c)
+      : members_(c)
    {}
+
+   //helpers for move assignments
+   explicit node_alloc_holder(BOOST_RV_REF(node_alloc_holder) x, const value_compare &c)
+      : members_(boost::move(x.node_alloc()), c)
+   {  this->icont().swap(x.icont());  }
+
+   void copy_assign_alloc(const node_alloc_holder &x)
+   {
+      container_detail::bool_<allocator_traits_type::propagate_on_container_copy_assignment::value> flag;
+      container_detail::assign_alloc( static_cast<NodeAlloc &>(this->members_)
+                                    , static_cast<const NodeAlloc &>(x.members_), flag);
+   }
+
+   void move_assign_alloc( node_alloc_holder &x)
+   {
+      container_detail::bool_<allocator_traits_type::propagate_on_container_move_assignment::value> flag;
+      container_detail::move_alloc( static_cast<NodeAlloc &>(this->members_)
+                                  , static_cast<NodeAlloc &>(x.members_), flag);
+   }
 
    ~node_alloc_holder()
    {  this->clear(alloc_version()); }
 
    size_type max_size() const
-   {  return this->node_alloc().max_size();  }
+   {  return allocator_traits_type::max_size(this->node_alloc());  }
 
    NodePtr allocate_one()
-   {  return this->allocate_one(alloc_version());   }
+   {  return AllocVersionTraits::allocate_one(this->node_alloc());   }
 
-   NodePtr allocate_one(allocator_v1)
-   {  return this->node_alloc().allocate(1);   }
+   void deallocate_one(const NodePtr &p)
+   {  AllocVersionTraits::deallocate_one(this->node_alloc(), p);  }
 
-   NodePtr allocate_one(allocator_v2)
-   {  return this->node_alloc().allocate_one();   }
-
-   void deallocate_one(NodePtr p)
-   {  return this->deallocate_one(p, alloc_version());   }
-
-   void deallocate_one(NodePtr p, allocator_v1)
-   {  this->node_alloc().deallocate(p, 1);   }
-
-   void deallocate_one(NodePtr p, allocator_v2)
-   {  this->node_alloc().deallocate_one(p);   }
-
-   template<class Convertible1, class Convertible2>
-   static void construct(const NodePtr &ptr,
-      BOOST_RV_REF_2_TEMPL_ARGS(std::pair, Convertible1, Convertible2) value)
-   {  
-      typedef typename Node::hook_type                hook_type;
-      typedef typename Node::value_type::first_type   first_type;
-      typedef typename Node::value_type::second_type  second_type;
-      Node *nodeptr = containers_detail::get_pointer(ptr);
-
-      //Hook constructor does not throw
-      new(static_cast<hook_type*>(nodeptr))hook_type();
-      //Now construct pair members_holder
-      value_type *valueptr = &nodeptr->get_data();
-      new((void*)&valueptr->first) first_type(boost::move(value.first));
-      BOOST_TRY{
-         new((void*)&valueptr->second) second_type(boost::move(value.second));
-      }
-      BOOST_CATCH(...){
-         valueptr->first.~first_type();
-         static_cast<hook_type*>(nodeptr)->~hook_type();
-         BOOST_RETHROW
-      }
-      BOOST_CATCH_END
-   }
-
-   static void destroy(const NodePtr &ptr)
-   {  containers_detail::get_pointer(ptr)->~Node();  }
-
-   Deallocator create_node_and_deallocator()
-   {
-      return Deallocator(this->allocate_one(), this->node_alloc());
-   }
-
-   #ifdef BOOST_CONTAINERS_PERFECT_FORWARDING
-
-   template<class ...Args>
-   static void construct(const NodePtr &ptr, Args &&...args)
-   {  new((void*)containers_detail::get_pointer(ptr)) Node(boost::forward<Args>(args)...);  }
+   #ifdef BOOST_CONTAINER_PERFECT_FORWARDING
 
    template<class ...Args>
    NodePtr create_node(Args &&...args)
    {
       NodePtr p = this->allocate_one();
       Deallocator node_deallocator(p, this->node_alloc());
-      self_t::construct(p, boost::forward<Args>(args)...);
+      allocator_traits<NodeAlloc>::construct
+         ( this->node_alloc()
+         , container_detail::addressof(p->m_data), boost::forward<Args>(args)...);
       node_deallocator.release();
+      //This does not throw
+      typedef typename Node::hook_type hook_type;
+      ::new(static_cast<hook_type*>(container_detail::to_raw_pointer(p)), boost_container_new_t()) hook_type;
       return (p);
    }
 
-   #else //#ifdef BOOST_CONTAINERS_PERFECT_FORWARDING
-
-   static void construct(const NodePtr &ptr)
-   {  new((void*)containers_detail::get_pointer(ptr)) Node();  }
-
-   NodePtr create_node()
-   {
-      NodePtr p = this->allocate_one();
-      Deallocator node_deallocator(p, this->node_alloc());
-      self_t::construct(p);
-      node_deallocator.release();
-      return (p);
-   }
-
-   #define BOOST_PP_LOCAL_MACRO(n)                                                           \
-   template<BOOST_PP_ENUM_PARAMS(n, class P)>                                                \
-   void construct(const NodePtr &ptr, BOOST_PP_ENUM(n, BOOST_CONTAINERS_PP_PARAM_LIST, _)) \
-   {                                                                                         \
-      new((void*)containers_detail::get_pointer(ptr))                                                   \
-      Node(BOOST_PP_ENUM(n, BOOST_CONTAINERS_PP_PARAM_FORWARD, _));                        \
-   }                                                                                         \
-   //!
-   #define BOOST_PP_LOCAL_LIMITS (1, BOOST_CONTAINERS_MAX_CONSTRUCTOR_PARAMETERS)
-   #include BOOST_PP_LOCAL_ITERATE()
+   #else //#ifdef BOOST_CONTAINER_PERFECT_FORWARDING
 
    #define BOOST_PP_LOCAL_MACRO(n)                                                        \
-   template<BOOST_PP_ENUM_PARAMS(n, class P)>                                             \
-   NodePtr create_node(BOOST_PP_ENUM(n, BOOST_CONTAINERS_PP_PARAM_LIST, _))             \
+                                                                                          \
+   BOOST_PP_EXPR_IF(n, template<) BOOST_PP_ENUM_PARAMS(n, class P) BOOST_PP_EXPR_IF(n, >) \
+   NodePtr create_node(BOOST_PP_ENUM(n, BOOST_CONTAINER_PP_PARAM_LIST, _))                \
    {                                                                                      \
       NodePtr p = this->allocate_one();                                                   \
       Deallocator node_deallocator(p, this->node_alloc());                                \
-      self_t::construct(p, BOOST_PP_ENUM(n, BOOST_CONTAINERS_PP_PARAM_FORWARD, _));     \
+      allocator_traits<NodeAlloc>::construct                                              \
+         (this->node_alloc(), container_detail::addressof(p->m_data)                      \
+            BOOST_PP_ENUM_TRAILING(n, BOOST_CONTAINER_PP_PARAM_FORWARD, _));              \
       node_deallocator.release();                                                         \
+      typedef typename Node::hook_type hook_type;                                         \
+      ::new(static_cast<hook_type*>(container_detail::to_raw_pointer(p)), boost_container_new_t()) hook_type;      \
       return (p);                                                                         \
    }                                                                                      \
    //!
-   #define BOOST_PP_LOCAL_LIMITS (1, BOOST_CONTAINERS_MAX_CONSTRUCTOR_PARAMETERS)
+   #define BOOST_PP_LOCAL_LIMITS (0, BOOST_CONTAINER_MAX_CONSTRUCTOR_PARAMETERS)
    #include BOOST_PP_LOCAL_ITERATE()
 
-   #endif   //#ifdef BOOST_CONTAINERS_PERFECT_FORWARDING
+   #endif   //#ifdef BOOST_CONTAINER_PERFECT_FORWARDING
 
    template<class It>
-   NodePtr create_node_from_it(It it)
+   NodePtr create_node_from_it(const It &it)
    {
       NodePtr p = this->allocate_one();
       Deallocator node_deallocator(p, this->node_alloc());
-      ::boost::container::construct_in_place(containers_detail::get_pointer(p), it);
+      ::boost::container::construct_in_place(this->node_alloc(), container_detail::addressof(p->m_data), it);
       node_deallocator.release();
+      //This does not throw
+      typedef typename Node::hook_type hook_type;
+      ::new(static_cast<hook_type*>(container_detail::to_raw_pointer(p)), boost_container_new_t()) hook_type;
       return (p);
    }
 
-   void destroy_node(NodePtr node)
+   void destroy_node(const NodePtr &nodep)
    {
-      self_t::destroy(node);
-      this->deallocate_one(node);
+      allocator_traits<NodeAlloc>::destroy(this->node_alloc(), container_detail::to_raw_pointer(nodep));
+      this->deallocate_one(nodep);
    }
 
    void swap(node_alloc_holder &x)
    {
-      NodeAlloc& this_alloc   = this->node_alloc();
-      NodeAlloc& other_alloc  = x.node_alloc();
-
-      if (this_alloc != other_alloc){
-         containers_detail::do_swap(this_alloc, other_alloc);
-      }
-
       this->icont().swap(x.icont());
+      container_detail::bool_<allocator_traits_type::propagate_on_container_swap::value> flag;
+      container_detail::swap_alloc(this->node_alloc(), x.node_alloc(), flag);
    }
 
    template<class FwdIterator, class Inserter>
-   FwdIterator allocate_many_and_construct
+   void allocate_many_and_construct
       (FwdIterator beg, difference_type n, Inserter inserter)
    {
       if(n){
-         typedef typename NodeAlloc::multiallocation_chain multiallocation_chain;
+         typedef typename node_allocator_version_traits_type::multiallocation_chain multiallocation_chain;
 
          //Try to allocate memory in a single block
-         multiallocation_chain mem(this->node_alloc().allocate_individual(n));
-         int constructed = 0;
+         typedef typename multiallocation_chain::iterator multialloc_iterator;
+         multiallocation_chain mem;
+         NodeAlloc &nalloc = this->node_alloc();
+         node_allocator_version_traits_type::allocate_individual(nalloc, n, mem);
+         multialloc_iterator itbeg(mem.begin()), itlast(mem.last());
+         mem.clear();
          Node *p = 0;
          BOOST_TRY{
-               for(difference_type i = 0; i < n; ++i, ++beg, --constructed){
-               p = containers_detail::get_pointer(mem.front());
-               mem.pop_front();
+            Deallocator node_deallocator(NodePtr(), nalloc);
+            container_detail::scoped_destructor<NodeAlloc> sdestructor(nalloc, 0);
+            while(n--){
+               p = container_detail::to_raw_pointer(iterator_to_pointer(itbeg));
+               node_deallocator.set(p);
+               ++itbeg;
                //This can throw
-               constructed = 0;
-               boost::container::construct_in_place(p, beg);
-               ++constructed;
-               //This can throw in some containers (predicate might throw)
+               boost::container::construct_in_place(nalloc, container_detail::addressof(p->m_data), beg);
+               sdestructor.set(p);
+               ++beg;
+               //This does not throw
+               typedef typename Node::hook_type hook_type;
+               ::new(static_cast<hook_type*>(p), boost_container_new_t()) hook_type;
+               //This can throw in some containers (predicate might throw).
+               //(sdestructor will destruct the node and node_deallocator will deallocate it in case of exception)
                inserter(*p);
+               sdestructor.set(0);
             }
+            sdestructor.release();
+            node_deallocator.release();
          }
          BOOST_CATCH(...){
-            if(constructed){
-               this->destroy(p);
-            }
-            this->node_alloc().deallocate_individual(boost::move(mem));
+            mem.incorporate_after(mem.last(), &*itbeg, &*itlast, n);
+            node_allocator_version_traits_type::deallocate_individual(this->node_alloc(), mem);
             BOOST_RETHROW
          }
          BOOST_CATCH_END
       }
-      return beg;
    }
 
    void clear(allocator_v1)
@@ -401,16 +298,21 @@ struct node_alloc_holder
       this->icont().clear_and_dispose(builder);
       //BOOST_STATIC_ASSERT((::boost::has_move_emulation_enabled<typename NodeAlloc::multiallocation_chain>::value == true));
       if(!chain.empty())
-         this->node_alloc().deallocate_individual(boost::move(chain));
+         this->node_alloc().deallocate_individual(chain);
    }
 
-   icont_iterator erase_range(icont_iterator first, icont_iterator last, allocator_v1)
+   icont_iterator erase_range(const icont_iterator &first, const icont_iterator &last, allocator_v1)
    {  return this->icont().erase_and_dispose(first, last, Destroyer(this->node_alloc())); }
 
-   icont_iterator erase_range(icont_iterator first, icont_iterator last, allocator_v2)
+   icont_iterator erase_range(const icont_iterator &first, const icont_iterator &last, allocator_v2)
    {
-      allocator_multialloc_chain_node_deallocator<NodeAlloc> chain_holder(this->node_alloc());
-      return this->icont().erase_and_dispose(first, last, chain_holder.get_chain_builder());
+      typedef typename NodeAlloc::multiallocation_chain multiallocation_chain;
+      NodeAlloc & nalloc = this->node_alloc();
+      multiallocation_chain chain;
+      allocator_destroyer_and_chain_builder<NodeAlloc> chain_builder(nalloc, chain);
+      icont_iterator ret_it = this->icont().erase_and_dispose(first, last, chain_builder);
+      nalloc.deallocate_individual(chain);
+      return ret_it;
    }
 
    template<class Key, class Comparator>
@@ -437,44 +339,38 @@ struct node_alloc_holder
       node_alloc_holder &m_holder;
    };
 
-   struct destroyer
-   {
-      destroyer(node_alloc_holder &holder)
-         :  m_holder(holder)
-      {}
-
-      void operator()(NodePtr n) const
-      {  m_holder.destroy_node(n);  }
-
-      node_alloc_holder &m_holder;
-   };
-
    struct members_holder
       :  public NodeAlloc
    {
       private:
       members_holder(const members_holder&);
+      members_holder & operator=(const members_holder&);
 
       public:
-      template<class ConvertibleToAlloc>
-      members_holder(const ConvertibleToAlloc &c2alloc)
-         :  NodeAlloc(c2alloc)
-      {}
-
-      template<class ConvertibleToAlloc, class Pred>
-      members_holder(const ConvertibleToAlloc &c2alloc, const Pred &c)
-         :  NodeAlloc(c2alloc), m_icont(c)
+      members_holder()
+         : NodeAlloc(), m_icont()
       {}
 
       template<class ConvertibleToAlloc>
-      void assign (const ConvertibleToAlloc &c2alloc)
-      {
-         NodeAlloc::operator=(c2alloc);
-      }
+      explicit members_holder(BOOST_FWD_REF(ConvertibleToAlloc) c2alloc)
+         :  NodeAlloc(boost::forward<ConvertibleToAlloc>(c2alloc))
+         , m_icont()
+      {}
+
+      template<class ConvertibleToAlloc>
+      members_holder(BOOST_FWD_REF(ConvertibleToAlloc) c2alloc, const value_compare &c)
+         :  NodeAlloc(boost::forward<ConvertibleToAlloc>(c2alloc))
+         , m_icont(typename ICont::value_compare(c))
+      {}
+
+      explicit members_holder(const value_compare &c)
+         : NodeAlloc()
+         , m_icont(typename ICont::value_compare(c))
+      {}
 
       //The intrusive container
       ICont m_icont;
-   } members_;
+   };
 
    ICont &non_const_icont() const
    {  return const_cast<ICont&>(this->members_.m_icont);   }
@@ -490,12 +386,14 @@ struct node_alloc_holder
 
    const NodeAlloc &node_alloc() const
    {  return static_cast<const NodeAlloc &>(this->members_);   }
+
+   members_holder members_;
 };
 
-}  //namespace containers_detail {
+}  //namespace container_detail {
 }  //namespace container {
 }  //namespace boost {
 
 #include <boost/container/detail/config_end.hpp>
 
-#endif // BOOST_CONTAINERS_DETAIL_NODE_ALLOC_HPP_
+#endif // BOOST_CONTAINER_DETAIL_NODE_ALLOC_HPP_
