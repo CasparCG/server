@@ -250,7 +250,7 @@ public:
 		return video_decoder_ ? video_decoder_->file_frame_number() : 0;
 	}
 		
-	boost::unique_future<std::wstring> call(const std::vector<std::wstring>& params) override
+	std::future<std::wstring> call(const std::vector<std::wstring>& params) override
 	{
 		static const boost::wregex loop_exp(L"LOOP\\s*(?<VALUE>\\d?)?", boost::regex::icase);
 		static const boost::wregex seek_exp(L"SEEK\\s+(?<VALUE>\\d+)", boost::regex::icase);
@@ -291,7 +291,7 @@ public:
 		else
 			CASPAR_THROW_EXCEPTION(invalid_argument());
 
-		return async(launch::deferred, [=]{return result;});
+		return make_ready_future(std::move(result));
 	}
 				
 	std::wstring print() const override

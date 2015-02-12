@@ -33,6 +33,7 @@
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
 #include <common/gl/gl_check.h>
+#include <common/future.h>
 
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
@@ -147,11 +148,9 @@ public:
 		}, task_priority::high_priority);
 	}
 
-	boost::unique_future<boost::property_tree::wptree> info() const
+	std::future<boost::property_tree::wptree> info() const
 	{
-		boost::promise<boost::property_tree::wptree> info;
-		info.set_value(boost::property_tree::wptree());
-		return info.get_future();
+		return make_ready_future(boost::property_tree::wptree());
 	}
 };
 	
@@ -161,7 +160,7 @@ void mixer::set_blend_mode(int index, blend_mode value){impl_->set_blend_mode(in
 void mixer::clear_blend_mode(int index) { impl_->clear_blend_mode(index); }
 void mixer::clear_blend_modes() { impl_->clear_blend_modes(); }
 void mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
-boost::unique_future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
+std::future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
 const_frame mixer::operator()(std::map<int, draw_frame> frames, const struct video_format_desc& format_desc){return (*impl_)(std::move(frames), format_desc);}
 mutable_frame mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->image_mixer_->create_frame(tag, desc);}
 }}

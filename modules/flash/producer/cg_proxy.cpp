@@ -34,7 +34,9 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/regex.hpp>
 #include <boost/property_tree/ptree.hpp>
-		
+
+#include <future>
+
 namespace caspar { namespace flash {
 	
 struct cg_proxy::impl : boost::noncopyable
@@ -45,7 +47,7 @@ public:
 		: flash_producer_(frame_producer)
 	{}
 	
-	boost::unique_future<std::wstring> add(int layer, std::wstring filename,  bool play_on_load, const std::wstring& label, const std::wstring& data)
+	std::future<std::wstring> add(int layer, std::wstring filename,  bool play_on_load, const std::wstring& label, const std::wstring& data)
 	{
 		if(filename.size() > 0 && filename[0] == L'/')
 			filename = filename.substr(1, filename.size()-1);
@@ -60,7 +62,7 @@ public:
 		return flash_producer_->call(std::move(params));
 	}
 
-	boost::unique_future<std::wstring> remove(int layer)
+	std::future<std::wstring> remove(int layer)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Delete\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking remove-command: " << str;
@@ -69,7 +71,7 @@ public:
 		return flash_producer_->call(std::move(params));
 	}
 
-	boost::unique_future<std::wstring> play(int layer)
+	std::future<std::wstring> play(int layer)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Play\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking play-command: " << str;
@@ -78,7 +80,7 @@ public:
 		return flash_producer_->call(std::move(params));
 	}
 
-	boost::unique_future<std::wstring> stop(int layer, unsigned int)
+	std::future<std::wstring> stop(int layer, unsigned int)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Stop\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><number>0</number></arguments></invoke>") % layer).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking stop-command: " << str;
@@ -87,7 +89,7 @@ public:
 		return flash_producer_->call(std::move(params));
 	}
 
-	boost::unique_future<std::wstring> next(int layer)
+	std::future<std::wstring> next(int layer)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Next\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking next-command: " << str;
@@ -96,7 +98,7 @@ public:
 		return flash_producer_->call(std::move(params));
 	}
 
-	boost::unique_future<std::wstring> update(int layer, const std::wstring& data)
+	std::future<std::wstring> update(int layer, const std::wstring& data)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"SetData\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><string><![CDATA[%2%]]></string></arguments></invoke>") % layer % data).str();
 		CASPAR_LOG(info) << flash_producer_->print() <<" Invoking update-command: " << str;
@@ -105,7 +107,7 @@ public:
 		return flash_producer_->call(std::move(params));
 	}
 
-	boost::unique_future<std::wstring> invoke(int layer, const std::wstring& label)
+	std::future<std::wstring> invoke(int layer, const std::wstring& label)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Invoke\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><string>%2%</string></arguments></invoke>") % layer % label).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking invoke-command: " << str;
@@ -114,7 +116,7 @@ public:
 		return flash_producer_->call(std::move(params));
 	}
 
-	boost::unique_future<std::wstring> description(int layer)
+	std::future<std::wstring> description(int layer)
 	{
 		auto str = (boost::wformat(L"<invoke name=\"GetDescription\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking description-command: " << str;
@@ -123,7 +125,7 @@ public:
 		return flash_producer_->call(std::move(params));
 	}
 
-	boost::unique_future<std::wstring> template_host_info()
+	std::future<std::wstring> template_host_info()
 	{
 		auto str = (boost::wformat(L"<invoke name=\"GetInfo\" returntype=\"xml\"><arguments></arguments></invoke>")).str();
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking info-command: " << str;
@@ -135,21 +137,21 @@ public:
 	std::wstring timed_invoke(int layer, const std::wstring& label)
 	{
 		auto result = invoke(layer, label);
-		if(result.timed_wait(boost::posix_time::seconds(2)))
+		if(result.wait_for(std::chrono::seconds(2)) == std::future_status::ready)
 			return result.get();
 		return L"";
 	}
 	std::wstring timed_description(int layer)
 	{
 		auto result = description(layer);
-		if(result.timed_wait(boost::posix_time::seconds(2)))
+		if (result.wait_for(std::chrono::seconds(2)) == std::future_status::ready)
 			return result.get();
 		return L"";
 	}
 	std::wstring timed_template_host_info()
 	{
 		auto result = template_host_info();
-		if(result.timed_wait(boost::posix_time::seconds(2)))
+		if (result.wait_for(std::chrono::seconds(2)) == std::future_status::ready)
 			return result.get();
 		return L"";
 	}
@@ -162,7 +164,7 @@ public:
 	
 cg_proxy create_cg_proxy(const spl::shared_ptr<core::video_channel>& video_channel, int render_layer)
 {	
-	auto flash_producer = video_channel->stage().foreground(render_layer).get();
+	auto flash_producer = spl::make_shared_ptr(video_channel->stage().foreground(render_layer).get());
 
 	try
 	{
@@ -192,7 +194,7 @@ spl::shared_ptr<core::frame_producer> create_cg_producer_and_autoplay_file(
 		return core::frame_producer::empty();
 		
 	boost::filesystem::path path(filename);
-	path = boost::filesystem3::complete(path);
+	path = boost::filesystem::complete(path);
 	auto filename2 = path.wstring();
 
 	auto flash_producer = flash::create_producer(frame_factory, format_desc, boost::assign::list_of<std::wstring>());	

@@ -62,7 +62,7 @@ struct image_kernel::impl
 							
 	impl(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted)
 		: ogl_(ogl)
-		, shader_(ogl_->invoke([&]{return get_image_shader(blend_modes_, blend_modes_wanted);}))
+		, shader_(ogl_->invoke([&]{return get_image_shader(ogl, blend_modes_, blend_modes_wanted); }))
 	{
 	}
 
@@ -105,8 +105,8 @@ struct image_kernel::impl
 		shader_->set("local_key",		texture_id::local_key);
 		shader_->set("layer_key",		texture_id::layer_key);
 		shader_->set("is_hd",		 	params.pix_desc.planes.at(0).height > 700 ? 1 : 0);
-		shader_->set("has_local_key",	params.local_key);
-		shader_->set("has_layer_key",	params.layer_key);
+		shader_->set("has_local_key",	static_cast<bool>(params.local_key));
+		shader_->set("has_layer_key",	static_cast<bool>(params.layer_key));
 		shader_->set("pixel_format",	params.pix_desc.format.value());	
 		shader_->set("opacity",			params.transform.is_key ? 1.0 : params.transform.opacity);	
 				

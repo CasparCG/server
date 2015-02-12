@@ -2,5 +2,6 @@
 
 #include "forward.h"
 
-FORWARD1(boost, template<typename> class unique_future);
-FORWARD1(boost, template<typename> class shared_future);
+FORWARD1(std, template<typename> class future);
+FORWARD1(std, template<typename> class shared_future);
+FORWARD1(std, template<typename> class promise);

@@ -3,9 +3,9 @@
 #include "../monitor/monitor.h"
 
 #include <common/memory.h>
+#include <common/future_fwd.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
-#include <boost/thread/future.hpp>
 
 namespace caspar { namespace core {
 
@@ -27,7 +27,7 @@ public:
 
 	port& operator=(port&& other);
 
-	boost::unique_future<bool> send(class const_frame frame);	
+	std::future<bool> send(class const_frame frame);	
 
 	monitor::subject& monitor_output();
 

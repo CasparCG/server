@@ -26,6 +26,7 @@
 #include <iostream>
 #include <iterator>
 #include <set>
+#include <future>
 
 #include <boost/thread.hpp>
 #include <boost/range/algorithm/transform.hpp>
@@ -159,7 +160,7 @@ public:
 						relative_without_extensions.end()),
 				boost::bind(&get_relative_without_extension, _1, media_path_));
 
-		for (boost::filesystem3::wrecursive_directory_iterator iter(thumbnails_path_); iter != boost::filesystem3::wrecursive_directory_iterator(); ++iter)
+		for (boost::filesystem::wrecursive_directory_iterator iter(thumbnails_path_); iter != boost::filesystem::wrecursive_directory_iterator(); ++iter)
 		{
 			auto& path = iter->path();
 
@@ -181,7 +182,7 @@ public:
 		auto base_file = media_path_ / media_file;
 		auto folder = base_file.parent_path();
 
-		for (boost::filesystem3::directory_iterator iter(folder); iter != boost::filesystem3::directory_iterator(); ++iter)
+		for (boost::filesystem::directory_iterator iter(folder); iter != boost::filesystem::directory_iterator(); ++iter)
 		{
 			auto stem = iter->path().stem();
 
@@ -252,7 +253,7 @@ public:
 	{
 		auto media_file = get_relative_without_extension(file, media_path_);
 		auto png_file = thumbnails_path_ / (media_file + L".png");
-		boost::promise<void> thumbnail_ready;
+		std::promise<void> thumbnail_ready;
 
 		{
 			auto producer = frame_producer::empty();

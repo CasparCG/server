@@ -59,7 +59,7 @@ public:
 
 	// Properties
 
-	boost::unique_future<boost::property_tree::wptree> info() const;
+	std::future<boost::property_tree::wptree> info() const;
 
 private:
 	struct impl;
