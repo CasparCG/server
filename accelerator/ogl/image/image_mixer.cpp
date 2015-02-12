@@ -53,7 +53,7 @@ using namespace boost::assign;
 
 namespace caspar { namespace accelerator { namespace ogl {
 		
-typedef boost::shared_future<spl::shared_ptr<texture>> future_texture;
+typedef std::shared_future<std::shared_ptr<texture>> future_texture;
 
 struct item
 {
@@ -96,15 +96,12 @@ public:
 	{
 	}
 	
-	boost::unique_future<array<const std::uint8_t>> operator()(std::vector<layer> layers, const core::video_format_desc& format_desc)
+	std::future<array<const std::uint8_t>> operator()(std::vector<layer> layers, const core::video_format_desc& format_desc)
 	{	
 		if(layers.empty())
 		{ // Bypass GPU with empty frame.
 			auto buffer = spl::make_shared<const std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>>(format_desc.size, 0);
-			return async(launch::deferred, [=]
-			{
-				return array<const std::uint8_t>(buffer->data(), format_desc.size, true, buffer);
-			});
+			return make_ready_future(array<const std::uint8_t>(buffer->data(), format_desc.size, true, buffer));
 		}		
 
 		if(format_desc.field_mode != core::field_mode::progressive)
@@ -126,18 +123,18 @@ public:
 			}
 		}
 
-		return flatten(ogl_->begin_invoke([=]() mutable -> boost::shared_future<array<const std::uint8_t>>
+		return flatten(ogl_->begin_invoke([=]() mutable -> std::shared_future<array<const std::uint8_t>>
 		{
 			auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4);
 
-			if(format_desc.field_mode != core::field_mode::progressive)
+			if (format_desc.field_mode != core::field_mode::progressive)
 			{
-				draw(target_texture, layers,			format_desc, core::field_mode::upper);
+				draw(target_texture, layers, format_desc, core::field_mode::upper);
 				draw(target_texture, std::move(layers), format_desc, core::field_mode::lower);
 			}
-			else			
+			else
 				draw(target_texture, std::move(layers), format_desc, core::field_mode::progressive);
-								
+
 			return ogl_->copy_async(target_texture);
 		}));
 	}
@@ -231,7 +228,7 @@ private:
 		draw_params.geometry	= item.geometry;
 
 		BOOST_FOREACH(auto& future_texture, item.textures)
-			draw_params.textures.push_back(future_texture.get());
+			draw_params.textures.push_back(spl::make_shared_ptr(future_texture.get()));
 
 		if(item.transform.is_key)
 		{
@@ -344,7 +341,7 @@ public:
 	{		
 	}
 	
-	boost::unique_future<array<const std::uint8_t>> render(const core::video_format_desc& format_desc)
+	std::future<array<const std::uint8_t>> render(const core::video_format_desc& format_desc)
 	{
 		return renderer_(std::move(layers_), format_desc);
 	}
@@ -364,7 +361,7 @@ image_mixer::~image_mixer(){}
 void image_mixer::push(const core::frame_transform& transform){impl_->push(transform);}
 void image_mixer::visit(const core::const_frame& frame){impl_->visit(frame);}
 void image_mixer::pop(){impl_->pop();}
-boost::unique_future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
+std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
 void image_mixer::begin_layer(core::blend_mode blend_mode){impl_->begin_layer(blend_mode);}
 void image_mixer::end_layer(){impl_->end_layer();}
 core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->create_frame(tag, desc);}

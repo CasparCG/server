@@ -25,6 +25,9 @@
 
 #include "stdafx.h"
 
+#include <tbb/task_scheduler_init.h>
+#include <tbb/task_scheduler_observer.h>
+
 #ifdef _DEBUG
 	#define _CRTDBG_MAP_ALLOC
 	#include <stdlib.h>
@@ -58,9 +61,6 @@
 #include <common/os/windows/current_version.h>
 #include <common/os/windows/system_info.h>
 
-#include <tbb/task_scheduler_init.h>
-#include <tbb/task_scheduler_observer.h>
-
 #include <boost/property_tree/detail/file_parser_error.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/foreach.hpp>
@@ -70,6 +70,8 @@
 #include <boost/thread.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
+
+#include <future>
 
 #include <signal.h>
 
@@ -181,7 +183,7 @@ LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
 	return EXCEPTION_CONTINUE_EXECUTION;
 }
 
-void do_run(server& caspar_server, boost::promise<bool>& shutdown_server_now)
+void do_run(server& caspar_server, std::promise<bool>& shutdown_server_now)
 {
 	// Create a dummy client which prints amcp responses to console.
 	auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
@@ -283,8 +285,8 @@ void do_run(server& caspar_server, boost::promise<bool>& shutdown_server_now)
 
 bool run()
 {
-	boost::promise<bool> shutdown_server_now;
-	boost::unique_future<bool> shutdown_server = shutdown_server_now.get_future();
+	std::promise<bool> shutdown_server_now;
+	std::future<bool> shutdown_server = shutdown_server_now.get_future();
 
 	// Create server object which initializes channels, protocols and controllers.
 	server caspar_server(shutdown_server_now);
@@ -385,7 +387,7 @@ int main(int argc, wchar_t* argv[])
 		print_info();
 		
 		std::wstringstream str;
-		boost::property_tree::xml_writer_settings<wchar_t> w(' ', 3);
+		boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
 		boost::property_tree::write_xml(str, env::properties(), w);
 		CASPAR_LOG(info) << L"casparcg.config:\n-----------------------------------------\n" << str.str().c_str() << L"-----------------------------------------";
 		

@@ -182,7 +182,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 			return core::frame_producer::empty();
 
 		auto dir = boost::filesystem::path(env::media_folder() + params[1]).parent_path();
-		auto basename = boost::filesystem3::basename(params[1]);
+		auto basename = boost::filesystem::basename(params[1]);
 		std::set<std::wstring> files;
 		boost::filesystem::directory_iterator end;
 

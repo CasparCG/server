@@ -218,7 +218,7 @@ struct scene_producer::impl
 
 	bool collides(double x, double y) const
 	{
-		return collission_detect(x, y);
+		return static_cast<bool>((collission_detect(x, y)));
 	}
 
 	boost::optional<interaction_target> collission_detect(double x, double y) const
@@ -244,7 +244,7 @@ struct scene_producer::impl
 		return boost::optional<interaction_target>();
 	}
 
-	boost::unique_future<std::wstring> call(const std::vector<std::wstring>& params) 
+	std::future<std::wstring> call(const std::vector<std::wstring>& params) 
 	{
 		for (int i = 0; i + 1 < params.size(); i += 2)
 		{
@@ -254,7 +254,7 @@ struct scene_producer::impl
 				found->second->from_string(params[i + 1]);
 		}
 
-		return wrap_as_future(std::wstring(L""));
+		return make_ready_future(std::wstring(L""));
 	}
 
 	std::wstring print() const
@@ -338,7 +338,7 @@ boost::property_tree::wptree scene_producer::info() const
 	return impl_->info();
 }
 
-boost::unique_future<std::wstring> scene_producer::call(const std::vector<std::wstring>& params) 
+std::future<std::wstring> scene_producer::call(const std::vector<std::wstring>& params) 
 {
 	return impl_->call(params);
 }
@@ -386,7 +386,7 @@ spl::shared_ptr<core::frame_producer> create_dummy_scene_producer(const spl::sha
 	auto text_area = text_producer::create(frame_factory, 0, 0, L"a", text_info, 1280, 720, false);
 
 	auto text_width = text_area->pixel_constraints().width;
-	binding<double> padding(1);
+	binding<double> padding(1.0);
 	binding<double> panel_width = padding + text_width + padding;
 	binding<double> panel_height = padding + text_area->pixel_constraints().height + padding;
 
@@ -445,7 +445,7 @@ spl::shared_ptr<core::frame_producer> create_dummy_scene_producer(const spl::sha
 			.transformed([](double v) { return std::floor(v); }); // snap to pixels instead of subpixels
 			*/
 	tweener tween(L"easeoutbounce");
-	binding<double> panel_x(0);
+	binding<double> panel_x(0.0);
 
 	scene->add_keyframe(panel_x, -panel_width, 0);
 	scene->add_keyframe(panel_x, 300.0, 50, L"easeinoutsine");

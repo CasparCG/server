@@ -1,191 +1,28 @@
 #pragma once
 
-#include "enum_class.h"
-
-#include <boost/thread/future.hpp>
-#include <boost/thread/thread.hpp>
-#include <boost/shared_ptr.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/function.hpp>
+#include <boost/optional.hpp>
 
 #include <functional>
+#include <future>
 
 namespace caspar {
-	
-struct launch_policy_def
-{
-	enum type
-	{
-		async = 1,
-		deferred = 2
-	};
-};
-typedef caspar::enum_class<launch_policy_def> launch;
-
-namespace detail {
-	
-template<typename R>
-struct future_object_helper
-{	
-	template<typename T, typename F>
-	static void nonlocking_invoke(T& future_object, F& f)
-	{				
-        try
-        {
-			future_object.mark_finished_with_result_internal(f());
-        }
-        catch(...)
-        {
-			future_object.mark_exceptional_finish_internal(boost::current_exception());
-        }
-	}
-
-	template<typename T, typename F>
-	static void locking_invoke(T& future_object, F& f)
-	{				
-        try
-        {
-			future_object.mark_finished_with_result(f());
-        }
-        catch(...)
-        {
-			future_object.mark_exceptional_finish();
-        }
-	}
-};
-
-template<>
-struct future_object_helper<void>
-{	
-	template<typename T, typename F>
-	static void nonlocking_invoke(T& future_object, F& f)
-	{				
-        try
-        {
-			f();
-			future_object.mark_finished_with_result_internal();
-        }
-        catch(...)
-        {
-			future_object.mark_exceptional_finish_internal(boost::current_exception());
-        }
-	}
-
-	template<typename T, typename F>
-	static void locking_invoke(T& future_object, F& f)
-	{				
-        try
-        {
-			f();
-			future_object.mark_finished_with_result();
-        }
-        catch(...)
-        {
-			future_object.mark_exceptional_finish();
-        }
-	}
-};
-
-template<typename R, typename F>
-struct deferred_future_object : public boost::detail::future_object<R>
-{	
-	F f;
-	bool done;
-
-	template<typename F2>
-	deferred_future_object(F2&& f)
-		: f(std::forward<F2>(f))
-		, done(false)
-	{
-		set_wait_callback(std::mem_fn(&detail::deferred_future_object<R, F>::operator()), this);
-	}
-
-	~deferred_future_object()
-	{
-	}
-		
-	void operator()()
-	{		
-		boost::lock_guard<boost::mutex> lock2(mutex);
-
-		if(done)
-			return;
-
-		future_object_helper<R>::nonlocking_invoke(*this, f);
-
-		done = true;
-	}
-};
-
-template<typename R, typename F>
-struct async_future_object : public boost::detail::future_object<R>
-{	
-	F f;
-	boost::thread thread;
-
-	template<typename F2>
-	async_future_object(F2&& f)
-		: f(std::forward<F2>(f))
-		, thread([this]{run();})
-	{
-	}
-
-	~async_future_object()
-	{
-		thread.join();
-	}
-
-	void run()
-	{
-		future_object_helper<R>::locking_invoke(*this, f);
-	}
-};
-
-}
-	
-template<typename F>
-auto async(launch policy, F&& f) -> boost::unique_future<decltype(f())>
-{		
-	typedef decltype(f())								result_type;	
-	typedef boost::detail::future_object<result_type>	future_object_type;
-
-	boost::shared_ptr<future_object_type> future_object;
-
-	// HACK: This solution is a hack to avoid modifying boost code.
-
-	if((policy & launch::async) != 0)
-		future_object.reset(new detail::async_future_object<result_type, F>(std::forward<F>(f)), [](future_object_type* p){delete reinterpret_cast<detail::async_future_object<result_type, F>*>(p);});
-	else if((policy & launch::deferred) != 0)
-		future_object.reset(new detail::deferred_future_object<result_type, F>(std::forward<F>(f)), [](future_object_type* p){delete reinterpret_cast<detail::deferred_future_object<result_type, F>*>(p);});
-	else
-		throw std::invalid_argument("policy");
-	
-	boost::unique_future<result_type> future;
-
-	static_assert(sizeof(future) == sizeof(future_object), "");
-
-	reinterpret_cast<boost::shared_ptr<future_object_type>&>(future) = std::move(future_object); // Get around the "private" encapsulation.
-	return std::move(future);
-}
-	
-template<typename F>
-auto async(F&& f) -> boost::unique_future<decltype(f())>
-{	
-	return async(launch::async | launch::deferred, std::forward<F>(f));
-}
 
 template<typename T>
-auto make_shared(boost::unique_future<T>&& f) -> boost::shared_future<T>
-{	
-	return boost::shared_future<T>(std::move(f));
-}
-
-template<typename T>
-auto flatten(boost::unique_future<T>&& f) -> boost::unique_future<decltype(f.get().get())>
+auto flatten(std::future<T>&& f) -> std::future<typename std::decay<decltype(f.get().get())>::type>
 {
-	auto shared_f = make_shared(std::move(f));
-	return async(launch::deferred, [=]() mutable
+	auto shared_f = f.share();
+	return std::async(std::launch::deferred, [=]() mutable -> typename std::decay<decltype(f.get().get())>::type
 	{
 		return shared_f.get().get();
 	});
+}
+
+template<typename F>
+bool is_ready(const F& future)
+{
+	return future.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
 }
 
 /**
@@ -209,11 +46,11 @@ public:
 	 */
 	void set_task(const func_type& func)
 	{
-		boost::mutex::scoped_lock lock(mutex_);
+		boost::unique_lock<boost::mutex> lock(mutex_);
 
 		func_ = func;
 		done_ = false;
-		promise_ = boost::promise<R>();
+		promise_ = std::promise<R>();
 	}
 
 	/**
@@ -222,9 +59,9 @@ public:
 	 *
 	 * @return the future.
 	 */
-	boost::unique_future<R> get_future()
+	std::future<R> get_future()
 	{
-		boost::mutex::scoped_lock lock(mutex_);
+		boost::unique_lock<boost::mutex> lock(mutex_);
 
 		return promise_.get_future();
 	}
@@ -237,7 +74,7 @@ public:
 	 */
 	bool try_completion()
 	{
-		boost::mutex::scoped_lock lock(mutex_);
+		boost::unique_lock<boost::mutex> lock(mutex_);
 
 		return try_completion_internal();
 	}
@@ -253,7 +90,7 @@ public:
 	template <class E>
 	void try_or_fail(const E& exception)
 	{
-		boost::mutex::scoped_lock lock(mutex_);
+		boost::unique_lock<boost::mutex> lock(mutex_);
 
 		if (!try_completion_internal())
 		{
@@ -264,7 +101,7 @@ public:
 			catch (...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
-				promise_.set_exception(boost::current_exception());
+				promise_.set_exception(std::current_exception());
 				done_ = true;
 			}
 		}
@@ -287,7 +124,7 @@ private:
 		catch (...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
-			promise_.set_exception(boost::current_exception());
+			promise_.set_exception(std::current_exception());
 			done_ = true;
 
 			return true;
@@ -304,7 +141,7 @@ private:
 private:
 	boost::mutex mutex_;
 	func_type func_;
-	boost::promise<R> promise_;
+	std::promise<R> promise_;
 	bool done_;
 };
 
@@ -319,11 +156,20 @@ private:
  * @return The future with the result set.
  */
 template<class R>
-boost::unique_future<R> wrap_as_future(R&& value)
+std::future<R> make_ready_future(R&& value)
 {
-	boost::promise<R> p;
+	std::promise<R> p;
 
 	p.set_value(value);
+
+	return p.get_future();
+}
+
+static std::future<void> make_ready_future()
+{
+	std::promise<void> p;
+
+	p.set_value();
 
 	return p.get_future();
 }

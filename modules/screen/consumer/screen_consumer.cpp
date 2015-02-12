@@ -34,6 +34,8 @@
 #include <common/prec_timer.h>
 #include <common/future.h>
 
+#include <windows.h>
+
 #include <ffmpeg/producer/filter/filter.h>
 
 #include <core/video_format.h>
@@ -236,11 +238,11 @@ public:
 
 	void init()
 	{
-		window_.Create(sf::VideoMode(screen_width_, screen_height_, 32), u8(L"Screen consumer " + channel_and_format()), config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
-		window_.ShowMouseCursor(config_.interactive);
-		window_.SetPosition(screen_x_, screen_y_);
-		window_.SetSize(screen_width_, screen_height_);
-		window_.SetActive();
+		window_.create(sf::VideoMode(screen_width_, screen_height_, 32), u8(L"Screen consumer " + channel_and_format()), config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
+		window_.setMouseCursorVisible(config_.interactive);
+		window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
+		window_.setSize(sf::Vector2u(screen_width_, screen_height_));
+		window_.setActive();
 		
 		if(!GLEW_VERSION_2_1 && glewInit() != GLEW_OK)
 			CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
@@ -311,35 +313,35 @@ public:
 				try
 				{
 					sf::Event e;		
-					while(window_.GetEvent(e))
+					while(window_.pollEvent(e))
 					{
-						if (e.Type == sf::Event::Resized)
+						if (e.type == sf::Event::Resized)
 							calculate_aspect();
-						else if (e.Type == sf::Event::Closed)
+						else if (e.type == sf::Event::Closed)
 							is_running_ = false;
 						else if (config_.interactive && sink_)
 						{
-							switch (e.Type)
+							switch (e.type)
 							{
 							case sf::Event::MouseMoved:
 								{
-									auto& mouse_move = e.MouseMove;
+									auto& mouse_move = e.mouseMove;
 									sink_->on_interaction(spl::make_shared<core::mouse_move_event>(
 											1,
-											static_cast<double>(mouse_move.X) / screen_width_,
-											static_cast<double>(mouse_move.Y) / screen_height_));
+											static_cast<double>(mouse_move.x) / screen_width_,
+											static_cast<double>(mouse_move.y) / screen_height_));
 								}
 								break;
 							case sf::Event::MouseButtonPressed:
 							case sf::Event::MouseButtonReleased:
 								{
-									auto& mouse_button = e.MouseButton;
+									auto& mouse_button = e.mouseButton;
 									sink_->on_interaction(spl::make_shared<core::mouse_button_event>(
 											1,
-											static_cast<double>(mouse_button.X) / screen_width_,
-											static_cast<double>(mouse_button.Y) / screen_height_,
-											static_cast<int>(mouse_button.Button),
-											e.Type == sf::Event::MouseButtonPressed));
+											static_cast<double>(mouse_button.x) / screen_width_,
+											static_cast<double>(mouse_button.y) / screen_height_,
+											static_cast<int>(mouse_button.button),
+											e.type == sf::Event::MouseButtonPressed));
 								}
 								break;
 							}
@@ -388,7 +390,7 @@ public:
 	void wait_for_vblank_and_display()
 	{
 		try_sleep_almost_until_vblank();
-		window_.Display();
+		window_.display();
 		// Make sure that the next tick measures the duration from this point in time.
 		wait_timer_.tick(0.0);
 	}
@@ -498,12 +500,12 @@ public:
 	}
 
 
-	boost::unique_future<bool> send(core::const_frame frame)
+	std::future<bool> send(core::const_frame frame)
 	{
 		if(!frame_buffer_.try_push(frame))
 			graph_->set_tag("dropped-frame");
 
-		return wrap_as_future(is_running_.load());
+		return make_ready_future(is_running_.load());
 	}
 
 	std::wstring channel_and_format() const
@@ -520,8 +522,8 @@ public:
 	{
 		if(config_.windowed)
 		{
-			screen_height_ = window_.GetHeight();
-			screen_width_ = window_.GetWidth();
+			screen_height_ = window_.getSize().y;
+			screen_width_ = window_.getSize().x;
 		}
 		
 		GL(glViewport(0, 0, screen_width_, screen_height_));
@@ -597,7 +599,7 @@ public:
 		consumer_.reset(new screen_consumer(config_, format_desc, channel_index, sink_));
 	}
 	
-	boost::unique_future<bool> send(core::const_frame frame) override
+	std::future<bool> send(core::const_frame frame) override
 	{
 		return consumer_->send(frame);
 	}

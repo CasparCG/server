@@ -45,6 +45,7 @@
 #include <functional>
 #include <map>
 #include <vector>
+#include <future>
 
 namespace caspar { namespace core {
 	
@@ -89,7 +90,10 @@ public:
 				aggregator_.translate_and_send();
 
 				// WORKAROUND: Compiler doesn't seem to like lambda.
-				tbb::parallel_for_each(indices.begin(), indices.end(), std::bind(&stage::impl::draw, this, std::placeholders::_1, std::ref(format_desc), std::ref(frames)));
+				tbb::parallel_for_each(indices.begin(), indices.end(), [&](int index)
+				{
+					draw(index, format_desc, frames);
+				});
 			}
 			catch(...)
 			{
@@ -139,7 +143,7 @@ public:
 		return it->second;
 	}
 		
-	boost::unique_future<void> apply_transforms(const std::vector<std::tuple<int, stage::transform_func_t, unsigned int, tweener>>& transforms)
+	std::future<void> apply_transforms(const std::vector<std::tuple<int, stage::transform_func_t, unsigned int, tweener>>& transforms)
 	{
 		return executor_.begin_invoke([=]
 		{
@@ -152,7 +156,7 @@ public:
 		}, task_priority::high_priority);
 	}
 						
-	boost::unique_future<void> apply_transform(int index, const stage::transform_func_t& transform, unsigned int mix_duration, const tweener& tween)
+	std::future<void> apply_transform(int index, const stage::transform_func_t& transform, unsigned int mix_duration, const tweener& tween)
 	{
 		return executor_.begin_invoke([=]
 		{
@@ -162,7 +166,7 @@ public:
 		}, task_priority::high_priority);
 	}
 
-	boost::unique_future<void> clear_transforms(int index)
+	std::future<void> clear_transforms(int index)
 	{
 		return executor_.begin_invoke([=]
 		{
@@ -170,7 +174,7 @@ public:
 		}, task_priority::high_priority);
 	}
 
-	boost::unique_future<void> clear_transforms()
+	std::future<void> clear_transforms()
 	{
 		return executor_.begin_invoke([=]
 		{
@@ -178,7 +182,7 @@ public:
 		}, task_priority::high_priority);
 	}
 		
-	boost::unique_future<void> load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, const boost::optional<int32_t>& auto_play_delta)
+	std::future<void> load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, const boost::optional<int32_t>& auto_play_delta)
 	{
 		return executor_.begin_invoke([=]
 		{
@@ -186,7 +190,7 @@ public:
 		}, task_priority::high_priority);
 	}
 
-	boost::unique_future<void> pause(int index)
+	std::future<void> pause(int index)
 	{		
 		return executor_.begin_invoke([=]
 		{
@@ -194,7 +198,7 @@ public:
 		}, task_priority::high_priority);
 	}
 
-	boost::unique_future<void> play(int index)
+	std::future<void> play(int index)
 	{		
 		return executor_.begin_invoke([=]
 		{
@@ -202,7 +206,7 @@ public:
 		}, task_priority::high_priority);
 	}
 
-	boost::unique_future<void> stop(int index)
+	std::future<void> stop(int index)
 	{		
 		return executor_.begin_invoke([=]
 		{
@@ -210,7 +214,7 @@ public:
 		}, task_priority::high_priority);
 	}
 
-	boost::unique_future<void> clear(int index)
+	std::future<void> clear(int index)
 	{
 		return executor_.begin_invoke([=]
 		{
@@ -218,7 +222,7 @@ public:
 		}, task_priority::high_priority);
 	}
 		
-	boost::unique_future<void> clear()
+	std::future<void> clear()
 	{
 		return executor_.begin_invoke([=]
 		{
@@ -226,12 +230,14 @@ public:
 		}, task_priority::high_priority);
 	}	
 		
-	boost::unique_future<void> swap_layers(stage& other)
+	std::future<void> swap_layers(stage& other)
 	{
 		auto other_impl = other.impl_;
 
-		if(other_impl.get() == this)
-			return async(launch::deferred, []{});
+		if (other_impl.get() == this)
+		{
+			return make_ready_future();
+		}
 		
 		auto func = [=]
 		{
@@ -259,7 +265,7 @@ public:
 		}, task_priority::high_priority);
 	}
 
-	boost::unique_future<void> swap_layer(int index, int other_index)
+	std::future<void> swap_layer(int index, int other_index)
 	{
 		return executor_.begin_invoke([=]
 		{
@@ -267,7 +273,7 @@ public:
 		}, task_priority::high_priority);
 	}
 
-	boost::unique_future<void> swap_layer(int index, int other_index, stage& other)
+	std::future<void> swap_layer(int index, int other_index, stage& other)
 	{
 		auto other_impl = other.impl_;
 
@@ -296,23 +302,23 @@ public:
 		}
 	}
 		
-	boost::unique_future<spl::shared_ptr<frame_producer>> foreground(int index)
+	std::future<std::shared_ptr<frame_producer>> foreground(int index)
 	{
-		return executor_.begin_invoke([=]
+		return executor_.begin_invoke([=]() -> std::shared_ptr<frame_producer>
 		{
 			return get_layer(index).foreground();
 		}, task_priority::high_priority);
 	}
 	
-	boost::unique_future<spl::shared_ptr<frame_producer>> background(int index)
+	std::future<std::shared_ptr<frame_producer>> background(int index)
 	{
-		return executor_.begin_invoke([=]
+		return executor_.begin_invoke([=]() -> std::shared_ptr<frame_producer>
 		{
 			return get_layer(index).background();
 		}, task_priority::high_priority);
 	}
 
-	boost::unique_future<boost::property_tree::wptree> info()
+	std::future<boost::property_tree::wptree> info()
 	{
 		return executor_.begin_invoke([this]() -> boost::property_tree::wptree
 		{
@@ -324,7 +330,7 @@ public:
 		}, task_priority::high_priority);
 	}
 
-	boost::unique_future<boost::property_tree::wptree> info(int index)
+	std::future<boost::property_tree::wptree> info(int index)
 	{
 		return executor_.begin_invoke([=]
 		{
@@ -332,11 +338,11 @@ public:
 		}, task_priority::high_priority);
 	}		
 	
-	boost::unique_future<std::wstring> call(int index, const std::vector<std::wstring>& params)
+	std::future<std::wstring> call(int index, const std::vector<std::wstring>& params)
 	{
 		return flatten(executor_.begin_invoke([=]
 		{
-			return make_shared(get_layer(index).foreground()->call(params));
+			return get_layer(index).foreground()->call(params).share();
 		}, task_priority::high_priority));
 	}
 
@@ -370,24 +376,24 @@ public:
 };
 
 stage::stage(spl::shared_ptr<diagnostics::graph> graph) : impl_(new impl(std::move(graph))){}
-boost::unique_future<std::wstring> stage::call(int index, const std::vector<std::wstring>& params){return impl_->call(index, params);}
-boost::unique_future<void> stage::apply_transforms(const std::vector<stage::transform_tuple_t>& transforms){return impl_->apply_transforms(transforms);}
-boost::unique_future<void> stage::apply_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const tweener& tween){return impl_->apply_transform(index, transform, mix_duration, tween);}
-boost::unique_future<void> stage::clear_transforms(int index){return impl_->clear_transforms(index);}
-boost::unique_future<void> stage::clear_transforms(){return impl_->clear_transforms();}
-boost::unique_future<void> stage::load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, const boost::optional<int32_t>& auto_play_delta){return impl_->load(index, producer, preview, auto_play_delta);}
-boost::unique_future<void> stage::pause(int index){return impl_->pause(index);}
-boost::unique_future<void> stage::play(int index){return impl_->play(index);}
-boost::unique_future<void> stage::stop(int index){return impl_->stop(index);}
-boost::unique_future<void> stage::clear(int index){return impl_->clear(index);}
-boost::unique_future<void> stage::clear(){return impl_->clear();}
-boost::unique_future<void> stage::swap_layers(stage& other){return impl_->swap_layers(other);}
-boost::unique_future<void> stage::swap_layer(int index, int other_index){return impl_->swap_layer(index, other_index);}
-boost::unique_future<void> stage::swap_layer(int index, int other_index, stage& other){return impl_->swap_layer(index, other_index, other);}
-boost::unique_future<spl::shared_ptr<frame_producer>> stage::foreground(int index) {return impl_->foreground(index);}
-boost::unique_future<spl::shared_ptr<frame_producer>> stage::background(int index) {return impl_->background(index);}
-boost::unique_future<boost::property_tree::wptree> stage::info() const{return impl_->info();}
-boost::unique_future<boost::property_tree::wptree> stage::info(int index) const{return impl_->info(index);}
+std::future<std::wstring> stage::call(int index, const std::vector<std::wstring>& params){return impl_->call(index, params);}
+std::future<void> stage::apply_transforms(const std::vector<stage::transform_tuple_t>& transforms){ return impl_->apply_transforms(transforms); }
+std::future<void> stage::apply_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const tweener& tween){ return impl_->apply_transform(index, transform, mix_duration, tween); }
+std::future<void> stage::clear_transforms(int index){ return impl_->clear_transforms(index); }
+std::future<void> stage::clear_transforms(){ return impl_->clear_transforms(); }
+std::future<void> stage::load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, const boost::optional<int32_t>& auto_play_delta){ return impl_->load(index, producer, preview, auto_play_delta); }
+std::future<void> stage::pause(int index){ return impl_->pause(index); }
+std::future<void> stage::play(int index){ return impl_->play(index); }
+std::future<void> stage::stop(int index){ return impl_->stop(index); }
+std::future<void> stage::clear(int index){ return impl_->clear(index); }
+std::future<void> stage::clear(){ return impl_->clear(); }
+std::future<void> stage::swap_layers(stage& other){ return impl_->swap_layers(other); }
+std::future<void> stage::swap_layer(int index, int other_index){ return impl_->swap_layer(index, other_index); }
+std::future<void> stage::swap_layer(int index, int other_index, stage& other){ return impl_->swap_layer(index, other_index, other); }
+std::future<std::shared_ptr<frame_producer>> stage::foreground(int index) { return impl_->foreground(index); }
+std::future<std::shared_ptr<frame_producer>> stage::background(int index) { return impl_->background(index); }
+std::future<boost::property_tree::wptree> stage::info() const{ return impl_->info(); }
+std::future<boost::property_tree::wptree> stage::info(int index) const{ return impl_->info(index); }
 std::map<int, class draw_frame> stage::operator()(const video_format_desc& format_desc){return (*impl_)(format_desc);}
 monitor::subject& stage::monitor_output(){return *impl_->monitor_subject_;}
 //void stage::subscribe(const frame_observable::observer_ptr& o) {impl_->frames_subject_.subscribe(o);}

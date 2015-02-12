@@ -22,11 +22,11 @@
 #pragma once
 
 #include <common/memory.h>
+#include <common/future_fwd.h>
 
 #include <core/monitor/monitor.h>
 
 #include <boost/noncopyable.hpp>
-#include <boost/thread/future.hpp>
 
 #include <vector>
 
@@ -40,7 +40,7 @@ namespace core {
 class server /* final */ : public boost::noncopyable
 {
 public:
-	explicit server(boost::promise<bool>& shutdown_server_now);
+	explicit server(std::promise<bool>& shutdown_server_now);
 	const std::vector<spl::shared_ptr<core::video_channel>> channels() const;
 	std::shared_ptr<core::thumbnail_generator> get_thumbnail_generator() const;
 
