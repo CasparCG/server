@@ -785,7 +785,7 @@ public:
 		}
 	}
 	
-	boost::unique_future<bool> send(core::const_frame frame) override
+	std::future<bool> send(core::const_frame frame) override
 	{
 		bool ready_for_frame = consumer_->ready_for_frame();
 		
@@ -807,7 +807,7 @@ public:
 				key_only_consumer_->mark_dropped();
 		}
 		
-		return caspar::wrap_as_future(true); 
+		return make_ready_future(true);
 	}
 	
 	std::wstring print() const override

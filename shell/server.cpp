@@ -29,6 +29,7 @@
 #include <common/utf.h>
 #include <common/memory.h>
 #include <common/polling_filesystem_monitor.h>
+#include <common/diagnostics/graph.h>
 
 #include <core/video_channel.h>
 #include <core/video_format.h>
@@ -71,6 +72,8 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
+#include <future>
+
 namespace caspar {
 
 using namespace core;
@@ -87,9 +90,9 @@ struct server::impl : boost::noncopyable
 	std::vector<std::shared_ptr<void>>					predefined_osc_subscriptions_;
 	std::vector<spl::shared_ptr<video_channel>>			channels_;
 	std::shared_ptr<thumbnail_generator>				thumbnail_generator_;
-	boost::promise<bool>&								shutdown_server_now_;
+	std::promise<bool>&									shutdown_server_now_;
 
-	explicit impl(boost::promise<bool>& shutdown_server_now)		
+	explicit impl(std::promise<bool>& shutdown_server_now)		
 		: accelerator_(env::properties().get(L"configuration.accelerator", L"auto"))
 		, osc_client_(io_service_manager_.service())
 		, shutdown_server_now_(shutdown_server_now)
@@ -149,6 +152,7 @@ struct server::impl : boost::noncopyable
 
 		image::uninit();
 		ffmpeg::uninit();
+		diagnostics::shutdown();
 	}
 				
 	void setup_channels(const boost::property_tree::wptree& pt)
@@ -308,7 +312,7 @@ struct server::impl : boost::noncopyable
 
 };
 
-server::server(boost::promise<bool>& shutdown_server_now) : impl_(new impl(shutdown_server_now)){}
+server::server(std::promise<bool>& shutdown_server_now) : impl_(new impl(shutdown_server_now)){}
 
 const std::vector<spl::shared_ptr<video_channel>> server::channels() const
 {

@@ -82,7 +82,7 @@ public:
 	{
 	}
 	
-	boost::unique_future<bool> send(core::const_frame frame) override
+	std::future<bool> send(core::const_frame frame) override
 	{
 		auto filename = filename_;
 
@@ -109,7 +109,7 @@ public:
 		});
 		async.detach();
 
-		return wrap_as_future(false);
+		return make_ready_future(false);
 	}
 
 	std::wstring print() const override

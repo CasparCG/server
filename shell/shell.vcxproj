@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -90,12 +90,14 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -113,8 +115,8 @@
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)tmp\$(Configuration)\</IntDir>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\dependencies64\boost\;..\dependencies64\ffmpeg\include\;..\dependencies64\glew\include;..\dependencies64\sfml\include\;..\dependencies64\tbb\include\;$(IncludePath)</IncludePath>
     <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\dependencies64\boost\;..\dependencies64\ffmpeg\include\;..\dependencies64\glew\include;..\dependencies64\sfml\include\;..\dependencies64\tbb\include\;$(IncludePath)</IncludePath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\dependencies64\boost\stage\lib;..\dependencies64\ffmpeg\lib\;..\dependencies64\glew\lib;..\dependencies64\sfml\extlibs\lib;..\dependencies64\sfml\lib\;..\dependencies64\tbb\lib\;..\dependencies64\freeimage\lib\;..\dependencies64\openal\lib\;..\dependencies64\asmlib\;$(LibraryPath)</LibraryPath>
-    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\dependencies64\boost\stage\lib;..\dependencies64\ffmpeg\lib\;..\dependencies64\glew\lib;..\dependencies64\sfml\lib\;..\dependencies64\tbb\lib\;..\dependencies64\freeimage\lib\;..\dependencies64\openal\lib\;..\dependencies64\asmlib\;..\dependencies64\freetype\objs\win32\vc2010;$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\dependencies64\boost\stage\lib;..\dependencies64\ffmpeg\lib\;..\dependencies64\glew\lib;..\dependencies64\freeimage\lib\;..\dependencies64\sfml\extlibs\lib;..\dependencies64\sfml\lib\;..\dependencies64\tbb\lib\;..\dependencies64\openal\lib\;..\dependencies64\freetype\objs\win32\vc2010;..\dependencies64\asmlib\;..\dependencies64\zlib\lib\;$(LibraryPath)</LibraryPath>
+    <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\dependencies64\boost\stage\lib;..\dependencies64\ffmpeg\lib\;..\dependencies64\glew\lib;..\dependencies64\sfml\lib\;..\dependencies64\tbb\lib\;..\dependencies64\freeimage\lib\;..\dependencies64\openal\lib\;..\dependencies64\asmlib\;..\dependencies64\sfml\extlibs\lib;..\dependencies64\freetype\objs\win32\vc2010;..\dependencies64\zlib\lib\;$(LibraryPath)</LibraryPath>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)bin\$(Configuration)\</OutDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)bin\$(Configuration)\</OutDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionName)</TargetName>
@@ -145,14 +147,14 @@
       <BrowseInformation>true</BrowseInformation>
       <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <PreprocessorDefinitions>TBB_USE_CAPTURED_EXCEPTION=0;TBB_USE_ASSERT=1;TBB_USE_DEBUG;_DEBUG;_CRT_SECURE_NO_WARNINGS;COMPILE_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0601;SFML_STATIC;BOOST_THREAD_VERSION=4;TBB_USE_CAPTURED_EXCEPTION=0;TBB_USE_ASSERT=1;TBB_USE_DEBUG;_DEBUG;_CRT_SECURE_NO_WARNINGS;COMPILE_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <TreatWarningAsError>true</TreatWarningAsError>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FloatingPointModel>Fast</FloatingPointModel>
       <ForcedIncludeFiles>common/compiler/vs/disable_silly_warnings.h</ForcedIncludeFiles>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>alibcof64.lib;freetype248_d.lib;sfml-system-d.lib;sfml-window-d.lib;sfml-graphics-d.lib;sfml-audio-d.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;swresample.lib;tbb.lib;OpenGL32.lib;FreeImaged.lib;glew32.lib;openal32.lib</AdditionalDependencies>
+      <AdditionalDependencies>alibcof64.lib;jpeg.lib;sndfile.lib;sfml-system-d-2.lib;sfml-window-d-2.lib;sfml-graphics-d-2.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;swresample.lib;tbb.lib;OpenGL32.lib;FreeImaged.lib;glew32.lib;openal32.lib;freetype.lib;zlibstat.lib</AdditionalDependencies>
       <Version>
       </Version>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
@@ -195,13 +197,13 @@ copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"
       <AdditionalIncludeDirectories>../;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
+      <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <PreprocessorDefinitions>TBB_USE_CAPTURED_EXCEPTION=0;NDEBUG;COMPILE_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_WIN32_WINNT=0x0601;SFML_STATIC;BOOST_THREAD_VERSION=4;TBB_USE_CAPTURED_EXCEPTION=0;NDEBUG;COMPILE_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WholeProgramOptimization>false</WholeProgramOptimization>
       <TreatWarningAsError>true</TreatWarningAsError>
       <OmitFramePointers>true</OmitFramePointers>
@@ -210,7 +212,7 @@ copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"
     </ClCompile>
     <Link>
       <OptimizeReferences>false</OptimizeReferences>
-      <AdditionalDependencies>alibcof64.lib;freetype250.lib;sfml-system.lib;sfml-window.lib;sfml-graphics.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;swresample.lib;tbb.lib;OpenGL32.lib;glew32.lib;openal32.lib;freeimage.lib</AdditionalDependencies>
+      <AdditionalDependencies>alibcof64.lib;jpeg.lib;sndfile.lib;sfml-system-2.lib;sfml-window-2.lib;sfml-graphics-2.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avutil.lib;avfilter.lib;swscale.lib;swresample.lib;tbb.lib;OpenGL32.lib;glew32.lib;openal32.lib;FreeImage.lib;freetype.lib;zlibstat.lib</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>

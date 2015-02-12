@@ -66,6 +66,7 @@
 #include <memory>
 #include <cctype>
 #include <io.h>
+#include <future>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/lexical_cast.hpp>
@@ -370,7 +371,7 @@ bool CallCommand::DoExecute()
 	{
 		auto result = channel()->stage().call(layer_index(), parameters());
 		
-		if(!result.timed_wait(boost::posix_time::seconds(2)))
+		if (result.wait_for(std::chrono::seconds(2)) != std::future_status::ready)
 			CASPAR_THROW_EXCEPTION(timed_out());
 				
 		std::wstringstream replyString;
@@ -1470,7 +1471,7 @@ bool InfoCommand::DoExecute()
 {
 	std::wstringstream replyString;
 	
-	boost::property_tree::xml_writer_settings<wchar_t> w(' ', 3);
+	boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
 
 	try
 	{
@@ -1501,7 +1502,7 @@ bool InfoCommand::DoExecute()
 
 			boost::property_tree::wptree info;
 			info.add_child(L"paths", caspar::env::properties().get_child(L"configuration.paths"));
-			info.add(L"paths.initial-path", boost::filesystem3::initial_path().wstring() + L"\\");
+			info.add(L"paths.initial-path", boost::filesystem::initial_path().wstring() + L"\\");
 
 			boost::property_tree::write_xml(replyString, info, w);
 		}

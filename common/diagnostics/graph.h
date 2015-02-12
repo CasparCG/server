@@ -50,5 +50,6 @@ private:
 
 void register_graph(const spl::shared_ptr<graph>& graph);
 void show_graphs(bool value);
+void shutdown();
 
 }}

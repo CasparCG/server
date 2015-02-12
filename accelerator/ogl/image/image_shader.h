@@ -42,8 +42,8 @@ struct texture_id
 	};
 };
 
-spl::shared_ptr<shader> get_image_shader(
-		bool& blend_modes, bool blend_modes_wanted);
+std::shared_ptr<shader> get_image_shader(
+		const spl::shared_ptr<device>& ogl, bool& blend_modes, bool blend_modes_wanted);
 
 
 }}}

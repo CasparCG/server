@@ -25,7 +25,7 @@
 
 #include <boost/noncopyable.hpp>
 #include <boost/thread/mutex.hpp>
-#include <boost/thread/condition.hpp>
+#include <boost/thread/condition_variable.hpp>
 
 namespace caspar {
 
@@ -45,7 +45,7 @@ class semaphore : boost::noncopyable
 {
 	mutable boost::mutex mutex_;
 	unsigned int permits_;
-	boost::condition_variable permits_available_;
+	boost::condition_variable_any permits_available_;
 public:
 	/**
 	 * Constructor.
@@ -62,7 +62,7 @@ public:
 	 */
 	void release()
 	{
-		boost::mutex::scoped_lock lock(mutex_);
+		boost::unique_lock<boost::mutex> lock(mutex_);
 
 		++permits_;
 
@@ -76,7 +76,7 @@ public:
 	 */
 	void release(unsigned int permits)
 	{
-		boost::mutex::scoped_lock lock(mutex_);
+		boost::unique_lock<boost::mutex> lock(mutex_);
 
 		permits_ += permits;
 
@@ -89,7 +89,7 @@ public:
 	 */
 	void acquire()
 	{
-		boost::mutex::scoped_lock lock(mutex_);
+		boost::unique_lock<boost::mutex> lock(mutex_);
 
 		while (permits_ == 0u)
 		{
@@ -107,7 +107,7 @@ public:
 	 */
 	void acquire(unsigned int permits)
 	{
-		boost::mutex::scoped_lock lock(mutex_);
+		boost::unique_lock<boost::mutex> lock(mutex_);
 		auto num_acquired = 0u;
 
 		while (true)
@@ -134,7 +134,7 @@ public:
 	 */
 	bool try_acquire()
 	{
-		boost::mutex::scoped_lock lock(mutex_);
+		boost::unique_lock<boost::mutex> lock(mutex_);
 
 		if (permits_ == 0u)
 			return false;
@@ -152,7 +152,7 @@ public:
 	 */
 	unsigned int permits() const
 	{
-		boost::mutex::scoped_lock lock(mutex_);
+		boost::unique_lock<boost::mutex> lock(mutex_);
 
 		return permits_;
 	}

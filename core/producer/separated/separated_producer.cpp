@@ -29,6 +29,8 @@
 
 #include <tbb/parallel_invoke.h>
 
+#include <future>
+
 namespace caspar { namespace core {	
 
 class separated_producer : public frame_producer_base
@@ -118,7 +120,7 @@ public:
 		return L"separated[fill:" + fill_producer_->print() + L"|key[" + key_producer_->print() + L"]]";
 	}	
 
-	boost::unique_future<std::wstring> call(const std::vector<std::wstring>& params) override
+	std::future<std::wstring> call(const std::vector<std::wstring>& params) override
 	{
 		key_producer_->call(params);
 		return fill_producer_->call(params);
