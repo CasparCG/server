@@ -130,7 +130,7 @@ public:
 
 		std::set<wpath> initial_files;
 
-		for (boost::filesystem3::wrecursive_directory_iterator iter(folder_); iter != boost::filesystem3::wrecursive_directory_iterator(); ++iter)
+		for (boost::filesystem::wrecursive_directory_iterator iter(folder_); iter != boost::filesystem::wrecursive_directory_iterator(); ++iter)
 		{
 			if (should_abort())
 				return;
@@ -215,7 +215,7 @@ class polling_filesystem_monitor : public filesystem_monitor
 	boost::thread scanning_thread_;
 	tbb::atomic<bool> running_;
 	int scan_interval_millis_;
-	boost::promise<void> initial_scan_completion_;
+	std::promise<void> initial_scan_completion_;
 	tbb::concurrent_queue<boost::filesystem::wpath> to_reemmit_;
 	tbb::atomic<bool> reemmit_all_;
 public:
@@ -241,7 +241,7 @@ public:
 		scanning_thread_.join();
 	}
 
-	virtual boost::unique_future<void> initial_files_processed()
+	virtual std::future<void> initial_files_processed()
 	{
 		return initial_scan_completion_.get_future();
 	}

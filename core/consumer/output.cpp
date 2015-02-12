@@ -177,7 +177,7 @@ public:
 			if(!frames_.full())
 				return;
 
-			std::map<int, boost::unique_future<bool>> send_results;
+			std::map<int, std::future<bool>> send_results;
 
 			// Start invocations
 			for (auto it = ports_.begin(); it != ports_.end();)
@@ -231,7 +231,7 @@ public:
 		return L"output[" + boost::lexical_cast<std::wstring>(channel_index_) + L"]";
 	}
 
-	boost::unique_future<boost::property_tree::wptree> info()
+	std::future<boost::property_tree::wptree> info()
 	{
 		return std::move(executor_.begin_invoke([&]() -> boost::property_tree::wptree
 		{			
@@ -251,7 +251,7 @@ void output::add(int index, const spl::shared_ptr<frame_consumer>& consumer){imp
 void output::add(const spl::shared_ptr<frame_consumer>& consumer){impl_->add(consumer);}
 void output::remove(int index){impl_->remove(index);}
 void output::remove(const spl::shared_ptr<frame_consumer>& consumer){impl_->remove(consumer);}
-boost::unique_future<boost::property_tree::wptree> output::info() const{return impl_->info();}
+std::future<boost::property_tree::wptree> output::info() const{return impl_->info();}
 void output::operator()(const_frame frame, const video_format_desc& format_desc){(*impl_)(std::move(frame), format_desc);}
 monitor::subject& output::monitor_output() {return *impl_->monitor_subject_;}
 }}

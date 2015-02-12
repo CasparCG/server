@@ -92,7 +92,7 @@ public:
 	bool collides(double x, double y) const override;
 	std::wstring print() const override;
 	std::wstring name() const override;
-	boost::unique_future<std::wstring>	call(const std::vector<std::wstring>& params) override;
+	std::future<std::wstring>	call(const std::vector<std::wstring>& params) override;
 	boost::property_tree::wptree info() const override;
 	monitor::subject& monitor_output();
 

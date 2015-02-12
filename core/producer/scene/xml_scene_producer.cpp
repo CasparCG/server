@@ -31,6 +31,8 @@
 #include <common/env.h>
 #include <core/producer/frame_producer.h>
 
+#include <future>
+
 #include "scene_producer.h"
 
 namespace caspar { namespace core { namespace scene {

@@ -64,7 +64,7 @@ public:
 	virtual void begin_layer(blend_mode blend_mode) = 0;
 	virtual void end_layer() = 0;
 		
-	virtual boost::unique_future<array<const std::uint8_t>> operator()(const struct video_format_desc& format_desc) = 0;
+	virtual std::future<array<const std::uint8_t>> operator()(const struct video_format_desc& format_desc) = 0;
 
 	virtual class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc) = 0;
 

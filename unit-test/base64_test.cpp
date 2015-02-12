@@ -68,7 +68,7 @@ TEST(Base64Test, InvalidInputCharacters)
 	for (int i = 1; i < 256; ++i)
 	{
 		if (get_dictionary().find(static_cast<char>(i)) == get_dictionary().end()
-				&& !std::isspace(i)
+				&& !std::isspace(i, std::locale())
 				&& i != '=')
 		{
 			auto invalid = PREFIX + static_cast<char>(i);

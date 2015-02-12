@@ -25,8 +25,9 @@
 
 #include "AMCPCommand.h"
 
-#include <boost/thread/future.hpp>
 #include <core/thumbnail_generator.h>
+
+#include <future>
 
 namespace caspar { namespace protocol {
 	
@@ -314,23 +315,23 @@ private:
 class KillCommand : public AMCPCommandBase<0> 
 {
 public:
-	KillCommand(IO::ClientInfoPtr client, boost::promise<bool>& shutdown_server_now) : AMCPCommandBase(client), shutdown_server_now_(&shutdown_server_now) {}
+	KillCommand(IO::ClientInfoPtr client, std::promise<bool>& shutdown_server_now) : AMCPCommandBase(client), shutdown_server_now_(&shutdown_server_now) {}
 	std::wstring print() const { return L"KillCommand";}
 	bool DoExecute();
 
 private:
-	boost::promise<bool>* shutdown_server_now_;
+	std::promise<bool>* shutdown_server_now_;
 };
 
 class RestartCommand : public AMCPCommandBase<0> 
 {
 public:
-	RestartCommand(IO::ClientInfoPtr client, boost::promise<bool>& shutdown_server_now) : AMCPCommandBase(client), shutdown_server_now_(&shutdown_server_now) {}
+	RestartCommand(IO::ClientInfoPtr client, std::promise<bool>& shutdown_server_now) : AMCPCommandBase(client), shutdown_server_now_(&shutdown_server_now) {}
 	std::wstring print() const { return L"RestartCommand";}
 	bool DoExecute();
 
 private:
-	boost::promise<bool>* shutdown_server_now_;
+	std::promise<bool>* shutdown_server_now_;
 };
 
 }	//namespace amcp

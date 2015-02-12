@@ -6,6 +6,8 @@
 #include "../frame/frame.h"
 #include <boost/lexical_cast.hpp>
 
+#include <future>
+
 namespace caspar { namespace core {
 
 struct port::impl
@@ -30,7 +32,7 @@ public:
 		consumer_->initialize(format_desc, channel_index_);
 	}
 		
-	boost::unique_future<bool> send(const_frame frame)
+	std::future<bool> send(const_frame frame)
 	{
 		*monitor_subject_ << monitor::message("/type") % consumer_->name();
 		return consumer_->send(std::move(frame));
@@ -65,7 +67,7 @@ port::port(int index, int channel_index, spl::shared_ptr<frame_consumer> consume
 port::port(port&& other) : impl_(std::move(other.impl_)){}
 port::~port(){}
 port& port::operator=(port&& other){impl_ = std::move(other.impl_); return *this;}
-boost::unique_future<bool> port::send(const_frame frame){return impl_->send(std::move(frame));}	
+std::future<bool> port::send(const_frame frame){return impl_->send(std::move(frame));}	
 monitor::subject& port::monitor_output() {return *impl_->monitor_subject_;}
 void port::video_format_desc(const struct video_format_desc& format_desc){impl_->video_format_desc(format_desc);}
 int port::buffer_depth() const{return impl_->buffer_depth();}

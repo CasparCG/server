@@ -30,6 +30,8 @@
 
 #include <tbb/parallel_invoke.h>
 
+#include <future>
+
 namespace caspar { namespace core {	
 
 class transition_producer : public frame_producer_base
@@ -143,7 +145,7 @@ public:
 		return dest_producer_->info();
 	}
 	
-	boost::unique_future<std::wstring> call(const std::vector<std::wstring>& params) override
+	std::future<std::wstring> call(const std::vector<std::wstring>& params) override
 	{
 		return dest_producer_->call(params);
 	}

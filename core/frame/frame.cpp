@@ -25,6 +25,7 @@
 
 #include <common/except.h>
 #include <common/array.h>
+#include <common/future.h>
 
 #include <core/frame/frame_visitor.h>
 #include <core/frame/pixel_format.h>
@@ -87,7 +88,7 @@ const const_frame& const_frame::empty()
 
 struct const_frame::impl : boost::noncopyable
 {			
-	mutable std::vector<boost::shared_future<array<const std::uint8_t>>>	future_buffers_;
+	mutable std::vector<std::shared_future<array<const std::uint8_t>>>	future_buffers_;
 	int											id_;
 	core::audio_buffer							audio_data_;
 	const core::pixel_format_desc				desc_;
@@ -102,7 +103,7 @@ struct const_frame::impl : boost::noncopyable
 	{
 	}
 	
-	impl(boost::shared_future<array<const std::uint8_t>> image, audio_buffer audio_buffer, const void* tag, const core::pixel_format_desc& desc) 
+	impl(std::shared_future<array<const std::uint8_t>> image, audio_buffer audio_buffer, const void* tag, const core::pixel_format_desc& desc) 
 		: audio_data_(std::move(audio_buffer))
 		, desc_(desc)
 		, tag_(tag)
@@ -124,9 +125,7 @@ struct const_frame::impl : boost::noncopyable
 	{
 		for(std::size_t n = 0; n < desc_.planes.size(); ++n)
 		{
-			boost::promise<array<const std::uint8_t>> p;
-			p.set_value(std::move(other.image_data(n)));
-			future_buffers_.push_back(p.get_future());
+			future_buffers_.push_back(make_ready_future<array<const std::uint8_t>>(std::move(other.image_data(n))).share());
 		}
 	}
 
@@ -152,7 +151,7 @@ struct const_frame::impl : boost::noncopyable
 };
 	
 const_frame::const_frame(const void* tag) : impl_(new impl(tag)){}
-const_frame::const_frame(boost::shared_future<array<const std::uint8_t>> image, audio_buffer audio_buffer, const void* tag, const core::pixel_format_desc& desc) 
+const_frame::const_frame(std::shared_future<array<const std::uint8_t>> image, audio_buffer audio_buffer, const void* tag, const core::pixel_format_desc& desc) 
 	: impl_(new impl(std::move(image), std::move(audio_buffer), tag, desc)){}
 const_frame::const_frame(mutable_frame&& other) : impl_(new impl(std::move(other))){}
 const_frame::~const_frame(){}
