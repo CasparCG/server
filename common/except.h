@@ -133,22 +133,3 @@ private:
 
 }
 
-namespace std
-{
-
-inline bool operator!=(const std::exception_ptr& lhs, const std::exception_ptr& rhs)
-{
-	return !(lhs == rhs);
-}
-
-inline bool operator!=(const std::exception_ptr& lhs, std::nullptr_t)
-{
-	return !(lhs == nullptr);
-}
-
-inline bool operator!=(std::nullptr_t, const std::exception_ptr& rhs)
-{
-	return !(nullptr == rhs);
-}
-
-}

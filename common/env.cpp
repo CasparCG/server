@@ -57,7 +57,7 @@ void configure(const std::wstring& filename)
 {
 	try
 	{
-		auto initialPath = boost::filesystem3::initial_path().wstring();
+		auto initialPath = boost::filesystem::initial_path().wstring();
 	
 		std::wifstream file(initialPath + L"\\" + filename);
 		boost::property_tree::read_xml(file, pt, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
@@ -65,7 +65,7 @@ void configure(const std::wstring& filename)
 		auto paths	= pt.get_child(L"configuration.paths");
 		media		= paths.get(L"media-path", initialPath + L"\\media\\");
 		log			= paths.get(L"log-path", initialPath + L"\\log\\");
-		ftemplate	= boost::filesystem3::complete(paths.get(L"template-path", initialPath + L"\\template\\")).wstring();		
+		ftemplate	= boost::filesystem::complete(paths.get(L"template-path", initialPath + L"\\template\\")).wstring();		
 		data		= paths.get(L"data-path", initialPath + L"\\data\\");
 		font		= paths.get(L"font-path", initialPath + L"\\fonts\\");
 		thumbnails	= paths.get(L"thumbnails-path", initialPath + L"\\data\\");

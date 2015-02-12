@@ -155,7 +155,7 @@ class image_renderer
 	tbb::concurrent_unordered_map<int64_t, tbb::concurrent_bounded_queue<std::shared_ptr<SwsContext>>>	sws_devices_;
 	tbb::concurrent_bounded_queue<spl::shared_ptr<buffer>>												temp_buffers_;
 public:	
-	boost::unique_future<array<const std::uint8_t>> operator()(std::vector<item> items, const core::video_format_desc& format_desc)
+	std::future<array<const std::uint8_t>> operator()(std::vector<item> items, const core::video_format_desc& format_desc)
 	{	
 		convert(items, format_desc.width, format_desc.height);		
 				
@@ -185,10 +185,7 @@ public:
 
 		temp_buffers_.clear();
 		
-		return async(launch::deferred, [=]
-		{
-			return array<const std::uint8_t>(result->data(), format_desc.size, true, result);
-		});	
+		return make_ready_future(array<const std::uint8_t>(result->data(), format_desc.size, true, result));
 	}
 
 private:
@@ -357,7 +354,7 @@ public:
 	{		
 	}
 	
-	boost::unique_future<array<const std::uint8_t>> render(const core::video_format_desc& format_desc)
+	std::future<array<const std::uint8_t>> render(const core::video_format_desc& format_desc)
 	{
 		return renderer_(std::move(items_), format_desc);
 	}
@@ -379,7 +376,7 @@ image_mixer::~image_mixer(){}
 void image_mixer::push(const core::frame_transform& transform){impl_->push(transform);}
 void image_mixer::visit(const core::const_frame& frame){impl_->visit(frame);}
 void image_mixer::pop(){impl_->pop();}
-boost::unique_future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
+std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
 void image_mixer::begin_layer(core::blend_mode blend_mode){impl_->begin_layer(blend_mode);}
 void image_mixer::end_layer(){impl_->end_layer();}
 core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->create_frame(tag, desc);}

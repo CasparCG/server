@@ -271,8 +271,8 @@ std::string get_fragment(bool blend_modes)
 	"}																					\n";
 }
 
-spl::shared_ptr<shader> get_image_shader(
-		bool& blend_modes, bool blend_modes_wanted)
+std::shared_ptr<shader> get_image_shader(
+		const spl::shared_ptr<device>& ogl, bool& blend_modes, bool blend_modes_wanted)
 {
 	tbb::mutex::scoped_lock lock(g_shader_mutex);
 	auto existing_shader = g_shader.lock();
@@ -280,13 +280,28 @@ spl::shared_ptr<shader> get_image_shader(
 	if(existing_shader)
 	{
 		blend_modes = g_blend_modes;
-		return spl::make_shared_ptr(existing_shader);
+		return existing_shader;
 	}
+
+	// The deleter is alive until the weak pointer is destroyed, so we have
+	// to weakly reference ogl, to not keep it alive until atexit
+	std::weak_ptr<device> weak_ogl = ogl;
+
+	auto deleter = [weak_ogl](shader* p)
+	{
+		auto ogl = weak_ogl.lock();
+
+		if (ogl)
+			ogl->invoke([=]
+			{
+				delete p;
+			});
+	};
 		
 	try
 	{				
 		g_blend_modes  = glTextureBarrierNV ? blend_modes_wanted : false;
-		existing_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes)));
+		existing_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes)), deleter);
 	}
 	catch(...)
 	{
@@ -294,7 +309,7 @@ spl::shared_ptr<shader> get_image_shader(
 		CASPAR_LOG(warning) << "Failed to compile shader. Trying to compile without blend-modes.";
 				
 		g_blend_modes = false;
-		existing_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes)));
+		existing_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes)), deleter);
 	}
 						
 	//if(!g_blend_modes)
@@ -303,9 +318,10 @@ spl::shared_ptr<shader> get_image_shader(
 	//	CASPAR_LOG(info) << L"[shader] Blend-modes are disabled.";
 	//}
 
+
 	blend_modes = g_blend_modes;
 	g_shader = existing_shader;
-	return spl::make_shared_ptr(existing_shader);
+	return existing_shader;
 }
 
 }}}

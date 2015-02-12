@@ -177,7 +177,7 @@ public:
 		});
 	}
 	
-	boost::unique_future<bool> send(core::const_frame frame) override
+	std::future<bool> send(core::const_frame frame) override
 	{
 		// Will only block if the default executor queue capacity of 512 is
 		// exhausted, which should not happen
@@ -218,7 +218,7 @@ public:
 			perf_timer_.restart();
 		});
 
-		return wrap_as_future(true);
+		return make_ready_future(true);
 	}
 	
 	std::wstring print() const override

@@ -70,7 +70,7 @@ public:
 namespace caspar { namespace core {
 	namespace text {
 
-		using namespace boost::filesystem3;
+		using namespace boost::filesystem;
 
 		std::map<std::wstring, std::wstring> fonts;
 
@@ -217,12 +217,12 @@ public:
 		return frame_;
 	}
 
-	boost::unique_future<std::wstring> call(const std::vector<std::wstring>& param)
+	std::future<std::wstring> call(const std::vector<std::wstring>& param)
 	{
 		std::wstring result;
 		text_.value().set(param.empty() ? L"" : param[0]);
 
-		return async(launch::deferred, [=]{return result;});
+		return make_ready_future(std::move(result));
 	}
 
 	variable& get_variable(const std::wstring& name)
@@ -300,7 +300,7 @@ text_producer::text_producer(const spl::shared_ptr<frame_factory>& frame_factory
 {}
 
 draw_frame text_producer::receive_impl() { return impl_->receive_impl(); }
-boost::unique_future<std::wstring> text_producer::call(const std::vector<std::wstring>& param) { return impl_->call(param); }
+std::future<std::wstring> text_producer::call(const std::vector<std::wstring>& param) { return impl_->call(param); }
 variable& text_producer::get_variable(const std::wstring& name) { return impl_->get_variable(name); }
 const std::vector<std::wstring>& text_producer::get_variables() const { return impl_->get_variables(); }
 text::string_metrics text_producer::measure_string(const std::wstring& str) { return impl_->measure_string(str); }

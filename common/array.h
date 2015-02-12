@@ -86,6 +86,7 @@ public:
 	// Static Members
 
 	// Constructors
+	array() = default; // Needed by std::future
 
 	template<typename T>
 	explicit array(const std::uint8_t* ptr, std::size_t size, bool cacheable, T&& storage)

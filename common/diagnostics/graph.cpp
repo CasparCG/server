@@ -40,9 +40,12 @@
 #include <tbb/atomic.h>
 #include <tbb/spin_mutex.h>
 
+#include <GL/glew.h>
+
 #include <array>
 #include <numeric>
 #include <tuple>
+#include <memory>
 
 namespace caspar { namespace diagnostics {
 		
@@ -65,11 +68,29 @@ std::tuple<float, float, float, float> color(int code)
 	return std::make_tuple(r, g, b, a);
 }
 
-struct drawable : public sf::Drawable
+sf::Font& get_default_font()
+{
+	static sf::Font DEFAULT_FONT = []()
+	{
+		sf::Font font;
+		if (!font.loadFromFile("arial.ttf"))
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("arial.ttf not found"));
+		return font;
+	}();
+
+	return DEFAULT_FONT;
+}
+
+struct drawable : public sf::Drawable, public sf::Transformable
 {
 	virtual ~drawable(){}
-	virtual void render(sf::RenderTarget& target) = 0;
-	virtual void Render(sf::RenderTarget& target) const { const_cast<drawable*>(this)->render(target);}
+	virtual void render(sf::RenderTarget& target, sf::RenderStates states) = 0;
+	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const override
+	{
+		states.transform *= getTransform();
+		glLoadMatrixf(states.transform.getMatrix());
+		const_cast<drawable*>(this)->render(target, states);
+	}
 };
 
 class context : public drawable
@@ -86,20 +107,24 @@ public:
 		if(!drawable)
 			return;
 
-		get_instance().executor_.begin_invoke([=]
+		get_instance()->executor_.begin_invoke([=]
 		{
-			get_instance().do_register_drawable(drawable);
+			get_instance()->do_register_drawable(drawable);
 		}, task_priority::high_priority);
 	}
 
 	static void show(bool value)
 	{
-		get_instance().executor_.begin_invoke([=]
+		get_instance()->executor_.begin_invoke([=]
 		{	
-			get_instance().do_show(value);
+			get_instance()->do_show(value);
 		}, task_priority::high_priority);
 	}
-				
+	
+	static void shutdown()
+	{
+		get_instance().reset();
+	}
 private:
 	context() : executor_(L"diagnostics")
 	{
@@ -116,8 +141,8 @@ private:
 			if(!window_)
 			{
 				window_.reset(new sf::RenderWindow(sf::VideoMode(750, 750), "CasparCG Diagnostics"));
-				window_->SetPosition(0, 0);
-				window_->SetActive();
+				window_->setPosition(sf::Vector2i(0, 0));
+				window_->setActive();
 				glEnable(GL_BLEND);
 				glEnable(GL_LINE_SMOOTH);
 				glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
@@ -135,22 +160,23 @@ private:
 			return;
 
 		sf::Event e;
-		while(window_->GetEvent(e))
+		while(window_->pollEvent(e))
 		{
-			if(e.Type == sf::Event::Closed)
+			if(e.type == sf::Event::Closed)
 			{
 				window_.reset();
 				return;
 			}
 		}		
-		glClear(GL_COLOR_BUFFER_BIT);
-		window_->Draw(*this);
-		window_->Display();
+		//glClear(GL_COLOR_BUFFER_BIT);
+		window_->clear();
+		window_->draw(*this);
+		window_->display();
 		boost::this_thread::sleep(boost::posix_time::milliseconds(10));
 		executor_.begin_invoke([this]{tick();});
 	}
 
-	void render(sf::RenderTarget& target)
+	void render(sf::RenderTarget& target, sf::RenderStates states)
 	{
 		auto count = std::max<size_t>(8, drawables_.size());
 		float target_dy = 1.0f/static_cast<float>(count);
@@ -162,15 +188,15 @@ private:
 			auto drawable = it->lock();
 			if(drawable)
 			{
-				drawable->SetScale(static_cast<float>(window_->GetWidth()), static_cast<float>(target_dy*window_->GetHeight()));
-				float target_y = std::max(last_y, static_cast<float>(n * window_->GetHeight())*target_dy);
-				drawable->SetPosition(0.0f, target_y);			
-				target.Draw(*drawable);				
+				drawable->setScale(static_cast<float>(window_->getSize().x), static_cast<float>(target_dy*window_->getSize().y));
+				float target_y = std::max(last_y, static_cast<float>(n * window_->getSize().y)*target_dy);
+				drawable->setPosition(0.0f, target_y);			
+				target.draw(*drawable, states);
 				++it;		
 			}
 			else	
 				it = drawables_.erase(it);			
-		}		
+		}
 	}	
 	
 	void do_register_drawable(const std::shared_ptr<drawable>& drawable)
@@ -186,9 +212,9 @@ private:
 		}
 	}
 	
-	static context& get_instance()
+	static std::unique_ptr<context>& get_instance()
 	{
-		static context impl;
+		static auto impl = std::unique_ptr<context>(new context);
 		return impl;
 	}
 };
@@ -231,7 +257,7 @@ public:
 		return color_;
 	}
 		
-	void render(sf::RenderTarget&)
+	void render(sf::RenderTarget& target, sf::RenderStates states)
 	{
 		float dx = 1.0f/static_cast<float>(line_data_.capacity());
 		float x = static_cast<float>(line_data_.capacity()-line_data_.size())*dx;
@@ -308,7 +334,7 @@ struct graph::impl : public drawable
 	}
 		
 private:
-	void render(sf::RenderTarget& target)
+	void render(sf::RenderTarget& target, sf::RenderStates states)
 	{
 		const size_t text_size = 15;
 		const size_t text_margin = 2;
@@ -323,38 +349,53 @@ private:
 			auto_reset = auto_reset_;
 		}
 
-		sf::String text(text_str.c_str(), sf::Font::GetDefaultFont(), text_size);
-		text.SetStyle(sf::String::Italic);
-		text.Move(text_margin, text_margin);
+		//sf::Text test("Test", get_default_font());
+		//target.draw(test, states);
+
+		sf::Text text(text_str.c_str(), get_default_font(), text_size);
+		text.setStyle(sf::Text::Italic);
+		text.move(text_margin, text_margin);
 		
-		glPushMatrix();
-			glScaled(1.0f/GetScale().x, 1.0f/GetScale().y, 1.0f);
-			target.Draw(text);
+		//glPushMatrix();
+			//glScaled(1.0f/getScale().x, 1.0f/getScale().y, 1.0f);
+			target.draw(text, states);
 			float x_offset = text_margin;
 			for(auto it = lines_.begin(); it != lines_.end(); ++it)
-			{						
-				sf::String line_text(it->first, sf::Font::GetDefaultFont(), text_size);
-				line_text.SetPosition(x_offset, text_margin+text_offset/2);
+			{
+				sf::Text line_text(it->first, get_default_font(), text_size);
+				line_text.setPosition(x_offset, text_margin+text_offset/2);
 				auto c = it->second.get_color();
-				line_text.SetColor(sf::Color((c >> 24) & 255, (c >> 16) & 255, (c >> 8) & 255, (c >> 0) & 255));
-				target.Draw(line_text);
-				x_offset = line_text.GetRect().Right + text_margin*2;
+				line_text.setColor(sf::Color((c >> 24) & 255, (c >> 16) & 255, (c >> 8) & 255, (c >> 0) & 255));
+				target.draw(line_text, states);
+				x_offset += (line_text.getLocalBounds().width/* - line_text.getLocalBounds().left*/) + text_margin * 2;
 			}
 
 			glDisable(GL_TEXTURE_2D);
-		glPopMatrix();
+		//glPopMatrix();
 
-		glBegin(GL_QUADS);
+		static auto rect = []()
+		{
+			sf::RectangleShape r(sf::Vector2f(1.0f, 0.99f));
+			r.setFillColor(sf::Color(255, 255, 255, 51));
+			r.setOutlineThickness(0.00f);
+			return r;
+		}();
+		target.draw(rect, states);
+		/*glBegin(GL_QUADS);
 			glColor4f(1.0f, 1.0f, 1.0f, 0.2f);	
 			glVertex2f(1.0f, 0.99f);
 			glVertex2f(0.0f, 0.99f);
 			glVertex2f(0.0f, 0.01f);	
 			glVertex2f(1.0f, 0.01f);	
-		glEnd();
+		glEnd();*/
 
-		glPushMatrix();
-			glTranslated(0.0f, text_offset/GetScale().y, 1.0f);
-			glScaled(1.0f, 1.0-text_offset/GetScale().y, 1.0f);
+		states.transform
+			.translate(0, text_offset)
+			.scale(1.0f, text_offset / getScale().y);
+		//glLoadMatrixf(states.transform.getMatrix());
+		//glPushMatrix();
+			//glTranslated(0.0f, text_offset/getScale().y, 1.0f);
+			//glScaled(1.0f, 1.0-text_offset/getScale().y, 1.0f);
 		
 			glEnable(GL_LINE_STIPPLE);
 			glLineStipple(3, 0xAAAA);
@@ -378,12 +419,12 @@ private:
 
 			for(auto it = lines_.begin(); it != lines_.end(); ++it)		
 			{
-				target.Draw(it->second);
+				target.draw(it->second, states);
 				if(auto_reset)
 					it->second.set_value(0.0f);
 			}
 		
-		glPopMatrix();
+		//glPopMatrix();
 	}
 
 	impl(impl&);
@@ -407,6 +448,11 @@ void register_graph(const spl::shared_ptr<graph>& graph)
 void show_graphs(bool value)
 {
 	context::show(value);
+}
+
+void shutdown()
+{
+	context::shutdown();
 }
 
 //namespace v2

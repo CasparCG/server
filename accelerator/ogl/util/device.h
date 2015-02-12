@@ -51,13 +51,13 @@ public:
 	array<std::uint8_t>		 create_array(int size);
 		
 	// NOTE: Since the returned texture is cached it SHOULD NOT be modified.
-	boost::unique_future<spl::shared_ptr<texture>>	copy_async(const array<const std::uint8_t>& source, int width, int height, int stride);
+	std::future<std::shared_ptr<texture>>	copy_async(const array<const std::uint8_t>& source, int width, int height, int stride);
 
-	boost::unique_future<spl::shared_ptr<texture>>	copy_async(const array<std::uint8_t>& source, int width, int height, int stride);
-	boost::unique_future<array<const std::uint8_t>>	copy_async(const spl::shared_ptr<texture>& source);
+	std::future<std::shared_ptr<texture>>	copy_async(const array<std::uint8_t>& source, int width, int height, int stride);
+	std::future<array<const std::uint8_t>>	copy_async(const spl::shared_ptr<texture>& source);
 			
 	template<typename Func>
-	auto begin_invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> boost::unique_future<decltype(func())> // noexcept
+	auto begin_invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> std::future<decltype(func())> // noexcept
 	{			
 		return executor_.begin_invoke(std::forward<Func>(func), priority);
 	}

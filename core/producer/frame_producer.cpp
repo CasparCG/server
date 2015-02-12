@@ -129,7 +129,7 @@ draw_frame frame_producer_base::create_thumbnail_frame()
 	return impl_->create_thumbnail_frame();
 }
 
-boost::unique_future<std::wstring> frame_producer_base::call(const std::vector<std::wstring>&) 
+std::future<std::wstring> frame_producer_base::call(const std::vector<std::wstring>&) 
 {
 	CASPAR_THROW_EXCEPTION(not_supported());
 }
@@ -170,7 +170,7 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
 		monitor::subject& monitor_output() override {static monitor::subject monitor_subject(""); return monitor_subject;}										
 		std::wstring name() const override {return L"empty";}
 		uint32_t frame_number() const override {return 0;}
-		boost::unique_future<std::wstring> call(const std::vector<std::wstring>& params) override{CASPAR_THROW_EXCEPTION(not_supported());}
+		std::future<std::wstring> call(const std::vector<std::wstring>& params) override{CASPAR_THROW_EXCEPTION(not_supported());}
 		variable& get_variable(const std::wstring& name) override { CASPAR_THROW_EXCEPTION(not_supported()); }
 		const std::vector<std::wstring>& get_variables() const override { static std::vector<std::wstring> empty; return empty; }
 		draw_frame last_frame() {return draw_frame::empty();}
@@ -242,7 +242,7 @@ public:
 	std::wstring										name() const override															{return producer_->name();}
 	uint32_t											frame_number() const override													{return producer_->frame_number();}
 	boost::property_tree::wptree 						info() const override															{return producer_->info();}
-	boost::unique_future<std::wstring>					call(const std::vector<std::wstring>& params) override							{return producer_->call(params);}
+	std::future<std::wstring>							call(const std::vector<std::wstring>& params) override							{return producer_->call(params);}
 	variable&											get_variable(const std::wstring& name) override									{return producer_->get_variable(name);}
 	const std::vector<std::wstring>&					get_variables() const override													{return producer_->get_variables();}
 	void												leading_producer(const spl::shared_ptr<frame_producer>& producer) override		{return producer_->leading_producer(producer);}
