@@ -140,7 +140,7 @@ public:
 	 */
 	void set_capacity(size_type capacity)
 	{
-		boost::mutex::scoped_lock lock (capacity_mutex_);
+		boost::unique_lock<boost::mutex> lock (capacity_mutex_);
 
 		if (capacity_ < capacity)
 		{
@@ -164,7 +164,7 @@ public:
 	 */
 	size_type capacity() const
 	{
-		boost::mutex::scoped_lock lock (capacity_mutex_);
+		boost::unique_lock<boost::mutex> lock (capacity_mutex_);
 
 		return capacity_;
 	}

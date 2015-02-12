@@ -21,20 +21,8 @@
 
 #pragma once
 
-#if defined(_MSC_VER)
-#pragma warning (push)
-#pragma warning (disable : 4100)
-#pragma warning (disable : 4127) // conditional expression is constant
-#pragma warning (disable : 4512)
-#pragma warning (disable : 4714) // marked as __forceinline not inlined
-#pragma warning (disable : 4996) // _CRT_SECURE_NO_WARNINGS
-#endif
-
-#include <boost/log/detail/prologue.hpp>
-#include <boost/log/keywords/severity.hpp>
+#include <boost/log/trivial.hpp>
 #include <boost/log/sources/global_logger_storage.hpp>
-#include <boost/log/sources/severity_logger.hpp>
-#include <boost/log/sources/record_ostream.hpp>
 
 #include <string>
 #include <locale>
@@ -68,17 +56,7 @@ inline std::basic_string<T> replace_nonprintable_copy(std::basic_string<T, std::
 
 void add_file_sink(const std::wstring& folder);
 
-enum severity_level
-{
-	trace,
-	debug,
-	info,
-	warning,
-	error,
-	fatal
-};
-
-template< typename CharT, typename TraitsT >
+/*template< typename CharT, typename TraitsT >
 inline std::basic_ostream< CharT, TraitsT >& operator<< (
 	std::basic_ostream< CharT, TraitsT >& strm, severity_level lvl)
 {
@@ -98,19 +76,18 @@ inline std::basic_ostream< CharT, TraitsT >& operator<< (
 		strm << static_cast<int>(lvl);
 
 	return strm;
-}
+}*/
 
-typedef boost::log::sources::wseverity_logger_mt<severity_level> caspar_logger;
+typedef boost::log::sources::wseverity_logger_mt<boost::log::trivial::severity_level> caspar_logger;
 
-BOOST_LOG_DECLARE_GLOBAL_LOGGER_INIT(logger, caspar_logger)
+BOOST_LOG_INLINE_GLOBAL_LOGGER_INIT(logger, caspar_logger)
 {
 	internal::init();
-	return caspar_logger(boost::log::keywords::severity = trace);
+	return caspar_logger(boost::log::trivial::trace);
 }
 
 #define CASPAR_LOG(lvl)\
-	BOOST_LOG_STREAM_WITH_PARAMS(::caspar::log::get_logger(),\
-		(::boost::log::keywords::severity = ::caspar::log::lvl))
+	BOOST_LOG_SEV(::caspar::log::logger::get(), ::boost::log::trivial::lvl)
 
 #define CASPAR_LOG_CALL_STACK()	try{\
 		CASPAR_LOG(info) << L"callstack:\n" << caspar::log::internal::get_call_stack();\
@@ -126,6 +103,3 @@ void set_log_level(const std::wstring& lvl);
 
 }}
 
-#if defined(_MSC_VER)
-#pragma warning (pop)
-#endif

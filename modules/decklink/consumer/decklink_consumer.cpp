@@ -432,7 +432,7 @@ public:
 
 			unsigned long buffered;
 			output_->GetBufferedAudioSampleFrameCount(&buffered);
-			graph_->set_value("buffered-audio", static_cast<double>(buffered)/(format_desc_.audio_cadence[0]*format_desc_.audio_channels*2));
+			graph_->set_value("buffered-audio", static_cast<double>(buffered) / (format_desc_.audio_cadence[0] * format_desc_.audio_channels * 2));
 		}
 		catch(...)
 		{
@@ -469,7 +469,7 @@ public:
 		tick_timer_.restart();
 	}
 
-	boost::unique_future<bool> send(core::const_frame frame)
+	std::future<bool> send(core::const_frame frame)
 	{
 		auto exception = lock(exception_mutex_, [&]
 		{
@@ -500,7 +500,7 @@ public:
 		};
 		
 		if (enqueue_task())
-			return wrap_as_future(true);
+			return make_ready_future(true);
 
 		send_completion_.set_task(enqueue_task);
 
@@ -552,7 +552,7 @@ public:
 		});
 	}
 	
-	boost::unique_future<bool> send(core::const_frame frame) override
+	std::future<bool> send(core::const_frame frame) override
 	{
 		return consumer_->send(frame);
 	}

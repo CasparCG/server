@@ -81,7 +81,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		executor_.invoke([=]
 		{
 			device_.reset(new sf::Context());
-			device_->SetActive(true);		
+			device_->setActive(true);		
 						
 			if (glewInit() != GLEW_OK)
 				CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
@@ -100,8 +100,14 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	{
 		executor_.invoke([=]
 		{
-			BOOST_FOREACH(auto& pool, device_pools_)
+			texture_cache_.clear();
+
+			for (auto& pool : host_pools_)
 				pool.clear();
+
+			for (auto& pool : device_pools_)
+				pool.clear();
+
 			glDeleteFramebuffers(1, &fbo_);
 
 			device_.reset();
@@ -159,7 +165,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
 			buf = executor_.invoke([&]
 			{
-				return spl::make_shared<buffer>(size, usage);
+				return std::make_shared<buffer>(size, usage);
 			}, task_priority::high_priority);
 			
 			if(timer.elapsed() > 0.02)
@@ -201,11 +207,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	}
 
 	// TODO: Since the returned texture is cached it SHOULD NOT be modified.
-	boost::unique_future<spl::shared_ptr<texture>> copy_async(const array<const std::uint8_t>& source, int width, int height, int stride)
+	std::future<std::shared_ptr<texture>> copy_async(const array<const std::uint8_t>& source, int width, int height, int stride)
 	{
 		std::shared_ptr<buffer> buf = copy_to_buf(source);
 				
-		return executor_.begin_invoke([=]() -> spl::shared_ptr<texture>
+		return executor_.begin_invoke([=]() -> std::shared_ptr<texture>
 		{
 			tbb::concurrent_hash_map<buffer*, std::shared_ptr<texture>>::const_accessor a;
 			if(texture_cache_.find(a, buf.get()))
@@ -220,11 +226,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		}, task_priority::high_priority);
 	}
 	
-	boost::unique_future<spl::shared_ptr<texture>> copy_async(const array<std::uint8_t>& source, int width, int height, int stride)
+	std::future<std::shared_ptr<texture>> copy_async(const array<std::uint8_t>& source, int width, int height, int stride)
 	{
 		std::shared_ptr<buffer> buf = copy_to_buf(source);
 
-		return executor_.begin_invoke([=]() -> spl::shared_ptr<texture>
+		return executor_.begin_invoke([=]() -> std::shared_ptr<texture>
 		{
 			auto texture = create_texture(width, height, stride, false);
 			texture->copy_from(*buf);	
@@ -233,7 +239,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		}, task_priority::high_priority);
 	}
 
-	boost::unique_future<array<const std::uint8_t>> copy_async(const spl::shared_ptr<texture>& source)
+	std::future<array<const std::uint8_t>> copy_async(const spl::shared_ptr<texture>& source)
 	{
 		if(!executor_.is_current())
 			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Operation only valid in an OpenGL Context."));
@@ -242,11 +248,12 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		source->copy_to(*buffer);	
 
 		auto self = shared_from_this();
-		return async(launch::deferred, [self, buffer]() mutable -> array<const std::uint8_t>
+		auto cmd = [self, buffer]() mutable -> array<const std::uint8_t>
 		{
 			self->executor_.invoke(std::bind(&buffer::map, std::ref(buffer))); // Defer blocking "map" call until data is needed.
 			return array<const std::uint8_t>(buffer->data(), buffer->size(), true, buffer);
-		});
+		};
+		return std::async(std::launch::deferred, std::move(cmd));
 	}
 };
 
@@ -254,12 +261,12 @@ device::device()
 	: executor_(L"OpenGL Rendering Context")
 	, impl_(new impl(executor_)){}
 device::~device(){}
-spl::shared_ptr<texture>							device::create_texture(int width, int height, int stride){return impl_->create_texture(width, height, stride, true);}
-array<std::uint8_t>									device::create_array(int size){return impl_->create_array(size);}
-boost::unique_future<spl::shared_ptr<texture>>		device::copy_async(const array<const std::uint8_t>& source, int width, int height, int stride){return impl_->copy_async(source, width, height, stride);}
-boost::unique_future<spl::shared_ptr<texture>>		device::copy_async(const array<std::uint8_t>& source, int width, int height, int stride){return impl_->copy_async(source, width, height, stride);}
-boost::unique_future<array<const std::uint8_t>>		device::copy_async(const spl::shared_ptr<texture>& source){return impl_->copy_async(source);}
-std::wstring										device::version() const{return impl_->version();}
+spl::shared_ptr<texture>					device::create_texture(int width, int height, int stride){return impl_->create_texture(width, height, stride, true);}
+array<std::uint8_t>							device::create_array(int size){return impl_->create_array(size);}
+std::future<std::shared_ptr<texture>>		device::copy_async(const array<const std::uint8_t>& source, int width, int height, int stride){return impl_->copy_async(source, width, height, stride);}
+std::future<std::shared_ptr<texture>>		device::copy_async(const array<std::uint8_t>& source, int width, int height, int stride){return impl_->copy_async(source, width, height, stride);}
+std::future<array<const std::uint8_t>>		device::copy_async(const spl::shared_ptr<texture>& source){return impl_->copy_async(source);}
+std::wstring								device::version() const{return impl_->version();}
 
 
 }}}

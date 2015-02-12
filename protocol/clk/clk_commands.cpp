@@ -23,6 +23,7 @@
 
 #include <stdexcept>
 #include <sstream>
+#include <future>
 
 #include <boost/lexical_cast.hpp>
 

@@ -24,9 +24,9 @@
 #include "../monitor/monitor.h"
 
 #include <common/memory.h>
+#include <common/future_fwd.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
-#include <boost/thread/future.hpp>
 
 #include <functional>
 #include <string>
@@ -52,7 +52,7 @@ public:
 	
 	// Methods
 
-	virtual boost::unique_future<bool>		send(class const_frame frame) = 0;
+	virtual std::future<bool>				send(class const_frame frame) = 0;
 	virtual void							initialize(const struct video_format_desc& format_desc, int channel_index) = 0;
 	
 	// monitor::observable

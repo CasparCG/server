@@ -28,6 +28,7 @@
 #include <string>
 #include <set>
 #include <memory>
+#include <functional>
 
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
@@ -66,34 +67,50 @@ class connection : public spl::enable_shared_from_this<connection>
 	{
 		std::weak_ptr<connection> connection_;
 	public:
-		explicit connection_holder(std::weak_ptr<connection> conn) : connection_(conn)
+		explicit connection_holder(std::weak_ptr<connection> conn) : connection_(std::move(conn))
 		{}
 
 		virtual void send(std::basic_string<char>&& data)
 		{
 			auto conn = connection_.lock();
-			conn->send(std::move(data));
+
+			if (conn)
+				conn->send(std::move(data));
 		}
+
 		virtual void disconnect()
 		{
 			auto conn = connection_.lock();
-			conn->disconnect();
+
+			if (conn)
+				conn->disconnect();
 		}
+
 		virtual std::wstring print() const
 		{
 			auto conn = connection_.lock();
-			return conn->print();
+
+			if (conn)
+				return conn->print();
+			else
+				return L"[destroyed-connection]";
 		}
 
 		virtual void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound)
 		{
 			auto conn = connection_.lock();
-			return conn->add_lifecycle_bound_object(key, lifecycle_bound);
+
+			if (conn)
+				return conn->add_lifecycle_bound_object(key, lifecycle_bound);
 		}
 		virtual std::shared_ptr<void> remove_lifecycle_bound_object(const std::wstring& key)
 		{
 			auto conn = connection_.lock();
-			return conn->remove_lifecycle_bound_object(key);
+
+			if (conn)
+				return conn->remove_lifecycle_bound_object(key);
+			else
+				return std::shared_ptr<void>();
 		}
 	};
 
@@ -268,7 +285,7 @@ struct AsyncEventServer::implementation
 	implementation(const protocol_strategy_factory<char>::ptr& protocol, unsigned short port)
 		: acceptor_(service_, tcp::endpoint(tcp::v4(), port))
 		, protocol_factory_(protocol)
-		, thread_(std::bind(&boost::asio::io_service::run, &service_))
+		, thread_([&] { service_.run(); })
 	{
 		start_accept();
 	}

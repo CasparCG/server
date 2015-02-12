@@ -26,7 +26,7 @@
 #include "log.h"
 #include "blocking_bounded_queue_adapter.h"
 #include "blocking_priority_queue.h"
-
+#include "future.h"
 
 #include <tbb/atomic.h>
 #include <tbb/concurrent_priority_queue.h>
@@ -36,6 +36,7 @@
 #include <boost/assign/list_of.hpp>
 
 #include <functional>
+#include <future>
 
 namespace caspar {
 		
@@ -98,7 +99,7 @@ public:
 	}
 
 	template<typename Func>
-	auto begin_invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> boost::unique_future<decltype(func())> // noexcept
+	auto begin_invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> std::future<decltype(func())> // noexcept
 	{	
 		if(!is_running_)
 			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("executor not running.") << source_info(name_));
@@ -185,13 +186,13 @@ private:
 	template<typename Func>
 	auto internal_begin_invoke(
 		Func&& func,
-		task_priority priority = task_priority::normal_priority) -> boost::unique_future<decltype(func())> // noexcept
+		task_priority priority = task_priority::normal_priority) -> std::future<decltype(func())> // noexcept
 	{					
 		typedef typename std::remove_reference<Func>::type	function_type;
 		typedef decltype(func())							result_type;
-		typedef boost::packaged_task<result_type>			task_type;
+		typedef std::packaged_task<result_type()>			task_type;
 								
-		std::unique_ptr<task_type> task;
+		std::shared_ptr<task_type> task;
 
 		// Use pointers since the boost thread library doesn't fully support move semantics.
 
@@ -209,28 +210,15 @@ private:
 			delete raw_func2;
 			throw;
 		}
-		
-		task->set_wait_callback(std::function<void(task_type&)>([=](task_type& my_task) // The std::function wrapper is required in order to add ::result_type to functor class.
-		{
-			try
-			{
-				if(is_current())  // Avoids potential deadlock.
-					my_task();
-			}
-			catch(boost::task_already_started&){}
-		}));
 				
-		auto future = task->get_future();
-
-		auto raw_task = task.release();
-		auto function = [raw_task]
+		auto future = task->get_future().share();
+		auto function = [task]
 		{
-			std::unique_ptr<task_type> task(raw_task);
 			try
 			{
 				(*task)();
 			}
-			catch(boost::task_already_started&){}
+			catch(std::future_error&){}
 		};
 
 		if (!execution_queue_.try_push(priority, function))
@@ -239,7 +227,15 @@ private:
 			execution_queue_.push(priority, function);
 		}
 
-		return std::move(future);		
+		return std::async(std::launch::deferred, [=]() mutable -> result_type
+		{
+			if (!is_ready(future) && is_current()) // Avoids potential deadlock.
+			{
+				function();
+			}
+
+			return future.get();
+		});
 	}
 
 	void run() // noexcept

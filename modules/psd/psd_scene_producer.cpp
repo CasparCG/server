@@ -43,6 +43,8 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/rational.hpp>
 
+#include <future>
+
 namespace caspar { namespace psd {
 
 void init()

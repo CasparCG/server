@@ -33,6 +33,7 @@
 #include <string.h>
 #include <algorithm>
 #include <cctype>
+#include <future>
 
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/algorithm/string/split.hpp>
@@ -53,10 +54,10 @@ private:
 	std::vector<channel_context>				channels_;
 	std::vector<AMCPCommandQueue::ptr_type>		commandQueues_;
 	std::shared_ptr<core::thumbnail_generator>	thumb_gen_;
-	boost::promise<bool>&						shutdown_server_now_;
+	std::promise<bool>&							shutdown_server_now_;
 
 public:
-	impl(const std::vector<spl::shared_ptr<core::video_channel>>& channels, const std::shared_ptr<core::thumbnail_generator>& thumb_gen, boost::promise<bool>& shutdown_server_now) : thumb_gen_(thumb_gen), shutdown_server_now_(shutdown_server_now)
+	impl(const std::vector<spl::shared_ptr<core::video_channel>>& channels, const std::shared_ptr<core::thumbnail_generator>& thumb_gen, std::promise<bool>& shutdown_server_now) : thumb_gen_(thumb_gen), shutdown_server_now_(shutdown_server_now)
 	{
 		commandQueues_.push_back(std::make_shared<AMCPCommandQueue>());
 
@@ -388,7 +389,7 @@ private:
 };
 
 
-AMCPProtocolStrategy::AMCPProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>& channels, const std::shared_ptr<core::thumbnail_generator>& thumb_gen, boost::promise<bool>& shutdown_server_now) : impl_(spl::make_unique<impl>(channels, thumb_gen, shutdown_server_now)) {}
+AMCPProtocolStrategy::AMCPProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>& channels, const std::shared_ptr<core::thumbnail_generator>& thumb_gen, std::promise<bool>& shutdown_server_now) : impl_(spl::make_unique<impl>(channels, thumb_gen, shutdown_server_now)) {}
 AMCPProtocolStrategy::~AMCPProtocolStrategy() {}
 void AMCPProtocolStrategy::Parse(const std::wstring& msg, IO::ClientInfoPtr pClientInfo) { impl_->Parse(msg, pClientInfo); }
 

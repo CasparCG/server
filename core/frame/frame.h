@@ -8,6 +8,7 @@
 #include <common/memory.h>
 #include <common/forward.h>
 #include <common/array.h>
+#include <common/future_fwd.h>
 
 #include <boost/range.hpp>
 #include <boost/any.hpp>
@@ -82,7 +83,7 @@ public:
 	// Constructors
 
 	explicit const_frame(const void* tag = nullptr);
-	explicit const_frame(boost::shared_future<array<const std::uint8_t>> image, 
+	explicit const_frame(std::shared_future<array<const std::uint8_t>> image, 
 						audio_buffer audio_buffer, 
 						const void* tag, 
 						const struct pixel_format_desc& desc);

@@ -23,6 +23,7 @@
 
 #include <vector>
 #include <cstdint>
+#include <algorithm>
 
 namespace caspar { namespace image {
 

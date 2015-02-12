@@ -27,7 +27,7 @@ int _tmain(int argc, _TCHAR* argv[])
 			if(doc.has_timeline())
 			{
 				trace << L"<timeline>" << std::endl;
-					boost::property_tree::xml_writer_settings<wchar_t> w(' ', 3);
+					boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
 					boost::property_tree::write_xml(trace, doc.timeline(), w);
 
 				trace << L"</timeline>" << std::endl;
@@ -46,13 +46,13 @@ int _tmain(int argc, _TCHAR* argv[])
 				if(layer->is_text())
 				{
 					trace << L"			<text value='" << (*it)->text_data().get(L"EngineDict.Editor.Text", L"") << L"' />" << std::endl;
-					boost::property_tree::xml_writer_settings<wchar_t> w(' ', 3);
+					boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
 					boost::property_tree::write_xml(trace, (*it)->text_data(), w);
 				}
 				if(layer->has_timeline())
 				{
 					trace << L"			<timeline>" << std::endl;
-					boost::property_tree::xml_writer_settings<wchar_t> w(' ', 3);
+					boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
 					boost::property_tree::write_xml(trace, (*it)->timeline_data(), w);
 					trace << L"			</timeline>" << std::endl;
 				}

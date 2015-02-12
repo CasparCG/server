@@ -74,7 +74,7 @@ public:
 	// Methods	
 
 	virtual class draw_frame					receive() = 0;
-	virtual boost::unique_future<std::wstring>	call(const std::vector<std::wstring>& params) = 0;
+	virtual std::future<std::wstring>			call(const std::vector<std::wstring>& params) = 0;
 	virtual variable&							get_variable(const std::wstring& name) = 0;
 	virtual const std::vector<std::wstring>&	get_variables() const = 0;
 	
@@ -109,7 +109,7 @@ public:
 
 	// Methods	
 
-	virtual boost::unique_future<std::wstring>	call(const std::vector<std::wstring>& params) override;
+	virtual std::future<std::wstring>			call(const std::vector<std::wstring>& params) override;
 	virtual variable&							get_variable(const std::wstring& name) override;
 	virtual const std::vector<std::wstring>&	get_variables() const override;
 	
