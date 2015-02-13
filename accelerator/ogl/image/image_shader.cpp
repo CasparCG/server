@@ -41,234 +41,241 @@ bool					g_blend_modes = false;
 
 std::string get_blend_color_func()
 {
-	return 
-			
-	get_adjustement_glsl()
-		
-	+
+	return
 
-	get_blend_glsl()
-		
-	+
-			
-	"vec3 get_blend_color(vec3 back, vec3 fore)											\n"
-	"{																					\n"
-	"	switch(blend_mode)																\n"
-	"	{																				\n"
-	"	case  0: return BlendNormal(back, fore);										\n"
-	"	case  1: return BlendLighten(back, fore);										\n"
-	"	case  2: return BlendDarken(back, fore);										\n"
-	"	case  3: return BlendMultiply(back, fore);										\n"
-	"	case  4: return BlendAverage(back, fore);										\n"
-	"	case  5: return BlendAdd(back, fore);											\n"
-	"	case  6: return BlendSubstract(back, fore);										\n"
-	"	case  7: return BlendDifference(back, fore);									\n"
-	"	case  8: return BlendNegation(back, fore);										\n"
-	"	case  9: return BlendExclusion(back, fore);										\n"
-	"	case 10: return BlendScreen(back, fore);										\n"
-	"	case 11: return BlendOverlay(back, fore);										\n"
-	//"	case 12: return BlendSoftLight(back, fore);										\n"
-	"	case 13: return BlendHardLight(back, fore);										\n"
-	"	case 14: return BlendColorDodge(back, fore);									\n"
-	"	case 15: return BlendColorBurn(back, fore);										\n"
-	"	case 16: return BlendLinearDodge(back, fore);									\n"
-	"	case 17: return BlendLinearBurn(back, fore);									\n"
-	"	case 18: return BlendLinearLight(back, fore);									\n"
-	"	case 19: return BlendVividLight(back, fore);									\n"
-	"	case 20: return BlendPinLight(back, fore);										\n"
-	"	case 21: return BlendHardMix(back, fore);										\n"
-	"	case 22: return BlendReflect(back, fore);										\n"
-	"	case 23: return BlendGlow(back, fore);											\n"
-	"	case 24: return BlendPhoenix(back, fore);										\n"
-	"	case 25: return BlendHue(back, fore);											\n"
-	"	case 26: return BlendSaturation(back, fore);									\n"
-	"	case 27: return BlendColor(back, fore);											\n"
-	"	case 28: return BlendLuminosity(back, fore);									\n"
-	"	}																				\n"
-	"	return BlendNormal(back, fore);													\n"
-	"}																					\n"
-	"																					\n"																			  
-	"vec4 blend(vec4 fore)																\n"
-	"{																					\n"
-	"   vec4 back = texture2D(background, gl_TexCoord[1].st).bgra;						\n"
-	"   if(blend_mode != 0)																\n"
-	"		fore.rgb = get_blend_color(back.rgb/(back.a+0.0000001), fore.rgb/(fore.a+0.0000001))*fore.a;\n"
-	"	switch(keyer)																	\n"	
-	"	{																				\n"	
-	"		case 1:  return fore + back; // additive									\n"
-	"		default: return fore + (1.0-fore.a)*back; // linear							\n"
-	"	}																				\n"
-	"}																					\n";			
+		get_adjustement_glsl()
+
+		+
+
+		get_blend_glsl()
+
+		+
+
+		R"shader(
+				vec3 get_blend_color(vec3 back, vec3 fore)
+				{
+					switch(blend_mode)
+					{
+					case  0: return BlendNormal(back, fore);
+					case  1: return BlendLighten(back, fore);
+					case  2: return BlendDarken(back, fore);
+					case  3: return BlendMultiply(back, fore);
+					case  4: return BlendAverage(back, fore);
+					case  5: return BlendAdd(back, fore);
+					case  6: return BlendSubstract(back, fore);
+					case  7: return BlendDifference(back, fore);
+					case  8: return BlendNegation(back, fore);
+					case  9: return BlendExclusion(back, fore);
+					case 10: return BlendScreen(back, fore);
+					case 11: return BlendOverlay(back, fore);
+				//	case 12: return BlendSoftLight(back, fore);
+					case 13: return BlendHardLight(back, fore);
+					case 14: return BlendColorDodge(back, fore);
+					case 15: return BlendColorBurn(back, fore);
+					case 16: return BlendLinearDodge(back, fore);
+					case 17: return BlendLinearBurn(back, fore);
+					case 18: return BlendLinearLight(back, fore);
+					case 19: return BlendVividLight(back, fore);
+					case 20: return BlendPinLight(back, fore);
+					case 21: return BlendHardMix(back, fore);
+					case 22: return BlendReflect(back, fore);
+					case 23: return BlendGlow(back, fore);
+					case 24: return BlendPhoenix(back, fore);
+					case 25: return BlendHue(back, fore);
+					case 26: return BlendSaturation(back, fore);
+					case 27: return BlendColor(back, fore);
+					case 28: return BlendLuminosity(back, fore);
+					}
+					return BlendNormal(back, fore);
+				}
+
+				vec4 blend(vec4 fore)
+				{
+				   vec4 back = texture2D(background, gl_TexCoord[1].st).bgra;
+				   if(blend_mode != 0)
+						fore.rgb = get_blend_color(back.rgb/(back.a+0.0000001), fore.rgb/(fore.a+0.0000001))*fore.a;
+					switch(keyer)
+					{
+						case 1:  return fore + back; // additive
+						default: return fore + (1.0-fore.a)*back; // linear
+					}
+				}
+		)shader";
 }
 		
 std::string get_simple_blend_color_func()
 {
-	return 	
-		
-	get_adjustement_glsl()
-			
-	+
+	return
 
-	"vec4 blend(vec4 fore)																\n"
-	"{																					\n"
-	"	return fore;																	\n"
-	"}																					\n";
+		get_adjustement_glsl()
+
+		+
+
+		R"shader(
+				vec4 blend(vec4 fore)
+				{
+					return fore;
+				}
+		)shader";
 }
 
 std::string get_vertex()
 {
-	return 
-
-	"void main()																		\n"
-	"{																					\n"
-	"	gl_TexCoord[0] = gl_MultiTexCoord0;												\n"
-//	"	gl_TexCoord[1] = gl_MultiTexCoord1;												\n"
-	"	vec4 pos = ftransform();														\n"
-	"	gl_TexCoord[1] = vec4(pos.xy, 0.0, 0.0);										\n"
-	"	pos.x = pos.x*2.0 - 1.0;														\n"
-	"	pos.y = pos.y*2.0 - 1.0;														\n"
-	"	gl_Position    = pos;															\n"
-	"}																					\n";
+	return R"shader(
+			void main()
+			{
+				gl_TexCoord[0] = gl_MultiTexCoord0;
+			//	gl_TexCoord[1] = gl_MultiTexCoord1;
+				vec4 pos = ftransform();
+				gl_TexCoord[1] = vec4(pos.xy, 0.0, 0.0);
+				pos.x = pos.x*2.0 - 1.0;
+				pos.y = pos.y*2.0 - 1.0;
+				gl_Position    = pos;
+			}
+	)shader";
 }
 
 std::string get_fragment(bool blend_modes)
 {
-	return
+	return R"shader(
 
-	"#version 130																		\n"
-	"uniform sampler2D	background;														\n"
-	"uniform sampler2D	plane[4];														\n"
-	"uniform vec2		plane_size[4];													\n"
-	"uniform sampler2D	local_key;														\n"
-	"uniform sampler2D	layer_key;														\n"
-	"																					\n"
-	"uniform bool		is_hd;															\n"
-	"uniform bool		has_local_key;													\n"
-	"uniform bool		has_layer_key;													\n"
-	"uniform int		blend_mode;														\n"
-	"uniform int		keyer;															\n"
-	"uniform int		pixel_format;													\n"
-	"uniform int		deinterlace;													\n"
-	"																					\n"
-	"uniform float		opacity;														\n"
-	"uniform bool		levels;															\n"
-	"uniform float		min_input;														\n"
-	"uniform float		max_input;														\n"
-	"uniform float		gamma;															\n"
-	"uniform float		min_output;														\n"
-	"uniform float		max_output;														\n"
-	"																					\n"
-	"uniform bool		csb;															\n"
-	"uniform float		brt;															\n"
-	"uniform float		sat;															\n"
-	"uniform float		con;															\n"
-	"																					\n"	
+			#version 130
+			uniform sampler2D	background;
+			uniform sampler2D	plane[4];
+			uniform vec2		plane_size[4];
+			uniform sampler2D	local_key;
+			uniform sampler2D	layer_key;
+
+			uniform bool		is_hd;
+			uniform bool		has_local_key;
+			uniform bool		has_layer_key;
+			uniform int			blend_mode;
+			uniform int			keyer;
+			uniform int			pixel_format;
+			uniform int			deinterlace;
+
+			uniform float		opacity;
+			uniform bool		levels;
+			uniform float		min_input;
+			uniform float		max_input;
+			uniform float		gamma;
+			uniform float		min_output;
+			uniform float		max_output;
+
+			uniform bool		csb;
+			uniform float		brt;
+			uniform float		sat;
+			uniform float		con;
+
+	)shader"
 
 	+
-		
+
 	(blend_modes ? get_blend_color_func() : get_simple_blend_color_func())
 
 	+
-	
-	"																					\n"
-	"vec4 ycbcra_to_rgba_sd(float Y, float Cb, float Cr, float A)						\n"
-	"{																					\n"
-	"   vec4 rgba;																		\n"
-	"   rgba.b = (1.164*(Y*255 - 16) + 1.596*(Cr*255 - 128))/255;						\n"
-	"   rgba.g = (1.164*(Y*255 - 16) - 0.813*(Cr*255 - 128) - 0.391*(Cb*255 - 128))/255;\n"
-	"   rgba.r = (1.164*(Y*255 - 16) + 2.018*(Cb*255 - 128))/255;						\n"
-	"   rgba.a = A;																		\n"
-	"	return rgba;																	\n"	
-	"}																					\n"			
-	"																					\n"
-	"vec4 ycbcra_to_rgba_hd(float Y, float Cb, float Cr, float A)						\n"
-	"{																					\n"
-	"   vec4 rgba;																		\n"
-	"   rgba.b = (1.164*(Y*255 - 16) + 1.793*(Cr*255 - 128))/255;						\n"
-	"   rgba.g = (1.164*(Y*255 - 16) - 0.534*(Cr*255 - 128) - 0.213*(Cb*255 - 128))/255;\n"
-	"   rgba.r = (1.164*(Y*255 - 16) + 2.115*(Cb*255 - 128))/255;						\n"
-	"   rgba.a = A;																		\n"
-	"	return rgba;																	\n"
-	"}																					\n"					
-	"																					\n"		
-	"vec4 ycbcra_to_rgba(float y, float cb, float cr, float a)							\n"
-	"{																					\n"
-	"	if(is_hd)																		\n"
-	"		return ycbcra_to_rgba_hd(y, cb, cr, a);										\n"
-	"	else																			\n"
-	"		return ycbcra_to_rgba_sd(y, cb, cr, a);										\n"
-	"}																					\n"
-	"																					\n"
-	"vec4 get_sample(sampler2D sampler, vec2 coords, vec2 size)							\n"
-	"{																					\n"
-	"	switch(deinterlace)																\n"
-	"	{																				\n"
-	"	case 1: // upper																\n"
-	"		return texture2D(sampler, coords);											\n"
-	"	case 2: // lower																\n"
-	"		return texture2D(sampler, coords);											\n"
-	"	default:																		\n"
-	"		return texture2D(sampler, coords);											\n"
-	"	}																				\n"
-	"}																					\n"
-	"																					\n"
-	"vec4 get_rgba_color()																\n"
-	"{																					\n"
-	"	switch(pixel_format)															\n"
-	"	{																				\n"
-	"	case 0:		//gray																\n"
-	"		return vec4(get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).rrr, 1.0);\n"
-	"	case 1:		//bgra,																\n"
-	"		return get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).bgra;			\n"
-	"	case 2:		//rgba,																\n"
-	"		return get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).rgba;			\n"
-	"	case 3:		//argb,																\n"
-	"		return get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).argb;			\n"
-	"	case 4:		//abgr,																\n"
-	"		return get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).gbar;			\n"
-	"	case 5:		//ycbcr,															\n"
-	"		{																			\n"
-	"			float y  = get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).r;	\n"
-	"			float cb = get_sample(plane[1], gl_TexCoord[0].st, plane_size[0]).r;	\n"
-	"			float cr = get_sample(plane[2], gl_TexCoord[0].st, plane_size[0]).r;	\n"
-	"			return ycbcra_to_rgba(y, cb, cr, 1.0);									\n"
-	"		}																			\n"
-	"	case 6:		//ycbcra															\n"
-	"		{																			\n"
-	"			float y  = get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).r;	\n"
-	"			float cb = get_sample(plane[1], gl_TexCoord[0].st, plane_size[0]).r;	\n"
-	"			float cr = get_sample(plane[2], gl_TexCoord[0].st, plane_size[0]).r;	\n"
-	"			float a  = get_sample(plane[3], gl_TexCoord[0].st, plane_size[0]).r;	\n"
-	"			return ycbcra_to_rgba(y, cb, cr, a);									\n"
-	"		}																			\n"
-	"	case 7:		//luma																\n"
-	"		{																			\n"
-	"			vec3 y3 = get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).rrr;	\n"
-	"			return vec4((y3-0.065)/0.859, 1.0);										\n"
-	"		}																			\n"
-	"	case 8:		//bgr,																\n"
-	"		return vec4(get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).bgr, 1.0);\n"
-	"	case 9:		//rgb,																\n"
-	"		return vec4(get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).rgb, 1.0);\n"
-	"	}																				\n"
-	"	return vec4(0.0, 0.0, 0.0, 0.0);												\n"
-	"}																					\n"
-	"																					\n"
-	"void main()																		\n"
-	"{																					\n"
-	"	vec4 color = get_rgba_color();													\n"
-	"   if(levels)																		\n"
-	"		color.rgb = LevelsControl(color.rgb, min_input, gamma, max_input, min_output, max_output); \n"
-	"	if(csb)																			\n"
-	"		color.rgb = ContrastSaturationBrightness(color.rgb, brt, sat, con);			\n"
-	"	if(has_local_key)																\n"
-	"		color *= texture2D(local_key, gl_TexCoord[1].st).r;							\n"
-	"	if(has_layer_key)																\n"
-	"		color *= texture2D(layer_key, gl_TexCoord[1].st).r;							\n"
-	"	color *= opacity;																\n"
-	"	color = blend(color);															\n"
-	"	gl_FragColor = color.bgra;														\n"
-	"}																					\n";
+
+	R"shader(
+
+			vec4 ycbcra_to_rgba_sd(float Y, float Cb, float Cr, float A)
+			{
+				vec4 rgba;
+				rgba.b = (1.164*(Y*255 - 16) + 1.596*(Cr*255 - 128))/255;
+				rgba.g = (1.164*(Y*255 - 16) - 0.813*(Cr*255 - 128) - 0.391*(Cb*255 - 128))/255;
+				rgba.r = (1.164*(Y*255 - 16) + 2.018*(Cb*255 - 128))/255;
+				rgba.a = A;
+				return rgba;
+			}
+
+			vec4 ycbcra_to_rgba_hd(float Y, float Cb, float Cr, float A)
+			{
+				vec4 rgba;
+				rgba.b = (1.164*(Y*255 - 16) + 1.793*(Cr*255 - 128))/255;
+				rgba.g = (1.164*(Y*255 - 16) - 0.534*(Cr*255 - 128) - 0.213*(Cb*255 - 128))/255;
+				rgba.r = (1.164*(Y*255 - 16) + 2.115*(Cb*255 - 128))/255;
+				rgba.a = A;
+				return rgba;
+			}
+
+			vec4 ycbcra_to_rgba(float y, float cb, float cr, float a)
+			{
+				if(is_hd)
+					return ycbcra_to_rgba_hd(y, cb, cr, a);
+				else
+					return ycbcra_to_rgba_sd(y, cb, cr, a);
+			}
+
+			vec4 get_sample(sampler2D sampler, vec2 coords, vec2 size)
+			{
+				switch(deinterlace)
+				{
+				case 1: // upper
+					return texture2D(sampler, coords);
+				case 2: // lower
+					return texture2D(sampler, coords);
+				default:
+					return texture2D(sampler, coords);
+				}
+			}
+
+			vec4 get_rgba_color()
+			{
+				switch(pixel_format)
+				{
+				case 0:		//gray
+					return vec4(get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).rrr, 1.0);
+				case 1:		//bgra,
+					return get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).bgra;
+				case 2:		//rgba,
+					return get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).rgba;
+				case 3:		//argb,
+					return get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).argb;
+				case 4:		//abgr,
+					return get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).gbar;
+				case 5:		//ycbcr,
+					{
+						float y  = get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).r;
+						float cb = get_sample(plane[1], gl_TexCoord[0].st, plane_size[0]).r;
+						float cr = get_sample(plane[2], gl_TexCoord[0].st, plane_size[0]).r;
+						return ycbcra_to_rgba(y, cb, cr, 1.0);
+					}
+				case 6:		//ycbcra
+					{
+						float y  = get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).r;
+						float cb = get_sample(plane[1], gl_TexCoord[0].st, plane_size[0]).r;
+						float cr = get_sample(plane[2], gl_TexCoord[0].st, plane_size[0]).r;
+						float a  = get_sample(plane[3], gl_TexCoord[0].st, plane_size[0]).r;
+						return ycbcra_to_rgba(y, cb, cr, a);
+					}
+				case 7:		//luma
+					{
+						vec3 y3 = get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).rrr;
+						return vec4((y3-0.065)/0.859, 1.0);
+					}
+				case 8:		//bgr,
+					return vec4(get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).bgr, 1.0);
+				case 9:		//rgb,
+					return vec4(get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).rgb, 1.0);
+				}
+				return vec4(0.0, 0.0, 0.0, 0.0);
+			}
+
+			void main()
+			{
+				vec4 color = get_rgba_color();
+			   if(levels)
+					color.rgb = LevelsControl(color.rgb, min_input, gamma, max_input, min_output, max_output);
+				if(csb)
+					color.rgb = ContrastSaturationBrightness(color.rgb, brt, sat, con);
+				if(has_local_key)
+					color *= texture2D(local_key, gl_TexCoord[1].st).r;
+				if(has_layer_key)
+					color *= texture2D(layer_key, gl_TexCoord[1].st).r;
+				color *= opacity;
+				color = blend(color);
+				gl_FragColor = color.bgra;
+			}
+	)shader";
 }
 
 std::shared_ptr<shader> get_image_shader(

@@ -442,7 +442,7 @@ tweener_t get_tweener(std::wstring name)
 	
 	std::vector<double> params;
 	
-	static const boost::wregex expr(L"(?<NAME>\\w*)(:(?<V0>\\d+\\.?\\d?))?(:(?<V1>\\d+\\.?\\d?))?"); // boost::regex has no repeated captures?
+	static const boost::wregex expr(LR"((?<NAME>\w*)(:(?<V0>\d+\.?\d?))?(:(?<V1>\d+\.?\d?))?)"); // boost::regex has no repeated captures?
 	boost::wsmatch what;
 	if(boost::regex_match(name, what, expr))
 	{
