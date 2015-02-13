@@ -48,7 +48,6 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/timer.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/foreach.hpp>
 #include <boost/range.hpp>
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm.hpp>

@@ -42,7 +42,6 @@
 
 #include <gl/glew.h>
 
-#include <boost/foreach.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
 #include <boost/thread/future.hpp>
 
@@ -104,7 +103,7 @@ public:
 
 		if(format_desc.field_mode != core::field_mode::progressive)
 		{ // Remove jitter from still.
-			BOOST_FOREACH(auto& layer, layers)
+			for (auto& layer : layers)
 			{	
 				// Remove first field stills.
 				boost::range::remove_erase_if(layer.items, [&](const item& item)
@@ -113,7 +112,7 @@ public:
 				});
 		
 				// Stills are progressive
-				BOOST_FOREACH(auto& item, layer.items)
+				for (auto& item : layer.items)
 				{
 					if(item.transform.is_still)
 						item.transform.field_mode = core::field_mode::progressive;
@@ -146,7 +145,7 @@ private:
 	{
 		std::shared_ptr<texture> layer_key_texture;
 
-		BOOST_FOREACH(auto& layer, layers)
+		for (auto& layer : layers)
 			draw(target_texture, std::move(layer), layer_key_texture, format_desc, field_mode);
 	}
 
@@ -178,7 +177,7 @@ private:
 		//}
 
 		// Mask out fields
-		BOOST_FOREACH(auto& item, layer.items)				
+		for (auto& item : layer.items)				
 			item.transform.field_mode &= field_mode;
 		
 		// Remove empty items.
@@ -197,7 +196,7 @@ private:
 		{
 			auto layer_texture = ogl_->create_texture(target_texture->width(), target_texture->height(), 4);
 
-			BOOST_FOREACH(auto& item, layer.items)
+			for (auto& item : layer.items)
 				draw(layer_texture, std::move(item), layer_key_texture, local_key_texture, local_mix_texture);	
 		
 			draw(layer_texture, std::move(local_mix_texture), core::blend_mode::normal);							
@@ -205,7 +204,7 @@ private:
 		}
 		else // fast path
 		{
-			BOOST_FOREACH(auto& item, layer.items)		
+			for (auto& item : layer.items)		
 				draw(target_texture, std::move(item), layer_key_texture, local_key_texture, local_mix_texture);		
 					
 			draw(target_texture, std::move(local_mix_texture), core::blend_mode::normal);
@@ -225,7 +224,7 @@ private:
 		draw_params.transform	= std::move(item.transform);
 		draw_params.geometry	= item.geometry;
 
-		BOOST_FOREACH(auto& future_texture, item.textures)
+		for (auto& future_texture : item.textures)
 			draw_params.textures.push_back(spl::make_shared_ptr(future_texture.get()));
 
 		if(item.transform.is_key)
@@ -347,7 +346,7 @@ public:
 	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc) override
 	{
 		std::vector<array<std::uint8_t>> buffers;
-		BOOST_FOREACH(auto& plane, desc.planes)		
+		for (auto& plane : desc.planes)		
 			buffers.push_back(ogl_->create_array(plane.size));		
 
 		return core::mutable_frame(std::move(buffers), core::audio_buffer(), tag, desc);

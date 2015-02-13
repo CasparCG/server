@@ -27,8 +27,6 @@
 
 #include "frame_transform.h"
 
-#include <boost/foreach.hpp>
-
 namespace caspar { namespace core {
 		
 enum tags
@@ -81,7 +79,7 @@ public:
 		}
 		else
 		{
-			BOOST_FOREACH(auto frame, frames_)
+			for (auto& frame : frames_)
 				frame.accept(visitor);
 		}
 		visitor.pop();

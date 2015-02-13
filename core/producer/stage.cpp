@@ -35,7 +35,6 @@
 
 #include <core/frame/frame_transform.h>
 
-#include <boost/foreach.hpp>
 #include <boost/timer.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/algorithm_ext.hpp>
@@ -81,7 +80,7 @@ public:
 			{			
 				std::vector<int> indices;
 
-				BOOST_FOREACH(auto& layer, layers_)	
+				for (auto& layer : layers_)	
 				{
 					frames[layer.first] = draw_frame::empty();	
 					indices.push_back(layer.first);
@@ -147,7 +146,7 @@ public:
 	{
 		return executor_.begin_invoke([=]
 		{
-			BOOST_FOREACH(auto& transform, transforms)
+			for (auto& transform : transforms)
 			{
 				auto src = tweens_[std::get<0>(transform)].fetch();
 				auto dst = std::get<1>(transform)(src);
@@ -244,18 +243,18 @@ public:
 			auto layers			= layers_ | boost::adaptors::map_values;
 			auto other_layers	= other_impl->layers_ | boost::adaptors::map_values;
 
-			BOOST_FOREACH(auto& layer, layers)
+			for (auto& layer : layers)
 				layer.monitor_output().detach_parent();
 			
-			BOOST_FOREACH(auto& layer, other_layers)
+			for (auto& layer : other_layers)
 				layer.monitor_output().detach_parent();
 			
 			std::swap(layers_, other_impl->layers_);
 						
-			BOOST_FOREACH(auto& layer, layers)
+			for (auto& layer : layers)
 				layer.monitor_output().attach_parent(monitor_subject_);
 			
-			BOOST_FOREACH(auto& layer, other_layers)
+			for (auto& layer : other_layers)
 				layer.monitor_output().attach_parent(monitor_subject_);
 		};		
 
@@ -323,7 +322,7 @@ public:
 		return executor_.begin_invoke([this]() -> boost::property_tree::wptree
 		{
 			boost::property_tree::wptree info;
-			BOOST_FOREACH(auto& layer, layers_)			
+			for (auto& layer : layers_)			
 				info.add_child(L"layers.layer", layer.second.info())
 					.add(L"index", layer.first);	
 			return info;
@@ -356,7 +355,7 @@ public:
 
 	boost::optional<interaction_target> collission_detect(double x, double y)
 	{
-		BOOST_FOREACH(auto& layer, layers_ | boost::adaptors::reversed)
+		for (auto& layer : layers_ | boost::adaptors::reversed)
 		{
 			auto transform = tweens_[layer.first].fetch();
 			auto translated = translate(x, y, transform);

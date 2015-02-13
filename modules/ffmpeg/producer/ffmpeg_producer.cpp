@@ -47,7 +47,6 @@
 #include <boost/algorithm/string.hpp>
 #include <common/assert.h>
 #include <boost/timer.hpp>
-#include <boost/foreach.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/range/algorithm/find_if.hpp>
 #include <boost/range/algorithm/find.hpp>

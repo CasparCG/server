@@ -41,7 +41,6 @@
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/foreach.hpp>
 
 #include <algorithm>
 #include <set>
@@ -221,7 +220,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 		std::vector<core::draw_frame> frames;
 		frames.reserve(files.size());
 
-		BOOST_FOREACH(auto& file, files)
+		for (auto& file : files)
 		{
 			auto frame = load_image(frame_factory, file);
 

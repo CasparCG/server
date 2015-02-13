@@ -25,7 +25,6 @@
 
 #include <cmath>
 #include <cstdint>
-#include <boost/foreach.hpp>
 
 namespace caspar { namespace image {
 
