@@ -25,7 +25,7 @@ namespace caspar { namespace core {
 typedef std::vector<int32_t, tbb::cache_aligned_allocator<int32_t>> audio_buffer;
 class frame_geometry;
 
-class mutable_frame /* final */
+class mutable_frame final
 {
 	mutable_frame(const mutable_frame&);
 	mutable_frame& operator=(const mutable_frame&);
@@ -72,7 +72,7 @@ private:
 	spl::unique_ptr<impl> impl_;
 };
 
-class const_frame /* final */
+class const_frame final
 {
 public:	
 

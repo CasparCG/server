@@ -38,7 +38,7 @@ FORWARD1(boost, template<typename T> class optional);
 
 namespace caspar { namespace core {
 	
-class layer /*final*/ : public interaction_sink
+class layer final : public interaction_sink
 {
 	layer(const layer&);
 	layer& operator=(const layer&);
