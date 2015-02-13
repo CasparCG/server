@@ -53,8 +53,6 @@
 #include <tbb/concurrent_queue.h>
 #include <tbb/parallel_for.h>
 
-#include <boost/assign.hpp>
-
 #include <asmlib.h>
 
 #include <algorithm>
@@ -184,7 +182,7 @@ public:
 				boost::rational<int>(format_desc.time_scale, format_desc.duration),
 				sample_aspect_ratio,
 				AV_PIX_FMT_BGRA,
-				boost::assign::list_of(AV_PIX_FMT_BGRA),
+				{ AV_PIX_FMT_BGRA },
 				format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? "" : "YADIF=1:-1");
 		}())
 	{		

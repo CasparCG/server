@@ -173,7 +173,7 @@ cg_proxy create_cg_proxy(const spl::shared_ptr<core::video_channel>& video_chann
 	{
 		if(flash_producer->name() != L"flash")
 		{
-			flash_producer = flash::create_producer(video_channel->frame_factory(), video_channel->video_format_desc(), boost::assign::list_of<std::wstring>());	
+			flash_producer = flash::create_producer(video_channel->frame_factory(), video_channel->video_format_desc(), { });
 			video_channel->stage().load(render_layer, flash_producer); 
 			video_channel->stage().play(render_layer);
 		}
@@ -200,7 +200,7 @@ spl::shared_ptr<core::frame_producer> create_cg_producer_and_autoplay_file(
 	path = boost::filesystem::complete(path);
 	auto filename2 = path.wstring();
 
-	auto flash_producer = flash::create_producer(frame_factory, format_desc, boost::assign::list_of<std::wstring>());	
+	auto flash_producer = flash::create_producer(frame_factory, format_desc, {});
 	auto producer = flash_producer;
 	cg_proxy(producer).add(0, filename2, 1);
 

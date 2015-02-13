@@ -161,7 +161,7 @@ void CIIProtocolStrategy::WriteTemplateData(const std::wstring& templateName, co
 		return;
 	}
 	
-	auto producer = flash::create_producer(this->GetChannel()->frame_factory(), this->GetChannel()->video_format_desc(), boost::assign::list_of(env::template_folder()+TEXT("CG.fth")));
+	auto producer = flash::create_producer(this->GetChannel()->frame_factory(), this->GetChannel()->video_format_desc(), { env::template_folder() + TEXT("CG.fth") });
 
 	std::wstringstream flashParam;
 	flashParam << TEXT("<invoke name=\"Add\" returntype=\"xml\"><arguments><number>1</number><string>") << currentProfile_ << '/' <<  templateName << TEXT("</string><number>0</number><true/><string> </string><string><![CDATA[ ") << xmlData << TEXT(" ]]></string></arguments></invoke>");

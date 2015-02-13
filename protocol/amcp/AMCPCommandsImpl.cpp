@@ -953,7 +953,7 @@ bool ClearCommand::DoExecute()
 
 bool PrintCommand::DoExecute()
 {
-	channel()->output().add(create_consumer(boost::assign::list_of(L"IMAGE")));
+	channel()->output().add(create_consumer({ L"IMAGE" }));
 		
 	SetReplyString(TEXT("202 PRINT OK\r\n"));
 

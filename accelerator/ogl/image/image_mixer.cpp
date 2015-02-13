@@ -49,8 +49,6 @@
 #include <algorithm>
 #include <vector>
 
-using namespace boost::assign;
-
 namespace caspar { namespace accelerator { namespace ogl {
 		
 typedef std::shared_future<std::shared_ptr<texture>> future_texture;
@@ -273,8 +271,8 @@ private:
 
 		draw_params draw_params;
 		draw_params.pix_desc.format		= core::pixel_format::bgra;
-		draw_params.pix_desc.planes		= list_of(core::pixel_format_desc::plane(source_buffer->width(), source_buffer->height(), 4));
-		draw_params.textures			= list_of(source_buffer);
+		draw_params.pix_desc.planes		= { core::pixel_format_desc::plane(source_buffer->width(), source_buffer->height(), 4) };
+		draw_params.textures			= { spl::make_shared_ptr(source_buffer) };
 		draw_params.transform			= core::image_transform();
 		draw_params.blend_mode			= blend_mode;
 		draw_params.background			= target_texture;
