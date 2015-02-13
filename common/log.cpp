@@ -37,7 +37,6 @@
 #include <boost/filesystem/convenience.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/foreach.hpp>
 
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>

@@ -39,7 +39,6 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/timer.hpp>
-#include <boost/foreach.hpp>
 #include <boost/thread/once.hpp>
 
 #include <tbb/concurrent_queue.h>
@@ -143,7 +142,7 @@ public:
 				alDeleteSources(1, &source_);
 			}
 
-			BOOST_FOREACH(auto& buffer, buffers_)
+			for (auto& buffer : buffers_)
 			{
 				if(buffer)
 					alDeleteBuffers(1, &buffer);

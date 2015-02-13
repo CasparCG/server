@@ -351,7 +351,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<fram
 	if(producer == frame_producer::empty())
 	{
 		std::wstring str;
-		BOOST_FOREACH(auto& param, params)
+		for (auto& param : params)
 			str += param + L" ";
 		CASPAR_THROW_EXCEPTION(file_not_found() << msg_info("No match found for supplied commands. Check syntax.") << arg_value_info(u8(str)));
 	}

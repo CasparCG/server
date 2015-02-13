@@ -45,7 +45,6 @@
 #include <boost/timer.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/foreach.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/thread.hpp>
 
@@ -293,7 +292,7 @@ public:
 		if(texture_)
 			glDeleteTextures(1, &texture_);
 
-		BOOST_FOREACH(auto& pbo, pbos_)
+		for (auto& pbo : pbos_)
 		{
 			if(pbo)
 				glDeleteBuffers(1, &pbo);

@@ -23,8 +23,6 @@
 
 #include <gtest/gtest.h>
 
-#include <boost/foreach.hpp>
-
 #include <common/tweener.h>
 
 namespace caspar { namespace core {

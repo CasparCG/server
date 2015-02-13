@@ -26,7 +26,6 @@
 
 #include <tbb/concurrent_queue.h>
 
-#include <boost/foreach.hpp>
 #include <boost/thread/mutex.hpp>
 
 #include "semaphore.h"
@@ -65,7 +64,7 @@ public:
 		, elements_available_(0u)
 		, capacity_(capacity)
 	{
-		BOOST_FOREACH(Prio priority, priorities)
+		for (Prio priority : priorities)
 		{
 			queues_by_priority_.insert(std::make_pair(priority, tbb::concurrent_queue<T>()));
 		}
@@ -165,7 +164,7 @@ public:
 
 		acquire_transaction transaction(elements_available_, true);
 
-		BOOST_FOREACH(auto& queue, queues_by_priority_)
+		for (auto& queue : queues_by_priority_)
 		{
 			if (queue.first < minimum_priority)
 			{
@@ -254,7 +253,7 @@ private:
 
 	void pop_acquired_any_priority(T& element, acquire_transaction& transaction)
 	{
-		BOOST_FOREACH(auto& queue, queues_by_priority_)
+		for (auto& queue : queues_by_priority_)
 		{
 			if (queue.second.try_pop(element))
 			{
