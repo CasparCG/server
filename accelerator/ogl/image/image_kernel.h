@@ -42,7 +42,7 @@ struct keyer_def
 };
 typedef enum_class<keyer_def> keyer;
 
-struct draw_params /* final */
+struct draw_params final
 {
 	core::pixel_format_desc						pix_desc;
 	std::vector<spl::shared_ptr<class texture>>	textures;
@@ -62,7 +62,7 @@ struct draw_params /* final */
 	}
 };
 
-class image_kernel /* final */
+class image_kernel final
 {
 	image_kernel(const image_kernel&);
 	image_kernel& operator=(const image_kernel&);

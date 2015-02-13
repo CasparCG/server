@@ -50,7 +50,7 @@ struct pixel_format_def
 };
 typedef enum_class<pixel_format_def> pixel_format;
 
-struct pixel_format_desc /* final */
+struct pixel_format_desc final
 {
 	struct plane
 	{

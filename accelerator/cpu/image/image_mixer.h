@@ -22,7 +22,7 @@ namespace caspar { namespace accelerator { namespace cpu {
 	
 typedef std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> buffer;
 
-class image_mixer /* final */ : public core::image_mixer
+class image_mixer final : public core::image_mixer
 {
 public:
 
