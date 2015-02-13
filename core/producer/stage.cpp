@@ -88,7 +88,6 @@ public:
 
 				aggregator_.translate_and_send();
 
-				// WORKAROUND: Compiler doesn't seem to like lambda.
 				tbb::parallel_for_each(indices.begin(), indices.end(), [&](int index)
 				{
 					draw(index, format_desc, frames);
