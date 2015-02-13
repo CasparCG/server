@@ -304,7 +304,7 @@ struct AsyncEventServer::implementation
 		service_.post([=]
 		{
 			auto connections = *connection_set_;
-			BOOST_FOREACH(auto& connection, connections)
+			for (auto& connection : connections)
 				connection->stop();				
 		});
 
@@ -327,7 +327,7 @@ struct AsyncEventServer::implementation
 			auto conn = connection::create(socket, protocol_factory_, connection_set_);
 			connection_set_->insert(conn);
 
-			BOOST_FOREACH(auto& lifecycle_factory, lifecycle_factories_)
+			for (auto& lifecycle_factory : lifecycle_factories_)
 			{
 				auto lifecycle_bound = lifecycle_factory(conn->ipv4_address());
 				conn->add_lifecycle_bound_object(lifecycle_bound.first, lifecycle_bound.second);

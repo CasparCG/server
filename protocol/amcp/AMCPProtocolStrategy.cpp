@@ -62,7 +62,7 @@ public:
 		commandQueues_.push_back(std::make_shared<AMCPCommandQueue>());
 
 		int index = 0;
-		BOOST_FOREACH(const spl::shared_ptr<core::video_channel>& channel,  channels)
+		for (const auto& channel : channels)
 		{
 			std::wstring lifecycle_key = L"lock" + boost::lexical_cast<std::wstring>(index);
 			channels_.push_back(channel_context(channel, lifecycle_key));

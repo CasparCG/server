@@ -68,7 +68,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/thread.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/foreach.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
@@ -158,7 +157,7 @@ struct server::impl : boost::noncopyable
 	void setup_channels(const boost::property_tree::wptree& pt)
 	{   
 		using boost::property_tree::wptree;
-		BOOST_FOREACH(auto& xml_channel, pt.get_child(L"configuration.channels"))
+		for (auto& xml_channel : pt.get_child(L"configuration.channels"))
 		{		
 			auto format_desc = video_format_desc(xml_channel.second.get(L"video-mode", L"PAL"));		
 			if(format_desc.format == video_format::invalid)
@@ -166,7 +165,7 @@ struct server::impl : boost::noncopyable
 			
 			auto channel = spl::make_shared<video_channel>(static_cast<int>(channels_.size()+1), format_desc, accelerator_.create_image_mixer());
 			
-			BOOST_FOREACH(auto& xml_consumer, xml_channel.second.get_child(L"consumers"))
+			for (auto& xml_consumer : xml_channel.second.get_child(L"consumers"))
 			{
 				try
 				{
@@ -213,7 +212,7 @@ struct server::impl : boost::noncopyable
 
 		if (predefined_clients)
 		{
-			BOOST_FOREACH(auto& predefined_client, *predefined_clients)
+			for (auto& predefined_client : *predefined_clients)
 			{
 				const auto address =
 						predefined_client.second.get<std::wstring>(L"address");
@@ -268,7 +267,7 @@ struct server::impl : boost::noncopyable
 	void setup_controllers(const boost::property_tree::wptree& pt)
 	{		
 		using boost::property_tree::wptree;
-		BOOST_FOREACH(auto& xml_controller, pt.get_child(L"configuration.controllers"))
+		for (auto& xml_controller : pt.get_child(L"configuration.controllers"))
 		{
 			try
 			{

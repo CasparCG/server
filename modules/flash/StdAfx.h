@@ -45,7 +45,6 @@
 #include <tbb/concurrent_queue.h>
 
 #include <boost/filesystem.hpp>
-#include <boost/foreach.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/format.hpp>
 #include <boost/algorithm/string.hpp>
