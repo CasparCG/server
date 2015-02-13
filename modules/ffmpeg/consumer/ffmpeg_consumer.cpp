@@ -324,7 +324,7 @@ public:
 
 		if(options.size() > 0)
 		{
-			BOOST_FOREACH(auto& option, options)
+			for (auto& option : options)
 				CASPAR_LOG(warning) << L"Invalid option: -" << u16(option.name) << L" " << u16(option.value);
 		}
 

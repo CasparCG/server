@@ -236,7 +236,7 @@ public:
 		return std::move(executor_.begin_invoke([&]() -> boost::property_tree::wptree
 		{			
 			boost::property_tree::wptree info;
-			BOOST_FOREACH(auto& port, ports_)
+			for (auto& port : ports_)
 			{
 				info.add_child(L"consumers.consumer", port.second.info())
 					.add(L"index", port.first); 

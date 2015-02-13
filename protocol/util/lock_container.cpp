@@ -66,7 +66,7 @@ namespace caspar { namespace IO {
 			}
 
 			//now we can take our time to inform the clients that their locks have been released.
-			BOOST_FOREACH(std::weak_ptr<client_connection<wchar_t>> conn, clients)
+			for (auto& conn : clients)
 			{
 				auto ptr = conn.lock();
 				if(ptr)

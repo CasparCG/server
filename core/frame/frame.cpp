@@ -51,7 +51,7 @@ struct mutable_frame::impl : boost::noncopyable
 		, tag_(tag)
 		, geometry_(frame_geometry::get_default())
 	{
-		BOOST_FOREACH(auto& buffer, buffers_)
+		for (auto& buffer : buffers_)
 			if(!buffer.data())
 				CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("mutable_frame: null argument"));
 	}

@@ -184,12 +184,12 @@ struct scene_producer::impl
 
 	draw_frame render_frame()
 	{
-		BOOST_FOREACH(auto& timeline, timelines_)
+		for (auto& timeline : timelines_)
 			timeline.second.on_frame(frame_number_.get());
 
 		std::vector<draw_frame> frames;
 
-		BOOST_FOREACH(auto& layer, layers_)
+		for (auto& layer : layers_)
 		{
 			if (layer.hidden.get())
 				continue;
@@ -223,7 +223,7 @@ struct scene_producer::impl
 
 	boost::optional<interaction_target> collission_detect(double x, double y) const
 	{
-		BOOST_FOREACH(auto& layer, layers_ | boost::adaptors::reversed)
+		for (auto& layer : layers_ | boost::adaptors::reversed)
 		{
 			if (layer.hidden.get())
 				continue;

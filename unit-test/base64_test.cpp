@@ -26,7 +26,6 @@
 #include <set>
 
 #include <boost/assign.hpp>
-#include <boost/foreach.hpp>
 
 #include <common/base64.h>
 #include <common/except.h>

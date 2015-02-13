@@ -47,7 +47,6 @@
 #include <tbb/concurrent_queue.h>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/foreach.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/timer.hpp>
 

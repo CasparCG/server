@@ -107,7 +107,7 @@ template_host get_template_host(const core::video_format_desc& desc)
 	try
 	{
 		std::vector<template_host> template_hosts;
-		BOOST_FOREACH(auto& xml_mapping, env::properties().get_child(L"configuration.template-hosts"))
+		for (auto& xml_mapping : env::properties().get_child(L"configuration.template-hosts"))
 		{
 			try
 			{
