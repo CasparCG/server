@@ -863,13 +863,13 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 
 	auto str = std::accumulate(params2.begin(), params2.end(), std::wstring(), [](const std::wstring& lhs, const std::wstring& rhs) {return lhs + L" " + rhs;});
 	
-	boost::wregex path_exp(L"\\s*FILE(\\s(?<PATH>.+\\.[^\\s]+))?.*", boost::regex::icase);
+	boost::wregex path_exp(LR"(\s*FILE(\s(?<PATH>.+\.[^\s]+))?.*)", boost::regex::icase);
 
 	boost::wsmatch path;
 	if(!boost::regex_match(str, path, path_exp))
 		return core::frame_consumer::empty();
 	
-	boost::wregex opt_exp(L"-((?<NAME>[^\\s]+)\\s+(?<VALUE>[^\\s]+))");	
+	boost::wregex opt_exp(LR"(-((?<NAME>[^\s]+)\s+(?<VALUE>[^\s]+)))");	
 	
 	std::vector<option> options;
 	for(boost::wsregex_iterator it(str.begin(), str.end(), opt_exp); it != boost::wsregex_iterator(); ++it)
