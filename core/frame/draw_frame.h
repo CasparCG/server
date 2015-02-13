@@ -33,7 +33,7 @@ namespace caspar { namespace core {
 	
 struct frame_transform;
 
-class draw_frame /* final */
+class draw_frame final
 {
 public:		
 	// Static Members

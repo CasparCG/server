@@ -47,7 +47,7 @@
 
 namespace caspar { namespace core {
 
-struct video_channel::impl /* final */
+struct video_channel::impl final
 {
 	spl::shared_ptr<monitor::subject>				monitor_subject_;
 

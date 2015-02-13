@@ -13,7 +13,7 @@
 namespace caspar {
 	
 template<typename T>
-class array /* final */
+class array final
 {
 	array(const array<std::uint8_t>&);
 	array& operator=(const array<std::uint8_t>&);
@@ -79,7 +79,7 @@ private:
 };
 
 template<typename T>
-class array<const T> /* final */
+class array<const T> final
 {
 public:
 
