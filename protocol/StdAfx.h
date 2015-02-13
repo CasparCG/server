@@ -48,9 +48,9 @@
 #include <deque>
 #include <queue>
 #include <string>
+#include <set>
 #include <math.h>
 
-#include <boost/assign.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/algorithm.hpp>

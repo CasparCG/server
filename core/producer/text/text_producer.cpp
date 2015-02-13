@@ -241,12 +241,12 @@ public:
 
 	const std::vector<std::wstring>& get_variables() const
 	{
-		static std::vector<std::wstring> vars =
-				boost::assign::list_of<std::wstring>
-						(L"text")
-						(L"tracking")
-						(L"current_bearing_y")
-						(L"current_protrude_under_y");
+		static const std::vector<std::wstring> vars = {
+			L"text",
+			L"tracking",
+			L"current_bearing_y",
+			L"current_protrude_under_y"
+		};
 
 		return vars;
 	}

@@ -23,14 +23,12 @@
 
 #include <gtest/gtest.h>
 
-#include <boost/assign.hpp>
-
 #include <common/param.h>
 
 namespace {
-	static auto params = boost::assign::list_of<std::wstring>
-			(L"param1")(L"1")
-			(L"param2")(L"string value");
+	static auto params = {
+		L"param1", L"1",
+		L"param2", L"string value" };
 }
 
 namespace caspar {

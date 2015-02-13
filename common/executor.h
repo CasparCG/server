@@ -33,7 +33,6 @@
 
 #include <boost/thread.hpp>
 #include <boost/optional.hpp>
-#include <boost/assign/list_of.hpp>
 
 #include <functional>
 #include <future>
@@ -69,13 +68,14 @@ class executor /* final */
 public:		
 	executor(const std::wstring& name)
 		: name_(name)
-		, execution_queue_(512, boost::assign::list_of
-				(task_priority::lowest_priority)
-				(task_priority::lower_priority)
-				(task_priority::low_priority)
-				(task_priority::normal_priority)
-				(task_priority::high_priority)
-				(task_priority::higher_priority))
+		, execution_queue_(512, std::vector<task_priority> {
+			task_priority::lowest_priority,
+			task_priority::lower_priority,
+			task_priority::low_priority,
+			task_priority::normal_priority,
+			task_priority::high_priority,
+			task_priority::higher_priority 
+		})
 	{
 		is_running_ = true;
 		thread_ = boost::thread([this]{run();});
