@@ -43,7 +43,6 @@
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
 #include <tbb/cache_aligned_allocator.h>
-#include <boost/assign.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/timer.hpp>
 #include <boost/filesystem.hpp>
