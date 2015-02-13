@@ -493,8 +493,35 @@ std::wstring print_mode(int width, int height, double fps, bool interlaced)
 
 bool is_valid_file(const std::wstring& filename)
 {				
-	static const std::vector<std::wstring> invalid_exts = boost::assign::list_of(L".png")(L".tga")(L".bmp")(L".jpg")(L".jpeg")(L".gif")(L".tiff")(L".tif")(L".jp2")(L".jpx")(L".j2k")(L".j2c")(L".swf")(L".ct");
-	static std::vector<std::wstring>	   valid_exts   = boost::assign::list_of(L".m2t")(L".mov")(L".mp4")(L".dv")(L".flv")(L".mpg")(L".wav")(L".mp3")(L".dnxhd")(L".h264")(L".prores");
+	static const auto invalid_exts = {
+		L".png",
+		L".tga",
+		L".bmp",
+		L".jpg",
+		L".jpeg",
+		L".gif",
+		L".tiff",
+		L".tif",
+		L".jp2",
+		L".jpx",
+		L".j2k",
+		L".j2c",
+		L".swf",
+		L".ct"
+	};
+	static const auto valid_exts = {
+		L".m2t",
+		L".mov",
+		L".mp4",
+		L".dv",
+		L".flv",
+		L".mpg",
+		L".wav",
+		L".mp3",
+		L".dnxhd",
+		L".h264",
+		L".prores"
+	};
 
 	auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
 		
