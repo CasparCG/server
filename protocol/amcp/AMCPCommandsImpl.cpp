@@ -327,7 +327,7 @@ bool ChannelGridCommand::DoExecute()
 
 	self->output().add(screen);
 
-	BOOST_FOREACH(auto channel, channels())
+	for (auto& channel : channels())
 	{
 		if(channel.channel != self)
 		{
@@ -665,7 +665,7 @@ bool AddCommand::DoExecute()
 	try
 	{
 		//create_consumer still expects all parameters to be uppercase
-		BOOST_FOREACH(std::wstring& str, parameters())
+		for (auto& str : parameters())
 		{
 			boost::to_upper(str);
 		}
@@ -700,7 +700,7 @@ bool RemoveCommand::DoExecute()
 		if(index == std::numeric_limits<int>::min())
 		{
 			//create_consumer still expects all parameters to be uppercase
-			BOOST_FOREACH(std::wstring& str, parameters())
+			for (auto& str : parameters())
 			{
 				boost::to_upper(str);
 			}
@@ -1520,10 +1520,10 @@ bool InfoCommand::DoExecute()
 			info.add(L"system.windows.service-pack",	caspar::win_sp_version());
 			info.add(L"system.cpu",						caspar::cpu_info());
 	
-			BOOST_FOREACH(auto device, caspar::decklink::device_list())
+			for (auto& device : caspar::decklink::device_list())
 				info.add(L"system.decklink.device", device);
 
-			BOOST_FOREACH(auto device, caspar::bluefish::device_list())
+			for (auto& device : caspar::bluefish::device_list())
 				info.add(L"system.bluefish.device", device);
 				
 			info.add(L"system.flash",					caspar::flash::version());
@@ -1543,7 +1543,7 @@ bool InfoCommand::DoExecute()
 			boost::property_tree::wptree info;
 
 			int index = 0;
-			BOOST_FOREACH(auto channel, channels())
+			for (auto& channel : channels())
 				info.add_child(L"channels.channel", channel.channel->info())
 					.add(L"index", ++index);
 			

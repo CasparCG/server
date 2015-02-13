@@ -52,7 +52,6 @@
 #include <math.h>
 
 #include <boost/filesystem.hpp>
-#include <boost/foreach.hpp>
 #include <boost/range/algorithm.hpp>
 
 #include "../common/utf.h"

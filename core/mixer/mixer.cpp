@@ -41,7 +41,6 @@
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
-#include <boost/foreach.hpp>
 #include <boost/timer.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/algorithm_ext.hpp>
@@ -82,7 +81,7 @@ public:
 		{		
 			try
 			{	
-				BOOST_FOREACH(auto& frame, frames)
+				for (auto& frame : frames)
 				{
 					auto blend_it = blend_modes_.find(frame.first);
 					image_mixer_->begin_layer(blend_it != blend_modes_.end() ? blend_it->second : blend_mode::normal);

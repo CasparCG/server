@@ -85,7 +85,7 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 
 	auto scene = spl::make_shared<scene_producer>(width, height);
 
-	BOOST_FOREACH(auto elem, root.get_child(L"scene.variables"))
+	for (auto elem : root.get_child(L"scene.variables"))
 	{
 		auto type = elem.second.get<std::wstring>(L"<xmlattr>.type");
 		auto id = elem.second.get<std::wstring>(L"<xmlattr>.id");
@@ -103,7 +103,7 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 			scene->create_variable<bool>(id, is_public, expr);
 	}
 
-	BOOST_FOREACH(auto elem, root.get_child(L"scene.layers"))
+	for (auto& elem : root.get_child(L"scene.layers"))
 	{
 		auto id = elem.second.get<std::wstring>(L"<xmlattr>.id");
 		auto producer = create_producer(frame_factory, format_desc, elem.second.get<std::wstring>(L"producer"));
@@ -119,7 +119,7 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 		scene->create_variable<double>(variable_prefix + L"width", false) = layer.producer.get()->pixel_constraints().width;
 		scene->create_variable<double>(variable_prefix + L"height", false) = layer.producer.get()->pixel_constraints().height;
 
-		BOOST_FOREACH(auto& var_name, producer->get_variables())
+		for (auto& var_name : producer->get_variables())
 		{
 			auto& var = producer->get_variable(var_name);
 			auto expr = elem.second.get<std::wstring>(L"parameters." + var_name, L"");
@@ -133,11 +133,11 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 		}
 	}
 
-	BOOST_FOREACH(auto& elem, root.get_child(L"scene.timelines"))
+	for (auto& elem : root.get_child(L"scene.timelines"))
 	{
 		auto& variable = scene->get_variable(elem.second.get<std::wstring>(L"<xmlattr>.variable"));
 
-		BOOST_FOREACH(auto& k, elem.second)
+		for (auto& k : elem.second)
 		{
 			if (k.first == L"<xmlattr>")
 				continue;
@@ -157,7 +157,7 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 		return scene->get_variable(name); 
 	};
 
-	BOOST_FOREACH(auto& var_name, scene->get_variables())
+	for (auto& var_name : scene->get_variables())
 	{
 		deduce_expression(scene->get_variable(var_name), repo);
 	}

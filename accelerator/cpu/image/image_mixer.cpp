@@ -46,7 +46,6 @@
 #include <tbb/parallel_for_each.h>
 #include <tbb/concurrent_queue.h>
 
-#include <boost/foreach.hpp>
 #include <boost/range.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
 #include <boost/thread/future.hpp>
@@ -166,7 +165,7 @@ public:
 		});
 		
 		// Stills are progressive
-		BOOST_FOREACH(auto item, items)
+		for (auto& item : items)
 		{
 			if(item.transform.is_still)
 				item.transform.field_mode = core::field_mode::progressive;
@@ -192,7 +191,7 @@ private:
 
 	void draw(std::vector<item> items, uint8_t* dest, std::size_t width, std::size_t height, core::field_mode field_mode)
 	{		
-		BOOST_FOREACH(auto& item, items)
+		for (auto& item : items)
 			item.transform.field_mode &= field_mode;
 		
 		// Remove empty items.
@@ -235,7 +234,7 @@ private:
 	{
 		std::set<std::array<const uint8_t*, 4>> buffers;
 
-		BOOST_FOREACH(auto& item, source_items)
+		for (auto& item : source_items)
 			buffers.insert(item.data);
 		
 		auto dest_items = source_items;
@@ -362,7 +361,7 @@ public:
 	virtual core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc)
 	{
 		std::vector<array<std::uint8_t>> buffers;
-		BOOST_FOREACH(auto& plane, desc.planes)
+		for (auto& plane : desc.planes)
 		{
 			auto buf = spl::make_shared<buffer>(plane.size);
 			buffers.push_back(array<std::uint8_t>(buf->data(), plane.size, true, buf));

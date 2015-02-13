@@ -133,7 +133,7 @@ public:
 		std::map<const void*, audio_stream>	next_audio_streams;
 		std::vector<const void*> used_tags;
 
-		BOOST_FOREACH(auto& item, items_)
+		for (auto& item : items_)
 		{			
 			audio_buffer_ps next_audio;
 
@@ -195,7 +195,7 @@ public:
 		}
 				
 		std::vector<float> result_ps(audio_size(audio_cadence_.front()), 0.0f);
-		BOOST_FOREACH(auto& stream, audio_streams_ | boost::adaptors::map_values)
+		for (auto& stream : audio_streams_ | boost::adaptors::map_values)
 		{
 			if(stream.audio_data.size() < result_ps.size())
 				stream.audio_data.resize(result_ps.size(), 0.0f);

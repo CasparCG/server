@@ -30,7 +30,6 @@
 #include <type_traits>
 
 #include <boost/lexical_cast.hpp>
-#include <boost/foreach.hpp>
 
 namespace caspar { namespace core {
 
@@ -62,7 +61,7 @@ struct impl_base : std::enable_shared_from_this<impl_base>
 
 	bool depends_on(const std::shared_ptr<impl_base>& other) const
 	{
-		BOOST_FOREACH(auto& dependency, dependencies_)
+		for (auto& dependency : dependencies_)
 		{
 			if (dependency == other)
 				return true;
