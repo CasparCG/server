@@ -38,14 +38,13 @@
 #include <common/array.h>
 #include <common/base64.h>
 
-#include <boost/assign.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/foreach.hpp>
 
 #include <algorithm>
-
-using namespace boost::assign;
+#include <set>
 
 namespace caspar { namespace image {
 
@@ -174,7 +173,20 @@ public:
 
 spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
 {
-	static const std::vector<std::wstring> extensions = list_of(L".png")(L".tga")(L".bmp")(L".jpg")(L".jpeg")(L".gif")(L".tiff")(L".tif")(L".jp2")(L".jpx")(L".j2k")(L".j2c");
+	static const auto extensions = {
+		L".png",
+		L".tga",
+		L".bmp",
+		L".jpg",
+		L".jpeg",
+		L".gif",
+		L".tiff",
+		L".tif",
+		L".jp2",
+		L".jpx",
+		L".j2k",
+		L".j2c"
+	};
 
 	if (boost::iequals(params[0], L"[IMG_SEQUENCE]"))
 	{

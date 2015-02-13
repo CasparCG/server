@@ -46,7 +46,6 @@
 
 #include <boost/algorithm/string.hpp>
 #include <common/assert.h>
-#include <boost/assign.hpp>
 #include <boost/timer.hpp>
 #include <boost/foreach.hpp>
 #include <boost/filesystem.hpp>

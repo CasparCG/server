@@ -33,6 +33,8 @@
 
 #include <accelerator/cpu/image/image_mixer.h>
 
+#include <boost/assign.hpp>
+
 namespace caspar { namespace core {
 
 spl::shared_ptr<accelerator::ogl::device> ogl_device()

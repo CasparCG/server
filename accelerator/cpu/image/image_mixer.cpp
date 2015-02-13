@@ -46,7 +46,6 @@
 #include <tbb/parallel_for_each.h>
 #include <tbb/concurrent_queue.h>
 
-#include <boost/assign.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
@@ -55,6 +54,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <vector>
+#include <set>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -291,7 +291,7 @@ private:
 					dest_items[n].data.assign(0);
 					dest_items[n].data[0]			= dest_frame->data();
 					dest_items[n].pix_desc			= core::pixel_format_desc(core::pixel_format::bgra);
-					dest_items[n].pix_desc.planes	= boost::assign::list_of(core::pixel_format_desc::plane(width, height, 4));
+					dest_items[n].pix_desc.planes	= { core::pixel_format_desc::plane(width, height, 4) };
 					dest_items[n].transform			= source_items[n].transform;
 				}
 			}
