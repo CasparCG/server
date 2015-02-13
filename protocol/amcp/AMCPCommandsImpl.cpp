@@ -165,11 +165,9 @@ std::wstring read_latin1_file(const boost::filesystem::wpath& file)
 	std::wstring widened_result;
 
 	// The first 255 codepoints in unicode is the same as in latin1
-	auto from_signed_to_signed = std::function<unsigned char(char)>(
-		[] (char c) { return static_cast<unsigned char>(c); }
-	);
 	boost::copy(
-		result | boost::adaptors::transformed(from_signed_to_signed),
+		result | boost::adaptors::transformed(
+				[](char c) { return static_cast<unsigned char>(c); }),
 		std::back_inserter(widened_result));
 
 	return widened_result;

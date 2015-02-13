@@ -38,7 +38,7 @@ FORWARD2(caspar, diagnostics, class graph);
 
 namespace caspar { namespace core {
 	
-class mixer /* final */
+class mixer final
 {
 	mixer(const mixer&);
 	mixer& operator=(const mixer&);

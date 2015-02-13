@@ -138,8 +138,8 @@ public:
 			return std::make_pair(0, 0);
 		
 		auto buffer_depths = ports_ | 
-							 boost::adaptors::map_values | // std::function is MSVC workaround
-							 boost::adaptors::transformed(std::function<int(const port&)>([](const port& p){return p.buffer_depth();})); 
+							 boost::adaptors::map_values |
+							 boost::adaptors::transformed([](const port& p){return p.buffer_depth();}); 
 		
 
 		return std::make_pair(*boost::range::min_element(buffer_depths), *boost::range::max_element(buffer_depths));
