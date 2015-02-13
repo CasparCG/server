@@ -44,7 +44,6 @@
 
 #include "except.h"
 
-#include <boost/assign/list_of.hpp>
 #include <boost/regex.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/range/adaptor/map.hpp>
@@ -385,50 +384,51 @@ typedef std::function<double(double, double, double, double, const std::vector<d
 
 const std::unordered_map<std::wstring, tween_t>& get_tweens()
 {
-	static const std::unordered_map<std::wstring, tween_t> tweens = boost::assign::map_list_of	
-		(L"",					ease_none		   )	
-		(L"linear",				ease_none		   )	
-		(L"easenone",			ease_none		   )
-		(L"easeinquad",			ease_in_quad	   )
-		(L"easeoutquad",		ease_out_quad	   )
-		(L"easeinoutquad",		ease_in_out_quad   )
-		(L"easeoutinquad",		ease_out_in_quad   )
-		(L"easeincubic",		ease_in_cubic	   )
-		(L"easeoutcubic",		ease_out_cubic	   )
-		(L"easeinoutcubic",		ease_in_out_cubic  )
-		(L"easeoutincubic",		ease_out_in_cubic  )
-		(L"easeinquart", 		ease_in_quart 	   )
-		(L"easeoutquart",		ease_out_quart	   )
-		(L"easeinoutquart",		ease_in_out_quart  )
-		(L"easeoutinquart",		ease_out_in_quart  )
-		(L"easeinquint",		ease_in_quint	   )
-		(L"easeoutquint",		ease_out_quint	   )
-		(L"easeinoutquint",		ease_in_out_quint  )
-		(L"easeoutinquint",		ease_out_in_quint  )
-		(L"easeinsine",			ease_in_sine	   )
-		(L"easeoutsine",		ease_out_sine	   )
-		(L"easeinoutsine",		ease_in_out_sine   )
-		(L"easeoutinsine",		ease_out_in_sine   )
-		(L"easeinexpo",			ease_in_expo	   )
-		(L"easeoutexpo",		ease_out_expo	   )
-		(L"easeinoutexpo",		ease_in_out_expo   )
-		(L"easeoutinexpo",		ease_out_in_expo   )
-		(L"easeincirc",			ease_in_circ	   )
-		(L"easeoutcirc",		ease_out_circ	   )
-		(L"easeinoutcirc",		ease_in_out_circ   )
-		(L"easeoutincirc",		ease_out_in_circ   )
-		(L"easeinelastic",		ease_in_elastic	   )
-		(L"easeoutelastic",		ease_out_elastic   )
-		(L"easeinoutelastic",	ease_in_out_elastic)
-		(L"easeoutinelastic",	ease_out_in_elastic)
-		(L"easeinback",			ease_in_back	   )
-		(L"easeoutback",		ease_out_back	   )
-		(L"easeinoutback",		ease_in_out_back   )
-		(L"easeoutintback",		ease_out_int_back  )
-		(L"easeoutbounce",		ease_out_bounce	   )
-		(L"easeinbounce",		ease_in_bounce	   )
-		(L"easeinoutbounce",	ease_in_out_bounce )
-		(L"easeoutinbounce",	ease_out_in_bounce );
+	static const std::unordered_map<std::wstring, tween_t> tweens = {
+		{L"",                 ease_none },
+		{L"linear",           ease_none },
+		{L"easenone",         ease_none },
+		{L"easeinquad",       ease_in_quad },
+		{L"easeoutquad",      ease_out_quad },
+		{L"easeinoutquad",    ease_in_out_quad },
+		{L"easeoutinquad",    ease_out_in_quad },
+		{L"easeincubic",      ease_in_cubic },
+		{L"easeoutcubic",     ease_out_cubic },
+		{L"easeinoutcubic",   ease_in_out_cubic },
+		{L"easeoutincubic",   ease_out_in_cubic },
+		{L"easeinquart",      ease_in_quart },
+		{L"easeoutquart",     ease_out_quart },
+		{L"easeinoutquart",   ease_in_out_quart },
+		{L"easeoutinquart",   ease_out_in_quart },
+		{L"easeinquint",      ease_in_quint },
+		{L"easeoutquint",     ease_out_quint },
+		{L"easeinoutquint",   ease_in_out_quint },
+		{L"easeoutinquint",   ease_out_in_quint },
+		{L"easeinsine",       ease_in_sine },
+		{L"easeoutsine",      ease_out_sine },
+		{L"easeinoutsine",    ease_in_out_sine },
+		{L"easeoutinsine",    ease_out_in_sine },
+		{L"easeinexpo",       ease_in_expo },
+		{L"easeoutexpo",      ease_out_expo },
+		{L"easeinoutexpo",    ease_in_out_expo },
+		{L"easeoutinexpo",    ease_out_in_expo },
+		{L"easeincirc",       ease_in_circ },
+		{L"easeoutcirc",      ease_out_circ },
+		{L"easeinoutcirc",    ease_in_out_circ },
+		{L"easeoutincirc",    ease_out_in_circ },
+		{L"easeinelastic",    ease_in_elastic },
+		{L"easeoutelastic",   ease_out_elastic },
+		{L"easeinoutelastic", ease_in_out_elastic },
+		{L"easeoutinelastic", ease_out_in_elastic },
+		{L"easeinback",       ease_in_back },
+		{L"easeoutback",      ease_out_back },
+		{L"easeinoutback",    ease_in_out_back },
+		{L"easeoutintback",   ease_out_int_back },
+		{L"easeoutbounce",    ease_out_bounce },
+		{L"easeinbounce",     ease_in_bounce },
+		{L"easeinoutbounce",  ease_in_out_bounce },
+		{L"easeoutinbounce",  ease_out_in_bounce }
+	};
 
 	return tweens;
 }

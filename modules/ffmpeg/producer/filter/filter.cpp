@@ -28,10 +28,8 @@
 #include <common/assert.h>
 #include <common/except.h>
 
-#include <boost/assign.hpp>
 #include <boost/range/iterator_range.hpp>
 #include <boost/range/adaptors.hpp>
-#include <boost/assign.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
 #include <boost/thread.hpp>
@@ -84,17 +82,18 @@ struct filter::implementation
 	{
 		if(out_pix_fmts.empty())
 		{
-			out_pix_fmts = boost::assign::list_of
-				(AV_PIX_FMT_YUVA420P)
-				(AV_PIX_FMT_YUV444P)
-				(AV_PIX_FMT_YUV422P)
-				(AV_PIX_FMT_YUV420P)
-				(AV_PIX_FMT_YUV411P)
-				(AV_PIX_FMT_BGRA)
-				(AV_PIX_FMT_ARGB)
-				(AV_PIX_FMT_RGBA)
-				(AV_PIX_FMT_ABGR)
-				(AV_PIX_FMT_GRAY8);
+			out_pix_fmts = {
+				AV_PIX_FMT_YUVA420P,
+				AV_PIX_FMT_YUV444P,
+				AV_PIX_FMT_YUV422P,
+				AV_PIX_FMT_YUV420P,
+				AV_PIX_FMT_YUV411P,
+				AV_PIX_FMT_BGRA,
+				AV_PIX_FMT_ARGB,
+				AV_PIX_FMT_RGBA,
+				AV_PIX_FMT_ABGR,
+				AV_PIX_FMT_GRAY8
+			};
 		}
 
 		out_pix_fmts.push_back(AV_PIX_FMT_NONE);
