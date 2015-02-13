@@ -32,8 +32,6 @@
 #include <tbb/parallel_for.h>
 #include <tbb/tbb_thread.h>
 
-#include <boost/foreach.hpp>
-
 #if defined(_MSC_VER)
 #pragma warning (push)
 #pragma warning (disable : 4244)
@@ -75,7 +73,7 @@ int thread_execute2(AVCodecContext* s, int (*func)(AVCodecContext* c2, void* arg
 	
 	tbb::parallel_for(0, MAX_THREADS, [&](int n)    
     {   
-		BOOST_FOREACH(auto k, jobs[n])
+		for (auto k : jobs[n])
 		{
 			int r = func(s, arg, k, n);
 			if(ret) 

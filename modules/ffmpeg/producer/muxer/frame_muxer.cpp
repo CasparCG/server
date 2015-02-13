@@ -53,7 +53,6 @@ extern "C"
 #endif
 
 #include <common/assert.h>
-#include <boost/foreach.hpp>
 #include <boost/range/algorithm_ext/push_back.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -113,7 +112,7 @@ struct frame_muxer::impl : boost::noncopyable
 				update_display_mode(video);
 				
 			filter_->push(video);
-			BOOST_FOREACH(auto& av_frame, filter_->poll_all())			
+			for (auto& av_frame : filter_->poll_all())			
 				video_stream_.push(make_frame(this, av_frame, format_desc_.fps, *frame_factory_));			
 		}
 

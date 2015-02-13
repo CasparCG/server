@@ -63,7 +63,6 @@
 
 #include <boost/property_tree/detail/file_parser_error.hpp>
 #include <boost/property_tree/xml_parser.hpp>
-#include <boost/foreach.hpp>
 #include <boost/locale.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -149,12 +148,12 @@ void print_info()
 	CASPAR_LOG(info) << system_product_name();
 	
 	CASPAR_LOG(info) << L"Decklink " << decklink::version();
-	BOOST_FOREACH(auto device, decklink::device_list())
-		CASPAR_LOG(info) << L" - " << device;	
+	for (auto device : decklink::device_list())
+		CASPAR_LOG(info) << L" - " << device;
 		
 	CASPAR_LOG(info) << L"Bluefish " << bluefish::version();
-	BOOST_FOREACH(auto device, bluefish::device_list())
-		CASPAR_LOG(info) << L" - " << device;	
+	for (auto device : bluefish::device_list())
+		CASPAR_LOG(info) << L" - " << device;
 	
 	CASPAR_LOG(info) << L"Flash "			<< flash::version();
 	CASPAR_LOG(info) << L"FreeImage "		<< image::version();

@@ -36,8 +36,6 @@
 #include <common/gl/gl_check.h>
 #include <common/os/windows/windows.h>
 
-#include <boost/foreach.hpp>
-
 #include <gl/glew.h>
 
 #include <SFML/Window/Context.hpp>

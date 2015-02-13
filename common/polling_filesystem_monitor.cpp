@@ -29,7 +29,6 @@
 #include <cstdint>
 
 #include <boost/thread.hpp>
-#include <boost/foreach.hpp>
 #include <boost/range/adaptor/map.hpp>
 #include <boost/range/algorithm/copy.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -101,7 +100,7 @@ public:
 		if ((events_mask_ & MODIFIED) == 0)
 			return;
 
-		BOOST_FOREACH(auto& file, files_)
+		for (auto& file : files_)
 			handler_(MODIFIED, file.first);
 	}
 
@@ -186,7 +185,7 @@ public:
 			removed_files.erase(path);
 		}
 
-		BOOST_FOREACH(auto& path, removed_files)
+		for (auto& path : removed_files)
 		{
 			files_.erase(path);
 			being_written_sizes_.erase(path);

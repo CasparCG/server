@@ -31,7 +31,6 @@
 
 #include <SFML/Graphics.hpp>
 
-#include <boost/foreach.hpp>
 #include <boost/optional.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>

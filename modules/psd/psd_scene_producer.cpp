@@ -38,7 +38,6 @@
 #include <common/log.h>
 
 #include <boost/filesystem.hpp>
-#include <boost/foreach.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/rational.hpp>
@@ -134,7 +133,7 @@ core::text::text_info get_text_info(const boost::property_tree::wptree& ptree)
 			{
 				auto& master = (*it);
 				//std::for_each(layers.begin(), layers.end(), [&master](linked_layer_record &r) mutable { 
-				BOOST_FOREACH(auto &r, layers) {
+				for (auto &r : layers) {
 					if(r.link_id == master.link_id && r.layer != master.layer)
 					{
 						{	//x-coords
@@ -230,13 +229,13 @@ void create_timelines(
 	double original_pos_x = psd_layer->location().x;
 	double original_pos_y = psd_layer->location().y;
 
-	BOOST_FOREACH(auto& track, *tracklist)
+	for (auto& track : *tracklist)
 	{
 		auto track_id = track.second.get<std::wstring>(L"stdTrackID");
 
 		if (track_id == L"sheetPositionTrack")
 		{
-			BOOST_FOREACH(auto& key, track.second.get_child(L"keyList"))
+			for (auto& key : track.second.get_child(L"keyList"))
 			{
 				bool tween = key.second.get<std::wstring>(L"animInterpStyle")
 						== L"Lnr ";
@@ -271,7 +270,7 @@ void create_timelines(
 		{
 			auto& opacity = layer.adjustments.opacity;
 
-			BOOST_FOREACH(auto& key, track.second.get_child(L"keyList"))
+			for (auto& key : track.second.get_child(L"keyList"))
 			{
 				bool tween = key.second.get<std::wstring>(L"animInterpStyle")
 						== L"Lnr ";
@@ -386,7 +385,7 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 	link_constructor.calculate();
 
 	// Reset all dynamic text fields to empty strings and expose them as a scene parameter.
-	BOOST_FOREACH(auto& text_layer, text_producers_by_layer_name)
+	for (auto& text_layer : text_producers_by_layer_name)
 		text_layer.second->text().bind(root->create_variable<std::wstring>(boost::to_lower_copy(text_layer.first), true, L""));
 
 	auto params2 = params;

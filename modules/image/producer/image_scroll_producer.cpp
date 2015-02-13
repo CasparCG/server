@@ -43,7 +43,6 @@
 #include <common/param.h>
 
 #include <boost/filesystem.hpp>
-#include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/scoped_array.hpp>
@@ -243,7 +242,7 @@ struct image_scroll_producer : public core::frame_producer_base
 		std::vector<core::draw_frame> result;
 		result.reserve(frames_.size());
 
-		BOOST_FOREACH(auto& frame, frames_)
+		for (auto& frame : frames_)
 		{
 			auto& fill_translation = frame.transform().image_transform.fill_translation;
 

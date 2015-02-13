@@ -38,7 +38,6 @@
 #include <unordered_map>
 
 #include <boost/asio.hpp>
-#include <boost/foreach.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread.hpp>
 
@@ -93,7 +92,7 @@ void write_osc_event(byte_vector& destination, const core::monitor::message& e)
 	o << ::osc::BeginMessage(e.path().c_str());
 				
 	param_visitor<decltype(o)> param_visitor(o);
-	BOOST_FOREACH(const auto& data, e.data())
+	for (const auto& data : e.data())
 		boost::apply_visitor(param_visitor, data);
 				
 	o << ::osc::EndMessage;
@@ -208,7 +207,7 @@ private:
 	{
 		boost::system::error_code ec;
 
-		BOOST_FOREACH(const auto& endpoint, destinations)
+		for (const auto& endpoint : destinations)
 			socket_.send_to(buffers, endpoint, 0, ec);
 	}
 
@@ -243,7 +242,7 @@ private:
 				{
 					tbb::spin_mutex::scoped_lock lock(endpoints_mutex_);
 
-					BOOST_FOREACH(const auto& endpoint, reference_counts_by_endpoint_)
+					for (const auto& endpoint : reference_counts_by_endpoint_)
 						destinations.push_back(endpoint.first);
 				}
 
@@ -258,7 +257,7 @@ private:
 				auto datagram_size = bundle_header.size();
 				buffers.push_back(boost::asio::buffer(bundle_header));
 
-				BOOST_FOREACH(const auto& slot, updates)
+				for (const auto& slot : updates)
 				{
 					write_osc_bundle_element_start(element_headers[i], slot.second);
 					const auto& headers = element_headers;
