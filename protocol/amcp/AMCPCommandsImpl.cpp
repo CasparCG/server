@@ -371,8 +371,11 @@ bool CallCommand::DoExecute()
 	{
 		auto result = channel()->stage().call(layer_index(), parameters());
 		
-		if (result.wait_for(std::chrono::seconds(2)) != std::future_status::ready)
-			CASPAR_THROW_EXCEPTION(timed_out());
+		// TODO: because of std::async deferred timed waiting does not work
+
+		/*auto wait_res = result.wait_for(std::chrono::seconds(2));
+		if (wait_res == std::future_status::timeout)
+			CASPAR_THROW_EXCEPTION(timed_out());*/
 				
 		std::wstringstream replyString;
 		if(result.get().empty())
@@ -799,7 +802,7 @@ bool LoadbgCommand::DoExecute()
 	for(size_t n = 0; n < parameters().size(); ++n)
 		message += boost::to_upper_copy(parameters()[n]) + L" ";
 		
-	static const boost::wregex expr(L".*(?<TRANSITION>CUT|PUSH|SLIDE|WIPE|MIX)\\s*(?<DURATION>\\d+)\\s*(?<TWEEN>(LINEAR)|(EASE[^\\s]*))?\\s*(?<DIRECTION>FROMLEFT|FROMRIGHT|LEFT|RIGHT)?.*");
+	static const boost::wregex expr(LR"(.*(?<TRANSITION>CUT|PUSH|SLIDE|WIPE|MIX)\s*(?<DURATION>\d+)\s*(?<TWEEN>(LINEAR)|(EASE[^\s]*))?\s*(?<DIRECTION>FROMLEFT|FROMRIGHT|LEFT|RIGHT)?.*)");
 	boost::wsmatch what;
 	if(boost::regex_match(message, what, expr))
 	{
@@ -835,7 +838,7 @@ bool LoadbgCommand::DoExecute()
 	{
 		std::shared_ptr<core::frame_producer> pFP;
 		
-		static boost::wregex expr(L"\\[(?<CHANNEL>\\d+)\\]", boost::regex::icase);
+		static boost::wregex expr(LR"(\[(?<CHANNEL>\d+)\])", boost::regex::icase);
 			
 		boost::wsmatch what;
 		if(boost::regex_match(parameters().at(0), what, expr))

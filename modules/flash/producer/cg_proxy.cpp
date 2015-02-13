@@ -137,23 +137,26 @@ public:
 	std::wstring timed_invoke(int layer, const std::wstring& label)
 	{
 		auto result = invoke(layer, label);
-		if(result.wait_for(std::chrono::seconds(2)) == std::future_status::ready)
+		// TODO: because of std::async deferred timed waiting does not work
+		//if (result.wait_for(std::chrono::seconds(2)) != std::future_status::timeout)
 			return result.get();
-		return L"";
+		//return L"";
 	}
 	std::wstring timed_description(int layer)
 	{
 		auto result = description(layer);
-		if (result.wait_for(std::chrono::seconds(2)) == std::future_status::ready)
+		// TODO: because of std::async deferred timed waiting does not work
+		//if (result.wait_for(std::chrono::seconds(2)) != std::future_status::timeout)
 			return result.get();
-		return L"";
+		//return L"";
 	}
 	std::wstring timed_template_host_info()
 	{
 		auto result = template_host_info();
-		if (result.wait_for(std::chrono::seconds(2)) == std::future_status::ready)
+		// TODO: because of std::async deferred timed waiting does not work
+		//if (result.wait_for(std::chrono::seconds(2)) != std::future_status::timeout)
 			return result.get();
-		return L"";
+		//return L"";
 	}
 
 	core::monitor::subject& monitor_output()
