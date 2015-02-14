@@ -129,9 +129,6 @@ struct server::implementation : boost::noncopyable
 		running_ = true;
 		setup_audio(env::properties());
 		
-		image::init();		  
-		CASPAR_LOG(info) << L"Initialized image module.";
-
 		ffmpeg::init(media_info_repo_);
 		CASPAR_LOG(info) << L"Initialized ffmpeg module.";
 							  
@@ -152,7 +149,10 @@ struct server::implementation : boost::noncopyable
 
 		flash::init();		  
 		CASPAR_LOG(info) << L"Initialized flash module.";
-		
+
+		image::init();		  
+		CASPAR_LOG(info) << L"Initialized image module.";
+
 		setup_channels(env::properties());
 		CASPAR_LOG(info) << L"Initialized channels.";
 
