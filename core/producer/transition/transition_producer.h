@@ -23,7 +23,6 @@
 
 #include "../../video_format.h"
 
-#include <common/enum_class.h>
 #include <common/memory.h>
 #include <common/tweener.h>
 
@@ -31,30 +30,22 @@
 
 namespace caspar { namespace core {
 	
-struct transition_type_def
+enum class transition_type
 {
-	enum type
-	{
-		cut,	
-		mix,	
-		push,	 
-		slide,	
-		wipe,
-		count
-	};
+	cut,	
+	mix,	
+	push,	 
+	slide,	
+	wipe,
+	count
 };
-typedef enum_class<transition_type_def> transition_type;
 	
-struct transition_direction_def
+enum class transition_direction
 {
-	enum type
-	{
-		from_left,
-		from_right,
-		count
-	};
+	from_left,
+	from_right,
+	count
 };
-typedef enum_class<transition_direction_def> transition_direction;
 
 struct transition_info
 {

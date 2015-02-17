@@ -88,7 +88,7 @@ public:
 	}
 };
 
-enum channel_type
+enum class channel_type
 {
 	total_user_mask = -3,
 	user_mask = -2,
@@ -98,7 +98,7 @@ enum channel_type
 	color_blue = 2
 };
 
-enum blend_mode
+enum class blend_mode
 {
 	InvalidBlendMode = -1,
 	Normal = 'norm',
@@ -123,7 +123,7 @@ enum blend_mode
 blend_mode int_to_blend_mode(unsigned long x);
 std::wstring blend_mode_to_string(blend_mode b);
 
-enum color_mode
+enum class color_mode
 {
 	InvalidColorMode = -1,
 	Bitmap = 0,

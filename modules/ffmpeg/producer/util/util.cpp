@@ -100,7 +100,7 @@ core::pixel_format_desc pixel_format_desc(PixelFormat pix_fmt, int width, int he
 
 	core::pixel_format_desc desc = get_pixel_format(pix_fmt);
 		
-	switch(desc.format.value())
+	switch(desc.format)
 	{
 	case core::pixel_format::gray:
 	case core::pixel_format::luma:
@@ -264,7 +264,7 @@ spl::shared_ptr<AVFrame> make_av_frame(std::array<uint8_t*, 4> data, const core:
 	avcodec_get_frame_defaults(av_frame.get());
 	
 	auto planes		 = pix_desc.planes;
-	auto format		 = pix_desc.format.value();
+	auto format		 = pix_desc.format;
 
 	av_frame->width  = planes[0].width;
 	av_frame->height = planes[0].height;
@@ -394,7 +394,7 @@ double read_fps(AVFormatContext& context, double fail_value)
 		double fps = static_cast<double>(time_base.den) / static_cast<double>(time_base.num);
 
 		double closest_fps = 0.0;
-		for(int n = 0; n < core::video_format::count; ++n)
+		for(int n = 0; n < static_cast<int>(core::video_format::count); ++n)
 		{
 			auto format = core::video_format_desc(core::video_format(n));
 

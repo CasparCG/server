@@ -37,7 +37,7 @@ struct frame_geometry::impl
 frame_geometry::frame_geometry() {}
 frame_geometry::frame_geometry(geometry_type t, std::vector<float> d) : impl_(new impl(t, std::move(d))) {}
 
-frame_geometry::geometry_type frame_geometry::type() const { return impl_ ? impl_->type_ : none; }
+frame_geometry::geometry_type frame_geometry::type() const { return impl_ ? impl_->type_ : geometry_type::none; }
 const std::vector<float>& frame_geometry::data() const
 {
 	if (impl_)
@@ -49,7 +49,7 @@ const std::vector<float>& frame_geometry::data() const
 const frame_geometry& frame_geometry::get_default()
 {
 	const float d[] = {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f};
-	static frame_geometry g(frame_geometry::quad, std::vector<float>(std::begin(d), std::end(d)));
+	static frame_geometry g(frame_geometry::geometry_type::quad, std::vector<float>(std::begin(d), std::end(d)));
 
 	return g;
 }

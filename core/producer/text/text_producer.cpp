@@ -157,9 +157,9 @@ public:
 		, dirty_(false)
 	{
 		//TODO: examine str to determine which unicode_blocks to load
-		font_.load_glyphs(text::Basic_Latin, text_info.color);
-		font_.load_glyphs(text::Latin_1_Supplement, text_info.color);
-		font_.load_glyphs(text::Latin_Extended_A, text_info.color);
+		font_.load_glyphs(text::unicode_block::Basic_Latin, text_info.color);
+		font_.load_glyphs(text::unicode_block::Latin_1_Supplement, text_info.color);
+		font_.load_glyphs(text::unicode_block::Latin_Extended_A, text_info.color);
 
 		tracking_.value().set(text_info.tracking);
 		text_subscription_ = text_.value().on_change([this]()
@@ -192,7 +192,7 @@ public:
 		auto vertex_stream = font_.create_vertex_stream(text_.value().get(), x_, y_, parent_width_, parent_height_, &metrics);
 		auto frame = frame_factory_->create_frame(vertex_stream.data(), pfd);
 		memcpy(frame.image_data().data(), atlas_.data(), frame.image_data().size());
-		frame.set_geometry(frame_geometry(frame_geometry::quad_list, std::move(vertex_stream)));
+		frame.set_geometry(frame_geometry(frame_geometry::geometry_type::quad_list, std::move(vertex_stream)));
 
 		this->constraints_.width.set(metrics.width);
 		this->constraints_.height.set(metrics.height);

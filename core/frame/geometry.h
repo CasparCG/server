@@ -29,7 +29,7 @@ namespace caspar { namespace core {
 class frame_geometry
 {
 public:
-	enum geometry_type
+	enum class geometry_type
 	{
 		none,
 		quad,
