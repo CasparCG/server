@@ -130,7 +130,7 @@ public:
 		, thumbnail_creator_(thumbnail_creator)
 		, monitor_(monitor_factory.create(
 				media_path,
-				ALL,
+				filesystem_event::ALL,
 				true,
 				[this] (filesystem_event event, const boost::filesystem::wpath& file)
 				{
@@ -200,16 +200,16 @@ public:
 	{
 		switch (event)
 		{
-		case CREATED:
+		case filesystem_event::CREATED:
 			if (needs_to_be_generated(file))
 				generate_thumbnail(file);
 
 			break;
-		case MODIFIED:
+		case filesystem_event::MODIFIED:
 			generate_thumbnail(file);
 
 			break;
-		case REMOVED:
+		case filesystem_event::REMOVED:
 			auto relative_without_extension = get_relative_without_extension(file, media_path_);
 			boost::filesystem::remove(thumbnails_path_ / (relative_without_extension + L".png"));
 

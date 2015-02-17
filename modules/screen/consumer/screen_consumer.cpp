@@ -74,7 +74,7 @@ extern "C"
 
 namespace caspar { namespace screen {
 		
-enum stretch
+enum class stretch
 {
 	none,
 	uniform,
@@ -84,7 +84,7 @@ enum stretch
 
 struct configuration
 {
-	enum aspect_ratio
+	enum class aspect_ratio
 	{
 		aspect_4_3 = 0,
 		aspect_16_9,
@@ -104,11 +104,11 @@ struct configuration
 	configuration()
 		: name(L"ogl")
 		, screen_index(0)
-		, stretch(fill)
+		, stretch(stretch::fill)
 		, windowed(true)
 		, auto_deinterlace(true)
 		, key_only(false)
-		, aspect(aspect_invalid)
+		, aspect(aspect_ratio::aspect_invalid)
 		, vsync(true)
 		, interactive(true)
 	{
@@ -185,15 +185,15 @@ public:
 				format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? "" : "YADIF=1:-1");
 		}())
 	{		
-		if(format_desc_.format == core::video_format::ntsc && config_.aspect == configuration::aspect_4_3)
+		if (format_desc_.format == core::video_format::ntsc && config_.aspect == configuration::aspect_ratio::aspect_4_3)
 		{
 			// Use default values which are 4:3.
 		}
 		else
 		{
-			if(config_.aspect == configuration::aspect_16_9)
+			if (config_.aspect == configuration::aspect_ratio::aspect_16_9)
 				square_width_ = (format_desc.height*16)/9;
-			else if(config_.aspect == configuration::aspect_4_3)
+			else if (config_.aspect == configuration::aspect_ratio::aspect_4_3)
 				square_width_ = (format_desc.height*4)/3;
 		}
 
@@ -526,11 +526,11 @@ public:
 		GL(glViewport(0, 0, screen_width_, screen_height_));
 
 		std::pair<float, float> target_ratio = None();
-		if(config_.stretch == fill)
+		if (config_.stretch == stretch::fill)
 			target_ratio = Fill();
-		else if(config_.stretch == uniform)
+		else if (config_.stretch == stretch::uniform)
 			target_ratio = Uniform();
-		else if(config_.stretch == uniform_to_fill)
+		else if (config_.stretch == stretch::uniform_to_fill)
 			target_ratio = UniformToFill();
 
 		width_ = target_ratio.first;
@@ -680,9 +680,9 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const boost::property_tree
 
 	auto aspect_str = ptree.get(L"aspect-ratio", L"default");
 	if(aspect_str == L"16:9")
-		config.aspect = configuration::aspect_16_9;
+		config.aspect = configuration::aspect_ratio::aspect_16_9;
 	else if(aspect_str == L"4:3")
-		config.aspect = configuration::aspect_4_3;
+		config.aspect = configuration::aspect_ratio::aspect_4_3;
 	
 	return spl::make_shared<screen_consumer_proxy>(config, sink);
 }

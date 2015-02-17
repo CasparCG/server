@@ -1,57 +1,18 @@
 #pragma once
 
-namespace caspar {
+#include <type_traits>
 
-template<typename def, typename inner = typename def::type>
-class enum_class : public def
-{
-	typedef typename def::type type;
-	inner val_; 
-public: 
-	explicit enum_class(int v) : val_(static_cast<type>(v)) {}
-	enum_class(type v) : val_(v) {}
-	inner value() const { return val_; }
- 
-	bool operator==(const enum_class& s) const	{ return val_ == s.val_; }
-	bool operator!=(const enum_class& s) const	{ return val_ != s.val_; }
-	bool operator<(const enum_class& s) const	{ return val_ <  s.val_; }
-	bool operator<=(const enum_class& s) const	{ return val_ <= s.val_; }
-	bool operator>(const enum_class& s) const	{ return val_ >  s.val_; }
-	bool operator>=(const enum_class& s) const	{ return val_ >= s.val_; }
-		
-	bool operator==(const int& val) const	{ return val_ == val; }
-	bool operator!=(const int& val) const	{ return val_ != val; }
-	bool operator<(const int& val) const	{ return val_ <  val; }
-	bool operator<=(const int& val) const	{ return val_ <= val; }
-	bool operator>(const int& val) const	{ return val_ >  val; }
-	bool operator>=(const int& val) const	{ return val_ >= val; }
+// Macro that defines & and &= for an enum class. Add more when needed.
 
-	enum_class operator&(const enum_class& s) const
-	{
-		return enum_class(static_cast<type>(val_ & s.val_));
-	}
-
-	enum_class& operator&=(const enum_class& s)
-	{
-		val_ = static_cast<type>(val_ & s.val_);
-		return *this;
-	}
-
-	enum_class operator|(const enum_class& s) const
-	{
-		return enum_class(static_cast<type>(val_ | s.val_));
-	}
-	
-	enum_class& operator|=(const enum_class& s)
-	{
-		val_ = static_cast<type>(val_ | s.val_);
-		return *this;
-	}
-
-	//operator inner()
-	//{
-	//	return val_;
-	//}
-};
-
-}
+#define ENUM_ENABLE_BITWISE(enum_class) \
+	static enum_class operator&(enum_class lhs, enum_class rhs) \
+	{ \
+		return static_cast<enum_class>( \
+				static_cast<std::underlying_type<enum_class>::type>(lhs) \
+					& static_cast<std::underlying_type<enum_class>::type>(rhs)); \
+	}; \
+	static enum_class& operator&=(enum_class& lhs, enum_class rhs) \
+	{ \
+		lhs = lhs & rhs; \
+		return lhs; \
+	};

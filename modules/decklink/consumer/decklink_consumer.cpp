@@ -53,14 +53,14 @@ namespace caspar { namespace decklink {
 	
 struct configuration
 {
-	enum keyer_t
+	enum class keyer_t
 	{
 		internal_keyer,
 		external_keyer,
 		default_keyer
 	};
 
-	enum latency_t
+	enum class latency_t
 	{
 		low_latency,
 		normal_latency,
@@ -77,8 +77,8 @@ struct configuration
 	configuration()
 		: device_index(1)
 		, embedded_audio(true)
-		, keyer(default_keyer)
-		, latency(default_latency)
+		, keyer(keyer_t::default_keyer)
+		, latency(latency_t::default_latency)
 		, key_only(false)
 		, base_buffer_depth(3)
 	{
@@ -86,7 +86,7 @@ struct configuration
 	
 	int buffer_depth() const
 	{
-		return base_buffer_depth + (latency == low_latency ? 0 : 1) + (embedded_audio ? 1 : 0);
+		return base_buffer_depth + (latency == latency_t::low_latency ? 0 : 1) + (embedded_audio ? 1 : 0);
 	}
 };
 
@@ -279,12 +279,12 @@ public:
 			
 	void set_latency(configuration::latency_t latency)
 	{		
-		if(latency == configuration::low_latency)
+		if(latency == configuration::latency_t::low_latency)
 		{
 			configuration_->SetFlag(bmdDeckLinkConfigLowLatencyVideoOutput, true);
 			CASPAR_LOG(info) << print() << L" Enabled low-latency mode.";
 		}
-		else if(latency == configuration::normal_latency)
+		else if(latency == configuration::latency_t::normal_latency)
 		{			
 			configuration_->SetFlag(bmdDeckLinkConfigLowLatencyVideoOutput, false);
 			CASPAR_LOG(info) << print() << L" Disabled low-latency mode.";
@@ -293,7 +293,7 @@ public:
 
 	void set_keyer(configuration::keyer_t keyer)
 	{
-		if(keyer == configuration::internal_keyer) 
+		if(keyer == configuration::keyer_t::internal_keyer) 
 		{
 			BOOL value = true;
 			if(SUCCEEDED(attributes_->GetFlag(BMDDeckLinkSupportsInternalKeying, &value)) && !value)
@@ -305,7 +305,7 @@ public:
 			else
 				CASPAR_LOG(info) << print() << L" Enabled internal keyer.";		
 		}
-		else if(keyer == configuration::external_keyer)
+		else if(keyer == configuration::keyer_t::external_keyer)
 		{
 			BOOL value = true;
 			if(SUCCEEDED(attributes_->GetFlag(BMDDeckLinkSupportsExternalKeying, &value)) && !value)
@@ -573,9 +573,8 @@ public:
 		info.add(L"type", L"decklink");
 		info.add(L"key-only", config_.key_only);
 		info.add(L"device", config_.device_index);
-		info.add(L"low-latency", config_.low_latency);
+		info.add(L"low-latency", config_.latency == configuration::latency_t::low_latency);
 		info.add(L"embedded-audio", config_.embedded_audio);
-		info.add(L"low-latency", config_.low_latency);
 		//info.add(L"internal-key", config_.internal_key);
 		return info;
 	}
@@ -607,14 +606,14 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 		config.device_index = boost::lexical_cast<int>(params[1]);
 	
 	if(std::find(params.begin(), params.end(), L"INTERNAL_KEY")			!= params.end())
-		config.keyer = configuration::internal_keyer;
+		config.keyer = configuration::keyer_t::internal_keyer;
 	else if(std::find(params.begin(), params.end(), L"EXTERNAL_KEY")	!= params.end())
-		config.keyer = configuration::external_keyer;
+		config.keyer = configuration::keyer_t::external_keyer;
 	else
-		config.keyer = configuration::default_keyer;
+		config.keyer = configuration::keyer_t::default_keyer;
 
 	if(std::find(params.begin(), params.end(), L"LOW_LATENCY")	 != params.end())
-		config.latency = configuration::low_latency;
+		config.latency = configuration::latency_t::low_latency;
 
 	config.embedded_audio	= std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
 	config.key_only			= std::find(params.begin(), params.end(), L"KEY_ONLY")		 != params.end();
@@ -628,15 +627,15 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const boost::property_tree
 
 	auto keyer = ptree.get(L"keyer", L"default");
 	if(keyer == L"external")
-		config.keyer = configuration::external_keyer;
+		config.keyer = configuration::keyer_t::external_keyer;
 	else if(keyer == L"internal")
-		config.keyer = configuration::internal_keyer;
+		config.keyer = configuration::keyer_t::internal_keyer;
 
 	auto latency = ptree.get(L"latency", L"normal");
 	if(latency == L"low")
-		config.latency = configuration::low_latency;
+		config.latency = configuration::latency_t::low_latency;
 	else if(latency == L"normal")
-		config.latency = configuration::normal_latency;
+		config.latency = configuration::latency_t::normal_latency;
 
 	config.key_only				= ptree.get(L"key-only",		config.key_only);
 	config.device_index			= ptree.get(L"device",			config.device_index);

@@ -69,7 +69,7 @@ public:
 
 	draw_frame create_frame()
 	{
-		pixel_format_desc desc(pixel_format_def::bgra);
+		pixel_format_desc desc(pixel_format::bgra);
 		desc.planes.push_back(pixel_format_desc::plane(
 				static_cast<int>(constraints_.width.get()),
 				static_cast<int>(constraints_.height.get()),

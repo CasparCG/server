@@ -29,7 +29,6 @@
 #include <common/forward.h>
 #include <common/future_fwd.h>
 #include <common/memory.h>
-#include <common/enum_class.h>
 
 #include <cstdint>
 #include <limits>

@@ -154,7 +154,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	{
 		CASPAR_VERIFY(size > 0);
 		
-		auto pool = &host_pools_[usage.value()][size];
+		auto pool = &host_pools_[static_cast<int>(usage)][size];
 		
 		std::shared_ptr<buffer> buf;
 		if(!pool->try_pop(buf))	

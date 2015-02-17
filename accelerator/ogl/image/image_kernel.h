@@ -23,7 +23,6 @@
 
 #include <core/mixer/image/blend_modes.h>
 
-#include <common/enum_class.h>
 #include <common/memory.h>
 
 #include <core/frame/pixel_format.h>
@@ -32,15 +31,11 @@
 
 namespace caspar { namespace accelerator { namespace ogl {
 	
-struct keyer_def
+enum class keyer
 {
-	enum type
-	{
-		linear = 0,
-		additive,
-	};
+	linear = 0,
+	additive,
 };
-typedef enum_class<keyer_def> keyer;
 
 struct draw_params final
 {

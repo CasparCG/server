@@ -23,32 +23,26 @@
 
 #include "../video_format.h"
 
-#include <common/enum_class.h>
-
 #include <cstddef>
 #include <vector>
 
 namespace caspar { namespace core {
 		
-struct pixel_format_def
+enum class pixel_format
 {
-	enum type
-	{
-		gray = 0,
-		bgra,
-		rgba,
-		argb,
-		abgr,
-		ycbcr,
-		ycbcra,
-		luma,
-		bgr,
-		rgb,
-		count,
-		invalid,
-	};
+	gray = 0,
+	bgra,
+	rgba,
+	argb,
+	abgr,
+	ycbcr,
+	ycbcra,
+	luma,
+	bgr,
+	rgb,
+	count,
+	invalid,
 };
-typedef enum_class<pixel_format_def> pixel_format;
 
 struct pixel_format_desc final
 {
