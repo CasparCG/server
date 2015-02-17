@@ -10,7 +10,7 @@
 namespace caspar { namespace core { namespace text {
 
 class texture_atlas;
-enum unicode_block;
+enum class unicode_block;
 
 class texture_font
 {
@@ -30,7 +30,7 @@ private:
 	spl::shared_ptr<impl> impl_;
 };
 
-enum unicode_block
+enum class unicode_block
 {
 	Basic_Latin,
 	Latin_1_Supplement,

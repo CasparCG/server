@@ -97,20 +97,20 @@ public:
 
 	void reemmit_all()
 	{
-		if ((events_mask_ & MODIFIED) == 0)
+		if (static_cast<int>(events_mask_ & filesystem_event::MODIFIED) == 0)
 			return;
 
 		for (auto& file : files_)
-			handler_(MODIFIED, file.first);
+			handler_(filesystem_event::MODIFIED, file.first);
 	}
 
 	void reemmit(const boost::filesystem::wpath& file)
 	{
-		if ((events_mask_ & MODIFIED) == 0)
+		if (static_cast<int>(events_mask_ & filesystem_event::MODIFIED) == 0)
 			return;
 
 		if (files_.find(file) != files_.end() && boost::filesystem::exists(file))
-			handler_(MODIFIED, file);
+			handler_(filesystem_event::MODIFIED, file);
 	}
 
 	void scan(const boost::function<bool ()>& should_abort)
@@ -118,9 +118,9 @@ public:
 		static const std::time_t NO_LONGER_WRITING_AGE = 3; // Assume std::time_t is expressed in seconds
 		using namespace boost::filesystem;
 
-		bool interested_in_removed = (events_mask_ & REMOVED) > 0;
-		bool interested_in_created = (events_mask_ & CREATED) > 0;
-		bool interested_in_modified = (events_mask_ & MODIFIED) > 0;
+		bool interested_in_removed = static_cast<int>(events_mask_ & filesystem_event::REMOVED) > 0;
+		bool interested_in_created = static_cast<int>(events_mask_ & filesystem_event::CREATED) > 0;
+		bool interested_in_modified = static_cast<int>(events_mask_ & filesystem_event::MODIFIED) > 0;
 
 		std::set<wpath> removed_files;
 		boost::copy(
@@ -164,7 +164,7 @@ public:
 				if (modified && can_read_file(path))
 				{
 					if (interested_in_modified)
-						handler_(MODIFIED, path);
+						handler_(filesystem_event::MODIFIED, path);
 
 					files_[path] = current_mtime;
 					being_written_sizes_.erase(path);
@@ -173,7 +173,7 @@ public:
 			else if (no_longer_being_written_to && can_read_file(path))
 			{
 				if (interested_in_created && (report_already_existing_ || !first_scan_))
-					handler_(CREATED, path);
+					handler_(filesystem_event::CREATED, path);
 
 				if (first_scan_)
 					initial_files.insert(path);
@@ -191,7 +191,7 @@ public:
 			being_written_sizes_.erase(path);
 
 			if (interested_in_removed)
-				handler_(REMOVED, path);
+				handler_(filesystem_event::REMOVED, path);
 		}
 
 		if (first_scan_)

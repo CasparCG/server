@@ -84,10 +84,10 @@ struct image_kernel::impl
 			params.textures[n]->bind(n);
 
 		if(params.local_key)
-			params.local_key->bind(texture_id::local_key);
+			params.local_key->bind(static_cast<int>(texture_id::local_key));
 		
 		if(params.layer_key)
-			params.layer_key->bind(texture_id::layer_key);
+			params.layer_key->bind(static_cast<int>(texture_id::layer_key));
 			
 		// Setup shader
 								
@@ -97,7 +97,7 @@ struct image_kernel::impl
 		shader_->set("plane[1]",		texture_id::plane1);
 		shader_->set("plane[2]",		texture_id::plane2);
 		shader_->set("plane[3]",		texture_id::plane3);
-		for(int n = 0; n < params.textures.size(); ++n)
+		for (int n = 0; n < params.textures.size(); ++n)
 			shader_->set("plane_size[" + boost::lexical_cast<std::string>(n) + "]",	
 						 static_cast<float>(params.textures[n]->width()), 
 						 static_cast<float>(params.textures[n]->height()));
@@ -107,7 +107,7 @@ struct image_kernel::impl
 		shader_->set("is_hd",		 	params.pix_desc.planes.at(0).height > 700 ? 1 : 0);
 		shader_->set("has_local_key",	static_cast<bool>(params.local_key));
 		shader_->set("has_layer_key",	static_cast<bool>(params.layer_key));
-		shader_->set("pixel_format",	params.pix_desc.format.value());	
+		shader_->set("pixel_format",	params.pix_desc.format);
 		shader_->set("opacity",			params.transform.is_key ? 1.0 : params.transform.opacity);	
 				
 
@@ -118,17 +118,17 @@ struct image_kernel::impl
 
 		if(blend_modes_)
 		{
-			params.background->bind(texture_id::background);
+			params.background->bind(static_cast<int>(texture_id::background));
 
 			shader_->set("background",	texture_id::background);
-			shader_->set("blend_mode",	params.blend_mode.value());
-			shader_->set("keyer",		params.keyer.value());
+			shader_->set("blend_mode",	params.blend_mode);
+			shader_->set("keyer",		params.keyer);
 		}
 		else
 		{
 			GL(glEnable(GL_BLEND));
 
-			switch(params.keyer.value())
+			switch(params.keyer)
 			{
 			case keyer::additive:
 				GL(glBlendFunc(GL_ONE, GL_ONE));	
@@ -223,7 +223,7 @@ struct image_kernel::impl
 
 			switch(params.geometry.type())
 			{
-			case core::frame_geometry::quad:
+			case core::frame_geometry::geometry_type::quad:
 				{
 					const std::vector<float>& data = params.geometry.data();
 					float v_left = data[0], v_top = data[1], t_left = data[2], t_top = data[3];
@@ -238,7 +238,7 @@ struct image_kernel::impl
 				}
 				break;
 
-			case core::frame_geometry::quad_list:
+			case core::frame_geometry::geometry_type::quad_list:
 				{
 					glClientActiveTexture(GL_TEXTURE0);
 					

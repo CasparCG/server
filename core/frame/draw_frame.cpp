@@ -29,7 +29,7 @@
 
 namespace caspar { namespace core {
 		
-enum tags
+enum class tags
 {
 	frame_tag = 0,
 	empty_tag,

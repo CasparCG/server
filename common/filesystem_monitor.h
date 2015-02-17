@@ -29,6 +29,7 @@
 
 #include "memory.h"
 #include "future_fwd.h"
+#include "enum_class.h"
 
 namespace caspar {
 
@@ -64,7 +65,7 @@ public:
 /**
  * The possible filesystem events.
  */
-enum filesystem_event
+enum class filesystem_event
 {
 	CREATED = 1,
 	REMOVED = 2,
@@ -72,6 +73,7 @@ enum filesystem_event
 	// Only used for describing a bitmask where all events are wanted. Never used when calling a handler.
 	ALL = 7
 };
+ENUM_ENABLE_BITWISE(filesystem_event);
 
 /**
  * Handles filesystem events.
