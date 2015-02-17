@@ -59,7 +59,7 @@ public:
 
 	void Open(const std::wstring& filename);
 
-	void read(char*, unsigned long);
+	void read(char*, std::streamsize);
 	unsigned char read_byte();
 	unsigned short read_short();
 	unsigned long read_long();
@@ -68,12 +68,12 @@ public:
 	std::wstring read_id_string();
 	double read_double();
 
-	void discard_bytes(unsigned long);
+	void discard_bytes(std::streamoff);
 	void discard_to_next_word();
 	void discard_to_next_dword();
 
-	long current_position();
-	void set_position(unsigned long);
+	std::streamoff current_position();
+	void set_position(std::streamoff);
 
 	void close();
 private:
@@ -84,7 +84,7 @@ private:
 class StreamPositionBackup
 {
 public:
-	StreamPositionBackup(BEFileInputStream* pStream, unsigned long newPos) : pStream_(pStream)
+	StreamPositionBackup(BEFileInputStream* pStream, std::streamoff newPos) : pStream_(pStream)
 	{
 		oldPosition_ = pStream->current_position();
 		pStream_->set_position(newPos);
@@ -94,7 +94,7 @@ public:
 		pStream_->set_position(oldPosition_);
 	}
 private:
-	unsigned long oldPosition_;
+	std::streamoff oldPosition_;
 	BEFileInputStream* pStream_;
 
 };

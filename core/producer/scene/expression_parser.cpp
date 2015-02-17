@@ -215,7 +215,7 @@ boost::any parse_variable(
 
 struct op
 {
-	enum op_type
+	enum class op_type
 	{
 		UNARY,
 		BINARY,
@@ -250,16 +250,16 @@ op parse_operator(std::wstring::const_iterator& cursor, const std::wstring& str)
 		{
 		case L'+':
 			++cursor;
-			return op(ch, 6, op::BINARY);
+			return op(ch, 6, op::op_type::BINARY);
 		case L'*':
 		case L'/':
 		case L'%':
 			++cursor;
-			return op(ch, 5, op::BINARY);
+			return op(ch, 5, op::op_type::BINARY);
 		case L'?':
 		case L':':
 			++cursor;
-			return op(ch, 15, op::TERNARY);
+			return op(ch, 15, op::op_type::TERNARY);
 		case L'-':
 			if (first == L'-')
 				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
@@ -300,22 +300,22 @@ op parse_operator(std::wstring::const_iterator& cursor, const std::wstring& str)
 			if (first == L'=')
 			{
 				++cursor;
-				return op(L"==", 9, op::BINARY);
+				return op(L"==", 9, op::op_type::BINARY);
 			}
 			else if (first == L'!')
 			{
 				++cursor;
-				return op(L"!=", 9, op::BINARY);
+				return op(L"!=", 9, op::op_type::BINARY);
 			}
 			else if (first == L'>')
 			{
 				++cursor;
-				return op(L">=", 8, op::BINARY);
+				return op(L">=", 8, op::op_type::BINARY);
 			}
 			else if (first == L'<')
 			{
 				++cursor;
-				return op(L"<=", 8, op::BINARY);
+				return op(L"<=", 8, op::op_type::BINARY);
 			}
 			else if (first == NONE)
 			{
@@ -331,7 +331,7 @@ op parse_operator(std::wstring::const_iterator& cursor, const std::wstring& str)
 			if (first == L'|')
 			{
 				++cursor;
-				return op(L"||", 14, op::BINARY);
+				return op(L"||", 14, op::op_type::BINARY);
 			}
 			else if (first == NONE)
 			{
@@ -347,7 +347,7 @@ op parse_operator(std::wstring::const_iterator& cursor, const std::wstring& str)
 			if (first == L'&')
 			{
 				++cursor;
-				return op(L"&&", 13, op::BINARY);
+				return op(L"&&", 13, op::op_type::BINARY);
 			}
 			else if (first == NONE)
 			{
@@ -362,18 +362,18 @@ op parse_operator(std::wstring::const_iterator& cursor, const std::wstring& str)
 		case L' ':
 		case L'\t':
 			if (first == L'-')
-				return op(L'-', 6, op::BINARY);
+				return op(L'-', 6, op::op_type::BINARY);
 			else if (first == L'!')
-				return op(L'!', 3, op::UNARY);
+				return op(L'!', 3, op::op_type::UNARY);
 		default:
 			if (first == L'<')
-				return op(L'<', 8, op::BINARY);
+				return op(L'<', 8, op::op_type::BINARY);
 			else if (first == L'>')
-				return op(L'>', 8, op::BINARY);
+				return op(L'>', 8, op::op_type::BINARY);
 			else if (first == L'-')
-				return op(L"unary-", 3, op::UNARY);
+				return op(L"unary-", 3, op::op_type::UNARY);
 			else if (first == L'!')
-				return op(L'!', 3, op::UNARY);
+				return op(L'!', 3, op::op_type::UNARY);
 			else
 				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
 						L"Expected second character of operator"
@@ -587,7 +587,7 @@ void resolve_operators(int precedence, std::vector<boost::any>& tokens)
 
 		switch (op_token.type)
 		{
-		case op::UNARY:
+		case op::op_type::UNARY:
 			if (op_token.characters == L"unary-")
 			{
 				tokens.at(i) = negative(token_after);
@@ -600,7 +600,7 @@ void resolve_operators(int precedence, std::vector<boost::any>& tokens)
 			tokens.erase(tokens.begin() + index_after);
 
 			break;
-		case op::BINARY:
+		case op::op_type::BINARY:
 			{
 				auto& token_before = tokens.at(i - 1);
 
@@ -636,7 +636,7 @@ void resolve_operators(int precedence, std::vector<boost::any>& tokens)
 			--i;
 
 			break;
-		case op::TERNARY:
+		case op::op_type::TERNARY:
 			if (op_token.characters == L"?")
 			{
 				auto& token_before = tokens.at(i - 1);

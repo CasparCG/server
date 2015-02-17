@@ -66,13 +66,13 @@ bool descriptor::populate(BEFileInputStream& stream)
 		stream.read_unicode_string();
 		stream.read_id_string();
 		unsigned long element_count = stream.read_long();
-		for(int element_index = 0; element_index < element_count; ++element_index)
+		for (unsigned long element_index = 0; element_index < element_count; ++element_index)
 		{
 			std::wstring key = stream.read_id_string();
 			read_value(key, stream);
 		}
 	}
-	catch(std::exception& ex)
+	catch(std::exception&)
 	{
 		result = false;
 	}
@@ -126,8 +126,8 @@ void descriptor::read_value(const std::wstring& key, BEFileInputStream& stream)
 	case 'VlLs': 
 		{
 			context::scoped_holder list(key, context_);
-			unsigned long count = stream.read_long();
-			for(int i = 0; i < count; ++i)
+			auto count = stream.read_long();
+			for(unsigned long i = 0; i < count; ++i)
 			{
 				read_value(L"li", stream);
 			}

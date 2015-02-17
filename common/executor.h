@@ -22,7 +22,6 @@
 #pragma once
 
 #include "except.h"
-#include "enum_class.h"
 #include "log.h"
 #include "blocking_bounded_queue_adapter.h"
 #include "blocking_priority_queue.h"
@@ -39,19 +38,15 @@
 
 namespace caspar {
 		
-struct task_priority_def
+enum class task_priority
 {
-	enum type
-	{
-		lowest_priority = 0,
-		lower_priority,
-		low_priority,
-		normal_priority,
-		high_priority,
-		higher_priority
-	};
+	lowest_priority = 0,
+	lower_priority,
+	low_priority,
+	normal_priority,
+	high_priority,
+	higher_priority
 };
-typedef enum_class<task_priority_def> task_priority;
 
 class executor final
 {	

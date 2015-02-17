@@ -56,22 +56,12 @@ unsigned char BEFileInputStream::read_byte()
 	return out;
 }
 
-unsigned short SWAP16(unsigned short inVal)
-{
-	return caspar::swap_byte_order(inVal);
-}
-
-unsigned long SWAP32(unsigned long inVal)
-{
-	return caspar::swap_byte_order(inVal);
-}
-
 unsigned short BEFileInputStream::read_short()
 {
 	unsigned short out;
 	read((char*)&out, 2);
 
-	return SWAP16(out);
+	return caspar::swap_byte_order(out);
 }
 
 unsigned long BEFileInputStream::read_long()
@@ -79,7 +69,7 @@ unsigned long BEFileInputStream::read_long()
 	unsigned long in;
 	read((char*)&in, 4);
 
-	return SWAP32(in);
+	return caspar::swap_byte_order(in);
 }
 double BEFileInputStream::read_double()
 {
@@ -90,33 +80,33 @@ double BEFileInputStream::read_double()
 	return *reinterpret_cast<double*>(data);
 }
 
-void BEFileInputStream::read(char* buf, unsigned long length)
+void BEFileInputStream::read(char* buf, std::streamsize length)
 {
 	if(length > 0)
 	{
 		if(ifs_.eof())
 			throw UnexpectedEOFException();
 
-			ifs_.read(buf, (std::streamsize)length);
+			ifs_.read(buf, length);
 		
-		if(ifs_.gcount() < (std::streamsize)length)
+		if(ifs_.gcount() < length)
 			throw UnexpectedEOFException();
 	}
 }
 
-long BEFileInputStream::current_position()
+std::streamoff BEFileInputStream::current_position()
 {
 	return ifs_.tellg();
 }
 
-void BEFileInputStream::set_position(unsigned long offset)
+void BEFileInputStream::set_position(std::streamoff offset)
 {
-	ifs_.seekg(static_cast<std::streamsize>(offset), std::ios_base::beg);
+	ifs_.seekg(offset, std::ios_base::beg);
 }
 
-void BEFileInputStream::discard_bytes(unsigned long length)
+void BEFileInputStream::discard_bytes(std::streamoff length)
 {
-	ifs_.seekg(static_cast<std::streamsize>(length), std::ios_base::cur);
+	ifs_.seekg(length, std::ios_base::cur);
 }
 void BEFileInputStream::discard_to_next_word()
 {
@@ -157,7 +147,7 @@ std::wstring BEFileInputStream::read_unicode_string()
 		result.reserve(length);
 
 		//can be optimized. Reads and swaps byte-order, one char at the time
-		for(int i=0;i<length; ++i)
+		for (unsigned long i = 0; i < length; ++i)
 			result.append(1, static_cast<wchar_t>(read_short()));
 	}
 
@@ -173,13 +163,13 @@ std::wstring BEFileInputStream::read_id_string()
 	{
 		result.reserve(length);
 
-		for(int i=0;i<length;++i)
+		for (unsigned long i = 0; i < length; ++i)
 			result.append(1, read_byte());
 	}
 	else
 	{
 		result.reserve(4);
-		for(int i=0;i<4;++i)
+		for(int i = 0; i < 4; ++i)
 			result.append(1, read_byte());
 	}
 

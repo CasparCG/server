@@ -41,7 +41,7 @@ public:
 	CLKProtocolStrategy(
 		const IO::client_connection<wchar_t>::ptr& client_connection,
 		clk_command_processor& command_processor) 
-		: currentState_(ExpectingNewCommand)
+		: currentState_(ParserState::ExpectingNewCommand)
 		, command_processor_(command_processor)
 		, client_connection_(client_connection)
 	{
@@ -62,18 +62,18 @@ public:
 			{
 				switch (currentState_)
 				{
-					case ExpectingNewCommand:
+					case ParserState::ExpectingNewCommand:
 						if (currentByte == 1) 
-							currentState_ = ExpectingCommand;					
+							currentState_ = ParserState::ExpectingCommand;
 						//just throw anything else away
 						break;
-					case ExpectingCommand:
+					case ParserState::ExpectingCommand:
 						if (currentByte == 2) 
-							currentState_ = ExpectingParameter;
+							currentState_ = ParserState::ExpectingParameter;
 						else
 							command_name_ += currentByte;
 						break;
-					case ExpectingParameter:
+					case ParserState::ExpectingParameter:
 						//allocate new parameter
 						if (parameters_.size() == 0 || currentByte == 2)
 							parameters_.push_back(std::wstring());
@@ -124,13 +124,13 @@ public:
 private:
 	void reset()
 	{
-		currentState_ = ExpectingNewCommand;
+		currentState_ = ParserState::ExpectingNewCommand;
 		currentCommandString_.str(L"");
 		command_name_.clear();
 		parameters_.clear();
 	}
 
-	enum ParserState
+	enum class ParserState
 	{
 		ExpectingNewCommand,
 		ExpectingCommand,
