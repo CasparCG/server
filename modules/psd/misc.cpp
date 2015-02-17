@@ -26,91 +26,92 @@ namespace caspar { namespace psd {
 
 blend_mode int_to_blend_mode(unsigned long x)
 {
-	blend_mode retVal = InvalidBlendMode;
-	switch(x)
-	{
-		case Normal: retVal = Normal; break;
-		case Darken: retVal = Darken; break;
-		case Lighten: retVal = Lighten; break;
-		case Hue: retVal = Hue; break;
-		case Saturation: retVal = Saturation; break;
-		case Color: retVal = Color; break;
-		case Luminosity: retVal = Luminosity; break;
-		case Multiply: retVal = Multiply; break;
-		case Screen: retVal = Screen; break;
-		case Dissolve: retVal = Dissolve; break;
-		case Overlay: retVal = Overlay; break;
-		case HardLight: retVal = HardLight; break;
-		case SoftLight: retVal = SoftLight; break;
-		case Difference: retVal = Difference; break;
-		case Exclusion: retVal = Exclusion; break;
-		case ColorDodge: retVal = ColorDodge; break;
-		case ColorBurn: retVal = ColorBurn; break;
-	}
+	blend_mode mode = static_cast<blend_mode>(x);
 
-	return retVal;
+	switch (mode)
+	{
+		case blend_mode::Normal:
+		case blend_mode::Darken:
+		case blend_mode::Lighten:
+		case blend_mode::Hue:
+		case blend_mode::Saturation:
+		case blend_mode::Color:
+		case blend_mode::Luminosity:
+		case blend_mode::Multiply:
+		case blend_mode::Screen:
+		case blend_mode::Dissolve:
+		case blend_mode::Overlay:
+		case blend_mode::HardLight:
+		case blend_mode::SoftLight:
+		case blend_mode::Difference:
+		case blend_mode::Exclusion:
+		case blend_mode::ColorDodge:
+		case blend_mode::ColorBurn:
+			return mode;
+		default:
+			return blend_mode::InvalidBlendMode;
+	}
 }
 
 std::wstring blend_mode_to_string(blend_mode b)
 {
-	std::wstring retVal = L"Invalid";
 	switch(b)
 	{
-		case Normal: retVal = L"Normal"; break;
-		case Darken: retVal = L"Darken"; break;
-		case Lighten: retVal = L"Lighten"; break;
-		case Hue: retVal = L"Hue"; break;
-		case Saturation: retVal = L"Saturation"; break;
-		case Color: retVal = L"Color"; break;
-		case Luminosity: retVal = L"Luminosity"; break;
-		case Multiply: retVal = L"Multiply"; break;
-		case Screen: retVal = L"Screen"; break;
-		case Dissolve: retVal = L"Dissolve"; break;
-		case Overlay: retVal = L"Overlay"; break;
-		case HardLight: retVal = L"HardLight"; break;
-		case SoftLight: retVal = L"SoftLight"; break;
-		case Difference: retVal = L"Difference"; break;
-		case Exclusion: retVal = L"Exclusion"; break;
-		case ColorDodge: retVal = L"ColorDodge"; break;
-		case ColorBurn: retVal = L"ColorBurn"; break;
+		case blend_mode::Normal: return L"Normal";
+		case blend_mode::Darken: return L"Darken";
+		case blend_mode::Lighten: return L"Lighten";
+		case blend_mode::Hue: return L"Hue";
+		case blend_mode::Saturation: return L"Saturation";
+		case blend_mode::Color: return L"Color";
+		case blend_mode::Luminosity: return L"Luminosity";
+		case blend_mode::Multiply: return L"Multiply";
+		case blend_mode::Screen: return L"Screen";
+		case blend_mode::Dissolve: return L"Dissolve";
+		case blend_mode::Overlay: return L"Overlay";
+		case blend_mode::HardLight: return L"HardLight";
+		case blend_mode::SoftLight: return L"SoftLight";
+		case blend_mode::Difference: return L"Difference";
+		case blend_mode::Exclusion: return L"Exclusion";
+		case blend_mode::ColorDodge: return L"ColorDodge";
+		case blend_mode::ColorBurn: return L"ColorBurn";
+		default: return L"Invalid";
 	}
-
-	return retVal;
 }
 
 color_mode int_to_color_mode(unsigned short x)
 {
-	color_mode retVal = InvalidColorMode;
-	switch(x)
-	{
-		case Bitmap: retVal = Bitmap; break;
-		case Grayscale:	retVal = Grayscale;	break;
-		case Indexed: retVal = Indexed;	break;
-		case RGB: retVal = RGB;	break;
-		case CMYK: retVal = CMYK; break;
-		case Multichannel: retVal = Multichannel; break;
-		case Duotone: retVal = Duotone; break;
-		case Lab: retVal = Lab;	break;
-	};
+	color_mode mode = static_cast<color_mode>(x);
 
-	return retVal;
+	switch(mode)
+	{
+		case color_mode::Bitmap:
+		case color_mode::Grayscale:
+		case color_mode::Indexed:
+		case color_mode::RGB:
+		case color_mode::CMYK:
+		case color_mode::Multichannel:
+		case color_mode::Duotone:
+		case color_mode::Lab:
+			return mode;
+		default:
+			return color_mode::InvalidColorMode;
+	};
 }
+
 std::wstring color_mode_to_string(color_mode c)
 {
-	std::wstring retVal = L"Invalid";
 	switch(c)
 	{
-		case Bitmap: retVal = L"Bitmap"; break;
-		case Grayscale:	retVal = L"Grayscale";	break;
-		case Indexed: retVal = L"Indexed";	break;
-		case RGB: retVal = L"RGB";	break;
-		case CMYK: retVal = L"CMYK"; break;
-		case Multichannel: retVal = L"Multichannel"; break;
-		case Duotone: retVal = L"Duotone"; break;
-		case Lab: retVal = L"Lab";	break;
+		case color_mode::Bitmap: return L"Bitmap";
+		case color_mode::Grayscale:	return L"Grayscale";
+		case color_mode::Indexed: return L"Indexed";
+		case color_mode::RGB: return L"RGB";
+		case color_mode::CMYK: return L"CMYK";
+		case color_mode::Multichannel: return L"Multichannel";
+		case color_mode::Duotone: return L"Duotone";
+		case color_mode::Lab: return L"Lab";
+		default: return L"Invalid";
 	};
-
-	return retVal;
 }
 
 }	//namespace psd

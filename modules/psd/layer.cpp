@@ -75,7 +75,7 @@ struct layer::impl
 {
 	friend class layer;
 
-	impl() : blend_mode_(InvalidBlendMode), link_group_id_(0), opacity_(255), sheet_color_(0), baseClipping_(false), flags_(0), protection_flags_(0), masks_count_(0), text_scale_(1.0f)
+	impl() : blend_mode_(blend_mode::InvalidBlendMode), link_group_id_(0), opacity_(255), sheet_color_(0), baseClipping_(false), flags_(0), protection_flags_(0), masks_count_(0), text_scale_(1.0f)
 	{}
 
 private:
@@ -135,13 +135,13 @@ public:
 		stream.discard_bytes(1);	//padding
 
 		unsigned long extras_size = stream.read_long();
-		long position = stream.current_position();
+		auto position = stream.current_position();
 		mask_.read_mask_data(stream);
 		read_blending_ranges(stream);
 		name_ = stream.read_pascal_string(4);
 
 		//Aditional Layer Information
-		long end_of_layer_info = position + extras_size;
+		auto end_of_layer_info = position + extras_size;
 		try
 		{
 			while(stream.current_position() < end_of_layer_info)
@@ -157,16 +157,16 @@ public:
 
 	void read_chunk(BEFileInputStream& stream, const psd_document& doc, bool isMetadata = false)
 	{
-		unsigned long signature = stream.read_long();
+		auto signature = stream.read_long();
 		if(signature != '8BIM' && signature != '8B64')
 			throw PSDFileFormatException();
 
-		unsigned long key = stream.read_long();
+		auto key = stream.read_long();
 
 		if(isMetadata) stream.read_long();
 
-		unsigned long length = stream.read_long();
-		unsigned long end_of_chunk = stream.current_position() + length;
+		auto length = stream.read_long();
+		auto end_of_chunk = stream.current_position() + length;
 
 		try
 		{
@@ -249,28 +249,28 @@ public:
 	{
 		typedef std::pair<unsigned long, unsigned long> path_point;
 
-		unsigned long version = stream.read_long();
-		unsigned long flags = stream.read_long();
+		stream.read_long(); // version
+		stream.read_long(); // flags
 		int path_records = (length-8) / 26;
 
-		long position = stream.current_position();
+		auto position = stream.current_position();
 
 		std::vector<path_point> knots;
 		for(int i=1; i <= path_records; ++i)
 		{
-			unsigned short selector = stream.read_short();
+			auto selector = stream.read_short();
 			if(selector == 2)	//we only concern ourselves with closed paths 
 			{
-				unsigned long p_y = stream.read_long();
-				unsigned long p_x = stream.read_long();
+				auto p_y = stream.read_long();
+				auto p_x = stream.read_long();
 				path_point cp_prev(p_x, p_y);
 
-				unsigned long a_y = stream.read_long();
-				unsigned long a_x = stream.read_long();
+				auto a_y = stream.read_long();
+				auto a_x = stream.read_long();
 				path_point anchor(a_x, a_y);
 
-				unsigned long n_y = stream.read_long();
-				unsigned long n_x = stream.read_long();
+				auto n_y = stream.read_long();
+				auto n_x = stream.read_long();
 				path_point cp_next(n_x, n_y);
 
 				if(anchor == cp_prev && anchor == cp_next)
@@ -302,7 +302,7 @@ public:
 
 	void read_metadata(BEFileInputStream& stream, const psd_document& doc)
 	{
-		unsigned long count = stream.read_long();
+		auto count = stream.read_long();
 		for(unsigned long index = 0; index < count; ++index)
 			read_chunk(stream, doc, true);
 	}
@@ -328,12 +328,12 @@ public:
 		stream.read_short();	//should be 1
 	
 		//transformation info
-		double xx = stream.read_double();
-		double xy = stream.read_double();
-		double yx = stream.read_double();
-		double yy = stream.read_double();
-		double tx = stream.read_double();
-		double ty = stream.read_double();
+		auto xx = stream.read_double();
+		auto xy = stream.read_double();
+		auto yx = stream.read_double();
+		auto yy = stream.read_double();
+		stream.read_double(); // tx
+		stream.read_double(); // ty
 		if(xx != yy || (xy != 0 && yx != 0))
 			throw PSDFileFormatException("Rotation and non-uniform scaling of dynamic textfields is not supported yet");
 
@@ -369,23 +369,23 @@ public:
 			throw PSDFileFormatException("Failed to read text warp-data");
 		else
 		{
-			double w_top = stream.read_double();
-			double w_left = stream.read_double();
-			double w_right = stream.read_double();
-			double w_bottom = stream.read_double();
+			stream.read_double(); // w_top
+			stream.read_double();  // w_left
+			stream.read_double();  // w_right
+			stream.read_double();  // w_bottom
 		}
 	}
 
 	//TODO: implement
 	void read_blending_ranges(BEFileInputStream& stream)
 	{
-		unsigned long length = stream.read_long();
+		auto length = stream.read_long();
 		stream.discard_bytes(length);
 	}
 
 	bool has_channel(channel_type type)
 	{
-		return std::find_if(channels_.begin(), channels_.end(), [=](const channel& c) { return c.id == type; }) != channels_.end();
+		return std::find_if(channels_.begin(), channels_.end(), [=](const channel& c) { return c.id == static_cast<int>(type); }) != channels_.end();
 	}
 
 	void read_channel_data(BEFileInputStream& stream)
@@ -393,7 +393,7 @@ public:
 		image8bit_ptr bitmap;
 		image8bit_ptr mask;
 
-		bool has_transparency = has_channel(psd::transparency);
+		bool has_transparency = has_channel(channel_type::transparency);
 	
 		rect<long> clip_rect;
 		if(!bitmap_rect_.empty())
@@ -418,7 +418,7 @@ public:
 		{
 			psd::rect<long> src_rect;
 			image8bit_ptr target;
-			unsigned char offset;
+			unsigned char offset = 0;
 			bool discard_channel = false;
 
 			//determine target bitmap and offset
@@ -427,7 +427,7 @@ public:
 			else if((*it).id >= -1)	//BGRA-data
 			{
 				target = bitmap;
-				offset = ((*it).id >= 0) ? 2 - (*it).id : 3;
+				offset = static_cast<unsigned char>(((*it).id >= 0) ? 2 - (*it).id : 3);
 				src_rect = bitmap_rect_;
 			}
 			else if(mask)	//mask
@@ -445,10 +445,10 @@ public:
 			if(!target || src_rect.empty())
 				discard_channel = true;
 
-			unsigned long end_of_data = stream.current_position() + (*it).data_length;
+			auto end_of_data = stream.current_position() + (*it).data_length;
 			if(!discard_channel)
 			{
-				unsigned short encoding = stream.read_short();
+				auto encoding = stream.read_short();
 				if(target)
 				{
 					if(encoding == 0)
@@ -479,9 +479,9 @@ public:
 		if(total_length != data_length)
 			throw PSDFileFormatException();
 
-		unsigned char* data = target->data();
+		auto data = target->data();
 
-		unsigned char stride = target->channel_count();
+		auto stride = target->channel_count();
 		if(stride == 1)
 			stream.read(reinterpret_cast<char*>(data + offset), total_length);
 		else
@@ -493,9 +493,9 @@ public:
 
 	void read_rle_image_data(BEFileInputStream& stream, const rect<long>&src_rect, const rect<long>&clip_rect, image8bit_ptr target, unsigned char offset)
 	{
-		unsigned long width = src_rect.size.width;
-		unsigned long height = src_rect.size.height;
-		unsigned char stride = target->channel_count();
+		auto width = src_rect.size.width;
+		auto height = src_rect.size.height;
+		auto stride = target->channel_count();
 
 		int offset_x = clip_rect.location.x - src_rect.location.x;
 		int offset_y = clip_rect.location.y - src_rect.location.y;
@@ -503,10 +503,10 @@ public:
 		std::vector<unsigned short> scanline_lengths;
 		scanline_lengths.reserve(height);
 
-		for(unsigned long scanlineIndex=0; scanlineIndex < height; ++scanlineIndex)
+		for (long scanlineIndex = 0; scanlineIndex < height; ++scanlineIndex)
 			scanline_lengths.push_back(stream.read_short());
 
-		unsigned char *target_data = target->data();
+		auto target_data = target->data();
 
 		std::vector<unsigned char> line(width);
 
@@ -515,7 +515,7 @@ public:
 			if(scanlineIndex >= target->height()+offset_y)
 				break;
 
-			unsigned long colIndex = 0;
+			long colIndex = 0;
 
 			do
 			{

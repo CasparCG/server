@@ -22,7 +22,6 @@
 #pragma once
 
 #include <common/memory.h>
-#include <common/enum_class.h>
 
 #include <cstdint>
 
@@ -36,15 +35,11 @@ public:
 
 	// Static Members
 
-	struct usage_def
+	enum class usage
 	{
-		enum type
-		{
-			write_only,
-			read_only
-		};
+		write_only,
+		read_only
 	};
-	typedef enum_class<usage_def> usage;
 	
 	// Constructors
 

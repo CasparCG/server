@@ -84,7 +84,7 @@ void blue_initialize()
 
 EVideoMode vid_fmt_from_video_format(const core::video_format& fmt) 
 {
-	switch(fmt.value())
+	switch(fmt)
 	{
 	case core::video_format::pal:			return VID_FMT_PAL;
 	case core::video_format::ntsc:			return VID_FMT_NTSC;
