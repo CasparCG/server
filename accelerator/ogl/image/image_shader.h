@@ -28,18 +28,15 @@ namespace caspar { namespace accelerator { namespace ogl {
 class shader;
 class device;
 
-struct texture_id
+enum class texture_id
 {
-	enum type
-	{
-		plane0 = 0,
-		plane1,
-		plane2,
-		plane3,
-		local_key,
-		layer_key,
-		background,
-	};
+	plane0 = 0,
+	plane1,
+	plane2,
+	plane3,
+	local_key,
+	layer_key,
+	background
 };
 
 std::shared_ptr<shader> get_image_shader(

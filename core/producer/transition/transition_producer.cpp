@@ -98,7 +98,7 @@ public:
 		*monitor_subject_	<< monitor::message("/transition/frame") % current_frame_ % info_.duration
 							<< monitor::message("/transition/type") % [&]() -> std::string
 																{
-																	switch(info_.type.value())
+																	switch(info_.type)
 																	{
 																	case transition_type::mix:		return "mix";
 																	case transition_type::wipe:		return "wipe";

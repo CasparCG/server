@@ -37,7 +37,7 @@ namespace caspar { namespace decklink {
 	
 static BMDDisplayMode get_decklink_video_format(core::video_format fmt) 
 {
-	switch(fmt.value())
+	switch(fmt)
 	{
 	case core::video_format::pal:			return bmdModePAL;
 	case core::video_format::ntsc:			return bmdModeNTSC;

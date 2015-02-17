@@ -74,13 +74,13 @@ public:
 
 	~impl() {}
 
-	enum parser_state {
+	enum class parser_state {
 		New = 0,
 		GetSwitch,
 		GetCommand,
 		GetParameters
 	};
-	enum error_state {
+	enum class error_state {
 		no_error = 0,
 		command_error,
 		channel_error,
@@ -91,7 +91,7 @@ public:
 
 	struct command_interpreter_result
 	{
-		command_interpreter_result() : error(no_error) {}
+		command_interpreter_result() : error(error_state::no_error) {}
 
 		std::shared_ptr<caspar::IO::lock_container>	lock;
 		std::wstring								command_name;
@@ -110,28 +110,28 @@ public:
 		if(interpret_command_string(message, result, client))
 		{
 			if(result.lock && !result.lock->check_access(client))
-				result.error = access_error;
+				result.error = error_state::access_error;
 			else
 				result.queue->AddCommand(result.command);
 		}
 		
-		if(result.error != no_error)
+		if (result.error != error_state::no_error)
 		{
 			std::wstringstream answer;
 			boost::to_upper(result.command_name);
 
 			switch(result.error)
 			{
-			case command_error:
+			case error_state::command_error:
 				answer << L"400 ERROR\r\n" << message << "\r\n";
 				break;
-			case channel_error:
+			case error_state::channel_error:
 				answer << L"401 " << result.command_name << " ERROR\r\n";
 				break;
-			case parameters_error:
+			case error_state::parameters_error:
 				answer << L"402 " << result.command_name << " ERROR\r\n";
 				break;
-			case access_error:
+			case error_state::access_error:
 				answer << L"503 " << result.command_name << " FAILED\r\n";
 				break;
 			default:
@@ -150,38 +150,38 @@ private:
 		try
 		{
 			std::vector<std::wstring> tokens;
-			parser_state state = New;
+			parser_state state = parser_state::New;
 
 			tokenize(message, &tokens);
 
 			//parse the message one token at the time
 			auto end = tokens.end();
 			auto it = tokens.begin();
-			while(it != end && result.error == no_error)
+			while (it != end && result.error == error_state::no_error)
 			{
 				switch(state)
 				{
-				case New:
+				case parser_state::New:
 					if((*it)[0] == TEXT('/'))
-						state = GetSwitch;
+						state = parser_state::GetSwitch;
 					else
-						state = GetCommand;
+						state = parser_state::GetCommand;
 					break;
 
-				case GetSwitch:
+				case parser_state::GetSwitch:
 					//command_switch = (*it);	//we dont care for the switch anymore
-					state = GetCommand;
+					state = parser_state::GetCommand;
 					++it;
 					break;
 
-				case GetCommand:
+				case parser_state::GetCommand:
 					{
 						result.command_name = (*it);
 						result.command = create_command(result.command_name, client);
 						if(result.command)	//the command doesn't need a channel
 						{
 							result.queue = commandQueues_[0];
-							state = GetParameters;
+							state = parser_state::GetParameters;
 						}
 						else
 						{
@@ -193,9 +193,9 @@ private:
 							if(it == end)
 							{
 								if(create_channel_command(result.command_name, client, channels_.at(0), 0, 0))	//check if there is a command like this
-									result.error = channel_error;
+									result.error = error_state::channel_error;
 								else
-									result.error = command_error;
+									result.error = error_state::command_error;
 
 								break;
 							}
@@ -213,7 +213,7 @@ private:
 								}
 								catch(...)
 								{
-									result.error = channel_error;
+									result.error = error_state::channel_error;
 									break;
 								}
 							}
@@ -228,23 +228,23 @@ private:
 								}
 								else
 								{
-									result.error = command_error;
+									result.error = error_state::command_error;
 									break;
 								}
 							}
 							else
 							{
-								result.error = channel_error;
+								result.error = error_state::channel_error;
 								break;
 							}
 						}
 
-						state = GetParameters;
+						state = parser_state::GetParameters;
 						++it;
 					}
 					break;
 
-				case GetParameters:
+				case parser_state::GetParameters:
 					{
 						int parameterCount=0;
 						while(it != end)
@@ -258,17 +258,17 @@ private:
 				}
 			}
 
-			if(result.command && result.error == no_error && result.command->parameters().size() < result.command->minimum_parameters()) {
-				result.error = parameters_error;
+			if(result.command && result.error == error_state::no_error && result.command->parameters().size() < result.command->minimum_parameters()) {
+				result.error = error_state::parameters_error;
 			}
 		}
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
-			result.error = unknown_error;
+			result.error = error_state::unknown_error;
 		}
 
-		return result.error == no_error;
+		return result.error == error_state::no_error;
 	}
 
 	std::size_t tokenize(const std::wstring& message, std::vector<std::wstring>* pTokenVector)

@@ -259,7 +259,7 @@ bool read_pdf(boost::property_tree::wptree& tree, const std::string& s)
 		if(result)
 			tree.swap(g.context.root);
 	}
-	catch(std::exception& ex)
+	catch(std::exception&)
 	{}
 
 	return result;

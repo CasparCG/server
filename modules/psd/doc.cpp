@@ -25,7 +25,7 @@
 
 namespace caspar { namespace psd {
 
-psd_document::psd_document() : channels_(0), width_(0), height_(0), depth_(0), color_mode_(InvalidColorMode)
+psd_document::psd_document() : channels_(0), width_(0), height_(0), depth_(0), color_mode_(color_mode::InvalidColorMode)
 {
 }
 
@@ -43,7 +43,7 @@ bool psd_document::parse(const std::wstring& filename)
 		read_image_resources();
 		read_layers();
 	}
-	catch(std::exception& ex)
+	catch(std::exception&)
 	{
 		result = false;
 	}
@@ -53,8 +53,8 @@ bool psd_document::parse(const std::wstring& filename)
 
 void psd_document::read_header()
 {
-	unsigned long signature = input_.read_long();
-	unsigned short version = input_.read_short();
+	auto signature = input_.read_long();
+	auto version = input_.read_short();
 	if(!(signature == '8BPS' && version == 1))
 		throw PSDFileFormatException();
 
@@ -69,7 +69,7 @@ void psd_document::read_header()
 
 void psd_document::read_color_mode()
 {
-	unsigned long length = input_.read_long();
+	auto length = input_.read_long();
 	input_.discard_bytes(length);
 }
 
@@ -79,22 +79,22 @@ void psd_document::read_image_resources()
 
 	if(section_length > 0)
 	{
-		unsigned long end_of_section = input_.current_position() + section_length;
+		std::streamoff end_of_section = input_.current_position() + section_length;
 	
 		try
 		{
 			while(input_.current_position() < end_of_section)
 			{
-				unsigned long signature = input_.read_long();
+				auto signature = input_.read_long();
 				if(signature != '8BIM')
 					throw PSDFileFormatException();
 
-				unsigned short resource_id = input_.read_short();
+				auto resource_id = input_.read_short();
 				
 				std::wstring name = input_.read_pascal_string(2);
 
-				unsigned long resource_length = input_.read_long();
-				unsigned long end_of_chunk = input_.current_position() + resource_length;
+				auto resource_length = input_.read_long();
+				auto end_of_chunk = input_.current_position() + resource_length;
 
 				try
 				{
@@ -118,7 +118,7 @@ void psd_document::read_image_resources()
 						break;
 					case 1075:		//timeline information
 						{
-							int desc_ver = input_.read_long();	//descriptor version, should be 16
+							input_.read_long();	//descriptor version, should be 16
 							descriptor timeline_descriptor;
 							if(!timeline_descriptor.populate(input_))
 								throw PSDFileFormatException();
@@ -179,7 +179,7 @@ void psd_document::read_image_resources()
 				}
 			}
 		}
-		catch(PSDFileFormatException& ex)
+		catch(PSDFileFormatException&)
 		{
 			//if an error occurs, just skip this section
 			input_.set_position(end_of_section);
@@ -191,20 +191,20 @@ void psd_document::read_image_resources()
 void psd_document::read_layers()
 {
 	//"Layer And Mask information"
-	unsigned long total_length = input_.read_long();	//length of "Layer and Mask information"
-	unsigned long end_of_layers = input_.current_position() + total_length;
+	auto total_length = input_.read_long();	//length of "Layer and Mask information"
+	auto end_of_layers = input_.current_position() + total_length;
 
 	try
 	{
 		//"Layer info section"
 		{
-			unsigned long layer_info_length = input_.read_long();	//length of "Layer info" section
-			unsigned long end_of_layers_info = input_.current_position() + layer_info_length;
+			auto layer_info_length = input_.read_long();	//length of "Layer info" section
+			auto end_of_layers_info = input_.current_position() + layer_info_length;
 
-			short layers_count = abs(static_cast<short>(input_.read_short()));
+			auto layers_count = std::abs(static_cast<short>(input_.read_short()));
 			//std::clog << "Expecting " << layers_count << " layers" << std::endl;
 
-			for(short layer_index = 0; layer_index < layers_count; ++layer_index)
+			for(int layer_index = 0; layer_index < layers_count; ++layer_index)
 			{
 				if(layer_index  == layers_.size())
 					layers_.push_back(std::make_shared<layer>());
@@ -212,8 +212,6 @@ void psd_document::read_layers()
 				layers_[layer_index]->populate(input_, *this);
 				//std::clog << "Added layer: " << std::string(layers_[layerIndex]->name().begin(), layers_[layerIndex]->name().end()) << std::endl;
 			}
-
-			unsigned long channel_data_start = input_.current_position();	//TODO: remove. For debug purposes only
 
 			auto end = layers_.end();
 			for(auto layer_it = layers_.begin(); layer_it != end; ++layer_it)
@@ -224,13 +222,12 @@ void psd_document::read_layers()
 			input_.set_position(end_of_layers_info);
 		}
 
-		unsigned long cp = input_.current_position();
 		//global layer mask info
-		unsigned long global_layer_mask_length = input_.read_long();
+		auto global_layer_mask_length = input_.read_long();
 		input_.discard_bytes(global_layer_mask_length);
 
 	}
-	catch(std::exception& ex)
+	catch(std::exception&)
 	{
 		input_.set_position(end_of_layers);
 	}

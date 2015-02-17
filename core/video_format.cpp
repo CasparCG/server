@@ -94,7 +94,7 @@ video_format_desc::video_format_desc(video_format format)
 	: format(video_format::invalid)
 	, field_mode(field_mode::empty)
 {
-	*this = format_descs.at(format.value());
+	*this = format_descs.at(static_cast<int>(format));
 }
 
 video_format_desc::video_format_desc(const std::wstring& name)

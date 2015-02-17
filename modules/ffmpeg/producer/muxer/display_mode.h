@@ -27,7 +27,7 @@
 
 namespace caspar { namespace ffmpeg {
 	
-enum display_mode
+enum class display_mode
 {
 	simple,
 	duplicate,
@@ -45,14 +45,14 @@ std::basic_ostream< CharT, TraitsT >& operator<< (std::basic_ostream<CharT, Trai
 {	
 	switch(value)
 	{
-		case simple:						return o << L"simple";
-		case duplicate:						return o << L"duplicate";
-		case half:							return o << L"half";
-		case interlace:						return o << L"interlace";
-		case deinterlace_bob:				return o << L"deinterlace_bob";
-		case deinterlace_bob_reinterlace:	return o << L"deinterlace_bob_reinterlace";
-		case deinterlace:					return o << L"deinterlace";
-		default:							return o << L"invalid";
+	case display_mode::simple:						return o << L"simple";
+	case display_mode::duplicate:					return o << L"duplicate";
+	case display_mode::half:						return o << L"half";
+	case display_mode::interlace:					return o << L"interlace";
+	case display_mode::deinterlace_bob:				return o << L"deinterlace_bob";
+	case display_mode::deinterlace_bob_reinterlace:	return o << L"deinterlace_bob_reinterlace";
+	case display_mode::deinterlace:					return o << L"deinterlace";
+	default:										return o << L"invalid";
 	}
 }
 
