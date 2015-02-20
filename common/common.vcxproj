@@ -120,6 +120,7 @@
     <ClInclude Include="base64.h" />
     <ClInclude Include="blocking_bounded_queue_adapter.h" />
     <ClInclude Include="blocking_priority_queue.h" />
+    <ClInclude Include="cache_aligned_vector.h" />
     <ClInclude Include="compiler\vs\disable_silly_warnings.h" />
     <ClInclude Include="compiler\vs\stack_walker.h" />
     <ClInclude Include="diagnostics\graph.h" />

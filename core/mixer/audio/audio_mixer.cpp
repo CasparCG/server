@@ -54,7 +54,7 @@ struct audio_item
 	}
 };
 
-typedef std::vector<float, tbb::cache_aligned_allocator<float>> audio_buffer_ps;
+typedef cache_aligned_vector<float> audio_buffer_ps;
 	
 struct audio_stream
 {
