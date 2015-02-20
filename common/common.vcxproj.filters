@@ -163,5 +163,8 @@
     <ClInclude Include="base64.h">
       <Filter>source</Filter>
     </ClInclude>
+    <ClInclude Include="cache_aligned_vector.h">
+      <Filter>source</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
