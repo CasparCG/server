@@ -38,23 +38,20 @@ class transition_producer : public frame_producer_base
 {	
 	spl::shared_ptr<monitor::subject>	monitor_subject_;
 	const field_mode					mode_;
-	int									current_frame_;
+	int									current_frame_		= 0;
 	
 	const transition_info				info_;
 		
 	spl::shared_ptr<frame_producer>		dest_producer_;
-	spl::shared_ptr<frame_producer>		source_producer_;
+	spl::shared_ptr<frame_producer>		source_producer_	= frame_producer::empty();
 
-	bool								paused_;
+	bool								paused_				= false;
 		
 public:
 	explicit transition_producer(const field_mode& mode, const spl::shared_ptr<frame_producer>& dest, const transition_info& info) 
 		: mode_(mode)
-		, current_frame_(0)
 		, info_(info)
 		, dest_producer_(dest)
-		, source_producer_(frame_producer::empty())
-		, paused_(false)
 	{
 		dest->monitor_output().attach_parent(monitor_subject_);
 

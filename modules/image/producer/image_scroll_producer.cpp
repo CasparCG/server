@@ -63,28 +63,25 @@ struct image_scroll_producer : public core::frame_producer_base
 	int								height_;
 	core::constraints				constraints_;
 
-	double							delta_;
+	double							delta_				= 0.0;
 	double							speed_;
 
-	int								start_offset_x_;
-	int								start_offset_y_;
+	int								start_offset_x_		= 0;
+	int								start_offset_y_		= 0;
 	bool							progressive_;
 	
 	explicit image_scroll_producer(
-		const spl::shared_ptr<core::frame_factory>& frame_factory, 
-		const core::video_format_desc& format_desc, 
-		const std::wstring& filename, 
-		double speed,
-		double duration,
-		int motion_blur_px = 0,
-		bool premultiply_with_alpha = false,
-		bool progressive = false)
+			const spl::shared_ptr<core::frame_factory>& frame_factory,
+			const core::video_format_desc& format_desc,
+			const std::wstring& filename,
+			double speed,
+			double duration,
+			int motion_blur_px = 0,
+			bool premultiply_with_alpha = false,
+			bool progressive = false)
 		: filename_(filename)
-		, delta_(0)
 		, format_desc_(format_desc)
 		, speed_(speed)
-		, start_offset_x_(0)
-		, start_offset_y_(0)
 		, progressive_(progressive)
 	{
 		auto bitmap = load_image(filename_);

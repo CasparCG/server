@@ -54,13 +54,11 @@ typedef std::vector<int16_t, tbb::cache_aligned_allocator<int16_t>> audio_buffer
 
 class device
 {
-	ALCdevice*											device_;
-	ALCcontext*											context_;
+	ALCdevice*		device_		= nullptr;
+	ALCcontext*		context_	= nullptr;
 
 public:
 	device()
-		: device_(0)
-		, context_(0)
 	{
 		device_ = alcOpenDevice(nullptr);
 
@@ -107,20 +105,17 @@ struct oal_consumer : public core::frame_consumer
 
 	spl::shared_ptr<diagnostics::graph>	graph_;
 	boost::timer						perf_timer_;
-	int									channel_index_;
+	int									channel_index_		= -1;
 	
 	core::video_format_desc				format_desc_;
 
-	ALuint								source_;
+	ALuint								source_				= 0;
 	std::array<ALuint, 3>				buffers_;
 
-	executor							executor_;
+	executor							executor_			= L"oal_consumer";
 
 public:
 	oal_consumer() 
-		: channel_index_(-1)
-		, source_(0)
-		, executor_(L"oal_consumer")
 	{
 		buffers_.assign(0);
 

@@ -69,14 +69,14 @@ struct filter::implementation
     AVFilterContext*				video_graph_out_; 
 		
 	implementation(
-		int in_width,
-		int in_height,
-		boost::rational<int> in_time_base,
-		boost::rational<int> in_frame_rate,
-		boost::rational<int> in_sample_aspect_ratio,
-		AVPixelFormat in_pix_fmt,
-		std::vector<AVPixelFormat> out_pix_fmts,
-		const std::string& filtergraph) 
+			int in_width,
+			int in_height,
+			boost::rational<int> in_time_base,
+			boost::rational<int> in_frame_rate,
+			boost::rational<int> in_sample_aspect_ratio,
+			AVPixelFormat in_pix_fmt,
+			std::vector<AVPixelFormat> out_pix_fmts,
+			const std::string& filtergraph) 
 		: filtergraph_(boost::to_lower_copy(filtergraph))
 	{
 		if(out_pix_fmts.empty())

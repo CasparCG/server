@@ -39,22 +39,15 @@ enum class keyer
 
 struct draw_params final
 {
-	core::pixel_format_desc						pix_desc;
+	core::pixel_format_desc						pix_desc	= core::pixel_format::invalid;
 	std::vector<spl::shared_ptr<class texture>>	textures;
 	core::image_transform						transform;
 	core::frame_geometry						geometry;
-	core::blend_mode							blend_mode;
-	keyer										keyer;
+	core::blend_mode							blend_mode	= core::blend_mode::normal;
+	keyer										keyer		= keyer::linear;
 	std::shared_ptr<class texture>				background;
 	std::shared_ptr<class texture>				local_key;
 	std::shared_ptr<class texture>				layer_key;
-
-	draw_params() 
-		: pix_desc(core::pixel_format::invalid)
-		, blend_mode(core::blend_mode::normal)
-		, keyer(keyer::linear)
-	{
-	}
 };
 
 class image_kernel final

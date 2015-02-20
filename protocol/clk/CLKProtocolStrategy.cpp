@@ -37,12 +37,24 @@ namespace caspar { namespace protocol { namespace CLK {
 
 class CLKProtocolStrategy : public IO::protocol_strategy<wchar_t>
 {
+	enum class ParserState
+	{
+		ExpectingNewCommand,
+		ExpectingCommand,
+		ExpectingParameter
+	};
+
+	ParserState	currentState_								= ParserState::ExpectingNewCommand;
+	std::wstringstream currentCommandString_;
+	std::wstring command_name_;
+	std::vector<std::wstring> parameters_;
+	clk_command_processor& command_processor_;
+	IO::client_connection<wchar_t>::ptr client_connection_;
 public:
 	CLKProtocolStrategy(
-		const IO::client_connection<wchar_t>::ptr& client_connection,
-		clk_command_processor& command_processor) 
-		: currentState_(ParserState::ExpectingNewCommand)
-		, command_processor_(command_processor)
+			const IO::client_connection<wchar_t>::ptr& client_connection,
+			clk_command_processor& command_processor) 
+		: command_processor_(command_processor)
 		, client_connection_(client_connection)
 	{
 	}
@@ -129,20 +141,6 @@ private:
 		command_name_.clear();
 		parameters_.clear();
 	}
-
-	enum class ParserState
-	{
-		ExpectingNewCommand,
-		ExpectingCommand,
-		ExpectingParameter
-	};
-
-	ParserState	currentState_;
-	std::wstringstream currentCommandString_;
-	std::wstring command_name_;
-	std::vector<std::wstring> parameters_;
-	clk_command_processor& command_processor_;
-	IO::client_connection<wchar_t>::ptr client_connection_;
 };
 
 clk_protocol_strategy_factory::clk_protocol_strategy_factory(

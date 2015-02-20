@@ -30,40 +30,33 @@ namespace caspar { namespace core {
 			
 struct levels final
 {
-	levels() 
-		: min_input(0.0)
-		, max_input(1.0)
-		, gamma(1.0)
-		, min_output(0.0)
-		, max_output(1.0)
-	{		
-	}
-	double min_input;
-	double max_input;
-	double gamma;
-	double min_output;
-	double max_output;
+	double min_input	= 0.0;
+	double max_input	= 1.0;
+	double gamma		= 1.0;
+	double min_output	= 0.0;
+	double max_output	= 1.0;
 };
 
 struct image_transform final
 {
-public:
-	image_transform();
+	double					opacity				= 1.0;
+	double					contrast			= 1.0;
+	double					brightness			= 1.0;
+	double					saturation			= 1.0;
 
-	double					opacity;
-	double					contrast;
-	double					brightness;
-	double					saturation;
-	boost::array<double, 2>	fill_translation; 
-	boost::array<double, 2>	fill_scale; 
-	boost::array<double, 2>	clip_translation;  
-	boost::array<double, 2>	clip_scale;  
+	// A bug in VS 2013 prevents us from writing:
+	// boost::array<double, 2> fill_translation = { { 0.0, 0.0 } };
+	// See http://blogs.msdn.com/b/vcblog/archive/2014/08/19/the-future-of-non-static-data-member-initialization.aspx
+	boost::array<double, 2>	fill_translation	= boost::array<double, 2> { { 0.0, 0.0 } };
+	boost::array<double, 2>	fill_scale			= boost::array<double, 2> { { 1.0, 1.0 } };
+	boost::array<double, 2>	clip_translation	= boost::array<double, 2> { { 0.0, 0.0 } };
+	boost::array<double, 2>	clip_scale			= boost::array<double, 2> { { 1.0, 1.0 } };
 	levels					levels;
 
-	field_mode				field_mode;
-	bool					is_key;
-	bool					is_mix;
-	bool					is_still;
+	field_mode				field_mode			= field_mode::progressive;
+	bool					is_key				= false;
+	bool					is_mix				= false;
+	bool					is_still			= false;
 	
 	image_transform& operator*=(const image_transform &other);
 	image_transform operator*(const image_transform &other) const;
@@ -76,11 +69,8 @@ bool operator!=(const image_transform& lhs, const image_transform& rhs);
 
 struct audio_transform final
 {
-public:
-	audio_transform();
-
-	double	volume;
-	bool	is_still;
+	double	volume		= 1.0;
+	bool	is_still	= false;
 	
 	audio_transform& operator*=(const audio_transform &other);
 	audio_transform operator*(const audio_transform &other) const;

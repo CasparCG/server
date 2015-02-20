@@ -63,7 +63,7 @@ struct video_channel::impl final
 	caspar::core::mixer								mixer_;
 	caspar::core::stage								stage_;	
 
-	executor										executor_;
+	executor										executor_			= L"video_channel";
 public:
 	impl(int index, const core::video_format_desc& format_desc, std::unique_ptr<image_mixer> image_mixer)  
 		: monitor_subject_(spl::make_shared<monitor::subject>(
@@ -74,7 +74,6 @@ public:
 		, image_mixer_(std::move(image_mixer))
 		, mixer_(graph_, image_mixer_)
 		, stage_(graph_)
-		, executor_(L"video_channel")
 	{
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_text(print());
