@@ -67,22 +67,12 @@ struct configuration
 		default_latency
 	};
 
-	int			device_index;
-	bool		embedded_audio;
-	keyer_t		keyer;
-	latency_t	latency;
-	bool		key_only;
-	int			base_buffer_depth;
-	
-	configuration()
-		: device_index(1)
-		, embedded_audio(true)
-		, keyer(keyer_t::default_keyer)
-		, latency(latency_t::default_latency)
-		, key_only(false)
-		, base_buffer_depth(3)
-	{
-	}
+	int			device_index		= 1;
+	bool		embedded_audio		= true;
+	keyer_t		keyer				= keyer_t::default_keyer;
+	latency_t	latency				= latency_t::default_latency;
+	bool		key_only			= false;
+	int			base_buffer_depth	= 3;
 	
 	int buffer_depth() const
 	{
@@ -180,27 +170,27 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	const int							channel_index_;
 	const configuration					config_;
 
-	CComPtr<IDeckLink>					decklink_;
-	CComQIPtr<IDeckLinkOutput>			output_;
-	CComQIPtr<IDeckLinkConfiguration>	configuration_;
-	CComQIPtr<IDeckLinkKeyer>			keyer_;
-	CComQIPtr<IDeckLinkAttributes>		attributes_;
+	CComPtr<IDeckLink>					decklink_							= get_device(config_.device_index);
+	CComQIPtr<IDeckLinkOutput>			output_								= decklink_;
+	CComQIPtr<IDeckLinkConfiguration>	configuration_						= decklink_;
+	CComQIPtr<IDeckLinkKeyer>			keyer_								= decklink_;
+	CComQIPtr<IDeckLinkAttributes>		attributes_							= decklink_;
 
 	tbb::spin_mutex						exception_mutex_;
 	std::exception_ptr					exception_;
 
 	tbb::atomic<bool>					is_running_;
 		
-	const std::wstring					model_name_;
+	const std::wstring					model_name_							= get_model_name(decklink_);
 	const core::video_format_desc		format_desc_;
-	const int							buffer_size_;
+	const int							buffer_size_						= config_.buffer_depth(); // Minimum buffer-size 3.
 
-	long long							video_scheduled_;
-	long long							audio_scheduled_;
+	long long							video_scheduled_					= 0;
+	long long							audio_scheduled_					= 0;
 
-	int									preroll_count_;
+	int									preroll_count_						= 0;
 		
-	boost::circular_buffer<std::vector<int32_t>>	audio_container_;
+	boost::circular_buffer<std::vector<int32_t>>	audio_container_		{ buffer_size_ + 1 };
 
 	tbb::concurrent_bounded_queue<core::const_frame> video_frame_buffer_;
 	tbb::concurrent_bounded_queue<core::const_frame> audio_frame_buffer_;
@@ -213,18 +203,7 @@ public:
 	decklink_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index) 
 		: channel_index_(channel_index)
 		, config_(config)
-		, decklink_(get_device(config.device_index))
-		, output_(decklink_)
-		, configuration_(decklink_)
-		, keyer_(decklink_)
-		, attributes_(decklink_)
-		, model_name_(get_model_name(decklink_))
 		, format_desc_(format_desc)
-		, buffer_size_(config.buffer_depth()) // Minimum buffer-size 3.
-		, video_scheduled_(0)
-		, audio_scheduled_(0)
-		, preroll_count_(0)
-		, audio_container_(buffer_size_+1)
 	{
 		is_running_ = true;
 				

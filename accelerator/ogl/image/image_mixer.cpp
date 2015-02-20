@@ -54,15 +54,10 @@ typedef std::shared_future<std::shared_ptr<texture>> future_texture;
 
 struct item
 {
-	core::pixel_format_desc								pix_desc;
-	std::vector<future_texture>							textures;
-	core::image_transform								transform;
-	core::frame_geometry								geometry;
-
-	item()
-		: pix_desc(core::pixel_format::invalid)
-	{
-	}
+	core::pixel_format_desc		pix_desc	= core::pixel_format::invalid;
+	std::vector<future_texture>	textures;
+	core::image_transform		transform;
+	core::frame_geometry		geometry;
 };
 
 struct layer

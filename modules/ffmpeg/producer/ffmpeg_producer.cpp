@@ -91,7 +91,7 @@ struct ffmpeg_producer : public core::frame_producer_base
 {
 	spl::shared_ptr<core::monitor::subject>			monitor_subject_;
 	const std::wstring								filename_;
-	const std::wstring								path_relative_to_media_;
+	const std::wstring								path_relative_to_media_	= get_relative_or_original(filename_, env::media_folder());
 	
 	const spl::shared_ptr<diagnostics::graph>		graph_;
 					
@@ -100,7 +100,7 @@ struct ffmpeg_producer : public core::frame_producer_base
 
 	input											input_;	
 
-	const double									fps_;
+	const double									fps_					= read_fps(input_.context(), format_desc_.fps);
 	const uint32_t									start_;
 		
 	std::unique_ptr<video_decoder>					video_decoder_;
@@ -108,7 +108,7 @@ struct ffmpeg_producer : public core::frame_producer_base
 	frame_muxer										muxer_;
 	core::constraints								constraints_;
 	
-	core::draw_frame								last_frame_;
+	core::draw_frame								last_frame_				= core::draw_frame::empty();
 
 	boost::optional<uint32_t>						seek_target_;
 	
@@ -121,14 +121,12 @@ public:
 							 uint32_t start, 
 							 uint32_t length) 
 		: filename_(filename)
-		, path_relative_to_media_(get_relative_or_original(filename, env::media_folder()))
 		, frame_factory_(frame_factory)		
 		, format_desc_(format_desc)
 		, input_(graph_, filename_, loop, start, length)
 		, fps_(read_fps(input_.context(), format_desc_.fps))
 		, muxer_(fps_, frame_factory, format_desc_, filter)
 		, start_(start)
-		, last_frame_(core::draw_frame::empty())
 	{
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	

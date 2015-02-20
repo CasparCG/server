@@ -98,7 +98,7 @@ class context : public drawable
 	
 	std::list<std::weak_ptr<drawable>> drawables_;
 		
-	executor executor_;
+	executor executor_ = L"diagnostics";
 public:					
 
 	static void register_drawable(const std::shared_ptr<drawable>& drawable)
@@ -125,7 +125,7 @@ public:
 		get_instance().reset();
 	}
 private:
-	context() : executor_(L"diagnostics")
+	context()
 	{
 		executor_.begin_invoke([=]
 		{			
@@ -294,10 +294,9 @@ struct graph::impl : public drawable
 
 	tbb::spin_mutex mutex_;
 	std::wstring text_;
-	bool auto_reset_;
+	bool auto_reset_ = false;
 
 	impl()
-		: auto_reset_(false)
 	{
 	}
 		

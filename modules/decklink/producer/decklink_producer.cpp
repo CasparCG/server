@@ -80,49 +80,42 @@ namespace caspar { namespace decklink {
 		
 class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 {	
+	const int										device_index_;
 	core::monitor::subject							monitor_subject_;
 	spl::shared_ptr<diagnostics::graph>				graph_;
 	boost::timer									tick_timer_;
 
-	CComPtr<IDeckLink>								decklink_;
-	CComQIPtr<IDeckLinkInput>						input_;
-	CComQIPtr<IDeckLinkAttributes >					attributes_;
+	CComPtr<IDeckLink>								decklink_			= get_device(device_index_);
+	CComQIPtr<IDeckLinkInput>						input_				= decklink_;
+	CComQIPtr<IDeckLinkAttributes >					attributes_			= decklink_;
 	
-	const std::wstring								model_name_;
-	const int										device_index_;
+	const std::wstring								model_name_			= get_model_name(decklink_);
 	const std::wstring								filter_;
 	
-	std::vector<int>								audio_cadence_;
-	boost::circular_buffer<size_t>					sync_buffer_;
-	ffmpeg::frame_muxer								muxer_;
-			
-	spl::shared_ptr<core::frame_factory>			frame_factory_;
 	core::video_format_desc							in_format_desc_;
 	core::video_format_desc							out_format_desc_;
-	core::constraints								constraints_;
+	std::vector<int>								audio_cadence_		= out_format_desc_.audio_cadence;
+	boost::circular_buffer<size_t>					sync_buffer_		{ audio_cadence_.size() };
+	spl::shared_ptr<core::frame_factory>			frame_factory_;
+	ffmpeg::frame_muxer								muxer_				{ in_format_desc_.fps, frame_factory_, out_format_desc_, filter_ };
+			
+	core::constraints								constraints_		{ in_format_desc_.width, in_format_desc_.height };
 
 	tbb::concurrent_bounded_queue<core::draw_frame>	frame_buffer_;
 
 	std::exception_ptr								exception_;		
 
 public:
-	decklink_producer(const core::video_format_desc& in_format_desc, 
-					  int device_index, 
-					  const spl::shared_ptr<core::frame_factory>& frame_factory, 
-					  const core::video_format_desc& out_format_desc, 
-					  const std::wstring& filter)
-		: decklink_(get_device(device_index))
-		, input_(decklink_)
-		, attributes_(decklink_)
-		, model_name_(get_model_name(decklink_))
-		, device_index_(device_index)
+	decklink_producer(
+			const core::video_format_desc& in_format_desc, 
+			int device_index, 
+			const spl::shared_ptr<core::frame_factory>& frame_factory, 
+			const core::video_format_desc& out_format_desc, 
+			const std::wstring& filter)
+		: device_index_(device_index)
 		, filter_(filter)
 		, in_format_desc_(in_format_desc)
 		, out_format_desc_(out_format_desc)
-		, constraints_(in_format_desc.width, in_format_desc.height)
-		, muxer_(in_format_desc.fps, frame_factory, out_format_desc, filter)
-		, audio_cadence_(out_format_desc.audio_cadence)
-		, sync_buffer_(out_format_desc.audio_cadence.size())
 		, frame_factory_(frame_factory)
 	{	
 		frame_buffer_.set_capacity(2);

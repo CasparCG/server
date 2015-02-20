@@ -75,13 +75,12 @@ struct image_producer : public core::frame_producer_base
 	core::monitor::subject						monitor_subject_;
 	const std::wstring							description_;
 	const spl::shared_ptr<core::frame_factory>	frame_factory_;
-	core::draw_frame							frame_;
+	core::draw_frame							frame_				= core::draw_frame::empty();
 	core::constraints							constraints_;
 	
 	image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& description) 
 		: description_(description)
 		, frame_factory_(frame_factory)
-		, frame_(core::draw_frame::empty())	
 	{
 		load(load_image(description_));
 
@@ -91,7 +90,6 @@ struct image_producer : public core::frame_producer_base
 	image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const void* png_data, size_t size) 
 		: description_(L"png from memory")
 		, frame_factory_(frame_factory)
-		, frame_(core::draw_frame::empty())	
 	{
 		load(load_png_from_memory(png_data, size));
 

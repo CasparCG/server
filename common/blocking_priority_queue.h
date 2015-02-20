@@ -45,11 +45,11 @@ class blocking_priority_queue
 public:
 	typedef unsigned int size_type;
 private:	
-	std::map<Prio, tbb::concurrent_queue<T>, std::greater<Prio>> queues_by_priority_;
-	semaphore space_available_;
-	semaphore elements_available_;
-	mutable boost::mutex capacity_mutex_;
-	size_type capacity_;
+	std::map<Prio, tbb::concurrent_queue<T>, std::greater<Prio>>	queues_by_priority_;
+	size_type														capacity_;
+	semaphore														space_available_	= capacity_;
+	semaphore														elements_available_	= 0u;
+	mutable boost::mutex											capacity_mutex_;
 public:
 	/**
 	 * Constructor.
@@ -60,9 +60,7 @@ public:
 	 */
 	template<class PrioList>
 	blocking_priority_queue(size_type capacity, const PrioList& priorities)
-		: space_available_(capacity)
-		, elements_available_(0u)
-		, capacity_(capacity)
+		: capacity_(capacity)
 	{
 		for (Prio priority : priorities)
 		{

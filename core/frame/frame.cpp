@@ -42,14 +42,13 @@ struct mutable_frame::impl : boost::noncopyable
 	core::audio_buffer							audio_data_;
 	const core::pixel_format_desc				desc_;
 	const void*									tag_;
-	core::frame_geometry						geometry_;
+	core::frame_geometry						geometry_		= frame_geometry::get_default();
 	
 	impl(std::vector<array<std::uint8_t>> buffers, audio_buffer audio_buffer, const void* tag, const core::pixel_format_desc& desc) 
 		: buffers_(std::move(buffers))
 		, audio_data_(std::move(audio_buffer))
 		, desc_(desc)
 		, tag_(tag)
-		, geometry_(frame_geometry::get_default())
 	{
 		for (auto& buffer : buffers_)
 			if(!buffer.data())
