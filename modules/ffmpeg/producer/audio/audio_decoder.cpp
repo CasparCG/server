@@ -30,8 +30,7 @@
 #include <core/video_format.h>
 
 #include <common/log.h>
-
-#include <tbb/cache_aligned_allocator.h>
+#include <common/cache_aligned_vector.h>
 
 #include <queue>
 
@@ -79,7 +78,7 @@ struct audio_decoder::impl : boost::noncopyable
 																						[](SwrContext* p){swr_free(&p); }
 																					};
 
-	std::vector<uint8_t, tbb::cache_aligned_allocator<int8_t>>	buffer_;
+	cache_aligned_vector<uint8_t>								buffer_;
 
 	std::shared_ptr<AVPacket>									current_packet_;
 	

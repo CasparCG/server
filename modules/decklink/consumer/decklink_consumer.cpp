@@ -37,11 +37,11 @@
 #include <common/memshfl.h>
 #include <common/array.h>
 #include <common/future.h>
+#include <common/cache_aligned_vector.h>
 
 #include <core/consumer/frame_consumer.h>
 
 #include <tbb/concurrent_queue.h>
-#include <tbb/cache_aligned_allocator.h>
 
 #include <common/assert.h>
 #include <boost/lexical_cast.hpp>
@@ -82,12 +82,12 @@ struct configuration
 
 class decklink_frame : public IDeckLinkVideoFrame
 {
-	tbb::atomic<int>											ref_count_;
-	core::const_frame											frame_;
-	const core::video_format_desc								format_desc_;
+	tbb::atomic<int>				ref_count_;
+	core::const_frame				frame_;
+	const core::video_format_desc	format_desc_;
 
-	const bool													key_only_;
-	std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>> data_;
+	const bool						key_only_;
+	cache_aligned_vector<uint8_t>	data_;
 public:
 	decklink_frame(core::const_frame frame, const core::video_format_desc& format_desc, bool key_only)
 		: frame_(frame)
