@@ -91,28 +91,15 @@ struct configuration
 		aspect_invalid,
 	};
 		
-	std::wstring	name;
-	int				screen_index;
-	stretch			stretch;
-	bool			windowed;
-	bool			auto_deinterlace;
-	bool			key_only;
-	aspect_ratio	aspect;	
-	bool			vsync;
-	bool			interactive;
-
-	configuration()
-		: name(L"ogl")
-		, screen_index(0)
-		, stretch(stretch::fill)
-		, windowed(true)
-		, auto_deinterlace(true)
-		, key_only(false)
-		, aspect(aspect_ratio::aspect_invalid)
-		, vsync(true)
-		, interactive(true)
-	{
-	}
+	std::wstring	name				= L"ogl";
+	int				screen_index		= 0;
+	stretch			stretch				= stretch::fill;
+	bool			windowed			= true;
+	bool			auto_deinterlace	= true;
+	bool			key_only			= false;
+	aspect_ratio	aspect				= aspect_ratio::aspect_invalid;
+	bool			vsync				= true;
+	bool			interactive			= true;
 };
 
 struct screen_consumer : boost::noncopyable
@@ -121,17 +108,17 @@ struct screen_consumer : boost::noncopyable
 	core::video_format_desc								format_desc_;
 	int													channel_index_;
 
-	GLuint												texture_;
-	std::vector<GLuint>									pbos_;
+	GLuint												texture_		= 0;
+	std::vector<GLuint>									pbos_			= std::vector<GLuint> { 0, 0 };
 			
 	float												width_;
 	float												height_;
 	int													screen_x_;
 	int													screen_y_;
-	int													screen_width_;
-	int													screen_height_;
-	int													square_width_;
-	int													square_height_;
+	int													screen_width_	= format_desc_.width;
+	int													screen_height_	= format_desc_.height;
+	int													square_width_	= format_desc_.square_width;
+	int													square_height_	= format_desc_.square_height;
 
 	sf::Window											window_;
 
@@ -157,12 +144,6 @@ public:
 		: config_(config)
 		, format_desc_(format_desc)
 		, channel_index_(channel_index)
-		, texture_(0)
-		, pbos_(2, 0)	
-		, screen_width_(format_desc.width)
-		, screen_height_(format_desc.height)
-		, square_width_(format_desc.square_width)
-		, square_height_(format_desc.square_height)		
 		, sink_(sink)
 		, filter_([&]() -> ffmpeg::filter
 		{			

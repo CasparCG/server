@@ -38,13 +38,10 @@ struct point
 template<typename T>
 struct color
 {
-	color() : red(0), green(0), blue(0), alpha(0)
-	{}
-
-	T red;
-	T green;
-	T blue;
-	T alpha;
+	T red		= 0;
+	T green		= 0;
+	T blue		= 0;
+	T alpha		= 0;
 
 	unsigned long to_uint32()
 	{

@@ -62,10 +62,22 @@ struct audio_decoder::impl : boost::noncopyable
 	core::monitor::subject										monitor_subject_;
 	input*														input_;
 	int															index_;
-	const spl::shared_ptr<AVCodecContext>						codec_context_;		
 	const core::video_format_desc								format_desc_;
+	const spl::shared_ptr<AVCodecContext>						codec_context_ = open_codec(input_->context(), AVMEDIA_TYPE_AUDIO, index_);
 
-	std::shared_ptr<SwrContext>									swr_;
+	std::shared_ptr<SwrContext>									swr_				{
+																						swr_alloc_set_opts(
+																								nullptr,
+																								av_get_default_channel_layout(format_desc_.audio_channels),
+																								AV_SAMPLE_FMT_S32,
+																								format_desc_.audio_sample_rate,
+																								get_channel_layout(codec_context_.get()),
+																								codec_context_->sample_fmt,
+																								codec_context_->sample_rate,
+																								0,
+																								nullptr),
+																						[](SwrContext* p){swr_free(&p); }
+																					};
 
 	std::vector<uint8_t, tbb::cache_aligned_allocator<int8_t>>	buffer_;
 
@@ -76,11 +88,7 @@ public:
 		: input_(&in)
 		, format_desc_(format_desc)	
 		, codec_context_(open_codec(input_->context(), AVMEDIA_TYPE_AUDIO, index_))
-		, swr_(swr_alloc_set_opts(nullptr,
-										av_get_default_channel_layout(format_desc_.audio_channels), AV_SAMPLE_FMT_S32, format_desc_.audio_sample_rate,
-										get_channel_layout(codec_context_.get()), codec_context_->sample_fmt, codec_context_->sample_rate,
-										0, nullptr), [](SwrContext* p){swr_free(&p);})
-		, buffer_(480000*4)
+		, buffer_(480000 * 4)
 	{		
 		if(!swr_)
 			CASPAR_THROW_EXCEPTION(bad_alloc());

@@ -49,16 +49,10 @@ enum class transition_direction
 
 struct transition_info
 {
-	transition_info() 
-		: type(transition_type::cut)
-		, duration(0)
-		, direction(transition_direction::from_left)
-		, tweener(L"linear"){}
-		
-	int						duration;
-	transition_direction	direction;
-	transition_type			type;
-	tweener					tweener;
+	int						duration	= 0;
+	transition_direction	direction	= transition_direction::from_left;
+	transition_type			type		= transition_type::cut;
+	tweener					tweener		= { L"linear" };
 };
 
 spl::shared_ptr<class frame_producer> create_transition_producer(const field_mode& mode, const spl::shared_ptr<class frame_producer>& destination, const transition_info& info);

@@ -53,20 +53,18 @@ namespace caspar { namespace core {
 struct output::impl
 {		
 	spl::shared_ptr<diagnostics::graph>	graph_;
-	spl::shared_ptr<monitor::subject>	monitor_subject_;
+	spl::shared_ptr<monitor::subject>	monitor_subject_	= spl::make_shared<monitor::subject>("/output");
 	const int							channel_index_;
 	video_format_desc					format_desc_;
 	std::map<int, port>					ports_;	
 	prec_timer							sync_timer_;
 	boost::circular_buffer<const_frame>	frames_;
-	executor							executor_;		
+	executor							executor_			= { L"output" };
 public:
 	impl(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index) 
 		: graph_(std::move(graph))
-		, monitor_subject_(spl::make_shared<monitor::subject>("/output"))
 		, channel_index_(channel_index)
 		, format_desc_(format_desc)
-		, executor_(L"output")
 	{
 		graph_->set_color("consume-time", diagnostics::color(1.0f, 0.4f, 0.0f, 0.8));
 	}	
