@@ -104,37 +104,31 @@ public:
 		
 struct input::impl : boost::noncopyable
 {		
-	const spl::shared_ptr<diagnostics::graph>					graph_;
+	const spl::shared_ptr<diagnostics::graph>	graph_;
 
-	const spl::shared_ptr<AVFormatContext>						format_context_; // Destroy this last
-	const int													default_stream_index_;
-			
-	const std::wstring											filename_;
-	tbb::atomic<uint32_t>										start_;		
-	tbb::atomic<uint32_t>										length_;
-	tbb::atomic<bool>											loop_;
-	double														fps_;
-	uint32_t													frame_number_;
-	
-	stream														video_stream_;
-	stream														audio_stream_;
+	const std::wstring					  		filename_;
+	const spl::shared_ptr<AVFormatContext>		format_context_			= open_input(filename_); // Destroy this last
+	const int							  		default_stream_index_	= av_find_default_stream_index(format_context_.get());
 
-	boost::optional<uint32_t>									seek_target_;
+	tbb::atomic<uint32_t>				  		start_;		
+	tbb::atomic<uint32_t>				  		length_;
+	tbb::atomic<bool>					  		loop_;
+	double								  		fps_					= read_fps(*format_context_, 0.0);
+	uint32_t							  		frame_number_			= 0;
 
-	tbb::atomic<bool>											is_running_;
-	boost::mutex												mutex_;
-	boost::condition_variable									cond_;
-	boost::thread												thread_;
+	stream								  		video_stream_			= av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
+	stream								  		audio_stream_			= av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_AUDIO, -1, -1, 0, 0);
+
+	boost::optional<uint32_t>			  		seek_target_;
+
+	tbb::atomic<bool>					  		is_running_;
+	boost::mutex						  		mutex_;
+	boost::condition_variable			  		cond_;
+	boost::thread						  		thread_;
 	
 	impl(const spl::shared_ptr<diagnostics::graph> graph, const std::wstring& filename, const bool loop, const uint32_t start, const uint32_t length) 
 		: graph_(graph)
-		, format_context_(open_input(filename))		
-		, default_stream_index_(av_find_default_stream_index(format_context_.get()))
 		, filename_(filename)
-		, frame_number_(0)
-		, fps_(read_fps(*format_context_, 0.0))
-		, video_stream_(av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0))
-		, audio_stream_(av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_AUDIO, -1, -1, 0, 0))
 	{		
 		start_			= start;
 		length_			= length;

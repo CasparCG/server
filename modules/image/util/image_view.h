@@ -199,6 +199,14 @@ struct image_stride_iterator : public boost::filter_iterator<is_within_view<Pack
 template<class PackedPixel>
 class image_sub_view
 {
+private:
+	image_view<PackedPixel>	root_view_;
+	int						relative_to_root_x_;
+	int						relative_to_root_y_;
+	int						width_;
+	int						height_;
+	PackedPixel*			raw_begin_				= root_view_.relative(root_view_.begin(), relative_to_root_x_, relative_to_root_y_);
+	PackedPixel*			raw_end_				= root_view_.relative(raw_begin_, width_ - 1, height_ - 1) + 1;
 public:
 	typedef PackedPixel pixel_type;
 
@@ -208,8 +216,6 @@ public:
 		, relative_to_root_y_(y)
 		, width_(width)
 		, height_(height)
-		, raw_begin_(root_view.relative(root_view.begin(), x, y))
-		, raw_end_(root_view.relative(raw_begin_, width - 1, height_ - 1) + 1)
 	{
 	}
 
@@ -264,14 +270,6 @@ public:
 	{
 		return root_view_.subview(relative_to_root_x_ + x, relative_to_root_y_ + y, width, height);
 	}
-private:
-	image_view<PackedPixel> root_view_;
-	int relative_to_root_x_;
-	int relative_to_root_y_;
-	int width_;
-	int height_;
-	PackedPixel* raw_begin_;
-	PackedPixel* raw_end_;
 };
 
 }}

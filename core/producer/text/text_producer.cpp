@@ -142,9 +142,9 @@ struct text_producer::impl
 	variable_impl<double> current_bearing_y_;
 	variable_impl<double> current_protrude_under_y_;
 	draw_frame frame_;
-	text::texture_atlas atlas_;
+	text::texture_atlas atlas_								{ 512, 512, 4 };
 	text::texture_font font_;
-	bool dirty_;
+	bool dirty_												= false;
 
 public:
 	explicit impl(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, text::text_info& text_info, long parent_width, long parent_height, bool standalone) 
@@ -152,9 +152,7 @@ public:
 		, constraints_(parent_width, parent_height)
 		, x_(x), y_(y), parent_width_(parent_width), parent_height_(parent_height)
 		, standalone_(standalone)
-		, atlas_(512,512,4)
 		, font_(atlas_, text::find_font_file(text_info), !standalone)
-		, dirty_(false)
 	{
 		//TODO: examine str to determine which unicode_blocks to load
 		font_.load_glyphs(text::unicode_block::Basic_Latin, text_info.color);

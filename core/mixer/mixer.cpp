@@ -61,14 +61,12 @@ struct mixer::impl : boost::noncopyable
 	
 	std::unordered_map<int, blend_mode>	blend_modes_;
 			
-	executor executor_;
+	executor executor_									= L"mixer";
 
 public:
 	impl(spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer) 
 		: graph_(std::move(graph))
-		, audio_mixer_()
 		, image_mixer_(std::move(image_mixer))
-		, executor_(L"mixer")
 	{			
 		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8));
 	}	

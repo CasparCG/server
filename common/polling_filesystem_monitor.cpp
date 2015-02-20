@@ -71,14 +71,14 @@ public:
 
 class directory_monitor
 {
-	bool report_already_existing_;
-	boost::filesystem::wpath folder_;
-	filesystem_event events_mask_;
-	filesystem_monitor_handler handler_;
-	initial_files_handler initial_files_handler_;
-	bool first_scan_;
-	std::map<boost::filesystem::wpath, std::time_t> files_;
-	std::map<boost::filesystem::wpath, uintmax_t> being_written_sizes_;
+	bool											report_already_existing_;
+	boost::filesystem::wpath						folder_;
+	filesystem_event								events_mask_;
+	filesystem_monitor_handler						handler_;
+	initial_files_handler							initial_files_handler_;
+	bool											first_scan_					= true;
+	std::map<boost::filesystem::wpath, std::time_t>	files_;
+	std::map<boost::filesystem::wpath, uintmax_t>	being_written_sizes_;
 public:
 	directory_monitor(
 			bool report_already_existing,
@@ -91,7 +91,6 @@ public:
 		, events_mask_(events_mask)
 		, handler_(exception_protected_handler(handler))
 		, initial_files_handler_(initial_files_handler)
-		, first_scan_(true)
 	{
 	}
 
