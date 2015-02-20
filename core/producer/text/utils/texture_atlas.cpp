@@ -52,17 +52,26 @@ private:
 	typedef std::list<node> node_list;
 	typedef std::list<node>::iterator node_iterator;
 
+	node_list nodes_;
+
+	size_t width_;
+	size_t height_;
+	size_t depth_;
+
+	std::vector<unsigned char> data_;
+	size_t used_						= 0;
+
 public:
-	impl(const size_t width, const size_t height, const size_t depth) : width_(width), height_(height), depth_(depth), used_(0), data_(width*height*depth, 0)
+	impl(const size_t width, const size_t height, const size_t depth) : width_(width), height_(height), depth_(depth), data_(width*height*depth, 0)
 	{
 		// We want a one pixel border around the whole atlas to avoid any artefact when sampling texture
-		node n = {1, 1, (int)width_ - 2};
+		node n = {1, 1, static_cast<int>(width_) - 2};
 		nodes_.push_back(n);
 	}
 
 	rect get_region(int width, int height)
 	{
-		rect region = {0,0,(int)width,(int)height};
+		rect region = { 0, 0, static_cast<int>(width), static_cast<int>(height) };
 
 		int best_height = INT_MAX;
 		int best_width = INT_MAX;
@@ -203,15 +212,6 @@ private:
 				++it;
 		}
 	}
-
-	node_list nodes_;
-
-	size_t width_;
-	size_t height_;
-	size_t depth_;
-
-	std::vector<unsigned char> data_;
-	size_t used_;
 };
 
 texture_atlas::texture_atlas(const size_t w, const size_t h, const size_t d) : impl_(new impl(w, h, d)) {}

@@ -34,14 +34,12 @@ namespace caspar { namespace image {
  */
 class rgba_weighting
 {
-	int r, g, b, a;
-	int total_weight;
+	int r = 0;
+	int g = 0;
+	int b = 0;
+	int a = 0;
+	int total_weight = 0;
 public:
-	rgba_weighting()
-		: r(0), g(0), b(0), a(0), total_weight(0)
-	{
-	}
-
 	template<class RGBAPixel>
 	inline void add_pixel(const RGBAPixel& pixel, uint8_t weight)
 	{

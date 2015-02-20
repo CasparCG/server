@@ -73,12 +73,11 @@ namespace caspar { namespace accelerator { namespace cpu {
 		
 struct item
 {
-	core::pixel_format_desc			pix_desc;
+	core::pixel_format_desc			pix_desc	= core::pixel_format::invalid;
 	std::array<const uint8_t*, 4>	data;
 	core::image_transform			transform;
 
 	item()
-		: pix_desc(core::pixel_format::invalid)
 	{
 		data.fill(0);
 	}

@@ -151,10 +151,9 @@ class flash_renderer
 {	
 	struct com_init
 	{
-		HRESULT result_;
+		HRESULT result_ = CoInitialize(nullptr);
 
 		com_init()
-			: result_(CoInitialize(nullptr))
 		{
 			if(FAILED(result_))
 				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to initialize com-context for flash-player"));
@@ -167,34 +166,32 @@ class flash_renderer
 		}
 	} com_init_;
 
-	core::monitor::subject&						monitor_subject_;
+	core::monitor::subject&							monitor_subject_;
 
-	const std::wstring							filename_;
+	const std::wstring								filename_;
+	const int										width_;
+	const int										height_;
 
-	const std::shared_ptr<core::frame_factory>	frame_factory_;
+	const std::shared_ptr<core::frame_factory>		frame_factory_;
 	
-	CComObject<caspar::flash::FlashAxContainer>* ax_;
-	core::draw_frame							head_;
-	bitmap										bmp_;
+	CComObject<caspar::flash::FlashAxContainer>*	ax_					= nullptr;
+	core::draw_frame								head_				= core::draw_frame::empty();
+	bitmap											bmp_				{ width_, height_ };
 	
-	spl::shared_ptr<diagnostics::graph>			graph_;
+	spl::shared_ptr<diagnostics::graph>				graph_;
 	
-	prec_timer									timer_;
+	prec_timer										timer_;
 
-	const int									width_;
-	const int									height_;
 	
 public:
 	flash_renderer(core::monitor::subject& monitor_subject, const spl::shared_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
 		: monitor_subject_(monitor_subject)
 		, graph_(graph)
 		, filename_(filename)
-		, frame_factory_(frame_factory)
-		, ax_(nullptr)
-		, head_(core::draw_frame::empty())
-		, bmp_(width, height)
 		, width_(width)
 		, height_(height)
+		, frame_factory_(frame_factory)
+		, bmp_(width, height)
 	{		
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));	
@@ -330,8 +327,8 @@ struct flash_producer : public core::frame_producer_base
 	const core::video_format_desc					format_desc_;
 	const int										width_;
 	const int										height_;
-	core::constraints								constraints_;
-	const int										buffer_size_;
+	core::constraints								constraints_		{ static_cast<double>(width_), static_cast<double>(height_) };
+	const int										buffer_size_		= env::properties().get(L"configuration.flash.buffer-depth", format_desc_.fps > 30.0 ? 4 : 2);
 
 	tbb::atomic<int>								fps_;
 
@@ -345,7 +342,7 @@ struct flash_producer : public core::frame_producer_base
 	boost::timer									tick_timer_;
 	std::unique_ptr<flash_renderer>					renderer_;
 	
-	executor										executor_;	
+	executor										executor_			= L"flash_producer";
 public:
 	flash_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::wstring& filename, int width, int height) 
 		: filename_(filename)		
@@ -353,9 +350,6 @@ public:
 		, format_desc_(format_desc)
 		, width_(width > 0 ? width : format_desc.width)
 		, height_(height > 0 ? height : format_desc.height)
-		, constraints_(width_, height_)
-		, buffer_size_(env::properties().get(L"configuration.flash.buffer-depth", format_desc.fps > 30.0 ? 4 : 2))
-		, executor_(L"flash_producer")
 	{	
 		fps_ = 0;
 	 

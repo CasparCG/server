@@ -12,16 +12,14 @@ namespace caspar { namespace core {
 
 struct port::impl
 {
-	spl::shared_ptr<monitor::subject>	monitor_subject_;
-	std::shared_ptr<frame_consumer>		consumer_;
 	int									index_;
+	spl::shared_ptr<monitor::subject>	monitor_subject_ = spl::make_shared<monitor::subject>("/port" + boost::lexical_cast<std::string>(index_));
+	std::shared_ptr<frame_consumer>		consumer_;
 	int									channel_index_;
 public:
 	impl(int index, int channel_index, spl::shared_ptr<frame_consumer> consumer)
-		: monitor_subject_(spl::make_shared<monitor::subject>(
-				"/port" + boost::lexical_cast<std::string>(index)))
+		: index_(index)
 		, consumer_(std::move(consumer))
-		, index_(index)
 		, channel_index_(channel_index)
 	{
 		consumer_->monitor_output().attach_parent(monitor_subject_);

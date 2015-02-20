@@ -36,20 +36,17 @@ namespace caspar { namespace core {
 class separated_producer : public frame_producer_base
 {		
 	spl::shared_ptr<monitor::subject>	monitor_subject_;
-	spl::shared_ptr<monitor::subject>	key_monitor_subject_;
+	spl::shared_ptr<monitor::subject>	key_monitor_subject_	= spl::make_shared<monitor::subject>("/keyer");
 
 	spl::shared_ptr<frame_producer>	fill_producer_;
 	spl::shared_ptr<frame_producer>	key_producer_;
-	draw_frame						fill_;
-	draw_frame						key_;
+	draw_frame						fill_						= core::draw_frame::late();
+	draw_frame						key_						= core::draw_frame::late();
 			
 public:
 	explicit separated_producer(const spl::shared_ptr<frame_producer>& fill, const spl::shared_ptr<frame_producer>& key) 
-		: key_monitor_subject_(spl::make_shared<monitor::subject>("/keyer"))
-		, fill_producer_(fill)
+		: fill_producer_(fill)
 		, key_producer_(key)
-		, fill_(core::draw_frame::late())
-		, key_(core::draw_frame::late())
 	{
 		CASPAR_LOG(info) << print() << L" Initialized";
 

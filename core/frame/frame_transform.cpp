@@ -24,27 +24,10 @@
 #include "frame_transform.h"
 
 #include <boost/range/algorithm/equal.hpp>
-#include <boost/range/algorithm/fill.hpp>
 
 namespace caspar { namespace core {
 		
 // image_transform
-
-image_transform::image_transform() 
-	: opacity(1.0)
-	, brightness(1.0)
-	, contrast(1.0)
-	, saturation(1.0)
-	, field_mode(field_mode::progressive)
-	, is_key(false)
-	, is_mix(false)
-	, is_still(false)
-{
-	boost::range::fill(fill_translation, 0.0);
-	boost::range::fill(fill_scale, 1.0);
-	boost::range::fill(clip_translation, 0.0);
-	boost::range::fill(clip_scale, 1.0);
-}
 
 image_transform& image_transform::operator*=(const image_transform &other)
 {
@@ -138,12 +121,6 @@ bool operator!=(const image_transform& lhs, const image_transform& rhs)
 }
 
 // audio_transform
-		
-audio_transform::audio_transform() 
-	: volume(1.0)
-	, is_still(false)
-{
-}
 
 audio_transform& audio_transform::operator*=(const audio_transform &other)
 {
