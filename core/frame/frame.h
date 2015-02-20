@@ -9,11 +9,10 @@
 #include <common/forward.h>
 #include <common/array.h>
 #include <common/future_fwd.h>
+#include <common/cache_aligned_vector.h>
 
 #include <boost/range.hpp>
 #include <boost/any.hpp>
-
-#include <tbb/cache_aligned_allocator.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -22,7 +21,7 @@ FORWARD1(boost, template<typename> class shared_future);
 
 namespace caspar { namespace core {
 	
-typedef std::vector<int32_t, tbb::cache_aligned_allocator<int32_t>> audio_buffer;
+typedef cache_aligned_vector<int32_t> audio_buffer;
 class frame_geometry;
 
 class mutable_frame final

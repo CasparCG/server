@@ -92,7 +92,7 @@ public:
 	{	
 		if(layers.empty())
 		{ // Bypass GPU with empty frame.
-			auto buffer = spl::make_shared<const std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>>(format_desc.size, 0);
+			auto buffer = spl::make_shared<const cache_aligned_vector<uint8_t>>(format_desc.size, 0);
 			return make_ready_future(array<const std::uint8_t>(buffer->data(), format_desc.size, true, buffer));
 		}		
 
