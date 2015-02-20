@@ -30,7 +30,7 @@
 #include <common/utf.h>
 #include <common/except.h>
 #include <common/endian.h>
-
+#include <common/cache_aligned_vector.h>
 #include <core/monitor/monitor.h>
 
 #include <functional>
@@ -42,7 +42,6 @@
 #include <boost/thread.hpp>
 
 #include <tbb/spin_mutex.h>
-#include <tbb/cache_aligned_allocator.h>
 
 using namespace boost::asio::ip;
 
@@ -60,7 +59,7 @@ struct no_init_proxy
     }
 };
 
-typedef std::vector<no_init_proxy<char>, tbb::cache_aligned_allocator<no_init_proxy<char>>> byte_vector;
+typedef cache_aligned_vector<no_init_proxy<char>> byte_vector;
 
 template<typename T>
 struct param_visitor : public boost::static_visitor<void>

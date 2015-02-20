@@ -253,7 +253,7 @@ struct output_format
 	}
 };
 
-typedef std::vector<uint8_t, tbb::cache_aligned_allocator<uint8_t>>	byte_vector;
+typedef cache_aligned_vector<uint8_t> byte_vector;
 
 struct ffmpeg_consumer : boost::noncopyable
 {		
