@@ -259,7 +259,7 @@ struct ffmpeg_consumer : boost::noncopyable
 {		
 	const spl::shared_ptr<diagnostics::graph>	graph_;
 	const std::string							filename_;		
-	const std::shared_ptr<AVFormatContext>		oc_;
+	const std::shared_ptr<AVFormatContext>		oc_					{ avformat_alloc_context(), av_free };
 	const core::video_format_desc				format_desc_;	
 
 	core::monitor::subject						monitor_subject_;
@@ -276,7 +276,7 @@ struct ffmpeg_consumer : boost::noncopyable
 	std::shared_ptr<SwrContext>					swr_;
 	std::shared_ptr<SwsContext>					sws_;
 
-	int64_t										frame_number_;
+	int64_t										frame_number_		= 0;
 
 	output_format								output_format_;
 	bool										key_only_;
@@ -285,9 +285,7 @@ struct ffmpeg_consumer : boost::noncopyable
 public:
 	ffmpeg_consumer(const std::string& filename, const core::video_format_desc& format_desc, std::vector<option> options, bool key_only)
 		: filename_(filename)
-		, oc_(avformat_alloc_context(), av_free)
 		, format_desc_(format_desc)
-		, frame_number_(0)
 		, output_format_(format_desc, filename, options)
 		, key_only_(key_only)
 		, executor_(print())

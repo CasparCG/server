@@ -37,10 +37,10 @@ namespace caspar { namespace core {
 struct layer::impl
 {				
 	spl::shared_ptr<monitor::subject>	monitor_subject_;
-	spl::shared_ptr<frame_producer>		foreground_;
-	spl::shared_ptr<frame_producer>		background_;
+	spl::shared_ptr<frame_producer>		foreground_			= frame_producer::empty();
+	spl::shared_ptr<frame_producer>		background_			= frame_producer::empty();;
 	boost::optional<int32_t>			auto_play_delta_;
-	bool								is_paused_;
+	bool								is_paused_			= false;
 
 public:
 	impl(int index) 
@@ -48,9 +48,6 @@ public:
 				"/layer/" + boost::lexical_cast<std::string>(index)))
 //		, foreground_event_subject_("")
 //		, background_event_subject_("background")
-		, foreground_(frame_producer::empty())
-		, background_(frame_producer::empty())
-		, is_paused_(false)
 	{
 //		foreground_event_subject_.subscribe(event_subject_);
 //		background_event_subject_.subscribe(event_subject_);

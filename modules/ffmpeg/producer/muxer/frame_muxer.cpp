@@ -69,26 +69,23 @@ struct frame_muxer::impl : boost::noncopyable
 	std::queue<core::mutable_frame>					video_stream_;
 	core::audio_buffer								audio_stream_;
 	std::queue<draw_frame>							frame_buffer_;
-	display_mode									display_mode_;
+	display_mode									display_mode_			= display_mode::invalid;
 	const double									in_fps_;
 	const video_format_desc							format_desc_;
 	
-	std::vector<int>								audio_cadence_;
+	std::vector<int>								audio_cadence_			= format_desc_.audio_cadence;
 			
 	spl::shared_ptr<core::frame_factory>			frame_factory_;
 	
 	std::unique_ptr<filter>							filter_;
 	const std::wstring								filter_str_;
-	bool											force_deinterlacing_;
+	bool											force_deinterlacing_	= env::properties().get(L"configuration.force-deinterlace", true);
 		
 	impl(double in_fps, const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::wstring& filter_str)
-		: display_mode_(display_mode::invalid)
-		, in_fps_(in_fps)
+		: in_fps_(in_fps)
 		, format_desc_(format_desc)
-		, audio_cadence_(format_desc_.audio_cadence)
 		, frame_factory_(frame_factory)
 		, filter_str_(filter_str)
-		, force_deinterlacing_(env::properties().get(L"configuration.force-deinterlace", true))
 	{		
 		// Note: Uses 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
 		// This cadence fills the audio mixer most optimally.

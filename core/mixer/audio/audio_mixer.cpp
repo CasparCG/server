@@ -60,12 +60,7 @@ struct audio_stream
 {
 	audio_transform		prev_transform;
 	audio_buffer_ps		audio_data;
-	bool				is_still;
-
-	audio_stream() 
-		: is_still(false)
-	{
-	}
+	bool				is_still		= false;
 };
 
 struct audio_mixer::impl : boost::noncopyable
@@ -75,12 +70,10 @@ struct audio_mixer::impl : boost::noncopyable
 	std::vector<audio_item>				items_;
 	std::vector<int>					audio_cadence_;
 	video_format_desc					format_desc_;
-	float								master_volume_;
-	float								previous_master_volume_;
+	float								master_volume_			= 1.0f;
+	float								previous_master_volume_	= master_volume_;
 public:
 	impl()
-		: master_volume_(1.0f)
-		, previous_master_volume_(master_volume_)
 	{
 		transform_stack_.push(core::audio_transform());
 	}

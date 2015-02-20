@@ -44,11 +44,10 @@ class interaction_aggregator
 
 
 	boost::optional<interaction_target> clicked_and_held_;
-	int num_buttons_clicked_and_held_;
+	int num_buttons_clicked_and_held_						= 0;
 public:
 	interaction_aggregator(const collission_detector& collission_detector)
 		: collission_detector_(collission_detector)
-		, num_buttons_clicked_and_held_(0)
 	{
 	}
 
