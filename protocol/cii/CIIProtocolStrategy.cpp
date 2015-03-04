@@ -30,6 +30,7 @@
 #include <modules/flash/producer/flash_producer.h>
 #include <core/producer/transition/transition_producer.h>
 #include <core/mixer/mixer.h>
+#include <core/diagnostics/call_context.h>
 #include <common/env.h>
 
 #include <boost/algorithm/string/replace.hpp>
@@ -160,7 +161,10 @@ void CIIProtocolStrategy::WriteTemplateData(const std::wstring& templateName, co
 		CASPAR_LOG(error) << "Failed to save instance of " << templateName << TEXT(" as ") << titleName << TEXT(", template ") << fullTemplateFilename << " not found";
 		return;
 	}
-	
+	core::diagnostics::scoped_call_context save;
+	core::diagnostics::call_context::for_thread().video_channel = 1;
+	core::diagnostics::call_context::for_thread().layer = 0;
+
 	auto producer = flash::create_producer(this->GetChannel()->frame_factory(), this->GetChannel()->video_format_desc(), { env::template_folder() + TEXT("CG.fth") });
 
 	std::wstringstream flashParam;
@@ -195,6 +199,10 @@ void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename)
 	transition_info transition;
 	transition.type = transition_type::mix;
 	transition.duration = 12;
+
+	core::diagnostics::scoped_call_context save;
+	core::diagnostics::call_context::for_thread().video_channel = 1;
+	core::diagnostics::call_context::for_thread().layer = 0;
 
 	auto pFP = create_producer(GetChannel()->frame_factory(), GetChannel()->video_format_desc(), filename);
 	auto pTransition = create_transition_producer(GetChannel()->video_format_desc().field_mode, pFP, transition);

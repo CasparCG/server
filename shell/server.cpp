@@ -29,7 +29,6 @@
 #include <common/utf.h>
 #include <common/memory.h>
 #include <common/polling_filesystem_monitor.h>
-#include <common/diagnostics/graph.h>
 
 #include <core/video_channel.h>
 #include <core/video_format.h>
@@ -40,6 +39,9 @@
 #include <core/producer/text/text_producer.h>
 #include <core/consumer/output.h>
 #include <core/thumbnail_generator.h>
+#include <core/diagnostics/subject_diagnostics.h>
+#include <core/diagnostics/call_context.h>
+#include <core/diagnostics/osd_graph.h>
 
 #include <modules/bluefish/bluefish.h>
 #include <modules/decklink/decklink.h>
@@ -82,6 +84,7 @@ struct server::impl : boost::noncopyable
 {
 	protocol::asio::io_service_manager					io_service_manager_;
 	spl::shared_ptr<monitor::subject>					monitor_subject_;
+	spl::shared_ptr<monitor::subject>					diag_subject_					= core::diagnostics::get_or_create_subject();
 	accelerator::accelerator							accelerator_;
 	std::vector<spl::shared_ptr<IO::AsyncEventServer>>	async_servers_;
 	std::shared_ptr<IO::AsyncEventServer>				primary_amcp_server_;
@@ -95,7 +98,9 @@ struct server::impl : boost::noncopyable
 		: accelerator_(env::properties().get(L"configuration.accelerator", L"auto"))
 		, osc_client_(io_service_manager_.service())
 		, shutdown_server_now_(shutdown_server_now)
-	{	
+	{
+		core::diagnostics::osd::register_sink();
+		diag_subject_->attach_parent(monitor_subject_);
 
 		ffmpeg::init();
 		CASPAR_LOG(info) << L"Initialized ffmpeg module.";
@@ -151,7 +156,7 @@ struct server::impl : boost::noncopyable
 
 		image::uninit();
 		ffmpeg::uninit();
-		diagnostics::shutdown();
+		core::diagnostics::osd::shutdown();
 	}
 				
 	void setup_channels(const boost::property_tree::wptree& pt)
@@ -164,6 +169,9 @@ struct server::impl : boost::noncopyable
 				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid video-mode."));
 			
 			auto channel = spl::make_shared<video_channel>(static_cast<int>(channels_.size()+1), format_desc, accelerator_.create_image_mixer());
+
+			core::diagnostics::scoped_call_context save;
+			core::diagnostics::call_context::for_thread().video_channel = channel->index();
 			
 			for (auto& xml_consumer : xml_channel.second.get_child(L"consumers"))
 			{
