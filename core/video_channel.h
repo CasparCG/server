@@ -54,23 +54,24 @@ public:
 
 	// Methods
 			
-	monitor::subject& monitor_output();
+	monitor::subject&						monitor_output();
 
 	// Properties
 
-	const core::stage&					 stage() const;
-	core::stage&						 stage();
-	const core::mixer&					 mixer() const;
-	core::mixer&						 mixer();
-	const core::output&					 output() const;
-	core::output&						 output();
-										 
-	core::video_format_desc				 video_format_desc() const;
-	void								 video_format_desc(const core::video_format_desc& format_desc);
-	
-	spl::shared_ptr<core::frame_factory> frame_factory();
+	const core::stage&						stage() const;
+	core::stage&							stage();
+	const core::mixer&						mixer() const;
+	core::mixer&							mixer();
+	const core::output&						output() const;
+	core::output&							output();
 
-	boost::property_tree::wptree		 info() const;
+	core::video_format_desc					video_format_desc() const;
+	void									video_format_desc(const core::video_format_desc& format_desc);
+
+	spl::shared_ptr<core::frame_factory>	frame_factory();
+
+	boost::property_tree::wptree			info() const;
+	int										index() const;
 private:
 	struct impl;
 	spl::unique_ptr<impl> impl_;

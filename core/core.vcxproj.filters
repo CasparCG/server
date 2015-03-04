@@ -49,6 +49,9 @@
     <Filter Include="source\producer\text\utils">
       <UniqueIdentifier>{fc435676-34ca-46fe-bbcf-2fbad8e3cd21}</UniqueIdentifier>
     </Filter>
+    <Filter Include="source\diagnostics">
+      <UniqueIdentifier>{42cbb33e-a2fd-43a1-86fb-204caa2afc13}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="producer\transition\transition_producer.h">
@@ -181,6 +184,15 @@
     <ClInclude Include="thumbnail_generator.h">
       <Filter>source</Filter>
     </ClInclude>
+    <ClInclude Include="diagnostics\subject_diagnostics.h">
+      <Filter>source\diagnostics</Filter>
+    </ClInclude>
+    <ClInclude Include="diagnostics\call_context.h">
+      <Filter>source\diagnostics</Filter>
+    </ClInclude>
+    <ClInclude Include="diagnostics\osd_graph.h">
+      <Filter>source\diagnostics</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="producer\transition\transition_producer.cpp">
@@ -270,6 +282,15 @@
     </ClCompile>
     <ClCompile Include="thumbnail_generator.cpp">
       <Filter>source</Filter>
+    </ClCompile>
+    <ClCompile Include="diagnostics\subject_diagnostics.cpp">
+      <Filter>source\diagnostics</Filter>
+    </ClCompile>
+    <ClCompile Include="diagnostics\call_context.cpp">
+      <Filter>source\diagnostics</Filter>
+    </ClCompile>
+    <ClCompile Include="diagnostics\osd_graph.cpp">
+      <Filter>source\diagnostics</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

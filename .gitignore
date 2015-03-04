@@ -107,3 +107,4 @@ x64
 /clang-analyze.out
 *.suo
 /dependencies64/boost/stage/lib/libboost_wave-vc120-mt-gd-1_57.lib
+/shell/LiberationSans-Regular.ttf
