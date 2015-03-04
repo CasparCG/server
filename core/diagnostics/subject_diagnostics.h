@@ -16,28 +16,15 @@
 * You should have received a copy of the GNU General Public License
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
-* Author: Robert Nagy, ronag89@gmail.com
+* Author: Helge Norberg, helge.norberg@svt.se
 */
 
 #pragma once
 
-#include <cstdint>
+#include "../monitor/monitor.h"
 
-namespace caspar {
-	
-class prec_timer
-{
-public:
-	prec_timer();
+namespace caspar { namespace core { namespace diagnostics {
 
-	// Author: Ryan M. Geiss
-	// http://www.geisswerks.com/ryan/FAQS/timing.html
-	void tick(double interval);
-	void tick_millis(int64_t interval);
+spl::shared_ptr<monitor::subject> get_or_create_subject();
 
-private:	
-	unsigned long time_;
-};
-
-
-}
+}}}

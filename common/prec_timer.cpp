@@ -37,23 +37,27 @@ prec_timer::prec_timer()
 // Author: Ryan M. Geiss
 // http://www.geisswerks.com/ryan/FAQS/timing.html
 void prec_timer::tick(double interval)
-{     	
+{
+	tick_millis(static_cast<int64_t>(interval * 1000.0));
+}
+
+void prec_timer::tick_millis(int64_t ticks_to_wait)
+{
 	auto t = ::timeGetTime();
 
 	if (time_ != 0)
 	{
-		auto ticks_to_wait = static_cast<DWORD>(interval*1000.0);
 		bool done = 0;
 		do
-		{				
+		{
 			auto ticks_passed = t - time_;
-			auto ticks_left	  = ticks_to_wait - ticks_passed;
+			auto ticks_left = ticks_to_wait - ticks_passed;
 
 			if (t < time_)    // time wrap
 				done = 1;
 			if (ticks_passed >= ticks_to_wait)
 				done = 1;
-				
+
 			if (!done)
 			{
 				// if > 0.002s left, do Sleep(1), which will actually sleep some 
@@ -64,17 +68,16 @@ void prec_timer::tick(double interval)
 				//   amount of time.
 				if (ticks_left > 2)
 					Sleep(1);
-				else                        
-					for (int i = 0; i < 10; ++i) 
+				else
+					for (int i = 0; i < 10; ++i)
 						Sleep(0);  // causes thread to give up its timeslice
 			}
 
 			t = ::timeGetTime();
-		}
-		while (!done);            
+		} while (!done);
 	}
 
 	time_ = t;
-}	
+}
 
 }

@@ -28,6 +28,7 @@
 #include <common/env.h>
 
 #include <core/mixer/mixer.h>
+#include <core/diagnostics/call_context.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/format.hpp>
@@ -173,7 +174,11 @@ cg_proxy create_cg_proxy(const spl::shared_ptr<core::video_channel>& video_chann
 	{
 		if(flash_producer->name() != L"flash")
 		{
-			flash_producer = flash::create_producer(video_channel->frame_factory(), video_channel->video_format_desc(), { });
+			core::diagnostics::scoped_call_context save;
+			core::diagnostics::call_context::for_thread().video_channel = video_channel->index();
+			core::diagnostics::call_context::for_thread().layer = render_layer;
+
+			flash_producer = flash::create_producer(video_channel->frame_factory(), video_channel->video_format_desc(), {});
 			video_channel->stage().load(render_layer, flash_producer); 
 			video_channel->stage().play(render_layer);
 		}

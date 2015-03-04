@@ -16,28 +16,29 @@
 * You should have received a copy of the GNU General Public License
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
-* Author: Robert Nagy, ronag89@gmail.com
+* Author: Helge Norberg, helge.norberg@svt.se
 */
 
 #pragma once
 
-#include <cstdint>
+namespace caspar { namespace core { namespace diagnostics {
 
-namespace caspar {
-	
-class prec_timer
+struct call_context
 {
-public:
-	prec_timer();
+	int		video_channel	= -1;
+	int		layer			= -1;
 
-	// Author: Ryan M. Geiss
-	// http://www.geisswerks.com/ryan/FAQS/timing.html
-	void tick(double interval);
-	void tick_millis(int64_t interval);
-
-private:	
-	unsigned long time_;
+	static call_context& for_thread();
 };
 
+class scoped_call_context : boost::noncopyable
+{
+	call_context	saved_ = call_context::for_thread();
+public:
+	~scoped_call_context()
+	{
+		call_context::for_thread() = saved_;
+	}
+};
 
-}
+}}}
