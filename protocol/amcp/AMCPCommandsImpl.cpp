@@ -32,7 +32,6 @@
 
 #include <common/log.h>
 #include <common/param.h>
-#include <common/diagnostics/graph.h>
 #include <common/os/windows/current_version.h>
 #include <common/os/windows/system_info.h>
 #include <common/base64.h>
@@ -46,6 +45,8 @@
 #include <core/mixer/mixer.h>
 #include <core/consumer/output.h>
 #include <core/thumbnail_generator.h>
+#include <core/diagnostics/call_context.h>
+#include <core/diagnostics/osd_graph.h>
 
 #include <modules/reroute/producer/reroute_producer.h>
 #include <modules/bluefish/bluefish.h>
@@ -297,7 +298,7 @@ bool DiagnosticsCommand::DoExecute()
 {	
 	try
 	{
-		diagnostics::show_graphs(true);
+		core::diagnostics::osd::show_graphs(true);
 
 		SetReplyString(TEXT("202 DIAG OK\r\n"));
 
@@ -316,6 +317,9 @@ bool ChannelGridCommand::DoExecute()
 	int index = 1;
 	auto self = channels().back().channel;
 	
+	core::diagnostics::scoped_call_context save;
+	core::diagnostics::call_context::for_thread().video_channel = channels().size();
+
 	std::vector<std::wstring> params;
 	params.push_back(L"SCREEN");
 	params.push_back(L"0");
@@ -329,6 +333,7 @@ bool ChannelGridCommand::DoExecute()
 	{
 		if(channel.channel != self)
 		{
+			core::diagnostics::call_context::for_thread().layer = index;
 			auto producer = reroute::create_producer(*channel.channel);
 			self->stage().load(index, producer, false);
 			self->stage().play(index);
@@ -668,6 +673,9 @@ bool AddCommand::DoExecute()
 			boost::to_upper(str);
 		}
 
+		core::diagnostics::scoped_call_context save;
+		core::diagnostics::call_context::for_thread().video_channel = channel_index() + 1;
+
 		auto consumer = create_consumer(parameters());
 		channel()->output().add(layer_index(consumer->index()), consumer);
 	
@@ -731,7 +739,10 @@ bool LoadCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		auto pFP = create_producer(channel()->frame_factory(), channel()->video_format_desc(), parameters());		
+		core::diagnostics::scoped_call_context save;
+		core::diagnostics::call_context::for_thread().video_channel = channel_index() + 1;
+		core::diagnostics::call_context::for_thread().layer = layer_index();
+		auto pFP = create_producer(channel()->frame_factory(), channel()->video_format_desc(), parameters());
 		channel()->stage().load(layer_index(), pFP, true);
 	
 		SetReplyString(TEXT("202 LOAD OK\r\n"));
@@ -838,6 +849,10 @@ bool LoadbgCommand::DoExecute()
 		
 		static boost::wregex expr(LR"(\[(?<CHANNEL>\d+)\])", boost::regex::icase);
 			
+		core::diagnostics::scoped_call_context save;
+		core::diagnostics::call_context::for_thread().video_channel = channel_index() + 1;
+		core::diagnostics::call_context::for_thread().layer = layer_index();
+
 		boost::wsmatch what;
 		if(boost::regex_match(parameters().at(0), what, expr))
 		{

@@ -16,28 +16,30 @@
 * You should have received a copy of the GNU General Public License
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
-* Author: Robert Nagy, ronag89@gmail.com
+* Author: Helge Norberg, helge.norberg@svt.se
 */
 
-#pragma once
+#include "../StdAfx.h"
 
-#include <cstdint>
+#include "call_context.h"
 
-namespace caspar {
-	
-class prec_timer
+#include <boost/thread/tss.hpp>
+
+namespace caspar { namespace core { namespace diagnostics {
+
+call_context& call_context::for_thread()
 {
-public:
-	prec_timer();
+	static boost::thread_specific_ptr<call_context> contexts;
 
-	// Author: Ryan M. Geiss
-	// http://www.geisswerks.com/ryan/FAQS/timing.html
-	void tick(double interval);
-	void tick_millis(int64_t interval);
+	auto local = contexts.get();
 
-private:	
-	unsigned long time_;
-};
+	if (!local)
+	{
+		local = new call_context;
+		contexts.reset(local);
+	}
 
-
+	return *local;
 }
+
+}}}

@@ -192,7 +192,7 @@ private:
 
 	const std::string ipv4_address() const
 	{
-		return socket_->is_open() ? socket_->local_endpoint().address().to_string() : "no-address";
+		return socket_->is_open() ? socket_->remote_endpoint().address().to_string() : "no-address";
 	}
 
     connection(const spl::shared_ptr<tcp::socket>& socket, const protocol_strategy_factory<char>::ptr& protocol_factory, const spl::shared_ptr<connection_set>& connection_set) 

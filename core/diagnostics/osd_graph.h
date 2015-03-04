@@ -21,23 +21,19 @@
 
 #pragma once
 
-#include <cstdint>
+#include <common/memory.h>
+#include <common/diagnostics/graph.h>
 
-namespace caspar {
-	
-class prec_timer
-{
-public:
-	prec_timer();
+#include <string>
+#include <tuple>
+#include <functional>
 
-	// Author: Ryan M. Geiss
-	// http://www.geisswerks.com/ryan/FAQS/timing.html
-	void tick(double interval);
-	void tick_millis(int64_t interval);
+#include <boost/noncopyable.hpp>
 
-private:	
-	unsigned long time_;
-};
+namespace caspar { namespace core { namespace diagnostics { namespace osd {
 
+void register_sink();
+void show_graphs(bool value);
+void shutdown();
 
-}
+}}}}

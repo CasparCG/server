@@ -23,28 +23,12 @@
 
 #include "graph.h"
 
-#pragma warning (disable : 4244)
+#include <boost/range/adaptor/transformed.hpp>
+#include <boost/thread.hpp>
 
-#include "../executor.h"
-#include "../lock.h"
-#include "../env.h"
-
-#include <SFML/Graphics.hpp>
-
-#include <boost/optional.hpp>
-#include <boost/circular_buffer.hpp>
-#include <boost/range/algorithm_ext/erase.hpp>
-
-#include <tbb/concurrent_unordered_map.h>
-#include <tbb/atomic.h>
 #include <tbb/spin_mutex.h>
 
-#include <GL/glew.h>
-
-#include <array>
-#include <numeric>
-#include <tuple>
-#include <memory>
+#include <vector>
 
 namespace caspar { namespace diagnostics {
 		
@@ -67,516 +51,90 @@ std::tuple<float, float, float, float> color(int code)
 	return std::make_tuple(r, g, b, a);
 }
 
-sf::Font& get_default_font()
-{
-	static sf::Font DEFAULT_FONT = []()
-	{
-		sf::Font font;
-		if (!font.loadFromFile("arial.ttf"))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("arial.ttf not found"));
-		return font;
-	}();
+typedef std::vector<spi::sink_factory_t> sink_factories_t;
+static boost::mutex g_sink_factories_mutex;
+static sink_factories_t g_sink_factories;
 
-	return DEFAULT_FONT;
+std::vector<spl::shared_ptr<spi::graph_sink>> create_sinks()
+{
+	boost::lock_guard<boost::mutex> lock(g_sink_factories_mutex);
+	auto sinks = g_sink_factories | boost::adaptors::transformed([](const spi::sink_factory_t& s){ return s(); });
+	return std::vector<spl::shared_ptr<spi::graph_sink>>(std::begin(sinks), std::end(sinks));
 }
 
-struct drawable : public sf::Drawable, public sf::Transformable
+struct graph::impl
 {
-	virtual ~drawable(){}
-	virtual void render(sf::RenderTarget& target, sf::RenderStates states) = 0;
-	virtual void draw(sf::RenderTarget& target, sf::RenderStates states) const override
-	{
-		states.transform *= getTransform();
-		glLoadMatrixf(states.transform.getMatrix());
-		const_cast<drawable*>(this)->render(target, states);
-	}
-};
-
-class context : public drawable
-{	
-	std::unique_ptr<sf::RenderWindow> window_;
-	
-	std::list<std::weak_ptr<drawable>> drawables_;
-		
-	executor executor_ = L"diagnostics";
-public:					
-
-	static void register_drawable(const std::shared_ptr<drawable>& drawable)
-	{
-		if(!drawable)
-			return;
-
-		get_instance()->executor_.begin_invoke([=]
-		{
-			get_instance()->do_register_drawable(drawable);
-		}, task_priority::high_priority);
-	}
-
-	static void show(bool value)
-	{
-		get_instance()->executor_.begin_invoke([=]
-		{	
-			get_instance()->do_show(value);
-		}, task_priority::high_priority);
-	}
-	
-	static void shutdown()
-	{
-		get_instance().reset();
-	}
-private:
-	context()
-	{
-		executor_.begin_invoke([=]
-		{			
-			SetThreadPriority(GetCurrentThread(), BELOW_NORMAL_PRIORITY_CLASS);
-		});
-	}
-
-	void do_show(bool value)
-	{
-		if(value)
-		{
-			if(!window_)
-			{
-				window_.reset(new sf::RenderWindow(sf::VideoMode(750, 750), "CasparCG Diagnostics"));
-				window_->setPosition(sf::Vector2i(0, 0));
-				window_->setActive();
-				glEnable(GL_BLEND);
-				glEnable(GL_LINE_SMOOTH);
-				glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
-				glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-				tick();
-			}
-		}
-		else
-			window_.reset();
-	}
-
-	void tick()
-	{
-		if(!window_)
-			return;
-
-		sf::Event e;
-		while(window_->pollEvent(e))
-		{
-			if(e.type == sf::Event::Closed)
-			{
-				window_.reset();
-				return;
-			}
-		}		
-		//glClear(GL_COLOR_BUFFER_BIT);
-		window_->clear();
-		window_->draw(*this);
-		window_->display();
-		boost::this_thread::sleep(boost::posix_time::milliseconds(10));
-		executor_.begin_invoke([this]{tick();});
-	}
-
-	void render(sf::RenderTarget& target, sf::RenderStates states)
-	{
-		auto count = std::max<size_t>(8, drawables_.size());
-		float target_dy = 1.0f/static_cast<float>(count);
-
-		float last_y = 0.0f;
-		int n = 0;
-		for(auto it = drawables_.begin(); it != drawables_.end(); ++n)
-		{
-			auto drawable = it->lock();
-			if(drawable)
-			{
-				drawable->setScale(static_cast<float>(window_->getSize().x), static_cast<float>(target_dy*window_->getSize().y));
-				float target_y = std::max(last_y, static_cast<float>(n * window_->getSize().y)*target_dy);
-				drawable->setPosition(0.0f, target_y);			
-				target.draw(*drawable, states);
-				++it;		
-			}
-			else	
-				it = drawables_.erase(it);			
-		}
-	}	
-	
-	void do_register_drawable(const std::shared_ptr<drawable>& drawable)
-	{
-		drawables_.push_back(drawable);
-		auto it = drawables_.begin();
-		while(it != drawables_.end())
-		{
-			if(it->lock())
-				++it;
-			else	
-				it = drawables_.erase(it);			
-		}
-	}
-	
-	static std::unique_ptr<context>& get_instance()
-	{
-		static auto impl = std::unique_ptr<context>(new context);
-		return impl;
-	}
-};
-
-class line : public drawable
-{
-	boost::circular_buffer<std::pair<float, bool>> line_data_;
-
-	tbb::atomic<float>	tick_data_;
-	tbb::atomic<bool>	tick_tag_;
-	tbb::atomic<int>	color_;
+	std::vector<spl::shared_ptr<spi::graph_sink>> sinks_ = create_sinks();
 public:
-	line(size_t res = 1200)
-		: line_data_(res)
-	{
-		tick_data_	= -1.0f;
-		color_		= 0xFFFFFFFF;
-		tick_tag_	= false;
-
-		line_data_.push_back(std::make_pair(-1.0f, false));
-	}
-	
-	void set_value(float value)
-	{
-		tick_data_ = value;
-	}
-	
-	void set_tag()
-	{
-		tick_tag_ = true;
-	}
-		
-	void set_color(int color)
-	{
-		color_ = color;
-	}
-
-	int get_color()
-	{
-		return color_;
-	}
-		
-	void render(sf::RenderTarget& target, sf::RenderStates states)
-	{
-		float dx = 1.0f/static_cast<float>(line_data_.capacity());
-		float x = static_cast<float>(line_data_.capacity()-line_data_.size())*dx;
-
-		line_data_.push_back(std::make_pair(tick_data_, tick_tag_));		
-		tick_tag_   = false;
-				
-		glBegin(GL_LINE_STRIP);
-		auto c = color(color_);
-		glColor4f(std::get<0>(c), std::get<1>(c), std::get<2>(c), 0.8f);		
-		for(size_t n = 0; n < line_data_.size(); ++n)		
-			if(line_data_[n].first > -0.5)
-				glVertex3d(x+n*dx, std::max(0.05, std::min(0.95, (1.0f-line_data_[n].first)*0.8 + 0.1f)), 0.0);		
-		glEnd();
-				
-		glEnable(GL_LINE_STIPPLE);
-		glLineStipple(3, 0xAAAA);
-		for(size_t n = 0; n < line_data_.size(); ++n)	
-		{
-			if(line_data_[n].second)
-			{
-				glBegin(GL_LINE_STRIP);			
-					glVertex3f(x+n*dx, 0.0f, 0.0f);				
-					glVertex3f(x+n*dx, 1.0f, 0.0f);		
-				glEnd();
-			}
-		}
-		glDisable(GL_LINE_STIPPLE);
-	}
-};
-
-struct graph::impl : public drawable
-{
-	tbb::concurrent_unordered_map<std::string, diagnostics::line> lines_;
-
-	tbb::spin_mutex mutex_;
-	std::wstring text_;
-	bool auto_reset_ = false;
-
 	impl()
 	{
 	}
-		
+
+	void activate()
+	{
+		for (auto& sink : sinks_)
+			sink->activate();
+	}
+
 	void set_text(const std::wstring& value)
 	{
-		auto temp = value;
-		lock(mutex_, [&]
-		{
-			text_ = std::move(temp);
-		});
+		for (auto& sink : sinks_)
+			sink->set_text(value);
 	}
 
 	void set_value(const std::string& name, double value)
 	{
-		lines_[name].set_value(value);
+		for (auto& sink : sinks_)
+			sink->set_value(name, value);
 	}
 
 	void set_tag(const std::string& name)
 	{
-		lines_[name].set_tag();
+		for (auto& sink : sinks_)
+			sink->set_tag(name);
 	}
 
 	void set_color(const std::string& name, int color)
 	{
-		lines_[name].set_color(color);
+		for (auto& sink : sinks_)
+			sink->set_color(name, color);
 	}
+
 	void auto_reset()
 	{
-		lock(mutex_, [this]
-		{
-			auto_reset_ = true;
-		});
+		for (auto& sink : sinks_)
+			sink->auto_reset();
 	}
 		
 private:
-	void render(sf::RenderTarget& target, sf::RenderStates states)
-	{
-		const size_t text_size = 15;
-		const size_t text_margin = 2;
-		const size_t text_offset = (text_size+text_margin*2)*2;
-
-		std::wstring text_str;
-		bool auto_reset;
-
-		{
-			tbb::spin_mutex::scoped_lock lock(mutex_);
-			text_str = text_;
-			auto_reset = auto_reset_;
-		}
-
-		//sf::Text test("Test", get_default_font());
-		//target.draw(test, states);
-
-		sf::Text text(text_str.c_str(), get_default_font(), text_size);
-		text.setStyle(sf::Text::Italic);
-		text.move(text_margin, text_margin);
-		
-		//glPushMatrix();
-			//glScaled(1.0f/getScale().x, 1.0f/getScale().y, 1.0f);
-			target.draw(text, states);
-			float x_offset = text_margin;
-			for(auto it = lines_.begin(); it != lines_.end(); ++it)
-			{
-				sf::Text line_text(it->first, get_default_font(), text_size);
-				line_text.setPosition(x_offset, text_margin+text_offset/2);
-				auto c = it->second.get_color();
-				line_text.setColor(sf::Color((c >> 24) & 255, (c >> 16) & 255, (c >> 8) & 255, (c >> 0) & 255));
-				target.draw(line_text, states);
-				x_offset += (line_text.getLocalBounds().width/* - line_text.getLocalBounds().left*/) + text_margin * 2;
-			}
-
-			glDisable(GL_TEXTURE_2D);
-		//glPopMatrix();
-
-		static auto rect = []()
-		{
-			sf::RectangleShape r(sf::Vector2f(1.0f, 0.99f));
-			r.setFillColor(sf::Color(255, 255, 255, 51));
-			r.setOutlineThickness(0.00f);
-			return r;
-		}();
-		target.draw(rect, states);
-		/*glBegin(GL_QUADS);
-			glColor4f(1.0f, 1.0f, 1.0f, 0.2f);	
-			glVertex2f(1.0f, 0.99f);
-			glVertex2f(0.0f, 0.99f);
-			glVertex2f(0.0f, 0.01f);	
-			glVertex2f(1.0f, 0.01f);	
-		glEnd();*/
-
-		states.transform
-			.translate(0, text_offset)
-			.scale(1.0f, text_offset / getScale().y);
-		//glLoadMatrixf(states.transform.getMatrix());
-		//glPushMatrix();
-			//glTranslated(0.0f, text_offset/getScale().y, 1.0f);
-			//glScaled(1.0f, 1.0-text_offset/getScale().y, 1.0f);
-		
-			glEnable(GL_LINE_STIPPLE);
-			glLineStipple(3, 0xAAAA);
-			glColor4f(1.0f, 1.0f, 1.9f, 0.5f);	
-			glBegin(GL_LINE_STRIP);		
-				glVertex3f(0.0f, (1.0f-0.5f) * 0.8f + 0.1f, 0.0f);		
-				glVertex3f(1.0f, (1.0f-0.5f) * 0.8f + 0.1f, 0.0f);	
-			glEnd();
-			glBegin(GL_LINE_STRIP);		
-				glVertex3f(0.0f, (1.0f-0.0f) * 0.8f + 0.1f, 0.0f);		
-				glVertex3f(1.0f, (1.0f-0.0f) * 0.8f + 0.1f, 0.0f);	
-			glEnd();
-			glBegin(GL_LINE_STRIP);		
-				glVertex3f(0.0f, (1.0f-1.0f) * 0.8f + 0.1f, 0.0f);		
-				glVertex3f(1.0f, (1.0f-1.0f) * 0.8f + 0.1f, 0.0f);	
-			glEnd();
-			glDisable(GL_LINE_STIPPLE);
-
-			//target.Draw(diagnostics::guide(1.0f, color(1.0f, 1.0f, 1.0f, 0.6f)));
-			//target.Draw(diagnostics::guide(0.0f, color(1.0f, 1.0f, 1.0f, 0.6f)));
-
-			for(auto it = lines_.begin(); it != lines_.end(); ++it)		
-			{
-				target.draw(it->second, states);
-				if(auto_reset)
-					it->second.set_value(0.0f);
-			}
-		
-		//glPopMatrix();
-	}
-
 	impl(impl&);
 	impl& operator=(impl&);
 };
 	
-graph::graph() : impl_(new impl())
+graph::graph() : impl_(new impl)
 {
 }
 
-void graph::set_text(const std::wstring& value){impl_->set_text(value);}
-void graph::set_value(const std::string& name, double value){impl_->set_value(name, value);}
-void graph::set_color(const std::string& name, int color){impl_->set_color(name, color);}
-void graph::set_tag(const std::string& name){impl_->set_tag(name);}
-void graph::auto_reset(){impl_->auto_reset(); }
+void graph::set_text(const std::wstring& value) { impl_->set_text(value); }
+void graph::set_value(const std::string& name, double value) { impl_->set_value(name, value); }
+void graph::set_color(const std::string& name, int color) { impl_->set_color(name, color); }
+void graph::set_tag(const std::string& name) { impl_->set_tag(name); }
+void graph::auto_reset() { impl_->auto_reset(); }
+
 void register_graph(const spl::shared_ptr<graph>& graph)
 {
-	context::register_drawable(graph->impl_);
+	graph->impl_->activate();
 }
 
-void show_graphs(bool value)
+namespace spi {
+
+void register_sink_factory(sink_factory_t factory)
 {
-	context::show(value);
+	boost::lock_guard<boost::mutex> lock(g_sink_factories_mutex);
+
+	g_sink_factories.push_back(std::move(factory));
 }
 
-void shutdown()
-{
-	context::shutdown();
 }
-
-//namespace v2
-//{	
-//	
-//struct line::impl
-//{
-//	std::wstring name_;
-//	boost::circular_buffer<data> ticks_;
-//
-//	impl(const std::wstring& name) 
-//		: name_(name)
-//		, ticks_(1024){}
-//	
-//	void set_value(float value)
-//	{
-//		ticks_.push_back();
-//		ticks_.back().value = value;
-//	}
-//
-//	void set_value(float value)
-//	{
-//		ticks_.clear();
-//		set_value(value);
-//	}
-//};
-//
-//line::line(){}
-//line::line(const std::wstring& name) : impl_(new impl(name)){}
-//std::wstring line::print() const {return impl_->name_;}
-//void line::set_value(float value){impl_->set_value(value);}
-//void line::set_value(float value){impl_->set_value(value);}
-//boost::circular_buffer<data>& line::ticks() { return impl_->ticks_;}
-//
-//struct graph::impl
-//{
-//	std::map<std::wstring, line> lines_;
-//	color						 color_;
-//	printer						 printer_;
-//
-//	impl(const std::wstring& name) 
-//		: printer_([=]{return name;}){}
-//
-//	impl(const printer& parent_printer) 
-//		: printer_(parent_printer){}
-//	
-//	void set_value(const std::wstring& name, float value)
-//	{
-//		auto it = lines_.find(name);
-//		if(it == lines_.end())
-//			it = lines_.insert(std::make_pair(name, line(name))).first;
-//
-//		it->second.set_value(value);
-//	}
-//
-//	void set_value(const std::wstring& name, float value)
-//	{
-//		auto it = lines_.find(name);
-//		if(it == lines_.end())
-//			it = lines_.insert(std::make_pair(name, line(name))).first;
-//
-//		it->second.set_value(value);
-//	}
-//	
-//	void set_color(const std::wstring& name, color color)
-//	{
-//		color_ = color;
-//	}
-//
-//	std::map<std::wstring, line>& get_lines()
-//	{
-//		return lines_;
-//	}
-//	
-//	color get_color() const
-//	{
-//		return color_;
-//	}
-//
-//	std::wstring print() const
-//	{
-//		return printer_ ? printer_() : L"graph";
-//	}
-//};
-//	
-//graph::graph(const std::wstring& name) : impl_(new impl(name)){}
-//graph::graph(const printer& parent_printer) : impl_(new impl(parent_printer)){}
-//void graph::set_value(const std::wstring& name, float value){impl_->set_value(name, value);}
-//void graph::set_value(const std::wstring& name, float value){impl_->set_value(name, value);}
-//void graph::set_color(const std::wstring& name, color c){impl_->set_color(name, c);}
-//color graph::get_color() const {return impl_->get_color();}
-//std::wstring graph::print() const {return impl_->print();}
-//
-//spl::shared_ptr<graph> graph::clone() const 
-//{
-//	spl::shared_ptr<graph> clone(new graph(std::wstring(L"")));
-//	clone->impl_->printer_ = impl_->printer_;
-//	clone->impl_->lines_ = impl_->lines_;
-//	clone->impl_->color_ = impl_->color_;	
-//}
-//
-//std::map<std::wstring, line>& graph::get_lines() {impl_->get_lines();}
-//
-//std::vector<spl::shared_ptr<graph>> g_graphs;
-//
-//spl::shared_ptr<graph> create_graph(const std::string& name)
-//{
-//	g_graphs.push_back(spl::make_shared<graph>(name));
-//	return g_graphs.back();
-//}
-//
-//spl::shared_ptr<graph> create_graph(const printer& parent_printer)
-//{
-//	g_graphs.push_back(spl::make_shared<graph>(parent_printer));
-//	return g_graphs.back();
-//}
-//
-//static std::vector<spl::shared_ptr<graph>> get_all_graphs()
-//{
-//	std::vector<spl::shared_ptr<graph>> graphs;
-//	BOOST_FOREACH(auto& graph, g_graphs)
-//		graphs.push_back(graph->clone());
-//
-//	return graphs;
-//}
-//
-//}
 
 }}
