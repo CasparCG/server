@@ -181,6 +181,8 @@ copy "$(SolutionDir)dependencies64\freeimage\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies64\openal\bin\*.dll" "$(OutDir)"
 copy "$(ProjectDir)casparcg.config" "$(OutDir)"
 copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"
+copy "$(SolutionDir)dependencies64\liberation-fonts\LiberationSans-Regular.ttf" "$(OutDir)"
+copy "$(SolutionDir)dependencies64\liberation-fonts\LiberationSans-Regular.ttf" "$(ProjectDir)"
 </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -229,7 +231,9 @@ copy "$(SolutionDir)dependencies64\glew\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies64\freeimage\bin\*.dll" "$(OutDir)"
 copy "$(SolutionDir)dependencies64\openal\bin\*.dll" "$(OutDir)"
 copy "$(ProjectDir)casparcg.config" "$(OutDir)"
-copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
+copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"
+copy "$(SolutionDir)dependencies64\liberation-fonts\LiberationSans-Regular.ttf" "$(OutDir)"
+copy "$(SolutionDir)dependencies64\liberation-fonts\LiberationSans-Regular.ttf" "$(ProjectDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

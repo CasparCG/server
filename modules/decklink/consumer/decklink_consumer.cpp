@@ -40,6 +40,7 @@
 #include <common/cache_aligned_vector.h>
 
 #include <core/consumer/frame_consumer.h>
+#include <core/diagnostics/call_context.h>
 
 #include <tbb/concurrent_queue.h>
 
@@ -505,8 +506,10 @@ public:
 		: config_(config)
 		, executor_(L"decklink_consumer[" + boost::lexical_cast<std::wstring>(config.device_index) + L"]")
 	{
+		auto ctx = core::diagnostics::call_context::for_thread();
 		executor_.begin_invoke([=]
 		{
+			core::diagnostics::call_context::for_thread() = ctx;
 			::CoInitialize(nullptr);
 		});
 	}
