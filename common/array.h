@@ -96,7 +96,15 @@ public:
 		, storage_(new boost::any(std::forward<T>(storage)))
 	{
 	}
-	
+
+	explicit array(const std::uint8_t* ptr, std::size_t size, bool cacheable)
+		: ptr_(ptr)
+		, size_(size)
+		, cacheable_(cacheable)
+		, storage_(new boost::any)
+	{
+	}
+
 	array(const array& other)
 		: ptr_(other.ptr_)
 		, size_(other.size_)
