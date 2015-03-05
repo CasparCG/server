@@ -43,6 +43,7 @@
 #include <gl/glew.h>
 
 #include <boost/range/algorithm_ext/erase.hpp>
+#include <boost/range/algorithm/max_element.hpp>
 #include <boost/thread/future.hpp>
 
 #include <algorithm>
@@ -77,6 +78,17 @@ struct layer
 	}
 };
 
+std::size_t get_max_video_format_size()
+{
+	return *boost::range::max_element(
+		iterate_enum<core::video_format>()
+		| boost::adaptors::transformed(
+				[] (core::video_format format)
+				{
+					return core::video_format_desc(format).size;
+				}));
+}
+
 class image_renderer
 {
 	spl::shared_ptr<device>	ogl_;
@@ -92,9 +104,9 @@ public:
 	{	
 		if(layers.empty())
 		{ // Bypass GPU with empty frame.
-			auto buffer = spl::make_shared<const cache_aligned_vector<uint8_t>>(format_desc.size, 0);
-			return make_ready_future(array<const std::uint8_t>(buffer->data(), format_desc.size, true, buffer));
-		}		
+			static const cache_aligned_vector<uint8_t> buffer(get_max_video_format_size(), 0);
+			return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true));
+		}
 
 		if(format_desc.field_mode != core::field_mode::progressive)
 		{ // Remove jitter from still.
