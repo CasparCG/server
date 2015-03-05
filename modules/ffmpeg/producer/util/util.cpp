@@ -394,9 +394,10 @@ double read_fps(AVFormatContext& context, double fail_value)
 		double fps = static_cast<double>(time_base.den) / static_cast<double>(time_base.num);
 
 		double closest_fps = 0.0;
-		for(int n = 0; n < static_cast<int>(core::video_format::count); ++n)
+
+		for (auto video_mode : iterate_enum<core::video_format>())
 		{
-			auto format = core::video_format_desc(core::video_format(n));
+			auto format = core::video_format_desc(core::video_format(video_mode));
 
 			double diff1 = std::abs(format.fps - fps);
 			double diff2 = std::abs(closest_fps - fps);
