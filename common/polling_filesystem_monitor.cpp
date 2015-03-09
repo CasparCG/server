@@ -29,8 +29,6 @@
 #include <cstdint>
 
 #include <boost/thread.hpp>
-#include <boost/range/adaptor/map.hpp>
-#include <boost/range/algorithm/copy.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/convenience.hpp>
 
@@ -38,6 +36,7 @@
 #include <tbb/concurrent_queue.h>
 
 #include "executor.h"
+#include "linq.h"
 
 namespace caspar {
 
@@ -121,11 +120,8 @@ public:
 		bool interested_in_created = static_cast<int>(events_mask_ & filesystem_event::CREATED) > 0;
 		bool interested_in_modified = static_cast<int>(events_mask_ & filesystem_event::MODIFIED) > 0;
 
-		std::set<wpath> removed_files;
-		boost::copy(
-				files_ | boost::adaptors::map_keys,
-				std::insert_iterator<decltype(removed_files)>(removed_files, removed_files.end()));
-
+		auto filenames = cpplinq::from(files_).select(keys());
+		std::set<wpath> removed_files(filenames.begin(), filenames.end());
 		std::set<wpath> initial_files;
 
 		for (boost::filesystem::wrecursive_directory_iterator iter(folder_); iter != boost::filesystem::wrecursive_directory_iterator(); ++iter)

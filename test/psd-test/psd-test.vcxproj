@@ -42,11 +42,11 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <LibraryPath>..\..\dependencies64\boost\stage\lib;..\..\dependencies64\tbb\lib;$(LibraryPath)</LibraryPath>
-    <IncludePath>..\..\dependencies64\boost;..\..\;$(IncludePath)</IncludePath>
+    <IncludePath>..\dependencies64\RxCpp\include\;..\..\dependencies64\boost;..\..\;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>..\..\dependencies64\boost;..\..\;$(IncludePath)</IncludePath>
+    <IncludePath>..\dependencies64\RxCpp\include\;..\..\dependencies64\boost;..\..\;$(IncludePath)</IncludePath>
     <LibraryPath>..\..\dependencies64\boost\stage\lib;..\..\dependencies64\tbb\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">

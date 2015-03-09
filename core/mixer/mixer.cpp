@@ -43,7 +43,6 @@
 
 #include <boost/timer.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/range/algorithm_ext.hpp>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/spin_mutex.h>

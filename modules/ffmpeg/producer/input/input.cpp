@@ -38,7 +38,6 @@
 #include <tbb/atomic.h>
 #include <tbb/recursive_mutex.h>
 
-#include <boost/range/algorithm.hpp>
 #include <boost/thread/condition_variable.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>

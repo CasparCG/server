@@ -9,7 +9,8 @@
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
-    <ProjectConfiguration Include="Release|Win32"> <!-- Only to enable profiling. See http://stackoverflow.com/questions/13934895/profiling-with-cmake-c-and-visual-studio-2012 -->
+    <ProjectConfiguration Include="Release|Win32">
+      <!-- Only to enable profiling. See http://stackoverflow.com/questions/13934895/profiling-with-cmake-c-and-visual-studio-2012 -->
       <Configuration>Release</Configuration>
       <Platform>Win32</Platform>
     </ProjectConfiguration>
@@ -117,8 +118,8 @@
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)tmp\$(Configuration)\</IntDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(SolutionDir)tmp\$(Configuration)\</IntDir>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\dependencies64\boost\;..\dependencies64\ffmpeg\include\;..\dependencies64\glew\include;..\dependencies64\sfml\include\;..\dependencies64\tbb\include\;$(IncludePath)</IncludePath>
-    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\dependencies64\boost\;..\dependencies64\ffmpeg\include\;..\dependencies64\glew\include;..\dependencies64\sfml\include\;..\dependencies64\tbb\include\;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\dependencies64\RxCpp\include\;..\dependencies64\boost\;..\dependencies64\ffmpeg\include\;..\dependencies64\glew\include;..\dependencies64\sfml\include\;..\dependencies64\tbb\include\;$(IncludePath)</IncludePath>
+    <IncludePath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\dependencies64\RxCpp\include\;..\dependencies64\boost\;..\dependencies64\ffmpeg\include\;..\dependencies64\glew\include;..\dependencies64\sfml\include\;..\dependencies64\tbb\include\;$(IncludePath)</IncludePath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">..\dependencies64\boost\stage\lib;..\dependencies64\ffmpeg\lib\;..\dependencies64\glew\lib;..\dependencies64\freeimage\lib\;..\dependencies64\sfml\extlibs\lib;..\dependencies64\sfml\lib\;..\dependencies64\tbb\lib\;..\dependencies64\openal\lib\;..\dependencies64\freetype\objs\win32\vc2010;..\dependencies64\asmlib\;..\dependencies64\zlib\lib\;$(LibraryPath)</LibraryPath>
     <LibraryPath Condition="'$(Configuration)|$(Platform)'=='Release|x64'">..\dependencies64\boost\stage\lib;..\dependencies64\ffmpeg\lib\;..\dependencies64\glew\lib;..\dependencies64\sfml\lib\;..\dependencies64\tbb\lib\;..\dependencies64\freeimage\lib\;..\dependencies64\openal\lib\;..\dependencies64\asmlib\;..\dependencies64\sfml\extlibs\lib;..\dependencies64\freetype\objs\win32\vc2010;..\dependencies64\zlib\lib\;$(LibraryPath)</LibraryPath>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(SolutionDir)bin\$(Configuration)\</OutDir>
