@@ -37,7 +37,6 @@
 
 #include <boost/timer.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/range/algorithm_ext.hpp>
 
 #include <tbb/parallel_for_each.h>
 

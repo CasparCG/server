@@ -40,13 +40,14 @@
 #include <common/prec_timer.h>
 #include <common/memshfl.h>
 #include <common/env.h>
+#include <common/linq.h>
 
 #include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/range/algorithm.hpp>
-#include <boost/range/adaptors.hpp>
 #include <boost/timer.hpp>
+
+#include <functional>
 
 namespace caspar { namespace core {
 
@@ -134,19 +135,19 @@ public:
 	{		
 		if(ports_.empty())
 			return std::make_pair(0, 0);
-		
-		auto buffer_depths = ports_ | 
-							 boost::adaptors::map_values |
-							 boost::adaptors::transformed([](const port& p){return p.buffer_depth();}); 
-		
 
-		return std::make_pair(*boost::range::min_element(buffer_depths), *boost::range::max_element(buffer_depths));
+		return cpplinq::from(ports_)
+			.select(values())
+			.select(std::mem_fn(&port::buffer_depth))
+			.aggregate(minmax::initial_value<int>(), minmax());
 	}
 
 	bool has_synchronization_clock() const
 	{
-		return boost::range::count_if(ports_ | boost::adaptors::map_values,
-									  [](const port& p){return p.has_synchronization_clock();}) > 0;
+		return cpplinq::from(ports_)
+			.select(values())
+			.where(std::mem_fn(&port::has_synchronization_clock))
+			.any();
 	}
 		
 	void operator()(const_frame input_frame, const core::video_format_desc& format_desc)

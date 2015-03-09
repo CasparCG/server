@@ -32,8 +32,6 @@
 #include <core/frame/frame_factory.h>
 #include <core/frame/frame.h>
 
-#include <boost/range.hpp>
-
 #include <cstdint>
 
 FORWARD2(caspar, core, struct pixel_format_desc);

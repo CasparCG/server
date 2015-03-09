@@ -53,7 +53,7 @@ public:
 	 * @return The possible tween function names. Some of them may also support
 	 * 		   additional parameters appended to the name.
 	 */
-	static const std::vector<std::wstring>& names();
+	static const std::vector<const std::wstring>& names();
 
 	/**
 	 * Calculate a tweened value given a timepoint within the total duration
