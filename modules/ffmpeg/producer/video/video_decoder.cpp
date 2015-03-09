@@ -32,7 +32,6 @@
 #include <core/frame/frame_transform.h>
 #include <core/frame/frame_factory.h>
 
-#include <boost/range/algorithm_ext/push_back.hpp>
 #include <boost/filesystem.hpp>
 
 #include <queue>

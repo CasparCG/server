@@ -395,7 +395,7 @@ double read_fps(AVFormatContext& context, double fail_value)
 
 		double closest_fps = 0.0;
 
-		for (auto video_mode : iterate_enum<core::video_format>())
+		for (auto video_mode : enum_constants<core::video_format>())
 		{
 			auto format = core::video_format_desc(core::video_format(video_mode));
 

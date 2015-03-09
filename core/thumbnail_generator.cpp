@@ -29,7 +29,6 @@
 #include <future>
 
 #include <boost/thread.hpp>
-#include <boost/range/algorithm/transform.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
 
