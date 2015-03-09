@@ -48,8 +48,6 @@
 #include <common/assert.h>
 #include <boost/timer.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/range/algorithm/find_if.hpp>
-#include <boost/range/algorithm/find.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/regex.hpp>
 #include <boost/thread/future.hpp>

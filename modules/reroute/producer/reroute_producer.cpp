@@ -35,6 +35,7 @@
 #include <common/diagnostics/graph.h>
 #include <common/log.h>
 #include <common/reactive.h>
+#include <common/linq.h>
 
 #include <asmlib.h>
 
@@ -42,9 +43,6 @@
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/optional.hpp>
-#include <boost/range/algorithm_ext/push_back.hpp>
-#include <boost/range/numeric.hpp>
-#include <boost/range/adaptor/map.hpp>
 
 #include <queue>
 
@@ -89,7 +87,9 @@ public:
 			return core::draw_frame::late();		
 		}
 
-		return boost::accumulate(frames | boost::adaptors::map_values, core::draw_frame::empty(), core::draw_frame::over);
+		return cpplinq::from(frames)
+			.select(values())
+			.aggregate(core::draw_frame::empty(), core::draw_frame::over);
 	}
 
 	core::constraints& pixel_constraints() override

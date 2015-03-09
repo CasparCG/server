@@ -45,7 +45,6 @@
 #include <tbb/parallel_for_each.h>
 #include <tbb/concurrent_queue.h>
 
-#include <boost/range.hpp>
 #include <boost/range/algorithm_ext/erase.hpp>
 #include <boost/thread/future.hpp>
 
