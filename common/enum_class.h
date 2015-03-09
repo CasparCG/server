@@ -2,8 +2,9 @@
 
 #include <type_traits>
 
-#include <boost/range/adaptor/transformed.hpp>
 #include <boost/range/irange.hpp>
+
+#include "linq.h"
 
 // Macro that defines & and &= for an enum class. Add more when needed.
 
@@ -22,23 +23,18 @@
 
 namespace caspar {
 
-template<typename E>
-struct enum_from_int
-{
-	typedef E result_type;
-
-	E operator()(typename std::underlying_type<E>::type i) const
-	{
-		return static_cast<E>(i);
-	}
-};
-
 // For enum classes starting at 0 and without any gaps with a terminating count constant.
 template <typename E>
-boost::transformed_range<enum_from_int<E>, const boost::integer_range<typename std::underlying_type<E>::type>> iterate_enum()
+const std::vector<E>& enum_constants()
 {
 	typedef typename std::underlying_type<E>::type integer;
-	return boost::irange(static_cast<integer>(0), static_cast<integer>(E::count)) | boost::adaptors::transformed(enum_from_int<E>());
+
+	static const auto ints = boost::irange(static_cast<integer>(0), static_cast<integer>(E::count));
+	static const auto result = cpplinq::from(ints.begin(), ints.end())
+		.cast<E>()
+		.to_vector();
+
+	return result;
 }
 
 }

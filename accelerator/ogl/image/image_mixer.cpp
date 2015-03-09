@@ -31,6 +31,7 @@
 #include <common/gl/gl_check.h>
 #include <common/future.h>
 #include <common/array.h>
+#include <common/linq.h>
 
 #include <core/frame/frame.h>
 #include <core/frame/frame_transform.h>
@@ -43,7 +44,6 @@
 #include <gl/glew.h>
 
 #include <boost/range/algorithm_ext/erase.hpp>
-#include <boost/range/algorithm/max_element.hpp>
 #include <boost/thread/future.hpp>
 
 #include <algorithm>
@@ -80,13 +80,9 @@ struct layer
 
 std::size_t get_max_video_format_size()
 {
-	return *boost::range::max_element(
-		iterate_enum<core::video_format>()
-		| boost::adaptors::transformed(
-				[] (core::video_format format)
-				{
-					return core::video_format_desc(format).size;
-				}));
+	return cpplinq::from(enum_constants<core::video_format>())
+		.select([](core::video_format format) { return core::video_format_desc(format).size; })
+		.max();
 }
 
 class image_renderer

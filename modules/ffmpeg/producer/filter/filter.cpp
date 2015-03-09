@@ -28,8 +28,6 @@
 #include <common/assert.h>
 #include <common/except.h>
 
-#include <boost/range/iterator_range.hpp>
-#include <boost/range/adaptors.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/thread.hpp>
 #include <boost/format.hpp>

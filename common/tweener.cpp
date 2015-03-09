@@ -43,10 +43,10 @@
 #include "tweener.h"
 
 #include "except.h"
+#include "linq.h"
 
 #include <boost/regex.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/range/adaptor/map.hpp>
 
 #include <unordered_map>
 #include <string>
@@ -481,13 +481,11 @@ double tweener::operator()(double t, double b , double c, double d) const
 	return func_(t, b, c, d);
 }
 
-const std::vector<std::wstring>& tweener::names()
+const std::vector<const std::wstring>& tweener::names()
 {
-	using namespace boost::adaptors;
-
-	static const std::vector<std::wstring> names(
-		(get_tweens() | map_keys).begin(),
-		(get_tweens() | map_keys).end());
+	static const auto names = cpplinq::from(get_tweens())
+		.select(keys())
+		.to_vector();
 
 	return names;
 }

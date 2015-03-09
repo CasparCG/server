@@ -23,7 +23,8 @@
 
 #include "graph.h"
 
-#include <boost/range/adaptor/transformed.hpp>
+#include "../linq.h"
+
 #include <boost/thread.hpp>
 
 #include <tbb/spin_mutex.h>
@@ -58,8 +59,10 @@ static sink_factories_t g_sink_factories;
 std::vector<spl::shared_ptr<spi::graph_sink>> create_sinks()
 {
 	boost::lock_guard<boost::mutex> lock(g_sink_factories_mutex);
-	auto sinks = g_sink_factories | boost::adaptors::transformed([](const spi::sink_factory_t& s){ return s(); });
-	return std::vector<spl::shared_ptr<spi::graph_sink>>(std::begin(sinks), std::end(sinks));
+
+	return cpplinq::from(g_sink_factories)
+		.select([](const spi::sink_factory_t& s){ return s(); })
+		.to_vector();
 }
 
 struct graph::impl
