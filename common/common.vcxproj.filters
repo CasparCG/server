@@ -166,5 +166,8 @@
     <ClInclude Include="cache_aligned_vector.h">
       <Filter>source</Filter>
     </ClInclude>
+    <ClInclude Include="linq.h">
+      <Filter>source</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
