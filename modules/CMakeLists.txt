@@ -1,0 +1,12 @@
+cmake_minimum_required (VERSION 2.6)
+project ("modules")
+
+add_subdirectory(bluefish)
+add_subdirectory(decklink)
+add_subdirectory(ffmpeg)
+add_subdirectory(flash)
+add_subdirectory(image)
+add_subdirectory(oal)
+add_subdirectory(psd)
+add_subdirectory(reroute)
+add_subdirectory(screen)
