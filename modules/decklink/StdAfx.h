@@ -21,6 +21,7 @@
 
 #pragma once
 
+#ifdef __cplusplus
 #ifdef _DEBUG
 #include <crtdbg.h>
 #endif
@@ -82,3 +83,6 @@ extern "C"
 #include "../common/utf.h"
 #include "../common/except.h"
 #include "../common/log.h"
+#endif
+#include <rpc.h>
+#include <rpcndr.h>

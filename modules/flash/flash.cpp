@@ -28,6 +28,10 @@
 
 #include <common/env.h>
 
+#ifdef WIN32 
+#include <Windows.h>
+#endif
+
 namespace caspar { namespace flash {
 
 void init()
