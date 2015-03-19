@@ -21,6 +21,7 @@
 
 #pragma once
 
+#ifdef __cplusplus
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 
@@ -57,3 +58,6 @@
 
 #include "../common/log.h"
 #include "../common/except.h"
+#endif
+#include <rpc.h>
+#include <rpcndr.h>

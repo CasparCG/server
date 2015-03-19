@@ -67,7 +67,7 @@ public:
 		, channel_index_(channel_index)
 		, format_desc_(format_desc)
 	{
-		graph_->set_color("consume-time", diagnostics::color(1.0f, 0.4f, 0.0f, 0.8));
+		graph_->set_color("consume-time", diagnostics::color(1.0f, 0.4f, 0.0f, 0.8f));
 	}	
 	
 	void add(int index, spl::shared_ptr<frame_consumer> consumer)

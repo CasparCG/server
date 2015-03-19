@@ -12,8 +12,8 @@ set(HEADERS
 		stdafx.h
 )
 
-add_executable(shell ${SOURCES} ${HEADERS})
-add_precompiled_header(shell stdafx.h FORCEINCLUDE)
+add_executable(casparcg ${SOURCES} ${HEADERS})
+add_precompiled_header(casparcg stdafx.h FORCEINCLUDE)
 
 include_directories(..)
 include_directories(${BOOST_INCLUDE_PATH})
@@ -22,7 +22,7 @@ include_directories(${TBB_INCLUDE_PATH})
 
 source_group(sources ./*)
 
-target_link_libraries(shell
+target_link_libraries(casparcg
 		accelerator
 		common
 		core
@@ -41,9 +41,12 @@ target_link_libraries(shell
 		alibcof64.lib
 		jpeg.lib
 		sndfile.lib
-		sfml-system-2.lib
-		sfml-window-2.lib
-		sfml-graphics-2.lib
+		optimized sfml-system-2.lib
+		optimized sfml-window-2.lib
+		optimized sfml-graphics-2.lib
+		debug sfml-system-d-2.lib
+		debug sfml-window-d-2.lib
+		debug sfml-graphics-d-2.lib
 		Winmm.lib
 		Ws2_32.lib
 		avformat.lib
@@ -52,11 +55,43 @@ target_link_libraries(shell
 		avfilter.lib
 		swscale.lib
 		swresample.lib
-		tbb.lib
+		optimized tbb.lib
+		debug tbb_debug.lib
 		OpenGL32.lib
 		glew32.lib
 		openal32.lib
-		FreeImage.lib
+		optimized FreeImage.lib
+		debug FreeImaged.lib
 		freetype.lib
 		zlibstat.lib
+)
+
+set(OUTPUT_FOLDER "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}")
+
+add_custom_command(TARGET casparcg POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy \"${FFMPEG_BIN_PATH}/avcodec-55.dll\" \"${OUTPUT_FOLDER}/\"
+		COMMAND ${CMAKE_COMMAND} -E copy \"${FFMPEG_BIN_PATH}/avdevice-55.dll\" \"${OUTPUT_FOLDER}/\"
+		COMMAND ${CMAKE_COMMAND} -E copy \"${FFMPEG_BIN_PATH}/avfilter-4.dll\" \"${OUTPUT_FOLDER}/\"
+		COMMAND ${CMAKE_COMMAND} -E copy \"${FFMPEG_BIN_PATH}/avformat-55.dll\" \"${OUTPUT_FOLDER}/\"
+		COMMAND ${CMAKE_COMMAND} -E copy \"${FFMPEG_BIN_PATH}/avutil-52.dll\" \"${OUTPUT_FOLDER}/\"
+		COMMAND ${CMAKE_COMMAND} -E copy \"${FFMPEG_BIN_PATH}/postproc-52.dll\" \"${OUTPUT_FOLDER}/\"
+		COMMAND ${CMAKE_COMMAND} -E copy \"${FFMPEG_BIN_PATH}/swresample-0.dll\" \"${OUTPUT_FOLDER}/\"
+		COMMAND ${CMAKE_COMMAND} -E copy \"${FFMPEG_BIN_PATH}/swscale-2.dll\" \"${OUTPUT_FOLDER}/\"
+		COMMAND ${CMAKE_COMMAND} -E copy \"${FREEIMAGE_BIN_PATH}/FreeImage.dll\" \"${OUTPUT_FOLDER}/\"
+		COMMAND ${CMAKE_COMMAND} -E copy \"${FREEIMAGE_BIN_PATH}/FreeImaged.dll\" \"${OUTPUT_FOLDER}/\"
+		COMMAND ${CMAKE_COMMAND} -E copy \"${GLEW_BIN_PATH}/glew32.dll\" \"${OUTPUT_FOLDER}/\"
+		COMMAND ${CMAKE_COMMAND} -E copy \"${OPENAL_BIN_PATH}/OpenAL32.dll\" \"${OUTPUT_FOLDER}/\"
+		COMMAND ${CMAKE_COMMAND} -E copy \"${OPENAL_BIN_PATH}/wrap_oal.dll\" \"${OUTPUT_FOLDER}/\"
+		COMMAND ${CMAKE_COMMAND} -E copy \"${TBB_BIN_PATH}/tbb.dll\" \"${OUTPUT_FOLDER}/\"
+		COMMAND ${CMAKE_COMMAND} -E copy \"${TBB_BIN_PATH}/tbb_debug.dll\" \"${OUTPUT_FOLDER}/\"
+		COMMAND ${CMAKE_COMMAND} -E copy \"${TBB_BIN_PATH}/tbbmalloc.dll\" \"${OUTPUT_FOLDER}/\"
+		COMMAND ${CMAKE_COMMAND} -E copy \"${TBB_BIN_PATH}/tbbmalloc_debug.dll\" \"${OUTPUT_FOLDER}/\"
+		COMMAND ${CMAKE_COMMAND} -E copy \"${TBB_BIN_PATH}/tbbmalloc_proxy.dll\" \"${OUTPUT_FOLDER}/\"
+		COMMAND ${CMAKE_COMMAND} -E copy \"${TBB_BIN_PATH}/tbbmalloc_proxy_debug.dll\" \"${OUTPUT_FOLDER}/\"
+
+		COMMAND ${CMAKE_COMMAND} -E copy \"${LIBERATION_FONTS_BIN_PATH}/LiberationSans-Regular.ttf\" \"${OUTPUT_FOLDER}/\"
+		COMMAND ${CMAKE_COMMAND} -E copy \"${LIBERATION_FONTS_BIN_PATH}/LiberationSans-Regular.ttf\" \"${CMAKE_CURRENT_BINARY_DIR}/\"
+
+		COMMAND ${CMAKE_COMMAND} -E copy \"${CMAKE_CURRENT_SOURCE_DIR}/casparcg.config\" \"${OUTPUT_FOLDER}/\"
+		COMMAND ${CMAKE_COMMAND} -E copy \"${CMAKE_CURRENT_SOURCE_DIR}/casparcg.config\" \"${CMAKE_CURRENT_BINARY_DIR}/\"
 )
