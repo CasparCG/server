@@ -37,8 +37,6 @@
 #include <common/reactive.h>
 #include <common/linq.h>
 
-#include <asmlib.h>
-
 #include <tbb/concurrent_queue.h>
 
 #include <boost/property_tree/ptree.hpp>

@@ -1,19 +1,38 @@
 cmake_minimum_required (VERSION 2.6)
 project ("CasparCG Server")
 
-set(DEPENDENCIES_FOLDER "${PROJECT_SOURCE_DIR}/dependencies64")
+find_package(Git)
 
-set(BOOST_INCLUDE_PATH		"${DEPENDENCIES_FOLDER}/boost")
-set(RXCPP_INCLUDE_PATH		"${DEPENDENCIES_FOLDER}/RxCpp/include")
-set(TBB_INCLUDE_PATH		"${DEPENDENCIES_FOLDER}/tbb/include")
-set(GLEW_INCLUDE_PATH		"${DEPENDENCIES_FOLDER}/glew/include")
-set(SFML_INCLUDE_PATH		"${DEPENDENCIES_FOLDER}/sfml/include")
-set(FREETYPE_INCLUDE_PATH	"${DEPENDENCIES_FOLDER}/freetype/include")
-set(FFMPEG_INCLUDE_PATH		"${DEPENDENCIES_FOLDER}/ffmpeg/include")
-set(ASMLIB_INCLUDE_PATH		"${DEPENDENCIES_FOLDER}/asmlib")
-set(FREEIMAGE_INCLUDE_PATH	"${DEPENDENCIES_FOLDER}/freeimage/include")
-set(OPENAL_INCLUDE_PATH		"${DEPENDENCIES_FOLDER}/openal/include")
-set(BLUEFISH_INCLUDE_PATH	"${DEPENDENCIES_FOLDER}/bluefish/include")
+set(GIT_REV "N/A")
+
+if (GIT_FOUND)
+	exec_program("${GIT_EXECUTABLE}" "${PROJECT_SOURCE_DIR}"
+			ARGS rev-parse --verify --short HEAD
+			OUTPUT_VARIABLE GIT_REV)
+endif ()
+
+configure_file("${PROJECT_SOURCE_DIR}/version.tmpl" "${PROJECT_SOURCE_DIR}/version.h")
+
+set(DEPENDENCIES_FOLDER			"${PROJECT_SOURCE_DIR}/dependencies64")
+
+set(BOOST_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/boost")
+set(RXCPP_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/RxCpp/include")
+set(TBB_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/tbb/include")
+set(GLEW_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/glew/include")
+set(SFML_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/sfml/include")
+set(FREETYPE_INCLUDE_PATH		"${DEPENDENCIES_FOLDER}/freetype/include")
+set(FFMPEG_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/ffmpeg/include")
+set(ASMLIB_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/asmlib")
+set(FREEIMAGE_INCLUDE_PATH		"${DEPENDENCIES_FOLDER}/freeimage/include")
+set(OPENAL_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/openal/include")
+set(BLUEFISH_INCLUDE_PATH		"${DEPENDENCIES_FOLDER}/bluefish/include")
+
+set(FFMPEG_BIN_PATH				"${DEPENDENCIES_FOLDER}/ffmpeg/bin")
+set(FREEIMAGE_BIN_PATH			"${DEPENDENCIES_FOLDER}/freeimage/bin")
+set(GLEW_BIN_PATH				"${DEPENDENCIES_FOLDER}/glew/bin")
+set(OPENAL_BIN_PATH				"${DEPENDENCIES_FOLDER}/openal/bin")
+set(TBB_BIN_PATH				"${DEPENDENCIES_FOLDER}/tbb/bin")
+set(LIBERATION_FONTS_BIN_PATH	"${DEPENDENCIES_FOLDER}/liberation-fonts")
 
 link_directories("${DEPENDENCIES_FOLDER}/boost/stage/lib")
 link_directories("${DEPENDENCIES_FOLDER}/tbb/lib")
@@ -38,7 +57,7 @@ add_definitions( -D_UNICODE )
 
 if (${MSVC})
 	set(CMAKE_CXX_FLAGS			"${CMAKE_CXX_FLAGS}			/EHa /Zi /W4 /WX /MP /fp:fast /FIcommon/compiler/vs/disable_silly_warnings.h")
-	set(CMAKE_CXX_FLAGS_DEBUG	"${CMAKE_CXX_FLAGS_DEBUG}	/D TBB_USE_ASSERT=1 /D TBB_USE_DEBUG")
+	set(CMAKE_CXX_FLAGS_DEBUG	"${CMAKE_CXX_FLAGS_DEBUG}	/D TBB_USE_ASSERT=1 /D TBB_USE_DEBUG /bigobj")
 	set(CMAKE_CXX_FLAGS_RELEASE	"${CMAKE_CXX_FLAGS_RELEASE}	/Oi /Ot /Gy")
 endif ()
 

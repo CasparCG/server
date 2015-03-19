@@ -67,7 +67,7 @@ public:
 		: graph_(std::move(graph))
 		, image_mixer_(std::move(image_mixer))
 	{			
-		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8));
+		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8f));
 	}	
 	
 	const_frame operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc)
