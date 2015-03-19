@@ -3,7 +3,9 @@ project (common)
 
 set(SOURCES
 		compiler/vs/stack_walker.cpp
+
 		diagnostics/graph.cpp
+
 		gl/gl_check.cpp
 
 		base64.cpp
@@ -20,8 +22,11 @@ set(SOURCES
 set(HEADERS
 		compiler/vs/disable_silly_warnings.h
 		compiler/vs/stack_walker.h
+
 		diagnostics/graph.h
+
 		gl/gl_check.h
+
 		os/windows/windows.h
 		os/windows/system_info.h
 		os/windows/windows.h

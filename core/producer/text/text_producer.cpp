@@ -45,9 +45,6 @@
 #include <common/os/windows/system_info.h>
 #include <memory>
 
-#include <asmlib.h>
-#include <FreeImage.h>
-
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/filesystem.hpp>
