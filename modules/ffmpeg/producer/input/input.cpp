@@ -29,7 +29,8 @@
 #include <common/diagnostics/graph.h>
 #include <common/executor.h>
 #include <common/lock.h>
-#include <common/except.h>
+//#include <common/except.h>
+#include <common/os/general_protection_fault.h>
 #include <common/log.h>
 
 #include <core/video_format.h>
@@ -284,7 +285,7 @@ private:
 
 	void run()
 	{
-		win32_exception::install_handler();
+		ensure_gpf_handler_installed_for_thread(u8(print()).c_str());
 
 		while(is_running_)
 		{

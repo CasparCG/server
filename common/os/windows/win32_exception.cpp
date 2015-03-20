@@ -4,7 +4,7 @@
 
 #include <boost/thread.hpp>
 
-#include "os/windows/windows.h"
+#include "windows.h"
 
 namespace caspar { namespace detail {
 

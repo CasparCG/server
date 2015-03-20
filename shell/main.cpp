@@ -59,6 +59,7 @@
 #include <common/log.h>
 #include <common/gl/gl_check.h>
 #include <common/os/system_info.h>
+#include <common/os/general_protection_fault.h>
 
 #include <boost/property_tree/detail/file_parser_error.hpp>
 #include <boost/property_tree/xml_parser.hpp>
@@ -340,7 +341,7 @@ int main(int argc, wchar_t* argv[])
 	SetPriorityClass(GetCurrentProcess(), ABOVE_NORMAL_PRIORITY_CLASS);
 
 	// Install structured exception handler.
-	win32_exception::install_handler();
+	ensure_gpf_handler_installed_for_thread("main thread");
 				
 	// Increase time precision. This will increase accuracy of function like Sleep(1) from 10 ms to 1 ms.
 	struct inc_prec
@@ -355,8 +356,7 @@ int main(int argc, wchar_t* argv[])
 		tbb_thread_installer(){observe(true);}
 		void on_scheduler_entry(bool is_worker)
 		{
-			//detail::SetThreadName(GetCurrentThreadId(), "tbb-worker-thread");
-			win32_exception::install_handler();
+			ensure_gpf_handler_installed_for_thread("tbb-worker-thread");
 		}
 	} tbb_thread_installer;
 
