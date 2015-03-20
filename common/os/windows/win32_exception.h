@@ -38,11 +38,11 @@ public:
 
 	address location() const { return location_; }
 	unsigned int error_code() const { return errorCode_; }
-	virtual const char* what() const noexcept override { return message_;	}
+	virtual const char* what() const throw() override { return message_; }
+	static void Handler(unsigned int errorCode, EXCEPTION_POINTERS* pInfo);
 
 protected:
 	win32_exception(const EXCEPTION_RECORD& info);
-	static void Handler(unsigned int errorCode, EXCEPTION_POINTERS* pInfo);
 
 private:
 	const char* message_;
@@ -58,7 +58,7 @@ class win32_access_violation : public win32_exception
 public:
 	bool is_write() const { return isWrite_; }
 	address bad_address() const { return badAddress_;}
-	virtual const char* what() const noexcept override;
+	virtual const char* what() const throw() override;
 
 protected:
 	win32_access_violation(const EXCEPTION_RECORD& info);
