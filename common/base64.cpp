@@ -25,6 +25,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <cstring>
 
 #include <boost/archive/iterators/insert_linebreaks.hpp>
 #include <boost/archive/iterators/base64_from_binary.hpp>
