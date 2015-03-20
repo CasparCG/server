@@ -47,8 +47,8 @@ public:
 private:	
 	std::map<Prio, tbb::concurrent_queue<T>, std::greater<Prio>>	queues_by_priority_;
 	size_type														capacity_;
-	semaphore														space_available_	= capacity_;
-	semaphore														elements_available_	= 0u;
+	semaphore														space_available_	{ capacity_ };
+	semaphore														elements_available_	{ 0u };
 	mutable boost::mutex											capacity_mutex_;
 public:
 	/**

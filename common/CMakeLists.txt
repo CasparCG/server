@@ -2,34 +2,49 @@ cmake_minimum_required (VERSION 2.6)
 project (common)
 
 set(SOURCES
-		compiler/vs/stack_walker.cpp
-
 		diagnostics/graph.cpp
 
 		gl/gl_check.cpp
 
 		base64.cpp
 		env.cpp
-		except.cpp
 		log.cpp
-		page_locked_allocator.cpp
 		polling_filesystem_monitor.cpp
-		prec_timer.cpp
 		stdafx.cpp
 		tweener.cpp
 		utf.cpp
 )
-set(HEADERS
-		compiler/vs/disable_silly_warnings.h
-		compiler/vs/stack_walker.h
+if (MSVC)
+	set(OS_SPECIFIC_SOURCES
+			compiler/vs/disable_silly_warnings.h
+			compiler/vs/stack_walker.cpp
+			compiler/vs/stack_walker.h
 
+			os/windows/current_version.h
+			os/windows/page_locked_allocator.cpp
+			os/windows/prec_timer.cpp
+			os/windows/stack_trace.cpp
+			os/windows/system_info.cpp
+			os/windows/win32_exception.cpp
+			os/windows/win32_exception.h
+			os/windows/windows.h
+	)
+elseif (CMAKE_COMPILER_IS_GNUCXX)
+	set(OS_SPECIFIC_SOURCES
+			os/linux/signal_handlers.cpp
+			os/linux/stack_trace.cpp
+			os/linux/system_info.cpp
+	)
+endif ()
+set(HEADERS
 		diagnostics/graph.h
 
 		gl/gl_check.h
 
-		os/windows/windows.h
-		os/windows/system_info.h
-		os/windows/windows.h
+		os/general_protection_fault.h
+		os/page_locked_allocator.h
+		os/stack_trace.h
+		os/system_info.h
 
 		array.h
 		assert.h
@@ -51,7 +66,6 @@ set(HEADERS
 		log.h
 		memory.h
 		memshfl.h
-		page_locked_allocator.h
 		param.h
 		polling_filesystem_monitor.h
 		prec_timer.h
@@ -62,7 +76,7 @@ set(HEADERS
 		utf.h
 )
 
-add_library(common ${SOURCES} ${HEADERS})
+add_library(common ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
 add_precompiled_header(common stdafx.h FORCEINCLUDE)
 
 include_directories(..)
