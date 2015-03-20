@@ -30,9 +30,13 @@ class prec_timer
 public:
 	prec_timer();
 
+	void tick(double interval)
+	{
+		tick_millis(static_cast<int64_t>(interval * 1000.0));
+	}
+
 	// Author: Ryan M. Geiss
 	// http://www.geisswerks.com/ryan/FAQS/timing.html
-	void tick(double interval);
 	void tick_millis(int64_t interval);
 
 private:	

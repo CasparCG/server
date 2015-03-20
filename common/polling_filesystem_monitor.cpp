@@ -252,9 +252,7 @@ public:
 private:
 	void scanner()
 	{
-		win32_exception::install_handler();
-
-		//detail::SetThreadName(GetCurrentThreadId(), "polling_filesystem_monitor");
+		ensure_gpf_handler_installed_for_thread("polling_filesystem_monitor");
 
 		bool running = scan(false);
 		initial_scan_completion_.set_value();
@@ -268,7 +266,7 @@ private:
 		try
 		{
 			if (sleep)
-				boost::this_thread::sleep(boost::posix_time::milliseconds(scan_interval_millis_));
+				boost::this_thread::sleep_for(boost::chrono::milliseconds(scan_interval_millis_));
 
 			if (reemmit_all_.fetch_and_store(false))
 				root_monitor_.reemmit_all();

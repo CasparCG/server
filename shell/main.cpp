@@ -58,8 +58,7 @@
 #include <common/except.h>
 #include <common/log.h>
 #include <common/gl/gl_check.h>
-#include <common/os/windows/current_version.h>
-#include <common/os/windows/system_info.h>
+#include <common/os/system_info.h>
 
 #include <boost/property_tree/detail/file_parser_error.hpp>
 #include <boost/property_tree/xml_parser.hpp>
@@ -143,7 +142,7 @@ void print_info()
 	CASPAR_LOG(info) << L"http://www.casparcg.com/";
 	CASPAR_LOG(info) << L"############################################################################";
 	CASPAR_LOG(info) << L"Starting CasparCG Video and Graphics Playout Server " << env::version();
-	CASPAR_LOG(info) << L"on " << win_product_name() << L" " << win_sp_version();
+	CASPAR_LOG(info) << L"on " << os_description();
 	CASPAR_LOG(info) << cpu_info();
 	CASPAR_LOG(info) << system_product_name();
 	

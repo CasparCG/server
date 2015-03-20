@@ -42,7 +42,6 @@
 #include <common/env.h>
 #include <common/future.h>
 #include <common/param.h>
-#include <common/os/windows/system_info.h>
 #include <memory>
 
 #include <boost/algorithm/string.hpp>

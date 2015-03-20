@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include "os/general_protection_fault.h"
 #include "except.h"
 #include "log.h"
 #include "blocking_bounded_queue_adapter.h"
@@ -235,7 +236,7 @@ private:
 
 	void run() // noexcept
 	{
-		win32_exception::install_handler();		
+		ensure_gpf_handler_installed_for_thread(u8(name_).c_str());
 		while(is_running_)
 		{
 			try

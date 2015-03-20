@@ -19,17 +19,19 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#pragma once
+#include "../../stdafx.h"
+
+#include "../system_info.h"
+#include "current_version.h"
 
 #include "windows.h"
 
-#include <string>
 #include <sstream>
 #include <map>
 
 namespace caspar {
 	
-static std::wstring cpu_info()
+std::wstring cpu_info()
 {
 	std::wstring cpu_name = L"Unknown CPU";
 	HKEY hkey; 
@@ -58,7 +60,7 @@ static std::wstring cpu_info()
 	return s.str();
 }
 
-static std::wstring system_product_name()
+std::wstring system_product_name()
 {
 	std::wstring system_product_name = L"Unknown System";
 	HKEY hkey; 
@@ -78,6 +80,12 @@ static std::wstring system_product_name()
 
 	return system_product_name;
 }
+
+std::wstring os_description()
+{
+	return win_product_name() + L" " + win_sp_version();
+}
+
 
 /*static std::map<std::wstring, std::wstring> enumerate_fonts()
 {
