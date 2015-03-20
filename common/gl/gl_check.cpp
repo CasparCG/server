@@ -22,8 +22,6 @@
 //
 ///////////////////////////
 
-#pragma once
-
 #include "../stdafx.h"
 
 #include "gl_check.h"

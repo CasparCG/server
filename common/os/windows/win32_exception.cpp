@@ -1,6 +1,6 @@
-#include "stdafx.h"
+#include "../../stdafx.h"
 
-#include "except.h"
+#include "win32_exception.h"
 
 #include <boost/thread.hpp>
 
@@ -49,7 +49,7 @@ bool& installed_for_thread()
 	return *for_thread;
 }
 
-void win32_exception::install_handler() 
+void install_gpf_handler()
 {
 //#ifndef _DEBUG
 	_set_se_translator(win32_exception::Handler);
@@ -57,12 +57,12 @@ void win32_exception::install_handler()
 //#endif
 }
 
-void win32_exception::ensure_handler_installed_for_thread(
+void ensure_gpf_handler_installed_for_thread(
 		const char* thread_description)
 {
 	if (!installed_for_thread())
 	{
-		install_handler();
+		install_gpf_handler();
 
 		if (thread_description)
 			detail::SetThreadName(GetCurrentThreadId(), thread_description);

@@ -21,4 +21,12 @@
 
 #pragma once
 
-//#include "os/windows/windows.h"
+#include <string>
+
+namespace caspar {
+	
+std::wstring cpu_info();
+std::wstring system_product_name();
+std::wstring os_description();
+
+}

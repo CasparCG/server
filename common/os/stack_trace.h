@@ -16,9 +16,15 @@
 * You should have received a copy of the GNU General Public License
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
-* Author: Robert Nagy, ronag89@gmail.com
+* Author: Helge Norberg, helge.norberg@svt.se
 */
 
 #pragma once
 
-//#include "os/windows/windows.h"
+#include <string>
+
+namespace caspar {
+
+std::wstring get_call_stack();
+
+}
