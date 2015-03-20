@@ -28,7 +28,7 @@
 //
 //Open source under the BSD License.
 //
-//Copyright © 2001 Robert Penner
+//Copyright ï¿½ 2001 Robert Penner
 //All rights reserved.
 //
 //Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
@@ -435,7 +435,7 @@ const std::unordered_map<std::wstring, tween_t>& get_tweens()
 
 tweener_t get_tweener(std::wstring name)
 {
-	std::transform(name.begin(), name.end(), name.begin(), std::tolower);
+	std::transform(name.begin(), name.end(), name.begin(), std::towlower);
 
 	if(name == L"linear")
 		return [](double t, double b, double c, double d){return ease_none(t, b, c, d, std::vector<double>());};

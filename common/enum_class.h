@@ -31,7 +31,8 @@ const std::vector<E>& enum_constants()
 
 	static const auto ints = boost::irange(static_cast<integer>(0), static_cast<integer>(E::count));
 	static const auto result = cpplinq::from(ints.begin(), ints.end())
-		.cast<E>()
+		//.cast<E>()
+		.select([](int i) { return static_cast<E>(i); })
 		.to_vector();
 
 	return result;

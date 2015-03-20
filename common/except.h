@@ -23,18 +23,12 @@
 
 #include "utf.h"
 
-#include "log.h"
+#include "os/stack_trace.h"
 
 #include <exception>
 #include <boost/exception/all.hpp>
 #include <boost/exception/error_info.hpp>
 #include <boost/throw_exception.hpp>
-
-struct _EXCEPTION_RECORD;
-struct _EXCEPTION_POINTERS;
-
-typedef _EXCEPTION_RECORD EXCEPTION_RECORD;
-typedef _EXCEPTION_POINTERS EXCEPTION_POINTERS;
 
 namespace caspar {
 
@@ -67,7 +61,13 @@ typedef boost::error_info<struct tag_nested_exception_, std::exception_ptr> nest
 struct caspar_exception			: virtual boost::exception, virtual std::exception 
 {
 	caspar_exception(){}
-	explicit caspar_exception(const char* msg) : std::exception(msg) {}
+	explicit caspar_exception(const char* msg) : msg_(msg) {}
+	const char* what() const noexcept override
+	{
+		return msg_;
+	}
+private:
+	const char* msg_ = "";
 };
 
 struct io_error					: virtual caspar_exception {};
@@ -88,48 +88,7 @@ struct timed_out				: virtual caspar_exception {};
 struct not_supported			: virtual caspar_exception {};
 struct not_implemented			: virtual caspar_exception {};
 
-class win32_exception : public std::exception
-{
-public:
-	typedef const void* address;
-	static void install_handler();
-	static void ensure_handler_installed_for_thread(
-			const char* thread_description = nullptr);
-
-	address location() const { return location_; }
-	unsigned int error_code() const { return errorCode_; }
-	virtual const char* what() const { return message_;	}
-
-protected:
-	win32_exception(const EXCEPTION_RECORD& info);
-	static void Handler(unsigned int errorCode, EXCEPTION_POINTERS* pInfo);
-
-private:
-	const char* message_;
-
-	address location_;
-	unsigned int errorCode_;
-};
-
-class win32_access_violation : public win32_exception
-{
-	mutable char messageBuffer_[256];
-
-public:
-	bool is_write() const { return isWrite_; }
-	address bad_address() const { return badAddress_;}
-	virtual const char* what() const;
-
-protected:
-	win32_access_violation(const EXCEPTION_RECORD& info);
-	friend void win32_exception::Handler(unsigned int errorCode, EXCEPTION_POINTERS* pInfo);
-
-private:
-	bool isWrite_;
-	address badAddress_;
-};
-
-#define CASPAR_THROW_EXCEPTION(e) BOOST_THROW_EXCEPTION(e << call_stack_info(caspar::log::internal::get_call_stack()))
+#define CASPAR_THROW_EXCEPTION(e) BOOST_THROW_EXCEPTION(e << call_stack_info(caspar::get_call_stack()))
 
 }
 

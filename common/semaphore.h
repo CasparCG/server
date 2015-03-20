@@ -52,7 +52,7 @@ public:
 	 *
 	 * @param permits The initial number of permits.
 	 */
-	semaphore(unsigned int permits)
+	explicit semaphore(unsigned int permits)
 		: permits_(permits)
 	{
 	}
