@@ -22,6 +22,7 @@
 #include "../../stdafx.h"
 
 #include "../stack_trace.h"
+#include "../../utf.h"
 
 #include "../../compiler/vs/stack_walker.h"
 

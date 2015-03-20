@@ -62,7 +62,7 @@ struct caspar_exception			: virtual boost::exception, virtual std::exception
 {
 	caspar_exception(){}
 	explicit caspar_exception(const char* msg) : msg_(msg) {}
-	const char* what() const noexcept override
+	const char* what() const throw() override
 	{
 		return msg_;
 	}
