@@ -28,7 +28,7 @@
 #include <boost/asio/io_service.hpp>
 #include <boost/thread/thread.hpp>
 
-#include <common/except.h>
+#include <common/os/general_protection_fault.h>
 
 namespace caspar { namespace protocol { namespace asio {
 
@@ -48,7 +48,7 @@ struct io_service_manager::impl
 
 	void run()
 	{
-		win32_exception::ensure_handler_installed_for_thread("asio-thread");
+		ensure_gpf_handler_installed_for_thread("asio-thread");
 
 		service_.run();
 	}

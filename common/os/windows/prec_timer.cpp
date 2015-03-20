@@ -23,7 +23,7 @@
 
 #include "../../prec_timer.h"
 
-#include "os/windows/windows.h"
+#include "windows.h"
 
 #include <Mmsystem.h>
 
@@ -32,13 +32,6 @@ namespace caspar {
 prec_timer::prec_timer()
 	: time_(0)
 {
-}
-
-// Author: Ryan M. Geiss
-// http://www.geisswerks.com/ryan/FAQS/timing.html
-void prec_timer::tick(double interval)
-{
-	tick_millis(static_cast<int64_t>(interval * 1000.0));
 }
 
 void prec_timer::tick_millis(int64_t ticks_to_wait)
