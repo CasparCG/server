@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include <cstdlib>
+
 namespace caspar {
 
 namespace detail {

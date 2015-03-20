@@ -89,4 +89,6 @@ source_group(sources ./*)
 source_group(sources\\gl gl/*)
 source_group(sources\\diagnostics diagnostics/*)
 source_group(sources\\compiler\\vs compiler/vs/*)
+source_group(sources\\os\\windows os/windows/*)
+source_group(sources\\os os/*)
 

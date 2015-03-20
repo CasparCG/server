@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include "os/stack_trace.h"
+
 #include <boost/log/trivial.hpp>
 #include <boost/log/sources/global_logger_storage.hpp>
 
@@ -90,12 +92,12 @@ BOOST_LOG_INLINE_GLOBAL_LOGGER_INIT(logger, caspar_logger)
 	BOOST_LOG_SEV(::caspar::log::logger::get(), ::boost::log::trivial::lvl)
 
 #define CASPAR_LOG_CALL_STACK()	try{\
-		CASPAR_LOG(info) << L"callstack:\n" << caspar::log::internal::get_call_stack();\
+		CASPAR_LOG(info) << L"callstack:\n" << caspar::get_call_stack();\
 	}\
 	catch(...){}
 
 #define CASPAR_LOG_CURRENT_EXCEPTION() try{\
-		CASPAR_LOG(error)  << caspar::u16(boost::current_exception_diagnostic_information()) << L"Caught at:\n" << caspar::log::internal::get_call_stack();\
+		CASPAR_LOG(error)  << caspar::u16(boost::current_exception_diagnostic_information()) << L"Caught at:\n" << caspar::get_call_stack();\
 	}\
 	catch(...){}
 	
