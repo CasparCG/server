@@ -32,10 +32,12 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <boost/thread/once.hpp>
 
 #include <functional>
 #include <iostream>
+#include <fstream>
 
 namespace caspar { namespace env {
 	
@@ -59,7 +61,7 @@ void configure(const std::wstring& filename)
 	{
 		auto initialPath = boost::filesystem::initial_path().wstring();
 	
-		std::wifstream file(initialPath + L"\\" + filename);
+		boost::filesystem::wifstream file(initialPath + L"\\" + filename);
 		boost::property_tree::read_xml(file, pt, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
 
 		auto paths	= pt.get_child(L"configuration.paths");

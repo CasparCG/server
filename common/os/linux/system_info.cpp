@@ -16,9 +16,29 @@
 * You should have received a copy of the GNU General Public License
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
-* Author: Robert Nagy, ronag89@gmail.com
+* Author: Helge Norberg, helge.norberg@svt.se
 */
 
-#pragma once
+#include "../system_info.h"
 
-//#include "os/windows/windows.h"
+namespace caspar {
+	
+std::wstring cpu_info()
+{
+	// TODO: implement
+	return L"Unknown CPU";
+}
+
+std::wstring system_product_name()
+{
+	// TODO: implement
+	return L"Unknown System";
+}
+
+std::wstring os_description()
+{
+	// TODO: implement
+	return L"Unknown OS";
+}
+
+}

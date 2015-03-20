@@ -25,7 +25,7 @@
 
 #include <BlueVelvet4.h>
 
-#include <common/page_locked_allocator.h>
+#include <common/os/page_locked_allocator.h>
 
 #include <vector>
 

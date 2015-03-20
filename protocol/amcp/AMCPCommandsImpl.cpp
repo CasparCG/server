@@ -32,8 +32,7 @@
 
 #include <common/log.h>
 #include <common/param.h>
-#include <common/os/windows/current_version.h>
-#include <common/os/windows/system_info.h>
+#include <common/os/system_info.h>
 #include <common/base64.h>
 
 #include <core/producer/frame_producer.h>
@@ -1529,8 +1528,7 @@ bool InfoCommand::DoExecute()
 			boost::property_tree::wptree info;
 			
 			info.add(L"system.name",					caspar::system_product_name());
-			info.add(L"system.windows.name",			caspar::win_product_name());
-			info.add(L"system.windows.service-pack",	caspar::win_sp_version());
+			info.add(L"system.os.description",			caspar::os_description());
 			info.add(L"system.cpu",						caspar::cpu_info());
 	
 			for (auto& device : caspar::decklink::device_list())

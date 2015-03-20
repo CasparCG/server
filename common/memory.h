@@ -113,8 +113,7 @@ public:
         p_.swap(other.p_); 
     } 
 	
-    template<class D, class T2> 
-    D* get_deleter(shared_ptr<T2> const& ptr) 
+    D& get_deleter()
     { 
         return p_.get_deleter(); 
     }
@@ -448,15 +447,15 @@ public:
     { 
         return p_.owner_before(ptr); 
     }
-
-    template<class D, class T2> 
-    D* get_deleter(shared_ptr<T2> const& ptr) 
-    { 
-        return p_.get_deleter(); 
-    }
 private:    
     std::shared_ptr<T> p_;
 };
+
+template<class D, class T>
+D* get_deleter(shared_ptr<T> const& ptr)
+{
+    return ptr.get_deleter();
+}
 
 template<class T, class T2>
 bool operator==(const shared_ptr<T>& a, const shared_ptr<T2>& b)
