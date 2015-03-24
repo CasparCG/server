@@ -63,6 +63,20 @@ extern "C"
 using namespace caspar::core;
 
 namespace caspar { namespace ffmpeg {
+
+bool is_frame_format_changed(const AVFrame lhs, const AVFrame& rhs)
+{
+	if (lhs.format != rhs.format)
+		return true;
+
+	for (int i = 0; i < AV_NUM_DATA_POINTERS; ++i)
+	{
+		if (lhs.linesize[i] != rhs.linesize[i])
+			return true;
+	}
+
+	return false;
+}
 	
 struct frame_muxer::impl : boost::noncopyable
 {	
@@ -76,7 +90,8 @@ struct frame_muxer::impl : boost::noncopyable
 	std::vector<int>								audio_cadence_			= format_desc_.audio_cadence;
 			
 	spl::shared_ptr<core::frame_factory>			frame_factory_;
-	
+	std::shared_ptr<AVFrame>						previous_frame_;
+
 	std::unique_ptr<filter>							filter_;
 	const std::wstring								filter_str_;
 	bool											force_deinterlacing_	= env::properties().get(L"configuration.force-deinterlace", true);
@@ -97,6 +112,13 @@ struct frame_muxer::impl : boost::noncopyable
 		if(!video)
 			return;
 
+		if (previous_frame_ && video->data[0] && is_frame_format_changed(*previous_frame_, *video))
+		{
+			// Fixes bug where avfilter crashes server on some DV files (starts in YUV420p but changes to YUV411p after the first frame).
+			CASPAR_LOG(info) << L"[frame_muxer] Frame format has changed. Resetting display mode.";
+			display_mode_ = display_mode::invalid;
+		}
+
 		if(!video->data[0])
 		{
 			auto empty_frame = frame_factory_->create_frame(this, core::pixel_format_desc(core::pixel_format::invalid));
@@ -109,6 +131,7 @@ struct frame_muxer::impl : boost::noncopyable
 				update_display_mode(video);
 				
 			filter_->push(video);
+			previous_frame_ = video;
 			for (auto& av_frame : filter_->poll_all())			
 				video_stream_.push(make_frame(this, av_frame, format_desc_.fps, *frame_factory_));			
 		}
