@@ -64,7 +64,7 @@ using namespace caspar::core;
 
 namespace caspar { namespace ffmpeg {
 
-bool is_frame_format_changed(const AVFrame lhs, const AVFrame& rhs)
+bool is_frame_format_changed(const AVFrame& lhs, const AVFrame& rhs)
 {
 	if (lhs.format != rhs.format)
 		return true;
