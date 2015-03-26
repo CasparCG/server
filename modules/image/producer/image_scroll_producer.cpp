@@ -156,7 +156,7 @@ struct image_scroll_producer : public core::frame_producer_base
 
 			blurred_copy.reset(new uint8_t[count]);
 			image_view<bgra_pixel> blurred_view(blurred_copy.get(), width_, height_);
-			core::tweener blur_tweener(L"easeInQuad");
+			caspar::tweener blur_tweener(L"easeInQuad");
 			blur(original_view, blurred_view, angle, motion_blur_px, blur_tweener);
 			bytes = blurred_copy.get();
 			bitmap.reset();
