@@ -62,7 +62,7 @@ public:
 };
 
 template<class T>
-std::vector<T> get_tweened_values(const core::tweener& tweener, size_t num_values, T from, T to)
+std::vector<T> get_tweened_values(const caspar::tweener& tweener, size_t num_values, T from, T to)
 {
 	std::vector<T> result;
 	result.reserve(num_values);
@@ -104,7 +104,7 @@ void blur(
 	const SrcView& src,
 	DstView& dst,
 	const std::vector<std::pair<int, int>>& motion_trail_coordinates, 
-	const core::tweener& tweener)
+	const caspar::tweener& tweener)
 {
 	auto blur_px = motion_trail_coordinates.size();
 	auto tweened_weights_y = get_tweened_values<uint8_t>(tweener, blur_px + 2, 255, 0);
@@ -167,7 +167,7 @@ void blur(
 	DstView& dst,
 	double angle_radians,
 	int blur_px, 
-	const core::tweener& tweener)
+	const caspar::tweener& tweener)
 {
 	auto motion_trail = get_line_points(blur_px, angle_radians);
 
