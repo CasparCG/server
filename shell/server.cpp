@@ -62,7 +62,7 @@
 #include <protocol/asio/io_service_manager.h>
 #include <protocol/amcp/AMCPProtocolStrategy.h>
 #include <protocol/cii/CIIProtocolStrategy.h>
-#include <protocol/CLK/CLKProtocolStrategy.h>
+#include <protocol/clk/CLKProtocolStrategy.h>
 #include <protocol/util/AsyncEventServer.h>
 #include <protocol/util/strategy_adapters.h>
 #include <protocol/osc/client.h>

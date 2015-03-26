@@ -41,8 +41,8 @@
 
 namespace caspar { namespace core {
 	
-std::vector<const producer_factory_t> g_factories;
-std::vector<const producer_factory_t> g_thumbnail_factories;
+std::vector<producer_factory_t> g_factories;
+std::vector<producer_factory_t> g_thumbnail_factories;
 
 void register_producer_factory(const producer_factory_t& factory)
 {
@@ -260,7 +260,7 @@ spl::shared_ptr<core::frame_producer> create_destroy_proxy(spl::shared_ptr<core:
 	return spl::make_shared<destroy_producer_proxy>(std::move(producer));
 }
 
-spl::shared_ptr<core::frame_producer> do_create_producer(const spl::shared_ptr<frame_factory>& my_frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params, const std::vector<const producer_factory_t>& factories, bool throw_on_fail = false)
+spl::shared_ptr<core::frame_producer> do_create_producer(const spl::shared_ptr<frame_factory>& my_frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params, const std::vector<producer_factory_t>& factories, bool throw_on_fail = false)
 {
 	if(params.empty())
 		CASPAR_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));

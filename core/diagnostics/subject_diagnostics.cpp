@@ -38,7 +38,7 @@ namespace {
 
 int64_t create_id()
 {
-	static std::atomic<int64_t> counter = 0;
+	static std::atomic<int64_t> counter { 0 };
 
 	return ++counter;
 }

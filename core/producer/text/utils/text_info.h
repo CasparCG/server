@@ -10,14 +10,14 @@ namespace caspar { namespace core { namespace text {
 		std::wstring font;
 		std::wstring font_file;
 
-		float size						= 0.0f;
-		color<float> color;
-		//int shadow_distance;
-		//int shadow_size;
-		//float shadow_spread;
-		//color<float> shadow_color;
-		int baseline_shift				= 0;
-		int tracking					= 0;
+		float					size				= 0.0f;
+		text::color<float>		color;
+		//int					shadow_distance;
+		//int					shadow_size;
+		//float					shadow_spread;
+		//text::color<float>	shadow_color;
+		int						baseline_shift		= 0;
+		int						tracking			= 0;
 	};
 
 }}}

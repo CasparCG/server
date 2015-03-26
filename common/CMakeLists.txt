@@ -23,6 +23,7 @@ if (MSVC)
 			os/windows/current_version.h
 			os/windows/page_locked_allocator.cpp
 			os/windows/prec_timer.cpp
+			os/windows/scheduling.cpp
 			os/windows/stack_trace.cpp
 			os/windows/system_info.cpp
 			os/windows/win32_exception.cpp
@@ -32,6 +33,7 @@ if (MSVC)
 elseif (CMAKE_COMPILER_IS_GNUCXX)
 	set(OS_SPECIFIC_SOURCES
 			os/linux/signal_handlers.cpp
+			os/linux/scheduling.cpp
 			os/linux/stack_trace.cpp
 			os/linux/system_info.cpp
 	)
@@ -43,6 +45,7 @@ set(HEADERS
 
 		os/general_protection_fault.h
 		os/page_locked_allocator.h
+		os/scheduling.h
 		os/stack_trace.h
 		os/system_info.h
 

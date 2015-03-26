@@ -19,7 +19,7 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "..\stdafx.h"
+#include "../StdAfx.h"
 
 #include "AsyncEventServer.h"
 
@@ -34,9 +34,9 @@
 #include <boost/thread.hpp>
 #include <boost/lexical_cast.hpp>
 
-#include <tbb\mutex.h>
-#include <tbb\concurrent_hash_map.h>
-#include <tbb\concurrent_queue.h>
+#include <tbb/mutex.h>
+#include <tbb/concurrent_hash_map.h>
+#include <tbb/concurrent_queue.h>
 
 using boost::asio::ip::tcp;
 

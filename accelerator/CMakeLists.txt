@@ -1,8 +1,16 @@
 cmake_minimum_required (VERSION 2.6)
 project (accelerator)
 
+if (MSVC)
+	set(OS_SPECIFIC_SOURCES
+			cpu/image/image_mixer.cpp
+			cpu/image/image_mixer.h
+	
+			cpu/util/xmm.h
+	)
+elseif (CMAKE_COMPILER_IS_GNUCXX)
+endif ()
 set(SOURCES
-		cpu/image/image_mixer.cpp
 
 		ogl/image/image_kernel.cpp
 		ogl/image/image_mixer.cpp
@@ -17,10 +25,6 @@ set(SOURCES
 		StdAfx.cpp
 )
 set(HEADERS
-		cpu/image/image_mixer.h
-
-		cpu/util/xmm.h
-
 		ogl/image/blending_glsl.h
 		ogl/image/image_kernel.h
 		ogl/image/image_mixer.h
@@ -35,7 +39,7 @@ set(HEADERS
 		StdAfx.h
 )
 
-add_library(accelerator ${SOURCES} ${HEADERS})
+add_library(accelerator ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
 add_precompiled_header(accelerator StdAfx.h FORCEINCLUDE)
 
 include_directories(..)

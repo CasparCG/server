@@ -19,7 +19,7 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../stdafx.h"
+#include "../StdAfx.h"
 
 #include "frame.h"
 
@@ -30,6 +30,9 @@
 #include <core/frame/frame_visitor.h>
 #include <core/frame/pixel_format.h>
 #include <core/frame/geometry.h>
+
+#include <cstdint>
+#include <vector>
 
 #include <boost/lexical_cast.hpp>
 #include <boost/thread/future.hpp>
@@ -88,7 +91,6 @@ const const_frame& const_frame::empty()
 struct const_frame::impl : boost::noncopyable
 {			
 	mutable std::vector<std::shared_future<array<const std::uint8_t>>>	future_buffers_;
-	int											id_;
 	core::audio_buffer							audio_data_;
 	const core::pixel_format_desc				desc_;
 	const void*									tag_;
@@ -97,7 +99,6 @@ struct const_frame::impl : boost::noncopyable
 	impl(const void* tag)
 		: desc_(core::pixel_format::invalid)
 		, tag_(tag)	
-		, id_(0)
 		, geometry_(frame_geometry::get_default())
 	{
 	}
@@ -106,7 +107,6 @@ struct const_frame::impl : boost::noncopyable
 		: audio_data_(std::move(audio_buffer))
 		, desc_(desc)
 		, tag_(tag)
-		, id_(reinterpret_cast<int>(this))
 		, geometry_(frame_geometry::get_default())
 	{
 		if(desc.format != core::pixel_format::bgra)
@@ -119,7 +119,6 @@ struct const_frame::impl : boost::noncopyable
 		: audio_data_(other.audio_data())
 		, desc_(other.pixel_format_desc())
 		, tag_(other.stream_tag())
-		, id_(reinterpret_cast<int>(this))
 		, geometry_(other.geometry())
 	{
 		for(std::size_t n = 0; n < desc_.planes.size(); ++n)
