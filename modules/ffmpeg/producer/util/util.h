@@ -30,7 +30,17 @@
 
 #include <array>
 
+#if defined(_MSC_VER)
+#pragma warning (push)
+#pragma warning (disable : 4244)
+#endif
+extern "C"
+{
 #include <libavutil/avutil.h>
+}
+#if defined(_MSC_VER)
+#pragma warning (pop)
+#endif
 
 struct AVFrame;
 struct AVFormatContext;
