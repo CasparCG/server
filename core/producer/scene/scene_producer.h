@@ -42,9 +42,9 @@ struct coord
 
 struct rect
 {
-	coord upper_left;
-	binding<double> width;
-	binding<double> height;
+	coord			upper_left;
+	binding<double>	width;
+	binding<double>	height;
 };
 
 struct adjustments
@@ -56,23 +56,23 @@ struct adjustments
 
 struct layer
 {
-	binding<std::wstring> name;
-	coord position;
-	rect clipping;
-	adjustments adjustments;
-	binding<spl::shared_ptr<frame_producer>> producer;
-	binding<bool> hidden;
-	binding<bool> is_key;
+	binding<std::wstring>						name;
+	scene::coord								position;
+	scene::rect									clipping;
+	scene::adjustments							adjustments;
+	binding<spl::shared_ptr<frame_producer>>	producer;
+	binding<bool>								hidden;
+	binding<bool>								is_key;
 
 	explicit layer(const std::wstring& name, const spl::shared_ptr<frame_producer>& producer);
 };
 
 struct keyframe
 {
-	std::function<void ()> on_start_animate;
-	std::function<void (int64_t start_frame, int64_t current_frame)> on_animate_to;
-	std::function<void ()> on_destination_frame;
-	int64_t destination_frame;
+	std::function<void ()>												on_start_animate;
+	std::function<void (int64_t start_frame, int64_t current_frame)>	on_animate_to;
+	std::function<void ()>												on_destination_frame;
+	int64_t																destination_frame;
 public:
 	keyframe(int64_t destination_frame)
 		: destination_frame(destination_frame)

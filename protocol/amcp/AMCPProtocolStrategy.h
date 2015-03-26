@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "../util/protocolstrategy.h"
+#include "../util/ProtocolStrategy.h"
 
 #include <core/video_channel.h>
 #include <core/thumbnail_generator.h>

@@ -104,7 +104,7 @@ public:
 		remove(consumer->index());
 	}
 	
-	void video_format_desc(const core::video_format_desc& format_desc)
+	void set_video_format_desc(const core::video_format_desc& format_desc)
 	{
 		executor_.invoke([&]
 		{
@@ -154,7 +154,7 @@ public:
 	{
 		boost::timer frame_timer;
 
-		video_format_desc(format_desc);		
+		set_video_format_desc(format_desc);
 
 		executor_.invoke([=]
 		{			

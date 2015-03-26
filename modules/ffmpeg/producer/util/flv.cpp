@@ -19,7 +19,7 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../../stdafx.h"
+#include "../../StdAfx.h"
 
 #include "flv.h"
 
@@ -29,6 +29,7 @@
 #include <boost/filesystem.hpp>
 
 #include <iostream>
+#include <fstream>
 
 #include <unordered_map>
 
@@ -46,7 +47,7 @@ std::map<std::string, std::string> read_flv_meta_info(const std::string& filenam
 		if(!boost::filesystem::exists(filename))
 			CASPAR_THROW_EXCEPTION(caspar_exception());
 	
-		std::fstream fileStream = std::fstream(filename, std::fstream::in);
+		std::fstream fileStream(filename, std::fstream::in);
 		
 		std::vector<char> bytes2(256);
 		fileStream.read(bytes2.data(), bytes2.size());

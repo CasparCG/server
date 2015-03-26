@@ -44,7 +44,7 @@ struct draw_params final
 	core::image_transform						transform;
 	core::frame_geometry						geometry;
 	core::blend_mode							blend_mode	= core::blend_mode::normal;
-	keyer										keyer		= keyer::linear;
+	ogl::keyer									keyer		= ogl::keyer::linear;
 	std::shared_ptr<class texture>				background;
 	std::shared_ptr<class texture>				local_key;
 	std::shared_ptr<class texture>				layer_key;

@@ -81,7 +81,7 @@ video_format_desc::video_format_desc(
 	, fps(static_cast<double>(time_scale) / static_cast<double>(duration))
 	, time_scale(time_scale)
 	, duration(duration)
-	, field_count(field_mode == field_mode::progressive ? 1 : 2)
+	, field_count(field_mode == core::field_mode::progressive ? 1 : 2)
 	, size(width*height*4)
 	, name(name)
 	, audio_sample_rate(48000)
@@ -92,14 +92,14 @@ video_format_desc::video_format_desc(
 
 video_format_desc::video_format_desc(video_format format)
 	: format(video_format::invalid)
-	, field_mode(field_mode::empty)
+	, field_mode(core::field_mode::empty)
 {
 	*this = format_descs.at(static_cast<int>(format));
 }
 
 video_format_desc::video_format_desc(const std::wstring& name)
 	: format(video_format::invalid)
-	, field_mode(field_mode::empty)
+	, field_mode(core::field_mode::empty)
 {	
 	*this = video_format_desc(video_format::invalid);
 	for(auto it = std::begin(format_descs); it != std::end(format_descs)-1; ++it)

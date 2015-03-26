@@ -73,6 +73,7 @@ include_directories(..)
 include_directories(${BOOST_INCLUDE_PATH})
 include_directories(${RXCPP_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_PATH})
+include_directories(${FFMPEG_INCLUDE_PATH})
 
 source_group(sources\\amcp amcp/*)
 source_group(sources\\asio asio/*)

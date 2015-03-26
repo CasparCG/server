@@ -29,7 +29,7 @@
 #include "AMCPCommandQueue.h"
 
 #include <stdio.h>
-#include <crtdbg.h>
+//#include <crtdbg.h>
 #include <string.h>
 #include <algorithm>
 #include <cctype>
@@ -162,7 +162,7 @@ private:
 				switch(state)
 				{
 				case parser_state::New:
-					if((*it)[0] == TEXT('/'))
+					if((*it)[0] == L'/')
 						state = parser_state::GetSwitch;
 					else
 						state = parser_state::GetCommand;
@@ -288,14 +288,14 @@ private:
 				//insert code-handling here
 				switch(message[charIndex])
 				{
-				case TEXT('\\'):
-					currentToken += TEXT("\\");
+				case L'\\':
+					currentToken += L"\\";
 					break;
-				case TEXT('\"'):
-					currentToken += TEXT("\"");
+				case L'\"':
+					currentToken += L"\"";
 					break;
-				case TEXT('n'):
-					currentToken += TEXT("\n");
+				case L'n':
+					currentToken += L"\n";
 					break;
 				default:
 					break;
@@ -304,13 +304,13 @@ private:
 				continue;
 			}
 
-			if(message[charIndex]==TEXT('\\'))
+			if(message[charIndex]==L'\\')
 			{
 				getSpecialCode = true;
 				continue;
 			}
 
-			if(message[charIndex]==' ' && inQuote==false)
+			if(message[charIndex]==L' ' && inQuote==false)
 			{
 				if(currentToken.size()>0)
 				{
@@ -320,7 +320,7 @@ private:
 				continue;
 			}
 
-			if(message[charIndex]==TEXT('\"'))
+			if(message[charIndex]==L'\"')
 			{
 				inQuote = !inQuote;
 
@@ -347,20 +347,20 @@ private:
 	AMCPCommand::ptr_type create_command(const std::wstring& str, ClientInfoPtr client)
 	{
 		std::wstring s = boost::to_upper_copy(str);
-		if(s == TEXT("DIAG"))				return std::make_shared<DiagnosticsCommand>(client);
-		else if(s == TEXT("CHANNEL_GRID"))	return std::make_shared<ChannelGridCommand>(client, channels_);
-		else if(s == TEXT("DATA"))			return std::make_shared<DataCommand>(client);
-		else if(s == TEXT("CINF"))			return std::make_shared<CinfCommand>(client);
-		else if(s == TEXT("INFO"))			return std::make_shared<InfoCommand>(client, channels_);
-		else if(s == TEXT("CLS"))			return std::make_shared<ClsCommand>(client);
-		else if(s == TEXT("TLS"))			return std::make_shared<TlsCommand>(client);
-		else if(s == TEXT("VERSION"))		return std::make_shared<VersionCommand>(client);
-		else if(s == TEXT("BYE"))			return std::make_shared<ByeCommand>(client);
-		else if(s == TEXT("LOCK"))			return std::make_shared<LockCommand>(client, channels_);
-		else if(s == TEXT("LOG"))			return std::make_shared<LogCommand>(client);
-		else if(s == TEXT("THUMBNAIL"))		return std::make_shared<ThumbnailCommand>(client, thumb_gen_);
-		else if(s == TEXT("KILL"))			return std::make_shared<KillCommand>(client, shutdown_server_now_);
-		else if(s == TEXT("RESTART"))		return std::make_shared<RestartCommand>(client, shutdown_server_now_);
+		if(s == L"DIAG")				return std::make_shared<DiagnosticsCommand>(client);
+		else if(s == L"CHANNEL_GRID")	return std::make_shared<ChannelGridCommand>(client, channels_);
+		else if(s == L"DATA")			return std::make_shared<DataCommand>(client);
+		else if(s == L"CINF")			return std::make_shared<CinfCommand>(client);
+		else if(s == L"INFO")			return std::make_shared<InfoCommand>(client, channels_);
+		else if(s == L"CLS")			return std::make_shared<ClsCommand>(client);
+		else if(s == L"TLS")			return std::make_shared<TlsCommand>(client);
+		else if(s == L"VERSION")		return std::make_shared<VersionCommand>(client);
+		else if(s == L"BYE")			return std::make_shared<ByeCommand>(client);
+		else if(s == L"LOCK")			return std::make_shared<LockCommand>(client, channels_);
+		else if(s == L"LOG")			return std::make_shared<LogCommand>(client);
+		else if(s == L"THUMBNAIL")		return std::make_shared<ThumbnailCommand>(client, thumb_gen_);
+		else if(s == L"KILL")			return std::make_shared<KillCommand>(client, shutdown_server_now_);
+		else if(s == L"RESTART")		return std::make_shared<RestartCommand>(client, shutdown_server_now_);
 
 		return nullptr;
 	}
@@ -369,20 +369,20 @@ private:
 	{
 		std::wstring s = boost::to_upper_copy(str);
 	
-		if	   (s == TEXT("MIXER"))			return std::make_shared<MixerCommand>(client, channel, channel_index, layer_index);
-		else if(s == TEXT("CALL"))			return std::make_shared<CallCommand>(client, channel, channel_index, layer_index);
-		else if(s == TEXT("SWAP"))			return std::make_shared<SwapCommand>(client, channel, channel_index, layer_index, channels_);
-		else if(s == TEXT("LOAD"))			return std::make_shared<LoadCommand>(client, channel, channel_index, layer_index);
-		else if(s == TEXT("LOADBG"))		return std::make_shared<LoadbgCommand>(client, channel, channel_index, layer_index, channels_);
-		else if(s == TEXT("ADD"))			return std::make_shared<AddCommand>(client, channel, channel_index, layer_index);
-		else if(s == TEXT("REMOVE"))		return std::make_shared<RemoveCommand>(client, channel, channel_index, layer_index);
-		else if(s == TEXT("PAUSE"))			return std::make_shared<PauseCommand>(client, channel, channel_index, layer_index);
-		else if(s == TEXT("PLAY"))			return std::make_shared<PlayCommand>(client, channel, channel_index, layer_index, channels_);
-		else if(s == TEXT("STOP"))			return std::make_shared<StopCommand>(client, channel, channel_index, layer_index);
-		else if(s == TEXT("CLEAR"))			return std::make_shared<ClearCommand>(client, channel, channel_index, layer_index);
-		else if(s == TEXT("PRINT"))			return std::make_shared<PrintCommand>(client, channel, channel_index, layer_index);
-		else if(s == TEXT("CG"))			return std::make_shared<CGCommand>(client, channel, channel_index, layer_index);
-		else if(s == TEXT("SET"))			return std::make_shared<SetCommand>(client, channel, channel_index, layer_index);
+		if	   (s == L"MIXER")			return std::make_shared<MixerCommand>(client, channel, channel_index, layer_index);
+		else if(s == L"CALL")			return std::make_shared<CallCommand>(client, channel, channel_index, layer_index);
+		else if(s == L"SWAP")			return std::make_shared<SwapCommand>(client, channel, channel_index, layer_index, channels_);
+		else if(s == L"LOAD")			return std::make_shared<LoadCommand>(client, channel, channel_index, layer_index);
+		else if(s == L"LOADBG")			return std::make_shared<LoadbgCommand>(client, channel, channel_index, layer_index, channels_);
+		else if(s == L"ADD")			return std::make_shared<AddCommand>(client, channel, channel_index, layer_index);
+		else if(s == L"REMOVE")			return std::make_shared<RemoveCommand>(client, channel, channel_index, layer_index);
+		else if(s == L"PAUSE")			return std::make_shared<PauseCommand>(client, channel, channel_index, layer_index);
+		else if(s == L"PLAY")			return std::make_shared<PlayCommand>(client, channel, channel_index, layer_index, channels_);
+		else if(s == L"STOP")			return std::make_shared<StopCommand>(client, channel, channel_index, layer_index);
+		else if(s == L"CLEAR")			return std::make_shared<ClearCommand>(client, channel, channel_index, layer_index);
+		else if(s == L"PRINT")			return std::make_shared<PrintCommand>(client, channel, channel_index, layer_index);
+		else if(s == L"CG")				return std::make_shared<CGCommand>(client, channel, channel_index, layer_index);
+		else if(s == L"SET")			return std::make_shared<SetCommand>(client, channel, channel_index, layer_index);
 
 		return nullptr;
 	}

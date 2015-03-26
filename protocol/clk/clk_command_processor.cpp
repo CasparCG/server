@@ -19,7 +19,7 @@
 * Author: Helge Norberg, helge.norberg@svt.se
 */
 
-#include "../stdafx.h"
+#include "../StdAfx.h"
 
 #include "clk_command_processor.h"
 

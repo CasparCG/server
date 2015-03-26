@@ -19,7 +19,7 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../../stdafx.h"
+#include "../../StdAfx.h"
 
 #include "util.h"
 
@@ -44,6 +44,8 @@
 #include <common/assert.h>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
+
+#include <fstream>
 
 #include <asmlib.h>
 
@@ -541,7 +543,7 @@ bool is_valid_file(const std::wstring& filename)
 	if(av_probe_input_format2(&pb, false, &score) != nullptr)
 		return true;
 
-	std::ifstream file(filename);
+	std::ifstream file(u8filename);
 
 	std::vector<unsigned char> buf;
 	for(auto file_it = std::istreambuf_iterator<char>(file); file_it != std::istreambuf_iterator<char>() && buf.size() < 1024; ++file_it)

@@ -19,7 +19,7 @@
 * Author: Niklas P Andersson, niklas.p.andersson@svt.se
 */
 
-#include "../../stdafx.h"
+#include "../../StdAfx.h"
 
 #include "text_producer.h"
 
@@ -52,8 +52,8 @@
 #include FT_FREETYPE_H
 #include FT_GLYPH_H
 
-#include "utils\texture_atlas.h"
-#include "utils\texture_font.h"
+#include "utils/texture_atlas.h"
+#include "utils/texture_font.h"
 
 class font_comparer {
 	const std::wstring& lhs;
@@ -95,7 +95,7 @@ namespace caspar { namespace core {
 					if(fontname != nullptr)
 					{
 						std::string fontname_str(fontname);
-						result.insert(std::pair<std::wstring, std::wstring>(std::wstring(fontname_str.begin(), fontname_str.end()), file.path().native()));
+						result.insert(std::make_pair(u16(fontname_str), u16(file.path().native())));
 					}
 
 					FT_Done_Face(face);

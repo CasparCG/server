@@ -51,7 +51,6 @@
 #include <boost/thread/once.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/timer.hpp>
-#include <crtdbg.h>
 #include <cstdint>
 #include <cstdio>
 #include <deque>

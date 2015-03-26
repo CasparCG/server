@@ -24,7 +24,7 @@
 #include <functional>
 #include <vector>
 
-namespace caspar { namespace core {
+namespace caspar {
 
 /**
  * A tweener can be used for creating any kind of (image position, image fade
@@ -53,7 +53,7 @@ public:
 	 * @return The possible tween function names. Some of them may also support
 	 * 		   additional parameters appended to the name.
 	 */
-	static const std::vector<const std::wstring>& names();
+	static const std::vector<std::wstring>& names();
 
 	/**
 	 * Calculate a tweened value given a timepoint within the total duration
@@ -77,4 +77,4 @@ private:
 	std::function<double(double, double, double, double)> func_;
 };
 
-}}
+}

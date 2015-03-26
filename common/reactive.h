@@ -86,9 +86,9 @@ public:
 
 	// Static Members
 
-	typedef T						value_type;
-	typedef observer<T>				observer;
-	typedef std::weak_ptr<observer>	observer_ptr;
+	typedef T										value_type;
+	typedef reactive::observer<T>					observer;
+	typedef std::weak_ptr<reactive::observer<T>>	observer_ptr;
 	
 	// Constructors
 
@@ -167,7 +167,6 @@ public:
 	void swap(observer_function& other)
 	{
 		std::swap(func_, other.func_);
-		std::swap(filter_, other.filter_);
 	}
 		
 	void on_next(const T& e) override
@@ -353,7 +352,7 @@ template<typename F>
 spl::shared_ptr<observer_function<typename std::decay<typename detail::function_traits<F>::arg1_type>::type, F>> 
 make_observer(F func)
 {
-	return spl::make_shared<observer_function<std::decay<typename detail::function_traits<F>::arg1_type>::type, F>>(std::move(func));
+	return spl::make_shared<observer_function<typename std::decay<typename detail::function_traits<F>::arg1_type>::type, F>>(std::move(func));
 }
 
 template<typename T>
