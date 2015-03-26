@@ -30,7 +30,8 @@
 
 #include <array>
 
-enum PixelFormat;
+#include <libavutil/avutil.h>
+
 struct AVFrame;
 struct AVFormatContext;
 struct AVPacket;
@@ -56,7 +57,7 @@ core::pixel_format_desc				pixel_format_desc(PixelFormat pix_fmt, int width, int
 spl::shared_ptr<AVPacket> create_packet();
 spl::shared_ptr<AVFrame>  create_frame();
 
-spl::shared_ptr<AVCodecContext> open_codec(AVFormatContext& context,  enum AVMediaType type, int& index);
+spl::shared_ptr<AVCodecContext> open_codec(AVFormatContext& context, AVMediaType type, int& index);
 spl::shared_ptr<AVFormatContext> open_input(const std::wstring& filename);
 
 bool is_sane_fps(AVRational time_base);

@@ -371,7 +371,7 @@ int main(int argc, wchar_t* argv[])
 
 	#ifdef _DEBUG
 		if(env::properties().get(L"configuration.debugging.remote", false))
-			MessageBox(nullptr, TEXT("Now is the time to connect for remote debugging..."), TEXT("Debug"), MB_OK | MB_TOPMOST);
+			MessageBox(nullptr, L"Now is the time to connect for remote debugging...", L"Debug", MB_OK | MB_TOPMOST);
 	#endif	 
 
 		// Start logging to file.

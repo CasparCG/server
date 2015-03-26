@@ -55,7 +55,7 @@
 #include <algorithm>
 #include <vector>
 
-namespace caspar { namespace core {
+namespace caspar {
 
 typedef std::function<double(double, double, double, double)> tweener_t;
 			
@@ -453,10 +453,8 @@ tweener_t get_tweener(std::wstring name)
 			params.push_back(boost::lexical_cast<double>(what["V1"].str()));
 	}
 		
-	auto tweens = get_tweens();
-
-	auto it = tweens.find(name);
-	if(it == tweens.end())
+	auto it = get_tweens().find(name);
+	if(it == get_tweens().end())
 		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Could not find tween.") << arg_value_info(name));
 	
 	auto tween = it->second;
@@ -481,13 +479,24 @@ double tweener::operator()(double t, double b , double c, double d) const
 	return func_(t, b, c, d);
 }
 
-const std::vector<const std::wstring>& tweener::names()
+const std::vector<std::wstring>& tweener::names()
 {
-	static const auto names = cpplinq::from(get_tweens())
+	/*static const auto names = cpplinq::from(get_tweens())
 		.select(keys())
-		.to_vector();
+		.to_vector();*/
 
-	return names;
+	static const auto result = []
+	{
+		std::vector<std::wstring> result;
+
+		for (auto& tween : get_tweens())
+			result.push_back(tween.first);
+
+		return result;
+	}();
+	//static const std::vector<std::wstring> result;
+
+	return result;
 }
 
-}}
+}

@@ -19,13 +19,13 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../../stdafx.h"
+#include "../../StdAfx.h"
 
 #include "shader.h"
 
 #include <common/gl/gl_check.h>
 
-#include <gl/glew.h>
+#include <GL/glew.h>
 
 #include <unordered_map>
 

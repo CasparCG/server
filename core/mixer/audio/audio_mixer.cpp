@@ -19,7 +19,7 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../../stdafx.h"
+#include "../../StdAfx.h"
 
 #include "audio_mixer.h"
 
@@ -39,7 +39,7 @@ namespace caspar { namespace core {
 
 struct audio_item
 {
-	const void*			tag;
+	const void*			tag			= nullptr;
 	audio_transform		transform;
 	audio_buffer		audio_data;
 

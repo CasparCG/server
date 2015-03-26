@@ -78,7 +78,7 @@ private:
 	typedef std::list<TitleHolder> TitleList;
 	TitleList titles_;
 	spl::shared_ptr<core::frame_producer> GetPreparedTemplate(const std::wstring& name);
-	void PutPreparedTemplate(const std::wstring& name, spl::shared_ptr<core::frame_producer>& pframe_producer);
+	void PutPreparedTemplate(const std::wstring& name, const spl::shared_ptr<core::frame_producer>& pframe_producer);
 
 	static const wchar_t TokenDelimiter;
 	static const std::wstring MessageDelimiter;

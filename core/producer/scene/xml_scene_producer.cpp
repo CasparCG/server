@@ -19,12 +19,13 @@
 * Author: Helge Norberg, helge.norberg@svt.se
 */
 
-#include "../../stdafx.h"
+#include "../../StdAfx.h"
 
 #include "xml_scene_producer.h"
 #include "expression_parser.h"
 
 #include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
@@ -73,7 +74,7 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 		return core::frame_producer::empty();
 
 	boost::property_tree::wptree root;
-	std::wifstream file(filename);
+	boost::filesystem::wifstream file(filename);
 	boost::property_tree::read_xml(
 			file,
 			root,

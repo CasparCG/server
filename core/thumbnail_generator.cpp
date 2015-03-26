@@ -19,7 +19,7 @@
 * Author: Helge Norberg, helge.norberg@svt.se
 */
 
-#include "stdafx.h"
+#include "StdAfx.h"
 
 #include "thumbnail_generator.h"
 
@@ -86,7 +86,7 @@ struct thumbnail_output
 		int current_sleep = sleep_millis;
 
 		if (current_sleep > 0)
-			boost::this_thread::sleep(boost::posix_time::milliseconds(current_sleep));
+			boost::this_thread::sleep_for(boost::chrono::milliseconds(current_sleep));
 
 		on_send(std::move(frame));
 		on_send = nullptr;

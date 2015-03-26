@@ -19,7 +19,7 @@
 * Author: Helge Norberg, helge.norberg@svt.se
 */
 
-#include "../../stdafx.h"
+#include "../../StdAfx.h"
 
 #include <common/future.h>
 #include <boost/algorithm/string/split.hpp>
@@ -237,7 +237,7 @@ struct scene_producer::impl
 				&& translated.second <= 1.0
 				&& layer.producer.get()->collides(translated.first, translated.second))
 			{
-				return std::make_pair(transform, layer.producer.get().get());
+				return std::make_pair(transform, static_cast<interaction_sink*>(layer.producer.get().get()));
 			}
 		}
 
