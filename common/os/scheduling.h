@@ -21,6 +21,13 @@
 
 #pragma once
 
-#ifdef WIN32
-#include "os/windows/windows.h"
-#endif
+namespace caspar {
+
+enum class thread_priority
+{
+	LOW
+};
+
+void set_priority_of_current_thread(thread_priority priority);
+
+}

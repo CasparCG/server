@@ -1,9 +1,10 @@
-#include "..\..\..\StdAfx.h"
+#include "../../../StdAfx.h"
 
 #include "texture_atlas.h"
 #include "texture_font.h"
 
 #include <map>
+#include <memory>
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_GLYPH_H
@@ -84,7 +85,7 @@ public:
 		return range.last - range.first;
 	}
 
-	void impl::load_glyphs(unicode_block block, const color<float>& col)
+	void load_glyphs(unicode_block block, const color<float>& col)
 	{
 		FT_Error err;
 		int flags = FT_LOAD_RENDER | FT_LOAD_FORCE_AUTOHINT | FT_LOAD_TARGET_NORMAL;

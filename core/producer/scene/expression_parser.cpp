@@ -19,7 +19,7 @@
 * Author: Helge Norberg, helge.norberg@svt.se
 */
 
-#include "../../stdafx.h"
+#include "../../StdAfx.h"
 
 #include "expression_parser.h"
 
@@ -430,7 +430,7 @@ boost::any negative(const boost::any& to_create_negative_of)
 	return -require<double>(to_create_negative_of);
 }
 
-boost::any not(const boost::any& to_create_not_of)
+boost::any not_(const boost::any& to_create_not_of)
 {
 	return !require<bool>(to_create_not_of);
 }
@@ -526,12 +526,12 @@ boost::any equal(const boost::any& lhs, boost::any& rhs)
 		return require<bool>(l) == require<bool>(r);
 }
 
-boost::any and(const boost::any& lhs, boost::any& rhs)
+boost::any and_(const boost::any& lhs, boost::any& rhs)
 {
 	return require<bool>(lhs) && require<bool>(rhs);
 }
 
-boost::any or(const boost::any& lhs, boost::any& rhs)
+boost::any or_(const boost::any& lhs, boost::any& rhs)
 {
 	return require<bool>(lhs) || require<bool>(rhs);
 }
@@ -594,7 +594,7 @@ void resolve_operators(int precedence, std::vector<boost::any>& tokens)
 			}
 			else if (op_token.characters == L"!")
 			{
-				tokens.at(i) = not(token_after);
+				tokens.at(i) = not_(token_after);
 			}
 
 			tokens.erase(tokens.begin() + index_after);
@@ -625,11 +625,11 @@ void resolve_operators(int precedence, std::vector<boost::any>& tokens)
 				else if (op_token.characters == L"==")
 					token_before = equal(token_before, token_after);
 				else if (op_token.characters == L"!=")
-					token_before = not(equal(token_before, token_after));
+					token_before = not_(equal(token_before, token_after));
 				else if (op_token.characters == L"&&")
-					token_before = and(token_before, token_after);
+					token_before = and_(token_before, token_after);
 				else if (op_token.characters == L"||")
-					token_before = or(token_before, token_after);
+					token_before = or_(token_before, token_after);
 			}
 
 			tokens.erase(tokens.begin() + i, tokens.begin() + i + 2);

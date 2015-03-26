@@ -52,7 +52,7 @@ struct transition_info
 	int						duration	= 0;
 	transition_direction	direction	= transition_direction::from_left;
 	transition_type			type		= transition_type::cut;
-	tweener					tweener		= { L"linear" };
+	caspar::tweener			tweener		{ L"linear" };
 };
 
 spl::shared_ptr<class frame_producer> create_transition_producer(const field_mode& mode, const spl::shared_ptr<class frame_producer>& destination, const transition_info& info);

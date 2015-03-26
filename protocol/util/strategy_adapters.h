@@ -61,11 +61,11 @@ class delimiter_based_chunking_strategy : public protocol_strategy<CharT>
 {
 	std::basic_string<CharT> delimiter_;
 	std::basic_string<CharT> input_;
-	protocol_strategy<CharT>::ptr strategy_;
+	typename protocol_strategy<CharT>::ptr strategy_;
 public:
 	delimiter_based_chunking_strategy(
 			const std::basic_string<CharT>& delimiter, 
-			const protocol_strategy<CharT>::ptr& strategy)
+			const typename protocol_strategy<CharT>::ptr& strategy)
 		: delimiter_(delimiter)
 		, strategy_(strategy)
 	{
@@ -93,11 +93,11 @@ class delimiter_based_chunking_strategy_factory
 	: public protocol_strategy_factory<CharT>
 {
 	std::basic_string<CharT> delimiter_;
-	protocol_strategy_factory<CharT>::ptr strategy_factory_;
+	typename protocol_strategy_factory<CharT>::ptr strategy_factory_;
 public:
 	delimiter_based_chunking_strategy_factory(
 			const std::basic_string<CharT>& delimiter, 
-			const protocol_strategy_factory<CharT>::ptr& strategy_factory)
+			const typename protocol_strategy_factory<CharT>::ptr& strategy_factory)
 		: delimiter_(delimiter)
 		, strategy_factory_(strategy_factory)
 	{

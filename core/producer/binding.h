@@ -28,8 +28,11 @@
 #include <map>
 #include <algorithm>
 #include <type_traits>
+#include <stdexcept>
 
 #include <boost/lexical_cast.hpp>
+
+#include <common/tweener.h>
 
 namespace caspar { namespace core {
 
@@ -53,7 +56,7 @@ struct impl_base : std::enable_shared_from_this<impl_base>
 		auto self = shared_from_this();
 
 		if (dependency->depends_on(self))
-			throw std::exception("Can't have circular dependencies between bindings");
+			throw std::runtime_error("Can't have circular dependencies between bindings");
 
 		dependency->on_change(self, [=] { evaluate(); });
 		dependencies_.push_back(dependency);
@@ -123,7 +126,7 @@ private:
 		{
 			if (bound())
 			{
-				throw std::exception("Bound value cannot be set");
+				throw std::runtime_error("Bound value cannot be set");
 			}
 
 			if (value == value_)
@@ -574,7 +577,7 @@ public:
 	}
 };
 
-template<typename T, typename T2>
+/*template<typename T, typename T2>
 binding<T> add_tween(
 		const binding<T>& to_tween,
 		const binding<T2>& counter,
@@ -595,7 +598,7 @@ binding<T> add_tween(
 			return tween(t - start_time, start_val, destination_val, dur);
 		}).as<T>())
 		.otherwise(destination_value);
-}
+}*/
 
 template<typename T, typename T2>
 binding<T> delay(

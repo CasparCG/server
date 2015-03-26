@@ -51,9 +51,9 @@ struct image_transform final
 	boost::array<double, 2>	fill_scale			= boost::array<double, 2> { { 1.0, 1.0 } };
 	boost::array<double, 2>	clip_translation	= boost::array<double, 2> { { 0.0, 0.0 } };
 	boost::array<double, 2>	clip_scale			= boost::array<double, 2> { { 1.0, 1.0 } };
-	levels					levels;
+	core::levels			levels;
 
-	field_mode				field_mode			= field_mode::progressive;
+	core::field_mode		field_mode			= core::field_mode::progressive;
 	bool					is_key				= false;
 	bool					is_mix				= false;
 	bool					is_still			= false;
@@ -87,8 +87,8 @@ struct frame_transform final
 public:
 	frame_transform();
 	
-	image_transform image_transform;
-	audio_transform audio_transform;
+	core::image_transform image_transform;
+	core::audio_transform audio_transform;
 
 	//char padding[(sizeof(core::image_transform) + sizeof(core::audio_transform)) % 16];
 	

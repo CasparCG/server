@@ -20,7 +20,7 @@
 */
 
  
-#include "..\stdafx.h"
+#include "../StdAfx.h"
 
 #include "CLKProtocolStrategy.h"
 #include "clk_commands.h"

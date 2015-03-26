@@ -19,7 +19,7 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../stdafx.h"
+#include "../StdAfx.h"
 
 #include "osd_graph.h"
 
@@ -31,6 +31,7 @@
 #include <common/lock.h>
 #include <common/env.h>
 #include <common/prec_timer.h>
+#include <common/os/scheduling.h>
 
 #include <SFML/Graphics.hpp>
 
@@ -47,8 +48,6 @@
 #include <numeric>
 #include <tuple>
 #include <memory>
-
-#include <Windows.h>
 
 namespace caspar { namespace core { namespace diagnostics { namespace osd {
 
@@ -100,12 +99,12 @@ class context : public drawable
 	std::list<std::weak_ptr<drawable>>	drawables_;
 	int64_t								refresh_rate_millis_		= 16;
 	boost::timer						display_time_;
-	bool								calculate_view_;
+	bool								calculate_view_				= true;
 	int									scroll_position_			= 0;
 	bool								dragging_					= false;
-	int									last_mouse_y_;
+	int									last_mouse_y_				= 0;
 
-	executor							executor_					= L"diagnostics";
+	executor							executor_					{ L"diagnostics" };
 public:					
 
 	static void register_drawable(const std::shared_ptr<drawable>& drawable)
@@ -135,8 +134,8 @@ private:
 	context()
 	{
 		executor_.begin_invoke([=]
-		{			
-			SetThreadPriority(GetCurrentThread(), BELOW_NORMAL_PRIORITY_CLASS);
+		{
+			set_priority_of_current_thread(thread_priority::LOW);
 		});
 	}
 

@@ -19,7 +19,7 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../../stdafx.h"
+#include "../../StdAfx.h"
 
 #include "image_mixer.h"
 
@@ -39,7 +39,7 @@
 
 #include <asmlib.h>
 
-#include <gl/glew.h>
+#include <GL/glew.h>
 
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_for_each.h>
@@ -52,6 +52,7 @@
 #include <cstdint>
 #include <vector>
 #include <set>
+#include <array>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -140,7 +141,7 @@ static void kernel(uint8_t* dest, const uint8_t* source, size_t count)
 {			
 	using namespace xmm;
 
-	if(reinterpret_cast<int>(dest) % 16 != 0 || reinterpret_cast<int>(source) % 16 != 0)
+	if(reinterpret_cast<long>(dest) % 16 != 0 || reinterpret_cast<long>(source) % 16 != 0)
 		kernel<temporal_tag, unaligned_tag>(dest, source, count);
 	else
 		kernel<temporal_tag, aligned_tag>(dest, source, count);
@@ -284,7 +285,7 @@ private:
 			{
 				if(source_items[n].data == data)
 				{
-					dest_items[n].data.assign(0);
+					dest_items[n].data.fill(0);
 					dest_items[n].data[0]			= dest_frame->data();
 					dest_items[n].pix_desc			= core::pixel_format_desc(core::pixel_format::bgra);
 					dest_items[n].pix_desc.planes	= { core::pixel_format_desc::plane(width, height, 4) };
@@ -355,7 +356,7 @@ public:
 		return renderer_(std::move(items_), format_desc);
 	}
 	
-	virtual core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc)
+	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc)
 	{
 		std::vector<array<std::uint8_t>> buffers;
 		for (auto& plane : desc.planes)

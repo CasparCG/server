@@ -35,7 +35,7 @@ typename std::enable_if<!std::is_convertible<T, std::wstring>::value, typename s
 		if(++it == params.end())
 			throw std::out_of_range("");
 
-		return boost::lexical_cast<std::decay<T>::type>(*it);
+		return boost::lexical_cast<typename std::decay<T>::type>(*it);
 	}
 	catch(...)
 	{		

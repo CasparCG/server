@@ -18,7 +18,7 @@
 *
 * Author: Robert Nagy, ronag89@gmail.com
 */
-#include "../../stdafx.h"
+#include "../../StdAfx.h"
 
 #include "image_mixer.h"
 
@@ -41,7 +41,7 @@
 
 #include <asmlib.h>
 
-#include <gl/glew.h>
+#include <GL/glew.h>
 
 #include <boost/range/algorithm_ext/erase.hpp>
 #include <boost/thread/future.hpp>
@@ -80,8 +80,9 @@ struct layer
 
 std::size_t get_max_video_format_size()
 {
+	auto format_size = [](core::video_format format) { return core::video_format_desc(format).size; };
 	return cpplinq::from(enum_constants<core::video_format>())
-		.select([](core::video_format format) { return core::video_format_desc(format).size; })
+		.select(std::ref(format_size))
 		.max();
 }
 

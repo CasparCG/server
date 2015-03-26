@@ -35,7 +35,7 @@
 
 namespace caspar { namespace core {
 		
-std::vector<const consumer_factory_t> g_factories;
+std::vector<consumer_factory_t> g_factories;
 
 void register_consumer_factory(const consumer_factory_t& factory)
 {
@@ -122,7 +122,7 @@ public:
 class recover_consumer_proxy : public frame_consumer
 {	
 	std::shared_ptr<frame_consumer> consumer_;
-	int								channel_index_;
+	int								channel_index_	= -1;
 	video_format_desc				format_desc_;
 public:
 	recover_consumer_proxy(spl::shared_ptr<frame_consumer>&& consumer) 
