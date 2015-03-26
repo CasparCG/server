@@ -1,18 +1,26 @@
 cmake_minimum_required (VERSION 2.6)
 project (shell)
 
+if (MSVC)
+	set(OS_SPECIFIC_SOURCES
+			resource.h
+			shell.rc
+	)
+elseif (CMAKE_COMPILER_IS_GNUCXX)
+	set(OS_SPECIFIC_SOURCES
+	)
+endif ()
 set(SOURCES
 		main.cpp
 		server.cpp
 		stdafx.cpp
 )
 set(HEADERS
-		resource.h
 		server.h
 		stdafx.h
 )
 
-add_executable(casparcg ${SOURCES} ${HEADERS})
+add_executable(casparcg ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
 add_precompiled_header(casparcg stdafx.h FORCEINCLUDE)
 
 include_directories(..)
