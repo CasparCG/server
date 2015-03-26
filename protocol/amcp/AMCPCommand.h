@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "../util/clientinfo.h"
+#include "../util/ClientInfo.h"
 #include "amcp_shared.h"
 #include <core/consumer/frame_consumer.h>
 
@@ -94,7 +94,7 @@ namespace amcp {
 		spl::shared_ptr<IO::lock_container>& lock_container() { return ctx_.lock; }
 
 		unsigned int channel_index(){return channel_index_;}
-		int layer_index(int default = 0) const{return layer_index_ != -1 ? layer_index_ : default; }
+		int layer_index(int default_ = 0) const{return layer_index_ != -1 ? layer_index_ : default_; }
 
 	private:
 		unsigned int channel_index_;
@@ -118,13 +118,13 @@ namespace amcp {
 	class AMCPChannelCommandBase : public AMCPChannelCommand, public AMCPCommandBase<TMinParameters>
 	{
 	public:
-		AMCPChannelCommandBase(IO::ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index) : AMCPChannelCommand(channel, channel_index, layer_index), AMCPCommandBase(client)
+		AMCPChannelCommandBase(IO::ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index) : AMCPChannelCommand(channel, channel_index, layer_index), AMCPCommandBase<TMinParameters>(client)
 		{}
 	protected:
-		AMCPChannelCommandBase(const AMCPChannelCommandBase& rhs) : AMCPChannelCommand(rhs), AMCPCommandBase(rhs)
+		AMCPChannelCommandBase(const AMCPChannelCommandBase& rhs) : AMCPChannelCommand(rhs), AMCPCommandBase<TMinParameters>(rhs)
 		{}
 		template<int T>
-		AMCPChannelCommandBase(const AMCPChannelCommandBase<T>& rhs) : AMCPChannelCommand(rhs), AMCPCommandBase(rhs)
+		AMCPChannelCommandBase(const AMCPChannelCommandBase<T>& rhs) : AMCPChannelCommand(rhs), AMCPCommandBase<TMinParameters>(rhs)
 		{}
 	};
 }}}

@@ -83,7 +83,7 @@ struct video_format_desc final
 	int					height;		
 	int					square_width;
 	int					square_height;
-	field_mode			field_mode;	// progressive, interlaced upper field first, interlaced lower field first
+	core::field_mode	field_mode;	// progressive, interlaced upper field first, interlaced lower field first
 	double				fps;		// actual framerate = duration/time_scale, e.g. i50 = 25 fps, p50 = 50 fps
 	int					time_scale;
 	int					duration;

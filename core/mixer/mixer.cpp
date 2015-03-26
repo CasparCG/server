@@ -32,7 +32,6 @@
 #include <common/executor.h>
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
-#include <common/gl/gl_check.h>
 #include <common/future.h>
 
 #include <core/frame/draw_frame.h>
@@ -60,7 +59,7 @@ struct mixer::impl : boost::noncopyable
 	
 	std::unordered_map<int, blend_mode>	blend_modes_;
 			
-	executor executor_									= L"mixer";
+	executor executor_									{ L"mixer" };
 
 public:
 	impl(spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer) 

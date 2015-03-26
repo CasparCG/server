@@ -21,7 +21,7 @@
 
 // TODO: Smart GC
 
-#include "../../stdafx.h"
+#include "../../StdAfx.h"
 
 #include "device.h"
 
@@ -33,10 +33,11 @@
 #include <common/except.h>
 #include <common/future.h>
 #include <common/array.h>
+#include <common/memory.h>
 #include <common/gl/gl_check.h>
-#include <common/os/windows/windows.h>
+//#include <common/os/windows/windows.h>
 
-#include <gl/glew.h>
+#include <GL/glew.h>
 
 #include <SFML/Window/Context.hpp>
 
@@ -189,7 +190,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	{
 		std::shared_ptr<buffer> buf;
 
-		auto tmp = source.storage<spl::shared_ptr<buffer>>();
+		auto tmp = source.template storage<spl::shared_ptr<buffer>>();
 		if(tmp)
 			buf = *tmp;
 		else

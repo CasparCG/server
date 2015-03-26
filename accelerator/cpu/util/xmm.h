@@ -1,6 +1,11 @@
 #pragma once
 
+#ifdef WIN32
 #include <intrin.h>
+#else
+#include <smmintrin.h>
+#endif
+
 #include <type_traits>
 
 namespace caspar { namespace accelerator { namespace cpu { namespace xmm {

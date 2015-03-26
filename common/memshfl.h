@@ -21,7 +21,11 @@
 
 #pragma once
 
+#ifdef _MSC_VER
 #include <intrin.h>
+#else
+#include <tmmintrin.h>
+#endif
 
 namespace caspar {
 	

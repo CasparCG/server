@@ -56,7 +56,6 @@
 #include <modules/flash/producer/flash_producer.h>
 #include <modules/flash/producer/cg_proxy.h>
 #include <modules/ffmpeg/producer/util/util.h>
-#include <modules/image/image.h>
 #include <modules/screen/screen.h>
 #include <modules/reroute/producer/reroute_producer.h>
 
@@ -65,7 +64,7 @@
 #include <fstream>
 #include <memory>
 #include <cctype>
-#include <io.h>
+//#include <io.h>
 #include <future>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -201,17 +200,17 @@ std::wstring MediaInfo(const boost::filesystem::path& path)
 {
 	if(boost::filesystem::is_regular_file(path))
 	{
-		std::wstring clipttype = TEXT("N/A");
+		std::wstring clipttype = L"N/A";
 		std::wstring extension = boost::to_upper_copy(path.extension().wstring());
-		if(extension == TEXT(".TGA") || extension == TEXT(".COL") || extension == L".PNG" || extension == L".JPEG" || extension == L".JPG" ||
+		if(extension == L".TGA" || extension == L".COL" || extension == L".PNG" || extension == L".JPEG" || extension == L".JPG" ||
 			extension == L"GIF" || extension == L"BMP")
-			clipttype = TEXT("STILL");
-		else if(extension == TEXT(".WAV") || extension == TEXT(".MP3"))
-			clipttype = TEXT("AUDIO");
-		else if(extension == TEXT("SWF") || extension == TEXT("CT") || extension == TEXT("DV") || extension == TEXT("MOV") || extension == TEXT("MPG") || extension == TEXT("AVI") || caspar::ffmpeg::is_valid_file(path.wstring()))
-			clipttype = TEXT("MOVIE");
+			clipttype = L"STILL";
+		else if(extension == L".WAV" || extension == L".MP3")
+			clipttype = L"AUDIO";
+		else if(extension == L"SWF" || extension == L"CT" || extension == L"DV" || extension == L"MOV" || extension == L"MPG" || extension == L"AVI" || caspar::ffmpeg::is_valid_file(path.wstring()))
+			clipttype = L"MOVIE";
 
-		if(clipttype != TEXT("N/A"))
+		if(clipttype != L"N/A")
 		{		
 			auto is_not_digit = [](char c){ return std::isdigit(c) == 0; };
 
@@ -225,15 +224,15 @@ std::wstring MediaInfo(const boost::filesystem::path& path)
 			sizeStr.erase(std::remove_if(sizeStr.begin(), sizeStr.end(), is_not_digit), sizeStr.end());
 			auto sizeWStr = std::wstring(sizeStr.begin(), sizeStr.end());
 				
-			auto str = relativePath.replace_extension(TEXT("")).native();
-			while(str.size() > 0 && (str[0] == '\\' || str[0] == '/'))
+			auto str = relativePath.replace_extension(L"").generic_wstring();
+			while(str.size() > 0 && (str[0] == L'\\' || str[0] == L'/'))
 				str = std::wstring(str.begin() + 1, str.end());
 
-			return std::wstring() + TEXT("\"") + str +
-					+ TEXT("\" ") + clipttype +
-					+ TEXT(" ") + sizeStr +
-					+ TEXT(" ") + writeTimeWStr +
-					+ TEXT("\r\n"); 	
+			return std::wstring() + L"\"" + str +
+					+ L"\" " + clipttype +
+					+ L" " + sizeStr +
+					+ L" " + writeTimeWStr +
+					+ L"\r\n";
 		}	
 	}
 	return L"";
@@ -267,17 +266,17 @@ std::wstring ListTemplates()
 
 			auto sizeWStr = std::wstring(sizeStr.begin(), sizeStr.end());
 
-			std::wstring dir = relativePath.parent_path().native();
+			std::wstring dir = relativePath.parent_path().generic_wstring();
 			std::wstring file = boost::to_upper_copy(relativePath.filename().wstring());
 			relativePath = boost::filesystem::wpath(dir + L"/" + file);
 						
-			auto str = relativePath.replace_extension(TEXT("")).native();
+			auto str = relativePath.replace_extension(L"").generic_wstring();
 			boost::trim_if(str, boost::is_any_of("\\/"));
 
-			replyString << TEXT("\"") << str
-						<< TEXT("\" ") << sizeWStr
-						<< TEXT(" ") << writeTimeWStr
-						<< TEXT("\r\n");		
+			replyString << L"\"" << str
+						<< L"\" " << sizeWStr
+						<< L" " << writeTimeWStr
+						<< L"\r\n";
 		}
 	}
 	return replyString.str();
@@ -299,14 +298,14 @@ bool DiagnosticsCommand::DoExecute()
 	{
 		core::diagnostics::osd::show_graphs(true);
 
-		SetReplyString(TEXT("202 DIAG OK\r\n"));
+		SetReplyString(L"202 DIAG OK\r\n");
 
 		return true;
 	}
 	catch(...)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("502 DIAG FAILED\r\n"));
+		SetReplyString(L"502 DIAG FAILED\r\n");
 		return false;
 	}
 }
@@ -381,9 +380,9 @@ bool CallCommand::DoExecute()
 				
 		std::wstringstream replyString;
 		if(result.get().empty())
-			replyString << TEXT("202 CALL OK\r\n");
+			replyString << L"202 CALL OK\r\n";
 		else
-			replyString << TEXT("201 CALL OK\r\n") << result.get() << L"\r\n";
+			replyString << L"201 CALL OK\r\n" << result.get() << L"\r\n";
 		
 		SetReplyString(replyString.str());
 
@@ -392,7 +391,7 @@ bool CallCommand::DoExecute()
 	catch(...)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("502 CALL FAILED\r\n"));
+		SetReplyString(L"502 CALL FAILED\r\n");
 		return false;
 	}
 }
@@ -588,7 +587,7 @@ bool MixerCommand::DoExecute()
 		}
 		else
 		{
-			SetReplyString(TEXT("404 MIXER ERROR\r\n"));
+			SetReplyString(L"404 MIXER ERROR\r\n");
 			return false;
 		}
 
@@ -600,20 +599,20 @@ bool MixerCommand::DoExecute()
 		else
 			channel()->stage().apply_transforms(transforms);
 	
-		SetReplyString(TEXT("202 MIXER OK\r\n"));
+		SetReplyString(L"202 MIXER OK\r\n");
 
 		return true;
 	}
 	catch(file_not_found&)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("404 MIXER ERROR\r\n"));
+		SetReplyString(L"404 MIXER ERROR\r\n");
 		return false;
 	}
 	catch(...)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("502 MIXER FAILED\r\n"));
+		SetReplyString(L"502 MIXER FAILED\r\n");
 		return false;
 	}
 }
@@ -643,20 +642,20 @@ bool SwapCommand::DoExecute()
 			ch1->stage().swap_layers(ch2.channel->stage());
 		}
 		
-		SetReplyString(TEXT("202 SWAP OK\r\n"));
+		SetReplyString(L"202 SWAP OK\r\n");
 
 		return true;
 	}
 	catch(file_not_found&)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("404 SWAP ERROR\r\n"));
+		SetReplyString(L"404 SWAP ERROR\r\n");
 		return false;
 	}
 	catch(...)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("502 SWAP FAILED\r\n"));
+		SetReplyString(L"502 SWAP FAILED\r\n");
 		return false;
 	}
 }
@@ -678,20 +677,20 @@ bool AddCommand::DoExecute()
 		auto consumer = create_consumer(parameters());
 		channel()->output().add(layer_index(consumer->index()), consumer);
 	
-		SetReplyString(TEXT("202 ADD OK\r\n"));
+		SetReplyString(L"202 ADD OK\r\n");
 
 		return true;
 	}
 	catch(file_not_found&)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("404 ADD ERROR\r\n"));
+		SetReplyString(L"404 ADD ERROR\r\n");
 		return false;
 	}
 	catch(...)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("502 ADD FAILED\r\n"));
+		SetReplyString(L"502 ADD FAILED\r\n");
 		return false;
 	}
 }
@@ -715,20 +714,20 @@ bool RemoveCommand::DoExecute()
 
 		channel()->output().remove(index);
 
-		SetReplyString(TEXT("202 REMOVE OK\r\n"));
+		SetReplyString(L"202 REMOVE OK\r\n");
 
 		return true;
 	}
 	catch(file_not_found&)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("404 REMOVE ERROR\r\n"));
+		SetReplyString(L"404 REMOVE ERROR\r\n");
 		return false;
 	}
 	catch(...)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("502 REMOVE FAILED\r\n"));
+		SetReplyString(L"502 REMOVE FAILED\r\n");
 		return false;
 	}
 }
@@ -744,20 +743,20 @@ bool LoadCommand::DoExecute()
 		auto pFP = create_producer(channel()->frame_factory(), channel()->video_format_desc(), parameters());
 		channel()->stage().load(layer_index(), pFP, true);
 	
-		SetReplyString(TEXT("202 LOAD OK\r\n"));
+		SetReplyString(L"202 LOAD OK\r\n");
 
 		return true;
 	}
 	catch(file_not_found&)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("404 LOAD ERROR\r\n"));
+		SetReplyString(L"404 LOAD ERROR\r\n");
 		return false;
 	}
 	catch(...)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("502 LOAD FAILED\r\n"));
+		SetReplyString(L"502 LOAD FAILED\r\n");
 		return false;
 	}
 }
@@ -820,24 +819,24 @@ bool LoadbgCommand::DoExecute()
 		auto tween = what["TWEEN"].matched ? what["TWEEN"].str() : L"";
 		transitionInfo.tweener = tween;		
 
-		if(transition == TEXT("CUT"))
+		if(transition == L"CUT")
 			transitionInfo.type = transition_type::cut;
-		else if(transition == TEXT("MIX"))
+		else if(transition == L"MIX")
 			transitionInfo.type = transition_type::mix;
-		else if(transition == TEXT("PUSH"))
+		else if(transition == L"PUSH")
 			transitionInfo.type = transition_type::push;
-		else if(transition == TEXT("SLIDE"))
+		else if(transition == L"SLIDE")
 			transitionInfo.type = transition_type::slide;
-		else if(transition == TEXT("WIPE"))
+		else if(transition == L"WIPE")
 			transitionInfo.type = transition_type::wipe;
 		
-		if(direction == TEXT("FROMLEFT"))
+		if(direction == L"FROMLEFT")
 			transitionInfo.direction = transition_direction::from_left;
-		else if(direction == TEXT("FROMRIGHT"))
+		else if(direction == L"FROMRIGHT")
 			transitionInfo.direction = transition_direction::from_right;
-		else if(direction == TEXT("LEFT"))
+		else if(direction == L"LEFT")
 			transitionInfo.direction = transition_direction::from_right;
-		else if(direction == TEXT("RIGHT"))
+		else if(direction == L"RIGHT")
 			transitionInfo.direction = transition_direction::from_left;
 	}
 	
@@ -875,20 +874,20 @@ bool LoadbgCommand::DoExecute()
 			channel()->stage().load(layer_index(), pFP2, false); // TODO: LOOP
 	
 		
-		SetReplyString(TEXT("202 LOADBG OK\r\n"));
+		SetReplyString(L"202 LOADBG OK\r\n");
 
 		return true;
 	}
 	catch(file_not_found&)
 	{		
 		CASPAR_LOG(error) << L"File not found. No match found for parameters. Check syntax.";
-		SetReplyString(TEXT("404 LOADBG ERROR\r\n"));
+		SetReplyString(L"404 LOADBG ERROR\r\n");
 		return false;
 	}
 	catch(...)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("502 LOADBG FAILED\r\n"));
+		SetReplyString(L"502 LOADBG FAILED\r\n");
 		return false;
 	}
 }
@@ -898,12 +897,12 @@ bool PauseCommand::DoExecute()
 	try
 	{
 		channel()->stage().pause(layer_index());
-		SetReplyString(TEXT("202 PAUSE OK\r\n"));
+		SetReplyString(L"202 PAUSE OK\r\n");
 		return true;
 	}
 	catch(...)
 	{
-		SetReplyString(TEXT("501 PAUSE FAILED\r\n"));
+		SetReplyString(L"501 PAUSE FAILED\r\n");
 	}
 
 	return false;
@@ -923,12 +922,12 @@ bool PlayCommand::DoExecute()
 
 		channel()->stage().play(layer_index());
 		
-		SetReplyString(TEXT("202 PLAY OK\r\n"));
+		SetReplyString(L"202 PLAY OK\r\n");
 		return true;
 	}
 	catch(...)
 	{
-		SetReplyString(TEXT("501 PLAY FAILED\r\n"));
+		SetReplyString(L"501 PLAY FAILED\r\n");
 	}
 
 	return false;
@@ -939,12 +938,12 @@ bool StopCommand::DoExecute()
 	try
 	{
 		channel()->stage().stop(layer_index());
-		SetReplyString(TEXT("202 STOP OK\r\n"));
+		SetReplyString(L"202 STOP OK\r\n");
 		return true;
 	}
 	catch(...)
 	{
-		SetReplyString(TEXT("501 STOP FAILED\r\n"));
+		SetReplyString(L"501 STOP FAILED\r\n");
 	}
 
 	return false;
@@ -958,7 +957,7 @@ bool ClearCommand::DoExecute()
 	else
 		channel()->stage().clear();
 		
-	SetReplyString(TEXT("202 CLEAR OK\r\n"));
+	SetReplyString(L"202 CLEAR OK\r\n");
 
 	return true;
 }
@@ -967,7 +966,7 @@ bool PrintCommand::DoExecute()
 {
 	channel()->output().add(create_consumer({ L"IMAGE" }));
 		
-	SetReplyString(TEXT("202 PRINT OK\r\n"));
+	SetReplyString(L"202 PRINT OK\r\n");
 
 	return true;
 }
@@ -977,7 +976,7 @@ bool LogCommand::DoExecute()
 	if(boost::iequals(parameters().at(0), L"LEVEL"))
 		log::set_log_level(parameters().at(1));
 
-	SetReplyString(TEXT("202 LOG OK\r\n"));
+	SetReplyString(L"202 LOG OK\r\n");
 
 	return true;
 }
@@ -987,23 +986,23 @@ bool CGCommand::DoExecute()
 	try
 	{
 		std::wstring command = boost::to_upper_copy(parameters()[0]);
-		if(command == TEXT("ADD"))
+		if(command == L"ADD")
 			return DoExecuteAdd();
-		else if(command == TEXT("PLAY"))
+		else if(command == L"PLAY")
 			return DoExecutePlay();
-		else if(command == TEXT("STOP"))
+		else if(command == L"STOP")
 			return DoExecuteStop();
-		else if(command == TEXT("NEXT"))
+		else if(command == L"NEXT")
 			return DoExecuteNext();
-		else if(command == TEXT("REMOVE"))
+		else if(command == L"REMOVE")
 			return DoExecuteRemove();
-		else if(command == TEXT("CLEAR"))
+		else if(command == L"CLEAR")
 			return DoExecuteClear();
-		else if(command == TEXT("UPDATE"))
+		else if(command == L"UPDATE")
 			return DoExecuteUpdate();
-		else if(command == TEXT("INVOKE"))
+		else if(command == L"INVOKE")
 			return DoExecuteInvoke();
-		else if(command == TEXT("INFO"))
+		else if(command == L"INFO")
 			return DoExecuteInfo();
 	}
 	catch(...)
@@ -1011,14 +1010,14 @@ bool CGCommand::DoExecute()
 		CASPAR_LOG_CURRENT_EXCEPTION();
 	}
 
-	SetReplyString(TEXT("403 CG ERROR\r\n"));
+	SetReplyString(L"403 CG ERROR\r\n");
 	return false;
 }
 
 bool CGCommand::ValidateLayer(const std::wstring& layerstring) {
 	int length = layerstring.length();
 	for(int i = 0; i < length; ++i) {
-		if(!_istdigit(layerstring[i])) {
+		if(!std::isdigit(layerstring[i])) {
 			return false;
 		}
 	}
@@ -1037,14 +1036,14 @@ bool CGCommand::DoExecuteAdd() {
 
 	if(parameters().size() < 4) 
 	{
-		SetReplyString(TEXT("402 CG ERROR\r\n"));
+		SetReplyString(L"402 CG ERROR\r\n");
 		return false;
 	}
 	unsigned int dataIndex = 4;
 
 	if(!ValidateLayer(parameters()[1])) 
 	{
-		SetReplyString(TEXT("403 CG ERROR\r\n"));
+		SetReplyString(L"403 CG ERROR\r\n");
 		return false;
 	}
 
@@ -1056,36 +1055,36 @@ bool CGCommand::DoExecuteAdd() {
 		++dataIndex;
 
 		if(parameters().size() > 4 && parameters()[4].length() > 0)	//read play-on-load-flag
-			bDoStart = (parameters()[4][0]==TEXT('1')) ? true : false;
+			bDoStart = (parameters()[4][0]==L'1') ? true : false;
 		else 
 		{
-			SetReplyString(TEXT("402 CG ERROR\r\n"));
+			SetReplyString(L"402 CG ERROR\r\n");
 			return false;
 		}
 	}
 	else if(parameters()[3].length() > 0) {	//read play-on-load-flag
-		bDoStart = (parameters()[3][0]==TEXT('1')) ? true : false;
+		bDoStart = (parameters()[3][0]==L'1') ? true : false;
 	}
 	else 
 	{
-		SetReplyString(TEXT("403 CG ERROR\r\n"));
+		SetReplyString(L"403 CG ERROR\r\n");
 		return false;
 	}
 
-	const TCHAR* pDataString = 0;
+	const wchar_t* pDataString = 0;
 	std::wstring dataFromFile;
 	if(parameters().size() > dataIndex) 
 	{	//read data
 		const std::wstring& dataString = parameters()[dataIndex];
 
-		if(dataString[0] == TEXT('<')) //the data is an XML-string
+		if(dataString[0] == L'<') //the data is an XML-string
 			pDataString = dataString.c_str();
 		else 
 		{
 			//The data is not an XML-string, it must be a filename
 			std::wstring filename = env::data_folder();
 			filename.append(dataString);
-			filename.append(TEXT(".ftd"));
+			filename.append(L".ftd");
 
 			dataFromFile = read_file(boost::filesystem::wpath(filename));
 			pDataString = dataFromFile.c_str();
@@ -1099,13 +1098,13 @@ bool CGCommand::DoExecuteAdd() {
 		std::wstring filename = parameters()[2];
 		filename.append(extension);
 
-		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).add(layer, filename, bDoStart, label, (pDataString!=0) ? pDataString : TEXT(""));
-		SetReplyString(TEXT("202 CG OK\r\n"));
+		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).add(layer, filename, bDoStart, label, (pDataString!=0) ? pDataString : L"");
+		SetReplyString(L"202 CG OK\r\n");
 	}
 	else
 	{
 		CASPAR_LOG(warning) << "Could not find template " << parameters()[2];
-		SetReplyString(TEXT("404 CG ERROR\r\n"));
+		SetReplyString(L"404 CG ERROR\r\n");
 	}
 	return true;
 }
@@ -1116,7 +1115,7 @@ bool CGCommand::DoExecutePlay()
 	{
 		if(!ValidateLayer(parameters()[1])) 
 		{
-			SetReplyString(TEXT("403 CG ERROR\r\n"));
+			SetReplyString(L"403 CG ERROR\r\n");
 			return false;
 		}
 		int layer = boost::lexical_cast<int>(parameters()[1]);
@@ -1124,11 +1123,11 @@ bool CGCommand::DoExecutePlay()
 	}
 	else
 	{
-		SetReplyString(TEXT("402 CG ERROR\r\n"));
+		SetReplyString(L"402 CG ERROR\r\n");
 		return true;
 	}
 
-	SetReplyString(TEXT("202 CG OK\r\n"));
+	SetReplyString(L"202 CG OK\r\n");
 	return true;
 }
 
@@ -1138,7 +1137,7 @@ bool CGCommand::DoExecuteStop()
 	{
 		if(!ValidateLayer(parameters()[1])) 
 		{
-			SetReplyString(TEXT("403 CG ERROR\r\n"));
+			SetReplyString(L"403 CG ERROR\r\n");
 			return false;
 		}
 		int layer = boost::lexical_cast<int>(parameters()[1]);
@@ -1146,11 +1145,11 @@ bool CGCommand::DoExecuteStop()
 	}
 	else 
 	{
-		SetReplyString(TEXT("402 CG ERROR\r\n"));
+		SetReplyString(L"402 CG ERROR\r\n");
 		return true;
 	}
 
-	SetReplyString(TEXT("202 CG OK\r\n"));
+	SetReplyString(L"202 CG OK\r\n");
 	return true;
 }
 
@@ -1160,7 +1159,7 @@ bool CGCommand::DoExecuteNext()
 	{
 		if(!ValidateLayer(parameters()[1])) 
 		{
-			SetReplyString(TEXT("403 CG ERROR\r\n"));
+			SetReplyString(L"403 CG ERROR\r\n");
 			return false;
 		}
 
@@ -1169,11 +1168,11 @@ bool CGCommand::DoExecuteNext()
 	}
 	else 
 	{
-		SetReplyString(TEXT("402 CG ERROR\r\n"));
+		SetReplyString(L"402 CG ERROR\r\n");
 		return true;
 	}
 
-	SetReplyString(TEXT("202 CG OK\r\n"));
+	SetReplyString(L"202 CG OK\r\n");
 	return true;
 }
 
@@ -1183,7 +1182,7 @@ bool CGCommand::DoExecuteRemove()
 	{
 		if(!ValidateLayer(parameters()[1])) 
 		{
-			SetReplyString(TEXT("403 CG ERROR\r\n"));
+			SetReplyString(L"403 CG ERROR\r\n");
 			return false;
 		}
 
@@ -1192,18 +1191,18 @@ bool CGCommand::DoExecuteRemove()
 	}
 	else 
 	{
-		SetReplyString(TEXT("402 CG ERROR\r\n"));
+		SetReplyString(L"402 CG ERROR\r\n");
 		return true;
 	}
 
-	SetReplyString(TEXT("202 CG OK\r\n"));
+	SetReplyString(L"202 CG OK\r\n");
 	return true;
 }
 
 bool CGCommand::DoExecuteClear() 
 {
 	channel()->stage().clear(layer_index(flash::cg_proxy::DEFAULT_LAYER));
-	SetReplyString(TEXT("202 CG OK\r\n"));
+	SetReplyString(L"202 CG OK\r\n");
 	return true;
 }
 
@@ -1213,17 +1212,17 @@ bool CGCommand::DoExecuteUpdate()
 	{
 		if(!ValidateLayer(parameters().at(1)))
 		{
-			SetReplyString(TEXT("403 CG ERROR\r\n"));
+			SetReplyString(L"403 CG ERROR\r\n");
 			return false;
 		}
 						
 		std::wstring dataString = parameters().at(2);				
-		if(dataString.at(0) != TEXT('<'))
+		if(dataString.at(0) != L'<')
 		{
 			//The data is not an XML-string, it must be a filename
 			std::wstring filename = env::data_folder();
 			filename.append(dataString);
-			filename.append(TEXT(".ftd"));
+			filename.append(L".ftd");
 
 			dataString = read_file(boost::filesystem::wpath(filename));
 		}		
@@ -1233,33 +1232,33 @@ bool CGCommand::DoExecuteUpdate()
 	}
 	catch(...)
 	{
-		SetReplyString(TEXT("402 CG ERROR\r\n"));
+		SetReplyString(L"402 CG ERROR\r\n");
 		return true;
 	}
 
-	SetReplyString(TEXT("202 CG OK\r\n"));
+	SetReplyString(L"202 CG OK\r\n");
 	return true;
 }
 
 bool CGCommand::DoExecuteInvoke() 
 {
 	std::wstringstream replyString;
-	replyString << TEXT("201 CG OK\r\n");
+	replyString << L"201 CG OK\r\n";
 
 	if(parameters().size() > 2)
 	{
 		if(!ValidateLayer(parameters()[1]))
 		{
-			SetReplyString(TEXT("403 CG ERROR\r\n"));
+			SetReplyString(L"403 CG ERROR\r\n");
 			return false;
 		}
 		int layer = boost::lexical_cast<int>(parameters()[1]);
 		auto result = flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).invoke(layer, parameters()[2]);
-		replyString << result << TEXT("\r\n"); 
+		replyString << result << L"\r\n";
 	}
 	else 
 	{
-		SetReplyString(TEXT("402 CG ERROR\r\n"));
+		SetReplyString(L"402 CG ERROR\r\n");
 		return true;
 	}
 	
@@ -1270,25 +1269,25 @@ bool CGCommand::DoExecuteInvoke()
 bool CGCommand::DoExecuteInfo() 
 {
 	std::wstringstream replyString;
-	replyString << TEXT("201 CG OK\r\n");
+	replyString << L"201 CG OK\r\n";
 
 	if(parameters().size() > 1)
 	{
 		if(!ValidateLayer(parameters()[1]))
 		{
-			SetReplyString(TEXT("403 CG ERROR\r\n"));
+			SetReplyString(L"403 CG ERROR\r\n");
 			return false;
 		}
 
 		int layer = boost::lexical_cast<int>(parameters()[1]);
 		auto desc = flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).description(layer);
 		
-		replyString << desc << TEXT("\r\n"); 
+		replyString << desc << L"\r\n";
 	}
 	else 
 	{
 		auto info = flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).template_host_info();
-		replyString << info << TEXT("\r\n"); 
+		replyString << info << L"\r\n";
 	}	
 
 	SetReplyString(replyString.str());
@@ -1298,16 +1297,16 @@ bool CGCommand::DoExecuteInfo()
 bool DataCommand::DoExecute()
 {
 	std::wstring command = boost::to_upper_copy(parameters()[0]);
-	if(command == TEXT("STORE"))
+	if(command == L"STORE")
 		return DoExecuteStore();
-	else if(command == TEXT("RETRIEVE"))
+	else if(command == L"RETRIEVE")
 		return DoExecuteRetrieve();
-	else if(command == TEXT("REMOVE"))
+	else if(command == L"REMOVE")
 		return DoExecuteRemove();
-	else if(command == TEXT("LIST"))
+	else if(command == L"LIST")
 		return DoExecuteList();
 
-	SetReplyString(TEXT("403 DATA ERROR\r\n"));
+	SetReplyString(L"403 DATA ERROR\r\n");
 	return false;
 }
 
@@ -1315,13 +1314,13 @@ bool DataCommand::DoExecuteStore()
 {
 	if(parameters().size() < 3) 
 	{
-		SetReplyString(TEXT("402 DATA STORE ERROR\r\n"));
+		SetReplyString(L"402 DATA STORE ERROR\r\n");
 		return false;
 	}
 
 	std::wstring filename = env::data_folder();
 	filename.append(parameters()[1]);
-	filename.append(TEXT(".ftd"));
+	filename.append(L".ftd");
 
 	auto data_path = boost::filesystem::wpath(
 		boost::filesystem::wpath(filename).parent_path());
@@ -1329,10 +1328,10 @@ bool DataCommand::DoExecuteStore()
 	if(!boost::filesystem::exists(data_path))
 		boost::filesystem::create_directories(data_path);
 
-	std::wofstream datafile(filename.c_str());
+	boost::filesystem::wofstream datafile(filename);
 	if(!datafile) 
 	{
-		SetReplyString(TEXT("501 DATA STORE FAILED\r\n"));
+		SetReplyString(L"501 DATA STORE FAILED\r\n");
 		return false;
 	}
 
@@ -1340,7 +1339,7 @@ bool DataCommand::DoExecuteStore()
 	datafile << parameters()[2] << std::flush;
 	datafile.close();
 
-	std::wstring replyString = TEXT("202 DATA STORE OK\r\n");
+	std::wstring replyString = L"202 DATA STORE OK\r\n";
 	SetReplyString(replyString);
 	return true;
 }
@@ -1349,23 +1348,23 @@ bool DataCommand::DoExecuteRetrieve()
 {
 	if(parameters().size() < 2) 
 	{
-		SetReplyString(TEXT("402 DATA RETRIEVE ERROR\r\n"));
+		SetReplyString(L"402 DATA RETRIEVE ERROR\r\n");
 		return false;
 	}
 
 	std::wstring filename = env::data_folder();
 	filename.append(parameters()[1]);
-	filename.append(TEXT(".ftd"));
+	filename.append(L".ftd");
 
 	std::wstring file_contents = read_file(boost::filesystem::wpath(filename));
 
 	if (file_contents.empty()) 
 	{
-		SetReplyString(TEXT("404 DATA RETRIEVE ERROR\r\n"));
+		SetReplyString(L"404 DATA RETRIEVE ERROR\r\n");
 		return false;
 	}
 
-	std::wstringstream reply(TEXT("201 DATA RETRIEVE OK\r\n"));
+	std::wstringstream reply(L"201 DATA RETRIEVE OK\r\n");
 
 	std::wstringstream file_contents_stream(file_contents);
 	std::wstring line;
@@ -1390,27 +1389,27 @@ bool DataCommand::DoExecuteRemove()
 { 
 	if (parameters().size() < 2)
 	{
-		SetReplyString(TEXT("402 DATA REMOVE ERROR\r\n"));
+		SetReplyString(L"402 DATA REMOVE ERROR\r\n");
 		return false;
 	}
 
 	std::wstring filename = env::data_folder();
 	filename.append(parameters()[1]);
-	filename.append(TEXT(".ftd"));
+	filename.append(L".ftd");
 
 	if (!boost::filesystem::exists(filename))
 	{
-		SetReplyString(TEXT("404 DATA REMOVE ERROR\r\n"));
+		SetReplyString(L"404 DATA REMOVE ERROR\r\n");
 		return false;
 	}
 
 	if (!boost::filesystem::remove(filename))
 	{
-		SetReplyString(TEXT("403 DATA REMOVE ERROR\r\n"));
+		SetReplyString(L"403 DATA REMOVE ERROR\r\n");
 		return false;
 	}
 
-	SetReplyString(TEXT("201 DATA REMOVE OK\r\n"));
+	SetReplyString(L"201 DATA REMOVE OK\r\n");
 
 	return true;
 }
@@ -1418,7 +1417,7 @@ bool DataCommand::DoExecuteRemove()
 bool DataCommand::DoExecuteList() 
 {
 	std::wstringstream replyString;
-	replyString << TEXT("200 DATA LIST OK\r\n");
+	replyString << L"200 DATA LIST OK\r\n";
 
 	for (boost::filesystem::recursive_directory_iterator itr(env::data_folder()), end; itr != end; ++itr)
 	{			
@@ -1429,15 +1428,15 @@ bool DataCommand::DoExecuteList()
 			
 			auto relativePath = boost::filesystem::wpath(itr->path().wstring().substr(env::data_folder().size()-1, itr->path().wstring().size()));
 			
-			auto str = relativePath.replace_extension(TEXT("")).native();
-			if(str[0] == '\\' || str[0] == '/')
+			auto str = relativePath.replace_extension(L"").generic_wstring();
+			if(str[0] == L'\\' || str[0] == L'/')
 				str = std::wstring(str.begin() + 1, str.end());
 
-			replyString << str << TEXT("\r\n"); 	
+			replyString << str << L"\r\n";
 		}
 	}
 	
-	replyString << TEXT("\r\n");
+	replyString << L"\r\n";
 
 	SetReplyString(boost::to_upper_copy(replyString.str()));
 	return true;
@@ -1460,16 +1459,16 @@ bool CinfCommand::DoExecute()
 
 		if(info.empty())
 		{
-			SetReplyString(TEXT("404 CINF ERROR\r\n"));
+			SetReplyString(L"404 CINF ERROR\r\n");
 			return false;
 		}
-		replyString << TEXT("200 CINF OK\r\n");
+		replyString << L"200 CINF OK\r\n";
 		replyString << info << "\r\n";
 	}
 	catch(...)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("404 CINF ERROR\r\n"));
+		SetReplyString(L"404 CINF ERROR\r\n");
 		return false;
 	}
 	
@@ -1479,7 +1478,7 @@ bool CinfCommand::DoExecute()
 
 void GenerateChannelInfo(int index, const spl::shared_ptr<core::video_channel>& pChannel, std::wstringstream& replyString)
 {
-	replyString << index+1 << TEXT(" ") << pChannel->video_format_desc().name << TEXT(" PLAYING") << TEXT("\r\n");
+	replyString << index+1 << L" " << pChannel->video_format_desc().name << L" PLAYING\r\n";
 }
 
 bool InfoCommand::DoExecute()
@@ -1538,7 +1537,6 @@ bool InfoCommand::DoExecute()
 				info.add(L"system.bluefish.device", device);
 				
 			info.add(L"system.flash",					caspar::flash::version());
-			//info.add(L"system.free-image",				caspar::image::version());
 			info.add(L"system.ffmpeg.avcodec",			caspar::ffmpeg::avcodec_version());
 			info.add(L"system.ffmpeg.avformat",			caspar::ffmpeg::avformat_version());
 			info.add(L"system.ffmpeg.avfilter",			caspar::ffmpeg::avfilter_version());
@@ -1564,7 +1562,7 @@ bool InfoCommand::DoExecute()
 		{			
 			if(parameters().size() >= 1)
 			{
-				replyString << TEXT("201 INFO OK\r\n");
+				replyString << L"201 INFO OK\r\n";
 				boost::property_tree::wptree info;
 
 				std::vector<std::wstring> split;
@@ -1601,7 +1599,7 @@ bool InfoCommand::DoExecute()
 			else
 			{
 				// This is needed for backwards compatibility with old clients
-				replyString << TEXT("200 INFO OK\r\n");
+				replyString << L"200 INFO OK\r\n";
 				for(size_t n = 0; n < channels().size(); ++n)
 					GenerateChannelInfo(n, channels()[n].channel, replyString);
 			}
@@ -1611,11 +1609,11 @@ bool InfoCommand::DoExecute()
 	catch(...)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("403 INFO ERROR\r\n"));
+		SetReplyString(L"403 INFO ERROR\r\n");
 		return false;
 	}
 
-	replyString << TEXT("\r\n");
+	replyString << L"\r\n";
 	SetReplyString(replyString.str());
 	return true;
 }
@@ -1633,15 +1631,15 @@ bool ClsCommand::DoExecute()
 	try
 	{
 		std::wstringstream replyString;
-		replyString << TEXT("200 CLS OK\r\n");
+		replyString << L"200 CLS OK\r\n";
 		replyString << ListMedia();
-		replyString << TEXT("\r\n");
+		replyString << L"\r\n";
 		SetReplyString(boost::to_upper_copy(replyString.str()));
 	}
 	catch(...)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("501 CLS FAILED\r\n"));
+		SetReplyString(L"501 CLS FAILED\r\n");
 		return false;
 	}
 
@@ -1653,17 +1651,17 @@ bool TlsCommand::DoExecute()
 	try
 	{
 		std::wstringstream replyString;
-		replyString << TEXT("200 TLS OK\r\n");
+		replyString << L"200 TLS OK\r\n";
 
 		replyString << ListTemplates();
-		replyString << TEXT("\r\n");
+		replyString << L"\r\n";
 
 		SetReplyString(replyString.str());
 	}
 	catch(...)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("501 TLS FAILED\r\n"));
+		SetReplyString(L"501 TLS FAILED\r\n");
 		return false;
 	}
 	return true;
@@ -1671,16 +1669,16 @@ bool TlsCommand::DoExecute()
 
 bool VersionCommand::DoExecute()
 {
-	std::wstring replyString = TEXT("201 VERSION OK\r\n") + env::version() + TEXT("\r\n");
+	std::wstring replyString = L"201 VERSION OK\r\n" + env::version() + L"\r\n";
 
 	if(parameters().size() > 0)
 	{
 		if(boost::iequals(parameters()[0], L"FLASH"))
-			replyString = TEXT("201 VERSION OK\r\n") + flash::version() + TEXT("\r\n");
+			replyString = L"201 VERSION OK\r\n" + flash::version() + L"\r\n";
 		else if(boost::iequals(parameters()[0], L"TEMPLATEHOST"))
-			replyString = TEXT("201 VERSION OK\r\n") + flash::cg_version() + TEXT("\r\n");
+			replyString = L"201 VERSION OK\r\n" + flash::cg_version() + L"\r\n";
 		else if(!boost::iequals(parameters()[0], L"SERVER"))
-			replyString = TEXT("403 VERSION ERROR\r\n");
+			replyString = L"403 VERSION ERROR\r\n";
 	}
 
 	SetReplyString(replyString);
@@ -1700,26 +1698,26 @@ bool SetCommand::DoExecute()
 		std::wstring name = boost::to_upper_copy(parameters()[0]);
 		std::wstring value = boost::to_upper_copy(parameters()[1]);
 
-		if(name == TEXT("MODE"))
+		if(name == L"MODE")
 		{
 			auto format_desc = core::video_format_desc(value);
 			if(format_desc.format != core::video_format::invalid)
 			{
 				channel()->video_format_desc(format_desc);
-				SetReplyString(TEXT("202 SET MODE OK\r\n"));
+				SetReplyString(L"202 SET MODE OK\r\n");
 			}
 			else
-				SetReplyString(TEXT("501 SET MODE FAILED\r\n"));
+				SetReplyString(L"501 SET MODE FAILED\r\n");
 		}
 		else
 		{
-			this->SetReplyString(TEXT("403 SET ERROR\r\n"));
+			this->SetReplyString(L"403 SET ERROR\r\n");
 		}
 	}
 	catch(...)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(TEXT("501 SET FAILED\r\n"));
+		SetReplyString(L"501 SET FAILED\r\n");
 		return false;
 	}
 
@@ -1856,16 +1854,16 @@ bool ThumbnailCommand::DoExecute()
 {
 	std::wstring command = boost::to_upper_copy(parameters()[0]);
 
-	if (command == TEXT("RETRIEVE"))
+	if (command == L"RETRIEVE")
 		return DoExecuteRetrieve();
-	else if (command == TEXT("LIST"))
+	else if (command == L"LIST")
 		return DoExecuteList();
-	else if (command == TEXT("GENERATE"))
+	else if (command == L"GENERATE")
 		return DoExecuteGenerate();
-	else if (command == TEXT("GENERATE_ALL"))
+	else if (command == L"GENERATE_ALL")
 		return DoExecuteGenerateAll();
 
-	SetReplyString(TEXT("403 THUMBNAIL ERROR\r\n"));
+	SetReplyString(L"403 THUMBNAIL ERROR\r\n");
 	return false;
 }
 
@@ -1873,19 +1871,19 @@ bool ThumbnailCommand::DoExecuteRetrieve()
 {
 	if(parameters().size() < 2) 
 	{
-		SetReplyString(TEXT("402 THUMBNAIL RETRIEVE ERROR\r\n"));
+		SetReplyString(L"402 THUMBNAIL RETRIEVE ERROR\r\n");
 		return false;
 	}
 
 	std::wstring filename = env::thumbnails_folder();
 	filename.append(parameters()[1]);
-	filename.append(TEXT(".png"));
+	filename.append(L".png");
 
 	std::wstring file_contents = read_file_base64(boost::filesystem::wpath(filename));
 
 	if (file_contents.empty())
 	{
-		SetReplyString(TEXT("404 THUMBNAIL RETRIEVE ERROR\r\n"));
+		SetReplyString(L"404 THUMBNAIL RETRIEVE ERROR\r\n");
 		return false;
 	}
 
@@ -1901,7 +1899,7 @@ bool ThumbnailCommand::DoExecuteRetrieve()
 bool ThumbnailCommand::DoExecuteList()
 {
 	std::wstringstream replyString;
-	replyString << TEXT("200 THUMBNAIL LIST OK\r\n");
+	replyString << L"200 THUMBNAIL LIST OK\r\n";
 
 	for (boost::filesystem::recursive_directory_iterator itr(env::thumbnails_folder()), end; itr != end; ++itr)
 	{      
@@ -1912,7 +1910,7 @@ bool ThumbnailCommand::DoExecuteList()
 
 			auto relativePath = boost::filesystem::wpath(itr->path().wstring().substr(env::thumbnails_folder().size()-1, itr->path().wstring().size()));
 
-			auto str = relativePath.replace_extension(L"").native();
+			auto str = relativePath.replace_extension(L"").generic_wstring();
 			if(str[0] == '\\' || str[0] == '/')
 				str = std::wstring(str.begin() + 1, str.end());
 
@@ -1924,7 +1922,7 @@ bool ThumbnailCommand::DoExecuteList()
 		}
 	}
 
-	replyString << TEXT("\r\n");
+	replyString << L"\r\n";
 
 	SetReplyString(boost::to_upper_copy(replyString.str()));
 	return true;
@@ -1969,14 +1967,14 @@ bool ThumbnailCommand::DoExecuteGenerateAll()
 bool KillCommand::DoExecute()
 {
 	shutdown_server_now_->set_value(false);	//false for not attempting to restart
-	SetReplyString(TEXT("202 KILL OK\r\n"));
+	SetReplyString(L"202 KILL OK\r\n");
 	return true;
 }
 
 bool RestartCommand::DoExecute()
 {
 	shutdown_server_now_->set_value(true);	//true for attempting to restart
-	SetReplyString(TEXT("202 RESTART OK\r\n"));
+	SetReplyString(L"202 RESTART OK\r\n");
 	return true;
 }
 

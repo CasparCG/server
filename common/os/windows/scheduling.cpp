@@ -19,8 +19,18 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#pragma once
+#include "../../stdafx.h"
 
-#ifdef WIN32
-#include "os/windows/windows.h"
-#endif
+#include "../scheduling.h"
+
+#include "windows.h"
+
+namespace caspar {
+	
+void set_priority_of_current_thread(thread_priority priority)
+{
+	if (priority == thread_priority::LOW)
+		SetThreadPriority(GetCurrentThread(), BELOW_NORMAL_PRIORITY_CLASS);
+}
+
+}
