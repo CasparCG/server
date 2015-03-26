@@ -22,7 +22,7 @@
  
 #pragma once
 
-#include "ciicommand.h"
+#include "CIICommand.h"
 
 namespace caspar { namespace protocol {
 

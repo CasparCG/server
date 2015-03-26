@@ -69,7 +69,7 @@ struct video_channel::impl final
 	caspar::core::mixer									mixer_;
 	caspar::core::stage									stage_;	
 
-	executor											executor_			= L"video_channel";
+	executor											executor_			{ L"video_channel" };
 public:
 	impl(int index, const core::video_format_desc& format_desc, std::unique_ptr<image_mixer> image_mixer)  
 		: monitor_subject_(spl::make_shared<monitor::subject>(

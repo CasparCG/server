@@ -364,7 +364,7 @@ public:
 				&& translated.second <= 1.0
 				&& layer.second.collides(translated.first, translated.second))
 			{
-				return std::make_pair(transform, &layer.second);
+				return std::make_pair(transform, static_cast<interaction_sink*>(&layer.second));
 			}
 		}
 

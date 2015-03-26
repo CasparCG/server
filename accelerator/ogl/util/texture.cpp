@@ -19,7 +19,7 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../../stdafx.h"
+#include "../../StdAfx.h"
 
 #include "texture.h"
 
@@ -28,7 +28,7 @@
 #include <common/except.h>
 #include <common/gl/gl_check.h>
 
-#include <gl/glew.h>
+#include <GL/glew.h>
 
 #include <tbb/atomic.h>
 

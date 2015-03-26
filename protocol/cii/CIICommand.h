@@ -22,6 +22,8 @@
  
 #pragma once
 
+#include <memory>
+
 namespace caspar { namespace protocol {
 namespace cii {
 
@@ -34,7 +36,7 @@ public:
 
 	virtual void Execute() = 0;
 };
-typedef std::tr1::shared_ptr<ICIICommand> CIICommandPtr;
+typedef std::shared_ptr<ICIICommand> CIICommandPtr;
 
 }	//namespace cii
 }}	//namespace caspar

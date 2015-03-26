@@ -56,6 +56,7 @@
 #include <tbb/spin_mutex.h>
 
 #include <numeric>
+#include <cstring>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -304,7 +305,7 @@ public:
 
 		oc_->oformat = output_format_.format;
 				
-		strcpy_s(oc_->filename, filename_.c_str());
+		std::strcpy(oc_->filename, filename_.c_str());
 		
 		//  Add the audio and video streams using the default format codecs	and initialize the codecs.
 		video_st_ = add_video_stream(options);

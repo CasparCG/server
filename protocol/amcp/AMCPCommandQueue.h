@@ -25,7 +25,7 @@
 
 #include <common/executor.h>
 
-#include <tbb\mutex.h>
+#include <tbb/mutex.h>
 
 namespace caspar { namespace protocol { namespace amcp {
 

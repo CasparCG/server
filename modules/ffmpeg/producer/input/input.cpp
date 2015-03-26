@@ -19,7 +19,7 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../../stdafx.h"
+#include "../../StdAfx.h"
 
 #include "input.h"
 
@@ -116,8 +116,8 @@ struct input::impl : boost::noncopyable
 	double								  		fps_					= read_fps(*format_context_, 0.0);
 	uint32_t							  		frame_number_			= 0;
 
-	stream								  		video_stream_			= av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
-	stream								  		audio_stream_			= av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_AUDIO, -1, -1, 0, 0);
+	stream								  		video_stream_			{ av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0) };
+	stream								  		audio_stream_			{ av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_AUDIO, -1, -1, 0, 0) };
 
 	boost::optional<uint32_t>			  		seek_target_;
 
@@ -291,7 +291,7 @@ private:
 		{
 			try
 			{
-				boost::this_thread::sleep(boost::posix_time::milliseconds(1));
+				boost::this_thread::sleep_for(boost::chrono::milliseconds(1));
 				
 				{
 					boost::unique_lock<boost::mutex> lock(mutex_);

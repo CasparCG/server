@@ -38,8 +38,6 @@
 #endif
 
 #include <cstdint>
-#include <winsock2.h>
-#include <tchar.h>
 #include <sstream>
 #include <memory>
 #include <functional>
