@@ -44,6 +44,7 @@
 #include <common/assert.h>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/rational.hpp>
 
 #include <fstream>
 
@@ -556,6 +557,34 @@ bool is_valid_file(const std::wstring& filename)
 	pb.buf_size = static_cast<int>(buf.size());
 
 	return av_probe_input_format2(&pb, true, &score) != nullptr;
+}
+
+bool try_get_duration(const std::wstring filename, std::int64_t& duration, boost::rational<std::int64_t>& time_base)
+{
+	AVFormatContext* weak_context = nullptr;
+	if (avformat_open_input(&weak_context, u8(filename).c_str(), nullptr, nullptr) < 0)
+		return false;
+
+	std::shared_ptr<AVFormatContext> context(weak_context, av_close_input_file);
+
+	context->probesize = context->probesize / 10;
+	context->max_analyze_duration = context->probesize / 10;
+
+	if (avformat_find_stream_info(context.get(), nullptr) < 0)
+		return false;
+
+	const auto fps = read_fps(*context, 1.0);
+
+	const auto rational_fps = boost::rational<std::int64_t>(static_cast<int>(fps * AV_TIME_BASE), AV_TIME_BASE);
+
+	duration = boost::rational_cast<std::int64_t>(context->duration * rational_fps / AV_TIME_BASE);
+
+	if (rational_fps == 0)
+		return false;
+
+	time_base = 1 / rational_fps;
+
+	return true;
 }
 
 std::wstring probe_stem(const std::wstring& stem)

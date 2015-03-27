@@ -27,17 +27,28 @@
 #include "producer/flash_producer.h"
 
 #include <common/env.h>
+#include <common/os/windows/windows.h>
 
-#ifdef WIN32 
-#include <Windows.h>
-#endif
+#include <core/producer/media_info/media_info.h>
+#include <core/producer/media_info/media_info_repository.h>
+
+#include <string>
 
 namespace caspar { namespace flash {
 
-void init()
+void init(const spl::shared_ptr<core::media_info_repository>& media_info_repo)
 {
 	core::register_producer_factory(create_ct_producer);
 	core::register_producer_factory(create_swf_producer);
+	media_info_repo->register_extractor([](const std::wstring& file, const std::wstring& extension, core::media_info& info)
+	{
+		if (extension != L".CT" && extension != L".SWF")
+			return false;
+
+		info.clip_type = L"MOVIE";
+
+		return true;
+	});
 }
 
 std::wstring cg_version()
