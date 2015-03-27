@@ -25,6 +25,7 @@
 
 #include <core/video_channel.h>
 #include <core/thumbnail_generator.h>
+#include <core/producer/media_info/media_info_repository.h>
 
 #include <common/memory.h>
 
@@ -41,6 +42,7 @@ public:
 	AMCPProtocolStrategy(
 		const std::vector<spl::shared_ptr<core::video_channel>>& channels, 
 		const std::shared_ptr<core::thumbnail_generator>& thumb_gen,
+		const spl::shared_ptr<core::media_info_repository>& media_info_repo,
 		std::promise<bool>& shutdown_server_now);
 
 	virtual ~AMCPProtocolStrategy();

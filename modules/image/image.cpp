@@ -27,6 +27,8 @@
 
 #include <core/producer/frame_producer.h>
 #include <core/consumer/frame_consumer.h>
+#include <core/producer/media_info/media_info.h>
+#include <core/producer/media_info/media_info_repository.h>
 
 #include <common/utf.h>
 
@@ -34,21 +36,35 @@
 
 namespace caspar { namespace image {
 
-void init()
+void init(const spl::shared_ptr<core::media_info_repository>& repo)
 {
 	FreeImage_Initialise();
 	core::register_producer_factory(create_scroll_producer);
 	core::register_producer_factory(create_producer);
 	core::register_thumbnail_producer_factory(create_thumbnail_producer);
 	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
+	repo->register_extractor([](const std::wstring& file, const std::wstring& extension, core::media_info& info)
+	{
+		if (extension == L".TGA"
+			|| extension == L".COL"
+			|| extension == L".PNG"
+			|| extension == L".JPEG"
+			|| extension == L".JPG"
+			|| extension == L".GIF"
+			|| extension == L".BMP")
+		{
+			info.clip_type = L"STILL";
+
+			return true;
+		}
+
+		return false;
+	});
 }
 
 void uninit()
 {
 	FreeImage_DeInitialise();
-//	core::register_producer_factory(create_scroll_producer);
-//	core::register_producer_factory(create_producer);
-//	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
 }
 
 

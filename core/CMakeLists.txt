@@ -25,6 +25,8 @@ set(SOURCES
 
 		producer/draw/freehand_producer.cpp
 
+		producer/media_info/in_memory_media_info_repository.cpp
+
 		producer/scene/const_producer.cpp
 		producer/scene/expression_parser.cpp
 		producer/scene/hotswap_producer.cpp
@@ -78,6 +80,10 @@ set(HEADERS
 
 		producer/draw/freehand_producer.h
 
+		producer/media_info/in_memory_media_info_repository.h
+		producer/media_info/media_info.h
+		producer/media_info/media_info_repository.h
+
 		producer/scene/const_producer.h
 		producer/scene/expression_parser.h
 		producer/scene/hotswap_producer.h
@@ -125,6 +131,7 @@ source_group(sources\\frame frame/*)
 source_group(sources\\interaction interaction/*)
 source_group(sources\\mixer mixer/*)
 source_group(sources\\producer\\draw producer/draw/*)
+source_group(sources\\producer\\media_info producer/media_info/*)
 source_group(sources\\producer\\scene producer/scene/*)
 source_group(sources\\producer\\text\\utils producer/text/utils/*)
 source_group(sources\\producer\\text producer/text/*)
