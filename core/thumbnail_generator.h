@@ -23,7 +23,7 @@
 
 #include <boost/noncopyable.hpp>
 
-#include "memory.h"
+#include <common/memory.h>
 #include <common/filesystem_monitor.h>
 
 namespace caspar { namespace core {
@@ -31,6 +31,7 @@ namespace caspar { namespace core {
 class ogl_device;
 class read_frame;
 struct video_format_desc;
+struct media_info_repository;
 
 typedef std::function<void (
 		const class const_frame& frame,
@@ -51,7 +52,8 @@ public:
 			const video_format_desc& render_video_mode,
 			std::unique_ptr<class image_mixer> image_mixer,
 			int generate_delay_millis,
-			const thumbnail_creator& thumbnail_creator);
+			const thumbnail_creator& thumbnail_creator,
+			spl::shared_ptr<media_info_repository> media_info_repo);
 	~thumbnail_generator();
 	void generate(const std::wstring& media_file);
 	void generate_all();

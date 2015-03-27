@@ -44,6 +44,8 @@
 #include "frame/frame.h"
 #include "frame/draw_frame.h"
 #include "frame/frame_transform.h"
+#include "producer/media_info/media_info.h"
+#include "producer/media_info/media_info_repository.h"
 
 namespace caspar { namespace core {
 
@@ -96,17 +98,18 @@ struct thumbnail_output
 struct thumbnail_generator::impl
 {
 private:
-	boost::filesystem::wpath media_path_;
-	boost::filesystem::wpath thumbnails_path_;
-	int width_;
-	int height_;
-	spl::shared_ptr<image_mixer> image_mixer_;
-	spl::shared_ptr<diagnostics::graph> graph_;
-	video_format_desc format_desc_;
-	spl::unique_ptr<thumbnail_output> output_;
-	mixer mixer_;
-	thumbnail_creator thumbnail_creator_;
-	filesystem_monitor::ptr monitor_;
+	boost::filesystem::wpath				media_path_;
+	boost::filesystem::wpath				thumbnails_path_;
+	int										width_;
+	int										height_;
+	spl::shared_ptr<image_mixer>			image_mixer_;
+	spl::shared_ptr<diagnostics::graph>		graph_;
+	video_format_desc						format_desc_;
+	spl::unique_ptr<thumbnail_output>		output_;
+	mixer									mixer_;
+	thumbnail_creator						thumbnail_creator_;
+	spl::shared_ptr<media_info_repository>	media_info_repo_;
+	filesystem_monitor::ptr					monitor_;
 public:
 	impl(
 			filesystem_monitor_factory& monitor_factory,
@@ -117,7 +120,8 @@ public:
 			const video_format_desc& render_video_mode,
 			std::unique_ptr<image_mixer> image_mixer,
 			int generate_delay_millis,
-			const thumbnail_creator& thumbnail_creator)
+			const thumbnail_creator& thumbnail_creator,
+			spl::shared_ptr<media_info_repository> media_info_repo)
 		: media_path_(media_path)
 		, thumbnails_path_(thumbnails_path)
 		, width_(width)
@@ -127,6 +131,7 @@ public:
 		, output_(spl::make_unique<thumbnail_output>(generate_delay_millis))
 		, mixer_(graph_, image_mixer_)
 		, thumbnail_creator_(thumbnail_creator)
+		, media_info_repo_(std::move(media_info_repo))
 		, monitor_(monitor_factory.create(
 				media_path,
 				filesystem_event::ALL,
@@ -211,6 +216,7 @@ public:
 		case filesystem_event::REMOVED:
 			auto relative_without_extension = get_relative_without_extension(file, media_path_);
 			boost::filesystem::remove(thumbnails_path_ / (relative_without_extension + L".png"));
+			media_info_repo_->remove(file.wstring());
 
 			break;
 		}
@@ -289,6 +295,8 @@ public:
 			try
 			{
 				raw_frame = producer->create_thumbnail_frame();
+				media_info_repo_->remove(file.wstring());
+				media_info_repo_->get(file.wstring());
 			}
 			catch (const boost::thread_interrupted&)
 			{
@@ -348,7 +356,8 @@ thumbnail_generator::thumbnail_generator(
 		const video_format_desc& render_video_mode,
 		std::unique_ptr<image_mixer> image_mixer,
 		int generate_delay_millis,
-		const thumbnail_creator& thumbnail_creator)
+		const thumbnail_creator& thumbnail_creator,
+		spl::shared_ptr<media_info_repository> media_info_repo)
 		: impl_(new impl(
 				monitor_factory,
 				media_path,
@@ -357,7 +366,8 @@ thumbnail_generator::thumbnail_generator(
 				render_video_mode,
 				std::move(image_mixer),
 				generate_delay_millis,
-				thumbnail_creator))
+				thumbnail_creator,
+				media_info_repo))
 {
 }
 

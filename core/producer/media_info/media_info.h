@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+* Copyright 2013 Sveriges Television AB http://casparcg.com/
 *
 * This file is part of CasparCG (www.casparcg.com).
 *
@@ -16,31 +16,27 @@
 * You should have received a copy of the GNU General Public License
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
-* Author: Robert Nagy, ronag89@gmail.com
+* Author: Helge Norberg, helge.norberg@svt.se
 */
 
 #pragma once
 
+#include <cstdint>
 #include <string>
 
-#include <common/memory.h>
+#include <boost/rational.hpp>
 
-namespace caspar {
-namespace core {
+namespace caspar { namespace core {
 
-struct media_info_repository;
+struct media_info
+{
+	std::int64_t					duration	= 0;
+	boost::rational<std::int64_t>	time_base;
+	std::wstring					clip_type;
 
-}
-
-namespace ffmpeg {
-
-void init(const spl::shared_ptr<core::media_info_repository>& media_info_repo);
-void uninit();
-
-std::wstring avcodec_version();
-std::wstring avformat_version();
-std::wstring avutil_version();
-std::wstring avfilter_version();
-std::wstring swscale_version();
+	media_info()
+	{
+	}
+};
 
 }}
