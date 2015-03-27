@@ -39,6 +39,9 @@
 #include <core/producer/text/text_producer.h>
 #include <core/consumer/output.h>
 #include <core/thumbnail_generator.h>
+#include <core/producer/media_info/media_info.h>
+#include <core/producer/media_info/media_info_repository.h>
+#include <core/producer/media_info/in_memory_media_info_repository.h>
 #include <core/diagnostics/subject_diagnostics.h>
 #include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
@@ -73,6 +76,8 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 
+#include <tbb/atomic.h>
+
 #include <future>
 
 namespace caspar {
@@ -91,18 +96,23 @@ struct server::impl : boost::noncopyable
 	osc::client											osc_client_;
 	std::vector<std::shared_ptr<void>>					predefined_osc_subscriptions_;
 	std::vector<spl::shared_ptr<video_channel>>			channels_;
+	spl::shared_ptr<media_info_repository>				media_info_repo_;
+	boost::thread										initial_media_info_thread_;
+	tbb::atomic<bool>									running_;
 	std::shared_ptr<thumbnail_generator>				thumbnail_generator_;
 	std::promise<bool>&									shutdown_server_now_;
 
 	explicit impl(std::promise<bool>& shutdown_server_now)		
 		: accelerator_(env::properties().get(L"configuration.accelerator", L"auto"))
 		, osc_client_(io_service_manager_.service())
+		, media_info_repo_(create_in_memory_media_info_repository())
 		, shutdown_server_now_(shutdown_server_now)
 	{
+		running_ = true;
 		core::diagnostics::osd::register_sink();
 		diag_subject_->attach_parent(monitor_subject_);
 
-		ffmpeg::init();
+		ffmpeg::init(media_info_repo_);
 		CASPAR_LOG(info) << L"Initialized ffmpeg module.";
 							  
 		bluefish::init();	  
@@ -117,10 +127,10 @@ struct server::impl : boost::noncopyable
 		screen::init();		  
 		CASPAR_LOG(info) << L"Initialized ogl module.";
 
-		image::init();		  
+		image::init(media_info_repo_);
 		CASPAR_LOG(info) << L"Initialized image module.";
 
-		flash::init();		  
+		flash::init(media_info_repo_);
 		CASPAR_LOG(info) << L"Initialized flash module.";
 
 		psd::init();		  
@@ -142,10 +152,15 @@ struct server::impl : boost::noncopyable
 
 		setup_osc(env::properties());
 		CASPAR_LOG(info) << L"Initialized osc.";
+
+		start_initial_media_info_scan();
+		CASPAR_LOG(info) << L"Started initial media information retrieval.";
 	}
 
 	~impl()
 	{
+		running_ = false;
+		initial_media_info_thread_.join();
 		thumbnail_generator_.reset();
 		primary_amcp_server_.reset();
 		async_servers_.clear();
@@ -267,7 +282,8 @@ struct server::impl : boost::noncopyable
 			core::video_format_desc(pt.get(L"configuration.thumbnails.video-mode", L"720p2500")),
 			accelerator_.create_image_mixer(),
 			pt.get(L"configuration.thumbnails.generate-delay-millis", 2000),
-			&image::write_cropped_png));
+			&image::write_cropped_png,
+			media_info_repo_));
 
 		CASPAR_LOG(info) << L"Initialized thumbnail generator.";
 	}
@@ -306,7 +322,7 @@ struct server::impl : boost::noncopyable
 		using namespace IO;
 
 		if(boost::iequals(name, L"AMCP"))
-			return wrap_legacy_protocol("\r\n", spl::make_shared<amcp::AMCPProtocolStrategy>(channels_, thumbnail_generator_, shutdown_server_now_));
+			return wrap_legacy_protocol("\r\n", spl::make_shared<amcp::AMCPProtocolStrategy>(channels_, thumbnail_generator_, media_info_repo_, shutdown_server_now_));
 		else if(boost::iequals(name, L"CII"))
 			return wrap_legacy_protocol("\r\n", spl::make_shared<cii::CIIProtocolStrategy>(channels_));
 		else if(boost::iequals(name, L"CLOCK"))
@@ -317,6 +333,27 @@ struct server::impl : boost::noncopyable
 		CASPAR_THROW_EXCEPTION(caspar_exception() << arg_name_info(L"name") << arg_value_info(name) << msg_info(L"Invalid protocol"));
 	}
 
+	void start_initial_media_info_scan()
+	{
+		initial_media_info_thread_ = boost::thread([this]
+		{
+			for (boost::filesystem::wrecursive_directory_iterator iter(env::media_folder()), end; iter != end; ++iter)
+			{
+				if (running_)
+				{
+					if (boost::filesystem::is_regular_file(iter->path()))
+						media_info_repo_->get(iter->path().wstring());
+				}
+				else
+				{
+					CASPAR_LOG(info) << L"Initial media information retrieval aborted.";
+					return;
+				}
+			}
+
+			CASPAR_LOG(info) << L"Initial media information retrieval finished.";
+		});
+	}
 };
 
 server::server(std::promise<bool>& shutdown_server_now) : impl_(new impl(shutdown_server_now)){}
@@ -326,6 +363,7 @@ const std::vector<spl::shared_ptr<video_channel>> server::channels() const
 	return impl_->channels_;
 }
 std::shared_ptr<core::thumbnail_generator> server::get_thumbnail_generator() const {return impl_->thumbnail_generator_; }
+spl::shared_ptr<media_info_repository> server::get_media_info_repo() const { return impl_->media_info_repo_; }
 core::monitor::subject& server::monitor_output() { return *impl_->monitor_subject_; }
 
 }

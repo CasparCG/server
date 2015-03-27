@@ -189,7 +189,14 @@ void do_run(server& caspar_server, std::promise<bool>& shutdown_server_now)
 	
 	// Create a amcp parser for console commands.
 	//protocol::amcp::AMCPProtocolStrategy amcp(caspar_server.channels());
-	auto amcp = spl::make_shared<caspar::IO::delimiter_based_chunking_strategy_factory<wchar_t>>(L"\r\n", spl::make_shared<caspar::IO::legacy_strategy_adapter_factory>(spl::make_shared<protocol::amcp::AMCPProtocolStrategy>(caspar_server.channels(), caspar_server.get_thumbnail_generator(), shutdown_server_now)))->create(console_client);
+	auto amcp = spl::make_shared<caspar::IO::delimiter_based_chunking_strategy_factory<wchar_t>>(
+			L"\r\n",
+			spl::make_shared<caspar::IO::legacy_strategy_adapter_factory>(
+					spl::make_shared<protocol::amcp::AMCPProtocolStrategy>(
+							caspar_server.channels(),
+							caspar_server.get_thumbnail_generator(),
+							caspar_server.get_media_info_repo(),
+							shutdown_server_now)))->create(console_client);
 
 	std::wstring wcmd;
 	while(true)

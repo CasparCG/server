@@ -28,6 +28,8 @@
 #include <core/frame/pixel_format.h>
 #include <core/mixer/audio/audio_mixer.h>
 
+#include <boost/rational.hpp>
+
 #include <array>
 
 #if defined(_MSC_VER)
@@ -79,5 +81,6 @@ std::wstring print_mode(int width, int height, double fps, bool interlaced);
 
 std::wstring probe_stem(const std::wstring& stem);
 bool is_valid_file(const std::wstring& filename);
+bool try_get_duration(const std::wstring filename, std::int64_t& duration, boost::rational<std::int64_t>& time_base);
 
 }}

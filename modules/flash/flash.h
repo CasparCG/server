@@ -23,9 +23,19 @@
 
 #include <string>
 
-namespace caspar { namespace flash {
+#include <common/memory.h>
 
-void init();
+namespace caspar {
+
+namespace core {
+
+struct media_info_repository;
+
+}
+
+namespace flash {
+
+void init(const spl::shared_ptr<core::media_info_repository>& media_info_repo);
 
 std::wstring cg_version();
 std::wstring version();

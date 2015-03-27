@@ -44,6 +44,8 @@
 #include <core/mixer/mixer.h>
 #include <core/consumer/output.h>
 #include <core/thumbnail_generator.h>
+#include <core/producer/media_info/media_info.h>
+#include <core/producer/media_info/media_info_repository.h>
 #include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
 
@@ -57,14 +59,12 @@
 #include <modules/flash/producer/cg_proxy.h>
 #include <modules/ffmpeg/producer/util/util.h>
 #include <modules/screen/screen.h>
-#include <modules/reroute/producer/reroute_producer.h>
 
 #include <algorithm>
 #include <locale>
 #include <fstream>
 #include <memory>
 #include <cctype>
-//#include <io.h>
 #include <future>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
@@ -196,53 +196,47 @@ std::wstring read_file(const boost::filesystem::wpath& file)
 	return read_latin1_file(file);
 }
 
-std::wstring MediaInfo(const boost::filesystem::path& path)
+std::wstring MediaInfo(const boost::filesystem::path& path, const spl::shared_ptr<media_info_repository>& media_info_repo)
 {
-	if(boost::filesystem::is_regular_file(path))
-	{
-		std::wstring clipttype = L"N/A";
-		std::wstring extension = boost::to_upper_copy(path.extension().wstring());
-		if(extension == L".TGA" || extension == L".COL" || extension == L".PNG" || extension == L".JPEG" || extension == L".JPG" ||
-			extension == L"GIF" || extension == L"BMP")
-			clipttype = L"STILL";
-		else if(extension == L".WAV" || extension == L".MP3")
-			clipttype = L"AUDIO";
-		else if(extension == L"SWF" || extension == L"CT" || extension == L"DV" || extension == L"MOV" || extension == L"MPG" || extension == L"AVI" || caspar::ffmpeg::is_valid_file(path.wstring()))
-			clipttype = L"MOVIE";
+	if (!boost::filesystem::is_regular_file(path))
+		return L"";
 
-		if(clipttype != L"N/A")
-		{		
-			auto is_not_digit = [](char c){ return std::isdigit(c) == 0; };
+	auto media_info = media_info_repo->get(path.wstring());
 
-			auto relativePath = boost::filesystem::path(path.wstring().substr(env::media_folder().size()-1, path.wstring().size()));
+	if (!media_info)
+		return L"";
 
-			auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(path)));
-			writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), is_not_digit), writeTimeStr.end());
-			auto writeTimeWStr = std::wstring(writeTimeStr.begin(), writeTimeStr.end());
+	auto is_not_digit = [](char c){ return std::isdigit(c) == 0; };
 
-			auto sizeStr = boost::lexical_cast<std::wstring>(boost::filesystem::file_size(path));
-			sizeStr.erase(std::remove_if(sizeStr.begin(), sizeStr.end(), is_not_digit), sizeStr.end());
-			auto sizeWStr = std::wstring(sizeStr.begin(), sizeStr.end());
-				
-			auto str = relativePath.replace_extension(L"").generic_wstring();
-			while(str.size() > 0 && (str[0] == L'\\' || str[0] == L'/'))
-				str = std::wstring(str.begin() + 1, str.end());
+	auto relativePath = boost::filesystem::wpath(path.wstring().substr(env::media_folder().size() - 1, path.wstring().size()));
 
-			return std::wstring() + L"\"" + str +
-					+ L"\" " + clipttype +
-					+ L" " + sizeStr +
-					+ L" " + writeTimeWStr +
-					+ L"\r\n";
-		}	
-	}
-	return L"";
+	auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(path)));
+	writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), is_not_digit), writeTimeStr.end());
+	auto writeTimeWStr = std::wstring(writeTimeStr.begin(), writeTimeStr.end());
+
+	auto sizeStr = boost::lexical_cast<std::wstring>(boost::filesystem::file_size(path));
+	sizeStr.erase(std::remove_if(sizeStr.begin(), sizeStr.end(), is_not_digit), sizeStr.end());
+	auto sizeWStr = std::wstring(sizeStr.begin(), sizeStr.end());
+
+	auto str = relativePath.replace_extension(L"").generic_wstring();
+	if (str[0] == '\\' || str[0] == '/')
+		str = std::wstring(str.begin() + 1, str.end());
+
+	return std::wstring()
+		+ L"\"" + str +
+		+ L"\" " + media_info->clip_type +
+		+ L" " + sizeStr +
+		+ L" " + writeTimeWStr +
+		+ L" " + boost::lexical_cast<std::wstring>(media_info->duration) +
+		+ L" " + boost::lexical_cast<std::wstring>(media_info->time_base.numerator()) + L"/" + boost::lexical_cast<std::wstring>(media_info->time_base.denominator())
+		+ L"\r\n";
 }
 
-std::wstring ListMedia()
+std::wstring ListMedia(const spl::shared_ptr<media_info_repository>& media_info_repo)
 {	
 	std::wstringstream replyString;
-	for (boost::filesystem::recursive_directory_iterator itr(env::media_folder()), end; itr != end; ++itr)	
-		replyString << MediaInfo(itr->path());
+	for (boost::filesystem::recursive_directory_iterator itr(env::media_folder()), end; itr != end; ++itr)
+		replyString << MediaInfo(itr->path(), media_info_repo);
 	
 	return boost::to_upper_copy(replyString.str());
 }
@@ -1454,7 +1448,7 @@ bool CinfCommand::DoExecute()
 			auto path = itr->path();
 			auto file = path.replace_extension(L"").filename();
 			if(boost::iequals(file.wstring(), parameters().at(0)))
-				info += MediaInfo(itr->path()) + L"\r\n";
+				info += MediaInfo(itr->path(), repo_) + L"\r\n";
 		}
 
 		if(info.empty())
@@ -1632,7 +1626,7 @@ bool ClsCommand::DoExecute()
 	{
 		std::wstringstream replyString;
 		replyString << L"200 CLS OK\r\n";
-		replyString << ListMedia();
+		replyString << ListMedia(repo_);
 		replyString << L"\r\n";
 		SetReplyString(boost::to_upper_copy(replyString.str()));
 	}

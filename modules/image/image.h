@@ -23,9 +23,19 @@
 
 #include <string>
 
-namespace caspar { namespace image {
+#include <common/memory.h>
 
-void init();
+namespace caspar {
+
+namespace core {
+
+struct media_info_repository;
+
+}
+
+namespace image {
+
+void init(const spl::shared_ptr<core::media_info_repository>& repo);
 void uninit();
 
 std::wstring version();

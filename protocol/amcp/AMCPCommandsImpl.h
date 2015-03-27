@@ -19,22 +19,16 @@
 * Author: Nicklas P Andersson
 */
 
- 
-#ifndef __AMCPCOMMANDSIMPL_H__
-#define __AMCPCOMMANDSIMPL_H__
+#pragma once 
 
 #include "AMCPCommand.h"
 
 #include <core/thumbnail_generator.h>
+#include <core/producer/media_info/media_info_repository.h>
 
 #include <future>
 
-namespace caspar { namespace protocol {
-	
-std::wstring ListMedia();
-std::wstring ListTemplates();
-
-namespace amcp {
+namespace caspar { namespace protocol { namespace amcp {
 	
 class ChannelGridCommand : public AMCPCommandBase<0>, AMCPChannelsAwareCommand
 {
@@ -232,9 +226,14 @@ public:
 class ClsCommand : public AMCPCommandBase<0>
 {
 public:
-	explicit ClsCommand(IO::ClientInfoPtr client) : AMCPCommandBase(client) {}
+	explicit ClsCommand(IO::ClientInfoPtr client, const spl::shared_ptr<core::media_info_repository>& repo)
+		: AMCPCommandBase(client)
+		, repo_(repo)
+	{}
 	std::wstring print() const { return L"ClsCommand";}
 	bool DoExecute();
+private:
+	spl::shared_ptr<core::media_info_repository> repo_;
 };
 
 class TlsCommand : public AMCPCommandBase<0>
@@ -248,9 +247,14 @@ public:
 class CinfCommand : public AMCPCommandBase<1>
 {
 public:
-	explicit CinfCommand(IO::ClientInfoPtr client) : AMCPCommandBase(client) {}
+	explicit CinfCommand(IO::ClientInfoPtr client, const spl::shared_ptr<core::media_info_repository>& repo)
+		: AMCPCommandBase(client)
+		, repo_(repo)
+	{}
 	std::wstring print() const { return L"CinfCommand";}
 	bool DoExecute();
+private:
+	spl::shared_ptr<core::media_info_repository> repo_;
 };
 
 class InfoCommand : public AMCPCommandBase<0>, AMCPChannelsAwareCommand
@@ -336,5 +340,3 @@ private:
 
 }	//namespace amcp
 }}	//namespace caspar
-
-#endif	//__AMCPCOMMANDSIMPL_H__
