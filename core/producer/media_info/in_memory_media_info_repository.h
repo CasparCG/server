@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+* Copyright 2013 Sveriges Television AB http://casparcg.com/
 *
 * This file is part of CasparCG (www.casparcg.com).
 *
@@ -16,7 +16,7 @@
 * You should have received a copy of the GNU General Public License
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
-* Author: Robert Nagy, ronag89@gmail.com
+* Author: Helge Norberg, helge.norberg@svt.se
 */
 
 #pragma once
@@ -25,22 +25,8 @@
 
 #include <common/memory.h>
 
-namespace caspar {
-namespace core {
+namespace caspar { namespace core {
 
-struct media_info_repository;
-
-}
-
-namespace ffmpeg {
-
-void init(const spl::shared_ptr<core::media_info_repository>& media_info_repo);
-void uninit();
-
-std::wstring avcodec_version();
-std::wstring avformat_version();
-std::wstring avutil_version();
-std::wstring avfilter_version();
-std::wstring swscale_version();
+spl::shared_ptr<struct media_info_repository> create_in_memory_media_info_repository();
 
 }}

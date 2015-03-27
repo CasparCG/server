@@ -23,11 +23,14 @@
 
 #include "consumer/ffmpeg_consumer.h"
 #include "producer/ffmpeg_producer.h"
+#include "producer/util/util.h"
 
 #include <common/log.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/producer/frame_producer.h>
+#include <core/producer/media_info/media_info.h>
+#include <core/producer/media_info/media_info_repository.h>
 
 #include <tbb/recursive_mutex.h>
 
@@ -195,7 +198,7 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 //}
 //#pragma warning (pop)
 
-void init()
+void init(const spl::shared_ptr<core::media_info_repository>& media_info_repo)
 {
 	av_lockmgr_register(ffmpeg_lock_callback);
 	av_log_set_callback(log_callback);
@@ -208,6 +211,26 @@ void init()
 	
 	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
 	core::register_producer_factory(create_producer);
+	
+	media_info_repo->register_extractor(
+			[](const std::wstring& file, const std::wstring& extension, core::media_info& info) -> bool
+			{
+				// TODO: merge thumbnail generation from 2.0
+				//auto disable_logging = temporary_disable_logging_for_thread(true);
+				if (extension == L".WAV" || extension == L".MP3")
+				{
+					info.clip_type = L"AUDIO";
+					return true;
+				}
+
+				if (!is_valid_file(file))
+					return false;
+
+				info.clip_type = L"MOVIE";
+
+				return try_get_duration(file, info.duration, info.time_base);
+			});
+
 }
 
 void uninit()
