@@ -73,7 +73,6 @@ include_directories(..)
 include_directories(${BOOST_INCLUDE_PATH})
 include_directories(${RXCPP_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_PATH})
-include_directories(${FFMPEG_INCLUDE_PATH})
 
 source_group(sources\\amcp amcp/*)
 source_group(sources\\asio asio/*)
@@ -84,4 +83,4 @@ source_group(sources\\osc osc/*)
 source_group(sources\\util util/*)
 source_group(sources ./*)
 
-target_link_libraries(protocol common core ffmpeg flash reroute)
+target_link_libraries(protocol common core flash reroute)
