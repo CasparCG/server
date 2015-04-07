@@ -31,12 +31,20 @@
 
 #include <core/producer/media_info/media_info.h>
 #include <core/producer/media_info/media_info_repository.h>
+#include <core/system_info_provider.h>
+
+#include <boost/property_tree/ptree.hpp>
 
 #include <string>
 
 namespace caspar { namespace flash {
 
-void init(const spl::shared_ptr<core::media_info_repository>& media_info_repo)
+std::wstring version();
+std::wstring cg_version();
+
+void init(
+		const spl::shared_ptr<core::media_info_repository>& media_info_repo,
+		const spl::shared_ptr<core::system_info_provider_repository>& info_provider_repo)
 {
 	core::register_producer_factory(create_ct_producer);
 	core::register_producer_factory(create_swf_producer);
@@ -49,6 +57,12 @@ void init(const spl::shared_ptr<core::media_info_repository>& media_info_repo)
 
 		return true;
 	});
+	info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
+	{
+		info.add(L"system.flash", version());
+	});
+	info_provider_repo->register_version_provider(L"FLASH", &version);
+	info_provider_repo->register_version_provider(L"TEMPLATEHOST", &cg_version);
 }
 
 std::wstring cg_version()

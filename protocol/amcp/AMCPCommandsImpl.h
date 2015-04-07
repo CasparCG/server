@@ -25,6 +25,7 @@
 
 #include <core/thumbnail_generator.h>
 #include <core/producer/media_info/media_info_repository.h>
+#include <core/system_info_provider.h>
 
 #include <future>
 
@@ -260,17 +261,28 @@ private:
 class InfoCommand : public AMCPCommandBase<0>, AMCPChannelsAwareCommand
 {
 public:
-	InfoCommand(IO::ClientInfoPtr client, const std::vector<channel_context>& channels) : AMCPChannelsAwareCommand(channels), AMCPCommandBase(client) {}
+	InfoCommand(IO::ClientInfoPtr client, const std::vector<channel_context>& channels, const spl::shared_ptr<core::system_info_provider_repository>& repo)
+		: AMCPChannelsAwareCommand(channels)
+		, AMCPCommandBase(client)
+		, repo_(repo)
+	{}
 	std::wstring print() const { return L"InfoCommand";}
 	bool DoExecute();
+private:
+	spl::shared_ptr<core::system_info_provider_repository> repo_;
 };
 
 class VersionCommand : public AMCPCommandBase<0>
 {
 public:
-	explicit VersionCommand(IO::ClientInfoPtr client) : AMCPCommandBase(client) {}
+	explicit VersionCommand(IO::ClientInfoPtr client, const spl::shared_ptr<core::system_info_provider_repository>& repo)
+		: AMCPCommandBase(client)
+		, repo_(repo)
+	{}
 	std::wstring print() const { return L"VersionCommand";}
 	bool DoExecute();
+private:
+	spl::shared_ptr<core::system_info_provider_repository> repo_;
 };
 
 class ByeCommand : public AMCPCommandBase<0>

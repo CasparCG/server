@@ -51,20 +51,23 @@ using IO::ClientInfoPtr;
 struct AMCPProtocolStrategy::impl
 {
 private:
-	std::vector<channel_context>					channels_;
-	std::vector<AMCPCommandQueue::ptr_type>			commandQueues_;
-	std::shared_ptr<core::thumbnail_generator>		thumb_gen_;
-	spl::shared_ptr<core::media_info_repository>	media_info_repo_;
-	std::promise<bool>&								shutdown_server_now_;
+	std::vector<channel_context>							channels_;
+	std::vector<AMCPCommandQueue::ptr_type>					commandQueues_;
+	std::shared_ptr<core::thumbnail_generator>				thumb_gen_;
+	spl::shared_ptr<core::media_info_repository>			media_info_repo_;
+	spl::shared_ptr<core::system_info_provider_repository>	system_info_provider_repo_;
+	std::promise<bool>&										shutdown_server_now_;
 
 public:
 	impl(
 			const std::vector<spl::shared_ptr<core::video_channel>>& channels,
 			const std::shared_ptr<core::thumbnail_generator>& thumb_gen,
 			const spl::shared_ptr<core::media_info_repository>& media_info_repo,
+			const spl::shared_ptr<core::system_info_provider_repository>& system_info_provider_repo,
 			std::promise<bool>& shutdown_server_now)
 		: thumb_gen_(thumb_gen)
 		, media_info_repo_(media_info_repo)
+		, system_info_provider_repo_(system_info_provider_repo)
 		, shutdown_server_now_(shutdown_server_now)
 	{
 		commandQueues_.push_back(std::make_shared<AMCPCommandQueue>());
@@ -355,20 +358,20 @@ private:
 	AMCPCommand::ptr_type create_command(const std::wstring& str, ClientInfoPtr client)
 	{
 		std::wstring s = boost::to_upper_copy(str);
-		if(s == L"DIAG")				return std::make_shared<DiagnosticsCommand>(client);
-		else if(s == L"CHANNEL_GRID")	return std::make_shared<ChannelGridCommand>(client, channels_);
-		else if(s == L"DATA")			return std::make_shared<DataCommand>(client);
-		else if(s == L"CINF")			return std::make_shared<CinfCommand>(client, media_info_repo_);
-		else if(s == L"INFO")			return std::make_shared<InfoCommand>(client, channels_);
-		else if(s == L"CLS")			return std::make_shared<ClsCommand>(client, media_info_repo_);
-		else if(s == L"TLS")			return std::make_shared<TlsCommand>(client);
-		else if(s == L"VERSION")		return std::make_shared<VersionCommand>(client);
-		else if(s == L"BYE")			return std::make_shared<ByeCommand>(client);
-		else if(s == L"LOCK")			return std::make_shared<LockCommand>(client, channels_);
-		else if(s == L"LOG")			return std::make_shared<LogCommand>(client);
-		else if(s == L"THUMBNAIL")		return std::make_shared<ThumbnailCommand>(client, thumb_gen_);
-		else if(s == L"KILL")			return std::make_shared<KillCommand>(client, shutdown_server_now_);
-		else if(s == L"RESTART")		return std::make_shared<RestartCommand>(client, shutdown_server_now_);
+		if (     s == L"DIAG")			return std::make_shared<DiagnosticsCommand>(client);
+		else if (s == L"CHANNEL_GRID")	return std::make_shared<ChannelGridCommand>(client, channels_);
+		else if (s == L"DATA")			return std::make_shared<DataCommand>(client);
+		else if (s == L"CINF")			return std::make_shared<CinfCommand>(client, media_info_repo_);
+		else if (s == L"INFO")			return std::make_shared<InfoCommand>(client, channels_, system_info_provider_repo_);
+		else if (s == L"CLS")			return std::make_shared<ClsCommand>(client, media_info_repo_);
+		else if (s == L"TLS")			return std::make_shared<TlsCommand>(client);
+		else if (s == L"VERSION")		return std::make_shared<VersionCommand>(client, system_info_provider_repo_);
+		else if (s == L"BYE")			return std::make_shared<ByeCommand>(client);
+		else if (s == L"LOCK")			return std::make_shared<LockCommand>(client, channels_);
+		else if (s == L"LOG")			return std::make_shared<LogCommand>(client);
+		else if (s == L"THUMBNAIL")		return std::make_shared<ThumbnailCommand>(client, thumb_gen_);
+		else if (s == L"KILL")			return std::make_shared<KillCommand>(client, shutdown_server_now_);
+		else if (s == L"RESTART")		return std::make_shared<RestartCommand>(client, shutdown_server_now_);
 
 		return nullptr;
 	}
@@ -401,8 +404,9 @@ AMCPProtocolStrategy::AMCPProtocolStrategy(
 		const std::vector<spl::shared_ptr<core::video_channel>>& channels,
 		const std::shared_ptr<core::thumbnail_generator>& thumb_gen,
 		const spl::shared_ptr<core::media_info_repository>& media_info_repo,
+		const spl::shared_ptr<core::system_info_provider_repository>& system_info_provider_repo,
 		std::promise<bool>& shutdown_server_now)
-	: impl_(spl::make_unique<impl>(channels, thumb_gen, media_info_repo, shutdown_server_now))
+	: impl_(spl::make_unique<impl>(channels, thumb_gen, media_info_repo, system_info_provider_repo, shutdown_server_now))
 {
 }
 AMCPProtocolStrategy::~AMCPProtocolStrategy() {}
