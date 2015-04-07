@@ -16,43 +16,35 @@
 * You should have received a copy of the GNU General Public License
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
-* Author: Robert Nagy, ronag89@gmail.com
+* Author: Helge Norberg, helge.norberg@svt.se
 */
 
 #pragma once
 
 #include <common/memory.h>
-#include <common/future_fwd.h>
-
-#include <core/monitor/monitor.h>
 
 #include <boost/noncopyable.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
 
-#include <vector>
+#include <functional>
+#include <string>
 
-namespace caspar {
+namespace caspar { namespace core {
 
-namespace core {
-	class video_channel;
-	class thumbnail_generator;
-	struct media_info_repository;
-	class system_info_provider_repository;
-}
+typedef std::function<void (boost::property_tree::wptree& info)> system_info_provider;
+typedef std::function<std::wstring ()> version_provider;
 
-class server final : public boost::noncopyable
+class system_info_provider_repository : boost::noncopyable
 {
 public:
-	explicit server(std::promise<bool>& shutdown_server_now);
-	void start();
-	const std::vector<spl::shared_ptr<core::video_channel>> channels() const;
-	std::shared_ptr<core::thumbnail_generator> get_thumbnail_generator() const;
-	spl::shared_ptr<core::media_info_repository> get_media_info_repo() const;
-	spl::shared_ptr<core::system_info_provider_repository> get_system_info_provider_repo() const;
-
-	core::monitor::subject& monitor_output();
+	system_info_provider_repository();
+	void register_system_info_provider(system_info_provider provider);
+	void register_version_provider(const std::wstring& version_name, version_provider provider);
+	void fill_information(boost::property_tree::wptree& info) const;
+	std::wstring get_version(const std::wstring& version_name) const;
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;
 };
 
-}
+}}

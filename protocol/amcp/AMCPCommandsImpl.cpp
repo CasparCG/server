@@ -48,17 +48,13 @@
 #include <core/producer/media_info/media_info_repository.h>
 #include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
+#include <core/system_info_provider.h>
 
 #include <modules/reroute/producer/reroute_producer.h>
-#include <modules/bluefish/bluefish.h>
-#include <modules/decklink/decklink.h>
-#include <modules/ffmpeg/ffmpeg.h>
 #include <modules/flash/flash.h>
 #include <modules/flash/util/swf.h>
 #include <modules/flash/producer/flash_producer.h>
 #include <modules/flash/producer/cg_proxy.h>
-#include <modules/ffmpeg/producer/util/util.h>
-#include <modules/screen/screen.h>
 
 #include <algorithm>
 #include <locale>
@@ -1523,19 +1519,8 @@ bool InfoCommand::DoExecute()
 			info.add(L"system.name",					caspar::system_product_name());
 			info.add(L"system.os.description",			caspar::os_description());
 			info.add(L"system.cpu",						caspar::cpu_info());
-	
-			for (auto& device : caspar::decklink::device_list())
-				info.add(L"system.decklink.device", device);
 
-			for (auto& device : caspar::bluefish::device_list())
-				info.add(L"system.bluefish.device", device);
-				
-			info.add(L"system.flash",					caspar::flash::version());
-			info.add(L"system.ffmpeg.avcodec",			caspar::ffmpeg::avcodec_version());
-			info.add(L"system.ffmpeg.avformat",			caspar::ffmpeg::avformat_version());
-			info.add(L"system.ffmpeg.avfilter",			caspar::ffmpeg::avfilter_version());
-			info.add(L"system.ffmpeg.avutil",			caspar::ffmpeg::avutil_version());
-			info.add(L"system.ffmpeg.swscale",			caspar::ffmpeg::swscale_version());
+			repo_->fill_information(info);
 						
 			boost::property_tree::write_xml(replyString, info, w);
 		}
@@ -1665,14 +1650,14 @@ bool VersionCommand::DoExecute()
 {
 	std::wstring replyString = L"201 VERSION OK\r\n" + env::version() + L"\r\n";
 
-	if(parameters().size() > 0)
+	if (parameters().size() > 0 && !boost::iequals(parameters()[0], L"SERVER"))
 	{
-		if(boost::iequals(parameters()[0], L"FLASH"))
-			replyString = L"201 VERSION OK\r\n" + flash::version() + L"\r\n";
-		else if(boost::iequals(parameters()[0], L"TEMPLATEHOST"))
-			replyString = L"201 VERSION OK\r\n" + flash::cg_version() + L"\r\n";
-		else if(!boost::iequals(parameters()[0], L"SERVER"))
+		auto version = repo_->get_version(parameters().at(0));
+
+		if (version.empty())
 			replyString = L"403 VERSION ERROR\r\n";
+		else
+			replyString = L"201 VERSION OK\r\n" + version + L"\r\n";
 	}
 
 	SetReplyString(replyString);

@@ -21,6 +21,8 @@
 
 #include "StdAfx.h"
 
+#include "ffmpeg.h"
+
 #include "consumer/ffmpeg_consumer.h"
 #include "producer/ffmpeg_producer.h"
 #include "producer/util/util.h"
@@ -31,6 +33,9 @@
 #include <core/producer/frame_producer.h>
 #include <core/producer/media_info/media_info.h>
 #include <core/producer/media_info/media_info_repository.h>
+#include <core/system_info_provider.h>
+
+#include <boost/property_tree/ptree.hpp>
 
 #include <tbb/recursive_mutex.h>
 
@@ -198,7 +203,41 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 //}
 //#pragma warning (pop)
 
-void init(const spl::shared_ptr<core::media_info_repository>& media_info_repo)
+std::wstring make_version(unsigned int ver)
+{
+	std::wstringstream str;
+	str << ((ver >> 16) & 0xFF) << L"." << ((ver >> 8) & 0xFF) << L"." << ((ver >> 0) & 0xFF);
+	return str.str();
+}
+
+std::wstring avcodec_version()
+{
+	return make_version(::avcodec_version());
+}
+
+std::wstring avformat_version()
+{
+	return make_version(::avformat_version());
+}
+
+std::wstring avutil_version()
+{
+	return make_version(::avutil_version());
+}
+
+std::wstring avfilter_version()
+{
+	return make_version(::avfilter_version());
+}
+
+std::wstring swscale_version()
+{
+	return make_version(::swscale_version());
+}
+
+void init(
+		const spl::shared_ptr<core::media_info_repository>& media_info_repo,
+		const spl::shared_ptr<core::system_info_provider_repository>& system_info_repo)
 {
 	av_lockmgr_register(ffmpeg_lock_callback);
 	av_log_set_callback(log_callback);
@@ -230,7 +269,14 @@ void init(const spl::shared_ptr<core::media_info_repository>& media_info_repo)
 
 				return try_get_duration(file, info.duration, info.time_base);
 			});
-
+	system_info_repo->register_system_info_provider([](boost::property_tree::wptree& info)
+	{
+		info.add(L"system.ffmpeg.avcodec", avcodec_version());
+		info.add(L"system.ffmpeg.avformat", avformat_version());
+		info.add(L"system.ffmpeg.avfilter", avfilter_version());
+		info.add(L"system.ffmpeg.avutil", avutil_version());
+		info.add(L"system.ffmpeg.swscale", swscale_version());
+	});
 }
 
 void uninit()
@@ -238,38 +284,6 @@ void uninit()
 	avfilter_uninit();
     avformat_network_deinit();
 	av_lockmgr_register(nullptr);
-}
-
-std::wstring make_version(unsigned int ver)
-{
-	std::wstringstream str;
-	str << ((ver >> 16) & 0xFF) << L"." << ((ver >> 8) & 0xFF) << L"." << ((ver >> 0) & 0xFF);
-	return str.str();
-}
-
-std::wstring avcodec_version()
-{
-	return make_version(::avcodec_version());
-}
-
-std::wstring avformat_version()
-{
-	return make_version(::avformat_version());
-}
-
-std::wstring avutil_version()
-{
-	return make_version(::avutil_version());
-}
-
-std::wstring avfilter_version()
-{
-	return make_version(::avfilter_version());
-}
-
-std::wstring swscale_version()
-{
-	return make_version(::swscale_version());
 }
 
 }}

@@ -29,18 +29,15 @@ namespace caspar {
 namespace core {
 
 struct media_info_repository;
+class system_info_provider_repository;
 
 }
 
 namespace ffmpeg {
 
-void init(const spl::shared_ptr<core::media_info_repository>& media_info_repo);
+void init(
+		const spl::shared_ptr<core::media_info_repository>& media_info_repo,
+		const spl::shared_ptr<core::system_info_provider_repository>& system_info_repo);
 void uninit();
-
-std::wstring avcodec_version();
-std::wstring avformat_version();
-std::wstring avutil_version();
-std::wstring avfilter_version();
-std::wstring swscale_version();
 
 }}
