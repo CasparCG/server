@@ -29,6 +29,9 @@
 
 #include <core/consumer/frame_consumer.h>
 #include <core/producer/frame_producer.h>
+#include <core/system_info_provider.h>
+
+#include <boost/property_tree/ptree.hpp>
 
 #include "interop/DeckLinkAPI_h.h"
 
@@ -44,7 +47,58 @@
 
 namespace caspar { namespace decklink {
 
-void init()
+std::wstring version()
+{
+	std::wstring version = L"Not found";
+
+	struct co_init
+	{
+		co_init(){ ::CoInitialize(nullptr); }
+		~co_init(){ ::CoUninitialize(); }
+	} init;
+
+	try
+	{
+		CComPtr<IDeckLinkIterator> pDecklinkIterator;
+		if (SUCCEEDED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
+			version = decklink::version(pDecklinkIterator);
+	}
+	catch (...){}
+
+	return version;
+}
+
+std::vector<std::wstring> device_list()
+{
+	std::vector<std::wstring> devices;
+
+	struct co_init
+	{
+		co_init(){ ::CoInitialize(nullptr); }
+		~co_init(){ ::CoUninitialize(); }
+	} init;
+
+	try
+	{
+		CComPtr<IDeckLinkIterator> pDecklinkIterator;
+		if (SUCCEEDED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
+		{
+			IDeckLink* decklink;
+			for (int n = 1; pDecklinkIterator->Next(&decklink) == S_OK; ++n)
+			{
+				BSTR model_name = L"Unknown";
+				decklink->GetModelName(&model_name);
+				decklink->Release();
+				devices.push_back(std::wstring(model_name) + L" [" + boost::lexical_cast<std::wstring>(n)+L"]");
+			}
+		}
+	}
+	catch (...){}
+
+	return devices;
+}
+
+void init(const spl::shared_ptr<core::system_info_provider_repository>& repo)
 {
 	struct co_init
 	{
@@ -58,57 +112,13 @@ void init()
 		
 	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
 	core::register_producer_factory(create_producer);
-}
-
-std::wstring version() 
-{
-	std::wstring version = L"Not found";
-	
-	struct co_init
+	repo->register_system_info_provider([](boost::property_tree::wptree& info)
 	{
-		co_init(){::CoInitialize(nullptr);}
-		~co_init(){::CoUninitialize();}
-	} init;
+		info.add(L"system.decklink.version", version());
 
-	try
-	{
-		CComPtr<IDeckLinkIterator> pDecklinkIterator;
-		if(SUCCEEDED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))		
-			version = decklink::version(pDecklinkIterator);
-	}
-	catch(...){}
-
-	return version;
-}
-
-std::vector<std::wstring> device_list()
-{
-	std::vector<std::wstring> devices;
-	
-	struct co_init
-	{
-		co_init(){::CoInitialize(nullptr);}
-		~co_init(){::CoUninitialize();}
-	} init;
-
-	try
-	{
-		CComPtr<IDeckLinkIterator> pDecklinkIterator;
-		if(SUCCEEDED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
-		{		
-			IDeckLink* decklink;
-			for(int n = 1; pDecklinkIterator->Next(&decklink) == S_OK; ++n)	
-			{
-				BSTR model_name = L"Unknown";
-				decklink->GetModelName(&model_name);
-				decklink->Release();
-				devices.push_back(std::wstring(model_name) + L" [" + boost::lexical_cast<std::wstring>(n) + L"]");	
-			}
-		}
-	}
-	catch(...){}
-
-	return devices;
+		for (auto device : device_list())
+			info.add(L"system.decklink.device", device);
+	});
 }
 
 }}
