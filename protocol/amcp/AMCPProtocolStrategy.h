@@ -26,6 +26,7 @@
 #include <core/video_channel.h>
 #include <core/thumbnail_generator.h>
 #include <core/producer/media_info/media_info_repository.h>
+#include <core/system_info_provider.h>
 
 #include <common/memory.h>
 
@@ -40,10 +41,11 @@ class AMCPProtocolStrategy : public IO::IProtocolStrategy, boost::noncopyable
 {
 public:
 	AMCPProtocolStrategy(
-		const std::vector<spl::shared_ptr<core::video_channel>>& channels, 
-		const std::shared_ptr<core::thumbnail_generator>& thumb_gen,
-		const spl::shared_ptr<core::media_info_repository>& media_info_repo,
-		std::promise<bool>& shutdown_server_now);
+			const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+			const std::shared_ptr<core::thumbnail_generator>& thumb_gen,
+			const spl::shared_ptr<core::media_info_repository>& media_info_repo,
+			const spl::shared_ptr<core::system_info_provider_repository>& system_info_provider_repo,
+			std::promise<bool>& shutdown_server_now);
 
 	virtual ~AMCPProtocolStrategy();
 

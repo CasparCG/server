@@ -29,14 +29,24 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/producer/media_info/media_info.h>
 #include <core/producer/media_info/media_info_repository.h>
+#include <core/system_info_provider.h>
 
 #include <common/utf.h>
+
+#include <boost/property_tree/ptree.hpp>
 
 #include <FreeImage.h>
 
 namespace caspar { namespace image {
 
-void init(const spl::shared_ptr<core::media_info_repository>& repo)
+std::wstring version()
+{
+	return u16(FreeImage_GetVersion());
+}
+
+void init(
+		const spl::shared_ptr<core::media_info_repository>& repo,
+		const spl::shared_ptr<core::system_info_provider_repository>& system_info_repo)
 {
 	FreeImage_Initialise();
 	core::register_producer_factory(create_scroll_producer);
@@ -60,17 +70,15 @@ void init(const spl::shared_ptr<core::media_info_repository>& repo)
 
 		return false;
 	});
+	system_info_repo->register_system_info_provider([](boost::property_tree::wptree& info)
+	{
+		info.add(L"system.freeimage", version());
+	});
 }
 
 void uninit()
 {
 	FreeImage_DeInitialise();
-}
-
-
-std::wstring version()
-{
-	return u16(FreeImage_GetVersion());
 }
 
 }}
