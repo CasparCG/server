@@ -48,18 +48,14 @@
 #include <protocol/util/strategy_adapters.h>
 #include <protocol/amcp/AMCPProtocolStrategy.h>
 
-#include <modules/bluefish/bluefish.h>
-#include <modules/decklink/decklink.h>
-#include <modules/flash/flash.h>
-#include <modules/ffmpeg/ffmpeg.h>
-#include <modules/image/image.h>
-
 #include <common/env.h>
 #include <common/except.h>
 #include <common/log.h>
 #include <common/gl/gl_check.h>
 #include <common/os/system_info.h>
 #include <common/os/general_protection_fault.h>
+
+#include <core/system_info_provider.h>
 
 #include <boost/property_tree/detail/file_parser_error.hpp>
 #include <boost/property_tree/xml_parser.hpp>
@@ -146,22 +142,44 @@ void print_info()
 	CASPAR_LOG(info) << L"on " << os_description();
 	CASPAR_LOG(info) << cpu_info();
 	CASPAR_LOG(info) << system_product_name();
+}
+
+void print_child(const std::wstring& indent, const std::wstring& elem, const boost::property_tree::wptree& tree)
+{
+	auto data = tree.data();
+
+	if (data.empty())
+		CASPAR_LOG(info) << indent << elem;
+	else
+		CASPAR_LOG(info) << indent << elem << L" " << tree.data();
+
+	for (auto& child : tree)
+		print_child(indent + L"    ", child.first, child.second);
+}
+
+void print_system_info(const spl::shared_ptr<core::system_info_provider_repository>& repo)
+{
+	boost::property_tree::wptree info;
+	repo->fill_information(info);
 	
-	CASPAR_LOG(info) << L"Decklink " << decklink::version();
+	/*CASPAR_LOG(info) << L"Decklink " << decklink::version();
 	for (auto device : decklink::device_list())
 		CASPAR_LOG(info) << L" - " << device;
 		
 	CASPAR_LOG(info) << L"Bluefish " << bluefish::version();
 	for (auto device : bluefish::device_list())
-		CASPAR_LOG(info) << L" - " << device;
-	
-	CASPAR_LOG(info) << L"Flash "			<< flash::version();
-	CASPAR_LOG(info) << L"FreeImage "		<< image::version();
-	CASPAR_LOG(info) << L"FFMPEG-avcodec "  << ffmpeg::avcodec_version();
+		CASPAR_LOG(info) << L" - " << device;*/
+
+	for (auto& elem : info.get_child(L"system"))
+		print_child(L"", elem.first, elem.second);
+
+	//CASPAR_LOG(info) << L"Flash "			<< flash::version();
+	//CASPAR_LOG(info) << L"FreeImage "		<< image::version();
+	/*CASPAR_LOG(info) << L"FFMPEG-avcodec "  << ffmpeg::avcodec_version();
 	CASPAR_LOG(info) << L"FFMPEG-avformat " << ffmpeg::avformat_version();
 	CASPAR_LOG(info) << L"FFMPEG-avfilter " << ffmpeg::avfilter_version();
 	CASPAR_LOG(info) << L"FFMPEG-avutil "	<< ffmpeg::avutil_version();
-	CASPAR_LOG(info) << L"FFMPEG-swscale "  << ffmpeg::swscale_version();
+	CASPAR_LOG(info) << L"FFMPEG-swscale "  << ffmpeg::swscale_version();*/
 }
 
 LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
@@ -196,6 +214,7 @@ void do_run(server& caspar_server, std::promise<bool>& shutdown_server_now)
 							caspar_server.channels(),
 							caspar_server.get_thumbnail_generator(),
 							caspar_server.get_media_info_repo(),
+							caspar_server.get_system_info_provider_repo(),
 							shutdown_server_now)))->create(console_client);
 
 	std::wstring wcmd;
@@ -294,9 +313,21 @@ bool run()
 	std::promise<bool> shutdown_server_now;
 	std::future<bool> shutdown_server = shutdown_server_now.get_future();
 
+	print_info();
+
 	// Create server object which initializes channels, protocols and controllers.
 	server caspar_server(shutdown_server_now);
 	
+	// Print environment information.
+	print_system_info(caspar_server.get_system_info_provider_repo());
+
+	std::wstringstream str;
+	boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
+	boost::property_tree::write_xml(str, env::properties(), w);
+	CASPAR_LOG(info) << L"casparcg.config:\n-----------------------------------------\n" << str.str().c_str() << L"-----------------------------------------";
+	
+	caspar_server.start();
+
 	//auto console_obs = reactive::make_observer([](const monitor::event& e)
 	//{
 	//	std::stringstream str;
@@ -388,14 +419,6 @@ int main(int argc, wchar_t* argv[])
 		// Setup console window.
 		setup_console_window();
 
-		// Print environment information.
-		print_info();
-		
-		std::wstringstream str;
-		boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
-		boost::property_tree::write_xml(str, env::properties(), w);
-		CASPAR_LOG(info) << L"casparcg.config:\n-----------------------------------------\n" << str.str().c_str() << L"-----------------------------------------";
-		
 		return_code = run() ? 5 : 0;
 		
 		Sleep(500);

@@ -45,6 +45,7 @@
 #include <core/diagnostics/subject_diagnostics.h>
 #include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
+#include <core/system_info_provider.h>
 
 #include <modules/bluefish/bluefish.h>
 #include <modules/decklink/decklink.h>
@@ -98,6 +99,7 @@ struct server::impl : boost::noncopyable
 	std::vector<spl::shared_ptr<video_channel>>			channels_;
 	spl::shared_ptr<media_info_repository>				media_info_repo_;
 	boost::thread										initial_media_info_thread_;
+	spl::shared_ptr<system_info_provider_repository>	system_info_provider_repo_;
 	tbb::atomic<bool>									running_;
 	std::shared_ptr<thumbnail_generator>				thumbnail_generator_;
 	std::promise<bool>&									shutdown_server_now_;
@@ -108,17 +110,17 @@ struct server::impl : boost::noncopyable
 		, media_info_repo_(create_in_memory_media_info_repository())
 		, shutdown_server_now_(shutdown_server_now)
 	{
-		running_ = true;
+		running_ = false;
 		core::diagnostics::osd::register_sink();
 		diag_subject_->attach_parent(monitor_subject_);
 
-		ffmpeg::init(media_info_repo_);
+		ffmpeg::init(media_info_repo_, system_info_provider_repo_);
 		CASPAR_LOG(info) << L"Initialized ffmpeg module.";
 							  
-		bluefish::init();	  
+		bluefish::init(system_info_provider_repo_);
 		CASPAR_LOG(info) << L"Initialized bluefish module.";
 							  
-		decklink::init();	  
+		decklink::init(system_info_provider_repo_);	  
 		CASPAR_LOG(info) << L"Initialized decklink module.";
 							  							  
 		oal::init();		  
@@ -127,10 +129,10 @@ struct server::impl : boost::noncopyable
 		screen::init();		  
 		CASPAR_LOG(info) << L"Initialized ogl module.";
 
-		image::init(media_info_repo_);
+		image::init(media_info_repo_, system_info_provider_repo_);
 		CASPAR_LOG(info) << L"Initialized image module.";
 
-		flash::init(media_info_repo_);
+		flash::init(media_info_repo_, system_info_provider_repo_);
 		CASPAR_LOG(info) << L"Initialized flash module.";
 
 		psd::init();		  
@@ -140,6 +142,11 @@ struct server::impl : boost::noncopyable
 
 		register_producer_factory(&core::scene::create_dummy_scene_producer);
 		register_producer_factory(&core::scene::create_xml_scene_producer);
+	}
+
+	void start()
+	{
+		running_ = true;
 
 		setup_channels(env::properties());
 		CASPAR_LOG(info) << L"Initialized channels.";
@@ -159,8 +166,12 @@ struct server::impl : boost::noncopyable
 
 	~impl()
 	{
-		running_ = false;
-		initial_media_info_thread_.join();
+		if (running_)
+		{
+			running_ = false;
+			initial_media_info_thread_.join();
+		}
+
 		thumbnail_generator_.reset();
 		primary_amcp_server_.reset();
 		async_servers_.clear();
@@ -322,7 +333,7 @@ struct server::impl : boost::noncopyable
 		using namespace IO;
 
 		if(boost::iequals(name, L"AMCP"))
-			return wrap_legacy_protocol("\r\n", spl::make_shared<amcp::AMCPProtocolStrategy>(channels_, thumbnail_generator_, media_info_repo_, shutdown_server_now_));
+			return wrap_legacy_protocol("\r\n", spl::make_shared<amcp::AMCPProtocolStrategy>(channels_, thumbnail_generator_, media_info_repo_, system_info_provider_repo_, shutdown_server_now_));
 		else if(boost::iequals(name, L"CII"))
 			return wrap_legacy_protocol("\r\n", spl::make_shared<cii::CIIProtocolStrategy>(channels_));
 		else if(boost::iequals(name, L"CLOCK"))
@@ -357,13 +368,14 @@ struct server::impl : boost::noncopyable
 };
 
 server::server(std::promise<bool>& shutdown_server_now) : impl_(new impl(shutdown_server_now)){}
-
+void server::start() { impl_->start(); }
 const std::vector<spl::shared_ptr<video_channel>> server::channels() const
 {
 	return impl_->channels_;
 }
 std::shared_ptr<core::thumbnail_generator> server::get_thumbnail_generator() const {return impl_->thumbnail_generator_; }
 spl::shared_ptr<media_info_repository> server::get_media_info_repo() const { return impl_->media_info_repo_; }
+spl::shared_ptr<core::system_info_provider_repository> server::get_system_info_provider_repo() const { return impl_->system_info_provider_repo_; }
 core::monitor::subject& server::monitor_output() { return *impl_->monitor_subject_; }
 
 }
