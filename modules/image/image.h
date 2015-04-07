@@ -30,14 +30,15 @@ namespace caspar {
 namespace core {
 
 struct media_info_repository;
+class system_info_provider_repository;
 
 }
 
 namespace image {
 
-void init(const spl::shared_ptr<core::media_info_repository>& repo);
+void init(
+		const spl::shared_ptr<core::media_info_repository>& repo,
+		const spl::shared_ptr<core::system_info_provider_repository>& system_info_repo);
 void uninit();
-
-std::wstring version();
 
 }}

@@ -31,23 +31,12 @@
 #include <common/utf.h>
 
 #include <core/consumer/frame_consumer.h>
+#include <core/system_info_provider.h>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 namespace caspar { namespace bluefish {
-
-void init()
-{
-	try
-	{
-		blue_initialize();
-		core::register_consumer_factory([](const std::vector<std::wstring>& params)
-		{
-			return create_consumer(params);
-		});
-	}
-	catch(...){}
-}
 
 std::wstring version()
 {
@@ -85,6 +74,27 @@ std::vector<std::wstring> device_list()
 	catch(...){}
 
 	return devices;
+}
+
+void init(const spl::shared_ptr<core::system_info_provider_repository>& repo)
+{
+	try
+	{
+		blue_initialize();
+	}
+	catch(...){}
+
+	core::register_consumer_factory([](const std::vector<std::wstring>& params)
+	{
+		return create_consumer(params);
+	});
+	repo->register_system_info_provider([](boost::property_tree::wptree& info)
+	{
+		info.add(L"system.bluefish.version", version());
+
+		for (auto device : device_list())
+			info.add(L"system.bluefish.device", device);
+	});
 }
 
 }}

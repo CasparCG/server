@@ -24,11 +24,17 @@
 #include <string>
 #include <vector>
 
-namespace caspar { namespace bluefish {
+#include <common/memory.h>
 
-void init();
+namespace caspar {
+namespace core {
 
-std::wstring version();
-std::vector<std::wstring> device_list();
+class system_info_provider_repository;
+
+}
+
+namespace bluefish {
+
+void init(const spl::shared_ptr<core::system_info_provider_repository>& repo);
 
 }}

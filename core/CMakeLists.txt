@@ -45,6 +45,7 @@ set(SOURCES
 		producer/layer.cpp
 		producer/stage.cpp
 
+		system_info_provider.cpp
 		StdAfx.cpp
 		thumbnail_generator.cpp
 		video_channel.cpp
@@ -106,7 +107,7 @@ set(HEADERS
 		producer/stage.h
 		producer/variable.h
 
-		frame.h
+		system_info_provider.h
 		StdAfx.h
 		thumbnail_generator.h
 		video_channel.h
