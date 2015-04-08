@@ -32,7 +32,7 @@ public:
 	virtual ~IProtocolStrategy(){}
 
 	virtual void Parse(const std::wstring& msg, ClientInfoPtr pClientInfo) = 0;
-	virtual std::string GetCodepage() = 0;
+	virtual std::string GetCodepage() const = 0;
 };
 typedef std::shared_ptr<IProtocolStrategy> ProtocolStrategyPtr;
 
