@@ -37,6 +37,7 @@ namespace core {
 	class thumbnail_generator;
 	struct media_info_repository;
 	class system_info_provider_repository;
+	class cg_producer_registry;
 }
 
 class server final : public boost::noncopyable
@@ -48,6 +49,7 @@ public:
 	std::shared_ptr<core::thumbnail_generator> get_thumbnail_generator() const;
 	spl::shared_ptr<core::media_info_repository> get_media_info_repo() const;
 	spl::shared_ptr<core::system_info_provider_repository> get_system_info_provider_repo() const;
+	spl::shared_ptr<core::cg_producer_registry> get_cg_registry() const;
 
 	core::monitor::subject& monitor_output();
 private:

@@ -161,25 +161,9 @@ void print_system_info(const spl::shared_ptr<core::system_info_provider_reposito
 {
 	boost::property_tree::wptree info;
 	repo->fill_information(info);
-	
-	/*CASPAR_LOG(info) << L"Decklink " << decklink::version();
-	for (auto device : decklink::device_list())
-		CASPAR_LOG(info) << L" - " << device;
-		
-	CASPAR_LOG(info) << L"Bluefish " << bluefish::version();
-	for (auto device : bluefish::device_list())
-		CASPAR_LOG(info) << L" - " << device;*/
 
 	for (auto& elem : info.get_child(L"system"))
 		print_child(L"", elem.first, elem.second);
-
-	//CASPAR_LOG(info) << L"Flash "			<< flash::version();
-	//CASPAR_LOG(info) << L"FreeImage "		<< image::version();
-	/*CASPAR_LOG(info) << L"FFMPEG-avcodec "  << ffmpeg::avcodec_version();
-	CASPAR_LOG(info) << L"FFMPEG-avformat " << ffmpeg::avformat_version();
-	CASPAR_LOG(info) << L"FFMPEG-avfilter " << ffmpeg::avfilter_version();
-	CASPAR_LOG(info) << L"FFMPEG-avutil "	<< ffmpeg::avutil_version();
-	CASPAR_LOG(info) << L"FFMPEG-swscale "  << ffmpeg::swscale_version();*/
 }
 
 LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
@@ -206,7 +190,6 @@ void do_run(server& caspar_server, std::promise<bool>& shutdown_server_now)
 	auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
 	
 	// Create a amcp parser for console commands.
-	//protocol::amcp::AMCPProtocolStrategy amcp(caspar_server.channels());
 	auto amcp = spl::make_shared<caspar::IO::delimiter_based_chunking_strategy_factory<wchar_t>>(
 			L"\r\n",
 			spl::make_shared<caspar::IO::legacy_strategy_adapter_factory>(
@@ -215,6 +198,7 @@ void do_run(server& caspar_server, std::promise<bool>& shutdown_server_now)
 							caspar_server.get_thumbnail_generator(),
 							caspar_server.get_media_info_repo(),
 							caspar_server.get_system_info_provider_repo(),
+							caspar_server.get_cg_registry(),
 							shutdown_server_now)))->create(console_client);
 
 	std::wstring wcmd;
