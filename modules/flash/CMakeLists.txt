@@ -4,7 +4,6 @@ project (flash)
 set(SOURCES
 		interop/Flash9e_i.c
 
-		producer/cg_proxy.cpp
 		producer/FlashAxContainer.cpp
 		producer/flash_producer.cpp
 
@@ -18,7 +17,6 @@ set(HEADERS
 		interop/axflash.h
 		interop/TimerHelper.h
 
-		producer/cg_proxy.h
 		producer/FlashAxContainer.h
 		producer/flash_producer.h
 

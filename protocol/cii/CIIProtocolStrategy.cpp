@@ -27,7 +27,6 @@
 #include <algorithm>
 #include "CIIProtocolStrategy.h"
 #include "CIICommandsImpl.h"
-#include <modules/flash/producer/flash_producer.h>
 #include <core/producer/transition/transition_producer.h>
 #include <core/mixer/mixer.h>
 #include <core/diagnostics/call_context.h>
@@ -46,7 +45,12 @@ using namespace core;
 const std::wstring CIIProtocolStrategy::MessageDelimiter = L"\r\n";
 const wchar_t CIIProtocolStrategy::TokenDelimiter = L'\\';
 
-CIIProtocolStrategy::CIIProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>& channels) : pChannel_(channels.at(0)), executor_(L"CIIProtocolStrategy")
+CIIProtocolStrategy::CIIProtocolStrategy(
+		const std::vector<spl::shared_ptr<core::video_channel>>& channels, 
+		const spl::shared_ptr<core::cg_producer_registry>& cg_registry)
+	: executor_(L"CIIProtocolStrategy")
+	, pChannel_(channels.at(0))
+	, cg_registry_(cg_registry)
 {
 }
 
@@ -148,30 +152,23 @@ CIICommandPtr CIIProtocolStrategy::Create(const std::wstring& name)
 
 void CIIProtocolStrategy::WriteTemplateData(const std::wstring& templateName, const std::wstring& titleName, const std::wstring& xmlData) 
 {
-	std::wstring fullTemplateFilename = env::template_folder();
-	if(currentProfile_.size() > 0)
-	{
-		fullTemplateFilename += currentProfile_;
-		fullTemplateFilename += L"\\";
-	}
-	fullTemplateFilename += templateName;
-	fullTemplateFilename = flash::find_template(fullTemplateFilename);
-	if(fullTemplateFilename.empty())
-	{
-		CASPAR_LOG(error) << "Failed to save instance of " << templateName << L" as " << titleName << L", template " << fullTemplateFilename << " not found";
-		return;
-	}
+	std::wstring fullTemplateFilename = templateName;
+
+	if (!currentProfile_.empty())
+		fullTemplateFilename = currentProfile_ + L"/" + templateName;
+
 	core::diagnostics::scoped_call_context save;
 	core::diagnostics::call_context::for_thread().video_channel = 1;
 	core::diagnostics::call_context::for_thread().layer = 0;
+	auto producer = cg_registry_->create_producer(GetChannel(), fullTemplateFilename);
 
-	auto producer = flash::create_producer(this->GetChannel()->frame_factory(), this->GetChannel()->video_format_desc(), { env::template_folder() + L"CG.fth" });
+	if (producer == core::frame_producer::empty())
+	{
+		CASPAR_LOG(error) << "Failed to save instance of " << templateName << L" as " << titleName << L", template " << fullTemplateFilename << L"not found";
+		return;
+	}
 
-	std::wstringstream flashParam;
-	flashParam << L"<invoke name=\"Add\" returntype=\"xml\"><arguments><number>1</number><string>" << currentProfile_ << '/' <<  templateName << L"</string><number>0</number><true/><string> </string><string><![CDATA[ " << xmlData << L" ]]></string></arguments></invoke>";
-	std::vector<std::wstring> params;
-	params.push_back(flashParam.str());
-	producer->call(std::move(params));
+	cg_registry_->get_proxy(producer)->add(1, fullTemplateFilename, true, L"", xmlData);
 
 	CASPAR_LOG(info) << "Saved an instance of " << templateName << L" as " << titleName ;
 

@@ -25,6 +25,7 @@
 
 #include <core/thumbnail_generator.h>
 #include <core/producer/media_info/media_info_repository.h>
+#include <core/producer/cg_proxy.h>
 #include <core/system_info_provider.h>
 
 #include <future>
@@ -192,8 +193,16 @@ public:
 class CGCommand : public AMCPChannelCommandBase<1>
 {
 public:
-	CGCommand(IO::ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index) : AMCPChannelCommandBase(client, channel, channel_index, layer_index)
-	{}
+	CGCommand(
+			IO::ClientInfoPtr client,
+			const channel_context& channel,
+			unsigned int channel_index,
+			int layer_index,
+			const spl::shared_ptr<core::cg_producer_registry>& cg_registry)
+		: AMCPChannelCommandBase(client, channel, channel_index, layer_index)
+		, cg_registry_(cg_registry)
+	{
+	}
 
 private:
 	std::wstring print() const { return L"CGCommand";}
@@ -209,6 +218,8 @@ private:
 	bool DoExecuteUpdate();
 	bool DoExecuteInvoke();
 	bool DoExecuteInfo();
+private:
+	spl::shared_ptr<core::cg_producer_registry> cg_registry_;
 };
 
 class DataCommand : public AMCPCommandBase<1>
@@ -227,62 +238,75 @@ public:
 class ClsCommand : public AMCPCommandBase<0>
 {
 public:
-	explicit ClsCommand(IO::ClientInfoPtr client, const spl::shared_ptr<core::media_info_repository>& repo)
+	explicit ClsCommand(IO::ClientInfoPtr client, const spl::shared_ptr<core::media_info_repository>& system_info_repo)
 		: AMCPCommandBase(client)
-		, repo_(repo)
+		, system_info_repo_(system_info_repo)
 	{}
 	std::wstring print() const { return L"ClsCommand";}
 	bool DoExecute();
 private:
-	spl::shared_ptr<core::media_info_repository> repo_;
+	spl::shared_ptr<core::media_info_repository> system_info_repo_;
 };
 
 class TlsCommand : public AMCPCommandBase<0>
 {
 public:
-	explicit TlsCommand(IO::ClientInfoPtr client) : AMCPCommandBase(client) {}
+	explicit TlsCommand(
+			IO::ClientInfoPtr client,
+			const spl::shared_ptr<core::cg_producer_registry>& cg_registry)
+		: AMCPCommandBase(client)
+		, cg_registry_(cg_registry)
+	{}
 	std::wstring print() const { return L"TlsCommand";}
 	bool DoExecute();
+private:
+	spl::shared_ptr<core::cg_producer_registry> cg_registry_;
 };
 
 class CinfCommand : public AMCPCommandBase<1>
 {
 public:
-	explicit CinfCommand(IO::ClientInfoPtr client, const spl::shared_ptr<core::media_info_repository>& repo)
+	explicit CinfCommand(IO::ClientInfoPtr client, const spl::shared_ptr<core::media_info_repository>& system_info_repo)
 		: AMCPCommandBase(client)
-		, repo_(repo)
+		, system_info_repo_(system_info_repo)
 	{}
 	std::wstring print() const { return L"CinfCommand";}
 	bool DoExecute();
 private:
-	spl::shared_ptr<core::media_info_repository> repo_;
+	spl::shared_ptr<core::media_info_repository> system_info_repo_;
 };
 
 class InfoCommand : public AMCPCommandBase<0>, AMCPChannelsAwareCommand
 {
 public:
-	InfoCommand(IO::ClientInfoPtr client, const std::vector<channel_context>& channels, const spl::shared_ptr<core::system_info_provider_repository>& repo)
+	InfoCommand(
+			IO::ClientInfoPtr client,
+			const std::vector<channel_context>& channels,
+			const spl::shared_ptr<core::system_info_provider_repository>& system_info_repo,
+			const spl::shared_ptr<core::cg_producer_registry>& cg_registry)
 		: AMCPChannelsAwareCommand(channels)
 		, AMCPCommandBase(client)
-		, repo_(repo)
+		, system_info_repo_(system_info_repo)
+		, cg_registry_(cg_registry)
 	{}
 	std::wstring print() const { return L"InfoCommand";}
 	bool DoExecute();
 private:
-	spl::shared_ptr<core::system_info_provider_repository> repo_;
+	spl::shared_ptr<core::system_info_provider_repository> system_info_repo_;
+	spl::shared_ptr<core::cg_producer_registry> cg_registry_;
 };
 
 class VersionCommand : public AMCPCommandBase<0>
 {
 public:
-	explicit VersionCommand(IO::ClientInfoPtr client, const spl::shared_ptr<core::system_info_provider_repository>& repo)
+	explicit VersionCommand(IO::ClientInfoPtr client, const spl::shared_ptr<core::system_info_provider_repository>& system_info_repo)
 		: AMCPCommandBase(client)
-		, repo_(repo)
+		, system_info_repo_(system_info_repo)
 	{}
 	std::wstring print() const { return L"VersionCommand";}
 	bool DoExecute();
 private:
-	spl::shared_ptr<core::system_info_provider_repository> repo_;
+	spl::shared_ptr<core::system_info_provider_repository> system_info_repo_;
 };
 
 class ByeCommand : public AMCPCommandBase<0>
