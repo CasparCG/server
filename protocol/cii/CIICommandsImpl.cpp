@@ -26,9 +26,12 @@
 
 #include "CIIProtocolStrategy.h"
 #include "CIICommandsImpl.h"
+
+#include <core/producer/cg_proxy.h>
+
 #include <sstream>
 #include <algorithm>
-#include <modules/flash/producer/cg_proxy.h>
+
 #include <boost/locale.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/algorithm/string/split.hpp>
@@ -155,7 +158,11 @@ void MiscellaneousCommand::Execute()
 	{
 		// HACK fix. The data sent is UTF8, however the protocol is implemented for ISO-8859-1. Instead of doing risky changes we simply convert into proper encoding when leaving protocol code.
 		auto xmlData2 = boost::locale::conv::utf_to_utf<wchar_t, char>(std::string(xmlData_.begin(), xmlData_.end()));
-		flash::create_cg_proxy(pCIIStrategy_->GetChannel()).add(layer_, filename_, false, L"", xmlData2);
+		auto proxy = pCIIStrategy_->get_cg_registry()->get_or_create_proxy(
+				pCIIStrategy_->GetChannel(),
+				core::cg_proxy::DEFAULT_LAYER,
+				filename_);
+		proxy->add(layer_, filename_, false, L"", xmlData2);
 	}
 }
 
@@ -164,17 +171,19 @@ void MiscellaneousCommand::Execute()
 // KeydataCommand
 void KeydataCommand::Execute() 
 {
-	if(state_ == 0)	
+	auto proxy = pCIIStrategy_->get_cg_registry()->get_proxy(
+		pCIIStrategy_->GetChannel(), casparLayer_);
+
+	if (state_ == 0)
 		pCIIStrategy_->DisplayTemplate(titleName_);
-	
 
 	//TODO: Need to be checked for validity
 	else if(state_ == 1)
-		flash::create_cg_proxy(pCIIStrategy_->GetChannel(), casparLayer_).stop(layer_, 0);
+		proxy->stop(layer_, 0);
 	else if(state_ == 2)
 		pCIIStrategy_->GetChannel()->stage().clear();
 	else if(state_ == 3)
-		flash::create_cg_proxy(pCIIStrategy_->GetChannel(), casparLayer_).play(layer_);
+		proxy->play(layer_);
 }
 
 void KeydataCommand::Setup(const std::vector<std::wstring>& parameters) {
@@ -194,7 +203,7 @@ void KeydataCommand::Setup(const std::vector<std::wstring>& parameters) {
 		state_ = 0;
 	}
 
-	casparLayer_ = flash::cg_proxy::DEFAULT_LAYER;
+	casparLayer_ = core::cg_proxy::DEFAULT_LAYER;
 	if(parameters.size() > 2)
 	{
 		//The layer parameter now supports casparlayers.
@@ -212,7 +221,7 @@ void KeydataCommand::Setup(const std::vector<std::wstring>& parameters) {
 		}
 		catch(...)
 		{ 
-			casparLayer_ = flash::cg_proxy::DEFAULT_LAYER;
+			casparLayer_ = core::cg_proxy::DEFAULT_LAYER;
 			layer_ = 0;
 		}
 	}
