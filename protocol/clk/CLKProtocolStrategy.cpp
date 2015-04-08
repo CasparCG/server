@@ -25,8 +25,6 @@
 #include "CLKProtocolStrategy.h"
 #include "clk_commands.h"
 
-#include <modules/flash/producer/cg_proxy.h>
-
 #include <string>
 #include <algorithm>
 #include <locale>
@@ -144,9 +142,10 @@ private:
 };
 
 clk_protocol_strategy_factory::clk_protocol_strategy_factory(
-		const std::vector<spl::shared_ptr<core::video_channel>>& channels)
+		const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+		const spl::shared_ptr<core::cg_producer_registry>& cg_registry)
 {
-	add_command_handlers(command_processor_, channels.at(0));
+	add_command_handlers(command_processor_, channels.at(0), cg_registry);
 }
 
 IO::protocol_strategy<wchar_t>::ptr clk_protocol_strategy_factory::create(

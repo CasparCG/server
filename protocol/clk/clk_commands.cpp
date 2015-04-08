@@ -28,8 +28,11 @@
 #include <boost/lexical_cast.hpp>
 
 #include <common/log.h>
+#include <common/memory.h>
 
-#include <modules/flash/producer/cg_proxy.h>
+#include <core/video_channel.h>
+#include <core/producer/stage.h>
+#include <core/producer/cg_proxy.h>
 
 #include "clk_commands.h"
 
@@ -37,12 +40,15 @@ namespace caspar { namespace protocol { namespace CLK {
 
 class command_context
 {
-	bool clock_loaded_;
-	spl::shared_ptr<core::video_channel> channel_;
+	bool										clock_loaded_ = false;
+	spl::shared_ptr<core::video_channel>		channel_;
+	spl::shared_ptr<core::cg_producer_registry>	cg_registry_;
 public:
-	command_context(const spl::shared_ptr<core::video_channel>& channel)
-		: clock_loaded_(false)
-		, channel_(channel)
+	command_context(
+			const spl::shared_ptr<core::video_channel>& channel,
+			const spl::shared_ptr<core::cg_producer_registry>& cg_registry)
+		: channel_(channel)
+		, cg_registry_(cg_registry)
 	{
 	}
 
@@ -50,13 +56,13 @@ public:
 	{
 		if (!clock_loaded_) 
 		{
-			flash::create_cg_proxy(channel_).add(
-				0, L"hawrysklocka/clock.ft", true, L"", data);
+			cg_registry_->get_or_create_proxy(channel_, core::cg_proxy::DEFAULT_LAYER, L"hawrysklocka/clock")->add(
+				0, L"hawrysklocka/clock", true, L"", data);
 			clock_loaded_ = true;
 		}
 		else
 		{
-			flash::create_cg_proxy(channel_).update(0, data);
+			cg_registry_->get_proxy(channel_, core::cg_proxy::DEFAULT_LAYER)->update(0, data);
 		}
 				
 		CASPAR_LOG(debug) << L"CLK: Clockdata sent: " << data;
@@ -64,7 +70,7 @@ public:
 
 	void reset()
 	{
-		channel_->stage().clear(flash::cg_proxy::DEFAULT_LAYER);
+		channel_->stage().clear(core::cg_proxy::DEFAULT_LAYER);
 		clock_loaded_ = false;
 		CASPAR_LOG(info) << L"CLK: Recieved and executed reset-command";
 	}
@@ -148,9 +154,10 @@ clk_command_handler create_send_xml_handler(
 
 void add_command_handlers(
 	clk_command_processor& processor, 
-	const spl::shared_ptr<core::video_channel>& channel)
+	const spl::shared_ptr<core::video_channel>& channel,
+	const spl::shared_ptr<core::cg_producer_registry>& cg_registry)
 {
-	auto context = spl::make_shared<command_context>(channel);
+	auto context = spl::make_shared<command_context>(channel, cg_registry);
 
 	processor
 		.add_handler(L"DUR", 

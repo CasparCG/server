@@ -41,6 +41,7 @@ set(SOURCES
 
 		producer/transition/transition_producer.cpp
 
+		producer/cg_proxy.cpp
 		producer/frame_producer.cpp
 		producer/layer.cpp
 		producer/stage.cpp
@@ -102,6 +103,7 @@ set(HEADERS
 		producer/transition/transition_producer.h
 
 		producer/binding.h
+		producer/cg_proxy.h
 		producer/frame_producer.h
 		producer/layer.h
 		producer/stage.h

@@ -25,15 +25,15 @@ namespace caspar { namespace core { namespace diagnostics {
 
 struct call_context
 {
-	int		video_channel	= -1;
-	int		layer			= -1;
+	int video_channel	= -1;
+	int layer			= -1;
 
 	static call_context& for_thread();
 };
 
 class scoped_call_context : boost::noncopyable
 {
-	call_context	saved_ = call_context::for_thread();
+	call_context saved_ = call_context::for_thread();
 public:
 	~scoped_call_context()
 	{

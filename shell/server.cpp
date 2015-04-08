@@ -42,6 +42,7 @@
 #include <core/producer/media_info/media_info.h>
 #include <core/producer/media_info/media_info_repository.h>
 #include <core/producer/media_info/in_memory_media_info_repository.h>
+#include <core/producer/cg_proxy.h>
 #include <core/diagnostics/subject_diagnostics.h>
 #include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
@@ -100,6 +101,7 @@ struct server::impl : boost::noncopyable
 	spl::shared_ptr<media_info_repository>				media_info_repo_;
 	boost::thread										initial_media_info_thread_;
 	spl::shared_ptr<system_info_provider_repository>	system_info_provider_repo_;
+	spl::shared_ptr<core::cg_producer_registry>			cg_registry_;
 	tbb::atomic<bool>									running_;
 	std::shared_ptr<thumbnail_generator>				thumbnail_generator_;
 	std::promise<bool>&									shutdown_server_now_;
@@ -132,7 +134,7 @@ struct server::impl : boost::noncopyable
 		image::init(media_info_repo_, system_info_provider_repo_);
 		CASPAR_LOG(info) << L"Initialized image module.";
 
-		flash::init(media_info_repo_, system_info_provider_repo_);
+		flash::init(media_info_repo_, system_info_provider_repo_, cg_registry_);
 		CASPAR_LOG(info) << L"Initialized flash module.";
 
 		psd::init();		  
@@ -333,13 +335,19 @@ struct server::impl : boost::noncopyable
 		using namespace IO;
 
 		if(boost::iequals(name, L"AMCP"))
-			return wrap_legacy_protocol("\r\n", spl::make_shared<amcp::AMCPProtocolStrategy>(channels_, thumbnail_generator_, media_info_repo_, system_info_provider_repo_, shutdown_server_now_));
+			return wrap_legacy_protocol("\r\n", spl::make_shared<amcp::AMCPProtocolStrategy>(
+					channels_,
+					thumbnail_generator_,
+					media_info_repo_,
+					system_info_provider_repo_,
+					cg_registry_,
+					shutdown_server_now_));
 		else if(boost::iequals(name, L"CII"))
-			return wrap_legacy_protocol("\r\n", spl::make_shared<cii::CIIProtocolStrategy>(channels_));
+			return wrap_legacy_protocol("\r\n", spl::make_shared<cii::CIIProtocolStrategy>(channels_, cg_registry_));
 		else if(boost::iequals(name, L"CLOCK"))
 			return spl::make_shared<to_unicode_adapter_factory>(
 					"ISO-8859-1",
-					spl::make_shared<CLK::clk_protocol_strategy_factory>(channels_));
+					spl::make_shared<CLK::clk_protocol_strategy_factory>(channels_, cg_registry_));
 		
 		CASPAR_THROW_EXCEPTION(caspar_exception() << arg_name_info(L"name") << arg_value_info(name) << msg_info(L"Invalid protocol"));
 	}
@@ -376,6 +384,7 @@ const std::vector<spl::shared_ptr<video_channel>> server::channels() const
 std::shared_ptr<core::thumbnail_generator> server::get_thumbnail_generator() const {return impl_->thumbnail_generator_; }
 spl::shared_ptr<media_info_repository> server::get_media_info_repo() const { return impl_->media_info_repo_; }
 spl::shared_ptr<core::system_info_provider_repository> server::get_system_info_provider_repo() const { return impl_->system_info_provider_repo_; }
+spl::shared_ptr<core::cg_producer_registry> server::get_cg_registry() const { return impl_->cg_registry_; }
 core::monitor::subject& server::monitor_output() { return *impl_->monitor_subject_; }
 
 }
