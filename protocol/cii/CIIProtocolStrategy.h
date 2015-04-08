@@ -28,8 +28,10 @@
 #include "CIICommand.h"
 
 #include <core/producer/stage.h>
+#include <core/producer/cg_proxy.h>
 
 #include <common/executor.h>
+#include <common/memory.h>
 
 #include <string>
 
@@ -38,14 +40,15 @@ namespace caspar { namespace protocol { namespace cii {
 class CIIProtocolStrategy : public IO::IProtocolStrategy
 {
 public:
-	CIIProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>& channels);
+	CIIProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>& channels, const spl::shared_ptr<core::cg_producer_registry>& cg_registry);
 
 	void Parse(const std::wstring& message, IO::ClientInfoPtr pClientInfo);
-	std::string GetCodepage() {return "ISO-8859-1";}	//ISO 8859-1
+	std::string GetCodepage() const { return "ISO-8859-1"; }	//ISO 8859-1
 
 	void SetProfile(const std::wstring& profile) {currentProfile_ = profile;}
 
-	spl::shared_ptr<core::video_channel> GetChannel() const{return this->pChannel_;}
+	spl::shared_ptr<core::video_channel> GetChannel() const { return pChannel_; }
+	spl::shared_ptr<core::cg_producer_registry> get_cg_registry() const { return cg_registry_; }
 
 	void DisplayMediaFile(const std::wstring& filename);
 	void DisplayTemplate(const std::wstring& titleName);
@@ -92,6 +95,7 @@ private:
 
 	std::wstring currentProfile_;
 	spl::shared_ptr<core::video_channel> pChannel_;
+	spl::shared_ptr<core::cg_producer_registry> cg_registry_;
 };
 
 }}}

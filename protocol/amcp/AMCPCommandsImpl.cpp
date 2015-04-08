@@ -51,10 +51,6 @@
 #include <core/system_info_provider.h>
 
 #include <modules/reroute/producer/reroute_producer.h>
-#include <modules/flash/flash.h>
-#include <modules/flash/util/swf.h>
-#include <modules/flash/producer/flash_producer.h>
-#include <modules/flash/producer/cg_proxy.h>
 
 #include <algorithm>
 #include <locale>
@@ -237,13 +233,13 @@ std::wstring ListMedia(const spl::shared_ptr<media_info_repository>& media_info_
 	return boost::to_upper_copy(replyString.str());
 }
 
-std::wstring ListTemplates() 
+std::wstring ListTemplates(const spl::shared_ptr<core::cg_producer_registry>& cg_registry)
 {
 	std::wstringstream replyString;
 
 	for (boost::filesystem::recursive_directory_iterator itr(env::template_folder()), end; itr != end; ++itr)
 	{		
-		if(boost::filesystem::is_regular_file(itr->path()) && (itr->path().extension() == L".ft" || itr->path().extension() == L".ct"))
+		if(boost::filesystem::is_regular_file(itr->path()) && cg_registry->is_cg_extension(itr->path().extension().wstring()))
 		{
 			auto relativePath = boost::filesystem::wpath(itr->path().wstring().substr(env::template_folder().size()-1, itr->path().wstring().size()));
 
@@ -256,9 +252,9 @@ std::wstring ListTemplates()
 
 			auto sizeWStr = std::wstring(sizeStr.begin(), sizeStr.end());
 
-			std::wstring dir = relativePath.parent_path().generic_wstring();
-			std::wstring file = boost::to_upper_copy(relativePath.filename().wstring());
-			relativePath = boost::filesystem::wpath(dir + L"/" + file);
+			auto dir = relativePath.parent_path();
+			auto file = boost::to_upper_copy(relativePath.filename().wstring());
+			relativePath = dir / file;
 						
 			auto str = relativePath.replace_extension(L"").generic_wstring();
 			boost::trim_if(str, boost::is_any_of("\\/"));
@@ -751,44 +747,6 @@ bool LoadCommand::DoExecute()
 	}
 }
 
-
-
-//std::function<std::wstring()> channel_cg_add_command::parse(const std::wstring& message, const std::vector<renderer::render_device_ptr>& channels)
-//{
-//	static boost::wregex expr(L"^CG\\s(?<video_channel>\\d+)-?(?<LAYER>\\d+)?\\sADD\\s(?<FLASH_LAYER>\\d+)\\s(?<TEMPLATE>\\S+)\\s?(?<START_LABEL>\\S\\S+)?\\s?(?<PLAY_ON_LOAD>\\d)?\\s?(?<DATA>.*)?");
-//
-//	boost::wsmatch what;
-//	if(!boost::regex_match(message, what, expr))
-//		return nullptr;
-//
-//	auto info = channel_info::parse(what, channels);
-//
-//	int flash_layer_index = boost::lexical_cast<int>(what["FLASH_LAYER"].str());
-//
-//	std::wstring templatename = what["TEMPLATE"].str();
-//	bool play_on_load = what["PLAY_ON_LOAD"].matched ? what["PLAY_ON_LOAD"].str() != L"0" : 0;
-//	std::wstring start_label = what["START_LABEL"].str();	
-//	std::wstring data = get_data(what["DATA"].str());
-//	
-//	boost::replace_all(templatename, "\"", "");
-//
-//	return [=]() -> std::wstring
-//	{	
-//		std::wstring fullFilename = flash::flash_producer::find_template(server::template_folder() + templatename);
-//		if(fullFilename.empty())
-//			CASPAR_THROW_EXCEPTION(file_not_found());
-//	
-//		std::wstring extension = boost::filesystem::wpath(fullFilename).extension();
-//		std::wstring filename = templatename;
-//		filename.append(extension);
-//
-//		flash::flash::create_cg_proxy(info.video_channel, std::max<int>(DEFAULT_CHANNEL_LAYER+1, info.layer_index))
-//			->add(flash_layer_index, filename, play_on_load, start_label, data);
-//
-//		CASPAR_LOG(info) << L"Executed [amcp_channel_cg_add]";
-//		return L"";
-//	};
-
 bool LoadbgCommand::DoExecute()
 {
 	transition_info transitionInfo;
@@ -1081,21 +1039,19 @@ bool CGCommand::DoExecuteAdd() {
 		}
 	}
 
-	std::wstring fullFilename = flash::find_template(env::template_folder() + parameters()[2]);
-	if(!fullFilename.empty())
-	{
-		std::wstring extension = boost::filesystem::path(fullFilename).extension().wstring();
-		std::wstring filename = parameters()[2];
-		filename.append(extension);
+	auto filename = parameters()[2];
+	auto proxy = cg_registry_->get_or_create_proxy(channel(), layer_index(core::cg_proxy::DEFAULT_LAYER), filename);
 
-		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).add(layer, filename, bDoStart, label, (pDataString!=0) ? pDataString : L"");
-		SetReplyString(L"202 CG OK\r\n");
-	}
-	else
+	if (proxy == core::cg_proxy::empty())
 	{
 		CASPAR_LOG(warning) << "Could not find template " << parameters()[2];
 		SetReplyString(L"404 CG ERROR\r\n");
 	}
+	else
+	{
+		proxy->add(layer, filename, bDoStart, label, (pDataString != 0) ? pDataString : L"");
+	}
+
 	return true;
 }
 
@@ -1109,7 +1065,7 @@ bool CGCommand::DoExecutePlay()
 			return false;
 		}
 		int layer = boost::lexical_cast<int>(parameters()[1]);
-		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).play(layer);
+		cg_registry_->get_proxy(channel(), layer_index(core::cg_proxy::DEFAULT_LAYER))->play(layer);
 	}
 	else
 	{
@@ -1131,7 +1087,7 @@ bool CGCommand::DoExecuteStop()
 			return false;
 		}
 		int layer = boost::lexical_cast<int>(parameters()[1]);
-		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).stop(layer, 0);
+		cg_registry_->get_proxy(channel(), layer_index(core::cg_proxy::DEFAULT_LAYER))->stop(layer, 0);
 	}
 	else 
 	{
@@ -1154,7 +1110,7 @@ bool CGCommand::DoExecuteNext()
 		}
 
 		int layer = boost::lexical_cast<int>(parameters()[1]);
-		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).next(layer);
+		cg_registry_->get_proxy(channel(), layer_index(core::cg_proxy::DEFAULT_LAYER))->next(layer);
 	}
 	else 
 	{
@@ -1177,7 +1133,7 @@ bool CGCommand::DoExecuteRemove()
 		}
 
 		int layer = boost::lexical_cast<int>(parameters()[1]);
-		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).remove(layer);
+		cg_registry_->get_proxy(channel(), layer_index(core::cg_proxy::DEFAULT_LAYER))->remove(layer);
 	}
 	else 
 	{
@@ -1191,7 +1147,7 @@ bool CGCommand::DoExecuteRemove()
 
 bool CGCommand::DoExecuteClear() 
 {
-	channel()->stage().clear(layer_index(flash::cg_proxy::DEFAULT_LAYER));
+	channel()->stage().clear(layer_index(core::cg_proxy::DEFAULT_LAYER));
 	SetReplyString(L"202 CG OK\r\n");
 	return true;
 }
@@ -1218,7 +1174,7 @@ bool CGCommand::DoExecuteUpdate()
 		}		
 
 		int layer = boost::lexical_cast<int>(parameters()[1]);
-		flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).update(layer, dataString);
+		cg_registry_->get_proxy(channel(), layer_index(core::cg_proxy::DEFAULT_LAYER))->update(layer, dataString);
 	}
 	catch(...)
 	{
@@ -1243,7 +1199,7 @@ bool CGCommand::DoExecuteInvoke()
 			return false;
 		}
 		int layer = boost::lexical_cast<int>(parameters()[1]);
-		auto result = flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).invoke(layer, parameters()[2]);
+		auto result = cg_registry_->get_proxy(channel(), layer_index(core::cg_proxy::DEFAULT_LAYER))->invoke(layer, parameters()[2]);
 		replyString << result << L"\r\n";
 	}
 	else 
@@ -1270,13 +1226,13 @@ bool CGCommand::DoExecuteInfo()
 		}
 
 		int layer = boost::lexical_cast<int>(parameters()[1]);
-		auto desc = flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).description(layer);
+		auto desc = cg_registry_->get_proxy(channel(), layer_index(core::cg_proxy::DEFAULT_LAYER))->description(layer);
 		
 		replyString << desc << L"\r\n";
 	}
 	else 
 	{
-		auto info = flash::create_cg_proxy(spl::shared_ptr<core::video_channel>(channel()), layer_index(flash::cg_proxy::DEFAULT_LAYER)).template_host_info();
+		auto info = cg_registry_->get_proxy(channel(), layer_index(core::cg_proxy::DEFAULT_LAYER))->template_host_info();
 		replyString << info << L"\r\n";
 	}	
 
@@ -1444,7 +1400,7 @@ bool CinfCommand::DoExecute()
 			auto path = itr->path();
 			auto file = path.replace_extension(L"").filename();
 			if(boost::iequals(file.wstring(), parameters().at(0)))
-				info += MediaInfo(itr->path(), repo_) + L"\r\n";
+				info += MediaInfo(itr->path(), system_info_repo_) + L"\r\n";
 		}
 
 		if(info.empty())
@@ -1483,12 +1439,10 @@ bool InfoCommand::DoExecute()
 		{		
 			replyString << L"201 INFO TEMPLATE OK\r\n";
 
-			// Needs to be extended for any file, not just flash.
-
-			auto filename = flash::find_template(env::template_folder() + parameters().at(1));
+			auto filename = parameters().at(1);
 						
 			std::wstringstream str;
-			str << u16(flash::read_template_meta_info(filename));
+			str << u16(cg_registry_->read_meta_info(filename));
 			boost::property_tree::wptree info;
 			boost::property_tree::xml_parser::read_xml(str, info, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
 
@@ -1520,7 +1474,7 @@ bool InfoCommand::DoExecute()
 			info.add(L"system.os.description",			caspar::os_description());
 			info.add(L"system.cpu",						caspar::cpu_info());
 
-			repo_->fill_information(info);
+			system_info_repo_->fill_information(info);
 						
 			boost::property_tree::write_xml(replyString, info, w);
 		}
@@ -1599,19 +1553,11 @@ bool InfoCommand::DoExecute()
 
 bool ClsCommand::DoExecute()
 {
-/*
-		wav = audio
-		mp3 = audio
-		swf	= movie
-		dv  = movie
-		tga = still
-		col = still
-	*/
 	try
 	{
 		std::wstringstream replyString;
 		replyString << L"200 CLS OK\r\n";
-		replyString << ListMedia(repo_);
+		replyString << ListMedia(system_info_repo_);
 		replyString << L"\r\n";
 		SetReplyString(boost::to_upper_copy(replyString.str()));
 	}
@@ -1632,7 +1578,7 @@ bool TlsCommand::DoExecute()
 		std::wstringstream replyString;
 		replyString << L"200 TLS OK\r\n";
 
-		replyString << ListTemplates();
+		replyString << ListTemplates(cg_registry_);
 		replyString << L"\r\n";
 
 		SetReplyString(replyString.str());
@@ -1652,7 +1598,7 @@ bool VersionCommand::DoExecute()
 
 	if (parameters().size() > 0 && !boost::iequals(parameters()[0], L"SERVER"))
 	{
-		auto version = repo_->get_version(parameters().at(0));
+		auto version = system_info_repo_->get_version(parameters().at(0));
 
 		if (version.empty())
 			replyString = L"403 VERSION ERROR\r\n";

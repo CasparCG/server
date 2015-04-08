@@ -56,6 +56,7 @@ private:
 	std::shared_ptr<core::thumbnail_generator>				thumb_gen_;
 	spl::shared_ptr<core::media_info_repository>			media_info_repo_;
 	spl::shared_ptr<core::system_info_provider_repository>	system_info_provider_repo_;
+	spl::shared_ptr<core::cg_producer_registry>				cg_registry_;
 	std::promise<bool>&										shutdown_server_now_;
 
 public:
@@ -64,10 +65,12 @@ public:
 			const std::shared_ptr<core::thumbnail_generator>& thumb_gen,
 			const spl::shared_ptr<core::media_info_repository>& media_info_repo,
 			const spl::shared_ptr<core::system_info_provider_repository>& system_info_provider_repo,
+			const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
 			std::promise<bool>& shutdown_server_now)
 		: thumb_gen_(thumb_gen)
 		, media_info_repo_(media_info_repo)
 		, system_info_provider_repo_(system_info_provider_repo)
+		, cg_registry_(cg_registry)
 		, shutdown_server_now_(shutdown_server_now)
 	{
 		commandQueues_.push_back(std::make_shared<AMCPCommandQueue>());
@@ -362,9 +365,9 @@ private:
 		else if (s == L"CHANNEL_GRID")	return std::make_shared<ChannelGridCommand>(client, channels_);
 		else if (s == L"DATA")			return std::make_shared<DataCommand>(client);
 		else if (s == L"CINF")			return std::make_shared<CinfCommand>(client, media_info_repo_);
-		else if (s == L"INFO")			return std::make_shared<InfoCommand>(client, channels_, system_info_provider_repo_);
+		else if (s == L"INFO")			return std::make_shared<InfoCommand>(client, channels_, system_info_provider_repo_, cg_registry_);
 		else if (s == L"CLS")			return std::make_shared<ClsCommand>(client, media_info_repo_);
-		else if (s == L"TLS")			return std::make_shared<TlsCommand>(client);
+		else if (s == L"TLS")			return std::make_shared<TlsCommand>(client, cg_registry_);
 		else if (s == L"VERSION")		return std::make_shared<VersionCommand>(client, system_info_provider_repo_);
 		else if (s == L"BYE")			return std::make_shared<ByeCommand>(client);
 		else if (s == L"LOCK")			return std::make_shared<LockCommand>(client, channels_);
@@ -380,20 +383,20 @@ private:
 	{
 		std::wstring s = boost::to_upper_copy(str);
 	
-		if	   (s == L"MIXER")			return std::make_shared<MixerCommand>(client, channel, channel_index, layer_index);
-		else if(s == L"CALL")			return std::make_shared<CallCommand>(client, channel, channel_index, layer_index);
-		else if(s == L"SWAP")			return std::make_shared<SwapCommand>(client, channel, channel_index, layer_index, channels_);
-		else if(s == L"LOAD")			return std::make_shared<LoadCommand>(client, channel, channel_index, layer_index);
-		else if(s == L"LOADBG")			return std::make_shared<LoadbgCommand>(client, channel, channel_index, layer_index, channels_);
-		else if(s == L"ADD")			return std::make_shared<AddCommand>(client, channel, channel_index, layer_index);
-		else if(s == L"REMOVE")			return std::make_shared<RemoveCommand>(client, channel, channel_index, layer_index);
-		else if(s == L"PAUSE")			return std::make_shared<PauseCommand>(client, channel, channel_index, layer_index);
-		else if(s == L"PLAY")			return std::make_shared<PlayCommand>(client, channel, channel_index, layer_index, channels_);
-		else if(s == L"STOP")			return std::make_shared<StopCommand>(client, channel, channel_index, layer_index);
-		else if(s == L"CLEAR")			return std::make_shared<ClearCommand>(client, channel, channel_index, layer_index);
-		else if(s == L"PRINT")			return std::make_shared<PrintCommand>(client, channel, channel_index, layer_index);
-		else if(s == L"CG")				return std::make_shared<CGCommand>(client, channel, channel_index, layer_index);
-		else if(s == L"SET")			return std::make_shared<SetCommand>(client, channel, channel_index, layer_index);
+		if (     s == L"MIXER") 	return std::make_shared<MixerCommand>(client, channel, channel_index, layer_index);
+		else if (s == L"CALL")  	return std::make_shared<CallCommand>(client, channel, channel_index, layer_index);
+		else if (s == L"SWAP")  	return std::make_shared<SwapCommand>(client, channel, channel_index, layer_index, channels_);
+		else if (s == L"LOAD")  	return std::make_shared<LoadCommand>(client, channel, channel_index, layer_index);
+		else if (s == L"LOADBG")	return std::make_shared<LoadbgCommand>(client, channel, channel_index, layer_index, channels_);
+		else if (s == L"ADD")   	return std::make_shared<AddCommand>(client, channel, channel_index, layer_index);
+		else if (s == L"REMOVE")	return std::make_shared<RemoveCommand>(client, channel, channel_index, layer_index);
+		else if (s == L"PAUSE") 	return std::make_shared<PauseCommand>(client, channel, channel_index, layer_index);
+		else if (s == L"PLAY")  	return std::make_shared<PlayCommand>(client, channel, channel_index, layer_index, channels_);
+		else if (s == L"STOP")  	return std::make_shared<StopCommand>(client, channel, channel_index, layer_index);
+		else if (s == L"CLEAR") 	return std::make_shared<ClearCommand>(client, channel, channel_index, layer_index);
+		else if (s == L"PRINT") 	return std::make_shared<PrintCommand>(client, channel, channel_index, layer_index);
+		else if (s == L"CG")	   	return std::make_shared<CGCommand>(client, channel, channel_index, layer_index, cg_registry_);
+		else if (s == L"SET")   	return std::make_shared<SetCommand>(client, channel, channel_index, layer_index);
 
 		return nullptr;
 	}
@@ -405,8 +408,15 @@ AMCPProtocolStrategy::AMCPProtocolStrategy(
 		const std::shared_ptr<core::thumbnail_generator>& thumb_gen,
 		const spl::shared_ptr<core::media_info_repository>& media_info_repo,
 		const spl::shared_ptr<core::system_info_provider_repository>& system_info_provider_repo,
+		const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
 		std::promise<bool>& shutdown_server_now)
-	: impl_(spl::make_unique<impl>(channels, thumb_gen, media_info_repo, system_info_provider_repo, shutdown_server_now))
+	: impl_(spl::make_unique<impl>(
+			channels,
+			thumb_gen,
+			media_info_repo,
+			system_info_provider_repo,
+			cg_registry,
+			shutdown_server_now))
 {
 }
 AMCPProtocolStrategy::~AMCPProtocolStrategy() {}

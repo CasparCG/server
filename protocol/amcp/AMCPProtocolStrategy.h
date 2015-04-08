@@ -26,6 +26,7 @@
 #include <core/video_channel.h>
 #include <core/thumbnail_generator.h>
 #include <core/producer/media_info/media_info_repository.h>
+#include <core/producer/cg_proxy.h>
 #include <core/system_info_provider.h>
 
 #include <common/memory.h>
@@ -45,12 +46,13 @@ public:
 			const std::shared_ptr<core::thumbnail_generator>& thumb_gen,
 			const spl::shared_ptr<core::media_info_repository>& media_info_repo,
 			const spl::shared_ptr<core::system_info_provider_repository>& system_info_provider_repo,
+			const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
 			std::promise<bool>& shutdown_server_now);
 
 	virtual ~AMCPProtocolStrategy();
 
 	virtual void Parse(const std::wstring& msg, IO::ClientInfoPtr pClientInfo);
-	virtual std::string GetCodepage() {	return "UTF-8"; }
+	virtual std::string GetCodepage() const { return "UTF-8"; }
 
 private:
 	struct impl;

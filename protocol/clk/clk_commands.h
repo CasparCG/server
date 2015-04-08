@@ -22,6 +22,7 @@
 #pragma once
 
 #include <core/video_channel.h>
+#include <core/producer/cg_proxy.h>
 
 #include "clk_command_processor.h"
 
@@ -35,6 +36,7 @@ namespace caspar { namespace protocol { namespace CLK {
  */
 void add_command_handlers(
 	clk_command_processor& processor, 
-	const spl::shared_ptr<core::video_channel>& channel);
+	const spl::shared_ptr<core::video_channel>& channel,
+	const spl::shared_ptr<core::cg_producer_registry>& cg_registry);
 
 }}}
