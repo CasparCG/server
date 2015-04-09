@@ -371,7 +371,8 @@ public:
 	}
 };	
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_consumer> create_consumer(
+		const std::vector<std::wstring>& params, core::interaction_sink*)
 {
 	if(params.size() < 1 || params[0] != L"BLUEFISH")
 		return core::frame_consumer::empty();
@@ -384,7 +385,8 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 	return spl::make_shared<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
 }
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree) 
+spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
+		const boost::property_tree::wptree& ptree, core::interaction_sink*)
 {	
 	const auto device_index		= ptree.get(L"device",			1);
 	const auto embedded_audio	= ptree.get(L"embedded-audio",	false);

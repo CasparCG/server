@@ -34,6 +34,8 @@
 
 namespace caspar { namespace core {
 
+struct interaction_sink;
+
 // Interface
 class frame_consumer
 {
@@ -69,9 +71,23 @@ public:
 	virtual int								index() const = 0;
 };
 
-typedef std::function<spl::shared_ptr<frame_consumer>(const std::vector<std::wstring>&)> consumer_factory_t;
+typedef std::function<spl::shared_ptr<frame_consumer>(
+		const std::vector<std::wstring>&,
+		interaction_sink* sink)> consumer_factory_t;
+typedef std::function<spl::shared_ptr<frame_consumer>(
+		const boost::property_tree::wptree& element,
+		interaction_sink* sink)> preconfigured_consumer_factory_t;
 
 void register_consumer_factory(const consumer_factory_t& factory);
-spl::shared_ptr<frame_consumer> create_consumer(const std::vector<std::wstring>& params);
+void register_preconfigured_consumer_factory(
+		const std::wstring& element_name,
+		const preconfigured_consumer_factory_t& factory);
+spl::shared_ptr<frame_consumer> create_consumer(
+		const std::vector<std::wstring>& params,
+		interaction_sink* sink);
+spl::shared_ptr<frame_consumer> create_consumer(
+		const std::wstring& element_name,
+		const boost::property_tree::wptree& element,
+		interaction_sink* sink);
 
 }}

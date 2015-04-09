@@ -309,7 +309,7 @@ bool ChannelGridCommand::DoExecute()
 	params.push_back(L"0");
 	params.push_back(L"NAME");
 	params.push_back(L"Channel Grid Window");
-	auto screen = create_consumer(params);
+	auto screen = create_consumer(params, &self->stage());
 
 	self->output().add(screen);
 
@@ -660,7 +660,7 @@ bool AddCommand::DoExecute()
 		core::diagnostics::scoped_call_context save;
 		core::diagnostics::call_context::for_thread().video_channel = channel_index() + 1;
 
-		auto consumer = create_consumer(parameters());
+		auto consumer = create_consumer(parameters(), &channel()->stage());
 		channel()->output().add(layer_index(consumer->index()), consumer);
 	
 		SetReplyString(L"202 ADD OK\r\n");
@@ -695,7 +695,7 @@ bool RemoveCommand::DoExecute()
 				boost::to_upper(str);
 			}
 
-			index = create_consumer(parameters())->index();
+			index = create_consumer(parameters(), &channel()->stage())->index();
 		}
 
 		channel()->output().remove(index);
@@ -912,7 +912,7 @@ bool ClearCommand::DoExecute()
 
 bool PrintCommand::DoExecute()
 {
-	channel()->output().add(create_consumer({ L"IMAGE" }));
+	channel()->output().add(create_consumer({ L"IMAGE" }, &channel()->stage()));
 		
 	SetReplyString(L"202 PRINT OK\r\n");
 
