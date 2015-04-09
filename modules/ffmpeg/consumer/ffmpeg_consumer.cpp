@@ -848,7 +848,8 @@ public:
 		return consumer_->monitor_output();
 	}
 };	
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_consumer> create_consumer(
+		const std::vector<std::wstring>& params, core::interaction_sink*)
 {
 	auto params2 = params;
 	auto separate_key_it = std::find(params2.begin(), params2.end(), L"SEPARATE_KEY");
@@ -887,7 +888,8 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 	return spl::make_shared<ffmpeg_consumer_proxy>(env::media_folder() + path["PATH"].str(), options, separate_key);
 }
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree)
+spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
+		const boost::property_tree::wptree& ptree, core::interaction_sink*)
 {
 	auto filename		= ptree.get<std::wstring>(L"path");
 	auto codec			= ptree.get(L"vcodec", L"libx264");

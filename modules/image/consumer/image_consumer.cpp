@@ -145,7 +145,7 @@ public:
 	}
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params, core::interaction_sink*)
 {
 	if (params.size() < 1 || params[0] != L"IMAGE")
 		return core::frame_consumer::empty();

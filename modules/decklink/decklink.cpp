@@ -110,7 +110,8 @@ void init(const spl::shared_ptr<core::system_info_provider_repository>& repo)
 	if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))		
 		return;
 		
-	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
+	core::register_consumer_factory(create_consumer);
+	core::register_preconfigured_consumer_factory(L"decklink", create_preconfigured_consumer);
 	core::register_producer_factory(create_producer);
 	repo->register_system_info_provider([](boost::property_tree::wptree& info)
 	{

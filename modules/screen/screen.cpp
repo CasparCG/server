@@ -29,7 +29,8 @@ namespace caspar { namespace screen {
 
 void init()
 {
-	caspar::core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
+	core::register_consumer_factory(create_consumer);
+	core::register_preconfigured_consumer_factory(L"screen", create_preconfigured_consumer);
 }
 
 }}
