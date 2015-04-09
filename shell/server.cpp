@@ -58,12 +58,6 @@
 #include <modules/image/consumer/image_consumer.h>
 #include <modules/psd/psd_scene_producer.h>
 
-#include <modules/oal/consumer/oal_consumer.h>
-#include <modules/bluefish/consumer/bluefish_consumer.h>
-#include <modules/decklink/consumer/decklink_consumer.h>
-#include <modules/screen/consumer/screen_consumer.h>
-#include <modules/ffmpeg/consumer/ffmpeg_consumer.h>
-
 #include <protocol/asio/io_service_manager.h>
 #include <protocol/amcp/AMCPProtocolStrategy.h>
 #include <protocol/cii/CIIProtocolStrategy.h>
@@ -206,18 +200,9 @@ struct server::impl : boost::noncopyable
 				try
 				{
 					auto name = xml_consumer.first;
-					if(name == L"screen")
-						channel->output().add(caspar::screen::create_consumer(xml_consumer.second, &channel->stage()));					
-					else if(name == L"bluefish")					
-						channel->output().add(bluefish::create_consumer(xml_consumer.second));					
-					else if(name == L"decklink")					
-						channel->output().add(decklink::create_consumer(xml_consumer.second));				
-					else if(name == L"file")					
-						channel->output().add(ffmpeg::create_consumer(xml_consumer.second));						
-					else if(name == L"system-audio")
-						channel->output().add(oal::create_consumer());		
-					else if(name != L"<xmlcomment>")
-						CASPAR_LOG(warning) << "Invalid consumer: " << name;	
+					
+					if (name != L"<xmlcomment>")
+						channel->output().add(create_consumer(name, xml_consumer.second, &channel->stage()));
 				}
 				catch(...)
 				{

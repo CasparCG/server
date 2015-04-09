@@ -32,14 +32,24 @@
 #include <boost/thread.hpp>
 
 #include <future>
+#include <vector>
+#include <map>
 
 namespace caspar { namespace core {
 		
 std::vector<consumer_factory_t> g_factories;
+std::map<std::wstring, preconfigured_consumer_factory_t> g_preconfigured_factories;
 
 void register_consumer_factory(const consumer_factory_t& factory)
 {
 	g_factories.push_back(factory);
+}
+
+void register_preconfigured_consumer_factory(
+		const std::wstring& element_name,
+		const preconfigured_consumer_factory_t& factory)
+{
+	g_preconfigured_factories.insert(std::make_pair(element_name, factory));
 }
 
 class destroy_consumer_proxy : public frame_consumer
@@ -220,7 +230,8 @@ public:
 	monitor::subject& monitor_output() override								{return consumer_->monitor_output();}										
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_consumer> create_consumer(
+		const std::vector<std::wstring>& params, interaction_sink* sink)
 {
 	if(params.empty())
 		CASPAR_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
@@ -230,7 +241,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 		{
 			try
 			{
-				consumer = factory(params);
+				consumer = factory(params, sink);
 			}
 			catch(...)
 			{
@@ -247,6 +258,24 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 			 spl::make_shared<recover_consumer_proxy>(
 			  spl::make_shared<cadence_guard>(
 			   std::move(consumer)))));
+}
+
+spl::shared_ptr<frame_consumer> create_consumer(
+		const std::wstring& element_name,
+		const boost::property_tree::wptree& element,
+		interaction_sink* sink)
+{
+	auto found = g_preconfigured_factories.find(element_name);
+
+	if (found == g_preconfigured_factories.end())
+		CASPAR_THROW_EXCEPTION(file_not_found()
+			<< msg_info(L"No consumer factory registered for element name " + element_name));
+
+	return spl::make_shared<destroy_consumer_proxy>(
+			spl::make_shared<print_consumer_proxy>(
+					spl::make_shared<recover_consumer_proxy>(
+							spl::make_shared<cadence_guard>(
+									found->second(element, sink)))));
 }
 
 const spl::shared_ptr<frame_consumer>& frame_consumer::empty()
