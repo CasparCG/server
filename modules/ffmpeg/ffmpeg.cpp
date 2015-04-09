@@ -248,7 +248,8 @@ void init(
     avformat_network_init();
     avcodec_register_all();
 	
-	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
+	core::register_consumer_factory(create_consumer);
+	core::register_preconfigured_consumer_factory(L"file", create_preconfigured_consumer);
 	core::register_producer_factory(create_producer);
 	
 	media_info_repo->register_extractor(

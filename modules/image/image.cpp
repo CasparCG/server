@@ -52,7 +52,7 @@ void init(
 	core::register_producer_factory(create_scroll_producer);
 	core::register_producer_factory(create_producer);
 	core::register_thumbnail_producer_factory(create_thumbnail_producer);
-	core::register_consumer_factory([](const std::vector<std::wstring>& params){return create_consumer(params);});
+	core::register_consumer_factory(create_consumer);
 	repo->register_extractor([](const std::wstring& file, const std::wstring& extension, core::media_info& info)
 	{
 		if (extension == L".TGA"

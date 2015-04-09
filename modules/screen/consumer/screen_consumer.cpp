@@ -41,6 +41,7 @@
 #include <core/video_format.h>
 #include <core/frame/frame.h>
 #include <core/consumer/frame_consumer.h>
+#include <core/interaction/interaction_sink.h>
 
 #include <boost/timer.hpp>
 #include <boost/circular_buffer.hpp>
@@ -623,7 +624,7 @@ public:
 	}
 };	
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params, core::interaction_sink* sink)
 {
 	if(params.size() < 1 || params[0] != L"SCREEN")
 		return core::frame_consumer::empty();
@@ -633,17 +634,18 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 	if(params.size() > 1)
 		config.screen_index = boost::lexical_cast<int>(params[1]);
 		
-	config.key_only = std::find(params.begin(), params.end(), L"WINDOWED") != params.end();
-	config.key_only = std::find(params.begin(), params.end(), L"KEY_ONLY") != params.end();
+	config.windowed		= std::find(params.begin(), params.end(), L"WINDOWED") != params.end();
+	config.key_only		= std::find(params.begin(), params.end(), L"KEY_ONLY") != params.end();
+	config.interactive	= std::find(params.begin(), params.end(), L"INTERACTIVE") != params.end();
 
 	auto name_it	= std::find(params.begin(), params.end(), L"NAME");
 	if(name_it != params.end() && ++name_it != params.end())
 		config.name = *name_it;
 
-	return spl::make_shared<screen_consumer_proxy>(config, nullptr);
+	return spl::make_shared<screen_consumer_proxy>(config, sink);
 }
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const boost::property_tree::wptree& ptree, core::interaction_sink* sink) 
+spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(const boost::property_tree::wptree& ptree, core::interaction_sink* sink) 
 {
 	configuration config;
 	config.name				= ptree.get(L"name",	 config.name);
