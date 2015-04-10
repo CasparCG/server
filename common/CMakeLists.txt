@@ -32,6 +32,7 @@ if (MSVC)
 	)
 elseif (CMAKE_COMPILER_IS_GNUCXX)
 	set(OS_SPECIFIC_SOURCES
+			os/linux/prec_timer.cpp
 			os/linux/signal_handlers.cpp
 			os/linux/scheduling.cpp
 			os/linux/stack_trace.cpp
