@@ -109,6 +109,7 @@ set(HEADERS
 		producer/stage.h
 		producer/variable.h
 
+		module_dependencies.h
 		system_info_provider.h
 		StdAfx.h
 		thumbnail_generator.h

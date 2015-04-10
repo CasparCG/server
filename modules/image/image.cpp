@@ -44,16 +44,14 @@ std::wstring version()
 	return u16(FreeImage_GetVersion());
 }
 
-void init(
-		const spl::shared_ptr<core::media_info_repository>& repo,
-		const spl::shared_ptr<core::system_info_provider_repository>& system_info_repo)
+void init(core::module_dependencies dependencies)
 {
 	FreeImage_Initialise();
 	core::register_producer_factory(create_scroll_producer);
 	core::register_producer_factory(create_producer);
 	core::register_thumbnail_producer_factory(create_thumbnail_producer);
 	core::register_consumer_factory(create_consumer);
-	repo->register_extractor([](const std::wstring& file, const std::wstring& extension, core::media_info& info)
+	dependencies.media_info_repo->register_extractor([](const std::wstring& file, const std::wstring& extension, core::media_info& info)
 	{
 		if (extension == L".TGA"
 			|| extension == L".COL"
@@ -70,7 +68,7 @@ void init(
 
 		return false;
 	});
-	system_info_repo->register_system_info_provider([](boost::property_tree::wptree& info)
+	dependencies.system_info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
 	{
 		info.add(L"system.freeimage", version());
 	});

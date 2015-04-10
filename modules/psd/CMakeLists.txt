@@ -39,3 +39,7 @@ source_group(sources\\util util/*)
 source_group(sources ./*)
 
 target_link_libraries(psd common core)
+
+casparcg_add_include_statement("modules/psd/psd_scene_producer.h")
+casparcg_add_init_statement("psd::init" "psd")
+casparcg_add_module_project("psd")

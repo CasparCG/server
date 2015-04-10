@@ -22,22 +22,11 @@
 #pragma once
 
 #include <string>
+#include <core/module_dependencies.h>
 
-#include <common/memory.h>
+namespace caspar { namespace ffmpeg {
 
-namespace caspar {
-namespace core {
-
-struct media_info_repository;
-class system_info_provider_repository;
-
-}
-
-namespace ffmpeg {
-
-void init(
-		const spl::shared_ptr<core::media_info_repository>& media_info_repo,
-		const spl::shared_ptr<core::system_info_provider_repository>& system_info_repo);
+void init(core::module_dependencies dependencies);
 void uninit();
 
 }}

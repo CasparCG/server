@@ -72,3 +72,8 @@ source_group(sources\\producer\\video producer/video/*)
 source_group(sources\\producer producer/*)
 
 target_link_libraries(ffmpeg common core)
+
+casparcg_add_include_statement("modules/ffmpeg/ffmpeg.h")
+casparcg_add_init_statement("ffmpeg::init" "ffmpeg")
+casparcg_add_uninit_statement("ffmpeg::uninit")
+casparcg_add_module_project("ffmpeg")
