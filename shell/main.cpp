@@ -28,7 +28,7 @@
 #include <tbb/task_scheduler_init.h>
 #include <tbb/task_scheduler_observer.h>
 
-#ifdef _DEBUG
+#if defined _DEBUG && defined _MSC_VER
 	#define _CRTDBG_MAP_ALLOC
 	#include <stdlib.h>
 	#include <crtdbg.h>
@@ -36,14 +36,8 @@
 	#include <tbb/tbbmalloc_proxy.h>
 #endif
 
-#include "resource.h"
-
 #include "server.h"
-
-#include <common/os/windows/windows.h>
-#include <winnt.h>
-#include <mmsystem.h>
-#include <atlbase.h>
+#include "platform_specific.h"
 
 #include <protocol/util/strategy_adapters.h>
 #include <protocol/amcp/AMCPProtocolStrategy.h>
@@ -68,66 +62,16 @@
 
 #include <future>
 
-#include <signal.h>
+#include <csignal>
 
 using namespace caspar;
 	
-// NOTE: This is needed in order to make CComObject work since this is not a real ATL project.
-CComModule _AtlModule;
-extern __declspec(selectany) CAtlModule* _pAtlModule = &_AtlModule;
-
-void change_icon( const HICON hNewIcon )
-{
-   auto hMod = ::LoadLibrary(L"Kernel32.dll"); 
-   typedef DWORD(__stdcall *SCI)(HICON);
-   auto pfnSetConsoleIcon = reinterpret_cast<SCI>(::GetProcAddress(hMod, "SetConsoleIcon")); 
-   pfnSetConsoleIcon(hNewIcon); 
-   ::FreeLibrary(hMod);
-}
-
 void setup_global_locale()
 {
 	boost::locale::generator gen;
 	gen.categories(boost::locale::codepage_facet);
 
 	std::locale::global(gen(""));
-}
-
-void setup_console_window()
-{	 
-	auto hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-
-	// Disable close button in console to avoid shutdown without cleanup.
-	EnableMenuItem(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE , MF_GRAYED);
-	DrawMenuBar(GetConsoleWindow());
-	//SetConsoleCtrlHandler(HandlerRoutine, true);
-
-	// Configure console size and position.
-	auto coord = GetLargestConsoleWindowSize(hOut);
-	coord.X /= 2;
-
-	SetConsoleScreenBufferSize(hOut, coord);
-
-	SMALL_RECT DisplayArea = {0, 0, 0, 0};
-	DisplayArea.Right = coord.X-1;
-	DisplayArea.Bottom = (coord.Y-1)/2;
-	SetConsoleWindowInfo(hOut, TRUE, &DisplayArea);
-		 
-	change_icon(::LoadIcon(GetModuleHandle(0), MAKEINTRESOURCE(101)));
-
-	// Set console title.
-	std::wstringstream str;
-	str << "CasparCG Server " << env::version() << L" x64 ";
-#ifdef COMPILE_RELEASE
-	str << " Release";
-#elif  COMPILE_PROFILE
-	str << " Profile";
-#elif  COMPILE_DEVELOP
-	str << " Develop";
-#elif  COMPILE_DEBUG
-	str << " Debug";
-#endif
-	SetConsoleTitle(str.str().c_str());
 }
 
 void print_info()
@@ -164,24 +108,6 @@ void print_system_info(const spl::shared_ptr<core::system_info_provider_reposito
 
 	for (auto& elem : info.get_child(L"system"))
 		print_child(L"", elem.first, elem.second);
-}
-
-LONG WINAPI UserUnhandledExceptionFilter(EXCEPTION_POINTERS* info)
-{
-	try
-	{
-		CASPAR_LOG(fatal) << L"#######################\n UNHANDLED EXCEPTION: \n" 
-			<< L"Adress:" << info->ExceptionRecord->ExceptionAddress << L"\n"
-			<< L"Code:" << info->ExceptionRecord->ExceptionCode << L"\n"
-			<< L"Flag:" << info->ExceptionRecord->ExceptionFlags << L"\n"
-			<< L"Info:" << info->ExceptionRecord->ExceptionInformation << L"\n"
-			<< L"Continuing execution. \n#######################";
-
-		CASPAR_LOG_CALL_STACK();
-	}
-	catch(...){}
-
-	return EXCEPTION_CONTINUE_EXECUTION;
 }
 
 void do_run(server& caspar_server, std::promise<bool>& shutdown_server_now)
@@ -337,42 +263,23 @@ void on_abort(int)
 int main(int argc, wchar_t* argv[])
 {	
 	int return_code = 0;
-	SetUnhandledExceptionFilter(UserUnhandledExceptionFilter);
-	signal(SIGABRT, on_abort);
+	setup_prerequisites();
+	std::signal(SIGABRT, on_abort);
 
 	setup_global_locale();
 
 	std::wcout << L"Type \"q\" to close application." << std::endl;
 	
 	// Set debug mode.
-	#ifdef _DEBUG
-		HANDLE hLogFile;
-		hLogFile = CreateFile(L"crt_log.txt", GENERIC_WRITE, FILE_SHARE_WRITE, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-		std::shared_ptr<void> crt_log(nullptr, [](HANDLE h){::CloseHandle(h);});
-
-		_CrtSetDbgFlag (_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-		_CrtSetReportMode(_CRT_WARN,	_CRTDBG_MODE_FILE);
-		_CrtSetReportFile(_CRT_WARN,	hLogFile);
-		_CrtSetReportMode(_CRT_ERROR,	_CRTDBG_MODE_FILE);
-		_CrtSetReportFile(_CRT_ERROR,	hLogFile);
-		_CrtSetReportMode(_CRT_ASSERT,	_CRTDBG_MODE_FILE);
-		_CrtSetReportFile(_CRT_ASSERT,	hLogFile);
-	#endif
+	auto debugging_environment = setup_debugging_environment();
 
 	// Increase process priotity.
-	SetPriorityClass(GetCurrentProcess(), ABOVE_NORMAL_PRIORITY_CLASS);
+	increase_process_priority();
 
-	// Install structured exception handler.
+	// Install general protection fault handler.
 	ensure_gpf_handler_installed_for_thread("main thread");
 				
-	// Increase time precision. This will increase accuracy of function like Sleep(1) from 10 ms to 1 ms.
-	struct inc_prec
-	{
-		inc_prec(){timeBeginPeriod(1);}
-		~inc_prec(){timeEndPeriod(1);}
-	} inc_prec;	
-
-	// Install SEH into all tbb threads.
+	// Install GPF handler into all tbb threads.
 	struct tbb_thread_installer : public tbb::task_scheduler_observer
 	{
 		tbb_thread_installer(){observe(true);}
@@ -391,10 +298,8 @@ int main(int argc, wchar_t* argv[])
 				
 		log::set_log_level(env::properties().get(L"configuration.log-level", L"debug"));
 
-	#ifdef _DEBUG
-		if(env::properties().get(L"configuration.debugging.remote", false))
-			MessageBox(nullptr, L"Now is the time to connect for remote debugging...", L"Debug", MB_OK | MB_TOPMOST);
-	#endif	 
+		if (env::properties().get(L"configuration.debugging.remote", false))
+			wait_for_remote_debugging();
 
 		// Start logging to file.
 		log::add_file_sink(env::log_folder());			
@@ -405,23 +310,23 @@ int main(int argc, wchar_t* argv[])
 
 		return_code = run() ? 5 : 0;
 		
-		Sleep(500);
+		boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
 		CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
 	}
 	catch(boost::property_tree::file_parser_error&)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
 		CASPAR_LOG(fatal) << L"Unhandled configuration error in main thread. Please check the configuration file (casparcg.config) for errors.";
-		system("pause");	
+		wait_for_keypress();
 	}
 	catch(...)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
 		CASPAR_LOG(fatal) << L"Unhandled exception in main thread. Please report this error on the CasparCG forums (www.casparcg.com/forum).";
-		Sleep(1000);
+		boost::this_thread::sleep_for(boost::chrono::milliseconds(1000));
 		std::wcout << L"\n\nCasparCG will automatically shutdown. See the log file located at the configured log-file folder for more information.\n\n";
-		Sleep(4000);
-	}		
+		boost::this_thread::sleep_for(boost::chrono::milliseconds(4000));
+	}
 	
 	return return_code;
 }
