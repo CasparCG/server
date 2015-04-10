@@ -42,3 +42,8 @@ source_group(sources\\util util/*)
 source_group(sources ./*)
 
 target_link_libraries(image common core)
+
+casparcg_add_include_statement("modules/image/image.h")
+casparcg_add_init_statement("image::init" "image")
+casparcg_add_uninit_statement("image::uninit")
+casparcg_add_module_project("image")

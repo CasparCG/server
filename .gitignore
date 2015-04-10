@@ -1,4 +1,5 @@
 /version.h
+/shell/included_modules.h
 
 /unit-test/bin
 /unit-test/tmp

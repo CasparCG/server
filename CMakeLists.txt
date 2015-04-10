@@ -76,10 +76,46 @@ endif ()
 cmake_policy(SET CMP0045 OLD)
 include(CMake/PrecompiledHeader.cmake)
 
+set(CASPARCG_MODULE_INCLUDE_STATEMENTS	"" CACHE INTERNAL "")
+set(CASPARCG_MODULE_INIT_STATEMENTS		"" CACHE INTERNAL "")
+set(CASPARCG_MODULE_UNINIT_STATEMENTS	"" CACHE INTERNAL "")
+set(CASPARCG_MODULE_PROJECTS			"" CACHE INTERNAL "")
+
+function(casparcg_add_include_statement HEADER_FILE_TO_INCLUDE)
+	set(CASPARCG_MODULE_INCLUDE_STATEMENTS "${CASPARCG_MODULE_INCLUDE_STATEMENTS}"
+			"#include <${HEADER_FILE_TO_INCLUDE}>"
+			CACHE INTERNAL "")
+endfunction()
+
+function(casparcg_add_init_statement INIT_FUNCTION_NAME NAME_TO_LOG)
+	set(CASPARCG_MODULE_INIT_STATEMENTS "${CASPARCG_MODULE_INIT_STATEMENTS}"
+			"	${INIT_FUNCTION_NAME}(dependencies)\;"
+			"	CASPAR_LOG(info) << L\"Initialized ${NAME_TO_LOG} module.\"\;"
+			""
+			CACHE INTERNAL "")
+endfunction()
+
+function(casparcg_add_uninit_statement UNINIT_FUNCTION_NAME)
+	set(CASPARCG_MODULE_UNINIT_STATEMENTS "${CASPARCG_MODULE_UNINIT_STATEMENTS}"
+			"	${UNINIT_FUNCTION_NAME}()\;"
+			CACHE INTERNAL "")
+endfunction()
+
+function(casparcg_add_module_project PROJECT)
+	set(CASPARCG_MODULE_PROJECTS "${CASPARCG_MODULE_PROJECTS}" "${PROJECT}" CACHE INTERNAL "")
+endfunction()
+
+# http://stackoverflow.com/questions/7172670/best-shortest-way-to-join-a-list-in-cmake
+function(join_list VALUES GLUE OUTPUT)
+	string (REGEX REPLACE "([^\\]|^);" "\\1${GLUE}" _TMP_STR "${VALUES}")
+	string (REGEX REPLACE "[\\](.)" "\\1" _TMP_STR "${_TMP_STR}") #fixes escaping
+	set (${OUTPUT} "${_TMP_STR}" PARENT_SCOPE)
+endfunction()
+
 add_subdirectory(accelerator)
 add_subdirectory(common)
 add_subdirectory(core)
 add_subdirectory(modules)
+
 add_subdirectory(protocol)
 add_subdirectory(shell)
-
