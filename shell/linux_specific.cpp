@@ -16,34 +16,41 @@
 * You should have received a copy of the GNU General Public License
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
-* Author: Robert Nagy, ronag89@gmail.com
+* Author: Helge Norberg, helge.norberg@svt.se
 */
 
-#pragma once
+#include "stdafx.h"
 
-#if defined _DEBUG && defined _MSC_VER
-#include <crtdbg.h>
-#endif
+#include "platform_specific.h"
 
-#define NOMINMAX
+namespace caspar {
 
-#include <Windows.h>
+void setup_prerequisites()
+{
 
-#include <memory>
-#include <array>
-#include <functional>
-#include <algorithm>
-#include <vector>
-#include <deque>
-#include <queue>
-#include <string>
-#include <math.h>
+}
 
-#include <common/utf.h>
-#include <common/memory.h>
-//#include "../common/executor.h" // Can't include this due to MSVC lambda bug
+void setup_console_window()
+{
 
-#include <common/log.h>
-#include <common/except.h>
+}
 
-#include <assert.h>
+void increase_process_priority()
+{
+}
+
+void wait_for_keypress()
+{
+}
+
+std::shared_ptr<void> setup_debugging_environment()
+{
+	return nullptr;
+}
+
+void wait_for_remote_debugging()
+{
+
+}
+
+}
