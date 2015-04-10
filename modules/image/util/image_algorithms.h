@@ -25,6 +25,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <algorithm>
 
 namespace caspar { namespace image {
 
@@ -186,7 +187,7 @@ void blur(
 template<class SrcDstView>
 void premultiply(SrcDstView& view_to_modify)
 {
-	std::for_each(view_to_modify.begin(), view_to_modify.end(), [&](SrcDstView::pixel_type& pixel)
+	std::for_each(view_to_modify.begin(), view_to_modify.end(), [&](typename SrcDstView::pixel_type& pixel)
 	{
 		int alpha = static_cast<int>(pixel.a());
 
