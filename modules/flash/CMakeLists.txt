@@ -44,3 +44,7 @@ source_group(sources\\util util/*)
 source_group(sources ./*)
 
 target_link_libraries(flash common core)
+
+casparcg_add_include_statement("modules/flash/flash.h")
+casparcg_add_init_statement("flash::init" "flash")
+casparcg_add_module_project("flash")

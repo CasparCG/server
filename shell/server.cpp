@@ -21,6 +21,7 @@
 #include "stdafx.h"
 
 #include "server.h"
+#include "included_modules.h"
 
 #include <accelerator/accelerator.h>
 
@@ -48,15 +49,7 @@
 #include <core/diagnostics/osd_graph.h>
 #include <core/system_info_provider.h>
 
-#include <modules/bluefish/bluefish.h>
-#include <modules/decklink/decklink.h>
-#include <modules/ffmpeg/ffmpeg.h>
-#include <modules/flash/flash.h>
-#include <modules/oal/oal.h>
-#include <modules/screen/screen.h>
-#include <modules/image/image.h>
 #include <modules/image/consumer/image_consumer.h>
-#include <modules/psd/psd_scene_producer.h>
 
 #include <protocol/asio/io_service_manager.h>
 #include <protocol/amcp/AMCPProtocolStrategy.h>
@@ -110,29 +103,10 @@ struct server::impl : boost::noncopyable
 		core::diagnostics::osd::register_sink();
 		diag_subject_->attach_parent(monitor_subject_);
 
-		ffmpeg::init(media_info_repo_, system_info_provider_repo_);
-		CASPAR_LOG(info) << L"Initialized ffmpeg module.";
-							  
-		bluefish::init(system_info_provider_repo_);
-		CASPAR_LOG(info) << L"Initialized bluefish module.";
-							  
-		decklink::init(system_info_provider_repo_);	  
-		CASPAR_LOG(info) << L"Initialized decklink module.";
-							  							  
-		oal::init();		  
-		CASPAR_LOG(info) << L"Initialized oal module.";
-							  
-		screen::init();		  
-		CASPAR_LOG(info) << L"Initialized ogl module.";
-
-		image::init(media_info_repo_, system_info_provider_repo_);
-		CASPAR_LOG(info) << L"Initialized image module.";
-
-		flash::init(media_info_repo_, system_info_provider_repo_, cg_registry_);
-		CASPAR_LOG(info) << L"Initialized flash module.";
-
-		psd::init();		  
-		CASPAR_LOG(info) << L"Initialized psd module.";
+		initialize_modules(module_dependencies(
+				system_info_provider_repo_,
+				cg_registry_,
+				media_info_repo_));
 
 		core::text::init();
 
@@ -176,8 +150,7 @@ struct server::impl : boost::noncopyable
 		boost::this_thread::sleep(boost::posix_time::milliseconds(500));
 		//Sleep(500); // HACK: Wait for asynchronous destruction of producers and consumers.
 
-		image::uninit();
-		ffmpeg::uninit();
+		uninitialize_modules();
 		core::diagnostics::osd::shutdown();
 	}
 				

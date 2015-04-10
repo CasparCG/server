@@ -21,8 +21,10 @@
 
 #pragma once
 
+#include <core/module_dependencies.h>
+
 namespace caspar { namespace oal {
 
-void init();
+void init(core::module_dependencies dependencies);
 
 }}

@@ -46,11 +46,6 @@
 
 namespace caspar { namespace psd {
 
-void init()
-{
-	core::register_producer_factory(create_psd_scene_producer);
-}
-
 core::text::text_info get_text_info(const boost::property_tree::wptree& ptree)
 {
 	core::text::text_info result;
@@ -394,6 +389,11 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 	root->call(params2);
 
 	return root;
+}
+
+void init(core::module_dependencies dependencies)
+{
+	core::register_producer_factory(create_psd_scene_producer);
 }
 
 }}
