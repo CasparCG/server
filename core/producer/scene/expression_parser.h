@@ -39,6 +39,12 @@ bool is(const boost::any& value)
 }
 
 template<typename T>
+T as(const boost::any& value)
+{
+	return boost::any_cast<T>(value);
+}
+
+template<typename T>
 static binding<T> parse_expression(
 		const std::wstring& str, const variable_repository& var_repo)
 {
@@ -55,6 +61,19 @@ static binding<T> parse_expression(
 
 template<>
 binding<std::wstring> parse_expression(
-		const std::wstring& str, const variable_repository& var_repo);
+		const std::wstring& str, const variable_repository& var_repo)
+{
+	auto cursor = str.cbegin();
+	auto expr = parse_expression(cursor, str, var_repo);
+
+	if (is<binding<std::wstring>>(expr))
+		return as<binding<std::wstring>>(expr);
+	else if (is<binding<double>>(expr))
+		return as<binding<double>>(expr).as<std::wstring>();
+	else
+		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
+				L"parse_expression() Unsupported type "
+				+ u16(expr.type().name())));
+}
 
 }}}

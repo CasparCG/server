@@ -41,12 +41,12 @@
 
 namespace caspar { namespace core {
 	
-std::vector<producer_factory_t> g_factories;
+std::vector<producer_factory_t> g_producer_factories;
 std::vector<producer_factory_t> g_thumbnail_factories;
 
 void register_producer_factory(const producer_factory_t& factory)
 {
-	g_factories.push_back(factory);
+	g_producer_factories.push_back(factory);
 }
 void register_thumbnail_producer_factory(const producer_factory_t& factory)
 {
@@ -326,7 +326,7 @@ spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const spl::share
 
 spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>& my_frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params)
 {	
-	auto producer = do_create_producer(my_frame_factory, format_desc, params, g_factories);
+	auto producer = do_create_producer(my_frame_factory, format_desc, params, g_producer_factories);
 	auto key_producer = frame_producer::empty();
 	
 	try // to find a key file.
@@ -335,11 +335,11 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<fram
 		if(params_copy.size() > 0)
 		{
 			params_copy[0] += L"_A";
-			key_producer = do_create_producer(my_frame_factory, format_desc, params_copy, g_factories);			
+			key_producer = do_create_producer(my_frame_factory, format_desc, params_copy, g_producer_factories);
 			if(key_producer == frame_producer::empty())
 			{
 				params_copy[0] += L"LPHA";
-				key_producer = do_create_producer(my_frame_factory, format_desc, params_copy, g_factories);	
+				key_producer = do_create_producer(my_frame_factory, format_desc, params_copy, g_producer_factories);
 			}
 		}
 	}
