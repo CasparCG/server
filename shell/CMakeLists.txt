@@ -10,9 +10,11 @@ if (MSVC)
 	set(OS_SPECIFIC_SOURCES
 			resource.h
 			shell.rc
+			windows_specific.cpp
 	)
 elseif (CMAKE_COMPILER_IS_GNUCXX)
 	set(OS_SPECIFIC_SOURCES
+			linux_specific.cpp
 	)
 endif ()
 set(SOURCES
@@ -22,6 +24,7 @@ set(SOURCES
 )
 set(HEADERS
 		included_modules.h
+		platform_specific.h
 		server.h
 		stdafx.h
 )
