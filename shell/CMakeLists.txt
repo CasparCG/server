@@ -39,15 +39,8 @@ include_directories(${TBB_INCLUDE_PATH})
 
 source_group(sources ./*)
 
-target_link_libraries(casparcg
-		accelerator
-		common
-		core
-		protocol
-
-		"${CASPARCG_MODULE_PROJECTS}"
-		reroute
-
+if (MSVC)
+	set(LIBRARIES_TO_LINK
 		alibcof64.lib
 		jpeg.lib
 		sndfile.lib
@@ -74,6 +67,55 @@ target_link_libraries(casparcg
 		debug FreeImaged.lib
 		freetype.lib
 		zlibstat.lib
+	)
+else ()
+	set(LIBRARIES_TO_LINK
+		"${DEPENDENCIES_FOLDER}/asmlib/alibelf64.a"
+		avformat
+		avcodec
+		avutil
+		avfilter
+		swscale
+		swresample
+		freetype
+		freeimage
+		boost_system
+		boost_thread
+		boost_chrono
+		boost_filesystem
+		boost_log
+		boost_locale
+		boost_regex
+		boost_date_time
+		tbb
+		tbbmalloc
+		tbbmalloc_proxy
+		sfml-system-s
+		sfml-window-s
+		sfml-graphics-s
+		GLEW
+		GL
+		X11
+		jpeg
+		sndfile
+		freetype
+		udev
+		Xrandr
+		pthread
+	)
+endif ()
+
+target_link_libraries(casparcg
+		accelerator
+		common
+		core
+		protocol
+
+		"${CASPARCG_MODULE_PROJECTS}"
+
+		reroute
+
+		"${LIBRARIES_TO_LINK}"
 )
 
 set(OUTPUT_FOLDER "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}")

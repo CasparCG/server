@@ -148,7 +148,7 @@ struct server::impl : boost::noncopyable
 		async_servers_.clear();
 		channels_.clear();
 
-		boost::this_thread::sleep(boost::posix_time::milliseconds(500));
+		boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
 		//Sleep(500); // HACK: Wait for asynchronous destruction of producers and consumers.
 
 		uninitialize_modules();
