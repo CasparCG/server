@@ -40,7 +40,7 @@ include_directories(${TBB_INCLUDE_PATH})
 source_group(sources ./*)
 
 if (MSVC)
-	set(LIBRARIES_TO_LINK
+	target_link_libraries(casparcg
 		alibcof64.lib
 		jpeg.lib
 		sndfile.lib
@@ -69,7 +69,7 @@ if (MSVC)
 		zlibstat.lib
 	)
 else ()
-	set(LIBRARIES_TO_LINK
+	target_link_libraries(casparcg
 		"${DEPENDENCIES_FOLDER}/asmlib/alibelf64.a"
 		avformat
 		avcodec
@@ -114,8 +114,6 @@ target_link_libraries(casparcg
 		"${CASPARCG_MODULE_PROJECTS}"
 
 		reroute
-
-		"${LIBRARIES_TO_LINK}"
 )
 
 set(OUTPUT_FOLDER "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}")
