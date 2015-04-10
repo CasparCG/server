@@ -21,20 +21,10 @@
 
 #pragma once
 
-#include <string>
-#include <vector>
+#include <core/module_dependencies.h>
 
-#include <common/memory.h>
+namespace caspar { namespace bluefish {
 
-namespace caspar {
-namespace core {
-
-class system_info_provider_repository;
-
-}
-
-namespace bluefish {
-
-void init(const spl::shared_ptr<core::system_info_provider_repository>& repo);
+void init(core::module_dependencies dependencies);
 
 }}
