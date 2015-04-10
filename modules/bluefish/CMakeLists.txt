@@ -35,3 +35,7 @@ source_group(sources ./*)
 source_group(sources\\consumer consumer/*)
 
 target_link_libraries(bluefish common core)
+
+casparcg_add_include_statement("modules/bluefish/bluefish.h")
+casparcg_add_init_statement("bluefish::init" "bluefish")
+casparcg_add_module_project("bluefish")

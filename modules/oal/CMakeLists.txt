@@ -26,3 +26,7 @@ source_group(sources\\consumer consumer/*)
 source_group(sources ./*)
 
 target_link_libraries(oal common core)
+
+casparcg_add_include_statement("modules/oal/oal.h")
+casparcg_add_init_statement("oal::init" "oal")
+casparcg_add_module_project("oal")

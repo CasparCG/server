@@ -1,0 +1,21 @@
+/*
+ * Generated file.
+ */
+
+#pragma once
+
+#include <common/log.h>
+
+#include <core/module_dependencies.h>
+${CASPARCG_MODULE_INCLUDE_STATEMENTS}
+
+namespace caspar {
+
+void initialize_modules(const core::module_dependencies& dependencies)
+{${CASPARCG_MODULE_INIT_STATEMENTS}}
+
+void uninitialize_modules()
+{${CASPARCG_MODULE_UNINIT_STATEMENTS}
+}
+
+}
