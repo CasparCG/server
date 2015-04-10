@@ -235,9 +235,7 @@ std::wstring swscale_version()
 	return make_version(::swscale_version());
 }
 
-void init(
-		const spl::shared_ptr<core::media_info_repository>& media_info_repo,
-		const spl::shared_ptr<core::system_info_provider_repository>& system_info_repo)
+void init(core::module_dependencies dependencies)
 {
 	av_lockmgr_register(ffmpeg_lock_callback);
 	av_log_set_callback(log_callback);
@@ -252,7 +250,7 @@ void init(
 	core::register_preconfigured_consumer_factory(L"file", create_preconfigured_consumer);
 	core::register_producer_factory(create_producer);
 	
-	media_info_repo->register_extractor(
+	dependencies.media_info_repo->register_extractor(
 			[](const std::wstring& file, const std::wstring& extension, core::media_info& info) -> bool
 			{
 				// TODO: merge thumbnail generation from 2.0
@@ -270,7 +268,7 @@ void init(
 
 				return try_get_duration(file, info.duration, info.time_base);
 			});
-	system_info_repo->register_system_info_provider([](boost::property_tree::wptree& info)
+	dependencies.system_info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
 	{
 		info.add(L"system.ffmpeg.avcodec", avcodec_version());
 		info.add(L"system.ffmpeg.avformat", avformat_version());

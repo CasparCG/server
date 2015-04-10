@@ -48,9 +48,9 @@ namespace caspar { namespace flash {
 std::wstring version();
 std::wstring cg_version();
 
-std::wstring get_absolute(const std::wstring& filename)
+std::wstring get_absolute(const std::wstring& base_folder, const std::wstring& filename)
 {
-	return (boost::filesystem::path(env::template_folder()) / filename).wstring();
+	return (boost::filesystem::path(base_folder) / filename).wstring();
 }
 
 class flash_cg_proxy : public core::cg_proxy, boost::noncopyable
@@ -164,6 +164,9 @@ spl::shared_ptr<core::frame_producer> create_ct_producer(
 		const core::video_format_desc& format_desc,
 		const std::vector<std::wstring>& params)
 {
+	if (params.empty() || !boost::filesystem::exists(get_absolute(env::media_folder(), params.at(0)) + L".ct"))
+		return core::frame_producer::empty();
+
 	auto flash_producer = flash::create_producer(frame_factory, format_desc, {});
 	auto producer = flash_producer;
 	flash_cg_proxy(producer, env::media_folder()).add(0, params[0], true, L"", L"");
@@ -171,14 +174,11 @@ spl::shared_ptr<core::frame_producer> create_ct_producer(
 	return producer;
 }
 
-void init(
-		const spl::shared_ptr<core::media_info_repository>& media_info_repo,
-		const spl::shared_ptr<core::system_info_provider_repository>& info_provider_repo,
-		const spl::shared_ptr<core::cg_producer_registry>& cg_registry)
+void init(core::module_dependencies dependencies)
 {
 	core::register_producer_factory(create_ct_producer);
 	core::register_producer_factory(create_swf_producer);
-	media_info_repo->register_extractor([](const std::wstring& file, const std::wstring& extension, core::media_info& info)
+	dependencies.media_info_repo->register_extractor([](const std::wstring& file, const std::wstring& extension, core::media_info& info)
 	{
 		if (extension != L".CT" && extension != L".SWF")
 			return false;
@@ -187,18 +187,18 @@ void init(
 
 		return true;
 	});
-	info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
+	dependencies.system_info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
 	{
 		info.add(L"system.flash", version());
 	});
-	info_provider_repo->register_version_provider(L"FLASH", &version);
-	info_provider_repo->register_version_provider(L"TEMPLATEHOST", &cg_version);
-	cg_registry->register_cg_producer(
+	dependencies.system_info_provider_repo->register_version_provider(L"FLASH", &version);
+	dependencies.system_info_provider_repo->register_version_provider(L"TEMPLATEHOST", &cg_version);
+	dependencies.cg_registry->register_cg_producer(
 			L"flash",
 			{ L".ft", L".ct" },
 			[](const std::wstring& filename)
 			{
-				return read_template_meta_info(get_absolute(filename) + L".ft");
+				return read_template_meta_info(get_absolute(env::template_folder(), filename) + L".ft");
 			},
 			[](const spl::shared_ptr<core::frame_producer>& producer)
 			{

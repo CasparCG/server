@@ -43,3 +43,7 @@ source_group(sources\\interop interop/*)
 source_group(sources\\producer producer/*)
 
 target_link_libraries(decklink common core ffmpeg)
+
+casparcg_add_include_statement("modules/decklink/decklink.h")
+casparcg_add_init_statement("decklink::init" "decklink")
+casparcg_add_module_project("decklink")

@@ -1,6 +1,11 @@
 cmake_minimum_required (VERSION 2.6)
 project (shell)
 
+join_list("${CASPARCG_MODULE_INCLUDE_STATEMENTS}" "\n" CASPARCG_MODULE_INCLUDE_STATEMENTS)
+join_list("${CASPARCG_MODULE_INIT_STATEMENTS}" "\n" CASPARCG_MODULE_INIT_STATEMENTS)
+join_list("${CASPARCG_MODULE_UNINIT_STATEMENTS}" "\n" CASPARCG_MODULE_UNINIT_STATEMENTS)
+configure_file("${PROJECT_SOURCE_DIR}/included_modules.tmpl" "${PROJECT_SOURCE_DIR}/included_modules.h")
+
 if (MSVC)
 	set(OS_SPECIFIC_SOURCES
 			resource.h
@@ -16,6 +21,7 @@ set(SOURCES
 		stdafx.cpp
 )
 set(HEADERS
+		included_modules.h
 		server.h
 		stdafx.h
 )
@@ -36,15 +42,8 @@ target_link_libraries(casparcg
 		core
 		protocol
 
-		bluefish
-		decklink
-		ffmpeg
-		flash
-		image
-		oal
-		psd
+		"${CASPARCG_MODULE_PROJECTS}"
 		reroute
-		screen
 
 		alibcof64.lib
 		jpeg.lib

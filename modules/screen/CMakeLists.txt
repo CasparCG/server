@@ -29,3 +29,7 @@ source_group(sources\\consumer consumer/*)
 source_group(sources ./*)
 
 target_link_libraries(screen common core ffmpeg)
+
+casparcg_add_include_statement("modules/screen/screen.h")
+casparcg_add_init_statement("screen::init" "screen")
+casparcg_add_module_project("screen")

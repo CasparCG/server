@@ -21,23 +21,10 @@
 
 #pragma once
 
-#include <common/memory.h>
+#include <core/module_dependencies.h>
 
-namespace caspar {
+namespace caspar { namespace flash {
 
-namespace core {
-
-struct media_info_repository;
-class system_info_provider_repository;
-class cg_producer_registry;
-
-}
-
-namespace flash {
-
-void init(
-		const spl::shared_ptr<core::media_info_repository>& media_info_repo,
-		const spl::shared_ptr<core::system_info_provider_repository>& info_provider_repo,
-		const spl::shared_ptr<core::cg_producer_registry>& cg_registry);
+void init(core::module_dependencies dependencies);
 
 }}

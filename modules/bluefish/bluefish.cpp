@@ -76,7 +76,7 @@ std::vector<std::wstring> device_list()
 	return devices;
 }
 
-void init(const spl::shared_ptr<core::system_info_provider_repository>& repo)
+void init(core::module_dependencies dependencies)
 {
 	try
 	{
@@ -86,7 +86,7 @@ void init(const spl::shared_ptr<core::system_info_provider_repository>& repo)
 
 	core::register_consumer_factory(create_consumer);
 	core::register_preconfigured_consumer_factory(L"bluefish", create_preconfigured_consumer);
-	repo->register_system_info_provider([](boost::property_tree::wptree& info)
+	dependencies.system_info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
 	{
 		info.add(L"system.bluefish.version", version());
 
