@@ -385,12 +385,6 @@ op parse_operator(std::wstring::const_iterator& cursor, const std::wstring& str)
 			L"Unexpected end of input (Expected operator) in " + str));
 }
 
-template<typename T>
-T as(const boost::any& value)
-{
-	return boost::any_cast<T>(value);
-}
-
 boost::any as_binding(const boost::any& value)
 {
 	// Wrap supported constants as bindings
@@ -731,7 +725,7 @@ boost::any parse_expression(
 	return as_binding(tokens.at(0));
 }
 
-template<>
+/*template<>
 binding<std::wstring> parse_expression(
 		const std::wstring& str, const variable_repository& var_repo)
 {
@@ -746,6 +740,6 @@ binding<std::wstring> parse_expression(
 		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
 				L"parse_expression() Unsupported type "
 				+ u16(expr.type().name())));
-}
+}*/
 
 }}}
