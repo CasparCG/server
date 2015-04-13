@@ -449,7 +449,7 @@ bool ConvertWideCharToMultiByte(UINT codePage, const std::wstring& wideString, s
 
 void AsyncEventServer::DoSend(SocketInfo& socketInfo) {
 	//Locks the socketInfo-object so that no one else tampers with the sendqueue at the same time
-	tbb::mutex::scoped_lock lock(mutex_);
+	tbb::mutex::scoped_lock lock(socketInfo.mutex_);
 
 	while(!socketInfo.sendQueue_.empty() || socketInfo.currentlySending_.size() > 0) {
 		if(socketInfo.currentlySending_.size() == 0) {
