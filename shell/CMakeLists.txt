@@ -23,6 +23,7 @@ set(SOURCES
 		stdafx.cpp
 )
 set(HEADERS
+		casparcg.config
 		included_modules.h
 		platform_specific.h
 		server.h
