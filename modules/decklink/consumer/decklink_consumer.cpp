@@ -171,25 +171,25 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	const int											channel_index_;
 	const configuration									config_;
 
-	com_ptr<IDeckLink>									decklink_							= get_device(config_.device_index);
-	com_iface_ptr<IDeckLinkOutput>						output_								= iface_cast<IDeckLinkOutput>(decklink_);
-	com_iface_ptr<IDeckLinkConfiguration>				configuration_						= iface_cast<IDeckLinkConfiguration>(decklink_);
-	com_iface_ptr<IDeckLinkKeyer>						keyer_								= iface_cast<IDeckLinkKeyer>(decklink_);
-	com_iface_ptr<IDeckLinkAttributes>					attributes_							= iface_cast<IDeckLinkAttributes>(decklink_);
+	com_ptr<IDeckLink>									decklink_				= get_device(config_.device_index);
+	com_iface_ptr<IDeckLinkOutput>						output_					= iface_cast<IDeckLinkOutput>(decklink_);
+	com_iface_ptr<IDeckLinkConfiguration>				configuration_			= iface_cast<IDeckLinkConfiguration>(decklink_);
+	com_iface_ptr<IDeckLinkKeyer>						keyer_					= iface_cast<IDeckLinkKeyer>(decklink_);
+	com_iface_ptr<IDeckLinkAttributes>					attributes_				= iface_cast<IDeckLinkAttributes>(decklink_);
 
 	tbb::spin_mutex                                     exception_mutex_;
 	std::exception_ptr                                  exception_;
 
 	tbb::atomic<bool>                                   is_running_;
 		
-	const std::wstring                                  model_name_							= get_model_name(decklink_);
+	const std::wstring                                  model_name_				= get_model_name(decklink_);
 	const core::video_format_desc                       format_desc_;
-	const int                                           buffer_size_						= config_.buffer_depth(); // Minimum buffer-size 3.
+	const int                                           buffer_size_			= config_.buffer_depth(); // Minimum buffer-size 3.
 
-	long long                                           video_scheduled_					= 0;
-	long long                                           audio_scheduled_					= 0;
+	long long                                           video_scheduled_		= 0;
+	long long                                           audio_scheduled_		= 0;
 
-	int                                                 preroll_count_						= 0;
+	int                                                 preroll_count_			= 0;
 		
 	boost::circular_buffer<std::vector<int32_t>>        audio_container_		{ buffer_size_ + 1 };
 

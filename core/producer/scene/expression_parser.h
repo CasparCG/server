@@ -59,9 +59,15 @@ static binding<T> parse_expression(
 				+ u16(expr.type().name())));
 }
 
+#if defined(_MSC_VER)
+template<>
+static binding<std::wstring> parse_expression(
+	const std::wstring& str, const variable_repository& var_repo)
+#else
 template<>
 binding<std::wstring> parse_expression(
-		const std::wstring& str, const variable_repository& var_repo)
+	const std::wstring& str, const variable_repository& var_repo)
+#endif
 {
 	auto cursor = str.cbegin();
 	auto expr = parse_expression(cursor, str, var_repo);
