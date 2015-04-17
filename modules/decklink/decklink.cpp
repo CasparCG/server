@@ -82,19 +82,6 @@ std::vector<std::wstring> device_list()
 
 void init(core::module_dependencies dependencies)
 {
-    struct co_init init;
-	
-    com_ptr<IDeckLinkIterator> pDecklinkIterator;
-
-    try
-    {
-        pDecklinkIterator = create_iterator();
-    }
-    catch (...)
-    {
-        return;
-    }
-
 	core::register_consumer_factory(create_consumer);
 	core::register_preconfigured_consumer_factory(L"decklink", create_preconfigured_consumer);
 	core::register_producer_factory(create_producer);
