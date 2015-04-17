@@ -41,67 +41,7 @@ source_group(sources ./*)
 
 if (MSVC)
 	target_link_libraries(casparcg
-		alibcof64.lib
-		jpeg.lib
-		sndfile.lib
-		optimized sfml-system-2.lib
-		optimized sfml-window-2.lib
-		optimized sfml-graphics-2.lib
-		debug sfml-system-d-2.lib
-		debug sfml-window-d-2.lib
-		debug sfml-graphics-d-2.lib
-		Winmm.lib
-		Ws2_32.lib
-		avformat.lib
-		avcodec.lib
-		avutil.lib
-		avfilter.lib
-		swscale.lib
-		swresample.lib
-		optimized tbb.lib
-		debug tbb_debug.lib
-		OpenGL32.lib
-		glew32.lib
-		openal32.lib
-		optimized FreeImage.lib
-		debug FreeImaged.lib
-		freetype.lib
 		zlibstat.lib
-	)
-else ()
-	target_link_libraries(casparcg
-		"${DEPENDENCIES_FOLDER}/asmlib/alibelf64.a"
-		avformat
-		avcodec
-		avutil
-		avfilter
-		swscale
-		swresample
-		freetype
-		freeimage
-		boost_system
-		boost_thread
-		boost_chrono
-		boost_filesystem
-		boost_log
-		boost_locale
-		boost_regex
-		boost_date_time
-		tbb
-		tbbmalloc
-		tbbmalloc_proxy
-		sfml-system-s
-		sfml-window-s
-		sfml-graphics-s
-		GLEW
-		GL
-		X11
-		jpeg
-		sndfile
-		freetype
-		udev
-		Xrandr
-		pthread
 	)
 endif ()
 

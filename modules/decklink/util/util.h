@@ -25,11 +25,9 @@
 #include <common/log.h>
 #include <core/video_format.h>
 
-#include "../interop/DeckLinkAPI_h.h"
+#include "../decklink_api.h"
 
 #include <boost/lexical_cast.hpp>
-
-#include <atlbase.h>
 
 #include <string>
 
@@ -108,21 +106,26 @@ static core::video_format get_caspar_video_format(BMDDisplayMode fmt)
 template<typename T, typename F>
 BMDDisplayMode get_display_mode(const T& device, BMDDisplayMode format, BMDPixelFormat pix_fmt, F flag)
 {
-	CComPtr<IDeckLinkDisplayModeIterator> iterator;
-	CComPtr<IDeckLinkDisplayMode>    	  mode;
-	
-	if(SUCCEEDED(device->GetDisplayModeIterator(&iterator)))
+    IDeckLinkDisplayMode* m = nullptr;
+    IDeckLinkDisplayModeIterator* iter;
+    if(SUCCEEDED(device->GetDisplayModeIterator(&iter)))
 	{
-		while(SUCCEEDED(iterator->Next(&mode)) && 
-				mode != nullptr && 
-				mode->GetDisplayMode() != format){}
+        auto iterator = wrap_raw<com_ptr>(iter, true);
+        while(SUCCEEDED(iterator->Next(&m)) &&
+                m != nullptr &&
+                m->GetDisplayMode() != format)
+        {
+            m->Release();
+        }
 	}
 
-	if(!mode)
+    if(!m)
 		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Device could not find requested video-format.") 
 												 << arg_value_info(boost::lexical_cast<std::string>(format))
 												 << arg_name_info("format"));
-		
+
+	com_ptr<IDeckLinkDisplayMode> mode = wrap_raw<com_ptr>(m, true);
+
 	BMDDisplayModeSupport displayModeSupport;
 	if(FAILED(device->DoesSupportVideoMode(mode->GetDisplayMode(), pix_fmt, flag, &displayModeSupport, nullptr)) || displayModeSupport == bmdDisplayModeNotSupported)
 		CASPAR_LOG(warning) << L"Device does not support video-format: " << mode->GetDisplayMode();
@@ -142,27 +145,31 @@ static BMDDisplayMode get_display_mode(const T& device, core::video_format fmt, 
 }
 
 template<typename T>
-static std::wstring version(T& iterator)
+static std::wstring version(T iterator)
 {
-	CComQIPtr<IDeckLinkAPIInformation> info = iterator;
+    auto info = iface_cast<IDeckLinkAPIInformation>(iterator);
 	if (!info)
 		return L"Unknown";
 	
-	BSTR ver;		
-	info->GetString(BMDDeckLinkAPIVersion, &ver);
+    String ver;
+    info->GetString(BMDDeckLinkAPIVersion, &ver);
 		
-	return ver;					
+    return u16(ver);
 }
 
-static CComPtr<IDeckLink> get_device(size_t device_index)
+static com_ptr<IDeckLink> get_device(size_t device_index)
 {
-	CComPtr<IDeckLinkIterator> pDecklinkIterator;
-	if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
-		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Decklink drivers not found."));
+    auto pDecklinkIterator = create_iterator();
 		
 	size_t n = 0;
-	CComPtr<IDeckLink> decklink;
-	while(n < device_index && pDecklinkIterator->Next(&decklink) == S_OK){++n;}	
+    com_ptr<IDeckLink> decklink;
+    IDeckLink* current = nullptr;
+    while(n < device_index && pDecklinkIterator->Next(&current) == S_OK)
+    {
+        ++n;
+        decklink = wrap_raw<com_ptr>(current);
+        current->Release();
+    }
 
 	if(n != device_index || !decklink)
 		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Decklink device not found.") << arg_name_info("device_index") << arg_value_info(boost::lexical_cast<std::string>(device_index)));
@@ -173,9 +180,9 @@ static CComPtr<IDeckLink> get_device(size_t device_index)
 template <typename T>
 static std::wstring get_model_name(const T& device)
 {	
-	BSTR pModelName;
+    String pModelName;
 	device->GetModelName(&pModelName);
-	return std::wstring(pModelName);
+    return u16(pModelName);
 }
 
 }}

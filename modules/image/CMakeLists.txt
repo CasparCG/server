@@ -42,6 +42,22 @@ source_group(sources\\util util/*)
 source_group(sources ./*)
 
 target_link_libraries(image common core)
+if (MSVC)
+	target_link_libraries(image
+		common
+		core
+
+		optimized FreeImage.lib
+		debug FreeImaged.lib
+	)
+else ()
+	target_link_libraries(image
+		common
+		core
+
+		freeimage
+	)
+endif ()
 
 casparcg_add_include_statement("modules/image/image.h")
 casparcg_add_init_statement("image::init" "image")

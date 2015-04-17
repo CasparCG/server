@@ -16,10 +16,23 @@
 * You should have received a copy of the GNU General Public License
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
-* Author: Robert Nagy, ronag89@gmail.com
+* Author: Helge Norberg, helge.norberg@svt.se
 */
 
-#include "StdAfx.h"
+#include "../../stdafx.h"
 
-// TODO: reference any additional headers you need in STDAFX.H
-// and not in this file
+#include "../filesystem.h"
+
+#include <boost/filesystem.hpp>
+
+namespace caspar {
+	
+boost::optional<std::wstring> find_case_insensitive(const std::wstring& case_insensitive)
+{
+	if (boost::filesystem::exists(case_insensitive))
+		return case_insensitive;
+	else
+		return boost::none;
+}
+
+}
