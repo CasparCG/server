@@ -25,7 +25,7 @@
 
 #include "../util/util.h"
 
-#include "../interop/DeckLinkAPI_h.h"
+#include "../decklink_api.h"
 
 #include <core/frame/frame.h>
 #include <core/mixer/audio/audio_mixer.h>
@@ -100,17 +100,17 @@ public:
 	
 	// IUnknown
 
-	STDMETHOD (QueryInterface(REFIID, LPVOID*))		
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*)
 	{
 		return E_NOINTERFACE;
 	}
 	
-	STDMETHOD_(ULONG,			AddRef())			
+	virtual ULONG STDMETHODCALLTYPE AddRef()
 	{
 		return ++ref_count_;
 	}
 
-	STDMETHOD_(ULONG,			Release())			
+	virtual ULONG STDMETHODCALLTYPE Release()
 	{
 		if(--ref_count_ == 0)
 			delete this;
@@ -119,13 +119,13 @@ public:
 
 	// IDecklinkVideoFrame
 
-	STDMETHOD_(long,			GetWidth())			{return static_cast<long>(format_desc_.width);}        
-	STDMETHOD_(long,			GetHeight())		{return static_cast<long>(format_desc_.height);}        
-	STDMETHOD_(long,			GetRowBytes())		{return static_cast<long>(format_desc_.width*4);}        
-	STDMETHOD_(BMDPixelFormat,	GetPixelFormat())	{return bmdFormat8BitBGRA;}        
-	STDMETHOD_(BMDFrameFlags,	GetFlags())			{return bmdFrameFlagDefault;}
+	virtual long STDMETHODCALLTYPE GetWidth()                   {return static_cast<long>(format_desc_.width);}
+	virtual long STDMETHODCALLTYPE GetHeight()                  {return static_cast<long>(format_desc_.height);}
+	virtual long STDMETHODCALLTYPE GetRowBytes()                {return static_cast<long>(format_desc_.width*4);}
+	virtual BMDPixelFormat STDMETHODCALLTYPE GetPixelFormat()   {return bmdFormat8BitBGRA;}
+	virtual BMDFrameFlags STDMETHODCALLTYPE GetFlags()			{return bmdFrameFlagDefault;}
 		
-	STDMETHOD(GetBytes(void** buffer))
+	virtual HRESULT STDMETHODCALLTYPE GetBytes(void** buffer)
 	{
 		try
 		{
@@ -155,8 +155,8 @@ public:
 		return S_OK;
 	}
 		
-	STDMETHOD(GetTimecode(BMDTimecodeFormat format, IDeckLinkTimecode** timecode)){return S_FALSE;}        
-	STDMETHOD(GetAncillaryData(IDeckLinkVideoFrameAncillary** ancillary))		  {return S_FALSE;}
+	virtual HRESULT STDMETHODCALLTYPE GetTimecode(BMDTimecodeFormat format, IDeckLinkTimecode** timecode) {return S_FALSE;}
+	virtual HRESULT STDMETHODCALLTYPE GetAncillaryData(IDeckLinkVideoFrameAncillary** ancillary)		  {return S_FALSE;}
 
 	// decklink_frame	
 
@@ -168,37 +168,37 @@ public:
 
 struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
 {		
-	const int							channel_index_;
-	const configuration					config_;
+	const int											channel_index_;
+	const configuration									config_;
 
-	CComPtr<IDeckLink>					decklink_							= get_device(config_.device_index);
-	CComQIPtr<IDeckLinkOutput>			output_								= decklink_;
-	CComQIPtr<IDeckLinkConfiguration>	configuration_						= decklink_;
-	CComQIPtr<IDeckLinkKeyer>			keyer_								= decklink_;
-	CComQIPtr<IDeckLinkAttributes>		attributes_							= decklink_;
+	com_ptr<IDeckLink>									decklink_							= get_device(config_.device_index);
+	com_iface_ptr<IDeckLinkOutput>						output_								= iface_cast<IDeckLinkOutput>(decklink_);
+	com_iface_ptr<IDeckLinkConfiguration>				configuration_						= iface_cast<IDeckLinkConfiguration>(decklink_);
+	com_iface_ptr<IDeckLinkKeyer>						keyer_								= iface_cast<IDeckLinkKeyer>(decklink_);
+	com_iface_ptr<IDeckLinkAttributes>					attributes_							= iface_cast<IDeckLinkAttributes>(decklink_);
 
-	tbb::spin_mutex						exception_mutex_;
-	std::exception_ptr					exception_;
+	tbb::spin_mutex                                     exception_mutex_;
+	std::exception_ptr                                  exception_;
 
-	tbb::atomic<bool>					is_running_;
+	tbb::atomic<bool>                                   is_running_;
 		
-	const std::wstring					model_name_							= get_model_name(decklink_);
-	const core::video_format_desc		format_desc_;
-	const int							buffer_size_						= config_.buffer_depth(); // Minimum buffer-size 3.
+	const std::wstring                                  model_name_							= get_model_name(decklink_);
+	const core::video_format_desc                       format_desc_;
+	const int                                           buffer_size_						= config_.buffer_depth(); // Minimum buffer-size 3.
 
-	long long							video_scheduled_					= 0;
-	long long							audio_scheduled_					= 0;
+	long long                                           video_scheduled_					= 0;
+	long long                                           audio_scheduled_					= 0;
 
-	int									preroll_count_						= 0;
+	int                                                 preroll_count_						= 0;
 		
-	boost::circular_buffer<std::vector<int32_t>>	audio_container_		{ buffer_size_ + 1 };
+	boost::circular_buffer<std::vector<int32_t>>        audio_container_		{ buffer_size_ + 1 };
 
-	tbb::concurrent_bounded_queue<core::const_frame> video_frame_buffer_;
-	tbb::concurrent_bounded_queue<core::const_frame> audio_frame_buffer_;
+	tbb::concurrent_bounded_queue<core::const_frame>    video_frame_buffer_;
+	tbb::concurrent_bounded_queue<core::const_frame>    audio_frame_buffer_;
 	
-	spl::shared_ptr<diagnostics::graph> graph_;
-	boost::timer tick_timer_;
-	retry_task<bool> send_completion_;
+	spl::shared_ptr<diagnostics::graph>                 graph_;
+	boost::timer                                        tick_timer_;
+	retry_task<bool>                                    send_completion_;
 
 public:
 	decklink_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index) 
@@ -327,18 +327,18 @@ public:
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Failed to schedule playback."));
 	}
 	
-	STDMETHOD (QueryInterface(REFIID, LPVOID*))	{return E_NOINTERFACE;}
-	STDMETHOD_(ULONG, AddRef())					{return 1;}
-	STDMETHOD_(ULONG, Release())				{return 1;}
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*)	{return E_NOINTERFACE;}
+	virtual ULONG STDMETHODCALLTYPE AddRef()					{return 1;}
+	virtual ULONG STDMETHODCALLTYPE Release()				{return 1;}
 	
-	STDMETHOD(ScheduledPlaybackHasStopped())
+	virtual HRESULT STDMETHODCALLTYPE ScheduledPlaybackHasStopped()
 	{
 		is_running_ = false;
 		CASPAR_LOG(info) << print() << L" Scheduled playback has stopped.";
 		return S_OK;
 	}
 
-	STDMETHOD(ScheduledFrameCompleted(IDeckLinkVideoFrame* completed_frame, BMDOutputFrameCompletionResult result))
+	virtual HRESULT STDMETHODCALLTYPE ScheduledFrameCompleted(IDeckLinkVideoFrame* completed_frame, BMDOutputFrameCompletionResult result)
 	{
 		if(!is_running_)
 			return E_FAIL;
@@ -364,7 +364,7 @@ public:
 			send_completion_.try_completion();
 			schedule_next_video(frame);	
 			
-			unsigned long buffered;
+			UINT32 buffered;
 			output_->GetBufferedVideoFrameCount(&buffered);
 			graph_->set_value("buffered-video", static_cast<double>(buffered)/format_desc_.fps);
 		}
@@ -380,7 +380,7 @@ public:
 		return S_OK;
 	}
 		
-	STDMETHOD(RenderAudioSamples(BOOL preroll))
+	virtual HRESULT STDMETHODCALLTYPE RenderAudioSamples(BOOL preroll)
 	{
 		if(!is_running_)
 			return E_FAIL;
@@ -410,7 +410,7 @@ public:
 				}
 			}
 
-			unsigned long buffered;
+			UINT32 buffered;
 			output_->GetBufferedAudioSampleFrameCount(&buffered);
 			graph_->set_value("buffered-audio", static_cast<double>(buffered) / (format_desc_.audio_cadence[0] * format_desc_.audio_channels * 2));
 		}
@@ -439,8 +439,8 @@ public:
 			
 	void schedule_next_video(core::const_frame frame)
 	{
-		CComPtr<IDeckLinkVideoFrame> frame2(new decklink_frame(frame, format_desc_, config_.key_only));
-		if(FAILED(output_->ScheduleVideoFrame(frame2, video_scheduled_, format_desc_.duration, format_desc_.time_scale)))
+		auto frame2 = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(frame, format_desc_, config_.key_only));
+		if(FAILED(output_->ScheduleVideoFrame(get_raw(frame2), video_scheduled_, format_desc_.duration, format_desc_.time_scale)))
 			CASPAR_LOG(error) << print() << L" Failed to schedule video.";
 
 		video_scheduled_ += format_desc_.duration;
@@ -510,7 +510,7 @@ public:
 		executor_.begin_invoke([=]
 		{
 			core::diagnostics::call_context::for_thread() = ctx;
-			::CoInitialize(nullptr);
+			com_initialize();
 		});
 	}
 
@@ -519,7 +519,7 @@ public:
 		executor_.invoke([=]
 		{
 			consumer_.reset();
-			::CoUninitialize();
+			com_uninitialize();
 		});
 	}
 

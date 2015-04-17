@@ -142,4 +142,16 @@ source_group(sources\\producer\\text producer/text/*)
 source_group(sources\\producer\\transition producer/transition/*)
 source_group(sources\\producer producer/*)
 
-target_link_libraries(core common)
+if (MSVC)
+	target_link_libraries(core
+			common
+
+			freetype.lib
+	)
+else()
+	target_link_libraries(core
+			common
+
+			freetype
+	)
+endif()
