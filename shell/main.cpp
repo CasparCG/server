@@ -278,7 +278,7 @@ int main(int argc, wchar_t* argv[])
 
 	// Install general protection fault handler.
 	ensure_gpf_handler_installed_for_thread("main thread");
-				
+
 	// Install GPF handler into all tbb threads.
 	struct tbb_thread_installer : public tbb::task_scheduler_observer
 	{
@@ -295,7 +295,7 @@ int main(int argc, wchar_t* argv[])
 	{
 		// Configure environment properties from configuration.
 		env::configure(L"casparcg.config");
-				
+
 		log::set_log_level(env::properties().get(L"configuration.log-level", L"debug"));
 
 		if (env::properties().get(L"configuration.debugging.remote", false))
