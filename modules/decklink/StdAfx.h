@@ -29,7 +29,9 @@
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
 
+#if defined(_MSC_VER)
 #include <Windows.h>
+#endif
 
 #include <algorithm>
 #include <array>
@@ -69,12 +71,14 @@ extern "C"
 #pragma warning(push)
 #pragma warning(disable : 4996)
 
-	#include <atlbase.h>
+#if defined(_MSC_VER)
+    #include <atlbase.h>
 
 	#include <atlcom.h>
 	#include <atlhost.h>
+#endif
 
-#pragma warning(push)
+#pragma warning(pop)
 
 #include <functional>
 
@@ -84,5 +88,9 @@ extern "C"
 #include "../common/except.h"
 #include "../common/log.h"
 #endif
+
+#if defined(_MSC_VER)
 #include <rpc.h>
 #include <rpcndr.h>
+#endif
+

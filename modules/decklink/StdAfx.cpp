@@ -19,7 +19,7 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "stdafx.h"
+#include "StdAfx.h"
 
 // TODO: reference any additional headers you need in STDAFX.H
 // and not in this file

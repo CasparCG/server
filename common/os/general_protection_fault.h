@@ -21,8 +21,6 @@
 
 #pragma once
 
-#include <string>
-
 namespace caspar {
 
 void install_gpf_handler();

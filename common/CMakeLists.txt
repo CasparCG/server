@@ -21,6 +21,7 @@ if (MSVC)
 			compiler/vs/stack_walker.h
 
 			os/windows/current_version.h
+			os/windows/filesystem.cpp
 			os/windows/page_locked_allocator.cpp
 			os/windows/prec_timer.cpp
 			os/windows/scheduling.cpp
@@ -32,6 +33,7 @@ if (MSVC)
 	)
 elseif (CMAKE_COMPILER_IS_GNUCXX)
 	set(OS_SPECIFIC_SOURCES
+			os/linux/filesystem.cpp
 			os/linux/prec_timer.cpp
 			os/linux/signal_handlers.cpp
 			os/linux/scheduling.cpp
@@ -44,6 +46,7 @@ set(HEADERS
 
 		gl/gl_check.h
 
+		os/filesystem.h
 		os/general_protection_fault.h
 		os/page_locked_allocator.h
 		os/scheduling.h
@@ -96,3 +99,51 @@ source_group(sources\\compiler\\vs compiler/vs/*)
 source_group(sources\\os\\windows os/windows/*)
 source_group(sources\\os os/*)
 
+if (MSVC)
+	target_link_libraries(common
+		alibcof64.lib
+		jpeg.lib
+		sndfile.lib
+		optimized sfml-system-2.lib
+		optimized sfml-window-2.lib
+		optimized sfml-graphics-2.lib
+		debug sfml-system-d-2.lib
+		debug sfml-window-d-2.lib
+		debug sfml-graphics-d-2.lib
+		Winmm.lib
+		Ws2_32.lib
+		optimized tbb.lib
+		debug tbb_debug.lib
+		OpenGL32.lib
+		glew32.lib
+		openal32.lib
+		zlibstat.lib
+	)
+else ()
+	target_link_libraries(common
+		"${DEPENDENCIES_FOLDER}/asmlib/alibelf64.a"
+		boost_system
+		boost_thread
+		boost_chrono
+		boost_filesystem
+		boost_log
+		boost_locale
+		boost_regex
+		boost_date_time
+		tbb
+		tbbmalloc
+		tbbmalloc_proxy
+		sfml-graphics-s
+		sfml-window-s
+		sfml-system-s
+		GLEW
+		GL
+		X11
+		jpeg
+		sndfile
+		freetype
+		udev
+		Xrandr
+		pthread
+	)
+endif ()

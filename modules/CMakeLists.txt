@@ -5,11 +5,11 @@ add_subdirectory(ffmpeg)
 
 if (MSVC)
 	add_subdirectory(bluefish)
-	add_subdirectory(decklink)
 	add_subdirectory(oal)
-	add_subdirectory(screen)
 endif ()
 
+add_subdirectory(decklink)
+add_subdirectory(screen)
 add_subdirectory(image)
 
 if (MSVC)

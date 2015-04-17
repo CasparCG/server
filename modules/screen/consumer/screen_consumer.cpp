@@ -34,7 +34,7 @@
 #include <common/prec_timer.h>
 #include <common/future.h>
 
-#include <windows.h>
+//#include <windows.h>
 
 #include <ffmpeg/producer/filter/filter.h>
 
@@ -94,7 +94,7 @@ struct configuration
 		
 	std::wstring	name				= L"ogl";
 	int				screen_index		= 0;
-	stretch			stretch				= stretch::fill;
+	screen::stretch	stretch				= screen::stretch::fill;
 	bool			windowed			= true;
 	bool			auto_deinterlace	= true;
 	bool			key_only			= false;
@@ -187,7 +187,7 @@ public:
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 									
-		DISPLAY_DEVICE d_device = {sizeof(d_device), 0};			
+		/*DISPLAY_DEVICE d_device = {sizeof(d_device), 0};
 		std::vector<DISPLAY_DEVICE> displayDevices;
 		for(int n = 0; EnumDisplayDevices(NULL, n, &d_device, NULL); ++n)
 			displayDevices.push_back(d_device);
@@ -202,7 +202,11 @@ public:
 		screen_x_		= devmode.dmPosition.x;
 		screen_y_		= devmode.dmPosition.y;
 		screen_width_	= config_.windowed ? square_width_ : devmode.dmPelsWidth;
-		screen_height_	= config_.windowed ? square_height_ : devmode.dmPelsHeight;
+		screen_height_	= config_.windowed ? square_height_ : devmode.dmPelsHeight;*/
+		screen_x_		= 0;
+		screen_y_		= 0;
+		screen_width_	= square_width_;
+		screen_height_	= square_height_;
 		
 		is_running_ = true;
 		thread_ = boost::thread([this]{run();});
@@ -254,7 +258,13 @@ public:
 		glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW_ARB);
 		glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
 		
-		auto wglSwapIntervalEXT = reinterpret_cast<void(APIENTRY*)(int)>(wglGetProcAddress("wglSwapIntervalEXT"));
+		window_.setVerticalSyncEnabled(config_.vsync);
+
+		if (config_.vsync)
+		{
+			CASPAR_LOG(info) << print() << " Enabled vsync.";
+		}
+		/*auto wglSwapIntervalEXT = reinterpret_cast<void(APIENTRY*)(int)>(wglGetProcAddress("wglSwapIntervalEXT"));
 		if(wglSwapIntervalEXT)
 		{
 			if(config_.vsync)
@@ -264,7 +274,7 @@ public:
 			}
 			else
 				wglSwapIntervalEXT(0);
-		}
+		}*/
 
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
 	}
@@ -508,11 +518,11 @@ public:
 		GL(glViewport(0, 0, screen_width_, screen_height_));
 
 		std::pair<float, float> target_ratio = None();
-		if (config_.stretch == stretch::fill)
+		if (config_.stretch == screen::stretch::fill)
 			target_ratio = Fill();
-		else if (config_.stretch == stretch::uniform)
+		else if (config_.stretch == screen::stretch::uniform)
 			target_ratio = Uniform();
-		else if (config_.stretch == stretch::uniform_to_fill)
+		else if (config_.stretch == screen::stretch::uniform_to_fill)
 			target_ratio = UniformToFill();
 
 		width_ = target_ratio.first;
@@ -657,9 +667,9 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(const boost:
 	
 	auto stretch_str = ptree.get(L"stretch", L"default");
 	if(stretch_str == L"uniform")
-		config.stretch = stretch::uniform;
+		config.stretch = screen::stretch::uniform;
 	else if(stretch_str == L"uniform_to_fill")
-		config.stretch = stretch::uniform_to_fill;
+		config.stretch = screen::stretch::uniform_to_fill;
 
 	auto aspect_str = ptree.get(L"aspect-ratio", L"default");
 	if(aspect_str == L"16:9")
