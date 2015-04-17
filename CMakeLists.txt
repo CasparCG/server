@@ -72,14 +72,19 @@ if (MSVC)
 	set(CMAKE_CXX_FLAGS_DEBUG	"${CMAKE_CXX_FLAGS_DEBUG}	/D TBB_USE_ASSERT=1 /D TBB_USE_DEBUG /bigobj")
 	set(CMAKE_CXX_FLAGS_RELEASE	"${CMAKE_CXX_FLAGS_RELEASE}	/Oi /Ot /Gy")
 elseif (CMAKE_COMPILER_IS_GNUCXX)
+	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g")
 	add_compile_options( -std=c++11 )
 	add_compile_options( -msse3 )
 	add_compile_options( -mssse3 )
 	add_compile_options( -msse4.1 )
 	add_compile_options( -pthread )
+	add_compile_options( -fnon-call-exceptions ) # Allow signal handler to throw exception
 endif ()
 
-cmake_policy(SET CMP0045 OLD)
+if (POLICY CMP0045)
+	cmake_policy(SET CMP0045 OLD)
+endif ()
+
 include(CMake/PrecompiledHeader.cmake)
 
 set(CASPARCG_MODULE_INCLUDE_STATEMENTS	"" CACHE INTERNAL "")

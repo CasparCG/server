@@ -61,30 +61,30 @@ void configure(const std::wstring& filename)
 	{
 		auto initialPath = boost::filesystem::initial_path().wstring();
 	
-		boost::filesystem::wifstream file(initialPath + L"\\" + filename);
+		boost::filesystem::wifstream file(initialPath + L"/" + filename);
 		boost::property_tree::read_xml(file, pt, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
 
 		auto paths	= pt.get_child(L"configuration.paths");
-		media		= paths.get(L"media-path", initialPath + L"\\media\\");
-		log			= paths.get(L"log-path", initialPath + L"\\log\\");
-		ftemplate	= boost::filesystem::complete(paths.get(L"template-path", initialPath + L"\\template\\")).wstring();		
-		data		= paths.get(L"data-path", initialPath + L"\\data\\");
-		font		= paths.get(L"font-path", initialPath + L"\\fonts\\");
-		thumbnails	= paths.get(L"thumbnails-path", initialPath + L"\\data\\");
+		media		= paths.get(L"media-path", initialPath + L"/media/");
+		log			= paths.get(L"log-path", initialPath + L"/log/");
+		ftemplate	= boost::filesystem::complete(paths.get(L"template-path", initialPath + L"/template/")).wstring();
+		data		= paths.get(L"data-path", initialPath + L"/data/");
+		font		= paths.get(L"font-path", initialPath + L"/fonts/");
+		thumbnails	= paths.get(L"thumbnails-path", initialPath + L"/data/");
 
 		//Make sure that all paths have a trailing backslash
-		if(media.at(media.length()-1) != L'\\')
-			media.append(L"\\");
-		if(log.at(log.length()-1) != L'\\')
-			log.append(L"\\");
-		if(ftemplate.at(ftemplate.length()-1) != L'\\')
-			ftemplate.append(L"\\");
-		if(data.at(data.length()-1) != L'\\')
-			data.append(L"\\");
-		if(font.at(font.length()-1) != L'\\')
-			font.append(L"\\");
-		if(thumbnails.at(thumbnails.length()-1) != L'\\')
-			thumbnails.append(L"\\");
+		if(media.at(media.length()-1) != L'/')
+			media.append(L"/");
+		if(log.at(log.length()-1) != L'/')
+			log.append(L"/");
+		if(ftemplate.at(ftemplate.length()-1) != L'/')
+			ftemplate.append(L"/");
+		if(data.at(data.length()-1) != L'/')
+			data.append(L"/");
+		if(font.at(font.length()-1) != L'/')
+			font.append(L"/");
+		if(thumbnails.at(thumbnails.length()-1) != L'/')
+			thumbnails.append(L"/");
 
 		try
 		{

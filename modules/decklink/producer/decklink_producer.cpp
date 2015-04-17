@@ -19,11 +19,10 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../stdafx.h"
+#include "../StdAfx.h"
 
 #include "decklink_producer.h"
 
-#include "../interop/DeckLinkAPI_h.h"
 #include "../util/util.h"
 
 #include "../../ffmpeg/producer/filter/filter.h"
@@ -64,15 +63,7 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-#pragma warning(push)
-#pragma warning(disable : 4996)
-
-	#include <atlbase.h>
-
-	#include <atlcom.h>
-	#include <atlhost.h>
-
-#pragma warning(push)
+#include "../decklink_api.h"
 
 #include <functional>
 
@@ -85,9 +76,9 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	spl::shared_ptr<diagnostics::graph>				graph_;
 	boost::timer									tick_timer_;
 
-	CComPtr<IDeckLink>								decklink_			= get_device(device_index_);
-	CComQIPtr<IDeckLinkInput>						input_				= decklink_;
-	CComQIPtr<IDeckLinkAttributes >					attributes_			= decklink_;
+	com_ptr<IDeckLink>								decklink_			= get_device(device_index_);
+	com_iface_ptr<IDeckLinkInput>					input_				= iface_cast<IDeckLinkInput>(decklink_);
+	com_iface_ptr<IDeckLinkAttributes>				attributes_			= iface_cast<IDeckLinkAttributes>(decklink_);
 	
 	const std::wstring								model_name_			= get_model_name(decklink_);
 	const std::wstring								filter_;
@@ -317,7 +308,7 @@ public:
 	{
 		executor_.invoke([=]
 		{
-			CoInitialize(nullptr);
+			com_initialize();
 			producer_.reset(new decklink_producer(in_format_desc, device_index, frame_factory, out_format_desc, filter_str));
 		});
 	}
@@ -327,7 +318,7 @@ public:
 		executor_.invoke([=]
 		{
 			producer_.reset();
-			CoUninitialize();
+			com_uninitialize();
 		});
 	}
 
