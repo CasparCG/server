@@ -24,7 +24,7 @@ set(HEADERS
 if (MSVC)
 	set(OS_SPECIFIC_SOURCES
 			interop/DeckLinkAPI_i.c
-			interop/DeckLinkAPI_h.h
+			interop/DeckLinkAPI.h
 			interop/DeckLinkAPIVersion.h
 	)
 elseif (CMAKE_COMPILER_IS_GNUCXX)
