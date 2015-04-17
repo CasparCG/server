@@ -60,7 +60,7 @@ static binding<T> parse_expression(
 }
 
 template<>
-static binding<std::wstring> parse_expression(
+binding<std::wstring> parse_expression(
 		const std::wstring& str, const variable_repository& var_repo)
 {
 	auto cursor = str.cbegin();

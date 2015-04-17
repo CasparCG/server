@@ -71,7 +71,51 @@ source_group(sources\\producer\\util producer/util/*)
 source_group(sources\\producer\\video producer/video/*)
 source_group(sources\\producer producer/*)
 
-target_link_libraries(ffmpeg common core)
+if (MSVC)
+	target_link_libraries(ffmpeg
+			common
+			core
+
+			avformat.lib
+			avcodec.lib
+			avutil.lib
+			avfilter.lib
+			swscale.lib
+			swresample.lib
+	)
+else()
+	target_link_libraries(ffmpeg
+			common
+			core
+
+			-Wl,--start-group
+			avformat.so
+			avcodec.so
+			avutil.so
+			avfilter.so
+			swscale.so
+			swresample.so
+			postproc.so
+
+			bz2.a
+			mp3lame.a
+			opus.a
+			png.a
+			theora.a
+			theoradec.a
+			theoraenc.a
+			vorbis.a
+			vorbisenc.a
+			vorbisfile.a
+			ogg.a
+			vpx.a
+			x264.a
+			xvidcore.a
+			yasm.a
+			z.a
+			-Wl,--end-group
+	)
+endif()
 
 casparcg_add_include_statement("modules/ffmpeg/ffmpeg.h")
 casparcg_add_init_statement("ffmpeg::init" "ffmpeg")
