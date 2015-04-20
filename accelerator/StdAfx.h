@@ -45,7 +45,6 @@
 #include <tbb/concurrent_unordered_map.h>
 
 #include <boost/circular_buffer.hpp>
-#include <boost/timer.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/range.hpp>
 #include <boost/range/adaptors.hpp>
@@ -61,3 +60,4 @@
 
 #include <common/log.h>
 #include <common/except.h>
+#include <common/timer.h>

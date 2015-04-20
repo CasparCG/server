@@ -23,7 +23,7 @@
 
 #include "AMCPCommandQueue.h"
 
-#include <boost/timer.hpp>
+#include <common/timer.h>
 
 namespace caspar { namespace protocol { namespace amcp {
 	
@@ -62,7 +62,7 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 		{
 			try
 			{
-				boost::timer timer;
+				caspar::timer timer;
 				if(pCurrentCommand->Execute()) 
 					CASPAR_LOG(debug) << "Executed command: " << pCurrentCommand->print() << " " << timer.elapsed();
 				else 

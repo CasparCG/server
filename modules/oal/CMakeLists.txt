@@ -30,3 +30,9 @@ target_link_libraries(oal common core)
 casparcg_add_include_statement("modules/oal/oal.h")
 casparcg_add_init_statement("oal::init" "oal")
 casparcg_add_module_project("oal")
+
+if(MSVC)
+	casparcg_add_runtime_dependency("${OPENAL_BIN_PATH}/OpenAL32.dll")
+	casparcg_add_runtime_dependency("${OPENAL_BIN_PATH}/wrap_oal.dll")
+endif()
+

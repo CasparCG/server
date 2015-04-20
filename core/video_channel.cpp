@@ -36,6 +36,7 @@
 #include <common/env.h>
 #include <common/lock.h>
 #include <common/executor.h>
+#include <common/timer.h>
 
 #include <core/mixer/image/image_mixer.h>
 #include <core/diagnostics/call_context.h>
@@ -117,7 +118,7 @@ public:
 
 			auto format_desc = video_format_desc();
 			
-			boost::timer frame_timer;
+			caspar::timer frame_timer;
 
 			// Produce
 			
