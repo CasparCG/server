@@ -41,11 +41,11 @@
 #include <common/memshfl.h>
 #include <common/env.h>
 #include <common/linq.h>
+#include <common/timer.h>
 
 #include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/timer.hpp>
 
 #include <functional>
 
@@ -152,7 +152,7 @@ public:
 		
 	void operator()(const_frame input_frame, const core::video_format_desc& format_desc)
 	{
-		boost::timer frame_timer;
+		caspar::timer frame_timer;
 
 		set_video_format_desc(format_desc);
 
