@@ -35,6 +35,7 @@
 #include <common/except.h>
 #include <common/log.h>
 #include <common/param.h>
+#include <common/timer.h>
 
 #include <core/frame/frame.h>
 #include <core/frame/draw_frame.h>
@@ -47,7 +48,6 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/timer.hpp>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -74,7 +74,7 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	const int										device_index_;
 	core::monitor::subject							monitor_subject_;
 	spl::shared_ptr<diagnostics::graph>				graph_;
-	boost::timer									tick_timer_;
+	caspar::timer									tick_timer_;
 
 	com_ptr<IDeckLink>								decklink_			= get_device(device_index_);
 	com_iface_ptr<IDeckLinkInput>					input_				= iface_cast<IDeckLinkInput>(decklink_);
@@ -178,7 +178,7 @@ public:
 			graph_->set_value("tick-time", tick_timer_.elapsed()*out_format_desc_.fps*0.5);
 			tick_timer_.restart();
 
-			boost::timer frame_timer;	
+			caspar::timer frame_timer;
 			
 			// Video
 
