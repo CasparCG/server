@@ -35,7 +35,7 @@
 #include <common/array.h>
 #include <common/memory.h>
 #include <common/gl/gl_check.h>
-//#include <common/os/windows/windows.h>
+#include <common/timer.h>
 
 #include <GL/glew.h>
 
@@ -160,7 +160,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		std::shared_ptr<buffer> buf;
 		if(!pool->try_pop(buf))	
 		{
-			boost::timer timer;
+			caspar::timer timer;
 
 			buf = executor_.invoke([&]
 			{

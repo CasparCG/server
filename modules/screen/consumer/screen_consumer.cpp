@@ -33,6 +33,7 @@
 #include <common/utf.h>
 #include <common/prec_timer.h>
 #include <common/future.h>
+#include <common/timer.h>
 
 //#include <windows.h>
 
@@ -43,7 +44,6 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/interaction/interaction_sink.h>
 
-#include <boost/timer.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -124,8 +124,8 @@ struct screen_consumer : boost::noncopyable
 	sf::Window											window_;
 
 	spl::shared_ptr<diagnostics::graph>					graph_;
-	boost::timer										perf_timer_;
-	boost::timer										tick_timer_;
+	caspar::timer										perf_timer_;
+	caspar::timer										tick_timer_;
 
 	caspar::prec_timer									wait_timer_;
 

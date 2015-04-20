@@ -47,7 +47,6 @@
 #include <tbb/concurrent_queue.h>
 #include <tbb/cache_aligned_allocator.h>
 #include <boost/circular_buffer.hpp>
-#include <boost/timer.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/range.hpp>
 #include <boost/range/algorithm.hpp>
@@ -87,6 +86,7 @@ extern "C"
 #include "../common/utf.h"
 #include "../common/except.h"
 #include "../common/log.h"
+#include "../common/timer.h"
 #endif
 
 #if defined(_MSC_VER)

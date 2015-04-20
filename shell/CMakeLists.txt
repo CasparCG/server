@@ -18,12 +18,12 @@ elseif (CMAKE_COMPILER_IS_GNUCXX)
 	)
 endif ()
 set(SOURCES
+		casparcg.config
 		main.cpp
 		server.cpp
 		stdafx.cpp
 )
 set(HEADERS
-		casparcg.config
 		included_modules.h
 		platform_specific.h
 		server.h
@@ -57,32 +57,12 @@ target_link_libraries(casparcg
 		reroute
 )
 
+casparcg_add_runtime_dependency("${LIBERATION_FONTS_BIN_PATH}/LiberationSans-Regular.ttf")
+casparcg_add_runtime_dependency("${CMAKE_CURRENT_SOURCE_DIR}/casparcg.config")
+
 set(OUTPUT_FOLDER "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}")
 
-add_custom_command(TARGET casparcg POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy \"${FFMPEG_BIN_PATH}/avcodec-55.dll\" \"${OUTPUT_FOLDER}/\"
-		COMMAND ${CMAKE_COMMAND} -E copy \"${FFMPEG_BIN_PATH}/avdevice-55.dll\" \"${OUTPUT_FOLDER}/\"
-		COMMAND ${CMAKE_COMMAND} -E copy \"${FFMPEG_BIN_PATH}/avfilter-4.dll\" \"${OUTPUT_FOLDER}/\"
-		COMMAND ${CMAKE_COMMAND} -E copy \"${FFMPEG_BIN_PATH}/avformat-55.dll\" \"${OUTPUT_FOLDER}/\"
-		COMMAND ${CMAKE_COMMAND} -E copy \"${FFMPEG_BIN_PATH}/avutil-52.dll\" \"${OUTPUT_FOLDER}/\"
-		COMMAND ${CMAKE_COMMAND} -E copy \"${FFMPEG_BIN_PATH}/postproc-52.dll\" \"${OUTPUT_FOLDER}/\"
-		COMMAND ${CMAKE_COMMAND} -E copy \"${FFMPEG_BIN_PATH}/swresample-0.dll\" \"${OUTPUT_FOLDER}/\"
-		COMMAND ${CMAKE_COMMAND} -E copy \"${FFMPEG_BIN_PATH}/swscale-2.dll\" \"${OUTPUT_FOLDER}/\"
-		COMMAND ${CMAKE_COMMAND} -E copy \"${FREEIMAGE_BIN_PATH}/FreeImage.dll\" \"${OUTPUT_FOLDER}/\"
-		COMMAND ${CMAKE_COMMAND} -E copy \"${FREEIMAGE_BIN_PATH}/FreeImaged.dll\" \"${OUTPUT_FOLDER}/\"
-		COMMAND ${CMAKE_COMMAND} -E copy \"${GLEW_BIN_PATH}/glew32.dll\" \"${OUTPUT_FOLDER}/\"
-		COMMAND ${CMAKE_COMMAND} -E copy \"${OPENAL_BIN_PATH}/OpenAL32.dll\" \"${OUTPUT_FOLDER}/\"
-		COMMAND ${CMAKE_COMMAND} -E copy \"${OPENAL_BIN_PATH}/wrap_oal.dll\" \"${OUTPUT_FOLDER}/\"
-		COMMAND ${CMAKE_COMMAND} -E copy \"${TBB_BIN_PATH}/tbb.dll\" \"${OUTPUT_FOLDER}/\"
-		COMMAND ${CMAKE_COMMAND} -E copy \"${TBB_BIN_PATH}/tbb_debug.dll\" \"${OUTPUT_FOLDER}/\"
-		COMMAND ${CMAKE_COMMAND} -E copy \"${TBB_BIN_PATH}/tbbmalloc.dll\" \"${OUTPUT_FOLDER}/\"
-		COMMAND ${CMAKE_COMMAND} -E copy \"${TBB_BIN_PATH}/tbbmalloc_debug.dll\" \"${OUTPUT_FOLDER}/\"
-		COMMAND ${CMAKE_COMMAND} -E copy \"${TBB_BIN_PATH}/tbbmalloc_proxy.dll\" \"${OUTPUT_FOLDER}/\"
-		COMMAND ${CMAKE_COMMAND} -E copy \"${TBB_BIN_PATH}/tbbmalloc_proxy_debug.dll\" \"${OUTPUT_FOLDER}/\"
-
-		COMMAND ${CMAKE_COMMAND} -E copy \"${LIBERATION_FONTS_BIN_PATH}/LiberationSans-Regular.ttf\" \"${OUTPUT_FOLDER}/\"
-		COMMAND ${CMAKE_COMMAND} -E copy \"${LIBERATION_FONTS_BIN_PATH}/LiberationSans-Regular.ttf\" \"${CMAKE_CURRENT_BINARY_DIR}/\"
-
-		COMMAND ${CMAKE_COMMAND} -E copy \"${CMAKE_CURRENT_SOURCE_DIR}/casparcg.config\" \"${OUTPUT_FOLDER}/\"
-		COMMAND ${CMAKE_COMMAND} -E copy \"${CMAKE_CURRENT_SOURCE_DIR}/casparcg.config\" \"${CMAKE_CURRENT_BINARY_DIR}/\"
-)
+foreach(FILE_TO_COPY ${CASPARCG_RUNTIME_DEPENDENCIES})
+	add_custom_command(TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/\")
+	add_custom_command(TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${CMAKE_CURRENT_BINARY_DIR}/\")
+endforeach(FILE_TO_COPY)
