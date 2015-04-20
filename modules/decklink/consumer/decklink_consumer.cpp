@@ -38,6 +38,7 @@
 #include <common/array.h>
 #include <common/future.h>
 #include <common/cache_aligned_vector.h>
+#include <common/timer.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/diagnostics/call_context.h>
@@ -47,7 +48,6 @@
 #include <common/assert.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/circular_buffer.hpp>
-#include <boost/timer.hpp>
 #include <boost/property_tree/ptree.hpp>
 
 namespace caspar { namespace decklink { 
@@ -197,7 +197,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	tbb::concurrent_bounded_queue<core::const_frame>    audio_frame_buffer_;
 	
 	spl::shared_ptr<diagnostics::graph>                 graph_;
-	boost::timer                                        tick_timer_;
+	caspar::timer										tick_timer_;
 	retry_task<bool>                                    send_completion_;
 
 public:

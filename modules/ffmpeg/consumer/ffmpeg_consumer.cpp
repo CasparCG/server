@@ -44,9 +44,9 @@
 #include <common/utf.h>
 #include <common/assert.h>
 #include <common/memshfl.h>
+#include <common/timer.h>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/timer.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/range/algorithm.hpp>
@@ -732,7 +732,7 @@ private:
 			if(frame_number_ % 25 == 0)
 				check_space();
 
-			boost::timer frame_timer;
+			caspar::timer frame_timer;
 
 			encode_video_frame(frame);
 			encode_audio_frame(frame);
