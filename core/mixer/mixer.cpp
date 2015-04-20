@@ -33,6 +33,7 @@
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
 #include <common/future.h>
+#include <common/timer.h>
 
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
@@ -40,7 +41,6 @@
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
-#include <boost/timer.hpp>
 #include <boost/property_tree/ptree.hpp>
 
 #include <tbb/concurrent_queue.h>
@@ -71,7 +71,7 @@ public:
 	
 	const_frame operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc)
 	{		
-		boost::timer frame_timer;
+		caspar::timer frame_timer;
 
 		auto frame = executor_.invoke([=]() mutable -> const_frame
 		{		

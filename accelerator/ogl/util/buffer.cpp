@@ -28,6 +28,7 @@
 
 #include <common/except.h>
 #include <common/gl/gl_check.h>
+#include <common/timer.h>
 
 #include <GL/glew.h>
 
@@ -52,7 +53,7 @@ public:
 		, target_(usage == buffer::usage::write_only ? GL_PIXEL_UNPACK_BUFFER : GL_PIXEL_PACK_BUFFER)
 		, usage_(usage == buffer::usage::write_only ? GL_STREAM_DRAW : GL_STREAM_READ)
 	{
-		boost::timer timer;
+		caspar::timer timer;
 
 		data_ = nullptr;
 		GL(glGenBuffers(1, &pbo_));
@@ -84,7 +85,7 @@ public:
 		if(data_ != nullptr)
 			return data_;
 		
-		boost::timer timer;
+		caspar::timer timer;
 
 		GL(glBindBuffer(target_, pbo_));
 		if(usage_ == GL_STREAM_DRAW)			

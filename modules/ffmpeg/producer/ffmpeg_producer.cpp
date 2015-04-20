@@ -36,6 +36,7 @@
 #include <common/param.h>
 #include <common/diagnostics/graph.h>
 #include <common/future.h>
+#include <common/timer.h>
 
 #include <core/video_format.h>
 #include <core/producer/frame_producer.h>
@@ -46,7 +47,6 @@
 
 #include <boost/algorithm/string.hpp>
 #include <common/assert.h>
-#include <boost/timer.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/regex.hpp>
@@ -178,7 +178,7 @@ public:
 	{				
 		auto frame = core::draw_frame::late();		
 		
-		boost::timer frame_timer;
+		caspar::timer frame_timer;
 		
 		end_seek();
 				

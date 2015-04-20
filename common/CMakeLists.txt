@@ -79,6 +79,7 @@ set(HEADERS
 		reactive.h
 		semaphore.h
 		stdafx.h
+		timer.h
 		tweener.h
 		utf.h
 )
@@ -147,3 +148,17 @@ else ()
 		pthread
 	)
 endif ()
+
+if(MSVC)
+	casparcg_add_runtime_dependency("${GLEW_BIN_PATH}/glew32.dll")
+	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbb.dll")
+	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbb_debug.dll")
+	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc.dll")
+	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_debug.dll")
+	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_proxy.dll")
+	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_proxy_debug.dll")
+else()
+	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/libtbb.so.2")
+	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/libtbbmalloc_proxy.so.2")
+	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/libtbbmalloc.so.2")
+endif()

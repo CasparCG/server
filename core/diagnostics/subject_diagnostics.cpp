@@ -26,9 +26,9 @@
 #include "call_context.h"
 
 #include <common/diagnostics/graph.h>
+#include <common/timer.h>
 
 #include <boost/lexical_cast.hpp>
-#include <boost/timer.hpp>
 
 #include <atomic>
 #include <mutex>
@@ -56,7 +56,7 @@ class subject_graph : public caspar::diagnostics::spi::graph_sink
 	std::mutex								mutex_;
 	std::wstring							text_;
 	std::unordered_map<std::string, int>	colors_;
-	boost::timer							time_since_full_state_send_;
+	caspar::timer							time_since_full_state_send_;
 public:
 	subject_graph()
 	{
