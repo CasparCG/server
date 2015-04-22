@@ -106,3 +106,5 @@ higher, please see LICENSE.TXT for details.
 
 The included software is provided as-is by Sveriges Televison AB.
 More information is available at http://casparcg.com/
+
+Join the chat at https://gitter.im/CasparCG/Server
