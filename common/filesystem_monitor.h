@@ -59,7 +59,7 @@ public:
 	 *
 	 * @param file The file to reemmit.
 	 */
-	virtual void reemmit(const boost::filesystem::wpath& file) = 0;
+	virtual void reemmit(const boost::filesystem::path& file) = 0;
 };
 
 /**
@@ -83,7 +83,7 @@ ENUM_ENABLE_BITWISE(filesystem_event);
  * @param event Can be CREATED, REMOVED or MODIFIED.
  * @param file  The file affected.
  */
-typedef std::function<void (filesystem_event event, const boost::filesystem::wpath& file)> filesystem_monitor_handler;
+typedef std::function<void (filesystem_event event, const boost::filesystem::path& file)> filesystem_monitor_handler;
 
 /**
  * Called when the initially available files has been found.
@@ -92,7 +92,7 @@ typedef std::function<void (filesystem_event event, const boost::filesystem::wpa
  *
  * @param initial_files The files that were initially available.
  */
-typedef std::function<void (const std::set<boost::filesystem::wpath>& initial_files)> initial_files_handler;
+typedef std::function<void (const std::set<boost::filesystem::path>& initial_files)> initial_files_handler;
 
 /**
  * Factory for creating filesystem monitors.
@@ -120,12 +120,12 @@ public:
 	 * @return The filesystem monitor handle.
 	 */
 	virtual filesystem_monitor::ptr create(
-			const boost::filesystem::wpath& folder_to_watch,
+			const boost::filesystem::path& folder_to_watch,
 			filesystem_event events_of_interest_mask,
 			bool report_already_existing,
 			const filesystem_monitor_handler& handler,
 			const initial_files_handler& initial_files_handler =
-					[] (const std::set<boost::filesystem::wpath>&) { }) = 0;
+					[] (const std::set<boost::filesystem::path>&) { }) = 0;
 };
 
 }

@@ -37,6 +37,7 @@
 #include <common/log.h>
 #include <common/array.h>
 #include <common/base64.h>
+#include <common/os/filesystem.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -246,14 +247,16 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 	std::wstring filename = env::media_folder() + params[0];
 
 	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
-		{			
-			return boost::filesystem::is_regular_file(boost::filesystem::path(filename).replace_extension(ex));
-		});
+	{
+		auto file = caspar::find_case_insensitive(boost::filesystem::path(filename).replace_extension(ex).wstring());
+
+		return static_cast<bool>(file);
+	});
 
 	if(ext == extensions.end())
 		return core::frame_producer::empty();
 
-	return spl::make_shared<image_producer>(frame_factory, filename + *ext);
+	return spl::make_shared<image_producer>(frame_factory, *caspar::find_case_insensitive(filename + *ext));
 }
 
 

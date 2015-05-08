@@ -776,7 +776,7 @@ public:
 
 		if (separate_key_)
 		{
-			boost::filesystem::wpath fill_file(filename_);
+			boost::filesystem::path fill_file(filename_);
 			auto without_extension = u16(fill_file.stem().string());
 			auto key_file = env::media_folder() + without_extension + L"_A" + u16(fill_file.extension().string());
 
