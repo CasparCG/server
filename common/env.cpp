@@ -28,6 +28,7 @@
 #include "except.h"
 #include "log.h"
 #include "string.h"
+#include "os/filesystem.h"
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
@@ -71,8 +72,52 @@ void configure(const std::wstring& filename)
 		data		= paths.get(L"data-path", initialPath + L"/data/");
 		font		= paths.get(L"font-path", initialPath + L"/fonts/");
 		thumbnails	= paths.get(L"thumbnails-path", initialPath + L"/data/");
+	}
+	catch(...)
+	{
+		CASPAR_LOG(error) << L" ### Invalid configuration file. ###";
+		throw;
+	}
 
-		//Make sure that all paths have a trailing backslash
+	try
+	{
+		auto found_media_path = find_case_insensitive(media);
+		if (found_media_path)
+			media = *found_media_path;
+		else
+			boost::filesystem::create_directories(media);
+
+		auto found_template_path = find_case_insensitive(ftemplate);
+		if (found_template_path)
+			ftemplate = *found_template_path;
+		else
+			boost::filesystem::create_directories(ftemplate);
+
+		auto found_data_path = find_case_insensitive(data);
+		if (found_data_path)
+			data = *found_data_path;
+		else
+			boost::filesystem::create_directories(data);
+
+		auto found_font_path = find_case_insensitive(font);
+		if (found_font_path)
+			font = *found_font_path;
+		else
+			boost::filesystem::create_directories(font);
+
+		auto found_thumbnails_path = find_case_insensitive(thumbnails);
+		if (found_thumbnails_path)
+			thumbnails = *found_thumbnails_path;
+		else
+			boost::filesystem::create_directories(thumbnails);
+
+		auto found_log_path = find_case_insensitive(log);
+		if (found_log_path)
+			log = *found_log_path;
+		else if (!boost::filesystem::create_directories(log))
+			log = L"./";
+
+		//Make sure that all paths have a trailing slash
 		if(media.at(media.length()-1) != L'/')
 			media.append(L"/");
 		if(log.at(log.length()-1) != L'/')
@@ -88,18 +133,20 @@ void configure(const std::wstring& filename)
 
 		try
 		{
+			auto initialPath = boost::filesystem::initial_path().wstring();
+
 			for(auto it = boost::filesystem::directory_iterator(initialPath); it != boost::filesystem::directory_iterator(); ++it)
 			{
-				if(it->path().wstring().find(L".fth") != std::wstring::npos)			
+				if(it->path().wstring().find(L".fth") != std::wstring::npos)
 				{
 					auto from_path = *it;
 					auto to_path = boost::filesystem::path(ftemplate + L"/" + it->path().wstring());
-				
+
 					if(boost::filesystem::exists(to_path))
 						boost::filesystem::remove(to_path);
 
 					boost::filesystem::copy_file(from_path, to_path);
-				}	
+				}
 			}
 		}
 		catch(...)
@@ -107,45 +154,6 @@ void configure(const std::wstring& filename)
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			CASPAR_LOG(error) << L"Failed to copy template-hosts from initial-path to template-path.";
 		}
-	}
-	catch(...)
-	{
-		CASPAR_LOG(error) << L" ### Invalid configuration file. ###";
-		throw;
-	}
-
-	try
-	{
-		try
-		{
-			auto log_path = boost::filesystem::path(log);
-			if(!boost::filesystem::exists(log_path))
-				boost::filesystem::create_directories(log_path);
-		}
-		catch(...)
-		{
-			log = L"./";
-		}
-
-		auto media_path = boost::filesystem::path(media);
-		if(!boost::filesystem::exists(media_path))
-			boost::filesystem::create_directories(media_path);
-				
-		auto template_path = boost::filesystem::path(ftemplate);
-		if(!boost::filesystem::exists(template_path))
-			boost::filesystem::create_directories(template_path);
-		
-		auto data_path = boost::filesystem::path(data);
-		if(!boost::filesystem::exists(data_path))
-			boost::filesystem::create_directories(data_path);
-
-		auto font_path = boost::filesystem::path(font);
-		if(!boost::filesystem::exists(font_path))
-			boost::filesystem::create_directories(font_path);
-
-		auto thumbnails_path = boost::filesystem::path(thumbnails);
-		if(!boost::filesystem::exists(thumbnails_path))
-			boost::filesystem::create_directories(thumbnails_path);
 	}
 	catch(...)
 	{

@@ -51,7 +51,7 @@ namespace caspar { namespace image {
 	void write_cropped_png(
 		const core::const_frame& frame,
 		const core::video_format_desc& format_desc,
-		const boost::filesystem::wpath& output_file,
+		const boost::filesystem::path& output_file,
 		int width,
 		int height)
 	{
@@ -100,7 +100,11 @@ public:
 				auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Allocate(static_cast<int>(frame.width()), static_cast<int>(frame.height()), 32), FreeImage_Unload);
 				A_memcpy(FreeImage_GetBits(bitmap.get()), frame.image_data().begin(), frame.image_data().size());
 				FreeImage_FlipVertical(bitmap.get());
+#ifdef WIN32
 				FreeImage_SaveU(FIF_PNG, bitmap.get(), filename2.c_str(), 0);
+#else
+				FreeImage_Save(FIF_PNG, bitmap.get(), u8(filename2).c_str(), 0);
+#endif
 			}
 			catch(...)
 			{

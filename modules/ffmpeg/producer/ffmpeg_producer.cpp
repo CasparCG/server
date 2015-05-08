@@ -62,12 +62,12 @@ namespace caspar { namespace ffmpeg {
 
 std::wstring get_relative_or_original(
 		const std::wstring& filename,
-		const boost::filesystem::wpath& relative_to)
+		const boost::filesystem::path& relative_to)
 {
-	boost::filesystem::wpath file(filename);
+	boost::filesystem::path file(filename);
 	auto result = file.filename().wstring();
 
-	boost::filesystem::wpath current_path = file;
+	boost::filesystem::path current_path = file;
 
 	while (true)
 	{
