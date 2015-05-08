@@ -49,7 +49,7 @@ public:
 	{
 	}
 
-	void operator()(filesystem_event event, const boost::filesystem::wpath& file)
+	void operator()(filesystem_event event, const boost::filesystem::path& file)
 	{
 		try
 		{
@@ -71,17 +71,17 @@ public:
 class directory_monitor
 {
 	bool											report_already_existing_;
-	boost::filesystem::wpath						folder_;
+	boost::filesystem::path							folder_;
 	filesystem_event								events_mask_;
 	filesystem_monitor_handler						handler_;
 	initial_files_handler							initial_files_handler_;
 	bool											first_scan_					= true;
-	std::map<boost::filesystem::wpath, std::time_t>	files_;
-	std::map<boost::filesystem::wpath, uintmax_t>	being_written_sizes_;
+	std::map<boost::filesystem::path, std::time_t>	files_;
+	std::map<boost::filesystem::path, uintmax_t>	being_written_sizes_;
 public:
 	directory_monitor(
 			bool report_already_existing,
-			const boost::filesystem::wpath& folder,
+			const boost::filesystem::path& folder,
 			filesystem_event events_mask,
 			const filesystem_monitor_handler& handler,
 			const initial_files_handler& initial_files_handler)
@@ -102,7 +102,7 @@ public:
 			handler_(filesystem_event::MODIFIED, file.first);
 	}
 
-	void reemmit(const boost::filesystem::wpath& file)
+	void reemmit(const boost::filesystem::path& file)
 	{
 		if (static_cast<int>(events_mask_ & filesystem_event::MODIFIED) == 0)
 			return;
@@ -121,8 +121,8 @@ public:
 		bool interested_in_modified = static_cast<int>(events_mask_ & filesystem_event::MODIFIED) > 0;
 
 		auto filenames = cpplinq::from(files_).select(keys());
-		std::set<wpath> removed_files(filenames.begin(), filenames.end());
-		std::set<wpath> initial_files;
+		std::set<path> removed_files(filenames.begin(), filenames.end());
+		std::set<path> initial_files;
 
 		for (boost::filesystem::wrecursive_directory_iterator iter(folder_); iter != boost::filesystem::wrecursive_directory_iterator(); ++iter)
 		{
@@ -195,7 +195,7 @@ public:
 		first_scan_ = false;
 	}
 private:
-	bool can_read_file(const boost::filesystem::wpath& file)
+	bool can_read_file(const boost::filesystem::path& file)
 	{
 		boost::filesystem::wifstream stream(file);
 
@@ -210,11 +210,11 @@ class polling_filesystem_monitor : public filesystem_monitor
 	tbb::atomic<bool> running_;
 	int scan_interval_millis_;
 	std::promise<void> initial_scan_completion_;
-	tbb::concurrent_queue<boost::filesystem::wpath> to_reemmit_;
+	tbb::concurrent_queue<boost::filesystem::path> to_reemmit_;
 	tbb::atomic<bool> reemmit_all_;
 public:
 	polling_filesystem_monitor(
-			const boost::filesystem::wpath& folder_to_watch,
+			const boost::filesystem::path& folder_to_watch,
 			filesystem_event events_of_interest_mask,
 			bool report_already_existing,
 			int scan_interval_millis,
@@ -245,7 +245,7 @@ public:
 		reemmit_all_ = true;
 	}
 
-	virtual void reemmit(const boost::filesystem::wpath& file)
+	virtual void reemmit(const boost::filesystem::path& file)
 	{
 		to_reemmit_.push(file);
 	}
@@ -272,7 +272,7 @@ private:
 				root_monitor_.reemmit_all();
 			else
 			{
-				boost::filesystem::wpath file;
+				boost::filesystem::path file;
 
 				while (to_reemmit_.try_pop(file))
 					root_monitor_.reemmit(file);
@@ -312,7 +312,7 @@ polling_filesystem_monitor_factory::~polling_filesystem_monitor_factory()
 }
 
 filesystem_monitor::ptr polling_filesystem_monitor_factory::create(
-		const boost::filesystem::wpath& folder_to_watch,
+		const boost::filesystem::path& folder_to_watch,
 		filesystem_event events_of_interest_mask,
 		bool report_already_existing,
 		const filesystem_monitor_handler& handler,

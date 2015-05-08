@@ -45,7 +45,7 @@ public:
 	polling_filesystem_monitor_factory(int scan_interval_millis = 5000);
 	virtual ~polling_filesystem_monitor_factory();
 	virtual filesystem_monitor::ptr create(
-			const boost::filesystem::wpath& folder_to_watch,
+			const boost::filesystem::path& folder_to_watch,
 			filesystem_event events_of_interest_mask,
 			bool report_already_existing,
 			const filesystem_monitor_handler& handler,

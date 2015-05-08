@@ -68,7 +68,7 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 	if (params.empty())
 		return core::frame_producer::empty();
 
-	std::wstring filename = env::media_folder() + L"\\" + params[0] + L".xml";
+	std::wstring filename = env::media_folder() + L"/" + params[0] + L".xml";
 	
 	if (!boost::filesystem::is_regular_file(boost::filesystem::path(filename)))
 		return core::frame_producer::empty();

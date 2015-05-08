@@ -57,12 +57,14 @@ target_link_libraries(casparcg
 		reroute
 )
 
+add_custom_target(casparcg_copy_dependencies ALL)
+
 casparcg_add_runtime_dependency("${LIBERATION_FONTS_BIN_PATH}/LiberationSans-Regular.ttf")
 casparcg_add_runtime_dependency("${CMAKE_CURRENT_SOURCE_DIR}/casparcg.config")
 
 set(OUTPUT_FOLDER "${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}")
 
 foreach(FILE_TO_COPY ${CASPARCG_RUNTIME_DEPENDENCIES})
-	add_custom_command(TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/\")
-	add_custom_command(TARGET casparcg POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${CMAKE_CURRENT_BINARY_DIR}/\")
+	add_custom_command(TARGET casparcg_copy_dependencies POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${OUTPUT_FOLDER}/\")
+	add_custom_command(TARGET casparcg_copy_dependencies POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy \"${FILE_TO_COPY}\" \"${CMAKE_CURRENT_BINARY_DIR}/\")
 endforeach(FILE_TO_COPY)
