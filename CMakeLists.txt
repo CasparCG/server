@@ -78,6 +78,7 @@ elseif (CMAKE_COMPILER_IS_GNUCXX)
 	add_compile_options( -mssse3 )
 	add_compile_options( -msse4.1 )
 	add_compile_options( -pthread )
+	add_compile_options( -fPIC )
 	add_compile_options( -fnon-call-exceptions ) # Allow signal handler to throw exception
 endif ()
 
