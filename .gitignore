@@ -13,3 +13,7 @@
 /dependencies64/boost/stage/lib/libboost_wave-vc120-mt-gd-1_57.lib
 
 /build
+
+CMakeLists.txt.user
+.settings
+

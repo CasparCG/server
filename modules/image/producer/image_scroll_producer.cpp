@@ -41,6 +41,7 @@
 #include <common/array.h>
 #include <common/tweener.h>
 #include <common/param.h>
+#include <common/os/filesystem.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
@@ -409,12 +410,14 @@ spl::shared_ptr<core::frame_producer> create_scroll_producer(const spl::shared_p
 		L".j2k",
 		L".j2c"
 	};
-	std::wstring filename = env::media_folder() + L"\\" + params[0];
+	std::wstring filename = env::media_folder() + params[0];
 	
 	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
-		{					
-			return boost::filesystem::is_regular_file(boost::filesystem::path(filename).replace_extension(ex));
-		});
+	{
+		auto file = caspar::find_case_insensitive(boost::filesystem::path(filename).replace_extension(ex).wstring());
+
+		return static_cast<bool>(file);
+	});
 
 	if(ext == extensions.end())
 		return core::frame_producer::empty();
@@ -434,14 +437,14 @@ spl::shared_ptr<core::frame_producer> create_scroll_producer(const spl::shared_p
 	bool progressive = contains_param(L"PROGRESSIVE", params);
 
 	return core::create_destroy_proxy(spl::make_shared<image_scroll_producer>(
-		frame_factory, 
-		format_desc, 
-		filename + *ext, 
-		-speed, 
-		-duration, 
-		motion_blur_px, 
-		premultiply_with_alpha,
-		progressive));
+			frame_factory,
+			format_desc,
+			*caspar::find_case_insensitive(filename + *ext),
+			-speed,
+			-duration,
+			motion_blur_px,
+			premultiply_with_alpha,
+			progressive));
 }
 
 }}
