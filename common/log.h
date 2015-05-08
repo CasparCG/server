@@ -22,9 +22,11 @@
 #pragma once
 
 #include "os/stack_trace.h"
+#include "utf.h"
 
 #include <boost/log/trivial.hpp>
 #include <boost/log/sources/global_logger_storage.hpp>
+#include <boost/exception/all.hpp>
 
 #include <string>
 #include <locale>

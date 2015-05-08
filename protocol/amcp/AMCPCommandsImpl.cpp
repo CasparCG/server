@@ -33,6 +33,7 @@
 #include <common/log.h>
 #include <common/param.h>
 #include <common/os/system_info.h>
+#include <common/os/filesystem.h>
 #include <common/base64.h>
 
 #include <core/producer/frame_producer.h>
@@ -102,7 +103,7 @@ namespace caspar { namespace protocol {
 
 using namespace core;
 
-std::wstring read_file_base64(const boost::filesystem::wpath& file)
+std::wstring read_file_base64(const boost::filesystem::path& file)
 {
 	using namespace boost::archive::iterators;
 
@@ -120,7 +121,7 @@ std::wstring read_file_base64(const boost::filesystem::wpath& file)
 	return std::wstring(result.begin(), result.end());
 }
 
-std::wstring read_utf8_file(const boost::filesystem::wpath& file)
+std::wstring read_utf8_file(const boost::filesystem::path& file)
 {
 	std::wstringstream result;
 	boost::filesystem::wifstream filestream(file);
@@ -136,7 +137,7 @@ std::wstring read_utf8_file(const boost::filesystem::wpath& file)
 	return result.str();
 }
 
-std::wstring read_latin1_file(const boost::filesystem::wpath& file)
+std::wstring read_latin1_file(const boost::filesystem::path& file)
 {
 	boost::locale::generator gen;
 	gen.locale_cache_enabled(true);
@@ -164,7 +165,7 @@ std::wstring read_latin1_file(const boost::filesystem::wpath& file)
 	return widened_result;
 }
 
-std::wstring read_file(const boost::filesystem::wpath& file)
+std::wstring read_file(const boost::filesystem::path& file)
 {
 	static const uint8_t BOM[] = {0xef, 0xbb, 0xbf};
 
@@ -200,7 +201,7 @@ std::wstring MediaInfo(const boost::filesystem::path& path, const spl::shared_pt
 
 	auto is_not_digit = [](char c){ return std::isdigit(c) == 0; };
 
-	auto relativePath = boost::filesystem::wpath(path.wstring().substr(env::media_folder().size() - 1, path.wstring().size()));
+	auto relativePath = boost::filesystem::path(path.wstring().substr(env::media_folder().size() - 1, path.wstring().size()));
 
 	auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(path)));
 	writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), is_not_digit), writeTimeStr.end());
@@ -241,7 +242,7 @@ std::wstring ListTemplates(const spl::shared_ptr<core::cg_producer_registry>& cg
 	{		
 		if(boost::filesystem::is_regular_file(itr->path()) && cg_registry->is_cg_extension(itr->path().extension().wstring()))
 		{
-			auto relativePath = boost::filesystem::wpath(itr->path().wstring().substr(env::template_folder().size()-1, itr->path().wstring().size()));
+			auto relativePath = boost::filesystem::path(itr->path().wstring().substr(env::template_folder().size()-1, itr->path().wstring().size()));
 
 			auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(itr->path())));
 			writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), [](char c){ return std::isdigit(c) == 0;}), writeTimeStr.end());
@@ -1034,8 +1035,13 @@ bool CGCommand::DoExecuteAdd() {
 			filename.append(dataString);
 			filename.append(L".ftd");
 
-			dataFromFile = read_file(boost::filesystem::wpath(filename));
-			pDataString = dataFromFile.c_str();
+			auto found_file = find_case_insensitive(filename);
+
+			if (found_file)
+			{
+				dataFromFile = read_file(boost::filesystem::path(*found_file));
+				pDataString = dataFromFile.c_str();
+			}
 		}
 	}
 
@@ -1170,7 +1176,7 @@ bool CGCommand::DoExecuteUpdate()
 			filename.append(dataString);
 			filename.append(L".ftd");
 
-			dataString = read_file(boost::filesystem::wpath(filename));
+			dataString = read_file(boost::filesystem::path(filename));
 		}		
 
 		int layer = boost::lexical_cast<int>(parameters()[1]);
@@ -1268,11 +1274,19 @@ bool DataCommand::DoExecuteStore()
 	filename.append(parameters()[1]);
 	filename.append(L".ftd");
 
-	auto data_path = boost::filesystem::wpath(
-		boost::filesystem::wpath(filename).parent_path());
+	auto data_path = boost::filesystem::path(filename).parent_path().wstring();
+	auto found_data_path = find_case_insensitive(data_path);
+
+	if (found_data_path)
+		data_path = *found_data_path;
 
 	if(!boost::filesystem::exists(data_path))
 		boost::filesystem::create_directories(data_path);
+
+	auto found_filename = find_case_insensitive(filename);
+
+	if (found_filename)
+		filename = *found_filename; // Overwrite case insensitive.
 
 	boost::filesystem::wofstream datafile(filename);
 	if(!datafile) 
@@ -1302,7 +1316,12 @@ bool DataCommand::DoExecuteRetrieve()
 	filename.append(parameters()[1]);
 	filename.append(L".ftd");
 
-	std::wstring file_contents = read_file(boost::filesystem::wpath(filename));
+	std::wstring file_contents;
+
+	auto found_file = find_case_insensitive(filename);
+
+	if (found_file)
+		file_contents = read_file(boost::filesystem::path(*found_file));
 
 	if (file_contents.empty()) 
 	{
@@ -1372,7 +1391,7 @@ bool DataCommand::DoExecuteList()
 			if(!boost::iequals(itr->path().extension().wstring(), L".ftd"))
 				continue;
 			
-			auto relativePath = boost::filesystem::wpath(itr->path().wstring().substr(env::data_folder().size()-1, itr->path().wstring().size()));
+			auto relativePath = boost::filesystem::path(itr->path().wstring().substr(env::data_folder().size()-1, itr->path().wstring().size()));
 			
 			auto str = relativePath.replace_extension(L"").generic_wstring();
 			if(str[0] == L'\\' || str[0] == L'/')
@@ -1460,7 +1479,7 @@ bool InfoCommand::DoExecute()
 
 			boost::property_tree::wptree info;
 			info.add_child(L"paths", caspar::env::properties().get_child(L"configuration.paths"));
-			info.add(L"paths.initial-path", boost::filesystem::initial_path().wstring() + L"\\");
+			info.add(L"paths.initial-path", boost::filesystem::initial_path().wstring() + L"/");
 
 			boost::property_tree::write_xml(replyString, info, w);
 		}
@@ -1804,7 +1823,12 @@ bool ThumbnailCommand::DoExecuteRetrieve()
 	filename.append(parameters()[1]);
 	filename.append(L".png");
 
-	std::wstring file_contents = read_file_base64(boost::filesystem::wpath(filename));
+	std::wstring file_contents;
+
+	auto found_file = find_case_insensitive(filename);
+
+	if (found_file)
+		file_contents = read_file_base64(boost::filesystem::path(*found_file));
 
 	if (file_contents.empty())
 	{
@@ -1833,7 +1857,7 @@ bool ThumbnailCommand::DoExecuteList()
 			if(!boost::iequals(itr->path().extension().wstring(), L".png"))
 				continue;
 
-			auto relativePath = boost::filesystem::wpath(itr->path().wstring().substr(env::thumbnails_folder().size()-1, itr->path().wstring().size()));
+			auto relativePath = boost::filesystem::path(itr->path().wstring().substr(env::thumbnails_folder().size()-1, itr->path().wstring().size()));
 
 			auto str = relativePath.replace_extension(L"").generic_wstring();
 			if(str[0] == '\\' || str[0] == '/')

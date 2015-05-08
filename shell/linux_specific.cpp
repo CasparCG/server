@@ -23,11 +23,23 @@
 
 #include "platform_specific.h"
 
+#include <exception>
+#include <common/log.h>
+
+#include <iostream>
+
+#include <X11/Xlib.h>
+
 namespace caspar {
 
 void setup_prerequisites()
 {
-	// TODO: implement if needed.
+	XInitThreads();
+
+	std::set_terminate([]
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+	});
 }
 
 void setup_console_window()

@@ -1,6 +1,7 @@
 #include "../general_protection_fault.h"
 
 #include "../../except.h"
+#include "../../log.h"
 
 #include <signal.h>
 
@@ -11,12 +12,28 @@ struct segmentation_fault_exception : virtual caspar_exception {};
 
 void catch_fpe(int signum)
 {
-	CASPAR_THROW_EXCEPTION(floating_point_exception());
+	try
+	{
+		CASPAR_THROW_EXCEPTION(floating_point_exception());
+	}
+	catch (...)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		throw;
+	}
 }
 
 void catch_segv(int signum)
 {
-	CASPAR_THROW_EXCEPTION(segmentation_fault_exception());
+	try
+	{
+		CASPAR_THROW_EXCEPTION(segmentation_fault_exception());
+	}
+	catch (...)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		throw;
+	}
 }
 
 void do_install_handlers()

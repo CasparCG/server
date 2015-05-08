@@ -264,7 +264,7 @@ int main(int argc, wchar_t* argv[])
 {	
 	int return_code = 0;
 	setup_prerequisites();
-	std::signal(SIGABRT, on_abort);
+	//std::signal(SIGABRT, on_abort);
 
 	setup_global_locale();
 

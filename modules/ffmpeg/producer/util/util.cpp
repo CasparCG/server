@@ -38,6 +38,7 @@
 
 #include <common/except.h>
 #include <common/array.h>
+#include <common/os/filesystem.h>
 
 #include <tbb/parallel_for.h>
 
@@ -590,7 +591,13 @@ bool try_get_duration(const std::wstring filename, std::int64_t& duration, boost
 std::wstring probe_stem(const std::wstring& stem)
 {
 	auto stem2 = boost::filesystem::path(stem);
-	auto dir = stem2.parent_path();
+	auto parent = find_case_insensitive(stem2.parent_path().wstring());
+
+	if (!parent)
+		return L"";
+
+	auto dir = boost::filesystem::path(*parent);
+
 	for(auto it = boost::filesystem::directory_iterator(dir); it != boost::filesystem::directory_iterator(); ++it)
 	{
 		if(boost::iequals(it->path().stem().wstring(), stem2.filename().wstring()) && is_valid_file(it->path().wstring()))
