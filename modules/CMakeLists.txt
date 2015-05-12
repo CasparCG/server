@@ -15,6 +15,7 @@ add_subdirectory(image)
 if (MSVC)
 	add_subdirectory(flash)
 	add_subdirectory(psd)
+	add_subdirectory(html)
 endif ()
 
 add_subdirectory(reroute)

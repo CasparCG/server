@@ -38,6 +38,7 @@
 
 #include "server.h"
 #include "platform_specific.h"
+#include "included_modules.h"
 
 #include <protocol/util/strategy_adapters.h>
 #include <protocol/amcp/AMCPProtocolStrategy.h>
@@ -260,8 +261,11 @@ void on_abort(int)
 	CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("abort called"));
 }
 
-int main(int argc, wchar_t* argv[])
-{	
+int main(int argc, char** argv)
+{
+	if (intercept_command_line_args(argc, argv))
+		return 0;
+
 	int return_code = 0;
 	setup_prerequisites();
 	//std::signal(SIGABRT, on_abort);

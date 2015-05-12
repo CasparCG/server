@@ -11,11 +11,16 @@ ${CASPARCG_MODULE_INCLUDE_STATEMENTS}
 
 namespace caspar {
 
-void initialize_modules(const core::module_dependencies& dependencies)
+static bool intercept_command_line_args(int argc, char** argv)
+{${CASPARCG_MODULE_COMMAND_LINE_ARG_INTERCEPTORS_STATEMENTS}
+	return false;
+}
+
+static void initialize_modules(const core::module_dependencies& dependencies)
 {${CASPARCG_MODULE_INIT_STATEMENTS}}
 
-void uninitialize_modules()
-{${CASPARCG_MODULE_UNINIT_STATEMENTS}
-}
+static void uninitialize_modules()
+{
+${CASPARCG_MODULE_UNINIT_STATEMENTS}}
 
 }
