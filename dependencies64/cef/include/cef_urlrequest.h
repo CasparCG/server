@@ -41,7 +41,6 @@
 #include "include/cef_auth_callback.h"
 #include "include/cef_base.h"
 #include "include/cef_request.h"
-#include "include/cef_request_context.h"
 #include "include/cef_response.h"
 
 class CefURLRequestClient;
@@ -69,16 +68,12 @@ class CefURLRequest : public virtual CefBase {
   // would not normally be rendered then the response may receive special
   // handling inside the browser (for example, via the file download code path
   // instead of the URL request code path). The |request| object will be marked
-  // as read-only after calling this method. In the browser process if
-  // |request_context| is empty the global request context will be used. In the
-  // render process |request_context| must be empty and the context associated
-  // with the current renderer process' browser will be used.
+  // as read-only after calling this method.
   ///
-  /*--cef(optional_param=request_context)--*/
+  /*--cef()--*/
   static CefRefPtr<CefURLRequest> Create(
       CefRefPtr<CefRequest> request,
-      CefRefPtr<CefURLRequestClient> client,
-      CefRefPtr<CefRequestContext> request_context);
+      CefRefPtr<CefURLRequestClient> client);
 
   ///
   // Returns the request object used to create this URL request. The returned
@@ -145,8 +140,8 @@ class CefURLRequestClient : public virtual CefBase {
   ///
   /*--cef()--*/
   virtual void OnUploadProgress(CefRefPtr<CefURLRequest> request,
-                                int64 current,
-                                int64 total) =0;
+                                uint64 current,
+                                uint64 total) =0;
 
   ///
   // Notifies the client of download progress. |current| denotes the number of
@@ -155,8 +150,8 @@ class CefURLRequestClient : public virtual CefBase {
   ///
   /*--cef()--*/
   virtual void OnDownloadProgress(CefRefPtr<CefURLRequest> request,
-                                  int64 current,
-                                  int64 total) =0;
+                                  uint64 current,
+                                  uint64 total) =0;
 
   ///
   // Called when some part of the response is read. |data| contains the current

@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Marshall A. Greenblatt. All rights reserved.
+// Copyright (c) 2014 Marshall A. Greenblatt. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -39,7 +39,6 @@
 #pragma once
 
 #include "include/capi/cef_base_capi.h"
-#include "include/capi/cef_callback_capi.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -69,9 +68,9 @@ typedef struct _cef_end_tracing_callback_t {
 
 
 ///
-// Start tracing events on all processes. Tracing is initialized asynchronously
-// and |callback| will be executed on the UI thread after initialization is
-// complete.
+// Start tracing events on all processes. Tracing begins immediately locally,
+// and asynchronously on child processes as soon as they receive the
+// BeginTracing request.
 //
 // If CefBeginTracing was called previously, or if a CefEndTracingAsync call is
 // pending, CefBeginTracing will fail and return false (0).
@@ -85,8 +84,7 @@ typedef struct _cef_end_tracing_callback_t {
 //
 // This function must be called on the browser process UI thread.
 ///
-CEF_EXPORT int cef_begin_tracing(const cef_string_t* categories,
-    struct _cef_completion_callback_t* callback);
+CEF_EXPORT int cef_begin_tracing(const cef_string_t* categories);
 
 ///
 // Stop tracing events on all processes.
@@ -101,7 +99,7 @@ CEF_EXPORT int cef_begin_tracing(const cef_string_t* categories,
 //
 // This function must be called on the browser process UI thread.
 ///
-CEF_EXPORT int cef_end_tracing(const cef_string_t* tracing_file,
+CEF_EXPORT int cef_end_tracing_async(const cef_string_t* tracing_file,
     cef_end_tracing_callback_t* callback);
 
 ///

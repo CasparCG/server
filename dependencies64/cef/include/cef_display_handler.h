@@ -65,13 +65,6 @@ class CefDisplayHandler : public virtual CefBase {
                              const CefString& title) {}
 
   ///
-  // Called when the page icon changes.
-  ///
-  /*--cef(optional_param=icon_urls)--*/
-  virtual void OnFaviconURLChange(CefRefPtr<CefBrowser> browser,
-                                  const std::vector<CefString>& icon_urls) {}
-
-  ///
   // Called when the browser is about to display a tooltip. |text| contains the
   // text that will be displayed in the tooltip. To handle the display of the
   // tooltip yourself return true. Otherwise, you can optionally modify |text|
@@ -84,8 +77,9 @@ class CefDisplayHandler : public virtual CefBase {
                          CefString& text) { return false; }
 
   ///
-  // Called when the browser receives a status message. |value| contains the
-  // text that will be displayed in the status message.
+  // Called when the browser receives a status message. |text| contains the text
+  // that will be displayed in the status message and |type| indicates the
+  // status message type.
   ///
   /*--cef(optional_param=value)--*/
   virtual void OnStatusMessage(CefRefPtr<CefBrowser> browser,

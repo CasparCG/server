@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Marshall A. Greenblatt. All rights reserved.
+// Copyright (c) 2014 Marshall A. Greenblatt. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -47,9 +47,7 @@ extern "C" {
 
 
 ///
-// Implement this structure to provide handler implementations. The handler
-// instance will not be released until all objects related to the context have
-// been destroyed.
+// Implement this structure to provide handler implementations.
 ///
 typedef struct _cef_request_context_handler_t {
   ///
@@ -58,9 +56,8 @@ typedef struct _cef_request_context_handler_t {
   cef_base_t base;
 
   ///
-  // Called on the IO thread to retrieve the cookie manager. If this function
-  // returns NULL the default cookie manager retrievable via
-  // cef_request_tContext::get_default_cookie_manager() will be used.
+  // Called on the IO thread to retrieve the cookie manager. The global cookie
+  // manager will be used if this function returns NULL.
   ///
   struct _cef_cookie_manager_t* (CEF_CALLBACK *get_cookie_manager)(
       struct _cef_request_context_handler_t* self);
