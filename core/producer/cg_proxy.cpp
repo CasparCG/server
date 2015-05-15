@@ -29,6 +29,7 @@
 #include "../diagnostics/call_context.h"
 
 #include <common/env.h>
+#include <common/os/filesystem.h>
 
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/lock_guard.hpp>
@@ -228,7 +229,7 @@ private:
 			{
 				auto p = path(basepath.wstring() + file_extension);
 
-				if (exists(p))
+				if (find_case_insensitive(p.wstring()))
 					return rec;
 			}
 		}

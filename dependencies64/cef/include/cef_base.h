@@ -26,19 +26,24 @@
 // THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// ---------------------------------------------------------------------------
+//
+// The contents of this file must follow a specific format in order to
+// support the CEF translator tool. See the translator.README.txt file in the
+// tools directory for more information.
+//
 
 
 #ifndef CEF_INCLUDE_CEF_BASE_H_
 #define CEF_INCLUDE_CEF_BASE_H_
 #pragma once
 
-#include "include/base/cef_atomic_ref_count.h"
-#include "include/base/cef_build.h"
-#include "include/base/cef_macros.h"
-
-// Bring in common C++ type definitions used by CEF consumers.
+#include "include/internal/cef_build.h"
 #include "include/internal/cef_ptr.h"
 #include "include/internal/cef_types_wrappers.h"
+
+// Bring in platform-specific definitions.
 #if defined(OS_WIN)
 #include "include/internal/cef_win.h"
 #elif defined(OS_MACOSX)
@@ -54,57 +59,59 @@
 class CefBase {
  public:
   ///
-  // Called to increment the reference count for the object. Should be called
-  // for every new copy of a pointer to a given object.
+  // The AddRef method increments the reference count for the object. It should
+  // be called for every new copy of a pointer to a given object. The resulting
+  // reference count value is returned and should be used for diagnostic/testing
+  // purposes only.
   ///
-  virtual void AddRef() const =0;
+  virtual int AddRef() =0;
 
   ///
-  // Called to decrement the reference count for the object. Returns true if
-  // the reference count is 0, in which case the object should self-delete.
+  // The Release method decrements the reference count for the object. If the
+  // reference count on the object falls to 0, then the object should free
+  // itself from memory.  The resulting reference count value is returned and
+  // should be used for diagnostic/testing purposes only.
   ///
-  virtual bool Release() const =0;
+  virtual int Release() =0;
 
   ///
-  // Returns true if the reference count is 1.
+  // Return the current number of references.
   ///
-  virtual bool HasOneRef() const =0;
+  virtual int GetRefCt() =0;
 
  protected:
   virtual ~CefBase() {}
 };
+
 
 ///
 // Class that implements atomic reference counting.
 ///
 class CefRefCount {
  public:
-  CefRefCount() : ref_count_(0) {}
+  CefRefCount() : refct_(0) {}
 
   ///
-  // Increment the reference count.
+  // Atomic reference increment.
   ///
-  void AddRef() const {
-    base::AtomicRefCountInc(&ref_count_); 
+  int AddRef() {
+    return CefAtomicIncrement(&refct_);
   }
 
   ///
-  // Decrement the reference count. Returns true if the reference count is 0.
+  // Atomic reference decrement. Delete the object when no references remain.
   ///
-  bool Release() const {
-    return !base::AtomicRefCountDec(&ref_count_);
+  int Release() {
+    return CefAtomicDecrement(&refct_);
   }
 
   ///
-  // Returns true if the reference count is 1.
+  // Return the current number of references.
   ///
-  bool HasOneRef() const {
-    return base::AtomicRefCountIsOne(&ref_count_);
-  }
+  int GetRefCt() { return refct_; }
 
  private:
-  mutable base::AtomicRefCount ref_count_;
-  DISALLOW_COPY_AND_ASSIGN(CefRefCount);
+  long refct_;  // NOLINT(runtime/int)
 };
 
 ///
@@ -113,54 +120,22 @@ class CefRefCount {
 ///
 #define IMPLEMENT_REFCOUNTING(ClassName)            \
   public:                                           \
-    void AddRef() const {                           \
-      ref_count_.AddRef();                          \
+    int AddRef() { return refct_.AddRef(); }        \
+    int Release() {                                 \
+      int retval = refct_.Release();                \
+      if (retval == 0)                              \
+        delete this;                                \
+      return retval;                                \
     }                                               \
-    bool Release() const {                          \
-      if (ref_count_.Release()) {                   \
-        delete static_cast<const ClassName*>(this); \
-        return true;                                \
-      }                                             \
-      return false;                                 \
-    }                                               \
-    bool HasOneRef() const {                        \
-      return ref_count_.HasOneRef();                \
-    }                                               \
+    int GetRefCt() { return refct_.GetRefCt(); }    \
   private:                                          \
-    CefRefCount ref_count_;
+    CefRefCount refct_;
 
 ///
 // Macro that provides a locking implementation. Use the Lock() and Unlock()
 // methods to protect a section of code from simultaneous access by multiple
 // threads. The AutoLock class is a helper that will hold the lock while in
 // scope.
-//
-// THIS MACRO IS DEPRECATED. Use an explicit base::Lock member variable and
-// base::AutoLock instead. For example:
-//
-// #include "include/base/cef_lock.h"
-//
-// // Class declaration.
-// class MyClass : public CefBase {
-//  public:
-//   MyClass() : value_(0) {}
-//   // Method that may be called on multiple threads.
-//   void IncrementValue();
-//  private:
-//   // Value that may be accessed on multiple theads.
-//   int value_;
-//   // Lock used to protect access to |value_|.
-//   base::Lock lock_;
-//   IMPLEMENT_REFCOUNTING(MyClass);
-// };
-//
-// // Class implementation.
-// void MyClass::IncrementValue() {
-//   // Acquire the lock for the scope of this method.
-//   base::AutoLock lock_scope(lock_);
-//   // |value_| can now be modified safely.
-//   value_++;
-// }
 ///
 #define IMPLEMENT_LOCKING(ClassName)                                       \
   public:                                                                  \
@@ -170,11 +145,10 @@ class CefRefCount {
       ~AutoLock() { base_->Unlock(); }                                     \
      private:                                                              \
       ClassName* base_;                                                    \
-      DISALLOW_COPY_AND_ASSIGN(AutoLock);                                  \
     };                                                                     \
-    void Lock() { lock_.Acquire(); }                                       \
-    void Unlock() { lock_.Release(); }                                     \
+    void Lock() { critsec_.Lock(); }                                       \
+    void Unlock() { critsec_.Unlock(); }                                   \
   private:                                                                 \
-    base::Lock lock_;
+    CefCriticalSection critsec_;
 
 #endif  // CEF_INCLUDE_CEF_BASE_H_

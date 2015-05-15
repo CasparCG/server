@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Marshall A. Greenblatt. All rights reserved.
+// Copyright (c) 2014 Marshall A. Greenblatt. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -59,26 +59,20 @@ typedef struct _cef_life_span_handler_t {
   cef_base_t base;
 
   ///
-  // Called on the IO thread before a new popup browser is created. The
-  // |browser| and |frame| values represent the source of the popup request. The
-  // |target_url| and |target_frame_name| values indicate where the popup
-  // browser should navigate and may be NULL if not specified with the request.
-  // The |target_disposition| value indicates where the user intended to open
-  // the popup (e.g. current tab, new tab, etc). The |user_gesture| value will
-  // be true (1) if the popup was opened via explicit user gesture (e.g.
-  // clicking a link) or false (0) if the popup opened automatically (e.g. via
-  // the DomContentLoaded event). The |popupFeatures| structure contains
-  // additional information about the requested popup window. To allow creation
-  // of the popup browser optionally modify |windowInfo|, |client|, |settings|
-  // and |no_javascript_access| and return false (0). To cancel creation of the
-  // popup browser return true (1). The |client| and |settings| values will
-  // default to the source browser's values. If the |no_javascript_access| value
-  // is set to false (0) the new browser will not be scriptable and may not be
-  // hosted in the same renderer process as the source browser.
+  // Called on the IO thread before a new popup window is created. The |browser|
+  // and |frame| parameters represent the source of the popup request. The
+  // |target_url| and |target_frame_name| values may be NULL if none were
+  // specified with the request. The |popupFeatures| structure contains
+  // information about the requested popup window. To allow creation of the
+  // popup window optionally modify |windowInfo|, |client|, |settings| and
+  // |no_javascript_access| and return false (0). To cancel creation of the
+  // popup window return true (1). The |client| and |settings| values will
+  // default to the source browser's values. The |no_javascript_access| value
+  // indicates whether the new browser window should be scriptable and in the
+  // same process as the source browser.
   int (CEF_CALLBACK *on_before_popup)(struct _cef_life_span_handler_t* self,
       struct _cef_browser_t* browser, struct _cef_frame_t* frame,
       const cef_string_t* target_url, const cef_string_t* target_frame_name,
-      cef_window_open_disposition_t target_disposition, int user_gesture,
       const struct _cef_popup_features_t* popupFeatures,
       struct _cef_window_info_t* windowInfo, struct _cef_client_t** client,
       struct _cef_browser_settings_t* settings, int* no_javascript_access);
@@ -120,10 +114,9 @@ typedef struct _cef_life_span_handler_t {
   // opportunity to process the 'onbeforeunload' event and optionally cancel the
   // close before do_close() is called.
   //
-  // The cef_life_span_handler_t::on_before_close() function will be called
+  // The cef_life_span_handler_t::OnBeforeclose() function will be called
   // immediately before the browser object is destroyed. The application should
-  // only exit after on_before_close() has been called for all existing
-  // browsers.
+  // only exit after OnBeforeclose() has been called for all existing browsers.
   //
   // If the browser represents a modal window and a custom modal loop
   // implementation was provided in cef_life_span_handler_t::run_modal() this
@@ -142,13 +135,15 @@ typedef struct _cef_life_span_handler_t {
   //     CefJSDialogHandler::OnBeforeUnloadDialog()).
   // 4.  User approves the close. 5.  JavaScript 'onunload' handler executes. 6.
   // Application's do_close() handler is called. Application will:
-  //     A. Set a flag to indicate that the next close attempt will be allowed.
-  //     B. Return false.
+  //     A. Call CefBrowserHost::ParentWindowWillClose() to notify CEF that the
+  //        parent window will be closing.
+  //     B. Set a flag to indicate that the next close attempt will be allowed.
+  //     C. Return false.
   // 7.  CEF sends an OS close notification. 8.  Application's top-level window
   // receives the OS close notification and
   //     allows the window to close based on the flag from #6B.
   // 9.  Browser OS window is destroyed. 10. Application's
-  // cef_life_span_handler_t::on_before_close() handler is called and
+  // cef_life_span_handler_t::OnBeforeclose() handler is called and
   //     the browser object is destroyed.
   // 11. Application exits by calling cef_quit_message_loop() if no other
   // browsers
