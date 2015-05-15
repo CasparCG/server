@@ -272,7 +272,11 @@ public:
 
 bool intercept_command_line(int argc, char** argv)
 {
+#ifdef _WIN32
+	CefMainArgs main_args;
+#else
 	CefMainArgs main_args(argc, argv);
+#endif
 
 	if (CefExecuteProcess(main_args, CefRefPtr<CefApp>(new renderer_application), nullptr) >= 0)
 		return true;
