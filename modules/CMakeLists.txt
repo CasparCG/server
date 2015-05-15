@@ -11,11 +11,11 @@ endif ()
 add_subdirectory(decklink)
 add_subdirectory(screen)
 add_subdirectory(image)
+add_subdirectory(html)
 
 if (MSVC)
 	add_subdirectory(flash)
 	add_subdirectory(psd)
-	add_subdirectory(html)
 endif ()
 
 add_subdirectory(reroute)

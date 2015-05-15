@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/thread/lock_guard.hpp>
+
 namespace caspar {
 
 template<typename T, typename F>

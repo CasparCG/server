@@ -65,11 +65,11 @@ void caspar_log(
 class animation_handler : public CefV8Handler
 {
 private:
-	std::vector<CefRefPtr<CefV8Value>> callbacks_;
-	boost::timer since_start_timer_;
+	std::vector<CefRefPtr<CefV8Value>>			callbacks_;
+	boost::timer								since_start_timer_;
 public:
-	CefRefPtr<CefBrowser> browser;
-	std::function<CefRefPtr<CefV8Context>()> get_context;
+	CefRefPtr<CefBrowser>						browser;
+	std::function<CefRefPtr<CefV8Context>()>	get_context;
 
 	bool Execute(
 			const CefString& name,
@@ -117,7 +117,7 @@ public:
 		callback_args.push_back(CefV8Value::CreateDouble(
 				since_start_timer_.elapsed() * 1000.0));
 
-		BOOST_FOREACH(auto callback, callbacks)
+		for (auto callback : callbacks)
 		{
 			callback->ExecuteFunctionWithContext(
 					context, callback, callback_args);
@@ -169,7 +169,7 @@ public:
 	CefRefPtr<CefV8Context> get_context(
 			const CefRefPtr<animation_handler>& handler)
 	{
-		BOOST_FOREACH(auto& ctx, contexts_per_handlers_)
+		for (auto& ctx : contexts_per_handlers_)
 		{
 			if (ctx.first == handler)
 				return ctx.second;
@@ -254,7 +254,7 @@ public:
 	{
 		if (message->GetName().ToString() == TICK_MESSAGE_NAME)
 		{
-			BOOST_FOREACH(auto& handler, contexts_per_handlers_)
+			for (auto& handler : contexts_per_handlers_)
 			{
 				handler.first->tick();
 			}
@@ -272,7 +272,7 @@ public:
 
 bool intercept_command_line(int argc, char** argv)
 {
-	CefMainArgs main_args;
+	CefMainArgs main_args(argc, argv);
 
 	if (CefExecuteProcess(main_args, CefRefPtr<CefApp>(new renderer_application), nullptr) >= 0)
 		return true;
@@ -289,7 +289,8 @@ void init(core::module_dependencies dependencies)
 	g_cef_executor->invoke([&]
 	{
 		CefSettings settings;
-		settings.windowless_rendering_enabled = true;
+		settings.no_sandbox = true;
+		//settings.windowless_rendering_enabled = true;
 		CefInitialize(main_args, settings, nullptr, nullptr);
 	});
 	g_cef_executor->begin_invoke([&]

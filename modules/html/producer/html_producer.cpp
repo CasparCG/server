@@ -42,10 +42,7 @@
 #include <common/os/filesystem.h>
 
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/algorithm/string/trim.hpp>
-#include <boost/algorithm/string/replace.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/format.hpp>
 #include <boost/timer.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -473,8 +470,8 @@ namespace caspar {
 
 					CefWindowInfo window_info;
 
-					//window_info.SetTransparentPainting(TRUE);
-					window_info.SetAsWindowless(nullptr, true);
+					window_info.SetTransparentPainting(true);
+					window_info.SetAsOffScreen(nullptr);
 					//window_info.SetAsWindowless(nullptr, true);
 					
 					CefBrowserSettings browser_settings;
@@ -510,13 +507,6 @@ namespace caspar {
 
 				return core::draw_frame::empty();
 			}
-
-			/*core::draw_frame last_frame() override
-			{
-				return client_
-					? client_->last_frame()
-					: core::draw_frame::empty();
-			}*/
 
 			std::future<std::wstring> call(const std::vector<std::wstring>& params) override
 			{
@@ -558,14 +548,14 @@ namespace caspar {
 				const core::video_format_desc& format_desc,
 				const std::vector<std::wstring>& params)
 		{
-			const auto filename = env::template_folder() + L"/" + params.at(0) + L".html";
+			const auto filename = env::template_folder() + params.at(0) + L".html";
 			const auto found_filename = find_case_insensitive(filename);
 
 			if (!found_filename && !boost::iequals(params.at(0), L"[HTML]"))
 				return core::frame_producer::empty();
 
 			const auto url = found_filename 
-				? *found_filename
+				? L"file://" + *found_filename
 				: params.at(1);
 		
 			if (!boost::algorithm::contains(url, ".") || boost::algorithm::ends_with(url, "_A") || boost::algorithm::ends_with(url, "_ALPHA"))
