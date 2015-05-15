@@ -37,7 +37,6 @@
 #define CEF_INCLUDE_WRAPPER_CEF_MESSAGE_ROUTER_H_
 #pragma once
 
-#include "include/base/cef_ref_counted.h"
 #include "include/cef_base.h"
 #include "include/cef_browser.h"
 #include "include/cef_process_message.h"
@@ -212,8 +211,7 @@ struct CefMessageRouterConfig {
 // Implements the browser side of query routing. The methods of this class may
 // be called on any browser process thread unless otherwise indicated.
 ///
-class CefMessageRouterBrowserSide :
-    public base::RefCountedThreadSafe<CefMessageRouterBrowserSide> {
+class CefMessageRouterBrowserSide : public CefBase {
  public:
   ///
   // Callback associated with a single pending asynchronous query. Execute the
@@ -362,20 +360,16 @@ class CefMessageRouterBrowserSide :
       CefRefPtr<CefBrowser> browser,
       CefProcessId source_process,
       CefRefPtr<CefProcessMessage> message) =0;
-
- protected:
-  // Protect against accidental deletion of this object.
-  friend class base::RefCountedThreadSafe<CefMessageRouterBrowserSide>;
-  virtual ~CefMessageRouterBrowserSide() {}
 };
 
 ///
 // Implements the renderer side of query routing. The methods of this class must
 // be called on the render process main thread.
 ///
-class CefMessageRouterRendererSide :
-    public base::RefCountedThreadSafe<CefMessageRouterRendererSide> {
+class CefMessageRouterRendererSide : public CefBase {
  public:
+  virtual ~CefMessageRouterRendererSide() {}
+
   ///
   // Create a new router with the specified configuration.
   ///
@@ -418,11 +412,6 @@ class CefMessageRouterRendererSide :
       CefRefPtr<CefBrowser> browser,
       CefProcessId source_process,
       CefRefPtr<CefProcessMessage> message) =0;
-
- protected:
-  // Protect against accidental deletion of this object.
-  friend class base::RefCountedThreadSafe<CefMessageRouterRendererSide>;
-  virtual ~CefMessageRouterRendererSide() {}
 };
 
 #endif  // CEF_INCLUDE_WRAPPER_CEF_MESSAGE_ROUTER_H_

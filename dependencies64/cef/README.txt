@@ -1,18 +1,16 @@
-Chromium Embedded Framework (CEF) Standard Binary Distribution for Windows
+Chromium Embedded Framework (CEF) Standard Binary Distribution for Linux
 -------------------------------------------------------------------------------
 
-Date:             April 30, 2015
+Date:             October 13, 2014
 
-CEF Version:      3.2378.1268.g4715a16
-CEF URL:          https://bitbucket.org/chromiumembedded/cef.git
-                  @4715a1644e292e191d3840b59a74f821be91daec
+CEF Version:      3.1750.1805
+CEF URL:          https://chromiumembedded@bitbucket.org/chromiumembedded/branches-1750-cef3.git@1805
 
-Chromium Verison: 44.0.2378.0
-Chromium URL:     https://chromium.googlesource.com/chromium/src.git
-                  @c03558c9998c74e25c302a1f5e9e164b572b9373
+Chromium Verison: 33.0.1750.170
+Chromium URL:     https://chromium.googlesource.com/chromium/src.git@7120fdb1f88ea2e8b81641aee3fec6c8fa256541
 
 This distribution contains all components necessary to build and distribute an
-application using CEF on the Windows platform. Please see the LICENSING
+application using CEF on the Linux platform. Please see the LICENSING
 section of this document for licensing terms and conditions.
 
 
@@ -27,37 +25,34 @@ cefsimple   Contains the cefsimple sample application configured to build
             using the files in this distribution. This application demonstrates
             the minimal functionality required to create a browser window.
 
-Debug       Contains libcef.dll, libcef.lib and other components required to
-            build and run the debug version of CEF-based applications. By
-            default these files should be placed in the same directory as the
-            executable and will be copied there as part of the build process.
+Debug       Contains libcef.so and other components required to run the debug
+            version of CEF-based applications. By default these files should be
+            placed in the same directory as the executable and will be copied
+            there as part of the build process.
 
 include     Contains all required CEF header files.
 
 libcef_dll  Contains the source code for the libcef_dll_wrapper static library
             that all applications using the CEF C++ API must link against.
 
-Release     Contains libcef.dll, libcef.lib and other components required to
-            build and run the release version of CEF-based applications. By
-            default these files should be placed in the same directory as the
-            executable and will be copied there as part of the build process.
+Release     Contains libcef.so and other components required to run the release
+            version of CEF-based applications. By default these files should be
+            placed in the same directory as the executable and will be copied
+            there as part of the build process.
 
-Resources   Contains resources required by libcef.dll. By default these files
-            should be placed in the same directory as libcef.dll. By default
-            these files should be placed in the same directory as libcef.dll
-            and will be copied there as part of the build process.
+Resources   Contains resources required by libcef.so. By default these files
+            should be placed in the same directory as libcef.so and will be
+            copied there as part of the build process.
 
 
 USAGE
 -----
 
-Building using CMake:
-  CMake can be used to generate project files in many different formats. See
-  usage instructions at the top of the CMakeLists.txt file.
+Run 'build.sh Debug' to build the cefclient target in Debug mode.
 
 Please visit the CEF Website for additional usage information.
 
-https://bitbucket.org/chromiumembedded/cef/
+http://code.google.com/p/chromiumembedded
 
 
 REDISTRIBUTION
@@ -71,47 +66,30 @@ features will not be used.
 Required components:
 
 * CEF core library
-    libcef.dll
-
-* Unicode support
-    icudtl.dat
+    libcef.so
 
 Optional components:
 
 * Localized resources
     locales/
   Note: Contains localized strings for WebKit UI controls. A .pak file is loaded
-  from this folder based on the CefSettings.locale value. Only configured
-  locales need to be distributed. If no locale is configured the default locale
-  of "en-US" will be used. Locale file loading can be disabled completely using
-  CefSettings.pack_loading_disabled. The locales folder path can be customized
-  using CefSettings.locales_dir_path.
+  from this folder based on the value of environment variables which are read
+  with the following precedence order: LANGUAGE, LC_ALL, LC_MESSAGES and LANG.
+  Only configured locales need to be distributed. If no locale is configured the
+  default locale of "en-US" will be used. Locale file loading can be disabled
+  completely using CefSettings.pack_loading_disabled. The locales folder path
+  can be customized using CefSettings.locales_dir_path.
 
 * Other resources
     cef.pak
-    cef_100_percent.pak
-    cef_200_percent.pak
     devtools_resources.pak
   Note: Contains WebKit image and inspector resources. Pack file loading can be
   disabled completely using CefSettings.pack_loading_disabled. The resources
   directory path can be customized using CefSettings.resources_dir_path.
 
 * FFmpeg audio and video support
-    ffmpegsumo.dll
+    libffmpegsumo.so
   Note: Without this component HTML5 audio and video will not function.
-
-* Angle and Direct3D support
-    d3dcompiler_43.dll (required for Windows XP)
-    d3dcompiler_47.dll (required for Windows Vista and newer)
-    libEGL.dll
-    libGLESv2.dll
-  Note: Without these components HTML5 accelerated content like 2D canvas, 3D
-  CSS and WebGL will not function.
-
-* Windows Vista 64-bit sandbox support (32-bit distributions only)
-    wow_helper.exe
-  Note: Without this component the 32-bit build of CEF will not run on 64-bit
-  Vista machines with the sandbox enabled.
 
 
 LICENSING

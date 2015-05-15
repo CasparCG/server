@@ -37,6 +37,14 @@ if(MSVC)
 		libcef.lib
 		libcef_dll_wrapper.lib
 	)
+else()
+	target_link_libraries(html
+		common
+		core
+
+		cef
+		cef_dll_wrapper
+	)
 endif()
 
 casparcg_add_include_statement("modules/html/html.h")
@@ -47,10 +55,7 @@ casparcg_add_module_project("html")
 
 casparcg_add_runtime_dependency("${CEF_RESOURCES_PATH}/locales")
 casparcg_add_runtime_dependency("${CEF_RESOURCES_PATH}/cef.pak")
-casparcg_add_runtime_dependency("${CEF_RESOURCES_PATH}/cef_100_percent.pak")
-casparcg_add_runtime_dependency("${CEF_RESOURCES_PATH}/cef_200_percent.pak")
 casparcg_add_runtime_dependency("${CEF_RESOURCES_PATH}/devtools_resources.pak")
-casparcg_add_runtime_dependency("${CEF_RESOURCES_PATH}/icudtl.dat")
 
 if(MSVC)
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libcef.dll")
@@ -61,4 +66,7 @@ if(MSVC)
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libGLESv2.dll")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/natives_blob.bin")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/snapshot_blob.bin")
+else()
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libcef.so")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libffmpegsumo.so")
 endif()
