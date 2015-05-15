@@ -327,7 +327,7 @@ namespace caspar {
 				{
 					if (!frames_.empty())
 					{
-						result = frames_.front();
+						result = std::move(frames_.front());
 						frames_.pop();
 
 						return true;

@@ -11,6 +11,7 @@
 /clang-analyze.out
 
 /dependencies64/cef/bin/linux/libcef.so
+/dependencies64/cef/bin/win32/libcef.dll.pdb
 
 /build
 
