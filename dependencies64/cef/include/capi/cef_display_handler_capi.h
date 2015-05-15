@@ -1,4 +1,4 @@
-// Copyright (c) 2015 Marshall A. Greenblatt. All rights reserved.
+// Copyright (c) 2014 Marshall A. Greenblatt. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -71,12 +71,6 @@ typedef struct _cef_display_handler_t {
       struct _cef_browser_t* browser, const cef_string_t* title);
 
   ///
-  // Called when the page icon changes.
-  ///
-  void (CEF_CALLBACK *on_favicon_urlchange)(struct _cef_display_handler_t* self,
-      struct _cef_browser_t* browser, cef_string_list_t icon_urls);
-
-  ///
   // Called when the browser is about to display a tooltip. |text| contains the
   // text that will be displayed in the tooltip. To handle the display of the
   // tooltip yourself return true (1). Otherwise, you can optionally modify
@@ -88,8 +82,9 @@ typedef struct _cef_display_handler_t {
       struct _cef_browser_t* browser, cef_string_t* text);
 
   ///
-  // Called when the browser receives a status message. |value| contains the
-  // text that will be displayed in the status message.
+  // Called when the browser receives a status message. |text| contains the text
+  // that will be displayed in the status message and |type| indicates the
+  // status message type.
   ///
   void (CEF_CALLBACK *on_status_message)(struct _cef_display_handler_t* self,
       struct _cef_browser_t* browser, const cef_string_t* value);

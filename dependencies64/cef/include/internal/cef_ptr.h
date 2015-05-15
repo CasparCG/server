@@ -1,4 +1,5 @@
-// Copyright (c) 2014 Marshall A. Greenblatt. All rights reserved.
+// Copyright (c) 2008 Marshall A. Greenblatt. Portions Copyright (c)
+// 2006-2008 Google Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -32,11 +33,10 @@
 #define CEF_INCLUDE_INTERNAL_CEF_PTR_H_
 #pragma once
 
-#include "include/base/cef_ref_counted.h"
+#include <stddef.h>
 
 ///
-// Smart pointer implementation that is an alias of scoped_refptr from
-// include/base/cef_ref_counted.h.
+// Smart pointer implementation borrowed from base/ref_counted.h
 // <p>
 // A smart pointer class for reference counted objects.  Use this class instead
 // of calling AddRef and Release manually on a reference counted object to
@@ -144,18 +144,56 @@
 // </p>
 ///
 template <class T>
-class CefRefPtr : public scoped_refptr<T> {
+class CefRefPtr {
  public:
-  typedef scoped_refptr<T> parent;
+  CefRefPtr() : ptr_(NULL) {
+  }
 
-  CefRefPtr() : parent() {}
+  CefRefPtr(T* p) : ptr_(p) {  // NOLINT(runtime/explicit)
+    if (ptr_)
+      ptr_->AddRef();
+  }
 
-  CefRefPtr(T* p) : parent(p) {}
+  CefRefPtr(const CefRefPtr<T>& r) : ptr_(r.ptr_) {
+    if (ptr_)
+      ptr_->AddRef();
+  }
 
-  CefRefPtr(const scoped_refptr<T>& r) : parent(r) {}
+  ~CefRefPtr() {
+    if (ptr_)
+      ptr_->Release();
+  }
 
-  template <typename U>
-  CefRefPtr(const scoped_refptr<U>& r) : parent(r) {}
+  T* get() const { return ptr_; }
+  operator T*() const { return ptr_; }
+  T* operator->() const { return ptr_; }
+
+  CefRefPtr<T>& operator=(T* p) {
+    // AddRef first so that self assignment should work
+    if (p)
+      p->AddRef();
+    if (ptr_ )
+      ptr_ ->Release();
+    ptr_ = p;
+    return *this;
+  }
+
+  CefRefPtr<T>& operator=(const CefRefPtr<T>& r) {
+    return *this = r.ptr_;
+  }
+
+  void swap(T** pp) {
+    T* p = ptr_;
+    ptr_ = *pp;
+    *pp = p;
+  }
+
+  void swap(CefRefPtr<T>& r) {
+    swap(&r.ptr_);  // NOLINT(build/include_what_you_use)
+  }
+
+ private:
+  T* ptr_;
 };
 
 #endif  // CEF_INCLUDE_INTERNAL_CEF_PTR_H_
