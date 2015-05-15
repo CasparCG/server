@@ -31,8 +31,6 @@
 #ifndef CEF_INCLUDE_CAPI_CEF_BASE_CAPI_H_
 #define CEF_INCLUDE_CAPI_CEF_BASE_CAPI_H_
 
-#include <stdint.h>
-
 #include "include/internal/cef_export.h"
 #include "include/internal/cef_string.h"
 #include "include/internal/cef_string_list.h"
@@ -55,22 +53,20 @@ typedef struct _cef_base_t {
   size_t size;
 
   ///
-  // Called to increment the reference count for the object. Should be called
-  // for every new copy of a pointer to a given object.
+  // Increment the reference count.
   ///
-  void (CEF_CALLBACK *add_ref)(struct _cef_base_t* self);
+  int (CEF_CALLBACK *add_ref)(struct _cef_base_t* self);
 
   ///
-  // Called to decrement the reference count for the object. If the reference
-  // count falls to 0 the object should self-delete. Returns true (1) if the
-  // resulting reference count is 0.
+  // Decrement the reference count.  Delete this object when no references
+  // remain.
   ///
   int (CEF_CALLBACK *release)(struct _cef_base_t* self);
 
   ///
-  // Returns true (1) if the current reference count is 1.
+  // Returns the current number of references.
   ///
-  int (CEF_CALLBACK *has_one_ref)(struct _cef_base_t* self);
+  int (CEF_CALLBACK *get_refct)(struct _cef_base_t* self);
 } cef_base_t;
 
 

@@ -17,11 +17,17 @@
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
 * Author: Helge Norberg, helge.norberg@svt.se
+* Author: Robert Nagy, ronag89@gmail.com
 */
 
 #include "html_cg_proxy.h"
 
 #include <future>
+
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string/trim.hpp>
+#include <boost/algorithm/string/replace.hpp>
+#include <boost/format.hpp>
 
 namespace caspar { namespace html {
 
@@ -74,12 +80,16 @@ void html_cg_proxy::next(int layer)
 
 void html_cg_proxy::update(int layer, const std::wstring& data)
 {
-
+	impl_->producer->call({ (boost::wformat(L"update(\"%1%\")") % boost::algorithm::replace_all_copy(boost::algorithm::trim_copy_if(data, boost::is_any_of(" \"")), "\"", "\\\"")).str() });
 }
 
 std::wstring html_cg_proxy::invoke(int layer, const std::wstring& label)
 {
-	return L"";
+	auto function_call = boost::algorithm::trim_copy_if(label, boost::is_any_of(" \""));
+
+	// Append empty () if no parameter list has been given
+	auto javascript = boost::ends_with(function_call, ")") ? function_call : function_call + L"()";
+	return impl_->producer->call({ javascript }).get();
 }
 
 std::wstring html_cg_proxy::description(int layer)
