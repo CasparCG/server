@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include <common/except.h>
+
 #include <boost/filesystem/fstream.hpp>
 
 #include <string>
@@ -29,34 +31,15 @@
 
 namespace caspar { namespace psd {
 
-class UnexpectedEOFException : public std::exception
-{
-public:
-	virtual ~UnexpectedEOFException()
-	{}
-	virtual const char *what() const noexcept
-	{
-		return "Unexpected end of file";
-	}
-};
-class FileNotFoundException : public std::exception
-{
-public:
-	virtual ~FileNotFoundException()
-	{}
-	virtual const char *what() const noexcept
-	{
-		return "File not found";
-	}
-};
+struct UnexpectedEOFException : virtual io_error {};
 
-class BEFileInputStream
+class bigendian_file_input_stream
 {
 public:
-	explicit BEFileInputStream();
-	virtual ~BEFileInputStream();
+	explicit bigendian_file_input_stream();
+	virtual ~bigendian_file_input_stream();
 
-	void Open(const std::wstring& filename);
+	void open(const std::wstring& filename);
 
 	void read(char*, std::streamsize);
 	std::uint8_t read_byte();
@@ -83,7 +66,7 @@ private:
 class StreamPositionBackup
 {
 public:
-	StreamPositionBackup(BEFileInputStream& stream, std::streamoff newPos) : stream_(stream)
+	StreamPositionBackup(bigendian_file_input_stream& stream, std::streamoff newPos) : stream_(stream)
 	{
 		oldPosition_ = stream.current_position();
 		stream_.set_position(newPos);
@@ -94,8 +77,8 @@ public:
 		stream_.set_position(oldPosition_);
 	}
 private:
-	std::streamoff		oldPosition_;
-	BEFileInputStream&	stream_;
+	std::streamoff					oldPosition_;
+	bigendian_file_input_stream&	stream_;
 
 };
 
