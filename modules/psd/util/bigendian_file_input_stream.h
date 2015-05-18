@@ -31,7 +31,7 @@
 
 namespace caspar { namespace psd {
 
-struct UnexpectedEOFException : virtual io_error {};
+struct unexpected_eof_exception : virtual io_error {};
 
 class bigendian_file_input_stream
 {

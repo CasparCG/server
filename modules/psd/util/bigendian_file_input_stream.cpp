@@ -87,12 +87,12 @@ void bigendian_file_input_stream::read(char* buf, std::streamsize length)
 	if (length > 0)
 	{
 		if (ifs_.eof())
-			CASPAR_THROW_EXCEPTION(UnexpectedEOFException());
+			CASPAR_THROW_EXCEPTION(unexpected_eof_exception());
 
 		ifs_.read(buf, length);
 		
 		if (ifs_.gcount() < length)
-			CASPAR_THROW_EXCEPTION(UnexpectedEOFException());
+			CASPAR_THROW_EXCEPTION(unexpected_eof_exception());
 	}
 }
 
