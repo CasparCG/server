@@ -128,7 +128,7 @@ public:
 
 		unsigned long blendModeSignature = stream.read_long();
 		if(blendModeSignature != '8BIM')
-			throw psd_file_format_exception();
+			CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("blendModeSignature != '8BIM'"));
 
 		blend_mode_ = int_to_blend_mode(stream.read_long());
 		opacity_ = stream.read_byte();
@@ -162,7 +162,7 @@ public:
 	{
 		auto signature = stream.read_long();
 		if(signature != '8BIM' && signature != '8B64')
-			throw psd_file_format_exception();
+			CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("signature != '8BIM' && signature != '8B64'"));
 
 		auto key = stream.read_long();
 
@@ -234,7 +234,7 @@ public:
 	void read_solid_color(bigendian_file_input_stream& stream)
 	{
 		if(stream.read_long() != 16)	//"descriptor version" should be 16
-			throw psd_file_format_exception();
+			CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("descriptor version should be 16"));
 
 		descriptor solid_descriptor;
 		solid_descriptor.populate(stream);
