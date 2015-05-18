@@ -36,6 +36,7 @@
 #include <common/env.h>
 #include <common/memory.h>
 #include <common/log.h>
+#include <common/os/filesystem.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/thread/future.hpp>
@@ -289,13 +290,14 @@ void create_timelines(
 
 spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
 {
-	std::wstring filename = env::media_folder() + L"\\" + params[0] + L".psd";
-	if(!boost::filesystem::is_regular_file(boost::filesystem::path(filename)))
+	std::wstring filename = env::media_folder() + params[0] + L".psd";
+	auto found_file = find_case_insensitive(filename);
+
+	if (!found_file)
 		return core::frame_producer::empty();
 
 	psd_document doc;
-	if(!doc.parse(filename))
-		return core::frame_producer::empty();
+	doc.parse(*found_file);
 
 	spl::shared_ptr<core::scene::scene_producer> root(spl::make_shared<core::scene::scene_producer>(doc.width(), doc.height()));
 
@@ -384,7 +386,7 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 		text_layer.second->text().bind(root->create_variable<std::wstring>(boost::to_lower_copy(text_layer.first), true, L""));
 
 	auto params2 = params;
-	params2.erase(params2.cbegin());
+	params2.erase(params2.begin());
 
 	root->call(params2);
 

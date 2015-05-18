@@ -10,7 +10,6 @@ set(SOURCES
 		layer.cpp
 		misc.cpp
 		psd_scene_producer.cpp
-		resource.cpp
 )
 set(HEADERS
 		util/bigendian_file_input_stream.h
@@ -23,7 +22,6 @@ set(HEADERS
 		layer.h
 		misc.h
 		psd_scene_producer.h
-		resource.h
 )
 
 add_library(psd ${SOURCES} ${HEADERS})

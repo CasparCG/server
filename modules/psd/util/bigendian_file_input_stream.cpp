@@ -20,7 +20,8 @@
 */
 
 #include "bigendian_file_input_stream.h"
-#include "..\..\..\common\utf.h"
+
+#include <common/utf.h>
 #include <common/endian.h>
 
 namespace caspar { namespace psd {
@@ -48,29 +49,30 @@ void BEFileInputStream::close()
 		ifs_.close();
 }
 
-unsigned char BEFileInputStream::read_byte()
+std::uint8_t BEFileInputStream::read_byte()
 {
-	unsigned char out;
-	read((char*)&out, 1);
+	std::uint8_t out;
+	read(reinterpret_cast<char*>(&out), 1);
 
 	return out;
 }
 
-unsigned short BEFileInputStream::read_short()
+std::uint16_t BEFileInputStream::read_short()
 {
-	unsigned short out;
-	read((char*)&out, 2);
+	std::uint16_t out;
+	read(reinterpret_cast<char*>(&out), 2);
 
 	return caspar::swap_byte_order(out);
 }
 
-unsigned long BEFileInputStream::read_long()
+std::uint32_t BEFileInputStream::read_long()
 {
-	unsigned long in;
-	read((char*)&in, 4);
+	std::uint32_t in;
+	read(reinterpret_cast<char*>(&in), 4);
 
 	return caspar::swap_byte_order(in);
 }
+
 double BEFileInputStream::read_double()
 {
 	char data[8];
@@ -87,7 +89,7 @@ void BEFileInputStream::read(char* buf, std::streamsize length)
 		if(ifs_.eof())
 			throw UnexpectedEOFException();
 
-			ifs_.read(buf, length);
+		ifs_.read(buf, length);
 		
 		if(ifs_.gcount() < length)
 			throw UnexpectedEOFException();

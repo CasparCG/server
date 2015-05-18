@@ -21,12 +21,14 @@
 
 #pragma once
 
+#include "util/bigendian_file_input_stream.h"
+
+#include <boost/property_tree/ptree.hpp>
+
 #include <vector>
 #include <map>
 #include <string>
 #include <memory>
-#include <boost\property_tree\ptree.hpp>
-#include "util\bigendian_file_input_stream.h"
 
 namespace caspar { namespace psd {
 
@@ -68,7 +70,7 @@ public:
 	descriptor();
 	~descriptor();
 
-	bool populate(BEFileInputStream& stream);
+	void populate(BEFileInputStream& stream);
 	Ptree& items() const { return context_->root; }
 private:
 	void read_value(const std::wstring& key, BEFileInputStream& stream);
