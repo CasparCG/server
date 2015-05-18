@@ -19,10 +19,12 @@
 * Author: Niklas P Andersson, niklas.p.andersson@svt.se
 */
 
-#include <memory>
 #include "descriptor.h"
-#include <boost\property_tree\ptree.hpp>
 #include "misc.h"
+
+#include <boost/property_tree/ptree.hpp>
+
+#include <memory>
 
 namespace caspar { namespace psd {
 
@@ -57,27 +59,16 @@ namespace caspar { namespace psd {
 		context_->stack.pop_back();
 	}
 
-bool descriptor::populate(BEFileInputStream& stream)
+void descriptor::populate(BEFileInputStream& stream)
 {
-	bool result = true;
-
-	try
+	stream.read_unicode_string();
+	stream.read_id_string();
+	unsigned long element_count = stream.read_long();
+	for (unsigned long element_index = 0; element_index < element_count; ++element_index)
 	{
-		stream.read_unicode_string();
-		stream.read_id_string();
-		unsigned long element_count = stream.read_long();
-		for (unsigned long element_index = 0; element_index < element_count; ++element_index)
-		{
-			std::wstring key = stream.read_id_string();
-			read_value(key, stream);
-		}
+		std::wstring key = stream.read_id_string();
+		read_value(key, stream);
 	}
-	catch(std::exception&)
-	{
-		result = false;
-	}
-
-	return result;
 }
 
 void descriptor::read_value(const std::wstring& key, BEFileInputStream& stream)
@@ -162,7 +153,7 @@ void descriptor::read_value(const std::wstring& key, BEFileInputStream& stream)
 	case 'alis':
 	default:
 		//descriptor type not supported yet
-		throw PSDFileFormatException();
+		CASPAR_THROW_EXCEPTION(PSDFileFormatException() << msg_info("descriptor type not supported yet"));
 	}
 }
 

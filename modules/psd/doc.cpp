@@ -25,30 +25,18 @@
 
 namespace caspar { namespace psd {
 
-psd_document::psd_document() : channels_(0), width_(0), height_(0), depth_(0), color_mode_(color_mode::InvalidColorMode)
+psd_document::psd_document() : channels_(0), width_(0), height_(0), depth_(0), color_mode_(psd::color_mode::InvalidColorMode)
 {
 }
 
-
-bool psd_document::parse(const std::wstring& filename)
+void psd_document::parse(const std::wstring& filename)
 {
-	bool result = true;
-	
-	try
-	{
-		filename_ = filename;
-		input_.Open(filename_);
-		read_header();
-		read_color_mode();
-		read_image_resources();
-		read_layers();
-	}
-	catch(std::exception&)
-	{
-		result = false;
-	}
-
-	return result;
+	filename_ = filename;
+	input_.Open(filename_);
+	read_header();
+	read_color_mode();
+	read_image_resources();
+	read_layers();
 }
 
 void psd_document::read_header()
@@ -56,7 +44,7 @@ void psd_document::read_header()
 	auto signature = input_.read_long();
 	auto version = input_.read_short();
 	if(!(signature == '8BPS' && version == 1))
-		throw PSDFileFormatException();
+		CASPAR_THROW_EXCEPTION(PSDFileFormatException() << msg_info("!(signature == '8BPS' && version == 1)"));
 
 	input_.discard_bytes(6);
 	channels_= input_.read_short();
@@ -87,7 +75,7 @@ void psd_document::read_image_resources()
 			{
 				auto signature = input_.read_long();
 				if(signature != '8BIM')
-					throw PSDFileFormatException();
+					CASPAR_THROW_EXCEPTION(PSDFileFormatException() << msg_info("signature != '8BIM'"));
 
 				auto resource_id = input_.read_short();
 				
@@ -120,12 +108,8 @@ void psd_document::read_image_resources()
 						{
 							input_.read_long();	//descriptor version, should be 16
 							descriptor timeline_descriptor;
-							if(!timeline_descriptor.populate(input_))
-								throw PSDFileFormatException();
-							else
-							{
-								timeline_desc_.swap(timeline_descriptor.items());
-							}
+							timeline_descriptor.populate(input_);
+							timeline_desc_.swap(timeline_descriptor.items());
 						}
 						break;
 
