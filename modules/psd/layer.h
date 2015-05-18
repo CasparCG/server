@@ -48,7 +48,7 @@ public:
 	{
 		friend struct layer::impl;
 
-		void read_mask_data(BEFileInputStream&);
+		void read_mask_data(bigendian_file_input_stream&);
 
 		image8bit_ptr	bitmap_;
 		unsigned char	default_value_;
@@ -67,8 +67,8 @@ public:
 
 	layer();
 
-	void populate(BEFileInputStream&, const psd_document&);
-	void read_channel_data(BEFileInputStream&);
+	void populate(bigendian_file_input_stream&, const psd_document&);
+	void read_channel_data(bigendian_file_input_stream&);
 
 	const std::wstring& name() const;
 	unsigned char opacity() const;

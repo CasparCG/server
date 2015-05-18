@@ -86,7 +86,7 @@ private:
 	void read_layers();
 
 	std::wstring					filename_;
-	BEFileInputStream				input_;
+	bigendian_file_input_stream		input_;
 
 	std::vector<layer_ptr>			layers_;
 
