@@ -19,23 +19,22 @@
 * Author: Niklas P Andersson, niklas.p.andersson@svt.se
 */
 
-#ifndef _BEFILEINPUTSTREAM_H__
-#define _BEFILEINPUTSTREAM_H__
-
 #pragma once
+
+#include <boost/filesystem/fstream.hpp>
 
 #include <string>
 #include <fstream>
+#include <cstdint>
 
-namespace caspar {
-namespace psd {
+namespace caspar { namespace psd {
 
 class UnexpectedEOFException : public std::exception
 {
 public:
 	virtual ~UnexpectedEOFException()
 	{}
-	virtual const char *what() const
+	virtual const char *what() const noexcept
 	{
 		return "Unexpected end of file";
 	}
@@ -45,7 +44,7 @@ class FileNotFoundException : public std::exception
 public:
 	virtual ~FileNotFoundException()
 	{}
-	virtual const char *what() const
+	virtual const char *what() const noexcept
 	{
 		return "File not found";
 	}
@@ -60,9 +59,9 @@ public:
 	void Open(const std::wstring& filename);
 
 	void read(char*, std::streamsize);
-	unsigned char read_byte();
-	unsigned short read_short();
-	unsigned long read_long();
+	std::uint8_t read_byte();
+	std::uint16_t read_short();
+	std::uint32_t read_long();
 	std::wstring read_pascal_string(unsigned char padding = 1);
 	std::wstring read_unicode_string();
 	std::wstring read_id_string();
@@ -77,29 +76,28 @@ public:
 
 	void close();
 private:
-	std::ifstream	ifs_;
-	std::wstring	filename_;
+	boost::filesystem::ifstream	ifs_;
+	std::wstring				filename_;
 };
 
 class StreamPositionBackup
 {
 public:
-	StreamPositionBackup(BEFileInputStream* pStream, std::streamoff newPos) : pStream_(pStream)
+	StreamPositionBackup(BEFileInputStream& stream, std::streamoff newPos) : stream_(stream)
 	{
-		oldPosition_ = pStream->current_position();
-		pStream_->set_position(newPos);
+		oldPosition_ = stream.current_position();
+		stream_.set_position(newPos);
 	}
+
 	~StreamPositionBackup()
 	{
-		pStream_->set_position(oldPosition_);
+		stream_.set_position(oldPosition_);
 	}
 private:
-	std::streamoff oldPosition_;
-	BEFileInputStream* pStream_;
+	std::streamoff		oldPosition_;
+	BEFileInputStream&	stream_;
 
 };
 
 }	//namespace psd
 }	//namespace caspar
-
-#endif	//_BEFILEINPUTSTREAM_H__
