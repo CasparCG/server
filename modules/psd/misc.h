@@ -19,8 +19,9 @@
 * Author: Niklas P Andersson, niklas.p.andersson@svt.se
 */
 
-#ifndef _PSDMISC_H__
-#define _PSDMISC_H__
+#pragma once
+
+#include <common/except.h>
 
 #include <string>
 
@@ -61,29 +62,13 @@ struct size
 template<typename T>
 struct rect
 {
-	point<T>	location;
-	size<T>		size;
+	point<T>		location;
+	psd::size<T>	size;
 
 	bool empty() const { return size.width == 0 || size.height == 0; }
 };
 
-
-
-class PSDFileFormatException : public std::exception
-{
-public:
-	PSDFileFormatException() : std::exception()
-	{}
-	explicit PSDFileFormatException(const char* msg) : std::exception(msg)
-	{}
-
-	virtual ~PSDFileFormatException()
-	{}
-	virtual const char *what() const
-	{
-		return "Unknown fileformat error";
-	}
-};
+struct PSDFileFormatException : virtual caspar_exception {};
 
 enum class channel_type
 {
@@ -139,4 +124,3 @@ std::wstring color_mode_to_string(color_mode c);
 }	//namespace psd
 }	//namespace caspar
 
-#endif
