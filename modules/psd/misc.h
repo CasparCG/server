@@ -68,7 +68,7 @@ struct rect
 	bool empty() const { return size.width == 0 || size.height == 0; }
 };
 
-struct PSDFileFormatException : virtual caspar_exception {};
+struct psd_file_format_exception : virtual caspar_exception {};
 
 enum class channel_type
 {

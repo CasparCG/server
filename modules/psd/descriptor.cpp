@@ -59,7 +59,7 @@ namespace caspar { namespace psd {
 		context_->stack.pop_back();
 	}
 
-void descriptor::populate(BEFileInputStream& stream)
+void descriptor::populate(bigendian_file_input_stream& stream)
 {
 	stream.read_unicode_string();
 	stream.read_id_string();
@@ -71,7 +71,7 @@ void descriptor::populate(BEFileInputStream& stream)
 	}
 }
 
-void descriptor::read_value(const std::wstring& key, BEFileInputStream& stream)
+void descriptor::read_value(const std::wstring& key, bigendian_file_input_stream& stream)
 {
 	unsigned int type = stream.read_long();
 
@@ -153,7 +153,7 @@ void descriptor::read_value(const std::wstring& key, BEFileInputStream& stream)
 	case 'alis':
 	default:
 		//descriptor type not supported yet
-		CASPAR_THROW_EXCEPTION(PSDFileFormatException() << msg_info("descriptor type not supported yet"));
+		CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("descriptor type not supported yet"));
 	}
 }
 
