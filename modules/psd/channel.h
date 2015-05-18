@@ -19,12 +19,10 @@
 * Author: Niklas P Andersson, niklas.p.andersson@svt.se
 */
 
-#ifndef _PSDCHANNEL_H__
-#define _PSDCHANNEL_H__
-
 #pragma once
 
-#include "util\bigendian_file_input_stream.h"
+#include "util/bigendian_file_input_stream.h"
+
 #include <memory>
 
 namespace caspar { namespace psd {
@@ -40,5 +38,3 @@ public:
 
 }	//namespace psd
 }	//namespace caspar
-
-#endif	//_PSDCHANNEL_H__

@@ -22,14 +22,17 @@
 #include "layer.h"
 #include "doc.h"
 #include "descriptor.h"
-#include <common/log.h>
-#include "util\pdf_reader.h"
+#include "util/pdf_reader.h"
 
-#include <algorithm>
 #include "../image/util/image_algorithms.h"
 #include "../image/util/image_view.h"
 
+#include <common/log.h>
+
 #include <boost/property_tree/ptree.hpp>
+#include <boost/lexical_cast.hpp>
+
+#include <algorithm>
 
 namespace caspar { namespace psd {
 
@@ -234,15 +237,11 @@ public:
 			throw PSDFileFormatException();
 
 		descriptor solid_descriptor;
-		if(!solid_descriptor.populate(stream))
-			throw PSDFileFormatException("Failed to read solid color data");
-		else
-		{
-			solid_color_.red = static_cast<unsigned char>(solid_descriptor.items().get(L"Clr .Rd  ", 0.0) + 0.5);
-			solid_color_.green = static_cast<unsigned char>(solid_descriptor.items().get(L"Clr .Grn ", 0.0) + 0.5);
-			solid_color_.blue = static_cast<unsigned char>(solid_descriptor.items().get(L"Clr .Bl  ", 0.0) + 0.5);
-			solid_color_.alpha = 255;
-		}
+		solid_descriptor.populate(stream);
+		solid_color_.red = static_cast<unsigned char>(solid_descriptor.items().get(L"Clr .Rd  ", 0.0) + 0.5);
+		solid_color_.green = static_cast<unsigned char>(solid_descriptor.items().get(L"Clr .Grn ", 0.0) + 0.5);
+		solid_color_.blue = static_cast<unsigned char>(solid_descriptor.items().get(L"Clr .Bl  ", 0.0) + 0.5);
+		solid_color_.alpha = 255;
 	}
 
 	void read_vector_mask(unsigned long length, BEFileInputStream& stream, long doc_width, long doc_height)
@@ -277,7 +276,7 @@ public:
 					knots.push_back(anchor);
 				else
 				{	//we can't handle smooth curves yet
-					throw PSDFileFormatException();
+					CASPAR_THROW_EXCEPTION(PSDFileFormatException() << msg_info("we can't handle smooth curves yet"));
 				}
 			}
 
@@ -285,11 +284,11 @@ public:
 		}
 
 		if(knots.size() != 4)	//we only support rectangular vector masks
-			throw PSDFileFormatException();
+			CASPAR_THROW_EXCEPTION(PSDFileFormatException() << msg_info("we only support rectangular vector masks"));
 
 		//we only support rectangular vector masks
 		if(!(knots[0].first == knots[3].first && knots[1].first == knots[2].first && knots[0].second == knots[1].second && knots[2].second == knots[3].second))
-			throw PSDFileFormatException();
+			CASPAR_THROW_EXCEPTION(PSDFileFormatException() << msg_info("we only support rectangular vector masks"));
 
 		//the path_points are given in fixed-point 8.24 as a ratio with regards to the width/height of the document. we need to divide by 16777215.0f to get the real ratio.
 		float x_ratio = doc_width / 16777215.0f;
@@ -310,15 +309,11 @@ public:
 	void read_timeline_data(BEFileInputStream& stream)
 	{
 		if(stream.read_long() != 16)	//"descriptor version" should be 16
-			throw PSDFileFormatException();
+			CASPAR_THROW_EXCEPTION(PSDFileFormatException() << msg_info("descriptor version should be 16"));
 
 		descriptor timeline_descriptor;
-		if(!timeline_descriptor.populate(stream))
-			throw PSDFileFormatException();
-		else
-		{
-			timeline_info_.swap(timeline_descriptor.items());
-		}
+		timeline_descriptor.populate(stream);
+		timeline_info_.swap(timeline_descriptor.items());
 	}
 
 	void read_text_data(BEFileInputStream& stream)
@@ -335,45 +330,37 @@ public:
 		stream.read_double(); // tx
 		stream.read_double(); // ty
 		if(xx != yy || (xy != 0 && yx != 0))
-			throw PSDFileFormatException("Rotation and non-uniform scaling of dynamic textfields is not supported yet");
+			CASPAR_THROW_EXCEPTION(PSDFileFormatException() << msg_info("Rotation and non-uniform scaling of dynamic textfields is not supported yet"));
 
 		text_scale_ = static_cast<float>(xx);
 
 		if(stream.read_short() != 50)	//"text version" should be 50
-			throw PSDFileFormatException("invalid text version");
+			CASPAR_THROW_EXCEPTION(PSDFileFormatException() << msg_info("invalid text version"));
 
 		if(stream.read_long() != 16)	//"descriptor version" should be 16
-			throw PSDFileFormatException("Invalid descriptor version while reading text-data");
+			CASPAR_THROW_EXCEPTION(PSDFileFormatException() << msg_info("Invalid descriptor version while reading text-data"));
 
 		descriptor text_descriptor;
-		if(!text_descriptor.populate(stream))
-			throw PSDFileFormatException("Failed to read text-info");
-		else
+		text_descriptor.populate(stream);
+		auto text_info = text_descriptor.items().get_optional<std::wstring>(L"EngineData");
+		if(text_info.is_initialized())
 		{
-			auto text_info = text_descriptor.items().get_optional<std::wstring>(L"EngineData");
-			if(text_info.is_initialized())
-			{
-				std::string str(text_info.get().begin(), text_info.get().end());
-				read_pdf(text_layer_info_, str);
-			}
+			std::string str(text_info.get().begin(), text_info.get().end());
+			read_pdf(text_layer_info_, str);
 		}
 
 		if(stream.read_short() != 1)	//"warp version" should be 1
-			throw PSDFileFormatException("invalid warp version");
+			CASPAR_THROW_EXCEPTION(PSDFileFormatException() << msg_info("invalid warp version"));
 
 		if(stream.read_long() != 16)	//"descriptor version" should be 16
-			throw PSDFileFormatException("Invalid descriptor version while reading text warp-data");
+			CASPAR_THROW_EXCEPTION(PSDFileFormatException() << msg_info("Invalid descriptor version while reading text warp-data"));
 
 		descriptor warp_descriptor;
-		if(!warp_descriptor.populate(stream))
-			throw PSDFileFormatException("Failed to read text warp-data");
-		else
-		{
-			stream.read_double(); // w_top
-			stream.read_double();  // w_left
-			stream.read_double();  // w_right
-			stream.read_double();  // w_bottom
-		}
+		warp_descriptor.populate(stream);
+		stream.read_double(); // w_top
+		stream.read_double();  // w_left
+		stream.read_double();  // w_right
+		stream.read_double();  // w_bottom
 	}
 
 	//TODO: implement
@@ -456,7 +443,7 @@ public:
 					else if(encoding == 1)
 						read_rle_image_data(stream, src_rect, (target == bitmap) ? clip_rect : mask_.rect_, target, offset);
 					else
-						throw PSDFileFormatException();
+						CASPAR_THROW_EXCEPTION(PSDFileFormatException() << msg_info("Unhandled image data encoding: " + boost::lexical_cast<std::string>(encoding)));
 				}
 			}
 			stream.set_position(end_of_data);
@@ -477,7 +464,7 @@ public:
 	{
 		unsigned long total_length = target->width() * target->height();
 		if(total_length != data_length)
-			throw PSDFileFormatException();
+			CASPAR_THROW_EXCEPTION(PSDFileFormatException() << msg_info("total_length != data_length"));
 
 		auto data = target->data();
 

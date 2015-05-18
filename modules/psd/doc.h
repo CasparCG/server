@@ -19,20 +19,16 @@
 * Author: Niklas P Andersson, niklas.p.andersson@svt.se
 */
 
-#ifndef	_PSDDOC_H__
-#define _PSDDOC_H__
-
 #pragma once
 
-#include <string>
-#include <vector>
-#include "util\bigendian_file_input_stream.h"
-
+#include "util/bigendian_file_input_stream.h"
 #include "misc.h"
 #include "layer.h"
 
 #include <boost/property_tree/ptree.hpp>
 
+#include <string>
+#include <vector>
 
 namespace caspar { namespace psd {
 
@@ -81,7 +77,7 @@ public:
 	}
 
 
-	bool parse(const std::wstring& s);
+	void parse(const std::wstring& s);
 
 private:
 	void read_header();
@@ -104,5 +100,3 @@ private:
 
 }	//namespace psd
 }	//namespace caspar
-
-#endif	//_PSDDOC_H__

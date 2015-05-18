@@ -19,20 +19,18 @@
 * Author: Niklas P Andersson, niklas.p.andersson@svt.se
 */
 
-#ifndef _PSDLAYER_H__
-#define _PSDLAYER_H__
-
 #pragma once
+
+#include "util/bigendian_file_input_stream.h"
+#include "image.h"
+#include "misc.h"
+#include "channel.h"
+
+#include <boost/property_tree/ptree_fwd.hpp>
 
 #include <vector>
 #include <string>
 #include <common/memory.h>
-#include "util\bigendian_file_input_stream.h"
-
-#include "image.h"
-#include "misc.h"
-#include "channel.h"
-#include <boost/property_tree/ptree_fwd.hpp>
 
 namespace caspar { namespace psd {
 
@@ -97,5 +95,3 @@ public:
 
 }	//namespace psd
 }	//namespace caspar
-
-#endif	//_PSDLAYER_H__
