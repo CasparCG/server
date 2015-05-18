@@ -70,10 +70,10 @@ public:
 	descriptor();
 	~descriptor();
 
-	void populate(BEFileInputStream& stream);
+	void populate(bigendian_file_input_stream& stream);
 	Ptree& items() const { return context_->root; }
 private:
-	void read_value(const std::wstring& key, BEFileInputStream& stream);
+	void read_value(const std::wstring& key, bigendian_file_input_stream& stream);
 	context::ptr_type context_;
 };
 
