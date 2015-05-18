@@ -19,20 +19,25 @@
 * Author: Niklas P Andersson, niklas.p.andersson@svt.se
 */
 
-#include "doc.h"
+#include "psd_document.h"
 #include "descriptor.h"
 #include <iostream>
 
 namespace caspar { namespace psd {
 
-psd_document::psd_document() : channels_(0), width_(0), height_(0), depth_(0), color_mode_(psd::color_mode::InvalidColorMode)
+psd_document::psd_document()
+	: channels_(0)
+	, width_(0)
+	, height_(0)
+	, depth_(0)
+	, color_mode_(psd::color_mode::InvalidColorMode)
 {
 }
 
 void psd_document::parse(const std::wstring& filename)
 {
 	filename_ = filename;
-	input_.Open(filename_);
+	input_.open(filename_);
 	read_header();
 	read_color_mode();
 	read_image_resources();
@@ -44,7 +49,7 @@ void psd_document::read_header()
 	auto signature = input_.read_long();
 	auto version = input_.read_short();
 	if(!(signature == '8BPS' && version == 1))
-		CASPAR_THROW_EXCEPTION(PSDFileFormatException() << msg_info("!(signature == '8BPS' && version == 1)"));
+		CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("!(signature == '8BPS' && version == 1)"));
 
 	input_.discard_bytes(6);
 	channels_= input_.read_short();
@@ -75,7 +80,7 @@ void psd_document::read_image_resources()
 			{
 				auto signature = input_.read_long();
 				if(signature != '8BIM')
-					CASPAR_THROW_EXCEPTION(PSDFileFormatException() << msg_info("signature != '8BIM'"));
+					CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("signature != '8BIM'"));
 
 				auto resource_id = input_.read_short();
 				
@@ -157,13 +162,13 @@ void psd_document::read_image_resources()
 					if((resource_length & 1) == 1)	//each resource is padded to an even amount of bytes
 						input_.discard_bytes(1);
 				}
-				catch(PSDFileFormatException&)
+				catch(psd_file_format_exception&)
 				{
 					input_.set_position(end_of_chunk);
 				}
 			}
 		}
-		catch(PSDFileFormatException&)
+		catch(psd_file_format_exception&)
 		{
 			//if an error occurs, just skip this section
 			input_.set_position(end_of_section);

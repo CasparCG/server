@@ -31,8 +31,8 @@ public:
 		data_.resize(width*height*channels);
 	}
 
-	int width() const { return width_; };
-	int height() const { return height_; };
+	int width() const { return width_; }
+	int height() const { return height_; }
 	unsigned char channel_count() const { return channels_; }
 
 	T* data() { return data_.data(); }
