@@ -6,7 +6,7 @@ set(SOURCES
 		util/pdf_reader.cpp
 
 		descriptor.cpp
-		doc.cpp
+		psd_document.cpp
 		layer.cpp
 		misc.cpp
 		psd_scene_producer.cpp
@@ -17,7 +17,7 @@ set(HEADERS
 
 		channel.h
 		descriptor.h
-		doc.h
+		psd_document.h
 		image.h
 		layer.h
 		misc.h

@@ -20,8 +20,8 @@
 */
 
 #include "psd_scene_producer.h"
+#include "psd_document.h"
 #include "layer.h"
-#include "doc.h"
 
 #include <core/frame/pixel_format.h>
 #include <core/frame/frame_factory.h>
