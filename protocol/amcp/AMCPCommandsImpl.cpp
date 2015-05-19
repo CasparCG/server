@@ -1417,8 +1417,8 @@ bool CinfCommand::DoExecute()
 		for (boost::filesystem::recursive_directory_iterator itr(env::media_folder()), end; itr != end && info.empty(); ++itr)
 		{
 			auto path = itr->path();
-			auto file = path.replace_extension(L"").filename();
-			if(boost::iequals(file.wstring(), parameters().at(0)))
+			auto file = path.replace_extension(L"").filename().wstring();
+			if(boost::iequals(file, parameters().at(0)))
 				info += MediaInfo(itr->path(), system_info_repo_) + L"\r\n";
 		}
 

@@ -1,13 +1,37 @@
 /**********************************************************************
  * 
- * stack_walker.h
+ * StackWalker.h
  *
  *
- * History:
- *  2005-07-27   v1    - First public release on http://www.codeproject.com/
- *  (for additional changes see History in 'stack_walker.cpp'!
  *
- **********************************************************************/
+ * LICENSE (http://www.opensource.org/licenses/bsd-license.php)
+ *
+ *   Copyright (c) 2005-2009, Jochen Kalmbach
+ *   All rights reserved.
+ *
+ *   Redistribution and use in source and binary forms, with or without modification, 
+ *   are permitted provided that the following conditions are met:
+ *
+ *   Redistributions of source code must retain the above copyright notice, 
+ *   this list of conditions and the following disclaimer. 
+ *   Redistributions in binary form must reproduce the above copyright notice, 
+ *   this list of conditions and the following disclaimer in the documentation 
+ *   and/or other materials provided with the distribution. 
+ *   Neither the name of Jochen Kalmbach nor the names of its contributors may be 
+ *   used to endorse or promote products derived from this software without 
+ *   specific prior written permission. 
+ *   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+ *   AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, 
+ *   THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+ *   ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE 
+ *   FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES 
+ *   (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; 
+ *   LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND 
+ *   ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT 
+ *   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS 
+ *   SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * **********************************************************************/
 // #pragma once is supported starting with _MCS_VER 1000, 
 // so we need not to check the version (because we only support _MSC_VER >= 1100)!
 #pragma once
@@ -24,8 +48,8 @@ typedef unsigned long SIZE_T, *PSIZE_T;
 #endif
 #endif  // _MSC_VER < 1300
 
-class stack_walkerInternal;  // forward
-class stack_walker
+class StackWalkerInternal;  // forward
+class StackWalker
 {
 public:
   typedef enum StackWalkOptions
@@ -62,14 +86,14 @@ public:
     OptionsAll = 0x3F
   } StackWalkOptions;
 
-  stack_walker(
+  StackWalker(
     int options = OptionsAll, // 'int' is by design, to combine the enum-flags
     LPCSTR szSymPath = NULL, 
     DWORD dwProcessId = GetCurrentProcessId(), 
     HANDLE hProcess = GetCurrentProcess()
     );
-  stack_walker(DWORD dwProcessId, HANDLE hProcess);
-  virtual ~stack_walker();
+  StackWalker(DWORD dwProcessId, HANDLE hProcess);
+  virtual ~StackWalker();
 
   typedef BOOL (__stdcall *PReadProcessMemoryRoutine)(
     HANDLE      hProcess,
@@ -94,7 +118,7 @@ public:
 // in older compilers in order to use it... starting with VC7 we can declare it as "protected"
 protected:
 #endif
-	enum { STACKWALK_MAX_NAMELEN = 1024 }; // max name length for found symbols
+	enum { STACKWALK_MAX_NAMELEN = 4096 }; // max name length for found symbols
 
 protected:
   // Entry for each Callstack-Entry
@@ -123,18 +147,19 @@ protected:
   virtual void OnDbgHelpErr(LPCSTR szFuncName, DWORD gle, DWORD64 addr);
   virtual void OnOutput(LPCSTR szText);
 
-  stack_walkerInternal *m_sw;
+  StackWalkerInternal *m_sw;
   HANDLE m_hProcess;
   DWORD m_dwProcessId;
   BOOL m_modulesLoaded;
   LPSTR m_szSymPath;
 
   int m_options;
+  int m_MaxRecursionCount;
 
   static BOOL __stdcall myReadProcMem(HANDLE hProcess, DWORD64 qwBaseAddress, PVOID lpBuffer, DWORD nSize, LPDWORD lpNumberOfBytesRead);
 
-  friend stack_walkerInternal;
-};
+  friend StackWalkerInternal;
+};  // class StackWalker
 
 
 // The "ugly" assembler-implementation is needed for systems before XP
@@ -152,7 +177,7 @@ protected:
 #ifdef CURRENT_THREAD_VIA_EXCEPTION
 // TODO: The following is not a "good" implementation, 
 // because the callstack is only valid in the "__except" block...
-#define GET_CURRENT_CONTEXT(c, contextFlags) \
+#define GET_CURRENT_CONTEXT_STACKWALKER_CODEPLEX(c, contextFlags) \
   do { \
     memset(&c, 0, sizeof(CONTEXT)); \
     EXCEPTION_POINTERS *pExp = NULL; \
@@ -165,7 +190,7 @@ protected:
   } while(0);
 #else
 // The following should be enough for walking the callstack...
-#define GET_CURRENT_CONTEXT(c, contextFlags) \
+#define GET_CURRENT_CONTEXT_STACKWALKER_CODEPLEX(c, contextFlags) \
   do { \
     memset(&c, 0, sizeof(CONTEXT)); \
     c.ContextFlags = contextFlags; \
@@ -180,7 +205,7 @@ protected:
 #else
 
 // The following is defined for x86 (XP and higher), x64 and IA64:
-#define GET_CURRENT_CONTEXT(c, contextFlags) \
+#define GET_CURRENT_CONTEXT_STACKWALKER_CODEPLEX(c, contextFlags) \
   do { \
     memset(&c, 0, sizeof(CONTEXT)); \
     c.ContextFlags = contextFlags; \

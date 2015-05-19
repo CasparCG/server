@@ -109,7 +109,7 @@ struct server::impl : boost::noncopyable
 				cg_registry_,
 				media_info_repo_));
 
-		//core::text::init();
+		core::text::init();
 
 		register_producer_factory(&core::scene::create_dummy_scene_producer);
 		register_producer_factory(&core::scene::create_xml_scene_producer);
