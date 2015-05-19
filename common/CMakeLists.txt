@@ -17,8 +17,8 @@ set(SOURCES
 if (MSVC)
 	set(OS_SPECIFIC_SOURCES
 			compiler/vs/disable_silly_warnings.h
-			compiler/vs/stack_walker.cpp
-			compiler/vs/stack_walker.h
+			compiler/vs/StackWalker.cpp
+			compiler/vs/StackWalker.h
 
 			os/windows/current_version.h
 			os/windows/filesystem.cpp
