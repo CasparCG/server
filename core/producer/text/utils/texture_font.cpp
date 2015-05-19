@@ -11,11 +11,7 @@
 
 namespace caspar { namespace core { namespace text {
 
-struct freetype_exception : virtual caspar_exception
-{
-	freetype_exception() {}
-	explicit freetype_exception(const char* msg) : caspar_exception(msg) {}
-};
+struct freetype_exception : virtual caspar_exception { };
 
 struct unicode_range
 {
@@ -55,19 +51,19 @@ public:
 		FT_Library lib;
 			
 		if (FT_Init_FreeType(&lib))
-			throw freetype_exception("Failed to initialize freetype");
+			CASPAR_THROW_EXCEPTION(freetype_exception() << msg_info("Failed to initialize freetype"));
 
 		lib_.reset(lib, [](FT_Library ptr) { FT_Done_FreeType(ptr); });
 
 		FT_Face face;
 			
 		if (FT_New_Face(lib_.get(), u8(info.font_file).c_str(), 0, &face))
-			throw freetype_exception("Failed to load font");
+			CASPAR_THROW_EXCEPTION(freetype_exception() << msg_info("Failed to load font"));
 
 		face_.reset(face, [](FT_Face ptr) { FT_Done_Face(ptr); });
 
 		if (FT_Set_Char_Size(face_.get(), static_cast<FT_F26Dot6>(size_*64), 0, 72, 72))
-			throw freetype_exception("Failed to set font size");
+			CASPAR_THROW_EXCEPTION(freetype_exception() << msg_info("Failed to set font size"));
 	}
 
 	void set_tracking(int tracking)

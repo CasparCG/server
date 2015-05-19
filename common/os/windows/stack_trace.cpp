@@ -24,7 +24,7 @@
 #include "../stack_trace.h"
 #include "../../utf.h"
 
-#include "../../compiler/vs/stack_walker.h"
+#include "../../compiler/vs/StackWalker.h"
 
 #include <utility>
 
@@ -34,31 +34,31 @@ namespace caspar {
 
 std::wstring get_call_stack()
 {
-	class log_call_stack_walker : public stack_walker
+	class log_call_stack_walker : public StackWalker
 	{
 		std::string str_;
 	public:
-		log_call_stack_walker() : stack_walker() {}
+		log_call_stack_walker() : StackWalker() {}
 
 		std::string flush()
 		{
 			return std::move(str_);
 		}
 	protected:
-		virtual void OnSymInit(LPCSTR szSearchPath, DWORD symOptions, LPCSTR szUserName)
+		virtual void OnSymInit(LPCSTR szSearchPath, DWORD symOptions, LPCSTR szUserName) override
 		{
 		}
-		virtual void OnLoadModule(LPCSTR img, LPCSTR mod, DWORD64 baseAddr, DWORD size, DWORD result, LPCSTR symType, LPCSTR pdbName, ULONGLONG fileVersion)
+		virtual void OnLoadModule(LPCSTR img, LPCSTR mod, DWORD64 baseAddr, DWORD size, DWORD result, LPCSTR symType, LPCSTR pdbName, ULONGLONG fileVersion) override
 		{
 		}
-		virtual void OnDbgHelpErr(LPCSTR szFuncName, DWORD gle, DWORD64 addr)
+		virtual void OnDbgHelpErr(LPCSTR szFuncName, DWORD gle, DWORD64 addr) override
 		{
 		}
-		virtual void OnOutput(LPCSTR szText)
+		virtual void OnOutput(LPCSTR szText) override
 		{
 			std::string str = szText;
 
-			if(str.find("internal::get_call_stack") == std::string::npos && str.find("stack_walker::ShowCallstack") == std::string::npos)
+			if(str.find("caspar::get_call_stack") == std::string::npos && str.find("StackWalker::ShowCallstack") == std::string::npos)
 				str_ += std::move(str);
 		}
 	};

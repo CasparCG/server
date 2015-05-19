@@ -31,6 +31,7 @@
 #include <core/producer/scene/scene_producer.h>
 #include <core/producer/scene/const_producer.h>
 #include <core/producer/scene/hotswap_producer.h>
+#include <core/producer/media_info/media_info.h>
 #include <core/frame/draw_frame.h>
 
 #include <common/env.h>
@@ -396,6 +397,18 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 void init(core::module_dependencies dependencies)
 {
 	core::register_producer_factory(create_psd_scene_producer);
+	dependencies.media_info_repo->register_extractor(
+			[](const std::wstring& file, const std::wstring& upper_case_extension, core::media_info& info)
+			{
+				if (upper_case_extension == L".PSD")
+				{
+					info.clip_type = L"STILL";
+
+					return true;
+				}
+
+				return false;
+			});
 }
 
 }}
