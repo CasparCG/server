@@ -80,10 +80,14 @@ std::wstring get_call_stack()
 	{
 		auto entries = std::shared_ptr<char*>(strings, free);
 		std::wostringstream stream;
+		stream << std::endl;
 
 		for (int i = 0; i != size; ++i)
 		{
-			stream << demangle(strings[i]).c_str() << std::endl;
+			auto demangled = demangle(strings[i]);
+
+			if (demangled.find("caspar::get_call_stack") == std::string::npos)
+				stream << demangled.c_str() << std::endl;
 		}
 
 		return stream.str();
