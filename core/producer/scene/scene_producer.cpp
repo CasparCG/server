@@ -377,7 +377,7 @@ spl::shared_ptr<core::frame_producer> create_dummy_scene_producer(const spl::sha
 	auto scene = spl::make_shared<scene_producer>(format_desc.width, format_desc.height);
 
 	text::text_info text_info;
-	text_info.font = L"Arial";
+	text_info.font = L"ArialMT";
 	text_info.size = 62;
 	text_info.color.r = 1;
 	text_info.color.g = 1;
