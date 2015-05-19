@@ -79,7 +79,7 @@ namespace caspar { namespace core {
 			if(err) 
 				return result;
 
-			auto fonts = directory_iterator(env::system_font_folder());
+			auto fonts = directory_iterator(env::font_folder());
 			auto end = directory_iterator();
 			for(; fonts != end; ++fonts)
 			{
@@ -110,8 +110,7 @@ namespace caspar { namespace core {
 		void init()
 		{
 			fonts = enumerate_fonts();
-			if(!fonts.empty())
-				register_producer_factory(&create_text_producer);
+			register_producer_factory(&create_text_producer);
 		}
 
 		text_info& find_font_file(text_info& info)
