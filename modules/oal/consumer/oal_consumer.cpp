@@ -43,8 +43,8 @@
 
 #include <tbb/concurrent_queue.h>
 
-#include <al/alc.h>
-#include <al/al.h>
+#include <AL/alc.h>
+#include <AL/al.h>
 
 #include <array>
 
@@ -112,12 +112,12 @@ struct oal_consumer : public core::frame_consumer
 	ALuint								source_				= 0;
 	std::array<ALuint, 3>				buffers_;
 
-	executor							executor_			= L"oal_consumer";
+	executor							executor_			{ L"oal_consumer" };
 
 public:
 	oal_consumer() 
 	{
-		buffers_.assign(0);
+		buffers_.fill(0);
 
 		init_device();
 
