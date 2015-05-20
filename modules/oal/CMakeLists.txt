@@ -28,7 +28,9 @@ source_group(sources ./*)
 if(MSVC)
 	target_link_libraries(oal
 			common
-			core)
+			core
+
+			OpenAL32)
 else()
 	target_link_libraries(oal
 			common
@@ -43,7 +45,6 @@ casparcg_add_module_project("oal")
 
 if(MSVC)
 	casparcg_add_runtime_dependency("${OPENAL_BIN_PATH}/OpenAL32.dll")
-	casparcg_add_runtime_dependency("${OPENAL_BIN_PATH}/wrap_oal.dll")
 else()
 	casparcg_add_runtime_dependency("${OPENAL_BIN_PATH}/libopenal.so.1.16.0")
 endif()
