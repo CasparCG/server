@@ -9,41 +9,45 @@ if not defined BUILD_7ZIP exit /b 1
 :: Clean and enter shadow build folder
 echo Cleaning...
 cd .. || goto :error
-if exist bin rmdir bin /s /q || goto :error
-if exist ipch rmdir ipch /s /q || goto :error
-if exist tmp rmdir tmp /s /q || goto :error
 if exist build rmdir build /s /q || goto :error
 mkdir build || goto :error
 
 :: Unpack archived dependencies
 echo Unpacking archived dependencies...
-"%BUILD_7ZIP%" x -y -odependencies dependencies\cef.7z || goto :error
+"%BUILD_7ZIP%" x -y -odependencies64 dependencies64\large_files_win32.7z || goto :error
 
 :: Setup VC++ environment
 echo Setting up VC++...
-call "%BUILD_VCVARSALL%" x86 || goto :error
+call "%BUILD_VCVARSALL%" x64 || goto :error
+
+:: Run cmake
+cd build || goto :error
+cmake -G "Visual Studio 12 2013" -A x64 .. || goto :error
 
 :: Build with MSBuild
 echo Building...
-msbuild /t:Clean /p:Configuration=Release || goto :error
-msbuild /p:Configuration=Release /m:%BUILD_PARALLEL_THREADS% || goto :error
+msbuild "CasparCG Server.sln" /t:Clean /p:Configuration=RelWithDebInfo || goto :error
+msbuild "CasparCG Server.sln" /p:Configuration=RelWithDebInfo /m:%BUILD_PARALLEL_THREADS% || goto :error
 
 :: Create server folder to later zip
-cd build || goto :error
 set SERVER_FOLDER=CasparCG Server
 if exist "%SERVER_FOLDER%" rmdir "%SERVER_FOLDER%" /s /q || goto :error
 mkdir "%SERVER_FOLDER%" || goto :error
 
 :: Copy media files
 echo Copying media...
-xcopy ..\deploy\Server "%SERVER_FOLDER%\Server" /E /I /Y || goto :error
-xcopy ..\deploy\Wallpapers "%SERVER_FOLDER%\Wallpapers" /E /I /Y || goto :error
-copy ..\deploy\CasparCG_Server_2.0-brochure.pdf "%SERVER_FOLDER%" || goto :error
+xcopy ..\deploy\general\Server "%SERVER_FOLDER%\Server" /E /I /Y || goto :error
+xcopy ..\deploy\general\Wallpapers "%SERVER_FOLDER%\Wallpapers" /E /I /Y || goto :error
+copy ..\deploy\general\CasparCG_Server_2.0-brochure.pdf "%SERVER_FOLDER%" || goto :error
 
 :: Copy binaries
 echo Copying binaries...
-copy ..\bin\Release\* "%SERVER_FOLDER%\Server" || goto :error
-xcopy ..\bin\Release\locales "%SERVER_FOLDER%\Server\locales" /E /I /Y || goto :error
+copy shell\*.dll "%SERVER_FOLDER%\Server" || goto :error
+copy shell\RelWithDebInfo\casparcg.exe "%SERVER_FOLDER%\Server" || goto :error
+copy shell\RelWithDebInfo\casparcg.pdb "%SERVER_FOLDER%\Server" || goto :error
+copy shell\casparcg.config "%SERVER_FOLDER%\Server" || goto :error
+copy shell\*.ttf "%SERVER_FOLDER%\Server" || goto :error
+xcopy shell\locales "%SERVER_FOLDER%\Server\locales" /E /I /Y || goto :error
 
 :: Copy documentation
 echo Copying documentation...
