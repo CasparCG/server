@@ -46,6 +46,6 @@ casparcg_add_module_project("oal")
 if(MSVC)
 	casparcg_add_runtime_dependency("${OPENAL_BIN_PATH}/OpenAL32.dll")
 else()
-	casparcg_add_runtime_dependency("${OPENAL_BIN_PATH}/libopenal.so.1.16.0")
+	casparcg_add_runtime_dependency("${OPENAL_BIN_PATH}/libopenal.so.1")
 endif()
 
