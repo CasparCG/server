@@ -38,15 +38,18 @@ mkdir "$SERVER_FOLDER/lib" || fail "Could not create $SERVER_FOLDER/lib"
 
 # Copy compiled binaries
 echo Copying binaries...
-cp -fP shell/lib* "$SERVER_FOLDER/lib/" || fail "Could not copy server libraries"
-cp -f shell/casparcg "$SERVER_FOLDER/bin/" || fail "Could not copy server executable"
-cp -f shell/casparcg.config "$SERVER_FOLDER/" || fail "Could not copy server config"
+cp -f  shell/lib* "$SERVER_FOLDER/lib/" || fail "Could not copy server libraries"
+cp -f  shell/*.ttf "$SERVER_FOLDER/" || fail "Could not copy font(s)"
+cp -f  shell/casparcg "$SERVER_FOLDER/bin/" || fail "Could not copy server executable"
+cp -f  shell/casparcg.config "$SERVER_FOLDER/" || fail "Could not copy server config"
 cp -Rf shell/locales "$SERVER_FOLDER/bin/" || fail "Could not copy server CEF locales"
 
 # Copy binary dependencies
 echo Copying binary dependencies...
-cp -RfP ../deploy/linux/* "$SERVER_FOLDER/" || fail "Could not copy binary dependencies"
-#cp -RfP ../deploy/examples/* "$SERVER_FOLDER/" || fail "Could not copy binary dependencies"
+cp -Rf ../deploy/linux/* "$SERVER_FOLDER/" || fail "Could not copy binary dependencies"
+cp -f  ../deploy/general/*.pdf "$SERVER_FOLDER/" || fail "Could not copy pdf"
+cp -Rf ../deploy/general/wallpapers "$SERVER_FOLDER/" || fail "Could not copy wallpapers"
+cp -Rf ../deploy/general/server/media "$SERVER_FOLDER/" || fail "Could not copy media"
 
 # Copy documentation
 echo Copying documentation...
