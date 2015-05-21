@@ -27,6 +27,7 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/producer/frame_producer.h>
+#include <core/interaction/interaction_event.h>
 #include <core/frame/frame.h>
 #include <core/frame/pixel_format.h>
 #include <core/frame/geometry.h>
@@ -147,6 +148,11 @@ namespace caspar {
 					execute_queued_javascript();
 					do_execute_javascript(javascript);
 				}
+			}
+
+			CefRefPtr<CefBrowserHost> get_browser_host()
+			{
+				return browser_->GetHost();
 			}
 
 			void close()
@@ -490,6 +496,56 @@ namespace caspar {
 			std::wstring name() const override
 			{
 				return L"html";
+			}
+
+			void on_interaction(const core::interaction_event::ptr& event) override
+			{
+				if (core::is<core::mouse_move_event>(event))
+				{
+					auto move = core::as<core::mouse_move_event>(event);
+					int x = static_cast<int>(move->x * constraints_.width.get());
+					int y = static_cast<int>(move->y * constraints_.height.get());
+
+					CefMouseEvent e;
+					e.x = x;
+					e.y = y;
+					client_->get_browser_host()->SendMouseMoveEvent(e, false);
+				}
+				else if (core::is<core::mouse_button_event>(event))
+				{
+					auto button = core::as<core::mouse_button_event>(event);
+					int x = static_cast<int>(button->x * constraints_.width.get());
+					int y = static_cast<int>(button->y * constraints_.height.get());
+
+					CefMouseEvent e;
+					e.x = x;
+					e.y = y;
+					client_->get_browser_host()->SendMouseClickEvent(
+							e,
+							static_cast<CefBrowserHost::MouseButtonType>(button->button),
+							!button->pressed,
+							1);
+				}
+				else if (core::is<core::mouse_wheel_event>(event))
+				{
+					auto wheel = core::as<core::mouse_wheel_event>(event);
+					int x = static_cast<int>(wheel->x * constraints_.width.get());
+					int y = static_cast<int>(wheel->y * constraints_.height.get());
+
+					CefMouseEvent e;
+					e.x = x;
+					e.y = y;
+					static const int WHEEL_TICKS_AMPLIFICATION = 40;
+					client_->get_browser_host()->SendMouseWheelEvent(
+							e,
+							0,                                               // delta_x
+							wheel->ticks_delta * WHEEL_TICKS_AMPLIFICATION); // delta_y
+				}
+			}
+
+			bool collides(double x, double y) const override
+			{
+				return true;
 			}
 
 			core::draw_frame receive_impl() override

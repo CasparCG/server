@@ -333,6 +333,16 @@ public:
 											e.type == sf::Event::MouseButtonPressed));
 								}
 								break;
+							case sf::Event::MouseWheelMoved:
+								{
+									auto& wheel_moved = e.mouseWheel;
+									sink_->on_interaction(spl::make_shared<core::mouse_wheel_event>(
+											1,
+											static_cast<double>(wheel_moved.x) / screen_width_,
+											static_cast<double>(wheel_moved.y) / screen_height_,
+											wheel_moved.delta));
+								}
+								break;
 							}
 						}
 					}
