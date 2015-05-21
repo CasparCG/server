@@ -87,6 +87,25 @@ protected:
 	}
 };
 
+struct mouse_wheel_event : public position_event
+{
+	typedef spl::shared_ptr<mouse_wheel_event> ptr;
+
+	const int ticks_delta;
+
+	mouse_wheel_event(int source_id, double x, double y, int ticks_delta)
+		: position_event(source_id, x, y)
+		, ticks_delta(ticks_delta)
+	{
+	}
+protected:
+	virtual interaction_event::ptr clone(
+			double new_x, double new_y) const override
+	{
+		return spl::make_shared<mouse_wheel_event>(source_id, new_x, new_y, ticks_delta);
+	}
+};
+
 struct mouse_button_event : public position_event
 {
 	typedef spl::shared_ptr<mouse_button_event> ptr;

@@ -250,8 +250,8 @@ public:
 	class draw_frame									last_frame()																	{return producer_->last_frame();}
 	draw_frame											create_thumbnail_frame()														{return producer_->create_thumbnail_frame();}
 	monitor::subject&									monitor_output() override														{return producer_->monitor_output();}										
-	bool												collides(double x, double y)													{return producer_->collides(x, y);}
-	void												on_interaction(const interaction_event::ptr& event)								{return producer_->on_interaction(event);}
+	bool												collides(double x, double y) const override										{return producer_->collides(x, y);}
+	void												on_interaction(const interaction_event::ptr& event)	override					{return producer_->on_interaction(event);}
 	constraints&										pixel_constraints() override													{return producer_->pixel_constraints();}
 };
 
