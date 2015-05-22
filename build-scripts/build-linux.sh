@@ -10,6 +10,10 @@ fail()
 [ -z "$BUILD_ARCHIVE_NAME" ] && fail "BUILD_ARCHIVE_NAME has to be set"
 [ -z "$BUILD_PARALLEL_THREADS" ] && fail "BUILD_PARALLEL_THREADS has to be set"
 
+# Unpack archived dependencies
+cd ../dependencies64 || fail "Could not enter ../dependencies64"
+tar xvJf large_files_linux.tar.xz || fail "Could not unpack large_files_linux.tar.xz"
+
 # Clean and enter shadow build folder
 echo Cleaning...
 if [ -e ../build ]; then
@@ -19,7 +23,7 @@ fi
 mkdir ../build || fail "Could not create ../build"
 cd ../build || fail "Could not enter ../build"
 
-# Run qmake
+# Run cmake
 echo Running cmake...
 cmake -G "Unix Makefiles" -A x64 -DCMAKE_BUILD_TYPE=RelWithDebInfo .. || fail "cmake failed"
 
