@@ -18,7 +18,7 @@ echo Unpacking archived dependencies...
 
 :: Setup VC++ environment
 echo Setting up VC++...
-call "%BUILD_VCVARSALL%" x64 || goto :error
+call "%BUILD_VCVARSALL%" amd64 || goto :error
 
 :: Run cmake
 cd build || goto :error
