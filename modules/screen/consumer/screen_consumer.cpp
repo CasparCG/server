@@ -654,9 +654,9 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 	if(params.size() > 1)
 		config.screen_index = boost::lexical_cast<int>(params[1]);
 		
-	config.windowed		= std::find(params.begin(), params.end(), L"WINDOWED") != params.end();
+	config.windowed		= std::find(params.begin(), params.end(), L"FULLSCREEN") == params.end();
 	config.key_only		= std::find(params.begin(), params.end(), L"KEY_ONLY") != params.end();
-	config.interactive	= std::find(params.begin(), params.end(), L"INTERACTIVE") != params.end();
+	config.interactive	= std::find(params.begin(), params.end(), L"NON_INTERACTIVE") == params.end();
 
 	auto name_it	= std::find(params.begin(), params.end(), L"NAME");
 	if(name_it != params.end() && ++name_it != params.end())
@@ -668,13 +668,14 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(const boost::property_tree::wptree& ptree, core::interaction_sink* sink) 
 {
 	configuration config;
-	config.name				= ptree.get(L"name",	 config.name);
-	config.screen_index		= ptree.get(L"device",   config.screen_index+1)-1;
-	config.windowed			= ptree.get(L"windowed", config.windowed);
-	config.key_only			= ptree.get(L"key-only", config.key_only);
-	config.auto_deinterlace	= ptree.get(L"auto-deinterlace", config.auto_deinterlace);
-	config.vsync			= ptree.get(L"vsync", config.vsync);
-	
+	config.name				= ptree.get(L"name",				config.name);
+	config.screen_index		= ptree.get(L"device",				config.screen_index+1)-1;
+	config.windowed			= ptree.get(L"windowed",			config.windowed);
+	config.key_only			= ptree.get(L"key-only",				config.key_only);
+	config.auto_deinterlace	= ptree.get(L"auto-deinterlace",		config.auto_deinterlace);
+	config.vsync			= ptree.get(L"vsync",				config.vsync);
+	config.interactive		= ptree.get(L"interactive",			config.interactive);
+
 	auto stretch_str = ptree.get(L"stretch", L"default");
 	if(stretch_str == L"uniform")
 		config.stretch = screen::stretch::uniform;
