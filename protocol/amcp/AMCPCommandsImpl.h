@@ -64,9 +64,19 @@ class MixerCommand : public AMCPChannelCommandBase<1>
 public:
 	MixerCommand(IO::ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index) : AMCPChannelCommandBase(client, channel, channel_index, layer_index)
 	{}
-
 private:
 	std::wstring print() const { return L"MixerCommand";}
+	core::frame_transform get_current_transform();
+	template<typename Func>
+	bool reply_value(const Func& extractor)
+	{
+		auto value = extractor(get_current_transform());
+
+		SetReplyString(L"201 MIXER OK\r\n"
+			+ boost::lexical_cast<std::wstring>(value) + L"\r\n");
+
+		return true;
+	}
 	bool DoExecute();
 };
 	

@@ -42,9 +42,16 @@ struct coord
 
 struct rect
 {
-	coord			upper_left;
-	binding<double>	width;
-	binding<double>	height;
+	coord upper_left;
+	coord lower_right;
+};
+
+struct corners
+{
+	coord upper_left;
+	coord upper_right;
+	coord lower_right;
+	coord lower_left;
 };
 
 struct adjustments
@@ -57,8 +64,11 @@ struct adjustments
 struct layer
 {
 	binding<std::wstring>						name;
+	scene::coord								anchor;
 	scene::coord								position;
-	scene::rect									clipping;
+	scene::rect									crop;
+	scene::corners								perspective;
+	binding<double>								rotation;
 	scene::adjustments							adjustments;
 	binding<spl::shared_ptr<frame_producer>>	producer;
 	binding<bool>								hidden;

@@ -52,6 +52,7 @@ public:
 	
 	audio_buffer operator()(const struct video_format_desc& format_desc);
 	void set_master_volume(float volume); 
+	float get_master_volume();
 
 	// frame_visitor
 
