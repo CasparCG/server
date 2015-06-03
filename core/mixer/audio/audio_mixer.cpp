@@ -115,6 +115,11 @@ public:
 		master_volume_ = volume;
 	}
 
+	float get_master_volume()
+	{
+		return master_volume_;
+	}
+
 	audio_buffer mix(const video_format_desc& format_desc)
 	{	
 		if(format_desc_ != format_desc)
@@ -218,6 +223,7 @@ void audio_mixer::push(const frame_transform& transform){impl_->push(transform);
 void audio_mixer::visit(const const_frame& frame){impl_->visit(frame);}
 void audio_mixer::pop(){impl_->pop();}
 void audio_mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
-audio_buffer audio_mixer::operator()(const video_format_desc& format_desc){return impl_->mix(format_desc);}
+float audio_mixer::get_master_volume() { return impl_->get_master_volume(); }
+audio_buffer audio_mixer::operator()(const video_format_desc& format_desc){ return impl_->mix(format_desc); }
 
 }}

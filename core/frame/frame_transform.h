@@ -37,6 +37,20 @@ struct levels final
 	double max_output	= 1.0;
 };
 
+struct corners final
+{
+	boost::array<double, 2> ul = boost::array<double, 2> { { 0.0, 0.0 } };
+	boost::array<double, 2> ur = boost::array<double, 2> { { 1.0, 0.0 } };
+	boost::array<double, 2> lr = boost::array<double, 2> { { 1.0, 1.0 } };
+	boost::array<double, 2> ll = boost::array<double, 2> { { 0.0, 1.0 } };
+};
+
+struct rectangle final
+{
+	boost::array<double, 2> ul = boost::array<double, 2> { { 0.0, 0.0 } };
+	boost::array<double, 2> lr = boost::array<double, 2> { { 1.0, 1.0 } };
+};
+
 struct image_transform final
 {
 	double					opacity				= 1.0;
@@ -47,10 +61,14 @@ struct image_transform final
 	// A bug in VS 2013 prevents us from writing:
 	// boost::array<double, 2> fill_translation = { { 0.0, 0.0 } };
 	// See http://blogs.msdn.com/b/vcblog/archive/2014/08/19/the-future-of-non-static-data-member-initialization.aspx
+	boost::array<double, 2>	anchor				= boost::array<double, 2> { { 0.0, 0.0 } };
 	boost::array<double, 2>	fill_translation	= boost::array<double, 2> { { 0.0, 0.0 } };
 	boost::array<double, 2>	fill_scale			= boost::array<double, 2> { { 1.0, 1.0 } };
 	boost::array<double, 2>	clip_translation	= boost::array<double, 2> { { 0.0, 0.0 } };
 	boost::array<double, 2>	clip_scale			= boost::array<double, 2> { { 1.0, 1.0 } };
+	double					angle				= 0.0;
+	rectangle				crop;
+	corners					perspective;
 	core::levels			levels;
 
 	core::field_mode		field_mode			= core::field_mode::progressive;
@@ -136,4 +154,9 @@ public:
 	}
 };
 
-}}
+namespace detail {
+
+void set_current_aspect_ratio(double aspect_ratio);
+double get_current_aspect_ratio();
+
+}}}

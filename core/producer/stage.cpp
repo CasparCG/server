@@ -178,7 +178,15 @@ public:
 			tweens_.clear();
 		}, task_priority::high_priority);
 	}
-		
+
+	std::future<frame_transform> get_current_transform(int index)
+	{
+		return executor_.begin_invoke([=]
+		{
+			return tweens_[index].fetch();
+		}, task_priority::high_priority);
+	}
+
 	std::future<void> load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, const boost::optional<int32_t>& auto_play_delta)
 	{
 		return executor_.begin_invoke([=]
@@ -378,6 +386,7 @@ std::future<void> stage::apply_transforms(const std::vector<stage::transform_tup
 std::future<void> stage::apply_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const tweener& tween){ return impl_->apply_transform(index, transform, mix_duration, tween); }
 std::future<void> stage::clear_transforms(int index){ return impl_->clear_transforms(index); }
 std::future<void> stage::clear_transforms(){ return impl_->clear_transforms(); }
+std::future<frame_transform> stage::get_current_transform(int index){ return impl_->get_current_transform(index); }
 std::future<void> stage::load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, const boost::optional<int32_t>& auto_play_delta){ return impl_->load(index, producer, preview, auto_play_delta); }
 std::future<void> stage::pause(int index){ return impl_->pause(index); }
 std::future<void> stage::play(int index){ return impl_->play(index); }

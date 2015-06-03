@@ -223,39 +223,39 @@ std::string get_fragment(bool blend_modes)
 				switch(pixel_format)
 				{
 				case 0:		//gray
-					return vec4(get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).rrr, 1.0);
+					return vec4(get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).rrr, 1.0);
 				case 1:		//bgra,
-					return get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).bgra;
+					return get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).bgra;
 				case 2:		//rgba,
-					return get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).rgba;
+					return get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).rgba;
 				case 3:		//argb,
-					return get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).argb;
+					return get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).argb;
 				case 4:		//abgr,
-					return get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).gbar;
+					return get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).gbar;
 				case 5:		//ycbcr,
 					{
-						float y  = get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).r;
-						float cb = get_sample(plane[1], gl_TexCoord[0].st, plane_size[0]).r;
-						float cr = get_sample(plane[2], gl_TexCoord[0].st, plane_size[0]).r;
+						float y  = get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).r;
+						float cb = get_sample(plane[1], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).r;
+						float cr = get_sample(plane[2], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).r;
 						return ycbcra_to_rgba(y, cb, cr, 1.0);
 					}
 				case 6:		//ycbcra
 					{
-						float y  = get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).r;
-						float cb = get_sample(plane[1], gl_TexCoord[0].st, plane_size[0]).r;
-						float cr = get_sample(plane[2], gl_TexCoord[0].st, plane_size[0]).r;
-						float a  = get_sample(plane[3], gl_TexCoord[0].st, plane_size[0]).r;
+						float y  = get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).r;
+						float cb = get_sample(plane[1], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).r;
+						float cr = get_sample(plane[2], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).r;
+						float a  = get_sample(plane[3], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).r;
 						return ycbcra_to_rgba(y, cb, cr, a);
 					}
 				case 7:		//luma
 					{
-						vec3 y3 = get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).rrr;
+						vec3 y3 = get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).rrr;
 						return vec4((y3-0.065)/0.859, 1.0);
 					}
 				case 8:		//bgr,
-					return vec4(get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).bgr, 1.0);
+					return vec4(get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).bgr, 1.0);
 				case 9:		//rgb,
-					return vec4(get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).rgb, 1.0);
+					return vec4(get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).rgb, 1.0);
 				}
 				return vec4(0.0, 0.0, 0.0, 0.0);
 			}
