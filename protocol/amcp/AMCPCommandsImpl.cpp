@@ -385,6 +385,11 @@ bool CallCommand::DoExecute()
 
 tbb::concurrent_unordered_map<int, std::vector<stage::transform_tuple_t>> deferred_transforms;
 
+core::frame_transform MixerCommand::get_current_transform()
+{
+	return channel()->stage().get_current_transform(layer_index()).get();
+}
+
 bool MixerCommand::DoExecute()
 {	
 	//Perform loading of the clip
@@ -398,6 +403,9 @@ bool MixerCommand::DoExecute()
 
 		if(boost::iequals(parameters()[0], L"KEYER") || boost::iequals(parameters()[0], L"IS_KEY"))
 		{
+			if (parameters().size() == 1)
+				return reply_value([](const frame_transform& t) { return t.image_transform.is_key ? 1 : 0; });
+
 			bool value = boost::lexical_cast<int>(parameters().at(1));
 			transforms.push_back(stage::transform_tuple_t(layer_index(), [=](frame_transform transform) -> frame_transform
 			{
@@ -407,6 +415,9 @@ bool MixerCommand::DoExecute()
 		}
 		else if(boost::iequals(parameters()[0], L"OPACITY"))
 		{
+			if (parameters().size() == 1)
+				return reply_value([](const frame_transform& t) { return t.image_transform.opacity; });
+
 			int duration = parameters().size() > 2 ? boost::lexical_cast<int>(parameters()[2]) : 0;
 			std::wstring tween = parameters().size() > 3 ? parameters()[3] : L"linear";
 
@@ -418,8 +429,47 @@ bool MixerCommand::DoExecute()
 				return transform;					
 			}, duration, tween));
 		}
-		else if(boost::iequals(parameters()[0], L"FILL") || boost::iequals(parameters()[0], L"FILL_RECT"))
+		else if (boost::iequals(parameters()[0], L"ANCHOR"))
 		{
+			if (parameters().size() == 1)
+			{
+				auto transform = get_current_transform().image_transform;
+				auto anchor = transform.anchor;
+				SetReplyString(
+						L"201 MIXER OK\r\n"
+						+ boost::lexical_cast<std::wstring>(anchor[0]) + L" "
+						+ boost::lexical_cast<std::wstring>(anchor[1]) + L"\r\n");
+				return true;
+			}
+
+			int duration = parameters().size() > 3 ? boost::lexical_cast<int>(parameters()[3]) : 0;
+			std::wstring tween = parameters().size() > 4 ? parameters()[4] : L"linear";
+			double x = boost::lexical_cast<double>(parameters().at(1));
+			double y = boost::lexical_cast<double>(parameters().at(2));
+
+			transforms.push_back(stage::transform_tuple_t(layer_index(), [=](frame_transform transform) mutable -> frame_transform
+			{
+				transform.image_transform.anchor[0] = x;
+				transform.image_transform.anchor[1] = y;
+				return transform;
+			}, duration, tween));
+		}
+		else if (boost::iequals(parameters()[0], L"FILL") || boost::iequals(parameters()[0], L"FILL_RECT"))
+		{
+			if (parameters().size() == 1)
+			{
+				auto transform = get_current_transform().image_transform;
+				auto translation = transform.fill_translation;
+				auto scale = transform.fill_scale;
+				SetReplyString(
+						L"201 MIXER OK\r\n"
+						+ boost::lexical_cast<std::wstring>(translation[0]) + L" "
+						+ boost::lexical_cast<std::wstring>(translation[1]) + L" "
+						+ boost::lexical_cast<std::wstring>(scale[0]) + L" "
+						+ boost::lexical_cast<std::wstring>(scale[1]) + L"\r\n");
+				return true;
+			}
+
 			int duration = parameters().size() > 5 ? boost::lexical_cast<int>(parameters()[5]) : 0;
 			std::wstring tween = parameters().size() > 6 ? parameters()[6] : L"linear";
 			double x	= boost::lexical_cast<double>(parameters().at(1));
@@ -438,6 +488,20 @@ bool MixerCommand::DoExecute()
 		}
 		else if(boost::iequals(parameters()[0], L"CLIP") || boost::iequals(parameters()[0], L"CLIP_RECT"))
 		{
+			if (parameters().size() == 1)
+			{
+				auto transform = get_current_transform().image_transform;
+				auto translation = transform.clip_translation;
+				auto scale = transform.clip_scale;
+				SetReplyString(
+						L"201 MIXER OK\r\n"
+						+ boost::lexical_cast<std::wstring>(translation[0]) + L" "
+						+ boost::lexical_cast<std::wstring>(translation[1]) + L" "
+						+ boost::lexical_cast<std::wstring>(scale[0]) + L" "
+						+ boost::lexical_cast<std::wstring>(scale[1]) + L"\r\n");
+				return true;
+			}
+
 			int duration = parameters().size() > 5 ? boost::lexical_cast<int>(parameters()[5]) : 0;
 			std::wstring tween = parameters().size() > 6 ? parameters()[6] : L"linear";
 			double x	= boost::lexical_cast<double>(parameters().at(1));
@@ -454,7 +518,79 @@ bool MixerCommand::DoExecute()
 				return transform;
 			}, duration, tween));
 		}
-		else if(boost::iequals(parameters()[0], L"GRID"))
+		else if (boost::iequals(parameters()[0], L"CROP"))
+		{
+			if (parameters().size() == 1)
+			{
+				auto crop = get_current_transform().image_transform.crop;
+				SetReplyString(
+					L"201 MIXER OK\r\n"
+					+ boost::lexical_cast<std::wstring>(crop.ul[0]) + L" "
+					+ boost::lexical_cast<std::wstring>(crop.ul[1]) + L" "
+					+ boost::lexical_cast<std::wstring>(crop.lr[0]) + L" "
+					+ boost::lexical_cast<std::wstring>(crop.lr[1]) + L"\r\n");
+				return true;
+			}
+
+			int duration = parameters().size() > 5 ? boost::lexical_cast<int>(parameters()[5]) : 0;
+			std::wstring tween = parameters().size() > 6 ? parameters()[6] : L"linear";
+			double ul_x = boost::lexical_cast<double>(parameters().at(1));
+			double ul_y = boost::lexical_cast<double>(parameters().at(2));
+			double lr_x = boost::lexical_cast<double>(parameters().at(3));
+			double lr_y = boost::lexical_cast<double>(parameters().at(4));
+
+			transforms.push_back(stage::transform_tuple_t(layer_index(), [=](frame_transform transform) -> frame_transform
+			{
+				transform.image_transform.crop.ul[0] = ul_x;
+				transform.image_transform.crop.ul[1] = ul_y;
+				transform.image_transform.crop.lr[0] = lr_x;
+				transform.image_transform.crop.lr[1] = lr_y;
+				return transform;
+			}, duration, tween));
+		}
+		else if (boost::iequals(parameters()[0], L"PERSPECTIVE"))
+		{
+			if (parameters().size() == 1)
+			{
+				auto perspective = get_current_transform().image_transform.perspective;
+				SetReplyString(
+						L"201 MIXER OK\r\n"
+						+ boost::lexical_cast<std::wstring>(perspective.ul[0]) + L" "
+						+ boost::lexical_cast<std::wstring>(perspective.ul[1]) + L" "
+						+ boost::lexical_cast<std::wstring>(perspective.ur[0]) + L" "
+						+ boost::lexical_cast<std::wstring>(perspective.ur[1]) + L" "
+						+ boost::lexical_cast<std::wstring>(perspective.lr[0]) + L" "
+						+ boost::lexical_cast<std::wstring>(perspective.lr[1]) + L" "
+						+ boost::lexical_cast<std::wstring>(perspective.ll[0]) + L" "
+						+ boost::lexical_cast<std::wstring>(perspective.ll[1]) + L"\r\n");
+				return true;
+			}
+
+			int duration = parameters().size() > 9 ? boost::lexical_cast<int>(parameters()[9]) : 0;
+			std::wstring tween = parameters().size() > 10 ? parameters()[10] : L"linear";
+			double ul_x = boost::lexical_cast<double>(parameters().at(1));
+			double ul_y = boost::lexical_cast<double>(parameters().at(2));
+			double ur_x = boost::lexical_cast<double>(parameters().at(3));
+			double ur_y = boost::lexical_cast<double>(parameters().at(4));
+			double lr_x = boost::lexical_cast<double>(parameters().at(5));
+			double lr_y = boost::lexical_cast<double>(parameters().at(6));
+			double ll_x = boost::lexical_cast<double>(parameters().at(7));
+			double ll_y = boost::lexical_cast<double>(parameters().at(8));
+
+			transforms.push_back(stage::transform_tuple_t(layer_index(), [=](frame_transform transform) -> frame_transform
+			{
+				transform.image_transform.perspective.ul[0] = ul_x;
+				transform.image_transform.perspective.ul[1] = ul_y;
+				transform.image_transform.perspective.ur[0] = ur_x;
+				transform.image_transform.perspective.ur[1] = ur_y;
+				transform.image_transform.perspective.lr[0] = lr_x;
+				transform.image_transform.perspective.lr[1] = lr_y;
+				transform.image_transform.perspective.ll[0] = ll_x;
+				transform.image_transform.perspective.ll[1] = ll_y;
+				return transform;
+			}, duration, tween));
+		}
+		else if (boost::iequals(parameters()[0], L"GRID"))
 		{
 			int duration = parameters().size() > 2 ? boost::lexical_cast<int>(parameters()[2]) : 0;
 			std::wstring tween = parameters().size() > 3 ? parameters()[3] : L"linear";
@@ -482,17 +618,37 @@ bool MixerCommand::DoExecute()
 		}
 		else if(boost::iequals(parameters()[0], L"BLEND"))
 		{
+			if (parameters().size() == 1)
+			{
+				auto blend_mode = channel()->mixer().get_blend_mode(layer_index());
+				SetReplyString(L"201 MIXER OK\r\n"
+						+ boost::lexical_cast<std::wstring>(get_blend_mode(blend_mode))
+						+ L"\r\n");
+				return true;
+			}
+
 			auto blend_str = parameters().at(1);								
 			int layer = layer_index();
 			channel()->mixer().set_blend_mode(layer, get_blend_mode(blend_str));	
 		}
 		else if(boost::iequals(parameters()[0], L"MASTERVOLUME"))
 		{
+			if (parameters().size() == 1)
+			{
+				auto volume = channel()->mixer().get_master_volume();
+				SetReplyString(L"201 MIXER OK\r\n"
+						+ boost::lexical_cast<std::wstring>(volume)+L"\r\n");
+				return true;
+			}
+
 			float master_volume = boost::lexical_cast<float>(parameters().at(1));
 			channel()->mixer().set_master_volume(master_volume);
 		}
 		else if(boost::iequals(parameters()[0], L"BRIGHTNESS"))
 		{
+			if (parameters().size() == 1)
+				return reply_value([](const frame_transform& t) { return t.image_transform.brightness; });
+
 			auto value = boost::lexical_cast<double>(parameters().at(1));
 			int duration = parameters().size() > 2 ? boost::lexical_cast<int>(parameters()[2]) : 0;
 			std::wstring tween = parameters().size() > 3 ? parameters()[3] : L"linear";
@@ -504,6 +660,9 @@ bool MixerCommand::DoExecute()
 		}
 		else if(boost::iequals(parameters()[0], L"SATURATION"))
 		{
+			if (parameters().size() == 1)
+				return reply_value([](const frame_transform& t) { return t.image_transform.saturation; });
+
 			auto value = boost::lexical_cast<double>(parameters().at(1));
 			int duration = parameters().size() > 2 ? boost::lexical_cast<int>(parameters()[2]) : 0;
 			std::wstring tween = parameters().size() > 3 ? parameters()[3] : L"linear";
@@ -513,8 +672,11 @@ bool MixerCommand::DoExecute()
 				return transform;
 			}, duration, tween));	
 		}
-		else if(parameters()[0] == L"CONTRAST")
+		else if (boost::iequals(parameters()[0], L"CONTRAST"))
 		{
+			if (parameters().size() == 1)
+				return reply_value([](const frame_transform& t) { return t.image_transform.contrast; });
+
 			auto value = boost::lexical_cast<double>(parameters().at(1));
 			int duration = parameters().size() > 2 ? boost::lexical_cast<int>(parameters()[2]) : 0;
 			std::wstring tween = parameters().size() > 3 ? parameters()[3] : L"linear";
@@ -524,8 +686,36 @@ bool MixerCommand::DoExecute()
 				return transform;
 			}, duration, tween));	
 		}
-		else if(boost::iequals(parameters()[0], L"LEVELS"))
+		else if (boost::iequals(parameters()[0], L"ROTATION"))
 		{
+			static const double PI = 3.141592653589793;
+
+			if (parameters().size() == 1)
+				return reply_value([](const frame_transform& t) { return t.image_transform.angle / PI * 180.0; });
+
+			auto value = boost::lexical_cast<double>(parameters().at(1)) * PI / 180.0;
+			int duration = parameters().size() > 2 ? boost::lexical_cast<int>(parameters()[2]) : 0;
+			std::wstring tween = parameters().size() > 3 ? parameters()[3] : L"linear";
+			transforms.push_back(stage::transform_tuple_t(layer_index(), [=](frame_transform transform) -> frame_transform
+			{
+				transform.image_transform.angle = value;
+				return transform;
+			}, duration, tween));
+		}
+		else if (boost::iequals(parameters()[0], L"LEVELS"))
+		{
+			if (parameters().size() == 1)
+			{
+				auto levels = get_current_transform().image_transform.levels;
+				SetReplyString(L"201 MIXER OK\r\n"
+						+ boost::lexical_cast<std::wstring>(levels.min_input) + L" "
+						+ boost::lexical_cast<std::wstring>(levels.max_input) + L" "
+						+ boost::lexical_cast<std::wstring>(levels.gamma) + L" "
+						+ boost::lexical_cast<std::wstring>(levels.min_output) + L" "
+						+ boost::lexical_cast<std::wstring>(levels.max_output) + L"\r\n");
+				return true;
+			}
+
 			levels value;
 			value.min_input  = boost::lexical_cast<double>(parameters().at(1));
 			value.max_input  = boost::lexical_cast<double>(parameters().at(2));
@@ -543,6 +733,9 @@ bool MixerCommand::DoExecute()
 		}
 		else if(boost::iequals(parameters()[0], L"VOLUME"))
 		{
+			if (parameters().size() == 1)
+				return reply_value([](const frame_transform& t) { return t.audio_transform.volume; });
+
 			int duration = parameters().size() > 2 ? boost::lexical_cast<int>(parameters()[2]) : 0;
 			std::wstring tween = parameters().size() > 3 ? parameters()[3] : L"linear";
 			double value = boost::lexical_cast<double>(parameters()[1]);
@@ -1026,7 +1219,7 @@ bool CGCommand::DoExecuteAdd() {
 	{	//read data
 		const std::wstring& dataString = parameters()[dataIndex];
 
-		if(dataString[0] == L'<') //the data is an XML-string
+		if (dataString.at(0) == L'<' || dataString.at(0) == L'{') //the data is XML or Json
 			pDataString = dataString.c_str();
 		else 
 		{
@@ -1169,9 +1362,9 @@ bool CGCommand::DoExecuteUpdate()
 		}
 						
 		std::wstring dataString = parameters().at(2);				
-		if(dataString.at(0) != L'<')
+		if (dataString.at(0) != L'<' && dataString.at(0) != L'{')
 		{
-			//The data is not an XML-string, it must be a filename
+			//The data is not XML or Json, it must be a filename
 			std::wstring filename = env::data_folder();
 			filename.append(dataString);
 			filename.append(L".ftd");

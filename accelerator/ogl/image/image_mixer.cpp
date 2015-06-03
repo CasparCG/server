@@ -58,7 +58,7 @@ struct item
 	core::pixel_format_desc		pix_desc	= core::pixel_format::invalid;
 	std::vector<future_texture>	textures;
 	core::image_transform		transform;
-	core::frame_geometry		geometry;
+	core::frame_geometry		geometry	= core::frame_geometry::get_default();
 };
 
 struct layer
@@ -201,7 +201,7 @@ private:
 			auto layer_texture = ogl_->create_texture(target_texture->width(), target_texture->height(), 4);
 
 			for (auto& item : layer.items)
-				draw(layer_texture, std::move(item), layer_key_texture, local_key_texture, local_mix_texture);	
+				draw(layer_texture, std::move(item), layer_key_texture, local_key_texture, local_mix_texture, format_desc);
 		
 			draw(layer_texture, std::move(local_mix_texture), core::blend_mode::normal);							
 			draw(target_texture, std::move(layer_texture), layer.blend_mode);
@@ -209,7 +209,7 @@ private:
 		else // fast path
 		{
 			for (auto& item : layer.items)		
-				draw(target_texture, std::move(item), layer_key_texture, local_key_texture, local_mix_texture);		
+				draw(target_texture, std::move(item), layer_key_texture, local_key_texture, local_mix_texture, format_desc);
 					
 			draw(target_texture, std::move(local_mix_texture), core::blend_mode::normal);
 		}					
@@ -217,16 +217,18 @@ private:
 		layer_key_texture = std::move(local_key_texture);
 	}
 
-	void draw(spl::shared_ptr<texture>&	target_texture, 
-			  item						item, 
-		      std::shared_ptr<texture>&	layer_key_texture, 
-			  std::shared_ptr<texture>&	local_key_texture, 
-			  std::shared_ptr<texture>&	local_mix_texture)
+	void draw(spl::shared_ptr<texture>& target_texture, 
+			  item item, 
+		      std::shared_ptr<texture>& layer_key_texture, 
+			  std::shared_ptr<texture>& local_key_texture, 
+			  std::shared_ptr<texture>& local_mix_texture,
+			  const core::video_format_desc& format_desc)
 	{			
 		draw_params draw_params;
-		draw_params.pix_desc	= std::move(item.pix_desc);
-		draw_params.transform	= std::move(item.transform);
-		draw_params.geometry	= item.geometry;
+		draw_params.pix_desc		= std::move(item.pix_desc);
+		draw_params.transform		= std::move(item.transform);
+		draw_params.geometry		= item.geometry;
+		draw_params.aspect_ratio	= static_cast<double>(format_desc.square_width) / static_cast<double>(format_desc.square_height);
 
 		for (auto& future_texture : item.textures)
 			draw_params.textures.push_back(spl::make_shared_ptr(future_texture.get()));
@@ -235,9 +237,9 @@ private:
 		{
 			local_key_texture = local_key_texture ? local_key_texture : ogl_->create_texture(target_texture->width(), target_texture->height(), 1);
 
-			draw_params.background			= local_key_texture;
-			draw_params.local_key			= nullptr;
-			draw_params.layer_key			= nullptr;
+			draw_params.background	= local_key_texture;
+			draw_params.local_key	= nullptr;
+			draw_params.layer_key	= nullptr;
 
 			kernel_.draw(std::move(draw_params));
 		}
@@ -245,11 +247,11 @@ private:
 		{
 			local_mix_texture = local_mix_texture ? local_mix_texture : ogl_->create_texture(target_texture->width(), target_texture->height(), 4);
 
-			draw_params.background			= local_mix_texture;
-			draw_params.local_key			= std::move(local_key_texture);
-			draw_params.layer_key			= layer_key_texture;
+			draw_params.background	= local_mix_texture;
+			draw_params.local_key	= std::move(local_key_texture);
+			draw_params.layer_key	= layer_key_texture;
 
-			draw_params.keyer				= keyer::additive;
+			draw_params.keyer		= keyer::additive;
 
 			kernel_.draw(std::move(draw_params));
 		}
@@ -257,9 +259,9 @@ private:
 		{
 			draw(target_texture, std::move(local_mix_texture), core::blend_mode::normal);
 			
-			draw_params.background			= target_texture;
-			draw_params.local_key			= std::move(local_key_texture);
-			draw_params.layer_key			= layer_key_texture;
+			draw_params.background	= target_texture;
+			draw_params.local_key	= std::move(local_key_texture);
+			draw_params.layer_key	= layer_key_texture;
 
 			kernel_.draw(std::move(draw_params));
 		}	
@@ -273,13 +275,13 @@ private:
 			return;
 
 		draw_params draw_params;
-		draw_params.pix_desc.format		= core::pixel_format::bgra;
-		draw_params.pix_desc.planes		= { core::pixel_format_desc::plane(source_buffer->width(), source_buffer->height(), 4) };
-		draw_params.textures			= { spl::make_shared_ptr(source_buffer) };
-		draw_params.transform			= core::image_transform();
-		draw_params.blend_mode			= blend_mode;
-		draw_params.background			= target_texture;
-		draw_params.geometry			= core::frame_geometry::get_default();
+		draw_params.pix_desc.format	= core::pixel_format::bgra;
+		draw_params.pix_desc.planes	= { core::pixel_format_desc::plane(source_buffer->width(), source_buffer->height(), 4) };
+		draw_params.textures		= { spl::make_shared_ptr(source_buffer) };
+		draw_params.transform		= core::image_transform();
+		draw_params.blend_mode		= blend_mode;
+		draw_params.background		= target_texture;
+		draw_params.geometry		= core::frame_geometry::get_default();
 
 		kernel_.draw(std::move(draw_params));
 	}

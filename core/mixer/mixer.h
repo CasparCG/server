@@ -55,12 +55,12 @@ public:
 	class const_frame operator()(std::map<int, class draw_frame> frames, const struct video_format_desc& format_desc);
 	
 	void set_blend_mode(int index, blend_mode value);
-
+	blend_mode get_blend_mode(int index);
 	void clear_blend_mode(int index);
-
 	void clear_blend_modes();
 
 	void set_master_volume(float volume);
+	float get_master_volume();
 
 	class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc);
 

@@ -64,20 +64,21 @@ public:
 
 	std::map<int, class draw_frame> operator()(const struct video_format_desc& format_desc);
 
-	std::future<void>			apply_transforms(const std::vector<transform_tuple_t>& transforms);
-	std::future<void>			apply_transform(int index, const transform_func_t& transform, unsigned int mix_duration = 0, const tweener& tween = L"linear");
-	std::future<void>			clear_transforms(int index);
-	std::future<void>			clear_transforms();
-	std::future<void>			load(int index, const spl::shared_ptr<class frame_producer>& producer, bool preview = false, const boost::optional<int32_t>& auto_play_delta = nullptr);
-	std::future<void>			pause(int index);
-	std::future<void>			play(int index);
-	std::future<void>			stop(int index);
-	std::future<std::wstring>	call(int index, const std::vector<std::wstring>& params);
-	std::future<void>			clear(int index);
-	std::future<void>			clear();
-	std::future<void>			swap_layers(stage& other);
-	std::future<void>			swap_layer(int index, int other_index);
-	std::future<void>			swap_layer(int index, int other_index, stage& other);
+	std::future<void>				apply_transforms(const std::vector<transform_tuple_t>& transforms);
+	std::future<void>				apply_transform(int index, const transform_func_t& transform, unsigned int mix_duration = 0, const tweener& tween = L"linear");
+	std::future<void>				clear_transforms(int index);
+	std::future<void>				clear_transforms();
+	std::future<frame_transform>	get_current_transform(int index);
+	std::future<void>				load(int index, const spl::shared_ptr<class frame_producer>& producer, bool preview = false, const boost::optional<int32_t>& auto_play_delta = nullptr);
+	std::future<void>				pause(int index);
+	std::future<void>				play(int index);
+	std::future<void>				stop(int index);
+	std::future<std::wstring>		call(int index, const std::vector<std::wstring>& params);
+	std::future<void>				clear(int index);
+	std::future<void>				clear();
+	std::future<void>				swap_layers(stage& other);
+	std::future<void>				swap_layer(int index, int other_index);
+	std::future<void>				swap_layer(int index, int other_index, stage& other);
 
 	monitor::subject& monitor_output();	
 

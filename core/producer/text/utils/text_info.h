@@ -10,8 +10,8 @@ namespace caspar { namespace core { namespace text {
 		std::wstring font;
 		std::wstring font_file;
 
-		float					size				= 0.0f;
-		text::color<float>		color;
+		double					size				= 0.0;
+		text::color<double>		color;
 		//int					shadow_distance;
 		//int					shadow_size;
 		//float					shadow_spread;
