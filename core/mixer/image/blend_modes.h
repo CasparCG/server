@@ -59,5 +59,6 @@ enum class blend_mode
 };
 
 blend_mode get_blend_mode(const std::wstring& str);
+std::wstring get_blend_mode(blend_mode mode);
 
 }}

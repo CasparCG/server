@@ -138,7 +138,7 @@ public:
 	}
 
 	//the data parameter points to bitmap-data that is 8-bit grayscale.
-	void set_region(const size_t x, const size_t y, const size_t width, const size_t height, const unsigned char *src, const size_t stride, const color<float>& col)
+	void set_region(const size_t x, const size_t y, const size_t width, const size_t height, const unsigned char *src, const size_t stride, const color<double>& col)
 	{
 		//this assumes depth_ is set to 4
 		for(size_t i=0; i<height; ++i)
@@ -216,7 +216,7 @@ private:
 
 texture_atlas::texture_atlas(const size_t w, const size_t h, const size_t d) : impl_(new impl(w, h, d)) {}
 rect texture_atlas::get_region(int width, int height) { return impl_->get_region(width, height); }
-void texture_atlas::set_region(const size_t x, const size_t y, const size_t width, const size_t height, const unsigned char *src, const size_t stride, const color<float>& col)
+void texture_atlas::set_region(const size_t x, const size_t y, const size_t width, const size_t height, const unsigned char *src, const size_t stride, const color<double>& col)
 	{ impl_->set_region(x, y, width, height, src, stride, col); }
 
 void texture_atlas::clear() { impl_->clear(); }

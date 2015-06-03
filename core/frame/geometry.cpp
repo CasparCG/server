@@ -26,30 +26,63 @@
 
 namespace caspar { namespace core {
 
+frame_geometry::coord::coord(double vertex_x, double vertex_y, double texture_x, double texture_y)
+	: vertex_x(vertex_x)
+	, vertex_y(vertex_y)
+	, texture_x(texture_x)
+	, texture_y(texture_y)
+{
+}
+
+bool frame_geometry::coord::operator==(const frame_geometry::coord& other) const
+{
+	return vertex_x		== other.vertex_x
+		&& vertex_y		== other.vertex_y
+		&& texture_x	== other.texture_x
+		&& texture_y	== other.texture_y
+		&& texture_r	== other.texture_r
+		&& texture_q	== other.texture_q;
+}
+
 struct frame_geometry::impl
 {
-	impl(frame_geometry::geometry_type t, std::vector<float> d) : type_(t), data_(std::move(d)) {}
+	impl(frame_geometry::geometry_type type, std::vector<coord> data)
+		: type_(type)
+	{
+		if (type == geometry_type::quad && data.size() != 4)
+			CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("The number of coordinates needs to be 4"));
+
+		if (type == geometry_type::quad_list)
+		{
+			if (data.size() % 4 != 0)
+				CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("The number of coordinates needs to be a multiple of 4"));
+		}
+
+		data_ = std::move(data);
+	}
 	
-	frame_geometry::geometry_type type_;
-	std::vector<float> data_;
+	frame_geometry::geometry_type	type_;
+	std::vector<coord>				data_;
 };
 
-frame_geometry::frame_geometry() {}
-frame_geometry::frame_geometry(geometry_type t, std::vector<float> d) : impl_(new impl(t, std::move(d))) {}
+frame_geometry::frame_geometry(geometry_type type, std::vector<coord> data) : impl_(new impl(type, std::move(data))) {}
 
-frame_geometry::geometry_type frame_geometry::type() const { return impl_ ? impl_->type_ : geometry_type::none; }
-const std::vector<float>& frame_geometry::data() const
+frame_geometry::geometry_type frame_geometry::type() const { return impl_->type_; }
+const std::vector<frame_geometry::coord>& frame_geometry::data() const
 {
-	if (impl_)
-		return impl_->data_;
-	else
-		CASPAR_THROW_EXCEPTION(invalid_operation());
+	return impl_->data_;
 }
 	
 const frame_geometry& frame_geometry::get_default()
 {
-	const float d[] = {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f};
-	static frame_geometry g(frame_geometry::geometry_type::quad, std::vector<float>(std::begin(d), std::end(d)));
+	static std::vector<frame_geometry::coord> data = {
+	//    vertex    texture
+		{ 0.0, 0.0, 0.0, 0.0 }, // upper left
+		{ 1.0, 0.0, 1.0, 0.0 }, // upper right
+		{ 1.0, 1.0, 1.0, 1.0 }, // lower right
+		{ 0.0, 1.0, 0.0, 1.0 }  // lower left
+	};
+	static const frame_geometry g(frame_geometry::geometry_type::quad, data);
 
 	return g;
 }

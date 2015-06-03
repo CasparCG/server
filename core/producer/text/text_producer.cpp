@@ -192,7 +192,6 @@ public:
 		current_bearing_y_.value().set(metrics.bearingY);
 		current_protrude_under_y_.value().set(metrics.protrudeUnderY);
 		frame_ = core::draw_frame(std::move(frame));
-		frame_.transform().image_transform.fill_translation[1] = static_cast<double>(metrics.bearingY) / static_cast<double>(metrics.height);
 	}
 
 	text::string_metrics measure_string(const std::wstring& str)
@@ -205,7 +204,10 @@ public:
 	draw_frame receive_impl()
 	{
 		if (dirty_)
+		{
 			generate_frame();
+			dirty_ = false;
+		}
 
 		return frame_;
 	}
@@ -327,12 +329,12 @@ spl::shared_ptr<frame_producer> create_text_producer(const spl::shared_ptr<frame
 
 	text::text_info text_info;
 	text_info.font = get_param(L"FONT", params, L"verdana");
-	text_info.size = static_cast<float>(get_param(L"SIZE", params, 30.0)); // 30.0f does not seem to work to get as float directly
+	text_info.size = get_param(L"SIZE", params, 30.0); // 30.0f does not seem to work to get as float directly
 	
 	std::wstring col_str = get_param(L"color", params, L"#ffffffff");
 	uint32_t col_val = 0xffffffff;
 	try_get_color(col_str, col_val);
-	text_info.color = core::text::color<float>(col_val);
+	text_info.color = core::text::color<double>(col_val);
 
 	bool standalone = get_param(L"STANDALONE", params, false);
 
