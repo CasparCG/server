@@ -67,7 +67,7 @@ public:
 		, image_mixer_(std::move(image_mixer))
 	{			
 		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8f));
-	}	
+	}
 	
 	const_frame operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc)
 	{		
@@ -76,7 +76,11 @@ public:
 		auto frame = executor_.invoke([=]() mutable -> const_frame
 		{		
 			try
-			{	
+			{
+				detail::set_current_aspect_ratio(
+						static_cast<double>(format_desc.square_width)
+						/ static_cast<double>(format_desc.square_height));
+
 				for (auto& frame : frames)
 				{
 					auto blend_it = blend_modes_.find(frame.first);
@@ -119,6 +123,14 @@ public:
 		}, task_priority::high_priority);
 	}
 
+	blend_mode get_blend_mode(int index)
+	{
+		return executor_.invoke([=]
+		{
+			return blend_modes_[index];
+		}, task_priority::high_priority);
+	}
+
 	void clear_blend_mode(int index)
 	{
 		executor_.begin_invoke([=]
@@ -143,6 +155,14 @@ public:
 		}, task_priority::high_priority);
 	}
 
+	float get_master_volume()
+	{
+		return executor_.invoke([=]
+		{
+			return audio_mixer_.get_master_volume();
+		}, task_priority::high_priority);
+	}
+
 	std::future<boost::property_tree::wptree> info() const
 	{
 		return make_ready_future(boost::property_tree::wptree());
@@ -152,9 +172,11 @@ public:
 mixer::mixer(spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer) 
 	: impl_(new impl(std::move(graph), std::move(image_mixer))){}
 void mixer::set_blend_mode(int index, blend_mode value){impl_->set_blend_mode(index, value);}
+blend_mode mixer::get_blend_mode(int index) { return impl_->get_blend_mode(index); }
 void mixer::clear_blend_mode(int index) { impl_->clear_blend_mode(index); }
 void mixer::clear_blend_modes() { impl_->clear_blend_modes(); }
 void mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
+float mixer::get_master_volume() { return impl_->get_master_volume(); }
 std::future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
 const_frame mixer::operator()(std::map<int, draw_frame> frames, const struct video_format_desc& format_desc){return (*impl_)(std::move(frames), format_desc);}
 mutable_frame mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->image_mixer_->create_frame(tag, desc);}

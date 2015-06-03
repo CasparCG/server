@@ -36,8 +36,12 @@ namespace caspar { namespace core { namespace scene {
 layer::layer(const std::wstring& name, const spl::shared_ptr<frame_producer>& producer)
 	: name(name), producer(producer)
 {
-	clipping.width.bind(producer.get()->pixel_constraints().width);
-	clipping.height.bind(producer.get()->pixel_constraints().height);
+	crop.lower_right.x.bind(producer.get()->pixel_constraints().width);
+	crop.lower_right.y.bind(producer.get()->pixel_constraints().height);
+	perspective.upper_right.x.bind(producer.get()->pixel_constraints().width);
+	perspective.lower_right.x.bind(producer.get()->pixel_constraints().width);
+	perspective.lower_right.y.bind(producer.get()->pixel_constraints().height);
+	perspective.lower_left.y.bind(producer.get()->pixel_constraints().height);
 }
 
 adjustments::adjustments()
@@ -159,22 +163,35 @@ struct scene_producer::impl
 	{
 		frame_transform transform;
 
-		auto& pos = transform.image_transform.fill_translation;
-		auto& scale = transform.image_transform.fill_scale;
-		//auto& clip_pos = transform.image_transform.clip_translation;
-		//auto& clip_scale = transform.image_transform.clip_scale;
+		auto& anchor		= transform.image_transform.anchor;
+		auto& pos			= transform.image_transform.fill_translation;
+		auto& scale			= transform.image_transform.fill_scale;
+		auto& angle			= transform.image_transform.angle;
+		auto& crop			= transform.image_transform.crop;
+		auto& pers			= transform.image_transform.perspective;
 
-		pos[0] = static_cast<double>(layer.position.x.get()) / static_cast<double>(pixel_constraints_.width.get());
-		pos[1] = static_cast<double>(layer.position.y.get()) / static_cast<double>(pixel_constraints_.height.get());
-		scale[0] = static_cast<double>(layer.producer.get()->pixel_constraints().width.get())
-				/ static_cast<double>(pixel_constraints_.width.get());
-		scale[1] = static_cast<double>(layer.producer.get()->pixel_constraints().height.get())
-				/ static_cast<double>(pixel_constraints_.height.get());
+		anchor[0]	= layer.anchor.x.get()										/ layer.producer.get()->pixel_constraints().width.get();
+		anchor[1]	= layer.anchor.y.get()										/ layer.producer.get()->pixel_constraints().height.get();
+		pos[0]		= layer.position.x.get()									/ pixel_constraints_.width.get();
+		pos[1]		= layer.position.y.get()									/ pixel_constraints_.height.get();
+		scale[0]	= layer.producer.get()->pixel_constraints().width.get()		/ pixel_constraints_.width.get();
+		scale[1]	= layer.producer.get()->pixel_constraints().height.get()	/ pixel_constraints_.height.get();
+		crop.ul[0]	= layer.crop.upper_left.x.get()								/ layer.producer.get()->pixel_constraints().width.get();
+		crop.ul[1]	= layer.crop.upper_left.y.get()								/ layer.producer.get()->pixel_constraints().height.get();
+		crop.lr[0]	= layer.crop.lower_right.x.get()							/ layer.producer.get()->pixel_constraints().width.get();
+		crop.lr[1]	= layer.crop.lower_right.y.get()							/ layer.producer.get()->pixel_constraints().height.get();
+		pers.ul[0]	= layer.perspective.upper_left.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
+		pers.ul[1]	= layer.perspective.upper_left.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
+		pers.ur[0]	= layer.perspective.upper_right.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
+		pers.ur[1]	= layer.perspective.upper_right.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
+		pers.lr[0]	= layer.perspective.lower_right.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
+		pers.lr[1]	= layer.perspective.lower_right.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
+		pers.ll[0]	= layer.perspective.lower_left.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
+		pers.ll[1]	= layer.perspective.lower_left.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
 
-		/*clip_pos[0] = static_cast<double>(layer.clipping.upper_left.x.get()) / static_cast<double>(pixel_constraints_.width.get());
-		clip_pos[1] = static_cast<double>(layer.clipping.upper_left.y.get()) / static_cast<double>(pixel_constraints_.height.get());
-		clip_scale[0] = static_cast<double>(layer.clipping.width.get()) / static_cast<double>(pixel_constraints_.width.get());
-		clip_scale[1] = static_cast<double>(layer.clipping.height.get()) / static_cast<double>(pixel_constraints_.height.get());*/
+		static const double PI = 3.141592653589793;
+
+		angle		= layer.rotation.get() * PI / 180.0;
 
 		transform.image_transform.opacity = layer.adjustments.opacity.get();
 		transform.image_transform.is_key = layer.is_key.get();
@@ -405,12 +422,6 @@ spl::shared_ptr<core::frame_producer> create_dummy_scene_producer(const spl::sha
 	};
 
 	auto& car_layer = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"car")), L"car");
-	car_layer.clipping.upper_left.x.set(80);
-	car_layer.clipping.upper_left.y.set(45);
-	car_layer.clipping.width.unbind();
-	car_layer.clipping.width.set(640);
-	car_layer.clipping.height.unbind();
-	car_layer.clipping.height.set(360);
 	car_layer.adjustments.opacity.set(0.5);
 	//car_layer.hidden = scene->frame() % 50 > 25 || !(scene->frame() < 1000);
 	std::vector<std::wstring> sub_params;

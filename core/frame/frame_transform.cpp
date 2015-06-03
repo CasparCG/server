@@ -24,10 +24,32 @@
 #include "frame_transform.h"
 
 #include <boost/range/algorithm/equal.hpp>
+#include <boost/thread.hpp>
 
 namespace caspar { namespace core {
-		
+
 // image_transform
+
+template<typename Rect>
+void transform_rect(Rect& self, const Rect& other)
+{
+	self.ul[0] += other.ul[0];
+	self.ul[1] += other.ul[1];
+	self.lr[0] *= other.lr[0];
+	self.lr[1] *= other.lr[1];
+}
+
+void transform_corners(corners& self, const corners& other)
+{
+	transform_rect(self, other);
+
+	self.ur[0] *= other.ur[0];
+	self.ur[1] += other.ur[1];
+	self.ll[0] += other.ll[0];
+	self.ll[1] *= other.ll[1];
+
+	// TODO: figure out the math to compose perspective transforms correctly.
+}
 
 image_transform& image_transform::operator*=(const image_transform &other)
 {
@@ -35,14 +57,35 @@ image_transform& image_transform::operator*=(const image_transform &other)
 	brightness				*= other.brightness;
 	contrast				*= other.contrast;
 	saturation				*= other.saturation;
-	fill_translation[0]		+= other.fill_translation[0]*fill_scale[0];
-	fill_translation[1]		+= other.fill_translation[1]*fill_scale[1];
+
+	// TODO: can this be done in any way without knowing the aspect ratio of the
+	// actual video mode? Thread local to the rescue
+	auto aspect_ratio		 = detail::get_current_aspect_ratio();
+	aspect_ratio			*= fill_scale[0] / fill_scale[1];
+
+	boost::array<double, 2> rotated;
+
+	auto orig_x				 = other.fill_translation[0];
+	auto orig_y				 = other.fill_translation[1] / aspect_ratio;
+	rotated[0]				 = orig_x * std::cos(angle) - orig_y * std::sin(angle);
+	rotated[1]				 = orig_x * std::sin(angle) + orig_y * std::cos(angle);
+	rotated[1]				*= aspect_ratio;
+
+	anchor[0]				+= other.anchor[0] * fill_scale[0];
+	anchor[1]				+= other.anchor[1] * fill_scale[1];
+	fill_translation[0]		+= rotated[0] * fill_scale[0];
+	fill_translation[1]		+= rotated[1] * fill_scale[1];
 	fill_scale[0]			*= other.fill_scale[0];
 	fill_scale[1]			*= other.fill_scale[1];
-	clip_translation[0]		+= other.clip_translation[0]*clip_scale[0];
-	clip_translation[1]		+= other.clip_translation[1]*clip_scale[1];
+	clip_translation[0]		+= other.clip_translation[0] * clip_scale[0];
+	clip_translation[1]		+= other.clip_translation[1] * clip_scale[1];
 	clip_scale[0]			*= other.clip_scale[0];
 	clip_scale[1]			*= other.clip_scale[1];
+	angle					+= other.angle;
+
+	transform_rect(crop, other.crop);
+	transform_corners(perspective, other.perspective);
+
 	levels.min_input		 = std::max(levels.min_input,  other.levels.min_input);
 	levels.max_input		 = std::min(levels.max_input,  other.levels.max_input);	
 	levels.min_output		 = std::max(levels.min_output, other.levels.min_output);
@@ -52,6 +95,7 @@ image_transform& image_transform::operator*=(const image_transform &other)
 	is_key					|= other.is_key;
 	is_mix					|= other.is_mix;
 	is_still				|= other.is_still;
+
 	return *this;
 }
 
@@ -60,28 +104,51 @@ image_transform image_transform::operator*(const image_transform &other) const
 	return image_transform(*this) *= other;
 }
 
+double do_tween(double time, double source, double dest, double duration, const tweener& tween)
+{
+	return tween(time, source, dest - source, duration);
+};
+
+template<typename Rect>
+void do_tween_rectangle(const Rect& source, const Rect& dest, Rect& out, double time, double duration, const tweener& tweener)
+{
+	out.ul[0] = do_tween(time, source.ul[0], dest.ul[0], duration, tweener);
+	out.ul[1] = do_tween(time, source.ul[1], dest.ul[1], duration, tweener);
+	out.lr[0] = do_tween(time, source.lr[0], dest.lr[0], duration, tweener);
+	out.lr[1] = do_tween(time, source.lr[1], dest.lr[1], duration, tweener);
+}
+
+void do_tween_corners(const corners& source, const corners& dest, corners& out, double time, double duration, const tweener& tweener)
+{
+	do_tween_rectangle(source, dest, out, time, duration, tweener);
+
+	out.ur[0] = do_tween(time, source.ur[0], dest.ur[0], duration, tweener);
+	out.ur[1] = do_tween(time, source.ur[1], dest.ur[1], duration, tweener);
+	out.ll[0] = do_tween(time, source.ll[0], dest.ll[0], duration, tweener);
+	out.ll[1] = do_tween(time, source.ll[1], dest.ll[1], duration, tweener);
+};
+
 image_transform image_transform::tween(double time, const image_transform& source, const image_transform& dest, double duration, const tweener& tween)
 {	
-	auto do_tween = [](double time, double source, double dest, double duration, const tweener& tween)
-	{
-		return tween(time, source, dest-source, duration);
-	};
-	
 	image_transform result;	
+
 	result.brightness			= do_tween(time, source.brightness,				dest.brightness,			duration, tween);
 	result.contrast				= do_tween(time, source.contrast,				dest.contrast,				duration, tween);
 	result.saturation			= do_tween(time, source.saturation,				dest.saturation,			duration, tween);
-	result.opacity				= do_tween(time, source.opacity,				dest.opacity,				duration, tween);	
-	result.fill_translation[0]	= do_tween(time, source.fill_translation[0],	dest.fill_translation[0],	duration, tween), 
-	result.fill_translation[1]	= do_tween(time, source.fill_translation[1],	dest.fill_translation[1],	duration, tween);		
-	result.fill_scale[0]		= do_tween(time, source.fill_scale[0],			dest.fill_scale[0],			duration, tween), 
-	result.fill_scale[1]		= do_tween(time, source.fill_scale[1],			dest.fill_scale[1],			duration, tween);	
-	result.clip_translation[0]	= do_tween(time, source.clip_translation[0],	dest.clip_translation[0],	duration, tween), 
-	result.clip_translation[1]	= do_tween(time, source.clip_translation[1],	dest.clip_translation[1],	duration, tween);		
-	result.clip_scale[0]		= do_tween(time, source.clip_scale[0],			dest.clip_scale[0],			duration, tween), 
+	result.opacity				= do_tween(time, source.opacity,				dest.opacity,				duration, tween);
+	result.anchor[0]			= do_tween(time, source.anchor[0],				dest.anchor[0],				duration, tween);
+	result.anchor[1]			= do_tween(time, source.anchor[1],				dest.anchor[1],				duration, tween);
+	result.fill_translation[0]	= do_tween(time, source.fill_translation[0],	dest.fill_translation[0],	duration, tween);
+	result.fill_translation[1]	= do_tween(time, source.fill_translation[1],	dest.fill_translation[1],	duration, tween);
+	result.fill_scale[0]		= do_tween(time, source.fill_scale[0],			dest.fill_scale[0],			duration, tween);
+	result.fill_scale[1]		= do_tween(time, source.fill_scale[1],			dest.fill_scale[1],			duration, tween);
+	result.clip_translation[0]	= do_tween(time, source.clip_translation[0],	dest.clip_translation[0],	duration, tween);
+	result.clip_translation[1]	= do_tween(time, source.clip_translation[1],	dest.clip_translation[1],	duration, tween);
+	result.clip_scale[0]		= do_tween(time, source.clip_scale[0],			dest.clip_scale[0],			duration, tween);
 	result.clip_scale[1]		= do_tween(time, source.clip_scale[1],			dest.clip_scale[1],			duration, tween);
+	result.angle				= do_tween(time, source.angle,					dest.angle,					duration, tween);
 	result.levels.max_input		= do_tween(time, source.levels.max_input,		dest.levels.max_input,		duration, tween);
-	result.levels.min_input		= do_tween(time, source.levels.min_input,		dest.levels.min_input,		duration, tween);	
+	result.levels.min_input		= do_tween(time, source.levels.min_input,		dest.levels.min_input,		duration, tween);
 	result.levels.max_output	= do_tween(time, source.levels.max_output,		dest.levels.max_output,		duration, tween);
 	result.levels.min_output	= do_tween(time, source.levels.min_output,		dest.levels.min_output,		duration, tween);
 	result.levels.gamma			= do_tween(time, source.levels.gamma,			dest.levels.gamma,			duration, tween);
@@ -89,30 +156,53 @@ image_transform image_transform::tween(double time, const image_transform& sourc
 	result.is_key				= source.is_key | dest.is_key;
 	result.is_mix				= source.is_mix | dest.is_mix;
 	result.is_still				= source.is_still | dest.is_still;
-	
+
+	do_tween_rectangle(source.crop, dest.crop, result.crop, time, duration, tween);
+	do_tween_corners(source.perspective, dest.perspective, result.perspective, time, duration, tween);
+
 	return result;
+}
+
+bool eq(double lhs, double rhs)
+{
+	return std::abs(lhs - rhs) < 5e-8;
+};
+
+bool operator==(const corners& lhs, const corners& rhs)
+{
+	return
+		boost::range::equal(lhs.ul, rhs.ul, eq) &&
+		boost::range::equal(lhs.ur, rhs.ur, eq) &&
+		boost::range::equal(lhs.lr, rhs.lr, eq) &&
+		boost::range::equal(lhs.ll, rhs.ll, eq);
+}
+
+bool operator==(const rectangle& lhs, const rectangle& rhs)
+{
+	return
+		boost::range::equal(lhs.ul, rhs.ul, eq) &&
+		boost::range::equal(lhs.lr, rhs.lr, eq);
 }
 
 bool operator==(const image_transform& lhs, const image_transform& rhs)
 {
-	auto eq = [](double lhs, double rhs)
-	{
-		return std::abs(lhs - rhs) < 5e-8;
-	};
-
 	return 
 		eq(lhs.opacity, rhs.opacity) &&
 		eq(lhs.contrast, rhs.contrast) &&
 		eq(lhs.brightness, rhs.brightness) &&
 		eq(lhs.saturation, rhs.saturation) &&
+		boost::range::equal(lhs.anchor, rhs.anchor, eq) &&
 		boost::range::equal(lhs.fill_translation, rhs.fill_translation, eq) &&
 		boost::range::equal(lhs.fill_scale, rhs.fill_scale, eq) &&
 		boost::range::equal(lhs.clip_translation, rhs.clip_translation, eq) &&
 		boost::range::equal(lhs.clip_scale, rhs.clip_scale, eq) &&
+		eq(lhs.angle, rhs.angle) &&
 		lhs.field_mode == rhs.field_mode &&
 		lhs.is_key == rhs.is_key &&
 		lhs.is_mix == rhs.is_mix &&
-		lhs.is_still == rhs.is_still;
+		lhs.is_still == rhs.is_still &&
+		lhs.crop == rhs.crop &&
+		lhs.perspective == rhs.perspective;
 }
 
 bool operator!=(const image_transform& lhs, const image_transform& rhs)
@@ -136,12 +226,7 @@ audio_transform audio_transform::operator*(const audio_transform &other) const
 
 audio_transform audio_transform::tween(double time, const audio_transform& source, const audio_transform& dest, double duration, const tweener& tween)
 {	
-	auto do_tween = [](double time, double source, double dest, double duration, const tweener& tween)
-	{
-		return tween(time, source, dest-source, duration);
-	};
-	
-	audio_transform result;	
+	audio_transform result;
 	result.is_still			= source.is_still | dest.is_still;
 	result.volume			= do_tween(time, source.volume,				dest.volume,			duration, tween);
 	
@@ -150,11 +235,6 @@ audio_transform audio_transform::tween(double time, const audio_transform& sourc
 
 bool operator==(const audio_transform& lhs, const audio_transform& rhs)
 {
-	auto eq = [](double lhs, double rhs)
-	{
-		return std::abs(lhs - rhs) < 5e-8;
-	};
-
 	return eq(lhs.volume, rhs.volume) && lhs.is_still == rhs.is_still;
 }
 
@@ -199,4 +279,26 @@ bool operator!=(const frame_transform& lhs, const frame_transform& rhs)
 	return !(lhs == rhs);
 }
 
-}}
+namespace detail {
+
+boost::thread_specific_ptr<double>& get_thread_local_aspect_ratio()
+{
+	static boost::thread_specific_ptr<double> aspect_ratio;
+
+	if (!aspect_ratio.get())
+		aspect_ratio.reset(new double(1.0));
+
+	return aspect_ratio;
+}
+
+void set_current_aspect_ratio(double aspect_ratio)
+{
+	*get_thread_local_aspect_ratio() = aspect_ratio;
+}
+
+double get_current_aspect_ratio()
+{
+	return *get_thread_local_aspect_ratio();
+}
+
+}}}

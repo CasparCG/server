@@ -21,7 +21,8 @@
 
 #pragma once
 
-#include <memory>
+#include <common/memory.h>
+
 #include <vector>
 
 namespace caspar { namespace core {
@@ -31,22 +32,35 @@ class frame_geometry
 public:
 	enum class geometry_type
 	{
-		none,
 		quad,
 		quad_list
 	};
 
-	frame_geometry();
-	frame_geometry(geometry_type, std::vector<float>);
+	struct coord
+	{
+		double vertex_x		= 0.0;
+		double vertex_y		= 0.0;
+		double texture_x	= 0.0;
+		double texture_y	= 0.0;
+		double texture_r	= 0.0;
+		double texture_q	= 1.0;
+
+		coord() = default;
+		coord(double vertex_x, double vertex_y, double texture_x, double texture_y);
+
+		bool operator==(const coord& other) const;
+	};
+
+	frame_geometry(geometry_type type, std::vector<coord> data);
 
 	geometry_type type() const ;
-	const std::vector<float>& data() const;
+	const std::vector<coord>& data() const;
 
 	static const frame_geometry& get_default();
 
 private:
 	struct impl;
-	std::shared_ptr<impl> impl_;
+	spl::shared_ptr<impl> impl_;
 };
 
 }}
