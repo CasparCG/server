@@ -195,6 +195,7 @@ struct scene_producer::impl
 
 		transform.image_transform.opacity = layer.adjustments.opacity.get();
 		transform.image_transform.is_key = layer.is_key.get();
+		transform.image_transform.use_mipmap = layer.use_mipmap.get();
 
 		return transform;
 	}
@@ -212,7 +213,7 @@ struct scene_producer::impl
 				continue;
 
 			draw_frame frame(layer.producer.get()->receive());
-			frame.transform() = get_transform(layer);;
+			frame.transform() = get_transform(layer);
 			frames.push_back(frame);
 		}
 
