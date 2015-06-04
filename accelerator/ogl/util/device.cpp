@@ -63,7 +63,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
 	std::unique_ptr<sf::Context> device_;
 	
-	std::array<tbb::concurrent_unordered_map<std::size_t, tbb::concurrent_bounded_queue<std::shared_ptr<texture>>>, 4>	device_pools_;
+	std::array<tbb::concurrent_unordered_map<std::size_t, tbb::concurrent_bounded_queue<std::shared_ptr<texture>>>, 8>	device_pools_;
 	std::array<tbb::concurrent_unordered_map<std::size_t, tbb::concurrent_bounded_queue<std::shared_ptr<buffer>>>, 2>	host_pools_;
 	
 	GLuint fbo_;
@@ -128,7 +128,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		}
 	}
 							
-	spl::shared_ptr<texture> create_texture(int width, int height, int stride, bool clear = false)
+	spl::shared_ptr<texture> create_texture(int width, int height, int stride, bool mipmapped, bool clear)
 	{
 		CASPAR_VERIFY(stride > 0 && stride < 5);
 		CASPAR_VERIFY(width > 0 && height > 0);
@@ -136,11 +136,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		if(!executor_.is_current())
 			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Operation only valid in an OpenGL Context."));
 					
-		auto pool = &device_pools_[stride-1][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
+		auto pool = &device_pools_[stride - 1 + (mipmapped ? 4 : 0)][((width << 16) & 0xFFFF0000) | (height & 0x0000FFFF)];
 		
 		std::shared_ptr<texture> tex;
 		if(!pool->try_pop(tex))		
-			tex = spl::make_shared<texture>(width, height, stride);
+			tex = spl::make_shared<texture>(width, height, stride, mipmapped);
 	
 		if(clear)
 			tex->clear();
@@ -171,11 +171,20 @@ struct device::impl : public std::enable_shared_from_this<impl>
 				CASPAR_LOG(debug) << L"[ogl-device] Performance warning. Buffer allocation blocked: " << timer.elapsed();
 		}
 		
-		auto self = shared_from_this(); // buffers can leave the device context, take a hold on life-time.
+		std::weak_ptr<impl> self = shared_from_this(); // buffers can leave the device context, take a hold on life-time.
 		return spl::shared_ptr<buffer>(buf.get(), [=](buffer*) mutable
-		{	
-			texture_cache_.erase(buf.get());
-			pool->push(buf);
+		{
+			auto strong = self.lock();
+
+			if (strong)
+			{
+				strong->texture_cache_.erase(buf.get());
+				pool->push(buf);
+			}
+			else
+			{
+				CASPAR_LOG(info) << L"Buffer outlived ogl device";
+			}
 		});
 	}
 
@@ -206,7 +215,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	}
 
 	// TODO: Since the returned texture is cached it SHOULD NOT be modified.
-	std::future<std::shared_ptr<texture>> copy_async(const array<const std::uint8_t>& source, int width, int height, int stride)
+	std::future<std::shared_ptr<texture>> copy_async(const array<const std::uint8_t>& source, int width, int height, int stride, bool mipmapped)
 	{
 		std::shared_ptr<buffer> buf = copy_to_buf(source);
 				
@@ -216,8 +225,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
 			if(texture_cache_.find(a, buf.get()))
 				return spl::make_shared_ptr(a->second);
 
-			auto texture = create_texture(width, height, stride);
-			texture->copy_from(*buf);	
+			auto texture = create_texture(width, height, stride, mipmapped, false);
+			texture->copy_from(*buf);
 
 			texture_cache_.insert(std::make_pair(buf.get(), texture));
 			
@@ -225,13 +234,13 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		}, task_priority::high_priority);
 	}
 	
-	std::future<std::shared_ptr<texture>> copy_async(const array<std::uint8_t>& source, int width, int height, int stride)
+	std::future<std::shared_ptr<texture>> copy_async(const array<std::uint8_t>& source, int width, int height, int stride, bool mipmapped)
 	{
 		std::shared_ptr<buffer> buf = copy_to_buf(source);
 
 		return executor_.begin_invoke([=]() -> std::shared_ptr<texture>
 		{
-			auto texture = create_texture(width, height, stride, false);
+			auto texture = create_texture(width, height, stride, mipmapped, false);
 			texture->copy_from(*buf);	
 			
 			return texture;
@@ -260,10 +269,10 @@ device::device()
 	: executor_(L"OpenGL Rendering Context")
 	, impl_(new impl(executor_)){}
 device::~device(){}
-spl::shared_ptr<texture>					device::create_texture(int width, int height, int stride){return impl_->create_texture(width, height, stride, true);}
+spl::shared_ptr<texture>					device::create_texture(int width, int height, int stride, bool mipmapped){ return impl_->create_texture(width, height, stride, mipmapped, true); }
 array<std::uint8_t>							device::create_array(int size){return impl_->create_array(size);}
-std::future<std::shared_ptr<texture>>		device::copy_async(const array<const std::uint8_t>& source, int width, int height, int stride){return impl_->copy_async(source, width, height, stride);}
-std::future<std::shared_ptr<texture>>		device::copy_async(const array<std::uint8_t>& source, int width, int height, int stride){return impl_->copy_async(source, width, height, stride);}
+std::future<std::shared_ptr<texture>>		device::copy_async(const array<const std::uint8_t>& source, int width, int height, int stride, bool mipmapped){return impl_->copy_async(source, width, height, stride, mipmapped);}
+std::future<std::shared_ptr<texture>>		device::copy_async(const array<std::uint8_t>& source, int width, int height, int stride, bool mipmapped){ return impl_->copy_async(source, width, height, stride, mipmapped); }
 std::future<array<const std::uint8_t>>		device::copy_async(const spl::shared_ptr<texture>& source){return impl_->copy_async(source);}
 std::wstring								device::version() const{return impl_->version();}
 
