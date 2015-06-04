@@ -108,13 +108,13 @@ public:
 		if(format_desc.field_mode != core::field_mode::progressive)
 		{ // Remove jitter from still.
 			for (auto& layer : layers)
-			{	
+			{
 				// Remove first field stills.
 				boost::range::remove_erase_if(layer.items, [&](const item& item)
 				{
 					return item.transform.is_still && item.transform.field_mode == format_desc.field_mode; // only us last field for stills.
 				});
-		
+
 				// Stills are progressive
 				for (auto& item : layer.items)
 				{
@@ -126,7 +126,7 @@ public:
 
 		return flatten(ogl_->begin_invoke([=]() mutable -> std::shared_future<array<const std::uint8_t>>
 		{
-			auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4);
+			auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4, false);
 
 			if (format_desc.field_mode != core::field_mode::progressive)
 			{
@@ -198,7 +198,7 @@ private:
 				
 		if(layer.blend_mode != core::blend_mode::normal)
 		{
-			auto layer_texture = ogl_->create_texture(target_texture->width(), target_texture->height(), 4);
+			auto layer_texture = ogl_->create_texture(target_texture->width(), target_texture->height(), 4, false);
 
 			for (auto& item : layer.items)
 				draw(layer_texture, std::move(item), layer_key_texture, local_key_texture, local_mix_texture, format_desc);
@@ -235,7 +235,7 @@ private:
 
 		if(item.transform.is_key)
 		{
-			local_key_texture = local_key_texture ? local_key_texture : ogl_->create_texture(target_texture->width(), target_texture->height(), 1);
+			local_key_texture = local_key_texture ? local_key_texture : ogl_->create_texture(target_texture->width(), target_texture->height(), 1, draw_params.transform.use_mipmap);
 
 			draw_params.background	= local_key_texture;
 			draw_params.local_key	= nullptr;
@@ -245,7 +245,7 @@ private:
 		}
 		else if(item.transform.is_mix)
 		{
-			local_mix_texture = local_mix_texture ? local_mix_texture : ogl_->create_texture(target_texture->width(), target_texture->height(), 4);
+			local_mix_texture = local_mix_texture ? local_mix_texture : ogl_->create_texture(target_texture->width(), target_texture->height(), 4, draw_params.transform.use_mipmap);
 
 			draw_params.background	= local_mix_texture;
 			draw_params.local_key	= std::move(local_key_texture);
@@ -330,7 +330,7 @@ public:
 		
 		// NOTE: Once we have copied the arrays they are no longer valid for reading!!! Check for alternative solution e.g. transfer with AMD_pinned_memory.
 		for(int n = 0; n < static_cast<int>(item.pix_desc.planes.size()); ++n)
-			item.textures.push_back(ogl_->copy_async(frame.image_data(n), item.pix_desc.planes[n].width, item.pix_desc.planes[n].height, item.pix_desc.planes[n].stride));
+			item.textures.push_back(ogl_->copy_async(frame.image_data(n), item.pix_desc.planes[n].width, item.pix_desc.planes[n].height, item.pix_desc.planes[n].stride, item.transform.use_mipmap));
 		
 		layers_.back().items.push_back(item);
 	}

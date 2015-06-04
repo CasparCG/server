@@ -46,25 +46,51 @@ struct texture::impl : boost::noncopyable
 {
 	GLuint	id_;
 
-	const int width_;
-	const int height_;
-	const int stride_;
+	const int	width_;
+	const int	height_;
+	const int	stride_;
+	const bool	mipmapped_;
 public:
-	impl(int width, int height, int stride) 
+	impl(int width, int height, int stride, bool mipmapped) 
 		: width_(width)
 		, height_(height)
 		, stride_(stride)
+		, mipmapped_(mipmapped)
 	{	
 		GL(glGenTextures(1, &id_));
 		GL(glBindTexture(GL_TEXTURE_2D, id_));
-		GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-		GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-		GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
-		GL(glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (mipmapped ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR)));
+		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
 		GL(glTexImage2D(GL_TEXTURE_2D, 0, INTERNAL_FORMAT[stride_], width_, height_, 0, FORMAT[stride_], TYPE[stride_], NULL));
+
+		if (mipmapped)
+		{
+			enable_anosotropic_filtering_if_available();
+			GL(glGenerateMipmap(GL_TEXTURE_2D));
+		}
+
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
 		//CASPAR_LOG(trace) << "[texture] [" << ++g_total_count << L"] allocated size:" << width*height*stride;	
 	}	
+
+	void enable_anosotropic_filtering_if_available()
+	{
+		static auto AVAILABLE = glewIsSupported("GL_EXT_texture_filter_anisotropic");
+
+		if (!AVAILABLE)
+			return;
+
+		static GLfloat MAX_ANISOTROPY = []() -> GLfloat
+		{
+			GLfloat anisotropy;
+			glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &anisotropy);
+			return anisotropy;
+		}();
+
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, MAX_ANISOTROPY);
+	}
 
 	~impl()
 	{
@@ -104,6 +130,10 @@ public:
 		source.bind();
 		GL(glBindTexture(GL_TEXTURE_2D, id_));
 		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width_, height_, FORMAT[stride_], TYPE[stride_], NULL));
+
+		if (mipmapped_)
+			GL(glGenerateMipmap(GL_TEXTURE_2D));
+
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
 		source.unbind();
 		source.map(); // Just map it back since map will orphan buffer.
@@ -122,7 +152,7 @@ public:
 	}
 };
 
-texture::texture(int width, int height, int stride) : impl_(new impl(width, height, stride)){}
+texture::texture(int width, int height, int stride, bool mipmapped) : impl_(new impl(width, height, stride, mipmapped)){}
 texture::texture(texture&& other) : impl_(std::move(other.impl_)){}
 texture::~texture(){}
 texture& texture::operator=(texture&& other){impl_ = std::move(other.impl_); return *this;}
@@ -135,6 +165,7 @@ void texture::copy_to(buffer& dest){impl_->copy_to(dest);}
 int texture::width() const { return impl_->width_; }
 int texture::height() const { return impl_->height_; }
 int texture::stride() const { return impl_->stride_; }
+bool texture::mipmapped() const { return impl_->mipmapped_; }
 std::size_t texture::size() const { return static_cast<std::size_t>(impl_->width_*impl_->height_*impl_->stride_); }
 int texture::id() const{ return impl_->id_;}
 

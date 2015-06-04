@@ -75,6 +75,7 @@ struct image_transform final
 	bool					is_key				= false;
 	bool					is_mix				= false;
 	bool					is_still			= false;
+	bool					use_mipmap			= false;
 	
 	image_transform& operator*=(const image_transform &other);
 	image_transform operator*(const image_transform &other) const;
