@@ -200,7 +200,12 @@ public:
 
 	virtual ~destroy_producer_proxy()
 	{		
-		static tbb::atomic<int> counter = tbb::atomic<int>();
+		static tbb::atomic<int> counter = []
+		{
+			tbb::atomic<int> c;
+			c = 0;
+			return c;
+		}();
 		
 		if(producer_ == core::frame_producer::empty())
 			return;

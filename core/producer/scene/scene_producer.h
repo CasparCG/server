@@ -73,6 +73,7 @@ struct layer
 	binding<spl::shared_ptr<frame_producer>>	producer;
 	binding<bool>								hidden;
 	binding<bool>								is_key;
+	binding<bool>								use_mipmap;
 
 	explicit layer(const std::wstring& name, const spl::shared_ptr<frame_producer>& producer);
 };

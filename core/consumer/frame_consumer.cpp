@@ -63,7 +63,12 @@ public:
 
 	~destroy_consumer_proxy()
 	{		
-		static tbb::atomic<int> counter = tbb::atomic<int>();
+		static tbb::atomic<int> counter = []
+		{
+			tbb::atomic<int> c;
+			c = 0;
+			return c;
+		}();
 			
 		++counter;
 		CASPAR_VERIFY(counter < 8);
@@ -85,7 +90,6 @@ public:
 
 			pointer_guard.reset();
 
-			--counter;
 		}).detach(); 
 	}
 	

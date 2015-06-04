@@ -95,6 +95,7 @@ image_transform& image_transform::operator*=(const image_transform &other)
 	is_key					|= other.is_key;
 	is_mix					|= other.is_mix;
 	is_still				|= other.is_still;
+	use_mipmap				|= other.use_mipmap;
 
 	return *this;
 }
@@ -156,6 +157,7 @@ image_transform image_transform::tween(double time, const image_transform& sourc
 	result.is_key				= source.is_key | dest.is_key;
 	result.is_mix				= source.is_mix | dest.is_mix;
 	result.is_still				= source.is_still | dest.is_still;
+	result.use_mipmap			= source.use_mipmap | dest.use_mipmap;
 
 	do_tween_rectangle(source.crop, dest.crop, result.crop, time, duration, tween);
 	do_tween_corners(source.perspective, dest.perspective, result.perspective, time, duration, tween);
@@ -201,6 +203,7 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
 		lhs.is_key == rhs.is_key &&
 		lhs.is_mix == rhs.is_mix &&
 		lhs.is_still == rhs.is_still &&
+		lhs.use_mipmap == rhs.use_mipmap &&
 		lhs.crop == rhs.crop &&
 		lhs.perspective == rhs.perspective;
 }
