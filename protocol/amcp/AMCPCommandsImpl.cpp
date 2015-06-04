@@ -616,6 +616,18 @@ bool MixerCommand::DoExecute()
 				}
 			}
 		}
+		else if (boost::iequals(parameters()[0], L"MIPMAP"))
+		{
+			if (parameters().size() == 1)
+				return reply_value([](const frame_transform& t) { return t.image_transform.use_mipmap ? 1 : 0; });
+
+			bool value = boost::lexical_cast<int>(parameters().at(1));
+			transforms.push_back(stage::transform_tuple_t(layer_index(), [=](frame_transform transform) -> frame_transform
+			{
+				transform.image_transform.use_mipmap = value;
+				return transform;
+			}, 0, L"linear"));
+		}
 		else if(boost::iequals(parameters()[0], L"BLEND"))
 		{
 			if (parameters().size() == 1)

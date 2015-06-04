@@ -40,7 +40,7 @@ public:
 
 	// Constructors
 
-	texture(int width, int height, int stride);
+	texture(int width, int height, int stride, bool mipmapped);
 	texture(texture&& other);
 	~texture();
 	
@@ -61,6 +61,7 @@ public:
 	int width() const;
 	int height() const;
 	int stride() const;	
+	bool mipmapped() const;
 	std::size_t size() const;
 
 	int id() const;
