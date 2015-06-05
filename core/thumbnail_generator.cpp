@@ -109,6 +109,7 @@ private:
 	mixer									mixer_;
 	thumbnail_creator						thumbnail_creator_;
 	spl::shared_ptr<media_info_repository>	media_info_repo_;
+	bool									mipmap_;
 	filesystem_monitor::ptr					monitor_;
 public:
 	impl(
@@ -121,7 +122,8 @@ public:
 			std::unique_ptr<image_mixer> image_mixer,
 			int generate_delay_millis,
 			const thumbnail_creator& thumbnail_creator,
-			spl::shared_ptr<media_info_repository> media_info_repo)
+			spl::shared_ptr<media_info_repository> media_info_repo,
+			bool mipmap)
 		: media_path_(media_path)
 		, thumbnails_path_(thumbnails_path)
 		, width_(width)
@@ -318,11 +320,12 @@ public:
 			auto transformed_frame = draw_frame(raw_frame);
 			transformed_frame.transform().image_transform.fill_scale[0] = static_cast<double>(width_) / format_desc_.width;
 			transformed_frame.transform().image_transform.fill_scale[1] = static_cast<double>(height_) / format_desc_.height;
+			transformed_frame.transform().image_transform.use_mipmap = mipmap_;
 			frames.insert(std::make_pair(0, transformed_frame));
 
 			std::shared_ptr<void> ticket(nullptr, [&thumbnail_ready](void*) { thumbnail_ready.set_value(); });
 
-			auto mixed_frame = mixer_(frames, format_desc_);
+			auto mixed_frame = mixer_(std::move(frames), format_desc_);
 
 			output_->send(std::move(mixed_frame), ticket);
 			ticket.reset();
@@ -357,7 +360,8 @@ thumbnail_generator::thumbnail_generator(
 		std::unique_ptr<image_mixer> image_mixer,
 		int generate_delay_millis,
 		const thumbnail_creator& thumbnail_creator,
-		spl::shared_ptr<media_info_repository> media_info_repo)
+		spl::shared_ptr<media_info_repository> media_info_repo,
+		bool mipmap)
 		: impl_(new impl(
 				monitor_factory,
 				media_path,
@@ -367,7 +371,8 @@ thumbnail_generator::thumbnail_generator(
 				std::move(image_mixer),
 				generate_delay_millis,
 				thumbnail_creator,
-				media_info_repo))
+				media_info_repo,
+				mipmap))
 {
 }
 
