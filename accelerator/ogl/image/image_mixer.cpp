@@ -63,17 +63,12 @@ struct item
 
 struct layer
 {
+	std::vector<layer>	sublayers;
 	std::vector<item>	items;
 	core::blend_mode	blend_mode;
 
-	layer()
-		: blend_mode(core::blend_mode::normal)
-	{
-	}
-
-	layer(std::vector<item> items, core::blend_mode blend_mode)
-		: items(std::move(items))
-		, blend_mode(blend_mode)
+	layer(core::blend_mode blend_mode)
+		: blend_mode(blend_mode)
 	{
 	}
 };
@@ -150,7 +145,10 @@ private:
 		std::shared_ptr<texture> layer_key_texture;
 
 		for (auto& layer : layers)
+		{
+			draw(target_texture, layer.sublayers, format_desc, field_mode);
 			draw(target_texture, std::move(layer), layer_key_texture, format_desc, field_mode);
+		}
 	}
 
 	void draw(spl::shared_ptr<texture>&			target_texture,
@@ -293,6 +291,7 @@ struct image_mixer::impl : public core::frame_factory
 	image_renderer						renderer_;
 	std::vector<core::image_transform>	transform_stack_;
 	std::vector<layer>					layers_; // layer/stream/items
+	std::vector<layer*>					layer_stack_;
 public:
 	impl(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted) 
 		: ogl_(ogl)
@@ -301,15 +300,29 @@ public:
 	{
 		CASPAR_LOG(info) << L"Initialized OpenGL Accelerated GPU Image Mixer";
 	}
-
-	void begin_layer(core::blend_mode blend_mode)
-	{
-		layers_.push_back(layer(std::vector<item>(), blend_mode));
-	}
 		
 	void push(const core::frame_transform& transform)
 	{
-		transform_stack_.push_back(transform_stack_.back()*transform.image_transform);
+		auto previous_layer_depth = transform_stack_.back().layer_depth;
+		transform_stack_.push_back(transform_stack_.back() * transform.image_transform);
+		auto new_layer_depth = transform_stack_.back().layer_depth;
+
+		if (previous_layer_depth < new_layer_depth)
+		{
+			layer new_layer(transform_stack_.back().blend_mode);
+
+			if (layer_stack_.empty())
+			{
+				layers_.push_back(std::move(new_layer));
+				layer_stack_.push_back(&layers_.back());
+			}
+			else
+			{
+				layer_stack_.back()->sublayers.push_back(std::move(new_layer));
+				layer_stack_.push_back(&layer_stack_.back()->sublayers.back());
+			}
+		}
+
 	}
 		
 	void visit(const core::const_frame& frame)
@@ -332,16 +345,13 @@ public:
 		for(int n = 0; n < static_cast<int>(item.pix_desc.planes.size()); ++n)
 			item.textures.push_back(ogl_->copy_async(frame.image_data(n), item.pix_desc.planes[n].width, item.pix_desc.planes[n].height, item.pix_desc.planes[n].stride, item.transform.use_mipmap));
 		
-		layers_.back().items.push_back(item);
+		layer_stack_.back()->items.push_back(item);
 	}
 
 	void pop()
 	{
 		transform_stack_.pop_back();
-	}
-
-	void end_layer()
-	{		
+		layer_stack_.resize(transform_stack_.back().layer_depth);
 	}
 	
 	std::future<array<const std::uint8_t>> render(const core::video_format_desc& format_desc)
@@ -365,8 +375,6 @@ void image_mixer::push(const core::frame_transform& transform){impl_->push(trans
 void image_mixer::visit(const core::const_frame& frame){impl_->visit(frame);}
 void image_mixer::pop(){impl_->pop();}
 std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
-void image_mixer::begin_layer(core::blend_mode blend_mode){impl_->begin_layer(blend_mode);}
-void image_mixer::end_layer(){impl_->end_layer();}
 core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->create_frame(tag, desc);}
 
 }}}
