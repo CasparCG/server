@@ -53,7 +53,8 @@ public:
 			std::unique_ptr<class image_mixer> image_mixer,
 			int generate_delay_millis,
 			const thumbnail_creator& thumbnail_creator,
-			spl::shared_ptr<media_info_repository> media_info_repo);
+			spl::shared_ptr<media_info_repository> media_info_repo,
+			bool mipmap);
 	~thumbnail_generator();
 	void generate(const std::wstring& media_file);
 	void generate_all();
