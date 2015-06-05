@@ -22,10 +22,13 @@
 #pragma once
 
 #include <common/tweener.h>
+#include <common/env.h>
+
 #include <core/video_format.h>
 #include <core/mixer/image/blend_modes.h>
 
 #include <boost/array.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 namespace caspar { namespace core {
 			
@@ -135,6 +138,7 @@ public:
 		: duration_(0)
 		, time_(0)
 	{
+		dest_.image_transform.use_mipmap = env::properties().get(L"configuration.mixer.mipmapping_default_on", false);
 	}
 
 	tweened_transform(const frame_transform& source, const frame_transform& dest, int duration, const tweener& tween)
