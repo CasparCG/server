@@ -74,6 +74,7 @@ struct layer
 	binding<bool>								hidden;
 	binding<bool>								is_key;
 	binding<bool>								use_mipmap;
+	binding<core::blend_mode>					blend_mode;
 
 	explicit layer(const std::wstring& name, const spl::shared_ptr<frame_producer>& producer);
 };

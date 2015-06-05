@@ -23,6 +23,7 @@
 
 #include <common/tweener.h>
 #include <core/video_format.h>
+#include <core/mixer/image/blend_modes.h>
 
 #include <boost/array.hpp>
 
@@ -76,6 +77,8 @@ struct image_transform final
 	bool					is_mix				= false;
 	bool					is_still			= false;
 	bool					use_mipmap			= false;
+	core::blend_mode		blend_mode			= core::blend_mode::normal;
+	int						layer_depth			= 0;
 	
 	image_transform& operator*=(const image_transform &other);
 	image_transform operator*(const image_transform &other) const;

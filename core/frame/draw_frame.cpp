@@ -174,8 +174,8 @@ draw_frame late_frame(const_frame(0));
 
 draw_frame draw_frame::still(draw_frame frame)
 {
-	frame.transform().image_transform.is_still	= true;	
-	frame.transform().audio_transform.is_still	= true;		
+	frame.transform().image_transform.is_still = true;	
+	frame.transform().audio_transform.is_still = true;		
 	return frame;
 }
 

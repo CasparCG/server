@@ -58,9 +58,6 @@ public:
 	virtual void push(const struct frame_transform& frame) = 0;
 	virtual void visit(const class const_frame& frame) = 0;
 	virtual void pop() = 0;
-
-	virtual void begin_layer(blend_mode blend_mode) = 0;
-	virtual void end_layer() = 0;
 		
 	virtual std::future<array<const std::uint8_t>> operator()(const struct video_format_desc& format_desc) = 0;
 
