@@ -196,6 +196,10 @@ struct scene_producer::impl
 		transform.image_transform.opacity = layer.adjustments.opacity.get();
 		transform.image_transform.is_key = layer.is_key.get();
 		transform.image_transform.use_mipmap = layer.use_mipmap.get();
+		transform.image_transform.blend_mode = layer.blend_mode.get();
+
+		// Mark as sublayer, so it will be composited separately by the mixer.
+		transform.image_transform.layer_depth = 1;
 
 		return transform;
 	}

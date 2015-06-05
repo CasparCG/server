@@ -58,9 +58,6 @@ public:
 	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc) override;
 
 	// core::image_mixer
-	
-	void begin_layer(core::blend_mode blend_mode) override;
-	void end_layer() override;
 
 	void push(const core::frame_transform& frame) override;
 	void visit(const core::const_frame& frame) override;
