@@ -56,8 +56,6 @@ struct mixer::impl : boost::noncopyable
 	spl::shared_ptr<diagnostics::graph> graph_;
 	audio_mixer							audio_mixer_;
 	spl::shared_ptr<image_mixer>		image_mixer_;
-	
-	std::unordered_map<int, blend_mode>	blend_modes_;
 			
 	executor executor_									{ L"mixer" };
 
@@ -83,13 +81,9 @@ public:
 
 				for (auto& frame : frames)
 				{
-					auto blend_it = blend_modes_.find(frame.first);
-					image_mixer_->begin_layer(blend_it != blend_modes_.end() ? blend_it->second : blend_mode::normal);
-													
-					frame.second.accept(audio_mixer_);					
+					frame.second.accept(audio_mixer_);
+					frame.second.transform().image_transform.layer_depth = 1;
 					frame.second.accept(*image_mixer_);
-
-					image_mixer_->end_layer();
 				}
 				
 				auto image = (*image_mixer_)(format_desc);
@@ -109,42 +103,6 @@ public:
 		graph_->set_value("mix-time", frame_timer.elapsed()*format_desc.fps*0.5);
 
 		return frame;
-	}
-					
-	void set_blend_mode(int index, blend_mode value)
-	{
-		executor_.begin_invoke([=]
-		{
-			auto it = blend_modes_.find(index);
-			if(it == blend_modes_.end())
-				blend_modes_.insert(std::make_pair(index, value));
-			else
-				it->second = value;
-		}, task_priority::high_priority);
-	}
-
-	blend_mode get_blend_mode(int index)
-	{
-		return executor_.invoke([=]
-		{
-			return blend_modes_[index];
-		}, task_priority::high_priority);
-	}
-
-	void clear_blend_mode(int index)
-	{
-		executor_.begin_invoke([=]
-		{
-			blend_modes_.erase(index);
-		}, task_priority::high_priority);
-	}
-
-	void clear_blend_modes()
-	{
-		executor_.begin_invoke([=]
-		{
-			blend_modes_.clear();
-		}, task_priority::high_priority);
 	}
 
 	void set_master_volume(float volume)
@@ -171,10 +129,6 @@ public:
 	
 mixer::mixer(spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer) 
 	: impl_(new impl(std::move(graph), std::move(image_mixer))){}
-void mixer::set_blend_mode(int index, blend_mode value){impl_->set_blend_mode(index, value);}
-blend_mode mixer::get_blend_mode(int index) { return impl_->get_blend_mode(index); }
-void mixer::clear_blend_mode(int index) { impl_->clear_blend_mode(index); }
-void mixer::clear_blend_modes() { impl_->clear_blend_modes(); }
 void mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 float mixer::get_master_volume() { return impl_->get_master_volume(); }
 std::future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
