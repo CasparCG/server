@@ -309,10 +309,6 @@ public:
 	{
 		CASPAR_LOG(info) << L"Initialized Streaming SIMD Extensions Accelerated CPU Image Mixer";
 	}
-
-	void begin_layer(core::blend_mode blend_mode)
-	{
-	}
 		
 	void push(const core::frame_transform& transform)
 	{
@@ -346,10 +342,6 @@ public:
 	{
 		transform_stack_.pop_back();
 	}
-
-	void end_layer()
-	{		
-	}
 	
 	std::future<array<const std::uint8_t>> render(const core::video_format_desc& format_desc)
 	{
@@ -374,8 +366,6 @@ void image_mixer::push(const core::frame_transform& transform){impl_->push(trans
 void image_mixer::visit(const core::const_frame& frame){impl_->visit(frame);}
 void image_mixer::pop(){impl_->pop();}
 std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
-void image_mixer::begin_layer(core::blend_mode blend_mode){impl_->begin_layer(blend_mode);}
-void image_mixer::end_layer(){impl_->end_layer();}
 core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->create_frame(tag, desc);}
 
 }}}

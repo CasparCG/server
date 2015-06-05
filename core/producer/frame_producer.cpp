@@ -241,7 +241,7 @@ public:
 		}).detach(); 
 	}
 	
-	draw_frame	receive() override																										{return producer_->receive();}
+	draw_frame											receive() override																										{return producer_->receive();}
 	std::wstring										print() const override															{return producer_->print();}
 	void												paused(bool value) override														{producer_->paused(value);}
 	std::wstring										name() const override															{return producer_->name();}

@@ -35,9 +35,6 @@ public:
 
 	// Methods	
 
-	virtual void begin_layer(core::blend_mode blend_mode);
-	virtual void end_layer();
-
 	virtual void push(const core::frame_transform& frame);
 	virtual void visit(const core::const_frame& frame);
 	virtual void pop();

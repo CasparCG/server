@@ -631,17 +631,14 @@ bool MixerCommand::DoExecute()
 		else if(boost::iequals(parameters()[0], L"BLEND"))
 		{
 			if (parameters().size() == 1)
-			{
-				auto blend_mode = channel()->mixer().get_blend_mode(layer_index());
-				SetReplyString(L"201 MIXER OK\r\n"
-						+ boost::lexical_cast<std::wstring>(get_blend_mode(blend_mode))
-						+ L"\r\n");
-				return true;
-			}
+				return reply_value([](const frame_transform& t) { return get_blend_mode(t.image_transform.blend_mode); });
 
-			auto blend_str = parameters().at(1);								
-			int layer = layer_index();
-			channel()->mixer().set_blend_mode(layer, get_blend_mode(blend_str));	
+			auto value = get_blend_mode(parameters().at(1));
+			transforms.push_back(stage::transform_tuple_t(layer_index(), [=](frame_transform transform) -> frame_transform
+			{
+				transform.image_transform.blend_mode = value;
+				return transform;
+			}, 0, L"linear"));
 		}
 		else if(boost::iequals(parameters()[0], L"MASTERVOLUME"))
 		{
@@ -765,12 +762,10 @@ bool MixerCommand::DoExecute()
 			if (layer == std::numeric_limits<int>::max())
 			{
 				channel()->stage().clear_transforms();
-				channel()->mixer().clear_blend_modes();
 			}
 			else
 			{
 				channel()->stage().clear_transforms(layer);
-				channel()->mixer().clear_blend_mode(layer);
 			}
 		}
 		else if(boost::iequals(parameters()[0], L"COMMIT"))
