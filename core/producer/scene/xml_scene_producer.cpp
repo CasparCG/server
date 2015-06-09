@@ -134,6 +134,10 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 		layer.is_key = scene->create_variable<bool>(variable_prefix + L"is_key", false, elem.second.get(L"is_key", L"false"));
 		layer.use_mipmap = scene->create_variable<bool>(variable_prefix + L"use_mipmap", false, elem.second.get(L"use_mipmap", L"false"));
 		layer.blend_mode = scene->create_variable<std::wstring>(variable_prefix + L"blend_mode", false, elem.second.get(L"blend_mode", L"normal")).transformed([](const std::wstring& b) { return get_blend_mode(b); });
+		layer.chroma_key.key = scene->create_variable<std::wstring>(variable_prefix + L"chroma_key.key", false, elem.second.get(L"chroma_key.key", L"none")).transformed([](const std::wstring& k) { return get_chroma_mode(k); });
+		layer.chroma_key.threshold = scene->create_variable<double>(variable_prefix + L"chroma_key.threshold", false, elem.second.get(L"chroma_key.threshold", L"0.0"));
+		layer.chroma_key.softness = scene->create_variable<double>(variable_prefix + L"chroma_key.softness", false, elem.second.get(L"chroma_key.softness", L"0.0"));
+		layer.chroma_key.spill = scene->create_variable<double>(variable_prefix + L"chroma_key.spill", false, elem.second.get(L"chroma_key.spill", L"0.0"));
 
 		scene->create_variable<double>(variable_prefix + L"width", false) = layer.producer.get()->pixel_constraints().width;
 		scene->create_variable<double>(variable_prefix + L"height", false) = layer.producer.get()->pixel_constraints().height;
