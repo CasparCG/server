@@ -31,7 +31,22 @@
 #include <boost/property_tree/ptree.hpp>
 
 namespace caspar { namespace core {
-			
+
+struct chroma
+{
+	enum class type
+	{
+		none,
+		green,
+		blue
+	};
+
+	type	key			= type::none;
+	double	threshold	= 0.0;
+	double	softness	= 0.0;
+	double	spill		= 0.0;
+};
+
 struct levels final
 {
 	double min_input	= 0.0;
@@ -74,6 +89,7 @@ struct image_transform final
 	rectangle				crop;
 	corners					perspective;
 	core::levels			levels;
+	core::chroma			chroma;
 
 	core::field_mode		field_mode			= core::field_mode::progressive;
 	bool					is_key				= false;
@@ -161,6 +177,9 @@ public:
 		return fetch();
 	}
 };
+
+chroma::type get_chroma_mode(const std::wstring& str);
+std::wstring get_chroma_mode(chroma::type type);
 
 namespace detail {
 

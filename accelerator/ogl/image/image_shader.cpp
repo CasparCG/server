@@ -119,6 +119,29 @@ std::string get_simple_blend_color_func()
 		)shader";
 }
 
+std::string get_chroma_func()
+{
+	return
+
+		get_chroma_glsl()
+		
+		+
+		
+		R"shader(
+				vec4 chroma_key(vec4 c)
+				{
+					switch (chroma_mode)
+					{
+					case 0: return c;
+					case 1: return ChromaOnGreen(c.bgra).bgra;
+					case 2: return ChromaOnBlue(c.bgra).bgra;
+					}
+
+					return c;
+				}
+		)shader";
+}
+
 std::string get_vertex()
 {
 	return R"shader(
@@ -167,11 +190,18 @@ std::string get_fragment(bool blend_modes)
 			uniform float		sat;
 			uniform float		con;
 
+			uniform int			chroma_mode;
+			uniform vec2		chroma_blend;
+			uniform float		chroma_spill;
 	)shader"
 
 	+
 
 	(blend_modes ? get_blend_color_func() : get_simple_blend_color_func())
+
+	+
+
+	get_chroma_func()
 
 	+
 
@@ -263,7 +293,8 @@ std::string get_fragment(bool blend_modes)
 			void main()
 			{
 				vec4 color = get_rgba_color();
-			   if(levels)
+				color = chroma_key(color);
+				if(levels)
 					color.rgb = LevelsControl(color.rgb, min_input, gamma, max_input, min_output, max_output);
 				if(csb)
 					color.rgb = ContrastSaturationBrightness(color.rgb, brt, sat, con);
