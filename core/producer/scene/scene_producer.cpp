@@ -193,10 +193,14 @@ struct scene_producer::impl
 
 		angle		= layer.rotation.get() * PI / 180.0;
 
-		transform.image_transform.opacity = layer.adjustments.opacity.get();
-		transform.image_transform.is_key = layer.is_key.get();
-		transform.image_transform.use_mipmap = layer.use_mipmap.get();
-		transform.image_transform.blend_mode = layer.blend_mode.get();
+		transform.image_transform.opacity			= layer.adjustments.opacity.get();
+		transform.image_transform.is_key			= layer.is_key.get();
+		transform.image_transform.use_mipmap		= layer.use_mipmap.get();
+		transform.image_transform.blend_mode		= layer.blend_mode.get();
+		transform.image_transform.chroma.key		= layer.chroma_key.key.get();
+		transform.image_transform.chroma.threshold	= layer.chroma_key.threshold.get();
+		transform.image_transform.chroma.softness	= layer.chroma_key.softness.get();
+		transform.image_transform.chroma.spill		= layer.chroma_key.spill.get();
 
 		// Mark as sublayer, so it will be composited separately by the mixer.
 		transform.image_transform.layer_depth = 1;

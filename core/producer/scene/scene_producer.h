@@ -61,6 +61,14 @@ struct adjustments
 	adjustments();
 };
 
+struct chroma_key
+{
+	binding<core::chroma::type>	key;
+	binding<double>				threshold;
+	binding<double>				softness;
+	binding<double>				spill;
+};
+
 struct layer
 {
 	binding<std::wstring>						name;
@@ -75,6 +83,7 @@ struct layer
 	binding<bool>								is_key;
 	binding<bool>								use_mipmap;
 	binding<core::blend_mode>					blend_mode;
+	scene::chroma_key							chroma_key;
 
 	explicit layer(const std::wstring& name, const spl::shared_ptr<frame_producer>& producer);
 };
