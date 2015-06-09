@@ -190,6 +190,7 @@ std::string get_fragment(bool blend_modes)
 			uniform float		sat;
 			uniform float		con;
 
+			uniform bool		chroma;
 			uniform int			chroma_mode;
 			uniform vec2		chroma_blend;
 			uniform float		chroma_spill;
@@ -293,7 +294,8 @@ std::string get_fragment(bool blend_modes)
 			void main()
 			{
 				vec4 color = get_rgba_color();
-				color = chroma_key(color);
+				if (chroma)
+					color = chroma_key(color);
 				if(levels)
 					color.rgb = LevelsControl(color.rgb, min_input, gamma, max_input, min_output, max_output);
 				if(csb)
