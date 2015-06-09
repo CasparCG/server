@@ -260,7 +260,10 @@ struct image_kernel::impl
 		shader_->set("has_layer_key",	static_cast<bool>(params.layer_key));
 		shader_->set("pixel_format",	params.pix_desc.format);
 		shader_->set("opacity",			params.transform.is_key ? 1.0 : params.transform.opacity);	
-				
+
+		shader_->set("chroma_mode",		static_cast<int>(params.transform.chroma.key));
+		shader_->set("chroma_blend",	params.transform.chroma.threshold, params.transform.chroma.softness);
+		shader_->set("chroma_spill",	params.transform.chroma.spill);
 
 		// Setup blend_func
 		
