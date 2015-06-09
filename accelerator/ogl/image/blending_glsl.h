@@ -267,3 +267,54 @@ static std::string get_blend_glsl()
 
 	return glsl;
 }
+
+static std::string get_chroma_glsl()
+{
+	static std::string glsl = R"shader(
+		// Chroma keying
+		// Author: Tim Eves <timseves@googlemail.com>
+		//
+		// This implements the Chroma key algorithm described in the paper:
+		//      'Software Chroma Keying in an Imersive Virtual Environment'
+		//      by F. van den Bergh & V. Lalioti
+		// but as a pixel shader algorithm.
+		//
+
+		float       chroma_blend_w = chroma_blend.y - chroma_blend.x;
+		const vec4  grey_xfer  = vec4(0.3, 0.59, 0.11, 0.0);
+
+		float fma(float a, float b, float c) { return a*b + c; }
+
+		// This allows us to implement the paper's alphaMap curve in software
+		// rather than a largeish array
+		float alpha_map(float d)
+		{
+		    return 1.0-smoothstep(chroma_blend.x, chroma_blend.y, d);
+		}
+
+		vec4 supress_spill(vec4 c, float d)
+		{
+		    float ds = smoothstep(chroma_spill, 1.0, d/chroma_blend.y);
+		    float gl = dot(grey_xfer, c);
+		    return mix(c, vec4(vec3(gl*gl), gl), ds);
+		}
+
+		// Key on green
+		vec4 ChromaOnGreen(vec4 c)
+		{
+		    float d = fma(2.0, c.g, -c.r - c.b)/2.0;
+		    c *= alpha_map(d);
+		    return supress_spill(c, d);
+		}
+
+		//Key on blue
+		vec4 ChromaOnBlue(vec4 c)
+		{
+		    float d = fma(2.0, c.b, -c.r - c.g)/2.0;
+		    c *= alpha_map(d);
+		    return supress_spill(c, d);
+		}
+	)shader";
+
+	return glsl;
+}

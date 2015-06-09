@@ -79,6 +79,7 @@ struct file_write_error         : virtual io_error {};
 struct invalid_argument			: virtual caspar_exception {};
 struct null_argument			: virtual invalid_argument {};
 struct out_of_range				: virtual invalid_argument {};
+struct programming_error		: virtual caspar_exception {};
 struct bad_alloc				: virtual caspar_exception {};
 
 struct invalid_operation		: virtual caspar_exception {};

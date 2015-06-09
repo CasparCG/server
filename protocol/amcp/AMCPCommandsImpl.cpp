@@ -640,7 +640,35 @@ bool MixerCommand::DoExecute()
 				return transform;
 			}, 0, L"linear"));
 		}
-		else if(boost::iequals(parameters()[0], L"MASTERVOLUME"))
+		else if (boost::iequals(parameters()[0], L"CHROMA"))
+		{
+			if (parameters().size() == 1)
+			{
+				auto chroma = get_current_transform().image_transform.chroma;
+				SetReplyString(
+					L"201 MIXER OK\r\n"
+					+ core::get_chroma_mode(chroma.key) + L" "
+					+ boost::lexical_cast<std::wstring>(chroma.threshold) + L" "
+					+ boost::lexical_cast<std::wstring>(chroma.softness) + L" "
+					+ boost::lexical_cast<std::wstring>(chroma.spill) + L"\r\n");
+				return true;
+			}
+
+			int duration = parameters().size() > 5 ? boost::lexical_cast<int>(parameters().at(5)) : 0;
+			std::wstring tween = parameters().size() > 6 ? parameters().at(6) : L"linear";
+
+			core::chroma chroma;
+			chroma.key			= get_chroma_mode(parameters().at(1));
+			chroma.threshold	= boost::lexical_cast<double>(parameters().at(2));
+			chroma.softness		= boost::lexical_cast<double>(parameters().at(3));
+			chroma.spill		= parameters().size() > 4 ? boost::lexical_cast<double>(parameters().at(4)) : 0.0;
+			transforms.push_back(stage::transform_tuple_t(layer_index(), [=](frame_transform transform) -> frame_transform
+			{
+				transform.image_transform.chroma = chroma;
+				return transform;
+			}, duration, tween));
+		}
+		else if (boost::iequals(parameters()[0], L"MASTERVOLUME"))
 		{
 			if (parameters().size() == 1)
 			{
