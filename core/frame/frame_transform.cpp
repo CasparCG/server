@@ -91,6 +91,10 @@ image_transform& image_transform::operator*=(const image_transform &other)
 	levels.min_output		 = std::max(levels.min_output, other.levels.min_output);
 	levels.max_output		 = std::min(levels.max_output, other.levels.max_output);
 	levels.gamma			*= other.levels.gamma;
+	chroma.key				 = std::max(chroma.key, other.chroma.key);
+	chroma.threshold		+= other.chroma.threshold;
+	chroma.softness			+= other.chroma.softness;
+	chroma.spill			+= other.chroma.spill;
 	field_mode				 = field_mode & other.field_mode;
 	is_key					|= other.is_key;
 	is_mix					|= other.is_mix;
@@ -132,7 +136,7 @@ void do_tween_corners(const corners& source, const corners& dest, corners& out, 
 };
 
 image_transform image_transform::tween(double time, const image_transform& source, const image_transform& dest, double duration, const tweener& tween)
-{	
+{
 	image_transform result;	
 
 	result.brightness			= do_tween(time, source.brightness,				dest.brightness,			duration, tween);
@@ -155,6 +159,10 @@ image_transform image_transform::tween(double time, const image_transform& sourc
 	result.levels.max_output	= do_tween(time, source.levels.max_output,		dest.levels.max_output,		duration, tween);
 	result.levels.min_output	= do_tween(time, source.levels.min_output,		dest.levels.min_output,		duration, tween);
 	result.levels.gamma			= do_tween(time, source.levels.gamma,			dest.levels.gamma,			duration, tween);
+	result.chroma.threshold		= do_tween(time, source.chroma.threshold,		dest.chroma.threshold,		duration, tween);
+	result.chroma.softness		= do_tween(time, source.chroma.softness,		dest.chroma.softness,		duration, tween);
+	result.chroma.spill			= do_tween(time, source.chroma.spill,			dest.chroma.spill,			duration, tween);
+	result.chroma.key			= dest.chroma.key;
 	result.field_mode			= source.field_mode & dest.field_mode;
 	result.is_key				= source.is_key | dest.is_key;
 	result.is_mix				= source.is_mix | dest.is_mix;
@@ -286,6 +294,34 @@ bool operator==(const frame_transform& lhs, const frame_transform& rhs)
 bool operator!=(const frame_transform& lhs, const frame_transform& rhs)
 {
 	return !(lhs == rhs);
+}
+
+
+core::chroma::type get_chroma_mode(const std::wstring& str)
+{
+	if (boost::iequals(str, L"none"))
+		return core::chroma::type::none;
+	else if (boost::iequals(str, L"green"))
+		return core::chroma::type::green;
+	else if (boost::iequals(str, L"blue"))
+		return core::chroma::type::blue;
+	else
+		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("chroma mode has to be one of none, green or blue"));
+}
+
+std::wstring get_chroma_mode(core::chroma::type type)
+{
+	switch (type)
+	{
+	case core::chroma::type::none:
+		return L"none";
+	case core::chroma::type::green:
+		return L"green";
+	case core::chroma::type::blue:
+		return L"blue";
+	default:
+		CASPAR_THROW_EXCEPTION(programming_error() << msg_info("Unhandled enum constant"));
+	};
 }
 
 namespace detail {

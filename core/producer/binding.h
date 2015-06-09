@@ -49,7 +49,7 @@ struct impl_base : std::enable_shared_from_this<impl_base>
 	{
 	}
 
-	virtual void evaluate() = 0;
+	virtual void evaluate() const = 0;
 
 	void depend_on(const std::shared_ptr<impl_base>& dependency)
 	{
@@ -93,8 +93,9 @@ private:
 
 	struct impl : public detail::impl_base
 	{
-		T value_;
+		mutable T			value_;
 		std::function<T ()> expression_;
+		mutable bool		evaluated_		= false;
 
 		impl()
 			: value_()
@@ -114,6 +115,9 @@ private:
 
 		T get() const
 		{
+			if (!evaluated_)
+				evaluate();
+
 			return value_;
 		}
 
@@ -137,7 +141,7 @@ private:
 			on_change();
 		}
 
-		void evaluate() override
+		void evaluate() const override
 		{
 			if (expression_)
 			{
@@ -149,10 +153,12 @@ private:
 					on_change();
 				}
 			}
+
+			evaluated_ = true;
 		}
 
 		using impl_base::on_change;
-		void on_change()
+		void on_change() const
 		{
 			auto copy = on_change_;
 
@@ -172,7 +178,7 @@ private:
 			unbind();
 			depend_on(other);
 			expression_ = [other]{ return other->get(); };
-			evaluate();
+			//evaluate();
 		}
 
 		void unbind()
@@ -204,7 +210,7 @@ public:
 	explicit binding(const Expr& expression)
 		: impl_(new impl(expression))
 	{
-		impl_->evaluate();
+		//impl_->evaluate();
 	}
 
 	// Expr -> T ()
@@ -213,7 +219,7 @@ public:
 		: impl_(new impl(expression))
 	{
 		depend_on(dep);
-		impl_->evaluate();
+		//impl_->evaluate();
 	}
 
 	// Expr -> T ()
@@ -226,7 +232,7 @@ public:
 	{
 		depend_on(dep1);
 		depend_on(dep2);
-		impl_->evaluate();
+		//impl_->evaluate();
 	}
 
 	void* identity() const
