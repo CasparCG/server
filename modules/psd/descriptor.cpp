@@ -22,11 +22,23 @@
 #include "descriptor.h"
 #include "misc.h"
 
+#include <common/log.h>
+
 #include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 
 #include <memory>
 
 namespace caspar { namespace psd {
+
+	std::wstring debug_ptree(const boost::property_tree::wptree& tree)
+	{
+		std::wstringstream str;
+		boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
+		boost::property_tree::write_xml(str, tree, w);
+		str.flush();
+		return str.str();
+	}
 
 	class descriptor::context::scoped_holder
 	{
@@ -44,7 +56,7 @@ namespace caspar { namespace psd {
 		}
 	};
 
-	descriptor::descriptor() : context_(std::make_shared<context>())
+	descriptor::descriptor(const std::wstring& debug_name) : context_(std::make_shared<context>(debug_name))
 	{
 		context_->stack.push_back(&context_->root);
 	}
@@ -69,6 +81,9 @@ void descriptor::populate(bigendian_file_input_stream& stream)
 		std::wstring key = stream.read_id_string();
 		read_value(key, stream);
 	}
+
+	if (context_->stack.size() == 1)
+		CASPAR_LOG(trace) << context_->debug_name << L":\n\n" << debug_ptree(context_->root) << L"\n";
 }
 
 void descriptor::read_value(const std::wstring& key, bigendian_file_input_stream& stream)

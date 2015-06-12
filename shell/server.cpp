@@ -104,15 +104,14 @@ struct server::impl : boost::noncopyable
 		core::diagnostics::osd::register_sink();
 		diag_subject_->attach_parent(monitor_subject_);
 
-		initialize_modules(module_dependencies(
-				system_info_provider_repo_,
-				cg_registry_,
-				media_info_repo_));
+		module_dependencies dependencies(
+			system_info_provider_repo_,
+			cg_registry_,
+			media_info_repo_);
 
+		initialize_modules(dependencies);
 		core::text::init();
-
-		register_producer_factory(&core::scene::create_dummy_scene_producer);
-		register_producer_factory(&core::scene::create_xml_scene_producer);
+		core::scene::init(dependencies);
 	}
 
 	void start()

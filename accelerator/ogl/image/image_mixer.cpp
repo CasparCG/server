@@ -356,6 +356,7 @@ public:
 	
 	std::future<array<const std::uint8_t>> render(const core::video_format_desc& format_desc)
 	{
+		CASPAR_LOG(info) << layer_stack_.size() << L" " << transform_stack_.size();
 		return renderer_(std::move(layers_), format_desc);
 	}
 	

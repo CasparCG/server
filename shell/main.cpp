@@ -235,7 +235,7 @@ bool run()
 	std::wstringstream str;
 	boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
 	boost::property_tree::write_xml(str, env::properties(), w);
-	CASPAR_LOG(info) << L"casparcg.config:\n-----------------------------------------\n" << str.str().c_str() << L"-----------------------------------------";
+	CASPAR_LOG(info) << L"casparcg.config:\n-----------------------------------------\n" << str.str() << L"-----------------------------------------";
 	
 	caspar_server.start();
 
