@@ -131,8 +131,8 @@ struct scene_producer::impl
 	std::multimap<int64_t, marker>							markers_by_frame_;
 	monitor::subject										monitor_subject_;
 	bool													paused_				= true;
+	bool													removed_			= false;
 	bool													going_to_mark_		= false;
-	draw_frame												last_frame_			= draw_frame::empty();
 
 	impl(int width, int height, const video_format_desc& format_desc)
 		: pixel_constraints_(width, height)
@@ -302,11 +302,8 @@ struct scene_producer::impl
 		}
 	}
 
-	draw_frame render_progressive_frame()
+	void advance()
 	{
-		if (paused_)
-			return last_frame_;
-
 		frame_fraction_ += speed_.get();
 
 		if (std::abs(frame_fraction_) >= 1.0)
@@ -319,7 +316,6 @@ struct scene_producer::impl
 			if (marker && marker->second.action == mark_action::remove)
 			{
 				remove();
-				return last_frame_;
 			}
 			if (marker && !going_to_mark_)
 			{
@@ -342,6 +338,15 @@ struct scene_producer::impl
 
 			going_to_mark_ = false;
 		}
+	}
+
+	draw_frame render_progressive_frame()
+	{
+		if (removed_)
+			return draw_frame::empty();
+
+		if (!paused_)
+			advance();
 
 		for (auto& timeline : timelines_)
 			timeline.second.on_frame(frame_number_.get());
@@ -358,7 +363,7 @@ struct scene_producer::impl
 			frames.push_back(frame);
 		}
 
-		return last_frame_ = draw_frame(frames);
+		return draw_frame(frames);
 	}
 
 	void on_interaction(const interaction_event::ptr& event)
@@ -433,8 +438,7 @@ struct scene_producer::impl
 
 	void remove()
 	{
-		paused_ = true;
-		last_frame_ = draw_frame::empty();
+		removed_ = true;
 		layers_.clear();
 	}
 
