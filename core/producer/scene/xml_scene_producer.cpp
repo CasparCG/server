@@ -35,6 +35,7 @@
 #include <future>
 
 #include "scene_producer.h"
+#include "scene_cg_proxy.h"
 
 namespace caspar { namespace core { namespace scene {
 
@@ -60,6 +61,26 @@ void deduce_expression(variable& var, const variable_repository& repo)
 	}
 }
 
+void init(module_dependencies dependencies)
+{
+	dependencies.cg_registry->register_cg_producer(
+			L"scene",
+			{ L".scene" },
+			[](const std::wstring& filename) { return ""; },
+			[](const spl::shared_ptr<core::frame_producer>& producer)
+			{
+				return spl::make_shared<core::scene::scene_cg_proxy>(producer);
+			},
+			[](
+			const spl::shared_ptr<core::frame_factory>& factory,
+			const core::video_format_desc& format_desc,
+			const std::wstring& filename)
+			{
+				return create_xml_scene_producer(factory, format_desc, { filename });
+			},
+			false);
+}
+
 spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 		const spl::shared_ptr<core::frame_factory>& frame_factory,
 		const core::video_format_desc& format_desc,
@@ -68,7 +89,7 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 	if (params.empty())
 		return core::frame_producer::empty();
 
-	std::wstring filename = env::media_folder() + L"/" + params[0] + L".xml";
+	std::wstring filename = env::template_folder() + L"/" + params[0] + L".scene";
 	
 	if (!boost::filesystem::is_regular_file(boost::filesystem::path(filename)))
 		return core::frame_producer::empty();
@@ -84,7 +105,7 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 	int width = root.get<int>(L"scene.<xmlattr>.width");
 	int height = root.get<int>(L"scene.<xmlattr>.height");
 
-	auto scene = spl::make_shared<scene_producer>(width, height);
+	auto scene = spl::make_shared<scene_producer>(width, height, format_desc);
 
 	for (auto elem : root.get_child(L"scene.variables"))
 	{
@@ -153,6 +174,18 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 				scene->create_variable<std::wstring>(variable_prefix + L"parameter." + var_name, false, expr) = var.as<std::wstring>();
 			else if (var.is<bool>())
 				scene->create_variable<bool>(variable_prefix + L"parameter." + var_name, false, expr) = var.as<bool>();
+		}
+	}
+
+	if (root.get_child_optional(L"scene.marks"))
+	{
+		for (auto& mark : root.get_child(L"scene.marks"))
+		{
+			auto at = mark.second.get<int64_t>(L"<xmlattr>.at");
+			auto type = get_mark_action(mark.second.get<std::wstring>(L"<xmlattr>.type"));
+			auto label = mark.second.get(L"<xmlattr>.label", L"");
+
+			scene->add_mark(at, type, label);
 		}
 	}
 

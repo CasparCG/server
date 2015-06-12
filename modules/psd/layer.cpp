@@ -236,7 +236,7 @@ public:
 		if(stream.read_long() != 16)	//"descriptor version" should be 16
 			CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("descriptor version should be 16"));
 
-		descriptor solid_descriptor;
+		descriptor solid_descriptor(L"solid_color");
 		solid_descriptor.populate(stream);
 		solid_color_.red = static_cast<unsigned char>(solid_descriptor.items().get(L"Clr .Rd  ", 0.0) + 0.5);
 		solid_color_.green = static_cast<unsigned char>(solid_descriptor.items().get(L"Clr .Grn ", 0.0) + 0.5);
@@ -311,7 +311,7 @@ public:
 		if(stream.read_long() != 16)	//"descriptor version" should be 16
 			CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("descriptor version should be 16"));
 
-		descriptor timeline_descriptor;
+		descriptor timeline_descriptor(L"timeline");
 		timeline_descriptor.populate(stream);
 		timeline_info_.swap(timeline_descriptor.items());
 	}
@@ -340,7 +340,7 @@ public:
 		if(stream.read_long() != 16)	//"descriptor version" should be 16
 			CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("Invalid descriptor version while reading text-data"));
 
-		descriptor text_descriptor;
+		descriptor text_descriptor(L"text");
 		text_descriptor.populate(stream);
 		auto text_info = text_descriptor.items().get_optional<std::wstring>(L"EngineData");
 		if(text_info.is_initialized())
@@ -355,7 +355,7 @@ public:
 		if(stream.read_long() != 16)	//"descriptor version" should be 16
 			CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("Invalid descriptor version while reading text warp-data"));
 
-		descriptor warp_descriptor;
+		descriptor warp_descriptor(L"warp");
 		warp_descriptor.populate(stream);
 		stream.read_double(); // w_top
 		stream.read_double();  // w_left

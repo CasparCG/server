@@ -28,6 +28,7 @@
 #include <core/producer/frame_producer.h>
 #include <core/producer/color/color_producer.h>
 #include <core/producer/text/text_producer.h>
+#include <core/producer/scene/scene_cg_proxy.h>
 #include <core/producer/scene/scene_producer.h>
 #include <core/producer/scene/const_producer.h>
 #include <core/producer/scene/hotswap_producer.h>
@@ -88,6 +89,7 @@ core::text::text_info get_text_info(const boost::property_tree::wptree& ptree)
 
 	return result;
 }
+
 
 	class layer_link_constructor
 	{
@@ -201,6 +203,60 @@ boost::rational<int> get_rational(const boost::property_tree::wptree& node)
 			node.get<int>(L"numerator"), node.get<int>(L"denominator"));
 }
 
+void create_marks_from_comments(
+		const spl::shared_ptr<core::scene::scene_producer>& scene,
+		const core::video_format_desc& format_desc,
+		const boost::property_tree::wptree& comment_track)
+{
+	auto keylist = comment_track.get_child_optional(L"keyList");
+
+	if (!keylist)
+		return;
+
+	for (auto& key : *keylist)
+	{
+		auto time = get_rational(key.second.get_child(L"time"));
+		auto frame = get_frame_number(format_desc, time);
+		auto text = key.second.get<std::wstring>(L"animKey.Vl  ");
+		std::vector<std::wstring> marks;
+		boost::split(marks, text, boost::is_any_of(","));
+
+		for (auto& mark : marks)
+		{
+			boost::trim_if(mark, [](wchar_t c) { return isspace(c) || c == 0; });
+
+			std::vector<std::wstring> args;
+			boost::split(args, mark, boost::is_any_of(" \t"), boost::algorithm::token_compress_on);
+
+			scene->add_mark(frame, core::scene::get_mark_action(args.at(0)), args.size() == 1 ? L"" : args.at(1));
+		}
+	}
+}
+
+void create_marks(
+		const spl::shared_ptr<core::scene::scene_producer>& scene,
+		const core::video_format_desc& format_desc,
+		const boost::property_tree::wptree& global_timeline)
+{
+	auto time = get_rational(global_timeline.get_child(L"duration"));
+	auto remove_at_frame = get_frame_number(format_desc, time);
+
+	scene->add_mark(remove_at_frame, core::scene::mark_action::remove, L"");
+
+	auto tracklist = global_timeline.get_child_optional(L"globalTrackList");
+
+	if (!tracklist)
+		return;
+
+	for (auto& track : *tracklist)
+	{
+		auto track_id = track.second.get<std::wstring>(L"stdTrackID");
+
+		if (track_id == L"globalCommentTrack")
+			create_marks_from_comments(scene, format_desc, track.second);
+	}
+}
+
 void create_timelines(
 		const spl::shared_ptr<core::scene::scene_producer>& scene,
 		const core::video_format_desc& format_desc,
@@ -291,7 +347,7 @@ void create_timelines(
 
 spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
 {
-	std::wstring filename = env::media_folder() + params[0] + L".psd";
+	std::wstring filename = env::template_folder() + params[0] + L".psd";
 	auto found_file = find_case_insensitive(filename);
 
 	if (!found_file)
@@ -300,7 +356,7 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 	psd_document doc;
 	doc.parse(*found_file);
 
-	spl::shared_ptr<core::scene::scene_producer> root(spl::make_shared<core::scene::scene_producer>(doc.width(), doc.height()));
+	spl::shared_ptr<core::scene::scene_producer> root(spl::make_shared<core::scene::scene_producer>(doc.width(), doc.height(), format_desc));
 
 	layer_link_constructor link_constructor;
 
@@ -386,6 +442,9 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 	for (auto& text_layer : text_producers_by_layer_name)
 		text_layer.second->text().bind(root->create_variable<std::wstring>(boost::to_lower_copy(text_layer.first), true, L""));
 
+	if (doc.has_timeline())
+		create_marks(root, format_desc, doc.timeline());
+
 	auto params2 = params;
 	params2.erase(params2.begin());
 
@@ -409,6 +468,22 @@ void init(core::module_dependencies dependencies)
 
 				return false;
 			});
+	dependencies.cg_registry->register_cg_producer(
+			L"scene",
+			{ L".psd" },
+			[](const std::wstring& filename) { return ""; },
+			[](const spl::shared_ptr<core::frame_producer>& producer)
+			{
+				return spl::make_shared<core::scene::scene_cg_proxy>(producer);
+			},
+			[](
+					const spl::shared_ptr<core::frame_factory>& factory,
+					const core::video_format_desc& format_desc,
+					const std::wstring& filename)
+			{
+				return create_psd_scene_producer(factory, format_desc, { filename });
+			},
+			false);
 }
 
 }}

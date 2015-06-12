@@ -30,6 +30,7 @@ set(SOURCES
 		producer/scene/const_producer.cpp
 		producer/scene/expression_parser.cpp
 		producer/scene/hotswap_producer.cpp
+		producer/scene/scene_cg_proxy.cpp
 		producer/scene/scene_producer.cpp
 		producer/scene/xml_scene_producer.cpp
 
@@ -89,6 +90,7 @@ set(HEADERS
 		producer/scene/const_producer.h
 		producer/scene/expression_parser.h
 		producer/scene/hotswap_producer.h
+		producer/scene/scene_cg_proxy.h
 		producer/scene/scene_producer.h
 		producer/scene/xml_scene_producer.h
 
