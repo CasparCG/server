@@ -22,6 +22,8 @@
 #include "../../StdAfx.h"
 
 #include <common/future.h>
+#include <common/prec_timer.h>
+
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string.hpp>
 
@@ -88,28 +90,59 @@ struct timeline
 	}
 };
 
+mark_action get_mark_action(const std::wstring& name)
+{
+	if (name == L"start")
+		return mark_action::start;
+	else if (name == L"stop")
+		return mark_action::stop;
+	else if (name == L"jump_to")
+		return mark_action::jump_to;
+	else if (name == L"remove")
+		return mark_action::remove;
+	else
+		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info(L"Invalid mark_action " + name));
+}
+
+struct marker
+{
+	mark_action		action;
+	std::wstring	label_argument;
+
+	marker(mark_action action, const std::wstring& label_argument)
+		: action(action)
+		, label_argument(label_argument)
+	{
+	}
+};
+
 struct scene_producer::impl
 {
-	constraints pixel_constraints_;
-	std::list<layer> layers_;
-	interaction_aggregator aggregator_;
-	binding<int64_t> frame_number_;
-	binding<double> speed_;
-	double frame_fraction_;
-	std::map<void*, timeline> timelines_;
-	std::map<std::wstring, std::shared_ptr<core::variable>> variables_;
-	std::vector<std::wstring> variable_names_;
-	monitor::subject monitor_subject_;
+	constraints												pixel_constraints_;
+	video_format_desc										format_desc_;
+	std::list<layer>										layers_;
+	interaction_aggregator									aggregator_;
+	binding<int64_t>										frame_number_;
+	binding<double>											speed_;
+	double													frame_fraction_		= 0.0;
+	std::map<void*, timeline>								timelines_;
+	std::map<std::wstring, std::shared_ptr<core::variable>>	variables_;
+	std::vector<std::wstring>								variable_names_;
+	std::multimap<int64_t, marker>							markers_by_frame_;
+	monitor::subject										monitor_subject_;
+	bool													paused_				= true;
+	bool													going_to_mark_		= false;
+	draw_frame												last_frame_			= draw_frame::empty();
 
-	impl(int width, int height)
+	impl(int width, int height, const video_format_desc& format_desc)
 		: pixel_constraints_(width, height)
+		, format_desc_(format_desc)
 		, aggregator_([=] (double x, double y) { return collission_detect(x, y); })
-		, frame_fraction_(0)
 	{
 		auto speed_variable = std::make_shared<core::variable_impl<double>>(L"1.0", true, 1.0);
 		store_variable(L"scene_speed", speed_variable);
 		speed_ = speed_variable->value();
-		auto frame_variable = std::make_shared<core::variable_impl<int64_t>>(L"0", true, 0);
+		auto frame_variable = std::make_shared<core::variable_impl<int64_t>>(L"-1", true, -1);
 		store_variable(L"frame", frame_variable);
 		frame_number_ = frame_variable->value();
 	}
@@ -137,6 +170,11 @@ struct scene_producer::impl
 	{
 		variables_.insert(std::make_pair(name, var));
 		variable_names_.push_back(name);
+	}
+
+	void add_mark(int64_t frame, mark_action action, const std::wstring& label)
+	{
+		markers_by_frame_.insert(std::make_pair(frame, marker(action, label)));
 	}
 
 	core::variable& get_variable(const std::wstring& name)
@@ -208,8 +246,103 @@ struct scene_producer::impl
 		return transform;
 	}
 
+	boost::optional<std::pair<int64_t, marker>> find_first_stop_or_jump_or_remove(int64_t start_frame, int64_t end_frame)
+	{
+		auto lower = markers_by_frame_.lower_bound(start_frame);
+		auto upper = markers_by_frame_.upper_bound(end_frame);
+
+		if (lower == markers_by_frame_.end())
+			return boost::none;
+
+		for (auto iter = lower; iter != upper; ++iter)
+		{
+			auto action = iter->second.action;
+
+			if (action == mark_action::stop || action == mark_action::jump_to || action == mark_action::remove)
+				return *iter;
+		}
+
+		return boost::none;
+	}
+
+	boost::optional<std::pair<int64_t, marker>> find_first_start(int64_t start_frame)
+	{
+		auto lower = markers_by_frame_.lower_bound(start_frame);
+
+		if (lower == markers_by_frame_.end())
+			return boost::none;
+
+		for (auto iter = lower; iter != markers_by_frame_.end(); ++iter)
+		{
+			auto action = iter->second.action;
+
+			if (action == mark_action::start)
+				return *iter;
+		}
+
+		return boost::none;
+	}
+
 	draw_frame render_frame()
 	{
+		if (format_desc_.field_count == 1)
+			return render_progressive_frame();
+		else
+		{
+			prec_timer timer;
+			timer.tick_millis(0);
+			
+			auto field1 = render_progressive_frame();
+			
+			timer.tick(0.5 / format_desc_.fps);
+
+			auto field2 = render_progressive_frame();
+
+			return draw_frame::interlace(field1, field2, format_desc_.field_mode);
+		}
+	}
+
+	draw_frame render_progressive_frame()
+	{
+		if (paused_)
+			return last_frame_;
+
+		frame_fraction_ += speed_.get();
+
+		if (std::abs(frame_fraction_) >= 1.0)
+		{
+			int64_t delta = static_cast<int64_t>(frame_fraction_);
+			auto previous_frame = frame_number_.get();
+			auto next_frame = frame_number_.get() + delta;
+			auto marker = find_first_stop_or_jump_or_remove(previous_frame + 1, next_frame);
+
+			if (marker && marker->second.action == mark_action::remove)
+			{
+				remove();
+				return last_frame_;
+			}
+			if (marker && !going_to_mark_)
+			{
+				if (marker->second.action == mark_action::stop)
+				{
+					frame_number_.set(marker->first);
+					frame_fraction_ = 0.0;
+					paused_ = true;
+				}
+				else if (marker->second.action == mark_action::jump_to)
+				{
+					go_to_marker(marker->second.label_argument, 0);
+				}
+			}
+			else
+			{
+				frame_number_.set(next_frame);
+				frame_fraction_ -= delta;
+			}
+
+			going_to_mark_ = false;
+		}
+
 		for (auto& timeline : timelines_)
 			timeline.second.on_frame(frame_number_.get());
 
@@ -225,16 +358,7 @@ struct scene_producer::impl
 			frames.push_back(frame);
 		}
 
-		frame_fraction_ += speed_.get();
-
-		if (std::abs(frame_fraction_) >= 1.0)
-		{
-			int64_t delta = static_cast<int64_t>(frame_fraction_);
-			frame_number_.set(frame_number_.get() + delta);
-			frame_fraction_ -= delta;
-		}
-
-		return draw_frame(frames);
+		return last_frame_ = draw_frame(frames);
 	}
 
 	void on_interaction(const interaction_event::ptr& event)
@@ -272,6 +396,14 @@ struct scene_producer::impl
 
 	std::future<std::wstring> call(const std::vector<std::wstring>& params) 
 	{
+		if (!params.empty() && boost::ends_with(params.at(0), L"()"))
+			return make_ready_future(handle_call(params));
+		else
+			return make_ready_future(handle_variable_set(params));
+	}
+
+	std::wstring handle_variable_set(const std::vector<std::wstring>& params)
+	{
 		for (int i = 0; i + 1 < params.size(); i += 2)
 		{
 			auto found = variables_.find(boost::to_lower_copy(params[i]));
@@ -280,7 +412,77 @@ struct scene_producer::impl
 				found->second->from_string(params[i + 1]);
 		}
 
-		return make_ready_future(std::wstring(L""));
+		return L"";
+	}
+
+	std::wstring handle_call(const std::vector<std::wstring>& params)
+	{
+		auto call = params.at(0);
+
+		if (call == L"play()")
+			go_to_marker(params.at(1), -1);
+		else if (call == L"remove()")
+			remove();
+		else if (call == L"next()")
+			next();
+		else
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(L"Unknown call " + call));
+
+		return L"";
+	}
+
+	void remove()
+	{
+		paused_ = true;
+		last_frame_ = draw_frame::empty();
+		layers_.clear();
+	}
+
+	void next()
+	{
+		auto marker = find_first_start(frame_number_.get() + 1);
+
+		if (marker)
+		{
+			frame_number_.set(marker->first - 1);
+			frame_fraction_ = 0.0;
+			paused_ = false;
+			going_to_mark_ = true;
+		}
+		else
+		{
+			remove();
+		}
+	}
+
+	void go_to_marker(const std::wstring& marker_name, int64_t offset)
+	{
+		for (auto& marker : markers_by_frame_)
+		{
+			if (marker.second.label_argument == marker_name && marker.second.action == mark_action::start)
+			{
+				frame_number_.set(marker.first + offset);
+				frame_fraction_ = 0.0;
+				paused_ = false;
+				going_to_mark_ = true;
+
+				return;
+			}
+		}
+
+		if (marker_name == L"intro")
+		{
+			frame_number_.set(offset);
+			frame_fraction_ = 0.0;
+			paused_ = false;
+			going_to_mark_ = true;
+		}
+		else if (marker_name == L"outro")
+		{
+			remove();
+		}
+		else
+			CASPAR_LOG(info) << print() << L" no marker called " << marker_name << " found";
 	}
 
 	std::wstring print() const
@@ -306,8 +508,8 @@ struct scene_producer::impl
 	}
 };
 
-scene_producer::scene_producer(int width, int height)
-	: impl_(new impl(width, height))
+scene_producer::scene_producer(int width, int height, const video_format_desc& format_desc)
+	: impl_(new impl(width, height, format_desc))
 {
 }
 
@@ -385,6 +587,11 @@ void scene_producer::store_variable(
 	impl_->store_variable(name, var);
 }
 
+void scene_producer::add_mark(int64_t frame, mark_action action, const std::wstring& label)
+{
+	impl_->add_mark(frame, action, label);
+}
+
 core::variable& scene_producer::get_variable(const std::wstring& name)
 {
 	return impl_->get_variable(name);
@@ -400,7 +607,7 @@ spl::shared_ptr<core::frame_producer> create_dummy_scene_producer(const spl::sha
 	if (params.size() < 1 || !boost::iequals(params.at(0), L"[SCENE]"))
 		return core::frame_producer::empty();
 
-	auto scene = spl::make_shared<scene_producer>(format_desc.width, format_desc.height);
+	auto scene = spl::make_shared<scene_producer>(format_desc.width, format_desc.height, format_desc);
 
 	text::text_info text_info;
 	text_info.font = L"ArialMT";

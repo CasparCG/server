@@ -55,10 +55,16 @@ class descriptor
 
 		Ptree root;
 		std::vector<Ptree *> stack;
+		std::wstring debug_name;
 
 		friend descriptor;
 		friend class scoped_holder;
 		class scoped_holder;
+
+		context(const std::wstring& debug_name)
+			: debug_name(debug_name)
+		{
+		}
 	};
 	friend class context::scoped_holder;
 
@@ -67,7 +73,7 @@ class descriptor
 	explicit descriptor(const std::wstring& key, context::ptr_type context);
 
 public:
-	descriptor();
+	descriptor(const std::wstring& debug_name);
 	~descriptor();
 
 	void populate(bigendian_file_input_stream& stream);
