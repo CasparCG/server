@@ -58,7 +58,7 @@ public:
 		FT_Face face;
 			
 		if (FT_New_Face(lib_.get(), u8(info.font_file).c_str(), 0, &face))
-			CASPAR_THROW_EXCEPTION(freetype_exception() << msg_info("Failed to load font"));
+			CASPAR_THROW_EXCEPTION(freetype_exception() << msg_info(L"Failed to load font " + info.font));
 
 		face_.reset(face, [](FT_Face ptr) { FT_Done_Face(ptr); });
 

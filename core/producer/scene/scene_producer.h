@@ -101,10 +101,20 @@ public:
 	}
 };
 
+enum class mark_action
+{
+	start,
+	stop,
+	jump_to,
+	remove
+};
+
+mark_action get_mark_action(const std::wstring& name);
+
 class scene_producer : public frame_producer_base
 {
 public:
-	scene_producer(int width, int height);
+	scene_producer(int width, int height, const video_format_desc& format_desc);
 	~scene_producer();
 
 	class draw_frame receive_impl() override;
@@ -113,7 +123,7 @@ public:
 	bool collides(double x, double y) const override;
 	std::wstring print() const override;
 	std::wstring name() const override;
-	std::future<std::wstring>	call(const std::vector<std::wstring>& params) override;
+	std::future<std::wstring> call(const std::vector<std::wstring>& params) override;
 	boost::property_tree::wptree info() const override;
 	monitor::subject& monitor_output();
 
@@ -211,6 +221,8 @@ public:
 
 		store_keyframe(to_affect.identity(), k);
 	}
+
+	void add_mark(int64_t frame, mark_action action, const std::wstring& label);
 
 	core::variable& get_variable(const std::wstring& name) override;
 	const std::vector<std::wstring>& get_variables() const override;

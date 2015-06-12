@@ -21,16 +21,28 @@
 
 #pragma once
 
-#include <vector>
-#include <string>
-
+#include <core/producer/cg_proxy.h>
 #include <common/memory.h>
-
-#include "../../module_dependencies.h"
 
 namespace caspar { namespace core { namespace scene {
 
-void init(module_dependencies dependencies);
-spl::shared_ptr<core::frame_producer> create_xml_scene_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params);
+class scene_cg_proxy : public cg_proxy
+{
+public:
+	scene_cg_proxy(spl::shared_ptr<frame_producer> producer);
+
+	void add(int layer, const std::wstring& template_name, bool play_on_load, const std::wstring& start_from_label, const std::wstring& data) override;
+	void remove(int layer) override;
+	void play(int layer) override;
+	void stop(int layer, unsigned int mix_out_duration) override;
+	void next(int layer) override;
+	void update(int layer, const std::wstring& data) override;
+	std::wstring invoke(int layer, const std::wstring& label) override;
+	std::wstring description(int layer) override;
+	std::wstring template_host_info() override;
+private:
+	struct impl;
+	spl::unique_ptr<impl> impl_;
+};
 
 }}}
