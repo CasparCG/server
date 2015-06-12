@@ -112,9 +112,11 @@ void psd_document::read_image_resources()
 					case 1075:		//timeline information
 						{
 							input_.read_long();	//descriptor version, should be 16
-							descriptor timeline_descriptor;
+							descriptor timeline_descriptor(L"global timeline");
 							timeline_descriptor.populate(input_);
-							timeline_desc_.swap(timeline_descriptor.items());
+
+							if (timeline_desc_.empty())
+								timeline_desc_.swap(timeline_descriptor.items());
 						}
 						break;
 

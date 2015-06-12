@@ -268,6 +268,9 @@ struct image_kernel::impl
 			shader_->set("chroma_blend", params.transform.chroma.threshold, params.transform.chroma.softness);
 			shader_->set("chroma_spill", params.transform.chroma.spill);
 		}
+		else
+			shader_->set("chroma", false);
+
 
 		// Setup blend_func
 		
