@@ -28,7 +28,7 @@
 #include <common/memory.h>
 #include <common/reactive.h>
 
-#include <core/video_format.h>
+#include <core/fwd.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
 
@@ -48,16 +48,16 @@ public:
 					
 	// Constructors
 	
-	explicit mixer(spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<class image_mixer> image_mixer);
+	explicit mixer(spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer);
 
 	// Methods
 		
-	class const_frame operator()(std::map<int, class draw_frame> frames, const struct video_format_desc& format_desc);
+	const_frame operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc);
 
 	void set_master_volume(float volume);
 	float get_master_volume();
 
-	class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc);
+	mutable_frame create_frame(const void* tag, const pixel_format_desc& desc);
 
 	// Properties
 

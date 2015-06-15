@@ -22,6 +22,7 @@
 #pragma once
 
 #include "../monitor/monitor.h"
+#include "../fwd.h"
 
 #include <common/memory.h>
 #include <common/future_fwd.h>
@@ -33,8 +34,6 @@
 #include <vector>
 
 namespace caspar { namespace core {
-
-struct interaction_sink;
 
 // Interface
 class frame_consumer
@@ -54,8 +53,8 @@ public:
 	
 	// Methods
 
-	virtual std::future<bool>				send(class const_frame frame) = 0;
-	virtual void							initialize(const struct video_format_desc& format_desc, int channel_index) = 0;
+	virtual std::future<bool>				send(const_frame frame) = 0;
+	virtual void							initialize(const video_format_desc& format_desc, int channel_index) = 0;
 	
 	// monitor::observable
 

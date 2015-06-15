@@ -137,7 +137,7 @@ public:
 	}
 
 	spl::shared_ptr<cg_proxy> get_proxy(
-			const spl::shared_ptr<class video_channel>& video_channel,
+			const spl::shared_ptr<video_channel>& video_channel,
 			int render_layer) const
 	{
 		auto producer = spl::make_shared_ptr(video_channel->stage().foreground(render_layer).get());
@@ -146,7 +146,7 @@ public:
 	}
 
 	spl::shared_ptr<cg_proxy> get_or_create_proxy(
-			const spl::shared_ptr<class video_channel>& video_channel,
+			const spl::shared_ptr<video_channel>& video_channel,
 			int render_layer,
 			const std::wstring& filename) const
 	{
