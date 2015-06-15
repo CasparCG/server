@@ -22,6 +22,7 @@
 #pragma once
 
 #include "../../video_format.h"
+#include "../../fwd.h"
 
 #include <common/memory.h>
 #include <common/tweener.h>
@@ -55,6 +56,6 @@ struct transition_info
 	caspar::tweener			tweener		{ L"linear" };
 };
 
-spl::shared_ptr<class frame_producer> create_transition_producer(const field_mode& mode, const spl::shared_ptr<class frame_producer>& destination, const transition_info& info);
+spl::shared_ptr<frame_producer> create_transition_producer(const field_mode& mode, const spl::shared_ptr<frame_producer>& destination, const transition_info& info);
 
 }}

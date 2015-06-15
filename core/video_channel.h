@@ -25,17 +25,11 @@
 #include <common/reactive.h>
 #include <common/forward.h>
 
+#include "fwd.h"
+
 #include "monitor/monitor.h"
 
 #include <boost/property_tree/ptree_fwd.hpp>
-
-FORWARD3(caspar, core, ogl, class accelerator);
-FORWARD2(caspar, core, class stage);
-FORWARD2(caspar, core, class mixer);
-FORWARD2(caspar, core, class output);
-FORWARD2(caspar, core, class image_mixer);
-FORWARD2(caspar, core, struct video_format_desc);
-FORWARD2(caspar, core, class frame_factory);
 
 namespace caspar { namespace core {
 	
