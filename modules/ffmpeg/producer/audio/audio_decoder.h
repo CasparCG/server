@@ -31,15 +31,7 @@
 struct AVPacket;
 struct AVFormatContext;
 
-namespace caspar { 
-			
-namespace core {
-
-struct video_format_desc;
-
-}
-
-namespace ffmpeg {
+namespace caspar { namespace ffmpeg {
 	
 class audio_decoder : public boost::noncopyable
 {

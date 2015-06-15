@@ -23,22 +23,13 @@
 
 #include <common/memory.h>
 
-#include <core/producer/frame_producer.h>
+#include <core/fwd.h>
 #include <core/video_format.h>
 
 #include <string>
 #include <vector>
 
-namespace caspar {
-
-namespace core {
-
-class frame_producer;
-class frame_factory;
-
-}
-	
-namespace ffmpeg {
+namespace caspar { namespace ffmpeg {
 
 spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params);
 

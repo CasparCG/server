@@ -22,6 +22,7 @@
 #pragma once
 
 #include "../monitor/monitor.h"
+#include "../fwd.h"
 
 #include <common/forward.h>
 #include <common/future_fwd.h>
@@ -44,15 +45,15 @@ public:
 
 	// Constructors
 
-	explicit output(spl::shared_ptr<diagnostics::graph> graph, const struct video_format_desc& format_desc, int channel_index);
+	explicit output(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index);
 	
 	// Methods
 
-	void operator()(class const_frame frame, const struct video_format_desc& format_desc);
+	void operator()(const_frame frame, const video_format_desc& format_desc);
 	
-	void add(const spl::shared_ptr<class frame_consumer>& consumer);
-	void add(int index, const spl::shared_ptr<class frame_consumer>& consumer);
-	void remove(const spl::shared_ptr<class frame_consumer>& consumer);
+	void add(const spl::shared_ptr<frame_consumer>& consumer);
+	void add(int index, const spl::shared_ptr<frame_consumer>& consumer);
+	void remove(const spl::shared_ptr<frame_consumer>& consumer);
 	void remove(int index);
 	
 	monitor::subject& monitor_output();

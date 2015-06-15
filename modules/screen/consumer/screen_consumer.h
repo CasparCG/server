@@ -23,18 +23,12 @@
 
 #include <common/memory.h>
 
+#include <core/fwd.h>
+
 #include <vector>
 #include <boost/property_tree/ptree.hpp>
 
-namespace caspar { 
-	
-namespace core {
-	class frame_consumer;
-	struct interaction_sink;
-}
-
-namespace screen {
-
+namespace caspar { namespace screen {
 
 spl::shared_ptr<core::frame_consumer> create_consumer(
 		const std::vector<std::wstring>& params,

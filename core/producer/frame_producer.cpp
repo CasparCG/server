@@ -249,7 +249,7 @@ public:
 	const std::vector<std::wstring>&					get_variables() const override													{return producer_->get_variables();}
 	void												leading_producer(const spl::shared_ptr<frame_producer>& producer) override		{return producer_->leading_producer(producer);}
 	uint32_t											nb_frames() const override														{return producer_->nb_frames();}
-	class draw_frame									last_frame()																	{return producer_->last_frame();}
+	draw_frame											last_frame()																	{return producer_->last_frame();}
 	draw_frame											create_thumbnail_frame()														{return producer_->create_thumbnail_frame();}
 	monitor::subject&									monitor_output() override														{return producer_->monitor_output();}										
 	bool												collides(double x, double y) const override										{return producer_->collides(x, y);}

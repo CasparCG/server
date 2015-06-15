@@ -22,8 +22,7 @@
 #pragma once
 
 #include "frame_visitor.h"
-
-#include <core/video_format.h>
+#include "../fwd.h"
 
 #include <common/memory.h>
 
@@ -31,8 +30,6 @@
 
 namespace caspar { namespace core {
 	
-struct frame_transform;
-
 class draw_frame final
 {
 public:		
@@ -52,8 +49,8 @@ public:
 	draw_frame();
 	draw_frame(const draw_frame& other);
 	draw_frame(draw_frame&& other);	
-	explicit draw_frame(class const_frame&& frame);
-	explicit draw_frame(class mutable_frame&& frame);
+	explicit draw_frame(const_frame&& frame);
+	explicit draw_frame(mutable_frame&& frame);
 	explicit draw_frame(std::vector<draw_frame> frames);
 
 	~draw_frame();

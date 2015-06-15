@@ -26,15 +26,12 @@
 #include <common/memory.h>
 #include <common/filesystem_monitor.h>
 
+#include "fwd.h"
+
 namespace caspar { namespace core {
 
-class ogl_device;
-class read_frame;
-struct video_format_desc;
-struct media_info_repository;
-
 typedef std::function<void (
-		const class const_frame& frame,
+		const const_frame& frame,
 		const video_format_desc& format_desc,
 		const boost::filesystem::path& output_file,
 		int width,
@@ -50,7 +47,7 @@ public:
 			int width,
 			int height,
 			const video_format_desc& render_video_mode,
-			std::unique_ptr<class image_mixer> image_mixer,
+			std::unique_ptr<image_mixer> image_mixer,
 			int generate_delay_millis,
 			const thumbnail_creator& thumbnail_creator,
 			spl::shared_ptr<media_info_repository> media_info_repo,
