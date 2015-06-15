@@ -25,7 +25,7 @@ public:
 		consumer_->monitor_output().attach_parent(monitor_subject_);
 	}
 	
-	void video_format_desc(const struct video_format_desc& format_desc)
+	void video_format_desc(const core::video_format_desc& format_desc)
 	{
 		consumer_->initialize(format_desc, channel_index_);
 	}
@@ -67,7 +67,7 @@ port::~port(){}
 port& port::operator=(port&& other){impl_ = std::move(other.impl_); return *this;}
 std::future<bool> port::send(const_frame frame){return impl_->send(std::move(frame));}	
 monitor::subject& port::monitor_output() {return *impl_->monitor_subject_;}
-void port::video_format_desc(const struct video_format_desc& format_desc){impl_->video_format_desc(format_desc);}
+void port::video_format_desc(const core::video_format_desc& format_desc){impl_->video_format_desc(format_desc);}
 int port::buffer_depth() const{return impl_->buffer_depth();}
 std::wstring port::print() const{ return impl_->print();}
 bool port::has_synchronization_clock() const{return impl_->has_synchronization_clock();}

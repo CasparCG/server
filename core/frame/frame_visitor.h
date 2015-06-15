@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include "../fwd.h"
+
 namespace caspar { namespace core {
 	
 class frame_visitor
@@ -37,8 +39,8 @@ public:
 
 	// Methods
 
-	virtual void push(const struct frame_transform& transform) = 0;
-	virtual void visit(const class const_frame& frame) = 0;
+	virtual void push(const frame_transform& transform) = 0;
+	virtual void visit(const const_frame& frame) = 0;
 	virtual void pop() = 0;
 
 	// Properties

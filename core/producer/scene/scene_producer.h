@@ -24,15 +24,12 @@
 #include <common/log.h>
 
 #include "../frame_producer.h"
+#include "../../fwd.h"
 
 #include "../binding.h"
 #include "../variable.h"
 
-namespace caspar { namespace core {
-
-class frame_factory;
-
-namespace scene {
+namespace caspar { namespace core { namespace scene {
 
 struct coord
 {
@@ -117,7 +114,7 @@ public:
 	scene_producer(int width, int height, const video_format_desc& format_desc);
 	~scene_producer();
 
-	class draw_frame receive_impl() override;
+	draw_frame receive_impl() override;
 	constraints& pixel_constraints() override;
 	void on_interaction(const interaction_event::ptr& event) override;
 	bool collides(double x, double y) const override;

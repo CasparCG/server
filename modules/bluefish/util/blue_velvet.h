@@ -29,15 +29,9 @@
 #include <common/memory.h>
 #include <common/except.h>
 
-namespace caspar { 
+#include <core/fwd.h>
 
-namespace core {
-
-struct video_format_desc;
-
-}
-
-namespace bluefish {
+namespace caspar { namespace bluefish {
 
 extern const char* (*BlueVelvetVersion)();
 extern BLUE_UINT32 (*encode_hanc_frame)(struct hanc_stream_info_struct * hanc_stream_ptr, void * audio_pcm_ptr,BLUE_UINT32 no_audio_ch,BLUE_UINT32 no_audio_samples,BLUE_UINT32 nTypeOfSample,BLUE_UINT32 emb_audio_flag);

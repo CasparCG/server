@@ -3,7 +3,7 @@
 #undef BOOST_PARAMETER_MAX_ARITY
 #define BOOST_PARAMETER_MAX_ARITY 7
 
-#include "../video_format.h"
+#include "../fwd.h"
 
 #include <common/memory.h>
 #include <common/forward.h>
@@ -34,7 +34,7 @@ public:
 	explicit mutable_frame(std::vector<array<std::uint8_t>> image_buffers, 
 						audio_buffer audio_buffer, 
 						const void* tag, 
-						const struct pixel_format_desc& desc);
+						const pixel_format_desc& desc);
 	~mutable_frame();
 
 	// Methods
@@ -46,7 +46,7 @@ public:
 			
 	// Properties
 			
-	const struct pixel_format_desc& pixel_format_desc() const;
+	const pixel_format_desc& pixel_format_desc() const;
 
 	const array<std::uint8_t>& image_data(std::size_t index = 0) const;
 	const core::audio_buffer& audio_data() const;
@@ -82,7 +82,7 @@ public:
 	explicit const_frame(std::shared_future<array<const std::uint8_t>> image, 
 						audio_buffer audio_buffer, 
 						const void* tag, 
-						const struct pixel_format_desc& desc);
+						const pixel_format_desc& desc);
 	const_frame(mutable_frame&& other);
 	~const_frame();
 
@@ -95,7 +95,7 @@ public:
 				
 	// Properties
 				
-	const struct pixel_format_desc& pixel_format_desc() const;
+	const pixel_format_desc& pixel_format_desc() const;
 
 	array<const std::uint8_t> image_data(int index = 0) const;
 	const core::audio_buffer& audio_data() const;

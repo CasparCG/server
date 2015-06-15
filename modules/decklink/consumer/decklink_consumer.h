@@ -23,21 +23,14 @@
 
 #include <common/memory.h>
 
-#include <core/video_format.h>
+#include <core/fwd.h>
 
-#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
 
 #include <string>
 #include <vector>
 
-namespace caspar {
-
-namespace core {
-	class frame_consumer;
-	struct interaction_sink;
-}
-
-namespace decklink {
+namespace caspar { namespace decklink {
 
 spl::shared_ptr<core::frame_consumer> create_consumer(
 		const std::vector<std::wstring>& params, core::interaction_sink*);
