@@ -16,6 +16,7 @@ add_subdirectory(psd)
 
 if (MSVC)
 	add_subdirectory(flash)
+	add_subdirectory(newtek)
 endif ()
 
 add_subdirectory(reroute)
