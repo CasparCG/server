@@ -139,6 +139,7 @@ public:
 		return cpplinq::from(ports_)
 			.select(values())
 			.select(std::mem_fn(&port::buffer_depth))
+			.where([](int v) { return v >= 0; })
 			.aggregate(minmax::initial_value<int>(), minmax());
 	}
 
@@ -182,7 +183,8 @@ public:
 			for (auto it = ports_.begin(); it != ports_.end();)
 			{
 				auto& port	= it->second;
-				auto& frame	= frames_.at(port.buffer_depth()-minmax.first);
+				auto depth = port.buffer_depth();
+				auto& frame = depth < 0 ? frames_.back() : frames_.at(depth - minmax.first);
 					
 				try
 				{
