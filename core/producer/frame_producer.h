@@ -22,7 +22,7 @@
 #pragma once
 
 #include "../monitor/monitor.h"
-#include "../video_format.h"
+#include "../fwd.h"
 #include "../interaction/interaction_sink.h"
 #include "binding.h"
 
@@ -72,7 +72,7 @@ public:
 
 	// Methods	
 
-	virtual class draw_frame					receive() = 0;
+	virtual draw_frame							receive() = 0;
 	virtual std::future<std::wstring>			call(const std::vector<std::wstring>& params) = 0;
 	virtual variable&							get_variable(const std::wstring& name) = 0;
 	virtual const std::vector<std::wstring>&	get_variables() const = 0;
@@ -94,8 +94,8 @@ public:
 	virtual boost::property_tree::wptree		info() const = 0;
 	virtual uint32_t							nb_frames() const = 0;
 	virtual uint32_t							frame_number() const = 0;
-	virtual class draw_frame					last_frame() = 0;
-	virtual class draw_frame					create_thumbnail_frame() = 0;
+	virtual draw_frame							last_frame() = 0;
+	virtual draw_frame							create_thumbnail_frame() = 0;
 	virtual constraints&						pixel_constraints() = 0;
 	virtual void								leading_producer(const spl::shared_ptr<frame_producer>&) {}  
 };
@@ -119,12 +119,12 @@ public:
 	void						paused(bool value) override;	
 	uint32_t					nb_frames() const override;
 	uint32_t					frame_number() const override;
-	virtual class draw_frame	last_frame() override;
-	virtual class draw_frame	create_thumbnail_frame() override;
+	virtual draw_frame			last_frame() override;
+	virtual draw_frame			create_thumbnail_frame() override;
 
 private:
-	virtual class draw_frame	receive() override;
-	virtual class draw_frame	receive_impl() = 0;
+	virtual draw_frame			receive() override;
+	virtual draw_frame			receive_impl() = 0;
 
 	struct impl;
 	friend struct impl;

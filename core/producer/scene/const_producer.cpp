@@ -89,14 +89,14 @@ public:
 	}
 };
 
-spl::shared_ptr<class frame_producer> create_const_producer(
-		const class draw_frame& frame, int width, int height)
+spl::shared_ptr<frame_producer> create_const_producer(
+		const draw_frame& frame, int width, int height)
 {
 	return spl::make_shared<const_producer>(frame, width, height);
 }
 
-spl::shared_ptr<class frame_producer> create_const_producer(
-		std::vector<class draw_frame>&& frames, int width, int height)
+spl::shared_ptr<frame_producer> create_const_producer(
+		std::vector<draw_frame>&& frames, int width, int height)
 {
 	return spl::make_shared<const_producer>(std::move(frames), width, height);
 }

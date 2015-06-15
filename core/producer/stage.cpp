@@ -51,7 +51,7 @@ struct stage::impl : public std::enable_shared_from_this<impl>
 {				
 	spl::shared_ptr<diagnostics::graph>							graph_;
 	spl::shared_ptr<monitor::subject>							monitor_subject_;
-	//reactive::basic_subject<std::map<int, class draw_frame>>	frames_subject_;
+	//reactive::basic_subject<std::map<int, draw_frame>>		frames_subject_;
 	std::map<int, layer>										layers_;	
 	std::map<int, tweened_transform>							tweens_;
 	interaction_aggregator										aggregator_;
@@ -66,14 +66,14 @@ public:
 		graph_->set_color("produce-time", diagnostics::color(0.0f, 1.0f, 0.0f));
 	}
 		
-	std::map<int, draw_frame> operator()(const struct video_format_desc& format_desc)
+	std::map<int, draw_frame> operator()(const video_format_desc& format_desc)
 	{		
 		caspar::timer frame_timer;
 
 		auto frames = executor_.invoke([=]() -> std::map<int, draw_frame>
 		{
 
-			std::map<int, class draw_frame> frames;
+			std::map<int, draw_frame> frames;
 			
 			try
 			{			
@@ -400,7 +400,7 @@ std::future<std::shared_ptr<frame_producer>> stage::foreground(int index) { retu
 std::future<std::shared_ptr<frame_producer>> stage::background(int index) { return impl_->background(index); }
 std::future<boost::property_tree::wptree> stage::info() const{ return impl_->info(); }
 std::future<boost::property_tree::wptree> stage::info(int index) const{ return impl_->info(index); }
-std::map<int, class draw_frame> stage::operator()(const video_format_desc& format_desc){return (*impl_)(format_desc);}
+std::map<int, draw_frame> stage::operator()(const video_format_desc& format_desc){return (*impl_)(format_desc);}
 monitor::subject& stage::monitor_output(){return *impl_->monitor_subject_;}
 //void stage::subscribe(const frame_observable::observer_ptr& o) {impl_->frames_subject_.subscribe(o);}
 //void stage::unsubscribe(const frame_observable::observer_ptr& o) {impl_->frames_subject_.unsubscribe(o);}

@@ -23,11 +23,13 @@
 
 #include <common/memory.h>
 
+#include <core/fwd.h>
+
 #include <string>
 #include <vector>
 
 namespace caspar { namespace core {
 	
-spl::shared_ptr<class frame_producer> create_freehand_producer(const spl::shared_ptr<class frame_factory>& frame_factory, const std::vector<std::wstring>& params);
+spl::shared_ptr<frame_producer> create_freehand_producer(const spl::shared_ptr<frame_factory>& frame_factory, const std::vector<std::wstring>& params);
 
 }}

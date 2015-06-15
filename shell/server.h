@@ -25,20 +25,13 @@
 #include <common/future_fwd.h>
 
 #include <core/monitor/monitor.h>
+#include <core/fwd.h>
 
 #include <boost/noncopyable.hpp>
 
 #include <vector>
 
 namespace caspar {
-
-namespace core {
-	class video_channel;
-	class thumbnail_generator;
-	struct media_info_repository;
-	class system_info_provider_repository;
-	class cg_producer_registry;
-}
 
 class server final : public boost::noncopyable
 {

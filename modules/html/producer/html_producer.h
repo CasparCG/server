@@ -23,22 +23,12 @@
 
 #include <common/memory.h>
 
-#include <core/producer/frame_producer.h>
-#include <core/video_format.h>
+#include <core/fwd.h>
 
 #include <string>
 #include <vector>
 
-namespace caspar {
-
-namespace core {
-
-class frame_producer;
-class frame_factory;
-
-}
-
-namespace html {
+namespace caspar { namespace html {
 
 spl::shared_ptr<core::frame_producer> create_producer(
 		const spl::shared_ptr<core::frame_factory>& frame_factory,
