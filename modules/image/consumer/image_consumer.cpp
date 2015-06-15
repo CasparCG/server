@@ -135,7 +135,7 @@ public:
 
 	int buffer_depth() const override
 	{
-		return 0;
+		return -1;
 	}
 
 	int index() const override
