@@ -23,18 +23,13 @@
 
 #include <common/memory.h>
 
+#include <core/fwd.h>
+
 #include <boost/property_tree/ptree_fwd.hpp>
 
 #include <string>
 
-namespace caspar { 
-
-namespace core {
-	class frame_consumer;
-	struct interaction_sink;
-}
-	 
-namespace newtek {
+namespace caspar { namespace newtek {
 
 spl::shared_ptr<core::frame_consumer> create_ivga_consumer(const std::vector<std::wstring>& params, core::interaction_sink*);
 spl::shared_ptr<core::frame_consumer> create_preconfigured_ivga_consumer(const boost::property_tree::wptree& ptree, core::interaction_sink*);

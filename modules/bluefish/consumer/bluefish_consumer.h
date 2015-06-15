@@ -23,18 +23,13 @@
 
 #include <common/memory.h>
 
-#include <boost/property_tree/ptree.hpp>
+#include <core/fwd.h>
+
+#include <boost/property_tree/ptree_fwd.hpp>
 
 #include <string>
 
-namespace caspar { 
-
-namespace core {
-	class frame_consumer;
-	struct interaction_sink;
-}
-	 
-namespace bluefish {
+namespace caspar { namespace bluefish {
 
 spl::shared_ptr<core::frame_consumer> create_consumer(
 		const std::vector<std::wstring>& params, core::interaction_sink*);

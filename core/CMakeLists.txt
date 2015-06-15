@@ -111,6 +111,7 @@ set(HEADERS
 		producer/stage.h
 		producer/variable.h
 
+		fwd.h
 		module_dependencies.h
 		system_info_provider.h
 		StdAfx.h

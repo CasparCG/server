@@ -22,11 +22,8 @@
 #pragma once
 
 #include <common/memory.h>
-#include <common/forward.h>
-#include <common/reactive.h>
 
-FORWARD2(caspar, core, class video_channel);
-FORWARD2(caspar, core, class frame_producer);
+#include <core/fwd.h>
 
 namespace caspar { namespace reroute {
 	

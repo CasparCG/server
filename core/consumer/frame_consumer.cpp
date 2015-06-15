@@ -91,7 +91,7 @@ public:
 	}
 	
 	std::future<bool> send(const_frame frame) override													{return consumer_->send(std::move(frame));}
-	virtual void initialize(const struct video_format_desc& format_desc, int channel_index)	override	{return consumer_->initialize(format_desc, channel_index);}
+	virtual void initialize(const video_format_desc& format_desc, int channel_index)	override	{return consumer_->initialize(format_desc, channel_index);}
 	std::wstring print() const override																	{return consumer_->print();}	
 	std::wstring name() const override																	{return consumer_->name();}
 	boost::property_tree::wptree info() const override 													{return consumer_->info();}
@@ -120,7 +120,7 @@ public:
 	}
 	
 	std::future<bool> send(const_frame frame) override													{return consumer_->send(std::move(frame));}
-	virtual void initialize(const struct video_format_desc& format_desc, int channel_index)	override	{return consumer_->initialize(format_desc, channel_index);}
+	virtual void initialize(const video_format_desc& format_desc, int channel_index)	override	{return consumer_->initialize(format_desc, channel_index);}
 	std::wstring print() const override																	{return consumer_->print();}
 	std::wstring name() const override																	{return consumer_->name();}
 	boost::property_tree::wptree info() const override 													{return consumer_->info();}
@@ -164,7 +164,7 @@ public:
 		}
 	}
 
-	virtual void initialize(const struct video_format_desc& format_desc, int channel_index)		
+	virtual void initialize(const video_format_desc& format_desc, int channel_index)		
 	{
 		format_desc_	= format_desc;
 		channel_index_	= channel_index;
