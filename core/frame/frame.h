@@ -46,7 +46,7 @@ public:
 			
 	// Properties
 			
-	const pixel_format_desc& pixel_format_desc() const;
+	const core::pixel_format_desc& pixel_format_desc() const;
 
 	const array<std::uint8_t>& image_data(std::size_t index = 0) const;
 	const core::audio_buffer& audio_data() const;
@@ -95,7 +95,7 @@ public:
 				
 	// Properties
 				
-	const pixel_format_desc& pixel_format_desc() const;
+	const core::pixel_format_desc& pixel_format_desc() const;
 
 	array<const std::uint8_t> image_data(int index = 0) const;
 	const core::audio_buffer& audio_data() const;
