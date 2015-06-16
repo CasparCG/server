@@ -10,17 +10,25 @@
 
 namespace caspar {
 
-class param_comparer {
-		const std::wstring& lhs;
-	public:
-		explicit param_comparer(const std::wstring& p) : lhs(p) {}
-		bool operator()(const std::wstring& rhs) { return boost::iequals(lhs, rhs); }
-	};
+class param_comparer
+{
+	const std::wstring& lhs;
+public:
+	explicit param_comparer(const std::wstring& p) : lhs(p) {}
+	bool operator()(const std::wstring& rhs) { return boost::iequals(lhs, rhs); }
+};
 
 template<typename C>
 bool contains_param(const std::wstring& name, C&& params)
 {
 	return std::find_if(params.begin(), params.end(), param_comparer(name)) != params.end();
+}
+
+template<typename C>
+void replace_placeholders(const std::wstring& placeholder, const std::wstring& replacement, C&& params)
+{
+	for (auto& param : params)
+		boost::ireplace_all(param, placeholder, replacement);
 }
 
 template<typename T, typename C>

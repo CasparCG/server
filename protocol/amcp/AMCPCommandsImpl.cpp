@@ -880,11 +880,10 @@ bool AddCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		//create_consumer still expects all parameters to be uppercase
-		for (auto& str : parameters())
-		{
-			boost::to_upper(str);
-		}
+		replace_placeholders(
+				L"<CLIENT_IP_ADDRESS>",
+				this->client()->address(),
+				parameters());
 
 		core::diagnostics::scoped_call_context save;
 		core::diagnostics::call_context::for_thread().video_channel = channel_index() + 1;
@@ -918,11 +917,10 @@ bool RemoveCommand::DoExecute()
 		auto index = layer_index(std::numeric_limits<int>::min());
 		if(index == std::numeric_limits<int>::min())
 		{
-			//create_consumer still expects all parameters to be uppercase
-			for (auto& str : parameters())
-			{
-				boost::to_upper(str);
-			}
+			replace_placeholders(
+					L"<CLIENT_IP_ADDRESS>",
+					this->client()->address(),
+					parameters());
 
 			index = create_consumer(parameters(), &channel()->stage())->index();
 		}
