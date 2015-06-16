@@ -259,7 +259,7 @@ struct scene_producer::impl
 			auto action = iter->second.action;
 
 			if (action == mark_action::stop || action == mark_action::jump_to || action == mark_action::remove)
-				return *iter;
+				return std::make_pair(iter->first, iter->second);
 		}
 
 		return boost::none;
@@ -277,7 +277,7 @@ struct scene_producer::impl
 			auto action = iter->second.action;
 
 			if (action == mark_action::start)
-				return *iter;
+				return std::make_pair(iter->first, iter->second);
 		}
 
 		return boost::none;
