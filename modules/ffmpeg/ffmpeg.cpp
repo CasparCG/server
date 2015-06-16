@@ -24,6 +24,7 @@
 #include "ffmpeg.h"
 
 #include "consumer/ffmpeg_consumer.h"
+#include "consumer/streaming_consumer.h"
 #include "producer/ffmpeg_producer.h"
 #include "producer/util/util.h"
 
@@ -247,7 +248,9 @@ void init(core::module_dependencies dependencies)
     avcodec_register_all();
 	
 	core::register_consumer_factory(create_consumer);
+	core::register_consumer_factory(create_streaming_consumer);
 	core::register_preconfigured_consumer_factory(L"file", create_preconfigured_consumer);
+	core::register_preconfigured_consumer_factory(L"stream", create_preconfigured_streaming_consumer);
 	core::register_producer_factory(create_producer);
 	
 	dependencies.media_info_repo->register_extractor(

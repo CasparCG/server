@@ -852,7 +852,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(
 		const std::vector<std::wstring>& params, core::interaction_sink*)
 {
 	auto params2 = params;
-	auto separate_key_it = std::find(params2.begin(), params2.end(), L"SEPARATE_KEY");
+	auto separate_key_it = std::find_if(params2.begin(), params2.end(), param_comparer(L"SEPARATE_KEY"));
 	bool separate_key = false;
 
 	if (separate_key_it != params2.end())

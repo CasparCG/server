@@ -167,10 +167,10 @@ spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<fram
 		return core::frame_producer::empty();
 
 	uint32_t value = 0;
-	if(!try_get_color(params[0], value))
+	if(!try_get_color(params.at(0), value))
 		return core::frame_producer::empty();
 
-	return spl::make_shared<color_producer>(frame_factory, params[0]);
+	return spl::make_shared<color_producer>(frame_factory, params.at(0));
 }
 
 draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, uint32_t value)
