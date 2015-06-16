@@ -169,7 +169,7 @@ spl::shared_ptr<core::frame_producer> create_ct_producer(
 
 	auto flash_producer = flash::create_producer(frame_factory, format_desc, {});
 	auto producer = flash_producer;
-	flash_cg_proxy(producer, env::media_folder()).add(0, params[0], true, L"", L"");
+	flash_cg_proxy(producer, env::media_folder()).add(0, params.at(0), true, L"", L"");
 
 	return producer;
 }

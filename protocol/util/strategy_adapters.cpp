@@ -40,7 +40,7 @@ public:
 	{
 	}
 
-	virtual void parse(const std::basic_string<char>& data)
+	void parse(const std::basic_string<char>& data) override
 	{
 		auto utf_data = boost::locale::conv::to_utf<wchar_t>(data, codepage_);
 
@@ -65,29 +65,33 @@ public:
 		CASPAR_LOG(info) << "from_unicode_client_connection destroyed.";
 	}
 
-	virtual void send(std::basic_string<wchar_t>&& data)
+	void send(std::basic_string<wchar_t>&& data) override
 	{
 		auto str = boost::locale::conv::from_utf<wchar_t>(std::move(data), codepage_);
 
 		client_->send(std::move(str));
 	}
 
-	virtual void disconnect()
+	void disconnect() override
 	{
 		client_->disconnect();
 	}
 
-	virtual std::wstring print() const
+	std::wstring print() const override
 	{
 		return client_->print();
 	}
 
+	std::wstring address() const override
+	{
+		return client_->address();
+	}
 
-	void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound)
+	void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound) override
 	{
 		client_->add_lifecycle_bound_object(key, lifecycle_bound);
 	}
-	std::shared_ptr<void> remove_lifecycle_bound_object(const std::wstring& key)
+	std::shared_ptr<void> remove_lifecycle_bound_object(const std::wstring& key) override
 	{
 		return client_->remove_lifecycle_bound_object(key);
 	}
@@ -168,7 +172,7 @@ public:
 		CASPAR_LOG(info) << "legacy_strategy_adapter destroyed.";
 	}
 
-	virtual void parse(const std::basic_string<wchar_t>& data)
+	void parse(const std::basic_string<wchar_t>& data) override
 	{
 		strategy_->Parse(data, client_info_);
 	}

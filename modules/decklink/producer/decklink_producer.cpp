@@ -364,7 +364,7 @@ public:
 
 spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& out_format_desc, const std::vector<std::wstring>& params)
 {
-	if(params.empty() || !boost::iequals(params[0], "decklink"))
+	if(params.empty() || !boost::iequals(params.at(0), "decklink"))
 		return core::frame_producer::empty();
 
 	auto device_index	= get_param(L"DEVICE", params, -1);
