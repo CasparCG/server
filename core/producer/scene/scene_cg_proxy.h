@@ -42,7 +42,7 @@ public:
 	std::wstring template_host_info() override;
 private:
 	struct impl;
-	spl::unique_ptr<impl> impl_;
+	spl::shared_ptr<impl> impl_;
 };
 
 }}}
