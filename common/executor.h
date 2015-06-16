@@ -91,6 +91,11 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 		
+		join();
+	}
+
+	void join()
+	{
 		thread_.join();
 	}
 

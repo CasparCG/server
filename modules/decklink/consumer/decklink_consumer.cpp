@@ -39,6 +39,7 @@
 #include <common/future.h>
 #include <common/cache_aligned_vector.h>
 #include <common/timer.h>
+#include <common/param.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/diagnostics/call_context.h>
@@ -580,26 +581,26 @@ public:
 spl::shared_ptr<core::frame_consumer> create_consumer(
 		const std::vector<std::wstring>& params, core::interaction_sink*)
 {
-	if(params.size() < 1 || params[0] != L"DECKLINK")
+	if (params.size() < 1 || !boost::iequals(params.at(0), L"DECKLINK"))
 		return core::frame_consumer::empty();
 	
 	configuration config;
 		
-	if(params.size() > 1)
-		config.device_index = boost::lexical_cast<int>(params[1]);
+	if (params.size() > 1)
+		config.device_index = boost::lexical_cast<int>(params.at(1));
 	
-	if(std::find(params.begin(), params.end(), L"INTERNAL_KEY")			!= params.end())
+	if (contains_param(L"INTERNAL_KEY", params))
 		config.keyer = configuration::keyer_t::internal_keyer;
-	else if(std::find(params.begin(), params.end(), L"EXTERNAL_KEY")	!= params.end())
+	else if (contains_param(L"EXTERNAL_KEY", params))
 		config.keyer = configuration::keyer_t::external_keyer;
 	else
 		config.keyer = configuration::keyer_t::default_keyer;
 
-	if(std::find(params.begin(), params.end(), L"LOW_LATENCY")	 != params.end())
+	if (contains_param(L"LOW_LATENCY", params))
 		config.latency = configuration::latency_t::low_latency;
 
-	config.embedded_audio	= std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
-	config.key_only			= std::find(params.begin(), params.end(), L"KEY_ONLY")		 != params.end();
+	config.embedded_audio	= contains_param(L"EMBEDDED_AUDIO", params);
+	config.key_only			= contains_param(L"KEY_ONLY", params);
 
 	return spl::make_shared<decklink_consumer_proxy>(config);
 }
