@@ -40,6 +40,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/timer.hpp>
 #include <boost/thread/once.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <tbb/concurrent_queue.h>
 
@@ -262,7 +263,7 @@ public:
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params, core::interaction_sink*)
 {
-	if(params.size() < 1 || params[0] != L"AUDIO")
+	if(params.size() < 1 || !boost::iequals(params.at(0), L"AUDIO"))
 		return core::frame_consumer::empty();
 
 	return spl::make_shared<oal_consumer>();

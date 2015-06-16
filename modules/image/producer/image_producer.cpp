@@ -186,13 +186,13 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 		L".j2c"
 	};
 
-	if (boost::iequals(params[0], L"[IMG_SEQUENCE]"))
+	if (boost::iequals(params.at(0), L"[IMG_SEQUENCE]"))
 	{
 		if (params.size() != 2)
 			return core::frame_producer::empty();
 
-		auto dir = boost::filesystem::path(env::media_folder() + params[1]).parent_path();
-		auto basename = boost::filesystem::basename(params[1]);
+		auto dir = boost::filesystem::path(env::media_folder() + params.at(1)).parent_path();
+		auto basename = boost::filesystem::basename(params.at(1));
 		std::set<std::wstring> files;
 		boost::filesystem::directory_iterator end;
 
@@ -234,17 +234,17 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 
 		return core::create_const_producer(std::move(frames), width, height);
 	}
-	else if(boost::iequals(params[0], L"[PNG_BASE64]"))
+	else if(boost::iequals(params.at(0), L"[PNG_BASE64]"))
 	{
 		if (params.size() < 2)
 			return core::frame_producer::empty();
 
-		auto png_data = from_base64(std::string(params[1].begin(), params[1].end()));
+		auto png_data = from_base64(std::string(params.at(1).begin(), params.at(1).end()));
 
 		return spl::make_shared<image_producer>(frame_factory, png_data.data(), png_data.size());
 	}
 
-	std::wstring filename = env::media_folder() + params[0];
+	std::wstring filename = env::media_folder() + params.at(0);
 
 	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
 	{
