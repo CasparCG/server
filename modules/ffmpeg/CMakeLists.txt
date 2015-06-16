@@ -3,6 +3,7 @@ project (ffmpeg)
 
 set(SOURCES
 		consumer/ffmpeg_consumer.cpp
+		consumer/streaming_consumer.cpp
 
 		producer/audio/audio_decoder.cpp
 
@@ -20,12 +21,15 @@ set(SOURCES
 		producer/ffmpeg_producer.cpp
 		producer/tbb_avcodec.cpp
 
+		util/error.cpp
+
 		ffmpeg.cpp
 		ffmpeg_error.cpp
 		StdAfx.cpp
 )
 set(HEADERS
 		consumer/ffmpeg_consumer.h
+		consumer/streaming_consumer.h
 
 		producer/audio/audio_decoder.h
 
@@ -43,6 +47,8 @@ set(HEADERS
 
 		producer/ffmpeg_producer.h
 		producer/tbb_avcodec.h
+
+		util/error.h
 
 		ffmpeg.h
 		ffmpeg_error.h

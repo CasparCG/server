@@ -63,6 +63,7 @@ void deduce_expression(variable& var, const variable_repository& repo)
 
 void init(module_dependencies dependencies)
 {
+	register_producer_factory(create_xml_scene_producer);
 	dependencies.cg_registry->register_cg_producer(
 			L"scene",
 			{ L".scene" },
@@ -89,7 +90,7 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 	if (params.empty())
 		return core::frame_producer::empty();
 
-	std::wstring filename = env::template_folder() + L"/" + params[0] + L".scene";
+	std::wstring filename = env::template_folder() + L"/" + params.at(0) + L".scene";
 	
 	if (!boost::filesystem::is_regular_file(boost::filesystem::path(filename)))
 		return core::frame_producer::empty();

@@ -173,10 +173,10 @@ public:
 
 spl::shared_ptr<core::frame_consumer> create_ivga_consumer(const std::vector<std::wstring>& params, core::interaction_sink*)
 {
-	if(params.size() < 1 || params[0] != L"NEWTEK_IVGA")
+	if (params.size() < 1 || !boost::iequals(params.at(0), L"NEWTEK_IVGA"))
 		return core::frame_consumer::empty();
 
-	const auto provide_sync = get_param(L"PROVIDE_SYNC", params, true);
+	const auto provide_sync = !contains_param(L"DONT_PROVIDE_SYNC", params);
 
 	return spl::make_shared<newtek_ivga_consumer>(provide_sync);
 }

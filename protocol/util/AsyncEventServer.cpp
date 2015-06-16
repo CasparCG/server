@@ -70,7 +70,7 @@ class connection : public spl::enable_shared_from_this<connection>
 		explicit connection_holder(std::weak_ptr<connection> conn) : connection_(std::move(conn))
 		{}
 
-		virtual void send(std::basic_string<char>&& data)
+		void send(std::basic_string<char>&& data) override
 		{
 			auto conn = connection_.lock();
 
@@ -78,7 +78,7 @@ class connection : public spl::enable_shared_from_this<connection>
 				conn->send(std::move(data));
 		}
 
-		virtual void disconnect()
+		void disconnect() override
 		{
 			auto conn = connection_.lock();
 
@@ -86,7 +86,7 @@ class connection : public spl::enable_shared_from_this<connection>
 				conn->disconnect();
 		}
 
-		virtual std::wstring print() const
+		std::wstring print() const override
 		{
 			auto conn = connection_.lock();
 
@@ -96,14 +96,25 @@ class connection : public spl::enable_shared_from_this<connection>
 				return L"[destroyed-connection]";
 		}
 
-		virtual void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound)
+		std::wstring address() const override
+		{
+			auto conn = connection_.lock();
+
+			if (conn)
+				return conn->address();
+			else
+				return L"[destroyed-connection]";
+		}
+
+		void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound) override
 		{
 			auto conn = connection_.lock();
 
 			if (conn)
 				return conn->add_lifecycle_bound_object(key, lifecycle_bound);
 		}
-		virtual std::shared_ptr<void> remove_lifecycle_bound_object(const std::wstring& key)
+
+		std::shared_ptr<void> remove_lifecycle_bound_object(const std::wstring& key) override
 		{
 			auto conn = connection_.lock();
 
@@ -130,6 +141,11 @@ public:
 	std::wstring print() const
 	{
 		return L"[" + name_ + L"]";
+	}
+
+	std::wstring address() const
+	{
+		return u16(socket_->local_endpoint().address().to_string());
 	}
 	
 	virtual void send(std::string&& data)

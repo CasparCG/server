@@ -34,6 +34,7 @@
 #include <common/prec_timer.h>
 #include <common/future.h>
 #include <common/timer.h>
+#include <common/param.h>
 
 //#include <windows.h>
 
@@ -48,6 +49,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/thread.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
@@ -646,21 +648,20 @@ public:
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params, core::interaction_sink* sink)
 {
-	if(params.size() < 1 || params[0] != L"SCREEN")
+	if (params.size() < 1 || !boost::iequals(params.at(0), L"SCREEN"))
 		return core::frame_consumer::empty();
 	
 	configuration config;
 		
-	if(params.size() > 1)
-		config.screen_index = boost::lexical_cast<int>(params[1]);
+	if (params.size() > 1)
+		config.screen_index = boost::lexical_cast<int>(params.at(1));
 		
-	config.windowed		= std::find(params.begin(), params.end(), L"FULLSCREEN") == params.end();
-	config.key_only		= std::find(params.begin(), params.end(), L"KEY_ONLY") != params.end();
-	config.interactive	= std::find(params.begin(), params.end(), L"NON_INTERACTIVE") == params.end();
+	config.windowed		= !contains_param(L"FULLSCREEN", params);
+	config.key_only		=  contains_param(L"KEY_ONLY", params);
+	config.interactive	= !contains_param(L"NON_INTERACTIVE", params);
 
-	auto name_it	= std::find(params.begin(), params.end(), L"NAME");
-	if(name_it != params.end() && ++name_it != params.end())
-		config.name = *name_it;
+	if (contains_param(L"NAME", params))
+		config.name = get_param(L"NAME", params);
 
 	return spl::make_shared<screen_consumer_proxy>(config, sink);
 }
@@ -669,10 +670,10 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(const boost:
 {
 	configuration config;
 	config.name				= ptree.get(L"name",				config.name);
-	config.screen_index		= ptree.get(L"device",				config.screen_index+1)-1;
+	config.screen_index		= ptree.get(L"device",				config.screen_index + 1) - 1;
 	config.windowed			= ptree.get(L"windowed",			config.windowed);
-	config.key_only			= ptree.get(L"key-only",				config.key_only);
-	config.auto_deinterlace	= ptree.get(L"auto-deinterlace",		config.auto_deinterlace);
+	config.key_only			= ptree.get(L"key-only",			config.key_only);
+	config.auto_deinterlace	= ptree.get(L"auto-deinterlace",	config.auto_deinterlace);
 	config.vsync			= ptree.get(L"vsync",				config.vsync);
 	config.interactive		= ptree.get(L"interactive",			config.interactive);
 

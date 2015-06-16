@@ -29,34 +29,20 @@
 #include "protocol_strategy.h"
 
 namespace caspar { namespace IO {
-/*
-class ClientInfo 
-{
-protected:
-	ClientInfo(){}
 
-public:
-	virtual ~ClientInfo(){}
-
-	virtual void Send(const std::wstring& data) = 0;
-	virtual void Disconnect() = 0;
-	virtual std::wstring print() const = 0;
-	virtual void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound) = 0;
-	virtual std::shared_ptr<void> remove_lifecycle_bound_object(const std::wstring& key) = 0;
-};
-*/
 typedef spl::shared_ptr<client_connection<wchar_t>> ClientInfoPtr;
 
 struct ConsoleClientInfo : public client_connection<wchar_t>
 {
-	virtual void send(std::wstring&& data)
+	void send(std::wstring&& data) override
 	{
 		std::wcout << (L"#" + caspar::log::replace_nonprintable_copy(data, L'?'));
 	}
-	virtual void disconnect() {}
-	virtual std::wstring print() const {return L"Console";}
-	virtual void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound) {}
-	virtual std::shared_ptr<void> remove_lifecycle_bound_object(const std::wstring& key) { return std::shared_ptr<void>(); }
+	void disconnect() override {}
+	std::wstring print() const override {return L"Console";}
+	std::wstring address() const override { return L"127.0.0.1"; }
+	void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound) override {}
+	std::shared_ptr<void> remove_lifecycle_bound_object(const std::wstring& key) override { return std::shared_ptr<void>(); }
 };
 
 }}

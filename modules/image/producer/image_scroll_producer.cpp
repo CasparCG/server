@@ -410,7 +410,7 @@ spl::shared_ptr<core::frame_producer> create_scroll_producer(const spl::shared_p
 		L".j2k",
 		L".j2c"
 	};
-	std::wstring filename = env::media_folder() + params[0];
+	std::wstring filename = env::media_folder() + params.at(0);
 	
 	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
 	{

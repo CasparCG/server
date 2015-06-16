@@ -32,6 +32,7 @@
 #include <common/diagnostics/graph.h>
 #include <common/array.h>
 #include <common/memshfl.h>
+#include <common/param.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/mixer/audio/audio_util.h>
@@ -43,6 +44,7 @@
 #include <boost/timer.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <asmlib.h>
 
@@ -374,13 +376,13 @@ public:
 spl::shared_ptr<core::frame_consumer> create_consumer(
 		const std::vector<std::wstring>& params, core::interaction_sink*)
 {
-	if(params.size() < 1 || params[0] != L"BLUEFISH")
+	if(params.size() < 1 || !boost::iequals(params.at(0), L"BLUEFISH"))
 		return core::frame_consumer::empty();
 
-	const auto device_index = params.size() > 1 ? boost::lexical_cast<int>(params[1]) : 1;
+	const auto device_index = params.size() > 1 ? boost::lexical_cast<int>(params.at(1)) : 1;
 
-	const auto embedded_audio = std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
-	const auto key_only		  = std::find(params.begin(), params.end(), L"KEY_ONLY")	   != params.end();
+	const auto embedded_audio	= contains_param(L"EMBEDDED_AUDIO", params);
+	const auto key_only			= contains_param(L"KEY_ONLY", params);
 
 	return spl::make_shared<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
 }
