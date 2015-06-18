@@ -44,6 +44,7 @@
 #include <tbb/spin_mutex.h>
 
 #include <boost/property_tree/ptree.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include <string>
 

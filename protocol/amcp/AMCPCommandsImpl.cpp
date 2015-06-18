@@ -51,8 +51,6 @@
 #include <core/diagnostics/osd_graph.h>
 #include <core/system_info_provider.h>
 
-#include <modules/reroute/producer/reroute_producer.h>
-
 #include <algorithm>
 #include <locale>
 #include <fstream>
@@ -319,35 +317,19 @@ bool ChannelGridCommand::DoExecute()
 		if(channel.channel != self)
 		{
 			core::diagnostics::call_context::for_thread().layer = index;
-			auto producer = reroute::create_producer(*channel.channel);
+			auto producer = create_producer(get_dependencies(channel.channel), L"route://" + boost::lexical_cast<std::wstring>(channel.channel->index()));
 			self->stage().load(index, producer, false);
 			self->stage().play(index);
 			index++;
 		}
 	}
 
-	int n = channels().size()-1;
-	double delta = 1.0/static_cast<double>(n);
-	for(int x = 0; x < n; ++x)
-	{
-		for(int y = 0; y < n; ++y)
-		{
-			int index = x+y*n+1;
-			auto transform = [=](frame_transform transform) -> frame_transform
-			{		
-				transform.image_transform.fill_translation[0]	= x*delta;
-				transform.image_transform.fill_translation[1]	= y*delta;
-				transform.image_transform.fill_scale[0]			= delta;
-				transform.image_transform.fill_scale[1]			= delta;
-				transform.image_transform.clip_translation[0]	= x*delta;
-				transform.image_transform.clip_translation[1]	= y*delta;
-				transform.image_transform.clip_scale[0]			= delta;
-				transform.image_transform.clip_scale[1]			= delta;			
-				return transform;
-			};
-			self->stage().apply_transform(index, transform);
-		}
-	}
+	MixerCommand mixer(client(), channels().back(), self->index(), -1);
+	auto num_channels = channels().size() - 1;
+	int square_side_length = std::ceil(std::sqrt(num_channels));
+	mixer.parameters().push_back(L"GRID");
+	mixer.parameters().push_back(boost::lexical_cast<std::wstring>(square_side_length));
+	mixer.Execute();
 
 	return true;
 }
@@ -953,7 +935,7 @@ bool LoadCommand::DoExecute()
 		core::diagnostics::scoped_call_context save;
 		core::diagnostics::call_context::for_thread().video_channel = channel_index() + 1;
 		core::diagnostics::call_context::for_thread().layer = layer_index();
-		auto pFP = create_producer(channel()->frame_factory(), channel()->video_format_desc(), parameters());
+		auto pFP = create_producer(get_dependencies(channel()), parameters());
 		channel()->stage().load(layer_index(), pFP, true);
 	
 		SetReplyString(L"202 LOAD OK\r\n");
@@ -1018,31 +1000,18 @@ bool LoadbgCommand::DoExecute()
 	//Perform loading of the clip
 	try
 	{
-		std::shared_ptr<core::frame_producer> pFP;
-		
-		static boost::wregex expr(LR"(\[(?<CHANNEL>\d+)\])", boost::regex::icase);
-			
 		core::diagnostics::scoped_call_context save;
 		core::diagnostics::call_context::for_thread().video_channel = channel_index() + 1;
 		core::diagnostics::call_context::for_thread().layer = layer_index();
 
-		boost::wsmatch what;
-		if(boost::regex_match(parameters().at(0), what, expr))
-		{
-			auto channel_index = boost::lexical_cast<int>(what["CHANNEL"].str());
-			pFP = reroute::create_producer(*channels().at(channel_index-1).channel); 
-		}
-		else
-		{
-			pFP = create_producer(channel()->frame_factory(), channel()->video_format_desc(), parameters());
-		}
+		auto pFP = create_producer(get_dependencies(channel()), parameters());
 		
 		if(pFP == frame_producer::empty())
 			CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(parameters().size() > 0 ? parameters()[0] : L""));
 
 		bool auto_play = contains_param(L"AUTO", parameters());
 
-		auto pFP2 = create_transition_producer(channel()->video_format_desc().field_mode, spl::make_shared_ptr(pFP), transitionInfo);
+		auto pFP2 = create_transition_producer(channel()->video_format_desc().field_mode, pFP, transitionInfo);
 		if(auto_play)
 			channel()->stage().load(layer_index(), pFP2, false, transitionInfo.duration); // TODO: LOOP
 		else
@@ -1272,7 +1241,7 @@ bool CGCommand::DoExecuteAdd() {
 	}
 
 	auto filename = parameters()[2];
-	auto proxy = cg_registry_->get_or_create_proxy(channel(), layer_index(core::cg_proxy::DEFAULT_LAYER), filename);
+	auto proxy = cg_registry_->get_or_create_proxy(channel(), get_dependencies(channel()), layer_index(core::cg_proxy::DEFAULT_LAYER), filename);
 
 	if (proxy == core::cg_proxy::empty())
 	{

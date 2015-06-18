@@ -107,7 +107,7 @@ public:
 	}
 
 	spl::shared_ptr<frame_producer> create_producer(
-			const spl::shared_ptr<video_channel>& video_channel,
+			const frame_producer_dependencies& dependencies,
 			const std::wstring& filename) const
 	{
 		auto found = find_record(filename);
@@ -115,10 +115,7 @@ public:
 		if (!found)
 			return frame_producer::empty();
 
-		return found->producer_factory(
-				video_channel->frame_factory(),
-				video_channel->video_format_desc(),
-				filename);
+		return found->producer_factory(dependencies, filename);
 	}
 
 	spl::shared_ptr<cg_proxy> get_proxy(const spl::shared_ptr<frame_producer>& producer) const
@@ -147,6 +144,7 @@ public:
 
 	spl::shared_ptr<cg_proxy> get_or_create_proxy(
 			const spl::shared_ptr<video_channel>& video_channel,
+			const frame_producer_dependencies& dependencies,
 			int render_layer,
 			const std::wstring& filename) const
 	{
@@ -167,10 +165,7 @@ public:
 			diagnostics::call_context::for_thread().video_channel = video_channel->index();
 			diagnostics::call_context::for_thread().layer = render_layer;
 
-			producer = found->producer_factory(
-					video_channel->frame_factory(),
-					video_channel->video_format_desc(),
-					filename);
+			producer = found->producer_factory(dependencies, filename);
 			video_channel->stage().load(render_layer, producer);
 			video_channel->stage().play(render_layer);
 		}
@@ -245,10 +240,10 @@ void cg_producer_registry::register_cg_producer(
 }
 
 spl::shared_ptr<frame_producer> cg_producer_registry::create_producer(
-		const spl::shared_ptr<video_channel>& video_channel,
+		const frame_producer_dependencies& dependencies,
 		const std::wstring& filename) const
 {
-	return impl_->create_producer(video_channel, filename);
+	return impl_->create_producer(dependencies, filename);
 }
 
 spl::shared_ptr<cg_proxy> cg_producer_registry::get_proxy(
@@ -266,10 +261,11 @@ spl::shared_ptr<cg_proxy> cg_producer_registry::get_proxy(
 
 spl::shared_ptr<cg_proxy> cg_producer_registry::get_or_create_proxy(
 		const spl::shared_ptr<video_channel>& video_channel,
+		const frame_producer_dependencies& dependencies,
 		int render_layer,
 		const std::wstring& filename) const
 {
-	return impl_->get_or_create_proxy(video_channel, render_layer, filename);
+	return impl_->get_or_create_proxy(video_channel, dependencies, render_layer, filename);
 }
 
 std::string cg_producer_registry::read_meta_info(const std::wstring& filename) const

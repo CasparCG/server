@@ -68,7 +68,7 @@ private:
 	spl::unique_ptr<impl> impl_;
 };
 
-spl::shared_ptr<frame_producer> create_text_producer(const spl::shared_ptr<frame_factory>& frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params);
+spl::shared_ptr<frame_producer> create_text_producer(const frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params);
 
 
 }}

@@ -40,14 +40,17 @@ namespace caspar { namespace protocol { namespace CLK {
 
 class command_context
 {
-	bool										clock_loaded_ = false;
-	spl::shared_ptr<core::video_channel>		channel_;
-	spl::shared_ptr<core::cg_producer_registry>	cg_registry_;
+	bool												clock_loaded_ = false;
+	std::vector<spl::shared_ptr<core::video_channel>>	channels_;
+	spl::shared_ptr<core::video_channel>				channel_;
+	spl::shared_ptr<core::cg_producer_registry>			cg_registry_;
 public:
 	command_context(
+			const std::vector<spl::shared_ptr<core::video_channel>>& channels,
 			const spl::shared_ptr<core::video_channel>& channel,
 			const spl::shared_ptr<core::cg_producer_registry>& cg_registry)
-		: channel_(channel)
+		: channels_(channels)
+		, channel_(channel)
 		, cg_registry_(cg_registry)
 	{
 	}
@@ -56,7 +59,8 @@ public:
 	{
 		if (!clock_loaded_) 
 		{
-			cg_registry_->get_or_create_proxy(channel_, core::cg_proxy::DEFAULT_LAYER, L"hawrysklocka/clock")->add(
+			core::frame_producer_dependencies dependencies(channel_->frame_factory(), channels_, channel_->video_format_desc());
+			cg_registry_->get_or_create_proxy(channel_, dependencies, core::cg_proxy::DEFAULT_LAYER, L"hawrysklocka/clock")->add(
 				0, L"hawrysklocka/clock", true, L"", data);
 			clock_loaded_ = true;
 		}
@@ -153,11 +157,12 @@ clk_command_handler create_send_xml_handler(
 }
 
 void add_command_handlers(
-	clk_command_processor& processor, 
+	clk_command_processor& processor,
+	const std::vector<spl::shared_ptr<core::video_channel>>& channels,
 	const spl::shared_ptr<core::video_channel>& channel,
 	const spl::shared_ptr<core::cg_producer_registry>& cg_registry)
 {
-	auto context = spl::make_shared<command_context>(channel, cg_registry);
+	auto context = spl::make_shared<command_context>(channels, channel, cg_registry);
 
 	processor
 		.add_handler(L"DUR", 

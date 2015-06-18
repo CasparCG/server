@@ -57,6 +57,7 @@ set(HEADERS
 		consumer/frame_consumer.h
 		consumer/output.h
 		consumer/port.h
+		consumer/write_frame_consumer.h
 
 		diagnostics/call_context.h
 		diagnostics/osd_graph.h

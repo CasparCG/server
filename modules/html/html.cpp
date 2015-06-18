@@ -312,9 +312,9 @@ void init(core::module_dependencies dependencies)
 			{
 				return spl::make_shared<html_cg_proxy>(producer);
 			},
-			[](const spl::shared_ptr<core::frame_factory>& ff, const core::video_format_desc& f, const std::wstring& filename)
+			[](const core::frame_producer_dependencies& dependencies, const std::wstring& filename)
 			{
-				return html::create_producer(ff, f, { filename });
+				return html::create_producer(dependencies, { filename });
 			},
 			false
 	);

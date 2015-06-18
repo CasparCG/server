@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include <core/producer/frame_producer.h>
+#include <core/fwd.h>
 
 #include <common/memory.h>
 
@@ -30,8 +30,8 @@
 
 namespace caspar { namespace flash {
 
-spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params);
-spl::shared_ptr<core::frame_producer> create_swf_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params);
+spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params);
+spl::shared_ptr<core::frame_producer> create_swf_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params);
 
 std::wstring find_template(const std::wstring& templateName);
 
