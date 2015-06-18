@@ -57,8 +57,7 @@ typedef std::function<spl::shared_ptr<cg_proxy>(
 		const spl::shared_ptr<frame_producer>& producer
 	)> cg_proxy_factory;
 typedef std::function<spl::shared_ptr<frame_producer>(
-		const spl::shared_ptr<frame_factory>& factory,
-		const video_format_desc& format_desc,
+		const frame_producer_dependencies& dependencies,
 		const std::wstring& filename
 	)> cg_producer_factory;
 typedef std::function<std::string(const std::wstring& filename)> meta_info_extractor;
@@ -77,7 +76,7 @@ public:
 			bool reusable_producer_instance);
 
 	spl::shared_ptr<frame_producer> create_producer(
-			const spl::shared_ptr<video_channel>& video_channel,
+			const frame_producer_dependencies& dependencies,
 			const std::wstring& filename) const;
 	spl::shared_ptr<cg_proxy> get_proxy(
 			const spl::shared_ptr<frame_producer>& producer) const;
@@ -86,6 +85,7 @@ public:
 			int render_layer) const;
 	spl::shared_ptr<cg_proxy> get_or_create_proxy(
 			const spl::shared_ptr<video_channel>& video_channel,
+			const frame_producer_dependencies& dependencies,
 			int render_layer,
 			const std::wstring& filename) const;
 	std::string read_meta_info(const std::wstring& filename) const;

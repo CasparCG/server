@@ -160,14 +160,13 @@ public:
 };
 
 spl::shared_ptr<core::frame_producer> create_ct_producer(
-		const spl::shared_ptr<core::frame_factory> frame_factory,
-		const core::video_format_desc& format_desc,
+		const core::frame_producer_dependencies& dependencies,
 		const std::vector<std::wstring>& params)
 {
 	if (params.empty() || !boost::filesystem::exists(get_absolute(env::media_folder(), params.at(0)) + L".ct"))
 		return core::frame_producer::empty();
 
-	auto flash_producer = flash::create_producer(frame_factory, format_desc, {});
+	auto flash_producer = flash::create_producer(dependencies, {});
 	auto producer = flash_producer;
 	flash_cg_proxy(producer, env::media_folder()).add(0, params.at(0), true, L"", L"");
 
@@ -204,9 +203,9 @@ void init(core::module_dependencies dependencies)
 			{
 				return spl::make_shared<flash_cg_proxy>(producer);
 			},
-			[](const spl::shared_ptr<core::frame_factory>& ff, const core::video_format_desc& f, const std::wstring&)
+			[](const core::frame_producer_dependencies& dependencies, const std::wstring&)
 			{
-				return flash::create_producer(ff, f, { });
+				return flash::create_producer(dependencies, { });
 			},
 			true
 		);
