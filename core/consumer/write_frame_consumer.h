@@ -16,19 +16,31 @@
 * You should have received a copy of the GNU General Public License
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
-* Author: Robert Nagy, ronag89@gmail.com
+* Author: Cambell Prince, cambell.prince@gmail.com
 */
 
 #pragma once
 
-#include <core/producer/frame_producer.h>
+#include "../fwd.h"
 
+#include <common/memory.h>
+
+#include <boost/noncopyable.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
+
+#include <functional>
 #include <string>
 #include <vector>
 
-namespace caspar { namespace image {
-
-spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params);
-spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params);
+namespace caspar { namespace core {
+	
+struct write_frame_consumer : boost::noncopyable
+{
+	virtual ~write_frame_consumer() {}
+	
+	virtual void send(const draw_frame& frame) = 0;
+	virtual std::wstring print() const = 0;
+	//virtual boost::property_tree::wptree info() const = 0;
+};
 
 }}
