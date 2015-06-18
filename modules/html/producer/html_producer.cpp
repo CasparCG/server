@@ -454,11 +454,11 @@ namespace caspar {
 		class html_producer
 			: public core::frame_producer_base
 		{
-			core::monitor::subject				monitor_subject_;
-			const std::wstring					url_;
-			core::constraints					constraints_;
+			core::monitor::subject	monitor_subject_;
+			const std::wstring		url_;
+			core::constraints		constraints_;
 
-			CefRefPtr<html_client>				client_;
+			CefRefPtr<html_client>	client_;
 
 		public:
 			html_producer(
@@ -600,8 +600,7 @@ namespace caspar {
 		};
 
 		spl::shared_ptr<core::frame_producer> create_producer(
-				const spl::shared_ptr<core::frame_factory>& frame_factory,
-				const core::video_format_desc& format_desc,
+				const core::frame_producer_dependencies& dependencies,
 				const std::vector<std::wstring>& params)
 		{
 			const auto filename = env::template_folder() + params.at(0) + L".html";
@@ -618,8 +617,8 @@ namespace caspar {
 				return core::frame_producer::empty();
 
 			return core::create_destroy_proxy(spl::make_shared<html_producer>(
-					frame_factory,
-					format_desc,
+					dependencies.frame_factory,
+					dependencies.format_desc,
 					url));
 		}
 	}

@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+* Copyright 2013 Sveriges Television AB http://casparcg.com/
 *
 * This file is part of CasparCG (www.casparcg.com).
 *
@@ -21,14 +21,14 @@
 
 #pragma once
 
-#include <core/producer/frame_producer.h>
+#include <common/memory.h>
 
-#include <string>
-#include <vector>
+#include <core/fwd.h>
 
-namespace caspar { namespace image {
+namespace caspar { namespace reroute {
 
-spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params);
-spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params);
+spl::shared_ptr<core::frame_producer> create_channel_producer(
+		const core::frame_producer_dependencies& dependencies,
+		const spl::shared_ptr<core::video_channel>& channel);
 
 }}

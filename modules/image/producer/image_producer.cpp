@@ -169,7 +169,7 @@ public:
 	}
 };
 
-spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
 {
 	static const auto extensions = {
 		L".png",
@@ -221,7 +221,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 
 		for (auto& file : files)
 		{
-			auto frame = load_image(frame_factory, file);
+			auto frame = load_image(dependencies.frame_factory, file);
 
 			if (width == -1)
 			{
@@ -241,7 +241,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 
 		auto png_data = from_base64(std::string(params.at(1).begin(), params.at(1).end()));
 
-		return spl::make_shared<image_producer>(frame_factory, png_data.data(), png_data.size());
+		return spl::make_shared<image_producer>(dependencies.frame_factory, png_data.data(), png_data.size());
 	}
 
 	std::wstring filename = env::media_folder() + params.at(0);
@@ -256,12 +256,12 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 	if(ext == extensions.end())
 		return core::frame_producer::empty();
 
-	return spl::make_shared<image_producer>(frame_factory, *caspar::find_case_insensitive(filename + *ext));
+	return spl::make_shared<image_producer>(dependencies.frame_factory, *caspar::find_case_insensitive(filename + *ext));
 }
 
 
-spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
 {
-	return caspar::image::create_producer(frame_factory, format_desc, params);
+	return caspar::image::create_producer(dependencies, params);
 }
 }}

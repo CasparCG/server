@@ -131,14 +131,26 @@ private:
 	std::shared_ptr<impl> impl_;
 };
 
-typedef std::function<spl::shared_ptr<core::frame_producer>(const spl::shared_ptr<class frame_factory>&, const video_format_desc& format_desc, const std::vector<std::wstring>&)> producer_factory_t;
+struct frame_producer_dependencies
+{
+	spl::shared_ptr<core::frame_factory>		frame_factory;
+	std::vector<spl::shared_ptr<video_channel>>	channels;
+	video_format_desc							format_desc;
+
+	frame_producer_dependencies(
+			const spl::shared_ptr<core::frame_factory>& frame_factory,
+			const std::vector<spl::shared_ptr<video_channel>>& channels,
+			const video_format_desc& format_desc);
+};
+
+typedef std::function<spl::shared_ptr<core::frame_producer>(const frame_producer_dependencies&, const std::vector<std::wstring>&)> producer_factory_t;
 void register_producer_factory(const producer_factory_t& factory); // Not thread-safe.
 void register_thumbnail_producer_factory(const producer_factory_t& factory); // Not thread-safe.
 
-spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>&, const video_format_desc& format_desc, const std::vector<std::wstring>& params);
-spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<frame_factory>&, const video_format_desc& format_desc, const std::wstring& params);
+spl::shared_ptr<core::frame_producer> create_producer(const frame_producer_dependencies&, const std::vector<std::wstring>& params);
+spl::shared_ptr<core::frame_producer> create_producer(const frame_producer_dependencies&, const std::wstring& params);
 
 spl::shared_ptr<core::frame_producer> create_destroy_proxy(spl::shared_ptr<core::frame_producer> producer);
-spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const spl::shared_ptr<frame_factory>&, const video_format_desc& format_desc, const std::wstring& media_file);
+spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const frame_producer_dependencies&, const std::wstring& media_file);
 
 }}

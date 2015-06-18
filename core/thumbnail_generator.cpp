@@ -267,7 +267,9 @@ public:
 
 			try
 			{
-				producer = create_thumbnail_producer(image_mixer_, format_desc_, media_file);
+				producer = create_thumbnail_producer(
+						frame_producer_dependencies(image_mixer_, { }, format_desc_),
+						media_file);
 			}
 			catch (const boost::thread_interrupted&)
 			{
