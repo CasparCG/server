@@ -113,10 +113,10 @@ private:
 	bool DoExecute();
 };
 
-class LoadCommand : public AMCPChannelCommandBase<1>
+class LoadCommand : public AMCPChannelCommandBase<1>, AMCPChannelsAwareCommand
 {
 public:
-	LoadCommand(IO::ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index) : AMCPChannelCommandBase(client, channel, channel_index, layer_index)
+	LoadCommand(IO::ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index, const std::vector<channel_context>& channels) : AMCPChannelCommandBase(client, channel, channel_index, layer_index), AMCPChannelsAwareCommand(channels)
 	{}
 
 private:
@@ -200,7 +200,7 @@ public:
 	bool DoExecute();
 };
 
-class CGCommand : public AMCPChannelCommandBase<1>
+class CGCommand : public AMCPChannelCommandBase<1>, public AMCPChannelsAwareCommand
 {
 public:
 	CGCommand(
@@ -208,8 +208,10 @@ public:
 			const channel_context& channel,
 			unsigned int channel_index,
 			int layer_index,
-			const spl::shared_ptr<core::cg_producer_registry>& cg_registry)
+			const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
+			const std::vector<channel_context>& channels)
 		: AMCPChannelCommandBase(client, channel, channel_index, layer_index)
+		, AMCPChannelsAwareCommand(channels)
 		, cg_registry_(cg_registry)
 	{
 	}

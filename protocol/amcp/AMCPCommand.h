@@ -24,6 +24,7 @@
 #include "../util/ClientInfo.h"
 #include "amcp_shared.h"
 #include <core/consumer/frame_consumer.h>
+#include <core/producer/frame_producer.h>
 
 #include <boost/algorithm/string.hpp>
 
@@ -109,6 +110,15 @@ namespace amcp {
 		AMCPChannelsAwareCommand(const AMCPChannelsAwareCommand& rhs) : channels_(rhs.channels_) {}
 
 		const std::vector<channel_context>& channels() { return channels_; }
+		core::frame_producer_dependencies get_dependencies(const spl::shared_ptr<core::video_channel>& channel)
+		{
+			return core::frame_producer_dependencies(
+					channel->frame_factory(),
+					cpplinq::from(channels())
+							.select([](channel_context c) { return c.channel; })
+							.to_vector(),
+					channel->video_format_desc());
+		}
 
 	private:
 		const std::vector<channel_context>& channels_;

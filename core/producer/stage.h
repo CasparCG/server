@@ -21,8 +21,7 @@
 
 #pragma once
 
-#include "frame_producer.h"
-
+#include "../fwd.h"
 #include "../monitor/monitor.h"
 #include "../interaction/interaction_sink.h"
 
@@ -49,7 +48,7 @@ class stage final : public interaction_sink
 {
 	stage(const stage&);
 	stage& operator=(const stage&);
-public:	
+public:
 
 	// Static Members
 	
@@ -79,6 +78,9 @@ public:
 	std::future<void>				swap_layers(stage& other);
 	std::future<void>				swap_layer(int index, int other_index);
 	std::future<void>				swap_layer(int index, int other_index, stage& other);
+
+	void							add_layer_consumer(void* token, int layer, const spl::shared_ptr<write_frame_consumer>& layer_consumer);
+	void							remove_layer_consumer(void* token, int layer);
 
 	monitor::subject& monitor_output();	
 

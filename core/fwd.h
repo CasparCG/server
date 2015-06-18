@@ -44,4 +44,5 @@ FORWARD2(caspar, core, class thumbnail_generator);
 FORWARD2(caspar, core, class system_info_provider_repository);
 FORWARD2(caspar, core, class cg_producer_registry);
 FORWARD2(caspar, core, struct frame_transform);
-
+FORWARD2(caspar, core, struct write_frame_consumer);
+FORWARD2(caspar, core, struct frame_producer_dependencies);

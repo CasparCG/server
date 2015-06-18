@@ -28,6 +28,7 @@
 #include "../frame/draw_frame.h"
 #include "../frame/frame_factory.h"
 #include "../interaction/interaction_aggregator.h"
+#include "../consumer/write_frame_consumer.h"
 
 #include <common/executor.h>
 #include <common/future.h>
@@ -49,13 +50,15 @@ namespace caspar { namespace core {
 	
 struct stage::impl : public std::enable_shared_from_this<impl>
 {				
-	spl::shared_ptr<diagnostics::graph>							graph_;
-	spl::shared_ptr<monitor::subject>							monitor_subject_;
-	//reactive::basic_subject<std::map<int, draw_frame>>		frames_subject_;
-	std::map<int, layer>										layers_;	
-	std::map<int, tweened_transform>							tweens_;
-	interaction_aggregator										aggregator_;
-	executor													executor_;
+	spl::shared_ptr<diagnostics::graph>										graph_;
+	spl::shared_ptr<monitor::subject>										monitor_subject_;
+	//reactive::basic_subject<std::map<int, draw_frame>>					frames_subject_;
+	std::map<int, layer>													layers_;	
+	std::map<int, tweened_transform>										tweens_;
+	interaction_aggregator													aggregator_;
+	// map of layer -> map of tokens (src ref) -> layer_consumer
+	std::map<int, std::map<void*, spl::shared_ptr<write_frame_consumer>>>	layer_consumers_;
+	executor																executor_;
 public:
 	impl(spl::shared_ptr<diagnostics::graph> graph) 
 		: graph_(std::move(graph))
@@ -81,7 +84,11 @@ public:
 
 				for (auto& layer : layers_)	
 				{
-					frames[layer.first] = draw_frame::empty();	
+					// Prevent race conditions in parallel for each later
+					frames[layer.first] = draw_frame::empty();
+					tweens_[layer.first];
+					layer_consumers_[layer.first];
+
 					indices.push_back(layer.first);
 				}
 
@@ -114,9 +121,21 @@ public:
 	{
 		auto& layer		= layers_[index];
 		auto& tween		= tweens_[index];
-				
+		auto& consumers	= layer_consumers_[index];
+
 		auto frame  = layer.receive(format_desc);					
+		
+		if (!consumers.empty())
+		{
+			auto consumer_it = consumers | boost::adaptors::map_values;
+			tbb::parallel_for_each(consumer_it.begin(), consumer_it.end(), [&](decltype(*consumer_it.begin()) layer_consumer)
+			{
+				layer_consumer->send(frame);
+			});
+		}
+
 		auto frame1 = frame;
+		
 		frame1.transform() *= tween.fetch_and_tick(1);
 
 		if(format_desc.field_mode != core::field_mode::progressive)
@@ -306,7 +325,28 @@ public:
 			}, task_priority::high_priority);
 		}
 	}
-		
+
+	void add_layer_consumer(void* token, int layer, const spl::shared_ptr<write_frame_consumer>& layer_consumer)
+	{
+		executor_.begin_invoke([=]
+		{
+			layer_consumers_[layer].insert(std::make_pair(token, layer_consumer));
+		}, task_priority::high_priority);
+	}
+
+	void remove_layer_consumer(void* token, int layer)
+	{
+		executor_.begin_invoke([=]
+		{
+			auto& layer_map = layer_consumers_[layer];
+			layer_map.erase(token);
+			if (layer_map.empty())
+			{
+				layer_consumers_.erase(layer);
+			}
+		}, task_priority::high_priority);
+	}
+
 	std::future<std::shared_ptr<frame_producer>> foreground(int index)
 	{
 		return executor_.begin_invoke([=]() -> std::shared_ptr<frame_producer>
@@ -396,7 +436,8 @@ std::future<void> stage::clear(){ return impl_->clear(); }
 std::future<void> stage::swap_layers(stage& other){ return impl_->swap_layers(other); }
 std::future<void> stage::swap_layer(int index, int other_index){ return impl_->swap_layer(index, other_index); }
 std::future<void> stage::swap_layer(int index, int other_index, stage& other){ return impl_->swap_layer(index, other_index, other); }
-std::future<std::shared_ptr<frame_producer>> stage::foreground(int index) { return impl_->foreground(index); }
+void stage::add_layer_consumer(void* token, int layer, const spl::shared_ptr<write_frame_consumer>& layer_consumer){ impl_->add_layer_consumer(token, layer, layer_consumer); }
+void stage::remove_layer_consumer(void* token, int layer){ impl_->remove_layer_consumer(token, layer); }std::future<std::shared_ptr<frame_producer>> stage::foreground(int index) { return impl_->foreground(index); }
 std::future<std::shared_ptr<frame_producer>> stage::background(int index) { return impl_->background(index); }
 std::future<boost::property_tree::wptree> stage::info() const{ return impl_->info(); }
 std::future<boost::property_tree::wptree> stage::info(int index) const{ return impl_->info(index); }

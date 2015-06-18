@@ -73,18 +73,16 @@ void init(module_dependencies dependencies)
 				return spl::make_shared<core::scene::scene_cg_proxy>(producer);
 			},
 			[](
-			const spl::shared_ptr<core::frame_factory>& factory,
-			const core::video_format_desc& format_desc,
-			const std::wstring& filename)
+					const core::frame_producer_dependencies& dependencies,
+					const std::wstring& filename)
 			{
-				return create_xml_scene_producer(factory, format_desc, { filename });
+				return create_xml_scene_producer(dependencies, { filename });
 			},
 			false);
 }
 
 spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
-		const spl::shared_ptr<core::frame_factory>& frame_factory,
-		const core::video_format_desc& format_desc,
+		const core::frame_producer_dependencies& dependencies,
 		const std::vector<std::wstring>& params)
 {
 	if (params.empty())
@@ -106,7 +104,7 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 	int width = root.get<int>(L"scene.<xmlattr>.width");
 	int height = root.get<int>(L"scene.<xmlattr>.height");
 
-	auto scene = spl::make_shared<scene_producer>(width, height, format_desc);
+	auto scene = spl::make_shared<scene_producer>(width, height, dependencies.format_desc);
 
 	for (auto elem : root.get_child(L"scene.variables"))
 	{
@@ -129,7 +127,7 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 	for (auto& elem : root.get_child(L"scene.layers"))
 	{
 		auto id = elem.second.get<std::wstring>(L"<xmlattr>.id");
-		auto producer = create_producer(frame_factory, format_desc, elem.second.get<std::wstring>(L"producer"));
+		auto producer = create_producer(dependencies, elem.second.get<std::wstring>(L"producer"));
 		auto& layer = scene->create_layer(producer, 0, 0, id);
 		auto variable_prefix = L"layer." + id + L".";
 
