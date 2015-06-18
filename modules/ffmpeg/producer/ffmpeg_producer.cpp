@@ -397,7 +397,7 @@ public:
 	}
 };
 
-spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
 {		
 	auto filename = probe_stem(env::media_folder() + L"/" + params.at(0));
 
@@ -409,7 +409,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 	auto length		= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
 	auto filter_str = get_param(L"FILTER", params, L""); 	
 	
-	return create_destroy_proxy(spl::make_shared_ptr(std::make_shared<ffmpeg_producer>(frame_factory, format_desc, filename, filter_str, loop, start, length)));
+	return create_destroy_proxy(spl::make_shared_ptr(std::make_shared<ffmpeg_producer>(dependencies.frame_factory, dependencies.format_desc, filename, filter_str, loop, start, length)));
 }
 
 }}

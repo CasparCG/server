@@ -41,6 +41,7 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_transform.h>
 #include <core/frame/frame_factory.h>
+#include <core/producer/frame_producer.h>
 #include <core/monitor/monitor.h>
 #include <core/mixer/audio/audio_mixer.h>
 
@@ -362,7 +363,7 @@ public:
 	}
 };
 
-spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& out_format_desc, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
 {
 	if(params.empty() || !boost::iequals(params.at(0), "decklink"))
 		return core::frame_producer::empty();
@@ -376,9 +377,9 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 	auto in_format_desc = core::video_format_desc(get_param(L"FORMAT", params, L"INVALID"));
 		
 	if(in_format_desc.format == core::video_format::invalid)
-		in_format_desc = out_format_desc;
+		in_format_desc = dependencies.format_desc;
 			
-	return create_destroy_proxy(spl::make_shared<decklink_producer_proxy>(in_format_desc, frame_factory, out_format_desc, device_index, filter_str, length));
+	return create_destroy_proxy(spl::make_shared<decklink_producer_proxy>(in_format_desc, dependencies.frame_factory, dependencies.format_desc, device_index, filter_str, length));
 }
 
 }}

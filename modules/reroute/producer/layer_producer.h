@@ -16,19 +16,17 @@
 * You should have received a copy of the GNU General Public License
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
-* Author: Robert Nagy, ronag89@gmail.com
+* Author: Cambell Prince, cambell.prince@gmail.com
 */
 
 #pragma once
 
-#include <core/producer/frame_producer.h>
+#include <common/memory.h>
 
-#include <string>
-#include <vector>
+#include <core/fwd.h>
 
-namespace caspar { namespace image {
+namespace caspar { namespace reroute {
 
-spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params);
-spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params);
+spl::shared_ptr<core::frame_producer> create_layer_producer(const spl::shared_ptr<core::video_channel>& channel, int layer);
 
 }}

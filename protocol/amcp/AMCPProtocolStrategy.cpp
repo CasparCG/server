@@ -385,7 +385,7 @@ private:
 		if (     s == L"MIXER") 	return std::make_shared<MixerCommand>(client, channel, channel_index, layer_index);
 		else if (s == L"CALL")  	return std::make_shared<CallCommand>(client, channel, channel_index, layer_index);
 		else if (s == L"SWAP")  	return std::make_shared<SwapCommand>(client, channel, channel_index, layer_index, channels_);
-		else if (s == L"LOAD")  	return std::make_shared<LoadCommand>(client, channel, channel_index, layer_index);
+		else if (s == L"LOAD")  	return std::make_shared<LoadCommand>(client, channel, channel_index, layer_index, channels_);
 		else if (s == L"LOADBG")	return std::make_shared<LoadbgCommand>(client, channel, channel_index, layer_index, channels_);
 		else if (s == L"ADD")   	return std::make_shared<AddCommand>(client, channel, channel_index, layer_index);
 		else if (s == L"REMOVE")	return std::make_shared<RemoveCommand>(client, channel, channel_index, layer_index);
@@ -394,7 +394,7 @@ private:
 		else if (s == L"STOP")  	return std::make_shared<StopCommand>(client, channel, channel_index, layer_index);
 		else if (s == L"CLEAR") 	return std::make_shared<ClearCommand>(client, channel, channel_index, layer_index);
 		else if (s == L"PRINT") 	return std::make_shared<PrintCommand>(client, channel, channel_index, layer_index);
-		else if (s == L"CG")	   	return std::make_shared<CGCommand>(client, channel, channel_index, layer_index, cg_registry_);
+		else if (s == L"CG")	   	return std::make_shared<CGCommand>(client, channel, channel_index, layer_index, cg_registry_, channels_);
 		else if (s == L"SET")   	return std::make_shared<SetCommand>(client, channel, channel_index, layer_index);
 
 		return nullptr;
