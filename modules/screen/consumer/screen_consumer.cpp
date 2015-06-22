@@ -656,9 +656,10 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 	if (params.size() > 1)
 		config.screen_index = boost::lexical_cast<int>(params.at(1));
 		
-	config.windowed		= !contains_param(L"FULLSCREEN", params);
-	config.key_only		=  contains_param(L"KEY_ONLY", params);
-	config.interactive	= !contains_param(L"NON_INTERACTIVE", params);
+	config.windowed			= !contains_param(L"FULLSCREEN", params);
+	config.key_only			=  contains_param(L"KEY_ONLY", params);
+	config.interactive		= !contains_param(L"NON_INTERACTIVE", params);
+	config.auto_deinterlace	= !contains_param(L"NO_AUTO_DEINTERLACE", params);
 
 	if (contains_param(L"NAME", params))
 		config.name = get_param(L"NAME", params);
