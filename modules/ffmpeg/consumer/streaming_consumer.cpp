@@ -2,7 +2,7 @@
 
 #include "ffmpeg_consumer.h"
 
-#include "../util/error.h"
+#include "../ffmpeg_error.h"
 
 #include <common/except.h>
 #include <common/executor.h>

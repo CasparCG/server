@@ -23,7 +23,7 @@ namespace detail
 		}
 		
 		scope_exit(scope_exit&& other)
-			: func_(std::move(other.v))
+			: func_(std::move(other.func_))
 			, valid_(std::move(other.valid_))
 		{
 			other.valid_ = false;
