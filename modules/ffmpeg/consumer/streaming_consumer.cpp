@@ -34,7 +34,6 @@
 #include <tbb/parallel_invoke.h>
 #include <tbb/parallel_for.h>
 
-#include <agents.h>
 #include <numeric>
 
 #pragma warning(push)
@@ -57,8 +56,6 @@ extern "C"
 }
 
 #pragma warning(pop)
-
-using namespace Concurrency;
 
 namespace caspar { namespace ffmpeg {
 
