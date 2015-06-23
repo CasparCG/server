@@ -20,6 +20,7 @@ elseif (CMAKE_COMPILER_IS_GNUCXX)
 endif ()
 set(SOURCES
 		casparcg.config
+		included_modules.tmpl
 		main.cpp
 		server.cpp
 		stdafx.cpp
