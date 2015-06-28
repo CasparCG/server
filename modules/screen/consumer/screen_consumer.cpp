@@ -100,6 +100,7 @@ struct configuration
 	bool			windowed			= true;
 	bool			auto_deinterlace	= true;
 	bool			key_only			= false;
+	bool			sbs_key				= false;
 	aspect_ratio	aspect				= aspect_ratio::aspect_invalid;
 	bool			vsync				= true;
 	bool			interactive			= true;
@@ -223,10 +224,10 @@ public:
 
 	void init()
 	{
-		window_.create(sf::VideoMode(screen_width_, screen_height_, 32), u8(L"Screen consumer " + channel_and_format()), config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
+		window_.create(sf::VideoMode(!config_.sbs_key ? screen_width_ : screen_width_ * 2, screen_height_, 32), u8(L"Screen consumer " + channel_and_format()), config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
 		window_.setMouseCursorVisible(config_.interactive);
 		window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
-		window_.setSize(sf::Vector2u(screen_width_, screen_height_));
+		window_.setSize(sf::Vector2u(!config_.sbs_key ? screen_width_ : screen_width_ * 2, screen_height_));
 		window_.setActive();
 		
 		if(!GLEW_VERSION_2_1 && glewInit() != GLEW_OK)
@@ -238,7 +239,7 @@ public:
 		GL(glEnable(GL_TEXTURE_2D));
 		GL(glDisable(GL_DEPTH_TEST));		
 		GL(glClearColor(0.0, 0.0, 0.0, 0.0));
-		GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
+		GL(glViewport(0, 0, !config_.sbs_key ? format_desc_.width : format_desc_.width * 2, format_desc_.height));
 		GL(glLoadIdentity());
 				
 		calculate_aspect();
@@ -249,15 +250,15 @@ public:
 		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
 		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP));
 		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP));
-		GL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, format_desc_.width, format_desc_.height, 0, GL_BGRA, GL_UNSIGNED_BYTE, 0));
+		GL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, !config_.sbs_key ? format_desc_.width : format_desc_.width*2, format_desc_.height, 0, GL_BGRA, GL_UNSIGNED_BYTE, 0));
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
 					
 		GL(glGenBuffers(2, pbos_.data()));
 			
 		glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pbos_[0]);
-		glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW_ARB);
+		glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, !config_.sbs_key ? format_desc_.size : format_desc_.size * 2, 0, GL_STREAM_DRAW_ARB);
 		glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pbos_[1]);
-		glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW_ARB);
+		glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, !config_.sbs_key ? format_desc_.size : format_desc_.size * 2, 0, GL_STREAM_DRAW_ARB);
 		glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
 		
 		window_.setVerticalSyncEnabled(config_.vsync);
@@ -450,17 +451,17 @@ public:
 
 			wait_for_vblank_and_display(); // field2
 		}
-	}
+	}	
 
 	void render(spl::shared_ptr<AVFrame> av_frame)
 	{
 		GL(glBindTexture(GL_TEXTURE_2D, texture_));
 
 		GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[0]));
-		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, format_desc_.width, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, 0));
+		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, !config_.sbs_key ? format_desc_.width : format_desc_.width * 2, format_desc_.height, GL_BGRA, GL_UNSIGNED_BYTE, 0));
 
 		GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[1]));
-		GL(glBufferData(GL_PIXEL_UNPACK_BUFFER, format_desc_.size, 0, GL_STREAM_DRAW));
+		GL(glBufferData(GL_PIXEL_UNPACK_BUFFER, !config_.sbs_key ? format_desc_.size : format_desc_.size * 2, 0, GL_STREAM_DRAW));
 
 		auto ptr = reinterpret_cast<char*>(GL2(glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY)));
 		if(ptr)
@@ -471,6 +472,15 @@ public:
 				{
 					for(int n = r.begin(); n != r.end(); ++n)
 						aligned_memshfl(ptr+n*format_desc_.width*4, av_frame->data[0]+n*av_frame->linesize[0], format_desc_.width*4, 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+				});
+			}
+			else if (config_.sbs_key) {
+				tbb::parallel_for(tbb::blocked_range<int>(0, format_desc_.height), [&](const tbb::blocked_range<int>& r)
+				{
+					for (int n = r.begin(); n != r.end(); ++n) {
+						A_memcpy(ptr + (n * 2)*format_desc_.width * 4, av_frame->data[0] + n*av_frame->linesize[0], format_desc_.width * 4);
+						aligned_memshfl(ptr + (n * 2 + 1) * format_desc_.width * 4, av_frame->data[0] + n*av_frame->linesize[0], format_desc_.width * 4, 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+					}
 				});
 			}
 			else
@@ -525,9 +535,16 @@ public:
 		{
 			screen_height_ = window_.getSize().y;
 			screen_width_ = window_.getSize().x;
+			GL(glViewport(0, 0, screen_width_, screen_height_));
+
+		}
+		else if (config_.sbs_key) {
+			GL(glViewport(0, 0, screen_width_ * 2, screen_height_));
+		}
+		else {
+			GL(glViewport(0, 0, screen_width_, screen_height_));
 		}
 		
-		GL(glViewport(0, 0, screen_width_, screen_height_));
 
 		std::pair<float, float> target_ratio = None();
 		if (config_.stretch == screen::stretch::fill)
@@ -551,7 +568,7 @@ public:
 
 	std::pair<float, float> Uniform()
 	{
-		float aspect = static_cast<float>(square_width_)/static_cast<float>(square_height_);
+		float aspect = static_cast<float>(!config_.sbs_key ? square_width_ : square_width_*2) / static_cast<float>(square_height_);
 		float width = std::min(1.0f, static_cast<float>(screen_height_)*aspect/static_cast<float>(screen_width_));
 		float height = static_cast<float>(screen_width_*width)/static_cast<float>(screen_height_*aspect);
 
@@ -565,7 +582,7 @@ public:
 
 	std::pair<float, float> UniformToFill()
 	{
-		float wr = static_cast<float>(square_width_)/static_cast<float>(screen_width_);
+		float wr = static_cast<float>(!config_.sbs_key ? square_width_ : square_width_ * 2) / static_cast<float>(screen_width_);
 		float hr = static_cast<float>(square_height_)/static_cast<float>(screen_height_);
 		float r_inv = 1.0f/std::min(wr, hr);
 
@@ -673,10 +690,13 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(const boost:
 	config.name				= ptree.get(L"name",				config.name);
 	config.screen_index		= ptree.get(L"device",				config.screen_index + 1) - 1;
 	config.windowed			= ptree.get(L"windowed",			config.windowed);
-	config.key_only			= ptree.get(L"key-only",			config.key_only);
-	config.auto_deinterlace	= ptree.get(L"auto-deinterlace",	config.auto_deinterlace);
+	config.key_only			= ptree.get(L"key-only",				config.key_only);
+	config.sbs_key			= ptree.get(L"sbs-key",				config.sbs_key);
+	config.auto_deinterlace = ptree.get(L"auto-deinterlace", config.auto_deinterlace);
 	config.vsync			= ptree.get(L"vsync",				config.vsync);
 	config.interactive		= ptree.get(L"interactive",			config.interactive);
+
+	if (config.sbs_key) config.key_only = false;
 
 	auto stretch_str = ptree.get(L"stretch", L"default");
 	if(stretch_str == L"uniform")
