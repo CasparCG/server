@@ -57,12 +57,13 @@ public:
 
 	void swap(layer& other);  
 		
-	void load(spl::shared_ptr<frame_producer> producer, bool preview, const boost::optional<int32_t>& auto_play_delta = nullptr); 
-	void play(); 
-	void pause(); 
-	void stop(); 
+	void load(spl::shared_ptr<frame_producer> producer, bool preview, const boost::optional<int32_t>& auto_play_delta = nullptr);
+	void play();
+	void pause();
+	void resume();
+	void stop();
 	
-	draw_frame receive(const video_format_desc& format_desc); 
+	draw_frame receive(const video_format_desc& format_desc);
 	
 	// monitor::observable
 

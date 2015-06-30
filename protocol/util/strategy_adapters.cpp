@@ -24,6 +24,7 @@
 #include "strategy_adapters.h"
 
 #include <boost/locale.hpp>
+#include <boost/algorithm/string/replace.hpp>
 
 namespace caspar { namespace IO {
 
@@ -67,9 +68,18 @@ public:
 
 	void send(std::basic_string<wchar_t>&& data) override
 	{
-		auto str = boost::locale::conv::from_utf<wchar_t>(std::move(data), codepage_);
+		auto str = boost::locale::conv::from_utf<wchar_t>(data, codepage_);
 
 		client_->send(std::move(str));
+
+		if (data.length() < 512)
+		{
+			boost::replace_all(data, L"\n", L"\\n");
+			boost::replace_all(data, L"\r", L"\\r");
+			CASPAR_LOG(info) << L"Sent message to " << client_->print() << L":" << data;
+		}
+		else
+			CASPAR_LOG(info) << L"Sent more than 512 bytes to " << client_->print();
 	}
 
 	void disconnect() override
