@@ -46,7 +46,7 @@ namespace amcp {
 		std::promise<bool>&										shutdown_server_now;
 		std::vector<std::wstring>								parameters;
 
-		int layer_index(int default = 0) const { return layer_id == -1 ? default: layer_id; }
+		int layer_index(int default_ = 0) const { return layer_id == -1 ? default_: layer_id; }
 
 		command_context(
 				IO::ClientInfoPtr client,
