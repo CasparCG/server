@@ -5,6 +5,7 @@ set(SOURCES
 		amcp/AMCPCommandQueue.cpp
 		amcp/AMCPCommandsImpl.cpp
 		amcp/AMCPProtocolStrategy.cpp
+		amcp/amcp_command_repository.cpp
 
 		asio/io_service_manager.cpp
 
@@ -33,6 +34,7 @@ set(HEADERS
 		amcp/AMCPCommandQueue.h
 		amcp/AMCPCommandsImpl.h
 		amcp/AMCPProtocolStrategy.h
+		amcp/amcp_command_repository.h
 		amcp/amcp_shared.h
 
 		asio/io_service_manager.h

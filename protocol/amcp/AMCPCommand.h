@@ -30,111 +30,103 @@
 
 namespace caspar { namespace protocol {
 namespace amcp {
-	
+
+	struct command_context
+	{
+		IO::ClientInfoPtr										client;
+		channel_context											channel;
+		int														channel_index;
+		int														layer_id;
+		std::vector<channel_context>							channels;
+		spl::shared_ptr<core::help_repository>					help_repo;
+		spl::shared_ptr<core::media_info_repository>			media_info_repo;
+		spl::shared_ptr<core::cg_producer_registry>				cg_registry;
+		spl::shared_ptr<core::system_info_provider_repository>	system_info_repo;
+		std::shared_ptr<core::thumbnail_generator>				thumb_gen;
+		std::promise<bool>&										shutdown_server_now;
+		std::vector<std::wstring>								parameters;
+
+		int layer_index(int default = 0) const { return layer_id == -1 ? default: layer_id; }
+
+		command_context(
+				IO::ClientInfoPtr client,
+				channel_context channel,
+				int channel_index,
+				int layer_id,
+				std::vector<channel_context> channels,
+				spl::shared_ptr<core::help_repository> help_repo,
+				spl::shared_ptr<core::media_info_repository> media_info_repo,
+				spl::shared_ptr<core::cg_producer_registry> cg_registry,
+				spl::shared_ptr<core::system_info_provider_repository> system_info_repo,
+				std::shared_ptr<core::thumbnail_generator> thumb_gen,
+				std::promise<bool>& shutdown_server_now)
+			: client(std::move(client))
+			, channel(channel)
+			, channel_index(channel_index)
+			, layer_id(layer_id)
+			, channels(std::move(channels))
+			, help_repo(std::move(help_repo))
+			, media_info_repo(std::move(media_info_repo))
+			, cg_registry(std::move(cg_registry))
+			, system_info_repo(std::move(system_info_repo))
+			, thumb_gen(std::move(thumb_gen))
+			, shutdown_server_now(shutdown_server_now)
+		{
+		}
+	};
+
+	typedef std::function<std::wstring(command_context& args)> amcp_command_func;
+
 	class AMCPCommand
 	{
-		AMCPCommand& operator=(const AMCPCommand&);
-	protected:
-		AMCPCommand(const AMCPCommand& rhs) : client_(rhs.client_), parameters_(rhs.parameters_)
-		{}
-
+	private:
+		command_context		ctx_;
+		amcp_command_func	command_;
+		int					min_num_params_;
+		std::wstring		name_;
+		std::wstring		replyString_;
 	public:
+		AMCPCommand(const command_context& ctx, const amcp_command_func& command, int min_num_params, const std::wstring& name)
+			: ctx_(ctx)
+			, command_(command)
+			, min_num_params_(min_num_params)
+			, name_(name)
+		{
+		}
+
 		typedef std::shared_ptr<AMCPCommand> ptr_type;
 
-		explicit AMCPCommand(IO::ClientInfoPtr client) : client_(client) {}
-		virtual ~AMCPCommand() {}
-
-		virtual bool Execute() = 0;
-		virtual int minimum_parameters() = 0;
-
-		void SendReply();
-
-		std::vector<std::wstring>& parameters() { return parameters_; }
-
-		IO::ClientInfoPtr client() { return client_; }
-
-		virtual std::wstring print() const = 0;
-
-		void SetReplyString(const std::wstring& str){replyString_ = str;}
-
-	private:
-		std::vector<std::wstring> parameters_;
-		IO::ClientInfoPtr client_;
-		std::wstring replyString_;
-	};
-
-	template<int TMinParameters>
-	class AMCPCommandBase : public AMCPCommand
-	{
-	protected:
-		explicit AMCPCommandBase(IO::ClientInfoPtr client) : AMCPCommand(client) {}
-		AMCPCommandBase(const AMCPCommandBase& rhs) : AMCPCommand(rhs) {}
-		template<int T>
-		AMCPCommandBase(const AMCPCommandBase<T>& rhs) : AMCPCommand(rhs) {}
-
-		~AMCPCommandBase(){}
-	public:
-		virtual bool Execute()
+		bool Execute()
 		{
-			return (parameters().size() < TMinParameters) ? false : DoExecute();
-		}
-		virtual int minimum_parameters(){return TMinParameters;}
-	private:
-		virtual bool DoExecute() = 0;
-	};	
-
-	class AMCPChannelCommand
-	{
-	protected:
-		AMCPChannelCommand(const channel_context& ctx, unsigned int channel_index, int layer_index) : ctx_(ctx), channel_index_(channel_index), layer_index_(layer_index)
-		{}
-		AMCPChannelCommand(const AMCPChannelCommand& rhs) : ctx_(rhs.ctx_), channel_index_(rhs.channel_index_), layer_index_(rhs.layer_index_)
-		{}
-
-		spl::shared_ptr<core::video_channel>& channel() { return ctx_.channel; }
-		spl::shared_ptr<IO::lock_container>& lock_container() { return ctx_.lock; }
-
-		unsigned int channel_index(){return channel_index_;}
-		int layer_index(int default_ = 0) const{return layer_index_ != -1 ? layer_index_ : default_; }
-
-	private:
-		unsigned int channel_index_;
-		int layer_index_;
-		channel_context ctx_;
-	};
-
-	class AMCPChannelsAwareCommand
-	{
-	protected:
-		AMCPChannelsAwareCommand(const std::vector<channel_context>& channels) : channels_(channels) {}
-		AMCPChannelsAwareCommand(const AMCPChannelsAwareCommand& rhs) : channels_(rhs.channels_) {}
-
-		const std::vector<channel_context>& channels() { return channels_; }
-		core::frame_producer_dependencies get_dependencies(const spl::shared_ptr<core::video_channel>& channel)
-		{
-			return core::frame_producer_dependencies(
-					channel->frame_factory(),
-					cpplinq::from(channels())
-							.select([](channel_context c) { return c.channel; })
-							.to_vector(),
-					channel->video_format_desc());
+			SetReplyString(command_(ctx_));
+			return true;
 		}
 
-	private:
-		const std::vector<channel_context>& channels_;
-	};
+		int minimum_parameters() const
+		{
+			return min_num_params_;
+		}
 
-	template<int TMinParameters>
-	class AMCPChannelCommandBase : public AMCPChannelCommand, public AMCPCommandBase<TMinParameters>
-	{
-	public:
-		AMCPChannelCommandBase(IO::ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index) : AMCPChannelCommand(channel, channel_index, layer_index), AMCPCommandBase<TMinParameters>(client)
-		{}
-	protected:
-		AMCPChannelCommandBase(const AMCPChannelCommandBase& rhs) : AMCPChannelCommand(rhs), AMCPCommandBase<TMinParameters>(rhs)
-		{}
-		template<int T>
-		AMCPChannelCommandBase(const AMCPChannelCommandBase<T>& rhs) : AMCPChannelCommand(rhs), AMCPCommandBase<TMinParameters>(rhs)
-		{}
+		void SendReply()
+		{
+			if (replyString_.empty())
+				return;
+
+			ctx_.client->send(std::move(replyString_));
+		}
+
+		std::vector<std::wstring>& parameters() { return ctx_.parameters; }
+
+		IO::ClientInfoPtr client() { return ctx_.client; }
+
+		std::wstring print() const
+		{
+			return name_;
+		}
+
+		void SetReplyString(const std::wstring& str)
+		{
+			replyString_ = str;
+		}
 	};
 }}}

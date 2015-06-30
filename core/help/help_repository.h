@@ -16,41 +16,34 @@
 * You should have received a copy of the GNU General Public License
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
-* Author: Nicklas P Andersson
+* Author: Helge Norberg, helge.norberg@svt.se
 */
 
 #pragma once
 
-#include "../util/ProtocolStrategy.h"
-
-#include <core/video_channel.h>
-#include <core/thumbnail_generator.h>
-#include <core/producer/media_info/media_info_repository.h>
-#include <core/producer/cg_proxy.h>
-#include <core/system_info_provider.h>
+#include "../fwd.h"
 
 #include <common/memory.h>
 
-#include <boost/noncopyable.hpp>
+#include <set>
+#include <vector>
+#include <functional>
+#include <utility>
 
-#include <string>
-#include <future>
+namespace caspar { namespace core {
 
-namespace caspar { namespace protocol { namespace amcp {
+typedef std::function<void(core::help_sink&, const core::help_repository&)> help_item_describer;
 
-class AMCPProtocolStrategy : public IO::IProtocolStrategy, boost::noncopyable
+class help_repository
 {
 public:
-	AMCPProtocolStrategy(const spl::shared_ptr<class amcp_command_repository>& repo);
-
-	virtual ~AMCPProtocolStrategy();
-
-	virtual void Parse(const std::wstring& msg, IO::ClientInfoPtr pClientInfo);
-	virtual std::string GetCodepage() const { return "UTF-8"; }
-
+	help_repository();
+	void register_item(std::set<std::wstring> tags, std::wstring name, help_item_describer describer); // Not thread safe
+	void help(std::set<std::wstring> tags, help_sink& sink) const;
+	void help(std::set<std::wstring> tags, std::wstring name, help_sink& sink) const;
 private:
 	struct impl;
-	spl::unique_ptr<impl> impl_;
+	spl::shared_ptr<impl> impl_;
 };
 
-}}}
+}}
