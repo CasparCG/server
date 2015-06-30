@@ -451,7 +451,7 @@ public:
 
 			wait_for_vblank_and_display(); // field2
 		}
-	}	
+	}
 
 	void render(spl::shared_ptr<AVFrame> av_frame)
 	{
@@ -538,7 +538,8 @@ public:
 			GL(glViewport(0, 0, screen_width_, screen_height_));
 
 		}
-		else if (config_.sbs_key) {
+		else if (config_.sbs_key) 
+		{
 			GL(glViewport(0, 0, screen_width_ * 2, screen_height_));
 		}
 		else {
@@ -690,9 +691,9 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(const boost:
 	config.name				= ptree.get(L"name",				config.name);
 	config.screen_index		= ptree.get(L"device",				config.screen_index + 1) - 1;
 	config.windowed			= ptree.get(L"windowed",			config.windowed);
-	config.key_only			= ptree.get(L"key-only",				config.key_only);
+	config.key_only			= ptree.get(L"key-only",			config.key_only);
 	config.sbs_key			= ptree.get(L"sbs-key",				config.sbs_key);
-	config.auto_deinterlace = ptree.get(L"auto-deinterlace", config.auto_deinterlace);
+	config.auto_deinterlace = ptree.get(L"auto-deinterlace",	config.auto_deinterlace);
 	config.vsync			= ptree.get(L"vsync",				config.vsync);
 	config.interactive		= ptree.get(L"interactive",			config.interactive);
 
