@@ -31,6 +31,8 @@
 
 #include <vector>
 
+FORWARD3(caspar, protocol, amcp, class amcp_command_repository);
+
 namespace caspar {
 
 class server final : public boost::noncopyable
@@ -38,11 +40,8 @@ class server final : public boost::noncopyable
 public:
 	explicit server(std::promise<bool>& shutdown_server_now);
 	void start();
-	const std::vector<spl::shared_ptr<core::video_channel>> channels() const;
-	std::shared_ptr<core::thumbnail_generator> get_thumbnail_generator() const;
-	spl::shared_ptr<core::media_info_repository> get_media_info_repo() const;
 	spl::shared_ptr<core::system_info_provider_repository> get_system_info_provider_repo() const;
-	spl::shared_ptr<core::cg_producer_registry> get_cg_registry() const;
+	spl::shared_ptr<protocol::amcp::amcp_command_repository> get_amcp_command_repository() const;
 
 	core::monitor::subject& monitor_output();
 private:
