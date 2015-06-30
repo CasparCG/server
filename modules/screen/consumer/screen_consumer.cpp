@@ -534,11 +534,10 @@ public:
 		if(config_.windowed)
 		{
 			screen_height_ = window_.getSize().y;
-			screen_width_ = window_.getSize().x;
-			GL(glViewport(0, 0, screen_width_, screen_height_));
-
+			screen_width_ = !config_.sbs_key ? window_.getSize().x : window_.getSize().x / 2;
 		}
-		else if (config_.sbs_key) 
+		
+		if (config_.sbs_key) 
 		{
 			GL(glViewport(0, 0, screen_width_ * 2, screen_height_));
 		}
