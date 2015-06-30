@@ -222,6 +222,14 @@ public:
 		}, task_priority::high_priority);
 	}
 
+	std::future<void> resume(int index)
+	{
+		return executor_.begin_invoke([=]
+		{
+			get_layer(index).resume();
+		}, task_priority::high_priority);
+	}
+
 	std::future<void> play(int index)
 	{		
 		return executor_.begin_invoke([=]
@@ -254,7 +262,7 @@ public:
 		}, task_priority::high_priority);
 	}	
 		
-	std::future<void> swap_layers(stage& other)
+	std::future<void> swap_layers(stage& other, bool swap_transforms)
 	{
 		auto other_impl = other.impl_;
 
@@ -281,7 +289,10 @@ public:
 			
 			for (auto& layer : other_layers)
 				layer.monitor_output().attach_parent(monitor_subject_);
-		};		
+
+			if (swap_transforms)
+				std::swap(tweens_, other_impl->tweens_);
+		};
 
 		return executor_.begin_invoke([=]
 		{
@@ -289,20 +300,23 @@ public:
 		}, task_priority::high_priority);
 	}
 
-	std::future<void> swap_layer(int index, int other_index)
+	std::future<void> swap_layer(int index, int other_index, bool swap_transforms)
 	{
 		return executor_.begin_invoke([=]
 		{
 			std::swap(get_layer(index), get_layer(other_index));
+
+			if (swap_transforms)
+				std::swap(tweens_[index], tweens_[other_index]);
 		}, task_priority::high_priority);
 	}
 
-	std::future<void> swap_layer(int index, int other_index, stage& other)
+	std::future<void> swap_layer(int index, int other_index, stage& other, bool swap_transforms)
 	{
 		auto other_impl = other.impl_;
 
 		if(other_impl.get() == this)
-			return swap_layer(index, other_index);
+			return swap_layer(index, other_index, swap_transforms);
 		else
 		{
 			auto func = [=]
@@ -317,6 +331,13 @@ public:
 
 				my_layer.monitor_output().attach_parent(monitor_subject_);
 				other_layer.monitor_output().attach_parent(other_impl->monitor_subject_);
+
+				if (swap_transforms)
+				{
+					auto& my_tween		= tweens_[index];
+					auto& other_tween	= other_impl->tweens_[other_index];
+					std::swap(my_tween, other_tween);
+				}
 			};		
 
 			return executor_.begin_invoke([=]
@@ -429,13 +450,14 @@ std::future<void> stage::clear_transforms(){ return impl_->clear_transforms(); }
 std::future<frame_transform> stage::get_current_transform(int index){ return impl_->get_current_transform(index); }
 std::future<void> stage::load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, const boost::optional<int32_t>& auto_play_delta){ return impl_->load(index, producer, preview, auto_play_delta); }
 std::future<void> stage::pause(int index){ return impl_->pause(index); }
+std::future<void> stage::resume(int index){ return impl_->resume(index); }
 std::future<void> stage::play(int index){ return impl_->play(index); }
 std::future<void> stage::stop(int index){ return impl_->stop(index); }
 std::future<void> stage::clear(int index){ return impl_->clear(index); }
 std::future<void> stage::clear(){ return impl_->clear(); }
-std::future<void> stage::swap_layers(stage& other){ return impl_->swap_layers(other); }
-std::future<void> stage::swap_layer(int index, int other_index){ return impl_->swap_layer(index, other_index); }
-std::future<void> stage::swap_layer(int index, int other_index, stage& other){ return impl_->swap_layer(index, other_index, other); }
+std::future<void> stage::swap_layers(stage& other, bool swap_transforms){ return impl_->swap_layers(other, swap_transforms); }
+std::future<void> stage::swap_layer(int index, int other_index, bool swap_transforms){ return impl_->swap_layer(index, other_index, swap_transforms); }
+std::future<void> stage::swap_layer(int index, int other_index, stage& other, bool swap_transforms){ return impl_->swap_layer(index, other_index, other, swap_transforms); }
 void stage::add_layer_consumer(void* token, int layer, const spl::shared_ptr<write_frame_consumer>& layer_consumer){ impl_->add_layer_consumer(token, layer, layer_consumer); }
 void stage::remove_layer_consumer(void* token, int layer){ impl_->remove_layer_consumer(token, layer); }std::future<std::shared_ptr<frame_producer>> stage::foreground(int index) { return impl_->foreground(index); }
 std::future<std::shared_ptr<frame_producer>> stage::background(int index) { return impl_->background(index); }

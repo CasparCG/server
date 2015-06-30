@@ -23,16 +23,19 @@
 #include "../StdAfx.h"
 
 #include "AMCPProtocolStrategy.h"
-#include "AMCPCommandsImpl.h"
 #include "amcp_shared.h"
 #include "AMCPCommand.h"
 #include "AMCPCommandQueue.h"
+#include "amcp_command_repository.h"
 
 #include <stdio.h>
 #include <string.h>
 #include <algorithm>
 #include <cctype>
 #include <future>
+
+#include <core/help/help_repository.h>
+#include <core/help/help_sink.h>
 
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/algorithm/string/split.hpp>
@@ -47,52 +50,33 @@ namespace caspar { namespace protocol { namespace amcp {
 
 using IO::ClientInfoPtr;
 
+template <typename Out, typename In>
+bool try_lexical_cast(const In& input, Out& result)
+{
+	Out saved = result;
+	bool success = boost::conversion::detail::try_lexical_convert(input, result);
+
+	if (!success)
+		result = saved; // Needed because of how try_lexical_convert is implemented.
+
+	return success;
+}
+
 struct AMCPProtocolStrategy::impl
 {
 private:
-	std::vector<channel_context>							channels_;
-	std::vector<AMCPCommandQueue::ptr_type>					commandQueues_;
-	std::shared_ptr<core::thumbnail_generator>				thumb_gen_;
-	spl::shared_ptr<core::media_info_repository>			media_info_repo_;
-	spl::shared_ptr<core::system_info_provider_repository>	system_info_provider_repo_;
-	spl::shared_ptr<core::cg_producer_registry>				cg_registry_;
-	std::promise<bool>&										shutdown_server_now_;
+	std::vector<AMCPCommandQueue::ptr_type>		commandQueues_;
+	spl::shared_ptr<amcp_command_repository>	repo_;
 
 public:
-	impl(
-			const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-			const std::shared_ptr<core::thumbnail_generator>& thumb_gen,
-			const spl::shared_ptr<core::media_info_repository>& media_info_repo,
-			const spl::shared_ptr<core::system_info_provider_repository>& system_info_provider_repo,
-			const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
-			std::promise<bool>& shutdown_server_now)
-		: thumb_gen_(thumb_gen)
-		, media_info_repo_(media_info_repo)
-		, system_info_provider_repo_(system_info_provider_repo)
-		, cg_registry_(cg_registry)
-		, shutdown_server_now_(shutdown_server_now)
+	impl(const spl::shared_ptr<amcp_command_repository>& repo)
+		: repo_(repo)
 	{
-		commandQueues_.push_back(std::make_shared<AMCPCommandQueue>());
-
-		int index = 0;
-		for (const auto& channel : channels)
-		{
-			std::wstring lifecycle_key = L"lock" + boost::lexical_cast<std::wstring>(index);
-			channels_.push_back(channel_context(channel, lifecycle_key));
-			auto queue(std::make_shared<AMCPCommandQueue>());
-			commandQueues_.push_back(queue);
-			++index;
-		}
+		commandQueues_.resize(repo_->channels().size() + 1);
 	}
 
 	~impl() {}
 
-	enum class parser_state {
-		New = 0,
-		GetSwitch,
-		GetCommand,
-		GetParameters
-	};
 	enum class error_state {
 		no_error = 0,
 		command_error,
@@ -104,12 +88,10 @@ public:
 
 	struct command_interpreter_result
 	{
-		command_interpreter_result() : error(error_state::no_error) {}
-
 		std::shared_ptr<caspar::IO::lock_container>	lock;
 		std::wstring								command_name;
 		AMCPCommand::ptr_type						command;
-		error_state									error;
+		error_state									error			= error_state::no_error;
 		AMCPCommandQueue::ptr_type					queue;
 	};
 
@@ -131,7 +113,6 @@ public:
 		if (result.error != error_state::no_error)
 		{
 			std::wstringstream answer;
-			boost::to_upper(result.command_name);
 
 			switch(result.error)
 			{
@@ -156,123 +137,93 @@ public:
 	}
 
 private:
-	friend class AMCPCommand;
-
 	bool interpret_command_string(const std::wstring& message, command_interpreter_result& result, ClientInfoPtr client)
 	{
 		try
 		{
-			std::vector<std::wstring> tokens;
-			parser_state state = parser_state::New;
+			std::list<std::wstring> tokens;
+			tokenize(message, tokens);
 
-			tokenize(message, &tokens);
+			// Discard GetSwitch
+			if (!tokens.empty() && tokens.front().at(0) == L'/')
+				tokens.pop_front();
 
-			//parse the message one token at the time
-			auto end = tokens.end();
-			auto it = tokens.begin();
-			while (it != end && result.error == error_state::no_error)
+			// Fail if no more tokens.
+			if (tokens.empty())
 			{
-				switch(state)
+				result.error = error_state::command_error;
+				return false;
+			}
+
+			// Consume command name
+			result.command_name = boost::to_upper_copy(tokens.front());
+			tokens.pop_front();
+
+			// Determine whether the next parameter is a channel spec or not
+			int channel_index = -1;
+			int layer_index = -1;
+			std::wstring channel_spec;
+
+			if (!tokens.empty())
+			{
+				channel_spec = tokens.front();
+				std::wstring channelid_str = boost::trim_copy(channel_spec);
+				std::vector<std::wstring> split;
+				boost::split(split, channelid_str, boost::is_any_of("-"));
+
+				// Use non_throwing lexical cast to not hit exception break point all the time.
+				if (try_lexical_cast(split[0], channel_index))
 				{
-				case parser_state::New:
-					if((*it)[0] == L'/')
-						state = parser_state::GetSwitch;
-					else
-						state = parser_state::GetCommand;
-					break;
+					--channel_index;
 
-				case parser_state::GetSwitch:
-					//command_switch = (*it);	//we dont care for the switch anymore
-					state = parser_state::GetCommand;
-					++it;
-					break;
+					if (split.size() > 1)
+						try_lexical_cast(split[1], layer_index);
 
-				case parser_state::GetCommand:
-					{
-						result.command_name = (*it);
-						result.command = create_command(result.command_name, client);
-						if(result.command)	//the command doesn't need a channel
-						{
-							result.queue = commandQueues_[0];
-							state = parser_state::GetParameters;
-						}
-						else
-						{
-							//get channel index from next token
-							int channel_index = -1;
-							int layer_index = -1;
-
-							++it;
-							if(it == end)
-							{
-								if(create_channel_command(result.command_name, client, channels_.at(0), 0, 0))	//check if there is a command like this
-									result.error = error_state::channel_error;
-								else
-									result.error = error_state::command_error;
-
-								break;
-							}
-
-							{	//parse channel/layer token
-								try
-								{
-									std::wstring channelid_str = boost::trim_copy(*it);
-									std::vector<std::wstring> split;
-									boost::split(split, channelid_str, boost::is_any_of("-"));
-
-									channel_index = boost::lexical_cast<int>(split[0]) - 1;
-									if(split.size() > 1)
-										layer_index = boost::lexical_cast<int>(split[1]);
-								}
-								catch(...)
-								{
-									result.error = error_state::channel_error;
-									break;
-								}
-							}
-						
-							if(channel_index >= 0 && channel_index < channels_.size())
-							{
-								result.command = create_channel_command(result.command_name, client, channels_.at(channel_index), channel_index, layer_index);
-								if(result.command)
-								{
-									result.lock = channels_.at(channel_index).lock;
-									result.queue = commandQueues_[channel_index + 1];
-								}
-								else
-								{
-									result.error = error_state::command_error;
-									break;
-								}
-							}
-							else
-							{
-								result.error = error_state::channel_error;
-								break;
-							}
-						}
-
-						state = parser_state::GetParameters;
-						++it;
-					}
-					break;
-
-				case parser_state::GetParameters:
-					{
-						int parameterCount=0;
-						while(it != end)
-						{
-							result.command->parameters().push_back((*it));
-							++it;
-							++parameterCount;
-						}
-					}
-					break;
+					// Consume channel-spec
+					tokens.pop_front();
 				}
 			}
 
-			if(result.command && result.error == error_state::no_error && result.command->parameters().size() < result.command->minimum_parameters()) {
-				result.error = error_state::parameters_error;
+			bool is_channel_command = channel_index != -1;
+
+			// Create command instance
+			if (is_channel_command)
+			{
+				result.command = repo_->create_channel_command(result.command_name, client, channel_index, layer_index, tokens);
+
+				if (result.command)
+				{
+					result.lock = repo_->channels().at(channel_index).lock;
+					result.queue = commandQueues_.at(channel_index + 1);
+				}
+				else // Might be a non channel command, although the first argument is numeric
+				{
+					// Restore backed up channel spec string.
+					tokens.push_front(channel_spec);
+					result.command = repo_->create_command(result.command_name, client, tokens);
+
+					if (result.command)
+						result.queue = commandQueues_.at(0);
+				}
+			}
+			else
+			{
+				result.command = repo_->create_command(result.command_name, client, tokens);
+
+				if (result.command)
+					result.queue = commandQueues_.at(0);
+			}
+
+			if (!result.command)
+				result.error = error_state::command_error;
+			else
+			{
+				std::vector<std::wstring> parameters(tokens.begin(), tokens.end());
+
+				result.command->parameters() = std::move(parameters);
+
+				if (result.command->parameters().size() < result.command->minimum_parameters())
+					result.error = error_state::parameters_error;
 			}
 		}
 		catch(...)
@@ -284,7 +235,8 @@ private:
 		return result.error == error_state::no_error;
 	}
 
-	std::size_t tokenize(const std::wstring& message, std::vector<std::wstring>* pTokenVector)
+	template<typename C>
+	std::size_t tokenize(const std::wstring& message, C& pTokenVector)
 	{
 		//split on whitespace but keep strings within quotationmarks
 		//treat \ as the start of an escape-sequence: the following char will indicate what to actually put in the string
@@ -325,9 +277,9 @@ private:
 
 			if(message[charIndex]==L' ' && inQuote==false)
 			{
-				if(currentToken.size()>0)
+				if(!currentToken.empty())
 				{
-					pTokenVector->push_back(currentToken);
+					pTokenVector.push_back(currentToken);
 					currentToken.clear();
 				}
 				continue;
@@ -337,9 +289,9 @@ private:
 			{
 				inQuote = !inQuote;
 
-				if(currentToken.size()>0 || !inQuote)
+				if(!currentToken.empty() || !inQuote)
 				{
-					pTokenVector->push_back(currentToken);
+					pTokenVector.push_back(currentToken);
 					currentToken.clear();
 				}
 				continue;
@@ -348,74 +300,18 @@ private:
 			currentToken += message[charIndex];
 		}
 
-		if(currentToken.size()>0)
+		if(!currentToken.empty())
 		{
-			pTokenVector->push_back(currentToken);
+			pTokenVector.push_back(currentToken);
 			currentToken.clear();
 		}
 
-		return pTokenVector->size();
-	}
-
-	AMCPCommand::ptr_type create_command(const std::wstring& str, ClientInfoPtr client)
-	{
-		std::wstring s = boost::to_upper_copy(str);
-		if (     s == L"DIAG")			return std::make_shared<DiagnosticsCommand>(client);
-		else if (s == L"CHANNEL_GRID")	return std::make_shared<ChannelGridCommand>(client, channels_);
-		else if (s == L"DATA")			return std::make_shared<DataCommand>(client);
-		else if (s == L"CINF")			return std::make_shared<CinfCommand>(client, media_info_repo_);
-		else if (s == L"INFO")			return std::make_shared<InfoCommand>(client, channels_, system_info_provider_repo_, cg_registry_);
-		else if (s == L"CLS")			return std::make_shared<ClsCommand>(client, media_info_repo_);
-		else if (s == L"TLS")			return std::make_shared<TlsCommand>(client, cg_registry_);
-		else if (s == L"VERSION")		return std::make_shared<VersionCommand>(client, system_info_provider_repo_);
-		else if (s == L"BYE")			return std::make_shared<ByeCommand>(client);
-		else if (s == L"LOCK")			return std::make_shared<LockCommand>(client, channels_);
-		else if (s == L"LOG")			return std::make_shared<LogCommand>(client);
-		else if (s == L"THUMBNAIL")		return std::make_shared<ThumbnailCommand>(client, thumb_gen_);
-		else if (s == L"KILL")			return std::make_shared<KillCommand>(client, shutdown_server_now_);
-		else if (s == L"RESTART")		return std::make_shared<RestartCommand>(client, shutdown_server_now_);
-
-		return nullptr;
-	}
-
-	AMCPCommand::ptr_type create_channel_command(const std::wstring& str, ClientInfoPtr client, const channel_context& channel, unsigned int channel_index, int layer_index)
-	{
-		std::wstring s = boost::to_upper_copy(str);
-	
-		if (     s == L"MIXER") 	return std::make_shared<MixerCommand>(client, channel, channel_index, layer_index);
-		else if (s == L"CALL")  	return std::make_shared<CallCommand>(client, channel, channel_index, layer_index);
-		else if (s == L"SWAP")  	return std::make_shared<SwapCommand>(client, channel, channel_index, layer_index, channels_);
-		else if (s == L"LOAD")  	return std::make_shared<LoadCommand>(client, channel, channel_index, layer_index, channels_);
-		else if (s == L"LOADBG")	return std::make_shared<LoadbgCommand>(client, channel, channel_index, layer_index, channels_);
-		else if (s == L"ADD")   	return std::make_shared<AddCommand>(client, channel, channel_index, layer_index);
-		else if (s == L"REMOVE")	return std::make_shared<RemoveCommand>(client, channel, channel_index, layer_index);
-		else if (s == L"PAUSE") 	return std::make_shared<PauseCommand>(client, channel, channel_index, layer_index);
-		else if (s == L"PLAY")  	return std::make_shared<PlayCommand>(client, channel, channel_index, layer_index, channels_);
-		else if (s == L"STOP")  	return std::make_shared<StopCommand>(client, channel, channel_index, layer_index);
-		else if (s == L"CLEAR") 	return std::make_shared<ClearCommand>(client, channel, channel_index, layer_index);
-		else if (s == L"PRINT") 	return std::make_shared<PrintCommand>(client, channel, channel_index, layer_index);
-		else if (s == L"CG")	   	return std::make_shared<CGCommand>(client, channel, channel_index, layer_index, cg_registry_, channels_);
-		else if (s == L"SET")   	return std::make_shared<SetCommand>(client, channel, channel_index, layer_index);
-
-		return nullptr;
+		return pTokenVector.size();
 	}
 };
 
-
-AMCPProtocolStrategy::AMCPProtocolStrategy(
-		const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-		const std::shared_ptr<core::thumbnail_generator>& thumb_gen,
-		const spl::shared_ptr<core::media_info_repository>& media_info_repo,
-		const spl::shared_ptr<core::system_info_provider_repository>& system_info_provider_repo,
-		const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
-		std::promise<bool>& shutdown_server_now)
-	: impl_(spl::make_unique<impl>(
-			channels,
-			thumb_gen,
-			media_info_repo,
-			system_info_provider_repo,
-			cg_registry,
-			shutdown_server_now))
+AMCPProtocolStrategy::AMCPProtocolStrategy(const spl::shared_ptr<amcp_command_repository>& repo)
+	: impl_(spl::make_unique<impl>(repo))
 {
 }
 AMCPProtocolStrategy::~AMCPProtocolStrategy() {}

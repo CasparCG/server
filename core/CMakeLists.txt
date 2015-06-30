@@ -15,6 +15,8 @@ set(SOURCES
 		frame/frame_transform.cpp
 		frame/geometry.cpp
 
+		help/help_repository.cpp
+
 		mixer/audio/audio_mixer.cpp
 		mixer/image/blend_modes.cpp
 		mixer/mixer.cpp
@@ -70,6 +72,9 @@ set(HEADERS
 		frame/frame_visitor.h
 		frame/geometry.h
 		frame/pixel_format.h
+
+		help/help_repository.h
+		help/help_sink.h
 
 		interaction/interaction_aggregator.h
 		interaction/interaction_event.h
@@ -136,6 +141,7 @@ source_group(sources ./*)
 source_group(sources\\consumer consumer/*)
 source_group(sources\\diagnostics diagnostics/*)
 source_group(sources\\frame frame/*)
+source_group(sources\\help help/*)
 source_group(sources\\interaction interaction/*)
 source_group(sources\\mixer mixer/*)
 source_group(sources\\producer\\draw producer/draw/*)
