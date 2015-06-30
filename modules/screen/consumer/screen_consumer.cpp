@@ -537,14 +537,7 @@ public:
 			screen_width_ = !config_.sbs_key ? window_.getSize().x : window_.getSize().x / 2;
 		}
 		
-		if (config_.sbs_key) 
-		{
-			GL(glViewport(0, 0, screen_width_ * 2, screen_height_));
-		}
-		else {
-			GL(glViewport(0, 0, screen_width_, screen_height_));
-		}
-		
+		GL(glViewport(0, 0, !config_.sbs_key ? screen_width_ : screen_width_ * 2, screen_height_));
 
 		std::pair<float, float> target_ratio = None();
 		if (config_.stretch == screen::stretch::fill)
