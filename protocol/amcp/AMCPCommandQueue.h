@@ -24,6 +24,7 @@
 #include "AMCPCommand.h"
 
 #include <common/executor.h>
+#include <common/memory.h>
 
 #include <tbb/mutex.h>
 
@@ -34,7 +35,7 @@ class AMCPCommandQueue
 	AMCPCommandQueue(const AMCPCommandQueue&);
 	AMCPCommandQueue& operator=(const AMCPCommandQueue&);
 public:
-	typedef std::shared_ptr<AMCPCommandQueue> ptr_type;
+	typedef spl::shared_ptr<AMCPCommandQueue> ptr_type;
 
 	AMCPCommandQueue();
 	~AMCPCommandQueue();

@@ -197,7 +197,7 @@ void init(core::module_dependencies dependencies)
 			{ L".ft", L".ct" },
 			[](const std::wstring& filename)
 			{
-				return read_template_meta_info(get_absolute(env::template_folder(), filename) + L".ft");
+				return read_template_meta_info(filename);
 			},
 			[](const spl::shared_ptr<core::frame_producer>& producer)
 			{

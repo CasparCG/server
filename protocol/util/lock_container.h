@@ -11,8 +11,6 @@ namespace caspar { namespace IO {
 	class lock_container : public boost::noncopyable
 	{
 	public:
-		typedef spl::shared_ptr<lock_container> ptr_type;
-
 		lock_container(const std::wstring& lifecycle_key);
 		~lock_container();
 

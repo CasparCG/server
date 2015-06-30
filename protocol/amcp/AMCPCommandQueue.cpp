@@ -60,19 +60,30 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 	{
 		try
 		{
+			caspar::timer timer;
+
 			try
 			{
-				caspar::timer timer;
 				if(pCurrentCommand->Execute()) 
 					CASPAR_LOG(debug) << "Executed command: " << pCurrentCommand->print() << " " << timer.elapsed();
 				else 
 					CASPAR_LOG(warning) << "Failed to execute command: " << pCurrentCommand->print() << " " << timer.elapsed();
 			}
-			catch(...)
+			catch (file_not_found&)
+			{
+				CASPAR_LOG(error) << L"File not found. No match found for parameters. Check syntax.";
+				pCurrentCommand->SetReplyString(L"404 " + pCurrentCommand->print() + L" FAILED\r\n");
+			}
+			catch (std::out_of_range&)
+			{
+				CASPAR_LOG(error) << L"Missing parameter. Check syntax.";
+				pCurrentCommand->SetReplyString(L"402 " + pCurrentCommand->print() + L" FAILED\r\n");
+			}
+			catch (...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
-				CASPAR_LOG(error) << "Failed to execute command:" << pCurrentCommand->print();
-				pCurrentCommand->SetReplyString(L"500 FAILED\r\n");
+				CASPAR_LOG(warning) << "Failed to execute command:" << pCurrentCommand->print() << " " << timer.elapsed();
+				pCurrentCommand->SetReplyString(L"501 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
 				
 			pCurrentCommand->SendReply();
