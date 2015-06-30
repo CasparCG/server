@@ -568,7 +568,7 @@ public:
 
 	std::pair<float, float> Uniform()
 	{
-		float aspect = static_cast<float>(!config_.sbs_key ? square_width_ : square_width_*2) / static_cast<float>(square_height_);
+		float aspect = static_cast<float>(!config_.sbs_key ? square_width_ : square_width_ * 2) / static_cast<float>(square_height_);
 		float width = std::min(1.0f, static_cast<float>(screen_height_)*aspect/static_cast<float>(screen_width_));
 		float height = static_cast<float>(screen_width_*width)/static_cast<float>(screen_height_*aspect);
 
@@ -692,7 +692,7 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(const boost:
 	config.windowed			= ptree.get(L"windowed",			config.windowed);
 	config.key_only			= ptree.get(L"key-only",			config.key_only);
 	config.sbs_key			= ptree.get(L"sbs-key",				config.sbs_key);
-	config.auto_deinterlace = ptree.get(L"auto-deinterlace",	config.auto_deinterlace);
+	config.auto_deinterlace = ptree.get(L"auto-deinterlace", config.auto_deinterlace);
 	config.vsync			= ptree.get(L"vsync",				config.vsync);
 	config.interactive		= ptree.get(L"interactive",			config.interactive);
 
