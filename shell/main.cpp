@@ -111,23 +111,8 @@ void print_system_info(const spl::shared_ptr<core::system_info_provider_reposito
 		print_child(L"", elem.first, elem.second);
 }
 
-void do_run(server& caspar_server, std::promise<bool>& shutdown_server_now)
+void do_run(std::weak_ptr<caspar::IO::protocol_strategy<wchar_t>> amcp, std::promise<bool>& shutdown_server_now)
 {
-	// Create a dummy client which prints amcp responses to console.
-	auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
-	
-	// Create a amcp parser for console commands.
-	auto amcp = spl::make_shared<caspar::IO::delimiter_based_chunking_strategy_factory<wchar_t>>(
-			L"\r\n",
-			spl::make_shared<caspar::IO::legacy_strategy_adapter_factory>(
-					spl::make_shared<protocol::amcp::AMCPProtocolStrategy>(
-							caspar_server.channels(),
-							caspar_server.get_thumbnail_generator(),
-							caspar_server.get_media_info_repo(),
-							caspar_server.get_system_info_provider_repo(),
-							caspar_server.get_cg_registry(),
-							shutdown_server_now)))->create(console_client);
-
 	std::wstring wcmd;
 	while(true)
 	{
@@ -215,7 +200,11 @@ void do_run(server& caspar_server, std::promise<bool>& shutdown_server_now)
 		}
 
 		wcmd += L"\r\n";
-		amcp->parse(wcmd);
+		auto strong = amcp.lock();
+		if (strong)
+			strong->parse(wcmd);
+		else
+			break;
 	}
 };
 
@@ -239,19 +228,19 @@ bool run()
 	
 	caspar_server.start();
 
-	//auto console_obs = reactive::make_observer([](const monitor::event& e)
-	//{
-	//	std::stringstream str;
-	//	str << e;
-	//	CASPAR_LOG(trace) << str.str().c_str();
-	//});
+	// Create a dummy client which prints amcp responses to console.
+	auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
 
-	//caspar_server.subscribe(console_obs);
-
+	// Create a amcp parser for console commands.
+	auto amcp = spl::make_shared<caspar::IO::delimiter_based_chunking_strategy_factory<wchar_t>>(
+			L"\r\n",
+			spl::make_shared<caspar::IO::legacy_strategy_adapter_factory>(
+					spl::make_shared<protocol::amcp::AMCPProtocolStrategy>(
+							caspar_server.get_amcp_command_repository())))->create(console_client);
 
 	// Use separate thread for the blocking console input, will be terminated 
 	// anyway when the main thread terminates.
-	boost::thread stdin_thread(std::bind(do_run, std::ref(caspar_server), std::ref(shutdown_server_now)));	//compiler didn't like lambda here...
+	boost::thread stdin_thread(std::bind(do_run, amcp, std::ref(shutdown_server_now)));	//compiler didn't like lambda here...
 	stdin_thread.detach();
 	return shutdown_server.get();
 }
@@ -315,6 +304,7 @@ int main(int argc, char** argv)
 		return_code = run() ? 5 : 0;
 		
 		boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
+
 		CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
 	}
 	catch(boost::property_tree::file_parser_error&)

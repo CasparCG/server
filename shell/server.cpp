@@ -49,11 +49,14 @@
 #include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
 #include <core/system_info_provider.h>
+#include <core/help/help_repository.h>
 
 #include <modules/image/consumer/image_consumer.h>
 
 #include <protocol/asio/io_service_manager.h>
 #include <protocol/amcp/AMCPProtocolStrategy.h>
+#include <protocol/amcp/amcp_command_repository.h>
+#include <protocol/amcp/AMCPCommandsImpl.h>
 #include <protocol/cii/CIIProtocolStrategy.h>
 #include <protocol/clk/CLKProtocolStrategy.h>
 #include <protocol/util/AsyncEventServer.h>
@@ -81,6 +84,8 @@ struct server::impl : boost::noncopyable
 	spl::shared_ptr<monitor::subject>					monitor_subject_;
 	spl::shared_ptr<monitor::subject>					diag_subject_					= core::diagnostics::get_or_create_subject();
 	accelerator::accelerator							accelerator_;
+	spl::shared_ptr<help_repository>					help_repo_;
+	std::shared_ptr<amcp::amcp_command_repository>		amcp_command_repo_;
 	std::vector<spl::shared_ptr<IO::AsyncEventServer>>	async_servers_;
 	std::shared_ptr<IO::AsyncEventServer>				primary_amcp_server_;
 	osc::client											osc_client_;
@@ -261,7 +266,17 @@ struct server::impl : boost::noncopyable
 	}
 		
 	void setup_controllers(const boost::property_tree::wptree& pt)
-	{		
+	{
+		amcp_command_repo_ = spl::make_shared<amcp::amcp_command_repository>(
+				channels_,
+				thumbnail_generator_,
+				media_info_repo_,
+				system_info_provider_repo_,
+				cg_registry_,
+				help_repo_,
+				shutdown_server_now_);
+		amcp::register_commands(*amcp_command_repo_);
+
 		using boost::property_tree::wptree;
 		for (auto& xml_controller : pt.get_child(L"configuration.controllers"))
 		{
@@ -294,13 +309,7 @@ struct server::impl : boost::noncopyable
 		using namespace IO;
 
 		if(boost::iequals(name, L"AMCP"))
-			return wrap_legacy_protocol("\r\n", spl::make_shared<amcp::AMCPProtocolStrategy>(
-					channels_,
-					thumbnail_generator_,
-					media_info_repo_,
-					system_info_provider_repo_,
-					cg_registry_,
-					shutdown_server_now_));
+			return wrap_legacy_protocol("\r\n", spl::make_shared<amcp::AMCPProtocolStrategy>(spl::make_shared_ptr(amcp_command_repo_)));
 		else if(boost::iequals(name, L"CII"))
 			return wrap_legacy_protocol("\r\n", spl::make_shared<cii::CIIProtocolStrategy>(channels_, cg_registry_));
 		else if(boost::iequals(name, L"CLOCK"))
@@ -336,14 +345,8 @@ struct server::impl : boost::noncopyable
 
 server::server(std::promise<bool>& shutdown_server_now) : impl_(new impl(shutdown_server_now)){}
 void server::start() { impl_->start(); }
-const std::vector<spl::shared_ptr<video_channel>> server::channels() const
-{
-	return impl_->channels_;
-}
-std::shared_ptr<core::thumbnail_generator> server::get_thumbnail_generator() const {return impl_->thumbnail_generator_; }
-spl::shared_ptr<media_info_repository> server::get_media_info_repo() const { return impl_->media_info_repo_; }
 spl::shared_ptr<core::system_info_provider_repository> server::get_system_info_provider_repo() const { return impl_->system_info_provider_repo_; }
-spl::shared_ptr<core::cg_producer_registry> server::get_cg_registry() const { return impl_->cg_registry_; }
+spl::shared_ptr<protocol::amcp::amcp_command_repository> server::get_amcp_command_repository() const { return spl::make_shared_ptr(impl_->amcp_command_repo_); }
 core::monitor::subject& server::monitor_output() { return *impl_->monitor_subject_; }
 
 }

@@ -65,7 +65,13 @@ public:
 		foreground_->paused(true);
 		is_paused_ = true;
 	}
-	
+
+	void resume()
+	{
+		foreground_->paused(false);
+		is_paused_ = false;
+	}
+
 	void load(spl::shared_ptr<frame_producer> producer, bool preview, const boost::optional<int32_t>& auto_play_delta)
 	{		
 //		background_->unsubscribe(background_event_subject_);
@@ -187,6 +193,7 @@ void layer::swap(layer& other)
 void layer::load(spl::shared_ptr<frame_producer> frame_producer, bool preview, const boost::optional<int32_t>& auto_play_delta){return impl_->load(std::move(frame_producer), preview, auto_play_delta);}	
 void layer::play(){impl_->play();}
 void layer::pause(){impl_->pause();}
+void layer::resume(){impl_->resume();}
 void layer::stop(){impl_->stop();}
 draw_frame layer::receive(const video_format_desc& format_desc) {return impl_->receive(format_desc);}
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}

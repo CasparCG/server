@@ -46,3 +46,5 @@ FORWARD2(caspar, core, class cg_producer_registry);
 FORWARD2(caspar, core, struct frame_transform);
 FORWARD2(caspar, core, struct write_frame_consumer);
 FORWARD2(caspar, core, struct frame_producer_dependencies);
+FORWARD2(caspar, core, class help_sink);
+FORWARD2(caspar, core, class help_repository);
