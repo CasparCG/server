@@ -96,6 +96,7 @@ struct server::impl : boost::noncopyable
 	spl::shared_ptr<system_info_provider_repository>	system_info_provider_repo_;
 	spl::shared_ptr<core::cg_producer_registry>			cg_registry_;
 	spl::shared_ptr<core::frame_producer_registry>		producer_registry_;
+	spl::shared_ptr<core::frame_consumer_registry>		consumer_registry_;
 	tbb::atomic<bool>									running_;
 	std::shared_ptr<thumbnail_generator>				thumbnail_generator_;
 	std::promise<bool>&									shutdown_server_now_;
@@ -114,7 +115,8 @@ struct server::impl : boost::noncopyable
 				system_info_provider_repo_,
 				cg_registry_,
 				media_info_repo_,
-				producer_registry_);
+				producer_registry_,
+				consumer_registry_);
 
 		initialize_modules(dependencies);
 		core::text::init(dependencies);
@@ -182,7 +184,7 @@ struct server::impl : boost::noncopyable
 					auto name = xml_consumer.first;
 					
 					if (name != L"<xmlcomment>")
-						channel->output().add(create_consumer(name, xml_consumer.second, &channel->stage()));
+						channel->output().add(consumer_registry_->create_consumer(name, xml_consumer.second, &channel->stage()));
 				}
 				catch(...)
 				{
@@ -278,6 +280,7 @@ struct server::impl : boost::noncopyable
 				cg_registry_,
 				help_repo_,
 				producer_registry_,
+				consumer_registry_,
 				shutdown_server_now_);
 		amcp::register_commands(*amcp_command_repo_);
 

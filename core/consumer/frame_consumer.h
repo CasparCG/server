@@ -77,16 +77,24 @@ typedef std::function<spl::shared_ptr<frame_consumer>(
 		const boost::property_tree::wptree& element,
 		interaction_sink* sink)> preconfigured_consumer_factory_t;
 
-void register_consumer_factory(const consumer_factory_t& factory);
-void register_preconfigured_consumer_factory(
-		const std::wstring& element_name,
-		const preconfigured_consumer_factory_t& factory);
-spl::shared_ptr<frame_consumer> create_consumer(
-		const std::vector<std::wstring>& params,
-		interaction_sink* sink);
-spl::shared_ptr<frame_consumer> create_consumer(
-		const std::wstring& element_name,
-		const boost::property_tree::wptree& element,
-		interaction_sink* sink);
+class frame_consumer_registry : boost::noncopyable
+{
+public:
+	frame_consumer_registry();
+	void register_consumer_factory(const consumer_factory_t& factory);
+	void register_preconfigured_consumer_factory(
+			const std::wstring& element_name,
+			const preconfigured_consumer_factory_t& factory);
+	spl::shared_ptr<frame_consumer> create_consumer(
+			const std::vector<std::wstring>& params,
+			interaction_sink* sink) const;
+	spl::shared_ptr<frame_consumer> create_consumer(
+			const std::wstring& element_name,
+			const boost::property_tree::wptree& element,
+			interaction_sink* sink) const;
+private:
+	struct impl;
+	spl::shared_ptr<impl> impl_;
+};
 
 }}
