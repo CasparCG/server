@@ -29,12 +29,12 @@
 #include <core/frame/geometry.h>
 #include <core/frame/frame.h>
 #include <core/frame/draw_frame.h>
-
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
 #include <core/monitor/monitor.h>
-
 #include <core/consumer/frame_consumer.h>
+#include <core/module_dependencies.h>
+
 #include <modules/image/consumer/image_consumer.h>
 
 #include <common/except.h>
@@ -107,10 +107,10 @@ namespace caspar { namespace core {
 			return result;
 		}
 
-		void init()
+		void init(module_dependencies dependencies)
 		{
 			fonts = enumerate_fonts();
-			register_producer_factory(&create_text_producer);
+			dependencies.producer_registry->register_producer_factory(create_text_producer);
 		}
 
 		text_info& find_font_file(text_info& info)
