@@ -286,7 +286,7 @@ bool intercept_command_line(int argc, char** argv)
 
 void init(core::module_dependencies dependencies)
 {
-	core::register_producer_factory(html::create_producer);
+	dependencies.producer_registry->register_producer_factory(html::create_producer);
 	
 	CefMainArgs main_args;
 	g_cef_executor.reset(new executor(L"cef"));

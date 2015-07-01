@@ -98,19 +98,20 @@ struct thumbnail_output
 struct thumbnail_generator::impl
 {
 private:
-	boost::filesystem::path					media_path_;
-	boost::filesystem::path					thumbnails_path_;
-	int										width_;
-	int										height_;
-	spl::shared_ptr<image_mixer>			image_mixer_;
-	spl::shared_ptr<diagnostics::graph>		graph_;
-	video_format_desc						format_desc_;
-	spl::unique_ptr<thumbnail_output>		output_;
-	mixer									mixer_;
-	thumbnail_creator						thumbnail_creator_;
-	spl::shared_ptr<media_info_repository>	media_info_repo_;
-	bool									mipmap_;
-	filesystem_monitor::ptr					monitor_;
+	boost::filesystem::path							media_path_;
+	boost::filesystem::path							thumbnails_path_;
+	int												width_;
+	int												height_;
+	spl::shared_ptr<image_mixer>					image_mixer_;
+	spl::shared_ptr<diagnostics::graph>				graph_;
+	video_format_desc								format_desc_;
+	spl::unique_ptr<thumbnail_output>				output_;
+	mixer											mixer_;
+	thumbnail_creator								thumbnail_creator_;
+	spl::shared_ptr<media_info_repository>			media_info_repo_;
+	spl::shared_ptr<const frame_producer_registry>	producer_registry_;
+	bool											mipmap_;
+	filesystem_monitor::ptr							monitor_;
 public:
 	impl(
 			filesystem_monitor_factory& monitor_factory,
@@ -123,6 +124,7 @@ public:
 			int generate_delay_millis,
 			const thumbnail_creator& thumbnail_creator,
 			spl::shared_ptr<media_info_repository> media_info_repo,
+			spl::shared_ptr<const frame_producer_registry> producer_registry,
 			bool mipmap)
 		: media_path_(media_path)
 		, thumbnails_path_(thumbnails_path)
@@ -134,6 +136,7 @@ public:
 		, mixer_(graph_, image_mixer_)
 		, thumbnail_creator_(thumbnail_creator)
 		, media_info_repo_(std::move(media_info_repo))
+		, producer_registry_(std::move(producer_registry))
 		, monitor_(monitor_factory.create(
 				media_path,
 				filesystem_event::ALL,
@@ -267,8 +270,8 @@ public:
 
 			try
 			{
-				producer = create_thumbnail_producer(
-						frame_producer_dependencies(image_mixer_, { }, format_desc_),
+				producer = producer_registry_->create_thumbnail_producer(
+						frame_producer_dependencies(image_mixer_, { }, format_desc_, producer_registry_),
 						media_file);
 			}
 			catch (const boost::thread_interrupted&)
@@ -363,6 +366,7 @@ thumbnail_generator::thumbnail_generator(
 		int generate_delay_millis,
 		const thumbnail_creator& thumbnail_creator,
 		spl::shared_ptr<media_info_repository> media_info_repo,
+		spl::shared_ptr<const frame_producer_registry> producer_registry,
 		bool mipmap)
 		: impl_(new impl(
 				monitor_factory,
@@ -374,6 +378,7 @@ thumbnail_generator::thumbnail_generator(
 				generate_delay_millis,
 				thumbnail_creator,
 				media_info_repo,
+				producer_registry,
 				mipmap))
 {
 }

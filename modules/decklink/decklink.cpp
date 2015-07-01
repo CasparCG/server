@@ -84,7 +84,7 @@ void init(core::module_dependencies dependencies)
 {
 	core::register_consumer_factory(create_consumer);
 	core::register_preconfigured_consumer_factory(L"decklink", create_preconfigured_consumer);
-	core::register_producer_factory(create_producer);
+	dependencies.producer_registry->register_producer_factory(create_producer);
 	dependencies.system_info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
 	{
 		info.add(L"system.decklink.version", version());

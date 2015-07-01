@@ -175,8 +175,8 @@ spl::shared_ptr<core::frame_producer> create_ct_producer(
 
 void init(core::module_dependencies dependencies)
 {
-	core::register_producer_factory(create_ct_producer);
-	core::register_producer_factory(create_swf_producer);
+	dependencies.producer_registry->register_producer_factory(create_ct_producer);
+	dependencies.producer_registry->register_producer_factory(create_swf_producer);
 	dependencies.media_info_repo->register_extractor([](const std::wstring& file, const std::wstring& extension, core::media_info& info)
 	{
 		if (extension != L".CT" && extension != L".SWF")

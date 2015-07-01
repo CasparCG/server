@@ -40,7 +40,10 @@ namespace caspar { namespace protocol { namespace cii {
 class CIIProtocolStrategy : public IO::IProtocolStrategy
 {
 public:
-	CIIProtocolStrategy(const std::vector<spl::shared_ptr<core::video_channel>>& channels, const spl::shared_ptr<core::cg_producer_registry>& cg_registry);
+	CIIProtocolStrategy(
+			const std::vector<spl::shared_ptr<core::video_channel>>& channels,
+			const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
+			const spl::shared_ptr<const core::frame_producer_registry>& producer_registry);
 
 	void Parse(const std::wstring& message, IO::ClientInfoPtr pClientInfo);
 	std::string GetCodepage() const { return "ISO-8859-1"; }	//ISO 8859-1
@@ -49,7 +52,8 @@ public:
 
 	spl::shared_ptr<core::video_channel> GetChannel() const { return pChannel_; }
 	spl::shared_ptr<core::cg_producer_registry> get_cg_registry() const { return cg_registry_; }
-	core::frame_producer_dependencies get_dependencies() const { return core::frame_producer_dependencies(GetChannel()->frame_factory(), channels_, GetChannel()->video_format_desc()); }
+	spl::shared_ptr<const core::frame_producer_registry> get_producer_registry() const { return producer_registry_; }
+	core::frame_producer_dependencies get_dependencies() const { return core::frame_producer_dependencies(GetChannel()->frame_factory(), channels_, GetChannel()->video_format_desc(), producer_registry_); }
 
 	void DisplayMediaFile(const std::wstring& filename);
 	void DisplayTemplate(const std::wstring& titleName);
@@ -97,6 +101,7 @@ private:
 	std::wstring currentProfile_;
 	spl::shared_ptr<core::video_channel> pChannel_;
 	spl::shared_ptr<core::cg_producer_registry> cg_registry_;
+	spl::shared_ptr<const core::frame_producer_registry> producer_registry_;
 	std::vector<spl::shared_ptr<core::video_channel>> channels_;
 };
 
