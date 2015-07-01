@@ -51,6 +51,7 @@ public:
 			int generate_delay_millis,
 			const thumbnail_creator& thumbnail_creator,
 			spl::shared_ptr<media_info_repository> media_info_repo,
+			spl::shared_ptr<const frame_producer_registry> producer_registry,
 			bool mipmap);
 	~thumbnail_generator();
 	void generate(const std::wstring& media_file);

@@ -37,7 +37,7 @@
 namespace caspar { namespace core {
 	namespace text 
 	{
-		void init();
+		void init(module_dependencies dependencies);
 	}
 
 class text_producer : public frame_producer_base
