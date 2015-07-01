@@ -180,6 +180,7 @@ int main(int argc, char** argv)
 	auto media_info_repo = core::create_in_memory_media_info_repository();
 	spl::shared_ptr<core::help_repository> help_repo;
 	spl::shared_ptr<core::frame_producer_registry> producer_registry;
+	spl::shared_ptr<core::frame_consumer_registry> consumer_registry;
 	std::promise<bool> shutdown_server_now;
 	protocol::amcp::amcp_command_repository repo(
 			{ },
@@ -189,11 +190,12 @@ int main(int argc, char** argv)
 			cg_registry,
 			help_repo,
 			producer_registry,
+			consumer_registry,
 			shutdown_server_now);
 
 	protocol::amcp::register_commands(repo);
 
-	core::module_dependencies dependencies(system_info_provider_repo, cg_registry, media_info_repo, producer_registry);
+	core::module_dependencies dependencies(system_info_provider_repo, cg_registry, media_info_repo, producer_registry, consumer_registry);
 	initialize_modules(dependencies);
 
 	generate_amcp_commands_help(*help_repo);

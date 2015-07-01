@@ -82,8 +82,8 @@ std::vector<std::wstring> device_list()
 
 void init(core::module_dependencies dependencies)
 {
-	core::register_consumer_factory(create_consumer);
-	core::register_preconfigured_consumer_factory(L"decklink", create_preconfigured_consumer);
+	dependencies.consumer_registry->register_consumer_factory(create_consumer);
+	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"decklink", create_preconfigured_consumer);
 	dependencies.producer_registry->register_producer_factory(create_producer);
 	dependencies.system_info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
 	{

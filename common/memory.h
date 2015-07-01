@@ -715,6 +715,12 @@ shared_ptr<T> make_shared(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4, P5&& p5, 
     return shared_ptr<T>(std::make_shared<T>(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4), std::forward<P5>(p5), std::forward<P6>(p6), std::forward<P7>(p7)));
 }
 
+template<typename T, typename P0, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
+shared_ptr<T> make_shared(P0&& p0, P1&& p1, P2&& p2, P3&& p3, P4&& p4, P5&& p5, P6&& p6, P7&& p7, P8&& p8)
+{
+	return shared_ptr<T>(std::make_shared<T>(std::forward<P0>(p0), std::forward<P1>(p1), std::forward<P2>(p2), std::forward<P3>(p3), std::forward<P4>(p4), std::forward<P5>(p5), std::forward<P6>(p6), std::forward<P7>(p7), std::forward<P8>(p8)));
+}
+
 template<typename T>
 shared_ptr<T>::shared_ptr() 
     : p_(make_shared<T>())
