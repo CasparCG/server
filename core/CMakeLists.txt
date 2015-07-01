@@ -16,6 +16,7 @@ set(SOURCES
 		frame/geometry.cpp
 
 		help/help_repository.cpp
+		help/util.cpp
 
 		mixer/audio/audio_mixer.cpp
 		mixer/image/blend_modes.cpp
@@ -75,6 +76,7 @@ set(HEADERS
 
 		help/help_repository.h
 		help/help_sink.h
+		help/util.h
 
 		interaction/interaction_aggregator.h
 		interaction/interaction_event.h

@@ -63,7 +63,7 @@ void deduce_expression(variable& var, const variable_repository& repo)
 
 void init(module_dependencies dependencies)
 {
-	register_producer_factory(create_xml_scene_producer);
+	dependencies.producer_registry->register_producer_factory(create_xml_scene_producer);
 	dependencies.cg_registry->register_cg_producer(
 			L"scene",
 			{ L".scene" },
@@ -127,7 +127,7 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 	for (auto& elem : root.get_child(L"scene.layers"))
 	{
 		auto id = elem.second.get<std::wstring>(L"<xmlattr>.id");
-		auto producer = create_producer(dependencies, elem.second.get<std::wstring>(L"producer"));
+		auto producer = dependencies.producer_registry->create_producer(dependencies, elem.second.get<std::wstring>(L"producer"));
 		auto& layer = scene->create_layer(producer, 0, 0, id);
 		auto variable_prefix = L"layer." + id + L".";
 

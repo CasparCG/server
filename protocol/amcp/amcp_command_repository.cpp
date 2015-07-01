@@ -69,6 +69,7 @@ struct amcp_command_repository::impl
 	spl::shared_ptr<core::system_info_provider_repository>		system_info_provider_repo;
 	spl::shared_ptr<core::cg_producer_registry>					cg_registry;
 	spl::shared_ptr<core::help_repository>						help_repo;
+	spl::shared_ptr<const core::frame_producer_registry>		producer_registry;
 	std::promise<bool>&											shutdown_server_now;
 
 	std::map<std::wstring, std::pair<amcp_command_func, int>>	commands;
@@ -81,12 +82,14 @@ struct amcp_command_repository::impl
 			const spl::shared_ptr<core::system_info_provider_repository>& system_info_provider_repo,
 			const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
 			const spl::shared_ptr<core::help_repository>& help_repo,
+			const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
 			std::promise<bool>& shutdown_server_now)
 		: thumb_gen(thumb_gen)
 		, media_info_repo(media_info_repo)
 		, system_info_provider_repo(system_info_provider_repo)
 		, cg_registry(cg_registry)
 		, help_repo(help_repo)
+		, producer_registry(producer_registry)
 		, shutdown_server_now(shutdown_server_now)
 	{
 		int index = 0;
@@ -106,17 +109,18 @@ amcp_command_repository::amcp_command_repository(
 		const spl::shared_ptr<core::system_info_provider_repository>& system_info_provider_repo,
 		const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
 		const spl::shared_ptr<core::help_repository>& help_repo,
+		const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
 		std::promise<bool>& shutdown_server_now)
-	: impl_(new impl(channels, thumb_gen, media_info_repo, system_info_provider_repo, cg_registry, help_repo, shutdown_server_now))
+	: impl_(new impl(channels, thumb_gen, media_info_repo, system_info_provider_repo, cg_registry, help_repo, producer_registry, shutdown_server_now))
 {
 }
 
-AMCPCommand::ptr_type amcp_command_repository::create_command(const std::wstring& s, IO::ClientInfoPtr client, std::list<std::wstring>& tokens)
+AMCPCommand::ptr_type amcp_command_repository::create_command(const std::wstring& s, IO::ClientInfoPtr client, std::list<std::wstring>& tokens) const
 {
 	auto& self = *impl_;
 
 	command_context ctx(
-			client,
+			std::move(client),
 			channel_context(),
 			-1,
 			-1,
@@ -126,6 +130,7 @@ AMCPCommand::ptr_type amcp_command_repository::create_command(const std::wstring
 			self.cg_registry,
 			self.system_info_provider_repo,
 			self.thumb_gen,
+			self.producer_registry,
 			self.shutdown_server_now);
 
 	auto command = find_command(self.commands, s, ctx, tokens);
@@ -146,7 +151,7 @@ AMCPCommand::ptr_type amcp_command_repository::create_channel_command(
 		IO::ClientInfoPtr client,
 		unsigned int channel_index,
 		int layer_index,
-		std::list<std::wstring>& tokens)
+		std::list<std::wstring>& tokens) const
 {
 	auto& self = *impl_;
 
@@ -163,6 +168,7 @@ AMCPCommand::ptr_type amcp_command_repository::create_channel_command(
 			self.cg_registry,
 			self.system_info_provider_repo,
 			self.thumb_gen,
+			self.producer_registry,
 			self.shutdown_server_now);
 
 	auto command = find_command(self.channel_commands, s, ctx, tokens);

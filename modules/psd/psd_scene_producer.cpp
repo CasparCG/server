@@ -455,7 +455,7 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 
 void init(core::module_dependencies dependencies)
 {
-	core::register_producer_factory(create_psd_scene_producer);
+	dependencies.producer_registry->register_producer_factory(create_psd_scene_producer);
 	dependencies.media_info_repo->register_extractor(
 			[](const std::wstring& file, const std::wstring& upper_case_extension, core::media_info& info)
 			{
