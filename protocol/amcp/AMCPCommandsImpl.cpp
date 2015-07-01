@@ -620,7 +620,7 @@ std::wstring add_command(command_context& ctx)
 	core::diagnostics::scoped_call_context save;
 	core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
 
-	auto consumer = create_consumer(ctx.parameters, &ctx.channel.channel->stage());
+	auto consumer = ctx.consumer_registry->create_consumer(ctx.parameters, &ctx.channel.channel->stage());
 	ctx.channel.channel->output().add(ctx.layer_index(consumer->index()), consumer);
 
 	return L"202 ADD OK\r\n";
@@ -653,7 +653,7 @@ std::wstring remove_command(command_context& ctx)
 				ctx.client->address(),
 				ctx.parameters);
 
-		index = create_consumer(ctx.parameters, &ctx.channel.channel->stage())->index();
+		index = ctx.consumer_registry->create_consumer(ctx.parameters, &ctx.channel.channel->stage())->index();
 	}
 
 	ctx.channel.channel->output().remove(index);
@@ -674,7 +674,7 @@ void print_describer(core::help_sink& sink, const core::help_repository& repo)
 
 std::wstring print_command(command_context& ctx)
 {
-	ctx.channel.channel->output().add(create_consumer({ L"IMAGE" }, &ctx.channel.channel->stage()));
+	ctx.channel.channel->output().add(ctx.consumer_registry->create_consumer({ L"IMAGE" }, &ctx.channel.channel->stage()));
 
 	return L"202 PRINT OK\r\n";
 }
@@ -1982,7 +1982,7 @@ std::wstring channel_grid_command(command_context& ctx)
 	params.push_back(L"0");
 	params.push_back(L"NAME");
 	params.push_back(L"Channel Grid Window");
-	auto screen = create_consumer(params, &self.channel->stage());
+	auto screen = ctx.consumer_registry->create_consumer(params, &self.channel->stage());
 
 	self.channel->output().add(screen);
 

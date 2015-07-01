@@ -33,14 +33,14 @@ void init(core::module_dependencies dependencies)
 	try
 	{
 		if (airsend::is_available())
-			core::register_consumer_factory(create_ivga_consumer);
+			dependencies.consumer_registry->register_consumer_factory(create_ivga_consumer);
 		dependencies.system_info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
 		{
 			info.add(L"system.newtek-ivga.version", airsend::is_available()
 					? L"available"
 					: L"unavailable (" + airsend::dll_name() + L")");
 		});
-		core::register_preconfigured_consumer_factory(L"newtek-ivga", create_preconfigured_ivga_consumer);
+		dependencies.consumer_registry->register_preconfigured_consumer_factory(L"newtek-ivga", create_preconfigured_ivga_consumer);
 	}
 	catch(...){}
 }
