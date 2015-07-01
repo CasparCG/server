@@ -95,6 +95,7 @@ struct server::impl : boost::noncopyable
 	boost::thread										initial_media_info_thread_;
 	spl::shared_ptr<system_info_provider_repository>	system_info_provider_repo_;
 	spl::shared_ptr<core::cg_producer_registry>			cg_registry_;
+	spl::shared_ptr<core::frame_producer_registry>		producer_registry_;
 	tbb::atomic<bool>									running_;
 	std::shared_ptr<thumbnail_generator>				thumbnail_generator_;
 	std::promise<bool>&									shutdown_server_now_;
@@ -110,12 +111,13 @@ struct server::impl : boost::noncopyable
 		diag_subject_->attach_parent(monitor_subject_);
 
 		module_dependencies dependencies(
-			system_info_provider_repo_,
-			cg_registry_,
-			media_info_repo_);
+				system_info_provider_repo_,
+				cg_registry_,
+				media_info_repo_,
+				producer_registry_);
 
 		initialize_modules(dependencies);
-		core::text::init();
+		core::text::init(dependencies);
 		core::scene::init(dependencies);
 	}
 
@@ -260,6 +262,7 @@ struct server::impl : boost::noncopyable
 			pt.get(L"configuration.thumbnails.generate-delay-millis", 2000),
 			&image::write_cropped_png,
 			media_info_repo_,
+			producer_registry_,
 			pt.get(L"configuration.thumbnails.mipmap", true)));
 
 		CASPAR_LOG(info) << L"Initialized thumbnail generator.";
@@ -274,6 +277,7 @@ struct server::impl : boost::noncopyable
 				system_info_provider_repo_,
 				cg_registry_,
 				help_repo_,
+				producer_registry_,
 				shutdown_server_now_);
 		amcp::register_commands(*amcp_command_repo_);
 
@@ -311,11 +315,11 @@ struct server::impl : boost::noncopyable
 		if(boost::iequals(name, L"AMCP"))
 			return wrap_legacy_protocol("\r\n", spl::make_shared<amcp::AMCPProtocolStrategy>(spl::make_shared_ptr(amcp_command_repo_)));
 		else if(boost::iequals(name, L"CII"))
-			return wrap_legacy_protocol("\r\n", spl::make_shared<cii::CIIProtocolStrategy>(channels_, cg_registry_));
+			return wrap_legacy_protocol("\r\n", spl::make_shared<cii::CIIProtocolStrategy>(channels_, cg_registry_, producer_registry_));
 		else if(boost::iequals(name, L"CLOCK"))
 			return spl::make_shared<to_unicode_adapter_factory>(
 					"ISO-8859-1",
-					spl::make_shared<CLK::clk_protocol_strategy_factory>(channels_, cg_registry_));
+					spl::make_shared<CLK::clk_protocol_strategy_factory>(channels_, cg_registry_, producer_registry_));
 		
 		CASPAR_THROW_EXCEPTION(caspar_exception() << arg_name_info(L"name") << arg_value_info(name) << msg_info(L"Invalid protocol"));
 	}
