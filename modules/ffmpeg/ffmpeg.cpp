@@ -247,10 +247,10 @@ void init(core::module_dependencies dependencies)
     avformat_network_init();
     avcodec_register_all();
 	
-	core::register_consumer_factory(create_consumer);
-	core::register_consumer_factory(create_streaming_consumer);
-	core::register_preconfigured_consumer_factory(L"file", create_preconfigured_consumer);
-	core::register_preconfigured_consumer_factory(L"stream", create_preconfigured_streaming_consumer);
+	dependencies.consumer_registry->register_consumer_factory(create_consumer);
+	dependencies.consumer_registry->register_consumer_factory(create_streaming_consumer);
+	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"file", create_preconfigured_consumer);
+	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"stream", create_preconfigured_streaming_consumer);
 	dependencies.producer_registry->register_producer_factory(create_producer);
 	
 	dependencies.media_info_repo->register_extractor(

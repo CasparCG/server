@@ -29,8 +29,8 @@ namespace caspar { namespace screen {
 
 void init(core::module_dependencies dependencies)
 {
-	core::register_consumer_factory(create_consumer);
-	core::register_preconfigured_consumer_factory(L"screen", create_preconfigured_consumer);
+	dependencies.consumer_registry->register_consumer_factory(create_consumer);
+	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"screen", create_preconfigured_consumer);
 }
 
 }}
