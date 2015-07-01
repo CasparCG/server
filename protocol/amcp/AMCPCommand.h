@@ -44,6 +44,7 @@ namespace amcp {
 		spl::shared_ptr<core::system_info_provider_repository>	system_info_repo;
 		std::shared_ptr<core::thumbnail_generator>				thumb_gen;
 		spl::shared_ptr<const core::frame_producer_registry>	producer_registry;
+		spl::shared_ptr<const core::frame_consumer_registry>	consumer_registry;
 		std::promise<bool>&										shutdown_server_now;
 		std::vector<std::wstring>								parameters;
 
@@ -61,6 +62,7 @@ namespace amcp {
 				spl::shared_ptr<core::system_info_provider_repository> system_info_repo,
 				std::shared_ptr<core::thumbnail_generator> thumb_gen,
 				spl::shared_ptr<const core::frame_producer_registry> producer_registry,
+				spl::shared_ptr<const core::frame_consumer_registry> consumer_registry,
 				std::promise<bool>& shutdown_server_now)
 			: client(std::move(client))
 			, channel(channel)
@@ -73,6 +75,7 @@ namespace amcp {
 			, system_info_repo(std::move(system_info_repo))
 			, thumb_gen(std::move(thumb_gen))
 			, producer_registry(std::move(producer_registry))
+			, consumer_registry(std::move(consumer_registry))
 			, shutdown_server_now(shutdown_server_now)
 		{
 		}
