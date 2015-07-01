@@ -43,15 +43,16 @@ public:
 			const spl::shared_ptr<core::system_info_provider_repository>& system_info_provider_repo,
 			const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
 			const spl::shared_ptr<core::help_repository>& help_repo,
+			const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
 			std::promise<bool>& shutdown_server_now);
 
-	AMCPCommand::ptr_type create_command(const std::wstring& s, IO::ClientInfoPtr client, std::list<std::wstring>& tokens);
+	AMCPCommand::ptr_type create_command(const std::wstring& s, IO::ClientInfoPtr client, std::list<std::wstring>& tokens) const;
 	AMCPCommand::ptr_type create_channel_command(
 			const std::wstring& s,
 			IO::ClientInfoPtr client,
 			unsigned int channel_index,
 			int layer_index,
-			std::list<std::wstring>& tokens);
+			std::list<std::wstring>& tokens) const;
 
 	const std::vector<channel_context>& channels() const;
 

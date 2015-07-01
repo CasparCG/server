@@ -251,7 +251,7 @@ void init(core::module_dependencies dependencies)
 	core::register_consumer_factory(create_streaming_consumer);
 	core::register_preconfigured_consumer_factory(L"file", create_preconfigured_consumer);
 	core::register_preconfigured_consumer_factory(L"stream", create_preconfigured_streaming_consumer);
-	core::register_producer_factory(create_producer);
+	dependencies.producer_registry->register_producer_factory(create_producer);
 	
 	dependencies.media_info_repo->register_extractor(
 			[](const std::wstring& file, const std::wstring& extension, core::media_info& info) -> bool

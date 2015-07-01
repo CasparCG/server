@@ -16,30 +16,16 @@
 * You should have received a copy of the GNU General Public License
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
-* Author: Nicklas P Andersson
+* Author: Helge Norberg, helge.norberg@svt.se
 */
 
- 
 #pragma once
 
-#include "../util/protocol_strategy.h"
-#include "clk_command_processor.h"
-#include <core/video_channel.h>
-#include <core/producer/cg_proxy.h>
+#include <string>
 
-namespace caspar { namespace protocol { namespace CLK {
+namespace caspar { namespace core {
 
-class clk_protocol_strategy_factory : public IO::protocol_strategy_factory<wchar_t>
-{
-	clk_command_processor command_processor_;
-public:
-	clk_protocol_strategy_factory(
-			const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-			const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
-			const spl::shared_ptr<const core::frame_producer_registry>& producer_registry);
+std::wstring wordwrap(const std::wstring& text, int width);
+std::wstring indent(std::wstring text, const std::wstring& indent);
 
-	virtual IO::protocol_strategy<wchar_t>::ptr create(
-		const IO::client_connection<wchar_t>::ptr& client_connection);
-};
-
-}}}
+}}

@@ -41,6 +41,7 @@
 #include <core/producer/frame_producer.h>
 #include <core/help/help_repository.h>
 #include <core/help/help_sink.h>
+#include <core/help/util.h>
 #include <core/video_format.h>
 #include <core/producer/transition/transition_producer.h>
 #include <core/frame/frame_transform.h>
@@ -278,7 +279,8 @@ core::frame_producer_dependencies get_producer_dependencies(const std::shared_pt
 			cpplinq::from(ctx.channels)
 					.select([](channel_context c) { return spl::make_shared_ptr(c.channel); })
 					.to_vector(),
-			channel->video_format_desc());
+			channel->video_format_desc(),
+			ctx.producer_registry);
 }
 
 // Basic Commands
@@ -368,7 +370,7 @@ std::wstring loadbg_command(command_context& ctx)
 	core::diagnostics::call_context::for_thread().layer = ctx.layer_index();
 
 	auto channel = ctx.channel.channel;
-	auto pFP = create_producer(get_producer_dependencies(channel, ctx), ctx.parameters);
+	auto pFP = ctx.producer_registry->create_producer(get_producer_dependencies(channel, ctx), ctx.parameters);
 
 	if (pFP == frame_producer::empty())
 		CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(ctx.parameters.size() > 0 ? ctx.parameters[0] : L""));
@@ -402,7 +404,7 @@ std::wstring load_command(command_context& ctx)
 	core::diagnostics::scoped_call_context save;
 	core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
 	core::diagnostics::call_context::for_thread().layer = ctx.layer_index();
-	auto pFP = create_producer(get_producer_dependencies(ctx.channel.channel, ctx), ctx.parameters);
+	auto pFP = ctx.producer_registry->create_producer(get_producer_dependencies(ctx.channel.channel, ctx), ctx.parameters);
 	ctx.channel.channel->stage().load(ctx.layer_index(), pFP, true);
 
 	return L"202 LOAD OK\r\n";
@@ -1801,7 +1803,7 @@ void mixer_mipmap_describer(core::help_sink& sink, const core::help_repository& 
 		->text(L"If no argument is given the current state is returned.");
 	sink.para()->text(L"Mipmapping reduces aliasing when downscaling/perspective transforming.");
 	sink.para()->text(L"Examples:");
-	sink.example(L">> MIXER 1-10 MIPMAP 1", L"for turing mipmapping on");
+	sink.example(L">> MIXER 1-10 MIPMAP 1", L"for turning mipmapping on");
 	sink.example(
 		L">> MIXER 1-10 MIPMAP\n"
 		L"<< 201 MIXER OK\n"
@@ -1989,7 +1991,7 @@ std::wstring channel_grid_command(command_context& ctx)
 		if (channel.channel != self.channel)
 		{
 			core::diagnostics::call_context::for_thread().layer = index;
-			auto producer = create_producer(get_producer_dependencies(channel.channel, ctx), L"route://" + boost::lexical_cast<std::wstring>(channel.channel->index()));
+			auto producer = ctx.producer_registry->create_producer(get_producer_dependencies(channel.channel, ctx), L"route://" + boost::lexical_cast<std::wstring>(channel.channel->index()));
 			self.channel->stage().load(index, producer, false);
 			self.channel->stage().play(index);
 			index++;
@@ -2411,6 +2413,7 @@ void help_describer(core::help_sink& sink, const core::help_repository& reposito
 
 std::wstring help_command(command_context& ctx)
 {
+	static const int WIDTH = 80;
 	struct max_width_sink : public core::help_sink
 	{
 		std::size_t max_width = 0;
@@ -2441,12 +2444,13 @@ std::wstring help_command(command_context& ctx)
 
 	struct simple_paragraph_builder : core::paragraph_builder
 	{
-		std::wstringstream& out;
+		std::wostringstream out;
+		std::wstringstream& commit_to;
 
-		simple_paragraph_builder(std::wstringstream& out) : out(out) { }
+		simple_paragraph_builder(std::wstringstream& out) : commit_to(out) { }
 		~simple_paragraph_builder()
 		{
-			out << L"\n\n";
+			commit_to << core::wordwrap(out.str(), WIDTH) << L"\n";
 		}
 		spl::shared_ptr<paragraph_builder> text(std::wstring text) override
 		{
@@ -2463,10 +2467,15 @@ std::wstring help_command(command_context& ctx)
 		std::wstringstream& out;
 
 		simple_definition_list_builder(std::wstringstream& out) : out(out) { }
+		~simple_definition_list_builder()
+		{
+			out << L"\n";
+		}
+
 		spl::shared_ptr<definition_list_builder> item(std::wstring term, std::wstring description) override
 		{
-			out << L"  " << std::move(term) << L"\n";
-			out << L"    " << std::move(description) << L"\n\n";
+			out << core::indent(core::wordwrap(term, WIDTH - 2), L"  ");
+			out << core::indent(core::wordwrap(description, WIDTH - 4), L"    ");
 			return shared_from_this();
 		}
 	};
@@ -2479,8 +2488,8 @@ std::wstring help_command(command_context& ctx)
 
 		void syntax(const std::wstring& syntax) override
 		{
-			out << L"Syntax\n";
-			out << L"  " << syntax << L"\n\n";
+			out << L"Syntax:\n";
+			out << core::indent(core::wordwrap(syntax, WIDTH - 2), L"  ") << L"\n";
 		};
 
 		spl::shared_ptr<core::paragraph_builder> para() override
@@ -2495,9 +2504,11 @@ std::wstring help_command(command_context& ctx)
 
 		void example(const std::wstring& code, const std::wstring& caption = L"") override
 		{
-			out << L"  " << code << L"\n";
+			out << core::indent(core::wordwrap(code, WIDTH - 2), L"  ");
+
 			if (!caption.empty())
-				out << L"  ..." << caption << L"\n";
+				out << core::indent(core::wordwrap(L"..." + caption, WIDTH - 2), L"  ");
+
 			out << L"\n";
 		}
 	private:

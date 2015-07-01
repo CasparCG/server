@@ -40,26 +40,37 @@
 #include <boost/thread.hpp>
 
 namespace caspar { namespace core {
-	
-std::vector<producer_factory_t> g_producer_factories;
-std::vector<producer_factory_t> g_thumbnail_factories;
 
-void register_producer_factory(const producer_factory_t& factory)
+struct frame_producer_registry::impl
 {
-	g_producer_factories.push_back(factory);
+	std::vector<producer_factory_t> producer_factories;
+	std::vector<producer_factory_t> thumbnail_factories;
+};
+
+frame_producer_registry::frame_producer_registry()
+    : impl_(new impl)
+{
 }
-void register_thumbnail_producer_factory(const producer_factory_t& factory)
+
+void frame_producer_registry::register_producer_factory(const producer_factory_t& factory)
 {
-	g_thumbnail_factories.push_back(factory);
+	impl_->producer_factories.push_back(factory);
+}
+
+void frame_producer_registry::register_thumbnail_producer_factory(const producer_factory_t& factory)
+{
+	impl_->thumbnail_factories.push_back(factory);
 }
 
 frame_producer_dependencies::frame_producer_dependencies(
 		const spl::shared_ptr<core::frame_factory>& frame_factory,
 		const std::vector<spl::shared_ptr<video_channel>>& channels,
-		const video_format_desc& format_desc)
+		const video_format_desc& format_desc,
+		const spl::shared_ptr<const frame_producer_registry> producer_registry)
 	: frame_factory(frame_factory)
 	, channels(channels)
 	, format_desc(format_desc)
+	, producer_registry(producer_registry)
 {
 }
 
@@ -306,39 +317,41 @@ spl::shared_ptr<core::frame_producer> do_create_producer(const frame_producer_de
 	return producer;
 }
 
-spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const frame_producer_dependencies& dependencies, const std::wstring& media_file)
+spl::shared_ptr<core::frame_producer> frame_producer_registry::create_thumbnail_producer(const frame_producer_dependencies& dependencies, const std::wstring& media_file) const
 {
-  std::vector<std::wstring> params;
-  params.push_back(media_file);
+	auto& thumbnail_factories = impl_->thumbnail_factories;
+	std::vector<std::wstring> params;
+	params.push_back(media_file);
 
-  auto producer = do_create_producer(dependencies, params, g_thumbnail_factories, true);
-  auto key_producer = frame_producer::empty();
+	auto producer = do_create_producer(dependencies, params, thumbnail_factories, true);
+	auto key_producer = frame_producer::empty();
   
-  try // to find a key file.
-  {
-	auto params_copy = params;
-	if (params_copy.size() > 0)
+	try // to find a key file.
 	{
-	  params_copy[0] += L"_A";
-	  key_producer = do_create_producer(dependencies, params_copy, g_thumbnail_factories, true);
-	  if (key_producer == frame_producer::empty())
-	  {
-		params_copy[0] += L"LPHA";
-		key_producer = do_create_producer(dependencies, params_copy, g_thumbnail_factories, true);
-	  }
+		auto params_copy = params;
+		if (params_copy.size() > 0)
+		{
+			params_copy[0] += L"_A";
+			key_producer = do_create_producer(dependencies, params_copy, thumbnail_factories, true);
+			if (key_producer == frame_producer::empty())
+			{
+				params_copy[0] += L"LPHA";
+				key_producer = do_create_producer(dependencies, params_copy, thumbnail_factories, true);
+			}
+		}
 	}
-  }
-  catch(...){}
+	catch(...){}
 
-  if (producer != frame_producer::empty() && key_producer != frame_producer::empty())
-	return create_separated_producer(producer, key_producer);
+	if (producer != frame_producer::empty() && key_producer != frame_producer::empty())
+		return create_separated_producer(producer, key_producer);
   
-  return producer;
+	return producer;
 }
 
-spl::shared_ptr<core::frame_producer> create_producer(const frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> frame_producer_registry::create_producer(const frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params) const
 {	
-	auto producer = do_create_producer(dependencies, params, g_producer_factories);
+	auto& producer_factories = impl_->producer_factories;
+	auto producer = do_create_producer(dependencies, params, producer_factories);
 	auto key_producer = frame_producer::empty();
 	
 	try // to find a key file.
@@ -347,11 +360,11 @@ spl::shared_ptr<core::frame_producer> create_producer(const frame_producer_depen
 		if(params_copy.size() > 0)
 		{
 			params_copy[0] += L"_A";
-			key_producer = do_create_producer(dependencies, params_copy, g_producer_factories);
+			key_producer = do_create_producer(dependencies, params_copy, producer_factories);
 			if(key_producer == frame_producer::empty())
 			{
 				params_copy[0] += L"LPHA";
-				key_producer = do_create_producer(dependencies, params_copy, g_producer_factories);
+				key_producer = do_create_producer(dependencies, params_copy, producer_factories);
 			}
 		}
 	}
@@ -372,7 +385,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const frame_producer_depen
 }
 
 
-spl::shared_ptr<core::frame_producer> create_producer(const frame_producer_dependencies& dependencies, const std::wstring& params)
+spl::shared_ptr<core::frame_producer> frame_producer_registry::create_producer(const frame_producer_dependencies& dependencies, const std::wstring& params) const
 {
 	std::wstringstream iss(params);
 	std::vector<std::wstring> tokens;
