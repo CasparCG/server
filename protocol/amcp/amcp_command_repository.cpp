@@ -70,6 +70,7 @@ struct amcp_command_repository::impl
 	spl::shared_ptr<core::cg_producer_registry>					cg_registry;
 	spl::shared_ptr<core::help_repository>						help_repo;
 	spl::shared_ptr<const core::frame_producer_registry>		producer_registry;
+	spl::shared_ptr<const core::frame_consumer_registry>		consumer_registry;
 	std::promise<bool>&											shutdown_server_now;
 
 	std::map<std::wstring, std::pair<amcp_command_func, int>>	commands;
@@ -83,6 +84,7 @@ struct amcp_command_repository::impl
 			const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
 			const spl::shared_ptr<core::help_repository>& help_repo,
 			const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
+			const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
 			std::promise<bool>& shutdown_server_now)
 		: thumb_gen(thumb_gen)
 		, media_info_repo(media_info_repo)
@@ -90,6 +92,7 @@ struct amcp_command_repository::impl
 		, cg_registry(cg_registry)
 		, help_repo(help_repo)
 		, producer_registry(producer_registry)
+		, consumer_registry(consumer_registry)
 		, shutdown_server_now(shutdown_server_now)
 	{
 		int index = 0;
@@ -110,8 +113,18 @@ amcp_command_repository::amcp_command_repository(
 		const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
 		const spl::shared_ptr<core::help_repository>& help_repo,
 		const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
+		const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
 		std::promise<bool>& shutdown_server_now)
-	: impl_(new impl(channels, thumb_gen, media_info_repo, system_info_provider_repo, cg_registry, help_repo, producer_registry, shutdown_server_now))
+		: impl_(new impl(
+				channels,
+				thumb_gen,
+				media_info_repo,
+				system_info_provider_repo,
+				cg_registry,
+				help_repo,
+				producer_registry,
+				consumer_registry,
+				shutdown_server_now))
 {
 }
 
@@ -131,6 +144,7 @@ AMCPCommand::ptr_type amcp_command_repository::create_command(const std::wstring
 			self.system_info_provider_repo,
 			self.thumb_gen,
 			self.producer_registry,
+			self.consumer_registry,
 			self.shutdown_server_now);
 
 	auto command = find_command(self.commands, s, ctx, tokens);
@@ -169,6 +183,7 @@ AMCPCommand::ptr_type amcp_command_repository::create_channel_command(
 			self.system_info_provider_repo,
 			self.thumb_gen,
 			self.producer_registry,
+			self.consumer_registry,
 			self.shutdown_server_now);
 
 	auto command = find_command(self.channel_commands, s, ctx, tokens);

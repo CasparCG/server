@@ -27,6 +27,7 @@
 #include "producer/cg_proxy.h"
 #include "producer/media_info/media_info_repository.h"
 #include "producer/frame_producer.h"
+#include "consumer/frame_consumer.h"
 
 namespace caspar { namespace core {
 
@@ -36,16 +37,19 @@ struct module_dependencies
 	const spl::shared_ptr<cg_producer_registry>				cg_registry;
 	const spl::shared_ptr<media_info_repository>			media_info_repo;
 	const spl::shared_ptr<frame_producer_registry>			producer_registry;
+	const spl::shared_ptr<frame_consumer_registry>			consumer_registry;
 
 	module_dependencies(
 			spl::shared_ptr<system_info_provider_repository> system_info_provider_repo,
 			spl::shared_ptr<cg_producer_registry> cg_registry,
 			spl::shared_ptr<media_info_repository> media_info_repo,
-			spl::shared_ptr<frame_producer_registry> producer_registry)
+			spl::shared_ptr<frame_producer_registry> producer_registry,
+			spl::shared_ptr<frame_consumer_registry> consumer_registry)
 		: system_info_provider_repo(std::move(system_info_provider_repo))
 		, cg_registry(std::move(cg_registry))
 		, media_info_repo(std::move(media_info_repo))
 		, producer_registry(std::move(producer_registry))
+		, consumer_registry(std::move(consumer_registry))
 	{
 	}
 };
