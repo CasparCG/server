@@ -32,6 +32,8 @@
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
 #include <core/monitor/monitor.h>
+#include <core/help/help_sink.h>
+#include <core/help/help_repository.h>
 
 #include <common/env.h>
 #include <common/log.h>
@@ -169,6 +171,16 @@ public:
 	}
 };
 
+void describe_producer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Loads a still image.");
+	sink.syntax(L"{[image_file:string]},{[PNG_BASE64] [encoded:string]}");
+	sink.para()->text(L"Loads a still image, either from disk or via a base64 encoded image submitted via AMCP.");
+	sink.para()->text(L"Examples:");
+	sink.example(L">> PLAY 1-10 image_file", L"Plays an image from the media folder.");
+	sink.example(L">> PLAY 1-10 [PNG_BASE64] data...", L"Plays a PNG image transferred as a base64 encoded string.");
+}
+
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
 {
 	static const auto extensions = {
@@ -264,4 +276,5 @@ spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const core::fram
 {
 	return caspar::image::create_producer(dependencies, params);
 }
+
 }}

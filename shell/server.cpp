@@ -105,6 +105,7 @@ struct server::impl : boost::noncopyable
 		: accelerator_(env::properties().get(L"configuration.accelerator", L"auto"))
 		, osc_client_(io_service_manager_.service())
 		, media_info_repo_(create_in_memory_media_info_repository())
+		, producer_registry_(spl::make_shared<core::frame_producer_registry>(help_repo_))
 		, shutdown_server_now_(shutdown_server_now)
 	{
 		running_ = false;

@@ -35,6 +35,8 @@
 #include <core/system_info_provider.h>
 #include <core/frame/frame_factory.h>
 #include <core/video_format.h>
+#include <core/help/help_sink.h>
+#include <core/help/help_repository.h>
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/noncopyable.hpp>
@@ -159,6 +161,16 @@ public:
 	}
 };
 
+void describe_ct_producer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Plays compressed flash templates (.ct files).");
+	sink.syntax(L"[ct_file:string]");
+	sink.para()->text(L"Plays compressed flash templates (.ct files). The file should reside under the media folder.");
+	sink.para()->text(L"A ct file is a zip file containing a flash template (.ft), an XML file with template data and media files.");
+	sink.para()->text(L"Examples:");
+	sink.example(L">> PLAY 1-10 folder/ct_file");
+}
+
 spl::shared_ptr<core::frame_producer> create_ct_producer(
 		const core::frame_producer_dependencies& dependencies,
 		const std::vector<std::wstring>& params)
@@ -175,8 +187,8 @@ spl::shared_ptr<core::frame_producer> create_ct_producer(
 
 void init(core::module_dependencies dependencies)
 {
-	dependencies.producer_registry->register_producer_factory(create_ct_producer);
-	dependencies.producer_registry->register_producer_factory(create_swf_producer);
+	dependencies.producer_registry->register_producer_factory(L"Flash Producer (.ct)", create_ct_producer, describe_ct_producer);
+	dependencies.producer_registry->register_producer_factory(L"Flash Producer (.swf)", create_swf_producer, describe_swf_producer);
 	dependencies.media_info_repo->register_extractor([](const std::wstring& file, const std::wstring& extension, core::media_info& info)
 	{
 		if (extension != L".CT" && extension != L".SWF")
