@@ -37,6 +37,7 @@
 #include <common/diagnostics/graph.h>
 #include <common/future.h>
 #include <common/timer.h>
+#include <common/assert.h>
 
 #include <core/video_format.h>
 #include <core/producer/frame_producer.h>
@@ -44,9 +45,10 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_transform.h>
 #include <core/monitor/monitor.h>
+#include <core/help/help_repository.h>
+#include <core/help/help_sink.h>
 
 #include <boost/algorithm/string.hpp>
-#include <common/assert.h>
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/regex.hpp>
@@ -396,6 +398,33 @@ public:
 		graph_->set_text(print());
 	}
 };
+
+void describe_producer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"A producer for playing media files supported by FFmpeg.");
+	sink.syntax(L"[clip:string] {[loop:LOOP]} {START,SEEK [start:int]} {LENGTH [start:int]} {FILTER [filter:string]}");
+	sink.para()
+		->text(L"The FFmpeg Producer can play all media that FFmpeg can play, which includes many ")
+		->text(L"QuickTime video codec such as Animation, PNG, PhotoJPEG, MotionJPEG, as well as ")
+		->text(L"H.264, FLV, WMV and several audio codecs as well as uncompressed audio.");
+	sink.definitions()
+		->item(L"clip", L"The file without the file extension to play. It should reside under the media folder.")
+		->item(L"loop", L"Will cause the media file to loop between start and start + length")
+		->item(L"start", L"Optionally sets the start frame. 0 by default. If loop is specified this will be the frame where it starts over again.")
+		->item(L"length", L"Optionally sets the length of the clip. If not specified the clip will be played to the end. If loop is specified the file will jump to start position once this number of frames has been played.")
+		->item(L"filter", L"If specified, will be used as an FFmpeg video filter.");
+	sink.para()->text(L"Examples:");
+	sink.example(L">> PLAY 1-10 folder/clip", L"to play all frames in a clip and stop at the last frame.");
+	sink.example(L">> PLAY 1-10 folder/clip LOOP", L"to loop a clip between the first frame and the last frame.");
+	sink.example(L">> PLAY 1-10 folder/clip LOOP START 10", L"to loop a clip between frame 10 and the last frame.");
+	sink.example(L">> PLAY 1-10 folder/clip LOOP START 10 LENGTH 50", L"to loop a clip between frame 10 and frame 60.");
+	sink.example(L">> PLAY 1-10 folder/clip START 10 LENGTH 50", L"to play frames 10-60 in a clip and stop.");
+	sink.example(L">> PLAY 1-10 folder/clip FILTER yadif=1,-1", L"to deinterlace the video.");
+	sink.para()->text(L"The FFmpeg producer also supports changing some of the settings via CALL:");
+	sink.example(L">> CALL 1-10 LOOP 1");
+	sink.example(L">> CALL 1-10 START 10");
+	sink.example(L">> CALL 1-10 LENGTH 50");
+}
 
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
 {		

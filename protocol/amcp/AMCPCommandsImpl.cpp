@@ -2402,9 +2402,139 @@ std::wstring diag_command(command_context& ctx)
 	return L"202 DIAG OK\r\n";
 }
 
+static const int WIDTH = 80;
+
+struct max_width_sink : public core::help_sink
+{
+	std::size_t max_width = 0;
+
+	void begin_item(const std::wstring& name) override
+	{
+		max_width = std::max(name.length(), max_width);
+	};
+};
+
+struct short_description_sink : public core::help_sink
+{
+	std::size_t width;
+	std::wstringstream& out;
+
+	short_description_sink(std::size_t width, std::wstringstream& out) : width(width), out(out) { }
+
+	void begin_item(const std::wstring& name) override
+	{
+		out << std::left << std::setw(width + 1) << name;
+	};
+
+	void short_description(const std::wstring& short_description) override
+	{
+		out << short_description << L"\r\n";
+	};
+};
+
+struct simple_paragraph_builder : core::paragraph_builder
+{
+	std::wostringstream out;
+	std::wstringstream& commit_to;
+
+	simple_paragraph_builder(std::wstringstream& out) : commit_to(out) { }
+	~simple_paragraph_builder()
+	{
+		commit_to << core::wordwrap(out.str(), WIDTH) << L"\n";
+	}
+	spl::shared_ptr<paragraph_builder> text(std::wstring text) override
+	{
+		out << std::move(text);
+		return shared_from_this();
+	}
+	spl::shared_ptr<paragraph_builder> code(std::wstring txt) override { return text(std::move(txt)); }
+	spl::shared_ptr<paragraph_builder> see(std::wstring item) override { return text(std::move(item)); }
+	spl::shared_ptr<paragraph_builder> url(std::wstring url, std::wstring name)  override { return text(std::move(url)); }
+};
+
+struct simple_definition_list_builder : core::definition_list_builder
+{
+	std::wstringstream& out;
+
+	simple_definition_list_builder(std::wstringstream& out) : out(out) { }
+	~simple_definition_list_builder()
+	{
+		out << L"\n";
+	}
+
+	spl::shared_ptr<definition_list_builder> item(std::wstring term, std::wstring description) override
+	{
+		out << core::indent(core::wordwrap(term, WIDTH - 2), L"  ");
+		out << core::indent(core::wordwrap(description, WIDTH - 4), L"    ");
+		return shared_from_this();
+	}
+};
+
+struct long_description_sink : public core::help_sink
+{
+	std::wstringstream& out;
+
+	long_description_sink(std::wstringstream& out) : out(out) { }
+
+	void syntax(const std::wstring& syntax) override
+	{
+		out << L"Syntax:\n";
+		out << core::indent(core::wordwrap(syntax, WIDTH - 2), L"  ") << L"\n";
+	};
+
+	spl::shared_ptr<core::paragraph_builder> para() override
+	{
+		return spl::make_shared<simple_paragraph_builder>(out);
+	}
+
+	spl::shared_ptr<core::definition_list_builder> definitions() override
+	{
+		return spl::make_shared<simple_definition_list_builder>(out);
+	}
+
+	void example(const std::wstring& code, const std::wstring& caption) override
+	{
+		out << core::indent(core::wordwrap(code, WIDTH - 2), L"  ");
+
+		if (!caption.empty())
+			out << core::indent(core::wordwrap(L"..." + caption, WIDTH - 2), L"  ");
+
+		out << L"\n";
+	}
+private:
+	void begin_item(const std::wstring& name) override
+	{
+		out << name << L"\n\n";
+	};
+};
+
+std::wstring create_help_list(const std::wstring& help_command, const command_context& ctx, std::set<std::wstring> tags)
+{
+	std::wstringstream result;
+	result << L"200 " << help_command << L" OK\r\n";
+	max_width_sink width;
+	ctx.help_repo->help(tags, width);
+	short_description_sink sink(width.max_width, result);
+	sink.width = width.max_width;
+	ctx.help_repo->help(tags, sink);
+	result << L"\r\n";
+	return result.str();
+}
+
+std::wstring create_help_details(const std::wstring& help_command, const command_context& ctx, std::set<std::wstring> tags)
+{
+	std::wstringstream result;
+	result << L"201 " << help_command << L" OK\r\n";
+	auto joined = boost::join(ctx.parameters, L" ");
+	long_description_sink sink(result);
+	ctx.help_repo->help(tags, joined, sink);
+	result << L"\r\n";
+	return result.str();
+}
+
 void help_describer(core::help_sink& sink, const core::help_repository& repository)
 {
-	sink.short_description(L"Show online help.");
+	sink.short_description(L"Show online help for AMCP commands.");
 	sink.syntax(LR"(HELP {[command:string]})");
 	sink.para()->text(LR"(Shows online help for a specific command or a list of all commands.)");
 	sink.example(L">> HELP", L"Shows a list of commands.");
@@ -2413,136 +2543,27 @@ void help_describer(core::help_sink& sink, const core::help_repository& reposito
 
 std::wstring help_command(command_context& ctx)
 {
-	static const int WIDTH = 80;
-	struct max_width_sink : public core::help_sink
-	{
-		std::size_t max_width = 0;
-
-		void begin_item(const std::wstring& name) override
-		{
-			max_width = std::max(name.length(), max_width);
-		};
-	};
-
-	struct short_description_sink : public core::help_sink
-	{
-		std::size_t width;
-		std::wstringstream& out;
-
-		short_description_sink(std::size_t width, std::wstringstream& out) : width(width), out(out) { }
-
-		void begin_item(const std::wstring& name) override
-		{
-			out << std::left << std::setw(width + 1) << name;
-		};
-
-		void short_description(const std::wstring& short_description) override
-		{
-			out << short_description << L"\r\n";
-		};
-	};
-
-	struct simple_paragraph_builder : core::paragraph_builder
-	{
-		std::wostringstream out;
-		std::wstringstream& commit_to;
-
-		simple_paragraph_builder(std::wstringstream& out) : commit_to(out) { }
-		~simple_paragraph_builder()
-		{
-			commit_to << core::wordwrap(out.str(), WIDTH) << L"\n";
-		}
-		spl::shared_ptr<paragraph_builder> text(std::wstring text) override
-		{
-			out << std::move(text);
-			return shared_from_this();
-		}
-		spl::shared_ptr<paragraph_builder> code(std::wstring txt) override { return text(std::move(txt)); }
-		spl::shared_ptr<paragraph_builder> see(std::wstring item) override { return text(std::move(item)); }
-		spl::shared_ptr<paragraph_builder> url(std::wstring url, std::wstring name)  override { return text(std::move(url)); }
-	};
-
-	struct simple_definition_list_builder : core::definition_list_builder
-	{
-		std::wstringstream& out;
-
-		simple_definition_list_builder(std::wstringstream& out) : out(out) { }
-		~simple_definition_list_builder()
-		{
-			out << L"\n";
-		}
-
-		spl::shared_ptr<definition_list_builder> item(std::wstring term, std::wstring description) override
-		{
-			out << core::indent(core::wordwrap(term, WIDTH - 2), L"  ");
-			out << core::indent(core::wordwrap(description, WIDTH - 4), L"    ");
-			return shared_from_this();
-		}
-	};
-
-	struct long_description_sink : public core::help_sink
-	{
-		std::wstringstream& out;
-
-		long_description_sink(std::wstringstream& out) : out(out) { }
-
-		void syntax(const std::wstring& syntax) override
-		{
-			out << L"Syntax:\n";
-			out << core::indent(core::wordwrap(syntax, WIDTH - 2), L"  ") << L"\n";
-		};
-
-		spl::shared_ptr<core::paragraph_builder> para() override
-		{
-			return spl::make_shared<simple_paragraph_builder>(out);
-		}
-
-		spl::shared_ptr<core::definition_list_builder> definitions() override
-		{
-			return spl::make_shared<simple_definition_list_builder>(out);
-		}
-
-		void example(const std::wstring& code, const std::wstring& caption = L"") override
-		{
-			out << core::indent(core::wordwrap(code, WIDTH - 2), L"  ");
-
-			if (!caption.empty())
-				out << core::indent(core::wordwrap(L"..." + caption, WIDTH - 2), L"  ");
-
-			out << L"\n";
-		}
-	private:
-		void begin_item(const std::wstring& name) override
-		{
-			out << name << L"\n\n";
-		};
-	};
-
-	std::wstringstream result;
-
 	if (ctx.parameters.size() == 0)
-	{
-		result << L"200 HELP OK\r\n";
-		max_width_sink width;
-		ctx.help_repo->help({ L"AMCP" }, width);
-		short_description_sink sink(width.max_width, result);
-		sink.width = width.max_width;
-		ctx.help_repo->help({ L"AMCP" }, sink);
-		result << L"\r\n";
-	}
+		return create_help_list(L"HELP", ctx, { L"AMCP" });
 	else
-	{
-		result << L"201 HELP OK\r\n";
-		auto command = boost::to_upper_copy(
-			ctx.parameters.size() == 2
-					? ctx.parameters.at(0) + L" " + ctx.parameters.at(1)
-					: ctx.parameters.at(0));
-		long_description_sink sink(result);
-		ctx.help_repo->help({ L"AMCP" }, command, sink);
-		result << L"\r\n";
-	}
+		return create_help_details(L"HELP", ctx, { L"AMCP" });
+}
 
-	return result.str();
+void help_producer_describer(core::help_sink& sink, const core::help_repository& repository)
+{
+	sink.short_description(L"Show online help for producers.");
+	sink.syntax(LR"(HELP PRODUCER {[producer:string]})");
+	sink.para()->text(LR"(Shows online help for a specific producer or a list of all producers.)");
+	sink.example(L">> HELP PRODUCER", L"Shows a list of producers.");
+	sink.example(L">> HELP PRODUCER FFmpeg Producer", L"Shows a detailed description of the FFmpeg Producer.");
+}
+
+std::wstring help_producer_command(command_context& ctx)
+{
+	if (ctx.parameters.size() == 0)
+		return create_help_list(L"HELP PRODUCER", ctx, { L"producer" });
+	else
+		return create_help_details(L"HELP PRODUCER", ctx, { L"producer" });
 }
 
 void bye_describer(core::help_sink& sink, const core::help_repository& repo)
@@ -2642,132 +2663,6 @@ std::wstring lock_command(command_context& ctx)
 	CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Unknown LOCK command " + command));
 }
 
-/*bool LockCommand::DoExecute()
-{
-	try
-	{
-		auto it = parameters().begin();
-
-		std::shared_ptr<caspar::IO::lock_container> lock;
-		try
-		{
-			int channel_index = boost::lexical_cast<int>(*it) - 1;
-			lock = channels().at(channel_index).lock;
-		}
-		catch(const boost::bad_lexical_cast&) {}
-		catch(...)
-		{
-			SetReplyString(L"401 LOCK ERROR\r\n");
-			return false;
-		}
-
-		if(lock)
-			++it;
-
-		if(it == parameters().end())	//too few parameters
-		{
-			SetReplyString(L"402 LOCK ERROR\r\n");
-			return false;
-		}
-
-		std::wstring command = boost::to_upper_copy(*it);
-		if(command == L"ACQUIRE")
-		{
-			++it;
-			if(it == parameters().end())	//too few parameters
-			{
-				SetReplyString(L"402 LOCK ACQUIRE ERROR\r\n");
-				return false;
-			}
-			std::wstring lock_phrase = (*it);
-
-			//TODO: read options
-
-			if(lock)
-			{
-				//just lock one channel
-				if(!lock->try_lock(lock_phrase, client()))
-				{
-					SetReplyString(L"503 LOCK ACQUIRE FAILED\r\n");
-					return false;
-				}
-			}
-			else
-			{
-				//TODO: lock all channels
-				CASPAR_THROW_EXCEPTION(not_implemented());
-			}
-			SetReplyString(L"202 LOCK ACQUIRE OK\r\n");
-
-		}
-		else if(command == L"RELEASE")
-		{
-			if(lock)
-			{
-				lock->release_lock(client());
-			}
-			else
-			{
-				//TODO: release all channels
-				CASPAR_THROW_EXCEPTION(not_implemented());
-			}
-			SetReplyString(L"202 LOCK RELEASE OK\r\n");
-		}
-		else if(command == L"CLEAR")
-		{
-			std::wstring override_phrase = env::properties().get(L"configuration.lock-clear-phrase", L"");
-			std::wstring client_override_phrase;
-			if(!override_phrase.empty())
-			{
-				++it;
-				if(it == parameters().end())
-				{
-					SetReplyString(L"402 LOCK CLEAR ERROR\r\n");
-					return false;
-				}
-				client_override_phrase = (*it);
-			}
-
-			if(lock)
-			{
-				//just clear one channel
-				if(client_override_phrase != override_phrase)
-				{
-					SetReplyString(L"503 LOCK CLEAR FAILED\r\n");
-					return false;
-				}
-				
-				lock->clear_locks();
-			}
-			else
-			{
-				//TODO: clear all channels
-				CASPAR_THROW_EXCEPTION(not_implemented());
-			}
-
-			SetReplyString(L"202 LOCK CLEAR OK\r\n");
-		}
-		else
-		{
-			SetReplyString(L"403 LOCK ERROR\r\n");
-			return false;
-		}
-	}
-	catch(not_implemented&)
-	{
-		SetReplyString(L"600 LOCK FAILED\r\n");
-		return false;
-	}
-	catch(...)
-	{
-		CASPAR_LOG_CURRENT_EXCEPTION();
-		SetReplyString(L"501 LOCK FAILED\r\n");
-		return false;
-	}
-
-	return true;
-}*/
-
 void register_commands(amcp_command_repository& repo)
 {
 	repo.register_channel_command(	L"Basic Commands",		L"LOADBG",					loadbg_describer,					loadbg_command,					1);
@@ -2844,6 +2739,7 @@ void register_commands(amcp_command_repository& repo)
 	repo.register_command(			L"Query Commands",		L"KILL",					kill_describer,						kill_command,					0);
 	repo.register_command(			L"Query Commands",		L"RESTART",					restart_describer,					restart_command,				0);
 	repo.register_command(			L"Query Commands",		L"HELP",					help_describer,						help_command,					0);
+	repo.register_command(			L"Query Commands",		L"HELP PRODUCER",			help_producer_describer,			help_producer_command,			0);
 }
 
 }	//namespace amcp
