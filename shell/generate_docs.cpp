@@ -28,6 +28,7 @@
 #include <core/help/help_repository.h>
 #include <core/help/help_sink.h>
 #include <core/help/util.h>
+#include <core/producer/text/text_producer.h>
 
 #include <protocol/amcp/amcp_command_repository.h>
 #include <protocol/amcp/AMCPCommandsImpl.h>
@@ -92,7 +93,7 @@ public:
 
 	~mediawiki_definition_list_builder()
 	{
-		out_ << L"\n" << std::endl;
+		out_ << std::endl;
 	}
 
 	spl::shared_ptr<definition_list_builder> item(std::wstring term, std::wstring description) override
@@ -170,16 +171,25 @@ void generate_amcp_commands_help(const core::help_repository& help_repo)
 	file.flush();
 }
 
+void generate_producers_help(const core::help_repository& help_repo)
+{
+	boost::filesystem::wofstream file(L"producers_help.wiki");
+	mediawiki_help_sink sink(file);
+
+	sink.start_section(L"Producers (Input Modules)");
+	help_repo.help({ L"producer" }, sink);
+
+	file.flush();
+}
+
 int main(int argc, char** argv)
 {
-	//env::configure(L"casparcg.config");
-	//log::set_log_level(L"info");
-
+	env::configure(L"casparcg.config");
 	spl::shared_ptr<core::system_info_provider_repository> system_info_provider_repo;
 	spl::shared_ptr<core::cg_producer_registry> cg_registry;
 	auto media_info_repo = core::create_in_memory_media_info_repository();
 	spl::shared_ptr<core::help_repository> help_repo;
-	spl::shared_ptr<core::frame_producer_registry> producer_registry;
+	auto producer_registry = spl::make_shared<core::frame_producer_registry>(help_repo);
 	spl::shared_ptr<core::frame_consumer_registry> consumer_registry;
 	std::promise<bool> shutdown_server_now;
 	protocol::amcp::amcp_command_repository repo(
@@ -197,8 +207,10 @@ int main(int argc, char** argv)
 
 	core::module_dependencies dependencies(system_info_provider_repo, cg_registry, media_info_repo, producer_registry, consumer_registry);
 	initialize_modules(dependencies);
+	core::text::init(dependencies);
 
 	generate_amcp_commands_help(*help_repo);
+	generate_producers_help(*help_repo);
 
 	uninitialize_modules();
 	

@@ -47,8 +47,8 @@ std::wstring version()
 void init(core::module_dependencies dependencies)
 {
 	FreeImage_Initialise();
-	dependencies.producer_registry->register_producer_factory(create_scroll_producer);
-	dependencies.producer_registry->register_producer_factory(create_producer);
+	dependencies.producer_registry->register_producer_factory(L"Image Scroll Producer", create_scroll_producer, describe_scroll_producer);
+	dependencies.producer_registry->register_producer_factory(L"Image Producer", create_producer, describe_producer);
 	dependencies.producer_registry->register_thumbnail_producer_factory(create_thumbnail_producer);
 	dependencies.consumer_registry->register_consumer_factory(create_consumer);
 	dependencies.media_info_repo->register_extractor([](const std::wstring& file, const std::wstring& extension, core::media_info& info)

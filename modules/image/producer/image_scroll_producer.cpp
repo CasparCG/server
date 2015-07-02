@@ -34,6 +34,8 @@
 #include <core/frame/frame_transform.h>
 #include <core/frame/pixel_format.h>
 #include <core/monitor/monitor.h>
+#include <core/help/help_sink.h>
+#include <core/help/help_repository.h>
 
 #include <common/env.h>
 #include <common/log.h>
@@ -393,6 +395,25 @@ struct image_scroll_producer : public core::frame_producer_base
 		return monitor_subject_;
 	}
 };
+
+void describe_scroll_producer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Scrolls an image either horizontally or vertically.");
+	sink.syntax(L"[image_file:string] SPEED [speed:float] {BLUR [blur_px:int]} {[premultiply:PREMULTIPLY]} {[progressive:PROGRESSIVE]}");
+	sink.para()
+		->text(L"Scrolls an image either horizontally or vertically. ")
+		->text(L"It is the image dimensions that decide if it will be a vertical scroll or a horizontal scroll. ")
+		->text(L"A horizontal scroll will be selected if the image height is exactly the same as the video format height. ")
+		->text(L"A vertical scroll will be selected if the image width is exactly the same as the video format width.");
+	sink.definitions()
+		->item(L"image_file", L"The image without extension. The file has to have either the same width or the same height as the video format.")
+		->item(L"speed", L"A positive or negative float defining how many pixels to move the image each frame.")
+		->item(L"blur_px", L"If specified, will do a directional blur in the scrolling direction by the given number of pixels.")
+		->item(L"premultiply", L"If the image is in straight alpha, use this option to make it display correctly in CasparCG.")
+		->item(L"progressive", L"When an interlaced video format is used, by default the image is moved every field. This can be overridden by specifying this option, causing the image to only move on full frames.");
+	sink.para()->text(L"If ")->code(L"SPEED [speed]")->text(L" is ommitted, the ordinary ")->see(L"Image Producer")->text(L" will be used instead.");
+	sink.example(L">> PLAY 1-10 cred_1280 SPEED 8 BLUR 2", L"Given that cred_1280 is a as wide as the video mode, this will create a rolling end credits with a little bit of blur and a speed of 8 pixels per frame.");
+}
 
 spl::shared_ptr<core::frame_producer> create_scroll_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
 {

@@ -43,18 +43,25 @@ namespace caspar { namespace core {
 
 struct frame_producer_registry::impl
 {
-	std::vector<producer_factory_t> producer_factories;
-	std::vector<producer_factory_t> thumbnail_factories;
+	std::vector<producer_factory_t>		producer_factories;
+	std::vector<producer_factory_t>		thumbnail_factories;
+	spl::shared_ptr<help_repository>	help_repo;
+
+	impl(spl::shared_ptr<help_repository> help_repo)
+		: help_repo(std::move(help_repo))
+	{
+	}
 };
 
-frame_producer_registry::frame_producer_registry()
-    : impl_(new impl)
+frame_producer_registry::frame_producer_registry(spl::shared_ptr<help_repository> help_repo)
+    : impl_(new impl(std::move(help_repo)))
 {
 }
 
-void frame_producer_registry::register_producer_factory(const producer_factory_t& factory)
+void frame_producer_registry::register_producer_factory(std::wstring name, const producer_factory_t& factory, const help_item_describer& describer)
 {
 	impl_->producer_factories.push_back(factory);
+	impl_->help_repo->register_item({ L"producer" }, std::move(name), describer);
 }
 
 void frame_producer_registry::register_thumbnail_producer_factory(const producer_factory_t& factory)

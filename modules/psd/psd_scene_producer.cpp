@@ -34,6 +34,8 @@
 #include <core/producer/scene/hotswap_producer.h>
 #include <core/producer/media_info/media_info.h>
 #include <core/frame/draw_frame.h>
+#include <core/help/help_repository.h>
+#include <core/help/help_sink.h>
 
 #include <common/env.h>
 #include <common/memory.h>
@@ -455,19 +457,6 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 
 void init(core::module_dependencies dependencies)
 {
-	dependencies.producer_registry->register_producer_factory(create_psd_scene_producer);
-	dependencies.media_info_repo->register_extractor(
-			[](const std::wstring& file, const std::wstring& upper_case_extension, core::media_info& info)
-			{
-				if (upper_case_extension == L".PSD")
-				{
-					info.clip_type = L"STILL";
-
-					return true;
-				}
-
-				return false;
-			});
 	dependencies.cg_registry->register_cg_producer(
 			L"scene",
 			{ L".psd" },

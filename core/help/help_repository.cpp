@@ -25,6 +25,7 @@
 #include <common/except.h>
 
 #include <boost/range/adaptor/filtered.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <algorithm>
 #include <utility>
@@ -69,9 +70,9 @@ void help_repository::help(std::set<std::wstring> tags, std::wstring name, help_
 {
 	auto found = impl_->items | boost::adaptors::filtered([&](const std::pair<help_item, std::set<std::wstring>>& item)
 	{
-		return item.first.first == name && std::includes(
-			item.second.begin(), item.second.end(),
-			tags.begin(), tags.end());
+		return boost::iequals(item.first.first, name) && std::includes(
+				item.second.begin(), item.second.end(),
+				tags.begin(), tags.end());
 	});
 
 	if (found.empty())
