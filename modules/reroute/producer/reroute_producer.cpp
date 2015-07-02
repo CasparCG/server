@@ -27,12 +27,32 @@
 
 #include <core/producer/frame_producer.h>
 #include <core/video_channel.h>
+#include <core/help/help_sink.h>
+#include <core/help/help_repository.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/range/algorithm/find_if.hpp>
 
 namespace caspar { namespace reroute {
-		
+
+void describe_producer(core::help_sink& sink, const core::help_repository& repository)
+{
+	sink.short_description(L"Reroutes a complete channel or a layer to another layer.");
+	sink.syntax(L"route://[source_channel:int]{-[source_layer:int]}");
+	sink.para()->text(L"Reroutes the composited video of a channel or the untransformed video of a layer .");
+	sink.para()
+		->text(L"If ")->code(L"source_layer")->text(L" is specified, only the video of the source layer is rerouted. ")
+		->text(L"If on the other hand only ")->code(L"source_channel")->text(L" is specified, the video of the complete channel is rerouted.");
+	sink.para()->text(L"Examples:");
+	sink.example(L">> PLAY 1-10 route://1-11", L"Play the contents of layer 1-11 on layer 1-10 as well.");
+	sink.example(L">> PLAY 1-10 route://2", L"Play the composited contents of channel 2 on layer 1-10 as well.");
+	sink.example(
+		L">> MIXER 1-10 FILL 0.02 0.01 0.9 0.9\n"
+		L">> PLAY 1-10 route://1\n"
+		L">> PLAY 1-9 AMB LOOP", L"Play the composited contents of channel 1 on layer 1-10. Since the source and destination channel is the same, an \"infinity\" effect is created.");
+	sink.para()->text(L"Always expect a few frames delay on the routed-to layer.");
+}
+
 spl::shared_ptr<core::frame_producer> create_producer(
 		const core::frame_producer_dependencies& dependencies,
 		const std::vector<std::wstring>& params)

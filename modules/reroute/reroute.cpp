@@ -30,7 +30,7 @@ namespace caspar { namespace reroute {
 
 void init(core::module_dependencies dependencies)
 {
-	dependencies.producer_registry->register_producer_factory(reroute::create_producer);
+	dependencies.producer_registry->register_producer_factory(L"Reroute Producer", reroute::create_producer, reroute::describe_producer);
 }
 
 }}
