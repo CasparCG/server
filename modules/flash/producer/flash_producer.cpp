@@ -39,6 +39,8 @@
 #include <core/frame/pixel_format.h>
 #include <core/producer/frame_producer.h>
 #include <core/monitor/monitor.h>
+#include <core/help/help_repository.h>
+#include <core/help/help_sink.h>
 
 #include <common/env.h>
 #include <common/executor.h>
@@ -510,6 +512,15 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 		CASPAR_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(u8(filename)));	
 
 	return create_destroy_proxy(spl::make_shared<flash_producer>(dependencies.frame_factory, dependencies.format_desc, filename, template_host.width, template_host.height));
+}
+
+void describe_swf_producer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Plays flash files (.swf files).");
+	sink.syntax(L"[swf_file:string]");
+	sink.para()->text(L"Plays flash files (.swf files). The file should reside under the media folder.");
+	sink.para()->text(L"Examples:");
+	sink.example(L">> PLAY 1-10 folder/swf_file");
 }
 
 spl::shared_ptr<core::frame_producer> create_swf_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)

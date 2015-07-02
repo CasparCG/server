@@ -28,6 +28,7 @@
 
 namespace caspar { namespace image {
 
+void describe_scroll_producer(core::help_sink& sink, const core::help_repository& repo);
 spl::shared_ptr<core::frame_producer> create_scroll_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params);
 
 }}

@@ -31,6 +31,8 @@
 
 #include <common/env.h>
 #include <core/producer/frame_producer.h>
+#include <core/help/help_repository.h>
+#include <core/help/help_sink.h>
 
 #include <future>
 
@@ -61,24 +63,15 @@ void deduce_expression(variable& var, const variable_repository& repo)
 	}
 }
 
-void init(module_dependencies dependencies)
+void describe_xml_scene_producer(core::help_sink& sink, const core::help_repository& repo)
 {
-	dependencies.producer_registry->register_producer_factory(create_xml_scene_producer);
-	dependencies.cg_registry->register_cg_producer(
-			L"scene",
-			{ L".scene" },
-			[](const std::wstring& filename) { return ""; },
-			[](const spl::shared_ptr<core::frame_producer>& producer)
-			{
-				return spl::make_shared<core::scene::scene_cg_proxy>(producer);
-			},
-			[](
-					const core::frame_producer_dependencies& dependencies,
-					const std::wstring& filename)
-			{
-				return create_xml_scene_producer(dependencies, { filename });
-			},
-			false);
+	sink.short_description(L"A simple producer for dynamic graphics using .scene files.");
+	sink.syntax(L"[.scene_filename:string] {[param1:string] [value1:string]} {[param2:string] [value2:string]} ...");
+	sink.para()->text(L"A simple producer that looks in the ")->code(L"templates")->text(L" folder for .scene files.");
+	sink.para()->text(L"The .scene file is a simple XML document containing variables, layers and timelines.");
+	sink.example(L">> PLAY 1-10 scene_name_sign FIRSTNAME \"John\" LASTNAME \"Doe\"", L"loads and plays templates/scene_name_sign.scene and sets the variables FIRSTNAME and LASTNAME.");
+	sink.para()->text(L"The scene producer also supports setting the variables while playing via the CALL command:");
+	sink.example(L">> CALL 1-10 FIRSTNAME \"Jane\"", L"changes the variable FIRSTNAME on an already loaded scene.");
 }
 
 spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
@@ -223,6 +216,26 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 	scene->call(params2);
 
 	return scene;
+}
+
+void init(module_dependencies dependencies)
+{
+	dependencies.producer_registry->register_producer_factory(L"XML Scene Producer", create_xml_scene_producer, describe_xml_scene_producer);
+	dependencies.cg_registry->register_cg_producer(
+			L"scene",
+			{ L".scene" },
+			[](const std::wstring& filename) { return ""; },
+			[](const spl::shared_ptr<core::frame_producer>& producer)
+			{
+				return spl::make_shared<core::scene::scene_cg_proxy>(producer);
+			},
+			[](
+			const core::frame_producer_dependencies& dependencies,
+			const std::wstring& filename)
+			{
+				return create_xml_scene_producer(dependencies, { filename });
+			},
+			false);
 }
 
 }}}
