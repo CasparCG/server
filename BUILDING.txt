@@ -63,9 +63,9 @@ Prerequisites:
 
    sudo apt-get install build-essential cmake
 
-2. Install development packages for libraries which are not bundled:
+2. Install development packages for libraries which are not bundled (For Debian, add libgl1-mesa-dev):
 
-   sudo apt-get install libxrandr-dev libjpeg-dev libsndfile-dev libudev-dev
+   sudo apt-get install libxrandr-dev libjpeg-dev libsndfile-dev libudev-dev libgl1-mesa-dev
 
 Building a distribution
 -----------------------
