@@ -116,6 +116,9 @@ private:
 
 	executor									write_executor_;
 	
+	std::string									info_path_;
+	std::string									info_options_;
+
 public:
 
 	streaming_consumer(
@@ -130,6 +133,8 @@ public:
 		, video_encoder_executor_(print() + L" video_encoder")
 		, write_executor_(print() + L" io")
 	{		
+		info_path_ = path;
+		info_options_ = options;
 		abort_request_ = false;	
 
 		for(auto it = 
@@ -427,7 +432,11 @@ public:
 	
 	virtual boost::property_tree::wptree info() const override
 	{
-		return boost::property_tree::wptree();
+		boost::property_tree::wptree info;
+		info.add(L"type", L"stream-consumer");
+		info.add(L"path", widen(info_path_));
+		info.add(L"options", widen(info_options_));
+		return info;
 	}
 
 	bool has_synchronization_clock() const override
