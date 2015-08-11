@@ -39,18 +39,25 @@ namespace caspar { namespace core {
 
 struct frame_consumer_registry::impl
 {
-	std::vector<consumer_factory_t> consumer_factories;
-	std::map<std::wstring, preconfigured_consumer_factory_t> preconfigured_consumer_factories;
+	std::vector<consumer_factory_t>								consumer_factories;
+	std::map<std::wstring, preconfigured_consumer_factory_t>	preconfigured_consumer_factories;
+	spl::shared_ptr<help_repository>							help_repo;
+
+	impl(spl::shared_ptr<help_repository> help_repo)
+		: help_repo(std::move(help_repo))
+	{
+	}
 };
 
-frame_consumer_registry::frame_consumer_registry()
-	: impl_(new impl)
+frame_consumer_registry::frame_consumer_registry(spl::shared_ptr<help_repository> help_repo)
+	: impl_(new impl(std::move(help_repo)))
 {
 }
 
-void frame_consumer_registry::register_consumer_factory(const consumer_factory_t& factory)
+void frame_consumer_registry::register_consumer_factory(const std::wstring& name, const consumer_factory_t& factory, const help_item_describer& describer)
 {
 	impl_->consumer_factories.push_back(factory);
+	impl_->help_repo->register_item({ L"consumer" }, std::move(name), describer);
 }
 
 void frame_consumer_registry::register_preconfigured_consumer_factory(

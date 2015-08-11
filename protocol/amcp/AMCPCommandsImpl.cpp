@@ -1920,7 +1920,7 @@ std::wstring mixer_grid_command(command_context& ctx)
 void mixer_commit_describer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"Commit all deferred mixer transforms.");
-	sink.syntax(L"MIXER [video_channel:int]{-[layer:int]|-0} COMMIT");
+	sink.syntax(L"MIXER [video_channel:int] COMMIT");
 	sink.para()->text(L"Commits all deferred mixer transforms on the specified channel. This ensures that all animations start at the same exact frame.");
 	sink.para()->text(L"Examples:");
 	sink.example(
@@ -2566,6 +2566,23 @@ std::wstring help_producer_command(command_context& ctx)
 		return create_help_details(L"HELP PRODUCER", ctx, { L"producer" });
 }
 
+void help_consumer_describer(core::help_sink& sink, const core::help_repository& repository)
+{
+	sink.short_description(L"Show online help for consumers.");
+	sink.syntax(LR"(HELP CONSUMER {[consumer:string]})");
+	sink.para()->text(LR"(Shows online help for a specific consumer or a list of all consumers.)");
+	sink.example(L">> HELP CONSUMER", L"Shows a list of consumers.");
+	sink.example(L">> HELP CONSUMER Decklink Consumer", L"Shows a detailed description of the Decklink Consumer.");
+}
+
+std::wstring help_consumer_command(command_context& ctx)
+{
+	if (ctx.parameters.size() == 0)
+		return create_help_list(L"HELP CONSUMER", ctx, { L"consumer" });
+	else
+		return create_help_details(L"HELP CONSUMER", ctx, { L"consumer" });
+}
+
 void bye_describer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"Disconnect the session.");
@@ -2740,6 +2757,7 @@ void register_commands(amcp_command_repository& repo)
 	repo.register_command(			L"Query Commands",		L"RESTART",					restart_describer,					restart_command,				0);
 	repo.register_command(			L"Query Commands",		L"HELP",					help_describer,						help_command,					0);
 	repo.register_command(			L"Query Commands",		L"HELP PRODUCER",			help_producer_describer,			help_producer_command,			0);
+	repo.register_command(			L"Query Commands",		L"HELP CONSUMER",			help_consumer_describer,			help_consumer_command,			0);
 }
 
 }	//namespace amcp

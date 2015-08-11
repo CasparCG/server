@@ -30,6 +30,7 @@
 
 namespace caspar { namespace screen {
 
+void describe_consumer(core::help_sink& sink, const core::help_repository& repo);
 spl::shared_ptr<core::frame_consumer> create_consumer(
 		const std::vector<std::wstring>& params,
 		core::interaction_sink* sink);
