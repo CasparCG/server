@@ -16,6 +16,8 @@
 #include <core/frame/frame.h>
 #include <core/video_format.h>
 #include <core/monitor/monitor.h>
+#include <core/help/help_repository.h>
+#include <core/help/help_sink.h>
 
 #include <boost/noncopyable.hpp>
 #include <boost/rational.hpp>
@@ -1248,7 +1250,19 @@ private:
 		return result;
 	}
 };
-	
+
+void describe_streaming_consumer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"For streaming the contents of a channel using FFMpeg.");
+	sink.syntax(L"STREAM [url:string] {-[ffmpeg_param1:string] [value1:string] {-[ffmpeg_param2:string] [value2:string] {...}}}");
+	sink.para()->text(L"For streaming the contents of a channel using FFMpeg");
+	sink.definitions()
+		->item(L"url", L"The stream URL to create/stream to.")
+		->item(L"ffmpeg_paramX", L"A parameter supported by FFMpeg. For example vcodec or acodec etc.");
+	sink.para()->text(L"Examples:");
+	sink.example(L">> ADD 1 STREAM udp://<client_ip_address>:9250 -format mpegts -vcodec libx264 -crf 25 -tune zerolatency -preset ultrafast");
+}
+
 spl::shared_ptr<core::frame_consumer> create_streaming_consumer(
 		const std::vector<std::wstring>& params, core::interaction_sink*)
 {       

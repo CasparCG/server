@@ -182,6 +182,17 @@ void generate_producers_help(const core::help_repository& help_repo)
 	file.flush();
 }
 
+void generate_consumers_help(const core::help_repository& help_repo)
+{
+	boost::filesystem::wofstream file(L"consumers_help.wiki");
+	mediawiki_help_sink sink(file);
+
+	sink.start_section(L"Consumers (Output Modules)");
+	help_repo.help({ L"consumer" }, sink);
+
+	file.flush();
+}
+
 int main(int argc, char** argv)
 {
 	env::configure(L"casparcg.config");
@@ -190,7 +201,7 @@ int main(int argc, char** argv)
 	auto media_info_repo = core::create_in_memory_media_info_repository();
 	spl::shared_ptr<core::help_repository> help_repo;
 	auto producer_registry = spl::make_shared<core::frame_producer_registry>(help_repo);
-	spl::shared_ptr<core::frame_consumer_registry> consumer_registry;
+	auto consumer_registry = spl::make_shared<core::frame_consumer_registry>(help_repo);
 	std::promise<bool> shutdown_server_now;
 	protocol::amcp::amcp_command_repository repo(
 			{ },
@@ -211,6 +222,7 @@ int main(int argc, char** argv)
 
 	generate_amcp_commands_help(*help_repo);
 	generate_producers_help(*help_repo);
+	generate_consumers_help(*help_repo);
 
 	uninitialize_modules();
 	
