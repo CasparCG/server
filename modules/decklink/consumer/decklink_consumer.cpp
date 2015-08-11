@@ -29,6 +29,10 @@
 
 #include <core/frame/frame.h>
 #include <core/mixer/audio/audio_mixer.h>
+#include <core/consumer/frame_consumer.h>
+#include <core/diagnostics/call_context.h>
+#include <core/help/help_sink.h>
+#include <core/help/help_repository.h>
 
 #include <common/executor.h>
 #include <common/lock.h>
@@ -40,9 +44,6 @@
 #include <common/cache_aligned_vector.h>
 #include <common/timer.h>
 #include <common/param.h>
-
-#include <core/consumer/frame_consumer.h>
-#include <core/diagnostics/call_context.h>
 
 #include <tbb/concurrent_queue.h>
 
@@ -577,6 +578,34 @@ public:
 		return monitor_subject_;
 	}
 };	
+
+void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Sends video on an SDI output using Blackmagic Decklink video cards.");
+	sink.syntax(L"DECKLINK "
+				L"{[device_index:int]|1} "
+				L"{[keyer:INTERNAL_KEY,EXTERNAL_KEY]} "
+				L"{[low_latency:LOW_LATENCY]} "
+				L"{[embedded_audio:EMBEDDED_AUDIO]} "
+				L"{[key_only:KEY_ONLY]}");
+	sink.para()->text(L"Sends video on an SDI output using Blackmagic Decklink video cards.");
+	sink.definitions()
+		->item(L"device_index", L"The Blackmagic video card to use (See Blackmagic control panel for card order). Default is 1.")
+		->item(L"keyer", L"If given tries to enable either internal or external keying. Not all Blackmagic cards supports this.")
+		->item(L"low_latency", L"Tries to enable low latency if given.")
+		->item(L"embedded_audio", L"Embeds the audio into the SDI signal if given.")
+		->item(L"key_only",
+				L" will extract only the alpha channel from the "
+				L"channel. This is useful when you have two SDI video cards, and neither has native support "
+				L"for separate fill/key output");
+	sink.para()->text(L"Examples:");
+	sink.example(L">> ADD 1 DECKLINK", L"for using the default device_index of 1.");
+	sink.example(L">> ADD 1 DECKLINK 2", L"uses device_index 2.");
+	sink.example(L">> ADD 1 DECKLINK 1 EXTERNAL_KEY EMBEDDED_AUDIO");
+	sink.example(
+		L">> ADD 1 DECKLINK 1 EMBEDDED_AUDIO\n"
+		L">> ADD 1 DECKLINK 2 KEY_ONLY", L"uses device with index 1 as fill output with audio and device with index 2 as key output.");
+}
 
 spl::shared_ptr<core::frame_consumer> create_consumer(
 		const std::vector<std::wstring>& params, core::interaction_sink*)

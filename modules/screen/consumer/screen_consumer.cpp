@@ -44,6 +44,8 @@
 #include <core/frame/frame.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/interaction/interaction_sink.h>
+#include <core/help/help_sink.h>
+#include <core/help/help_repository.h>
 
 #include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>
@@ -645,6 +647,31 @@ public:
 		return monitor_subject_;
 	}
 };	
+
+void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Displays the contents of a channel on screen using OpenGL.");
+	sink.syntax(
+			L"SCREEN "
+			L"{[screen_index:int]|1} "
+			L"{[fullscreen:FULLSCREEN]} "
+			L"{[key_only:KEY_ONLY]} "
+			L"{[non_interactive:NON_INTERACTIVE]} "
+			L"{[no_auto_deinterlace:NO_AUTO_DEINTERLACE]} "
+			L"{NAME [name:string]}");
+	sink.para()->text(L"Displays the contents of a channel on screen using OpenGL.");
+	sink.definitions()
+		->item(L"screen_index", L"Determines which screen the channel should be displayed on. Defaults to 1.")
+		->item(L"fullscreen", L"If specified opens the window in fullscreen.")
+		->item(L"key_only", L"Only displays the alpha channel of the video channel if specified.")
+		->item(L"non_interactive", L"If specified does not send mouse input to producers on the video channel.")
+		->item(L"no_auto_deinterlace", L"If the video mode of the channel is an interlaced mode, specifying this will turn of deinterlacing.")
+		->item(L"name", L"Optionally specifies a name of the window to show.");
+	sink.para()->text(L"Examples:");
+	sink.example(L">> ADD 1 SCREEN", L"opens a screen consumer on the default screen.");
+	sink.example(L">> ADD 1 SCREEN 2", L"opens a screen consumer on the screen 2.");
+	sink.example(L">> ADD 1 SCREEN 1 FULLSCREEN", L"opens a screen consumer in fullscreen on screen 1.");
+}
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params, core::interaction_sink* sink)
 {
