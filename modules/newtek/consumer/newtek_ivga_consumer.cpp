@@ -28,6 +28,8 @@
 #include <core/frame/frame.h>
 #include <core/mixer/audio/audio_util.h>
 #include <core/monitor/monitor.h>
+#include <core/help/help_sink.h>
+#include <core/help/help_repository.h>
 
 #include <common/assert.h>
 #include <common/executor.h>
@@ -170,6 +172,17 @@ public:
 		return provide_sync_ && connected_;
 	}
 };	
+
+void describe_ivga_consumer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"A consumer for streaming a channel to a NewTek TriCaster via iVGA/AirSend protocol.");
+	sink.syntax(L"NEWTEK_IVGA {[dont_provide_sync:DONT_PROVIDE_SYNC]}");
+	sink.para()->text(L"A consumer for streaming a channel to a NewTek TriCaster via iVGA/AirSend protocol.");
+	sink.para()->text(L"If ")->code(L"dont_provide_sync")->text(L" is specified, the consumer will not genlock the channel.");
+	sink.para()->text(L"Examples:");
+	sink.example(L">> ADD 1 NEWTEK_IVGA");
+	sink.example(L">> ADD 1 NEWTEK_IVGA DONT_PROVIDE_SYNC");
+}
 
 spl::shared_ptr<core::frame_consumer> create_ivga_consumer(const std::vector<std::wstring>& params, core::interaction_sink*)
 {

@@ -23,6 +23,7 @@
 
 #include "../monitor/monitor.h"
 #include "../fwd.h"
+#include "../help/help_repository.h"
 
 #include <common/memory.h>
 #include <common/future_fwd.h>
@@ -80,8 +81,8 @@ typedef std::function<spl::shared_ptr<frame_consumer>(
 class frame_consumer_registry : boost::noncopyable
 {
 public:
-	frame_consumer_registry();
-	void register_consumer_factory(const consumer_factory_t& factory);
+	frame_consumer_registry(spl::shared_ptr<help_repository> help_repo);
+	void register_consumer_factory(const std::wstring& name, const consumer_factory_t& factory, const help_item_describer& describer);
 	void register_preconfigured_consumer_factory(
 			const std::wstring& element_name,
 			const preconfigured_consumer_factory_t& factory);

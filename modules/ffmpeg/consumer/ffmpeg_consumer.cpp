@@ -31,6 +31,8 @@
 #include <core/mixer/audio/audio_util.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/video_format.h>
+#include <core/help/help_repository.h>
+#include <core/help/help_sink.h>
 
 #include <common/array.h>
 #include <common/env.h>
@@ -847,7 +849,26 @@ public:
 	{
 		return consumer_->monitor_output();
 	}
-};	
+};
+
+void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Can record a channel to a file supported by FFMpeg.");
+	sink.syntax(L"FILE [filename:string] {-[ffmpeg_param1:string] [value1:string] {-[ffmpeg_param2:string] [value2:string] {...}}} {[separate_key:SEPARATE_KEY]}");
+	sink.para()->text(L"Can record a channel to a file supported by FFMpeg.");
+	sink.definitions()
+		->item(L"filename", L"The filename under the media folder including the extension (decides which kind of container format that will be used).")
+		->item(L"ffmpeg_paramX", L"A parameter supported by FFMpeg. For example vcodec or acodec etc.")
+		->item(L"separate_key", L"If defined will create two files simultaneously -- One for fill and one for key (_A will be appended).")
+		;
+	sink.para()->text(L"Examples:");
+	sink.example(L">> ADD 1 FILE output.mov -vcodec dnxhd");
+	sink.example(L">> ADD 1 FILE output.mov -vcodec prores");
+	sink.example(L">> ADD 1 FILE output.mov -vcodec dvvideo");
+	sink.example(L">> ADD 1 FILE output.mov - vcodec libx264 -preset ultrafast -tune fastdecode -crf 25");
+	sink.example(L">> ADD 1 FILE output.mov -vcodec dnxhd SEPARATE_KEY", L"for creating output.mov with fill and output_A.mov with key/alpha");
+}
+
 spl::shared_ptr<core::frame_consumer> create_consumer(
 		const std::vector<std::wstring>& params, core::interaction_sink*)
 {
