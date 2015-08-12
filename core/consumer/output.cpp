@@ -60,7 +60,7 @@ struct output::impl
 	std::map<int, port>					ports_;	
 	prec_timer							sync_timer_;
 	boost::circular_buffer<const_frame>	frames_;
-	executor							executor_			= { L"output" };
+	executor							executor_			= { L"output " + boost::lexical_cast<std::wstring>(channel_index_) };
 public:
 	impl(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index) 
 		: graph_(std::move(graph))

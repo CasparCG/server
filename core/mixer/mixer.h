@@ -48,7 +48,7 @@ public:
 					
 	// Constructors
 	
-	explicit mixer(spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer);
+	explicit mixer(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer);
 
 	// Methods
 		

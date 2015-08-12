@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+* Copyright 2013 Sveriges Television AB http://casparcg.com/
 *
 * This file is part of CasparCG (www.casparcg.com).
 *
@@ -16,21 +16,32 @@
 * You should have received a copy of the GNU General Public License
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
-* Author: Robert Nagy, ronag89@gmail.com
+* Author: Helge Norberg, helge.norberg@svt.se
 */
 
-#include "../../stdafx.h"
+#pragma once
 
-#include "../scheduling.h"
+#include <string>
+#include <cstdint>
+#include <vector>
 
-#include "windows.h"
+#include "memory.h"
+
+#include <tbb/atomic.h>
+
+#include <boost/thread/thread.hpp>
 
 namespace caspar {
-	
-void set_priority_of_current_thread(thread_priority priority)
+
+struct thread_info
 {
-	if (priority == thread_priority::LOW)
-		SetThreadPriority(GetCurrentThread(), BELOW_NORMAL_PRIORITY_CLASS);
-}
+	std::string		name;
+	std::int64_t	native_id;
+
+	thread_info();
+};
+
+thread_info& get_thread_info();
+std::vector<spl::shared_ptr<thread_info>> get_thread_infos();
 
 }

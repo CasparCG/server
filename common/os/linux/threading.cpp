@@ -19,15 +19,21 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#pragma once
+#include "../../stdafx.h"
+
+#include "../threading.h"
 
 namespace caspar {
 
-enum class thread_priority
+void set_priority_of_current_thread(thread_priority priority)
 {
-	LOW
-};
+	// TODO: implement
+}
 
-void set_priority_of_current_thread(thread_priority priority);
+std::int64_t get_current_thread_id()
+{
+	// TODO: implement
+	return 0;
+}
 
 }
