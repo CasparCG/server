@@ -297,7 +297,9 @@ struct server::impl : boost::noncopyable
 				if(name == L"tcp")
 				{					
 					unsigned int port = xml_controller.second.get(L"port", 5250);
-					auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(create_protocol(protocol), port);
+					auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(
+							create_protocol(L"TCP Port " + boost::lexical_cast<std::wstring>(port), protocol),
+							port);
 					async_servers_.push_back(asyncbootstrapper);
 
 					if (!primary_amcp_server_ && boost::iequals(protocol, L"AMCP"))
@@ -313,12 +315,12 @@ struct server::impl : boost::noncopyable
 		}
 	}
 
-	IO::protocol_strategy_factory<char>::ptr create_protocol(const std::wstring& name) const
+	IO::protocol_strategy_factory<char>::ptr create_protocol(const std::wstring& name, const std::wstring& port_description) const
 	{
 		using namespace IO;
 
 		if(boost::iequals(name, L"AMCP"))
-			return wrap_legacy_protocol("\r\n", spl::make_shared<amcp::AMCPProtocolStrategy>(spl::make_shared_ptr(amcp_command_repo_)));
+			return wrap_legacy_protocol("\r\n", spl::make_shared<amcp::AMCPProtocolStrategy>(port_description, spl::make_shared_ptr(amcp_command_repo_)));
 		else if(boost::iequals(name, L"CII"))
 			return wrap_legacy_protocol("\r\n", spl::make_shared<cii::CIIProtocolStrategy>(channels_, cg_registry_, producer_registry_));
 		else if(boost::iequals(name, L"CLOCK"))

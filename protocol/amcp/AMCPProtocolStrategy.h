@@ -41,7 +41,7 @@ namespace caspar { namespace protocol { namespace amcp {
 class AMCPProtocolStrategy : public IO::IProtocolStrategy, boost::noncopyable
 {
 public:
-	AMCPProtocolStrategy(const spl::shared_ptr<class amcp_command_repository>& repo);
+	AMCPProtocolStrategy(const std::wstring& name, const spl::shared_ptr<class amcp_command_repository>& repo);
 
 	virtual ~AMCPProtocolStrategy();
 
