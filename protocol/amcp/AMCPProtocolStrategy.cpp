@@ -69,10 +69,16 @@ private:
 	spl::shared_ptr<amcp_command_repository>	repo_;
 
 public:
-	impl(const spl::shared_ptr<amcp_command_repository>& repo)
+	impl(const std::wstring& name, const spl::shared_ptr<amcp_command_repository>& repo)
 		: repo_(repo)
 	{
-		commandQueues_.resize(repo_->channels().size() + 1);
+		commandQueues_.push_back(spl::make_shared<AMCPCommandQueue>(L"General Queue for " + name));
+
+		for (int i = 0; i < repo_->channels().size(); ++i)
+		{
+			commandQueues_.push_back(spl::make_shared<AMCPCommandQueue>(
+					L"Channel " + boost::lexical_cast<std::wstring>(i + 1) + L" for " + name));
+		}
 	}
 
 	~impl() {}
@@ -92,7 +98,7 @@ public:
 		std::wstring								command_name;
 		AMCPCommand::ptr_type						command;
 		error_state									error			= error_state::no_error;
-		AMCPCommandQueue::ptr_type					queue;
+		std::shared_ptr<AMCPCommandQueue>			queue;
 	};
 
 	//The paser method expects message to be complete messages with the delimiter stripped away.
@@ -310,8 +316,8 @@ private:
 	}
 };
 
-AMCPProtocolStrategy::AMCPProtocolStrategy(const spl::shared_ptr<amcp_command_repository>& repo)
-	: impl_(spl::make_unique<impl>(repo))
+AMCPProtocolStrategy::AMCPProtocolStrategy(const std::wstring& name, const spl::shared_ptr<amcp_command_repository>& repo)
+	: impl_(spl::make_unique<impl>(name, repo))
 {
 }
 AMCPProtocolStrategy::~AMCPProtocolStrategy() {}
