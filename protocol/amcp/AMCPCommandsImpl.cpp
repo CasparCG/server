@@ -28,6 +28,7 @@
 #include "AMCPCommandsImpl.h"
 
 #include "amcp_command_repository.h"
+#include "AMCPCommandQueue.h"
 
 #include <common/env.h>
 
@@ -2388,6 +2389,18 @@ std::wstring info_server_command(command_context& ctx)
 	return create_info_xml_reply(info, L"SERVER");
 }
 
+void info_queues_describer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Get detailed information about all AMCP Command Queues.");
+	sink.syntax(L"INFO QUEUES");
+	sink.para()->text(L"Gets detailed information about all AMCP Command Queues.");
+}
+
+std::wstring info_queues_command(command_context& ctx)
+{
+	return create_info_xml_reply(AMCPCommandQueue::info_all_queues(), L"QUEUES");
+}
+
 void diag_describer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"Open the diagnostics window.");
@@ -2751,6 +2764,7 @@ void register_commands(amcp_command_repository& repo)
 	repo.register_command(			L"Query Commands",		L"INFO PATHS",				info_paths_describer,				info_paths_command,				0);
 	repo.register_command(			L"Query Commands",		L"INFO SYSTEM",				info_system_describer,				info_system_command,			0);
 	repo.register_command(			L"Query Commands",		L"INFO SERVER",				info_server_describer,				info_server_command,			0);
+	repo.register_command(			L"Query Commands",		L"INFO QUEUES",				info_queues_describer,				info_queues_command,			0);
 	repo.register_command(			L"Query Commands",		L"DIAG",					diag_describer,						diag_command,					0);
 	repo.register_command(			L"Query Commands",		L"BYE",						bye_describer,						bye_command,					0);
 	repo.register_command(			L"Query Commands",		L"KILL",					kill_describer,						kill_command,					0);
