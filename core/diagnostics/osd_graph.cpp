@@ -31,7 +31,7 @@
 #include <common/lock.h>
 #include <common/env.h>
 #include <common/prec_timer.h>
-#include <common/os/scheduling.h>
+#include <common/os/threading.h>
 #include <common/timer.h>
 
 #include <SFML/Graphics.hpp>

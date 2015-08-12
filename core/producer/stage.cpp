@@ -49,22 +49,21 @@
 namespace caspar { namespace core {
 	
 struct stage::impl : public std::enable_shared_from_this<impl>
-{				
+{
+	int																		channel_index_;
 	spl::shared_ptr<diagnostics::graph>										graph_;
-	spl::shared_ptr<monitor::subject>										monitor_subject_;
-	//reactive::basic_subject<std::map<int, draw_frame>>					frames_subject_;
-	std::map<int, layer>													layers_;	
+	spl::shared_ptr<monitor::subject>										monitor_subject_	= spl::make_shared<monitor::subject>("/stage");
+	std::map<int, layer>													layers_;
 	std::map<int, tweened_transform>										tweens_;
 	interaction_aggregator													aggregator_;
 	// map of layer -> map of tokens (src ref) -> layer_consumer
 	std::map<int, std::map<void*, spl::shared_ptr<write_frame_consumer>>>	layer_consumers_;
-	executor																executor_;
+	executor																executor_			{ L"stage " + boost::lexical_cast<std::wstring>(channel_index_) };
 public:
-	impl(spl::shared_ptr<diagnostics::graph> graph) 
-		: graph_(std::move(graph))
-		, monitor_subject_(spl::make_shared<monitor::subject>("/stage"))
+	impl(int channel_index, spl::shared_ptr<diagnostics::graph> graph)
+		: channel_index_(channel_index)
+		, graph_(std::move(graph))
 		, aggregator_([=] (double x, double y) { return collission_detect(x, y); })
-		, executor_(L"stage")
 	{
 		graph_->set_color("produce-time", diagnostics::color(0.0f, 1.0f, 0.0f));
 	}
@@ -441,7 +440,7 @@ public:
 	}
 };
 
-stage::stage(spl::shared_ptr<diagnostics::graph> graph) : impl_(new impl(std::move(graph))){}
+stage::stage(int channel_index, spl::shared_ptr<diagnostics::graph> graph) : impl_(new impl(channel_index, std::move(graph))){}
 std::future<std::wstring> stage::call(int index, const std::vector<std::wstring>& params){return impl_->call(index, params);}
 std::future<void> stage::apply_transforms(const std::vector<stage::transform_tuple_t>& transforms){ return impl_->apply_transforms(transforms); }
 std::future<void> stage::apply_transform(int index, const std::function<core::frame_transform(core::frame_transform)>& transform, unsigned int mix_duration, const tweener& tween){ return impl_->apply_transform(index, transform, mix_duration, tween); }

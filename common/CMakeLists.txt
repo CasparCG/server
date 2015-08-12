@@ -11,6 +11,7 @@ set(SOURCES
 		log.cpp
 		polling_filesystem_monitor.cpp
 		stdafx.cpp
+		thread_info.cpp
 		tweener.cpp
 		utf.cpp
 )
@@ -24,7 +25,7 @@ if (MSVC)
 			os/windows/filesystem.cpp
 			os/windows/page_locked_allocator.cpp
 			os/windows/prec_timer.cpp
-			os/windows/scheduling.cpp
+			os/windows/threading.cpp
 			os/windows/stack_trace.cpp
 			os/windows/system_info.cpp
 			os/windows/win32_exception.cpp
@@ -36,7 +37,7 @@ elseif (CMAKE_COMPILER_IS_GNUCXX)
 			os/linux/filesystem.cpp
 			os/linux/prec_timer.cpp
 			os/linux/signal_handlers.cpp
-			os/linux/scheduling.cpp
+			os/linux/threading.cpp
 			os/linux/stack_trace.cpp
 			os/linux/system_info.cpp
 	)
@@ -49,7 +50,7 @@ set(HEADERS
 		os/filesystem.h
 		os/general_protection_fault.h
 		os/page_locked_allocator.h
-		os/scheduling.h
+		os/threading.h
 		os/stack_trace.h
 		os/system_info.h
 
@@ -80,6 +81,7 @@ set(HEADERS
 		scope_exit.h
 		semaphore.h
 		stdafx.h
+		thread_info.h
 		timer.h
 		tweener.h
 		utf.h

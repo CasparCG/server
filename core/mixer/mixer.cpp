@@ -42,6 +42,7 @@
 #include <core/video_format.h>
 
 #include <boost/property_tree/ptree.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/spin_mutex.h>
@@ -52,16 +53,18 @@
 namespace caspar { namespace core {
 
 struct mixer::impl : boost::noncopyable
-{				
+{
+	int									channel_index_;
 	spl::shared_ptr<diagnostics::graph> graph_;
 	audio_mixer							audio_mixer_;
 	spl::shared_ptr<image_mixer>		image_mixer_;
 			
-	executor executor_									{ L"mixer" };
+	executor							executor_		{ L"mixer " + boost::lexical_cast<std::wstring>(channel_index_) };
 
 public:
-	impl(spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer) 
-		: graph_(std::move(graph))
+	impl(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer) 
+		: channel_index_(channel_index)
+		, graph_(std::move(graph))
 		, image_mixer_(std::move(image_mixer))
 	{			
 		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8f));
@@ -127,8 +130,8 @@ public:
 	}
 };
 	
-mixer::mixer(spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer) 
-	: impl_(new impl(std::move(graph), std::move(image_mixer))){}
+mixer::mixer(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer) 
+	: impl_(new impl(channel_index, std::move(graph), std::move(image_mixer))){}
 void mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 float mixer::get_master_volume() { return impl_->get_master_volume(); }
 std::future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
