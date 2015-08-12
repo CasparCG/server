@@ -236,6 +236,7 @@ bool run()
 			L"\r\n",
 			spl::make_shared<caspar::IO::legacy_strategy_adapter_factory>(
 					spl::make_shared<protocol::amcp::AMCPProtocolStrategy>(
+							L"Console",
 							caspar_server.get_amcp_command_repository())))->create(console_client);
 
 	// Use separate thread for the blocking console input, will be terminated 

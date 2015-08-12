@@ -176,6 +176,11 @@ public:
 	{
 		return boost::this_thread::get_id() == thread_.get_id();
 	}
+
+	std::wstring name() const
+	{
+		return name_;
+	}
 		
 private:	
 
