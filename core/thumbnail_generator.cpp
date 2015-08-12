@@ -133,7 +133,7 @@ public:
 		, image_mixer_(std::move(image_mixer))
 		, format_desc_(render_video_mode)
 		, output_(spl::make_unique<thumbnail_output>(generate_delay_millis))
-		, mixer_(graph_, image_mixer_)
+		, mixer_(0, graph_, image_mixer_)
 		, thumbnail_creator_(thumbnail_creator)
 		, media_info_repo_(std::move(media_info_repo))
 		, producer_registry_(std::move(producer_registry))

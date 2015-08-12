@@ -19,15 +19,18 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../../stdafx.h"
+#pragma once
 
-#include "../scheduling.h"
+#include <cstdint>
 
 namespace caspar {
-	
-void set_priority_of_current_thread(thread_priority priority)
+
+enum class thread_priority
 {
-	// TODO: implement
-}
+	LOW
+};
+
+void set_priority_of_current_thread(thread_priority priority);
+std::int64_t get_current_thread_id();
 
 }
