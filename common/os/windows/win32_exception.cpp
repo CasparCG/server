@@ -4,6 +4,7 @@
 
 #include <boost/thread.hpp>
 
+#include "../../thread_info.h"
 #include "windows.h"
 
 namespace caspar { namespace detail {
@@ -65,7 +66,10 @@ void ensure_gpf_handler_installed_for_thread(
 		install_gpf_handler();
 
 		if (thread_description)
+		{
 			detail::SetThreadName(GetCurrentThreadId(), thread_description);
+			get_thread_info().name = thread_description;
+		}
 	}
 }
 

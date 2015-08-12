@@ -37,6 +37,7 @@
 #include <common/os/system_info.h>
 #include <common/os/filesystem.h>
 #include <common/base64.h>
+#include <common/thread_info.h>
 
 #include <core/producer/cg_proxy.h>
 #include <core/producer/frame_producer.h>
@@ -2401,6 +2402,27 @@ std::wstring info_queues_command(command_context& ctx)
 	return create_info_xml_reply(AMCPCommandQueue::info_all_queues(), L"QUEUES");
 }
 
+void info_threads_describer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Lists all known threads in the server.");
+	sink.syntax(L"INFO THREADS");
+	sink.para()->text(L"Lists all known threads in the server.");
+}
+
+std::wstring info_threads_command(command_context& ctx)
+{
+	std::wstringstream replyString;
+	replyString << L"200 INFO THREADS OK\r\n";
+
+	for (auto& thread : get_thread_infos())
+	{
+		replyString << thread->native_id << L"\t" << u16(thread->name) << L"\r\n";
+	}
+
+	replyString << L"\r\n";
+	return replyString.str();
+}
+
 void diag_describer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"Open the diagnostics window.");
@@ -2765,6 +2787,7 @@ void register_commands(amcp_command_repository& repo)
 	repo.register_command(			L"Query Commands",		L"INFO SYSTEM",				info_system_describer,				info_system_command,			0);
 	repo.register_command(			L"Query Commands",		L"INFO SERVER",				info_server_describer,				info_server_command,			0);
 	repo.register_command(			L"Query Commands",		L"INFO QUEUES",				info_queues_describer,				info_queues_command,			0);
+	repo.register_command(			L"Query Commands",		L"INFO THREADS",			info_threads_describer,				info_threads_command,			0);
 	repo.register_command(			L"Query Commands",		L"DIAG",					diag_describer,						diag_command,					0);
 	repo.register_command(			L"Query Commands",		L"BYE",						bye_describer,						bye_command,					0);
 	repo.register_command(			L"Query Commands",		L"KILL",					kill_describer,						kill_command,					0);

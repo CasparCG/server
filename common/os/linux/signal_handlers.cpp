@@ -2,6 +2,7 @@
 
 #include "../../except.h"
 #include "../../log.h"
+#include "../../thread_info.h"
 
 #include <signal.h>
 
@@ -51,6 +52,9 @@ void ensure_gpf_handler_installed_for_thread(
 		const char* thread_description)
 {
 	static auto install = []() { do_install_handlers(); return 0; } ();
+	
+	if (thread_description)
+		get_thread_info().name = thread_description;
 }
 
 }
