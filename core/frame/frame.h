@@ -10,6 +10,7 @@
 #include <common/array.h>
 #include <common/future_fwd.h>
 #include <common/cache_aligned_vector.h>
+#include <common/timer.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -62,6 +63,8 @@ public:
 
 	const core::frame_geometry& geometry() const;
 	void set_geometry(const frame_geometry& g);
+
+	caspar::timer since_created() const;
 			
 private:
 	struct impl;
@@ -109,6 +112,7 @@ public:
 
 	const core::frame_geometry& geometry() const;
 	void set_geometry(const frame_geometry& g);
+	int64_t get_age_millis() const;
 
 	bool operator==(const const_frame& other);
 	bool operator!=(const const_frame& other);

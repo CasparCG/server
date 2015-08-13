@@ -101,6 +101,8 @@ public:
 	std::future<boost::property_tree::wptree>		info() const;
 	std::future<boost::property_tree::wptree>		info(int index) const;
 
+	std::future<boost::property_tree::wptree>		delay_info() const;
+	std::future<boost::property_tree::wptree>		delay_info(int layer) const;
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;
