@@ -40,6 +40,7 @@
 #include <core/mixer/audio/audio_util.h>
 
 #include <tbb/concurrent_queue.h>
+#include <tbb/atomic.h>
 
 #include <common/assert.h>
 #include <boost/lexical_cast.hpp>
@@ -57,14 +58,14 @@ namespace caspar { namespace bluefish {
 			
 struct bluefish_consumer : boost::noncopyable
 {
-	spl::shared_ptr<CBlueVelvet4>				blue_;
+	spl::shared_ptr<CBlueVelvet4>		blue_;
 	const unsigned int					device_index_;
 	const core::video_format_desc		format_desc_;
 	const int							channel_index_;
 
 	const std::wstring					model_name_;
 
-	spl::shared_ptr<diagnostics::graph>		graph_;
+	spl::shared_ptr<diagnostics::graph>	graph_;
 	boost::timer						frame_timer_;
 	boost::timer						tick_timer_;
 	boost::timer						sync_timer_;	
@@ -73,7 +74,9 @@ struct bluefish_consumer : boost::noncopyable
 
 	std::array<blue_dma_buffer_ptr, 4>	reserved_frames_;	
 	tbb::concurrent_bounded_queue<core::const_frame> frame_buffer_;
-	
+	tbb::atomic<int64_t>				presentation_delay_millis_;
+	core::const_frame					previous_frame_				= core::const_frame::empty();
+
 	const bool							embedded_audio_;
 	const bool							key_only_;
 		
@@ -91,6 +94,7 @@ public:
 		, executor_(print())
 	{
 		executor_.set_capacity(1);
+		presentation_delay_millis_ = 0;
 
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("sync-time", diagnostics::color(1.0f, 0.0f, 0.0f));
@@ -220,6 +224,11 @@ public:
 		
 		frame_timer_.restart();		
 
+		if (previous_frame_ != core::const_frame::empty())
+			presentation_delay_millis_ = previous_frame_.get_age_millis();
+
+		previous_frame_ = frame;
+
 		// Copy to local buffers
 		
 		if(!frame.image_data().empty())
@@ -298,6 +307,11 @@ public:
 		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" + 
 			boost::lexical_cast<std::wstring>(device_index_) + L"|" +  format_desc_.name + L"]";
 	}
+
+	int64_t presentation_delay_millis() const
+	{
+		return presentation_delay_millis_;
+	}
 };
 
 struct bluefish_consumer_proxy : public core::frame_consumer
@@ -356,6 +370,7 @@ public:
 		info.add(L"key-only", key_only_);
 		info.add(L"device", device_index_);
 		info.add(L"embedded-audio", embedded_audio_);
+		info.add(L"presentation-frame-age", presentation_frame_age_millis());
 		return info;
 	}
 
@@ -367,6 +382,11 @@ public:
 	int index() const override
 	{
 		return 400 + device_index_;
+	}
+
+	int64_t presentation_frame_age_millis() const override
+	{
+		return consumer_ ? consumer_->presentation_delay_millis() : 0;
 	}
 
 	core::monitor::subject& monitor_output()

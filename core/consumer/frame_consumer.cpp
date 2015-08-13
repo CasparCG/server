@@ -113,6 +113,7 @@ public:
 	bool has_synchronization_clock() const override														{return consumer_->has_synchronization_clock();}
 	int buffer_depth() const override																	{return consumer_->buffer_depth();}
 	int index() const override																			{return consumer_->index();}
+	int64_t presentation_frame_age_millis() const override												{return consumer_->presentation_frame_age_millis();}
 	monitor::subject& monitor_output() override															{return consumer_->monitor_output();}										
 };
 
@@ -142,6 +143,7 @@ public:
 	bool has_synchronization_clock() const override														{return consumer_->has_synchronization_clock();}
 	int buffer_depth() const override																	{return consumer_->buffer_depth();}
 	int index() const override																			{return consumer_->index();}
+	int64_t presentation_frame_age_millis() const override												{return consumer_->presentation_frame_age_millis();}
 	monitor::subject& monitor_output() override															{return consumer_->monitor_output();}										
 };
 
@@ -192,6 +194,7 @@ public:
 	bool has_synchronization_clock() const override							{return consumer_->has_synchronization_clock();}
 	int buffer_depth() const override										{return consumer_->buffer_depth();}
 	int index() const override												{return consumer_->index();}
+	int64_t presentation_frame_age_millis() const override					{return consumer_->presentation_frame_age_millis();}
 	monitor::subject& monitor_output() override								{return consumer_->monitor_output();}										
 };
 
@@ -243,6 +246,7 @@ public:
 	bool has_synchronization_clock() const override							{return consumer_->has_synchronization_clock();}
 	int buffer_depth() const override										{return consumer_->buffer_depth();}
 	int index() const override												{return consumer_->index();}
+	int64_t presentation_frame_age_millis() const override					{return consumer_->presentation_frame_age_millis();}
 	monitor::subject& monitor_output() override								{return consumer_->monitor_output();}										
 };
 
@@ -307,7 +311,8 @@ const spl::shared_ptr<frame_consumer>& frame_consumer::empty()
 		std::wstring name() const override {return L"empty";}
 		bool has_synchronization_clock() const override {return false;}
 		int buffer_depth() const override {return 0;};
-		virtual int index() const{return -1;}
+		int index() const override {return -1;}
+		int64_t presentation_frame_age_millis() const override {return -1;}
 		monitor::subject& monitor_output() override {static monitor::subject monitor_subject(""); return monitor_subject;}										
 		boost::property_tree::wptree info() const override
 		{
