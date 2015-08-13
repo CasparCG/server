@@ -2423,6 +2423,27 @@ std::wstring info_threads_command(command_context& ctx)
 	return replyString.str();
 }
 
+void info_delay_describer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Get the current delay on a channel or a layer.");
+	sink.syntax(L"INFO [video_channel:int]{-[layer:int]} DELAY");
+	sink.para()->text(L"Get the current delay on the specified channel or layer.");
+}
+
+std::wstring info_delay_command(command_context& ctx)
+{
+	boost::property_tree::wptree info;
+	auto layer = ctx.layer_index(std::numeric_limits<int>::min());
+
+	if (layer == std::numeric_limits<int>::min())
+		info.add_child(L"channel-delay", ctx.channel.channel->delay_info());
+	else
+		info.add_child(L"layer-delay", ctx.channel.channel->stage().delay_info(layer).get())
+			.add(L"index", layer);
+
+	return create_info_xml_reply(info, L"DELAY");
+}
+
 void diag_describer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"Open the diagnostics window.");
@@ -2788,6 +2809,7 @@ void register_commands(amcp_command_repository& repo)
 	repo.register_command(			L"Query Commands",		L"INFO SERVER",				info_server_describer,				info_server_command,			0);
 	repo.register_command(			L"Query Commands",		L"INFO QUEUES",				info_queues_describer,				info_queues_command,			0);
 	repo.register_command(			L"Query Commands",		L"INFO THREADS",			info_threads_describer,				info_threads_command,			0);
+	repo.register_channel_command(	L"Query Commands",		L"INFO DELAY",				info_delay_describer,				info_delay_command,				0);
 	repo.register_command(			L"Query Commands",		L"DIAG",					diag_describer,						diag_command,					0);
 	repo.register_command(			L"Query Commands",		L"BYE",						bye_describer,						bye_command,					0);
 	repo.register_command(			L"Query Commands",		L"KILL",					kill_describer,						kill_command,					0);

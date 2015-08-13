@@ -108,7 +108,8 @@ struct oal_consumer : public core::frame_consumer
 
 	spl::shared_ptr<diagnostics::graph>	graph_;
 	boost::timer						perf_timer_;
-	int									channel_index_		= -1;
+	tbb::atomic<int64_t>				presentation_age_;
+	int									channel_index_ = -1;
 	
 	core::video_format_desc				format_desc_;
 
@@ -121,6 +122,7 @@ public:
 	oal_consumer() 
 	{
 		buffers_.fill(0);
+		presentation_age_ = 0;
 
 		init_device();
 
@@ -173,7 +175,12 @@ public:
 			alSourcePlay(source_);	
 		});
 	}
-	
+
+	int64_t presentation_frame_age_millis() const override
+	{
+		return presentation_age_;
+	}
+
 	std::future<bool> send(core::const_frame frame) override
 	{
 		// Will only block if the default executor queue capacity of 512 is
@@ -213,6 +220,7 @@ public:
 
 			graph_->set_value("tick-time", perf_timer_.elapsed()*format_desc_.fps*0.5);		
 			perf_timer_.restart();
+			presentation_age_ = frame.get_age_millis() + delay_millis();
 		});
 
 		return make_ready_future(true);
@@ -242,7 +250,7 @@ public:
 
 	int delay_millis() const
 	{
-		return 60;
+		return 160;
 	}
 	
 	int buffer_depth() const override

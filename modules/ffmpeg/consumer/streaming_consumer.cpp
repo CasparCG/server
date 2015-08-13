@@ -111,6 +111,7 @@ private:
 	tbb::atomic<int>							tokens_;
 	boost::mutex								tokens_mutex_;
 	boost::condition_variable					tokens_cond_;
+	tbb::atomic<int64_t>						current_encoding_delay_;
 
 	executor									write_executor_;
 	
@@ -128,7 +129,8 @@ public:
 		, video_encoder_executor_(print() + L" video_encoder")
 		, write_executor_(print() + L" io")
 	{		
-		abort_request_ = false;	
+		abort_request_ = false;
+		current_encoding_delay_ = 0;
 
 		for(auto it = 
 				boost::sregex_iterator(
@@ -395,10 +397,11 @@ public:
 		--tokens_;
 		std::shared_ptr<void> token(
 			nullptr, 
-			[this](void*)
+			[this, frame](void*)
 			{
 				++tokens_;
 				tokens_cond_.notify_one();
+				current_encoding_delay_ = frame.get_age_millis();
 			});
 
 		return executor_.begin_invoke([=]() -> bool
@@ -449,6 +452,11 @@ public:
 	int index() const override
 	{
 		return 100000 + consumer_index_offset_;
+	}
+
+	int64_t presentation_frame_age_millis() const override
+	{
+		return current_encoding_delay_;
 	}
 
 private:

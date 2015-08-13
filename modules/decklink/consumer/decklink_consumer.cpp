@@ -166,6 +166,11 @@ public:
 	{
 		return frame_.audio_data();
 	}
+
+	int64_t get_age_millis() const
+	{
+		return frame_.get_age_millis();
+	}
 };
 
 struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
@@ -199,6 +204,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	tbb::concurrent_bounded_queue<core::const_frame>    audio_frame_buffer_;
 	
 	spl::shared_ptr<diagnostics::graph>                 graph_;
+	tbb::atomic<int64_t>								current_presentation_delay_;
 	caspar::timer										tick_timer_;
 	retry_task<bool>                                    send_completion_;
 
@@ -209,6 +215,7 @@ public:
 		, format_desc_(format_desc)
 	{
 		is_running_ = true;
+		current_presentation_delay_ = 0;
 				
 		video_frame_buffer_.set_capacity(1);
 
@@ -347,11 +354,13 @@ public:
 		
 		try
 		{
+			auto dframe = reinterpret_cast<decklink_frame*>(completed_frame);
+			current_presentation_delay_ = dframe->get_age_millis();
 			if(result == bmdOutputFrameDisplayedLate)
 			{
 				graph_->set_tag("late-frame");
 				video_scheduled_ += format_desc_.duration;
-				audio_scheduled_ += reinterpret_cast<decklink_frame*>(completed_frame)->audio_data().size()/format_desc_.audio_channels;
+				audio_scheduled_ += dframe->audio_data().size() / format_desc_.audio_channels;
 				//++video_scheduled_;
 				//audio_scheduled_ += format_desc_.audio_cadence[0];
 				//++audio_scheduled_;
@@ -501,6 +510,7 @@ struct decklink_consumer_proxy : public core::frame_consumer
 	core::monitor::subject				monitor_subject_;
 	const configuration					config_;
 	std::unique_ptr<decklink_consumer>	consumer_;
+	core::video_format_desc				format_desc_;
 	executor							executor_;
 public:
 
@@ -529,6 +539,7 @@ public:
 	
 	void initialize(const core::video_format_desc& format_desc, int channel_index) override
 	{
+		format_desc_ = format_desc;
 		executor_.invoke([=]
 		{
 			consumer_.reset();
@@ -559,18 +570,24 @@ public:
 		info.add(L"device", config_.device_index);
 		info.add(L"low-latency", config_.latency == configuration::latency_t::low_latency);
 		info.add(L"embedded-audio", config_.embedded_audio);
+		info.add(L"presentation-frame-age", presentation_frame_age_millis());
 		//info.add(L"internal-key", config_.internal_key);
 		return info;
 	}
 
 	int buffer_depth() const override
 	{
-		return config_.buffer_depth();
+		return config_.buffer_depth() + 2;
 	}
 
 	int index() const override
 	{
 		return 300 + config_.device_index;
+	}
+
+	int64_t presentation_frame_age_millis() const override
+	{
+		return consumer_ ? consumer_->current_presentation_delay_ : 0;
 	}
 
 	core::monitor::subject& monitor_output()

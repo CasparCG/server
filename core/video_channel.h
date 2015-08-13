@@ -65,6 +65,7 @@ public:
 	spl::shared_ptr<core::frame_factory>	frame_factory();
 
 	boost::property_tree::wptree			info() const;
+	boost::property_tree::wptree			delay_info() const;
 	int										index() const;
 private:
 	struct impl;

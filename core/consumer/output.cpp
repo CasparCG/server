@@ -54,13 +54,14 @@ namespace caspar { namespace core {
 struct output::impl
 {		
 	spl::shared_ptr<diagnostics::graph>	graph_;
-	spl::shared_ptr<monitor::subject>	monitor_subject_	= spl::make_shared<monitor::subject>("/output");
+	spl::shared_ptr<monitor::subject>	monitor_subject_			= spl::make_shared<monitor::subject>("/output");
 	const int							channel_index_;
 	video_format_desc					format_desc_;
 	std::map<int, port>					ports_;	
 	prec_timer							sync_timer_;
 	boost::circular_buffer<const_frame>	frames_;
-	executor							executor_			= { L"output " + boost::lexical_cast<std::wstring>(channel_index_) };
+	std::map<int, int64_t>				send_to_consumers_delays_;
+	executor							executor_					{ L"output " + boost::lexical_cast<std::wstring>(channel_index_) };
 public:
 	impl(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index) 
 		: graph_(std::move(graph))
@@ -94,8 +95,11 @@ public:
 		executor_.begin_invoke([=]
 		{
 			auto it = ports_.find(index);
-			if(it != ports_.end())
-				ports_.erase(it);					
+			if (it != ports_.end())
+			{
+				ports_.erase(it);
+				send_to_consumers_delays_.erase(index);
+			}
 		}, task_priority::high_priority);
 	}
 
@@ -122,6 +126,7 @@ public:
 				catch(...)
 				{
 					CASPAR_LOG_CURRENT_EXCEPTION();
+					send_to_consumers_delays_.erase(it->first);
 					ports_.erase(it++);
 				}
 			}
@@ -159,7 +164,6 @@ public:
 
 		executor_.invoke([=]
 		{			
-
 			if(!has_synchronization_clock())
 				sync_timer_.tick(1.0/format_desc_.fps);
 				
@@ -185,6 +189,8 @@ public:
 				auto& port	= it->second;
 				auto depth = port.buffer_depth();
 				auto& frame = depth < 0 ? frames_.back() : frames_.at(depth - minmax.first);
+
+				send_to_consumers_delays_[it->first] = frame.get_age_millis();
 					
 				try
 				{
@@ -203,6 +209,7 @@ public:
 					{
 						CASPAR_LOG_CURRENT_EXCEPTION();
 						CASPAR_LOG(error) << "Failed to recover consumer: " << port.print() << L". Removing it.";
+						send_to_consumers_delays_.erase(it->first);
 						it = ports_.erase(it);
 					}
 				}
@@ -214,11 +221,15 @@ public:
 				try
 				{
 					if (!it->second.get())
+					{
+						send_to_consumers_delays_.erase(it->first);
 						ports_.erase(it->first);
+					}
 				}
 				catch (...)
 				{
 					CASPAR_LOG_CURRENT_EXCEPTION();
+					send_to_consumers_delays_.erase(it->first);
 					ports_.erase(it->first);
 				}
 			}
@@ -245,6 +256,31 @@ public:
 			return info;
 		}, task_priority::high_priority));
 	}
+
+	std::future<boost::property_tree::wptree> delay_info()
+	{
+		return std::move(executor_.begin_invoke([&]() -> boost::property_tree::wptree
+		{
+			boost::property_tree::wptree info;
+
+			for (auto& port : ports_)
+			{
+				auto total_age =
+					port.second.presentation_frame_age_millis();
+				auto sendoff_age = send_to_consumers_delays_[port.first];
+				auto presentation_time = total_age - sendoff_age;
+
+				boost::property_tree::wptree child;
+				child.add(L"name", port.second.print());
+				child.add(L"age-at-arrival", sendoff_age);
+				child.add(L"presentation-time", presentation_time);
+				child.add(L"age-at-presentation", total_age);
+
+				info.add_child(L"consumer", child);
+			}
+			return info;
+		}, task_priority::high_priority));
+	}
 };
 
 output::output(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index) : impl_(new impl(std::move(graph), format_desc, channel_index)){}
@@ -253,6 +289,7 @@ void output::add(const spl::shared_ptr<frame_consumer>& consumer){impl_->add(con
 void output::remove(int index){impl_->remove(index);}
 void output::remove(const spl::shared_ptr<frame_consumer>& consumer){impl_->remove(consumer);}
 std::future<boost::property_tree::wptree> output::info() const{return impl_->info();}
-void output::operator()(const_frame frame, const video_format_desc& format_desc){(*impl_)(std::move(frame), format_desc);}
+std::future<boost::property_tree::wptree> output::delay_info() const{ return impl_->delay_info(); }
+void output::operator()(const_frame frame, const video_format_desc& format_desc){ (*impl_)(std::move(frame), format_desc); }
 monitor::subject& output::monitor_output() {return *impl_->monitor_subject_;}
 }}
