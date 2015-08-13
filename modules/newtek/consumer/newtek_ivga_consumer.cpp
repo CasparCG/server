@@ -167,6 +167,11 @@ public:
 		return 900;
 	}
 
+	virtual int64_t presentation_frame_age_millis() const override
+	{
+		return 0;
+	}
+
 	virtual bool has_synchronization_clock() const override
 	{
 		return provide_sync_ && connected_;

@@ -41,6 +41,7 @@ struct layer::impl
 	spl::shared_ptr<frame_producer>		background_			= frame_producer::empty();;
 	boost::optional<int32_t>			auto_play_delta_;
 	bool								is_paused_			= false;
+	int64_t								current_frame_age_	= 0;
 
 public:
 	impl(int index) 
@@ -142,6 +143,8 @@ public:
 
 			//foreground_event_subject_ << monitor::event("type") % foreground_->name();
 			//background_event_subject_ << monitor::event("type") % background_->name();
+
+			current_frame_age_ = frame.get_and_record_age_millis();
 				
 			return frame;
 		}
@@ -163,8 +166,17 @@ public:
 
 		info.add(L"nb_frames",	 nb_frames == std::numeric_limits<int64_t>::max() ? -1 : nb_frames);
 		info.add(L"frames-left", nb_frames == std::numeric_limits<int64_t>::max() ? -1 : (foreground_->nb_frames() - foreground_->frame_number() - (auto_play_delta_ ? *auto_play_delta_ : 0)));
+		info.add(L"frame-age", current_frame_age_);
 		info.add_child(L"producer", foreground_->info());
 		info.add_child(L"background.producer", background_->info());
+		return info;
+	}
+
+	boost::property_tree::wptree delay_info() const
+	{
+		boost::property_tree::wptree info;
+		info.add(L"producer", foreground_->print());
+		info.add(L"frame-age", current_frame_age_);
 		return info;
 	}
 
@@ -199,6 +211,7 @@ draw_frame layer::receive(const video_format_desc& format_desc) {return impl_->r
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_;}
 boost::property_tree::wptree layer::info() const{return impl_->info();}
+boost::property_tree::wptree layer::delay_info() const{return impl_->delay_info();}
 monitor::subject& layer::monitor_output() {return *impl_->monitor_subject_;}
 void layer::on_interaction(const interaction_event::ptr& event) { impl_->on_interaction(event); }
 bool layer::collides(double x, double y) const { return impl_->collides(x, y); }

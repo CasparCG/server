@@ -69,6 +69,7 @@ public:
 	virtual bool							has_synchronization_clock() const {return true;}
 	virtual int								buffer_depth() const = 0; // -1 to not participate in frame presentation synchronization
 	virtual int								index() const = 0;
+	virtual int64_t							presentation_frame_age_millis() const = 0;
 };
 
 typedef std::function<spl::shared_ptr<frame_consumer>(
