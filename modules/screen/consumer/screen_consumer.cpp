@@ -138,6 +138,7 @@ struct screen_consumer : boost::noncopyable
 
 	boost::thread										thread_;
 	tbb::atomic<bool>									is_running_;
+	tbb::atomic<int64_t>								current_presentation_age_;
 
 	ffmpeg::filter										filter_;
 public:
@@ -213,6 +214,7 @@ public:
 		screen_height_	= square_height_;
 		
 		is_running_ = true;
+		current_presentation_age_ = 0;
 		thread_ = boost::thread([this]{run();});
 	}
 	
@@ -362,6 +364,7 @@ public:
 
 					window_.Display();*/
 
+					current_presentation_age_ = frame.get_age_millis();
 					graph_->set_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);	
 					tick_timer_.restart();
 				}
@@ -601,7 +604,12 @@ public:
 		consumer_.reset();
 		consumer_.reset(new screen_consumer(config_, format_desc, channel_index, sink_));
 	}
-	
+
+	int64_t presentation_frame_age_millis() const override
+	{
+		return consumer_ ? consumer_->current_presentation_age_ : 0;
+	}
+
 	std::future<bool> send(core::const_frame frame) override
 	{
 		return consumer_->send(frame);
@@ -624,6 +632,7 @@ public:
 		info.add(L"key-only", config_.key_only);
 		info.add(L"windowed", config_.windowed);
 		info.add(L"auto-deinterlace", config_.auto_deinterlace);
+		info.add(L"vsync", config_.vsync);
 		return info;
 	}
 

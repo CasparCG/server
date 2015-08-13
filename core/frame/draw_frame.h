@@ -62,7 +62,9 @@ public:
 	void swap(draw_frame& other);	
 	
 	void accept(frame_visitor& visitor) const;
-
+	
+	int64_t get_and_record_age_millis();
+	
 	bool operator==(const draw_frame& other) const;
 	bool operator!=(const draw_frame& other) const;
 

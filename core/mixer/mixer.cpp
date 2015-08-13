@@ -46,6 +46,7 @@
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/spin_mutex.h>
+#include <tbb/atomic.h>
 
 #include <unordered_map>
 #include <vector>
@@ -56,6 +57,7 @@ struct mixer::impl : boost::noncopyable
 {
 	int									channel_index_;
 	spl::shared_ptr<diagnostics::graph> graph_;
+	tbb::atomic<int64_t>				current_mix_time_;
 	audio_mixer							audio_mixer_;
 	spl::shared_ptr<image_mixer>		image_mixer_;
 			
@@ -68,6 +70,7 @@ public:
 		, image_mixer_(std::move(image_mixer))
 	{			
 		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8f));
+		current_mix_time_ = 0;
 	}
 	
 	const_frame operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc)
@@ -102,8 +105,10 @@ public:
 				return const_frame::empty();
 			}	
 		});		
-				
-		graph_->set_value("mix-time", frame_timer.elapsed()*format_desc.fps*0.5);
+
+		auto mix_time = frame_timer.elapsed();
+		graph_->set_value("mix-time", mix_time * format_desc.fps * 0.5);
+		current_mix_time_ = static_cast<int64_t>(mix_time * 1000.0);
 
 		return frame;
 	}
@@ -126,7 +131,18 @@ public:
 
 	std::future<boost::property_tree::wptree> info() const
 	{
-		return make_ready_future(boost::property_tree::wptree());
+		boost::property_tree::wptree info;
+		info.add(L"mix-time", current_mix_time_);
+
+		return make_ready_future(std::move(info));
+	}
+
+	std::future<boost::property_tree::wptree> delay_info() const
+	{
+		boost::property_tree::wptree info;
+		info.put_value(current_mix_time_);
+
+		return make_ready_future(std::move(info));
 	}
 };
 	
@@ -135,6 +151,7 @@ mixer::mixer(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::
 void mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 float mixer::get_master_volume() { return impl_->get_master_volume(); }
 std::future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
-const_frame mixer::operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc){return (*impl_)(std::move(frames), format_desc);}
+std::future<boost::property_tree::wptree> mixer::delay_info() const{ return impl_->delay_info(); }
+const_frame mixer::operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc){ return (*impl_)(std::move(frames), format_desc); }
 mutable_frame mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->image_mixer_->create_frame(tag, desc);}
 }}

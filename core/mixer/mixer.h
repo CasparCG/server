@@ -62,6 +62,7 @@ public:
 	// Properties
 
 	std::future<boost::property_tree::wptree> info() const;
+	std::future<boost::property_tree::wptree> delay_info() const;
 
 private:
 	struct impl;

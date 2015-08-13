@@ -283,7 +283,8 @@ struct ffmpeg_consumer : boost::noncopyable
 
 	output_format								output_format_;
 	bool										key_only_;
-	
+	tbb::atomic<int64_t>						current_encoding_delay_;
+
 	executor									executor_;
 public:
 	ffmpeg_consumer(const std::string& filename, const core::video_format_desc& format_desc, std::vector<option> options, bool key_only)
@@ -293,6 +294,7 @@ public:
 		, key_only_(key_only)
 		, executor_(print())
 	{
+		current_encoding_delay_ = 0;
 		check_space();
 
 		// TODO: Ask stakeholders about case where file already exists.
@@ -371,6 +373,7 @@ public:
 		executor_.begin_invoke([=]
 		{		
 			encode(frame);
+			current_encoding_delay_ = frame.get_age_millis();
 		});
 	}
 
@@ -769,7 +772,7 @@ public:
 	{
 	}
 	
-	virtual void initialize(const core::video_format_desc& format_desc, int)
+	void initialize(const core::video_format_desc& format_desc, int) override
 	{
 		if(consumer_)
 			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot reinitialize ffmpeg-consumer."));
@@ -785,7 +788,12 @@ public:
 			key_only_consumer_.reset(new ffmpeg_consumer(u8(key_file), format_desc, options_, true));
 		}
 	}
-	
+
+	int64_t presentation_frame_age_millis() const override
+	{
+		return consumer_ ? consumer_->current_encoding_delay_ : 0;
+	}
+
 	std::future<bool> send(core::const_frame frame) override
 	{
 		bool ready_for_frame = consumer_->ready_for_frame();

@@ -59,6 +59,11 @@ public:
 	{
 		return consumer_->info();
 	}
+
+	int64_t presentation_frame_age_millis() const
+	{
+		return consumer_->presentation_frame_age_millis();
+	}
 };
 
 port::port(int index, int channel_index, spl::shared_ptr<frame_consumer> consumer) : impl_(new impl(index, channel_index, std::move(consumer))){}
@@ -72,4 +77,5 @@ int port::buffer_depth() const{return impl_->buffer_depth();}
 std::wstring port::print() const{ return impl_->print();}
 bool port::has_synchronization_clock() const{return impl_->has_synchronization_clock();}
 boost::property_tree::wptree port::info() const{return impl_->info();}
+int64_t port::presentation_frame_age_millis() const{ return impl_->presentation_frame_age_millis(); }
 }}
