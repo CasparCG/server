@@ -208,7 +208,7 @@ void do_run(std::weak_ptr<caspar::IO::protocol_strategy<wchar_t>> amcp, std::pro
 	}
 };
 
-bool run()
+bool run(const std::wstring& config_file_name)
 {
 	std::promise<bool> shutdown_server_now;
 	std::future<bool> shutdown_server = shutdown_server_now.get_future();
@@ -224,7 +224,7 @@ bool run()
 	std::wstringstream str;
 	boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
 	boost::property_tree::write_xml(str, env::properties(), w);
-	CASPAR_LOG(info) << L"casparcg.config:\n-----------------------------------------\n" << str.str() << L"-----------------------------------------";
+	CASPAR_LOG(info) << config_file_name << L":\n-----------------------------------------\n" << str.str() << L"-----------------------------------------";
 	
 	caspar_server.start();
 
@@ -284,11 +284,15 @@ int main(int argc, char** argv)
 	} tbb_thread_installer;
 
 	tbb::task_scheduler_init init;
+	std::wstring config_file_name(L"casparcg.config");
 	
 	try 
 	{
 		// Configure environment properties from configuration.
-		env::configure(L"casparcg.config");
+		if (argc >= 2)
+			config_file_name = caspar::u16(argv[1]);
+
+		env::configure(config_file_name);
 
 		log::set_log_level(env::properties().get(L"configuration.log-level", L"debug"));
 
@@ -302,7 +306,7 @@ int main(int argc, char** argv)
 		// Setup console window.
 		setup_console_window();
 
-		return_code = run() ? 5 : 0;
+		return_code = run(config_file_name) ? 5 : 0;
 		
 		boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
 
@@ -311,7 +315,7 @@ int main(int argc, char** argv)
 	catch(boost::property_tree::file_parser_error&)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		CASPAR_LOG(fatal) << L"Unhandled configuration error in main thread. Please check the configuration file (casparcg.config) for errors.";
+		CASPAR_LOG(fatal) << L"Unhandled configuration error in main thread. Please check the configuration file (" << config_file_name << L") for errors.";
 		wait_for_keypress();
 	}
 	catch(...)
