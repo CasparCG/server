@@ -2147,7 +2147,7 @@ std::wstring cinf_command(command_context& ctx)
 		auto path = itr->path();
 		auto file = path.replace_extension(L"").filename().wstring();
 		if (boost::iequals(file, ctx.parameters.at(0)))
-			info += MediaInfo(itr->path(), ctx.media_info_repo) + L"\r\n";
+			info += MediaInfo(itr->path(), ctx.media_info_repo);
 	}
 
 	if (info.empty())
