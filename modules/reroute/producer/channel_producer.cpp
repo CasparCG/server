@@ -121,6 +121,11 @@ public:
 		return L"channel-consumer";
 	}
 
+	int64_t presentation_frame_age_millis() const override
+	{
+		return current_age_;
+	}
+
 	std::wstring print() const override
 	{
 		return L"[channel-consumer|" + boost::lexical_cast<std::wstring>(channel_index_) + L"]";
@@ -175,9 +180,8 @@ public:
 		if (!is_running_)
 			return frame;
 		
-		frame_buffer_.try_pop(frame);
-		//if (frame_buffer_.try_pop(frame))
-//			current_age_ = frame.get_age_millis();
+		if (frame_buffer_.try_pop(frame))
+			current_age_ = frame.get_age_millis();
 
 		return frame;
 	}

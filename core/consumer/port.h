@@ -39,6 +39,7 @@ public:
 	int buffer_depth() const;
 	bool has_synchronization_clock() const;
 	boost::property_tree::wptree info() const;
+	int64_t presentation_frame_age_millis() const;
 private:
 	struct impl;
 	std::unique_ptr<impl> impl_;
