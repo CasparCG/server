@@ -314,12 +314,13 @@ struct AsyncEventServer::implementation
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
+		auto conns_set = connection_set_;
 
-		service_->post([=]
+		service_->post([conns_set]
 		{
-			auto connections = *connection_set_;
+			auto connections = *conns_set;
 			for (auto& connection : connections)
-				connection->stop();				
+				connection->stop();
 		});
 	}
 		
