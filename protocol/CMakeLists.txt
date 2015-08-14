@@ -7,8 +7,6 @@ set(SOURCES
 		amcp/AMCPProtocolStrategy.cpp
 		amcp/amcp_command_repository.cpp
 
-		asio/io_service_manager.cpp
-
 		cii/CIICommandsImpl.cpp
 		cii/CIIProtocolStrategy.cpp
 
@@ -36,8 +34,6 @@ set(HEADERS
 		amcp/AMCPProtocolStrategy.h
 		amcp/amcp_command_repository.h
 		amcp/amcp_shared.h
-
-		asio/io_service_manager.h
 
 		cii/CIICommand.h
 		cii/CIICommandsImpl.h
@@ -77,7 +73,6 @@ include_directories(${RXCPP_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_PATH})
 
 source_group(sources\\amcp amcp/*)
-source_group(sources\\asio asio/*)
 source_group(sources\\cii cii/*)
 source_group(sources\\clk clk/*)
 source_group(sources\\osc\\oscpack osc/oscpack/*)

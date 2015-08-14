@@ -40,7 +40,7 @@ public:
 
 	// Constructors
 
-	client(boost::asio::io_service& service);
+	client(std::shared_ptr<boost::asio::io_service> service);
 	
 	client(client&&);
 
