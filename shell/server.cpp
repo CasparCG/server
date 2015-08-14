@@ -53,7 +53,6 @@
 
 #include <modules/image/consumer/image_consumer.h>
 
-#include <protocol/asio/io_service_manager.h>
 #include <protocol/amcp/AMCPProtocolStrategy.h>
 #include <protocol/amcp/amcp_command_repository.h>
 #include <protocol/amcp/AMCPCommandsImpl.h>
@@ -68,6 +67,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
+#include <boost/asio.hpp>
 
 #include <tbb/atomic.h>
 
@@ -78,9 +78,32 @@ namespace caspar {
 using namespace core;
 using namespace protocol;
 
+std::shared_ptr<boost::asio::io_service> create_running_io_service()
+{
+	auto service = std::make_shared<boost::asio::io_service>();
+	// To keep the io_service::run() running although no pending async
+	// operations are posted.
+	auto work = std::make_shared<boost::asio::io_service::work>(*service);
+	auto thread = std::make_shared<boost::thread>([service]
+	{
+		ensure_gpf_handler_installed_for_thread("asio-thread");
+
+		service->run();
+	});
+
+	return std::shared_ptr<boost::asio::io_service>(
+			service.get(),
+			[service, work, thread](void*) mutable
+			{
+				work.reset();
+				service->stop();
+				thread->join();
+			});
+}
+
 struct server::impl : boost::noncopyable
 {
-	protocol::asio::io_service_manager					io_service_manager_;
+	std::shared_ptr<boost::asio::io_service>			io_service_						= create_running_io_service();
 	spl::shared_ptr<monitor::subject>					monitor_subject_;
 	spl::shared_ptr<monitor::subject>					diag_subject_					= core::diagnostics::get_or_create_subject();
 	accelerator::accelerator							accelerator_;
@@ -103,7 +126,7 @@ struct server::impl : boost::noncopyable
 
 	explicit impl(std::promise<bool>& shutdown_server_now)		
 		: accelerator_(env::properties().get(L"configuration.accelerator", L"auto"))
-		, osc_client_(io_service_manager_.service())
+		, osc_client_(io_service_)
 		, media_info_repo_(create_in_memory_media_info_repository())
 		, producer_registry_(spl::make_shared<core::frame_producer_registry>(help_repo_))
 		, consumer_registry_(spl::make_shared<core::frame_consumer_registry>(help_repo_))
@@ -254,7 +277,7 @@ struct server::impl : boost::noncopyable
 
 		auto scan_interval_millis = pt.get(L"configuration.thumbnails.scan-interval-millis", 5000);
 
-		polling_filesystem_monitor_factory monitor_factory(scan_interval_millis);
+		polling_filesystem_monitor_factory monitor_factory(io_service_, scan_interval_millis);
 		thumbnail_generator_.reset(new thumbnail_generator(
 			monitor_factory, 
 			env::media_folder(),
@@ -298,6 +321,7 @@ struct server::impl : boost::noncopyable
 				{					
 					unsigned int port = xml_controller.second.get(L"port", 5250);
 					auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(
+							io_service_,
 							create_protocol(protocol, L"TCP Port " + boost::lexical_cast<std::wstring>(port)),
 							port);
 					async_servers_.push_back(asyncbootstrapper);
@@ -335,6 +359,8 @@ struct server::impl : boost::noncopyable
 	{
 		initial_media_info_thread_ = boost::thread([this]
 		{
+			ensure_gpf_handler_installed_for_thread("initial media scan");
+
 			for (boost::filesystem::wrecursive_directory_iterator iter(env::media_folder()), end; iter != end; ++iter)
 			{
 				if (running_)

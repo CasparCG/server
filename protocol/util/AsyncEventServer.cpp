@@ -31,7 +31,6 @@
 #include <functional>
 
 #include <boost/asio.hpp>
-#include <boost/thread.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include <tbb/mutex.h>
@@ -290,18 +289,17 @@ private:
 
 struct AsyncEventServer::implementation
 {
-	boost::asio::io_service					service_;
-	tcp::acceptor							acceptor_;
-	protocol_strategy_factory<char>::ptr	protocol_factory_;
-	spl::shared_ptr<connection_set>			connection_set_;
-	boost::thread							thread_;
-	std::vector<lifecycle_factory_t>		lifecycle_factories_;
+	std::shared_ptr<boost::asio::io_service>	service_;
+	tcp::acceptor								acceptor_;
+	protocol_strategy_factory<char>::ptr		protocol_factory_;
+	spl::shared_ptr<connection_set>				connection_set_;
+	std::vector<lifecycle_factory_t>			lifecycle_factories_;
 	tbb::mutex mutex_;
 
-	implementation(const protocol_strategy_factory<char>::ptr& protocol, unsigned short port)
-		: acceptor_(service_, tcp::endpoint(tcp::v4(), port))
+	implementation(std::shared_ptr<boost::asio::io_service> service, const protocol_strategy_factory<char>::ptr& protocol, unsigned short port)
+		: service_(std::move(service))
+		, acceptor_(*service_, tcp::endpoint(tcp::v4(), port))
 		, protocol_factory_(protocol)
-		, thread_([&] { service_.run(); })
 	{
 		start_accept();
 	}
@@ -317,19 +315,17 @@ struct AsyncEventServer::implementation
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 
-		service_.post([=]
+		service_->post([=]
 		{
 			auto connections = *connection_set_;
 			for (auto& connection : connections)
 				connection->stop();				
 		});
-
-		thread_.join();
 	}
 		
-    void start_accept() 
+	void start_accept() 
 	{
-		spl::shared_ptr<tcp::socket> socket(new tcp::socket(service_));
+		spl::shared_ptr<tcp::socket> socket(new tcp::socket(*service_));
 		acceptor_.async_accept(*socket, std::bind(&implementation::handle_accept, this, socket, std::placeholders::_1));
     }
 
@@ -354,13 +350,13 @@ struct AsyncEventServer::implementation
 
 	void add_client_lifecycle_object_factory(const lifecycle_factory_t& factory)
 	{
-		service_.post([=]{ lifecycle_factories_.push_back(factory); });
+		service_->post([=]{ lifecycle_factories_.push_back(factory); });
 	}
 };
 
 AsyncEventServer::AsyncEventServer(
-		const protocol_strategy_factory<char>::ptr& protocol, unsigned short port)
-	: impl_(new implementation(protocol, port)) {}
+		std::shared_ptr<boost::asio::io_service> service, const protocol_strategy_factory<char>::ptr& protocol, unsigned short port)
+	: impl_(new implementation(std::move(service), protocol, port)) {}
 
 AsyncEventServer::~AsyncEventServer() {}
 void AsyncEventServer::add_client_lifecycle_object_factory(const lifecycle_factory_t& factory) { impl_->add_client_lifecycle_object_factory(factory); }
