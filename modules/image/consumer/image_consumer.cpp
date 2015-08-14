@@ -27,6 +27,7 @@
 #include <common/utf.h>
 #include <common/array.h>
 #include <common/future.h>
+#include <common/os/general_protection_fault.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/video_format.h>
@@ -96,6 +97,8 @@ public:
 
 		boost::thread async([frame, filename]
 		{
+			ensure_gpf_handler_installed_for_thread("image-consumer");
+
 			try
 			{
 				auto filename2 = filename;
