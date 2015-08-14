@@ -5,6 +5,7 @@
 #include "../../thread_info.h"
 
 #include <signal.h>
+#include <pthread.h>
 
 namespace caspar {
 
@@ -51,10 +52,23 @@ void install_gpf_handler()
 void ensure_gpf_handler_installed_for_thread(
 		const char* thread_description)
 {
+	static const int MAX_LINUX_THREAD_NAME_LEN = 15;
 	static auto install = []() { do_install_handlers(); return 0; } ();
 	
 	if (thread_description)
+	{
 		get_thread_info().name = thread_description;
+
+		if (std::strlen(thread_description) > MAX_LINUX_THREAD_NAME_LEN)
+		{
+			char truncated[MAX_LINUX_THREAD_NAME_LEN + 1];
+			std::memcpy(truncated, thread_description, MAX_LINUX_THREAD_NAME_LEN);
+			truncated[MAX_LINUX_THREAD_NAME_LEN] = 0;
+			pthread_setname_np(pthread_self(), truncated);
+		}
+		else
+			pthread_setname_np(pthread_self(), thread_description);
+	}
 }
 
 }

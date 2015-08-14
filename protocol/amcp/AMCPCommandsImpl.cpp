@@ -2416,7 +2416,7 @@ std::wstring info_threads_command(command_context& ctx)
 
 	for (auto& thread : get_thread_infos())
 	{
-		replyString << thread->native_id << L"\t" << u16(thread->name) << L"\r\n";
+		replyString << thread->native_id << L" " << u16(thread->name) << L"\r\n";
 	}
 
 	replyString << L"\r\n";
