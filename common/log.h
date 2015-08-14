@@ -23,6 +23,7 @@
 
 #include "os/stack_trace.h"
 #include "utf.h"
+#include "thread_info.h"
 
 #include <boost/log/trivial.hpp>
 #include <boost/log/sources/global_logger_storage.hpp>
@@ -60,28 +61,6 @@ inline std::basic_string<T> replace_nonprintable_copy(std::basic_string<T, std::
 
 void add_file_sink(const std::wstring& folder);
 
-/*template< typename CharT, typename TraitsT >
-inline std::basic_ostream< CharT, TraitsT >& operator<< (
-	std::basic_ostream< CharT, TraitsT >& strm, severity_level lvl)
-{
-	if(lvl == trace)
-		strm << "trace";
-	else if(lvl == debug)
-		strm << "debug";
-	else if(lvl == info)
-		strm << "info";
-	else if(lvl == warning)
-		strm << "warning";
-	else if(lvl == error)
-		strm << "error";
-	else if(lvl == fatal)
-		strm << "fatal";
-	else
-		strm << static_cast<int>(lvl);
-
-	return strm;
-}*/
-
 typedef boost::log::sources::wseverity_logger_mt<boost::log::trivial::severity_level> caspar_logger;
 
 BOOST_LOG_INLINE_GLOBAL_LOGGER_INIT(logger, caspar_logger)
@@ -94,12 +73,12 @@ BOOST_LOG_INLINE_GLOBAL_LOGGER_INIT(logger, caspar_logger)
 	BOOST_LOG_SEV(::caspar::log::logger::get(), ::boost::log::trivial::lvl)
 
 #define CASPAR_LOG_CALL_STACK()	try{\
-		CASPAR_LOG(info) << L"callstack:\n" << caspar::get_call_stack();\
+		CASPAR_LOG(info) << L"callstack (" << caspar::get_thread_info().name << L"):\n" << caspar::get_call_stack();\
 	}\
 	catch(...){}
 
 #define CASPAR_LOG_CURRENT_EXCEPTION() try{\
-		CASPAR_LOG(error)  << caspar::u16(boost::current_exception_diagnostic_information()) << L"Caught at:\n" << caspar::get_call_stack();\
+		CASPAR_LOG(error)  << caspar::u16(boost::current_exception_diagnostic_information()) << L"Caught at (" << caspar::get_thread_info().name << L"):\n" << caspar::get_call_stack();\
 	}\
 	catch(...){}
 	

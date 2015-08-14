@@ -31,6 +31,8 @@
 #include <common/except.h>
 #include <common/endian.h>
 #include <common/cache_aligned_vector.h>
+#include <common/os/general_protection_fault.h>
+
 #include <core/monitor/monitor.h>
 
 #include <functional>
@@ -216,6 +218,8 @@ private:
 	{
 		// http://stackoverflow.com/questions/14993000/the-most-reliable-and-efficient-udp-packet-size
 		const int SAFE_DATAGRAM_SIZE = 508;
+
+		ensure_gpf_handler_installed_for_thread("osc-sender-thread");
 
 		try
 		{
