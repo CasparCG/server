@@ -35,6 +35,7 @@
 #include <common/future.h>
 #include <common/timer.h>
 #include <common/param.h>
+#include <common/os/general_protection_fault.h>
 
 //#include <windows.h>
 
@@ -299,6 +300,8 @@ public:
 
 	void run()
 	{
+		ensure_gpf_handler_installed_for_thread("screen-consumer-thread");
+
 		try
 		{
 			init();
