@@ -84,11 +84,22 @@ std::shared_ptr<boost::asio::io_service> create_running_io_service()
 	// To keep the io_service::run() running although no pending async
 	// operations are posted.
 	auto work = std::make_shared<boost::asio::io_service::work>(*service);
-	auto thread = std::make_shared<boost::thread>([service]
+	auto weak_work = std::weak_ptr<boost::asio::io_service::work>(work);
+	auto thread = std::make_shared<boost::thread>([service, weak_work]
 	{
 		ensure_gpf_handler_installed_for_thread("asio-thread");
 
-		service->run();
+		while (weak_work.lock())
+		{
+			try
+			{
+				service->run();
+			}
+			catch (...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+			}
+		}
 	});
 
 	return std::shared_ptr<boost::asio::io_service>(
@@ -359,23 +370,30 @@ struct server::impl : boost::noncopyable
 	{
 		initial_media_info_thread_ = boost::thread([this]
 		{
-			ensure_gpf_handler_installed_for_thread("initial media scan");
-
-			for (boost::filesystem::wrecursive_directory_iterator iter(env::media_folder()), end; iter != end; ++iter)
+			try
 			{
-				if (running_)
-				{
-					if (boost::filesystem::is_regular_file(iter->path()))
-						media_info_repo_->get(iter->path().wstring());
-				}
-				else
-				{
-					CASPAR_LOG(info) << L"Initial media information retrieval aborted.";
-					return;
-				}
-			}
+				ensure_gpf_handler_installed_for_thread("initial media scan");
 
-			CASPAR_LOG(info) << L"Initial media information retrieval finished.";
+				for (boost::filesystem::wrecursive_directory_iterator iter(env::media_folder()), end; iter != end; ++iter)
+				{
+					if (running_)
+					{
+						if (boost::filesystem::is_regular_file(iter->path()))
+							media_info_repo_->get(iter->path().wstring());
+					}
+					else
+					{
+						CASPAR_LOG(info) << L"Initial media information retrieval aborted.";
+						return;
+					}
+				}
+
+				CASPAR_LOG(info) << L"Initial media information retrieval finished.";
+			}
+			catch (...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+			}
 		});
 	}
 };
