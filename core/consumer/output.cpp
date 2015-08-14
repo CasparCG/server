@@ -236,6 +236,7 @@ public:
 		});
 
 		graph_->set_value("consume-time", frame_timer.elapsed()*format_desc.fps*0.5);
+		*monitor_subject_ << monitor::message("/consume_time") % (frame_timer.elapsed());
 	}
 
 	std::wstring print() const
