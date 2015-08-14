@@ -28,6 +28,7 @@
 #include <iostream>
 #include <cstdint>
 
+#include <boost/asio.hpp>
 #include <boost/thread.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/filesystem/convenience.hpp>
@@ -53,13 +54,7 @@ public:
 	{
 		try
 		{
-			boost::this_thread::interruption_point();
 			handler_(event, file);
-			boost::this_thread::interruption_point();
-		}
-		catch (const boost::thread_interrupted&)
-		{
-			throw;
 		}
 		catch (...)
 		{
@@ -205,8 +200,10 @@ private:
 
 class polling_filesystem_monitor : public filesystem_monitor
 {
+	std::shared_ptr<boost::asio::io_service> scheduler_;
 	directory_monitor root_monitor_;
-	boost::thread scanning_thread_;
+	executor executor_;
+	boost::asio::deadline_timer timer_;
 	tbb::atomic<bool> running_;
 	int scan_interval_millis_;
 	std::promise<void> initial_scan_completion_;
@@ -218,61 +215,84 @@ public:
 			filesystem_event events_of_interest_mask,
 			bool report_already_existing,
 			int scan_interval_millis,
+			std::shared_ptr<boost::asio::io_service> scheduler,
 			const filesystem_monitor_handler& handler,
 			const initial_files_handler& initial_files_handler)
-		: root_monitor_(report_already_existing, folder_to_watch, events_of_interest_mask, handler, initial_files_handler)
+		: scheduler_(std::move(scheduler))
+		, root_monitor_(report_already_existing, folder_to_watch, events_of_interest_mask, handler, initial_files_handler)
+		, executor_(L"polling_filesystem_monitor")
+		, timer_(*scheduler_)
 		, scan_interval_millis_(scan_interval_millis)
 	{
 		running_ = true;
 		reemmit_all_ = false;
-		scanning_thread_ = boost::thread([this] { scanner(); });
+		executor_.begin_invoke([this]
+		{
+			scan();
+			initial_scan_completion_.set_value();
+			schedule_next();
+		});
 	}
 
-	virtual ~polling_filesystem_monitor()
+	~polling_filesystem_monitor()
 	{
 		running_ = false;
-		scanning_thread_.interrupt();
-		scanning_thread_.join();
+		boost::system::error_code e;
+		timer_.cancel(e);
 	}
 
-	virtual std::future<void> initial_files_processed()
+	std::future<void> initial_files_processed() override
 	{
 		return initial_scan_completion_.get_future();
 	}
 
-	virtual void reemmit_all()
+	void reemmit_all() override
 	{
 		reemmit_all_ = true;
 	}
 
-	virtual void reemmit(const boost::filesystem::path& file)
+	void reemmit(const boost::filesystem::path& file) override
 	{
 		to_reemmit_.push(file);
 	}
 private:
-	void scanner()
+	void schedule_next()
 	{
-		ensure_gpf_handler_installed_for_thread("polling_filesystem_monitor");
+		if (!running_)
+			return;
 
-		bool running = scan(false);
-		initial_scan_completion_.set_value();
-
-		if (running)
-			while (scan(true));
+		timer_.expires_from_now(
+			boost::posix_time::milliseconds(scan_interval_millis_));
+		timer_.async_wait([this](const boost::system::error_code& e)
+		{
+			begin_scan();
+		});
 	}
 
-	bool scan(bool sleep)
+	void begin_scan()
 	{
+		if (!running_)
+			return;
+
+		executor_.begin_invoke([this]()
+		{
+			scan();
+			schedule_next();
+		});
+	}
+
+	void scan()
+	{
+		if (!running_)
+			return;
+
 		try
 		{
-			if (sleep)
-				boost::this_thread::sleep_for(boost::chrono::milliseconds(scan_interval_millis_));
-
 			if (reemmit_all_.fetch_and_store(false))
 				root_monitor_.reemmit_all();
 			else
 			{
-				boost::filesystem::path file;
+				boost::filesystem::wpath file;
 
 				while (to_reemmit_.try_pop(file))
 					root_monitor_.reemmit(file);
@@ -280,30 +300,31 @@ private:
 
 			root_monitor_.scan([=] { return !running_; });
 		}
-		catch (const boost::thread_interrupted&)
-		{
-		}
 		catch (...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
-
-		return running_;
 	}
 };
 
 struct polling_filesystem_monitor_factory::impl
 {
+	std::shared_ptr<boost::asio::io_service> scheduler_;
 	int scan_interval_millis;
 
-	impl(int scan_interval_millis)
-		: scan_interval_millis(scan_interval_millis)
+	impl(
+			std::shared_ptr<boost::asio::io_service> scheduler,
+			int scan_interval_millis)
+		: scheduler_(std::move(scheduler))
+		, scan_interval_millis(scan_interval_millis)
 	{
 	}
 };
 
-polling_filesystem_monitor_factory::polling_filesystem_monitor_factory(int scan_interval_millis)
-	: impl_(new impl(scan_interval_millis))
+polling_filesystem_monitor_factory::polling_filesystem_monitor_factory(
+		std::shared_ptr<boost::asio::io_service> scheduler,
+		int scan_interval_millis)
+	: impl_(new impl(std::move(scheduler), scan_interval_millis))
 {
 }
 
@@ -323,6 +344,7 @@ filesystem_monitor::ptr polling_filesystem_monitor_factory::create(
 			events_of_interest_mask,
 			report_already_existing,
 			impl_->scan_interval_millis,
+			impl_->scheduler_,
 			handler,
 			initial_files_handler);
 }
