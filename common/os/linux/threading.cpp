@@ -23,6 +23,10 @@
 
 #include "../threading.h"
 
+#include <unistd.h>
+#include <sys/syscall.h>
+#include <sys/types.h>
+
 namespace caspar {
 
 void set_priority_of_current_thread(thread_priority priority)
@@ -32,8 +36,7 @@ void set_priority_of_current_thread(thread_priority priority)
 
 std::int64_t get_current_thread_id()
 {
-	// TODO: implement
-	return 0;
+	return syscall(__NR_gettid);
 }
 
 }
