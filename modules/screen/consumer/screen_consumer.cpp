@@ -607,7 +607,7 @@ public:
 
 	int64_t presentation_frame_age_millis() const override
 	{
-		return consumer_ ? consumer_->current_presentation_age_ : 0;
+		return consumer_ ? static_cast<int64_t>(consumer_->current_presentation_age_) : 0;
 	}
 
 	std::future<bool> send(core::const_frame frame) override

@@ -587,7 +587,7 @@ public:
 
 	int64_t presentation_frame_age_millis() const override
 	{
-		return consumer_ ? consumer_->current_presentation_delay_ : 0;
+		return consumer_ ? static_cast<int64_t>(consumer_->current_presentation_delay_) : 0;
 	}
 
 	core::monitor::subject& monitor_output()
