@@ -51,7 +51,7 @@ class connection : public spl::enable_shared_from_this<connection>
 	typedef tbb::concurrent_queue<std::string>	send_queue;
 
     const spl::shared_ptr<tcp::socket>				socket_; 
-	boost::asio::io_service&						service_;
+	std::shared_ptr<boost::asio::io_service>		service_;
 	const spl::shared_ptr<connection_set>			connection_set_;
 	const std::wstring								name_;
 	protocol_strategy_factory<char>::ptr			protocol_factory_;
@@ -125,9 +125,9 @@ class connection : public spl::enable_shared_from_this<connection>
 	};
 
 public:
-    static spl::shared_ptr<connection> create(spl::shared_ptr<tcp::socket> socket, const protocol_strategy_factory<char>::ptr& protocol, spl::shared_ptr<connection_set> connection_set)
+	static spl::shared_ptr<connection> create(std::shared_ptr<boost::asio::io_service> service, spl::shared_ptr<tcp::socket> socket, const protocol_strategy_factory<char>::ptr& protocol, spl::shared_ptr<connection_set> connection_set)
 	{
-		spl::shared_ptr<connection> con(new connection(std::move(socket), std::move(protocol), std::move(connection_set)));
+		spl::shared_ptr<connection> con(new connection(std::move(service), std::move(socket), std::move(protocol), std::move(connection_set)));
 		con->read_some();
 		return con;
     }
@@ -150,12 +150,12 @@ public:
 	virtual void send(std::string&& data)
 	{
 		send_queue_.push(std::move(data));
-		service_.dispatch([=] { do_write(); });
+		service_->dispatch([=] { do_write(); });
 	}
 
 	virtual void disconnect()
 	{
-		service_.dispatch([=] { stop(); });
+		service_->dispatch([=] { stop(); });
 	}
 
 	void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound)
@@ -210,9 +210,9 @@ private:
 		return socket_->is_open() ? socket_->remote_endpoint().address().to_string() : "no-address";
 	}
 
-    connection(const spl::shared_ptr<tcp::socket>& socket, const protocol_strategy_factory<char>::ptr& protocol_factory, const spl::shared_ptr<connection_set>& connection_set) 
+    connection(const std::shared_ptr<boost::asio::io_service>& service, const spl::shared_ptr<tcp::socket>& socket, const protocol_strategy_factory<char>::ptr& protocol_factory, const spl::shared_ptr<connection_set>& connection_set) 
 		: socket_(socket)
-		, service_(socket->get_io_service())
+		, service_(service)
 		, name_((socket_->is_open() ? u16(socket_->local_endpoint().address().to_string() + ":" + boost::lexical_cast<std::string>(socket_->local_endpoint().port())) : L"no-address"))
 		, connection_set_(connection_set)
 		, protocol_factory_(protocol_factory)
@@ -294,7 +294,7 @@ struct AsyncEventServer::implementation
 	protocol_strategy_factory<char>::ptr		protocol_factory_;
 	spl::shared_ptr<connection_set>				connection_set_;
 	std::vector<lifecycle_factory_t>			lifecycle_factories_;
-	tbb::mutex mutex_;
+	tbb::mutex									mutex_;
 
 	implementation(std::shared_ptr<boost::asio::io_service> service, const protocol_strategy_factory<char>::ptr& protocol, unsigned short port)
 		: service_(std::move(service))
@@ -308,7 +308,8 @@ struct AsyncEventServer::implementation
 	{
 		try
 		{
-			acceptor_.close();			
+			acceptor_.cancel();
+			acceptor_.close();
 		}
 		catch(...)
 		{
@@ -337,7 +338,7 @@ struct AsyncEventServer::implementation
 		
         if (!error)
 		{
-			auto conn = connection::create(socket, protocol_factory_, connection_set_);
+			auto conn = connection::create(service_, socket, protocol_factory_, connection_set_);
 			connection_set_->insert(conn);
 
 			for (auto& lifecycle_factory : lifecycle_factories_)
