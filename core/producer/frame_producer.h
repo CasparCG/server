@@ -165,5 +165,6 @@ private:
 };
 
 spl::shared_ptr<core::frame_producer> create_destroy_proxy(spl::shared_ptr<core::frame_producer> producer);
+void destroy_producers_synchronously();
 
 }}
