@@ -99,4 +99,6 @@ private:
 	spl::shared_ptr<impl> impl_;
 };
 
+void destroy_consumers_synchronously();
+
 }}
