@@ -25,6 +25,7 @@
 
 #include <common/except.h>
 #include <common/future.h>
+#include <common/os/general_protection_fault.h>
 
 #include <core/video_format.h>
 #include <core/frame/frame.h>
@@ -67,6 +68,18 @@ void frame_consumer_registry::register_preconfigured_consumer_factory(
 	impl_->preconfigured_consumer_factories.insert(std::make_pair(element_name, factory));
 }
 
+tbb::atomic<bool>& destroy_consumers_in_separate_thread()
+{
+	static tbb::atomic<bool> state;
+
+	return state;
+}
+
+void destroy_consumers_synchronously()
+{
+	destroy_consumers_in_separate_thread() = false;
+}
+
 class destroy_consumer_proxy : public frame_consumer
 {	
 	std::shared_ptr<frame_consumer> consumer_;
@@ -74,6 +87,7 @@ public:
 	destroy_consumer_proxy(spl::shared_ptr<frame_consumer>&& consumer) 
 		: consumer_(std::move(consumer))
 	{
+		destroy_consumers_in_separate_thread() = true;
 	}
 
 	~destroy_consumer_proxy()
@@ -81,6 +95,9 @@ public:
 		static tbb::atomic<int> counter;
 		static std::once_flag counter_init_once;
 		std::call_once(counter_init_once, []{ counter = 0; });
+
+		if (!destroy_consumers_in_separate_thread())
+			return;
 			
 		++counter;
 		CASPAR_VERIFY(counter < 8);
@@ -89,11 +106,13 @@ public:
 		boost::thread([=]
 		{
 			std::unique_ptr<std::shared_ptr<frame_consumer>> pointer_guard(consumer);
-
 			auto str = (*consumer)->print();
+
 			try
 			{
-				if(!consumer->unique())
+				ensure_gpf_handler_installed_for_thread(u8(L"Destroyer: " + str).c_str());
+
+				if (!consumer->unique())
 					CASPAR_LOG(trace) << str << L" Not destroyed on asynchronous destruction thread: " << consumer->use_count();
 				else
 					CASPAR_LOG(trace) << str << L" Destroying on asynchronous destruction thread.";
