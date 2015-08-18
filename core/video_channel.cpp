@@ -94,6 +94,11 @@ public:
 
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
 	}
+
+	~impl()
+	{
+		CASPAR_LOG(info) << print() << " Uninitializing.";
+	}
 							
 	core::video_format_desc video_format_desc() const
 	{
@@ -144,7 +149,8 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 
-		executor_.begin_invoke([=]{tick();});
+		if (executor_.is_running())
+			executor_.begin_invoke([=]{tick();});
 	}
 			
 	std::wstring print() const
