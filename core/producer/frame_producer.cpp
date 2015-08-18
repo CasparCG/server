@@ -215,7 +215,19 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
 
 	static spl::shared_ptr<frame_producer> producer = spl::make_shared<empty_frame_producer>();
 	return producer;
-}	
+}
+
+tbb::atomic<bool>& destroy_producers_in_separate_thread()
+{
+	static tbb::atomic<bool> state;
+
+	return state;
+}
+
+void destroy_producers_synchronously()
+{
+	destroy_producers_in_separate_thread() = false;
+}
 
 class destroy_producer_proxy : public frame_producer
 {	
@@ -224,15 +236,16 @@ public:
 	destroy_producer_proxy(spl::shared_ptr<frame_producer>&& producer) 
 		: producer_(std::move(producer))
 	{
+		destroy_producers_in_separate_thread() = true;
 	}
 
 	virtual ~destroy_producer_proxy()
-	{		
+	{
 		static tbb::atomic<int> counter;
 		static std::once_flag counter_init_once;
 		std::call_once(counter_init_once, []{ counter = 0; });
 		
-		if(producer_ == core::frame_producer::empty())
+		if(producer_ == core::frame_producer::empty() || !destroy_producers_in_separate_thread())
 			return;
 
 		++counter;
@@ -245,7 +258,9 @@ public:
 			auto str = (*producer)->print();
 			try
 			{
-				if(!producer->unique())
+				ensure_gpf_handler_installed_for_thread(u8(L"Destroyer: " + str).c_str());
+
+				if (!producer->unique())
 					CASPAR_LOG(trace) << str << L" Not destroyed on asynchronous destruction thread: " << producer->use_count();
 				else
 					CASPAR_LOG(trace) << str << L" Destroying on asynchronous destruction thread.";

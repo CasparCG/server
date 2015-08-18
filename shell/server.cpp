@@ -108,7 +108,10 @@ std::shared_ptr<boost::asio::io_service> create_running_io_service()
 			{
 				work.reset();
 				service->stop();
-				thread->join();
+				if (thread->get_id() != boost::this_thread::get_id())
+					thread->join();
+				else
+					thread->detach();
 			});
 }
 
@@ -122,7 +125,7 @@ struct server::impl : boost::noncopyable
 	std::shared_ptr<amcp::amcp_command_repository>		amcp_command_repo_;
 	std::vector<spl::shared_ptr<IO::AsyncEventServer>>	async_servers_;
 	std::shared_ptr<IO::AsyncEventServer>				primary_amcp_server_;
-	osc::client											osc_client_;
+	std::shared_ptr<osc::client>						osc_client_						= std::make_shared<osc::client>(io_service_);
 	std::vector<std::shared_ptr<void>>					predefined_osc_subscriptions_;
 	std::vector<spl::shared_ptr<video_channel>>			channels_;
 	spl::shared_ptr<media_info_repository>				media_info_repo_;
@@ -137,7 +140,6 @@ struct server::impl : boost::noncopyable
 
 	explicit impl(std::promise<bool>& shutdown_server_now)		
 		: accelerator_(env::properties().get(L"configuration.accelerator", L"auto"))
-		, osc_client_(io_service_)
 		, media_info_repo_(create_in_memory_media_info_repository())
 		, producer_registry_(spl::make_shared<core::frame_producer_registry>(help_repo_))
 		, consumer_registry_(spl::make_shared<core::frame_consumer_registry>(help_repo_))
@@ -187,13 +189,19 @@ struct server::impl : boost::noncopyable
 			initial_media_info_thread_.join();
 		}
 
+		std::weak_ptr<boost::asio::io_service> weak_io_service = io_service_;
+		io_service_.reset();
+		osc_client_.reset();
 		thumbnail_generator_.reset();
+		amcp_command_repo_.reset();
 		primary_amcp_server_.reset();
 		async_servers_.clear();
+		destroy_producers_synchronously();
+		destroy_consumers_synchronously();
 		channels_.clear();
-
-		boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
-		//Sleep(500); // HACK: Wait for asynchronous destruction of producers and consumers.
+		
+		while (weak_io_service.lock())
+			boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
 
 		uninitialize_modules();
 		core::diagnostics::osd::shutdown();
@@ -242,7 +250,7 @@ struct server::impl : boost::noncopyable
 		using boost::property_tree::wptree;
 		using namespace boost::asio::ip;
 
-		monitor_subject_->attach_parent(osc_client_.sink());
+		monitor_subject_->attach_parent(osc_client_->sink());
 		
 		auto default_port =
 				pt.get<unsigned short>(L"configuration.osc.default-port", 6250);
@@ -258,7 +266,7 @@ struct server::impl : boost::noncopyable
 				const auto port =
 						predefined_client.second.get<unsigned short>(L"port");
 				predefined_osc_subscriptions_.push_back(
-						osc_client_.get_subscription_token(udp::endpoint(
+						osc_client_->get_subscription_token(udp::endpoint(
 								address_v4::from_string(u8(address)),
 								port)));
 			}
@@ -273,7 +281,7 @@ struct server::impl : boost::noncopyable
 
 						return std::make_pair(
 								std::wstring(L"osc_subscribe"),
-								osc_client_.get_subscription_token(
+								osc_client_->get_subscription_token(
 										udp::endpoint(
 												address_v4::from_string(
 														ipv4_address),

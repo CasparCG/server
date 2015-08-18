@@ -330,6 +330,7 @@ void uninit()
 	{
 		CefShutdown();
 	});
+	g_cef_executor.reset();
 }
 
 class cef_task : public CefTask

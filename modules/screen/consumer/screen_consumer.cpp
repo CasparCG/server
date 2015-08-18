@@ -356,7 +356,7 @@ public:
 						}
 					}
 			
-					auto frame = core::const_frame::empty();
+					core::const_frame frame;
 					frame_buffer_.pop(frame);
 
 					render_and_draw_frame(frame);

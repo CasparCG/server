@@ -200,15 +200,15 @@ private:
 
 class polling_filesystem_monitor : public filesystem_monitor
 {
+	tbb::atomic<bool> running_;
 	std::shared_ptr<boost::asio::io_service> scheduler_;
 	directory_monitor root_monitor_;
-	executor executor_;
 	boost::asio::deadline_timer timer_;
-	tbb::atomic<bool> running_;
 	int scan_interval_millis_;
 	std::promise<void> initial_scan_completion_;
 	tbb::concurrent_queue<boost::filesystem::path> to_reemmit_;
 	tbb::atomic<bool> reemmit_all_;
+	executor executor_;
 public:
 	polling_filesystem_monitor(
 			const boost::filesystem::path& folder_to_watch,
@@ -220,9 +220,9 @@ public:
 			const initial_files_handler& initial_files_handler)
 		: scheduler_(std::move(scheduler))
 		, root_monitor_(report_already_existing, folder_to_watch, events_of_interest_mask, handler, initial_files_handler)
-		, executor_(L"polling_filesystem_monitor")
 		, timer_(*scheduler_)
 		, scan_interval_millis_(scan_interval_millis)
+		, executor_(L"polling_filesystem_monitor")
 	{
 		running_ = true;
 		reemmit_all_ = false;

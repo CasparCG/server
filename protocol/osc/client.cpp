@@ -238,6 +238,9 @@ private:
 				{			
 					boost::unique_lock<boost::mutex> cond_lock(updates_mutex_);
 
+					if (!is_running_)
+						return;
+
 					if (updates_.empty())
 						updates_cond_.wait(cond_lock);
 

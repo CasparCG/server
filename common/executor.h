@@ -79,12 +79,15 @@ public:
 	
 	~executor()
 	{
+		CASPAR_LOG(trace) << L"Shutting down " << name_;
+
 		try
 		{
-			internal_begin_invoke([=]
-			{
-				is_running_ = false;
-			}).wait();
+			if (is_running_)
+				internal_begin_invoke([=]
+				{
+					is_running_ = false;
+				}).wait();
 		}
 		catch(...)
 		{
