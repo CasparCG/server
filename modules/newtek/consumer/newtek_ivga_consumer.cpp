@@ -49,11 +49,10 @@ namespace caspar { namespace newtek {
 
 struct newtek_ivga_consumer : public core::frame_consumer
 {
-	core::monitor::subject	monitor_subject_;
+	core::monitor::subject				monitor_subject_;
 	std::shared_ptr<void>				air_send_;
 	core::video_format_desc				format_desc_;
 	executor							executor_;
-	bool								provide_sync_;
 	tbb::atomic<bool>					connected_;
 	spl::shared_ptr<diagnostics::graph>	graph_;
 	timer								tick_timer_;
@@ -61,9 +60,8 @@ struct newtek_ivga_consumer : public core::frame_consumer
 
 public:
 
-	newtek_ivga_consumer(bool provide_sync)
+	newtek_ivga_consumer()
 		: executor_(print())
-		, provide_sync_(provide_sync)
 	{
 		if (!airsend::is_available())
 			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(airsend::dll_name() + L" not available"));
@@ -73,6 +71,7 @@ public:
 		graph_->set_text(print());
 		graph_->set_color("frame-time", diagnostics::color(0.5f, 1.0f, 0.2f));
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
+		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
 		diagnostics::register_graph(graph_);
 	}
 	
@@ -103,15 +102,13 @@ public:
 
 		format_desc_ = format_desc;
 
-		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
+		CASPAR_LOG(info) << print() << L" Successfully Initialized.";
 	}
 
-	virtual std::future<bool> send(core::const_frame frame) override
+	std::future<bool> schedule_send(core::const_frame frame)
 	{
-		CASPAR_VERIFY(format_desc_.height * format_desc_.width * 4 == frame.image_data().size());
-
 		return executor_.begin_invoke([=]() -> bool
-		{			
+		{
 			graph_->set_value("tick-time", tick_timer_.elapsed() * format_desc_.fps * 0.5);
 			tick_timer_.restart();
 			frame_timer_.restart();
@@ -128,9 +125,25 @@ public:
 
 			graph_->set_text(print());
 			graph_->set_value("frame-time", frame_timer_.elapsed() * format_desc_.fps * 0.5);
-			
+
 			return true;
 		});
+	}
+
+	virtual std::future<bool> send(core::const_frame frame) override
+	{
+		CASPAR_VERIFY(format_desc_.height * format_desc_.width * 4 == frame.image_data().size());
+
+		if (executor_.size() > 0 || executor_.is_currently_in_task())
+		{
+			graph_->set_tag("dropped-frame");
+
+			return make_ready_future(true);
+		}
+
+		schedule_send(std::move(frame));
+
+		return make_ready_future(true);
 	}
 
 	virtual core::monitor::subject& monitor_output() override
@@ -174,19 +187,17 @@ public:
 
 	virtual bool has_synchronization_clock() const override
 	{
-		return provide_sync_ && connected_;
+		return false;
 	}
 };	
 
 void describe_ivga_consumer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"A consumer for streaming a channel to a NewTek TriCaster via iVGA/AirSend protocol.");
-	sink.syntax(L"NEWTEK_IVGA {[dont_provide_sync:DONT_PROVIDE_SYNC]}");
+	sink.syntax(L"NEWTEK_IVGA");
 	sink.para()->text(L"A consumer for streaming a channel to a NewTek TriCaster via iVGA/AirSend protocol.");
-	sink.para()->text(L"If ")->code(L"dont_provide_sync")->text(L" is specified, the consumer will not genlock the channel.");
 	sink.para()->text(L"Examples:");
 	sink.example(L">> ADD 1 NEWTEK_IVGA");
-	sink.example(L">> ADD 1 NEWTEK_IVGA DONT_PROVIDE_SYNC");
 }
 
 spl::shared_ptr<core::frame_consumer> create_ivga_consumer(const std::vector<std::wstring>& params, core::interaction_sink*)
@@ -194,16 +205,12 @@ spl::shared_ptr<core::frame_consumer> create_ivga_consumer(const std::vector<std
 	if (params.size() < 1 || !boost::iequals(params.at(0), L"NEWTEK_IVGA"))
 		return core::frame_consumer::empty();
 
-	const auto provide_sync = !contains_param(L"DONT_PROVIDE_SYNC", params);
-
-	return spl::make_shared<newtek_ivga_consumer>(provide_sync);
+	return spl::make_shared<newtek_ivga_consumer>();
 }
 
 spl::shared_ptr<core::frame_consumer> create_preconfigured_ivga_consumer(const boost::property_tree::wptree& ptree, core::interaction_sink*)
 {	
-	const auto provide_sync = ptree.get(L"provide-sync", true);
-
-	return spl::make_shared<newtek_ivga_consumer>(provide_sync);
+	return spl::make_shared<newtek_ivga_consumer>();
 }
 
 }}

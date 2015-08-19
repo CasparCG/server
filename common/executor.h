@@ -60,7 +60,8 @@ class executor final
 	tbb::atomic<bool>											is_running_;
 	boost::thread												thread_;	
 	function_queue_t											execution_queue_;
-		
+	tbb::atomic<bool>											currently_in_task_;
+
 public:		
 	executor(const std::wstring& name)
 		: name_(name)
@@ -74,6 +75,7 @@ public:
 		})
 	{
 		is_running_ = true;
+		currently_in_task_ = false;
 		thread_ = boost::thread([this]{run();});
 	}
 	
@@ -169,7 +171,7 @@ public:
 	{
 		return execution_queue_.size();	
 	}
-		
+
 	bool is_running() const
 	{
 		return is_running_; 
@@ -178,6 +180,11 @@ public:
 	bool is_current() const
 	{
 		return boost::this_thread::get_id() == thread_.get_id();
+	}
+
+	bool is_currently_in_task() const
+	{
+		return currently_in_task_;
 	}
 
 	std::wstring name() const
@@ -256,12 +263,15 @@ private:
 			{
 				std::function<void ()> func;
 				execution_queue_.pop(func);
+				currently_in_task_ = true;
 				func();
 			}
 			catch(...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
 			}
+
+			currently_in_task_ = false;
 		}
 	}	
 };
