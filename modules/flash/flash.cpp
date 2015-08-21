@@ -82,7 +82,7 @@ public:
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking add-command: " << str;
 		std::vector<std::wstring> params;
 		params.push_back(std::move(str));
-		flash_producer_->call(std::move(params));
+		flash_producer_->call(std::move(params)).get();
 	}
 
 	void remove(int layer) override
