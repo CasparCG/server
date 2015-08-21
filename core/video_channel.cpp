@@ -86,8 +86,9 @@ public:
 		graph_->set_color("tick-time", caspar::diagnostics::color(0.0f, 0.6f, 0.9f));
 		graph_->set_text(print());
 		caspar::diagnostics::register_graph(graph_);
-		
+
 		output_.monitor_output().attach_parent(monitor_subject_);
+		mixer_.monitor_output().attach_parent(monitor_subject_);
 		stage_.monitor_output().attach_parent(monitor_subject_);
 
 		executor_.begin_invoke([=]{tick();});

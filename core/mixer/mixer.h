@@ -29,6 +29,7 @@
 #include <common/reactive.h>
 
 #include <core/fwd.h>
+#include <core/monitor/monitor.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
 
@@ -63,6 +64,8 @@ public:
 
 	std::future<boost::property_tree::wptree> info() const;
 	std::future<boost::property_tree::wptree> delay_info() const;
+
+	monitor::subject& monitor_output();
 
 private:
 	struct impl;

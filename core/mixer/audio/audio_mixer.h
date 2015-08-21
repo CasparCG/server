@@ -26,6 +26,7 @@
 #include <common/cache_aligned_vector.h>
 
 #include <core/frame/frame_visitor.h>
+#include <core/monitor/monitor.h>
 
 #include <vector>
 #include <cstdint>
@@ -46,13 +47,14 @@ public:
 
 	// Constructors
 
-	audio_mixer();
+	audio_mixer(spl::shared_ptr<diagnostics::graph> graph);
 
 	// Methods
 	
 	audio_buffer operator()(const struct video_format_desc& format_desc);
 	void set_master_volume(float volume); 
 	float get_master_volume();
+	monitor::subject& monitor_output();
 
 	// frame_visitor
 
