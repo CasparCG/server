@@ -56,12 +56,13 @@ namespace caspar { namespace core {
 struct mixer::impl : boost::noncopyable
 {
 	int									channel_index_;
-	spl::shared_ptr<diagnostics::graph> graph_;
+	spl::shared_ptr<diagnostics::graph>	graph_;
 	tbb::atomic<int64_t>				current_mix_time_;
-	audio_mixer							audio_mixer_;
+	spl::shared_ptr<monitor::subject>	monitor_subject_	= spl::make_shared<monitor::subject>("/mixer");
+	audio_mixer							audio_mixer_		{ graph_ };
 	spl::shared_ptr<image_mixer>		image_mixer_;
 			
-	executor							executor_		{ L"mixer " + boost::lexical_cast<std::wstring>(channel_index_) };
+	executor							executor_			{ L"mixer " + boost::lexical_cast<std::wstring>(channel_index_) };
 
 public:
 	impl(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer) 
@@ -71,6 +72,7 @@ public:
 	{			
 		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8f));
 		current_mix_time_ = 0;
+		audio_mixer_.monitor_output().attach_parent(monitor_subject_);
 	}
 	
 	const_frame operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc)
@@ -154,4 +156,5 @@ std::future<boost::property_tree::wptree> mixer::info() const{return impl_->info
 std::future<boost::property_tree::wptree> mixer::delay_info() const{ return impl_->delay_info(); }
 const_frame mixer::operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc){ return (*impl_)(std::move(frames), format_desc); }
 mutable_frame mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->image_mixer_->create_frame(tag, desc);}
+monitor::subject& mixer::monitor_output() { return *impl_->monitor_subject_; }
 }}
