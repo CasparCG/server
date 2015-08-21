@@ -25,11 +25,14 @@
 
 #include <core/frame/frame.h>
 #include <core/frame/frame_transform.h>
+#include <core/monitor/monitor.h>
+
 #include <common/diagnostics/graph.h>
 #include <common/linq.h>
 
 #include <boost/range/adaptors.hpp>
 #include <boost/range/distance.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include <map>
 #include <stack>
@@ -66,6 +69,7 @@ struct audio_stream
 
 struct audio_mixer::impl : boost::noncopyable
 {
+	monitor::subject					monitor_subject_		{ "/audio" };
 	std::stack<core::audio_transform>	transform_stack_;
 	std::map<const void*, audio_stream>	audio_streams_;
 	std::vector<audio_item>				items_;
@@ -73,9 +77,12 @@ struct audio_mixer::impl : boost::noncopyable
 	video_format_desc					format_desc_;
 	float								master_volume_			= 1.0f;
 	float								previous_master_volume_	= master_volume_;
+	spl::shared_ptr<diagnostics::graph>	graph_;
 public:
-	impl()
+	impl(spl::shared_ptr<diagnostics::graph> graph)
+		: graph_(std::move(graph))
 	{
+		graph_->set_color("volume", diagnostics::color(1.0f, 0.8f, 0.1f));
 		transform_stack_.push(core::audio_transform());
 	}
 	
@@ -209,6 +216,32 @@ public:
 		result.reserve(result_ps.size());
 		boost::range::transform(result_ps, std::back_inserter(result), [](float sample){return static_cast<int32_t>(sample);});		
 		
+		const int num_channels = format_desc_.audio_channels;
+		monitor_subject_ << monitor::message("/nb_channels") % num_channels;
+
+		auto max = std::vector<int32_t>(num_channels, std::numeric_limits<int32_t>::min());
+
+		for (size_t n = 0; n < result.size(); n += num_channels)
+			for (int ch = 0; ch < num_channels; ++ch)
+				max[ch] = std::max(max[ch], std::abs(result[n + ch]));
+
+		// Makes the dBFS of silence => -dynamic range of 32bit LPCM => about -192 dBFS
+		// Otherwise it would be -infinity
+		static const auto MIN_PFS = 0.5f / static_cast<float>(std::numeric_limits<int32_t>::max());
+
+		for (int i = 0; i < num_channels; ++i)
+		{
+			const auto pFS = max[i] / static_cast<float>(std::numeric_limits<int32_t>::max());
+			const auto dBFS = 20.0f * std::log10(std::max(MIN_PFS, pFS));
+
+			auto chan_str = boost::lexical_cast<std::string>(i + 1);
+
+			monitor_subject_ << monitor::message("/" + chan_str + "/pFS") % pFS;
+			monitor_subject_ << monitor::message("/" + chan_str + "/dBFS") % dBFS;
+		}
+
+		graph_->set_value("volume", static_cast<double>(*boost::max_element(max)) / std::numeric_limits<int32_t>::max());
+
 		return result;
 	}
 
@@ -218,12 +251,13 @@ public:
 	}
 };
 
-audio_mixer::audio_mixer() : impl_(new impl()){}
+audio_mixer::audio_mixer(spl::shared_ptr<diagnostics::graph> graph) : impl_(new impl(std::move(graph))){}
 void audio_mixer::push(const frame_transform& transform){impl_->push(transform);}
 void audio_mixer::visit(const const_frame& frame){impl_->visit(frame);}
 void audio_mixer::pop(){impl_->pop();}
 void audio_mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 float audio_mixer::get_master_volume() { return impl_->get_master_volume(); }
 audio_buffer audio_mixer::operator()(const video_format_desc& format_desc){ return impl_->mix(format_desc); }
+monitor::subject& audio_mixer::monitor_output(){ return impl_->monitor_subject_; }
 
 }}
