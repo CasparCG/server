@@ -110,18 +110,24 @@ template_host get_template_host(const core::video_format_desc& desc)
 	try
 	{
 		std::vector<template_host> template_hosts;
-		for (auto& xml_mapping : env::properties().get_child(L"configuration.template-hosts"))
+		auto template_hosts_element = env::properties().get_child_optional(
+			L"configuration.template-hosts");
+
+		if (template_hosts_element)
 		{
-			try
+			for (auto& xml_mapping : *template_hosts_element)
 			{
-				template_host template_host;
-				template_host.video_mode		= xml_mapping.second.get(L"video-mode", L"");
-				template_host.filename			= xml_mapping.second.get(L"filename",	L"cg.fth");
-				template_host.width				= xml_mapping.second.get(L"width",		desc.width);
-				template_host.height			= xml_mapping.second.get(L"height",		desc.height);
-				template_hosts.push_back(template_host);
+				try
+				{
+					template_host template_host;
+					template_host.video_mode		= xml_mapping.second.get(L"video-mode", L"");
+					template_host.filename			= xml_mapping.second.get(L"filename",	L"cg.fth");
+					template_host.width				= xml_mapping.second.get(L"width",		desc.width);
+					template_host.height			= xml_mapping.second.get(L"height",		desc.height);
+					template_hosts.push_back(template_host);
+				}
+				catch(...){}
 			}
-			catch(...){}
 		}
 
 		auto template_host_it = boost::find_if(template_hosts, [&](template_host template_host){return template_host.video_mode == desc.name;});
@@ -148,6 +154,13 @@ template_host get_template_host(const core::video_format_desc& desc)
 	template_host.width =  desc.square_width;
 	template_host.height = desc.square_height;
 	return template_host;
+}
+
+boost::mutex& get_global_init_destruct_mutex()
+{
+	static boost::mutex m;
+
+	return m;
 }
 
 class flash_renderer
@@ -178,13 +191,12 @@ class flash_renderer
 	const std::shared_ptr<core::frame_factory>		frame_factory_;
 	
 	CComObject<caspar::flash::FlashAxContainer>*	ax_					= nullptr;
-	core::draw_frame								head_				= core::draw_frame::empty();
+	core::draw_frame								head_				= core::draw_frame::late();
 	bitmap											bmp_				{ width_, height_ };
+	prec_timer										timer_;
+	caspar::timer									tick_timer_;
 	
 	spl::shared_ptr<diagnostics::graph>				graph_;
-	
-	prec_timer										timer_;
-
 	
 public:
 	flash_renderer(core::monitor::subject& monitor_subject, const spl::shared_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
@@ -197,17 +209,17 @@ public:
 		, bmp_(width, height)
 	{		
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
-		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));	
-		graph_->set_color("sync", diagnostics::color(0.8f, 0.3f, 0.2f));			
+		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
+		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));
 		
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to create FlashAxContainer"));
 		
-		ax_->set_print([this]{return print();});
-
 		if(FAILED(ax_->CreateAxControl()))
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Create FlashAxControl"));
-		
+
+		ax_->set_print([this]{return print(); });
+
 		CComPtr<IShockwaveFlash> spFlash;
 		if(FAILED(ax_->QueryControl(&spFlash)))
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Query FlashAxControl"));
@@ -215,16 +227,20 @@ public:
 		if(FAILED(spFlash->put_Playing(true)) )
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to start playing Flash"));
 
-		if(FAILED(spFlash->put_Movie(CComBSTR(filename.c_str()))))
-			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Load Template Host"));
+		// Concurrent initialization of two template hosts causes a
+		// SecurityException later when CG ADD is performed. Initialization is
+		// therefore serialized via a global mutex.
+		lock(get_global_init_destruct_mutex(), [&]
+		{
+			if (FAILED(spFlash->put_Movie(CComBSTR(filename.c_str()))))
+				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Load Template Host"));
+		});
 										
 		if(FAILED(spFlash->put_ScaleMode(2)))  //Exact fit. Scale without respect to the aspect ratio.
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Set Scale Mode"));
 						
-		ax_->SetSize(width_, height_);		
-
-		tick(false);
-		render();
+		ax_->SetSize(width_, height_);
+		render_frame(0.0);
 
 		CASPAR_LOG(info) << print() << L" Initialized.";
 	}
@@ -249,55 +265,56 @@ public:
 
 		if(!ax_->FlashCall(param, result))
 			CASPAR_LOG(warning) << print() << L" Flash call failed:" << param;//CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Flash function call failed.") << arg_name_info("param") << arg_value_info(narrow(param)));
+
+		if (boost::starts_with(result, L"<exception>"))
+			CASPAR_LOG(warning) << print() << L" Flash call failed:" << result;
+
 		graph_->set_tag("param");
 
 		return result;
 	}
-
-	void tick(double sync)
-	{		
-		const float frame_time = 1.0f/ax_->GetFPS();
-
-		if(sync > 0.00001)			
-			timer_.tick(frame_time*sync); // This will block the thread.
-		else
-			graph_->set_tag("sync");
-
-		graph_->set_value("sync", sync);
-		monitor_subject_ << core::monitor::message("/sync") % sync;
-		
-		ax_->Tick();
-					
-		MSG msg;
-		while(PeekMessage(&msg, NULL, NULL, NULL, PM_REMOVE)) // DO NOT REMOVE THE MESSAGE DISPATCH LOOP. Without this some stuff doesn't work!  
-		{
-			if(msg.message == WM_TIMER && msg.wParam == 3 && msg.lParam == 0) // We tick this inside FlashAxContainer
-				continue;
-			
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);			
-		}
-	}
 	
-	core::draw_frame render()
+	core::draw_frame render_frame(double sync)
 	{			
 		const float frame_time = 1.0f/fps();
 
-		boost::timer frame_timer;
+		if (!ax_->IsReadyToRender())
+			return head_;
 
-		if(ax_->InvalidRect())
+		if (is_empty())
+			return core::draw_frame::empty();
+
+		if (sync > 0.00001)
+			timer_.tick(frame_time*sync); // This will block the thread.
+
+		graph_->set_value("tick-time", static_cast<float>(tick_timer_.elapsed() / frame_time) * 0.5f);
+		tick_timer_.restart();
+		boost::timer frame_timer;
+		ax_->Tick();
+
+		if (ax_->InvalidRect())
 		{			
-			A_memset(bmp_.data(), 0, width_*height_*4);
-			ax_->DrawControl(bmp_);
-		
 			core::pixel_format_desc desc = core::pixel_format::bgra;
 			desc.planes.push_back(core::pixel_format_desc::plane(width_, height_, 4));
 			auto frame = frame_factory_->create_frame(this, desc);
 
+			A_memset(bmp_.data(), 0, width_ * height_ * 4);
+			ax_->DrawControl(bmp_);
+		
 			A_memcpy(frame.image_data(0).begin(), bmp_.data(), width_*height_*4);
 			head_ = core::draw_frame(std::move(frame));	
 		}		
-										
+
+		MSG msg;
+		while (PeekMessage(&msg, NULL, NULL, NULL, PM_REMOVE)) // DO NOT REMOVE THE MESSAGE DISPATCH LOOP. Without this some stuff doesn't work!  
+		{
+			if (msg.message == WM_TIMER && msg.wParam == 3 && msg.lParam == 0) // We tick this inside FlashAxContainer
+				continue;
+
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+
 		graph_->set_value("frame-time", static_cast<float>(frame_timer.elapsed()/frame_time)*0.5f);
 		monitor_subject_ << core::monitor::message("/renderer/profiler/time") % frame_timer.elapsed() % frame_time;
 		return head_;
@@ -315,7 +332,7 @@ public:
 	
 	std::wstring print()
 	{
-		return L"flash-player[" + boost::filesystem::wpath(filename_).filename().wstring() 
+		return L"flash-player[" + boost::filesystem::path(filename_).filename().wstring()
 				  + L"|" + boost::lexical_cast<std::wstring>(width_)
 				  + L"x" + boost::lexical_cast<std::wstring>(height_)
 				  + L"]";		
@@ -340,11 +357,11 @@ struct flash_producer : public core::frame_producer_base
 	std::queue<core::draw_frame>					frame_buffer_;
 	tbb::concurrent_bounded_queue<core::draw_frame>	output_buffer_;
 
-	core::draw_frame								last_frame_;
+	core::draw_frame								last_frame_			= core::draw_frame::empty();
 				
-	boost::timer									tick_timer_;
 	std::unique_ptr<flash_renderer>					renderer_;
-	
+	tbb::atomic<bool>								has_renderer_;
+
 	executor										executor_			= L"flash_producer";
 public:
 	flash_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::wstring& filename, int width, int height) 
@@ -356,11 +373,12 @@ public:
 	{	
 		fps_ = 0;
 	 
-		graph_->set_color("buffer-size", diagnostics::color(1.0f, 1.0f, 0.0f));
-		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
+		graph_->set_color("buffered", diagnostics::color(1.0f, 1.0f, 0.0f));
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.9f));
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
+
+		has_renderer_ = false;
 
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}
@@ -374,15 +392,28 @@ public:
 	}
 
 	// frame_producer
-		
+	
+	void log_buffered()
+	{
+		double buffered = output_buffer_.size();
+		auto ratio = buffered / buffer_size_;
+		graph_->set_value("buffered", ratio);
+	}
+
 	core::draw_frame receive_impl() override
 	{					
 		auto frame = last_frame_;
+
+		double buffered = output_buffer_.size();
+		auto ratio = buffered / buffer_size_;
+		graph_->set_value("buffered", ratio);
 		
-		if(output_buffer_.try_pop(frame))			
-			executor_.begin_invoke(std::bind(&flash_producer::next, this));		
+		if (output_buffer_.try_pop(frame))
+			last_frame_ = frame;
 		else		
-			graph_->set_tag("late-frame");		
+			graph_->set_tag("late-frame");
+
+		fill_buffer();
 				
 		monitor_subject_ << core::monitor::message("/host/path")	% filename_
 						<< core::monitor::message("/host/width")	% width_
@@ -390,7 +421,7 @@ public:
 						<< core::monitor::message("/host/fps")		% fps_
 						<< core::monitor::message("/buffer")		% output_buffer_.size() % buffer_size_;
 
-		return last_frame_ = frame;
+		return frame;
 	}
 
 	core::constraints& pixel_constraints() override
@@ -402,28 +433,41 @@ public:
 	{
 		auto param = boost::algorithm::join(params, L" ");
 
+		if (param == L"?")
+			return make_ready_future(std::wstring(has_renderer_ ? L"1" : L"0"));
+
 		return executor_.begin_invoke([this, param]() -> std::wstring
 		{			
 			try
 			{
-				if(!renderer_)
+				bool initialize_renderer = !renderer_;
+
+				if (initialize_renderer)
 				{
 					renderer_.reset(new flash_renderer(monitor_subject_, graph_, frame_factory_, filename_, width_, height_));
 
-					while(output_buffer_.size() < buffer_size_)
-						output_buffer_.push(core::draw_frame::empty());
+					has_renderer_ = true;
 				}
 
-				return renderer_->call(param);	
+				std::wstring result = param == L"start_rendering"
+						? L"" : renderer_->call(param);
+
+				if (initialize_renderer)
+				{
+					do_fill_buffer(true);
+				}
+
+				return result;	
 			}
 			catch(...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
 				renderer_.reset(nullptr);
+				has_renderer_ = false;
 			}
 
 			return L"";
-		});
+		}, task_priority::high_priority);
 	}
 		
 	std::wstring print() const override
@@ -450,55 +494,126 @@ public:
 
 	// flash_producer
 	
-	void tick()
+	void fill_buffer()
 	{
-		double ratio = std::min(1.0, static_cast<double>(output_buffer_.size())/static_cast<double>(std::max(1, buffer_size_ - 1)));
-		double sync  = 2*ratio - ratio*ratio;
-		renderer_->tick(sync);
+		if (executor_.size() > 0)
+			return;
+
+		executor_.begin_invoke([this]
+		{
+			do_fill_buffer(false);
+		});
 	}
-	
-	void next()
-	{	
-		if(!renderer_)
+
+	void do_fill_buffer(bool initial_buffer_fill)
+	{
+		int nothing_rendered = 0;
+		const int MAX_NOTHING_RENDERED_RETRIES = 4;
+
+		auto to_render = buffer_size_ - output_buffer_.size();
+		bool allow_faster_rendering = !initial_buffer_fill;
+		int rendered = 0;
+
+		while (rendered < to_render)
+		{
+			bool was_rendered = next(allow_faster_rendering);
+			log_buffered();
+
+			if (was_rendered)
+			{
+				++rendered;
+			}
+			else
+			{
+				if (nothing_rendered++ < MAX_NOTHING_RENDERED_RETRIES)
+				{
+					// Flash player not ready with first frame, sleep to not busy-loop;
+					boost::this_thread::sleep(boost::posix_time::milliseconds(10));
+					boost::this_thread::yield();
+				}
+				else
+					return;
+			}
+
+			executor_.yield(task_priority::high_priority);
+		}
+	}
+
+	bool next(bool allow_faster_rendering)
+	{
+		if (!renderer_)
 			frame_buffer_.push(core::draw_frame::empty());
 
-		tick_timer_.restart();				
-
-		if(frame_buffer_.empty())
-		{					
-			tick();
-			auto frame = renderer_->render();
-
-			if(abs(renderer_->fps()/2.0 - format_desc_.fps) < 2.0) // flash == 2 * format -> interlace
-			{					
-				tick();
-				if(format_desc_.field_mode != core::field_mode::progressive)
-					frame = core::draw_frame::interlace(frame, renderer_->render(), format_desc_.field_mode);
-				
-				frame_buffer_.push(frame);
-			}
-			else if(abs(renderer_->fps() - format_desc_.fps/2.0) < 2.0) // format == 2 * flash -> duplicate
+		if (frame_buffer_.empty())
+		{
+			if (abs(renderer_->fps() / 2.0 - format_desc_.fps) < 2.0) // flash == 2 * format -> interlace
 			{
-				frame_buffer_.push(frame);
-				frame_buffer_.push(frame);
+				auto frame1 = render_frame(allow_faster_rendering);
+
+				if (frame1 != core::draw_frame::late())
+				{
+					auto frame2 = render_frame(allow_faster_rendering);
+					frame_buffer_.push(core::draw_frame::interlace(frame1, frame2, format_desc_.field_mode));
+				}
+			}
+			else if (abs(renderer_->fps() - format_desc_.fps / 2.0) < 2.0) // format == 2 * flash -> duplicate
+			{
+				auto frame = render_frame(allow_faster_rendering);
+
+				if (frame != core::draw_frame::late())
+				{
+					frame_buffer_.push(frame);
+					frame_buffer_.push(frame);
+				}
 			}
 			else //if(abs(renderer_->fps() - format_desc_.fps) < 0.1) // format == flash -> simple
 			{
-				frame_buffer_.push(frame);
+				auto frame = render_frame(allow_faster_rendering);
+
+				if (frame != core::draw_frame::late())
+					frame_buffer_.push(frame);
 			}
-						
-			fps_.fetch_and_store(static_cast<int>(renderer_->fps()*100.0));				
+
+			fps_.fetch_and_store(static_cast<int>(renderer_->fps()*100.0));
 			graph_->set_text(print());
-			
-			if(renderer_->is_empty())			
+
+			if (renderer_->is_empty())
+			{
 				renderer_.reset();
+				has_renderer_ = false;
+			}
 		}
 
-		graph_->set_value("tick-time", static_cast<float>(tick_timer_.elapsed()/fps_)*0.5f);
-		monitor_subject_ << core::monitor::message("/profiler/time") % tick_timer_.elapsed() % fps_;
+		if (frame_buffer_.empty())
+		{
+			return false;
+		}
+		else
+		{
+			output_buffer_.push(std::move(frame_buffer_.front()));
+			frame_buffer_.pop();
+			return true;
+		}
+	}
 
-		output_buffer_.push(std::move(frame_buffer_.front()));
-		frame_buffer_.pop();
+	core::draw_frame render_frame(bool allow_faster_rendering)
+	{
+		double sync;
+
+		if (allow_faster_rendering)
+		{
+			double ratio = std::min(
+					1.0,
+					static_cast<double>(output_buffer_.size())
+							/ static_cast<double>(std::max(1, buffer_size_ - 1)));
+			sync = 2 * ratio - ratio * ratio;
+		}
+		else
+		{
+			sync = 1.0;
+		}
+
+		return renderer_->render_frame(sync);
 	}
 };
 
@@ -532,8 +647,12 @@ spl::shared_ptr<core::frame_producer> create_swf_producer(const core::frame_prod
 
 	swf_t::header_t header(filename);
 
-	return create_destroy_proxy(
-		spl::make_shared<flash_producer>(dependencies.frame_factory, dependencies.format_desc, filename, header.frame_width, header.frame_height));
+	auto producer = spl::make_shared<flash_producer>(
+			dependencies.frame_factory, dependencies.format_desc, filename, header.frame_width, header.frame_height);
+
+	producer->call({ L"start_rendering" }).get();
+
+	return create_destroy_proxy(producer);
 }
 
 std::wstring find_template(const std::wstring& template_name)
