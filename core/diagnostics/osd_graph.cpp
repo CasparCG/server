@@ -325,6 +325,15 @@ public:
 		for (auto& vertex : line_data_)
 			vertex.position.x -= x_delta_;
 
+		for (auto& tag : line_tags_)
+		{
+			if (tag)
+			{
+				(*tag)[0].position.x -= x_delta_;
+				(*tag)[1].position.x -= x_delta_;
+			}
+		}
+
 		auto color = get_sfml_color(color_);
 		color.a = 255 * 0.8;
 		line_data_.push_back(sf::Vertex(sf::Vector2f(get_insertion_xcoord(), std::max(0.05, std::min(0.95, (1.0f - tick_data_) * 0.8 + 0.1f))), color));
