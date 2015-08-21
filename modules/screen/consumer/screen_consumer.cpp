@@ -106,6 +106,7 @@ struct configuration
 	aspect_ratio	aspect				= aspect_ratio::aspect_invalid;
 	bool			vsync				= true;
 	bool			interactive			= true;
+	bool			borderless			= false;
 };
 
 struct screen_consumer : boost::noncopyable
@@ -228,7 +229,12 @@ public:
 
 	void init()
 	{
-		window_.create(sf::VideoMode(screen_width_, screen_height_, 32), u8(L"Screen consumer " + channel_and_format()), config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
+		auto window_style = config_.borderless
+			? sf::Style::None
+			: (config_.windowed
+				? sf::Style::Resize | sf::Style::Close
+				: sf::Style::Fullscreen);
+		window_.create(sf::VideoMode(screen_width_, screen_height_, 32), u8(L"Screen consumer " + channel_and_format()), window_style);
 		window_.setMouseCursorVisible(config_.interactive);
 		window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
 		window_.setSize(sf::Vector2u(screen_width_, screen_height_));
@@ -667,6 +673,7 @@ void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
 			L"SCREEN "
 			L"{[screen_index:int]|1} "
 			L"{[fullscreen:FULLSCREEN]} "
+			L"{[borderless:BORDERLESS]} "
 			L"{[key_only:KEY_ONLY]} "
 			L"{[non_interactive:NON_INTERACTIVE]} "
 			L"{[no_auto_deinterlace:NO_AUTO_DEINTERLACE]} "
@@ -675,6 +682,7 @@ void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
 	sink.definitions()
 		->item(L"screen_index", L"Determines which screen the channel should be displayed on. Defaults to 1.")
 		->item(L"fullscreen", L"If specified opens the window in fullscreen.")
+		->item(L"borderless", L"Makes the window appear without any window decorations.")
 		->item(L"key_only", L"Only displays the alpha channel of the video channel if specified.")
 		->item(L"non_interactive", L"If specified does not send mouse input to producers on the video channel.")
 		->item(L"no_auto_deinterlace", L"If the video mode of the channel is an interlaced mode, specifying this will turn of deinterlacing.")
@@ -683,6 +691,7 @@ void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
 	sink.example(L">> ADD 1 SCREEN", L"opens a screen consumer on the default screen.");
 	sink.example(L">> ADD 1 SCREEN 2", L"opens a screen consumer on the screen 2.");
 	sink.example(L">> ADD 1 SCREEN 1 FULLSCREEN", L"opens a screen consumer in fullscreen on screen 1.");
+	sink.example(L">> ADD 1 SCREEN 1 BORDERLESS", L"opens a screen consumer without borders/window decorations on screen 1.");
 }
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params, core::interaction_sink* sink)
@@ -699,6 +708,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 	config.key_only			=  contains_param(L"KEY_ONLY", params);
 	config.interactive		= !contains_param(L"NON_INTERACTIVE", params);
 	config.auto_deinterlace	= !contains_param(L"NO_AUTO_DEINTERLACE", params);
+	config.borderless		=  contains_param(L"BORDERLESS", params);
 
 	if (contains_param(L"NAME", params))
 		config.name = get_param(L"NAME", params);
@@ -716,6 +726,7 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(const boost:
 	config.auto_deinterlace	= ptree.get(L"auto-deinterlace",	config.auto_deinterlace);
 	config.vsync			= ptree.get(L"vsync",				config.vsync);
 	config.interactive		= ptree.get(L"interactive",			config.interactive);
+	config.borderless		= ptree.get(L"borderless",			config.borderless);
 
 	auto stretch_str = ptree.get(L"stretch", L"default");
 	if(stretch_str == L"uniform")
