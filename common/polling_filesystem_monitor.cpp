@@ -292,7 +292,7 @@ private:
 				root_monitor_.reemmit_all();
 			else
 			{
-				boost::filesystem::wpath file;
+				boost::filesystem::path file;
 
 				while (to_reemmit_.try_pop(file))
 					root_monitor_.reemmit(file);
