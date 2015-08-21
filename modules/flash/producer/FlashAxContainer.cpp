@@ -25,6 +25,7 @@
 #include "../interop/TimerHelper.h"
 
 #include <common/log.h>
+#include <common/os/general_protection_fault.h>
 
 #if defined(_MSC_VER)
 #pragma warning (push, 2) // TODO
@@ -47,7 +48,7 @@ FlashAxContainer::~FlashAxContainer()
 	if(m_lpDD4)
 	{
 		m_lpDD4->Release();
-		m_lpDD4 = nullptr;
+		delete m_lpDD4;
 	}
 
 	if(pTimerHelper != 0)
@@ -453,6 +454,7 @@ DEFINE_GUID2(IID_IDirectDraw7,0x15e65ec0,0x3b9c,0x11d2,0xb9,0x2f,0x00,0x60,0x97,
 /////////
 HRESULT STDMETHODCALLTYPE FlashAxContainer::QueryService( REFGUID rsid, REFIID riid, void** ppvObj) 
 {
+	ensure_gpf_handler_installed_for_thread("flash-player-thread");
 //	ATLTRACE(_T("IServiceProvider::QueryService\n"));
 	//the flashcontrol asks for an interface {618F8AD4-8B7A-11D0-8FCC-00C04FD9189D}, this is IID for a DirectDraw3 object
 
@@ -600,6 +602,7 @@ void FlashAxContainer::EnterFullscreen()
 
 void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 {
+	ensure_gpf_handler_installed_for_thread("flash-player-thread");
 	std::wstring str(request);
 	if(str.find(L"DisplayedTemplate") != std::wstring::npos)
 	{
@@ -673,11 +676,7 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 void STDMETHODCALLTYPE FlashAxContainer::OnReadyStateChange(long newState)
 {
 	if(newState == 4)
-	{
 		bReadyToRender_ = true;
-	}
-	else
-		bReadyToRender_ = false;
 }
 
 void FlashAxContainer::DestroyAxControl()
