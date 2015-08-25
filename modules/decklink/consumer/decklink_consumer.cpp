@@ -243,10 +243,6 @@ struct key_video_context : public IDeckLinkVideoOutputCallback, boost::noncopyab
 
 	key_video_context(const configuration& config, const std::wstring& print)
 		: config_(config)
-		, output_(decklink_)
-		, keyer_(decklink_)
-		, attributes_(decklink_)
-		, configuration_(decklink_)
 	{
 		current_presentation_delay_ = 0;
 		scheduled_frames_completed_ = 0;
@@ -281,18 +277,18 @@ struct key_video_context : public IDeckLinkVideoOutputCallback, boost::noncopyab
 		}
 	}
 
-	STDMETHOD(QueryInterface(REFIID, LPVOID*))	{ return E_NOINTERFACE; }
-	STDMETHOD_(ULONG, AddRef())					{ return 1; }
-	STDMETHOD_(ULONG, Release())				{ return 1; }
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*)	{return E_NOINTERFACE;}
+	virtual ULONG STDMETHODCALLTYPE AddRef()							{return 1;}
+	virtual ULONG STDMETHODCALLTYPE Release()							{return 1;}
 
-	STDMETHOD(ScheduledPlaybackHasStopped())
+	virtual HRESULT STDMETHODCALLTYPE ScheduledPlaybackHasStopped()
 	{
 		return S_OK;
 	}
 
-	STDMETHOD(ScheduledFrameCompleted(
+	virtual HRESULT STDMETHODCALLTYPE ScheduledFrameCompleted(
 			IDeckLinkVideoFrame* completed_frame,
-			BMDOutputFrameCompletionResult result))
+			BMDOutputFrameCompletionResult result)
 	{
 		auto dframe = reinterpret_cast<decklink_frame*>(completed_frame);
 		current_presentation_delay_ = dframe->get_age_millis();
@@ -570,7 +566,7 @@ public:
 		if (key_context_)
 		{
 			auto key_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(frame, format_desc_, true));
-			if (FAILED(key_context_->output_->ScheduleVideoFrame(key_frame, video_scheduled_, format_desc_.duration, format_desc_.time_scale)))
+			if (FAILED(key_context_->output_->ScheduleVideoFrame(get_raw(key_frame), video_scheduled_, format_desc_.duration, format_desc_.time_scale)))
 				CASPAR_LOG(error) << print() << L" Failed to schedule key video.";
 		}
 
