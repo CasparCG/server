@@ -404,13 +404,13 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 				}
 				else if((*it)->bitmap())
 				{
-					/*if (boost::algorithm::istarts_with(layer_name, L"[producer]"))
+					if (boost::algorithm::istarts_with(layer_name, L"[producer]"))
 					{
-						auto hotswap = std::make_shared<core::hotswap_producer>((*it)->rect().width(), (*it)->rect().height());
-						hotswap->producer().set(core::create_producer(frame_factory, format_desc, layer_name.substr(10)));
+						auto hotswap = std::make_shared<core::hotswap_producer>((*it)->bitmap()->width(), (*it)->bitmap()->height());
+						hotswap->producer().set(dependencies.producer_registry->create_producer(dependencies, layer_name.substr(10)));
 						layer_producer = hotswap;
 					}
-					else*/
+					else
 					{
 						core::pixel_format_desc pfd(core::pixel_format::bgra);
 						pfd.planes.push_back(core::pixel_format_desc::plane((*it)->bitmap()->width(), (*it)->bitmap()->height(), 4));
