@@ -189,8 +189,8 @@ struct filter::implementation
 				FF(avfilter_graph_parse(
 					&graph, 
 					filtergraph.c_str(), 
-					&inputs, 
-					&outputs, 
+					inputs,
+					outputs,
 					nullptr));
 			} 
 			else 
@@ -208,8 +208,8 @@ struct filter::implementation
 		}
 		catch(...)
 		{
-			avfilter_inout_free(&outputs);
-			avfilter_inout_free(&inputs);
+			//avfilter_inout_free(&outputs);
+			//avfilter_inout_free(&inputs);
 			throw;
 		}
 	}
