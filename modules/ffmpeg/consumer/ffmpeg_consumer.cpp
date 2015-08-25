@@ -262,7 +262,7 @@ struct ffmpeg_consumer : boost::noncopyable
 {		
 	const spl::shared_ptr<diagnostics::graph>	graph_;
 	const std::string							filename_;		
-	const std::shared_ptr<AVFormatContext>		oc_					{ avformat_alloc_context(), av_free };
+	const std::shared_ptr<AVFormatContext>		oc_					{ avformat_alloc_context(), avformat_free_context };
 	const core::video_format_desc				format_desc_;	
 
 	core::monitor::subject						monitor_subject_;
@@ -403,7 +403,7 @@ private:
 		if(output_format_.vcodec == CODEC_ID_NONE)
 			return nullptr;
 
-		auto st = av_new_stream(oc_.get(), 0);
+		auto st = avformat_new_stream(oc_.get(), 0);
 		if (!st) 		
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Could not allocate video-stream.") << boost::errinfo_api_function("av_new_stream"));		
 
@@ -494,7 +494,7 @@ private:
 		if(output_format_.acodec == CODEC_ID_NONE)
 			return nullptr;
 
-		auto st = av_new_stream(oc_.get(), 1);
+		auto st = avformat_new_stream(oc_.get(), nullptr);
 		if(!st)
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Could not allocate audio-stream") << boost::errinfo_api_function("av_new_stream"));		
 		
@@ -529,7 +529,7 @@ private:
 
 		return std::shared_ptr<AVStream>(st, [](AVStream* st)
 		{
-			LOG_ON_ERROR2(avcodec_close(st->codec), "[ffmpeg_consumer]");;
+			LOG_ON_ERROR2(avcodec_close(st->codec), "[ffmpeg_consumer]");
 			av_freep(&st->codec);
 			av_freep(&st);
 		});
