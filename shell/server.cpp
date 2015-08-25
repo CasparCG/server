@@ -241,8 +241,11 @@ struct server::impl : boost::noncopyable
 		}
 
 		// Dummy diagnostics channel
-		if(env::properties().get(L"configuration.channel-grid", false))
-			channels_.push_back(spl::make_shared<video_channel>(static_cast<int>(channels_.size()+1), core::video_format_desc(core::video_format::x576p2500), accelerator_.create_image_mixer()));
+		if (env::properties().get(L"configuration.channel-grid", false))
+		{
+			channels_.push_back(spl::make_shared<video_channel>(static_cast<int>(channels_.size() + 1), core::video_format_desc(core::video_format::x576p2500), accelerator_.create_image_mixer()));
+			channels_.back()->monitor_output().attach_parent(monitor_subject_);
+		}
 	}
 
 	void setup_osc(const boost::property_tree::wptree& pt)
