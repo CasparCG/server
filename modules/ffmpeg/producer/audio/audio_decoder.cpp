@@ -144,7 +144,7 @@ public:
 		if(!got_frame)
 			return nullptr;
 							
-		const uint8_t *in[] = {frame->data[0]};
+		const uint8_t **in	= const_cast<const uint8_t**>(frame->extended_data);
 		uint8_t* out[]		= {buffer_.data()};
 
 		auto channel_samples = swr_convert(swr_.get(), 

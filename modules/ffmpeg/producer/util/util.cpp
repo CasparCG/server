@@ -482,7 +482,10 @@ spl::shared_ptr<AVFormatContext> open_input(const std::wstring& filename)
 {
 	AVFormatContext* weak_context = nullptr;
 	THROW_ON_ERROR2(avformat_open_input(&weak_context, u8(filename).c_str(), nullptr, nullptr), filename);
-	spl::shared_ptr<AVFormatContext> context(weak_context, av_close_input_file);			
+	spl::shared_ptr<AVFormatContext> context(weak_context, [](AVFormatContext* p)
+	{
+		avformat_close_input(&p);
+	});
 	THROW_ON_ERROR2(avformat_find_stream_info(weak_context, nullptr), filename);
 	fix_meta_data(*context);
 	return context;
@@ -566,7 +569,10 @@ bool try_get_duration(const std::wstring filename, std::int64_t& duration, boost
 	if (avformat_open_input(&weak_context, u8(filename).c_str(), nullptr, nullptr) < 0)
 		return false;
 
-	std::shared_ptr<AVFormatContext> context(weak_context, av_close_input_file);
+	std::shared_ptr<AVFormatContext> context(weak_context, [](AVFormatContext* p)
+	{
+		avformat_close_input(&p);
+	});
 
 	context->probesize = context->probesize / 10;
 	context->max_analyze_duration = context->probesize / 10;
