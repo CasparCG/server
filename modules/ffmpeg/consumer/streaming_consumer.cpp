@@ -821,8 +821,8 @@ private:
 				FF(avfilter_graph_parse(
 					&graph, 
 					filtergraph.c_str(), 
-					&inputs, 
-					&outputs, 
+					inputs,
+					outputs,
 					nullptr));
 			} 
 			else 
