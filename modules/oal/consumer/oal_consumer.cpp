@@ -49,8 +49,6 @@
 #include <AL/alc.h>
 #include <AL/al.h>
 
-#include <array>
-
 namespace caspar { namespace oal {
 
 typedef cache_aligned_vector<int16_t> audio_buffer_16;
@@ -114,14 +112,13 @@ struct oal_consumer : public core::frame_consumer
 	core::video_format_desc				format_desc_;
 
 	ALuint								source_				= 0;
-	std::array<ALuint, 3>				buffers_;
+	std::vector<ALuint>					buffers_;
 
 	executor							executor_			{ L"oal_consumer" };
 
 public:
 	oal_consumer() 
 	{
-		buffers_.fill(0);
 		presentation_age_ = 0;
 
 		init_device();
@@ -134,7 +131,7 @@ public:
 
 	~oal_consumer()
 	{
-		executor_.begin_invoke([=]
+		executor_.invoke([=]
 		{		
 			if(source_)
 			{
@@ -157,15 +154,16 @@ public:
 		format_desc_	= format_desc;		
 		channel_index_	= channel_index;
 		graph_->set_text(print());
-		
+
 		executor_.begin_invoke([=]
 		{		
+			buffers_.resize(format_desc_.fps > 30 ? 8 : 4);
 			alGenBuffers(static_cast<ALsizei>(buffers_.size()), buffers_.data());
 			alGenSources(1, &source_);
 
 			for(std::size_t n = 0; n < buffers_.size(); ++n)
 			{
-				std::vector<int16_t> audio(format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()]*format_desc_.audio_channels, 0);
+				audio_buffer_16 audio(format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()]*format_desc_.audio_channels, 0);
 				alBufferData(buffers_[n], AL_FORMAT_STEREO16, audio.data(), static_cast<ALsizei>(audio.size()*sizeof(int16_t)), format_desc_.audio_sample_rate);
 				alSourceQueueBuffers(source_, 1, &buffers_[n]);
 			}
@@ -250,7 +248,7 @@ public:
 
 	int delay_millis() const
 	{
-		return 160;
+		return 213;
 	}
 	
 	int buffer_depth() const override
