@@ -120,12 +120,10 @@ else()
 			rtmp
 			ssl
 			tasn1
-			theora
 			theoradec
 			theoraenc
 			vorbis
 			vorbisenc
-			vorbisfile
 			vpx
 			x264
 			xavs
