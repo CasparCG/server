@@ -425,9 +425,9 @@ public:
 		return av_frame;
 	}
 
-	void render_and_draw_frame(core::const_frame frame)
+	void render_and_draw_frame(core::const_frame input_frame)
 	{
-		if(static_cast<size_t>(frame.image_data().size()) != format_desc_.size)
+		if(static_cast<size_t>(input_frame.image_data().size()) != format_desc_.size)
 			return;
 
 		if(screen_width_ == 0 && screen_height_ == 0)
@@ -435,30 +435,31 @@ public:
 					
 		perf_timer_.restart();
 		auto av_frame = get_av_frame();
-		av_frame->data[0] = const_cast<uint8_t*>(frame.image_data().begin());
+		av_frame->data[0] = const_cast<uint8_t*>(input_frame.image_data().begin());
 
 		filter_.push(av_frame);
-		auto frames = filter_.poll_all();
+		auto frame = filter_.poll();
 
-		if (frames.empty())
+		if (!frame)
 			return;
 
-		if (frames.size() == 1)
+		if (!filter_.is_double_rate())
 		{
-			render(frames[0]);
+			render(spl::make_shared_ptr(frame));
 			graph_->set_value("frame-time", perf_timer_.elapsed() * format_desc_.fps * 0.5);
 
 			wait_for_vblank_and_display(); // progressive frame
 		}
-		else if (frames.size() == 2)
+		else
 		{
-			render(frames[0]);
+			render(spl::make_shared_ptr(frame));
 			double perf_elapsed = perf_timer_.elapsed();
 
 			wait_for_vblank_and_display(); // field1
 
 			perf_timer_.restart();
-			render(frames[1]);
+			frame = filter_.poll();
+			render(spl::make_shared_ptr(frame));
 			perf_elapsed += perf_timer_.elapsed();
 			graph_->set_value("frame-time", perf_elapsed * format_desc_.fps * 0.5);
 
