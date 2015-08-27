@@ -482,6 +482,7 @@ public:
 			//window_info.SetAsWindowless(nullptr, true);
 					
 			CefBrowserSettings browser_settings;
+			browser_settings.web_security = cef_state_t::STATE_DISABLED;
 			CefBrowserHost::CreateBrowser(window_info, client_.get(), url, browser_settings, nullptr);
 		});
 	}
