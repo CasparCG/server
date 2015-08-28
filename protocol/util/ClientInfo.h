@@ -36,7 +36,7 @@ struct ConsoleClientInfo : public client_connection<wchar_t>
 {
 	void send(std::wstring&& data) override
 	{
-		std::wcout << (L"#" + caspar::log::replace_nonprintable_copy(data, L'?'));
+		std::wcout << (L"#" + caspar::log::replace_nonprintable_copy(data, L'?')) << std::flush;
 	}
 	void disconnect() override {}
 	std::wstring print() const override {return L"Console";}
