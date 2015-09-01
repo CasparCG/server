@@ -24,7 +24,7 @@
 
 namespace caspar { namespace psd {
 
-blend_mode int_to_blend_mode(unsigned long x)
+blend_mode int_to_blend_mode(std::uint32_t x)
 {
 	blend_mode mode = static_cast<blend_mode>(x);
 
@@ -78,7 +78,7 @@ std::wstring blend_mode_to_string(blend_mode b)
 	}
 }
 
-color_mode int_to_color_mode(unsigned short x)
+color_mode int_to_color_mode(std::uint16_t x)
 {
 	color_mode mode = static_cast<color_mode>(x);
 

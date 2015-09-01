@@ -28,6 +28,7 @@
 #include <boost/log/trivial.hpp>
 #include <boost/log/sources/global_logger_storage.hpp>
 #include <boost/exception/all.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
 
 #include <string>
 #include <locale>
@@ -83,6 +84,12 @@ BOOST_LOG_INLINE_GLOBAL_LOGGER_INIT(logger, caspar_logger)
 	catch(...){}
 	
 void set_log_level(const std::wstring& lvl);
+
+void print_child(
+		boost::log::trivial::severity_level level,
+		const std::wstring& indent,
+		const std::wstring& elem,
+		const boost::property_tree::wptree& tree);
 
 }}
 

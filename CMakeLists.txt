@@ -86,6 +86,7 @@ elseif (CMAKE_COMPILER_IS_GNUCXX)
 	add_compile_options( -pthread )
 	add_compile_options( -fPIC )
 	add_compile_options( -fnon-call-exceptions ) # Allow signal handler to throw exception
+	add_definitions( -DBOOST_NO_SWPRINTF ) # swprintf on Linux seems to always use , as decimal point regardless of C-locale or C++-locale
 endif ()
 
 if (POLICY CMP0045)

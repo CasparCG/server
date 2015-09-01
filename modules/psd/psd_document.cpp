@@ -23,6 +23,8 @@
 #include "descriptor.h"
 #include <iostream>
 
+#include <common/log.h>
+
 namespace caspar { namespace psd {
 
 psd_document::psd_document()
@@ -68,7 +70,7 @@ void psd_document::read_color_mode()
 
 void psd_document::read_image_resources()
 {
-	unsigned long section_length = input_.read_long();
+	auto section_length = input_.read_long();
 
 	if(section_length > 0)
 	{
@@ -99,7 +101,7 @@ void psd_document::read_image_resources()
 							int layer_count = resource_length / 2;
 							for(int i = 0; i < layer_count; ++i)
 							{
-								short id = input_.read_short();
+								std::int16_t id = input_.read_short();
 
 								if(i == layers_.size())
 									layers_.push_back(std::make_shared<layer>());
@@ -192,7 +194,7 @@ void psd_document::read_layers()
 			auto layer_info_length = input_.read_long();	//length of "Layer info" section
 			auto end_of_layers_info = input_.current_position() + layer_info_length;
 
-			auto layers_count = std::abs(static_cast<short>(input_.read_short()));
+			auto layers_count = std::abs(static_cast<std::int16_t>(input_.read_short()));
 			//std::clog << "Expecting " << layers_count << " layers" << std::endl;
 
 			for(int layer_index = 0; layer_index < layers_count; ++layer_index)
@@ -220,6 +222,7 @@ void psd_document::read_layers()
 	}
 	catch(std::exception&)
 	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
 		input_.set_position(end_of_layers);
 	}
 }
