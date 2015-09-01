@@ -54,6 +54,7 @@
 #include <boost/lambda/lambda.hpp>
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include <tbb/atomic.h>
 
@@ -194,6 +195,23 @@ void set_log_level(const std::wstring& lvl)
 		boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::error);
 	else if (boost::iequals(lvl, L"fatal"))
 		boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::fatal);
+}
+
+void print_child(
+		boost::log::trivial::severity_level level,
+		const std::wstring& indent,
+		const std::wstring& elem,
+		const boost::property_tree::wptree& tree)
+{
+	auto& data = tree.data();
+
+	if (!data.empty())
+		BOOST_LOG_STREAM_WITH_PARAMS(log::logger::get(), (boost::log::keywords::severity = level)) << indent << elem << L" " << replace_nonprintable_copy(data, L'?');
+	else if (tree.size() == 0)
+		BOOST_LOG_STREAM_WITH_PARAMS(log::logger::get(), (boost::log::keywords::severity = level)) << indent << elem;
+
+	for (auto& child : tree)
+		print_child(level, indent + (elem.empty() ? L"" : elem + L"."), child.first, child.second);
 }
 
 }}

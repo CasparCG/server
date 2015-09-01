@@ -44,7 +44,7 @@ struct color
 	T blue		= 0;
 	T alpha		= 0;
 
-	unsigned long to_uint32()
+	std::uint32_t to_uint32()
 	{
 		return (alpha << 24) + (red << 16) + (green << 8) + blue;
 	}
@@ -102,7 +102,7 @@ enum class blend_mode
 	ColorBurn = 'idiv'
 };
 
-blend_mode int_to_blend_mode(unsigned long x);
+blend_mode int_to_blend_mode(std::uint32_t x);
 std::wstring blend_mode_to_string(blend_mode b);
 
 enum class color_mode
@@ -118,7 +118,7 @@ enum class color_mode
 	Lab = 9
 };
 
-color_mode int_to_color_mode(unsigned short x);
+color_mode int_to_color_mode(std::uint16_t x);
 std::wstring color_mode_to_string(color_mode c);
 
 }	//namespace psd

@@ -50,18 +50,18 @@ public:
 
 		void read_mask_data(bigendian_file_input_stream&);
 
-		image8bit_ptr	bitmap_;
-		unsigned char	default_value_;
-		unsigned char	flags_;
-		char			mask_id_;
-		rect<long>		rect_;
+		image8bit_ptr		bitmap_;
+		std::uint8_t		default_value_;
+		std::uint8_t		flags_;
+		char				mask_id_;
+		rect<std::int32_t>	rect_;
 
 	public:
 		bool enabled() const { return (flags_ & 2) == 0; }
 		bool linked() const { return (flags_ & 1) == 0;  }
 		bool inverted() const { return (flags_ & 4) == 4; }
 
-		const point<long>& location() const { return rect_.location; }
+		const point<std::int32_t>& location() const { return rect_.location; }
 		const image8bit_ptr& bitmap() const { return bitmap_; }
 	};
 
@@ -71,22 +71,22 @@ public:
 	void read_channel_data(bigendian_file_input_stream&);
 
 	const std::wstring& name() const;
-	unsigned char opacity() const;
-	unsigned short sheet_color() const;
+	std::uint8_t opacity() const;
+	std::uint16_t sheet_color() const;
 	bool is_visible();
 	bool is_position_protected();
 
-	float text_scale() const;
+	double text_scale() const;
 	bool is_text() const;
 	const boost::property_tree::wptree& text_data() const;
 
 	bool is_solid() const;
-	color<unsigned char> solid_color() const;
+	color<std::uint8_t> solid_color() const;
 
 	bool has_timeline() const;
 	const boost::property_tree::wptree& timeline_data() const;
 
-	const point<long>& location() const;
+	const point<std::int32_t>& location() const;
 	const image8bit_ptr& bitmap() const;
 
 	int link_group_id() const;
