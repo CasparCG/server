@@ -89,18 +89,6 @@ void print_info()
 	CASPAR_LOG(info) << system_product_name();
 }
 
-void print_child(const std::wstring& indent, const std::wstring& elem, const boost::property_tree::wptree& tree)
-{
-	auto data = tree.data();
-
-	if (data.empty())
-		CASPAR_LOG(info) << indent << elem;
-	else
-		CASPAR_LOG(info) << indent << elem << L" " << tree.data();
-
-	for (auto& child : tree)
-		print_child(indent + L"    ", child.first, child.second);
-}
 
 void print_system_info(const spl::shared_ptr<core::system_info_provider_repository>& repo)
 {
@@ -108,7 +96,7 @@ void print_system_info(const spl::shared_ptr<core::system_info_provider_reposito
 	repo->fill_information(info);
 
 	for (auto& elem : info.get_child(L"system"))
-		print_child(L"", elem.first, elem.second);
+		log::print_child(boost::log::trivial::info, L"", elem.first, elem.second);
 }
 
 void do_run(std::weak_ptr<caspar::IO::protocol_strategy<wchar_t>> amcp, std::promise<bool>& shutdown_server_now)

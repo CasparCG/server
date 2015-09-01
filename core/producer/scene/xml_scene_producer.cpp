@@ -30,6 +30,7 @@
 #include <boost/property_tree/xml_parser.hpp>
 
 #include <common/env.h>
+#include <common/os/filesystem.h>
 #include <core/producer/frame_producer.h>
 #include <core/help/help_repository.h>
 #include <core/help/help_sink.h>
@@ -81,10 +82,11 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 	if (params.empty())
 		return core::frame_producer::empty();
 
-	std::wstring filename = env::template_folder() + L"/" + params.at(0) + L".scene";
-	
-	if (!boost::filesystem::is_regular_file(boost::filesystem::path(filename)))
+	auto found = find_case_insensitive(env::template_folder() + L"/" + params.at(0) + L".scene");
+	if (!found)
 		return core::frame_producer::empty();
+
+	std::wstring filename = *found;
 
 	boost::property_tree::wptree root;
 	boost::filesystem::wifstream file(filename);

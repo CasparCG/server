@@ -32,20 +32,6 @@
 
 namespace caspar { namespace psd {
 
-	//struct descriptor_item
-	//{
-	//	unsigned long type;
-
-	//	std::wstring enum_key;
-	//	std::wstring enum_val;
-
-	//	std::wstring text_text;
-
-	//	unsigned long long_value;
-	//	
-	//	std::vector<char> rawdata_data;
-	//};
-
 class descriptor
 {
 	typedef boost::property_tree::wptree Ptree;
