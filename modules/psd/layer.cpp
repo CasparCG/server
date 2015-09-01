@@ -38,7 +38,7 @@ namespace caspar { namespace psd {
 
 void layer::layer_mask_info::read_mask_data(bigendian_file_input_stream& stream)
 {
-	unsigned long length = stream.read_long();
+	auto length = stream.read_long();
 	switch(length)
 	{
 	case 0:
@@ -85,25 +85,25 @@ private:
 	std::vector<channel>			channels_;
 	blend_mode						blend_mode_;
 	int								link_group_id_;
-	unsigned char					opacity_;
-	unsigned short					sheet_color_;
+	std::uint8_t					opacity_;
+	std::uint16_t					sheet_color_;
 	bool							baseClipping_;
-	unsigned char					flags_;
-	int								protection_flags_;
+	std::uint8_t					flags_;
+	std::uint32_t					protection_flags_;
 	std::wstring					name_;
-	char							masks_count_;
-	float							text_scale_;
+	int								masks_count_;
+	double							text_scale_;
 
-	rect<long>						vector_mask_;
+	rect<std::int32_t>				vector_mask_;
 	layer::layer_mask_info			mask_;
 
-	rect<long>						bitmap_rect_;
+	rect<std::int32_t>				bitmap_rect_;
 	image8bit_ptr					bitmap_;
 
 	boost::property_tree::wptree	text_layer_info_;
 	boost::property_tree::wptree	timeline_info_;
 
-	color<unsigned char>			solid_color_;
+	color<std::uint8_t>				solid_color_;
 
 public:
 	void populate(bigendian_file_input_stream& stream, const psd_document& doc)
@@ -114,10 +114,10 @@ public:
 		bitmap_rect_.size.width = stream.read_long() - bitmap_rect_.location.x;
 
 		//Get info about the channels in the layer
-		unsigned short channelCount = stream.read_short();
+		auto channelCount = stream.read_short();
 		for(int channelIndex = 0; channelIndex < channelCount; ++channelIndex)
 		{
-			short id = static_cast<short>(stream.read_short());
+			auto id = static_cast<std::int16_t>(stream.read_short());
 			channel c(id, stream.read_long());
 
 			if(c.id < -1)
@@ -126,7 +126,7 @@ public:
 			channels_.push_back(c);
 		}
 
-		unsigned long blendModeSignature = stream.read_long();
+		auto blendModeSignature = stream.read_long();
 		if(blendModeSignature != '8BIM')
 			CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("blendModeSignature != '8BIM'"));
 
@@ -137,7 +137,7 @@ public:
 
 		stream.discard_bytes(1);	//padding
 
-		unsigned long extras_size = stream.read_long();
+		auto extras_size = stream.read_long();
 		auto position = stream.current_position();
 		mask_.read_mask_data(stream);
 		read_blending_ranges(stream);
@@ -238,15 +238,15 @@ public:
 
 		descriptor solid_descriptor(L"solid_color");
 		solid_descriptor.populate(stream);
-		solid_color_.red = static_cast<unsigned char>(solid_descriptor.items().get(L"Clr .Rd  ", 0.0) + 0.5);
-		solid_color_.green = static_cast<unsigned char>(solid_descriptor.items().get(L"Clr .Grn ", 0.0) + 0.5);
-		solid_color_.blue = static_cast<unsigned char>(solid_descriptor.items().get(L"Clr .Bl  ", 0.0) + 0.5);
+		solid_color_.red = static_cast<std::uint8_t>(solid_descriptor.items().get(L"Clr .Rd  ", 0.0) + 0.5);
+		solid_color_.green = static_cast<std::uint8_t>(solid_descriptor.items().get(L"Clr .Grn ", 0.0) + 0.5);
+		solid_color_.blue = static_cast<std::uint8_t>(solid_descriptor.items().get(L"Clr .Bl  ", 0.0) + 0.5);
 		solid_color_.alpha = 255;
 	}
 
-	void read_vector_mask(unsigned long length, bigendian_file_input_stream& stream, long doc_width, long doc_height)
+	void read_vector_mask(std::uint32_t length, bigendian_file_input_stream& stream, std::uint32_t doc_width, std::uint32_t doc_height)
 	{
-		typedef std::pair<unsigned long, unsigned long> path_point;
+		typedef std::pair<std::uint32_t, std::uint32_t> path_point;
 
 		stream.read_long(); // version
 		stream.read_long(); // flags
@@ -293,16 +293,16 @@ public:
 		//the path_points are given in fixed-point 8.24 as a ratio with regards to the width/height of the document. we need to divide by 16777215.0f to get the real ratio.
 		float x_ratio = doc_width / 16777215.0f;
 		float y_ratio = doc_height / 16777215.0f;
-		vector_mask_.location.x = static_cast<long>(knots[0].first * x_ratio +0.5f);								//add .5 to get propper rounding when converting to integer
-		vector_mask_.location.y = static_cast<long>(knots[0].second * y_ratio +0.5f);								//add .5 to get propper rounding when converting to integer
-		vector_mask_.size.width = static_cast<long>(knots[1].first * x_ratio +0.5f)	- vector_mask_.location.x;		//add .5 to get propper rounding when converting to integer
-		vector_mask_.size.height = static_cast<long>(knots[2].second * y_ratio +0.5f) - vector_mask_.location.y;	//add .5 to get propper rounding when converting to integer
+		vector_mask_.location.x = static_cast<std::int32_t>(knots[0].first * x_ratio +0.5f);								//add .5 to get propper rounding when converting to integer
+		vector_mask_.location.y = static_cast<std::int32_t>(knots[0].second * y_ratio +0.5f);								//add .5 to get propper rounding when converting to integer
+		vector_mask_.size.width = static_cast<std::int32_t>(knots[1].first * x_ratio +0.5f)	- vector_mask_.location.x;		//add .5 to get propper rounding when converting to integer
+		vector_mask_.size.height = static_cast<std::int32_t>(knots[2].second * y_ratio +0.5f) - vector_mask_.location.y;	//add .5 to get propper rounding when converting to integer
 	}
 
 	void read_metadata(bigendian_file_input_stream& stream, const psd_document& doc)
 	{
 		auto count = stream.read_long();
-		for(unsigned long index = 0; index < count; ++index)
+		for(int index = 0; index < count; ++index)
 			read_chunk(stream, doc, true);
 	}
 
@@ -332,7 +332,7 @@ public:
 		if(xx != yy || (xy != 0 && yx != 0))
 			CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("Rotation and non-uniform scaling of dynamic textfields is not supported yet"));
 
-		text_scale_ = static_cast<float>(xx);
+		text_scale_ = xx;
 
 		if(stream.read_short() != 50)	//"text version" should be 50
 			CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("invalid text version"));
@@ -343,10 +343,10 @@ public:
 		descriptor text_descriptor(L"text");
 		text_descriptor.populate(stream);
 		auto text_info = text_descriptor.items().get_optional<std::wstring>(L"EngineData");
-		if(text_info.is_initialized())
+		if(text_info)
 		{
-			std::string str(text_info.get().begin(), text_info.get().end());
-			read_pdf(text_layer_info_, str);
+			read_pdf(text_layer_info_, *text_info);
+			log::print_child(boost::log::trivial::trace, L"", L"text_layer_info", text_layer_info_);
 		}
 
 		if(stream.read_short() != 1)	//"warp version" should be 1
@@ -382,7 +382,7 @@ public:
 
 		bool has_transparency = has_channel(channel_type::transparency);
 	
-		rect<long> clip_rect;
+		rect<std::int32_t> clip_rect;
 		if(!bitmap_rect_.empty())
 		{
 			clip_rect = bitmap_rect_;
@@ -403,9 +403,9 @@ public:
 
 		for(auto it = channels_.begin(); it != channels_.end(); ++it)
 		{
-			psd::rect<long> src_rect;
+			psd::rect<std::int32_t> src_rect;
 			image8bit_ptr target;
-			unsigned char offset = 0;
+			std::uint8_t offset = 0;
 			bool discard_channel = false;
 
 			//determine target bitmap and offset
@@ -414,7 +414,7 @@ public:
 			else if((*it).id >= -1)	//BGRA-data
 			{
 				target = bitmap;
-				offset = static_cast<unsigned char>(((*it).id >= 0) ? 2 - (*it).id : 3);
+				offset = static_cast<std::uint8_t>(((*it).id >= 0) ? 2 - (*it).id : 3);
 				src_rect = bitmap_rect_;
 			}
 			else if(mask)	//mask
@@ -460,9 +460,9 @@ public:
 		mask_.bitmap_ = mask;
 	}
 
-	void read_raw_image_data(bigendian_file_input_stream& stream, unsigned long data_length, image8bit_ptr target, unsigned char offset)
+	void read_raw_image_data(bigendian_file_input_stream& stream, std::uint32_t data_length, image8bit_ptr target, std::uint8_t offset)
 	{
-		unsigned long total_length = target->width() * target->height();
+		std::uint32_t total_length = target->width() * target->height();
 		if(total_length != data_length)
 			CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("total_length != data_length"));
 
@@ -473,12 +473,12 @@ public:
 			stream.read(reinterpret_cast<char*>(data + offset), total_length);
 		else
 		{
-			for(unsigned long index=0; index < total_length; ++index)
-				data[index*stride+offset] = stream.read_byte();
+			for(std::uint32_t index = 0; index < total_length; ++index)
+				data[index * stride + offset] = stream.read_byte();
 		}
 	}
 
-	void read_rle_image_data(bigendian_file_input_stream& stream, const rect<long>&src_rect, const rect<long>&clip_rect, image8bit_ptr target, unsigned char offset)
+	void read_rle_image_data(bigendian_file_input_stream& stream, const rect<std::int32_t>&src_rect, const rect<std::int32_t>&clip_rect, image8bit_ptr target, std::uint8_t offset)
 	{
 		auto width = src_rect.size.width;
 		auto height = src_rect.size.height;
@@ -487,7 +487,7 @@ public:
 		int offset_x = clip_rect.location.x - src_rect.location.x;
 		int offset_y = clip_rect.location.y - src_rect.location.y;
 
-		std::vector<unsigned short> scanline_lengths;
+		std::vector<std::uint8_t> scanline_lengths;
 		scanline_lengths.reserve(height);
 
 		for (long scanlineIndex = 0; scanlineIndex < height; ++scanlineIndex)
@@ -495,7 +495,7 @@ public:
 
 		auto target_data = target->data();
 
-		std::vector<unsigned char> line(width);
+		std::vector<std::uint8_t> line(width);
 
 		for(long scanlineIndex=0; scanlineIndex < height; ++scanlineIndex)
 		{
@@ -506,7 +506,7 @@ public:
 
 			do
 			{
-				unsigned char length = 0;
+				std::uint8_t length = 0;
 
 				//Get controlbyte
 				char controlByte = static_cast<char>(stream.read_byte());
@@ -514,15 +514,15 @@ public:
 				{
 					//Read uncompressed string
 					length = controlByte+1;
-					for(unsigned long index=0; index < length; ++index)
+					for(int index=0; index < length; ++index)
 						line[colIndex+index] = stream.read_byte();
 				}
 				else if(controlByte > -128)
 				{
 					//Repeat next byte
 					length = -controlByte+1;
-					unsigned char value = stream.read_byte();
-					for(unsigned long index=0; index < length; ++index)
+					auto value = stream.read_byte();
+					for(int index=0; index < length; ++index)
 						line[colIndex+index] = value;
 				}
 
@@ -546,13 +546,13 @@ void layer::populate(bigendian_file_input_stream& stream, const psd_document& do
 void layer::read_channel_data(bigendian_file_input_stream& stream) { impl_->read_channel_data(stream); }
 
 const std::wstring& layer::name() const { return impl_->name_; }
-unsigned char layer::opacity() const { return impl_->opacity_; }
-unsigned short layer::sheet_color() const { return impl_->sheet_color_; }
+std::uint8_t layer::opacity() const { return impl_->opacity_; }
+std::uint16_t layer::sheet_color() const { return impl_->sheet_color_; }
 
 bool layer::is_visible() { return (impl_->flags_ & 2) == 0; }	//the (PSD file-format) documentation is is saying the opposite but what the heck
 bool layer::is_position_protected() { return (impl_->protection_flags_& 4) == 4; }
 
-float layer::text_scale() const { return impl_->text_scale_; }
+double layer::text_scale() const { return impl_->text_scale_; }
 bool layer::is_text() const { return !impl_->text_layer_info_.empty(); }
 const boost::property_tree::wptree& layer::text_data() const { return impl_->text_layer_info_; }
 
@@ -560,9 +560,9 @@ bool layer::has_timeline() const { return !impl_->timeline_info_.empty(); }
 const boost::property_tree::wptree& layer::timeline_data() const { return impl_->timeline_info_; }
 
 bool layer::is_solid() const { return impl_->solid_color_.alpha != 0; }
-color<unsigned char> layer::solid_color() const { return impl_->solid_color_; }
+color<std::uint8_t> layer::solid_color() const { return impl_->solid_color_; }
 
-const point<long>& layer::location() const { return impl_->bitmap_rect_.location; }
+const point<std::int32_t>& layer::location() const { return impl_->bitmap_rect_.location; }
 const image8bit_ptr& layer::bitmap() const { return impl_->bitmap_; }
 
 int layer::link_group_id() const { return impl_->link_group_id_; }

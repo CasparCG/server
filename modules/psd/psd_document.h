@@ -41,11 +41,11 @@ public:
 	{
 		return layers_;
 	}
-	unsigned long width() const
+	std::uint32_t width() const
 	{
 		return width_;
 	}
-	unsigned long height() const
+	std::uint32_t height() const
 	{
 		return height_;
 	}
@@ -55,11 +55,11 @@ public:
 		return color_mode_;
 	}
 
-	unsigned short color_depth() const
+	std::uint16_t color_depth() const
 	{
 		return depth_;
 	}
-	unsigned short channels_count() const
+	std::uint16_t channels_count() const
 	{
 		return channels_;
 	}
@@ -90,10 +90,10 @@ private:
 
 	std::vector<layer_ptr>			layers_;
 
-	unsigned short					channels_;
-	unsigned long					width_;
-	unsigned long					height_;
-	unsigned short					depth_;
+	std::uint16_t					channels_;
+	std::uint32_t					width_;
+	std::uint32_t					height_;
+	std::uint16_t					depth_;
 	psd::color_mode					color_mode_;
 	boost::property_tree::wptree	timeline_desc_;
 };

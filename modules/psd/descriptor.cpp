@@ -21,24 +21,17 @@
 
 #include "descriptor.h"
 #include "misc.h"
+#include "util/pdf_reader.h"
 
 #include <common/log.h>
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
+#include <boost/locale.hpp>
 
 #include <memory>
 
 namespace caspar { namespace psd {
-
-	std::wstring debug_ptree(const boost::property_tree::wptree& tree)
-	{
-		std::wstringstream str;
-		boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
-		boost::property_tree::write_xml(str, tree, w);
-		str.flush();
-		return str.str();
-	}
 
 	class descriptor::context::scoped_holder
 	{
@@ -75,20 +68,20 @@ void descriptor::populate(bigendian_file_input_stream& stream)
 {
 	stream.read_unicode_string();
 	stream.read_id_string();
-	unsigned long element_count = stream.read_long();
-	for (unsigned long element_index = 0; element_index < element_count; ++element_index)
+	auto element_count = stream.read_long();
+	for (std::uint32_t element_index = 0; element_index < element_count; ++element_index)
 	{
 		std::wstring key = stream.read_id_string();
 		read_value(key, stream);
 	}
 
 	if (context_->stack.size() == 1)
-		CASPAR_LOG(trace) << context_->debug_name << L":\n\n" << debug_ptree(context_->root) << L"\n";
+		log::print_child(boost::log::trivial::trace, context_->debug_name + L": ", L"", context_->root);
 }
 
 void descriptor::read_value(const std::wstring& key, bigendian_file_input_stream& stream)
 {
-	unsigned int type = stream.read_long();
+	auto type = stream.read_long();
 
 	switch(type)
 	{
@@ -113,13 +106,16 @@ void descriptor::read_value(const std::wstring& key, bigendian_file_input_stream
 
 	case 'enum':
 		{
-			context_->stack.back()->put(stream.read_id_string(), stream.read_id_string());
+			auto k = stream.read_id_string();
+			auto v = stream.read_id_string();
+			context_->stack.back()->put(k, v);
 		}
 		break;
 
 	case 'long':
 		{
-			context_->stack.back()->put(key, static_cast<long>(stream.read_long()));
+			std::int32_t value = stream.read_long();
+			context_->stack.back()->put(key, value);
 		}
 		break;
 
@@ -133,7 +129,7 @@ void descriptor::read_value(const std::wstring& key, bigendian_file_input_stream
 		{
 			context::scoped_holder list(key, context_);
 			auto count = stream.read_long();
-			for(unsigned long i = 0; i < count; ++i)
+			for(std::uint32_t i = 0; i < count; ++i)
 			{
 				read_value(L"li", stream);
 			}
@@ -142,10 +138,9 @@ void descriptor::read_value(const std::wstring& key, bigendian_file_input_stream
 
 	case 'tdta':
 		{
-			unsigned long rawdata_length = stream.read_long();
+			auto rawdata_length = stream.read_long();
 			std::vector<char> rawdata(rawdata_length);
 			stream.read(rawdata.data(), rawdata_length);
-
 			std::wstring data_str(rawdata.begin(), rawdata.end());
 			context_->stack.back()->put(key, data_str);
 		}
@@ -154,7 +149,7 @@ void descriptor::read_value(const std::wstring& key, bigendian_file_input_stream
 	case 'UntF': 
 		{
 			context::scoped_holder list(key, context_);
-			unsigned long unit = stream.read_long();
+			auto unit = stream.read_long();
 			std::string type(reinterpret_cast<char*>(&unit), 4);
 			std::wstring wtype(type.rbegin(), type.rend());
 			context_->stack.back()->put(wtype, stream.read_double());

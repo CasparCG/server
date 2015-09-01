@@ -21,7 +21,10 @@
 
 #include "pdf_reader.h"
 
+#include <common/log.h>
+
 #include <boost/spirit/home/qi.hpp>
+#include <boost/lexical_cast.hpp>
 
 namespace qi = boost::spirit::qi;
 
@@ -65,12 +68,18 @@ struct pdf_context
 		stack.pop_back();
 	}
 
+	std::string get_indent() const
+	{
+		return std::string(stack.size() * 4, ' ');
+	}
+
 	void set_name(const std::string& str)
 	{
 		name.assign(str.begin(), str.end());
+		CASPAR_LOG(trace) << get_indent() << name;
 	}
 
-	void add_char(unsigned char c)
+	void add_char(std::uint8_t c)
 	{
 		char_flag = !char_flag;
 
@@ -87,12 +96,14 @@ struct pdf_context
 	}
 	void set_value(double val)
 	{
-		value = std::to_wstring((long double)val);
+		value = boost::lexical_cast<std::wstring>(val);
 		set_value();
 	}
 
 	void set_value()
 	{
+		CASPAR_LOG(trace) << get_indent() << value;
+
 		stack.back()->push_back(std::make_pair(name, Ptree(value)));
 		clear_state();
 	}
@@ -238,16 +249,16 @@ struct pdf_grammar : qi::grammar<Iterator, qi::space_type>
 		pdf_context &c;
 		explicit a_char(pdf_context& c) : c(c) {}
 
-		void operator()(unsigned char n, qi::unused_type, qi::unused_type) const
+		void operator()(std::uint8_t n, qi::unused_type, qi::unused_type) const
 		{
 			c.add_char(n);
 		}
 	};
 };
 
-bool read_pdf(boost::property_tree::wptree& tree, const std::string& s)
+bool read_pdf(boost::property_tree::wptree& tree, const std::wstring& s)
 {
-	typedef std::string::const_iterator iterator_type;
+	typedef std::wstring::const_iterator iterator_type;
 
 	pdf_grammar<iterator_type> g;
 	bool result = false;
@@ -260,7 +271,9 @@ bool read_pdf(boost::property_tree::wptree& tree, const std::string& s)
 			tree.swap(g.context.root);
 	}
 	catch(std::exception&)
-	{}
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+	}
 
 	return result;
 }
