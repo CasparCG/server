@@ -45,7 +45,7 @@ public:
 	std::uint8_t read_byte();
 	std::uint16_t read_short();
 	std::uint32_t read_long();
-	std::wstring read_pascal_string(unsigned char padding = 1);
+	std::wstring read_pascal_string(std::uint8_t padding = 1);
 	std::wstring read_unicode_string();
 	std::wstring read_id_string();
 	double read_double();

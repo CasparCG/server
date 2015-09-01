@@ -26,31 +26,31 @@ template<typename T>
 class image
 {
 public:
-	image(unsigned long width, unsigned long height, unsigned char channels) : width_(width), height_(height), channels_(channels) 
+	image(std::uint32_t width, std::uint32_t height, std::uint8_t channels) : width_(width), height_(height), channels_(channels)
 	{
 		data_.resize(width*height*channels);
 	}
 
-	int width() const { return width_; }
-	int height() const { return height_; }
-	unsigned char channel_count() const { return channels_; }
+	std::uint32_t width() const { return width_; }
+	std::uint32_t height() const { return height_; }
+	std::uint8_t channel_count() const { return channels_; }
 
 	T* data() { return data_.data(); }
 
 private:
 	std::vector<T> data_;
-	unsigned long width_;
-	unsigned long height_;
-	unsigned char channels_;
+	std::uint32_t width_;
+	std::uint32_t height_;
+	std::uint8_t channels_;
 };
 
-typedef image<unsigned char> image8bit; 
-typedef image<unsigned short> image16bit; 
-typedef image<unsigned long> image32bit; 
+typedef image<std::uint8_t>		image8bit;
+typedef image<std::uint16_t>	image16bit;
+typedef image<std::uint32_t>	image32bit;
 
-typedef std::shared_ptr<image8bit>  image8bit_ptr;
-typedef std::shared_ptr<image16bit>  image16bit_ptr;
-typedef std::shared_ptr<image32bit>  image32bit_ptr;
+typedef std::shared_ptr<image8bit>	image8bit_ptr;
+typedef std::shared_ptr<image16bit>	image16bit_ptr;
+typedef std::shared_ptr<image32bit>	image32bit_ptr;
 
 }	//namespace psd
 }	//namespace caspar
