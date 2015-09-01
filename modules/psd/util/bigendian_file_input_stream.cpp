@@ -112,17 +112,17 @@ void bigendian_file_input_stream::discard_bytes(std::streamoff length)
 }
 void bigendian_file_input_stream::discard_to_next_word()
 {
-	unsigned const char padding = 2;
+	const std::uint8_t padding = 2;
 	discard_bytes((padding - (current_position() % padding)) % padding);
 }
 
 void bigendian_file_input_stream::discard_to_next_dword()
 {
-	unsigned const char padding = 4;
+	const std::uint8_t padding = 4;
 	discard_bytes((padding - (current_position() % padding)) % padding);
 }
 
-std::wstring bigendian_file_input_stream::read_pascal_string(unsigned char padding)
+std::wstring bigendian_file_input_stream::read_pascal_string(std::uint8_t padding)
 {
 	char buffer[256];
 
@@ -131,7 +131,7 @@ std::wstring bigendian_file_input_stream::read_pascal_string(unsigned char paddi
 	buffer[length] = 0;
 	this->read(buffer, length);
 
-	unsigned char padded_bytes = (padding - ((length + 1) % padding)) % padding;
+	auto padded_bytes = (padding - ((length + 1) % padding)) % padding;
 	this->discard_bytes(padded_bytes);
 
 	return caspar::u16(buffer);
@@ -139,7 +139,7 @@ std::wstring bigendian_file_input_stream::read_pascal_string(unsigned char paddi
 
 std::wstring bigendian_file_input_stream::read_unicode_string()
 {
-	unsigned long length = read_long();
+	auto length = read_long();
 	std::wstring result;
 
 	if(length > 0)
@@ -147,7 +147,7 @@ std::wstring bigendian_file_input_stream::read_unicode_string()
 		result.reserve(length);
 
 		//can be optimized. Reads and swaps byte-order, one char at the time
-		for (unsigned long i = 0; i < length; ++i)
+		for (std::uint32_t i = 0; i < length; ++i)
 			result.append(1, static_cast<wchar_t>(read_short()));
 	}
 
@@ -157,13 +157,13 @@ std::wstring bigendian_file_input_stream::read_unicode_string()
 std::wstring bigendian_file_input_stream::read_id_string()
 {
 	std::string result;
-	unsigned long length = read_long();
+	auto length = read_long();
 	
 	if(length > 0)
 	{
 		result.reserve(length);
 
-		for (unsigned long i = 0; i < length; ++i)
+		for (std::uint32_t i = 0; i < length; ++i)
 			result.append(1, read_byte());
 	}
 	else

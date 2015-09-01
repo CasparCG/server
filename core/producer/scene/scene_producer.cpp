@@ -503,6 +503,33 @@ struct scene_producer::impl
 	{
 		boost::property_tree::wptree info;
 		info.add(L"type", L"scene");
+		info.add(L"frame-number", frame_number_.get());
+
+		for (auto& var : variables_)
+		{
+			boost::property_tree::wptree variable_info;
+
+			variable_info.add(L"name", var.first);
+			variable_info.add(L"public", var.second->is_public());
+			variable_info.add(L"value", var.second->to_string());
+
+			info.add_child(L"variables.variable", variable_info);
+		}
+
+		for (auto& layer : layers_)
+		{
+			boost::property_tree::wptree layer_info;
+
+			layer_info.add(L"name", layer.name.get());
+			layer_info.add_child(L"producer", layer.producer.get()->info());
+			layer_info.add(L"x", layer.position.x.get());
+			layer_info.add(L"y", layer.position.y.get());
+			layer_info.add(L"width", layer.producer.get()->pixel_constraints().width.get());
+			layer_info.add(L"height", layer.producer.get()->pixel_constraints().height.get());
+
+			info.add_child(L"layers.layer", layer_info);
+		}
+
 		return info;
 	}
 
