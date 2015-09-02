@@ -29,6 +29,7 @@
 
 #include <string>
 #include <vector>
+#include <cstdint>
 
 namespace caspar { namespace psd {
 
