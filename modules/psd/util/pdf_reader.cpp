@@ -26,6 +26,8 @@
 #include <boost/spirit/home/qi.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <cstdint>
+
 namespace qi = boost::spirit::qi;
 
 namespace caspar { namespace psd { 
