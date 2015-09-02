@@ -24,6 +24,7 @@
 #include "util/bigendian_file_input_stream.h"
 
 #include <memory>
+#include <cstdint>
 
 namespace caspar { namespace psd {
 

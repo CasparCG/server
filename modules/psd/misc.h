@@ -24,6 +24,7 @@
 #include <common/except.h>
 
 #include <string>
+#include <cstdint>
 
 namespace caspar { namespace psd {
 	
