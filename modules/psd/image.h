@@ -27,22 +27,22 @@ template<typename T>
 class image
 {
 public:
-	image(std::uint32_t width, std::uint32_t height, std::uint8_t channels) : width_(width), height_(height), channels_(channels)
+	image(int width, int height, int channels) : width_(width), height_(height), channels_(channels)
 	{
 		data_.resize(width*height*channels);
 	}
 
-	std::uint32_t width() const { return width_; }
-	std::uint32_t height() const { return height_; }
-	std::uint8_t channel_count() const { return channels_; }
+	int width() const { return width_; }
+	int height() const { return height_; }
+	int channel_count() const { return channels_; }
 
 	T* data() { return data_.data(); }
 
 private:
-	std::vector<T> data_;
-	std::uint32_t width_;
-	std::uint32_t height_;
-	std::uint8_t channels_;
+	std::vector<T>	data_;
+	int				width_;
+	int				height_;
+	int				channels_;
 };
 
 typedef image<std::uint8_t>		image8bit;

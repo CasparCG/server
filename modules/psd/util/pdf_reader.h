@@ -26,7 +26,7 @@
 
 namespace caspar { namespace psd { 
 
-bool read_pdf(boost::property_tree::wptree& tree, const std::wstring& s);
+bool read_pdf(boost::property_tree::wptree& tree, const std::string& s);
 
 }	//namespace psd
 }	//namespace caspar
