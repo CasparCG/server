@@ -31,10 +31,10 @@ namespace caspar { namespace psd {
 struct channel
 {
 public:
-	channel(std::int16_t id1, std::uint32_t len) : id(id1), data_length(len) {}
+	channel(int id1, int len) : id(id1), data_length(len) {}
 
-	std::int16_t id;
-	std::uint32_t data_length;
+	int id;
+	int data_length;
 };
 
 }	//namespace psd
