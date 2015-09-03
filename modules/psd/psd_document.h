@@ -42,11 +42,13 @@ public:
 	{
 		return layers_;
 	}
-	std::uint32_t width() const
+
+	int width() const
 	{
 		return width_;
 	}
-	std::uint32_t height() const
+
+	int height() const
 	{
 		return height_;
 	}
@@ -56,27 +58,30 @@ public:
 		return color_mode_;
 	}
 
-	std::uint16_t color_depth() const
+	int color_depth() const
 	{
 		return depth_;
 	}
-	std::uint16_t channels_count() const
+
+	int channels_count() const
 	{
 		return channels_;
 	}
+
 	const std::wstring& filename() const
 	{
 		return filename_;
 	}
+
 	bool has_timeline() const
 	{
 		return !timeline_desc_.empty();
 	}
+
 	const boost::property_tree::wptree& timeline() const 
 	{
 		return timeline_desc_;
 	}
-
 
 	void parse(const std::wstring& s);
 
@@ -91,11 +96,11 @@ private:
 
 	std::vector<layer_ptr>			layers_;
 
-	std::uint16_t					channels_;
-	std::uint32_t					width_;
-	std::uint32_t					height_;
-	std::uint16_t					depth_;
-	psd::color_mode					color_mode_;
+	int								channels_		= 0;
+	int								width_			= 0;
+	int								height_			= 0;
+	int								depth_			= 0;
+	psd::color_mode					color_mode_		= psd::color_mode::InvalidColorMode;
 	boost::property_tree::wptree	timeline_desc_;
 };
 

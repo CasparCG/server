@@ -68,8 +68,8 @@ void descriptor::populate(bigendian_file_input_stream& stream)
 {
 	stream.read_unicode_string();
 	stream.read_id_string();
-	auto element_count = stream.read_long();
-	for (std::uint32_t element_index = 0; element_index < element_count; ++element_index)
+	int element_count = stream.read_long();
+	for (int element_index = 0; element_index < element_count; ++element_index)
 	{
 		std::wstring key = stream.read_id_string();
 		read_value(key, stream);
@@ -128,8 +128,9 @@ void descriptor::read_value(const std::wstring& key, bigendian_file_input_stream
 	case 'VlLs': 
 		{
 			context::scoped_holder list(key, context_);
-			auto count = stream.read_long();
-			for(std::uint32_t i = 0; i < count; ++i)
+			int count = stream.read_long();
+
+			for (int i = 0; i < count; ++i)
 			{
 				read_value(L"li", stream);
 			}

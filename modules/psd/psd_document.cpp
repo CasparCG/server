@@ -28,16 +28,12 @@
 namespace caspar { namespace psd {
 
 psd_document::psd_document()
-	: channels_(0)
-	, width_(0)
-	, height_(0)
-	, depth_(0)
-	, color_mode_(psd::color_mode::InvalidColorMode)
 {
 }
 
 void psd_document::parse(const std::wstring& filename)
 {
+	// Most of the parsing here is based on information from http://www.adobe.com/devnet-apps/photoshop/fileformatashtml/
 	filename_ = filename;
 	input_.open(filename_);
 	read_header();
@@ -101,7 +97,7 @@ void psd_document::read_image_resources()
 							int layer_count = resource_length / 2;
 							for(int i = 0; i < layer_count; ++i)
 							{
-								std::int16_t id = input_.read_short();
+								int id = static_cast<std::int16_t>(input_.read_short());
 
 								if(i == layers_.size())
 									layers_.push_back(std::make_shared<layer>());
@@ -194,7 +190,7 @@ void psd_document::read_layers()
 			auto layer_info_length = input_.read_long();	//length of "Layer info" section
 			auto end_of_layers_info = input_.current_position() + layer_info_length;
 
-			auto layers_count = std::abs(static_cast<std::int16_t>(input_.read_short()));
+			int layers_count = std::abs(static_cast<std::int16_t>(input_.read_short()));
 			//std::clog << "Expecting " << layers_count << " layers" << std::endl;
 
 			for(int layer_index = 0; layer_index < layers_count; ++layer_index)

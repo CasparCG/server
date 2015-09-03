@@ -110,19 +110,20 @@ void bigendian_file_input_stream::discard_bytes(std::streamoff length)
 {
 	ifs_.seekg(length, std::ios_base::cur);
 }
+
 void bigendian_file_input_stream::discard_to_next_word()
 {
-	const std::uint8_t padding = 2;
-	discard_bytes((padding - (current_position() % padding)) % padding);
+	const int PADDING = 2;
+	discard_bytes((PADDING - (current_position() % PADDING)) % PADDING);
 }
 
 void bigendian_file_input_stream::discard_to_next_dword()
 {
-	const std::uint8_t padding = 4;
-	discard_bytes((padding - (current_position() % padding)) % padding);
+	const int PADDING = 4;
+	discard_bytes((PADDING - (current_position() % PADDING)) % PADDING);
 }
 
-std::wstring bigendian_file_input_stream::read_pascal_string(std::uint8_t padding)
+std::wstring bigendian_file_input_stream::read_pascal_string(int padding)
 {
 	char buffer[256];
 
@@ -139,7 +140,7 @@ std::wstring bigendian_file_input_stream::read_pascal_string(std::uint8_t paddin
 
 std::wstring bigendian_file_input_stream::read_unicode_string()
 {
-	auto length = read_long();
+	int length = read_long();
 	std::wstring result;
 
 	if(length > 0)
@@ -147,7 +148,7 @@ std::wstring bigendian_file_input_stream::read_unicode_string()
 		result.reserve(length);
 
 		//can be optimized. Reads and swaps byte-order, one char at the time
-		for (std::uint32_t i = 0; i < length; ++i)
+		for (int i = 0; i < length; ++i)
 			result.append(1, static_cast<wchar_t>(read_short()));
 	}
 
@@ -157,13 +158,13 @@ std::wstring bigendian_file_input_stream::read_unicode_string()
 std::wstring bigendian_file_input_stream::read_id_string()
 {
 	std::string result;
-	auto length = read_long();
+	int length = read_long();
 	
 	if(length > 0)
 	{
 		result.reserve(length);
 
-		for (std::uint32_t i = 0; i < length; ++i)
+		for (int i = 0; i < length; ++i)
 			result.append(1, read_byte());
 	}
 	else

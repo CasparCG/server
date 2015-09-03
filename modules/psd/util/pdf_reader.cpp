@@ -258,9 +258,9 @@ struct pdf_grammar : qi::grammar<Iterator, qi::space_type>
 	};
 };
 
-bool read_pdf(boost::property_tree::wptree& tree, const std::wstring& s)
+bool read_pdf(boost::property_tree::wptree& tree, const std::string& s)
 {
-	typedef std::wstring::const_iterator iterator_type;
+	typedef std::string::const_iterator iterator_type;
 
 	pdf_grammar<iterator_type> g;
 	bool result = false;
