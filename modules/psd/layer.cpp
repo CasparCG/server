@@ -85,8 +85,8 @@ private:
 	std::vector<channel>			channels_;
 	blend_mode						blend_mode_;
 	int								link_group_id_;
-	std::uint8_t					opacity_;
-	std::uint16_t					sheet_color_;
+	int								opacity_;
+	int								sheet_color_;
 	bool							baseClipping_;
 	std::uint8_t					flags_;
 	std::uint32_t					protection_flags_;
@@ -94,10 +94,10 @@ private:
 	int								masks_count_;
 	double							text_scale_;
 
-	rect<std::int32_t>				vector_mask_;
+	rect<int>						vector_mask_;
 	layer::layer_mask_info			mask_;
 
-	rect<std::int32_t>				bitmap_rect_;
+	rect<int>						bitmap_rect_;
 	image8bit_ptr					bitmap_;
 
 	boost::property_tree::wptree	text_layer_info_;
@@ -199,7 +199,7 @@ public:
 				break;
 
 			case 'lclr':
-				sheet_color_ = stream.read_short();
+				sheet_color_ = static_cast<std::int16_t>(stream.read_short());
 				break;
 				
 			case 'lyvr':	//layer version
@@ -244,9 +244,9 @@ public:
 		solid_color_.alpha = 255;
 	}
 
-	void read_vector_mask(std::uint32_t length, bigendian_file_input_stream& stream, std::uint32_t doc_width, std::uint32_t doc_height)
+	void read_vector_mask(int length, bigendian_file_input_stream& stream, int doc_width, int doc_height)
 	{
-		typedef std::pair<std::uint32_t, std::uint32_t> path_point;
+		typedef std::pair<int, int> path_point;
 
 		stream.read_long(); // version
 		stream.read_long(); // flags
@@ -255,7 +255,12 @@ public:
 		auto position = stream.current_position();
 
 		std::vector<path_point> knots;
-		for(int i=1; i <= path_records; ++i)
+		
+		const int SELECTOR_SIZE = 2;
+		const int PATH_POINT_SIZE = 4 + 4;
+		const int PATH_POINT_RECORD_SIZE = SELECTOR_SIZE + (3 * PATH_POINT_SIZE);
+
+		for (int i = 1; i <= path_records; ++i)
 		{
 			auto selector = stream.read_short();
 			if(selector == 2)	//we only concern ourselves with closed paths 
@@ -280,7 +285,8 @@ public:
 				}
 			}
 
-			stream.set_position(position + 26*i);
+			auto offset = PATH_POINT_RECORD_SIZE * i;
+			stream.set_position(position + offset);
 		}
 
 		if(knots.size() != 4)	//we only support rectangular vector masks
@@ -293,15 +299,15 @@ public:
 		//the path_points are given in fixed-point 8.24 as a ratio with regards to the width/height of the document. we need to divide by 16777215.0f to get the real ratio.
 		float x_ratio = doc_width / 16777215.0f;
 		float y_ratio = doc_height / 16777215.0f;
-		vector_mask_.location.x = static_cast<std::int32_t>(knots[0].first * x_ratio +0.5f);								//add .5 to get propper rounding when converting to integer
-		vector_mask_.location.y = static_cast<std::int32_t>(knots[0].second * y_ratio +0.5f);								//add .5 to get propper rounding when converting to integer
-		vector_mask_.size.width = static_cast<std::int32_t>(knots[1].first * x_ratio +0.5f)	- vector_mask_.location.x;		//add .5 to get propper rounding when converting to integer
-		vector_mask_.size.height = static_cast<std::int32_t>(knots[2].second * y_ratio +0.5f) - vector_mask_.location.y;	//add .5 to get propper rounding when converting to integer
+		vector_mask_.location.x = static_cast<int>(knots[0].first * x_ratio +0.5f);								//add .5 to get propper rounding when converting to integer
+		vector_mask_.location.y = static_cast<int>(knots[0].second * y_ratio +0.5f);								//add .5 to get propper rounding when converting to integer
+		vector_mask_.size.width = static_cast<int>(knots[1].first * x_ratio +0.5f)	- vector_mask_.location.x;		//add .5 to get propper rounding when converting to integer
+		vector_mask_.size.height = static_cast<int>(knots[2].second * y_ratio +0.5f) - vector_mask_.location.y;	//add .5 to get propper rounding when converting to integer
 	}
 
 	void read_metadata(bigendian_file_input_stream& stream, const psd_document& doc)
 	{
-		auto count = stream.read_long();
+		int count = stream.read_long();
 		for(int index = 0; index < count; ++index)
 			read_chunk(stream, doc, true);
 	}
@@ -343,9 +349,11 @@ public:
 		descriptor text_descriptor(L"text");
 		text_descriptor.populate(stream);
 		auto text_info = text_descriptor.items().get_optional<std::wstring>(L"EngineData");
-		if(text_info)
+		
+		if (text_info)
 		{
-			read_pdf(text_layer_info_, *text_info);
+			std::string str(text_info->begin(), text_info->end());
+			read_pdf(text_layer_info_, str);
 			log::print_child(boost::log::trivial::trace, L"", L"text_layer_info", text_layer_info_);
 		}
 
@@ -382,7 +390,7 @@ public:
 
 		bool has_transparency = has_channel(channel_type::transparency);
 	
-		rect<std::int32_t> clip_rect;
+		rect<int> clip_rect;
 		if(!bitmap_rect_.empty())
 		{
 			clip_rect = bitmap_rect_;
@@ -403,9 +411,9 @@ public:
 
 		for(auto it = channels_.begin(); it != channels_.end(); ++it)
 		{
-			psd::rect<std::int32_t> src_rect;
+			psd::rect<int> src_rect;
 			image8bit_ptr target;
-			std::uint8_t offset = 0;
+			int offset = 0;
 			bool discard_channel = false;
 
 			//determine target bitmap and offset
@@ -414,7 +422,7 @@ public:
 			else if((*it).id >= -1)	//BGRA-data
 			{
 				target = bitmap;
-				offset = static_cast<std::uint8_t>(((*it).id >= 0) ? 2 - (*it).id : 3);
+				offset = ((*it).id >= 0) ? 2 - (*it).id : 3;
 				src_rect = bitmap_rect_;
 			}
 			else if(mask)	//mask
@@ -460,25 +468,25 @@ public:
 		mask_.bitmap_ = mask;
 	}
 
-	void read_raw_image_data(bigendian_file_input_stream& stream, std::uint32_t data_length, image8bit_ptr target, std::uint8_t offset)
+	void read_raw_image_data(bigendian_file_input_stream& stream, int data_length, image8bit_ptr target, int offset)
 	{
-		std::uint32_t total_length = target->width() * target->height();
-		if(total_length != data_length)
+		auto total_length = target->width() * target->height();
+		if (total_length != data_length)
 			CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("total_length != data_length"));
 
 		auto data = target->data();
-
 		auto stride = target->channel_count();
-		if(stride == 1)
+
+		if (stride == 1)
 			stream.read(reinterpret_cast<char*>(data + offset), total_length);
 		else
 		{
-			for(std::uint32_t index = 0; index < total_length; ++index)
+			for(int index = 0; index < total_length; ++index)
 				data[index * stride + offset] = stream.read_byte();
 		}
 	}
 
-	void read_rle_image_data(bigendian_file_input_stream& stream, const rect<std::int32_t>&src_rect, const rect<std::int32_t>&clip_rect, image8bit_ptr target, std::uint8_t offset)
+	void read_rle_image_data(bigendian_file_input_stream& stream, const rect<int>&src_rect, const rect<int>&clip_rect, image8bit_ptr target, int offset)
 	{
 		auto width = src_rect.size.width;
 		auto height = src_rect.size.height;
@@ -487,26 +495,26 @@ public:
 		int offset_x = clip_rect.location.x - src_rect.location.x;
 		int offset_y = clip_rect.location.y - src_rect.location.y;
 
-		std::vector<std::uint8_t> scanline_lengths;
+		std::vector<int> scanline_lengths;
 		scanline_lengths.reserve(height);
 
-		for (long scanlineIndex = 0; scanlineIndex < height; ++scanlineIndex)
-			scanline_lengths.push_back(stream.read_short());
+		for (int scanlineIndex = 0; scanlineIndex < height; ++scanlineIndex)
+			scanline_lengths.push_back(static_cast<std::int16_t>(stream.read_short()));
 
 		auto target_data = target->data();
 
 		std::vector<std::uint8_t> line(width);
 
-		for(long scanlineIndex=0; scanlineIndex < height; ++scanlineIndex)
+		for(int scanlineIndex=0; scanlineIndex < height; ++scanlineIndex)
 		{
 			if(scanlineIndex >= target->height()+offset_y)
 				break;
 
-			long colIndex = 0;
+			int colIndex = 0;
 
 			do
 			{
-				std::uint8_t length = 0;
+				int length = 0;
 
 				//Get controlbyte
 				char controlByte = static_cast<char>(stream.read_byte());
@@ -546,8 +554,8 @@ void layer::populate(bigendian_file_input_stream& stream, const psd_document& do
 void layer::read_channel_data(bigendian_file_input_stream& stream) { impl_->read_channel_data(stream); }
 
 const std::wstring& layer::name() const { return impl_->name_; }
-std::uint8_t layer::opacity() const { return impl_->opacity_; }
-std::uint16_t layer::sheet_color() const { return impl_->sheet_color_; }
+int layer::opacity() const { return impl_->opacity_; }
+int layer::sheet_color() const { return impl_->sheet_color_; }
 
 bool layer::is_visible() { return (impl_->flags_ & 2) == 0; }	//the (PSD file-format) documentation is is saying the opposite but what the heck
 bool layer::is_position_protected() { return (impl_->protection_flags_& 4) == 4; }
@@ -562,7 +570,7 @@ const boost::property_tree::wptree& layer::timeline_data() const { return impl_-
 bool layer::is_solid() const { return impl_->solid_color_.alpha != 0; }
 color<std::uint8_t> layer::solid_color() const { return impl_->solid_color_; }
 
-const point<std::int32_t>& layer::location() const { return impl_->bitmap_rect_.location; }
+const point<int>& layer::location() const { return impl_->bitmap_rect_.location; }
 const image8bit_ptr& layer::bitmap() const { return impl_->bitmap_; }
 
 int layer::link_group_id() const { return impl_->link_group_id_; }
