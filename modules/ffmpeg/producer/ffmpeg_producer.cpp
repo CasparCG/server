@@ -389,7 +389,7 @@ public:
 	void decode_next_frame()
 	{
 		for(int n = 0; n < 8 && muxer_.empty(); ++n)
-		{				
+		{
 			if(!muxer_.video_ready())
 				muxer_.push_video(video_decoder_ ? (*video_decoder_)() : create_frame());
 			if(!muxer_.audio_ready())
