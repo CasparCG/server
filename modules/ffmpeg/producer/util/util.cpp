@@ -359,7 +359,15 @@ double read_fps(AVFormatContext& context, double fail_value)
 	{
 		const auto video_context = context.streams[video_index]->codec;
 		const auto video_stream  = context.streams[video_index];
-						
+
+		auto frame_rate_time_base = video_stream->avg_frame_rate;
+		std::swap(frame_rate_time_base.num, frame_rate_time_base.den);
+
+		if (is_sane_fps(frame_rate_time_base))
+		{
+			return static_cast<double>(frame_rate_time_base.den) / static_cast<double>(frame_rate_time_base.num);
+		}
+
 		AVRational time_base = video_context->time_base;
 
 		if(boost::filesystem::path(context.filename).extension().string() == ".flv")
