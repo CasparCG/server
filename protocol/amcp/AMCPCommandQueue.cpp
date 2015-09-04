@@ -86,10 +86,10 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 	{
 		try
 		{
-			caspar::timer timer;
-
 			try
 			{
+				caspar::timer timer;
+
 				auto print = pCurrentCommand->print();
 				auto params = boost::join(pCurrentCommand->parameters(), L" ");
 
@@ -102,9 +102,9 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 				}
 
 				if (pCurrentCommand->Execute())
-					CASPAR_LOG(debug) << "Executed command: " << print << " " << timer.elapsed();
+					CASPAR_LOG(debug) << "Executed command (" << timer.elapsed() << "s): " << print;
 				else
-					CASPAR_LOG(warning) << "Failed to execute command: " << print << " " << timer.elapsed();
+					CASPAR_LOG(warning) << "Failed to execute command: " << print;
 			}
 			catch (file_not_found&)
 			{
@@ -119,7 +119,7 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 			catch (...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
-				CASPAR_LOG(warning) << "Failed to execute command:" << pCurrentCommand->print() << " " << timer.elapsed();
+				CASPAR_LOG(warning) << "Failed to execute command:" << pCurrentCommand->print();
 				pCurrentCommand->SetReplyString(L"501 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
 				
