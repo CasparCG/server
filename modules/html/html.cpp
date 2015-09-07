@@ -388,7 +388,7 @@ std::future<void> begin_invoke(const std::function<void()>& func)
 	if (CefPostTask(TID_UI, task.get()))
 		return task->future();
 	else
-		BOOST_THROW_EXCEPTION(caspar_exception()
+		CASPAR_THROW_EXCEPTION(caspar_exception()
 				<< msg_info("[cef_executor] Could not post task"));
 }
 

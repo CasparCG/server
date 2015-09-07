@@ -484,8 +484,6 @@ private:
 		return std::shared_ptr<AVStream>(st, [](AVStream* st)
 		{
 			LOG_ON_ERROR2(tbb_avcodec_close(st->codec), "[ffmpeg_consumer]");
-			av_freep(&st->codec);
-			av_freep(&st);
 		});
 	}
 		
@@ -530,8 +528,6 @@ private:
 		return std::shared_ptr<AVStream>(st, [](AVStream* st)
 		{
 			LOG_ON_ERROR2(avcodec_close(st->codec), "[ffmpeg_consumer]");
-			av_freep(&st->codec);
-			av_freep(&st);
 		});
 	}
   
@@ -592,7 +588,7 @@ private:
 			
 		while(audio_buffer_.size() >= frame_size)
 		{			
-			std::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);
+			std::shared_ptr<AVFrame> av_frame(av_frame_alloc(), [=](AVFrame* p) { av_frame_free(&p); });
 			avcodec_get_frame_defaults(av_frame.get());		
 			av_frame->nb_samples = frame_size / (enc->channels * av_get_bytes_per_sample(enc->sample_fmt));
 
@@ -727,7 +723,7 @@ private:
 	{
 		auto space = boost::filesystem::space(boost::filesystem::path(filename_).parent_path());
 		if(space.available < 512*1000000)
-			BOOST_THROW_EXCEPTION(file_write_error() << msg_info("out of space"));
+			CASPAR_THROW_EXCEPTION(file_write_error() << msg_info("out of space"));
 	}
 
 	void encode(const core::const_frame& frame)
@@ -775,7 +771,7 @@ public:
 	void initialize(const core::video_format_desc& format_desc, int) override
 	{
 		if(consumer_)
-			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot reinitialize ffmpeg-consumer."));
+			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot reinitialize ffmpeg-consumer."));
 
 		consumer_.reset(new ffmpeg_consumer(u8(filename_), format_desc, options_, false));
 

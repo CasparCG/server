@@ -188,7 +188,7 @@ draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& f
 {
 	uint32_t value = 0;
 	if(!try_get_color(str, value))
-		BOOST_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(str) << msg_info("Invalid color."));
+		CASPAR_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(str) << msg_info("Invalid color."));
 	
 	return create_color_frame(tag, frame_factory, value);
 }

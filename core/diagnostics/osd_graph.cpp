@@ -74,7 +74,7 @@ sf::Font& get_default_font()
 	{
 		sf::Font font;
 		if (!font.loadFromFile("LiberationSans-Regular.ttf"))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("LiberationSans-Regular.ttf not found"));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("LiberationSans-Regular.ttf not found"));
 		return font;
 	}();
 
