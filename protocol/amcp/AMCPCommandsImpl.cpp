@@ -980,6 +980,16 @@ std::wstring cg_play_command(command_context& ctx)
 	return L"202 CG OK\r\n";
 }
 
+spl::shared_ptr<core::cg_proxy> get_expected_cg_proxy(command_context& ctx)
+{
+	auto proxy = ctx.cg_registry->get_proxy(spl::make_shared_ptr(ctx.channel.channel), ctx.layer_index(core::cg_proxy::DEFAULT_LAYER));
+
+	if (proxy == cg_proxy::empty())
+		CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"No CG proxy running on layer"));
+
+	return proxy;
+}
+
 void cg_stop_describer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"Stop and remove a template.");
@@ -994,7 +1004,7 @@ void cg_stop_describer(core::help_sink& sink, const core::help_repository& repo)
 std::wstring cg_stop_command(command_context& ctx)
 {
 	int layer = get_and_validate_layer(ctx.parameters.at(0));
-	ctx.cg_registry->get_proxy(spl::make_shared_ptr(ctx.channel.channel), ctx.layer_index(core::cg_proxy::DEFAULT_LAYER))->stop(layer, 0);
+	get_expected_cg_proxy(ctx)->stop(layer, 0);
 
 	return L"202 CG OK\r\n";
 }
@@ -1013,7 +1023,7 @@ void cg_next_describer(core::help_sink& sink, const core::help_repository& repo)
 std::wstring cg_next_command(command_context& ctx)
 {
 	int layer = get_and_validate_layer(ctx.parameters.at(0));
-	ctx.cg_registry->get_proxy(spl::make_shared_ptr(ctx.channel.channel), ctx.layer_index(core::cg_proxy::DEFAULT_LAYER))->next(layer);
+	get_expected_cg_proxy(ctx)->next(layer);
 
 	return L"202 CG OK\r\n";
 }
@@ -1030,7 +1040,7 @@ void cg_remove_describer(core::help_sink& sink, const core::help_repository& rep
 std::wstring cg_remove_command(command_context& ctx)
 {
 	int layer = get_and_validate_layer(ctx.parameters.at(0));
-	ctx.cg_registry->get_proxy(spl::make_shared_ptr(ctx.channel.channel), ctx.layer_index(core::cg_proxy::DEFAULT_LAYER))->remove(layer);
+	get_expected_cg_proxy(ctx)->remove(layer);
 
 	return L"202 CG OK\r\n";
 }
@@ -1073,10 +1083,7 @@ std::wstring cg_update_command(command_context& ctx)
 		dataString = read_file(boost::filesystem::path(filename));
 	}
 
-	ctx.cg_registry->get_proxy(
-		spl::make_shared_ptr(ctx.channel.channel),
-		ctx.layer_index(core::cg_proxy::DEFAULT_LAYER))
-		->update(layer, dataString);
+	get_expected_cg_proxy(ctx)->update(layer, dataString);
 
 	return L"202 CG OK\r\n";
 }
@@ -1094,10 +1101,7 @@ std::wstring cg_invoke_command(command_context& ctx)
 	std::wstringstream replyString;
 	replyString << L"201 CG OK\r\n";
 	int layer = get_and_validate_layer(ctx.parameters.at(0));
-	auto result = ctx.cg_registry->get_proxy(
-		spl::make_shared_ptr(ctx.channel.channel),
-		ctx.layer_index(core::cg_proxy::DEFAULT_LAYER))
-		->invoke(layer, ctx.parameters.at(1));
+	auto result = get_expected_cg_proxy(ctx)->invoke(layer, ctx.parameters.at(1));
 	replyString << result << L"\r\n";
 
 	return replyString.str();
@@ -1118,19 +1122,13 @@ std::wstring cg_info_command(command_context& ctx)
 
 	if (ctx.parameters.empty())
 	{
-		auto info = ctx.cg_registry->get_proxy(
-			spl::make_shared_ptr(ctx.channel.channel),
-			ctx.layer_index(core::cg_proxy::DEFAULT_LAYER))
-			->template_host_info();
+		auto info = get_expected_cg_proxy(ctx)->template_host_info();
 		replyString << info << L"\r\n";
 	}
 	else
 	{
 		int layer = get_and_validate_layer(ctx.parameters.at(0));
-		auto desc = ctx.cg_registry->get_proxy(
-			spl::make_shared_ptr(ctx.channel.channel),
-			ctx.layer_index(core::cg_proxy::DEFAULT_LAYER))
-			->description(layer);
+		auto desc = get_expected_cg_proxy(ctx)->description(layer);
 
 		replyString << desc << L"\r\n";
 	}

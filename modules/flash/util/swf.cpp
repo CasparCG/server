@@ -118,7 +118,7 @@ swf_t::header_t::header_t(const std::wstring& filename)
 	auto ret = uncompress(reinterpret_cast<Bytef*>(data.data()), &file_size, reinterpret_cast<const Bytef*>(file_data.data()), static_cast<uLong>(file_data.size()));
 
 	if (ret == Z_DATA_ERROR)
-		BOOST_THROW_EXCEPTION(io_error());
+		CASPAR_THROW_EXCEPTION(io_error());
 	
 	// http://thenobody.blog.matfyz.sk/p13084-how-to-get-dimensions-of-a-swf-file
 
@@ -176,7 +176,7 @@ swf_t::swf_t(const std::wstring& filename)
 	auto ret = uncompress(reinterpret_cast<Bytef*>(this->data.data()), &file_size, reinterpret_cast<const Bytef*>(file_data.data()), static_cast<uLong>(file_data.size()));
 
 	if (ret != Z_OK)
-		BOOST_THROW_EXCEPTION(io_error());
+		CASPAR_THROW_EXCEPTION(io_error());
 }
 
 }}
