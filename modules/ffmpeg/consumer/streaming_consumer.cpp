@@ -268,13 +268,13 @@ public:
 					: avcodec_find_encoder(oc_->oformat->audio_codec);
 			
 			if (!video_codec)
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(
+				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
 						"Failed to find video codec " + (video_codec_name
 								? *video_codec_name
 								: "with id " + boost::lexical_cast<std::string>(
 										oc_->oformat->video_codec))));
 			if (!audio_codec)
-				BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(
+				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
 						"Failed to find audio codec " + (audio_codec_name
 								? *audio_codec_name
 								: "with id " + boost::lexical_cast<std::string>(
@@ -436,7 +436,10 @@ public:
 	
 	virtual boost::property_tree::wptree info() const override
 	{
-		return boost::property_tree::wptree();
+		boost::property_tree::wptree info;
+		info.add(L"type", L"stream");
+		info.add(L"path", path_.wstring());
+		return info;
 	}
 
 	bool has_synchronization_clock() const override
@@ -478,7 +481,7 @@ private:
 				&codec);
 
 		if (!st) 		
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("Could not allocate video-stream.") << boost::errinfo_api_function("av_new_stream"));	
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Could not allocate video-stream.") << boost::errinfo_api_function("av_new_stream"));
 
 		auto enc = st->codec;
 				

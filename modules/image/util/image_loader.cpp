@@ -86,7 +86,7 @@ std::shared_ptr<FIBITMAP> load_png_from_memory(const void* memory_location, size
 		bitmap = std::shared_ptr<FIBITMAP>(FreeImage_ConvertTo32Bits(bitmap.get()), FreeImage_Unload);
 
 		if (!bitmap)
-			BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
+			CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
 	}
 
 	return bitmap;

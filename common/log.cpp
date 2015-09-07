@@ -161,7 +161,7 @@ void add_file_sink(const std::wstring& folder)
 	try
 	{
 		if (!boost::filesystem::is_directory(folder))
-			BOOST_THROW_EXCEPTION(directory_not_found());
+			CASPAR_THROW_EXCEPTION(directory_not_found());
 
 		auto file_sink = boost::make_shared<file_sink_type>(
 			boost::log::keywords::file_name = (folder + L"caspar_%Y-%m-%d.log"),
