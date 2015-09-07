@@ -350,7 +350,7 @@ private:
 
 		if (!try_pop(frame))
 		{
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " No frame in buffer"));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " No frame in buffer"));
 		}
 
 		return frame;
