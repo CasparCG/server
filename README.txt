@@ -7,7 +7,9 @@ CasparCG Server has been in 24/7 broadcast production since 2006.
 This release is considered untested and unstable, and is NOT intended for use in
 professional production.
 
-More information is available at http://casparcg.com/
+Alpha and beta builds are available at http://builds.casparcg.com/
+
+More information about CasparCG is available at http://casparcg.com/
 
 
 COMMON SYSTEM REQUIREMENTS FOR WINDOWS AND LINUX 
@@ -26,30 +28,27 @@ COMMON SYSTEM REQUIREMENTS FOR WINDOWS AND LINUX
    
 SYSTEM REQUIREMENTS FOR WINDOWS
 -------------------------------
-1. 2. Windows 7 (64-bit) strongly recommended.
+1. Windows 7 (64-bit) or Windows 8 (64-bit)
    CasparCG Server has also been used successfully on Windows 7 (32-bit) 
    and Windows XP SP2 (32-bit only.)
-   NOT SUPPORTED: Windows 8, Windows 2003 Server and Windows Vista.
+   NOT SUPPORTED: Windows 2003 Server and Windows Vista.
    
-Microsoft Visual C++ 2010 Redistributable Package must be installed.
-   See link in the Installation section below.
+2. Microsoft Visual C++ 2010 Redistributable Package must be installed.
+   See link in the 'INSTALLATION ON WINDOWS' section below.
    
-5. Microsoft .NET Framework 4.0 or later must be installed.
-   See link in the Installation section below.
+3. Microsoft .NET Framework 4.0 or later must be installed.
+   See link in the 'INSTALLATION ON WINDOWS' section below.
    
-6. Windows' "Aero" theme and "ClearType" font smoothing must be disabled
-   as they have been known to interfere with transparency in Flash templates,
-   and can also cause problems with Vsync when outputting to computer screens.
-
-The latest system recommendations are available at:
-http://casparcg.com/wiki/CasparCG_Server#System_Requirements
-
+   
+SYSTEM REQUIREMENTS FOR LINUX
+-----------------------------
+1. XXXXXXXXXXXXX
+   
 
 
 
-INSTALLATION
-------------
-
+INSTALLATION ON WINDOWS
+-----------------------
 1. Check that your system meets the requirements above.
 
 2. Unzip and place the "CasparCG Server" folder anywhere you like.
@@ -60,14 +59,11 @@ INSTALLATION
 4. Install "Microsoft .NET Framework" (version 4.0 or later) from
    http://go.microsoft.com/fwlink/?LinkId=225702
 
-5. Make sure you turn off Windows' "Aero Theme" and "ClearType" font smoothing
-   as they can interfere with CasparCG Server's OpenGL features!
 
 
 INSTALLATION OF ADDITIONAL NON-GPL SOFTWARE
 -------------------------------------------
-
-- For Flash template support:
+- For Flash template support (Windows only):
 
   1. Uninstall any previous version of the Adobe Flash Player using this file:
      http://download.macromedia.com/get/flashplayer/current/support/uninstall_flash_player.exe
@@ -76,7 +72,7 @@ INSTALLATION OF ADDITIONAL NON-GPL SOFTWARE
   3. Install Adobe Flash Player 11.8.800.94 from the unpacked archive:
      fp_11.8.800.94_archive\11_8_r800_94\flashplayer11_8r800_94_winax.exe
 
-- For NewTek iVGA support, please download and install the following driver:
+- For NewTek iVGA support (Windows only), please download and install the following driver:
   http://new.tk/NetworkSendRedist
 
 
