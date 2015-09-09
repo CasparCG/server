@@ -1,19 +1,25 @@
+=========================================================================================
 CasparCG Server 2.1 alpha
-============================
+=========================================================================================
 Thank you for your interest in CasparCG Server, a professional software used to
 play out and record professional graphics, audio and video to multiple outputs.
 CasparCG Server has been in 24/7 broadcast production since 2006.
+The included software is provided as-is by Sveriges Televison AB.
 
 This release is considered untested and unstable, and is NOT intended for use in
-professional production.
+professional production. Stable and production-proven versions can be downloaded 
+at http://casparcg.com/download/
 
 Alpha and beta builds are available at http://builds.casparcg.com/
 
-More information about CasparCG is available at http://casparcg.com/
+More information about CasparCG is available at http://casparcg.com/ and
+in the forum at http://casparcg.com/forum/
+
+
 
 
 COMMON SYSTEM REQUIREMENTS FOR WINDOWS AND LINUX 
-------------------------------------------------
+=========================================================================================
 1. Intel processor capable of using SSSE3 instructions. 
    Please refer to
    http://en.wikipedia.org/wiki/SSSE3 for a complete list.
@@ -25,9 +31,10 @@ COMMON SYSTEM REQUIREMENTS FOR WINDOWS AND LINUX
    using the built-in GPU that exists in many CPUs. Your playback performance
    might suffer if using a built-in GPU.
    
+
    
 SYSTEM REQUIREMENTS FOR WINDOWS
--------------------------------
+=========================================================================================
 1. Windows 7 (64-bit) or Windows 8 (64-bit)
    CasparCG Server has also been used successfully on Windows 7 (32-bit) 
    and Windows XP SP2 (32-bit only.)
@@ -40,15 +47,16 @@ SYSTEM REQUIREMENTS FOR WINDOWS
    See link in the 'INSTALLATION ON WINDOWS' section below.
    
    
+
 SYSTEM REQUIREMENTS FOR LINUX
------------------------------
+=========================================================================================
 1. XXXXXXXXXXXXX
    
 
 
 
 INSTALLATION ON WINDOWS
------------------------
+=========================================================================================
 1. Check that your system meets the requirements above.
 
 2. Unzip and place the "CasparCG Server" folder anywhere you like.
@@ -61,44 +69,101 @@ INSTALLATION ON WINDOWS
 
 
 
+INSTALLATION ON LINUX
+=========================================================================================
+1. Check that your system meets the requirements above.
+
+2. XXXXXXXXXXXXX
+
+
+
 INSTALLATION OF ADDITIONAL NON-GPL SOFTWARE
--------------------------------------------
+=========================================================================================
 - For Flash template support (Windows only):
 
   1. Uninstall any previous version of the Adobe Flash Player using this file:
-     http://download.macromedia.com/get/flashplayer/current/support/uninstall_flash_player.exe
+http://download.macromedia.com/get/flashplayer/current/support/uninstall_flash_player.exe
   2. Download and unpack
-     http://download.macromedia.com/pub/flashplayer/installers/archive/fp_11.8.800.94_archive.zip
+http://download.macromedia.com/pub/flashplayer/installers/archive/fp_11.8.800.94_archive.zip
   3. Install Adobe Flash Player 11.8.800.94 from the unpacked archive:
      fp_11.8.800.94_archive\11_8_r800_94\flashplayer11_8r800_94_winax.exe
 
-- For NewTek iVGA support (Windows only), please download and install the following driver:
-  http://new.tk/NetworkSendRedist
+- For NewTek iVGA support (Windows only), please download and install the following 
+  driver:  http://new.tk/NetworkSendRedist
+
 
 
 CONFIGURATION
--------------
-1. Configure the server by editing the self-documented casparcg.config file in a
+=========================================================================================
+1. Configure the server by editing the self-documented 'casparcg.config' file in a
    text editor.
 
-2. Start the "casparcg.exe" program.
+2. On Windows, start the "casparcg.exe" program, or on Linux start the 'bin/casparcg' 
+   program.
 
 3. Connect to the Server from a client software, such as the "CasparCG Client"
    which is available as a separate download.
 
 
+
 DOCUMENTATION
--------------
+=========================================================================================
 The most up-to-date documentation is always available at
 http://casparcg.com/wiki/
 
 Ask questions in the forum: http://casparcg.com/forum/
 
 
-LICENSING
----------
-CasparCG is distributed under the GNU General Public License GPLv3 or
-higher, please see LICENSE.TXT for details.
 
-The included software is provided as-is by Sveriges Televison AB.
-More information is available at http://casparcg.com/
+
+
+LICENSING
+=========================================================================================
+CasparCG is distributed under the GNU General Public 
+License GPLv3 or higher, see the file COPYING.TXT for details. 
+
+More information, samples and documentation at: 
+http://casparcg.com/
+http://casparcg.com/forum/
+http://casparcg.com/wiki/
+
+
+CasparCG Server uses FFmpeg (http://ffmpeg.org/) under the GPLv2 Licence. 
+FFmpeg is a trademark of Fabrice Bellard, originator of the FFmpeg project.
+
+CasparCG Server uses the Threading Building Blocks 
+(http://www.threadingbuildingblocks.org/) library under the GPLv2 Licence.
+
+CasparCG Server uses FreeImage (http://freeimage.sourceforge.net/) under the GPLv2.
+
+CasparCG Server uses SFML (http://www.sfml-dev.org/) under the zlib/libpng License.
+
+CasparCG Server uses GLEW (http://glew.sourceforge.net) under the modified BSD license.
+
+CasparCG Server uses boost (http://www.boost.org/) under the Boost Software License, 
+version 1.0.
+
+
+
+
+AUTHORS - People who have developed the CasparCG Server software
+==========(sorted alphabetically by last name)==================
+Niklas Andersson   (Server 1.0-1.8)
+Andreas Jeansson    (TemplateHost)
+Robert Nagy        (Server 1.7-2.x)
+Helge Norberg     (Server 2.x)
+
+
+
+CREDITS - People who have contributed to the CasparCG Project
+==========(sorted alphabetically by last name)===============
+Niklas  Andersson
+Jonas   Hummelstrand    (jonas @ superfly.tv)
+Andreas Jeansson        (andreas.jeansson @ svt.se)
+Peter   Karlsson        (peter.p.karlsson @ svt.se)
+Jeff    Lafforgue
+Andy    Mace
+Robert  Nagy            (ronag89 @ gmail.com)
+Helge   Norberg         (helge.norberg @ svt.se)
+Thomas  R. Kaltz III
+Olle    Soprani
