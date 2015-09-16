@@ -164,8 +164,9 @@ public:
 		{
 			for (auto& transform : transforms)
 			{
-				auto src = tweens_[std::get<0>(transform)].fetch();
-				auto dst = std::get<1>(transform)(src);
+				auto& tween = tweens_[std::get<0>(transform)];
+				auto src = tween.fetch();
+				auto dst = std::get<1>(transform)(tween.dest());
 				tweens_[std::get<0>(transform)] = tweened_transform(src, dst, std::get<2>(transform), std::get<3>(transform));
 			}
 		}, task_priority::high_priority);

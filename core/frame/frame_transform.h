@@ -165,6 +165,11 @@ public:
 		, tweener_(tween)
 	{
 	}
+
+	const frame_transform& dest() const
+	{
+		return dest_;
+	}
 	
 	frame_transform fetch()
 	{
