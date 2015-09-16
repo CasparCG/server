@@ -1175,8 +1175,9 @@ public:
 
 	void commit_deferred()
 	{
-		ctx_.channel.channel->stage().apply_transforms(
-				std::move(deferred_transforms_[ctx_.channel_index]));
+		auto& transforms = deferred_transforms_[ctx_.channel_index];
+		ctx_.channel.channel->stage().apply_transforms(transforms).get();
+		transforms.clear();
 	}
 
 	void apply()
