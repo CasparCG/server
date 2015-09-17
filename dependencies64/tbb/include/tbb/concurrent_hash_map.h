@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2015 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks. Threading Building Blocks is free software;
     you can redistribute it and/or modify it under the terms of the GNU General Public License
@@ -44,7 +44,7 @@
 #include "atomic.h"
 #include "tbb_exception.h"
 #include "tbb_profiling.h"
-#include "internal/_concurrent_unordered_impl.h" // Need tbb_hasher
+#include "internal/_tbb_hash_compare_impl.h"
 #if __TBB_INITIALIZER_LISTS_PRESENT
 #include <initializer_list>
 #endif
@@ -56,13 +56,6 @@
 #endif
 
 namespace tbb {
-
-//! hash_compare that is default argument for concurrent_hash_map
-template<typename Key>
-struct tbb_hash_compare {
-    static size_t hash( const Key& a ) { return tbb_hasher(a); }
-    static bool equal( const Key& a, const Key& b ) { return a == b; }
-};
 
 namespace interface5 {
 
@@ -580,7 +573,15 @@ protected:
         node( const Key &key ) : item(key, T()) {}
         node( const Key &key, const T &t ) : item(key, t) {}
 #if __TBB_CPP11_RVALUE_REF_PRESENT
+        node( const Key &key, T &&t ) : item(key, std::move(t)) {}
         node( value_type&& i ) : item(std::move(i)){}
+#if __TBB_CPP11_VARIADIC_TEMPLATES_PRESENT
+        template<typename... Args>
+        node( Args&&... args ) : item(std::forward<Args>(args)...) {}
+#if __TBB_COPY_FROM_NON_CONST_REF_BROKEN
+        node( value_type& i ) : item(const_cast<const value_type&>(i)) {}
+#endif //__TBB_COPY_FROM_NON_CONST_REF_BROKEN
+#endif //__TBB_CPP11_VARIADIC_TEMPLATES_PRESENT
 #endif //__TBB_CPP11_RVALUE_REF_PRESENT
         node( const value_type& i ) : item(i) {}
 
@@ -603,6 +604,18 @@ protected:
     static node* allocate_node_copy_construct(node_allocator_type& allocator, const Key &key, const T * t){
         return  new( allocator ) node(key, *t);
     }
+
+#if __TBB_CPP11_RVALUE_REF_PRESENT
+    static node* allocate_node_move_construct(node_allocator_type& allocator, const Key &key, const T * t){
+        return  new( allocator ) node(key, std::move(*const_cast<T*>(t)));
+    }
+#if __TBB_CPP11_VARIADIC_TEMPLATES_PRESENT
+    template<typename... Args>
+    static node* allocate_node_emplace_construct(node_allocator_type& allocator, Args&&... args){
+        return  new( allocator ) node(std::forward<Args>(args)...);
+    }
+#endif //#if __TBB_CPP11_VARIADIC_TEMPLATES_PRESENT
+#endif
 
     static node* allocate_node_default_construct(node_allocator_type& allocator, const Key &key, const T * ){
         return  new( allocator ) node(key);
@@ -957,6 +970,49 @@ public:
         return lookup(/*insert*/true, value.first, &value.second, NULL, /*write=*/false, &allocate_node_copy_construct );
     }
 
+#if __TBB_CPP11_RVALUE_REF_PRESENT
+    //! Insert item by copying if there is no such key present already and acquire a read lock on the item.
+    /** Returns true if item is new. */
+    bool insert( const_accessor &result, value_type && value ) {
+        return generic_move_insert(result, std::move(value));
+    }
+
+    //! Insert item by copying if there is no such key present already and acquire a write lock on the item.
+    /** Returns true if item is new. */
+    bool insert( accessor &result, value_type && value ) {
+        return generic_move_insert(result, std::move(value));
+    }
+
+    //! Insert item by copying if there is no such key present already
+    /** Returns true if item is inserted. */
+    bool insert( value_type && value ) {
+        return generic_move_insert(accessor_not_used(), std::move(value));
+    }
+
+#if __TBB_CPP11_VARIADIC_TEMPLATES_PRESENT
+    //! Insert item by copying if there is no such key present already and acquire a read lock on the item.
+    /** Returns true if item is new. */
+    template<typename... Args>
+    bool emplace( const_accessor &result, Args&&... args ) {
+        return generic_emplace(result, std::forward<Args>(args)...);
+    }
+
+    //! Insert item by copying if there is no such key present already and acquire a write lock on the item.
+    /** Returns true if item is new. */
+    template<typename... Args>
+    bool emplace( accessor &result, Args&&... args ) {
+        return generic_emplace(result, std::forward<Args>(args)...);
+    }
+
+    //! Insert item by copying if there is no such key present already
+    /** Returns true if item is inserted. */
+    template<typename... Args>
+    bool emplace( Args&&... args ) {
+        return generic_emplace(accessor_not_used(), std::forward<Args>(args)...);
+    }
+#endif //__TBB_CPP11_VARIADIC_TEMPLATES_PRESENT
+#endif //__TBB_CPP11_RVALUE_REF_PRESENT
+
     //! Insert range [first, last)
     template<typename I>
     void insert( I first, I last ) {
@@ -989,7 +1045,32 @@ public:
 
 protected:
     //! Insert or find item and optionally acquire a lock on the item.
-    bool lookup(bool op_insert, const Key &key, const T *t, const_accessor *result, bool write,  node* (*allocate_node)(node_allocator_type& ,  const Key &, const T * )  ) ;
+    bool lookup(bool op_insert, const Key &key, const T *t, const_accessor *result, bool write,  node* (*allocate_node)(node_allocator_type& ,  const Key &, const T * ), node *tmp_n = 0  ) ;
+
+    struct accessor_not_used { void release(){}};
+    friend const_accessor* accessor_location( accessor_not_used const& ){ return NULL;}
+    friend const_accessor* accessor_location( const_accessor & a )      { return &a;}
+
+    friend bool is_write_access_needed( accessor const& )           { return true;}
+    friend bool is_write_access_needed( const_accessor const& )     { return false;}
+    friend bool is_write_access_needed( accessor_not_used const& )  { return false;}
+
+#if __TBB_CPP11_RVALUE_REF_PRESENT
+    template<typename Accessor>
+    bool generic_move_insert( Accessor && result, value_type && value ) {
+        result.release();
+        return lookup(/*insert*/true, value.first, &value.second, accessor_location(result), is_write_access_needed(result), &allocate_node_move_construct );
+    }
+
+#if __TBB_CPP11_VARIADIC_TEMPLATES_PRESENT
+    template<typename Accessor, typename... Args>
+    bool generic_emplace( Accessor && result, Args &&... args ) {
+        result.release();
+        node * node_ptr = allocate_node_emplace_construct(my_allocator, std::forward<Args>(args)...);
+        return lookup(/*insert*/true, node_ptr->item.first, NULL, accessor_location(result), is_write_access_needed(result), &do_not_allocate_node, node_ptr );
+    }
+#endif //__TBB_CPP11_VARIADIC_TEMPLATES_PRESENT
+#endif //__TBB_CPP11_RVALUE_REF_PRESENT
 
     //! delete item by accessor
     bool exclude( const_accessor &item_accessor );
@@ -1035,13 +1116,13 @@ protected:
 };
 
 template<typename Key, typename T, typename HashCompare, typename A>
-bool concurrent_hash_map<Key,T,HashCompare,A>::lookup( bool op_insert, const Key &key, const T *t, const_accessor *result, bool write, node* (*allocate_node)(node_allocator_type& , const Key&, const T*) ) {
+bool concurrent_hash_map<Key,T,HashCompare,A>::lookup( bool op_insert, const Key &key, const T *t, const_accessor *result, bool write, node* (*allocate_node)(node_allocator_type& , const Key&, const T*), node *tmp_n ) {
     __TBB_ASSERT( !result || !result->my_node, NULL );
     bool return_value;
     hashcode_t const h = my_hash_compare.hash( key );
     hashcode_t m = (hashcode_t) itt_load_word_with_acquire( my_mask );
     segment_index_t grow_segment = 0;
-    node *n, *tmp_n = 0;
+    node *n;
     restart:
     {//lock scope
         __TBB_ASSERT((m&(m+1))==0, "data structure is invalid");
