@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2015 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks. Threading Building Blocks is free software;
     you can redistribute it and/or modify it under the terms of the GNU General Public License
@@ -27,7 +27,7 @@
 
 #include "tbb/internal/_flow_graph_types_impl.h"  // for aligned_pair
 
-// in namespace tbb::flow::interface7 (included in _flow_graph_node_impl.h)
+// in namespace tbb::flow::interface8 (included in _flow_graph_node_impl.h)
 
     //! Expandable buffer of items.  The possible operations are push, pop,
     //* tests for empty and so forth.  No mutual exclusion is built in.
