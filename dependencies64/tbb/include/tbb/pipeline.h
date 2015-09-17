@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2015 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks. Threading Building Blocks is free software;
     you can redistribute it and/or modify it under the terms of the GNU General Public License
@@ -595,6 +595,7 @@ class filter_t {
     template<typename T_, typename V_, typename U_>
     friend filter_t<T_,U_> operator& (const filter_t<T_,V_>& , const filter_t<V_,U_>& );
 public:
+    // TODO: add move-constructors, move-assignment, etc. where C++11 is available.
     filter_t() : root(NULL) {}
     filter_t( const filter_t<T,U>& rhs ) : root(rhs.root) {
         if( root ) root->add_ref();

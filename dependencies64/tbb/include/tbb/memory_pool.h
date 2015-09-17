@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2015 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks. Threading Building Blocks is free software;
     you can redistribute it and/or modify it under the terms of the GNU General Public License
@@ -28,6 +28,9 @@
 
 #include "scalable_allocator.h"
 #include <new> // std::bad_alloc
+#include <stdexcept> // std::runtime_error, std::invalid_argument
+// required in C++03 to construct std::runtime_error and std::invalid_argument
+#include <string>
 #if __TBB_ALLOCATOR_CONSTRUCT_VARIADIC
 #include <utility> // std::forward
 #endif
@@ -114,7 +117,10 @@ public:
     
     //! Allocate space for n objects.
     pointer allocate( size_type n, const void* /*hint*/ = 0) {
-        return static_cast<pointer>( my_pool->malloc( n*sizeof(value_type) ) );
+        pointer p = static_cast<pointer>( my_pool->malloc( n*sizeof(value_type) ) );
+        if (!p)
+            tbb::internal::throw_exception(std::bad_alloc());
+        return p;
     }
     //! Free previously allocated block of memory.
     void deallocate( pointer p, size_type ) {
@@ -216,7 +222,8 @@ memory_pool<Alloc>::memory_pool(const Alloc &src) : my_alloc(src) {
     rml::MemPoolPolicy args(allocate_request, deallocate_request,
                             sizeof(typename Alloc::value_type));
     rml::MemPoolError res = rml::pool_create_v1(intptr_t(this), &args, &my_pool);
-    if( res!=rml::POOL_OK ) __TBB_THROW(std::bad_alloc());
+    if (res!=rml::POOL_OK)
+        tbb::internal::throw_exception(std::runtime_error("Can't create pool"));
 }
 template <typename Alloc>
 void *memory_pool<Alloc>::allocate_request(intptr_t pool_id, size_t & bytes) {
@@ -246,10 +253,13 @@ int memory_pool<Alloc>::deallocate_request(intptr_t pool_id, void* raw_ptr, size
     #pragma warning (pop)
 #endif
 inline fixed_pool::fixed_pool(void *buf, size_t size) : my_buffer(buf), my_size(size) {
-    if( !buf || !size ) __TBB_THROW(std::bad_alloc());
+    if (!buf || !size)
+        // TODO: improve support for mode with exceptions disabled
+        tbb::internal::throw_exception(std::invalid_argument("Zero in parameter is invalid"));
     rml::MemPoolPolicy args(allocate_request, 0, size, /*fixedPool=*/true);
     rml::MemPoolError res = rml::pool_create_v1(intptr_t(this), &args, &my_pool);
-    if( res!=rml::POOL_OK ) __TBB_THROW(std::bad_alloc());
+    if (res!=rml::POOL_OK)
+        tbb::internal::throw_exception(std::runtime_error("Can't create pool"));
 }
 inline void *fixed_pool::allocate_request(intptr_t pool_id, size_t & bytes) {
     fixed_pool &self = *reinterpret_cast<fixed_pool*>(pool_id);

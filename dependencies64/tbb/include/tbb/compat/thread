@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2015 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks. Threading Building Blocks is free software;
     you can redistribute it and/or modify it under the terms of the GNU General Public License
@@ -21,9 +21,11 @@
 #ifndef __TBB_thread_H
 #define __TBB_thread_H
 
-#include "../tbb_thread.h"
+#include "../tbb_config.h"
 
 #if TBB_IMPLEMENT_CPP0X
+
+#include "../tbb_thread.h"
 
 namespace std {
 
@@ -36,11 +38,23 @@ namespace this_thread {
     inline void sleep_for(const tbb::tick_count::interval_t& rel_time) {
         tbb::internal::thread_sleep_v3( rel_time );
     }
-
 }
 
-}
+} // namespace std
+
+#else /* TBB_IMPLEMENT_CPP0X */
+
+#define __TBB_COMPAT_THREAD_RECURSION_PROTECTOR 1
+#include <thread>
+#undef __TBB_COMPAT_THREAD_RECURSION_PROTECTOR
 
 #endif /* TBB_IMPLEMENT_CPP0X */
+
+#else /* __TBB_thread_H */
+
+#if __TBB_COMPAT_THREAD_RECURSION_PROTECTOR
+#error The tbb/compat/thread header attempts to include itself. \
+       Please make sure that {TBBROOT}/include/tbb/compat is NOT in include paths.
+#endif
 
 #endif /* __TBB_thread_H */
