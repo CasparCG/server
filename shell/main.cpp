@@ -33,7 +33,8 @@
 	#include <stdlib.h>
 	#include <crtdbg.h>
 #else
-	#include <tbb/tbbmalloc_proxy.h>
+	// Reenable when tbb gets official support for vc14
+	//#include <tbb/tbbmalloc_proxy.h>
 #endif
 
 #include "server.h"

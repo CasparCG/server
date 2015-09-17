@@ -81,9 +81,9 @@ void descriptor::populate(bigendian_file_input_stream& stream)
 
 void descriptor::read_value(const std::wstring& key, bigendian_file_input_stream& stream)
 {
-	auto type = stream.read_long();
+	auto value_type = stream.read_long();
 
-	switch(type)
+	switch(value_type)
 	{
 	case 'Objc': 
 		{
