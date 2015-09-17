@@ -49,7 +49,10 @@ namespace detail
 			catch(...)
 			{
 				if(!std::uncaught_exception()) 
+#pragma warning(push)
+#pragma warning(disable: 4297)
 					throw;
+#pragma warning(pop)
 				else
 					CASPAR_LOG_CURRENT_EXCEPTION();
 			}

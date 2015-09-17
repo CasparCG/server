@@ -3,6 +3,7 @@
 #include "win32_exception.h"
 
 #include <boost/thread.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include "../../thread_info.h"
 #include "windows.h"
@@ -73,43 +74,34 @@ void ensure_gpf_handler_installed_for_thread(
 	}
 }
 
+msg_info_t generate_message(const EXCEPTION_RECORD& info)
+{
+	switch (info.ExceptionCode)
+	{
+	case EXCEPTION_ACCESS_VIOLATION:
+		{
+			bool is_write = info.ExceptionInformation[0] == 1;
+			auto bad_address = reinterpret_cast<const void*>(info.ExceptionInformation[1]);
+			auto location = info.ExceptionAddress;
+
+			return "Access violation at " + boost::lexical_cast<std::string>(location) + " trying to " + (is_write ? "write " : "read ") + boost::lexical_cast<std::string>(bad_address);
+		}
+	case EXCEPTION_FLT_DIVIDE_BY_ZERO:
+	case EXCEPTION_INT_DIVIDE_BY_ZERO:
+		return "Divide by zero";
+	default:
+		return "Win32 exception";
+	}
+}
+
 void win32_exception::Handler(unsigned int errorCode, EXCEPTION_POINTERS* pInfo) {
 	switch(errorCode)
 	{
 	case EXCEPTION_ACCESS_VIOLATION:
-		throw win32_access_violation(*(pInfo->ExceptionRecord));
-		break;
-
+		CASPAR_THROW_EXCEPTION(win32_access_violation() << generate_message(*(pInfo->ExceptionRecord)));
 	default:
-		throw win32_exception(*(pInfo->ExceptionRecord));
+		CASPAR_THROW_EXCEPTION(win32_exception() << generate_message(*(pInfo->ExceptionRecord)));
 	}
-}
-
-win32_exception::win32_exception(const EXCEPTION_RECORD& info) : message_("Win32 exception"), location_(info.ExceptionAddress), errorCode_(info.ExceptionCode)
-{
-	switch(info.ExceptionCode)
-	{
-	case EXCEPTION_ACCESS_VIOLATION:
-		message_ = "Access violation";
-		break;
-	case EXCEPTION_FLT_DIVIDE_BY_ZERO:
-	case EXCEPTION_INT_DIVIDE_BY_ZERO:
-		message_ = "Divide by zero";
-		break;
-	}
-}
-
-win32_access_violation::win32_access_violation(const EXCEPTION_RECORD& info) : win32_exception(info), isWrite_(false), badAddress_(0) 
-{
-	isWrite_ = info.ExceptionInformation[0] == 1;
-	badAddress_ = reinterpret_cast<win32_exception::address>(info.ExceptionInformation[1]);
-}
-
-const char* win32_access_violation::what() const
-{
-	sprintf_s<>(messageBuffer_, "Access violation at %p, trying to %s %p", location(), isWrite_?"write":"read", badAddress_);
-
-	return messageBuffer_;
 }
 
 }

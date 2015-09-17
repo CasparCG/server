@@ -419,8 +419,8 @@ private:
 		c->codec_type		= AVMEDIA_TYPE_VIDEO;
 		c->width			= output_format_.width;
 		c->height			= output_format_.height - output_format_.croptop - output_format_.cropbot;
-		c->time_base.den	= format_desc_.time_scale;
-		c->time_base.num	= format_desc_.duration;
+		st->time_base.den	= format_desc_.time_scale;
+		st->time_base.num	= format_desc_.duration;
 		c->gop_size			= 25;
 		c->flags		   |= format_desc_.field_mode == core::field_mode::progressive ? 0 : (CODEC_FLAG_INTERLACED_ME | CODEC_FLAG_INTERLACED_DCT);
 		c->pix_fmt			= c->pix_fmt != PIX_FMT_NONE ? c->pix_fmt : PIX_FMT_YUV420P;
@@ -509,8 +509,8 @@ private:
 		c->sample_rate		= 48000;
 		c->channels			= 2;
 		c->sample_fmt		= AV_SAMPLE_FMT_S16;
-		c->time_base.num	= 1;
-		c->time_base.den	= c->sample_rate;
+		st->time_base.num	= 1;
+		st->time_base.den	= c->sample_rate;
 
 		if(output_format_.vcodec == CODEC_ID_FLV1)		
 			c->sample_rate	= 44100;		
@@ -541,7 +541,7 @@ private:
 		auto av_frame				= convert_video(frame, enc);
 		av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
 		av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper;
-		av_frame->pts				= frame_number_++;
+		av_frame->pts = frame_number_++;
 
 		monitor_subject_ << core::monitor::message("/frame")
 				% static_cast<int64_t>(frame_number_)
@@ -687,6 +687,10 @@ private:
 				  out_frame->data, 
 				  out_frame->linesize);
 
+		out_frame->format	= c->pix_fmt;
+		out_frame->width	= c->width;
+		out_frame->height	= c->height;
+
 		return out_frame;
 	}
 	
@@ -764,7 +768,7 @@ public:
 	ffmpeg_consumer_proxy(const std::wstring& filename, const std::vector<option>& options, bool separate_key)
 		: filename_(filename)
 		, options_(options)
-		, separate_key_(separate_key_)
+		, separate_key_(separate_key)
 	{
 	}
 	

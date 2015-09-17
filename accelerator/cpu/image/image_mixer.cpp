@@ -141,7 +141,7 @@ static void kernel(uint8_t* dest, const uint8_t* source, size_t count)
 {			
 	using namespace xmm;
 
-	if(reinterpret_cast<long>(dest) % 16 != 0 || reinterpret_cast<long>(source) % 16 != 0)
+	if(reinterpret_cast<std::uint64_t>(dest) % 16 != 0 || reinterpret_cast<std::uint64_t>(source) % 16 != 0)
 		kernel<temporal_tag, unaligned_tag>(dest, source, count);
 	else
 		kernel<temporal_tag, aligned_tag>(dest, source, count);

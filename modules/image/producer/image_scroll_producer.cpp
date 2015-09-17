@@ -52,6 +52,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 
 namespace caspar { namespace image {
 		
@@ -173,7 +174,7 @@ struct image_scroll_producer : public core::frame_producer_base
 			{
 				core::pixel_format_desc desc = core::pixel_format::bgra;
 				desc.planes.push_back(core::pixel_format_desc::plane(width_, format_desc_.height, 4));
-				auto frame = frame_factory->create_frame(reinterpret_cast<void*>(rand()), desc);
+				auto frame = frame_factory->create_frame(this, desc);
 
 				if(count >= frame.image_data(0).size())
 				{	
@@ -202,7 +203,7 @@ struct image_scroll_producer : public core::frame_producer_base
 			{
 				core::pixel_format_desc desc = core::pixel_format::bgra;
 				desc.planes.push_back(core::pixel_format_desc::plane(format_desc_.width, height_, 4));
-				auto frame = frame_factory->create_frame(reinterpret_cast<void*>(rand()), desc);
+				auto frame = frame_factory->create_frame(this, desc);
 				if(count >= frame.image_data(0).size())
 				{	
 					for(int y = 0; y < height_; ++y)
