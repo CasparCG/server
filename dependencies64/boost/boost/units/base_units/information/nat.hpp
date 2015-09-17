@@ -7,8 +7,8 @@
 // accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef BOOST_UNIT_SYSTEMS_INFORMATION_NAT_HPP
-#define BOOST_UNIT_SYSTEMS_INFORMATION_NAT_HPP
+#ifndef BOOST_UNITS_BASE_UNITS_INFORMATION_NAT_HPP_INCLUDED
+#define BOOST_UNITS_BASE_UNITS_INFORMATION_NAT_HPP_INCLUDED
 
 #include <boost/units/conversion.hpp>
 #include <boost/units/base_units/information/bit.hpp>
@@ -27,4 +27,4 @@ BOOST_TYPEOF_REGISTER_TYPE(boost::units::information::nat_base_unit)
 
 #endif
 
-#endif // BOOST_UNIT_SYSTEMS_INFORMATION_NAT_HPP
+#endif // BOOST_UNITS_BASE_UNITS_INFORMATION_NAT_HPP_INCLUDED

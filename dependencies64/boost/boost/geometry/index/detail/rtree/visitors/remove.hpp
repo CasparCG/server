@@ -2,7 +2,7 @@
 //
 // R-tree removing visitor implementation
 //
-// Copyright (c) 2011-2014 Adam Wulkiewicz, Lodz, Poland.
+// Copyright (c) 2011-2015 Adam Wulkiewicz, Lodz, Poland.
 //
 // Use, modification and distribution is subject to the Boost Software License,
 // Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
@@ -30,7 +30,7 @@ class remove
     typedef typename rtree::internal_node<Value, parameters_type, Box, Allocators, typename Options::node_tag>::type internal_node;
     typedef typename rtree::leaf<Value, parameters_type, Box, Allocators, typename Options::node_tag>::type leaf;
 
-    typedef rtree::node_auto_ptr<Value, Options, Translator, Box, Allocators> node_auto_ptr;
+    typedef rtree::subtree_destroyer<Value, Options, Translator, Box, Allocators> subtree_destroyer;
     typedef typename Allocators::node_pointer node_pointer;
     typedef typename Allocators::size_type size_type;
 
@@ -152,7 +152,7 @@ public:
         // if value was removed
         if ( m_is_value_removed )
         {
-            BOOST_ASSERT_MSG(0 < m_parameters.get_min_elements(), "min number of elements is too small");
+            BOOST_GEOMETRY_INDEX_ASSERT(0 < m_parameters.get_min_elements(), "min number of elements is too small");
 
             // calc underflow
             m_is_underflow = elements.size() < m_parameters.get_min_elements();
@@ -222,6 +222,13 @@ private:
         return elements.size() < m_parameters.get_min_elements();
     }
 
+    static inline bool is_leaf(node const& n)
+    {
+        visitors::is_leaf<Value, Options, Box, Allocators> ilv;
+        rtree::apply_visitor(ilv, n);
+        return ilv.result;
+    }
+
     void reinsert_removed_nodes_elements()
     {
         typename UnderflowNodes::reverse_iterator it = m_underflowed_nodes.rbegin();
@@ -232,9 +239,11 @@ private:
             // begin with levels closer to the root
             for ( ; it != m_underflowed_nodes.rend() ; ++it )
             {
-                is_leaf<Value, Options, Box, Allocators> ilv;
-                rtree::apply_visitor(ilv, *it->second);
-                if ( ilv.result )
+                // it->first is an index of a level of a node, not children
+                // counted from the leafs level
+                bool const node_is_leaf = it->first == 1;
+                BOOST_GEOMETRY_INDEX_ASSERT(node_is_leaf == is_leaf(*it->second), "unexpected condition");
+                if ( node_is_leaf )
                 {
                     reinsert_node_elements(rtree::get<leaf>(*it->second), it->first);                        // MAY THROW (V, E: alloc, copy, N: alloc)
 
@@ -255,7 +264,7 @@ private:
             // destroy current and remaining nodes
             for ( ; it != m_underflowed_nodes.rend() ; ++it )
             {
-                node_auto_ptr dummy(it->second, m_allocators);
+                subtree_destroyer dummy(it->second, m_allocators);
             }
 
             //m_underflowed_nodes.clear();

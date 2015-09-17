@@ -337,6 +337,13 @@ public:
     };
     typedef std::vector<internal_stack_element> internal_stack_type;
 
+    inline distance_query_incremental()
+        : m_translator(NULL)
+//        , m_pred()
+        , current_neighbor((std::numeric_limits<size_type>::max)())
+//        , next_closest_node_distance((std::numeric_limits<node_distance_type>::max)())
+    {}
+
     inline distance_query_incremental(Translator const& translator, Predicates const& pred)
         : m_translator(::boost::addressof(translator))
         , m_pred(pred)
@@ -344,7 +351,7 @@ public:
 
         , next_closest_node_distance((std::numeric_limits<node_distance_type>::max)())
     {
-        BOOST_ASSERT_MSG(0 < max_count(), "k must be greather than 0");
+        BOOST_GEOMETRY_INDEX_ASSERT(0 < max_count(), "k must be greather than 0");
     }
 
     const_reference dereference() const
@@ -399,7 +406,7 @@ public:
                 }
 
                 // if node is further than the furthest neighbour, following nodes also will be further
-                BOOST_ASSERT_MSG(neighbors.size() <= max_count(), "unexpected neighbours count");
+                BOOST_GEOMETRY_INDEX_ASSERT(neighbors.size() <= max_count(), "unexpected neighbours count");
                 if ( max_count() <= neighbors.size() &&
                      is_node_prunable(neighbors.back().first, branches[current_branch].first) )
                 {
@@ -426,10 +433,11 @@ public:
 
     friend bool operator==(distance_query_incremental const& l, distance_query_incremental const& r)
     {
-        BOOST_ASSERT_MSG(l.current_neighbor != r.current_neighbor ||
-                         (std::numeric_limits<size_type>::max)() == l.current_neighbor ||
-                         l.neighbors[l.current_neighbor].second == r.neighbors[r.current_neighbor].second,
-                         "not corresponding iterators");
+        BOOST_GEOMETRY_INDEX_ASSERT(l.current_neighbor != r.current_neighbor ||
+                                    (std::numeric_limits<size_type>::max)() == l.current_neighbor ||
+                                    (std::numeric_limits<size_type>::max)() == r.current_neighbor ||
+                                    l.neighbors[l.current_neighbor].second == r.neighbors[r.current_neighbor].second,
+                                    "not corresponding iterators");
         return l.current_neighbor == r.current_neighbor;
     }
 

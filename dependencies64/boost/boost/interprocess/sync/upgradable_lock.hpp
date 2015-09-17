@@ -16,7 +16,11 @@
 #ifndef BOOST_INTERPROCESS_UPGRADABLE_LOCK_HPP
 #define BOOST_INTERPROCESS_UPGRADABLE_LOCK_HPP
 
-#if defined(_MSC_VER)
+#ifndef BOOST_CONFIG_HPP
+#  include <boost/config.hpp>
+#endif
+#
+#if defined(BOOST_HAS_PRAGMA_ONCE)
 #  pragma once
 #endif
 
@@ -290,8 +294,8 @@ class upgradable_lock
    //!Throws: Nothing.
    void swap(upgradable_lock<mutex_type> &other)
    {
-      std::swap(mp_mutex, other.mp_mutex);
-      std::swap(m_locked, other.m_locked);
+      (simple_swap)(mp_mutex, other.mp_mutex);
+      (simple_swap)(m_locked, other.m_locked);
    }
 
    #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)

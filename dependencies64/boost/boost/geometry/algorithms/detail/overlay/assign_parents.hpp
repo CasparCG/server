@@ -9,6 +9,8 @@
 #ifndef BOOST_GEOMETRY_ALGORITHMS_DETAIL_OVERLAY_ASSIGN_PARENTS_HPP
 #define BOOST_GEOMETRY_ALGORITHMS_DETAIL_OVERLAY_ASSIGN_PARENTS_HPP
 
+#include <boost/range.hpp>
+
 #include <boost/geometry/algorithms/area.hpp>
 #include <boost/geometry/algorithms/envelope.hpp>
 #include <boost/geometry/algorithms/expand.hpp>
@@ -17,11 +19,6 @@
 #include <boost/geometry/algorithms/within.hpp>
 
 #include <boost/geometry/geometries/box.hpp>
-
-#ifdef BOOST_GEOMETRY_TIME_OVERLAY
-#  include <boost/timer.hpp>
-#endif
-
 
 namespace boost { namespace geometry
 {
@@ -186,11 +183,6 @@ inline void assign_parents(Geometry1 const& geometry1,
         typedef std::vector<helper> vector_type;
         typedef typename boost::range_iterator<vector_type const>::type vector_iterator_type;
 
-#ifdef BOOST_GEOMETRY_TIME_OVERLAY
-        boost::timer timer;
-#endif
-
-
         std::size_t count_total = ring_map.size();
         std::size_t count_positive = 0;
         std::size_t index_positive = 0; // only used if count_positive>0
@@ -225,10 +217,6 @@ inline void assign_parents(Geometry1 const& geometry1,
                 index_positive = index;
             }
         }
-
-#ifdef BOOST_GEOMETRY_TIME_OVERLAY
-        std::cout << " ap: created helper vector: " << timer.elapsed() << std::endl;
-#endif
 
         if (! check_for_orientation)
         {
@@ -272,11 +260,6 @@ inline void assign_parents(Geometry1 const& geometry1,
             <
                 box_type, ring_info_helper_get_box, ring_info_helper_ovelaps_box
             >::apply(vector, visitor);
-
-#ifdef BOOST_GEOMETRY_TIME_OVERLAY
-        std::cout << " ap: quadradic loop: " << timer.elapsed() << std::endl;
-        std::cout << " ap: check_for_orientation " << check_for_orientation << std::endl;
-#endif
     }
 
     if (check_for_orientation)
