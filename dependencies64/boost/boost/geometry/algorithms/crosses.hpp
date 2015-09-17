@@ -21,13 +21,17 @@
 #define BOOST_GEOMETRY_ALGORITHMS_CROSSES_HPP
 
 #include <cstddef>
+
+#include <boost/variant/apply_visitor.hpp>
+#include <boost/variant/static_visitor.hpp>
 #include <boost/variant/variant_fwd.hpp>
 
 #include <boost/geometry/core/access.hpp>
 
 #include <boost/geometry/geometries/concepts/check.hpp>
 
-#include <boost/geometry/algorithms/detail/relate/relate.hpp>
+#include <boost/geometry/algorithms/relate.hpp>
+#include <boost/geometry/algorithms/detail/relate/relate_impl.hpp>
 
 namespace boost { namespace geometry
 {
@@ -45,9 +49,9 @@ template
     typename Tag2 = typename tag<Geometry2>::type
 >
 struct crosses
-    : detail::relate::relate_base
+    : detail::relate::relate_impl
         <
-            detail::relate::static_mask_crosses_type,
+            detail::de9im::static_mask_crosses_type,
             Geometry1,
             Geometry2
         >
@@ -84,18 +88,17 @@ namespace resolve_variant
             Geometry2 const& m_geometry2;
             
             visitor(Geometry2 const& geometry2)
-            : m_geometry2(geometry2)
+                : m_geometry2(geometry2)
             {}
             
             template <typename Geometry1>
             result_type operator()(Geometry1 const& geometry1) const
             {
                 return crosses
-                <
-                    Geometry1,
-                    Geometry2
-                >::apply
-                (geometry1, m_geometry2);
+                    <
+                        Geometry1,
+                        Geometry2
+                    >::apply(geometry1, m_geometry2);
             }
         };
         
@@ -103,7 +106,7 @@ namespace resolve_variant
         apply(variant<BOOST_VARIANT_ENUM_PARAMS(T)> const& geometry1,
               Geometry2 const& geometry2)
         {
-            return apply_visitor(visitor(geometry2), geometry1);
+            return boost::apply_visitor(visitor(geometry2), geometry1);
         }
     };
     
@@ -116,56 +119,51 @@ namespace resolve_variant
             Geometry1 const& m_geometry1;
             
             visitor(Geometry1 const& geometry1)
-            : m_geometry1(geometry1)
+                : m_geometry1(geometry1)
             {}
             
             template <typename Geometry2>
             result_type operator()(Geometry2 const& geometry2) const
             {
                 return crosses
-                <
-                    Geometry1,
-                    Geometry2
-                >::apply
-                (m_geometry1, geometry2);
+                    <
+                        Geometry1,
+                        Geometry2
+                    >::apply(m_geometry1, geometry2);
             }
         };
         
         static inline bool
-        apply(
-              Geometry1 const& geometry1,
+        apply(Geometry1 const& geometry1,
               const variant<BOOST_VARIANT_ENUM_PARAMS(T)>& geometry2)
         {
-            return apply_visitor(visitor(geometry1), geometry2);
+            return boost::apply_visitor(visitor(geometry1), geometry2);
         }
     };
     
     
-    template <BOOST_VARIANT_ENUM_PARAMS(typename A), BOOST_VARIANT_ENUM_PARAMS(typename B)>
-    struct crosses<variant<BOOST_VARIANT_ENUM_PARAMS(A)>, variant<BOOST_VARIANT_ENUM_PARAMS(B)> >
+    template <BOOST_VARIANT_ENUM_PARAMS(typename T1), BOOST_VARIANT_ENUM_PARAMS(typename T2)>
+    struct crosses<variant<BOOST_VARIANT_ENUM_PARAMS(T1)>, variant<BOOST_VARIANT_ENUM_PARAMS(T2)> >
     {
         struct visitor: static_visitor<bool>
         {
             template <typename Geometry1, typename Geometry2>
-            result_type operator()(
-                                   Geometry1 const& geometry1,
+            result_type operator()(Geometry1 const& geometry1,
                                    Geometry2 const& geometry2) const
             {
                 return crosses
-                <
-                Geometry1,
-                Geometry2
-                >::apply
-                (geometry1, geometry2);
+                    <
+                        Geometry1,
+                        Geometry2
+                    >::apply(geometry1, geometry2);
             }
         };
         
         static inline bool
-        apply(
-              const variant<BOOST_VARIANT_ENUM_PARAMS(A)>& geometry1,
-              const variant<BOOST_VARIANT_ENUM_PARAMS(B)>& geometry2)
+        apply(const variant<BOOST_VARIANT_ENUM_PARAMS(T1)>& geometry1,
+              const variant<BOOST_VARIANT_ENUM_PARAMS(T2)>& geometry2)
         {
-            return apply_visitor(visitor(), geometry1, geometry2);
+            return boost::apply_visitor(visitor(), geometry1, geometry2);
         }
     };
     

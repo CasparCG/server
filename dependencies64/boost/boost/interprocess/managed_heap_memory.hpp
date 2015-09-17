@@ -11,7 +11,11 @@
 #ifndef BOOST_INTERPROCESS_MANAGED_HEAP_MEMORY_HPP
 #define BOOST_INTERPROCESS_MANAGED_HEAP_MEMORY_HPP
 
-#if defined(_MSC_VER)
+#ifndef BOOST_CONFIG_HPP
+#  include <boost/config.hpp>
+#endif
+#
+#if defined(BOOST_HAS_PRAGMA_ONCE)
 #  pragma once
 #endif
 
@@ -21,7 +25,7 @@
 #include <boost/move/utility_core.hpp>
 #include <vector>
 #include <boost/interprocess/detail/managed_memory_impl.hpp>
-#include <boost/detail/no_exceptions_support.hpp>
+#include <boost/core/no_exceptions_support.hpp>
 //These includes needed to fulfill default template parameters of
 //predeclarations in interprocess_fwd.hpp
 #include <boost/interprocess/mem_algo/rbtree_best_fit.hpp>

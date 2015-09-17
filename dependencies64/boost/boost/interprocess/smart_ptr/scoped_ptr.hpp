@@ -15,7 +15,11 @@
 #ifndef BOOST_INTERPROCESS_SCOPED_PTR_HPP_INCLUDED
 #define BOOST_INTERPROCESS_SCOPED_PTR_HPP_INCLUDED
 
-#if defined(_MSC_VER)
+#ifndef BOOST_CONFIG_HPP
+#  include <boost/config.hpp>
+#endif
+#
+#if defined(BOOST_HAS_PRAGMA_ONCE)
 #  pragma once
 #endif
 
@@ -24,6 +28,7 @@
 #include <boost/interprocess/detail/pointer_type.hpp>
 #include <boost/interprocess/detail/utilities.hpp>
 #include <boost/assert.hpp>
+#include <boost/move/adl_move_swap.hpp>
 
 //!\file
 //!Describes the smart pointer scoped_ptr
@@ -129,7 +134,10 @@ class scoped_ptr
    //!Exchanges the internal pointer and deleter with other scoped_ptr
    //!Never throws.
    void swap(scoped_ptr & b) // never throws
-   {  ipcdetail::do_swap<Deleter>(*this, b); ipcdetail::do_swap(m_ptr, b.m_ptr); }
+   {
+      ::boost::adl_move_swap(static_cast<Deleter&>(*this), static_cast<Deleter&>(b));
+      ::boost::adl_move_swap(m_ptr, b.m_ptr);
+   }
 
    #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
    private:

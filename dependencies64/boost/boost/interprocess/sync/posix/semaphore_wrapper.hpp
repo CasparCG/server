@@ -11,7 +11,11 @@
 #ifndef BOOST_INTERPROCESS_POSIX_SEMAPHORE_WRAPPER_HPP
 #define BOOST_INTERPROCESS_POSIX_SEMAPHORE_WRAPPER_HPP
 
-#if defined(_MSC_VER)
+#ifndef BOOST_CONFIG_HPP
+#  include <boost/config.hpp>
+#endif
+#
+#if defined(BOOST_HAS_PRAGMA_ONCE)
 #  pragma once
 #endif
 
@@ -46,6 +50,8 @@
 namespace boost {
 namespace interprocess {
 namespace ipcdetail {
+
+#ifdef BOOST_INTERPROCESS_POSIX_NAMED_SEMAPHORES
 
 inline bool semaphore_open
    (sem_t *&handle, create_enum_t type, const char *origname,
@@ -130,6 +136,10 @@ inline bool semaphore_unlink(const char *semname)
    }
 }
 
+#endif   //BOOST_INTERPROCESS_POSIX_NAMED_SEMAPHORES
+
+#ifdef BOOST_INTERPROCESS_POSIX_UNNAMED_SEMAPHORES
+
 inline void semaphore_init(sem_t *handle, unsigned int initialCount)
 {
    int ret = sem_init(handle, 1, initialCount);
@@ -149,6 +159,8 @@ inline void semaphore_destroy(sem_t *handle)
       BOOST_ASSERT(0);
    }
 }
+
+#endif   //BOOST_INTERPROCESS_POSIX_UNNAMED_SEMAPHORES
 
 inline void semaphore_post(sem_t *handle)
 {

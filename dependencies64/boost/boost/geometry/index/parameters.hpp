@@ -70,8 +70,7 @@ inline size_t default_rstar_reinserted_elements_d_calc(size_t max_elements, size
 \tparam MinElements     Minimum number of elements in nodes. Default: 0.3*Max.
 */
 template <size_t MaxElements,
-          size_t MinElements = detail::default_min_elements_s<MaxElements>::value
->
+          size_t MinElements = detail::default_min_elements_s<MaxElements>::value>
 struct linear
 {
     BOOST_MPL_ASSERT_MSG((0 < MinElements && 2*MinElements <= MaxElements+1),

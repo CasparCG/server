@@ -13,10 +13,6 @@
 #ifndef BOOST_INTRUSIVE_ANY_HOOK_HPP
 #define BOOST_INTRUSIVE_ANY_HOOK_HPP
 
-#if defined(_MSC_VER)
-#  pragma once
-#endif
-
 #include <boost/intrusive/detail/config_begin.hpp>
 #include <boost/intrusive/intrusive_fwd.hpp>
 #include <boost/intrusive/detail/any_node_and_algorithms.hpp>
@@ -24,6 +20,10 @@
 #include <boost/intrusive/detail/generic_hook.hpp>
 #include <boost/intrusive/detail/mpl.hpp>
 #include <boost/intrusive/pointer_rebind.hpp>
+
+#if defined(BOOST_HAS_PRAGMA_ONCE)
+#  pragma once
+#endif
 
 namespace boost {
 namespace intrusive {

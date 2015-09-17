@@ -13,14 +13,14 @@
 #ifndef BOOST_INTRUSIVE_DERIVATION_VALUE_TRAITS_HPP
 #define BOOST_INTRUSIVE_DERIVATION_VALUE_TRAITS_HPP
 
-#if defined(_MSC_VER)
-#  pragma once
-#endif
-
 #include <boost/intrusive/detail/config_begin.hpp>
 #include <boost/intrusive/intrusive_fwd.hpp>
 #include <boost/intrusive/link_mode.hpp>
 #include <boost/intrusive/pointer_traits.hpp>
+
+#if defined(BOOST_HAS_PRAGMA_ONCE)
+#  pragma once
+#endif
 
 namespace boost {
 namespace intrusive {
@@ -29,7 +29,7 @@ namespace intrusive {
 //!from user defined node traits where value_traits::value_type will
 //!derive from node_traits::node
 
-template<class T, class NodeTraits, link_mode_type LinkMode 
+template<class T, class NodeTraits, link_mode_type LinkMode
    #ifdef BOOST_INTRUSIVE_DOXYGEN_INVOKED
    = safe_link
    #endif
