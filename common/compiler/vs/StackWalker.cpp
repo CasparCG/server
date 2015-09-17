@@ -92,6 +92,7 @@
 // If VC7 and later, then use the shipped 'dbghelp.h'-file
 #pragma pack(push,8)
 #if _MSC_VER >= 1300
+#pragma warning(disable:4091)
 #include <dbghelp.h>
 #else
 // inline the important dbghelp.h-declarations...

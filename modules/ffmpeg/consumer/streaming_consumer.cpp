@@ -81,6 +81,7 @@ private:
 	int											consumer_index_offset_;
 
 	std::map<std::string, std::string>			options_;
+	bool										compatibility_mode_;
 												
 	core::video_format_desc						in_video_format_;
 
@@ -119,9 +120,11 @@ public:
 
 	streaming_consumer(
 			std::string path, 
-			std::string options)
+			std::string options,
+			bool compatibility_mode)
 		: path_(path)
 		, consumer_index_offset_(crc16(path))
+		, compatibility_mode_(compatibility_mode)
 		, video_pts_(0)
 		, audio_pts_(0)
 		, executor_(print())
@@ -196,7 +199,7 @@ public:
 			const auto overwrite = 
 				try_remove_arg<std::string>(
 					options_,
-					boost::regex("y")) != nullptr;
+					boost::regex("y")) != boost::none;
 
 			if(!boost::regex_match(
 					path_.string(), 
@@ -212,7 +215,7 @@ public:
 			
 				if(boost::filesystem::exists(path_))
 				{
-					if(!overwrite)
+					if(!overwrite && !compatibility_mode_)
 						BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("File exists"));
 						
 					boost::filesystem::remove(path_);
@@ -454,7 +457,7 @@ public:
 
 	int index() const override
 	{
-		return 100000 + consumer_index_offset_;
+		return compatibility_mode_ ? 200 : 100000 + consumer_index_offset_;
 	}
 
 	int64_t presentation_frame_age_millis() const override
@@ -490,22 +493,23 @@ private:
 		switch(enc->codec_type)
 		{
 			case AVMEDIA_TYPE_VIDEO:
-			{				
-				enc->time_base			  = video_graph_out_->inputs[0]->time_base;
-				enc->pix_fmt			  = static_cast<AVPixelFormat>(video_graph_out_->inputs[0]->format);
-				enc->sample_aspect_ratio  = st->sample_aspect_ratio = video_graph_out_->inputs[0]->sample_aspect_ratio;
-				enc->width				  = video_graph_out_->inputs[0]->w;
-				enc->height				  = video_graph_out_->inputs[0]->h;
+			{
+				st->time_base				= video_graph_out_->inputs[0]->time_base;
+				enc->pix_fmt				= static_cast<AVPixelFormat>(video_graph_out_->inputs[0]->format);
+				enc->sample_aspect_ratio	= st->sample_aspect_ratio = video_graph_out_->inputs[0]->sample_aspect_ratio;
+				enc->width					= video_graph_out_->inputs[0]->w;
+				enc->height					= video_graph_out_->inputs[0]->h;
+				enc->bit_rate_tolerance		= 400 * 1000000;
 			
 				break;
 			}
 			case AVMEDIA_TYPE_AUDIO:
 			{
-				enc->time_base			  = audio_graph_out_->inputs[0]->time_base;
-				enc->sample_fmt			  = static_cast<AVSampleFormat>(audio_graph_out_->inputs[0]->format);
-				enc->sample_rate		  = audio_graph_out_->inputs[0]->sample_rate;
-				enc->channel_layout		  = audio_graph_out_->inputs[0]->channel_layout;
-				enc->channels			  = audio_graph_out_->inputs[0]->channels;
+				st->time_base				= audio_graph_out_->inputs[0]->time_base;
+				enc->sample_fmt				= static_cast<AVSampleFormat>(audio_graph_out_->inputs[0]->format);
+				enc->sample_rate			= audio_graph_out_->inputs[0]->sample_rate;
+				enc->channel_layout			= audio_graph_out_->inputs[0]->channel_layout;
+				enc->channels				= audio_graph_out_->inputs[0]->channels;
 			
 				break;
 			}
@@ -1277,13 +1281,14 @@ void describe_streaming_consumer(core::help_sink& sink, const core::help_reposit
 spl::shared_ptr<core::frame_consumer> create_streaming_consumer(
 		const std::vector<std::wstring>& params, core::interaction_sink*)
 {       
-	if (params.size() < 1 || params.at(0) != L"STREAM")
+	if (params.size() < 1 || (!boost::iequals(params.at(0), L"STREAM") && !boost::iequals(params.at(0), L"FILE")))
 		return core::frame_consumer::empty();
 
-	auto path = u8(params.at(1));
+	auto compatibility_mode = boost::iequals(params.at(0), L"FILE");
+	auto path = u8(params.size() > 1 ? params.at(1) : L"");
 	auto args = u8(boost::join(params, L" "));
 
-	return spl::make_shared<streaming_consumer>(path, args);
+	return spl::make_shared<streaming_consumer>(path, args, compatibility_mode);
 }
 
 spl::shared_ptr<core::frame_consumer> create_preconfigured_streaming_consumer(
@@ -1291,7 +1296,8 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_streaming_consumer(
 {              	
 	return spl::make_shared<streaming_consumer>(
 			u8(ptree.get<std::wstring>(L"path")), 
-			u8(ptree.get<std::wstring>(L"args", L"")));
+			u8(ptree.get<std::wstring>(L"args", L"")),
+			false);
 }
 
 }}

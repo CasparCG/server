@@ -77,8 +77,7 @@ public:
 		int best_width = INT_MAX;
 		node_iterator best_it = nodes_.end();
 
-		auto it = nodes_.begin();
-		for(; it != nodes_.end(); ++it)
+		for(auto it = nodes_.begin(); it != nodes_.end(); ++it)
 		{
 			int y = fit(it, width, height);
 			if( y >= 0 )

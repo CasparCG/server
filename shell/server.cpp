@@ -89,7 +89,7 @@ std::shared_ptr<boost::asio::io_service> create_running_io_service()
 	{
 		ensure_gpf_handler_installed_for_thread("asio-thread");
 
-		while (weak_work.lock())
+		while (auto strong = weak_work.lock())
 		{
 			try
 			{

@@ -61,10 +61,10 @@ sf::Color get_sfml_color(int color)
 	auto c = caspar::diagnostics::color(color);
 
 	return {
-		(color >> 24) & 255,
-		(color >> 16) & 255,
-		(color >> 8) & 255,
-		(color >> 0) & 255
+		static_cast<sf::Uint8>((color >> 24) & 255),
+		static_cast<sf::Uint8>((color >> 16) & 255),
+		static_cast<sf::Uint8>((color >> 8) & 255),
+		static_cast<sf::Uint8>((color >> 0) & 255)
 	};
 }
 
