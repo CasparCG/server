@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2015 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks. Threading Building Blocks is free software;
     you can redistribute it and/or modify it under the terms of the GNU General Public License
@@ -139,6 +139,25 @@ public:
     /** To avoid requiring support for namespace chrono, this method deviates from the working draft in that 
         it uses tbb::tick_count::interval_t to specify the time duration. */
     unique_lock(mutex_type& m, const tick_count::interval_t &i) : pm(&m) {owns = try_lock_for( i );}
+
+#if __TBB_CPP11_RVALUE_REF_PRESENT
+    //! Move constructor
+    /** postconditions: pm == src_p.pm and owns == src_p.owns (where src_p is the state of src just prior to this
+        construction), src.pm == 0 and src.owns == false. */
+    unique_lock(unique_lock && src): pm(NULL), owns(false) {this->swap(src);}
+
+    //! Move assignment
+    /** effects: If owns calls pm->unlock().
+        Postconditions: pm == src_p.pm and owns == src_p.owns (where src_p is the state of src just prior to this
+        assignment), src.pm == 0 and src.owns == false. */
+    unique_lock& operator=(unique_lock && src) {
+        if (owns)
+            this->unlock();
+        pm = NULL;
+        this->swap(src);
+        return *this;
+    }
+#endif // __TBB_CPP11_RVALUE_REF_PRESENT
 
     //! Destructor
     ~unique_lock() { if( owns ) pm->unlock(); }

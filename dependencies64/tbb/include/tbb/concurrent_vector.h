@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2015 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks. Threading Building Blocks is free software;
     you can redistribute it and/or modify it under the terms of the GNU General Public License
@@ -239,7 +239,7 @@ namespace internal {
             //and 2 is the minimal index for which it's true
             __TBB_ASSERT(element_index, "there should be no need to call "
                                         "is_first_element_in_segment for 0th element" );
-            return is_power_of_two_factor( element_index, 2 );
+            return is_power_of_two_at_least( element_index, 2 );
         }
 
         //! An operation on an n-element array starting at begin.
@@ -963,12 +963,14 @@ public:
     //! the first item
     reference front() {
         __TBB_ASSERT( size()>0, NULL);
-        return (my_segment[0].template load<relaxed>().template pointer<T>())[0];
+        const segment_value_t& segment_value = my_segment[0].template load<relaxed>();
+        return (segment_value.template pointer<T>())[0];
     }
     //! the first item const
     const_reference front() const {
         __TBB_ASSERT( size()>0, NULL);
-        return static_cast<const T*>(my_segment[0].array)[0];
+        const segment_value_t& segment_value = my_segment[0].template load<relaxed>();
+        return (segment_value.template pointer<const T>())[0];
     }
     //! the last item
     reference back() {

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2015 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks. Threading Building Blocks is free software;
     you can redistribute it and/or modify it under the terms of the GNU General Public License
@@ -43,7 +43,7 @@
 #endif
 #if __TBB_DEFINE_MIC
 #define __TBB_NONUNIFORM_TASK_CREATION 1
-#ifdef __TBB_machine_time_stamp
+#ifdef __TBB_time_stamp
 #define __TBB_USE_MACHINE_TIME_STAMPS 1
 #define __TBB_task_duration() __TBB_STATIC_THRESHOLD
 #endif // __TBB_machine_time_stamp
@@ -52,6 +52,7 @@
 #include "task.h"
 #include "aligned_space.h"
 #include "atomic.h"
+#include "internal/_template_helpers.h"
 
 #if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
     // Workaround for overzealous compiler warnings
@@ -334,10 +335,6 @@ struct adaptive_partition_type_base : partition_type_base<Partition> {
     depth_t max_depth() { return my_max_depth; }
 };
 
-//! Helper that enables one or the other code branches (see example in is_splittable_in_proportion)
-template<bool C, typename T = void> struct enable_if { typedef T type; };
-template<typename T> struct enable_if<false, T> { };
-
 //! Class determines whether template parameter has static boolean constant
 //! 'is_splittable_in_proportion' initialized with value of 'true' or not.
 /** If template parameter has such field that has been initialized with non-zero
@@ -366,7 +363,7 @@ class affinity_partition_type : public adaptive_partition_type_base<affinity_par
         pass
     } my_delay;
 #ifdef __TBB_USE_MACHINE_TIME_STAMPS
-    machine_tsc_t my_dst_tsc;
+    tbb::internal::machine_tsc_t my_dst_tsc;
 #endif
     size_t my_begin;
     tbb::internal::affinity_id* my_array;
@@ -447,10 +444,10 @@ public:
 #ifndef __TBB_USE_MACHINE_TIME_STAMPS
             my_delay = pass;
 #else
-            my_dst_tsc = __TBB_machine_time_stamp() + __TBB_task_duration();
+            my_dst_tsc = __TBB_time_stamp() + __TBB_task_duration();
             my_delay = run;
         } else if( run == my_delay ) {
-            if( __TBB_machine_time_stamp() < my_dst_tsc ) {
+            if( __TBB_time_stamp() < my_dst_tsc ) {
                 __TBB_ASSERT(my_max_depth > 0, NULL);
                 return false;
             }
