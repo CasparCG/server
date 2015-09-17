@@ -11,13 +11,16 @@
 #ifndef BOOST_INTERPROCESS_XSI_SHARED_MEMORY_HPP
 #define BOOST_INTERPROCESS_XSI_SHARED_MEMORY_HPP
 
-#if defined(_MSC_VER)
+#ifndef BOOST_CONFIG_HPP
+#  include <boost/config.hpp>
+#endif
+#
+#if defined(BOOST_HAS_PRAGMA_ONCE)
 #  pragma once
 #endif
 
 #include <boost/interprocess/detail/config_begin.hpp>
 #include <boost/interprocess/detail/workaround.hpp>
-#include <boost/detail/workaround.hpp>
 
 #if !defined(BOOST_INTERPROCESS_XSI_SHARED_MEMORY_OBJECTS)
 #error "This header can't be used in operating systems without XSI (System V) shared memory support"
@@ -26,15 +29,22 @@
 #include <boost/interprocess/creation_tags.hpp>
 #include <boost/interprocess/exceptions.hpp>
 #include <boost/interprocess/detail/utilities.hpp>
-#include <boost/move/utility_core.hpp>
+
 #include <boost/interprocess/detail/os_file_functions.hpp>
 #include <boost/interprocess/interprocess_fwd.hpp>
 #include <boost/interprocess/exceptions.hpp>
 #include <boost/interprocess/xsi_key.hpp>
 #include <boost/interprocess/permissions.hpp>
-#include <sys/shm.h>
-#include <cstddef>
+#include <boost/interprocess/detail/simple_swap.hpp>
+// move
+#include <boost/move/utility_core.hpp>
+// other boost
 #include <boost/cstdint.hpp>
+// std
+#include <cstddef>
+// OS
+#include <sys/shm.h>
+
 
 //!\file
 //!Describes a class representing a native xsi shared memory.
@@ -145,7 +155,7 @@ inline int xsi_shared_memory::get_shmid() const
 
 inline void xsi_shared_memory::swap(xsi_shared_memory &other)
 {
-   std::swap(m_shmid, other.m_shmid);
+   (simple_swap)(m_shmid, other.m_shmid);
 }
 
 inline mapping_handle_t xsi_shared_memory::get_mapping_handle() const

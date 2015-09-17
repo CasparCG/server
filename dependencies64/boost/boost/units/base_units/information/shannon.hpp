@@ -7,8 +7,8 @@
 // accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
 
-#ifndef BOOST_UNIT_SYSTEMS_INFORMATION_SHANNON_HPP
-#define BOOST_UNIT_SYSTEMS_INFORMATION_SHANNON_HPP
+#ifndef BOOST_UNITS_BASE_UNITS_INFORMATION_SHANNON_HPP_INCLUDED
+#define BOOST_UNITS_BASE_UNITS_INFORMATION_SHANNON_HPP_INCLUDED
 
 #include <boost/units/scaled_base_unit.hpp>
 #include <boost/units/static_rational.hpp>
@@ -33,4 +33,4 @@ struct base_unit_info<information::shannon_base_unit> {
 } // namespace units
 } // namespace boost
 
-#endif // BOOST_UNIT_SYSTEMS_INFORMATION_SHANNON_HPP
+#endif // BOOST_UNITS_BASE_UNITS_INFORMATION_SHANNON_HPP_INCLUDED

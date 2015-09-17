@@ -1,5 +1,5 @@
 /*
- *          Copyright Andrey Semashev 2007 - 2014.
+ *          Copyright Andrey Semashev 2007 - 2015.
  * Distributed under the Boost Software License, Version 1.0.
  *    (See accompanying file LICENSE_1_0.txt or copy at
  *          http://www.boost.org/LICENSE_1_0.txt)
@@ -18,7 +18,11 @@
 #include <boost/ref.hpp>
 #include <boost/move/core.hpp>
 #include <boost/move/utility.hpp>
+#if defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
 #include <boost/utility/enable_if.hpp>
+#include <boost/type_traits/is_same.hpp>
+#include <boost/type_traits/remove_cv.hpp>
+#endif
 #include <boost/log/detail/config.hpp>
 #include <boost/log/detail/light_function.hpp>
 #include <boost/log/attributes/attribute_value_set.hpp>

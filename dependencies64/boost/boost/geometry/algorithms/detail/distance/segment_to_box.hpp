@@ -15,19 +15,20 @@
 #include <functional>
 #include <vector>
 
-#include <boost/assert.hpp>
 #include <boost/core/ignore_unused.hpp>
 #include <boost/mpl/if.hpp>
 #include <boost/numeric/conversion/cast.hpp>
 #include <boost/type_traits/is_same.hpp>
 
 #include <boost/geometry/core/access.hpp>
+#include <boost/geometry/core/assert.hpp>
 #include <boost/geometry/core/closure.hpp>
 #include <boost/geometry/core/coordinate_dimension.hpp>
 #include <boost/geometry/core/point_type.hpp>
 #include <boost/geometry/core/tags.hpp>
 
 #include <boost/geometry/util/calculation_type.hpp>
+#include <boost/geometry/util/condition.hpp>
 #include <boost/geometry/util/math.hpp>
 
 #include <boost/geometry/strategies/distance.hpp>
@@ -151,7 +152,7 @@ public:
             }
         }
 
-        if (is_comparable<Strategy>::value)
+        if (BOOST_GEOMETRY_CONDITION(is_comparable<Strategy>::value))
         {
             return cd[imin];
         }
@@ -560,7 +561,7 @@ private:
         typedef compare_less_equal<ReturnType, true> less_equal;
 
         // assert that the segment has non-negative slope
-        BOOST_ASSERT( ( math::equals(geometry::get<0>(p0), geometry::get<0>(p1))
+        BOOST_GEOMETRY_ASSERT( ( math::equals(geometry::get<0>(p0), geometry::get<0>(p1))
                         && geometry::get<1>(p0) < geometry::get<1>(p1))
                       ||
                       ( geometry::get<0>(p0) < geometry::get<0>(p1)
@@ -616,7 +617,7 @@ private:
         typedef compare_less_equal<ReturnType, false> greater_equal;
 
         // assert that the segment has negative slope
-        BOOST_ASSERT( geometry::get<0>(p0) < geometry::get<0>(p1)
+        BOOST_GEOMETRY_ASSERT( geometry::get<0>(p0) < geometry::get<0>(p1)
                       && geometry::get<1>(p0) > geometry::get<1>(p1) );
 
         ReturnType result(0);
@@ -664,7 +665,7 @@ public:
                                    PPStrategy const& pp_strategy,
                                    PSStrategy const& ps_strategy)
     {
-        BOOST_ASSERT( geometry::less<SegmentPoint>()(p0, p1) );
+        BOOST_GEOMETRY_ASSERT( geometry::less<SegmentPoint>()(p0, p1) );
 
         if (geometry::get<0>(p0) < geometry::get<0>(p1)
             && geometry::get<1>(p0) > geometry::get<1>(p1))

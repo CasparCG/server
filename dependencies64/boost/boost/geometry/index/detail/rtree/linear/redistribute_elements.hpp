@@ -149,7 +149,7 @@ struct find_greatest_normalized_separation
         
         // highest_low - lowest_high
         separation = difference<separation_type>(lowest_high, highest_low);
-        // BOOST_ASSERT(0 <= width);
+        // BOOST_GEOMETRY_INDEX_ASSERT(0 <= width);
         if ( std::numeric_limits<coordinate_type>::epsilon() < width )
             separation /= width;
 

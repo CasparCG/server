@@ -14,10 +14,7 @@
 #ifndef BOOST_GEOMETRY_ALGORITHMS_DETAIL_COURSE_HPP
 #define BOOST_GEOMETRY_ALGORITHMS_DETAIL_COURSE_HPP
 
-#include <boost/geometry/core/cs.hpp>
-#include <boost/geometry/core/access.hpp>
-#include <boost/geometry/core/radian_access.hpp>
-#include <boost/geometry/util/math.hpp>
+#include <boost/geometry/algorithms/detail/azimuth.hpp>
 
 namespace boost { namespace geometry
 {
@@ -27,25 +24,12 @@ namespace detail
 {
 
 /// Calculate course (bearing) between two points.
+///
+/// NOTE: left for convenience and temporary backward compatibility
 template <typename ReturnType, typename Point1, typename Point2>
 inline ReturnType course(Point1 const& p1, Point2 const& p2)
 {
-    // http://williams.best.vwh.net/avform.htm#Crs
-    ReturnType dlon = get_as_radian<0>(p2) - get_as_radian<0>(p1);
-    ReturnType cos_p2lat = cos(get_as_radian<1>(p2));
-
-    // An optimization which should kick in often for Boxes
-    //if ( math::equals(dlon, ReturnType(0)) )
-    //if ( get<0>(p1) == get<0>(p2) )
-    //{
-    //    return - sin(get_as_radian<1>(p1)) * cos_p2lat);
-    //}
-
-    // "An alternative formula, not requiring the pre-computation of d"
-    // In the formula below dlon is used as "d"
-    return atan2(sin(dlon) * cos_p2lat,
-        cos(get_as_radian<1>(p1)) * sin(get_as_radian<1>(p2))
-        - sin(get_as_radian<1>(p1)) * cos_p2lat * cos(dlon));
+    return azimuth<ReturnType>(p1, p2);
 }
 
 } // namespace detail

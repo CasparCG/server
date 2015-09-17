@@ -12,8 +12,7 @@
 
 #include <iterator>
 
-#include <boost/assert.hpp>
-
+#include <boost/geometry/core/assert.hpp>
 #include <boost/geometry/core/point_type.hpp>
 #include <boost/geometry/strategies/distance.hpp>
 #include <boost/geometry/util/math.hpp>
@@ -49,7 +48,7 @@ private:
                              RangeIterator& it_min,
                              Distance& dist_min)
     {
-        BOOST_ASSERT( first != last );
+        BOOST_GEOMETRY_ASSERT( first != last );
 
         Distance const zero = Distance(0);
 
@@ -63,8 +62,7 @@ private:
             >::apply(geometry, *it_min, strategy);
 
         // check if other elements in the range are closer
-        RangeIterator it = first;
-        for (++it; it != last; ++it)
+        for (RangeIterator it = ++first; it != last; ++it)
         {
             Distance dist = dispatch::distance
                 <
