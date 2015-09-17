@@ -1,6 +1,6 @@
 // Boost.Geometry Index
 //
-// Copyright (c) 2011-2014 Adam Wulkiewicz, Lodz, Poland.
+// Copyright (c) 2011-2015 Adam Wulkiewicz, Lodz, Poland.
 //
 // Use, modification and distribution is subject to the Boost Software License,
 // Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
@@ -353,7 +353,7 @@ class load
     typedef typename Options::parameters_type parameters_type;
 
     typedef typename Allocators::node_pointer node_pointer;
-    typedef rtree::node_auto_ptr<Value, Options, Translator, Box, Allocators> node_auto_ptr;
+    typedef rtree::subtree_destroyer<Value, Options, Translator, Box, Allocators> subtree_destroyer;
     typedef typename Allocators::size_type size_type;
 
 public:
@@ -385,7 +385,7 @@ private:
         if ( current_level < leafs_level )
         {
             node_pointer n = rtree::create_node<Allocators, internal_node>::apply(allocators);              // MAY THROW (A)
-            node_auto_ptr auto_remover(n, allocators);    
+            subtree_destroyer auto_remover(n, allocators);    
             internal_node & in = rtree::get<internal_node>(*n);
 
             elements_type & elements = rtree::elements(in);
@@ -408,7 +408,7 @@ private:
             BOOST_GEOMETRY_INDEX_ASSERT(current_level == leafs_level, "unexpected value");
 
             node_pointer n = rtree::create_node<Allocators, leaf>::apply(allocators);                       // MAY THROW (A)
-            node_auto_ptr auto_remover(n, allocators);
+            subtree_destroyer auto_remover(n, allocators);
             leaf & l = rtree::get<leaf>(*n);
 
             typedef typename rtree::elements_type<leaf>::type elements_type;
@@ -537,7 +537,7 @@ void load(Archive & ar, boost::geometry::index::rtree<V, P, I, E, A> & rt, unsig
 
     typedef typename options_type::parameters_type parameters_type;
     typedef typename allocators_type::node_pointer node_pointer;
-    typedef detail::rtree::node_auto_ptr<value_type, options_type, translator_type, box_type, allocators_type> node_auto_ptr;
+    typedef detail::rtree::subtree_destroyer<value_type, options_type, translator_type, box_type, allocators_type> subtree_destroyer;
 
     view tree(rt);
 
@@ -554,7 +554,7 @@ void load(Archive & ar, boost::geometry::index::rtree<V, P, I, E, A> & rt, unsig
         n = detail::rtree::load<value_type, options_type, translator_type, box_type, allocators_type>
             ::apply(ar, version, leafs_level, loaded_values_count, params, tree.members().translator(), tree.members().allocators());                                        // MAY THROW
 
-        node_auto_ptr remover(n, tree.members().allocators());
+        subtree_destroyer remover(n, tree.members().allocators());
         if ( loaded_values_count != values_count )
             BOOST_THROW_EXCEPTION(std::runtime_error("unexpected number of values")); // TODO change exception type
         remover.release();
@@ -564,7 +564,7 @@ void load(Archive & ar, boost::geometry::index::rtree<V, P, I, E, A> & rt, unsig
     tree.members().values_count = values_count;
     tree.members().leafs_level = leafs_level;
 
-    node_auto_ptr remover(tree.members().root, tree.members().allocators());
+    subtree_destroyer remover(tree.members().root, tree.members().allocators());
     tree.members().root = n;
 }
 
