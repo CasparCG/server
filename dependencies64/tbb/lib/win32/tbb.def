@@ -1,43 +1,46 @@
-; Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
+
+; Copyright 2005-2015 Intel Corporation.  All Rights Reserved.
 ;
-; The source code contained or described herein and all documents related
-; to the source code ("Material") are owned by Intel Corporation or its
-; suppliers or licensors.  Title to the Material remains with Intel
-; Corporation or its suppliers and licensors.  The Material is protected
-; by worldwide copyright laws and treaty provisions.  No part of the
-; Material may be used, copied, reproduced, modified, published, uploaded,
-; posted, transmitted, distributed, or disclosed in any way without
-; Intel's prior express written permission.
+; This file is part of Threading Building Blocks. Threading Building Blocks is free software;
+; you can redistribute it and/or modify it under the terms of the GNU General Public License
+; version 2  as  published  by  the  Free Software Foundation.  Threading Building Blocks is
+; distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+; implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+; See  the GNU General Public License for more details.   You should have received a copy of
+; the  GNU General Public License along with Threading Building Blocks; if not, write to the
+; Free Software Foundation, Inc.,  51 Franklin St,  Fifth Floor,  Boston,  MA 02110-1301 USA
 ;
-; No license under any patent, copyright, trade secret or other
-; intellectual property right is granted to or conferred upon you by
-; disclosure or delivery of the Materials, either expressly, by
-; implication, inducement, estoppel or otherwise.  Any license under such
-; intellectual property rights must be express and approved by Intel in
-; writing.
+; As a special exception,  you may use this file  as part of a free software library without
+; restriction.  Specifically,  if other files instantiate templates  or use macros or inline
+; functions from this file, or you compile this file and link it with other files to produce
+; an executable,  this file does not by itself cause the resulting executable to be covered
+; by the GNU General Public License. This exception does not however invalidate any other
+; reasons why the executable file might be covered by the GNU General Public License.
 
 ; This file is organized with a section for each .cpp file.
 ; Each of these sections is in alphabetical order.
 
 EXPORTS
 
-; Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
+
+
+; Copyright 2005-2015 Intel Corporation.  All Rights Reserved.
 ;
-; The source code contained or described herein and all documents related
-; to the source code ("Material") are owned by Intel Corporation or its
-; suppliers or licensors.  Title to the Material remains with Intel
-; Corporation or its suppliers and licensors.  The Material is protected
-; by worldwide copyright laws and treaty provisions.  No part of the
-; Material may be used, copied, reproduced, modified, published, uploaded,
-; posted, transmitted, distributed, or disclosed in any way without
-; Intel's prior express written permission.
+; This file is part of Threading Building Blocks. Threading Building Blocks is free software;
+; you can redistribute it and/or modify it under the terms of the GNU General Public License
+; version 2  as  published  by  the  Free Software Foundation.  Threading Building Blocks is
+; distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+; implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+; See  the GNU General Public License for more details.   You should have received a copy of
+; the  GNU General Public License along with Threading Building Blocks; if not, write to the
+; Free Software Foundation, Inc.,  51 Franklin St,  Fifth Floor,  Boston,  MA 02110-1301 USA
 ;
-; No license under any patent, copyright, trade secret or other
-; intellectual property right is granted to or conferred upon you by
-; disclosure or delivery of the Materials, either expressly, by
-; implication, inducement, estoppel or otherwise.  Any license under such
-; intellectual property rights must be express and approved by Intel in
-; writing.
+; As a special exception,  you may use this file  as part of a free software library without
+; restriction.  Specifically,  if other files instantiate templates  or use macros or inline
+; functions from this file, or you compile this file and link it with other files to produce
+; an executable,  this file does not by itself cause the resulting executable to be covered
+; by the GNU General Public License. This exception does not however invalidate any other
+; reasons why the executable file might be covered by the GNU General Public License.
 
 
 
@@ -60,29 +63,6 @@ EXPORTS
 
 
 
- 
-
-
-
-
-
-
-
-
- 
-
- 
- 
-
-
-
-
- 
-
-
-
-
- 
 
 
 
@@ -95,26 +75,396 @@ EXPORTS
 
 
 
- 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     
 
 
- 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+        
+    
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+
+
+
+
+
+
+
+
+
+
+        
+    
+
+
+
+
+
+
+
+
+    
     
         
     
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+    
+
+
+
+    
+
+
+
+    
+
+
+
+
+
+
+
+    
+
+
     
     
 
- 
-     
-         
+
+
+
+
     
-     
 
 
 
+    
 
 
 
@@ -127,36 +477,26 @@ EXPORTS
 
 
 
- 
- 
-     
 
-     
 
 
- 
+    
 
 
 
 
 
 
-     
 
- 
-     
+    
 
- 
 
- 
 
- 
+    
 
- 
 
 
 
- 
 
 
 
@@ -173,23 +513,24 @@ EXPORTS
 
 
 
- 
 
 
 
+    
 
 
- 
 
 
+        
+    
 
 
 
- 
 
 
 
 
+    
 
 
 
@@ -204,7 +545,6 @@ EXPORTS
 
 
 
- 
 
 
 
@@ -213,7 +553,169 @@ EXPORTS
 
 
 
- 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+    
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -261,9 +763,12 @@ __TBB_machine_is_in_transaction
 ?initialize@task_scheduler_init@tbb@@QEAAXH_K@Z
 ?initialize@task_scheduler_init@tbb@@QEAAXH@Z
 ?terminate@task_scheduler_init@tbb@@QEAAXXZ
+
 ?observe@task_scheduler_observer_v3@internal@tbb@@QEAAX_N@Z
 
- 
+
+
+
 ?internal_current_slot@task_arena_base@internal@interface7@tbb@@KAHXZ
 ?internal_initialize@task_arena_base@internal@interface7@tbb@@IEAAXXZ
 ?internal_terminate@task_arena_base@internal@interface7@tbb@@IEAAXXZ
@@ -272,7 +777,11 @@ __TBB_machine_is_in_transaction
 ?internal_wait@task_arena_base@internal@interface7@tbb@@IEBAXXZ
 
 
+
+
 ?destroy@task@tbb@@QEAAXAEAV12@@Z
+
+
 
 
 ?allocate@allocate_root_with_context_proxy@internal@tbb@@QEBAAEAVtask@3@_K@Z
@@ -285,8 +794,10 @@ __TBB_machine_is_in_transaction
 ?init@task_group_context@tbb@@IEAAXXZ
 ?register_pending_exception@task_group_context@tbb@@QEAAXXZ
 ??1task_group_context@tbb@@QEAA@XZ
+
 ?set_priority@task_group_context@tbb@@QEAAXW4priority_t@2@@Z
 ?priority@task_group_context@tbb@@QEBA?AW4priority_t@2@XZ
+
 ?name@captured_exception@tbb@@UEBAPEBDXZ
 ?what@captured_exception@tbb@@UEBAPEBDXZ
 ??1captured_exception@tbb@@UEAA@XZ
@@ -294,6 +805,7 @@ __TBB_machine_is_in_transaction
 ?destroy@captured_exception@tbb@@UEAAXXZ
 ?set@captured_exception@tbb@@QEAAXPEBD0@Z
 ?clear@captured_exception@tbb@@QEAAXXZ
+
 
 
 ?throw_bad_last_alloc_exception_v4@internal@tbb@@YAXXZ
@@ -320,6 +832,13 @@ TBB_runtime_interface_version
 ?itt_set_sync_name_v3@internal@tbb@@YAXPEAXPEB_W@Z
 
 
+
+
+
+
+
+
+
 ??_7pipeline@tbb@@6B@
 ??0pipeline@tbb@@QEAA@XZ
 ??1filter@tbb@@UEAA@XZ
@@ -328,7 +847,9 @@ TBB_runtime_interface_version
 ?clear@pipeline@tbb@@QEAAXXZ
 ?inject_token@pipeline@tbb@@AEAAXAEAVtask@2@@Z
 ?run@pipeline@tbb@@QEAAX_K@Z
+
 ?run@pipeline@tbb@@QEAAX_KAEAVtask_group_context@2@@Z
+
 ?process_item@thread_bound_filter@tbb@@QEAA?AW4result_type@12@XZ
 ?try_process_item@thread_bound_filter@tbb@@QEAA?AW4result_type@12@XZ
 ?set_end_of_input@filter@tbb@@IEAAXXZ
@@ -355,6 +876,7 @@ TBB_runtime_interface_version
 ?internal_destroy@scoped_lock_read@reader_writer_lock@interface5@tbb@@AEAAXXZ
 
 
+
 ?internal_itt_releasing@spin_rw_mutex@tbb@@CAXPEAV12@@Z
 ?internal_acquire_writer@spin_rw_mutex@tbb@@CA_NPEAV12@@Z
 ?internal_acquire_reader@spin_rw_mutex@tbb@@CAXPEAV12@@Z
@@ -364,6 +886,7 @@ TBB_runtime_interface_version
 ?internal_release_writer@spin_rw_mutex@tbb@@CAXPEAV12@@Z
 ?internal_try_acquire_writer@spin_rw_mutex@tbb@@CA_NPEAV12@@Z
 ?internal_try_acquire_reader@spin_rw_mutex@tbb@@CA_NPEAV12@@Z
+
 
 
 ?internal_construct@spin_rw_mutex_v3@tbb@@AEAAXXZ
@@ -415,6 +938,7 @@ TBB_runtime_interface_version
 ?internal_construct@critical_section_v4@internal@tbb@@QEAAXXZ
 
 
+
 ?internal_grow_predicate@hash_map_segment_base@internal@tbb@@QEBA_NXZ
 
 
@@ -430,6 +954,7 @@ TBB_runtime_interface_version
 ?internal_push_if_not_full@concurrent_queue_base@internal@tbb@@IEAA_NPEBX@Z
 ?internal_set_capacity@concurrent_queue_base@internal@tbb@@IEAAX_J_K@Z
 ?internal_size@concurrent_queue_base@internal@tbb@@IEBA_JXZ
+
 
 
 ??0concurrent_queue_iterator_base_v3@internal@tbb@@IEAA@AEBVconcurrent_queue_base_v3@12@@Z
@@ -455,6 +980,7 @@ TBB_runtime_interface_version
 ?move_content@concurrent_queue_base_v8@internal@tbb@@IEAAXAEAV123@@Z
 
 
+
 ?internal_assign@concurrent_vector_base@internal@tbb@@IEAAXAEBV123@_KP6AXPEAX1@ZP6AX2PEBX1@Z5@Z
 ?internal_capacity@concurrent_vector_base@internal@tbb@@IEBA_KXZ
 ?internal_clear@concurrent_vector_base@internal@tbb@@IEAAXP6AXPEAX_K@Z_N@Z
@@ -463,6 +989,7 @@ TBB_runtime_interface_version
 ?internal_grow_to_at_least@concurrent_vector_base@internal@tbb@@IEAAX_K0P6AXPEAX0@Z@Z
 ?internal_push_back@concurrent_vector_base@internal@tbb@@IEAAPEAX_KAEA_K@Z
 ?internal_reserve@concurrent_vector_base@internal@tbb@@IEAAX_K00@Z
+
 
 
 ??1concurrent_vector_base_v3@internal@tbb@@IEAA@XZ
@@ -498,5 +1025,12 @@ TBB_runtime_interface_version
 ?internal_condition_variable_notify_one@internal@interface5@tbb@@YAXAEATcondvar_impl_t@123@@Z
 ?internal_condition_variable_notify_all@internal@interface5@tbb@@YAXAEATcondvar_impl_t@123@@Z
 ?internal_destroy_condition_variable@internal@interface5@tbb@@YAXAEATcondvar_impl_t@123@@Z
+
+
+?active_value@global_control@interface9@tbb@@CA_KH@Z
+?internal_create@global_control@interface9@tbb@@AEAAXXZ
+?internal_destroy@global_control@interface9@tbb@@AEAAXXZ
+
+
 
 

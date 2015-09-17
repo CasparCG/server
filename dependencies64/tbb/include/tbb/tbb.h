@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2015 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks. Threading Building Blocks is free software;
     you can redistribute it and/or modify it under the terms of the GNU General Public License
@@ -51,6 +51,9 @@
 #include "critical_section.h"
 #include "enumerable_thread_specific.h"
 #include "flow_graph.h"
+#if TBB_PREVIEW_GLOBAL_CONTROL
+#include "global_control.h"
+#endif
 #include "mutex.h"
 #include "null_mutex.h"
 #include "null_rw_mutex.h"

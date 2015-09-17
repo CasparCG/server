@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2015 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks. Threading Building Blocks is free software;
     you can redistribute it and/or modify it under the terms of the GNU General Public License
@@ -25,13 +25,37 @@
 #error Do not #include this internal file directly; use public TBB headers instead.
 #endif
 
-// included in namespace tbb::flow::interface7
+// included in namespace tbb::flow::interface8
 
 namespace internal {
-// wrap each element of a tuple in a template, and make a tuple of the result.
 
+    // the change to key_matching (adding a K and KHash template parameter, making it a class)
+    // means we have to pass this data to the key_matching_port.  All the ports have only one
+    // template parameter, so we have to wrap the following types in a trait:
+    //
+    //    . K == key_type
+    //    . KHash == hash and compare for Key
+    //    . TtoK == function_body that given an object of T, returns its K
+    //    . T == type accepted by port, and stored in the hash table
+    //
+    // The port will have an additional parameter on node construction, which is a function_body
+    // that accepts a const T& and returns a K which is the field in T which is its K.
+    template<typename Kp, typename KHashp, typename Tp>
+    struct KeyTrait {
+        typedef Kp K;
+        typedef Tp T;
+        typedef internal::type_to_key_function_body<T,K> TtoK;
+        typedef KHashp KHash;
+    };
+
+// wrap each element of a tuple in a template, and make a tuple of the result.
     template<int N, template<class> class PT, typename TypeTuple>
     struct wrap_tuple_elements;
+
+    // A wrapper that generates the traits needed for each port of a key-matching join,
+    // and the type of the tuple of input ports.
+    template<int N, template<class> class PT, typename KeyTraits, typename TypeTuple>
+    struct wrap_key_tuple_elements;
 
     template<template<class> class PT, typename TypeTuple>
     struct wrap_tuple_elements<1, PT, TypeTuple> {
@@ -40,12 +64,29 @@ namespace internal {
             type;
     };
 
+    template<template<class> class PT, typename KeyTraits, typename TypeTuple>
+    struct wrap_key_tuple_elements<1, PT, KeyTraits, TypeTuple > {
+        typedef typename KeyTraits::key_type K;
+        typedef typename KeyTraits::hash_compare_type KHash;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<0,TypeTuple>::type> KeyTrait0;
+        typedef typename tbb::flow::tuple< PT<KeyTrait0> > type;
+    };
+
     template<template<class> class PT, typename TypeTuple>
     struct wrap_tuple_elements<2, PT, TypeTuple> {
         typedef typename tbb::flow::tuple<
                 PT<typename tbb::flow::tuple_element<0,TypeTuple>::type>,
                 PT<typename tbb::flow::tuple_element<1,TypeTuple>::type> >
             type;
+    };
+
+    template<template<class> class PT, typename KeyTraits, typename TypeTuple>
+    struct wrap_key_tuple_elements<2, PT, KeyTraits, TypeTuple> {
+        typedef typename KeyTraits::key_type K;
+        typedef typename KeyTraits::hash_compare_type KHash;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<0,TypeTuple>::type> KeyTrait0;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<1,TypeTuple>::type> KeyTrait1;
+        typedef typename tbb::flow::tuple< PT<KeyTrait0>, PT<KeyTrait1> > type;
     };
 
     template<template<class> class PT, typename TypeTuple>
@@ -57,6 +98,16 @@ namespace internal {
             type;
     };
 
+    template<template<class> class PT, typename KeyTraits, typename TypeTuple>
+    struct wrap_key_tuple_elements<3, PT, KeyTraits, TypeTuple> {
+        typedef typename KeyTraits::key_type K;
+        typedef typename KeyTraits::hash_compare_type KHash;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<0,TypeTuple>::type> KeyTrait0;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<1,TypeTuple>::type> KeyTrait1;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<2,TypeTuple>::type> KeyTrait2;
+        typedef typename tbb::flow::tuple< PT<KeyTrait0>, PT<KeyTrait1>, PT<KeyTrait2> > type;
+    };
+
     template<template<class> class PT, typename TypeTuple>
     struct wrap_tuple_elements<4, PT, TypeTuple> {
         typedef typename tbb::flow::tuple<
@@ -65,6 +116,18 @@ namespace internal {
                 PT<typename tbb::flow::tuple_element<2,TypeTuple>::type>,
                 PT<typename tbb::flow::tuple_element<3,TypeTuple>::type> >
             type;
+    };
+
+    template<template<class> class PT, typename KeyTraits, typename TypeTuple>
+    struct wrap_key_tuple_elements<4, PT, KeyTraits, TypeTuple> {
+        typedef typename KeyTraits::key_type K;
+        typedef typename KeyTraits::hash_compare_type KHash;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<0,TypeTuple>::type> KeyTrait0;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<1,TypeTuple>::type> KeyTrait1;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<2,TypeTuple>::type> KeyTrait2;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<3,TypeTuple>::type> KeyTrait3;
+        typedef typename tbb::flow::tuple< PT<KeyTrait0>, PT<KeyTrait1>, PT<KeyTrait2>,
+                PT<KeyTrait3> > type;
     };
 
     template<template<class> class PT, typename TypeTuple>
@@ -78,6 +141,19 @@ namespace internal {
             type;
     };
 
+    template<template<class> class PT, typename KeyTraits, typename TypeTuple>
+    struct wrap_key_tuple_elements<5, PT, KeyTraits, TypeTuple> {
+        typedef typename KeyTraits::key_type K;
+        typedef typename KeyTraits::hash_compare_type KHash;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<0,TypeTuple>::type> KeyTrait0;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<1,TypeTuple>::type> KeyTrait1;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<2,TypeTuple>::type> KeyTrait2;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<3,TypeTuple>::type> KeyTrait3;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<4,TypeTuple>::type> KeyTrait4;
+        typedef typename tbb::flow::tuple< PT<KeyTrait0>, PT<KeyTrait1>, PT<KeyTrait2>,
+                PT<KeyTrait3>, PT<KeyTrait4> > type;
+    };
+
 #if __TBB_VARIADIC_MAX >= 6
     template<template<class> class PT, typename TypeTuple>
     struct wrap_tuple_elements<6, PT, TypeTuple> {
@@ -89,6 +165,20 @@ namespace internal {
                 PT<typename tbb::flow::tuple_element<4,TypeTuple>::type>,
                 PT<typename tbb::flow::tuple_element<5,TypeTuple>::type> >
             type;
+    };
+
+    template<template<class> class PT, typename KeyTraits, typename TypeTuple>
+    struct wrap_key_tuple_elements<6, PT, KeyTraits, TypeTuple> {
+        typedef typename KeyTraits::key_type K;
+        typedef typename KeyTraits::hash_compare_type KHash;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<0,TypeTuple>::type> KeyTrait0;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<1,TypeTuple>::type> KeyTrait1;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<2,TypeTuple>::type> KeyTrait2;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<3,TypeTuple>::type> KeyTrait3;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<4,TypeTuple>::type> KeyTrait4;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<5,TypeTuple>::type> KeyTrait5;
+        typedef typename tbb::flow::tuple< PT<KeyTrait0>, PT<KeyTrait1>, PT<KeyTrait2>, PT<KeyTrait3>,
+                PT<KeyTrait4>, PT<KeyTrait5> > type;
     };
 #endif
 
@@ -105,6 +195,21 @@ namespace internal {
                 PT<typename tbb::flow::tuple_element<6,TypeTuple>::type> >
             type;
     };
+
+    template<template<class> class PT, typename KeyTraits, typename TypeTuple>
+    struct wrap_key_tuple_elements<7, PT, KeyTraits, TypeTuple> {
+        typedef typename KeyTraits::key_type K;
+        typedef typename KeyTraits::hash_compare_type KHash;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<0,TypeTuple>::type> KeyTrait0;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<1,TypeTuple>::type> KeyTrait1;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<2,TypeTuple>::type> KeyTrait2;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<3,TypeTuple>::type> KeyTrait3;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<4,TypeTuple>::type> KeyTrait4;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<5,TypeTuple>::type> KeyTrait5;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<6,TypeTuple>::type> KeyTrait6;
+        typedef typename tbb::flow::tuple< PT<KeyTrait0>, PT<KeyTrait1>, PT<KeyTrait2>, PT<KeyTrait3>,
+                PT<KeyTrait4>, PT<KeyTrait5>, PT<KeyTrait6> > type;
+    };
 #endif
 
 #if __TBB_VARIADIC_MAX >= 8
@@ -120,6 +225,22 @@ namespace internal {
                 PT<typename tbb::flow::tuple_element<6,TypeTuple>::type>,
                 PT<typename tbb::flow::tuple_element<7,TypeTuple>::type> >
             type;
+    };
+
+    template<template<class> class PT, typename KeyTraits, typename TypeTuple>
+    struct wrap_key_tuple_elements<8, PT, KeyTraits, TypeTuple> {
+        typedef typename KeyTraits::key_type K;
+        typedef typename KeyTraits::hash_compare_type KHash;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<0,TypeTuple>::type> KeyTrait0;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<1,TypeTuple>::type> KeyTrait1;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<2,TypeTuple>::type> KeyTrait2;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<3,TypeTuple>::type> KeyTrait3;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<4,TypeTuple>::type> KeyTrait4;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<5,TypeTuple>::type> KeyTrait5;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<6,TypeTuple>::type> KeyTrait6;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<7,TypeTuple>::type> KeyTrait7;
+        typedef typename tbb::flow::tuple< PT<KeyTrait0>, PT<KeyTrait1>, PT<KeyTrait2>, PT<KeyTrait3>,
+                PT<KeyTrait4>, PT<KeyTrait5>, PT<KeyTrait6>, PT<KeyTrait7> > type;
     };
 #endif
 
@@ -138,6 +259,23 @@ namespace internal {
                 PT<typename tbb::flow::tuple_element<8,TypeTuple>::type> >
             type;
     };
+
+    template<template<class> class PT, typename KeyTraits, typename TypeTuple>
+    struct wrap_key_tuple_elements<9, PT, KeyTraits, TypeTuple> {
+        typedef typename KeyTraits::key_type K;
+        typedef typename KeyTraits::hash_compare_type KHash;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<0,TypeTuple>::type> KeyTrait0;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<1,TypeTuple>::type> KeyTrait1;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<2,TypeTuple>::type> KeyTrait2;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<3,TypeTuple>::type> KeyTrait3;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<4,TypeTuple>::type> KeyTrait4;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<5,TypeTuple>::type> KeyTrait5;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<6,TypeTuple>::type> KeyTrait6;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<7,TypeTuple>::type> KeyTrait7;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<8,TypeTuple>::type> KeyTrait8;
+        typedef typename tbb::flow::tuple< PT<KeyTrait0>, PT<KeyTrait1>, PT<KeyTrait2>, PT<KeyTrait3>,
+                PT<KeyTrait4>, PT<KeyTrait5>, PT<KeyTrait6>, PT<KeyTrait7>, PT<KeyTrait8> > type;
+    };
 #endif
 
 #if __TBB_VARIADIC_MAX >= 10
@@ -155,6 +293,25 @@ namespace internal {
                 PT<typename tbb::flow::tuple_element<8,TypeTuple>::type>,
                 PT<typename tbb::flow::tuple_element<9,TypeTuple>::type> >
             type;
+    };
+
+    template<template<class> class PT, typename KeyTraits, typename TypeTuple>
+    struct wrap_key_tuple_elements<10, PT, KeyTraits, TypeTuple> {
+        typedef typename KeyTraits::key_type K;
+        typedef typename KeyTraits::hash_compare_type KHash;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<0,TypeTuple>::type> KeyTrait0;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<1,TypeTuple>::type> KeyTrait1;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<2,TypeTuple>::type> KeyTrait2;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<3,TypeTuple>::type> KeyTrait3;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<4,TypeTuple>::type> KeyTrait4;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<5,TypeTuple>::type> KeyTrait5;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<6,TypeTuple>::type> KeyTrait6;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<7,TypeTuple>::type> KeyTrait7;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<8,TypeTuple>::type> KeyTrait8;
+        typedef KeyTrait<K, KHash, typename tbb::flow::tuple_element<9,TypeTuple>::type> KeyTrait9;
+        typedef typename tbb::flow::tuple< PT<KeyTrait0>, PT<KeyTrait1>, PT<KeyTrait2>, PT<KeyTrait3>,
+                PT<KeyTrait4>, PT<KeyTrait5>, PT<KeyTrait6>, PT<KeyTrait7>, PT<KeyTrait8>,
+                PT<KeyTrait9> > type;
     };
 #endif
 
@@ -339,20 +496,16 @@ template< class Tuple, template<class> class Selector > struct pick_tuple_max<0,
 };
 
 // is the specified type included in a tuple?
-
-template<class U, class V> struct is_same_type      { static const bool value = false; };
-template<class W>          struct is_same_type<W,W> { static const bool value = true; };
-
 template<class Q, size_t N, class Tuple>
 struct is_element_of {
     typedef typename tbb::flow::tuple_element<N-1, Tuple>::type T_i;
-    static const bool value = is_same_type<Q,T_i>::value || is_element_of<Q,N-1,Tuple>::value;
+    static const bool value = tbb::internal::is_same_type<Q,T_i>::value || is_element_of<Q,N-1,Tuple>::value;
 };
 
 template<class Q, class Tuple>
 struct is_element_of<Q,0,Tuple> {
     typedef typename tbb::flow::tuple_element<0, Tuple>::type T_i;
-    static const bool value = is_same_type<Q,T_i>::value;
+    static const bool value = tbb::internal::is_same_type<Q,T_i>::value;
 };
 
 // allow the construction of types that are listed tuple.  If a disallowed type
@@ -383,11 +536,12 @@ struct do_if<T, false> {
 
 using tbb::internal::punned_cast;
 struct tagged_null_type {};
-template<typename TagType, typename T0, typename T1=tagged_null_type, typename T2=tagged_null_type, typename T3=tagged_null_type, 
+template<typename TagType, typename T0, typename T1=tagged_null_type, typename T2=tagged_null_type, typename T3=tagged_null_type,
                            typename T4=tagged_null_type, typename T5=tagged_null_type, typename T6=tagged_null_type,
                            typename T7=tagged_null_type, typename T8=tagged_null_type, typename T9=tagged_null_type>
 class tagged_msg {
     typedef tbb::flow::tuple<T0, T1, T2, T3, T4
+                  //TODO: Should we reject lists longer than a tuple can hold?
                   #if __TBB_VARIADIC_MAX >= 6
                   , T5
                   #endif
@@ -403,7 +557,7 @@ class tagged_msg {
                   #if __TBB_VARIADIC_MAX >= 10
                   , T9
                   #endif
-                  > Tuple;   
+                  > Tuple;
 
 private:
     class variant {
@@ -463,11 +617,11 @@ private:
     variant my_msg;
 
 public:
-    tagged_msg(): my_tag(TagType(~0)), my_msg(){} 
+    tagged_msg(): my_tag(TagType(~0)), my_msg(){}
 
     template<typename T, typename R>
     tagged_msg(T const &index, R const &value) : my_tag(index), my_msg(value) {}
-    
+
     #if __TBB_CONST_REF_TO_ARRAY_TEMPLATE_PARAM_BROKEN
     template<typename T, typename R, size_t N>
     tagged_msg(T const &index,  R (&value)[N]) : my_tag(index), my_msg(value) {}
@@ -486,11 +640,11 @@ public:
 }; //class tagged_msg
 
 // template to simplify cast and test for tagged_msg in template contexts
-template<typename T, typename V>
-const T& cast_to(V const &v) { return v.template cast_to<T>(); }
+template<typename V, typename T>
+const V& cast_to(T const &t) { return t.template cast_to<V>(); }
 
-template<typename T, typename V>
-bool is_a(V const &v) { return v.template is_a<T>(); }
+template<typename V, typename T>
+bool is_a(T const &t) { return t.template is_a<V>(); }
 
 }  // namespace internal
 

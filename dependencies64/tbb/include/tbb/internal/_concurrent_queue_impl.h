@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2015 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks. Threading Building Blocks is free software;
     you can redistribute it and/or modify it under the terms of the GNU General Public License
@@ -1015,11 +1015,11 @@ template<typename Container, typename Value>
 class concurrent_queue_iterator: public concurrent_queue_iterator_base,
         public std::iterator<std::forward_iterator_tag,Value> {
 
-#if !defined(_MSC_VER) || defined(__INTEL_COMPILER)
+#if !__TBB_TEMPLATE_FRIENDS_BROKEN
     template<typename T, class A>
     friend class ::tbb::concurrent_bounded_queue;
 #else
-public: // workaround for MSVC
+public:
 #endif
 
     //! Construct iterator pointing to head of queue.
