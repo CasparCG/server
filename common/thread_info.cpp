@@ -55,11 +55,11 @@ public:
 
 		for (auto it = enumerable_.begin(); it != enumerable_.end();)
 		{
-			auto lock = it->second.lock();
+			auto strong = it->second.lock();
 
-			if (lock)
+			if (strong)
 			{
-				result.push_back(spl::make_shared_ptr(lock));
+				result.push_back(spl::make_shared_ptr(strong));
 				++it;
 			}
 			else

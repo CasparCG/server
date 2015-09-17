@@ -53,10 +53,13 @@
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
 
+#pragma warning(push)
+#pragma warning(disable: 4458)
 #include <cef_task.h>
 #include <cef_app.h>
 #include <cef_client.h>
 #include <cef_render_handler.h>
+#pragma warning(pop)
 
 #include <asmlib.h>
 

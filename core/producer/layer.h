@@ -32,10 +32,9 @@
 #include <common/memory.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
+#include <boost/optional.hpp>
 
 #include <string>
-
-FORWARD1(boost, template<typename T> class optional);
 
 namespace caspar { namespace core {
 	
@@ -57,7 +56,7 @@ public:
 
 	void swap(layer& other);  
 		
-	void load(spl::shared_ptr<frame_producer> producer, bool preview, const boost::optional<int32_t>& auto_play_delta = nullptr);
+	void load(spl::shared_ptr<frame_producer> producer, bool preview, const boost::optional<int32_t>& auto_play_delta = boost::optional<int32_t>());
 	void play();
 	void pause();
 	void resume();

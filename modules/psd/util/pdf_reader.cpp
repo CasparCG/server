@@ -23,7 +23,12 @@
 
 #include <common/log.h>
 
+#pragma warning(push)
+#pragma warning(disable: 4459)
+#pragma warning(disable: 4244)
 #include <boost/spirit/home/qi.hpp>
+#pragma warning(pop)
+
 #include <boost/lexical_cast.hpp>
 
 #include <cstdint>
