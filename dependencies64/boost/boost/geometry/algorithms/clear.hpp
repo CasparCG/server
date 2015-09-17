@@ -16,6 +16,7 @@
 
 
 #include <boost/type_traits/remove_const.hpp>
+
 #include <boost/variant/apply_visitor.hpp>
 #include <boost/variant/static_visitor.hpp>
 #include <boost/variant/variant_fwd.hpp>
@@ -161,7 +162,7 @@ struct clear<variant<BOOST_VARIANT_ENUM_PARAMS(T)> >
 
     static inline void apply(variant<BOOST_VARIANT_ENUM_PARAMS(T)>& geometry)
     {
-        apply_visitor(visitor(), geometry);
+        boost::apply_visitor(visitor(), geometry);
     }
 };
 

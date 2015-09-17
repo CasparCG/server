@@ -10,17 +10,24 @@
 #ifndef BOOST_INTERPROCESS_FLAT_MAP_INDEX_HPP
 #define BOOST_INTERPROCESS_FLAT_MAP_INDEX_HPP
 
-#if defined(_MSC_VER)
+#ifndef BOOST_CONFIG_HPP
+#  include <boost/config.hpp>
+#endif
+#
+#if defined(BOOST_HAS_PRAGMA_ONCE)
 #  pragma once
 #endif
 
 #include <boost/interprocess/detail/config_begin.hpp>
 #include <boost/interprocess/detail/workaround.hpp>
 
-#include <functional>
-#include <utility>
+// interprocess
 #include <boost/interprocess/containers/flat_map.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
+// intrusive/detail
+#include <boost/intrusive/detail/minimal_pair_header.hpp>         //std::pair
+#include <boost/intrusive/detail/minimal_less_equal_header.hpp>   //std::less
+
 
 //!\file
 //!Describes index adaptor of boost::map container, to use it

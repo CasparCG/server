@@ -243,13 +243,6 @@ public:
         rhs.top_element = NULL;
     }
 
-    fibonacci_heap(fibonacci_heap & rhs):
-        super_t(rhs), top_element(rhs.top_element)
-    {
-        roots.splice(roots.begin(), rhs.roots);
-        rhs.top_element = NULL;
-    }
-
     /// \copydoc boost::heap::priority_queue::operator=(priority_queue &&)
     fibonacci_heap & operator=(fibonacci_heap && rhs)
     {
@@ -439,14 +432,7 @@ public:
      * */
     void update (handle_type handle)
     {
-        node_pointer n = handle.node_;
-        node_pointer parent = n->get_parent();
-
-        if (parent) {
-            n->parent = NULL;
-            roots.splice(roots.begin(), parent->children, node_list_type::s_iterator_to(*n));
-        }
-        add_children_to_root(n);
+        update_lazy(handle);
         consolidate();
     }
 
@@ -465,6 +451,9 @@ public:
             roots.splice(roots.begin(), parent->children, node_list_type::s_iterator_to(*n));
         }
         add_children_to_root(n);
+
+        if (super_t::operator()(top_element->value, n->value))
+            top_element = n;
     }
 
 
@@ -742,7 +731,7 @@ private:
                 aux[node_rank] = n;
             }
 
-            if (super_t::operator()(top_element->value, n->value))
+            if (!super_t::operator()(n->value, top_element->value))
                 top_element = n;
         }
         while (it != roots.end());
