@@ -22,8 +22,6 @@ set(SOURCES
 		mixer/image/blend_modes.cpp
 		mixer/mixer.cpp
 
-		monitor/monitor.cpp
-
 		producer/color/color_producer.cpp
 
 		producer/draw/freehand_producer.cpp

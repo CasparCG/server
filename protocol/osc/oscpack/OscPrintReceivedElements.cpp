@@ -211,8 +211,8 @@ std::ostream& operator<<( std::ostream & os, const ReceivedBundle& b )
     for( ReceivedBundle::const_iterator i = b.ElementsBegin();
             i != b.ElementsEnd(); ++i ){
         if( i->IsBundle() ){
-            ReceivedBundle b(*i);
-            os << b << "\n";
+            ReceivedBundle b2(*i);
+            os << b2 << "\n";
         }else{
             ReceivedMessage m(*i);
             for( int j=0; j < indent; ++j )

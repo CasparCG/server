@@ -113,8 +113,7 @@ void set_keyer(
 		configuration::keyer_t keyer,
 		const std::wstring& print)
 {
-	if (keyer == configuration::keyer_t::internal_keyer
-			|| keyer == configuration::keyer_t::external_separate_device_keyer)
+	if (keyer == configuration::keyer_t::internal_keyer)
 	{
 		BOOL value = true;
 		if (SUCCEEDED(attributes->GetFlag(BMDDeckLinkSupportsInternalKeying, &value)) && !value)

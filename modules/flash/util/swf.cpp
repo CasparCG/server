@@ -113,16 +113,16 @@ swf_t::header_t::header_t(const std::wstring& filename)
 	std::vector<char> file_data;
 	std::copy((std::istreambuf_iterator<char>(stream)), std::istreambuf_iterator<char>(), std::back_inserter(file_data));
 
-	std::array<char, 32> data;
+	std::array<char, 32> uncompressed_data;
 	uLongf file_size = 32;
-	auto ret = uncompress(reinterpret_cast<Bytef*>(data.data()), &file_size, reinterpret_cast<const Bytef*>(file_data.data()), static_cast<uLong>(file_data.size()));
+	auto ret = uncompress(reinterpret_cast<Bytef*>(uncompressed_data.data()), &file_size, reinterpret_cast<const Bytef*>(file_data.data()), static_cast<uLong>(file_data.size()));
 
 	if (ret == Z_DATA_ERROR)
 		CASPAR_THROW_EXCEPTION(io_error());
 	
 	// http://thenobody.blog.matfyz.sk/p13084-how-to-get-dimensions-of-a-swf-file
 
-	unsigned char nbits = reinterpret_cast<unsigned char*>(data.data())[0];
+	unsigned char nbits = reinterpret_cast<unsigned char*>(uncompressed_data.data())[0];
 
 	unsigned int size = nbits >> 3;                    // remove overlaping 3 bits
 
@@ -141,7 +141,7 @@ swf_t::header_t::header_t(const std::wstring& filename)
 		for (unsigned int j = 0; j < by_offset; ++j)
 		{
 			ibuf <<= 8;
-			ibuf +=  reinterpret_cast<unsigned char*>(data.data())[1+ioffset+j];
+			ibuf +=  reinterpret_cast<unsigned char*>(uncompressed_data.data())[1+ioffset+j];
 		}
 
 		dims[i] = (ibuf >> (3 + bi_offset + (i * bi_offset))) / 20;    // coordinates in twips, so divide by 20 for pixels

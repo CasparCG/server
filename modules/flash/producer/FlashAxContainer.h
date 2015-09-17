@@ -126,8 +126,8 @@ public:
 	END_COM_MAP()
 
 	BEGIN_SINK_MAP(FlashAxContainer)
-		SINK_ENTRY_INFO(0, DIID__IShockwaveFlashEvents, 0xc5, OnFlashCall, &fnInfoFlashCallEvent)
-		SINK_ENTRY_INFO(0, DIID__IShockwaveFlashEvents, 0xfffffd9f, OnReadyStateChange, &fnInfoReadyStateChangeEvent)
+		SINK_ENTRY_INFO(0, DIID__IShockwaveFlashEvents, static_cast<DISPID>(0xc5), OnFlashCall, &fnInfoFlashCallEvent)
+		SINK_ENTRY_INFO(0, DIID__IShockwaveFlashEvents, static_cast<DISPID>(0xfffffd9f), OnReadyStateChange, &fnInfoReadyStateChangeEvent)
 	END_SINK_MAP()
 
 	void STDMETHODCALLTYPE OnFlashCall(BSTR request);
