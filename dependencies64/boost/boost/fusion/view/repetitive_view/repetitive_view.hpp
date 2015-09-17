@@ -38,7 +38,7 @@ namespace boost { namespace fusion
             mpl::if_<traits::is_view<Sequence>, Sequence, sequence_type&>::type
         stored_seq_type;
 
-        BOOST_FUSION_GPU_ENABLED
+        BOOST_CONSTEXPR BOOST_FUSION_GPU_ENABLED
         repetitive_view(Sequence& in_seq)
             : seq(in_seq) {}
 

@@ -73,7 +73,7 @@ struct winding_side_equal
         PointOfSegment ss1, ss2;
         set<1-D>(ss1, get<1-D>(se));
         set<1-D>(ss2, get<1-D>(se));
-        if ( count > 0 ) // UP
+        if (count > 0) // UP
         {
             set<D>(ss1, 0);
             set<D>(ss2, 1);
@@ -127,7 +127,7 @@ struct winding_side_between
         set<1-D>(ss1, get<1-D>(s1));
         set<1-D>(ss2, get<1-D>(s1));
 
-        if ( count > 0 ) // UP
+        if (count > 0) // UP
         {
             set<D>(ss1, 0);
             set<D>(ss2, 1);
@@ -140,9 +140,9 @@ struct winding_side_between
 
         int const seg_side = strategy_side_type::apply(ss1, ss2, s2);
 
-        if ( seg_side != 0 ) // segment not vertical
+        if (seg_side != 0) // segment not vertical
         {
-            if ( strategy_side_type::apply(ss1, ss2, point) == -seg_side ) // point on the opposite side than s2
+            if (strategy_side_type::apply(ss1, ss2, point) == -seg_side) // point on the opposite side than s2
             {
                 return -seg_side;
             }
@@ -151,7 +151,7 @@ struct winding_side_between
                 set<1-D>(ss1, get<1-D>(s2));
                 set<1-D>(ss2, get<1-D>(s2));
 
-                if ( strategy_side_type::apply(ss1, ss2, point) == seg_side ) // point behind s2
+                if (strategy_side_type::apply(ss1, ss2, point) == seg_side) // point behind s2
                 {
                     return seg_side;
                 }
@@ -308,7 +308,7 @@ public :
         if (count != 0)
         {
             int side = 0;
-            if ( count == 1 || count == -1 )
+            if (count == 1 || count == -1)
             {
                 side = winding_side_equal<cs_t>
                             ::template apply<1>(point, eq1 ? s1 : s2, count);

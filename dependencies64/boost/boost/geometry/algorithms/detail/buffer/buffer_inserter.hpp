@@ -12,14 +12,17 @@
 #include <cstddef>
 #include <iterator>
 
-#include <boost/numeric/conversion/cast.hpp>
 
+#include <boost/core/ignore_unused.hpp>
+#include <boost/numeric/conversion/cast.hpp>
 #include <boost/range.hpp>
 
+#include <boost/geometry/core/assert.hpp>
 #include <boost/geometry/core/closure.hpp>
 #include <boost/geometry/core/exterior_ring.hpp>
 #include <boost/geometry/core/interior_rings.hpp>
 
+#include <boost/geometry/util/condition.hpp>
 #include <boost/geometry/util/math.hpp>
 
 #include <boost/geometry/strategies/buffer.hpp>
@@ -28,6 +31,7 @@
 #include <boost/geometry/algorithms/detail/buffer/line_line_intersection.hpp>
 #include <boost/geometry/algorithms/detail/buffer/parallel_continue.hpp>
 
+#include <boost/geometry/algorithms/num_interior_rings.hpp>
 #include <boost/geometry/algorithms/simplify.hpp>
 
 #include <boost/geometry/views/detail/normalized_view.hpp>
@@ -144,15 +148,25 @@ struct buffer_range
                         intersection_point);
 
         }
+
         switch(join)
         {
             case strategy::buffer::join_continue :
                 // No join, we get two consecutive sides
-                return;
+                break;
             case strategy::buffer::join_concave :
-                collection.add_piece(strategy::buffer::buffered_concave,
-                        previous_input, prev_perp2, perp1);
-                return;
+                {
+                    std::vector<output_point_type> range_out;
+                    range_out.push_back(prev_perp2);
+                    range_out.push_back(previous_input);
+                    collection.add_piece(strategy::buffer::buffered_concave, previous_input, range_out);
+
+                    range_out.clear();
+                    range_out.push_back(previous_input);
+                    range_out.push_back(perp1);
+                    collection.add_piece(strategy::buffer::buffered_concave, previous_input, range_out);
+                }
+                break;
             case strategy::buffer::join_spike :
                 {
                     // For linestrings, only add spike at one side to avoid
@@ -160,22 +174,24 @@ struct buffer_range
                     std::vector<output_point_type> range_out;
                     end_strategy.apply(penultimate_input, prev_perp2, previous_input, perp1, side, distance, range_out);
                     collection.add_endcap(end_strategy, range_out, previous_input);
+                    collection.set_current_ring_concave();
                 }
-                return;
+                break;
             case strategy::buffer::join_convex :
-                break; // All code below handles this
-        }
-
-        // The corner is convex, we create a join
-        // TODO (future) - avoid a separate vector, add the piece directly
-        std::vector<output_point_type> range_out;
-        if (join_strategy.apply(intersection_point,
-                    previous_input, prev_perp2, perp1,
-                    distance.apply(previous_input, input, side),
-                    range_out))
-        {
-            collection.add_piece(strategy::buffer::buffered_join,
-                    previous_input, range_out);
+                {
+                    // The corner is convex, we create a join
+                    // TODO (future) - avoid a separate vector, add the piece directly
+                    std::vector<output_point_type> range_out;
+                    if (join_strategy.apply(intersection_point,
+                                previous_input, prev_perp2, perp1,
+                                distance.apply(previous_input, input, side),
+                                range_out))
+                    {
+                        collection.add_piece(strategy::buffer::buffered_join,
+                                previous_input, range_out);
+                    }
+                }
+                break;
         }
     }
 
@@ -212,7 +228,7 @@ struct buffer_range
         typename EndStrategy,
         typename RobustPolicy
     >
-    static inline bool iterate(Collection& collection,
+    static inline strategy::buffer::result_code iterate(Collection& collection,
                 Iterator begin, Iterator end,
                 strategy::buffer::buffer_side_selector side,
                 DistanceStrategy const& distance_strategy,
@@ -225,18 +241,13 @@ struct buffer_range
                 output_point_type& last_p1,
                 output_point_type& last_p2)
     {
+        boost::ignore_unused(side_strategy);
+
         typedef typename std::iterator_traits
         <
             Iterator
         >::value_type point_type;
 
-        typedef typename robust_point_type
-        <
-            point_type,
-            RobustPolicy
-        >::type robust_point_type;
-
-        robust_point_type previous_robust_input;
         point_type second_point, penultimate_point, ultimate_point; // last two points from begin/end
 
         /*
@@ -256,62 +267,62 @@ struct buffer_range
          * pup: penultimate_point
          */
 
-        bool result = false;
+        strategy::buffer::result_code result = strategy::buffer::result_no_output;
         bool first = true;
 
         Iterator it = begin;
-
-        geometry::recalculate(previous_robust_input, *begin, robust_policy);
 
         std::vector<output_point_type> generated_side;
         generated_side.reserve(2);
 
         for (Iterator prev = it++; it != end; ++it)
         {
-            robust_point_type robust_input;
-            geometry::recalculate(robust_input, *it, robust_policy);
-            // Check on equality - however, if input is simplified, this is
-            // unlikely (though possible by rescaling or for degenerated pointlike polygons)
-            if (! detail::equals::equals_point_point(previous_robust_input, robust_input))
+            generated_side.clear();
+            strategy::buffer::result_code error_code
+                = side_strategy.apply(*prev, *it, side,
+                                distance_strategy, generated_side);
+
+            if (error_code == strategy::buffer::result_no_output)
             {
-                generated_side.clear();
-                side_strategy.apply(*prev, *it, side,
-                                    distance_strategy, generated_side);
-
-                if (generated_side.empty())
-                {
-                    break;
-                }
-
-                result = true;
-
-                if (! first)
-                {
-                     add_join(collection,
-                            penultimate_point,
-                            *prev, last_p1, last_p2,
-                            *it, generated_side.front(), generated_side.back(),
-                            side,
-                            distance_strategy, join_strategy, end_strategy,
-                            robust_policy);
-                }
-
-                collection.add_side_piece(*prev, *it, generated_side, first);
-
-                penultimate_point = *prev;
-                ultimate_point = *it;
-                last_p1 = generated_side.front();
-                last_p2 = generated_side.back();
-                prev = it;
-                if (first)
-                {
-                    first = false;
-                    second_point = *it;
-                    first_p1 = generated_side.front();
-                    first_p2 = generated_side.back();
-                }
+                // Because input is simplified, this is improbable,
+                // but it can happen for degenerate geometries
+                // Further handling of this side is skipped
+                continue;
             }
-            previous_robust_input = robust_input;
+            else if (error_code == strategy::buffer::result_error_numerical)
+            {
+                return error_code;
+            }
+
+            BOOST_GEOMETRY_ASSERT(! generated_side.empty());
+
+            result = strategy::buffer::result_normal;
+
+            if (! first)
+            {
+                 add_join(collection,
+                        penultimate_point,
+                        *prev, last_p1, last_p2,
+                        *it, generated_side.front(), generated_side.back(),
+                        side,
+                        distance_strategy, join_strategy, end_strategy,
+                        robust_policy);
+            }
+
+            collection.add_side_piece(*prev, *it, generated_side, first);
+
+            penultimate_point = *prev;
+            ultimate_point = *it;
+            last_p1 = generated_side.front();
+            last_p2 = generated_side.back();
+            prev = it;
+            if (first)
+            {
+                first = false;
+                second_point = *it;
+                first_p1 = generated_side.front();
+                first_p2 = generated_side.back();
+            }
         }
         return result;
     }
@@ -380,6 +391,7 @@ inline void buffer_point(Point const& point, Collection& collection,
     std::vector<OutputPointType> range_out;
     point_strategy.apply(point, distance_strategy, range_out);
     collection.add_piece(strategy::buffer::buffered_point, range_out, false);
+    collection.set_piece_center(point);
     collection.finish_ring();
 }
 
@@ -455,7 +467,7 @@ struct buffer_inserter<ring_tag, RingInput, RingOutput>
         typename EndStrategy,
         typename RobustPolicy
     >
-    static inline bool iterate(Collection& collection,
+    static inline strategy::buffer::result_code iterate(Collection& collection,
                 Iterator begin, Iterator end,
                 strategy::buffer::buffer_side_selector side,
                 DistanceStrategy const& distance_strategy,
@@ -468,13 +480,14 @@ struct buffer_inserter<ring_tag, RingInput, RingOutput>
 
         typedef detail::buffer::buffer_range<RingOutput> buffer_range;
 
-        bool result = buffer_range::iterate(collection, begin, end,
+        strategy::buffer::result_code result
+            = buffer_range::iterate(collection, begin, end,
                 side,
                 distance_strategy, side_strategy, join_strategy, end_strategy, robust_policy,
                 first_p1, first_p2, last_p1, last_p2);
 
         // Generate closing join
-        if (result)
+        if (result == strategy::buffer::result_normal)
         {
             buffer_range::add_join(collection,
                 *(end - 2),
@@ -499,7 +512,7 @@ struct buffer_inserter<ring_tag, RingInput, RingOutput>
         typename PointStrategy,
         typename RobustPolicy
     >
-    static inline void apply(RingInput const& ring,
+    static inline strategy::buffer::result_code apply(RingInput const& ring,
             Collection& collection,
             DistanceStrategy const& distance,
             SideStrategy const& side_strategy,
@@ -511,7 +524,7 @@ struct buffer_inserter<ring_tag, RingInput, RingOutput>
         RingInput simplified;
         detail::buffer::simplify_input(ring, distance, simplified);
 
-        bool has_output = false;
+        strategy::buffer::result_code code = strategy::buffer::result_no_output;
 
         std::size_t n = boost::size(simplified);
         std::size_t const min_points = core_detail::closure::minimum_ring_size
@@ -525,21 +538,19 @@ struct buffer_inserter<ring_tag, RingInput, RingOutput>
             if (distance.negative())
             {
                 // Walk backwards (rings will be reversed afterwards)
-                // It might be that this will be changed later.
-                // TODO: decide this.
-                has_output = iterate(collection, boost::rbegin(view), boost::rend(view),
+                code = iterate(collection, boost::rbegin(view), boost::rend(view),
                         strategy::buffer::buffer_side_right,
                         distance, side_strategy, join_strategy, end_strategy, robust_policy);
             }
             else
             {
-                has_output = iterate(collection, boost::begin(view), boost::end(view),
+                code = iterate(collection, boost::begin(view), boost::end(view),
                         strategy::buffer::buffer_side_left,
                         distance, side_strategy, join_strategy, end_strategy, robust_policy);
             }
         }
 
-        if (! has_output && n >= 1)
+        if (code == strategy::buffer::result_no_output && n >= 1)
         {
             // Use point_strategy to buffer degenerated ring
             detail::buffer::buffer_point<output_point_type>
@@ -548,6 +559,7 @@ struct buffer_inserter<ring_tag, RingInput, RingOutput>
                     collection, distance, point_strategy
                 );
         }
+        return code;
     }
 };
 
@@ -573,7 +585,7 @@ struct buffer_inserter<linestring_tag, Linestring, Polygon>
         typename EndStrategy,
         typename RobustPolicy
     >
-    static inline bool iterate(Collection& collection,
+    static inline strategy::buffer::result_code iterate(Collection& collection,
                 Iterator begin, Iterator end,
                 strategy::buffer::buffer_side_selector side,
                 DistanceStrategy const& distance_strategy,
@@ -598,27 +610,33 @@ struct buffer_inserter<linestring_tag, Linestring, Polygon>
         else
         {
             std::vector<output_point_type> generated_side;
-            side_strategy.apply(ultimate_point, penultimate_point,
+            strategy::buffer::result_code code
+                = side_strategy.apply(ultimate_point, penultimate_point,
                     strategy::buffer::buffer_side_right,
                     distance_strategy, generated_side);
-            if (generated_side.empty())
+            if (code != strategy::buffer::result_normal)
             {
-                return false;
+                // No output or numerical error
+                return code;
             }
             reverse_p1 = generated_side.front();
         }
 
         output_point_type first_p2, last_p1, last_p2;
 
-        detail::buffer::buffer_range<output_ring_type>::iterate(collection,
+        strategy::buffer::result_code result
+            = detail::buffer::buffer_range<output_ring_type>::iterate(collection,
                 begin, end, side,
                 distance_strategy, side_strategy, join_strategy, end_strategy, robust_policy,
                 first_p1, first_p2, last_p1, last_p2);
 
-        std::vector<output_point_type> range_out;
-        end_strategy.apply(penultimate_point, last_p2, ultimate_point, reverse_p1, side, distance_strategy, range_out);
-        collection.add_endcap(end_strategy, range_out, ultimate_point);
-        return true;
+        if (result == strategy::buffer::result_normal)
+        {
+            std::vector<output_point_type> range_out;
+            end_strategy.apply(penultimate_point, last_p2, ultimate_point, reverse_p1, side, distance_strategy, range_out);
+            collection.add_endcap(end_strategy, range_out, ultimate_point);
+        }
+        return result;
     }
 
     template
@@ -631,7 +649,7 @@ struct buffer_inserter<linestring_tag, Linestring, Polygon>
         typename PointStrategy,
         typename RobustPolicy
     >
-    static inline void apply(Linestring const& linestring, Collection& collection,
+    static inline strategy::buffer::result_code apply(Linestring const& linestring, Collection& collection,
             DistanceStrategy const& distance,
             SideStrategy const& side_strategy,
             JoinStrategy const& join_strategy,
@@ -642,28 +660,29 @@ struct buffer_inserter<linestring_tag, Linestring, Polygon>
         Linestring simplified;
         detail::buffer::simplify_input(linestring, distance, simplified);
 
-        bool has_output = false;
+        strategy::buffer::result_code code = strategy::buffer::result_no_output;
         std::size_t n = boost::size(simplified);
         if (n > 1)
         {
             collection.start_new_ring();
             output_point_type first_p1;
-            has_output = iterate(collection,
+            code = iterate(collection,
                     boost::begin(simplified), boost::end(simplified),
                     strategy::buffer::buffer_side_left,
                     distance, side_strategy, join_strategy, end_strategy, robust_policy,
                     first_p1);
 
-            if (has_output)
+            if (code == strategy::buffer::result_normal)
             {
-                iterate(collection, boost::rbegin(simplified), boost::rend(simplified),
+                code = iterate(collection,
+                        boost::rbegin(simplified), boost::rend(simplified),
                         strategy::buffer::buffer_side_right,
                         distance, side_strategy, join_strategy, end_strategy, robust_policy,
                         first_p1);
             }
             collection.finish_ring();
         }
-        if (! has_output && n >= 1)
+        if (code == strategy::buffer::result_no_output && n >= 1)
         {
             // Use point_strategy to buffer degenerated linestring
             detail::buffer::buffer_point<output_point_type>
@@ -672,6 +691,7 @@ struct buffer_inserter<linestring_tag, Linestring, Polygon>
                     collection, distance, point_strategy
                 );
         }
+        return code;
     }
 };
 
@@ -715,9 +735,16 @@ private:
         for (Iterator it = begin; it != end; ++it)
         {
             collection.start_new_ring();
-            policy::apply(*it, collection, distance, side_strategy,
+            strategy::buffer::result_code const code
+                    = policy::apply(*it, collection, distance, side_strategy,
                     join_strategy, end_strategy, point_strategy,
                     robust_policy);
+
+            if (code == strategy::buffer::result_error_numerical)
+            {
+                collection.abort_ring();
+                return;
+            }
             collection.finish_ring(is_interior);
         }
     }
@@ -771,11 +798,21 @@ public:
     {
         {
             collection.start_new_ring();
-            policy::apply(exterior_ring(polygon), collection,
+
+            strategy::buffer::result_code const code
+                = policy::apply(exterior_ring(polygon), collection,
                     distance, side_strategy,
                     join_strategy, end_strategy, point_strategy,
                     robust_policy);
-            collection.finish_ring();
+
+            if (code == strategy::buffer::result_error_numerical)
+            {
+                collection.abort_ring();
+            }
+            else
+            {
+                collection.finish_ring(false, geometry::num_interior_rings(polygon) > 0u);
+            }
         }
 
         apply_interior_rings(interior_rings(polygon),
@@ -839,6 +876,8 @@ inline void buffer_inserter(GeometryInput const& geometry_input, OutputIterator 
         VisitPiecesPolicy& visit_pieces_policy
     )
 {
+    boost::ignore_unused(visit_pieces_policy);
+
     typedef detail::buffer::buffered_piece_collection
     <
         typename geometry::ring_type<GeometryOutput>::type,
@@ -851,6 +890,11 @@ inline void buffer_inserter(GeometryInput const& geometry_input, OutputIterator 
         <
             typename tag_cast<typename tag<GeometryInput>::type, areal_tag>::type,
             areal_tag
+        >::type::value;
+    bool const linear = boost::is_same
+        <
+            typename tag_cast<typename tag<GeometryInput>::type, linear_tag>::type,
+            linear_tag
         >::type::value;
 
     dispatch::buffer_inserter
@@ -868,9 +912,10 @@ inline void buffer_inserter(GeometryInput const& geometry_input, OutputIterator 
             robust_policy);
 
     collection.get_turns();
-    if (areal)
+    collection.classify_turns(linear);
+    if (BOOST_GEOMETRY_CONDITION(areal))
     {
-        collection.check_remaining_points(distance_strategy.factor());
+        collection.check_remaining_points(distance_strategy);
     }
 
     // Visit the piece collection. This does nothing (by default), but
@@ -889,13 +934,19 @@ inline void buffer_inserter(GeometryInput const& geometry_input, OutputIterator 
     // - the output is counter clockwise
     // and avoid reversing twice
     bool reverse = distance_strategy.negative() && areal;
-    if (geometry::point_order<GeometryOutput>::value == counterclockwise)
+    if (BOOST_GEOMETRY_CONDITION(
+            geometry::point_order<GeometryOutput>::value == counterclockwise))
     {
         reverse = ! reverse;
     }
     if (reverse)
     {
         collection.reverse();
+    }
+
+    if (BOOST_GEOMETRY_CONDITION(distance_strategy.negative() && areal))
+    {
+        collection.discard_nonintersecting_deflated_rings();
     }
 
     collection.template assign<GeometryOutput>(out);

@@ -1219,7 +1219,7 @@ inline typename B::exponent_type eval_ilogb(const B& val)
 template <class B>
 inline void eval_logb(B& result, const B& val)
 {
-   typedef typename boost::mpl::if_c<boost::is_same<boost::intmax_t, long>::value, long long, boost::intmax_t>::type max_t;
+   typedef typename boost::mpl::if_c<boost::is_same<boost::intmax_t, long>::value, boost::long_long_type, boost::intmax_t>::type max_t;
    result = static_cast<max_t>(eval_ilogb(val));
 }
 template <class B, class A>
@@ -1436,29 +1436,29 @@ inline long ltrunc(const number<T, ExpressionTemplates>& v)
 }
 #ifndef BOOST_NO_LONG_LONG
 template <class tag, class A1, class A2, class A3, class A4, class Policy>
-inline long long lltrunc(const detail::expression<tag, A1, A2, A3, A4>& v, const Policy& pol)
+inline boost::long_long_type lltrunc(const detail::expression<tag, A1, A2, A3, A4>& v, const Policy& pol)
 {
    typedef typename detail::expression<tag, A1, A2, A3, A4>::result_type number_type;
    number_type r = trunc(v, pol);
-   if((r > (std::numeric_limits<long long>::max)()) || r < (std::numeric_limits<long long>::min)() || !(boost::math::isfinite)(v))
+   if((r > (std::numeric_limits<boost::long_long_type>::max)()) || r < (std::numeric_limits<boost::long_long_type>::min)() || !(boost::math::isfinite)(v))
       return boost::math::policies::raise_rounding_error("boost::multiprecision::lltrunc<%1%>(%1%)", 0, number_type(v), 0LL, pol);
-   return r.template convert_to<long long>();
+   return r.template convert_to<boost::long_long_type>();
 }
 template <class tag, class A1, class A2, class A3, class A4>
-inline long long lltrunc(const detail::expression<tag, A1, A2, A3, A4>& v)
+inline boost::long_long_type lltrunc(const detail::expression<tag, A1, A2, A3, A4>& v)
 {
    return lltrunc(v, boost::math::policies::policy<>());
 }
 template <class T, expression_template_option ExpressionTemplates, class Policy>
-inline long long lltrunc(const number<T, ExpressionTemplates>& v, const Policy& pol)
+inline boost::long_long_type lltrunc(const number<T, ExpressionTemplates>& v, const Policy& pol)
 {
    number<T, ExpressionTemplates> r = trunc(v, pol);
-   if((r > (std::numeric_limits<long long>::max)()) || r < (std::numeric_limits<long long>::min)() || !(boost::math::isfinite)(v))
+   if((r > (std::numeric_limits<boost::long_long_type>::max)()) || r < (std::numeric_limits<boost::long_long_type>::min)() || !(boost::math::isfinite)(v))
       return boost::math::policies::raise_rounding_error("boost::multiprecision::lltrunc<%1%>(%1%)", 0, v, 0LL, pol);
-   return r.template convert_to<long long>();
+   return r.template convert_to<boost::long_long_type>();
 }
 template <class T, expression_template_option ExpressionTemplates>
-inline long long lltrunc(const number<T, ExpressionTemplates>& v)
+inline boost::long_long_type lltrunc(const number<T, ExpressionTemplates>& v)
 {
    return lltrunc(v, boost::math::policies::policy<>());
 }
@@ -1534,33 +1534,98 @@ inline long lround(const number<T, ExpressionTemplates>& v)
 }
 #ifndef BOOST_NO_LONG_LONG
 template <class tag, class A1, class A2, class A3, class A4, class Policy>
-inline long long llround(const detail::expression<tag, A1, A2, A3, A4>& v, const Policy& pol)
+inline boost::long_long_type llround(const detail::expression<tag, A1, A2, A3, A4>& v, const Policy& pol)
 {
    typedef typename detail::expression<tag, A1, A2, A3, A4>::result_type number_type;
    number_type r = round(v, pol);
-   if((r > (std::numeric_limits<long long>::max)()) || r < (std::numeric_limits<long long>::min)() || !(boost::math::isfinite)(v))
+   if((r > (std::numeric_limits<boost::long_long_type>::max)()) || r < (std::numeric_limits<boost::long_long_type>::min)() || !(boost::math::isfinite)(v))
       return boost::math::policies::raise_rounding_error("boost::multiprecision::iround<%1%>(%1%)", 0, number_type(v), 0LL, pol);
-   return r.template convert_to<long long>();
+   return r.template convert_to<boost::long_long_type>();
 }
 template <class tag, class A1, class A2, class A3, class A4>
-inline long long llround(const detail::expression<tag, A1, A2, A3, A4>& v)
+inline boost::long_long_type llround(const detail::expression<tag, A1, A2, A3, A4>& v)
 {
    return llround(v, boost::math::policies::policy<>());
 }
 template <class T, expression_template_option ExpressionTemplates, class Policy>
-inline long long llround(const number<T, ExpressionTemplates>& v, const Policy& pol)
+inline boost::long_long_type llround(const number<T, ExpressionTemplates>& v, const Policy& pol)
 {
    number<T, ExpressionTemplates> r = round(v, pol);
-   if((r > (std::numeric_limits<long long>::max)()) || r < (std::numeric_limits<long long>::min)() || !(boost::math::isfinite)(v))
+   if((r > (std::numeric_limits<boost::long_long_type>::max)()) || r < (std::numeric_limits<boost::long_long_type>::min)() || !(boost::math::isfinite)(v))
       return boost::math::policies::raise_rounding_error("boost::multiprecision::iround<%1%>(%1%)", 0, v, 0LL, pol);
-   return r.template convert_to<long long>();
+   return r.template convert_to<boost::long_long_type>();
 }
 template <class T, expression_template_option ExpressionTemplates>
-inline long long llround(const number<T, ExpressionTemplates>& v)
+inline boost::long_long_type llround(const number<T, ExpressionTemplates>& v)
 {
    return llround(v, boost::math::policies::policy<>());
 }
 #endif
+//
+// frexp does not return an expression template since we require the
+// integer argument to be evaluated even if the returned value is
+// not assigned to anything...
+//
+template <class T, expression_template_option ExpressionTemplates>
+inline typename enable_if_c<number_category<T>::value == number_kind_floating_point, number<T, ExpressionTemplates> >::type frexp(const number<T, ExpressionTemplates>& v, short* pint)
+{
+   using default_ops::eval_frexp;
+   number<T, ExpressionTemplates> result;
+   eval_frexp(result.backend(), v.backend(), pint);
+   return BOOST_MP_MOVE(result);
+}
+template <class tag, class A1, class A2, class A3, class A4>
+inline typename enable_if_c<number_category<typename detail::expression<tag, A1, A2, A3, A4>::result_type>::value == number_kind_floating_point, typename detail::expression<tag, A1, A2, A3, A4>::result_type>::type 
+   frexp(const detail::expression<tag, A1, A2, A3, A4>& v, short* pint)
+{
+   typedef typename detail::expression<tag, A1, A2, A3, A4>::result_type number_type;
+   return BOOST_MP_MOVE(frexp(static_cast<number_type>(v), pint));
+}
+template <class T, expression_template_option ExpressionTemplates>
+inline typename enable_if_c<number_category<T>::value == number_kind_floating_point, number<T, ExpressionTemplates> >::type frexp(const number<T, ExpressionTemplates>& v, int* pint)
+{
+   using default_ops::eval_frexp;
+   number<T, ExpressionTemplates> result;
+   eval_frexp(result.backend(), v.backend(), pint);
+   return BOOST_MP_MOVE(result);
+}
+template <class tag, class A1, class A2, class A3, class A4>
+inline typename enable_if_c<number_category<typename detail::expression<tag, A1, A2, A3, A4>::result_type>::value == number_kind_floating_point, typename detail::expression<tag, A1, A2, A3, A4>::result_type>::type
+frexp(const detail::expression<tag, A1, A2, A3, A4>& v, int* pint)
+{
+   typedef typename detail::expression<tag, A1, A2, A3, A4>::result_type number_type;
+   return BOOST_MP_MOVE(frexp(static_cast<number_type>(v), pint));
+}
+template <class T, expression_template_option ExpressionTemplates>
+inline typename enable_if_c<number_category<T>::value == number_kind_floating_point, number<T, ExpressionTemplates> >::type frexp(const number<T, ExpressionTemplates>& v, long* pint)
+{
+   using default_ops::eval_frexp;
+   number<T, ExpressionTemplates> result;
+   eval_frexp(result.backend(), v.backend(), pint);
+   return BOOST_MP_MOVE(result);
+}
+template <class tag, class A1, class A2, class A3, class A4>
+inline typename enable_if_c<number_category<typename detail::expression<tag, A1, A2, A3, A4>::result_type>::value == number_kind_floating_point, typename detail::expression<tag, A1, A2, A3, A4>::result_type>::type
+frexp(const detail::expression<tag, A1, A2, A3, A4>& v, long* pint)
+{
+   typedef typename detail::expression<tag, A1, A2, A3, A4>::result_type number_type;
+   return BOOST_MP_MOVE(frexp(static_cast<number_type>(v), pint));
+}
+template <class T, expression_template_option ExpressionTemplates>
+inline typename enable_if_c<number_category<T>::value == number_kind_floating_point, number<T, ExpressionTemplates> >::type frexp(const number<T, ExpressionTemplates>& v, boost::long_long_type* pint)
+{
+   using default_ops::eval_frexp;
+   number<T, ExpressionTemplates> result;
+   eval_frexp(result.backend(), v.backend(), pint);
+   return BOOST_MP_MOVE(result);
+}
+template <class tag, class A1, class A2, class A3, class A4>
+inline typename enable_if_c<number_category<typename detail::expression<tag, A1, A2, A3, A4>::result_type>::value == number_kind_floating_point, typename detail::expression<tag, A1, A2, A3, A4>::result_type>::type
+frexp(const detail::expression<tag, A1, A2, A3, A4>& v, boost::long_long_type* pint)
+{
+   typedef typename detail::expression<tag, A1, A2, A3, A4>::result_type number_type;
+   return BOOST_MP_MOVE(frexp(static_cast<number_type>(v), pint));
+}
 
 template <class B, expression_template_option ExpressionTemplates>
 inline typename enable_if_c<number_category<B>::value == number_kind_integer, number<B, ExpressionTemplates> >::type
@@ -2034,13 +2099,13 @@ UNARY_OP_FUNCTOR(sinh, number_kind_floating_point)
 UNARY_OP_FUNCTOR(tanh, number_kind_floating_point)
 
 HETERO_BINARY_OP_FUNCTOR(ldexp, short, number_kind_floating_point)
-HETERO_BINARY_OP_FUNCTOR(frexp, short*, number_kind_floating_point)
+//HETERO_BINARY_OP_FUNCTOR(frexp, short*, number_kind_floating_point)
 HETERO_BINARY_OP_FUNCTOR_B(ldexp, int, number_kind_floating_point)
-HETERO_BINARY_OP_FUNCTOR_B(frexp, int*, number_kind_floating_point)
+//HETERO_BINARY_OP_FUNCTOR_B(frexp, int*, number_kind_floating_point)
 HETERO_BINARY_OP_FUNCTOR_B(ldexp, long, number_kind_floating_point)
-HETERO_BINARY_OP_FUNCTOR_B(frexp, long*, number_kind_floating_point)
-HETERO_BINARY_OP_FUNCTOR_B(ldexp, long long, number_kind_floating_point)
-HETERO_BINARY_OP_FUNCTOR_B(frexp, long long*, number_kind_floating_point)
+//HETERO_BINARY_OP_FUNCTOR_B(frexp, long*, number_kind_floating_point)
+HETERO_BINARY_OP_FUNCTOR_B(ldexp, boost::long_long_type, number_kind_floating_point)
+//HETERO_BINARY_OP_FUNCTOR_B(frexp, boost::long_long_type*, number_kind_floating_point)
 BINARY_OP_FUNCTOR(pow, number_kind_floating_point)
 BINARY_OP_FUNCTOR(fmod, number_kind_floating_point)
 BINARY_OP_FUNCTOR(atan2, number_kind_floating_point)
@@ -2049,7 +2114,7 @@ UNARY_OP_FUNCTOR(logb, number_kind_floating_point)
 HETERO_BINARY_OP_FUNCTOR(scalbn, short, number_kind_floating_point)
 HETERO_BINARY_OP_FUNCTOR_B(scalbn, int, number_kind_floating_point)
 HETERO_BINARY_OP_FUNCTOR_B(scalbn, long, number_kind_floating_point)
-HETERO_BINARY_OP_FUNCTOR_B(scalbn, long long, number_kind_floating_point)
+HETERO_BINARY_OP_FUNCTOR_B(scalbn, boost::long_long_type, number_kind_floating_point)
 
 //
 // Integer functions:

@@ -2,7 +2,7 @@
 //
 // R-tree nodes
 //
-// Copyright (c) 2011-2014 Adam Wulkiewicz, Lodz, Poland.
+// Copyright (c) 2011-2015 Adam Wulkiewicz, Lodz, Poland.
 //
 // Use, modification and distribution is subject to the Boost Software License,
 // Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
@@ -16,8 +16,8 @@
 
 #include <boost/geometry/index/detail/rtree/node/concept.hpp>
 #include <boost/geometry/index/detail/rtree/node/pairs.hpp>
-#include <boost/geometry/index/detail/rtree/node/auto_deallocator.hpp>
 #include <boost/geometry/index/detail/rtree/node/node_elements.hpp>
+#include <boost/geometry/index/detail/rtree/node/scoped_deallocator.hpp>
 
 //#include <boost/geometry/index/detail/rtree/node/weak_visitor.hpp>
 //#include <boost/geometry/index/detail/rtree/node/weak_dynamic.hpp>
@@ -27,7 +27,7 @@
 #include <boost/geometry/index/detail/rtree/node/variant_dynamic.hpp>
 #include <boost/geometry/index/detail/rtree/node/variant_static.hpp>
 
-#include <boost/geometry/index/detail/rtree/node/node_auto_ptr.hpp>
+#include <boost/geometry/index/detail/rtree/node/subtree_destroyer.hpp>
 
 #include <boost/geometry/algorithms/expand.hpp>
 
@@ -46,11 +46,7 @@ inline Box elements_box(FwdIter first, FwdIter last, Translator const& tr)
 {
     Box result;
 
-    if ( first == last )
-    {
-        geometry::assign_inverse(result);
-        return result;
-    }
+    BOOST_GEOMETRY_INDEX_ASSERT(first != last, "non-empty range required");
 
     detail::bounds(element_indexable(*first, tr), result);
     ++first;
@@ -70,11 +66,11 @@ struct destroy_element
     typedef typename rtree::internal_node<Value, parameters_type, Box, Allocators, typename Options::node_tag>::type internal_node;
     typedef typename rtree::leaf<Value, parameters_type, Box, Allocators, typename Options::node_tag>::type leaf;
 
-    typedef rtree::node_auto_ptr<Value, Options, Translator, Box, Allocators> node_auto_ptr;
+    typedef rtree::subtree_destroyer<Value, Options, Translator, Box, Allocators> subtree_destroyer;
 
     inline static void apply(typename internal_node::elements_type::value_type & element, Allocators & allocators)
     {
-         node_auto_ptr dummy(element.second, allocators);
+         subtree_destroyer dummy(element.second, allocators);
          element.second = 0;
     }
 
@@ -108,11 +104,11 @@ private:
     inline static void apply_dispatch(It first, It last, Allocators & allocators,
                                       boost::mpl::bool_<false> const& /*is_range_of_values*/)
     {
-        typedef rtree::node_auto_ptr<Value, Options, Translator, Box, Allocators> node_auto_ptr;
+        typedef rtree::subtree_destroyer<Value, Options, Translator, Box, Allocators> subtree_destroyer;
 
         for ( ; first != last ; ++first )
         {
-            node_auto_ptr dummy(first->second, allocators);
+            subtree_destroyer dummy(first->second, allocators);
             first->second = 0;
         }
     }

@@ -13,7 +13,11 @@
 
 #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
 
-#if defined(_MSC_VER)
+#ifndef BOOST_CONFIG_HPP
+#  include <boost/config.hpp>
+#endif
+#
+#if defined(BOOST_HAS_PRAGMA_ONCE)
 #  pragma once
 #endif
 
@@ -25,7 +29,7 @@
 #include <boost/interprocess/detail/posix_time_types_wrk.hpp>
 
 #if !defined(BOOST_INTERPROCESS_FORCE_GENERIC_EMULATION) && \
-   (defined(BOOST_INTERPROCESS_POSIX_PROCESS_SHARED) && defined(BOOST_INTERPROCESS_POSIX_NAMED_SEMAPHORES))
+   (defined(BOOST_INTERPROCESS_POSIX_PROCESS_SHARED) && defined(BOOST_INTERPROCESS_POSIX_UNNAMED_SEMAPHORES))
    #include <boost/interprocess/sync/posix/semaphore.hpp>
    #define BOOST_INTERPROCESS_USE_POSIX
 //Experimental...

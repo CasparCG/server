@@ -16,7 +16,11 @@
 #ifndef BOOST_INTERPROCESS_SHARABLE_LOCK_HPP
 #define BOOST_INTERPROCESS_SHARABLE_LOCK_HPP
 
-#if defined(_MSC_VER)
+#ifndef BOOST_CONFIG_HPP
+#  include <boost/config.hpp>
+#endif
+#
+#if defined(BOOST_HAS_PRAGMA_ONCE)
 #  pragma once
 #endif
 
@@ -27,6 +31,7 @@
 #include <boost/interprocess/exceptions.hpp>
 #include <boost/interprocess/detail/mpl.hpp>
 #include <boost/interprocess/detail/type_traits.hpp>
+#include <boost/interprocess/detail/simple_swap.hpp>
 #include <boost/move/utility_core.hpp>
 #include <boost/interprocess/detail/posix_time_types_wrk.hpp>
 
@@ -286,8 +291,8 @@ class sharable_lock
    //!Throws: Nothing.
    void swap(sharable_lock<mutex_type> &other)
    {
-      std::swap(mp_mutex, other.mp_mutex);
-      std::swap(m_locked, other.m_locked);
+      (simple_swap)(mp_mutex, other.mp_mutex);
+      (simple_swap)(m_locked, other.m_locked);
    }
 
    #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)

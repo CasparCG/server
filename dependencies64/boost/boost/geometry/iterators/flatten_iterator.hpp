@@ -10,13 +10,13 @@
 #ifndef BOOST_GEOMETRY_ITERATORS_FLATTEN_ITERATOR_HPP
 #define BOOST_GEOMETRY_ITERATORS_FLATTEN_ITERATOR_HPP
 
-#include <boost/assert.hpp>
 #include <boost/mpl/assert.hpp>
 #include <boost/type_traits/is_convertible.hpp>
 #include <boost/iterator.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/iterator/iterator_categories.hpp>
 
+#include <boost/geometry/core/assert.hpp>
 
 namespace boost { namespace geometry
 {
@@ -107,42 +107,15 @@ public:
                              (types<OtherOuterIterator, OtherInnerIterator>));
     }
 
-    template
-    <
-        typename OtherOuterIterator,
-        typename OtherInnerIterator,
-        typename OtherValue,
-        typename OtherAccessInnerBegin,
-        typename OtherAccessInnerEnd,
-        typename OtherReference
-    >
-    flatten_iterator operator=(flatten_iterator
-                               <
-                                   OtherOuterIterator,
-                                   OtherInnerIterator,
-                                   OtherValue,
-                                   OtherAccessInnerBegin,
-                                   OtherAccessInnerEnd,
-                                   OtherReference
-                               > const& other)
+    flatten_iterator& operator=(flatten_iterator const& other)
     {
-        static const bool are_conv
-            = boost::is_convertible
-                <
-                    OtherOuterIterator, OuterIterator
-                >::value
-           && boost::is_convertible
-                <
-                    OtherInnerIterator, InnerIterator
-                >::value;
-
-        BOOST_MPL_ASSERT_MSG((are_conv),
-                             NOT_CONVERTIBLE,
-                             (types<OtherOuterIterator, OtherInnerIterator>));
-             
         m_outer_it = other.m_outer_it;
         m_outer_end = other.m_outer_end;
-        m_inner_it = other.m_inner_it;
+        // avoid assigning an iterator having singular value
+        if ( other.m_outer_it != other.m_outer_end )
+        {
+            m_inner_it = other.m_inner_it;
+        }
         return *this;
     }
 
@@ -162,8 +135,8 @@ private:
 
     static inline bool empty(OuterIterator outer_it)
     {
-        return
-            AccessInnerBegin::apply(*outer_it) == AccessInnerEnd::apply(*outer_it);
+        return AccessInnerBegin::apply(*outer_it)
+            == AccessInnerEnd::apply(*outer_it);
     }
 
     inline void advance_through_empty()
@@ -181,8 +154,8 @@ private:
 
     inline Reference dereference() const
     {
-        BOOST_ASSERT( m_outer_it != m_outer_end );
-        BOOST_ASSERT( m_inner_it != AccessInnerEnd::apply(*m_outer_it) );
+        BOOST_GEOMETRY_ASSERT( m_outer_it != m_outer_end );
+        BOOST_GEOMETRY_ASSERT( m_inner_it != AccessInnerEnd::apply(*m_outer_it) );
         return *m_inner_it;
     }
 
@@ -221,8 +194,8 @@ private:
 
     inline void increment()
     {
-        BOOST_ASSERT( m_outer_it != m_outer_end );
-        BOOST_ASSERT( m_inner_it != AccessInnerEnd::apply(*m_outer_it) );
+        BOOST_GEOMETRY_ASSERT( m_outer_it != m_outer_end );
+        BOOST_GEOMETRY_ASSERT( m_inner_it != AccessInnerEnd::apply(*m_outer_it) );
 
         ++m_inner_it;
         if ( m_inner_it == AccessInnerEnd::apply(*m_outer_it) )
@@ -242,12 +215,9 @@ private:
                 --m_outer_it;
             }
             while ( empty(m_outer_it) );
-            m_inner_it = --AccessInnerEnd::apply(*m_outer_it);
-        }
-        else
-        {
-            --m_inner_it;
-        }
+            m_inner_it = AccessInnerEnd::apply(*m_outer_it);
+        }        
+        --m_inner_it;
     }
 };
 
