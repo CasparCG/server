@@ -39,7 +39,10 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/log/trivial.hpp>
 
+#pragma warning(push)
+#pragma warning(disable: 4458)
 #include <cef_app.h>
+#pragma warning(pop)
 
 #pragma comment(lib, "libcef.lib")
 #pragma comment(lib, "libcef_dll_wrapper.lib")

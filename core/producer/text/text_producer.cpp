@@ -69,7 +69,7 @@ namespace caspar { namespace core { namespace text {
 
 using namespace boost::filesystem;
 
-std::map<std::wstring, std::wstring> fonts;
+std::map<std::wstring, std::wstring> g_fonts;
 
 std::map<std::wstring, std::wstring> enumerate_fonts()
 {
@@ -113,15 +113,15 @@ spl::shared_ptr<frame_producer> create_text_producer(const frame_producer_depend
 
 void init(module_dependencies dependencies)
 {
-	fonts = enumerate_fonts();
+	g_fonts = enumerate_fonts();
 	dependencies.producer_registry->register_producer_factory(L"Text Producer", create_text_producer, describe_text_producer);
 }
 
 text_info& find_font_file(text_info& info)
 {
 	auto& font_name = info.font;
-	auto it = std::find_if(fonts.begin(), fonts.end(), font_comparer(font_name));
-	info.font_file = (it != fonts.end()) ? (*it).second : L"";
+	auto it = std::find_if(g_fonts.begin(), g_fonts.end(), font_comparer(font_name));
+	info.font_file = (it != g_fonts.end()) ? (*it).second : L"";
 	return info;
 }
 

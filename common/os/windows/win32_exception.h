@@ -31,43 +31,12 @@ typedef _EXCEPTION_POINTERS EXCEPTION_POINTERS;
 
 namespace caspar {
 
-class win32_exception : public std::exception
+struct win32_exception : virtual caspar_exception
 {
-public:
-	typedef const void* address;
-
-	address location() const { return location_; }
-	unsigned int error_code() const { return errorCode_; }
-	virtual const char* what() const throw() override { return message_; }
 	static void Handler(unsigned int errorCode, EXCEPTION_POINTERS* pInfo);
-
-protected:
-	win32_exception(const EXCEPTION_RECORD& info);
-
-private:
-	const char* message_;
-
-	address location_;
-	unsigned int errorCode_;
 };
 
-class win32_access_violation : public win32_exception
-{
-	mutable char messageBuffer_[256];
-
-public:
-	bool is_write() const { return isWrite_; }
-	address bad_address() const { return badAddress_;}
-	virtual const char* what() const throw() override;
-
-protected:
-	win32_access_violation(const EXCEPTION_RECORD& info);
-	friend void win32_exception::Handler(unsigned int errorCode, EXCEPTION_POINTERS* pInfo);
-
-private:
-	bool isWrite_;
-	address badAddress_;
-};
+struct win32_access_violation : virtual win32_exception { };
 
 }
 
