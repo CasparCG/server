@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2015 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks. Threading Building Blocks is free software;
     you can redistribute it and/or modify it under the terms of the GNU General Public License
@@ -34,7 +34,7 @@
     __TBB_USE_GENERIC_DWORD_FETCH_ADD
     __TBB_USE_GENERIC_DWORD_FETCH_STORE
     __TBB_USE_GENERIC_HALF_FENCED_LOAD_STORE
-    __TBB_USE_GENERIC_FULL_FENCED_LOAD_STORE
+    __TBB_USE_GENERIC_SEQUENTIAL_CONSISTENCY_LOAD_STORE
     __TBB_USE_GENERIC_RELAXED_LOAD_STORE
     __TBB_USE_FETCHSTORE_AS_FULL_FENCED_STORE
 
@@ -351,7 +351,7 @@ namespace internal { //< @cond INTERNAL
 class atomic_backoff : no_copy {
     //! Time delay, in units of "pause" instructions.
     /** Should be equal to approximately the number of "pause" instructions
-        that take the same time as an context switch. */
+        that take the same time as an context switch. Must be a power of two.*/
     static const int32_t LOOPS_BEFORE_YIELD = 16;
     int32_t count;
 public:
@@ -374,10 +374,10 @@ public:
         }
     }
 
-    // pause for a few times and then return false immediately.
+    //! Pause for a few times and return false if saturated.
     bool bounded_pause() {
-        if( count<=LOOPS_BEFORE_YIELD ) {
-            __TBB_Pause(count);
+        __TBB_Pause(count);
+        if( count<LOOPS_BEFORE_YIELD ) {
             // Pause twice as long the next time.
             count*=2;
             return true;

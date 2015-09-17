@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2015 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks. Threading Building Blocks is free software;
     you can redistribute it and/or modify it under the terms of the GNU General Public License
@@ -129,6 +129,7 @@ namespace rml {
 class MemoryPool;
 
 typedef void *(*rawAllocType)(intptr_t pool_id, size_t &bytes);
+// returns non-zero in case of error
 typedef int   (*rawFreeType)(intptr_t pool_id, void* raw_ptr, size_t raw_bytes);
 
 /*
@@ -191,6 +192,7 @@ void *pool_aligned_malloc(MemoryPool* mPool, size_t size, size_t alignment);
 void *pool_aligned_realloc(MemoryPool* mPool, void *ptr, size_t size, size_t alignment);
 bool  pool_reset(MemoryPool* memPool);
 bool  pool_free(MemoryPool *memPool, void *object);
+MemoryPool *pool_identify(void *object);
 }
 
 #include <new>      /* To use new with the placement argument */
@@ -215,6 +217,23 @@ namespace tbb {
     #pragma warning (push)
     #pragma warning (disable: 4100)
 #endif
+
+//! @cond INTERNAL
+namespace internal {
+
+#if TBB_USE_EXCEPTIONS
+// forward declaration is for inlining prevention
+template<typename E> __TBB_NOINLINE( void throw_exception(const E &e) );
+#endif
+
+// keep throw in a separate function to prevent code bloat
+template<typename E>
+void throw_exception(const E &e) {
+    __TBB_THROW(e);
+}
+
+} // namespace internal
+//! @endcond
 
 //! Meets "allocator" requirements of ISO C++ Standard, Section 20.1.5
 /** The members are ordered the same way they are in section 20.4.1
@@ -243,7 +262,10 @@ public:
 
     //! Allocate space for n objects.
     pointer allocate( size_type n, const void* /*hint*/ =0 ) {
-        return static_cast<pointer>( scalable_malloc( n * sizeof(value_type) ) );
+        pointer p = static_cast<pointer>( scalable_malloc( n * sizeof(value_type) ) );
+        if (!p)
+            internal::throw_exception(std::bad_alloc());
+        return p;
     }
 
     //! Free previously allocated block of memory

@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2015 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks. Threading Building Blocks is free software;
     you can redistribute it and/or modify it under the terms of the GNU General Public License
@@ -23,6 +23,7 @@
 
 #include "tbb_stddef.h"
 #include "tbb_machine.h"
+#include "tbb_profiling.h"
 #include <climits>
 
 typedef struct ___itt_caller *__itt_caller;
@@ -689,10 +690,21 @@ public:
 #endif /* TBB_USE_THREADING_TOOLS||TBB_USE_ASSERT */
     }
 
-    //! Atomically increment reference count and returns its old value.
+    //! Atomically increment reference count.
     /** Has acquire semantics */
     void increment_ref_count() {
         __TBB_FetchAndIncrementWacquire( &prefix().ref_count );
+    }
+
+    //! Atomically adds to reference count and returns its new value.
+    /** Has release-acquire semantics */
+    int add_ref_count( int count ) {
+        internal::call_itt_notify( internal::releasing, &prefix().ref_count );
+        internal::reference_count k = count+__TBB_FetchAndAddW( &prefix().ref_count, count );
+        __TBB_ASSERT( k>=0, "task's reference count underflowed" );
+        if( k==0 )
+            internal::call_itt_notify( internal::acquired, &prefix().ref_count );
+        return int(k);
     }
 
     //! Atomically decrement reference count and returns its new value.
@@ -766,7 +778,7 @@ public:
     //! sets parent task pointer to specified value
     void set_parent(task* p) {
 #if __TBB_TASK_GROUP_CONTEXT
-        __TBB_ASSERT(prefix().context == p->prefix().context, "The tasks must be in the same context");
+        __TBB_ASSERT(!p || prefix().context == p->prefix().context, "The tasks must be in the same context");
 #endif
         prefix().parent = p;
     }
@@ -925,7 +937,18 @@ public:
         *next_ptr = &task;
         next_ptr = &task.prefix().next;
     }
-
+#if __TBB_TODO
+    // TODO: add this method and implement&document the local execution ordering. See more in generic_scheduler::local_spawn
+    //! Push task onto front of list (FIFO local execution, like individual spawning in the same order).
+    void push_front( task& task ) {
+        if( empty() ) {
+            push_back(task);
+        } else {
+            task.prefix().next = first;
+            first = &task;
+        }
+    }
+#endif
     //! Pop the front task from the list.
     task& pop_front() {
         __TBB_ASSERT( !empty(), "attempt to pop item from empty task_list" );

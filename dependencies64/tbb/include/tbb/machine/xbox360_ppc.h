@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2015 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks. Threading Building Blocks is free software;
     you can redistribute it and/or modify it under the terms of the GNU General Public License
@@ -94,7 +94,7 @@ static inline int __TBB_XBOX360_DetectNumberOfWorkers()
             ((__TBB_XBOX360_HARDWARE_THREAD_MASK >> 2) & 1) +
             ((__TBB_XBOX360_HARDWARE_THREAD_MASK >> 3) & 1) +
             ((__TBB_XBOX360_HARDWARE_THREAD_MASK >> 4) & 1) +
-            ((__TBB_XBOX360_HARDWARE_THREAD_MASK >> 5) & 1) + 1;  // +1 accomodates for the master thread
+            ((__TBB_XBOX360_HARDWARE_THREAD_MASK >> 5) & 1) + 1;  // +1 accommodates for the master thread
 }
 
 static inline int __TBB_XBOX360_GetHardwareThreadIndex(int workerThreadIndex)

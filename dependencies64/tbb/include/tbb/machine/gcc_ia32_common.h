@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2015 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks. Threading Building Blocks is free software;
     you can redistribute it and/or modify it under the terms of the GNU General Public License
@@ -52,6 +52,18 @@ static inline void __TBB_machine_pause( int32_t delay ) {
 }
 #define __TBB_Pause(V) __TBB_machine_pause(V)
 #endif /* !__TBB_Pause */
+
+namespace tbb { namespace internal { typedef uint64_t machine_tsc_t; } }
+static inline tbb::internal::machine_tsc_t __TBB_machine_time_stamp() {
+#if __INTEL_COMPILER
+    return _rdtsc();
+#else
+    tbb::internal::uint32_t hi, lo;
+    __asm__ __volatile__("rdtsc" : "=d"(hi), "=a"(lo));
+    return (tbb::internal::machine_tsc_t( hi ) << 32) | lo;
+#endif
+}
+#define __TBB_time_stamp() __TBB_machine_time_stamp()
 
 // API to retrieve/update FPU control setting
 #ifndef __TBB_CPU_CTL_ENV_PRESENT
