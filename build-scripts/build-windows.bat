@@ -22,7 +22,7 @@ call "%BUILD_VCVARSALL%" amd64 || goto :error
 
 :: Run cmake
 cd build || goto :error
-cmake -G "Visual Studio 12 2013" -A x64 .. || goto :error
+cmake -G "Visual Studio 14 2015" -A x64 .. || goto :error
 
 :: Build with MSBuild
 echo Building...
