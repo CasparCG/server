@@ -40,6 +40,7 @@
 #include <core/producer/scene/xml_scene_producer.h>
 #include <core/producer/text/text_producer.h>
 #include <core/consumer/output.h>
+#include <core/mixer/mixer.h>
 #include <core/thumbnail_generator.h>
 #include <core/producer/media_info/media_info.h>
 #include <core/producer/media_info/media_info_repository.h>
@@ -237,6 +238,7 @@ struct server::impl : boost::noncopyable
 			}		
 
 		    channel->monitor_output().attach_parent(monitor_subject_);
+			channel->mixer().set_straight_alpha_output(xml_channel.second.get(L"straight-alpha-output", false));
 			channels_.push_back(channel);
 		}
 
