@@ -61,13 +61,15 @@ public:
 
 	// Constructors
 
-	image_kernel(const spl::shared_ptr<class device>& ogl, bool blend_modes_wanted);
+	image_kernel(const spl::shared_ptr<class device>& ogl, bool blend_modes_wanted, bool straight_alpha_wanted);
 	~image_kernel();
 
 	// Methods
 
 	void draw(const draw_params& params);
-	
+	void post_process(
+			const std::shared_ptr<class texture>& background, bool straighten_alpha);
+
 	// Properties
 
 	bool has_blend_modes() const;

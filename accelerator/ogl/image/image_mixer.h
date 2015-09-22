@@ -44,12 +44,12 @@ public:
 	
 	// Constructors
 
-	image_mixer(const spl::shared_ptr<class device>& ogl, bool blend_modes_wanted);
+	image_mixer(const spl::shared_ptr<class device>& ogl, bool blend_modes_wanted, bool straight_alpha_wanted);
 	~image_mixer();
 
 	// Methods
 			
-	std::future<array<const std::uint8_t>> operator()(const core::video_format_desc& format_desc) override;		
+	std::future<array<const std::uint8_t>> operator()(const core::video_format_desc& format_desc, bool straighten_alpha) override;
 	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc) override;
 
 	// core::image_mixer
