@@ -1876,6 +1876,35 @@ std::wstring mixer_mastervolume_command(command_context& ctx)
 	return L"202 MIXER OK\r\n";
 }
 
+void mixer_straight_alpha_describer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Turn straight alpha output on or off for a channel.");
+	sink.syntax(L"MIXER [video_channel:int] STRAIGHT_ALPHA_OUTPUT {[straight_alpha:0,1|0]}");
+	sink.para()->text(L"Turn straight alpha output on or off for the specified channel.");
+	sink.para()->code(L"casparcg.config")->text(L" needs to be configured to enable the feature.");
+	sink.para()->text(L"Examples:");
+	sink.example(L">> MIXER 1 STRAIGHT_ALPHA_OUTPUT 0");
+	sink.example(L">> MIXER 1 STRAIGHT_ALPHA_OUTPUT 1");
+	sink.example(
+			L">> MIXER 1 STRAIGHT_ALPHA_OUTPUT\n"
+			L"<< 201 MIXER OK\n"
+			L"<< 1");
+}
+
+std::wstring mixer_straight_alpha_command(command_context& ctx)
+{
+	if (ctx.parameters.empty())
+	{
+		bool state = ctx.channel.channel->mixer().get_straight_alpha_output();
+		return L"201 MIXER OK\r\n" + boost::lexical_cast<std::wstring>(state) + L"\r\n";
+	}
+
+	bool state = boost::lexical_cast<bool>(ctx.parameters.at(0));
+	ctx.channel.channel->mixer().set_straight_alpha_output(state);
+
+	return L"202 MIXER OK\r\n";
+}
+
 void mixer_grid_describer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"Create a grid of video layers.");
@@ -2737,85 +2766,86 @@ std::wstring lock_command(command_context& ctx)
 
 void register_commands(amcp_command_repository& repo)
 {
-	repo.register_channel_command(	L"Basic Commands",		L"LOADBG",					loadbg_describer,					loadbg_command,					1);
-	repo.register_channel_command(	L"Basic Commands",		L"LOAD",					load_describer,						load_command,					1);
-	repo.register_channel_command(	L"Basic Commands",		L"PLAY",					play_describer,						play_command,					0);
-	repo.register_channel_command(	L"Basic Commands",		L"PAUSE",					pause_describer,					pause_command,					0);
-	repo.register_channel_command(	L"Basic Commands",		L"RESUME",					resume_describer,					resume_command,					0);
-	repo.register_channel_command(	L"Basic Commands",		L"STOP",					stop_describer,						stop_command,					0);
-	repo.register_channel_command(	L"Basic Commands",		L"CLEAR",					clear_describer,					clear_command,					0);
-	repo.register_channel_command(	L"Basic Commands",		L"CALL",					call_describer,						call_command,					1);
-	repo.register_channel_command(	L"Basic Commands",		L"SWAP",					swap_describer,						swap_command,					1);
-	repo.register_channel_command(	L"Basic Commands",		L"ADD",						add_describer,						add_command,					1);
-	repo.register_channel_command(	L"Basic Commands",		L"REMOVE",					remove_describer,					remove_command,					0);
-	repo.register_channel_command(	L"Basic Commands",		L"PRINT",					print_describer,					print_command,					0);
-	repo.register_command(			L"Basic Commands",		L"LOG LEVEL",				log_level_describer,				log_level_command,				1);
-	repo.register_channel_command(	L"Basic Commands",		L"SET",						set_describer,						set_command,					2);
-	repo.register_command(			L"Basic Commands",		L"LOCK",					lock_describer,						lock_command,					2);
+	repo.register_channel_command(	L"Basic Commands",		L"LOADBG",						loadbg_describer,					loadbg_command,					1);
+	repo.register_channel_command(	L"Basic Commands",		L"LOAD",						load_describer,						load_command,					1);
+	repo.register_channel_command(	L"Basic Commands",		L"PLAY",						play_describer,						play_command,					0);
+	repo.register_channel_command(	L"Basic Commands",		L"PAUSE",						pause_describer,					pause_command,					0);
+	repo.register_channel_command(	L"Basic Commands",		L"RESUME",						resume_describer,					resume_command,					0);
+	repo.register_channel_command(	L"Basic Commands",		L"STOP",						stop_describer,						stop_command,					0);
+	repo.register_channel_command(	L"Basic Commands",		L"CLEAR",						clear_describer,					clear_command,					0);
+	repo.register_channel_command(	L"Basic Commands",		L"CALL",						call_describer,						call_command,					1);
+	repo.register_channel_command(	L"Basic Commands",		L"SWAP",						swap_describer,						swap_command,					1);
+	repo.register_channel_command(	L"Basic Commands",		L"ADD",							add_describer,						add_command,					1);
+	repo.register_channel_command(	L"Basic Commands",		L"REMOVE",						remove_describer,					remove_command,					0);
+	repo.register_channel_command(	L"Basic Commands",		L"PRINT",						print_describer,					print_command,					0);
+	repo.register_command(			L"Basic Commands",		L"LOG LEVEL",					log_level_describer,				log_level_command,				1);
+	repo.register_channel_command(	L"Basic Commands",		L"SET",							set_describer,						set_command,					2);
+	repo.register_command(			L"Basic Commands",		L"LOCK",						lock_describer,						lock_command,					2);
 
-	repo.register_command(			L"Data Commands", 		L"DATA STORE",				data_store_describer,				data_store_command,				2);
-	repo.register_command(			L"Data Commands", 		L"DATA RETRIEVE",			data_retrieve_describer,			data_retrieve_command,			1);
-	repo.register_command(			L"Data Commands", 		L"DATA LIST",				data_list_describer,				data_list_command,				0);
-	repo.register_command(			L"Data Commands", 		L"DATA REMOVE",				data_remove_describer,				data_remove_command,			1);
+	repo.register_command(			L"Data Commands", 		L"DATA STORE",					data_store_describer,				data_store_command,				2);
+	repo.register_command(			L"Data Commands", 		L"DATA RETRIEVE",				data_retrieve_describer,			data_retrieve_command,			1);
+	repo.register_command(			L"Data Commands", 		L"DATA LIST",					data_list_describer,				data_list_command,				0);
+	repo.register_command(			L"Data Commands", 		L"DATA REMOVE",					data_remove_describer,				data_remove_command,			1);
 
-	repo.register_channel_command(	L"Template Commands",	L"CG ADD",					cg_add_describer,					cg_add_command,					3);
-	repo.register_channel_command(	L"Template Commands",	L"CG PLAY",					cg_play_describer,					cg_play_command,				1);
-	repo.register_channel_command(	L"Template Commands",	L"CG STOP",					cg_stop_describer,					cg_stop_command,				1);
-	repo.register_channel_command(	L"Template Commands",	L"CG NEXT",					cg_next_describer,					cg_next_command,				1);
-	repo.register_channel_command(	L"Template Commands",	L"CG REMOVE",				cg_remove_describer,				cg_remove_command,				1);
-	repo.register_channel_command(	L"Template Commands",	L"CG CLEAR",				cg_clear_describer,					cg_clear_command,				0);
-	repo.register_channel_command(	L"Template Commands",	L"CG UPDATE",				cg_update_describer,				cg_update_command,				2);
-	repo.register_channel_command(	L"Template Commands",	L"CG INVOKE",				cg_invoke_describer,				cg_invoke_command,				2);
-	repo.register_channel_command(	L"Template Commands",	L"CG INFO",					cg_info_describer,					cg_info_command,				0);
+	repo.register_channel_command(	L"Template Commands",	L"CG ADD",						cg_add_describer,					cg_add_command,					3);
+	repo.register_channel_command(	L"Template Commands",	L"CG PLAY",						cg_play_describer,					cg_play_command,				1);
+	repo.register_channel_command(	L"Template Commands",	L"CG STOP",						cg_stop_describer,					cg_stop_command,				1);
+	repo.register_channel_command(	L"Template Commands",	L"CG NEXT",						cg_next_describer,					cg_next_command,				1);
+	repo.register_channel_command(	L"Template Commands",	L"CG REMOVE",					cg_remove_describer,				cg_remove_command,				1);
+	repo.register_channel_command(	L"Template Commands",	L"CG CLEAR",					cg_clear_describer,					cg_clear_command,				0);
+	repo.register_channel_command(	L"Template Commands",	L"CG UPDATE",					cg_update_describer,				cg_update_command,				2);
+	repo.register_channel_command(	L"Template Commands",	L"CG INVOKE",					cg_invoke_describer,				cg_invoke_command,				2);
+	repo.register_channel_command(	L"Template Commands",	L"CG INFO",						cg_info_describer,					cg_info_command,				0);
 
-	repo.register_channel_command(	L"Mixer Commands",		L"MIXER KEYER",				mixer_keyer_describer,				mixer_keyer_command,			0);
-	repo.register_channel_command(	L"Mixer Commands",		L"MIXER CHROMA",			mixer_chroma_describer,				mixer_chroma_command,			0);
-	repo.register_channel_command(	L"Mixer Commands",		L"MIXER BLEND",				mixer_blend_describer,				mixer_blend_command,			0);
-	repo.register_channel_command(	L"Mixer Commands",		L"MIXER OPACITY",			mixer_opacity_describer,			mixer_opacity_command,			0);
-	repo.register_channel_command(	L"Mixer Commands",		L"MIXER BRIGHTNESS",		mixer_brightness_describer,			mixer_brightness_command,		0);
-	repo.register_channel_command(	L"Mixer Commands",		L"MIXER SATURATION",		mixer_saturation_describer,			mixer_saturation_command,		0);
-	repo.register_channel_command(	L"Mixer Commands",		L"MIXER CONTRAST",			mixer_contrast_describer,			mixer_contrast_command,			0);
-	repo.register_channel_command(	L"Mixer Commands",		L"MIXER LEVELS",			mixer_levels_describer,				mixer_levels_command,			0);
-	repo.register_channel_command(	L"Mixer Commands",		L"MIXER FILL",				mixer_fill_describer,				mixer_fill_command,				0);
-	repo.register_channel_command(	L"Mixer Commands",		L"MIXER CLIP",				mixer_clip_describer,				mixer_clip_command,				0);
-	repo.register_channel_command(	L"Mixer Commands",		L"MIXER ANCHOR",			mixer_anchor_describer,				mixer_anchor_command,			0);
-	repo.register_channel_command(	L"Mixer Commands",		L"MIXER CROP",				mixer_crop_describer,				mixer_crop_command,				0);
-	repo.register_channel_command(	L"Mixer Commands",		L"MIXER ROTATION",			mixer_rotation_describer,			mixer_rotation_command,			0);
-	repo.register_channel_command(	L"Mixer Commands",		L"MIXER PERSPECTIVE",		mixer_perspective_describer,		mixer_perspective_command,		0);
-	repo.register_channel_command(	L"Mixer Commands",		L"MIXER MIPMAP",			mixer_mipmap_describer,				mixer_mipmap_command,			0);
-	repo.register_channel_command(	L"Mixer Commands",		L"MIXER VOLUME",			mixer_volume_describer,				mixer_volume_command,			0);
-	repo.register_channel_command(	L"Mixer Commands",		L"MIXER MASTERVOLUME",		mixer_mastervolume_describer,		mixer_mastervolume_command,		0);
-	repo.register_channel_command(	L"Mixer Commands",		L"MIXER GRID",				mixer_grid_describer,				mixer_grid_command,				1);
-	repo.register_channel_command(	L"Mixer Commands",		L"MIXER COMMIT",			mixer_commit_describer,				mixer_commit_command,			0);
-	repo.register_channel_command(	L"Mixer Commands",		L"MIXER CLEAR",				mixer_clear_describer,				mixer_clear_command,			0);
-	repo.register_command(			L"Mixer Commands",		L"CHANNEL_GRID",			channel_grid_describer,				channel_grid_command,			0);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER KEYER",					mixer_keyer_describer,				mixer_keyer_command,			0);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER CHROMA",				mixer_chroma_describer,				mixer_chroma_command,			0);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER BLEND",					mixer_blend_describer,				mixer_blend_command,			0);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER OPACITY",				mixer_opacity_describer,			mixer_opacity_command,			0);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER BRIGHTNESS",			mixer_brightness_describer,			mixer_brightness_command,		0);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER SATURATION",			mixer_saturation_describer,			mixer_saturation_command,		0);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER CONTRAST",				mixer_contrast_describer,			mixer_contrast_command,			0);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER LEVELS",				mixer_levels_describer,				mixer_levels_command,			0);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER FILL",					mixer_fill_describer,				mixer_fill_command,				0);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER CLIP",					mixer_clip_describer,				mixer_clip_command,				0);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER ANCHOR",				mixer_anchor_describer,				mixer_anchor_command,			0);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER CROP",					mixer_crop_describer,				mixer_crop_command,				0);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER ROTATION",				mixer_rotation_describer,			mixer_rotation_command,			0);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER PERSPECTIVE",			mixer_perspective_describer,		mixer_perspective_command,		0);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER MIPMAP",				mixer_mipmap_describer,				mixer_mipmap_command,			0);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER VOLUME",				mixer_volume_describer,				mixer_volume_command,			0);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER MASTERVOLUME",			mixer_mastervolume_describer,		mixer_mastervolume_command,		0);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER STRAIGHT_ALPHA_OUTPUT",	mixer_straight_alpha_describer,		mixer_straight_alpha_command,	0);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER GRID",					mixer_grid_describer,				mixer_grid_command,				1);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER COMMIT",				mixer_commit_describer,				mixer_commit_command,			0);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER CLEAR",					mixer_clear_describer,				mixer_clear_command,			0);
+	repo.register_command(			L"Mixer Commands",		L"CHANNEL_GRID",				channel_grid_describer,				channel_grid_command,			0);
 
-	repo.register_command(			L"Thumbnail Commands",	L"THUMBNAIL LIST",			thumbnail_list_describer,			thumbnail_list_command,			0);
-	repo.register_command(			L"Thumbnail Commands",	L"THUMBNAIL RETRIEVE",		thumbnail_retrieve_describer,		thumbnail_retrieve_command,		1);
-	repo.register_command(			L"Thumbnail Commands",	L"THUMBNAIL GENERATE",		thumbnail_generate_describer,		thumbnail_generate_command,		1);
-	repo.register_command(			L"Thumbnail Commands",	L"THUMBNAIL GENERATE_ALL",	thumbnail_generateall_describer,	thumbnail_generateall_command,	0);
+	repo.register_command(			L"Thumbnail Commands",	L"THUMBNAIL LIST",				thumbnail_list_describer,			thumbnail_list_command,			0);
+	repo.register_command(			L"Thumbnail Commands",	L"THUMBNAIL RETRIEVE",			thumbnail_retrieve_describer,		thumbnail_retrieve_command,		1);
+	repo.register_command(			L"Thumbnail Commands",	L"THUMBNAIL GENERATE",			thumbnail_generate_describer,		thumbnail_generate_command,		1);
+	repo.register_command(			L"Thumbnail Commands",	L"THUMBNAIL GENERATE_ALL",		thumbnail_generateall_describer,	thumbnail_generateall_command,	0);
 
-	repo.register_command(			L"Query Commands",		L"CINF",					cinf_describer,						cinf_command,					1);
-	repo.register_command(			L"Query Commands",		L"CLS",						cls_describer,						cls_command,					0);
-	repo.register_command(			L"Query Commands",		L"TLS",						tls_describer,						tls_command,					0);
-	repo.register_command(			L"Query Commands",		L"VERSION",					version_describer,					version_command,				0);
-	repo.register_command(			L"Query Commands",		L"INFO",					info_describer,						info_command,					0);
-	repo.register_channel_command(	L"Query Commands",		L"INFO",					info_channel_describer,				info_channel_command,			0);
-	repo.register_command(			L"Query Commands",		L"INFO TEMPLATE",			info_template_describer,			info_template_command,			1);
-	repo.register_command(			L"Query Commands",		L"INFO CONFIG",				info_config_describer,				info_config_command,			0);
-	repo.register_command(			L"Query Commands",		L"INFO PATHS",				info_paths_describer,				info_paths_command,				0);
-	repo.register_command(			L"Query Commands",		L"INFO SYSTEM",				info_system_describer,				info_system_command,			0);
-	repo.register_command(			L"Query Commands",		L"INFO SERVER",				info_server_describer,				info_server_command,			0);
-	repo.register_command(			L"Query Commands",		L"INFO QUEUES",				info_queues_describer,				info_queues_command,			0);
-	repo.register_command(			L"Query Commands",		L"INFO THREADS",			info_threads_describer,				info_threads_command,			0);
-	repo.register_channel_command(	L"Query Commands",		L"INFO DELAY",				info_delay_describer,				info_delay_command,				0);
-	repo.register_command(			L"Query Commands",		L"DIAG",					diag_describer,						diag_command,					0);
-	repo.register_command(			L"Query Commands",		L"BYE",						bye_describer,						bye_command,					0);
-	repo.register_command(			L"Query Commands",		L"KILL",					kill_describer,						kill_command,					0);
-	repo.register_command(			L"Query Commands",		L"RESTART",					restart_describer,					restart_command,				0);
-	repo.register_command(			L"Query Commands",		L"HELP",					help_describer,						help_command,					0);
-	repo.register_command(			L"Query Commands",		L"HELP PRODUCER",			help_producer_describer,			help_producer_command,			0);
-	repo.register_command(			L"Query Commands",		L"HELP CONSUMER",			help_consumer_describer,			help_consumer_command,			0);
+	repo.register_command(			L"Query Commands",		L"CINF",						cinf_describer,						cinf_command,					1);
+	repo.register_command(			L"Query Commands",		L"CLS",							cls_describer,						cls_command,					0);
+	repo.register_command(			L"Query Commands",		L"TLS",							tls_describer,						tls_command,					0);
+	repo.register_command(			L"Query Commands",		L"VERSION",						version_describer,					version_command,				0);
+	repo.register_command(			L"Query Commands",		L"INFO",						info_describer,						info_command,					0);
+	repo.register_channel_command(	L"Query Commands",		L"INFO",						info_channel_describer,				info_channel_command,			0);
+	repo.register_command(			L"Query Commands",		L"INFO TEMPLATE",				info_template_describer,			info_template_command,			1);
+	repo.register_command(			L"Query Commands",		L"INFO CONFIG",					info_config_describer,				info_config_command,			0);
+	repo.register_command(			L"Query Commands",		L"INFO PATHS",					info_paths_describer,				info_paths_command,				0);
+	repo.register_command(			L"Query Commands",		L"INFO SYSTEM",					info_system_describer,				info_system_command,			0);
+	repo.register_command(			L"Query Commands",		L"INFO SERVER",					info_server_describer,				info_server_command,			0);
+	repo.register_command(			L"Query Commands",		L"INFO QUEUES",					info_queues_describer,				info_queues_command,			0);
+	repo.register_command(			L"Query Commands",		L"INFO THREADS",				info_threads_describer,				info_threads_command,			0);
+	repo.register_channel_command(	L"Query Commands",		L"INFO DELAY",					info_delay_describer,				info_delay_command,				0);
+	repo.register_command(			L"Query Commands",		L"DIAG",						diag_describer,						diag_command,					0);
+	repo.register_command(			L"Query Commands",		L"BYE",							bye_describer,						bye_command,					0);
+	repo.register_command(			L"Query Commands",		L"KILL",						kill_describer,						kill_command,					0);
+	repo.register_command(			L"Query Commands",		L"RESTART",						restart_describer,					restart_command,				0);
+	repo.register_command(			L"Query Commands",		L"HELP",						help_describer,						help_command,					0);
+	repo.register_command(			L"Query Commands",		L"HELP PRODUCER",				help_producer_describer,			help_producer_command,			0);
+	repo.register_command(			L"Query Commands",		L"HELP CONSUMER",				help_consumer_describer,			help_consumer_command,			0);
 }
 
 }	//namespace amcp

@@ -37,7 +37,8 @@ namespace caspar { namespace accelerator { namespace ogl {
 
 std::weak_ptr<shader>	g_shader;
 tbb::mutex				g_shader_mutex;
-bool					g_blend_modes = false;
+bool					g_blend_modes		= false;
+bool					g_post_processing	= false;
 
 std::string get_blend_color_func()
 {
@@ -142,6 +143,22 @@ std::string get_chroma_func()
 		)shader";
 }
 
+std::string get_post_process()
+{
+	return R"shader(
+		if (post_processing)
+		{
+			gl_FragColor = post_process().bgra;
+		}
+		else
+	)shader";
+}
+
+std::string get_no_post_process()
+{
+	return "";
+}
+
 std::string get_vertex()
 {
 	return R"shader(
@@ -158,7 +175,7 @@ std::string get_vertex()
 	)shader";
 }
 
-std::string get_fragment(bool blend_modes)
+std::string get_fragment(bool blend_modes, bool post_processing)
 {
 	return R"shader(
 
@@ -189,6 +206,9 @@ std::string get_fragment(bool blend_modes)
 			uniform float		brt;
 			uniform float		sat;
 			uniform float		con;
+
+			uniform bool		post_processing;
+			uniform bool		straighten_alpha;
 
 			uniform bool		chroma;
 			uniform int			chroma_mode;
@@ -291,28 +311,53 @@ std::string get_fragment(bool blend_modes)
 				return vec4(0.0, 0.0, 0.0, 0.0);
 			}
 
+			vec4 post_process()
+			{
+				vec4 color = texture2D(background, gl_TexCoord[0].st).bgra;
+
+				if (straighten_alpha)
+					color.rgb /= color.a + 0.0000001;
+
+				return color;
+			}	
+
 			void main()
 			{
-				vec4 color = get_rgba_color();
-				if (chroma)
-					color = chroma_key(color);
-				if(levels)
-					color.rgb = LevelsControl(color.rgb, min_input, gamma, max_input, min_output, max_output);
-				if(csb)
-					color.rgb = ContrastSaturationBrightness(color.rgb, brt, sat, con);
-				if(has_local_key)
-					color *= texture2D(local_key, gl_TexCoord[1].st).r;
-				if(has_layer_key)
-					color *= texture2D(layer_key, gl_TexCoord[1].st).r;
-				color *= opacity;
-				color = blend(color);
-				gl_FragColor = color.bgra;
+	)shader"
+
+	+
+
+	(post_processing ? get_post_process() : get_no_post_process())
+
+	+
+
+	R"shader(
+				{
+					vec4 color = get_rgba_color();
+					if (chroma)
+						color = chroma_key(color);
+					if(levels)
+						color.rgb = LevelsControl(color.rgb, min_input, gamma, max_input, min_output, max_output);
+					if(csb)
+						color.rgb = ContrastSaturationBrightness(color.rgb, brt, sat, con);
+					if(has_local_key)
+						color *= texture2D(local_key, gl_TexCoord[1].st).r;
+					if(has_layer_key)
+						color *= texture2D(layer_key, gl_TexCoord[1].st).r;
+					color *= opacity;
+					color = blend(color);
+					gl_FragColor = color.bgra;
+				}
 			}
 	)shader";
 }
 
 std::shared_ptr<shader> get_image_shader(
-		const spl::shared_ptr<device>& ogl, bool& blend_modes, bool blend_modes_wanted)
+		const spl::shared_ptr<device>& ogl,
+		bool& blend_modes,
+		bool blend_modes_wanted,
+		bool& post_processing,
+		bool straight_alpha_wanted)
 {
 	tbb::mutex::scoped_lock lock(g_shader_mutex);
 	auto existing_shader = g_shader.lock();
@@ -320,6 +365,7 @@ std::shared_ptr<shader> get_image_shader(
 	if(existing_shader)
 	{
 		blend_modes = g_blend_modes;
+		post_processing = g_post_processing;
 		return existing_shader;
 	}
 
@@ -341,7 +387,8 @@ std::shared_ptr<shader> get_image_shader(
 	try
 	{				
 		g_blend_modes  = glTextureBarrierNV ? blend_modes_wanted : false;
-		existing_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes)), deleter);
+		g_post_processing = straight_alpha_wanted;
+		existing_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes, g_post_processing)), deleter);
 	}
 	catch(...)
 	{
@@ -349,9 +396,9 @@ std::shared_ptr<shader> get_image_shader(
 		CASPAR_LOG(warning) << "Failed to compile shader. Trying to compile without blend-modes.";
 				
 		g_blend_modes = false;
-		existing_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes)), deleter);
+		existing_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes, g_post_processing)), deleter);
 	}
-						
+
 	//if(!g_blend_modes)
 	//{
 	//	ogl.blend_func(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
@@ -360,6 +407,7 @@ std::shared_ptr<shader> get_image_shader(
 
 
 	blend_modes = g_blend_modes;
+	post_processing = g_post_processing;
 	g_shader = existing_shader;
 	return existing_shader;
 }
