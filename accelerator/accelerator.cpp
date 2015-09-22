@@ -37,7 +37,10 @@ struct accelerator::impl
 				if(!ogl_device_)
 					ogl_device_.reset(new ogl::device());
 
-				return std::unique_ptr<core::image_mixer>(new ogl::image_mixer(spl::make_shared_ptr(ogl_device_), env::properties().get(L"configuration.mixer.blend-modes", false)));
+				return std::unique_ptr<core::image_mixer>(new ogl::image_mixer(
+						spl::make_shared_ptr(ogl_device_),
+						env::properties().get(L"configuration.mixer.blend-modes", false),
+						env::properties().get(L"configuration.mixer.straight-alpha", false)));
 			}
 		}
 		catch(...)

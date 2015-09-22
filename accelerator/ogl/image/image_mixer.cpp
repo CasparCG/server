@@ -86,13 +86,13 @@ class image_renderer
 	spl::shared_ptr<device>	ogl_;
 	image_kernel			kernel_;
 public:
-	image_renderer(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted)
+	image_renderer(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted, bool straight_alpha_wanted)
 		: ogl_(ogl)
-		, kernel_(ogl_, blend_modes_wanted)
+		, kernel_(ogl_, blend_modes_wanted, straight_alpha_wanted)
 	{
 	}
 	
-	std::future<array<const std::uint8_t>> operator()(std::vector<layer> layers, const core::video_format_desc& format_desc)
+	std::future<array<const std::uint8_t>> operator()(std::vector<layer> layers, const core::video_format_desc& format_desc, bool straighten_alpha)
 	{	
 		if(layers.empty())
 		{ // Bypass GPU with empty frame.
@@ -130,6 +130,8 @@ public:
 			}
 			else
 				draw(target_texture, std::move(layers), format_desc, core::field_mode::progressive);
+
+			kernel_.post_process(target_texture, straighten_alpha);
 
 			return ogl_->copy_async(target_texture);
 		}));
@@ -293,9 +295,9 @@ struct image_mixer::impl : public core::frame_factory
 	std::vector<layer>					layers_; // layer/stream/items
 	std::vector<layer*>					layer_stack_;
 public:
-	impl(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted) 
+	impl(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted, bool straight_alpha_wanted)
 		: ogl_(ogl)
-		, renderer_(ogl, blend_modes_wanted)
+		, renderer_(ogl, blend_modes_wanted, straight_alpha_wanted)
 		, transform_stack_(1)	
 	{
 		CASPAR_LOG(info) << L"Initialized OpenGL Accelerated GPU Image Mixer";
@@ -354,9 +356,9 @@ public:
 		layer_stack_.resize(transform_stack_.back().layer_depth);
 	}
 	
-	std::future<array<const std::uint8_t>> render(const core::video_format_desc& format_desc)
+	std::future<array<const std::uint8_t>> render(const core::video_format_desc& format_desc, bool straighten_alpha)
 	{
-		return renderer_(std::move(layers_), format_desc);
+		return renderer_(std::move(layers_), format_desc, straighten_alpha);
 	}
 	
 	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc) override
@@ -369,12 +371,12 @@ public:
 	}
 };
 
-image_mixer::image_mixer(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted) : impl_(new impl(ogl, blend_modes_wanted)){}
+image_mixer::image_mixer(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted, bool straight_alpha_wanted) : impl_(new impl(ogl, blend_modes_wanted, straight_alpha_wanted)){}
 image_mixer::~image_mixer(){}
 void image_mixer::push(const core::frame_transform& transform){impl_->push(transform);}
 void image_mixer::visit(const core::const_frame& frame){impl_->visit(frame);}
 void image_mixer::pop(){impl_->pop();}
-std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
+std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc, bool straighten_alpha){return impl_->render(format_desc, straighten_alpha);}
 core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->create_frame(tag, desc);}
 
 }}}
