@@ -24,15 +24,12 @@
 #include <common/log.h>
 
 #include "../frame_producer.h"
+#include "../../fwd.h"
 
 #include "../binding.h"
 #include "../variable.h"
 
-namespace caspar { namespace core {
-
-class frame_factory;
-
-namespace scene {
+namespace caspar { namespace core { namespace scene {
 
 struct coord
 {
@@ -42,9 +39,16 @@ struct coord
 
 struct rect
 {
-	coord			upper_left;
-	binding<double>	width;
-	binding<double>	height;
+	coord upper_left;
+	coord lower_right;
+};
+
+struct corners
+{
+	coord upper_left;
+	coord upper_right;
+	coord lower_right;
+	coord lower_left;
 };
 
 struct adjustments
@@ -54,15 +58,29 @@ struct adjustments
 	adjustments();
 };
 
+struct chroma_key
+{
+	binding<core::chroma::type>	key;
+	binding<double>				threshold;
+	binding<double>				softness;
+	binding<double>				spill;
+};
+
 struct layer
 {
 	binding<std::wstring>						name;
+	scene::coord								anchor;
 	scene::coord								position;
-	scene::rect									clipping;
+	scene::rect									crop;
+	scene::corners								perspective;
+	binding<double>								rotation;
 	scene::adjustments							adjustments;
 	binding<spl::shared_ptr<frame_producer>>	producer;
 	binding<bool>								hidden;
 	binding<bool>								is_key;
+	binding<bool>								use_mipmap;
+	binding<core::blend_mode>					blend_mode;
+	scene::chroma_key							chroma_key;
 
 	explicit layer(const std::wstring& name, const spl::shared_ptr<frame_producer>& producer);
 };
@@ -80,19 +98,29 @@ public:
 	}
 };
 
+enum class mark_action
+{
+	start,
+	stop,
+	jump_to,
+	remove
+};
+
+mark_action get_mark_action(const std::wstring& name);
+
 class scene_producer : public frame_producer_base
 {
 public:
-	scene_producer(int width, int height);
+	scene_producer(int width, int height, const video_format_desc& format_desc);
 	~scene_producer();
 
-	class draw_frame receive_impl() override;
+	draw_frame receive_impl() override;
 	constraints& pixel_constraints() override;
 	void on_interaction(const interaction_event::ptr& event) override;
 	bool collides(double x, double y) const override;
 	std::wstring print() const override;
 	std::wstring name() const override;
-	std::future<std::wstring>	call(const std::vector<std::wstring>& params) override;
+	std::future<std::wstring> call(const std::vector<std::wstring>& params) override;
 	boost::property_tree::wptree info() const override;
 	monitor::subject& monitor_output();
 
@@ -191,6 +219,8 @@ public:
 		store_keyframe(to_affect.identity(), k);
 	}
 
+	void add_mark(int64_t frame, mark_action action, const std::wstring& label);
+
 	core::variable& get_variable(const std::wstring& name) override;
 	const std::vector<std::wstring>& get_variables() const override;
 private:
@@ -201,7 +231,5 @@ private:
 	struct impl;
 	std::unique_ptr<impl> impl_;
 };
-
-spl::shared_ptr<frame_producer> create_dummy_scene_producer(const spl::shared_ptr<frame_factory>& frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params);
 
 }}}

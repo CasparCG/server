@@ -41,8 +41,11 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_transform.h>
 #include <core/frame/frame_factory.h>
+#include <core/producer/frame_producer.h>
 #include <core/monitor/monitor.h>
 #include <core/mixer/audio/audio_mixer.h>
+#include <core/help/help_repository.h>
+#include <core/help/help_sink.h>
 
 #include <tbb/concurrent_queue.h>
 
@@ -362,9 +365,25 @@ public:
 	}
 };
 
-spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& out_format_desc, const std::vector<std::wstring>& params)
+void describe_producer(core::help_sink& sink, const core::help_repository& repo)
 {
-	if(params.empty() || !boost::iequals(params[0], "decklink"))
+	sink.short_description(L"Allows video sources to be input from BlackMagic Design cards.");
+	sink.syntax(L"DECKLINK [device:int],DEVICE [device:int] {FILTER [filter:string]} {LENGTH [length:int]} {FORMAT [format:string]}");
+	sink.para()->text(L"Allows video sources to be input from BlackMagic Design cards. Parameters:");
+	sink.definitions()
+		->item(L"device", L"The decklink device to stream the input from. See the Blackmagic control panel for the order of devices in your system.")
+		->item(L"filter", L"If specified, sets an FFmpeg video filter to use.")
+		->item(L"length", L"Optionally specify a limit on how many frames to produce.")
+		->item(L"format", L"Specifies what video format to expect on the incoming SDI/HDMI signal. If not specified the video format of the channel is assumed.");
+	sink.para()->text(L"Examples:");
+	sink.example(L">> PLAY 1-10 DECKLINK DEVICE 2", L"Play using decklink device 2 expecting the video signal to have the same video format as the channel.");
+	sink.example(L">> PLAY 1-10 DECKLINK DEVICE 2 FORMAT PAL FILTER yadif=1:-1", L"Play using decklink device 2 expecting the video signal to be in PAL and deinterlace it.");
+	sink.example(L">> PLAY 1-10 DECKLINK DEVICE 2 LENGTH 1000", L"Play using decklink device 2 but only produce 1000 frames.");
+}
+
+spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
+{
+	if(params.empty() || !boost::iequals(params.at(0), "decklink"))
 		return core::frame_producer::empty();
 
 	auto device_index	= get_param(L"DEVICE", params, -1);
@@ -376,9 +395,9 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 	auto in_format_desc = core::video_format_desc(get_param(L"FORMAT", params, L"INVALID"));
 		
 	if(in_format_desc.format == core::video_format::invalid)
-		in_format_desc = out_format_desc;
+		in_format_desc = dependencies.format_desc;
 			
-	return create_destroy_proxy(spl::make_shared<decklink_producer_proxy>(in_format_desc, frame_factory, out_format_desc, device_index, filter_str, length));
+	return create_destroy_proxy(spl::make_shared<decklink_producer_proxy>(in_format_desc, dependencies.frame_factory, dependencies.format_desc, device_index, filter_str, length));
 }
 
 }}

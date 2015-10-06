@@ -26,17 +26,14 @@
 #include <common/memory.h>
 #include <common/filesystem_monitor.h>
 
+#include "fwd.h"
+
 namespace caspar { namespace core {
 
-class ogl_device;
-class read_frame;
-struct video_format_desc;
-struct media_info_repository;
-
 typedef std::function<void (
-		const class const_frame& frame,
+		const const_frame& frame,
 		const video_format_desc& format_desc,
-		const boost::filesystem::wpath& output_file,
+		const boost::filesystem::path& output_file,
 		int width,
 		int height)> thumbnail_creator;
 
@@ -45,15 +42,17 @@ class thumbnail_generator : boost::noncopyable
 public:
 	thumbnail_generator(
 			filesystem_monitor_factory& monitor_factory,
-			const boost::filesystem::wpath& media_path,
-			const boost::filesystem::wpath& thumbnails_path,
+			const boost::filesystem::path& media_path,
+			const boost::filesystem::path& thumbnails_path,
 			int width,
 			int height,
 			const video_format_desc& render_video_mode,
-			std::unique_ptr<class image_mixer> image_mixer,
+			std::unique_ptr<image_mixer> image_mixer,
 			int generate_delay_millis,
 			const thumbnail_creator& thumbnail_creator,
-			spl::shared_ptr<media_info_repository> media_info_repo);
+			spl::shared_ptr<media_info_repository> media_info_repo,
+			spl::shared_ptr<const frame_producer_registry> producer_registry,
+			bool mipmap);
 	~thumbnail_generator();
 	void generate(const std::wstring& media_file);
 	void generate_all();

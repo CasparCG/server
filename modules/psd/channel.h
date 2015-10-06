@@ -19,26 +19,23 @@
 * Author: Niklas P Andersson, niklas.p.andersson@svt.se
 */
 
-#ifndef _PSDCHANNEL_H__
-#define _PSDCHANNEL_H__
-
 #pragma once
 
-#include "util\bigendian_file_input_stream.h"
+#include "util/bigendian_file_input_stream.h"
+
 #include <memory>
+#include <cstdint>
 
 namespace caspar { namespace psd {
 
 struct channel
 {
 public:
-	channel(short id1, unsigned long len) : id(id1), data_length(len) {}
+	channel(int id1, int len) : id(id1), data_length(len) {}
 
-	short id;
-	unsigned long data_length;
+	int id;
+	int data_length;
 };
 
 }	//namespace psd
 }	//namespace caspar
-
-#endif	//_PSDCHANNEL_H__

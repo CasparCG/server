@@ -22,111 +22,77 @@
 #include "../stdafx.h"
 
 #include "reroute_producer.h"
+#include "layer_producer.h"
+#include "channel_producer.h"
 
 #include <core/producer/frame_producer.h>
-#include <core/frame/draw_frame.h>
-#include <core/frame/frame_factory.h>
-#include <core/frame/pixel_format.h>
-#include <core/frame/frame.h>
 #include <core/video_channel.h>
-#include <core/producer/stage.h>
+#include <core/help/help_sink.h>
+#include <core/help/help_repository.h>
 
-#include <common/except.h>
-#include <common/diagnostics/graph.h>
-#include <common/log.h>
-#include <common/reactive.h>
-#include <common/linq.h>
-
-#include <tbb/concurrent_queue.h>
-
-#include <boost/property_tree/ptree.hpp>
-#include <boost/optional.hpp>
-
-#include <queue>
+#include <boost/algorithm/string.hpp>
+#include <boost/range/algorithm/find_if.hpp>
 
 namespace caspar { namespace reroute {
-		
-class reroute_producer : public reactive::observer<std::map<int, core::draw_frame>>
-					   , public core::frame_producer_base
+
+void describe_producer(core::help_sink& sink, const core::help_repository& repository)
 {
-	core::monitor::subject											monitor_subject_;
+	sink.short_description(L"Reroutes a complete channel or a layer to another layer.");
+	sink.syntax(L"route://[source_channel:int]{-[source_layer:int]}");
+	sink.para()->text(L"Reroutes the composited video of a channel or the untransformed video of a layer .");
+	sink.para()
+		->text(L"If ")->code(L"source_layer")->text(L" is specified, only the video of the source layer is rerouted. ")
+		->text(L"If on the other hand only ")->code(L"source_channel")->text(L" is specified, the video of the complete channel is rerouted.");
+	sink.para()->text(L"Examples:");
+	sink.example(L">> PLAY 1-10 route://1-11", L"Play the contents of layer 1-11 on layer 1-10 as well.");
+	sink.example(L">> PLAY 1-10 route://2", L"Play the composited contents of channel 2 on layer 1-10 as well.");
+	sink.example(
+		L">> MIXER 1-10 FILL 0.02 0.01 0.9 0.9\n"
+		L">> PLAY 1-10 route://1\n"
+		L">> PLAY 1-9 AMB LOOP", L"Play the composited contents of channel 1 on layer 1-10. Since the source and destination channel is the same, an \"infinity\" effect is created.");
+	sink.para()->text(L"Always expect a few frames delay on the routed-to layer.");
+}
 
-	core::constraints												constraints_;
-	const spl::shared_ptr<diagnostics::graph>						graph_;
-	
-	tbb::concurrent_bounded_queue<std::map<int, core::draw_frame>>	input_buffer_;
-public:
-	explicit reroute_producer() 
-	{
-		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
-		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
-		graph_->set_text(print());
-		diagnostics::register_graph(graph_);
-
-		input_buffer_.set_capacity(1);
-	}
-		
-	// observable
-
-	void on_next(const std::map<int, core::draw_frame>& frames)
-	{
-		if(!input_buffer_.try_push(frames))
-			graph_->set_tag("dropped-frame");		
-	}
-
-	// frame_producer
-			
-	core::draw_frame receive_impl() override
-	{		
-		std::map<int, core::draw_frame> frames;
-		if(!input_buffer_.try_pop(frames))
-		{
-			graph_->set_tag("late-frame");
-			return core::draw_frame::late();		
-		}
-
-		return cpplinq::from(frames)
-			.select(values())
-			.aggregate(core::draw_frame::empty(), core::draw_frame::over);
-	}
-
-	core::constraints& pixel_constraints() override
-	{
-		return constraints_;
-	}
-		
-	std::wstring print() const override
-	{
-		return L"reroute[]";
-	}
-
-	std::wstring name() const override
-	{
-		return L"reroute";
-	}
-
-	boost::property_tree::wptree info() const override
-	{
-		boost::property_tree::wptree info;
-		info.add(L"type", L"rerotue-producer");
-		return info;
-	}
-		
-	core::monitor::subject& monitor_output()
-	{
-		return monitor_subject_;
-	}
-};
-
-spl::shared_ptr<core::frame_producer> create_producer(core::video_channel& channel)
+spl::shared_ptr<core::frame_producer> create_producer(
+		const core::frame_producer_dependencies& dependencies,
+		const std::vector<std::wstring>& params)
 {
-	auto producer = spl::make_shared<reroute_producer>();
-	
-	std::weak_ptr<reactive::observer<std::map<int, core::draw_frame>>> o = producer;
+	static const std::wstring PREFIX = L"route://";
 
-	//channel.stage().monitor_output().link_target.subscribe(o);
+	if (params.empty() ||
+		!boost::starts_with(params.at(0), PREFIX) ||
+		boost::ends_with(params.at(0), L"_A") ||
+		boost::ends_with(params.at(0), L"_ALPHA"))
+	{
+		return core::frame_producer::empty();
+	}
 
-	return producer;
+	auto& url = params.at(0);
+	auto channel_layer_spec = url.substr(PREFIX.length());
+	auto dash = channel_layer_spec.find(L"-");
+	bool has_layer_spec = dash != std::wstring::npos;
+	int channel_id;
+
+	if (has_layer_spec)
+		channel_id = boost::lexical_cast<int>(channel_layer_spec.substr(0, dash));
+	else
+		channel_id = boost::lexical_cast<int>(channel_layer_spec);
+
+	auto found_channel = boost::find_if(dependencies.channels, [=](spl::shared_ptr<core::video_channel> ch) { return ch->index() == channel_id; });
+
+	if (found_channel == dependencies.channels.end())
+		CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"No channel with id " + channel_id));
+
+	if (has_layer_spec)
+	{
+		auto layer = boost::lexical_cast<int>(channel_layer_spec.substr(dash + 1));
+
+		return create_layer_producer(*found_channel, layer);
+	}
+	else
+	{
+		return create_channel_producer(dependencies, *found_channel);
+	}
 }
 
 }}

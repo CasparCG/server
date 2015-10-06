@@ -37,7 +37,8 @@ namespace caspar { namespace accelerator { namespace ogl {
 
 std::weak_ptr<shader>	g_shader;
 tbb::mutex				g_shader_mutex;
-bool					g_blend_modes = false;
+bool					g_blend_modes		= false;
+bool					g_post_processing	= false;
 
 std::string get_blend_color_func()
 {
@@ -119,6 +120,45 @@ std::string get_simple_blend_color_func()
 		)shader";
 }
 
+std::string get_chroma_func()
+{
+	return
+
+		get_chroma_glsl()
+		
+		+
+		
+		R"shader(
+				vec4 chroma_key(vec4 c)
+				{
+					switch (chroma_mode)
+					{
+					case 0: return c;
+					case 1: return ChromaOnGreen(c.bgra).bgra;
+					case 2: return ChromaOnBlue(c.bgra).bgra;
+					}
+
+					return c;
+				}
+		)shader";
+}
+
+std::string get_post_process()
+{
+	return R"shader(
+		if (post_processing)
+		{
+			gl_FragColor = post_process().bgra;
+		}
+		else
+	)shader";
+}
+
+std::string get_no_post_process()
+{
+	return "";
+}
+
 std::string get_vertex()
 {
 	return R"shader(
@@ -135,7 +175,7 @@ std::string get_vertex()
 	)shader";
 }
 
-std::string get_fragment(bool blend_modes)
+std::string get_fragment(bool blend_modes, bool post_processing)
 {
 	return R"shader(
 
@@ -167,11 +207,22 @@ std::string get_fragment(bool blend_modes)
 			uniform float		sat;
 			uniform float		con;
 
+			uniform bool		post_processing;
+			uniform bool		straighten_alpha;
+
+			uniform bool		chroma;
+			uniform int			chroma_mode;
+			uniform vec2		chroma_blend;
+			uniform float		chroma_spill;
 	)shader"
 
 	+
 
 	(blend_modes ? get_blend_color_func() : get_simple_blend_color_func())
+
+	+
+
+	get_chroma_func()
 
 	+
 
@@ -223,63 +274,90 @@ std::string get_fragment(bool blend_modes)
 				switch(pixel_format)
 				{
 				case 0:		//gray
-					return vec4(get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).rrr, 1.0);
+					return vec4(get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).rrr, 1.0);
 				case 1:		//bgra,
-					return get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).bgra;
+					return get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).bgra;
 				case 2:		//rgba,
-					return get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).rgba;
+					return get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).rgba;
 				case 3:		//argb,
-					return get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).argb;
+					return get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).argb;
 				case 4:		//abgr,
-					return get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).gbar;
+					return get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).gbar;
 				case 5:		//ycbcr,
 					{
-						float y  = get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).r;
-						float cb = get_sample(plane[1], gl_TexCoord[0].st, plane_size[0]).r;
-						float cr = get_sample(plane[2], gl_TexCoord[0].st, plane_size[0]).r;
+						float y  = get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).r;
+						float cb = get_sample(plane[1], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).r;
+						float cr = get_sample(plane[2], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).r;
 						return ycbcra_to_rgba(y, cb, cr, 1.0);
 					}
 				case 6:		//ycbcra
 					{
-						float y  = get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).r;
-						float cb = get_sample(plane[1], gl_TexCoord[0].st, plane_size[0]).r;
-						float cr = get_sample(plane[2], gl_TexCoord[0].st, plane_size[0]).r;
-						float a  = get_sample(plane[3], gl_TexCoord[0].st, plane_size[0]).r;
+						float y  = get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).r;
+						float cb = get_sample(plane[1], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).r;
+						float cr = get_sample(plane[2], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).r;
+						float a  = get_sample(plane[3], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).r;
 						return ycbcra_to_rgba(y, cb, cr, a);
 					}
 				case 7:		//luma
 					{
-						vec3 y3 = get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).rrr;
+						vec3 y3 = get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).rrr;
 						return vec4((y3-0.065)/0.859, 1.0);
 					}
 				case 8:		//bgr,
-					return vec4(get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).bgr, 1.0);
+					return vec4(get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).bgr, 1.0);
 				case 9:		//rgb,
-					return vec4(get_sample(plane[0], gl_TexCoord[0].st, plane_size[0]).rgb, 1.0);
+					return vec4(get_sample(plane[0], gl_TexCoord[0].st / gl_TexCoord[0].q, plane_size[0]).rgb, 1.0);
 				}
 				return vec4(0.0, 0.0, 0.0, 0.0);
 			}
 
+			vec4 post_process()
+			{
+				vec4 color = texture2D(background, gl_TexCoord[0].st).bgra;
+
+				if (straighten_alpha)
+					color.rgb /= color.a + 0.0000001;
+
+				return color;
+			}	
+
 			void main()
 			{
-				vec4 color = get_rgba_color();
-			   if(levels)
-					color.rgb = LevelsControl(color.rgb, min_input, gamma, max_input, min_output, max_output);
-				if(csb)
-					color.rgb = ContrastSaturationBrightness(color.rgb, brt, sat, con);
-				if(has_local_key)
-					color *= texture2D(local_key, gl_TexCoord[1].st).r;
-				if(has_layer_key)
-					color *= texture2D(layer_key, gl_TexCoord[1].st).r;
-				color *= opacity;
-				color = blend(color);
-				gl_FragColor = color.bgra;
+	)shader"
+
+	+
+
+	(post_processing ? get_post_process() : get_no_post_process())
+
+	+
+
+	R"shader(
+				{
+					vec4 color = get_rgba_color();
+					if (chroma)
+						color = chroma_key(color);
+					if(levels)
+						color.rgb = LevelsControl(color.rgb, min_input, gamma, max_input, min_output, max_output);
+					if(csb)
+						color.rgb = ContrastSaturationBrightness(color.rgb, brt, sat, con);
+					if(has_local_key)
+						color *= texture2D(local_key, gl_TexCoord[1].st).r;
+					if(has_layer_key)
+						color *= texture2D(layer_key, gl_TexCoord[1].st).r;
+					color *= opacity;
+					color = blend(color);
+					gl_FragColor = color.bgra;
+				}
 			}
 	)shader";
 }
 
 std::shared_ptr<shader> get_image_shader(
-		const spl::shared_ptr<device>& ogl, bool& blend_modes, bool blend_modes_wanted)
+		const spl::shared_ptr<device>& ogl,
+		bool& blend_modes,
+		bool blend_modes_wanted,
+		bool& post_processing,
+		bool straight_alpha_wanted)
 {
 	tbb::mutex::scoped_lock lock(g_shader_mutex);
 	auto existing_shader = g_shader.lock();
@@ -287,6 +365,7 @@ std::shared_ptr<shader> get_image_shader(
 	if(existing_shader)
 	{
 		blend_modes = g_blend_modes;
+		post_processing = g_post_processing;
 		return existing_shader;
 	}
 
@@ -308,7 +387,8 @@ std::shared_ptr<shader> get_image_shader(
 	try
 	{				
 		g_blend_modes  = glTextureBarrierNV ? blend_modes_wanted : false;
-		existing_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes)), deleter);
+		g_post_processing = straight_alpha_wanted;
+		existing_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes, g_post_processing)), deleter);
 	}
 	catch(...)
 	{
@@ -316,9 +396,9 @@ std::shared_ptr<shader> get_image_shader(
 		CASPAR_LOG(warning) << "Failed to compile shader. Trying to compile without blend-modes.";
 				
 		g_blend_modes = false;
-		existing_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes)), deleter);
+		existing_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes, g_post_processing)), deleter);
 	}
-						
+
 	//if(!g_blend_modes)
 	//{
 	//	ogl.blend_func(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE);
@@ -327,6 +407,7 @@ std::shared_ptr<shader> get_image_shader(
 
 
 	blend_modes = g_blend_modes;
+	post_processing = g_post_processing;
 	g_shader = existing_shader;
 	return existing_shader;
 }

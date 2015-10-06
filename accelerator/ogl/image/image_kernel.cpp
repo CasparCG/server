@@ -38,10 +38,86 @@
 #include <core/frame/pixel_format.h>
 #include <core/frame/frame_transform.h>
 
+#include <boost/algorithm/cxx11/all_of.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/range/adaptor/transformed.hpp>
+
+#include <cmath>
 
 namespace caspar { namespace accelerator { namespace ogl {
-	
+
+// http://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
+bool get_line_intersection(
+		double p0_x, double p0_y,
+		double p1_x, double p1_y,
+		double p2_x, double p2_y,
+		double p3_x, double p3_y,
+		double& result_x, double& result_y)
+{
+	double s1_x = p1_x - p0_x;
+	double s1_y = p1_y - p0_y;
+	double s2_x = p3_x - p2_x;
+	double s2_y = p3_y - p2_y;
+
+	double s = (-s1_y * (p0_x - p2_x) + s1_x * (p0_y - p2_y)) / (-s2_x * s1_y + s1_x * s2_y);
+	double t = (s2_x * (p0_y - p2_y) - s2_y * (p0_x - p2_x)) / (-s2_x * s1_y + s1_x * s2_y);
+
+	if (s >= 0 && s <= 1 && t >= 0 && t <= 1)
+	{
+		// Collision detected
+		result_x = p0_x + (t * s1_x);
+		result_y = p0_y + (t * s1_y);
+
+		return true;
+	}
+
+	return false; // No collision
+}
+
+double hypotenuse(double x1, double y1, double x2, double y2)
+{
+	auto x = x2 - x1;
+	auto y = y2 - y1;
+
+	return std::sqrt(x * x + y * y);
+}
+
+double calc_q(double close_diagonal, double distant_diagonal)
+{
+	return (close_diagonal + distant_diagonal) / distant_diagonal;
+}
+
+bool is_above_screen(double y)
+{
+	return y < 0.0;
+}
+
+bool is_below_screen(double y)
+{
+	return y > 1.0;
+}
+
+bool is_left_of_screen(double x)
+{
+	return x < 0.0;
+}
+
+bool is_right_of_screen(double x)
+{
+	return x > 1.0;
+}
+
+bool is_outside_screen(const std::vector<core::frame_geometry::coord>& coords)
+{
+	auto x_coords = coords | boost::adaptors::transformed([](const core::frame_geometry::coord& c) { return c.vertex_x; });
+	auto y_coords = coords | boost::adaptors::transformed([](const core::frame_geometry::coord& c) { return c.vertex_y; });
+
+	return boost::algorithm::all_of(x_coords, &is_left_of_screen)
+		|| boost::algorithm::all_of(x_coords, &is_right_of_screen)
+		|| boost::algorithm::all_of(y_coords, &is_above_screen)
+		|| boost::algorithm::all_of(y_coords, &is_below_screen);
+}
+
 GLubyte upper_pattern[] = {
 	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
 	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
@@ -59,11 +135,15 @@ struct image_kernel::impl
 	spl::shared_ptr<device>	ogl_;
 	spl::shared_ptr<shader>	shader_;
 	bool					blend_modes_;
-							
-	impl(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted)
+	bool					post_processing_;
+	bool					supports_texture_barrier_	= glTextureBarrierNV != 0;
+
+	impl(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted, bool straight_alpha_wanted)
 		: ogl_(ogl)
-		, shader_(ogl_->invoke([&]{return get_image_shader(ogl, blend_modes_, blend_modes_wanted); }))
+		, shader_(ogl_->invoke([&]{return get_image_shader(ogl, blend_modes_, blend_modes_wanted, post_processing_, straight_alpha_wanted); }))
 	{
+		if (!supports_texture_barrier_)
+			CASPAR_LOG(warning) << L"[image_mixer] TextureBarrierNV not supported. Post processing will not be available";
 	}
 
 	void draw(draw_params params)
@@ -77,7 +157,82 @@ struct image_kernel::impl
 
 		if(params.transform.opacity < epsilon)
 			return;
-				
+
+		auto coords = params.geometry.data();
+
+		if (coords.empty())
+			return;
+
+		// Calculate transforms
+		auto f_p = params.transform.fill_translation;
+		auto f_s = params.transform.fill_scale;
+
+		bool is_default_geometry = boost::equal(coords, core::frame_geometry::get_default().data());
+		auto aspect = params.aspect_ratio;
+		auto angle = params.transform.angle;
+		auto anchor = params.transform.anchor;
+		auto crop = params.transform.crop;
+		auto pers = params.transform.perspective;
+		pers.ur[0] -= 1.0;
+		pers.lr[0] -= 1.0;
+		pers.lr[1] -= 1.0;
+		pers.ll[1] -= 1.0;
+		std::vector<boost::array<double, 2>> pers_corners = { pers.ul, pers.ur, pers.lr, pers.ll };
+
+		auto do_crop = [&](core::frame_geometry::coord& coord)
+		{
+			if (!is_default_geometry)
+				// TODO implement support for non-default geometry.
+				return;
+
+			coord.vertex_x = std::max(coord.vertex_x, crop.ul[0]);
+			coord.vertex_x = std::min(coord.vertex_x, crop.lr[0]);
+			coord.vertex_y = std::max(coord.vertex_y, crop.ul[1]);
+			coord.vertex_y = std::min(coord.vertex_y, crop.lr[1]);
+			coord.texture_x = std::max(coord.texture_x, crop.ul[0]);
+			coord.texture_x = std::min(coord.texture_x, crop.lr[0]);
+			coord.texture_y = std::max(coord.texture_y, crop.ul[1]);
+			coord.texture_y = std::min(coord.texture_y, crop.lr[1]);
+		};
+		auto do_perspective = [=](core::frame_geometry::coord& coord, const boost::array<double, 2>& pers_corner)
+		{
+			if (!is_default_geometry)
+				// TODO implement support for non-default geometry.
+				return;
+
+			coord.vertex_x += pers_corner[0];
+			coord.vertex_y += pers_corner[1];
+		};
+		auto rotate = [&](core::frame_geometry::coord& coord)
+		{
+			auto orig_x = (coord.vertex_x - anchor[0]) * f_s[0];
+			auto orig_y = (coord.vertex_y - anchor[1]) * f_s[1] / aspect;
+			coord.vertex_x = orig_x * std::cos(angle) - orig_y * std::sin(angle);
+			coord.vertex_y = orig_x * std::sin(angle) + orig_y * std::cos(angle);
+			coord.vertex_y *= aspect;
+		};
+		auto move = [&](core::frame_geometry::coord& coord)
+		{
+			coord.vertex_x += f_p[0];
+			coord.vertex_y += f_p[1];
+		};
+
+		int corner = 0;
+		for (auto& coord : coords)
+		{
+			do_crop(coord);
+			do_perspective(coord, pers_corners.at(corner));
+			rotate(coord);
+			move(coord);
+
+			if (++corner == 4)
+				corner = 0;
+		}
+
+		// Skip drawing if all the coordinates will be outside the screen.
+		if (is_outside_screen(coords))
+			return;
+
 		// Bind textures
 
 		for(int n = 0; n < params.textures.size(); ++n)
@@ -93,6 +248,7 @@ struct image_kernel::impl
 								
 		shader_->use();
 
+		shader_->set("post_processing",	false);
 		shader_->set("plane[0]",		texture_id::plane0);
 		shader_->set("plane[1]",		texture_id::plane1);
 		shader_->set("plane[2]",		texture_id::plane2);
@@ -109,7 +265,17 @@ struct image_kernel::impl
 		shader_->set("has_layer_key",	static_cast<bool>(params.layer_key));
 		shader_->set("pixel_format",	params.pix_desc.format);
 		shader_->set("opacity",			params.transform.is_key ? 1.0 : params.transform.opacity);	
-				
+
+		if (params.transform.chroma.key != core::chroma::type::none)
+		{
+			shader_->set("chroma", true);
+			shader_->set("chroma_mode", static_cast<int>(params.transform.chroma.key));
+			shader_->set("chroma_blend", params.transform.chroma.threshold, params.transform.chroma.softness);
+			shader_->set("chroma_spill", params.transform.chroma.spill);
+		}
+		else
+			shader_->set("chroma", false);
+
 
 		// Setup blend_func
 		
@@ -141,11 +307,11 @@ struct image_kernel::impl
 
 		// Setup image-adjustements
 		
-		if(params.transform.levels.min_input  > epsilon		||
-		   params.transform.levels.max_input  < 1.0-epsilon	||
-		   params.transform.levels.min_output > epsilon		||
-		   params.transform.levels.max_output < 1.0-epsilon	||
-		   std::abs(params.transform.levels.gamma - 1.0) > epsilon)
+		if (params.transform.levels.min_input  > epsilon		||
+			params.transform.levels.max_input  < 1.0-epsilon	||
+			params.transform.levels.min_output > epsilon		||
+			params.transform.levels.max_output < 1.0-epsilon	||
+			std::abs(params.transform.levels.gamma - 1.0) > epsilon)
 		{
 			shader_->set("levels", true);	
 			shader_->set("min_input",	params.transform.levels.min_input);	
@@ -157,9 +323,9 @@ struct image_kernel::impl
 		else
 			shader_->set("levels", false);	
 
-		if(std::abs(params.transform.brightness - 1.0) > epsilon ||
-		   std::abs(params.transform.saturation - 1.0) > epsilon ||
-		   std::abs(params.transform.contrast - 1.0)   > epsilon)
+		if (std::abs(params.transform.brightness - 1.0) > epsilon ||
+			std::abs(params.transform.saturation - 1.0) > epsilon ||
+			std::abs(params.transform.contrast - 1.0)   > epsilon)
 		{
 			shader_->set("csb",	true);	
 			
@@ -172,7 +338,7 @@ struct image_kernel::impl
 		
 		// Setup interlacing
 		
-		if(params.transform.field_mode != core::field_mode::progressive)	
+		if (params.transform.field_mode != core::field_mode::progressive)	
 		{
 			GL(glEnable(GL_POLYGON_STIPPLE));
 
@@ -193,21 +359,18 @@ struct image_kernel::impl
 		bool scissor = m_p[0] > std::numeric_limits<double>::epsilon()			|| m_p[1] > std::numeric_limits<double>::epsilon() ||
 					   m_s[0] < (1.0 - std::numeric_limits<double>::epsilon())	|| m_s[1] < (1.0 - std::numeric_limits<double>::epsilon());
 
-		if(scissor)
+		if (scissor)
 		{
 			double w = static_cast<double>(params.background->width());
 			double h = static_cast<double>(params.background->height());
 		
 			GL(glEnable(GL_SCISSOR_TEST));
-			glScissor(static_cast<int>(m_p[0]*w), static_cast<int>(m_p[1]*h), static_cast<int>(m_s[0]*w), static_cast<int>(m_s[1]*h));
+			glScissor(static_cast<int>(m_p[0] * w), static_cast<int>(m_p[1] * h), std::max(0, static_cast<int>(m_s[0] * w)), std::max(0, static_cast<int>(m_s[1] * h)));
 		}
 
-		auto f_p = params.transform.fill_translation;
-		auto f_s = params.transform.fill_scale;
-		
 		// Synchronize and set render target
 								
-		if(blend_modes_)
+		if (blend_modes_)
 		{
 			// http://www.opengl.org/registry/specs/NV/texture_barrier.txt
 			// This allows us to use framebuffer (background) both as source and target while blending.
@@ -215,66 +378,122 @@ struct image_kernel::impl
 		}
 
 		params.background->attach();
-		
-		glMatrixMode(GL_MODELVIEW);
-		glPushMatrix();
-			glTranslated(f_p[0], f_p[1], 0.0);
-			glScaled(f_s[0], f_s[1], 1.0);
 
-			switch(params.geometry.type())
+		// Perspective correction
+		double diagonal_intersection_x;
+		double diagonal_intersection_y;
+
+		if (get_line_intersection(
+				pers.ul[0] + crop.ul[0], pers.ul[1] + crop.ul[1],
+				pers.lr[0] + crop.lr[0], pers.lr[1] + crop.lr[1],
+				pers.ur[0] + crop.lr[0], pers.ur[1] + crop.ul[1],
+				pers.ll[0] + crop.ul[0], pers.ll[1] + crop.lr[1],
+				diagonal_intersection_x,
+				diagonal_intersection_y) &&
+			is_default_geometry)
+		{
+			// http://www.reedbeta.com/blog/2012/05/26/quadrilateral-interpolation-part-1/
+			auto d0 = hypotenuse(pers.ll[0] + crop.ul[0], pers.ll[1] + crop.lr[1], diagonal_intersection_x, diagonal_intersection_y);
+			auto d1 = hypotenuse(pers.lr[0] + crop.lr[0], pers.lr[1] + crop.lr[1], diagonal_intersection_x, diagonal_intersection_y);
+			auto d2 = hypotenuse(pers.ur[0] + crop.lr[0], pers.ur[1] + crop.ul[1], diagonal_intersection_x, diagonal_intersection_y);
+			auto d3 = hypotenuse(pers.ul[0] + crop.ul[0], pers.ul[1] + crop.ul[1], diagonal_intersection_x, diagonal_intersection_y);
+
+			auto ulq = calc_q(d3, d1);
+			auto urq = calc_q(d2, d0);
+			auto lrq = calc_q(d1, d3);
+			auto llq = calc_q(d0, d2);
+
+			std::vector<double> q_values = { ulq, urq, lrq, llq };
+
+			corner = 0;
+			for (auto& coord : coords)
 			{
-			case core::frame_geometry::geometry_type::quad:
-				{
-					const std::vector<float>& data = params.geometry.data();
-					float v_left = data[0], v_top = data[1], t_left = data[2], t_top = data[3];
-					float v_right = data[4], v_bottom = data[5], t_right = data[6], t_bottom = data[7];
+				coord.texture_q = q_values[corner];
+				coord.texture_x *= q_values[corner];
+				coord.texture_y *= q_values[corner];
 
-					glBegin(GL_QUADS);
-						glMultiTexCoord2d(GL_TEXTURE0, t_left, t_top);		glVertex2d(v_left, v_top);
-						glMultiTexCoord2d(GL_TEXTURE0, t_right, t_top);		glVertex2d(v_right, v_top);
-						glMultiTexCoord2d(GL_TEXTURE0, t_right, t_bottom);	glVertex2d(v_right, v_bottom);
-						glMultiTexCoord2d(GL_TEXTURE0, t_left, t_bottom);	glVertex2d(v_left, v_bottom);
-					glEnd();
-				}
-				break;
-
-			case core::frame_geometry::geometry_type::quad_list:
-				{
-					glClientActiveTexture(GL_TEXTURE0);
-					
-					glDisableClientState(GL_EDGE_FLAG_ARRAY);
-					glDisableClientState(GL_COLOR_ARRAY);
-					glDisableClientState(GL_INDEX_ARRAY);
-					glDisableClientState(GL_NORMAL_ARRAY);
-
-					glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-					glEnableClientState(GL_VERTEX_ARRAY);
-					
-					glTexCoordPointer(2, GL_FLOAT, 4*sizeof(float), &(params.geometry.data().data()[2]));
-					glVertexPointer(2, GL_FLOAT, 4*sizeof(float), params.geometry.data().data());
-					
-					glDrawArrays(GL_QUADS, 0, (GLsizei)params.geometry.data().size()/4);	//each vertex is four floats.
-					
-					glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-					glDisableClientState(GL_VERTEX_ARRAY);
-				}
-				break;
-
-			default:
-				break;
+				if (++corner == 4)
+					corner = 0;
 			}
-		glPopMatrix();
+		}
+
+		// Draw
+		switch(params.geometry.type())
+		{
+		case core::frame_geometry::geometry_type::quad:
+		case core::frame_geometry::geometry_type::quad_list:
+			{
+				glClientActiveTexture(GL_TEXTURE0);
+
+				glDisableClientState(GL_EDGE_FLAG_ARRAY);
+				glDisableClientState(GL_COLOR_ARRAY);
+				glDisableClientState(GL_INDEX_ARRAY);
+				glDisableClientState(GL_NORMAL_ARRAY);
+
+				glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+				glEnableClientState(GL_VERTEX_ARRAY);
+
+				auto stride = static_cast<GLsizei>(sizeof(core::frame_geometry::coord));
+				auto vertex_coord_member = &core::frame_geometry::coord::vertex_x;
+				auto texture_coord_member = &core::frame_geometry::coord::texture_x;
+				auto data_ptr = coords.data();
+				auto vertex_coord_ptr = &(data_ptr->*vertex_coord_member);
+				auto texture_coord_ptr = &(data_ptr->*texture_coord_member);
+
+				glVertexPointer(2, GL_DOUBLE, stride, vertex_coord_ptr);
+				glTexCoordPointer(4, GL_DOUBLE, stride, texture_coord_ptr);
+				glDrawArrays(GL_QUADS, 0, static_cast<GLsizei>(coords.size()));	//each vertex is four doubles.
+
+				glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+				glDisableClientState(GL_VERTEX_ARRAY);
+			}
+			break;
+		default:
+			break;
+		}
 		
 		// Cleanup
 		GL(glDisable(GL_SCISSOR_TEST));
 		GL(glDisable(GL_POLYGON_STIPPLE));
 		GL(glDisable(GL_BLEND));
 	}
+
+	void post_process(const std::shared_ptr<texture>& background, bool straighten_alpha)
+	{
+		bool should_post_process =
+				supports_texture_barrier_
+				&& straighten_alpha
+				&& post_processing_;
+
+		if (!should_post_process)
+			return;
+
+		background->attach();
+
+		background->bind(static_cast<int>(texture_id::background));
+
+		shader_->use();
+		shader_->set("background", texture_id::background);
+		shader_->set("post_processing", true);
+		shader_->set("straighten_alpha", straighten_alpha);
+
+		GL(glViewport(0, 0, background->width(), background->height()));
+
+		glBegin(GL_QUADS);
+			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 0.0); glVertex2d(0.0, 0.0);
+			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 0.0); glVertex2d(1.0, 0.0);
+			glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0); glVertex2d(1.0, 1.0);
+			glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glVertex2d(0.0, 1.0);
+		glEnd();
+
+		glTextureBarrierNV();
+	}
 };
 
-image_kernel::image_kernel(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted) : impl_(new impl(ogl, blend_modes_wanted)){}
+image_kernel::image_kernel(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted, bool straight_alpha_wanted) : impl_(new impl(ogl, blend_modes_wanted, straight_alpha_wanted)){}
 image_kernel::~image_kernel(){}
 void image_kernel::draw(const draw_params& params){impl_->draw(params);}
+void image_kernel::post_process(const std::shared_ptr<texture>& background, bool straighten_alpha) { impl_->post_process(background, straighten_alpha);}
 bool image_kernel::has_blend_modes() const{return impl_->blend_modes_;}
 
 }}}

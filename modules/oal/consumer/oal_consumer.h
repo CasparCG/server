@@ -23,21 +23,15 @@
 
 #include <common/memory.h>
 
-#include <core/video_format.h>
+#include <core/fwd.h>
 
 #include <vector>
 
 #include <boost/property_tree/ptree_fwd.hpp>
 
-namespace caspar { 
-
-namespace core {
-	class frame_consumer;
-	struct interaction_sink;
-}	
-
-namespace oal {
+namespace caspar { namespace oal {
 	
+void describe_consumer(core::help_sink& sink, const core::help_repository& repo);
 spl::shared_ptr<core::frame_consumer> create_consumer(
 		const std::vector<std::wstring>& params, core::interaction_sink*);
 spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(

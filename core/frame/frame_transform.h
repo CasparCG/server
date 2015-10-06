@@ -22,12 +22,31 @@
 #pragma once
 
 #include <common/tweener.h>
+#include <common/env.h>
+
 #include <core/video_format.h>
+#include <core/mixer/image/blend_modes.h>
 
 #include <boost/array.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 namespace caspar { namespace core {
-			
+
+struct chroma
+{
+	enum class type
+	{
+		none,
+		green,
+		blue
+	};
+
+	type	key			= type::none;
+	double	threshold	= 0.0;
+	double	softness	= 0.0;
+	double	spill		= 0.0;
+};
+
 struct levels final
 {
 	double min_input	= 0.0;
@@ -35,6 +54,20 @@ struct levels final
 	double gamma		= 1.0;
 	double min_output	= 0.0;
 	double max_output	= 1.0;
+};
+
+struct corners final
+{
+	boost::array<double, 2> ul = boost::array<double, 2> { { 0.0, 0.0 } };
+	boost::array<double, 2> ur = boost::array<double, 2> { { 1.0, 0.0 } };
+	boost::array<double, 2> lr = boost::array<double, 2> { { 1.0, 1.0 } };
+	boost::array<double, 2> ll = boost::array<double, 2> { { 0.0, 1.0 } };
+};
+
+struct rectangle final
+{
+	boost::array<double, 2> ul = boost::array<double, 2> { { 0.0, 0.0 } };
+	boost::array<double, 2> lr = boost::array<double, 2> { { 1.0, 1.0 } };
 };
 
 struct image_transform final
@@ -47,16 +80,24 @@ struct image_transform final
 	// A bug in VS 2013 prevents us from writing:
 	// boost::array<double, 2> fill_translation = { { 0.0, 0.0 } };
 	// See http://blogs.msdn.com/b/vcblog/archive/2014/08/19/the-future-of-non-static-data-member-initialization.aspx
+	boost::array<double, 2>	anchor				= boost::array<double, 2> { { 0.0, 0.0 } };
 	boost::array<double, 2>	fill_translation	= boost::array<double, 2> { { 0.0, 0.0 } };
 	boost::array<double, 2>	fill_scale			= boost::array<double, 2> { { 1.0, 1.0 } };
 	boost::array<double, 2>	clip_translation	= boost::array<double, 2> { { 0.0, 0.0 } };
 	boost::array<double, 2>	clip_scale			= boost::array<double, 2> { { 1.0, 1.0 } };
+	double					angle				= 0.0;
+	rectangle				crop;
+	corners					perspective;
 	core::levels			levels;
+	core::chroma			chroma;
 
 	core::field_mode		field_mode			= core::field_mode::progressive;
 	bool					is_key				= false;
 	bool					is_mix				= false;
 	bool					is_still			= false;
+	bool					use_mipmap			= false;
+	core::blend_mode		blend_mode			= core::blend_mode::normal;
+	int						layer_depth			= 0;
 	
 	image_transform& operator*=(const image_transform &other);
 	image_transform operator*(const image_transform &other) const;
@@ -113,6 +154,7 @@ public:
 		: duration_(0)
 		, time_(0)
 	{
+		dest_.image_transform.use_mipmap = env::properties().get(L"configuration.mixer.mipmapping_default_on", false);
 	}
 
 	tweened_transform(const frame_transform& source, const frame_transform& dest, int duration, const tweener& tween)
@@ -122,6 +164,11 @@ public:
 		, time_(0)
 		, tweener_(tween)
 	{
+	}
+
+	const frame_transform& dest() const
+	{
+		return dest_;
 	}
 	
 	frame_transform fetch()
@@ -136,4 +183,12 @@ public:
 	}
 };
 
-}}
+chroma::type get_chroma_mode(const std::wstring& str);
+std::wstring get_chroma_mode(chroma::type type);
+
+namespace detail {
+
+void set_current_aspect_ratio(double aspect_ratio);
+double get_current_aspect_ratio();
+
+}}}

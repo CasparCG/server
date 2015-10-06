@@ -23,17 +23,43 @@
 
 #include "AMCPCommandQueue.h"
 
-#include <common/timer.h>
+#include <boost/property_tree/ptree.hpp>
+
+#include <cmath>
 
 namespace caspar { namespace protocol { namespace amcp {
-	
-AMCPCommandQueue::AMCPCommandQueue() 
-	: executor_(L"AMCPCommandQueue")
+
+namespace {
+
+tbb::spin_mutex& get_global_mutex()
 {
+	static tbb::spin_mutex mutex;
+
+	return mutex;
 }
 
-AMCPCommandQueue::~AMCPCommandQueue() 
+std::map<std::wstring, AMCPCommandQueue*>& get_instances()
 {
+	static std::map<std::wstring, AMCPCommandQueue*> queues;
+
+	return queues;
+}
+
+}
+
+AMCPCommandQueue::AMCPCommandQueue(const std::wstring& name)
+	: executor_(L"AMCPCommandQueue " + name)
+{
+	tbb::spin_mutex::scoped_lock lock(get_global_mutex());
+
+	get_instances().insert(std::make_pair(name, this));
+}
+
+AMCPCommandQueue::~AMCPCommandQueue()
+{
+	tbb::spin_mutex::scoped_lock lock(get_global_mutex());
+
+	get_instances().erase(executor_.name());
 }
 
 void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
@@ -63,27 +89,102 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 			try
 			{
 				caspar::timer timer;
-				if(pCurrentCommand->Execute()) 
-					CASPAR_LOG(debug) << "Executed command: " << pCurrentCommand->print() << " " << timer.elapsed();
-				else 
-					CASPAR_LOG(warning) << "Failed to execute command: " << pCurrentCommand->print() << " " << timer.elapsed();
+
+				auto print = pCurrentCommand->print();
+				auto params = boost::join(pCurrentCommand->parameters(), L" ");
+
+				{
+					tbb::spin_mutex::scoped_lock lock(running_command_mutex_);
+					running_command_ = true;
+					running_command_name_ = print;
+					running_command_params_ = std::move(params);
+					running_command_since_.restart();
+				}
+
+				if (pCurrentCommand->Execute())
+					CASPAR_LOG(debug) << "Executed command (" << timer.elapsed() << "s): " << print;
+				else
+					CASPAR_LOG(warning) << "Failed to execute command: " << print;
 			}
-			catch(...)
+			catch (file_not_found&)
+			{
+				CASPAR_LOG(error) << L"File not found. No match found for parameters. Check syntax.";
+				pCurrentCommand->SetReplyString(L"404 " + pCurrentCommand->print() + L" FAILED\r\n");
+			}
+			catch (std::out_of_range&)
+			{
+				CASPAR_LOG(error) << L"Missing parameter. Check syntax.";
+				pCurrentCommand->SetReplyString(L"402 " + pCurrentCommand->print() + L" FAILED\r\n");
+			}
+			catch (...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
-				CASPAR_LOG(error) << "Failed to execute command:" << pCurrentCommand->print();
-				pCurrentCommand->SetReplyString(L"500 FAILED\r\n");
+				CASPAR_LOG(warning) << "Failed to execute command:" << pCurrentCommand->print();
+				pCurrentCommand->SetReplyString(L"501 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
 				
 			pCurrentCommand->SendReply();
 			
 			CASPAR_LOG(trace) << "Ready for a new command";
+
+			tbb::spin_mutex::scoped_lock lock(running_command_mutex_);
+			running_command_ = false;
 		}
 		catch(...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 	});
+}
+
+boost::property_tree::wptree AMCPCommandQueue::info() const
+{
+	boost::property_tree::wptree info;
+
+	auto name = executor_.name();
+	info.add(L"name", name);
+	auto size = executor_.size();
+	info.add(L"queued", std::max(0u, size));
+
+	bool running_command;
+	std::wstring running_command_name;
+	std::wstring running_command_params;
+	int64_t running_command_elapsed;
+
+	lock(running_command_mutex_, [&]
+	{
+		running_command = running_command_;
+
+		if (running_command)
+		{
+			running_command_name = running_command_name_;
+			running_command_params = running_command_params_;
+			running_command_elapsed = static_cast<int64_t>(
+				running_command_since_.elapsed() * 1000.0);
+		}
+	});
+
+	if (running_command)
+	{
+		info.add(L"running.command", running_command_name);
+		info.add(L"running.params", running_command_params);
+		info.add(L"running.elapsed", running_command_elapsed);
+	}
+
+	return info;
+}
+
+boost::property_tree::wptree AMCPCommandQueue::info_all_queues()
+{
+	boost::property_tree::wptree info;
+	tbb::spin_mutex::scoped_lock lock(get_global_mutex());
+
+	for (auto& queue : get_instances())
+	{
+		info.add_child(L"queues.queue", queue.second->info());
+	}
+
+	return info;
 }
 
 }}}

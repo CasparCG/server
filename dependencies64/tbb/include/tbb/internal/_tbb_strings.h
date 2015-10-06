@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2015 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks. Threading Building Blocks is free software;
     you can redistribute it and/or modify it under the terms of the GNU General Public License
@@ -27,7 +27,7 @@ TBB_STRING_RESOURCE(FLOW_JOIN_NODE_RESERVING, "join_node (reserving)")
 TBB_STRING_RESOURCE(FLOW_JOIN_NODE_TAG_MATCHING, "join_node (tag_matching)")
 TBB_STRING_RESOURCE(FLOW_LIMITER_NODE, "limiter_node")
 TBB_STRING_RESOURCE(FLOW_MULTIFUNCTION_NODE, "multifunction_node")
-TBB_STRING_RESOURCE(FLOW_OR_NODE, "or_node") //no longer in use, kept for backward compatibilty
+TBB_STRING_RESOURCE(FLOW_OR_NODE, "or_node") //no longer in use, kept for backward compatibility
 TBB_STRING_RESOURCE(FLOW_OVERWRITE_NODE, "overwrite_node")
 TBB_STRING_RESOURCE(FLOW_PRIORITY_QUEUE_NODE, "priority_queue_node")
 TBB_STRING_RESOURCE(FLOW_QUEUE_NODE, "queue_node")
@@ -63,3 +63,5 @@ TBB_STRING_RESOURCE(FLOW_OUTPUT_PORT_9, "output_port_9")
 TBB_STRING_RESOURCE(FLOW_OBJECT_NAME, "object_name")
 TBB_STRING_RESOURCE(FLOW_NULL, "null")
 TBB_STRING_RESOURCE(FLOW_INDEXER_NODE, "indexer_node")
+TBB_STRING_RESOURCE(FLOW_COMPOSITE_NODE, "composite_node")
+TBB_STRING_RESOURCE(FLOW_ASYNC_NODE, "async_node")

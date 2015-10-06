@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2015 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks. Threading Building Blocks is free software;
     you can redistribute it and/or modify it under the terms of the GNU General Public License
@@ -44,10 +44,6 @@
 #define __TBB_STEALING_PAUSE 1500/16
 #include <sched.h>
 #define __TBB_Yield() sched_yield()
-
-// low-level timing intrinsic and its type
-#define __TBB_machine_time_stamp() _rdtsc()
-typedef uint64_t machine_tsc_t;
 
 /** Specifics **/
 #define __TBB_STEALING_ABORT_ON_CONTENTION 1

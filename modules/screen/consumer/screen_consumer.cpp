@@ -34,6 +34,8 @@
 #include <common/prec_timer.h>
 #include <common/future.h>
 #include <common/timer.h>
+#include <common/param.h>
+#include <common/os/general_protection_fault.h>
 
 //#include <windows.h>
 
@@ -43,11 +45,14 @@
 #include <core/frame/frame.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/interaction/interaction_sink.h>
+#include <core/help/help_sink.h>
+#include <core/help/help_repository.h>
 
 #include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/thread.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
@@ -101,6 +106,7 @@ struct configuration
 	aspect_ratio	aspect				= aspect_ratio::aspect_invalid;
 	bool			vsync				= true;
 	bool			interactive			= true;
+	bool			borderless			= false;
 };
 
 struct screen_consumer : boost::noncopyable
@@ -134,6 +140,7 @@ struct screen_consumer : boost::noncopyable
 
 	boost::thread										thread_;
 	tbb::atomic<bool>									is_running_;
+	tbb::atomic<int64_t>								current_presentation_age_;
 
 	ffmpeg::filter										filter_;
 public:
@@ -209,6 +216,7 @@ public:
 		screen_height_	= square_height_;
 		
 		is_running_ = true;
+		current_presentation_age_ = 0;
 		thread_ = boost::thread([this]{run();});
 	}
 	
@@ -221,7 +229,12 @@ public:
 
 	void init()
 	{
-		window_.create(sf::VideoMode(screen_width_, screen_height_, 32), u8(L"Screen consumer " + channel_and_format()), config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
+		auto window_style = config_.borderless
+			? sf::Style::None
+			: (config_.windowed
+				? sf::Style::Resize | sf::Style::Close
+				: sf::Style::Fullscreen);
+		window_.create(sf::VideoMode(screen_width_, screen_height_, 32), u8(L"Screen consumer " + channel_and_format()), window_style);
 		window_.setMouseCursorVisible(config_.interactive);
 		window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
 		window_.setSize(sf::Vector2u(screen_width_, screen_height_));
@@ -293,6 +306,8 @@ public:
 
 	void run()
 	{
+		ensure_gpf_handler_installed_for_thread("screen-consumer-thread");
+
 		try
 		{
 			init();
@@ -333,11 +348,21 @@ public:
 											e.type == sf::Event::MouseButtonPressed));
 								}
 								break;
+							case sf::Event::MouseWheelMoved:
+								{
+									auto& wheel_moved = e.mouseWheel;
+									sink_->on_interaction(spl::make_shared<core::mouse_wheel_event>(
+											1,
+											static_cast<double>(wheel_moved.x) / screen_width_,
+											static_cast<double>(wheel_moved.y) / screen_height_,
+											wheel_moved.delta));
+								}
+								break;
 							}
 						}
 					}
 			
-					auto frame = core::const_frame::empty();
+					core::const_frame frame;
 					frame_buffer_.pop(frame);
 
 					render_and_draw_frame(frame);
@@ -348,6 +373,7 @@ public:
 
 					window_.Display();*/
 
+					current_presentation_age_ = frame.get_age_millis();
 					graph_->set_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);	
 					tick_timer_.restart();
 				}
@@ -399,9 +425,9 @@ public:
 		return av_frame;
 	}
 
-	void render_and_draw_frame(core::const_frame frame)
+	void render_and_draw_frame(core::const_frame input_frame)
 	{
-		if(static_cast<size_t>(frame.image_data().size()) != format_desc_.size)
+		if(static_cast<size_t>(input_frame.image_data().size()) != format_desc_.size)
 			return;
 
 		if(screen_width_ == 0 && screen_height_ == 0)
@@ -409,30 +435,31 @@ public:
 					
 		perf_timer_.restart();
 		auto av_frame = get_av_frame();
-		av_frame->data[0] = const_cast<uint8_t*>(frame.image_data().begin());
+		av_frame->data[0] = const_cast<uint8_t*>(input_frame.image_data().begin());
 
 		filter_.push(av_frame);
-		auto frames = filter_.poll_all();
+		auto frame = filter_.poll();
 
-		if (frames.empty())
+		if (!frame)
 			return;
 
-		if (frames.size() == 1)
+		if (!filter_.is_double_rate())
 		{
-			render(frames[0]);
+			render(spl::make_shared_ptr(frame));
 			graph_->set_value("frame-time", perf_timer_.elapsed() * format_desc_.fps * 0.5);
 
 			wait_for_vblank_and_display(); // progressive frame
 		}
-		else if (frames.size() == 2)
+		else
 		{
-			render(frames[0]);
+			render(spl::make_shared_ptr(frame));
 			double perf_elapsed = perf_timer_.elapsed();
 
 			wait_for_vblank_and_display(); // field1
 
 			perf_timer_.restart();
-			render(frames[1]);
+			frame = filter_.poll();
+			render(spl::make_shared_ptr(frame));
 			perf_elapsed += perf_timer_.elapsed();
 			graph_->set_value("frame-time", perf_elapsed * format_desc_.fps * 0.5);
 
@@ -587,7 +614,12 @@ public:
 		consumer_.reset();
 		consumer_.reset(new screen_consumer(config_, format_desc, channel_index, sink_));
 	}
-	
+
+	int64_t presentation_frame_age_millis() const override
+	{
+		return consumer_ ? static_cast<int64_t>(consumer_->current_presentation_age_) : 0;
+	}
+
 	std::future<bool> send(core::const_frame frame) override
 	{
 		return consumer_->send(frame);
@@ -610,6 +642,7 @@ public:
 		info.add(L"key-only", config_.key_only);
 		info.add(L"windowed", config_.windowed);
 		info.add(L"auto-deinterlace", config_.auto_deinterlace);
+		info.add(L"vsync", config_.vsync);
 		return info;
 	}
 
@@ -634,23 +667,52 @@ public:
 	}
 };	
 
+void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Displays the contents of a channel on screen using OpenGL.");
+	sink.syntax(
+			L"SCREEN "
+			L"{[screen_index:int]|1} "
+			L"{[fullscreen:FULLSCREEN]} "
+			L"{[borderless:BORDERLESS]} "
+			L"{[key_only:KEY_ONLY]} "
+			L"{[non_interactive:NON_INTERACTIVE]} "
+			L"{[no_auto_deinterlace:NO_AUTO_DEINTERLACE]} "
+			L"{NAME [name:string]}");
+	sink.para()->text(L"Displays the contents of a channel on screen using OpenGL.");
+	sink.definitions()
+		->item(L"screen_index", L"Determines which screen the channel should be displayed on. Defaults to 1.")
+		->item(L"fullscreen", L"If specified opens the window in fullscreen.")
+		->item(L"borderless", L"Makes the window appear without any window decorations.")
+		->item(L"key_only", L"Only displays the alpha channel of the video channel if specified.")
+		->item(L"non_interactive", L"If specified does not send mouse input to producers on the video channel.")
+		->item(L"no_auto_deinterlace", L"If the video mode of the channel is an interlaced mode, specifying this will turn of deinterlacing.")
+		->item(L"name", L"Optionally specifies a name of the window to show.");
+	sink.para()->text(L"Examples:");
+	sink.example(L">> ADD 1 SCREEN", L"opens a screen consumer on the default screen.");
+	sink.example(L">> ADD 1 SCREEN 2", L"opens a screen consumer on the screen 2.");
+	sink.example(L">> ADD 1 SCREEN 1 FULLSCREEN", L"opens a screen consumer in fullscreen on screen 1.");
+	sink.example(L">> ADD 1 SCREEN 1 BORDERLESS", L"opens a screen consumer without borders/window decorations on screen 1.");
+}
+
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params, core::interaction_sink* sink)
 {
-	if(params.size() < 1 || params[0] != L"SCREEN")
+	if (params.size() < 1 || !boost::iequals(params.at(0), L"SCREEN"))
 		return core::frame_consumer::empty();
 	
 	configuration config;
 		
-	if(params.size() > 1)
-		config.screen_index = boost::lexical_cast<int>(params[1]);
+	if (params.size() > 1)
+		config.screen_index = boost::lexical_cast<int>(params.at(1));
 		
-	config.windowed		= std::find(params.begin(), params.end(), L"WINDOWED") != params.end();
-	config.key_only		= std::find(params.begin(), params.end(), L"KEY_ONLY") != params.end();
-	config.interactive	= std::find(params.begin(), params.end(), L"INTERACTIVE") != params.end();
+	config.windowed			= !contains_param(L"FULLSCREEN", params);
+	config.key_only			=  contains_param(L"KEY_ONLY", params);
+	config.interactive		= !contains_param(L"NON_INTERACTIVE", params);
+	config.auto_deinterlace	= !contains_param(L"NO_AUTO_DEINTERLACE", params);
+	config.borderless		=  contains_param(L"BORDERLESS", params);
 
-	auto name_it	= std::find(params.begin(), params.end(), L"NAME");
-	if(name_it != params.end() && ++name_it != params.end())
-		config.name = *name_it;
+	if (contains_param(L"NAME", params))
+		config.name = get_param(L"NAME", params);
 
 	return spl::make_shared<screen_consumer_proxy>(config, sink);
 }
@@ -658,13 +720,15 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(const boost::property_tree::wptree& ptree, core::interaction_sink* sink) 
 {
 	configuration config;
-	config.name				= ptree.get(L"name",	 config.name);
-	config.screen_index		= ptree.get(L"device",   config.screen_index+1)-1;
-	config.windowed			= ptree.get(L"windowed", config.windowed);
-	config.key_only			= ptree.get(L"key-only", config.key_only);
-	config.auto_deinterlace	= ptree.get(L"auto-deinterlace", config.auto_deinterlace);
-	config.vsync			= ptree.get(L"vsync", config.vsync);
-	
+	config.name				= ptree.get(L"name",				config.name);
+	config.screen_index		= ptree.get(L"device",				config.screen_index + 1) - 1;
+	config.windowed			= ptree.get(L"windowed",			config.windowed);
+	config.key_only			= ptree.get(L"key-only",			config.key_only);
+	config.auto_deinterlace	= ptree.get(L"auto-deinterlace",	config.auto_deinterlace);
+	config.vsync			= ptree.get(L"vsync",				config.vsync);
+	config.interactive		= ptree.get(L"interactive",			config.interactive);
+	config.borderless		= ptree.get(L"borderless",			config.borderless);
+
 	auto stretch_str = ptree.get(L"stretch", L"default");
 	if(stretch_str == L"uniform")
 		config.stretch = screen::stretch::uniform;

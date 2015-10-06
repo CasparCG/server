@@ -22,6 +22,8 @@
 #pragma once
 
 #include "../monitor/monitor.h"
+#include "../fwd.h"
+#include "../help/help_repository.h"
 
 #include <common/memory.h>
 #include <common/future_fwd.h>
@@ -33,8 +35,6 @@
 #include <vector>
 
 namespace caspar { namespace core {
-
-struct interaction_sink;
 
 // Interface
 class frame_consumer
@@ -54,8 +54,8 @@ public:
 	
 	// Methods
 
-	virtual std::future<bool>				send(class const_frame frame) = 0;
-	virtual void							initialize(const struct video_format_desc& format_desc, int channel_index) = 0;
+	virtual std::future<bool>				send(const_frame frame) = 0;
+	virtual void							initialize(const video_format_desc& format_desc, int channel_index) = 0;
 	
 	// monitor::observable
 
@@ -67,8 +67,9 @@ public:
 	virtual std::wstring					name() const = 0;
 	virtual boost::property_tree::wptree	info() const = 0;
 	virtual bool							has_synchronization_clock() const {return true;}
-	virtual int								buffer_depth() const = 0;
+	virtual int								buffer_depth() const = 0; // -1 to not participate in frame presentation synchronization
 	virtual int								index() const = 0;
+	virtual int64_t							presentation_frame_age_millis() const = 0;
 };
 
 typedef std::function<spl::shared_ptr<frame_consumer>(
@@ -78,16 +79,26 @@ typedef std::function<spl::shared_ptr<frame_consumer>(
 		const boost::property_tree::wptree& element,
 		interaction_sink* sink)> preconfigured_consumer_factory_t;
 
-void register_consumer_factory(const consumer_factory_t& factory);
-void register_preconfigured_consumer_factory(
-		const std::wstring& element_name,
-		const preconfigured_consumer_factory_t& factory);
-spl::shared_ptr<frame_consumer> create_consumer(
-		const std::vector<std::wstring>& params,
-		interaction_sink* sink);
-spl::shared_ptr<frame_consumer> create_consumer(
-		const std::wstring& element_name,
-		const boost::property_tree::wptree& element,
-		interaction_sink* sink);
+class frame_consumer_registry : boost::noncopyable
+{
+public:
+	frame_consumer_registry(spl::shared_ptr<help_repository> help_repo);
+	void register_consumer_factory(const std::wstring& name, const consumer_factory_t& factory, const help_item_describer& describer);
+	void register_preconfigured_consumer_factory(
+			const std::wstring& element_name,
+			const preconfigured_consumer_factory_t& factory);
+	spl::shared_ptr<frame_consumer> create_consumer(
+			const std::vector<std::wstring>& params,
+			interaction_sink* sink) const;
+	spl::shared_ptr<frame_consumer> create_consumer(
+			const std::wstring& element_name,
+			const boost::property_tree::wptree& element,
+			interaction_sink* sink) const;
+private:
+	struct impl;
+	spl::shared_ptr<impl> impl_;
+};
+
+void destroy_consumers_synchronously();
 
 }}

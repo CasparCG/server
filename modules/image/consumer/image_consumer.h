@@ -38,10 +38,11 @@ namespace image {
 void write_cropped_png(
 		const class core::const_frame& frame,
 		const core::video_format_desc& format_desc,
-		const boost::filesystem::wpath& output_file,
+		const boost::filesystem::path& output_file,
 		int width,
 		int height);
 
+void describe_consumer(core::help_sink& sink, const core::help_repository& repo);
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params, struct core::interaction_sink*);
 
 }}

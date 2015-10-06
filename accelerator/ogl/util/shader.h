@@ -47,7 +47,7 @@ public:
 	void set(const std::string& name, bool value);
 	void set(const std::string& name, int value);
 	void set(const std::string& name, float value);
-	void set(const std::string& name, float value0, float value1);
+	void set(const std::string& name, double value0, double value1);
 	void set(const std::string& name, double value);
 
 	template<typename E>

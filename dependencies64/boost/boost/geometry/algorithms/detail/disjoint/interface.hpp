@@ -23,8 +23,8 @@
 
 #include <cstddef>
 
-#include <boost/variant/static_visitor.hpp>
 #include <boost/variant/apply_visitor.hpp>
+#include <boost/variant/static_visitor.hpp>
 #include <boost/variant/variant_fwd.hpp>
 
 #include <boost/geometry/geometries/concepts/check.hpp>
@@ -175,7 +175,7 @@ struct disjoint<
 */
 template <typename Geometry1, typename Geometry2>
 inline bool disjoint(Geometry1 const& geometry1,
-            Geometry2 const& geometry2)
+                     Geometry2 const& geometry2)
 {
     return resolve_variant::disjoint<Geometry1, Geometry2>::apply(geometry1, geometry2);
 }

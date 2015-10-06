@@ -22,8 +22,9 @@
 #include <boost/range.hpp>
 #include <boost/type_traits/is_array.hpp>
 #include <boost/type_traits/remove_reference.hpp>
-#include <boost/variant/static_visitor.hpp>
+
 #include <boost/variant/apply_visitor.hpp>
+#include <boost/variant/static_visitor.hpp>
 #include <boost/variant/variant_fwd.hpp>
 
 #include <boost/geometry/arithmetic/arithmetic.hpp>
@@ -276,7 +277,7 @@ template
     bool UseAssignment = boost::is_same<Geometry1, Geometry2>::value
                          && !boost::is_array<Geometry1>::value
 >
-struct convert: not_implemented<Tag1, Tag2, mpl::int_<DimensionCount> >
+struct convert: not_implemented<Tag1, Tag2, boost::mpl::int_<DimensionCount> >
 {};
 
 
@@ -521,7 +522,7 @@ struct convert<boost::variant<BOOST_VARIANT_ENUM_PARAMS(T)>, Geometry2>
         Geometry2& geometry2
     )
     {
-        apply_visitor(visitor(geometry2), geometry1);
+        boost::apply_visitor(visitor(geometry2), geometry1);
     }
 };
 

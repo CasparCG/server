@@ -50,12 +50,12 @@
 namespace caspar { namespace core {
 
 std::wstring get_relative_without_extension(
-		const boost::filesystem::wpath& file,
-		const boost::filesystem::wpath& relative_to)
+		const boost::filesystem::path& file,
+		const boost::filesystem::path& relative_to)
 {
 	auto result = file.stem();
 
-	boost::filesystem::wpath current_path = file;
+	boost::filesystem::path current_path = file;
 
 	while (true)
 	{
@@ -98,30 +98,34 @@ struct thumbnail_output
 struct thumbnail_generator::impl
 {
 private:
-	boost::filesystem::wpath				media_path_;
-	boost::filesystem::wpath				thumbnails_path_;
-	int										width_;
-	int										height_;
-	spl::shared_ptr<image_mixer>			image_mixer_;
-	spl::shared_ptr<diagnostics::graph>		graph_;
-	video_format_desc						format_desc_;
-	spl::unique_ptr<thumbnail_output>		output_;
-	mixer									mixer_;
-	thumbnail_creator						thumbnail_creator_;
-	spl::shared_ptr<media_info_repository>	media_info_repo_;
-	filesystem_monitor::ptr					monitor_;
+	boost::filesystem::path							media_path_;
+	boost::filesystem::path							thumbnails_path_;
+	int												width_;
+	int												height_;
+	spl::shared_ptr<image_mixer>					image_mixer_;
+	spl::shared_ptr<diagnostics::graph>				graph_;
+	video_format_desc								format_desc_;
+	spl::unique_ptr<thumbnail_output>				output_;
+	mixer											mixer_;
+	thumbnail_creator								thumbnail_creator_;
+	spl::shared_ptr<media_info_repository>			media_info_repo_;
+	spl::shared_ptr<const frame_producer_registry>	producer_registry_;
+	bool											mipmap_;
+	filesystem_monitor::ptr							monitor_;
 public:
 	impl(
 			filesystem_monitor_factory& monitor_factory,
-			const boost::filesystem::wpath& media_path,
-			const boost::filesystem::wpath& thumbnails_path,
+			const boost::filesystem::path& media_path,
+			const boost::filesystem::path& thumbnails_path,
 			int width,
 			int height,
 			const video_format_desc& render_video_mode,
 			std::unique_ptr<image_mixer> image_mixer,
 			int generate_delay_millis,
 			const thumbnail_creator& thumbnail_creator,
-			spl::shared_ptr<media_info_repository> media_info_repo)
+			spl::shared_ptr<media_info_repository> media_info_repo,
+			spl::shared_ptr<const frame_producer_registry> producer_registry,
+			bool mipmap)
 		: media_path_(media_path)
 		, thumbnails_path_(thumbnails_path)
 		, width_(width)
@@ -129,18 +133,19 @@ public:
 		, image_mixer_(std::move(image_mixer))
 		, format_desc_(render_video_mode)
 		, output_(spl::make_unique<thumbnail_output>(generate_delay_millis))
-		, mixer_(graph_, image_mixer_)
+		, mixer_(0, graph_, image_mixer_)
 		, thumbnail_creator_(thumbnail_creator)
 		, media_info_repo_(std::move(media_info_repo))
+		, producer_registry_(std::move(producer_registry))
 		, monitor_(monitor_factory.create(
 				media_path,
 				filesystem_event::ALL,
 				true,
-				[this] (filesystem_event event, const boost::filesystem::wpath& file)
+				[this] (filesystem_event event, const boost::filesystem::path& file)
 				{
 					this->on_file_event(event, file);
 				},
-				[this] (const std::set<boost::filesystem::wpath>& initial_files) 
+				[this] (const std::set<boost::filesystem::path>& initial_files)
 				{
 					this->on_initial_files(initial_files);
 				}))
@@ -152,7 +157,7 @@ public:
 		//output_->sleep_millis = 2000;
 	}
 
-	void on_initial_files(const std::set<boost::filesystem::wpath>& initial_files)
+	void on_initial_files(const std::set<boost::filesystem::path>& initial_files)
 	{
 		using namespace boost::filesystem;
 
@@ -200,7 +205,7 @@ public:
 		monitor_->reemmit_all();
 	}
 
-	void on_file_event(filesystem_event event, const boost::filesystem::wpath& file)
+	void on_file_event(filesystem_event event, const boost::filesystem::path& file)
 	{
 		switch (event)
 		{
@@ -222,7 +227,7 @@ public:
 		}
 	}
 
-	bool needs_to_be_generated(const boost::filesystem::wpath& file)
+	bool needs_to_be_generated(const boost::filesystem::path& file)
 	{
 		using namespace boost::filesystem;
 
@@ -254,7 +259,7 @@ public:
 		}
 	}
 
-	void generate_thumbnail(const boost::filesystem::wpath& file)
+	void generate_thumbnail(const boost::filesystem::path& file)
 	{
 		auto media_file = get_relative_without_extension(file, media_path_);
 		auto png_file = thumbnails_path_ / (media_file + L".png");
@@ -265,7 +270,9 @@ public:
 
 			try
 			{
-				producer = create_thumbnail_producer(image_mixer_, format_desc_, media_file);
+				producer = producer_registry_->create_thumbnail_producer(
+						frame_producer_dependencies(image_mixer_, { }, format_desc_, producer_registry_),
+						media_file);
 			}
 			catch (const boost::thread_interrupted&)
 			{
@@ -318,11 +325,12 @@ public:
 			auto transformed_frame = draw_frame(raw_frame);
 			transformed_frame.transform().image_transform.fill_scale[0] = static_cast<double>(width_) / format_desc_.width;
 			transformed_frame.transform().image_transform.fill_scale[1] = static_cast<double>(height_) / format_desc_.height;
+			transformed_frame.transform().image_transform.use_mipmap = mipmap_;
 			frames.insert(std::make_pair(0, transformed_frame));
 
 			std::shared_ptr<void> ticket(nullptr, [&thumbnail_ready](void*) { thumbnail_ready.set_value(); });
 
-			auto mixed_frame = mixer_(frames, format_desc_);
+			auto mixed_frame = mixer_(std::move(frames), format_desc_);
 
 			output_->send(std::move(mixed_frame), ticket);
 			ticket.reset();
@@ -349,15 +357,17 @@ public:
 
 thumbnail_generator::thumbnail_generator(
 		filesystem_monitor_factory& monitor_factory,
-		const boost::filesystem::wpath& media_path,
-		const boost::filesystem::wpath& thumbnails_path,
+		const boost::filesystem::path& media_path,
+		const boost::filesystem::path& thumbnails_path,
 		int width,
 		int height,
 		const video_format_desc& render_video_mode,
 		std::unique_ptr<image_mixer> image_mixer,
 		int generate_delay_millis,
 		const thumbnail_creator& thumbnail_creator,
-		spl::shared_ptr<media_info_repository> media_info_repo)
+		spl::shared_ptr<media_info_repository> media_info_repo,
+		spl::shared_ptr<const frame_producer_registry> producer_registry,
+		bool mipmap)
 		: impl_(new impl(
 				monitor_factory,
 				media_path,
@@ -367,7 +377,9 @@ thumbnail_generator::thumbnail_generator(
 				std::move(image_mixer),
 				generate_delay_millis,
 				thumbnail_creator,
-				media_info_repo))
+				media_info_repo,
+				producer_registry,
+				mipmap))
 {
 }
 

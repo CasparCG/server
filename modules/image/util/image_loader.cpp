@@ -41,11 +41,19 @@ std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename)
 	if(!boost::filesystem::exists(filename))
 		CASPAR_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(u8(filename)));
 
-	FREE_IMAGE_FORMAT fif = FreeImage_GetFileTypeU(filename.c_str(), 0);		
+#ifdef WIN32
+	FREE_IMAGE_FORMAT fif = FreeImage_GetFileTypeU(filename.c_str(), 0);
+#else
+	FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(u8(filename).c_str(), 0);
+#endif
 	if(fif == FIF_UNKNOWN || !FreeImage_FIFSupportsReading(fif)) 
 		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
 		
+#ifdef WIN32
 	auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_LoadU(fif, filename.c_str(), 0), FreeImage_Unload);
+#else
+	auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Load(fif, u8(filename).c_str(), 0), FreeImage_Unload);
+#endif
 		  
 	if(FreeImage_GetBPP(bitmap.get()) != 32)
 	{
@@ -78,7 +86,7 @@ std::shared_ptr<FIBITMAP> load_png_from_memory(const void* memory_location, size
 		bitmap = std::shared_ptr<FIBITMAP>(FreeImage_ConvertTo32Bits(bitmap.get()), FreeImage_Unload);
 
 		if (!bitmap)
-			BOOST_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
+			CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
 	}
 
 	return bitmap;

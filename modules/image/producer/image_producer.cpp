@@ -32,11 +32,14 @@
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
 #include <core/monitor/monitor.h>
+#include <core/help/help_sink.h>
+#include <core/help/help_repository.h>
 
 #include <common/env.h>
 #include <common/log.h>
 #include <common/array.h>
 #include <common/base64.h>
+#include <common/os/filesystem.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -168,7 +171,17 @@ public:
 	}
 };
 
-spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
+void describe_producer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Loads a still image.");
+	sink.syntax(L"{[image_file:string]},{[PNG_BASE64] [encoded:string]}");
+	sink.para()->text(L"Loads a still image, either from disk or via a base64 encoded image submitted via AMCP.");
+	sink.para()->text(L"Examples:");
+	sink.example(L">> PLAY 1-10 image_file", L"Plays an image from the media folder.");
+	sink.example(L">> PLAY 1-10 [PNG_BASE64] data...", L"Plays a PNG image transferred as a base64 encoded string.");
+}
+
+spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
 {
 	static const auto extensions = {
 		L".png",
@@ -185,13 +198,13 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 		L".j2c"
 	};
 
-	if (boost::iequals(params[0], L"[IMG_SEQUENCE]"))
+	if (boost::iequals(params.at(0), L"[IMG_SEQUENCE]"))
 	{
 		if (params.size() != 2)
 			return core::frame_producer::empty();
 
-		auto dir = boost::filesystem::path(env::media_folder() + params[1]).parent_path();
-		auto basename = boost::filesystem::basename(params[1]);
+		auto dir = boost::filesystem::path(env::media_folder() + params.at(1)).parent_path();
+		auto basename = boost::filesystem::basename(params.at(1));
 		std::set<std::wstring> files;
 		boost::filesystem::directory_iterator end;
 
@@ -220,7 +233,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 
 		for (auto& file : files)
 		{
-			auto frame = load_image(frame_factory, file);
+			auto frame = load_image(dependencies.frame_factory, file);
 
 			if (width == -1)
 			{
@@ -233,32 +246,35 @@ spl::shared_ptr<core::frame_producer> create_producer(const spl::shared_ptr<core
 
 		return core::create_const_producer(std::move(frames), width, height);
 	}
-	else if(boost::iequals(params[0], L"[PNG_BASE64]"))
+	else if(boost::iequals(params.at(0), L"[PNG_BASE64]"))
 	{
 		if (params.size() < 2)
 			return core::frame_producer::empty();
 
-		auto png_data = from_base64(std::string(params[1].begin(), params[1].end()));
+		auto png_data = from_base64(std::string(params.at(1).begin(), params.at(1).end()));
 
-		return spl::make_shared<image_producer>(frame_factory, png_data.data(), png_data.size());
+		return spl::make_shared<image_producer>(dependencies.frame_factory, png_data.data(), png_data.size());
 	}
 
-	std::wstring filename = env::media_folder() + params[0];
+	std::wstring filename = env::media_folder() + params.at(0);
 
 	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
-		{			
-			return boost::filesystem::is_regular_file(boost::filesystem::path(filename).replace_extension(ex));
-		});
+	{
+		auto file = caspar::find_case_insensitive(boost::filesystem::path(filename).replace_extension(ex).wstring());
+
+		return static_cast<bool>(file);
+	});
 
 	if(ext == extensions.end())
 		return core::frame_producer::empty();
 
-	return spl::make_shared<image_producer>(frame_factory, filename + *ext);
+	return spl::make_shared<image_producer>(dependencies.frame_factory, *caspar::find_case_insensitive(filename + *ext));
 }
 
 
-spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
 {
-	return caspar::image::create_producer(frame_factory, format_desc, params);
+	return caspar::image::create_producer(dependencies, params);
 }
+
 }}

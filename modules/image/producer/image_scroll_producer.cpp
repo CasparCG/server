@@ -34,6 +34,8 @@
 #include <core/frame/frame_transform.h>
 #include <core/frame/pixel_format.h>
 #include <core/monitor/monitor.h>
+#include <core/help/help_sink.h>
+#include <core/help/help_repository.h>
 
 #include <common/env.h>
 #include <common/log.h>
@@ -41,6 +43,7 @@
 #include <common/array.h>
 #include <common/tweener.h>
 #include <common/param.h>
+#include <common/os/filesystem.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
@@ -49,6 +52,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 
 namespace caspar { namespace image {
 		
@@ -96,7 +100,7 @@ struct image_scroll_producer : public core::frame_producer_base
 		bool horizontal = height_ == format_desc_.height;
 
 		if (!vertical && !horizontal)
-			BOOST_THROW_EXCEPTION(
+			CASPAR_THROW_EXCEPTION(
 				caspar::invalid_argument() << msg_info("Neither width nor height matched the video resolution"));
 
 		if (vertical)
@@ -170,7 +174,7 @@ struct image_scroll_producer : public core::frame_producer_base
 			{
 				core::pixel_format_desc desc = core::pixel_format::bgra;
 				desc.planes.push_back(core::pixel_format_desc::plane(width_, format_desc_.height, 4));
-				auto frame = frame_factory->create_frame(reinterpret_cast<void*>(rand()), desc);
+				auto frame = frame_factory->create_frame(this, desc);
 
 				if(count >= frame.image_data(0).size())
 				{	
@@ -199,7 +203,7 @@ struct image_scroll_producer : public core::frame_producer_base
 			{
 				core::pixel_format_desc desc = core::pixel_format::bgra;
 				desc.planes.push_back(core::pixel_format_desc::plane(format_desc_.width, height_, 4));
-				auto frame = frame_factory->create_frame(reinterpret_cast<void*>(rand()), desc);
+				auto frame = frame_factory->create_frame(this, desc);
 				if(count >= frame.image_data(0).size())
 				{	
 					for(int y = 0; y < height_; ++y)
@@ -393,7 +397,26 @@ struct image_scroll_producer : public core::frame_producer_base
 	}
 };
 
-spl::shared_ptr<core::frame_producer> create_scroll_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
+void describe_scroll_producer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Scrolls an image either horizontally or vertically.");
+	sink.syntax(L"[image_file:string] SPEED [speed:float] {BLUR [blur_px:int]} {[premultiply:PREMULTIPLY]} {[progressive:PROGRESSIVE]}");
+	sink.para()
+		->text(L"Scrolls an image either horizontally or vertically. ")
+		->text(L"It is the image dimensions that decide if it will be a vertical scroll or a horizontal scroll. ")
+		->text(L"A horizontal scroll will be selected if the image height is exactly the same as the video format height. ")
+		->text(L"A vertical scroll will be selected if the image width is exactly the same as the video format width.");
+	sink.definitions()
+		->item(L"image_file", L"The image without extension. The file has to have either the same width or the same height as the video format.")
+		->item(L"speed", L"A positive or negative float defining how many pixels to move the image each frame.")
+		->item(L"blur_px", L"If specified, will do a directional blur in the scrolling direction by the given number of pixels.")
+		->item(L"premultiply", L"If the image is in straight alpha, use this option to make it display correctly in CasparCG.")
+		->item(L"progressive", L"When an interlaced video format is used, by default the image is moved every field. This can be overridden by specifying this option, causing the image to only move on full frames.");
+	sink.para()->text(L"If ")->code(L"SPEED [speed]")->text(L" is ommitted, the ordinary ")->see(L"Image Producer")->text(L" will be used instead.");
+	sink.example(L">> PLAY 1-10 cred_1280 SPEED 8 BLUR 2", L"Given that cred_1280 is a as wide as the video mode, this will create a rolling end credits with a little bit of blur and a speed of 8 pixels per frame.");
+}
+
+spl::shared_ptr<core::frame_producer> create_scroll_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
 {
 	static const auto extensions = {
 		L".png",
@@ -409,12 +432,14 @@ spl::shared_ptr<core::frame_producer> create_scroll_producer(const spl::shared_p
 		L".j2k",
 		L".j2c"
 	};
-	std::wstring filename = env::media_folder() + L"\\" + params[0];
+	std::wstring filename = env::media_folder() + params.at(0);
 	
 	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
-		{					
-			return boost::filesystem::is_regular_file(boost::filesystem::path(filename).replace_extension(ex));
-		});
+	{
+		auto file = caspar::find_case_insensitive(boost::filesystem::path(filename).replace_extension(ex).wstring());
+
+		return static_cast<bool>(file);
+	});
 
 	if(ext == extensions.end())
 		return core::frame_producer::empty();
@@ -434,14 +459,14 @@ spl::shared_ptr<core::frame_producer> create_scroll_producer(const spl::shared_p
 	bool progressive = contains_param(L"PROGRESSIVE", params);
 
 	return core::create_destroy_proxy(spl::make_shared<image_scroll_producer>(
-		frame_factory, 
-		format_desc, 
-		filename + *ext, 
-		-speed, 
-		-duration, 
-		motion_blur_px, 
-		premultiply_with_alpha,
-		progressive));
+			dependencies.frame_factory,
+			dependencies.format_desc,
+			*caspar::find_case_insensitive(filename + *ext),
+			-speed,
+			-duration,
+			motion_blur_px,
+			premultiply_with_alpha,
+			progressive));
 }
 
 }}

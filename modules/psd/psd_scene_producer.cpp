@@ -20,22 +20,27 @@
 */
 
 #include "psd_scene_producer.h"
+#include "psd_document.h"
 #include "layer.h"
-#include "doc.h"
 
 #include <core/frame/pixel_format.h>
 #include <core/frame/frame_factory.h>
 #include <core/producer/frame_producer.h>
 #include <core/producer/color/color_producer.h>
 #include <core/producer/text/text_producer.h>
+#include <core/producer/scene/scene_cg_proxy.h>
 #include <core/producer/scene/scene_producer.h>
 #include <core/producer/scene/const_producer.h>
 #include <core/producer/scene/hotswap_producer.h>
+#include <core/producer/media_info/media_info.h>
 #include <core/frame/draw_frame.h>
+#include <core/help/help_repository.h>
+#include <core/help/help_sink.h>
 
 #include <common/env.h>
 #include <common/memory.h>
 #include <common/log.h>
+#include <common/os/filesystem.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/thread/future.hpp>
@@ -57,17 +62,21 @@ core::text::text_info get_text_info(const boost::property_tree::wptree& ptree)
 	//result.kerning = ptree.get(L"EngineDict.StyleRun.RunArray..StyleSheet.StyleSheetData.Kerning", 0);
 
 	int child_index = 0;
-	auto color_node = ptree.get_child(L"EngineDict.StyleRun.RunArray..StyleSheet.StyleSheetData.FillColor.Values");
-	for(auto it = color_node.begin(); it != color_node.end(); ++it, ++child_index)
+	auto color_node = ptree.get_child_optional(L"EngineDict.StyleRun.RunArray..StyleSheet.StyleSheetData.FillColor.Values");
+
+	if (color_node)
 	{
-		auto& value_node = (*it).second;
-		float value = value_node.get_value(0.0f);
-		switch(child_index)
+		for(auto it = color_node->begin(); it != color_node->end(); ++it, ++child_index)
 		{
-		case 0: result.color.a = value; break;
-		case 1: result.color.r = value; break;
-		case 2: result.color.g = value; break;
-		case 3: result.color.b = value; break;
+			auto& value_node = (*it).second;
+			float value = value_node.get_value(0.0f);
+			switch(child_index)
+			{
+			case 0: result.color.a = value; break;
+			case 1: result.color.r = value; break;
+			case 2: result.color.g = value; break;
+			case 3: result.color.b = value; break;
+			}
 		}
 	}
 
@@ -86,6 +95,7 @@ core::text::text_info get_text_info(const boost::property_tree::wptree& ptree)
 
 	return result;
 }
+
 
 	class layer_link_constructor
 	{
@@ -199,6 +209,60 @@ boost::rational<int> get_rational(const boost::property_tree::wptree& node)
 			node.get<int>(L"numerator"), node.get<int>(L"denominator"));
 }
 
+void create_marks_from_comments(
+		const spl::shared_ptr<core::scene::scene_producer>& scene,
+		const core::video_format_desc& format_desc,
+		const boost::property_tree::wptree& comment_track)
+{
+	auto keylist = comment_track.get_child_optional(L"keyList");
+
+	if (!keylist)
+		return;
+
+	for (auto& key : *keylist)
+	{
+		auto time = get_rational(key.second.get_child(L"time"));
+		auto frame = get_frame_number(format_desc, time);
+		auto text = key.second.get<std::wstring>(L"animKey.Vl  ");
+		std::vector<std::wstring> marks;
+		boost::split(marks, text, boost::is_any_of(","));
+
+		for (auto& mark : marks)
+		{
+			boost::trim_if(mark, [](wchar_t c) { return isspace(c) || c == 0; });
+
+			std::vector<std::wstring> args;
+			boost::split(args, mark, boost::is_any_of(" \t"), boost::algorithm::token_compress_on);
+
+			scene->add_mark(frame, core::scene::get_mark_action(args.at(0)), args.size() == 1 ? L"" : args.at(1));
+		}
+	}
+}
+
+void create_marks(
+		const spl::shared_ptr<core::scene::scene_producer>& scene,
+		const core::video_format_desc& format_desc,
+		const boost::property_tree::wptree& global_timeline)
+{
+	auto time = get_rational(global_timeline.get_child(L"duration"));
+	auto remove_at_frame = get_frame_number(format_desc, time);
+
+	scene->add_mark(remove_at_frame, core::scene::mark_action::remove, L"");
+
+	auto tracklist = global_timeline.get_child_optional(L"globalTrackList");
+
+	if (!tracklist)
+		return;
+
+	for (auto& track : *tracklist)
+	{
+		auto track_id = track.second.get<std::wstring>(L"stdTrackID");
+
+		if (track_id == L"globalCommentTrack")
+			create_marks_from_comments(scene, format_desc, track.second);
+	}
+}
+
 void create_timelines(
 		const spl::shared_ptr<core::scene::scene_producer>& scene,
 		const core::video_format_desc& format_desc,
@@ -287,17 +351,18 @@ void create_timelines(
 	}
 }
 
-spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
 {
-	std::wstring filename = env::media_folder() + L"\\" + params[0] + L".psd";
-	if(!boost::filesystem::is_regular_file(boost::filesystem::path(filename)))
+	std::wstring filename = env::template_folder() + params.at(0) + L".psd";
+	auto found_file = find_case_insensitive(filename);
+
+	if (!found_file)
 		return core::frame_producer::empty();
 
 	psd_document doc;
-	if(!doc.parse(filename))
-		return core::frame_producer::empty();
+	doc.parse(*found_file);
 
-	spl::shared_ptr<core::scene::scene_producer> root(spl::make_shared<core::scene::scene_producer>(doc.width(), doc.height()));
+	spl::shared_ptr<core::scene::scene_producer> root(spl::make_shared<core::scene::scene_producer>(doc.width(), doc.height(), dependencies.format_desc));
 
 	layer_link_constructor link_constructor;
 
@@ -308,14 +373,17 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 	{
 		if((*it)->is_visible())
 		{
-			if((*it)->is_text() && (*it)->sheet_color() == 4)
+			bool is_text = (*it)->is_text();
+			bool is_marked_as_dynamic = (*it)->sheet_color() == 4;
+			std::wstring layer_name = (*it)->name();
+			if(is_text && is_marked_as_dynamic)
 			{
 				std::wstring str = (*it)->text_data().get(L"EngineDict.Editor.Text", L"");
 			
 				core::text::text_info text_info(std::move(get_text_info((*it)->text_data())));
 				text_info.size *= (*it)->text_scale();
 
-				auto text_producer = core::text_producer::create(frame_factory, 0, 0, str, text_info, doc.width(), doc.height());
+				auto text_producer = core::text_producer::create(dependencies.frame_factory, 0, 0, str, text_info, doc.width(), doc.height());
 			
 				core::text::string_metrics metrics = text_producer->measure_string(str);
 			
@@ -326,36 +394,37 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 				new_layer.hidden.set(!(*it)->is_visible());
 
 				if ((*it)->has_timeline())
-					create_timelines(root, format_desc, new_layer, (*it), adjustment_x, adjustment_y);
+					create_timelines(root, dependencies.format_desc, new_layer, (*it), adjustment_x, adjustment_y);
 
 				if((*it)->link_group_id() != 0)
 					link_constructor.add(&new_layer, (*it)->link_group_id(), (*it)->is_position_protected(), -adjustment_x, -adjustment_y);
 
-				text_producers_by_layer_name.push_back(std::make_pair((*it)->name(), text_producer));
+				text_producers_by_layer_name.push_back(std::make_pair(layer_name, text_producer));
 			}
 			else
 			{
-				std::wstring layer_name = (*it)->name();
 				std::shared_ptr<core::frame_producer> layer_producer;
 				if((*it)->is_solid())
 				{
-					layer_producer = core::create_const_producer(core::create_color_frame(it->get(), frame_factory, (*it)->solid_color().to_uint32()), (*it)->bitmap()->width(), (*it)->bitmap()->height());
+					layer_producer = core::create_const_producer(core::create_color_frame(it->get(), dependencies.frame_factory, (*it)->solid_color().to_uint32()), (*it)->bitmap()->width(), (*it)->bitmap()->height());
 				}
 				else if((*it)->bitmap())
 				{
-					/*if (boost::algorithm::istarts_with(layer_name, L"[producer]"))
+					if (boost::algorithm::istarts_with(layer_name, L"[producer]"))
 					{
-						auto hotswap = std::make_shared<core::hotswap_producer>((*it)->rect().width(), (*it)->rect().height());
-						hotswap->producer().set(core::create_producer(frame_factory, format_desc, layer_name.substr(10)));
+						auto hotswap = std::make_shared<core::hotswap_producer>((*it)->bitmap()->width(), (*it)->bitmap()->height());
+						hotswap->producer().set(dependencies.producer_registry->create_producer(dependencies, layer_name.substr(10)));
 						layer_producer = hotswap;
 					}
-					else*/
+					else
 					{
 						core::pixel_format_desc pfd(core::pixel_format::bgra);
 						pfd.planes.push_back(core::pixel_format_desc::plane((*it)->bitmap()->width(), (*it)->bitmap()->height(), 4));
 
-						auto frame = frame_factory->create_frame(it->get(), pfd);
-						memcpy(frame.image_data().data(), (*it)->bitmap()->data(), frame.image_data().size());
+						auto frame = dependencies.frame_factory->create_frame(it->get(), pfd);
+						auto destination = frame.image_data().data();
+						auto source = (*it)->bitmap()->data();
+						memcpy(destination, source, frame.image_data().size());
 
 						layer_producer = core::create_const_producer(core::draw_frame(std::move(frame)), (*it)->bitmap()->width(), (*it)->bitmap()->height());
 					}
@@ -368,7 +437,7 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 					new_layer.hidden.set(!(*it)->is_visible());
 
 					if ((*it)->has_timeline())
-						create_timelines(root, format_desc, new_layer, (*it), 0, 0);
+						create_timelines(root, dependencies.format_desc, new_layer, (*it), 0, 0);
 
 					if((*it)->link_group_id() != 0)
 						link_constructor.add(&new_layer, (*it)->link_group_id(), (*it)->is_position_protected(), 0, 0);
@@ -383,8 +452,11 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 	for (auto& text_layer : text_producers_by_layer_name)
 		text_layer.second->text().bind(root->create_variable<std::wstring>(boost::to_lower_copy(text_layer.first), true, L""));
 
+	if (doc.has_timeline())
+		create_marks(root, dependencies.format_desc, doc.timeline());
+
 	auto params2 = params;
-	params2.erase(params2.cbegin());
+	params2.erase(params2.begin());
 
 	root->call(params2);
 
@@ -393,7 +465,21 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const spl::share
 
 void init(core::module_dependencies dependencies)
 {
-	core::register_producer_factory(create_psd_scene_producer);
+	dependencies.cg_registry->register_cg_producer(
+			L"scene",
+			{ L".psd" },
+			[](const std::wstring& filename) { return ""; },
+			[](const spl::shared_ptr<core::frame_producer>& producer)
+			{
+				return spl::make_shared<core::scene::scene_cg_proxy>(producer);
+			},
+			[](
+					const core::frame_producer_dependencies& dependencies,
+					const std::wstring& filename)
+			{
+				return create_psd_scene_producer(dependencies, { filename });
+			},
+			false);
 }
 
 }}

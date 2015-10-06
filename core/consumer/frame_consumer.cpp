@@ -25,6 +25,7 @@
 
 #include <common/except.h>
 #include <common/future.h>
+#include <common/os/general_protection_fault.h>
 
 #include <core/video_format.h>
 #include <core/frame/frame.h>
@@ -36,20 +37,47 @@
 #include <map>
 
 namespace caspar { namespace core {
-		
-std::vector<consumer_factory_t> g_consumer_factories;
-std::map<std::wstring, preconfigured_consumer_factory_t> g_preconfigured_consumer_factories;
 
-void register_consumer_factory(const consumer_factory_t& factory)
+struct frame_consumer_registry::impl
 {
-	g_consumer_factories.push_back(factory);
+	std::vector<consumer_factory_t>								consumer_factories;
+	std::map<std::wstring, preconfigured_consumer_factory_t>	preconfigured_consumer_factories;
+	spl::shared_ptr<help_repository>							help_repo;
+
+	impl(spl::shared_ptr<help_repository> help_repo)
+		: help_repo(std::move(help_repo))
+	{
+	}
+};
+
+frame_consumer_registry::frame_consumer_registry(spl::shared_ptr<help_repository> help_repo)
+	: impl_(new impl(std::move(help_repo)))
+{
 }
 
-void register_preconfigured_consumer_factory(
+void frame_consumer_registry::register_consumer_factory(const std::wstring& name, const consumer_factory_t& factory, const help_item_describer& describer)
+{
+	impl_->consumer_factories.push_back(factory);
+	impl_->help_repo->register_item({ L"consumer" }, std::move(name), describer);
+}
+
+void frame_consumer_registry::register_preconfigured_consumer_factory(
 		const std::wstring& element_name,
 		const preconfigured_consumer_factory_t& factory)
 {
-	g_preconfigured_consumer_factories.insert(std::make_pair(element_name, factory));
+	impl_->preconfigured_consumer_factories.insert(std::make_pair(element_name, factory));
+}
+
+tbb::atomic<bool>& destroy_consumers_in_separate_thread()
+{
+	static tbb::atomic<bool> state;
+
+	return state;
+}
+
+void destroy_consumers_synchronously()
+{
+	destroy_consumers_in_separate_thread() = false;
 }
 
 class destroy_consumer_proxy : public frame_consumer
@@ -59,11 +87,17 @@ public:
 	destroy_consumer_proxy(spl::shared_ptr<frame_consumer>&& consumer) 
 		: consumer_(std::move(consumer))
 	{
+		destroy_consumers_in_separate_thread() = true;
 	}
 
 	~destroy_consumer_proxy()
 	{		
-		static tbb::atomic<int> counter = tbb::atomic<int>();
+		static tbb::atomic<int> counter;
+		static std::once_flag counter_init_once;
+		std::call_once(counter_init_once, []{ counter = 0; });
+
+		if (!destroy_consumers_in_separate_thread())
+			return;
 			
 		++counter;
 		CASPAR_VERIFY(counter < 8);
@@ -72,11 +106,13 @@ public:
 		boost::thread([=]
 		{
 			std::unique_ptr<std::shared_ptr<frame_consumer>> pointer_guard(consumer);
-
 			auto str = (*consumer)->print();
+
 			try
 			{
-				if(!consumer->unique())
+				ensure_gpf_handler_installed_for_thread(u8(L"Destroyer: " + str).c_str());
+
+				if (!consumer->unique())
 					CASPAR_LOG(trace) << str << L" Not destroyed on asynchronous destruction thread: " << consumer->use_count();
 				else
 					CASPAR_LOG(trace) << str << L" Destroying on asynchronous destruction thread.";
@@ -85,18 +121,18 @@ public:
 
 			pointer_guard.reset();
 
-			--counter;
 		}).detach(); 
 	}
 	
 	std::future<bool> send(const_frame frame) override													{return consumer_->send(std::move(frame));}
-	virtual void initialize(const struct video_format_desc& format_desc, int channel_index)	override	{return consumer_->initialize(format_desc, channel_index);}
+	virtual void initialize(const video_format_desc& format_desc, int channel_index)	override	{return consumer_->initialize(format_desc, channel_index);}
 	std::wstring print() const override																	{return consumer_->print();}	
 	std::wstring name() const override																	{return consumer_->name();}
 	boost::property_tree::wptree info() const override 													{return consumer_->info();}
 	bool has_synchronization_clock() const override														{return consumer_->has_synchronization_clock();}
 	int buffer_depth() const override																	{return consumer_->buffer_depth();}
 	int index() const override																			{return consumer_->index();}
+	int64_t presentation_frame_age_millis() const override												{return consumer_->presentation_frame_age_millis();}
 	monitor::subject& monitor_output() override															{return consumer_->monitor_output();}										
 };
 
@@ -119,13 +155,14 @@ public:
 	}
 	
 	std::future<bool> send(const_frame frame) override													{return consumer_->send(std::move(frame));}
-	virtual void initialize(const struct video_format_desc& format_desc, int channel_index)	override	{return consumer_->initialize(format_desc, channel_index);}
+	virtual void initialize(const video_format_desc& format_desc, int channel_index)	override	{return consumer_->initialize(format_desc, channel_index);}
 	std::wstring print() const override																	{return consumer_->print();}
 	std::wstring name() const override																	{return consumer_->name();}
 	boost::property_tree::wptree info() const override 													{return consumer_->info();}
 	bool has_synchronization_clock() const override														{return consumer_->has_synchronization_clock();}
 	int buffer_depth() const override																	{return consumer_->buffer_depth();}
 	int index() const override																			{return consumer_->index();}
+	int64_t presentation_frame_age_millis() const override												{return consumer_->presentation_frame_age_millis();}
 	monitor::subject& monitor_output() override															{return consumer_->monitor_output();}										
 };
 
@@ -163,7 +200,7 @@ public:
 		}
 	}
 
-	virtual void initialize(const struct video_format_desc& format_desc, int channel_index)		
+	virtual void initialize(const video_format_desc& format_desc, int channel_index)		
 	{
 		format_desc_	= format_desc;
 		channel_index_	= channel_index;
@@ -176,6 +213,7 @@ public:
 	bool has_synchronization_clock() const override							{return consumer_->has_synchronization_clock();}
 	int buffer_depth() const override										{return consumer_->buffer_depth();}
 	int index() const override												{return consumer_->index();}
+	int64_t presentation_frame_age_millis() const override					{return consumer_->presentation_frame_age_millis();}
 	monitor::subject& monitor_output() override								{return consumer_->monitor_output();}										
 };
 
@@ -227,17 +265,19 @@ public:
 	bool has_synchronization_clock() const override							{return consumer_->has_synchronization_clock();}
 	int buffer_depth() const override										{return consumer_->buffer_depth();}
 	int index() const override												{return consumer_->index();}
+	int64_t presentation_frame_age_millis() const override					{return consumer_->presentation_frame_age_millis();}
 	monitor::subject& monitor_output() override								{return consumer_->monitor_output();}										
 };
 
-spl::shared_ptr<core::frame_consumer> create_consumer(
-		const std::vector<std::wstring>& params, interaction_sink* sink)
+spl::shared_ptr<core::frame_consumer> frame_consumer_registry::create_consumer(
+		const std::vector<std::wstring>& params, interaction_sink* sink) const
 {
 	if(params.empty())
 		CASPAR_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
 	
 	auto consumer = frame_consumer::empty();
-	std::any_of(g_consumer_factories.begin(), g_consumer_factories.end(), [&](const consumer_factory_t& factory) -> bool
+	auto& consumer_factories = impl_->consumer_factories;
+	std::any_of(consumer_factories.begin(), consumer_factories.end(), [&](const consumer_factory_t& factory) -> bool
 		{
 			try
 			{
@@ -260,14 +300,15 @@ spl::shared_ptr<core::frame_consumer> create_consumer(
 			   std::move(consumer)))));
 }
 
-spl::shared_ptr<frame_consumer> create_consumer(
+spl::shared_ptr<frame_consumer> frame_consumer_registry::create_consumer(
 		const std::wstring& element_name,
 		const boost::property_tree::wptree& element,
-		interaction_sink* sink)
+		interaction_sink* sink) const
 {
-	auto found = g_preconfigured_consumer_factories.find(element_name);
+	auto& preconfigured_consumer_factories = impl_->preconfigured_consumer_factories;
+	auto found = preconfigured_consumer_factories.find(element_name);
 
-	if (found == g_preconfigured_consumer_factories.end())
+	if (found == preconfigured_consumer_factories.end())
 		CASPAR_THROW_EXCEPTION(file_not_found()
 			<< msg_info(L"No consumer factory registered for element name " + element_name));
 
@@ -289,7 +330,8 @@ const spl::shared_ptr<frame_consumer>& frame_consumer::empty()
 		std::wstring name() const override {return L"empty";}
 		bool has_synchronization_clock() const override {return false;}
 		int buffer_depth() const override {return 0;};
-		virtual int index() const{return -1;}
+		int index() const override {return -1;}
+		int64_t presentation_frame_age_millis() const override {return -1;}
 		monitor::subject& monitor_output() override {static monitor::subject monitor_subject(""); return monitor_subject;}										
 		boost::property_tree::wptree info() const override
 		{

@@ -22,8 +22,10 @@
 
 
 #include <boost/range.hpp>
-#include <boost/variant/static_visitor.hpp>
+
 #include <boost/variant/apply_visitor.hpp>
+#include <boost/variant/static_visitor.hpp>
+#include <boost/variant/variant_fwd.hpp>
 
 #include <boost/geometry/algorithms/num_interior_rings.hpp>
 #include <boost/geometry/algorithms/detail/convert_point_to_point.hpp>
@@ -325,7 +327,7 @@ struct append<boost::variant<BOOST_VARIANT_ENUM_PARAMS(T)> >
                              int ring_index,
                              int multi_index)
     {
-        apply_visitor(
+        boost::apply_visitor(
             visitor<RangeOrPoint>(
                 range_or_point,
                 ring_index,

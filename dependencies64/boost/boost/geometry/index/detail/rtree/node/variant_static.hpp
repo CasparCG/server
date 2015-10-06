@@ -79,7 +79,7 @@ struct visitor<Value, Parameters, Box, Allocators, node_variant_static_tag, IsVi
 // allocators
 
 template <typename Allocator, typename Value, typename Parameters, typename Box>
-struct allocators<Allocator, Value, Parameters, Box, node_variant_static_tag>
+class allocators<Allocator, Value, Parameters, Box, node_variant_static_tag>
     : public Allocator::template rebind<
         typename node<
             Value, Parameters, Box,
@@ -151,40 +151,6 @@ public:
 
     node_allocator_type & node_allocator() { return *this; }
     node_allocator_type const& node_allocator() const { return *this; }
-};
-
-// create_node
-
-template <typename Allocators, typename Value, typename Parameters, typename Box>
-struct create_node<
-    Allocators,
-    variant_internal_node<Value, Parameters, Box, Allocators, node_variant_static_tag>
->
-{
-    static inline typename Allocators::node_pointer
-    apply(Allocators & allocators)
-    {
-        return create_variant_node<
-            typename Allocators::node_pointer,
-            variant_internal_node<Value, Parameters, Box, Allocators, node_variant_static_tag>
-        >::apply(allocators.node_allocator());
-    }
-};
-
-template <typename Allocators, typename Value, typename Parameters, typename Box>
-struct create_node<
-    Allocators,
-    variant_leaf<Value, Parameters, Box, Allocators, node_variant_static_tag>
->
-{
-    static inline typename Allocators::node_pointer
-    apply(Allocators & allocators)
-    {
-        return create_variant_node<
-            typename Allocators::node_pointer,
-            variant_leaf<Value, Parameters, Box, Allocators, node_variant_static_tag>
-        >::apply(allocators.node_allocator());
-    }
 };
 
 }} // namespace detail::rtree

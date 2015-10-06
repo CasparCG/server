@@ -31,6 +31,8 @@
 #include <common/except.h>
 #include <common/endian.h>
 #include <common/cache_aligned_vector.h>
+#include <common/os/general_protection_fault.h>
+
 #include <core/monitor/monitor.h>
 
 #include <functional>
@@ -127,7 +129,8 @@ void write_osc_bundle_element_start(byte_vector& destination, const byte_vector&
 
 struct client::impl : public spl::enable_shared_from_this<client::impl>, core::monitor::sink
 {
-	udp::socket socket_;
+	std::shared_ptr<boost::asio::io_service>		service_;
+	udp::socket										socket_;
 	tbb::spin_mutex									endpoints_mutex_;
 	std::map<udp::endpoint, int>					reference_counts_by_endpoint_;
 
@@ -140,8 +143,9 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>, core::m
 	boost::thread									thread_;
 	
 public:
-	impl(boost::asio::io_service& service)
-		: socket_(service, udp::v4())
+	impl(std::shared_ptr<boost::asio::io_service> service)
+		: service_(std::move(service))
+		, socket_(*service_, udp::v4())
 		, thread_(boost::bind(&impl::run, this))
 	{
 	}
@@ -215,6 +219,8 @@ private:
 		// http://stackoverflow.com/questions/14993000/the-most-reliable-and-efficient-udp-packet-size
 		const int SAFE_DATAGRAM_SIZE = 508;
 
+		ensure_gpf_handler_installed_for_thread("osc-sender-thread");
+
 		try
 		{
 			is_running_ = true;
@@ -231,6 +237,9 @@ private:
 
 				{			
 					boost::unique_lock<boost::mutex> cond_lock(updates_mutex_);
+
+					if (!is_running_)
+						return;
 
 					if (updates_.empty())
 						updates_cond_.wait(cond_lock);
@@ -289,8 +298,8 @@ private:
 	}
 };
 
-client::client(boost::asio::io_service& service) 
-	: impl_(new impl(service))
+client::client(std::shared_ptr<boost::asio::io_service> service)
+	: impl_(new impl(std::move(service)))
 {
 }
 

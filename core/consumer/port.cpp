@@ -25,7 +25,7 @@ public:
 		consumer_->monitor_output().attach_parent(monitor_subject_);
 	}
 	
-	void video_format_desc(const struct video_format_desc& format_desc)
+	void video_format_desc(const core::video_format_desc& format_desc)
 	{
 		consumer_->initialize(format_desc, channel_index_);
 	}
@@ -59,6 +59,11 @@ public:
 	{
 		return consumer_->info();
 	}
+
+	int64_t presentation_frame_age_millis() const
+	{
+		return consumer_->presentation_frame_age_millis();
+	}
 };
 
 port::port(int index, int channel_index, spl::shared_ptr<frame_consumer> consumer) : impl_(new impl(index, channel_index, std::move(consumer))){}
@@ -67,9 +72,10 @@ port::~port(){}
 port& port::operator=(port&& other){impl_ = std::move(other.impl_); return *this;}
 std::future<bool> port::send(const_frame frame){return impl_->send(std::move(frame));}	
 monitor::subject& port::monitor_output() {return *impl_->monitor_subject_;}
-void port::video_format_desc(const struct video_format_desc& format_desc){impl_->video_format_desc(format_desc);}
+void port::video_format_desc(const core::video_format_desc& format_desc){impl_->video_format_desc(format_desc);}
 int port::buffer_depth() const{return impl_->buffer_depth();}
 std::wstring port::print() const{ return impl_->print();}
 bool port::has_synchronization_clock() const{return impl_->has_synchronization_clock();}
 boost::property_tree::wptree port::info() const{return impl_->info();}
+int64_t port::presentation_frame_age_millis() const{ return impl_->presentation_frame_age_millis(); }
 }}

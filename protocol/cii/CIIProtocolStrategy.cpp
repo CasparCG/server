@@ -47,10 +47,13 @@ const wchar_t CIIProtocolStrategy::TokenDelimiter = L'\\';
 
 CIIProtocolStrategy::CIIProtocolStrategy(
 		const std::vector<spl::shared_ptr<core::video_channel>>& channels, 
-		const spl::shared_ptr<core::cg_producer_registry>& cg_registry)
+		const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
+		const spl::shared_ptr<const core::frame_producer_registry>& producer_registry)
 	: executor_(L"CIIProtocolStrategy")
 	, pChannel_(channels.at(0))
+	, channels_(channels)
 	, cg_registry_(cg_registry)
+	, producer_registry_(producer_registry)
 {
 }
 
@@ -160,7 +163,7 @@ void CIIProtocolStrategy::WriteTemplateData(const std::wstring& templateName, co
 	core::diagnostics::scoped_call_context save;
 	core::diagnostics::call_context::for_thread().video_channel = 1;
 	core::diagnostics::call_context::for_thread().layer = 0;
-	auto producer = cg_registry_->create_producer(GetChannel(), fullTemplateFilename);
+	auto producer = cg_registry_->create_producer(get_dependencies(), fullTemplateFilename);
 
 	if (producer == core::frame_producer::empty())
 	{
@@ -201,7 +204,7 @@ void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename)
 	core::diagnostics::call_context::for_thread().video_channel = 1;
 	core::diagnostics::call_context::for_thread().layer = 0;
 
-	auto pFP = create_producer(GetChannel()->frame_factory(), GetChannel()->video_format_desc(), filename);
+	auto pFP = get_producer_registry()->create_producer(get_dependencies(), filename);
 	auto pTransition = create_transition_producer(GetChannel()->video_format_desc().field_mode, pFP, transition);
 
 	try

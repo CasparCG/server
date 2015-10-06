@@ -38,6 +38,7 @@
 
 #include <common/except.h>
 #include <common/array.h>
+#include <common/os/filesystem.h>
 
 #include <tbb/parallel_for.h>
 
@@ -358,7 +359,15 @@ double read_fps(AVFormatContext& context, double fail_value)
 	{
 		const auto video_context = context.streams[video_index]->codec;
 		const auto video_stream  = context.streams[video_index];
-						
+
+		auto frame_rate_time_base = video_stream->avg_frame_rate;
+		std::swap(frame_rate_time_base.num, frame_rate_time_base.den);
+
+		if (is_sane_fps(frame_rate_time_base))
+		{
+			return static_cast<double>(frame_rate_time_base.den) / static_cast<double>(frame_rate_time_base.num);
+		}
+
 		AVRational time_base = video_context->time_base;
 
 		if(boost::filesystem::path(context.filename).extension().string() == ".flv")
@@ -481,7 +490,10 @@ spl::shared_ptr<AVFormatContext> open_input(const std::wstring& filename)
 {
 	AVFormatContext* weak_context = nullptr;
 	THROW_ON_ERROR2(avformat_open_input(&weak_context, u8(filename).c_str(), nullptr, nullptr), filename);
-	spl::shared_ptr<AVFormatContext> context(weak_context, av_close_input_file);			
+	spl::shared_ptr<AVFormatContext> context(weak_context, [](AVFormatContext* p)
+	{
+		avformat_close_input(&p);
+	});
 	THROW_ON_ERROR2(avformat_find_stream_info(weak_context, nullptr), filename);
 	fix_meta_data(*context);
 	return context;
@@ -565,7 +577,10 @@ bool try_get_duration(const std::wstring filename, std::int64_t& duration, boost
 	if (avformat_open_input(&weak_context, u8(filename).c_str(), nullptr, nullptr) < 0)
 		return false;
 
-	std::shared_ptr<AVFormatContext> context(weak_context, av_close_input_file);
+	std::shared_ptr<AVFormatContext> context(weak_context, [](AVFormatContext* p)
+	{
+		avformat_close_input(&p);
+	});
 
 	context->probesize = context->probesize / 10;
 	context->max_analyze_duration = context->probesize / 10;
@@ -590,7 +605,13 @@ bool try_get_duration(const std::wstring filename, std::int64_t& duration, boost
 std::wstring probe_stem(const std::wstring& stem)
 {
 	auto stem2 = boost::filesystem::path(stem);
-	auto dir = stem2.parent_path();
+	auto parent = find_case_insensitive(stem2.parent_path().wstring());
+
+	if (!parent)
+		return L"";
+
+	auto dir = boost::filesystem::path(*parent);
+
 	for(auto it = boost::filesystem::directory_iterator(dir); it != boost::filesystem::directory_iterator(); ++it)
 	{
 		if(boost::iequals(it->path().stem().wstring(), stem2.filename().wstring()) && is_valid_file(it->path().wstring()))

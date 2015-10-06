@@ -487,12 +487,12 @@ const std::vector<std::wstring>& tweener::names()
 
 	static const auto result = []
 	{
-		std::vector<std::wstring> result;
+		std::vector<std::wstring> tweens;
 
 		for (auto& tween : get_tweens())
-			result.push_back(tween.first);
+			tweens.push_back(tween.first);
 
-		return result;
+		return tweens;
 	}();
 	//static const std::vector<std::wstring> result;
 

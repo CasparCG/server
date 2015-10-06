@@ -11,18 +11,27 @@
 #ifndef BOOST_INTERPROCESS_FILE_MAPPING_HPP
 #define BOOST_INTERPROCESS_FILE_MAPPING_HPP
 
-#if defined(_MSC_VER)
+#ifndef BOOST_CONFIG_HPP
+#  include <boost/config.hpp>
+#endif
+#
+#if defined(BOOST_HAS_PRAGMA_ONCE)
 #  pragma once
 #endif
 
 #include <boost/interprocess/detail/config_begin.hpp>
 #include <boost/interprocess/detail/workaround.hpp>
 
+#if !defined(BOOST_INTERPROCESS_MAPPED_FILES)
+#error "Boost.Interprocess: This platform does not support memory mapped files!"
+#endif
+
 #include <boost/interprocess/interprocess_fwd.hpp>
 #include <boost/interprocess/exceptions.hpp>
 #include <boost/interprocess/detail/utilities.hpp>
 #include <boost/interprocess/creation_tags.hpp>
 #include <boost/interprocess/detail/os_file_functions.hpp>
+#include <boost/interprocess/detail/simple_swap.hpp>
 #include <boost/move/utility_core.hpp>
 #include <string>    //std::string
 
@@ -118,8 +127,8 @@ inline const char *file_mapping::get_name() const
 
 inline void file_mapping::swap(file_mapping &other)
 {
-   std::swap(m_handle, other.m_handle);
-   std::swap(m_mode, other.m_mode);
+   (simple_swap)(m_handle, other.m_handle);
+   (simple_swap)(m_mode, other.m_mode);
    m_filename.swap(other.m_filename);
 }
 

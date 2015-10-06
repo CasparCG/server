@@ -44,6 +44,7 @@
 #include <tbb/spin_mutex.h>
 
 #include <boost/property_tree/ptree.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include <string>
 
@@ -70,7 +71,7 @@ struct video_channel::impl final
 	caspar::core::mixer									mixer_;
 	caspar::core::stage									stage_;	
 
-	executor											executor_			{ L"video_channel" };
+	executor											executor_			{ L"video_channel " + boost::lexical_cast<std::wstring>(index_) };
 public:
 	impl(int index, const core::video_format_desc& format_desc, std::unique_ptr<image_mixer> image_mixer)  
 		: monitor_subject_(spl::make_shared<monitor::subject>(
@@ -79,19 +80,25 @@ public:
 		, format_desc_(format_desc)
 		, output_(graph_, format_desc, index)
 		, image_mixer_(std::move(image_mixer))
-		, mixer_(graph_, image_mixer_)
-		, stage_(graph_)
+		, mixer_(index, graph_, image_mixer_)
+		, stage_(index, graph_)
 	{
 		graph_->set_color("tick-time", caspar::diagnostics::color(0.0f, 0.6f, 0.9f));
 		graph_->set_text(print());
 		caspar::diagnostics::register_graph(graph_);
-		
+
 		output_.monitor_output().attach_parent(monitor_subject_);
+		mixer_.monitor_output().attach_parent(monitor_subject_);
 		stage_.monitor_output().attach_parent(monitor_subject_);
 
 		executor_.begin_invoke([=]{tick();});
 
 		CASPAR_LOG(info) << print() << " Successfully Initialized.";
+	}
+
+	~impl()
+	{
+		CASPAR_LOG(info) << print() << " Uninitializing.";
 	}
 							
 	core::video_format_desc video_format_desc() const
@@ -143,7 +150,8 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 
-		executor_.begin_invoke([=]{tick();});
+		if (executor_.is_running())
+			executor_.begin_invoke([=]{tick();});
 	}
 			
 	std::wstring print() const
@@ -171,6 +179,22 @@ public:
    
 		return info;			   
 	}
+
+	boost::property_tree::wptree delay_info() const
+	{
+		boost::property_tree::wptree info;
+
+		auto stage_info = stage_.delay_info();
+		auto mixer_info = mixer_.delay_info();
+		auto output_info = output_.delay_info();
+
+		// TODO: because of std::async deferred timed waiting does not work so for now we have to block
+		info.add_child(L"layers", stage_info.get());
+		info.add_child(L"mix-time", mixer_info.get());
+		info.add_child(L"output", output_info.get());
+
+		return info;
+	}
 };
 
 video_channel::video_channel(int index, const core::video_format_desc& format_desc, std::unique_ptr<image_mixer> image_mixer) : impl_(new impl(index, format_desc, std::move(image_mixer))){}
@@ -185,6 +209,7 @@ spl::shared_ptr<frame_factory> video_channel::frame_factory() { return impl_->im
 core::video_format_desc video_channel::video_format_desc() const{return impl_->video_format_desc();}
 void core::video_channel::video_format_desc(const core::video_format_desc& format_desc){impl_->video_format_desc(format_desc);}
 boost::property_tree::wptree video_channel::info() const{return impl_->info();}
+boost::property_tree::wptree video_channel::delay_info() const { return impl_->delay_info(); }
 int video_channel::index() const { return impl_->index(); }
 monitor::subject& video_channel::monitor_output(){ return *impl_->monitor_subject_; }
 

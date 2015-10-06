@@ -18,6 +18,8 @@
 #include <boost/geometry/core/point_type.hpp>
 #include <boost/geometry/core/tags.hpp>
 
+#include <boost/geometry/util/condition.hpp>
+
 #include <boost/geometry/strategies/distance.hpp>
 #include <boost/geometry/strategies/tags.hpp>
 
@@ -96,7 +98,7 @@ public:
         std::size_t imin = std::distance(boost::addressof(d[0]),
                                          std::min_element(d, d + 4));
 
-        if (is_comparable<Strategy>::value)
+        if (BOOST_GEOMETRY_CONDITION(is_comparable<Strategy>::value))
         {
             return d[imin];
         }

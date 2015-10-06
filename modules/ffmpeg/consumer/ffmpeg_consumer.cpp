@@ -31,6 +31,8 @@
 #include <core/mixer/audio/audio_util.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/video_format.h>
+#include <core/help/help_repository.h>
+#include <core/help/help_sink.h>
 
 #include <common/array.h>
 #include <common/env.h>
@@ -260,7 +262,7 @@ struct ffmpeg_consumer : boost::noncopyable
 {		
 	const spl::shared_ptr<diagnostics::graph>	graph_;
 	const std::string							filename_;		
-	const std::shared_ptr<AVFormatContext>		oc_					{ avformat_alloc_context(), av_free };
+	const std::shared_ptr<AVFormatContext>		oc_					{ avformat_alloc_context(), avformat_free_context };
 	const core::video_format_desc				format_desc_;	
 
 	core::monitor::subject						monitor_subject_;
@@ -281,7 +283,8 @@ struct ffmpeg_consumer : boost::noncopyable
 
 	output_format								output_format_;
 	bool										key_only_;
-	
+	tbb::atomic<int64_t>						current_encoding_delay_;
+
 	executor									executor_;
 public:
 	ffmpeg_consumer(const std::string& filename, const core::video_format_desc& format_desc, std::vector<option> options, bool key_only)
@@ -291,6 +294,7 @@ public:
 		, key_only_(key_only)
 		, executor_(print())
 	{
+		current_encoding_delay_ = 0;
 		check_space();
 
 		// TODO: Ask stakeholders about case where file already exists.
@@ -369,6 +373,7 @@ public:
 		executor_.begin_invoke([=]
 		{		
 			encode(frame);
+			current_encoding_delay_ = frame.get_age_millis();
 		});
 	}
 
@@ -398,7 +403,7 @@ private:
 		if(output_format_.vcodec == CODEC_ID_NONE)
 			return nullptr;
 
-		auto st = av_new_stream(oc_.get(), 0);
+		auto st = avformat_new_stream(oc_.get(), 0);
 		if (!st) 		
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Could not allocate video-stream.") << boost::errinfo_api_function("av_new_stream"));		
 
@@ -414,8 +419,8 @@ private:
 		c->codec_type		= AVMEDIA_TYPE_VIDEO;
 		c->width			= output_format_.width;
 		c->height			= output_format_.height - output_format_.croptop - output_format_.cropbot;
-		c->time_base.den	= format_desc_.time_scale;
-		c->time_base.num	= format_desc_.duration;
+		st->time_base.den	= format_desc_.time_scale;
+		st->time_base.num	= format_desc_.duration;
 		c->gop_size			= 25;
 		c->flags		   |= format_desc_.field_mode == core::field_mode::progressive ? 0 : (CODEC_FLAG_INTERLACED_ME | CODEC_FLAG_INTERLACED_DCT);
 		c->pix_fmt			= c->pix_fmt != PIX_FMT_NONE ? c->pix_fmt : PIX_FMT_YUV420P;
@@ -479,8 +484,6 @@ private:
 		return std::shared_ptr<AVStream>(st, [](AVStream* st)
 		{
 			LOG_ON_ERROR2(tbb_avcodec_close(st->codec), "[ffmpeg_consumer]");
-			av_freep(&st->codec);
-			av_freep(&st);
 		});
 	}
 		
@@ -489,7 +492,7 @@ private:
 		if(output_format_.acodec == CODEC_ID_NONE)
 			return nullptr;
 
-		auto st = av_new_stream(oc_.get(), 1);
+		auto st = avformat_new_stream(oc_.get(), nullptr);
 		if(!st)
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Could not allocate audio-stream") << boost::errinfo_api_function("av_new_stream"));		
 		
@@ -506,8 +509,8 @@ private:
 		c->sample_rate		= 48000;
 		c->channels			= 2;
 		c->sample_fmt		= AV_SAMPLE_FMT_S16;
-		c->time_base.num	= 1;
-		c->time_base.den	= c->sample_rate;
+		st->time_base.num	= 1;
+		st->time_base.den	= c->sample_rate;
 
 		if(output_format_.vcodec == CODEC_ID_FLV1)		
 			c->sample_rate	= 44100;		
@@ -524,9 +527,7 @@ private:
 
 		return std::shared_ptr<AVStream>(st, [](AVStream* st)
 		{
-			LOG_ON_ERROR2(avcodec_close(st->codec), "[ffmpeg_consumer]");;
-			av_freep(&st->codec);
-			av_freep(&st);
+			LOG_ON_ERROR2(avcodec_close(st->codec), "[ffmpeg_consumer]");
 		});
 	}
   
@@ -540,7 +541,7 @@ private:
 		auto av_frame				= convert_video(frame, enc);
 		av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
 		av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper;
-		av_frame->pts				= frame_number_++;
+		av_frame->pts = frame_number_++;
 
 		monitor_subject_ << core::monitor::message("/frame")
 				% static_cast<int64_t>(frame_number_)
@@ -587,7 +588,7 @@ private:
 			
 		while(audio_buffer_.size() >= frame_size)
 		{			
-			std::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);
+			std::shared_ptr<AVFrame> av_frame(av_frame_alloc(), [=](AVFrame* p) { av_frame_free(&p); });
 			avcodec_get_frame_defaults(av_frame.get());		
 			av_frame->nb_samples = frame_size / (enc->channels * av_get_bytes_per_sample(enc->sample_fmt));
 
@@ -686,6 +687,10 @@ private:
 				  out_frame->data, 
 				  out_frame->linesize);
 
+		out_frame->format	= c->pix_fmt;
+		out_frame->width	= c->width;
+		out_frame->height	= c->height;
+
 		return out_frame;
 	}
 	
@@ -722,7 +727,7 @@ private:
 	{
 		auto space = boost::filesystem::space(boost::filesystem::path(filename_).parent_path());
 		if(space.available < 512*1000000)
-			BOOST_THROW_EXCEPTION(file_write_error() << msg_info("out of space"));
+			CASPAR_THROW_EXCEPTION(file_write_error() << msg_info("out of space"));
 	}
 
 	void encode(const core::const_frame& frame)
@@ -763,27 +768,32 @@ public:
 	ffmpeg_consumer_proxy(const std::wstring& filename, const std::vector<option>& options, bool separate_key)
 		: filename_(filename)
 		, options_(options)
-		, separate_key_(separate_key_)
+		, separate_key_(separate_key)
 	{
 	}
 	
-	virtual void initialize(const core::video_format_desc& format_desc, int)
+	void initialize(const core::video_format_desc& format_desc, int) override
 	{
 		if(consumer_)
-			BOOST_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot reinitialize ffmpeg-consumer."));
+			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot reinitialize ffmpeg-consumer."));
 
 		consumer_.reset(new ffmpeg_consumer(u8(filename_), format_desc, options_, false));
 
 		if (separate_key_)
 		{
-			boost::filesystem::wpath fill_file(filename_);
+			boost::filesystem::path fill_file(filename_);
 			auto without_extension = u16(fill_file.stem().string());
 			auto key_file = env::media_folder() + without_extension + L"_A" + u16(fill_file.extension().string());
 
 			key_only_consumer_.reset(new ffmpeg_consumer(u8(key_file), format_desc, options_, true));
 		}
 	}
-	
+
+	int64_t presentation_frame_age_millis() const override
+	{
+		return consumer_ ? static_cast<int64_t>(consumer_->current_encoding_delay_) : 0;
+	}
+
 	std::future<bool> send(core::const_frame frame) override
 	{
 		bool ready_for_frame = consumer_->ready_for_frame();
@@ -835,7 +845,7 @@ public:
 
 	int buffer_depth() const override
 	{
-		return 1;
+		return -1;
 	}
 
 	int index() const override
@@ -847,12 +857,31 @@ public:
 	{
 		return consumer_->monitor_output();
 	}
-};	
+};
+
+void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Can record a channel to a file supported by FFMpeg.");
+	sink.syntax(L"FILE [filename:string] {-[ffmpeg_param1:string] [value1:string] {-[ffmpeg_param2:string] [value2:string] {...}}} {[separate_key:SEPARATE_KEY]}");
+	sink.para()->text(L"Can record a channel to a file supported by FFMpeg.");
+	sink.definitions()
+		->item(L"filename", L"The filename under the media folder including the extension (decides which kind of container format that will be used).")
+		->item(L"ffmpeg_paramX", L"A parameter supported by FFMpeg. For example vcodec or acodec etc.")
+		->item(L"separate_key", L"If defined will create two files simultaneously -- One for fill and one for key (_A will be appended).")
+		;
+	sink.para()->text(L"Examples:");
+	sink.example(L">> ADD 1 FILE output.mov -vcodec dnxhd");
+	sink.example(L">> ADD 1 FILE output.mov -vcodec prores");
+	sink.example(L">> ADD 1 FILE output.mov -vcodec dvvideo");
+	sink.example(L">> ADD 1 FILE output.mov - vcodec libx264 -preset ultrafast -tune fastdecode -crf 25");
+	sink.example(L">> ADD 1 FILE output.mov -vcodec dnxhd SEPARATE_KEY", L"for creating output.mov with fill and output_A.mov with key/alpha");
+}
+
 spl::shared_ptr<core::frame_consumer> create_consumer(
 		const std::vector<std::wstring>& params, core::interaction_sink*)
 {
 	auto params2 = params;
-	auto separate_key_it = std::find(params2.begin(), params2.end(), L"SEPARATE_KEY");
+	auto separate_key_it = std::find_if(params2.begin(), params2.end(), param_comparer(L"SEPARATE_KEY"));
 	bool separate_key = false;
 
 	if (separate_key_it != params2.end())

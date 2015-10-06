@@ -15,7 +15,11 @@
 #ifndef BOOST_INTERPROCESS_WEAK_PTR_HPP_INCLUDED
 #define BOOST_INTERPROCESS_WEAK_PTR_HPP_INCLUDED
 
-#if defined(_MSC_VER)
+#ifndef BOOST_CONFIG_HPP
+#  include <boost/config.hpp>
+#endif
+#
+#if defined(BOOST_HAS_PRAGMA_ONCE)
 #  pragma once
 #endif
 
@@ -23,10 +27,11 @@
 #include <boost/interprocess/detail/workaround.hpp>
 
 #include <boost/interprocess/smart_ptr/shared_ptr.hpp>
-#include <boost/detail/no_exceptions_support.hpp>
+#include <boost/core/no_exceptions_support.hpp>
 #include <boost/interprocess/allocators/allocator.hpp>
 #include <boost/interprocess/smart_ptr/deleter.hpp>
 #include <boost/intrusive/pointer_traits.hpp>
+#include <boost/move/adl_move_swap.hpp>
 
 //!\file
 //!Describes the smart pointer weak_ptr.
@@ -197,7 +202,7 @@ class weak_ptr
    //!
    //!Throws: nothing.
    void swap(this_type & other) // never throws
-   {  ipcdetail::do_swap(m_pn, other.m_pn);   }
+   {  ::boost::adl_move_swap(m_pn, other.m_pn);   }
 
    #if !defined(BOOST_INTERPROCESS_DOXYGEN_INVOKED)
    template<class T2, class A2, class D2>

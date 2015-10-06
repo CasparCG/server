@@ -35,6 +35,8 @@
 #include <core/system_info_provider.h>
 #include <core/frame/frame_factory.h>
 #include <core/video_format.h>
+#include <core/help/help_sink.h>
+#include <core/help/help_repository.h>
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/noncopyable.hpp>
@@ -80,7 +82,7 @@ public:
 		CASPAR_LOG(info) << flash_producer_->print() << " Invoking add-command: " << str;
 		std::vector<std::wstring> params;
 		params.push_back(std::move(str));
-		flash_producer_->call(std::move(params));
+		flash_producer_->call(std::move(params)).get();
 	}
 
 	void remove(int layer) override
@@ -159,25 +161,34 @@ public:
 	}
 };
 
+void describe_ct_producer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Plays compressed flash templates (.ct files).");
+	sink.syntax(L"[ct_file:string]");
+	sink.para()->text(L"Plays compressed flash templates (.ct files). The file should reside under the media folder.");
+	sink.para()->text(L"A ct file is a zip file containing a flash template (.ft), an XML file with template data and media files.");
+	sink.para()->text(L"Examples:");
+	sink.example(L">> PLAY 1-10 folder/ct_file");
+}
+
 spl::shared_ptr<core::frame_producer> create_ct_producer(
-		const spl::shared_ptr<core::frame_factory> frame_factory,
-		const core::video_format_desc& format_desc,
+		const core::frame_producer_dependencies& dependencies,
 		const std::vector<std::wstring>& params)
 {
 	if (params.empty() || !boost::filesystem::exists(get_absolute(env::media_folder(), params.at(0)) + L".ct"))
 		return core::frame_producer::empty();
 
-	auto flash_producer = flash::create_producer(frame_factory, format_desc, {});
+	auto flash_producer = flash::create_producer(dependencies, {});
 	auto producer = flash_producer;
-	flash_cg_proxy(producer, env::media_folder()).add(0, params[0], true, L"", L"");
+	flash_cg_proxy(producer, env::media_folder()).add(0, params.at(0), true, L"", L"");
 
 	return producer;
 }
 
 void init(core::module_dependencies dependencies)
 {
-	core::register_producer_factory(create_ct_producer);
-	core::register_producer_factory(create_swf_producer);
+	dependencies.producer_registry->register_producer_factory(L"Flash Producer (.ct)", create_ct_producer, describe_ct_producer);
+	dependencies.producer_registry->register_producer_factory(L"Flash Producer (.swf)", create_swf_producer, describe_swf_producer);
 	dependencies.media_info_repo->register_extractor([](const std::wstring& file, const std::wstring& extension, core::media_info& info)
 	{
 		if (extension != L".CT" && extension != L".SWF")
@@ -198,15 +209,15 @@ void init(core::module_dependencies dependencies)
 			{ L".ft", L".ct" },
 			[](const std::wstring& filename)
 			{
-				return read_template_meta_info(get_absolute(env::template_folder(), filename) + L".ft");
+				return read_template_meta_info(filename);
 			},
 			[](const spl::shared_ptr<core::frame_producer>& producer)
 			{
 				return spl::make_shared<flash_cg_proxy>(producer);
 			},
-			[](const spl::shared_ptr<core::frame_factory>& ff, const core::video_format_desc& f, const std::wstring&)
+			[](const core::frame_producer_dependencies& dependencies, const std::wstring&)
 			{
-				return flash::create_producer(ff, f, { });
+				return flash::create_producer(dependencies, { });
 			},
 			true
 		);

@@ -134,7 +134,7 @@ public:
 			return nullptr;
 		
 		auto stream_time_base	 = stream_->time_base;
-		auto packet_frame_number = static_cast<uint32_t>((static_cast<double>(pkt.pts * stream_time_base.num)/stream_time_base.den)*fps_);
+		auto packet_frame_number = static_cast<uint32_t>((static_cast<double>(pkt.pts * stream_time_base.num) / stream_time_base.den) * fps_);
 
 		file_frame_number_ = packet_frame_number;
 

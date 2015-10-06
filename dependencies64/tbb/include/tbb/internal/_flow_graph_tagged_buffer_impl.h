@@ -1,5 +1,5 @@
 /*
-    Copyright 2005-2014 Intel Corporation.  All Rights Reserved.
+    Copyright 2005-2015 Intel Corporation.  All Rights Reserved.
 
     This file is part of Threading Building Blocks. Threading Building Blocks is free software;
     you can redistribute it and/or modify it under the terms of the GNU General Public License
@@ -18,53 +18,51 @@
     reasons why the executable file might be covered by the GNU General Public License.
 */
 
-// tagged buffer that can expand, and can support as many deletions as additions
-// list-based, with elements of list held in array (for destruction management),
-// multiplicative hashing (like ets).  No synchronization built-in.
+// a hash table buffer that can expand, and can support as many deletions as
+// additions, list-based, with elements of list held in array (for destruction
+// management), multiplicative hashing (like ets).  No synchronization built-in.
 //
 
-#ifndef __TBB__flow_graph_tagged_buffer_impl_H
-#define __TBB__flow_graph_tagged_buffer_impl_H
+#ifndef __TBB__flow_graph_hash_buffer_impl_H
+#define __TBB__flow_graph_hash_buffer_impl_H
 
 #ifndef __TBB_flow_graph_H
 #error Do not #include this internal file directly; use public TBB headers instead.
 #endif
 
-// included in namespace tbb::flow::interface7::internal
+// included in namespace tbb::flow::interface8::internal
 
-template<typename T, typename U, size_t NoTagMark>
-struct otherData {
-    T t;
-    U next;
-    otherData() : t(NoTagMark), next(NULL) {}
-};
-
-template<typename TagType, typename ValueType, size_t NoTagMark>
+// elements in the table are a simple list; we need pointer to next element to
+// traverse the chain
+template<typename ValueType>
 struct buffer_element_type {
     // the second parameter below is void * because we can't forward-declare the type
     // itself, so we just reinterpret_cast below.
-    typedef typename aligned_pair<ValueType, otherData<TagType, void *, NoTagMark> >::type type;
+    typedef typename aligned_pair<ValueType, void *>::type type;
 };
 
 template
     <
-     typename TagType, 
-     typename ValueType, 
-     size_t   NoTagMark = 0,
-     typename Allocator=tbb::cache_aligned_allocator< typename buffer_element_type<TagType, ValueType, NoTagMark>::type >
+     typename Key,         // type of key within ValueType
+     typename ValueType,
+     typename ValueToKey,  // abstract method that returns "const Key" or "const Key&" given ValueType
+     typename HashCompare, // has hash and equal
+     typename Allocator=tbb::cache_aligned_allocator< typename aligned_pair<ValueType, void *>::type >
     >
-class tagged_buffer {
+class hash_buffer : public HashCompare {
 public:
     static const size_t INITIAL_SIZE = 8;  // initial size of the hash pointer table
-    static const TagType NO_TAG = TagType(NoTagMark);
     typedef ValueType value_type;
-    typedef typename buffer_element_type<TagType, ValueType, NO_TAG>::type element_type;
+    typedef typename buffer_element_type< value_type >::type element_type;
     typedef value_type *pointer_type;
     typedef element_type *list_array_type;  // array we manage manually
     typedef list_array_type *pointer_array_type;
     typedef typename Allocator::template rebind<list_array_type>::other pointer_array_allocator_type;
     typedef typename Allocator::template rebind<element_type>::other elements_array_allocator;
+    typedef typename tbb::internal::strip<Key>::type Knoref;
+
 private:
+    ValueToKey *my_key;
     size_t my_size;
     size_t nelements;
     pointer_array_type pointer_array;    // pointer_array[my_size]
@@ -73,17 +71,12 @@ private:
 
     size_t mask() { return my_size - 1; }
 
-    static size_t hash(TagType t) {
-        return uintptr_t(t)*tbb::internal::select_size_t_constant<0x9E3779B9,0x9E3779B97F4A7C15ULL>::value;
-    }
-
     void set_up_free_list( element_type **p_free_list, list_array_type la, size_t sz) {
         for(size_t i=0; i < sz - 1; ++i ) {  // construct free list
-            la[i].second.next = &(la[i+1]);
-            la[i].second.t = NO_TAG;
+            la[i].second = &(la[i+1]);
         }
-        la[sz-1].second.next = NULL;
-        *p_free_list = &(la[0]);
+        la[sz-1].second = NULL;
+        *p_free_list = (element_type *)&(la[0]);
     }
 
     // cleanup for exceptions
@@ -117,10 +110,10 @@ private:
             set_up_free_list(&new_free_list, new_elements_array, my_size );
 
             for(size_t i=0; i < my_size; ++i) {
-                for( element_type* op = pointer_array[i]; op; op = (element_type *)(op->second.next)) {
+                for( element_type* op = pointer_array[i]; op; op = (element_type *)(op->second)) {
                     value_type *ov = reinterpret_cast<value_type *>(&(op->first));
                     // could have std::move semantics
-                    internal_tagged_insert(new_pointer_array, new_size, new_free_list, op->second.t, *ov);
+                    internal_insert_with_key(new_pointer_array, new_size, new_free_list, *ov);
                 }
             }
             my_cleanup.my_pa = NULL;
@@ -137,15 +130,15 @@ private:
 
     // v should have perfect forwarding if std::move implemented.
     // we use this method to move elements in grow_array, so can't use class fields
-    void internal_tagged_insert( element_type **p_pointer_array, size_t p_sz, list_array_type &p_free_list,
-            const TagType t, const value_type &v) {
+    void internal_insert_with_key( element_type **p_pointer_array, size_t p_sz, list_array_type &p_free_list,
+            const value_type &v) {
         size_t l_mask = p_sz-1;
-        size_t h = hash(t) & l_mask;
+        __TBB_ASSERT(my_key, "Error: value-to-key functor not provided");
+        size_t h = this->hash((*my_key)(v)) & l_mask;
         __TBB_ASSERT(p_free_list, "Error: free list not set up.");
-        element_type* my_elem = p_free_list; p_free_list = (element_type *)(p_free_list->second.next);
-        my_elem->second.t = t;
+        element_type* my_elem = p_free_list; p_free_list = (element_type *)(p_free_list->second);
         (void) new(&(my_elem->first)) value_type(v);
-        my_elem->second.next = p_pointer_array[h];
+        my_elem->second = p_pointer_array[h];
         p_pointer_array[h] = my_elem;
     }
 
@@ -162,12 +155,11 @@ private:
             for(size_t i = 0; i < sz; ++i ) {
                 element_type *p_next;
                 for( element_type *p = pa[i]; p; p = p_next) {
-                    p_next = (element_type *)p->second.next;
-                    value_type *vp = reinterpret_cast<value_type *>(&(p->first));
-                    vp->~value_type();
+                    p_next = (element_type *)p->second;
+                    internal::punned_cast<value_type *>(&(p->first))->~value_type();
                 }
             }
-            pointer_array_allocator_type().deallocate(pa, sz); 
+            pointer_array_allocator_type().deallocate(pa, sz);
             pa = NULL;
         }
         // Separate test (if allocation of pa throws, el may be allocated.
@@ -181,12 +173,13 @@ private:
     }
 
 public:
-    tagged_buffer() : my_size(INITIAL_SIZE), nelements(0) {
+    hash_buffer() : my_key(NULL), my_size(INITIAL_SIZE), nelements(0) {
         internal_initialize_buffer();
     }
 
-    ~tagged_buffer() {
+    ~hash_buffer() {
         internal_free_buffer(pointer_array, elements_array, my_size, nelements);
+        if(my_key) delete my_key;
     }
 
     void reset() {
@@ -194,34 +187,43 @@ public:
         internal_initialize_buffer();
     }
 
-    bool tagged_insert(const TagType t, const value_type &v) {
-        pointer_type p;
-        if(tagged_find_ref(t, p)) {
+    // Take ownership of func object allocated with new.
+    // This method is only used internally, so can't be misused by user.
+    void set_key_func(ValueToKey *vtk) { my_key = vtk; }
+    // pointer is used to clone()
+    ValueToKey* get_key_func() { return my_key; }
+
+    bool insert_with_key(const value_type &v) {
+        pointer_type p = NULL;
+        __TBB_ASSERT(my_key, "Error: value-to-key functor not provided");
+        if(find_ref_with_key((*my_key)(v), p)) {
             p->~value_type();
             (void) new(p) value_type(v);  // copy-construct into the space
             return false;
         }
         ++nelements;
         if(nelements*2 > my_size) grow_array();
-        internal_tagged_insert(pointer_array, my_size, free_list, t, v);
+        internal_insert_with_key(pointer_array, my_size, free_list, v);
         return true;
     }
 
-    // returns reference to array element.v
-    bool tagged_find_ref(const TagType t, pointer_type &v) {
-        size_t i = hash(t) & mask();
-        for(element_type* p = pointer_array[i]; p; p = (element_type *)(p->second.next)) {
-            if(p->second.t == t) {
-                v = reinterpret_cast<pointer_type>(&(p->first));
+    // returns true and sets v to array element if found, else returns false.
+    bool find_ref_with_key(const Knoref& k, pointer_type &v) {
+        size_t i = this->hash(k) & mask();
+        for(element_type* p = pointer_array[i]; p; p = (element_type *)(p->second)) {
+            pointer_type pv = reinterpret_cast<pointer_type>(&(p->first));
+            __TBB_ASSERT(my_key, "Error: value-to-key functor not provided");
+            if(this->equal((*my_key)(*pv), k)) {
+                v = pv;
                 return true;
             }
         }
         return false;
     }
 
-    bool tagged_find( const TagType t, value_type &v) {
+    bool find_with_key( const Knoref& k, value_type &v) {
         value_type *p;
-        if(tagged_find_ref(t, p)) {
+        if(find_ref_with_key(k, p)) {
             v = *p;
             return true;
         }
@@ -229,23 +231,23 @@ public:
             return false;
     }
 
-    void tagged_delete(const TagType t) {
-        size_t h = hash(t) & mask();
+    void delete_with_key(const Knoref& k) {
+        size_t h = this->hash(k) & mask();
         element_type* prev = NULL;
-        for(element_type* p = pointer_array[h]; p; prev = p, p = (element_type *)(p->second.next)) {
-            if(p->second.t == t) {
-                value_type *vp = reinterpret_cast<value_type *>(&(p->first));
+        for(element_type* p = pointer_array[h]; p; prev = p, p = (element_type *)(p->second)) {
+            value_type *vp = reinterpret_cast<value_type *>(&(p->first));
+            __TBB_ASSERT(my_key, "Error: value-to-key functor not provided");
+            if(this->equal((*my_key)(*vp), k)) {
                 vp->~value_type();
-                p->second.t = NO_TAG;
-                if(prev) prev->second.next = p->second.next;
-                else pointer_array[h] = (element_type *)(p->second.next);
-                p->second.next = free_list;
+                if(prev) prev->second = p->second;
+                else pointer_array[h] = (element_type *)(p->second);
+                p->second = free_list;
                 free_list = p;
                 --nelements;
                 return;
             }
         }
-        __TBB_ASSERT(false, "tag not found for delete");
+        __TBB_ASSERT(false, "key not found for delete");
     }
 };
-#endif // __TBB__flow_graph_tagged_buffer_impl_H
+#endif // __TBB__flow_graph_hash_buffer_impl_H

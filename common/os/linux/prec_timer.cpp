@@ -26,6 +26,10 @@
 #include <boost/thread.hpp>
 #include <boost/chrono/system_clocks.hpp>
 
+#include <time.h>
+
+#include <cmath>
+
 using namespace boost::chrono;
 
 namespace caspar {
@@ -37,7 +41,8 @@ prec_timer::prec_timer()
 
 void prec_timer::tick_millis(int64_t ticks_to_wait)
 {
-	auto t = duration_cast<milliseconds>(high_resolution_clock::now().time_since_epoch()).count();
+	ticks_to_wait *= 1000000;
+	auto t = duration_cast<nanoseconds>(high_resolution_clock::now().time_since_epoch()).count();
 
 	if (time_ != 0)
 	{
@@ -54,20 +59,23 @@ void prec_timer::tick_millis(int64_t ticks_to_wait)
 
 			if (!done)
 			{
-				// if > 0.002s left, do Sleep(1), which will actually sleep some 
-				//   steady amount, probably 1-2 ms,
-				//   and do so in a nice way (cpu meter drops; laptop battery spared).
-				// otherwise, do a few Sleep(0)'s, which just give up the timeslice,
-				//   but don't really save cpu or battery, but do pass a tiny
-				//   amount of time.
-				if (ticks_left > 2)
-					boost::this_thread::sleep_for(milliseconds(1));
-				/*else
-					for (int i = 0; i < 10; ++i)
-						Sleep(0);  // causes thread to give up its timeslice*/
+				timespec spec;
+
+				if (ticks_left > 2000000)
+				{
+					spec.tv_sec = ticks_left / 1000000000;
+					spec.tv_nsec = 1000000;
+				}
+				else
+				{
+					spec.tv_sec = 0;
+					spec.tv_nsec = ticks_left / 100;
+				}
+
+				nanosleep(&spec, nullptr);
 			}
 
-			t = duration_cast<milliseconds>(high_resolution_clock::now().time_since_epoch()).count();
+			t = duration_cast<nanoseconds>(high_resolution_clock::now().time_since_epoch()).count();
 		} while (!done);
 	}
 

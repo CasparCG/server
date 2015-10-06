@@ -27,15 +27,10 @@
 
 #include <core/mixer/image/blend_modes.h>
 #include <core/mixer/image/image_mixer.h>
+#include <core/fwd.h>
 
 #include <core/frame/frame_visitor.h>
 #include <core/video_format.h>
-
-FORWARD2(caspar, core, class frame);
-FORWARD2(caspar, core, struct pixel_format_desc);
-FORWARD2(caspar, core, struct video_format_desc);
-FORWARD2(caspar, core, class mutable_frame);
-FORWARD2(caspar, core, struct frame_transform);
 
 namespace caspar { namespace accelerator { namespace ogl {
 	
@@ -49,18 +44,15 @@ public:
 	
 	// Constructors
 
-	image_mixer(const spl::shared_ptr<class device>& ogl, bool blend_modes_wanted);
+	image_mixer(const spl::shared_ptr<class device>& ogl, bool blend_modes_wanted, bool straight_alpha_wanted);
 	~image_mixer();
 
 	// Methods
 			
-	std::future<array<const std::uint8_t>> operator()(const core::video_format_desc& format_desc) override;		
+	std::future<array<const std::uint8_t>> operator()(const core::video_format_desc& format_desc, bool straighten_alpha) override;
 	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc) override;
 
 	// core::image_mixer
-	
-	void begin_layer(core::blend_mode blend_mode) override;
-	void end_layer() override;
 
 	void push(const core::frame_transform& frame) override;
 	void visit(const core::const_frame& frame) override;

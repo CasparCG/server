@@ -24,6 +24,7 @@
 
 #include <boost/range.hpp>
 
+#include <boost/geometry/core/assert.hpp>
 #include <boost/geometry/core/cs.hpp>
 #include <boost/geometry/core/point_type.hpp>
 #include <boost/geometry/strategies/convex_hull.hpp>
@@ -354,7 +355,7 @@ private:
     {
         std::copy(boost::begin(first), boost::end(first), out);
 
-        BOOST_ASSERT(closed ? !boost::empty(second) : boost::size(second) > 1);
+        BOOST_GEOMETRY_ASSERT(closed ? !boost::empty(second) : boost::size(second) > 1);
         std::copy(++boost::rbegin(second), // skip the first Point
                   closed ? boost::rend(second) : --boost::rend(second), // skip the last Point if open
                   out);
@@ -364,7 +365,7 @@ private:
         // count describes a closed case but comparison with min size of closed
         // gives the result compatible also with open
         // here core_detail::closure::minimum_ring_size<closed> could be used
-        if ( count < 4 )
+        if (count < 4)
         {
             // there should be only one missing
             *out++ = *boost::begin(first);

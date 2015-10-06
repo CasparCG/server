@@ -22,14 +22,17 @@
 #pragma once
 
 #include <common/memory.h>
-#include <common/forward.h>
-#include <common/reactive.h>
 
-FORWARD2(caspar, core, class video_channel);
-FORWARD2(caspar, core, class frame_producer);
+#include <core/fwd.h>
+
+#include <vector>
+#include <string>
 
 namespace caspar { namespace reroute {
-	
-spl::shared_ptr<core::frame_producer> create_producer(core::video_channel& channel);
+
+void describe_producer(core::help_sink& sink, const core::help_repository& repository);
+spl::shared_ptr<core::frame_producer> create_producer(
+		const core::frame_producer_dependencies& dependencies,
+		const std::vector<std::wstring>& params);
 
 }}

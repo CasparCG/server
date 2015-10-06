@@ -27,22 +27,27 @@
 
 #include <core/video_format.h>
 #include <core/frame/frame.h>
+#include <core/help/help_repository.h>
+#include <core/help/help_sink.h>
 
 #include <common/executor.h>
 #include <common/diagnostics/graph.h>
 #include <common/array.h>
 #include <common/memshfl.h>
+#include <common/param.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/mixer/audio/audio_util.h>
 
 #include <tbb/concurrent_queue.h>
+#include <tbb/atomic.h>
 
 #include <common/assert.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/timer.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <asmlib.h>
 
@@ -53,14 +58,14 @@ namespace caspar { namespace bluefish {
 			
 struct bluefish_consumer : boost::noncopyable
 {
-	spl::shared_ptr<CBlueVelvet4>				blue_;
+	spl::shared_ptr<CBlueVelvet4>		blue_;
 	const unsigned int					device_index_;
 	const core::video_format_desc		format_desc_;
 	const int							channel_index_;
 
 	const std::wstring					model_name_;
 
-	spl::shared_ptr<diagnostics::graph>		graph_;
+	spl::shared_ptr<diagnostics::graph>	graph_;
 	boost::timer						frame_timer_;
 	boost::timer						tick_timer_;
 	boost::timer						sync_timer_;	
@@ -69,7 +74,9 @@ struct bluefish_consumer : boost::noncopyable
 
 	std::array<blue_dma_buffer_ptr, 4>	reserved_frames_;	
 	tbb::concurrent_bounded_queue<core::const_frame> frame_buffer_;
-	
+	tbb::atomic<int64_t>				presentation_delay_millis_;
+	core::const_frame					previous_frame_				= core::const_frame::empty();
+
 	const bool							embedded_audio_;
 	const bool							key_only_;
 		
@@ -87,6 +94,7 @@ public:
 		, executor_(print())
 	{
 		executor_.set_capacity(1);
+		presentation_delay_millis_ = 0;
 
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("sync-time", diagnostics::color(1.0f, 0.0f, 0.0f));
@@ -216,6 +224,11 @@ public:
 		
 		frame_timer_.restart();		
 
+		if (previous_frame_ != core::const_frame::empty())
+			presentation_delay_millis_ = previous_frame_.get_age_millis();
+
+		previous_frame_ = frame;
+
 		// Copy to local buffers
 		
 		if(!frame.image_data().empty())
@@ -294,6 +307,11 @@ public:
 		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" + 
 			boost::lexical_cast<std::wstring>(device_index_) + L"|" +  format_desc_.name + L"]";
 	}
+
+	int64_t presentation_delay_millis() const
+	{
+		return presentation_delay_millis_;
+	}
 };
 
 struct bluefish_consumer_proxy : public core::frame_consumer
@@ -352,6 +370,7 @@ public:
 		info.add(L"key-only", key_only_);
 		info.add(L"device", device_index_);
 		info.add(L"embedded-audio", embedded_audio_);
+		info.add(L"presentation-frame-age", presentation_frame_age_millis());
 		return info;
 	}
 
@@ -365,22 +384,49 @@ public:
 		return 400 + device_index_;
 	}
 
+	int64_t presentation_frame_age_millis() const override
+	{
+		return consumer_ ? consumer_->presentation_delay_millis() : 0;
+	}
+
 	core::monitor::subject& monitor_output()
 	{
 		return monitor_subject_;
 	}
 };	
 
+
+void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Sends video on an SDI output using Bluefish video cards.");
+	sink.syntax(L"BLUEFISH {[device_index:int]|1} {[embedded_audio:EMBEDDED_AUDIO]} {[key_only:KEY_ONLY]}");
+	sink.para()
+		->text(L"Sends video on an SDI output using Bluefish video cards. Multiple video cards can be ")
+		->text(L"installed in the same machine and used at the same time, they will be addressed via ")
+		->text(L"different ")->code(L"device_index")->text(L" parameters.");
+	sink.para()->text(L"Specify ")->code(L"embedded_audio")->text(L" to embed audio into the SDI signal.");
+	sink.para()
+		->text(L"Specifying ")->code(L"key_only")->text(L" will extract only the alpha channel from the ")
+		->text(L"channel. This is useful when you have two SDI video cards, and neither has native support ")
+		->text(L"for separate fill/key output");
+	sink.para()->text(L"Examples:");
+	sink.example(L">> ADD 1 BLUEFISH", L"uses the default device_index of 1.");
+	sink.example(L">> ADD 1 BLUEFISH 2", L"for device_index 2.");
+	sink.example(
+		L">> ADD 1 BLUEFISH 1 EMBEDDED_AUDIO\n"
+		L">> ADD 1 BLUEFISH 2 KEY_ONLY", L"uses device with index 1 as fill output with audio and device with index 2 as key output.");
+}
+
 spl::shared_ptr<core::frame_consumer> create_consumer(
 		const std::vector<std::wstring>& params, core::interaction_sink*)
 {
-	if(params.size() < 1 || params[0] != L"BLUEFISH")
+	if(params.size() < 1 || !boost::iequals(params.at(0), L"BLUEFISH"))
 		return core::frame_consumer::empty();
 
-	const auto device_index = params.size() > 1 ? boost::lexical_cast<int>(params[1]) : 1;
+	const auto device_index = params.size() > 1 ? boost::lexical_cast<int>(params.at(1)) : 1;
 
-	const auto embedded_audio = std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
-	const auto key_only		  = std::find(params.begin(), params.end(), L"KEY_ONLY")	   != params.end();
+	const auto embedded_audio	= contains_param(L"EMBEDDED_AUDIO", params);
+	const auto key_only			= contains_param(L"KEY_ONLY", params);
 
 	return spl::make_shared<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
 }

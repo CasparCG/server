@@ -21,8 +21,7 @@
 
 #pragma once
 
-#include "frame_producer.h"
-
+#include "../fwd.h"
 #include "../monitor/monitor.h"
 #include "../interaction/interaction_sink.h"
 
@@ -49,7 +48,7 @@ class stage final : public interaction_sink
 {
 	stage(const stage&);
 	stage& operator=(const stage&);
-public:	
+public:
 
 	// Static Members
 	
@@ -58,26 +57,31 @@ public:
 
 	// Constructors
 
-	explicit stage(spl::shared_ptr<diagnostics::graph> graph);
+	explicit stage(int channel_index, spl::shared_ptr<diagnostics::graph> graph);
 	
 	// Methods
 
-	std::map<int, class draw_frame> operator()(const struct video_format_desc& format_desc);
+	std::map<int, draw_frame>		operator()(const video_format_desc& format_desc);
 
-	std::future<void>			apply_transforms(const std::vector<transform_tuple_t>& transforms);
-	std::future<void>			apply_transform(int index, const transform_func_t& transform, unsigned int mix_duration = 0, const tweener& tween = L"linear");
-	std::future<void>			clear_transforms(int index);
-	std::future<void>			clear_transforms();
-	std::future<void>			load(int index, const spl::shared_ptr<class frame_producer>& producer, bool preview = false, const boost::optional<int32_t>& auto_play_delta = nullptr);
-	std::future<void>			pause(int index);
-	std::future<void>			play(int index);
-	std::future<void>			stop(int index);
-	std::future<std::wstring>	call(int index, const std::vector<std::wstring>& params);
-	std::future<void>			clear(int index);
-	std::future<void>			clear();
-	std::future<void>			swap_layers(stage& other);
-	std::future<void>			swap_layer(int index, int other_index);
-	std::future<void>			swap_layer(int index, int other_index, stage& other);
+	std::future<void>				apply_transforms(const std::vector<transform_tuple_t>& transforms);
+	std::future<void>				apply_transform(int index, const transform_func_t& transform, unsigned int mix_duration = 0, const tweener& tween = L"linear");
+	std::future<void>				clear_transforms(int index);
+	std::future<void>				clear_transforms();
+	std::future<frame_transform>	get_current_transform(int index);
+	std::future<void>				load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview = false, const boost::optional<int32_t>& auto_play_delta = boost::optional<int32_t>());
+	std::future<void>				pause(int index);
+	std::future<void>				resume(int index);
+	std::future<void>				play(int index);
+	std::future<void>				stop(int index);
+	std::future<std::wstring>		call(int index, const std::vector<std::wstring>& params);
+	std::future<void>				clear(int index);
+	std::future<void>				clear();
+	std::future<void>				swap_layers(stage& other, bool swap_transforms);
+	std::future<void>				swap_layer(int index, int other_index, bool swap_transforms);
+	std::future<void>				swap_layer(int index, int other_index, stage& other, bool swap_transforms);
+
+	void							add_layer_consumer(void* token, int layer, const spl::shared_ptr<write_frame_consumer>& layer_consumer);
+	void							remove_layer_consumer(void* token, int layer);
 
 	monitor::subject& monitor_output();	
 
@@ -91,12 +95,14 @@ public:
 
 	// Properties
 
-	std::future<std::shared_ptr<class frame_producer>>	foreground(int index);
-	std::future<std::shared_ptr<class frame_producer>>	background(int index);
+	std::future<std::shared_ptr<frame_producer>>	foreground(int index);
+	std::future<std::shared_ptr<frame_producer>>	background(int index);
 
-	std::future<boost::property_tree::wptree>			info() const;
-	std::future<boost::property_tree::wptree>			info(int index) const;
+	std::future<boost::property_tree::wptree>		info() const;
+	std::future<boost::property_tree::wptree>		info(int index) const;
 
+	std::future<boost::property_tree::wptree>		delay_info() const;
+	std::future<boost::property_tree::wptree>		delay_info(int layer) const;
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

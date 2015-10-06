@@ -58,22 +58,17 @@ struct item
 	core::pixel_format_desc		pix_desc	= core::pixel_format::invalid;
 	std::vector<future_texture>	textures;
 	core::image_transform		transform;
-	core::frame_geometry		geometry;
+	core::frame_geometry		geometry	= core::frame_geometry::get_default();
 };
 
 struct layer
 {
+	std::vector<layer>	sublayers;
 	std::vector<item>	items;
 	core::blend_mode	blend_mode;
 
-	layer()
-		: blend_mode(core::blend_mode::normal)
-	{
-	}
-
-	layer(std::vector<item> items, core::blend_mode blend_mode)
-		: items(std::move(items))
-		, blend_mode(blend_mode)
+	layer(core::blend_mode blend_mode)
+		: blend_mode(blend_mode)
 	{
 	}
 };
@@ -91,13 +86,13 @@ class image_renderer
 	spl::shared_ptr<device>	ogl_;
 	image_kernel			kernel_;
 public:
-	image_renderer(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted)
+	image_renderer(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted, bool straight_alpha_wanted)
 		: ogl_(ogl)
-		, kernel_(ogl_, blend_modes_wanted)
+		, kernel_(ogl_, blend_modes_wanted, straight_alpha_wanted)
 	{
 	}
 	
-	std::future<array<const std::uint8_t>> operator()(std::vector<layer> layers, const core::video_format_desc& format_desc)
+	std::future<array<const std::uint8_t>> operator()(std::vector<layer> layers, const core::video_format_desc& format_desc, bool straighten_alpha)
 	{	
 		if(layers.empty())
 		{ // Bypass GPU with empty frame.
@@ -108,13 +103,13 @@ public:
 		if(format_desc.field_mode != core::field_mode::progressive)
 		{ // Remove jitter from still.
 			for (auto& layer : layers)
-			{	
+			{
 				// Remove first field stills.
 				boost::range::remove_erase_if(layer.items, [&](const item& item)
 				{
 					return item.transform.is_still && item.transform.field_mode == format_desc.field_mode; // only us last field for stills.
 				});
-		
+
 				// Stills are progressive
 				for (auto& item : layer.items)
 				{
@@ -126,7 +121,7 @@ public:
 
 		return flatten(ogl_->begin_invoke([=]() mutable -> std::shared_future<array<const std::uint8_t>>
 		{
-			auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4);
+			auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4, false);
 
 			if (format_desc.field_mode != core::field_mode::progressive)
 			{
@@ -135,6 +130,8 @@ public:
 			}
 			else
 				draw(target_texture, std::move(layers), format_desc, core::field_mode::progressive);
+
+			kernel_.post_process(target_texture, straighten_alpha);
 
 			return ogl_->copy_async(target_texture);
 		}));
@@ -150,7 +147,10 @@ private:
 		std::shared_ptr<texture> layer_key_texture;
 
 		for (auto& layer : layers)
+		{
+			draw(target_texture, layer.sublayers, format_desc, field_mode);
 			draw(target_texture, std::move(layer), layer_key_texture, format_desc, field_mode);
+		}
 	}
 
 	void draw(spl::shared_ptr<texture>&			target_texture,
@@ -198,10 +198,10 @@ private:
 				
 		if(layer.blend_mode != core::blend_mode::normal)
 		{
-			auto layer_texture = ogl_->create_texture(target_texture->width(), target_texture->height(), 4);
+			auto layer_texture = ogl_->create_texture(target_texture->width(), target_texture->height(), 4, false);
 
 			for (auto& item : layer.items)
-				draw(layer_texture, std::move(item), layer_key_texture, local_key_texture, local_mix_texture);	
+				draw(layer_texture, std::move(item), layer_key_texture, local_key_texture, local_mix_texture, format_desc);
 		
 			draw(layer_texture, std::move(local_mix_texture), core::blend_mode::normal);							
 			draw(target_texture, std::move(layer_texture), layer.blend_mode);
@@ -209,7 +209,7 @@ private:
 		else // fast path
 		{
 			for (auto& item : layer.items)		
-				draw(target_texture, std::move(item), layer_key_texture, local_key_texture, local_mix_texture);		
+				draw(target_texture, std::move(item), layer_key_texture, local_key_texture, local_mix_texture, format_desc);
 					
 			draw(target_texture, std::move(local_mix_texture), core::blend_mode::normal);
 		}					
@@ -217,39 +217,41 @@ private:
 		layer_key_texture = std::move(local_key_texture);
 	}
 
-	void draw(spl::shared_ptr<texture>&	target_texture, 
-			  item						item, 
-		      std::shared_ptr<texture>&	layer_key_texture, 
-			  std::shared_ptr<texture>&	local_key_texture, 
-			  std::shared_ptr<texture>&	local_mix_texture)
+	void draw(spl::shared_ptr<texture>& target_texture, 
+			  item item, 
+		      std::shared_ptr<texture>& layer_key_texture, 
+			  std::shared_ptr<texture>& local_key_texture, 
+			  std::shared_ptr<texture>& local_mix_texture,
+			  const core::video_format_desc& format_desc)
 	{			
 		draw_params draw_params;
-		draw_params.pix_desc	= std::move(item.pix_desc);
-		draw_params.transform	= std::move(item.transform);
-		draw_params.geometry	= item.geometry;
+		draw_params.pix_desc		= std::move(item.pix_desc);
+		draw_params.transform		= std::move(item.transform);
+		draw_params.geometry		= item.geometry;
+		draw_params.aspect_ratio	= static_cast<double>(format_desc.square_width) / static_cast<double>(format_desc.square_height);
 
 		for (auto& future_texture : item.textures)
 			draw_params.textures.push_back(spl::make_shared_ptr(future_texture.get()));
 
 		if(item.transform.is_key)
 		{
-			local_key_texture = local_key_texture ? local_key_texture : ogl_->create_texture(target_texture->width(), target_texture->height(), 1);
+			local_key_texture = local_key_texture ? local_key_texture : ogl_->create_texture(target_texture->width(), target_texture->height(), 1, draw_params.transform.use_mipmap);
 
-			draw_params.background			= local_key_texture;
-			draw_params.local_key			= nullptr;
-			draw_params.layer_key			= nullptr;
+			draw_params.background	= local_key_texture;
+			draw_params.local_key	= nullptr;
+			draw_params.layer_key	= nullptr;
 
 			kernel_.draw(std::move(draw_params));
 		}
 		else if(item.transform.is_mix)
 		{
-			local_mix_texture = local_mix_texture ? local_mix_texture : ogl_->create_texture(target_texture->width(), target_texture->height(), 4);
+			local_mix_texture = local_mix_texture ? local_mix_texture : ogl_->create_texture(target_texture->width(), target_texture->height(), 4, draw_params.transform.use_mipmap);
 
-			draw_params.background			= local_mix_texture;
-			draw_params.local_key			= std::move(local_key_texture);
-			draw_params.layer_key			= layer_key_texture;
+			draw_params.background	= local_mix_texture;
+			draw_params.local_key	= std::move(local_key_texture);
+			draw_params.layer_key	= layer_key_texture;
 
-			draw_params.keyer				= keyer::additive;
+			draw_params.keyer		= keyer::additive;
 
 			kernel_.draw(std::move(draw_params));
 		}
@@ -257,9 +259,9 @@ private:
 		{
 			draw(target_texture, std::move(local_mix_texture), core::blend_mode::normal);
 			
-			draw_params.background			= target_texture;
-			draw_params.local_key			= std::move(local_key_texture);
-			draw_params.layer_key			= layer_key_texture;
+			draw_params.background	= target_texture;
+			draw_params.local_key	= std::move(local_key_texture);
+			draw_params.layer_key	= layer_key_texture;
 
 			kernel_.draw(std::move(draw_params));
 		}	
@@ -273,13 +275,13 @@ private:
 			return;
 
 		draw_params draw_params;
-		draw_params.pix_desc.format		= core::pixel_format::bgra;
-		draw_params.pix_desc.planes		= { core::pixel_format_desc::plane(source_buffer->width(), source_buffer->height(), 4) };
-		draw_params.textures			= { spl::make_shared_ptr(source_buffer) };
-		draw_params.transform			= core::image_transform();
-		draw_params.blend_mode			= blend_mode;
-		draw_params.background			= target_texture;
-		draw_params.geometry			= core::frame_geometry::get_default();
+		draw_params.pix_desc.format	= core::pixel_format::bgra;
+		draw_params.pix_desc.planes	= { core::pixel_format_desc::plane(source_buffer->width(), source_buffer->height(), 4) };
+		draw_params.textures		= { spl::make_shared_ptr(source_buffer) };
+		draw_params.transform		= core::image_transform();
+		draw_params.blend_mode		= blend_mode;
+		draw_params.background		= target_texture;
+		draw_params.geometry		= core::frame_geometry::get_default();
 
 		kernel_.draw(std::move(draw_params));
 	}
@@ -291,23 +293,38 @@ struct image_mixer::impl : public core::frame_factory
 	image_renderer						renderer_;
 	std::vector<core::image_transform>	transform_stack_;
 	std::vector<layer>					layers_; // layer/stream/items
+	std::vector<layer*>					layer_stack_;
 public:
-	impl(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted) 
+	impl(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted, bool straight_alpha_wanted)
 		: ogl_(ogl)
-		, renderer_(ogl, blend_modes_wanted)
+		, renderer_(ogl, blend_modes_wanted, straight_alpha_wanted)
 		, transform_stack_(1)	
 	{
 		CASPAR_LOG(info) << L"Initialized OpenGL Accelerated GPU Image Mixer";
 	}
-
-	void begin_layer(core::blend_mode blend_mode)
-	{
-		layers_.push_back(layer(std::vector<item>(), blend_mode));
-	}
 		
 	void push(const core::frame_transform& transform)
 	{
-		transform_stack_.push_back(transform_stack_.back()*transform.image_transform);
+		auto previous_layer_depth = transform_stack_.back().layer_depth;
+		transform_stack_.push_back(transform_stack_.back() * transform.image_transform);
+		auto new_layer_depth = transform_stack_.back().layer_depth;
+
+		if (previous_layer_depth < new_layer_depth)
+		{
+			layer new_layer(transform_stack_.back().blend_mode);
+
+			if (layer_stack_.empty())
+			{
+				layers_.push_back(std::move(new_layer));
+				layer_stack_.push_back(&layers_.back());
+			}
+			else
+			{
+				layer_stack_.back()->sublayers.push_back(std::move(new_layer));
+				layer_stack_.push_back(&layer_stack_.back()->sublayers.back());
+			}
+		}
+
 	}
 		
 	void visit(const core::const_frame& frame)
@@ -328,23 +345,20 @@ public:
 		
 		// NOTE: Once we have copied the arrays they are no longer valid for reading!!! Check for alternative solution e.g. transfer with AMD_pinned_memory.
 		for(int n = 0; n < static_cast<int>(item.pix_desc.planes.size()); ++n)
-			item.textures.push_back(ogl_->copy_async(frame.image_data(n), item.pix_desc.planes[n].width, item.pix_desc.planes[n].height, item.pix_desc.planes[n].stride));
+			item.textures.push_back(ogl_->copy_async(frame.image_data(n), item.pix_desc.planes[n].width, item.pix_desc.planes[n].height, item.pix_desc.planes[n].stride, item.transform.use_mipmap));
 		
-		layers_.back().items.push_back(item);
+		layer_stack_.back()->items.push_back(item);
 	}
 
 	void pop()
 	{
 		transform_stack_.pop_back();
-	}
-
-	void end_layer()
-	{		
+		layer_stack_.resize(transform_stack_.back().layer_depth);
 	}
 	
-	std::future<array<const std::uint8_t>> render(const core::video_format_desc& format_desc)
+	std::future<array<const std::uint8_t>> render(const core::video_format_desc& format_desc, bool straighten_alpha)
 	{
-		return renderer_(std::move(layers_), format_desc);
+		return renderer_(std::move(layers_), format_desc, straighten_alpha);
 	}
 	
 	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc) override
@@ -357,14 +371,12 @@ public:
 	}
 };
 
-image_mixer::image_mixer(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted) : impl_(new impl(ogl, blend_modes_wanted)){}
+image_mixer::image_mixer(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted, bool straight_alpha_wanted) : impl_(new impl(ogl, blend_modes_wanted, straight_alpha_wanted)){}
 image_mixer::~image_mixer(){}
 void image_mixer::push(const core::frame_transform& transform){impl_->push(transform);}
 void image_mixer::visit(const core::const_frame& frame){impl_->visit(frame);}
 void image_mixer::pop(){impl_->pop();}
-std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc){return impl_->render(format_desc);}
-void image_mixer::begin_layer(core::blend_mode blend_mode){impl_->begin_layer(blend_mode);}
-void image_mixer::end_layer(){impl_->end_layer();}
+std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc, bool straighten_alpha){return impl_->render(format_desc, straighten_alpha);}
 core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->create_frame(tag, desc);}
 
 }}}

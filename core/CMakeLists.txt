@@ -15,11 +15,12 @@ set(SOURCES
 		frame/frame_transform.cpp
 		frame/geometry.cpp
 
+		help/help_repository.cpp
+		help/util.cpp
+
 		mixer/audio/audio_mixer.cpp
 		mixer/image/blend_modes.cpp
 		mixer/mixer.cpp
-
-		monitor/monitor.cpp
 
 		producer/color/color_producer.cpp
 
@@ -30,6 +31,7 @@ set(SOURCES
 		producer/scene/const_producer.cpp
 		producer/scene/expression_parser.cpp
 		producer/scene/hotswap_producer.cpp
+		producer/scene/scene_cg_proxy.cpp
 		producer/scene/scene_producer.cpp
 		producer/scene/xml_scene_producer.cpp
 
@@ -56,6 +58,7 @@ set(HEADERS
 		consumer/frame_consumer.h
 		consumer/output.h
 		consumer/port.h
+		consumer/write_frame_consumer.h
 
 		diagnostics/call_context.h
 		diagnostics/osd_graph.h
@@ -68,6 +71,10 @@ set(HEADERS
 		frame/frame_visitor.h
 		frame/geometry.h
 		frame/pixel_format.h
+
+		help/help_repository.h
+		help/help_sink.h
+		help/util.h
 
 		interaction/interaction_aggregator.h
 		interaction/interaction_event.h
@@ -89,6 +96,7 @@ set(HEADERS
 		producer/scene/const_producer.h
 		producer/scene/expression_parser.h
 		producer/scene/hotswap_producer.h
+		producer/scene/scene_cg_proxy.h
 		producer/scene/scene_producer.h
 		producer/scene/xml_scene_producer.h
 
@@ -109,6 +117,7 @@ set(HEADERS
 		producer/stage.h
 		producer/variable.h
 
+		fwd.h
 		module_dependencies.h
 		system_info_provider.h
 		StdAfx.h
@@ -132,6 +141,7 @@ source_group(sources ./*)
 source_group(sources\\consumer consumer/*)
 source_group(sources\\diagnostics diagnostics/*)
 source_group(sources\\frame frame/*)
+source_group(sources\\help help/*)
 source_group(sources\\interaction interaction/*)
 source_group(sources\\mixer mixer/*)
 source_group(sources\\producer\\draw producer/draw/*)

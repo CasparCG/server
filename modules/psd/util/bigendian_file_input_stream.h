@@ -19,51 +19,33 @@
 * Author: Niklas P Andersson, niklas.p.andersson@svt.se
 */
 
-#ifndef _BEFILEINPUTSTREAM_H__
-#define _BEFILEINPUTSTREAM_H__
-
 #pragma once
+
+#include <common/except.h>
+
+#include <boost/filesystem/fstream.hpp>
 
 #include <string>
 #include <fstream>
+#include <cstdint>
 
-namespace caspar {
-namespace psd {
+namespace caspar { namespace psd {
 
-class UnexpectedEOFException : public std::exception
+struct unexpected_eof_exception : virtual io_error {};
+
+class bigendian_file_input_stream
 {
 public:
-	virtual ~UnexpectedEOFException()
-	{}
-	virtual const char *what() const
-	{
-		return "Unexpected end of file";
-	}
-};
-class FileNotFoundException : public std::exception
-{
-public:
-	virtual ~FileNotFoundException()
-	{}
-	virtual const char *what() const
-	{
-		return "File not found";
-	}
-};
+	explicit bigendian_file_input_stream();
+	virtual ~bigendian_file_input_stream();
 
-class BEFileInputStream
-{
-public:
-	explicit BEFileInputStream();
-	virtual ~BEFileInputStream();
-
-	void Open(const std::wstring& filename);
+	void open(const std::wstring& filename);
 
 	void read(char*, std::streamsize);
-	unsigned char read_byte();
-	unsigned short read_short();
-	unsigned long read_long();
-	std::wstring read_pascal_string(unsigned char padding = 1);
+	std::uint8_t read_byte();
+	std::uint16_t read_short();
+	std::uint32_t read_long();
+	std::wstring read_pascal_string(int padding = 1);
 	std::wstring read_unicode_string();
 	std::wstring read_id_string();
 	double read_double();
@@ -77,29 +59,28 @@ public:
 
 	void close();
 private:
-	std::ifstream	ifs_;
-	std::wstring	filename_;
+	boost::filesystem::ifstream	ifs_;
+	std::wstring				filename_;
 };
 
 class StreamPositionBackup
 {
 public:
-	StreamPositionBackup(BEFileInputStream* pStream, std::streamoff newPos) : pStream_(pStream)
+	StreamPositionBackup(bigendian_file_input_stream& stream, std::streamoff newPos) : stream_(stream)
 	{
-		oldPosition_ = pStream->current_position();
-		pStream_->set_position(newPos);
+		oldPosition_ = stream.current_position();
+		stream_.set_position(newPos);
 	}
+
 	~StreamPositionBackup()
 	{
-		pStream_->set_position(oldPosition_);
+		stream_.set_position(oldPosition_);
 	}
 private:
-	std::streamoff oldPosition_;
-	BEFileInputStream* pStream_;
+	std::streamoff					oldPosition_;
+	bigendian_file_input_stream&	stream_;
 
 };
 
 }	//namespace psd
 }	//namespace caspar
-
-#endif	//_BEFILEINPUTSTREAM_H__

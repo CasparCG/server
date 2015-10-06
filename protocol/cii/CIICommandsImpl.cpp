@@ -160,6 +160,7 @@ void MiscellaneousCommand::Execute()
 		auto xmlData2 = boost::locale::conv::utf_to_utf<wchar_t, char>(std::string(xmlData_.begin(), xmlData_.end()));
 		auto proxy = pCIIStrategy_->get_cg_registry()->get_or_create_proxy(
 				pCIIStrategy_->GetChannel(),
+				pCIIStrategy_->get_dependencies(),
 				core::cg_proxy::DEFAULT_LAYER,
 				filename_);
 		proxy->add(layer_, filename_, false, L"", xmlData2);

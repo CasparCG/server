@@ -31,7 +31,7 @@
 #include <common/lock.h>
 #include <common/env.h>
 #include <common/prec_timer.h>
-#include <common/os/scheduling.h>
+#include <common/os/threading.h>
 #include <common/timer.h>
 
 #include <SFML/Graphics.hpp>
@@ -61,10 +61,10 @@ sf::Color get_sfml_color(int color)
 	auto c = caspar::diagnostics::color(color);
 
 	return {
-		(color >> 24) & 255,
-		(color >> 16) & 255,
-		(color >> 8) & 255,
-		(color >> 0) & 255
+		static_cast<sf::Uint8>((color >> 24) & 255),
+		static_cast<sf::Uint8>((color >> 16) & 255),
+		static_cast<sf::Uint8>((color >> 8) & 255),
+		static_cast<sf::Uint8>((color >> 0) & 255)
 	};
 }
 
@@ -74,7 +74,7 @@ sf::Font& get_default_font()
 	{
 		sf::Font font;
 		if (!font.loadFromFile("LiberationSans-Regular.ttf"))
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("LiberationSans-Regular.ttf not found"));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("LiberationSans-Regular.ttf not found"));
 		return font;
 	}();
 
@@ -324,6 +324,15 @@ public:
 
 		for (auto& vertex : line_data_)
 			vertex.position.x -= x_delta_;
+
+		for (auto& tag : line_tags_)
+		{
+			if (tag)
+			{
+				(*tag)[0].position.x -= x_delta_;
+				(*tag)[1].position.x -= x_delta_;
+			}
+		}
 
 		auto color = get_sfml_color(color_);
 		color.a = 255 * 0.8;

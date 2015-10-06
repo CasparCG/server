@@ -40,7 +40,10 @@ enum class texture_id
 };
 
 std::shared_ptr<shader> get_image_shader(
-		const spl::shared_ptr<device>& ogl, bool& blend_modes, bool blend_modes_wanted);
-
+		const spl::shared_ptr<device>& ogl,
+		bool& blend_modes,
+		bool blend_modes_wanted,
+		bool& post_processing,
+		bool straight_alpha_wanted);
 
 }}}

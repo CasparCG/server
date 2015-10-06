@@ -26,14 +26,11 @@
 
 #include <common/memory.h>
 
-namespace caspar { namespace core {
+#include "../../module_dependencies.h"
 
-class frame_producer;
-class frame_factory;
-struct video_format_desc;
+namespace caspar { namespace core { namespace scene {
 
-namespace scene {
-
-spl::shared_ptr<core::frame_producer> create_xml_scene_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::vector<std::wstring>& params);
+void init(module_dependencies dependencies);
+spl::shared_ptr<core::frame_producer> create_xml_scene_producer(const frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params);
 
 }}}

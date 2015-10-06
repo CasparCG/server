@@ -27,6 +27,7 @@
 #include <core/video_format.h>
 #include <core/frame/pixel_format.h>
 #include <core/mixer/audio/audio_mixer.h>
+#include <core/fwd.h>
 
 #include <boost/rational.hpp>
 
@@ -49,10 +50,6 @@ struct AVFormatContext;
 struct AVPacket;
 struct AVRational;
 struct AVCodecContext;
-
-FORWARD2(caspar, core, struct pixel_format_desc);
-FORWARD2(caspar, core, class mutable_frame);
-FORWARD2(caspar, core, class frame_factory);
 
 namespace caspar { namespace ffmpeg {
 		

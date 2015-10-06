@@ -18,7 +18,7 @@
 #include <boost/geometry/strategies/distance.hpp>
 #include <boost/geometry/strategies/tags.hpp>
 
-#include <boost/geometry/algorithms/within.hpp>
+#include <boost/geometry/algorithms/covered_by.hpp>
 
 #include <boost/geometry/algorithms/dispatch/distance.hpp>
 
@@ -113,16 +113,16 @@ template <typename MultiPoint, typename Areal, typename Strategy>
 class multipoint_to_areal
 {
 private:
-    struct within_areal
+    struct not_covered_by_areal
     {
-        within_areal(Areal const& areal)
+        not_covered_by_areal(Areal const& areal)
             : m_areal(areal)
         {}
 
         template <typename Point>
         inline bool apply(Point const& point) const
         {
-            return geometry::within(point, m_areal);
+            return !geometry::covered_by(point, m_areal);
         }
 
         Areal const& m_areal;
@@ -140,27 +140,26 @@ public:
                                     Areal const& areal,
                                     Strategy const& strategy)
     {
-        within_areal predicate(areal);
+        not_covered_by_areal predicate(areal);
 
         if (check_iterator_range
                 <
-                    within_areal, false
+                    not_covered_by_areal, false
                 >::apply(boost::begin(multipoint),
                          boost::end(multipoint),
                          predicate))
         {
-            return 0;
+            return detail::distance::point_or_segment_range_to_geometry_rtree
+                <
+                    typename boost::range_iterator<MultiPoint const>::type,
+                    Areal,
+                    Strategy
+                >::apply(boost::begin(multipoint),
+                         boost::end(multipoint),
+                         areal,
+                         strategy);
         }
-
-        return detail::distance::point_or_segment_range_to_geometry_rtree
-            <
-                typename boost::range_iterator<MultiPoint const>::type,
-                Areal,
-                Strategy
-            >::apply(boost::begin(multipoint),
-                     boost::end(multipoint),
-                     areal,
-                     strategy);
+        return 0;
     }
 
     static inline return_type apply(Areal const& areal,

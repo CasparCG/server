@@ -26,6 +26,7 @@
 #include <common/except.h>
 #include <common/array.h>
 #include <common/future.h>
+#include <common/timer.h>
 
 #include <core/frame/frame_visitor.h>
 #include <core/frame/pixel_format.h>
@@ -45,7 +46,8 @@ struct mutable_frame::impl : boost::noncopyable
 	core::audio_buffer							audio_data_;
 	const core::pixel_format_desc				desc_;
 	const void*									tag_;
-	core::frame_geometry						geometry_		= frame_geometry::get_default();
+	core::frame_geometry						geometry_				= frame_geometry::get_default();
+	caspar::timer								since_created_timer_;
 	
 	impl(std::vector<array<std::uint8_t>> buffers, audio_buffer audio_buffer, const void* tag, const core::pixel_format_desc& desc) 
 		: buffers_(std::move(buffers))
@@ -80,6 +82,7 @@ const void* mutable_frame::stream_tag()const{return impl_->tag_;}
 const void* mutable_frame::data_tag()const{return impl_.get();}	
 const frame_geometry& mutable_frame::geometry() const { return impl_->geometry_; }
 void mutable_frame::set_geometry(const frame_geometry& g) { impl_->geometry_ = g; }
+caspar::timer mutable_frame::since_created() const { return impl_->since_created_timer_; }
 
 const const_frame& const_frame::empty()
 {
@@ -91,16 +94,21 @@ const const_frame& const_frame::empty()
 struct const_frame::impl : boost::noncopyable
 {			
 	mutable std::vector<std::shared_future<array<const std::uint8_t>>>	future_buffers_;
-	core::audio_buffer							audio_data_;
-	const core::pixel_format_desc				desc_;
-	const void*									tag_;
-	core::frame_geometry						geometry_;
+	core::audio_buffer													audio_data_;
+	const core::pixel_format_desc										desc_;
+	const void*															tag_;
+	core::frame_geometry												geometry_;
+	caspar::timer														since_created_timer_;
+	bool																should_record_age_;
+	mutable tbb::atomic<int64_t>										recorded_age_;
 
 	impl(const void* tag)
 		: desc_(core::pixel_format::invalid)
 		, tag_(tag)	
 		, geometry_(frame_geometry::get_default())
+		, should_record_age_(true)
 	{
+		recorded_age_ = 0;
 	}
 	
 	impl(std::shared_future<array<const std::uint8_t>> image, audio_buffer audio_buffer, const void* tag, const core::pixel_format_desc& desc) 
@@ -108,8 +116,9 @@ struct const_frame::impl : boost::noncopyable
 		, desc_(desc)
 		, tag_(tag)
 		, geometry_(frame_geometry::get_default())
+		, should_record_age_(false)
 	{
-		if(desc.format != core::pixel_format::bgra)
+		if (desc.format != core::pixel_format::bgra)
 			CASPAR_THROW_EXCEPTION(not_implemented());
 		
 		future_buffers_.push_back(std::move(image));
@@ -120,11 +129,15 @@ struct const_frame::impl : boost::noncopyable
 		, desc_(other.pixel_format_desc())
 		, tag_(other.stream_tag())
 		, geometry_(other.geometry())
+		, since_created_timer_(other.since_created())
+		, should_record_age_(true)
 	{
-		for(std::size_t n = 0; n < desc_.planes.size(); ++n)
+		for (std::size_t n = 0; n < desc_.planes.size(); ++n)
 		{
 			future_buffers_.push_back(make_ready_future<array<const std::uint8_t>>(std::move(other.image_data(n))).share());
 		}
+
+		recorded_age_ = -1;
 	}
 
 	array<const std::uint8_t> image_data(int index) const
@@ -145,6 +158,19 @@ struct const_frame::impl : boost::noncopyable
 	std::size_t size() const
 	{
 		return tag_ != empty().stream_tag() ? desc_.planes.at(0).size : 0;
+	}
+
+	int64_t get_age_millis() const
+	{
+		if (should_record_age_)
+		{
+			if (recorded_age_ == -1)
+				recorded_age_ = static_cast<int64_t>(since_created_timer_.elapsed() * 1000.0);
+
+			return recorded_age_;
+		}
+		else
+			return static_cast<int64_t>(since_created_timer_.elapsed() * 1000.0);
 	}
 };
 	
@@ -167,8 +193,8 @@ const_frame& const_frame::operator=(const const_frame& other)
 }
 bool const_frame::operator==(const const_frame& other){return impl_ == other.impl_;}
 bool const_frame::operator!=(const const_frame& other){return !(*this == other);}
-bool const_frame::operator<(const const_frame& other){return impl_< other.impl_;}
-bool const_frame::operator>(const const_frame& other){return impl_> other.impl_;}
+bool const_frame::operator<(const const_frame& other){return impl_ < other.impl_;}
+bool const_frame::operator>(const const_frame& other){return impl_ > other.impl_;}
 const core::pixel_format_desc& const_frame::pixel_format_desc()const{return impl_->desc_;}
 array<const std::uint8_t> const_frame::image_data(int index)const{return impl_->image_data(index);}
 const core::audio_buffer& const_frame::audio_data()const{return impl_->audio_data_;}
@@ -179,5 +205,6 @@ const void* const_frame::stream_tag()const{return impl_->tag_;}
 const void* const_frame::data_tag()const{return impl_.get();}	
 const frame_geometry& const_frame::geometry() const { return impl_->geometry_; }
 void const_frame::set_geometry(const frame_geometry& g) { impl_->geometry_ = g; }
+int64_t const_frame::get_age_millis() const { return impl_->get_age_millis(); }
 
 }}

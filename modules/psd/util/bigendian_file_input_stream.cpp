@@ -20,58 +20,60 @@
 */
 
 #include "bigendian_file_input_stream.h"
-#include "..\..\..\common\utf.h"
+
+#include <common/utf.h>
 #include <common/endian.h>
 
 namespace caspar { namespace psd {
 
-BEFileInputStream::BEFileInputStream()
+bigendian_file_input_stream::bigendian_file_input_stream()
 {
 }
 
-BEFileInputStream::~BEFileInputStream()
+bigendian_file_input_stream::~bigendian_file_input_stream()
 {
 	close();
 }
 
-void BEFileInputStream::Open(const std::wstring& filename)
+void bigendian_file_input_stream::open(const std::wstring& filename)
 {
 	filename_ = filename;
 	ifs_.open(filename_.c_str(), std::ios::in | std::ios::binary);
 	if(!ifs_.is_open())
-		throw FileNotFoundException();
+		CASPAR_THROW_EXCEPTION(file_not_found());
 }
 
-void BEFileInputStream::close()
+void bigendian_file_input_stream::close()
 {
 	if(ifs_.is_open())
 		ifs_.close();
 }
 
-unsigned char BEFileInputStream::read_byte()
+std::uint8_t bigendian_file_input_stream::read_byte()
 {
-	unsigned char out;
-	read((char*)&out, 1);
+	std::uint8_t out;
+	read(reinterpret_cast<char*>(&out), 1);
 
 	return out;
 }
 
-unsigned short BEFileInputStream::read_short()
+std::uint16_t bigendian_file_input_stream::read_short()
 {
-	unsigned short out;
-	read((char*)&out, 2);
+	std::uint16_t out;
+	read(reinterpret_cast<char*>(&out), 2);
 
 	return caspar::swap_byte_order(out);
 }
 
-unsigned long BEFileInputStream::read_long()
+std::uint32_t bigendian_file_input_stream::read_long()
 {
-	unsigned long in;
-	read((char*)&in, 4);
+	std::uint32_t in;
+	read(reinterpret_cast<char*>(&in), 4);
 
 	return caspar::swap_byte_order(in);
 }
-double BEFileInputStream::read_double()
+
+double bigendian_file_input_stream::read_double()
 {
 	char data[8];
 	for(int i = 0; i < 8; ++i)
@@ -80,66 +82,65 @@ double BEFileInputStream::read_double()
 	return *reinterpret_cast<double*>(data);
 }
 
-void BEFileInputStream::read(char* buf, std::streamsize length)
+void bigendian_file_input_stream::read(char* buf, std::streamsize length)
 {
-	if(length > 0)
+	if (length > 0)
 	{
-		if(ifs_.eof())
-			throw UnexpectedEOFException();
+		if (ifs_.eof())
+			CASPAR_THROW_EXCEPTION(unexpected_eof_exception());
 
-			ifs_.read(buf, length);
+		ifs_.read(buf, length);
 		
-		if(ifs_.gcount() < length)
-			throw UnexpectedEOFException();
+		if (ifs_.gcount() < length)
+			CASPAR_THROW_EXCEPTION(unexpected_eof_exception());
 	}
 }
 
-std::streamoff BEFileInputStream::current_position()
+std::streamoff bigendian_file_input_stream::current_position()
 {
 	return ifs_.tellg();
 }
 
-void BEFileInputStream::set_position(std::streamoff offset)
+void bigendian_file_input_stream::set_position(std::streamoff offset)
 {
 	ifs_.seekg(offset, std::ios_base::beg);
 }
 
-void BEFileInputStream::discard_bytes(std::streamoff length)
+void bigendian_file_input_stream::discard_bytes(std::streamoff length)
 {
 	ifs_.seekg(length, std::ios_base::cur);
 }
-void BEFileInputStream::discard_to_next_word()
+
+void bigendian_file_input_stream::discard_to_next_word()
 {
-	unsigned const char padding = 2;
-	discard_bytes((padding - (current_position() % padding)) % padding);
+	const int PADDING = 2;
+	discard_bytes((PADDING - (current_position() % PADDING)) % PADDING);
 }
 
-void BEFileInputStream::discard_to_next_dword()
+void bigendian_file_input_stream::discard_to_next_dword()
 {
-	unsigned const char padding = 4;
-	discard_bytes((padding - (current_position() % padding)) % padding);
+	const int PADDING = 4;
+	discard_bytes((PADDING - (current_position() % PADDING)) % PADDING);
 }
 
-std::wstring BEFileInputStream::read_pascal_string(unsigned char padding)
+std::wstring bigendian_file_input_stream::read_pascal_string(int padding)
 {
-	char strBuffer[256];
+	char buffer[256];
 
-	unsigned char strLength = this->read_byte();
+	auto length = this->read_byte();
 
-	strBuffer[strLength] = 0;
-	this->read(strBuffer, strLength);
+	buffer[length] = 0;
+	this->read(buffer, length);
 
-	unsigned char padded_bytes = (padding - ((strLength+1) % padding)) % padding;
+	auto padded_bytes = (padding - ((length + 1) % padding)) % padding;
 	this->discard_bytes(padded_bytes);
 
-	return caspar::u16(strBuffer);
-
-
+	return caspar::u16(buffer);
 }
 
-std::wstring BEFileInputStream::read_unicode_string()
+std::wstring bigendian_file_input_stream::read_unicode_string()
 {
-	unsigned long length = read_long();
+	int length = read_long();
 	std::wstring result;
 
 	if(length > 0)
@@ -147,23 +148,23 @@ std::wstring BEFileInputStream::read_unicode_string()
 		result.reserve(length);
 
 		//can be optimized. Reads and swaps byte-order, one char at the time
-		for (unsigned long i = 0; i < length; ++i)
+		for (int i = 0; i < length; ++i)
 			result.append(1, static_cast<wchar_t>(read_short()));
 	}
 
 	return result;
 }
 
-std::wstring BEFileInputStream::read_id_string()
+std::wstring bigendian_file_input_stream::read_id_string()
 {
 	std::string result;
-	unsigned long length = read_long();
+	int length = read_long();
 	
 	if(length > 0)
 	{
 		result.reserve(length);
 
-		for (unsigned long i = 0; i < length; ++i)
+		for (int i = 0; i < length; ++i)
 			result.append(1, read_byte());
 	}
 	else

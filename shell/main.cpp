@@ -33,11 +33,13 @@
 	#include <stdlib.h>
 	#include <crtdbg.h>
 #else
-	#include <tbb/tbbmalloc_proxy.h>
+	// Reenable when tbb gets official support for vc14
+	//#include <tbb/tbbmalloc_proxy.h>
 #endif
 
 #include "server.h"
 #include "platform_specific.h"
+#include "included_modules.h"
 
 #include <protocol/util/strategy_adapters.h>
 #include <protocol/amcp/AMCPProtocolStrategy.h>
@@ -88,18 +90,6 @@ void print_info()
 	CASPAR_LOG(info) << system_product_name();
 }
 
-void print_child(const std::wstring& indent, const std::wstring& elem, const boost::property_tree::wptree& tree)
-{
-	auto data = tree.data();
-
-	if (data.empty())
-		CASPAR_LOG(info) << indent << elem;
-	else
-		CASPAR_LOG(info) << indent << elem << L" " << tree.data();
-
-	for (auto& child : tree)
-		print_child(indent + L"    ", child.first, child.second);
-}
 
 void print_system_info(const spl::shared_ptr<core::system_info_provider_repository>& repo)
 {
@@ -107,26 +97,11 @@ void print_system_info(const spl::shared_ptr<core::system_info_provider_reposito
 	repo->fill_information(info);
 
 	for (auto& elem : info.get_child(L"system"))
-		print_child(L"", elem.first, elem.second);
+		log::print_child(boost::log::trivial::info, L"", elem.first, elem.second);
 }
 
-void do_run(server& caspar_server, std::promise<bool>& shutdown_server_now)
+void do_run(std::weak_ptr<caspar::IO::protocol_strategy<wchar_t>> amcp, std::promise<bool>& shutdown_server_now)
 {
-	// Create a dummy client which prints amcp responses to console.
-	auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
-	
-	// Create a amcp parser for console commands.
-	auto amcp = spl::make_shared<caspar::IO::delimiter_based_chunking_strategy_factory<wchar_t>>(
-			L"\r\n",
-			spl::make_shared<caspar::IO::legacy_strategy_adapter_factory>(
-					spl::make_shared<protocol::amcp::AMCPProtocolStrategy>(
-							caspar_server.channels(),
-							caspar_server.get_thumbnail_generator(),
-							caspar_server.get_media_info_repo(),
-							caspar_server.get_system_info_provider_repo(),
-							caspar_server.get_cg_registry(),
-							shutdown_server_now)))->create(console_client);
-
 	std::wstring wcmd;
 	while(true)
 	{
@@ -214,11 +189,15 @@ void do_run(server& caspar_server, std::promise<bool>& shutdown_server_now)
 		}
 
 		wcmd += L"\r\n";
-		amcp->parse(wcmd);
+		auto strong = amcp.lock();
+		if (strong)
+			strong->parse(wcmd);
+		else
+			break;
 	}
 };
 
-bool run()
+bool run(const std::wstring& config_file_name)
 {
 	std::promise<bool> shutdown_server_now;
 	std::future<bool> shutdown_server = shutdown_server_now.get_future();
@@ -226,33 +205,40 @@ bool run()
 	print_info();
 
 	// Create server object which initializes channels, protocols and controllers.
-	server caspar_server(shutdown_server_now);
+	std::unique_ptr<server> caspar_server(new server(shutdown_server_now));
 	
 	// Print environment information.
-	print_system_info(caspar_server.get_system_info_provider_repo());
+	print_system_info(caspar_server->get_system_info_provider_repo());
 
 	std::wstringstream str;
 	boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
 	boost::property_tree::write_xml(str, env::properties(), w);
-	CASPAR_LOG(info) << L"casparcg.config:\n-----------------------------------------\n" << str.str().c_str() << L"-----------------------------------------";
+	CASPAR_LOG(info) << config_file_name << L":\n-----------------------------------------\n" << str.str() << L"-----------------------------------------";
 	
-	caspar_server.start();
+	caspar_server->start();
 
-	//auto console_obs = reactive::make_observer([](const monitor::event& e)
-	//{
-	//	std::stringstream str;
-	//	str << e;
-	//	CASPAR_LOG(trace) << str.str().c_str();
-	//});
+	// Create a dummy client which prints amcp responses to console.
+	auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
 
-	//caspar_server.subscribe(console_obs);
-
+	// Create a amcp parser for console commands.
+	std::shared_ptr<IO::protocol_strategy<wchar_t>> amcp = spl::make_shared<caspar::IO::delimiter_based_chunking_strategy_factory<wchar_t>>(
+			L"\r\n",
+			spl::make_shared<caspar::IO::legacy_strategy_adapter_factory>(
+					spl::make_shared<protocol::amcp::AMCPProtocolStrategy>(
+							L"Console",
+							caspar_server->get_amcp_command_repository())))->create(console_client);
+	std::weak_ptr<IO::protocol_strategy<wchar_t>> weak_amcp = amcp;
 
 	// Use separate thread for the blocking console input, will be terminated 
 	// anyway when the main thread terminates.
-	boost::thread stdin_thread(std::bind(do_run, std::ref(caspar_server), std::ref(shutdown_server_now)));	//compiler didn't like lambda here...
+	boost::thread stdin_thread(std::bind(do_run, weak_amcp, std::ref(shutdown_server_now)));	//compiler didn't like lambda here...
 	stdin_thread.detach();
-	return shutdown_server.get();
+	bool should_restart = shutdown_server.get();
+	amcp.reset();
+
+	while (weak_amcp.lock());
+
+	return should_restart;
 }
 
 void on_abort(int)
@@ -260,11 +246,14 @@ void on_abort(int)
 	CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("abort called"));
 }
 
-int main(int argc, wchar_t* argv[])
-{	
+int main(int argc, char** argv)
+{
+	if (intercept_command_line_args(argc, argv))
+		return 0;
+
 	int return_code = 0;
 	setup_prerequisites();
-	std::signal(SIGABRT, on_abort);
+	//std::signal(SIGABRT, on_abort);
 
 	setup_global_locale();
 
@@ -283,18 +272,22 @@ int main(int argc, wchar_t* argv[])
 	struct tbb_thread_installer : public tbb::task_scheduler_observer
 	{
 		tbb_thread_installer(){observe(true);}
-		void on_scheduler_entry(bool is_worker)
+		void on_scheduler_entry(bool is_worker) override
 		{
 			ensure_gpf_handler_installed_for_thread("tbb-worker-thread");
 		}
 	} tbb_thread_installer;
 
 	tbb::task_scheduler_init init;
+	std::wstring config_file_name(L"casparcg.config");
 	
 	try 
 	{
 		// Configure environment properties from configuration.
-		env::configure(L"casparcg.config");
+		if (argc >= 2)
+			config_file_name = caspar::u16(argv[1]);
+
+		env::configure(config_file_name);
 
 		log::set_log_level(env::properties().get(L"configuration.log-level", L"debug"));
 
@@ -308,15 +301,20 @@ int main(int argc, wchar_t* argv[])
 		// Setup console window.
 		setup_console_window();
 
-		return_code = run() ? 5 : 0;
+		return_code = run(config_file_name) ? 5 : 0;
+
+		for (auto& thread : get_thread_infos())
+		{
+			if (thread->name != "main thread" && thread->name != "tbb-worker-thread")
+				CASPAR_LOG(warning) << L"Thread left running: " << thread->name << L" (" << thread->native_id << L")";
+		}
 		
-		boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
 		CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
 	}
 	catch(boost::property_tree::file_parser_error&)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		CASPAR_LOG(fatal) << L"Unhandled configuration error in main thread. Please check the configuration file (casparcg.config) for errors.";
+		CASPAR_LOG(fatal) << L"Unhandled configuration error in main thread. Please check the configuration file (" << config_file_name << L") for errors.";
 		wait_for_keypress();
 	}
 	catch(...)

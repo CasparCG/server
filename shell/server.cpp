@@ -40,6 +40,7 @@
 #include <core/producer/scene/xml_scene_producer.h>
 #include <core/producer/text/text_producer.h>
 #include <core/consumer/output.h>
+#include <core/mixer/mixer.h>
 #include <core/thumbnail_generator.h>
 #include <core/producer/media_info/media_info.h>
 #include <core/producer/media_info/media_info_repository.h>
@@ -49,11 +50,13 @@
 #include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
 #include <core/system_info_provider.h>
+#include <core/help/help_repository.h>
 
 #include <modules/image/consumer/image_consumer.h>
 
-#include <protocol/asio/io_service_manager.h>
 #include <protocol/amcp/AMCPProtocolStrategy.h>
+#include <protocol/amcp/amcp_command_repository.h>
+#include <protocol/amcp/AMCPCommandsImpl.h>
 #include <protocol/cii/CIIProtocolStrategy.h>
 #include <protocol/clk/CLKProtocolStrategy.h>
 #include <protocol/util/AsyncEventServer.h>
@@ -65,6 +68,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
+#include <boost/asio.hpp>
 
 #include <tbb/atomic.h>
 
@@ -75,44 +79,87 @@ namespace caspar {
 using namespace core;
 using namespace protocol;
 
+std::shared_ptr<boost::asio::io_service> create_running_io_service()
+{
+	auto service = std::make_shared<boost::asio::io_service>();
+	// To keep the io_service::run() running although no pending async
+	// operations are posted.
+	auto work = std::make_shared<boost::asio::io_service::work>(*service);
+	auto weak_work = std::weak_ptr<boost::asio::io_service::work>(work);
+	auto thread = std::make_shared<boost::thread>([service, weak_work]
+	{
+		ensure_gpf_handler_installed_for_thread("asio-thread");
+
+		while (auto strong = weak_work.lock())
+		{
+			try
+			{
+				service->run();
+			}
+			catch (...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+			}
+		}
+	});
+
+	return std::shared_ptr<boost::asio::io_service>(
+			service.get(),
+			[service, work, thread](void*) mutable
+			{
+				work.reset();
+				service->stop();
+				if (thread->get_id() != boost::this_thread::get_id())
+					thread->join();
+				else
+					thread->detach();
+			});
+}
+
 struct server::impl : boost::noncopyable
 {
-	protocol::asio::io_service_manager					io_service_manager_;
+	std::shared_ptr<boost::asio::io_service>			io_service_						= create_running_io_service();
 	spl::shared_ptr<monitor::subject>					monitor_subject_;
 	spl::shared_ptr<monitor::subject>					diag_subject_					= core::diagnostics::get_or_create_subject();
 	accelerator::accelerator							accelerator_;
+	spl::shared_ptr<help_repository>					help_repo_;
+	std::shared_ptr<amcp::amcp_command_repository>		amcp_command_repo_;
 	std::vector<spl::shared_ptr<IO::AsyncEventServer>>	async_servers_;
 	std::shared_ptr<IO::AsyncEventServer>				primary_amcp_server_;
-	osc::client											osc_client_;
+	std::shared_ptr<osc::client>						osc_client_						= std::make_shared<osc::client>(io_service_);
 	std::vector<std::shared_ptr<void>>					predefined_osc_subscriptions_;
 	std::vector<spl::shared_ptr<video_channel>>			channels_;
 	spl::shared_ptr<media_info_repository>				media_info_repo_;
 	boost::thread										initial_media_info_thread_;
 	spl::shared_ptr<system_info_provider_repository>	system_info_provider_repo_;
 	spl::shared_ptr<core::cg_producer_registry>			cg_registry_;
+	spl::shared_ptr<core::frame_producer_registry>		producer_registry_;
+	spl::shared_ptr<core::frame_consumer_registry>		consumer_registry_;
 	tbb::atomic<bool>									running_;
 	std::shared_ptr<thumbnail_generator>				thumbnail_generator_;
 	std::promise<bool>&									shutdown_server_now_;
 
 	explicit impl(std::promise<bool>& shutdown_server_now)		
 		: accelerator_(env::properties().get(L"configuration.accelerator", L"auto"))
-		, osc_client_(io_service_manager_.service())
 		, media_info_repo_(create_in_memory_media_info_repository())
+		, producer_registry_(spl::make_shared<core::frame_producer_registry>(help_repo_))
+		, consumer_registry_(spl::make_shared<core::frame_consumer_registry>(help_repo_))
 		, shutdown_server_now_(shutdown_server_now)
 	{
 		running_ = false;
 		core::diagnostics::osd::register_sink();
 		diag_subject_->attach_parent(monitor_subject_);
 
-		initialize_modules(module_dependencies(
+		module_dependencies dependencies(
 				system_info_provider_repo_,
 				cg_registry_,
-				media_info_repo_));
+				media_info_repo_,
+				producer_registry_,
+				consumer_registry_);
 
-		//core::text::init();
-
-		register_producer_factory(&core::scene::create_dummy_scene_producer);
-		register_producer_factory(&core::scene::create_xml_scene_producer);
+		initialize_modules(dependencies);
+		core::text::init(dependencies);
+		core::scene::init(dependencies);
 	}
 
 	void start()
@@ -143,13 +190,19 @@ struct server::impl : boost::noncopyable
 			initial_media_info_thread_.join();
 		}
 
+		std::weak_ptr<boost::asio::io_service> weak_io_service = io_service_;
+		io_service_.reset();
+		osc_client_.reset();
 		thumbnail_generator_.reset();
+		amcp_command_repo_.reset();
 		primary_amcp_server_.reset();
 		async_servers_.clear();
+		destroy_producers_synchronously();
+		destroy_consumers_synchronously();
 		channels_.clear();
-
-		boost::this_thread::sleep_for(boost::chrono::milliseconds(500));
-		//Sleep(500); // HACK: Wait for asynchronous destruction of producers and consumers.
+		
+		while (weak_io_service.lock())
+			boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
 
 		uninitialize_modules();
 		core::diagnostics::osd::shutdown();
@@ -176,7 +229,7 @@ struct server::impl : boost::noncopyable
 					auto name = xml_consumer.first;
 					
 					if (name != L"<xmlcomment>")
-						channel->output().add(create_consumer(name, xml_consumer.second, &channel->stage()));
+						channel->output().add(consumer_registry_->create_consumer(name, xml_consumer.second, &channel->stage()));
 				}
 				catch(...)
 				{
@@ -185,12 +238,16 @@ struct server::impl : boost::noncopyable
 			}		
 
 		    channel->monitor_output().attach_parent(monitor_subject_);
+			channel->mixer().set_straight_alpha_output(xml_channel.second.get(L"straight-alpha-output", false));
 			channels_.push_back(channel);
 		}
 
 		// Dummy diagnostics channel
-		if(env::properties().get(L"configuration.channel-grid", false))
-			channels_.push_back(spl::make_shared<video_channel>(static_cast<int>(channels_.size()+1), core::video_format_desc(core::video_format::x576p2500), accelerator_.create_image_mixer()));
+		if (env::properties().get(L"configuration.channel-grid", false))
+		{
+			channels_.push_back(spl::make_shared<video_channel>(static_cast<int>(channels_.size() + 1), core::video_format_desc(core::video_format::x576p2500), accelerator_.create_image_mixer()));
+			channels_.back()->monitor_output().attach_parent(monitor_subject_);
+		}
 	}
 
 	void setup_osc(const boost::property_tree::wptree& pt)
@@ -198,7 +255,7 @@ struct server::impl : boost::noncopyable
 		using boost::property_tree::wptree;
 		using namespace boost::asio::ip;
 
-		monitor_subject_->attach_parent(osc_client_.sink());
+		monitor_subject_->attach_parent(osc_client_->sink());
 		
 		auto default_port =
 				pt.get<unsigned short>(L"configuration.osc.default-port", 6250);
@@ -214,7 +271,7 @@ struct server::impl : boost::noncopyable
 				const auto port =
 						predefined_client.second.get<unsigned short>(L"port");
 				predefined_osc_subscriptions_.push_back(
-						osc_client_.get_subscription_token(udp::endpoint(
+						osc_client_->get_subscription_token(udp::endpoint(
 								address_v4::from_string(u8(address)),
 								port)));
 			}
@@ -229,7 +286,7 @@ struct server::impl : boost::noncopyable
 
 						return std::make_pair(
 								std::wstring(L"osc_subscribe"),
-								osc_client_.get_subscription_token(
+								osc_client_->get_subscription_token(
 										udp::endpoint(
 												address_v4::from_string(
 														ipv4_address),
@@ -244,7 +301,7 @@ struct server::impl : boost::noncopyable
 
 		auto scan_interval_millis = pt.get(L"configuration.thumbnails.scan-interval-millis", 5000);
 
-		polling_filesystem_monitor_factory monitor_factory(scan_interval_millis);
+		polling_filesystem_monitor_factory monitor_factory(io_service_, scan_interval_millis);
 		thumbnail_generator_.reset(new thumbnail_generator(
 			monitor_factory, 
 			env::media_folder(),
@@ -255,13 +312,27 @@ struct server::impl : boost::noncopyable
 			accelerator_.create_image_mixer(),
 			pt.get(L"configuration.thumbnails.generate-delay-millis", 2000),
 			&image::write_cropped_png,
-			media_info_repo_));
+			media_info_repo_,
+			producer_registry_,
+			pt.get(L"configuration.thumbnails.mipmap", true)));
 
 		CASPAR_LOG(info) << L"Initialized thumbnail generator.";
 	}
 		
 	void setup_controllers(const boost::property_tree::wptree& pt)
-	{		
+	{
+		amcp_command_repo_ = spl::make_shared<amcp::amcp_command_repository>(
+				channels_,
+				thumbnail_generator_,
+				media_info_repo_,
+				system_info_provider_repo_,
+				cg_registry_,
+				help_repo_,
+				producer_registry_,
+				consumer_registry_,
+				shutdown_server_now_);
+		amcp::register_commands(*amcp_command_repo_);
+
 		using boost::property_tree::wptree;
 		for (auto& xml_controller : pt.get_child(L"configuration.controllers"))
 		{
@@ -273,7 +344,10 @@ struct server::impl : boost::noncopyable
 				if(name == L"tcp")
 				{					
 					unsigned int port = xml_controller.second.get(L"port", 5250);
-					auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(create_protocol(protocol), port);
+					auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(
+							io_service_,
+							create_protocol(protocol, L"TCP Port " + boost::lexical_cast<std::wstring>(port)),
+							port);
 					async_servers_.push_back(asyncbootstrapper);
 
 					if (!primary_amcp_server_ && boost::iequals(protocol, L"AMCP"))
@@ -289,24 +363,18 @@ struct server::impl : boost::noncopyable
 		}
 	}
 
-	IO::protocol_strategy_factory<char>::ptr create_protocol(const std::wstring& name) const
+	IO::protocol_strategy_factory<char>::ptr create_protocol(const std::wstring& name, const std::wstring& port_description) const
 	{
 		using namespace IO;
 
 		if(boost::iequals(name, L"AMCP"))
-			return wrap_legacy_protocol("\r\n", spl::make_shared<amcp::AMCPProtocolStrategy>(
-					channels_,
-					thumbnail_generator_,
-					media_info_repo_,
-					system_info_provider_repo_,
-					cg_registry_,
-					shutdown_server_now_));
+			return wrap_legacy_protocol("\r\n", spl::make_shared<amcp::AMCPProtocolStrategy>(port_description, spl::make_shared_ptr(amcp_command_repo_)));
 		else if(boost::iequals(name, L"CII"))
-			return wrap_legacy_protocol("\r\n", spl::make_shared<cii::CIIProtocolStrategy>(channels_, cg_registry_));
+			return wrap_legacy_protocol("\r\n", spl::make_shared<cii::CIIProtocolStrategy>(channels_, cg_registry_, producer_registry_));
 		else if(boost::iequals(name, L"CLOCK"))
 			return spl::make_shared<to_unicode_adapter_factory>(
 					"ISO-8859-1",
-					spl::make_shared<CLK::clk_protocol_strategy_factory>(channels_, cg_registry_));
+					spl::make_shared<CLK::clk_protocol_strategy_factory>(channels_, cg_registry_, producer_registry_));
 		
 		CASPAR_THROW_EXCEPTION(caspar_exception() << arg_name_info(L"name") << arg_value_info(name) << msg_info(L"Invalid protocol"));
 	}
@@ -315,35 +383,38 @@ struct server::impl : boost::noncopyable
 	{
 		initial_media_info_thread_ = boost::thread([this]
 		{
-			for (boost::filesystem::wrecursive_directory_iterator iter(env::media_folder()), end; iter != end; ++iter)
+			try
 			{
-				if (running_)
-				{
-					if (boost::filesystem::is_regular_file(iter->path()))
-						media_info_repo_->get(iter->path().wstring());
-				}
-				else
-				{
-					CASPAR_LOG(info) << L"Initial media information retrieval aborted.";
-					return;
-				}
-			}
+				ensure_gpf_handler_installed_for_thread("initial media scan");
 
-			CASPAR_LOG(info) << L"Initial media information retrieval finished.";
+				for (boost::filesystem::wrecursive_directory_iterator iter(env::media_folder()), end; iter != end; ++iter)
+				{
+					if (running_)
+					{
+						if (boost::filesystem::is_regular_file(iter->path()))
+							media_info_repo_->get(iter->path().wstring());
+					}
+					else
+					{
+						CASPAR_LOG(info) << L"Initial media information retrieval aborted.";
+						return;
+					}
+				}
+
+				CASPAR_LOG(info) << L"Initial media information retrieval finished.";
+			}
+			catch (...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+			}
 		});
 	}
 };
 
 server::server(std::promise<bool>& shutdown_server_now) : impl_(new impl(shutdown_server_now)){}
 void server::start() { impl_->start(); }
-const std::vector<spl::shared_ptr<video_channel>> server::channels() const
-{
-	return impl_->channels_;
-}
-std::shared_ptr<core::thumbnail_generator> server::get_thumbnail_generator() const {return impl_->thumbnail_generator_; }
-spl::shared_ptr<media_info_repository> server::get_media_info_repo() const { return impl_->media_info_repo_; }
 spl::shared_ptr<core::system_info_provider_repository> server::get_system_info_provider_repo() const { return impl_->system_info_provider_repo_; }
-spl::shared_ptr<core::cg_producer_registry> server::get_cg_registry() const { return impl_->cg_registry_; }
+spl::shared_ptr<protocol::amcp::amcp_command_repository> server::get_amcp_command_repository() const { return spl::make_shared_ptr(impl_->amcp_command_repo_); }
 core::monitor::subject& server::monitor_output() { return *impl_->monitor_subject_; }
 
 }

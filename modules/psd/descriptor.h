@@ -21,28 +21,16 @@
 
 #pragma once
 
+#include "util/bigendian_file_input_stream.h"
+
+#include <boost/property_tree/ptree.hpp>
+
 #include <vector>
 #include <map>
 #include <string>
 #include <memory>
-#include <boost\property_tree\ptree.hpp>
-#include "util\bigendian_file_input_stream.h"
 
 namespace caspar { namespace psd {
-
-	//struct descriptor_item
-	//{
-	//	unsigned long type;
-
-	//	std::wstring enum_key;
-	//	std::wstring enum_val;
-
-	//	std::wstring text_text;
-
-	//	unsigned long long_value;
-	//	
-	//	std::vector<char> rawdata_data;
-	//};
 
 class descriptor
 {
@@ -53,10 +41,16 @@ class descriptor
 
 		Ptree root;
 		std::vector<Ptree *> stack;
+		std::wstring debug_name;
 
 		friend descriptor;
 		friend class scoped_holder;
 		class scoped_holder;
+
+		context(const std::wstring& debug_name)
+			: debug_name(debug_name)
+		{
+		}
 	};
 	friend class context::scoped_holder;
 
@@ -65,13 +59,13 @@ class descriptor
 	explicit descriptor(const std::wstring& key, context::ptr_type context);
 
 public:
-	descriptor();
+	descriptor(const std::wstring& debug_name);
 	~descriptor();
 
-	bool populate(BEFileInputStream& stream);
+	void populate(bigendian_file_input_stream& stream);
 	Ptree& items() const { return context_->root; }
 private:
-	void read_value(const std::wstring& key, BEFileInputStream& stream);
+	void read_value(const std::wstring& key, bigendian_file_input_stream& stream);
 	context::ptr_type context_;
 };
 

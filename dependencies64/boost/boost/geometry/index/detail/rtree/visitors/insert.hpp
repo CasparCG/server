@@ -2,7 +2,7 @@
 //
 // R-tree inserting visitor implementation
 //
-// Copyright (c) 2011-2013 Adam Wulkiewicz, Lodz, Poland.
+// Copyright (c) 2011-2015 Adam Wulkiewicz, Lodz, Poland.
 //
 // Use, modification and distribution is subject to the Boost Software License,
 // Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
@@ -115,7 +115,7 @@ protected:
     typedef typename rtree::internal_node<Value, parameters_type, Box, Allocators, typename Options::node_tag>::type internal_node;
     typedef typename rtree::leaf<Value, parameters_type, Box, Allocators, typename Options::node_tag>::type leaf;
 
-    typedef rtree::node_auto_ptr<Value, Options, Translator, Box, Allocators> node_auto_ptr;
+    typedef rtree::subtree_destroyer<Value, Options, Translator, Box, Allocators> subtree_destroyer;
 
 public:
     typedef index::detail::varray<
@@ -133,8 +133,8 @@ public:
     {
         // TODO - consider creating nodes always with sufficient memory allocated
 
-        // create additional node, use auto ptr for automatic destruction on exception
-        node_auto_ptr second_node(rtree::create_node<Allocators, Node>::apply(allocators), allocators);     // MAY THROW, STRONG (N: alloc)
+        // create additional node, use auto destroyer for automatic destruction on exception
+        subtree_destroyer second_node(rtree::create_node<Allocators, Node>::apply(allocators), allocators);     // MAY THROW, STRONG (N: alloc)
         // create reference to the newly created node
         Node & n2 = rtree::get<Node>(*second_node);
 
@@ -232,7 +232,7 @@ protected:
     typedef typename rtree::internal_node<Value, parameters_type, Box, Allocators, typename Options::node_tag>::type internal_node;
     typedef typename rtree::leaf<Value, parameters_type, Box, Allocators, typename Options::node_tag>::type leaf;
 
-    typedef rtree::node_auto_ptr<Value, Options, Translator, Box, Allocators> node_auto_ptr;
+    typedef rtree::subtree_destroyer<Value, Options, Translator, Box, Allocators> subtree_destroyer;
     typedef typename Allocators::node_pointer node_pointer;
     typedef typename Allocators::size_type size_type;
 
@@ -340,7 +340,7 @@ protected:
         // Implement template <node_tag> struct node_element_type or something like that
 
         // for exception safety
-        node_auto_ptr additional_node_ptr(additional_nodes[0].second, m_allocators);
+        subtree_destroyer additional_node_ptr(additional_nodes[0].second, m_allocators);
 
         // node is not the root - just add the new node
         if ( !m_traverse_data.current_is_root() )
@@ -356,7 +356,7 @@ protected:
             BOOST_GEOMETRY_INDEX_ASSERT(&n == &rtree::get<Node>(*m_root_node), "node should be the root");
 
             // create new root and add nodes
-            node_auto_ptr new_root(rtree::create_node<Allocators, internal_node>::apply(m_allocators), m_allocators); // MAY THROW, STRONG (N:alloc)
+            subtree_destroyer new_root(rtree::create_node<Allocators, internal_node>::apply(m_allocators), m_allocators); // MAY THROW, STRONG (N:alloc)
 
             BOOST_TRY
             {
@@ -365,7 +365,7 @@ protected:
             }
             BOOST_CATCH(...)
             {
-                // clear new root to not delete in the ~node_auto_ptr() potentially stored old root node
+                // clear new root to not delete in the ~subtree_destroyer() potentially stored old root node
                 rtree::elements(rtree::get<internal_node>(*new_root)).clear();
                 BOOST_RETHROW                                                                                           // RETHROW
             }

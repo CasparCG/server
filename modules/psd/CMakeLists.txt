@@ -6,11 +6,10 @@ set(SOURCES
 		util/pdf_reader.cpp
 
 		descriptor.cpp
-		doc.cpp
+		psd_document.cpp
 		layer.cpp
 		misc.cpp
 		psd_scene_producer.cpp
-		resource.cpp
 )
 set(HEADERS
 		util/bigendian_file_input_stream.h
@@ -18,12 +17,11 @@ set(HEADERS
 
 		channel.h
 		descriptor.h
-		doc.h
+		psd_document.h
 		image.h
 		layer.h
 		misc.h
 		psd_scene_producer.h
-		resource.h
 )
 
 add_library(psd ${SOURCES} ${HEADERS})

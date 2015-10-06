@@ -24,6 +24,10 @@
 #include "AMCPCommand.h"
 
 #include <common/executor.h>
+#include <common/memory.h>
+#include <common/timer.h>
+
+#include <boost/property_tree/ptree_fwd.hpp>
 
 #include <tbb/mutex.h>
 
@@ -34,15 +38,23 @@ class AMCPCommandQueue
 	AMCPCommandQueue(const AMCPCommandQueue&);
 	AMCPCommandQueue& operator=(const AMCPCommandQueue&);
 public:
-	typedef std::shared_ptr<AMCPCommandQueue> ptr_type;
+	typedef spl::shared_ptr<AMCPCommandQueue> ptr_type;
 
-	AMCPCommandQueue();
+	AMCPCommandQueue(const std::wstring& name);
 	~AMCPCommandQueue();
 
 	void AddCommand(AMCPCommand::ptr_type pCommand);
 
+	boost::property_tree::wptree info() const;
+
+	static boost::property_tree::wptree info_all_queues();
 private:
-	executor			executor_;
+	executor				executor_;
+	mutable tbb::spin_mutex	running_command_mutex_;
+	bool					running_command_		= false;
+	std::wstring			running_command_name_;
+	std::wstring			running_command_params_;
+	caspar::timer			running_command_since_;
 };
 
 }}}

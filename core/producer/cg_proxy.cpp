@@ -29,6 +29,7 @@
 #include "../diagnostics/call_context.h"
 
 #include <common/env.h>
+#include <common/os/filesystem.h>
 
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/lock_guard.hpp>
@@ -37,7 +38,7 @@
 #include <boost/optional.hpp>
 
 #include <future>
-#include <vector>
+#include <map>
 
 namespace caspar { namespace core {
 
@@ -68,7 +69,6 @@ private:
 	struct record
 	{
 		std::wstring			name;
-		std::set<std::wstring>	file_extensions;
 		meta_info_extractor		info_extractor;
 		cg_proxy_factory		proxy_factory;
 		cg_producer_factory		producer_factory;
@@ -78,8 +78,8 @@ private:
 	struct name {};
 	struct extension {};
 
-	mutable boost::mutex	mutex_;
-	std::vector<record>		records_;
+	mutable boost::mutex			mutex_;
+	std::map<std::wstring, record>	records_by_extension_;
 public:
 	void register_cg_producer(
 			std::wstring cg_producer_name,
@@ -91,19 +91,23 @@ public:
 	{
 		boost::lock_guard<boost::mutex> lock(mutex_);
 
-		records_.push_back(
+		record rec
 		{
 			std::move(cg_producer_name),
-			std::move(file_extensions),
 			std::move(info_extractor),
 			std::move(proxy_factory),
 			std::move(producer_factory),
 			reusable_producer_instance
-		});
+		};
+
+		for (auto& extension : file_extensions)
+		{
+			records_by_extension_.insert(std::make_pair(extension, rec));
+		}
 	}
 
 	spl::shared_ptr<frame_producer> create_producer(
-			const spl::shared_ptr<video_channel>& video_channel,
+			const frame_producer_dependencies& dependencies,
 			const std::wstring& filename) const
 	{
 		auto found = find_record(filename);
@@ -111,10 +115,7 @@ public:
 		if (!found)
 			return frame_producer::empty();
 
-		return found->producer_factory(
-				video_channel->frame_factory(),
-				video_channel->video_format_desc(),
-				filename);
+		return found->producer_factory(dependencies, filename);
 	}
 
 	spl::shared_ptr<cg_proxy> get_proxy(const spl::shared_ptr<frame_producer>& producer) const
@@ -123,17 +124,17 @@ public:
 
 		boost::lock_guard<boost::mutex> lock(mutex_);
 
-		for (auto& elem : records_)
+		for (auto& elem : records_by_extension_)
 		{
-			if (elem.name == producer_name)
-				return elem.proxy_factory(producer);
+			if (elem.second.name == producer_name)
+				return elem.second.proxy_factory(producer);
 		}
 
 		return cg_proxy::empty();
 	}
 
 	spl::shared_ptr<cg_proxy> get_proxy(
-			const spl::shared_ptr<class video_channel>& video_channel,
+			const spl::shared_ptr<video_channel>& video_channel,
 			int render_layer) const
 	{
 		auto producer = spl::make_shared_ptr(video_channel->stage().foreground(render_layer).get());
@@ -142,7 +143,8 @@ public:
 	}
 
 	spl::shared_ptr<cg_proxy> get_or_create_proxy(
-			const spl::shared_ptr<class video_channel>& video_channel,
+			const spl::shared_ptr<video_channel>& video_channel,
+			const frame_producer_dependencies& dependencies,
 			int render_layer,
 			const std::wstring& filename) const
 	{
@@ -163,10 +165,7 @@ public:
 			diagnostics::call_context::for_thread().video_channel = video_channel->index();
 			diagnostics::call_context::for_thread().layer = render_layer;
 
-			producer = found->producer_factory(
-					video_channel->frame_factory(),
-					video_channel->video_format_desc(),
-					filename);
+			producer = found->producer_factory(dependencies, filename);
 			video_channel->stage().load(render_layer, producer);
 			video_channel->stage().play(render_layer);
 		}
@@ -182,36 +181,23 @@ public:
 
 		boost::lock_guard<boost::mutex> lock(mutex_);
 
-		for (auto& rec : records_)
+		for (auto& rec : records_by_extension_)
 		{
-			for (auto& file_extension : rec.file_extensions)
-			{
-				auto p = path(basepath.wstring() + file_extension);
+			auto p = path(basepath.wstring() + rec.first);
+			auto found = find_case_insensitive(p.wstring());
 
-				if (exists(p))
-				{
-					return rec.info_extractor(filename);
-				}
-			}
+			if (found)
+				return rec.second.info_extractor(*found);
 		}
 
-		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info(L"No meta info extractor for " + filename));
+		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(L"No meta info extractor for " + filename));
 	}
 
 	bool is_cg_extension(const std::wstring& extension) const
 	{
 		boost::lock_guard<boost::mutex> lock(mutex_);
 
-		for (auto& rec : records_)
-		{
-			for (auto& file_extension : rec.file_extensions)
-			{
-				if (boost::algorithm::iequals(file_extension, extension))
-					return true;
-			}
-		}
-
-		return false;
+		return records_by_extension_.find(extension) != records_by_extension_.end();
 	}
 private:
 	boost::optional<record> find_record(const std::wstring& filename) const
@@ -222,15 +208,12 @@ private:
 
 		boost::lock_guard<boost::mutex> lock(mutex_);
 
-		for (auto& rec : records_)
+		for (auto& rec : records_by_extension_)
 		{
-			for (auto& file_extension : rec.file_extensions)
-			{
-				auto p = path(basepath.wstring() + file_extension);
+			auto p = path(basepath.wstring() + rec.first);
 
-				if (exists(p))
-					return rec;
-			}
+			if (find_case_insensitive(p.wstring()))
+				return rec.second;
 		}
 
 		return boost::none;
@@ -257,10 +240,10 @@ void cg_producer_registry::register_cg_producer(
 }
 
 spl::shared_ptr<frame_producer> cg_producer_registry::create_producer(
-		const spl::shared_ptr<video_channel>& video_channel,
+		const frame_producer_dependencies& dependencies,
 		const std::wstring& filename) const
 {
-	return impl_->create_producer(video_channel, filename);
+	return impl_->create_producer(dependencies, filename);
 }
 
 spl::shared_ptr<cg_proxy> cg_producer_registry::get_proxy(
@@ -278,10 +261,11 @@ spl::shared_ptr<cg_proxy> cg_producer_registry::get_proxy(
 
 spl::shared_ptr<cg_proxy> cg_producer_registry::get_or_create_proxy(
 		const spl::shared_ptr<video_channel>& video_channel,
+		const frame_producer_dependencies& dependencies,
 		int render_layer,
 		const std::wstring& filename) const
 {
-	return impl_->get_or_create_proxy(video_channel, render_layer, filename);
+	return impl_->get_or_create_proxy(video_channel, dependencies, render_layer, filename);
 }
 
 std::string cg_producer_registry::read_meta_info(const std::wstring& filename) const

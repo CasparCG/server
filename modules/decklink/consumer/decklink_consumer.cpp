@@ -29,6 +29,10 @@
 
 #include <core/frame/frame.h>
 #include <core/mixer/audio/audio_mixer.h>
+#include <core/consumer/frame_consumer.h>
+#include <core/diagnostics/call_context.h>
+#include <core/help/help_sink.h>
+#include <core/help/help_repository.h>
 
 #include <common/executor.h>
 #include <common/lock.h>
@@ -39,9 +43,7 @@
 #include <common/future.h>
 #include <common/cache_aligned_vector.h>
 #include <common/timer.h>
-
-#include <core/consumer/frame_consumer.h>
-#include <core/diagnostics/call_context.h>
+#include <common/param.h>
 
 #include <tbb/concurrent_queue.h>
 
@@ -58,6 +60,7 @@ struct configuration
 	{
 		internal_keyer,
 		external_keyer,
+		external_separate_device_keyer,
 		default_keyer
 	};
 
@@ -69,6 +72,7 @@ struct configuration
 	};
 
 	int			device_index		= 1;
+	int			key_device_idx		= 0;
 	bool		embedded_audio		= true;
 	keyer_t		keyer				= keyer_t::default_keyer;
 	latency_t	latency				= latency_t::default_latency;
@@ -79,7 +83,61 @@ struct configuration
 	{
 		return base_buffer_depth + (latency == latency_t::low_latency ? 0 : 1) + (embedded_audio ? 1 : 0);
 	}
+
+	int key_device_index() const
+	{
+		return key_device_idx == 0 ? device_index + 1 : key_device_idx;
+	}
 };
+
+void set_latency(
+		const com_iface_ptr<IDeckLinkConfiguration>& config,
+		configuration::latency_t latency,
+		const std::wstring& print)
+{
+	if (latency == configuration::latency_t::low_latency)
+	{
+		config->SetFlag(bmdDeckLinkConfigLowLatencyVideoOutput, true);
+		CASPAR_LOG(info) << print << L" Enabled low-latency mode.";
+	}
+	else if (latency == configuration::latency_t::normal_latency)
+	{
+		config->SetFlag(bmdDeckLinkConfigLowLatencyVideoOutput, false);
+		CASPAR_LOG(info) << print << L" Disabled low-latency mode.";
+	}
+}
+
+void set_keyer(
+		const com_iface_ptr<IDeckLinkAttributes>& attributes,
+		const com_iface_ptr<IDeckLinkKeyer>& decklink_keyer,
+		configuration::keyer_t keyer,
+		const std::wstring& print)
+{
+	if (keyer == configuration::keyer_t::internal_keyer)
+	{
+		BOOL value = true;
+		if (SUCCEEDED(attributes->GetFlag(BMDDeckLinkSupportsInternalKeying, &value)) && !value)
+			CASPAR_LOG(error) << print << L" Failed to enable internal keyer.";	
+		else if (FAILED(decklink_keyer->Enable(FALSE)))
+			CASPAR_LOG(error) << print << L" Failed to enable internal keyer.";			
+		else if (FAILED(decklink_keyer->SetLevel(255)))
+			CASPAR_LOG(error) << print << L" Failed to set key-level to max.";
+		else
+			CASPAR_LOG(info) << print << L" Enabled internal keyer.";		
+	}
+	else if (keyer == configuration::keyer_t::external_keyer)
+	{
+		BOOL value = true;
+		if (SUCCEEDED(attributes->GetFlag(BMDDeckLinkSupportsExternalKeying, &value)) && !value)
+			CASPAR_LOG(error) << print << L" Failed to enable external keyer.";	
+		else if (FAILED(decklink_keyer->Enable(TRUE)))			
+			CASPAR_LOG(error) << print << L" Failed to enable external keyer.";	
+		else if (FAILED(decklink_keyer->SetLevel(255)))
+			CASPAR_LOG(error) << print << L" Failed to set key-level to max.";
+		else
+			CASPAR_LOG(info) << print << L" Enabled external keyer.";			
+	}
+}
 
 class decklink_frame : public IDeckLinkVideoFrame
 {
@@ -164,6 +222,81 @@ public:
 	{
 		return frame_.audio_data();
 	}
+
+	int64_t get_age_millis() const
+	{
+		return frame_.get_age_millis();
+	}
+};
+
+struct key_video_context : public IDeckLinkVideoOutputCallback, boost::noncopyable
+{
+	const configuration										config_;
+	com_ptr<IDeckLink>										decklink_					= get_device(config_.key_device_index());
+	com_iface_ptr<IDeckLinkOutput>							output_						= iface_cast<IDeckLinkOutput>(decklink_);
+	com_iface_ptr<IDeckLinkKeyer>							keyer_						= iface_cast<IDeckLinkKeyer>(decklink_);
+	com_iface_ptr<IDeckLinkAttributes>						attributes_					= iface_cast<IDeckLinkAttributes>(decklink_);
+	com_iface_ptr<IDeckLinkConfiguration>					configuration_				= iface_cast<IDeckLinkConfiguration>(decklink_);
+	tbb::atomic<int64_t>									current_presentation_delay_;
+	tbb::atomic<int64_t>									scheduled_frames_completed_;
+
+	key_video_context(const configuration& config, const std::wstring& print)
+		: config_(config)
+	{
+		current_presentation_delay_ = 0;
+		scheduled_frames_completed_ = 0;
+
+		set_latency(configuration_, config.latency, print);
+		set_keyer(attributes_, keyer_, config.keyer, print);
+
+		if (FAILED(output_->SetScheduledFrameCompletionCallback(this)))
+			CASPAR_THROW_EXCEPTION(caspar_exception()
+					<< msg_info(u8(print) + " Failed to set key playback completion callback.")
+					<< boost::errinfo_api_function("SetScheduledFrameCompletionCallback"));
+	}
+
+	template<typename Print>
+	void enable_video(BMDDisplayMode display_mode, const Print& print)
+	{
+		if (FAILED(output_->EnableVideoOutput(display_mode, bmdVideoOutputFlagDefault)))
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Could not enable key video output."));
+
+		if (FAILED(output_->SetScheduledFrameCompletionCallback(this)))
+			CASPAR_THROW_EXCEPTION(caspar_exception()
+					<< msg_info(u8(print()) + " Failed to set key playback completion callback.")
+					<< boost::errinfo_api_function("SetScheduledFrameCompletionCallback"));
+	}
+
+	virtual ~key_video_context()
+	{
+		if (output_)
+		{
+			output_->StopScheduledPlayback(0, nullptr, 0);
+			output_->DisableVideoOutput();
+		}
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*)	{return E_NOINTERFACE;}
+	virtual ULONG STDMETHODCALLTYPE AddRef()							{return 1;}
+	virtual ULONG STDMETHODCALLTYPE Release()							{return 1;}
+
+	virtual HRESULT STDMETHODCALLTYPE ScheduledPlaybackHasStopped()
+	{
+		return S_OK;
+	}
+
+	virtual HRESULT STDMETHODCALLTYPE ScheduledFrameCompleted(
+			IDeckLinkVideoFrame* completed_frame,
+			BMDOutputFrameCompletionResult result)
+	{
+		auto dframe = reinterpret_cast<decklink_frame*>(completed_frame);
+		current_presentation_delay_ = dframe->get_age_millis();
+		++scheduled_frames_completed_;
+
+		// Let the fill callback keep the pace, so no scheduling here.
+
+		return S_OK;
+	}
 };
 
 struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
@@ -177,28 +310,31 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	com_iface_ptr<IDeckLinkKeyer>						keyer_					= iface_cast<IDeckLinkKeyer>(decklink_);
 	com_iface_ptr<IDeckLinkAttributes>					attributes_				= iface_cast<IDeckLinkAttributes>(decklink_);
 
-	tbb::spin_mutex                                     exception_mutex_;
-	std::exception_ptr                                  exception_;
+	tbb::spin_mutex										exception_mutex_;
+	std::exception_ptr									exception_;
 
-	tbb::atomic<bool>                                   is_running_;
+	tbb::atomic<bool>									is_running_;
 		
-	const std::wstring                                  model_name_				= get_model_name(decklink_);
-	const core::video_format_desc                       format_desc_;
-	const int                                           buffer_size_			= config_.buffer_depth(); // Minimum buffer-size 3.
+	const std::wstring									model_name_				= get_model_name(decklink_);
+	const core::video_format_desc						format_desc_;
+	const int											buffer_size_			= config_.buffer_depth(); // Minimum buffer-size 3.
 
-	long long                                           video_scheduled_		= 0;
-	long long                                           audio_scheduled_		= 0;
+	long long											video_scheduled_		= 0;
+	long long											audio_scheduled_		= 0;
 
-	int                                                 preroll_count_			= 0;
+	int													preroll_count_			= 0;
 		
-	boost::circular_buffer<std::vector<int32_t>>        audio_container_		{ buffer_size_ + 1 };
+	boost::circular_buffer<std::vector<int32_t>>		audio_container_		{ buffer_size_ + 1 };
 
-	tbb::concurrent_bounded_queue<core::const_frame>    video_frame_buffer_;
-	tbb::concurrent_bounded_queue<core::const_frame>    audio_frame_buffer_;
+	tbb::concurrent_bounded_queue<core::const_frame>	video_frame_buffer_;
+	tbb::concurrent_bounded_queue<core::const_frame>	audio_frame_buffer_;
 	
-	spl::shared_ptr<diagnostics::graph>                 graph_;
+	spl::shared_ptr<diagnostics::graph>					graph_;
+	tbb::atomic<int64_t>								current_presentation_delay_;
 	caspar::timer										tick_timer_;
-	retry_task<bool>                                    send_completion_;
+	retry_task<bool>									send_completion_;
+	tbb::atomic<int64_t>								scheduled_frames_completed_;
+	std::unique_ptr<key_video_context>					key_context_;
 
 public:
 	decklink_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index) 
@@ -207,6 +343,8 @@ public:
 		, format_desc_(format_desc)
 	{
 		is_running_ = true;
+		current_presentation_delay_ = 0;
+		scheduled_frames_completed_ = 0;
 				
 		video_frame_buffer_.set_capacity(1);
 
@@ -215,12 +353,21 @@ public:
 		// samples from 2 frames in order to keep up
 		audio_frame_buffer_.set_capacity((format_desc.fps > 50.0) ? 2 : 1);
 
+		if (config.keyer == configuration::keyer_t::external_separate_device_keyer)
+			key_context_.reset(new key_video_context(config, print()));
+
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
 		graph_->set_color("flushed-frame", diagnostics::color(0.4f, 0.3f, 0.8f));
 		graph_->set_color("buffered-audio", diagnostics::color(0.9f, 0.9f, 0.5f));
 		graph_->set_color("buffered-video", diagnostics::color(0.2f, 0.9f, 0.9f));
+
+		if (key_context_)
+		{
+			graph_->set_color("key-offset", diagnostics::color(1.0f, 0.0f, 0.0f));
+		}
+
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 		
@@ -229,9 +376,9 @@ public:
 		if(config.embedded_audio)
 			enable_audio();
 		
-		set_latency(config.latency);				
-		set_keyer(config.keyer);
-				
+		set_latency(configuration_, config.latency, print());				
+		set_keyer(attributes_, keyer_, config.keyer, print());
+
 		if(config.embedded_audio)		
 			output_->BeginAudioPreroll();		
 		
@@ -256,48 +403,6 @@ public:
 			output_->DisableVideoOutput();
 		}
 	}
-			
-	void set_latency(configuration::latency_t latency)
-	{		
-		if(latency == configuration::latency_t::low_latency)
-		{
-			configuration_->SetFlag(bmdDeckLinkConfigLowLatencyVideoOutput, true);
-			CASPAR_LOG(info) << print() << L" Enabled low-latency mode.";
-		}
-		else if(latency == configuration::latency_t::normal_latency)
-		{			
-			configuration_->SetFlag(bmdDeckLinkConfigLowLatencyVideoOutput, false);
-			CASPAR_LOG(info) << print() << L" Disabled low-latency mode.";
-		}
-	}
-
-	void set_keyer(configuration::keyer_t keyer)
-	{
-		if(keyer == configuration::keyer_t::internal_keyer) 
-		{
-			BOOL value = true;
-			if(SUCCEEDED(attributes_->GetFlag(BMDDeckLinkSupportsInternalKeying, &value)) && !value)
-				CASPAR_LOG(error) << print() << L" Failed to enable internal keyer.";	
-			else if(FAILED(keyer_->Enable(FALSE)))			
-				CASPAR_LOG(error) << print() << L" Failed to enable internal keyer.";			
-			else if(FAILED(keyer_->SetLevel(255)))			
-				CASPAR_LOG(error) << print() << L" Failed to set key-level to max.";
-			else
-				CASPAR_LOG(info) << print() << L" Enabled internal keyer.";		
-		}
-		else if(keyer == configuration::keyer_t::external_keyer)
-		{
-			BOOL value = true;
-			if(SUCCEEDED(attributes_->GetFlag(BMDDeckLinkSupportsExternalKeying, &value)) && !value)
-				CASPAR_LOG(error) << print() << L" Failed to enable external keyer.";	
-			else if(FAILED(keyer_->Enable(TRUE)))			
-				CASPAR_LOG(error) << print() << L" Failed to enable external keyer.";	
-			else if(FAILED(keyer_->SetLevel(255)))			
-				CASPAR_LOG(error) << print() << L" Failed to set key-level to max.";
-			else
-				CASPAR_LOG(info) << print() << L" Enabled external keyer.";			
-		}
-	}
 	
 	void enable_audio()
 	{
@@ -313,18 +418,24 @@ public:
 	void enable_video(BMDDisplayMode display_mode)
 	{
 		if(FAILED(output_->EnableVideoOutput(display_mode, bmdVideoOutputFlagDefault))) 
-			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Could not enable video output."));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Could not enable fill video output."));
 		
 		if(FAILED(output_->SetScheduledFrameCompletionCallback(this)))
 			CASPAR_THROW_EXCEPTION(caspar_exception() 
-									<< msg_info(u8(print()) + " Failed to set playback completion callback.")
+									<< msg_info(u8(print()) + " Failed to set fill playback completion callback.")
 									<< boost::errinfo_api_function("SetScheduledFrameCompletionCallback"));
+
+		if (key_context_)
+			key_context_->enable_video(display_mode, [this]() { return print(); });
 	}
 
 	void start_playback()
 	{
 		if(FAILED(output_->StartScheduledPlayback(0, format_desc_.time_scale, 1.0))) 
-			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Failed to schedule playback."));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Failed to schedule fill playback."));
+
+		if (key_context_ && FAILED(key_context_->output_->StartScheduledPlayback(0, format_desc_.time_scale, 1.0)))
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Failed to schedule key playback."));
 	}
 	
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*)	{return E_NOINTERFACE;}
@@ -345,11 +456,23 @@ public:
 		
 		try
 		{
+			auto dframe = reinterpret_cast<decklink_frame*>(completed_frame);
+			current_presentation_delay_ = dframe->get_age_millis();
+			++scheduled_frames_completed_;
+
+			if (key_context_)
+				graph_->set_value(
+						"key-offset",
+						static_cast<double>(
+								scheduled_frames_completed_
+								- key_context_->scheduled_frames_completed_)
+						* 0.1 + 0.5);
+
 			if(result == bmdOutputFrameDisplayedLate)
 			{
 				graph_->set_tag("late-frame");
 				video_scheduled_ += format_desc_.duration;
-				audio_scheduled_ += reinterpret_cast<decklink_frame*>(completed_frame)->audio_data().size()/format_desc_.audio_channels;
+				audio_scheduled_ += dframe->audio_data().size() / format_desc_.audio_channels;
 				//++video_scheduled_;
 				//audio_scheduled_ += format_desc_.audio_cadence[0];
 				//++audio_scheduled_;
@@ -439,9 +562,16 @@ public:
 			
 	void schedule_next_video(core::const_frame frame)
 	{
-		auto frame2 = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(frame, format_desc_, config_.key_only));
-		if(FAILED(output_->ScheduleVideoFrame(get_raw(frame2), video_scheduled_, format_desc_.duration, format_desc_.time_scale)))
-			CASPAR_LOG(error) << print() << L" Failed to schedule video.";
+		if (key_context_)
+		{
+			auto key_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(frame, format_desc_, true));
+			if (FAILED(key_context_->output_->ScheduleVideoFrame(get_raw(key_frame), video_scheduled_, format_desc_.duration, format_desc_.time_scale)))
+				CASPAR_LOG(error) << print() << L" Failed to schedule key video.";
+		}
+
+		auto fill_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(frame, format_desc_, config_.key_only));
+		if (FAILED(output_->ScheduleVideoFrame(get_raw(fill_frame), video_scheduled_, format_desc_.duration, format_desc_.time_scale)))
+			CASPAR_LOG(error) << print() << L" Failed to schedule fill video.";
 
 		video_scheduled_ += format_desc_.duration;
 
@@ -489,8 +619,16 @@ public:
 	
 	std::wstring print() const
 	{
-		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" +
-			boost::lexical_cast<std::wstring>(config_.device_index) + L"|" +  format_desc_.name + L"]";
+		if (config_.keyer == configuration::keyer_t::external_separate_device_keyer)
+			return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_)+L"-" +
+				boost::lexical_cast<std::wstring>(config_.device_index) +
+				L"&&" +
+				boost::lexical_cast<std::wstring>(config_.key_device_index()) +
+				L"|" +
+				format_desc_.name + L"]";
+		else
+			return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_)+L"-" +
+				boost::lexical_cast<std::wstring>(config_.device_index) + L"|" + format_desc_.name + L"]";
 	}
 };
 
@@ -499,6 +637,7 @@ struct decklink_consumer_proxy : public core::frame_consumer
 	core::monitor::subject				monitor_subject_;
 	const configuration					config_;
 	std::unique_ptr<decklink_consumer>	consumer_;
+	core::video_format_desc				format_desc_;
 	executor							executor_;
 public:
 
@@ -527,6 +666,7 @@ public:
 	
 	void initialize(const core::video_format_desc& format_desc, int channel_index) override
 	{
+		format_desc_ = format_desc;
 		executor_.invoke([=]
 		{
 			consumer_.reset();
@@ -555,20 +695,32 @@ public:
 		info.add(L"type", L"decklink");
 		info.add(L"key-only", config_.key_only);
 		info.add(L"device", config_.device_index);
+
+		if (config_.keyer == configuration::keyer_t::external_separate_device_keyer)
+		{
+			info.add(L"key-device", config_.key_device_index());
+		}
+
 		info.add(L"low-latency", config_.latency == configuration::latency_t::low_latency);
 		info.add(L"embedded-audio", config_.embedded_audio);
+		info.add(L"presentation-frame-age", presentation_frame_age_millis());
 		//info.add(L"internal-key", config_.internal_key);
 		return info;
 	}
 
 	int buffer_depth() const override
 	{
-		return config_.buffer_depth();
+		return config_.buffer_depth() + 2;
 	}
 
 	int index() const override
 	{
 		return 300 + config_.device_index;
+	}
+
+	int64_t presentation_frame_age_millis() const override
+	{
+		return consumer_ ? static_cast<int64_t>(consumer_->current_presentation_delay_) : 0;
 	}
 
 	core::monitor::subject& monitor_output()
@@ -577,29 +729,64 @@ public:
 	}
 };	
 
+void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Sends video on an SDI output using Blackmagic Decklink video cards.");
+	sink.syntax(L"DECKLINK "
+				L"{[device_index:int]|1} "
+				L"{[keyer:INTERNAL_KEY,EXTERNAL_KEY,EXTERNAL_SEPARATE_DEVICE_KEY]} "
+				L"{[low_latency:LOW_LATENCY]} "
+				L"{[embedded_audio:EMBEDDED_AUDIO]} "
+				L"{[key_only:KEY_ONLY]}");
+	sink.para()->text(L"Sends video on an SDI output using Blackmagic Decklink video cards.");
+	sink.definitions()
+		->item(L"device_index", L"The Blackmagic video card to use (See Blackmagic control panel for card order). Default is 1.")
+		->item(L"keyer",
+				L"If given tries to enable either internal or external keying. Not all Blackmagic cards supports this. "
+				L"There is also a third experimental option (EXTERNAL_SEPARATE_DEVICE_KEY) which allocates device_index + 1 for synhronized key output.")
+		->item(L"low_latency", L"Tries to enable low latency if given.")
+		->item(L"embedded_audio", L"Embeds the audio into the SDI signal if given.")
+		->item(L"key_only",
+				L" will extract only the alpha channel from the "
+				L"channel. This is useful when you have two SDI video cards, and neither has native support "
+				L"for separate fill/key output");
+	sink.para()->text(L"Examples:");
+	sink.example(L">> ADD 1 DECKLINK", L"for using the default device_index of 1.");
+	sink.example(L">> ADD 1 DECKLINK 2", L"uses device_index 2.");
+	sink.example(L">> ADD 1 DECKLINK 1 EXTERNAL_KEY EMBEDDED_AUDIO");
+	sink.example(
+			L">> ADD 1 DECKLINK 1 EMBEDDED_AUDIO\n"
+			L">> ADD 1 DECKLINK 2 KEY_ONLY", L"uses device with index 1 as fill output with audio and device with index 2 as key output.");
+	sink.example(
+			L">> ADD 1 DECKLINK 1 EXTERNAL_SEPARATE_DEVICE_KEY EMBEDDED_AUDIO",
+			L"Uses device 2 for key output. May give better sync between key and fill than the previous method.");
+}
+
 spl::shared_ptr<core::frame_consumer> create_consumer(
 		const std::vector<std::wstring>& params, core::interaction_sink*)
 {
-	if(params.size() < 1 || params[0] != L"DECKLINK")
+	if (params.size() < 1 || !boost::iequals(params.at(0), L"DECKLINK"))
 		return core::frame_consumer::empty();
 	
 	configuration config;
 		
-	if(params.size() > 1)
-		config.device_index = boost::lexical_cast<int>(params[1]);
+	if (params.size() > 1)
+		config.device_index = boost::lexical_cast<int>(params.at(1));
 	
-	if(std::find(params.begin(), params.end(), L"INTERNAL_KEY")			!= params.end())
+	if (contains_param(L"INTERNAL_KEY", params))
 		config.keyer = configuration::keyer_t::internal_keyer;
-	else if(std::find(params.begin(), params.end(), L"EXTERNAL_KEY")	!= params.end())
+	else if (contains_param(L"EXTERNAL_KEY", params))
 		config.keyer = configuration::keyer_t::external_keyer;
+	else if (contains_param(L"EXTERNAL_SEPARATE_DEVICE_KEY", params))
+		config.keyer = configuration::keyer_t::external_separate_device_keyer;
 	else
 		config.keyer = configuration::keyer_t::default_keyer;
 
-	if(std::find(params.begin(), params.end(), L"LOW_LATENCY")	 != params.end())
+	if (contains_param(L"LOW_LATENCY", params))
 		config.latency = configuration::latency_t::low_latency;
 
-	config.embedded_audio	= std::find(params.begin(), params.end(), L"EMBEDDED_AUDIO") != params.end();
-	config.key_only			= std::find(params.begin(), params.end(), L"KEY_ONLY")		 != params.end();
+	config.embedded_audio	= contains_param(L"EMBEDDED_AUDIO", params);
+	config.key_only			= contains_param(L"KEY_ONLY", params);
 
 	return spl::make_shared<decklink_consumer_proxy>(config);
 }
@@ -614,6 +801,8 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 		config.keyer = configuration::keyer_t::external_keyer;
 	else if(keyer == L"internal")
 		config.keyer = configuration::keyer_t::internal_keyer;
+	else if (keyer == L"external_separate_device")
+		config.keyer = configuration::keyer_t::external_separate_device_keyer;
 
 	auto latency = ptree.get(L"latency", L"normal");
 	if(latency == L"low")
@@ -623,6 +812,7 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 
 	config.key_only				= ptree.get(L"key-only",		config.key_only);
 	config.device_index			= ptree.get(L"device",			config.device_index);
+	config.key_device_idx		= ptree.get(L"key-device",		config.key_device_idx);
 	config.embedded_audio		= ptree.get(L"embedded-audio",	config.embedded_audio);
 	config.base_buffer_depth	= ptree.get(L"buffer-depth",	config.base_buffer_depth);
 

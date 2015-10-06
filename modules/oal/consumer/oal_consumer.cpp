@@ -34,19 +34,20 @@
 #include <core/mixer/audio/audio_util.h>
 #include <core/mixer/audio/audio_mixer.h>
 #include <core/video_format.h>
+#include <core/help/help_sink.h>
+#include <core/help/help_repository.h>
 
 #include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/timer.hpp>
 #include <boost/thread/once.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include <tbb/concurrent_queue.h>
 
-#include <al/alc.h>
-#include <al/al.h>
-
-#include <array>
+#include <AL/alc.h>
+#include <AL/al.h>
 
 namespace caspar { namespace oal {
 
@@ -105,19 +106,20 @@ struct oal_consumer : public core::frame_consumer
 
 	spl::shared_ptr<diagnostics::graph>	graph_;
 	boost::timer						perf_timer_;
-	int									channel_index_		= -1;
+	tbb::atomic<int64_t>				presentation_age_;
+	int									channel_index_ = -1;
 	
 	core::video_format_desc				format_desc_;
 
 	ALuint								source_				= 0;
-	std::array<ALuint, 3>				buffers_;
+	std::vector<ALuint>					buffers_;
 
-	executor							executor_			= L"oal_consumer";
+	executor							executor_			{ L"oal_consumer" };
 
 public:
 	oal_consumer() 
 	{
-		buffers_.assign(0);
+		presentation_age_ = 0;
 
 		init_device();
 
@@ -129,7 +131,7 @@ public:
 
 	~oal_consumer()
 	{
-		executor_.begin_invoke([=]
+		executor_.invoke([=]
 		{		
 			if(source_)
 			{
@@ -152,15 +154,16 @@ public:
 		format_desc_	= format_desc;		
 		channel_index_	= channel_index;
 		graph_->set_text(print());
-		
+
 		executor_.begin_invoke([=]
 		{		
+			buffers_.resize(format_desc_.fps > 30 ? 8 : 4);
 			alGenBuffers(static_cast<ALsizei>(buffers_.size()), buffers_.data());
 			alGenSources(1, &source_);
 
 			for(std::size_t n = 0; n < buffers_.size(); ++n)
 			{
-				std::vector<int16_t> audio(format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()]*format_desc_.audio_channels, 0);
+				audio_buffer_16 audio(format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()]*format_desc_.audio_channels, 0);
 				alBufferData(buffers_[n], AL_FORMAT_STEREO16, audio.data(), static_cast<ALsizei>(audio.size()*sizeof(int16_t)), format_desc_.audio_sample_rate);
 				alSourceQueueBuffers(source_, 1, &buffers_[n]);
 			}
@@ -170,7 +173,12 @@ public:
 			alSourcePlay(source_);	
 		});
 	}
-	
+
+	int64_t presentation_frame_age_millis() const override
+	{
+		return presentation_age_;
+	}
+
 	std::future<bool> send(core::const_frame frame) override
 	{
 		// Will only block if the default executor queue capacity of 512 is
@@ -210,6 +218,7 @@ public:
 
 			graph_->set_value("tick-time", perf_timer_.elapsed()*format_desc_.fps*0.5);		
 			perf_timer_.restart();
+			presentation_age_ = frame.get_age_millis() + delay_millis();
 		});
 
 		return make_ready_future(true);
@@ -239,7 +248,7 @@ public:
 
 	int delay_millis() const
 	{
-		return 60;
+		return 213;
 	}
 	
 	int buffer_depth() const override
@@ -260,9 +269,18 @@ public:
 	}
 };
 
+void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"A system audio consumer.");
+	sink.syntax(L"AUDIO");
+	sink.para()->text(L"Uses the system's default audio playback device.");
+	sink.para()->text(L"Examples:");
+	sink.example(L">> ADD 1 AUDIO");
+}
+
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params, core::interaction_sink*)
 {
-	if(params.size() < 1 || params[0] != L"AUDIO")
+	if(params.size() < 1 || !boost::iequals(params.at(0), L"AUDIO"))
 		return core::frame_consumer::empty();
 
 	return spl::make_shared<oal_consumer>();

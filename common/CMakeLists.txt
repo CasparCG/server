@@ -11,20 +11,21 @@ set(SOURCES
 		log.cpp
 		polling_filesystem_monitor.cpp
 		stdafx.cpp
+		thread_info.cpp
 		tweener.cpp
 		utf.cpp
 )
 if (MSVC)
 	set(OS_SPECIFIC_SOURCES
 			compiler/vs/disable_silly_warnings.h
-			compiler/vs/stack_walker.cpp
-			compiler/vs/stack_walker.h
+			compiler/vs/StackWalker.cpp
+			compiler/vs/StackWalker.h
 
 			os/windows/current_version.h
 			os/windows/filesystem.cpp
 			os/windows/page_locked_allocator.cpp
 			os/windows/prec_timer.cpp
-			os/windows/scheduling.cpp
+			os/windows/threading.cpp
 			os/windows/stack_trace.cpp
 			os/windows/system_info.cpp
 			os/windows/win32_exception.cpp
@@ -36,7 +37,7 @@ elseif (CMAKE_COMPILER_IS_GNUCXX)
 			os/linux/filesystem.cpp
 			os/linux/prec_timer.cpp
 			os/linux/signal_handlers.cpp
-			os/linux/scheduling.cpp
+			os/linux/threading.cpp
 			os/linux/stack_trace.cpp
 			os/linux/system_info.cpp
 	)
@@ -49,7 +50,7 @@ set(HEADERS
 		os/filesystem.h
 		os/general_protection_fault.h
 		os/page_locked_allocator.h
-		os/scheduling.h
+		os/threading.h
 		os/stack_trace.h
 		os/system_info.h
 
@@ -77,8 +78,10 @@ set(HEADERS
 		polling_filesystem_monitor.h
 		prec_timer.h
 		reactive.h
+		scope_exit.h
 		semaphore.h
 		stdafx.h
+		thread_info.h
 		timer.h
 		tweener.h
 		utf.h
@@ -153,11 +156,14 @@ if(MSVC)
 	casparcg_add_runtime_dependency("${GLEW_BIN_PATH}/glew32.dll")
 	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbb.dll")
 	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbb_debug.dll")
-	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc.dll")
-	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_debug.dll")
-	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_proxy.dll")
-	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_proxy_debug.dll")
+
+	# Reenable when tbb gets official support for vc14
+	# casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc.dll")
+	# casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_debug.dll")
+	# casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_proxy.dll")
+	# casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_proxy_debug.dll")
 else()
+	casparcg_add_runtime_dependency("${GLEW_BIN_PATH}/libGLEW.so.1.12")
 	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/libtbb.so.2")
 	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/libtbbmalloc_proxy.so.2")
 	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/libtbbmalloc.so.2")

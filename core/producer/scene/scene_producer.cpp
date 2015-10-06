@@ -22,6 +22,8 @@
 #include "../../StdAfx.h"
 
 #include <common/future.h>
+#include <common/prec_timer.h>
+
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string.hpp>
 
@@ -36,8 +38,12 @@ namespace caspar { namespace core { namespace scene {
 layer::layer(const std::wstring& name, const spl::shared_ptr<frame_producer>& producer)
 	: name(name), producer(producer)
 {
-	clipping.width.bind(producer.get()->pixel_constraints().width);
-	clipping.height.bind(producer.get()->pixel_constraints().height);
+	crop.lower_right.x.bind(producer.get()->pixel_constraints().width);
+	crop.lower_right.y.bind(producer.get()->pixel_constraints().height);
+	perspective.upper_right.x.bind(producer.get()->pixel_constraints().width);
+	perspective.lower_right.x.bind(producer.get()->pixel_constraints().width);
+	perspective.lower_right.y.bind(producer.get()->pixel_constraints().height);
+	perspective.lower_left.y.bind(producer.get()->pixel_constraints().height);
 }
 
 adjustments::adjustments()
@@ -84,28 +90,59 @@ struct timeline
 	}
 };
 
+mark_action get_mark_action(const std::wstring& name)
+{
+	if (name == L"start")
+		return mark_action::start;
+	else if (name == L"stop")
+		return mark_action::stop;
+	else if (name == L"jump_to")
+		return mark_action::jump_to;
+	else if (name == L"remove")
+		return mark_action::remove;
+	else
+		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info(L"Invalid mark_action " + name));
+}
+
+struct marker
+{
+	mark_action		action;
+	std::wstring	label_argument;
+
+	marker(mark_action action, const std::wstring& label_argument)
+		: action(action)
+		, label_argument(label_argument)
+	{
+	}
+};
+
 struct scene_producer::impl
 {
-	constraints pixel_constraints_;
-	std::list<layer> layers_;
-	interaction_aggregator aggregator_;
-	binding<int64_t> frame_number_;
-	binding<double> speed_;
-	double frame_fraction_;
-	std::map<void*, timeline> timelines_;
-	std::map<std::wstring, std::shared_ptr<core::variable>> variables_;
-	std::vector<std::wstring> variable_names_;
-	monitor::subject monitor_subject_;
+	constraints												pixel_constraints_;
+	video_format_desc										format_desc_;
+	std::list<layer>										layers_;
+	interaction_aggregator									aggregator_;
+	binding<int64_t>										frame_number_;
+	binding<double>											speed_;
+	double													frame_fraction_		= 0.0;
+	std::map<void*, timeline>								timelines_;
+	std::map<std::wstring, std::shared_ptr<core::variable>>	variables_;
+	std::vector<std::wstring>								variable_names_;
+	std::multimap<int64_t, marker>							markers_by_frame_;
+	monitor::subject										monitor_subject_;
+	bool													paused_				= true;
+	bool													removed_			= false;
+	bool													going_to_mark_		= false;
 
-	impl(int width, int height)
+	impl(int width, int height, const video_format_desc& format_desc)
 		: pixel_constraints_(width, height)
+		, format_desc_(format_desc)
 		, aggregator_([=] (double x, double y) { return collission_detect(x, y); })
-		, frame_fraction_(0)
 	{
 		auto speed_variable = std::make_shared<core::variable_impl<double>>(L"1.0", true, 1.0);
 		store_variable(L"scene_speed", speed_variable);
 		speed_ = speed_variable->value();
-		auto frame_variable = std::make_shared<core::variable_impl<int64_t>>(L"0", true, 0);
+		auto frame_variable = std::make_shared<core::variable_impl<int64_t>>(L"-1", true, -1);
 		store_variable(L"frame", frame_variable);
 		frame_number_ = frame_variable->value();
 	}
@@ -135,6 +172,11 @@ struct scene_producer::impl
 		variable_names_.push_back(name);
 	}
 
+	void add_mark(int64_t frame, mark_action action, const std::wstring& label)
+	{
+		markers_by_frame_.insert(std::make_pair(frame, marker(action, label)));
+	}
+
 	core::variable& get_variable(const std::wstring& name)
 	{
 		auto found = variables_.find(name);
@@ -159,31 +201,153 @@ struct scene_producer::impl
 	{
 		frame_transform transform;
 
-		auto& pos = transform.image_transform.fill_translation;
-		auto& scale = transform.image_transform.fill_scale;
-		//auto& clip_pos = transform.image_transform.clip_translation;
-		//auto& clip_scale = transform.image_transform.clip_scale;
+		auto& anchor		= transform.image_transform.anchor;
+		auto& pos			= transform.image_transform.fill_translation;
+		auto& scale			= transform.image_transform.fill_scale;
+		auto& angle			= transform.image_transform.angle;
+		auto& crop			= transform.image_transform.crop;
+		auto& pers			= transform.image_transform.perspective;
 
-		pos[0] = static_cast<double>(layer.position.x.get()) / static_cast<double>(pixel_constraints_.width.get());
-		pos[1] = static_cast<double>(layer.position.y.get()) / static_cast<double>(pixel_constraints_.height.get());
-		scale[0] = static_cast<double>(layer.producer.get()->pixel_constraints().width.get())
-				/ static_cast<double>(pixel_constraints_.width.get());
-		scale[1] = static_cast<double>(layer.producer.get()->pixel_constraints().height.get())
-				/ static_cast<double>(pixel_constraints_.height.get());
+		anchor[0]	= layer.anchor.x.get()										/ layer.producer.get()->pixel_constraints().width.get();
+		anchor[1]	= layer.anchor.y.get()										/ layer.producer.get()->pixel_constraints().height.get();
+		pos[0]		= layer.position.x.get()									/ pixel_constraints_.width.get();
+		pos[1]		= layer.position.y.get()									/ pixel_constraints_.height.get();
+		scale[0]	= layer.producer.get()->pixel_constraints().width.get()		/ pixel_constraints_.width.get();
+		scale[1]	= layer.producer.get()->pixel_constraints().height.get()	/ pixel_constraints_.height.get();
+		crop.ul[0]	= layer.crop.upper_left.x.get()								/ layer.producer.get()->pixel_constraints().width.get();
+		crop.ul[1]	= layer.crop.upper_left.y.get()								/ layer.producer.get()->pixel_constraints().height.get();
+		crop.lr[0]	= layer.crop.lower_right.x.get()							/ layer.producer.get()->pixel_constraints().width.get();
+		crop.lr[1]	= layer.crop.lower_right.y.get()							/ layer.producer.get()->pixel_constraints().height.get();
+		pers.ul[0]	= layer.perspective.upper_left.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
+		pers.ul[1]	= layer.perspective.upper_left.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
+		pers.ur[0]	= layer.perspective.upper_right.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
+		pers.ur[1]	= layer.perspective.upper_right.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
+		pers.lr[0]	= layer.perspective.lower_right.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
+		pers.lr[1]	= layer.perspective.lower_right.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
+		pers.ll[0]	= layer.perspective.lower_left.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
+		pers.ll[1]	= layer.perspective.lower_left.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
 
-		/*clip_pos[0] = static_cast<double>(layer.clipping.upper_left.x.get()) / static_cast<double>(pixel_constraints_.width.get());
-		clip_pos[1] = static_cast<double>(layer.clipping.upper_left.y.get()) / static_cast<double>(pixel_constraints_.height.get());
-		clip_scale[0] = static_cast<double>(layer.clipping.width.get()) / static_cast<double>(pixel_constraints_.width.get());
-		clip_scale[1] = static_cast<double>(layer.clipping.height.get()) / static_cast<double>(pixel_constraints_.height.get());*/
+		static const double PI = 3.141592653589793;
 
-		transform.image_transform.opacity = layer.adjustments.opacity.get();
-		transform.image_transform.is_key = layer.is_key.get();
+		angle		= layer.rotation.get() * PI / 180.0;
+
+		transform.image_transform.opacity			= layer.adjustments.opacity.get();
+		transform.image_transform.is_key			= layer.is_key.get();
+		transform.image_transform.use_mipmap		= layer.use_mipmap.get();
+		transform.image_transform.blend_mode		= layer.blend_mode.get();
+		transform.image_transform.chroma.key		= layer.chroma_key.key.get();
+		transform.image_transform.chroma.threshold	= layer.chroma_key.threshold.get();
+		transform.image_transform.chroma.softness	= layer.chroma_key.softness.get();
+		transform.image_transform.chroma.spill		= layer.chroma_key.spill.get();
+
+		// Mark as sublayer, so it will be composited separately by the mixer.
+		transform.image_transform.layer_depth = 1;
 
 		return transform;
 	}
 
+	boost::optional<std::pair<int64_t, marker>> find_first_stop_or_jump_or_remove(int64_t start_frame, int64_t end_frame)
+	{
+		auto lower = markers_by_frame_.lower_bound(start_frame);
+		auto upper = markers_by_frame_.upper_bound(end_frame);
+
+		if (lower == markers_by_frame_.end())
+			return boost::none;
+
+		for (auto iter = lower; iter != upper; ++iter)
+		{
+			auto action = iter->second.action;
+
+			if (action == mark_action::stop || action == mark_action::jump_to || action == mark_action::remove)
+				return std::make_pair(iter->first, iter->second);
+		}
+
+		return boost::none;
+	}
+
+	boost::optional<std::pair<int64_t, marker>> find_first_start(int64_t start_frame)
+	{
+		auto lower = markers_by_frame_.lower_bound(start_frame);
+
+		if (lower == markers_by_frame_.end())
+			return boost::none;
+
+		for (auto iter = lower; iter != markers_by_frame_.end(); ++iter)
+		{
+			auto action = iter->second.action;
+
+			if (action == mark_action::start)
+				return std::make_pair(iter->first, iter->second);
+		}
+
+		return boost::none;
+	}
+
 	draw_frame render_frame()
 	{
+		if (format_desc_.field_count == 1)
+			return render_progressive_frame();
+		else
+		{
+			prec_timer timer;
+			timer.tick_millis(0);
+			
+			auto field1 = render_progressive_frame();
+			
+			timer.tick(0.5 / format_desc_.fps);
+
+			auto field2 = render_progressive_frame();
+
+			return draw_frame::interlace(field1, field2, format_desc_.field_mode);
+		}
+	}
+
+	void advance()
+	{
+		frame_fraction_ += speed_.get();
+
+		if (std::abs(frame_fraction_) >= 1.0)
+		{
+			int64_t delta = static_cast<int64_t>(frame_fraction_);
+			auto previous_frame = frame_number_.get();
+			auto next_frame = frame_number_.get() + delta;
+			auto marker = find_first_stop_or_jump_or_remove(previous_frame + 1, next_frame);
+
+			if (marker && marker->second.action == mark_action::remove)
+			{
+				remove();
+			}
+			if (marker && !going_to_mark_)
+			{
+				if (marker->second.action == mark_action::stop)
+				{
+					frame_number_.set(marker->first);
+					frame_fraction_ = 0.0;
+					paused_ = true;
+				}
+				else if (marker->second.action == mark_action::jump_to)
+				{
+					go_to_marker(marker->second.label_argument, 0);
+				}
+			}
+			else
+			{
+				frame_number_.set(next_frame);
+				frame_fraction_ -= delta;
+			}
+
+			going_to_mark_ = false;
+		}
+	}
+
+	draw_frame render_progressive_frame()
+	{
+		if (removed_)
+			return draw_frame::empty();
+
+		if (!paused_)
+			advance();
+
 		for (auto& timeline : timelines_)
 			timeline.second.on_frame(frame_number_.get());
 
@@ -195,17 +359,8 @@ struct scene_producer::impl
 				continue;
 
 			draw_frame frame(layer.producer.get()->receive());
-			frame.transform() = get_transform(layer);;
+			frame.transform() = get_transform(layer);
 			frames.push_back(frame);
-		}
-
-		frame_fraction_ += speed_.get();
-
-		if (std::abs(frame_fraction_) >= 1.0)
-		{
-			int64_t delta = static_cast<int64_t>(frame_fraction_);
-			frame_number_.set(frame_number_.get() + delta);
-			frame_fraction_ -= delta;
 		}
 
 		return draw_frame(frames);
@@ -246,15 +401,92 @@ struct scene_producer::impl
 
 	std::future<std::wstring> call(const std::vector<std::wstring>& params) 
 	{
+		if (!params.empty() && boost::ends_with(params.at(0), L"()"))
+			return make_ready_future(handle_call(params));
+		else
+			return make_ready_future(handle_variable_set(params));
+	}
+
+	std::wstring handle_variable_set(const std::vector<std::wstring>& params)
+	{
 		for (int i = 0; i + 1 < params.size(); i += 2)
 		{
-			auto found = variables_.find(boost::to_lower_copy(params[i]));
+			auto found = variables_.find(boost::to_lower_copy(params.at(i)));
 
 			if (found != variables_.end() && found->second->is_public())
-				found->second->from_string(params[i + 1]);
+				found->second->from_string(params.at(i + 1));
 		}
 
-		return make_ready_future(std::wstring(L""));
+		return L"";
+	}
+
+	std::wstring handle_call(const std::vector<std::wstring>& params)
+	{
+		auto call = params.at(0);
+
+		if (call == L"play()")
+			go_to_marker(params.at(1), -1);
+		else if (call == L"remove()")
+			remove();
+		else if (call == L"next()")
+			next();
+		else
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(L"Unknown call " + call));
+
+		return L"";
+	}
+
+	void remove()
+	{
+		removed_ = true;
+		layers_.clear();
+	}
+
+	void next()
+	{
+		auto marker = find_first_start(frame_number_.get() + 1);
+
+		if (marker)
+		{
+			frame_number_.set(marker->first - 1);
+			frame_fraction_ = 0.0;
+			paused_ = false;
+			going_to_mark_ = true;
+		}
+		else
+		{
+			remove();
+		}
+	}
+
+	void go_to_marker(const std::wstring& marker_name, int64_t offset)
+	{
+		for (auto& marker : markers_by_frame_)
+		{
+			if (marker.second.label_argument == marker_name && marker.second.action == mark_action::start)
+			{
+				frame_number_.set(marker.first + offset);
+				frame_fraction_ = 0.0;
+				paused_ = false;
+				going_to_mark_ = true;
+
+				return;
+			}
+		}
+
+		if (marker_name == L"intro")
+		{
+			frame_number_.set(offset);
+			frame_fraction_ = 0.0;
+			paused_ = false;
+			going_to_mark_ = true;
+		}
+		else if (marker_name == L"outro")
+		{
+			remove();
+		}
+		else
+			CASPAR_LOG(info) << print() << L" no marker called " << marker_name << " found";
 	}
 
 	std::wstring print() const
@@ -271,6 +503,33 @@ struct scene_producer::impl
 	{
 		boost::property_tree::wptree info;
 		info.add(L"type", L"scene");
+		info.add(L"frame-number", frame_number_.get());
+
+		for (auto& var : variables_)
+		{
+			boost::property_tree::wptree variable_info;
+
+			variable_info.add(L"name", var.first);
+			variable_info.add(L"public", var.second->is_public());
+			variable_info.add(L"value", var.second->to_string());
+
+			info.add_child(L"variables.variable", variable_info);
+		}
+
+		for (auto& layer : layers_)
+		{
+			boost::property_tree::wptree layer_info;
+
+			layer_info.add(L"name", layer.name.get());
+			layer_info.add_child(L"producer", layer.producer.get()->info());
+			layer_info.add(L"x", layer.position.x.get());
+			layer_info.add(L"y", layer.position.y.get());
+			layer_info.add(L"width", layer.producer.get()->pixel_constraints().width.get());
+			layer_info.add(L"height", layer.producer.get()->pixel_constraints().height.get());
+
+			info.add_child(L"layers.layer", layer_info);
+		}
+
 		return info;
 	}
 
@@ -280,8 +539,8 @@ struct scene_producer::impl
 	}
 };
 
-scene_producer::scene_producer(int width, int height)
-	: impl_(new impl(width, height))
+scene_producer::scene_producer(int width, int height, const video_format_desc& format_desc)
+	: impl_(new impl(width, height, format_desc))
 {
 }
 
@@ -359,6 +618,11 @@ void scene_producer::store_variable(
 	impl_->store_variable(name, var);
 }
 
+void scene_producer::add_mark(int64_t frame, mark_action action, const std::wstring& label)
+{
+	impl_->add_mark(frame, action, label);
+}
+
 core::variable& scene_producer::get_variable(const std::wstring& name)
 {
 	return impl_->get_variable(name);
@@ -367,122 +631,6 @@ core::variable& scene_producer::get_variable(const std::wstring& name)
 const std::vector<std::wstring>& scene_producer::get_variables() const
 {
 	return impl_->get_variables();
-}
-
-spl::shared_ptr<core::frame_producer> create_dummy_scene_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const video_format_desc& format_desc, const std::vector<std::wstring>& params)
-{
-	if (params.size() < 1 || !boost::iequals(params.at(0), L"[SCENE]"))
-		return core::frame_producer::empty();
-
-	auto scene = spl::make_shared<scene_producer>(format_desc.width, format_desc.height);
-
-	text::text_info text_info;
-	text_info.font = L"Arial";
-	text_info.size = 62;
-	text_info.color.r = 1;
-	text_info.color.g = 1;
-	text_info.color.b = 1;
-	text_info.color.a = 0.5;
-	auto text_area = text_producer::create(frame_factory, 0, 0, L"a", text_info, 1280, 720, false);
-
-	auto text_width = text_area->pixel_constraints().width;
-	binding<double> padding(1.0);
-	binding<double> panel_width = padding + text_width + padding;
-	binding<double> panel_height = padding + text_area->pixel_constraints().height + padding;
-
-	auto subscription = panel_width.on_change([&]
-	{
-		CASPAR_LOG(info) << "Panel width: " << panel_width.get();
-	});
-
-	padding.set(2);
-
-	auto create_param = [](std::wstring elem) -> std::vector<std::wstring>
-	{
-		std::vector<std::wstring> result;
-		result.push_back(elem);
-		return result;
-	};
-
-	auto& car_layer = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"car")), L"car");
-	car_layer.clipping.upper_left.x.set(80);
-	car_layer.clipping.upper_left.y.set(45);
-	car_layer.clipping.width.unbind();
-	car_layer.clipping.width.set(640);
-	car_layer.clipping.height.unbind();
-	car_layer.clipping.height.set(360);
-	car_layer.adjustments.opacity.set(0.5);
-	//car_layer.hidden = scene->frame() % 50 > 25 || !(scene->frame() < 1000);
-	std::vector<std::wstring> sub_params;
-	sub_params.push_back(L"[FREEHAND]");
-	sub_params.push_back(L"640");
-	sub_params.push_back(L"360");
-	scene->create_layer(create_producer(frame_factory, format_desc, sub_params), 10, 10, L"freehand");
-	sub_params.clear();
-
-	auto& color_layer = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"RED")), 110, 10, L"color");
-	color_layer.producer.get()->pixel_constraints().width.set(1000);
-	color_layer.producer.get()->pixel_constraints().height.set(550);
-
-	//scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"SP")), 50, 50);
-
-	auto& upper_left = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"scene/upper_left")), L"upper_left");
-	auto& upper_right = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"scene/upper_right")), L"upper_right");
-	auto& lower_left = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"scene/lower_left")), L"lower_left");
-	auto& lower_right = scene->create_layer(create_producer(frame_factory, format_desc, create_param(L"scene/lower_right")), L"lower_right");
-	auto& text_layer = scene->create_layer(text_area, L"text_area");
-	upper_left.adjustments.opacity.bind(text_layer.adjustments.opacity);
-	upper_right.adjustments.opacity.bind(text_layer.adjustments.opacity);
-	lower_left.adjustments.opacity.bind(text_layer.adjustments.opacity);
-	lower_right.adjustments.opacity.bind(text_layer.adjustments.opacity);
-
-	/*
-	binding<double> panel_x = (scene->frame()
-			.as<double>()
-			.transformed([](double v) { return std::sin(v / 20.0); })
-			* 20.0
-			+ 40.0)
-			.transformed([](double v) { return std::floor(v); }); // snap to pixels instead of subpixels
-			*/
-	tweener tween(L"easeoutbounce");
-	binding<double> panel_x(0.0);
-
-	scene->add_keyframe(panel_x, -panel_width, 0);
-	scene->add_keyframe(panel_x, 300.0, 50, L"easeinoutsine");
-	scene->add_keyframe(panel_x, 300.0, 50 * 4);
-	scene->add_keyframe(panel_x, 1000.0, 50 * 5, L"easeinoutsine");
-	//panel_x = delay(panel_x, add_tween(panel_x, scene->frame(), 200.0, int64_t(50), L"linear"), scene->frame(), int64_t(100));
-	/*binding<double> panel_x = when(scene->frame() < 50)
-		.then(scene->frame().as<double>().transformed([tween](double t) { return tween(t, 0.0, 200, 50); }))
-		.otherwise(200.0);*/
-	//binding<double> panel_y = when(car_layer.hidden).then(500.0).otherwise(-panel_x + 300);
-	binding<double> panel_y(500.0);
-	scene->add_keyframe(panel_y, panel_y.get(), 50 * 4);
-	scene->add_keyframe(panel_y, 720.0, 50 * 5, L"easeinexpo");
-
-	scene->add_keyframe(text_layer.adjustments.opacity, 1.0, 100);
-	scene->add_keyframe(text_layer.adjustments.opacity, 0.0, 125, L"linear");
-	scene->add_keyframe(text_layer.adjustments.opacity, 1.0, 150, L"linear");
-
-	upper_left.position.x = panel_x;
-	upper_left.position.y = panel_y;
-	upper_right.position.x = upper_left.position.x + upper_left.producer.get()->pixel_constraints().width + panel_width;
-	upper_right.position.y = upper_left.position.y;
-	lower_left.position.x = upper_left.position.x;
-	lower_left.position.y = upper_left.position.y + upper_left.producer.get()->pixel_constraints().height + panel_height;
-	lower_right.position.x = upper_right.position.x;
-	lower_right.position.y = lower_left.position.y;
-	text_layer.position.x = upper_left.position.x + upper_left.producer.get()->pixel_constraints().width + padding;
-	text_layer.position.y = upper_left.position.y + upper_left.producer.get()->pixel_constraints().height + padding + text_area->current_bearing_y().as<double>();
-
-	text_area->text().bind(scene->create_variable<std::wstring>(L"text", true));
-
-	auto params2 = params;
-	params2.erase(params2.begin());
-
-	scene->call(params2);
-
-	return scene;
 }
 
 }}}

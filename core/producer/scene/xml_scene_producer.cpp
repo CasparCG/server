@@ -30,11 +30,15 @@
 #include <boost/property_tree/xml_parser.hpp>
 
 #include <common/env.h>
+#include <common/os/filesystem.h>
 #include <core/producer/frame_producer.h>
+#include <core/help/help_repository.h>
+#include <core/help/help_sink.h>
 
 #include <future>
 
 #include "scene_producer.h"
+#include "scene_cg_proxy.h"
 
 namespace caspar { namespace core { namespace scene {
 
@@ -60,18 +64,29 @@ void deduce_expression(variable& var, const variable_repository& repo)
 	}
 }
 
+void describe_xml_scene_producer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"A simple producer for dynamic graphics using .scene files.");
+	sink.syntax(L"[.scene_filename:string] {[param1:string] [value1:string]} {[param2:string] [value2:string]} ...");
+	sink.para()->text(L"A simple producer that looks in the ")->code(L"templates")->text(L" folder for .scene files.");
+	sink.para()->text(L"The .scene file is a simple XML document containing variables, layers and timelines.");
+	sink.example(L">> PLAY 1-10 scene_name_sign FIRSTNAME \"John\" LASTNAME \"Doe\"", L"loads and plays templates/scene_name_sign.scene and sets the variables FIRSTNAME and LASTNAME.");
+	sink.para()->text(L"The scene producer also supports setting the variables while playing via the CALL command:");
+	sink.example(L">> CALL 1-10 FIRSTNAME \"Jane\"", L"changes the variable FIRSTNAME on an already loaded scene.");
+}
+
 spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
-		const spl::shared_ptr<core::frame_factory>& frame_factory,
-		const core::video_format_desc& format_desc,
+		const core::frame_producer_dependencies& dependencies,
 		const std::vector<std::wstring>& params)
 {
 	if (params.empty())
 		return core::frame_producer::empty();
 
-	std::wstring filename = env::media_folder() + L"\\" + params[0] + L".xml";
-	
-	if (!boost::filesystem::is_regular_file(boost::filesystem::path(filename)))
+	auto found = find_case_insensitive(env::template_folder() + L"/" + params.at(0) + L".scene");
+	if (!found)
 		return core::frame_producer::empty();
+
+	std::wstring filename = *found;
 
 	boost::property_tree::wptree root;
 	boost::filesystem::wifstream file(filename);
@@ -84,7 +99,7 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 	int width = root.get<int>(L"scene.<xmlattr>.width");
 	int height = root.get<int>(L"scene.<xmlattr>.height");
 
-	auto scene = spl::make_shared<scene_producer>(width, height);
+	auto scene = spl::make_shared<scene_producer>(width, height, dependencies.format_desc);
 
 	for (auto elem : root.get_child(L"scene.variables"))
 	{
@@ -107,15 +122,37 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 	for (auto& elem : root.get_child(L"scene.layers"))
 	{
 		auto id = elem.second.get<std::wstring>(L"<xmlattr>.id");
-		auto producer = create_producer(frame_factory, format_desc, elem.second.get<std::wstring>(L"producer"));
+		auto producer = dependencies.producer_registry->create_producer(dependencies, elem.second.get<std::wstring>(L"producer"));
 		auto& layer = scene->create_layer(producer, 0, 0, id);
 		auto variable_prefix = L"layer." + id + L".";
 
 		layer.hidden = scene->create_variable<bool>(variable_prefix + L"hidden", false, elem.second.get(L"hidden", L"false"));
 		layer.position.x = scene->create_variable<double>(variable_prefix + L"x", false, elem.second.get<std::wstring>(L"x"));
 		layer.position.y = scene->create_variable<double>(variable_prefix + L"y", false, elem.second.get<std::wstring>(L"y"));
+		layer.anchor.x = scene->create_variable<double>(variable_prefix + L"anchor_x", false, elem.second.get<std::wstring>(L"anchor_x", L"0.0"));
+		layer.anchor.y = scene->create_variable<double>(variable_prefix + L"anchor_y", false, elem.second.get<std::wstring>(L"anchor_y", L"0.0"));
+		layer.rotation = scene->create_variable<double>(variable_prefix + L"rotation", false, elem.second.get<std::wstring>(L"rotation", L"0.0"));
+		layer.crop.upper_left.x = scene->create_variable<double>(variable_prefix + L"crop_upper_left_x", false, elem.second.get<std::wstring>(L"crop_upper_left_x", L"0.0"));
+		layer.crop.upper_left.y = scene->create_variable<double>(variable_prefix + L"crop_upper_left_y", false, elem.second.get<std::wstring>(L"crop_upper_left_y", L"0.0"));
+		layer.crop.lower_right.x = scene->create_variable<double>(variable_prefix + L"crop_lower_right_x", false, elem.second.get<std::wstring>(L"crop_lower_right_x", layer.producer.get()->pixel_constraints().width.as<std::wstring>().get()));
+		layer.crop.lower_right.y = scene->create_variable<double>(variable_prefix + L"crop_lower_right_y", false, elem.second.get<std::wstring>(L"crop_lower_right_y", layer.producer.get()->pixel_constraints().height.as<std::wstring>().get()));
+		layer.perspective.upper_left.x = scene->create_variable<double>(variable_prefix + L"perspective_upper_left_x", false, elem.second.get<std::wstring>(L"perspective_upper_left_x", L"0.0"));
+		layer.perspective.upper_left.y = scene->create_variable<double>(variable_prefix + L"perspective_upper_left_y", false, elem.second.get<std::wstring>(L"perspective_upper_left_y", L"0.0"));
+		layer.perspective.upper_right.x = scene->create_variable<double>(variable_prefix + L"perspective_upper_right_x", false, elem.second.get<std::wstring>(L"perspective_upper_right_x", layer.producer.get()->pixel_constraints().width.as<std::wstring>().get()));
+		layer.perspective.upper_right.y = scene->create_variable<double>(variable_prefix + L"perspective_upper_right_y", false, elem.second.get<std::wstring>(L"perspective_upper_right_y", L"0.0"));
+		layer.perspective.lower_right.x = scene->create_variable<double>(variable_prefix + L"perspective_lower_right_x", false, elem.second.get<std::wstring>(L"perspective_lower_right_x", layer.producer.get()->pixel_constraints().width.as<std::wstring>().get()));
+		layer.perspective.lower_right.y = scene->create_variable<double>(variable_prefix + L"perspective_lower_right_y", false, elem.second.get<std::wstring>(L"perspective_lower_right_y", layer.producer.get()->pixel_constraints().height.as<std::wstring>().get()));
+		layer.perspective.lower_left.x = scene->create_variable<double>(variable_prefix + L"perspective_lower_left_x", false, elem.second.get<std::wstring>(L"perspective_lower_left_x", L"0.0"));
+		layer.perspective.lower_left.y = scene->create_variable<double>(variable_prefix + L"perspective_lower_left_y", false, elem.second.get<std::wstring>(L"perspective_lower_left_y", layer.producer.get()->pixel_constraints().height.as<std::wstring>().get()));
 
 		layer.adjustments.opacity = scene->create_variable<double>(variable_prefix + L"adjustment.opacity", false, elem.second.get(L"adjustments.opacity", L"1.0"));
+		layer.is_key = scene->create_variable<bool>(variable_prefix + L"is_key", false, elem.second.get(L"is_key", L"false"));
+		layer.use_mipmap = scene->create_variable<bool>(variable_prefix + L"use_mipmap", false, elem.second.get(L"use_mipmap", L"false"));
+		layer.blend_mode = scene->create_variable<std::wstring>(variable_prefix + L"blend_mode", false, elem.second.get(L"blend_mode", L"normal")).transformed([](const std::wstring& b) { return get_blend_mode(b); });
+		layer.chroma_key.key = scene->create_variable<std::wstring>(variable_prefix + L"chroma_key.key", false, elem.second.get(L"chroma_key.key", L"none")).transformed([](const std::wstring& k) { return get_chroma_mode(k); });
+		layer.chroma_key.threshold = scene->create_variable<double>(variable_prefix + L"chroma_key.threshold", false, elem.second.get(L"chroma_key.threshold", L"0.0"));
+		layer.chroma_key.softness = scene->create_variable<double>(variable_prefix + L"chroma_key.softness", false, elem.second.get(L"chroma_key.softness", L"0.0"));
+		layer.chroma_key.spill = scene->create_variable<double>(variable_prefix + L"chroma_key.spill", false, elem.second.get(L"chroma_key.spill", L"0.0"));
 
 		scene->create_variable<double>(variable_prefix + L"width", false) = layer.producer.get()->pixel_constraints().width;
 		scene->create_variable<double>(variable_prefix + L"height", false) = layer.producer.get()->pixel_constraints().height;
@@ -131,6 +168,18 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 				scene->create_variable<std::wstring>(variable_prefix + L"parameter." + var_name, false, expr) = var.as<std::wstring>();
 			else if (var.is<bool>())
 				scene->create_variable<bool>(variable_prefix + L"parameter." + var_name, false, expr) = var.as<bool>();
+		}
+	}
+
+	if (root.get_child_optional(L"scene.marks"))
+	{
+		for (auto& mark : root.get_child(L"scene.marks"))
+		{
+			auto at = mark.second.get<int64_t>(L"<xmlattr>.at");
+			auto type = get_mark_action(mark.second.get<std::wstring>(L"<xmlattr>.type"));
+			auto label = mark.second.get(L"<xmlattr>.label", L"");
+
+			scene->add_mark(at, type, label);
 		}
 	}
 
@@ -169,6 +218,26 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 	scene->call(params2);
 
 	return scene;
+}
+
+void init(module_dependencies dependencies)
+{
+	dependencies.producer_registry->register_producer_factory(L"XML Scene Producer", create_xml_scene_producer, describe_xml_scene_producer);
+	dependencies.cg_registry->register_cg_producer(
+			L"scene",
+			{ L".scene" },
+			[](const std::wstring& filename) { return ""; },
+			[](const spl::shared_ptr<core::frame_producer>& producer)
+			{
+				return spl::make_shared<core::scene::scene_cg_proxy>(producer);
+			},
+			[](
+			const core::frame_producer_dependencies& dependencies,
+			const std::wstring& filename)
+			{
+				return create_xml_scene_producer(dependencies, { filename });
+			},
+			false);
 }
 
 }}}

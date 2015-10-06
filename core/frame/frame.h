@@ -3,13 +3,14 @@
 #undef BOOST_PARAMETER_MAX_ARITY
 #define BOOST_PARAMETER_MAX_ARITY 7
 
-#include "../video_format.h"
+#include "../fwd.h"
 
 #include <common/memory.h>
 #include <common/forward.h>
 #include <common/array.h>
 #include <common/future_fwd.h>
 #include <common/cache_aligned_vector.h>
+#include <common/timer.h>
 
 #include <cstddef>
 #include <cstdint>
@@ -34,7 +35,7 @@ public:
 	explicit mutable_frame(std::vector<array<std::uint8_t>> image_buffers, 
 						audio_buffer audio_buffer, 
 						const void* tag, 
-						const struct pixel_format_desc& desc);
+						const pixel_format_desc& desc);
 	~mutable_frame();
 
 	// Methods
@@ -46,7 +47,7 @@ public:
 			
 	// Properties
 			
-	const struct pixel_format_desc& pixel_format_desc() const;
+	const core::pixel_format_desc& pixel_format_desc() const;
 
 	const array<std::uint8_t>& image_data(std::size_t index = 0) const;
 	const core::audio_buffer& audio_data() const;
@@ -62,6 +63,8 @@ public:
 
 	const core::frame_geometry& geometry() const;
 	void set_geometry(const frame_geometry& g);
+
+	caspar::timer since_created() const;
 			
 private:
 	struct impl;
@@ -82,7 +85,7 @@ public:
 	explicit const_frame(std::shared_future<array<const std::uint8_t>> image, 
 						audio_buffer audio_buffer, 
 						const void* tag, 
-						const struct pixel_format_desc& desc);
+						const pixel_format_desc& desc);
 	const_frame(mutable_frame&& other);
 	~const_frame();
 
@@ -95,7 +98,7 @@ public:
 				
 	// Properties
 				
-	const struct pixel_format_desc& pixel_format_desc() const;
+	const core::pixel_format_desc& pixel_format_desc() const;
 
 	array<const std::uint8_t> image_data(int index = 0) const;
 	const core::audio_buffer& audio_data() const;
@@ -109,6 +112,7 @@ public:
 
 	const core::frame_geometry& geometry() const;
 	void set_geometry(const frame_geometry& g);
+	int64_t get_age_millis() const;
 
 	bool operator==(const const_frame& other);
 	bool operator!=(const const_frame& other);
