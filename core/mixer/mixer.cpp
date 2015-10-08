@@ -153,7 +153,6 @@ public:
 	{
 		boost::property_tree::wptree info;
 		info.add(L"mix-time", current_mix_time_);
-
 		return make_ready_future(std::move(info));
 	}
 
@@ -171,7 +170,7 @@ mixer::mixer(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::
 void mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 float mixer::get_master_volume() { return impl_->get_master_volume(); }
 void mixer::set_straight_alpha_output(bool value) { impl_->set_straight_alpha_output(value); }
-bool mixer::get_straight_alpha_output() { return impl_->get_straight_alpha_output(); }
+bool mixer::get_straight_alpha_output() const { return impl_->get_straight_alpha_output(); }
 std::future<boost::property_tree::wptree> mixer::info() const{return impl_->info();}
 std::future<boost::property_tree::wptree> mixer::delay_info() const{ return impl_->delay_info(); }
 const_frame mixer::operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc){ return (*impl_)(std::move(frames), format_desc); }

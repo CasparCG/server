@@ -175,6 +175,7 @@ public:
 		info.add(L"video-mode", format_desc_.name);
 		info.add_child(L"stage", stage_info.get());
 		info.add_child(L"mixer", mixer_info.get());
+		info.add(L"straight-alpha-output", ((mixer_.get_straight_alpha_output()) ? L"true" : L"false"));
 		info.add_child(L"output", output_info.get());
    
 		return info;			   
