@@ -27,7 +27,6 @@
 #include "../frame/frame_transform.h"
 
 #include "color/color_producer.h"
-#include "draw/freehand_producer.h"
 #include "separated/separated_producer.h"
 #include "variable.h"
 
@@ -329,9 +328,6 @@ spl::shared_ptr<core::frame_producer> do_create_producer(const frame_producer_de
 
 	if(producer == frame_producer::empty())
 		producer = create_color_producer(dependencies.frame_factory, params);
-
-	if (producer == frame_producer::empty())
-		producer = create_freehand_producer(dependencies.frame_factory, params);
 
 	if(producer == frame_producer::empty())
 		return producer;

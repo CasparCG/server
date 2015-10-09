@@ -24,6 +24,7 @@
 #include <gtest/gtest.h>
 
 #include <set>
+#include <locale>
 
 #include <boost/assign.hpp>
 

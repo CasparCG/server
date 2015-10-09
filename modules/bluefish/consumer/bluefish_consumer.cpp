@@ -27,6 +27,7 @@
 
 #include <core/video_format.h>
 #include <core/frame/frame.h>
+#include <core/frame/audio_channel_layout.h>
 #include <core/help/help_repository.h>
 #include <core/help/help_sink.h>
 
@@ -58,34 +59,45 @@ namespace caspar { namespace bluefish {
 			
 struct bluefish_consumer : boost::noncopyable
 {
-	spl::shared_ptr<CBlueVelvet4>		blue_;
-	const unsigned int					device_index_;
-	const core::video_format_desc		format_desc_;
-	const int							channel_index_;
+	spl::shared_ptr<CBlueVelvet4>						blue_;
+	const unsigned int									device_index_;
+	const core::video_format_desc						format_desc_;
+	const core::audio_channel_layout					channel_layout_;
+	core::audio_channel_remapper						channel_remapper_;
+	const int											channel_index_;
 
-	const std::wstring					model_name_;
+	const std::wstring									model_name_;
 
-	spl::shared_ptr<diagnostics::graph>	graph_;
-	boost::timer						frame_timer_;
-	boost::timer						tick_timer_;
-	boost::timer						sync_timer_;	
+	spl::shared_ptr<diagnostics::graph>					graph_;
+	boost::timer										frame_timer_;
+	boost::timer										tick_timer_;
+	boost::timer										sync_timer_;	
 			
-	unsigned int						vid_fmt_;
+	unsigned int										vid_fmt_;
 
-	std::array<blue_dma_buffer_ptr, 4>	reserved_frames_;	
-	tbb::concurrent_bounded_queue<core::const_frame> frame_buffer_;
-	tbb::atomic<int64_t>				presentation_delay_millis_;
-	core::const_frame					previous_frame_				= core::const_frame::empty();
+	std::array<blue_dma_buffer_ptr, 4>					reserved_frames_;	
+	tbb::concurrent_bounded_queue<core::const_frame>	frame_buffer_;
+	tbb::atomic<int64_t>								presentation_delay_millis_;
+	core::const_frame									previous_frame_				= core::const_frame::empty();
 
-	const bool							embedded_audio_;
-	const bool							key_only_;
+	const bool											embedded_audio_;
+	const bool											key_only_;
 		
-	executor							executor_;
+	executor											executor_;
 public:
-	bluefish_consumer(const core::video_format_desc& format_desc, int device_index, bool embedded_audio, bool key_only, int channel_index) 
+	bluefish_consumer(
+			const core::video_format_desc& format_desc,
+			const core::audio_channel_layout& in_channel_layout,
+			const core::audio_channel_layout& out_channel_layout,
+			int device_index,
+			bool embedded_audio,
+			bool key_only,
+			int channel_index)
 		: blue_(create_blue(device_index))
 		, device_index_(device_index)
-		, format_desc_(format_desc) 
+		, format_desc_(format_desc)
+		, channel_layout_(out_channel_layout)
+		, channel_remapper_(in_channel_layout, out_channel_layout)
 		, channel_index_(channel_index)
 		, model_name_(get_card_desc(*blue_))
 		, vid_fmt_(get_video_mode(*blue_, format_desc))
@@ -142,7 +154,19 @@ public:
 		}
 		else
 		{
-			if(BLUE_FAIL(set_card_property(blue_, EMBEDEDDED_AUDIO_OUTPUT, blue_emb_audio_enable | blue_emb_audio_group1_enable))) 
+			ULONG audio_value =
+				EMBEDDED_AUDIO_OUTPUT | blue_emb_audio_group1_enable;
+
+			if (channel_layout_.num_channels > 4)
+				audio_value |= blue_emb_audio_group2_enable;
+
+			if (channel_layout_.num_channels > 8)
+				audio_value |= blue_emb_audio_group3_enable;
+
+			if (channel_layout_.num_channels > 12)
+				audio_value |= blue_emb_audio_group4_enable;
+
+			if(BLUE_FAIL(set_card_property(blue_, EMBEDEDDED_AUDIO_OUTPUT, audio_value)))
 				CASPAR_LOG(warning) << print() << TEXT(" Failed to enable embedded audio.");			
 			CASPAR_LOG(info) << print() << TEXT(" Enabled embedded-audio.");
 		}
@@ -245,12 +269,13 @@ public:
 		// Send and display
 
 		if(embedded_audio_)
-		{		
-			auto frame_audio = core::audio_32_to_24(frame.audio_data());			
+		{
+			auto remapped_audio	= channel_remapper_.mix_and_rearrange(frame.audio_data());
+			auto frame_audio	= core::audio_32_to_24(remapped_audio);
 			encode_hanc(reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()), 
 						frame_audio.data(), 
-						static_cast<int>(frame.audio_data().size()/format_desc_.audio_channels), 
-						static_cast<int>(format_desc_.audio_channels));
+						static_cast<int>(frame.audio_data().size()/channel_layout_.num_channels), 
+						static_cast<int>(channel_layout_.num_channels));
 								
 			blue_->system_buffer_write_async(const_cast<uint8_t*>(reserved_frames_.front()->image_data()), 
 											static_cast<unsigned long>(reserved_frames_.front()->image_size()), 
@@ -284,7 +309,16 @@ public:
 	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, int audio_samples, int audio_nchannels)
 	{	
 		const auto sample_type = AUDIO_CHANNEL_24BIT | AUDIO_CHANNEL_LITTLEENDIAN;
-		const auto emb_audio_flag = blue_emb_audio_enable | blue_emb_audio_group1_enable;
+		auto emb_audio_flag = blue_emb_audio_enable | blue_emb_audio_group1_enable;
+
+		if (audio_nchannels > 4)
+			emb_audio_flag |= blue_emb_audio_group2_enable;
+
+		if (audio_nchannels > 8)
+			emb_audio_flag |= blue_emb_audio_group3_enable;
+
+		if (audio_nchannels > 12)
+			emb_audio_flag |= blue_emb_audio_group4_enable;
 		
 		hanc_stream_info_struct hanc_stream_info;
 		memset(&hanc_stream_info, 0, sizeof(hanc_stream_info));
@@ -325,30 +359,37 @@ struct bluefish_consumer_proxy : public core::frame_consumer
 
 	std::vector<int>					audio_cadence_;
 	core::video_format_desc				format_desc_;
+	core::audio_channel_layout			in_channel_layout_		= core::audio_channel_layout::invalid();
+	core::audio_channel_layout			out_channel_layout_;
 
 public:
 
-	bluefish_consumer_proxy(int device_index, bool embedded_audio, bool key_only)
+	bluefish_consumer_proxy(int device_index, bool embedded_audio, bool key_only, const core::audio_channel_layout& out_channel_layout)
 		: device_index_(device_index)
 		, embedded_audio_(embedded_audio)
 		, key_only_(key_only)
+		, out_channel_layout_(out_channel_layout)
 	{
 	}
 	
 	// frame_consumer
 	
-	void initialize(const core::video_format_desc& format_desc, int channel_index) override
+	void initialize(const core::video_format_desc& format_desc, const core::audio_channel_layout& channel_layout, int channel_index) override
 	{
-		format_desc_ = format_desc;
-		audio_cadence_ = format_desc.audio_cadence;
+		format_desc_		= format_desc;
+		in_channel_layout_	= channel_layout;
+		audio_cadence_		= format_desc.audio_cadence;
+
+		if (out_channel_layout_ == core::audio_channel_layout::invalid())
+			out_channel_layout_ = in_channel_layout_;
 
 		consumer_.reset();
-		consumer_.reset(new bluefish_consumer(format_desc, device_index_, embedded_audio_, key_only_, channel_index));
+		consumer_.reset(new bluefish_consumer(format_desc, in_channel_layout_, out_channel_layout_, device_index_, embedded_audio_, key_only_, channel_index));
 	}
 	
 	std::future<bool> send(core::const_frame frame) override
 	{
-		CASPAR_VERIFY(audio_cadence_.front() * format_desc_.audio_channels == static_cast<size_t>(frame.audio_data().size()));
+		CASPAR_VERIFY(audio_cadence_.front() * in_channel_layout_.num_channels == static_cast<size_t>(frame.audio_data().size()));
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 		return consumer_->send(frame);
 	}
@@ -399,7 +440,7 @@ public:
 void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"Sends video on an SDI output using Bluefish video cards.");
-	sink.syntax(L"BLUEFISH {[device_index:int]|1} {[embedded_audio:EMBEDDED_AUDIO]} {[key_only:KEY_ONLY]}");
+	sink.syntax(L"BLUEFISH {[device_index:int]|1} {[embedded_audio:EMBEDDED_AUDIO]} {[key_only:KEY_ONLY]} {CHANNEL_LAYOUT [channel_layout:string]}");
 	sink.para()
 		->text(L"Sends video on an SDI output using Bluefish video cards. Multiple video cards can be ")
 		->text(L"installed in the same machine and used at the same time, they will be addressed via ")
@@ -409,6 +450,7 @@ void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
 		->text(L"Specifying ")->code(L"key_only")->text(L" will extract only the alpha channel from the ")
 		->text(L"channel. This is useful when you have two SDI video cards, and neither has native support ")
 		->text(L"for separate fill/key output");
+	sink.para()->text(L"Specify ")->code(L"channel_layout")->text(L" to output a different audio channel layout than the channel uses.");
 	sink.para()->text(L"Examples:");
 	sink.example(L">> ADD 1 BLUEFISH", L"uses the default device_index of 1.");
 	sink.example(L">> ADD 1 BLUEFISH 2", L"for device_index 2.");
@@ -425,20 +467,46 @@ spl::shared_ptr<core::frame_consumer> create_consumer(
 
 	const auto device_index = params.size() > 1 ? boost::lexical_cast<int>(params.at(1)) : 1;
 
-	const auto embedded_audio	= contains_param(L"EMBEDDED_AUDIO", params);
-	const auto key_only			= contains_param(L"KEY_ONLY", params);
+	const auto embedded_audio	= contains_param(	L"EMBEDDED_AUDIO",	params);
+	const auto key_only			= contains_param(	L"KEY_ONLY",		params);
+	const auto channel_layout	= get_param(		L"CHANNEL_LAYOUT",	params);
 
-	return spl::make_shared<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
+	auto layout = core::audio_channel_layout::invalid();
+
+	if (!channel_layout.empty())
+	{
+		auto found_layout = core::audio_channel_layout_repository::get_default()->get_layout(channel_layout);
+
+		if (!found_layout)
+			CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Channel layout " + channel_layout + L" not found"));
+
+		layout = *found_layout;
+	}
+
+	return spl::make_shared<bluefish_consumer_proxy>(device_index, embedded_audio, key_only, layout);
 }
 
 spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 		const boost::property_tree::wptree& ptree, core::interaction_sink*)
 {	
-	const auto device_index		= ptree.get(L"device",			1);
-	const auto embedded_audio	= ptree.get(L"embedded-audio",	false);
-	const auto key_only			= ptree.get(L"key-only",		false);
+	const auto device_index		= ptree.get(						L"device",			1);
+	const auto embedded_audio	= ptree.get(						L"embedded-audio",	false);
+	const auto key_only			= ptree.get(						L"key-only",		false);
+	const auto channel_layout	= ptree.get_optional<std::wstring>(	L"channel-layout");
 
-	return spl::make_shared<bluefish_consumer_proxy>(device_index, embedded_audio, key_only);
+	auto layout = core::audio_channel_layout::invalid();
+
+	if (channel_layout)
+	{
+		auto found_layout = core::audio_channel_layout_repository::get_default()->get_layout(*channel_layout);
+
+		if (!found_layout)
+			CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Channel layout " + *channel_layout + L" not found"));
+
+		layout = *found_layout;
+	}
+
+	return spl::make_shared<bluefish_consumer_proxy>(device_index, embedded_audio, key_only, layout);
 }
 
 }}

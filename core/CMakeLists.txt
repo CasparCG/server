@@ -10,6 +10,7 @@ set(SOURCES
 		diagnostics/osd_graph.cpp
 		diagnostics/subject_diagnostics.cpp
 
+		frame/audio_channel_layout.cpp
 		frame/draw_frame.cpp
 		frame/frame.cpp
 		frame/frame_transform.cpp
@@ -23,8 +24,6 @@ set(SOURCES
 		mixer/mixer.cpp
 
 		producer/color/color_producer.cpp
-
-		producer/draw/freehand_producer.cpp
 
 		producer/media_info/in_memory_media_info_repository.cpp
 
@@ -64,6 +63,7 @@ set(HEADERS
 		diagnostics/osd_graph.h
 		diagnostics/subject_diagnostics.h
 
+		frame/audio_channel_layout.h
 		frame/draw_frame.h
 		frame/frame.h
 		frame/frame_factory.h
@@ -86,8 +86,6 @@ set(HEADERS
 		monitor/monitor.h
 
 		producer/color/color_producer.h
-
-		producer/draw/freehand_producer.h
 
 		producer/media_info/in_memory_media_info_repository.h
 		producer/media_info/media_info.h
@@ -144,7 +142,6 @@ source_group(sources\\frame frame/*)
 source_group(sources\\help help/*)
 source_group(sources\\interaction interaction/*)
 source_group(sources\\mixer mixer/*)
-source_group(sources\\producer\\draw producer/draw/*)
 source_group(sources\\producer\\media_info producer/media_info/*)
 source_group(sources\\producer\\scene producer/scene/*)
 source_group(sources\\producer\\text\\utils producer/text/utils/*)

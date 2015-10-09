@@ -37,6 +37,7 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
+#include <core/frame/audio_channel_layout.h>
 #include <core/producer/frame_producer.h>
 #include <core/monitor/monitor.h>
 #include <core/help/help_repository.h>
@@ -296,7 +297,7 @@ public:
 		{			
 			core::pixel_format_desc desc = core::pixel_format::bgra;
 			desc.planes.push_back(core::pixel_format_desc::plane(width_, height_, 4));
-			auto frame = frame_factory_->create_frame(this, desc);
+			auto frame = frame_factory_->create_frame(this, desc, core::audio_channel_layout::invalid());
 
 			A_memset(bmp_.data(), 0, width_ * height_ * 4);
 			ax_->DrawControl(bmp_);

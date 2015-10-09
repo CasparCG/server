@@ -24,6 +24,7 @@
 #include <gtest/gtest.h>
 
 #include <core/mixer/image/image_mixer.h>
+#include <core/frame/audio_channel_layout.h>
 #include <core/frame/pixel_format.h>
 #include <core/frame/frame_transform.h>
 #include <core/frame/draw_frame.h>
@@ -52,7 +53,8 @@ spl::shared_ptr<core::image_mixer> create_mixer<accelerator::ogl::image_mixer>()
 {
 	return spl::make_shared<accelerator::ogl::image_mixer>(
 			ogl_device(),
-			false); // blend modes not wanted
+			false,  // blend modes not wanted
+			false); // straight alpha not wanted
 }
 
 struct dummy_ogl_with_blend_modes {};
@@ -61,7 +63,8 @@ spl::shared_ptr<core::image_mixer> create_mixer<dummy_ogl_with_blend_modes>()
 {
 	return spl::make_shared<accelerator::ogl::image_mixer>(
 			ogl_device(),
-			true); // blend modes wanted
+			true,   // blend modes wanted
+			false); // straight alpha not wanted
 }
 
 template <>
@@ -107,7 +110,7 @@ public:
 	{
 		core::pixel_format_desc desc(core::pixel_format::bgra);
 		desc.planes.push_back(core::pixel_format_desc::plane(width, height, 4));
-		return mixer->create_frame(this, desc);
+		return mixer->create_frame(this, desc, core::audio_channel_layout::invalid());
 	}
 
 	core::mutable_frame create_single_color_frame(
@@ -124,11 +127,8 @@ public:
 
 	void add_layer(core::draw_frame frame, core::blend_mode blend_mode = core::blend_mode::normal)
 	{
-		mixer->begin_layer(core::blend_mode::normal);
-
+		frame.transform().image_transform.layer_depth = 1;
 		frame.accept(*mixer);
-
-		mixer->end_layer();
 	}
 
 	array<const uint8_t> get_result(int width, int height)
@@ -138,7 +138,7 @@ public:
 		desc.height = height;
 		desc.size = width * height * 4;
 
-		return (*mixer)(desc).get();
+		return (*mixer)(desc, false).get();
 	}
 };
 
@@ -244,7 +244,7 @@ TYPED_TEST(MixerTestOgl, TransformFillScale)
 	frame.transform().image_transform.fill_scale[1] = 0.5;
 	add_layer(frame);
 	auto res = get_result(2, 2);
-	std::vector<const uint8_t> result(res.begin(), res.end());
+	std::vector<std::uint8_t> result(res.begin(), res.end());
 
 	// bottom right corner
 	ASSERT_EQ(boost::assign::list_of<uint8_t>
@@ -254,7 +254,7 @@ TYPED_TEST(MixerTestOgl, TransformFillScale)
 	frame.transform().image_transform.fill_translation[0] = 0;
 	add_layer(frame);
 	res = get_result(2, 2);
-	result = std::vector<const uint8_t>(res.begin(), res.end());
+	result = std::vector<std::uint8_t>(res.begin(), res.end());
 
 	// bottom left corner
 	ASSERT_EQ(boost::assign::list_of<uint8_t>

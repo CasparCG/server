@@ -26,6 +26,7 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/video_format.h>
 #include <core/frame/frame.h>
+#include <core/frame/audio_channel_layout.h>
 #include <core/mixer/audio/audio_util.h>
 #include <core/monitor/monitor.h>
 #include <core/help/help_sink.h>
@@ -52,6 +53,7 @@ struct newtek_ivga_consumer : public core::frame_consumer
 	core::monitor::subject				monitor_subject_;
 	std::shared_ptr<void>				air_send_;
 	core::video_format_desc				format_desc_;
+	core::audio_channel_layout			channel_layout_		= core::audio_channel_layout::invalid();
 	executor							executor_;
 	tbb::atomic<bool>					connected_;
 	spl::shared_ptr<diagnostics::graph>	graph_;
@@ -83,6 +85,7 @@ public:
 	
 	virtual void initialize(
 			const core::video_format_desc& format_desc,
+			const core::audio_channel_layout& channel_layout,
 			int channel_index) override
 	{
 		air_send_.reset(
@@ -94,13 +97,14 @@ public:
 				format_desc.field_mode == core::field_mode::progressive,
 				static_cast<float>(format_desc.square_width) / static_cast<float>(format_desc.square_height),
 				true,
-				format_desc.audio_channels,
+				channel_layout.num_channels,
 				format_desc.audio_sample_rate),
 				airsend::destroy);
 
 		CASPAR_VERIFY(air_send_);
 
-		format_desc_ = format_desc;
+		format_desc_	= format_desc;
+		channel_layout_	= channel_layout;
 
 		CASPAR_LOG(info) << print() << L" Successfully Initialized.";
 	}
@@ -117,7 +121,7 @@ public:
 
 			auto audio_buffer = core::audio_32_to_16(frame.audio_data());
 
-			airsend::add_audio(air_send_.get(), audio_buffer.data(), static_cast<int>(audio_buffer.size()) / format_desc_.audio_channels);
+			airsend::add_audio(air_send_.get(), audio_buffer.data(), static_cast<int>(audio_buffer.size()) / channel_layout_.num_channels);
 
 			// VIDEO
 
