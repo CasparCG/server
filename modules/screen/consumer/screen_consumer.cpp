@@ -609,7 +609,7 @@ public:
 	
 	// frame_consumer
 
-	void initialize(const core::video_format_desc& format_desc, int channel_index) override
+	void initialize(const core::video_format_desc& format_desc, const core::audio_channel_layout&, int channel_index) override
 	{
 		consumer_.reset();
 		consumer_.reset(new screen_consumer(config_, format_desc, channel_index, sink_));

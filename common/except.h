@@ -61,13 +61,10 @@ typedef boost::error_info<struct tag_nested_exception_, std::exception_ptr> nest
 struct caspar_exception			: virtual boost::exception, virtual std::exception 
 {
 	caspar_exception(){}
-	explicit caspar_exception(const char* msg) : msg_(msg) {}
 	const char* what() const throw() override
 	{
-		return msg_;
+		return boost::diagnostic_information_what(*this);
 	}
-private:
-	const char* msg_ = "";
 };
 
 struct io_error					: virtual caspar_exception {};

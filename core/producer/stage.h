@@ -57,7 +57,7 @@ public:
 
 	// Constructors
 
-	explicit stage(int channel_index, spl::shared_ptr<diagnostics::graph> graph);
+	explicit stage(int channel_index, spl::shared_ptr<caspar::diagnostics::graph> graph);
 	
 	// Methods
 

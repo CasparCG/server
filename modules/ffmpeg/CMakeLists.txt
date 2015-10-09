@@ -7,6 +7,7 @@ set(SOURCES
 
 		producer/audio/audio_decoder.cpp
 
+		producer/filter/audio_filter.cpp
 		producer/filter/filter.cpp
 
 		producer/input/input.cpp
@@ -21,6 +22,7 @@ set(SOURCES
 		producer/ffmpeg_producer.cpp
 		producer/tbb_avcodec.cpp
 
+		audio_channel_remapper.cpp
 		ffmpeg.cpp
 		ffmpeg_error.cpp
 		StdAfx.cpp
@@ -31,6 +33,7 @@ set(HEADERS
 
 		producer/audio/audio_decoder.h
 
+		producer/filter/audio_filter.h
 		producer/filter/filter.h
 
 		producer/input/input.h

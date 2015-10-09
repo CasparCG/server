@@ -25,6 +25,7 @@
 
 #include <core/frame/pixel_format.h>
 #include <core/frame/frame_factory.h>
+#include <core/frame/audio_channel_layout.h>
 #include <core/producer/frame_producer.h>
 #include <core/producer/color/color_producer.h>
 #include <core/producer/text/text_producer.h>
@@ -421,7 +422,7 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 						core::pixel_format_desc pfd(core::pixel_format::bgra);
 						pfd.planes.push_back(core::pixel_format_desc::plane((*it)->bitmap()->width(), (*it)->bitmap()->height(), 4));
 
-						auto frame = dependencies.frame_factory->create_frame(it->get(), pfd);
+						auto frame = dependencies.frame_factory->create_frame(it->get(), pfd, core::audio_channel_layout::invalid());
 						auto destination = frame.image_data().data();
 						auto source = (*it)->bitmap()->data();
 						memcpy(destination, source, frame.image_data().size());

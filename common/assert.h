@@ -22,6 +22,7 @@
 #pragma once
 
 #include "log.h"
+#include "except.h"
 
 #ifdef _MSC_VER
 #define _CASPAR_DBG_BREAK _CrtDbgBreak()
@@ -36,6 +37,9 @@
 	<< "file:" << __FILE__ << " " \
 	<< "line:" << __LINE__ << " "; \
 	_CASPAR_DBG_BREAK;\
+	}}while(0);
+
+#define CASPAR_ENSURE(expr) do{if(!(expr)){ CASPAR_THROW_EXCEPTION(programming_error() << msg_info(std::string("Assertion Failed: ") + CASPAR_VERIFY_EXPR_STR(expr))); \
 	}}while(0);
 
 #ifdef _DEBUG
