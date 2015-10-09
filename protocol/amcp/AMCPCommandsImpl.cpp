@@ -266,9 +266,12 @@ std::wstring ListTemplates(const spl::shared_ptr<core::cg_producer_registry>& cg
 			auto str = relativePath.replace_extension(L"").generic_wstring();
 			boost::trim_if(str, boost::is_any_of("\\/"));
 
+			auto template_type = cg_registry->get_cg_producer_name(str);
+
 			replyString << L"\"" << str
 						<< L"\" " << sizeWStr
 						<< L" " << writeTimeWStr
+						<< L" " << template_type
 						<< L"\r\n";
 		}
 	}
