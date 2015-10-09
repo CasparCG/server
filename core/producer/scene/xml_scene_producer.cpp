@@ -99,7 +99,7 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 	int width = root.get<int>(L"scene.<xmlattr>.width");
 	int height = root.get<int>(L"scene.<xmlattr>.height");
 
-	auto scene = spl::make_shared<scene_producer>(width, height, dependencies.format_desc);
+	auto scene = spl::make_shared<scene_producer>(L"scene", width, height, dependencies.format_desc);
 
 	for (auto elem : root.get_child(L"scene.variables"))
 	{

@@ -75,9 +75,6 @@ private:
 		bool					reusable_producer_instance;
 	};
 
-	struct name {};
-	struct extension {};
-
 	mutable boost::mutex			mutex_;
 	std::map<std::wstring, record>	records_by_extension_;
 public:
@@ -199,6 +196,16 @@ public:
 
 		return records_by_extension_.find(extension) != records_by_extension_.end();
 	}
+
+	std::wstring get_cg_producer_name(const std::wstring& filename) const
+	{
+		auto record = find_record(filename);
+
+		if (!record)
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(filename + L" is not a cg template."));
+
+		return record->name;
+	}
 private:
 	boost::optional<record> find_record(const std::wstring& filename) const
 	{
@@ -276,6 +283,11 @@ std::string cg_producer_registry::read_meta_info(const std::wstring& filename) c
 bool cg_producer_registry::is_cg_extension(const std::wstring& extension) const
 {
 	return impl_->is_cg_extension(extension);
+}
+
+std::wstring cg_producer_registry::get_cg_producer_name(const std::wstring& filename) const
+{
+	return impl_->get_cg_producer_name(filename);
 }
 
 }}

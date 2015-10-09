@@ -363,7 +363,7 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 	psd_document doc;
 	doc.parse(*found_file);
 
-	spl::shared_ptr<core::scene::scene_producer> root(spl::make_shared<core::scene::scene_producer>(doc.width(), doc.height(), dependencies.format_desc));
+	auto root = spl::make_shared<core::scene::scene_producer>(L"psd", doc.width(), doc.height(), dependencies.format_desc);
 
 	layer_link_constructor link_constructor;
 
@@ -467,7 +467,7 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 void init(core::module_dependencies dependencies)
 {
 	dependencies.cg_registry->register_cg_producer(
-			L"scene",
+			L"psd",
 			{ L".psd" },
 			[](const std::wstring& filename) { return ""; },
 			[](const spl::shared_ptr<core::frame_producer>& producer)
