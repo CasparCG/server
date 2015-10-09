@@ -14,6 +14,7 @@
 
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
+#include <core/frame/audio_channel_layout.h>
 #include <core/video_format.h>
 #include <core/monitor/monitor.h>
 #include <core/help/help_repository.h>
@@ -84,6 +85,7 @@ private:
 	bool										compatibility_mode_;
 												
 	core::video_format_desc						in_video_format_;
+	core::audio_channel_layout					in_channel_layout_			= core::audio_channel_layout::invalid();
 
 	std::shared_ptr<AVFormatContext>			oc_;
 	tbb::atomic<bool>							abort_request_;
@@ -190,6 +192,7 @@ public:
 
 	void initialize(
 			const core::video_format_desc& format_desc,
+			const core::audio_channel_layout& channel_layout,
 			int channel_index) override
 	{
 		try
@@ -247,6 +250,7 @@ public:
 			CASPAR_VERIFY(format_desc.format != core::video_format::invalid);
 
 			in_video_format_ = format_desc;
+			in_channel_layout_ = channel_layout;
 							
 			CASPAR_VERIFY(oc_->oformat);
 			
@@ -724,12 +728,12 @@ private:
 		const auto asrc_options = (boost::format("sample_rate=%1%:sample_fmt=%2%:channels=%3%:time_base=%4%/%5%:channel_layout=%6%")
 			% in_video_format_.audio_sample_rate
 			% av_get_sample_fmt_name(AV_SAMPLE_FMT_S32)
-			% in_video_format_.audio_channels
+			% in_channel_layout_.num_channels
 			% 1	% in_video_format_.audio_sample_rate
 			% boost::io::group(
 				std::hex, 
 				std::showbase, 
-				av_get_default_channel_layout(in_video_format_.audio_channels))).str();
+				av_get_default_channel_layout(in_channel_layout_.num_channels))).str();
 
 		AVFilterContext* filt_asrc = nullptr;
 		FF(avfilter_graph_create_filter(
@@ -985,8 +989,8 @@ private:
 					av_frame_free(&p);
 				});
 		
-			src_av_frame->channels		 = in_video_format_.audio_channels;
-			src_av_frame->channel_layout = av_get_default_channel_layout(in_video_format_.audio_channels);
+			src_av_frame->channels		 = in_channel_layout_.num_channels;
+			src_av_frame->channel_layout = av_get_default_channel_layout(in_channel_layout_.num_channels);
 			src_av_frame->sample_rate	 = in_video_format_.audio_sample_rate;
 			src_av_frame->nb_samples	 = static_cast<int>(frame_ptr.audio_data().size()) / src_av_frame->channels;
 			src_av_frame->format		 = AV_SAMPLE_FMT_S32;

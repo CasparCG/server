@@ -23,6 +23,7 @@
 
 #include "server.h"
 #include "included_modules.h"
+#include "default_audio_config.h"
 
 #include <accelerator/accelerator.h>
 
@@ -34,6 +35,7 @@
 
 #include <core/video_channel.h>
 #include <core/video_format.h>
+#include <core/frame/audio_channel_layout.h>
 #include <core/producer/stage.h>
 #include <core/producer/frame_producer.h>
 #include <core/producer/scene/scene_producer.h>
@@ -166,6 +168,9 @@ struct server::impl : boost::noncopyable
 	{
 		running_ = true;
 
+		setup_audio_config(env::properties());
+		CASPAR_LOG(info) << L"Initialized audio config.";
+
 		setup_channels(env::properties());
 		CASPAR_LOG(info) << L"Initialized channels.";
 
@@ -207,17 +212,42 @@ struct server::impl : boost::noncopyable
 		uninitialize_modules();
 		core::diagnostics::osd::shutdown();
 	}
-				
+
+	void setup_audio_config(const boost::property_tree::wptree& pt)
+	{
+		using boost::property_tree::wptree;
+
+		auto default_config = get_default_audio_config();
+
+		// Start with the defaults
+		audio_channel_layout_repository::get_default()->register_all_layouts(default_config.get_child(L"audio.channel-layouts"));
+		audio_mix_config_repository::get_default()->register_all_configs(default_config.get_child(L"audio.mix-configs"));
+
+		// Merge with user configuration (adds to or overwrites the defaults)
+		auto custom_channel_layouts	= pt.get_child_optional(L"configuration.audio.channel-layouts");
+		auto custom_mix_configs		= pt.get_child_optional(L"configuration.audio.mix-configs");
+
+		if (custom_channel_layouts)
+			audio_channel_layout_repository::get_default()->register_all_layouts(*custom_channel_layouts);
+
+		if (custom_mix_configs)
+			audio_mix_config_repository::get_default()->register_all_configs(*custom_mix_configs);
+	}
+
 	void setup_channels(const boost::property_tree::wptree& pt)
 	{   
 		using boost::property_tree::wptree;
 		for (auto& xml_channel : pt.get_child(L"configuration.channels"))
 		{		
-			auto format_desc = video_format_desc(xml_channel.second.get(L"video-mode", L"PAL"));		
+			auto format_desc = video_format_desc(xml_channel.second.get(L"video-mode", L"PAL"));
 			if(format_desc.format == video_format::invalid)
 				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid video-mode."));
-			
-			auto channel = spl::make_shared<video_channel>(static_cast<int>(channels_.size()+1), format_desc, accelerator_.create_image_mixer());
+
+			auto channel_layout = core::audio_channel_layout_repository::get_default()->get_layout(xml_channel.second.get(L"channel-layout", L"stereo"));
+			if (!channel_layout)
+				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Unknown channel-layout."));
+
+			auto channel = spl::make_shared<video_channel>(static_cast<int>(channels_.size()+1), format_desc, *channel_layout, accelerator_.create_image_mixer());
 
 			core::diagnostics::scoped_call_context save;
 			core::diagnostics::call_context::for_thread().video_channel = channel->index();
@@ -245,7 +275,11 @@ struct server::impl : boost::noncopyable
 		// Dummy diagnostics channel
 		if (env::properties().get(L"configuration.channel-grid", false))
 		{
-			channels_.push_back(spl::make_shared<video_channel>(static_cast<int>(channels_.size() + 1), core::video_format_desc(core::video_format::x576p2500), accelerator_.create_image_mixer()));
+			channels_.push_back(spl::make_shared<video_channel>(
+					static_cast<int>(channels_.size() + 1),
+					core::video_format_desc(core::video_format::x576p2500),
+					*core::audio_channel_layout_repository::get_default()->get_layout(L"stereo"),
+					accelerator_.create_image_mixer()));
 			channels_.back()->monitor_output().attach_parent(monitor_subject_);
 		}
 	}

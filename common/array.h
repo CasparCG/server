@@ -15,18 +15,23 @@ namespace caspar {
 template<typename T>
 class array final
 {
-	array(const array<std::uint8_t>&);
-	array& operator=(const array<std::uint8_t>&);
+	array(const array<T>&);
+	array& operator=(const array<T>&);
 
 	template<typename> friend class array;
 public:
+
+	// Boost Range support
+
+	typedef T*			iterator;
+	typedef const T*	const_iterator;
 
 	// Static Members
 
 	// Constructors
 	
 	template<typename T2>
-	explicit array(std::uint8_t* ptr, std::size_t size, bool cacheable, T2&& storage)
+	explicit array(T* ptr, std::size_t size, bool cacheable, T2&& storage)
 		: ptr_(ptr)
 		, size_(size)
 		, cacheable_(cacheable)
@@ -61,7 +66,7 @@ public:
 			
 	T* begin() const			{return ptr_;}		
 	T* data() const				{return ptr_;}
-	T* end() const				{return reinterpret_cast<T*>(reinterpret_cast<char*>(ptr_) + size_);}
+	T* end() const				{return ptr_ + size_;}
 	std::size_t size() const	{return size_;}
 	bool empty() const			{return size() == 0;}
 	bool cacheable() const		{return cacheable_;}
@@ -72,9 +77,9 @@ public:
 		return boost::any_cast<T2>(storage_.get());
 	}
 private:
-	T*			ptr_;
-	std::size_t	size_;
-	bool		cacheable_;
+	T*							ptr_;
+	std::size_t					size_;
+	bool						cacheable_;
 	std::unique_ptr<boost::any>	storage_;
 };
 
@@ -83,13 +88,18 @@ class array<const T> final
 {
 public:
 
+	// Boost Range support
+
+	typedef const T*	iterator;
+	typedef const T*	const_iterator;
+
 	// Static Members
 
 	// Constructors
 	array() = default; // Needed by std::future
 
 	template<typename T2>
-	explicit array(const std::uint8_t* ptr, std::size_t size, bool cacheable, T2&& storage)
+	explicit array(const T* ptr, std::size_t size, bool cacheable, T2&& storage)
 		: ptr_(ptr)
 		, size_(size)
 		, cacheable_(cacheable)
@@ -97,7 +107,7 @@ public:
 	{
 	}
 
-	explicit array(const std::uint8_t* ptr, std::size_t size, bool cacheable)
+	explicit array(const T* ptr, std::size_t size, bool cacheable)
 		: ptr_(ptr)
 		, size_(size)
 		, cacheable_(cacheable)
@@ -143,7 +153,7 @@ public:
 			
 	const T* begin() const		{return ptr_;}		
 	const T* data() const		{return ptr_;}
-	const T* end() const		{return reinterpret_cast<const T*>(reinterpret_cast<const char*>(ptr_) + size_);}
+	const T* end() const		{return ptr_ + size_;}
 	std::size_t size() const	{return size_;}
 	bool empty() const			{return size() == 0;}
 	bool cacheable() const		{return cacheable_;}

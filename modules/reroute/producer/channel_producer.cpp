@@ -31,6 +31,7 @@
 
 #include <core/frame/frame.h>
 #include <core/frame/pixel_format.h>
+#include <core/frame/audio_channel_layout.h>
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/video_format.h>
@@ -57,6 +58,7 @@ class channel_consumer : public core::frame_consumer
 	core::monitor::subject								monitor_subject_;
 	tbb::concurrent_bounded_queue<core::const_frame>	frame_buffer_;
 	core::video_format_desc								format_desc_;
+	core::audio_channel_layout							channel_layout_			= core::audio_channel_layout::invalid();
 	int													channel_index_;
 	int													consumer_index_;
 	tbb::atomic<bool>									is_running_;
@@ -110,9 +112,11 @@ public:
 
 	void initialize(
 			const core::video_format_desc& format_desc,
+			const core::audio_channel_layout& channel_layout,
 			int channel_index) override
 	{
 		format_desc_    = format_desc;
+		channel_layout_ = channel_layout;
 		channel_index_  = channel_index;
 	}
 
@@ -164,6 +168,11 @@ public:
 	const core::video_format_desc& get_video_format_desc()
 	{
 		return format_desc_;
+	}
+
+	const core::audio_channel_layout& get_audio_channel_layout()
+	{
+		return channel_layout_;
 	}
 
 	void block_until_first_frame_available()
@@ -251,7 +260,7 @@ public:
 		core::pixel_format_desc desc;
 		desc.format = core::pixel_format::bgra;
 		desc.planes.push_back(core::pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
-		auto frame = frame_factory_->create_frame(this, desc);
+		auto frame = frame_factory_->create_frame(this, desc, consumer_->get_audio_channel_layout());
 
 		bool copy_audio = !double_speed && !half_speed;
 

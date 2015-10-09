@@ -28,6 +28,7 @@
 #include "../producer/tbb_avcodec.h"
 
 #include <core/frame/frame.h>
+#include <core/frame/audio_channel_layout.h>
 #include <core/mixer/audio/audio_util.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/video_format.h>
@@ -261,9 +262,11 @@ typedef cache_aligned_vector<uint8_t> byte_vector;
 struct ffmpeg_consumer : boost::noncopyable
 {		
 	const spl::shared_ptr<diagnostics::graph>	graph_;
-	const std::string							filename_;		
+	const std::string							filename_;
+	const std::string							full_filename_		= u8(env::media_folder()) + filename_;
 	const std::shared_ptr<AVFormatContext>		oc_					{ avformat_alloc_context(), avformat_free_context };
-	const core::video_format_desc				format_desc_;	
+	const core::video_format_desc				format_desc_;
+	const core::audio_channel_layout			channel_layout_;
 
 	core::monitor::subject						monitor_subject_;
 	
@@ -287,10 +290,16 @@ struct ffmpeg_consumer : boost::noncopyable
 
 	executor									executor_;
 public:
-	ffmpeg_consumer(const std::string& filename, const core::video_format_desc& format_desc, std::vector<option> options, bool key_only)
+	ffmpeg_consumer(
+			const std::string& filename,
+			const core::video_format_desc& format_desc,
+			const core::audio_channel_layout& channel_layout,
+			std::vector<option> options,
+			bool key_only)
 		: filename_(filename)
 		, format_desc_(format_desc)
-		, output_format_(format_desc, filename, options)
+		, channel_layout_(channel_layout)
+		, output_format_(format_desc, full_filename_, options)
 		, key_only_(key_only)
 		, executor_(print())
 	{
@@ -298,7 +307,7 @@ public:
 		check_space();
 
 		// TODO: Ask stakeholders about case where file already exists.
-		boost::filesystem::remove(boost::filesystem::path(env::media_folder() + u16(filename))); // Delete the file if it exists
+		boost::filesystem::remove(boost::filesystem::path(full_filename_)); // Delete the file if it exists
 
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
@@ -309,7 +318,7 @@ public:
 
 		oc_->oformat = output_format_.format;
 				
-		std::strcpy(oc_->filename, filename_.c_str());
+		std::strcpy(oc_->filename, full_filename_.c_str());
 		
 		//  Add the audio and video streams using the default format codecs	and initialize the codecs.
 		video_st_ = add_video_stream(options);
@@ -317,11 +326,11 @@ public:
 		if (!key_only)
 			audio_st_ = add_audio_stream(options);
 				
-		av_dump_format(oc_.get(), 0, filename_.c_str(), 1);
+		av_dump_format(oc_.get(), 0, full_filename_.c_str(), 1);
 		 
 		// Open the output ffmpeg, if needed.
 		if (!(oc_->oformat->flags & AVFMT_NOFILE)) 
-			THROW_ON_ERROR2(avio_open(&oc_->pb, filename.c_str(), AVIO_FLAG_WRITE), "[ffmpeg_consumer]");
+			THROW_ON_ERROR2(avio_open(&oc_->pb, full_filename_.c_str(), AVIO_FLAG_WRITE), "[ffmpeg_consumer]");
 				
 		THROW_ON_ERROR2(avformat_write_header(oc_.get(), nullptr), "[ffmpeg_consumer]");
 
@@ -543,9 +552,10 @@ private:
 		av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper;
 		av_frame->pts = frame_number_++;
 
-		monitor_subject_ << core::monitor::message("/frame")
-				% static_cast<int64_t>(frame_number_)
-				% static_cast<int64_t>(std::numeric_limits<int64_t>::max());
+		monitor_subject_
+			<< core::monitor::message("/frame") % static_cast<int64_t>(frame_number_)
+			<< core::monitor::message("/path") % filename_
+			<< core::monitor::message("/fps") % format_desc_.fps;
 
 		AVPacket pkt;
 		av_init_packet(&pkt);
@@ -700,7 +710,7 @@ private:
 		{
 			swr_ = std::shared_ptr<SwrContext>(swr_alloc_set_opts(nullptr,
 										get_channel_layout(c), c->sample_fmt, c->sample_rate,
-										av_get_default_channel_layout(format_desc_.audio_channels), AV_SAMPLE_FMT_S32, format_desc_.audio_sample_rate,
+										av_get_default_channel_layout(channel_layout_.num_channels), AV_SAMPLE_FMT_S32, format_desc_.audio_sample_rate,
 										0, nullptr), [](SwrContext* p){swr_free(&p);});
 
 			if(!swr_)
@@ -716,7 +726,7 @@ private:
 
 		auto channel_samples = swr_convert(swr_.get(), 
 										   out, static_cast<int>(buffer.size()) / c->channels / av_get_bytes_per_sample(c->sample_fmt), 
-										   in, static_cast<int>(frame.audio_data().size()/format_desc_.audio_channels));
+										   in, static_cast<int>(frame.audio_data().size()/channel_layout_.num_channels));
 
 		buffer.resize(channel_samples * c->channels * av_get_bytes_per_sample(c->sample_fmt));	
 
@@ -725,7 +735,7 @@ private:
 
 	void check_space()
 	{
-		auto space = boost::filesystem::space(boost::filesystem::path(filename_).parent_path());
+		auto space = boost::filesystem::space(boost::filesystem::path(full_filename_).parent_path());
 		if(space.available < 512*1000000)
 			CASPAR_THROW_EXCEPTION(file_write_error() << msg_info("out of space"));
 	}
@@ -772,20 +782,20 @@ public:
 	{
 	}
 	
-	void initialize(const core::video_format_desc& format_desc, int) override
+	void initialize(const core::video_format_desc& format_desc, const core::audio_channel_layout& channel_layout, int) override
 	{
 		if(consumer_)
 			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot reinitialize ffmpeg-consumer."));
 
-		consumer_.reset(new ffmpeg_consumer(u8(filename_), format_desc, options_, false));
+		consumer_.reset(new ffmpeg_consumer(u8(filename_), format_desc, channel_layout, options_, false));
 
 		if (separate_key_)
 		{
 			boost::filesystem::path fill_file(filename_);
 			auto without_extension = u16(fill_file.stem().string());
-			auto key_file = env::media_folder() + without_extension + L"_A" + u16(fill_file.extension().string());
+			auto key_file = without_extension + L"_A" + u16(fill_file.extension().string());
 
-			key_only_consumer_.reset(new ffmpeg_consumer(u8(key_file), format_desc, options_, true));
+			key_only_consumer_.reset(new ffmpeg_consumer(u8(key_file), format_desc, channel_layout, options_, true));
 		}
 	}
 
@@ -873,7 +883,7 @@ void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
 	sink.example(L">> ADD 1 FILE output.mov -vcodec dnxhd");
 	sink.example(L">> ADD 1 FILE output.mov -vcodec prores");
 	sink.example(L">> ADD 1 FILE output.mov -vcodec dvvideo");
-	sink.example(L">> ADD 1 FILE output.mov - vcodec libx264 -preset ultrafast -tune fastdecode -crf 25");
+	sink.example(L">> ADD 1 FILE output.mov -vcodec libx264 -preset ultrafast -tune fastdecode -crf 25");
 	sink.example(L">> ADD 1 FILE output.mov -vcodec dnxhd SEPARATE_KEY", L"for creating output.mov with fill and output_A.mov with key/alpha");
 }
 
@@ -914,7 +924,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(
 		options.push_back(option(name, value));
 	}
 				
-	return spl::make_shared<ffmpeg_consumer_proxy>(env::media_folder() + path["PATH"].str(), options, separate_key);
+	return spl::make_shared<ffmpeg_consumer_proxy>(path["PATH"].str(), options, separate_key);
 }
 
 spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
@@ -927,7 +937,7 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 	std::vector<option> options;
 	options.push_back(option("vcodec", u8(codec)));
 	
-	return spl::make_shared<ffmpeg_consumer_proxy>(env::media_folder() + filename, options, separate_key);
+	return spl::make_shared<ffmpeg_consumer_proxy>(filename, options, separate_key);
 }
 
 }}

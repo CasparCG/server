@@ -56,7 +56,7 @@ namespace caspar { namespace ffmpeg {
 // Utils
 
 core::field_mode					get_mode(const AVFrame& frame);
-core::mutable_frame					make_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, double fps, core::frame_factory& frame_factory);
+core::mutable_frame					make_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, double fps, core::frame_factory& frame_factory, const core::audio_channel_layout& channel_layout);
 spl::shared_ptr<AVFrame>			make_av_frame(core::mutable_frame& frame);
 spl::shared_ptr<AVFrame>			make_av_frame(core::const_frame& frame);
 spl::shared_ptr<AVFrame>			make_av_frame(std::array<uint8_t*, 4> data, const core::pixel_format_desc& pix_desc);
@@ -79,5 +79,10 @@ std::wstring print_mode(int width, int height, double fps, bool interlaced);
 std::wstring probe_stem(const std::wstring& stem);
 bool is_valid_file(const std::wstring& filename);
 bool try_get_duration(const std::wstring filename, std::int64_t& duration, boost::rational<std::int64_t>& time_base);
+
+core::audio_channel_layout get_audio_channel_layout(const AVCodecContext& codec_context, const std::wstring& channel_layout_spec);
+
+// av_get_default_channel_layout does not work for layouts not predefined in ffmpeg. This is needed to support > 8 channels.
+std::int64_t create_channel_layout_bitmask(int num_channels);
 
 }}

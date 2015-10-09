@@ -55,7 +55,7 @@ public:
 	// Methods
 
 	virtual std::future<bool>				send(const_frame frame) = 0;
-	virtual void							initialize(const video_format_desc& format_desc, int channel_index) = 0;
+	virtual void							initialize(const video_format_desc& format_desc, const audio_channel_layout& channel_layout, int channel_index) = 0;
 	
 	// monitor::observable
 

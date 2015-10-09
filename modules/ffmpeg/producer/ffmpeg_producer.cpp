@@ -41,6 +41,7 @@
 
 #include <core/video_format.h>
 #include <core/producer/frame_producer.h>
+#include <core/frame/audio_channel_layout.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_transform.h>
@@ -105,7 +106,7 @@ struct ffmpeg_producer : public core::frame_producer_base
 		
 	std::unique_ptr<video_decoder>					video_decoder_;
 	std::unique_ptr<audio_decoder>					audio_decoder_;	
-	frame_muxer										muxer_;
+	std::unique_ptr<frame_muxer>					muxer_;
 	core::constraints								constraints_;
 	
 	core::draw_frame								last_frame_				= core::draw_frame::empty();
@@ -113,19 +114,20 @@ struct ffmpeg_producer : public core::frame_producer_base
 	boost::optional<uint32_t>						seek_target_;
 	
 public:
-	explicit ffmpeg_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, 
-							 const core::video_format_desc& format_desc, 
-							 const std::wstring& filename, 
-							 const std::wstring& filter, 
-							 bool loop, 
-							 uint32_t start, 
-							 uint32_t length) 
+	explicit ffmpeg_producer(
+			const spl::shared_ptr<core::frame_factory>& frame_factory, 
+			const core::video_format_desc& format_desc,
+			const std::wstring& channel_layout_spec,
+			const std::wstring& filename,
+			const std::wstring& filter,
+			bool loop,
+			uint32_t start,
+			uint32_t length)
 		: filename_(filename)
 		, frame_factory_(frame_factory)		
 		, format_desc_(format_desc)
 		, input_(graph_, filename_, loop, start, length)
 		, fps_(read_fps(input_.context(), format_desc_.fps))
-		, muxer_(fps_, frame_factory, format_desc_, filter)
 		, start_(start)
 	{
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
@@ -152,10 +154,14 @@ public:
 			CASPAR_LOG(warning) << print() << "Failed to open video-stream. Running without video.";	
 		}
 
+		auto channel_layout = core::audio_channel_layout::invalid();
+
 		try
 		{
-			audio_decoder_ .reset(new audio_decoder(input_, format_desc_));
+			audio_decoder_ .reset(new audio_decoder(input_, format_desc_, channel_layout_spec));
 			audio_decoder_->monitor_output().attach_parent(monitor_subject_);
+
+			channel_layout = audio_decoder_->channel_layout();
 			
 			CASPAR_LOG(info) << print() << L" " << audio_decoder_->print();
 		}
@@ -167,7 +173,9 @@ public:
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			CASPAR_LOG(warning) << print() << " Failed to open audio-stream. Running without audio.";		
-		}	
+		}
+
+		muxer_.reset(new frame_muxer(fps_, frame_factory, format_desc_, channel_layout, filter));
 		
 		decode_next_frame();
 
@@ -186,20 +194,18 @@ public:
 				
 		decode_next_frame();
 		
-		if(!muxer_.empty())
+		if(!muxer_->empty())
 		{
-			last_frame_ = frame = std::move(muxer_.front());
-			muxer_.pop();	
+			last_frame_ = frame = std::move(muxer_->front());
+			muxer_->pop();
 		}
-		else				
+		else
 			graph_->set_tag("underflow");
 									
 		graph_->set_value("frame-time", frame_timer.elapsed()*format_desc_.fps*0.5);
 		*monitor_subject_
 				<< core::monitor::message("/profiler/time")	% frame_timer.elapsed() % (1.0/format_desc_.fps);			
 		*monitor_subject_
-				<< core::monitor::message("/file/time")		% (file_frame_number()/fps_) 
-															% (file_nb_frames()/fps_)
 				<< core::monitor::message("/file/frame")	% static_cast<int32_t>(file_frame_number())
 															% static_cast<int32_t>(file_nb_frames())
 				<< core::monitor::message("/file/fps")		% fps_
@@ -228,7 +234,7 @@ public:
 		uint32_t nb_frames = file_nb_frames();
 
 		nb_frames = std::min(input_.length(), nb_frames);
-		nb_frames = muxer_.calc_nb_frames(nb_frames);
+		nb_frames = muxer_->calc_nb_frames(nb_frames);
 		
 		return nb_frames > start_ ? nb_frames - start_ : 0;
 	}
@@ -332,9 +338,9 @@ public:
 		for(int n = 0; n < 8 && (last_frame_ == core::draw_frame::empty() || (seek_target_ && file_frame_number() != *seek_target_+2)); ++n)
 		{
 			decode_next_frame();
-			if(!muxer_.empty())
+			if(!muxer_->empty())
 			{
-				last_frame_ = muxer_.front();
+				last_frame_ = muxer_->front();
 				seek_target_.reset();
 			}
 		}
@@ -375,7 +381,7 @@ public:
 		seek_target_ = std::min(target, file_nb_frames());
 
 		input_.seek(*seek_target_);
-		muxer_.clear();
+		muxer_->clear();
 	}
 
 	std::wstring print_mode() const
@@ -388,13 +394,14 @@ public:
 			
 	void decode_next_frame()
 	{
-		for(int n = 0; n < 8 && muxer_.empty(); ++n)
+		for(int n = 0; n < 32 && muxer_->empty(); ++n)
 		{
-			if(!muxer_.video_ready())
-				muxer_.push_video(video_decoder_ ? (*video_decoder_)() : create_frame());
-			if(!muxer_.audio_ready())
-				muxer_.push_audio(audio_decoder_ ? (*audio_decoder_)() : create_frame());
+			if(!muxer_->video_ready())
+				muxer_->push_video(video_decoder_ ? (*video_decoder_)() : create_frame());
+			if(!muxer_->audio_ready())
+				muxer_->push_audio(audio_decoder_ ? (*audio_decoder_)() : create_frame());
 		}
+
 		graph_->set_text(print());
 	}
 };
@@ -402,7 +409,7 @@ public:
 void describe_producer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"A producer for playing media files supported by FFmpeg.");
-	sink.syntax(L"[clip:string] {[loop:LOOP]} {START,SEEK [start:int]} {LENGTH [start:int]} {FILTER [filter:string]}");
+	sink.syntax(L"[clip:string] {[loop:LOOP]} {START,SEEK [start:int]} {LENGTH [start:int]} {FILTER [filter:string]} {CHANNEL_LAYOUT [channel_layout:string]}");
 	sink.para()
 		->text(L"The FFmpeg Producer can play all media that FFmpeg can play, which includes many ")
 		->text(L"QuickTime video codec such as Animation, PNG, PhotoJPEG, MotionJPEG, as well as ")
@@ -412,7 +419,10 @@ void describe_producer(core::help_sink& sink, const core::help_repository& repo)
 		->item(L"loop", L"Will cause the media file to loop between start and start + length")
 		->item(L"start", L"Optionally sets the start frame. 0 by default. If loop is specified this will be the frame where it starts over again.")
 		->item(L"length", L"Optionally sets the length of the clip. If not specified the clip will be played to the end. If loop is specified the file will jump to start position once this number of frames has been played.")
-		->item(L"filter", L"If specified, will be used as an FFmpeg video filter.");
+		->item(L"filter", L"If specified, will be used as an FFmpeg video filter.")
+		->item(L"channel_layout",
+				L"Optionally override the automatically deduced audio channel layout. "
+				L"Either a named layout as specified in casparcg.config or in the format [type:string]:[channel_order:string] for a custom layout.");
 	sink.para()->text(L"Examples:");
 	sink.example(L">> PLAY 1-10 folder/clip", L"to play all frames in a clip and stop at the last frame.");
 	sink.example(L">> PLAY 1-10 folder/clip LOOP", L"to loop a clip between the first frame and the last frame.");
@@ -420,6 +430,8 @@ void describe_producer(core::help_sink& sink, const core::help_repository& repo)
 	sink.example(L">> PLAY 1-10 folder/clip LOOP START 10 LENGTH 50", L"to loop a clip between frame 10 and frame 60.");
 	sink.example(L">> PLAY 1-10 folder/clip START 10 LENGTH 50", L"to play frames 10-60 in a clip and stop.");
 	sink.example(L">> PLAY 1-10 folder/clip FILTER yadif=1,-1", L"to deinterlace the video.");
+	sink.example(L">> PLAY 1-10 folder/clip CHANNEL_LAYOUT dolbydigital", L"given the defaults in casparcg.config this will specifies that the clip has 6 audio channels of the type 5.1 and that they are in the order FL FC FR BL BR LFE regardless of what ffmpeg says.");
+	sink.example(L">> PLAY 1-10 folder/clip CHANNEL_LAYOUT \"5.1:LFE FL FC FR BL BR\"", L"specifies that the clip has 6 audio channels of the type 5.1 and that they are in the specified order regardless of what ffmpeg says.");
 	sink.para()->text(L"The FFmpeg producer also supports changing some of the settings via CALL:");
 	sink.example(L">> CALL 1-10 LOOP 1");
 	sink.example(L">> CALL 1-10 START 10");
@@ -433,12 +445,21 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 	if(filename.empty())
 		return core::frame_producer::empty();
 	
-	bool loop		= contains_param(L"LOOP", params);
-	auto start		= get_param(L"START", params, get_param(L"SEEK", params, static_cast<uint32_t>(0)));
-	auto length		= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
-	auto filter_str = get_param(L"FILTER", params, L""); 	
-	
-	return create_destroy_proxy(spl::make_shared_ptr(std::make_shared<ffmpeg_producer>(dependencies.frame_factory, dependencies.format_desc, filename, filter_str, loop, start, length)));
+	bool loop			= contains_param(L"LOOP", params);
+	auto start			= get_param(L"START", params, get_param(L"SEEK", params, static_cast<uint32_t>(0)));
+	auto length			= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
+	auto filter_str		= get_param(L"FILTER", params, L"");
+	auto channel_layout	= get_param(L"CHANNEL_LAYOUT", params, L"");
+
+	return create_destroy_proxy(spl::make_shared_ptr(std::make_shared<ffmpeg_producer>(
+			dependencies.frame_factory,
+			dependencies.format_desc,
+			channel_layout,
+			filename,
+			filter_str,
+			loop,
+			start,
+			length)));
 }
 
 }}
