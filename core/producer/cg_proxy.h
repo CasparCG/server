@@ -90,6 +90,7 @@ public:
 			const std::wstring& filename) const;
 	std::string read_meta_info(const std::wstring& filename) const;
 	bool is_cg_extension(const std::wstring& extension) const;
+	std::wstring get_cg_producer_name(const std::wstring& filename) const;
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;
