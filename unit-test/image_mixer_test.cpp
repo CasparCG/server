@@ -32,9 +32,13 @@
 #include <accelerator/ogl/image/image_mixer.h>
 #include <accelerator/ogl/util/device.h>
 
+#ifdef _MSC_VER
 #include <accelerator/cpu/image/image_mixer.h>
+#endif
 
 #include <boost/assign.hpp>
+
+#include <cstdint>
 
 namespace caspar { namespace core {
 
@@ -67,11 +71,13 @@ spl::shared_ptr<core::image_mixer> create_mixer<dummy_ogl_with_blend_modes>()
 			false); // straight alpha not wanted
 }
 
+#ifdef _MSC_VER
 template <>
 spl::shared_ptr<core::image_mixer> create_mixer<accelerator::cpu::image_mixer>()
 {
 	return spl::make_shared<accelerator::cpu::image_mixer>();
 }
+#endif
 
 void assert_pixel_eq(uint8_t r, uint8_t g, uint8_t b, uint8_t a, const uint8_t* pos, int tolerance = 1)
 {
@@ -157,10 +163,17 @@ class MixerTestOglWithBlendModes : public MixerTest<T> // Only use-cases support
 {
 };
 
+#ifdef _MSC_VER
 typedef testing::Types<
 		accelerator::ogl::image_mixer,
 		accelerator::cpu::image_mixer,
 		dummy_ogl_with_blend_modes> all_mixer_implementations;
+#else
+typedef testing::Types<
+		accelerator::ogl::image_mixer,
+		dummy_ogl_with_blend_modes> all_mixer_implementations;
+#endif
+
 typedef testing::Types<
 		accelerator::ogl::image_mixer,
 		dummy_ogl_with_blend_modes> gpu_mixer_implementations;
@@ -174,30 +187,30 @@ TYPED_TEST_CASE(MixerTestOglWithBlendModes, testing::Types<dummy_ogl_with_blend_
 
 TYPED_TEST(MixerTestEveryImpl, PassthroughSingleLayer)
 {
-	core::draw_frame frame(create_single_color_frame(255, 255, 255, 255, 16, 16));
-	add_layer(frame);
-	assert_all_pixels_eq(255, 255, 255, 255, get_result(16, 16));
+	core::draw_frame frame(this->create_single_color_frame(255, 255, 255, 255, 16, 16));
+	this->add_layer(frame);
+	assert_all_pixels_eq(255, 255, 255, 255, this->get_result(16, 16));
 }
 
 TYPED_TEST(MixerTestEveryImpl, OpaqueTopLayer)
 {
-	core::draw_frame red_under(create_single_color_frame(255, 0, 0, 255, 16, 16));
-	core::draw_frame green_over(create_single_color_frame(0, 255, 0, 255, 16, 16));
-	add_layer(red_under);
-	add_layer(green_over);
-	assert_all_pixels_eq(0, 255, 0, 255, get_result(16, 16));
+	core::draw_frame red_under(this->create_single_color_frame(255, 0, 0, 255, 16, 16));
+	core::draw_frame green_over(this->create_single_color_frame(0, 255, 0, 255, 16, 16));
+	this->add_layer(red_under);
+	this->add_layer(green_over);
+	assert_all_pixels_eq(0, 255, 0, 255, this->get_result(16, 16));
 }
 
 TYPED_TEST(MixerTestEveryImpl, HalfAlpha)
 {
-	core::draw_frame red_under(create_single_color_frame(255, 0, 0, 255, 16, 16));
-	core::draw_frame half_green_over(create_single_color_frame(0, 127, 0, 127, 16, 16));
-	add_layer(red_under);
-	add_layer(half_green_over);
-	assert_all_pixels_eq(127, 127, 0, 255, get_result(16, 16));
+	core::draw_frame red_under(this->create_single_color_frame(255, 0, 0, 255, 16, 16));
+	core::draw_frame half_green_over(this->create_single_color_frame(0, 127, 0, 127, 16, 16));
+	this->add_layer(red_under);
+	this->add_layer(half_green_over);
+	assert_all_pixels_eq(127, 127, 0, 255, this->get_result(16, 16));
 
-	add_layer(half_green_over);
-	assert_all_pixels_eq(0, 127, 0, 127, get_result(16, 16));
+	this->add_layer(half_green_over);
+	assert_all_pixels_eq(0, 127, 0, 127, this->get_result(16, 16));
 }
 
 // Tests for use cases that currently *only* works on GPU mixer
@@ -205,31 +218,31 @@ TYPED_TEST(MixerTestEveryImpl, HalfAlpha)
 
 TYPED_TEST(MixerTestOgl, HalfBrightness)
 {
-	core::draw_frame frame(create_single_color_frame(255, 255, 255, 255, 1, 1));
+	core::draw_frame frame(this->create_single_color_frame(255, 255, 255, 255, 1, 1));
 	frame.transform().image_transform.brightness = 0.5;
-	add_layer(frame);
-	assert_all_pixels_eq(127, 127, 127, 255, get_result(1, 1));
+	this->add_layer(frame);
+	assert_all_pixels_eq(127, 127, 127, 255, this->get_result(1, 1));
 }
 
 TYPED_TEST(MixerTestOgl, HalfOpacity)
 {
-	core::draw_frame red_under(create_single_color_frame(255, 0, 0, 255, 1, 1));
-	core::draw_frame green_over(create_single_color_frame(0, 255, 0, 255, 1, 1));
+	core::draw_frame red_under(this->create_single_color_frame(255, 0, 0, 255, 1, 1));
+	core::draw_frame green_over(this->create_single_color_frame(0, 255, 0, 255, 1, 1));
 	green_over.transform().image_transform.opacity = 0.5;
-	add_layer(red_under);
-	add_layer(green_over);
-	assert_all_pixels_eq(127, 127, 0, 255, get_result(1, 1));
+	this->add_layer(red_under);
+	this->add_layer(green_over);
+	assert_all_pixels_eq(127, 127, 0, 255, this->get_result(1, 1));
 
-	add_layer(green_over);
-	assert_all_pixels_eq(0, 127, 0, 127, get_result(1, 1));
+	this->add_layer(green_over);
+	assert_all_pixels_eq(0, 127, 0, 127, this->get_result(1, 1));
 }
 
 TYPED_TEST(MixerTestOgl, MakeGrayscaleWithSaturation)
 {
-	core::draw_frame frame(create_single_color_frame(255, 0, 0, 255, 1, 1));
+	core::draw_frame frame(this->create_single_color_frame(255, 0, 0, 255, 1, 1));
 	frame.transform().image_transform.saturation = 0.0;
-	add_layer(frame);
-	auto result = get_result(1, 1);
+	this->add_layer(frame);
+	auto result = this->get_result(1, 1);
 	
 	ASSERT_EQ(result.data()[0], result.data()[1]);
 	ASSERT_EQ(result.data()[1], result.data()[2]);
@@ -237,13 +250,13 @@ TYPED_TEST(MixerTestOgl, MakeGrayscaleWithSaturation)
 
 TYPED_TEST(MixerTestOgl, TransformFillScale)
 {
-	core::draw_frame frame(create_single_color_frame(255, 255, 255, 255, 1, 1));
+	core::draw_frame frame(this->create_single_color_frame(255, 255, 255, 255, 1, 1));
 	frame.transform().image_transform.fill_translation[0] = 0.5;
 	frame.transform().image_transform.fill_translation[1] = 0.5;
 	frame.transform().image_transform.fill_scale[0] = 0.5;
 	frame.transform().image_transform.fill_scale[1] = 0.5;
-	add_layer(frame);
-	auto res = get_result(2, 2);
+	this->add_layer(frame);
+	auto res = this->get_result(2, 2);
 	std::vector<std::uint8_t> result(res.begin(), res.end());
 
 	// bottom right corner
@@ -252,8 +265,8 @@ TYPED_TEST(MixerTestOgl, TransformFillScale)
 			(0)(0)(0)(0) (255)(255)(255)(255), result);
 
 	frame.transform().image_transform.fill_translation[0] = 0;
-	add_layer(frame);
-	res = get_result(2, 2);
+	this->add_layer(frame);
+	res = this->get_result(2, 2);
 	result = std::vector<std::uint8_t>(res.begin(), res.end());
 
 	// bottom left corner
@@ -264,16 +277,16 @@ TYPED_TEST(MixerTestOgl, TransformFillScale)
 
 TYPED_TEST(MixerTestOgl, LevelsBugGammaMinLevelsMismatch)
 {
-	auto src_frame = create_frame(2, 1);
+	auto src_frame = this->create_frame(2, 1);
 	set_pixel(src_frame, 0, 0, 16, 16, 16, 255);
 	set_pixel(src_frame, 1, 0, 235, 235, 235, 255);
 
 	core::draw_frame frame(std::move(src_frame));
 	frame.transform().image_transform.levels.min_input = 16.0 / 255.0;
 	frame.transform().image_transform.levels.max_input = 235.0 / 255.0;
-	add_layer(frame);
+	this->add_layer(frame);
 
-	auto result = get_result(2, 1);
+	auto result = this->get_result(2, 1);
 	assert_pixel_eq(0, 0, 0, 255, result.data(), 0);
 	assert_pixel_eq(255, 255, 255, 255, result.data() + 4, 0);
 }

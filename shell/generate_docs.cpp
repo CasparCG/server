@@ -195,6 +195,11 @@ void generate_consumers_help(const core::help_repository& help_repo)
 
 int main(int argc, char** argv)
 {
+	if (intercept_command_line_args(argc, argv))
+	{
+		return 0;
+	}
+
 	env::configure(L"casparcg.config");
 	spl::shared_ptr<core::system_info_provider_repository> system_info_provider_repo;
 	spl::shared_ptr<core::cg_producer_registry> cg_registry;
