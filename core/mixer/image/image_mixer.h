@@ -61,7 +61,7 @@ public:
 		
 	virtual std::future<array<const std::uint8_t>> operator()(const struct video_format_desc& format_desc, bool straighten_alpha) = 0;
 
-	virtual class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc) = 0;
+	virtual class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc, const core::audio_channel_layout& channel_layout) = 0;
 
 	// Properties
 };

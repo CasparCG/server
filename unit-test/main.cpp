@@ -24,12 +24,30 @@
 #include <gtest/gtest.h>
 
 #include <common/log.h>
+#include <common/memory.h>
+
+#include <core/system_info_provider.h>
+#include <core/producer/cg_proxy.h>
+#include <core/producer/media_info/in_memory_media_info_repository.h>
+
+#include <modules/ffmpeg/ffmpeg.h>
 
 int main(int argc, char** argv)
 {
+	using namespace caspar;
+
+	spl::shared_ptr<core::system_info_provider_repository> system_info_provider_repo;
+	spl::shared_ptr<core::cg_producer_registry> cg_registry;
+	auto media_info_repo = core::create_in_memory_media_info_repository();
+	spl::shared_ptr<core::help_repository> help_repo;
+	auto producer_registry = spl::make_shared<core::frame_producer_registry>(help_repo);
+	auto consumer_registry = spl::make_shared<core::frame_consumer_registry>(help_repo);
+
+	core::module_dependencies dependencies(system_info_provider_repo, cg_registry, media_info_repo, producer_registry, consumer_registry);
+	caspar::ffmpeg::init(dependencies);
 	testing::InitGoogleTest(&argc, argv);
 
-	caspar::log::set_log_level(L"error");
+	caspar::log::set_log_level(L"trace");
 
 	return RUN_ALL_TESTS();
 }

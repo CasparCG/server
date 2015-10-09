@@ -28,6 +28,7 @@
 #include "../../ffmpeg_error.h"
 
 #include <core/video_format.h>
+#include <core/frame/audio_channel_layout.h>
 
 #include <common/log.h>
 #include <common/cache_aligned_vector.h>
@@ -50,7 +51,7 @@ extern "C"
 
 namespace caspar { namespace ffmpeg {
 	
-uint64_t get_channel_layout(AVCodecContext* dec)
+uint64_t get_ffmpeg_channel_layout(AVCodecContext* dec)
 {
 	auto layout = (dec->channel_layout && dec->channels == av_get_channel_layout_nb_channels(dec->channel_layout)) ? dec->channel_layout : av_get_default_channel_layout(dec->channels);
 	return layout;
@@ -59,18 +60,18 @@ uint64_t get_channel_layout(AVCodecContext* dec)
 struct audio_decoder::impl : boost::noncopyable
 {	
 	core::monitor::subject										monitor_subject_;
-	input*														input_;
+	input&														input_;
 	int															index_;
 	const core::video_format_desc								format_desc_;
-	const spl::shared_ptr<AVCodecContext>						codec_context_ = open_codec(input_->context(), AVMEDIA_TYPE_AUDIO, index_);
+	const spl::shared_ptr<AVCodecContext>						codec_context_		= open_codec(input_.context(), AVMEDIA_TYPE_AUDIO, index_);
 
 	std::shared_ptr<SwrContext>									swr_				{
 																						swr_alloc_set_opts(
 																								nullptr,
-																								av_get_default_channel_layout(format_desc_.audio_channels),
+																								create_channel_layout_bitmask(codec_context_->channels),//get_ffmpeg_channel_layout(codec_context_.get()),
 																								AV_SAMPLE_FMT_S32,
 																								format_desc_.audio_sample_rate,
-																								get_channel_layout(codec_context_.get()),
+																								create_channel_layout_bitmask(codec_context_->channels),//get_ffmpeg_channel_layout(codec_context_.get()),
 																								codec_context_->sample_fmt,
 																								codec_context_->sample_rate,
 																								0,
@@ -79,16 +80,17 @@ struct audio_decoder::impl : boost::noncopyable
 																					};
 
 	cache_aligned_vector<uint8_t>								buffer_;
+	core::audio_channel_layout									channel_layout_;
 
 	std::shared_ptr<AVPacket>									current_packet_;
 	
 public:
-	explicit impl(input& in, const core::video_format_desc& format_desc) 
-		: input_(&in)
-		, format_desc_(format_desc)	
-		, codec_context_(open_codec(input_->context(), AVMEDIA_TYPE_AUDIO, index_))
+	explicit impl(input& in, const core::video_format_desc& format_desc, const std::wstring& channel_layout_spec) 
+		: input_(in)
+		, format_desc_(format_desc)
 		, buffer_(480000 * 4)
-	{		
+		, channel_layout_(get_audio_channel_layout(*codec_context_, channel_layout_spec))
+	{
 		if(!swr_)
 			CASPAR_THROW_EXCEPTION(bad_alloc());
 
@@ -97,7 +99,7 @@ public:
 		
 	std::shared_ptr<AVFrame> poll()
 	{		
-		if(!current_packet_ && !input_->try_pop_audio(current_packet_))
+		if(!current_packet_ && !input_.try_pop_audio(current_packet_))
 			return nullptr;
 		
 		std::shared_ptr<AVFrame> audio;
@@ -122,7 +124,7 @@ public:
 				current_packet_.reset();
 		}
 	
-		return audio ? audio : poll();
+		return audio;
 	}
 
 	std::shared_ptr<AVFrame> decode(AVPacket& pkt)
@@ -148,14 +150,14 @@ public:
 		uint8_t* out[]		= {buffer_.data()};
 
 		auto channel_samples = swr_convert(swr_.get(), 
-											out, static_cast<int>(buffer_.size()) / format_desc_.audio_channels / av_get_bytes_per_sample(AV_SAMPLE_FMT_S32), 
-											in, frame->nb_samples);	
+											out, static_cast<int>(buffer_.size()) / codec_context_->channels / av_get_bytes_per_sample(AV_SAMPLE_FMT_S32),
+											in, frame->nb_samples);
 
 		frame->data[0]		= buffer_.data();
-		frame->linesize[0]	= channel_samples * format_desc_.audio_channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S32);
+		frame->linesize[0]	= channel_samples * codec_context_->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S32);
 		frame->nb_samples	= channel_samples;
 		frame->format		= AV_SAMPLE_FMT_S32;
-							
+
 		monitor_subject_  << core::monitor::message("/file/audio/sample-rate")	% codec_context_->sample_rate
 						<< core::monitor::message("/file/audio/channels")	% codec_context_->channels
 						<< core::monitor::message("/file/audio/format")		% u8(av_get_sample_fmt_name(codec_context_->sample_fmt))
@@ -175,11 +177,13 @@ public:
 	}
 };
 
-audio_decoder::audio_decoder(input& input, const core::video_format_desc& format_desc) : impl_(new impl(input, format_desc)){}
+audio_decoder::audio_decoder(input& input, const core::video_format_desc& format_desc, const std::wstring& channel_layout_spec) : impl_(new impl(input, format_desc, channel_layout_spec)){}
 audio_decoder::audio_decoder(audio_decoder&& other) : impl_(std::move(other.impl_)){}
 audio_decoder& audio_decoder::operator=(audio_decoder&& other){impl_ = std::move(other.impl_); return *this;}
 std::shared_ptr<AVFrame> audio_decoder::operator()(){return impl_->poll();}
 uint32_t audio_decoder::nb_frames() const{return impl_->nb_frames();}
+const core::audio_channel_layout& audio_decoder::channel_layout() const { return impl_->channel_layout_; }
 std::wstring audio_decoder::print() const{return impl_->print();}
 core::monitor::subject& audio_decoder::monitor_output() { return impl_->monitor_subject_;}
+
 }}

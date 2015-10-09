@@ -21,7 +21,7 @@
 
 #include "../../StdAfx.h"
 
-#include "filter.h"
+#include "audio_filter.h"
 
 #include "../../ffmpeg_error.h"
 
@@ -57,111 +57,116 @@ extern "C"
 
 namespace caspar { namespace ffmpeg {
 	
-struct filter::implementation
+struct audio_filter::implementation
 {
 	std::string						filtergraph_;
 
-	std::shared_ptr<AVFilterGraph>	video_graph_;	
-    AVFilterContext*				video_graph_in_;  
-    AVFilterContext*				video_graph_out_; 
-		
+	std::shared_ptr<AVFilterGraph>	audio_graph_;	
+    AVFilterContext*				audio_graph_in_;  
+    AVFilterContext*				audio_graph_out_; 
+
 	implementation(
-			int in_width,
-			int in_height,
 			boost::rational<int> in_time_base,
-			boost::rational<int> in_frame_rate,
-			boost::rational<int> in_sample_aspect_ratio,
-			AVPixelFormat in_pix_fmt,
-			std::vector<AVPixelFormat> out_pix_fmts,
-			const std::string& filtergraph) 
+			int in_sample_rate,
+			AVSampleFormat in_sample_fmt,
+			std::int64_t in_audio_channel_layout,
+			std::vector<int> out_sample_rates,
+			std::vector<AVSampleFormat> out_sample_fmts,
+			std::vector<std::int64_t> out_audio_channel_layouts,
+			const std::string& filtergraph)
 		: filtergraph_(boost::to_lower_copy(filtergraph))
 	{
-		if(out_pix_fmts.empty())
-		{
-			out_pix_fmts = {
-				AV_PIX_FMT_YUVA420P,
-				AV_PIX_FMT_YUV444P,
-				AV_PIX_FMT_YUV422P,
-				AV_PIX_FMT_YUV420P,
-				AV_PIX_FMT_YUV411P,
-				AV_PIX_FMT_BGRA,
-				AV_PIX_FMT_ARGB,
-				AV_PIX_FMT_RGBA,
-				AV_PIX_FMT_ABGR,
-				AV_PIX_FMT_GRAY8
-			};
-		}
+		if (out_sample_rates.empty())
+			out_sample_rates.push_back(48000);
 
-		out_pix_fmts.push_back(AV_PIX_FMT_NONE);
+		out_sample_rates.push_back(-1);
 
-		video_graph_.reset(
+		if (out_sample_fmts.empty())
+			out_sample_fmts.push_back(AV_SAMPLE_FMT_S32);
+
+		out_sample_fmts.push_back(AV_SAMPLE_FMT_NONE);
+
+		if (out_audio_channel_layouts.empty())
+			out_audio_channel_layouts.push_back(AV_CH_LAYOUT_NATIVE);
+
+		out_audio_channel_layouts.push_back(-1);
+
+		audio_graph_.reset(
 			avfilter_graph_alloc(), 
 			[](AVFilterGraph* p)
 			{
 				avfilter_graph_free(&p);
 			});
-		
-		video_graph_->nb_threads  = boost::thread::hardware_concurrency();
-		video_graph_->thread_type = AVFILTER_THREAD_SLICE;
-				
-		const auto vsrc_options = (boost::format("video_size=%1%x%2%:pix_fmt=%3%:time_base=%4%/%5%:pixel_aspect=%6%/%7%:frame_rate=%8%/%9%")
-			% in_width % in_height
-			% in_pix_fmt
+
+		const auto asrc_options = (boost::format("time_base=%1%/%2%:sample_rate=%3%:sample_fmt=%4%:channel_layout=0x%|5$x|")
 			% in_time_base.numerator() % in_time_base.denominator()
-			% in_sample_aspect_ratio.numerator() % in_sample_aspect_ratio.denominator()
-			% in_frame_rate.numerator() % in_frame_rate.denominator()).str();
+			% in_sample_rate
+			% av_get_sample_fmt_name(in_sample_fmt)
+			% in_audio_channel_layout).str();
 					
-		AVFilterContext* filt_vsrc = nullptr;			
+		AVFilterContext* filt_asrc = nullptr;			
 		FF(avfilter_graph_create_filter(
-			&filt_vsrc,
-			avfilter_get_by_name("buffer"), 
+			&filt_asrc,
+			avfilter_get_by_name("abuffer"), 
 			"filter_buffer",
-			vsrc_options.c_str(), 
+			asrc_options.c_str(),
 			nullptr, 
-			video_graph_.get()));
+			audio_graph_.get()));
 				
-		AVFilterContext* filt_vsink = nullptr;
+		AVFilterContext* filt_asink = nullptr;
 		FF(avfilter_graph_create_filter(
-			&filt_vsink,
-			avfilter_get_by_name("buffersink"), 
+			&filt_asink,
+			avfilter_get_by_name("abuffersink"), 
 			"filter_buffersink",
 			nullptr, 
 			nullptr, 
-			video_graph_.get()));
+			audio_graph_.get()));
 		
 #pragma warning (push)
 #pragma warning (disable : 4245)
 
 		FF(av_opt_set_int_list(
-			filt_vsink, 
-			"pix_fmts", 
-			out_pix_fmts.data(), 
+			filt_asink,
+			"sample_fmts",
+			out_sample_fmts.data(),
+			-1,
+			AV_OPT_SEARCH_CHILDREN));
+		FF(av_opt_set_int_list(
+			filt_asink,
+			"channel_layouts",
+			out_audio_channel_layouts.data(),
+			-1,
+			AV_OPT_SEARCH_CHILDREN));
+		FF(av_opt_set_int_list(
+			filt_asink,
+			"sample_rates",
+			out_sample_rates.data(),
 			-1,
 			AV_OPT_SEARCH_CHILDREN));
 
 #pragma warning (pop)
 			
 		configure_filtergraph(
-			*video_graph_, 
-			filtergraph_,
-			*filt_vsrc,
-			*filt_vsink);
+				*audio_graph_,
+				filtergraph_,
+				*filt_asrc,
+				*filt_asink);
 
-		video_graph_in_  = filt_vsrc;
-		video_graph_out_ = filt_vsink;
+		audio_graph_in_  = filt_asrc;
+		audio_graph_out_ = filt_asink;
 		
 		CASPAR_LOG(info)
 			<< 	u16(std::string("\n") 
 				+ avfilter_graph_dump(
-						video_graph_.get(), 
+						audio_graph_.get(), 
 						nullptr));
 	}
 	
 	void configure_filtergraph(
-		AVFilterGraph& graph, 
-		const std::string& filtergraph, 
-		AVFilterContext& source_ctx, 
-		AVFilterContext& sink_ctx)
+			AVFilterGraph& graph,
+			const std::string& filtergraph,
+			AVFilterContext& source_ctx,
+			AVFilterContext& sink_ctx)
 	{
 		AVFilterInOut* outputs = nullptr;
 		AVFilterInOut* inputs = nullptr;
@@ -216,7 +221,7 @@ struct filter::implementation
 	void push(const std::shared_ptr<AVFrame>& src_av_frame)
 	{		
 		FF(av_buffersrc_add_frame(
-			video_graph_in_, 
+			audio_graph_in_, 
 			src_av_frame.get()));
 	}
 
@@ -230,7 +235,7 @@ struct filter::implementation
 			});
 		
 		const auto ret = av_buffersink_get_frame(
-			video_graph_out_, 
+			audio_graph_out_, 
 			filt_frame.get());
 				
 		if(ret == AVERROR_EOF || ret == AVERROR(EAGAIN))
@@ -242,30 +247,30 @@ struct filter::implementation
 	}
 };
 
-filter::filter(
-		int in_width,
-		int in_height,
+audio_filter::audio_filter(
 		boost::rational<int> in_time_base,
-		boost::rational<int> in_frame_rate,
-		boost::rational<int> in_sample_aspect_ratio,
-		AVPixelFormat in_pix_fmt,
-		std::vector<AVPixelFormat> out_pix_fmts,
-		const std::string& filtergraph) 
-		: impl_(new implementation(
-			in_width,
-			in_height,
-			in_time_base,
-			in_frame_rate,
-			in_sample_aspect_ratio,
-			in_pix_fmt,
-			out_pix_fmts,
-			filtergraph)){}
-filter::filter(filter&& other) : impl_(std::move(other.impl_)){}
-filter& filter::operator=(filter&& other){impl_ = std::move(other.impl_); return *this;}
-void filter::push(const std::shared_ptr<AVFrame>& frame){impl_->push(frame);}
-std::shared_ptr<AVFrame> filter::poll(){return impl_->poll();}
-std::wstring filter::filter_str() const{return u16(impl_->filtergraph_);}
-std::vector<spl::shared_ptr<AVFrame>> filter::poll_all()
+		int in_sample_rate,
+		AVSampleFormat in_sample_fmt,
+		std::int64_t in_audio_channel_layout,
+		std::vector<int> out_sample_rates,
+		std::vector<AVSampleFormat> out_sample_fmts,
+		std::vector<std::int64_t> out_audio_channel_layouts,
+		const std::string& filtergraph)
+	: impl_(new implementation(
+		in_time_base,
+		in_sample_rate,
+		in_sample_fmt,
+		in_audio_channel_layout,
+		std::move(out_sample_rates),
+		std::move(out_sample_fmts),
+		std::move(out_audio_channel_layouts),
+		filtergraph)){}
+audio_filter::audio_filter(audio_filter&& other) : impl_(std::move(other.impl_)){}
+audio_filter& audio_filter::operator=(audio_filter&& other){impl_ = std::move(other.impl_); return *this;}
+void audio_filter::push(const std::shared_ptr<AVFrame>& frame){impl_->push(frame);}
+std::shared_ptr<AVFrame> audio_filter::poll(){return impl_->poll();}
+std::wstring audio_filter::filter_str() const{return u16(impl_->filtergraph_);}
+std::vector<spl::shared_ptr<AVFrame>> audio_filter::poll_all()
 {	
 	std::vector<spl::shared_ptr<AVFrame>> frames;
 	for(auto frame = poll(); frame; frame = poll())

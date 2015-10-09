@@ -28,6 +28,7 @@
 #include "../decklink_api.h"
 
 #include <core/frame/frame.h>
+#include <core/frame/audio_channel_layout.h>
 #include <core/mixer/audio/audio_mixer.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/diagnostics/call_context.h>
@@ -71,13 +72,14 @@ struct configuration
 		default_latency
 	};
 
-	int			device_index		= 1;
-	int			key_device_idx		= 0;
-	bool		embedded_audio		= true;
-	keyer_t		keyer				= keyer_t::default_keyer;
-	latency_t	latency				= latency_t::default_latency;
-	bool		key_only			= false;
-	int			base_buffer_depth	= 3;
+	int							device_index		= 1;
+	int							key_device_idx		= 0;
+	bool						embedded_audio		= true;
+	keyer_t						keyer				= keyer_t::default_keyer;
+	latency_t					latency				= latency_t::default_latency;
+	bool						key_only			= false;
+	int							base_buffer_depth	= 3;
+	core::audio_channel_layout	out_channel_layout	= core::audio_channel_layout::invalid();
 	
 	int buffer_depth() const
 	{
@@ -87,6 +89,31 @@ struct configuration
 	int key_device_index() const
 	{
 		return key_device_idx == 0 ? device_index + 1 : key_device_idx;
+	}
+
+	core::audio_channel_layout get_adjusted_layout(const core::audio_channel_layout& in_layout) const
+	{
+		auto adjusted = out_channel_layout == core::audio_channel_layout::invalid() ? in_layout : out_channel_layout;
+
+		if (adjusted.num_channels == 1) // Duplicate mono-signal into both left and right.
+		{
+			adjusted.num_channels = 2;
+			adjusted.channel_order.push_back(adjusted.channel_order.at(0)); // Usually FC -> FC FC
+		}
+		else if (adjusted.num_channels == 2)
+		{
+			adjusted.num_channels = 2;
+		}
+		else if (adjusted.num_channels <= 8)
+		{
+			adjusted.num_channels = 8;
+		}
+		else // Over 8 always pad to 16 or drop >16
+		{
+			adjusted.num_channels = 16;
+		}
+
+		return adjusted;
 	}
 };
 
@@ -317,6 +344,9 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 		
 	const std::wstring									model_name_				= get_model_name(decklink_);
 	const core::video_format_desc						format_desc_;
+	const core::audio_channel_layout					in_channel_layout_;
+	const core::audio_channel_layout					out_channel_layout_		= config_.get_adjusted_layout(in_channel_layout_);
+	core::audio_channel_remapper						channel_remapper_		{ in_channel_layout_, out_channel_layout_ };
 	const int											buffer_size_			= config_.buffer_depth(); // Minimum buffer-size 3.
 
 	long long											video_scheduled_		= 0;
@@ -337,10 +367,15 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	std::unique_ptr<key_video_context>					key_context_;
 
 public:
-	decklink_consumer(const configuration& config, const core::video_format_desc& format_desc, int channel_index) 
+	decklink_consumer(
+			const configuration& config,
+			const core::video_format_desc& format_desc,
+			const core::audio_channel_layout& in_channel_layout,
+			int channel_index) 
 		: channel_index_(channel_index)
 		, config_(config)
 		, format_desc_(format_desc)
+		, in_channel_layout_(in_channel_layout)
 	{
 		is_running_ = true;
 		current_presentation_delay_ = 0;
@@ -406,7 +441,7 @@ public:
 	
 	void enable_audio()
 	{
-		if(FAILED(output_->EnableAudioOutput(bmdAudioSampleRate48kHz, bmdAudioSampleType32bitInteger, 2, bmdAudioOutputStreamTimestamped)))
+		if(FAILED(output_->EnableAudioOutput(bmdAudioSampleRate48kHz, bmdAudioSampleType32bitInteger, out_channel_layout_.num_channels, bmdAudioOutputStreamTimestamped)))
 				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Could not enable audio output."));
 				
 		if(FAILED(output_->SetAudioCallback(this)))
@@ -472,7 +507,7 @@ public:
 			{
 				graph_->set_tag("late-frame");
 				video_scheduled_ += format_desc_.duration;
-				audio_scheduled_ += dframe->audio_data().size() / format_desc_.audio_channels;
+				audio_scheduled_ += dframe->audio_data().size() / out_channel_layout_.num_channels;
 				//++video_scheduled_;
 				//audio_scheduled_ += format_desc_.audio_cadence[0];
 				//++audio_scheduled_;
@@ -519,7 +554,7 @@ public:
 				}
 				else
 				{
-					schedule_next_audio(core::audio_buffer(format_desc_.audio_cadence[preroll % format_desc_.audio_cadence.size()] * format_desc_.audio_channels, 0));
+					schedule_next_audio(core::mutable_audio_buffer(format_desc_.audio_cadence[preroll % format_desc_.audio_cadence.size()] * out_channel_layout_.num_channels, 0));
 				}
 			}
 			else
@@ -529,13 +564,13 @@ public:
 				while(audio_frame_buffer_.try_pop(frame))
 				{
 					send_completion_.try_completion();
-					schedule_next_audio(frame.audio_data());
+					schedule_next_audio(channel_remapper_.mix_and_rearrange(frame.audio_data()));
 				}
 			}
 
 			UINT32 buffered;
 			output_->GetBufferedAudioSampleFrameCount(&buffered);
-			graph_->set_value("buffered-audio", static_cast<double>(buffered) / (format_desc_.audio_cadence[0] * format_desc_.audio_channels * 2));
+			graph_->set_value("buffered-audio", static_cast<double>(buffered) / (format_desc_.audio_cadence[0] * config_.buffer_depth()));
 		}
 		catch(...)
 		{
@@ -550,7 +585,7 @@ public:
 	template<typename T>
 	void schedule_next_audio(const T& audio_data)
 	{
-		auto sample_frame_count = static_cast<int>(audio_data.size()/format_desc_.audio_channels);
+		auto sample_frame_count = static_cast<int>(audio_data.size()/out_channel_layout_.num_channels);
 
 		audio_container_.push_back(std::vector<int32_t>(audio_data.begin(), audio_data.end()));
 
@@ -664,13 +699,13 @@ public:
 
 	// frame_consumer
 	
-	void initialize(const core::video_format_desc& format_desc, int channel_index) override
+	void initialize(const core::video_format_desc& format_desc, const core::audio_channel_layout& channel_layout, int channel_index) override
 	{
 		format_desc_ = format_desc;
 		executor_.invoke([=]
 		{
 			consumer_.reset();
-			consumer_.reset(new decklink_consumer(config_, format_desc, channel_index));			
+			consumer_.reset(new decklink_consumer(config_, format_desc, channel_layout, channel_index));			
 		});
 	}
 	
@@ -737,7 +772,8 @@ void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
 				L"{[keyer:INTERNAL_KEY,EXTERNAL_KEY,EXTERNAL_SEPARATE_DEVICE_KEY]} "
 				L"{[low_latency:LOW_LATENCY]} "
 				L"{[embedded_audio:EMBEDDED_AUDIO]} "
-				L"{[key_only:KEY_ONLY]}");
+				L"{[key_only:KEY_ONLY]} "
+				L"{CHANNEL_LAYOUT [channel_layout:string]}");
 	sink.para()->text(L"Sends video on an SDI output using Blackmagic Decklink video cards.");
 	sink.definitions()
 		->item(L"device_index", L"The Blackmagic video card to use (See Blackmagic control panel for card order). Default is 1.")
@@ -749,7 +785,8 @@ void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
 		->item(L"key_only",
 				L" will extract only the alpha channel from the "
 				L"channel. This is useful when you have two SDI video cards, and neither has native support "
-				L"for separate fill/key output");
+				L"for separate fill/key output")
+		->item(L"channel_layout", L"If specified, overrides the audio channel layout used by the channel.");
 	sink.para()->text(L"Examples:");
 	sink.example(L">> ADD 1 DECKLINK", L"for using the default device_index of 1.");
 	sink.example(L">> ADD 1 DECKLINK 2", L"uses device_index 2.");
@@ -788,6 +825,18 @@ spl::shared_ptr<core::frame_consumer> create_consumer(
 	config.embedded_audio	= contains_param(L"EMBEDDED_AUDIO", params);
 	config.key_only			= contains_param(L"KEY_ONLY", params);
 
+	auto channel_layout = get_param(L"CHANNEL_LAYOUT", params);
+
+	if (!channel_layout.empty())
+	{
+		auto found_layout = core::audio_channel_layout_repository::get_default()->get_layout(channel_layout);
+
+		if (!found_layout)
+			CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Channel layout " + channel_layout + L" not found."));
+
+		config.out_channel_layout = *found_layout;
+	}
+
 	return spl::make_shared<decklink_consumer_proxy>(config);
 }
 
@@ -809,6 +858,18 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 		config.latency = configuration::latency_t::low_latency;
 	else if(latency == L"normal")
 		config.latency = configuration::latency_t::normal_latency;
+
+	auto channel_layout = ptree.get_optional<std::wstring>(L"channel-layout");
+
+	if (channel_layout)
+	{
+		auto found_layout = core::audio_channel_layout_repository::get_default()->get_layout(*channel_layout);
+
+		if (!found_layout)
+			CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Channel layout " + *channel_layout + L" not found."));
+
+		config.out_channel_layout = *found_layout;
+	}
 
 	config.key_only				= ptree.get(L"key-only",		config.key_only);
 	config.device_index			= ptree.get(L"device",			config.device_index);

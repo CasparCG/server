@@ -49,18 +49,18 @@ public:
 					
 	// Constructors
 	
-	explicit mixer(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer);
+	explicit mixer(int channel_index, spl::shared_ptr<caspar::diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer);
 
 	// Methods
 		
-	const_frame operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc);
+	const_frame operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc, const core::audio_channel_layout& channel_layout);
 
 	void set_master_volume(float volume);
 	float get_master_volume();
 	void set_straight_alpha_output(bool value);
 	bool get_straight_alpha_output();
 
-	mutable_frame create_frame(const void* tag, const pixel_format_desc& desc);
+	mutable_frame create_frame(const void* tag, const pixel_format_desc& desc, const core::audio_channel_layout& channel_layout);
 
 	// Properties
 

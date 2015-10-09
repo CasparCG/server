@@ -98,7 +98,6 @@ struct video_format_desc final
 	std::wstring		name;		// name of output format
 
 	int					audio_sample_rate;
-	int					audio_channels;
 	std::vector<int>	audio_cadence;	// rotating optimal number of samples per frame
 
 	video_format_desc(video_format format,

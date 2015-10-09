@@ -50,3 +50,6 @@ FORWARD2(caspar, core, class help_sink);
 FORWARD2(caspar, core, class help_repository);
 FORWARD2(caspar, core, struct module_dependencies);
 FORWARD2(caspar, core, class frame_producer_registry);
+FORWARD2(caspar, core, struct audio_channel_layout);
+FORWARD2(caspar, core, class audio_channel_layout_repository);
+FORWARD2(caspar, core, class audio_mix_config_repository);

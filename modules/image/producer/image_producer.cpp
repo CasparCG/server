@@ -31,6 +31,7 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
+#include <core/frame/audio_channel_layout.h>
 #include <core/monitor/monitor.h>
 #include <core/help/help_sink.h>
 #include <core/help/help_repository.h>
@@ -61,7 +62,7 @@ std::pair<core::draw_frame, core::constraints> load_image(
 	auto width = FreeImage_GetWidth(bitmap.get());
 	auto height = FreeImage_GetHeight(bitmap.get());
 	desc.planes.push_back(core::pixel_format_desc::plane(width, height, 4));
-	auto frame = frame_factory->create_frame(bitmap.get(), desc);
+	auto frame = frame_factory->create_frame(bitmap.get(), desc, core::audio_channel_layout::invalid());
 
 	std::copy_n(
 			FreeImage_GetBits(bitmap.get()),
@@ -105,7 +106,7 @@ struct image_producer : public core::frame_producer_base
 		core::pixel_format_desc desc;
 		desc.format = core::pixel_format::bgra;
 		desc.planes.push_back(core::pixel_format_desc::plane(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), 4));
-		auto frame = frame_factory_->create_frame(this, desc);
+		auto frame = frame_factory_->create_frame(this, desc, core::audio_channel_layout::invalid());
  
 		std::copy_n(FreeImage_GetBits(bitmap.get()), frame.image_data().size(), frame.image_data().begin());
 		frame_ = core::draw_frame(std::move(frame));
