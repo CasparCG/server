@@ -33,6 +33,7 @@
 #include <core/frame/frame_factory.h>
 #include <core/frame/frame_transform.h>
 #include <core/frame/pixel_format.h>
+#include <core/frame/audio_channel_layout.h>
 #include <core/monitor/monitor.h>
 #include <core/help/help_sink.h>
 #include <core/help/help_repository.h>
@@ -174,7 +175,7 @@ struct image_scroll_producer : public core::frame_producer_base
 			{
 				core::pixel_format_desc desc = core::pixel_format::bgra;
 				desc.planes.push_back(core::pixel_format_desc::plane(width_, format_desc_.height, 4));
-				auto frame = frame_factory->create_frame(this, desc);
+				auto frame = frame_factory->create_frame(this, desc, core::audio_channel_layout::invalid());
 
 				if(count >= frame.image_data(0).size())
 				{	
@@ -203,7 +204,7 @@ struct image_scroll_producer : public core::frame_producer_base
 			{
 				core::pixel_format_desc desc = core::pixel_format::bgra;
 				desc.planes.push_back(core::pixel_format_desc::plane(format_desc_.width, height_, 4));
-				auto frame = frame_factory->create_frame(this, desc);
+				auto frame = frame_factory->create_frame(this, desc, core::audio_channel_layout::invalid());
 				if(count >= frame.image_data(0).size())
 				{	
 					for(int y = 0; y < height_; ++y)

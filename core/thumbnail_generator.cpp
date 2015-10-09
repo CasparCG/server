@@ -44,6 +44,7 @@
 #include "frame/frame.h"
 #include "frame/draw_frame.h"
 #include "frame/frame_transform.h"
+#include "frame/audio_channel_layout.h"
 #include "producer/media_info/media_info.h"
 #include "producer/media_info/media_info_repository.h"
 
@@ -330,7 +331,7 @@ public:
 
 			std::shared_ptr<void> ticket(nullptr, [&thumbnail_ready](void*) { thumbnail_ready.set_value(); });
 
-			auto mixed_frame = mixer_(std::move(frames), format_desc_);
+			auto mixed_frame = mixer_(std::move(frames), format_desc_, audio_channel_layout(2, L"stereo", L""));
 
 			output_->send(std::move(mixed_frame), ticket);
 			ticket.reset();

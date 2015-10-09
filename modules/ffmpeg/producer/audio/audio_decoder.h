@@ -26,6 +26,8 @@
 
 #include <common/memory.h>
 
+#include <core/fwd.h>
+
 #include <boost/noncopyable.hpp>
 
 struct AVPacket;
@@ -36,7 +38,7 @@ namespace caspar { namespace ffmpeg {
 class audio_decoder : public boost::noncopyable
 {
 public:
-	explicit audio_decoder(class input& input, const core::video_format_desc& format_desc);
+	explicit audio_decoder(class input& input, const core::video_format_desc& format_desc, const std::wstring& channel_layout_spec);
 	
 	audio_decoder(audio_decoder&& other);
 	audio_decoder& operator=(audio_decoder&& other);
@@ -44,6 +46,7 @@ public:
 	std::shared_ptr<AVFrame> operator()();
 
 	uint32_t nb_frames() const;
+	const core::audio_channel_layout& channel_layout() const;
 	
 	std::wstring print() const;
 	

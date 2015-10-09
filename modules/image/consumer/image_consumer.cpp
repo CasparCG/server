@@ -82,7 +82,7 @@ public:
 	{
 	}
 
-	void initialize(const core::video_format_desc&, int) override
+	void initialize(const core::video_format_desc&, const core::audio_channel_layout&, int) override
 	{
 	}
 
