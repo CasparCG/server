@@ -25,7 +25,7 @@
 
 #include <common/tweener.h>
 
-namespace caspar { namespace core {
+namespace caspar {
 
 class TweenerTest : public ::testing::TestWithParam<std::wstring>
 {
@@ -40,7 +40,7 @@ TEST_P(TweenerTest, StartsAndEndsCloseToDesiredSourceAndTarget)
 	static const double REQUIRED_CLOSENESS = 0.01;
 
 	auto name = GetParam();
-	caspar::core::tweener t(name);
+	tweener t(name);
 
 	EXPECT_NEAR(
 		start_value,
@@ -57,4 +57,4 @@ INSTANTIATE_TEST_CASE_P(
 	TweenerTest,
 	::testing::ValuesIn(tweener::names()));
 
-}}
+}

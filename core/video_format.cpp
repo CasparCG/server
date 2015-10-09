@@ -91,7 +91,6 @@ video_format_desc::video_format_desc(
 	, size(width*height*4)
 	, name(name)
 	, audio_sample_rate(48000)
-	, audio_channels(2)
 	, audio_cadence(audio_cadence)
 {
 }

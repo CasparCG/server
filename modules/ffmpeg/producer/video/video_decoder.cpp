@@ -111,7 +111,7 @@ public:
 				current_packet_.reset();
 		}
 			
-		return frame ? frame : poll();
+		return frame;
 	}
 
 	std::shared_ptr<AVFrame> decode(AVPacket& pkt)

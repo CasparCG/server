@@ -46,6 +46,7 @@
 #include <core/help/util.h>
 #include <core/video_format.h>
 #include <core/producer/transition/transition_producer.h>
+#include <core/frame/audio_channel_layout.h>
 #include <core/frame/frame_transform.h>
 #include <core/producer/stage.h>
 #include <core/producer/layer.h>
@@ -704,9 +705,11 @@ void set_describer(core::help_sink& sink, const core::help_repository& repo)
 	sink.syntax(L"SET [video_channel:int] [variable:string] [value:string]");
 	sink.para()->text(L"Changes the value of a channel variable. Available variables to set:");
 	sink.definitions()
-		->item(L"MODE", L"Changes the video format of the channel.");
+		->item(L"MODE", L"Changes the video format of the channel.")
+		->item(L"CHANNEL_LAYOUT", L"Changes the audio channel layout of the video channel channel.");
 	sink.para()->text(L"Examples:");
-	sink.example(L">> SET 1 MODE PAL", L"changes the video mode on channel 1 to PAL");
+	sink.example(L">> SET 1 MODE PAL", L"changes the video mode on channel 1 to PAL.");
+	sink.example(L">> SET 1 CHANNEL_LAYOUT smpte", L"changes the audio channel layout on channel 1 to smpte.");
 }
 
 std::wstring set_command(command_context& ctx)
@@ -724,6 +727,18 @@ std::wstring set_command(command_context& ctx)
 		}
 
 		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info(L"Invalid video mode"));
+	}
+	else if (name == L"CHANNEL_LAYOUT")
+	{
+		auto channel_layout = core::audio_channel_layout_repository::get_default()->get_layout(value);
+
+		if (channel_layout)
+		{
+			ctx.channel.channel->audio_channel_layout(*channel_layout);
+			return L"202 SET CHANNEL_LAYOUT OK\r\n";
+		}
+
+		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info(L"Invalid audio channel layout"));
 	}
 
 	CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info(L"Invalid channel variable"));

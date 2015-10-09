@@ -42,7 +42,10 @@ public:
 
 	// Methods
 
-	virtual mutable_frame create_frame(const void* video_stream_tag, const pixel_format_desc& desc) = 0;	
+	virtual mutable_frame create_frame(
+			const void* video_stream_tag,
+			const pixel_format_desc& desc,
+			const core::audio_channel_layout& channel_layout) = 0;
 
 	// Properties
 };
