@@ -118,6 +118,7 @@ struct marker
 
 struct scene_producer::impl
 {
+	std::wstring											producer_name_;
 	constraints												pixel_constraints_;
 	video_format_desc										format_desc_;
 	std::list<layer>										layers_;
@@ -134,8 +135,9 @@ struct scene_producer::impl
 	bool													removed_			= false;
 	bool													going_to_mark_		= false;
 
-	impl(int width, int height, const video_format_desc& format_desc)
-		: pixel_constraints_(width, height)
+	impl(std::wstring producer_name, int width, int height, const video_format_desc& format_desc)
+		: producer_name_(std::move(producer_name))
+		, pixel_constraints_(width, height)
 		, format_desc_(format_desc)
 		, aggregator_([=] (double x, double y) { return collission_detect(x, y); })
 	{
@@ -491,18 +493,19 @@ struct scene_producer::impl
 
 	std::wstring print() const
 	{
-		return L"scene[]";
+		return L"scene[type=" + name() + L"]";
 	}
 
 	std::wstring name() const
 	{
-		return L"scene";
+		return producer_name_;
 	}
 	
 	boost::property_tree::wptree info() const
 	{
 		boost::property_tree::wptree info;
 		info.add(L"type", L"scene");
+		info.add(L"producer-name", name());
 		info.add(L"frame-number", frame_number_.get());
 
 		for (auto& var : variables_)
@@ -539,8 +542,8 @@ struct scene_producer::impl
 	}
 };
 
-scene_producer::scene_producer(int width, int height, const video_format_desc& format_desc)
-	: impl_(new impl(width, height, format_desc))
+scene_producer::scene_producer(std::wstring producer_name, int width, int height, const video_format_desc& format_desc)
+	: impl_(new impl(std::move(producer_name), width, height, format_desc))
 {
 }
 
