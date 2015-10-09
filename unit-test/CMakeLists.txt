@@ -22,10 +22,18 @@ target_link_libraries(unit-test
 		common
 		core
 		ffmpeg
+)
 
+if (MSVC)
+	target_link_libraries(unit-test
 		optimized gtest.lib
 		debug gtestd.lib
-)
+	)
+else ()
+	target_link_libraries(unit-test
+		gtest
+	)
+endif ()
 
 include_directories(..)
 include_directories(${BOOST_INCLUDE_PATH})

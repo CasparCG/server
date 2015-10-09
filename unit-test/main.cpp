@@ -32,9 +32,15 @@
 
 #include <modules/ffmpeg/ffmpeg.h>
 
+#include <boost/locale.hpp>
+
 int main(int argc, char** argv)
 {
 	using namespace caspar;
+
+	boost::locale::generator gen;
+	gen.categories(boost::locale::codepage_facet);
+	std::locale::global(gen(""));
 
 	spl::shared_ptr<core::system_info_provider_repository> system_info_provider_repo;
 	spl::shared_ptr<core::cg_producer_registry> cg_registry;
