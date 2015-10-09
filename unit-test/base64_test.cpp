@@ -24,7 +24,7 @@
 #include <gtest/gtest.h>
 
 #include <set>
-#include <locale>
+#include <cctype>
 
 #include <boost/assign.hpp>
 
@@ -32,18 +32,14 @@
 #include <common/except.h>
 
 namespace {
-	static const char DICTIONARY[] =
-	{
-		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-		'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-		'/', '+'
-	};
-
 	const std::set<char>& get_dictionary()
 	{
-		static const std::set<char> dictionary(
-				DICTIONARY, DICTIONARY + sizeof(DICTIONARY));
+		static const std::set<char> dictionary{
+			'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+			'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+			'/', '+'
+		};
 
 		return dictionary;
 	}
@@ -68,7 +64,7 @@ TEST(Base64Test, InvalidInputCharacters)
 	for (int i = 1; i < 256; ++i)
 	{
 		if (get_dictionary().find(static_cast<char>(i)) == get_dictionary().end()
-				&& !std::isspace(i, std::locale())
+				&& !std::isspace(i)
 				&& i != '=')
 		{
 			auto invalid = PREFIX + static_cast<char>(i);
