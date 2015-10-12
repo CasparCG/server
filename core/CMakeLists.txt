@@ -37,6 +37,7 @@ set(SOURCES
 		producer/separated/separated_producer.cpp
 
 		producer/text/text_producer.cpp
+		producer/text/utils/freetype_library.cpp
 		producer/text/utils/texture_atlas.cpp
 		producer/text/utils/texture_font.cpp
 
@@ -99,6 +100,7 @@ set(HEADERS
 		producer/scene/xml_scene_producer.h
 
 		producer/text/utils/color.h
+		producer/text/utils/freetype_library.h
 		producer/text/utils/string_metrics.h
 		producer/text/utils/text_info.h
 		producer/text/utils/texture_atlas.h

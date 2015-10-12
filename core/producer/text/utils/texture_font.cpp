@@ -2,6 +2,7 @@
 
 #include "texture_atlas.h"
 #include "texture_font.h"
+#include "freetype_library.h"
 
 #include <map>
 #include <memory>
@@ -10,8 +11,6 @@
 #include FT_GLYPH_H
 
 namespace caspar { namespace core { namespace text {
-
-struct freetype_exception : virtual caspar_exception { };
 
 struct unicode_range
 {
@@ -37,8 +36,7 @@ private:
 		int width, height;
 	};
 
-	std::shared_ptr<FT_LibraryRec_>	lib_;
-	std::shared_ptr<FT_FaceRec_>	face_;
+	spl::shared_ptr<FT_FaceRec_>	face_;
 	texture_atlas					atlas_;
 	double							size_;
 	double							tracking_;
@@ -46,22 +44,13 @@ private:
 	std::map<int, glyph_info>		glyphs_;
 
 public:
-	impl(texture_atlas& atlas, const text_info& info, bool normalize_coordinates) : atlas_(atlas), size_(info.size), tracking_(info.size*info.tracking/1000.0), normalize_(normalize_coordinates)
+	impl(texture_atlas& atlas, const text_info& info, bool normalize_coordinates)
+		: face_(get_new_face(u8(info.font_file)))
+		, atlas_(atlas)
+		, size_(info.size)
+		, tracking_(info.size*info.tracking/1000.0)
+		, normalize_(normalize_coordinates)
 	{
-		FT_Library lib;
-			
-		if (FT_Init_FreeType(&lib))
-			CASPAR_THROW_EXCEPTION(freetype_exception() << msg_info("Failed to initialize freetype"));
-
-		lib_.reset(lib, [](FT_Library ptr) { FT_Done_FreeType(ptr); });
-
-		FT_Face face;
-			
-		if (FT_New_Face(lib_.get(), u8(info.font_file).c_str(), 0, &face))
-			CASPAR_THROW_EXCEPTION(freetype_exception() << msg_info(L"Failed to load font " + info.font));
-
-		face_.reset(face, [](FT_Face ptr) { FT_Done_Face(ptr); });
-
 		if (FT_Set_Char_Size(face_.get(), static_cast<FT_F26Dot6>(size_*64), 0, 72, 72))
 			CASPAR_THROW_EXCEPTION(freetype_exception() << msg_info("Failed to set font size"));
 	}
@@ -83,7 +72,6 @@ public:
 
 	void load_glyphs(unicode_block block, const color<double>& col)
 	{
-		FT_Error err;
 		int flags = FT_LOAD_RENDER | FT_LOAD_FORCE_AUTOHINT | FT_LOAD_TARGET_NORMAL;
 		unicode_range range = get_range(block);
 
@@ -93,7 +81,7 @@ public:
 			if(!glyph_index)	//ignore codes that doesn't have a glyph for now. Might want to map these to a special glyph later.
 				continue;
 			
-			err = FT_Load_Glyph(face_.get(), glyph_index, flags);
+			FT_Error err = FT_Load_Glyph(face_.get(), glyph_index, flags);
 			if(err) continue;	//igonore glyphs that fail to load
 
 			const FT_Bitmap& bitmap = face_->glyph->bitmap;	//shorthand notation
