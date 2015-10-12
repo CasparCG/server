@@ -316,6 +316,10 @@ spl::shared_ptr<core::frame_producer> do_create_producer(const frame_producer_de
 			{
 				producer = factory(dependencies, params);
 			}
+			catch (user_error&)
+			{
+				throw;
+			}
 			catch(...)
 			{
 				if(throw_on_fail)
