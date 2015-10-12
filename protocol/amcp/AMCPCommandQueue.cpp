@@ -111,6 +111,11 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 				CASPAR_LOG(error) << L"File not found. No match found for parameters. Check syntax.";
 				pCurrentCommand->SetReplyString(L"404 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
+			catch (const user_error& e)
+			{
+				CASPAR_LOG(error) << *boost::get_error_info<msg_info_t>(e) << ". Check syntax.";
+				pCurrentCommand->SetReplyString(L"403 " + pCurrentCommand->print() + L" FAILED\r\n");
+			}
 			catch (std::out_of_range&)
 			{
 				CASPAR_LOG(error) << L"Missing parameter. Check syntax.";
