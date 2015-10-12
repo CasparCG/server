@@ -55,7 +55,7 @@ spl::shared_ptr<std::remove_pointer<FT_Face>::type> get_new_face(const std::stri
 	if (FT_New_Face(lib.get(), u8(font_file).c_str(), 0, &face))
 		CASPAR_THROW_EXCEPTION(freetype_exception() << msg_info("Failed to load font file \"" + font_file + "\""));
 
-	return spl::shared_ptr<std::remove_pointer<FT_Face>::type>(face, [lib](auto* p)
+	return spl::shared_ptr<std::remove_pointer<FT_Face>::type>(face, [lib](FT_Face p)
 	{
 		FT_Done_Face(p);
 	});
