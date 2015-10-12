@@ -63,6 +63,8 @@
 
 namespace caspar { namespace ffmpeg {
 
+struct seek_out_of_range : virtual user_error {};
+
 std::wstring get_relative_or_original(
 		const std::wstring& filename,
 		const boost::filesystem::path& relative_to)
@@ -174,6 +176,9 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			CASPAR_LOG(warning) << print() << " Failed to open audio-stream. Running without audio.";		
 		}
+
+		if (start_ > file_nb_frames())
+			CASPAR_THROW_EXCEPTION(seek_out_of_range() << msg_info("SEEK out of range"));
 
 		muxer_.reset(new frame_muxer(fps_, frame_factory, format_desc_, channel_layout, filter));
 		
@@ -378,7 +383,10 @@ public:
 
 	void seek(uint32_t target)
 	{		
-		seek_target_ = std::min(target, file_nb_frames());
+		if (target > file_nb_frames())
+			CASPAR_THROW_EXCEPTION(seek_out_of_range() << msg_info("SEEK out of range"));
+
+		seek_target_ = target;
 
 		input_.seek(*seek_target_);
 		muxer_->clear();
