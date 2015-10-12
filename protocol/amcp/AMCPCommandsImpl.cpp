@@ -48,6 +48,7 @@
 #include <core/producer/transition/transition_producer.h>
 #include <core/frame/audio_channel_layout.h>
 #include <core/frame/frame_transform.h>
+#include <core/producer/text/text_producer.h>
 #include <core/producer/stage.h>
 #include <core/producer/layer.h>
 #include <core/mixer/mixer.h>
@@ -2224,6 +2225,29 @@ std::wstring cls_command(command_context& ctx)
 	return boost::to_upper_copy(replyString.str());
 }
 
+void fls_describer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"List all fonts.");
+	sink.syntax(L"FLS");
+	sink.para()
+		->text(L"Lists all font files in the ")->code(L"fonts")->text(L" folder. Use the command ")
+		->see(L"INFO PATHS")->text(L" to get the path to the ")->code(L"fonts")->text(L" folder.");
+	sink.para()->text(L"Columns in order from left to right are: Font name and font path.");
+}
+
+std::wstring fls_command(command_context& ctx)
+{
+	std::wstringstream replyString;
+	replyString << L"200 FLS OK\r\n";
+
+	for (auto& font : core::text::list_fonts())
+		replyString << L"\"" << font.first << L"\" \"" << font.second << L"\"\r\n";
+
+	replyString << L"\r\n";
+
+	return replyString.str();
+}
+
 void tls_describer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"List all templates.");
@@ -2845,6 +2869,7 @@ void register_commands(amcp_command_repository& repo)
 
 	repo.register_command(			L"Query Commands",		L"CINF",						cinf_describer,						cinf_command,					1);
 	repo.register_command(			L"Query Commands",		L"CLS",							cls_describer,						cls_command,					0);
+	repo.register_command(			L"Query Commands",		L"FLS",							fls_describer,						fls_command,					0);
 	repo.register_command(			L"Query Commands",		L"TLS",							tls_describer,						tls_command,					0);
 	repo.register_command(			L"Query Commands",		L"VERSION",						version_describer,					version_command,				0);
 	repo.register_command(			L"Query Commands",		L"INFO",						info_describer,						info_command,					0);

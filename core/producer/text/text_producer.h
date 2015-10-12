@@ -29,6 +29,7 @@
 #include <boost/property_tree/ptree_fwd.hpp>
 #include <string>
 #include <vector>
+#include <utility>
 
 #include "utils/color.h"
 #include "utils/string_metrics.h"
@@ -38,6 +39,7 @@ namespace caspar { namespace core {
 	namespace text 
 	{
 		void init(module_dependencies dependencies);
+		std::vector<std::pair<std::wstring, std::wstring>> list_fonts();
 	}
 
 class text_producer : public frame_producer_base
