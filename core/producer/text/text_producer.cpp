@@ -57,6 +57,7 @@
 
 #include "utils/texture_atlas.h"
 #include "utils/texture_font.h"
+#include "utils/freetype_library.h"
 
 class font_comparer {
 	const std::wstring& lhs;
@@ -70,43 +71,32 @@ namespace caspar { namespace core { namespace text {
 
 using namespace boost::filesystem;
 
-std::map<std::wstring, std::wstring> g_fonts;
-
 std::map<std::wstring, std::wstring> enumerate_fonts()
 {
 	std::map<std::wstring, std::wstring> result;
 
-	FT_Library lib;
-	FT_Error err = FT_Init_FreeType(&lib);
-	if(err) 
-		return result;
-
-	auto fonts = directory_iterator(env::font_folder());
-	auto end = directory_iterator();
-	for(; fonts != end; ++fonts)
+	for(auto iter = directory_iterator(env::font_folder()), end = directory_iterator(); iter != end; ++iter)
 	{
-		auto file = (*fonts);
+		auto file = (*iter);
 		if(is_regular_file(file.path()))
 		{
-			FT_Face face;
-			err = FT_New_Face(lib, u8(file.path().native()).c_str(), 0, &face);
-			if(err) 
-				continue;
-
-			const char* fontname = FT_Get_Postscript_Name(face);	//this doesn't work for .fon fonts. Ignoring those for now
+			auto face = get_new_face(u8(file.path().native()));
+			const char* fontname = FT_Get_Postscript_Name(face.get());	//this doesn't work for .fon fonts. Ignoring those for now
 			if(fontname != nullptr)
 			{
 				std::string fontname_str(fontname);
 				result.insert(std::make_pair(u16(fontname_str), u16(file.path().native())));
 			}
-
-			FT_Done_Face(face);
 		}
 	}
 
-	FT_Done_FreeType(lib);
-
 	return result;
+}
+
+std::vector<std::pair<std::wstring, std::wstring>> list_fonts()
+{
+	auto fonts = enumerate_fonts();
+	return std::vector<std::pair<std::wstring, std::wstring>>(fonts.begin(), fonts.end());
 }
 
 void describe_text_producer(help_sink&, const help_repository&);
@@ -114,15 +104,15 @@ spl::shared_ptr<frame_producer> create_text_producer(const frame_producer_depend
 
 void init(module_dependencies dependencies)
 {
-	g_fonts = enumerate_fonts();
 	dependencies.producer_registry->register_producer_factory(L"Text Producer", create_text_producer, describe_text_producer);
 }
 
 text_info& find_font_file(text_info& info)
 {
 	auto& font_name = info.font;
-	auto it = std::find_if(g_fonts.begin(), g_fonts.end(), font_comparer(font_name));
-	info.font_file = (it != g_fonts.end()) ? (*it).second : L"";
+	auto fonts = enumerate_fonts();
+	auto it = std::find_if(fonts.begin(), fonts.end(), font_comparer(font_name));
+	info.font_file = (it != fonts.end()) ? (*it).second : L"";
 	return info;
 }
 
@@ -131,27 +121,30 @@ text_info& find_font_file(text_info& info)
 
 struct text_producer::impl
 {
-	monitor::subject monitor_subject_;
-	spl::shared_ptr<core::frame_factory> frame_factory_;
-	constraints constraints_;
-	int x_, y_, parent_width_, parent_height_;
-	bool standalone_;
-	variable_impl<std::wstring> text_;
-	std::shared_ptr<void> text_subscription_;
-	variable_impl<double> tracking_;
-	std::shared_ptr<void> tracking_subscription_;
-	variable_impl<double> current_bearing_y_;
-	variable_impl<double> current_protrude_under_y_;
-	draw_frame frame_;
-	text::texture_atlas atlas_								{ 512, 512, 4 };
-	text::texture_font font_;
-	bool dirty_												= false;
+	monitor::subject						monitor_subject_;
+	spl::shared_ptr<core::frame_factory>	frame_factory_;
+	int										x_;
+	int										y_;
+	int										parent_width_;
+	int										parent_height_;
+	bool									standalone_;
+	constraints								constraints_				{ parent_width_, parent_height_ };
+	variable_impl<std::wstring>				text_;
+	std::shared_ptr<void>					text_subscription_;
+	variable_impl<double>					tracking_;
+	std::shared_ptr<void>					tracking_subscription_;
+	variable_impl<double>					current_bearing_y_;
+	variable_impl<double>					current_protrude_under_y_;
+	draw_frame								frame_;
+	text::texture_atlas						atlas_						{ 512, 512, 4 };
+	text::texture_font						font_;
+	bool									dirty_						= false;
 
 public:
 	explicit impl(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, text::text_info& text_info, long parent_width, long parent_height, bool standalone) 
 		: frame_factory_(frame_factory)
-		, constraints_(parent_width, parent_height)
-		, x_(x), y_(y), parent_width_(parent_width), parent_height_(parent_height)
+		, x_(x), y_(y)
+		, parent_width_(parent_width), parent_height_(parent_height)
 		, standalone_(standalone)
 		, font_(atlas_, text::find_font_file(text_info), !standalone)
 	{
@@ -340,6 +333,7 @@ void describe_text_producer(help_sink& sink, const help_repository& repo)
 	sink.para()->text(L"Examples:");
 	sink.example(L">> PLAY 1-10 [TEXT] \"John Doe\" 0 0 FONT ArialMT SIZE 30 COLOR #1b698d STANDALONE 1");
 	sink.example(L">> CALL 1-10 \"Jane Doe\"", L"for modifying the text while playing.");
+	sink.para()->text(L"See ")->see(L"FLS")->text(L" for listing the available fonts.");
 }
 
 spl::shared_ptr<frame_producer> create_text_producer(const frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
