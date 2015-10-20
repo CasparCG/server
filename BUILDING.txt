@@ -138,3 +138,4 @@ Development using Qt Creator
    (or any other number than 12 depending on the number of hardware threads
    in the computer). This will enable parallel building.
 
+7. Under "Run Settings" check the "Run in Terminal" checkbox.
