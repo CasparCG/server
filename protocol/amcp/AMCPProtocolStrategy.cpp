@@ -105,7 +105,7 @@ public:
 	//Thesefore the AMCPProtocolStrategy should be decorated with a delimiter_based_chunking_strategy
 	void Parse(const std::wstring& message, ClientInfoPtr client)
 	{
-		CASPAR_LOG(info) << L"Received message from " << client->print() << ": " << message << L"\\r\\n";
+		CASPAR_LOG(info) << L"Received message from " << client->address() << ": " << message << L"\\r\\n";
 	
 		command_interpreter_result result;
 		if(interpret_command_string(message, result, client))

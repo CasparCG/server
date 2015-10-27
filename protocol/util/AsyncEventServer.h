@@ -24,6 +24,8 @@
 
 #include "protocol_strategy.h"
 
+#include <common/memory.h>
+
 #include <boost/asio.hpp>
 
 namespace caspar { namespace IO {
@@ -42,7 +44,7 @@ public:
 
 	struct implementation;
 private:
-	std::unique_ptr<implementation> impl_;
+	spl::shared_ptr<implementation> impl_;
 };
 
 }}	
