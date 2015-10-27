@@ -39,8 +39,7 @@ struct ConsoleClientInfo : public client_connection<wchar_t>
 		std::wcout << (L"#" + caspar::log::replace_nonprintable_copy(data, L'?')) << std::flush;
 	}
 	void disconnect() override {}
-	std::wstring print() const override {return L"Console";}
-	std::wstring address() const override { return L"127.0.0.1"; }
+	std::wstring address() const override { return L"Console"; }
 	void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound) override {}
 	std::shared_ptr<void> remove_lifecycle_bound_object(const std::wstring& key) override { return std::shared_ptr<void>(); }
 };
