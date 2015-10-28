@@ -23,7 +23,7 @@ public:
 
 	// Constructors
 
-	image_mixer();
+	image_mixer(int channel_id);
 	~image_mixer();
 
 	// Methods	
