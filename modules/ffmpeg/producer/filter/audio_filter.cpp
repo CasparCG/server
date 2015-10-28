@@ -24,6 +24,7 @@
 #include "audio_filter.h"
 
 #include "../../ffmpeg_error.h"
+#include "../../ffmpeg.h"
 
 #include <common/assert.h>
 #include <common/except.h>
@@ -155,11 +156,12 @@ struct audio_filter::implementation
 		audio_graph_in_  = filt_asrc;
 		audio_graph_out_ = filt_asink;
 		
-		CASPAR_LOG(info)
-			<< 	u16(std::string("\n") 
-				+ avfilter_graph_dump(
-						audio_graph_.get(), 
-						nullptr));
+		if (!is_logging_disabled_for_thread())
+			CASPAR_LOG(info)
+				<< 	u16(std::string("\n") 
+					+ avfilter_graph_dump(
+							audio_graph_.get(), 
+							nullptr));
 	}
 	
 	void configure_filtergraph(

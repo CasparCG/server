@@ -29,6 +29,7 @@
 #include "producer/util/util.h"
 
 #include <common/log.h>
+#include <common/os/general_protection_fault.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/producer/frame_producer.h>
@@ -37,6 +38,7 @@
 #include <core/system_info_provider.h>
 
 #include <boost/property_tree/ptree.hpp>
+#include <boost/thread/tss.hpp>
 
 #include <tbb/recursive_mutex.h>
 
@@ -235,11 +237,55 @@ std::wstring swscale_version()
 {
 	return make_version(::swscale_version());
 }
+bool& get_disable_logging_for_thread()
+{
+	static boost::thread_specific_ptr<bool> disable_logging_for_thread;
+
+	auto local = disable_logging_for_thread.get();
+
+	if (!local)
+	{
+		local = new bool(false);
+		disable_logging_for_thread.reset(local);
+	}
+
+	return *local;
+}
+
+void disable_logging_for_thread()
+{
+	get_disable_logging_for_thread() = true;
+}
+
+bool is_logging_disabled_for_thread()
+{
+	return get_disable_logging_for_thread();
+}
+
+std::shared_ptr<void> temporary_disable_logging_for_thread(bool disable)
+{
+	if (!disable || is_logging_disabled_for_thread())
+		return std::shared_ptr<void>();
+
+	disable_logging_for_thread();
+
+	return std::shared_ptr<void>(nullptr, [](void*)
+	{
+		get_disable_logging_for_thread() = false; // Only works correctly if destructed in same thread as original caller.
+	});
+}
+
+void log_for_thread(void* ptr, int level, const char* fmt, va_list vl)
+{
+	ensure_gpf_handler_installed_for_thread("ffmpeg-thread");
+	if (!get_disable_logging_for_thread()) // It does not matter what the value of the bool is
+		log_callback(ptr, level, fmt, vl);
+}
 
 void init(core::module_dependencies dependencies)
 {
 	av_lockmgr_register(ffmpeg_lock_callback);
-	av_log_set_callback(log_callback);
+	av_log_set_callback(log_for_thread);
 
     avfilter_register_all();
 	//fix_yadif_filter_format_query();

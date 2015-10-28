@@ -25,6 +25,7 @@
 
 #include "../util/util.h"
 #include "../../ffmpeg_error.h"
+#include "../../ffmpeg.h"
 
 #include <common/diagnostics/graph.h>
 #include <common/executor.h>
@@ -218,7 +219,8 @@ private:
 		eof_ = false;
 		graph_->set_tag(diagnostics::tag_severity::INFO, "seek");
 
-		CASPAR_LOG(debug) << print() << " Seeking: " << target;
+		if (!is_logging_disabled_for_thread())
+			CASPAR_LOG(debug) << print() << " Seeking: " << target;
 
 		int flags = AVSEEK_FLAG_FRAME;
 		if(target == 0)
