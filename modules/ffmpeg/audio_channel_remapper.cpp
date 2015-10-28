@@ -21,6 +21,8 @@
 
 #include "StdAfx.h"
 
+#include "ffmpeg.h"
+
 #include <core/frame/audio_channel_layout.h>
 
 #include <common/except.h>
@@ -77,13 +79,13 @@ std::wstring generate_pan_filter_str(
 			for (int i = 0; i < output.num_channels; ++i)
 				result << L"|c" << i << L"=c" << i;
 
-			CASPAR_LOG(debug) << "[audio_channel_remapper] Passthru " << input.num_channels << " channels into " << output.num_channels;
+			CASPAR_LOG(trace) << "[audio_channel_remapper] Passthru " << input.num_channels << " channels into " << output.num_channels;
 
 			return result.str();
 		}
 	}
 
-	CASPAR_LOG(debug) << L"[audio_channel_remapper] Using mix config: " << *mix_config;
+	CASPAR_LOG(trace) << L"[audio_channel_remapper] Using mix config: " << *mix_config;
 
 	// Split on | to find the output sections
 	std::vector<std::wstring> output_sections;
@@ -136,15 +138,16 @@ struct audio_channel_remapper::impl
 		if (output_layout_ == audio_channel_layout::invalid())
 			CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info(L"Output audio channel layout is invalid"));
 
-		CASPAR_LOG(debug) << L"[audio_channel_remapper] Input:  " << input_layout_.print();
-		CASPAR_LOG(debug) << L"[audio_channel_remapper] Output: " << output_layout_.print();
+		CASPAR_LOG(trace) << L"[audio_channel_remapper] Input:  " << input_layout_.print();
+		CASPAR_LOG(trace) << L"[audio_channel_remapper] Output: " << output_layout_.print();
 
 		if (!the_same_layouts_)
 		{
 			auto mix_config = mix_repo->get_config(input_layout_.type, output_layout_.type);
 			auto pan_filter = u8(generate_pan_filter_str(input_layout_, output_layout_, mix_config));
 
-			CASPAR_LOG(debug) << "[audio_channel_remapper] Using audio filter: " << pan_filter;
+			CASPAR_LOG(trace) << "[audio_channel_remapper] Using audio filter: " << pan_filter;
+			auto logging_disabled = ffmpeg::temporary_disable_logging_for_thread(true);
 			filter_.reset(new ffmpeg::audio_filter(
 					boost::rational<int>(1, 1),
 					48000,
@@ -156,7 +159,7 @@ struct audio_channel_remapper::impl
 					pan_filter));
 		}
 		else
-			CASPAR_LOG(debug) << "[audio_channel_remapper] No remapping/mixing needed because the input and output layout is equal.";
+			CASPAR_LOG(trace) << "[audio_channel_remapper] No remapping/mixing needed because the input and output layout is equal.";
 	}
 
 	audio_buffer mix_and_rearrange(audio_buffer input)
