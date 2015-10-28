@@ -88,13 +88,18 @@ public:
 	{
 	}
 
-	void reemmit_all()
+	void reemmit_all(const tbb::atomic<bool>& running)
 	{
 		if (static_cast<int>(events_mask_ & filesystem_event::MODIFIED) == 0)
 			return;
 
 		for (auto& file : files_)
+		{
+			if (!running)
+				return;
+
 			handler_(filesystem_event::MODIFIED, file.first);
+		}
 	}
 
 	void reemmit(const boost::filesystem::path& file)
@@ -289,7 +294,7 @@ private:
 		try
 		{
 			if (reemmit_all_.fetch_and_store(false))
-				root_monitor_.reemmit_all();
+				root_monitor_.reemmit_all(running_);
 			else
 			{
 				boost::filesystem::path file;
