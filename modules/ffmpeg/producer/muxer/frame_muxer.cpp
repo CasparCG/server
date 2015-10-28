@@ -241,7 +241,7 @@ struct frame_muxer::impl : boost::noncopyable
 					auto second_audio_frame = core::mutable_frame(
 							std::vector<array<std::uint8_t>>(),
 							pop_audio(),
-							frame1.data_tag(),
+							frame1.stream_tag(),
 							core::pixel_format_desc(),
 							channel_layout_);
 					auto first_frame = core::draw_frame(std::move(frame1));
