@@ -61,7 +61,7 @@ struct audio_item
 	}
 };
 
-typedef cache_aligned_vector<float> audio_buffer_ps;
+typedef cache_aligned_vector<double> audio_buffer_ps;
 	
 struct audio_stream
 {
@@ -89,6 +89,7 @@ public:
 		: graph_(std::move(graph))
 	{
 		graph_->set_color("volume", diagnostics::color(1.0f, 0.8f, 0.1f));
+		graph_->set_color("audio-clipping", diagnostics::color(0.6f, 0.3f, 0.9f));
 		transform_stack_.push(core::audio_transform());
 	}
 	
@@ -206,11 +207,11 @@ public:
 
 			item.audio_data = channel_remapper->mix_and_rearrange(item.audio_data);
 
-			const float prev_volume = static_cast<float>(prev_transform.volume) * previous_master_volume_;
-			const float next_volume = static_cast<float>(next_transform.volume) * master_volume_;
+			const double prev_volume = prev_transform.volume * previous_master_volume_;
+			const double next_volume = next_transform.volume * master_volume_;
 
 			// TODO: Move volume mixing into code below, in order to support audio sample counts not corresponding to frame audio samples.
-			auto alpha = (next_volume-prev_volume)/static_cast<float>(item.audio_data.size()/channel_layout_.num_channels);
+			auto alpha = (next_volume-prev_volume)/static_cast<double>(item.audio_data.size()/channel_layout_.num_channels);
 			
 			for(size_t n = 0; n < item.audio_data.size(); ++n)
 			{
@@ -247,13 +248,13 @@ public:
 				CASPAR_LOG(trace) << "[audio_mixer] Incorrect frame audio cadence detected.";			
 		}
 				
-		std::vector<float> result_ps(audio_size(audio_cadence_.front()), 0.0f);
+		audio_buffer_ps result_ps(audio_size(audio_cadence_.front()), 0.0f);
 		for (auto& stream : audio_streams_ | boost::adaptors::map_values)
 		{
 			if(stream.audio_data.size() < result_ps.size())
 				stream.audio_data.resize(result_ps.size(), 0.0f);
 
-			auto out = boost::range::transform(result_ps, stream.audio_data, std::begin(result_ps), std::plus<float>());
+			auto out = boost::range::transform(result_ps, stream.audio_data, std::begin(result_ps), std::plus<double>());
 			stream.audio_data.erase(std::begin(stream.audio_data), std::begin(stream.audio_data) + std::distance(std::begin(result_ps), out));
 		}		
 		
@@ -262,7 +263,27 @@ public:
 		auto result_owner = spl::make_shared<mutable_audio_buffer>();
 		auto& result = *result_owner;
 		result.reserve(result_ps.size());
-		boost::range::transform(result_ps, std::back_inserter(result), [](float sample){return static_cast<int32_t>(sample);});		
+		const int32_t min_amplitude = std::numeric_limits<int32_t>::min();
+		const int32_t max_amplitude = std::numeric_limits<int32_t>::max();
+		bool clipping = false;
+		boost::range::transform(result_ps, std::back_inserter(result), [&](double sample)
+		{
+			if (sample > max_amplitude)
+			{
+				clipping = true;
+				return max_amplitude;
+			}
+			else if (sample < min_amplitude)
+			{
+				clipping = true;
+				return min_amplitude;
+			}
+			else
+				return static_cast<int32_t>(sample);
+		});
+
+		if (clipping)
+			graph_->set_tag(diagnostics::tag_severity::WARNING, "audio-clipping");
 		
 		const int num_channels = channel_layout_.num_channels;
 		monitor_subject_ << monitor::message("/nb_channels") % num_channels;
