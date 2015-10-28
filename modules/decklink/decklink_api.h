@@ -61,20 +61,8 @@ struct co_init
 template<typename T>
 using com_ptr = CComPtr<T>;
 
-// MSVC 2013 crashes when this alias template is instantiated
-/*template<typename T>
-using com_iface_ptr = CComQIPtr<T>;*/
-
 template<typename T>
-class com_iface_ptr : public CComQIPtr<T>
-{
-public:
-	template<typename T2>
-	com_iface_ptr(const com_ptr<T2>& lp)
-		: CComQIPtr<T>(lp)
-	{
-	}
-};
+using com_iface_ptr = CComQIPtr<T>;
 
 template<template<typename> class P, typename T>
 static P<T> wrap_raw(T* ptr, bool already_referenced = false)
