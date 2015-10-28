@@ -42,6 +42,7 @@ private:
 	double							tracking_;
 	bool							normalize_;
 	std::map<int, glyph_info>		glyphs_;
+	std::wstring					name_;
 
 public:
 	impl(texture_atlas& atlas, const text_info& info, bool normalize_coordinates)
@@ -50,6 +51,7 @@ public:
 		, size_(info.size)
 		, tracking_(info.size*info.tracking/1000.0)
 		, normalize_(normalize_coordinates)
+		, name_(info.font)
 	{
 		if (FT_Set_Char_Size(face_.get(), static_cast<FT_F26Dot6>(size_*64), 0, 72, 72))
 			CASPAR_THROW_EXCEPTION(freetype_exception() << msg_info("Failed to set font size"));
@@ -269,6 +271,16 @@ public:
 		result.width = (int)(pos_x+.5f);
 		return result;
 	}
+
+	std::wstring get_name() const
+	{
+		return name_;
+	}
+
+	double get_size() const
+	{
+		return size_;
+	}
 }; 
 
 texture_font::texture_font(texture_atlas& atlas, const text_info& info, bool normalize_coordinates) : impl_(new impl(atlas, info, normalize_coordinates)) {}
@@ -276,6 +288,8 @@ void texture_font::load_glyphs(unicode_block range, const color<double>& col) { 
 void texture_font::set_tracking(int tracking) { impl_->set_tracking(tracking); }
 std::vector<frame_geometry::coord> texture_font::create_vertex_stream(const std::wstring& str, int x, int y, int parent_width, int parent_height, string_metrics* metrics) { return impl_->create_vertex_stream(str, x, y, parent_width, parent_height, metrics); }
 string_metrics texture_font::measure_string(const std::wstring& str) { return impl_->measure_string(str); }
+std::wstring texture_font::get_name() const { return impl_->get_name(); }
+double texture_font::get_size() const { return impl_->get_size(); }
 
 unicode_range get_range(unicode_block block)
 {
