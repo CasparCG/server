@@ -351,8 +351,6 @@ struct server::impl : boost::noncopyable
 			media_info_repo_,
 			producer_registry_,
 			pt.get(L"configuration.thumbnails.mipmap", true)));
-
-		CASPAR_LOG(info) << L"Initialized thumbnail generator.";
 	}
 		
 	void setup_controllers(const boost::property_tree::wptree& pt)
