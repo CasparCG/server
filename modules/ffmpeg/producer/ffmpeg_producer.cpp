@@ -205,8 +205,8 @@ public:
 			muxer_->pop();
 		}
 		else
-			graph_->set_tag("underflow");
-									
+			graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
+
 		graph_->set_value("frame-time", frame_timer.elapsed()*format_desc_.fps*0.5);
 		*monitor_subject_
 				<< core::monitor::message("/profiler/time")	% frame_timer.elapsed() % (1.0/format_desc_.fps);			

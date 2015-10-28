@@ -91,10 +91,10 @@ public:
 			sink->set_value(name, value);
 	}
 
-	void set_tag(const std::string& name)
+	void set_tag(tag_severity severity, const std::string& name)
 	{
 		for (auto& sink : sinks_)
-			sink->set_tag(name);
+			sink->set_tag(severity, name);
 	}
 
 	void set_color(const std::string& name, int color)
@@ -121,7 +121,7 @@ graph::graph() : impl_(new impl)
 void graph::set_text(const std::wstring& value) { impl_->set_text(value); }
 void graph::set_value(const std::string& name, double value) { impl_->set_value(name, value); }
 void graph::set_color(const std::string& name, int color) { impl_->set_color(name, color); }
-void graph::set_tag(const std::string& name) { impl_->set_tag(name); }
+void graph::set_tag(tag_severity severity, const std::string& name) { impl_->set_tag(severity, name); }
 void graph::auto_reset() { impl_->auto_reset(); }
 
 void register_graph(const spl::shared_ptr<graph>& graph)
