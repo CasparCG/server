@@ -239,8 +239,11 @@ public:
 			}
 		});
 
-		graph_->set_value("consume-time", frame_timer.elapsed()*format_desc.fps*0.5);
-		*monitor_subject_ << monitor::message("/consume_time") % (frame_timer.elapsed());
+		auto consume_time = frame_timer.elapsed();
+		graph_->set_value("consume-time", consume_time * format_desc.fps * 0.5);
+		*monitor_subject_
+				<< monitor::message("/consume_time")	% consume_time
+				<< monitor::message("/profiler/time")	% consume_time		% (1.0 / format_desc.fps);
 	}
 
 	std::wstring print() const

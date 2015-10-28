@@ -121,7 +121,11 @@ public:
 		{		
 			*monitor_subject_ << monitor::message("/paused") % is_paused_;
 
+			caspar::timer produce_timer;
 			auto frame = foreground_->receive();
+			auto produce_time = produce_timer.elapsed();
+
+			*monitor_subject_ << monitor::message("/profiler/time") % produce_time % (1.0 / format_desc.fps);
 			
 			if(frame == core::draw_frame::late())
 				return foreground_->last_frame();
