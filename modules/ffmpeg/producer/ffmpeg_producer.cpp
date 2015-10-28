@@ -204,7 +204,7 @@ public:
 			last_frame_ = frame = std::move(muxer_->front());
 			muxer_->pop();
 		}
-		else
+		else if (!input_.eof())
 			graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
 
 		graph_->set_value("frame-time", frame_timer.elapsed()*format_desc_.fps*0.5);

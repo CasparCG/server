@@ -59,6 +59,8 @@ public:
 	void		length(uint32_t value);
 	uint32_t	length() const;
 
+	bool		eof() const;
+
 	void		seek(uint32_t target);
 
 	AVFormatContext& context();
