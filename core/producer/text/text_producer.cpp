@@ -285,6 +285,8 @@ public:
 		boost::property_tree::wptree info;
 		info.add(L"type", L"text");
 		info.add(L"text", text_.value().get());
+		info.add(L"font", font_.get_name());
+		info.add(L"size", font_.get_size());
 		return info;
 	}
 };

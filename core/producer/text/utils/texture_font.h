@@ -25,6 +25,8 @@ public:
 	void set_tracking(int tracking);
 	std::vector<frame_geometry::coord> create_vertex_stream(const std::wstring& str, int x, int y, int parent_width, int parent_height, string_metrics* metrics);
 	string_metrics measure_string(const std::wstring& str);
+	std::wstring get_name() const;
+	double get_size() const;
 
 private:
 	struct impl;
