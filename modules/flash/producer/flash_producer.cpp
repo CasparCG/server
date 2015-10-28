@@ -270,7 +270,7 @@ public:
 		if (boost::starts_with(result, L"<exception>"))
 			CASPAR_LOG(warning) << print() << L" Flash call failed:" << result;
 
-		graph_->set_tag("param");
+		graph_->set_tag(diagnostics::tag_severity::INFO, "param");
 
 		return result;
 	}
@@ -412,7 +412,7 @@ public:
 		if (output_buffer_.try_pop(frame))
 			last_frame_ = frame;
 		else		
-			graph_->set_tag("late-frame");
+			graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
 
 		fill_buffer();
 				

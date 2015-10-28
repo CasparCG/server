@@ -269,7 +269,7 @@ public:
 					frame_buffer_.try_pop(dummy);
 					frame_buffer_.try_push(frame);
 						
-					graph_->set_tag("dropped-frame");
+					graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
 				}
 			}
 			
@@ -295,7 +295,7 @@ public:
 		
 		core::draw_frame frame = core::draw_frame::late();
 		if(!frame_buffer_.try_pop(frame))
-			graph_->set_tag("late-frame");
+			graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
 		graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
 		return frame;
 	}

@@ -505,7 +505,7 @@ public:
 
 			if(result == bmdOutputFrameDisplayedLate)
 			{
-				graph_->set_tag("late-frame");
+				graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
 				video_scheduled_ += format_desc_.duration;
 				audio_scheduled_ += dframe->audio_data().size() / out_channel_layout_.num_channels;
 				//++video_scheduled_;
@@ -513,9 +513,9 @@ public:
 				//++audio_scheduled_;
 			}
 			else if(result == bmdOutputFrameDropped)
-				graph_->set_tag("dropped-frame");
+				graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
 			else if(result == bmdOutputFrameFlushed)
-				graph_->set_tag("flushed-frame");
+				graph_->set_tag(diagnostics::tag_severity::WARNING, "flushed-frame");
 
 			auto frame = core::const_frame::empty();	
 			video_frame_buffer_.pop(frame);

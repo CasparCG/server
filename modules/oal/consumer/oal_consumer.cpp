@@ -212,7 +212,7 @@ public:
 					}
 				}
 				alSourcePlay(source_);		
-				graph_->set_tag("late-frame");	
+				graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
 			}
 
 			auto audio = core::audio_32_to_16(channel_remapper_->mix_and_rearrange(frame.audio_data()));
@@ -225,7 +225,7 @@ public:
 				alSourceQueueBuffers(source_, 1, &buffer);
 			}
 			else
-				graph_->set_tag("dropped-frame");
+				graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
 
 			graph_->set_value("tick-time", perf_timer_.elapsed()*format_desc_.fps*0.5);		
 			perf_timer_.restart();

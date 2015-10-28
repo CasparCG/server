@@ -517,7 +517,7 @@ public:
 	std::future<bool> send(core::const_frame frame)
 	{
 		if(!frame_buffer_.try_push(frame))
-			graph_->set_tag("dropped-frame");
+			graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
 
 		return make_ready_future(is_running_.load());
 	}

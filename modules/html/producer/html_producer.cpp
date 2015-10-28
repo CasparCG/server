@@ -229,7 +229,7 @@ private:
 			while (frames_.size() > max_in_queue)
 			{
 				frames_.pop();
-				graph_->set_tag("dropped-frame");
+				graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
 			}
 		});
 		graph_->set_value("copy-time", copy_timer.elapsed()
@@ -416,7 +416,7 @@ private:
 		}
 		else
 		{
-			graph_->set_tag("late-frame");
+			graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
 
 			if (format_desc_.field_mode != core::field_mode::progressive)
 			{
