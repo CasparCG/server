@@ -138,7 +138,7 @@ public:
 
 		if (executor_.size() > 0 || executor_.is_currently_in_task())
 		{
-			graph_->set_tag("dropped-frame");
+			graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
 
 			return make_ready_future(true);
 		}
