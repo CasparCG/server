@@ -288,8 +288,6 @@ public:
 			else
 				wglSwapIntervalEXT(0);
 		}*/
-
-		CASPAR_LOG(info) << print() << " Successfully Initialized.";
 	}
 
 	void uninit()
