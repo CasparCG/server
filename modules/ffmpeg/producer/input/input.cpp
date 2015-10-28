@@ -118,6 +118,7 @@ struct input::impl : boost::noncopyable
 	tbb::atomic<uint32_t>				  		start_;		
 	tbb::atomic<uint32_t>				  		length_;
 	tbb::atomic<bool>					  		loop_;
+	tbb::atomic<bool>					  		eof_;
 	double								  		fps_					= read_fps(*format_context_, 0.0);
 	uint32_t							  		frame_number_			= 0;
 
@@ -138,6 +139,7 @@ struct input::impl : boost::noncopyable
 		start_			= start;
 		length_			= length;
 		loop_			= loop;
+		eof_			= false;
 		is_running_		= true;
 
 		if(start_ != 0)
@@ -213,6 +215,7 @@ struct input::impl : boost::noncopyable
 private:
 	void internal_seek(uint32_t target)
 	{
+		eof_ = false;
 		graph_->set_tag(diagnostics::tag_severity::INFO, "seek");
 
 		CASPAR_LOG(debug) << print() << " Seeking: " << target;
@@ -265,6 +268,7 @@ private:
 			{
 				audio_stream_.push(packet);
 				video_stream_.push(packet);
+				eof_ = true;
 			}
 		}
 		else
@@ -353,4 +357,5 @@ void input::start(uint32_t value){impl_->start_ = value;}
 uint32_t input::start() const{return impl_->start_;}
 void input::length(uint32_t value){impl_->length_ = value;}
 uint32_t input::length() const{return impl_->length_;}
+bool input::eof() const { return impl_->eof_; }
 }}
