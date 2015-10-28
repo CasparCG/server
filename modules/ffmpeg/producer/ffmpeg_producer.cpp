@@ -24,6 +24,7 @@
 #include "ffmpeg_producer.h"
 
 #include "../ffmpeg_error.h"
+#include "../ffmpeg.h"
 
 #include "muxer/frame_muxer.h"
 #include "input/input.h"
@@ -144,7 +145,8 @@ public:
 			constraints_.width.set(video_decoder_->width());
 			constraints_.height.set(video_decoder_->height());
 			
-			CASPAR_LOG(info) << print() << L" " << video_decoder_->print();
+			if (!is_logging_disabled_for_thread())
+				CASPAR_LOG(info) << print() << L" " << video_decoder_->print();
 		}
 		catch(averror_stream_not_found&)
 		{
@@ -184,7 +186,8 @@ public:
 		
 		decode_next_frame();
 
-		CASPAR_LOG(info) << print() << L" Initialized";
+		if (!is_logging_disabled_for_thread())
+			CASPAR_LOG(info) << print() << L" Initialized";
 	}
 
 	// frame_producer
