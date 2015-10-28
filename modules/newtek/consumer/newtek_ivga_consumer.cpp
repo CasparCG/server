@@ -105,8 +105,6 @@ public:
 
 		format_desc_	= format_desc;
 		channel_layout_	= channel_layout;
-
-		CASPAR_LOG(info) << print() << L" Successfully Initialized.";
 	}
 
 	std::future<bool> schedule_send(core::const_frame frame)

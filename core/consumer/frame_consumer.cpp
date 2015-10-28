@@ -144,7 +144,6 @@ public:
 	print_consumer_proxy(spl::shared_ptr<frame_consumer>&& consumer) 
 		: consumer_(std::move(consumer))
 	{
-		CASPAR_LOG(info) << consumer_->print() << L" Initialized.";
 	}
 
 	~print_consumer_proxy()
@@ -156,7 +155,11 @@ public:
 	}
 	
 	std::future<bool> send(const_frame frame) override																				{return consumer_->send(std::move(frame));}
-	void initialize(const video_format_desc& format_desc, const audio_channel_layout& channel_layout, int channel_index) override	{ return consumer_->initialize(format_desc, channel_layout, channel_index); }
+	void initialize(const video_format_desc& format_desc, const audio_channel_layout& channel_layout, int channel_index) override
+	{
+		consumer_->initialize(format_desc, channel_layout, channel_index);
+		CASPAR_LOG(info) << consumer_->print() << L" Initialized.";
+	}
 	std::wstring print() const override																								{return consumer_->print();}
 	std::wstring name() const override																								{return consumer_->name();}
 	boost::property_tree::wptree info() const override 																				{return consumer_->info();}
