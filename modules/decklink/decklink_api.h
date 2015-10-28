@@ -88,7 +88,12 @@ static com_ptr<IDeckLinkIterator> create_iterator()
 template<typename I, typename T>
 static com_iface_ptr<I> iface_cast(const com_ptr<T>& ptr)
 {
-    return com_iface_ptr<I>(ptr);
+	com_iface_ptr<I> result = ptr;
+
+	if (!result)
+		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(std::string("Could not cast from ") + typeid(T).name() + " to " + typeid(I).name() + ". This is probably due to old Decklink drivers."));
+
+	return result;
 }
 
 template<typename T>
