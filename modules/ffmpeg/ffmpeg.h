@@ -28,5 +28,8 @@ namespace caspar { namespace ffmpeg {
 
 void init(core::module_dependencies dependencies);
 void uninit();
+void disable_logging_for_thread();
+std::shared_ptr<void> temporary_disable_logging_for_thread(bool disable);
+bool is_logging_disabled_for_thread();
 
 }}
