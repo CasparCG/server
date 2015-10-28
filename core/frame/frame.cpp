@@ -93,7 +93,6 @@ core::mutable_audio_buffer& mutable_frame::audio_data(){return impl_->audio_data
 std::size_t mutable_frame::width() const{return impl_->desc_.planes.at(0).width;}
 std::size_t mutable_frame::height() const{return impl_->desc_.planes.at(0).height;}						
 const void* mutable_frame::stream_tag()const{return impl_->tag_;}				
-const void* mutable_frame::data_tag()const{return impl_.get();}	
 const frame_geometry& mutable_frame::geometry() const { return impl_->geometry_; }
 void mutable_frame::set_geometry(const frame_geometry& g) { impl_->geometry_ = g; }
 caspar::timer mutable_frame::since_created() const { return impl_->since_created_timer_; }
@@ -236,7 +235,6 @@ std::size_t const_frame::width()const{return impl_->width();}
 std::size_t const_frame::height()const{return impl_->height();}	
 std::size_t const_frame::size()const{return impl_->size();}						
 const void* const_frame::stream_tag()const{return impl_->tag_;}				
-const void* const_frame::data_tag()const{return impl_.get();}	
 const frame_geometry& const_frame::geometry() const { return impl_->geometry_; }
 void const_frame::set_geometry(const frame_geometry& g) { impl_->geometry_ = g; }
 int64_t const_frame::get_age_millis() const { return impl_->get_age_millis(); }
