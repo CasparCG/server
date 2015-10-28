@@ -62,6 +62,8 @@
 #include <boost/thread/future.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
 
+#include <tbb/atomic.h>
+
 #include <future>
 
 #include <csignal>
@@ -100,7 +102,10 @@ void print_system_info(const spl::shared_ptr<core::system_info_provider_reposito
 		log::print_child(boost::log::trivial::info, L"", elem.first, elem.second);
 }
 
-void do_run(std::weak_ptr<caspar::IO::protocol_strategy<wchar_t>> amcp, std::promise<bool>& shutdown_server_now)
+void do_run(
+		std::weak_ptr<caspar::IO::protocol_strategy<wchar_t>> amcp,
+		std::promise<bool>& shutdown_server_now,
+		tbb::atomic<bool>& should_wait_for_keypress)
 {
 	std::wstring wcmd;
 	while(true)
@@ -111,7 +116,8 @@ void do_run(std::weak_ptr<caspar::IO::protocol_strategy<wchar_t>> amcp, std::pro
 
 		if(boost::iequals(wcmd, L"EXIT") || boost::iequals(wcmd, L"Q") || boost::iequals(wcmd, L"QUIT") || boost::iequals(wcmd, L"BYE"))
 		{
-			shutdown_server_now.set_value(true);	//true to wait for keypress
+			should_wait_for_keypress = true;
+			shutdown_server_now.set_value(false);	//false to not restart
 			break;
 		}
 
@@ -197,7 +203,7 @@ void do_run(std::weak_ptr<caspar::IO::protocol_strategy<wchar_t>> amcp, std::pro
 	}
 };
 
-bool run(const std::wstring& config_file_name)
+bool run(const std::wstring& config_file_name, tbb::atomic<bool>& should_wait_for_keypress)
 {
 	std::promise<bool> shutdown_server_now;
 	std::future<bool> shutdown_server = shutdown_server_now.get_future();
@@ -231,7 +237,7 @@ bool run(const std::wstring& config_file_name)
 
 	// Use separate thread for the blocking console input, will be terminated 
 	// anyway when the main thread terminates.
-	boost::thread stdin_thread(std::bind(do_run, weak_amcp, std::ref(shutdown_server_now)));	//compiler didn't like lambda here...
+	boost::thread stdin_thread(std::bind(do_run, weak_amcp, std::ref(shutdown_server_now), std::ref(should_wait_for_keypress)));	//compiler didn't like lambda here...
 	stdin_thread.detach();
 	bool should_restart = shutdown_server.get();
 	amcp.reset();
@@ -301,7 +307,10 @@ int main(int argc, char** argv)
 		// Setup console window.
 		setup_console_window();
 
-		return_code = run(config_file_name) ? 5 : 0;
+		tbb::atomic<bool> should_wait_for_keypress;
+		should_wait_for_keypress = false;
+		auto should_restart = run(config_file_name, should_wait_for_keypress);
+		return_code = should_restart ? 5 : 0;
 
 		for (auto& thread : get_thread_infos())
 		{
@@ -310,6 +319,9 @@ int main(int argc, char** argv)
 		}
 		
 		CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
+
+		if (!should_wait_for_keypress)
+			wait_for_keypress();
 	}
 	catch(boost::property_tree::file_parser_error&)
 	{
@@ -325,6 +337,6 @@ int main(int argc, char** argv)
 		std::wcout << L"\n\nCasparCG will automatically shutdown. See the log file located at the configured log-file folder for more information.\n\n";
 		boost::this_thread::sleep_for(boost::chrono::milliseconds(4000));
 	}
-	
+
 	return return_code;
 }
