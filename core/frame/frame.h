@@ -62,7 +62,6 @@ public:
 	std::size_t height() const;
 								
 	const void* stream_tag() const;
-	const void* data_tag() const;
 
 	const core::frame_geometry& geometry() const;
 	void set_geometry(const frame_geometry& g);
@@ -113,7 +112,6 @@ public:
 	std::size_t size() const;
 								
 	const void* stream_tag() const;
-	const void* data_tag() const;
 
 	const core::frame_geometry& geometry() const;
 	void set_geometry(const frame_geometry& g);
