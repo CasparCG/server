@@ -389,7 +389,7 @@ public:
 
 	void mark_dropped()
 	{
-		graph_->set_tag("dropped-frame");
+		graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
 	}
 
 	std::wstring print() const

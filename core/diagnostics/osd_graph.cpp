@@ -422,7 +422,7 @@ struct graph : public drawable, public caspar::diagnostics::spi::graph_sink, pub
 		lines_[name].set_value(value);
 	}
 
-	void set_tag(const std::string& name) override
+	void set_tag(caspar::diagnostics::tag_severity /*severity*/, const std::string& name) override
 	{
 		lines_[name].set_tag();
 	}
