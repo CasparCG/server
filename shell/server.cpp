@@ -249,7 +249,8 @@ struct server::impl : boost::noncopyable
 			if (!channel_layout)
 				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Unknown channel-layout."));
 
-			auto channel = spl::make_shared<video_channel>(static_cast<int>(channels_.size()+1), format_desc, *channel_layout, accelerator_.create_image_mixer());
+			auto channel_id = static_cast<int>(channels_.size() + 1);
+			auto channel = spl::make_shared<video_channel>(channel_id, format_desc, *channel_layout, accelerator_.create_image_mixer(channel_id));
 
 			core::diagnostics::scoped_call_context save;
 			core::diagnostics::call_context::for_thread().video_channel = channel->index();
@@ -277,11 +278,12 @@ struct server::impl : boost::noncopyable
 		// Dummy diagnostics channel
 		if (env::properties().get(L"configuration.channel-grid", false))
 		{
+			auto channel_id = static_cast<int>(channels_.size() + 1);
 			channels_.push_back(spl::make_shared<video_channel>(
-					static_cast<int>(channels_.size() + 1),
+					channel_id,
 					core::video_format_desc(core::video_format::x576p2500),
 					*core::audio_channel_layout_repository::get_default()->get_layout(L"stereo"),
-					accelerator_.create_image_mixer()));
+					accelerator_.create_image_mixer(channel_id)));
 			channels_.back()->monitor_output().attach_parent(monitor_subject_);
 		}
 	}
@@ -345,7 +347,7 @@ struct server::impl : boost::noncopyable
 			pt.get(L"configuration.thumbnails.width", 256),
 			pt.get(L"configuration.thumbnails.height", 144),
 			core::video_format_desc(pt.get(L"configuration.thumbnails.video-mode", L"720p2500")),
-			accelerator_.create_image_mixer(),
+			accelerator_.create_image_mixer(0),
 			pt.get(L"configuration.thumbnails.generate-delay-millis", 2000),
 			&image::write_cropped_png,
 			media_info_repo_,

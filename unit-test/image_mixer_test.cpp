@@ -57,8 +57,9 @@ spl::shared_ptr<core::image_mixer> create_mixer<accelerator::ogl::image_mixer>()
 {
 	return spl::make_shared<accelerator::ogl::image_mixer>(
 			ogl_device(),
-			false,  // blend modes not wanted
-			false); // straight alpha not wanted
+			false, // blend modes not wanted
+			false, // straight alpha not wanted
+			0);
 }
 
 struct dummy_ogl_with_blend_modes {};
@@ -67,15 +68,16 @@ spl::shared_ptr<core::image_mixer> create_mixer<dummy_ogl_with_blend_modes>()
 {
 	return spl::make_shared<accelerator::ogl::image_mixer>(
 			ogl_device(),
-			true,   // blend modes wanted
-			false); // straight alpha not wanted
+			true,  // blend modes wanted
+			false, // straight alpha not wanted
+			0);
 }
 
 #ifdef _MSC_VER
 template <>
 spl::shared_ptr<core::image_mixer> create_mixer<accelerator::cpu::image_mixer>()
 {
-	return spl::make_shared<accelerator::cpu::image_mixer>();
+	return spl::make_shared<accelerator::cpu::image_mixer>(0);
 }
 #endif
 
