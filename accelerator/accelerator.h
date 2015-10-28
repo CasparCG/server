@@ -15,7 +15,7 @@ public:
 	accelerator(const std::wstring& path);
 	~accelerator();
 
-	std::unique_ptr<core::image_mixer> create_image_mixer();
+	std::unique_ptr<core::image_mixer> create_image_mixer(int channel_id);
 private:
 	struct impl;
 	spl::unique_ptr<impl> impl_;

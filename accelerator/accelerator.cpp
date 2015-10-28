@@ -26,7 +26,7 @@ struct accelerator::impl
 	{
 	}
 
-	std::unique_ptr<core::image_mixer> create_image_mixer()
+	std::unique_ptr<core::image_mixer> create_image_mixer(int channel_id)
 	{
 		try
 		{
@@ -40,7 +40,8 @@ struct accelerator::impl
 				return std::unique_ptr<core::image_mixer>(new ogl::image_mixer(
 						spl::make_shared_ptr(ogl_device_),
 						env::properties().get(L"configuration.mixer.blend-modes", false),
-						env::properties().get(L"configuration.mixer.straight-alpha", false)));
+						env::properties().get(L"configuration.mixer.straight-alpha", false),
+						channel_id));
 			}
 		}
 		catch(...)
@@ -49,7 +50,7 @@ struct accelerator::impl
 				CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 #ifdef _MSC_VER
-		return std::unique_ptr<core::image_mixer>(new cpu::image_mixer());
+		return std::unique_ptr<core::image_mixer>(new cpu::image_mixer(channel_id));
 #else
 		CASPAR_THROW_EXCEPTION(not_supported());
 #endif
@@ -65,9 +66,9 @@ accelerator::~accelerator()
 {
 }
 
-std::unique_ptr<core::image_mixer> accelerator::create_image_mixer()
+std::unique_ptr<core::image_mixer> accelerator::create_image_mixer(int channel_id)
 {
-	return impl_->create_image_mixer();
+	return impl_->create_image_mixer(channel_id);
 }
 
 }}
