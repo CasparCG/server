@@ -213,7 +213,7 @@ struct input::impl : boost::noncopyable
 private:
 	void internal_seek(uint32_t target)
 	{
-		graph_->set_tag("seek");	
+		graph_->set_tag(diagnostics::tag_severity::INFO, "seek");
 
 		CASPAR_LOG(debug) << print() << " Seeking: " << target;
 
