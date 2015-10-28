@@ -339,8 +339,6 @@ public:
 			for (auto& option : options)
 				CASPAR_LOG(warning) << L"Invalid option: -" << u16(option.name) << L" " << u16(option.value);
 		}
-
-		CASPAR_LOG(info) << print() << L" Successfully Initialized.";	
 	}
 
 	~ffmpeg_consumer()
@@ -363,8 +361,6 @@ public:
 			  
 		if (!(oc_->oformat->flags & AVFMT_NOFILE)) 
 			LOG_ON_ERROR2(avio_close(oc_->pb), "[ffmpeg_consumer]");
-
-		CASPAR_LOG(info) << print() << L" Successfully Uninitialized.";	
 	}
 	
 	// frame_consumer
