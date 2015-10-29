@@ -31,6 +31,8 @@
 
 #include <boost/property_tree/ptree_fwd.hpp>
 
+#include <future>
+
 FORWARD2(caspar, diagnostics, class graph);
 
 namespace caspar { namespace core {
@@ -49,7 +51,8 @@ public:
 	
 	// Methods
 
-	void operator()(const_frame frame, const video_format_desc& format_desc, const core::audio_channel_layout& channel_layout);
+	// Returns when submitted to consumers, but the future indicates when the consumers are ready for a new frame.
+	std::future<void> operator()(const_frame frame, const video_format_desc& format_desc, const core::audio_channel_layout& channel_layout);
 	
 	void add(const spl::shared_ptr<frame_consumer>& consumer);
 	void add(int index, const spl::shared_ptr<frame_consumer>& consumer);
