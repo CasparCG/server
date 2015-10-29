@@ -130,6 +130,7 @@ struct screen_consumer : boost::noncopyable
 
 	sf::Window											window_;
 	tbb::atomic<bool>									polling_event_;
+	std::int64_t										pts_;
 
 	spl::shared_ptr<diagnostics::graph>					graph_;
 	caspar::timer										perf_timer_;
@@ -154,6 +155,7 @@ public:
 		: config_(config)
 		, format_desc_(format_desc)
 		, channel_index_(channel_index)
+		, pts_(0)
 		, sink_(sink)
 		, filter_([&]() -> ffmpeg::filter
 		{			
@@ -173,7 +175,7 @@ public:
 				sample_aspect_ratio,
 				AV_PIX_FMT_BGRA,
 				{ AV_PIX_FMT_BGRA },
-				format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? "" : "YADIF=1:-1");
+				format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? "" : "format=pix_fmts=gbrp,YADIF=1:-1");
 		}())
 	{		
 		if (format_desc_.format == core::video_format::ntsc && config_.aspect == configuration::aspect_ratio::aspect_4_3)
@@ -423,7 +425,7 @@ public:
 
 	spl::shared_ptr<AVFrame> get_av_frame()
 	{		
-		spl::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
+		spl::shared_ptr<AVFrame> av_frame(av_frame_alloc(), [](AVFrame* p) { av_frame_free(&p); });
 		avcodec_get_frame_defaults(av_frame.get());
 						
 		av_frame->linesize[0]		= format_desc_.width*4;			
@@ -432,6 +434,7 @@ public:
 		av_frame->height			= format_desc_.height;
 		av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
 		av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
+		av_frame->pts				= pts_++;
 
 		return av_frame;
 	}
