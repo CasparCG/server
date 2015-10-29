@@ -38,6 +38,7 @@
 #include <common/lock.h>
 #include <common/executor.h>
 #include <common/timer.h>
+#include <common/future.h>
 
 #include <core/mixer/image/image_mixer.h>
 #include <core/diagnostics/call_context.h>
@@ -62,19 +63,20 @@ struct video_channel::impl final
 	mutable tbb::spin_mutex								channel_layout_mutex_;
 	core::audio_channel_layout							channel_layout_;
 
-	const spl::shared_ptr<caspar::diagnostics::graph>	graph_				= [](int index)
-																			  {
-																				  core::diagnostics::scoped_call_context save;
-																				  core::diagnostics::call_context::for_thread().video_channel = index;
-																				  return spl::make_shared<caspar::diagnostics::graph>();
-																			  }(index_);
+	const spl::shared_ptr<caspar::diagnostics::graph>	graph_					= [](int index)
+																				  {
+																					  core::diagnostics::scoped_call_context save;
+																					  core::diagnostics::call_context::for_thread().video_channel = index;
+																					  return spl::make_shared<caspar::diagnostics::graph>();
+																				  }(index_);
 
 	caspar::core::output								output_;
+	std::future<void>									output_ready_for_frame_	= make_ready_future();
 	spl::shared_ptr<image_mixer>						image_mixer_;
 	caspar::core::mixer									mixer_;
 	caspar::core::stage									stage_;	
 
-	executor											executor_			{ L"video_channel " + boost::lexical_cast<std::wstring>(index_) };
+	executor											executor_				{ L"video_channel " + boost::lexical_cast<std::wstring>(index_) };
 public:
 	impl(
 			int index,
@@ -162,8 +164,9 @@ public:
 			auto mixed_frame  = mixer_(std::move(stage_frames), format_desc, channel_layout);
 			
 			// Consume
-						
-			output_(std::move(mixed_frame), format_desc, channel_layout);
+
+			output_ready_for_frame_.get();
+			output_ready_for_frame_ = output_(std::move(mixed_frame), format_desc, channel_layout);
 		
 			auto frame_time = frame_timer.elapsed()*format_desc.fps*0.5;
 			graph_->set_value("tick-time", frame_time);
