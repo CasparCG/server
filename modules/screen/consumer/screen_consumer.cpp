@@ -36,6 +36,7 @@
 #include <common/timer.h>
 #include <common/param.h>
 #include <common/os/general_protection_fault.h>
+#include <common/scope_exit.h>
 
 //#include <windows.h>
 
@@ -128,6 +129,7 @@ struct screen_consumer : boost::noncopyable
 	int													square_height_	= format_desc_.square_height;
 
 	sf::Window											window_;
+	tbb::atomic<bool>									polling_event_;
 
 	spl::shared_ptr<diagnostics::graph>					graph_;
 	caspar::timer										perf_timer_;
@@ -215,6 +217,7 @@ public:
 		screen_width_	= square_width_;
 		screen_height_	= square_height_;
 		
+		polling_event_ = false;
 		is_running_ = true;
 		current_presentation_age_ = 0;
 		thread_ = boost::thread([this]{run();});
@@ -314,8 +317,18 @@ public:
 			{			
 				try
 				{
-					sf::Event e;		
-					while(window_.pollEvent(e))
+					auto poll_event = [this](sf::Event& e)
+					{
+						polling_event_ = true;
+						CASPAR_SCOPE_EXIT
+						{
+							polling_event_ = false;
+						};
+						return window_.pollEvent(e);
+					};
+
+					sf::Event e;
+					while(poll_event(e))
 					{
 						if (e.type == sf::Event::Resized)
 							calculate_aspect();
@@ -516,7 +529,7 @@ public:
 
 	std::future<bool> send(core::const_frame frame)
 	{
-		if(!frame_buffer_.try_push(frame))
+		if(!frame_buffer_.try_push(frame) && !polling_event_)
 			graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
 
 		return make_ready_future(is_running_.load());
