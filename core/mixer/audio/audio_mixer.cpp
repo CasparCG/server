@@ -170,7 +170,10 @@ public:
 		std::map<const void*, audio_stream>	next_audio_streams;
 
 		BOOST_FOREACH(auto& item, items_)
-		{			
+		{
+			if (next_audio_streams.find(item.tag) != next_audio_streams.end())
+				continue;
+
 			audio_buffer_ps next_audio;
 
 			auto next_transform = item.transform;
