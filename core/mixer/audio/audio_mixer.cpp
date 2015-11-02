@@ -58,7 +58,7 @@ struct audio_item
 	}
 };
 
-typedef std::vector<float, tbb::cache_aligned_allocator<float>> audio_buffer_ps;
+typedef std::vector<double, tbb::cache_aligned_allocator<double>> audio_buffer_ps;
 	
 struct audio_stream
 {
@@ -189,10 +189,10 @@ public:
 			if(prev_transform.volume < 0.001 && next_transform.volume < 0.001)
 				continue;
 			
-			const float prev_volume = static_cast<float>(prev_transform.volume) * previous_master_volume_;
-			const float next_volume = static_cast<float>(next_transform.volume) * master_volume_;
+			const double prev_volume = prev_transform.volume * previous_master_volume_;
+			const double next_volume = next_transform.volume * master_volume_;
 									
-			auto alpha = (next_volume-prev_volume)/static_cast<float>(item.audio_data.size()/channel_layout_.num_channels);
+			auto alpha = (next_volume-prev_volume)/static_cast<double>(item.audio_data.size()/channel_layout_.num_channels);
 			
 			for(size_t n = 0; n < item.audio_data.size(); ++n)
 			{
@@ -223,7 +223,7 @@ public:
 				CASPAR_LOG(trace) << "[audio_mixer] Incorrect frame audio cadence detected.";			
 		}
 
-		std::vector<float> result_ps(audio_size(audio_cadence_.front()), 0.0f);
+		audio_buffer_ps result_ps(audio_size(audio_cadence_.front()), 0.0f);
 
 		BOOST_FOREACH(auto& stream, audio_streams_ | boost::adaptors::map_values)
 		{
@@ -235,7 +235,7 @@ public:
 				CASPAR_LOG(trace) << L"[audio_mixer] Appended zero samples";
 			}
 
-			auto out = boost::range::transform(result_ps, stream.audio_data, std::begin(result_ps), std::plus<float>());
+			auto out = boost::range::transform(result_ps, stream.audio_data, std::begin(result_ps), std::plus<double>());
 			stream.audio_data.erase(std::begin(stream.audio_data), std::begin(stream.audio_data) + std::distance(std::begin(result_ps), out));
 		}
 		
@@ -244,7 +244,7 @@ public:
 
 		audio_buffer result;
 		result.reserve(result_ps.size());
-		boost::range::transform(result_ps, std::back_inserter(result), [](float sample){return static_cast<int32_t>(sample);});		
+		boost::range::transform(result_ps, std::back_inserter(result), [](double sample){return static_cast<int32_t>(sample);});		
 		
 		const int num_channels = channel_layout_.num_channels;
 		monitor_subject_ << monitor::message("/nb_channels") % num_channels;
