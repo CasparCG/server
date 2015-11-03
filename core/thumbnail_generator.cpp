@@ -35,6 +35,7 @@
 #include <tbb/atomic.h>
 
 #include <common/diagnostics/graph.h>
+#include <common/filesystem.h>
 
 #include "producer/frame_producer.h"
 #include "consumer/frame_consumer.h"
@@ -49,30 +50,6 @@
 #include "producer/media_info/media_info_repository.h"
 
 namespace caspar { namespace core {
-
-std::wstring get_relative_without_extension(
-		const boost::filesystem::path& file,
-		const boost::filesystem::path& relative_to)
-{
-	auto result = file.stem();
-
-	boost::filesystem::path current_path = file;
-
-	while (true)
-	{
-		current_path = current_path.parent_path();
-
-		if (boost::filesystem::equivalent(current_path, relative_to))
-			break;
-
-		if (current_path.empty())
-			throw std::runtime_error("File not relative to folder");
-
-		result = current_path.filename() / result;
-	}
-
-	return result.wstring();
-}
 
 struct thumbnail_output
 {
@@ -168,7 +145,7 @@ public:
 				std::insert_iterator<std::set<std::wstring>>(
 						relative_without_extensions,
 						relative_without_extensions.end()),
-				boost::bind(&get_relative_without_extension, _1, media_path_));
+				[&](const path& p) { return get_relative_without_extension(p, media_path_).wstring(); });
 
 		for (boost::filesystem::wrecursive_directory_iterator iter(thumbnails_path_); iter != boost::filesystem::wrecursive_directory_iterator(); ++iter)
 		{
@@ -178,11 +155,11 @@ public:
 				continue;
 
 			auto relative_without_extension = get_relative_without_extension(path, thumbnails_path_);
-			bool no_corresponding_media_file = relative_without_extensions.find(relative_without_extension) 
+			bool no_corresponding_media_file = relative_without_extensions.find(relative_without_extension.wstring()) 
 					== relative_without_extensions.end();
 
 			if (no_corresponding_media_file)
-				remove(thumbnails_path_ / (relative_without_extension + L".png"));
+				remove(thumbnails_path_ / (relative_without_extension.wstring() + L".png"));
 		}
 	}
 
@@ -221,7 +198,7 @@ public:
 			break;
 		case filesystem_event::REMOVED:
 			auto relative_without_extension = get_relative_without_extension(file, media_path_);
-			boost::filesystem::remove(thumbnails_path_ / (relative_without_extension + L".png"));
+			boost::filesystem::remove(thumbnails_path_ / (relative_without_extension.wstring() + L".png"));
 			media_info_repo_->remove(file.wstring());
 
 			break;
@@ -232,7 +209,7 @@ public:
 	{
 		using namespace boost::filesystem;
 
-		auto png_file = thumbnails_path_ / (get_relative_without_extension(file, media_path_) + L".png");
+		auto png_file = thumbnails_path_ / (get_relative_without_extension(file, media_path_).wstring() + L".png");
 
 		if (!exists(png_file))
 			return true;
@@ -263,7 +240,7 @@ public:
 	void generate_thumbnail(const boost::filesystem::path& file)
 	{
 		auto media_file = get_relative_without_extension(file, media_path_);
-		auto png_file = thumbnails_path_ / (media_file + L".png");
+		auto png_file = thumbnails_path_ / (media_file.wstring() + L".png");
 		std::promise<void> thumbnail_ready;
 
 		{
@@ -273,7 +250,7 @@ public:
 			{
 				producer = producer_registry_->create_thumbnail_producer(
 						frame_producer_dependencies(image_mixer_, { }, format_desc_, producer_registry_),
-						media_file);
+						media_file.wstring());
 			}
 			catch (const boost::thread_interrupted&)
 			{
