@@ -38,6 +38,7 @@
 #include <common/os/filesystem.h>
 #include <common/base64.h>
 #include <common/thread_info.h>
+#include <common/filesystem.h>
 
 #include <core/producer/cg_proxy.h>
 #include <core/producer/frame_producer.h>
@@ -208,7 +209,7 @@ std::wstring MediaInfo(const boost::filesystem::path& path, const spl::shared_pt
 
 	auto is_not_digit = [](char c){ return std::isdigit(c) == 0; };
 
-	auto relativePath = boost::filesystem::path(path.wstring().substr(env::media_folder().size() - 1, path.wstring().size()));
+	auto relativePath = get_relative_without_extension(path, env::media_folder());
 
 	auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(path)));
 	writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), is_not_digit), writeTimeStr.end());
@@ -249,7 +250,7 @@ std::wstring ListTemplates(const spl::shared_ptr<core::cg_producer_registry>& cg
 	{		
 		if(boost::filesystem::is_regular_file(itr->path()) && cg_registry->is_cg_extension(itr->path().extension().wstring()))
 		{
-			auto relativePath = boost::filesystem::path(itr->path().wstring().substr(env::template_folder().size()-1, itr->path().wstring().size()));
+			auto relativePath = get_relative_without_extension(itr->path(), env::template_folder());
 
 			auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(itr->path())));
 			writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), [](char c){ return std::isdigit(c) == 0;}), writeTimeStr.end());
@@ -856,7 +857,7 @@ std::wstring data_list_command(command_context& ctx)
 			if (!boost::iequals(itr->path().extension().wstring(), L".ftd"))
 				continue;
 
-			auto relativePath = boost::filesystem::path(itr->path().wstring().substr(env::data_folder().size() - 1, itr->path().wstring().size()));
+			auto relativePath = get_relative_without_extension(itr->path(), env::data_folder());
 
 			auto str = relativePath.replace_extension(L"").generic_wstring();
 			if (str[0] == L'\\' || str[0] == L'/')
@@ -2086,7 +2087,7 @@ std::wstring thumbnail_list_command(command_context& ctx)
 			if (!boost::iequals(itr->path().extension().wstring(), L".png"))
 				continue;
 
-			auto relativePath = boost::filesystem::path(itr->path().wstring().substr(env::thumbnails_folder().size() - 1, itr->path().wstring().size()));
+			auto relativePath = get_relative_without_extension(itr->path(), env::thumbnails_folder());
 
 			auto str = relativePath.replace_extension(L"").generic_wstring();
 			if (str[0] == '\\' || str[0] == '/')
