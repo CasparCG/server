@@ -27,7 +27,6 @@
 #include <common/forward.h>
 #include <common/future_fwd.h>
 #include <common/memory.h>
-#include <common/reactive.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
 
