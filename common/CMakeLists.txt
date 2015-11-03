@@ -9,6 +9,7 @@ set(SOURCES
 
 		base64.cpp
 		env.cpp
+		filesystem.cpp
 		log.cpp
 		polling_filesystem_monitor.cpp
 		stdafx.cpp
@@ -67,6 +68,7 @@ set(HEADERS
 		env.h
 		except.h
 		executor.h
+		filesystem.h
 		filesystem_monitor.h
 		forward.h
 		future.h
