@@ -22,7 +22,6 @@
 #pragma once
 
 #include <common/memory.h>
-#include <common/reactive.h>
 #include <common/forward.h>
 
 #include "fwd.h"
