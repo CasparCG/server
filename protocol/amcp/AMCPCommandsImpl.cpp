@@ -2242,7 +2242,7 @@ std::wstring fls_command(command_context& ctx)
 	replyString << L"200 FLS OK\r\n";
 
 	for (auto& font : core::text::list_fonts())
-		replyString << L"\"" << font.first << L"\" \"" << font.second << L"\"\r\n";
+		replyString << L"\"" << font.first << L"\" \"" << get_relative(font.second, env::font_folder()).wstring() << L"\"\r\n";
 
 	replyString << L"\r\n";
 
