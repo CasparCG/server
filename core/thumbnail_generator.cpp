@@ -239,6 +239,7 @@ public:
 
 	void generate_thumbnail(const boost::filesystem::path& file)
 	{
+		auto media_file_with_extension = get_relative(file, media_path_);
 		auto media_file = get_relative_without_extension(file, media_path_);
 		auto png_file = thumbnails_path_ / (media_file.wstring() + L".png");
 		std::promise<void> thumbnail_ready;
@@ -258,13 +259,13 @@ public:
 			}
 			catch (...)
 			{
-				CASPAR_LOG(debug) << L"Thumbnail producer failed to initialize for " << media_file;
+				CASPAR_LOG(debug) << L"Thumbnail producer failed to initialize for " << media_file_with_extension;
 				return;
 			}
 
 			if (producer == frame_producer::empty())
 			{
-				CASPAR_LOG(trace) << L"No appropriate thumbnail producer found for " << media_file;
+				CASPAR_LOG(trace) << L"No appropriate thumbnail producer found for " << media_file_with_extension;
 				return;
 			}
 
@@ -289,14 +290,14 @@ public:
 			}
 			catch (...)
 			{
-				CASPAR_LOG(debug) << L"Thumbnail producer failed to create thumbnail for " << media_file;
+				CASPAR_LOG(debug) << L"Thumbnail producer failed to create thumbnail for " << media_file_with_extension;
 				return;
 			}
 
 			if (raw_frame == draw_frame::empty()
 					|| raw_frame == draw_frame::late())
 			{
-				CASPAR_LOG(debug) << L"No thumbnail generated for " << media_file;
+				CASPAR_LOG(debug) << L"No thumbnail generated for " << media_file_with_extension;
 				return;
 			}
 
@@ -321,7 +322,7 @@ public:
 			try
 			{
 				boost::filesystem::last_write_time(png_file, boost::filesystem::last_write_time(file));
-				CASPAR_LOG(debug) << L"Generated thumbnail for " << media_file;
+				CASPAR_LOG(debug) << L"Generated thumbnail for " << media_file_with_extension;
 			}
 			catch (...)
 			{
@@ -329,7 +330,7 @@ public:
 			}
 		}
 		else
-			CASPAR_LOG(debug) << L"No thumbnail generated for " << media_file;
+			CASPAR_LOG(debug) << L"No thumbnail generated for " << media_file_with_extension;
 	}
 };
 
