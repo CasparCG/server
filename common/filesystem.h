@@ -27,6 +27,9 @@
 
 namespace caspar {
 
+boost::filesystem::path get_relative(
+		const boost::filesystem::path& file,
+		const boost::filesystem::path& relative_to);
 boost::filesystem::path get_relative_without_extension(
 		const boost::filesystem::path& file,
 		const boost::filesystem::path& relative_to);

@@ -28,11 +28,11 @@
 
 namespace caspar {
 
-boost::filesystem::path get_relative_without_extension(
+boost::filesystem::path get_relative(
 		const boost::filesystem::path& file,
 		const boost::filesystem::path& relative_to)
 {
-	auto result = file.stem();
+	auto result = file.filename();
 
 	boost::filesystem::path current_path = file;
 
@@ -50,6 +50,15 @@ boost::filesystem::path get_relative_without_extension(
 	}
 
 	return result;
+}
+
+boost::filesystem::path get_relative_without_extension(
+		const boost::filesystem::path& file,
+		const boost::filesystem::path& relative_to)
+{
+	return get_relative(
+			file.parent_path() / file.stem(),
+			relative_to);
 }
 
 }
