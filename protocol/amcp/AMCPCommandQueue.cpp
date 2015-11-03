@@ -23,6 +23,8 @@
 
 #include "AMCPCommandQueue.h"
 
+#include <common/lock.h>
+
 #include <boost/property_tree/ptree.hpp>
 
 #include <cmath>
