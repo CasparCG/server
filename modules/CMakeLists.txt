@@ -5,19 +5,31 @@ add_subdirectory(reroute)
 add_subdirectory(ffmpeg)
 add_subdirectory(oal)
 
-if (MSVC)
+if(BUILD_MODULE_BLUEFISH)
 	add_subdirectory(bluefish)
-endif ()	
+endif()
 
-add_subdirectory(decklink)
+if(BUILD_MODULE_DECKLINK)
+	add_subdirectory(decklink)
+endif()
+
 add_subdirectory(screen)
-add_subdirectory(html)
-add_subdirectory(psd)
 
-if (MSVC)
+if(BUILD_MODULE_HTML)
+	add_subdirectory(html)
+endif()
+
+if(BUILD_MODULE_PSD)
+	add_subdirectory(psd)
+endif()
+
+if(BUILD_MODULE_FLASH)
 	add_subdirectory(flash)
+endif()
+
+if(BUILD_MODULE_NEWTEK)
 	add_subdirectory(newtek)
-endif ()
+endif()
 
 add_subdirectory(image)
 

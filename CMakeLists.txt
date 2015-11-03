@@ -15,6 +15,15 @@ if (GIT_FOUND)
 			OUTPUT_VARIABLE GIT_HASH)
 endif ()
 
+include(CMakeDependentOption)
+
+CMAKE_DEPENDENT_OPTION(BUILD_MODULE_BLUEFISH "Build Bluefish module" ON "MSVC" OFF)
+option(BUILD_MODULE_DECKLINK "Build Decklink module" ON)
+option(BUILD_MODULE_HTML "Build HTML module" ON)
+option(BUILD_MODULE_PSD "Build PSD module" ON)
+CMAKE_DEPENDENT_OPTION(BUILD_MODULE_FLASH "Build Flash module" ON "MSVC" OFF)
+CMAKE_DEPENDENT_OPTION(BUILD_MODULE_NEWTEK "Build Newtek module" ON "MSVC" OFF)
+
 configure_file("${PROJECT_SOURCE_DIR}/version.tmpl" "${PROJECT_SOURCE_DIR}/version.h")
 
 set(DEPENDENCIES_FOLDER			"${PROJECT_SOURCE_DIR}/dependencies64")
