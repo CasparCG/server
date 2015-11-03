@@ -35,17 +35,17 @@ std::string demangle(const std::string& mangled)
 	auto start_of_name = mangled.find_first_of('(');
 
 	if (start_of_name == std::string::npos)
-		return mangled;
+        return "";
 
 	auto start_of_offset = mangled.find_first_of('+', start_of_name);
 
 	if (start_of_offset == std::string::npos)
-		return mangled;
+        return "";
 
 	auto end_of_name = mangled.find_first_of(')', start_of_offset);
 
 	if (end_of_name == std::string::npos)
-		return mangled;
+        return "";
 
 	auto file = mangled.substr(0, start_of_name);
 	auto mangled_symbol_name = mangled.substr(start_of_name + 1, start_of_offset - start_of_name - 1);
@@ -63,7 +63,7 @@ std::string demangle(const std::string& mangled)
 	}
 	else
 	{
-		return mangled;
+        return "";
 	}
 }
 
@@ -86,7 +86,7 @@ std::wstring get_call_stack()
 		{
 			auto demangled = demangle(strings[i]);
 
-			if (demangled.find("caspar::get_call_stack") == std::string::npos)
+            if (!demangled.empty() && demangled.find("caspar::get_call_stack") == std::string::npos)
 				stream << demangled.c_str() << std::endl;
 		}
 
