@@ -70,8 +70,8 @@ void configure(const std::wstring& filename)
 		log			= paths.get(L"log-path", initialPath + L"/log/");
 		ftemplate	= boost::filesystem::complete(paths.get(L"template-path", initialPath + L"/template/")).wstring();
 		data		= paths.get(L"data-path", initialPath + L"/data/");
-		font		= paths.get(L"fonts-path", initialPath + L"/fonts/");
-		thumbnails	= paths.get(L"thumbnails-path", initialPath + L"/data/");
+		font		= paths.get(L"font-path", initialPath + L"/font/");
+		thumbnails	= paths.get(L"thumbnail-path", initialPath + L"/thumbnail/");
 	}
 	catch(...)
 	{
