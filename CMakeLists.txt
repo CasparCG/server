@@ -28,7 +28,16 @@ configure_file("${PROJECT_SOURCE_DIR}/version.tmpl" "${PROJECT_SOURCE_DIR}/versi
 
 set(DEPENDENCIES_FOLDER			"${PROJECT_SOURCE_DIR}/dependencies64")
 
-set(BOOST_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/boost")
+if (MSVC)
+	set(PLATFORM_FOLDER_NAME	"win32")
+elseif (CMAKE_COMPILER_IS_GNUCXX)
+	set(PLATFORM_FOLDER_NAME	"linux")
+endif ()
+
+set(Boost_INCLUDE_DIRS			"${DEPENDENCIES_FOLDER}/boost")
+set(Boost_LIBRARIES boost_system boost_thread boost_chrono boost_filesystem boost_log boost_locale boost_regex boost_date_time)
+link_directories("${DEPENDENCIES_FOLDER}/boost/stage/lib/${PLATFORM_FOLDER_NAME}")
+
 set(RXCPP_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/RxCpp/include")
 set(TBB_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/tbb/include")
 set(GLEW_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/glew/include")
@@ -48,12 +57,6 @@ set(BLUEFISH_INCLUDE_PATH		"${DEPENDENCIES_FOLDER}/bluefish/include")
 set(CEF_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/cef/include")
 set(GTEST_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/gtest/include")
 
-if (MSVC)
-	set(PLATFORM_FOLDER_NAME	"win32")
-elseif (CMAKE_COMPILER_IS_GNUCXX)
-	set(PLATFORM_FOLDER_NAME	"linux")
-endif ()
-
 set(FFMPEG_BIN_PATH				"${DEPENDENCIES_FOLDER}/ffmpeg/bin/${PLATFORM_FOLDER_NAME}")
 set(FREEIMAGE_BIN_PATH			"${DEPENDENCIES_FOLDER}/freeimage/bin/${PLATFORM_FOLDER_NAME}")
 set(GLEW_BIN_PATH				"${DEPENDENCIES_FOLDER}/glew/bin/${PLATFORM_FOLDER_NAME}")
@@ -63,7 +66,6 @@ set(LIBERATION_FONTS_BIN_PATH	"${DEPENDENCIES_FOLDER}/liberation-fonts")
 set(CEF_PATH					"${DEPENDENCIES_FOLDER}/cef")
 set(CEF_BIN_PATH				"${DEPENDENCIES_FOLDER}/cef/bin/${PLATFORM_FOLDER_NAME}")
 
-link_directories("${DEPENDENCIES_FOLDER}/boost/stage/lib/${PLATFORM_FOLDER_NAME}")
 link_directories("${DEPENDENCIES_FOLDER}/tbb/lib/${PLATFORM_FOLDER_NAME}")
 link_directories("${DEPENDENCIES_FOLDER}/glew/lib/${PLATFORM_FOLDER_NAME}")
 link_directories("${DEPENDENCIES_FOLDER}/sfml/lib/${PLATFORM_FOLDER_NAME}")

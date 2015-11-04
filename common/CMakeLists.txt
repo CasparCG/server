@@ -98,7 +98,7 @@ add_precompiled_header(common stdafx.h FORCEINCLUDE)
 
 include_directories(..)
 include_directories(${ASMLIB_INCLUDE_PATH})
-include_directories(${BOOST_INCLUDE_PATH})
+include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${RXCPP_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_PATH})
 include_directories(${GLEW_INCLUDE_PATH})
@@ -133,14 +133,7 @@ if (MSVC)
 else ()
 	target_link_libraries(common
 		"${DEPENDENCIES_FOLDER}/asmlib/alibelf64.a"
-		boost_system
-		boost_thread
-		boost_chrono
-		boost_filesystem
-		boost_log
-		boost_locale
-		boost_regex
-		boost_date_time
+		"${Boost_LIBRARIES}"
 		tbb
 		tbbmalloc
 		tbbmalloc_proxy

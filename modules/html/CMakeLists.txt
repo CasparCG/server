@@ -18,7 +18,7 @@ add_library(html ${SOURCES} ${HEADERS})
 
 include_directories(..)
 include_directories(../..)
-include_directories(${BOOST_INCLUDE_PATH})
+include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${RXCPP_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_PATH})
 include_directories(${CEF_INCLUDE_PATH})

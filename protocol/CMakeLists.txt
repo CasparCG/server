@@ -72,7 +72,7 @@ add_library(protocol ${SOURCES} ${HEADERS})
 add_precompiled_header(protocol StdAfx.h FORCEINCLUDE)
 
 include_directories(..)
-include_directories(${BOOST_INCLUDE_PATH})
+include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${RXCPP_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_PATH})
 
