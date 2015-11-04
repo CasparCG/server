@@ -27,7 +27,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${RXCPP_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_PATH})
 include_directories(${ASMLIB_INCLUDE_PATH})
-include_directories(${FFMPEG_INCLUDE_PATH})
+include_directories(${FFmpeg_INCLUDE_DIRS})
 
 set_target_properties(reroute PROPERTIES FOLDER modules)
 source_group(sources\\producer producer/*)
