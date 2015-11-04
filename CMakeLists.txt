@@ -16,6 +16,7 @@ if (GIT_FOUND)
 endif ()
 
 include(CMakeDependentOption)
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMake/")
 
 CMAKE_DEPENDENT_OPTION(BUILD_MODULE_BLUEFISH "Build Bluefish module" ON "MSVC" OFF)
 option(BUILD_MODULE_DECKLINK "Build Decklink module" ON)
@@ -25,6 +26,7 @@ CMAKE_DEPENDENT_OPTION(BUILD_MODULE_FLASH "Build Flash module" ON "MSVC" OFF)
 CMAKE_DEPENDENT_OPTION(BUILD_MODULE_NEWTEK "Build Newtek module" ON "MSVC" OFF)
 
 option(USE_SYSTEM_BOOST "Compile against system boost instead of bundled one" OFF)
+option(USE_SYSTEM_FFMPEG "Compile against system FFmpeg instead of bundled one" OFF)
 
 configure_file("${PROJECT_SOURCE_DIR}/version.tmpl" "${PROJECT_SOURCE_DIR}/version.h")
 
@@ -51,12 +53,24 @@ set(GLEW_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/glew/include")
 set(SFML_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/sfml/include")
 set(FREETYPE_INCLUDE_PATH		"${DEPENDENCIES_FOLDER}/freetype/include")
 
-set(FFmpeg_INCLUDE_DIRS			"${DEPENDENCIES_FOLDER}/ffmpeg/include")
-if (MSVC)
-	list(APPEND FFmpeg_INCLUDE_DIRS "${DEPENDENCIES_FOLDER}/ffmpeg/include-win32")
-endif ()
-set(FFmpeg_BIN_DIR				"${DEPENDENCIES_FOLDER}/ffmpeg/bin/${PLATFORM_FOLDER_NAME}")
-link_directories("${DEPENDENCIES_FOLDER}/ffmpeg/lib/${PLATFORM_FOLDER_NAME}")
+if(USE_SYSTEM_FFMPEG)
+	find_package(FFmpeg REQUIRED COMPONENTS
+		avcodec
+		avdevice
+		avfilter
+		avformat
+		avutil
+		postproc
+		swresample
+		swscale)
+else()
+	set(FFmpeg_INCLUDE_DIRS		"${DEPENDENCIES_FOLDER}/ffmpeg/include")
+	if (MSVC)
+		list(APPEND FFmpeg_INCLUDE_DIRS "${DEPENDENCIES_FOLDER}/ffmpeg/include-win32")
+	endif ()
+	set(FFmpeg_BIN_DIR			"${DEPENDENCIES_FOLDER}/ffmpeg/bin/${PLATFORM_FOLDER_NAME}")
+	link_directories("${DEPENDENCIES_FOLDER}/ffmpeg/lib/${PLATFORM_FOLDER_NAME}")
+endif()
 
 set(ASMLIB_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/asmlib")
 set(FREEIMAGE_INCLUDE_PATH		"${DEPENDENCIES_FOLDER}/freeimage/include")
