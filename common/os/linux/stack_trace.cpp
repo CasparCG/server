@@ -63,7 +63,7 @@ std::string demangle(const std::string& mangled)
 	}
 	else
 	{
-        return "";
+		return "";
 	}
 }
 
@@ -86,7 +86,7 @@ std::wstring get_call_stack()
 		{
 			auto demangled = demangle(strings[i]);
 
-            if (!demangled.empty() && demangled.find("caspar::get_call_stack") == std::string::npos)
+			if (!demangled.empty() && demangled.find("caspar::get_call_stack") == std::string::npos)
 				stream << demangled.c_str() << std::endl;
 		}
 
