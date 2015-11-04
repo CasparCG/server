@@ -24,6 +24,8 @@ option(BUILD_MODULE_PSD "Build PSD module" ON)
 CMAKE_DEPENDENT_OPTION(BUILD_MODULE_FLASH "Build Flash module" ON "MSVC" OFF)
 CMAKE_DEPENDENT_OPTION(BUILD_MODULE_NEWTEK "Build Newtek module" ON "MSVC" OFF)
 
+option(USE_SYSTEM_BOOST "Compile against system boost instead of bundled one" OFF)
+
 configure_file("${PROJECT_SOURCE_DIR}/version.tmpl" "${PROJECT_SOURCE_DIR}/version.h")
 
 set(DEPENDENCIES_FOLDER			"${PROJECT_SOURCE_DIR}/dependencies64")
@@ -34,9 +36,14 @@ elseif (CMAKE_COMPILER_IS_GNUCXX)
 	set(PLATFORM_FOLDER_NAME	"linux")
 endif ()
 
-set(Boost_INCLUDE_DIRS			"${DEPENDENCIES_FOLDER}/boost")
-set(Boost_LIBRARIES boost_system boost_thread boost_chrono boost_filesystem boost_log boost_locale boost_regex boost_date_time)
-link_directories("${DEPENDENCIES_FOLDER}/boost/stage/lib/${PLATFORM_FOLDER_NAME}")
+if(USE_SYSTEM_BOOST)
+	find_package(Boost 1.56 REQUIRED COMPONENTS chrono date_time filesystem locale log regex system thread)
+	add_definitions(-DBOOST_ALL_DYN_LINK)
+else()
+	set(Boost_INCLUDE_DIRS		"${DEPENDENCIES_FOLDER}/boost")
+	set(Boost_LIBRARIES boost_system boost_thread boost_chrono boost_filesystem boost_log boost_locale boost_regex boost_date_time)
+	link_directories("${DEPENDENCIES_FOLDER}/boost/stage/lib/${PLATFORM_FOLDER_NAME}")
+endif()
 
 set(RXCPP_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/RxCpp/include")
 set(TBB_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/tbb/include")
