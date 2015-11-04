@@ -18,7 +18,7 @@ include_directories(..)
 include_directories(../..)
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${RXCPP_INCLUDE_PATH})
-include_directories(${TBB_INCLUDE_PATH})
+include_directories(${TBB_INCLUDE_DIRS})
 include_directories(${OPENAL_INCLUDE_PATH})
 
 set_target_properties(oal PROPERTIES FOLDER modules)

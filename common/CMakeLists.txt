@@ -100,7 +100,7 @@ include_directories(..)
 include_directories(${ASMLIB_INCLUDE_PATH})
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${RXCPP_INCLUDE_PATH})
-include_directories(${TBB_INCLUDE_PATH})
+include_directories(${TBB_INCLUDE_DIRS})
 include_directories(${GLEW_INCLUDE_PATH})
 
 source_group(sources ./*)
@@ -109,6 +109,10 @@ source_group(sources\\diagnostics diagnostics/*)
 source_group(sources\\compiler\\vs compiler/vs/*)
 source_group(sources\\os\\windows os/windows/*)
 source_group(sources\\os os/*)
+
+target_link_libraries(common
+	"${TBB_LIBRARIES}"
+)
 
 if (MSVC)
 	target_link_libraries(common
@@ -123,8 +127,6 @@ if (MSVC)
 		debug sfml-graphics-d-2.lib
 		Winmm.lib
 		Ws2_32.lib
-		optimized tbb.lib
-		debug tbb_debug.lib
 		OpenGL32.lib
 		glew32.lib
 		openal32.lib
@@ -134,9 +136,6 @@ else ()
 	target_link_libraries(common
 		"${DEPENDENCIES_FOLDER}/asmlib/alibelf64.a"
 		"${Boost_LIBRARIES}"
-		tbb
-		tbbmalloc
-		tbbmalloc_proxy
 		sfml-graphics-s
 		sfml-window-s
 		sfml-system-s
@@ -154,17 +153,17 @@ endif ()
 
 if(MSVC)
 	casparcg_add_runtime_dependency("${GLEW_BIN_PATH}/glew32.dll")
-	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbb.dll")
-	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbb_debug.dll")
+	casparcg_add_runtime_dependency("${TBB_BIN_DIR}/tbb.dll")
+	casparcg_add_runtime_dependency("${TBB_BIN_DIR}/tbb_debug.dll")
 
 	# Reenable when tbb gets official support for vc14
-	# casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc.dll")
-	# casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_debug.dll")
-	# casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_proxy.dll")
-	# casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_proxy_debug.dll")
+	# casparcg_add_runtime_dependency("${TBB_BIN_DIR}/tbbmalloc.dll")
+	# casparcg_add_runtime_dependency("${TBB_BIN_DIR}/tbbmalloc_debug.dll")
+	# casparcg_add_runtime_dependency("${TBB_BIN_DIR}/tbbmalloc_proxy.dll")
+	# casparcg_add_runtime_dependency("${TBB_BIN_DIR}/tbbmalloc_proxy_debug.dll")
 else()
 	casparcg_add_runtime_dependency("${GLEW_BIN_PATH}/libGLEW.so.1.12")
-	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/libtbb.so.2")
-	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/libtbbmalloc_proxy.so.2")
-	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/libtbbmalloc.so.2")
+	casparcg_add_runtime_dependency("${TBB_BIN_DIR}/libtbb.so.2")
+	casparcg_add_runtime_dependency("${TBB_BIN_DIR}/libtbbmalloc_proxy.so.2")
+	casparcg_add_runtime_dependency("${TBB_BIN_DIR}/libtbbmalloc.so.2")
 endif()
