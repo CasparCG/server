@@ -23,7 +23,6 @@ if (MSVC)
 			compiler/vs/StackWalker.cpp
 			compiler/vs/StackWalker.h
 
-			os/windows/current_version.h
 			os/windows/filesystem.cpp
 			os/windows/page_locked_allocator.cpp
 			os/windows/prec_timer.cpp
