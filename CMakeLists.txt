@@ -43,6 +43,7 @@ elseif (CMAKE_COMPILER_IS_GNUCXX)
 	set(PLATFORM_FOLDER_NAME	"linux")
 endif ()
 
+## boost ##
 if(USE_SYSTEM_BOOST)
 	find_package(Boost 1.56 REQUIRED COMPONENTS chrono date_time filesystem locale log regex system thread)
 	add_definitions(-DBOOST_ALL_DYN_LINK)
@@ -51,7 +52,10 @@ else()
 	set(Boost_LIBRARIES boost_system boost_thread boost_chrono boost_filesystem boost_log boost_locale boost_regex boost_date_time)
 	link_directories("${DEPENDENCIES_FOLDER}/boost/stage/lib/${PLATFORM_FOLDER_NAME}")
 endif()
+add_definitions( -DBOOST_THREAD_VERSION=4 )
+add_definitions( "-DBOOST_ASIO_ERROR_CATEGORY_NOEXCEPT=noexcept(true)" ) # Workaround macro redefinition in boost
 
+## TBB ##
 if(USE_SYSTEM_TBB)
 	find_package(TBB REQUIRED)
 else()
@@ -64,7 +68,9 @@ else()
 	set(TBB_BIN_DIR				"${DEPENDENCIES_FOLDER}/tbb/bin/${PLATFORM_FOLDER_NAME}")
 	link_directories("${DEPENDENCIES_FOLDER}/tbb/lib/${PLATFORM_FOLDER_NAME}")
 endif()
+add_definitions( -DTBB_USE_CAPTURED_EXCEPTION=0 )
 
+## GLEW ##
 if(USE_SYSTEM_GLEW)
 	find_package(GLEW REQUIRED)
 	find_package(OpenGL REQUIRED)
@@ -80,10 +86,12 @@ else()
 	set(GLEW_BIN_DIR			"${DEPENDENCIES_FOLDER}/glew/bin/${PLATFORM_FOLDER_NAME}")
 	link_directories("${DEPENDENCIES_FOLDER}/glew/lib/${PLATFORM_FOLDER_NAME}")
 endif()
+add_definitions( -DGLEW_NO_GLU )
 
 set(RXCPP_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/RxCpp/include")
 set(SFML_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/sfml/include")
 
+## FreeType ##
 if(USE_SYSTEM_FREETYPE)
 	find_package(Freetype REQUIRED)
 else()
@@ -92,6 +100,7 @@ else()
 	link_directories("${DEPENDENCIES_FOLDER}/freetype/objs/win32/vc2010")
 endif()
 
+## FFmpeg ##
 if(USE_SYSTEM_FFMPEG)
 	find_package(FFmpeg REQUIRED COMPONENTS
 		avcodec
@@ -111,6 +120,7 @@ else()
 	link_directories("${DEPENDENCIES_FOLDER}/ffmpeg/lib/${PLATFORM_FOLDER_NAME}")
 endif()
 
+## FreeImage ##
 if(USE_SYSTEM_FREEIMAGE)
 	find_package(FreeImage REQUIRED)
 else()
@@ -124,6 +134,7 @@ else()
 	link_directories("${DEPENDENCIES_FOLDER}/freeimage/lib/${PLATFORM_FOLDER_NAME}")
 endif()
 
+## OpenAL ##
 if(USE_SYSTEM_OPENAL)
 	find_package(OpenAL REQUIRED)
 else()
@@ -157,12 +168,8 @@ link_directories("${DEPENDENCIES_FOLDER}/gtest/lib/${PLATFORM_FOLDER_NAME}")
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 add_definitions( -DSFML_STATIC )
-add_definitions( -DBOOST_THREAD_VERSION=4 )
-add_definitions( -DTBB_USE_CAPTURED_EXCEPTION=0 )
 add_definitions( -DUNICODE )
 add_definitions( -D_UNICODE )
-add_definitions( -DGLEW_NO_GLU )
-add_definitions( "-DBOOST_ASIO_ERROR_CATEGORY_NOEXCEPT=noexcept(true)" ) # Workaround macro redefinition in boost
 add_definitions( -D_GLIBCXX_USE_CXX11_ABI=0 ) # Allow compilation in GCC 5 while keeping old dependencies
 add_definitions( -DCASPAR_SOURCE_PREFIX="${CMAKE_CURRENT_SOURCE_DIR}" )
 
