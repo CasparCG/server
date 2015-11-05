@@ -98,7 +98,7 @@ struct configuration
 		aspect_invalid,
 	};
 		
-	std::wstring	name				= L"ogl";
+	std::wstring	name				= L"Screen consumer";
 	int				screen_index		= 0;
 	screen::stretch	stretch				= screen::stretch::fill;
 	bool			windowed			= true;
@@ -239,7 +239,7 @@ public:
 			: (config_.windowed
 				? sf::Style::Resize | sf::Style::Close
 				: sf::Style::Fullscreen);
-		window_.create(sf::VideoMode(screen_width_, screen_height_, 32), u8(L"Screen consumer " + channel_and_format()), window_style);
+		window_.create(sf::VideoMode(screen_width_, screen_height_, 32), u8(print()), window_style);
 		window_.setMouseCursorVisible(config_.interactive);
 		window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
 		window_.setSize(sf::Vector2u(screen_width_, screen_height_));
@@ -545,7 +545,7 @@ public:
 
 	std::wstring print() const
 	{	
-		return config_.name + channel_and_format();
+		return config_.name + L" " + channel_and_format();
 	}
 	
 	void calculate_aspect()
