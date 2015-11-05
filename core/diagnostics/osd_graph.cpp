@@ -207,10 +207,18 @@ private:
 
 		if (calculate_view_)
 		{
+			int content_height		= static_cast<int>(RENDERING_HEIGHT * drawables_.size());
+			int window_height		= static_cast<int>(window_->getSize().y);
+			int not_visible			= std::max(0, content_height - window_height);
+			int min_scroll_position	= -not_visible;
+			int max_scroll_position	= 0;
+
+			scroll_position_ = std::min(max_scroll_position, std::max(min_scroll_position, scroll_position_));
 			view_.setViewport(sf::FloatRect(0, 0, 1.0, 1.0));
-			view_.setSize(RENDERING_WIDTH, window_->getSize().y);
-			view_.setCenter(RENDERING_WIDTH / 2, window_->getSize().y / 2 - scroll_position_);
+			view_.setSize(RENDERING_WIDTH, window_height);
+			view_.setCenter(RENDERING_WIDTH / 2, window_height / 2 - scroll_position_);
 			window_->setView(view_);
+
 			calculate_view_ = false;
 		}
 
