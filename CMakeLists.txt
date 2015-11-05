@@ -29,6 +29,7 @@ option(USE_SYSTEM_BOOST "Compile against system boost instead of bundled one" OF
 option(USE_SYSTEM_FFMPEG "Compile against system FFmpeg instead of bundled one" OFF)
 option(USE_SYSTEM_TBB "Compile against system TBB instead of bundled one" OFF)
 option(USE_SYSTEM_GLEW "Compile against system GLEW instead of bundled one" OFF)
+option(USE_SYSTEM_FREETYPE "Compile against system FreeType instead of bundled one" OFF)
 
 configure_file("${PROJECT_SOURCE_DIR}/version.tmpl" "${PROJECT_SOURCE_DIR}/version.h")
 
@@ -81,9 +82,13 @@ endif()
 set(RXCPP_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/RxCpp/include")
 set(SFML_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/sfml/include")
 
-set(FREETYPE_INCLUDE_DIRS		"${DEPENDENCIES_FOLDER}/freetype/include")
-set(FREETYPE_LIBRARIES freetype)
-link_directories("${DEPENDENCIES_FOLDER}/freetype/objs/win32/vc2010")
+if(USE_SYSTEM_FREETYPE)
+	find_package(Freetype REQUIRED)
+else()
+	set(FREETYPE_INCLUDE_DIRS	"${DEPENDENCIES_FOLDER}/freetype/include")
+	set(FREETYPE_LIBRARIES freetype)
+	link_directories("${DEPENDENCIES_FOLDER}/freetype/objs/win32/vc2010")
+endif()
 
 if(USE_SYSTEM_FFMPEG)
 	find_package(FFmpeg REQUIRED COMPONENTS
