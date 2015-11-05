@@ -563,14 +563,14 @@ public:
 
 				while(audio_frame_buffer_.try_pop(frame))
 				{
+					UINT32 buffered;
+					output_->GetBufferedAudioSampleFrameCount(&buffered);
+					graph_->set_value("buffered-audio", static_cast<double>(buffered) / (format_desc_.audio_cadence[0] * config_.buffer_depth()));
+
 					send_completion_.try_completion();
 					schedule_next_audio(channel_remapper_.mix_and_rearrange(frame.audio_data()));
 				}
 			}
-
-			UINT32 buffered;
-			output_->GetBufferedAudioSampleFrameCount(&buffered);
-			graph_->set_value("buffered-audio", static_cast<double>(buffered) / (format_desc_.audio_cadence[0] * config_.buffer_depth()));
 		}
 		catch(...)
 		{
