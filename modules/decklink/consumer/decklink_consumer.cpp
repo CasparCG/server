@@ -517,14 +517,14 @@ public:
 			else if(result == bmdOutputFrameFlushed)
 				graph_->set_tag(diagnostics::tag_severity::WARNING, "flushed-frame");
 
-			auto frame = core::const_frame::empty();	
+			UINT32 buffered;
+			output_->GetBufferedVideoFrameCount(&buffered);
+			graph_->set_value("buffered-video", static_cast<double>(buffered) / (config_.buffer_depth()));
+
+			auto frame = core::const_frame::empty();
 			video_frame_buffer_.pop(frame);
 			send_completion_.try_completion();
 			schedule_next_video(frame);	
-			
-			UINT32 buffered;
-			output_->GetBufferedVideoFrameCount(&buffered);
-			graph_->set_value("buffered-video", static_cast<double>(buffered)/format_desc_.fps);
 		}
 		catch(...)
 		{
