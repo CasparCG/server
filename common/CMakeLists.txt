@@ -101,7 +101,7 @@ include_directories(${ASMLIB_INCLUDE_PATH})
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${RXCPP_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_DIRS})
-include_directories(${GLEW_INCLUDE_PATH})
+include_directories(${GLEW_INCLUDE_DIRS})
 
 source_group(sources ./*)
 source_group(sources\\gl gl/*)
@@ -112,6 +112,8 @@ source_group(sources\\os os/*)
 
 target_link_libraries(common
 	"${TBB_LIBRARIES}"
+	"${GLEW_LIBRARIES}"
+	"${OPENGL_gl_LIBRARY}"
 )
 
 if (MSVC)
@@ -127,8 +129,6 @@ if (MSVC)
 		debug sfml-graphics-d-2.lib
 		Winmm.lib
 		Ws2_32.lib
-		OpenGL32.lib
-		glew32.lib
 		openal32.lib
 		zlibstat.lib
 	)
@@ -139,8 +139,6 @@ else ()
 		sfml-graphics-s
 		sfml-window-s
 		sfml-system-s
-		GLEW
-		GL
 		X11
 		jpeg
 		sndfile
@@ -152,9 +150,9 @@ else ()
 endif ()
 
 if(MSVC)
-	casparcg_add_runtime_dependency("${GLEW_BIN_PATH}/glew32.dll")
+	casparcg_add_runtime_dependency("${GLEW_BIN_DIR}/glew32.dll")
 else()
-	casparcg_add_runtime_dependency("${GLEW_BIN_PATH}/libGLEW.so.1.12")
+	casparcg_add_runtime_dependency("${GLEW_BIN_DIR}/libGLEW.so.1.12")
 endif()
 
 if(NOT USE_SYSTEM_TBB)
