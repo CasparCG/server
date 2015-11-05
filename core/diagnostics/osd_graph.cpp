@@ -336,7 +336,7 @@ public:
 
 		auto color = get_sfml_color(color_);
 		color.a = 255 * 0.8;
-		line_data_.push_back(sf::Vertex(sf::Vector2f(get_insertion_xcoord(), std::max(0.05, std::min(0.95, (1.0f - tick_data_) * 0.8 + 0.1f))), color));
+		line_data_.push_back(sf::Vertex(sf::Vector2f(get_insertion_xcoord(), std::max(0.1f, std::min(0.9f, (1.0f - tick_data_) * 0.8f + 0.1f))), color));
 
 		if (tick_tag_)
 		{
