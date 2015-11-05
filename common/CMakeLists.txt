@@ -116,6 +116,7 @@ target_link_libraries(common
 	"${OPENGL_gl_LIBRARY}"
 	"${FREETYPE_LIBRARIES}"
 	"${OPENAL_LIBRARY}"
+	"${SFML_LIBRARIES}"
 )
 
 if (MSVC)
@@ -123,12 +124,6 @@ if (MSVC)
 		alibcof64.lib
 		jpeg.lib
 		sndfile.lib
-		optimized sfml-system-2.lib
-		optimized sfml-window-2.lib
-		optimized sfml-graphics-2.lib
-		debug sfml-system-d-2.lib
-		debug sfml-window-d-2.lib
-		debug sfml-graphics-d-2.lib
 		Winmm.lib
 		Ws2_32.lib
 		zlibstat.lib
@@ -137,9 +132,6 @@ else ()
 	target_link_libraries(common
 		"${DEPENDENCIES_FOLDER}/asmlib/alibelf64.a"
 		"${Boost_LIBRARIES}"
-		sfml-graphics-s
-		sfml-window-s
-		sfml-system-s
 		X11
 		jpeg
 		sndfile

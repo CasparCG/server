@@ -147,7 +147,7 @@ include_directories(..)
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${RXCPP_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_DIRS})
-include_directories(${SFML_INCLUDE_PATH})
+include_directories(${SFML_INCLUDE_DIR})
 include_directories(${FREETYPE_INCLUDE_DIRS})
 include_directories(${GLEW_INCLUDE_DIRS})
 

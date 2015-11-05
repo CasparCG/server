@@ -49,7 +49,7 @@ include_directories(${TBB_INCLUDE_DIRS})
 include_directories(${GLEW_INCLUDE_DIRS})
 include_directories(${ASMLIB_INCLUDE_PATH})
 include_directories(${FFmpeg_INCLUDE_DIRS})
-include_directories(${SFML_INCLUDE_PATH})
+include_directories(${SFML_INCLUDE_DIR})
 
 source_group(sources ./*)
 source_group(sources\\cpu\\image cpu/image/*)

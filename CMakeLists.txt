@@ -89,7 +89,25 @@ endif()
 add_definitions( -DGLEW_NO_GLU )
 
 set(RXCPP_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/RxCpp/include")
-set(SFML_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/sfml/include")
+
+## SFML ##
+set(SFML_INCLUDE_DIR			"${DEPENDENCIES_FOLDER}/sfml/include")
+if(MSVC)
+	set(SFML_LIBRARIES
+		optimized sfml-system-2   debug sfml-system-d-2
+		optimized sfml-window-2   debug sfml-window-d-2
+		optimized sfml-graphics-2 debug sfml-graphics-d-2
+	)
+else()
+	set(SFML_LIBRARIES
+		sfml-graphics-s
+		sfml-window-s
+		sfml-system-s
+	)
+endif()
+link_directories("${DEPENDENCIES_FOLDER}/sfml/lib/${PLATFORM_FOLDER_NAME}")
+link_directories("${DEPENDENCIES_FOLDER}/sfml/extlibs/lib")
+add_definitions( -DSFML_STATIC )
 
 ## FreeType ##
 if(USE_SYSTEM_FREETYPE)
@@ -157,8 +175,6 @@ set(LIBERATION_FONTS_BIN_PATH	"${DEPENDENCIES_FOLDER}/liberation-fonts")
 set(CEF_PATH					"${DEPENDENCIES_FOLDER}/cef")
 set(CEF_BIN_PATH				"${DEPENDENCIES_FOLDER}/cef/bin/${PLATFORM_FOLDER_NAME}")
 
-link_directories("${DEPENDENCIES_FOLDER}/sfml/lib/${PLATFORM_FOLDER_NAME}")
-link_directories("${DEPENDENCIES_FOLDER}/sfml/extlibs/lib")
 link_directories("${DEPENDENCIES_FOLDER}/asmlib")
 link_directories("${DEPENDENCIES_FOLDER}/bluefish/lib")
 link_directories("${DEPENDENCIES_FOLDER}/zlib/lib")
@@ -167,7 +183,6 @@ link_directories("${DEPENDENCIES_FOLDER}/gtest/lib/${PLATFORM_FOLDER_NAME}")
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-add_definitions( -DSFML_STATIC )
 add_definitions( -DUNICODE )
 add_definitions( -D_UNICODE )
 add_definitions( -D_GLIBCXX_USE_CXX11_ABI=0 ) # Allow compilation in GCC 5 while keeping old dependencies
