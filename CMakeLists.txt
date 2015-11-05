@@ -80,7 +80,10 @@ endif()
 
 set(RXCPP_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/RxCpp/include")
 set(SFML_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/sfml/include")
-set(FREETYPE_INCLUDE_PATH		"${DEPENDENCIES_FOLDER}/freetype/include")
+
+set(FREETYPE_INCLUDE_DIRS		"${DEPENDENCIES_FOLDER}/freetype/include")
+set(FREETYPE_LIBRARIES freetype)
+link_directories("${DEPENDENCIES_FOLDER}/freetype/objs/win32/vc2010")
 
 if(USE_SYSTEM_FFMPEG)
 	find_package(FFmpeg REQUIRED COMPONENTS
@@ -116,7 +119,6 @@ set(CEF_BIN_PATH				"${DEPENDENCIES_FOLDER}/cef/bin/${PLATFORM_FOLDER_NAME}")
 
 link_directories("${DEPENDENCIES_FOLDER}/sfml/lib/${PLATFORM_FOLDER_NAME}")
 link_directories("${DEPENDENCIES_FOLDER}/sfml/extlibs/lib")
-link_directories("${DEPENDENCIES_FOLDER}/freetype/objs/win32/vc2010")
 link_directories("${DEPENDENCIES_FOLDER}/asmlib")
 link_directories("${DEPENDENCIES_FOLDER}/freeimage/lib/${PLATFORM_FOLDER_NAME}")
 link_directories("${DEPENDENCIES_FOLDER}/openal/lib/${PLATFORM_FOLDER_NAME}")

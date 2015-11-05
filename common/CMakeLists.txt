@@ -114,6 +114,7 @@ target_link_libraries(common
 	"${TBB_LIBRARIES}"
 	"${GLEW_LIBRARIES}"
 	"${OPENGL_gl_LIBRARY}"
+	"${FREETYPE_LIBRARIES}"
 )
 
 if (MSVC)
@@ -142,7 +143,6 @@ else ()
 		X11
 		jpeg
 		sndfile
-		freetype
 		udev
 		Xrandr
 		pthread

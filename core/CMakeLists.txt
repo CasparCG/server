@@ -148,7 +148,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${RXCPP_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_DIRS})
 include_directories(${SFML_INCLUDE_PATH})
-include_directories(${FREETYPE_INCLUDE_PATH})
+include_directories(${FREETYPE_INCLUDE_DIRS})
 include_directories(${GLEW_INCLUDE_DIRS})
 
 source_group(sources ./*)
@@ -171,16 +171,8 @@ source_group(sources\\producer\\text producer/text/*)
 source_group(sources\\producer\\transition producer/transition/*)
 source_group(sources\\producer\\separated producer/separated/*)
 
-if (MSVC)
-	target_link_libraries(core
-			common
+target_link_libraries(core
+	common
 
-			freetype.lib
-	)
-else()
-	target_link_libraries(core
-			common
-
-			freetype
-	)
-endif()
+	"${FREETYPE_LIBRARIES}"
+)
