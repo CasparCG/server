@@ -115,6 +115,7 @@ target_link_libraries(common
 	"${GLEW_LIBRARIES}"
 	"${OPENGL_gl_LIBRARY}"
 	"${FREETYPE_LIBRARIES}"
+	"${OPENAL_LIBRARY}"
 )
 
 if (MSVC)
@@ -130,7 +131,6 @@ if (MSVC)
 		debug sfml-graphics-d-2.lib
 		Winmm.lib
 		Ws2_32.lib
-		openal32.lib
 		zlibstat.lib
 	)
 else ()
