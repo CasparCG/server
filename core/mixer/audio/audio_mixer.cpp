@@ -89,7 +89,7 @@ public:
 		: graph_(std::move(graph))
 	{
 		graph_->set_color("volume", diagnostics::color(1.0f, 0.8f, 0.1f));
-		graph_->set_color("audio-clipping", diagnostics::color(0.6f, 0.3f, 0.9f));
+		graph_->set_color("audio-clipping", diagnostics::color(0.3f, 0.6f, 0.3f));
 		transform_stack_.push(core::audio_transform());
 	}
 	
@@ -232,7 +232,7 @@ public:
 		audio_streams_ = std::move(next_audio_streams);
 		
 		if(audio_streams_.empty())		
-			audio_streams_[nullptr].audio_data = audio_buffer_ps(audio_size(audio_cadence_.front()), 0.0f);
+			audio_streams_[nullptr].audio_data = audio_buffer_ps(audio_size(audio_cadence_.front()), 0.0);
 
 		{ // sanity check
 
@@ -248,7 +248,7 @@ public:
 				CASPAR_LOG(trace) << "[audio_mixer] Incorrect frame audio cadence detected.";			
 		}
 				
-		audio_buffer_ps result_ps(audio_size(audio_cadence_.front()), 0.0f);
+		audio_buffer_ps result_ps(audio_size(audio_cadence_.front()), 0.0);
 		for (auto& stream : audio_streams_ | boost::adaptors::map_values)
 		{
 			if(stream.audio_data.size() < result_ps.size())
