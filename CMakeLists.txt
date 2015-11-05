@@ -32,6 +32,7 @@ option(USE_SYSTEM_GLEW      "Compile against system GLEW instead of bundled one"
 option(USE_SYSTEM_FREETYPE  "Compile against system FreeType instead of bundled one" OFF)
 option(USE_SYSTEM_FREEIMAGE "Compile against system FreeImage instead of bundled one" OFF)
 option(USE_SYSTEM_OPENAL    "Compile against system OpenAL instead of bundled one" OFF)
+option(USE_SYSTEM_SFML      "Compile against system SFML instead of bundled one" OFF)
 
 configure_file("${PROJECT_SOURCE_DIR}/version.tmpl" "${PROJECT_SOURCE_DIR}/version.h")
 
@@ -91,23 +92,27 @@ add_definitions( -DGLEW_NO_GLU )
 set(RXCPP_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/RxCpp/include")
 
 ## SFML ##
-set(SFML_INCLUDE_DIR			"${DEPENDENCIES_FOLDER}/sfml/include")
-if(MSVC)
-	set(SFML_LIBRARIES
-		optimized sfml-system-2   debug sfml-system-d-2
-		optimized sfml-window-2   debug sfml-window-d-2
-		optimized sfml-graphics-2 debug sfml-graphics-d-2
-	)
+if(USE_SYSTEM_SFML)
+	find_package(SFML REQUIRED COMPONENTS graphics window system)
 else()
-	set(SFML_LIBRARIES
-		sfml-graphics-s
-		sfml-window-s
-		sfml-system-s
-	)
+	set(SFML_INCLUDE_DIR		"${DEPENDENCIES_FOLDER}/sfml/include")
+	if(MSVC)
+		set(SFML_LIBRARIES
+			optimized sfml-system-2   debug sfml-system-d-2
+			optimized sfml-window-2   debug sfml-window-d-2
+			optimized sfml-graphics-2 debug sfml-graphics-d-2
+		)
+	else()
+		set(SFML_LIBRARIES
+			sfml-graphics-s
+			sfml-window-s
+			sfml-system-s
+		)
+	endif()
+	link_directories("${DEPENDENCIES_FOLDER}/sfml/lib/${PLATFORM_FOLDER_NAME}")
+	link_directories("${DEPENDENCIES_FOLDER}/sfml/extlibs/lib")
+	add_definitions( -DSFML_STATIC )
 endif()
-link_directories("${DEPENDENCIES_FOLDER}/sfml/lib/${PLATFORM_FOLDER_NAME}")
-link_directories("${DEPENDENCIES_FOLDER}/sfml/extlibs/lib")
-add_definitions( -DSFML_STATIC )
 
 ## FreeType ##
 if(USE_SYSTEM_FREETYPE)
