@@ -9,7 +9,7 @@ The CasparCG Server works on Windows and Linux.
 
 See [README](README?raw=true) and [CHANGELOG](CHANGELOG?raw=true) for more information.
 
-You can find the latest server builds on [http://builds.casparcg.com/CasparCG Server/2.1.0/](http://builds.casparcg.com/CasparCGServer/2.1.0/).
+You can find the latest server builds on [http://builds.casparcg.com/CasparCG Server/2.1.0/](http://builds.casparcg.com/CasparCG%20Server/2.1.0/).
 
 Development
 -----------
