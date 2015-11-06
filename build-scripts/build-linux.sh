@@ -57,9 +57,9 @@ cp -Rf ../deploy/general/server/media "$SERVER_FOLDER/" || fail "Could not copy 
 
 # Copy documentation
 echo Copying documentation...
-cp -f ../CHANGES.txt "$SERVER_FOLDER/" || fail "Could not copy CHANGES.txt"
-cp -f ../README.txt "$SERVER_FOLDER/" || fail "Could not copy README.txt"
-cp -f ../LICENSE.txt "$SERVER_FOLDER/" || fail "Could not copy LICENSE.txt"
+cp -f ../CHANGELOG "$SERVER_FOLDER/" || fail "Could not copy CHANGELOG"
+cp -f ../README "$SERVER_FOLDER/" || fail "Could not copy README"
+cp -f ../LICENSE "$SERVER_FOLDER/" || fail "Could not copy LICENSE"
 
 # Create tar.gz file
 echo Creating tag.gz...
