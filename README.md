@@ -12,7 +12,9 @@ See [README](README?raw=true) and [CHANGELOG](CHANGELOG?raw=true) for more infor
 Development
 -----------
 
-You can find the latest unstable CasparCG Server development builds on [http://builds.casparcg.com/CasparCG Server/2.1.0/](http://builds.casparcg.com/CasparCG%20Server/2.1.0/). See [BUILDING](BUILDING?raw=true) for instructions on how to build the CasparCG Server from source manually.
+You can find the latest unstable CasparCG Server development builds on [http://builds.casparcg.com/CasparCG Server/2.1.0/](http://builds.casparcg.com/CasparCG%20Server/2.1.0/).
+
+See [BUILDING](BUILDING?raw=true) for instructions on how to build the CasparCG Server from source manually.
 
 **Join our development IRC channel on the Freenode network.**
 
