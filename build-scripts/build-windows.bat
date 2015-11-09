@@ -51,9 +51,9 @@ xcopy shell\locales "%SERVER_FOLDER%\Server\locales" /E /I /Y || goto :error
 
 :: Copy documentation
 echo Copying documentation...
-copy ..\CHANGES.txt "%SERVER_FOLDER%" || goto :error
-copy ..\LICENSE.txt "%SERVER_FOLDER%" || goto :error
-copy ..\README.txt "%SERVER_FOLDER%" || goto :error
+copy ..\CHANGELOG "%SERVER_FOLDER%" || goto :error
+copy ..\LICENSE "%SERVER_FOLDER%" || goto :error
+copy ..\README "%SERVER_FOLDER%" || goto :error
 
 :: Create zip file
 echo Creating zip...
