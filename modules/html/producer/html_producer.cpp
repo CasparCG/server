@@ -224,7 +224,7 @@ private:
 		{
 			frames_.push(core::draw_frame(std::move(frame)));
 
-			size_t max_in_queue = format_desc_.field_count;
+			size_t max_in_queue = format_desc_.field_count + 1;
 
 			while (frames_.size() > max_in_queue)
 			{
@@ -402,7 +402,7 @@ private:
 		}
 		else if (num_frames == 1) // Interlaced but only one frame
 		{                         // available. Probably the last frame
-				                    // of some animation sequence.
+		                          // of some animation sequence.
 			auto frame = pop();
 
 			lock(last_frame_mutex_, [&]
@@ -419,15 +419,10 @@ private:
 			graph_->set_tag(diagnostics::tag_severity::INFO, "late-frame");
 
 			if (format_desc_.field_mode != core::field_mode::progressive)
-			{
 				lock(last_frame_mutex_, [&]
 				{
 					last_frame_ = last_progressive_frame_;
 				});
-
-				timer.tick(1.0 / (format_desc_.fps * format_desc_.field_count));
-				invoke_requested_animation_frames();
-			}
 		}
 	}
 
