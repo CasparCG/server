@@ -46,6 +46,14 @@ std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename)
 #else
 	FREE_IMAGE_FORMAT fif = FreeImage_GetFileType(u8(filename).c_str(), 0);
 #endif
+
+	if (fif == FIF_UNKNOWN)
+#ifdef WIN32
+		fif = FreeImage_GetFIFFromFilenameU(filename.c_str());
+#else
+		fif = FreeImage_GetFIFFromFilename(u8(filename).c_str());
+#endif
+
 	if(fif == FIF_UNKNOWN || !FreeImage_FIFSupportsReading(fif)) 
 		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
 		
