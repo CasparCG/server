@@ -65,7 +65,7 @@ Prerequisites:
 
 2. Install development packages for libraries which are not bundled:
 
-   sudo apt-get install libxrandr-dev libjpeg-dev libsndfile-dev libudev-dev libglu1-mesa-dev
+   sudo apt-get install libxrandr-dev libjpeg-dev libsndfile1-dev libudev-dev libglu1-mesa-dev
 
 Building a distribution
 -----------------------
