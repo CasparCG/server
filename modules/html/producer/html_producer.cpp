@@ -90,7 +90,6 @@ class html_client
 	tbb::concurrent_queue<std::wstring>		javascript_before_load_;
 	tbb::atomic<bool>						loaded_;
 	tbb::atomic<bool>						removed_;
-	tbb::atomic<bool>						animation_frame_requested_;
 	std::queue<core::draw_frame>			frames_;
 	mutable boost::mutex					frames_mutex_;
 
@@ -123,7 +122,6 @@ public:
 
 		loaded_ = false;
 		removed_ = false;
-		animation_frame_requested_ = false;
 		executor_.begin_invoke([&]{ update(); });
 	}
 
@@ -162,11 +160,6 @@ public:
 
 	void close()
 	{
-		if (!animation_frame_requested_)
-			CASPAR_LOG(warning) << print()
-					<< " window.requestAnimationFrame() never called. "
-					<< "Animations might have been laggy";
-
 		html::invoke([=]
 		{
 			if (browser_ != nullptr)
@@ -289,15 +282,7 @@ private:
 	{
 		auto name = message->GetName().ToString();
 
-		if (name == ANIMATION_FRAME_REQUESTED_MESSAGE_NAME)
-		{
-			CASPAR_LOG(trace)
-					<< print() << L" Requested animation frame";
-			animation_frame_requested_ = true;
-
-			return true;
-		}
-		else if (name == REMOVE_MESSAGE_NAME)
+		if (name == REMOVE_MESSAGE_NAME)
 		{
 			remove();
 
