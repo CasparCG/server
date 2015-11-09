@@ -39,6 +39,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/log/trivial.hpp>
 
+#include <map>
+
 #pragma warning(push)
 #pragma warning(disable: 4458)
 #include <cef_app.h>
@@ -68,7 +70,8 @@ void caspar_log(
 class animation_handler : public CefV8Handler
 {
 private:
-	std::vector<CefRefPtr<CefV8Value>>			callbacks_;
+	std::map<int, CefRefPtr<CefV8Value>>		callbacks_per_id_;
+	int											current_callback_id_	= 0;
 	boost::timer								since_start_timer_;
 public:
 	CefRefPtr<CefBrowser>						browser;
@@ -84,16 +87,27 @@ public:
 		if (!CefCurrentlyOn(TID_RENDERER))
 			return false;
 
-		if (arguments.size() < 1 || !arguments.at(0)->IsFunction())
+		if (arguments.size() < 1)
 		{
 			return false;
 		}
 
-		callbacks_.push_back(arguments.at(0));
+		if (name == "requestAnimationFrame" && arguments.at(0)->IsFunction())
+		{
+			callbacks_per_id_.insert(std::make_pair(++current_callback_id_, arguments.at(0)));
 
-		if (browser)
-			browser->SendProcessMessage(PID_BROWSER, CefProcessMessage::Create(
+			if (browser)
+				browser->SendProcessMessage(PID_BROWSER, CefProcessMessage::Create(
 					ANIMATION_FRAME_REQUESTED_MESSAGE_NAME));
+
+			retval = CefV8Value::CreateInt(current_callback_id_);
+		}
+		else if (name == "cancelAnimationFrame" && arguments.at(0)->IsInt())
+		{
+			callbacks_per_id_.erase(arguments.at(0)->GetIntValue());
+		}
+		else
+			return false;
 
 		return true;
 	}
@@ -111,19 +125,18 @@ public:
 		if (!CefCurrentlyOn(TID_RENDERER))
 			return;
 
-		std::vector<CefRefPtr<CefV8Value>> callbacks;
-		callbacks_.swap(callbacks);
+		std::map<int, CefRefPtr<CefV8Value>> callbacks_per_id;
+		callbacks_per_id_.swap(callbacks_per_id);
+		current_callback_id_ = 0;
 
 		CefV8ValueList callback_args;
-		CefTime timestamp;
-		timestamp.Now();
 		callback_args.push_back(CefV8Value::CreateDouble(
 				since_start_timer_.elapsed() * 1000.0));
 
-		for (auto callback : callbacks)
+		for (auto& callback : callbacks_per_id)
 		{
-			callback->ExecuteFunctionWithContext(
-					context, callback, callback_args);
+			callback.second->ExecuteFunctionWithContext(
+					context, callback.second, callback_args);
 		}
 	}
 
@@ -203,20 +216,23 @@ public:
 
 		auto window = context->GetGlobal();
 
-		auto function = CefV8Value::CreateFunction(
-				"requestAnimationFrame",
-				handler.get());
 		window->SetValue(
 				"requestAnimationFrame",
-				function,
+				CefV8Value::CreateFunction(
+						"requestAnimationFrame",
+						handler.get()),
 				V8_PROPERTY_ATTRIBUTE_NONE);
-
-		function = CefV8Value::CreateFunction(
-				"remove",
-				new remove_handler(browser));
+		window->SetValue(
+				"cancelAnimationFrame",
+				CefV8Value::CreateFunction(
+						"cancelAnimationFrame",
+						handler.get()),
+				V8_PROPERTY_ATTRIBUTE_NONE);
 		window->SetValue(
 				"remove",
-				function,
+				CefV8Value::CreateFunction(
+						"remove",
+						new remove_handler(browser)),
 				V8_PROPERTY_ATTRIBUTE_NONE);
 	}
 
