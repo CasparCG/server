@@ -416,7 +416,7 @@ private:
 		}
 		else
 		{
-			graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
+			graph_->set_tag(diagnostics::tag_severity::INFO, "late-frame");
 
 			if (format_desc_.field_mode != core::field_mode::progressive)
 			{
