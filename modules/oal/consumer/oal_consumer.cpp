@@ -117,12 +117,14 @@ struct oal_consumer : public core::frame_consumer
 
 	ALuint											source_				= 0;
 	std::vector<ALuint>								buffers_;
+	int												latency_millis_;
 
 	executor										executor_			{ L"oal_consumer" };
 
 public:
-	oal_consumer(const core::audio_channel_layout& out_channel_layout)
+	oal_consumer(const core::audio_channel_layout& out_channel_layout, int latency_millis)
 		: out_channel_layout_(out_channel_layout)
+		, latency_millis_(latency_millis)
 	{
 		presentation_age_ = 0;
 
@@ -229,7 +231,7 @@ public:
 
 			graph_->set_value("tick-time", perf_timer_.elapsed()*format_desc_.fps*0.5);		
 			perf_timer_.restart();
-			presentation_age_ = frame.get_age_millis() + delay_millis();
+			presentation_age_ = frame.get_age_millis() + latency_millis();
 		});
 
 		return make_ready_future(true);
@@ -257,14 +259,14 @@ public:
 		return false;
 	}
 
-	int delay_millis() const
+	int latency_millis() const
 	{
-		return 213;
+		return latency_millis_;
 	}
 	
 	int buffer_depth() const override
 	{
-		int delay_in_frames = static_cast<int>(delay_millis() / (1000.0 / format_desc_.fps));
+		int delay_in_frames = static_cast<int>(latency_millis() / (1000.0 / format_desc_.fps));
 		
 		return delay_in_frames;
 	}
@@ -283,11 +285,12 @@ public:
 void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"A system audio consumer.");
-	sink.syntax(L"AUDIO {CHANNEL_LAYOUT [channel_layout:string]}");
+	sink.syntax(L"AUDIO {CHANNEL_LAYOUT [channel_layout:string]} {LATENCY [latency_millis:int|200]}");
 	sink.para()->text(L"Uses the system's default audio playback device.");
 	sink.para()->text(L"Examples:");
 	sink.example(L">> ADD 1 AUDIO");
 	sink.example(L">> ADD 1 AUDIO CHANNEL_LAYOUT matrix", L"Uses the matrix channel layout");
+	sink.example(L">> ADD 1 AUDIO LATENCY 500", L"Specifies that the system-audio chain: openal => driver => sound card => speaker output is 500ms");
 }
 
 spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params, core::interaction_sink*)
@@ -297,7 +300,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 
 	auto channel_layout			= core::audio_channel_layout::invalid();
 	auto channel_layout_spec	= get_param(L"CHANNEL_LAYOUT", params);
-	
+
 	if (!channel_layout_spec.empty())
 	{
 		auto found_layout = core::audio_channel_layout_repository::get_default()->get_layout(channel_layout_spec);
@@ -308,7 +311,9 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 		channel_layout = *found_layout;
 	}
 
-	return spl::make_shared<oal_consumer>(channel_layout);
+	auto latency_millis			= get_param(L"LATENCY", params, 200);
+
+	return spl::make_shared<oal_consumer>(channel_layout, latency_millis);
 }
 
 spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(const boost::property_tree::wptree& ptree, core::interaction_sink*)
@@ -326,7 +331,9 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(const boost:
 		channel_layout = *found_layout;
 	}
 
-	return spl::make_shared<oal_consumer>(channel_layout);
+	auto latency_millis			= ptree.get(L"latency", 200);
+
+	return spl::make_shared<oal_consumer>(channel_layout, latency_millis);
 }
 
 }}
