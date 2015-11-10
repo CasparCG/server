@@ -176,7 +176,7 @@ struct input::impl : boost::noncopyable
 		if(result)
 			cond_.notify_one();
 		
-		graph_->set_value("video-buffer", std::min(1.0, static_cast<double>(video_stream_.size()/MIN_FRAMES)));
+		graph_->set_value("video-buffer", std::min(1.0, static_cast<double>(video_stream_.size())/MIN_FRAMES));
 				
 		return result;
 	}
@@ -190,7 +190,7 @@ struct input::impl : boost::noncopyable
 		if(result)
 			cond_.notify_one();
 				
-		graph_->set_value("audio-buffer", std::min(1.0, static_cast<double>(audio_stream_.size()/MIN_FRAMES)));
+		graph_->set_value("audio-buffer", std::min(1.0, static_cast<double>(audio_stream_.size())/MIN_FRAMES));
 
 		return result;
 	}
@@ -268,8 +268,6 @@ private:
 				internal_seek(start_);
 			else
 			{
-				audio_stream_.push(packet);
-				video_stream_.push(packet);
 				eof_ = true;
 			}
 		}
@@ -303,10 +301,10 @@ private:
 		}	
 
 		if (video_stream_.is_available())
-			graph_->set_value("video-buffer", std::min(1.0, static_cast<double>(video_stream_.size()/MIN_FRAMES)));
+			graph_->set_value("video-buffer", std::min(1.0, static_cast<double>(video_stream_.size())/MIN_FRAMES));
 
 		if (audio_stream_.is_available())
-			graph_->set_value("audio-buffer", std::min(1.0, static_cast<double>(audio_stream_.size()/MIN_FRAMES)));
+			graph_->set_value("audio-buffer", std::min(1.0, static_cast<double>(audio_stream_.size())/MIN_FRAMES));
 	}
 			
 	bool full() const
