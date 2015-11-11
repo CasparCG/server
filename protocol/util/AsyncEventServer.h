@@ -27,13 +27,14 @@
 #include <common/memory.h>
 
 #include <boost/asio.hpp>
+#include <boost/noncopyable.hpp>
 
 namespace caspar { namespace IO {
 
 	typedef std::function<std::pair<std::wstring, std::shared_ptr<void>> (const std::string& ipv4_address)>
 		lifecycle_factory_t;
 
-class AsyncEventServer
+class AsyncEventServer : boost::noncopyable
 {
 public:
 	explicit AsyncEventServer(
