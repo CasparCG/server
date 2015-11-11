@@ -424,8 +424,8 @@ private:
 		c->codec_type		= AVMEDIA_TYPE_VIDEO;
 		c->width			= output_format_.width;
 		c->height			= output_format_.height - output_format_.croptop - output_format_.cropbot;
-		st->time_base.den	= format_desc_.time_scale;
-		st->time_base.num	= format_desc_.duration;
+		c->time_base.den	= format_desc_.time_scale;
+		c->time_base.num	= format_desc_.duration;
 		c->gop_size			= 25;
 		c->flags		   |= format_desc_.field_mode == core::field_mode::progressive ? 0 : (CODEC_FLAG_INTERLACED_ME | CODEC_FLAG_INTERLACED_DCT);
 		c->pix_fmt			= c->pix_fmt != PIX_FMT_NONE ? c->pix_fmt : PIX_FMT_YUV420P;
@@ -514,8 +514,8 @@ private:
 		c->sample_rate		= 48000;
 		c->channels			= 2;
 		c->sample_fmt		= AV_SAMPLE_FMT_S16;
-		st->time_base.num	= 1;
-		st->time_base.den	= c->sample_rate;
+		c->time_base.num	= 1;
+		c->time_base.den	= c->sample_rate;
 
 		if(output_format_.vcodec == CODEC_ID_FLV1)		
 			c->sample_rate	= 44100;		
