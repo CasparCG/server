@@ -498,7 +498,7 @@ private:
 		{
 			case AVMEDIA_TYPE_VIDEO:
 			{
-				st->time_base				= video_graph_out_->inputs[0]->time_base;
+				enc->time_base				= video_graph_out_->inputs[0]->time_base;
 				enc->pix_fmt				= static_cast<AVPixelFormat>(video_graph_out_->inputs[0]->format);
 				enc->sample_aspect_ratio	= st->sample_aspect_ratio = video_graph_out_->inputs[0]->sample_aspect_ratio;
 				enc->width					= video_graph_out_->inputs[0]->w;
@@ -509,7 +509,7 @@ private:
 			}
 			case AVMEDIA_TYPE_AUDIO:
 			{
-				st->time_base				= audio_graph_out_->inputs[0]->time_base;
+				enc->time_base				= audio_graph_out_->inputs[0]->time_base;
 				enc->sample_fmt				= static_cast<AVSampleFormat>(audio_graph_out_->inputs[0]->format);
 				enc->sample_rate			= audio_graph_out_->inputs[0]->sample_rate;
 				enc->channel_layout			= audio_graph_out_->inputs[0]->channel_layout;
@@ -1084,7 +1084,7 @@ private:
 					
 		if(!got_packet || pkt.size <= 0)
 			return false;
-				
+
 		pkt.stream_index = st.index;
 		
 		if(bsfc)
