@@ -209,8 +209,6 @@ std::wstring MediaInfo(const boost::filesystem::path& path, const spl::shared_pt
 
 	auto is_not_digit = [](char c){ return std::isdigit(c) == 0; };
 
-	auto relativePath = get_relative_without_extension(path, env::media_folder());
-
 	auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(path)));
 	writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), is_not_digit), writeTimeStr.end());
 	auto writeTimeWStr = std::wstring(writeTimeStr.begin(), writeTimeStr.end());
@@ -219,7 +217,9 @@ std::wstring MediaInfo(const boost::filesystem::path& path, const spl::shared_pt
 	sizeStr.erase(std::remove_if(sizeStr.begin(), sizeStr.end(), is_not_digit), sizeStr.end());
 	auto sizeWStr = std::wstring(sizeStr.begin(), sizeStr.end());
 
-	auto str = relativePath.replace_extension(L"").generic_wstring();
+	auto relativePath = get_relative_without_extension(path, env::media_folder());
+	auto str = relativePath.generic_wstring();
+
 	if (str[0] == '\\' || str[0] == '/')
 		str = std::wstring(str.begin() + 1, str.end());
 
@@ -265,7 +265,7 @@ std::wstring ListTemplates(const spl::shared_ptr<core::cg_producer_registry>& cg
 			auto file = boost::to_upper_copy(relativePath.filename().wstring());
 			relativePath = dir / file;
 						
-			auto str = relativePath.replace_extension(L"").generic_wstring();
+			auto str = relativePath.generic_wstring();
 			boost::trim_if(str, boost::is_any_of("\\/"));
 
 			auto template_type = cg_registry->get_cg_producer_name(str);
@@ -858,8 +858,8 @@ std::wstring data_list_command(command_context& ctx)
 				continue;
 
 			auto relativePath = get_relative_without_extension(itr->path(), env::data_folder());
+			auto str = relativePath.generic_wstring();
 
-			auto str = relativePath.replace_extension(L"").generic_wstring();
 			if (str[0] == L'\\' || str[0] == L'/')
 				str = std::wstring(str.begin() + 1, str.end());
 
@@ -2088,8 +2088,8 @@ std::wstring thumbnail_list_command(command_context& ctx)
 				continue;
 
 			auto relativePath = get_relative_without_extension(itr->path(), env::thumbnails_folder());
+			auto str = relativePath.generic_wstring();
 
-			auto str = relativePath.replace_extension(L"").generic_wstring();
 			if (str[0] == '\\' || str[0] == '/')
 				str = std::wstring(str.begin() + 1, str.end());
 
