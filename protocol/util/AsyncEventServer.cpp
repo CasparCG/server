@@ -293,17 +293,21 @@ struct AsyncEventServer::implementation : public spl::enable_shared_from_this<im
 	{
 	}
 
-	~implementation()
+	void stop()
 	{
 		try
 		{
 			acceptor_.cancel();
 			acceptor_.close();
 		}
-		catch(...)
+		catch (...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
+	}
+
+	~implementation()
+	{
 		auto conns_set = connection_set_;
 
 		service_->post([conns_set]
@@ -317,7 +321,7 @@ struct AsyncEventServer::implementation : public spl::enable_shared_from_this<im
 	void start_accept() 
 	{
 		spl::shared_ptr<tcp::socket> socket(new tcp::socket(*service_));
-		acceptor_.async_accept(*socket, std::bind(&implementation::handle_accept, this, socket, std::placeholders::_1));
+		acceptor_.async_accept(*socket, std::bind(&implementation::handle_accept, shared_from_this(), socket, std::placeholders::_1));
     }
 
 	void handle_accept(const spl::shared_ptr<tcp::socket>& socket, const boost::system::error_code& error) 
@@ -353,7 +357,11 @@ AsyncEventServer::AsyncEventServer(
 	impl_->start_accept();
 }
 
-AsyncEventServer::~AsyncEventServer() {}
+AsyncEventServer::~AsyncEventServer()
+{
+	impl_->stop();
+}
+
 void AsyncEventServer::add_client_lifecycle_object_factory(const lifecycle_factory_t& factory) { impl_->add_client_lifecycle_object_factory(factory); }
 
 }}
