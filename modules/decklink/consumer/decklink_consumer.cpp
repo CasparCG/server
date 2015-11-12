@@ -62,14 +62,14 @@ struct configuration
 		internal_keyer,
 		external_keyer,
 		external_separate_device_keyer,
-		default_keyer
+		default_keyer					= external_keyer
 	};
 
 	enum class latency_t
 	{
 		low_latency,
 		normal_latency,
-		default_latency
+		default_latency	= normal_latency
 	};
 
 	int							device_index		= 1;
@@ -853,7 +853,7 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 	else if (keyer == L"external_separate_device")
 		config.keyer = configuration::keyer_t::external_separate_device_keyer;
 
-	auto latency = ptree.get(L"latency", L"normal");
+	auto latency = ptree.get(L"latency", L"default");
 	if(latency == L"low")
 		config.latency = configuration::latency_t::low_latency;
 	else if(latency == L"normal")
