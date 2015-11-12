@@ -66,6 +66,7 @@ source_group(sources ./*)
 source_group(sources\\consumer consumer/*)
 source_group(sources\\interop interop/*)
 source_group(sources\\producer producer/*)
+source_group(sources\\util util/*)
 
 if (MSVC)
 	target_link_libraries(decklink
