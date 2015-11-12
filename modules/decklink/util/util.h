@@ -197,4 +197,39 @@ static std::wstring get_model_name(const T& device)
     return u16(pModelName);
 }
 
+class reference_signal_detector
+{
+	com_iface_ptr<IDeckLinkOutput>	output_;
+	BMDReferenceStatus				last_reference_status_	= static_cast<BMDReferenceStatus>(-1);
+public:
+	reference_signal_detector(const com_iface_ptr<IDeckLinkOutput>& output)
+		: output_(output)
+	{
+	}
+
+	template<typename Print>
+	void detect_change(const Print& print)
+	{
+		BMDReferenceStatus reference_status;
+
+		if (output_->GetReferenceStatus(&reference_status) != S_OK)
+		{
+			CASPAR_LOG(error) << print() << L" Reference signal: failed while querying status";
+		}
+		else if (reference_status != last_reference_status_)
+		{
+			last_reference_status_ = reference_status;
+
+			if (reference_status == 0)
+				CASPAR_LOG(info) << print() << L" Reference signal: not detected.";
+			else if (reference_status & bmdReferenceNotSupportedByHardware)
+				CASPAR_LOG(info) << print() << L" Reference signal: not supported by hardware.";
+			else if (reference_status & bmdReferenceLocked)
+				CASPAR_LOG(info) << print() << L" Reference signal: locked.";
+			else
+				CASPAR_LOG(info) << print() << L" Reference signal: Unhandled enum bitfield: " << reference_status;
+		}
+	}
+};
+
 }}

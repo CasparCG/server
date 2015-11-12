@@ -360,9 +360,10 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	tbb::concurrent_bounded_queue<core::const_frame>	audio_frame_buffer_;
 	
 	spl::shared_ptr<diagnostics::graph>					graph_;
-	tbb::atomic<int64_t>								current_presentation_delay_;
 	caspar::timer										tick_timer_;
 	retry_task<bool>									send_completion_;
+	reference_signal_detector							reference_signal_detector_	{ output_ };
+	tbb::atomic<int64_t>								current_presentation_delay_;
 	tbb::atomic<int64_t>								scheduled_frames_completed_;
 	std::unique_ptr<key_video_context>					key_context_;
 
@@ -612,6 +613,8 @@ public:
 
 		graph_->set_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
 		tick_timer_.restart();
+
+		reference_signal_detector_.detect_change([this]() { return print(); });
 	}
 
 	std::future<bool> send(core::const_frame frame)
