@@ -181,6 +181,45 @@ void add_file_sink(const std::wstring& folder)
 	}
 }
 
+std::shared_ptr<void> add_preformatted_line_sink(std::function<void(std::string line)> formatted_line_sink)
+{
+	class sink_backend : public boost::log::sinks::basic_formatted_sink_backend<char>
+	{
+		std::function<void(std::string line)> formatted_line_sink_;
+	public:
+		sink_backend(std::function<void(std::string line)> formatted_line_sink)
+			: formatted_line_sink_(std::move(formatted_line_sink))
+		{
+		}
+
+		void consume(const boost::log::record_view& rec, const std::string& formatted_message)
+		{
+			try
+			{
+				formatted_line_sink_(formatted_message);
+			}
+			catch (...)
+			{
+				std::cerr << "[sink_backend] Error while consuming formatted message: " << formatted_message << std::endl << std::endl;
+			}
+		}
+	};
+
+	typedef boost::log::sinks::synchronous_sink<sink_backend> sink_type;
+
+	auto sink = boost::make_shared<sink_type>(std::move(formatted_line_sink));
+	bool print_all_characters = true;
+
+	sink->set_formatter(boost::bind(&my_formatter<boost::log::formatting_ostream>, print_all_characters, _1, _2));
+
+	boost::log::core::get()->add_sink(sink);
+
+	return std::shared_ptr<void>(nullptr, [=](void*)
+	{
+		boost::log::core::get()->remove_sink(sink);
+	});
+}
+
 void set_log_level(const std::wstring& lvl)
 {
 	if (boost::iequals(lvl, L"trace"))

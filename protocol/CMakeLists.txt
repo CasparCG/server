@@ -14,6 +14,8 @@ set(SOURCES
 		clk/clk_commands.cpp
 		clk/clk_command_processor.cpp
 
+		log/tcp_logger_protocol_strategy.cpp
+
 		osc/oscpack/OscOutboundPacketStream.cpp
 		osc/oscpack/OscPrintReceivedElements.cpp
 		osc/oscpack/OscReceivedElements.cpp
@@ -42,6 +44,8 @@ set(HEADERS
 		clk/CLKProtocolStrategy.h
 		clk/clk_commands.h
 		clk/clk_command_processor.h
+
+		log/tcp_logger_protocol_strategy.h
 
 		osc/oscpack/MessageMappingOscPacketListener.h
 		osc/oscpack/OscException.h
@@ -75,6 +79,7 @@ include_directories(${TBB_INCLUDE_PATH})
 source_group(sources\\amcp amcp/*)
 source_group(sources\\cii cii/*)
 source_group(sources\\clk clk/*)
+source_group(sources\\log log/*)
 source_group(sources\\osc\\oscpack osc/oscpack/*)
 source_group(sources\\osc osc/*)
 source_group(sources\\util util/*)
