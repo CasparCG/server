@@ -65,6 +65,7 @@
 #include <protocol/util/AsyncEventServer.h>
 #include <protocol/util/strategy_adapters.h>
 #include <protocol/osc/client.h>
+#include <protocol/log/tcp_logger_protocol_strategy.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/thread.hpp>
@@ -411,7 +412,9 @@ struct server::impl : boost::noncopyable
 			return spl::make_shared<to_unicode_adapter_factory>(
 					"ISO-8859-1",
 					spl::make_shared<CLK::clk_protocol_strategy_factory>(channels_, cg_registry_, producer_registry_));
-		
+		else if (boost::iequals(name, L"LOG"))
+			return spl::make_shared<protocol::log::tcp_logger_protocol_strategy_factory>();
+
 		CASPAR_THROW_EXCEPTION(caspar_exception() << arg_name_info(L"name") << arg_value_info(name) << msg_info(L"Invalid protocol"));
 	}
 
