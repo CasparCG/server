@@ -32,6 +32,8 @@
 
 #include <string>
 #include <locale>
+#include <functional>
+#include <memory>
 
 namespace caspar { namespace log {
 	
@@ -61,6 +63,7 @@ inline std::basic_string<T> replace_nonprintable_copy(std::basic_string<T, std::
 }
 
 void add_file_sink(const std::wstring& folder);
+std::shared_ptr<void> add_preformatted_line_sink(std::function<void(std::string line)> formatted_line_sink);
 
 typedef boost::log::sources::wseverity_logger_mt<boost::log::trivial::severity_level> caspar_logger;
 
