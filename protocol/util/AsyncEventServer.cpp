@@ -118,13 +118,19 @@ public:
 	static spl::shared_ptr<connection> create(std::shared_ptr<boost::asio::io_service> service, spl::shared_ptr<tcp::socket> socket, const protocol_strategy_factory<char>::ptr& protocol, spl::shared_ptr<connection_set> connection_set)
 	{
 		spl::shared_ptr<connection> con(new connection(std::move(service), std::move(socket), std::move(protocol), std::move(connection_set)));
+		con->init();
 		con->read_some();
 		return con;
     }
 
+	void init()
+	{
+		protocol_ = protocol_factory_->create(spl::make_shared<connection_holder>(shared_from_this()));
+	}
+
 	~connection()
 	{
-		CASPAR_LOG(info) << print() << L" connection destroyed.";
+		CASPAR_LOG(trace) << print() << L" connection destroyed.";
 	}
 
 	std::wstring print() const
@@ -213,14 +219,6 @@ private:
 	{
 		CASPAR_LOG(info) << print() << L" Accepted connection from " << ipv4_address() << L" (" << (connection_set_->size() + 1) << L" connections).";
     }
-
-	protocol_strategy<char>& protocol()	//always called from the asio-service-thread
-	{
-		if (!protocol_)
-			protocol_ = protocol_factory_->create(spl::make_shared<connection_holder>(shared_from_this()));
-
-		return *protocol_;
-	}
 			
     void handle_read(const boost::system::error_code& error, size_t bytes_transferred) 	//always called from the asio-service-thread
 	{		
@@ -230,7 +228,7 @@ private:
 			{
 				std::string data(data_.begin(), data_.begin() + bytes_transferred);
 
-				protocol().parse(data);
+				protocol_->parse(data);
 			}
 			catch(...)
 			{
@@ -258,7 +256,7 @@ private:
 				do_write();
 			}
 		}
-		else if (error != boost::asio::error::operation_aborted)		
+		else if (error != boost::asio::error::operation_aborted && socket_->is_open())		
 			stop();
     }
 
