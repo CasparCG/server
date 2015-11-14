@@ -145,7 +145,7 @@ add_precompiled_header(core StdAfx.h FORCEINCLUDE)
 
 include_directories(..)
 include_directories(${Boost_INCLUDE_DIRS})
-include_directories(${RXCPP_INCLUDE_PATH})
+include_directories(${RXCPP_INCLUDE_DIRS})
 include_directories(${TBB_INCLUDE_DIRS})
 include_directories(${SFML_INCLUDE_DIR})
 include_directories(${FREETYPE_INCLUDE_DIRS})

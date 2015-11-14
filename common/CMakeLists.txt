@@ -99,7 +99,7 @@ add_precompiled_header(common stdafx.h FORCEINCLUDE)
 include_directories(..)
 include_directories(${ASMLIB_INCLUDE_PATH})
 include_directories(${Boost_INCLUDE_DIRS})
-include_directories(${RXCPP_INCLUDE_PATH})
+include_directories(${RXCPP_INCLUDE_DIRS})
 include_directories(${TBB_INCLUDE_DIRS})
 include_directories(${GLEW_INCLUDE_DIRS})
 
