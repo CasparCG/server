@@ -97,7 +97,7 @@ add_library(common ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
 add_precompiled_header(common stdafx.h FORCEINCLUDE)
 
 include_directories(..)
-include_directories(${ASMLIB_INCLUDE_PATH})
+include_directories(${ASMLIB_INCLUDE_DIRS})
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${RXCPP_INCLUDE_DIRS})
 include_directories(${TBB_INCLUDE_DIRS})
@@ -111,6 +111,7 @@ source_group(sources\\os\\windows os/windows/*)
 source_group(sources\\os os/*)
 
 target_link_libraries(common
+	"${ASMLIB_LIBRARIES}"
 	"${TBB_LIBRARIES}"
 	"${GLEW_LIBRARIES}"
 	"${OPENGL_gl_LIBRARY}"
@@ -121,7 +122,6 @@ target_link_libraries(common
 
 if (MSVC)
 	target_link_libraries(common
-		alibcof64.lib
 		jpeg.lib
 		sndfile.lib
 		Winmm.lib
@@ -130,7 +130,6 @@ if (MSVC)
 	)
 else ()
 	target_link_libraries(common
-		"${DEPENDENCIES_FOLDER}/asmlib/alibelf64.a"
 		"${Boost_LIBRARIES}"
 		X11
 		jpeg
