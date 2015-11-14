@@ -180,7 +180,10 @@ else()
 endif()
 link_directories("${DEPENDENCIES_FOLDER}/asmlib")
 
-set(BLUEFISH_INCLUDE_PATH		"${DEPENDENCIES_FOLDER}/bluefish/include")
+## Bluefish ##
+set(BLUEFISH_INCLUDE_DIRS		"${DEPENDENCIES_FOLDER}/bluefish/include")
+link_directories("${DEPENDENCIES_FOLDER}/bluefish/lib")
+
 set(CEF_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/cef/include")
 set(GTEST_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/gtest/include")
 
@@ -188,7 +191,6 @@ set(LIBERATION_FONTS_BIN_PATH	"${DEPENDENCIES_FOLDER}/liberation-fonts")
 set(CEF_PATH					"${DEPENDENCIES_FOLDER}/cef")
 set(CEF_BIN_PATH				"${DEPENDENCIES_FOLDER}/cef/bin/${PLATFORM_FOLDER_NAME}")
 
-link_directories("${DEPENDENCIES_FOLDER}/bluefish/lib")
 link_directories("${DEPENDENCIES_FOLDER}/zlib/lib")
 link_directories("${DEPENDENCIES_FOLDER}/cef/lib/${PLATFORM_FOLDER_NAME}")
 link_directories("${DEPENDENCIES_FOLDER}/gtest/lib/${PLATFORM_FOLDER_NAME}")

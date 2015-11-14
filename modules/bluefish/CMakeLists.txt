@@ -24,7 +24,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${TBB_INCLUDE_DIRS})
 include_directories(${RXCPP_INCLUDE_DIRS})
 include_directories(${ASMLIB_INCLUDE_DIRS})
-include_directories(${BLUEFISH_INCLUDE_PATH})
+include_directories(${BLUEFISH_INCLUDE_DIRS})
 
 set_target_properties(bluefish PROPERTIES FOLDER modules)
 source_group(sources ./*)
