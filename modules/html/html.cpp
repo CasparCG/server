@@ -38,12 +38,14 @@
 #include <boost/thread/future.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/log/trivial.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include <map>
 
 #pragma warning(push)
 #pragma warning(disable: 4458)
 #include <cef_app.h>
+#include <cef_version.h>
 #pragma warning(pop)
 
 #pragma comment(lib, "libcef.lib")
@@ -256,6 +258,23 @@ void init(core::module_dependencies dependencies)
 			},
 			false
 	);
+
+	auto cef_version_major =	boost::lexical_cast<std::wstring>(cef_version_info(0));
+	auto cef_revision =			boost::lexical_cast<std::wstring>(cef_version_info(1));
+	auto chrome_major =			boost::lexical_cast<std::wstring>(cef_version_info(2));
+	auto chrome_minor =			boost::lexical_cast<std::wstring>(cef_version_info(3));
+	auto chrome_build =			boost::lexical_cast<std::wstring>(cef_version_info(4));
+	auto chrome_patch =			boost::lexical_cast<std::wstring>(cef_version_info(5));
+
+	dependencies.system_info_provider_repo->register_version_provider(L"cef", [=]
+	{
+		return cef_version_major + L"." + chrome_build + L"." + cef_revision;
+	});
+	dependencies.system_info_provider_repo->register_system_info_provider([=](boost::property_tree::wptree& info)
+	{
+		info.add(L"system.cef.version",			cef_version_major	+ L"." + chrome_build + L"." + cef_revision);
+		info.add(L"system.cef.chromeversion",	chrome_major		+ L"." + chrome_minor + L"." + chrome_build + L"." + chrome_patch);
+	});
 }
 
 void uninit()
