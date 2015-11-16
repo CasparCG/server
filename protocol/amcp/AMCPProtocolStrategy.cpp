@@ -232,7 +232,12 @@ private:
 					result.error = error_state::parameters_error;
 			}
 		}
-		catch(...)
+		catch (std::out_of_range&)
+		{
+			CASPAR_LOG(error) << "Invalid channel specified.";
+			result.error = error_state::channel_error;
+		}
+		catch (...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			result.error = error_state::unknown_error;
