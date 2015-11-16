@@ -57,8 +57,7 @@ copy ..\README "%SERVER_FOLDER%" || goto :error
 
 :: Create zip file
 echo Creating zip...
-"%BUILD_7ZIP%" a -x!"%SERVER_FOLDER%\Server\casparcg.pdb" "%BUILD_ARCHIVE_NAME%.zip" "%SERVER_FOLDER%" || goto :error
-"%BUILD_7ZIP%" a "%BUILD_ARCHIVE_NAME%_debug_symbols.zip" "%SERVER_FOLDER%\Server\casparcg.pdb" || goto :error
+"%BUILD_7ZIP%" a "%BUILD_ARCHIVE_NAME%.zip" "%SERVER_FOLDER%" || goto :error
 
 :: Skip exiting with failure
 goto :EOF
