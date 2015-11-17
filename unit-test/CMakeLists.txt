@@ -22,24 +22,14 @@ target_link_libraries(unit-test
 		common
 		core
 		ffmpeg
+		"${GTEST_LIBRARIES}"
 )
-
-if (MSVC)
-	target_link_libraries(unit-test
-		optimized gtest.lib
-		debug gtestd.lib
-	)
-else ()
-	target_link_libraries(unit-test
-		gtest
-	)
-endif ()
 
 include_directories(..)
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${RXCPP_INCLUDE_DIRS})
 include_directories(${TBB_INCLUDE_DIRS})
-include_directories(${GTEST_INCLUDE_PATH})
+include_directories(${GTEST_INCLUDE_DIRS})
 
 source_group(sources ./*)
 

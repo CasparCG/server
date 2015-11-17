@@ -192,7 +192,12 @@ set(CEF_BIN_PATH				"${DEPENDENCIES_FOLDER}/cef/bin/${PLATFORM_FOLDER_NAME}")
 link_directories("${DEPENDENCIES_FOLDER}/cef/lib/${PLATFORM_FOLDER_NAME}")
 
 ## GTest ##
-set(GTEST_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/gtest/include")
+set(GTEST_INCLUDE_DIRS			"${DEPENDENCIES_FOLDER}/gtest/include")
+if(MSVC)
+	set(GTEST_LIBRARIES optimized gtest debug gtestd)
+else()
+	set(GTEST_LIBRARIES gtest)
+endif()
 link_directories("${DEPENDENCIES_FOLDER}/gtest/lib/${PLATFORM_FOLDER_NAME}")
 
 ## fonts ##
