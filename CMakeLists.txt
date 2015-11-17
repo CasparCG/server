@@ -33,6 +33,7 @@ option(USE_SYSTEM_FREETYPE  "Compile against system FreeType instead of bundled 
 option(USE_SYSTEM_FREEIMAGE "Compile against system FreeImage instead of bundled one" OFF)
 option(USE_SYSTEM_OPENAL    "Compile against system OpenAL instead of bundled one" OFF)
 option(USE_SYSTEM_SFML      "Compile against system SFML instead of bundled one" OFF)
+option(USE_SYSTEM_FONTS     "Compile against system fonts instead of bundled ones" OFF)
 
 configure_file("${PROJECT_SOURCE_DIR}/version.tmpl" "${PROJECT_SOURCE_DIR}/version.h")
 
@@ -187,9 +188,13 @@ link_directories("${DEPENDENCIES_FOLDER}/bluefish/lib")
 set(CEF_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/cef/include")
 set(GTEST_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/gtest/include")
 
-set(LIBERATION_FONTS_BIN_PATH	"${DEPENDENCIES_FOLDER}/liberation-fonts")
 set(CEF_PATH					"${DEPENDENCIES_FOLDER}/cef")
 set(CEF_BIN_PATH				"${DEPENDENCIES_FOLDER}/cef/bin/${PLATFORM_FOLDER_NAME}")
+
+## fonts ##
+if(NOT USE_SYSTEM_FONTS)
+	set(LIBERATION_FONTS_BIN_DIR	"${DEPENDENCIES_FOLDER}/liberation-fonts")
+endif()
 
 link_directories("${DEPENDENCIES_FOLDER}/zlib/lib")
 link_directories("${DEPENDENCIES_FOLDER}/cef/lib/${PLATFORM_FOLDER_NAME}")
