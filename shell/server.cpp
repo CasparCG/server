@@ -32,7 +32,6 @@
 #include <common/utf.h>
 #include <common/memory.h>
 #include <common/polling_filesystem_monitor.h>
-#include <common/diagnostics/graph_to_log_sink.h>
 
 #include <core/video_channel.h>
 #include <core/video_format.h>
@@ -52,6 +51,7 @@
 #include <core/diagnostics/subject_diagnostics.h>
 #include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
+#include <core/diagnostics/graph_to_log_sink.h>
 #include <core/system_info_provider.h>
 #include <core/help/help_repository.h>
 
@@ -151,7 +151,7 @@ struct server::impl : boost::noncopyable
 		, shutdown_server_now_(shutdown_server_now)
 	{
 		running_ = false;
-		caspar::diagnostics::register_graph_to_log_sink();
+		core::diagnostics::register_graph_to_log_sink();
 		caspar::core::diagnostics::osd::register_sink();
 		diag_subject_->attach_parent(monitor_subject_);
 
