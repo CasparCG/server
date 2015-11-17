@@ -70,7 +70,7 @@ public:
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to allocate buffer."));
 		
 		if(timer.elapsed() > 0.02)
-			CASPAR_LOG(debug) << L"[buffer] Performance warning. Buffer allocation blocked: " << timer.elapsed();
+			CASPAR_LOG(warning) << L"[buffer] Performance warning. Buffer allocation blocked: " << timer.elapsed();
 	
 		//CASPAR_LOG(trace) << "[buffer] [" << ++(usage_ == buffer::usage::write_only ? g_w_total_count : g_r_total_count) << L"] allocated size:" << size_ << " usage: " << (usage == buffer::usage::write_only ? "write_only" : "read_only");
 	}	
@@ -95,7 +95,7 @@ public:
 		data_ = (uint8_t*) result;
 
 		if(timer.elapsed() > 0.02)
-			CASPAR_LOG(debug) << L"[buffer] Performance warning. Buffer mapping blocked: " << timer.elapsed();
+			CASPAR_LOG(warning) << L"[buffer] Performance warning. Buffer mapping blocked: " << timer.elapsed();
 
 		GL(glBindBuffer(target_, 0));
 		if(!data_)
