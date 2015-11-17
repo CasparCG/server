@@ -219,7 +219,9 @@ private:
 		eof_ = false;
 		graph_->set_tag(diagnostics::tag_severity::INFO, "seek");
 
-		if (!is_logging_disabled_for_thread())
+		if (is_logging_quiet_for_thread())
+			CASPAR_LOG(trace) << print() << " Seeking: " << target;
+		else
 			CASPAR_LOG(debug) << print() << " Seeking: " << target;
 
 		int flags = AVSEEK_FLAG_FRAME;

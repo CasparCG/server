@@ -151,11 +151,17 @@ struct filter::implementation
 		video_graph_in_  = filt_vsrc;
 		video_graph_out_ = filt_vsink;
 		
-		if (!is_logging_disabled_for_thread())
-			CASPAR_LOG(info)
+		if (is_logging_quiet_for_thread())
+			CASPAR_LOG(trace)
 				<< 	u16(std::string("\n") 
 					+ avfilter_graph_dump(
 							video_graph_.get(), 
+							nullptr));
+		else
+			CASPAR_LOG(debug)
+				<< u16(std::string("\n")
+					+ avfilter_graph_dump(
+							video_graph_.get(),
 							nullptr));
 	}
 	

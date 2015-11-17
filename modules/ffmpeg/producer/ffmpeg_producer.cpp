@@ -145,12 +145,14 @@ public:
 			constraints_.width.set(video_decoder_->width());
 			constraints_.height.set(video_decoder_->height());
 			
-			if (!is_logging_disabled_for_thread())
+			if (is_logging_quiet_for_thread())
+				CASPAR_LOG(debug) << print() << L" " << video_decoder_->print();
+			else
 				CASPAR_LOG(info) << print() << L" " << video_decoder_->print();
 		}
 		catch(averror_stream_not_found&)
 		{
-			//CASPAR_LOG(warning) << print() << " No video-stream found. Running without video.";	
+			CASPAR_LOG(debug) << print() << " No video-stream found. Running without video.";	
 		}
 		catch(...)
 		{
@@ -186,7 +188,9 @@ public:
 		
 		decode_next_frame();
 
-		if (!is_logging_disabled_for_thread())
+		if (is_logging_quiet_for_thread())
+			CASPAR_LOG(debug) << print() << L" Initialized";
+		else
 			CASPAR_LOG(info) << print() << L" Initialized";
 	}
 
