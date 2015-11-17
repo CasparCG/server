@@ -117,7 +117,7 @@ public:
 					if (!command_processor_.handle(command_name_, parameters_))
 						CASPAR_LOG(error) << "CLK: Unknown command: " << command_name_;
 					else
-						CASPAR_LOG(debug) << L"CLK: Executed valid command: " 
+						CASPAR_LOG(info) << L"CLK: Executed valid command: " 
 							<< currentCommandString_.str();
 				} 
 				catch (...)
