@@ -147,7 +147,7 @@ struct audio_channel_remapper::impl
 			auto pan_filter = u8(generate_pan_filter_str(input_layout_, output_layout_, mix_config));
 
 			CASPAR_LOG(debug) << "[audio_channel_remapper] Using audio filter: " << pan_filter;
-			auto logging_disabled = ffmpeg::temporary_disable_logging_for_thread(true);
+			auto quiet_logging = ffmpeg::temporary_enable_quiet_logging_for_thread(true);
 			filter_.reset(new ffmpeg::audio_filter(
 					boost::rational<int>(1, 1),
 					48000,
