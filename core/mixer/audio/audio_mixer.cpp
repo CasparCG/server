@@ -251,8 +251,14 @@ public:
 		audio_buffer_ps result_ps(audio_size(audio_cadence_.front()), 0.0);
 		for (auto& stream : audio_streams_ | boost::adaptors::map_values)
 		{
-			if(stream.audio_data.size() < result_ps.size())
-				stream.audio_data.resize(result_ps.size(), 0.0f);
+			if (stream.audio_data.size() < result_ps.size())
+			{
+				auto samples = (result_ps.size() - stream.audio_data.size()) / channel_layout_.num_channels;
+				CASPAR_LOG(trace) << L"[audio_mixer] Appended " << samples << L" zero samples";
+				CASPAR_LOG(trace) << L"[audio_mixer] Actual number of samples " << stream.audio_data.size() / channel_layout_.num_channels;
+				CASPAR_LOG(trace) << L"[audio_mixer] Wanted number of samples " << result_ps.size() / channel_layout_.num_channels;
+				stream.audio_data.resize(result_ps.size(), 0.0);
+			}
 
 			auto out = boost::range::transform(result_ps, stream.audio_data, std::begin(result_ps), std::plus<double>());
 			stream.audio_data.erase(std::begin(stream.audio_data), std::begin(stream.audio_data) + std::distance(std::begin(result_ps), out));
