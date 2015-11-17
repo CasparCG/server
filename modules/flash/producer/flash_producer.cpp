@@ -262,7 +262,7 @@ public:
 	{		
 		std::wstring result;
 
-		CASPAR_LOG(trace) << print() << " Call: " << param;
+		CASPAR_LOG(debug) << print() << " Call: " << param;
 
 		if(!ax_->FlashCall(param, result))
 			CASPAR_LOG(warning) << print() << L" Flash call failed:" << param;//CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Flash function call failed.") << arg_name_info("param") << arg_value_info(narrow(param)));

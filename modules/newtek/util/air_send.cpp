@@ -64,7 +64,7 @@ std::shared_ptr<void> load_library()
 
 	GetModuleFileNameW(module, actualFilename, sizeof(actualFilename));
 
-	CASPAR_LOG(debug) << L"Loaded " << actualFilename;
+	CASPAR_LOG(info) << L"Loaded " << actualFilename;
 
 	create = reinterpret_cast<decltype(create)>(
 			GetProcAddress(module, "AirSend_Create"));

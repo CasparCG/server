@@ -186,7 +186,8 @@ public:
 
 			if (item.channel_layout == audio_channel_layout::invalid())
 			{
-				CASPAR_LOG(debug) << "[audio_mixer] invalid audio channel layout for item";
+				CASPAR_LOG(warning) << "[audio_mixer] invalid audio channel layout for item";
+				next_audio_streams[tag].remapping_failed = true;
 				continue;
 			}
 

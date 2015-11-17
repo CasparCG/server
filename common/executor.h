@@ -81,7 +81,7 @@ public:
 	
 	~executor()
 	{
-		CASPAR_LOG(trace) << L"Shutting down " << name_;
+		CASPAR_LOG(debug) << L"Shutting down " << name_;
 
 		try
 		{
@@ -239,7 +239,7 @@ private:
 
 		if (!execution_queue_.try_push(priority, function))
 		{
-			CASPAR_LOG(debug) << print() << L" Overflow. Blocking caller.";
+			CASPAR_LOG(warning) << print() << L" Overflow. Blocking caller.";
 			execution_queue_.push(priority, function);
 		}
 
