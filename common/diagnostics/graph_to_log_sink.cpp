@@ -60,7 +60,7 @@ public:
 			CASPAR_LOG(trace) << L"[diagnostics] [" << text_ << L"] " << name;
 			break;
 		case tag_severity::WARNING:
-			CASPAR_LOG(warning) << L"[diagnostics] [" << text_ << L"] " << name;
+			CASPAR_LOG(debug) << L"[diagnostics] [" << text_ << L"] " << name;
 			break;
 		}
 	}
