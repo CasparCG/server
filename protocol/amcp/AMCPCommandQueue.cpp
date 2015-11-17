@@ -104,7 +104,7 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 				}
 
 				if (pCurrentCommand->Execute())
-					CASPAR_LOG(info) << "Executed command (" << timer.elapsed() << "s): " << print;
+					CASPAR_LOG(debug) << "Executed command (" << timer.elapsed() << "s): " << print;
 				else
 					CASPAR_LOG(warning) << "Failed to execute command: " << print;
 			}
