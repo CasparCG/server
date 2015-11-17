@@ -259,8 +259,8 @@ public:
 			}
 			catch (...)
 			{
-				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
-				CASPAR_LOG(info) << L"Thumbnail producer failed to initialize for " << media_file_with_extension << L". Turn on log level debug to see more information.";
+				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(trace);
+				CASPAR_LOG(info) << L"Thumbnail producer failed to initialize for " << media_file_with_extension << L". Turn on log level trace to see more information.";
 				return;
 			}
 
@@ -291,8 +291,8 @@ public:
 			}
 			catch (...)
 			{
-				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
-				CASPAR_LOG(info) << L"Thumbnail producer failed to create thumbnail for " << media_file_with_extension << L". Turn on log level debug to see more information.";
+				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(trace);
+				CASPAR_LOG(info) << L"Thumbnail producer failed to create thumbnail for " << media_file_with_extension << L". Turn on log level trace to see more information.";
 				return;
 			}
 
