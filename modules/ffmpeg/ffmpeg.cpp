@@ -237,49 +237,46 @@ std::wstring swscale_version()
 {
 	return make_version(::swscale_version());
 }
-bool& get_disable_logging_for_thread()
+bool& get_quiet_logging_for_thread()
 {
-	static boost::thread_specific_ptr<bool> disable_logging_for_thread;
+	static boost::thread_specific_ptr<bool> quiet_logging_for_thread;
 
-	auto local = disable_logging_for_thread.get();
+	auto local = quiet_logging_for_thread.get();
 
 	if (!local)
 	{
 		local = new bool(false);
-		disable_logging_for_thread.reset(local);
+		quiet_logging_for_thread.reset(local);
 	}
 
 	return *local;
 }
 
-void disable_logging_for_thread()
+bool is_logging_quiet_for_thread()
 {
-	get_disable_logging_for_thread() = true;
+	return get_quiet_logging_for_thread();
 }
 
-bool is_logging_disabled_for_thread()
+std::shared_ptr<void> temporary_enable_quiet_logging_for_thread(bool enable)
 {
-	return get_disable_logging_for_thread();
-}
-
-std::shared_ptr<void> temporary_disable_logging_for_thread(bool disable)
-{
-	if (!disable || is_logging_disabled_for_thread())
+	if (!enable || is_logging_quiet_for_thread())
 		return std::shared_ptr<void>();
 
-	disable_logging_for_thread();
+	get_quiet_logging_for_thread() = true;
 
 	return std::shared_ptr<void>(nullptr, [](void*)
 	{
-		get_disable_logging_for_thread() = false; // Only works correctly if destructed in same thread as original caller.
+		get_quiet_logging_for_thread() = false; // Only works correctly if destructed in same thread as original caller.
 	});
 }
 
 void log_for_thread(void* ptr, int level, const char* fmt, va_list vl)
 {
 	ensure_gpf_handler_installed_for_thread("ffmpeg-thread");
-	if (!get_disable_logging_for_thread()) // It does not matter what the value of the bool is
-		log_callback(ptr, level, fmt, vl);
+
+	int min_level = is_logging_quiet_for_thread() ? AV_LOG_DEBUG : AV_LOG_FATAL;
+
+	log_callback(ptr, std::max(level, min_level), fmt, vl);
 }
 
 void init(core::module_dependencies dependencies)
@@ -302,8 +299,7 @@ void init(core::module_dependencies dependencies)
 	dependencies.media_info_repo->register_extractor(
 			[](const std::wstring& file, const std::wstring& extension, core::media_info& info) -> bool
 			{
-				// TODO: merge thumbnail generation from 2.0
-				//auto disable_logging = temporary_disable_logging_for_thread(true);
+				auto quiet_logging = temporary_enable_quiet_logging_for_thread(true);
 				if (extension == L".WAV" || extension == L".MP3")
 				{
 					info.clip_type = L"AUDIO";
