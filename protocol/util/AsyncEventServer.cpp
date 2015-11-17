@@ -130,7 +130,7 @@ public:
 
 	~connection()
 	{
-		CASPAR_LOG(trace) << print() << L" connection destroyed.";
+		CASPAR_LOG(debug) << print() << L" connection destroyed.";
 	}
 
 	std::wstring print() const

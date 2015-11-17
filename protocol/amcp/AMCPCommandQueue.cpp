@@ -104,29 +104,32 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 				}
 
 				if (pCurrentCommand->Execute())
-					CASPAR_LOG(debug) << "Executed command (" << timer.elapsed() << "s): " << print;
+					CASPAR_LOG(info) << "Executed command (" << timer.elapsed() << "s): " << print;
 				else
 					CASPAR_LOG(warning) << "Failed to execute command: " << print;
 			}
 			catch (file_not_found&)
 			{
+				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
 				CASPAR_LOG(error) << L"File not found. No match found for parameters. Check syntax.";
 				pCurrentCommand->SetReplyString(L"404 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
 			catch (const user_error& e)
 			{
+				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
 				CASPAR_LOG(error) << *boost::get_error_info<msg_info_t>(e) << ". Check syntax.";
 				pCurrentCommand->SetReplyString(L"403 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
 			catch (std::out_of_range&)
 			{
+				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
 				CASPAR_LOG(error) << L"Missing parameter. Check syntax.";
 				pCurrentCommand->SetReplyString(L"402 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
 			catch (...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
-				CASPAR_LOG(warning) << "Failed to execute command:" << pCurrentCommand->print();
+				CASPAR_LOG(error) << "Failed to execute command:" << pCurrentCommand->print();
 				pCurrentCommand->SetReplyString(L"501 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
 				

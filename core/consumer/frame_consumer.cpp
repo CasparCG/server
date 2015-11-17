@@ -114,9 +114,9 @@ public:
 				ensure_gpf_handler_installed_for_thread(u8(L"Destroyer: " + str).c_str());
 
 				if (!consumer->unique())
-					CASPAR_LOG(trace) << str << L" Not destroyed on asynchronous destruction thread: " << consumer->use_count();
+					CASPAR_LOG(debug) << str << L" Not destroyed on asynchronous destruction thread: " << consumer->use_count();
 				else
-					CASPAR_LOG(trace) << str << L" Destroying on asynchronous destruction thread.";
+					CASPAR_LOG(debug) << str << L" Destroying on asynchronous destruction thread.";
 			}
 			catch(...){}
 
@@ -149,7 +149,7 @@ public:
 	~print_consumer_proxy()
 	{		
 		auto str = consumer_->print();
-		CASPAR_LOG(trace) << str << L" Uninitializing.";
+		CASPAR_LOG(debug) << str << L" Uninitializing.";
 		consumer_.reset();
 		CASPAR_LOG(info) << str << L" Uninitialized.";
 	}

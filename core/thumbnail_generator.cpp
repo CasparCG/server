@@ -259,13 +259,14 @@ public:
 			}
 			catch (...)
 			{
-				CASPAR_LOG(debug) << L"Thumbnail producer failed to initialize for " << media_file_with_extension;
+				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
+				CASPAR_LOG(info) << L"Thumbnail producer failed to initialize for " << media_file_with_extension << L". Turn on log level debug to see more information.";
 				return;
 			}
 
 			if (producer == frame_producer::empty())
 			{
-				CASPAR_LOG(trace) << L"No appropriate thumbnail producer found for " << media_file_with_extension;
+				CASPAR_LOG(debug) << L"No appropriate thumbnail producer found for " << media_file_with_extension;
 				return;
 			}
 
@@ -290,7 +291,8 @@ public:
 			}
 			catch (...)
 			{
-				CASPAR_LOG(debug) << L"Thumbnail producer failed to create thumbnail for " << media_file_with_extension;
+				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
+				CASPAR_LOG(info) << L"Thumbnail producer failed to create thumbnail for " << media_file_with_extension << L". Turn on log level debug to see more information.";
 				return;
 			}
 
@@ -322,7 +324,7 @@ public:
 			try
 			{
 				boost::filesystem::last_write_time(png_file, boost::filesystem::last_write_time(file));
-				CASPAR_LOG(debug) << L"Generated thumbnail for " << media_file_with_extension;
+				CASPAR_LOG(info) << L"Generated thumbnail for " << media_file_with_extension;
 			}
 			catch (...)
 			{

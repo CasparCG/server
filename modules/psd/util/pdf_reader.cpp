@@ -83,7 +83,7 @@ struct pdf_context
 	void set_name(const std::string& str)
 	{
 		name.assign(str.begin(), str.end());
-		CASPAR_LOG(trace) << get_indent() << name;
+		CASPAR_LOG(debug) << get_indent() << name;
 	}
 
 	void add_char(std::uint8_t c)
@@ -109,7 +109,7 @@ struct pdf_context
 
 	void set_value()
 	{
-		CASPAR_LOG(trace) << get_indent() << value;
+		CASPAR_LOG(debug) << get_indent() << value;
 
 		stack.back()->push_back(std::make_pair(name, Ptree(value)));
 		clear_state();
