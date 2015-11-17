@@ -295,7 +295,7 @@ int main(int argc, char** argv)
 
 		env::configure(config_file_name);
 
-		log::set_log_level(env::properties().get(L"configuration.log-level", L"debug"));
+		log::set_log_level(env::properties().get(L"configuration.log-level", L"info"));
 
 		if (env::properties().get(L"configuration.debugging.remote", false))
 			wait_for_remote_debugging();

@@ -82,10 +82,15 @@ BOOST_LOG_INLINE_GLOBAL_LOGGER_INIT(logger, caspar_logger)
 	catch(...){}
 
 #define CASPAR_LOG_CURRENT_EXCEPTION() try{\
-		CASPAR_LOG(error)  << caspar::u16(boost::current_exception_diagnostic_information()) << L"Caught at (" << caspar::get_thread_info().name << L"):\n" << caspar::get_call_stack();\
+		CASPAR_LOG(error) << caspar::u16(boost::current_exception_diagnostic_information()) << L"Caught at (" << caspar::get_thread_info().name << L"):\n" << caspar::get_call_stack();\
 	}\
 	catch(...){}
-	
+
+#define CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(lvl) try{\
+		CASPAR_LOG(lvl) << caspar::u16(boost::current_exception_diagnostic_information()) << L"Caught at (" << caspar::get_thread_info().name << L"):\n" << caspar::get_call_stack();\
+	}\
+	catch(...){}
+
 void set_log_level(const std::wstring& lvl);
 
 void print_child(
