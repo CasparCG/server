@@ -185,11 +185,15 @@ link_directories("${DEPENDENCIES_FOLDER}/asmlib")
 set(BLUEFISH_INCLUDE_DIRS		"${DEPENDENCIES_FOLDER}/bluefish/include")
 link_directories("${DEPENDENCIES_FOLDER}/bluefish/lib")
 
+## CEF ##
 set(CEF_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/cef/include")
-set(GTEST_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/gtest/include")
-
 set(CEF_PATH					"${DEPENDENCIES_FOLDER}/cef")
 set(CEF_BIN_PATH				"${DEPENDENCIES_FOLDER}/cef/bin/${PLATFORM_FOLDER_NAME}")
+link_directories("${DEPENDENCIES_FOLDER}/cef/lib/${PLATFORM_FOLDER_NAME}")
+
+## GTest ##
+set(GTEST_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/gtest/include")
+link_directories("${DEPENDENCIES_FOLDER}/gtest/lib/${PLATFORM_FOLDER_NAME}")
 
 ## fonts ##
 if(NOT USE_SYSTEM_FONTS)
@@ -197,8 +201,6 @@ if(NOT USE_SYSTEM_FONTS)
 endif()
 
 link_directories("${DEPENDENCIES_FOLDER}/zlib/lib")
-link_directories("${DEPENDENCIES_FOLDER}/cef/lib/${PLATFORM_FOLDER_NAME}")
-link_directories("${DEPENDENCIES_FOLDER}/gtest/lib/${PLATFORM_FOLDER_NAME}")
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
