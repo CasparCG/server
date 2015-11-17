@@ -3,7 +3,6 @@ project (common)
 
 set(SOURCES
 		diagnostics/graph.cpp
-		diagnostics/graph_to_log_sink.cpp
 
 		gl/gl_check.cpp
 
@@ -45,7 +44,6 @@ elseif (CMAKE_COMPILER_IS_GNUCXX)
 endif ()
 set(HEADERS
 		diagnostics/graph.h
-		diagnostics/graph_to_log_sink.h
 
 		gl/gl_check.h
 
