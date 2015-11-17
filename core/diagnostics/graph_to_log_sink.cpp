@@ -21,16 +21,21 @@
 
 #include "graph_to_log_sink.h"
 
-#include "../log.h"
+#include "call_context.h"
+
+#include <common/diagnostics/graph.h>
+#include <common/memory.h>
+#include <common/log.h>
 
 #include <tbb/spin_mutex.h>
 
-namespace caspar { namespace diagnostics {
+namespace caspar { namespace core { namespace diagnostics {
 
-class graph_to_log_sink : public spi::graph_sink
+class graph_to_log_sink : public caspar::diagnostics::spi::graph_sink
 {
 	tbb::spin_mutex	mutex_;
 	std::wstring	text_;
+	std::wstring	context_	= call_context::for_thread().to_string();
 public:
 	void activate() override
 	{
@@ -50,17 +55,17 @@ public:
 	{
 	}
 
-	void set_tag(tag_severity severity, const std::string& name) override
+	void set_tag(caspar::diagnostics::tag_severity severity, const std::string& name) override
 	{
 		tbb::spin_mutex::scoped_lock lock(mutex_);
-
+			
 		switch (severity)
 		{
-		case tag_severity::INFO:
-			CASPAR_LOG(trace) << L"[diagnostics] [" << text_ << L"] " << name;
+		case caspar::diagnostics::tag_severity::INFO:
+			CASPAR_LOG(trace) << L"[diagnostics] [" << text_ << L"] " << name << L" " << context_;
 			break;
-		case tag_severity::WARNING:
-			CASPAR_LOG(debug) << L"[diagnostics] [" << text_ << L"] " << name;
+		case caspar::diagnostics::tag_severity::WARNING:
+			CASPAR_LOG(debug) << L"[diagnostics] [" << text_ << L"] " << name << L" " << context_;
 			break;
 		}
 	}
@@ -72,7 +77,7 @@ public:
 
 void register_graph_to_log_sink()
 {
-	spi::register_sink_factory([] { return spl::make_shared<graph_to_log_sink>(); });
+	caspar::diagnostics::spi::register_sink_factory([] { return spl::make_shared<graph_to_log_sink>(); });
 }
 
-}}
+}}}
