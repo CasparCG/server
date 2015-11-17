@@ -33,6 +33,7 @@ option(USE_SYSTEM_FREETYPE  "Compile against system FreeType instead of bundled 
 option(USE_SYSTEM_FREEIMAGE "Compile against system FreeImage instead of bundled one" OFF)
 option(USE_SYSTEM_OPENAL    "Compile against system OpenAL instead of bundled one" OFF)
 option(USE_SYSTEM_SFML      "Compile against system SFML instead of bundled one" OFF)
+option(USE_SYSTEM_GTEST     "Compile against system GTest instead of bundled one" OFF)
 option(USE_SYSTEM_FONTS     "Compile against system fonts instead of bundled ones" OFF)
 
 configure_file("${PROJECT_SOURCE_DIR}/version.tmpl" "${PROJECT_SOURCE_DIR}/version.h")
@@ -192,13 +193,17 @@ set(CEF_BIN_PATH				"${DEPENDENCIES_FOLDER}/cef/bin/${PLATFORM_FOLDER_NAME}")
 link_directories("${DEPENDENCIES_FOLDER}/cef/lib/${PLATFORM_FOLDER_NAME}")
 
 ## GTest ##
-set(GTEST_INCLUDE_DIRS			"${DEPENDENCIES_FOLDER}/gtest/include")
-if(MSVC)
-	set(GTEST_LIBRARIES optimized gtest debug gtestd)
+if(USE_SYSTEM_GTEST)
+	find_package(GTest REQUIRED)
 else()
-	set(GTEST_LIBRARIES gtest)
+	set(GTEST_INCLUDE_DIRS		"${DEPENDENCIES_FOLDER}/gtest/include")
+	if(MSVC)
+		set(GTEST_LIBRARIES optimized gtest debug gtestd)
+	else()
+		set(GTEST_LIBRARIES gtest)
+	endif()
+	link_directories("${DEPENDENCIES_FOLDER}/gtest/lib/${PLATFORM_FOLDER_NAME}")
 endif()
-link_directories("${DEPENDENCIES_FOLDER}/gtest/lib/${PLATFORM_FOLDER_NAME}")
 
 ## fonts ##
 if(NOT USE_SYSTEM_FONTS)
