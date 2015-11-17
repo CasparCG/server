@@ -170,7 +170,7 @@ public:
 		{
 			if (input_frame.size() != format_desc_.size)
 			{
-				CASPAR_LOG(debug) << print() << L" Invalid input frame dimension.";
+				CASPAR_LOG(warning) << print() << L" Invalid input frame dimension.";
 				return nullptr;
 			}
 

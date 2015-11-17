@@ -89,7 +89,7 @@ struct image_producer : public core::frame_producer_base
 		load(load_image(description_));
 
 		if (thumbnail_mode)
-			CASPAR_LOG(trace) << print() << L" Initialized";
+			CASPAR_LOG(debug) << print() << L" Initialized";
 		else
 			CASPAR_LOG(info) << print() << L" Initialized";
 	}

@@ -72,7 +72,7 @@ public:
 			cg_registry_->get_proxy(channel_, core::cg_proxy::DEFAULT_LAYER)->update(0, data);
 		}
 				
-		CASPAR_LOG(debug) << L"CLK: Clockdata sent: " << data;
+		CASPAR_LOG(info) << L"CLK: Clockdata sent: " << data;
 	}
 
 	void reset()

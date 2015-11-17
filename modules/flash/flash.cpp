@@ -79,7 +79,7 @@ public:
 		filename = find_template(filename);
 
 		auto str = (boost::wformat(L"<invoke name=\"Add\" returntype=\"xml\"><arguments><number>%1%</number><string>%2%</string>%3%<string>%4%</string><string><![CDATA[%5%]]></string></arguments></invoke>") % layer % filename % (play_on_load ? L"<true/>" : L"<false/>") % label % data).str();
-		CASPAR_LOG(info) << flash_producer_->print() << " Invoking add-command: " << str;
+		CASPAR_LOG(debug) << flash_producer_->print() << " Invoking add-command: " << str;
 		std::vector<std::wstring> params;
 		params.push_back(std::move(str));
 		flash_producer_->call(std::move(params)).get();
@@ -88,7 +88,7 @@ public:
 	void remove(int layer) override
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Delete\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
-		CASPAR_LOG(info) << flash_producer_->print() << " Invoking remove-command: " << str;
+		CASPAR_LOG(debug) << flash_producer_->print() << " Invoking remove-command: " << str;
 		std::vector<std::wstring> params;
 		params.push_back(std::move(str));
 		flash_producer_->call(std::move(params));
@@ -97,7 +97,7 @@ public:
 	void play(int layer) override
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Play\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
-		CASPAR_LOG(info) << flash_producer_->print() << " Invoking play-command: " << str;
+		CASPAR_LOG(debug) << flash_producer_->print() << " Invoking play-command: " << str;
 		std::vector<std::wstring> params;
 		params.push_back(std::move(str));
 		flash_producer_->call(std::move(params));
@@ -106,7 +106,7 @@ public:
 	void stop(int layer, unsigned int) override
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Stop\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><number>0</number></arguments></invoke>") % layer).str();
-		CASPAR_LOG(info) << flash_producer_->print() << " Invoking stop-command: " << str;
+		CASPAR_LOG(debug) << flash_producer_->print() << " Invoking stop-command: " << str;
 		std::vector<std::wstring> params;
 		params.push_back(std::move(str));
 		flash_producer_->call(std::move(params));
@@ -115,7 +115,7 @@ public:
 	void next(int layer) override
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Next\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
-		CASPAR_LOG(info) << flash_producer_->print() << " Invoking next-command: " << str;
+		CASPAR_LOG(debug) << flash_producer_->print() << " Invoking next-command: " << str;
 		std::vector<std::wstring> params;
 		params.push_back(std::move(str));
 		flash_producer_->call(std::move(params));
@@ -124,7 +124,7 @@ public:
 	void update(int layer, const std::wstring& data) override
 	{
 		auto str = (boost::wformat(L"<invoke name=\"SetData\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><string><![CDATA[%2%]]></string></arguments></invoke>") % layer % data).str();
-		CASPAR_LOG(info) << flash_producer_->print() << " Invoking update-command: " << str;
+		CASPAR_LOG(debug) << flash_producer_->print() << " Invoking update-command: " << str;
 		std::vector<std::wstring> params;
 		params.push_back(std::move(str));
 		flash_producer_->call(std::move(params));
@@ -133,7 +133,7 @@ public:
 	std::wstring invoke(int layer, const std::wstring& label) override
 	{
 		auto str = (boost::wformat(L"<invoke name=\"Invoke\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array><string>%2%</string></arguments></invoke>") % layer % label).str();
-		CASPAR_LOG(info) << flash_producer_->print() << " Invoking invoke-command: " << str;
+		CASPAR_LOG(debug) << flash_producer_->print() << " Invoking invoke-command: " << str;
 		std::vector<std::wstring> params;
 		params.push_back(std::move(str));
 		// TODO: because of std::async deferred timed waiting does not work so for now we have to block
@@ -143,7 +143,7 @@ public:
 	std::wstring description(int layer) override
 	{
 		auto str = (boost::wformat(L"<invoke name=\"GetDescription\" returntype=\"xml\"><arguments><array><property id=\"0\"><number>%1%</number></property></array></arguments></invoke>") % layer).str();
-		CASPAR_LOG(info) << flash_producer_->print() << " Invoking description-command: " << str;
+		CASPAR_LOG(debug) << flash_producer_->print() << " Invoking description-command: " << str;
 		std::vector<std::wstring> params;
 		params.push_back(std::move(str));
 		// TODO: because of std::async deferred timed waiting does not work so for now we have to block
@@ -153,7 +153,7 @@ public:
 	std::wstring template_host_info() override
 	{
 		auto str = (boost::wformat(L"<invoke name=\"GetInfo\" returntype=\"xml\"><arguments></arguments></invoke>")).str();
-		CASPAR_LOG(info) << flash_producer_->print() << " Invoking info-command: " << str;
+		CASPAR_LOG(debug) << flash_producer_->print() << " Invoking info-command: " << str;
 		std::vector<std::wstring> params;
 		params.push_back(std::move(str));
 		// TODO: because of std::async deferred timed waiting does not work so for now we have to block
