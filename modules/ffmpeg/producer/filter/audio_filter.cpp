@@ -156,12 +156,18 @@ struct audio_filter::implementation
 		audio_graph_in_  = filt_asrc;
 		audio_graph_out_ = filt_asink;
 		
-		if (!is_logging_disabled_for_thread())
-			CASPAR_LOG(info)
+		if (is_logging_quiet_for_thread())
+			CASPAR_LOG(trace)
 				<< 	u16(std::string("\n") 
 					+ avfilter_graph_dump(
 							audio_graph_.get(), 
 							nullptr));
+		else
+			CASPAR_LOG(debug)
+				<< u16(std::string("\n")
+					+ avfilter_graph_dump(
+						audio_graph_.get(),
+						nullptr));
 	}
 	
 	void configure_filtergraph(
