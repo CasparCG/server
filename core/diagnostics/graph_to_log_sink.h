@@ -21,11 +21,8 @@
 
 #pragma once
 
-#include "../memory.h"
-#include "graph.h"
-
-namespace caspar { namespace diagnostics {
+namespace caspar { namespace core { namespace diagnostics {
 
 void register_graph_to_log_sink();
 
-}}
+}}}
