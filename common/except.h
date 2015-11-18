@@ -83,10 +83,10 @@ struct invalid_operation		: virtual caspar_exception {};
 struct operation_failed			: virtual caspar_exception {};
 struct timed_out				: virtual caspar_exception {};
 
-struct not_supported			: virtual caspar_exception {};
 struct not_implemented			: virtual caspar_exception {};
 
 struct user_error				: virtual caspar_exception {};
+struct not_supported			: virtual user_error {};
 
 #define CASPAR_THROW_EXCEPTION(e) BOOST_THROW_EXCEPTION(e << call_stack_info(caspar::get_call_stack()))
 
