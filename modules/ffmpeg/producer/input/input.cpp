@@ -193,7 +193,7 @@ struct input::impl : boost::noncopyable
 					return false;
 
 				// Play nice
-				boost::this_thread::sleep(boost::posix_time::milliseconds(5));
+				boost::this_thread::sleep_for(boost::chrono::milliseconds(5));
 			}
 
 			return true;
