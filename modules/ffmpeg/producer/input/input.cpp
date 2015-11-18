@@ -120,11 +120,12 @@ struct input::impl : boost::noncopyable
 	tbb::atomic<uint32_t>				  		length_;
 	tbb::atomic<bool>					  		loop_;
 	tbb::atomic<bool>					  		eof_;
+	bool										thumbnail_mode_;
 	double								  		fps_					= read_fps(*format_context_, 0.0);
 	uint32_t							  		frame_number_			= 0;
 
-	stream								  		video_stream_			{ av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0) };
-	stream								  		audio_stream_			{ av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_AUDIO, -1, -1, 0, 0) };
+	stream								  		video_stream_			{							av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0) };
+	stream								  		audio_stream_			{ thumbnail_mode_ ? -1 :	av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_AUDIO, -1, -1, 0, 0) };
 
 	boost::optional<uint32_t>			  		seek_target_;
 
@@ -133,10 +134,17 @@ struct input::impl : boost::noncopyable
 	boost::condition_variable			  		cond_;
 	boost::thread						  		thread_;
 	
-	impl(const spl::shared_ptr<diagnostics::graph> graph, const std::wstring& filename, const bool loop, const uint32_t start, const uint32_t length) 
+	impl(
+			const spl::shared_ptr<diagnostics::graph> graph,
+			const std::wstring& filename,
+			const bool loop,
+			const uint32_t start,
+			const uint32_t length,
+			bool thumbnail_mode)
 		: graph_(graph)
 		, filename_(filename)
-	{		
+		, thumbnail_mode_(thumbnail_mode)
+	{
 		start_			= start;
 		length_			= length;
 		loop_			= loop;
@@ -157,14 +165,17 @@ struct input::impl : boost::noncopyable
 		for(int n = 0; n < 8; ++n)
 			tick();
 
-		thread_	= boost::thread([this]{run();});
+		if (!thumbnail_mode)
+			thread_	= boost::thread([this]{run();});
 	}
 
 	~impl()
 	{
 		is_running_ = false;
 		cond_.notify_one();
-		thread_.join();
+
+		if (!thumbnail_mode_)
+			thread_.join();
 	}
 	
 	bool try_pop_video(std::shared_ptr<AVPacket>& packet)
@@ -172,7 +183,24 @@ struct input::impl : boost::noncopyable
 		if (!video_stream_.is_available())
 			return false;
 
+		if (thumbnail_mode_)
+		{
+			int ticks = 0;
+			while (!video_stream_.try_pop(packet))
+			{
+				tick();
+				if (++ticks > 32) // Infinite loop should not be possible
+					return false;
+
+				// Play nice
+				boost::this_thread::sleep(boost::posix_time::milliseconds(5));
+			}
+
+			return true;
+		}
+
 		bool result = video_stream_.try_pop(packet);
+
 		if(result)
 			cond_.notify_one();
 		
@@ -204,7 +232,7 @@ struct input::impl : boost::noncopyable
 			video_stream_.clear();
 			audio_stream_.clear();
 		}
-		
+
 		cond_.notify_one();
 	}
 		
@@ -237,14 +265,15 @@ private:
 			}
 		}
 		
-		auto stream	= format_context_->streams[default_stream_index_];
-		auto fps	= read_fps(*format_context_, 0.0);
+		auto stream				= format_context_->streams[default_stream_index_];
+		auto fps				= read_fps(*format_context_, 0.0);
+		auto target_timestamp = static_cast<int64_t>((target / fps * stream->time_base.den) / stream->time_base.num);
 		
 		THROW_ON_ERROR2(avformat_seek_file(
 				format_context_.get(),
 				default_stream_index_,
 				std::numeric_limits<int64_t>::min(),
-				static_cast<int64_t>((target / fps * stream->time_base.den) / stream->time_base.num),
+				target_timestamp,
 				std::numeric_limits<int64_t>::max(),
 				0), print());
 		
@@ -347,8 +376,8 @@ private:
 	}
 };
 
-input::input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length) 
-	: impl_(new impl(graph, filename, loop, start, length)){}
+input::input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode)
+	: impl_(new impl(graph, filename, loop, start, length, thumbnail_mode)){}
 bool input::try_pop_video(std::shared_ptr<AVPacket>& packet){return impl_->try_pop_video(packet);}
 bool input::try_pop_audio(std::shared_ptr<AVPacket>& packet){return impl_->try_pop_audio(packet);}
 AVFormatContext& input::context(){return *impl_->format_context_;}

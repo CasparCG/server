@@ -45,7 +45,12 @@ namespace ffmpeg {
 class input : boost::noncopyable
 {
 public:
-	explicit input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length);
+	explicit input(
+			const spl::shared_ptr<diagnostics::graph>& graph,
+			const std::wstring& filename,
+			bool loop, uint32_t start,
+			uint32_t length,
+			bool thumbnail_mode);
 
 	bool		try_pop_video(std::shared_ptr<AVPacket>& packet);
 	bool		try_pop_audio(std::shared_ptr<AVPacket>& packet);
