@@ -70,6 +70,8 @@ public:
 		return executor_.invoke(std::forward<Func>(func), priority);
 	}
 
+	std::future<void> gc();
+
 	// Properties
 	
 	boost::property_tree::wptree	info() const;
