@@ -351,6 +351,32 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		};
 		return std::async(std::launch::deferred, std::move(cmd));
 	}
+
+	std::future<void> gc()
+	{
+		return executor_.begin_invoke([=]
+		{
+			CASPAR_LOG(info) << " ogl: Running GC.";
+
+			try
+			{
+				for (auto& pools : device_pools_)
+				{
+					for (auto& pool : pools)
+						pool.second.clear();
+				}
+				for (auto& pools : host_pools_)
+				{
+					for (auto& pool : pools)
+						pool.second.clear();
+				}
+			}
+			catch (...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+			}
+		}, task_priority::high_priority);
+	}
 };
 
 device::device() 
@@ -362,6 +388,7 @@ array<std::uint8_t>							device::create_array(int size){return impl_->create_ar
 std::future<std::shared_ptr<texture>>		device::copy_async(const array<const std::uint8_t>& source, int width, int height, int stride, bool mipmapped){return impl_->copy_async(source, width, height, stride, mipmapped);}
 std::future<std::shared_ptr<texture>>		device::copy_async(const array<std::uint8_t>& source, int width, int height, int stride, bool mipmapped){ return impl_->copy_async(source, width, height, stride, mipmapped); }
 std::future<array<const std::uint8_t>>		device::copy_async(const spl::shared_ptr<texture>& source){return impl_->copy_async(source);}
+std::future<void>							device::gc() { return impl_->gc(); }
 boost::property_tree::wptree				device::info() const { return impl_->info(); }
 std::wstring								device::version() const{return impl_->version();}
 
