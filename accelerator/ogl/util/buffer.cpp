@@ -73,8 +73,8 @@ public:
 		if(!pbo_)
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to allocate buffer."));
 
-		(usage == usage::write_only ? g_w_total_count : g_r_total_count)	++;
-		(usage == usage::write_only ? g_w_total_size : g_r_total_size)		+= size_;
+		(usage == buffer::usage::write_only ? g_w_total_count : g_r_total_count)	++;
+		(usage == buffer::usage::write_only ? g_w_total_size : g_r_total_size)		+= size_;
 		
 		if(timer.elapsed() > 0.02)
 			CASPAR_LOG(warning) << L"[buffer] Performance warning. Buffer allocation blocked: " << timer.elapsed();
