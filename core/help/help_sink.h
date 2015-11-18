@@ -33,6 +33,7 @@ public:
 	virtual ~paragraph_builder() { }
 	virtual spl::shared_ptr<paragraph_builder> text(std::wstring text) { return shared_from_this(); };
 	virtual spl::shared_ptr<paragraph_builder> code(std::wstring text) { return shared_from_this(); };
+	virtual spl::shared_ptr<paragraph_builder> strong(std::wstring text) { return shared_from_this(); };
 	virtual spl::shared_ptr<paragraph_builder> see(std::wstring item) { return shared_from_this(); };
 	virtual spl::shared_ptr<paragraph_builder> url(std::wstring url, std::wstring name = L"") { return shared_from_this(); };
 };

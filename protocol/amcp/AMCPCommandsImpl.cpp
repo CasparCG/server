@@ -2600,6 +2600,7 @@ struct simple_paragraph_builder : core::paragraph_builder
 		return shared_from_this();
 	}
 	spl::shared_ptr<paragraph_builder> code(std::wstring txt) override { return text(std::move(txt)); }
+	spl::shared_ptr<paragraph_builder> strong(std::wstring item) override { return text(L"*" + std::move(item) + L"*"); }
 	spl::shared_ptr<paragraph_builder> see(std::wstring item) override { return text(std::move(item)); }
 	spl::shared_ptr<paragraph_builder> url(std::wstring url, std::wstring name)  override { return text(std::move(url)); }
 };
