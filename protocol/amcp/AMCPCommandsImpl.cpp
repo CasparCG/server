@@ -2554,6 +2554,25 @@ std::wstring gl_info_command(command_context& ctx)
 	return result.str();
 }
 
+void gl_gc_describer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Release pooled OpenGL resources.");
+	sink.syntax(L"GL GC");
+	sink.para()->text(L"Releases all the pooled OpenGL resources. ")->strong(L"May cause a pause on all video channels.");
+}
+
+std::wstring gl_gc_command(command_context& ctx)
+{
+	auto device = ctx.ogl_device;
+
+	if (!device)
+		CASPAR_THROW_EXCEPTION(not_supported() << msg_info("GL command only supported with OpenGL accelerator."));
+
+	device->gc().wait();
+
+	return L"202 GL GC OK\r\n";
+}
+
 static const int WIDTH = 80;
 
 struct max_width_sink : public core::help_sink
@@ -2911,6 +2930,7 @@ void register_commands(amcp_command_repository& repo)
 	repo.register_channel_command(	L"Query Commands",		L"INFO DELAY",					info_delay_describer,				info_delay_command,				0);
 	repo.register_command(			L"Query Commands",		L"DIAG",						diag_describer,						diag_command,					0);
 	repo.register_command(			L"Query Commands",		L"GL INFO",						gl_info_describer,					gl_info_command,				0);
+	repo.register_command(			L"Query Commands",		L"GL GC",						gl_gc_describer,					gl_gc_command,					0);
 	repo.register_command(			L"Query Commands",		L"BYE",							bye_describer,						bye_command,					0);
 	repo.register_command(			L"Query Commands",		L"KILL",						kill_describer,						kill_command,					0);
 	repo.register_command(			L"Query Commands",		L"RESTART",						restart_describer,					restart_command,				0);
