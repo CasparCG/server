@@ -106,6 +106,7 @@ struct ffmpeg_producer : public core::frame_producer_base
 
 	const double									fps_					= read_fps(input_.context(), format_desc_.fps);
 	const uint32_t									start_;
+	const bool										thumbnail_mode_;
 		
 	std::unique_ptr<video_decoder>					video_decoder_;
 	std::unique_ptr<audio_decoder>					audio_decoder_;	
@@ -125,13 +126,15 @@ public:
 			const std::wstring& filter,
 			bool loop,
 			uint32_t start,
-			uint32_t length)
+			uint32_t length,
+			bool thumbnail_mode)
 		: filename_(filename)
 		, frame_factory_(frame_factory)		
 		, format_desc_(format_desc)
-		, input_(graph_, filename_, loop, start, length)
+		, input_(graph_, filename_, loop, start, length, thumbnail_mode)
 		, fps_(read_fps(input_.context(), format_desc_.fps))
 		, start_(start)
+		, thumbnail_mode_(thumbnail_mode)
 	{
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
@@ -140,7 +143,7 @@ public:
 
 		try
 		{
-			video_decoder_.reset(new video_decoder(input_));
+			video_decoder_.reset(new video_decoder(input_, thumbnail_mode));
 			video_decoder_->monitor_output().attach_parent(monitor_subject_);
 			constraints_.width.set(video_decoder_->width());
 			constraints_.height.set(video_decoder_->height());
@@ -162,23 +165,26 @@ public:
 
 		auto channel_layout = core::audio_channel_layout::invalid();
 
-		try
+		if (!thumbnail_mode)
 		{
-			audio_decoder_ .reset(new audio_decoder(input_, format_desc_, channel_layout_spec));
-			audio_decoder_->monitor_output().attach_parent(monitor_subject_);
+			try
+			{
+				audio_decoder_.reset(new audio_decoder(input_, format_desc_, channel_layout_spec));
+				audio_decoder_->monitor_output().attach_parent(monitor_subject_);
 
-			channel_layout = audio_decoder_->channel_layout();
-			
-			CASPAR_LOG(info) << print() << L" " << audio_decoder_->print();
-		}
-		catch(averror_stream_not_found&)
-		{
-			//CASPAR_LOG(warning) << print() << " No audio-stream found. Running without audio.";	
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			CASPAR_LOG(warning) << print() << " Failed to open audio-stream. Running without audio.";		
+				channel_layout = audio_decoder_->channel_layout();
+
+				CASPAR_LOG(info) << print() << L" " << audio_decoder_->print();
+			}
+			catch (averror_stream_not_found&)
+			{
+				CASPAR_LOG(debug) << print() << " No audio-stream found. Running without audio.";	
+			}
+			catch (...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+				CASPAR_LOG(warning) << print() << " Failed to open audio-stream. Running without audio.";
+			}
 		}
 
 		if (start_ > file_nb_frames())
@@ -225,6 +231,74 @@ public:
 				<< core::monitor::message("/loop")			% input_.loop();
 						
 		return frame;
+	}
+
+	core::draw_frame render_specific_frame(uint32_t file_position)
+	{
+		muxer_->clear();
+		input_.seek(file_position);
+
+		decode_next_frame();
+
+		if (muxer_->empty())
+		{
+			CASPAR_LOG(trace) << print() << " Giving up finding frame at " << file_position;
+
+			return core::draw_frame::empty();
+		}
+
+		auto frame = muxer_->front();
+		muxer_->pop();
+
+		return frame;
+	}
+
+	core::draw_frame create_thumbnail_frame() override
+	{
+		auto quiet_logging = temporary_enable_quiet_logging_for_thread(true);
+
+		auto total_frames = nb_frames();
+		auto grid = env::properties().get(L"configuration.thumbnails.video-grid", 2);
+
+		if (grid < 1)
+		{
+			CASPAR_LOG(error) << L"configuration/thumbnails/video-grid cannot be less than 1";
+			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("configuration/thumbnails/video-grid cannot be less than 1"));
+		}
+
+		if (grid == 1)
+		{
+			return render_specific_frame(total_frames / 2);
+		}
+
+		auto num_snapshots = grid * grid;
+
+		std::vector<core::draw_frame> frames;
+
+		for (int i = 0; i < num_snapshots; ++i)
+		{
+			int x = i % grid;
+			int y = i / grid;
+			int desired_frame;
+
+			if (i == 0)
+				desired_frame = 0; // first
+			else if (i == num_snapshots - 1)
+				desired_frame = total_frames - 1; // last
+			else
+				// evenly distributed across the file.
+				desired_frame = total_frames * i / (num_snapshots - 1);
+
+			auto frame = render_specific_frame(desired_frame);
+			frame.transform().image_transform.fill_scale[0] = 1.0 / static_cast<double>(grid);
+			frame.transform().image_transform.fill_scale[1] = 1.0 / static_cast<double>(grid);
+			frame.transform().image_transform.fill_translation[0] = 1.0 / static_cast<double>(grid) * x;
+			frame.transform().image_transform.fill_translation[1] = 1.0 / static_cast<double>(grid) * y;
+
+			frames.push_back(frame);
+		}
+
+		return core::draw_frame(frames);
 	}
 
 	core::draw_frame last_frame() override
@@ -455,7 +529,7 @@ void describe_producer(core::help_sink& sink, const core::help_repository& repo)
 
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
 {		
-	auto filename = probe_stem(env::media_folder() + L"/" + params.at(0));
+	auto filename = probe_stem(env::media_folder() + L"/" + params.at(0), false);
 
 	if(filename.empty())
 		return core::frame_producer::empty();
@@ -465,6 +539,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 	auto length			= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
 	auto filter_str		= get_param(L"FILTER", params, L"");
 	auto channel_layout	= get_param(L"CHANNEL_LAYOUT", params, L"");
+	bool thumbnail_mode	= false;
 
 	return create_destroy_proxy(spl::make_shared_ptr(std::make_shared<ffmpeg_producer>(
 			dependencies.frame_factory,
@@ -474,7 +549,35 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 			filter_str,
 			loop,
 			start,
-			length)));
+			length,
+			thumbnail_mode)));
+}
+
+spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
+{
+	auto quiet_logging = temporary_enable_quiet_logging_for_thread(true);
+	auto filename = probe_stem(env::media_folder() + L"/" + params.at(0), true);
+
+	if(filename.empty())
+		return core::frame_producer::empty();
+	
+	bool loop			= false;
+	auto start			= 0;
+	auto length			= std::numeric_limits<uint32_t>::max();
+	auto filter_str		= L"";
+	auto channel_layout	= L"";
+	bool thumbnail_mode	= true;
+
+	return spl::make_shared_ptr(std::make_shared<ffmpeg_producer>(
+			dependencies.frame_factory,
+			dependencies.format_desc,
+			channel_layout,
+			filename,
+			filter_str,
+			loop,
+			start,
+			length,
+			thumbnail_mode));
 }
 
 }}

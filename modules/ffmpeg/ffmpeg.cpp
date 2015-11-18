@@ -295,7 +295,8 @@ void init(core::module_dependencies dependencies)
 	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"file", create_preconfigured_consumer);
 	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"stream", create_preconfigured_streaming_consumer);
 	dependencies.producer_registry->register_producer_factory(L"FFmpeg Producer", create_producer, describe_producer);
-	
+	dependencies.producer_registry->register_thumbnail_producer_factory(create_thumbnail_producer);
+
 	dependencies.media_info_repo->register_extractor(
 			[](const std::wstring& file, const std::wstring& extension, core::media_info& info) -> bool
 			{
@@ -306,7 +307,7 @@ void init(core::module_dependencies dependencies)
 					return true;
 				}
 
-				if (!is_valid_file(file))
+				if (!is_valid_file(file, true))
 					return false;
 
 				info.clip_type = L"MOVIE";
