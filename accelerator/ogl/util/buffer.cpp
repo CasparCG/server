@@ -32,13 +32,17 @@
 
 #include <GL/glew.h>
 
+#include <boost/property_tree/ptree.hpp>
+
 #include <tbb/atomic.h>
 
 namespace caspar { namespace accelerator { namespace ogl {
 
-static tbb::atomic<int> g_w_total_count;
-static tbb::atomic<int> g_r_total_count;
-																																								
+static tbb::atomic<int>			g_w_total_count;
+static tbb::atomic<std::size_t>	g_w_total_size;
+static tbb::atomic<int>			g_r_total_count;
+static tbb::atomic<std::size_t>	g_r_total_size;
+
 struct buffer::impl : boost::noncopyable
 {	
 	GLuint						pbo_;
@@ -68,6 +72,9 @@ public:
 
 		if(!pbo_)
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to allocate buffer."));
+
+		(usage == usage::write_only ? g_w_total_count : g_r_total_count)	++;
+		(usage == usage::write_only ? g_w_total_size : g_r_total_size)		+= size_;
 		
 		if(timer.elapsed() > 0.02)
 			CASPAR_LOG(warning) << L"[buffer] Performance warning. Buffer allocation blocked: " << timer.elapsed();
@@ -78,6 +85,8 @@ public:
 	~impl()
 	{
 		glDeleteBuffers(1, &pbo_);
+		(usage_ == GL_STREAM_DRAW ? g_w_total_size : g_r_total_size)	-= size_;
+		(usage_ == GL_STREAM_DRAW ? g_w_total_count : g_r_total_count)	--;
 	}
 
 	void* map()
@@ -139,5 +148,17 @@ void buffer::bind() const{impl_->bind();}
 void buffer::unbind() const{impl_->unbind();}
 std::size_t buffer::size() const { return impl_->size_; }
 int buffer::id() const {return impl_->pbo_;}
+
+boost::property_tree::wptree buffer::info()
+{
+	boost::property_tree::wptree info;
+
+	info.add(L"total_read_count", g_r_total_count);
+	info.add(L"total_write_count", g_w_total_count);
+	info.add(L"total_read_size", g_r_total_size);
+	info.add(L"total_write_size", g_w_total_size);
+
+	return info;
+}
 
 }}}

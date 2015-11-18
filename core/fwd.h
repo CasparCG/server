@@ -22,7 +22,8 @@
 
 #include <common/forward.h>
 
-FORWARD3(caspar, core, ogl, class accelerator);
+FORWARD2(caspar, accelerator, class accelerator);
+FORWARD3(caspar, accelerator, ogl, class device);
 
 FORWARD2(caspar, core, class stage);
 FORWARD2(caspar, core, class mixer);

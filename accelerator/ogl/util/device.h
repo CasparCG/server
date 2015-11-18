@@ -26,6 +26,8 @@
 #include <common/memory.h>
 #include <common/executor.h>
 
+#include <boost/property_tree/ptree_fwd.hpp>
+
 namespace caspar { namespace accelerator { namespace ogl {
 
 class texture;
@@ -70,7 +72,8 @@ public:
 
 	// Properties
 	
-	std::wstring version() const;
+	boost::property_tree::wptree	info() const;
+	std::wstring					version() const;
 
 private:
 	struct impl;

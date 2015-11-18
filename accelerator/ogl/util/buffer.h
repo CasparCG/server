@@ -23,6 +23,8 @@
 
 #include <common/memory.h>
 
+#include <boost/property_tree/ptree_fwd.hpp>
+
 #include <cstdint>
 
 namespace caspar { namespace accelerator { namespace ogl {
@@ -64,6 +66,7 @@ public:
 
 	int id() const;
 
+	static boost::property_tree::wptree info();
 private:
 	struct impl;
 	spl::unique_ptr<impl> impl_;
