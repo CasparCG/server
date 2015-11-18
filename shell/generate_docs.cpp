@@ -69,6 +69,12 @@ public:
 		return shared_from_this();
 	};
 
+	spl::shared_ptr<paragraph_builder> strong(std::wstring text) override
+	{
+		out_ << L"'''" << std::move(text) << L"'''";
+		return shared_from_this();
+	};
+
 	spl::shared_ptr<paragraph_builder> see(std::wstring item) override
 	{
 		out_ << L"[[#" << item << L"|" << item << L"]]";
