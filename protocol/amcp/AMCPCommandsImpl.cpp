@@ -894,7 +894,7 @@ std::wstring data_remove_command(command_context& ctx)
 	if (!boost::filesystem::remove(filename))
 		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(filename + L" could not be removed"));
 
-	return L"201 DATA REMOVE OK\r\n";
+	return L"202 DATA REMOVE OK\r\n";
 }
 
 // Template Graphics Commands
