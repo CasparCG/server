@@ -43,6 +43,7 @@
 #include <core/producer/text/text_producer.h>
 #include <core/consumer/output.h>
 #include <core/mixer/mixer.h>
+#include <core/mixer/image/image_mixer.h>
 #include <core/thumbnail_generator.h>
 #include <core/producer/media_info/media_info.h>
 #include <core/producer/media_info/media_info_repository.h>
@@ -367,6 +368,7 @@ struct server::impl : boost::noncopyable
 				help_repo_,
 				producer_registry_,
 				consumer_registry_,
+				accelerator_.get_ogl_device(),
 				shutdown_server_now_);
 		amcp::register_commands(*amcp_command_repo_);
 
