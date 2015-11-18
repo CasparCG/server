@@ -115,6 +115,7 @@ public:
 		, thumbnail_creator_(thumbnail_creator)
 		, media_info_repo_(std::move(media_info_repo))
 		, producer_registry_(std::move(producer_registry))
+		, mipmap_(mipmap)
 		, monitor_(monitor_factory.create(
 				media_path,
 				filesystem_event::ALL,
