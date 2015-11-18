@@ -6,10 +6,11 @@
 #include "cpu/image/image_mixer.h"
 #endif
 #include "ogl/image/image_mixer.h"
-
 #include "ogl/util/device.h"
 
 #include <common/env.h>
+
+#include <core/mixer/image/image_mixer.h>
 
 #include <tbb/mutex.h>
 
@@ -69,6 +70,11 @@ accelerator::~accelerator()
 std::unique_ptr<core::image_mixer> accelerator::create_image_mixer(int channel_id)
 {
 	return impl_->create_image_mixer(channel_id);
+}
+
+std::shared_ptr<ogl::device> accelerator::get_ogl_device() const
+{
+	return impl_->ogl_device_;
 }
 
 }}

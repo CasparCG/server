@@ -39,6 +39,7 @@ add_precompiled_header(casparcg stdafx.h FORCEINCLUDE)
 add_executable(generate_docs generate_docs.cpp included_modules.h)
 target_link_libraries(generate_docs
 		protocol
+		accelerator
 
 		"${CASPARCG_MODULE_PROJECTS}"
 

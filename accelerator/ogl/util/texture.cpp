@@ -40,7 +40,8 @@ static GLenum FORMAT[] = {0, GL_RED, GL_RG, GL_BGR, GL_BGRA};
 static GLenum INTERNAL_FORMAT[] = {0, GL_R8, GL_RG8, GL_RGB8, GL_RGBA8};	
 static GLenum TYPE[] = {0, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_INT_8_8_8_8_REV};	
 
-static tbb::atomic<int> g_total_count;
+static tbb::atomic<int>			g_total_count;
+static tbb::atomic<std::size_t>	g_total_size;
 
 struct texture::impl : boost::noncopyable
 {
@@ -72,6 +73,8 @@ public:
 		}
 
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
+		g_total_count++;
+		g_total_size += static_cast<std::size_t>(width * height * stride * (mipmapped ? 1.33 : 1.0));
 		//CASPAR_LOG(trace) << "[texture] [" << ++g_total_count << L"] allocated size:" << width*height*stride;	
 	}	
 
@@ -95,6 +98,8 @@ public:
 	~impl()
 	{
 		glDeleteTextures(1, &id_);
+		g_total_size -= static_cast<std::size_t>(width_ * height_ * stride_ * (mipmapped_ ? 1.33 : 1.0));
+		g_total_count--;
 	}
 	
 	void bind()
@@ -168,5 +173,15 @@ int texture::stride() const { return impl_->stride_; }
 bool texture::mipmapped() const { return impl_->mipmapped_; }
 std::size_t texture::size() const { return static_cast<std::size_t>(impl_->width_*impl_->height_*impl_->stride_); }
 int texture::id() const{ return impl_->id_;}
+
+boost::property_tree::wptree texture::info()
+{
+	boost::property_tree::wptree info;
+
+	info.add(L"total_count", g_total_count);
+	info.add(L"total_size", g_total_size);
+
+	return info;
+}
 
 }}}
