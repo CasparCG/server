@@ -72,9 +72,9 @@ struct video_decoder::impl : boost::noncopyable
 	std::shared_ptr<AVPacket>				current_packet_;
 
 public:
-	explicit impl(input& in) 
+	explicit impl(input& in, bool single_threaded)
 		: input_(&in)
-		, codec_context_(open_codec(input_->context(), AVMEDIA_TYPE_VIDEO, index_))
+		, codec_context_(open_codec(input_->context(), AVMEDIA_TYPE_VIDEO, index_, single_threaded))
 		, stream_(input_->context().streams[index_])
 		, nb_frames_(static_cast<uint32_t>(stream_->nb_frames))
 		, width_(codec_context_->width)
@@ -162,7 +162,7 @@ public:
 	}
 };
 
-video_decoder::video_decoder(input& in) : impl_(new impl(in)){}
+video_decoder::video_decoder(input& in, bool single_threaded) : impl_(new impl(in, single_threaded)){}
 video_decoder::video_decoder(video_decoder&& other) : impl_(std::move(other.impl_)){}
 video_decoder& video_decoder::operator=(video_decoder&& other){impl_ = std::move(other.impl_); return *this;}
 std::shared_ptr<AVFrame> video_decoder::operator()(){return impl_->poll();}
