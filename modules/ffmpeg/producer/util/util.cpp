@@ -476,14 +476,14 @@ spl::shared_ptr<AVFrame> create_frame()
 	return frame;
 }
 
-spl::shared_ptr<AVCodecContext> open_codec(AVFormatContext& context, enum AVMediaType type, int& index)
+spl::shared_ptr<AVCodecContext> open_codec(AVFormatContext& context, enum AVMediaType type, int& index, bool single_threaded)
 {	
 	AVCodec* decoder;
 	index = THROW_ON_ERROR2(av_find_best_stream(&context, type, -1, -1, &decoder, 0), "");
 	//if(strcmp(decoder->name, "prores") == 0 && decoder->next && strcmp(decoder->next->name, "prores_lgpl") == 0)
 	//	decoder = decoder->next;
 
-	THROW_ON_ERROR2(tbb_avcodec_open(context.streams[index]->codec, decoder), "");
+	THROW_ON_ERROR2(tbb_avcodec_open(context.streams[index]->codec, decoder, single_threaded), "");
 	return spl::shared_ptr<AVCodecContext>(context.streams[index]->codec, tbb_avcodec_close);
 }
 
@@ -508,7 +508,7 @@ std::wstring print_mode(int width, int height, double fps, bool interlaced)
 	return boost::lexical_cast<std::wstring>(width) + L"x" + boost::lexical_cast<std::wstring>(height) + (!interlaced ? L"p" : L"i") + fps_ss.str();
 }
 
-bool is_valid_file(const std::wstring& filename)
+bool is_valid_file(const std::wstring& filename, bool only_video)
 {				
 	static const auto invalid_exts = {
 		L".png",
@@ -526,6 +526,11 @@ bool is_valid_file(const std::wstring& filename)
 		L".swf",
 		L".ct"
 	};
+	static const auto only_audio = {
+		L".mp3",
+		L".wav",
+		L".wma"
+	};
 	static const auto valid_exts = {
 		L".m2t",
 		L".mov",
@@ -533,8 +538,6 @@ bool is_valid_file(const std::wstring& filename)
 		L".dv",
 		L".flv",
 		L".mpg",
-		L".wav",
-		L".mp3",
 		L".dnxhd",
 		L".h264",
 		L".prores"
@@ -543,10 +546,16 @@ bool is_valid_file(const std::wstring& filename)
 	auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
 		
 	if(std::find(valid_exts.begin(), valid_exts.end(), ext) != valid_exts.end())
-		return true;	
+		return true;
+
+	if (!only_video && std::find(only_audio.begin(), only_audio.end(), ext) != only_audio.end())
+		return true;
 	
 	if(std::find(invalid_exts.begin(), invalid_exts.end(), ext) != invalid_exts.end())
 		return false;	
+
+	if (only_video && std::find(only_audio.begin(), only_audio.end(), ext) != only_audio.end())
+		return false;
 
 	auto u8filename = u8(filename);
 	
@@ -603,7 +612,7 @@ bool try_get_duration(const std::wstring filename, std::int64_t& duration, boost
 	return true;
 }
 
-std::wstring probe_stem(const std::wstring& stem)
+std::wstring probe_stem(const std::wstring& stem, bool only_video)
 {
 	auto stem2 = boost::filesystem::path(stem);
 	auto parent = find_case_insensitive(stem2.parent_path().wstring());
@@ -615,7 +624,7 @@ std::wstring probe_stem(const std::wstring& stem)
 
 	for(auto it = boost::filesystem::directory_iterator(dir); it != boost::filesystem::directory_iterator(); ++it)
 	{
-		if(boost::iequals(it->path().stem().wstring(), stem2.filename().wstring()) && is_valid_file(it->path().wstring()))
+		if(boost::iequals(it->path().stem().wstring(), stem2.filename().wstring()) && is_valid_file(it->path().wstring(), only_video))
 			return it->path().wstring();
 	}
 	return L"";

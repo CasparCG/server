@@ -63,7 +63,7 @@ struct audio_decoder::impl : boost::noncopyable
 	input&														input_;
 	int															index_;
 	const core::video_format_desc								format_desc_;
-	const spl::shared_ptr<AVCodecContext>						codec_context_		= open_codec(input_.context(), AVMEDIA_TYPE_AUDIO, index_);
+	const spl::shared_ptr<AVCodecContext>						codec_context_		= open_codec(input_.context(), AVMEDIA_TYPE_AUDIO, index_, false);
 
 	std::shared_ptr<SwrContext>									swr_				{
 																						swr_alloc_set_opts(
