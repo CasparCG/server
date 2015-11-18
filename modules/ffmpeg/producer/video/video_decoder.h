@@ -37,7 +37,7 @@ namespace caspar { namespace ffmpeg {
 class video_decoder : public boost::noncopyable
 {
 public:
-	explicit video_decoder(class input& input);
+	explicit video_decoder(class input& input, bool single_threaded);
 	
 	video_decoder(video_decoder&& other);
 	video_decoder& operator=(video_decoder&& other);
