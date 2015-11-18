@@ -48,12 +48,12 @@ public:
 		: fill_producer_(fill)
 		, key_producer_(key)
 	{
-		CASPAR_LOG(info) << print() << L" Initialized";
-
 		key_monitor_subject_->attach_parent(monitor_subject_);
 
 		key_producer_->monitor_output().attach_parent(key_monitor_subject_);
 		fill_producer_->monitor_output().attach_parent(monitor_subject_);
+
+		CASPAR_LOG(debug) << print() << L" Initialized";
 	}
 
 	// frame_producer
