@@ -217,6 +217,7 @@ int main(int argc, char** argv)
 			help_repo,
 			producer_registry,
 			consumer_registry,
+			nullptr,
 			shutdown_server_now);
 
 	protocol::amcp::register_commands(repo);

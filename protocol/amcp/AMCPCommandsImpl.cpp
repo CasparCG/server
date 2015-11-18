@@ -2529,6 +2529,31 @@ std::wstring diag_command(command_context& ctx)
 	return L"202 DIAG OK\r\n";
 }
 
+void gl_info_describer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Get information about the allocated and pooled OpenGL resources.");
+	sink.syntax(L"GL INFO");
+	sink.para()->text(L"Retrieves information about the allocated and pooled OpenGL resources.");
+}
+
+std::wstring gl_info_command(command_context& ctx)
+{
+	auto device = ctx.ogl_device;
+
+	if (!device)
+		CASPAR_THROW_EXCEPTION(not_supported() << msg_info("GL command only supported with OpenGL accelerator."));
+
+	std::wstringstream result;
+	result << L"201 GL INFO OK\r\n";
+
+	boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
+	auto info = device->info();
+	boost::property_tree::write_xml(result, info, w);
+	result << L"\r\n";
+
+	return result.str();
+}
+
 static const int WIDTH = 80;
 
 struct max_width_sink : public core::help_sink
@@ -2884,6 +2909,7 @@ void register_commands(amcp_command_repository& repo)
 	repo.register_command(			L"Query Commands",		L"INFO THREADS",				info_threads_describer,				info_threads_command,			0);
 	repo.register_channel_command(	L"Query Commands",		L"INFO DELAY",					info_delay_describer,				info_delay_command,				0);
 	repo.register_command(			L"Query Commands",		L"DIAG",						diag_describer,						diag_command,					0);
+	repo.register_command(			L"Query Commands",		L"GL INFO",						gl_info_describer,					gl_info_command,				0);
 	repo.register_command(			L"Query Commands",		L"BYE",							bye_describer,						bye_command,					0);
 	repo.register_command(			L"Query Commands",		L"KILL",						kill_describer,						kill_command,					0);
 	repo.register_command(			L"Query Commands",		L"RESTART",						restart_describer,					restart_command,				0);
