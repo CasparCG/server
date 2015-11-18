@@ -21,7 +21,7 @@ include_directories(../..)
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${RXCPP_INCLUDE_DIRS})
 include_directories(${TBB_INCLUDE_DIRS})
-include_directories(${CEF_INCLUDE_PATH})
+include_directories(${CEF_INCLUDE_DIRS})
 include_directories(${CEF_PATH})
 include_directories(${ASMLIB_INCLUDE_DIRS})
 
@@ -29,25 +29,11 @@ set_target_properties(html PROPERTIES FOLDER modules)
 source_group(sources\\producer producer/*)
 source_group(sources ./*)
 
-if(MSVC)
-	target_link_libraries(html
-		common
-		core
-
-		optimized release/libcef
-		optimized release/libcef_dll_wrapper
-		debug debug/libcef
-		debug debug/libcef_dll_wrapper
-	)
-else()
-	target_link_libraries(html
-		common
-		core
-
-		cef
-		cef_dll_wrapper
-	)
-endif()
+target_link_libraries(html
+	common
+	core
+	"${CEF_LIBRARIES}"
+)
 
 casparcg_add_include_statement("modules/html/html.h")
 casparcg_add_init_statement("html::init" "html")

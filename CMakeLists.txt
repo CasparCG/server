@@ -187,7 +187,17 @@ set(BLUEFISH_INCLUDE_DIRS		"${DEPENDENCIES_FOLDER}/bluefish/include")
 link_directories("${DEPENDENCIES_FOLDER}/bluefish/lib")
 
 ## CEF ##
-set(CEF_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/cef/include")
+set(CEF_INCLUDE_DIRS			"${DEPENDENCIES_FOLDER}/cef/include")
+if(MSVC)
+	set(CEF_LIBRARIES
+		optimized release/libcef
+		optimized release/libcef_dll_wrapper
+		debug debug/libcef
+		debug debug/libcef_dll_wrapper
+	)
+else()
+	set(CEF_LIBRARIES cef cef_dll_wrapper)
+endif()
 set(CEF_PATH					"${DEPENDENCIES_FOLDER}/cef")
 set(CEF_BIN_PATH				"${DEPENDENCIES_FOLDER}/cef/bin/${PLATFORM_FOLDER_NAME}")
 link_directories("${DEPENDENCIES_FOLDER}/cef/lib/${PLATFORM_FOLDER_NAME}")
