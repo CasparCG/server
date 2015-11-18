@@ -484,7 +484,7 @@ private:
 		if(output_format_.format->flags & AVFMT_GLOBALHEADER)
 			c->flags |= CODEC_FLAG_GLOBAL_HEADER;
 		
-		THROW_ON_ERROR2(tbb_avcodec_open(c, encoder), "[ffmpeg_consumer]");
+		THROW_ON_ERROR2(tbb_avcodec_open(c, encoder, false), "[ffmpeg_consumer]");
 
 		return std::shared_ptr<AVStream>(st, [](AVStream* st)
 		{
