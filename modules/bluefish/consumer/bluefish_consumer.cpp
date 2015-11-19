@@ -478,7 +478,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(
 		auto found_layout = core::audio_channel_layout_repository::get_default()->get_layout(channel_layout);
 
 		if (!found_layout)
-			CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Channel layout " + channel_layout + L" not found"));
+			CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Channel layout " + channel_layout + L" not found"));
 
 		layout = *found_layout;
 	}
@@ -501,7 +501,7 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 		auto found_layout = core::audio_channel_layout_repository::get_default()->get_layout(*channel_layout);
 
 		if (!found_layout)
-			CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Channel layout " + *channel_layout + L" not found"));
+			CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Channel layout " + *channel_layout + L" not found"));
 
 		layout = *found_layout;
 	}

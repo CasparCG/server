@@ -36,7 +36,7 @@ typedef boost::error_info<struct tag_arg_name_info,		std::string>	arg_name_info_
 typedef boost::error_info<struct tag_arg_value_info,	std::string>	arg_value_info_t;
 typedef boost::error_info<struct tag_msg_info,			std::string>	msg_info_t;
 typedef boost::error_info<struct tag_call_stack_info,	std::string>	call_stack_info_t;
-typedef boost::error_info<struct tag_msg_info,			std::string>	error_info_t;
+typedef boost::error_info<struct tag_error_info,		std::string>	error_info_t;
 typedef boost::error_info<struct tag_source_info,		std::string>	source_info_t;
 typedef boost::error_info<struct tag_file_name_info,	std::string>	file_name_info_t;
 

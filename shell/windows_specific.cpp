@@ -124,6 +124,7 @@ void increase_process_priority()
 
 void wait_for_keypress()
 {
+	boost::this_thread::sleep_for(boost::chrono::milliseconds(200));
 	std::system("pause");
 }
 

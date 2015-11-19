@@ -71,7 +71,7 @@ binding<std::wstring> parse_expression(
 	else if (is<binding<double>>(expr))
 		return as<binding<double>>(expr).as<std::wstring>();
 	else
-		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(
 				L"parse_expression() Unsupported type "
 				+ u16(expr.type().name())));
 }

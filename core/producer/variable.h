@@ -122,7 +122,7 @@ public:
 			else if (raw_value == L"false")
 				bool_binding.set(false);
 			else
-				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(L"bool constants should be true or false"));
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"bool constants should be true or false"));
 		}
 		else
 			value_.set(boost::lexical_cast<T>(raw_value));
