@@ -173,7 +173,7 @@ uint32_t frame_producer_base::frame_number() const
 
 variable& frame_producer_base::get_variable(const std::wstring& name)
 {
-	CASPAR_THROW_EXCEPTION(caspar_exception() 
+	CASPAR_THROW_EXCEPTION(user_error()
 			<< msg_info(L"No variable called " + name + L" found in " + print()));
 }
 
@@ -197,8 +197,8 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
 		monitor::subject& monitor_output() override {static monitor::subject monitor_subject(""); return monitor_subject;}										
 		std::wstring name() const override {return L"empty";}
 		uint32_t frame_number() const override {return 0;}
-		std::future<std::wstring> call(const std::vector<std::wstring>& params) override{CASPAR_THROW_EXCEPTION(not_supported());}
-		variable& get_variable(const std::wstring& name) override { CASPAR_THROW_EXCEPTION(not_supported()); }
+		std::future<std::wstring> call(const std::vector<std::wstring>& params) override{CASPAR_THROW_EXCEPTION(not_implemented());}
+		variable& get_variable(const std::wstring& name) override { CASPAR_THROW_EXCEPTION(not_implemented()); }
 		const std::vector<std::wstring>& get_variables() const override { static std::vector<std::wstring> empty; return empty; }
 		draw_frame last_frame() {return draw_frame::empty();}
 		draw_frame create_thumbnail_frame() {return draw_frame::empty();}
@@ -307,7 +307,7 @@ spl::shared_ptr<core::frame_producer> create_destroy_proxy(spl::shared_ptr<core:
 spl::shared_ptr<core::frame_producer> do_create_producer(const frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params, const std::vector<producer_factory_t>& factories, bool throw_on_fail = false)
 {
 	if(params.empty())
-		CASPAR_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
+		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("params cannot be empty"));
 	
 	auto producer = frame_producer::empty();
 	std::any_of(factories.begin(), factories.end(), [&](const producer_factory_t& factory) -> bool

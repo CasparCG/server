@@ -111,20 +111,26 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 			catch (file_not_found&)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
-				CASPAR_LOG(error) << L"File not found. No match found for parameters. Check syntax.";
+				CASPAR_LOG(error) << L"File not found. No match found for parameters. Check syntax. Turn on log level debug for stacktrace.";
 				pCurrentCommand->SetReplyString(L"404 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
 			catch (const user_error& e)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
-				CASPAR_LOG(error) << *boost::get_error_info<msg_info_t>(e) << ". Check syntax.";
+				CASPAR_LOG(error) << *boost::get_error_info<msg_info_t>(e) << ". Check syntax. Turn on log level debug for stacktrace.";
 				pCurrentCommand->SetReplyString(L"403 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
 			catch (std::out_of_range&)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
-				CASPAR_LOG(error) << L"Missing parameter. Check syntax.";
+				CASPAR_LOG(error) << L"Missing parameter. Check syntax. Turn on log level debug for stacktrace.";
 				pCurrentCommand->SetReplyString(L"402 " + pCurrentCommand->print() + L" FAILED\r\n");
+			}
+			catch (boost::bad_lexical_cast&)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
+				CASPAR_LOG(error) << L"Invalid parameter. Check syntax. Turn on log level debug for stacktrace.";
+				pCurrentCommand->SetReplyString(L"403 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
 			catch (...)
 			{

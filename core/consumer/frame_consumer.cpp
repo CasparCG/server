@@ -281,7 +281,7 @@ spl::shared_ptr<core::frame_consumer> frame_consumer_registry::create_consumer(
 		const std::vector<std::wstring>& params, interaction_sink* sink) const
 {
 	if(params.empty())
-		CASPAR_THROW_EXCEPTION(invalid_argument() << arg_name_info("params") << arg_value_info(""));
+		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("params cannot be empty"));
 	
 	auto consumer = frame_consumer::empty();
 	auto& consumer_factories = impl_->consumer_factories;
@@ -317,7 +317,7 @@ spl::shared_ptr<frame_consumer> frame_consumer_registry::create_consumer(
 	auto found = preconfigured_consumer_factories.find(element_name);
 
 	if (found == preconfigured_consumer_factories.end())
-		CASPAR_THROW_EXCEPTION(file_not_found()
+		CASPAR_THROW_EXCEPTION(user_error()
 			<< msg_info(L"No consumer factory registered for element name " + element_name));
 
 	return spl::make_shared<destroy_consumer_proxy>(
