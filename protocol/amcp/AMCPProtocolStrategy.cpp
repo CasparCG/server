@@ -134,9 +134,12 @@ public:
 			case error_state::access_error:
 				answer << L"503 " << result.command_name << " FAILED\r\n";
 				break;
-			default:
+			case error_state::unknown_error:
 				answer << L"500 FAILED\r\n";
 				break;
+			default:
+				CASPAR_THROW_EXCEPTION(programming_error()
+						<< msg_info(L"Unhandled error_state enum constant " + boost::lexical_cast<std::wstring>(static_cast<int>(result.error))));
 			}
 			client->send(answer.str());
 		}
