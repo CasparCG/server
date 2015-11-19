@@ -77,7 +77,7 @@ public:
 
 		//boost::iter_split(split, input_, boost::algorithm::first_finder(delimiter_)) was painfully slow in debug-build
 
-		auto delim_pos = input_.find_first_of(delimiter_);
+		auto delim_pos = input_.find(delimiter_);
 		while(delim_pos != std::string::npos)
 		{
 			strategy_->parse(input_.substr(0, delim_pos));
