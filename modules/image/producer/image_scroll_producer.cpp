@@ -101,8 +101,8 @@ struct image_scroll_producer : public core::frame_producer_base
 		bool horizontal = height_ == format_desc_.height;
 
 		if (!vertical && !horizontal)
-			CASPAR_THROW_EXCEPTION(
-				caspar::invalid_argument() << msg_info("Neither width nor height matched the video resolution"));
+			CASPAR_THROW_EXCEPTION(caspar::user_error()
+					<< msg_info("Neither width nor height matched the video resolution"));
 
 		if (vertical)
 		{

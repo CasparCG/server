@@ -85,7 +85,7 @@ std::vector<unsigned char> from_base64(const std::string& data)
 			[] (char c) { return !std::isspace(static_cast<unsigned char>(c)); });
 
 	if (length % 4 != 0)
-		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(
 				"The length of a base64 sequence must be a multiple of 4"));
 
 	int padding = 0;

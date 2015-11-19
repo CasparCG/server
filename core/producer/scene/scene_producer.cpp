@@ -101,7 +101,7 @@ mark_action get_mark_action(const std::wstring& name)
 	else if (name == L"remove")
 		return mark_action::remove;
 	else
-		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info(L"Invalid mark_action " + name));
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid mark_action " + name));
 }
 
 struct marker
@@ -184,7 +184,7 @@ struct scene_producer::impl
 		auto found = variables_.find(name);
 
 		if (found == variables_.end())
-			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(name + L" not found in scene"));
+			CASPAR_THROW_EXCEPTION(user_error() << msg_info(name + L" not found in scene"));
 
 		return *found->second;
 	}
@@ -433,7 +433,7 @@ struct scene_producer::impl
 		else if (call == L"next()")
 			next();
 		else
-			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(L"Unknown call " + call));
+			CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Unknown call " + call));
 
 		return L"";
 	}

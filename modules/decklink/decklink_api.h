@@ -81,7 +81,7 @@ static com_ptr<IDeckLinkIterator> create_iterator()
 {
     CComPtr<IDeckLinkIterator> pDecklinkIterator;
     if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
-        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Decklink drivers not found."));
+        CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Decklink drivers not found."));
     return pDecklinkIterator;
 }
 
@@ -91,7 +91,7 @@ static com_iface_ptr<I> iface_cast(const com_ptr<T>& ptr)
 	com_iface_ptr<I> result = ptr;
 
 	if (!result)
-		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(std::string("Could not cast from ") + typeid(T).name() + " to " + typeid(I).name() + ". This is probably due to old Decklink drivers."));
+		CASPAR_THROW_EXCEPTION(not_supported() << msg_info(std::string("Could not cast from ") + typeid(T).name() + " to " + typeid(I).name() + ". This is probably due to old Decklink drivers."));
 
 	return result;
 }
@@ -160,7 +160,7 @@ static com_ptr<IDeckLinkIterator> create_iterator()
     IDeckLinkIterator* iterator = CreateDeckLinkIteratorInstance();
 
     if (iterator == nullptr)
-        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Decklink drivers not found."));
+        CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Decklink drivers not found."));
 
 	return wrap_raw<com_ptr>(iterator, true);
 }

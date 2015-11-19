@@ -68,7 +68,7 @@ struct system_info_provider_repository::impl
 		auto found = version_providers_.find(boost::algorithm::to_lower_copy(version_name));
 
 		if (found == version_providers_.end())
-			CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"No version provider with name " + version_name));
+			CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"No version provider with name " + version_name));
 
 		return found->second();
 	}
