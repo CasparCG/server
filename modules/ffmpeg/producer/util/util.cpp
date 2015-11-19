@@ -650,7 +650,7 @@ core::audio_channel_layout get_audio_channel_layout(const AVCodecContext& codec_
 			auto layout = core::audio_channel_layout_repository::get_default()->get_layout(channel_layout_spec);
 
 			if (!layout)
-				CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info(L"No channel layout with name " + channel_layout_spec + L" registered"));
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"No channel layout with name " + channel_layout_spec + L" registered"));
 
 			layout->num_channels = num_channels;
 

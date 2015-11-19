@@ -209,7 +209,7 @@ struct output_format
 			format = av_guess_format(value.c_str(), nullptr, nullptr);
 
 			if(format == nullptr)
-				CASPAR_THROW_EXCEPTION(invalid_argument() << arg_name_info("f"));
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info("Unknown format " + value));
 
 			return true;
 		}
@@ -217,7 +217,7 @@ struct output_format
 		{
 			auto c = avcodec_find_encoder_by_name(value.c_str());
 			if(c == nullptr)
-				CASPAR_THROW_EXCEPTION(invalid_argument() << arg_name_info("vcodec"));
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info("Unknown video codec " + value));
 
 			vcodec = avcodec_find_encoder_by_name(value.c_str())->id;
 			return true;
@@ -227,7 +227,7 @@ struct output_format
 		{
 			auto c = avcodec_find_encoder_by_name(value.c_str());
 			if(c == nullptr)
-				CASPAR_THROW_EXCEPTION(invalid_argument() << arg_name_info("acodec"));
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info("Unknown audio codec " + value));
 
 			acodec = avcodec_find_encoder_by_name(value.c_str())->id;
 
@@ -236,7 +236,7 @@ struct output_format
 		else if(name == "s")
 		{
 			if(av_parse_video_size(&width, &height, value.c_str()) < 0)
-				CASPAR_THROW_EXCEPTION(invalid_argument() << arg_name_info("s"));
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info("Unknown video size " + value));
 			
 			return true;
 		}

@@ -731,7 +731,7 @@ std::wstring set_command(command_context& ctx)
 			return L"202 SET MODE OK\r\n";
 		}
 
-		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info(L"Invalid video mode"));
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid video mode"));
 	}
 	else if (name == L"CHANNEL_LAYOUT")
 	{
@@ -743,10 +743,10 @@ std::wstring set_command(command_context& ctx)
 			return L"202 SET CHANNEL_LAYOUT OK\r\n";
 		}
 
-		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info(L"Invalid audio channel layout"));
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid audio channel layout"));
 	}
 
-	CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info(L"Invalid channel variable"));
+	CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid channel variable"));
 }
 
 void data_store_describer(core::help_sink& sink, const core::help_repository& repo)
@@ -899,17 +899,6 @@ std::wstring data_remove_command(command_context& ctx)
 
 // Template Graphics Commands
 
-int get_and_validate_layer(const std::wstring& layerstring) {
-	int length = layerstring.length();
-	for (int i = 0; i < length; ++i) {
-		if (!std::isdigit(layerstring[i])) {
-			CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info(layerstring + L" is not a layer"));
-		}
-	}
-
-	return boost::lexical_cast<int>(layerstring);
-}
-
 void cg_add_describer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"Prepare a template for displaying.");
@@ -925,7 +914,7 @@ std::wstring cg_add_command(command_context& ctx)
 {
 	//CG 1 ADD 0 "template_folder/templatename" [STARTLABEL] 0/1 [DATA]
 
-	int layer = get_and_validate_layer(ctx.parameters.at(0));
+	int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
 	std::wstring label;		//_parameters[2]
 	bool bDoStart = false;		//_parameters[2] alt. _parameters[3]
 	unsigned int dataIndex = 3;
@@ -994,7 +983,7 @@ void cg_play_describer(core::help_sink& sink, const core::help_repository& repo)
 
 std::wstring cg_play_command(command_context& ctx)
 {
-	int layer = get_and_validate_layer(ctx.parameters.at(0));
+	int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
 	ctx.cg_registry->get_proxy(spl::make_shared_ptr(ctx.channel.channel), ctx.layer_index(core::cg_proxy::DEFAULT_LAYER))->play(layer);
 
 	return L"202 CG OK\r\n";
@@ -1023,7 +1012,7 @@ void cg_stop_describer(core::help_sink& sink, const core::help_repository& repo)
 
 std::wstring cg_stop_command(command_context& ctx)
 {
-	int layer = get_and_validate_layer(ctx.parameters.at(0));
+	int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
 	get_expected_cg_proxy(ctx)->stop(layer, 0);
 
 	return L"202 CG OK\r\n";
@@ -1042,7 +1031,7 @@ void cg_next_describer(core::help_sink& sink, const core::help_repository& repo)
 
 std::wstring cg_next_command(command_context& ctx)
 {
-	int layer = get_and_validate_layer(ctx.parameters.at(0));
+	int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
 	get_expected_cg_proxy(ctx)->next(layer);
 
 	return L"202 CG OK\r\n";
@@ -1059,7 +1048,7 @@ void cg_remove_describer(core::help_sink& sink, const core::help_repository& rep
 
 std::wstring cg_remove_command(command_context& ctx)
 {
-	int layer = get_and_validate_layer(ctx.parameters.at(0));
+	int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
 	get_expected_cg_proxy(ctx)->remove(layer);
 
 	return L"202 CG OK\r\n";
@@ -1090,7 +1079,7 @@ void cg_update_describer(core::help_sink& sink, const core::help_repository& rep
 
 std::wstring cg_update_command(command_context& ctx)
 {
-	int layer = get_and_validate_layer(ctx.parameters.at(0));
+	int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
 
 	std::wstring dataString = ctx.parameters.at(1);
 	if (dataString.at(0) != L'<' && dataString.at(0) != L'{')
@@ -1120,7 +1109,7 @@ std::wstring cg_invoke_command(command_context& ctx)
 {
 	std::wstringstream replyString;
 	replyString << L"201 CG OK\r\n";
-	int layer = get_and_validate_layer(ctx.parameters.at(0));
+	int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
 	auto result = get_expected_cg_proxy(ctx)->invoke(layer, ctx.parameters.at(1));
 	replyString << result << L"\r\n";
 
@@ -1147,7 +1136,7 @@ std::wstring cg_info_command(command_context& ctx)
 	}
 	else
 	{
-		int layer = get_and_validate_layer(ctx.parameters.at(0));
+		int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
 		auto desc = get_expected_cg_proxy(ctx)->description(layer);
 
 		replyString << desc << L"\r\n";
@@ -2157,7 +2146,7 @@ std::wstring thumbnail_generate_command(command_context& ctx)
 		return L"202 THUMBNAIL GENERATE OK\r\n";
 	}
 	else
-		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(L"Thumbnail generation turned off"));
+		CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"Thumbnail generation turned off"));
 }
 
 void thumbnail_generateall_describer(core::help_sink& sink, const core::help_repository& repo)
@@ -2175,7 +2164,7 @@ std::wstring thumbnail_generateall_command(command_context& ctx)
 		return L"202 THUMBNAIL GENERATE_ALL OK\r\n";
 	}
 	else
-		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(L"Thumbnail generation turned off"));
+		CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"Thumbnail generation turned off"));
 }
 
 // Query Commands

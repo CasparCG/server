@@ -306,7 +306,7 @@ core::chroma::type get_chroma_mode(const std::wstring& str)
 	else if (boost::iequals(str, L"blue"))
 		return core::chroma::type::blue;
 	else
-		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("chroma mode has to be one of none, green or blue"));
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info("chroma mode has to be one of none, green or blue"));
 }
 
 std::wstring get_chroma_mode(core::chroma::type type)
