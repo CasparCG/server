@@ -1005,7 +1005,7 @@ spl::shared_ptr<core::cg_proxy> get_expected_cg_proxy(command_context& ctx)
 	auto proxy = ctx.cg_registry->get_proxy(spl::make_shared_ptr(ctx.channel.channel), ctx.layer_index(core::cg_proxy::DEFAULT_LAYER));
 
 	if (proxy == cg_proxy::empty())
-		CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"No CG proxy running on layer"));
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"No CG proxy running on layer"));
 
 	return proxy;
 }
