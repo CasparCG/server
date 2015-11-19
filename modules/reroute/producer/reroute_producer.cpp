@@ -81,7 +81,7 @@ spl::shared_ptr<core::frame_producer> create_producer(
 	auto found_channel = boost::find_if(dependencies.channels, [=](spl::shared_ptr<core::video_channel> ch) { return ch->index() == channel_id; });
 
 	if (found_channel == dependencies.channels.end())
-		CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"No channel with id " + channel_id));
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"No channel with id " + boost::lexical_cast<std::wstring>(channel_id)));
 
 	if (has_layer_spec)
 	{

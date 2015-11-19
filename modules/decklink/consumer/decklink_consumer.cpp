@@ -278,7 +278,7 @@ struct key_video_context : public IDeckLinkVideoOutputCallback, boost::noncopyab
 
 		if (FAILED(output_->SetScheduledFrameCompletionCallback(this)))
 			CASPAR_THROW_EXCEPTION(caspar_exception()
-					<< msg_info(u8(print) + " Failed to set key playback completion callback.")
+					<< msg_info(print + L" Failed to set key playback completion callback.")
 					<< boost::errinfo_api_function("SetScheduledFrameCompletionCallback"));
 	}
 
@@ -286,11 +286,11 @@ struct key_video_context : public IDeckLinkVideoOutputCallback, boost::noncopyab
 	void enable_video(BMDDisplayMode display_mode, const Print& print)
 	{
 		if (FAILED(output_->EnableVideoOutput(display_mode, bmdVideoOutputFlagDefault)))
-			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Could not enable key video output."));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Could not enable key video output."));
 
 		if (FAILED(output_->SetScheduledFrameCompletionCallback(this)))
 			CASPAR_THROW_EXCEPTION(caspar_exception()
-					<< msg_info(u8(print()) + " Failed to set key playback completion callback.")
+					<< msg_info(print() + L" Failed to set key playback completion callback.")
 					<< boost::errinfo_api_function("SetScheduledFrameCompletionCallback"));
 	}
 
@@ -443,10 +443,10 @@ public:
 	void enable_audio()
 	{
 		if(FAILED(output_->EnableAudioOutput(bmdAudioSampleRate48kHz, bmdAudioSampleType32bitInteger, out_channel_layout_.num_channels, bmdAudioOutputStreamTimestamped)))
-				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Could not enable audio output."));
+				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Could not enable audio output."));
 				
 		if(FAILED(output_->SetAudioCallback(this)))
-			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Could not set audio callback."));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Could not set audio callback."));
 
 		CASPAR_LOG(info) << print() << L" Enabled embedded-audio.";
 	}
@@ -454,11 +454,11 @@ public:
 	void enable_video(BMDDisplayMode display_mode)
 	{
 		if(FAILED(output_->EnableVideoOutput(display_mode, bmdVideoOutputFlagDefault))) 
-			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Could not enable fill video output."));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Could not enable fill video output."));
 		
 		if(FAILED(output_->SetScheduledFrameCompletionCallback(this)))
 			CASPAR_THROW_EXCEPTION(caspar_exception() 
-									<< msg_info(u8(print()) + " Failed to set fill playback completion callback.")
+									<< msg_info(print() + L" Failed to set fill playback completion callback.")
 									<< boost::errinfo_api_function("SetScheduledFrameCompletionCallback"));
 
 		if (key_context_)
@@ -468,10 +468,10 @@ public:
 	void start_playback()
 	{
 		if(FAILED(output_->StartScheduledPlayback(0, format_desc_.time_scale, 1.0))) 
-			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Failed to schedule fill playback."));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to schedule fill playback."));
 
 		if (key_context_ && FAILED(key_context_->output_->StartScheduledPlayback(0, format_desc_.time_scale, 1.0)))
-			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Failed to schedule key playback."));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to schedule key playback."));
 	}
 	
 	virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID, LPVOID*)	{return E_NOINTERFACE;}
@@ -628,7 +628,7 @@ public:
 			std::rethrow_exception(exception);		
 
 		if(!is_running_)
-			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(u8(print()) + " Is not running."));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Is not running."));
 		
 		bool audio_ready = !config_.embedded_audio;
 		bool video_ready = false;
@@ -835,7 +835,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(
 		auto found_layout = core::audio_channel_layout_repository::get_default()->get_layout(channel_layout);
 
 		if (!found_layout)
-			CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Channel layout " + channel_layout + L" not found."));
+			CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Channel layout " + channel_layout + L" not found."));
 
 		config.out_channel_layout = *found_layout;
 	}
@@ -869,7 +869,7 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 		auto found_layout = core::audio_channel_layout_repository::get_default()->get_layout(*channel_layout);
 
 		if (!found_layout)
-			CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Channel layout " + *channel_layout + L" not found."));
+			CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Channel layout " + *channel_layout + L" not found."));
 
 		config.out_channel_layout = *found_layout;
 	}

@@ -323,10 +323,16 @@ int main(int argc, char** argv)
 		if (!should_wait_for_keypress)
 			wait_for_keypress();
 	}
-	catch(boost::property_tree::file_parser_error&)
+	catch(const boost::property_tree::file_parser_error& e)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		CASPAR_LOG(fatal) << L"Unhandled configuration error in main thread. Please check the configuration file (" << config_file_name << L") for errors.";
+		CASPAR_LOG(fatal) << "At " << u8(config_file_name) << ":" << e.line() << ": " << e.message() << ". Please check the configuration file (" << u8(config_file_name) << ") for errors.";
+		wait_for_keypress();
+	}
+	catch (const user_error& e)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
+		CASPAR_LOG(fatal) << *boost::get_error_info<msg_info_t>(e) << ". Please check the configuration file (" << u8(config_file_name) << ") for errors. Turn on log level debug for stacktrace.";
 		wait_for_keypress();
 	}
 	catch(...)

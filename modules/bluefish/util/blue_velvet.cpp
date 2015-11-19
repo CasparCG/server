@@ -185,7 +185,7 @@ EVideoMode get_video_mode(CBlueVelvet4& blue, const core::video_format_desc& for
 			vid_fmt = videoMode;			
 	}
 	if(vid_fmt == VID_FMT_INVALID)
-		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("video-mode not supported.") << arg_value_info(format_desc.name));
+		CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"video-mode not supported: " + format_desc.name));
 
 	return vid_fmt;
 }
@@ -193,7 +193,7 @@ EVideoMode get_video_mode(CBlueVelvet4& blue, const core::video_format_desc& for
 spl::shared_ptr<CBlueVelvet4> create_blue()
 {
 	if(!BlueVelvetFactory4 || !encode_hanc_frame)
-		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Bluefish drivers not found."));
+		CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Bluefish drivers not found."));
 
 	return spl::shared_ptr<CBlueVelvet4>(BlueVelvetFactory4(), BlueVelvetDestroy);
 }

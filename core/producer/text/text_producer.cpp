@@ -230,7 +230,7 @@ public:
 		else if (name == L"tracking")
 			return tracking_;
 
-		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(L"text_producer does not have a variable called " + name));
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"text_producer does not have a variable called " + name));
 	}
 
 	const std::vector<std::wstring>& get_variables() const
