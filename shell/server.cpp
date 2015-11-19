@@ -242,14 +242,16 @@ struct server::impl : boost::noncopyable
 	{   
 		using boost::property_tree::wptree;
 		for (auto& xml_channel : pt.get_child(L"configuration.channels"))
-		{		
-			auto format_desc = video_format_desc(xml_channel.second.get(L"video-mode", L"PAL"));
+		{
+			auto format_desc_str = xml_channel.second.get(L"video-mode", L"PAL");
+			auto format_desc = video_format_desc(format_desc_str);
 			if(format_desc.format == video_format::invalid)
-				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Invalid video-mode."));
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid video-mode: " + format_desc_str));
 
-			auto channel_layout = core::audio_channel_layout_repository::get_default()->get_layout(xml_channel.second.get(L"channel-layout", L"stereo"));
+			auto channel_layout_str = xml_channel.second.get(L"channel-layout", L"stereo");
+			auto channel_layout = core::audio_channel_layout_repository::get_default()->get_layout(channel_layout_str);
 			if (!channel_layout)
-				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Unknown channel-layout."));
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Unknown channel-layout: " + channel_layout_str));
 
 			auto channel_id = static_cast<int>(channels_.size() + 1);
 			auto channel = spl::make_shared<video_channel>(channel_id, format_desc, *channel_layout, accelerator_.create_image_mixer(channel_id));
@@ -259,14 +261,19 @@ struct server::impl : boost::noncopyable
 			
 			for (auto& xml_consumer : xml_channel.second.get_child(L"consumers"))
 			{
+				auto name = xml_consumer.first;
+
 				try
 				{
-					auto name = xml_consumer.first;
-					
 					if (name != L"<xmlcomment>")
 						channel->output().add(consumer_registry_->create_consumer(name, xml_consumer.second, &channel->stage()));
 				}
-				catch(...)
+				catch (const user_error& e)
+				{
+					CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
+					CASPAR_LOG(error) << *boost::get_error_info<msg_info_t>(e) << L". Error found in " << name << L" consumer configuration. Turn on log level debug for stacktrace.";
+				}
+				catch (...)
 				{
 					CASPAR_LOG_CURRENT_EXCEPTION();
 				}
@@ -375,30 +382,23 @@ struct server::impl : boost::noncopyable
 		using boost::property_tree::wptree;
 		for (auto& xml_controller : pt.get_child(L"configuration.controllers"))
 		{
-			try
-			{
-				auto name = xml_controller.first;
-				auto protocol = xml_controller.second.get<std::wstring>(L"protocol");	
+			auto name = xml_controller.first;
+			auto protocol = xml_controller.second.get<std::wstring>(L"protocol");	
 
-				if(name == L"tcp")
-				{					
-					unsigned int port = xml_controller.second.get(L"port", 5250);
-					auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(
-							io_service_,
-							create_protocol(protocol, L"TCP Port " + boost::lexical_cast<std::wstring>(port)),
-							port);
-					async_servers_.push_back(asyncbootstrapper);
+			if(name == L"tcp")
+			{					
+				unsigned int port = xml_controller.second.get(L"port", 5250);
+				auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(
+						io_service_,
+						create_protocol(protocol, L"TCP Port " + boost::lexical_cast<std::wstring>(port)),
+						port);
+				async_servers_.push_back(asyncbootstrapper);
 
-					if (!primary_amcp_server_ && boost::iequals(protocol, L"AMCP"))
-						primary_amcp_server_ = asyncbootstrapper;
-				}
-				else
-					CASPAR_LOG(warning) << "Invalid controller: " << name;	
+				if (!primary_amcp_server_ && boost::iequals(protocol, L"AMCP"))
+					primary_amcp_server_ = asyncbootstrapper;
 			}
-			catch(...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-			}
+			else
+				CASPAR_LOG(warning) << "Invalid controller: " << name;	
 		}
 	}
 
@@ -417,7 +417,7 @@ struct server::impl : boost::noncopyable
 		else if (boost::iequals(name, L"LOG"))
 			return spl::make_shared<protocol::log::tcp_logger_protocol_strategy_factory>();
 
-		CASPAR_THROW_EXCEPTION(caspar_exception() << arg_name_info(L"name") << arg_value_info(name) << msg_info(L"Invalid protocol"));
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid protocol: " + name));
 	}
 
 	void start_initial_media_info_scan()

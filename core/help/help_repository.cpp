@@ -76,7 +76,7 @@ void help_repository::help(std::set<std::wstring> tags, std::wstring name, help_
 	});
 
 	if (found.empty())
-		CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Could not find help item " + name));
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Could not find help item " + name));
 
 	for (auto& item : found)
 	{

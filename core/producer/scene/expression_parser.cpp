@@ -56,7 +56,7 @@ wchar_t next_non_whitespace(
 		}
 	}
 
-	CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
+	CASPAR_THROW_EXCEPTION(user_error() << msg_info(
 			L"Unexpected end of input (" + error_if_eof + L") in " + str));
 }
 
@@ -80,13 +80,13 @@ boost::any parse_parenthesis(
 		const variable_repository& var_repo)
 {
 	if (*cursor++ != L'(')
-		CASPAR_THROW_EXCEPTION(caspar_exception()
+		CASPAR_THROW_EXCEPTION(user_error()
 				<< msg_info(L"Expected (" + at_position(cursor, str)));
 
 	auto expr = parse_expression(cursor, str, var_repo);
 
 	if (*cursor++ != L')')
-		CASPAR_THROW_EXCEPTION(caspar_exception()
+		CASPAR_THROW_EXCEPTION(user_error()
 				<< msg_info(L"Expected )" + at_position(cursor, str)));
 
 	return expr;
@@ -118,7 +118,7 @@ std::wstring parse_string_literal(
 	std::wstring literal;
 
 	if (*cursor++ != L'"')
-		CASPAR_THROW_EXCEPTION(caspar_exception()
+		CASPAR_THROW_EXCEPTION(user_error()
 				<< msg_info(L"Expected (" + at_position(cursor, str)));
 
 	bool escaping = false;
@@ -166,7 +166,7 @@ std::wstring parse_string_literal(
 		++cursor;
 	}
 
-	CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
+	CASPAR_THROW_EXCEPTION(user_error() << msg_info(
 			L"Unexpected end of input (Expected closing \") in " + str));
 }
 
@@ -208,7 +208,7 @@ boost::any parse_variable(
 	else if (var.is<bool>())
 		return var.as<bool>();
 
-	CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
+	CASPAR_THROW_EXCEPTION(user_error() << msg_info(
 				L"Unhandled variable type of " + variable_name
 				+ at_position(cursor, str)));
 }
@@ -262,7 +262,7 @@ op parse_operator(std::wstring::const_iterator& cursor, const std::wstring& str)
 			return op(ch, 15, op::op_type::TERNARY);
 		case L'-':
 			if (first == L'-')
-				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(
 						L"Did not expect -" + at_position(cursor, str)));
 			else
 				first = ch;
@@ -271,7 +271,7 @@ op parse_operator(std::wstring::const_iterator& cursor, const std::wstring& str)
 			break;
 		case L'!':
 			if (first == L'!')
-				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(
 						L"Did not expect !" + at_position(cursor, str)));
 			else
 				first = ch;
@@ -280,7 +280,7 @@ op parse_operator(std::wstring::const_iterator& cursor, const std::wstring& str)
 			break;
 		case L'<':
 			if (first == L'<')
-				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(
 						L"Did not expect <" + at_position(cursor, str)));
 			else
 				first = ch;
@@ -289,7 +289,7 @@ op parse_operator(std::wstring::const_iterator& cursor, const std::wstring& str)
 			break;
 		case L'>':
 			if (first == L'>')
-				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(
 						L"Did not expect >" + at_position(cursor, str)));
 			else
 				first = ch;
@@ -323,7 +323,7 @@ op parse_operator(std::wstring::const_iterator& cursor, const std::wstring& str)
 				first = L'=';
 			}
 			else
-				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(
 						L"Did not expect =" + at_position(cursor, str)));
 
 			break;
@@ -339,7 +339,7 @@ op parse_operator(std::wstring::const_iterator& cursor, const std::wstring& str)
 				first = L'|';
 			}
 			else
-				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(
 						L"Did not expect =" + at_position(cursor, str)));
 
 			break;
@@ -355,7 +355,7 @@ op parse_operator(std::wstring::const_iterator& cursor, const std::wstring& str)
 				first = L'&';
 			}
 			else
-				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(
 						L"Did not expect =" + at_position(cursor, str)));
 
 			break;
@@ -375,13 +375,13 @@ op parse_operator(std::wstring::const_iterator& cursor, const std::wstring& str)
 			else if (first == L'!')
 				return op(L'!', 3, op::op_type::UNARY);
 			else
-				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(
 						L"Expected second character of operator"
 						+ at_position(cursor, str)));
 		}
 	}
 
-	CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
+	CASPAR_THROW_EXCEPTION(user_error() << msg_info(
 			L"Unexpected end of input (Expected operator) in " + str));
 }
 
@@ -402,7 +402,7 @@ boost::any as_binding(const boost::any& value)
 	else if (is<binding<std::wstring>>(value))
 		return as<binding<std::wstring>>(value);
 	else
-		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(
 				L"Couldn't detect type of " + u16(value.type().name())));
 }
 
@@ -414,7 +414,7 @@ binding<T> require(const boost::any& value)
 	if (is<binding<T>>(b))
 		return as<binding<T>>(b);
 	else
-		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(
 				L"Required binding of type " + u16(typeid(T).name())
 				+ L" but got " + u16(value.type().name())));
 }
@@ -459,7 +459,7 @@ binding<std::wstring> stringify(const boost::any& value)
 	else if (is<binding<bool>>(b))
 		return as<binding<bool>>(b).as<std::wstring>();
 	else
-		CASPAR_THROW_EXCEPTION(caspar_exception()
+		CASPAR_THROW_EXCEPTION(user_error()
 				<< msg_info(L"Couldn't stringify " + u16(value.type().name())));
 }
 
@@ -637,7 +637,7 @@ void resolve_operators(int precedence, std::vector<boost::any>& tokens)
 				auto& token_colon_operator = tokens.at(i + 2);
 
 				if (as<op>(token_colon_operator).characters != L":")
-					CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
+					CASPAR_THROW_EXCEPTION(user_error() << msg_info(
 							L"Expected : as part of ternary expression"));
 
 				auto& token_false_value = tokens.at(i + 3);
@@ -712,7 +712,7 @@ boost::any parse_expression(
 	}
 
 	if (tokens.empty())
-		CASPAR_THROW_EXCEPTION(caspar_exception()
+		CASPAR_THROW_EXCEPTION(user_error()
 				<< msg_info(L"Expected expression"));
 
 	int precedence = 1;
@@ -724,22 +724,5 @@ boost::any parse_expression(
 
 	return as_binding(tokens.at(0));
 }
-
-/*template<>
-binding<std::wstring> parse_expression(
-		const std::wstring& str, const variable_repository& var_repo)
-{
-	auto cursor = str.cbegin();
-	auto expr = parse_expression(cursor, str, var_repo);
-
-	if (is<binding<std::wstring>>(expr))
-		return as<binding<std::wstring>>(expr);
-	else if (is<binding<double>>(expr))
-		return as<binding<double>>(expr).as<std::wstring>();
-	else
-		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
-				L"parse_expression() Unsupported type "
-				+ u16(expr.type().name())));
-}*/
 
 }}}

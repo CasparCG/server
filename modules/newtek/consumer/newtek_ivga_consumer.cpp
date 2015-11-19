@@ -66,7 +66,7 @@ public:
 		: executor_(print())
 	{
 		if (!airsend::is_available())
-			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(airsend::dll_name() + L" not available"));
+			CASPAR_THROW_EXCEPTION(not_supported() << msg_info(airsend::dll_name() + L" not available"));
 
 		connected_ = false;
 

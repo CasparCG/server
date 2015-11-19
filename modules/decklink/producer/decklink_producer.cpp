@@ -426,7 +426,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 		auto found_layout = core::audio_channel_layout_repository::get_default()->get_layout(channel_layout_spec);
 
 		if (!found_layout)
-			CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Channel layout not found."));
+			CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Channel layout not found."));
 
 		channel_layout = *found_layout;
 	}

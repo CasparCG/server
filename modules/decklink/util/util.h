@@ -132,9 +132,7 @@ BMDDisplayMode get_display_mode(const T& device, BMDDisplayMode format, BMDPixel
 	}
 
     if(!m)
-		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Device could not find requested video-format.") 
-												 << arg_value_info(boost::lexical_cast<std::string>(format))
-												 << arg_name_info("format"));
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info("Device could not find requested video-format: " + boost::lexical_cast<std::string>(format)));
 
 	com_ptr<IDeckLinkDisplayMode> mode = wrap_raw<com_ptr>(m, true);
 
@@ -184,7 +182,7 @@ static com_ptr<IDeckLink> get_device(size_t device_index)
     }
 
 	if(n != device_index || !decklink)
-		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Decklink device not found.") << arg_name_info("device_index") << arg_value_info(boost::lexical_cast<std::string>(device_index)));
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info("Decklink device " + boost::lexical_cast<std::string>(device_index) + " not found."));
 		
 	return decklink;
 }
