@@ -52,6 +52,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/range/adaptor/transformed.hpp>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -83,6 +84,12 @@ core::audio_channel_layout get_adjusted_channel_layout(core::audio_channel_layou
 		layout.num_channels = 16;
 
 	return layout;
+}
+
+template <typename T>
+std::wstring to_string(const T& cadence)
+{
+	return boost::join(cadence | boost::adaptors::transformed([](size_t i) { return boost::lexical_cast<std::wstring>(i); }), L", ");
 }
 		
 class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
@@ -245,7 +252,7 @@ public:
 			sync_buffer_.push_back(audio->GetSampleFrameCount());		
 			if(!boost::range::equal(sync_buffer_, audio_cadence_))
 			{
-				CASPAR_LOG(trace) << print() << L" Syncing audio.";
+				CASPAR_LOG(trace) << print() << L" Syncing audio. Expected cadence: " << to_string(audio_cadence_) << L" Got cadence: " << to_string(sync_buffer_);
 				return S_OK;
 			}
 			boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
