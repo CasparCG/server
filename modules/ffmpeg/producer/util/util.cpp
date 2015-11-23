@@ -40,6 +40,7 @@
 #include <common/except.h>
 #include <common/array.h>
 #include <common/os/filesystem.h>
+#include <common/memcpy.h>
 
 #include <tbb/parallel_for.h>
 
@@ -241,13 +242,20 @@ core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& 
 			CASPAR_ASSERT(decoded);
 			CASPAR_ASSERT(write.image_data(n).begin());
 
-			// Copy line by line since ffmpeg sometimes pads each line.
-			tbb::affinity_partitioner ap;
-			tbb::parallel_for(tbb::blocked_range<int>(0, desc.planes[n].height), [&](const tbb::blocked_range<int>& r)
+			if (decoded_linesize != plane.linesize)
 			{
-				for(int y = r.begin(); y != r.end(); ++y)
-					A_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
-			}, ap);
+				// Copy line by line since ffmpeg sometimes pads each line.
+				tbb::affinity_partitioner ap;
+				tbb::parallel_for(tbb::blocked_range<int>(0, desc.planes[n].height), [&](const tbb::blocked_range<int>& r)
+				{
+					for (int y = r.begin(); y != r.end(); ++y)
+						A_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
+				}, ap);
+			}
+			else
+			{
+				fast_memcpy(result, decoded, plane.size);
+			}
 		}
 	
 		return std::move(write);
