@@ -49,6 +49,8 @@
 #include <common/diagnostics/graph.h>
 #include <common/prec_timer.h>
 #include <common/array.h>
+#include <common/memset.h>
+#include <common/memcpy.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -57,8 +59,6 @@
 #include <boost/algorithm/string.hpp>
 
 #include <tbb/spin_mutex.h>
-
-#include <asmlib.h>
 
 #include <functional>
 
@@ -299,10 +299,10 @@ public:
 			desc.planes.push_back(core::pixel_format_desc::plane(width_, height_, 4));
 			auto frame = frame_factory_->create_frame(this, desc, core::audio_channel_layout::invalid());
 
-			A_memset(bmp_.data(), 0, width_ * height_ * 4);
+			fast_memset(bmp_.data(), 0, width_ * height_ * 4);
 			ax_->DrawControl(bmp_);
 		
-			A_memcpy(frame.image_data(0).begin(), bmp_.data(), width_*height_*4);
+			fast_memcpy(frame.image_data(0).begin(), bmp_.data(), width_*height_*4);
 			head_ = core::draw_frame(std::move(frame));	
 		}		
 
