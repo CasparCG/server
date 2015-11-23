@@ -74,6 +74,8 @@ set(HEADERS
 		lock.h
 		log.h
 		memory.h
+		memcpy.h
+		memset.h
 		memshfl.h
 		param.h
 		polling_filesystem_monitor.h
@@ -91,6 +93,7 @@ add_library(common ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
 add_precompiled_header(common stdafx.h FORCEINCLUDE)
 
 include_directories(..)
+include_directories(${ASMLIB_INCLUDE_PATH})
 include_directories(${BOOST_INCLUDE_PATH})
 include_directories(${RXCPP_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_PATH})
