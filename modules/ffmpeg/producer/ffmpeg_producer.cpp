@@ -485,10 +485,25 @@ public:
 	{
 		for(int n = 0; n < 32 && muxer_->empty(); ++n)
 		{
-			if(!muxer_->video_ready())
-				muxer_->push_video(video_decoder_ ? (*video_decoder_)() : create_frame());
-			if(!muxer_->audio_ready())
-				muxer_->push_audio(audio_decoder_ ? (*audio_decoder_)() : create_frame());
+			std::shared_ptr<AVFrame> video;
+			std::shared_ptr<AVFrame> audio;
+			bool needs_video = !muxer_->video_ready();
+			bool needs_audio = !muxer_->audio_ready();
+
+			tbb::parallel_invoke(
+					[&]
+					{
+						if (needs_video)
+							video = video_decoder_ ? (*video_decoder_)() : create_frame();
+					},
+					[&]
+					{
+						if (needs_audio)
+							audio = audio_decoder_ ? (*audio_decoder_)() : create_frame();
+					});
+
+			muxer_->push_video(video);
+			muxer_->push_audio(audio);
 		}
 
 		graph_->set_text(print());
