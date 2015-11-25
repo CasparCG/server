@@ -266,7 +266,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
 			if (strong)
 			{
-				strong->texture_cache_.erase(buf.get());
+				strong->executor_.invoke([&]
+				{
+					strong->texture_cache_.erase(buf.get());
+				}, task_priority::high_priority);
+				
 				pool->push(buf);
 			}
 			else
