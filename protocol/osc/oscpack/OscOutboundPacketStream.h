@@ -38,8 +38,10 @@ namespace osc{
 
 class OutOfBufferMemoryException : public Exception{
 public:
-    OutOfBufferMemoryException( const char *w="out of buffer memory" )
-        : Exception( w ) {}
+    OutOfBufferMemoryException(std::size_t required_, const char *w="out of buffer memory" )
+        : Exception( w ), required(required_) {}
+
+	std::size_t required;
 };
 
 class BundleNotInProgressException : public Exception{
