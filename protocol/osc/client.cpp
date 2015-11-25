@@ -85,19 +85,34 @@ struct param_visitor : public boost::static_visitor<void>
 	void operator()(const std::vector<int8_t>& value)	{o << ::osc::Blob(value.data(), static_cast<unsigned long>(value.size()));}
 };
 
-void write_osc_event(byte_vector& destination, const core::monitor::message& e)
-{		
-	destination.resize(4096);
+void write_osc_event(byte_vector& destination, const core::monitor::message& message, int retry_allocation_attempt = 0)
+{
+	static std::size_t max_size = 128;
+
+	destination.resize(max_size);
 
 	::osc::OutboundPacketStream o(reinterpret_cast<char*>(destination.data()), static_cast<unsigned long>(destination.size()));
-	o << ::osc::BeginMessage(e.path().c_str());
-				
-	param_visitor<decltype(o)> param_visitor(o);
-	for (const auto& data : e.data())
-		boost::apply_visitor(param_visitor, data);
-				
-	o << ::osc::EndMessage;
-		
+
+	try
+	{
+		o << ::osc::BeginMessage(message.path().c_str());
+
+		param_visitor<decltype(o)> param_visitor(o);
+		for (const auto& data : message.data())
+			boost::apply_visitor(param_visitor, data);
+
+		o << ::osc::EndMessage;
+	}
+	catch (const ::osc::OutOfBufferMemoryException& e)
+	{
+		if (retry_allocation_attempt > message.data().size())
+			throw;
+
+		max_size = e.required;
+		CASPAR_LOG(trace) << L"[osc] Too small buffer for osc message. Increasing to " << max_size;
+		return write_osc_event(destination, message, retry_allocation_attempt + 1);
+	}
+
 	destination.resize(o.Size());
 }
 
