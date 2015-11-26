@@ -162,6 +162,10 @@ struct scene_producer::impl
 		return layers_.back();
 	}
 
+	void reverse_layers() {
+		layers_.reverse();
+	}
+
 	void store_keyframe(void* timeline_identity, const keyframe& k)
 	{
 		timelines_[timeline_identity].keyframes.insert(std::make_pair(k.destination_frame, k));
@@ -561,6 +565,10 @@ layer& scene_producer::create_layer(
 		const spl::shared_ptr<frame_producer>& producer, const std::wstring& name)
 {
 	return impl_->create_layer(producer, 0, 0, name);
+}
+
+void scene_producer::reverse_layers() {
+	impl_->reverse_layers();
 }
 
 binding<int64_t> scene_producer::frame()

@@ -35,6 +35,8 @@ struct point
 	point(T x1, T y1) : x(x1), y(y1) {}
 	T x;
 	T y;
+
+	void clear() { x = 0; y = 0; }
 };
 
 template<typename T>
@@ -58,6 +60,8 @@ struct size
 	size(T w, T h) : width(w), height(h) {}
 	T width;
 	T height;
+
+	void clear() { width = 0; height = 0; }
 };
 
 template<typename T>
@@ -67,6 +71,7 @@ struct rect
 	psd::size<T>	size;
 
 	bool empty() const { return size.width == 0 || size.height == 0; }
+	void clear() { location.clear(); size.clear(); }
 };
 
 struct psd_file_format_exception : virtual caspar_exception {};
@@ -80,6 +85,16 @@ enum class channel_type
 	color_green = 1,
 	color_blue = 2
 };
+
+enum class layer_type
+{
+	content = 0,
+	group,
+	timeline_group,
+	group_delimiter
+};
+layer_type int_to_layer_type(std::uint32_t x, std::uint32_t y);
+std::wstring layer_type_to_string(layer_type b);
 
 enum class blend_mode
 {

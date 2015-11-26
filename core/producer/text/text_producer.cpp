@@ -77,17 +77,21 @@ std::map<std::wstring, std::wstring> enumerate_fonts()
 
 	for(auto iter = directory_iterator(env::font_folder()), end = directory_iterator(); iter != end; ++iter)
 	{
-		auto file = (*iter);
-		if(is_regular_file(file.path()))
+		try 
 		{
-			auto face = get_new_face(u8(file.path().native()));
-			const char* fontname = FT_Get_Postscript_Name(face.get());	//this doesn't work for .fon fonts. Ignoring those for now
-			if(fontname != nullptr)
+			auto file = (*iter);
+			if (is_regular_file(file.path()))
 			{
-				std::string fontname_str(fontname);
-				result.insert(std::make_pair(u16(fontname_str), u16(file.path().native())));
+				auto face = get_new_face(u8(file.path().native()));
+				const char* fontname = FT_Get_Postscript_Name(face.get());	//this doesn't work for .fon fonts. Ignoring those for now
+				if (fontname != nullptr)
+				{
+					std::string fontname_str(fontname);
+					result.insert(std::make_pair(u16(fontname_str), u16(file.path().native())));
+				}
 			}
 		}
+		catch(...) { }
 	}
 
 	return result;
@@ -181,6 +185,7 @@ public:
 
 		text::string_metrics metrics;
 		font_.set_tracking(static_cast<int>(tracking_.value().get()));
+		
 		auto vertex_stream = font_.create_vertex_stream(text_.value().get(), x_, y_, parent_width_, parent_height_, &metrics);
 		auto frame = frame_factory_->create_frame(vertex_stream.data(), pfd, core::audio_channel_layout::invalid());
 		memcpy(frame.image_data().data(), atlas_.data(), frame.image_data().size());
