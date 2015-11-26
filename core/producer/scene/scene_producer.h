@@ -128,6 +128,8 @@ public:
 			const spl::shared_ptr<frame_producer>& producer, int x, int y, const std::wstring& name);
 	layer& create_layer(
 			const spl::shared_ptr<frame_producer>& producer, const std::wstring& name);
+	void reverse_layers();
+
 	binding<int64_t> frame();
 	binding<double> speed();
 

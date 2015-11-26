@@ -24,6 +24,29 @@
 
 namespace caspar { namespace psd {
 
+layer_type int_to_layer_type(std::uint32_t x, std::uint32_t y)
+{
+	if (x == 1 || x == 2)
+		return (y == 1) ? layer_type::timeline_group : layer_type::group;
+	else if (x == 3)
+		return layer_type::group_delimiter;
+
+	return layer_type::content;
+}
+
+std::wstring layer_type_to_string(layer_type b)
+{
+	switch (b)
+	{
+	case layer_type::content: return L"Content";
+	case layer_type::group: return L"Group";
+	case layer_type::timeline_group: return L"TimelineGroup";
+	case layer_type::group_delimiter: return L"GroupDelimiter";
+	default: return L"Invalid";
+	}
+}
+
+
 blend_mode int_to_blend_mode(std::uint32_t x)
 {
 	blend_mode mode = static_cast<blend_mode>(x);

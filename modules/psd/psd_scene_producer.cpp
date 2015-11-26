@@ -369,83 +369,114 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 
 	std::vector<std::pair<std::wstring, spl::shared_ptr<core::text_producer>>> text_producers_by_layer_name;
 
-	auto layers_end = doc.layers().end();
-	for(auto it = doc.layers().begin(); it != layers_end; ++it)
+	std::stack<spl::shared_ptr<core::scene::scene_producer>> current_scene_stack;
+	current_scene_stack.push(root);
+
+	auto layers_end = doc.layers().rend();
+	for(auto it = doc.layers().rbegin(); it != layers_end; ++it)
 	{
-		if((*it)->is_visible())
+		auto psd_layer = (*it);
+		auto current_scene = current_scene_stack.top();
+
+		if (psd_layer->group_mode() == layer_type::group) {
+			auto group = spl::make_shared<core::scene::scene_producer>(psd_layer->name(), doc.width(), doc.height(), dependencies.format_desc);
+
+			auto& scene_layer = current_scene->create_layer(group, psd_layer->location().x, psd_layer->location().y, psd_layer->name());
+			scene_layer.adjustments.opacity.set(psd_layer->opacity() / 255.0);
+			scene_layer.hidden.set(!psd_layer->is_visible());
+
+			if (psd_layer->has_timeline())
+				create_timelines(current_scene, dependencies.format_desc, scene_layer, psd_layer, 0, 0);
+
+			if (psd_layer->link_group_id() != 0)
+				link_constructor.add(&scene_layer, psd_layer->link_group_id(), psd_layer->is_position_protected(), 0, 0);
+
+			current_scene_stack.push(group);
+			continue;
+		}
+		else if (psd_layer->group_mode() == layer_type::group_delimiter) {
+			current_scene->reverse_layers();
+			current_scene_stack.pop();
+			continue;
+		}
+
+		if(psd_layer->is_visible())
 		{
-			bool is_text = (*it)->is_text();
-			bool is_marked_as_dynamic = (*it)->sheet_color() == 4;
-			std::wstring layer_name = (*it)->name();
+			bool is_text = psd_layer->is_text();
+			bool is_marked_as_dynamic = psd_layer->sheet_color() != 1;
+			std::wstring layer_name = psd_layer->name();
+
 			if(is_text && is_marked_as_dynamic)
 			{
-				std::wstring str = (*it)->text_data().get(L"EngineDict.Editor.Text", L"");
+				std::wstring str = psd_layer->text_data().get(L"EngineDict.Editor.Text", L"");
 			
-				core::text::text_info text_info(std::move(get_text_info((*it)->text_data())));
-				text_info.size *= (*it)->text_scale();
+				core::text::text_info text_info(std::move(get_text_info(psd_layer->text_data())));
+				text_info.size *= psd_layer->text_scale();
 
 				auto text_producer = core::text_producer::create(dependencies.frame_factory, 0, 0, str, text_info, doc.width(), doc.height());
-			
+				text_producer->pixel_constraints().width.set(psd_layer->size().width);
+				text_producer->pixel_constraints().height.set(psd_layer->size().height);
 				core::text::string_metrics metrics = text_producer->measure_string(str);
 			
 				auto adjustment_x = -2;	//the 2 offset is just a hack for now. don't know why our text is rendered 2 px to the right of that in photoshop
 				auto adjustment_y = metrics.bearingY;
-				auto& new_layer = root->create_layer(text_producer, (*it)->location().x + adjustment_x, (*it)->location().y + adjustment_y, (*it)->name());	
-				new_layer.adjustments.opacity.set((*it)->opacity() / 255.0);
-				new_layer.hidden.set(!(*it)->is_visible());
+				auto& scene_layer = current_scene->create_layer(text_producer, psd_layer->location().x + adjustment_x, psd_layer->location().y + adjustment_y, psd_layer->name());
+				scene_layer.adjustments.opacity.set(psd_layer->opacity() / 255.0);
+				scene_layer.hidden.set(!psd_layer->is_visible());
 
-				if ((*it)->has_timeline())
-					create_timelines(root, dependencies.format_desc, new_layer, (*it), adjustment_x, adjustment_y);
+				if (psd_layer->has_timeline())
+					create_timelines(current_scene, dependencies.format_desc, scene_layer, psd_layer, adjustment_x, adjustment_y);
 
-				if((*it)->link_group_id() != 0)
-					link_constructor.add(&new_layer, (*it)->link_group_id(), (*it)->is_position_protected(), -adjustment_x, -adjustment_y);
+				if(psd_layer->link_group_id() != 0)
+					link_constructor.add(&scene_layer, psd_layer->link_group_id(), psd_layer->is_position_protected(), -adjustment_x, -adjustment_y);
 
 				text_producers_by_layer_name.push_back(std::make_pair(layer_name, text_producer));
 			}
 			else
 			{
 				std::shared_ptr<core::frame_producer> layer_producer;
-				if((*it)->is_solid())
+				if(psd_layer->is_solid())
 				{
-					layer_producer = core::create_const_producer(core::create_color_frame(it->get(), dependencies.frame_factory, (*it)->solid_color().to_uint32()), (*it)->bitmap()->width(), (*it)->bitmap()->height());
+					layer_producer = core::create_const_producer(core::create_color_frame(it->get(), dependencies.frame_factory, psd_layer->solid_color().to_uint32()), psd_layer->bitmap()->width(), psd_layer->bitmap()->height());
 				}
-				else if((*it)->bitmap())
+				else if(psd_layer->bitmap())
 				{
 					if (boost::algorithm::istarts_with(layer_name, L"[producer]"))
 					{
-						auto hotswap = std::make_shared<core::hotswap_producer>((*it)->bitmap()->width(), (*it)->bitmap()->height());
+						auto hotswap = std::make_shared<core::hotswap_producer>(psd_layer->bitmap()->width(), psd_layer->bitmap()->height());
 						hotswap->producer().set(dependencies.producer_registry->create_producer(dependencies, layer_name.substr(10)));
 						layer_producer = hotswap;
 					}
 					else
 					{
 						core::pixel_format_desc pfd(core::pixel_format::bgra);
-						pfd.planes.push_back(core::pixel_format_desc::plane((*it)->bitmap()->width(), (*it)->bitmap()->height(), 4));
+						pfd.planes.push_back(core::pixel_format_desc::plane(psd_layer->bitmap()->width(), psd_layer->bitmap()->height(), 4));
 
 						auto frame = dependencies.frame_factory->create_frame(it->get(), pfd, core::audio_channel_layout::invalid());
 						auto destination = frame.image_data().data();
-						auto source = (*it)->bitmap()->data();
+						auto source = psd_layer->bitmap()->data();
 						memcpy(destination, source, frame.image_data().size());
 
-						layer_producer = core::create_const_producer(core::draw_frame(std::move(frame)), (*it)->bitmap()->width(), (*it)->bitmap()->height());
+						layer_producer = core::create_const_producer(core::draw_frame(std::move(frame)), psd_layer->bitmap()->width(), psd_layer->bitmap()->height());
 					}
 				}
 
 				if(layer_producer)
 				{
-					auto& new_layer = root->create_layer(spl::make_shared_ptr(layer_producer), (*it)->location().x, (*it)->location().y, (*it)->name());
-					new_layer.adjustments.opacity.set((*it)->opacity() / 255.0);
-					new_layer.hidden.set(!(*it)->is_visible());
+					auto& scene_layer = current_scene->create_layer(spl::make_shared_ptr(layer_producer), psd_layer->location().x, psd_layer->location().y, psd_layer->name());
+					scene_layer.adjustments.opacity.set(psd_layer->opacity() / 255.0);
+					scene_layer.hidden.set(!psd_layer->is_visible());
 
-					if ((*it)->has_timeline())
-						create_timelines(root, dependencies.format_desc, new_layer, (*it), 0, 0);
+					if (psd_layer->has_timeline())
+						create_timelines(current_scene, dependencies.format_desc, scene_layer, psd_layer, 0, 0);
 
-					if((*it)->link_group_id() != 0)
-						link_constructor.add(&new_layer, (*it)->link_group_id(), (*it)->is_position_protected(), 0, 0);
+					if(psd_layer->link_group_id() != 0)
+						link_constructor.add(&scene_layer, psd_layer->link_group_id(), psd_layer->is_position_protected(), 0, 0);
 				}
 			}
 		}
 	}
+	root->reverse_layers();
 
 	link_constructor.calculate();
 
