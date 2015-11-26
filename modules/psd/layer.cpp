@@ -36,7 +36,7 @@
 
 namespace caspar { namespace psd {
 
-void layer::layer_mask_info::read_mask_data(bigendian_file_input_stream& stream)
+void layer::mask_info::read_mask_data(bigendian_file_input_stream& stream)
 {
 	auto length = stream.read_long();
 	switch(length)
@@ -57,13 +57,14 @@ void layer::layer_mask_info::read_mask_data(bigendian_file_input_stream& stream)
 		
 		if(length == 36)
 		{
-			stream.discard_bytes(18);	//discard "total user mask" data
-			//flags_ = stream.read_byte();
-			//default_value_ = stream.read_byte();
-			//rect_.location.y = stream.read_long();
-			//rect_.location.x = stream.read_long();
-			//rect_.size.height = stream.read_long() - rect_.location.y;
-			//rect_.size.width = stream.read_long() - rect_.location.x;
+			//we save the information about the total mask in case the vector-mask has an unsupported shape
+			total_mask_.reset(new layer::mask_info);
+			total_mask_->flags_ = stream.read_byte();
+			total_mask_->default_value_ = stream.read_byte();
+			total_mask_->rect_.location.y = stream.read_long();
+			total_mask_->rect_.location.x = stream.read_long();
+			total_mask_->rect_.size.height = stream.read_long() - rect_.location.y;
+			total_mask_->rect_.size.width = stream.read_long() - rect_.location.x;
 		}
 		break;
 
@@ -74,16 +75,84 @@ void layer::layer_mask_info::read_mask_data(bigendian_file_input_stream& stream)
 	};
 }
 
+bool layer::vector_mask_info::populate(int length, bigendian_file_input_stream& stream, int doc_width, int doc_height)
+{
+	typedef std::pair<int, int> path_point;
+	bool bFail = false;
+
+	stream.read_long(); // version
+	this->flags_ = static_cast<std::uint8_t>(stream.read_long()); // flags
+	int path_records = (length - 8) / 26;
+
+	auto position = stream.current_position();
+
+	std::vector<path_point> knots;
+
+	const int SELECTOR_SIZE = 2;
+	const int PATH_POINT_SIZE = 4 + 4;
+	const int PATH_POINT_RECORD_SIZE = SELECTOR_SIZE + (3 * PATH_POINT_SIZE);
+
+	for (int i = 1; i <= path_records; ++i)
+	{
+		auto selector = stream.read_short();
+		if (selector == 2)	//we only concern ourselves with closed paths 
+		{
+			auto p_y = stream.read_long();
+			auto p_x = stream.read_long();
+			path_point cp_prev(p_x, p_y);
+
+			auto a_y = stream.read_long();
+			auto a_x = stream.read_long();
+			path_point anchor(a_x, a_y);
+
+			auto n_y = stream.read_long();
+			auto n_x = stream.read_long();
+			path_point cp_next(n_x, n_y);
+
+			if (anchor == cp_prev && anchor == cp_next)
+				knots.push_back(anchor);
+			else
+			{	//we can't handle smooth curves yet
+				bFail = true;
+			}
+		}
+
+		auto offset = PATH_POINT_RECORD_SIZE * i;
+		stream.set_position(position + offset);
+	}
+
+	if ((knots.size() != 4) || (!(knots[0].first == knots[3].first && knots[1].first == knots[2].first && knots[0].second == knots[1].second && knots[2].second == knots[3].second)))
+		bFail = true;
+
+	if (bFail) {
+		rect_.clear();
+		flags_ = static_cast<std::uint8_t>(flags::unsupported);
+	}
+	else 
+	{
+		//the path_points are given in fixed-point 8.24 as a ratio with regards to the width/height of the document. we need to divide by 16777215.0f to get the real ratio.
+		float x_ratio = doc_width / 16777215.0f;
+		float y_ratio = doc_height / 16777215.0f;
+		rect_.location.x = static_cast<int>(knots[0].first * x_ratio + 0.5f);								//add .5 to get propper rounding when converting to integer
+		rect_.location.y = static_cast<int>(knots[0].second * y_ratio + 0.5f);								//add .5 to get propper rounding when converting to integer
+		rect_.size.width = static_cast<int>(knots[1].first * x_ratio + 0.5f) - rect_.location.x;		//add .5 to get propper rounding when converting to integer
+		rect_.size.height = static_cast<int>(knots[2].second * y_ratio + 0.5f) - rect_.location.y;	//add .5 to get propper rounding when converting to integer
+	}
+
+	return !bFail;
+}
+
 struct layer::impl
 {
 	friend class layer;
 
-	impl() : blend_mode_(blend_mode::InvalidBlendMode), link_group_id_(0), opacity_(255), sheet_color_(0), baseClipping_(false), flags_(0), protection_flags_(0), masks_count_(0), text_scale_(1.0f)
+	impl() : blend_mode_(blend_mode::InvalidBlendMode), layer_type_(layer_type::content), link_group_id_(0), opacity_(255), sheet_color_(0), baseClipping_(false), flags_(0), protection_flags_(0), masks_count_(0), text_scale_(1.0f)
 	{}
 
 private:
 	std::vector<channel>			channels_;
 	blend_mode						blend_mode_;
+	layer_type						layer_type_;
 	int								link_group_id_;
 	int								opacity_;
 	int								sheet_color_;
@@ -94,8 +163,7 @@ private:
 	int								masks_count_;
 	double							text_scale_;
 
-	rect<int>						vector_mask_;
-	layer::layer_mask_info			mask_;
+	layer::mask_info				mask_;
 
 	rect<int>						bitmap_rect_;
 	image8bit_ptr					bitmap_;
@@ -179,6 +247,9 @@ public:
 				read_solid_color(stream);
 				break;
 
+			case 'lsct':	//group settings (folders)
+				read_group_settings(stream, length);
+
 			case 'lspf':	//protection settings
 				protection_flags_ = stream.read_long();
 				break;
@@ -211,7 +282,7 @@ public:
 				break;
 
 			case 'vmsk':
-				read_vector_mask(length, stream, doc.width(), doc.height());
+				mask_.read_vector_mask_data(length, stream, doc.width(), doc.height());
 				break;
 				
 			case 'tmln':
@@ -244,65 +315,24 @@ public:
 		solid_color_.alpha = 255;
 	}
 
-	void read_vector_mask(int length, bigendian_file_input_stream& stream, int doc_width, int doc_height)
+	void read_group_settings(bigendian_file_input_stream& stream, unsigned int length) 
 	{
-		typedef std::pair<int, int> path_point;
+		auto type = stream.read_long();
+		unsigned int sub_type = 0;
 
-		stream.read_long(); // version
-		stream.read_long(); // flags
-		int path_records = (length-8) / 26;
-
-		auto position = stream.current_position();
-
-		std::vector<path_point> knots;
-		
-		const int SELECTOR_SIZE = 2;
-		const int PATH_POINT_SIZE = 4 + 4;
-		const int PATH_POINT_RECORD_SIZE = SELECTOR_SIZE + (3 * PATH_POINT_SIZE);
-
-		for (int i = 1; i <= path_records; ++i)
+		if (length >= 12)
 		{
-			auto selector = stream.read_short();
-			if(selector == 2)	//we only concern ourselves with closed paths 
-			{
-				auto p_y = stream.read_long();
-				auto p_x = stream.read_long();
-				path_point cp_prev(p_x, p_y);
+			auto signature = stream.read_long();
+			if (signature != '8BIM')
+				CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("signature != '8BIM'"));
 
-				auto a_y = stream.read_long();
-				auto a_x = stream.read_long();
-				path_point anchor(a_x, a_y);
-
-				auto n_y = stream.read_long();
-				auto n_x = stream.read_long();
-				path_point cp_next(n_x, n_y);
-
-				if(anchor == cp_prev && anchor == cp_next)
-					knots.push_back(anchor);
-				else
-				{	//we can't handle smooth curves yet
-					CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("we can't handle smooth curves yet"));
-				}
-			}
-
-			auto offset = PATH_POINT_RECORD_SIZE * i;
-			stream.set_position(position + offset);
+			blend_mode_ = int_to_blend_mode(stream.read_long());
+			
+			if (length >= 16)
+				sub_type = stream.read_long();
 		}
 
-		if(knots.size() != 4)	//we only support rectangular vector masks
-			CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("we only support rectangular vector masks"));
-
-		//we only support rectangular vector masks
-		if(!(knots[0].first == knots[3].first && knots[1].first == knots[2].first && knots[0].second == knots[1].second && knots[2].second == knots[3].second))
-			CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("we only support rectangular vector masks"));
-
-		//the path_points are given in fixed-point 8.24 as a ratio with regards to the width/height of the document. we need to divide by 16777215.0f to get the real ratio.
-		float x_ratio = doc_width / 16777215.0f;
-		float y_ratio = doc_height / 16777215.0f;
-		vector_mask_.location.x = static_cast<int>(knots[0].first * x_ratio +0.5f);								//add .5 to get propper rounding when converting to integer
-		vector_mask_.location.y = static_cast<int>(knots[0].second * y_ratio +0.5f);								//add .5 to get propper rounding when converting to integer
-		vector_mask_.size.width = static_cast<int>(knots[1].first * x_ratio +0.5f)	- vector_mask_.location.x;		//add .5 to get propper rounding when converting to integer
-		vector_mask_.size.height = static_cast<int>(knots[2].second * y_ratio +0.5f) - vector_mask_.location.y;	//add .5 to get propper rounding when converting to integer
+		layer_type_ = int_to_layer_type(type, sub_type);
 	}
 
 	void read_metadata(bigendian_file_input_stream& stream, const psd_document& doc)
@@ -386,70 +416,60 @@ public:
 	void read_channel_data(bigendian_file_input_stream& stream)
 	{
 		image8bit_ptr bitmap;
-		image8bit_ptr mask;
 
 		bool has_transparency = has_channel(channel_type::transparency);
 	
-		rect<int> clip_rect;
 		if(!bitmap_rect_.empty())
 		{
-			clip_rect = bitmap_rect_;
-
-			if(!vector_mask_.empty())
-				clip_rect = vector_mask_;
-
-			bitmap = std::make_shared<image8bit>(clip_rect.size.width, clip_rect.size.height, 4);
-
+			bitmap = std::make_shared<image8bit>(bitmap_rect_.size.width, bitmap_rect_.size.height, 4);
 			if(!has_transparency)
 				std::memset(bitmap->data(), 255, bitmap->width()*bitmap->height()*bitmap->channel_count());
 		}
 
-		if(masks_count_ > 0 && !mask_.rect_.empty())
-		{
-			mask = std::make_shared<image8bit>(mask_.rect_.size.width, mask_.rect_.size.height, 1);
-		}
-
 		for(auto it = channels_.begin(); it != channels_.end(); ++it)
 		{
-			psd::rect<int> src_rect;
+			auto channel = (*it);
 			image8bit_ptr target;
 			int offset = 0;
 			bool discard_channel = false;
 
 			//determine target bitmap and offset
-			if((*it).id >= 3)
+			if(channel.id >= 3)
 				discard_channel = true;	//discard channels that doesn't contribute to the final image
-			else if((*it).id >= -1)	//BGRA-data
+			else if(channel.id >= -1)	//BGRA-data
 			{
 				target = bitmap;
-				offset = ((*it).id >= 0) ? 2 - (*it).id : 3;
-				src_rect = bitmap_rect_;
+				offset = (channel.id >= 0) ? 2 - channel.id : 3;
 			}
-			else if(mask)	//mask
+			else	//mask
 			{
-				if((*it).id == -3)	//discard the "total user mask"
-					discard_channel = true;
-				else
+				offset = 0;
+				if (channel.id == -2)
 				{
-					target = mask;
+					mask_.create_bitmap();
+					target = mask_.bitmap_;
+				}
+				else if (channel.id == -3)	//total_mask
+				{
+					mask_.total_mask_->create_bitmap();
+					target = mask_.total_mask_->bitmap_;
 					offset = 0;
-					src_rect = mask_.rect_;
 				}
 			}
 
-			if(!target || src_rect.empty())
+			if(!target)
 				discard_channel = true;
 
-			auto end_of_data = stream.current_position() + (*it).data_length;
+			auto end_of_data = stream.current_position() + channel.data_length;
 			if(!discard_channel)
 			{
 				auto encoding = stream.read_short();
 				if(target)
 				{
 					if(encoding == 0)
-						read_raw_image_data(stream, (*it).data_length-2, target, offset);
+						read_raw_image_data(stream, channel.data_length-2, target, offset);
 					else if(encoding == 1)
-						read_rle_image_data(stream, src_rect, (target == bitmap) ? clip_rect : mask_.rect_, target, offset);
+						read_rle_image_data(stream, target, offset);
 					else
 						CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("Unhandled image data encoding: " + boost::lexical_cast<std::string>(encoding)));
 				}
@@ -464,8 +484,6 @@ public:
 		}
 
 		bitmap_ = bitmap;
-		bitmap_rect_ = clip_rect;
-		mask_.bitmap_ = mask;
 	}
 
 	void read_raw_image_data(bigendian_file_input_stream& stream, int data_length, image8bit_ptr target, int offset)
@@ -486,14 +504,11 @@ public:
 		}
 	}
 
-	void read_rle_image_data(bigendian_file_input_stream& stream, const rect<int>&src_rect, const rect<int>&clip_rect, image8bit_ptr target, int offset)
+	void read_rle_image_data(bigendian_file_input_stream& stream, image8bit_ptr target, int offset)
 	{
-		auto width = src_rect.size.width;
-		auto height = src_rect.size.height;
+		auto width = target->width();
+		auto height = target->height();
 		auto stride = target->channel_count();
-
-		int offset_x = clip_rect.location.x - src_rect.location.x;
-		int offset_y = clip_rect.location.y - src_rect.location.y;
 
 		std::vector<int> scanline_lengths;
 		scanline_lengths.reserve(height);
@@ -507,9 +522,6 @@ public:
 
 		for(int scanlineIndex=0; scanlineIndex < height; ++scanlineIndex)
 		{
-			if(scanlineIndex >= target->height()+offset_y)
-				break;
-
 			int colIndex = 0;
 
 			do
@@ -539,11 +551,10 @@ public:
 			while(colIndex < width);
 
 			//use line to populate target
-			if(scanlineIndex >= offset_y)
-				for(int index = offset_x; index < target->width(); ++index)
-				{
-					target_data[((scanlineIndex-offset_y)*target->width()+index-offset_x) * stride + offset] = line[index];
-				}
+			for(int index = 0; index < width; ++index)
+			{
+				target_data[(scanlineIndex*width+index) * stride + offset] = line[index];
+			}
 		}
 	}
 };
@@ -571,8 +582,10 @@ bool layer::is_solid() const { return impl_->solid_color_.alpha != 0; }
 color<std::uint8_t> layer::solid_color() const { return impl_->solid_color_; }
 
 const point<int>& layer::location() const { return impl_->bitmap_rect_.location; }
+const size<int>& layer::size() const { return impl_->bitmap_rect_.size; }
 const image8bit_ptr& layer::bitmap() const { return impl_->bitmap_; }
 
+layer_type layer::group_mode() const { return impl_->layer_type_; }
 int layer::link_group_id() const { return impl_->link_group_id_; }
 void layer::set_link_group_id(int id) { impl_->link_group_id_ = id; }
 

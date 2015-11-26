@@ -85,7 +85,7 @@ void psd_document::read_image_resources()
 				std::wstring name = input_.read_pascal_string(2);
 
 				auto resource_length = input_.read_long();
-				auto end_of_chunk = input_.current_position() + resource_length;
+				auto end_of_chunk = input_.current_position() + resource_length + resource_length%2;	//the actual data is padded to even bytes
 
 				try
 				{
@@ -117,6 +117,11 @@ void psd_document::read_image_resources()
 								timeline_desc_.swap(timeline_descriptor.items());
 						}
 						break;
+					case 1072:		//layer group(s) enabled id
+						{
+
+						}
+						break;
 
 					case 1005:
 						{	
@@ -143,7 +148,6 @@ void psd_document::read_image_resources()
 					case 1060:		//XMP metadata
 					case 1065:		//layer comps
 					case 1069:		//layer selection ID(s)
-					case 1072:		//layer group(s) enabled id
 					case 1077:		//DisplayInfo
 					case 2999:		//name of clipping path
 					default:
@@ -190,7 +194,9 @@ void psd_document::read_layers()
 			auto layer_info_length = input_.read_long();	//length of "Layer info" section
 			auto end_of_layers_info = input_.current_position() + layer_info_length;
 
-			int layers_count = std::abs(static_cast<std::int16_t>(input_.read_short()));
+			int layers_count = static_cast<std::int16_t>(input_.read_short());
+			//bool has_merged_alpha = (layers_count < 0);
+			layers_count = std::abs(layers_count);
 			//std::clog << "Expecting " << layers_count << " layers" << std::endl;
 
 			for(int layer_index = 0; layer_index < layers_count; ++layer_index)
