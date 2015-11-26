@@ -57,13 +57,14 @@ private:
 	size_t width_;
 	size_t height_;
 	size_t depth_;
-
+	const unsigned char* dataptr_;
 	std::vector<unsigned char> data_;
 	size_t used_						= 0;
 
 public:
 	impl(const size_t width, const size_t height, const size_t depth) : width_(width), height_(height), depth_(depth), data_(width*height*depth, 0)
 	{
+		dataptr_ = data_.data();
 		// We want a one pixel border around the whole atlas to avoid any artefact when sampling texture
 		node n = {1, 1, static_cast<int>(width_) - 2};
 		nodes_.push_back(n);

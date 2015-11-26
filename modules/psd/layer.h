@@ -44,24 +44,76 @@ class layer
 	spl::shared_ptr<impl> impl_;
 
 public:
-	class layer_mask_info
+	class mask_info;
+
+	class vector_mask_info
+	{
+		enum class flags {
+			inverted = 1,
+			unlinked = 2,
+			disabled = 4,
+			unsupported = 128
+		};
+
+		std::uint8_t	flags_;
+		rect<int>		rect_;
+
+		friend class layer::mask_info;
+		bool populate(int length, bigendian_file_input_stream& stream, int doc_width, int doc_height);
+
+	public:
+		vector_mask_info() : flags_(0)
+		{}
+
+		bool enabled() const { return (flags_ & static_cast<std::uint8_t>(flags::disabled)) == 0; }
+		bool linked() const { return (flags_ & static_cast<std::uint8_t>(flags::unlinked)) == 0; }
+		bool inverted() const { return (flags_ & static_cast<std::uint8_t>(flags::inverted)) == static_cast<std::uint8_t>(flags::inverted); }
+		bool unsupported() const { return (flags_ & static_cast<std::uint8_t>(flags::unsupported)) == static_cast<std::uint8_t>(flags::unsupported); }
+
+		bool empty() { return rect_.empty(); }
+
+		const rect<int>& rect() const { return rect_; }
+	};
+
+	class mask_info
 	{
 		friend struct layer::impl;
+		friend class layer::vector_mask_info;
 
 		void read_mask_data(bigendian_file_input_stream&);
+		void read_vector_mask_data(int length, bigendian_file_input_stream& stream, int doc_width, int doc_height)
+		{
+			vector_mask_.reset(new vector_mask_info);
+			vector_mask_->populate(length, stream, doc_width, doc_height);
+		}
 
 		image8bit_ptr	bitmap_;
 		std::uint8_t	default_value_;
 		std::uint8_t	flags_;
-		char			mask_id_;
 		rect<int>		rect_;
 
+		std::unique_ptr<vector_mask_info> vector_mask_;
+		std::unique_ptr<mask_info> total_mask_;
+
+		void create_bitmap() {
+			bitmap_ = std::make_shared<image8bit>(rect_.size.width, rect_.size.height, 1);
+		}
+
 	public:
+		mask_info() : default_value_(0), flags_(0)
+		{}
+
 		bool enabled() const { return (flags_ & 2) == 0; }
 		bool linked() const { return (flags_ & 1) == 0;  }
 		bool inverted() const { return (flags_ & 4) == 4; }
 
-		const point<int>& location() const { return rect_.location; }
+		bool empty() const { return rect_.empty(); }
+		
+		bool has_vector() const { return (vector_mask_ && !vector_mask_->empty() && vector_mask_->enabled()); }
+		bool has_bitmap() const { return (!vector_mask_ && !empty()) || (vector_mask_ && total_mask_); }
+		const std::unique_ptr<vector_mask_info>& vector() { return vector_mask_; }
+
+		const rect<int>& rect() const { return rect_; }
 		const image8bit_ptr& bitmap() const { return bitmap_; }
 	};
 
@@ -87,7 +139,10 @@ public:
 	const boost::property_tree::wptree& timeline_data() const;
 
 	const point<int>& location() const;
+	const size<int>& size() const;
 	const image8bit_ptr& bitmap() const;
+
+	layer_type group_mode() const;
 
 	int link_group_id() const;
 	void set_link_group_id(int id);
