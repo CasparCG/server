@@ -30,6 +30,7 @@
 #include <common/memory.h>
 #include <common/array.h>
 #include <common/memshfl.h>
+#include <common/memcpy.h>
 #include <common/utf.h>
 #include <common/prec_timer.h>
 #include <common/future.h>
@@ -503,12 +504,8 @@ public:
 				});
 			}
 			else
-			{	
-				tbb::parallel_for(tbb::blocked_range<int>(0, format_desc_.height), [&](const tbb::blocked_range<int>& r)
-				{
-					for(int n = r.begin(); n != r.end(); ++n)
-						A_memcpy(ptr+n*format_desc_.width*4, av_frame->data[0]+n*av_frame->linesize[0], format_desc_.width*4);
-				});
+			{
+				fast_memcpy(ptr, av_frame->data[0], format_desc_.size);
 			}
 			
 			GL(glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER)); // release the mapped buffer
