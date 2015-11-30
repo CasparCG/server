@@ -37,6 +37,7 @@
 #include <cstdio>
 #include <sstream>
 #include <string>
+#include <queue>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -60,11 +61,13 @@ namespace caspar { namespace ffmpeg {
 	
 struct filter::implementation
 {
-	std::string						filtergraph_;
+	std::string								filtergraph_;
 
-	std::shared_ptr<AVFilterGraph>	video_graph_;	
-    AVFilterContext*				video_graph_in_;  
-    AVFilterContext*				video_graph_out_; 
+	std::shared_ptr<AVFilterGraph>			video_graph_;
+    AVFilterContext*						video_graph_in_;
+    AVFilterContext*						video_graph_out_;
+
+	std::queue<std::shared_ptr<AVFrame>>	fast_path_;
 		
 	implementation(
 			int in_width,
@@ -221,15 +224,33 @@ struct filter::implementation
 		}
 	}
 
+	bool fast_path() const
+	{
+		return filtergraph_.empty();
+	}
+
 	void push(const std::shared_ptr<AVFrame>& src_av_frame)
-	{		
-		FF(av_buffersrc_add_frame(
-			video_graph_in_, 
-			src_av_frame.get()));
+	{
+		if (fast_path())
+			fast_path_.push(src_av_frame);
+		else
+			FF(av_buffersrc_add_frame(
+				video_graph_in_, 
+				src_av_frame.get()));
 	}
 
 	std::shared_ptr<AVFrame> poll()
 	{
+		if (fast_path())
+		{
+			if (fast_path_.empty())
+				return nullptr;
+
+			auto result = fast_path_.front();
+			fast_path_.pop();
+			return result;
+		}
+
 		std::shared_ptr<AVFrame> filt_frame(
 			av_frame_alloc(), 
 			[](AVFrame* p)
