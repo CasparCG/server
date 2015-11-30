@@ -44,6 +44,7 @@
 #include <common/prec_timer.h>
 #include <common/linq.h>
 #include <common/os/filesystem.h>
+#include <common/memcpy.h>
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
@@ -211,7 +212,7 @@ private:
 			pixel_desc.planes.push_back(
 				core::pixel_format_desc::plane(width, height, 4));
 		auto frame = frame_factory_->create_frame(this, pixel_desc, core::audio_channel_layout::invalid());
-		A_memcpy(frame.image_data().begin(), buffer, width * height * 4);
+		fast_memcpy(frame.image_data().begin(), buffer, width * height * 4);
 
 		lock(frames_mutex_, [&]
 		{
@@ -310,6 +311,7 @@ private:
 			browser_->SendProcessMessage(
 					CefProcessId::PID_RENDERER,
 					CefProcessMessage::Create(TICK_MESSAGE_NAME));
+
 		graph_->set_value("tick-time", tick_timer_.elapsed()
 				* format_desc_.fps
 				* format_desc_.field_count
