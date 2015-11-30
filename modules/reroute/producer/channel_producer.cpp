@@ -44,6 +44,7 @@
 #include <common/except.h>
 #include <common/memory.h>
 #include <common/future.h>
+#include <common/memcpy.h>
 
 #include <tbb/concurrent_queue.h>
 
@@ -270,7 +271,7 @@ public:
 			boost::copy(read_frame.audio_data(), std::back_inserter(frame.audio_data()));
 		}
 
-		A_memcpy(frame.image_data().begin(), read_frame.image_data().begin(), read_frame.image_data().size());
+		fast_memcpy(frame.image_data().begin(), read_frame.image_data().begin(), read_frame.image_data().size());
 
 		frame_buffer_.push(core::draw_frame(std::move(frame)));
 		
