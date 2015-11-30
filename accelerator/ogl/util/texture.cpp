@@ -38,7 +38,8 @@ namespace caspar { namespace accelerator { namespace ogl {
 	
 static GLenum FORMAT[] = {0, GL_RED, GL_RG, GL_BGR, GL_BGRA};
 static GLenum INTERNAL_FORMAT[] = {0, GL_R8, GL_RG8, GL_RGB8, GL_RGBA8};	
-static GLenum TYPE[] = {0, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_INT_8_8_8_8_REV};	
+static GLenum TYPE[]			= { 0, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE };
+static GLenum READPIXELS_TYPE[]	= { 0, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_INT_8_8_8_8_REV };
 
 static tbb::atomic<int>			g_total_count;
 static tbb::atomic<std::size_t>	g_total_size;
@@ -150,7 +151,7 @@ public:
 		dest.bind();
 		GL(glBindTexture(GL_TEXTURE_2D, id_));
 		GL(glReadBuffer(GL_COLOR_ATTACHMENT0));
-		GL(glReadPixels(0, 0, width_, height_, FORMAT[stride_], TYPE[stride_], NULL));
+		GL(glReadPixels(0, 0, width_, height_, FORMAT[stride_], READPIXELS_TYPE[stride_], NULL));
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
 		dest.unbind();
 		GL(glFlush());
