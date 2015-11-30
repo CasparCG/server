@@ -25,12 +25,14 @@
 
 #include <tbb/parallel_for.h>
 
+#include <boost/thread/thread.hpp>
+
 namespace caspar {
 
 static void fast_memset(void* dest, int c, std::size_t size)
 {
 	tbb::affinity_partitioner partitioner;
-	tbb::parallel_for(tbb::blocked_range<std::size_t>(0, size, size / 128), [&](const tbb::blocked_range<size_t>& range)
+	tbb::parallel_for(tbb::blocked_range<std::size_t>(0, size, size / boost::thread::hardware_concurrency()), [&](const tbb::blocked_range<size_t>& range)
 	{
 		A_memset(
 				reinterpret_cast<std::uint8_t*>(dest) + range.begin(),
