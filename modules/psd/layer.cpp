@@ -30,6 +30,7 @@
 #include <common/log.h>
 
 #include <boost/property_tree/ptree.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include <algorithm>
@@ -146,7 +147,7 @@ struct layer::impl
 {
 	friend class layer;
 
-	impl() : blend_mode_(blend_mode::InvalidBlendMode), layer_type_(layer_type::content), link_group_id_(0), opacity_(255), sheet_color_(0), baseClipping_(false), flags_(0), protection_flags_(0), masks_count_(0), text_scale_(1.0f)
+	impl() : blend_mode_(blend_mode::InvalidBlendMode), layer_type_(layer_type::content), link_group_id_(0), opacity_(255), sheet_color_(0), baseClipping_(false), flags_(0), protection_flags_(0), masks_count_(0), text_scale_(1.0f), tags_(layer_tag::none)
 	{}
 
 private:
@@ -172,6 +173,8 @@ private:
 	boost::property_tree::wptree	timeline_info_;
 
 	color<std::uint8_t>				solid_color_;
+
+	layer_tag						tags_;
 
 public:
 	void populate(bigendian_file_input_stream& stream, const psd_document& doc)
@@ -209,7 +212,8 @@ public:
 		auto position = stream.current_position();
 		mask_.read_mask_data(stream);
 		read_blending_ranges(stream);
-		name_ = stream.read_pascal_string(4);
+
+		stream.read_pascal_string(4);	//throw this away. We'll read the unicode version of the name later
 
 		//Aditional Layer Information
 		auto end_of_layer_info = position + extras_size;
@@ -258,7 +262,7 @@ public:
 				break;
 
 			case 'luni':
-				name_ = stream.read_unicode_string();
+				set_name_and_tags(stream.read_unicode_string());
 				break;
 
 			case 'TySh':	//type tool object settings
@@ -300,6 +304,27 @@ public:
 		}
 
 		stream.set_position(end_of_chunk);
+	}
+	  
+	void set_name_and_tags(const std::wstring& name) {
+		auto start_bracket = name.find_first_of(L'[');
+		auto end_bracket = name.find_first_of(L']');
+		if (start_bracket == std::wstring::npos && end_bracket == std::wstring::npos) {
+			//no flags
+			name_ = name;
+		}
+		else if (start_bracket != std::wstring::npos && end_bracket > start_bracket) {
+			//we have tags
+			tags_ = string_to_layer_tags(name.substr(start_bracket+1, end_bracket-start_bracket-1));
+			name_ = name.substr(end_bracket+1);
+		}
+		else {
+			//missmatch
+			name_ = name;
+			CASPAR_LOG(warning) << "Mismatching tag-brackets in layer name";
+		}
+
+		boost::trim(name_);
 	}
 
 	void read_solid_color(bigendian_file_input_stream& stream)
@@ -588,6 +613,13 @@ const image8bit_ptr& layer::bitmap() const { return impl_->bitmap_; }
 layer_type layer::group_mode() const { return impl_->layer_type_; }
 int layer::link_group_id() const { return impl_->link_group_id_; }
 void layer::set_link_group_id(int id) { impl_->link_group_id_ = id; }
+
+bool layer::is_explicit_dynamic() const { return (impl_->tags_ & layer_tag::explicit_dynamic) == layer_tag::explicit_dynamic; }
+bool layer::is_static() const { return (impl_->tags_ & layer_tag::rasterized) == layer_tag::rasterized; }
+bool layer::is_movable() const { return (impl_->tags_ & layer_tag::moveable) == layer_tag::moveable; }
+bool layer::is_resizable() const { return (impl_->tags_ & layer_tag::resizable) == layer_tag::resizable; }
+bool layer::is_placeholder() const { return (impl_->tags_ & layer_tag::placeholder) == layer_tag::placeholder; }
+layer_tag layer::tags() const { return impl_->tags_; }
 
 }	//namespace psd
 }	//namespace caspar
