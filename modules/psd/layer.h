@@ -56,7 +56,7 @@ public:
 		};
 
 		std::uint8_t	flags_;
-		rect<int>		rect_;
+		psd::rect<int>		rect_;
 
 		friend class layer::mask_info;
 		bool populate(int length, bigendian_file_input_stream& stream, int doc_width, int doc_height);
@@ -72,7 +72,7 @@ public:
 
 		bool empty() { return rect_.empty(); }
 
-		const rect<int>& rect() const { return rect_; }
+		const psd::rect<int>& rect() const { return rect_; }
 	};
 
 	class mask_info
@@ -90,7 +90,7 @@ public:
 		image8bit_ptr	bitmap_;
 		std::uint8_t	default_value_;
 		std::uint8_t	flags_;
-		rect<int>		rect_;
+		psd::rect<int>		rect_;
 
 		std::unique_ptr<vector_mask_info> vector_mask_;
 		std::unique_ptr<mask_info> total_mask_;
@@ -113,7 +113,7 @@ public:
 		bool has_bitmap() const { return (!vector_mask_ && !empty()) || (vector_mask_ && total_mask_); }
 		const std::unique_ptr<vector_mask_info>& vector() { return vector_mask_; }
 
-		const rect<int>& rect() const { return rect_; }
+		const psd::rect<int>& rect() const { return rect_; }
 		const image8bit_ptr& bitmap() const { return bitmap_; }
 	};
 
@@ -139,7 +139,7 @@ public:
 	const boost::property_tree::wptree& timeline_data() const;
 
 	const point<int>& location() const;
-	const size<int>& size() const;
+	const psd::size<int>& size() const;
 	const image8bit_ptr& bitmap() const;
 
 	layer_type group_mode() const;
