@@ -137,6 +137,35 @@ enum class color_mode
 color_mode int_to_color_mode(std::uint16_t x);
 std::wstring color_mode_to_string(color_mode c);
 
+
+enum class layer_tag : int {
+	none = 0,
+	placeholder = 1,
+	explicit_dynamic = 2,
+	moveable = 4,
+	resizable = 8,
+	rasterized = 16,
+	all = 31
+};
+inline layer_tag operator | (layer_tag lhs, layer_tag rhs)
+{
+	return (layer_tag)(static_cast<int>(lhs) | static_cast<int>(rhs));
+}
+inline layer_tag operator & (layer_tag lhs, layer_tag rhs)
+{
+	return (layer_tag)(static_cast<int>(lhs) & static_cast<int>(rhs));
+}
+inline layer_tag operator ^ (layer_tag lhs, layer_tag rhs)
+{
+	return (layer_tag)(static_cast<int>(lhs) ^ static_cast<int>(rhs));
+}
+inline layer_tag operator ~ (layer_tag rhs)
+{
+	return (layer_tag)(static_cast<int>(layer_tag::all) ^ static_cast<int>(rhs));
+}
+
+layer_tag string_to_layer_tags(const std::wstring& str);
+
 }	//namespace psd
 }	//namespace caspar
 

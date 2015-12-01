@@ -140,7 +140,7 @@ struct text_producer::impl
 	variable_impl<double>					current_bearing_y_;
 	variable_impl<double>					current_protrude_under_y_;
 	draw_frame								frame_;
-	text::texture_atlas						atlas_						{ 512, 512, 4 };
+	text::texture_atlas						atlas_						{ 1024, 512, 4 };
 	text::texture_font						font_;
 	bool									dirty_						= false;
 

@@ -19,7 +19,9 @@
 * Author: Niklas P Andersson, niklas.p.andersson@svt.se
 */
 
+#include <boost/algorithm/string.hpp>
 #include <vector>
+
 #include "misc.h"
 
 namespace caspar { namespace psd {
@@ -136,6 +138,38 @@ std::wstring color_mode_to_string(color_mode c)
 		default: return L"Invalid";
 	};
 }
+
+layer_tag string_to_layer_tags(const std::wstring& str) {
+	std::vector<std::wstring> flags;
+	boost::split(flags, str, boost::is_any_of(L", "), boost::token_compress_on);
+
+	layer_tag result = layer_tag::none;
+	for (auto& flag : flags) {
+		if (boost::algorithm::iequals(flag, "producer"))
+			result = result | layer_tag::placeholder;
+		else if (boost::algorithm::iequals(flag, "dynamic")) {
+			result = result | layer_tag::explicit_dynamic;
+			result = result & (~layer_tag::rasterized);
+		}
+		else if (boost::algorithm::iequals(flag, "static")) {
+			result = result | layer_tag::rasterized;
+			result = result & (~layer_tag::explicit_dynamic);
+		}
+		else if (boost::algorithm::iequals(flag, "movable")) {
+			result = result | layer_tag::moveable;
+			result = result & (~layer_tag::resizable);
+			result = result & (~layer_tag::explicit_dynamic);
+		}
+		else if (boost::algorithm::iequals(flag, "resizable")) {
+			result = result | layer_tag::resizable;
+			result = result & (~layer_tag::moveable);
+			result = result & (~layer_tag::explicit_dynamic);
+		}
+	}
+
+	return result;
+}
+
 
 }	//namespace psd
 }	//namespace caspar

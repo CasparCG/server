@@ -146,6 +146,13 @@ public:
 
 	int link_group_id() const;
 	void set_link_group_id(int id);
+
+	bool is_explicit_dynamic() const;
+	bool is_static() const;
+	bool is_movable() const;
+	bool is_resizable() const;
+	bool is_placeholder() const;
+	layer_tag tags() const;
 };
 
 }	//namespace psd
