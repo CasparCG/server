@@ -771,7 +771,7 @@ HRESULT FlashAxContainer::CreateAxControl()
 			HRESULT hr2 = m_spOleObject->QueryInterface(__uuidof(IShockwaveFlash), (void**) &spFlash);
 			if(hr2 == S_OK && spFlash)
 			{
-				if(FAILED(spFlash->put_WMode(L"direct")))
+				if(FAILED(spFlash->put_WMode(L"Transparent")))
 					CASPAR_LOG(warning) << print_() << L" Failed to set flash container to transparent mode.";
 				//spFlash->put_WMode(TEXT("ogl"));
 				hResultQuality = spFlash->put_Quality2(L"Best");
