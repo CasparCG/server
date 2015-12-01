@@ -106,7 +106,7 @@ struct configuration
 	bool			auto_deinterlace	= true;
 	bool			key_only			= false;
 	aspect_ratio	aspect				= aspect_ratio::aspect_invalid;
-	bool			vsync				= true;
+	bool			vsync				= false;
 	bool			interactive			= true;
 	bool			borderless			= false;
 };
@@ -283,17 +283,6 @@ public:
 		{
 			CASPAR_LOG(info) << print() << " Enabled vsync.";
 		}
-		/*auto wglSwapIntervalEXT = reinterpret_cast<void(APIENTRY*)(int)>(wglGetProcAddress("wglSwapIntervalEXT"));
-		if(wglSwapIntervalEXT)
-		{
-			if(config_.vsync)
-			{
-				wglSwapIntervalEXT(1);
-				CASPAR_LOG(info) << print() << " Enabled vsync.";
-			}
-			else
-				wglSwapIntervalEXT(0);
-		}*/
 	}
 
 	void uninit()
