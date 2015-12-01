@@ -98,103 +98,103 @@ core::text::text_info get_text_info(const boost::property_tree::wptree& ptree)
 }
 
 
-	class layer_link_constructor
+class dependency_resolver
+{
+	struct layer_record
 	{
-		struct linked_layer_record
+		layer_record() : layer(nullptr), tags(layer_tag::none), adjustment_x(0), adjustment_y(0)
+		{}
+
+		caspar::core::scene::layer* layer;
+		layer_tag tags;
+		double adjustment_x;
+		double adjustment_y;
+	};
+
+	std::list<layer_record> layers;
+	layer_record master;
+	
+	spl::shared_ptr<core::scene::scene_producer> scene_;
+	bool is_root_;
+
+public:
+	dependency_resolver(const spl::shared_ptr<core::scene::scene_producer>& s) :
+		scene_(s), is_root_(false)
+	{}
+	dependency_resolver(const spl::shared_ptr<core::scene::scene_producer>& s, bool root) :
+		scene_(s), is_root_(root)
+	{}
+
+	spl::shared_ptr<core::scene::scene_producer> scene() { return scene_; }
+
+	void add(caspar::core::scene::layer* layer, layer_tag tags, double adjustment_x, double adjustment_y)
+	{
+		layer_record rec;
+		rec.layer = layer;
+		rec.tags = tags;
+		rec.adjustment_x = adjustment_x;
+		rec.adjustment_y = adjustment_y;
+		layers.push_back(rec);
+
+		//if the layer is either explicitly tagged as dynamic or at least not tagged as static/rasterized we should try to set it as master
+		if((rec.tags & layer_tag::explicit_dynamic) == layer_tag::explicit_dynamic || (rec.tags & layer_tag::rasterized) == layer_tag::none)
 		{
-			caspar::core::scene::layer* layer;
-			int link_id;
-			bool is_master;
-			double adjustment_x;
-			double adjustment_y;
-		};
-
-		std::vector<linked_layer_record> layers;
-		std::vector<linked_layer_record> masters;
-
-	public:
-		void add(caspar::core::scene::layer* layer, int link_group, bool master, double adjustment_x, double adjustment_y)
-		{
-			linked_layer_record rec;
-			rec.layer = layer;
-			rec.link_id = link_group;
-			rec.is_master = master;
-			rec.adjustment_x = adjustment_x;
-			rec.adjustment_y = adjustment_y;
-			layers.push_back(rec);
-
-			if(rec.is_master)
+			//if we don't have a master already, just assign this
+			if (master.layer == nullptr)
+				master = rec;
+			else if ((rec.tags & layer_tag::explicit_dynamic) == layer_tag::explicit_dynamic) 
 			{
-				auto it = std::find_if(masters.begin(), masters.end(), [=](linked_layer_record const &r){ return r.link_id == link_group; });
-				if(it == masters.end())
-					masters.push_back(rec);
-				else
-					masters.erase(it);	//ambigous, two linked layers with locked position
-			}
-		}
-
-		void calculate()
-		{
-			for(auto it = masters.begin(); it != masters.end(); ++it)
-			{
-				auto& master = (*it);
-				//std::for_each(layers.begin(), layers.end(), [&master](linked_layer_record &r) mutable { 
-				for (auto &r : layers) {
-					if(r.link_id == master.link_id && r.layer != master.layer)
-					{
-						{	//x-coords
-							double slave_left = r.layer->position.x.get() + r.adjustment_x;
-							double slave_right = slave_left + r.layer->producer.get()->pixel_constraints().width.get();
-
-							double master_left = master.layer->position.x.get() + master.adjustment_x;
-							double master_right = master_left + master.layer->producer.get()->pixel_constraints().width.get();
-
-							if((slave_left >= master_left && slave_right <= master_right) || (slave_left <= master_left && slave_right >= master_right))
-							{
-								//change width of slave
-								r.layer->position.x.bind(master.layer->position.x - r.adjustment_x + master.adjustment_x + (slave_left - master_left));
-								r.layer->producer.get()->pixel_constraints().width.bind(master.layer->producer.get()->pixel_constraints().width + (slave_right - slave_left - master_right + master_left)); 
-							}
-							else if(slave_left >= master_right)
-							{
-								//push slave ahead of master
-								r.layer->position.x.bind(master.layer->position.x - r.adjustment_x + master.adjustment_x + master.layer->producer.get()->pixel_constraints().width + (slave_left - master_right));
-							}
-							else if(slave_right <= master_left)
-							{
-								r.layer->position.x.bind(master.layer->position.x - r.adjustment_x + master.adjustment_x - (master_left - slave_left));
-							}
-						}
-
-						{	//y-coords
-							double slave_top = r.layer->position.y.get() + r.adjustment_y;
-							double slave_bottom = slave_top + r.layer->producer.get()->pixel_constraints().height.get();
-
-							double master_top = master.layer->position.y.get() + master.adjustment_y;
-							double master_bottom = master_top + master.layer->producer.get()->pixel_constraints().height.get();
-
-							if((slave_top >= master_top && slave_bottom <= master_bottom) || (slave_top <= master_top && slave_bottom >= master_bottom))
-							{
-								//change height of slave
-								r.layer->position.y.bind(master.layer->position.y - r.adjustment_y + master.adjustment_y + (slave_top - master_top));
-								r.layer->producer.get()->pixel_constraints().height.bind(master.layer->producer.get()->pixel_constraints().height + (slave_bottom - slave_top - master_bottom + master_top)); 
-							}
-							else if(slave_top >= master_bottom)
-							{
-								//push slave ahead of master
-								r.layer->position.y.bind(master.layer->position.y - r.adjustment_y + master.adjustment_y + master.layer->producer.get()->pixel_constraints().height + (slave_top - master_bottom));
-							}
-							else if(slave_bottom <= master_top)
-							{
-								r.layer->position.y.bind(master.layer->position.y - r.adjustment_y + master.adjustment_y - (master_top - slave_top));
-							}
-						}
-
-					}
+				if((master.tags & layer_tag::explicit_dynamic) == layer_tag::none) 
+				{
+					//if we have a master that's not explicitly tagged as dynamic but this layer is; use this as master
+					master = rec;
+				}
+				else {
+					//we have multiple layers that're tagged as dynamic, warn that the first one will be used
+					CASPAR_LOG(warning) << "Multiple explicitly dynamic layers in the same group. The first one will be used";
 				}
 			}
 		}
-	};
+	}
+
+	void calculate()
+	{
+		if (layers.size() == 0)
+			return;
+
+		if (master.layer == nullptr) {
+			CASPAR_LOG(warning) << "Dependent layers without any dynamic layer";
+			return;
+		}
+
+		for (auto &r : layers)
+		{
+			if (r.layer != master.layer)
+			{
+				//x-coords
+				double slave_left = r.layer->position.x.get();
+				double master_left = master.layer->position.x.get();
+				double slave_right = slave_left + r.layer->producer.get()->pixel_constraints().width.get();
+				double master_right = master_left + master.layer->producer.get()->pixel_constraints().width.get();
+
+				double slave_width = slave_right - slave_left;
+				double master_width = master_right - master_left;
+
+				double offset_start_x = slave_left - master_left;
+				double offset_end_x = slave_left - master_right;
+
+				if((r.tags & layer_tag::moveable) == layer_tag::moveable)
+					r.layer->position.x.bind(master.layer->position.x + master.layer->producer.get()->pixel_constraints().width + offset_end_x + r.adjustment_x);
+				else if ((r.tags & layer_tag::resizable) == layer_tag::resizable) {
+					r.layer->position.x.bind(master.layer->position.x + offset_start_x + r.adjustment_x);
+					r.layer->producer.get()->pixel_constraints().width.bind(master.layer->producer.get()->pixel_constraints().width + (slave_width - master_width));
+				}
+
+				//no support for changes in the y-direction yet
+			}
+		}
+	}
+};
 
 int64_t get_frame_number(
 		const core::video_format_desc& format_desc,
@@ -365,48 +365,54 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 
 	auto root = spl::make_shared<core::scene::scene_producer>(L"psd", doc.width(), doc.height(), dependencies.format_desc);
 
-	layer_link_constructor link_constructor;
-
 	std::vector<std::pair<std::wstring, spl::shared_ptr<core::text_producer>>> text_producers_by_layer_name;
 
-	std::stack<spl::shared_ptr<core::scene::scene_producer>> current_scene_stack;
-	current_scene_stack.push(root);
+	std::stack<dependency_resolver> scene_stack;
+	scene_stack.push(dependency_resolver{ root, true });
 
 	auto layers_end = doc.layers().rend();
 	for(auto it = doc.layers().rbegin(); it != layers_end; ++it)
 	{
-		auto psd_layer = (*it);
-		auto current_scene = current_scene_stack.top();
+		auto& psd_layer = (*it);
+		auto& current = scene_stack.top();
 
 		if (psd_layer->group_mode() == layer_type::group) {
+			//we've found a group. Create a new scene and add it to the scene-stack
+
 			auto group = spl::make_shared<core::scene::scene_producer>(psd_layer->name(), doc.width(), doc.height(), dependencies.format_desc);
 
-			auto& scene_layer = current_scene->create_layer(group, psd_layer->location().x, psd_layer->location().y, psd_layer->name());
+			auto& scene_layer = current.scene()->create_layer(group, psd_layer->location().x, psd_layer->location().y, psd_layer->name());
 			scene_layer.adjustments.opacity.set(psd_layer->opacity() / 255.0);
 			scene_layer.hidden.set(!psd_layer->is_visible());
 
 			if (psd_layer->has_timeline())
-				create_timelines(current_scene, dependencies.format_desc, scene_layer, psd_layer, 0, 0);
+				create_timelines(root, dependencies.format_desc, scene_layer, psd_layer, 0, 0);
 
-			if (psd_layer->link_group_id() != 0)
-				link_constructor.add(&scene_layer, psd_layer->link_group_id(), psd_layer->is_position_protected(), 0, 0);
+			if (psd_layer->is_movable())
+				current.add(&scene_layer, psd_layer->tags(), 0, 0);
 
-			current_scene_stack.push(group);
+			if (psd_layer->is_resizable())
+				CASPAR_LOG(warning) << "Groups doesn't support the \"resizable\"-tag.";
+
+			if (psd_layer->is_explicit_dynamic())
+				CASPAR_LOG(warning) << "Groups doesn't support the \"dynamic\"-tag.";
+
+			scene_stack.push(group);
 			continue;
 		}
 		else if (psd_layer->group_mode() == layer_type::group_delimiter) {
-			current_scene->reverse_layers();
-			current_scene_stack.pop();
+			//a group-terminator. Finish the scene
+			current.scene()->reverse_layers();
+			current.calculate();
+			scene_stack.pop();
 			continue;
 		}
 
 		if(psd_layer->is_visible())
 		{
-			bool is_text = psd_layer->is_text();
-			bool is_marked_as_dynamic = psd_layer->sheet_color() != 1;
-			std::wstring layer_name = psd_layer->name();
+			auto layer_name = psd_layer->name();
 
-			if(is_text && is_marked_as_dynamic)
+			if(psd_layer->is_text() && !psd_layer->is_static())
 			{
 				std::wstring str = psd_layer->text_data().get(L"EngineDict.Editor.Text", L"");
 			
@@ -420,16 +426,14 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 			
 				auto adjustment_x = -2;	//the 2 offset is just a hack for now. don't know why our text is rendered 2 px to the right of that in photoshop
 				auto adjustment_y = metrics.bearingY;
-				auto& scene_layer = current_scene->create_layer(text_producer, psd_layer->location().x + adjustment_x, psd_layer->location().y + adjustment_y, psd_layer->name());
+				auto& scene_layer = current.scene()->create_layer(text_producer, psd_layer->location().x + adjustment_x, psd_layer->location().y + adjustment_y, layer_name);
 				scene_layer.adjustments.opacity.set(psd_layer->opacity() / 255.0);
 				scene_layer.hidden.set(!psd_layer->is_visible());
 
 				if (psd_layer->has_timeline())
-					create_timelines(current_scene, dependencies.format_desc, scene_layer, psd_layer, adjustment_x, adjustment_y);
+					create_timelines(root, dependencies.format_desc, scene_layer, psd_layer, adjustment_x, adjustment_y);
 
-				if(psd_layer->link_group_id() != 0)
-					link_constructor.add(&scene_layer, psd_layer->link_group_id(), psd_layer->is_position_protected(), -adjustment_x, -adjustment_y);
-
+				current.add(&scene_layer, psd_layer->tags(), -adjustment_x, -adjustment_y);
 				text_producers_by_layer_name.push_back(std::make_pair(layer_name, text_producer));
 			}
 			else
@@ -441,10 +445,10 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 				}
 				else if(psd_layer->bitmap())
 				{
-					if (boost::algorithm::istarts_with(layer_name, L"[producer]"))
+					if (psd_layer->is_placeholder())
 					{
 						auto hotswap = std::make_shared<core::hotswap_producer>(psd_layer->bitmap()->width(), psd_layer->bitmap()->height());
-						hotswap->producer().set(dependencies.producer_registry->create_producer(dependencies, layer_name.substr(10)));
+						hotswap->producer().set(dependencies.producer_registry->create_producer(dependencies, layer_name));
 						layer_producer = hotswap;
 					}
 					else
@@ -463,22 +467,25 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 
 				if(layer_producer)
 				{
-					auto& scene_layer = current_scene->create_layer(spl::make_shared_ptr(layer_producer), psd_layer->location().x, psd_layer->location().y, psd_layer->name());
+					auto& scene_layer = current.scene()->create_layer(spl::make_shared_ptr(layer_producer), psd_layer->location().x, psd_layer->location().y, psd_layer->name());
 					scene_layer.adjustments.opacity.set(psd_layer->opacity() / 255.0);
 					scene_layer.hidden.set(!psd_layer->is_visible());
 
 					if (psd_layer->has_timeline())
-						create_timelines(current_scene, dependencies.format_desc, scene_layer, psd_layer, 0, 0);
+						create_timelines(root, dependencies.format_desc, scene_layer, psd_layer, 0, 0);
 
-					if(psd_layer->link_group_id() != 0)
-						link_constructor.add(&scene_layer, psd_layer->link_group_id(), psd_layer->is_position_protected(), 0, 0);
+					if(psd_layer->is_movable() || psd_layer->is_resizable())
+						current.add(&scene_layer, psd_layer->tags(), 0, 0);
 				}
 			}
 		}
 	}
+	if (scene_stack.size() != 1) {
+		
+	}
 	root->reverse_layers();
+	scene_stack.top().calculate();
 
-	link_constructor.calculate();
 
 	// Reset all dynamic text fields to empty strings and expose them as a scene parameter.
 	for (auto& text_layer : text_producers_by_layer_name)
