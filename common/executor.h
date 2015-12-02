@@ -250,7 +250,17 @@ private:
 				function();
 			}
 
-			return future.get();
+			try
+			{
+				return future.get();
+			}
+			catch (const caspar_exception& e)
+			{
+				if (!is_current()) // Add context information from this thread before rethrowing.
+					e << context_info(get_context() + *boost::get_error_info<context_info_t>(e));
+
+				throw;
+			}
 		});
 	}
 

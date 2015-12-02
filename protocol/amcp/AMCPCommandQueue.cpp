@@ -108,16 +108,16 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 				else
 					CASPAR_LOG(warning) << "Failed to execute command: " << print;
 			}
-			catch (file_not_found&)
+			catch (const file_not_found& e)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
-				CASPAR_LOG(error) << L"File not found. No match found for parameters. Check syntax. Turn on log level debug for stacktrace.";
+				CASPAR_LOG(error) << get_message_and_context(e) << " Turn on log level debug for stacktrace.";
 				pCurrentCommand->SetReplyString(L"404 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
 			catch (const user_error& e)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
-				CASPAR_LOG(error) << *boost::get_error_info<msg_info_t>(e) << ". Check syntax. Turn on log level debug for stacktrace.";
+				CASPAR_LOG(error) << get_message_and_context(e) << " Check syntax. Turn on log level debug for stacktrace.";
 				pCurrentCommand->SetReplyString(L"403 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
 			catch (std::out_of_range&)
