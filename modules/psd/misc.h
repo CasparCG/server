@@ -22,6 +22,7 @@
 #pragma once
 
 #include <common/except.h>
+#include <common/enum_class.h>
 
 #include <string>
 #include <cstdint>
@@ -147,18 +148,8 @@ enum class layer_tag : int {
 	rasterized = 16,
 	all = 31
 };
-inline layer_tag operator | (layer_tag lhs, layer_tag rhs)
-{
-	return (layer_tag)(static_cast<int>(lhs) | static_cast<int>(rhs));
-}
-inline layer_tag operator & (layer_tag lhs, layer_tag rhs)
-{
-	return (layer_tag)(static_cast<int>(lhs) & static_cast<int>(rhs));
-}
-inline layer_tag operator ^ (layer_tag lhs, layer_tag rhs)
-{
-	return (layer_tag)(static_cast<int>(lhs) ^ static_cast<int>(rhs));
-}
+ENUM_ENABLE_BITWISE(layer_tag);
+
 inline layer_tag operator ~ (layer_tag rhs)
 {
 	return (layer_tag)(static_cast<int>(layer_tag::all) ^ static_cast<int>(rhs));

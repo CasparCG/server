@@ -121,7 +121,6 @@ void psd_document::read_image_resources()
 						{
 
 						}
-						break;
 
 					case 1005:
 						{	
