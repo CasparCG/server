@@ -332,7 +332,7 @@ int main(int argc, char** argv)
 	catch (const user_error& e)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
-		CASPAR_LOG(fatal) << *boost::get_error_info<msg_info_t>(e) << ". Please check the configuration file (" << u8(config_file_name) << ") for errors. Turn on log level debug for stacktrace.";
+		CASPAR_LOG(fatal) << get_message_and_context(e) << " Please check the configuration file (" << u8(config_file_name) << ") for errors. Turn on log level debug for stacktrace.";
 		wait_for_keypress();
 	}
 	catch(...)
