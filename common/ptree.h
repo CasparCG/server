@@ -50,7 +50,7 @@ T ptree_get(const Ptree& ptree, const typename Ptree::key_type& path)
 {
 	try
 	{
-		return ptree.get<T>(path);
+		return ptree.template get<T>(path);
 	}
 	catch (boost::property_tree::ptree_bad_path&)
 	{
@@ -68,7 +68,7 @@ T ptree_get_value(const Ptree& ptree)
 {
 	try
 	{
-		return ptree.get_value<T>();
+		return ptree.template get_value<T>();
 	}
 	catch (const boost::property_tree::ptree_bad_data& e)
 	{
