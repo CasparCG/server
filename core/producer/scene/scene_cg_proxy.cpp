@@ -23,6 +23,8 @@
 
 #include "scene_cg_proxy.h"
 
+#include <common/ptree.h>
+
 #include <core/producer/frame_producer.h>
 
 #include <boost/property_tree/ptree.hpp>
@@ -95,10 +97,12 @@ void scene_cg_proxy::update(int layer, const std::wstring& data)
 
 	std::vector<std::wstring> parameters;
 
-	for (auto value : root.get_child(L"templateData"))
+	for (auto value : root | witerate_children(L"templateData") | welement_context_iteration)
 	{
-		auto id = value.second.get<std::wstring>(L"<xmlattr>.id");
-		auto val = value.second.get<std::wstring>(L"data.<xmlattr>.value");
+		ptree_verify_element_name(value, L"componentData");
+
+		auto id		= ptree_get<std::wstring>(value.second, L"<xmlattr>.id");
+		auto val	= ptree_get<std::wstring>(value.second, L"data.<xmlattr>.value");
 
 		parameters.push_back(std::move(id));
 		parameters.push_back(std::move(val));
