@@ -81,6 +81,7 @@ set(HEADERS
 		param.h
 		polling_filesystem_monitor.h
 		prec_timer.h
+		ptree.h
 		scope_exit.h
 		semaphore.h
 		stdafx.h
