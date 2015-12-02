@@ -11,6 +11,7 @@
 #include <common/future.h>
 #include <common/env.h>
 #include <common/scope_exit.h>
+#include <common/ptree.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
@@ -1299,7 +1300,7 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_streaming_consumer(
 		const boost::property_tree::wptree& ptree, core::interaction_sink*)
 {              	
 	return spl::make_shared<streaming_consumer>(
-			u8(ptree.get<std::wstring>(L"path")), 
+			u8(ptree_get<std::wstring>(ptree, L"path")), 
 			u8(ptree.get<std::wstring>(L"args", L"")),
 			false);
 }

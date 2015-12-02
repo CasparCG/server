@@ -212,7 +212,7 @@ bool run(const std::wstring& config_file_name, tbb::atomic<bool>& should_wait_fo
 
 	// Create server object which initializes channels, protocols and controllers.
 	std::unique_ptr<server> caspar_server(new server(shutdown_server_now));
-	
+
 	// Print environment information.
 	print_system_info(caspar_server->get_system_info_provider_repo());
 
@@ -221,7 +221,10 @@ bool run(const std::wstring& config_file_name, tbb::atomic<bool>& should_wait_fo
 	boost::property_tree::write_xml(str, env::properties(), w);
 	CASPAR_LOG(info) << config_file_name << L":\n-----------------------------------------\n" << str.str() << L"-----------------------------------------";
 	
-	caspar_server->start();
+	{
+		CASPAR_SCOPED_CONTEXT_MSG(config_file_name + L": ")
+		caspar_server->start();
+	}
 
 	// Create a dummy client which prints amcp responses to console.
 	auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
