@@ -48,6 +48,7 @@
 #include <common/assert.h>
 #include <common/memshfl.h>
 #include <common/timer.h>
+#include <common/ptree.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -926,7 +927,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(
 spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 		const boost::property_tree::wptree& ptree, core::interaction_sink*)
 {
-	auto filename		= ptree.get<std::wstring>(L"path");
+	auto filename		= ptree_get<std::wstring>(ptree, L"path");
 	auto codec			= ptree.get(L"vcodec", L"libx264");
 	auto separate_key	= ptree.get(L"separate-key", false);
 
