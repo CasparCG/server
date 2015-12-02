@@ -26,9 +26,12 @@
 #include "os/stack_trace.h"
 
 #include <exception>
+#include <list>
+
 #include <boost/exception/all.hpp>
 #include <boost/exception/error_info.hpp>
 #include <boost/throw_exception.hpp>
+#include <boost/noncopyable.hpp>
 
 namespace caspar {
 
@@ -39,6 +42,7 @@ typedef boost::error_info<struct tag_call_stack_info,	std::string>	call_stack_in
 typedef boost::error_info<struct tag_error_info,		std::string>	error_info_t;
 typedef boost::error_info<struct tag_source_info,		std::string>	source_info_t;
 typedef boost::error_info<struct tag_file_name_info,	std::string>	file_name_info_t;
+typedef boost::error_info<struct tag_context_info,		std::string>	context_info_t;
 
 template<typename T>
 inline arg_name_info_t		arg_name_info(const T& str)		{return arg_name_info_t(u8(str));}
@@ -54,6 +58,8 @@ template<typename T>
 inline source_info_t		source_info(const T& str)		{return source_info_t(u8(str));}
 template<typename T>
 inline file_name_info_t		file_name_info(const T& str)	{return file_name_info_t(u8(str));}
+template<typename T>
+inline context_info_t		context_info(const T& str)		{return context_info_t(u8(str));}
 
 typedef boost::error_info<struct tag_line_info, size_t>						line_info;
 typedef boost::error_info<struct tag_nested_exception_, std::exception_ptr> nested_exception;
@@ -88,7 +94,39 @@ struct not_implemented			: virtual caspar_exception {};
 struct user_error				: virtual caspar_exception {};
 struct not_supported			: virtual user_error {};
 
-#define CASPAR_THROW_EXCEPTION(e) BOOST_THROW_EXCEPTION(e << call_stack_info(caspar::get_call_stack()))
+std::string get_context();
+
+class scoped_context : boost::noncopyable
+{
+public:
+	scoped_context();
+	scoped_context(std::string msg);
+	template <typename Str>
+	scoped_context(Str msg)
+		: scoped_context(u8(std::move(msg)))
+	{
+	}
+
+	~scoped_context();
+	void replace_msg(std::string msg);
+	template <typename Str>
+	void replace_msg(std::string msg)
+	{
+		replace_msg(u8(std::move(msg)));
+	}
+	void clear_msg();
+private:
+	std::list<std::string>&	for_thread_;
+	std::string*			msg_;
+};
+
+#define _CASPAR_GENERATE_UNIQUE_IDENTIFIER_CAT(name, line) name##line
+#define _CASPAR_GENERATE_UNIQUE_IDENTIFIER(name, line) _CASPAR_GENERATE_UNIQUE_IDENTIFIER_CAT(name, line)
+#define CASPAR_SCOPED_CONTEXT_MSG(ctx_msg) ::caspar::scoped_context _CASPAR_GENERATE_UNIQUE_IDENTIFIER(SCOPED_CONTEXT, __LINE__)(u8(ctx_msg));
+
+#define CASPAR_THROW_EXCEPTION(e) BOOST_THROW_EXCEPTION(e << call_stack_info(caspar::get_call_stack()) << context_info(get_context()))
+
+std::string get_message_and_context(const caspar_exception& e);
 
 }
 
