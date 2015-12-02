@@ -379,7 +379,18 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 		if (psd_layer->group_mode() == layer_type::group) {
 			//we've found a group. Create a new scene and add it to the scene-stack
 
-			auto group = spl::make_shared<core::scene::scene_producer>(psd_layer->name(), doc.width(), doc.height(), dependencies.format_desc);
+			auto format_desc = (dependencies.format_desc.field_count == 1) ? dependencies.format_desc : core::video_format_desc{ dependencies.format_desc.format,
+																																	dependencies.format_desc.width,
+																																	dependencies.format_desc.height,
+																																	dependencies.format_desc.square_width,
+																																	dependencies.format_desc.square_height,
+																																	core::field_mode::progressive,
+																																	dependencies.format_desc.time_scale*2,
+																																	dependencies.format_desc.duration,
+																																	dependencies.format_desc.name,
+																																	dependencies.format_desc.audio_cadence };
+			
+			auto group = spl::make_shared<core::scene::scene_producer>(psd_layer->name(), doc.width(), doc.height(), format_desc);
 
 			auto& scene_layer = current.scene()->create_layer(group, psd_layer->location().x, psd_layer->location().y, psd_layer->name());
 			scene_layer.adjustments.opacity.set(psd_layer->opacity() / 255.0);
