@@ -32,6 +32,7 @@
 #include <common/utf.h>
 #include <common/memory.h>
 #include <common/polling_filesystem_monitor.h>
+#include <common/ptree.h>
 
 #include <core/video_channel.h>
 #include <core/video_format.h>
@@ -232,17 +233,25 @@ struct server::impl : boost::noncopyable
 		auto custom_mix_configs		= pt.get_child_optional(L"configuration.audio.mix-configs");
 
 		if (custom_channel_layouts)
+		{
+			CASPAR_SCOPED_CONTEXT_MSG("/configuration/audio/channel-layouts");
 			audio_channel_layout_repository::get_default()->register_all_layouts(*custom_channel_layouts);
+		}
 
 		if (custom_mix_configs)
+		{
+			CASPAR_SCOPED_CONTEXT_MSG("/configuration/audio/mix-configs");
 			audio_mix_config_repository::get_default()->register_all_configs(*custom_mix_configs);
+		}
 	}
 
 	void setup_channels(const boost::property_tree::wptree& pt)
 	{   
 		using boost::property_tree::wptree;
-		for (auto& xml_channel : pt.get_child(L"configuration.channels"))
+		for (auto& xml_channel : pt | witerate_children(L"configuration.channels") | welement_context_iteration)
 		{
+			ptree_verify_element_name(xml_channel, L"channel");
+
 			auto format_desc_str = xml_channel.second.get(L"video-mode", L"PAL");
 			auto format_desc = video_format_desc(format_desc_str);
 			if(format_desc.format == video_format::invalid)
@@ -258,8 +267,8 @@ struct server::impl : boost::noncopyable
 
 			core::diagnostics::scoped_call_context save;
 			core::diagnostics::call_context::for_thread().video_channel = channel->index();
-			
-			for (auto& xml_consumer : xml_channel.second.get_child(L"consumers"))
+
+			for (auto& xml_consumer : xml_channel.second | witerate_children(L"consumers") | welement_context_iteration)
 			{
 				auto name = xml_consumer.first;
 
@@ -271,7 +280,7 @@ struct server::impl : boost::noncopyable
 				catch (const user_error& e)
 				{
 					CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
-					CASPAR_LOG(error) << *boost::get_error_info<msg_info_t>(e) << L". Error found in " << name << L" consumer configuration. Turn on log level debug for stacktrace.";
+					CASPAR_LOG(error) << get_message_and_context(e) << " Turn on log level debug for stacktrace.";
 				}
 				catch (...)
 				{
@@ -311,12 +320,14 @@ struct server::impl : boost::noncopyable
 
 		if (predefined_clients)
 		{
-			for (auto& predefined_client : *predefined_clients)
+			for (auto& predefined_client : pt | witerate_children(L"configuration.osc.predefined-clients") | welement_context_iteration)
 			{
+				ptree_verify_element_name(predefined_client, L"predefined_client");
+
 				const auto address =
-						predefined_client.second.get<std::wstring>(L"address");
+						ptree_get<std::wstring>(predefined_client.second, L"address");
 				const auto port =
-						predefined_client.second.get<unsigned short>(L"port");
+						ptree_get<unsigned short>(predefined_client.second, L"port");
 				predefined_osc_subscriptions_.push_back(
 						osc_client_->get_subscription_token(udp::endpoint(
 								address_v4::from_string(u8(address)),
@@ -380,14 +391,14 @@ struct server::impl : boost::noncopyable
 		amcp::register_commands(*amcp_command_repo_);
 
 		using boost::property_tree::wptree;
-		for (auto& xml_controller : pt.get_child(L"configuration.controllers"))
+		for (auto& xml_controller : pt | witerate_children(L"configuration.controllers") | welement_context_iteration)
 		{
 			auto name = xml_controller.first;
-			auto protocol = xml_controller.second.get<std::wstring>(L"protocol");	
+			auto protocol = ptree_get<std::wstring>(xml_controller.second, L"protocol");
 
 			if(name == L"tcp")
 			{					
-				unsigned int port = xml_controller.second.get(L"port", 5250);
+				auto port = ptree_get<unsigned int>(xml_controller.second, L"port");
 				auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(
 						io_service_,
 						create_protocol(protocol, L"TCP Port " + boost::lexical_cast<std::wstring>(port)),

@@ -23,6 +23,8 @@
 
 #include "audio_channel_layout.h"
 
+#include <common/ptree.h>
+
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/algorithm/equal.hpp>
@@ -128,13 +130,13 @@ void audio_channel_layout_repository::register_all_layouts(const boost::property
 	auto& self = *impl_;
 	boost::lock_guard<boost::mutex> lock(self.mutex_);
 
-	for (auto& layout : layouts)
+	for (auto& layout : layouts | welement_context_iteration)
 	{
-		CASPAR_VERIFY(layout.first == L"channel-layout");
+		ptree_verify_element_name(layout, L"channel-layout");
 
-		auto name			= layout.second.get<std::wstring>(L"<xmlattr>.name");
-		auto type			= layout.second.get<std::wstring>(L"<xmlattr>.type");
-		auto num_channels	= layout.second.get<int>(L"<xmlattr>.num-channels");
+		auto name			= ptree_get<std::wstring>(layout.second, L"<xmlattr>.name");
+		auto type			= ptree_get<std::wstring>(layout.second, L"<xmlattr>.type");
+		auto num_channels	= ptree_get<int>(layout.second, L"<xmlattr>.num-channels");
 		auto channel_order	= layout.second.get<std::wstring>(L"<xmlattr>.channel-order", L"");
 
 		boost::to_upper(name);
@@ -192,13 +194,13 @@ void audio_mix_config_repository::register_all_configs(const boost::property_tre
 	auto& self = *impl_;
 	boost::lock_guard<boost::mutex> lock(self.mutex_);
 
-	for (auto& config : configs)
+	for (auto& config : configs | welement_context_iteration)
 	{
-		CASPAR_VERIFY(config.first == L"mix-config");
+		ptree_verify_element_name(config, L"mix-config");
 
-		auto from_type		= config.second.get<std::wstring>(L"<xmlattr>.from-type");
-		auto to_types_str	= config.second.get<std::wstring>(L"<xmlattr>.to-types");
-		auto mix_config		= config.second.get<std::wstring>(L"<xmlattr>.mix");
+		auto from_type		= ptree_get<std::wstring>(config.second, L"<xmlattr>.from-type");
+		auto to_types_str	= ptree_get<std::wstring>(config.second, L"<xmlattr>.to-types");
+		auto mix_config		= ptree_get<std::wstring>(config.second, L"<xmlattr>.mix");
 
 		boost::to_upper(from_type);
 		std::vector<std::wstring> to_types;
