@@ -8,6 +8,7 @@ set(SOURCES
 
 		base64.cpp
 		env.cpp
+		except.cpp
 		filesystem.cpp
 		log.cpp
 		polling_filesystem_monitor.cpp
