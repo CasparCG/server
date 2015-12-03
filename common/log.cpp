@@ -97,7 +97,7 @@ public:
 	template<typename Stream, typename Val>
 	void write(Stream& out, const Val& value)
 	{
-		std::string to_string = boost::lexical_cast<std::string>(value);
+		std::wstring to_string = boost::lexical_cast<std::wstring>(value);
 		int length = static_cast<int>(to_string.size());
 		int read_width;
 
@@ -118,18 +118,24 @@ void my_formatter(bool print_all_characters, const boost::log::record_view& rec,
 	static column_writer severity_column(7);
 	namespace expr = boost::log::expressions;
 
-	append_timestamp(strm);
+	std::wstringstream pre_message_stream;
+	append_timestamp(pre_message_stream);
+	thread_id_column.write(pre_message_stream, boost::log::extract<boost::log::attributes::current_thread_id::value_type>("ThreadID", rec).get().native_id());
+	severity_column.write(pre_message_stream, boost::log::extract<boost::log::trivial::severity_level>("Severity", rec));
 
-	thread_id_column.write(strm, boost::log::extract<boost::log::attributes::current_thread_id::value_type>("ThreadID", rec).get().native_id());
-	severity_column.write(strm, boost::log::extract<boost::log::trivial::severity_level>("Severity", rec));
+	auto pre_message = pre_message_stream.str();
+
+	strm << pre_message;
+
+	auto line_break_replacement = L"\n" + pre_message;
 
 	if (print_all_characters)
 	{
-		strm << rec[expr::message];
+		strm << boost::replace_all_copy(rec[expr::message].get<std::wstring>(), "\n", line_break_replacement);
 	}
 	else
 	{
-		strm << replace_nonprintable_copy(rec[expr::message].get<std::wstring>(), L'?');
+		strm << boost::replace_all_copy(replace_nonprintable_copy(rec[expr::message].get<std::wstring>(), L'?'), L"\n", line_break_replacement);
 	}
 }
 
