@@ -102,13 +102,17 @@ class dependency_resolver
 {
 	struct layer_record
 	{
-		layer_record() : layer(nullptr), tags(layer_tag::none), adjustment_x(0), adjustment_y(0)
+		layer_record() : layer(nullptr), tags(layer_tag::none), adjustment_x(0), adjustment_y(0), vector_mask(false)
+		{}
+		layer_record(caspar::core::scene::layer* l, caspar::psd::layer_tag t, double x, double y, bool v) :
+			layer(l), tags(t), adjustment_x(x), adjustment_y(y), vector_mask(v)
 		{}
 
 		caspar::core::scene::layer* layer;
 		layer_tag tags;
 		double adjustment_x;
 		double adjustment_y;
+		bool vector_mask;
 	};
 
 	std::list<layer_record> layers;
@@ -127,13 +131,9 @@ public:
 
 	spl::shared_ptr<core::scene::scene_producer> scene() { return scene_; }
 
-	void add(caspar::core::scene::layer* layer, layer_tag tags, double adjustment_x, double adjustment_y)
+	void add(caspar::core::scene::layer* layer, layer_tag tags, double adjustment_x, double adjustment_y, bool vector_mask)
 	{
-		layer_record rec;
-		rec.layer = layer;
-		rec.tags = tags;
-		rec.adjustment_x = adjustment_x;
-		rec.adjustment_y = adjustment_y;
+		layer_record rec{ layer, tags, adjustment_x, adjustment_y, vector_mask };
 		layers.push_back(rec);
 
 		//if the layer is either explicitly tagged as dynamic or at least not tagged as static/rasterized we should try to set it as master
@@ -187,7 +187,11 @@ public:
 					r.layer->position.x.bind(master.layer->position.x + master.layer->producer.get()->pixel_constraints().width + offset_end_x + r.adjustment_x);
 				else if ((r.tags & layer_tag::resizable) == layer_tag::resizable) {
 					r.layer->position.x.bind(master.layer->position.x + offset_start_x + r.adjustment_x);
-					r.layer->producer.get()->pixel_constraints().width.bind(master.layer->producer.get()->pixel_constraints().width + (slave_width - master_width));
+
+					if(r.vector_mask)	//adjust crop-rect if we have a vector-mask
+						r.layer->crop.lower_right.x.bind(master.layer->producer.get()->pixel_constraints().width + ((r.layer->crop.lower_right.x.get() - r.layer->crop.upper_left.x.get()) - master_width));
+					else //just stretch the content
+						r.layer->producer.get()->pixel_constraints().width.bind(master.layer->producer.get()->pixel_constraints().width + (slave_width - master_width));
 				}
 
 				//no support for changes in the y-direction yet
@@ -349,6 +353,10 @@ void create_timelines(
 					scene->add_keyframe(opacity, opct, frame);
 			}
 		}
+		else
+		{
+			//ignore other kinds of tracks for now
+		}
 	}
 }
 
@@ -400,9 +408,9 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 				create_timelines(root, dependencies.format_desc, scene_layer, psd_layer, 0, 0);
 
 			if (psd_layer->is_movable())
-				current.add(&scene_layer, psd_layer->tags(), 0, 0);
+				current.add(&scene_layer, psd_layer->tags(), 0, 0, false);
 
-			if (psd_layer->is_resizable())
+			if (psd_layer->is_resizable())	//TODO: we could add support for resizable groups with vector masks
 				CASPAR_LOG(warning) << "Groups doesn't support the \"resizable\"-tag.";
 
 			if (psd_layer->is_explicit_dynamic())
@@ -418,6 +426,10 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 			scene_stack.pop();
 			continue;
 		}
+
+		std::shared_ptr<core::frame_producer> layer_producer;
+		int adjustment_x = 0,
+			adjustment_y = 0;
 
 		if(psd_layer->is_visible())
 		{
@@ -435,21 +447,14 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 				text_producer->pixel_constraints().height.set(psd_layer->size().height);
 				core::text::string_metrics metrics = text_producer->measure_string(str);
 			
-				auto adjustment_x = -2;	//the 2 offset is just a hack for now. don't know why our text is rendered 2 px to the right of that in photoshop
-				auto adjustment_y = metrics.bearingY;
-				auto& scene_layer = current.scene()->create_layer(text_producer, psd_layer->location().x + adjustment_x, psd_layer->location().y + adjustment_y, layer_name);
-				scene_layer.adjustments.opacity.set(psd_layer->opacity() / 255.0);
-				scene_layer.hidden.set(!psd_layer->is_visible());
+				adjustment_x = -2;	//the 2 offset is just a hack for now. don't know why our text is rendered 2 px to the right of that in photoshop
+				adjustment_y = metrics.bearingY;
+				layer_producer = text_producer;
 
-				if (psd_layer->has_timeline())
-					create_timelines(root, dependencies.format_desc, scene_layer, psd_layer, adjustment_x, adjustment_y);
-
-				current.add(&scene_layer, psd_layer->tags(), -adjustment_x, -adjustment_y);
 				text_producers_by_layer_name.push_back(std::make_pair(layer_name, text_producer));
 			}
 			else
 			{
-				std::shared_ptr<core::frame_producer> layer_producer;
 				if(psd_layer->is_solid())
 				{
 					layer_producer = core::create_const_producer(core::create_color_frame(it->get(), dependencies.frame_factory, psd_layer->solid_color().to_uint32()), psd_layer->bitmap()->width(), psd_layer->bitmap()->height());
@@ -475,19 +480,42 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 						layer_producer = core::create_const_producer(core::draw_frame(std::move(frame)), psd_layer->bitmap()->width(), psd_layer->bitmap()->height());
 					}
 				}
+			}
 
-				if(layer_producer)
-				{
-					auto& scene_layer = current.scene()->create_layer(spl::make_shared_ptr(layer_producer), psd_layer->location().x, psd_layer->location().y, psd_layer->name());
-					scene_layer.adjustments.opacity.set(psd_layer->opacity() / 255.0);
-					scene_layer.hidden.set(!psd_layer->is_visible());
+			if (layer_producer)
+			{
+				auto& scene_layer = current.scene()->create_layer(spl::make_shared_ptr(layer_producer), psd_layer->location().x + adjustment_x, psd_layer->location().y + adjustment_y, layer_name);
+				scene_layer.adjustments.opacity.set(psd_layer->opacity() / 255.0);
+				scene_layer.hidden.set(!psd_layer->is_visible());	//this will always evaluate to true
 
-					if (psd_layer->has_timeline())
-						create_timelines(root, dependencies.format_desc, scene_layer, psd_layer, 0, 0);
+				if (psd_layer->mask().has_vector()) {
+					
+					//this rectangle is in document-coordinates
+					auto mask = psd_layer->mask().vector()->rect();	
+					
+					//remap to layer-coordinates
+					auto left = static_cast<double>(mask.location.x) - scene_layer.position.x.get();
+					auto right = left + static_cast<double>(mask.size.width);
+					auto top = static_cast<double>(mask.location.y) - scene_layer.position.y.get();
+					auto bottom = top + static_cast<double>(mask.size.height);
 
-					if(psd_layer->is_movable() || psd_layer->is_resizable())
-						current.add(&scene_layer, psd_layer->tags(), 0, 0);
+					scene_layer.crop.upper_left.x.unbind();
+					scene_layer.crop.upper_left.x.set(left);
+					scene_layer.crop.upper_left.y.unbind();
+					scene_layer.crop.upper_left.y.set(top);
+
+					scene_layer.crop.lower_right.x.unbind();
+					scene_layer.crop.lower_right.x.set(right);
+
+					scene_layer.crop.lower_right.y.unbind();
+					scene_layer.crop.lower_right.y.set(bottom);
 				}
+
+				if (psd_layer->has_timeline())
+					create_timelines(root, dependencies.format_desc, scene_layer, psd_layer, adjustment_x, adjustment_y);
+
+				if (psd_layer->is_movable() || psd_layer->is_resizable() || (psd_layer->is_text() && !psd_layer->is_static()))
+					current.add(&scene_layer, psd_layer->tags(), -adjustment_x, -adjustment_y, psd_layer->mask().has_vector());
 			}
 		}
 	}
@@ -497,13 +525,14 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 	root->reverse_layers();
 	scene_stack.top().calculate();
 
-
-	// Reset all dynamic text fields to empty strings and expose them as a scene parameter.
-	for (auto& text_layer : text_producers_by_layer_name)
-		text_layer.second->text().bind(root->create_variable<std::wstring>(boost::to_lower_copy(text_layer.first), true, L""));
-
 	if (doc.has_timeline())
 		create_marks(root, dependencies.format_desc, doc.timeline());
+
+	// Reset all dynamic text fields to empty strings and expose them as a scene parameter.
+	for (auto& text_layer : text_producers_by_layer_name) {
+		text_layer.second->text().set(L"");
+		text_layer.second->text().bind(root->create_variable<std::wstring>(boost::to_lower_copy(text_layer.first), true, L""));
+	}
 
 	auto params2 = params;
 	params2.erase(params2.begin());

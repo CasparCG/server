@@ -111,7 +111,7 @@ public:
 		
 		bool has_vector() const { return (vector_mask_ && !vector_mask_->empty() && vector_mask_->enabled()); }
 		bool has_bitmap() const { return (!vector_mask_ && !empty()) || (vector_mask_ && total_mask_); }
-		const std::unique_ptr<vector_mask_info>& vector() { return vector_mask_; }
+		const std::unique_ptr<vector_mask_info>& vector() const { return vector_mask_; }
 
 		const psd::rect<int>& rect() const { return rect_; }
 		const image8bit_ptr& bitmap() const { return bitmap_; }
@@ -127,6 +127,8 @@ public:
 	int sheet_color() const;
 	bool is_visible();
 	bool is_position_protected();
+
+	const mask_info& mask() const;
 
 	double text_scale() const;
 	bool is_text() const;
