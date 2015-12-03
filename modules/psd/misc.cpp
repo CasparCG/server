@@ -165,6 +165,11 @@ layer_tag string_to_layer_tags(const std::wstring& str) {
 			result = result & (~layer_tag::moveable);
 			result = result & (~layer_tag::explicit_dynamic);
 		}
+		else if (boost::algorithm::iequals(flag, "cornerpin")) {
+			result = result | layer_tag::cornerpin;
+			result = result & (~layer_tag::resizable);
+			result = result & (~layer_tag::explicit_dynamic);
+		}
 	}
 
 	return result;
