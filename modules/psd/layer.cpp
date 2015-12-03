@@ -596,6 +596,8 @@ int layer::sheet_color() const { return impl_->sheet_color_; }
 bool layer::is_visible() { return (impl_->flags_ & 2) == 0; }	//the (PSD file-format) documentation is is saying the opposite but what the heck
 bool layer::is_position_protected() { return (impl_->protection_flags_& 4) == 4; }
 
+const layer::mask_info& layer::mask() const { return impl_->mask_; }
+
 double layer::text_scale() const { return impl_->text_scale_; }
 bool layer::is_text() const { return !impl_->text_layer_info_.empty(); }
 const boost::property_tree::wptree& layer::text_data() const { return impl_->text_layer_info_; }
