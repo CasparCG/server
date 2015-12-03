@@ -36,7 +36,7 @@ std::wstring get_call_stack()
 {
 	class log_call_stack_walker : public StackWalker
 	{
-		std::string str_;
+		std::string str_ = "\n";
 	public:
 		log_call_stack_walker() : StackWalker() {}
 
@@ -59,7 +59,7 @@ std::wstring get_call_stack()
 			std::string str = szText;
 
 			if(str.find("caspar::get_call_stack") == std::string::npos && str.find("StackWalker::ShowCallstack") == std::string::npos)
-				str_ += std::move(str);
+				str_ += "    " + std::move(str);
 		}
 	};
 
