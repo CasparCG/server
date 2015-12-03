@@ -87,7 +87,7 @@ std::wstring get_call_stack()
 			auto demangled = demangle(strings[i]);
 
 			if (!demangled.empty() && demangled.find("caspar::get_call_stack") == std::string::npos)
-				stream << demangled.c_str() << std::endl;
+				stream << L"   " << demangled.c_str() << std::endl;
 		}
 
 		return stream.str();
