@@ -146,7 +146,8 @@ enum class layer_tag : int {
 	moveable = 4,
 	resizable = 8,
 	rasterized = 16,
-	all = 31
+	cornerpin = 32,
+	all = 63
 };
 ENUM_ENABLE_BITWISE(layer_tag);
 
