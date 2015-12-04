@@ -114,6 +114,12 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 				CASPAR_LOG(error) << get_message_and_context(e) << " Turn on log level debug for stacktrace.";
 				pCurrentCommand->SetReplyString(L"404 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
+			catch (const expected_user_error& e)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
+				CASPAR_LOG(info) << get_message_and_context(e) << " Check syntax. Turn on log level debug for stacktrace.";
+				pCurrentCommand->SetReplyString(L"403 " + pCurrentCommand->print() + L" FAILED\r\n");
+			}
 			catch (const user_error& e)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);

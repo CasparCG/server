@@ -92,6 +92,7 @@ struct timed_out				: virtual caspar_exception {};
 struct not_implemented			: virtual caspar_exception {};
 
 struct user_error				: virtual caspar_exception {};
+struct expected_user_error		: virtual user_error {};
 struct not_supported			: virtual user_error {};
 
 std::string get_context();
