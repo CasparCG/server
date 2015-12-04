@@ -611,12 +611,12 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 	}
 	else if(str.find(L"OnCommand") != std::wstring::npos) {
 		//this is how templatehost 1.8 reports that a command has been received
-		CASPAR_LOG(info)  << print_()  << L" [command]      " << str;
+		CASPAR_LOG(debug)  << print_()  << L" [command]      " << str;
 		bCallSuccessful_ = true;
 	}
 	else if(str.find(L"Activity") != std::wstring::npos)
 	{
-		CASPAR_LOG(info) << print_() << L" [activity]     " << str;
+		CASPAR_LOG(debug) << print_() << L" [activity]     " << str;
 
 		//this is how templatehost 1.7 reports that a command has been received
 		if(str.find(L"Command recieved") != std::wstring::npos)
