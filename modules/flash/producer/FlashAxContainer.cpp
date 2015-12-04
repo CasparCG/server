@@ -646,7 +646,10 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 	}
 	else if(str.find(L"OnError") != std::wstring::npos)
 	{
-		CASPAR_LOG(error) << print_() << L" [error]        " << str;
+		if (str.find(L"No template playing on layer") != std::wstring::npos)
+			CASPAR_LOG(info) << print_() << L" [info]        " << str;
+		else
+			CASPAR_LOG(error) << print_() << L" [error]        " << str;
 	}
 	else if(str.find(L"OnDebug") != std::wstring::npos)
 	{
