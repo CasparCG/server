@@ -540,7 +540,8 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::Advise(VARIANT vtimeMin, VARIANT vti
 
 	if(pTimerHelper != 0)
 	{
-		pTimerHelper->Setup(vtimeMin.ulVal, vtimeInterval.ulVal, pTimerSink);
+		static tbb::atomic<DWORD> NEXT_ID;
+		pTimerHelper->Setup(++NEXT_ID, vtimeMin.ulVal, vtimeInterval.ulVal, pTimerSink);
 		*pdwCookie = pTimerHelper->ID;
 		bHasNewTiming_ = true;
 
