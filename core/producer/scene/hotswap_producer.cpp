@@ -30,18 +30,28 @@ namespace caspar { namespace core {
 
 struct hotswap_producer::impl
 {
-	monitor::subject monitor_subject;
-	binding<std::shared_ptr<frame_producer>> producer;
-	constraints size;
+	spl::shared_ptr<monitor::subject>			monitor_subject;
+	binding<std::shared_ptr<frame_producer>>	producer;
+	constraints									size;
 
-	impl(int width, int height)
+	impl(int width, int height, bool auto_size)
 		: size(width, height)
 	{
+		producer.on_change([=]
+		{
+			if (auto_size)
+			{
+				size.width.bind(producer.get()->pixel_constraints().width);
+				size.height.bind(producer.get()->pixel_constraints().height);
+			}
+
+			producer.get()->monitor_output().attach_parent(monitor_subject);
+		});
 	}
 };
 
-hotswap_producer::hotswap_producer(int width, int height)
-	: impl_(new impl(width, height))
+hotswap_producer::hotswap_producer(int width, int height, bool auto_size)
+	: impl_(new impl(width, height, auto_size))
 {
 }
 
@@ -90,7 +100,27 @@ boost::property_tree::wptree hotswap_producer::info() const
 
 monitor::subject& hotswap_producer::monitor_output()
 {
-	return impl_->monitor_subject;
+	return *impl_->monitor_subject;
+}
+
+variable& hotswap_producer::get_variable(const std::wstring& name)
+{
+	auto producer = impl_->producer.get();
+
+	if (producer)
+		return producer->get_variable(name);
+	else
+		return frame_producer_base::get_variable(name);
+}
+
+const std::vector<std::wstring>& hotswap_producer::get_variables() const
+{
+	auto producer = impl_->producer.get();
+
+	if (producer)
+		return producer->get_variables();
+	else
+		return frame_producer_base::get_variables();
 }
 
 binding<std::shared_ptr<frame_producer>>& hotswap_producer::producer()
