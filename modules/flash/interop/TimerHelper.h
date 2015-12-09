@@ -34,20 +34,25 @@ namespace flash {
 	public:
 		TimerHelper()
 		{}
-		TimerHelper(DWORD first, DWORD interv, ITimerSink* pTS) : firstTime(first), interval(interv), currentTime(first), pTimerSink(pTS)
+		TimerHelper(DWORD id, DWORD first, DWORD interv, ITimerSink* pTS)
+			: ID(id)
+			, firstTime(first)
+			, interval(interv)
+			, currentTime(first)
+			, pTimerSink(pTS)
 		{
-			ID = first;
 		}
+
 		~TimerHelper()
 		{
 		}
-		void Setup(DWORD first, DWORD interv, ITimerSink* pTS)
+		void Setup(DWORD id, DWORD first, DWORD interv, ITimerSink* pTS)
 		{
+			ID = id;
 			firstTime = first;
 			interval = interv;
 			currentTime = first;
 			pTimerSink = pTS;
-			ID = first;
 		}
 
 		DWORD Invoke()
@@ -64,11 +69,11 @@ namespace flash {
 			return currentTime;
 		}
 
+		DWORD ID;
 		DWORD firstTime;
 		DWORD interval;
 		DWORD currentTime;
 		ATL::CComPtr<ITimerSink> pTimerSink;
-		DWORD ID;
 	};
 
 }	//namespace flash
