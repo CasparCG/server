@@ -23,7 +23,7 @@ public:
 	texture_font(texture_atlas&, const text_info&, bool normalize_coordinates);
 	void load_glyphs(unicode_block block, const color<double>& col);
 	void set_tracking(int tracking);
-	std::vector<frame_geometry::coord> create_vertex_stream(const std::wstring& str, int x, int y, int parent_width, int parent_height, string_metrics* metrics);
+	std::vector<frame_geometry::coord> create_vertex_stream(const std::wstring& str, int x, int y, int parent_width, int parent_height, string_metrics* metrics, double shear = 0.0);
 	string_metrics measure_string(const std::wstring& str);
 	std::wstring get_name() const;
 	double get_size() const;
