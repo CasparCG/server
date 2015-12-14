@@ -33,15 +33,17 @@ namespace caspar { namespace core {
 class hotswap_producer : public frame_producer_base
 {
 public:
-	hotswap_producer(int width, int height);
+	hotswap_producer(int width, int height, bool auto_size = false);
 	~hotswap_producer();
 
-	draw_frame receive_impl() override;
-	constraints& pixel_constraints() override;
-	std::wstring print() const override;
-	std::wstring name() const override;
-	boost::property_tree::wptree info() const override;
-	monitor::subject& monitor_output();
+	draw_frame							receive_impl() override;
+	constraints&						pixel_constraints() override;
+	std::wstring						print() const override;
+	std::wstring						name() const override;
+	boost::property_tree::wptree		info() const override;
+	monitor::subject&					monitor_output() override;
+	variable&							get_variable(const std::wstring& name) override;
+	const std::vector<std::wstring>&	get_variables() const override;
 
 	binding<std::shared_ptr<frame_producer>>& producer();
 private:
