@@ -46,7 +46,7 @@ void layer::mask_info::read_mask_data(bigendian_file_input_stream& stream)
 		break;
 
 	case 20:
-	case 36:	//discard total user mask data
+	case 36:
 		rect_.location.y = stream.read_long();
 		rect_.location.x = stream.read_long();
 		rect_.size.height = stream.read_long() - rect_.location.y;
@@ -78,16 +78,14 @@ void layer::mask_info::read_mask_data(bigendian_file_input_stream& stream)
 
 bool layer::vector_mask_info::populate(int length, bigendian_file_input_stream& stream, int doc_width, int doc_height)
 {
-	typedef std::pair<int, int> path_point;
-	bool bFail = false;
+	std::vector<point<int>> knots;
+	bool smooth_curve = false;
 
 	stream.read_long(); // version
 	this->flags_ = static_cast<std::uint8_t>(stream.read_long()); // flags
 	int path_records = (length - 8) / 26;
 
 	auto position = stream.current_position();
-
-	std::vector<path_point> knots;
 
 	const int SELECTOR_SIZE = 2;
 	const int PATH_POINT_SIZE = 4 + 4;
@@ -100,21 +98,22 @@ bool layer::vector_mask_info::populate(int length, bigendian_file_input_stream& 
 		{
 			auto p_y = stream.read_long();
 			auto p_x = stream.read_long();
-			path_point cp_prev(p_x, p_y);
+			point<int> prev{ static_cast<int>(p_x), static_cast<int>(p_y) };
 
 			auto a_y = stream.read_long();
 			auto a_x = stream.read_long();
-			path_point anchor(a_x, a_y);
+			point<int> anchor{ static_cast<int>(a_x), static_cast<int>(a_y) };
 
 			auto n_y = stream.read_long();
 			auto n_x = stream.read_long();
-			path_point cp_next(n_x, n_y);
+			point<int> next{ static_cast<int>(n_x), static_cast<int>(n_y) };
 
-			if (anchor == cp_prev && anchor == cp_next)
+			if (anchor == prev && anchor == next)
 				knots.push_back(anchor);
-			else
-			{	//we can't handle smooth curves yet
-				bFail = true;
+			else 
+			{
+				//note that we've got a smooth curve, but continue to iterate through the data
+				smooth_curve = true;
 			}
 		}
 
@@ -122,37 +121,46 @@ bool layer::vector_mask_info::populate(int length, bigendian_file_input_stream& 
 		stream.set_position(position + offset);
 	}
 
-	if ((knots.size() != 4) || (!(knots[0].first == knots[3].first && knots[1].first == knots[2].first && knots[0].second == knots[1].second && knots[2].second == knots[3].second)))
-		bFail = true;
-
-	if (bFail) {
-		rect_.clear();
-		flags_ = static_cast<std::uint8_t>(flags::unsupported);
-	}
-	else 
+	if (smooth_curve || knots.size() != 4)	//we can't handle smooth-curves yet and we only support quad-gons
 	{
-		//the path_points are given in fixed-point 8.24 as a ratio with regards to the width/height of the document. we need to divide by 16777215.0f to get the real ratio.
-		float x_ratio = doc_width / 16777215.0f;
-		float y_ratio = doc_height / 16777215.0f;
-		rect_.location.x = static_cast<int>(knots[0].first * x_ratio + 0.5f);								//add .5 to get propper rounding when converting to integer
-		rect_.location.y = static_cast<int>(knots[0].second * y_ratio + 0.5f);								//add .5 to get propper rounding when converting to integer
-		rect_.size.width = static_cast<int>(knots[1].first * x_ratio + 0.5f) - rect_.location.x;		//add .5 to get propper rounding when converting to integer
-		rect_.size.height = static_cast<int>(knots[2].second * y_ratio + 0.5f) - rect_.location.y;	//add .5 to get propper rounding when converting to integer
+		rect_.clear();
+		flags_ = static_cast<std::uint8_t>(flags::unsupported | flags::disabled);
+		return false;
 	}
 
-	return !bFail;
+	//the path_points are given in fixed-point 8.24 as a ratio with regards to the width/height of the document. we need to divide by 16777215.0f to get the real ratio.
+	float x_ratio = doc_width / 16777215.0f;
+	float y_ratio = doc_height / 16777215.0f;
+	rect_.clear();
+	knots_.clear();
+
+	//is it an orthogonal rectangle
+	if (knots[0].x == knots[3].x && knots[1].x == knots[2].x && knots[0].y == knots[1].y && knots[2].y == knots[3].y)
+	{
+		rect_.location.x = static_cast<int>(knots[0].x * x_ratio + 0.5f);						//add .5 to get propper rounding when converting to integer
+		rect_.location.y = static_cast<int>(knots[0].y * y_ratio + 0.5f);						//add .5 to get propper rounding when converting to integer
+		rect_.size.width = static_cast<int>(knots[1].x * x_ratio + 0.5f) - rect_.location.x;	//add .5 to get propper rounding when converting to integer
+		rect_.size.height = static_cast<int>(knots[2].y * y_ratio + 0.5f) - rect_.location.y;	//add .5 to get propper rounding when converting to integer
+	}
+	else //it's could be any kind of quad-gon
+	{
+		for (auto& k : knots)
+			knots_.push_back(psd::point<int>{static_cast<int>(k.x * x_ratio + 0.5f), static_cast<int>(k.y * y_ratio + 0.5f)});
+	}
+
+	return true;
 }
 
 struct layer::impl
 {
 	friend class layer;
 
-	impl() : blend_mode_(blend_mode::InvalidBlendMode), layer_type_(layer_type::content), link_group_id_(0), opacity_(255), sheet_color_(0), baseClipping_(false), flags_(0), protection_flags_(0), masks_count_(0), text_scale_(1.0f), tags_(layer_tag::none)
+	impl() : blend_mode_(caspar::core::blend_mode::normal), layer_type_(layer_type::content), link_group_id_(0), opacity_(255), sheet_color_(0), baseClipping_(false), flags_(0), protection_flags_(0), masks_count_(0), scale_{ 1.0, 1.0 }, angle_(0), shear_(0), tags_(layer_tag::none)
 	{}
 
 private:
 	std::vector<channel>			channels_;
-	blend_mode						blend_mode_;
+	caspar::core::blend_mode		blend_mode_;
 	layer_type						layer_type_;
 	int								link_group_id_;
 	int								opacity_;
@@ -162,7 +170,10 @@ private:
 	std::uint32_t					protection_flags_;
 	std::wstring					name_;
 	int								masks_count_;
-	double							text_scale_;
+	psd::point<double>				text_pos_;
+	psd::point<double>				scale_;
+	double							angle_;
+	double							shear_;
 
 	layer::mask_info				mask_;
 
@@ -285,6 +296,7 @@ public:
 			case 'lnk3':	//linked layer
 				break;
 
+			case 'vsms':
 			case 'vmsk':
 				mask_.read_vector_mask_data(length, stream, doc.width(), doc.height());
 				break;
@@ -388,12 +400,11 @@ public:
 		auto xy = stream.read_double();
 		auto yx = stream.read_double();
 		auto yy = stream.read_double();
-		stream.read_double(); // tx
-		stream.read_double(); // ty
-		if(xx != yy || (xy != 0 && yx != 0))
-			CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("Rotation and non-uniform scaling of dynamic textfields is not supported yet"));
+		auto tx = stream.read_double(); // tx
+		auto ty = stream.read_double(); // ty
 
-		text_scale_ = xx;
+		text_pos_.x = tx;
+		text_pos_.y = ty;
 
 		if(stream.read_short() != 50)	//"text version" should be 50
 			CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("invalid text version"));
@@ -420,10 +431,45 @@ public:
 
 		descriptor warp_descriptor(L"warp");
 		warp_descriptor.populate(stream);
-		stream.read_double(); // w_top
-		stream.read_double();  // w_left
+		stream.read_double(); // w_left
+		stream.read_double();  // w_top
 		stream.read_double();  // w_right
 		stream.read_double();  // w_bottom
+
+
+		//extract scale, angle and shear factor from transformation matrix 
+		const double PI = 3.141592653589793;
+		auto angle = atan2(xy, xx);
+
+		auto c = cos(angle);
+		auto s = sin(angle);
+		auto scale_x = (abs(c) > 0.1) ? xx / c : xy / s;
+
+		if (xx / scale_x < 0) {	//fel kvadrant
+			angle += PI;
+			c = cos(angle);
+			s = sin(angle);
+			scale_x = (abs(c) > 0.1) ? xx / c : xy / s;
+		}
+
+		auto shear_factor = (yx*c + yy*s) / (yy*c - yx * s);
+		auto scale_y = 1.0;
+		if (abs(shear_factor) < 0.0001 || isnan(shear_factor)) {
+			shear_factor = 0;
+			scale_y = (abs(c) > 0.1) ? yy / c : yx / -s;
+		}
+		else {
+			scale_y = yx / (c*shear_factor - s);
+		}
+
+		scale_.x = scale_x;
+		scale_.y = scale_y;
+		angle_ = angle * 180 / PI;
+		shear_ = shear_factor;
+
+		
+
+
 	}
 
 	//TODO: implement
@@ -591,6 +637,7 @@ void layer::read_channel_data(bigendian_file_input_stream& stream) { impl_->read
 
 const std::wstring& layer::name() const { return impl_->name_; }
 int layer::opacity() const { return impl_->opacity_; }
+caspar::core::blend_mode layer::blend_mode() const { return impl_->blend_mode_; }
 int layer::sheet_color() const { return impl_->sheet_color_; }
 
 bool layer::is_visible() { return (impl_->flags_ & 2) == 0; }	//the (PSD file-format) documentation is is saying the opposite but what the heck
@@ -598,7 +645,11 @@ bool layer::is_position_protected() { return (impl_->protection_flags_& 4) == 4;
 
 const layer::mask_info& layer::mask() const { return impl_->mask_; }
 
-double layer::text_scale() const { return impl_->text_scale_; }
+const psd::point<double>& layer::text_pos() const { return impl_->text_pos_; }
+const psd::point<double>& layer::scale() const { return impl_->scale_; }
+const double layer::angle() const { return impl_->angle_; }
+const double layer::shear() const { return impl_->shear_; }
+
 bool layer::is_text() const { return !impl_->text_layer_info_.empty(); }
 const boost::property_tree::wptree& layer::text_data() const { return impl_->text_layer_info_; }
 
@@ -621,6 +672,8 @@ bool layer::is_static() const { return (impl_->tags_ & layer_tag::rasterized) ==
 bool layer::is_movable() const { return (impl_->tags_ & layer_tag::moveable) == layer_tag::moveable; }
 bool layer::is_resizable() const { return (impl_->tags_ & layer_tag::resizable) == layer_tag::resizable; }
 bool layer::is_placeholder() const { return (impl_->tags_ & layer_tag::placeholder) == layer_tag::placeholder; }
+bool layer::is_cornerpin() const { return (impl_->tags_ & layer_tag::cornerpin) == layer_tag::cornerpin; }
+
 layer_tag layer::tags() const { return impl_->tags_; }
 
 }	//namespace psd
