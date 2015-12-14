@@ -55,7 +55,12 @@
 #include <tbb/parallel_for.h>
 
 namespace caspar { namespace accelerator { namespace ogl {
-		
+
+	void __stdcall gl_debug_callback(GLenum, GLenum, GLuint, GLenum, GLsizei, const GLchar* message, const void*) {
+		CASPAR_LOG(debug) << message;
+	}
+
+
 struct device::impl : public std::enable_shared_from_this<impl>
 {	
 	static_assert(std::is_same<decltype(boost::declval<device>().impl_), spl::shared_ptr<impl>>::value, "impl_ must be shared_ptr");
@@ -85,10 +90,15 @@ struct device::impl : public std::enable_shared_from_this<impl>
 						
 			if (glewInit() != GLEW_OK)
 				CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
-		
+
 			if(!GLEW_VERSION_3_0)
 				CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Your graphics card does not meet the minimum hardware requirements since it does not support OpenGL 3.0 or higher."));
-	
+
+			glDebugMessageCallbackARB(gl_debug_callback, nullptr);
+			//glDebugMessageControlARB(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, nullptr, GL_FALSE);
+			glDebugMessageControlARB(GL_DONT_CARE, GL_DEBUG_TYPE_PERFORMANCE, GL_DEBUG_SEVERITY_LOW, 0, nullptr, GL_FALSE);
+			glDebugMessageControlARB(GL_DONT_CARE, GL_DEBUG_TYPE_PERFORMANCE, GL_DEBUG_SEVERITY_MEDIUM, 0, nullptr, GL_FALSE);
+
 			glGenFramebuffers(1, &fbo_);				
 			glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
 		});
