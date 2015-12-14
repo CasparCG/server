@@ -136,6 +136,9 @@ struct text_producer::impl
 	variable_impl<std::wstring>				text_;
 	std::shared_ptr<void>					text_subscription_;
 	variable_impl<double>					tracking_;
+	variable_impl<double>					scale_x_;
+	variable_impl<double>					scale_y_;
+	variable_impl<double>					shear_;
 	std::shared_ptr<void>					tracking_subscription_;
 	variable_impl<double>					current_bearing_y_;
 	variable_impl<double>					current_protrude_under_y_;
@@ -158,6 +161,9 @@ public:
 		font_.load_glyphs(text::unicode_block::Latin_Extended_A, text_info.color);
 
 		tracking_.value().set(text_info.tracking);
+		scale_x_.value().set(text_info.scale_x); 
+		scale_y_.value().set(text_info.scale_y); 
+		shear_.value().set(text_info.shear);
 		text_subscription_ = text_.value().on_change([this]()
 		{
 			dirty_ = true;
@@ -186,13 +192,13 @@ public:
 		text::string_metrics metrics;
 		font_.set_tracking(static_cast<int>(tracking_.value().get()));
 		
-		auto vertex_stream = font_.create_vertex_stream(text_.value().get(), x_, y_, parent_width_, parent_height_, &metrics);
+		auto vertex_stream = font_.create_vertex_stream(text_.value().get(), x_, y_, parent_width_, parent_height_, &metrics, shear_.value().get());
 		auto frame = frame_factory_->create_frame(vertex_stream.data(), pfd, core::audio_channel_layout::invalid());
 		memcpy(frame.image_data().data(), atlas_.data(), frame.image_data().size());
 		frame.set_geometry(frame_geometry(frame_geometry::geometry_type::quad_list, std::move(vertex_stream)));
 
-		this->constraints_.width.set(metrics.width);
-		this->constraints_.height.set(metrics.height);
+		this->constraints_.width.set(metrics.width * this->scale_x_.value().get());
+		this->constraints_.height.set(metrics.height * this->scale_y_.value().get());
 		current_bearing_y_.value().set(metrics.bearingY);
 		current_protrude_under_y_.value().set(metrics.protrudeUnderY);
 		frame_ = core::draw_frame(std::move(frame));
