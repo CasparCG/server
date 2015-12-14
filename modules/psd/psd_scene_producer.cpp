@@ -413,6 +413,12 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 			if (psd_layer->is_resizable())	//TODO: we could add support for resizable groups with vector masks
 				CASPAR_LOG(warning) << "Groups doesn't support the \"resizable\"-tag.";
 
+			if (psd_layer->is_placeholder())
+				CASPAR_LOG(warning) << "Groups doesn't support the \"producer\"-tag.";
+
+			if (psd_layer->is_cornerpin())
+				CASPAR_LOG(warning) << "Groups doesn't support the \"cornerpin\"-tag.";
+
 			if (psd_layer->is_explicit_dynamic())
 				CASPAR_LOG(warning) << "Groups doesn't support the \"dynamic\"-tag.";
 
@@ -427,98 +433,152 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 			continue;
 		}
 
-		std::shared_ptr<core::frame_producer> layer_producer;
-		int adjustment_x = 0,
-			adjustment_y = 0;
-
-		if(psd_layer->is_visible())
+		if (psd_layer->is_visible())
 		{
+			caspar::core::scene::layer* scene_layer = nullptr;
+			std::shared_ptr<core::frame_producer> layer_producer;
 			auto layer_name = psd_layer->name();
+			int adjustment_x = 0,
+				adjustment_y = 0;
 
 			if(psd_layer->is_text() && !psd_layer->is_static())
 			{
 				std::wstring str = psd_layer->text_data().get(L"EngineDict.Editor.Text", L"");
 			
 				core::text::text_info text_info(std::move(get_text_info(psd_layer->text_data())));
-				text_info.size *= psd_layer->text_scale();
+				auto max_scale = std::max(abs(psd_layer->scale().x), abs(psd_layer->scale().y));
+				text_info.size *= max_scale;
+				text_info.scale_x = psd_layer->scale().x / max_scale;
+				text_info.scale_y = psd_layer->scale().y / max_scale;
+				text_info.shear = 0;	
 
 				auto text_producer = core::text_producer::create(dependencies.frame_factory, 0, 0, str, text_info, doc.width(), doc.height());
-				text_producer->pixel_constraints().width.set(psd_layer->size().width);
-				text_producer->pixel_constraints().height.set(psd_layer->size().height);
+				//text_producer->pixel_constraints().width.set(psd_layer->size().width);
+				//text_producer->pixel_constraints().height.set(psd_layer->size().height);
 				core::text::string_metrics metrics = text_producer->measure_string(str);
 			
-				adjustment_x = -2;	//the 2 offset is just a hack for now. don't know why our text is rendered 2 px to the right of that in photoshop
-				adjustment_y = metrics.bearingY;
+				//adjustment_x = -2;	//the 2 offset is just a hack for now. don't know why our text is rendered 2 px to the right of that in photoshop
+				//adjustment_y = metrics.bearingY;
 				layer_producer = text_producer;
-
+				scene_layer = &current.scene()->create_layer(spl::make_shared_ptr(layer_producer), static_cast<int>(psd_layer->text_pos().x) + adjustment_x, static_cast<int>(psd_layer->text_pos().y) + adjustment_y, layer_name);
 				text_producers_by_layer_name.push_back(std::make_pair(layer_name, text_producer));
 			}
 			else
 			{
-				if(psd_layer->is_solid())
+				if (psd_layer->is_placeholder())
+				{
+					auto hotswap = std::make_shared<core::hotswap_producer>(psd_layer->bitmap()->width(), psd_layer->bitmap()->height());
+
+					if (psd_layer->is_explicit_dynamic())
+					{
+						/*auto& var = root->create_variable<std::wstring>(boost::to_lower_copy(layer_name), true, L"");
+						var.on_change([=]() {
+							hotswap->producer().set(dependencies.producer_registry->create_producer(dependencies, root->get_variable(layer_name).as<std::wstring>().get()));
+						});*/
+						
+					}
+					else
+						hotswap->producer().set(dependencies.producer_registry->create_producer(dependencies, layer_name));
+					
+					layer_producer = hotswap;
+				}
+				else if(psd_layer->is_solid())
 				{
 					layer_producer = core::create_const_producer(core::create_color_frame(it->get(), dependencies.frame_factory, psd_layer->solid_color().to_uint32()), psd_layer->bitmap()->width(), psd_layer->bitmap()->height());
 				}
 				else if(psd_layer->bitmap())
 				{
-					if (psd_layer->is_placeholder())
-					{
-						auto hotswap = std::make_shared<core::hotswap_producer>(psd_layer->bitmap()->width(), psd_layer->bitmap()->height());
-						hotswap->producer().set(dependencies.producer_registry->create_producer(dependencies, layer_name));
-						layer_producer = hotswap;
-					}
-					else
-					{
-						core::pixel_format_desc pfd(core::pixel_format::bgra);
-						pfd.planes.push_back(core::pixel_format_desc::plane(psd_layer->bitmap()->width(), psd_layer->bitmap()->height(), 4));
+					core::pixel_format_desc pfd(core::pixel_format::bgra);
+					pfd.planes.push_back(core::pixel_format_desc::plane(psd_layer->bitmap()->width(), psd_layer->bitmap()->height(), 4));
 
-						auto frame = dependencies.frame_factory->create_frame(it->get(), pfd, core::audio_channel_layout::invalid());
-						auto destination = frame.image_data().data();
-						auto source = psd_layer->bitmap()->data();
-						memcpy(destination, source, frame.image_data().size());
+					auto frame = dependencies.frame_factory->create_frame(it->get(), pfd, core::audio_channel_layout::invalid());
+					auto destination = frame.image_data().data();
+					auto source = psd_layer->bitmap()->data();
+					memcpy(destination, source, frame.image_data().size());
 
-						layer_producer = core::create_const_producer(core::draw_frame(std::move(frame)), psd_layer->bitmap()->width(), psd_layer->bitmap()->height());
-					}
+					layer_producer = core::create_const_producer(core::draw_frame(std::move(frame)), psd_layer->bitmap()->width(), psd_layer->bitmap()->height());
 				}
+				else {
+					CASPAR_LOG(warning) << "Ignoring layer \"" << layer_name << "\", layer type not supported";
+				}
+
+				if(layer_producer)
+					scene_layer = &current.scene()->create_layer(spl::make_shared_ptr(layer_producer), psd_layer->location().x + adjustment_x, psd_layer->location().y + adjustment_y, layer_name);
 			}
 
-			if (layer_producer)
+			if (layer_producer && scene_layer)
 			{
-				auto& scene_layer = current.scene()->create_layer(spl::make_shared_ptr(layer_producer), psd_layer->location().x + adjustment_x, psd_layer->location().y + adjustment_y, layer_name);
-				scene_layer.adjustments.opacity.set(psd_layer->opacity() / 255.0);
-				scene_layer.hidden.set(!psd_layer->is_visible());	//this will always evaluate to true
+				scene_layer->adjustments.opacity.set(psd_layer->opacity() / 255.0);
+				scene_layer->hidden.set(!psd_layer->is_visible());	//this will always evaluate to true
+				scene_layer->blend_mode.set(psd_layer->blend_mode());
+				scene_layer->rotation.set(psd_layer->angle());
 
 				if (psd_layer->mask().has_vector()) {
-					
-					//this rectangle is in document-coordinates
-					auto mask = psd_layer->mask().vector()->rect();	
-					
-					//remap to layer-coordinates
-					auto left = static_cast<double>(mask.location.x) - scene_layer.position.x.get();
-					auto right = left + static_cast<double>(mask.size.width);
-					auto top = static_cast<double>(mask.location.y) - scene_layer.position.y.get();
-					auto bottom = top + static_cast<double>(mask.size.height);
 
-					scene_layer.crop.upper_left.x.unbind();
-					scene_layer.crop.upper_left.x.set(left);
-					scene_layer.crop.upper_left.y.unbind();
-					scene_layer.crop.upper_left.y.set(top);
+					if (psd_layer->is_placeholder() && psd_layer->is_cornerpin()) {
+						
+						psd::point<int> layer_pos{ static_cast<int>(scene_layer->position.x.get()), static_cast<int>(scene_layer->position.y.get()) };
+						auto unbind_and_set = [&layer_pos](caspar::core::scene::coord& c, const caspar::psd::point<int>& pt) {
+							c.x.unbind();
+							c.x.set(pt.x - layer_pos.x);	//remap to layer-coordinates
+							c.y.unbind();
+							c.y.set(pt.y - layer_pos.y);	//remap to layer-coordinates
+						};
 
-					scene_layer.crop.lower_right.x.unbind();
-					scene_layer.crop.lower_right.x.set(right);
+						if (!psd_layer->mask().vector()->rect().empty()) {
+							//this rectangle is in document-coordinates
+							auto& mask = psd_layer->mask().vector()->rect();
 
-					scene_layer.crop.lower_right.y.unbind();
-					scene_layer.crop.lower_right.y.set(bottom);
+							unbind_and_set(scene_layer->perspective.upper_left, mask.location);
+							unbind_and_set(scene_layer->perspective.upper_right, point<int>{mask.location.x + mask.size.width, mask.location.y});
+							unbind_and_set(scene_layer->perspective.lower_right, point<int>{mask.location.x + mask.size.width, mask.location.y + mask.size.width});
+							unbind_and_set(scene_layer->perspective.lower_left, point<int>{mask.location.x, mask.location.y + mask.size.width});
+						}
+						else if (!psd_layer->mask().vector()->knots().empty()) {
+							auto& knots = psd_layer->mask().vector()->knots();
+							unbind_and_set(scene_layer->perspective.upper_left, knots[0]);
+							unbind_and_set(scene_layer->perspective.upper_right, knots[1]);
+							unbind_and_set(scene_layer->perspective.lower_right, knots[2]);
+							unbind_and_set(scene_layer->perspective.lower_left, knots[3]);
+						}
+					}
+					else if(!psd_layer->mask().vector()->rect().empty())
+					{
+						//this rectangle is in document-coordinates
+						auto mask = psd_layer->mask().vector()->rect();
+
+						//remap to layer-coordinates
+						auto left = static_cast<double>(mask.location.x) - scene_layer->position.x.get();
+						auto right = left + static_cast<double>(mask.size.width);
+						auto top = static_cast<double>(mask.location.y) - scene_layer->position.y.get();
+						auto bottom = top + static_cast<double>(mask.size.height);
+
+						scene_layer->crop.upper_left.x.unbind();
+						scene_layer->crop.upper_left.x.set(left);
+
+						scene_layer->crop.upper_left.y.unbind();
+						scene_layer->crop.upper_left.y.set(top);
+
+						scene_layer->crop.lower_right.x.unbind();
+						scene_layer->crop.lower_right.x.set(right);
+
+						scene_layer->crop.lower_right.y.unbind();
+						scene_layer->crop.lower_right.y.set(bottom);
+					}
 				}
 
 				if (psd_layer->has_timeline())
-					create_timelines(root, dependencies.format_desc, scene_layer, psd_layer, adjustment_x, adjustment_y);
+					create_timelines(root, dependencies.format_desc, *scene_layer, psd_layer, adjustment_x, adjustment_y);
 
 				if (psd_layer->is_movable() || psd_layer->is_resizable() || (psd_layer->is_text() && !psd_layer->is_static()))
-					current.add(&scene_layer, psd_layer->tags(), -adjustment_x, -adjustment_y, psd_layer->mask().has_vector());
+					current.add(scene_layer, psd_layer->tags(), -adjustment_x, -adjustment_y, psd_layer->mask().has_vector());
+
+				if (psd_layer->is_placeholder())
+					scene_layer->use_mipmap.set(true);
 			}
 		}
 	}
+
 	if (scene_stack.size() != 1) {
 		
 	}
@@ -531,7 +591,8 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 	// Reset all dynamic text fields to empty strings and expose them as a scene parameter.
 	for (auto& text_layer : text_producers_by_layer_name) {
 		text_layer.second->text().set(L"");
-		text_layer.second->text().bind(root->create_variable<std::wstring>(boost::to_lower_copy(text_layer.first), true, L""));
+		auto var = root->create_variable<std::wstring>(boost::to_lower_copy(text_layer.first), true, L"");
+		text_layer.second->text().bind(var);
 	}
 
 	auto params2 = params;
@@ -542,8 +603,16 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 	return root;
 }
 
+void describe_psd_scene_producer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"A producer for dynamic graphics using Photoshops .psd files.");
+	sink.syntax(L"[.psd_filename:string] {[param1:string] [value1:string]} {[param2:string] [value2:string]} ...");
+	sink.para()->text(L"A producer that looks in the ")->code(L"templates")->text(L" folder for .psd files.");
+}
+
 void init(core::module_dependencies dependencies)
 {
+	dependencies.producer_registry->register_producer_factory(L"PSD Scene Producer", create_psd_scene_producer, describe_psd_scene_producer);
 	dependencies.cg_registry->register_cg_producer(
 			L"psd",
 			{ L".psd" },

@@ -49,58 +49,47 @@ std::wstring layer_type_to_string(layer_type b)
 }
 
 
-blend_mode int_to_blend_mode(std::uint32_t x)
+caspar::core::blend_mode int_to_blend_mode(std::uint32_t x)
 {
-	blend_mode mode = static_cast<blend_mode>(x);
-
-	switch (mode)
+	switch (x)
 	{
-		case blend_mode::Normal:
-		case blend_mode::Darken:
-		case blend_mode::Lighten:
-		case blend_mode::Hue:
-		case blend_mode::Saturation:
-		case blend_mode::Color:
-		case blend_mode::Luminosity:
-		case blend_mode::Multiply:
-		case blend_mode::Screen:
-		case blend_mode::Dissolve:
-		case blend_mode::Overlay:
-		case blend_mode::HardLight:
-		case blend_mode::SoftLight:
-		case blend_mode::Difference:
-		case blend_mode::Exclusion:
-		case blend_mode::ColorDodge:
-		case blend_mode::ColorBurn:
-			return mode;
-		default:
-			return blend_mode::InvalidBlendMode;
+	case 'norm':
+		return core::blend_mode::normal;
+	case 'dark':
+		return core::blend_mode::darken;
+	case 'lite':
+		return core::blend_mode::lighten;
+	case'hue ':
+		return core::blend_mode::contrast;
+	case 'sat ':
+		return core::blend_mode::saturation;
+	case 'colr':
+		return core::blend_mode::color;
+	case 'lum ':
+		return core::blend_mode::luminosity;
+	case 'mul ':
+		return core::blend_mode::multiply;
+	case 'scrn':
+		return core::blend_mode::screen;
+	case 'diss':	//no support for the 'dissove' blend mode atm
+		return core::blend_mode::normal;
+	case 'over':
+		return core::blend_mode::overlay;
+	case 'hLit':
+		return core::blend_mode::hard_light;
+	case 'sLit':
+		return core::blend_mode::soft_light;
+	case 'diff':
+		return core::blend_mode::difference;
+	case 'smud':
+		return core::blend_mode::exclusion;
+	case 'div ':
+		return core::blend_mode::color_dodge;
+	case 'idiv':
+		return core::blend_mode::color_burn;
 	}
-}
 
-std::wstring blend_mode_to_string(blend_mode b)
-{
-	switch(b)
-	{
-		case blend_mode::Normal: return L"Normal";
-		case blend_mode::Darken: return L"Darken";
-		case blend_mode::Lighten: return L"Lighten";
-		case blend_mode::Hue: return L"Hue";
-		case blend_mode::Saturation: return L"Saturation";
-		case blend_mode::Color: return L"Color";
-		case blend_mode::Luminosity: return L"Luminosity";
-		case blend_mode::Multiply: return L"Multiply";
-		case blend_mode::Screen: return L"Screen";
-		case blend_mode::Dissolve: return L"Dissolve";
-		case blend_mode::Overlay: return L"Overlay";
-		case blend_mode::HardLight: return L"HardLight";
-		case blend_mode::SoftLight: return L"SoftLight";
-		case blend_mode::Difference: return L"Difference";
-		case blend_mode::Exclusion: return L"Exclusion";
-		case blend_mode::ColorDodge: return L"ColorDodge";
-		case blend_mode::ColorBurn: return L"ColorBurn";
-		default: return L"Invalid";
-	}
+	return core::blend_mode::normal;
 }
 
 color_mode int_to_color_mode(std::uint16_t x)
