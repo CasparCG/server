@@ -153,25 +153,25 @@ public:
 				auto ll_index = ul_index + 3;
 
 				//vertex 1 upper left
-				result[ul_index].vertex_x = left + top;	//vertex.x
+				result[ul_index].vertex_x = left;	//vertex.x
 				result[ul_index].vertex_y	= top;		  		//vertex.y
 				result[ul_index].texture_x	= coords.left;		//texcoord.r
 				result[ul_index].texture_y	= coords.top; 		//texcoord.s
 
 				//vertex 2 upper right
-				result[ur_index].vertex_x = right + top;	//vertex.x
+				result[ur_index].vertex_x = right;	//vertex.x
 				result[ur_index].vertex_y	= top;		   		//vertex.y
 				result[ur_index].texture_x	= coords.right;		//texcoord.r
 				result[ur_index].texture_y	= coords.top;  		//texcoord.s
 
 				//vertex 3 lower right
-				result[lr_index].vertex_x	= right + bottom;	//vertex.x
+				result[lr_index].vertex_x	= right;	//vertex.x
 				result[lr_index].vertex_y	= bottom;	   			//vertex.y
 				result[lr_index].texture_x	= coords.right;			//texcoord.r
 				result[lr_index].texture_y	= coords.bottom;		//texcoord.s
 
 				//vertex 4 lower left
-				result[ll_index].vertex_x	= left + bottom;	//vertex.x
+				result[ll_index].vertex_x	= left;	//vertex.x
 				result[ll_index].vertex_y	= bottom;				//vertex.y
 				result[ll_index].texture_x	= coords.left;			//texcoord.r
 				result[ll_index].texture_y	= coords.bottom;		//texcoord.s
