@@ -39,6 +39,7 @@
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/thread/tss.hpp>
+#include <boost/bind.hpp>
 
 #include <tbb/recursive_mutex.h>
 
@@ -289,15 +290,17 @@ void init(core::module_dependencies dependencies)
 	av_register_all();
     avformat_network_init();
     avcodec_register_all();
+
+	auto info_repo = dependencies.media_info_repo;
 	
 	dependencies.consumer_registry->register_consumer_factory(L"FFMpeg Consumer", create_consumer, describe_consumer);
 	dependencies.consumer_registry->register_consumer_factory(L"Streaming Consumer",  create_streaming_consumer, describe_streaming_consumer);
 	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"file", create_preconfigured_consumer);
 	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"stream", create_preconfigured_streaming_consumer);
-	dependencies.producer_registry->register_producer_factory(L"FFmpeg Producer", create_producer, describe_producer);
-	dependencies.producer_registry->register_thumbnail_producer_factory(create_thumbnail_producer);
+	dependencies.producer_registry->register_producer_factory(L"FFmpeg Producer", boost::bind(&create_producer, _1, _2, info_repo), describe_producer);
+	dependencies.producer_registry->register_thumbnail_producer_factory(boost::bind(&create_thumbnail_producer, _1, _2, info_repo));
 
-	dependencies.media_info_repo->register_extractor(
+	info_repo->register_extractor(
 			[](const std::wstring& file, const std::wstring& extension, core::media_info& info) -> bool
 			{
 				auto quiet_logging = temporary_enable_quiet_logging_for_thread(true);
