@@ -23,9 +23,11 @@
 
 #include <common/except.h>
 #include <common/enum_class.h>
+#include <core/mixer/image/blend_modes.h>
 
 #include <string>
 #include <cstdint>
+#include <vector>
 
 namespace caspar { namespace psd {
 	
@@ -38,6 +40,10 @@ struct point
 	T y;
 
 	void clear() { x = 0; y = 0; }
+	
+	bool operator==(const point& rhs) {
+		return x == rhs.x && y == rhs.y;
+	}
 };
 
 template<typename T>
@@ -97,30 +103,7 @@ enum class layer_type
 layer_type int_to_layer_type(std::uint32_t x, std::uint32_t y);
 std::wstring layer_type_to_string(layer_type b);
 
-enum class blend_mode
-{
-	InvalidBlendMode = -1,
-	Normal = 'norm',
-	Darken = 'dark',
-	Lighten = 'lite',
-	Hue = 'hue ',
-	Saturation = 'sat ',
-	Color = 'colr',
-	Luminosity = 'lum ',
-	Multiply = 'mul ',
-	Screen = 'scrn',
-	Dissolve = 'diss',
-	Overlay = 'over',
-	HardLight = 'hLit',
-	SoftLight = 'sLit',
-	Difference = 'diff',
-	Exclusion = 'smud',
-	ColorDodge = 'div ',
-	ColorBurn = 'idiv'
-};
-
-blend_mode int_to_blend_mode(std::uint32_t x);
-std::wstring blend_mode_to_string(blend_mode b);
+caspar::core::blend_mode int_to_blend_mode(std::uint32_t x);
 
 enum class color_mode
 {

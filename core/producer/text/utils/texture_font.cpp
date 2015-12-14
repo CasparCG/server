@@ -105,7 +105,7 @@ public:
 		}
 	}
 
-	std::vector<frame_geometry::coord> create_vertex_stream(const std::wstring& str, int x, int y, int parent_width, int parent_height, string_metrics* metrics)
+	std::vector<frame_geometry::coord> create_vertex_stream(const std::wstring& str, int x, int y, int parent_width, int parent_height, string_metrics* metrics, double shear)
 	{
 		//TODO: detect glyphs that aren't in the atlas and load them (and maybe that entire unicode_block on the fly
 
@@ -153,28 +153,28 @@ public:
 				auto ll_index = ul_index + 3;
 
 				//vertex 1 upper left
-				result[ul_index].vertex_x	= left;		  		//vertex.x
+				result[ul_index].vertex_x = left + top;	//vertex.x
 				result[ul_index].vertex_y	= top;		  		//vertex.y
 				result[ul_index].texture_x	= coords.left;		//texcoord.r
 				result[ul_index].texture_y	= coords.top; 		//texcoord.s
 
 				//vertex 2 upper right
-				result[ur_index].vertex_x	= right;	   		//vertex.x
+				result[ur_index].vertex_x = right + top;	//vertex.x
 				result[ur_index].vertex_y	= top;		   		//vertex.y
 				result[ur_index].texture_x	= coords.right;		//texcoord.r
 				result[ur_index].texture_y	= coords.top;  		//texcoord.s
 
 				//vertex 3 lower right
-				result[lr_index].vertex_x	= right;	   		//vertex.x
-				result[lr_index].vertex_y	= bottom;	   		//vertex.y
-				result[lr_index].texture_x	= coords.right;		//texcoord.r
-				result[lr_index].texture_y	= coords.bottom;	//texcoord.s
+				result[lr_index].vertex_x	= right + bottom;	//vertex.x
+				result[lr_index].vertex_y	= bottom;	   			//vertex.y
+				result[lr_index].texture_x	= coords.right;			//texcoord.r
+				result[lr_index].texture_y	= coords.bottom;		//texcoord.s
 
 				//vertex 4 lower left
-				result[ll_index].vertex_x	= left;				//vertex.x
-				result[ll_index].vertex_y	= bottom;			//vertex.y
-				result[ll_index].texture_x	= coords.left;		//texcoord.r
-				result[ll_index].texture_y	= coords.bottom;	//texcoord.s
+				result[ll_index].vertex_x	= left + bottom;	//vertex.x
+				result[ll_index].vertex_y	= bottom;				//vertex.y
+				result[ll_index].texture_x	= coords.left;			//texcoord.r
+				result[ll_index].texture_y	= coords.bottom;		//texcoord.s
 
 				int bearingY = face_->glyph->metrics.horiBearingY >> 6;
 
@@ -286,7 +286,7 @@ public:
 texture_font::texture_font(texture_atlas& atlas, const text_info& info, bool normalize_coordinates) : impl_(new impl(atlas, info, normalize_coordinates)) {}
 void texture_font::load_glyphs(unicode_block range, const color<double>& col) { impl_->load_glyphs(range, col); }
 void texture_font::set_tracking(int tracking) { impl_->set_tracking(tracking); }
-std::vector<frame_geometry::coord> texture_font::create_vertex_stream(const std::wstring& str, int x, int y, int parent_width, int parent_height, string_metrics* metrics) { return impl_->create_vertex_stream(str, x, y, parent_width, parent_height, metrics); }
+std::vector<frame_geometry::coord> texture_font::create_vertex_stream(const std::wstring& str, int x, int y, int parent_width, int parent_height, string_metrics* metrics, double shear) { return impl_->create_vertex_stream(str, x, y, parent_width, parent_height, metrics, shear); }
 string_metrics texture_font::measure_string(const std::wstring& str) { return impl_->measure_string(str); }
 std::wstring texture_font::get_name() const { return impl_->get_name(); }
 double texture_font::get_size() const { return impl_->get_size(); }
