@@ -49,6 +49,8 @@
 #include <core/monitor/monitor.h>
 #include <core/help/help_repository.h>
 #include <core/help/help_sink.h>
+#include <core/producer/media_info/media_info_repository.h>
+#include <core/producer/media_info/media_info.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
@@ -107,6 +109,7 @@ struct ffmpeg_producer : public core::frame_producer_base
 	const double									fps_					= read_fps(input_.context(), format_desc_.fps);
 	const uint32_t									start_;
 	const bool										thumbnail_mode_;
+	const boost::optional<core::media_info>			info_;
 		
 	std::unique_ptr<video_decoder>					video_decoder_;
 	std::unique_ptr<audio_decoder>					audio_decoder_;	
@@ -127,14 +130,15 @@ public:
 			bool loop,
 			uint32_t start,
 			uint32_t length,
-			bool thumbnail_mode)
+			bool thumbnail_mode,
+			boost::optional<core::media_info> info)
 		: filename_(filename)
 		, frame_factory_(frame_factory)		
 		, format_desc_(format_desc)
 		, input_(graph_, filename_, loop, start, length, thumbnail_mode)
-		, fps_(read_fps(input_.context(), format_desc_.fps))
 		, start_(start)
 		, thumbnail_mode_(thumbnail_mode)
+		, info_(info)
 	{
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
@@ -328,6 +332,10 @@ public:
 	uint32_t file_nb_frames() const
 	{
 		uint32_t file_nb_frames = 0;
+
+		if (info_)
+			file_nb_frames = static_cast<uint32_t>(info_->duration);
+
 		file_nb_frames = std::max(file_nb_frames, video_decoder_ ? video_decoder_->nb_frames() : 0);
 		file_nb_frames = std::max(file_nb_frames, audio_decoder_ ? audio_decoder_->nb_frames() : 0);
 		return file_nb_frames;
@@ -542,8 +550,11 @@ void describe_producer(core::help_sink& sink, const core::help_repository& repo)
 	sink.example(L">> CALL 1-10 LENGTH 50");
 }
 
-spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
-{		
+spl::shared_ptr<core::frame_producer> create_producer(
+		const core::frame_producer_dependencies& dependencies,
+		const std::vector<std::wstring>& params,
+		const spl::shared_ptr<core::media_info_repository>& info_repo)
+{
 	auto filename = probe_stem(env::media_folder() + L"/" + params.at(0), false);
 
 	if(filename.empty())
@@ -555,6 +566,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 	auto filter_str		= get_param(L"FILTER", params, L"");
 	auto channel_layout	= get_param(L"CHANNEL_LAYOUT", params, L"");
 	bool thumbnail_mode	= false;
+	auto info			= info_repo->get(filename);
 
 	return create_destroy_proxy(spl::make_shared_ptr(std::make_shared<ffmpeg_producer>(
 			dependencies.frame_factory,
@@ -565,10 +577,14 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 			loop,
 			start,
 			length,
-			thumbnail_mode)));
+			thumbnail_mode,
+			info)));
 }
 
-spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
+spl::shared_ptr<core::frame_producer> create_thumbnail_producer(
+		const core::frame_producer_dependencies& dependencies,
+		const std::vector<std::wstring>& params,
+		const spl::shared_ptr<core::media_info_repository>& info_repo)
 {
 	auto quiet_logging = temporary_enable_quiet_logging_for_thread(true);
 	auto filename = probe_stem(env::media_folder() + L"/" + params.at(0), true);
@@ -582,6 +598,7 @@ spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const core::fram
 	auto filter_str		= L"";
 	auto channel_layout	= L"";
 	bool thumbnail_mode	= true;
+	auto info			= info_repo->get(filename);
 
 	return spl::make_shared_ptr(std::make_shared<ffmpeg_producer>(
 			dependencies.frame_factory,
@@ -592,7 +609,8 @@ spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const core::fram
 			loop,
 			start,
 			length,
-			thumbnail_mode));
+			thumbnail_mode,
+			info));
 }
 
 }}
