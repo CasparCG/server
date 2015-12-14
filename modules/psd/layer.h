@@ -48,20 +48,22 @@ public:
 
 	class vector_mask_info
 	{
+		std::uint8_t			flags_;
+		psd::rect<int>			rect_;
+		std::vector<point<int>>	knots_;
+
+		friend class layer::mask_info;
+		bool populate(int length, bigendian_file_input_stream& stream, int doc_width, int doc_height);
+
+	public:
 		enum class flags {
+			none = 0,
 			inverted = 1,
 			unlinked = 2,
 			disabled = 4,
 			unsupported = 128
 		};
 
-		std::uint8_t	flags_;
-		psd::rect<int>		rect_;
-
-		friend class layer::mask_info;
-		bool populate(int length, bigendian_file_input_stream& stream, int doc_width, int doc_height);
-
-	public:
 		vector_mask_info() : flags_(0)
 		{}
 
@@ -70,9 +72,10 @@ public:
 		bool inverted() const { return (flags_ & static_cast<std::uint8_t>(flags::inverted)) == static_cast<std::uint8_t>(flags::inverted); }
 		bool unsupported() const { return (flags_ & static_cast<std::uint8_t>(flags::unsupported)) == static_cast<std::uint8_t>(flags::unsupported); }
 
-		bool empty() { return rect_.empty(); }
+		bool empty() { return rect_.empty() && knots_.empty(); }
 
 		const psd::rect<int>& rect() const { return rect_; }
+		const std::vector<point<int>>& knots() const { return knots_; }
 	};
 
 	class mask_info
@@ -90,7 +93,7 @@ public:
 		image8bit_ptr	bitmap_;
 		std::uint8_t	default_value_;
 		std::uint8_t	flags_;
-		psd::rect<int>		rect_;
+		psd::rect<int>	rect_;
 
 		std::unique_ptr<vector_mask_info> vector_mask_;
 		std::unique_ptr<mask_info> total_mask_;
@@ -124,13 +127,18 @@ public:
 
 	const std::wstring& name() const;
 	int opacity() const;
+	caspar::core::blend_mode blend_mode() const;
 	int sheet_color() const;
 	bool is_visible();
 	bool is_position_protected();
 
 	const mask_info& mask() const;
 
-	double text_scale() const;
+	const psd::point<double>& text_pos() const;
+	const psd::point<double>& scale() const;
+	const double angle() const;
+	const double shear() const;
+
 	bool is_text() const;
 	const boost::property_tree::wptree& text_data() const;
 
@@ -154,8 +162,11 @@ public:
 	bool is_movable() const;
 	bool is_resizable() const;
 	bool is_placeholder() const;
+	bool is_cornerpin() const;
 	layer_tag tags() const;
 };
+
+ENUM_ENABLE_BITWISE(layer::vector_mask_info::flags);
 
 }	//namespace psd
 }	//namespace caspar
