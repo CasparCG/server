@@ -704,6 +704,23 @@ std::wstring log_level_command(command_context& ctx)
 	return L"202 LOG OK\r\n";
 }
 
+void log_category_describer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Enable/disable a logging category in the server.");
+	sink.syntax(L"LOG CATEGORY [category:calltrace,communication] [enable:0,1]");
+	sink.para()->text(L"Enables or disables the specified logging category.");
+	sink.para()->text(L"Examples:");
+	sink.example(L">> LOG CATEGORY calltrace 1", L"to enable call trace");
+	sink.example(L">> LOG CATEGORY calltrace 0", L"to disable call trace");
+}
+
+std::wstring log_category_command(command_context& ctx)
+{
+	log::set_log_category(ctx.parameters.at(0), ctx.parameters.at(1) == L"1");
+
+	return L"202 LOG OK\r\n";
+}
+
 void set_describer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"Change the value of a channel variable.");
@@ -2856,6 +2873,7 @@ void register_commands(amcp_command_repository& repo)
 	repo.register_channel_command(	L"Basic Commands",		L"REMOVE",						remove_describer,					remove_command,					0);
 	repo.register_channel_command(	L"Basic Commands",		L"PRINT",						print_describer,					print_command,					0);
 	repo.register_command(			L"Basic Commands",		L"LOG LEVEL",					log_level_describer,				log_level_command,				1);
+	repo.register_command(			L"Basic Commands",		L"LOG CATEGORY",				log_category_describer,				log_category_command,			2);
 	repo.register_channel_command(	L"Basic Commands",		L"SET",							set_describer,						set_command,					2);
 	repo.register_command(			L"Basic Commands",		L"LOCK",						lock_describer,						lock_command,					2);
 
