@@ -152,7 +152,7 @@ void init()
 
 	auto stream_sink = boost::make_shared<stream_sink_type>(stream_backend);
 	// Never log calltrace to console. The terminal is too slow, so the log queue will build up faster than consumed.
-	stream_sink->set_filter(boost::log::expressions::attr<log_category>("Channel") != log_category::call);
+	stream_sink->set_filter(category != log_category::call);
 
 	bool print_all_characters = false;
 	stream_sink->set_formatter(boost::bind(&my_formatter<boost::log::wformatting_ostream>, print_all_characters, _1, _2));
@@ -162,17 +162,17 @@ void init()
 
 }
 
-void add_file_sink(const std::wstring& folder)
+void add_file_sink(const std::wstring& file, const boost::log::filter& filter)
 {
 	typedef boost::log::sinks::synchronous_sink<boost::log::sinks::text_file_backend> file_sink_type;
 
 	try
 	{
-		if (!boost::filesystem::is_directory(folder))
+		if (!boost::filesystem::is_directory(boost::filesystem::path(file).parent_path()))
 			CASPAR_THROW_EXCEPTION(directory_not_found());
 
 		auto file_sink = boost::make_shared<file_sink_type>(
-			boost::log::keywords::file_name = (folder + L"caspar_%Y-%m-%d.log"),
+			boost::log::keywords::file_name = (file + L"_%Y-%m-%d.log"),
 			boost::log::keywords::time_based_rotation = boost::log::sinks::file::rotation_at_time_point(0, 0, 0),
 			boost::log::keywords::auto_flush = true,
 			boost::log::keywords::open_mode = std::ios::app
@@ -181,6 +181,7 @@ void add_file_sink(const std::wstring& folder)
 		bool print_all_characters = true;
 
 		file_sink->set_formatter(boost::bind(&my_formatter<boost::log::formatting_ostream>, print_all_characters, _1, _2));
+		file_sink->set_filter(filter);
 		boost::log::core::get()->add_sink(file_sink);
 	}
 	catch (...)
