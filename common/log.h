@@ -27,6 +27,7 @@
 
 #include <boost/log/trivial.hpp>
 #include <boost/log/sources/global_logger_storage.hpp>
+#include <boost/log/sources/severity_channel_logger.hpp>
 #include <boost/exception/all.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
 
@@ -65,16 +66,29 @@ inline std::basic_string<T> replace_nonprintable_copy(std::basic_string<T, std::
 void add_file_sink(const std::wstring& folder);
 std::shared_ptr<void> add_preformatted_line_sink(std::function<void(std::string line)> formatted_line_sink);
 
-typedef boost::log::sources::wseverity_logger_mt<boost::log::trivial::severity_level> caspar_logger;
+enum class log_category
+{
+	normal,
+	call,
+	communication
+};
+
+typedef boost::log::sources::wseverity_channel_logger_mt<boost::log::trivial::severity_level, log_category> caspar_logger;
 
 BOOST_LOG_INLINE_GLOBAL_LOGGER_INIT(logger, caspar_logger)
 {
 	internal::init();
-	return caspar_logger(boost::log::trivial::trace);
+	return caspar_logger(
+			boost::log::keywords::severity = boost::log::trivial::trace,
+			boost::log::keywords::channel = log_category::normal);
 }
 
 #define CASPAR_LOG(lvl)\
-	BOOST_LOG_SEV(::caspar::log::logger::get(), ::boost::log::trivial::lvl)
+	BOOST_LOG_CHANNEL_SEV(::caspar::log::logger::get(), ::caspar::log::log_category::normal,		::boost::log::trivial::lvl)
+#define CASPAR_LOG_CALL(lvl)\
+	BOOST_LOG_CHANNEL_SEV(::caspar::log::logger::get(), ::caspar::log::log_category::call,			::boost::log::trivial::lvl)
+#define CASPAR_LOG_COMMUNICATION(lvl)\
+	BOOST_LOG_CHANNEL_SEV(::caspar::log::logger::get(), ::caspar::log::log_category::communication,	::boost::log::trivial::lvl)
 
 #define CASPAR_LOG_CALL_STACK()	try{\
 		CASPAR_LOG(info) << L"callstack (" << caspar::get_thread_info().name << L"):\n" << caspar::get_call_stack();\
