@@ -25,6 +25,7 @@
 
 #include <common/memory.h>
 #include <common/executor.h>
+#include <common/except.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
 
@@ -61,13 +62,25 @@ public:
 	template<typename Func>
 	auto begin_invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> std::future<decltype(func())> // noexcept
 	{			
-		return executor_.begin_invoke(std::forward<Func>(func), priority);
+		auto context = executor_.is_current() ? std::string() : get_context();
+
+		return executor_.begin_invoke([func, context]() mutable
+		{
+			CASPAR_SCOPED_CONTEXT_MSG(context);
+			return func();
+		}, priority);
 	}
 	
 	template<typename Func>
 	auto invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> decltype(func())
 	{
-		return executor_.invoke(std::forward<Func>(func), priority);
+		auto context = executor_.is_current() ? std::string() : get_context();
+
+		return executor_.invoke([func, context]() mutable
+		{
+			CASPAR_SCOPED_CONTEXT_MSG(context);
+			return func();
+		}, priority);
 	}
 
 	std::future<void> gc();
