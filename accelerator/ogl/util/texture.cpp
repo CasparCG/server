@@ -59,6 +59,8 @@ public:
 		, stride_(stride)
 		, mipmapped_(mipmapped)
 	{	
+		CASPAR_LOG_CALL(trace) << "texture::texture() <- " << get_context();
+
 		GL(glGenTextures(1, &id_));
 		GL(glBindTexture(GL_TEXTURE_2D, id_));
 		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (mipmapped ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR)));
@@ -98,6 +100,7 @@ public:
 
 	~impl()
 	{
+		CASPAR_LOG_CALL(trace) << "texture::~texture() <- " << get_context();
 		glDeleteTextures(1, &id_);
 		g_total_size -= static_cast<std::size_t>(width_ * height_ * stride_ * (mipmapped_ ? 1.33 : 1.0));
 		g_total_count--;
@@ -132,6 +135,7 @@ public:
 		
 	void copy_from(buffer& source)
 	{
+		CASPAR_LOG_CALL(trace) << "texture::copy_from(buffer&) <- " << get_context();
 		source.unmap();
 		source.bind();
 		GL(glBindTexture(GL_TEXTURE_2D, id_));
@@ -147,6 +151,7 @@ public:
 
 	void copy_to(buffer& dest)
 	{
+		CASPAR_LOG_CALL(trace) << "texture::copy_to(buffer&) <- " << get_context();
 		dest.unmap();
 		dest.bind();
 		GL(glBindTexture(GL_TEXTURE_2D, id_));
