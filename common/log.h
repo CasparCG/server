@@ -26,6 +26,7 @@
 #include "thread_info.h"
 
 #include <boost/log/trivial.hpp>
+#include <boost/log/expressions.hpp>
 #include <boost/log/sources/global_logger_storage.hpp>
 #include <boost/log/sources/severity_channel_logger.hpp>
 #include <boost/exception/all.hpp>
@@ -63,7 +64,7 @@ inline std::basic_string<T> replace_nonprintable_copy(std::basic_string<T, std::
 	return str;
 }
 
-void add_file_sink(const std::wstring& folder);
+void add_file_sink(const std::wstring& file, const boost::log::filter& filter);
 std::shared_ptr<void> add_preformatted_line_sink(std::function<void(std::string line)> formatted_line_sink);
 
 enum class log_category
@@ -72,6 +73,7 @@ enum class log_category
 	call,
 	communication
 };
+BOOST_LOG_ATTRIBUTE_KEYWORD(category, "Channel", ::caspar::log::log_category)
 
 typedef boost::log::sources::wseverity_channel_logger_mt<boost::log::trivial::severity_level, log_category> caspar_logger;
 
