@@ -98,8 +98,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
 	~impl()
 	{
+		auto context = executor_.is_current() ? std::string() : get_context();
+
 		executor_.invoke([=]
 		{
+			CASPAR_SCOPED_CONTEXT_MSG(context);
 			texture_cache_.clear();
 
 			for (auto& pool : host_pools_)
@@ -250,8 +253,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		{
 			caspar::timer timer;
 
+			auto context = executor_.is_current() ? std::string() : get_context();
+
 			buf = executor_.invoke([&]
 			{
+				CASPAR_SCOPED_CONTEXT_MSG(context);
 				return std::make_shared<buffer>(size, usage);
 			}, task_priority::high_priority);
 			
@@ -266,8 +272,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
 			if (strong)
 			{
+				auto context = executor_.is_current() ? std::string() : get_context();
+
 				strong->executor_.invoke([&]
 				{
+					CASPAR_SCOPED_CONTEXT_MSG(context);
 					strong->texture_cache_.erase(buf.get());
 				}, task_priority::high_priority);
 				
@@ -310,9 +319,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	std::future<std::shared_ptr<texture>> copy_async(const array<const std::uint8_t>& source, int width, int height, int stride, bool mipmapped)
 	{
 		std::shared_ptr<buffer> buf = copy_to_buf(source);
-				
+		auto context = executor_.is_current() ? std::string() : get_context();
+
 		return executor_.begin_invoke([=]() -> std::shared_ptr<texture>
 		{
+			CASPAR_SCOPED_CONTEXT_MSG(context);
 			tbb::concurrent_hash_map<buffer*, std::shared_ptr<texture>>::const_accessor a;
 			if(texture_cache_.find(a, buf.get()))
 				return spl::make_shared_ptr(a->second);
@@ -329,9 +340,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
 	std::future<std::shared_ptr<texture>> copy_async(const array<std::uint8_t>& source, int width, int height, int stride, bool mipmapped)
 	{
 		std::shared_ptr<buffer> buf = copy_to_buf(source);
+		auto context = executor_.is_current() ? std::string() : get_context();
 
 		return executor_.begin_invoke([=]() -> std::shared_ptr<texture>
 		{
+			CASPAR_SCOPED_CONTEXT_MSG(context);
 			auto texture = create_texture(width, height, stride, mipmapped, false);
 			texture->copy_from(*buf);	
 			
@@ -348,9 +361,14 @@ struct device::impl : public std::enable_shared_from_this<impl>
 		source->copy_to(*buffer);	
 
 		auto self = shared_from_this();
-		auto cmd = [self, buffer]() mutable -> array<const std::uint8_t>
+		auto context = get_context();
+		auto cmd = [self, buffer, context]() mutable -> array<const std::uint8_t>
 		{
-			self->executor_.invoke(std::bind(&buffer::map, std::ref(buffer))); // Defer blocking "map" call until data is needed.
+			self->executor_.invoke([&buffer, &context] // Defer blocking "map" call until data is needed.
+			{
+				CASPAR_LOG_CALL(trace) << "Readback <- " << context;
+				buffer->map();
+			});
 			return array<const std::uint8_t>(buffer->data(), buffer->size(), true, buffer);
 		};
 		return std::async(std::launch::deferred, std::move(cmd));

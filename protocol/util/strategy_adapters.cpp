@@ -59,11 +59,9 @@ public:
 		: client_(client)
 		, codepage_(codepage)
 	{
-		CASPAR_LOG(trace) << "from_unicode_client_connection created.";
 	}
 	~from_unicode_client_connection()
 	{
-		CASPAR_LOG(trace) << "from_unicode_client_connection destroyed.";
 	}
 
 	void send(std::basic_string<wchar_t>&& data) override
@@ -76,10 +74,10 @@ public:
 		{
 			boost::replace_all(data, L"\n", L"\\n");
 			boost::replace_all(data, L"\r", L"\\r");
-			CASPAR_LOG(info) << L"Sent message to " << client_->address() << L":" << data;
+			CASPAR_LOG_COMMUNICATION(info) << L"Sent message to " << client_->address() << L":" << data;
 		}
 		else
-			CASPAR_LOG(info) << L"Sent more than 512 bytes to " << client_->address();
+			CASPAR_LOG_COMMUNICATION(info) << L"Sent more than 512 bytes to " << client_->address();
 	}
 
 	void disconnect() override
@@ -129,11 +127,9 @@ public:
 		: strategy_(strategy)
 		, client_info_(client_connection)
 	{
-		CASPAR_LOG(trace) << "legacy_strategy_adapter created.";
 	}
 	~legacy_strategy_adapter()
 	{
-		CASPAR_LOG(trace) << "legacy_strategy_adapter destroyed.";
 	}
 
 	void parse(const std::basic_string<wchar_t>& data) override
