@@ -129,15 +129,15 @@ enum class layer_tag : int {
 	moveable = 4,
 	resizable = 8,
 	rasterized = 16,
-	cornerpin = 32,
-	all = 63
+	cornerpin = 32//,
+	//all = 63
 };
 ENUM_ENABLE_BITWISE(layer_tag);
 
-inline layer_tag operator ~ (layer_tag rhs)
+/*inline layer_tag operator ~ (layer_tag rhs)
 {
 	return (layer_tag)(static_cast<int>(layer_tag::all) ^ static_cast<int>(rhs));
-}
+}*/
 
 layer_tag string_to_layer_tags(const std::wstring& str);
 
