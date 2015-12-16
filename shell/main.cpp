@@ -304,7 +304,8 @@ int main(int argc, char** argv)
 			wait_for_remote_debugging();
 
 		// Start logging to file.
-		log::add_file_sink(env::log_folder());			
+		log::add_file_sink(env::log_folder() + L"caspar",		caspar::log::category != caspar::log::log_category::call);
+		log::add_file_sink(env::log_folder() + L"calltrace",	caspar::log::category == caspar::log::log_category::call);
 		std::wcout << L"Logging [info] or higher severity to " << env::log_folder() << std::endl << std::endl;
 		
 		// Setup console window.
