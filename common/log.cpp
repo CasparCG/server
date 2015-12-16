@@ -55,6 +55,7 @@
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/thread/mutex.hpp>
 
 #include <tbb/atomic.h>
 
@@ -152,7 +153,7 @@ void init()
 
 	auto stream_sink = boost::make_shared<stream_sink_type>(stream_backend);
 	// Never log calltrace to console. The terminal is too slow, so the log queue will build up faster than consumed.
-	stream_sink->set_filter(category != log_category::call);
+	stream_sink->set_filter(category != log_category::calltrace);
 
 	bool print_all_characters = false;
 	stream_sink->set_formatter(boost::bind(&my_formatter<boost::log::wformatting_ostream>, print_all_characters, _1, _2));
@@ -220,6 +221,7 @@ std::shared_ptr<void> add_preformatted_line_sink(std::function<void(std::string 
 	bool print_all_characters = true;
 
 	sink->set_formatter(boost::bind(&my_formatter<boost::log::formatting_ostream>, print_all_characters, _1, _2));
+	sink->set_filter(category != log_category::calltrace);
 
 	boost::log::core::get()->add_sink(sink);
 
@@ -229,20 +231,79 @@ std::shared_ptr<void> add_preformatted_line_sink(std::function<void(std::string 
 	});
 }
 
+boost::mutex& get_filter_mutex()
+{
+	static boost::mutex instance;
+
+	return instance;
+}
+
+boost::log::trivial::severity_level& get_level()
+{
+	static boost::log::trivial::severity_level instance;
+
+	return instance;
+}
+
+log_category& get_disabled_categories()
+{
+	static log_category instance = log_category::calltrace;
+
+	return instance;
+}
+
+void set_log_filter()
+{
+	auto severity_filter		= boost::log::trivial::severity >= get_level();
+	auto disabled_categories	= get_disabled_categories();
+
+	boost::log::core::get()->set_filter([=](const boost::log::attribute_value_set& attributes)
+	{
+		return severity_filter(attributes)
+			&& static_cast<int>(disabled_categories & attributes["Channel"].extract<log_category>().get()) == 0;
+	});
+}
+
 void set_log_level(const std::wstring& lvl)
 {
+	boost::lock_guard<boost::mutex> lock(get_filter_mutex());
+
 	if (boost::iequals(lvl, L"trace"))
-		boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::trace);
+		get_level() = boost::log::trivial::trace;
 	else if (boost::iequals(lvl, L"debug"))
-		boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::debug);
+		get_level() = boost::log::trivial::debug;
 	else if (boost::iequals(lvl, L"info"))
-		boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::info);
+		get_level() = boost::log::trivial::info;
 	else if (boost::iequals(lvl, L"warning"))
-		boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::warning);
+		get_level() = boost::log::trivial::warning;
 	else if (boost::iequals(lvl, L"error"))
-		boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::error);
+		get_level() = boost::log::trivial::error;
 	else if (boost::iequals(lvl, L"fatal"))
-		boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::fatal);
+		get_level() = boost::log::trivial::fatal;
+
+	set_log_filter();
+}
+
+void set_log_category(const std::wstring& cat, bool enabled)
+{
+	log_category category_to_set;
+
+	if (boost::iequals(cat, L"calltrace"))
+		category_to_set = log_category::calltrace;
+	else if (boost::iequals(cat, L"communication"))
+		category_to_set = log_category::communication;
+	else
+		return; // Ignore
+
+	boost::lock_guard<boost::mutex> lock(get_filter_mutex());
+	auto& disabled_categories = get_disabled_categories();
+
+	if (enabled)
+		disabled_categories &= ~category_to_set;
+	else
+		disabled_categories |= category_to_set;
+
+	set_log_filter();
 }
 
 void print_child(
