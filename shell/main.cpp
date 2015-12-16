@@ -61,10 +61,13 @@
 #include <boost/thread.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/classification.hpp>
 
 #include <tbb/atomic.h>
 
 #include <future>
+#include <set>
 
 #include <csignal>
 
@@ -299,13 +302,18 @@ int main(int argc, char** argv)
 		env::configure(config_file_name);
 
 		log::set_log_level(env::properties().get(L"configuration.log-level", L"info"));
+		auto log_categories_str = env::properties().get(L"configuration.log-categories", L"communication");
+		std::set<std::wstring> log_categories;
+		boost::split(log_categories, log_categories_str, boost::is_any_of(L", "));
+		for (auto& log_category : { L"calltrace", L"communication" })
+			log::set_log_category(log_category, log_categories.find(log_category) != log_categories.end());
 
 		if (env::properties().get(L"configuration.debugging.remote", false))
 			wait_for_remote_debugging();
 
 		// Start logging to file.
-		log::add_file_sink(env::log_folder() + L"caspar",		caspar::log::category != caspar::log::log_category::call);
-		log::add_file_sink(env::log_folder() + L"calltrace",	caspar::log::category == caspar::log::log_category::call);
+		log::add_file_sink(env::log_folder() + L"caspar",		caspar::log::category != caspar::log::log_category::calltrace);
+		log::add_file_sink(env::log_folder() + L"calltrace",	caspar::log::category == caspar::log::log_category::calltrace);
 		std::wcout << L"Logging [info] or higher severity to " << env::log_folder() << std::endl << std::endl;
 		
 		// Setup console window.

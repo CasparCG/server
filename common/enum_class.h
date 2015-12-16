@@ -41,6 +41,11 @@
 	{ \
 		lhs = lhs ^ rhs; \
 		return lhs; \
+	}; \
+	static enum_class operator~ (enum_class e) \
+	{ \
+		return static_cast<enum_class>( \
+				~static_cast<std::underlying_type<enum_class>::type>(e)); \
 	};
 
 namespace caspar {
