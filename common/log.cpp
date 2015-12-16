@@ -151,6 +151,8 @@ void init()
 	stream_backend->auto_flush(true);
 
 	auto stream_sink = boost::make_shared<stream_sink_type>(stream_backend);
+	// Never log calltrace to console. The terminal is too slow, so the log queue will build up faster than consumed.
+	stream_sink->set_filter(boost::log::expressions::attr<log_category>("Channel") != log_category::call);
 
 	bool print_all_characters = false;
 	stream_sink->set_formatter(boost::bind(&my_formatter<boost::log::wformatting_ostream>, print_all_characters, _1, _2));
