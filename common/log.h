@@ -24,6 +24,7 @@
 #include "os/stack_trace.h"
 #include "utf.h"
 #include "thread_info.h"
+#include "enum_class.h"
 
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
@@ -69,10 +70,11 @@ std::shared_ptr<void> add_preformatted_line_sink(std::function<void(std::string 
 
 enum class log_category
 {
-	normal,
-	call,
-	communication
+	normal			= 1,
+	calltrace		= 2,
+	communication	= 4
 };
+ENUM_ENABLE_BITWISE(log_category)
 BOOST_LOG_ATTRIBUTE_KEYWORD(category, "Channel", ::caspar::log::log_category)
 
 typedef boost::log::sources::wseverity_channel_logger_mt<boost::log::trivial::severity_level, log_category> caspar_logger;
@@ -88,7 +90,7 @@ BOOST_LOG_INLINE_GLOBAL_LOGGER_INIT(logger, caspar_logger)
 #define CASPAR_LOG(lvl)\
 	BOOST_LOG_CHANNEL_SEV(::caspar::log::logger::get(), ::caspar::log::log_category::normal,		::boost::log::trivial::lvl)
 #define CASPAR_LOG_CALL(lvl)\
-	BOOST_LOG_CHANNEL_SEV(::caspar::log::logger::get(), ::caspar::log::log_category::call,			::boost::log::trivial::lvl)
+	BOOST_LOG_CHANNEL_SEV(::caspar::log::logger::get(), ::caspar::log::log_category::calltrace,		::boost::log::trivial::lvl)
 #define CASPAR_LOG_COMMUNICATION(lvl)\
 	BOOST_LOG_CHANNEL_SEV(::caspar::log::logger::get(), ::caspar::log::log_category::communication,	::boost::log::trivial::lvl)
 
@@ -108,6 +110,7 @@ BOOST_LOG_INLINE_GLOBAL_LOGGER_INIT(logger, caspar_logger)
 	catch(...){}
 
 void set_log_level(const std::wstring& lvl);
+void set_log_category(const std::wstring& cat, bool enabled);
 
 void print_child(
 		boost::log::trivial::severity_level level,
