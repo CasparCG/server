@@ -473,6 +473,7 @@ public:
 
 	void render(spl::shared_ptr<AVFrame> av_frame)
 	{
+		CASPAR_LOG_CALL(trace) << "screen_consumer::render() <- " << print();
 		GL(glBindTexture(GL_TEXTURE_2D, texture_));
 
 		GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[0]));

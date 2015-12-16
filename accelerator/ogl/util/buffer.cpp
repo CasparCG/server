@@ -57,6 +57,7 @@ public:
 		, target_(usage == buffer::usage::write_only ? GL_PIXEL_UNPACK_BUFFER : GL_PIXEL_PACK_BUFFER)
 		, usage_(usage == buffer::usage::write_only ? GL_STREAM_DRAW : GL_STREAM_READ)
 	{
+		CASPAR_LOG_CALL(trace) << "buffer::buffer() <- " << get_context();
 		caspar::timer timer;
 
 		data_ = nullptr;
@@ -84,6 +85,7 @@ public:
 
 	~impl()
 	{
+		CASPAR_LOG_CALL(trace) << "buffer::~buffer() <- " << get_context();
 		glDeleteBuffers(1, &pbo_);
 		(usage_ == GL_STREAM_DRAW ? g_w_total_size : g_r_total_size)	-= size_;
 		(usage_ == GL_STREAM_DRAW ? g_w_total_count : g_r_total_count)	--;
