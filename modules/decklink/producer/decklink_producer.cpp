@@ -235,21 +235,33 @@ public:
 
 			// Audio
 
-			void* audio_bytes = nullptr;
-			if(FAILED(audio->GetBytes(&audio_bytes)) || !audio_bytes)
-				return S_OK;
-			
 			auto audio_frame = ffmpeg::create_frame();
+			audio_frame->format = AV_SAMPLE_FMT_S32;
+			core::mutable_audio_buffer audio_buf;
 
-			audio_frame->data[0]		= reinterpret_cast<uint8_t*>(audio_bytes);
-			audio_frame->linesize[0]	= audio->GetSampleFrameCount() * channel_layout_.num_channels * sizeof(int32_t);
-			audio_frame->nb_samples		= audio->GetSampleFrameCount();
-			audio_frame->format			= AV_SAMPLE_FMT_S32;
+			if (audio)
+			{
+				void* audio_bytes = nullptr;
+				if (FAILED(audio->GetBytes(&audio_bytes)) || !audio_bytes)
+					return S_OK;
+
+
+				audio_frame->data[0] = reinterpret_cast<uint8_t*>(audio_bytes);
+				audio_frame->linesize[0] = audio->GetSampleFrameCount() * channel_layout_.num_channels * sizeof(int32_t);
+				audio_frame->nb_samples = audio->GetSampleFrameCount();
+			}
+			else
+			{
+				audio_buf.resize(audio_cadence_.front() * channel_layout_.num_channels, 0);
+				audio_frame->data[0] = reinterpret_cast<uint8_t*>(audio_buf.data());
+				audio_frame->linesize[0] = audio_cadence_.front() * channel_layout_.num_channels * sizeof(int32_t);
+				audio_frame->nb_samples = audio_cadence_.front();
+			}
 						
 			// Note: Uses 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
 			// This cadence fills the audio mixer most optimally.
 
-			sync_buffer_.push_back(audio->GetSampleFrameCount());		
+			sync_buffer_.push_back(audio_frame->nb_samples);
 			if(!boost::range::equal(sync_buffer_, audio_cadence_))
 			{
 				CASPAR_LOG(trace) << print() << L" Syncing audio. Expected cadence: " << to_string(audio_cadence_) << L" Got cadence: " << to_string(sync_buffer_);
@@ -259,8 +271,8 @@ public:
 			
 			// PUSH
 
-			muxer_.push_video(video_frame);	
-			muxer_.push_audio(audio_frame);											
+			muxer_.push_video(video_frame);
+			muxer_.push_audio(audio_frame);
 			
 			// POLL
 
