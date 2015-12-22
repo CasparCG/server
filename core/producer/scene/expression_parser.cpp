@@ -29,6 +29,7 @@
 #include <functional>
 #include <typeinfo>
 #include <cstdint>
+#include <cmath>
 
 #include <boost/any.hpp>
 
@@ -122,6 +123,28 @@ boost::any create_animate_function(const std::vector<boost::any>& params, const 
 	return to_animate.animated(frame_counter, duration, tw);
 }
 
+boost::any create_sin_function(const std::vector<boost::any>& params, const variable_repository& var_repo)
+{
+	if (params.size() != 1)
+		CASPAR_THROW_EXCEPTION(user_error()
+			<< msg_info(L"sin() function requires one parameters: angle"));
+
+	auto angle = require<double>(params.at(0));
+
+	return angle.transformed([](double a) { return std::sin(a); });
+}
+
+boost::any create_cos_function(const std::vector<boost::any>& params, const variable_repository& var_repo)
+{
+	if (params.size() != 1)
+		CASPAR_THROW_EXCEPTION(user_error()
+			<< msg_info(L"cos() function requires one parameters: angle"));
+
+	auto angle = require<double>(params.at(0));
+
+	return angle.transformed([](double a) { return std::cos(a); });
+}
+
 boost::any parse_function(
 		const std::wstring& function_name,
 		std::wstring::const_iterator& cursor,
@@ -130,7 +153,9 @@ boost::any parse_function(
 {
 	static std::map<std::wstring, std::function<boost::any (const std::vector<boost::any>& params, const variable_repository& var_repo)>> FUNCTIONS
 	{
-		{L"animate", create_animate_function }
+		{L"animate",	create_animate_function },
+		{L"sin",		create_sin_function },
+		{L"cos",		create_cos_function }
 	};
 
 	auto function = FUNCTIONS.find(function_name);
