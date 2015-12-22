@@ -134,7 +134,15 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 		auto producer					= [&]
 		{
 			CASPAR_SCOPED_CONTEXT_MSG(" -> ");
-			return dependencies.producer_registry->create_producer(dependencies, producer_string);
+			auto adjusted_dependencies = dependencies;
+			auto& adjusted_format_desc = adjusted_dependencies.format_desc;
+
+			adjusted_format_desc.field_mode		 = field_mode::progressive;
+			adjusted_format_desc.fps			*= adjusted_format_desc.field_count;
+			adjusted_format_desc.duration		/= adjusted_format_desc.field_count;
+			adjusted_format_desc.field_count	 = 1;
+
+			return dependencies.producer_registry->create_producer(adjusted_dependencies, producer_string);
 		}();
 		auto& layer						= scene->create_layer(producer, 0, 0, id);
 		auto variable_prefix			= L"layer." + id + L".";
