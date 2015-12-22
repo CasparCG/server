@@ -1248,7 +1248,7 @@ std::wstring mixer_keyer_command(command_context& ctx)
 	{
 		transform.image_transform.is_key = value;
 		return transform;
-	}, 0, L"linear"));
+	}, 0, tweener(L"linear")));
 	transforms.apply();
 
 	return L"202 MIXER OK\r\n";
@@ -1339,7 +1339,7 @@ std::wstring mixer_blend_command(command_context& ctx)
 	{
 		transform.image_transform.blend_mode = value;
 		return transform;
-	}, 0, L"linear"));
+	}, 0, tweener(L"linear")));
 	transforms.apply();
 
 	return L"202 MIXER OK\r\n";
@@ -1848,7 +1848,7 @@ std::wstring mixer_mipmap_command(command_context& ctx)
 	{
 		transform.image_transform.use_mipmap = value;
 		return transform;
-	}, 0, L"linear"));
+	}, 0, tweener(L"linear")));
 	transforms.apply();
 
 	return L"202 MIXER OK\r\n";
