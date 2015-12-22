@@ -184,7 +184,8 @@ boost::any parse_variable(
 		if (ch == L'.'
 				|| ch == L'_'
 				|| (ch >= L'a' && ch <= L'z')
-				|| (ch >= L'A' && ch <= L'Z'))
+				|| (ch >= L'A' && ch <= L'Z')
+				|| (variable_name.length() > 0 && ch >= L'0' && ch <= L'9'))
 			variable_name += ch;
 		else
 			break;
