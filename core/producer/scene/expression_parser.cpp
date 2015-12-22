@@ -35,6 +35,7 @@
 #include <common/log.h>
 #include <common/except.h>
 #include <common/utf.h>
+#include <common/tweener.h>
 
 namespace caspar { namespace core { namespace scene {
 
@@ -69,6 +70,19 @@ std::wstring at_position(
 			+ L" in " + str;
 }
 
+template<typename T>
+binding<T> require(const boost::any& value)
+{
+	auto b = as_binding(value);
+
+	if (is<binding<T>>(b))
+		return as<binding<T>>(b);
+	else
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(
+			L"Required binding of type " + u16(typeid(T).name())
+			+ L" but got " + u16(value.type().name())));
+}
+
 boost::any parse_expression(
 		std::wstring::const_iterator& cursor,
 		const std::wstring& str,
@@ -85,11 +99,74 @@ boost::any parse_parenthesis(
 
 	auto expr = parse_expression(cursor, str, var_repo);
 
-	if (*cursor++ != L')')
+	if (next_non_whitespace(cursor, str, L"Expected )") != L')')
 		CASPAR_THROW_EXCEPTION(user_error()
 				<< msg_info(L"Expected )" + at_position(cursor, str)));
 
+	++cursor;
+
 	return expr;
+}
+
+boost::any create_animate_function(const std::vector<boost::any>& params, const variable_repository& var_repo)
+{
+	if (params.size() != 3)
+		CASPAR_THROW_EXCEPTION(user_error()
+			<< msg_info(L"animate() function requires three parameters: to_animate, duration, tweener"));
+
+	auto to_animate		= require<double>(params.at(0));
+	auto frame_counter	= var_repo(L"frame").as<int64_t>().as<double>();
+	auto duration		= require<double>(params.at(1));
+	auto tw				= require<std::wstring>(params.at(2)).transformed([](const std::wstring& s) { return tweener(s); });
+
+	return to_animate.animated(frame_counter, duration, tw);
+}
+
+boost::any parse_function(
+		const std::wstring& function_name,
+		std::wstring::const_iterator& cursor,
+		const std::wstring& str,
+		const variable_repository& var_repo)
+{
+	static std::map<std::wstring, std::function<boost::any (const std::vector<boost::any>& params, const variable_repository& var_repo)>> FUNCTIONS
+	{
+		{L"animate", create_animate_function }
+	};
+
+	auto function = FUNCTIONS.find(function_name);
+
+	if (function == FUNCTIONS.end())
+		CASPAR_THROW_EXCEPTION(user_error()
+				<< msg_info(function_name + L"() is an unknown function" + at_position(cursor, str)));
+
+	if (*cursor++ != L'(')
+		CASPAR_THROW_EXCEPTION(user_error()
+			<< msg_info(L"Expected (" + at_position(cursor, str)));
+
+	std::vector<boost::any> params;
+
+	while (cursor != str.end())
+	{
+		params.push_back(parse_expression(cursor, str, var_repo));
+
+		auto next = next_non_whitespace(cursor, str, L"Expected , or )");
+
+		if (next == L')')
+			break;
+		else if (next != L',')
+			CASPAR_THROW_EXCEPTION(user_error()
+				<< msg_info(L"Expected ) or ," + at_position(cursor, str)));
+
+		++cursor;
+	}
+
+	if (next_non_whitespace(cursor, str, L"Expected , or )") != L')')
+		CASPAR_THROW_EXCEPTION(user_error()
+			<< msg_info(L"Expected ) " + at_position(cursor, str)));
+
+	++cursor;
+
+	return function->second(params, var_repo);
 }
 
 double parse_constant(
@@ -192,6 +269,9 @@ boost::any parse_variable(
 
 		++cursor;
 	}
+
+	if (cursor != str.end() && *cursor == L'(')
+		return variable_name;
 
 	if (variable_name == L"true")
 		return true;
@@ -405,19 +485,6 @@ boost::any as_binding(const boost::any& value)
 	else
 		CASPAR_THROW_EXCEPTION(user_error() << msg_info(
 				L"Couldn't detect type of " + u16(value.type().name())));
-}
-
-template<typename T>
-binding<T> require(const boost::any& value)
-{
-	auto b = as_binding(value);
-
-	if (is<binding<T>>(b))
-		return as<binding<T>>(b);
-	else
-		CASPAR_THROW_EXCEPTION(user_error() << msg_info(
-				L"Required binding of type " + u16(typeid(T).name())
-				+ L" but got " + u16(value.type().name())));
 }
 
 boost::any negative(const boost::any& to_create_negative_of)
@@ -698,9 +765,17 @@ boost::any parse_expression(
 			tokens.push_back(parse_string_literal(cursor, str));
 			break;
 		case L'(':
-			tokens.push_back(parse_parenthesis(cursor, str, var_repo));
+			if (!tokens.empty() && is<std::wstring>(tokens.back()))
+			{
+				auto function_name = as<std::wstring>(tokens.back());
+				tokens.pop_back();
+				tokens.push_back(parse_function(function_name, cursor, str, var_repo));
+			}
+			else
+				tokens.push_back(parse_parenthesis(cursor, str, var_repo));
 			break;
 		case L')':
+		case L',':
 			stop = true;
 			break;
 		default:
@@ -714,7 +789,7 @@ boost::any parse_expression(
 
 	if (tokens.empty())
 		CASPAR_THROW_EXCEPTION(user_error()
-				<< msg_info(L"Expected expression"));
+				<< msg_info(L"Expected expression" + at_position(cursor, str)));
 
 	int precedence = 1;
 
