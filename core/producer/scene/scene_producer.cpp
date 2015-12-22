@@ -125,6 +125,10 @@ struct scene_producer::impl
 	interaction_aggregator									aggregator_;
 	binding<int64_t>										frame_number_;
 	binding<double>											speed_;
+	mutable tbb::atomic<int64_t>							m_x_;
+	mutable tbb::atomic<int64_t>							m_y_;
+	binding<int64_t>										mouse_x_;
+	binding<int64_t>										mouse_y_;
 	double													frame_fraction_		= 0.0;
 	std::map<void*, timeline>								timelines_;
 	std::map<std::wstring, std::shared_ptr<core::variable>>	variables_;
@@ -144,9 +148,19 @@ struct scene_producer::impl
 		auto speed_variable = std::make_shared<core::variable_impl<double>>(L"1.0", true, 1.0);
 		store_variable(L"scene_speed", speed_variable);
 		speed_ = speed_variable->value();
+		
 		auto frame_variable = std::make_shared<core::variable_impl<int64_t>>(L"-1", true, -1);
 		store_variable(L"frame", frame_variable);
 		frame_number_ = frame_variable->value();
+
+		auto mouse_x_variable = std::make_shared<core::variable_impl<int64_t>>(L"0", false, 0);
+		auto mouse_y_variable = std::make_shared<core::variable_impl<int64_t>>(L"0", false, 0);
+		store_variable(L"mouse_x", mouse_x_variable);
+		store_variable(L"mouse_y", mouse_y_variable);
+		mouse_x_ = mouse_x_variable->value();
+		mouse_y_ = mouse_y_variable->value();
+		m_x_ = 0;
+		m_y_ = 0;
 	}
 
 	layer& create_layer(
@@ -357,6 +371,9 @@ struct scene_producer::impl
 		for (auto& timeline : timelines_)
 			timeline.second.on_frame(frame_number_.get());
 
+		mouse_x_.set(m_x_);
+		mouse_y_.set(m_y_);
+
 		std::vector<draw_frame> frames;
 
 		for (auto& layer : layers_)
@@ -379,6 +396,9 @@ struct scene_producer::impl
 
 	bool collides(double x, double y) const
 	{
+		m_x_ = static_cast<int64_t>(x * pixel_constraints_.width.get());
+		m_y_ = static_cast<int64_t>(y * pixel_constraints_.height.get());
+
 		return static_cast<bool>((collission_detect(x, y)));
 	}
 
