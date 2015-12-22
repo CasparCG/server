@@ -466,17 +466,23 @@ tweener_t get_tweener(std::wstring name)
 
 tweener::tweener(const std::wstring& name)
 	: func_(get_tweener(name))
-{
-}
-
-tweener::tweener(const wchar_t* name)
-	: func_(get_tweener(name))
+	, name_(name)
 {
 }
 
 double tweener::operator()(double t, double b , double c, double d) const
 {
 	return func_(t, b, c, d);
+}
+
+bool tweener::operator==(const tweener& other) const
+{
+	return name_ == other.name_;
+}
+
+bool tweener::operator!=(const tweener& other) const
+{
+	return !(*this == other);
 }
 
 const std::vector<std::wstring>& tweener::names()
