@@ -47,7 +47,6 @@ public:
 	 * @param name The name of the tween function to use.
 	 */
 	tweener(const std::wstring& name = L"linear");
-	tweener(const wchar_t* name);
 
 	/**
 	 * @return The possible tween function names. Some of them may also support
@@ -73,8 +72,12 @@ public:
 	 * 	       than b or greater than b + c for some tweener functions.
 	 */
 	double operator()(double t, double b , double c, double d) const;
+
+	bool operator==(const tweener& other) const;
+	bool operator!=(const tweener& other) const;
 private:
-	std::function<double(double, double, double, double)> func_;
+	std::function<double(double, double, double, double)>	func_;
+	std::wstring											name_;
 };
 
 }
