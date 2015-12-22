@@ -71,6 +71,8 @@ std::wstring at_position(
 			+ L" in " + str;
 }
 
+boost::any as_binding(const boost::any& value);
+
 template<typename T>
 binding<T> require(const boost::any& value)
 {
