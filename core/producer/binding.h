@@ -459,7 +459,7 @@ public:
 	// Func -> R (T self_val, T2 other_val)
 	// Returns binding<R>
 	template<typename Func, typename T2>
-	auto composed(const binding<T2> other, const Func& func) const -> binding<decltype(func(impl_->value_, other.impl_->value_))>
+	auto composed(const binding<T2>& other, const Func& func) const -> binding<decltype(func(impl_->value_, other.impl_->value_))>
 	{
 		typedef decltype(func(impl_->value_, other.impl_->value_)) R;
 		auto self = impl_;
@@ -469,6 +469,62 @@ public:
 				[self, o, func] { return func(self->get(), o->get()); },
 				*this,
 				other);
+	}
+
+	template<typename TweenerFunc, typename FrameCounter>
+	binding<T> animated(
+			const binding<FrameCounter>& frame_counter,
+			const binding<FrameCounter>& duration,
+			const binding<TweenerFunc>& tweener_func) const
+	{
+		auto self					= impl_;
+		auto f						= frame_counter.impl_;
+		auto d						= duration.impl_;
+		auto tw						= tweener_func.impl_;
+		FrameCounter start_frame	= frame_counter.get();
+		FrameCounter current_frame	= start_frame;
+		T current_source			= get();
+		T current_destination		= current_source;
+		T current_result			= current_source;
+
+		auto result = binding<T>(
+			[=] () mutable
+			{
+				auto frame_diff		= f->get() - current_frame;
+				bool new_frame		= f->get() != current_frame;
+
+				if (!new_frame)
+					return current_result;
+
+				bool new_tween		= current_destination != self->get();
+				auto time			= current_frame - start_frame + (new_tween ? frame_diff : 0) + 1;
+				auto dur			= d->get();
+				current_frame		= f->get();
+
+				current_source		= new_tween ? tw->get()(time, current_source, current_destination - current_source, dur) : current_source;
+				current_destination	= self->get();
+
+				if (new_tween)
+					start_frame		= current_frame;
+
+				time				= current_frame - start_frame;
+
+				if (time < dur)
+					current_result = tw->get()(time, current_source, current_destination - current_source, dur);
+				else
+				{
+					current_result = current_destination;
+					current_source = current_destination;
+				}
+
+				return current_result;
+			});
+
+		result.depend_on(*this);
+		result.depend_on(frame_counter);
+		result.depend_on(tweener_func);
+
+		return result;
 	}
 
 	void unbind()
