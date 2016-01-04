@@ -322,7 +322,7 @@ struct server::impl : boost::noncopyable
 		{
 			for (auto& predefined_client : pt | witerate_children(L"configuration.osc.predefined-clients") | welement_context_iteration)
 			{
-				ptree_verify_element_name(predefined_client, L"predefined_client");
+				ptree_verify_element_name(predefined_client, L"predefined-client");
 
 				const auto address =
 						ptree_get<std::wstring>(predefined_client.second, L"address");
