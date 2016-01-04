@@ -868,12 +868,12 @@ public:
 
 void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
 {
-	sink.short_description(L"Can record a channel to a file supported by FFMpeg.");
+	sink.short_description(L"Can record a channel to a file supported by FFmpeg.");
 	sink.syntax(L"FILE [filename:string] {-[ffmpeg_param1:string] [value1:string] {-[ffmpeg_param2:string] [value2:string] {...}}} {[separate_key:SEPARATE_KEY]}");
-	sink.para()->text(L"Can record a channel to a file supported by FFMpeg.");
+	sink.para()->text(L"Can record a channel to a file supported by FFmpeg.");
 	sink.definitions()
 		->item(L"filename", L"The filename under the media folder including the extension (decides which kind of container format that will be used).")
-		->item(L"ffmpeg_paramX", L"A parameter supported by FFMpeg. For example vcodec or acodec etc.")
+		->item(L"ffmpeg_paramX", L"A parameter supported by FFmpeg. For example vcodec or acodec etc.")
 		->item(L"separate_key", L"If defined will create two files simultaneously -- One for fill and one for key (_A will be appended).")
 		;
 	sink.para()->text(L"Examples:");

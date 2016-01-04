@@ -293,7 +293,7 @@ void init(core::module_dependencies dependencies)
 
 	auto info_repo = dependencies.media_info_repo;
 	
-	dependencies.consumer_registry->register_consumer_factory(L"FFMpeg Consumer", create_consumer, describe_consumer);
+	dependencies.consumer_registry->register_consumer_factory(L"FFmpeg Consumer", create_consumer, describe_consumer);
 	dependencies.consumer_registry->register_consumer_factory(L"Streaming Consumer",  create_streaming_consumer, describe_streaming_consumer);
 	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"file", create_preconfigured_consumer);
 	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"stream", create_preconfigured_streaming_consumer);
