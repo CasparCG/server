@@ -1273,12 +1273,12 @@ private:
 
 void describe_streaming_consumer(core::help_sink& sink, const core::help_repository& repo)
 {
-	sink.short_description(L"For streaming the contents of a channel using FFMpeg.");
+	sink.short_description(L"For streaming the contents of a channel using FFmpeg.");
 	sink.syntax(L"STREAM [url:string] {-[ffmpeg_param1:string] [value1:string] {-[ffmpeg_param2:string] [value2:string] {...}}}");
-	sink.para()->text(L"For streaming the contents of a channel using FFMpeg");
+	sink.para()->text(L"For streaming the contents of a channel using FFmpeg");
 	sink.definitions()
 		->item(L"url", L"The stream URL to create/stream to.")
-		->item(L"ffmpeg_paramX", L"A parameter supported by FFMpeg. For example vcodec or acodec etc.");
+		->item(L"ffmpeg_paramX", L"A parameter supported by FFmpeg. For example vcodec or acodec etc.");
 	sink.para()->text(L"Examples:");
 	sink.example(L">> ADD 1 STREAM udp://<client_ip_address>:9250 -format mpegts -vcodec libx264 -crf 25 -tune zerolatency -preset ultrafast");
 }

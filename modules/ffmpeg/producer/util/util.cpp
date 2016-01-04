@@ -676,7 +676,7 @@ core::audio_channel_layout get_audio_channel_layout(const AVCodecContext& codec_
 			return core::audio_channel_layout(num_channels, L"", L""); // Passthru without named channels as is.
 	}
 
-	// What FFMpeg calls "channel layout" is only the "layout type" of a channel layout in
+	// What FFmpeg calls "channel layout" is only the "layout type" of a channel layout in
 	// CasparCG where the channel layout supports different orders as well.
 	// The user needs to provide additional mix-configs in casparcg.config to support more
 	// than the most common (5.1, mono and stereo) types.
@@ -746,7 +746,7 @@ core::audio_channel_layout get_audio_channel_layout(const AVCodecContext& codec_
 std::int64_t create_channel_layout_bitmask(int num_channels)
 {
 	if (num_channels > 63)
-		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info(L"FFMpeg cannot handle more than 63 audio channels"));
+		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info(L"FFmpeg cannot handle more than 63 audio channels"));
 
 	const auto ALL_63_CHANNELS = 0x7FFFFFFFFFFFFFFFULL;
 
