@@ -78,6 +78,7 @@ set(HEADERS
 		memcpy.h
 		memset.h
 		memshfl.h
+		no_init_proxy.h
 		param.h
 		polling_filesystem_monitor.h
 		prec_timer.h
