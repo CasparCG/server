@@ -40,6 +40,8 @@
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
 #include <common/memshfl.h>
+#include <common/memcpy.h>
+#include <common/no_init_proxy.h>
 #include <common/array.h>
 #include <common/future.h>
 #include <common/cache_aligned_vector.h>
@@ -168,12 +170,12 @@ void set_keyer(
 
 class decklink_frame : public IDeckLinkVideoFrame
 {
-	tbb::atomic<int>				ref_count_;
-	core::const_frame				frame_;
-	const core::video_format_desc	format_desc_;
+	tbb::atomic<int>								ref_count_;
+	core::const_frame								frame_;
+	const core::video_format_desc					format_desc_;
 
-	const bool						key_only_;
-	cache_aligned_vector<uint8_t>	data_;
+	const bool										key_only_;
+	cache_aligned_vector<no_init_proxy<uint8_t>>	data_;
 public:
 	decklink_frame(core::const_frame frame, const core::video_format_desc& format_desc, bool key_only)
 		: frame_(frame)
@@ -216,7 +218,7 @@ public:
 		{
 			if(static_cast<int>(frame_.image_data().size()) != format_desc_.size)
 			{
-				data_.resize(format_desc_.size, 0);
+				data_.resize(format_desc_.size);
 				*buffer = data_.data();
 			}
 			else if(key_only_)
@@ -229,7 +231,16 @@ public:
 				*buffer = data_.data();
 			}
 			else
+			{
 				*buffer = const_cast<uint8_t*>(frame_.image_data().begin());
+
+#if !defined(_MSC_VER)
+				// On Linux Decklink cannot DMA transfer from memory returned by glMapBuffer
+				data_.resize(frame_.image_data().size());
+				fast_memcpy(data_.data(), *buffer, frame_.image_data().size());
+				*buffer = data_.data();
+#endif
+			}
 		}
 		catch(...)
 		{
