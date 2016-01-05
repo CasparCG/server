@@ -32,6 +32,7 @@
 #include <common/endian.h>
 #include <common/cache_aligned_vector.h>
 #include <common/os/general_protection_fault.h>
+#include <common/no_init_proxy.h>
 
 #include <core/monitor/monitor.h>
 
@@ -48,18 +49,6 @@
 using namespace boost::asio::ip;
 
 namespace caspar { namespace protocol { namespace osc {
-
-template<typename T>
-struct no_init_proxy
-{
-    T value;
-
-    no_init_proxy() 
-	{
-		static_assert(sizeof(no_init_proxy) == sizeof(T), "invalid size");
-        static_assert(__alignof(no_init_proxy) == __alignof(T), "invalid alignment");
-    }
-};
 
 typedef cache_aligned_vector<no_init_proxy<char>> byte_vector;
 
