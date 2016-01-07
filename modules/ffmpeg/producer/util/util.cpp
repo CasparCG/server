@@ -34,11 +34,13 @@
 #include <core/frame/frame_transform.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/frame.h>
+#include <core/frame/audio_channel_layout.h>
 #include <core/producer/frame_producer.h>
 
 #include <common/except.h>
 #include <common/array.h>
 #include <common/os/filesystem.h>
+#include <common/memcpy.h>
 
 #include <tbb/parallel_for.h>
 
@@ -147,12 +149,12 @@ core::pixel_format_desc pixel_format_desc(PixelFormat pix_fmt, int width, int he
 	}
 }
 
-core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, double fps, core::frame_factory& frame_factory)
+core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, double fps, core::frame_factory& frame_factory, const core::audio_channel_layout& channel_layout)
 {			
 	static tbb::concurrent_unordered_map<int64_t, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contvalid_exts_;
 	
 	if(decoded_frame->width < 1 || decoded_frame->height < 1)
-		return frame_factory.create_frame(tag, core::pixel_format_desc(core::pixel_format::invalid));
+		return frame_factory.create_frame(tag, core::pixel_format_desc(core::pixel_format::invalid), core::audio_channel_layout::invalid());
 
 	const auto width  = decoded_frame->width;
 	const auto height = decoded_frame->height;
@@ -178,7 +180,7 @@ core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& 
 		
 		auto target_desc = pixel_format_desc(target_pix_fmt, width, height);
 
-		auto write = frame_factory.create_frame(tag, target_desc);
+		auto write = frame_factory.create_frame(tag, target_desc, channel_layout);
 
 		std::shared_ptr<SwsContext> sws_context;
 
@@ -228,7 +230,7 @@ core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& 
 	}
 	else
 	{
-		auto write = frame_factory.create_frame(tag, desc);
+		auto write = frame_factory.create_frame(tag, desc, channel_layout);
 		
 		for(int n = 0; n < static_cast<int>(desc.planes.size()); ++n)
 		{
@@ -240,13 +242,20 @@ core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& 
 			CASPAR_ASSERT(decoded);
 			CASPAR_ASSERT(write.image_data(n).begin());
 
-			// Copy line by line since ffmpeg sometimes pads each line.
-			tbb::affinity_partitioner ap;
-			tbb::parallel_for(tbb::blocked_range<int>(0, desc.planes[n].height), [&](const tbb::blocked_range<int>& r)
+			if (decoded_linesize != plane.linesize)
 			{
-				for(int y = r.begin(); y != r.end(); ++y)
-					A_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
-			}, ap);
+				// Copy line by line since ffmpeg sometimes pads each line.
+				tbb::affinity_partitioner ap;
+				tbb::parallel_for(tbb::blocked_range<int>(0, desc.planes[n].height), [&](const tbb::blocked_range<int>& r)
+				{
+					for (int y = r.begin(); y != r.end(); ++y)
+						A_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
+				}, ap);
+			}
+			else
+			{
+				fast_memcpy(result, decoded, plane.size);
+			}
 		}
 	
 		return std::move(write);
@@ -475,14 +484,14 @@ spl::shared_ptr<AVFrame> create_frame()
 	return frame;
 }
 
-spl::shared_ptr<AVCodecContext> open_codec(AVFormatContext& context, enum AVMediaType type, int& index)
+spl::shared_ptr<AVCodecContext> open_codec(AVFormatContext& context, enum AVMediaType type, int& index, bool single_threaded)
 {	
 	AVCodec* decoder;
 	index = THROW_ON_ERROR2(av_find_best_stream(&context, type, -1, -1, &decoder, 0), "");
 	//if(strcmp(decoder->name, "prores") == 0 && decoder->next && strcmp(decoder->next->name, "prores_lgpl") == 0)
 	//	decoder = decoder->next;
 
-	THROW_ON_ERROR2(tbb_avcodec_open(context.streams[index]->codec, decoder), "");
+	THROW_ON_ERROR2(tbb_avcodec_open(context.streams[index]->codec, decoder, single_threaded), "");
 	return spl::shared_ptr<AVCodecContext>(context.streams[index]->codec, tbb_avcodec_close);
 }
 
@@ -507,7 +516,7 @@ std::wstring print_mode(int width, int height, double fps, bool interlaced)
 	return boost::lexical_cast<std::wstring>(width) + L"x" + boost::lexical_cast<std::wstring>(height) + (!interlaced ? L"p" : L"i") + fps_ss.str();
 }
 
-bool is_valid_file(const std::wstring& filename)
+bool is_valid_file(const std::wstring& filename, bool only_video)
 {				
 	static const auto invalid_exts = {
 		L".png",
@@ -525,6 +534,11 @@ bool is_valid_file(const std::wstring& filename)
 		L".swf",
 		L".ct"
 	};
+	static const auto only_audio = {
+		L".mp3",
+		L".wav",
+		L".wma"
+	};
 	static const auto valid_exts = {
 		L".m2t",
 		L".mov",
@@ -532,8 +546,6 @@ bool is_valid_file(const std::wstring& filename)
 		L".dv",
 		L".flv",
 		L".mpg",
-		L".wav",
-		L".mp3",
 		L".dnxhd",
 		L".h264",
 		L".prores"
@@ -542,10 +554,16 @@ bool is_valid_file(const std::wstring& filename)
 	auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
 		
 	if(std::find(valid_exts.begin(), valid_exts.end(), ext) != valid_exts.end())
-		return true;	
+		return true;
+
+	if (!only_video && std::find(only_audio.begin(), only_audio.end(), ext) != only_audio.end())
+		return true;
 	
 	if(std::find(invalid_exts.begin(), invalid_exts.end(), ext) != invalid_exts.end())
 		return false;	
+
+	if (only_video && std::find(only_audio.begin(), only_audio.end(), ext) != only_audio.end())
+		return false;
 
 	auto u8filename = u8(filename);
 	
@@ -602,7 +620,7 @@ bool try_get_duration(const std::wstring filename, std::int64_t& duration, boost
 	return true;
 }
 
-std::wstring probe_stem(const std::wstring& stem)
+std::wstring probe_stem(const std::wstring& stem, bool only_video)
 {
 	auto stem2 = boost::filesystem::path(stem);
 	auto parent = find_case_insensitive(stem2.parent_path().wstring());
@@ -614,11 +632,130 @@ std::wstring probe_stem(const std::wstring& stem)
 
 	for(auto it = boost::filesystem::directory_iterator(dir); it != boost::filesystem::directory_iterator(); ++it)
 	{
-		if(boost::iequals(it->path().stem().wstring(), stem2.filename().wstring()) && is_valid_file(it->path().wstring()))
+		if(boost::iequals(it->path().stem().wstring(), stem2.filename().wstring()) && is_valid_file(it->path().wstring(), only_video))
 			return it->path().wstring();
 	}
 	return L"";
 }
+
+core::audio_channel_layout get_audio_channel_layout(const AVCodecContext& codec_context, const std::wstring& channel_layout_spec)
+{
+	auto num_channels = codec_context.channels;
+
+	if (!channel_layout_spec.empty())
+	{
+		if (boost::contains(channel_layout_spec, L":")) // Custom on the fly layout specified.
+		{
+			std::vector<std::wstring> type_and_channel_order;
+			boost::split(type_and_channel_order, channel_layout_spec, boost::is_any_of(L":"), boost::algorithm::token_compress_off);
+			auto& type			= type_and_channel_order.at(0);
+			auto& order			= type_and_channel_order.at(1);
+
+			return core::audio_channel_layout(num_channels, std::move(type), order);
+		}
+		else // Preconfigured named channel layout selected.
+		{
+			auto layout = core::audio_channel_layout_repository::get_default()->get_layout(channel_layout_spec);
+
+			if (!layout)
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"No channel layout with name " + channel_layout_spec + L" registered"));
+
+			layout->num_channels = num_channels;
+
+			return *layout;
+		}
+	}
+
+	if (!codec_context.channel_layout)
+	{
+		if (num_channels == 1)
+			return core::audio_channel_layout(num_channels, L"mono", L"FC");
+		else if (num_channels == 2)
+			return core::audio_channel_layout(num_channels, L"stereo", L"FL FR");
+		else
+			return core::audio_channel_layout(num_channels, L"", L""); // Passthru without named channels as is.
+	}
+
+	// What FFmpeg calls "channel layout" is only the "layout type" of a channel layout in
+	// CasparCG where the channel layout supports different orders as well.
+	// The user needs to provide additional mix-configs in casparcg.config to support more
+	// than the most common (5.1, mono and stereo) types.
+
+	// Based on information in https://ffmpeg.org/ffmpeg-utils.html#Channel-Layout
+	switch (codec_context.channel_layout)
+	{
+	case AV_CH_LAYOUT_MONO:
+		return core::audio_channel_layout(num_channels, L"mono",			L"FC");
+	case AV_CH_LAYOUT_STEREO:
+		return core::audio_channel_layout(num_channels, L"stereo",			L"FL FR");
+	case AV_CH_LAYOUT_2POINT1:
+		return core::audio_channel_layout(num_channels, L"2.1",				L"FL FR LFE");
+	case AV_CH_LAYOUT_SURROUND:
+		return core::audio_channel_layout(num_channels, L"3.0",				L"FL FR FC");
+	case AV_CH_LAYOUT_2_1:
+		return core::audio_channel_layout(num_channels, L"3.0(back)",		L"FL FR BC");
+	case AV_CH_LAYOUT_4POINT0:
+		return core::audio_channel_layout(num_channels, L"4.0",				L"FL FR FC BC");
+	case AV_CH_LAYOUT_QUAD:
+		return core::audio_channel_layout(num_channels, L"quad",			L"FL FR BL BR");
+	case AV_CH_LAYOUT_2_2:
+		return core::audio_channel_layout(num_channels, L"quad(side)",		L"FL FR SL SR");
+	case AV_CH_LAYOUT_3POINT1:
+		return core::audio_channel_layout(num_channels, L"3.1",				L"FL FR FC LFE");
+	case AV_CH_LAYOUT_5POINT0_BACK:
+		return core::audio_channel_layout(num_channels, L"5.0",				L"FL FR FC BL BR");
+	case AV_CH_LAYOUT_5POINT0:
+		return core::audio_channel_layout(num_channels, L"5.0(side)",		L"FL FR FC SL SR");
+	case AV_CH_LAYOUT_4POINT1:
+		return core::audio_channel_layout(num_channels, L"4.1",				L"FL FR FC LFE BC");
+	case AV_CH_LAYOUT_5POINT1_BACK:
+		return core::audio_channel_layout(num_channels, L"5.1",				L"FL FR FC LFE BL BR");
+	case AV_CH_LAYOUT_5POINT1:
+		return core::audio_channel_layout(num_channels, L"5.1(side)",		L"FL FR FC LFE SL SR");
+	case AV_CH_LAYOUT_6POINT0:
+		return core::audio_channel_layout(num_channels, L"6.0",				L"FL FR FC BC SL SR");
+	case AV_CH_LAYOUT_6POINT0_FRONT:
+		return core::audio_channel_layout(num_channels, L"6.0(front)",		L"FL FR FLC FRC SL SR");
+	case AV_CH_LAYOUT_HEXAGONAL:
+		return core::audio_channel_layout(num_channels, L"hexagonal",		L"FL FR FC BL BR BC");
+	case AV_CH_LAYOUT_6POINT1:
+		return core::audio_channel_layout(num_channels, L"6.1",				L"FL FR FC LFE BC SL SR");
+	case AV_CH_LAYOUT_6POINT1_BACK:
+		return core::audio_channel_layout(num_channels, L"6.1(back)",		L"FL FR FC LFE BL BR BC");
+	case AV_CH_LAYOUT_6POINT1_FRONT:
+		return core::audio_channel_layout(num_channels, L"6.1(front)",		L"FL FR LFE FLC FRC SL SR");
+	case AV_CH_LAYOUT_7POINT0:
+		return core::audio_channel_layout(num_channels, L"7.0",				L"FL FR FC BL BR SL SR");
+	case AV_CH_LAYOUT_7POINT0_FRONT:
+		return core::audio_channel_layout(num_channels, L"7.0(front)",		L"FL FR FC FLC FRC SL SR");
+	case AV_CH_LAYOUT_7POINT1:
+		return core::audio_channel_layout(num_channels, L"7.1",				L"FL FR FC LFE BL BR SL SR");
+	case AV_CH_LAYOUT_7POINT1_WIDE_BACK:
+		return core::audio_channel_layout(num_channels, L"7.1(wide)",		L"FL FR FC LFE BL BR FLC FRC");
+	case AV_CH_LAYOUT_7POINT1_WIDE:
+		return core::audio_channel_layout(num_channels, L"7.1(wide-side)",	L"FL FR FC LFE FLC FRC SL SR");
+	case AV_CH_LAYOUT_STEREO_DOWNMIX:
+		return core::audio_channel_layout(num_channels, L"downmix",			L"DL DR");
+	default:
+		// Passthru
+		return core::audio_channel_layout(num_channels, L"", L"");
+	}
+}
+
+// av_get_default_channel_layout does not work for layouts not predefined in ffmpeg. This is needed to support > 8 channels.
+std::int64_t create_channel_layout_bitmask(int num_channels)
+{
+	if (num_channels > 63)
+		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info(L"FFmpeg cannot handle more than 63 audio channels"));
+
+	const auto ALL_63_CHANNELS = 0x7FFFFFFFFFFFFFFFULL;
+
+	auto to_shift = 63 - num_channels;
+	auto result = ALL_63_CHANNELS >> to_shift;
+
+	return static_cast<std::int64_t>(result);
+}
+
 //
 //void av_dup_frame(AVFrame* frame)
 //{

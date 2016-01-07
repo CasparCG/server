@@ -27,9 +27,10 @@
 #include <common/forward.h>
 #include <common/future_fwd.h>
 #include <common/memory.h>
-#include <common/reactive.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
+
+#include <future>
 
 FORWARD2(caspar, diagnostics, class graph);
 
@@ -45,11 +46,12 @@ public:
 
 	// Constructors
 
-	explicit output(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index);
+	explicit output(spl::shared_ptr<caspar::diagnostics::graph> graph, const video_format_desc& format_desc, const core::audio_channel_layout& channel_layout, int channel_index);
 	
 	// Methods
 
-	void operator()(const_frame frame, const video_format_desc& format_desc);
+	// Returns when submitted to consumers, but the future indicates when the consumers are ready for a new frame.
+	std::future<void> operator()(const_frame frame, const video_format_desc& format_desc, const core::audio_channel_layout& channel_layout);
 	
 	void add(const spl::shared_ptr<frame_consumer>& consumer);
 	void add(int index, const spl::shared_ptr<frame_consumer>& consumer);

@@ -540,7 +540,8 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::Advise(VARIANT vtimeMin, VARIANT vti
 
 	if(pTimerHelper != 0)
 	{
-		pTimerHelper->Setup(vtimeMin.ulVal, vtimeInterval.ulVal, pTimerSink);
+		//static tbb::atomic<DWORD> NEXT_ID;
+		pTimerHelper->Setup(0, vtimeMin.ulVal, vtimeInterval.ulVal, pTimerSink);
 		*pdwCookie = pTimerHelper->ID;
 		bHasNewTiming_ = true;
 
@@ -640,13 +641,16 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 	}
 	else if(str.find(L"IsEmpty") != std::wstring::npos)
 	{
-		CASPAR_LOG(trace) << print_() << L" Empty.";
+		CASPAR_LOG(debug) << print_() << L" Empty.";
 		ATLTRACE(_T("ShockwaveFlash::IsEmpty\n"));
 		bIsEmpty_ = true;
 	}
 	else if(str.find(L"OnError") != std::wstring::npos)
 	{
-		CASPAR_LOG(error) << print_() << L" [error]        " << str;
+		if (str.find(L"No template playing on layer") != std::wstring::npos)
+			CASPAR_LOG(info) << print_() << L" [info]        " << str;
+		else
+			CASPAR_LOG(error) << print_() << L" [error]        " << str;
 	}
 	else if(str.find(L"OnDebug") != std::wstring::npos)
 	{

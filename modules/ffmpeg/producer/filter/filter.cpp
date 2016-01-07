@@ -24,6 +24,7 @@
 #include "filter.h"
 
 #include "../../ffmpeg_error.h"
+#include "../../ffmpeg.h"
 
 #include <common/assert.h>
 #include <common/except.h>
@@ -36,6 +37,7 @@
 #include <cstdio>
 #include <sstream>
 #include <string>
+#include <queue>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -48,7 +50,6 @@ extern "C"
 	#include <libavutil/opt.h>
 	#include <libavfilter/avfilter.h>
 	#include <libavfilter/avcodec.h>
-	#include <libavfilter/avfilter.h>
 	#include <libavfilter/buffersink.h>
 	#include <libavfilter/buffersrc.h>
 }
@@ -60,11 +61,13 @@ namespace caspar { namespace ffmpeg {
 	
 struct filter::implementation
 {
-	std::string						filtergraph_;
+	std::string								filtergraph_;
 
-	std::shared_ptr<AVFilterGraph>	video_graph_;	
-    AVFilterContext*				video_graph_in_;  
-    AVFilterContext*				video_graph_out_; 
+	std::shared_ptr<AVFilterGraph>			video_graph_;
+    AVFilterContext*						video_graph_in_;
+    AVFilterContext*						video_graph_out_;
+
+	std::queue<std::shared_ptr<AVFrame>>	fast_path_;
 		
 	implementation(
 			int in_width,
@@ -102,7 +105,7 @@ struct filter::implementation
 				avfilter_graph_free(&p);
 			});
 		
-		video_graph_->nb_threads  = boost::thread::hardware_concurrency();
+		video_graph_->nb_threads  = 0;
 		video_graph_->thread_type = AVFILTER_THREAD_SLICE;
 				
 		const auto vsrc_options = (boost::format("video_size=%1%x%2%:pix_fmt=%3%:time_base=%4%/%5%:pixel_aspect=%6%/%7%:frame_rate=%8%/%9%")
@@ -151,11 +154,18 @@ struct filter::implementation
 		video_graph_in_  = filt_vsrc;
 		video_graph_out_ = filt_vsink;
 		
-		CASPAR_LOG(info)
-			<< 	u16(std::string("\n") 
-				+ avfilter_graph_dump(
-						video_graph_.get(), 
-						nullptr));
+		if (is_logging_quiet_for_thread())
+			CASPAR_LOG(trace)
+				<< 	u16(std::string("\n") 
+					+ avfilter_graph_dump(
+							video_graph_.get(), 
+							nullptr));
+		else
+			CASPAR_LOG(debug)
+				<< u16(std::string("\n")
+					+ avfilter_graph_dump(
+							video_graph_.get(),
+							nullptr));
 	}
 	
 	void configure_filtergraph(
@@ -214,15 +224,33 @@ struct filter::implementation
 		}
 	}
 
+	bool fast_path() const
+	{
+		return filtergraph_.empty();
+	}
+
 	void push(const std::shared_ptr<AVFrame>& src_av_frame)
-	{		
-		FF(av_buffersrc_add_frame(
-			video_graph_in_, 
-			src_av_frame.get()));
+	{
+		if (fast_path())
+			fast_path_.push(src_av_frame);
+		else
+			FF(av_buffersrc_add_frame(
+				video_graph_in_, 
+				src_av_frame.get()));
 	}
 
 	std::shared_ptr<AVFrame> poll()
 	{
+		if (fast_path())
+		{
+			if (fast_path_.empty())
+				return nullptr;
+
+			auto result = fast_path_.front();
+			fast_path_.pop();
+			return result;
+		}
+
 		std::shared_ptr<AVFrame> filt_frame(
 			av_frame_alloc(), 
 			[](AVFrame* p)

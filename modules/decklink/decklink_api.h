@@ -61,20 +61,8 @@ struct co_init
 template<typename T>
 using com_ptr = CComPtr<T>;
 
-// MSVC 2013 crashes when this alias template is instantiated
-/*template<typename T>
-using com_iface_ptr = CComQIPtr<T>;*/
-
 template<typename T>
-class com_iface_ptr : public CComQIPtr<T>
-{
-public:
-	template<typename T2>
-	com_iface_ptr(const com_ptr<T2>& lp)
-		: CComQIPtr<T>(lp)
-	{
-	}
-};
+using com_iface_ptr = CComQIPtr<T>;
 
 template<template<typename> class P, typename T>
 static P<T> wrap_raw(T* ptr, bool already_referenced = false)
@@ -93,14 +81,19 @@ static com_ptr<IDeckLinkIterator> create_iterator()
 {
     CComPtr<IDeckLinkIterator> pDecklinkIterator;
     if(FAILED(pDecklinkIterator.CoCreateInstance(CLSID_CDeckLinkIterator)))
-        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Decklink drivers not found."));
+        CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Decklink drivers not found."));
     return pDecklinkIterator;
 }
 
 template<typename I, typename T>
 static com_iface_ptr<I> iface_cast(const com_ptr<T>& ptr)
 {
-    return com_iface_ptr<I>(ptr);
+	com_iface_ptr<I> result = ptr;
+
+	if (!result)
+		CASPAR_THROW_EXCEPTION(not_supported() << msg_info(std::string("Could not cast from ") + typeid(T).name() + " to " + typeid(I).name() + ". This is probably due to old Decklink drivers."));
+
+	return result;
 }
 
 template<typename T>
@@ -167,7 +160,7 @@ static com_ptr<IDeckLinkIterator> create_iterator()
     IDeckLinkIterator* iterator = CreateDeckLinkIteratorInstance();
 
     if (iterator == nullptr)
-        CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Decklink drivers not found."));
+        CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Decklink drivers not found."));
 
 	return wrap_raw<com_ptr>(iterator, true);
 }

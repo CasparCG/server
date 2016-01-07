@@ -37,6 +37,7 @@
 #include <common/param.h>
 #include <common/timer.h>
 
+#include <core/frame/audio_channel_layout.h>
 #include <core/frame/frame.h>
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_transform.h>
@@ -51,6 +52,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/range/adaptor/transformed.hpp>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -71,6 +73,24 @@ extern "C"
 #include <functional>
 
 namespace caspar { namespace decklink {
+
+core::audio_channel_layout get_adjusted_channel_layout(core::audio_channel_layout layout)
+{
+	if (layout.num_channels <= 2)
+		layout.num_channels = 2;
+	else if (layout.num_channels <= 8)
+		layout.num_channels = 8;
+	else
+		layout.num_channels = 16;
+
+	return layout;
+}
+
+template <typename T>
+std::wstring to_string(const T& cadence)
+{
+	return boost::join(cadence | boost::adaptors::transformed([](size_t i) { return boost::lexical_cast<std::wstring>(i); }), L", ");
+}
 		
 class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 {	
@@ -91,30 +111,33 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	std::vector<int>								audio_cadence_		= out_format_desc_.audio_cadence;
 	boost::circular_buffer<size_t>					sync_buffer_		{ audio_cadence_.size() };
 	spl::shared_ptr<core::frame_factory>			frame_factory_;
-	ffmpeg::frame_muxer								muxer_				{ in_format_desc_.fps, frame_factory_, out_format_desc_, filter_ };
+	core::audio_channel_layout						channel_layout_;
+	ffmpeg::frame_muxer								muxer_				{ in_format_desc_.fps, frame_factory_, out_format_desc_, channel_layout_, filter_ };
 			
 	core::constraints								constraints_		{ in_format_desc_.width, in_format_desc_.height };
 
 	tbb::concurrent_bounded_queue<core::draw_frame>	frame_buffer_;
 
-	std::exception_ptr								exception_;		
+	std::exception_ptr								exception_;
 
 public:
 	decklink_producer(
 			const core::video_format_desc& in_format_desc, 
 			int device_index, 
 			const spl::shared_ptr<core::frame_factory>& frame_factory, 
-			const core::video_format_desc& out_format_desc, 
+			const core::video_format_desc& out_format_desc,
+			const core::audio_channel_layout& channel_layout,
 			const std::wstring& filter)
 		: device_index_(device_index)
 		, filter_(filter)
 		, in_format_desc_(in_format_desc)
 		, out_format_desc_(out_format_desc)
 		, frame_factory_(frame_factory)
-	{	
+		, channel_layout_(get_adjusted_channel_layout(channel_layout))
+	{
 		frame_buffer_.set_capacity(2);
 		
-		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
+		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
 		graph_->set_color("frame-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
@@ -130,8 +153,8 @@ public:
 									<< msg_info(print() + L" Could not enable video input.")
 									<< boost::errinfo_api_function("EnableVideoInput"));
 
-		if(FAILED(input_->EnableAudioInput(bmdAudioSampleRate48kHz, bmdAudioSampleType32bitInteger, static_cast<int>(in_format_desc.audio_channels)))) 
-			CASPAR_THROW_EXCEPTION(caspar_exception() 
+		if(FAILED(input_->EnableAudioInput(bmdAudioSampleRate48kHz, bmdAudioSampleType32bitInteger, static_cast<int>(channel_layout_.num_channels))))
+			CASPAR_THROW_EXCEPTION(caspar_exception()
 									<< msg_info(print() + L" Could not enable audio input.")
 									<< boost::errinfo_api_function("EnableAudioInput"));
 			
@@ -212,32 +235,44 @@ public:
 
 			// Audio
 
-			void* audio_bytes = nullptr;
-			if(FAILED(audio->GetBytes(&audio_bytes)) || !audio_bytes)
-				return S_OK;
-			
 			auto audio_frame = ffmpeg::create_frame();
+			audio_frame->format = AV_SAMPLE_FMT_S32;
+			core::mutable_audio_buffer audio_buf;
 
-			audio_frame->data[0]		= reinterpret_cast<uint8_t*>(audio_bytes);
-			audio_frame->linesize[0]	= audio->GetSampleFrameCount()*out_format_desc_.audio_channels*sizeof(int32_t);
-			audio_frame->nb_samples		= audio->GetSampleFrameCount();
-			audio_frame->format			= AV_SAMPLE_FMT_S32;
+			if (audio)
+			{
+				void* audio_bytes = nullptr;
+				if (FAILED(audio->GetBytes(&audio_bytes)) || !audio_bytes)
+					return S_OK;
+
+
+				audio_frame->data[0] = reinterpret_cast<uint8_t*>(audio_bytes);
+				audio_frame->linesize[0] = audio->GetSampleFrameCount() * channel_layout_.num_channels * sizeof(int32_t);
+				audio_frame->nb_samples = audio->GetSampleFrameCount();
+			}
+			else
+			{
+				audio_buf.resize(audio_cadence_.front() * channel_layout_.num_channels, 0);
+				audio_frame->data[0] = reinterpret_cast<uint8_t*>(audio_buf.data());
+				audio_frame->linesize[0] = audio_cadence_.front() * channel_layout_.num_channels * sizeof(int32_t);
+				audio_frame->nb_samples = audio_cadence_.front();
+			}
 						
 			// Note: Uses 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
 			// This cadence fills the audio mixer most optimally.
 
-			sync_buffer_.push_back(audio->GetSampleFrameCount());		
+			sync_buffer_.push_back(audio_frame->nb_samples);
 			if(!boost::range::equal(sync_buffer_, audio_cadence_))
 			{
-				CASPAR_LOG(trace) << print() << L" Syncing audio.";
+				CASPAR_LOG(trace) << print() << L" Syncing audio. Expected cadence: " << to_string(audio_cadence_) << L" Got cadence: " << to_string(sync_buffer_);
 				return S_OK;
 			}
 			boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 			
 			// PUSH
 
-			muxer_.push_video(video_frame);	
-			muxer_.push_audio(audio_frame);											
+			muxer_.push_video(video_frame);
+			muxer_.push_audio(audio_frame);
 			
 			// POLL
 
@@ -253,7 +288,7 @@ public:
 					frame_buffer_.try_pop(dummy);
 					frame_buffer_.try_push(frame);
 						
-					graph_->set_tag("dropped-frame");
+					graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
 				}
 			}
 			
@@ -279,7 +314,7 @@ public:
 		
 		core::draw_frame frame = core::draw_frame::late();
 		if(!frame_buffer_.try_pop(frame))
-			graph_->set_tag("late-frame");
+			graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
 		graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
 		return frame;
 	}
@@ -301,18 +336,21 @@ class decklink_producer_proxy : public core::frame_producer_base
 	const uint32_t						length_;
 	executor							executor_;
 public:
-	explicit decklink_producer_proxy(const core::video_format_desc& in_format_desc,
-									 const spl::shared_ptr<core::frame_factory>& frame_factory, 
-									 const core::video_format_desc& out_format_desc, 
-									 int device_index,
-									 const std::wstring& filter_str, uint32_t length)
+	explicit decklink_producer_proxy(
+			const core::video_format_desc& in_format_desc,
+			const spl::shared_ptr<core::frame_factory>& frame_factory,
+			const core::video_format_desc& out_format_desc,
+			const core::audio_channel_layout& channel_layout,
+			int device_index,
+			const std::wstring& filter_str,
+			uint32_t length)
 		: executor_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
 		, length_(length)
 	{
 		executor_.invoke([=]
 		{
 			com_initialize();
-			producer_.reset(new decklink_producer(in_format_desc, device_index, frame_factory, out_format_desc, filter_str));
+			producer_.reset(new decklink_producer(in_format_desc, device_index, frame_factory, out_format_desc, channel_layout, filter_str));
 		});
 	}
 
@@ -368,17 +406,19 @@ public:
 void describe_producer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"Allows video sources to be input from BlackMagic Design cards.");
-	sink.syntax(L"DECKLINK [device:int],DEVICE [device:int] {FILTER [filter:string]} {LENGTH [length:int]} {FORMAT [format:string]}");
+	sink.syntax(L"DECKLINK [device:int],DEVICE [device:int] {FILTER [filter:string]} {LENGTH [length:int]} {FORMAT [format:string]} {CHANNEL_LAYOUT [channel_layout:string]}");
 	sink.para()->text(L"Allows video sources to be input from BlackMagic Design cards. Parameters:");
 	sink.definitions()
 		->item(L"device", L"The decklink device to stream the input from. See the Blackmagic control panel for the order of devices in your system.")
 		->item(L"filter", L"If specified, sets an FFmpeg video filter to use.")
 		->item(L"length", L"Optionally specify a limit on how many frames to produce.")
-		->item(L"format", L"Specifies what video format to expect on the incoming SDI/HDMI signal. If not specified the video format of the channel is assumed.");
+		->item(L"format", L"Specifies what video format to expect on the incoming SDI/HDMI signal. If not specified the video format of the channel is assumed.")
+		->item(L"channel_layout", L"Specifies what audio channel layout to expect on the incoming SDI/HDMI signal. If not specified, stereo is assumed.");
 	sink.para()->text(L"Examples:");
 	sink.example(L">> PLAY 1-10 DECKLINK DEVICE 2", L"Play using decklink device 2 expecting the video signal to have the same video format as the channel.");
 	sink.example(L">> PLAY 1-10 DECKLINK DEVICE 2 FORMAT PAL FILTER yadif=1:-1", L"Play using decklink device 2 expecting the video signal to be in PAL and deinterlace it.");
 	sink.example(L">> PLAY 1-10 DECKLINK DEVICE 2 LENGTH 1000", L"Play using decklink device 2 but only produce 1000 frames.");
+	sink.example(L">> PLAY 1-10 DECKLINK DEVICE 2 CHANNEL_LAYOUT smpte", L"Play using decklink device 2 and expect smpte surround sound.");
 }
 
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
@@ -396,8 +436,28 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 		
 	if(in_format_desc.format == core::video_format::invalid)
 		in_format_desc = dependencies.format_desc;
+
+	auto channel_layout_spec	= get_param(L"CHANNEL_LAYOUT", params);
+	auto channel_layout			= *core::audio_channel_layout_repository::get_default()->get_layout(L"stereo");
+
+	if (!channel_layout_spec.empty())
+	{
+		auto found_layout = core::audio_channel_layout_repository::get_default()->get_layout(channel_layout_spec);
+
+		if (!found_layout)
+			CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Channel layout not found."));
+
+		channel_layout = *found_layout;
+	}
 			
-	return create_destroy_proxy(spl::make_shared<decklink_producer_proxy>(in_format_desc, dependencies.frame_factory, dependencies.format_desc, device_index, filter_str, length));
+	return create_destroy_proxy(spl::make_shared<decklink_producer_proxy>(
+			in_format_desc,
+			dependencies.frame_factory,
+			dependencies.format_desc,
+			channel_layout,
+			device_index,
+			filter_str,
+			length));
 }
 
 }}

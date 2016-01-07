@@ -455,7 +455,7 @@ tweener_t get_tweener(std::wstring name)
 		
 	auto it = get_tweens().find(name);
 	if(it == get_tweens().end())
-		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Could not find tween.") << arg_value_info(name));
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Could not find tween " + name));
 	
 	auto tween = it->second;
 	return [=](double t, double b, double c, double d)
@@ -466,17 +466,23 @@ tweener_t get_tweener(std::wstring name)
 
 tweener::tweener(const std::wstring& name)
 	: func_(get_tweener(name))
-{
-}
-
-tweener::tweener(const wchar_t* name)
-	: func_(get_tweener(name))
+	, name_(name)
 {
 }
 
 double tweener::operator()(double t, double b , double c, double d) const
 {
 	return func_(t, b, c, d);
+}
+
+bool tweener::operator==(const tweener& other) const
+{
+	return name_ == other.name_;
+}
+
+bool tweener::operator!=(const tweener& other) const
+{
+	return !(*this == other);
 }
 
 const std::vector<std::wstring>& tweener::names()

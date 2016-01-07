@@ -304,10 +304,10 @@ struct image_mixer::impl : boost::noncopyable
 	std::vector<core::image_transform>	transform_stack_;
 	std::vector<item>					items_; // layer/stream/items
 public:
-	impl() 
+	impl(int channel_id)
 		: transform_stack_(1)	
 	{
-		CASPAR_LOG(info) << L"Initialized Streaming SIMD Extensions Accelerated CPU Image Mixer";
+		CASPAR_LOG(info) << L"Initialized Streaming SIMD Extensions Accelerated CPU Image Mixer for channel " << channel_id;
 	}
 		
 	void push(const core::frame_transform& transform)
@@ -348,7 +348,7 @@ public:
 		return renderer_(std::move(items_), format_desc);
 	}
 	
-	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc)
+	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc, const core::audio_channel_layout& channel_layout)
 	{
 		std::vector<array<std::uint8_t>> buffers;
 		for (auto& plane : desc.planes)
@@ -356,16 +356,16 @@ public:
 			auto buf = spl::make_shared<buffer>(plane.size);
 			buffers.push_back(array<std::uint8_t>(buf->data(), plane.size, true, buf));
 		}
-		return core::mutable_frame(std::move(buffers), core::audio_buffer(), tag, desc);
+		return core::mutable_frame(std::move(buffers), core::mutable_audio_buffer(), tag, desc, channel_layout);
 	}
 };
 
-image_mixer::image_mixer() : impl_(new impl()){}
+image_mixer::image_mixer(int channel_id) : impl_(new impl(channel_id)){}
 image_mixer::~image_mixer(){}
 void image_mixer::push(const core::frame_transform& transform){impl_->push(transform);}
 void image_mixer::visit(const core::const_frame& frame){impl_->visit(frame);}
 void image_mixer::pop(){impl_->pop();}
 std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc, bool /* straighten_alpha */){return impl_->render(format_desc);}
-core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->create_frame(tag, desc);}
+core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, const core::audio_channel_layout& channel_layout) {return impl_->create_frame(tag, desc, channel_layout);}
 
 }}}

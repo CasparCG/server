@@ -19,6 +19,33 @@
 	{ \
 		lhs = lhs & rhs; \
 		return lhs; \
+	}; \
+	static enum_class operator | (enum_class lhs, enum_class rhs) \
+	{ \
+		return static_cast<enum_class>( \
+				static_cast<std::underlying_type<enum_class>::type>(lhs) \
+					| static_cast<std::underlying_type<enum_class>::type>(rhs)); \
+	}; \
+	static enum_class& operator|=(enum_class& lhs, enum_class rhs) \
+	{ \
+		lhs = lhs | rhs; \
+		return lhs; \
+	}; \
+	static enum_class operator ^ (enum_class lhs, enum_class rhs) \
+	{ \
+		return static_cast<enum_class>( \
+				static_cast<std::underlying_type<enum_class>::type>(lhs) \
+					^ static_cast<std::underlying_type<enum_class>::type>(rhs)); \
+	}; \
+	static enum_class& operator^=(enum_class& lhs, enum_class rhs) \
+	{ \
+		lhs = lhs ^ rhs; \
+		return lhs; \
+	}; \
+	static enum_class operator~ (enum_class e) \
+	{ \
+		return static_cast<enum_class>( \
+				~static_cast<std::underlying_type<enum_class>::type>(e)); \
 	};
 
 namespace caspar {

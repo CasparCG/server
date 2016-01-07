@@ -38,9 +38,11 @@ namespace caspar { namespace accelerator { namespace ogl {
 	
 static GLenum FORMAT[] = {0, GL_RED, GL_RG, GL_BGR, GL_BGRA};
 static GLenum INTERNAL_FORMAT[] = {0, GL_R8, GL_RG8, GL_RGB8, GL_RGBA8};	
-static GLenum TYPE[] = {0, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_INT_8_8_8_8_REV};	
+static GLenum TYPE[]			= { 0, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE };
+static GLenum READPIXELS_TYPE[]	= { 0, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_INT_8_8_8_8_REV };
 
-static tbb::atomic<int> g_total_count;
+static tbb::atomic<int>			g_total_count;
+static tbb::atomic<std::size_t>	g_total_size;
 
 struct texture::impl : boost::noncopyable
 {
@@ -57,6 +59,8 @@ public:
 		, stride_(stride)
 		, mipmapped_(mipmapped)
 	{	
+		CASPAR_LOG_CALL(trace) << "texture::texture() <- " << get_context();
+
 		GL(glGenTextures(1, &id_));
 		GL(glBindTexture(GL_TEXTURE_2D, id_));
 		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (mipmapped ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR)));
@@ -72,6 +76,8 @@ public:
 		}
 
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
+		g_total_count++;
+		g_total_size += static_cast<std::size_t>(width * height * stride * (mipmapped ? 1.33 : 1.0));
 		//CASPAR_LOG(trace) << "[texture] [" << ++g_total_count << L"] allocated size:" << width*height*stride;	
 	}	
 
@@ -94,7 +100,10 @@ public:
 
 	~impl()
 	{
+		CASPAR_LOG_CALL(trace) << "texture::~texture() <- " << get_context();
 		glDeleteTextures(1, &id_);
+		g_total_size -= static_cast<std::size_t>(width_ * height_ * stride_ * (mipmapped_ ? 1.33 : 1.0));
+		g_total_count--;
 	}
 	
 	void bind()
@@ -126,6 +135,7 @@ public:
 		
 	void copy_from(buffer& source)
 	{
+		CASPAR_LOG_CALL(trace) << "texture::copy_from(buffer&) <- " << get_context();
 		source.unmap();
 		source.bind();
 		GL(glBindTexture(GL_TEXTURE_2D, id_));
@@ -141,11 +151,12 @@ public:
 
 	void copy_to(buffer& dest)
 	{
+		CASPAR_LOG_CALL(trace) << "texture::copy_to(buffer&) <- " << get_context();
 		dest.unmap();
 		dest.bind();
 		GL(glBindTexture(GL_TEXTURE_2D, id_));
 		GL(glReadBuffer(GL_COLOR_ATTACHMENT0));
-		GL(glReadPixels(0, 0, width_, height_, FORMAT[stride_], TYPE[stride_], NULL));
+		GL(glReadPixels(0, 0, width_, height_, FORMAT[stride_], READPIXELS_TYPE[stride_], NULL));
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
 		dest.unbind();
 		GL(glFlush());
@@ -168,5 +179,15 @@ int texture::stride() const { return impl_->stride_; }
 bool texture::mipmapped() const { return impl_->mipmapped_; }
 std::size_t texture::size() const { return static_cast<std::size_t>(impl_->width_*impl_->height_*impl_->stride_); }
 int texture::id() const{ return impl_->id_;}
+
+boost::property_tree::wptree texture::info()
+{
+	boost::property_tree::wptree info;
+
+	info.add(L"total_count", g_total_count);
+	info.add(L"total_size", g_total_size);
+
+	return info;
+}
 
 }}}

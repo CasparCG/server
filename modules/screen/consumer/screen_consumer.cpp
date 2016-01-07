@@ -30,12 +30,14 @@
 #include <common/memory.h>
 #include <common/array.h>
 #include <common/memshfl.h>
+#include <common/memcpy.h>
 #include <common/utf.h>
 #include <common/prec_timer.h>
 #include <common/future.h>
 #include <common/timer.h>
 #include <common/param.h>
 #include <common/os/general_protection_fault.h>
+#include <common/scope_exit.h>
 
 //#include <windows.h>
 
@@ -97,14 +99,14 @@ struct configuration
 		aspect_invalid,
 	};
 		
-	std::wstring	name				= L"ogl";
+	std::wstring	name				= L"Screen consumer";
 	int				screen_index		= 0;
 	screen::stretch	stretch				= screen::stretch::fill;
 	bool			windowed			= true;
 	bool			auto_deinterlace	= true;
 	bool			key_only			= false;
 	aspect_ratio	aspect				= aspect_ratio::aspect_invalid;
-	bool			vsync				= true;
+	bool			vsync				= false;
 	bool			interactive			= true;
 	bool			borderless			= false;
 };
@@ -128,6 +130,8 @@ struct screen_consumer : boost::noncopyable
 	int													square_height_	= format_desc_.square_height;
 
 	sf::Window											window_;
+	tbb::atomic<bool>									polling_event_;
+	std::int64_t										pts_;
 
 	spl::shared_ptr<diagnostics::graph>					graph_;
 	caspar::timer										perf_timer_;
@@ -152,6 +156,7 @@ public:
 		: config_(config)
 		, format_desc_(format_desc)
 		, channel_index_(channel_index)
+		, pts_(0)
 		, sink_(sink)
 		, filter_([&]() -> ffmpeg::filter
 		{			
@@ -171,7 +176,7 @@ public:
 				sample_aspect_ratio,
 				AV_PIX_FMT_BGRA,
 				{ AV_PIX_FMT_BGRA },
-				format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? "" : "YADIF=1:-1");
+				format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? "" : "format=pix_fmts=gbrp,YADIF=1:-1");
 		}())
 	{		
 		if (format_desc_.format == core::video_format::ntsc && config_.aspect == configuration::aspect_ratio::aspect_4_3)
@@ -215,6 +220,7 @@ public:
 		screen_width_	= square_width_;
 		screen_height_	= square_height_;
 		
+		polling_event_ = false;
 		is_running_ = true;
 		current_presentation_age_ = 0;
 		thread_ = boost::thread([this]{run();});
@@ -234,7 +240,7 @@ public:
 			: (config_.windowed
 				? sf::Style::Resize | sf::Style::Close
 				: sf::Style::Fullscreen);
-		window_.create(sf::VideoMode(screen_width_, screen_height_, 32), u8(L"Screen consumer " + channel_and_format()), window_style);
+		window_.create(sf::VideoMode(screen_width_, screen_height_, 32), u8(print()), window_style);
 		window_.setMouseCursorVisible(config_.interactive);
 		window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
 		window_.setSize(sf::Vector2u(screen_width_, screen_height_));
@@ -277,19 +283,6 @@ public:
 		{
 			CASPAR_LOG(info) << print() << " Enabled vsync.";
 		}
-		/*auto wglSwapIntervalEXT = reinterpret_cast<void(APIENTRY*)(int)>(wglGetProcAddress("wglSwapIntervalEXT"));
-		if(wglSwapIntervalEXT)
-		{
-			if(config_.vsync)
-			{
-				wglSwapIntervalEXT(1);
-				CASPAR_LOG(info) << print() << " Enabled vsync.";
-			}
-			else
-				wglSwapIntervalEXT(0);
-		}*/
-
-		CASPAR_LOG(info) << print() << " Successfully Initialized.";
 	}
 
 	void uninit()
@@ -316,8 +309,18 @@ public:
 			{			
 				try
 				{
-					sf::Event e;		
-					while(window_.pollEvent(e))
+					auto poll_event = [this](sf::Event& e)
+					{
+						polling_event_ = true;
+						CASPAR_SCOPE_EXIT
+						{
+							polling_event_ = false;
+						};
+						return window_.pollEvent(e);
+					};
+
+					sf::Event e;
+					while(poll_event(e))
 					{
 						if (e.type == sf::Event::Resized)
 							calculate_aspect();
@@ -412,7 +415,7 @@ public:
 
 	spl::shared_ptr<AVFrame> get_av_frame()
 	{		
-		spl::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
+		spl::shared_ptr<AVFrame> av_frame(av_frame_alloc(), [](AVFrame* p) { av_frame_free(&p); });
 		avcodec_get_frame_defaults(av_frame.get());
 						
 		av_frame->linesize[0]		= format_desc_.width*4;			
@@ -421,6 +424,7 @@ public:
 		av_frame->height			= format_desc_.height;
 		av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
 		av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
+		av_frame->pts				= pts_++;
 
 		return av_frame;
 	}
@@ -469,6 +473,7 @@ public:
 
 	void render(spl::shared_ptr<AVFrame> av_frame)
 	{
+		CASPAR_LOG_CALL(trace) << "screen_consumer::render() <- " << print();
 		GL(glBindTexture(GL_TEXTURE_2D, texture_));
 
 		GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, pbos_[0]));
@@ -489,12 +494,8 @@ public:
 				});
 			}
 			else
-			{	
-				tbb::parallel_for(tbb::blocked_range<int>(0, format_desc_.height), [&](const tbb::blocked_range<int>& r)
-				{
-					for(int n = r.begin(); n != r.end(); ++n)
-						A_memcpy(ptr+n*format_desc_.width*4, av_frame->data[0]+n*av_frame->linesize[0], format_desc_.width*4);
-				});
+			{
+				fast_memcpy(ptr, av_frame->data[0], format_desc_.size);
 			}
 			
 			GL(glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER)); // release the mapped buffer
@@ -518,8 +519,8 @@ public:
 
 	std::future<bool> send(core::const_frame frame)
 	{
-		if(!frame_buffer_.try_push(frame))
-			graph_->set_tag("dropped-frame");
+		if(!frame_buffer_.try_push(frame) && !polling_event_)
+			graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
 
 		return make_ready_future(is_running_.load());
 	}
@@ -531,7 +532,7 @@ public:
 
 	std::wstring print() const
 	{	
-		return config_.name + channel_and_format();
+		return config_.name + L" " + channel_and_format();
 	}
 	
 	void calculate_aspect()
@@ -609,7 +610,7 @@ public:
 	
 	// frame_consumer
 
-	void initialize(const core::video_format_desc& format_desc, int channel_index) override
+	void initialize(const core::video_format_desc& format_desc, const core::audio_channel_layout&, int channel_index) override
 	{
 		consumer_.reset();
 		consumer_.reset(new screen_consumer(config_, format_desc, channel_index, sink_));

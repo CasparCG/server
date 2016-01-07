@@ -2,6 +2,7 @@
 
 #include "texture_atlas.h"
 #include "texture_font.h"
+#include "freetype_library.h"
 
 #include <map>
 #include <memory>
@@ -10,8 +11,6 @@
 #include FT_GLYPH_H
 
 namespace caspar { namespace core { namespace text {
-
-struct freetype_exception : virtual caspar_exception { };
 
 struct unicode_range
 {
@@ -37,31 +36,23 @@ private:
 		int width, height;
 	};
 
-	std::shared_ptr<FT_LibraryRec_>	lib_;
-	std::shared_ptr<FT_FaceRec_>	face_;
+	spl::shared_ptr<FT_FaceRec_>	face_;
 	texture_atlas					atlas_;
 	double							size_;
 	double							tracking_;
 	bool							normalize_;
 	std::map<int, glyph_info>		glyphs_;
+	std::wstring					name_;
 
 public:
-	impl(texture_atlas& atlas, const text_info& info, bool normalize_coordinates) : atlas_(atlas), size_(info.size), tracking_(info.size*info.tracking/1000.0), normalize_(normalize_coordinates)
+	impl(texture_atlas& atlas, const text_info& info, bool normalize_coordinates)
+		: face_(get_new_face(u8(info.font_file)))
+		, atlas_(atlas)
+		, size_(info.size)
+		, tracking_(info.size*info.tracking/1000.0)
+		, normalize_(normalize_coordinates)
+		, name_(info.font)
 	{
-		FT_Library lib;
-			
-		if (FT_Init_FreeType(&lib))
-			CASPAR_THROW_EXCEPTION(freetype_exception() << msg_info("Failed to initialize freetype"));
-
-		lib_.reset(lib, [](FT_Library ptr) { FT_Done_FreeType(ptr); });
-
-		FT_Face face;
-			
-		if (FT_New_Face(lib_.get(), u8(info.font_file).c_str(), 0, &face))
-			CASPAR_THROW_EXCEPTION(freetype_exception() << msg_info(L"Failed to load font " + info.font));
-
-		face_.reset(face, [](FT_Face ptr) { FT_Done_Face(ptr); });
-
 		if (FT_Set_Char_Size(face_.get(), static_cast<FT_F26Dot6>(size_*64), 0, 72, 72))
 			CASPAR_THROW_EXCEPTION(freetype_exception() << msg_info("Failed to set font size"));
 	}
@@ -83,7 +74,6 @@ public:
 
 	void load_glyphs(unicode_block block, const color<double>& col)
 	{
-		FT_Error err;
 		int flags = FT_LOAD_RENDER | FT_LOAD_FORCE_AUTOHINT | FT_LOAD_TARGET_NORMAL;
 		unicode_range range = get_range(block);
 
@@ -93,7 +83,7 @@ public:
 			if(!glyph_index)	//ignore codes that doesn't have a glyph for now. Might want to map these to a special glyph later.
 				continue;
 			
-			err = FT_Load_Glyph(face_.get(), glyph_index, flags);
+			FT_Error err = FT_Load_Glyph(face_.get(), glyph_index, flags);
 			if(err) continue;	//igonore glyphs that fail to load
 
 			const FT_Bitmap& bitmap = face_->glyph->bitmap;	//shorthand notation
@@ -115,7 +105,7 @@ public:
 		}
 	}
 
-	std::vector<frame_geometry::coord> create_vertex_stream(const std::wstring& str, int x, int y, int parent_width, int parent_height, string_metrics* metrics)
+	std::vector<frame_geometry::coord> create_vertex_stream(const std::wstring& str, int x, int y, int parent_width, int parent_height, string_metrics* metrics, double shear)
 	{
 		//TODO: detect glyphs that aren't in the atlas and load them (and maybe that entire unicode_block on the fly
 
@@ -163,28 +153,28 @@ public:
 				auto ll_index = ul_index + 3;
 
 				//vertex 1 upper left
-				result[ul_index].vertex_x	= left;		  		//vertex.x
+				result[ul_index].vertex_x = left;	//vertex.x
 				result[ul_index].vertex_y	= top;		  		//vertex.y
 				result[ul_index].texture_x	= coords.left;		//texcoord.r
 				result[ul_index].texture_y	= coords.top; 		//texcoord.s
 
 				//vertex 2 upper right
-				result[ur_index].vertex_x	= right;	   		//vertex.x
+				result[ur_index].vertex_x = right;	//vertex.x
 				result[ur_index].vertex_y	= top;		   		//vertex.y
 				result[ur_index].texture_x	= coords.right;		//texcoord.r
 				result[ur_index].texture_y	= coords.top;  		//texcoord.s
 
 				//vertex 3 lower right
-				result[lr_index].vertex_x	= right;	   		//vertex.x
-				result[lr_index].vertex_y	= bottom;	   		//vertex.y
-				result[lr_index].texture_x	= coords.right;		//texcoord.r
-				result[lr_index].texture_y	= coords.bottom;	//texcoord.s
+				result[lr_index].vertex_x	= right;	//vertex.x
+				result[lr_index].vertex_y	= bottom;	   			//vertex.y
+				result[lr_index].texture_x	= coords.right;			//texcoord.r
+				result[lr_index].texture_y	= coords.bottom;		//texcoord.s
 
 				//vertex 4 lower left
-				result[ll_index].vertex_x	= left;				//vertex.x
-				result[ll_index].vertex_y	= bottom;			//vertex.y
-				result[ll_index].texture_x	= coords.left;		//texcoord.r
-				result[ll_index].texture_y	= coords.bottom;	//texcoord.s
+				result[ll_index].vertex_x	= left;	//vertex.x
+				result[ll_index].vertex_y	= bottom;				//vertex.y
+				result[ll_index].texture_x	= coords.left;			//texcoord.r
+				result[ll_index].texture_y	= coords.bottom;		//texcoord.s
 
 				int bearingY = face_->glyph->metrics.horiBearingY >> 6;
 
@@ -281,13 +271,25 @@ public:
 		result.width = (int)(pos_x+.5f);
 		return result;
 	}
+
+	std::wstring get_name() const
+	{
+		return name_;
+	}
+
+	double get_size() const
+	{
+		return size_;
+	}
 }; 
 
 texture_font::texture_font(texture_atlas& atlas, const text_info& info, bool normalize_coordinates) : impl_(new impl(atlas, info, normalize_coordinates)) {}
 void texture_font::load_glyphs(unicode_block range, const color<double>& col) { impl_->load_glyphs(range, col); }
 void texture_font::set_tracking(int tracking) { impl_->set_tracking(tracking); }
-std::vector<frame_geometry::coord> texture_font::create_vertex_stream(const std::wstring& str, int x, int y, int parent_width, int parent_height, string_metrics* metrics) { return impl_->create_vertex_stream(str, x, y, parent_width, parent_height, metrics); }
+std::vector<frame_geometry::coord> texture_font::create_vertex_stream(const std::wstring& str, int x, int y, int parent_width, int parent_height, string_metrics* metrics, double shear) { return impl_->create_vertex_stream(str, x, y, parent_width, parent_height, metrics, shear); }
 string_metrics texture_font::measure_string(const std::wstring& str) { return impl_->measure_string(str); }
+std::wstring texture_font::get_name() const { return impl_->get_name(); }
+double texture_font::get_size() const { return impl_->get_size(); }
 
 unicode_range get_range(unicode_block block)
 {

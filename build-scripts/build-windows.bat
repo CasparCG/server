@@ -45,20 +45,20 @@ echo Copying binaries...
 copy shell\*.dll "%SERVER_FOLDER%\Server" || goto :error
 copy shell\RelWithDebInfo\casparcg.exe "%SERVER_FOLDER%\Server" || goto :error
 copy shell\RelWithDebInfo\casparcg.pdb "%SERVER_FOLDER%\Server" || goto :error
+copy shell\RelWithDebInfo\libcef.dll.pdb "%SERVER_FOLDER%\Server" || goto :error
 copy shell\casparcg.config "%SERVER_FOLDER%\Server" || goto :error
 copy shell\*.ttf "%SERVER_FOLDER%\Server" || goto :error
 xcopy shell\locales "%SERVER_FOLDER%\Server\locales" /E /I /Y || goto :error
 
 :: Copy documentation
 echo Copying documentation...
-copy ..\CHANGES.txt "%SERVER_FOLDER%" || goto :error
-copy ..\LICENSE.txt "%SERVER_FOLDER%" || goto :error
-copy ..\README.txt "%SERVER_FOLDER%" || goto :error
+copy ..\CHANGELOG "%SERVER_FOLDER%" || goto :error
+copy ..\LICENSE "%SERVER_FOLDER%" || goto :error
+copy ..\README "%SERVER_FOLDER%" || goto :error
 
 :: Create zip file
 echo Creating zip...
-"%BUILD_7ZIP%" a -x!"%SERVER_FOLDER%\Server\casparcg.pdb" "%BUILD_ARCHIVE_NAME%.zip" "%SERVER_FOLDER%" || goto :error
-"%BUILD_7ZIP%" a "%BUILD_ARCHIVE_NAME%_debug_symbols.zip" "%SERVER_FOLDER%\Server\casparcg.pdb" || goto :error
+"%BUILD_7ZIP%" a "%BUILD_ARCHIVE_NAME%.7z" "%SERVER_FOLDER%" || goto :error
 
 :: Skip exiting with failure
 goto :EOF

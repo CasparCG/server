@@ -70,7 +70,7 @@ void CIIProtocolStrategy::Parse(const std::wstring& message, IO::ClientInfoPtr c
 
 void CIIProtocolStrategy::ProcessMessage(const std::wstring& message, IO::ClientInfoPtr pClientInfo)
 {	
-	CASPAR_LOG(info) << L"Received message from " << pClientInfo->print() << ": " << message << L"\\r\\n";
+	CASPAR_LOG(info) << L"Received message from " << pClientInfo->address() << ": " << message << L"\\r\\n";
 
 	std::vector<std::wstring> tokens;
 	int tokenCount = TokenizeMessage(message, &tokens);
@@ -229,7 +229,7 @@ spl::shared_ptr<core::frame_producer> CIIProtocolStrategy::GetPreparedTemplate(c
 
 	TitleList::iterator it = std::find(titles_.begin(), titles_.end(), titleName);
 	if(it != titles_.end()) {
-		CASPAR_LOG(debug) << L"Found title with name " << it->titleName;
+		CASPAR_LOG(info) << L"Found title with name " << it->titleName;
 		result = (*it).pframe_producer;
 	}
 	else 
@@ -240,7 +240,7 @@ spl::shared_ptr<core::frame_producer> CIIProtocolStrategy::GetPreparedTemplate(c
 
 void CIIProtocolStrategy::PutPreparedTemplate(const std::wstring& titleName, const spl::shared_ptr<core::frame_producer>& pFP)
 {
-	CASPAR_LOG(debug) << L"Saved title with name " << titleName;
+	CASPAR_LOG(info) << L"Saved title with name " << titleName;
 
 	TitleList::iterator it = std::find(titles_.begin(), titles_.end(), titleName);
 	if(it != titles_.end()) {

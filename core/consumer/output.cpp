@@ -32,6 +32,7 @@
 
 #include "../video_format.h"
 #include "../frame/frame.h"
+#include "../frame/audio_channel_layout.h"
 
 #include <common/assert.h>
 #include <common/future.h>
@@ -57,16 +58,18 @@ struct output::impl
 	spl::shared_ptr<monitor::subject>	monitor_subject_			= spl::make_shared<monitor::subject>("/output");
 	const int							channel_index_;
 	video_format_desc					format_desc_;
-	std::map<int, port>					ports_;	
+	audio_channel_layout				channel_layout_;
+	std::map<int, port>					ports_;
 	prec_timer							sync_timer_;
 	boost::circular_buffer<const_frame>	frames_;
 	std::map<int, int64_t>				send_to_consumers_delays_;
 	executor							executor_					{ L"output " + boost::lexical_cast<std::wstring>(channel_index_) };
 public:
-	impl(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index) 
+	impl(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, const audio_channel_layout& channel_layout, int channel_index) 
 		: graph_(std::move(graph))
 		, channel_index_(channel_index)
 		, format_desc_(format_desc)
+		, channel_layout_(channel_layout)
 	{
 		graph_->set_color("consume-time", diagnostics::color(1.0f, 0.4f, 0.0f, 0.8f));
 	}	
@@ -75,7 +78,7 @@ public:
 	{		
 		remove(index);
 
-		consumer->initialize(format_desc_, channel_index_);
+		consumer->initialize(format_desc_, channel_layout_, channel_index_);
 		
 		executor_.begin_invoke([this, index, consumer]
 		{			
@@ -108,11 +111,11 @@ public:
 		remove(consumer->index());
 	}
 	
-	void set_video_format_desc(const core::video_format_desc& format_desc)
+	void change_channel_format(const core::video_format_desc& format_desc, const core::audio_channel_layout& channel_layout)
 	{
 		executor_.invoke([&]
 		{
-			if(format_desc_ == format_desc)
+			if(format_desc_ == format_desc && channel_layout_ == channel_layout)
 				return;
 
 			auto it = ports_.begin();
@@ -120,7 +123,7 @@ public:
 			{						
 				try
 				{
-					it->second.video_format_desc(format_desc);
+					it->second.change_channel_format(format_desc, channel_layout);
 					++it;
 				}
 				catch(...)
@@ -132,6 +135,7 @@ public:
 			}
 			
 			format_desc_ = format_desc;
+			channel_layout_ = channel_layout;
 			frames_.clear();
 		});
 	}
@@ -156,21 +160,18 @@ public:
 			.any();
 	}
 		
-	void operator()(const_frame input_frame, const core::video_format_desc& format_desc)
+	std::future<void> operator()(const_frame input_frame, const core::video_format_desc& format_desc, const core::audio_channel_layout& channel_layout)
 	{
-		caspar::timer frame_timer;
+		spl::shared_ptr<caspar::timer> frame_timer;
 
-		set_video_format_desc(format_desc);
+		change_channel_format(format_desc, channel_layout);
 
-		executor_.invoke([=]
-		{			
-			if(!has_synchronization_clock())
-				sync_timer_.tick(1.0/format_desc_.fps);
-				
-			if(input_frame.size() != format_desc_.size)
+		auto pending_send_results = executor_.invoke([=]() -> std::shared_ptr<std::map<int, std::future<bool>>>
+		{
+			if (input_frame.size() != format_desc_.size)
 			{
-				CASPAR_LOG(debug) << print() << L" Invalid input frame dimension.";
-				return;
+				CASPAR_LOG(warning) << print() << L" Invalid input frame dimension.";
+				return nullptr;
 			}
 
 			auto minmax = minmax_buffer_depth();
@@ -178,23 +179,23 @@ public:
 			frames_.set_capacity(std::max(2, minmax.second - minmax.first) + 1); // std::max(2, x) since we want to guarantee some pipeline depth for asycnhronous mixer read-back.
 			frames_.push_back(input_frame);
 
-			if(!frames_.full())
-				return;
+			if (!frames_.full())
+				return nullptr;
 
-			std::map<int, std::future<bool>> send_results;
+			spl::shared_ptr<std::map<int, std::future<bool>>> send_results;
 
 			// Start invocations
 			for (auto it = ports_.begin(); it != ports_.end();)
 			{
-				auto& port	= it->second;
+				auto& port = it->second;
 				auto depth = port.buffer_depth();
 				auto& frame = depth < 0 ? frames_.back() : frames_.at(depth - minmax.first);
 
 				send_to_consumers_delays_[it->first] = frame.get_age_millis();
-					
+
 				try
 				{
-					send_results.insert(std::make_pair(it->first, port.send(frame)));
+					send_results->insert(std::make_pair(it->first, port.send(frame)));
 					++it;
 				}
 				catch (...)
@@ -202,10 +203,10 @@ public:
 					CASPAR_LOG_CURRENT_EXCEPTION();
 					try
 					{
-						send_results.insert(std::make_pair(it->first, port.send(frame)));
+						send_results->insert(std::make_pair(it->first, port.send(frame)));
 						++it;
 					}
-					catch(...)
+					catch (...)
 					{
 						CASPAR_LOG_CURRENT_EXCEPTION();
 						CASPAR_LOG(error) << "Failed to recover consumer: " << port.print() << L". Removing it.";
@@ -215,8 +216,16 @@ public:
 				}
 			}
 
+			return send_results;
+		});
+
+		if (!pending_send_results)
+			return make_ready_future();
+
+		return executor_.begin_invoke([=]()
+		{
 			// Retrieve results
-			for (auto it = send_results.begin(); it != send_results.end(); ++it)
+			for (auto it = pending_send_results->begin(); it != pending_send_results->end(); ++it)
 			{
 				try
 				{
@@ -233,10 +242,16 @@ public:
 					ports_.erase(it->first);
 				}
 			}
-		});
 
-		graph_->set_value("consume-time", frame_timer.elapsed()*format_desc.fps*0.5);
-		*monitor_subject_ << monitor::message("/consume_time") % (frame_timer.elapsed());
+			if (!has_synchronization_clock())
+				sync_timer_.tick(1.0 / format_desc_.fps);
+
+			auto consume_time = frame_timer->elapsed();
+			graph_->set_value("consume-time", consume_time * format_desc.fps * 0.5);
+			*monitor_subject_
+				<< monitor::message("/consume_time") % consume_time
+				<< monitor::message("/profiler/time") % consume_time % (1.0 / format_desc.fps);
+		});
 	}
 
 	std::wstring print() const
@@ -284,13 +299,13 @@ public:
 	}
 };
 
-output::output(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index) : impl_(new impl(std::move(graph), format_desc, channel_index)){}
+output::output(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, const core::audio_channel_layout& channel_layout, int channel_index) : impl_(new impl(std::move(graph), format_desc, channel_layout, channel_index)){}
 void output::add(int index, const spl::shared_ptr<frame_consumer>& consumer){impl_->add(index, consumer);}
 void output::add(const spl::shared_ptr<frame_consumer>& consumer){impl_->add(consumer);}
 void output::remove(int index){impl_->remove(index);}
 void output::remove(const spl::shared_ptr<frame_consumer>& consumer){impl_->remove(consumer);}
 std::future<boost::property_tree::wptree> output::info() const{return impl_->info();}
 std::future<boost::property_tree::wptree> output::delay_info() const{ return impl_->delay_info(); }
-void output::operator()(const_frame frame, const video_format_desc& format_desc){ (*impl_)(std::move(frame), format_desc); }
+std::future<void> output::operator()(const_frame frame, const video_format_desc& format_desc, const core::audio_channel_layout& channel_layout){ return (*impl_)(std::move(frame), format_desc, channel_layout); }
 monitor::subject& output::monitor_output() {return *impl_->monitor_subject_;}
 }}

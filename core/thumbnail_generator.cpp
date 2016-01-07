@@ -35,6 +35,7 @@
 #include <tbb/atomic.h>
 
 #include <common/diagnostics/graph.h>
+#include <common/filesystem.h>
 
 #include "producer/frame_producer.h"
 #include "consumer/frame_consumer.h"
@@ -44,34 +45,11 @@
 #include "frame/frame.h"
 #include "frame/draw_frame.h"
 #include "frame/frame_transform.h"
+#include "frame/audio_channel_layout.h"
 #include "producer/media_info/media_info.h"
 #include "producer/media_info/media_info_repository.h"
 
 namespace caspar { namespace core {
-
-std::wstring get_relative_without_extension(
-		const boost::filesystem::path& file,
-		const boost::filesystem::path& relative_to)
-{
-	auto result = file.stem();
-
-	boost::filesystem::path current_path = file;
-
-	while (true)
-	{
-		current_path = current_path.parent_path();
-
-		if (boost::filesystem::equivalent(current_path, relative_to))
-			break;
-
-		if (current_path.empty())
-			throw std::runtime_error("File not relative to folder");
-
-		result = current_path.filename() / result;
-	}
-
-	return result.wstring();
-}
 
 struct thumbnail_output
 {
@@ -137,6 +115,7 @@ public:
 		, thumbnail_creator_(thumbnail_creator)
 		, media_info_repo_(std::move(media_info_repo))
 		, producer_registry_(std::move(producer_registry))
+		, mipmap_(mipmap)
 		, monitor_(monitor_factory.create(
 				media_path,
 				filesystem_event::ALL,
@@ -167,7 +146,7 @@ public:
 				std::insert_iterator<std::set<std::wstring>>(
 						relative_without_extensions,
 						relative_without_extensions.end()),
-				boost::bind(&get_relative_without_extension, _1, media_path_));
+				[&](const path& p) { return get_relative_without_extension(p, media_path_).wstring(); });
 
 		for (boost::filesystem::wrecursive_directory_iterator iter(thumbnails_path_); iter != boost::filesystem::wrecursive_directory_iterator(); ++iter)
 		{
@@ -177,11 +156,11 @@ public:
 				continue;
 
 			auto relative_without_extension = get_relative_without_extension(path, thumbnails_path_);
-			bool no_corresponding_media_file = relative_without_extensions.find(relative_without_extension) 
+			bool no_corresponding_media_file = relative_without_extensions.find(relative_without_extension.wstring()) 
 					== relative_without_extensions.end();
 
 			if (no_corresponding_media_file)
-				remove(thumbnails_path_ / (relative_without_extension + L".png"));
+				remove(thumbnails_path_ / (relative_without_extension.wstring() + L".png"));
 		}
 	}
 
@@ -220,7 +199,7 @@ public:
 			break;
 		case filesystem_event::REMOVED:
 			auto relative_without_extension = get_relative_without_extension(file, media_path_);
-			boost::filesystem::remove(thumbnails_path_ / (relative_without_extension + L".png"));
+			boost::filesystem::remove(thumbnails_path_ / (relative_without_extension.wstring() + L".png"));
 			media_info_repo_->remove(file.wstring());
 
 			break;
@@ -231,7 +210,7 @@ public:
 	{
 		using namespace boost::filesystem;
 
-		auto png_file = thumbnails_path_ / (get_relative_without_extension(file, media_path_) + L".png");
+		auto png_file = thumbnails_path_ / (get_relative_without_extension(file, media_path_).wstring() + L".png");
 
 		if (!exists(png_file))
 			return true;
@@ -261,8 +240,9 @@ public:
 
 	void generate_thumbnail(const boost::filesystem::path& file)
 	{
+		auto media_file_with_extension = get_relative(file, media_path_);
 		auto media_file = get_relative_without_extension(file, media_path_);
-		auto png_file = thumbnails_path_ / (media_file + L".png");
+		auto png_file = thumbnails_path_ / (media_file.wstring() + L".png");
 		std::promise<void> thumbnail_ready;
 
 		{
@@ -272,7 +252,7 @@ public:
 			{
 				producer = producer_registry_->create_thumbnail_producer(
 						frame_producer_dependencies(image_mixer_, { }, format_desc_, producer_registry_),
-						media_file);
+						media_file.wstring());
 			}
 			catch (const boost::thread_interrupted&)
 			{
@@ -280,13 +260,14 @@ public:
 			}
 			catch (...)
 			{
-				CASPAR_LOG(debug) << L"Thumbnail producer failed to initialize for " << media_file;
+				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(trace);
+				CASPAR_LOG(info) << L"Thumbnail producer failed to initialize for " << media_file_with_extension << L". Turn on log level trace to see more information.";
 				return;
 			}
 
 			if (producer == frame_producer::empty())
 			{
-				CASPAR_LOG(trace) << L"No appropriate thumbnail producer found for " << media_file;
+				CASPAR_LOG(debug) << L"No appropriate thumbnail producer found for " << media_file_with_extension;
 				return;
 			}
 
@@ -311,14 +292,15 @@ public:
 			}
 			catch (...)
 			{
-				CASPAR_LOG(debug) << L"Thumbnail producer failed to create thumbnail for " << media_file;
+				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(trace);
+				CASPAR_LOG(info) << L"Thumbnail producer failed to create thumbnail for " << media_file_with_extension << L". Turn on log level trace to see more information.";
 				return;
 			}
 
 			if (raw_frame == draw_frame::empty()
 					|| raw_frame == draw_frame::late())
 			{
-				CASPAR_LOG(debug) << L"No thumbnail generated for " << media_file;
+				CASPAR_LOG(debug) << L"No thumbnail generated for " << media_file_with_extension;
 				return;
 			}
 
@@ -330,7 +312,7 @@ public:
 
 			std::shared_ptr<void> ticket(nullptr, [&thumbnail_ready](void*) { thumbnail_ready.set_value(); });
 
-			auto mixed_frame = mixer_(std::move(frames), format_desc_);
+			auto mixed_frame = mixer_(std::move(frames), format_desc_, audio_channel_layout(2, L"stereo", L""));
 
 			output_->send(std::move(mixed_frame), ticket);
 			ticket.reset();
@@ -343,7 +325,7 @@ public:
 			try
 			{
 				boost::filesystem::last_write_time(png_file, boost::filesystem::last_write_time(file));
-				CASPAR_LOG(debug) << L"Generated thumbnail for " << media_file;
+				CASPAR_LOG(info) << L"Generated thumbnail for " << media_file_with_extension;
 			}
 			catch (...)
 			{
@@ -351,7 +333,7 @@ public:
 			}
 		}
 		else
-			CASPAR_LOG(debug) << L"No thumbnail generated for " << media_file;
+			CASPAR_LOG(debug) << L"No thumbnail generated for " << media_file_with_extension;
 	}
 };
 

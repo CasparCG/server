@@ -74,7 +74,7 @@ sf::Font& get_default_font()
 	{
 		sf::Font font;
 		if (!font.loadFromFile("LiberationSans-Regular.ttf"))
-			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("LiberationSans-Regular.ttf not found"));
+			CASPAR_THROW_EXCEPTION(file_not_found() << msg_info("LiberationSans-Regular.ttf not found"));
 		return font;
 	}();
 
@@ -207,13 +207,22 @@ private:
 
 		if (calculate_view_)
 		{
+			int content_height		= static_cast<int>(RENDERING_HEIGHT * drawables_.size());
+			int window_height		= static_cast<int>(window_->getSize().y);
+			int not_visible			= std::max(0, content_height - window_height);
+			int min_scroll_position	= -not_visible;
+			int max_scroll_position	= 0;
+
+			scroll_position_ = std::min(max_scroll_position, std::max(min_scroll_position, scroll_position_));
 			view_.setViewport(sf::FloatRect(0, 0, 1.0, 1.0));
-			view_.setSize(RENDERING_WIDTH, window_->getSize().y);
-			view_.setCenter(RENDERING_WIDTH / 2, window_->getSize().y / 2 - scroll_position_);
+			view_.setSize(RENDERING_WIDTH, window_height);
+			view_.setCenter(RENDERING_WIDTH / 2, window_height / 2 - scroll_position_);
 			window_->setView(view_);
+
 			calculate_view_ = false;
 		}
 
+		CASPAR_LOG_CALL(trace) << "osd_graph::tick()";
 		window_->draw(*this);
 
 		static const auto THRESHOLD = 1;
@@ -336,7 +345,7 @@ public:
 
 		auto color = get_sfml_color(color_);
 		color.a = 255 * 0.8;
-		line_data_.push_back(sf::Vertex(sf::Vector2f(get_insertion_xcoord(), std::max(0.05, std::min(0.95, (1.0f - tick_data_) * 0.8 + 0.1f))), color));
+		line_data_.push_back(sf::Vertex(sf::Vector2f(get_insertion_xcoord(), std::max(0.1f, std::min(0.9f, (1.0f - tick_data_) * 0.8f + 0.1f))), color));
 
 		if (tick_tag_)
 		{
@@ -422,7 +431,7 @@ struct graph : public drawable, public caspar::diagnostics::spi::graph_sink, pub
 		lines_[name].set_value(value);
 	}
 
-	void set_tag(const std::string& name) override
+	void set_tag(caspar::diagnostics::tag_severity /*severity*/, const std::string& name) override
 	{
 		lines_[name].set_tag();
 	}

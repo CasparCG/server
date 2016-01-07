@@ -223,7 +223,7 @@ void OutboundPacketStream::CheckForAvailableBundleSpace()
     unsigned long required = Size() + ((ElementSizeSlotRequired())?4:0) + 16;
 
     if( required > Capacity() )
-        throw OutOfBufferMemoryException();
+        throw OutOfBufferMemoryException(required);
 }
 
 
@@ -234,7 +234,7 @@ void OutboundPacketStream::CheckForAvailableMessageSpace( const char *addressPat
             + RoundUp4(static_cast<unsigned long>(strlen(addressPattern)) + 1) + 4;
 
     if( required > Capacity() )
-        throw OutOfBufferMemoryException();
+        throw OutOfBufferMemoryException(required);
 }
 
 
@@ -245,7 +245,7 @@ void OutboundPacketStream::CheckForAvailableArgumentSpace( long argumentLength )
             + RoundUp4( static_cast<unsigned long>(end_ - typeTagsCurrent_) + 3 );
 
     if( required > Capacity() )
-        throw OutOfBufferMemoryException();
+        throw OutOfBufferMemoryException(required);
 }
 
 

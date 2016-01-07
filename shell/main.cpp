@@ -61,8 +61,13 @@
 #include <boost/thread.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/classification.hpp>
+
+#include <tbb/atomic.h>
 
 #include <future>
+#include <set>
 
 #include <csignal>
 
@@ -100,7 +105,10 @@ void print_system_info(const spl::shared_ptr<core::system_info_provider_reposito
 		log::print_child(boost::log::trivial::info, L"", elem.first, elem.second);
 }
 
-void do_run(std::weak_ptr<caspar::IO::protocol_strategy<wchar_t>> amcp, std::promise<bool>& shutdown_server_now)
+void do_run(
+		std::weak_ptr<caspar::IO::protocol_strategy<wchar_t>> amcp,
+		std::promise<bool>& shutdown_server_now,
+		tbb::atomic<bool>& should_wait_for_keypress)
 {
 	std::wstring wcmd;
 	while(true)
@@ -111,7 +119,8 @@ void do_run(std::weak_ptr<caspar::IO::protocol_strategy<wchar_t>> amcp, std::pro
 
 		if(boost::iequals(wcmd, L"EXIT") || boost::iequals(wcmd, L"Q") || boost::iequals(wcmd, L"QUIT") || boost::iequals(wcmd, L"BYE"))
 		{
-			shutdown_server_now.set_value(true);	//true to wait for keypress
+			should_wait_for_keypress = true;
+			shutdown_server_now.set_value(false);	//false to not restart
 			break;
 		}
 
@@ -197,7 +206,7 @@ void do_run(std::weak_ptr<caspar::IO::protocol_strategy<wchar_t>> amcp, std::pro
 	}
 };
 
-bool run(const std::wstring& config_file_name)
+bool run(const std::wstring& config_file_name, tbb::atomic<bool>& should_wait_for_keypress)
 {
 	std::promise<bool> shutdown_server_now;
 	std::future<bool> shutdown_server = shutdown_server_now.get_future();
@@ -206,7 +215,7 @@ bool run(const std::wstring& config_file_name)
 
 	// Create server object which initializes channels, protocols and controllers.
 	std::unique_ptr<server> caspar_server(new server(shutdown_server_now));
-	
+
 	// Print environment information.
 	print_system_info(caspar_server->get_system_info_provider_repo());
 
@@ -215,7 +224,10 @@ bool run(const std::wstring& config_file_name)
 	boost::property_tree::write_xml(str, env::properties(), w);
 	CASPAR_LOG(info) << config_file_name << L":\n-----------------------------------------\n" << str.str() << L"-----------------------------------------";
 	
-	caspar_server->start();
+	{
+		CASPAR_SCOPED_CONTEXT_MSG(config_file_name + L": ")
+		caspar_server->start();
+	}
 
 	// Create a dummy client which prints amcp responses to console.
 	auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
@@ -231,7 +243,7 @@ bool run(const std::wstring& config_file_name)
 
 	// Use separate thread for the blocking console input, will be terminated 
 	// anyway when the main thread terminates.
-	boost::thread stdin_thread(std::bind(do_run, weak_amcp, std::ref(shutdown_server_now)));	//compiler didn't like lambda here...
+	boost::thread stdin_thread(std::bind(do_run, weak_amcp, std::ref(shutdown_server_now), std::ref(should_wait_for_keypress)));	//compiler didn't like lambda here...
 	stdin_thread.detach();
 	bool should_restart = shutdown_server.get();
 	amcp.reset();
@@ -289,19 +301,28 @@ int main(int argc, char** argv)
 
 		env::configure(config_file_name);
 
-		log::set_log_level(env::properties().get(L"configuration.log-level", L"debug"));
+		log::set_log_level(env::properties().get(L"configuration.log-level", L"info"));
+		auto log_categories_str = env::properties().get(L"configuration.log-categories", L"communication");
+		std::set<std::wstring> log_categories;
+		boost::split(log_categories, log_categories_str, boost::is_any_of(L", "));
+		for (auto& log_category : { L"calltrace", L"communication" })
+			log::set_log_category(log_category, log_categories.find(log_category) != log_categories.end());
 
 		if (env::properties().get(L"configuration.debugging.remote", false))
 			wait_for_remote_debugging();
 
 		// Start logging to file.
-		log::add_file_sink(env::log_folder());			
+		log::add_file_sink(env::log_folder() + L"caspar",		caspar::log::category != caspar::log::log_category::calltrace);
+		log::add_file_sink(env::log_folder() + L"calltrace",	caspar::log::category == caspar::log::log_category::calltrace);
 		std::wcout << L"Logging [info] or higher severity to " << env::log_folder() << std::endl << std::endl;
 		
 		// Setup console window.
 		setup_console_window();
 
-		return_code = run(config_file_name) ? 5 : 0;
+		tbb::atomic<bool> should_wait_for_keypress;
+		should_wait_for_keypress = false;
+		auto should_restart = run(config_file_name, should_wait_for_keypress);
+		return_code = should_restart ? 5 : 0;
 
 		for (auto& thread : get_thread_infos())
 		{
@@ -310,11 +331,20 @@ int main(int argc, char** argv)
 		}
 		
 		CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
+
+		if (!should_wait_for_keypress)
+			wait_for_keypress();
 	}
-	catch(boost::property_tree::file_parser_error&)
+	catch(const boost::property_tree::file_parser_error& e)
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
-		CASPAR_LOG(fatal) << L"Unhandled configuration error in main thread. Please check the configuration file (" << config_file_name << L") for errors.";
+		CASPAR_LOG(fatal) << "At " << u8(config_file_name) << ":" << e.line() << ": " << e.message() << ". Please check the configuration file (" << u8(config_file_name) << ") for errors.";
+		wait_for_keypress();
+	}
+	catch (const user_error& e)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
+		CASPAR_LOG(fatal) << get_message_and_context(e) << " Please check the configuration file (" << u8(config_file_name) << ") for errors. Turn on log level debug for stacktrace.";
 		wait_for_keypress();
 	}
 	catch(...)
@@ -325,6 +355,6 @@ int main(int argc, char** argv)
 		std::wcout << L"\n\nCasparCG will automatically shutdown. See the log file located at the configured log-file folder for more information.\n\n";
 		boost::this_thread::sleep_for(boost::chrono::milliseconds(4000));
 	}
-	
+
 	return return_code;
 }

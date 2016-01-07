@@ -105,7 +105,7 @@ public:
 	//Thesefore the AMCPProtocolStrategy should be decorated with a delimiter_based_chunking_strategy
 	void Parse(const std::wstring& message, ClientInfoPtr client)
 	{
-		CASPAR_LOG(info) << L"Received message from " << client->print() << ": " << message << L"\\r\\n";
+		CASPAR_LOG_COMMUNICATION(info) << L"Received message from " << client->address() << ": " << message << L"\\r\\n";
 	
 		command_interpreter_result result;
 		if(interpret_command_string(message, result, client))
@@ -134,9 +134,12 @@ public:
 			case error_state::access_error:
 				answer << L"503 " << result.command_name << " FAILED\r\n";
 				break;
-			default:
+			case error_state::unknown_error:
 				answer << L"500 FAILED\r\n";
 				break;
+			default:
+				CASPAR_THROW_EXCEPTION(programming_error()
+						<< msg_info(L"Unhandled error_state enum constant " + boost::lexical_cast<std::wstring>(static_cast<int>(result.error))));
 			}
 			client->send(answer.str());
 		}
@@ -232,7 +235,12 @@ private:
 					result.error = error_state::parameters_error;
 			}
 		}
-		catch(...)
+		catch (std::out_of_range&)
+		{
+			CASPAR_LOG(error) << "Invalid channel specified.";
+			result.error = error_state::channel_error;
+		}
+		catch (...)
 		{
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			result.error = error_state::unknown_error;

@@ -38,6 +38,7 @@
 #include <common/os/filesystem.h>
 #include <common/base64.h>
 #include <common/thread_info.h>
+#include <common/filesystem.h>
 
 #include <core/producer/cg_proxy.h>
 #include <core/producer/frame_producer.h>
@@ -46,7 +47,9 @@
 #include <core/help/util.h>
 #include <core/video_format.h>
 #include <core/producer/transition/transition_producer.h>
+#include <core/frame/audio_channel_layout.h>
 #include <core/frame/frame_transform.h>
+#include <core/producer/text/text_producer.h>
 #include <core/producer/stage.h>
 #include <core/producer/layer.h>
 #include <core/mixer/mixer.h>
@@ -206,8 +209,6 @@ std::wstring MediaInfo(const boost::filesystem::path& path, const spl::shared_pt
 
 	auto is_not_digit = [](char c){ return std::isdigit(c) == 0; };
 
-	auto relativePath = boost::filesystem::path(path.wstring().substr(env::media_folder().size() - 1, path.wstring().size()));
-
 	auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(path)));
 	writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), is_not_digit), writeTimeStr.end());
 	auto writeTimeWStr = std::wstring(writeTimeStr.begin(), writeTimeStr.end());
@@ -216,7 +217,9 @@ std::wstring MediaInfo(const boost::filesystem::path& path, const spl::shared_pt
 	sizeStr.erase(std::remove_if(sizeStr.begin(), sizeStr.end(), is_not_digit), sizeStr.end());
 	auto sizeWStr = std::wstring(sizeStr.begin(), sizeStr.end());
 
-	auto str = relativePath.replace_extension(L"").generic_wstring();
+	auto relativePath = get_relative_without_extension(path, env::media_folder());
+	auto str = relativePath.generic_wstring();
+
 	if (str[0] == '\\' || str[0] == '/')
 		str = std::wstring(str.begin() + 1, str.end());
 
@@ -247,7 +250,7 @@ std::wstring ListTemplates(const spl::shared_ptr<core::cg_producer_registry>& cg
 	{		
 		if(boost::filesystem::is_regular_file(itr->path()) && cg_registry->is_cg_extension(itr->path().extension().wstring()))
 		{
-			auto relativePath = boost::filesystem::path(itr->path().wstring().substr(env::template_folder().size()-1, itr->path().wstring().size()));
+			auto relativePath = get_relative_without_extension(itr->path(), env::template_folder());
 
 			auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(itr->path())));
 			writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), [](char c){ return std::isdigit(c) == 0;}), writeTimeStr.end());
@@ -262,12 +265,15 @@ std::wstring ListTemplates(const spl::shared_ptr<core::cg_producer_registry>& cg
 			auto file = boost::to_upper_copy(relativePath.filename().wstring());
 			relativePath = dir / file;
 						
-			auto str = relativePath.replace_extension(L"").generic_wstring();
+			auto str = relativePath.generic_wstring();
 			boost::trim_if(str, boost::is_any_of("\\/"));
+
+			auto template_type = cg_registry->get_cg_producer_name(str);
 
 			replyString << L"\"" << str
 						<< L"\" " << sizeWStr
 						<< L" " << writeTimeWStr
+						<< L" " << template_type
 						<< L"\r\n";
 		}
 	}
@@ -698,15 +704,34 @@ std::wstring log_level_command(command_context& ctx)
 	return L"202 LOG OK\r\n";
 }
 
+void log_category_describer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Enable/disable a logging category in the server.");
+	sink.syntax(L"LOG CATEGORY [category:calltrace,communication] [enable:0,1]");
+	sink.para()->text(L"Enables or disables the specified logging category.");
+	sink.para()->text(L"Examples:");
+	sink.example(L">> LOG CATEGORY calltrace 1", L"to enable call trace");
+	sink.example(L">> LOG CATEGORY calltrace 0", L"to disable call trace");
+}
+
+std::wstring log_category_command(command_context& ctx)
+{
+	log::set_log_category(ctx.parameters.at(0), ctx.parameters.at(1) == L"1");
+
+	return L"202 LOG OK\r\n";
+}
+
 void set_describer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"Change the value of a channel variable.");
 	sink.syntax(L"SET [video_channel:int] [variable:string] [value:string]");
 	sink.para()->text(L"Changes the value of a channel variable. Available variables to set:");
 	sink.definitions()
-		->item(L"MODE", L"Changes the video format of the channel.");
+		->item(L"MODE", L"Changes the video format of the channel.")
+		->item(L"CHANNEL_LAYOUT", L"Changes the audio channel layout of the video channel channel.");
 	sink.para()->text(L"Examples:");
-	sink.example(L">> SET 1 MODE PAL", L"changes the video mode on channel 1 to PAL");
+	sink.example(L">> SET 1 MODE PAL", L"changes the video mode on channel 1 to PAL.");
+	sink.example(L">> SET 1 CHANNEL_LAYOUT smpte", L"changes the audio channel layout on channel 1 to smpte.");
 }
 
 std::wstring set_command(command_context& ctx)
@@ -723,10 +748,22 @@ std::wstring set_command(command_context& ctx)
 			return L"202 SET MODE OK\r\n";
 		}
 
-		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info(L"Invalid video mode"));
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid video mode"));
+	}
+	else if (name == L"CHANNEL_LAYOUT")
+	{
+		auto channel_layout = core::audio_channel_layout_repository::get_default()->get_layout(value);
+
+		if (channel_layout)
+		{
+			ctx.channel.channel->audio_channel_layout(*channel_layout);
+			return L"202 SET CHANNEL_LAYOUT OK\r\n";
+		}
+
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid audio channel layout"));
 	}
 
-	CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info(L"Invalid channel variable"));
+	CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid channel variable"));
 }
 
 void data_store_describer(core::help_sink& sink, const core::help_repository& repo)
@@ -837,9 +874,9 @@ std::wstring data_list_command(command_context& ctx)
 			if (!boost::iequals(itr->path().extension().wstring(), L".ftd"))
 				continue;
 
-			auto relativePath = boost::filesystem::path(itr->path().wstring().substr(env::data_folder().size() - 1, itr->path().wstring().size()));
+			auto relativePath = get_relative_without_extension(itr->path(), env::data_folder());
+			auto str = relativePath.generic_wstring();
 
-			auto str = relativePath.replace_extension(L"").generic_wstring();
 			if (str[0] == L'\\' || str[0] == L'/')
 				str = std::wstring(str.begin() + 1, str.end());
 
@@ -874,21 +911,10 @@ std::wstring data_remove_command(command_context& ctx)
 	if (!boost::filesystem::remove(filename))
 		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(filename + L" could not be removed"));
 
-	return L"201 DATA REMOVE OK\r\n";
+	return L"202 DATA REMOVE OK\r\n";
 }
 
 // Template Graphics Commands
-
-int get_and_validate_layer(const std::wstring& layerstring) {
-	int length = layerstring.length();
-	for (int i = 0; i < length; ++i) {
-		if (!std::isdigit(layerstring[i])) {
-			CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info(layerstring + L" is not a layer"));
-		}
-	}
-
-	return boost::lexical_cast<int>(layerstring);
-}
 
 void cg_add_describer(core::help_sink& sink, const core::help_repository& repo)
 {
@@ -905,7 +931,7 @@ std::wstring cg_add_command(command_context& ctx)
 {
 	//CG 1 ADD 0 "template_folder/templatename" [STARTLABEL] 0/1 [DATA]
 
-	int layer = get_and_validate_layer(ctx.parameters.at(0));
+	int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
 	std::wstring label;		//_parameters[2]
 	bool bDoStart = false;		//_parameters[2] alt. _parameters[3]
 	unsigned int dataIndex = 3;
@@ -974,7 +1000,7 @@ void cg_play_describer(core::help_sink& sink, const core::help_repository& repo)
 
 std::wstring cg_play_command(command_context& ctx)
 {
-	int layer = get_and_validate_layer(ctx.parameters.at(0));
+	int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
 	ctx.cg_registry->get_proxy(spl::make_shared_ptr(ctx.channel.channel), ctx.layer_index(core::cg_proxy::DEFAULT_LAYER))->play(layer);
 
 	return L"202 CG OK\r\n";
@@ -985,7 +1011,7 @@ spl::shared_ptr<core::cg_proxy> get_expected_cg_proxy(command_context& ctx)
 	auto proxy = ctx.cg_registry->get_proxy(spl::make_shared_ptr(ctx.channel.channel), ctx.layer_index(core::cg_proxy::DEFAULT_LAYER));
 
 	if (proxy == cg_proxy::empty())
-		CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"No CG proxy running on layer"));
+		CASPAR_THROW_EXCEPTION(expected_user_error() << msg_info(L"No CG proxy running on layer"));
 
 	return proxy;
 }
@@ -1003,7 +1029,7 @@ void cg_stop_describer(core::help_sink& sink, const core::help_repository& repo)
 
 std::wstring cg_stop_command(command_context& ctx)
 {
-	int layer = get_and_validate_layer(ctx.parameters.at(0));
+	int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
 	get_expected_cg_proxy(ctx)->stop(layer, 0);
 
 	return L"202 CG OK\r\n";
@@ -1022,7 +1048,7 @@ void cg_next_describer(core::help_sink& sink, const core::help_repository& repo)
 
 std::wstring cg_next_command(command_context& ctx)
 {
-	int layer = get_and_validate_layer(ctx.parameters.at(0));
+	int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
 	get_expected_cg_proxy(ctx)->next(layer);
 
 	return L"202 CG OK\r\n";
@@ -1039,7 +1065,7 @@ void cg_remove_describer(core::help_sink& sink, const core::help_repository& rep
 
 std::wstring cg_remove_command(command_context& ctx)
 {
-	int layer = get_and_validate_layer(ctx.parameters.at(0));
+	int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
 	get_expected_cg_proxy(ctx)->remove(layer);
 
 	return L"202 CG OK\r\n";
@@ -1070,7 +1096,7 @@ void cg_update_describer(core::help_sink& sink, const core::help_repository& rep
 
 std::wstring cg_update_command(command_context& ctx)
 {
-	int layer = get_and_validate_layer(ctx.parameters.at(0));
+	int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
 
 	std::wstring dataString = ctx.parameters.at(1);
 	if (dataString.at(0) != L'<' && dataString.at(0) != L'{')
@@ -1100,7 +1126,7 @@ std::wstring cg_invoke_command(command_context& ctx)
 {
 	std::wstringstream replyString;
 	replyString << L"201 CG OK\r\n";
-	int layer = get_and_validate_layer(ctx.parameters.at(0));
+	int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
 	auto result = get_expected_cg_proxy(ctx)->invoke(layer, ctx.parameters.at(1));
 	replyString << result << L"\r\n";
 
@@ -1127,7 +1153,7 @@ std::wstring cg_info_command(command_context& ctx)
 	}
 	else
 	{
-		int layer = get_and_validate_layer(ctx.parameters.at(0));
+		int layer = boost::lexical_cast<int>(ctx.parameters.at(0));
 		auto desc = get_expected_cg_proxy(ctx)->description(layer);
 
 		replyString << desc << L"\r\n";
@@ -1222,7 +1248,7 @@ std::wstring mixer_keyer_command(command_context& ctx)
 	{
 		transform.image_transform.is_key = value;
 		return transform;
-	}, 0, L"linear"));
+	}, 0, tweener(L"linear")));
 	transforms.apply();
 
 	return L"202 MIXER OK\r\n";
@@ -1313,7 +1339,7 @@ std::wstring mixer_blend_command(command_context& ctx)
 	{
 		transform.image_transform.blend_mode = value;
 		return transform;
-	}, 0, L"linear"));
+	}, 0, tweener(L"linear")));
 	transforms.apply();
 
 	return L"202 MIXER OK\r\n";
@@ -1822,7 +1848,7 @@ std::wstring mixer_mipmap_command(command_context& ctx)
 	{
 		transform.image_transform.use_mipmap = value;
 		return transform;
-	}, 0, L"linear"));
+	}, 0, tweener(L"linear")));
 	transforms.apply();
 
 	return L"202 MIXER OK\r\n";
@@ -2021,7 +2047,7 @@ std::wstring channel_grid_command(command_context& ctx)
 		if (channel.channel != self.channel)
 		{
 			core::diagnostics::call_context::for_thread().layer = index;
-			auto producer = ctx.producer_registry->create_producer(get_producer_dependencies(channel.channel, ctx), L"route://" + boost::lexical_cast<std::wstring>(channel.channel->index()));
+			auto producer = ctx.producer_registry->create_producer(get_producer_dependencies(self.channel, ctx), L"route://" + boost::lexical_cast<std::wstring>(channel.channel->index()));
 			self.channel->stage().load(index, producer, false);
 			self.channel->stage().play(index);
 			index++;
@@ -2067,9 +2093,9 @@ std::wstring thumbnail_list_command(command_context& ctx)
 			if (!boost::iequals(itr->path().extension().wstring(), L".png"))
 				continue;
 
-			auto relativePath = boost::filesystem::path(itr->path().wstring().substr(env::thumbnails_folder().size() - 1, itr->path().wstring().size()));
+			auto relativePath = get_relative_without_extension(itr->path(), env::thumbnails_folder());
+			auto str = relativePath.generic_wstring();
 
-			auto str = relativePath.replace_extension(L"").generic_wstring();
 			if (str[0] == '\\' || str[0] == '/')
 				str = std::wstring(str.begin() + 1, str.end());
 
@@ -2137,7 +2163,7 @@ std::wstring thumbnail_generate_command(command_context& ctx)
 		return L"202 THUMBNAIL GENERATE OK\r\n";
 	}
 	else
-		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(L"Thumbnail generation turned off"));
+		CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"Thumbnail generation turned off"));
 }
 
 void thumbnail_generateall_describer(core::help_sink& sink, const core::help_repository& repo)
@@ -2155,7 +2181,7 @@ std::wstring thumbnail_generateall_command(command_context& ctx)
 		return L"202 THUMBNAIL GENERATE_ALL OK\r\n";
 	}
 	else
-		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(L"Thumbnail generation turned off"));
+		CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"Thumbnail generation turned off"));
 }
 
 // Query Commands
@@ -2204,6 +2230,29 @@ std::wstring cls_command(command_context& ctx)
 	replyString << ListMedia(ctx.media_info_repo);
 	replyString << L"\r\n";
 	return boost::to_upper_copy(replyString.str());
+}
+
+void fls_describer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"List all fonts.");
+	sink.syntax(L"FLS");
+	sink.para()
+		->text(L"Lists all font files in the ")->code(L"fonts")->text(L" folder. Use the command ")
+		->see(L"INFO PATHS")->text(L" to get the path to the ")->code(L"fonts")->text(L" folder.");
+	sink.para()->text(L"Columns in order from left to right are: Font name and font path.");
+}
+
+std::wstring fls_command(command_context& ctx)
+{
+	std::wstringstream replyString;
+	replyString << L"200 FLS OK\r\n";
+
+	for (auto& font : core::text::list_fonts())
+		replyString << L"\"" << font.first << L"\" \"" << get_relative(font.second, env::font_folder()).wstring() << L"\"\r\n";
+
+	replyString << L"\r\n";
+
+	return replyString.str();
 }
 
 void tls_describer(core::help_sink& sink, const core::help_repository& repo)
@@ -2486,6 +2535,50 @@ std::wstring diag_command(command_context& ctx)
 	return L"202 DIAG OK\r\n";
 }
 
+void gl_info_describer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Get information about the allocated and pooled OpenGL resources.");
+	sink.syntax(L"GL INFO");
+	sink.para()->text(L"Retrieves information about the allocated and pooled OpenGL resources.");
+}
+
+std::wstring gl_info_command(command_context& ctx)
+{
+	auto device = ctx.ogl_device;
+
+	if (!device)
+		CASPAR_THROW_EXCEPTION(not_supported() << msg_info("GL command only supported with OpenGL accelerator."));
+
+	std::wstringstream result;
+	result << L"201 GL INFO OK\r\n";
+
+	boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
+	auto info = device->info();
+	boost::property_tree::write_xml(result, info, w);
+	result << L"\r\n";
+
+	return result.str();
+}
+
+void gl_gc_describer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Release pooled OpenGL resources.");
+	sink.syntax(L"GL GC");
+	sink.para()->text(L"Releases all the pooled OpenGL resources. ")->strong(L"May cause a pause on all video channels.");
+}
+
+std::wstring gl_gc_command(command_context& ctx)
+{
+	auto device = ctx.ogl_device;
+
+	if (!device)
+		CASPAR_THROW_EXCEPTION(not_supported() << msg_info("GL command only supported with OpenGL accelerator."));
+
+	device->gc().wait();
+
+	return L"202 GL GC OK\r\n";
+}
+
 static const int WIDTH = 80;
 
 struct max_width_sink : public core::help_sink
@@ -2532,6 +2625,7 @@ struct simple_paragraph_builder : core::paragraph_builder
 		return shared_from_this();
 	}
 	spl::shared_ptr<paragraph_builder> code(std::wstring txt) override { return text(std::move(txt)); }
+	spl::shared_ptr<paragraph_builder> strong(std::wstring item) override { return text(L"*" + std::move(item) + L"*"); }
 	spl::shared_ptr<paragraph_builder> see(std::wstring item) override { return text(std::move(item)); }
 	spl::shared_ptr<paragraph_builder> url(std::wstring url, std::wstring name)  override { return text(std::move(url)); }
 };
@@ -2779,6 +2873,7 @@ void register_commands(amcp_command_repository& repo)
 	repo.register_channel_command(	L"Basic Commands",		L"REMOVE",						remove_describer,					remove_command,					0);
 	repo.register_channel_command(	L"Basic Commands",		L"PRINT",						print_describer,					print_command,					0);
 	repo.register_command(			L"Basic Commands",		L"LOG LEVEL",					log_level_describer,				log_level_command,				1);
+	repo.register_command(			L"Basic Commands",		L"LOG CATEGORY",				log_category_describer,				log_category_command,			2);
 	repo.register_channel_command(	L"Basic Commands",		L"SET",							set_describer,						set_command,					2);
 	repo.register_command(			L"Basic Commands",		L"LOCK",						lock_describer,						lock_command,					2);
 
@@ -2827,6 +2922,7 @@ void register_commands(amcp_command_repository& repo)
 
 	repo.register_command(			L"Query Commands",		L"CINF",						cinf_describer,						cinf_command,					1);
 	repo.register_command(			L"Query Commands",		L"CLS",							cls_describer,						cls_command,					0);
+	repo.register_command(			L"Query Commands",		L"FLS",							fls_describer,						fls_command,					0);
 	repo.register_command(			L"Query Commands",		L"TLS",							tls_describer,						tls_command,					0);
 	repo.register_command(			L"Query Commands",		L"VERSION",						version_describer,					version_command,				0);
 	repo.register_command(			L"Query Commands",		L"INFO",						info_describer,						info_command,					0);
@@ -2840,6 +2936,8 @@ void register_commands(amcp_command_repository& repo)
 	repo.register_command(			L"Query Commands",		L"INFO THREADS",				info_threads_describer,				info_threads_command,			0);
 	repo.register_channel_command(	L"Query Commands",		L"INFO DELAY",					info_delay_describer,				info_delay_command,				0);
 	repo.register_command(			L"Query Commands",		L"DIAG",						diag_describer,						diag_command,					0);
+	repo.register_command(			L"Query Commands",		L"GL INFO",						gl_info_describer,					gl_info_command,				0);
+	repo.register_command(			L"Query Commands",		L"GL GC",						gl_gc_describer,					gl_gc_command,					0);
 	repo.register_command(			L"Query Commands",		L"BYE",							bye_describer,						bye_command,					0);
 	repo.register_command(			L"Query Commands",		L"KILL",						kill_describer,						kill_command,					0);
 	repo.register_command(			L"Query Commands",		L"RESTART",						restart_describer,					restart_command,				0);

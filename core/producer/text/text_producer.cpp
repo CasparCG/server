@@ -31,6 +31,7 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
+#include <core/frame/audio_channel_layout.h>
 #include <core/monitor/monitor.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/module_dependencies.h>
@@ -56,6 +57,7 @@
 
 #include "utils/texture_atlas.h"
 #include "utils/texture_font.h"
+#include "utils/freetype_library.h"
 
 class font_comparer {
 	const std::wstring& lhs;
@@ -69,43 +71,36 @@ namespace caspar { namespace core { namespace text {
 
 using namespace boost::filesystem;
 
-std::map<std::wstring, std::wstring> g_fonts;
-
 std::map<std::wstring, std::wstring> enumerate_fonts()
 {
 	std::map<std::wstring, std::wstring> result;
 
-	FT_Library lib;
-	FT_Error err = FT_Init_FreeType(&lib);
-	if(err) 
-		return result;
-
-	auto fonts = directory_iterator(env::font_folder());
-	auto end = directory_iterator();
-	for(; fonts != end; ++fonts)
+	for(auto iter = directory_iterator(env::font_folder()), end = directory_iterator(); iter != end; ++iter)
 	{
-		auto file = (*fonts);
-		if(is_regular_file(file.path()))
+		try 
 		{
-			FT_Face face;
-			err = FT_New_Face(lib, u8(file.path().native()).c_str(), 0, &face);
-			if(err) 
-				continue;
-
-			const char* fontname = FT_Get_Postscript_Name(face);	//this doesn't work for .fon fonts. Ignoring those for now
-			if(fontname != nullptr)
+			auto file = (*iter);
+			if (is_regular_file(file.path()))
 			{
-				std::string fontname_str(fontname);
-				result.insert(std::make_pair(u16(fontname_str), u16(file.path().native())));
+				auto face = get_new_face(u8(file.path().native()));
+				const char* fontname = FT_Get_Postscript_Name(face.get());	//this doesn't work for .fon fonts. Ignoring those for now
+				if (fontname != nullptr)
+				{
+					std::string fontname_str(fontname);
+					result.insert(std::make_pair(u16(fontname_str), u16(file.path().native())));
+				}
 			}
-
-			FT_Done_Face(face);
 		}
+		catch(...) { }
 	}
 
-	FT_Done_FreeType(lib);
-
 	return result;
+}
+
+std::vector<std::pair<std::wstring, std::wstring>> list_fonts()
+{
+	auto fonts = enumerate_fonts();
+	return std::vector<std::pair<std::wstring, std::wstring>>(fonts.begin(), fonts.end());
 }
 
 void describe_text_producer(help_sink&, const help_repository&);
@@ -113,15 +108,15 @@ spl::shared_ptr<frame_producer> create_text_producer(const frame_producer_depend
 
 void init(module_dependencies dependencies)
 {
-	g_fonts = enumerate_fonts();
 	dependencies.producer_registry->register_producer_factory(L"Text Producer", create_text_producer, describe_text_producer);
 }
 
 text_info& find_font_file(text_info& info)
 {
 	auto& font_name = info.font;
-	auto it = std::find_if(g_fonts.begin(), g_fonts.end(), font_comparer(font_name));
-	info.font_file = (it != g_fonts.end()) ? (*it).second : L"";
+	auto fonts = enumerate_fonts();
+	auto it = std::find_if(fonts.begin(), fonts.end(), font_comparer(font_name));
+	info.font_file = (it != fonts.end()) ? (*it).second : L"";
 	return info;
 }
 
@@ -130,27 +125,33 @@ text_info& find_font_file(text_info& info)
 
 struct text_producer::impl
 {
-	monitor::subject monitor_subject_;
-	spl::shared_ptr<core::frame_factory> frame_factory_;
-	constraints constraints_;
-	int x_, y_, parent_width_, parent_height_;
-	bool standalone_;
-	variable_impl<std::wstring> text_;
-	std::shared_ptr<void> text_subscription_;
-	variable_impl<double> tracking_;
-	std::shared_ptr<void> tracking_subscription_;
-	variable_impl<double> current_bearing_y_;
-	variable_impl<double> current_protrude_under_y_;
-	draw_frame frame_;
-	text::texture_atlas atlas_								{ 512, 512, 4 };
-	text::texture_font font_;
-	bool dirty_												= false;
+	monitor::subject						monitor_subject_;
+	spl::shared_ptr<core::frame_factory>	frame_factory_;
+	int										x_;
+	int										y_;
+	int										parent_width_;
+	int										parent_height_;
+	bool									standalone_;
+	constraints								constraints_				{ parent_width_, parent_height_ };
+	variable_impl<std::wstring>				text_;
+	std::shared_ptr<void>					text_subscription_;
+	variable_impl<double>					tracking_;
+	variable_impl<double>					scale_x_;
+	variable_impl<double>					scale_y_;
+	variable_impl<double>					shear_;
+	std::shared_ptr<void>					tracking_subscription_;
+	variable_impl<double>					current_bearing_y_;
+	variable_impl<double>					current_protrude_under_y_;
+	draw_frame								frame_;
+	text::texture_atlas						atlas_						{ 1024, 512, 4 };
+	text::texture_font						font_;
+	bool									dirty_						= false;
 
 public:
 	explicit impl(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, text::text_info& text_info, long parent_width, long parent_height, bool standalone) 
 		: frame_factory_(frame_factory)
-		, constraints_(parent_width, parent_height)
-		, x_(x), y_(y), parent_width_(parent_width), parent_height_(parent_height)
+		, x_(x), y_(y)
+		, parent_width_(parent_width), parent_height_(parent_height)
 		, standalone_(standalone)
 		, font_(atlas_, text::find_font_file(text_info), !standalone)
 	{
@@ -160,6 +161,9 @@ public:
 		font_.load_glyphs(text::unicode_block::Latin_Extended_A, text_info.color);
 
 		tracking_.value().set(text_info.tracking);
+		scale_x_.value().set(text_info.scale_x); 
+		scale_y_.value().set(text_info.scale_y); 
+		shear_.value().set(text_info.shear);
 		text_subscription_ = text_.value().on_change([this]()
 		{
 			dirty_ = true;
@@ -187,13 +191,14 @@ public:
 
 		text::string_metrics metrics;
 		font_.set_tracking(static_cast<int>(tracking_.value().get()));
-		auto vertex_stream = font_.create_vertex_stream(text_.value().get(), x_, y_, parent_width_, parent_height_, &metrics);
-		auto frame = frame_factory_->create_frame(vertex_stream.data(), pfd);
+		
+		auto vertex_stream = font_.create_vertex_stream(text_.value().get(), x_, y_, parent_width_, parent_height_, &metrics, shear_.value().get());
+		auto frame = frame_factory_->create_frame(vertex_stream.data(), pfd, core::audio_channel_layout::invalid());
 		memcpy(frame.image_data().data(), atlas_.data(), frame.image_data().size());
 		frame.set_geometry(frame_geometry(frame_geometry::geometry_type::quad_list, std::move(vertex_stream)));
 
-		this->constraints_.width.set(metrics.width);
-		this->constraints_.height.set(metrics.height);
+		this->constraints_.width.set(metrics.width * this->scale_x_.value().get());
+		this->constraints_.height.set(metrics.height * this->scale_y_.value().get());
 		current_bearing_y_.value().set(metrics.bearingY);
 		current_protrude_under_y_.value().set(metrics.protrudeUnderY);
 		frame_ = core::draw_frame(std::move(frame));
@@ -236,7 +241,7 @@ public:
 		else if (name == L"tracking")
 			return tracking_;
 
-		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(L"text_producer does not have a variable called " + name));
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"text_producer does not have a variable called " + name));
 	}
 
 	const std::vector<std::wstring>& get_variables() const
@@ -291,6 +296,8 @@ public:
 		boost::property_tree::wptree info;
 		info.add(L"type", L"text");
 		info.add(L"text", text_.value().get());
+		info.add(L"font", font_.get_name());
+		info.add(L"size", font_.get_size());
 		return info;
 	}
 };
@@ -339,6 +346,7 @@ void describe_text_producer(help_sink& sink, const help_repository& repo)
 	sink.para()->text(L"Examples:");
 	sink.example(L">> PLAY 1-10 [TEXT] \"John Doe\" 0 0 FONT ArialMT SIZE 30 COLOR #1b698d STANDALONE 1");
 	sink.example(L">> CALL 1-10 \"Jane Doe\"", L"for modifying the text while playing.");
+	sink.para()->text(L"See ")->see(L"FLS")->text(L" for listing the available fonts.");
 }
 
 spl::shared_ptr<frame_producer> create_text_producer(const frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)

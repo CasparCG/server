@@ -37,6 +37,7 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
+#include <core/frame/audio_channel_layout.h>
 #include <core/producer/frame_producer.h>
 #include <core/monitor/monitor.h>
 #include <core/help/help_repository.h>
@@ -48,6 +49,8 @@
 #include <common/diagnostics/graph.h>
 #include <common/prec_timer.h>
 #include <common/array.h>
+#include <common/memset.h>
+#include <common/memcpy.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -56,8 +59,6 @@
 #include <boost/algorithm/string.hpp>
 
 #include <tbb/spin_mutex.h>
-
-#include <asmlib.h>
 
 #include <functional>
 
@@ -261,7 +262,7 @@ public:
 	{		
 		std::wstring result;
 
-		CASPAR_LOG(trace) << print() << " Call: " << param;
+		CASPAR_LOG(debug) << print() << " Call: " << param;
 
 		if(!ax_->FlashCall(param, result))
 			CASPAR_LOG(warning) << print() << L" Flash call failed:" << param;//CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Flash function call failed.") << arg_name_info("param") << arg_value_info(narrow(param)));
@@ -269,7 +270,7 @@ public:
 		if (boost::starts_with(result, L"<exception>"))
 			CASPAR_LOG(warning) << print() << L" Flash call failed:" << result;
 
-		graph_->set_tag("param");
+		graph_->set_tag(diagnostics::tag_severity::INFO, "param");
 
 		return result;
 	}
@@ -296,12 +297,12 @@ public:
 		{			
 			core::pixel_format_desc desc = core::pixel_format::bgra;
 			desc.planes.push_back(core::pixel_format_desc::plane(width_, height_, 4));
-			auto frame = frame_factory_->create_frame(this, desc);
+			auto frame = frame_factory_->create_frame(this, desc, core::audio_channel_layout::invalid());
 
-			A_memset(bmp_.data(), 0, width_ * height_ * 4);
+			fast_memset(bmp_.data(), 0, width_ * height_ * 4);
 			ax_->DrawControl(bmp_);
 		
-			A_memcpy(frame.image_data(0).begin(), bmp_.data(), width_*height_*4);
+			fast_memcpy(frame.image_data(0).begin(), bmp_.data(), width_*height_*4);
 			head_ = core::draw_frame(std::move(frame));	
 		}		
 
@@ -411,7 +412,7 @@ public:
 		if (output_buffer_.try_pop(frame))
 			last_frame_ = frame;
 		else		
-			graph_->set_tag("late-frame");
+			graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
 
 		fill_buffer();
 				

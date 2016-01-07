@@ -18,6 +18,9 @@ namespace caspar { namespace core { namespace text {
 		//text::color<float>	shadow_color;
 		int						baseline_shift		= 0;
 		int						tracking			= 0;
+		double					scale_x				= 1.0;
+		double					scale_y				= 1.0;
+		double					shear				= 0;
 	};
 
 }}}

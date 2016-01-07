@@ -8,6 +8,8 @@ set(SOURCES
 
 		base64.cpp
 		env.cpp
+		except.cpp
+		filesystem.cpp
 		log.cpp
 		polling_filesystem_monitor.cpp
 		stdafx.cpp
@@ -21,7 +23,6 @@ if (MSVC)
 			compiler/vs/StackWalker.cpp
 			compiler/vs/StackWalker.h
 
-			os/windows/current_version.h
 			os/windows/filesystem.cpp
 			os/windows/page_locked_allocator.cpp
 			os/windows/prec_timer.cpp
@@ -65,6 +66,7 @@ set(HEADERS
 		env.h
 		except.h
 		executor.h
+		filesystem.h
 		filesystem_monitor.h
 		forward.h
 		future.h
@@ -73,11 +75,14 @@ set(HEADERS
 		lock.h
 		log.h
 		memory.h
+		memcpy.h
+		memset.h
 		memshfl.h
+		no_init_proxy.h
 		param.h
 		polling_filesystem_monitor.h
 		prec_timer.h
-		reactive.h
+		ptree.h
 		scope_exit.h
 		semaphore.h
 		stdafx.h
@@ -91,6 +96,7 @@ add_library(common ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
 add_precompiled_header(common stdafx.h FORCEINCLUDE)
 
 include_directories(..)
+include_directories(${ASMLIB_INCLUDE_PATH})
 include_directories(${BOOST_INCLUDE_PATH})
 include_directories(${RXCPP_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_PATH})

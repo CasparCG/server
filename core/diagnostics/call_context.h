@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include <string>
+
 namespace caspar { namespace core { namespace diagnostics {
 
 struct call_context
@@ -29,6 +31,7 @@ struct call_context
 	int layer			= -1;
 
 	static call_context& for_thread();
+	std::wstring to_string() const;
 };
 
 class scoped_call_context : boost::noncopyable

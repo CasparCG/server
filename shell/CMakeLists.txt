@@ -26,6 +26,7 @@ set(SOURCES
 		stdafx.cpp
 )
 set(HEADERS
+		default_audio_config.h
 		included_modules.h
 		platform_specific.h
 		server.h
@@ -38,6 +39,7 @@ add_precompiled_header(casparcg stdafx.h FORCEINCLUDE)
 add_executable(generate_docs generate_docs.cpp included_modules.h)
 target_link_libraries(generate_docs
 		protocol
+		accelerator
 
 		"${CASPARCG_MODULE_PROJECTS}"
 

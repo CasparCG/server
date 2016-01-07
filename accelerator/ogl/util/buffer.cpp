@@ -32,13 +32,17 @@
 
 #include <GL/glew.h>
 
+#include <boost/property_tree/ptree.hpp>
+
 #include <tbb/atomic.h>
 
 namespace caspar { namespace accelerator { namespace ogl {
 
-static tbb::atomic<int> g_w_total_count;
-static tbb::atomic<int> g_r_total_count;
-																																								
+static tbb::atomic<int>			g_w_total_count;
+static tbb::atomic<std::size_t>	g_w_total_size;
+static tbb::atomic<int>			g_r_total_count;
+static tbb::atomic<std::size_t>	g_r_total_size;
+
 struct buffer::impl : boost::noncopyable
 {	
 	GLuint						pbo_;
@@ -53,6 +57,7 @@ public:
 		, target_(usage == buffer::usage::write_only ? GL_PIXEL_UNPACK_BUFFER : GL_PIXEL_PACK_BUFFER)
 		, usage_(usage == buffer::usage::write_only ? GL_STREAM_DRAW : GL_STREAM_READ)
 	{
+		CASPAR_LOG_CALL(trace) << "buffer::buffer() <- " << get_context();
 		caspar::timer timer;
 
 		data_ = nullptr;
@@ -68,16 +73,22 @@ public:
 
 		if(!pbo_)
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to allocate buffer."));
+
+		(usage == buffer::usage::write_only ? g_w_total_count : g_r_total_count)	++;
+		(usage == buffer::usage::write_only ? g_w_total_size : g_r_total_size)		+= size_;
 		
 		if(timer.elapsed() > 0.02)
-			CASPAR_LOG(debug) << L"[buffer] Performance warning. Buffer allocation blocked: " << timer.elapsed();
+			CASPAR_LOG(warning) << L"[buffer] Performance warning. Buffer allocation blocked: " << timer.elapsed();
 	
 		//CASPAR_LOG(trace) << "[buffer] [" << ++(usage_ == buffer::usage::write_only ? g_w_total_count : g_r_total_count) << L"] allocated size:" << size_ << " usage: " << (usage == buffer::usage::write_only ? "write_only" : "read_only");
 	}	
 
 	~impl()
 	{
+		CASPAR_LOG_CALL(trace) << "buffer::~buffer() <- " << get_context();
 		glDeleteBuffers(1, &pbo_);
+		(usage_ == GL_STREAM_DRAW ? g_w_total_size : g_r_total_size)	-= size_;
+		(usage_ == GL_STREAM_DRAW ? g_w_total_count : g_r_total_count)	--;
 	}
 
 	void* map()
@@ -95,7 +106,7 @@ public:
 		data_ = (uint8_t*) result;
 
 		if(timer.elapsed() > 0.02)
-			CASPAR_LOG(debug) << L"[buffer] Performance warning. Buffer mapping blocked: " << timer.elapsed();
+			CASPAR_LOG(warning) << L"[buffer] Performance warning. Buffer mapping blocked: " << timer.elapsed();
 
 		GL(glBindBuffer(target_, 0));
 		if(!data_)
@@ -139,5 +150,17 @@ void buffer::bind() const{impl_->bind();}
 void buffer::unbind() const{impl_->unbind();}
 std::size_t buffer::size() const { return impl_->size_; }
 int buffer::id() const {return impl_->pbo_;}
+
+boost::property_tree::wptree buffer::info()
+{
+	boost::property_tree::wptree info;
+
+	info.add(L"total_read_count", g_r_total_count);
+	info.add(L"total_write_count", g_w_total_count);
+	info.add(L"total_read_size", g_r_total_size);
+	info.add(L"total_write_size", g_w_total_size);
+
+	return info;
+}
 
 }}}

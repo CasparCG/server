@@ -28,6 +28,7 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
+#include <core/frame/audio_channel_layout.h>
 #include <core/monitor/monitor.h>
 
 #include <common/except.h>
@@ -177,7 +178,7 @@ draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& f
 {
 	core::pixel_format_desc desc(pixel_format::bgra);
 	desc.planes.push_back(core::pixel_format_desc::plane(1, 1, 4));
-	auto frame = frame_factory->create_frame(tag, desc);
+	auto frame = frame_factory->create_frame(tag, desc, core::audio_channel_layout::invalid());
 	
 	*reinterpret_cast<uint32_t*>(frame.image_data(0).begin()) = value;
 
@@ -188,7 +189,7 @@ draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& f
 {
 	uint32_t value = 0;
 	if(!try_get_color(str, value))
-		CASPAR_THROW_EXCEPTION(invalid_argument() << arg_name_info("color") << arg_value_info(str) << msg_info("Invalid color."));
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid color: " + str));
 	
 	return create_color_frame(tag, frame_factory, value);
 }

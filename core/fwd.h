@@ -22,7 +22,8 @@
 
 #include <common/forward.h>
 
-FORWARD3(caspar, core, ogl, class accelerator);
+FORWARD2(caspar, accelerator, class accelerator);
+FORWARD3(caspar, accelerator, ogl, class device);
 
 FORWARD2(caspar, core, class stage);
 FORWARD2(caspar, core, class mixer);
@@ -50,3 +51,6 @@ FORWARD2(caspar, core, class help_sink);
 FORWARD2(caspar, core, class help_repository);
 FORWARD2(caspar, core, struct module_dependencies);
 FORWARD2(caspar, core, class frame_producer_registry);
+FORWARD2(caspar, core, struct audio_channel_layout);
+FORWARD2(caspar, core, class audio_channel_layout_repository);
+FORWARD2(caspar, core, class audio_mix_config_repository);

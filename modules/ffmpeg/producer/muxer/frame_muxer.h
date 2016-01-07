@@ -40,7 +40,12 @@ namespace caspar { namespace ffmpeg {
 class frame_muxer : boost::noncopyable
 {
 public:
-	frame_muxer(double in_fps, const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::wstring& filter = L"");
+	frame_muxer(
+			double in_fps,
+			const spl::shared_ptr<core::frame_factory>& frame_factory,
+			const core::video_format_desc& format_desc,
+			const core::audio_channel_layout& channel_layout,
+			const std::wstring& filter);
 	
 	void push_video(const std::shared_ptr<AVFrame>& frame);
 	void push_audio(const std::shared_ptr<AVFrame>& frame);

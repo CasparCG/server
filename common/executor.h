@@ -81,7 +81,7 @@ public:
 	
 	~executor()
 	{
-		CASPAR_LOG(trace) << L"Shutting down " << name_;
+		CASPAR_LOG(debug) << L"Shutting down " << name_;
 
 		try
 		{
@@ -239,7 +239,7 @@ private:
 
 		if (!execution_queue_.try_push(priority, function))
 		{
-			CASPAR_LOG(debug) << print() << L" Overflow. Blocking caller.";
+			CASPAR_LOG(warning) << print() << L" Overflow. Blocking caller.";
 			execution_queue_.push(priority, function);
 		}
 
@@ -250,7 +250,17 @@ private:
 				function();
 			}
 
-			return future.get();
+			try
+			{
+				return future.get();
+			}
+			catch (const caspar_exception& e)
+			{
+				if (!is_current()) // Add context information from this thread before rethrowing.
+					e << context_info(get_context() + *boost::get_error_info<context_info_t>(e));
+
+				throw;
+			}
 		});
 	}
 

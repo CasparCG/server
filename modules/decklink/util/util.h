@@ -132,9 +132,7 @@ BMDDisplayMode get_display_mode(const T& device, BMDDisplayMode format, BMDPixel
 	}
 
     if(!m)
-		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Device could not find requested video-format.") 
-												 << arg_value_info(boost::lexical_cast<std::string>(format))
-												 << arg_name_info("format"));
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info("Device could not find requested video-format: " + boost::lexical_cast<std::string>(format)));
 
 	com_ptr<IDeckLinkDisplayMode> mode = wrap_raw<com_ptr>(m, true);
 
@@ -184,7 +182,7 @@ static com_ptr<IDeckLink> get_device(size_t device_index)
     }
 
 	if(n != device_index || !decklink)
-		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Decklink device not found.") << arg_name_info("device_index") << arg_value_info(boost::lexical_cast<std::string>(device_index)));
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info("Decklink device " + boost::lexical_cast<std::string>(device_index) + " not found."));
 		
 	return decklink;
 }
@@ -196,5 +194,40 @@ static std::wstring get_model_name(const T& device)
 	device->GetModelName(&pModelName);
     return u16(pModelName);
 }
+
+class reference_signal_detector
+{
+	com_iface_ptr<IDeckLinkOutput>	output_;
+	BMDReferenceStatus				last_reference_status_	= static_cast<BMDReferenceStatus>(-1);
+public:
+	reference_signal_detector(const com_iface_ptr<IDeckLinkOutput>& output)
+		: output_(output)
+	{
+	}
+
+	template<typename Print>
+	void detect_change(const Print& print)
+	{
+		BMDReferenceStatus reference_status;
+
+		if (output_->GetReferenceStatus(&reference_status) != S_OK)
+		{
+			CASPAR_LOG(error) << print() << L" Reference signal: failed while querying status";
+		}
+		else if (reference_status != last_reference_status_)
+		{
+			last_reference_status_ = reference_status;
+
+			if (reference_status == 0)
+				CASPAR_LOG(info) << print() << L" Reference signal: not detected.";
+			else if (reference_status & bmdReferenceNotSupportedByHardware)
+				CASPAR_LOG(info) << print() << L" Reference signal: not supported by hardware.";
+			else if (reference_status & bmdReferenceLocked)
+				CASPAR_LOG(info) << print() << L" Reference signal: locked.";
+			else
+				CASPAR_LOG(info) << print() << L" Reference signal: Unhandled enum bitfield: " << reference_status;
+		}
+	}
+};
 
 }}

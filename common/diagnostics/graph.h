@@ -34,6 +34,12 @@ namespace caspar { namespace diagnostics {
 int color(float r, float g, float b, float a = 1.0f);
 std::tuple<float, float, float, float> color(int code);
 
+enum class tag_severity
+{
+	WARNING,
+	INFO
+};
+
 class graph : boost::noncopyable
 {
 	friend void register_graph(const spl::shared_ptr<graph>& graph);
@@ -42,7 +48,7 @@ public:
 	void set_text(const std::wstring& value);
 	void set_value(const std::string& name, double value);
 	void set_color(const std::string& name, int color);
-	void set_tag(const std::string& name);
+	void set_tag(tag_severity severity, const std::string& name);
 	void auto_reset();
 private:
 	struct impl;
@@ -61,7 +67,7 @@ public:
 	virtual void set_text(const std::wstring& value) = 0;
 	virtual void set_value(const std::string& name, double value) = 0;
 	virtual void set_color(const std::string& name, int color) = 0;
-	virtual void set_tag(const std::string& name) = 0;
+	virtual void set_tag(tag_severity severity, const std::string& name) = 0;
 	virtual void auto_reset() = 0;
 };
 

@@ -29,6 +29,7 @@
 #include "producer/util/util.h"
 
 #include <common/log.h>
+#include <common/os/general_protection_fault.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/producer/frame_producer.h>
@@ -37,6 +38,8 @@
 #include <core/system_info_provider.h>
 
 #include <boost/property_tree/ptree.hpp>
+#include <boost/thread/tss.hpp>
+#include <boost/bind.hpp>
 
 #include <tbb/recursive_mutex.h>
 
@@ -235,36 +238,79 @@ std::wstring swscale_version()
 {
 	return make_version(::swscale_version());
 }
+bool& get_quiet_logging_for_thread()
+{
+	static boost::thread_specific_ptr<bool> quiet_logging_for_thread;
+
+	auto local = quiet_logging_for_thread.get();
+
+	if (!local)
+	{
+		local = new bool(false);
+		quiet_logging_for_thread.reset(local);
+	}
+
+	return *local;
+}
+
+bool is_logging_quiet_for_thread()
+{
+	return get_quiet_logging_for_thread();
+}
+
+std::shared_ptr<void> temporary_enable_quiet_logging_for_thread(bool enable)
+{
+	if (!enable || is_logging_quiet_for_thread())
+		return std::shared_ptr<void>();
+
+	get_quiet_logging_for_thread() = true;
+
+	return std::shared_ptr<void>(nullptr, [](void*)
+	{
+		get_quiet_logging_for_thread() = false; // Only works correctly if destructed in same thread as original caller.
+	});
+}
+
+void log_for_thread(void* ptr, int level, const char* fmt, va_list vl)
+{
+	ensure_gpf_handler_installed_for_thread("ffmpeg-thread");
+
+	int min_level = is_logging_quiet_for_thread() ? AV_LOG_DEBUG : AV_LOG_FATAL;
+
+	log_callback(ptr, std::max(level, min_level), fmt, vl);
+}
 
 void init(core::module_dependencies dependencies)
 {
 	av_lockmgr_register(ffmpeg_lock_callback);
-	av_log_set_callback(log_callback);
+	av_log_set_callback(log_for_thread);
 
     avfilter_register_all();
 	//fix_yadif_filter_format_query();
 	av_register_all();
     avformat_network_init();
     avcodec_register_all();
+
+	auto info_repo = dependencies.media_info_repo;
 	
-	dependencies.consumer_registry->register_consumer_factory(L"FFMpeg Consumer", create_consumer, describe_consumer);
+	dependencies.consumer_registry->register_consumer_factory(L"FFmpeg Consumer", create_consumer, describe_consumer);
 	dependencies.consumer_registry->register_consumer_factory(L"Streaming Consumer",  create_streaming_consumer, describe_streaming_consumer);
 	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"file", create_preconfigured_consumer);
 	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"stream", create_preconfigured_streaming_consumer);
-	dependencies.producer_registry->register_producer_factory(L"FFmpeg Producer", create_producer, describe_producer);
-	
-	dependencies.media_info_repo->register_extractor(
+	dependencies.producer_registry->register_producer_factory(L"FFmpeg Producer", boost::bind(&create_producer, _1, _2, info_repo), describe_producer);
+	dependencies.producer_registry->register_thumbnail_producer_factory(boost::bind(&create_thumbnail_producer, _1, _2, info_repo));
+
+	info_repo->register_extractor(
 			[](const std::wstring& file, const std::wstring& extension, core::media_info& info) -> bool
 			{
-				// TODO: merge thumbnail generation from 2.0
-				//auto disable_logging = temporary_disable_logging_for_thread(true);
+				auto quiet_logging = temporary_enable_quiet_logging_for_thread(true);
 				if (extension == L".WAV" || extension == L".MP3")
 				{
 					info.clip_type = L"AUDIO";
 					return true;
 				}
 
-				if (!is_valid_file(file))
+				if (!is_valid_file(file, true))
 					return false;
 
 				info.clip_type = L"MOVIE";

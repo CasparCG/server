@@ -30,6 +30,7 @@
 #include <core/interaction/interaction_event.h>
 #include <core/frame/frame.h>
 #include <core/frame/pixel_format.h>
+#include <core/frame/audio_channel_layout.h>
 #include <core/frame/geometry.h>
 #include <core/help/help_repository.h>
 #include <core/help/help_sink.h>
@@ -43,6 +44,7 @@
 #include <common/prec_timer.h>
 #include <common/linq.h>
 #include <common/os/filesystem.h>
+#include <common/memcpy.h>
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
@@ -89,7 +91,6 @@ class html_client
 	tbb::concurrent_queue<std::wstring>		javascript_before_load_;
 	tbb::atomic<bool>						loaded_;
 	tbb::atomic<bool>						removed_;
-	tbb::atomic<bool>						animation_frame_requested_;
 	std::queue<core::draw_frame>			frames_;
 	mutable boost::mutex					frames_mutex_;
 
@@ -122,7 +123,6 @@ public:
 
 		loaded_ = false;
 		removed_ = false;
-		animation_frame_requested_ = false;
 		executor_.begin_invoke([&]{ update(); });
 	}
 
@@ -161,11 +161,6 @@ public:
 
 	void close()
 	{
-		if (!animation_frame_requested_)
-			CASPAR_LOG(warning) << print()
-					<< " window.requestAnimationFrame() never called. "
-					<< "Animations might have been laggy";
-
 		html::invoke([=]
 		{
 			if (browser_ != nullptr)
@@ -216,19 +211,19 @@ private:
 			pixel_desc.format = core::pixel_format::bgra;
 			pixel_desc.planes.push_back(
 				core::pixel_format_desc::plane(width, height, 4));
-		auto frame = frame_factory_->create_frame(this, pixel_desc);
-		A_memcpy(frame.image_data().begin(), buffer, width * height * 4);
+		auto frame = frame_factory_->create_frame(this, pixel_desc, core::audio_channel_layout::invalid());
+		fast_memcpy(frame.image_data().begin(), buffer, width * height * 4);
 
 		lock(frames_mutex_, [&]
 		{
 			frames_.push(core::draw_frame(std::move(frame)));
 
-			size_t max_in_queue = format_desc_.field_count;
+			size_t max_in_queue = format_desc_.field_count + 1;
 
 			while (frames_.size() > max_in_queue)
 			{
 				frames_.pop();
-				graph_->set_tag("dropped-frame");
+				graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
 			}
 		});
 		graph_->set_value("copy-time", copy_timer.elapsed()
@@ -288,15 +283,7 @@ private:
 	{
 		auto name = message->GetName().ToString();
 
-		if (name == ANIMATION_FRAME_REQUESTED_MESSAGE_NAME)
-		{
-			CASPAR_LOG(trace)
-					<< print() << L" Requested animation frame";
-			animation_frame_requested_ = true;
-
-			return true;
-		}
-		else if (name == REMOVE_MESSAGE_NAME)
+		if (name == REMOVE_MESSAGE_NAME)
 		{
 			remove();
 
@@ -324,6 +311,7 @@ private:
 			browser_->SendProcessMessage(
 					CefProcessId::PID_RENDERER,
 					CefProcessMessage::Create(TICK_MESSAGE_NAME));
+
 		graph_->set_value("tick-time", tick_timer_.elapsed()
 				* format_desc_.fps
 				* format_desc_.field_count
@@ -401,7 +389,7 @@ private:
 		}
 		else if (num_frames == 1) // Interlaced but only one frame
 		{                         // available. Probably the last frame
-				                    // of some animation sequence.
+		                          // of some animation sequence.
 			auto frame = pop();
 
 			lock(last_frame_mutex_, [&]
@@ -415,18 +403,13 @@ private:
 		}
 		else
 		{
-			graph_->set_tag("late-frame");
+			graph_->set_tag(diagnostics::tag_severity::INFO, "late-frame");
 
 			if (format_desc_.field_mode != core::field_mode::progressive)
-			{
 				lock(last_frame_mutex_, [&]
 				{
 					last_frame_ = last_progressive_frame_;
 				});
-
-				timer.tick(1.0 / (format_desc_.fps * format_desc_.field_count));
-				invoke_requested_animation_frames();
-			}
 		}
 	}
 

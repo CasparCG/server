@@ -23,6 +23,8 @@
 
 #include "AMCPCommandQueue.h"
 
+#include <common/lock.h>
+
 #include <boost/property_tree/ptree.hpp>
 
 #include <cmath>
@@ -106,20 +108,40 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 				else
 					CASPAR_LOG(warning) << "Failed to execute command: " << print;
 			}
-			catch (file_not_found&)
+			catch (const file_not_found& e)
 			{
-				CASPAR_LOG(error) << L"File not found. No match found for parameters. Check syntax.";
+				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
+				CASPAR_LOG(error) << get_message_and_context(e) << " Turn on log level debug for stacktrace.";
 				pCurrentCommand->SetReplyString(L"404 " + pCurrentCommand->print() + L" FAILED\r\n");
+			}
+			catch (const expected_user_error& e)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
+				CASPAR_LOG(info) << get_message_and_context(e) << " Check syntax. Turn on log level debug for stacktrace.";
+				pCurrentCommand->SetReplyString(L"403 " + pCurrentCommand->print() + L" FAILED\r\n");
+			}
+			catch (const user_error& e)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
+				CASPAR_LOG(error) << get_message_and_context(e) << " Check syntax. Turn on log level debug for stacktrace.";
+				pCurrentCommand->SetReplyString(L"403 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
 			catch (std::out_of_range&)
 			{
-				CASPAR_LOG(error) << L"Missing parameter. Check syntax.";
+				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
+				CASPAR_LOG(error) << L"Missing parameter. Check syntax. Turn on log level debug for stacktrace.";
 				pCurrentCommand->SetReplyString(L"402 " + pCurrentCommand->print() + L" FAILED\r\n");
+			}
+			catch (boost::bad_lexical_cast&)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
+				CASPAR_LOG(error) << L"Invalid parameter. Check syntax. Turn on log level debug for stacktrace.";
+				pCurrentCommand->SetReplyString(L"403 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
 			catch (...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
-				CASPAR_LOG(warning) << "Failed to execute command:" << pCurrentCommand->print();
+				CASPAR_LOG(error) << "Failed to execute command:" << pCurrentCommand->print();
 				pCurrentCommand->SetReplyString(L"501 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
 				

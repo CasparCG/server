@@ -11,9 +11,11 @@
 #include <common/future.h>
 #include <common/env.h>
 #include <common/scope_exit.h>
+#include <common/ptree.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/frame.h>
+#include <core/frame/audio_channel_layout.h>
 #include <core/video_format.h>
 #include <core/monitor/monitor.h>
 #include <core/help/help_repository.h>
@@ -84,6 +86,7 @@ private:
 	bool										compatibility_mode_;
 												
 	core::video_format_desc						in_video_format_;
+	core::audio_channel_layout					in_channel_layout_			= core::audio_channel_layout::invalid();
 
 	std::shared_ptr<AVFormatContext>			oc_;
 	tbb::atomic<bool>							abort_request_;
@@ -190,6 +193,7 @@ public:
 
 	void initialize(
 			const core::video_format_desc& format_desc,
+			const core::audio_channel_layout& channel_layout,
 			int channel_index) override
 	{
 		try
@@ -247,6 +251,7 @@ public:
 			CASPAR_VERIFY(format_desc.format != core::video_format::invalid);
 
 			in_video_format_ = format_desc;
+			in_channel_layout_ = channel_layout;
 							
 			CASPAR_VERIFY(oc_->oformat);
 			
@@ -271,13 +276,13 @@ public:
 					: avcodec_find_encoder(oc_->oformat->audio_codec);
 			
 			if (!video_codec)
-				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(
 						"Failed to find video codec " + (video_codec_name
 								? *video_codec_name
 								: "with id " + boost::lexical_cast<std::string>(
 										oc_->oformat->video_codec))));
 			if (!audio_codec)
-				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(
 						"Failed to find audio codec " + (audio_codec_name
 								? *audio_codec_name
 								: "with id " + boost::lexical_cast<std::string>(
@@ -494,7 +499,7 @@ private:
 		{
 			case AVMEDIA_TYPE_VIDEO:
 			{
-				st->time_base				= video_graph_out_->inputs[0]->time_base;
+				enc->time_base				= video_graph_out_->inputs[0]->time_base;
 				enc->pix_fmt				= static_cast<AVPixelFormat>(video_graph_out_->inputs[0]->format);
 				enc->sample_aspect_ratio	= st->sample_aspect_ratio = video_graph_out_->inputs[0]->sample_aspect_ratio;
 				enc->width					= video_graph_out_->inputs[0]->w;
@@ -505,7 +510,7 @@ private:
 			}
 			case AVMEDIA_TYPE_AUDIO:
 			{
-				st->time_base				= audio_graph_out_->inputs[0]->time_base;
+				enc->time_base				= audio_graph_out_->inputs[0]->time_base;
 				enc->sample_fmt				= static_cast<AVSampleFormat>(audio_graph_out_->inputs[0]->format);
 				enc->sample_rate			= audio_graph_out_->inputs[0]->sample_rate;
 				enc->channel_layout			= audio_graph_out_->inputs[0]->channel_layout;
@@ -724,12 +729,12 @@ private:
 		const auto asrc_options = (boost::format("sample_rate=%1%:sample_fmt=%2%:channels=%3%:time_base=%4%/%5%:channel_layout=%6%")
 			% in_video_format_.audio_sample_rate
 			% av_get_sample_fmt_name(AV_SAMPLE_FMT_S32)
-			% in_video_format_.audio_channels
+			% in_channel_layout_.num_channels
 			% 1	% in_video_format_.audio_sample_rate
 			% boost::io::group(
 				std::hex, 
 				std::showbase, 
-				av_get_default_channel_layout(in_video_format_.audio_channels))).str();
+				av_get_default_channel_layout(in_channel_layout_.num_channels))).str();
 
 		AVFilterContext* filt_asrc = nullptr;
 		FF(avfilter_graph_create_filter(
@@ -985,8 +990,8 @@ private:
 					av_frame_free(&p);
 				});
 		
-			src_av_frame->channels		 = in_video_format_.audio_channels;
-			src_av_frame->channel_layout = av_get_default_channel_layout(in_video_format_.audio_channels);
+			src_av_frame->channels		 = in_channel_layout_.num_channels;
+			src_av_frame->channel_layout = av_get_default_channel_layout(in_channel_layout_.num_channels);
 			src_av_frame->sample_rate	 = in_video_format_.audio_sample_rate;
 			src_av_frame->nb_samples	 = static_cast<int>(frame_ptr.audio_data().size()) / src_av_frame->channels;
 			src_av_frame->format		 = AV_SAMPLE_FMT_S32;
@@ -1080,7 +1085,7 @@ private:
 					
 		if(!got_packet || pkt.size <= 0)
 			return false;
-				
+
 		pkt.stream_index = st.index;
 		
 		if(bsfc)
@@ -1268,12 +1273,12 @@ private:
 
 void describe_streaming_consumer(core::help_sink& sink, const core::help_repository& repo)
 {
-	sink.short_description(L"For streaming the contents of a channel using FFMpeg.");
+	sink.short_description(L"For streaming the contents of a channel using FFmpeg.");
 	sink.syntax(L"STREAM [url:string] {-[ffmpeg_param1:string] [value1:string] {-[ffmpeg_param2:string] [value2:string] {...}}}");
-	sink.para()->text(L"For streaming the contents of a channel using FFMpeg");
+	sink.para()->text(L"For streaming the contents of a channel using FFmpeg");
 	sink.definitions()
 		->item(L"url", L"The stream URL to create/stream to.")
-		->item(L"ffmpeg_paramX", L"A parameter supported by FFMpeg. For example vcodec or acodec etc.");
+		->item(L"ffmpeg_paramX", L"A parameter supported by FFmpeg. For example vcodec or acodec etc.");
 	sink.para()->text(L"Examples:");
 	sink.example(L">> ADD 1 STREAM udp://<client_ip_address>:9250 -format mpegts -vcodec libx264 -crf 25 -tune zerolatency -preset ultrafast");
 }
@@ -1295,7 +1300,7 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_streaming_consumer(
 		const boost::property_tree::wptree& ptree, core::interaction_sink*)
 {              	
 	return spl::make_shared<streaming_consumer>(
-			u8(ptree.get<std::wstring>(L"path")), 
+			u8(ptree_get<std::wstring>(ptree, L"path")), 
 			u8(ptree.get<std::wstring>(L"args", L"")),
 			false);
 }

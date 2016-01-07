@@ -101,7 +101,7 @@ mark_action get_mark_action(const std::wstring& name)
 	else if (name == L"remove")
 		return mark_action::remove;
 	else
-		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info(L"Invalid mark_action " + name));
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid mark_action " + name));
 }
 
 struct marker
@@ -118,12 +118,17 @@ struct marker
 
 struct scene_producer::impl
 {
+	std::wstring											producer_name_;
 	constraints												pixel_constraints_;
 	video_format_desc										format_desc_;
 	std::list<layer>										layers_;
 	interaction_aggregator									aggregator_;
 	binding<int64_t>										frame_number_;
 	binding<double>											speed_;
+	mutable tbb::atomic<int64_t>							m_x_;
+	mutable tbb::atomic<int64_t>							m_y_;
+	binding<int64_t>										mouse_x_;
+	binding<int64_t>										mouse_y_;
 	double													frame_fraction_		= 0.0;
 	std::map<void*, timeline>								timelines_;
 	std::map<std::wstring, std::shared_ptr<core::variable>>	variables_;
@@ -134,17 +139,28 @@ struct scene_producer::impl
 	bool													removed_			= false;
 	bool													going_to_mark_		= false;
 
-	impl(int width, int height, const video_format_desc& format_desc)
-		: pixel_constraints_(width, height)
+	impl(std::wstring producer_name, int width, int height, const video_format_desc& format_desc)
+		: producer_name_(std::move(producer_name))
+		, pixel_constraints_(width, height)
 		, format_desc_(format_desc)
 		, aggregator_([=] (double x, double y) { return collission_detect(x, y); })
 	{
 		auto speed_variable = std::make_shared<core::variable_impl<double>>(L"1.0", true, 1.0);
 		store_variable(L"scene_speed", speed_variable);
 		speed_ = speed_variable->value();
+		
 		auto frame_variable = std::make_shared<core::variable_impl<int64_t>>(L"-1", true, -1);
 		store_variable(L"frame", frame_variable);
 		frame_number_ = frame_variable->value();
+
+		auto mouse_x_variable = std::make_shared<core::variable_impl<int64_t>>(L"0", false, 0);
+		auto mouse_y_variable = std::make_shared<core::variable_impl<int64_t>>(L"0", false, 0);
+		store_variable(L"mouse_x", mouse_x_variable);
+		store_variable(L"mouse_y", mouse_y_variable);
+		mouse_x_ = mouse_x_variable->value();
+		mouse_y_ = mouse_y_variable->value();
+		m_x_ = 0;
+		m_y_ = 0;
 	}
 
 	layer& create_layer(
@@ -158,6 +174,10 @@ struct scene_producer::impl
 		layers_.push_back(layer);
 
 		return layers_.back();
+	}
+
+	void reverse_layers() {
+		layers_.reverse();
 	}
 
 	void store_keyframe(void* timeline_identity, const keyframe& k)
@@ -182,7 +202,7 @@ struct scene_producer::impl
 		auto found = variables_.find(name);
 
 		if (found == variables_.end())
-			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(name + L" not found in scene"));
+			CASPAR_THROW_EXCEPTION(user_error() << msg_info(name + L" not found in scene"));
 
 		return *found->second;
 	}
@@ -351,6 +371,9 @@ struct scene_producer::impl
 		for (auto& timeline : timelines_)
 			timeline.second.on_frame(frame_number_.get());
 
+		mouse_x_.set(m_x_);
+		mouse_y_.set(m_y_);
+
 		std::vector<draw_frame> frames;
 
 		for (auto& layer : layers_)
@@ -373,6 +396,9 @@ struct scene_producer::impl
 
 	bool collides(double x, double y) const
 	{
+		m_x_ = static_cast<int64_t>(x * pixel_constraints_.width.get());
+		m_y_ = static_cast<int64_t>(y * pixel_constraints_.height.get());
+
 		return static_cast<bool>((collission_detect(x, y)));
 	}
 
@@ -431,7 +457,7 @@ struct scene_producer::impl
 		else if (call == L"next()")
 			next();
 		else
-			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(L"Unknown call " + call));
+			CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Unknown call " + call));
 
 		return L"";
 	}
@@ -491,18 +517,19 @@ struct scene_producer::impl
 
 	std::wstring print() const
 	{
-		return L"scene[]";
+		return L"scene[type=" + name() + L"]";
 	}
 
 	std::wstring name() const
 	{
-		return L"scene";
+		return producer_name_;
 	}
 	
 	boost::property_tree::wptree info() const
 	{
 		boost::property_tree::wptree info;
 		info.add(L"type", L"scene");
+		info.add(L"producer-name", name());
 		info.add(L"frame-number", frame_number_.get());
 
 		for (auto& var : variables_)
@@ -539,8 +566,8 @@ struct scene_producer::impl
 	}
 };
 
-scene_producer::scene_producer(int width, int height, const video_format_desc& format_desc)
-	: impl_(new impl(width, height, format_desc))
+scene_producer::scene_producer(std::wstring producer_name, int width, int height, const video_format_desc& format_desc)
+	: impl_(new impl(std::move(producer_name), width, height, format_desc))
 {
 }
 
@@ -558,6 +585,10 @@ layer& scene_producer::create_layer(
 		const spl::shared_ptr<frame_producer>& producer, const std::wstring& name)
 {
 	return impl_->create_layer(producer, 0, 0, name);
+}
+
+void scene_producer::reverse_layers() {
+	impl_->reverse_layers();
 }
 
 binding<int64_t> scene_producer::frame()

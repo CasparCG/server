@@ -55,6 +55,7 @@
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/thread/mutex.hpp>
 
 #include <tbb/atomic.h>
 
@@ -97,7 +98,7 @@ public:
 	template<typename Stream, typename Val>
 	void write(Stream& out, const Val& value)
 	{
-		std::string to_string = boost::lexical_cast<std::string>(value);
+		std::wstring to_string = boost::lexical_cast<std::wstring>(value);
 		int length = static_cast<int>(to_string.size());
 		int read_width;
 
@@ -118,18 +119,24 @@ void my_formatter(bool print_all_characters, const boost::log::record_view& rec,
 	static column_writer severity_column(7);
 	namespace expr = boost::log::expressions;
 
-	append_timestamp(strm);
+	std::wstringstream pre_message_stream;
+	append_timestamp(pre_message_stream);
+	thread_id_column.write(pre_message_stream, boost::log::extract<boost::log::attributes::current_thread_id::value_type>("ThreadID", rec).get().native_id());
+	severity_column.write(pre_message_stream, boost::log::extract<boost::log::trivial::severity_level>("Severity", rec));
 
-	thread_id_column.write(strm, boost::log::extract<boost::log::attributes::current_thread_id::value_type>("ThreadID", rec).get().native_id());
-	severity_column.write(strm, boost::log::extract<boost::log::trivial::severity_level>("Severity", rec));
+	auto pre_message = pre_message_stream.str();
+
+	strm << pre_message;
+
+	auto line_break_replacement = L"\n" + pre_message;
 
 	if (print_all_characters)
 	{
-		strm << rec[expr::message];
+		strm << boost::replace_all_copy(rec[expr::message].get<std::wstring>(), "\n", line_break_replacement);
 	}
 	else
 	{
-		strm << replace_nonprintable_copy(rec[expr::message].get<std::wstring>(), L'?');
+		strm << boost::replace_all_copy(replace_nonprintable_copy(rec[expr::message].get<std::wstring>(), L'?'), L"\n", line_break_replacement);
 	}
 }
 
@@ -145,6 +152,8 @@ void init()
 	stream_backend->auto_flush(true);
 
 	auto stream_sink = boost::make_shared<stream_sink_type>(stream_backend);
+	// Never log calltrace to console. The terminal is too slow, so the log queue will build up faster than consumed.
+	stream_sink->set_filter(category != log_category::calltrace);
 
 	bool print_all_characters = false;
 	stream_sink->set_formatter(boost::bind(&my_formatter<boost::log::wformatting_ostream>, print_all_characters, _1, _2));
@@ -154,17 +163,17 @@ void init()
 
 }
 
-void add_file_sink(const std::wstring& folder)
+void add_file_sink(const std::wstring& file, const boost::log::filter& filter)
 {
 	typedef boost::log::sinks::synchronous_sink<boost::log::sinks::text_file_backend> file_sink_type;
 
 	try
 	{
-		if (!boost::filesystem::is_directory(folder))
+		if (!boost::filesystem::is_directory(boost::filesystem::path(file).parent_path()))
 			CASPAR_THROW_EXCEPTION(directory_not_found());
 
 		auto file_sink = boost::make_shared<file_sink_type>(
-			boost::log::keywords::file_name = (folder + L"caspar_%Y-%m-%d.log"),
+			boost::log::keywords::file_name = (file + L"_%Y-%m-%d.log"),
 			boost::log::keywords::time_based_rotation = boost::log::sinks::file::rotation_at_time_point(0, 0, 0),
 			boost::log::keywords::auto_flush = true,
 			boost::log::keywords::open_mode = std::ios::app
@@ -173,6 +182,7 @@ void add_file_sink(const std::wstring& folder)
 		bool print_all_characters = true;
 
 		file_sink->set_formatter(boost::bind(&my_formatter<boost::log::formatting_ostream>, print_all_characters, _1, _2));
+		file_sink->set_filter(filter);
 		boost::log::core::get()->add_sink(file_sink);
 	}
 	catch (...)
@@ -181,20 +191,119 @@ void add_file_sink(const std::wstring& folder)
 	}
 }
 
+std::shared_ptr<void> add_preformatted_line_sink(std::function<void(std::string line)> formatted_line_sink)
+{
+	class sink_backend : public boost::log::sinks::basic_formatted_sink_backend<char>
+	{
+		std::function<void(std::string line)> formatted_line_sink_;
+	public:
+		sink_backend(std::function<void(std::string line)> formatted_line_sink)
+			: formatted_line_sink_(std::move(formatted_line_sink))
+		{
+		}
+
+		void consume(const boost::log::record_view& rec, const std::string& formatted_message)
+		{
+			try
+			{
+				formatted_line_sink_(formatted_message);
+			}
+			catch (...)
+			{
+				std::cerr << "[sink_backend] Error while consuming formatted message: " << formatted_message << std::endl << std::endl;
+			}
+		}
+	};
+
+	typedef boost::log::sinks::synchronous_sink<sink_backend> sink_type;
+
+	auto sink = boost::make_shared<sink_type>(std::move(formatted_line_sink));
+	bool print_all_characters = true;
+
+	sink->set_formatter(boost::bind(&my_formatter<boost::log::formatting_ostream>, print_all_characters, _1, _2));
+	sink->set_filter(category != log_category::calltrace);
+
+	boost::log::core::get()->add_sink(sink);
+
+	return std::shared_ptr<void>(nullptr, [=](void*)
+	{
+		boost::log::core::get()->remove_sink(sink);
+	});
+}
+
+boost::mutex& get_filter_mutex()
+{
+	static boost::mutex instance;
+
+	return instance;
+}
+
+boost::log::trivial::severity_level& get_level()
+{
+	static boost::log::trivial::severity_level instance;
+
+	return instance;
+}
+
+log_category& get_disabled_categories()
+{
+	static log_category instance = log_category::calltrace;
+
+	return instance;
+}
+
+void set_log_filter()
+{
+	auto severity_filter		= boost::log::trivial::severity >= get_level();
+	auto disabled_categories	= get_disabled_categories();
+
+	boost::log::core::get()->set_filter([=](const boost::log::attribute_value_set& attributes)
+	{
+		return severity_filter(attributes)
+			&& static_cast<int>(disabled_categories & attributes["Channel"].extract<log_category>().get()) == 0;
+	});
+}
+
 void set_log_level(const std::wstring& lvl)
 {
+	boost::lock_guard<boost::mutex> lock(get_filter_mutex());
+
 	if (boost::iequals(lvl, L"trace"))
-		boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::trace);
+		get_level() = boost::log::trivial::trace;
 	else if (boost::iequals(lvl, L"debug"))
-		boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::debug);
+		get_level() = boost::log::trivial::debug;
 	else if (boost::iequals(lvl, L"info"))
-		boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::info);
+		get_level() = boost::log::trivial::info;
 	else if (boost::iequals(lvl, L"warning"))
-		boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::warning);
+		get_level() = boost::log::trivial::warning;
 	else if (boost::iequals(lvl, L"error"))
-		boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::error);
+		get_level() = boost::log::trivial::error;
 	else if (boost::iequals(lvl, L"fatal"))
-		boost::log::core::get()->set_filter(boost::log::trivial::severity >= boost::log::trivial::fatal);
+		get_level() = boost::log::trivial::fatal;
+
+	set_log_filter();
+}
+
+void set_log_category(const std::wstring& cat, bool enabled)
+{
+	log_category category_to_set;
+
+	if (boost::iequals(cat, L"calltrace"))
+		category_to_set = log_category::calltrace;
+	else if (boost::iequals(cat, L"communication"))
+		category_to_set = log_category::communication;
+	else
+		return; // Ignore
+
+	boost::lock_guard<boost::mutex> lock(get_filter_mutex());
+	auto& disabled_categories = get_disabled_categories();
+
+	if (enabled)
+		disabled_categories &= ~category_to_set;
+	else
+		disabled_categories |= category_to_set;
+
+	set_log_filter();
 }
 
 void print_child(

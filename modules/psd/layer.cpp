@@ -30,13 +30,14 @@
 #include <common/log.h>
 
 #include <boost/property_tree/ptree.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include <algorithm>
 
 namespace caspar { namespace psd {
 
-void layer::layer_mask_info::read_mask_data(bigendian_file_input_stream& stream)
+void layer::mask_info::read_mask_data(bigendian_file_input_stream& stream)
 {
 	auto length = stream.read_long();
 	switch(length)
@@ -45,7 +46,7 @@ void layer::layer_mask_info::read_mask_data(bigendian_file_input_stream& stream)
 		break;
 
 	case 20:
-	case 36:	//discard total user mask data
+	case 36:
 		rect_.location.y = stream.read_long();
 		rect_.location.x = stream.read_long();
 		rect_.size.height = stream.read_long() - rect_.location.y;
@@ -57,13 +58,14 @@ void layer::layer_mask_info::read_mask_data(bigendian_file_input_stream& stream)
 		
 		if(length == 36)
 		{
-			stream.discard_bytes(18);	//discard "total user mask" data
-			//flags_ = stream.read_byte();
-			//default_value_ = stream.read_byte();
-			//rect_.location.y = stream.read_long();
-			//rect_.location.x = stream.read_long();
-			//rect_.size.height = stream.read_long() - rect_.location.y;
-			//rect_.size.width = stream.read_long() - rect_.location.x;
+			//we save the information about the total mask in case the vector-mask has an unsupported shape
+			total_mask_.reset(new layer::mask_info);
+			total_mask_->flags_ = stream.read_byte();
+			total_mask_->default_value_ = stream.read_byte();
+			total_mask_->rect_.location.y = stream.read_long();
+			total_mask_->rect_.location.x = stream.read_long();
+			total_mask_->rect_.size.height = stream.read_long() - rect_.location.y;
+			total_mask_->rect_.size.width = stream.read_long() - rect_.location.x;
 		}
 		break;
 
@@ -74,16 +76,92 @@ void layer::layer_mask_info::read_mask_data(bigendian_file_input_stream& stream)
 	};
 }
 
+bool layer::vector_mask_info::populate(int length, bigendian_file_input_stream& stream, int doc_width, int doc_height)
+{
+	std::vector<point<int>> knots;
+	bool smooth_curve = false;
+
+	stream.read_long(); // version
+	this->flags_ = static_cast<std::uint8_t>(stream.read_long()); // flags
+	int path_records = (length - 8) / 26;
+
+	auto position = stream.current_position();
+
+	const int SELECTOR_SIZE = 2;
+	const int PATH_POINT_SIZE = 4 + 4;
+	const int PATH_POINT_RECORD_SIZE = SELECTOR_SIZE + (3 * PATH_POINT_SIZE);
+
+	for (int i = 1; i <= path_records; ++i)
+	{
+		auto selector = stream.read_short();
+		if (selector == 2)	//we only concern ourselves with closed paths 
+		{
+			auto p_y = stream.read_long();
+			auto p_x = stream.read_long();
+			point<int> prev{ static_cast<int>(p_x), static_cast<int>(p_y) };
+
+			auto a_y = stream.read_long();
+			auto a_x = stream.read_long();
+			point<int> anchor{ static_cast<int>(a_x), static_cast<int>(a_y) };
+
+			auto n_y = stream.read_long();
+			auto n_x = stream.read_long();
+			point<int> next{ static_cast<int>(n_x), static_cast<int>(n_y) };
+
+			if (anchor == prev && anchor == next)
+				knots.push_back(anchor);
+			else 
+			{
+				//note that we've got a smooth curve, but continue to iterate through the data
+				smooth_curve = true;
+			}
+		}
+
+		auto offset = PATH_POINT_RECORD_SIZE * i;
+		stream.set_position(position + offset);
+	}
+
+	if (smooth_curve || knots.size() != 4)	//we can't handle smooth-curves yet and we only support quad-gons
+	{
+		rect_.clear();
+		flags_ = static_cast<std::uint8_t>(flags::unsupported | flags::disabled);
+		return false;
+	}
+
+	//the path_points are given in fixed-point 8.24 as a ratio with regards to the width/height of the document. we need to divide by 16777215.0f to get the real ratio.
+	float x_ratio = doc_width / 16777215.0f;
+	float y_ratio = doc_height / 16777215.0f;
+	rect_.clear();
+	knots_.clear();
+
+	//is it an orthogonal rectangle
+	if (knots[0].x == knots[3].x && knots[1].x == knots[2].x && knots[0].y == knots[1].y && knots[2].y == knots[3].y)
+	{
+		rect_.location.x = static_cast<int>(knots[0].x * x_ratio + 0.5f);						//add .5 to get propper rounding when converting to integer
+		rect_.location.y = static_cast<int>(knots[0].y * y_ratio + 0.5f);						//add .5 to get propper rounding when converting to integer
+		rect_.size.width = static_cast<int>(knots[1].x * x_ratio + 0.5f) - rect_.location.x;	//add .5 to get propper rounding when converting to integer
+		rect_.size.height = static_cast<int>(knots[2].y * y_ratio + 0.5f) - rect_.location.y;	//add .5 to get propper rounding when converting to integer
+	}
+	else //it's could be any kind of quad-gon
+	{
+		for (auto& k : knots)
+			knots_.push_back(psd::point<int>{static_cast<int>(k.x * x_ratio + 0.5f), static_cast<int>(k.y * y_ratio + 0.5f)});
+	}
+
+	return true;
+}
+
 struct layer::impl
 {
 	friend class layer;
 
-	impl() : blend_mode_(blend_mode::InvalidBlendMode), link_group_id_(0), opacity_(255), sheet_color_(0), baseClipping_(false), flags_(0), protection_flags_(0), masks_count_(0), text_scale_(1.0f)
+	impl() : blend_mode_(caspar::core::blend_mode::normal), layer_type_(layer_type::content), link_group_id_(0), opacity_(255), sheet_color_(0), baseClipping_(false), flags_(0), protection_flags_(0), masks_count_(0), scale_{ 1.0, 1.0 }, angle_(0), shear_(0), tags_(layer_tag::none)
 	{}
 
 private:
 	std::vector<channel>			channels_;
-	blend_mode						blend_mode_;
+	caspar::core::blend_mode		blend_mode_;
+	layer_type						layer_type_;
 	int								link_group_id_;
 	int								opacity_;
 	int								sheet_color_;
@@ -92,10 +170,12 @@ private:
 	std::uint32_t					protection_flags_;
 	std::wstring					name_;
 	int								masks_count_;
-	double							text_scale_;
+	psd::point<double>				text_pos_;
+	psd::point<double>				scale_;
+	double							angle_;
+	double							shear_;
 
-	rect<int>						vector_mask_;
-	layer::layer_mask_info			mask_;
+	layer::mask_info				mask_;
 
 	rect<int>						bitmap_rect_;
 	image8bit_ptr					bitmap_;
@@ -104,6 +184,8 @@ private:
 	boost::property_tree::wptree	timeline_info_;
 
 	color<std::uint8_t>				solid_color_;
+
+	layer_tag						tags_;
 
 public:
 	void populate(bigendian_file_input_stream& stream, const psd_document& doc)
@@ -141,7 +223,8 @@ public:
 		auto position = stream.current_position();
 		mask_.read_mask_data(stream);
 		read_blending_ranges(stream);
-		name_ = stream.read_pascal_string(4);
+
+		stream.read_pascal_string(4);	//throw this away. We'll read the unicode version of the name later
 
 		//Aditional Layer Information
 		auto end_of_layer_info = position + extras_size;
@@ -179,6 +262,9 @@ public:
 				read_solid_color(stream);
 				break;
 
+			case 'lsct':	//group settings (folders)
+				read_group_settings(stream, length);
+
 			case 'lspf':	//protection settings
 				protection_flags_ = stream.read_long();
 				break;
@@ -187,7 +273,7 @@ public:
 				break;
 
 			case 'luni':
-				name_ = stream.read_unicode_string();
+				set_name_and_tags(stream.read_unicode_string());
 				break;
 
 			case 'TySh':	//type tool object settings
@@ -210,8 +296,9 @@ public:
 			case 'lnk3':	//linked layer
 				break;
 
+			case 'vsms':
 			case 'vmsk':
-				read_vector_mask(length, stream, doc.width(), doc.height());
+				mask_.read_vector_mask_data(length, stream, doc.width(), doc.height());
 				break;
 				
 			case 'tmln':
@@ -230,6 +317,27 @@ public:
 
 		stream.set_position(end_of_chunk);
 	}
+	  
+	void set_name_and_tags(const std::wstring& name) {
+		auto start_bracket = name.find_first_of(L'[');
+		auto end_bracket = name.find_first_of(L']');
+		if (start_bracket == std::wstring::npos && end_bracket == std::wstring::npos) {
+			//no flags
+			name_ = name;
+		}
+		else if (start_bracket != std::wstring::npos && end_bracket > start_bracket) {
+			//we have tags
+			tags_ = string_to_layer_tags(name.substr(start_bracket+1, end_bracket-start_bracket-1));
+			name_ = name.substr(end_bracket+1);
+		}
+		else {
+			//missmatch
+			name_ = name;
+			CASPAR_LOG(warning) << "Mismatching tag-brackets in layer name";
+		}
+
+		boost::trim(name_);
+	}
 
 	void read_solid_color(bigendian_file_input_stream& stream)
 	{
@@ -244,65 +352,24 @@ public:
 		solid_color_.alpha = 255;
 	}
 
-	void read_vector_mask(int length, bigendian_file_input_stream& stream, int doc_width, int doc_height)
+	void read_group_settings(bigendian_file_input_stream& stream, unsigned int length) 
 	{
-		typedef std::pair<int, int> path_point;
+		auto type = stream.read_long();
+		unsigned int sub_type = 0;
 
-		stream.read_long(); // version
-		stream.read_long(); // flags
-		int path_records = (length-8) / 26;
-
-		auto position = stream.current_position();
-
-		std::vector<path_point> knots;
-		
-		const int SELECTOR_SIZE = 2;
-		const int PATH_POINT_SIZE = 4 + 4;
-		const int PATH_POINT_RECORD_SIZE = SELECTOR_SIZE + (3 * PATH_POINT_SIZE);
-
-		for (int i = 1; i <= path_records; ++i)
+		if (length >= 12)
 		{
-			auto selector = stream.read_short();
-			if(selector == 2)	//we only concern ourselves with closed paths 
-			{
-				auto p_y = stream.read_long();
-				auto p_x = stream.read_long();
-				path_point cp_prev(p_x, p_y);
+			auto signature = stream.read_long();
+			if (signature != '8BIM')
+				CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("signature != '8BIM'"));
 
-				auto a_y = stream.read_long();
-				auto a_x = stream.read_long();
-				path_point anchor(a_x, a_y);
-
-				auto n_y = stream.read_long();
-				auto n_x = stream.read_long();
-				path_point cp_next(n_x, n_y);
-
-				if(anchor == cp_prev && anchor == cp_next)
-					knots.push_back(anchor);
-				else
-				{	//we can't handle smooth curves yet
-					CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("we can't handle smooth curves yet"));
-				}
-			}
-
-			auto offset = PATH_POINT_RECORD_SIZE * i;
-			stream.set_position(position + offset);
+			blend_mode_ = int_to_blend_mode(stream.read_long());
+			
+			if (length >= 16)
+				sub_type = stream.read_long();
 		}
 
-		if(knots.size() != 4)	//we only support rectangular vector masks
-			CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("we only support rectangular vector masks"));
-
-		//we only support rectangular vector masks
-		if(!(knots[0].first == knots[3].first && knots[1].first == knots[2].first && knots[0].second == knots[1].second && knots[2].second == knots[3].second))
-			CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("we only support rectangular vector masks"));
-
-		//the path_points are given in fixed-point 8.24 as a ratio with regards to the width/height of the document. we need to divide by 16777215.0f to get the real ratio.
-		float x_ratio = doc_width / 16777215.0f;
-		float y_ratio = doc_height / 16777215.0f;
-		vector_mask_.location.x = static_cast<int>(knots[0].first * x_ratio +0.5f);								//add .5 to get propper rounding when converting to integer
-		vector_mask_.location.y = static_cast<int>(knots[0].second * y_ratio +0.5f);								//add .5 to get propper rounding when converting to integer
-		vector_mask_.size.width = static_cast<int>(knots[1].first * x_ratio +0.5f)	- vector_mask_.location.x;		//add .5 to get propper rounding when converting to integer
-		vector_mask_.size.height = static_cast<int>(knots[2].second * y_ratio +0.5f) - vector_mask_.location.y;	//add .5 to get propper rounding when converting to integer
+		layer_type_ = int_to_layer_type(type, sub_type);
 	}
 
 	void read_metadata(bigendian_file_input_stream& stream, const psd_document& doc)
@@ -333,12 +400,11 @@ public:
 		auto xy = stream.read_double();
 		auto yx = stream.read_double();
 		auto yy = stream.read_double();
-		stream.read_double(); // tx
-		stream.read_double(); // ty
-		if(xx != yy || (xy != 0 && yx != 0))
-			CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("Rotation and non-uniform scaling of dynamic textfields is not supported yet"));
+		auto tx = stream.read_double(); // tx
+		auto ty = stream.read_double(); // ty
 
-		text_scale_ = xx;
+		text_pos_.x = tx;
+		text_pos_.y = ty;
 
 		if(stream.read_short() != 50)	//"text version" should be 50
 			CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("invalid text version"));
@@ -365,10 +431,45 @@ public:
 
 		descriptor warp_descriptor(L"warp");
 		warp_descriptor.populate(stream);
-		stream.read_double(); // w_top
-		stream.read_double();  // w_left
+		stream.read_double(); // w_left
+		stream.read_double();  // w_top
 		stream.read_double();  // w_right
 		stream.read_double();  // w_bottom
+
+
+		//extract scale, angle and shear factor from transformation matrix 
+		const double PI = 3.141592653589793;
+		auto angle = atan2(xy, xx);
+
+		auto c = cos(angle);
+		auto s = sin(angle);
+		auto scale_x = (abs(c) > 0.1) ? xx / c : xy / s;
+
+		if (xx / scale_x < 0) {	//fel kvadrant
+			angle += PI;
+			c = cos(angle);
+			s = sin(angle);
+			scale_x = (abs(c) > 0.1) ? xx / c : xy / s;
+		}
+
+		auto shear_factor = (yx*c + yy*s) / (yy*c - yx * s);
+		auto scale_y = 1.0;
+		if (abs(shear_factor) < 0.0001 || isnan(shear_factor)) {
+			shear_factor = 0;
+			scale_y = (abs(c) > 0.1) ? yy / c : yx / -s;
+		}
+		else {
+			scale_y = yx / (c*shear_factor - s);
+		}
+
+		scale_.x = scale_x;
+		scale_.y = scale_y;
+		angle_ = angle * 180 / PI;
+		shear_ = shear_factor;
+
+		
+
+
 	}
 
 	//TODO: implement
@@ -386,70 +487,60 @@ public:
 	void read_channel_data(bigendian_file_input_stream& stream)
 	{
 		image8bit_ptr bitmap;
-		image8bit_ptr mask;
 
 		bool has_transparency = has_channel(channel_type::transparency);
 	
-		rect<int> clip_rect;
 		if(!bitmap_rect_.empty())
 		{
-			clip_rect = bitmap_rect_;
-
-			if(!vector_mask_.empty())
-				clip_rect = vector_mask_;
-
-			bitmap = std::make_shared<image8bit>(clip_rect.size.width, clip_rect.size.height, 4);
-
+			bitmap = std::make_shared<image8bit>(bitmap_rect_.size.width, bitmap_rect_.size.height, 4);
 			if(!has_transparency)
 				std::memset(bitmap->data(), 255, bitmap->width()*bitmap->height()*bitmap->channel_count());
 		}
 
-		if(masks_count_ > 0 && !mask_.rect_.empty())
-		{
-			mask = std::make_shared<image8bit>(mask_.rect_.size.width, mask_.rect_.size.height, 1);
-		}
-
 		for(auto it = channels_.begin(); it != channels_.end(); ++it)
 		{
-			psd::rect<int> src_rect;
+			auto channel = (*it);
 			image8bit_ptr target;
 			int offset = 0;
 			bool discard_channel = false;
 
 			//determine target bitmap and offset
-			if((*it).id >= 3)
+			if(channel.id >= 3)
 				discard_channel = true;	//discard channels that doesn't contribute to the final image
-			else if((*it).id >= -1)	//BGRA-data
+			else if(channel.id >= -1)	//BGRA-data
 			{
 				target = bitmap;
-				offset = ((*it).id >= 0) ? 2 - (*it).id : 3;
-				src_rect = bitmap_rect_;
+				offset = (channel.id >= 0) ? 2 - channel.id : 3;
 			}
-			else if(mask)	//mask
+			else	//mask
 			{
-				if((*it).id == -3)	//discard the "total user mask"
-					discard_channel = true;
-				else
+				offset = 0;
+				if (channel.id == -2)
 				{
-					target = mask;
+					mask_.create_bitmap();
+					target = mask_.bitmap_;
+				}
+				else if (channel.id == -3)	//total_mask
+				{
+					mask_.total_mask_->create_bitmap();
+					target = mask_.total_mask_->bitmap_;
 					offset = 0;
-					src_rect = mask_.rect_;
 				}
 			}
 
-			if(!target || src_rect.empty())
+			if(!target)
 				discard_channel = true;
 
-			auto end_of_data = stream.current_position() + (*it).data_length;
+			auto end_of_data = stream.current_position() + channel.data_length;
 			if(!discard_channel)
 			{
 				auto encoding = stream.read_short();
 				if(target)
 				{
 					if(encoding == 0)
-						read_raw_image_data(stream, (*it).data_length-2, target, offset);
+						read_raw_image_data(stream, channel.data_length-2, target, offset);
 					else if(encoding == 1)
-						read_rle_image_data(stream, src_rect, (target == bitmap) ? clip_rect : mask_.rect_, target, offset);
+						read_rle_image_data(stream, target, offset);
 					else
 						CASPAR_THROW_EXCEPTION(psd_file_format_exception() << msg_info("Unhandled image data encoding: " + boost::lexical_cast<std::string>(encoding)));
 				}
@@ -464,8 +555,6 @@ public:
 		}
 
 		bitmap_ = bitmap;
-		bitmap_rect_ = clip_rect;
-		mask_.bitmap_ = mask;
 	}
 
 	void read_raw_image_data(bigendian_file_input_stream& stream, int data_length, image8bit_ptr target, int offset)
@@ -486,14 +575,11 @@ public:
 		}
 	}
 
-	void read_rle_image_data(bigendian_file_input_stream& stream, const rect<int>&src_rect, const rect<int>&clip_rect, image8bit_ptr target, int offset)
+	void read_rle_image_data(bigendian_file_input_stream& stream, image8bit_ptr target, int offset)
 	{
-		auto width = src_rect.size.width;
-		auto height = src_rect.size.height;
+		auto width = target->width();
+		auto height = target->height();
 		auto stride = target->channel_count();
-
-		int offset_x = clip_rect.location.x - src_rect.location.x;
-		int offset_y = clip_rect.location.y - src_rect.location.y;
 
 		std::vector<int> scanline_lengths;
 		scanline_lengths.reserve(height);
@@ -507,9 +593,6 @@ public:
 
 		for(int scanlineIndex=0; scanlineIndex < height; ++scanlineIndex)
 		{
-			if(scanlineIndex >= target->height()+offset_y)
-				break;
-
 			int colIndex = 0;
 
 			do
@@ -539,11 +622,10 @@ public:
 			while(colIndex < width);
 
 			//use line to populate target
-			if(scanlineIndex >= offset_y)
-				for(int index = offset_x; index < target->width(); ++index)
-				{
-					target_data[((scanlineIndex-offset_y)*target->width()+index-offset_x) * stride + offset] = line[index];
-				}
+			for(int index = 0; index < width; ++index)
+			{
+				target_data[(scanlineIndex*width+index) * stride + offset] = line[index];
+			}
 		}
 	}
 };
@@ -555,12 +637,19 @@ void layer::read_channel_data(bigendian_file_input_stream& stream) { impl_->read
 
 const std::wstring& layer::name() const { return impl_->name_; }
 int layer::opacity() const { return impl_->opacity_; }
+caspar::core::blend_mode layer::blend_mode() const { return impl_->blend_mode_; }
 int layer::sheet_color() const { return impl_->sheet_color_; }
 
 bool layer::is_visible() { return (impl_->flags_ & 2) == 0; }	//the (PSD file-format) documentation is is saying the opposite but what the heck
 bool layer::is_position_protected() { return (impl_->protection_flags_& 4) == 4; }
 
-double layer::text_scale() const { return impl_->text_scale_; }
+const layer::mask_info& layer::mask() const { return impl_->mask_; }
+
+const psd::point<double>& layer::text_pos() const { return impl_->text_pos_; }
+const psd::point<double>& layer::scale() const { return impl_->scale_; }
+const double layer::angle() const { return impl_->angle_; }
+const double layer::shear() const { return impl_->shear_; }
+
 bool layer::is_text() const { return !impl_->text_layer_info_.empty(); }
 const boost::property_tree::wptree& layer::text_data() const { return impl_->text_layer_info_; }
 
@@ -571,10 +660,21 @@ bool layer::is_solid() const { return impl_->solid_color_.alpha != 0; }
 color<std::uint8_t> layer::solid_color() const { return impl_->solid_color_; }
 
 const point<int>& layer::location() const { return impl_->bitmap_rect_.location; }
+const size<int>& layer::size() const { return impl_->bitmap_rect_.size; }
 const image8bit_ptr& layer::bitmap() const { return impl_->bitmap_; }
 
+layer_type layer::group_mode() const { return impl_->layer_type_; }
 int layer::link_group_id() const { return impl_->link_group_id_; }
 void layer::set_link_group_id(int id) { impl_->link_group_id_ = id; }
+
+bool layer::is_explicit_dynamic() const { return (impl_->tags_ & layer_tag::explicit_dynamic) == layer_tag::explicit_dynamic; }
+bool layer::is_static() const { return (impl_->tags_ & layer_tag::rasterized) == layer_tag::rasterized; }
+bool layer::is_movable() const { return (impl_->tags_ & layer_tag::moveable) == layer_tag::moveable; }
+bool layer::is_resizable() const { return (impl_->tags_ & layer_tag::resizable) == layer_tag::resizable; }
+bool layer::is_placeholder() const { return (impl_->tags_ & layer_tag::placeholder) == layer_tag::placeholder; }
+bool layer::is_cornerpin() const { return (impl_->tags_ & layer_tag::cornerpin) == layer_tag::cornerpin; }
+
+layer_tag layer::tags() const { return impl_->tags_; }
 
 }	//namespace psd
 }	//namespace caspar

@@ -60,12 +60,14 @@ include_directories(${BOOST_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_PATH})
 include_directories(${FFMPEG_INCLUDE_PATH})
 include_directories(${RXCPP_INCLUDE_PATH})
+include_directories(${ASMLIB_INCLUDE_PATH})
 
 set_target_properties(decklink PROPERTIES FOLDER modules)
 source_group(sources ./*)
 source_group(sources\\consumer consumer/*)
 source_group(sources\\interop interop/*)
 source_group(sources\\producer producer/*)
+source_group(sources\\util util/*)
 
 if (MSVC)
 	target_link_libraries(decklink

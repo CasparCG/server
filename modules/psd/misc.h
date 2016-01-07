@@ -22,9 +22,12 @@
 #pragma once
 
 #include <common/except.h>
+#include <common/enum_class.h>
+#include <core/mixer/image/blend_modes.h>
 
 #include <string>
 #include <cstdint>
+#include <vector>
 
 namespace caspar { namespace psd {
 	
@@ -35,6 +38,12 @@ struct point
 	point(T x1, T y1) : x(x1), y(y1) {}
 	T x;
 	T y;
+
+	void clear() { x = 0; y = 0; }
+	
+	bool operator==(const point& rhs) {
+		return x == rhs.x && y == rhs.y;
+	}
 };
 
 template<typename T>
@@ -58,6 +67,8 @@ struct size
 	size(T w, T h) : width(w), height(h) {}
 	T width;
 	T height;
+
+	void clear() { width = 0; height = 0; }
 };
 
 template<typename T>
@@ -67,6 +78,7 @@ struct rect
 	psd::size<T>	size;
 
 	bool empty() const { return size.width == 0 || size.height == 0; }
+	void clear() { location.clear(); size.clear(); }
 };
 
 struct psd_file_format_exception : virtual caspar_exception {};
@@ -81,30 +93,17 @@ enum class channel_type
 	color_blue = 2
 };
 
-enum class blend_mode
+enum class layer_type
 {
-	InvalidBlendMode = -1,
-	Normal = 'norm',
-	Darken = 'dark',
-	Lighten = 'lite',
-	Hue = 'hue ',
-	Saturation = 'sat ',
-	Color = 'colr',
-	Luminosity = 'lum ',
-	Multiply = 'mul ',
-	Screen = 'scrn',
-	Dissolve = 'diss',
-	Overlay = 'over',
-	HardLight = 'hLit',
-	SoftLight = 'sLit',
-	Difference = 'diff',
-	Exclusion = 'smud',
-	ColorDodge = 'div ',
-	ColorBurn = 'idiv'
+	content = 0,
+	group,
+	timeline_group,
+	group_delimiter
 };
+layer_type int_to_layer_type(std::uint32_t x, std::uint32_t y);
+std::wstring layer_type_to_string(layer_type b);
 
-blend_mode int_to_blend_mode(std::uint32_t x);
-std::wstring blend_mode_to_string(blend_mode b);
+caspar::core::blend_mode int_to_blend_mode(std::uint32_t x);
 
 enum class color_mode
 {
@@ -121,6 +120,26 @@ enum class color_mode
 
 color_mode int_to_color_mode(std::uint16_t x);
 std::wstring color_mode_to_string(color_mode c);
+
+
+enum class layer_tag : int {
+	none = 0,
+	placeholder = 1,
+	explicit_dynamic = 2,
+	moveable = 4,
+	resizable = 8,
+	rasterized = 16,
+	cornerpin = 32//,
+	//all = 63
+};
+ENUM_ENABLE_BITWISE(layer_tag);
+
+/*inline layer_tag operator ~ (layer_tag rhs)
+{
+	return (layer_tag)(static_cast<int>(layer_tag::all) ^ static_cast<int>(rhs));
+}*/
+
+layer_tag string_to_layer_tags(const std::wstring& str);
 
 }	//namespace psd
 }	//namespace caspar

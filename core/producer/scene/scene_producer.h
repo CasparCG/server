@@ -111,7 +111,7 @@ mark_action get_mark_action(const std::wstring& name);
 class scene_producer : public frame_producer_base
 {
 public:
-	scene_producer(int width, int height, const video_format_desc& format_desc);
+	scene_producer(std::wstring producer_name, int width, int height, const video_format_desc& format_desc);
 	~scene_producer();
 
 	draw_frame receive_impl() override;
@@ -128,6 +128,8 @@ public:
 			const spl::shared_ptr<frame_producer>& producer, int x, int y, const std::wstring& name);
 	layer& create_layer(
 			const spl::shared_ptr<frame_producer>& producer, const std::wstring& name);
+	void reverse_layers();
+
 	binding<int64_t> frame();
 	binding<double> speed();
 
