@@ -185,13 +185,17 @@ public:
 	{
 		ref_count_ = 0;
 
+		bool dma_transfer_from_gl_buffer_impossible;
+
 #if !defined(_MSC_VER)
-		// On Linux Decklink cannot DMA transfer from memory returned by glMapBuffer
-		needs_to_copy_ = will_attempt_dma;
+		// On Linux Decklink cannot DMA transfer from memory returned by glMapBuffer (at least on nvidia)
+		dma_transfer_from_gl_buffer_impossible = true;
 #else
-		// On Windows it does
-		needs_to_copy_ = false;
+		// On Windows it is possible.
+		dma_transfer_from_gl_buffer_impossible = false;
 #endif
+
+		needs_to_copy_ = will_attempt_dma && dma_transfer_from_gl_buffer_impossible;
 	}
 	
 	// IUnknown
