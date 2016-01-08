@@ -29,6 +29,7 @@ namespace caspar { namespace reroute {
 
 spl::shared_ptr<core::frame_producer> create_channel_producer(
 		const core::frame_producer_dependencies& dependencies,
-		const spl::shared_ptr<core::video_channel>& channel);
+		const spl::shared_ptr<core::video_channel>& channel,
+		int frames_delay);
 
 }}
