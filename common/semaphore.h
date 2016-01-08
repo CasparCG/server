@@ -126,6 +126,44 @@ public:
 	}
 
 	/**
+	 * Acquire a number of permits. Will block until the given number of
+	 * permits has been acquired if not enough permits are currently available
+	 * or the timeout has passed.
+	 *
+	 * @param permits The number of permits to acquire.
+	 * @param timeout The timeout (will be used for each permit).
+	 *
+	 * @return whether successfully acquired within timeout or not.
+	 */
+	template <typename Rep, typename Period>
+	bool try_acquire(unsigned int permits, const boost::chrono::duration<Rep, Period>& timeout)
+	{
+		boost::unique_lock<boost::mutex> lock(mutex_);
+		auto num_acquired = 0u;
+
+		while (true)
+		{
+			auto num_wanted = permits - num_acquired;
+			auto to_drain = std::min(num_wanted, permits_);
+
+			permits_ -= to_drain;
+			num_acquired += to_drain;
+
+			if (num_acquired == permits)
+				break;
+
+			if (permits_available_.wait_for(lock, timeout) == boost::cv_status::timeout)
+			{
+				lock.unlock();
+				release(num_acquired);
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
 	 * Acquire one permits if permits are currently available. Does not block
 	 * until one is available, but returns immediately if unavailable.
 	 *
