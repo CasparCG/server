@@ -43,8 +43,9 @@
 
 #include <common/except.h>
 #include <common/memory.h>
-#include <common/future.h>
 #include <common/memcpy.h>
+#include <common/semaphore.h>
+#include <common/future.h>
 
 #include <tbb/concurrent_queue.h>
 
@@ -64,19 +65,17 @@ class channel_consumer : public core::frame_consumer
 	int													consumer_index_;
 	tbb::atomic<bool>									is_running_;
 	tbb::atomic<int64_t>								current_age_;
-	std::promise<void>									first_frame_promise_;
-	std::future<void>									first_frame_available_;
-	bool												first_frame_reported_;
+	semaphore											frames_available_ { 0 };
+	int													frames_delay_;
 
 public:
-	channel_consumer()
+	channel_consumer(int frames_delay)
 		: consumer_index_(next_consumer_index())
-		, first_frame_available_(first_frame_promise_.get_future())
-		, first_frame_reported_(false)
+		, frames_delay_(frames_delay)
 	{
 		is_running_ = true;
 		current_age_ = 0;
-		frame_buffer_.set_capacity(3);
+		frame_buffer_.set_capacity(3 + frames_delay);
 	}
 
 	static int next_consumer_index()
@@ -102,11 +101,8 @@ public:
 	{
 		bool pushed = frame_buffer_.try_push(frame);
 
-		if (pushed && !first_frame_reported_)
-		{
-			first_frame_promise_.set_value();
-			first_frame_reported_ = true;
-		}
+		if (pushed)
+			frames_available_.release();
 
 		return make_ready_future(is_running_.load());
 	}
@@ -178,7 +174,7 @@ public:
 
 	void block_until_first_frame_available()
 	{
-		if (first_frame_available_.wait_for(std::chrono::seconds(2)) == std::future_status::timeout)
+		if (!frames_available_.try_acquire(1 + frames_delay_, boost::chrono::seconds(2)))
 			CASPAR_LOG(warning)
 					<< print() << L" Timed out while waiting for first frame";
 	}
@@ -215,9 +211,10 @@ class channel_producer : public core::frame_producer_base
 	uint64_t									frame_number_;
 
 public:
-	explicit channel_producer(const core::frame_producer_dependencies& dependecies, const spl::shared_ptr<core::video_channel>& channel) 
+	explicit channel_producer(const core::frame_producer_dependencies& dependecies, const spl::shared_ptr<core::video_channel>& channel, int frames_delay)
 		: frame_factory_(dependecies.frame_factory)
 		, output_format_desc_(dependecies.format_desc)
+		, consumer_(spl::make_shared<channel_consumer>(frames_delay))
 		, frame_number_(0)
 	{
 		pixel_constraints_.width.set(output_format_desc_.width);
@@ -311,9 +308,10 @@ public:
 
 spl::shared_ptr<core::frame_producer> create_channel_producer(
 		const core::frame_producer_dependencies& dependencies,
-		const spl::shared_ptr<core::video_channel>& channel)
+		const spl::shared_ptr<core::video_channel>& channel,
+		int frames_delay)
 {
-	return spl::make_shared<channel_producer>(dependencies, channel);
+	return spl::make_shared<channel_producer>(dependencies, channel, frames_delay);
 }
 
 }}

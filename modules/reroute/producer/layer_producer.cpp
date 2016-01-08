@@ -32,7 +32,7 @@
 #include <core/producer/stage.h>
 
 #include <common/except.h>
-#include <common/future.h>
+#include <common/semaphore.h>
 
 #include <boost/format.hpp>
 
@@ -43,16 +43,14 @@ namespace caspar { namespace reroute {
 class layer_consumer : public core::write_frame_consumer
 {	
 	tbb::concurrent_bounded_queue<core::draw_frame>	frame_buffer_;
-	std::promise<void>								first_frame_promise_;
-	std::future<void>								first_frame_available_;
-	bool											first_frame_reported_;
+	semaphore										frames_available_ { 0 };
+	int												frames_delay_;
 
 public:
-	layer_consumer()
-		: first_frame_available_(first_frame_promise_.get_future())
-		, first_frame_reported_(false)
+	layer_consumer(int frames_delay)
+		: frames_delay_(frames_delay)
 	{
-		frame_buffer_.set_capacity(2);
+		frame_buffer_.set_capacity(2 + frames_delay);
 	}
 
 	~layer_consumer()
@@ -65,11 +63,8 @@ public:
 	{
 		bool pushed = frame_buffer_.try_push(src_frame);
 
-		if (pushed && !first_frame_reported_)
-		{
-			first_frame_promise_.set_value();
-			first_frame_reported_ = true;
-		}
+		if (pushed)
+			frames_available_.release();
 	}
 
 	std::wstring print() const override
@@ -89,7 +84,7 @@ public:
 
 	void block_until_first_frame_available()
 	{
-		if (first_frame_available_.wait_for(std::chrono::seconds(2)) == std::future_status::timeout)
+		if (!frames_available_.try_acquire(1 + frames_delay_, boost::chrono::seconds(2)))
 			CASPAR_LOG(warning)
 					<< print() << L" Timed out while waiting for first frame";
 	}
@@ -109,8 +104,9 @@ class layer_producer : public core::frame_producer_base
 	core::constraints							pixel_constraints_;
 
 public:
-	explicit layer_producer(const spl::shared_ptr<core::video_channel>& channel, int layer) 
+	explicit layer_producer(const spl::shared_ptr<core::video_channel>& channel, int layer, int frames_delay)
 		: layer_(layer)
+		, consumer_(spl::make_shared<layer_consumer>(frames_delay))
 		, channel_(channel)
 		, last_frame_(core::draw_frame::empty())
 		, frame_number_(0)
@@ -168,9 +164,9 @@ public:
 	}
 };
 
-spl::shared_ptr<core::frame_producer> create_layer_producer(const spl::shared_ptr<core::video_channel>& channel, int layer)
+spl::shared_ptr<core::frame_producer> create_layer_producer(const spl::shared_ptr<core::video_channel>& channel, int layer, int frames_delay)
 {
-	return spl::make_shared<layer_producer>(channel, layer);
+	return spl::make_shared<layer_producer>(channel, layer, frames_delay);
 }
 
 }}
