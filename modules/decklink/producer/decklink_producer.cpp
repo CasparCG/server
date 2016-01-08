@@ -145,7 +145,8 @@ public:
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 		
-		auto display_mode = get_display_mode(input_, in_format_desc.format, bmdFormat8BitYUV, bmdVideoInputFlagDefault);
+		bool will_attempt_dma;
+		auto display_mode = get_display_mode(input_, in_format_desc.format, bmdFormat8BitYUV, bmdVideoInputFlagDefault, will_attempt_dma);
 		
 		// NOTE: bmdFormat8BitARGB is currently not supported by any decklink card. (2011-05-08)
 		if(FAILED(input_->EnableVideoInput(display_mode, bmdFormat8BitYUV, 0))) 
