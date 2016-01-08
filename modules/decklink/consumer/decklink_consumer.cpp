@@ -175,14 +175,23 @@ class decklink_frame : public IDeckLinkVideoFrame
 	const core::video_format_desc					format_desc_;
 
 	const bool										key_only_;
+	bool											needs_to_copy_;
 	cache_aligned_vector<no_init_proxy<uint8_t>>	data_;
 public:
-	decklink_frame(core::const_frame frame, const core::video_format_desc& format_desc, bool key_only)
+	decklink_frame(core::const_frame frame, const core::video_format_desc& format_desc, bool key_only, bool will_attempt_dma)
 		: frame_(frame)
 		, format_desc_(format_desc)
 		, key_only_(key_only)
 	{
 		ref_count_ = 0;
+
+#if !defined(_MSC_VER)
+		// On Linux Decklink cannot DMA transfer from memory returned by glMapBuffer
+		needs_to_copy_ = will_attempt_dma;
+#else
+		// On Windows it does
+		needs_to_copy_ = false;
+#endif
 	}
 	
 	// IUnknown
@@ -234,12 +243,12 @@ public:
 			{
 				*buffer = const_cast<uint8_t*>(frame_.image_data().begin());
 
-#if !defined(_MSC_VER)
-				// On Linux Decklink cannot DMA transfer from memory returned by glMapBuffer
-				data_.resize(frame_.image_data().size());
-				fast_memcpy(data_.data(), *buffer, frame_.image_data().size());
-				*buffer = data_.data();
-#endif
+				if (needs_to_copy_)
+				{
+					data_.resize(frame_.image_data().size());
+					fast_memcpy(data_.data(), *buffer, frame_.image_data().size());
+					*buffer = data_.data();
+				}
 			}
 		}
 		catch(...)
@@ -354,6 +363,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	tbb::atomic<bool>									is_running_;
 		
 	const std::wstring									model_name_				= get_model_name(decklink_);
+	bool												will_attempt_dma_;
 	const core::video_format_desc						format_desc_;
 	const core::audio_channel_layout					in_channel_layout_;
 	const core::audio_channel_layout					out_channel_layout_		= config_.get_adjusted_layout(in_channel_layout_);
@@ -418,7 +428,7 @@ public:
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 		
-		enable_video(get_display_mode(output_, format_desc_.format, bmdFormat8BitBGRA, bmdVideoOutputFlagDefault));
+		enable_video(get_display_mode(output_, format_desc_.format, bmdFormat8BitBGRA, bmdVideoOutputFlagDefault, will_attempt_dma_));
 				
 		if(config.embedded_audio)
 			enable_audio();
@@ -611,12 +621,12 @@ public:
 	{
 		if (key_context_)
 		{
-			auto key_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(frame, format_desc_, true));
+			auto key_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(frame, format_desc_, true, will_attempt_dma_));
 			if (FAILED(key_context_->output_->ScheduleVideoFrame(get_raw(key_frame), video_scheduled_, format_desc_.duration, format_desc_.time_scale)))
 				CASPAR_LOG(error) << print() << L" Failed to schedule key video.";
 		}
 
-		auto fill_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(frame, format_desc_, config_.key_only));
+		auto fill_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(frame, format_desc_, config_.key_only, will_attempt_dma_));
 		if (FAILED(output_->ScheduleVideoFrame(get_raw(fill_frame), video_scheduled_, format_desc_.duration, format_desc_.time_scale)))
 			CASPAR_LOG(error) << print() << L" Failed to schedule fill video.";
 
