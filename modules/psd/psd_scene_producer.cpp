@@ -283,7 +283,7 @@ void create_timelines(
 	auto start_frame = get_frame_number(format_desc, start);
 	auto end_frame = get_frame_number(format_desc, end);
 
-	layer.hidden = scene->frame() < start_frame || scene->frame() > end_frame;
+	layer.hidden = scene->timeline_frame() < start_frame || scene->timeline_frame() > end_frame;
 
 	auto tracklist = timeline.get_child_optional(L"trackList");
 
