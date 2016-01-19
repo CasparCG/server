@@ -130,7 +130,7 @@ public:
 			const spl::shared_ptr<frame_producer>& producer, const std::wstring& name);
 	void reverse_layers();
 
-	binding<int64_t> frame();
+	binding<int64_t> timeline_frame();
 	binding<double> speed();
 
 	template<typename T> binding<T>& create_variable(

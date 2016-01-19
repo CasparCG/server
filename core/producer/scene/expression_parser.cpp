@@ -118,7 +118,7 @@ boost::any create_animate_function(const std::vector<boost::any>& params, const 
 			<< msg_info(L"animate() function requires three parameters: to_animate, duration, tweener"));
 
 	auto to_animate		= require<double>(params.at(0));
-	auto frame_counter	= var_repo(L"frame").as<int64_t>().as<double>();
+	auto frame_counter	= var_repo(L"frame").as<double>();
 	auto duration		= require<double>(params.at(1));
 	auto tw				= require<std::wstring>(params.at(2)).transformed([](const std::wstring& s) { return tweener(s); });
 
