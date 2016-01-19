@@ -47,7 +47,7 @@ TEST(ParamTest, GetDefaultValue)
 
 TEST(ParamTest, InvalidLexicalCast)
 {
-	EXPECT_THROW(get_param<bool>(L"param2", params), invalid_argument);
+	EXPECT_THROW(get_param<bool>(L"param2", params), user_error);
 }
 
 }
