@@ -206,26 +206,29 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 		}
 	}
 
-	for (auto& elem : root | witerate_children(L"scene.timelines") | welement_context_iteration)
+	if (root.get_child_optional(L"scene.timelines"))
 	{
-		ptree_verify_element_name(elem, L"timeline");
-
-		auto& variable = scene->get_variable(ptree_get<std::wstring>(elem.second, L"<xmlattr>.variable"));
-
-		for (auto& k : elem.second)
+		for (auto& elem : root | witerate_children(L"scene.timelines") | welement_context_iteration)
 		{
-			if (k.first == L"<xmlattr>")
-				continue;
+			ptree_verify_element_name(elem, L"timeline");
 
-			ptree_verify_element_name(k, L"keyframe");
+			auto& variable = scene->get_variable(ptree_get<std::wstring>(elem.second, L"<xmlattr>.variable"));
 
-			auto easing	= k.second.get(L"<xmlattr>.easing", L"");
-			auto at		= ptree_get<int64_t>(k.second, L"<xmlattr>.at");
+			for (auto& k : elem.second)
+			{
+				if (k.first == L"<xmlattr>")
+					continue;
 
-			if (variable.is<double>())
-				scene->add_keyframe(variable.as<double>(), ptree_get_value<double>(k.second), at, easing);
-			else if (variable.is<int>())
-				scene->add_keyframe(variable.as<int>(), ptree_get_value<int>(k.second), at, easing);
+				ptree_verify_element_name(k, L"keyframe");
+
+				auto easing = k.second.get(L"<xmlattr>.easing", L"");
+				auto at = ptree_get<int64_t>(k.second, L"<xmlattr>.at");
+
+				if (variable.is<double>())
+					scene->add_keyframe(variable.as<double>(), ptree_get_value<double>(k.second), at, easing);
+				else if (variable.is<int>())
+					scene->add_keyframe(variable.as<int>(), ptree_get_value<int>(k.second), at, easing);
+			}
 		}
 	}
 

@@ -123,7 +123,8 @@ struct scene_producer::impl
 	video_format_desc										format_desc_;
 	std::list<layer>										layers_;
 	interaction_aggregator									aggregator_;
-	binding<int64_t>										frame_number_;
+	binding<double>											frame_number_;
+	binding<int64_t>										timeline_frame_number_;
 	binding<double>											speed_;
 	mutable tbb::atomic<int64_t>							m_x_;
 	mutable tbb::atomic<int64_t>							m_y_;
@@ -149,9 +150,13 @@ struct scene_producer::impl
 		store_variable(L"scene_speed", speed_variable);
 		speed_ = speed_variable->value();
 		
-		auto frame_variable = std::make_shared<core::variable_impl<int64_t>>(L"-1", true, -1);
+		auto frame_variable = std::make_shared<core::variable_impl<double>>(L"-1", true, -1);
 		store_variable(L"frame", frame_variable);
 		frame_number_ = frame_variable->value();
+
+		auto timeline_frame_variable = std::make_shared<core::variable_impl<int64_t>>(L"-1", false, -1);
+		store_variable(L"timeline_frame", timeline_frame_variable);
+		timeline_frame_number_ = timeline_frame_variable->value();
 
 		auto mouse_x_variable = std::make_shared<core::variable_impl<int64_t>>(L"0", false, 0);
 		auto mouse_y_variable = std::make_shared<core::variable_impl<int64_t>>(L"0", false, 0);
@@ -212,9 +217,9 @@ struct scene_producer::impl
 		return variable_names_;
 	}
 
-	binding<int64_t> frame()
+	binding<int64_t> timeline_frame()
 	{
-		return frame_number_;
+		return timeline_frame_number_;
 	}
 
 	frame_transform get_transform(const layer& layer) const
@@ -329,8 +334,8 @@ struct scene_producer::impl
 		if (std::abs(frame_fraction_) >= 1.0)
 		{
 			int64_t delta = static_cast<int64_t>(frame_fraction_);
-			auto previous_frame = frame_number_.get();
-			auto next_frame = frame_number_.get() + delta;
+			auto previous_frame = timeline_frame_number_.get();
+			auto next_frame = timeline_frame_number_.get() + delta;
 			auto marker = find_first_stop_or_jump_or_remove(previous_frame + 1, next_frame);
 
 			if (marker && marker->second.action == mark_action::remove)
@@ -341,7 +346,7 @@ struct scene_producer::impl
 			{
 				if (marker->second.action == mark_action::stop)
 				{
-					frame_number_.set(marker->first);
+					timeline_frame_number_.set(marker->first);
 					frame_fraction_ = 0.0;
 					paused_ = true;
 				}
@@ -352,7 +357,7 @@ struct scene_producer::impl
 			}
 			else
 			{
-				frame_number_.set(next_frame);
+				timeline_frame_number_.set(next_frame);
 				frame_fraction_ -= delta;
 			}
 
@@ -365,14 +370,16 @@ struct scene_producer::impl
 		if (removed_)
 			return draw_frame::empty();
 
+		mouse_x_.set(m_x_);
+		mouse_y_.set(m_y_);
+
 		if (!paused_)
 			advance();
 
-		for (auto& timeline : timelines_)
-			timeline.second.on_frame(frame_number_.get());
+		frame_number_.set(frame_number_.get() + speed_.get());
 
-		mouse_x_.set(m_x_);
-		mouse_y_.set(m_y_);
+		for (auto& timeline : timelines_)
+			timeline.second.on_frame(timeline_frame_number_.get());
 
 		std::vector<draw_frame> frames;
 
@@ -470,11 +477,11 @@ struct scene_producer::impl
 
 	void next()
 	{
-		auto marker = find_first_start(frame_number_.get() + 1);
+		auto marker = find_first_start(timeline_frame_number_.get() + 1);
 
 		if (marker)
 		{
-			frame_number_.set(marker->first - 1);
+			timeline_frame_number_.set(marker->first - 1);
 			frame_fraction_ = 0.0;
 			paused_ = false;
 			going_to_mark_ = true;
@@ -491,7 +498,7 @@ struct scene_producer::impl
 		{
 			if (marker.second.label_argument == marker_name && marker.second.action == mark_action::start)
 			{
-				frame_number_.set(marker.first + offset);
+				timeline_frame_number_.set(marker.first + offset);
 				frame_fraction_ = 0.0;
 				paused_ = false;
 				going_to_mark_ = true;
@@ -502,7 +509,7 @@ struct scene_producer::impl
 
 		if (marker_name == L"intro")
 		{
-			frame_number_.set(offset);
+			timeline_frame_number_.set(offset);
 			frame_fraction_ = 0.0;
 			paused_ = false;
 			going_to_mark_ = true;
@@ -531,6 +538,7 @@ struct scene_producer::impl
 		info.add(L"type", L"scene");
 		info.add(L"producer-name", name());
 		info.add(L"frame-number", frame_number_.get());
+		info.add(L"timeline-frame-number", timeline_frame_number_.get());
 
 		for (auto& var : variables_)
 		{
@@ -591,9 +599,9 @@ void scene_producer::reverse_layers() {
 	impl_->reverse_layers();
 }
 
-binding<int64_t> scene_producer::frame()
+binding<int64_t> scene_producer::timeline_frame()
 {
-	return impl_->frame();
+	return impl_->timeline_frame();
 }
 
 draw_frame scene_producer::receive_impl()
