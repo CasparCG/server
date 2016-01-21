@@ -1,4 +1,4 @@
-// Copyright (c) 2014 Marshall A. Greenblatt. All rights reserved.
+// Copyright (c) 2015 Marshall A. Greenblatt. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -101,7 +101,8 @@ typedef struct _cef_zip_reader_t {
   ///
   // Returns the last modified timestamp for the file.
   ///
-  time_t (CEF_CALLBACK *get_file_last_modified)(struct _cef_zip_reader_t* self);
+  cef_time_t (CEF_CALLBACK *get_file_last_modified)(
+      struct _cef_zip_reader_t* self);
 
   ///
   // Opens the file for reading of uncompressed data. A read password may

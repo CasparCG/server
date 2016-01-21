@@ -1,4 +1,4 @@
-// Copyright (c) 2014 Marshall A. Greenblatt. All rights reserved.
+// Copyright (c) 2015 Marshall A. Greenblatt. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -174,6 +174,13 @@ CEF_EXPORT void cef_quit_message_loop();
 // modal message loop. Set to false (0) after exiting the modal message loop.
 ///
 CEF_EXPORT void cef_set_osmodal_loop(int osModalLoop);
+
+///
+// Call during process startup to enable High-DPI support on Windows 7 or newer.
+// Older versions of Windows should be left DPI-unaware because they do not
+// support DirectWrite and GDI fonts are kerned very badly.
+///
+CEF_EXPORT void cef_enable_highdpi_support();
 
 #ifdef __cplusplus
 }

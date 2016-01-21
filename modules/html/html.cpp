@@ -185,6 +185,15 @@ public:
 		contexts_.clear();
 	}
 
+	void OnBeforeCommandLineProcessing(
+		const CefString& process_type,
+		CefRefPtr<CefCommandLine> command_line) override
+	{
+		command_line->AppendSwitch("enable-gpu");
+		command_line->AppendSwitch("enable-webgl");
+		//command_line->AppendSwitch("ignore-gpu-blacklist");
+	}
+
 	bool OnProcessMessageReceived(
 			CefRefPtr<CefBrowser> browser,
 			CefProcessId source_process,
@@ -233,8 +242,9 @@ void init(core::module_dependencies dependencies)
 	g_cef_executor->invoke([&]
 	{
 		CefSettings settings;
+		settings.command_line_args_disabled = false;
 		settings.no_sandbox = true;
-		//settings.windowless_rendering_enabled = true;
+		settings.windowless_rendering_enabled = true;
 		CefInitialize(main_args, settings, nullptr, nullptr);
 	});
 	g_cef_executor->begin_invoke([&]
