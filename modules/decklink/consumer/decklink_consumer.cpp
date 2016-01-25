@@ -120,7 +120,7 @@ struct configuration
 };
 
 void set_latency(
-		const com_iface_ptr<IDeckLinkConfiguration>& config,
+		const com_iface_ptr<IDeckLinkConfiguration_v10_2>& config,
 		configuration::latency_t latency,
 		const std::wstring& print)
 {
@@ -287,7 +287,7 @@ struct key_video_context : public IDeckLinkVideoOutputCallback, boost::noncopyab
 	com_iface_ptr<IDeckLinkOutput>							output_						= iface_cast<IDeckLinkOutput>(decklink_);
 	com_iface_ptr<IDeckLinkKeyer>							keyer_						= iface_cast<IDeckLinkKeyer>(decklink_);
 	com_iface_ptr<IDeckLinkAttributes>						attributes_					= iface_cast<IDeckLinkAttributes>(decklink_);
-	com_iface_ptr<IDeckLinkConfiguration>					configuration_				= iface_cast<IDeckLinkConfiguration>(decklink_);
+	com_iface_ptr<IDeckLinkConfiguration_v10_2>				configuration_				= iface_cast<IDeckLinkConfiguration_v10_2>(decklink_);
 	tbb::atomic<int64_t>									current_presentation_delay_;
 	tbb::atomic<int64_t>									scheduled_frames_completed_;
 
@@ -357,7 +357,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 
 	com_ptr<IDeckLink>									decklink_				= get_device(config_.device_index);
 	com_iface_ptr<IDeckLinkOutput>						output_					= iface_cast<IDeckLinkOutput>(decklink_);
-	com_iface_ptr<IDeckLinkConfiguration>				configuration_			= iface_cast<IDeckLinkConfiguration>(decklink_);
+	com_iface_ptr<IDeckLinkConfiguration_v10_2>			configuration_			= iface_cast<IDeckLinkConfiguration_v10_2>(decklink_);
 	com_iface_ptr<IDeckLinkKeyer>						keyer_					= iface_cast<IDeckLinkKeyer>(decklink_);
 	com_iface_ptr<IDeckLinkAttributes>					attributes_				= iface_cast<IDeckLinkAttributes>(decklink_);
 
