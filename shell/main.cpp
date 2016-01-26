@@ -119,6 +119,7 @@ void do_run(
 
 		if(boost::iequals(wcmd, L"EXIT") || boost::iequals(wcmd, L"Q") || boost::iequals(wcmd, L"QUIT") || boost::iequals(wcmd, L"BYE"))
 		{
+			CASPAR_LOG(info) << L"Received message from Console: " << wcmd << L"\\r\\n";
 			should_wait_for_keypress = true;
 			shutdown_server_now.set_value(false);	//false to not restart
 			break;
