@@ -34,7 +34,7 @@
 #include <boost/range/algorithm/remove_if.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/lexical_cast.hpp>
-
+#include <common/env.h>
 #include <cef_app.h>
 
 #pragma comment(lib, "libcef.lib")
@@ -280,6 +280,9 @@ bool init()
 	{
 		CefSettings settings;
 		//settings.windowless_rendering_enabled = true;
+		if (env::properties().get(L"configuration.CefSettings.remote-debugging-port", false)){
+			settings.remote_debugging_port = env::properties().get(L"configuration.CefSettings.remote-debugging-port", false);
+		}
 		CefInitialize(main_args, settings, nullptr, nullptr);
 	});
 	g_cef_executor->begin_invoke([&]
