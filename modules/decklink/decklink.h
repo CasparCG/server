@@ -25,6 +25,7 @@
 
 namespace caspar { namespace decklink {
 
+std::wstring get_version();
 void init(core::module_dependencies dependencies);
 
 }}
