@@ -24,6 +24,7 @@
 #include "decklink_consumer.h"
 
 #include "../util/util.h"
+#include "../decklink.h"
 
 #include "../decklink_api.h"
 
@@ -47,6 +48,7 @@
 #include <common/cache_aligned_vector.h>
 #include <common/timer.h>
 #include <common/param.h>
+#include <common/software_version.h>
 
 #include <tbb/concurrent_queue.h>
 
@@ -119,8 +121,9 @@ struct configuration
 	}
 };
 
+template <typename Configuration>
 void set_latency(
-		const com_iface_ptr<IDeckLinkConfiguration_v10_2>& config,
+		const com_iface_ptr<Configuration>& config,
 		configuration::latency_t latency,
 		const std::wstring& print)
 {
@@ -280,16 +283,17 @@ public:
 	}
 };
 
+template <typename Configuration>
 struct key_video_context : public IDeckLinkVideoOutputCallback, boost::noncopyable
 {
-	const configuration										config_;
-	com_ptr<IDeckLink>										decklink_					= get_device(config_.key_device_index());
-	com_iface_ptr<IDeckLinkOutput>							output_						= iface_cast<IDeckLinkOutput>(decklink_);
-	com_iface_ptr<IDeckLinkKeyer>							keyer_						= iface_cast<IDeckLinkKeyer>(decklink_);
-	com_iface_ptr<IDeckLinkAttributes>						attributes_					= iface_cast<IDeckLinkAttributes>(decklink_);
-	com_iface_ptr<IDeckLinkConfiguration_v10_2>				configuration_				= iface_cast<IDeckLinkConfiguration_v10_2>(decklink_);
-	tbb::atomic<int64_t>									current_presentation_delay_;
-	tbb::atomic<int64_t>									scheduled_frames_completed_;
+	const configuration					config_;
+	com_ptr<IDeckLink>					decklink_					= get_device(config_.key_device_index());
+	com_iface_ptr<IDeckLinkOutput>		output_						= iface_cast<IDeckLinkOutput>(decklink_);
+	com_iface_ptr<IDeckLinkKeyer>		keyer_						= iface_cast<IDeckLinkKeyer>(decklink_);
+	com_iface_ptr<IDeckLinkAttributes>	attributes_					= iface_cast<IDeckLinkAttributes>(decklink_);
+	com_iface_ptr<Configuration>		configuration_				= iface_cast<Configuration>(decklink_);
+	tbb::atomic<int64_t>				current_presentation_delay_;
+	tbb::atomic<int64_t>				scheduled_frames_completed_;
 
 	key_video_context(const configuration& config, const std::wstring& print)
 		: config_(config)
@@ -350,6 +354,7 @@ struct key_video_context : public IDeckLinkVideoOutputCallback, boost::noncopyab
 	}
 };
 
+template <typename Configuration>
 struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLinkAudioOutputCallback, boost::noncopyable
 {		
 	const int											channel_index_;
@@ -357,7 +362,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 
 	com_ptr<IDeckLink>									decklink_				= get_device(config_.device_index);
 	com_iface_ptr<IDeckLinkOutput>						output_					= iface_cast<IDeckLinkOutput>(decklink_);
-	com_iface_ptr<IDeckLinkConfiguration_v10_2>			configuration_			= iface_cast<IDeckLinkConfiguration_v10_2>(decklink_);
+	com_iface_ptr<Configuration>						configuration_			= iface_cast<Configuration>(decklink_);
 	com_iface_ptr<IDeckLinkKeyer>						keyer_					= iface_cast<IDeckLinkKeyer>(decklink_);
 	com_iface_ptr<IDeckLinkAttributes>					attributes_				= iface_cast<IDeckLinkAttributes>(decklink_);
 
@@ -390,7 +395,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	reference_signal_detector							reference_signal_detector_	{ output_ };
 	tbb::atomic<int64_t>								current_presentation_delay_;
 	tbb::atomic<int64_t>								scheduled_frames_completed_;
-	std::unique_ptr<key_video_context>					key_context_;
+	std::unique_ptr<key_video_context<Configuration>>	key_context_;
 
 public:
 	decklink_consumer(
@@ -415,7 +420,7 @@ public:
 		audio_frame_buffer_.set_capacity((format_desc.fps > 50.0) ? 2 : 1);
 
 		if (config.keyer == configuration::keyer_t::external_separate_device_keyer)
-			key_context_.reset(new key_video_context(config, print()));
+			key_context_.reset(new key_video_context<Configuration>(config, print()));
 
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
@@ -695,13 +700,14 @@ public:
 	}
 };
 
+template <typename Configuration>
 struct decklink_consumer_proxy : public core::frame_consumer
 {
-	core::monitor::subject				monitor_subject_;
-	const configuration					config_;
-	std::unique_ptr<decklink_consumer>	consumer_;
-	core::video_format_desc				format_desc_;
-	executor							executor_;
+	core::monitor::subject								monitor_subject_;
+	const configuration									config_;
+	std::unique_ptr<decklink_consumer<Configuration>>	consumer_;
+	core::video_format_desc								format_desc_;
+	executor											executor_;
 public:
 
 	decklink_consumer_proxy(const configuration& config)
@@ -733,7 +739,7 @@ public:
 		executor_.invoke([=]
 		{
 			consumer_.reset();
-			consumer_.reset(new decklink_consumer(config_, format_desc, channel_layout, channel_index));			
+			consumer_.reset(new decklink_consumer<Configuration>(config_, format_desc, channel_layout, channel_index));			
 		});
 	}
 	
@@ -790,7 +796,21 @@ public:
 	{
 		return monitor_subject_;
 	}
-};	
+};
+
+const software_version<3>& get_driver_version()
+{
+	static software_version<3> version(u8(get_version()));
+
+	return version;
+}
+
+const software_version<3> get_new_configuration_api_version()
+{
+	static software_version<3> NEW_CONFIGURATION_API("10.2");
+
+	return NEW_CONFIGURATION_API;
+}
 
 void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
 {
@@ -865,7 +885,12 @@ spl::shared_ptr<core::frame_consumer> create_consumer(
 		config.out_channel_layout = *found_layout;
 	}
 
-	return spl::make_shared<decklink_consumer_proxy>(config);
+	bool old_configuration_api = get_driver_version() < get_new_configuration_api_version();
+
+	if (old_configuration_api)
+		return spl::make_shared<decklink_consumer_proxy<IDeckLinkConfiguration_v10_2>>(config);
+	else
+		return spl::make_shared<decklink_consumer_proxy<IDeckLinkConfiguration>>(config);
 }
 
 spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
@@ -907,7 +932,12 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 	config.embedded_audio		= ptree.get(L"embedded-audio",	config.embedded_audio);
 	config.base_buffer_depth	= ptree.get(L"buffer-depth",	config.base_buffer_depth);
 
-	return spl::make_shared<decklink_consumer_proxy>(config);
+	bool old_configuration_api = get_driver_version() < get_new_configuration_api_version();
+
+	if (old_configuration_api)
+		return spl::make_shared<decklink_consumer_proxy<IDeckLinkConfiguration_v10_2>>(config);
+	else
+		return spl::make_shared<decklink_consumer_proxy<IDeckLinkConfiguration>>(config);
 }
 
 }}

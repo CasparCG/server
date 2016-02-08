@@ -37,7 +37,7 @@
 
 namespace caspar { namespace decklink {
 
-std::wstring version()
+std::wstring get_version()
 {
     std::wstring ver = L"Not found";
 
@@ -87,7 +87,7 @@ void init(core::module_dependencies dependencies)
 	dependencies.producer_registry->register_producer_factory(L"Decklink Producer", create_producer, describe_producer);
 	dependencies.system_info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
 	{
-		info.add(L"system.decklink.version", version());
+		info.add(L"system.decklink.version", get_version());
 
 		for (auto device : device_list())
 			info.add(L"system.decklink.device", device);
