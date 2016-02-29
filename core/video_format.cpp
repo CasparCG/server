@@ -26,7 +26,8 @@
 #include <boost/algorithm/string.hpp>
 
 namespace caspar { namespace core {
-	
+#pragma warning( push ) 
+#pragma warning( disable : 4592)	
 	const std::vector<video_format_desc> format_descs = {
 		{ video_format::pal,          720,  576,  1024, 576,  field_mode::upper,       25,    1,    L"PAL",          { 1920                         } },
 		{ video_format::ntsc,         720,  486,  720,  540,  field_mode::lower,       30000, 1001, L"NTSC",         { 1602, 1601, 1602, 1601, 1602 } },
@@ -66,7 +67,7 @@ namespace caspar { namespace core {
 		{ video_format::dci2160p2500, 4096, 2160, 4096, 2160, field_mode::progressive, 25,    1,    L"dci2160p2500", { 1920                         } },
 		{ video_format::invalid,      0,    0,    0,    0,    field_mode::progressive, 1,     1,    L"invalid",      { 1                            } }
 	};
-
+#pragma warning( pop ) 
 video_format_desc::video_format_desc(
 		video_format format,
 		int width,
