@@ -42,6 +42,7 @@
 #include <core/producer/scene/scene_producer.h>
 #include <core/producer/scene/xml_scene_producer.h>
 #include <core/producer/text/text_producer.h>
+#include <core/producer/color/color_producer.h>
 #include <core/consumer/output.h>
 #include <core/mixer/mixer.h>
 #include <core/mixer/image/image_mixer.h>
@@ -167,6 +168,7 @@ struct server::impl : boost::noncopyable
 		initialize_modules(dependencies);
 		core::text::init(dependencies);
 		core::scene::init(dependencies);
+		help_repo_->register_item({ L"producer" }, L"Color Producer", &core::describe_color_producer);
 	}
 
 	void start()
