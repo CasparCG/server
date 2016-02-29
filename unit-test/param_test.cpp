@@ -26,9 +26,12 @@
 #include <common/param.h>
 
 namespace {
+#pragma warning( push ) 
+#pragma warning( disable : 4592)
 	static auto params = {
 		L"param1", L"1",
 		L"param2", L"string value" };
+#pragma warning( pop ) 
 }
 
 namespace caspar {
