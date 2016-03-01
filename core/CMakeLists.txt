@@ -152,6 +152,7 @@ source_group(sources\\producer\\scene producer/scene/*)
 source_group(sources\\producer\\text\\utils producer/text/utils/*)
 source_group(sources\\producer\\text producer/text/*)
 source_group(sources\\producer\\transition producer/transition/*)
+source_group(sources\\producer\\separated producer/separated/*)
 source_group(sources\\producer producer/*)
 
 if (MSVC)
