@@ -134,8 +134,10 @@ or <code>-codec: copy</code> would copy all the streams without reencoding.
 thread count for the second stream to 4.
 </p></dd>
 <dt><samp><var>stream_type</var>[:<var>stream_index</var>]</samp></dt>
-<dd><p><var>stream_type</var> is one of following: &rsquo;v&rsquo; for video, &rsquo;a&rsquo; for audio, &rsquo;s&rsquo; for subtitle,
-&rsquo;d&rsquo; for data, and &rsquo;t&rsquo; for attachments. If <var>stream_index</var> is given, then it matches
+<dd><p><var>stream_type</var> is one of following: &rsquo;v&rsquo; or &rsquo;V&rsquo; for video, &rsquo;a&rsquo; for audio, &rsquo;s&rsquo;
+for subtitle, &rsquo;d&rsquo; for data, and &rsquo;t&rsquo; for attachments. &rsquo;v&rsquo; matches all video
+streams, &rsquo;V&rsquo; only matches video streams which are not attached pictures, video
+thumbnails or cover arts.  If <var>stream_index</var> is given, then it matches
 stream number <var>stream_index</var> of this type. Otherwise, it matches all
 streams of this type.
 </p></dd>

@@ -92,7 +92,7 @@ int av_opt_set(void *obj, const char *name, const char *val, int search_flags)
 	{
 		AVCodecContext* c = (AVCodecContext*)obj;		
 		auto pix_fmt = av_get_pix_fmt(val);
-		if(pix_fmt == PIX_FMT_NONE)
+		if(pix_fmt == AV_PIX_FMT_NONE)
 			return -1;		
 		c->pix_fmt = pix_fmt;
 		return 0;
@@ -143,8 +143,8 @@ struct output_format
 		: format(av_guess_format(nullptr, filename.c_str(), nullptr))
 		, width(format_desc.width)
 		, height(format_desc.height)
-		, vcodec(CODEC_ID_NONE)
-		, acodec(CODEC_ID_NONE)
+		, vcodec(AV_CODEC_ID_NONE)
+		, acodec(AV_CODEC_ID_NONE)
 		, croptop(0)
 		, cropbot(0)
 	{
@@ -156,17 +156,17 @@ struct output_format
 			return set_opt(o.name, o.value);
 		});
 		
-		if(vcodec == CODEC_ID_NONE && format)
+		if(vcodec == AV_CODEC_ID_NONE && format)
 			vcodec = format->video_codec;
 
-		if(acodec == CODEC_ID_NONE && format)
+		if(acodec == AV_CODEC_ID_NONE && format)
 			acodec = format->audio_codec;
 		
-		if(vcodec == CODEC_ID_NONE)
-			vcodec = CODEC_ID_H264;
+		if(vcodec == AV_CODEC_ID_NONE)
+			vcodec = AV_CODEC_ID_H264;
 		
-		if(acodec == CODEC_ID_NONE)
-			acodec = CODEC_ID_PCM_S16LE;
+		if(acodec == AV_CODEC_ID_NONE)
+			acodec = AV_CODEC_ID_PCM_S16LE;
 	}
 	
 	bool set_opt(const std::string& name, const std::string& value)
@@ -406,7 +406,7 @@ public:
 private:
 	std::shared_ptr<AVStream> add_video_stream(std::vector<option>& options)
 	{ 
-		if(output_format_.vcodec == CODEC_ID_NONE)
+		if(output_format_.vcodec == AV_CODEC_ID_NONE)
 			return nullptr;
 
 		auto st = avformat_new_stream(oc_.get(), 0);
@@ -429,52 +429,52 @@ private:
 		c->time_base.num	= format_desc_.duration;
 		c->gop_size			= 25;
 		c->flags		   |= format_desc_.field_mode == core::field_mode::progressive ? 0 : (CODEC_FLAG_INTERLACED_ME | CODEC_FLAG_INTERLACED_DCT);
-		c->pix_fmt			= c->pix_fmt != PIX_FMT_NONE ? c->pix_fmt : PIX_FMT_YUV420P;
+		c->pix_fmt			= c->pix_fmt != AV_PIX_FMT_NONE ? c->pix_fmt : AV_PIX_FMT_YUV420P;
 
-		if(c->codec_id == CODEC_ID_PRORES)
+		if(c->codec_id == AV_CODEC_ID_PRORES)
 		{			
 			c->bit_rate	= output_format_.width < 1280 ? 63*1000000 : 220*1000000;
-			c->pix_fmt	= PIX_FMT_YUV422P10;
+			c->pix_fmt	= AV_PIX_FMT_YUV422P10;
 		}
-		else if(c->codec_id == CODEC_ID_DNXHD)
+		else if(c->codec_id == AV_CODEC_ID_DNXHD)
 		{
 			if(c->width < 1280 || c->height < 720)
 				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Unsupported video dimensions."));
 
 			c->bit_rate	= 220*1000000;
-			c->pix_fmt	= PIX_FMT_YUV422P;
+			c->pix_fmt	= AV_PIX_FMT_YUV422P;
 		}
-		else if(c->codec_id == CODEC_ID_DVVIDEO)
+		else if(c->codec_id == AV_CODEC_ID_DVVIDEO)
 		{
 			c->width = c->height == 1280 ? 960  : c->width;
 			
 			if(format_desc_.format == core::video_format::ntsc)
 			{
-				c->pix_fmt = PIX_FMT_YUV411P;
+				c->pix_fmt = AV_PIX_FMT_YUV411P;
 				output_format_.croptop = 2;
 				output_format_.cropbot = 4;
 				c->height			   = output_format_.height - output_format_.croptop - output_format_.cropbot;
 			}
 			else if(format_desc_.format == core::video_format::pal)
-				c->pix_fmt = PIX_FMT_YUV420P;
+				c->pix_fmt = AV_PIX_FMT_YUV420P;
 			else // dv50
-				c->pix_fmt = PIX_FMT_YUV422P;
+				c->pix_fmt = AV_PIX_FMT_YUV422P;
 			
 			if(format_desc_.duration == 1001)			
 				c->width = c->height == 1080 ? 1280 : c->width;			
 			else
 				c->width = c->height == 1080 ? 1440 : c->width;			
 		}
-		else if(c->codec_id == CODEC_ID_H264)
+		else if(c->codec_id == AV_CODEC_ID_H264)
 		{			   
-			c->pix_fmt = PIX_FMT_YUV420P;    
+			c->pix_fmt = AV_PIX_FMT_YUV420P;
 			av_opt_set(c->priv_data, "preset", "ultrafast", 0);
 			av_opt_set(c->priv_data, "tune",   "fastdecode",   0);
 			av_opt_set(c->priv_data, "crf",    "5",     0);
 		}
-		else if(c->codec_id == CODEC_ID_QTRLE)
+		else if(c->codec_id == AV_CODEC_ID_QTRLE)
 		{
-			c->pix_fmt = PIX_FMT_ARGB;
+			c->pix_fmt = AV_PIX_FMT_ARGB;
 		}
 								
 		boost::range::remove_erase_if(options, [&](const option& o)
@@ -495,7 +495,7 @@ private:
 		
 	std::shared_ptr<AVStream> add_audio_stream(std::vector<option>& options)
 	{
-		if(output_format_.acodec == CODEC_ID_NONE)
+		if(output_format_.acodec == AV_CODEC_ID_NONE)
 			return nullptr;
 
 		auto st = avformat_new_stream(oc_.get(), nullptr);
@@ -518,7 +518,7 @@ private:
 		c->time_base.num	= 1;
 		c->time_base.den	= c->sample_rate;
 
-		if(output_format_.vcodec == CODEC_ID_FLV1)		
+		if(output_format_.vcodec == AV_CODEC_ID_FLV1)
 			c->sample_rate	= 44100;		
 
 		if(output_format_.format->flags & AVFMT_GLOBALHEADER)
@@ -561,7 +561,7 @@ private:
 
 		int got_packet = 0;
 		THROW_ON_ERROR2(avcodec_encode_video2(enc, &pkt, av_frame.get(), &got_packet), "[ffmpeg_consumer]");
-		std::shared_ptr<AVPacket> guard(&pkt, av_free_packet);
+		std::shared_ptr<AVPacket> guard(&pkt, av_packet_unref);
 
 		if(!got_packet)
 			return;
@@ -596,7 +596,7 @@ private:
 		while(audio_buffer_.size() >= frame_size)
 		{			
 			std::shared_ptr<AVFrame> av_frame(av_frame_alloc(), [=](AVFrame* p) { av_frame_free(&p); });
-			avcodec_get_frame_defaults(av_frame.get());		
+			av_frame_unref(av_frame.get());		
 			av_frame->nb_samples = frame_size / (enc->channels * av_get_bytes_per_sample(enc->sample_fmt));
 
 			AVPacket pkt;
@@ -608,7 +608,7 @@ private:
 
 			int got_packet = 0;
 			THROW_ON_ERROR2(avcodec_encode_audio2(enc, &pkt, av_frame.get(), &got_packet), "[ffmpeg_consumer]");
-			std::shared_ptr<AVPacket> guard(&pkt, av_free_packet);
+			std::shared_ptr<AVPacket> guard(&pkt, av_packet_unref);
 				
 			audio_buffer_.erase(audio_buffer_.begin(), audio_buffer_.begin() + frame_size);
 
@@ -634,7 +634,7 @@ private:
 		{
 			sws_.reset(sws_getContext(format_desc_.width, 
 									  format_desc_.height - output_format_.croptop  - output_format_.cropbot, 
-									  PIX_FMT_BGRA,
+									  AV_PIX_FMT_BGRA,
 									  c->width,
 									  c->height, 
 									  c->pix_fmt, 
@@ -646,7 +646,7 @@ private:
 
 		// #in_frame
 
-		std::shared_ptr<AVFrame> in_frame(avcodec_alloc_frame(), av_free);
+		std::shared_ptr<AVFrame> in_frame(av_frame_alloc(), av_free);
 
 		auto in_picture = reinterpret_cast<AVPicture*>(in_frame.get());
 		
@@ -663,7 +663,7 @@ private:
 			avpicture_fill(
 					in_picture,
 					const_cast<uint8_t*>(frame.image_data().begin()),
-					PIX_FMT_BGRA,
+					AV_PIX_FMT_BGRA,
 					format_desc_.width,
 					format_desc_.height - output_format_.croptop  - output_format_.cropbot);
 		}
@@ -675,7 +675,7 @@ private:
 		
 		// #out_frame
 
-		std::shared_ptr<AVFrame> out_frame(avcodec_alloc_frame(), av_free);
+		std::shared_ptr<AVFrame> out_frame(av_frame_alloc(), av_free);
 		
 		av_image_fill_linesizes(out_frame->linesize, c->pix_fmt, c->width);
 		for(int n = 0; n < 4; ++n)

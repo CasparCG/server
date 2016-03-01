@@ -79,7 +79,7 @@ typedef struct AVIODirEntry {
     char *name;                           /**< Filename */
     int type;                             /**< Type of the entry */
     int utf8;                             /**< Set to 1 when name is encoded with UTF-8, 0 otherwise.
-                                               Name can be encoded with UTF-8 eventhough 0 is set. */
+                                               Name can be encoded with UTF-8 even though 0 is set. */
     int64_t size;                         /**< File size in bytes, -1 if unknown. */
     int64_t modification_timestamp;       /**< Time of last modification in microseconds since unix
                                                epoch, -1 if unknown. */
@@ -122,6 +122,53 @@ typedef struct AVIOContext {
      * to any av_opt_* functions in that case.
      */
     const AVClass *av_class;
+
+    /*
+     * The following shows the relationship between buffer, buf_ptr, buf_end, buf_size,
+     * and pos, when reading and when writing (since AVIOContext is used for both):
+     *
+     **********************************************************************************
+     *                                   READING
+     **********************************************************************************
+     *
+     *                            |              buffer_size              |
+     *                            |---------------------------------------|
+     *                            |                                       |
+     *
+     *                         buffer          buf_ptr       buf_end
+     *                            +---------------+-----------------------+
+     *                            |/ / / / / / / /|/ / / / / / /|         |
+     *  read buffer:              |/ / consumed / | to be read /|         |
+     *                            |/ / / / / / / /|/ / / / / / /|         |
+     *                            +---------------+-----------------------+
+     *
+     *                                                         pos
+     *              +-------------------------------------------+-----------------+
+     *  input file: |                                           |                 |
+     *              +-------------------------------------------+-----------------+
+     *
+     *
+     **********************************************************************************
+     *                                   WRITING
+     **********************************************************************************
+     *
+     *                                          |          buffer_size          |
+     *                                          |-------------------------------|
+     *                                          |                               |
+     *
+     *                                       buffer              buf_ptr     buf_end
+     *                                          +-------------------+-----------+
+     *                                          |/ / / / / / / / / /|           |
+     *  write buffer:                           | / to be flushed / |           |
+     *                                          |/ / / / / / / / / /|           |
+     *                                          +-------------------+-----------+
+     *
+     *                                         pos
+     *               +--------------------------+-----------------------------------+
+     *  output file: |                          |                                   |
+     *               +--------------------------+-----------------------------------+
+     *
+     */
     unsigned char *buffer;  /**< Start of the buffer. */
     int buffer_size;        /**< Maximum buffer size */
     unsigned char *buf_ptr; /**< Current position in the buffer */
@@ -196,6 +243,17 @@ typedef struct AVIOContext {
      * This field is internal to libavformat and access from outside is not allowed.
      */
     int orig_buffer_size;
+
+    /**
+     * Threshold to favor readahead over seek.
+     * This is current internal only, do not use from outside.
+     */
+    int short_seek_threshold;
+
+    /**
+     * ',' separated list of allowed protocols.
+     */
+    const char *protocol_whitelist;
 } AVIOContext;
 
 /* unbuffered I/O */
@@ -222,6 +280,25 @@ const char *avio_find_protocol_name(const char *url);
  * checked resource.
  */
 int avio_check(const char *url, int flags);
+
+/**
+ * Move or rename a resource.
+ *
+ * @note url_src and url_dst should share the same protocol and authority.
+ *
+ * @param url_src url to resource to be moved
+ * @param url_dst new url to resource if the operation succeeded
+ * @return >=0 on success or negative on error.
+ */
+int avpriv_io_move(const char *url_src, const char *url_dst);
+
+/**
+ * Delete a resource.
+ *
+ * @param url resource to be deleted.
+ * @return >=0 on success or negative on error.
+ */
+int avpriv_io_delete(const char *url);
 
 /**
  * Open directory for reading.
@@ -386,7 +463,7 @@ attribute_deprecated
 int url_feof(AVIOContext *s);
 #endif
 
-/** @warning currently size is limited */
+/** @warning Writes up to 4 KiB per call */
 int avio_printf(AVIOContext *s, const char *fmt, ...) av_printf_format(2, 3);
 
 /**
@@ -560,7 +637,7 @@ int avio_open_dyn_buf(AVIOContext **s);
 /**
  * Return the written size and a pointer to the buffer. The buffer
  * must be freed with av_free().
- * Padding of FF_INPUT_BUFFER_PADDING_SIZE is added to the buffer.
+ * Padding of AV_INPUT_BUFFER_PADDING_SIZE is added to the buffer.
  *
  * @param s IO context
  * @param pbuffer pointer to a byte buffer
@@ -623,4 +700,33 @@ struct AVBPrint;
  */
 int avio_read_to_bprint(AVIOContext *h, struct AVBPrint *pb, size_t max_size);
 
+/**
+ * Accept and allocate a client context on a server context.
+ * @param  s the server context
+ * @param  c the client context, must be unallocated
+ * @return   >= 0 on success or a negative value corresponding
+ *           to an AVERROR on failure
+ */
+int avio_accept(AVIOContext *s, AVIOContext **c);
+
+/**
+ * Perform one step of the protocol handshake to accept a new client.
+ * This function must be called on a client returned by avio_accept() before
+ * using it as a read/write context.
+ * It is separate from avio_accept() because it may block.
+ * A step of the handshake is defined by places where the application may
+ * decide to change the proceedings.
+ * For example, on a protocol with a request header and a reply header, each
+ * one can constitute a step because the application may use the parameters
+ * from the request to change parameters in the reply; or each individual
+ * chunk of the request can constitute a step.
+ * If the handshake is already finished, avio_handshake() does nothing and
+ * returns 0 immediately.
+ *
+ * @param  c the client context to perform the handshake on
+ * @return   0   on a complete and successful handshake
+ *           > 0 if the handshake progressed, but is not complete
+ *           < 0 for an AVERROR code
+ */
+int avio_handshake(AVIOContext *c);
 #endif /* AVFORMAT_AVIO_H */

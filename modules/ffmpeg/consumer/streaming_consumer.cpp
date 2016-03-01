@@ -876,7 +876,7 @@ private:
 					av_frame_free(&frame);
 				});
 
-			avcodec_get_frame_defaults(src_av_frame.get());		
+			av_frame_unref(src_av_frame.get());		
 			
 			const auto sample_aspect_ratio = 
 				boost::rational<int>(
@@ -1102,7 +1102,7 @@ private:
 					pkt.size,
 					pkt.flags & AV_PKT_FLAG_KEY);
 
-			if(a == 0 && new_pkt.data != pkt.data && new_pkt.destruct) 
+			if(a == 0 && new_pkt.data != pkt.data) 
 			{
 				auto t = reinterpret_cast<std::uint8_t*>(av_malloc(new_pkt.size + FF_INPUT_BUFFER_PADDING_SIZE));
 
@@ -1125,7 +1125,7 @@ private:
 					a = AVERROR(ENOMEM);
 			}
 
-			av_free_packet(&pkt);
+			av_packet_unref(&pkt);
 
 			FF_RET(
 				a, 
@@ -1173,7 +1173,7 @@ private:
 				new AVPacket(pkt), 
 				[](AVPacket* p)
 				{
-					av_free_packet(p); 
+					av_packet_unref(p); 
 					delete p;
 				}), token);
 

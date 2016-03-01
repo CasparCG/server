@@ -248,7 +248,7 @@ exec /usr/bin/pkg-config &quot;$@&quot;
 
 <p>Try a <code>make distclean</code> in the ffmpeg source directory before the build.
 If this does not help see
-(<a href="http://ffmpeg.org/bugreports.html">http://ffmpeg.org/bugreports.html</a>).
+(<a href="https://ffmpeg.org/bugreports.html">https://ffmpeg.org/bugreports.html</a>).
 </p>
 <a name="How-do-I-encode-single-pictures-into-movies_003f"></a>
 <h3 class="section">3.2 How do I encode single pictures into movies?<span class="pull-right"><a class="anchor hidden-xs" href="#How-do-I-encode-single-pictures-into-movies_003f" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-How-do-I-encode-single-pictures-into-movies_003f" aria-hidden="true">TOC</a></span></h3>
@@ -420,16 +420,16 @@ invoking ffmpeg with several <samp>-i</samp> options.
 </li><li> For audio, to put all channels together in a single stream (example: two
 mono streams into one stereo stream): this is sometimes called to
 <em>merge</em> them, and can be done using the
-<a href="http://ffmpeg.org/ffmpeg-filters.html#amerge"><code>amerge</code></a> filter.
+<a href="https://ffmpeg.org/ffmpeg-filters.html#amerge"><code>amerge</code></a> filter.
 
 </li><li> For audio, to play one on top of the other: this is called to <em>mix</em>
 them, and can be done by first merging them into a single stream and then
-using the <a href="http://ffmpeg.org/ffmpeg-filters.html#pan"><code>pan</code></a> filter to mix
+using the <a href="https://ffmpeg.org/ffmpeg-filters.html#pan"><code>pan</code></a> filter to mix
 the channels at will.
 
 </li><li> For video, to display both together, side by side or one on top of a part of
 the other; it can be done using the
-<a href="http://ffmpeg.org/ffmpeg-filters.html#overlay"><code>overlay</code></a> video filter.
+<a href="https://ffmpeg.org/ffmpeg-filters.html#overlay"><code>overlay</code></a> video filter.
 
 </li></ul>
 
@@ -441,19 +441,19 @@ the other; it can be done using the
 <a name="Concatenating-using-the-concat-filter"></a>
 <h4 class="subsection">3.14.1 Concatenating using the concat <em>filter</em><span class="pull-right"><a class="anchor hidden-xs" href="#Concatenating-using-the-concat-filter" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Concatenating-using-the-concat-filter" aria-hidden="true">TOC</a></span></h4>
 
-<p>FFmpeg has a <a href="http://ffmpeg.org/ffmpeg-filters.html#concat"><code>concat</code></a> filter designed specifically for that, with examples in the
+<p>FFmpeg has a <a href="https://ffmpeg.org/ffmpeg-filters.html#concat"><code>concat</code></a> filter designed specifically for that, with examples in the
 documentation. This operation is recommended if you need to re-encode.
 </p>
 <a name="Concatenating-using-the-concat-demuxer"></a>
 <h4 class="subsection">3.14.2 Concatenating using the concat <em>demuxer</em><span class="pull-right"><a class="anchor hidden-xs" href="#Concatenating-using-the-concat-demuxer" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Concatenating-using-the-concat-demuxer" aria-hidden="true">TOC</a></span></h4>
 
-<p>FFmpeg has a <a href="http://www.ffmpeg.org/ffmpeg-formats.html#concat"><code>concat</code></a> demuxer which you can use when you want to avoid a re-encode and
+<p>FFmpeg has a <a href="https://www.ffmpeg.org/ffmpeg-formats.html#concat"><code>concat</code></a> demuxer which you can use when you want to avoid a re-encode and
 your format doesn&rsquo;t support file level concatenation.
 </p>
 <a name="Concatenating-using-the-concat-protocol-_0028file-level_0029"></a>
 <h4 class="subsection">3.14.3 Concatenating using the concat <em>protocol</em> (file level)<span class="pull-right"><a class="anchor hidden-xs" href="#Concatenating-using-the-concat-protocol-_0028file-level_0029" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Concatenating-using-the-concat-protocol-_0028file-level_0029" aria-hidden="true">TOC</a></span></h4>
 
-<p>FFmpeg has a <a href="http://ffmpeg.org/ffmpeg-protocols.html#concat"><code>concat</code></a> protocol designed specifically for that, with examples in the
+<p>FFmpeg has a <a href="https://ffmpeg.org/ffmpeg-protocols.html#concat"><code>concat</code></a> protocol designed specifically for that, with examples in the
 documentation.
 </p>
 <p>A few multimedia containers (MPEG-1, MPEG-2 PS, DV) allow one to concatenate
@@ -597,7 +597,7 @@ scaling adjusts the SAR to keep the DAR constant.
 </p>
 <p>If you want to stretch, or “unstretch”, the image, you need to override the
 information with the
-<a href="http://ffmpeg.org/ffmpeg-filters.html#setdar_002c-setsar"><code>setdar or setsar filters</code></a>.
+<a href="https://ffmpeg.org/ffmpeg-filters.html#setdar_002c-setsar"><code>setdar or setsar filters</code></a>.
 </p>
 <p>Do not forget to examine carefully the original video to check whether the
 stretching comes from the image or from the aspect ratio information.
@@ -714,7 +714,7 @@ see <samp>libavformat/aviobuf.c</samp> in FFmpeg and <samp>libmpdemux/demux_lavf
 <a name="Where-is-the-documentation-about-ffv1_002c-msmpeg4_002c-asv1_002c-4xm_003f"></a>
 <h3 class="section">4.12 Where is the documentation about ffv1, msmpeg4, asv1, 4xm?<span class="pull-right"><a class="anchor hidden-xs" href="#Where-is-the-documentation-about-ffv1_002c-msmpeg4_002c-asv1_002c-4xm_003f" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Where-is-the-documentation-about-ffv1_002c-msmpeg4_002c-asv1_002c-4xm_003f" aria-hidden="true">TOC</a></span></h3>
 
-<p>see <a href="http://www.ffmpeg.org/~michael/">http://www.ffmpeg.org/~michael/</a>
+<p>see <a href="https://www.ffmpeg.org/~michael/">https://www.ffmpeg.org/~michael/</a>
 </p>
 <a name="How-do-I-feed-H_002e263_002dRTP-_0028and-other-codecs-in-RTP_0029-to-libavcodec_003f"></a>
 <h3 class="section">4.13 How do I feed H.263-RTP (and other codecs in RTP) to libavcodec?<span class="pull-right"><a class="anchor hidden-xs" href="#How-do-I-feed-H_002e263_002dRTP-_0028and-other-codecs-in-RTP_0029-to-libavcodec_003f" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-How-do-I-feed-H_002e263_002dRTP-_0028and-other-codecs-in-RTP_0029-to-libavcodec_003f" aria-hidden="true">TOC</a></span></h3>

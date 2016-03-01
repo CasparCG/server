@@ -260,7 +260,7 @@ private:
 			if(vid_stream_index >= 0)
 			{
 				auto codec_id = format_context_->streams[vid_stream_index]->codec->codec_id;
-				if(codec_id == CODEC_ID_VP6A || codec_id == CODEC_ID_VP6F || codec_id == CODEC_ID_VP6)
+				if(codec_id == AV_CODEC_ID_VP6A || codec_id == AV_CODEC_ID_VP6F || codec_id == AV_CODEC_ID_VP6)
 					flags = AVSEEK_FLAG_BYTE;
 			}
 		}

@@ -4,7 +4,7 @@
   <head>
     <meta charset="utf-8">
     <title>
-      Using git to develop FFmpeg
+      Using Git to develop FFmpeg
     </title>
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <link rel="stylesheet" type="text/css" href="bootstrap.min.css">
@@ -13,7 +13,7 @@
   <body>
     <div style="width: 95%; margin: auto">
       <h1>
-      Using git to develop FFmpeg
+      Using Git to develop FFmpeg
       </h1>
 <div align="center">
 </div>
@@ -31,7 +31,7 @@
   <li><a name="toc-Introduction" href="#Introduction">1 Introduction</a></li>
   <li><a name="toc-Basics-Usage" href="#Basics-Usage">2 Basics Usage</a>
   <ul class="no-bullet">
-    <li><a name="toc-Get-GIT" href="#Get-GIT">2.1 Get GIT</a></li>
+    <li><a name="toc-Get-Git" href="#Get-Git">2.1 Get Git</a></li>
     <li><a name="toc-Cloning-the-source-tree" href="#Cloning-the-source-tree">2.2 Cloning the source tree</a></li>
     <li><a name="toc-Updating-the-source-tree-to-the-latest-revision-1" href="#Updating-the-source-tree-to-the-latest-revision-1">2.3 Updating the source tree to the latest revision</a></li>
     <li><a name="toc-Rebasing-your-local-branches" href="#Rebasing-your-local-branches">2.4 Rebasing your local branches</a></li>
@@ -55,7 +55,7 @@
     <li><a name="toc-Pushing-changes-to-remote-trees" href="#Pushing-changes-to-remote-trees">4.2 Pushing changes to remote trees</a></li>
     <li><a name="toc-Finding-a-specific-svn-revision" href="#Finding-a-specific-svn-revision">4.3 Finding a specific svn revision</a></li>
   </ul></li>
-  <li><a name="toc-pre_002dpush-checklist" href="#pre_002dpush-checklist">5 pre-push checklist</a></li>
+  <li><a name="toc-Pre_002dpush-checklist" href="#Pre_002dpush-checklist">5 Pre-push checklist</a></li>
   <li><a name="toc-Server-Issues" href="#Server-Issues">6 Server Issues</a></li>
 </ul>
 </div>
@@ -64,9 +64,9 @@
 <a name="Introduction"></a>
 <h2 class="chapter">1 Introduction<span class="pull-right"><a class="anchor hidden-xs" href="#Introduction" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Introduction" aria-hidden="true">TOC</a></span></h2>
 
-<p>This document aims in giving some quick references on a set of useful git
+<p>This document aims in giving some quick references on a set of useful Git
 commands. You should always use the extensive and detailed documentation
-provided directly by git:
+provided directly by Git:
 </p>
 <div class="example">
 <pre class="example">git --help
@@ -83,24 +83,23 @@ man git-&lt;command&gt;
 <p>shows information about the subcommand &lt;command&gt;.
 </p>
 <p>Additional information could be found on the
-<a href="http://gitref.org">Git Reference</a> website
+<a href="http://gitref.org">Git Reference</a> website.
 </p>
 <p>For more information about the Git project, visit the
-</p>
-<p><a href="http://git-scm.com/">Git website</a>
+<a href="http://git-scm.com/">Git website</a>.
 </p>
 <p>Consult these resources whenever you have problems, they are quite exhaustive.
 </p>
 <p>What follows now is a basic introduction to Git and some FFmpeg-specific
-guidelines to ease the contribution to the project
+guidelines to ease the contribution to the project.
 </p>
 <a name="Basics-Usage"></a>
 <h2 class="chapter">2 Basics Usage<span class="pull-right"><a class="anchor hidden-xs" href="#Basics-Usage" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Basics-Usage" aria-hidden="true">TOC</a></span></h2>
 
-<a name="Get-GIT"></a>
-<h3 class="section">2.1 Get GIT<span class="pull-right"><a class="anchor hidden-xs" href="#Get-GIT" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Get-GIT" aria-hidden="true">TOC</a></span></h3>
+<a name="Get-Git"></a>
+<h3 class="section">2.1 Get Git<span class="pull-right"><a class="anchor hidden-xs" href="#Get-Git" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Get-Git" aria-hidden="true">TOC</a></span></h3>
 
-<p>You can get git from <a href="http://git-scm.com/">http://git-scm.com/</a>
+<p>You can get Git from <a href="http://git-scm.com/">http://git-scm.com/</a>
 Most distribution and operating system provide a package for it.
 </p>
 
@@ -120,6 +119,21 @@ Most distribution and operating system provide a package for it.
 <p>This will put the FFmpeg sources into the directory <var>&lt;target&gt;</var> and let
 you push back your changes to the remote repository.
 </p>
+<div class="example">
+<pre class="example">git clone gil@ffmpeg.org:ffmpeg-web &lt;target&gt;
+</pre></div>
+
+<p>This will put the source of the FFmpeg website into the directory
+<var>&lt;target&gt;</var> and let you push back your changes to the remote repository.
+(Note that <var>gil</var> stands for GItoLite and is not a typo of <var>git</var>.)
+</p>
+<p>If you don&rsquo;t have write-access to the ffmpeg-web repository, you can
+create patches after making a read-only ffmpeg-web clone:
+</p>
+<div class="example">
+<pre class="example">git clone git://ffmpeg.org/ffmpeg-web &lt;target&gt;
+</pre></div>
+
 <p>Make sure that you do not have Windows line endings in your checkouts,
 otherwise you may experience spurious compilation failures. One way to
 achieve this is to run
@@ -163,7 +177,7 @@ FFmpeg&rsquo;s master tree. The master tree will reject pushes with merge commit
 git rm [-r] &lt;filename/dirname&gt;
 </pre></div>
 
-<p>GIT needs to get notified of all changes you make to your working
+<p>Git needs to get notified of all changes you make to your working
 directory that makes files appear or disappear.
 Line moves across files are automatically tracked.
 </p>
@@ -185,8 +199,8 @@ Line moves across files are automatically tracked.
 <pre class="example">git log &lt;filename(s)&gt;
 </pre></div>
 
-<p>You may also use the graphical tools like gitview or gitk or the web
-interface available at http://source.ffmpeg.org/
+<p>You may also use the graphical tools like <code>gitview</code> or <code>gitk</code>
+or the web interface available at <a href="http://source.ffmpeg.org/">http://source.ffmpeg.org/</a>.
 </p>
 <a name="Checking-source-tree-status"></a>
 <h3 class="section">2.8 Checking source tree status<span class="pull-right"><a class="anchor hidden-xs" href="#Checking-source-tree-status" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Checking-source-tree-status" aria-hidden="true">TOC</a></span></h3>
@@ -209,7 +223,8 @@ of a commit (additions, modifications, deletions, etc.).
 <p>to double check your changes before committing them to avoid trouble later
 on. All experienced developers do this on each and every commit, no matter
 how small.
-Every one of them has been saved from looking like a fool by this many times.
+</p>
+<p>Every one of them has been saved from looking like a fool by this many times.
 It&rsquo;s very easy for stray debug output or cosmetic modifications to slip in,
 please avoid problems through this extra level of scrutiny.
 </p>
@@ -231,14 +246,14 @@ please avoid problems through this extra level of scrutiny.
 <pre class="example">git add [-i|-p|-A] &lt;filenames/dirnames&gt;
 </pre></div>
 
-<p>Make sure you have told git your name and email address
+<p>Make sure you have told Git your name and email address
 </p>
 <div class="example">
 <pre class="example">git config --global user.name &quot;My Name&quot;
 git config --global user.email my@email.invalid
 </pre></div>
 
-<p>Use <var>&ndash;global</var> to set the global configuration for all your git checkouts.
+<p>Use <samp>--global</samp> to set the global configuration for all your Git checkouts.
 </p>
 <p>Git will select the changes to the files for commit. Optionally you can use
 the interactive or the patch mode to select hunk by hunk what should be
@@ -269,7 +284,7 @@ include filenames in log messages, Git provides that information.
 </p>
 <p>Possibly make the commit message have a terse, descriptive first line, an
 empty line and then a full description. The first line will be used to name
-the patch by git format-patch.
+the patch by <code>git format-patch</code>.
 </p>
 <a name="Preparing-a-patchset"></a>
 <h3 class="section">2.10 Preparing a patchset<span class="pull-right"><a class="anchor hidden-xs" href="#Preparing-a-patchset" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Preparing-a-patchset" aria-hidden="true">TOC</a></span></h3>
@@ -393,10 +408,12 @@ faulty commit disappear from the history.
 <h3 class="section">4.2 Pushing changes to remote trees<span class="pull-right"><a class="anchor hidden-xs" href="#Pushing-changes-to-remote-trees" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Pushing-changes-to-remote-trees" aria-hidden="true">TOC</a></span></h3>
 
 <div class="example">
-<pre class="example">git push
+<pre class="example">git push origin master --dry-run
 </pre></div>
 
-<p>Will push the changes to the default remote (<var>origin</var>).
+<p>Will simulate a push of the local master branch to the default remote
+(<var>origin</var>). And list which branches and ranges or commits would have been
+pushed.
 Git will prevent you from pushing changes if the local and remote trees are
 out of sync. Refer to <a href="#Updating-the-source-tree-to-the-latest-revision">Updating the source tree to the latest revision</a>.
 </p>
@@ -418,23 +435,24 @@ branches matching the local ones.
 <a name="Finding-a-specific-svn-revision"></a>
 <h3 class="section">4.3 Finding a specific svn revision<span class="pull-right"><a class="anchor hidden-xs" href="#Finding-a-specific-svn-revision" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Finding-a-specific-svn-revision" aria-hidden="true">TOC</a></span></h3>
 
-<p>Since version 1.7.1 git supports <var>:/foo</var> syntax for specifying commits
+<p>Since version 1.7.1 Git supports &lsquo;<samp>:/foo</samp>&rsquo; syntax for specifying commits
 based on a regular expression. see man gitrevisions
 </p>
 <div class="example">
 <pre class="example">git show :/'as revision 23456'
 </pre></div>
 
-<p>will show the svn changeset <var>r23456</var>. With older git versions searching in
+<p>will show the svn changeset &lsquo;<samp>r23456</samp>&rsquo;. With older Git versions searching in
 the <code>git log</code> output is the easiest option (especially if a pager with
 search capabilities is used).
-This commit can be checked out with
+</p>
+<p>This commit can be checked out with
 </p>
 <div class="example">
 <pre class="example">git checkout -b svn_23456 :/'as revision 23456'
 </pre></div>
 
-<p>or for git &lt; 1.7.1 with
+<p>or for Git &lt; 1.7.1 with
 </p>
 <div class="example">
 <pre class="example">git checkout -b svn_23456 $SHA1
@@ -443,8 +461,8 @@ This commit can be checked out with
 <p>where <var>$SHA1</var> is the commit hash from the <code>git log</code> output.
 </p>
 
-<a name="pre_002dpush-checklist"></a>
-<h2 class="chapter">5 pre-push checklist<span class="pull-right"><a class="anchor hidden-xs" href="#pre_002dpush-checklist" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-pre_002dpush-checklist" aria-hidden="true">TOC</a></span></h2>
+<a name="Pre_002dpush-checklist"></a>
+<h2 class="chapter">5 Pre-push checklist<span class="pull-right"><a class="anchor hidden-xs" href="#Pre_002dpush-checklist" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Pre_002dpush-checklist" aria-hidden="true">TOC</a></span></h2>
 
 <p>Once you have a set of commits that you feel are ready for pushing,
 work through the following checklist to doublecheck everything is in
@@ -455,7 +473,7 @@ Apply your common sense, but if in doubt, err on the side of caution.
 <p>First, make sure that the commits and branches you are going to push
 match what you want pushed and that nothing is missing, extraneous or
 wrong. You can see what will be pushed by running the git push command
-with &ndash;dry-run first. And then inspecting the commits listed with
+with <samp>--dry-run</samp> first. And then inspecting the commits listed with
 <code>git log -p 1234567..987654</code>. The <code>git status</code> command
 may help in finding local changes that have been forgotten to be added.
 </p>
@@ -464,7 +482,7 @@ may help in finding local changes that have been forgotten to be added.
 <ul>
 <li> <code>make distclean</code>
 </li><li> <code>/path/to/ffmpeg/configure</code>
-</li><li> <code>make check</code>
+</li><li> <code>make fate</code>
 </li><li> if fate fails due to missing samples run <code>make fate-rsync</code> and retry
 </li></ul>
 
@@ -483,8 +501,8 @@ recommended.
 <a name="Server-Issues"></a>
 <h2 class="chapter">6 Server Issues<span class="pull-right"><a class="anchor hidden-xs" href="#Server-Issues" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Server-Issues" aria-hidden="true">TOC</a></span></h2>
 
-<p>Contact the project admins <a href="mailto:root@ffmpeg.org">root@ffmpeg.org</a> if you have technical
-problems with the GIT server.
+<p>Contact the project admins at <a href="mailto:root@ffmpeg.org">root@ffmpeg.org</a> if you have technical
+problems with the Git server.
 </p>
       <p style="font-size: small;">
         This document was generated using <a href="http://www.gnu.org/software/texinfo/"><em>makeinfo</em></a>.
