@@ -146,7 +146,7 @@ struct frame_muxer::impl : boost::noncopyable
 			filter_->push(video);
 			previous_frame_ = video;
 			for (auto& av_frame : filter_->poll_all())
-				video_stream_.push(make_frame(this, av_frame, format_desc_.fps, *frame_factory_, channel_layout_));
+				video_stream_.push(make_frame(this, av_frame, *frame_factory_, channel_layout_));
 		}
 
 		merge();

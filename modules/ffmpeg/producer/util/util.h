@@ -56,7 +56,7 @@ namespace caspar { namespace ffmpeg {
 // Utils
 
 core::field_mode					get_mode(const AVFrame& frame);
-core::mutable_frame					make_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, double fps, core::frame_factory& frame_factory, const core::audio_channel_layout& channel_layout);
+core::mutable_frame					make_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, core::frame_factory& frame_factory, const core::audio_channel_layout& channel_layout);
 spl::shared_ptr<AVFrame>			make_av_frame(core::mutable_frame& frame);
 spl::shared_ptr<AVFrame>			make_av_frame(std::array<uint8_t*, 4> data, const core::pixel_format_desc& pix_desc);
 
