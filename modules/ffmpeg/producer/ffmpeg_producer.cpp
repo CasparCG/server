@@ -237,74 +237,6 @@ public:
 		return frame;
 	}
 
-	core::draw_frame render_specific_frame(uint32_t file_position)
-	{
-		muxer_->clear();
-		input_.seek(file_position);
-
-		decode_next_frame();
-
-		if (muxer_->empty())
-		{
-			CASPAR_LOG(trace) << print() << " Giving up finding frame at " << file_position;
-
-			return core::draw_frame::empty();
-		}
-
-		auto frame = muxer_->front();
-		muxer_->pop();
-
-		return frame;
-	}
-
-	core::draw_frame create_thumbnail_frame() override
-	{
-		auto quiet_logging = temporary_enable_quiet_logging_for_thread(true);
-
-		auto total_frames = nb_frames();
-		auto grid = env::properties().get(L"configuration.thumbnails.video-grid", 2);
-
-		if (grid < 1)
-		{
-			CASPAR_LOG(error) << L"configuration/thumbnails/video-grid cannot be less than 1";
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("configuration/thumbnails/video-grid cannot be less than 1"));
-		}
-
-		if (grid == 1)
-		{
-			return render_specific_frame(total_frames / 2);
-		}
-
-		auto num_snapshots = grid * grid;
-
-		std::vector<core::draw_frame> frames;
-
-		for (int i = 0; i < num_snapshots; ++i)
-		{
-			int x = i % grid;
-			int y = i / grid;
-			int desired_frame;
-
-			if (i == 0)
-				desired_frame = 0; // first
-			else if (i == num_snapshots - 1)
-				desired_frame = total_frames - 1; // last
-			else
-				// evenly distributed across the file.
-				desired_frame = total_frames * i / (num_snapshots - 1);
-
-			auto frame = render_specific_frame(desired_frame);
-			frame.transform().image_transform.fill_scale[0] = 1.0 / static_cast<double>(grid);
-			frame.transform().image_transform.fill_scale[1] = 1.0 / static_cast<double>(grid);
-			frame.transform().image_transform.fill_translation[0] = 1.0 / static_cast<double>(grid) * x;
-			frame.transform().image_transform.fill_translation[1] = 1.0 / static_cast<double>(grid) * y;
-
-			frames.push_back(frame);
-		}
-
-		return core::draw_frame(frames);
-	}
-
 	core::draw_frame last_frame() override
 	{
 		end_seek();
@@ -581,36 +513,80 @@ spl::shared_ptr<core::frame_producer> create_producer(
 			info)));
 }
 
-spl::shared_ptr<core::frame_producer> create_thumbnail_producer(
-		const core::frame_producer_dependencies& dependencies,
-		const std::vector<std::wstring>& params,
-		const spl::shared_ptr<core::media_info_repository>& info_repo)
+core::draw_frame create_thumbnail_frame(
+	const core::frame_producer_dependencies& dependencies,
+	const std::wstring& media_file,
+	const spl::shared_ptr<core::media_info_repository>& info_repo)
 {
 	auto quiet_logging = temporary_enable_quiet_logging_for_thread(true);
-	auto filename = probe_stem(env::media_folder() + L"/" + params.at(0), true);
+	auto filename = probe_stem(env::media_folder() + L"/" + media_file, true);
 
-	if(filename.empty())
-		return core::frame_producer::empty();
-	
-	bool loop			= false;
-	auto start			= 0;
-	auto length			= std::numeric_limits<uint32_t>::max();
-	auto filter_str		= L"";
-	auto channel_layout	= L"";
-	bool thumbnail_mode	= true;
-	auto info			= info_repo->get(filename);
+	if (filename.empty())
+		return core::draw_frame::empty();
 
-	return spl::make_shared_ptr(std::make_shared<ffmpeg_producer>(
-			dependencies.frame_factory,
-			dependencies.format_desc,
-			channel_layout,
-			filename,
-			filter_str,
-			loop,
-			start,
-			length,
-			thumbnail_mode,
-			info));
+	auto render_specific_frame = [&](std::int64_t frame_num)
+	{
+		spl::shared_ptr<core::frame_producer> producer = spl::make_shared<ffmpeg_producer>(
+				dependencies.frame_factory,
+				dependencies.format_desc,
+				L"",
+				filename,
+				L"",
+				false,
+				static_cast<uint32_t>(frame_num),
+				std::numeric_limits<uint32_t>::max(),
+				true,
+				info_repo->get(filename));
+		return producer->receive();
+	};
+
+	auto info = info_repo->get(filename);
+
+	if (!info)
+		return core::draw_frame::empty();
+
+	auto total_frames = info->duration;
+	auto grid = env::properties().get(L"configuration.thumbnails.video-grid", 2);
+
+	if (grid < 1)
+	{
+		CASPAR_LOG(error) << L"configuration/thumbnails/video-grid cannot be less than 1";
+		BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("configuration/thumbnails/video-grid cannot be less than 1"));
+	}
+
+	if (grid == 1)
+	{
+		return render_specific_frame(total_frames / 2);
+	}
+
+	auto num_snapshots = grid * grid;
+
+	std::vector<core::draw_frame> frames;
+
+	for (int i = 0; i < num_snapshots; ++i)
+	{
+		int x = i % grid;
+		int y = i / grid;
+		std::int64_t desired_frame;
+
+		if (i == 0)
+			desired_frame = 0; // first
+		else if (i == num_snapshots - 1)
+			desired_frame = total_frames - 30; // last
+		else
+			// evenly distributed across the file.
+			desired_frame = total_frames * i / (num_snapshots - 1);
+
+		auto frame = render_specific_frame(desired_frame);
+		frame.transform().image_transform.fill_scale[0] = 1.0 / static_cast<double>(grid);
+		frame.transform().image_transform.fill_scale[1] = 1.0 / static_cast<double>(grid);
+		frame.transform().image_transform.fill_translation[0] = 1.0 / static_cast<double>(grid) * x;
+		frame.transform().image_transform.fill_translation[1] = 1.0 / static_cast<double>(grid) * y;
+
+		frames.push_back(frame);
+	}
+
+	return core::draw_frame(frames);
 }
 
 }}
