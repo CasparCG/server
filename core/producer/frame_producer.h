@@ -96,7 +96,6 @@ public:
 	virtual uint32_t							nb_frames() const = 0;
 	virtual uint32_t							frame_number() const = 0;
 	virtual draw_frame							last_frame() = 0;
-	virtual draw_frame							create_thumbnail_frame() = 0;
 	virtual constraints&						pixel_constraints() = 0;
 	virtual void								leading_producer(const spl::shared_ptr<frame_producer>&) {}  
 };
@@ -121,7 +120,6 @@ public:
 	uint32_t					nb_frames() const override;
 	uint32_t					frame_number() const override;
 	virtual draw_frame			last_frame() override;
-	virtual draw_frame			create_thumbnail_frame() override;
 
 private:
 	virtual draw_frame			receive() override;
@@ -149,16 +147,17 @@ struct frame_producer_dependencies
 };
 
 typedef std::function<spl::shared_ptr<core::frame_producer>(const frame_producer_dependencies&, const std::vector<std::wstring>&)> producer_factory_t;
+typedef std::function<draw_frame (const frame_producer_dependencies&, const std::wstring&)> thumbnail_producer_t;
 
 class frame_producer_registry : boost::noncopyable
 {
 public:
 	frame_producer_registry(spl::shared_ptr<help_repository> help_repo);
 	void register_producer_factory(std::wstring name, const producer_factory_t& factory, const help_item_describer& describer); // Not thread-safe.
-	void register_thumbnail_producer_factory(const producer_factory_t& factory); // Not thread-safe.
+	void register_thumbnail_producer(const thumbnail_producer_t& thumbnail_producer); // Not thread-safe.
 	spl::shared_ptr<core::frame_producer> create_producer(const frame_producer_dependencies&, const std::vector<std::wstring>& params) const;
 	spl::shared_ptr<core::frame_producer> create_producer(const frame_producer_dependencies&, const std::wstring& params) const;
-	spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const frame_producer_dependencies&, const std::wstring& media_file) const;
+	draw_frame create_thumbnail(const frame_producer_dependencies&, const std::wstring& media_file) const;
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;
