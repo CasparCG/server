@@ -67,7 +67,7 @@ struct video_decoder::impl : boost::noncopyable
 
 	bool									is_progressive_;
 	uint32_t								file_frame_number_;
-	double									fps_;
+	boost::rational<int>					framerate_;
 	
 	std::shared_ptr<AVPacket>				current_packet_;
 
@@ -80,7 +80,7 @@ public:
 		, width_(codec_context_->width)
 		, height_(codec_context_->height)
 		, file_frame_number_(0)
-		, fps_(read_fps(input_->context(), 0.0))
+		, framerate_(read_framerate(input_->context(), 0))
 	{
 	}
 	
@@ -133,8 +133,9 @@ public:
 		if(got_frame == 0)	
 			return nullptr;
 		
-		auto stream_time_base	 = stream_->time_base;
-		auto packet_frame_number = static_cast<uint32_t>((static_cast<double>(pkt.pts * stream_time_base.num) / stream_time_base.den) * fps_);
+		auto stream_time_base		= stream_->time_base;
+		auto fps = static_cast<double>(framerate_.numerator()) / static_cast<double>(framerate_.denominator());
+		auto packet_frame_number	= static_cast<uint32_t>((static_cast<double>(pkt.pts * stream_time_base.num) / stream_time_base.den) * fps);
 
 		file_frame_number_ = packet_frame_number;
 
@@ -170,6 +171,7 @@ int video_decoder::width() const{return impl_->width_;}
 int video_decoder::height() const{return impl_->height_;}
 uint32_t video_decoder::nb_frames() const{return impl_->nb_frames();}
 uint32_t video_decoder::file_frame_number() const{return impl_->file_frame_number_;}
+boost::rational<int> video_decoder::framerate() const { return impl_->framerate_; }
 bool video_decoder::is_progressive() const{return impl_->is_progressive_;}
 std::wstring video_decoder::print() const{return impl_->print();}
 core::monitor::subject& video_decoder::monitor_output() { return impl_->monitor_subject_; }

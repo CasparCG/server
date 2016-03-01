@@ -360,77 +360,83 @@ AVRational fix_time_base(AVRational time_base)
 }
 
 double read_fps(AVFormatContext& context, double fail_value)
-{						
+{
+	auto framerate = read_framerate(context, boost::rational<int>(static_cast<int>(fail_value * 1000000.0), 1000000));
+	
+	return static_cast<double>(framerate.numerator()) / static_cast<double>(framerate.denominator());
+}
+
+boost::rational<int> read_framerate(AVFormatContext& context, const boost::rational<int>& fail_value)
+{
 	auto video_index = av_find_best_stream(&context, AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
 	auto audio_index = av_find_best_stream(&context, AVMEDIA_TYPE_AUDIO, -1, -1, 0, 0);
-	
-	if(video_index > -1)
+
+	if (video_index > -1)
 	{
 		const auto video_context = context.streams[video_index]->codec;
-		const auto video_stream  = context.streams[video_index];
+		const auto video_stream = context.streams[video_index];
 
 		auto frame_rate_time_base = video_stream->avg_frame_rate;
 		std::swap(frame_rate_time_base.num, frame_rate_time_base.den);
 
 		if (is_sane_fps(frame_rate_time_base))
 		{
-			return static_cast<double>(frame_rate_time_base.den) / static_cast<double>(frame_rate_time_base.num);
+			return boost::rational<int>(frame_rate_time_base.den, frame_rate_time_base.num);
 		}
 
 		AVRational time_base = video_context->time_base;
 
-		if(boost::filesystem::path(context.filename).extension().string() == ".flv")
+		if (boost::filesystem::path(context.filename).extension().string() == ".flv")
 		{
 			try
 			{
 				auto meta = read_flv_meta_info(context.filename);
-				return boost::lexical_cast<double>(meta["framerate"]);
+				return boost::rational<int>(static_cast<int>(boost::lexical_cast<double>(meta["framerate"]) * 1000000.0), 1000000);
 			}
-			catch(...)
+			catch (...)
 			{
-				return 0.0;
+				return fail_value;
 			}
 		}
 		else
 		{
 			time_base.num *= video_context->ticks_per_frame;
 
-			if(!is_sane_fps(time_base))
-			{			
+			if (!is_sane_fps(time_base))
+			{
 				time_base = fix_time_base(time_base);
 
-				if(!is_sane_fps(time_base) && audio_index > -1)
+				if (!is_sane_fps(time_base) && audio_index > -1)
 				{
 					auto& audio_context = *context.streams[audio_index]->codec;
-					auto& audio_stream  = *context.streams[audio_index];
+					auto& audio_stream = *context.streams[audio_index];
 
 					double duration_sec = audio_stream.duration / static_cast<double>(audio_context.sample_rate);
-								
+
 					time_base.num = static_cast<int>(duration_sec*100000.0);
-					time_base.den = static_cast<int>(video_stream->nb_frames*100000);
+					time_base.den = static_cast<int>(video_stream->nb_frames * 100000);
 				}
 			}
 		}
-		
-		double fps = static_cast<double>(time_base.den) / static_cast<double>(time_base.num);
 
-		double closest_fps = 0.0;
+		boost::rational<int> fps(time_base.den, time_base.num);
+		boost::rational<int> closest_fps(0);
 
 		for (auto video_mode : enum_constants<core::video_format>())
 		{
 			auto format = core::video_format_desc(core::video_format(video_mode));
 
-			double diff1 = std::abs(format.fps - fps);
-			double diff2 = std::abs(closest_fps - fps);
+			auto diff1 = boost::abs(boost::rational<int>(format.time_scale, format.duration) - fps);
+			auto diff2 = boost::abs(closest_fps - fps);
 
-			if(diff1 < diff2)
-				closest_fps = format.fps;
+			if (diff1 < diff2)
+				closest_fps = boost::rational<int>(format.time_scale, format.duration);
 		}
-	
+
 		return closest_fps;
 	}
 
-	return fail_value;	
+	return fail_value;
 }
 
 void fix_meta_data(AVFormatContext& context)
