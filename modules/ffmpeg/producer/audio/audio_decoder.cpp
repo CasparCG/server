@@ -89,7 +89,10 @@ public:
 		: input_(in)
 		, format_desc_(format_desc)
 		, buffer_(480000 * 4)
-		, channel_layout_(get_audio_channel_layout(*codec_context_, channel_layout_spec))
+		, channel_layout_(get_audio_channel_layout(
+				codec_context_->channels,
+				codec_context_->channel_layout,
+				channel_layout_spec))
 	{
 		if(!swr_)
 			CASPAR_THROW_EXCEPTION(bad_alloc());
