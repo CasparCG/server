@@ -185,8 +185,6 @@ void describe_producer(core::help_sink& sink, const core::help_repository& repo)
 	sink.example(L">> PLAY 1-10 [PNG_BASE64] data...", L"Plays a PNG image transferred as a base64 encoded string.");
 }
 
-#pragma warning( push ) 
-#pragma warning( disable : 4592)
 static const auto g_extensions = {
 	L".png",
 	L".tga",
@@ -201,7 +199,6 @@ static const auto g_extensions = {
 	L".j2k",
 	L".j2c"
 };
-#pragma warning( pop )
 
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
 {
