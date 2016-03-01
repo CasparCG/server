@@ -265,7 +265,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
 	auto ext = std::find_if(g_extensions.begin(), g_extensions.end(), [&](const std::wstring& ex) -> bool
 	{
-		auto file = caspar::find_case_insensitive(boost::filesystem::path(filename).replace_extension(ex).wstring());
+		auto file = caspar::find_case_insensitive(boost::filesystem::path(filename).wstring() + ex);
 
 		return static_cast<bool>(file);
 	});
@@ -283,7 +283,7 @@ spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const core::fram
 
 	auto ext = std::find_if(g_extensions.begin(), g_extensions.end(), [&](const std::wstring& ex) -> bool
 	{
-		auto file = caspar::find_case_insensitive(boost::filesystem::path(filename).replace_extension(ex).wstring());
+		auto file = caspar::find_case_insensitive(boost::filesystem::path(filename).wstring() + ex);
 
 		return static_cast<bool>(file);
 	});
