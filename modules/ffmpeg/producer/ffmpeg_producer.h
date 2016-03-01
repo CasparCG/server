@@ -35,9 +35,9 @@ spl::shared_ptr<core::frame_producer> create_producer(
 		const core::frame_producer_dependencies& dependencies,
 		const std::vector<std::wstring>& params,
 		const spl::shared_ptr<core::media_info_repository>& info_repo);
-spl::shared_ptr<core::frame_producer> create_thumbnail_producer(
+core::draw_frame create_thumbnail_frame(
 		const core::frame_producer_dependencies& dependencies,
-		const std::vector<std::wstring>& params,
+		const std::wstring& media_file,
 		const spl::shared_ptr<core::media_info_repository>& info_repo);
 
 }}
