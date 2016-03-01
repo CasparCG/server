@@ -80,7 +80,7 @@ std::wstring probe_stem(const std::wstring& stem, bool only_video);
 bool is_valid_file(const std::wstring& filename, bool only_video);
 bool try_get_duration(const std::wstring filename, std::int64_t& duration, boost::rational<std::int64_t>& time_base);
 
-core::audio_channel_layout get_audio_channel_layout(const AVCodecContext& codec_context, const std::wstring& channel_layout_spec);
+core::audio_channel_layout get_audio_channel_layout(int num_channels, std::uint64_t layout, const std::wstring& channel_layout_spec);
 
 // av_get_default_channel_layout does not work for layouts not predefined in ffmpeg. This is needed to support > 8 channels.
 std::int64_t create_channel_layout_bitmask(int num_channels);
