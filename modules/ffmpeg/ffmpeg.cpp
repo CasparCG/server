@@ -32,6 +32,7 @@
 #include <common/os/general_protection_fault.h>
 
 #include <core/consumer/frame_consumer.h>
+#include <core/frame/draw_frame.h>
 #include <core/producer/frame_producer.h>
 #include <core/producer/media_info/media_info.h>
 #include <core/producer/media_info/media_info_repository.h>
@@ -298,7 +299,7 @@ void init(core::module_dependencies dependencies)
 	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"file", create_preconfigured_consumer);
 	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"stream", create_preconfigured_streaming_consumer);
 	dependencies.producer_registry->register_producer_factory(L"FFmpeg Producer", boost::bind(&create_producer, _1, _2, info_repo), describe_producer);
-	dependencies.producer_registry->register_thumbnail_producer_factory(boost::bind(&create_thumbnail_producer, _1, _2, info_repo));
+	dependencies.producer_registry->register_thumbnail_producer(boost::bind(&create_thumbnail_frame, _1, _2, info_repo));
 
 	info_repo->register_extractor(
 			[](const std::wstring& file, const std::wstring& extension, core::media_info& info) -> bool

@@ -29,6 +29,7 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/producer/media_info/media_info.h>
 #include <core/producer/media_info/media_info_repository.h>
+#include <core/frame/draw_frame.h>
 #include <core/system_info_provider.h>
 
 #include <common/utf.h>
@@ -49,7 +50,7 @@ void init(core::module_dependencies dependencies)
 	FreeImage_Initialise();
 	dependencies.producer_registry->register_producer_factory(L"Image Scroll Producer", create_scroll_producer, describe_scroll_producer);
 	dependencies.producer_registry->register_producer_factory(L"Image Producer", create_producer, describe_producer);
-	dependencies.producer_registry->register_thumbnail_producer_factory(create_thumbnail_producer);
+	dependencies.producer_registry->register_thumbnail_producer(create_thumbnail);
 	dependencies.consumer_registry->register_consumer_factory(L"Image Consumer", create_consumer, describe_consumer);
 	dependencies.media_info_repo->register_extractor([](const std::wstring& file, const std::wstring& extension, core::media_info& info)
 	{
