@@ -27,6 +27,7 @@
 #include <core/monitor/monitor.h>
 
 #include <boost/noncopyable.hpp>
+#include <boost/rational.hpp>
 
 struct AVFormatContext;
 struct AVFrame;
@@ -48,6 +49,7 @@ public:
 	int	 height() const;
 	bool is_progressive() const;
 	uint32_t file_frame_number() const;
+	boost::rational<int> framerate() const;
 
 	uint32_t nb_frames() const;
 

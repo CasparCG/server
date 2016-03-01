@@ -72,6 +72,7 @@ bool is_sane_fps(AVRational time_base);
 AVRational fix_time_base(AVRational time_base);
 
 double read_fps(AVFormatContext& context, double fail_value);
+boost::rational<int> read_framerate(AVFormatContext& context, const boost::rational<int>& fail_value);
 
 std::wstring print_mode(int width, int height, double fps, bool interlaced);
 
