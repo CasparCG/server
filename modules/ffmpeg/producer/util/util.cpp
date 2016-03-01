@@ -644,10 +644,8 @@ std::wstring probe_stem(const std::wstring& stem, bool only_video)
 	return L"";
 }
 
-core::audio_channel_layout get_audio_channel_layout(const AVCodecContext& codec_context, const std::wstring& channel_layout_spec)
+core::audio_channel_layout get_audio_channel_layout(int num_channels, std::uint64_t layout, const std::wstring& channel_layout_spec)
 {
-	auto num_channels = codec_context.channels;
-
 	if (!channel_layout_spec.empty())
 	{
 		if (boost::contains(channel_layout_spec, L":")) // Custom on the fly layout specified.
@@ -661,18 +659,18 @@ core::audio_channel_layout get_audio_channel_layout(const AVCodecContext& codec_
 		}
 		else // Preconfigured named channel layout selected.
 		{
-			auto layout = core::audio_channel_layout_repository::get_default()->get_layout(channel_layout_spec);
+			auto channel_layout = core::audio_channel_layout_repository::get_default()->get_layout(channel_layout_spec);
 
-			if (!layout)
+			if (!channel_layout)
 				CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"No channel layout with name " + channel_layout_spec + L" registered"));
 
-			layout->num_channels = num_channels;
+			channel_layout->num_channels = num_channels;
 
-			return *layout;
+			return *channel_layout;
 		}
 	}
 
-	if (!codec_context.channel_layout)
+	if (!layout)
 	{
 		if (num_channels == 1)
 			return core::audio_channel_layout(num_channels, L"mono", L"FC");
@@ -688,7 +686,7 @@ core::audio_channel_layout get_audio_channel_layout(const AVCodecContext& codec_
 	// than the most common (5.1, mono and stereo) types.
 
 	// Based on information in https://ffmpeg.org/ffmpeg-utils.html#Channel-Layout
-	switch (codec_context.channel_layout)
+	switch (layout)
 	{
 	case AV_CH_LAYOUT_MONO:
 		return core::audio_channel_layout(num_channels, L"mono",			L"FC");
