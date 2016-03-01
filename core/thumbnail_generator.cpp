@@ -246,31 +246,6 @@ public:
 		std::promise<void> thumbnail_ready;
 
 		{
-			auto producer = frame_producer::empty();
-
-			try
-			{
-				producer = producer_registry_->create_thumbnail_producer(
-						frame_producer_dependencies(image_mixer_, { }, format_desc_, producer_registry_),
-						media_file.wstring());
-			}
-			catch (const boost::thread_interrupted&)
-			{
-				throw;
-			}
-			catch (...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(trace);
-				CASPAR_LOG(info) << L"Thumbnail producer failed to initialize for " << media_file_with_extension << L". Turn on log level trace to see more information.";
-				return;
-			}
-
-			if (producer == frame_producer::empty())
-			{
-				CASPAR_LOG(debug) << L"No appropriate thumbnail producer found for " << media_file_with_extension;
-				return;
-			}
-
 			boost::filesystem::create_directories(png_file.parent_path());
 			output_->on_send = [this, &png_file] (const_frame frame)
 			{
@@ -282,7 +257,7 @@ public:
 
 			try
 			{
-				raw_frame = producer->create_thumbnail_frame();
+				raw_frame = producer_registry_->create_thumbnail(frame_producer_dependencies(image_mixer_, {}, format_desc_, producer_registry_), media_file.wstring());
 				media_info_repo_->remove(file.wstring());
 				media_info_repo_->get(file.wstring());
 			}
@@ -300,7 +275,7 @@ public:
 			if (raw_frame == draw_frame::empty()
 					|| raw_frame == draw_frame::late())
 			{
-				CASPAR_LOG(debug) << L"No thumbnail generated for " << media_file_with_extension;
+				CASPAR_LOG(debug) << L"No thumbnail producer for " << media_file_with_extension;
 				return;
 			}
 
