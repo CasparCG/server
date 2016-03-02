@@ -280,8 +280,7 @@ private:
 			temp_buffers_.push(dest_frame);
 
 			{
-				spl::shared_ptr<AVFrame> dest_av_frame(avcodec_alloc_frame(), av_free);	
-				avcodec_get_frame_defaults(dest_av_frame.get());			
+				auto dest_av_frame = ffmpeg::create_frame();
 				avpicture_fill(reinterpret_cast<AVPicture*>(dest_av_frame.get()), dest_frame->data(), PIX_FMT_BGRA, width, height);
 				
 				sws_scale(sws_device.get(), input_av_frame->data, input_av_frame->linesize, 0, input_av_frame->height, dest_av_frame->data, dest_av_frame->linesize);				
