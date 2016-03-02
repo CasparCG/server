@@ -205,8 +205,7 @@ core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& 
 									boost::errinfo_api_function("sws_getContext"));
 		}	
 		
-		spl::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
-		avcodec_get_frame_defaults(av_frame.get());			
+		auto av_frame = create_frame();
 		if(target_pix_fmt == PIX_FMT_BGRA)
 		{
 			auto size = avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write.image_data(0).begin(), PIX_FMT_BGRA, width, height);
@@ -273,8 +272,7 @@ spl::shared_ptr<AVFrame> make_av_frame(core::mutable_frame& frame)
 
 spl::shared_ptr<AVFrame> make_av_frame(std::array<uint8_t*, 4> data, const core::pixel_format_desc& pix_desc)
 {
-	spl::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
-	avcodec_get_frame_defaults(av_frame.get());
+	auto av_frame = create_frame();
 	
 	auto planes		 = pix_desc.planes;
 	auto format		 = pix_desc.format;
@@ -485,7 +483,10 @@ spl::shared_ptr<AVPacket> create_packet()
 
 spl::shared_ptr<AVFrame> create_frame()
 {	
-	spl::shared_ptr<AVFrame> frame(avcodec_alloc_frame(), av_free);
+	spl::shared_ptr<AVFrame> frame(av_frame_alloc(), [](AVFrame* p)
+	{
+		av_frame_free(&p);
+	});
 	avcodec_get_frame_defaults(frame.get());
 	return frame;
 }
