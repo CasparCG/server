@@ -306,8 +306,8 @@ private:
 		{		
 			THROW_ON_ERROR(ret, "av_read_frame", print());
 					
-			THROW_ON_ERROR2(av_dup_packet(packet.get()), print());
-				
+			THROW_ON_ERROR2(av_packet_ref(packet.get(), packet.get()), print());
+
 			// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
 			const auto size = packet->size;
 			const auto data = packet->data;

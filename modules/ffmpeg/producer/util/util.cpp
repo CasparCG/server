@@ -574,7 +574,7 @@ bool is_valid_file(const std::wstring& filename, bool only_video)
 	auto u8filename = u8(filename);
 	
 	int score = 0;
-	AVProbeData pb = {};
+	AVProbeData pb = { 0 };
 	pb.filename = u8filename.c_str();
 
 	if(av_probe_input_format2(&pb, false, &score) != nullptr)
