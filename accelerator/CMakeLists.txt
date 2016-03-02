@@ -56,4 +56,4 @@ source_group(sources\\cpu\\image cpu/image/*)
 source_group(sources\\ogl\\image ogl/image/*)
 source_group(sources\\ogl\\util ogl/util/*)
 
-target_link_libraries(accelerator common core)
+target_link_libraries(accelerator common core ffmpeg)
