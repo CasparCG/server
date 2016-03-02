@@ -151,9 +151,16 @@ class image_renderer
 {
 	tbb::concurrent_unordered_map<int64_t, tbb::concurrent_bounded_queue<std::shared_ptr<SwsContext>>>	sws_devices_;
 	tbb::concurrent_bounded_queue<spl::shared_ptr<buffer>>												temp_buffers_;
+	core::video_format_desc																				format_desc_;
 public:	
 	std::future<array<const std::uint8_t>> operator()(std::vector<item> items, const core::video_format_desc& format_desc)
-	{	
+	{
+		if (format_desc != format_desc_)
+		{
+			format_desc_ = format_desc;
+			sws_devices_.clear();
+		}
+
 		convert(items, format_desc.width, format_desc.height);		
 				
 		// Remove first field stills.
