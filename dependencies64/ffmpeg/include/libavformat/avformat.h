@@ -310,6 +310,7 @@
  * @{
  * @}
  * @}
+ *
  */
 
 #include <time.h>
@@ -1841,9 +1842,9 @@ typedef struct AVFormatContext {
     /*
      * A callback for opening new IO streams.
      *
-     * Whenever a muxer or a demuxer needs to open an IO stream (typically from
-     * avformat_open_input() for demuxers, but for certain formats can happen at
-     * other times as well), it will call this callback to obtain an IO context.
+     * Certain muxers or demuxers (e.g. for various playlist-based formats) need
+     * to open additional files during muxing or demuxing. This callback allows
+     * the caller to provide custom IO in such cases.
      *
      * @param s the format context
      * @param pb on success, the newly opened IO context should be returned here

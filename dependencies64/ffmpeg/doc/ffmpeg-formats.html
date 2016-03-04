@@ -341,7 +341,7 @@ difference between the buffered packets.
 </p>
 </dd>
 <dt><samp>use_wallclock_as_timestamps <var>integer</var> (<em>input</em>)</samp></dt>
-<dd><p>Use wallclock as timestamps if set to 1. Default is 0.
+<dd><p>Use wallclock as timestamps.
 </p>
 </dd>
 <dt><samp>avoid_negative_ts <var>integer</var> (<em>output</em>)</samp></dt>
@@ -1425,28 +1425,6 @@ is used as a string format with the segment number:
 <p>This example will produce the playlist, <samp>out.m3u8</samp>, and segment files:
 <samp>file000.ts</samp>, <samp>file001.ts</samp>, <samp>file002.ts</samp>, etc.
 </p>
-</dd>
-<dt><samp>use_localtime</samp></dt>
-<dd><p>Use strftime on <var>filename</var> to expand the segment filename with localtime.
-The segment number (%d) is not available in this mode.
-</p><div class="example">
-<pre class="example">ffmpeg in.nut -use_localtime 1 -hls_segment_filename 'file-%Y%m%d-%s.ts' out.m3u8
-</pre></div>
-<p>This example will produce the playlist, <samp>out.m3u8</samp>, and segment files:
-<samp>file-20160215-1455569023.ts</samp>, <samp>file-20160215-1455569024.ts</samp>, etc.
-</p>
-</dd>
-<dt><samp>use_localtime_mkdir</samp></dt>
-<dd><p>Used together with -use_localtime, it will create up to one subdirectory which
-is expanded in <var>filename</var>.
-</p><div class="example">
-<pre class="example">ffmpeg in.nut -use_localtime 1 -use_localtime_mkdir 1 -hls_segment_filename '%Y%m%d/file-%Y%m%d-%s.ts' out.m3u8
-</pre></div>
-<p>This example will create a directory 201560215 (if it does not exist), and then
-produce the playlist, <samp>out.m3u8</samp>, and segment files:
-<samp>201560215/file-20160215-1455569023.ts</samp>, <samp>201560215/file-20160215-1455569024.ts</samp>, etc.
-</p>
-
 </dd>
 <dt><samp>hls_key_info_file <var>key_info_file</var></samp></dt>
 <dd><p>Use the information in <var>key_info_file</var> for segment encryption. The first

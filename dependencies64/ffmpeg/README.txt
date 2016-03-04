@@ -2,7 +2,7 @@ This is a FFmpeg win64 shared build by Kyle Schwarz.
 
 Zeranoe's FFmpeg Builds Home Page: <http://ffmpeg.zeranoe.com/builds/>
 
-FFmpeg version: 20160301-git-1c7e2cf
+FFmpeg version: 3.0
 
 This FFmpeg build was configured with:
   --disable-static
@@ -26,7 +26,6 @@ This FFmpeg build was configured with:
   --enable-libgsm
   --enable-libilbc
   --enable-libmodplug
-  --enable-libmfx
   --enable-libmp3lame
   --enable-libopencore-amrnb
   --enable-libopencore-amrwb
@@ -69,7 +68,6 @@ This build was compiled with the following external libraries:
   GSM 1.0.13-4 <http://packages.debian.org/source/squeeze/libgsm>
   iLBC 20141214-git-ef04ebe <https://github.com/dekkers/libilbc/>
   Modplug-XMMS 0.8.8.5 <http://modplug-xmms.sourceforge.net/>
-  libmfx 20151202-git-9f4a84d <https://github.com/lu-zero/mfx_dispatch>
   LAME 3.99.5 <http://lame.sourceforge.net/>
   OpenCORE AMR 0.1.3 <http://sourceforge.net/projects/opencore-amr/>
   OpenJPEG 1.5.2 <https://github.com/uclouvain/openjpeg>

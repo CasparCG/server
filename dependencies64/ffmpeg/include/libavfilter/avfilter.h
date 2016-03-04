@@ -37,7 +37,6 @@
 
 #include "libavutil/attributes.h"
 #include "libavutil/avutil.h"
-#include "libavutil/buffer.h"
 #include "libavutil/dict.h"
 #include "libavutil/frame.h"
 #include "libavutil/log.h"
@@ -463,12 +462,6 @@ struct AVFilterLink {
      * It is similar to the r_frame_rate field in AVStream.
      */
     AVRational frame_rate;
-
-    /**
-     * For hwaccel pixel formats, this should be a reference to the
-     * AVHWFramesContext describing the frames.
-     */
-    AVBufferRef *hw_frames_ctx;
 
     /**
      * Buffer partially filled with samples to achieve a fixed/minimum size.
