@@ -26,6 +26,8 @@ set(SOURCES
 
 		producer/color/color_producer.cpp
 
+		producer/framerate/framerate_producer.cpp
+
 		producer/media_info/in_memory_media_info_repository.cpp
 
 		producer/scene/const_producer.cpp
@@ -90,6 +92,8 @@ set(HEADERS
 
 		producer/color/color_producer.h
 
+		producer/framerate/framerate_producer.h
+
 		producer/media_info/in_memory_media_info_repository.h
 		producer/media_info/media_info.h
 		producer/media_info/media_info_repository.h
@@ -143,6 +147,7 @@ source_group(sources ./*)
 source_group(sources\\consumer consumer/*)
 source_group(sources\\diagnostics diagnostics/*)
 source_group(sources\\producer producer/*)
+source_group(sources\\producer\\framerate producer/framerate/*)
 source_group(sources\\frame frame/*)
 source_group(sources\\help help/*)
 source_group(sources\\interaction interaction/*)
