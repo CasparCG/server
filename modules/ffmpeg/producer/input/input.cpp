@@ -60,6 +60,7 @@ extern "C"
 
 namespace caspar { namespace ffmpeg {
 
+static const int MAX_PUSH_WITHOUT_POP = 200;
 static const int MIN_FRAMES = 25;
 
 class stream
@@ -69,18 +70,27 @@ class stream
 
 	typedef tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>::size_type size_type;
 
-	int														 index_;
-	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>> packets_;
+	int															index_;
+	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>	packets_;
+	tbb::atomic<int>											push_since_pop_;
 public:
 
 	stream(int index) 
 		: index_(index)
 	{
+		push_since_pop_ = 0;
 	}
+
+	stream(stream&&) = default;
 
 	bool is_available() const
 	{
 		return index_ >= 0;
+	}
+
+	int index() const
+	{
+		return index_;
 	}
 	
 	void push(const std::shared_ptr<AVPacket>& packet)
@@ -88,17 +98,25 @@ public:
 		if(packet && packet->data && packet->stream_index != index_)
 			return;
 
+		if (++push_since_pop_ > MAX_PUSH_WITHOUT_POP) // Out of memory protection for streams never being used.
+		{
+			return;
+		}
+
 		packets_.push(packet);
 	}
 
 	bool try_pop(std::shared_ptr<AVPacket>& packet)
 	{
+		push_since_pop_ = 0;
+
 		return packets_.try_pop(packet);
 	}
 
 	void clear()
 	{
 		std::shared_ptr<AVPacket> packet;
+		push_since_pop_ = 0;
 		while(packets_.try_pop(packet));
 	}
 		
@@ -125,7 +143,7 @@ struct input::impl : boost::noncopyable
 	uint32_t							  		frame_number_			= 0;
 
 	stream								  		video_stream_			{							av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0) };
-	stream								  		audio_stream_			{ thumbnail_mode_ ? -1 :	av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_AUDIO, -1, -1, 0, 0) };
+	std::vector<stream>							audio_streams_;
 
 	boost::optional<uint32_t>			  		seek_target_;
 
@@ -156,8 +174,13 @@ struct input::impl : boost::noncopyable
 														
 		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));
 
-		if (audio_stream_.is_available())
-			graph_->set_color("audio-buffer", diagnostics::color(0.7f, 0.4f, 0.4f));
+		if (!thumbnail_mode_)
+			for (unsigned i = 0; i < format_context_->nb_streams; ++i)
+				if (format_context_->streams[i]->codec->codec_type == AVMediaType::AVMEDIA_TYPE_AUDIO)
+					audio_streams_.emplace_back(i);
+
+		for (int i = 0; i < audio_streams_.size(); ++i)
+			graph_->set_color("audio-buffer" + boost::lexical_cast<std::string>(i + 1), diagnostics::color(0.7f, 0.4f, 0.4f));
 
 		if (video_stream_.is_available())
 			graph_->set_color("video-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));
@@ -209,16 +232,18 @@ struct input::impl : boost::noncopyable
 		return result;
 	}
 	
-	bool try_pop_audio(std::shared_ptr<AVPacket>& packet)
+	bool try_pop_audio(std::shared_ptr<AVPacket>& packet, int audio_stream_index)
 	{
-		if (!audio_stream_.is_available())
+		if (audio_streams_.size() < audio_stream_index + 1)
 			return false;
 
-		bool result = audio_stream_.try_pop(packet);
+		auto& audio_stream = audio_streams_.at(audio_stream_index);
+		bool result = audio_stream.try_pop(packet);
 		if(result)
 			cond_.notify_one();
-				
-		graph_->set_value("audio-buffer", std::min(1.0, static_cast<double>(audio_stream_.size())/MIN_FRAMES));
+
+		auto buffer_nr = boost::lexical_cast<std::string>(audio_stream_index + 1);
+		graph_->set_value("audio-buffer" + buffer_nr, std::min(1.0, static_cast<double>(audio_stream.size())/MIN_FRAMES));
 
 		return result;
 	}
@@ -230,10 +255,20 @@ struct input::impl : boost::noncopyable
 
 			seek_target_ = target;
 			video_stream_.clear();
-			audio_stream_.clear();
+
+			for (auto& audio_stream : audio_streams_)
+				audio_stream.clear();
 		}
 
 		cond_.notify_one();
+	}
+
+	int get_actual_audio_stream_index(int audio_stream_index) const
+	{
+		if (audio_stream_index + 1 > audio_streams_.size())
+			CASPAR_THROW_EXCEPTION(averror_stream_not_found());
+
+		return audio_streams_.at(audio_stream_index).index();
 	}
 		
 	std::wstring print() const
@@ -278,7 +313,9 @@ private:
 				0), print());
 		
 		video_stream_.push(nullptr);
-		audio_stream_.push(nullptr);
+
+		for (auto& audio_stream : audio_streams_)
+			audio_stream.push(nullptr);
 	}
 
 	void tick()
@@ -327,20 +364,33 @@ private:
 			if(packet_frame_number >= start_ && packet_frame_number < length_)
 			{
 				video_stream_.push(packet);
-				audio_stream_.push(packet);
+
+				for (auto& audio_stream : audio_streams_)
+					audio_stream.push(packet);
 			}
 		}	
 
 		if (video_stream_.is_available())
 			graph_->set_value("video-buffer", std::min(1.0, static_cast<double>(video_stream_.size())/MIN_FRAMES));
 
-		if (audio_stream_.is_available())
-			graph_->set_value("audio-buffer", std::min(1.0, static_cast<double>(audio_stream_.size())/MIN_FRAMES));
+		for (int i = 0; i < audio_streams_.size(); ++i)
+			graph_->set_value(
+					"audio-buffer" + boost::lexical_cast<std::string>(i + 1),
+					std::min(1.0, static_cast<double>(audio_streams_[i].size())/MIN_FRAMES));
 	}
 			
 	bool full() const
 	{
-		return video_stream_.size() >= MIN_FRAMES && audio_stream_.size() >= MIN_FRAMES;
+		bool video_full = video_stream_.size() >= MIN_FRAMES;
+
+		if (!video_full)
+			return false;
+
+		for (auto& audio_stream : audio_streams_)
+			if (audio_stream.size() < MIN_FRAMES)
+				return false;
+
+		return true;
 	}
 
 	void run()
@@ -378,8 +428,10 @@ private:
 
 input::input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode)
 	: impl_(new impl(graph, filename, loop, start, length, thumbnail_mode)){}
+int input::get_actual_audio_stream_index(int audio_stream_index) const { return impl_->get_actual_audio_stream_index(audio_stream_index); };
+int input::num_audio_streams() const { return static_cast<int>(impl_->audio_streams_.size()); }
 bool input::try_pop_video(std::shared_ptr<AVPacket>& packet){return impl_->try_pop_video(packet);}
-bool input::try_pop_audio(std::shared_ptr<AVPacket>& packet){return impl_->try_pop_audio(packet);}
+bool input::try_pop_audio(std::shared_ptr<AVPacket>& packet, int audio_stream_index){return impl_->try_pop_audio(packet, audio_stream_index);}
 AVFormatContext& input::context(){return *impl_->format_context_;}
 void input::loop(bool value){impl_->loop_ = value;}
 bool input::loop() const{return impl_->loop_;}

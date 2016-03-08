@@ -52,8 +52,11 @@ public:
 			uint32_t length,
 			bool thumbnail_mode);
 
+	int			num_audio_streams() const;
+	int			get_actual_audio_stream_index(int audio_stream_index) const;
+
 	bool		try_pop_video(std::shared_ptr<AVPacket>& packet);
-	bool		try_pop_audio(std::shared_ptr<AVPacket>& packet);
+	bool		try_pop_audio(std::shared_ptr<AVPacket>& packet, int audio_stream_index);
 
 	void		loop(bool value);
 	bool		loop() const;
