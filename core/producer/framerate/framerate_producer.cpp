@@ -32,6 +32,7 @@
 #include "../../monitor/monitor.h"
 
 #include <common/future.h>
+#include <common/tweener.h>
 
 #include <functional>
 #include <queue>
@@ -127,6 +128,52 @@ struct audio_extractor : public frame_visitor
 	}
 };
 
+// Like tweened_transform but for framerates
+class speed_tweener
+{
+	boost::rational<int64_t>	source_		= 1LL;
+	boost::rational<int64_t>	dest_		= 1LL;
+	int							duration_	= 0;
+	int							time_		= 0;
+	tweener						tweener_;
+public:
+	speed_tweener() = default;
+	speed_tweener(
+			const boost::rational<int64_t>& source,
+			const boost::rational<int64_t>& dest,
+			int duration,
+			const tweener& tween)
+		: source_(source)
+		, dest_(dest)
+		, duration_(duration)
+		, time_(0)
+		, tweener_(tween)
+	{
+	}
+
+	const boost::rational<int64_t>& dest() const
+	{
+		return dest_;
+	}
+
+	boost::rational<int64_t> fetch() const
+	{
+		if (time_ == duration_)
+			return dest_;
+		double source	= static_cast<double>(source_.numerator()) / static_cast<double>(source_.denominator());
+		double delta	= static_cast<double>(dest_.numerator()) / static_cast<double>(dest_.denominator()) - source;
+		double result = tweener_(time_, source, delta, duration_);
+		
+		return boost::rational<int64_t>(static_cast<int64_t>(result * 1000000.0), 1000000);
+	}
+
+	boost::rational<int64_t> fetch_and_tick()
+	{
+		time_ = std::min(time_ + 1, duration_);
+		return fetch();
+	}
+};
+
 class framerate_producer : public frame_producer_base
 {
 	spl::shared_ptr<frame_producer>						source_;
@@ -136,6 +183,7 @@ class framerate_producer : public frame_producer_base
 	field_mode											destination_fieldmode_;
 	std::vector<int>									destination_audio_cadence_;
 	boost::rational<std::int64_t>						speed_;
+	speed_tweener										user_speed_;
 	std::function<draw_frame (
 			const draw_frame& source,
 			const draw_frame& destination,
@@ -224,10 +272,20 @@ public:
 
 	std::future<std::wstring> call(const std::vector<std::wstring>& params) override
 	{
-		if (!boost::iequals(params.at(0), L"framerate") || params.size() != 3)
+		if (!boost::iequals(params.at(0), L"framerate"))
 			return source_->call(params);
 
-		if (boost::iequals(params.at(1), L"interpolation"))
+		if (boost::iequals(params.at(1), L"speed"))
+		{
+			auto destination_user_speed = boost::rational<std::int64_t>(
+					static_cast<std::int64_t>(boost::lexical_cast<double>(params.at(2)) * 1000000.0),
+					1000000);
+			auto frames = params.size() > 3 ? boost::lexical_cast<int>(params.at(3)) : 0;
+			auto easing = params.size() > 4 ? params.at(4) : L"linear";
+
+			user_speed_ = speed_tweener(user_speed_.fetch(), destination_user_speed, frames, tweener(easing));
+		}
+		else if (boost::iequals(params.at(1), L"interpolation"))
 		{
 			if (boost::iequals(params.at(2), L"blend"))
 				interpolator_ = &blend;
@@ -271,6 +329,8 @@ public:
 private:
 	draw_frame do_render_progressive_frame(bool sound)
 	{
+		user_speed_.fetch_and_tick();
+
 		if (output_repeat_ && ++output_frame_ % output_repeat_)
 		{
 			auto frame = draw_frame::still(last_frame());
@@ -319,31 +379,40 @@ private:
 
 	boost::rational<std::int64_t> get_speed() const
 	{
-		return speed_;
+		return speed_ * user_speed_.fetch();
 	}
 
 	draw_frame pop_frame_from_source()
 	{
 		auto frame = source_->receive();
 
-		audio_extractor extractor([this](const const_frame& frame)
+		if (user_speed_.fetch() == 1)
 		{
-			if (source_channel_layout_ != frame.audio_channel_layout())
+			audio_extractor extractor([this](const const_frame& frame)
 			{
-				source_channel_layout_ = frame.audio_channel_layout();
+				if (source_channel_layout_ != frame.audio_channel_layout())
+				{
+					source_channel_layout_ = frame.audio_channel_layout();
 
-				// Insert silence samples so that the audio mixer is guaranteed to be filled.
-				auto min_num_samples_per_frame	= *boost::min_element(destination_audio_cadence_);
-				auto max_num_samples_per_frame	= *boost::max_element(destination_audio_cadence_);
-				auto cadence_safety_samples		= max_num_samples_per_frame - min_num_samples_per_frame;
-				audio_samples_.resize(source_channel_layout_.num_channels * cadence_safety_samples, 0);
-			}
+					// Insert silence samples so that the audio mixer is guaranteed to be filled.
+					auto min_num_samples_per_frame	= *boost::min_element(destination_audio_cadence_);
+					auto max_num_samples_per_frame	= *boost::max_element(destination_audio_cadence_);
+					auto cadence_safety_samples		= max_num_samples_per_frame - min_num_samples_per_frame;
+					audio_samples_.resize(source_channel_layout_.num_channels * cadence_safety_samples, 0);
+				}
 
-			auto& buffer = frame.audio_data();
-			audio_samples_.insert(audio_samples_.end(), buffer.begin(), buffer.end());
-		});
+				auto& buffer = frame.audio_data();
+				audio_samples_.insert(audio_samples_.end(), buffer.begin(), buffer.end());
+			});
 
-		frame.accept(extractor);
+			frame.accept(extractor);
+		}
+		else
+		{
+			source_channel_layout_ = audio_channel_layout::invalid();
+			audio_samples_.clear();
+		}
+
 		frame.transform().audio_transform.volume = 0.0;
 
 		return frame;
@@ -351,7 +420,7 @@ private:
 
 	draw_frame attach_sound(draw_frame frame)
 	{
-		if (source_channel_layout_ == audio_channel_layout::invalid())
+		if (user_speed_.fetch() != 1 || source_channel_layout_ == audio_channel_layout::invalid())
 			return frame;
 
 		mutable_audio_buffer buffer;
@@ -391,6 +460,7 @@ private:
 	bool enough_sound() const
 	{
 		return source_channel_layout_ == core::audio_channel_layout::invalid()
+				|| user_speed_.fetch() != 1
 				|| audio_samples_.size() / source_channel_layout_.num_channels >= destination_audio_cadence_.at(0);
 	}
 };
