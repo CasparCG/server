@@ -62,8 +62,9 @@ struct audio_decoder::impl : boost::noncopyable
 	core::monitor::subject										monitor_subject_;
 	input&														input_;
 	int															index_;
+	int															actual_index_;
 	const core::video_format_desc								format_desc_;
-	const spl::shared_ptr<AVCodecContext>						codec_context_		= open_codec(input_.context(), AVMEDIA_TYPE_AUDIO, index_, false);
+	const spl::shared_ptr<AVCodecContext>						codec_context_		= open_codec(input_.context(), AVMEDIA_TYPE_AUDIO, actual_index_, false);
 
 	std::shared_ptr<SwrContext>									swr_				{
 																						swr_alloc_set_opts(
@@ -85,8 +86,14 @@ struct audio_decoder::impl : boost::noncopyable
 	std::shared_ptr<AVPacket>									current_packet_;
 	
 public:
-	explicit impl(input& in, const core::video_format_desc& format_desc, const std::wstring& channel_layout_spec) 
+	explicit impl(
+			input& in,
+			const core::video_format_desc& format_desc,
+			const std::wstring& channel_layout_spec,
+			int audio_stream_index)
 		: input_(in)
+		, index_(audio_stream_index)
+		, actual_index_(input_.get_actual_audio_stream_index(index_))
 		, format_desc_(format_desc)
 		, buffer_(480000 * 4)
 		, channel_layout_(get_audio_channel_layout(
@@ -102,7 +109,7 @@ public:
 		
 	std::shared_ptr<AVFrame> poll()
 	{		
-		if(!current_packet_ && !input_.try_pop_audio(current_packet_))
+		if(!current_packet_ && !input_.try_pop_audio(current_packet_, index_))
 			return nullptr;
 		
 		std::shared_ptr<AVFrame> audio;
@@ -180,7 +187,7 @@ public:
 	}
 };
 
-audio_decoder::audio_decoder(input& input, const core::video_format_desc& format_desc, const std::wstring& channel_layout_spec) : impl_(new impl(input, format_desc, channel_layout_spec)){}
+audio_decoder::audio_decoder(input& input, const core::video_format_desc& format_desc, const std::wstring& channel_layout_spec, int audio_stream_index) : impl_(new impl(input, format_desc, channel_layout_spec, audio_stream_index)){}
 audio_decoder::audio_decoder(audio_decoder&& other) : impl_(std::move(other.impl_)){}
 audio_decoder& audio_decoder::operator=(audio_decoder&& other){impl_ = std::move(other.impl_); return *this;}
 std::shared_ptr<AVFrame> audio_decoder::operator()(){return impl_->poll();}

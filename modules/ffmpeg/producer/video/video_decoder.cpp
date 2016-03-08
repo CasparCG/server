@@ -55,7 +55,7 @@ struct video_decoder::impl : boost::noncopyable
 {
 	core::monitor::subject					monitor_subject_;
 	input*									input_;
-	int										index_;
+	int										index_				= -1;
 	const spl::shared_ptr<AVCodecContext>	codec_context_;
 
 	std::queue<spl::shared_ptr<AVPacket>>	packets_;
