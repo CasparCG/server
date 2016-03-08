@@ -38,7 +38,7 @@ namespace caspar { namespace ffmpeg {
 class audio_decoder : public boost::noncopyable
 {
 public:
-	explicit audio_decoder(class input& input, const core::video_format_desc& format_desc, const std::wstring& channel_layout_spec);
+	explicit audio_decoder(class input& input, const core::video_format_desc& format_desc, const std::wstring& channel_layout_spec, int audio_stream_index = 0);
 	
 	audio_decoder(audio_decoder&& other);
 	audio_decoder& operator=(audio_decoder&& other);
