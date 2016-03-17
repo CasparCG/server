@@ -30,6 +30,7 @@
 #include "../../frame/frame_transform.h"
 #include "../../frame/pixel_format.h"
 #include "../../monitor/monitor.h"
+#include "../../help/help_sink.h"
 
 #include <common/future.h>
 #include <common/tweener.h>
@@ -37,6 +38,7 @@
 #include <functional>
 #include <queue>
 #include <future>
+#include <stack>
 
 namespace caspar { namespace core {
 
@@ -54,7 +56,7 @@ draw_frame blend(const draw_frame& source, const draw_frame& destination, const 
 
 	auto under					= source;
 	auto over					= destination;
-	double float_distance		= static_cast<double>(distance.numerator()) / static_cast<double>(distance.denominator());
+	double float_distance		= boost::rational_cast<double>(distance);
 
 	under.transform().image_transform.is_mix	= true;
 	under.transform().image_transform.opacity	= 1 - float_distance;
@@ -99,7 +101,7 @@ struct blend_all
 		middle.transform().image_transform.is_mix			= true;
 		next_frame.transform().image_transform.is_mix		= true;
 
-		double float_distance								= static_cast<double>(distance.numerator()) / static_cast<double>(distance.denominator());
+		double float_distance								= boost::rational_cast<double>(distance);
 		previous_frame.transform().image_transform.opacity	= std::max(0.0, 0.5 - float_distance * 0.5);
 		middle.transform().image_transform.opacity			= 0.5;
 		next_frame.transform().image_transform.opacity		= 1.0 - previous_frame.transform().image_transform.opacity - middle.transform().image_transform.opacity;
@@ -110,20 +112,30 @@ struct blend_all
 	}
 };
 
-struct audio_extractor : public frame_visitor
+class audio_extractor : public frame_visitor
 {
-	std::function<void(const const_frame& frame)> on_frame_;
-
+	std::stack<core::audio_transform>				transform_stack_;
+	std::function<void(const const_frame& frame)>	on_frame_;
+public:
 	audio_extractor(std::function<void(const const_frame& frame)> on_frame)
 		: on_frame_(std::move(on_frame))
 	{
+		transform_stack_.push(audio_transform());
 	}
 
-	void push(const frame_transform& transform) override	{ }
-	void pop() override										{ }
+	void push(const frame_transform& transform) override
+	{
+		transform_stack_.push(transform_stack_.top() * transform.audio_transform);
+	}
+
+	void pop() override
+	{
+		transform_stack_.pop();
+	}
+
 	void visit(const const_frame& frame) override
 	{
-		if (!frame.audio_data().empty())
+		if (!frame.audio_data().empty() && !transform_stack_.top().is_still)
 			on_frame_(frame);
 	}
 };
@@ -160,9 +172,10 @@ public:
 	{
 		if (time_ == duration_)
 			return dest_;
-		double source	= static_cast<double>(source_.numerator()) / static_cast<double>(source_.denominator());
-		double delta	= static_cast<double>(dest_.numerator()) / static_cast<double>(dest_.denominator()) - source;
-		double result = tweener_(time_, source, delta, duration_);
+
+		double source	= boost::rational_cast<double>(source_);
+		double delta	= boost::rational_cast<double>(dest_) - source;
+		double result	= tweener_(time_, source, delta, duration_);
 		
 		return boost::rational<int64_t>(static_cast<int64_t>(result * 1000000.0), 1000000);
 	}
@@ -242,9 +255,13 @@ public:
 		// for all other framerates a frame interpolator will be chosen.
 		if (speed_ != 1 && speed_ * 2 != 1 && speed_ != 2)
 		{
-			if (source_framerate_ > 47)		// The bluriness of blend_all is acceptable on high framerates.
+			auto high_source_framerate		= source_framerate_ > 47;
+			auto high_destination_framerate	= destination_framerate_ > 47
+					|| destination_fieldmode_ != field_mode::progressive;
+
+			if (high_source_framerate && high_destination_framerate)	// The bluriness of blend_all is acceptable on high framerates.
 				interpolator_ = blend_all();
-			else							// blend_all is mostly too blurry on low framerates. blend provides a compromise.
+			else														// blend_all is mostly too blurry on low framerates. blend provides a compromise.
 				interpolator_ = &blend;
 
 			CASPAR_LOG(warning) << source_->print() << L" Frame blending frame rate conversion required to conform to channel frame rate.";
@@ -319,7 +336,27 @@ public:
 
 	boost::property_tree::wptree info() const override
 	{
-		return source_->info();
+		auto info = source_->info();
+
+		auto incorrect_frame_number = info.get_child_optional(L"frame-number");
+		if (incorrect_frame_number)
+			incorrect_frame_number->put_value(frame_number());
+
+		auto incorrect_nb_frames = info.get_child_optional(L"nb-frames");
+		if (incorrect_nb_frames)
+			incorrect_nb_frames->put_value(nb_frames());
+
+		return info;
+	}
+
+	uint32_t nb_frames() const override
+	{
+		return static_cast<uint32_t>(source_->nb_frames() * boost::rational_cast<double>(1 / get_speed() / (output_repeat_ != 0 ? 2 : 1)));
+	}
+
+	uint32_t frame_number() const override
+	{
+		return static_cast<uint32_t>(source_->frame_number() * boost::rational_cast<double>(1 / get_speed() / (output_repeat_ != 0 ? 2 : 1)));
 	}
 
 	constraints& pixel_constraints() override
@@ -371,9 +408,14 @@ private:
 
 		for (std::int64_t i = 0; i < num_frames; ++i)
 		{
-			previous_frame_ = std::move(next_frame_);
+			if (next_frame_ == draw_frame::empty())
+				previous_frame_ = pop_frame_from_source();
+			else
+			{
+				previous_frame_ = std::move(next_frame_);
 
-			next_frame_ = pop_frame_from_source();
+				next_frame_ = pop_frame_from_source();
+			}
 		}
 	}
 
@@ -441,7 +483,8 @@ private:
 		{
 			auto needed = destination_audio_cadence_.front();
 			auto got = audio_samples_.size() / source_channel_layout_.num_channels;
-			CASPAR_LOG(debug) << print() << L" Too few audio samples. Needed " << needed << L" but got " << got;
+			if (got != 0) // If at end of stream we don't care
+				CASPAR_LOG(debug) << print() << L" Too few audio samples. Needed " << needed << L" but got " << got;
 			buffer.swap(audio_samples_);
 			buffer.resize(needed * source_channel_layout_.num_channels, 0);
 		}
@@ -464,6 +507,18 @@ private:
 				|| audio_samples_.size() / source_channel_layout_.num_channels >= destination_audio_cadence_.at(0);
 	}
 };
+
+void describe_framerate_producer(help_sink& sink)
+{
+	sink.para()->text(L"Framerate conversion control / Slow motion examples:");
+	sink.example(L">> CALL 1-10 FRAMERATE INTERPOLATION BLEND", L"enables 2 frame blend interpolation.");
+	sink.example(L">> CALL 1-10 FRAMERATE INTERPOLATION BLEND_ALL", L"enables 3 frame blend interpolation.");
+	sink.example(L">> CALL 1-10 FRAMERATE INTERPOLATION DROP_AND_SKIP", L"disables frame interpolation.");
+	sink.example(L">> CALL 1-10 FRAMERATE SPEED 0.25", L"immediately changes the speed to 25%. Sound will be disabled.");
+	sink.example(L">> CALL 1-10 FRAMERATE SPEED 0.25 50", L"changes the speed to 25% linearly over 50 frames. Sound will be disabled.");
+	sink.example(L">> CALL 1-10 FRAMERATE SPEED 0.25 50 easeinoutsine", L"changes the speed to 25% over 50 frames using specified easing curve. Sound will be disabled.");
+	sink.example(L">> CALL 1-10 FRAMERATE SPEED 1 50", L"changes the speed to 100% linearly over 50 frames. Sound will be enabled when the destination speed of 100% has been reached.");
+}
 
 spl::shared_ptr<frame_producer> create_framerate_producer(
 		spl::shared_ptr<frame_producer> source,
