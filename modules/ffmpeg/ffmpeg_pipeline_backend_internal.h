@@ -21,26 +21,16 @@
 
 #pragma once
 
-#include "../../fwd.h"
-
 #include <common/memory.h>
-
-#include <core/producer/frame_producer.h>
-
-#include <string>
-#include <vector>
 
 #include <boost/rational.hpp>
 
-namespace caspar { namespace core {
+#include <string>
+#include <functional>
+#include <cstdint>
 
-void describe_framerate_producer(help_sink& sink);
+namespace caspar { namespace ffmpeg {
 
-spl::shared_ptr<frame_producer> create_framerate_producer(
-		spl::shared_ptr<frame_producer> source,
-		boost::rational<int> source_framerate,
-		boost::rational<int> destination_framerate,
-		field_mode destination_fieldmode,
-		std::vector<int> destination_audio_cadence);
+spl::shared_ptr<struct ffmpeg_pipeline_backend> create_internal_pipeline();
 
 }}

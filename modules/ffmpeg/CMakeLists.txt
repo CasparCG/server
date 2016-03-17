@@ -25,6 +25,8 @@ set(SOURCES
 		audio_channel_remapper.cpp
 		ffmpeg.cpp
 		ffmpeg_error.cpp
+		ffmpeg_pipeline.cpp
+		ffmpeg_pipeline_backend_internal.cpp
 		StdAfx.cpp
 )
 set(HEADERS
@@ -51,6 +53,9 @@ set(HEADERS
 
 		ffmpeg.h
 		ffmpeg_error.h
+		ffmpeg_pipeline.h
+		ffmpeg_pipeline_backend.h
+		ffmpeg_pipeline_backend_internal.h
 		StdAfx.h
 )
 
