@@ -89,16 +89,6 @@ public:
 			return true;	
 		return false;
 	}	
-	
-	static int delay(const std::wstring& filters)
-	{
-		return is_double_rate(filters) ? 1 : 1;
-	}
-
-	int delay() const
-	{
-		return delay(filter_str());
-	}
 
 	bool is_double_rate() const
 	{
