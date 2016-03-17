@@ -138,7 +138,6 @@ struct input::impl : boost::noncopyable
 	tbb::atomic<uint32_t>				  		length_;
 	tbb::atomic<bool>					  		loop_;
 	tbb::atomic<bool>					  		eof_;
-	bool										thumbnail_mode_;
 	double								  		fps_					= read_fps(*format_context_, 0.0);
 	uint32_t							  		frame_number_			= 0;
 
@@ -161,7 +160,6 @@ struct input::impl : boost::noncopyable
 			bool thumbnail_mode)
 		: graph_(graph)
 		, filename_(filename)
-		, thumbnail_mode_(thumbnail_mode)
 	{
 		start_			= start;
 		length_			= length;
@@ -174,7 +172,7 @@ struct input::impl : boost::noncopyable
 														
 		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));
 
-		if (!thumbnail_mode_)
+		if (!thumbnail_mode)
 			for (unsigned i = 0; i < format_context_->nb_streams; ++i)
 				if (format_context_->streams[i]->codec->codec_type == AVMediaType::AVMEDIA_TYPE_AUDIO)
 					audio_streams_.emplace_back(i);
@@ -188,39 +186,20 @@ struct input::impl : boost::noncopyable
 		for(int n = 0; n < 8; ++n)
 			tick();
 
-		if (!thumbnail_mode)
-			thread_	= boost::thread([this]{run();});
+		thread_	= boost::thread([this, thumbnail_mode]{run(thumbnail_mode);});
 	}
 
 	~impl()
 	{
 		is_running_ = false;
 		cond_.notify_one();
-
-		if (!thumbnail_mode_)
-			thread_.join();
+		thread_.join();
 	}
 	
 	bool try_pop_video(std::shared_ptr<AVPacket>& packet)
 	{
 		if (!video_stream_.is_available())
 			return false;
-
-		if (thumbnail_mode_)
-		{
-			int ticks = 0;
-			while (!video_stream_.try_pop(packet))
-			{
-				tick();
-				if (++ticks > 32) // Infinite loop should not be possible
-					return false;
-
-				// Play nice
-				boost::this_thread::sleep_for(boost::chrono::milliseconds(5));
-			}
-
-			return true;
-		}
 
 		bool result = video_stream_.try_pop(packet);
 
@@ -393,9 +372,10 @@ private:
 		return true;
 	}
 
-	void run()
+	void run(bool thumbnail_mode)
 	{
 		ensure_gpf_handler_installed_for_thread(u8(print()).c_str());
+		auto quiet_logging = temporary_enable_quiet_logging_for_thread(thumbnail_mode);
 
 		while(is_running_)
 		{
