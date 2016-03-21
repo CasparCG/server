@@ -177,7 +177,7 @@ public:
 
 		try
 		{
-			audio_decoder_.reset(new audio_decoder(*input_, core::video_format_desc(), L""));
+			audio_decoder_.reset(new audio_decoder(*input_, core::video_format_desc()));
 		}
 		catch (averror_stream_not_found&)
 		{
