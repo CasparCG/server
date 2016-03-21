@@ -81,7 +81,6 @@ struct audio_decoder::impl : boost::noncopyable
 																					};
 
 	cache_aligned_vector<uint8_t>								buffer_;
-	core::audio_channel_layout									channel_layout_;
 
 	std::shared_ptr<AVPacket>									current_packet_;
 	
@@ -89,17 +88,12 @@ public:
 	explicit impl(
 			input& in,
 			const core::video_format_desc& format_desc,
-			const std::wstring& channel_layout_spec,
 			int audio_stream_index)
 		: input_(in)
 		, index_(audio_stream_index)
 		, actual_index_(input_.get_actual_audio_stream_index(index_))
 		, format_desc_(format_desc)
 		, buffer_(480000 * 4)
-		, channel_layout_(get_audio_channel_layout(
-				codec_context_->channels,
-				codec_context_->channel_layout,
-				channel_layout_spec))
 	{
 		if(!swr_)
 			CASPAR_THROW_EXCEPTION(bad_alloc());
@@ -187,12 +181,11 @@ public:
 	}
 };
 
-audio_decoder::audio_decoder(input& input, const core::video_format_desc& format_desc, const std::wstring& channel_layout_spec, int audio_stream_index) : impl_(new impl(input, format_desc, channel_layout_spec, audio_stream_index)){}
+audio_decoder::audio_decoder(input& input, const core::video_format_desc& format_desc, int audio_stream_index) : impl_(new impl(input, format_desc, audio_stream_index)){}
 audio_decoder::audio_decoder(audio_decoder&& other) : impl_(std::move(other.impl_)){}
 audio_decoder& audio_decoder::operator=(audio_decoder&& other){impl_ = std::move(other.impl_); return *this;}
 std::shared_ptr<AVFrame> audio_decoder::operator()(){return impl_->poll();}
 uint32_t audio_decoder::nb_frames() const{return impl_->nb_frames();}
-const core::audio_channel_layout& audio_decoder::channel_layout() const { return impl_->channel_layout_; }
 std::wstring audio_decoder::print() const{return impl_->print();}
 core::monitor::subject& audio_decoder::monitor_output() { return impl_->monitor_subject_;}
 
