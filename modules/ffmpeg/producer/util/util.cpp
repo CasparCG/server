@@ -588,7 +588,7 @@ bool is_valid_file(const std::wstring& filename, bool only_video)
 		buf.push_back(*file_it);
 
 	if(buf.empty())
-		return nullptr;
+		return false;
 
 	pb.buf		= buf.data();
 	pb.buf_size = static_cast<int>(buf.size());
