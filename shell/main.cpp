@@ -333,7 +333,7 @@ int main(int argc, char** argv)
 		
 		CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
 
-		if (!should_wait_for_keypress)
+		if (should_wait_for_keypress)
 			wait_for_keypress();
 	}
 	catch(const boost::property_tree::file_parser_error& e)
