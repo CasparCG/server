@@ -411,6 +411,11 @@ public:
 
 	// ffmpeg_producer
 
+	bool has_alpha()
+	{
+		return av_find_best_stream(input_.context().get(), AVMEDIA_TYPE_VIDEO, 1, -1, nullptr, 0) != AVERROR_STREAM_NOT_FOUND;
+	}
+
 	std::wstring print_mode() const
 	{
 		return video_decoder_ ? ffmpeg::print_mode(video_decoder_->width(), video_decoder_->height(), fps_, !video_decoder_->is_progressive()) : L"";
@@ -567,7 +572,8 @@ safe_ptr<core::frame_producer> create_producer(
 
 	try // to find a key file.
 	{
-		key_producer = make_safe<ffmpeg_producer>(frame_factory, filename, FFMPEG_FILE, filter_str, loop, start, length, true, vid_params, true);
+		if (producer->has_alpha())
+			key_producer = make_safe<ffmpeg_producer>(frame_factory, filename, FFMPEG_FILE, filter_str, loop, start, length, true, vid_params, true);
 	}
 	catch (...) {}
 
