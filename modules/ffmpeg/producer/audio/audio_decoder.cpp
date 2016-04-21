@@ -69,7 +69,8 @@ struct audio_decoder::implementation : boost::noncopyable
 
 public:
 	explicit implementation(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc, const std::wstring& custom_channel_order) 
-		: format_desc_(format_desc)	
+		: index_(-1)
+		, format_desc_(format_desc)	
 		, codec_context_(open_codec(*context, AVMEDIA_TYPE_AUDIO, index_))
 		, buffer_(480000*2)
 		, nb_frames_(0)//context->streams[index_]->nb_frames)

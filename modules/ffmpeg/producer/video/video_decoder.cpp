@@ -66,8 +66,9 @@ struct video_decoder::implementation : boost::noncopyable
 	tbb::atomic<size_t>						file_frame_number_;
 
 public:
-	explicit implementation(const safe_ptr<AVFormatContext>& context) 
-		: codec_context_(open_codec(*context, AVMEDIA_TYPE_VIDEO, index_))
+	explicit implementation(const safe_ptr<AVFormatContext>& context, int index) 
+		: index_(index)
+		, codec_context_(open_codec(*context, AVMEDIA_TYPE_VIDEO, index_))
 		, nb_frames_(static_cast<uint32_t>(context->streams[index_]->nb_frames))
 		, width_(codec_context_->width)
 		, height_(codec_context_->height)
@@ -158,7 +159,7 @@ public:
 	}
 };
 
-video_decoder::video_decoder(const safe_ptr<AVFormatContext>& context) : impl_(new implementation(context)){}
+video_decoder::video_decoder(const safe_ptr<AVFormatContext>& context, int index) : impl_(new implementation(context, index)){}
 void video_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
 std::shared_ptr<AVFrame> video_decoder::poll(){return impl_->poll();}
 bool video_decoder::ready() const{return impl_->ready();}

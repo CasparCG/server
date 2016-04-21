@@ -44,6 +44,7 @@
 #include <core/producer/frame/frame_factory.h>
 #include <core/producer/frame/basic_frame.h>
 #include <core/producer/frame/frame_transform.h>
+#include <core/producer/separated/separated_producer.h>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/assign.hpp>
@@ -121,7 +122,7 @@ struct ffmpeg_producer : public core::frame_producer
 	uint32_t													file_frame_number_;
 		
 public:
-	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, FFMPEG_Resource resource_type, const std::wstring& filter, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const std::wstring& custom_channel_order, const ffmpeg_producer_params& vid_params)
+	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, FFMPEG_Resource resource_type, const std::wstring& filter, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_producer_params& vid_params, bool alpha = false)
 		: filename_(filename)
 		, path_relative_to_media_(get_relative_or_original(filename, env::media_folder()))
 		, resource_type_(resource_type)
@@ -142,7 +143,7 @@ public:
 	
 		try
 		{
-			video_decoder_.reset(new video_decoder(input_.context()));
+			video_decoder_.reset(new video_decoder(input_.context(), alpha ? 1 : -1));
 			if (!thumbnail_mode_)
 				CASPAR_LOG(info) << print() << L" " << video_decoder_->print();
 		}
@@ -161,11 +162,11 @@ public:
 
 		core::channel_layout audio_channel_layout = core::default_channel_layout_repository().get_by_name(L"STEREO");
 
-		if (!thumbnail_mode_)
+		if (!thumbnail_mode_ && !alpha)
 		{
 			try
 			{
-				audio_decoder_.reset(new audio_decoder(input_.context(), frame_factory->get_video_format_desc(), custom_channel_order));
+				audio_decoder_.reset(new audio_decoder(input_.context(), frame_factory->get_video_format_desc(), L""));
 				audio_channel_layout = audio_decoder_->channel_layout();
 				CASPAR_LOG(info) << print() << L" " << audio_decoder_->print();
 			}
@@ -560,9 +561,21 @@ safe_ptr<core::frame_producer> create_producer(
 			vid_params.options.push_back(option(name, value));
 		}
 	}
+		
+	auto producer = make_safe<ffmpeg_producer>(frame_factory, filename, FFMPEG_FILE, filter_str, loop, start, length, true, vid_params);
+	auto key_producer = core::frame_producer::empty();
+
+	try // to find a key file.
+	{
+		key_producer = make_safe<ffmpeg_producer>(frame_factory, filename, FFMPEG_FILE, filter_str, loop, start, length, true, vid_params, true);
+	}
+	catch (...) {}
+
+	if (producer != core::frame_producer::empty() && key_producer != core::frame_producer::empty())
+		return core::create_separated_producer(producer, key_producer);
 
 	
-	return create_producer_destroy_proxy(make_safe<ffmpeg_producer>(frame_factory, filename, resource_type, filter_str, loop, start, length, false, custom_channel_order, vid_params));
+	return create_producer_destroy_proxy(producer);
 }
 
 safe_ptr<core::frame_producer> create_thumbnail_producer(
@@ -583,7 +596,8 @@ safe_ptr<core::frame_producer> create_thumbnail_producer(
 	auto filter_str = L"";
 
 	ffmpeg_producer_params vid_params;
-	return make_safe<ffmpeg_producer>(frame_factory, filename, FFMPEG_FILE, filter_str, loop, start, length, true, L"", vid_params);
+
+	return make_safe<ffmpeg_producer>(frame_factory, filename, FFMPEG_FILE, filter_str, loop, start, length, true, vid_params);
 }
 
 }}

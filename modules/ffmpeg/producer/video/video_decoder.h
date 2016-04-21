@@ -41,7 +41,7 @@ namespace ffmpeg {
 class video_decoder : boost::noncopyable
 {
 public:
-	explicit video_decoder(const safe_ptr<AVFormatContext>& context);
+	explicit video_decoder(const safe_ptr<AVFormatContext>& context, int index = -1);
 	
 	bool ready() const;
 	void push(const std::shared_ptr<AVPacket>& packet);

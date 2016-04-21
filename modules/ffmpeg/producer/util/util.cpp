@@ -417,7 +417,7 @@ safe_ptr<AVPacket> create_packet()
 safe_ptr<AVCodecContext> open_codec(AVFormatContext& context, enum AVMediaType type, int& index)
 {	
 	AVCodec* decoder;
-	index = THROW_ON_ERROR2(av_find_best_stream(&context, type, -1, -1, &decoder, 0), "");
+	index = THROW_ON_ERROR2(av_find_best_stream(&context, type, index, -1, &decoder, 0), "");
 	//if(strcmp(decoder->name, "prores") == 0 && decoder->next && strcmp(decoder->next->name, "prores_lgpl") == 0)
 	//	decoder = decoder->next;
 

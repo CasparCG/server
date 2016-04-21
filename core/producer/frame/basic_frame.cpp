@@ -153,6 +153,7 @@ safe_ptr<basic_frame> basic_frame::fill_and_key(const safe_ptr<basic_frame>& fil
 
 	std::vector<safe_ptr<basic_frame>> frames;
 	key->get_frame_transform().is_key = true;
+	key->get_frame_transform().volume = 0.0;
 	frames.push_back(key);
 	frames.push_back(fill);
 	return make_safe<basic_frame>(std::move(frames));
