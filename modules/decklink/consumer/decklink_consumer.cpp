@@ -289,7 +289,7 @@ struct key_video_context : public IDeckLinkVideoOutputCallback, boost::noncopyab
 	const configuration					config_;
 	com_ptr<IDeckLink>					decklink_					= get_device(config_.key_device_index());
 	com_iface_ptr<IDeckLinkOutput>		output_						= iface_cast<IDeckLinkOutput>(decklink_);
-	com_iface_ptr<IDeckLinkKeyer>		keyer_						= iface_cast<IDeckLinkKeyer>(decklink_);
+	com_iface_ptr<IDeckLinkKeyer>		keyer_						= iface_cast<IDeckLinkKeyer>(decklink_, true);
 	com_iface_ptr<IDeckLinkAttributes>	attributes_					= iface_cast<IDeckLinkAttributes>(decklink_);
 	com_iface_ptr<Configuration>		configuration_				= iface_cast<Configuration>(decklink_);
 	tbb::atomic<int64_t>				current_presentation_delay_;
@@ -363,7 +363,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, public IDeckLink
 	com_ptr<IDeckLink>									decklink_				= get_device(config_.device_index);
 	com_iface_ptr<IDeckLinkOutput>						output_					= iface_cast<IDeckLinkOutput>(decklink_);
 	com_iface_ptr<Configuration>						configuration_			= iface_cast<Configuration>(decklink_);
-	com_iface_ptr<IDeckLinkKeyer>						keyer_					= iface_cast<IDeckLinkKeyer>(decklink_);
+	com_iface_ptr<IDeckLinkKeyer>						keyer_					= iface_cast<IDeckLinkKeyer>(decklink_, true);
 	com_iface_ptr<IDeckLinkAttributes>					attributes_				= iface_cast<IDeckLinkAttributes>(decklink_);
 
 	tbb::spin_mutex										exception_mutex_;
