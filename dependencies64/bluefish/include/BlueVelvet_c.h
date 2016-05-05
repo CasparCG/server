@@ -7,7 +7,7 @@
 //	LARGELY superseded by dynamic calculations
 
 
-  $Id: BlueVelvet_c.h,v 1.4 2002/10/02 00:29:53 cameron Exp $
+  $Id: BlueVelvet_c.h,v 1.1 2014/01/08 02:15:31 tim Exp $
 //
 //  developed by  : Cameron Duffy   (C) 2002 Bluefish444 P/L
 // ==========================================================================
