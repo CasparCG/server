@@ -56,7 +56,19 @@
 #include <array>
 
 namespace caspar { namespace bluefish { 
-			
+		
+enum class hardware_downstream_keyer_mode
+{
+	disable = 0,
+	enable = 1,
+};
+
+enum class hardware_downstream_keyer_audio_source
+{
+	SDIVideoInput = 1,
+	VideoOutputChannel = 2
+};
+
 struct bluefish_consumer : boost::noncopyable
 {
 	spl::shared_ptr<CBlueVelvet4>						blue_;
@@ -84,6 +96,8 @@ struct bluefish_consumer : boost::noncopyable
 	const bool											key_only_;
 		
 	executor											executor_;
+	hardware_downstream_keyer_mode									hardware_keyer_;
+	hardware_downstream_keyer_audio_source							keyer_audio_source_;
 public:
 	bluefish_consumer(
 			const core::video_format_desc& format_desc,
@@ -92,6 +106,8 @@ public:
 			int device_index,
 			bool embedded_audio,
 			bool key_only,
+			hardware_downstream_keyer_mode keyer,
+			hardware_downstream_keyer_audio_source keyer_audio_source,
 			int channel_index)
 		: blue_(create_blue(device_index))
 		, device_index_(device_index)
@@ -102,6 +118,8 @@ public:
 		, model_name_(get_card_desc(*blue_))
 		, vid_fmt_(get_video_mode(*blue_, format_desc))
 		, embedded_audio_(embedded_audio)
+		, hardware_keyer_(keyer)
+		, keyer_audio_source_(keyer_audio_source_)
 		, key_only_(key_only)
 		, executor_(print())
 	{
@@ -181,8 +199,11 @@ public:
 			blue_->Set_DownConverterSignalType(vid_fmt_ == VID_FMT_PAL ? SD_SDI : HD_SDI);	
 	
 		if(BLUE_FAIL(set_card_property(blue_, VIDEO_OUTPUT_ENGINE, VIDEO_ENGINE_FRAMESTORE))) 
-			CASPAR_LOG(warning) << print() << TEXT(" Failed to set video engine.");	
-		
+			CASPAR_LOG(warning) << print() << TEXT(" Failed to set video engine.");
+
+		if (is_epoch_card((*blue_)))
+			setup_hardware_downstream_keyer(hardware_keyer_, keyer_audio_source_);
+
 		enable_video_output();
 						
 		int n = 0;
@@ -204,7 +225,59 @@ public:
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 	}
-	
+
+	void setup_hardware_downstream_keyer(hardware_downstream_keyer_mode keyer, hardware_downstream_keyer_audio_source audio_source)
+	{
+		ULONG keyer_control_value = 0, card_feature_value = 0;
+		ULONG card_connector_value = 0;
+		unsigned int nOutputStreams = 0;
+		unsigned int nInputStreams = 0;
+		unsigned int nInputSDIConnector = 0;
+		unsigned int nOutputSDIConnector = 0;
+		if (BLUE_OK(get_card_property(blue_, CARD_FEATURE_STREAM_INFO, card_feature_value)))
+		{
+			nOutputStreams = CARD_FEATURE_GET_SDI_OUTPUT_STREAM_COUNT(card_feature_value);
+			nInputStreams = CARD_FEATURE_GET_SDI_INPUT_STREAM_COUNT(card_feature_value);
+		}
+		if (BLUE_OK(get_card_property(blue_, CARD_FEATURE_CONNECTOR_INFO, card_connector_value)))
+		{
+			nOutputSDIConnector = CARD_FEATURE_GET_SDI_OUTPUT_CONNECTOR_COUNT(card_connector_value);
+			nInputSDIConnector = CARD_FEATURE_GET_SDI_INPUT_CONNECTOR_COUNT(card_connector_value);
+		}
+		if (nInputSDIConnector == 0 || nInputStreams == 0)
+			return;
+		if (keyer == hardware_downstream_keyer_mode::disable)
+		{
+			keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_DISABLED(keyer_control_value);
+			keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_DISABLE_OVER_BLACK(keyer_control_value);
+		}
+		else
+			if (keyer == hardware_downstream_keyer_mode::enable)
+			{
+				ULONG invalidVideoModeFlag, inputVideoSignal;
+				if (BLUE_FAIL(get_card_property(blue_, INVALID_VIDEO_MODE_FLAG, invalidVideoModeFlag)))
+					CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(" Failed to get invalid video mode flag"));
+
+				keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_ENABLED(keyer_control_value);
+				if (BLUE_FAIL(get_card_property(blue_, VIDEO_INPUT_SIGNAL_VIDEO_MODE, inputVideoSignal)))
+					CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(" Failed to get video input signal mode"));
+
+				if (inputVideoSignal >= invalidVideoModeFlag)
+					keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_ENABLE_OVER_BLACK(keyer_control_value);
+				else
+					keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_DISABLE_OVER_BLACK(keyer_control_value);
+			}
+
+		if (audio_source == hardware_downstream_keyer_audio_source::SDIVideoInput && (keyer == hardware_downstream_keyer_mode::enable))
+			keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_USE_INPUT_ANCILLARY(keyer_control_value);
+		else
+			if (audio_source == hardware_downstream_keyer_audio_source::VideoOutputChannel)
+				keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_USE_OUTPUT_ANCILLARY(keyer_control_value);
+
+		if (!BLUE_PASS(set_card_property(blue_, VIDEO_ONBOARD_KEYER, keyer_control_value)))
+			CASPAR_LOG(error) << print() << TEXT(" Failed to set keyer control.");
+	}
+
 	void enable_video_output()
 	{
 		if(!BLUE_PASS(set_card_property(blue_, VIDEO_BLACKGENERATOR, 0)))
@@ -361,13 +434,22 @@ struct bluefish_consumer_proxy : public core::frame_consumer
 	core::video_format_desc				format_desc_;
 	core::audio_channel_layout			in_channel_layout_		= core::audio_channel_layout::invalid();
 	core::audio_channel_layout			out_channel_layout_;
+	hardware_downstream_keyer_mode					hardware_keyer_;
+	hardware_downstream_keyer_audio_source			hardware_keyer_audio_source_;
 
 public:
 
-	bluefish_consumer_proxy(int device_index, bool embedded_audio, bool key_only, const core::audio_channel_layout& out_channel_layout)
+	bluefish_consumer_proxy(int device_index, 
+							bool embedded_audio, 
+							bool key_only, 
+							hardware_downstream_keyer_mode keyer,
+							hardware_downstream_keyer_audio_source keyer_audio_source, 
+							const core::audio_channel_layout& out_channel_layout)
 		: device_index_(device_index)
 		, embedded_audio_(embedded_audio)
 		, key_only_(key_only)
+		, hardware_keyer_(keyer)
+		, hardware_keyer_audio_source_(keyer_audio_source)
 		, out_channel_layout_(out_channel_layout)
 	{
 	}
@@ -384,7 +466,15 @@ public:
 			out_channel_layout_ = in_channel_layout_;
 
 		consumer_.reset();
-		consumer_.reset(new bluefish_consumer(format_desc, in_channel_layout_, out_channel_layout_, device_index_, embedded_audio_, key_only_, channel_index));
+		consumer_.reset(new bluefish_consumer(	format_desc, 
+												in_channel_layout_, 
+												out_channel_layout_, 
+												device_index_, 
+												embedded_audio_, 
+												key_only_, 
+												hardware_keyer_,
+												hardware_keyer_audio_source_, 
+												channel_index));
 	}
 	
 	std::future<bool> send(core::const_frame frame) override
@@ -451,6 +541,14 @@ void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
 		->text(L"channel. This is useful when you have two SDI video cards, and neither has native support ")
 		->text(L"for separate fill/key output");
 	sink.para()->text(L"Specify ")->code(L"channel_layout")->text(L" to output a different audio channel layout than the channel uses.");
+	sink.para()->text(L"Specify ")->code(L"ENABLE_KEYER")->text(L" to enable use of hardware keyer on the bluefish board.\n"
+																L"\t\t\tUsing this option hardware keyer would key using \n "
+																L"\t\t\tthe video input on the SDI as background layer \n"
+																L"\t\t\tand graphics Generated by CasparCG as foreground layer");
+	sink.para()->text(L"Specify ")->code(L"DISABLE_KEYER")->text(L" this option to disable hardware keyer on the bluefish board");
+	sink.para()->text(L"Specify ")->code(L"KEYER_AUDIO_SOURCE_SDIINPUT")->text(L" to enable SDI embedded audio to be transparently passed through the keyer to the SDI output\n");
+	sink.para()->text(L"Specify ")->code(L"KEYER_AUDIO_SOURCE_OUTPUT_CHANNEL")->text(L" to enable keyer to pass the audio provided by CasparCG to the SDI output\n");
+
 	sink.para()->text(L"Examples:");
 	sink.example(L">> ADD 1 BLUEFISH", L"uses the default device_index of 1.");
 	sink.example(L">> ADD 1 BLUEFISH 2", L"for device_index 2.");
@@ -482,8 +580,22 @@ spl::shared_ptr<core::frame_consumer> create_consumer(
 
 		layout = *found_layout;
 	}
+	hardware_downstream_keyer_mode keyer = hardware_downstream_keyer_mode::disable;
 
-	return spl::make_shared<bluefish_consumer_proxy>(device_index, embedded_audio, key_only, layout);
+	if (contains_param(L"DISABLE_KEYER", params))
+		keyer = hardware_downstream_keyer_mode::disable;
+	else if (contains_param(L"ENABLE_KEYER", params))
+		keyer = hardware_downstream_keyer_mode::enable;
+
+
+	hardware_downstream_keyer_audio_source keyer_audio_source = hardware_downstream_keyer_audio_source::VideoOutputChannel;
+	if (contains_param(L"KEYER_AUDIO_SOURCE_SDIINPUT", params))
+		keyer_audio_source = hardware_downstream_keyer_audio_source::SDIVideoInput;
+	else
+	if (contains_param(L"KEYER_AUDIO_SOURCE_OUTPUT_CHANNEL", params))
+		keyer_audio_source = hardware_downstream_keyer_audio_source::VideoOutputChannel;
+
+	return spl::make_shared<bluefish_consumer_proxy>(device_index, embedded_audio, key_only, keyer, keyer_audio_source, layout);
 }
 
 spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
@@ -493,6 +605,8 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 	const auto embedded_audio	= ptree.get(						L"embedded-audio",	false);
 	const auto key_only			= ptree.get(						L"key-only",		false);
 	const auto channel_layout	= ptree.get_optional<std::wstring>(	L"channel-layout");
+	const auto hardware_keyer_value = ptree.get(L"hardware-keyer", L"disable-keyer");
+	const auto keyer_audio_source_value = ptree.get(L"hardware-keyer-audio-source", L"videooutputchannel");
 
 	auto layout = core::audio_channel_layout::invalid();
 
@@ -507,8 +621,24 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 
 		layout = *found_layout;
 	}
+	hardware_downstream_keyer_mode keyer_mode = hardware_downstream_keyer_mode::disable;
+	if (hardware_keyer_value == L"disable-keyer")
+	{
+		keyer_mode = hardware_downstream_keyer_mode::disable;
+	}
+	else if (hardware_keyer_value == L"enable-keyer")
+	{
+		keyer_mode = hardware_downstream_keyer_mode::enable;
+	}
 
-	return spl::make_shared<bluefish_consumer_proxy>(device_index, embedded_audio, key_only, layout);
+	hardware_downstream_keyer_audio_source keyer_audio_source = hardware_downstream_keyer_audio_source::VideoOutputChannel;
+	if (keyer_audio_source_value == L"videooutputchannel")
+		keyer_audio_source = hardware_downstream_keyer_audio_source::VideoOutputChannel;
+	else
+		if (keyer_audio_source_value == L"sdivideoinput")
+			keyer_audio_source = hardware_downstream_keyer_audio_source::SDIVideoInput;
+
+	return spl::make_shared<bluefish_consumer_proxy>(device_index, embedded_audio, key_only, keyer_mode, keyer_audio_source ,layout);
 }
 
 }}

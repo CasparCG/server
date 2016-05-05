@@ -54,4 +54,15 @@ int set_card_property(T& pSdk, ULONG prop, ULONG value)
 	return (pSdk->SetCardProperty(prop,variantValue));
 }
 
+template<typename T>
+int get_card_property(T& pSdk, ULONG prop, ULONG &value)
+{
+	VARIANT variantValue;
+	variantValue.vt = VT_UI4;
+	variantValue.ulVal = value;
+	int err = pSdk->QueryCardProperty(prop, variantValue);
+	value = variantValue.ulVal;
+	return (err);
+}
+
 }}
