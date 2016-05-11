@@ -48,9 +48,11 @@
 
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
+#include <tbb/spin_mutex.h>
 
 #include <boost/thread.hpp>
 #include <boost/optional.hpp>
+#include <boost/exception_ptr.hpp>
 
 namespace caspar { namespace ffmpeg {
 
@@ -112,25 +114,25 @@ struct source
 {
 	virtual ~source() { }
 
-	virtual std::wstring				print() const											= 0;
-	virtual void						start()													{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
-	virtual void						graph(spl::shared_ptr<caspar::diagnostics::graph> g)	{ }
-	virtual void						stop()													{ }
-	virtual void						start_frame(std::uint32_t frame)						{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not seekable.")); }
-	virtual std::uint32_t				start_frame() const										{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not seekable.")); }
-	virtual void						loop(bool value)										{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not seekable.")); }
-	virtual bool						loop() const											{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not seekable.")); }
-	virtual void						length(std::uint32_t frames)							{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not seekable.")); }
-	virtual std::uint32_t				length() const											{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not seekable.")); }
-	virtual std::string					filename() const										{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print())); }
-	virtual void						seek(std::uint32_t frame)								{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not seekable.")); }
-	virtual bool						has_audio() const										{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
-	virtual int							samplerate() const										{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
-	virtual bool						has_video() const										{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
-	virtual bool						eof() const												{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
-	virtual boost::rational<int>		framerate() const										{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
-	virtual std::uint32_t				frame_number() const									{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
-	virtual std::shared_ptr<AVFrame>	get_input_frame(AVMediaType type)						{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
+	virtual std::wstring							print() const											= 0;
+	virtual void									start()													{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
+	virtual void									graph(spl::shared_ptr<caspar::diagnostics::graph> g)	{ }
+	virtual void									stop()													{ }
+	virtual void									start_frame(std::uint32_t frame)						{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not seekable.")); }
+	virtual std::uint32_t							start_frame() const										{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not seekable.")); }
+	virtual void									loop(bool value)										{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not seekable.")); }
+	virtual bool									loop() const											{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not seekable.")); }
+	virtual void									length(std::uint32_t frames)							{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not seekable.")); }
+	virtual std::uint32_t							length() const											{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not seekable.")); }
+	virtual std::string								filename() const										{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print())); }
+	virtual void									seek(std::uint32_t frame)								{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not seekable.")); }
+	virtual bool									has_audio() const										{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
+	virtual int										samplerate() const										{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
+	virtual bool									has_video() const										{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
+	virtual bool									eof() const												{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
+	virtual boost::rational<int>					framerate() const										{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
+	virtual std::uint32_t							frame_number() const									{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
+	virtual std::vector<std::shared_ptr<AVFrame>>	get_input_frames_for_streams(AVMediaType type)			{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
 };
 
 struct no_source_selected : public source
@@ -143,16 +145,16 @@ struct no_source_selected : public source
 
 class file_source : public source
 {
-	std::wstring						filename_;
-	spl::shared_ptr<diagnostics::graph>	graph_;
-	std::uint32_t						start_frame_	= 0;
-	std::uint32_t						length_			= std::numeric_limits<std::uint32_t>::max();
-	bool								loop_			= false;
-	mutable boost::mutex				pointer_mutex_;
-	std::shared_ptr<input>				input_;
-	std::shared_ptr<audio_decoder>		audio_decoder_;
-	std::shared_ptr<video_decoder>		video_decoder_;
-	bool								started_		= false;
+	std::wstring								filename_;
+	spl::shared_ptr<diagnostics::graph>			graph_;
+	std::uint32_t								start_frame_	= 0;
+	std::uint32_t								length_			= std::numeric_limits<std::uint32_t>::max();
+	bool										loop_			= false;
+	mutable boost::mutex						pointer_mutex_;
+	std::shared_ptr<input>						input_;
+	std::vector<spl::shared_ptr<audio_decoder>>	audio_decoders_;
+	std::shared_ptr<video_decoder>				video_decoder_;
+	bool										started_		= false;
 public:
 	file_source(std::string filename)
 		: filename_(u16(filename))
@@ -175,27 +177,29 @@ public:
 		bool thumbnail_mode = is_logging_quiet_for_thread();
 		input_.reset(new input(graph_, filename_, loop_, start_frame_, length_, thumbnail_mode));
 
-		try
+		for (int i = 0; i < input_->num_audio_streams(); ++i)
 		{
-			audio_decoder_.reset(new audio_decoder(*input_, core::video_format_desc()));
+			try
+			{
+				audio_decoders_.push_back(spl::make_shared<audio_decoder>(*input_, core::video_format_desc(), i));
+			}
+			catch (...)
+			{
+				if (is_logging_quiet_for_thread())
+				{
+					CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
+					CASPAR_LOG(info) << print() << " Failed to open audio-stream. Turn on log level debug to see more information.";
+				}
+				else
+				{
+					CASPAR_LOG_CURRENT_EXCEPTION();
+					CASPAR_LOG(warning) << print() << " Failed to open audio-stream.";
+				}
+			}
 		}
-		catch (averror_stream_not_found&)
-		{
+
+		if (audio_decoders_.empty())
 			CASPAR_LOG(debug) << print() << " No audio-stream found. Running without audio.";
-		}
-		catch (...)
-		{
-			if (is_logging_quiet_for_thread())
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
-				CASPAR_LOG(info) << print() << " Failed to open audio-stream. Running without audio. Turn on log level debug to see more information.";
-			}
-			else
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				CASPAR_LOG(warning) << print() << " Failed to open audio-stream. Running without audio.";
-			}
-		}
 
 		try
 		{
@@ -271,10 +275,10 @@ public:
 		if (v)
 			return v->nb_frames();
 
-		auto a = get_audio_decoder();
+		auto a = get_audio_decoders();
 
-		if (a)
-			return a->nb_frames();
+		if (!a.empty())
+			return a.at(0)->nb_frames(); // Should be ok.
 
 		return length_;
 	}
@@ -298,14 +302,12 @@ public:
 
 	bool has_audio() const override
 	{
-		return static_cast<bool>(get_audio_decoder());
+		return !get_audio_decoders().empty();
 	}
 
 	int samplerate() const override
 	{
-		auto decoder = get_audio_decoder();
-
-		if (!decoder)
+		if (get_audio_decoders().empty())
 			return -1;
 
 		return 48000;
@@ -336,23 +338,34 @@ public:
 		return decoder->file_frame_number();
 	}
 
-	std::shared_ptr<AVFrame> get_input_frame(AVMediaType type) override
+	std::vector<std::shared_ptr<AVFrame>> get_input_frames_for_streams(AVMediaType type) override
 	{
-		auto a_decoder	= get_audio_decoder();
+		auto a_decoders	= get_audio_decoders();
 		auto v_decoder	= get_video_decoder();
 		expect_started();
 
-		if (type == AVMediaType::AVMEDIA_TYPE_AUDIO && a_decoder)
+		if (type == AVMediaType::AVMEDIA_TYPE_AUDIO && !a_decoders.empty())
 		{
-			std::shared_ptr<AVFrame> frame;
+			std::vector<std::shared_ptr<AVFrame>> frames;
 
-			for (int i = 0; i < 64; ++i)
+			for (auto& a_decoder : a_decoders)
 			{
-				frame = (*a_decoder)();
+				std::shared_ptr<AVFrame> frame;
 
-				if (frame && frame->data[0])
-					return spl::make_shared_ptr(frame);
+				for (int i = 0; i < 64; ++i)
+				{
+					frame = (*a_decoder)();
+
+					if (frame && frame->data[0])
+						break;
+					else
+						frame.reset();
+				}
+
+				frames.push_back(std::move(frame));
 			}
+
+			return frames;
 		}
 		else if (type == AVMediaType::AVMEDIA_TYPE_VIDEO && v_decoder)
 		{
@@ -363,14 +376,14 @@ public:
 				frame = (*v_decoder)();
 
 				if (frame && frame->data[0])
-					return spl::make_shared_ptr(frame);
+					return { frame };
 			}
 		}
 		else
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
 				print() + L" Unhandled media type " + boost::lexical_cast<std::wstring>(type)));
 
-		return nullptr;
+		return { };
 	}
 private:
 	void expect_started() const
@@ -385,10 +398,10 @@ private:
 		return input_;
 	}
 
-	std::shared_ptr<audio_decoder> get_audio_decoder() const
+	std::vector<spl::shared_ptr<audio_decoder>> get_audio_decoders() const
 	{
 		boost::lock_guard<boost::mutex> lock(pointer_mutex_);
-		return audio_decoder_;
+		return audio_decoders_;
 	}
 
 	std::shared_ptr<video_decoder> get_video_decoder() const
@@ -504,7 +517,7 @@ public:
 		return video_frames_.try_push(std::move(data));
 	}
 
-	std::shared_ptr<AVFrame> get_input_frame(AVMediaType type) override
+	std::vector<std::shared_ptr<AVFrame>> get_input_frames_for_streams(AVMediaType type) override
 	{
 		if (!running_)
 			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not running."));
@@ -515,7 +528,7 @@ public:
 			audio_frames_.pop(samples);
 
 			if (samples.empty())
-				return nullptr;
+				return { };
 			
 			spl::shared_ptr<AVFrame> av_frame(av_frame_alloc(), [samples](AVFrame* p) { av_frame_free(&p); });
 
@@ -537,7 +550,7 @@ public:
 					static_cast<AVSampleFormat>(av_frame->format),
 					16));
 
-			return av_frame;
+			return { av_frame };
 		}
 		else if (type == AVMediaType::AVMEDIA_TYPE_VIDEO && has_video())
 		{
@@ -545,7 +558,7 @@ public:
 			video_frames_.pop(data);
 
 			if (data.empty())
-				return nullptr;
+				return {};
 
 			spl::shared_ptr<AVFrame> av_frame(av_frame_alloc(), [data](AVFrame* p) { av_frame_free(&p); });
 			avcodec_get_frame_defaults(av_frame.get());		
@@ -570,7 +583,7 @@ public:
 					height_,
 					1));
 
-			return av_frame;
+			return { av_frame };
 		}
 		else
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(
@@ -582,19 +595,21 @@ struct sink
 {
 	virtual ~sink() { }
 
-	virtual std::wstring					print() const												= 0;
-	virtual void							graph(spl::shared_ptr<caspar::diagnostics::graph> g)		{ }
-	virtual void							acodec(std::string codec)									{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not an encoder.")); }
-	virtual void							vcodec(std::string codec)									{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not an encoder.")); }
-	virtual void							format(std::string fmt)										{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not an encoder.")); }
-	virtual void							framerate(boost::rational<int> framerate)					{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not an encoder.")); }
-	virtual void							start(bool has_audio, bool has_video)						{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
-	virtual void							stop()														{ }
-	virtual std::vector<AVSampleFormat>		supported_sample_formats() const							{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
-	virtual std::vector<int>				supported_samplerates() const								{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
-	virtual std::vector<AVPixelFormat>		supported_pixel_formats() const								{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
-	virtual boost::optional<AVMediaType>	try_push(AVMediaType type, spl::shared_ptr<AVFrame> frame)	{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
-	virtual void							eof()														{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
+	virtual std::wstring					print() const																	= 0;
+	virtual void							graph(spl::shared_ptr<caspar::diagnostics::graph> g)							{ }
+	virtual void							acodec(std::string codec)														{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not an encoder.")); }
+	virtual void							vcodec(std::string codec)														{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not an encoder.")); }
+	virtual void							format(std::string fmt)															{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not an encoder.")); }
+	virtual void							framerate(boost::rational<int> framerate)										{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not an encoder.")); }
+	virtual void							start(bool has_audio, bool has_video)											{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
+	virtual void							stop()																			{ }
+	virtual std::vector<AVSampleFormat>		supported_sample_formats() const												{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
+	virtual std::vector<int>				supported_samplerates() const													{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
+	virtual std::vector<AVPixelFormat>		supported_pixel_formats() const													{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
+	virtual int								wanted_num_audio_streams() const												{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
+	virtual boost::optional<int>			wanted_num_channels_per_stream() const										{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
+	virtual boost::optional<AVMediaType>	try_push(AVMediaType type, int stream_index, spl::shared_ptr<AVFrame> frame)	{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
+	virtual void							eof()																			{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
 };
 
 struct no_sink_selected : public sink
@@ -713,7 +728,17 @@ public:
 		};
 	}
 
-	boost::optional<AVMediaType> try_push(AVMediaType type, spl::shared_ptr<AVFrame> av_frame) override
+	int wanted_num_audio_streams() const override
+	{
+		return 1;
+	}
+
+	boost::optional<int> wanted_num_channels_per_stream() const
+	{
+		return boost::none;
+	}
+
+	boost::optional<AVMediaType> try_push(AVMediaType type, int stream_index, spl::shared_ptr<AVFrame> av_frame) override
 	{
 		if (!has_audio_ && !has_video_)
 			CASPAR_THROW_EXCEPTION(invalid_operation());
@@ -832,6 +857,20 @@ public:
 	}
 };
 
+struct audio_stream_info
+{
+	int				num_channels = 0;
+	AVSampleFormat	sampleformat = AVSampleFormat::AV_SAMPLE_FMT_NONE;
+};
+
+struct video_stream_info
+{
+	int					width		= 0;
+	int					height		= 0;
+	AVPixelFormat		pixelformat	= AVPixelFormat::AV_PIX_FMT_NONE;
+	core::field_mode	fieldmode	= core::field_mode::progressive;
+};
+
 class ffmpeg_pipeline_backend_internal : public ffmpeg_pipeline_backend
 {
 	spl::shared_ptr<diagnostics::graph>								graph_;
@@ -840,12 +879,8 @@ class ffmpeg_pipeline_backend_internal : public ffmpeg_pipeline_backend
 	std::function<bool (caspar::array<const std::int32_t> data)>	try_push_audio_;
 	std::function<bool (caspar::array<const std::uint8_t> data)>	try_push_video_;
 
-	int																source_num_channels_	= 0;
-	AVSampleFormat													source_sampleformat_	= AVSampleFormat::AV_SAMPLE_FMT_NONE;
-	int																source_width_			= 0;
-	int																source_height_			= 0;
-	AVPixelFormat													source_pixelformat_		= AVPixelFormat::AV_PIX_FMT_NONE;
-	core::field_mode												source_fieldmode_		= core::field_mode::progressive;
+	std::vector<audio_stream_info>									source_audio_streams_;
+	video_stream_info												source_video_stream_;
 
 	std::string														afilter_;
 	std::unique_ptr<audio_filter>									audio_filter_;
@@ -856,6 +891,8 @@ class ffmpeg_pipeline_backend_internal : public ffmpeg_pipeline_backend
 	std::function<core::draw_frame ()>								try_pop_frame_;
 
 	tbb::atomic<bool>												started_;
+	tbb::spin_mutex													exception_mutex_;
+	boost::exception_ptr											exception_;
 	boost::thread													thread_;
 public:
 	ffmpeg_pipeline_backend_internal()
@@ -867,6 +904,14 @@ public:
 	~ffmpeg_pipeline_backend_internal()
 	{
 		stop();
+	}
+
+	void throw_if_error()
+	{
+		boost::lock_guard<tbb::spin_mutex> lock(exception_mutex_);
+
+		if (exception_ != nullptr)
+			boost::rethrow_exception(exception_);
 	}
 
 	void graph(spl::shared_ptr<caspar::diagnostics::graph> g) override
@@ -944,12 +989,12 @@ public:
 
 	int width() const override
 	{
-		return source_width_;
+		return source_video_stream_.width;
 	}
 
 	int height() const override
 	{
-		return source_height_;
+		return source_video_stream_.height;
 	}
 
 	boost::rational<int> framerate() const override
@@ -1001,6 +1046,8 @@ public:
 
 	bool try_push_audio(caspar::array<const std::int32_t> data) override
 	{
+		throw_if_error();
+
 		if (try_push_audio_)
 			return try_push_audio_(std::move(data));
 		else
@@ -1009,6 +1056,8 @@ public:
 
 	bool try_push_video(caspar::array<const std::uint8_t> data) override
 	{
+		throw_if_error();
+
 		if (try_push_video_)
 			return try_push_video_(std::move(data));
 		else
@@ -1017,6 +1066,8 @@ public:
 
 	core::draw_frame try_pop_frame() override
 	{
+		throw_if_error();
+
 		if (!try_pop_frame_)
 			CASPAR_THROW_EXCEPTION(invalid_operation());
 
@@ -1056,27 +1107,33 @@ private:
 
 			while (started_ && (source_->has_audio() || source_->has_video()))
 			{
-				auto needed = *result;
-				auto input_frame = source_->get_input_frame(needed);
+				auto needed						= *result;
+				auto input_frames_for_streams	= source_->get_input_frames_for_streams(needed);
 
-				if (input_frame)
+				if (!input_frames_for_streams.empty() && input_frames_for_streams.at(0))
 				{
-					if (needed == AVMediaType::AVMEDIA_TYPE_AUDIO)
+					for (int input_stream_index = 0; input_stream_index < input_frames_for_streams.size(); ++input_stream_index)
 					{
-						result = sink_->try_push(AVMediaType::AVMEDIA_TYPE_AUDIO, spl::make_shared_ptr(std::move(input_frame)));
-					}
-					else if (needed == AVMediaType::AVMEDIA_TYPE_VIDEO)
-					{
-						initialize_video_filter_if_needed(*input_frame);
-						video_filter_->push(std::move(input_frame));
-
-						for (auto filtered_frame : video_filter_->poll_all())
+						if (needed == AVMediaType::AVMEDIA_TYPE_AUDIO)
 						{
-							result = sink_->try_push(AVMediaType::AVMEDIA_TYPE_VIDEO, std::move(filtered_frame));
+							initialize_audio_filter_if_needed(input_frames_for_streams);
+							audio_filter_->push(input_stream_index, std::move(input_frames_for_streams.at(input_stream_index)));
+
+							for (int output_stream_index = 0; output_stream_index < sink_->wanted_num_audio_streams(); ++output_stream_index)
+								for (auto filtered_frame : audio_filter_->poll_all(output_stream_index))
+									result = sink_->try_push(AVMediaType::AVMEDIA_TYPE_AUDIO, output_stream_index, std::move(filtered_frame));
 						}
+						else if (needed == AVMediaType::AVMEDIA_TYPE_VIDEO)
+						{
+							initialize_video_filter_if_needed(*input_frames_for_streams.at(input_stream_index));
+							video_filter_->push(std::move(input_frames_for_streams.at(input_stream_index)));
+
+							for (auto filtered_frame : video_filter_->poll_all())
+								result = sink_->try_push(AVMediaType::AVMEDIA_TYPE_VIDEO, 0, std::move(filtered_frame));
+						}
+						else
+							CASPAR_THROW_EXCEPTION(not_supported());
 					}
-					else
-						CASPAR_THROW_EXCEPTION(not_supported());
 				}
 				else if (source_->eof())
 				{
@@ -1104,6 +1161,9 @@ private:
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
 			}
+
+			boost::lock_guard<tbb::spin_mutex> lock(exception_mutex_);
+			exception_ = boost::current_exception();
 		}
 
 		video_filter_.reset();
@@ -1123,12 +1183,19 @@ private:
 		}
 	}
 
-	void initialize_audio_filter_if_needed(const AVFrame& av_frame)
+	void initialize_audio_filter_if_needed(const std::vector<std::shared_ptr<AVFrame>>& av_frames_per_stream)
 	{
-		bool changed = false;
+		bool changed = av_frames_per_stream.size() != source_audio_streams_.size();
+		source_audio_streams_.resize(av_frames_per_stream.size());
 
-		set_if_changed(changed, source_sampleformat_, static_cast<AVSampleFormat>(av_frame.format));
-		set_if_changed(changed, source_num_channels_, av_frame.channels);
+		for (int i = 0; i < av_frames_per_stream.size(); ++i)
+		{
+			auto& av_frame	= *av_frames_per_stream.at(i);
+			auto& stream	= source_audio_streams_.at(i);
+
+			set_if_changed(changed, stream.sampleformat, static_cast<AVSampleFormat>(av_frame.format));
+			set_if_changed(changed, stream.num_channels, av_frame.channels);
+		}
 
 		if (changed)
 			initialize_audio_filter();
@@ -1136,31 +1203,69 @@ private:
 
 	void initialize_audio_filter()
 	{
-		audio_filter_.reset(new audio_filter(
-				boost::rational<int>(1, source_->samplerate()),
-				source_->samplerate(),
-				source_sampleformat_,
-				av_get_default_channel_layout(source_num_channels_),
-				sink_->supported_samplerates(),
-				sink_->supported_sample_formats(),
-				{},
-				afilter_));
+		std::vector<audio_input_pad> input_pads;
+		std::vector<audio_output_pad> output_pads;
+
+		for (auto& source_audio_stream : source_audio_streams_)
+		{
+			input_pads.emplace_back(
+					boost::rational<int>(1, source_->samplerate()),
+					source_->samplerate(),
+					source_audio_stream.sampleformat,
+					av_get_default_channel_layout(source_audio_stream.num_channels));
+		}
+
+		auto total_num_channels = cpplinq::from(source_audio_streams_)
+				.select([](const audio_stream_info& info) { return info.num_channels; })
+				.aggregate(0, std::plus<int>());
+
+		if (total_num_channels > 1 && sink_->wanted_num_audio_streams() > 1)
+			CASPAR_THROW_EXCEPTION(invalid_operation()
+					<< msg_info("only one-to-many or many-to-one audio stream conversion supported."));
+
+		std::wstring amerge;
+
+		if (sink_->wanted_num_audio_streams() == 1 && !sink_->wanted_num_channels_per_stream())
+		{
+			output_pads.emplace_back(
+					sink_->supported_samplerates(),
+					sink_->supported_sample_formats(),
+					std::vector<int64_t>({ av_get_default_channel_layout(total_num_channels) }));
+
+			if (source_audio_streams_.size() > 1)
+			{
+				for (int i = 0; i < source_audio_streams_.size(); ++i)
+					amerge += L"[a:" + boost::lexical_cast<std::wstring>(i) + L"]";
+
+				amerge += L"amerge=inputs=" + boost::lexical_cast<std::wstring>(source_audio_streams_.size());
+			}
+		}
+
+		std::wstring afilter = u16(afilter_);
+
+		if (!amerge.empty())
+		{
+			afilter = prepend_filter(u16(afilter), amerge);
+			afilter += L"[aout:0]";
+		}
+
+		audio_filter_.reset(new audio_filter(input_pads, output_pads, u8(afilter)));
 	}
 
 	void initialize_video_filter_if_needed(const AVFrame& av_frame)
 	{
 		bool changed = false;
 
-		set_if_changed(changed, source_width_, av_frame.width);
-		set_if_changed(changed, source_height_, av_frame.height);
-		set_if_changed(changed, source_pixelformat_, static_cast<AVPixelFormat>(av_frame.format));
+		set_if_changed(changed, source_video_stream_.width, av_frame.width);
+		set_if_changed(changed, source_video_stream_.height, av_frame.height);
+		set_if_changed(changed, source_video_stream_.pixelformat, static_cast<AVPixelFormat>(av_frame.format));
 
 		core::field_mode field_mode = core::field_mode::progressive;
 
 		if (av_frame.interlaced_frame)
 			field_mode = av_frame.top_field_first ? core::field_mode::upper : core::field_mode::lower;
 
-		set_if_changed(changed, source_fieldmode_, field_mode);
+		set_if_changed(changed, source_video_stream_.fieldmode, field_mode);
 
 		if (changed)
 			initialize_video_filter();
@@ -1168,22 +1273,22 @@ private:
 
 	void initialize_video_filter()
 	{
-		if (source_fieldmode_ != core::field_mode::progressive && !filter::is_deinterlacing(u16(vfilter_)))
+		if (source_video_stream_.fieldmode != core::field_mode::progressive && !filter::is_deinterlacing(u16(vfilter_)))
 			vfilter_ = u8(append_filter(u16(vfilter_), L"YADIF=1:-1"));
 
-		if (source_height_ == 480) // NTSC DV
+		if (source_video_stream_.height == 480) // NTSC DV
 		{
-			auto pad_str = L"PAD=" + boost::lexical_cast<std::wstring>(source_width_) + L":486:0:2:black";
+			auto pad_str = L"PAD=" + boost::lexical_cast<std::wstring>(source_video_stream_.width) + L":486:0:2:black";
 			vfilter_ = u8(append_filter(u16(vfilter_), pad_str));
 		}
 
 		video_filter_.reset(new filter(
-				source_width_,
-				source_height_,
+				source_video_stream_.width,
+				source_video_stream_.height,
 				1 / source_->framerate(),
 				source_->framerate(),
 				boost::rational<int>(1, 1), // TODO
-				source_pixelformat_,
+				source_video_stream_.pixelformat,
 				sink_->supported_pixel_formats(),
 				vfilter_));
 		sink_->framerate(framerate());
