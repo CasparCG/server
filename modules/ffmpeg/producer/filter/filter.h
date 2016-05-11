@@ -51,6 +51,11 @@ static std::wstring append_filter(const std::wstring& filters, const std::wstrin
 	return filters + (filters.empty() ? L"" : L",") + filter;
 }
 
+static std::wstring prepend_filter(const std::wstring& filters, const std::wstring& filter)
+{
+	return filter + (filters.empty() ? L"" : L",") + filters;
+}
+
 class filter : boost::noncopyable
 {
 public:
