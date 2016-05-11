@@ -37,6 +37,7 @@
 #include <cstdio>
 #include <sstream>
 #include <string>
+#include <algorithm>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -57,104 +58,98 @@ extern "C"
 #endif
 
 namespace caspar { namespace ffmpeg {
-	
+
+std::string create_sourcefilter_str(const audio_input_pad& input_pad, std::string name)
+{
+	const auto asrc_options = (boost::format("abuffer=time_base=%1%/%2%:sample_rate=%3%:sample_fmt=%4%:channel_layout=0x%|5$x| [%6%]")
+		% input_pad.time_base.numerator() % input_pad.time_base.denominator()
+		% input_pad.sample_rate
+		% av_get_sample_fmt_name(input_pad.sample_fmt)
+		% input_pad.audio_channel_layout
+		% name).str();
+
+	return asrc_options;
+}
+
+std::string create_filter_list(const std::vector<std::string>& items)
+{
+	return boost::join(items, "|");
+}
+
+std::string channel_layout_to_string(int64_t channel_layout)
+{
+	return (boost::format("0x%|1$x|") % channel_layout).str();
+}
+
+std::string create_sinkfilter_str(const audio_output_pad& output_pad, std::string name)
+{
+	const auto asink_options = (boost::format("[%4%] abuffersink")//=sample_fmts=%1%:channel_layouts=%2%:sample_rates=%3%")
+		% create_filter_list(cpplinq::from(output_pad.sample_fmts)
+				.select(&av_get_sample_fmt_name)
+				.select([](const char* str) { return std::string(str); })
+				.to_vector())
+		% create_filter_list(cpplinq::from(output_pad.sample_fmts)
+				.select(&channel_layout_to_string)
+				.to_vector())
+		% create_filter_list(cpplinq::from(output_pad.sample_rates)
+				.select([](int samplerate) { return boost::lexical_cast<std::string>(samplerate); })
+				.to_vector())
+		% name).str();
+
+	return asink_options;
+}
+
 struct audio_filter::implementation
 {
 	std::string						filtergraph_;
 
-	std::shared_ptr<AVFilterGraph>	audio_graph_;	
-    AVFilterContext*				audio_graph_in_;  
-    AVFilterContext*				audio_graph_out_; 
+	std::shared_ptr<AVFilterGraph>	audio_graph_;
+	std::vector<AVFilterContext*>	audio_graph_inputs_;
+	std::vector<AVFilterContext*>	audio_graph_outputs_;
 
 	implementation(
-			boost::rational<int> in_time_base,
-			int in_sample_rate,
-			AVSampleFormat in_sample_fmt,
-			std::int64_t in_audio_channel_layout,
-			std::vector<int> out_sample_rates,
-			std::vector<AVSampleFormat> out_sample_fmts,
-			std::vector<std::int64_t> out_audio_channel_layouts,
-			const std::string& filtergraph)
+		std::vector<audio_input_pad> input_pads,
+		std::vector<audio_output_pad> output_pads,
+		const std::string& filtergraph)
 		: filtergraph_(boost::to_lower_copy(filtergraph))
 	{
-		if (out_sample_rates.empty())
-			out_sample_rates.push_back(48000);
+		if (input_pads.empty())
+			CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("input_pads cannot be empty"));
 
-		out_sample_rates.push_back(-1);
-
-		if (out_sample_fmts.empty())
-			out_sample_fmts.push_back(AV_SAMPLE_FMT_S32);
-
-		out_sample_fmts.push_back(AV_SAMPLE_FMT_NONE);
-
-		if (out_audio_channel_layouts.empty())
-			out_audio_channel_layouts.push_back(AV_CH_LAYOUT_NATIVE);
-
-		out_audio_channel_layouts.push_back(-1);
+		if (output_pads.empty())
+			CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("output_pads cannot be empty"));
 
 		audio_graph_.reset(
-			avfilter_graph_alloc(), 
+			avfilter_graph_alloc(),
 			[](AVFilterGraph* p)
-			{
-				avfilter_graph_free(&p);
-			});
+		{
+			avfilter_graph_free(&p);
+		});
 
-		const auto asrc_options = (boost::format("time_base=%1%/%2%:sample_rate=%3%:sample_fmt=%4%:channel_layout=0x%|5$x|")
-			% in_time_base.numerator() % in_time_base.denominator()
-			% in_sample_rate
-			% av_get_sample_fmt_name(in_sample_fmt)
-			% in_audio_channel_layout).str();
-					
-		AVFilterContext* filt_asrc = nullptr;			
-		FF(avfilter_graph_create_filter(
-			&filt_asrc,
-			avfilter_get_by_name("abuffer"), 
-			"filter_buffer",
-			asrc_options.c_str(),
-			nullptr, 
-			audio_graph_.get()));
-				
-		AVFilterContext* filt_asink = nullptr;
-		FF(avfilter_graph_create_filter(
-			&filt_asink,
-			avfilter_get_by_name("abuffersink"), 
-			"filter_buffersink",
-			nullptr, 
-			nullptr, 
-			audio_graph_.get()));
-		
-#pragma warning (push)
-#pragma warning (disable : 4245)
+		std::vector<std::string> complete_filter_graph;
 
-		FF(av_opt_set_int_list(
-			filt_asink,
-			"sample_fmts",
-			out_sample_fmts.data(),
-			-1,
-			AV_OPT_SEARCH_CHILDREN));
-		FF(av_opt_set_int_list(
-			filt_asink,
-			"channel_layouts",
-			out_audio_channel_layouts.data(),
-			-1,
-			AV_OPT_SEARCH_CHILDREN));
-		FF(av_opt_set_int_list(
-			filt_asink,
-			"sample_rates",
-			out_sample_rates.data(),
-			-1,
-			AV_OPT_SEARCH_CHILDREN));
+		{
+			int i = 0;
+			for (auto& input_pad : input_pads)
+				complete_filter_graph.push_back(create_sourcefilter_str(input_pad, "a:" + boost::lexical_cast<std::string>(i++)));
+		}
 
-#pragma warning (pop)
-			
+		if (filtergraph_.empty())
+			complete_filter_graph.push_back("[a:0] anull [aout:0]");
+		else
+			complete_filter_graph.push_back(filtergraph_);
+
+		{
+			int i = 0;
+			for (auto& output_pad : output_pads)
+				complete_filter_graph.push_back(create_sinkfilter_str(output_pad, "aout:" + boost::lexical_cast<std::string>(i++)));
+		}
+
 		configure_filtergraph(
 				*audio_graph_,
-				filtergraph_,
-				*filt_asrc,
-				*filt_asink);
-
-		audio_graph_in_  = filt_asrc;
-		audio_graph_out_ = filt_asink;
+				boost::join(complete_filter_graph, ";"),
+				audio_graph_inputs_,
+				audio_graph_outputs_);
 		
 		if (is_logging_quiet_for_thread())
 			CASPAR_LOG(trace)
@@ -173,46 +168,37 @@ struct audio_filter::implementation
 	void configure_filtergraph(
 			AVFilterGraph& graph,
 			const std::string& filtergraph,
-			AVFilterContext& source_ctx,
-			AVFilterContext& sink_ctx)
+			std::vector<AVFilterContext*>& source_contexts,
+			std::vector<AVFilterContext*>& sink_contexts)
 	{
-		AVFilterInOut* outputs = nullptr;
-		AVFilterInOut* inputs = nullptr;
-
 		try
 		{
-			if(!filtergraph.empty()) 
+			AVFilterInOut* outputs	= nullptr;
+			AVFilterInOut* inputs	= nullptr;
+
+			FF(avfilter_graph_parse2(
+					&graph,
+					filtergraph.c_str(),
+					&inputs,
+					&outputs));
+
+			// Workaround because outputs and inputs are not filled in for some reason
+			for (unsigned i = 0; i < graph.nb_filters; ++i)
 			{
-				outputs = avfilter_inout_alloc();
-				inputs  = avfilter_inout_alloc();
+				auto filter = graph.filters[i];
 
-				CASPAR_VERIFY(outputs && inputs);
+				if (std::string(filter->filter->name) == "abuffer")
+					source_contexts.push_back(filter);
 
-				outputs->name       = av_strdup("in");
-				outputs->filter_ctx = &source_ctx;
-				outputs->pad_idx    = 0;
-				outputs->next       = nullptr;
-
-				inputs->name        = av_strdup("out");
-				inputs->filter_ctx  = &sink_ctx;
-				inputs->pad_idx     = 0;
-				inputs->next        = nullptr;
-
-				FF(avfilter_graph_parse(
-					&graph, 
-					filtergraph.c_str(), 
-					inputs,
-					outputs,
-					nullptr));
-			} 
-			else 
-			{
-				FF(avfilter_link(
-					&source_ctx, 
-					0, 
-					&sink_ctx, 
-					0));
+				if (std::string(filter->filter->name) == "abuffersink")
+					sink_contexts.push_back(filter);
 			}
+
+			for (AVFilterInOut* iter = inputs; iter; iter = iter->next)
+				source_contexts.push_back(iter->filter_ctx);
+
+			for (AVFilterInOut* iter = outputs; iter; iter = iter->next)
+				sink_contexts.push_back(iter->filter_ctx);
 
 			FF(avfilter_graph_config(
 				&graph, 
@@ -226,14 +212,14 @@ struct audio_filter::implementation
 		}
 	}
 
-	void push(const std::shared_ptr<AVFrame>& src_av_frame)
+	void push(int input_pad_id, const std::shared_ptr<AVFrame>& src_av_frame)
 	{		
 		FF(av_buffersrc_add_frame(
-			audio_graph_in_, 
+			audio_graph_inputs_.at(input_pad_id),
 			src_av_frame.get()));
 	}
 
-	std::shared_ptr<AVFrame> poll()
+	std::shared_ptr<AVFrame> poll(int output_pad_id)
 	{
 		std::shared_ptr<AVFrame> filt_frame(
 			av_frame_alloc(), 
@@ -243,7 +229,7 @@ struct audio_filter::implementation
 			});
 		
 		const auto ret = av_buffersink_get_frame(
-			audio_graph_out_, 
+			audio_graph_outputs_.at(output_pad_id),
 			filt_frame.get());
 				
 		if(ret == AVERROR_EOF || ret == AVERROR(EAGAIN))
@@ -256,32 +242,21 @@ struct audio_filter::implementation
 };
 
 audio_filter::audio_filter(
-		boost::rational<int> in_time_base,
-		int in_sample_rate,
-		AVSampleFormat in_sample_fmt,
-		std::int64_t in_audio_channel_layout,
-		std::vector<int> out_sample_rates,
-		std::vector<AVSampleFormat> out_sample_fmts,
-		std::vector<std::int64_t> out_audio_channel_layouts,
+		std::vector<audio_input_pad> input_pads,
+		std::vector<audio_output_pad> output_pads,
 		const std::string& filtergraph)
-	: impl_(new implementation(
-		in_time_base,
-		in_sample_rate,
-		in_sample_fmt,
-		in_audio_channel_layout,
-		std::move(out_sample_rates),
-		std::move(out_sample_fmts),
-		std::move(out_audio_channel_layouts),
-		filtergraph)){}
+	: impl_(new implementation(std::move(input_pads), std::move(output_pads), filtergraph))
+{
+}
 audio_filter::audio_filter(audio_filter&& other) : impl_(std::move(other.impl_)){}
 audio_filter& audio_filter::operator=(audio_filter&& other){impl_ = std::move(other.impl_); return *this;}
-void audio_filter::push(const std::shared_ptr<AVFrame>& frame){impl_->push(frame);}
-std::shared_ptr<AVFrame> audio_filter::poll(){return impl_->poll();}
+void audio_filter::push(int input_pad_id, const std::shared_ptr<AVFrame>& frame){impl_->push(input_pad_id, frame);}
+std::shared_ptr<AVFrame> audio_filter::poll(int output_pad_id){return impl_->poll(output_pad_id);}
 std::wstring audio_filter::filter_str() const{return u16(impl_->filtergraph_);}
-std::vector<spl::shared_ptr<AVFrame>> audio_filter::poll_all()
+std::vector<spl::shared_ptr<AVFrame>> audio_filter::poll_all(int output_pad_id)
 {	
 	std::vector<spl::shared_ptr<AVFrame>> frames;
-	for(auto frame = poll(); frame; frame = poll())
+	for(auto frame = poll(output_pad_id); frame; frame = poll(output_pad_id))
 		frames.push_back(spl::make_shared_ptr(frame));
 	return frames;
 }
