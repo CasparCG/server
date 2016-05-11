@@ -5,11 +5,11 @@
 /* link this file in with the server and any clients */
 
 
- /* File created by MIDL compiler version 7.00.0555 */
-/* at Fri Nov 21 07:53:10 2014
+ /* File created by MIDL compiler version 8.00.0603 */
+/* at Fri Apr 17 14:14:57 2015
  */
-/* Compiler settings for interop\DeckLinkAPI.idl:
-    Oicf, W1, Zp8, env=Win32 (32b run), target_arch=X86 7.00.0555 
+/* Compiler settings for ..\..\..\modules\decklink\interop\DeckLinkAPI.idl:
+    Oicf, W1, Zp8, env=Win64 (32b run), target_arch=AMD64 8.00.0603 
     protocol : dce , ms_ext, c_ext, robust
     error checks: allocation ref bounds_check enum stub_data 
     VC __declspec() decoration level: 
@@ -82,7 +82,7 @@ MIDL_DEFINE_GUID(IID, IID_IDeckLinkDisplayMode,0x3EB2C1AB,0x0A3D,0x4523,0xA3,0xA
 MIDL_DEFINE_GUID(IID, IID_IDeckLink,0xC418FBDD,0x0587,0x48ED,0x8F,0xE5,0x64,0x0F,0x0A,0x14,0xAF,0x91);
 
 
-MIDL_DEFINE_GUID(IID, IID_IDeckLinkConfiguration,0xC679A35B,0x610C,0x4D09,0xB7,0x48,0x1D,0x04,0x78,0x10,0x0F,0xC0);
+MIDL_DEFINE_GUID(IID, IID_IDeckLinkConfiguration,0x1E69FCF6,0x4203,0x4936,0x80,0x76,0x2A,0x9F,0x4C,0xFD,0x50,0xCB);
 
 
 MIDL_DEFINE_GUID(IID, IID_IDeckLinkDeckControlStatusCallback,0x53436FFB,0xB434,0x4906,0xBA,0xDC,0xAE,0x30,0x60,0xFF,0xE8,0xEF);
@@ -218,6 +218,9 @@ MIDL_DEFINE_GUID(CLSID, CLSID_CDeckLinkVideoConversion,0x7DBBBB11,0x5B7B,0x467D,
 
 
 MIDL_DEFINE_GUID(CLSID, CLSID_CDeckLinkDiscovery,0x1073A05C,0xD885,0x47E9,0xB3,0xC6,0x12,0x9B,0x3F,0x9F,0x64,0x8B);
+
+
+MIDL_DEFINE_GUID(IID, IID_IDeckLinkConfiguration_v10_2,0xC679A35B,0x610C,0x4D09,0xB7,0x48,0x1D,0x04,0x78,0x10,0x0F,0xC0);
 
 
 MIDL_DEFINE_GUID(IID, IID_IDeckLinkOutput_v9_9,0xA3EF0963,0x0862,0x44ED,0x92,0xA9,0xEE,0x89,0xAB,0xF4,0x31,0xC7);
