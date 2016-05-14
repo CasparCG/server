@@ -493,6 +493,8 @@ void describe_scroll_producer(core::help_sink& sink, const core::help_repository
 {
 	sink.short_description(L"Scrolls an image either horizontally or vertically.");
 	sink.syntax(L"[image_file:string] SPEED [speed:float] {BLUR [blur_px:int]} {[premultiply:PREMULTIPLY]} {[progressive:PROGRESSIVE]}");
+	sink.syntax(L"[image_file:string] DURATION [duration:float] {BLUR [blur_px:int]} {[premultiply:PREMULTIPLY]} {[progressive:PROGRESSIVE]}");
+	sink.syntax(L"[image_file:string] END_TIME [end_time:string] {BLUR [blur_px:int]} {[premultiply:PREMULTIPLY]} {[progressive:PROGRESSIVE]}");
 	sink.para()
 		->text(L"Scrolls an image either horizontally or vertically. ")
 		->text(L"It is the image dimensions that decide if it will be a vertical scroll or a horizontal scroll. ")
@@ -501,11 +503,15 @@ void describe_scroll_producer(core::help_sink& sink, const core::help_repository
 	sink.definitions()
 		->item(L"image_file", L"The image without extension. The file has to have either the same width or the same height as the video format.")
 		->item(L"speed", L"A positive or negative float defining how many pixels to move the image each frame.")
+		->item(L"duration", L"A positive or negative float defining how many seconds the scroll should take.")
+		->item(L"end_time", L"An absolute date in the format yyyy-MM-dd HH:mm:ss for when the scroll should end, based on the system clock.")
 		->item(L"blur_px", L"If specified, will do a directional blur in the scrolling direction by the given number of pixels.")
 		->item(L"premultiply", L"If the image is in straight alpha, use this option to make it display correctly in CasparCG.")
 		->item(L"progressive", L"When an interlaced video format is used, by default the image is moved every field. This can be overridden by specifying this option, causing the image to only move on full frames.");
 	sink.para()->text(L"If ")->code(L"SPEED [speed]")->text(L" is ommitted, the ordinary ")->see(L"Image Producer")->text(L" will be used instead.");
 	sink.example(L">> PLAY 1-10 cred_1280 SPEED 8 BLUR 2", L"Given that cred_1280 is a as wide as the video mode, this will create a rolling end credits with a little bit of blur and a speed of 8 pixels per frame.");
+	sink.example(L">> PLAY 1-10 cred_1280 DURATION 60", L"Will adjust the speed to make the scroll take 60 seconds.");
+	sink.example(L">> PLAY 1-10 cred_1920 END_TIME \"2016-05-15 00:46:17\"", L"Will adjust the speed to make the scroll end at the specific date and time 2016-05-15 00:46:17.");
 }
 
 spl::shared_ptr<core::frame_producer> create_scroll_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
