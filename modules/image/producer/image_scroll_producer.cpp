@@ -45,11 +45,14 @@
 #include <common/tweener.h>
 #include <common/param.h>
 #include <common/os/filesystem.h>
+#include <common/future.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/scoped_array.hpp>
+#include <boost/date_time.hpp>
+#include <boost/date_time/posix_time/ptime.hpp>
 
 #include <algorithm>
 #include <array>
@@ -57,38 +60,91 @@
 
 namespace caspar { namespace image {
 		
+// Like tweened_transform but for speed
+class speed_tweener
+{
+	double	source_		= 0.0;
+	double	dest_		= 0.0;
+	int		duration_	= 0;
+	int		time_		= 0;
+	tweener	tweener_;
+public:
+	speed_tweener() = default;
+	speed_tweener(
+			double source,
+			double dest,
+			int duration,
+			const tweener& tween)
+		: source_(source)
+		, dest_(dest)
+		, duration_(duration)
+		, time_(0)
+		, tweener_(tween)
+	{
+	}
+
+	double dest() const
+	{
+		return dest_;
+	}
+
+	double fetch() const
+	{
+		if (time_ == duration_)
+			return dest_;
+
+		double delta = dest_ - source_;
+		double result = tweener_(time_, source_, delta, duration_);
+
+		return result;
+	}
+
+	double fetch_and_tick()
+	{
+		time_ = std::min(time_ + 1, duration_);
+		return fetch();
+	}
+};
+	
 struct image_scroll_producer : public core::frame_producer_base
 {	
-	core::monitor::subject			monitor_subject_;
+	core::monitor::subject						monitor_subject_;
 
-	const std::wstring				filename_;
-	std::vector<core::draw_frame>	frames_;
-	core::video_format_desc			format_desc_;
-	int								width_;
-	int								height_;
-	core::constraints				constraints_;
+	const std::wstring							filename_;
+	std::vector<core::draw_frame>				frames_;
+	core::video_format_desc						format_desc_;
+	int											width_;
+	int											height_;
+	core::constraints							constraints_;
 
-	double							delta_				= 0.0;
-	double							speed_;
+	double										delta_				= 0.0;
+	speed_tweener								speed_;
+	boost::optional<boost::posix_time::ptime>	end_time_;
 
-	int								start_offset_x_		= 0;
-	int								start_offset_y_		= 0;
-	bool							progressive_;
+	int											start_offset_x_		= 0;
+	int											start_offset_y_		= 0;
+	bool										progressive_;
 	
 	explicit image_scroll_producer(
 			const spl::shared_ptr<core::frame_factory>& frame_factory,
 			const core::video_format_desc& format_desc,
 			const std::wstring& filename,
-			double speed,
+			double s,
 			double duration,
+			boost::optional<boost::posix_time::ptime> end_time,
 			int motion_blur_px = 0,
 			bool premultiply_with_alpha = false,
 			bool progressive = false)
 		: filename_(filename)
 		, format_desc_(format_desc)
-		, speed_(speed)
+		, end_time_(std::move(end_time))
 		, progressive_(progressive)
 	{
+		double speed = s;
+
+		if (end_time_)
+			speed = -1.0;
+
 		auto bitmap = load_image(filename_);
 		FreeImage_FlipVertical(bitmap.get());
 
@@ -104,40 +160,25 @@ struct image_scroll_producer : public core::frame_producer_base
 			CASPAR_THROW_EXCEPTION(caspar::user_error()
 					<< msg_info("Neither width nor height matched the video resolution"));
 
+		if (duration != 0.0)
+			speed = speed_from_duration(duration);
+
 		if (vertical)
 		{
-			if (duration != 0.0)
-			{
-				double total_num_pixels = format_desc_.height * 2 + height_;
-
-				speed_ = total_num_pixels / (duration * format_desc_.fps * static_cast<double>(format_desc_.field_count));
-
-				if (std::abs(speed_) > 1.0)
-					speed_ = std::ceil(speed_);
-			}
-
-			if (speed_ < 0.0)
+			if (speed < 0.0)
 			{
 				start_offset_y_ = height_ + format_desc_.height;
 			}
 		}
 		else
 		{
-			if (duration != 0.0)
-			{
-				double total_num_pixels = format_desc_.width * 2 + width_;
-
-				speed_ = total_num_pixels / (duration * format_desc_.fps * static_cast<double>(format_desc_.field_count));
-
-				if (std::abs(speed_) > 1.0)
-					speed_ = std::ceil(speed_);
-			}
-
-			if (speed_ > 0.0)
+			if (speed > 0.0)
 				start_offset_x_ = format_desc_.width - (width_ % format_desc_.width);
 			else
 				start_offset_x_ = format_desc_.width - (width_ % format_desc_.width) + width_ + format_desc_.width;
 		}
+
+		speed_ = speed_tweener(speed, speed, 0, tweener(L"linear"));
 
 		auto bytes = FreeImage_GetBits(bitmap.get());
 		auto count = width_*height_*4;
@@ -152,7 +193,7 @@ struct image_scroll_producer : public core::frame_producer_base
 		{
 			double angle = 3.14159265 / 2; // Up
 
-			if (horizontal && speed_ < 0)
+			if (horizontal && speed < 0)
 				angle *= 2; // Left
 			else if (vertical && speed > 0)
 				angle *= 3; // Down
@@ -239,6 +280,39 @@ struct image_scroll_producer : public core::frame_producer_base
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}
 
+	double get_total_num_pixels() const
+	{
+		bool vertical = width_ == format_desc_.width;
+
+		if (vertical)
+			return height_ + format_desc_.height;
+		else
+			return width_ + format_desc_.width;
+	}
+
+	double speed_from_duration(double duration_seconds) const
+	{
+		return get_total_num_pixels() / (duration_seconds * format_desc_.fps * static_cast<double>(format_desc_.field_count));
+	}
+
+	std::future<std::wstring> call(const std::vector<std::wstring>& params) override
+	{
+		auto cmd = params.at(0);
+
+		if (boost::iequals(cmd, L"SPEED"))
+		{
+			if (params.size() == 1)
+				return make_ready_future(boost::lexical_cast<std::wstring>(speed_.fetch()));
+
+			auto val = boost::lexical_cast<double>(params.at(1));
+			int duration = params.size() > 2 ? boost::lexical_cast<int>(params.at(2)) : 0;
+			std::wstring tween = params.size() > 3 ? params.at(3) : L"linear";
+			speed_ = speed_tweener(speed_.fetch(), val, duration, tween);
+		}
+
+		return make_ready_future<std::wstring>(L"");
+	}
+
 	std::vector<core::draw_frame> get_visible()
 	{
 		std::vector<core::draw_frame> result;
@@ -320,7 +394,23 @@ struct image_scroll_producer : public core::frame_producer_base
 
 	void advance()
 	{
-		delta_ += speed_;
+		if (end_time_)
+		{
+			boost::posix_time::ptime now(boost::posix_time::second_clock::local_time());
+
+			auto diff = *end_time_ - now;
+			auto seconds = diff.total_seconds();
+
+			set_speed(-speed_from_duration(seconds));
+			end_time_ = boost::none;
+		}
+		else
+			delta_ += speed_.fetch_and_tick();
+	}
+
+	void set_speed(double speed)
+	{
+		speed_ = speed_tweener(speed, speed, 0, tweener(L"linear"));
 	}
 
 	core::draw_frame receive_impl() override
@@ -350,7 +440,7 @@ struct image_scroll_producer : public core::frame_producer_base
 		
 		monitor_subject_ << core::monitor::message("/file/path") % filename_
 						 << core::monitor::message("/delta") % delta_ 
-						 << core::monitor::message("/speed") % speed_;
+						 << core::monitor::message("/speed") % speed_.fetch();
 
 		return result;
 	}
@@ -375,6 +465,7 @@ struct image_scroll_producer : public core::frame_producer_base
 		boost::property_tree::wptree info;
 		info.add(L"type", L"image-scroll");
 		info.add(L"filename", filename_);
+		info.add(L"speed", speed_.fetch());
 		return info;
 	}
 
@@ -383,12 +474,12 @@ struct image_scroll_producer : public core::frame_producer_base
 		if(width_ == format_desc_.width)
 		{
 			auto length = (height_ + format_desc_.height * 2);
-			return static_cast<uint32_t>(length / std::abs(speed_));// + length % std::abs(delta_));
+			return static_cast<uint32_t>(length / std::abs(speed_.fetch()));// + length % std::abs(delta_));
 		}
 		else
 		{
 			auto length = (width_ + format_desc_.width * 2);
-			return static_cast<uint32_t>(length / std::abs(speed_));// + length % std::abs(delta_));
+			return static_cast<uint32_t>(length / std::abs(speed_.fetch()));// + length % std::abs(delta_));
 		}
 	}
 
@@ -447,11 +538,22 @@ spl::shared_ptr<core::frame_producer> create_scroll_producer(const core::frame_p
 	
 	double duration = 0.0;
 	double speed = get_param(L"SPEED", params, 0.0);
+	boost::optional<boost::posix_time::ptime> end_time;
 
 	if (speed == 0)
 		duration = get_param(L"DURATION", params, 0.0);
 
-	if(speed == 0 && duration == 0)
+	if (duration == 0)
+	{
+		auto end_time_str = get_param(L"END_TIME", params);
+
+		if (!end_time_str.empty())
+		{
+			end_time = boost::posix_time::time_from_string(u8(end_time_str));
+		}
+	}
+
+	if(speed == 0 && duration == 0 && !end_time)
 		return core::frame_producer::empty();
 
 	int motion_blur_px = get_param(L"BLUR", params, 0);
@@ -465,6 +567,7 @@ spl::shared_ptr<core::frame_producer> create_scroll_producer(const core::frame_p
 			*caspar::find_case_insensitive(filename + *ext),
 			-speed,
 			-duration,
+			end_time,
 			motion_blur_px,
 			premultiply_with_alpha,
 			progressive));
