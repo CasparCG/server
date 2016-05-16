@@ -117,7 +117,7 @@ public:
 	{
 		graph_->set_color("browser-tick-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
-		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.9f));
+		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 
@@ -206,7 +206,6 @@ private:
 		paint_timer_.restart();
 		CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
 
-		boost::timer copy_timer;
 		core::pixel_format_desc pixel_desc;
 			pixel_desc.format = core::pixel_format::bgra;
 			pixel_desc.planes.push_back(
@@ -226,10 +225,6 @@ private:
 				graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
 			}
 		});
-		graph_->set_value("copy-time", copy_timer.elapsed()
-				* format_desc_.fps
-				* format_desc_.field_count
-				* 0.5);
 	}
 
 	void OnAfterCreated(CefRefPtr<CefBrowser> browser) override
@@ -403,8 +398,6 @@ private:
 		}
 		else
 		{
-			graph_->set_tag(diagnostics::tag_severity::INFO, "late-frame");
-
 			if (format_desc_.field_mode != core::field_mode::progressive)
 				lock(last_frame_mutex_, [&]
 				{
