@@ -27,11 +27,11 @@
 
 /* DeckLinkAPIVersion.h */
 
-#ifndef __DeckLink_API_Version_h__
+#ifndef __DeckLink_API_Verison_h__
 #define __DeckLink_API_Version_h__
 
-#define BLACKMAGIC_DECKLINK_API_VERSION					0x0a040000
-#define BLACKMAGIC_DECKLINK_API_VERSION_STRING			"10.4"
+#define BLACKMAGIC_DECKLINK_API_VERSION					0x0a010400
+#define BLACKMAGIC_DECKLINK_API_VERSION_STRING			"10.1.4"
 
 #endif	// __DeckLink_API_Version_h__
 
