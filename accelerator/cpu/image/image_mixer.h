@@ -37,7 +37,7 @@ public:
 	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc, const core::audio_channel_layout& channel_layout) override;
 
 	// Properties
-
+	int get_max_frame_size() override;
 private:
 	struct impl;
 	spl::unique_ptr<impl> impl_;
