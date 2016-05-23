@@ -60,6 +60,8 @@ public:
 			
 	// Properties
 
+	int get_max_frame_size() override;
+
 private:
 	struct impl;
 	spl::unique_ptr<impl> impl_;

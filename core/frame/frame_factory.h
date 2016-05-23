@@ -48,6 +48,8 @@ public:
 			const core::audio_channel_layout& channel_layout) = 0;
 
 	// Properties
+
+	virtual int get_max_frame_size() = 0;
 };
 
 }}
