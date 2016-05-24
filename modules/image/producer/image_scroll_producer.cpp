@@ -302,12 +302,12 @@ struct image_scroll_producer : public core::frame_producer_base
 		if (boost::iequals(cmd, L"SPEED"))
 		{
 			if (params.size() == 1)
-				return make_ready_future(boost::lexical_cast<std::wstring>(speed_.fetch()));
+				return make_ready_future(boost::lexical_cast<std::wstring>(-speed_.fetch()));
 
 			auto val = boost::lexical_cast<double>(params.at(1));
 			int duration = params.size() > 2 ? boost::lexical_cast<int>(params.at(2)) : 0;
 			std::wstring tween = params.size() > 3 ? params.at(3) : L"linear";
-			speed_ = speed_tweener(speed_.fetch(), val, duration, tween);
+			speed_ = speed_tweener(speed_.fetch(), -val, duration, tween);
 		}
 
 		return make_ready_future<std::wstring>(L"");
