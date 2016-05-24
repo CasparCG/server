@@ -536,7 +536,7 @@ void call_describer(core::help_sink& sink, const core::help_repository& repo)
 
 std::wstring call_command(command_context& ctx)
 {
-	auto result = ctx.channel.channel->stage().call(ctx.layer_index(), ctx.parameters);
+	auto result = ctx.channel.channel->stage().call(ctx.layer_index(), ctx.parameters).get();
 
 	// TODO: because of std::async deferred timed waiting does not work
 
@@ -545,10 +545,10 @@ std::wstring call_command(command_context& ctx)
 	CASPAR_THROW_EXCEPTION(timed_out());*/
 
 	std::wstringstream replyString;
-	if (result.get().empty())
+	if (result.empty())
 		replyString << L"202 CALL OK\r\n";
 	else
-		replyString << L"201 CALL OK\r\n" << result.get() << L"\r\n";
+		replyString << L"201 CALL OK\r\n" << result << L"\r\n";
 
 	return replyString.str();
 }
