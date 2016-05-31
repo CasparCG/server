@@ -18,7 +18,7 @@
 *
 * Author: Helge Norberg, helge.norberg@svt.se
 */
-
+#pragma warning( disable : 4592)
 #include "stdafx.h"
 
 #include <gtest/gtest.h>

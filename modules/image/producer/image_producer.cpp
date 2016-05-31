@@ -18,7 +18,7 @@
 *
 * Author: Robert Nagy, ronag89@gmail.com
 */
-
+#pragma warning( disable : 4592)
 #include "image_producer.h"
 
 #include "../util/image_loader.h"

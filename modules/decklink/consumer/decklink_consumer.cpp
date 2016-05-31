@@ -34,6 +34,7 @@
 #include <core/diagnostics/call_context.h>
 #include <core/help/help_sink.h>
 #include <core/help/help_repository.h>
+#include <core/video_format.h> // aurel
 
 #include <common/executor.h>
 #include <common/lock.h>
@@ -394,11 +395,14 @@ public:
 		scheduled_frames_completed_ = 0;
 				
 		video_frame_buffer_.set_capacity(1);
+		
 
 		// Blackmagic calls RenderAudioSamples() 50 times per second
 		// regardless of video mode so we sometimes need to give them
 		// samples from 2 frames in order to keep up
 		audio_frame_buffer_.set_capacity((format_desc.fps > 50.0) ? 2 : 1);
+		
+
 
 		if (config.keyer == configuration::keyer_t::external_separate_device_keyer)
 			key_context_.reset(new key_video_context(config, print()));
@@ -416,10 +420,10 @@ public:
 		}
 
 		graph_->set_text(print());
-		diagnostics::register_graph(graph_);
+		diagnostics::register_graph(graph_);		
 		
-		enable_video(get_display_mode(output_, format_desc_.format, bmdFormat8BitBGRA, bmdVideoOutputFlagDefault));
-				
+		enable_video(get_display_mode(output_, format_desc_.format, bmdFormat8BitBGRA, bmdVideoOutputFlagDefault));		
+
 		if(config.embedded_audio)
 			enable_audio();
 		
@@ -718,6 +722,11 @@ public:
 		format_desc_ = format_desc;
 		executor_.invoke([=]
 		{
+			// begin workaround - aurelien revautl -> bug incorrect audio in 2160p i f decklink is not previously configured in NTSC...
+			consumer_.reset();			
+			consumer_.reset(new decklink_consumer(config_, core::video_format_desc(L"NTSC"), channel_layout, channel_index));			
+			// end workaround
+
 			consumer_.reset();
 			consumer_.reset(new decklink_consumer(config_, format_desc, channel_layout, channel_index));			
 		});

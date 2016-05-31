@@ -543,6 +543,8 @@ bool is_valid_file(const std::wstring& filename, bool only_video)
 		L".m2t",
 		L".mov",
 		L".mp4",
+		L".ts", // aurel
+		L".mxf", // aurel
 		L".dv",
 		L".flv",
 		L".mpg",
