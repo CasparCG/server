@@ -17,6 +17,7 @@
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
 * Author: Helge Norberg, helge.norberg@svt.se
+* Author: Robert Nagy, ronag89@gmail.com
 */
 
 #include "StdAfx.h"
@@ -859,8 +860,9 @@ public:
 
 struct audio_stream_info
 {
-	int				num_channels = 0;
-	AVSampleFormat	sampleformat = AVSampleFormat::AV_SAMPLE_FMT_NONE;
+	int				num_channels	= 0;
+	AVSampleFormat	sampleformat	= AVSampleFormat::AV_SAMPLE_FMT_NONE;
+	uint64_t		channel_layout	= 0;
 };
 
 struct video_stream_info
@@ -1195,6 +1197,7 @@ private:
 
 			set_if_changed(changed, stream.sampleformat, static_cast<AVSampleFormat>(av_frame.format));
 			set_if_changed(changed, stream.num_channels, av_frame.channels);
+			set_if_changed(changed, stream.channel_layout, av_frame.channel_layout);
 		}
 
 		if (changed)
@@ -1212,7 +1215,7 @@ private:
 					boost::rational<int>(1, source_->samplerate()),
 					source_->samplerate(),
 					source_audio_stream.sampleformat,
-					av_get_default_channel_layout(source_audio_stream.num_channels));
+					source_audio_stream.channel_layout);
 		}
 
 		auto total_num_channels = cpplinq::from(source_audio_streams_)
