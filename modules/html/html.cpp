@@ -26,6 +26,7 @@
 
 #include <common/executor.h>
 #include <common/future.h>
+#include <common/env.h>
 
 #include <core/producer/cg_proxy.h>
 
@@ -234,6 +235,7 @@ void init(core::module_dependencies dependencies)
 	{
 		CefSettings settings;
 		settings.no_sandbox = true;
+		settings.remote_debugging_port = env::properties().get(L"configuration.html.remote-debugging-port", 0);
 		//settings.windowless_rendering_enabled = true;
 		CefInitialize(main_args, settings, nullptr, nullptr);
 	});
