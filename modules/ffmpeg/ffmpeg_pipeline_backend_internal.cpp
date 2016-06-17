@@ -1195,9 +1195,13 @@ private:
 			auto& av_frame	= *av_frames_per_stream.at(i);
 			auto& stream	= source_audio_streams_.at(i);
 
+			auto channel_layout = av_frame.channel_layout == 0
+					? av_get_default_channel_layout(av_frame.channels)
+					: av_frame.channel_layout;
+
 			set_if_changed(changed, stream.sampleformat, static_cast<AVSampleFormat>(av_frame.format));
 			set_if_changed(changed, stream.num_channels, av_frame.channels);
-			set_if_changed(changed, stream.channel_layout, av_frame.channel_layout);
+			set_if_changed(changed, stream.channel_layout, channel_layout);
 		}
 
 		if (changed)
