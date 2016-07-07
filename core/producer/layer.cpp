@@ -84,6 +84,7 @@ public:
 		if(preview)
 		{
 			play();
+			receive(video_format::invalid);
 			foreground_->paused(true);
 			is_paused_ = true;
 		}
