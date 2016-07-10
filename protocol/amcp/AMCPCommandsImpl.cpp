@@ -818,7 +818,7 @@ std::wstring data_store_command(command_context& ctx)
 void data_retrieve_describer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"Retrieve a dataset.");
-	sink.syntax(L"DATA RETRIEVE [name:string] [data:string]");
+	sink.syntax(L"DATA RETRIEVE [name:string]");
 	sink.para()->text(L"Returns the data saved under the name ")->code(L"name")->text(L".");
 	sink.para()->text(L"Examples:");
 	sink.example(L">> DATA RETRIEVE my_data");
