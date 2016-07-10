@@ -2300,6 +2300,14 @@ void version_describer(core::help_sink& sink, const core::help_repository& repo)
 		L">> VERSION FLASH\n"
 		L"<< 201 VERSION OK\n"
 		L"<< 11.8.800.94");
+	sink.example(
+		L">> VERSION TEMPLATEHOST\n"
+		L"<< 201 VERSION OK\n"
+		L"<< unknown");
+	sink.example(
+		L">> VERSION CEF\n"
+		L"<< 201 VERSION OK\n"
+		L"<< 3.1750.1805");
 }
 
 std::wstring version_command(command_context& ctx)
