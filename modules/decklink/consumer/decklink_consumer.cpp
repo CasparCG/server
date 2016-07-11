@@ -57,6 +57,8 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/property_tree/ptree.hpp>
 
+#include <future>
+
 namespace caspar { namespace decklink { 
 	
 struct configuration
@@ -390,7 +392,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, boost::noncopyab
 	
 	spl::shared_ptr<diagnostics::graph>					graph_;
 	caspar::timer										tick_timer_;
-	retry_task<bool>									send_completion_;
+	std::packaged_task<bool ()>							send_completion_;
 	reference_signal_detector							reference_signal_detector_	{ output_ };
 	tbb::atomic<int64_t>								current_presentation_delay_;
 	tbb::atomic<int64_t>								scheduled_frames_completed_;
@@ -566,7 +568,8 @@ public:
 
 			frame_buffer_.pop(frame);
 
-			send_completion_.try_completion();
+			if (send_completion_.valid())
+				send_completion_();
 
 			if (config_.embedded_audio)
 				schedule_next_audio(channel_remapper_.mix_and_rearrange(frame.audio_data()));
@@ -627,21 +630,15 @@ public:
 		if(!is_running_)
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Is not running."));
 		
-		bool ready = false;
+		if (frame_buffer_.try_push(frame))
+			return make_ready_future(true);
 
-		auto enqueue_task = [ready, frame, this]() mutable -> boost::optional<bool>
+		send_completion_ = std::packaged_task<bool ()>([frame, this] () mutable -> bool
 		{
-			if (!ready)
-				ready = frame_buffer_.try_push(frame);
+			frame_buffer_.push(frame);
 
-			if (ready)
-				return true;
-			else
-				return boost::optional<bool>();
-		};
-
-		send_completion_.set_task(enqueue_task);
-		send_completion_.try_completion();
+			return true;
+		});
 
 		return send_completion_.get_future();
 	}
