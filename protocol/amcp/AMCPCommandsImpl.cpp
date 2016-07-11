@@ -818,7 +818,7 @@ std::wstring data_store_command(command_context& ctx)
 void data_retrieve_describer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"Retrieve a dataset.");
-	sink.syntax(L"DATA RETRIEVE [name:string] [data:string]");
+	sink.syntax(L"DATA RETRIEVE [name:string]");
 	sink.para()->text(L"Returns the data saved under the name ")->code(L"name")->text(L".");
 	sink.para()->text(L"Examples:");
 	sink.example(L">> DATA RETRIEVE my_data");
@@ -2300,6 +2300,14 @@ void version_describer(core::help_sink& sink, const core::help_repository& repo)
 		L">> VERSION FLASH\n"
 		L"<< 201 VERSION OK\n"
 		L"<< 11.8.800.94");
+	sink.example(
+		L">> VERSION TEMPLATEHOST\n"
+		L"<< 201 VERSION OK\n"
+		L"<< unknown");
+	sink.example(
+		L">> VERSION CEF\n"
+		L"<< 201 VERSION OK\n"
+		L"<< 3.1750.1805");
 }
 
 std::wstring version_command(command_context& ctx)
