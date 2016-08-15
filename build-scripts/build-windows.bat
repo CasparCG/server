@@ -48,6 +48,7 @@ copy shell\RelWithDebInfo\casparcg.pdb "%SERVER_FOLDER%\Server" || goto :error
 copy shell\RelWithDebInfo\libcef.dll.pdb "%SERVER_FOLDER%\Server" || goto :error
 copy shell\casparcg.config "%SERVER_FOLDER%\Server" || goto :error
 copy shell\*.ttf "%SERVER_FOLDER%\Server" || goto :error
+copy shell\*.pak "%SERVER_FOLDER%\Server" || goto :error
 xcopy shell\locales "%SERVER_FOLDER%\Server\locales" /E /I /Y || goto :error
 
 :: Copy documentation
