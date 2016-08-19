@@ -385,7 +385,7 @@ private:
 				{
 					boost::unique_lock<boost::mutex> lock(mutex_);
 
-					while(full() && !seek_target_ && is_running_)
+					while((eof_ || full()) && !seek_target_ && is_running_)
 						cond_.wait(lock);
 					
 					tick();
