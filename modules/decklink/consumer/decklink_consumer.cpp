@@ -569,7 +569,10 @@ public:
 			frame_buffer_.pop(frame);
 
 			if (send_completion_.valid())
+			{
 				send_completion_();
+				send_completion_.reset();
+			}
 
 			if (config_.embedded_audio)
 				schedule_next_audio(channel_remapper_.mix_and_rearrange(frame.audio_data()));
