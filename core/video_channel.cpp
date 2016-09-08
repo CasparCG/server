@@ -205,6 +205,7 @@ public:
 		info.add(L"audio-channel-layout", audio_channel_layout().print());
 		info.add_child(L"stage", stage_info.get());
 		info.add_child(L"mixer", mixer_info.get());
+		info.add(L"straight-alpha-output", ((mixer_.get_straight_alpha_output()) ? L"true" : L"false"));
 		info.add_child(L"output", output_info.get());
    
 		return info;			   
