@@ -182,7 +182,7 @@ public:
 		{
 			try
 			{
-				audio_decoders_.push_back(spl::make_shared<audio_decoder>(*input_, core::video_format_desc(), i));
+				audio_decoders_.push_back(spl::make_shared<audio_decoder>(*input_, core::video_format::invalid, i));
 			}
 			catch (...)
 			{
