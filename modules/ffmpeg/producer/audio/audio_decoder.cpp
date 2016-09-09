@@ -108,17 +108,17 @@ public:
 		
 		std::shared_ptr<AVFrame> audio;
 
-		if(!current_packet_)	
-		{
-			avcodec_flush_buffers(codec_context_.get());	
-		}
-		else if(!current_packet_->data)
+		if (!current_packet_->data)
 		{
 			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)			
 				audio = decode(*current_packet_);
 			
-			if(!audio)
+			if (!audio)
+			{
+				avcodec_flush_buffers(codec_context_.get());
 				current_packet_.reset();
+				audio = flush();
+			}
 		}
 		else
 		{
