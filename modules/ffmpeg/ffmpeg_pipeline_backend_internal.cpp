@@ -700,8 +700,7 @@ public:
 	void stop() override
 	{
 		running_ = false;
-		try_pop_frame();
-		try_pop_frame();
+		output_frames_.set_capacity(4);
 	}
 
 	std::vector<AVSampleFormat> supported_sample_formats() const override
