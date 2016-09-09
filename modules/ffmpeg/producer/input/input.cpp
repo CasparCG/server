@@ -281,7 +281,7 @@ private:
 		
 		auto stream				= format_context_->streams[default_stream_index_];
 		auto fps				= read_fps(*format_context_, 0.0);
-		auto target_timestamp = static_cast<int64_t>((target / fps * stream->time_base.den) / stream->time_base.num);
+		auto target_timestamp	= static_cast<int64_t>((target / fps * stream->time_base.den) / stream->time_base.num);
 		
 		THROW_ON_ERROR2(avformat_seek_file(
 				format_context_.get(),
@@ -290,11 +290,16 @@ private:
 				target_timestamp,
 				std::numeric_limits<int64_t>::max(),
 				0), print());
+
+		auto flush_packet	= create_packet();
+		flush_packet->data	= nullptr;
+		flush_packet->size	= 0;
+		flush_packet->pos	= target;
 		
-		video_stream_.push(nullptr);
+		video_stream_.push(flush_packet);
 
 		for (auto& audio_stream : audio_streams_)
-			audio_stream.push(nullptr);
+			audio_stream.push(flush_packet);
 	}
 
 	void tick()

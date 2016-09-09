@@ -357,7 +357,7 @@ public:
 				{
 					frame = (*a_decoder)();
 
-					if (frame && frame->data[0])
+					if (frame == flush() || (frame && frame->data[0]))
 						break;
 					else
 						frame.reset();
@@ -376,7 +376,7 @@ public:
 			{
 				frame = (*v_decoder)();
 
-				if (frame && frame->data[0])
+				if (frame == flush() || (frame && frame->data[0]))
 					return { frame };
 			}
 		}
@@ -604,11 +604,12 @@ struct sink
 	virtual void							framerate(boost::rational<int> framerate)										{ CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" not an encoder.")); }
 	virtual void							start(bool has_audio, bool has_video)											{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
 	virtual void							stop()																			{ }
+	virtual void							flush_all()																		{ }
 	virtual std::vector<AVSampleFormat>		supported_sample_formats() const												{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
 	virtual std::vector<int>				supported_samplerates() const													{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
 	virtual std::vector<AVPixelFormat>		supported_pixel_formats() const													{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
 	virtual int								wanted_num_audio_streams() const												{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
-	virtual boost::optional<int>			wanted_num_channels_per_stream() const										{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
+	virtual boost::optional<int>			wanted_num_channels_per_stream() const											{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
 	virtual boost::optional<AVMediaType>	try_push(AVMediaType type, int stream_index, spl::shared_ptr<AVFrame> frame)	{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
 	virtual void							eof()																			{ CASPAR_THROW_EXCEPTION(not_implemented() << msg_info(print())); }
 };
@@ -736,6 +737,14 @@ public:
 	boost::optional<int> wanted_num_channels_per_stream() const
 	{
 		return boost::none;
+	}
+
+	void flush_all() override
+	{
+		audio_samples_.clear();
+
+		while (!video_frames_.empty())
+			video_frames_.pop();
 	}
 
 	boost::optional<AVMediaType> try_push(AVMediaType type, int stream_index, spl::shared_ptr<AVFrame> av_frame) override
@@ -1110,8 +1119,21 @@ private:
 			{
 				auto needed						= *result;
 				auto input_frames_for_streams	= source_->get_input_frames_for_streams(needed);
+				bool flush_all					= !input_frames_for_streams.empty() && input_frames_for_streams.at(0) == flush();
 
-				if (!input_frames_for_streams.empty() && input_frames_for_streams.at(0))
+				if (flush_all)
+				{
+					sink_->flush_all();
+					
+					if (source_->has_audio() && source_->has_video())
+						result = needed == AVMediaType::AVMEDIA_TYPE_AUDIO ? AVMediaType::AVMEDIA_TYPE_VIDEO : AVMediaType::AVMEDIA_TYPE_AUDIO;
+
+					continue;
+				}
+
+				bool got_requested_media_type	= !input_frames_for_streams.empty() && input_frames_for_streams.at(0);
+
+				if (got_requested_media_type)
 				{
 					for (int input_stream_index = 0; input_stream_index < input_frames_for_streams.size(); ++input_stream_index)
 					{
