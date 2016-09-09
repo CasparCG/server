@@ -127,6 +127,11 @@ public:
 		return dest_producer_->nb_frames();
 	}
 
+	uint32_t frame_number() const override
+	{
+		return dest_producer_->frame_number();
+	}
+
 	std::wstring print() const override
 	{
 		return L"transition[" + source_producer_->print() + L"=>" + dest_producer_->print() + L"]";
