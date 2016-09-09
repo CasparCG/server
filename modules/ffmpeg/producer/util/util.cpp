@@ -491,6 +491,16 @@ spl::shared_ptr<AVFrame> create_frame()
 	return frame;
 }
 
+std::shared_ptr<AVFrame> flush()
+{
+	static std::shared_ptr<AVFrame> dummy(av_frame_alloc(), [](AVFrame* p)
+	{
+		av_frame_free(&p);
+	});
+
+	return dummy;
+}
+
 spl::shared_ptr<AVCodecContext> open_codec(AVFormatContext& context, enum AVMediaType type, int& index, bool single_threaded)
 {	
 	AVCodec* decoder;
