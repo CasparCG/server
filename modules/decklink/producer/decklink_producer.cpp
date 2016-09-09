@@ -44,6 +44,7 @@
 #include <core/frame/frame_factory.h>
 #include <core/producer/frame_producer.h>
 #include <core/monitor/monitor.h>
+#include <core/diagnostics/call_context.h>
 #include <core/mixer/audio/audio_mixer.h>
 #include <core/help/help_repository.h>
 #include <core/help/help_sink.h>
@@ -348,8 +349,10 @@ public:
 		: executor_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
 		, length_(length)
 	{
+		auto ctx = core::diagnostics::call_context::for_thread();
 		executor_.invoke([=]
 		{
+			core::diagnostics::call_context::for_thread() = ctx;
 			com_initialize();
 			producer_.reset(new decklink_producer(in_format_desc, device_index, frame_factory, out_format_desc, channel_layout, filter_str));
 		});
