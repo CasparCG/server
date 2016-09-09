@@ -34,6 +34,8 @@
 
 #include <boost/filesystem.hpp>
 
+#include <tbb/atomic.h>
+
 #include <queue>
 
 #if defined(_MSC_VER)
@@ -65,8 +67,8 @@ struct video_decoder::impl : boost::noncopyable
 	const int								width_;
 	const int								height_;
 
-	bool									is_progressive_;
-	uint32_t								file_frame_number_;
+	tbb::atomic<bool>						is_progressive_;
+	tbb::atomic<uint32_t>					file_frame_number_;
 	boost::rational<int>					framerate_;
 	
 	std::shared_ptr<AVPacket>				current_packet_;
@@ -79,9 +81,10 @@ public:
 		, nb_frames_(static_cast<uint32_t>(stream_->nb_frames))
 		, width_(codec_context_->width)
 		, height_(codec_context_->height)
-		, file_frame_number_(0)
 		, framerate_(read_framerate(input_->context(), 0))
 	{
+		is_progressive_ = false;
+		file_frame_number_ = 0;
 	}
 	
 	std::shared_ptr<AVFrame> poll()
@@ -91,17 +94,18 @@ public:
 		
 		std::shared_ptr<AVFrame> frame;
 
-		if(!current_packet_)		
-		{
-			avcodec_flush_buffers(codec_context_.get());	
-		}
-		else if(!current_packet_->data)
+		if (!current_packet_->data)
 		{
 			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)			
 				frame = decode(*current_packet_);
 			
-			if(!frame)
+			if (!frame)
+			{
+				file_frame_number_ = static_cast<uint32_t>(current_packet_->pos);
+				avcodec_flush_buffers(codec_context_.get());
 				current_packet_.reset();
+				frame = flush();
+			}
 		}
 		else
 		{
@@ -133,11 +137,7 @@ public:
 		if(got_frame == 0)	
 			return nullptr;
 		
-		auto stream_time_base		= stream_->time_base;
-		auto fps = static_cast<double>(framerate_.numerator()) / static_cast<double>(framerate_.denominator());
-		auto packet_frame_number	= static_cast<uint32_t>((static_cast<double>(pkt.pts * stream_time_base.num) / stream_time_base.den) * fps);
-
-		file_frame_number_ = packet_frame_number;
+		++file_frame_number_;
 
 		is_progressive_ = !frame->interlaced_frame;
 		
@@ -154,7 +154,7 @@ public:
 	
 	uint32_t nb_frames() const
 	{
-		return std::max(nb_frames_, file_frame_number_);
+		return std::max(nb_frames_, static_cast<uint32_t>(file_frame_number_));
 	}
 
 	std::wstring print() const
