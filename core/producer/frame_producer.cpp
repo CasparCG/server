@@ -368,22 +368,24 @@ spl::shared_ptr<core::frame_producer> frame_producer_registry::create_producer(c
 	auto& producer_factories = impl_->producer_factories;
 	auto producer = do_create_producer(dependencies, params, producer_factories);
 	auto key_producer = frame_producer::empty();
-	
-	try // to find a key file.
-	{
-		auto params_copy = params;
-		if(params_copy.size() > 0)
+
+	if (!filename_is_url(params[0])) {
+		try // to find a key file.
 		{
-			params_copy[0] += L"_A";
-			key_producer = do_create_producer(dependencies, params_copy, producer_factories);
-			if(key_producer == frame_producer::empty())
+			auto params_copy = params;
+			if(params_copy.size() > 0)
 			{
-				params_copy[0] += L"LPHA";
+				params_copy[0] += L"_A";
 				key_producer = do_create_producer(dependencies, params_copy, producer_factories);
+				if(key_producer == frame_producer::empty())
+				{
+					params_copy[0] += L"LPHA";
+					key_producer = do_create_producer(dependencies, params_copy, producer_factories);
+				}
 			}
 		}
+		catch(...){}
 	}
-	catch(...){}
 
 	if(producer != frame_producer::empty() && key_producer != frame_producer::empty())
 		return create_separated_producer(producer, key_producer);
@@ -407,6 +409,11 @@ spl::shared_ptr<core::frame_producer> frame_producer_registry::create_producer(c
 	typedef std::istream_iterator<std::wstring, wchar_t, std::char_traits<wchar_t> > iterator;
 	std::copy(iterator(iss),  iterator(), std::back_inserter(tokens));
 	return create_producer(dependencies, tokens);
+}
+
+bool frame_producer_registry::filename_is_url(std::wstring const& s)
+{
+	return s.find_first_of(L"://") != std::wstring::npos;
 }
 
 }}

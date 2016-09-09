@@ -37,6 +37,7 @@ ffmpeg_pipeline::ffmpeg_pipeline()
 
 ffmpeg_pipeline			ffmpeg_pipeline::graph(spl::shared_ptr<caspar::diagnostics::graph> g)													{ impl_->graph(std::move(g)); return *this; }
 ffmpeg_pipeline			ffmpeg_pipeline::from_file(std::string filename)																		{ impl_->from_file(std::move(filename)); return *this; }
+ffmpeg_pipeline			ffmpeg_pipeline::from_url(std::string url)																				{ impl_->from_url(std::move(url)); return *this; }
 ffmpeg_pipeline			ffmpeg_pipeline::from_memory_only_audio(int num_channels, int samplerate)												{ impl_->from_memory_only_audio(num_channels, samplerate); return *this; }
 ffmpeg_pipeline			ffmpeg_pipeline::from_memory_only_video(int width, int height, boost::rational<int> framerate)							{ impl_->from_memory_only_video(width, height, std::move(framerate)); return *this; }
 ffmpeg_pipeline			ffmpeg_pipeline::from_memory(int num_channels, int samplerate, int width, int height, boost::rational<int> framerate)	{ impl_->from_memory(num_channels, samplerate, width, height, std::move(framerate)); return *this; }

@@ -37,6 +37,7 @@ struct ffmpeg_pipeline_backend
 	virtual void					graph(spl::shared_ptr<caspar::diagnostics::graph> g) = 0;
 
 	virtual void					from_file(std::string filename) = 0;
+	virtual void					from_url(std::string filename) = 0;
 	virtual void					from_memory_only_audio(int num_channels, int samplerate) = 0;
 	virtual void					from_memory_only_video(int width, int height, boost::rational<int> framerate) = 0;
 	virtual void					from_memory(int num_channels, int samplerate, int width, int height, boost::rational<int> framerate) = 0;

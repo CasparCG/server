@@ -412,6 +412,41 @@ private:
 	}
 };
 
+
+class stream_source : public file_source
+{
+public:
+	stream_source(std::string url)
+		: file_source(url)
+	{
+	}
+
+	void start_frame(std::uint32_t frame) override
+	{
+		// Can't seek in a stream
+	}
+
+	std::uint32_t start_frame() const override
+	{
+		return 0;
+	}
+
+	void length(std::uint32_t frames) override
+	{
+		// Can't set length of a stream
+	}
+
+	std::uint32_t length() const override
+	{
+		return std::numeric_limits<uint32_t>::max();
+	}
+
+	void seek(std::uint32_t frame) override
+	{
+		// Can't seek in a stream
+	}
+};
+
 class memory_source : public source
 {
 	int															samplerate_		= -1;
@@ -941,6 +976,14 @@ public:
 		source_->graph(graph_);
 	}
 
+	void from_url(std::string url) override
+	{
+		source_ = spl::make_unique<stream_source>(std::move(url));
+		try_push_audio_ = std::function<bool(caspar::array<const std::int32_t>)>();
+		try_push_video_ = std::function<bool(caspar::array<const std::uint8_t>)>();
+		source_->graph(graph_);
+	}
+
 	void from_memory_only_audio(int num_channels, int samplerate) override
 	{
 		auto source		= spl::make_unique<memory_source>();
@@ -1329,3 +1372,4 @@ spl::shared_ptr<struct ffmpeg_pipeline_backend> create_internal_pipeline()
 }
 
 }}
+

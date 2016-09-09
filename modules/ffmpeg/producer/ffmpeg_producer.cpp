@@ -132,6 +132,8 @@ public:
 			frame = core::draw_frame::still(last_frame_);
 		else if (decoded_frame != core::draw_frame::late())
 			last_frame_ = frame = core::draw_frame(std::move(decoded_frame));
+		else if (pipeline_.started() && pipeline_.length() == std::numeric_limits<uint32_t>::max())
+			pipeline_.stop();  // If running and no length, then it is likely a stream and so the pipeline should be stopped
 		else if (pipeline_.started())
 			graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
 
@@ -296,14 +298,22 @@ spl::shared_ptr<core::frame_producer> create_producer(
 		const std::vector<std::wstring>& params,
 		const spl::shared_ptr<core::media_info_repository>& info_repo)
 {
-	auto filename = probe_stem(env::media_folder() + L"/" + params.at(0), false);
+	bool isStream = caspar::core::frame_producer_registry::filename_is_url(params.at(0));
+	auto filename = isStream 
+		? params.at(0)
+		: probe_stem(env::media_folder() + L"/" + params.at(0), false);
 
 	if(filename.empty())
 		return core::frame_producer::empty();
 	
-	auto pipeline = ffmpeg_pipeline()
-			.from_file(u8(filename))
-			.loop(contains_param(L"LOOP", params))
+	auto pipeline = ffmpeg_pipeline();
+
+	if (isStream)
+		pipeline.from_url(u8(filename));
+	else
+		pipeline.from_file(u8(filename));
+			
+	pipeline.loop(contains_param(L"LOOP", params))
 			.start_frame(get_param(L"START", params, get_param(L"SEEK", params, static_cast<uint32_t>(0))))
 			.length(get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max()))
 			.vfilter(u8(get_param(L"FILTER", params, L"")))
