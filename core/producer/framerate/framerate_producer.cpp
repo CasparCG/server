@@ -351,12 +351,18 @@ public:
 
 	uint32_t nb_frames() const override
 	{
-		return static_cast<uint32_t>(source_->nb_frames() * boost::rational_cast<double>(1 / get_speed() / (output_repeat_ != 0 ? 2 : 1)));
+		auto source_nb_frames = source_->nb_frames();
+		auto multiple = boost::rational_cast<double>(1 / get_speed() * (output_repeat_ != 0 ? 2 : 1));
+
+		return static_cast<uint32_t>(source_nb_frames * multiple);
 	}
 
 	uint32_t frame_number() const override
 	{
-		return static_cast<uint32_t>(source_->frame_number() * boost::rational_cast<double>(1 / get_speed() / (output_repeat_ != 0 ? 2 : 1)));
+		auto source_frame_number = source_->frame_number() - 1; // next frame already received
+		auto multiple = boost::rational_cast<double>(1 / get_speed() * (output_repeat_ != 0 ? 2 : 1));
+
+		return static_cast<uint32_t>(source_frame_number * multiple);
 	}
 
 	constraints& pixel_constraints() override
