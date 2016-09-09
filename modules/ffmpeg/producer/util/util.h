@@ -71,6 +71,8 @@ spl::shared_ptr<AVFormatContext> open_input(const std::wstring& filename);
 bool is_sane_fps(AVRational time_base);
 AVRational fix_time_base(AVRational time_base);
 
+std::shared_ptr<AVFrame> flush();
+
 double read_fps(AVFormatContext& context, double fail_value);
 boost::rational<int> read_framerate(AVFormatContext& context, const boost::rational<int>& fail_value);
 
