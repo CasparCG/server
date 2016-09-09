@@ -571,7 +571,7 @@ public:
 			if (send_completion_.valid())
 			{
 				send_completion_();
-				send_completion_.reset();
+				send_completion_ = std::packaged_task<bool ()>();
 			}
 
 			if (config_.embedded_audio)
