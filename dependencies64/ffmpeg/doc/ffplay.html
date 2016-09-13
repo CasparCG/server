@@ -98,8 +98,10 @@ or <code>-codec: copy</code> would copy all the streams without reencoding.
 thread count for the second stream to 4.
 </p></dd>
 <dt><samp><var>stream_type</var>[:<var>stream_index</var>]</samp></dt>
-<dd><p><var>stream_type</var> is one of following: &rsquo;v&rsquo; for video, &rsquo;a&rsquo; for audio, &rsquo;s&rsquo; for subtitle,
-&rsquo;d&rsquo; for data, and &rsquo;t&rsquo; for attachments. If <var>stream_index</var> is given, then it matches
+<dd><p><var>stream_type</var> is one of following: &rsquo;v&rsquo; or &rsquo;V&rsquo; for video, &rsquo;a&rsquo; for audio, &rsquo;s&rsquo;
+for subtitle, &rsquo;d&rsquo; for data, and &rsquo;t&rsquo; for attachments. &rsquo;v&rsquo; matches all video
+streams, &rsquo;V&rsquo; only matches video streams which are not attached pictures, video
+thumbnails or cover arts.  If <var>stream_index</var> is given, then it matches
 stream number <var>stream_index</var> of this type. Otherwise, it matches all
 streams of this type.
 </p></dd>
@@ -529,10 +531,18 @@ has been deprecated in favor of private options, try -video_size.
 <dd><p>Disable subtitles.
 </p></dd>
 <dt><samp>-ss <var>pos</var></samp></dt>
-<dd><p>Seek to a given position in seconds.
+<dd><p>Seek to <var>pos</var>. Note that in most formats it is not possible to seek
+exactly, so <code>ffplay</code> will seek to the nearest seek point to
+<var>pos</var>.
+</p>
+<p><var>pos</var> must be a time duration specification,
+see <a href="ffmpeg-utils.html#time-duration-syntax">(ffmpeg-utils)the Time duration section in the ffmpeg-utils(1) manual</a>.
 </p></dd>
 <dt><samp>-t <var>duration</var></samp></dt>
-<dd><p>play &lt;duration&gt; seconds of audio/video
+<dd><p>Play <var>duration</var> seconds of audio/video.
+</p>
+<p><var>duration</var> must be a time duration specification,
+see <a href="ffmpeg-utils.html#time-duration-syntax">(ffmpeg-utils)the Time duration section in the ffmpeg-utils(1) manual</a>.
 </p></dd>
 <dt><samp>-bytes</samp></dt>
 <dd><p>Seek by bytes.
@@ -708,6 +718,18 @@ for all inputs, use <samp>-noinfbuf</samp> to disable it.
 <dd><p>Pause.
 </p>
 </dd>
+<dt><tt class="key">m</tt></dt>
+<dd><p>Toggle mute.
+</p>
+</dd>
+<dt><tt class="key">9, 0</tt></dt>
+<dd><p>Decrease and increase volume respectively.
+</p>
+</dd>
+<dt><tt class="key">/, *</tt></dt>
+<dd><p>Decrease and increase volume respectively.
+</p>
+</dd>
 <dt><tt class="key">a</tt></dt>
 <dd><p>Cycle audio channel in the current program.
 </p>
@@ -749,8 +771,12 @@ or if there are no chapters
 Seek backward/forward 10 minutes.
 </p>
 </dd>
-<dt><tt class="key">mouse click</tt></dt>
+<dt><tt class="key">right mouse click</tt></dt>
 <dd><p>Seek to percentage in file corresponding to fraction of width.
+</p>
+</dd>
+<dt><tt class="key">left mouse double-click</tt></dt>
+<dd><p>Toggle full screen.
 </p>
 </dd>
 </dl>

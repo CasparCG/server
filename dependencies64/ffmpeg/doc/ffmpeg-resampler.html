@@ -124,8 +124,8 @@ be in the interval [-32,32].
 </dd>
 <dt><samp>rematrix_maxval</samp></dt>
 <dd><p>Set maximum output value for rematrixing.
-This can be used to prevent clipping vs. preventing volumn reduction
-A value of 1.0 prevents cliping.
+This can be used to prevent clipping vs. preventing volume reduction.
+A value of 1.0 prevents clipping.
 </p>
 </dd>
 <dt><samp>flags, swr_flags</samp></dt>
@@ -159,16 +159,16 @@ input and output sample rates match.
 <dd><p>select triangular dither with high pass
 </p></dd>
 <dt>&lsquo;<samp>lipshitz</samp>&rsquo;</dt>
-<dd><p>select lipshitz noise shaping dither
+<dd><p>select Lipshitz noise shaping dither.
 </p></dd>
 <dt>&lsquo;<samp>shibata</samp>&rsquo;</dt>
-<dd><p>select shibata noise shaping dither
+<dd><p>select Shibata noise shaping dither.
 </p></dd>
 <dt>&lsquo;<samp>low_shibata</samp>&rsquo;</dt>
-<dd><p>select low shibata noise shaping dither
+<dd><p>select low Shibata noise shaping dither.
 </p></dd>
 <dt>&lsquo;<samp>high_shibata</samp>&rsquo;</dt>
-<dd><p>select high shibata noise shaping dither
+<dd><p>select high Shibata noise shaping dither.
 </p></dd>
 <dt>&lsquo;<samp>f_weighted</samp>&rsquo;</dt>
 <dd><p>select f-weighted noise shaping dither
@@ -210,7 +210,7 @@ the interval [0,30].
 </p>
 </dd>
 <dt><samp>linear_interp</samp></dt>
-<dd><p>Use Linear Interpolation if set to 1, default value is 0.
+<dd><p>Use linear interpolation if set to 1, default value is 0.
 </p>
 </dd>
 <dt><samp>cutoff</samp></dt>
@@ -307,16 +307,16 @@ operations.
 <dd><p>select cubic
 </p></dd>
 <dt>&lsquo;<samp>blackman_nuttall</samp>&rsquo;</dt>
-<dd><p>select Blackman Nuttall Windowed Sinc
+<dd><p>select Blackman Nuttall windowed sinc
 </p></dd>
 <dt>&lsquo;<samp>kaiser</samp>&rsquo;</dt>
-<dd><p>select Kaiser Windowed Sinc
+<dd><p>select Kaiser windowed sinc
 </p></dd>
 </dl>
 
 </dd>
 <dt><samp>kaiser_beta</samp></dt>
-<dd><p>For swr only, set Kaiser Window Beta value. Must be an integer in the
+<dd><p>For swr only, set Kaiser window beta value. Must be a double float value in the
 interval [2,16], default value is 9.
 </p>
 </dd>

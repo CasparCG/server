@@ -33,7 +33,6 @@
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavfilter/avfiltergraph.h>
-#include <libavfilter/avcodec.h>
 #include <libavfilter/buffersink.h>
 #include <libavfilter/buffersrc.h>
 #include <libavutil/opt.h>
@@ -274,10 +273,10 @@ int main(int argc, char **argv)
             }
 
             if (packet.size <= 0)
-                av_free_packet(&packet0);
+                av_packet_unref(&packet0);
         } else {
             /* discard non-wanted packets */
-            av_free_packet(&packet0);
+            av_packet_unref(&packet0);
         }
     }
 end:

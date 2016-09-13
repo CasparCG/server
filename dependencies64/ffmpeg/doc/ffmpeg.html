@@ -58,15 +58,14 @@
       <li><a name="toc-avpreset-files" href="#avpreset-files">5.12.2 avpreset files</a></li>
     </ul></li>
   </ul></li>
-  <li><a name="toc-Tips" href="#Tips">6 Tips</a></li>
-  <li><a name="toc-Examples" href="#Examples">7 Examples</a>
+  <li><a name="toc-Examples" href="#Examples">6 Examples</a>
   <ul class="no-bullet">
-    <li><a name="toc-Video-and-Audio-grabbing" href="#Video-and-Audio-grabbing">7.1 Video and Audio grabbing</a></li>
-    <li><a name="toc-X11-grabbing" href="#X11-grabbing">7.2 X11 grabbing</a></li>
-    <li><a name="toc-Video-and-Audio-file-format-conversion" href="#Video-and-Audio-file-format-conversion">7.3 Video and Audio file format conversion</a></li>
+    <li><a name="toc-Video-and-Audio-grabbing" href="#Video-and-Audio-grabbing">6.1 Video and Audio grabbing</a></li>
+    <li><a name="toc-X11-grabbing" href="#X11-grabbing">6.2 X11 grabbing</a></li>
+    <li><a name="toc-Video-and-Audio-file-format-conversion" href="#Video-and-Audio-file-format-conversion">6.3 Video and Audio file format conversion</a></li>
   </ul></li>
-  <li><a name="toc-See-Also" href="#See-Also">8 See Also</a></li>
-  <li><a name="toc-Authors" href="#Authors">9 Authors</a></li>
+  <li><a name="toc-See-Also" href="#See-Also">7 See Also</a></li>
+  <li><a name="toc-Authors" href="#Authors">8 Authors</a></li>
 </ul>
 </div>
 
@@ -321,8 +320,10 @@ or <code>-codec: copy</code> would copy all the streams without reencoding.
 thread count for the second stream to 4.
 </p></dd>
 <dt><samp><var>stream_type</var>[:<var>stream_index</var>]</samp></dt>
-<dd><p><var>stream_type</var> is one of following: &rsquo;v&rsquo; for video, &rsquo;a&rsquo; for audio, &rsquo;s&rsquo; for subtitle,
-&rsquo;d&rsquo; for data, and &rsquo;t&rsquo; for attachments. If <var>stream_index</var> is given, then it matches
+<dd><p><var>stream_type</var> is one of following: &rsquo;v&rsquo; or &rsquo;V&rsquo; for video, &rsquo;a&rsquo; for audio, &rsquo;s&rsquo;
+for subtitle, &rsquo;d&rsquo; for data, and &rsquo;t&rsquo; for attachments. &rsquo;v&rsquo; matches all video
+streams, &rsquo;V&rsquo; only matches video streams which are not attached pictures, video
+thumbnails or cover arts.  If <var>stream_index</var> is given, then it matches
 stream number <var>stream_index</var> of this type. Otherwise, it matches all
 streams of this type.
 </p></dd>
@@ -747,6 +748,11 @@ needed in most cases.
 output file already exists.
 </p>
 </dd>
+<dt><samp>-stream_loop <var>number</var> (<em>input</em>)</samp></dt>
+<dd><p>Set number of times input stream shall be looped. Loop 0 means no loop,
+loop -1 means infinite loop.
+</p>
+</dd>
 <dt><samp>-c[:<var>stream_specifier</var>] <var>codec</var> (<em>input/output,per-stream</em>)</samp></dt>
 <dt><samp>-codec[:<var>stream_specifier</var>] <var>codec</var> (<em>input/output,per-stream</em>)</samp></dt>
 <dd><p>Select an encoder (when used before an output file) or a decoder (when used
@@ -775,26 +781,30 @@ data read from the input file.
 <p>When used as an output option (before an output filename), stop writing the
 output after its duration reaches <var>duration</var>.
 </p>
-<p><var>duration</var> may be a number in seconds, or in <code>hh:mm:ss[.xxx]</code> form.
+<p><var>duration</var> must be a time duration specification,
+see <a href="ffmpeg-utils.html#time-duration-syntax">(ffmpeg-utils)the Time duration section in the ffmpeg-utils(1) manual</a>.
 </p>
 <p>-to and -t are mutually exclusive and -t has priority.
 </p>
 </dd>
 <dt><samp>-to <var>position</var> (<em>output</em>)</samp></dt>
 <dd><p>Stop writing the output at <var>position</var>.
-<var>position</var> may be a number in seconds, or in <code>hh:mm:ss[.xxx]</code> form.
+<var>position</var> must be a time duration specification,
+see <a href="ffmpeg-utils.html#time-duration-syntax">(ffmpeg-utils)the Time duration section in the ffmpeg-utils(1) manual</a>.
 </p>
 <p>-to and -t are mutually exclusive and -t has priority.
 </p>
 </dd>
 <dt><samp>-fs <var>limit_size</var> (<em>output</em>)</samp></dt>
-<dd><p>Set the file size limit, expressed in bytes.
+<dd><p>Set the file size limit, expressed in bytes. No further chunk of bytes is written
+after the limit is exceeded. The size of the output file is slightly more than the
+requested file size.
 </p>
 </dd>
 <dt><samp>-ss <var>position</var> (<em>input/output</em>)</samp></dt>
 <dd><p>When used as an input option (before <code>-i</code>), seeks in this input file to
-<var>position</var>. Note the in most formats it is not possible to seek exactly, so
-<code>ffmpeg</code> will seek to the closest seek point before <var>position</var>.
+<var>position</var>. Note that in most formats it is not possible to seek exactly,
+so <code>ffmpeg</code> will seek to the closest seek point before <var>position</var>.
 When transcoding and <samp>-accurate_seek</samp> is enabled (the default), this
 extra segment between the seek point and <var>position</var> will be decoded and
 discarded. When doing stream copy or when <samp>-noaccurate_seek</samp> is used, it
@@ -803,7 +813,14 @@ will be preserved.
 <p>When used as an output option (before an output filename), decodes but discards
 input until the timestamps reach <var>position</var>.
 </p>
-<p><var>position</var> may be either in seconds or in <code>hh:mm:ss[.xxx]</code> form.
+<p><var>position</var> must be a time duration specification,
+see <a href="ffmpeg-utils.html#time-duration-syntax">(ffmpeg-utils)the Time duration section in the ffmpeg-utils(1) manual</a>.
+</p>
+</dd>
+<dt><samp>-sseof <var>position</var> (<em>input/output</em>)</samp></dt>
+<dd>
+<p>Like the <code>-ss</code> option but relative to the &quot;end of file&quot;. That is negative
+values are earlier in the file, 0 is at EOF.
 </p>
 </dd>
 <dt><samp>-itsoffset <var>offset</var> (<em>input</em>)</samp></dt>
@@ -820,7 +837,7 @@ the time duration specified in <var>offset</var>.
 <dt><samp>-timestamp <var>date</var> (<em>output</em>)</samp></dt>
 <dd><p>Set the recording timestamp in the container.
 </p>
-<p><var>date</var> must be a time duration specification,
+<p><var>date</var> must be a date specification,
 see <a href="ffmpeg-utils.html#date-syntax">(ffmpeg-utils)the Date section in the ffmpeg-utils(1) manual</a>.
 </p>
 </dd>
@@ -828,8 +845,8 @@ see <a href="ffmpeg-utils.html#date-syntax">(ffmpeg-utils)the Date section in th
 <dd><p>Set a metadata key/value pair.
 </p>
 <p>An optional <var>metadata_specifier</var> may be given to set metadata
-on streams or chapters. See <code>-map_metadata</code> documentation for
-details.
+on streams, chapters or programs. See <code>-map_metadata</code>
+documentation for details.
 </p>
 <p>This option overrides metadata set with <code>-map_metadata</code>. It is
 also possible to delete metadata by using an empty value.
@@ -844,6 +861,12 @@ also possible to delete metadata by using an empty value.
 <pre class="example">ffmpeg -i INPUT -metadata:s:a:0 language=eng OUTPUT
 </pre></div>
 
+</dd>
+<dt><samp>-program [title=<var>title</var>:][program_num=<var>program_num</var>:]st=<var>stream</var>[:st=<var>stream</var>...] (<em>output</em>)</samp></dt>
+<dd>
+<p>Creates a program with the specified <var>title</var>, <var>program_num</var> and adds the specified
+<var>stream</var>(s) to it.
+</p>
 </dd>
 <dt><samp>-target <var>type</var> (<em>output</em>)</samp></dt>
 <dd><p>Specify target file type (<code>vcd</code>, <code>svcd</code>, <code>dvd</code>, <code>dv</code>,
@@ -1213,6 +1236,17 @@ of <var>hwaccel</var> are:
 </dd>
 <dt><samp>dxva2</samp></dt>
 <dd><p>Use DXVA2 (DirectX Video Acceleration) hardware acceleration.
+</p>
+</dd>
+<dt><samp>qsv</samp></dt>
+<dd><p>Use the Intel QuickSync Video acceleration for video transcoding.
+</p>
+<p>Unlike most other values, this option does not enable accelerated decoding (that
+is used automatically whenever a qsv decoder is selected), but accelerated
+transcoding, without copying the frames into the system memory.
+</p>
+<p>For it to work, both the decoder and the encoder must support QSV acceleration
+and no filters must be used.
 </p></dd>
 </dl>
 
@@ -1242,8 +1276,28 @@ is not specified, the value of the <var>DISPLAY</var> environment variable is us
 <dt><samp>dxva2</samp></dt>
 <dd><p>For DXVA2, this option should contain the number of the display adapter to use.
 If this option is not specified, the default adapter is used.
-</p></dd>
+</p>
+</dd>
+<dt><samp>qsv</samp></dt>
+<dd><p>For QSV, this option corresponds to the valus of MFX_IMPL_* . Allowed values
+are:
+</p><dl compact="compact">
+<dt><samp>auto</samp></dt>
+<dt><samp>sw</samp></dt>
+<dt><samp>hw</samp></dt>
+<dt><samp>auto_any</samp></dt>
+<dt><samp>hw_any</samp></dt>
+<dt><samp>hw2</samp></dt>
+<dt><samp>hw3</samp></dt>
+<dt><samp>hw4</samp></dt>
 </dl>
+</dd>
+</dl>
+
+</dd>
+<dt><samp>-hwaccels</samp></dt>
+<dd><p>List all hardware acceleration methods supported in this build of ffmpeg.
+</p>
 </dd>
 </dl>
 
@@ -1814,9 +1868,9 @@ specified to <code>ffserver</code> but can be to <code>ffmpeg</code>.
 </p>
 </dd>
 <dt><samp>-sdp_file <var>file</var> (<em>global</em>)</samp></dt>
-<dd><p>Print sdp information to <var>file</var>.
+<dd><p>Print sdp information for an output stream to <var>file</var>.
 This allows dumping sdp information when at least one output isn&rsquo;t an
-rtp stream.
+rtp stream. (Requires at least one of the output formats to be rtp).
 </p>
 </dd>
 <dt><samp>-discard (<em>input</em>)</samp></dt>
@@ -1846,6 +1900,16 @@ Not all demuxers support this.
 </dd>
 <dt><samp>all</samp></dt>
 <dd><p>Discard all frames.
+</p></dd>
+</dl>
+
+</dd>
+<dt><samp>-abort_on <var>flags</var> (<em>global</em>)</samp></dt>
+<dd><p>Stop and abort on various conditions. The following flags are available:
+</p>
+<dl compact="compact">
+<dt><samp>empty_output</samp></dt>
+<dd><p>No packets were passed to the muxer, the output is empty.
 </p></dd>
 </dl>
 
@@ -1931,46 +1995,11 @@ search for the file <samp>libvpx-1080p.avpreset</samp>.
 <var>arg</var>.avpreset in the same directories.
 </p>
 
-<a name="Tips"></a>
-<h2 class="chapter">6 Tips<span class="pull-right"><a class="anchor hidden-xs" href="#Tips" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Tips" aria-hidden="true">TOC</a></span></h2>
-
-<ul>
-<li> For streaming at very low bitrates, use a low frame rate
-and a small GOP size. This is especially true for RealVideo where
-the Linux player does not seem to be very fast, so it can miss
-frames. An example is:
-
-<div class="example">
-<pre class="example">ffmpeg -g 3 -r 3 -t 10 -b:v 50k -s qcif -f rv10 /tmp/b.rm
-</pre></div>
-
-</li><li> The parameter &rsquo;q&rsquo; which is displayed while encoding is the current
-quantizer. The value 1 indicates that a very good quality could
-be achieved. The value 31 indicates the worst quality. If q=31 appears
-too often, it means that the encoder cannot compress enough to meet
-your bitrate. You must either increase the bitrate, decrease the
-frame rate or decrease the frame size.
-
-</li><li> If your computer is not fast enough, you can speed up the
-compression at the expense of the compression ratio. You can use
-&rsquo;-me zero&rsquo; to speed up motion estimation, and &rsquo;-g 0&rsquo; to disable
-motion estimation completely (you have only I-frames, which means it
-is about as good as JPEG compression).
-
-</li><li> To have very low audio bitrates, reduce the sampling frequency
-(down to 22050 Hz for MPEG audio, 22050 or 11025 for AC-3).
-
-</li><li> To have a constant quality (but a variable bitrate), use the option
-&rsquo;-qscale n&rsquo; when &rsquo;n&rsquo; is between 1 (excellent quality) and 31 (worst
-quality).
-
-</li></ul>
-
 <a name="Examples"></a>
-<h2 class="chapter">7 Examples<span class="pull-right"><a class="anchor hidden-xs" href="#Examples" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Examples" aria-hidden="true">TOC</a></span></h2>
+<h2 class="chapter">6 Examples<span class="pull-right"><a class="anchor hidden-xs" href="#Examples" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Examples" aria-hidden="true">TOC</a></span></h2>
 
 <a name="Video-and-Audio-grabbing"></a>
-<h3 class="section">7.1 Video and Audio grabbing<span class="pull-right"><a class="anchor hidden-xs" href="#Video-and-Audio-grabbing" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Video-and-Audio-grabbing" aria-hidden="true">TOC</a></span></h3>
+<h3 class="section">6.1 Video and Audio grabbing<span class="pull-right"><a class="anchor hidden-xs" href="#Video-and-Audio-grabbing" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Video-and-Audio-grabbing" aria-hidden="true">TOC</a></span></h3>
 
 <p>If you specify the input format and device then ffmpeg can grab video
 and audio directly.
@@ -1991,7 +2020,7 @@ have to set the audio recording levels correctly with a
 standard mixer.
 </p>
 <a name="X11-grabbing"></a>
-<h3 class="section">7.2 X11 grabbing<span class="pull-right"><a class="anchor hidden-xs" href="#X11-grabbing" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-X11-grabbing" aria-hidden="true">TOC</a></span></h3>
+<h3 class="section">6.2 X11 grabbing<span class="pull-right"><a class="anchor hidden-xs" href="#X11-grabbing" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-X11-grabbing" aria-hidden="true">TOC</a></span></h3>
 
 <p>Grab the X11 display with ffmpeg via
 </p>
@@ -2010,7 +2039,7 @@ the DISPLAY environment variable.
 variable. 10 is the x-offset and 20 the y-offset for the grabbing.
 </p>
 <a name="Video-and-Audio-file-format-conversion"></a>
-<h3 class="section">7.3 Video and Audio file format conversion<span class="pull-right"><a class="anchor hidden-xs" href="#Video-and-Audio-file-format-conversion" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Video-and-Audio-file-format-conversion" aria-hidden="true">TOC</a></span></h3>
+<h3 class="section">6.3 Video and Audio file format conversion<span class="pull-right"><a class="anchor hidden-xs" href="#Video-and-Audio-file-format-conversion" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Video-and-Audio-file-format-conversion" aria-hidden="true">TOC</a></span></h3>
 
 <p>Any supported file format and protocol can serve as input to ffmpeg:
 </p>
@@ -2153,7 +2182,7 @@ but you may use the QP2LAMBDA constant to easily convert from &rsquo;q&rsquo; un
 
 
 <a name="See-Also"></a>
-<h2 class="chapter">8 See Also<span class="pull-right"><a class="anchor hidden-xs" href="#See-Also" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-See-Also" aria-hidden="true">TOC</a></span></h2>
+<h2 class="chapter">7 See Also<span class="pull-right"><a class="anchor hidden-xs" href="#See-Also" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-See-Also" aria-hidden="true">TOC</a></span></h2>
 
 <p><a href="ffmpeg-all.html">ffmpeg-all</a>,
 <a href="ffplay.html">ffplay</a>, <a href="ffprobe.html">ffprobe</a>, <a href="ffserver.html">ffserver</a>,
@@ -2169,7 +2198,7 @@ but you may use the QP2LAMBDA constant to easily convert from &rsquo;q&rsquo; un
 </p>
 
 <a name="Authors"></a>
-<h2 class="chapter">9 Authors<span class="pull-right"><a class="anchor hidden-xs" href="#Authors" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Authors" aria-hidden="true">TOC</a></span></h2>
+<h2 class="chapter">8 Authors<span class="pull-right"><a class="anchor hidden-xs" href="#Authors" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Authors" aria-hidden="true">TOC</a></span></h2>
 
 <p>The FFmpeg developers.
 </p>

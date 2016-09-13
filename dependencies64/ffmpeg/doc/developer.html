@@ -81,15 +81,15 @@ this document.
 </p>
 <p>For more detailed legal information about the use of FFmpeg in
 external programs read the <samp>LICENSE</samp> file in the source tree and
-consult <a href="http://ffmpeg.org/legal.html">http://ffmpeg.org/legal.html</a>.
+consult <a href="https://ffmpeg.org/legal.html">https://ffmpeg.org/legal.html</a>.
 </p>
 <a name="Contributing"></a>
 <h3 class="section">1.2 Contributing<span class="pull-right"><a class="anchor hidden-xs" href="#Contributing" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Contributing" aria-hidden="true">TOC</a></span></h3>
 
-<p>There are 3 ways by which code gets into ffmpeg.
+<p>There are 3 ways by which code gets into FFmpeg.
 </p><ul>
-<li> Submitting Patches to the main developer mailing list
-      see <a href="#Submitting-patches">Submitting patches</a> for details.
+<li> Submitting patches to the main developer mailing list.
+      See <a href="#Submitting-patches">Submitting patches</a> for details.
 </li><li> Directly committing changes to the main tree.
 </li><li> Committing changes to a git clone, for example on github.com or
       gitorious.org. And asking us to merge these changes.
@@ -117,6 +117,8 @@ rejected by the git repository.
 
 </li><li> You should try to limit your code lines to 80 characters; however, do so if
 and only if this improves readability.
+
+</li><li> K&amp;R coding style is used.
 </li></ul>
 <p>The presentation is one inspired by &rsquo;indent -i4 -kr -nut&rsquo;.
 </p>
@@ -175,9 +177,9 @@ features from ISO C99, namely:
 
 </li><li> &lsquo;<samp>//</samp>&rsquo; comments;
 
-</li><li> designated struct initializers (&lsquo;<samp>struct s x = { .i = 17 };</samp>&rsquo;)
+</li><li> designated struct initializers (&lsquo;<samp>struct s x = { .i = 17 };</samp>&rsquo;);
 
-</li><li> compound literals (&lsquo;<samp>x = (struct s) { 17, 23 };</samp>&rsquo;)
+</li><li> compound literals (&lsquo;<samp>x = (struct s) { 17, 23 };</samp>&rsquo;).
 </li></ul>
 
 <p>These features are supported by all compilers we care about, so we will not
@@ -203,7 +205,7 @@ additional C99 features or GCC extensions. Especially watch out for:
 <p>All names should be composed with underscores (_), not CamelCase. For example,
 &lsquo;<samp>avfilter_get_video_buffer</samp>&rsquo; is an acceptable function name and
 &lsquo;<samp>AVFilterGetVideo</samp>&rsquo; is not. The exception from this are type names, like
-for example structs and enums; they should always be in the CamelCase
+for example structs and enums; they should always be in CamelCase.
 </p>
 <p>There are the following conventions for naming variables and functions:
 </p>
@@ -418,8 +420,8 @@ or obfuscates the code.
 </li><li> Make sure that no parts of the codebase that you maintain are missing from the
 <samp>MAINTAINERS</samp> file. If something that you want to maintain is missing add it with
 your name after it.
-If at some point you no longer want to maintain some code, then please help
-finding a new maintainer and also don&rsquo;t forget updating the <samp>MAINTAINERS</samp> file.
+If at some point you no longer want to maintain some code, then please help in
+finding a new maintainer and also don&rsquo;t forget to update the <samp>MAINTAINERS</samp> file.
 </li></ol>
 
 <p>We think our rules are not too hard. If you have comments, contact us.
@@ -431,7 +433,7 @@ finding a new maintainer and also don&rsquo;t forget updating the <samp>MAINTAIN
 the rules regarding patch submission.
 </p>
 <p>When you submit your patch, please use <code>git format-patch</code> or
-<code>git send-email</code>. We cannot read other diffs :-)
+<code>git send-email</code>. We cannot read other diffs :-).
 </p>
 <p>Also please do not submit a patch which contains several unrelated changes.
 Split it into separate, self-contained pieces. This does not mean splitting
@@ -454,7 +456,7 @@ and has no lrint()&rsquo;)
 do not attach several unrelated patches to the same mail.
 </p>
 <p>Patches should be posted to the
-<a href="http://lists.ffmpeg.org/mailman/listinfo/ffmpeg-devel">ffmpeg-devel</a>
+<a href="https://lists.ffmpeg.org/mailman/listinfo/ffmpeg-devel">ffmpeg-devel</a>
 mailing list. Use <code>git send-email</code> when possible since it will properly
 send patches without requiring extra care. If you cannot, then send patches
 as base64-encoded attachments, so your patch is not trashed during
@@ -546,6 +548,9 @@ tools/trasher, the noise bitstream filter, and
 should not crash, end in a (near) infinite loop, or allocate ridiculous
 amounts of memory when fed damaged data.
 
+</li><li> Did you test your decoder or demuxer against sample files?
+Samples may be obtained at <a href="https://samples.ffmpeg.org">https://samples.ffmpeg.org</a>.
+
 </li><li> Does the patch not mix functional and cosmetic changes?
 
 </li><li> Did you add tabs or trailing whitespace to the code? Both are forbidden.
@@ -560,7 +565,7 @@ text/x-patch or at least text/plain and not application/octet-stream.
 </li><li> If the patch fixes a bug, did you provide enough information, including
 a sample, so the bug can be reproduced and the fix can be verified?
 Note please do not attach samples &gt;100k to mails but rather provide a
-URL, you can upload to ftp://upload.ffmpeg.org
+URL, you can upload to ftp://upload.ffmpeg.org.
 
 </li><li> Did you provide a verbose summary about what the patch does change?
 
@@ -581,9 +586,9 @@ long as doing so does not break API/ABI compatibility.
 </li><li> Lines with similar content should be aligned vertically when doing so
 improves readability.
 
-</li><li> Consider to add a regression test for your code.
+</li><li> Consider adding a regression test for your code.
 
-</li><li> If you added YASM code please check that things still work with &ndash;disable-yasm
+</li><li> If you added YASM code please check that things still work with &ndash;disable-yasm.
 
 </li><li> Make sure you check the return values of function and return appropriate
 error codes. Especially memory allocation functions like <code>av_malloc()</code>
@@ -620,6 +625,10 @@ not related to the comments received during review. Such patches will
 be rejected. Instead, submit significant changes or new features as
 separate patches.
 </p>
+<p>Everyone is welcome to review patches. Also if you are waiting for your patch
+to be reviewed, please consider helping to review other patches, that is a great
+way to get everyone&rsquo;s patches reviewed sooner.
+</p>
 <a name="Regression-tests"></a><a name="Regression-tests-1"></a>
 <h3 class="section">1.9 Regression tests<span class="pull-right"><a class="anchor hidden-xs" href="#Regression-tests-1" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Regression-tests-1" aria-hidden="true">TOC</a></span></h3>
 
@@ -644,7 +653,6 @@ Once you have a working fate test and fate sample, provide in the commit
 message or introductory message for the patch series that you post to
 the ffmpeg-devel mailing list, a direct link to download the sample media.
 </p>
-
 <a name="Visualizing-Test-Coverage"></a>
 <h4 class="subsection">1.9.2 Visualizing Test Coverage<span class="pull-right"><a class="anchor hidden-xs" href="#Visualizing-Test-Coverage" aria-hidden="true">#</a> <a class="anchor hidden-xs"href="#toc-Visualizing-Test-Coverage" aria-hidden="true">TOC</a></span></h4>
 
@@ -690,7 +698,7 @@ your configure line instead.
 recommended deliverable for system integrators and distributors (such as
 Linux distributions, etc.). At regular times, a <strong>release
 manager</strong> prepares, tests and publishes tarballs on the
-<a href="http://ffmpeg.org">http://ffmpeg.org</a> website.
+<a href="https://ffmpeg.org">https://ffmpeg.org</a> website.
 </p>
 <p>There are two kinds of releases:
 </p>
@@ -757,7 +765,7 @@ branch on at least <strong>i386</strong> and <strong>amd64</strong>
 </li><li> Prepare the release tarballs in <code>bz2</code> and <code>gz</code> formats, and
 supplementing files that contain <code>gpg</code> signatures
 
-</li><li> Publish the tarballs at <a href="http://ffmpeg.org/releases">http://ffmpeg.org/releases</a>. Create and
+</li><li> Publish the tarballs at <a href="https://ffmpeg.org/releases">https://ffmpeg.org/releases</a>. Create and
 push an annotated tag in the form <code>nX</code>, with <code>X</code>
 containing the version number.
 
@@ -766,7 +774,7 @@ with a news entry for the website.
 
 </li><li> Publish the news entry.
 
-</li><li> Send announcement to the mailing list.
+</li><li> Send an announcement to the mailing list.
 </li></ol>
 
 

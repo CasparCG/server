@@ -274,7 +274,7 @@ private:
 			if(vid_stream_index >= 0)
 			{
 				auto codec_id = format_context_->streams[vid_stream_index]->codec->codec_id;
-				if(codec_id == CODEC_ID_VP6A || codec_id == CODEC_ID_VP6F || codec_id == CODEC_ID_VP6)
+				if(codec_id == AV_CODEC_ID_VP6A || codec_id == AV_CODEC_ID_VP6F || codec_id == AV_CODEC_ID_VP6)
 					flags = AVSEEK_FLAG_BYTE;
 			}
 		}
@@ -327,8 +327,8 @@ private:
 		{		
 			THROW_ON_ERROR(ret, "av_read_frame", print());
 					
-			THROW_ON_ERROR2(av_dup_packet(packet.get()), print());
-				
+			THROW_ON_ERROR2(av_packet_ref(packet.get(), packet.get()), print());
+
 			// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
 			const auto size = packet->size;
 			const auto data = packet->data;

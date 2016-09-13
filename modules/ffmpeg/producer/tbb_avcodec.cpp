@@ -86,10 +86,7 @@ int thread_execute2(AVCodecContext* s, int (*func)(AVCodecContext* c2, void* arg
 
 void thread_init(AVCodecContext* s)
 {
-	static int dummy_opaque;
-
     s->active_thread_type = FF_THREAD_SLICE;
-	s->thread_opaque	  = &dummy_opaque; 
     s->execute			  = thread_execute;
     s->execute2			  = thread_execute2;
     s->thread_count		  = MAX_THREADS; // We are using a task-scheduler, so use as many "threads/tasks" as possible. 
@@ -97,10 +94,6 @@ void thread_init(AVCodecContext* s)
 
 void thread_free(AVCodecContext* s)
 {
-	if(!s->thread_opaque)
-		return;
-
-	s->thread_opaque = nullptr;
 }
 
 int tbb_avcodec_open(AVCodecContext* avctx, AVCodec* codec, bool single_threaded)
