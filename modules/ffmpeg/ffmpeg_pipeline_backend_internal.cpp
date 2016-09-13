@@ -654,6 +654,7 @@ class memory_sink : public sink
 	core::mutable_audio_buffer						audio_samples_;
 
 	std::queue<std::shared_ptr<AVFrame>>			video_frames_;
+	std::shared_ptr<AVFrame>						last_video_frame_;
 
 	tbb::concurrent_bounded_queue<core::draw_frame>	output_frames_;
 	tbb::atomic<bool>								running_;
@@ -816,6 +817,7 @@ public:
 			}
 
 			auto output_frame = make_frame(this, spl::make_shared_ptr(video_frames_.front()), *factory_, channel_layout_);
+			last_video_frame_ = video_frames_.front();
 			video_frames_.pop();
 			output_frame.audio_data() = std::move(audio_data);
 
@@ -832,9 +834,15 @@ public:
 
 			audio_data.swap(audio_samples_);
 
+			if (video_frames_.empty() && !audio_data.empty() && last_video_frame_) // More audio samples than video
+			{
+				video_frames_.push(last_video_frame_);
+			}
+
 			if (!video_frames_.empty())
 			{
 				auto output_frame = make_frame(this, spl::make_shared_ptr(video_frames_.front()), *factory_, channel_layout_);
+				last_video_frame_ = video_frames_.front();
 				video_frames_.pop();
 				output_frame.audio_data() = std::move(audio_data);
 
