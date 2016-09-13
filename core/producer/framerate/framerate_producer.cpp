@@ -374,7 +374,7 @@ private:
 	{
 		user_speed_.fetch_and_tick();
 
-		if (output_repeat_ && ++output_frame_ % output_repeat_)
+		if (output_repeat_ && output_frame_++ % output_repeat_)
 		{
 			auto frame = draw_frame::still(last_frame());
 
