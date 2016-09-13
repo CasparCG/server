@@ -46,6 +46,7 @@ public:
 	ffmpeg_pipeline			graph(spl::shared_ptr<caspar::diagnostics::graph> g);
 
 	ffmpeg_pipeline			from_file(std::string filename);
+	ffmpeg_pipeline			from_url(std::string url);
 	ffmpeg_pipeline			from_memory_only_audio(int num_channels, int samplerate);
 	ffmpeg_pipeline			from_memory_only_video(int width, int height, boost::rational<int> framerate);
 	ffmpeg_pipeline			from_memory(int num_channels, int samplerate, int width, int height, boost::rational<int> framerate);

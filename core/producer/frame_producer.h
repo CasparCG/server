@@ -158,6 +158,9 @@ public:
 	spl::shared_ptr<core::frame_producer> create_producer(const frame_producer_dependencies&, const std::vector<std::wstring>& params) const;
 	spl::shared_ptr<core::frame_producer> create_producer(const frame_producer_dependencies&, const std::wstring& params) const;
 	draw_frame create_thumbnail(const frame_producer_dependencies&, const std::wstring& media_file) const;
+
+	static bool filename_is_url(std::wstring const& s);
+
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;
