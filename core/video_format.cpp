@@ -85,6 +85,7 @@ video_format_desc::video_format_desc(
 	, square_height(square_height)
 	, field_mode(field_mode)
 	, fps(static_cast<double>(time_scale) / static_cast<double>(duration))
+	, framerate(time_scale, duration)
 	, time_scale(time_scale)
 	, duration(duration)
 	, field_count(field_mode == core::field_mode::progressive ? 1 : 2)
