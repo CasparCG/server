@@ -257,7 +257,14 @@ private:
 			catch (const caspar_exception& e)
 			{
 				if (!is_current()) // Add context information from this thread before rethrowing.
-					e << context_info(get_context() + *boost::get_error_info<context_info_t>(e));
+				{
+					auto ctx_info = boost::get_error_info<context_info_t>(e);
+
+					if (ctx_info)
+						e << context_info(get_context() + *ctx_info);
+					else
+						e << context_info(get_context());
+				}
 
 				throw;
 			}
