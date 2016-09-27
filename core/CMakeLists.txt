@@ -86,6 +86,10 @@ set(HEADERS
 		interaction/interaction_sink.h
 		interaction/util.h
 
+		mixer/audio/audio_mixer.h
+
+		mixer/image/blend_modes.h
+
 		mixer/mixer.h
 
 		monitor/monitor.h
@@ -152,6 +156,8 @@ source_group(sources\\frame frame/*)
 source_group(sources\\help help/*)
 source_group(sources\\interaction interaction/*)
 source_group(sources\\mixer mixer/*)
+source_group(sources\\mixer\\audio mixer/audio/*)
+source_group(sources\\mixer\\image mixer/image/*)
 source_group(sources\\producer\\color producer/color/*)
 source_group(sources\\producer\\media_info producer/media_info/*)
 source_group(sources\\producer\\scene producer/scene/*)
