@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+* Copyright 2013 Sveriges Television AB http://casparcg.com/
 *
 * This file is part of CasparCG (www.casparcg.com).
 *
@@ -19,27 +19,28 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../../StdAfx.h"
+#include "../../stdafx.h"
 
 #include "input.h"
 
 #include "../util/util.h"
+#include "../util/flv.h"
 #include "../../ffmpeg_error.h"
 #include "../../ffmpeg.h"
 
+#include <core/video_format.h>
+
 #include <common/diagnostics/graph.h>
 #include <common/executor.h>
-#include <common/lock.h>
-//#include <common/except.h>
+#include <common/except.h>
 #include <common/os/general_protection_fault.h>
-#include <common/log.h>
-
-#include <core/video_format.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/atomic.h>
 #include <tbb/recursive_mutex.h>
 
+#include <boost/rational.hpp>
+#include <boost/range/algorithm.hpp>
 #include <boost/thread/condition_variable.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/thread.hpp>
@@ -48,7 +49,7 @@
 #pragma warning (push)
 #pragma warning (disable : 4244)
 #endif
-extern "C" 
+extern "C"
 {
 	#define __STDC_CONSTANT_MACROS
 	#define __STDC_LIMIT_MACROS
@@ -58,212 +59,284 @@ extern "C"
 #pragma warning (pop)
 #endif
 
+static const size_t MAX_BUFFER_COUNT    = 100;
+static const size_t MAX_BUFFER_COUNT_RT = 3;
+static const size_t MIN_BUFFER_COUNT    = 50;
+static const size_t MAX_BUFFER_SIZE     = 64 * 1000000;
+
 namespace caspar { namespace ffmpeg {
-
-static const int MAX_PUSH_WITHOUT_POP = 200;
-static const int MIN_FRAMES = 25;
-
-class stream
+struct input::implementation : boost::noncopyable
 {
-	stream(const stream&);
-	stream& operator=(const stream&);
+	const spl::shared_ptr<diagnostics::graph>					graph_;
 
-	typedef tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>::size_type size_type;
+	const spl::shared_ptr<AVFormatContext>						format_context_; // Destroy this last
+	const int													default_stream_index_	= av_find_default_stream_index(format_context_.get());
 
-	int															index_;
-	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>	packets_;
-	tbb::atomic<int>											push_since_pop_;
-public:
+	const std::wstring											filename_;
+	tbb::atomic<uint32_t>										start_;
+	tbb::atomic<uint32_t>										length_;
+	const bool													thumbnail_mode_;
+	tbb::atomic<bool>											loop_;
+	uint32_t													frame_number_			= 0;
+	boost::rational<int>										framerate_				= read_framerate(*format_context_, 1);
 
-	stream(int index) 
-		: index_(index)
+	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>	buffer_;
+	tbb::atomic<size_t>											buffer_size_;
+
+	executor													executor_;
+
+	explicit implementation(const spl::shared_ptr<diagnostics::graph> graph, const std::wstring& filename, FFMPEG_Resource resource_type, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_options& vid_params)
+		: graph_(graph)
+		, format_context_(open_input(filename, resource_type, vid_params))
+		, filename_(filename)
+		, thumbnail_mode_(thumbnail_mode)
+		, executor_(print())
 	{
-		push_since_pop_ = 0;
-	}
+		if (thumbnail_mode_)
+			executor_.invoke([]
+			{
+				enable_quiet_logging_for_thread();
+			});
 
-	stream(stream&&) = default;
+		start_			= start;
+		length_			= length;
+		loop_			= loop;
+		buffer_size_	= 0;
 
-	bool is_available() const
-	{
-		return index_ >= 0;
-	}
+		if(start_ > 0)
+			queued_seek(start_);
 
-	int index() const
-	{
-		return index_;
-	}
-	
-	void push(const std::shared_ptr<AVPacket>& packet)
-	{
-		if(packet && packet->data && packet->stream_index != index_)
-			return;
+		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));
+		graph_->set_color("buffer-count", diagnostics::color(0.7f, 0.4f, 0.4f));
+		graph_->set_color("buffer-size", diagnostics::color(1.0f, 1.0f, 0.0f));
 
-		if (++push_since_pop_ > MAX_PUSH_WITHOUT_POP) // Out of memory protection for streams never being used.
-		{
-			return;
-		}
-
-		packets_.push(packet);
+		tick();
 	}
 
 	bool try_pop(std::shared_ptr<AVPacket>& packet)
 	{
-		push_since_pop_ = 0;
-
-		return packets_.try_pop(packet);
-	}
-
-	void clear()
-	{
-		std::shared_ptr<AVPacket> packet;
-		push_since_pop_ = 0;
-		while(packets_.try_pop(packet));
-	}
-		
-	size_type size() const
-	{
-		return is_available() ? packets_.size() : std::numeric_limits<size_type>::max();
-	}
-};
-		
-struct input::impl : boost::noncopyable
-{		
-	const spl::shared_ptr<diagnostics::graph>	graph_;
-
-	const std::wstring					  		filename_;
-	const spl::shared_ptr<AVFormatContext>		format_context_			= open_input(filename_); // Destroy this last
-	const int							  		default_stream_index_	= av_find_default_stream_index(format_context_.get());
-
-	tbb::atomic<uint32_t>				  		start_;		
-	tbb::atomic<uint32_t>				  		length_;
-	tbb::atomic<bool>					  		loop_;
-	tbb::atomic<bool>					  		eof_;
-	double								  		fps_					= read_fps(*format_context_, 0.0);
-	uint32_t							  		frame_number_			= 0;
-
-	stream								  		video_stream_			{							av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0) };
-	std::vector<stream>							audio_streams_;
-
-	boost::optional<uint32_t>			  		seek_target_;
-
-	tbb::atomic<bool>					  		is_running_;
-	boost::mutex						  		mutex_;
-	boost::condition_variable			  		cond_;
-	boost::thread						  		thread_;
-	
-	impl(
-			const spl::shared_ptr<diagnostics::graph> graph,
-			const std::wstring& filename,
-			const bool loop,
-			const uint32_t start,
-			const uint32_t length,
-			bool thumbnail_mode)
-		: graph_(graph)
-		, filename_(filename)
-	{
-		start_			= start;
-		length_			= length;
-		loop_			= loop;
-		eof_			= false;
-		is_running_		= true;
-
-		if(start_ != 0)
-			seek_target_ = start_;
-														
-		graph_->set_color("seek", diagnostics::color(1.0f, 0.5f, 0.0f));
-
-		if (!thumbnail_mode)
-			for (unsigned i = 0; i < format_context_->nb_streams; ++i)
-				if (format_context_->streams[i]->codec->codec_type == AVMediaType::AVMEDIA_TYPE_AUDIO)
-					audio_streams_.emplace_back(i);
-
-		for (int i = 0; i < audio_streams_.size(); ++i)
-			graph_->set_color("audio-buffer" + boost::lexical_cast<std::string>(i + 1), diagnostics::color(0.7f, 0.4f, 0.4f));
-
-		if (video_stream_.is_available())
-			graph_->set_color("video-buffer", diagnostics::color(1.0f, 1.0f, 0.0f));
-		
-		for(int n = 0; n < 8; ++n)
-			tick();
-
-		thread_	= boost::thread([this, thumbnail_mode]{run(thumbnail_mode);});
-	}
-
-	~impl()
-	{
-		is_running_ = false;
-		cond_.notify_one();
-		thread_.join();
-	}
-	
-	bool try_pop_video(std::shared_ptr<AVPacket>& packet)
-	{
-		if (!video_stream_.is_available())
-			return false;
-
-		bool result = video_stream_.try_pop(packet);
+		auto result = buffer_.try_pop(packet);
 
 		if(result)
-			cond_.notify_one();
-		
-		graph_->set_value("video-buffer", std::min(1.0, static_cast<double>(video_stream_.size())/MIN_FRAMES));
-				
-		return result;
-	}
-	
-	bool try_pop_audio(std::shared_ptr<AVPacket>& packet, int audio_stream_index)
-	{
-		if (audio_streams_.size() < audio_stream_index + 1)
-			return false;
-
-		auto& audio_stream = audio_streams_.at(audio_stream_index);
-		bool result = audio_stream.try_pop(packet);
-		if(result)
-			cond_.notify_one();
-
-		auto buffer_nr = boost::lexical_cast<std::string>(audio_stream_index + 1);
-		graph_->set_value("audio-buffer" + buffer_nr, std::min(1.0, static_cast<double>(audio_stream.size())/MIN_FRAMES));
-
-		return result;
-	}
-
-	void seek(uint32_t target)
-	{
 		{
-			boost::lock_guard<boost::mutex> lock(mutex_);
-
-			seek_target_ = target;
-			video_stream_.clear();
-
-			for (auto& audio_stream : audio_streams_)
-				audio_stream.clear();
+			if(packet)
+				buffer_size_ -= packet->size;
+			tick();
 		}
 
-		cond_.notify_one();
+		graph_->set_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
+		graph_->set_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));
+
+		return result;
 	}
 
-	int get_actual_audio_stream_index(int audio_stream_index) const
+	std::ptrdiff_t get_max_buffer_count() const
 	{
-		if (audio_stream_index + 1 > audio_streams_.size())
-			CASPAR_THROW_EXCEPTION(averror_stream_not_found());
-
-		return audio_streams_.at(audio_stream_index).index();
+		return thumbnail_mode_ ? 1 : MAX_BUFFER_COUNT;
 	}
-		
+
+	std::ptrdiff_t get_min_buffer_count() const
+	{
+		return thumbnail_mode_ ? 0 : MIN_BUFFER_COUNT;
+	}
+
+	std::future<bool> seek(uint32_t target)
+	{
+		if (!executor_.is_running())
+			return make_ready_future(false);
+
+		return executor_.begin_invoke([=]() -> bool
+		{
+			std::shared_ptr<AVPacket> packet;
+			while(buffer_.try_pop(packet) && packet)
+				buffer_size_ -= packet->size;
+
+			queued_seek(target);
+
+			tick();
+
+			return true;
+		}, task_priority::high_priority);
+	}
+
 	std::wstring print() const
 	{
 		return L"ffmpeg_input[" + filename_ + L")]";
 	}
 
-private:
-	void internal_seek(uint32_t target)
+	bool full() const
 	{
-		eof_ = false;
-		graph_->set_tag(diagnostics::tag_severity::INFO, "seek");
+		return (buffer_size_ > MAX_BUFFER_SIZE || buffer_.size() > get_max_buffer_count()) && buffer_.size() > get_min_buffer_count();
+	}
 
-		if (is_logging_quiet_for_thread())
-			CASPAR_LOG(trace) << print() << " Seeking: " << target;
-		else
+	void tick()
+	{
+		if(!executor_.is_running())
+			return;
+
+		executor_.begin_invoke([this]
+		{
+			if(full())
+				return;
+
+			try
+			{
+				auto packet = create_packet();
+
+				auto ret = av_read_frame(format_context_.get(), packet.get()); // packet is only valid until next call of av_read_frame. Use av_dup_packet to extend its life.
+
+				if(is_eof(ret))
+				{
+					frame_number_	= 0;
+
+					if(loop_)
+					{
+						queued_seek(start_);
+						graph_->set_tag(diagnostics::tag_severity::INFO, "seek");
+						CASPAR_LOG(trace) << print() << " Looping.";
+					}
+					else
+						executor_.stop();
+				}
+				else
+				{
+					THROW_ON_ERROR(ret, "av_read_frame", print());
+
+					if(packet->stream_index == default_stream_index_)
+						++frame_number_;
+
+					THROW_ON_ERROR2(av_dup_packet(packet.get()), print());
+
+					// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
+					auto size = packet->size;
+					auto data = packet->data;
+
+					packet = spl::shared_ptr<AVPacket>(packet.get(), [packet, size, data](AVPacket*)
+					{
+						packet->size = size;
+						packet->data = data;
+					});
+
+					buffer_.try_push(packet);
+					buffer_size_ += packet->size;
+
+					graph_->set_value("buffer-size", (static_cast<double>(buffer_size_)+0.001)/MAX_BUFFER_SIZE);
+					graph_->set_value("buffer-count", (static_cast<double>(buffer_.size()+0.001)/MAX_BUFFER_COUNT));
+				}
+
+				tick();
+			}
+			catch(...)
+			{
+				if (!thumbnail_mode_)
+					CASPAR_LOG_CURRENT_EXCEPTION();
+				executor_.stop();
+			}
+		});
+	}
+
+	spl::shared_ptr<AVFormatContext> open_input(const std::wstring resource_name, FFMPEG_Resource resource_type, const ffmpeg_options& vid_params)
+	{
+		AVFormatContext* weak_context = nullptr;
+
+		switch (resource_type) {
+		case FFMPEG_Resource::FFMPEG_FILE:
+			THROW_ON_ERROR2(avformat_open_input(&weak_context, u8(resource_name).c_str(), nullptr, nullptr), resource_name);
+			break;
+		case FFMPEG_Resource::FFMPEG_DEVICE:
+			{
+				AVDictionary* format_options = NULL;
+				for (auto& option  : vid_params)
+				{
+					av_dict_set(&format_options, option.first.c_str(), option.second.c_str(), 0);
+				}
+				AVInputFormat* input_format = av_find_input_format("dshow");
+				THROW_ON_ERROR2(avformat_open_input(&weak_context, u8(resource_name).c_str(), input_format, &format_options), resource_name);
+				if (format_options != nullptr)
+				{
+					std::string unsupported_tokens = "";
+					AVDictionaryEntry *t = NULL;
+					while ((t = av_dict_get(format_options, "", t, AV_DICT_IGNORE_SUFFIX)) != nullptr)
+					{
+						if (!unsupported_tokens.empty())
+							unsupported_tokens += ", ";
+						unsupported_tokens += t->key;
+					}
+					avformat_close_input(&weak_context);
+					BOOST_THROW_EXCEPTION(ffmpeg_error() << msg_info(unsupported_tokens));
+				}
+				av_dict_free(&format_options);
+			}
+			break;
+		case FFMPEG_Resource::FFMPEG_STREAM:
+			{
+				AVDictionary* format_options = NULL;
+				for (auto& option : vid_params)
+				{
+					av_dict_set(&format_options, option.first.c_str(), option.second.c_str(), 0);
+				}
+				THROW_ON_ERROR2(avformat_open_input(&weak_context, u8(resource_name).c_str(), nullptr, &format_options), resource_name);
+				if (format_options != nullptr)
+				{
+					std::string unsupported_tokens = "";
+					AVDictionaryEntry *t = NULL;
+					while ((t = av_dict_get(format_options, "", t, AV_DICT_IGNORE_SUFFIX)) != nullptr)
+					{
+						if (!unsupported_tokens.empty())
+							unsupported_tokens += ", ";
+						unsupported_tokens += t->key;
+					}
+					avformat_close_input(&weak_context);
+					BOOST_THROW_EXCEPTION(ffmpeg_error() << msg_info(unsupported_tokens));
+				}
+				av_dict_free(&format_options);
+			}
+			break;
+		};
+		spl::shared_ptr<AVFormatContext> context(weak_context, [](AVFormatContext* p)
+		{
+			avformat_close_input(&p);
+		});
+		THROW_ON_ERROR2(avformat_find_stream_info(weak_context, nullptr), resource_name);
+		fix_meta_data(*context);
+		return context;
+	}
+
+	void fix_meta_data(AVFormatContext& context)
+	{
+		auto video_index = av_find_best_stream(&context, AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
+
+		if (video_index > -1)
+		{
+			auto video_stream = context.streams[video_index];
+			auto video_context = context.streams[video_index]->codec;
+
+			if (boost::filesystem::path(context.filename).extension().string() == ".flv")
+			{
+				try
+				{
+					auto meta = read_flv_meta_info(context.filename);
+					double fps = boost::lexical_cast<double>(meta["framerate"]);
+					video_stream->nb_frames = static_cast<int64_t>(boost::lexical_cast<double>(meta["duration"])*fps);
+				}
+				catch (...) {}
+			}
+			else
+			{
+				auto stream_time = video_stream->time_base;
+				auto duration = video_stream->duration;
+				auto codec_time = video_context->time_base;
+				auto ticks = video_context->ticks_per_frame;
+
+				if (video_stream->nb_frames == 0)
+					video_stream->nb_frames = (duration*stream_time.num*codec_time.den) / (stream_time.den*codec_time.num*ticks);
+			}
+		}
+	}
+
+	void queued_seek(const uint32_t target)
+	{
+		if (!thumbnail_mode_)
 			CASPAR_LOG(debug) << print() << " Seeking: " << target;
 
 		int flags = AVSEEK_FLAG_FRAME;
@@ -278,152 +351,61 @@ private:
 					flags = AVSEEK_FLAG_BYTE;
 			}
 		}
-		
-		auto stream				= format_context_->streams[default_stream_index_];
-		auto fps				= read_fps(*format_context_, 0.0);
-		auto target_timestamp	= static_cast<int64_t>((target / fps * stream->time_base.den) / stream->time_base.num);
-		
+
+		auto stream = format_context_->streams[default_stream_index_];
+
+
+		auto fps = read_fps(*format_context_, 0.0);
+
 		THROW_ON_ERROR2(avformat_seek_file(
-				format_context_.get(),
-				default_stream_index_,
-				std::numeric_limits<int64_t>::min(),
-				target_timestamp,
-				std::numeric_limits<int64_t>::max(),
-				0), print());
+			format_context_.get(),
+			default_stream_index_,
+			std::numeric_limits<int64_t>::min(),
+			static_cast<int64_t>((target / fps * stream->time_base.den) / stream->time_base.num),
+			std::numeric_limits<int64_t>::max(),
+			0), print());
 
 		auto flush_packet	= create_packet();
 		flush_packet->data	= nullptr;
 		flush_packet->size	= 0;
 		flush_packet->pos	= target;
-		
-		video_stream_.push(flush_packet);
 
-		for (auto& audio_stream : audio_streams_)
-			audio_stream.push(flush_packet);
+		buffer_.push(flush_packet);
 	}
 
-	void tick()
-	{
-		if(seek_target_)				
-		{
-			internal_seek(*seek_target_);
-			seek_target_.reset();
-		}
-
-		auto packet = create_packet();
-		
-		auto ret = av_read_frame(format_context_.get(), packet.get()); // packet is only valid until next call of av_read_frame. Use av_dup_packet to extend its life.	
-		
-		if(is_eof(ret))														     
-		{
-			if (loop_)
-				internal_seek(start_);
-			else
-			{
-				eof_ = true;
-			}
-		}
-		else
-		{		
-			THROW_ON_ERROR(ret, "av_read_frame", print());
-					
-			THROW_ON_ERROR2(av_dup_packet(packet.get()), print());
-				
-			// Make sure that the packet is correctly deallocated even if size and data is modified during decoding.
-			const auto size = packet->size;
-			const auto data = packet->data;
-			
-			packet = spl::shared_ptr<AVPacket>(packet.get(), [packet, size, data](AVPacket*)
-			{
-				packet->size = size;
-				packet->data = data;				
-			});
-					
-			const auto stream_time_base = format_context_->streams[packet->stream_index]->time_base;
-			const auto packet_frame_number = static_cast<uint32_t>((static_cast<double>(packet->pts * stream_time_base.num)/stream_time_base.den)*fps_);
-
-			if(packet->stream_index == default_stream_index_)
-				frame_number_ = packet_frame_number;
-					
-			if(packet_frame_number >= start_ && packet_frame_number < length_)
-			{
-				video_stream_.push(packet);
-
-				for (auto& audio_stream : audio_streams_)
-					audio_stream.push(packet);
-			}
-		}	
-
-		if (video_stream_.is_available())
-			graph_->set_value("video-buffer", std::min(1.0, static_cast<double>(video_stream_.size())/MIN_FRAMES));
-
-		for (int i = 0; i < audio_streams_.size(); ++i)
-			graph_->set_value(
-					"audio-buffer" + boost::lexical_cast<std::string>(i + 1),
-					std::min(1.0, static_cast<double>(audio_streams_[i].size())/MIN_FRAMES));
-	}
-			
-	bool full() const
-	{
-		bool video_full = video_stream_.size() >= MIN_FRAMES;
-
-		if (!video_full)
-			return false;
-
-		for (auto& audio_stream : audio_streams_)
-			if (audio_stream.size() < MIN_FRAMES)
-				return false;
-
-		return true;
-	}
-
-	void run(bool thumbnail_mode)
-	{
-		ensure_gpf_handler_installed_for_thread(u8(print()).c_str());
-		auto quiet_logging = temporary_enable_quiet_logging_for_thread(thumbnail_mode);
-
-		while(is_running_)
-		{
-			try
-			{
-				
-				{
-					boost::unique_lock<boost::mutex> lock(mutex_);
-
-					while((eof_ || full()) && !seek_target_ && is_running_)
-						cond_.wait(lock);
-					
-					tick();
-				}
-			}
-			catch(...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				is_running_ = false;
-			}
-		}
-	}
-			
 	bool is_eof(int ret)
 	{
-		#pragma warning (disable : 4146)
+		if(ret == AVERROR(EIO))
+			CASPAR_LOG(trace) << print() << " Received EIO, assuming EOF. ";
+		if(ret == AVERROR_EOF)
+			CASPAR_LOG(trace) << print() << " Received EOF. ";
+
 		return ret == AVERROR_EOF || ret == AVERROR(EIO) || frame_number_ >= length_; // av_read_frame doesn't always correctly return AVERROR_EOF;
+	}
+
+	int num_audio_streams() const
+	{
+		return 0; // TODO
+	}
+
+	boost::rational<int> framerate() const
+	{
+		return framerate_;
 	}
 };
 
-input::input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& filename, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode)
-	: impl_(new impl(graph, filename, loop, start, length, thumbnail_mode)){}
-int input::get_actual_audio_stream_index(int audio_stream_index) const { return impl_->get_actual_audio_stream_index(audio_stream_index); };
-int input::num_audio_streams() const { return static_cast<int>(impl_->audio_streams_.size()); }
-bool input::try_pop_video(std::shared_ptr<AVPacket>& packet){return impl_->try_pop_video(packet);}
-bool input::try_pop_audio(std::shared_ptr<AVPacket>& packet, int audio_stream_index){return impl_->try_pop_audio(packet, audio_stream_index);}
-AVFormatContext& input::context(){return *impl_->format_context_;}
-void input::loop(bool value){impl_->loop_ = value;}
-bool input::loop() const{return impl_->loop_;}
-void input::seek(uint32_t target){impl_->seek(target);}
+input::input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& filename, FFMPEG_Resource resource_type, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_options& vid_params)
+	: impl_(new implementation(graph, filename, resource_type, loop, start, length, thumbnail_mode, vid_params)){}
+bool input::eof() const {return !impl_->executor_.is_running();}
+bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
+spl::shared_ptr<AVFormatContext> input::context(){return impl_->format_context_;}
 void input::start(uint32_t value){impl_->start_ = value;}
 uint32_t input::start() const{return impl_->start_;}
 void input::length(uint32_t value){impl_->length_ = value;}
 uint32_t input::length() const{return impl_->length_;}
-bool input::eof() const { return impl_->eof_; }
+void input::loop(bool value){impl_->loop_ = value;}
+bool input::loop() const{return impl_->loop_;}
+int input::num_audio_streams() const { return impl_->num_audio_streams(); }
+boost::rational<int> input::framerate() const { return impl_->framerate(); }
+std::future<bool> input::seek(uint32_t target){return impl_->seek(target);}
 }}

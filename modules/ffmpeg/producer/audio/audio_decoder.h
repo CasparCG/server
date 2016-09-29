@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+* Copyright 2013 Sveriges Television AB http://casparcg.com/
 *
 * This file is part of CasparCG (www.casparcg.com).
 *
@@ -21,39 +21,34 @@
 
 #pragma once
 
-#include <core/mixer/audio/audio_mixer.h>
-#include <core/monitor/monitor.h>
-
 #include <common/memory.h>
 
-#include <core/fwd.h>
+#include <core/frame/frame.h>
 
 #include <boost/noncopyable.hpp>
 
 struct AVPacket;
+struct AVFrame;
 struct AVFormatContext;
 
 namespace caspar { namespace ffmpeg {
-	
-class audio_decoder : public boost::noncopyable
+
+class audio_decoder : boost::noncopyable
 {
 public:
-	explicit audio_decoder(class input& input, const core::video_format_desc& format_desc, int audio_stream_index);
+	explicit audio_decoder(const spl::shared_ptr<AVFormatContext>& context, int out_samplerate);
 	
-	audio_decoder(audio_decoder&& other);
-	audio_decoder& operator=(audio_decoder&& other);
+	bool ready() const;
+	void push(const std::shared_ptr<AVPacket>& packet);
+	std::shared_ptr<core::mutable_audio_buffer> poll();
 
-	std::shared_ptr<AVFrame> operator()();
+	int	num_channels() const;
+	uint64_t ffmpeg_channel_layout() const;
 
-	uint32_t nb_frames() const;
-	
 	std::wstring print() const;
-	
-	core::monitor::subject& monitor_output();
-
 private:
-	struct impl;
-	spl::shared_ptr<impl> impl_;
+	struct implementation;
+	spl::shared_ptr<implementation> impl_;
 };
 
 }}
