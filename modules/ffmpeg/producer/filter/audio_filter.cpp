@@ -171,45 +171,36 @@ struct audio_filter::implementation
 			std::vector<AVFilterContext*>& source_contexts,
 			std::vector<AVFilterContext*>& sink_contexts)
 	{
-		try
+		AVFilterInOut* outputs	= nullptr;
+		AVFilterInOut* inputs	= nullptr;
+
+		FF(avfilter_graph_parse2(
+				&graph,
+				filtergraph.c_str(),
+				&inputs,
+				&outputs));
+
+		// Workaround because outputs and inputs are not filled in for some reason
+		for (unsigned i = 0; i < graph.nb_filters; ++i)
 		{
-			AVFilterInOut* outputs	= nullptr;
-			AVFilterInOut* inputs	= nullptr;
+			auto filter = graph.filters[i];
 
-			FF(avfilter_graph_parse2(
-					&graph,
-					filtergraph.c_str(),
-					&inputs,
-					&outputs));
+			if (std::string(filter->filter->name) == "abuffer")
+				source_contexts.push_back(filter);
 
-			// Workaround because outputs and inputs are not filled in for some reason
-			for (unsigned i = 0; i < graph.nb_filters; ++i)
-			{
-				auto filter = graph.filters[i];
-
-				if (std::string(filter->filter->name) == "abuffer")
-					source_contexts.push_back(filter);
-
-				if (std::string(filter->filter->name) == "abuffersink")
-					sink_contexts.push_back(filter);
-			}
-
-			for (AVFilterInOut* iter = inputs; iter; iter = iter->next)
-				source_contexts.push_back(iter->filter_ctx);
-
-			for (AVFilterInOut* iter = outputs; iter; iter = iter->next)
-				sink_contexts.push_back(iter->filter_ctx);
-
-			FF(avfilter_graph_config(
-				&graph, 
-				nullptr));
+			if (std::string(filter->filter->name) == "abuffersink")
+				sink_contexts.push_back(filter);
 		}
-		catch(...)
-		{
-			//avfilter_inout_free(&outputs);
-			//avfilter_inout_free(&inputs);
-			throw;
-		}
+
+		for (AVFilterInOut* iter = inputs; iter; iter = iter->next)
+			source_contexts.push_back(iter->filter_ctx);
+
+		for (AVFilterInOut* iter = outputs; iter; iter = iter->next)
+			sink_contexts.push_back(iter->filter_ctx);
+
+		FF(avfilter_graph_config(
+			&graph, 
+			nullptr));
 	}
 
 	void push(int input_pad_id, const std::shared_ptr<AVFrame>& src_av_frame)

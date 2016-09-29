@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+* Copyright 2013 Sveriges Television AB http://casparcg.com/
 *
 * This file is part of CasparCG (www.casparcg.com).
 *
@@ -19,22 +19,19 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../../StdAfx.h"
+#include "../../stdafx.h"
 
 #include "video_decoder.h"
 
 #include "../util/util.h"
-#include "../input/input.h"
 
 #include "../../ffmpeg_error.h"
 
-#include <common/log.h>
 #include <core/frame/frame_transform.h>
 #include <core/frame/frame_factory.h>
 
+#include <boost/range/algorithm_ext/push_back.hpp>
 #include <boost/filesystem.hpp>
-
-#include <tbb/atomic.h>
 
 #include <queue>
 
@@ -53,105 +50,101 @@ extern "C"
 
 namespace caspar { namespace ffmpeg {
 	
-struct video_decoder::impl : boost::noncopyable
+struct video_decoder::implementation : boost::noncopyable
 {
-	core::monitor::subject					monitor_subject_;
-	input*									input_;
 	int										index_				= -1;
 	const spl::shared_ptr<AVCodecContext>	codec_context_;
 
 	std::queue<spl::shared_ptr<AVPacket>>	packets_;
 	
-	const AVStream*							stream_;
 	const uint32_t							nb_frames_;
-	const int								width_;
-	const int								height_;
 
-	tbb::atomic<bool>						is_progressive_;
+	const int								width_				= codec_context_->width;
+	const int								height_				= codec_context_->height;
+	bool									is_progressive_;
+
 	tbb::atomic<uint32_t>					file_frame_number_;
-	boost::rational<int>					framerate_;
-	
-	std::shared_ptr<AVPacket>				current_packet_;
 
 public:
-	explicit impl(input& in, bool single_threaded)
-		: input_(&in)
-		, codec_context_(open_codec(input_->context(), AVMEDIA_TYPE_VIDEO, index_, single_threaded))
-		, stream_(input_->context().streams[index_])
-		, nb_frames_(static_cast<uint32_t>(stream_->nb_frames))
-		, width_(codec_context_->width)
-		, height_(codec_context_->height)
-		, framerate_(read_framerate(input_->context(), 0))
+	explicit implementation(const spl::shared_ptr<AVFormatContext>& context)
+		: codec_context_(open_codec(*context, AVMEDIA_TYPE_VIDEO, index_, false))
+		, nb_frames_(static_cast<uint32_t>(context->streams[index_]->nb_frames))
 	{
-		is_progressive_ = false;
 		file_frame_number_ = 0;
+
+		codec_context_->refcounted_frames = 1;
 	}
-	
+
+	void push(const std::shared_ptr<AVPacket>& packet)
+	{
+		if(!packet)
+			return;
+
+		if(packet->stream_index == index_ || packet->data == nullptr)
+			packets_.push(spl::make_shared_ptr(packet));
+	}
+
 	std::shared_ptr<AVFrame> poll()
-	{			
-		if(!current_packet_ && !input_->try_pop_video(current_packet_))
+	{		
+		if(packets_.empty())
 			return nullptr;
 		
-		std::shared_ptr<AVFrame> frame;
-
-		if (!current_packet_->data)
-		{
-			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)			
-				frame = decode(*current_packet_);
-			
-			if (!frame)
+		auto packet = packets_.front();
+					
+		if(packet->data == nullptr)
+		{			
+			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
 			{
-				file_frame_number_ = static_cast<uint32_t>(current_packet_->pos);
-				avcodec_flush_buffers(codec_context_.get());
-				current_packet_.reset();
-				frame = flush();
+				auto video = decode(packet);
+				if(video)
+					return video;
 			}
-		}
-		else
-		{
-			frame = decode(*current_packet_);
-			
-			if(current_packet_->size == 0)
-				current_packet_.reset();
+					
+			packets_.pop();
+			file_frame_number_ = static_cast<uint32_t>(packet->pos);
+			avcodec_flush_buffers(codec_context_.get());
+			return flush_video();	
 		}
 			
-		return frame;
+		packets_.pop();
+		return decode(packet);
 	}
 
-	std::shared_ptr<AVFrame> decode(AVPacket& pkt)
+	std::shared_ptr<AVFrame> decode(spl::shared_ptr<AVPacket> pkt)
 	{
-		auto frame = create_frame();
-
-		int got_frame = 0;
-		auto len = THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), frame.get(), &got_frame, &pkt), "[video_decocer]");
-				
-		if(len == 0)
+		auto decoded_frame = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* frame)
 		{
-			pkt.size = 0;
-			return nullptr;
-		}
+			av_frame_free(&frame);
+		});
+		
+		int frame_finished = 0;
+		THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), decoded_frame.get(), &frame_finished, pkt.get()), "[video_decoder]");
+		
+		// If a decoder consumes less then the whole packet then something is wrong
+		// that might be just harmless padding at the end, or a problem with the
+		// AVParser or demuxer which puted more then one frame in a AVPacket.
 
-        pkt.data += len;
-        pkt.size -= len;
-
-		if(got_frame == 0)	
+		if(frame_finished == 0)	
 			return nullptr;
+
+		is_progressive_ = !decoded_frame->interlaced_frame;
+
+		if(decoded_frame->repeat_pict > 0)
+			CASPAR_LOG(warning) << "[video_decoder] Field repeat_pict not implemented.";
 		
 		++file_frame_number_;
 
-		is_progressive_ = !frame->interlaced_frame;
-		
-		if(frame->repeat_pict > 0)
-			CASPAR_LOG(warning) << "[video_decoder] repeat_pict not implemented.";
-				
-		monitor_subject_  << core::monitor::message("/file/video/width")	% width_
-						<< core::monitor::message("/file/video/height")	% height_
-						<< core::monitor::message("/file/video/field")	% u8(!frame->interlaced_frame ? "progressive" : (frame->top_field_first ? "upper" : "lower"))
-						<< core::monitor::message("/file/video/codec")	% u8(codec_context_->codec->long_name);
-		
-		return frame;
+		// This ties the life of the decoded_frame to the packet that it came from. For the
+		// current version of ffmpeg (0.8 or c17808c) the RAW_VIDEO codec returns frame data
+		// owned by the packet.
+		return std::shared_ptr<AVFrame>(decoded_frame.get(), [decoded_frame, pkt](AVFrame*){});
 	}
 	
+	bool ready() const
+	{
+		return packets_.size() >= 8;
+	}
+
 	uint32_t nb_frames() const
 	{
 		return std::max(nb_frames_, static_cast<uint32_t>(file_frame_number_));
@@ -163,16 +156,15 @@ public:
 	}
 };
 
-video_decoder::video_decoder(input& in, bool single_threaded) : impl_(new impl(in, single_threaded)){}
-video_decoder::video_decoder(video_decoder&& other) : impl_(std::move(other.impl_)){}
-video_decoder& video_decoder::operator=(video_decoder&& other){impl_ = std::move(other.impl_); return *this;}
-std::shared_ptr<AVFrame> video_decoder::operator()(){return impl_->poll();}
+video_decoder::video_decoder(const spl::shared_ptr<AVFormatContext>& context) : impl_(new implementation(context)){}
+void video_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
+std::shared_ptr<AVFrame> video_decoder::poll(){return impl_->poll();}
+bool video_decoder::ready() const{return impl_->ready();}
 int video_decoder::width() const{return impl_->width_;}
 int video_decoder::height() const{return impl_->height_;}
 uint32_t video_decoder::nb_frames() const{return impl_->nb_frames();}
-uint32_t video_decoder::file_frame_number() const{return impl_->file_frame_number_;}
-boost::rational<int> video_decoder::framerate() const { return impl_->framerate_; }
-bool video_decoder::is_progressive() const{return impl_->is_progressive_;}
+uint32_t video_decoder::file_frame_number() const{return static_cast<uint32_t>(impl_->file_frame_number_);}
+bool	video_decoder::is_progressive() const{return impl_->is_progressive_;}
 std::wstring video_decoder::print() const{return impl_->print();}
-core::monitor::subject& video_decoder::monitor_output() { return impl_->monitor_subject_; }
+
 }}

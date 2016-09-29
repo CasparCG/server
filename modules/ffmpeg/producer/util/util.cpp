@@ -27,6 +27,7 @@
 
 #include "../tbb_avcodec.h"
 #include "../../ffmpeg_error.h"
+#include "../../ffmpeg.h"
 
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_queue.h>
@@ -487,18 +488,31 @@ spl::shared_ptr<AVFrame> create_frame()
 	{
 		av_frame_free(&p);
 	});
-	avcodec_get_frame_defaults(frame.get());
 	return frame;
 }
 
-std::shared_ptr<AVFrame> flush()
+std::shared_ptr<core::mutable_audio_buffer> flush_audio()
 {
-	static std::shared_ptr<AVFrame> dummy(av_frame_alloc(), [](AVFrame* p)
-	{
-		av_frame_free(&p);
-	});
+	static std::shared_ptr<core::mutable_audio_buffer> audio(new core::mutable_audio_buffer());
+	return audio;
+}
 
-	return dummy;
+std::shared_ptr<core::mutable_audio_buffer> empty_audio()
+{
+	static std::shared_ptr<core::mutable_audio_buffer> audio(new core::mutable_audio_buffer());
+	return audio;
+}
+
+std::shared_ptr<AVFrame> flush_video()
+{
+	static auto video = create_frame();
+	return video;
+}
+
+std::shared_ptr<AVFrame> empty_video()
+{
+	static auto video = create_frame();
+	return video;
 }
 
 spl::shared_ptr<AVCodecContext> open_codec(AVFormatContext& context, enum AVMediaType type, int& index, bool single_threaded)
@@ -769,6 +783,60 @@ std::int64_t create_channel_layout_bitmask(int num_channels)
 	auto result = ALL_63_CHANNELS >> to_shift;
 
 	return static_cast<std::int64_t>(result);
+}
+
+std::string to_string(const boost::rational<int>& framerate)
+{
+	return boost::lexical_cast<std::string>(framerate.numerator())
+		+ "/" + boost::lexical_cast<std::string>(framerate.denominator()) + " (" + boost::lexical_cast<std::string>(static_cast<double>(framerate.numerator()) / static_cast<double>(framerate.denominator())) + ") fps";
+}
+
+std::vector<int> find_audio_cadence(const boost::rational<int>& framerate)
+{
+	static std::map<boost::rational<int>, std::vector<int>> CADENCES_BY_FRAMERATE = []
+	{
+		std::map<boost::rational<int>, std::vector<int>> result;
+
+		for (core::video_format format : enum_constants<core::video_format>())
+		{
+			core::video_format_desc desc(format);
+			boost::rational<int> format_rate(desc.time_scale, desc.duration);
+
+			result.insert(std::make_pair(format_rate, desc.audio_cadence));
+		}
+
+		return result;
+	}();
+
+	auto exact_match = CADENCES_BY_FRAMERATE.find(framerate);
+
+	if (exact_match != CADENCES_BY_FRAMERATE.end())
+		return exact_match->second;
+
+	boost::rational<int> closest_framerate_diff = std::numeric_limits<int>::max();
+	boost::rational<int> closest_framerate = 0;
+
+	for (auto format_framerate : CADENCES_BY_FRAMERATE | boost::adaptors::map_keys)
+	{
+		auto diff = boost::abs(framerate - format_framerate);
+
+		if (diff < closest_framerate_diff)
+		{
+			closest_framerate_diff = diff;
+			closest_framerate = format_framerate;
+		}
+	}
+
+	if (is_logging_quiet_for_thread())
+		CASPAR_LOG(debug) << "No exact audio cadence match found for framerate " << to_string(framerate)
+		<< "\nClosest match is " << to_string(closest_framerate)
+		<< "\nwhich is a " << to_string(closest_framerate_diff) << " difference.";
+	else
+		CASPAR_LOG(warning) << "No exact audio cadence match found for framerate " << to_string(framerate)
+		<< "\nClosest match is " << to_string(closest_framerate)
+		<< "\nwhich is a " << to_string(closest_framerate_diff) << " difference.";
+
+	return CADENCES_BY_FRAMERATE[closest_framerate];
 }
 
 //
