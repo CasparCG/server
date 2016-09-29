@@ -29,6 +29,7 @@
 
 #include <string>
 #include <vector>
+#include <functional>
 
 #include <boost/rational.hpp>
 
@@ -38,7 +39,7 @@ void describe_framerate_producer(help_sink& sink);
 
 spl::shared_ptr<frame_producer> create_framerate_producer(
 		spl::shared_ptr<frame_producer> source,
-		boost::rational<int> source_framerate,
+		std::function<boost::rational<int> ()> get_source_framerate, // Will be called after first receive() on the source
 		boost::rational<int> destination_framerate,
 		field_mode destination_fieldmode,
 		std::vector<int> destination_audio_cadence);
