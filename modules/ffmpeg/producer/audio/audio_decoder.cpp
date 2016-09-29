@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+* Copyright 2013 Sveriges Television AB http://casparcg.com/
 *
 * This file is part of CasparCG (www.casparcg.com).
 *
@@ -19,18 +19,16 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-#include "../../StdAfx.h"
+#include "../../stdafx.h"
 
 #include "audio_decoder.h"
 
 #include "../util/util.h"
-#include "../input/input.h"
 #include "../../ffmpeg_error.h"
 
 #include <core/video_format.h>
-#include <core/frame/audio_channel_layout.h>
+#include <core/mixer/audio/audio_util.h>
 
-#include <common/log.h>
 #include <common/cache_aligned_vector.h>
 
 #include <queue>
@@ -51,128 +49,119 @@ extern "C"
 
 namespace caspar { namespace ffmpeg {
 	
-uint64_t get_ffmpeg_channel_layout(AVCodecContext* dec)
-{
-	auto layout = (dec->channel_layout && dec->channels == av_get_channel_layout_nb_channels(dec->channel_layout)) ? dec->channel_layout : av_get_default_channel_layout(dec->channels);
-	return layout;
-}
-
-struct audio_decoder::impl : boost::noncopyable
+struct audio_decoder::implementation : boost::noncopyable
 {	
-	core::monitor::subject										monitor_subject_;
-	input&														input_;
-	int															index_;
-	int															actual_index_;
-	const core::video_format_desc								format_desc_;
-	const spl::shared_ptr<AVCodecContext>						codec_context_		= open_codec(input_.context(), AVMEDIA_TYPE_AUDIO, actual_index_, false);
-
-	std::shared_ptr<SwrContext>									swr_				{
-																						swr_alloc_set_opts(
-																								nullptr,
-																								create_channel_layout_bitmask(codec_context_->channels),//get_ffmpeg_channel_layout(codec_context_.get()),
-																								AV_SAMPLE_FMT_S32,
-																								format_desc_.audio_sample_rate,
-																								create_channel_layout_bitmask(codec_context_->channels),//get_ffmpeg_channel_layout(codec_context_.get()),
-																								codec_context_->sample_fmt,
-																								codec_context_->sample_rate,
-																								0,
-																								nullptr),
-																						[](SwrContext* p){swr_free(&p); }
-																					};
-
-	cache_aligned_vector<uint8_t>								buffer_;
-
-	std::shared_ptr<AVPacket>									current_packet_;
+	int										index_				= -1;
+	const spl::shared_ptr<AVCodecContext>	codec_context_;
+	const int								out_samplerate_;
 	
+	cache_aligned_vector<int32_t>			buffer_;
+
+	std::queue<spl::shared_ptr<AVPacket>>	packets_;
+
+	std::shared_ptr<SwrContext>				swr_				{
+																	swr_alloc_set_opts(
+																			nullptr,
+																			codec_context_->channel_layout
+																					? codec_context_->channel_layout
+																					: av_get_default_channel_layout(codec_context_->channels),
+																			AV_SAMPLE_FMT_S32,
+																			out_samplerate_,
+																			codec_context_->channel_layout
+																					? codec_context_->channel_layout
+																					: av_get_default_channel_layout(codec_context_->channels),
+																			codec_context_->sample_fmt,
+																			codec_context_->sample_rate,
+																			0,
+																			nullptr),
+																	[](SwrContext* p)
+																	{
+																		swr_free(&p);
+																	}
+																};
+
 public:
-	explicit impl(
-			input& in,
-			const core::video_format_desc& format_desc,
-			int audio_stream_index)
-		: input_(in)
-		, index_(audio_stream_index)
-		, actual_index_(input_.get_actual_audio_stream_index(index_))
-		, format_desc_(format_desc)
-		, buffer_(480000 * 4)
-	{
+	explicit implementation(const spl::shared_ptr<AVFormatContext>& context, int out_samplerate)
+		: codec_context_(open_codec(*context, AVMEDIA_TYPE_AUDIO, index_, false))
+		, out_samplerate_(out_samplerate)
+		, buffer_(10 * out_samplerate_ * codec_context_->channels) // 10 seconds of audio
+	{	
 		if(!swr_)
-			CASPAR_THROW_EXCEPTION(bad_alloc());
-
+			BOOST_THROW_EXCEPTION(bad_alloc());
+		
 		THROW_ON_ERROR2(swr_init(swr_.get()), "[audio_decoder]");
-	}
-		
-	std::shared_ptr<AVFrame> poll()
-	{		
-		if(!current_packet_ && !input_.try_pop_audio(current_packet_, index_))
-			return nullptr;
-		
-		std::shared_ptr<AVFrame> audio;
 
-		if (!current_packet_->data)
-		{
-			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)			
-				audio = decode(*current_packet_);
-			
-			if (!audio)
-			{
-				avcodec_flush_buffers(codec_context_.get());
-				current_packet_.reset();
-				audio = flush();
-			}
-		}
-		else
-		{
-			audio = decode(*current_packet_);
-			
-			if(current_packet_->size == 0)
-				current_packet_.reset();
-		}
+		codec_context_->refcounted_frames = 1;
+	}
+
+	void push(const std::shared_ptr<AVPacket>& packet)
+	{			
+		if(!packet)
+			return;
+
+		if(packet->stream_index == index_ || packet->data == nullptr)
+			packets_.push(spl::make_shared_ptr(packet));
+	}	
 	
+	std::shared_ptr<core::mutable_audio_buffer> poll()
+	{
+		if(packets_.empty())
+			return nullptr;
+				
+		auto packet = packets_.front();
+
+		if(packet->data == nullptr)
+		{
+			packets_.pop();
+			avcodec_flush_buffers(codec_context_.get());
+			return flush_audio();
+		}
+
+		auto audio = decode(*packet);
+
+		if(packet->size == 0)					
+			packets_.pop();
+
 		return audio;
 	}
 
-	std::shared_ptr<AVFrame> decode(AVPacket& pkt)
-	{		
-		auto frame = create_frame();
-		
+	std::shared_ptr<core::mutable_audio_buffer> decode(AVPacket& pkt)
+	{
+		auto decoded_frame = create_frame();
+
 		int got_frame = 0;
-		auto len = THROW_ON_ERROR2(avcodec_decode_audio4(codec_context_.get(), frame.get(), &got_frame, &pkt), "[audio_decoder]");
-					
-		if(len == 0)
+		auto len = THROW_ON_ERROR2(avcodec_decode_audio4(codec_context_.get(), decoded_frame.get(), &got_frame, &pkt), "[audio_decoder]");
+
+		if (len == 0)
 		{
 			pkt.size = 0;
 			return nullptr;
 		}
 
-        pkt.data += len;
-        pkt.size -= len;
+		pkt.data += len;
+		pkt.size -= len;
 
-		if(!got_frame)
+		if (!got_frame)
 			return nullptr;
-							
-		const uint8_t **in	= const_cast<const uint8_t**>(frame->extended_data);
-		uint8_t* out[]		= {buffer_.data()};
 
-		auto channel_samples = swr_convert(swr_.get(), 
-											out, static_cast<int>(buffer_.size()) / codec_context_->channels / av_get_bytes_per_sample(AV_SAMPLE_FMT_S32),
-											in, frame->nb_samples);
+		const uint8_t **in = const_cast<const uint8_t**>(decoded_frame->extended_data);
+		uint8_t* out[] = { reinterpret_cast<uint8_t*>(buffer_.data()) };
 
-		frame->data[0]		= buffer_.data();
-		frame->linesize[0]	= channel_samples * codec_context_->channels * av_get_bytes_per_sample(AV_SAMPLE_FMT_S32);
-		frame->nb_samples	= channel_samples;
-		frame->format		= AV_SAMPLE_FMT_S32;
+		const auto channel_samples = swr_convert(
+				swr_.get(),
+				out,
+				static_cast<int>(buffer_.size()) / codec_context_->channels,
+				in,
+				decoded_frame->nb_samples);
 
-		monitor_subject_  << core::monitor::message("/file/audio/sample-rate")	% codec_context_->sample_rate
-						<< core::monitor::message("/file/audio/channels")	% codec_context_->channels
-						<< core::monitor::message("/file/audio/format")		% u8(av_get_sample_fmt_name(codec_context_->sample_fmt))
-						<< core::monitor::message("/file/audio/codec")		% u8(codec_context_->codec->long_name);			
-
-		return frame;
+		return std::make_shared<core::mutable_audio_buffer>(
+				buffer_.begin(),
+				buffer_.begin() + channel_samples * decoded_frame->channels);
 	}
-	
-	uint32_t nb_frames() const
+
+	bool ready() const
 	{
-		return 0;
+		return packets_.size() > 10;
 	}
 
 	std::wstring print() const
@@ -181,12 +170,12 @@ public:
 	}
 };
 
-audio_decoder::audio_decoder(input& input, const core::video_format_desc& format_desc, int audio_stream_index) : impl_(new impl(input, format_desc, audio_stream_index)){}
-audio_decoder::audio_decoder(audio_decoder&& other) : impl_(std::move(other.impl_)){}
-audio_decoder& audio_decoder::operator=(audio_decoder&& other){impl_ = std::move(other.impl_); return *this;}
-std::shared_ptr<AVFrame> audio_decoder::operator()(){return impl_->poll();}
-uint32_t audio_decoder::nb_frames() const{return impl_->nb_frames();}
+audio_decoder::audio_decoder(const spl::shared_ptr<AVFormatContext>& context, int out_samplerate) : impl_(new implementation(context, out_samplerate)){}
+void audio_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
+bool audio_decoder::ready() const{return impl_->ready();}
+std::shared_ptr<core::mutable_audio_buffer> audio_decoder::poll() { return impl_->poll(); }
+int	audio_decoder::num_channels() const { return impl_->codec_context_->channels; }
+uint64_t audio_decoder::ffmpeg_channel_layout() const { return impl_->codec_context_->channel_layout; }
 std::wstring audio_decoder::print() const{return impl_->print();}
-core::monitor::subject& audio_decoder::monitor_output() { return impl_->monitor_subject_;}
 
 }}

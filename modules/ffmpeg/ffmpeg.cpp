@@ -50,7 +50,7 @@
 #pragma warning (disable : 4996)
 #endif
 
-extern "C" 
+extern "C"
 {
 	#define __STDC_CONSTANT_MACROS
 	#define __STDC_LIMIT_MACROS
@@ -58,45 +58,45 @@ extern "C"
 	#include <libswscale/swscale.h>
 	#include <libavutil/avutil.h>
 	#include <libavfilter/avfilter.h>
+	#include <libavdevice/avdevice.h>
 }
 
 namespace caspar { namespace ffmpeg {
-	
-int ffmpeg_lock_callback(void **mutex, enum AVLockOp op) 
-{ 
+int ffmpeg_lock_callback(void **mutex, enum AVLockOp op)
+{
 	if(!mutex)
 		return 0;
 
 	auto my_mutex = reinterpret_cast<tbb::recursive_mutex*>(*mutex);
-	
-	switch(op) 
-	{ 
-		case AV_LOCK_CREATE: 
-		{ 
-			*mutex = new tbb::recursive_mutex(); 
-			break; 
-		} 
-		case AV_LOCK_OBTAIN: 
-		{ 
+
+	switch(op)
+	{
+		case AV_LOCK_CREATE:
+		{
+			*mutex = new tbb::recursive_mutex();
+			break;
+		}
+		case AV_LOCK_OBTAIN:
+		{
 			if(my_mutex)
-				my_mutex->lock(); 
-			break; 
-		} 
-		case AV_LOCK_RELEASE: 
-		{ 
+				my_mutex->lock();
+			break;
+		}
+		case AV_LOCK_RELEASE:
+		{
 			if(my_mutex)
-				my_mutex->unlock(); 
-			break; 
-		} 
-		case AV_LOCK_DESTROY: 
-		{ 
+				my_mutex->unlock();
+			break;
+		}
+		case AV_LOCK_DESTROY:
+		{
 			delete my_mutex;
 			*mutex = nullptr;
-			break; 
-		} 
-	} 
-	return 0; 
-} 
+			break;
+		}
+	}
+	return 0;
+}
 
 static void sanitize(uint8_t *line)
 {
@@ -119,15 +119,15 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
     if(level > av_log_get_level())
         return;
     line[0]=0;
-	
+
 #undef fprintf
-    if(print_prefix && avc) 
+    if(print_prefix && avc)
 	{
-        if (avc->parent_log_context_offset) 
+        if (avc->parent_log_context_offset)
 		{
             AVClass** parent= *(AVClass***)(((uint8_t*)ptr) + avc->parent_log_context_offset);
             if(parent && *parent)
-                std::sprintf(line, "[%s @ %p] ", (*parent)->item_name(parent), parent);            
+                std::sprintf(line, "[%s @ %p] ", (*parent)->item_name(parent), parent);
         }
         std::sprintf(line + strlen(line), "[%s @ %p] ", avc->item_name(ptr), ptr);
     }
@@ -135,7 +135,7 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
     std::vsprintf(line + strlen(line), fmt, vl);
 
     print_prefix = strlen(line) && line[strlen(line)-1] == '\n';
-	
+
     //if(print_prefix && !strcmp(line, prev)){
     //    count++;
     //    if(is_atty==1)
@@ -152,7 +152,7 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 	auto len = strlen(line);
 	if(len > 0)
 		line[len-1] = 0;
-	
+
 	if(level == AV_LOG_DEBUG)
 		CASPAR_LOG(debug) << L"[ffmpeg] " << line;
 	else if(level == AV_LOG_INFO)
@@ -254,6 +254,11 @@ bool& get_quiet_logging_for_thread()
 	return *local;
 }
 
+void enable_quiet_logging_for_thread()
+{
+	get_quiet_logging_for_thread() = true;
+}
+
 bool is_logging_quiet_for_thread()
 {
 	return get_quiet_logging_for_thread();
@@ -291,9 +296,10 @@ void init(core::module_dependencies dependencies)
 	av_register_all();
     avformat_network_init();
     avcodec_register_all();
+	avdevice_register_all();
 
 	auto info_repo = dependencies.media_info_repo;
-	
+
 	dependencies.consumer_registry->register_consumer_factory(L"FFmpeg Consumer", create_consumer, describe_consumer);
 	dependencies.consumer_registry->register_consumer_factory(L"Streaming Consumer",  create_streaming_consumer, describe_streaming_consumer);
 	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"file", create_preconfigured_consumer);
@@ -334,5 +340,4 @@ void uninit()
     avformat_network_deinit();
 	av_lockmgr_register(nullptr);
 }
-
 }}
