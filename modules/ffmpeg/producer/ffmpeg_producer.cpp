@@ -281,12 +281,12 @@ public:
 			                   // therefore no seeking should be necessary for the first frame.
 		{
 			input_.seek(file_position > 1 ? file_position - 2: file_position).get();
-			boost::this_thread::sleep(boost::posix_time::milliseconds(40));
+            boost::this_thread::sleep_for(boost::chrono::milliseconds(40));
 		}
 
 		for (int i = 0; i < NUM_RETRIES; ++i)
 		{
-			boost::this_thread::sleep(boost::posix_time::milliseconds(40));
+            boost::this_thread::sleep_for(boost::chrono::milliseconds(40));
 
 			auto frame = render_frame();
 
@@ -306,7 +306,7 @@ public:
 				{
 					CASPAR_LOG(trace) << print() << L" adjusting to " << adjusted_seek;
 					input_.seek(static_cast<uint32_t>(adjusted_seek) - 1).get();
-					boost::this_thread::sleep(boost::posix_time::milliseconds(40));
+                    boost::this_thread::sleep_for(boost::chrono::milliseconds(40));
 				}
 				else
 					return frame.first;
