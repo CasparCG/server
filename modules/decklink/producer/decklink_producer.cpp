@@ -107,6 +107,8 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	const std::wstring								model_name_			= get_model_name(decklink_);
 	const std::wstring								filter_;
 
+	const int										delay_;
+
 	core::video_format_desc							in_format_desc_;
 	core::video_format_desc							out_format_desc_;
 	std::vector<int>								audio_cadence_		= in_format_desc_.audio_cadence;
@@ -129,15 +131,17 @@ public:
 			const spl::shared_ptr<core::frame_factory>& frame_factory,
 			const core::video_format_desc& out_format_desc,
 			const core::audio_channel_layout& channel_layout,
-			const std::wstring& filter)
+			const std::wstring& filter,
+			int delay)
 		: device_index_(device_index)
 		, filter_(filter)
 		, in_format_desc_(in_format_desc)
 		, out_format_desc_(out_format_desc)
 		, frame_factory_(frame_factory)
 		, channel_layout_(get_adjusted_channel_layout(channel_layout))
+		, delay_(delay)
 	{
-		frame_buffer_.set_capacity(4);
+		frame_buffer_.set_capacity(4+delay);
 
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
@@ -309,7 +313,7 @@ public:
 
 		core::draw_frame frame = last_frame_;
 
-		if (!frame_buffer_.try_pop(frame))
+		if (frame_buffer_.size() < delay_ || !frame_buffer_.try_pop(frame))
 			graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
 		else
 			last_frame_ = frame;
@@ -348,7 +352,8 @@ public:
 			const core::audio_channel_layout& channel_layout,
 			int device_index,
 			const std::wstring& filter_str,
-			uint32_t length)
+			uint32_t length,
+			int delay)
 		: executor_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
 		, length_(length)
 	{
@@ -357,7 +362,7 @@ public:
 		{
 			core::diagnostics::call_context::for_thread() = ctx;
 			com_initialize();
-			producer_.reset(new decklink_producer(in_format_desc, device_index, frame_factory, out_format_desc, channel_layout, filter_str));
+			producer_.reset(new decklink_producer(in_format_desc, device_index, frame_factory, out_format_desc, channel_layout, filter_str, delay));
 		});
 	}
 
@@ -425,12 +430,14 @@ void describe_producer(core::help_sink& sink, const core::help_repository& repo)
 		->item(L"filter", L"If specified, sets an FFmpeg video filter to use.")
 		->item(L"length", L"Optionally specify a limit on how many frames to produce.")
 		->item(L"format", L"Specifies what video format to expect on the incoming SDI/HDMI signal. If not specified the video format of the channel is assumed.")
-		->item(L"channel_layout", L"Specifies what audio channel layout to expect on the incoming SDI/HDMI signal. If not specified, stereo is assumed.");
+		->item(L"channel_layout", L"Specifies what audio channel layout to expect on the incoming SDI/HDMI signal. If not specified, stereo is assumed.")
+		->item(L"delay", L"Optionally Specify amount of frames the signla should be delayed. If not specified, 0 frames is assumed.");
 	sink.para()->text(L"Examples:");
 	sink.example(L">> PLAY 1-10 DECKLINK DEVICE 2", L"Play using decklink device 2 expecting the video signal to have the same video format as the channel.");
 	sink.example(L">> PLAY 1-10 DECKLINK DEVICE 2 FORMAT PAL FILTER yadif=1:-1", L"Play using decklink device 2 expecting the video signal to be in PAL and deinterlace it.");
 	sink.example(L">> PLAY 1-10 DECKLINK DEVICE 2 LENGTH 1000", L"Play using decklink device 2 but only produce 1000 frames.");
 	sink.example(L">> PLAY 1-10 DECKLINK DEVICE 2 CHANNEL_LAYOUT smpte", L"Play using decklink device 2 and expect smpte surround sound.");
+	sink.example(L">> PLAY 1-10 DECKLINK DEVICE 2 DELAY 15", L"Play using decklink device 2 and delay signal by 15 frames.");
 }
 
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
@@ -444,6 +451,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
 	auto filter_str		= get_param(L"FILTER", params);
 	auto length			= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
+	auto delay = get_param(L"DELAY", params, 0);
 	auto in_format_desc = core::video_format_desc(get_param(L"FORMAT", params, L"INVALID"));
 
 	if(in_format_desc.format == core::video_format::invalid)
@@ -473,7 +481,8 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 			channel_layout,
 			device_index,
 			filter_str,
-			length);
+			length,
+			delay);
 
 	auto get_source_framerate	= [=] { return producer->get_out_framerate(); };
 	auto target_framerate		= dependencies.format_desc.framerate;
