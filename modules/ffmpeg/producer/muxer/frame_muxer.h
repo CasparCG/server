@@ -49,10 +49,10 @@ public:
 			const core::audio_channel_layout& channel_layout,
 			const std::wstring& filter,
 			bool multithreaded_filter);
-	
+
 	void push(const std::shared_ptr<AVFrame>& video_frame);
 	void push(const std::shared_ptr<core::mutable_audio_buffer>& audio_samples);
-	
+
 	bool video_ready() const;
 	bool audio_ready() const;
 

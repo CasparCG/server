@@ -43,13 +43,13 @@ namespace diagnostics {
 class graph;
 
 }
-	 
+
 namespace ffmpeg {
 
 class input : boost::noncopyable
 {
 public:
-	explicit input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& filename, FFMPEG_Resource resource_type, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_options& vid_params);
+	explicit input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& url_or_file, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_options& vid_params);
 
 	bool								try_pop(std::shared_ptr<AVPacket>& packet);
 	bool								eof() const;
@@ -72,5 +72,5 @@ private:
 	std::shared_ptr<implementation> impl_;
 };
 
-	
+
 }}
