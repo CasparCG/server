@@ -392,7 +392,7 @@ public:
 	std::future<std::wstring> call(const std::vector<std::wstring>& params) override
 	{
 		static const boost::wregex loop_exp(LR"(LOOP\s*(?<VALUE>\d?)?)", boost::regex::icase);
-		static const boost::wregex seek_exp(LR"(SEEK\s+(?<VALUE>\d+))", boost::regex::icase);
+		static const boost::wregex seek_exp(LR"(SEEK\s+(?<VALUE>(\+|-)?\d+)(\s+(?<WHENCE>REL|END))?)", boost::regex::icase);
 		static const boost::wregex length_exp(LR"(LENGTH\s+(?<VALUE>\d+)?)", boost::regex::icase);
 		static const boost::wregex start_exp(LR"(START\\s+(?<VALUE>\\d+)?)", boost::regex::icase);
 
@@ -410,8 +410,19 @@ public:
 		}
 		else if(boost::regex_match(param, what, seek_exp))
 		{
-			auto value = what["VALUE"].str();
-			input_.seek(boost::lexical_cast<uint32_t>(value));
+			auto value = boost::lexical_cast<uint32_t>(what["VALUE"].str());
+			auto whence = what["WHENCE"].str();
+
+			if(boost::iequals(whence, L"REL"))
+			{
+				value = file_frame_number() + value;
+			}
+			else if(boost::iequals(whence, L"END"))
+			{
+				value = file_nb_frames() - value;
+			}
+
+			input_.seek(value);
 		}
 		else if(boost::regex_match(param, what, length_exp))
 		{
