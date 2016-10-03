@@ -56,12 +56,6 @@ struct AVCodecContext;
 
 namespace caspar { namespace ffmpeg {
 
-enum class FFMPEG_Resource {
-	FFMPEG_FILE,
-	FFMPEG_DEVICE,
-	FFMPEG_STREAM
-};
-
 typedef std::vector<std::pair<std::string, std::string>> ffmpeg_options;
 
 // Utils

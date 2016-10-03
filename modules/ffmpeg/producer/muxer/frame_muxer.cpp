@@ -206,7 +206,7 @@ struct frame_muxer::impl : boost::noncopyable
 		}
 
 		if (audio_streams_.back().size() > 32 * audio_cadence_.front() * audio_channel_layout_.num_channels)
-			BOOST_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("audio-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
+			CASPAR_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("audio-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
 	}
 
 	bool video_ready() const
