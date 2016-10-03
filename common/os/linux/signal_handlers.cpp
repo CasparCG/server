@@ -54,10 +54,12 @@ void ensure_gpf_handler_installed_for_thread(
 {
 	static const int MAX_LINUX_THREAD_NAME_LEN = 15;
 	static auto install = []() { do_install_handlers(); return 0; } ();
+
+	auto& for_thread = get_thread_info();
 	
-	if (thread_description)
+	if (thread_description && for_thread.name.empty())
 	{
-		get_thread_info().name = thread_description;
+		for_thread.name = thread_description;
 
 		if (std::strlen(thread_description) > MAX_LINUX_THREAD_NAME_LEN)
 		{
