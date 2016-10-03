@@ -70,6 +70,7 @@
 #include <set>
 
 #include <csignal>
+#include <clocale>
 
 using namespace caspar;
 	
