@@ -103,7 +103,7 @@ public:
 			packets_.pop();
 			file_frame_number_ = static_cast<uint32_t>(packet->pos);
 			avcodec_flush_buffers(codec_context_.get());
-			return flush_video();	
+			return flush_video();
 		}
 			
 		packets_.pop();
