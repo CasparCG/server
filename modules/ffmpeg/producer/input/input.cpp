@@ -252,17 +252,21 @@ struct input::implementation : boost::noncopyable
 
 		auto resource_name			= std::wstring();
 		auto parts					= caspar::protocol_split(url_or_file);
+		auto protocol				= parts.at(0);
+		auto path					= parts.at(1);
 		AVInputFormat* input_format	= nullptr;
 
-		if (parts.at(0).empty())
-			resource_name = parts.at(1);
-		else if (parts.at(0) == L"dshow")
+		static const std::set<std::wstring> PROTOCOLS_TREATED_AS_FORMATS = { L"dshow", L"v4l2" };
+
+		if (protocol.empty())
+			resource_name = path;
+		else if (PROTOCOLS_TREATED_AS_FORMATS.find(protocol) != PROTOCOLS_TREATED_AS_FORMATS.end())
 		{
-			input_format = av_find_input_format("dshow");
-			resource_name = parts.at(1);
+			input_format = av_find_input_format(u8(protocol).c_str());
+			resource_name = path;
 		}
 		else
-			resource_name = parts.at(0) + L"://" + parts.at(1);
+			resource_name = protocol + L"://" + path;
 
 		AVFormatContext* weak_context = nullptr;
 		THROW_ON_ERROR2(avformat_open_input(&weak_context, u8(resource_name).c_str(), input_format, &format_options), resource_name);
