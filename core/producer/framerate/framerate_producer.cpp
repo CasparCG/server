@@ -195,8 +195,7 @@ class framerate_producer : public frame_producer_base
 	audio_channel_layout								source_channel_layout_			= audio_channel_layout::invalid();
 	boost::rational<int>								original_destination_framerate_;
 	field_mode											original_destination_fieldmode_;
-	boost::rational<int>								destination_framerate_;
-	field_mode											destination_fieldmode_;
+	field_mode											destination_fieldmode_			= field_mode::empty;
 	std::vector<int>									destination_audio_cadence_;
 	boost::rational<std::int64_t>						speed_;
 	speed_tweener										user_speed_;
@@ -212,6 +211,7 @@ class framerate_producer : public frame_producer_base
 
 	unsigned int										output_repeat_					= 0;
 	unsigned int										output_frame_					= 0;
+	draw_frame											last_frame_						= draw_frame::empty();
 public:
 	framerate_producer(
 			spl::shared_ptr<frame_producer> source,
@@ -232,13 +232,16 @@ public:
 
 	draw_frame receive_impl() override
 	{
+		// destination field mode initially unknown but known after the first update_source_framerate().
+		auto field1 = do_render_progressive_frame(true);
+
 		if (destination_fieldmode_ == field_mode::progressive)
 		{
-			return do_render_progressive_frame(true);
+
+			return field1;
 		}
 		else
 		{
-			auto field1 = do_render_progressive_frame(true);
 			auto field2 = do_render_progressive_frame(false);
 
 			return draw_frame::interlace(field1, field2, destination_fieldmode_);
@@ -336,7 +339,7 @@ private:
 
 		if (output_repeat_ && output_frame_++ % output_repeat_)
 		{
-			auto frame = draw_frame::still(last_frame());
+			auto frame = last_frame_;
 
 			frame.transform().audio_transform.volume = 0.0;
 
@@ -360,6 +363,8 @@ private:
 		auto integer_next_frame		= boost::rational_cast<std::int64_t>(next_frame_number);
 
 		fast_forward_integer_frames(integer_next_frame - integer_current_frame);
+
+		last_frame_ = result;
 
 		if (sound)
 			return attach_sound(result);
@@ -481,19 +486,19 @@ private:
 		if (source_framerate_ == source_framerate)
 			return;
 
-		source_framerate_		= source_framerate;
-		destination_framerate_	= original_destination_framerate_;
-		destination_fieldmode_	= original_destination_fieldmode_;
+		source_framerate_			= source_framerate;
+		auto destination_framerate	= original_destination_framerate_;
+		destination_fieldmode_		= original_destination_fieldmode_;
 
 		// Coarse adjustment to correct fps family (23.98 - 30 vs 47.95 - 60)
 		if (destination_fieldmode_ != field_mode::progressive)	// Interlaced output
 		{
-			auto diff_double	= boost::abs(source_framerate_ - destination_framerate_ * 2);
-			auto diff_keep		= boost::abs(source_framerate_ - destination_framerate_);
+			auto diff_double	= boost::abs(source_framerate_ - destination_framerate * 2);
+			auto diff_keep		= boost::abs(source_framerate_ - destination_framerate);
 
 			if (diff_double < diff_keep)						// Double rate interlaced
 			{
-				destination_framerate_ *= 2;
+				destination_framerate *= 2;
 			}
 			else												// Progressive non interlaced
 			{
@@ -502,24 +507,24 @@ private:
 		}
 		else													// Progressive
 		{
-			auto diff_halve	= boost::abs(source_framerate_ * 2	- destination_framerate_);
-			auto diff_keep	= boost::abs(source_framerate_		- destination_framerate_);
+			auto diff_halve	= boost::abs(source_framerate_ * 2	- destination_framerate);
+			auto diff_keep	= boost::abs(source_framerate_		- destination_framerate);
 
 			if (diff_halve < diff_keep)							// Repeat every frame two times
 			{
-				destination_framerate_	/= 2;
+				destination_framerate	/= 2;
 				output_repeat_			= 2;
 			}
 		}
 
-		speed_ = boost::rational<int64_t>(source_framerate_ / destination_framerate_);
+		speed_ = boost::rational<int64_t>(source_framerate_ / destination_framerate);
 
 		// drop_and_skip will only be used by default for exact framerate multiples (half, same and double)
 		// for all other framerates a frame interpolator will be chosen.
 		if (speed_ != 1 && speed_ * 2 != 1 && speed_ != 2)
 		{
 			auto high_source_framerate		= source_framerate_ > 47;
-			auto high_destination_framerate	= destination_framerate_ > 47
+			auto high_destination_framerate	= destination_framerate > 47
 					|| destination_fieldmode_ != field_mode::progressive;
 
 			if (high_source_framerate && high_destination_framerate)	// The bluriness of blend3 is acceptable on high framerates.
