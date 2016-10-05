@@ -42,6 +42,7 @@
 //#include <windows.h>
 
 #include <ffmpeg/producer/filter/filter.h>
+#include <ffmpeg/producer/util/util.h>
 
 #include <core/video_format.h>
 #include <core/frame/frame.h>
@@ -69,7 +70,7 @@
 #pragma warning (push)
 #pragma warning (disable : 4244)
 #endif
-extern "C" 
+extern "C"
 {
 	#define __STDC_CONSTANT_MACROS
 	#define __STDC_LIMIT_MACROS
@@ -81,7 +82,7 @@ extern "C"
 #endif
 
 namespace caspar { namespace screen {
-		
+
 enum class stretch
 {
 	none,
@@ -98,7 +99,7 @@ struct configuration
 		aspect_16_9,
 		aspect_invalid,
 	};
-		
+
 	std::wstring	name				= L"Screen consumer";
 	int				screen_index		= 0;
 	screen::stretch	stretch				= screen::stretch::fill;
@@ -119,7 +120,7 @@ struct screen_consumer : boost::noncopyable
 
 	GLuint												texture_		= 0;
 	std::vector<GLuint>									pbos_			= std::vector<GLuint> { 0, 0 };
-			
+
 	float												width_;
 	float												height_;
 	int													screen_x_;
@@ -152,20 +153,20 @@ public:
 			const configuration& config,
 			const core::video_format_desc& format_desc,
 			int channel_index,
-			core::interaction_sink* sink) 
+			core::interaction_sink* sink)
 		: config_(config)
 		, format_desc_(format_desc)
 		, channel_index_(channel_index)
 		, pts_(0)
 		, sink_(sink)
 		, filter_([&]() -> ffmpeg::filter
-		{			
-			const auto sample_aspect_ratio = 
+		{
+			const auto sample_aspect_ratio =
 				boost::rational<int>(
-					format_desc.square_width, 
+					format_desc.square_width,
 					format_desc.square_height) /
 				boost::rational<int>(
-					format_desc.width, 
+					format_desc.width,
 					format_desc.height);
 
 			return ffmpeg::filter(
@@ -178,7 +179,7 @@ public:
 				{ AV_PIX_FMT_BGRA },
 				format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? "" : "format=pix_fmts=gbrp,YADIF=1:-1");
 		}())
-	{		
+	{
 		if (format_desc_.format == core::video_format::ntsc && config_.aspect == configuration::aspect_ratio::aspect_4_3)
 		{
 			// Use default values which are 4:3.
@@ -192,13 +193,13 @@ public:
 		}
 
 		frame_buffer_.set_capacity(1);
-		
-		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
+
+		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
-									
+
 		/*DISPLAY_DEVICE d_device = {sizeof(d_device), 0};
 		std::vector<DISPLAY_DEVICE> displayDevices;
 		for(int n = 0; EnumDisplayDevices(NULL, n, &d_device, NULL); ++n)
@@ -206,11 +207,11 @@ public:
 
 		if(config_.screen_index >= displayDevices.size())
 			CASPAR_LOG(warning) << print() << L" Invalid screen-index: " << config_.screen_index;
-		
+
 		DEVMODE devmode = {};
 		if(!EnumDisplaySettings(displayDevices[config_.screen_index].DeviceName, ENUM_CURRENT_SETTINGS, &devmode))
 			CASPAR_LOG(warning) << print() << L" Could not find display settings for screen-index: " << config_.screen_index;
-		
+
 		screen_x_		= devmode.dmPosition.x;
 		screen_y_		= devmode.dmPosition.y;
 		screen_width_	= config_.windowed ? square_width_ : devmode.dmPelsWidth;
@@ -219,13 +220,13 @@ public:
 		screen_y_		= 0;
 		screen_width_	= square_width_;
 		screen_height_	= square_height_;
-		
+
 		polling_event_ = false;
 		is_running_ = true;
 		current_presentation_age_ = 0;
 		thread_ = boost::thread([this]{run();});
 	}
-	
+
 	~screen_consumer()
 	{
 		is_running_ = false;
@@ -245,7 +246,7 @@ public:
 		window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
 		window_.setSize(sf::Vector2u(screen_width_, screen_height_));
 		window_.setActive();
-		
+
 		if(!GLEW_VERSION_2_1 && glewInit() != GLEW_OK)
 			CASPAR_THROW_EXCEPTION(gl::ogl_exception() << msg_info("Failed to initialize GLEW."));
 
@@ -253,13 +254,13 @@ public:
 			CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Missing OpenGL 2.1 support."));
 
 		GL(glEnable(GL_TEXTURE_2D));
-		GL(glDisable(GL_DEPTH_TEST));		
+		GL(glDisable(GL_DEPTH_TEST));
 		GL(glClearColor(0.0, 0.0, 0.0, 0.0));
 		GL(glViewport(0, 0, format_desc_.width, format_desc_.height));
 		GL(glLoadIdentity());
-				
+
 		calculate_aspect();
-			
+
 		GL(glGenTextures(1, &texture_));
 		GL(glBindTexture(GL_TEXTURE_2D, texture_));
 		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
@@ -268,15 +269,15 @@ public:
 		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP));
 		GL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, format_desc_.width, format_desc_.height, 0, GL_BGRA, GL_UNSIGNED_BYTE, 0));
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
-					
+
 		GL(glGenBuffers(2, pbos_.data()));
-			
+
 		glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pbos_[0]);
 		glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW_ARB);
 		glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, pbos_[1]);
 		glBufferDataARB(GL_PIXEL_UNPACK_BUFFER_ARB, format_desc_.size, 0, GL_STREAM_DRAW_ARB);
 		glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
-		
+
 		window_.setVerticalSyncEnabled(config_.vsync);
 
 		if (config_.vsync)
@@ -286,7 +287,7 @@ public:
 	}
 
 	void uninit()
-	{		
+	{
 		if(texture_)
 			glDeleteTextures(1, &texture_);
 
@@ -306,7 +307,7 @@ public:
 			init();
 
 			while(is_running_)
-			{			
+			{
 				try
 				{
 					auto poll_event = [this](sf::Event& e)
@@ -364,20 +365,20 @@ public:
 							}
 						}
 					}
-			
+
 					core::const_frame frame;
 					frame_buffer_.pop(frame);
 
 					render_and_draw_frame(frame);
-					
+
 					/*perf_timer_.restart();
 					render(frame);
-					graph_->set_value("frame-time", perf_timer_.elapsed()*format_desc_.fps*0.5);	
+					graph_->set_value("frame-time", perf_timer_.elapsed()*format_desc_.fps*0.5);
 
 					window_.Display();*/
 
 					current_presentation_age_ = frame.get_age_millis();
-					graph_->set_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);	
+					graph_->set_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
 					tick_timer_.restart();
 				}
 				catch(...)
@@ -414,11 +415,10 @@ public:
 	}
 
 	spl::shared_ptr<AVFrame> get_av_frame()
-	{		
-		spl::shared_ptr<AVFrame> av_frame(av_frame_alloc(), [](AVFrame* p) { av_frame_free(&p); });
-		avcodec_get_frame_defaults(av_frame.get());
-						
-		av_frame->linesize[0]		= format_desc_.width*4;			
+	{
+		auto av_frame = ffmpeg::create_frame();
+
+		av_frame->linesize[0]		= format_desc_.width*4;
 		av_frame->format			= PIX_FMT_BGRA;
 		av_frame->width				= format_desc_.width;
 		av_frame->height			= format_desc_.height;
@@ -436,7 +436,7 @@ public:
 
 		if(screen_width_ == 0 && screen_height_ == 0)
 			return;
-					
+
 		perf_timer_.restart();
 		auto av_frame = get_av_frame();
 		av_frame->data[0] = const_cast<uint8_t*>(input_frame.image_data().begin());
@@ -497,20 +497,20 @@ public:
 			{
 				fast_memcpy(ptr, av_frame->data[0], format_desc_.size);
 			}
-			
+
 			GL(glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER)); // release the mapped buffer
 		}
 
 		GL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
-				
-		GL(glClear(GL_COLOR_BUFFER_BIT));			
+
+		GL(glClear(GL_COLOR_BUFFER_BIT));
 		glBegin(GL_QUADS);
 				glTexCoord2f(0.0f,	  1.0f);	glVertex2f(-width_, -height_);
 				glTexCoord2f(1.0f,	  1.0f);	glVertex2f( width_, -height_);
 				glTexCoord2f(1.0f,	  0.0f);	glVertex2f( width_,  height_);
 				glTexCoord2f(0.0f,	  0.0f);	glVertex2f(-width_,  height_);
 		glEnd();
-		
+
 		GL(glBindTexture(GL_TEXTURE_2D, 0));
 
 		std::rotate(pbos_.begin(), pbos_.begin() + 1, pbos_.end());
@@ -531,10 +531,10 @@ public:
 	}
 
 	std::wstring print() const
-	{	
+	{
 		return config_.name + L" " + channel_and_format();
 	}
-	
+
 	void calculate_aspect()
 	{
 		if(config_.windowed)
@@ -542,7 +542,7 @@ public:
 			screen_height_ = window_.getSize().y;
 			screen_width_ = window_.getSize().x;
 		}
-		
+
 		GL(glViewport(0, 0, screen_width_, screen_height_));
 
 		std::pair<float, float> target_ratio = None();
@@ -556,7 +556,7 @@ public:
 		width_ = target_ratio.first;
 		height_ = target_ratio.second;
 	}
-		
+
 	std::pair<float, float> None()
 	{
 		float width = static_cast<float>(square_width_)/static_cast<float>(screen_width_);
@@ -607,7 +607,7 @@ public:
 		, sink_(sink)
 	{
 	}
-	
+
 	// frame_consumer
 
 	void initialize(const core::video_format_desc& format_desc, const core::audio_channel_layout&, int channel_index) override
@@ -625,7 +625,7 @@ public:
 	{
 		return consumer_->send(frame);
 	}
-	
+
 	std::wstring print() const override
 	{
 		return consumer_ ? consumer_->print() : L"[screen_consumer]";
@@ -651,7 +651,7 @@ public:
 	{
 		return false;
 	}
-	
+
 	int buffer_depth() const override
 	{
 		return 1;
@@ -666,7 +666,7 @@ public:
 	{
 		return monitor_subject_;
 	}
-};	
+};
 
 void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
 {
@@ -700,12 +700,12 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 {
 	if (params.size() < 1 || !boost::iequals(params.at(0), L"SCREEN"))
 		return core::frame_consumer::empty();
-	
+
 	configuration config;
-		
+
 	if (params.size() > 1)
 		config.screen_index = boost::lexical_cast<int>(params.at(1));
-		
+
 	config.windowed			= !contains_param(L"FULLSCREEN", params);
 	config.key_only			=  contains_param(L"KEY_ONLY", params);
 	config.interactive		= !contains_param(L"NON_INTERACTIVE", params);
@@ -718,7 +718,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 	return spl::make_shared<screen_consumer_proxy>(config, sink);
 }
 
-spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(const boost::property_tree::wptree& ptree, core::interaction_sink* sink) 
+spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(const boost::property_tree::wptree& ptree, core::interaction_sink* sink)
 {
 	configuration config;
 	config.name				= ptree.get(L"name",				config.name);
@@ -741,7 +741,7 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(const boost:
 		config.aspect = configuration::aspect_ratio::aspect_16_9;
 	else if(aspect_str == L"4:3")
 		config.aspect = configuration::aspect_ratio::aspect_4_3;
-	
+
 	return spl::make_shared<screen_consumer_proxy>(config, sink);
 }
 
