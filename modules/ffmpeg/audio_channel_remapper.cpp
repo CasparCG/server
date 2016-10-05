@@ -166,11 +166,7 @@ struct audio_channel_remapper::impl
 
 		auto num_samples			=	input.size() / input_layout_.num_channels;
 		auto expected_output_size	=	num_samples * output_layout_.num_channels;
-		auto input_frame			=	std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* p)
-										{
-											if (p)
-												av_frame_free(&p);
-										});
+		auto input_frame			=	ffmpeg::create_frame();
 
 		input_frame->channels		=	input_layout_.num_channels;
 		input_frame->channel_layout	=	ffmpeg::create_channel_layout_bitmask(input_layout_.num_channels);
