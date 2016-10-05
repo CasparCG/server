@@ -255,7 +255,7 @@ struct frame_muxer::impl : boost::noncopyable
 
 		frame_buffer_.push(core::draw_frame(std::move(frame)));
 
-		return frame_buffer_.empty() ? core::draw_frame::empty() : poll();
+		return poll();
 	}
 
 	core::mutable_frame pop_video()
