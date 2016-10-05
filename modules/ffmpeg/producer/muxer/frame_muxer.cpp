@@ -304,8 +304,6 @@ private:
 		display_mode_ = display_mode::simple;
 
 		auto mode = get_mode(*frame);
-		if (mode == core::field_mode::progressive && frame->height < 720 && in_framerate_ < 50) // SD frames are interlaced. Probably incorrect meta-data. Fix it.
-			mode = core::field_mode::upper;
 
 		if (filter::is_deinterlacing(filter_str_))
 		{
