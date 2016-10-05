@@ -62,7 +62,6 @@ public:
 	bool								loop() const;
 
 	int									num_audio_streams() const;
-	boost::rational<int>				framerate() const;
 
 	std::future<bool>					seek(uint32_t target);
 

@@ -41,7 +41,6 @@
 #include <tbb/atomic.h>
 #include <tbb/recursive_mutex.h>
 
-#include <boost/rational.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/thread/condition_variable.hpp>
 #include <boost/thread/mutex.hpp>
@@ -80,7 +79,6 @@ struct input::implementation : boost::noncopyable
 	const bool													thumbnail_mode_;
 	tbb::atomic<bool>											loop_;
 	uint32_t													frame_number_			= 0;
-	boost::rational<int>										framerate_				= read_framerate(*format_context_, 1);
 
 	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>	buffer_;
 	tbb::atomic<size_t>											buffer_size_;
@@ -379,11 +377,6 @@ struct input::implementation : boost::noncopyable
 	{
 		return 0; // TODO
 	}
-
-	boost::rational<int> framerate() const
-	{
-		return framerate_;
-	}
 };
 
 input::input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& url_or_file, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_options& vid_params)
@@ -398,6 +391,5 @@ uint32_t input::length() const{return impl_->length_;}
 void input::loop(bool value){impl_->loop_ = value;}
 bool input::loop() const{return impl_->loop_;}
 int input::num_audio_streams() const { return impl_->num_audio_streams(); }
-boost::rational<int> input::framerate() const { return impl_->framerate(); }
 std::future<bool> input::seek(uint32_t target){return impl_->seek(target);}
 }}
