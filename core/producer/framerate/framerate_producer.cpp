@@ -49,7 +49,7 @@ draw_frame drop_and_skip(const draw_frame& source, const draw_frame&, const boos
 
 // Blends next frame with current frame when the distance is not 0.
 // Completely sharp when distance is 0 but blurry when in between.
-draw_frame blend(const draw_frame& source, const draw_frame& destination, const boost::rational<int64_t>& distance)
+draw_frame blend2(const draw_frame& source, const draw_frame& destination, const boost::rational<int64_t>& distance)
 {
 	if (destination == draw_frame::empty())
 		return source;
@@ -70,8 +70,8 @@ draw_frame blend(const draw_frame& source, const draw_frame& destination, const 
 // * A distance of 0.0 gives 50% previous, 50% current and 0% next.
 // * A distance of 0.5 gives 25% previous, 50% current and 25% next.
 // * A distance of 0.75 gives 12.5% previous, 50% current and 37.5% next.
-// This is blurrier than blend, but gives a more even bluriness, instead of sharp, blurry, sharp, blurry.
-struct blend_all
+// This is blurrier than blend2, but gives a more even bluriness, instead of sharp, blurry, sharp, blurry.
+struct blend3
 {
 	draw_frame previous_frame	= draw_frame::empty();
 	draw_frame last_source		= draw_frame::empty();
@@ -93,7 +93,7 @@ struct blend_all
 		bool has_previous = previous_frame != draw_frame::empty();
 
 		if (!has_previous)
-			return blend(source, destination, distance);
+			return blend2(source, destination, distance);
 
 		auto middle											= last_source;
 		auto next_frame										= destination;
@@ -176,7 +176,7 @@ public:
 		double source	= boost::rational_cast<double>(source_);
 		double delta	= boost::rational_cast<double>(dest_) - source;
 		double result	= tweener_(time_, source, delta, duration_);
-		
+
 		return boost::rational<int64_t>(static_cast<int64_t>(result * 1000000.0), 1000000);
 	}
 
@@ -204,7 +204,7 @@ class framerate_producer : public frame_producer_base
 			const draw_frame& source,
 			const draw_frame& destination,
 			const boost::rational<int64_t>& distance)>	interpolator_					= drop_and_skip;
-	
+
 	boost::rational<std::int64_t>						current_frame_number_			= 0;
 	draw_frame											previous_frame_					= draw_frame::empty();
 	draw_frame											next_frame_						= draw_frame::empty();
@@ -262,12 +262,14 @@ public:
 		}
 		else if (boost::iequals(params.at(1), L"interpolation"))
 		{
-			if (boost::iequals(params.at(2), L"blend"))
-				interpolator_ = &blend;
-			else if (boost::iequals(params.at(2), L"blend_all"))
-				interpolator_ = blend_all();
-			else
+			if (boost::iequals(params.at(2), L"blend2"))
+				interpolator_ = &blend2;
+			else if (boost::iequals(params.at(2), L"blend3"))
+				interpolator_ = blend3();
+			else if (boost::iequals(params.at(2), L"drop_and_skip"))
 				interpolator_ = &drop_and_skip;
+			else
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info("Valid interpolations are DROP_AND_SKIP, BLEND2 and BLEND3"));
 		}
 		else if (boost::iequals(params.at(1), L"output_repeat")) // Only for debugging purposes
 		{
@@ -520,21 +522,23 @@ private:
 			auto high_destination_framerate	= destination_framerate_ > 47
 					|| destination_fieldmode_ != field_mode::progressive;
 
-			if (high_source_framerate && high_destination_framerate)	// The bluriness of blend_all is acceptable on high framerates.
-				interpolator_ = blend_all();
-			else														// blend_all is mostly too blurry on low framerates. blend provides a compromise.
-				interpolator_ = &blend;
+			if (high_source_framerate && high_destination_framerate)	// The bluriness of blend3 is acceptable on high framerates.
+				interpolator_	= blend3();
+			else														// blend3 is mostly too blurry on low framerates. blend2 provides a compromise.
+				interpolator_	= &blend2;
 
 			CASPAR_LOG(warning) << source_->print() << L" Frame blending frame rate conversion required to conform to channel frame rate.";
 		}
+		else
+			interpolator_		= &drop_and_skip;
 	}
 };
 
 void describe_framerate_producer(help_sink& sink)
 {
 	sink.para()->text(L"Framerate conversion control / Slow motion examples:");
-	sink.example(L">> CALL 1-10 FRAMERATE INTERPOLATION BLEND", L"enables 2 frame blend interpolation.");
-	sink.example(L">> CALL 1-10 FRAMERATE INTERPOLATION BLEND_ALL", L"enables 3 frame blend interpolation.");
+	sink.example(L">> CALL 1-10 FRAMERATE INTERPOLATION BLEND2", L"enables 2 frame blend interpolation.");
+	sink.example(L">> CALL 1-10 FRAMERATE INTERPOLATION BLEND3", L"enables 3 frame blend interpolation.");
 	sink.example(L">> CALL 1-10 FRAMERATE INTERPOLATION DROP_AND_SKIP", L"disables frame interpolation.");
 	sink.example(L">> CALL 1-10 FRAMERATE SPEED 0.25", L"immediately changes the speed to 25%. Sound will be disabled.");
 	sink.example(L">> CALL 1-10 FRAMERATE SPEED 0.25 50", L"changes the speed to 25% linearly over 50 frames. Sound will be disabled.");
@@ -558,4 +562,3 @@ spl::shared_ptr<frame_producer> create_framerate_producer(
 }
 
 }}
-
