@@ -39,7 +39,7 @@
 #pragma warning (push)
 #pragma warning (disable : 4244)
 #endif
-extern "C" 
+extern "C"
 {
 	#include <libavcodec/avcodec.h>
 	#include <libavformat/avformat.h>
@@ -49,14 +49,14 @@ extern "C"
 #endif
 
 namespace caspar { namespace ffmpeg {
-	
+
 struct video_decoder::implementation : boost::noncopyable
 {
 	int										index_				= -1;
 	const spl::shared_ptr<AVCodecContext>	codec_context_;
 
 	std::queue<spl::shared_ptr<AVPacket>>	packets_;
-	
+
 	const uint32_t							nb_frames_;
 
 	const int								width_				= codec_context_->width;
@@ -85,53 +85,50 @@ public:
 	}
 
 	std::shared_ptr<AVFrame> poll()
-	{		
+	{
 		if(packets_.empty())
 			return nullptr;
-		
+
 		auto packet = packets_.front();
-					
+
 		if(packet->data == nullptr)
-		{			
+		{
 			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
 			{
 				auto video = decode(packet);
 				if(video)
 					return video;
 			}
-					
+
 			packets_.pop();
 			file_frame_number_ = static_cast<uint32_t>(packet->pos);
 			avcodec_flush_buffers(codec_context_.get());
 			return flush_video();
 		}
-			
+
 		packets_.pop();
 		return decode(packet);
 	}
 
 	std::shared_ptr<AVFrame> decode(spl::shared_ptr<AVPacket> pkt)
 	{
-		auto decoded_frame = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* frame)
-		{
-			av_frame_free(&frame);
-		});
-		
+		auto decoded_frame = create_frame();
+
 		int frame_finished = 0;
 		THROW_ON_ERROR2(avcodec_decode_video2(codec_context_.get(), decoded_frame.get(), &frame_finished, pkt.get()), "[video_decoder]");
-		
+
 		// If a decoder consumes less then the whole packet then something is wrong
 		// that might be just harmless padding at the end, or a problem with the
 		// AVParser or demuxer which puted more then one frame in a AVPacket.
 
-		if(frame_finished == 0)	
+		if(frame_finished == 0)
 			return nullptr;
 
 		is_progressive_ = !decoded_frame->interlaced_frame;
 
 		if(decoded_frame->repeat_pict > 0)
 			CASPAR_LOG(warning) << "[video_decoder] Field repeat_pict not implemented.";
-		
+
 		++file_frame_number_;
 
 		// This ties the life of the decoded_frame to the packet that it came from. For the
@@ -139,7 +136,7 @@ public:
 		// owned by the packet.
 		return std::shared_ptr<AVFrame>(decoded_frame.get(), [decoded_frame, pkt](AVFrame*){});
 	}
-	
+
 	bool ready() const
 	{
 		return packets_.size() >= 8;
@@ -151,7 +148,7 @@ public:
 	}
 
 	std::wstring print() const
-	{		
+	{
 		return L"[video-decoder] " + u16(codec_context_->codec->long_name);
 	}
 };
