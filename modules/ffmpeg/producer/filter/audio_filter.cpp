@@ -25,6 +25,7 @@
 
 #include "../../ffmpeg_error.h"
 #include "../../ffmpeg.h"
+#include "../util/util.h"
 
 #include <common/assert.h>
 #include <common/except.h>
@@ -43,7 +44,7 @@
 #pragma warning (push)
 #pragma warning (disable : 4244)
 #endif
-extern "C" 
+extern "C"
 {
 	#include <libavutil/avutil.h>
 	#include <libavutil/imgutils.h>
@@ -150,12 +151,12 @@ struct audio_filter::implementation
 				boost::join(complete_filter_graph, ";"),
 				audio_graph_inputs_,
 				audio_graph_outputs_);
-		
+
 		if (is_logging_quiet_for_thread())
 			CASPAR_LOG(trace)
-				<< 	u16(std::string("\n") 
+				<< 	u16(std::string("\n")
 					+ avfilter_graph_dump(
-							audio_graph_.get(), 
+							audio_graph_.get(),
 							nullptr));
 		else
 			CASPAR_LOG(debug)
@@ -164,7 +165,7 @@ struct audio_filter::implementation
 						audio_graph_.get(),
 						nullptr));
 	}
-	
+
 	void configure_filtergraph(
 			AVFilterGraph& graph,
 			const std::string& filtergraph,
@@ -199,12 +200,12 @@ struct audio_filter::implementation
 			sink_contexts.push_back(iter->filter_ctx);
 
 		FF(avfilter_graph_config(
-			&graph, 
+			&graph,
 			nullptr));
 	}
 
 	void push(int input_pad_id, const std::shared_ptr<AVFrame>& src_av_frame)
-	{		
+	{
 		FF(av_buffersrc_add_frame(
 			audio_graph_inputs_.at(input_pad_id),
 			src_av_frame.get()));
@@ -212,20 +213,15 @@ struct audio_filter::implementation
 
 	std::shared_ptr<AVFrame> poll(int output_pad_id)
 	{
-		std::shared_ptr<AVFrame> filt_frame(
-			av_frame_alloc(), 
-			[](AVFrame* p)
-			{
-				av_frame_free(&p);
-			});
-		
+		auto filt_frame = create_frame();
+
 		const auto ret = av_buffersink_get_frame(
 			audio_graph_outputs_.at(output_pad_id),
 			filt_frame.get());
-				
+
 		if(ret == AVERROR_EOF || ret == AVERROR(EAGAIN))
 			return nullptr;
-					
+
 		FF_RET(ret, "poll");
 
 		return filt_frame;
@@ -245,7 +241,7 @@ void audio_filter::push(int input_pad_id, const std::shared_ptr<AVFrame>& frame)
 std::shared_ptr<AVFrame> audio_filter::poll(int output_pad_id){return impl_->poll(output_pad_id);}
 std::wstring audio_filter::filter_str() const{return u16(impl_->filtergraph_);}
 std::vector<spl::shared_ptr<AVFrame>> audio_filter::poll_all(int output_pad_id)
-{	
+{
 	std::vector<spl::shared_ptr<AVFrame>> frames;
 	for(auto frame = poll(output_pad_id); frame; frame = poll(output_pad_id))
 		frames.push_back(spl::make_shared_ptr(frame));
