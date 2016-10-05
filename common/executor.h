@@ -55,11 +55,11 @@ class executor final
 
 	typedef blocking_priority_queue<std::function<void()>, task_priority>	function_queue_t;
 
-	const std::wstring											name_;
-	tbb::atomic<bool>											is_running_;
-	boost::thread												thread_;
-	function_queue_t											execution_queue_;
-	tbb::atomic<bool>											currently_in_task_;
+	const std::wstring	name_;
+	tbb::atomic<bool>	is_running_;
+	boost::thread		thread_;
+	function_queue_t	execution_queue_;
+	tbb::atomic<bool>	currently_in_task_;
 
 public:
 	executor(const std::wstring& name)
@@ -276,7 +276,7 @@ private:
 	void run() // noexcept
 	{
 		ensure_gpf_handler_installed_for_thread(u8(name_).c_str());
-		while(is_running_)
+		while (is_running_)
 		{
 			try
 			{
@@ -285,12 +285,27 @@ private:
 				currently_in_task_ = true;
 				func();
 			}
-			catch(...)
+			catch (...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
 			}
 
 			currently_in_task_ = false;
+		}
+
+		// Execute rest
+		try
+		{
+			std::function<void()> func;
+
+			while (execution_queue_.try_pop(func))
+			{
+				func();
+			}
+		}
+		catch (...)
+		{
+			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 	}
 };
