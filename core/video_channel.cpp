@@ -74,7 +74,7 @@ struct video_channel::impl final
 	std::future<void>									output_ready_for_frame_	= make_ready_future();
 	spl::shared_ptr<image_mixer>						image_mixer_;
 	caspar::core::mixer									mixer_;
-	caspar::core::stage									stage_;	
+	caspar::core::stage									stage_;
 
 	executor											executor_				{ L"video_channel " + boost::lexical_cast<std::wstring>(index_) };
 public:
@@ -152,22 +152,22 @@ public:
 
 			auto format_desc	= video_format_desc();
 			auto channel_layout = audio_channel_layout();
-			
+
 			caspar::timer frame_timer;
 
 			// Produce
-			
+
 			auto stage_frames = stage_(format_desc);
-			
+
 			// Mix
-			
+
 			auto mixed_frame  = mixer_(std::move(stage_frames), format_desc, channel_layout);
-			
+
 			// Consume
 
-			output_ready_for_frame_.get();
 			output_ready_for_frame_ = output_(std::move(mixed_frame), format_desc, channel_layout);
-		
+			output_ready_for_frame_.get();
+
 			auto frame_time = frame_timer.elapsed()*format_desc.fps*0.5;
 			graph_->set_value("tick-time", frame_time);
 
@@ -182,7 +182,7 @@ public:
 		if (executor_.is_running())
 			executor_.begin_invoke([=]{tick();});
 	}
-			
+
 	std::wstring print() const
 	{
 		return L"video_channel[" + boost::lexical_cast<std::wstring>(index_) + L"|" +  video_format_desc().name + L"]";
@@ -206,8 +206,8 @@ public:
 		info.add_child(L"stage", stage_info.get());
 		info.add_child(L"mixer", mixer_info.get());
 		info.add_child(L"output", output_info.get());
-   
-		return info;			   
+
+		return info;
 	}
 
 	boost::property_tree::wptree delay_info() const

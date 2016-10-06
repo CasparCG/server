@@ -37,7 +37,7 @@
 #pragma warning (push)
 #pragma warning (disable : 4244)
 #endif
-extern "C" 
+extern "C"
 {
 	#include <libavformat/avformat.h>
 	#include <libavcodec/avcodec.h>
@@ -48,13 +48,13 @@ extern "C"
 #endif
 
 namespace caspar { namespace ffmpeg {
-	
+
 struct audio_decoder::implementation : boost::noncopyable
-{	
+{
 	int										index_				= -1;
 	const spl::shared_ptr<AVCodecContext>	codec_context_;
 	const int								out_samplerate_;
-	
+
 	cache_aligned_vector<int32_t>			buffer_;
 
 	std::queue<spl::shared_ptr<AVPacket>>	packets_;
@@ -85,29 +85,29 @@ public:
 		: codec_context_(open_codec(*context, AVMEDIA_TYPE_AUDIO, index_, false))
 		, out_samplerate_(out_samplerate)
 		, buffer_(10 * out_samplerate_ * codec_context_->channels) // 10 seconds of audio
-	{	
+	{
 		if(!swr_)
-			BOOST_THROW_EXCEPTION(bad_alloc());
-		
+			CASPAR_THROW_EXCEPTION(bad_alloc());
+
 		THROW_ON_ERROR2(swr_init(swr_.get()), "[audio_decoder]");
 
 		codec_context_->refcounted_frames = 1;
 	}
 
 	void push(const std::shared_ptr<AVPacket>& packet)
-	{			
+	{
 		if(!packet)
 			return;
 
 		if(packet->stream_index == index_ || packet->data == nullptr)
 			packets_.push(spl::make_shared_ptr(packet));
-	}	
-	
+	}
+
 	std::shared_ptr<core::mutable_audio_buffer> poll()
 	{
 		if(packets_.empty())
 			return nullptr;
-				
+
 		auto packet = packets_.front();
 
 		if(packet->data == nullptr)
@@ -119,7 +119,7 @@ public:
 
 		auto audio = decode(*packet);
 
-		if(packet->size == 0)					
+		if(packet->size == 0)
 			packets_.pop();
 
 		return audio;
@@ -165,7 +165,7 @@ public:
 	}
 
 	std::wstring print() const
-	{		
+	{
 		return L"[audio-decoder] " + u16(codec_context_->codec->long_name);
 	}
 };

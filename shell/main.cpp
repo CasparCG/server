@@ -70,6 +70,7 @@
 #include <set>
 
 #include <csignal>
+#include <clocale>
 
 using namespace caspar;
 	
@@ -79,6 +80,9 @@ void setup_global_locale()
 	gen.categories(boost::locale::codepage_facet);
 
 	std::locale::global(gen(""));
+
+	// sscanf is used in for example FFmpeg where we want decimals to be parsed as .
+	std::setlocale(LC_ALL, "C");
 }
 
 void print_info()
@@ -216,6 +220,9 @@ bool run(const std::wstring& config_file_name, tbb::atomic<bool>& should_wait_fo
 
 	// Create server object which initializes channels, protocols and controllers.
 	std::unique_ptr<server> caspar_server(new server(shutdown_server_now));
+
+	// For example CEF resets the global locale, so this is to reset it back to "our" preference.
+	setup_global_locale();
 
 	// Print environment information.
 	print_system_info(caspar_server->get_system_info_provider_repo());

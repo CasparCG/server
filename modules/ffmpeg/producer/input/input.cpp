@@ -34,12 +34,13 @@
 #include <common/executor.h>
 #include <common/except.h>
 #include <common/os/general_protection_fault.h>
+#include <common/param.h>
+#include <common/scope_exit.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/atomic.h>
 #include <tbb/recursive_mutex.h>
 
-#include <boost/rational.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/thread/condition_variable.hpp>
 #include <boost/thread/mutex.hpp>
@@ -78,17 +79,16 @@ struct input::implementation : boost::noncopyable
 	const bool													thumbnail_mode_;
 	tbb::atomic<bool>											loop_;
 	uint32_t													frame_number_			= 0;
-	boost::rational<int>										framerate_				= read_framerate(*format_context_, 1);
 
 	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>	buffer_;
 	tbb::atomic<size_t>											buffer_size_;
 
 	executor													executor_;
 
-	explicit implementation(const spl::shared_ptr<diagnostics::graph> graph, const std::wstring& filename, FFMPEG_Resource resource_type, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_options& vid_params)
+	explicit implementation(const spl::shared_ptr<diagnostics::graph> graph, const std::wstring& url_or_file, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_options& vid_params)
 		: graph_(graph)
-		, format_context_(open_input(filename, resource_type, vid_params))
-		, filename_(filename)
+		, format_context_(open_input(url_or_file, vid_params))
+		, filename_(url_or_file)
 		, thumbnail_mode_(thumbnail_mode)
 		, executor_(print())
 	{
@@ -235,69 +235,59 @@ struct input::implementation : boost::noncopyable
 		});
 	}
 
-	spl::shared_ptr<AVFormatContext> open_input(const std::wstring resource_name, FFMPEG_Resource resource_type, const ffmpeg_options& vid_params)
+	spl::shared_ptr<AVFormatContext> open_input(const std::wstring& url_or_file, const ffmpeg_options& vid_params)
 	{
-		AVFormatContext* weak_context = nullptr;
+		AVDictionary* format_options = nullptr;
 
-		switch (resource_type) {
-		case FFMPEG_Resource::FFMPEG_FILE:
-			THROW_ON_ERROR2(avformat_open_input(&weak_context, u8(resource_name).c_str(), nullptr, nullptr), resource_name);
-			break;
-		case FFMPEG_Resource::FFMPEG_DEVICE:
-			{
-				AVDictionary* format_options = NULL;
-				for (auto& option  : vid_params)
-				{
-					av_dict_set(&format_options, option.first.c_str(), option.second.c_str(), 0);
-				}
-				AVInputFormat* input_format = av_find_input_format("dshow");
-				THROW_ON_ERROR2(avformat_open_input(&weak_context, u8(resource_name).c_str(), input_format, &format_options), resource_name);
-				if (format_options != nullptr)
-				{
-					std::string unsupported_tokens = "";
-					AVDictionaryEntry *t = NULL;
-					while ((t = av_dict_get(format_options, "", t, AV_DICT_IGNORE_SUFFIX)) != nullptr)
-					{
-						if (!unsupported_tokens.empty())
-							unsupported_tokens += ", ";
-						unsupported_tokens += t->key;
-					}
-					avformat_close_input(&weak_context);
-					BOOST_THROW_EXCEPTION(ffmpeg_error() << msg_info(unsupported_tokens));
-				}
-				av_dict_free(&format_options);
-			}
-			break;
-		case FFMPEG_Resource::FFMPEG_STREAM:
-			{
-				AVDictionary* format_options = NULL;
-				for (auto& option : vid_params)
-				{
-					av_dict_set(&format_options, option.first.c_str(), option.second.c_str(), 0);
-				}
-				THROW_ON_ERROR2(avformat_open_input(&weak_context, u8(resource_name).c_str(), nullptr, &format_options), resource_name);
-				if (format_options != nullptr)
-				{
-					std::string unsupported_tokens = "";
-					AVDictionaryEntry *t = NULL;
-					while ((t = av_dict_get(format_options, "", t, AV_DICT_IGNORE_SUFFIX)) != nullptr)
-					{
-						if (!unsupported_tokens.empty())
-							unsupported_tokens += ", ";
-						unsupported_tokens += t->key;
-					}
-					avformat_close_input(&weak_context);
-					BOOST_THROW_EXCEPTION(ffmpeg_error() << msg_info(unsupported_tokens));
-				}
-				av_dict_free(&format_options);
-			}
-			break;
-		};
-		spl::shared_ptr<AVFormatContext> context(weak_context, [](AVFormatContext* p)
+		CASPAR_SCOPE_EXIT
 		{
-			avformat_close_input(&p);
+			if (format_options)
+				av_dict_free(&format_options);
+		};
+
+		for (auto& option : vid_params)
+			av_dict_set(&format_options, option.first.c_str(), option.second.c_str(), 0);
+
+		auto resource_name			= std::wstring();
+		auto parts					= caspar::protocol_split(url_or_file);
+		auto protocol				= parts.at(0);
+		auto path					= parts.at(1);
+		AVInputFormat* input_format	= nullptr;
+
+		static const std::set<std::wstring> PROTOCOLS_TREATED_AS_FORMATS = { L"dshow", L"v4l2" };
+
+		if (protocol.empty())
+			resource_name = path;
+		else if (PROTOCOLS_TREATED_AS_FORMATS.find(protocol) != PROTOCOLS_TREATED_AS_FORMATS.end())
+		{
+			input_format = av_find_input_format(u8(protocol).c_str());
+			resource_name = path;
+		}
+		else
+			resource_name = protocol + L"://" + path;
+
+		AVFormatContext* weak_context = nullptr;
+		THROW_ON_ERROR2(avformat_open_input(&weak_context, u8(resource_name).c_str(), input_format, &format_options), resource_name);
+
+		spl::shared_ptr<AVFormatContext> context(weak_context, [](AVFormatContext* ptr)
+		{
+			avformat_close_input(&ptr);
 		});
-		THROW_ON_ERROR2(avformat_find_stream_info(weak_context, nullptr), resource_name);
+
+		if (format_options)
+		{
+			std::string unsupported_tokens = "";
+			AVDictionaryEntry *t = NULL;
+			while ((t = av_dict_get(format_options, "", t, AV_DICT_IGNORE_SUFFIX)) != nullptr)
+			{
+				if (!unsupported_tokens.empty())
+					unsupported_tokens += ", ";
+				unsupported_tokens += t->key;
+			}
+			CASPAR_THROW_EXCEPTION(user_error() << msg_info(unsupported_tokens));
+		}
+
+		THROW_ON_ERROR2(avformat_find_stream_info(context.get(), nullptr), resource_name);
 		fix_meta_data(*context);
 		return context;
 	}
@@ -387,15 +377,10 @@ struct input::implementation : boost::noncopyable
 	{
 		return 0; // TODO
 	}
-
-	boost::rational<int> framerate() const
-	{
-		return framerate_;
-	}
 };
 
-input::input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& filename, FFMPEG_Resource resource_type, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_options& vid_params)
-	: impl_(new implementation(graph, filename, resource_type, loop, start, length, thumbnail_mode, vid_params)){}
+input::input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& url_or_file, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_options& vid_params)
+	: impl_(new implementation(graph, url_or_file, loop, start, length, thumbnail_mode, vid_params)){}
 bool input::eof() const {return !impl_->executor_.is_running();}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
 spl::shared_ptr<AVFormatContext> input::context(){return impl_->format_context_;}
@@ -406,6 +391,5 @@ uint32_t input::length() const{return impl_->length_;}
 void input::loop(bool value){impl_->loop_ = value;}
 bool input::loop() const{return impl_->loop_;}
 int input::num_audio_streams() const { return impl_->num_audio_streams(); }
-boost::rational<int> input::framerate() const { return impl_->framerate(); }
 std::future<bool> input::seek(uint32_t target){return impl_->seek(target);}
 }}

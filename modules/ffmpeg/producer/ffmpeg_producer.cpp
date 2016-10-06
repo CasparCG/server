@@ -79,8 +79,6 @@ struct ffmpeg_producer : public core::frame_producer_base
 	const std::wstring									filename_;
 	const std::wstring									path_relative_to_media_		= get_relative_or_original(filename_, env::media_folder());
 
-	FFMPEG_Resource										resource_type_;
-
 	const spl::shared_ptr<diagnostics::graph>			graph_;
 	timer												frame_timer_;
 
@@ -110,8 +108,7 @@ public:
 	explicit ffmpeg_producer(
 			const spl::shared_ptr<core::frame_factory>& frame_factory,
 			const core::video_format_desc& format_desc,
-			const std::wstring& filename,
-			FFMPEG_Resource resource_type,
+			const std::wstring& url_or_file,
 			const std::wstring& filter,
 			bool loop,
 			uint32_t start,
@@ -119,11 +116,10 @@ public:
 			bool thumbnail_mode,
 			const std::wstring& custom_channel_order,
 			const ffmpeg_options& vid_params)
-		: filename_(filename)
-		, resource_type_(resource_type)
+		: filename_(url_or_file)
 		, frame_factory_(frame_factory)
 		, initial_logger_disabler_(temporary_enable_quiet_logging_for_thread(thumbnail_mode))
-		, input_(graph_, filename_, resource_type, loop, start, length, thumbnail_mode, vid_params)
+		, input_(graph_, url_or_file, loop, start, length, thumbnail_mode, vid_params)
 		, framerate_(read_framerate(*input_.context(), format_desc.framerate))
 		, start_(start)
 		, length_(length)
@@ -229,16 +225,16 @@ public:
 				send_osc();
 				return std::make_pair(last_frame(), -1);
 			}
-			else if (resource_type_ == FFMPEG_Resource::FFMPEG_FILE)
+			else if (!is_url())
 			{
 				graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
 				send_osc();
-				return std::make_pair(core::draw_frame::late(), -1);
+				return std::make_pair(last_frame_, -1);
 			}
 			else
 			{
 				send_osc();
-				return std::make_pair(last_frame(), -1);
+				return std::make_pair(last_frame_, -1);
 			}
 		}
 
@@ -255,6 +251,11 @@ public:
 		send_osc();
 
 		return frame;
+	}
+
+	bool is_url() const
+	{
+		return boost::contains(filename_, L"://");
 	}
 
 	void send_osc()
@@ -325,7 +326,7 @@ public:
 		if (grid < 1)
 		{
 			CASPAR_LOG(error) << L"configuration/thumbnails/video-grid cannot be less than 1";
-			BOOST_THROW_EXCEPTION(caspar_exception() << msg_info("configuration/thumbnails/video-grid cannot be less than 1"));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("configuration/thumbnails/video-grid cannot be less than 1"));
 		}
 
 		if (grid == 1)
@@ -370,7 +371,7 @@ public:
 
 	uint32_t nb_frames() const override
 	{
-		if (resource_type_ == FFMPEG_Resource::FFMPEG_DEVICE || resource_type_ == FFMPEG_Resource::FFMPEG_STREAM || input_.loop())
+		if (is_url() || input_.loop())
 			return std::numeric_limits<uint32_t>::max();
 
 		uint32_t nb_frames = file_nb_frames();
@@ -391,7 +392,7 @@ public:
 	std::future<std::wstring> call(const std::vector<std::wstring>& params) override
 	{
 		static const boost::wregex loop_exp(LR"(LOOP\s*(?<VALUE>\d?)?)", boost::regex::icase);
-		static const boost::wregex seek_exp(LR"(SEEK\s+(?<VALUE>\d+))", boost::regex::icase);
+		static const boost::wregex seek_exp(LR"(SEEK\s+(?<VALUE>(\+|-)?\d+)(\s+(?<WHENCE>REL|END))?)", boost::regex::icase);
 		static const boost::wregex length_exp(LR"(LENGTH\s+(?<VALUE>\d+)?)", boost::regex::icase);
 		static const boost::wregex start_exp(LR"(START\\s+(?<VALUE>\\d+)?)", boost::regex::icase);
 
@@ -409,8 +410,19 @@ public:
 		}
 		else if(boost::regex_match(param, what, seek_exp))
 		{
-			auto value = what["VALUE"].str();
-			input_.seek(boost::lexical_cast<uint32_t>(value));
+			auto value = boost::lexical_cast<uint32_t>(what["VALUE"].str());
+			auto whence = what["WHENCE"].str();
+
+			if(boost::iequals(whence, L"REL"))
+			{
+				value = file_frame_number() + value;
+			}
+			else if(boost::iequals(whence, L"END"))
+			{
+				value = file_nb_frames() - value;
+			}
+
+			input_.seek(value);
 		}
 		else if(boost::regex_match(param, what, length_exp))
 		{
@@ -434,7 +446,7 @@ public:
 
 	std::wstring print() const override
 	{
-		return L"ffmpeg[" + boost::filesystem::path(filename_).filename().wstring() + L"|"
+		return L"ffmpeg[" + (is_url() ? filename_ : boost::filesystem::path(filename_).filename().wstring()) + L"|"
 						  + print_mode() + L"|"
 						  + boost::lexical_cast<std::wstring>(file_frame_number_) + L"/" + boost::lexical_cast<std::wstring>(file_nb_frames()) + L"]";
 	}
@@ -546,13 +558,14 @@ public:
 void describe_producer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"A producer for playing media files supported by FFmpeg.");
-	sink.syntax(L"[clip:string] {[loop:LOOP]} {SEEK [start:int]} {LENGTH [start:int]} {FILTER [filter:string]} {CHANNEL_LAYOUT [channel_layout:string]}");
+	sink.syntax(L"[clip,url:string] {[loop:LOOP]} {SEEK [start:int]} {LENGTH [start:int]} {FILTER [filter:string]} {CHANNEL_LAYOUT [channel_layout:string]}");
 	sink.para()
 		->text(L"The FFmpeg Producer can play all media that FFmpeg can play, which includes many ")
 		->text(L"QuickTime video codec such as Animation, PNG, PhotoJPEG, MotionJPEG, as well as ")
 		->text(L"H.264, FLV, WMV and several audio codecs as well as uncompressed audio.");
 	sink.definitions()
 		->item(L"clip", L"The file without the file extension to play. It should reside under the media folder.")
+		->item(L"url", L"If clip contains :// it is instead treated as the URL parameter. The URL can either be any streaming protocol supported by FFmpeg, dshow://video={webcam_name} or v4l2://{video device}.")
 		->item(L"loop", L"Will cause the media file to loop between start and start + length")
 		->item(L"start", L"Optionally sets the start frame. 0 by default. If loop is specified this will be the frame where it starts over again.")
 		->item(L"length", L"Optionally sets the length of the clip. If not specified the clip will be played to the end. If loop is specified the file will jump to start position once this number of frames has been played.")
@@ -569,6 +582,9 @@ void describe_producer(core::help_sink& sink, const core::help_repository& repo)
 	sink.example(L">> PLAY 1-10 folder/clip FILTER yadif=1,-1", L"to deinterlace the video.");
 	sink.example(L">> PLAY 1-10 folder/clip CHANNEL_LAYOUT film", L"given the defaults in casparcg.config this will specifies that the clip has 6 audio channels of the type 5.1 and that they are in the order FL FC FR BL BR LFE regardless of what ffmpeg says.");
 	sink.example(L">> PLAY 1-10 folder/clip CHANNEL_LAYOUT \"5.1:LFE FL FC FR BL BR\"", L"specifies that the clip has 6 audio channels of the type 5.1 and that they are in the specified order regardless of what ffmpeg says.");
+	sink.example(L">> PLAY 1-10 rtmp://example.com/live/stream", L"to play an RTMP stream.");
+	sink.example(L">> PLAY 1-10 \"dshow://video=Live! Cam Chat HD VF0790\"", L"to use a web camera as video input on Windows.");
+	sink.example(L">> PLAY 1-10 v4l2:///dev/video0", L"to use a web camera as video input on Linux.");
 	sink.para()->text(L"The FFmpeg producer also supports changing some of the settings via ")->code(L"CALL")->text(L":");
 	sink.example(L">> CALL 1-10 LOOP 1");
 	sink.example(L">> CALL 1-10 START 10");
@@ -582,34 +598,15 @@ spl::shared_ptr<core::frame_producer> create_producer(
 		const std::vector<std::wstring>& params,
 		const spl::shared_ptr<core::media_info_repository>& info_repo)
 {
-	// Infer the resource type from the resource_name
-	auto resource_type	= FFMPEG_Resource::FFMPEG_FILE;
-	auto tokens			= protocol_split(params.at(0));
-	auto filename		= params.at(0);
+	auto file_or_url	= params.at(0);
 
-	if (!tokens[0].empty())
-	{
-		if (tokens[0] == L"dshow")
-		{
-			// Camera
-			resource_type	= FFMPEG_Resource::FFMPEG_DEVICE;
-			filename		= tokens[1];
-		}
-		else
-		{
-			// Stream
-			resource_type	= FFMPEG_Resource::FFMPEG_STREAM;
-			filename		= params.at(0);
-		}
-	}
-	else
+	if (!boost::contains(file_or_url, L"://"))
 	{
 		// File
-		resource_type	= FFMPEG_Resource::FFMPEG_FILE;
-		filename		= probe_stem(env::media_folder() + L"/" + params.at(0), false);
+		file_or_url = probe_stem(env::media_folder() + L"/" + file_or_url, false);
 	}
 
-	if (filename.empty())
+	if (file_or_url.empty())
 		return core::frame_producer::empty();
 
 	auto loop					= contains_param(L"LOOP",		params);
@@ -642,8 +639,7 @@ spl::shared_ptr<core::frame_producer> create_producer(
 	auto producer = spl::make_shared<ffmpeg_producer>(
 			dependencies.frame_factory,
 			dependencies.format_desc,
-			filename,
-			resource_type,
+			file_or_url,
 			filter_str,
 			loop,
 			start,
@@ -687,7 +683,6 @@ core::draw_frame create_thumbnail_frame(
 			dependencies.frame_factory,
 			dependencies.format_desc,
 			filename,
-			FFMPEG_Resource::FFMPEG_FILE,
 			filter_str,
 			loop,
 			start,
