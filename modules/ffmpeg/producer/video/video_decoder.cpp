@@ -101,9 +101,15 @@ public:
 			}
 
 			packets_.pop();
-			file_frame_number_ = static_cast<uint32_t>(packet->pos);
-			avcodec_flush_buffers(codec_context_.get());
-			return flush_video();
+
+			if (packet->pos != -1)
+			{
+				file_frame_number_ = static_cast<uint32_t>(packet->pos);
+				avcodec_flush_buffers(codec_context_.get());
+				return flush_video();
+			}
+			else // Really EOF
+				return nullptr;
 		}
 
 		packets_.pop();
