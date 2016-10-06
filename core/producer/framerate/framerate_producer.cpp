@@ -237,7 +237,6 @@ public:
 
 		if (destination_fieldmode_ == field_mode::progressive)
 		{
-
 			return field1;
 		}
 		else
