@@ -196,7 +196,17 @@ struct input::implementation : boost::noncopyable
 						CASPAR_LOG(trace) << print() << " Looping.";
 					}
 					else
+					{
+						// Needed by some decoders to decode remaining frames based on last packet.
+						auto flush_packet = create_packet();
+						flush_packet->data = nullptr;
+						flush_packet->size = 0;
+						flush_packet->pos = -1;
+
+						buffer_.push(flush_packet);
+
 						executor_.stop();
+					}
 				}
 				else
 				{
