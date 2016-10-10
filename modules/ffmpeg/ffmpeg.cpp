@@ -114,6 +114,8 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 	static char prev[1024];
 	char line[8192];
 	AVClass* avc= ptr ? *(AVClass**)ptr : NULL;
+	if (level > AV_LOG_DEBUG)
+		return;
 	line[0]=0;
 
 #undef fprintf
@@ -139,18 +141,24 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 	if(len > 0)
 		line[len-1] = 0;
 
-	if(level == AV_LOG_DEBUG)
-		CASPAR_LOG(debug) << L"[ffmpeg] " << line;
-	else if(level == AV_LOG_INFO)
-		CASPAR_LOG(info) << L"[ffmpeg] " << line;
-	else if(level == AV_LOG_WARNING)
-		CASPAR_LOG(warning) << L"[ffmpeg] " << line;
-	else if(level == AV_LOG_ERROR)
-		CASPAR_LOG(error) << L"[ffmpeg] " << line;
-	else if(level == AV_LOG_FATAL)
-		CASPAR_LOG(fatal) << L"[ffmpeg] " << line;
-	else
-		CASPAR_LOG(trace) << L"[ffmpeg] " << line;
+	try
+	{
+		if (level == AV_LOG_VERBOSE)
+			CASPAR_LOG(debug) << L"[ffmpeg] " << line;
+		else if (level == AV_LOG_INFO)
+			CASPAR_LOG(info) << L"[ffmpeg] " << line;
+		else if (level == AV_LOG_WARNING)
+			CASPAR_LOG(warning) << L"[ffmpeg] " << line;
+		else if (level == AV_LOG_ERROR)
+			CASPAR_LOG(error) << L"[ffmpeg] " << line;
+		else if (level == AV_LOG_FATAL)
+			CASPAR_LOG(fatal) << L"[ffmpeg] " << line;
+		else
+			CASPAR_LOG(trace) << L"[ffmpeg] " << line;
+	}
+	catch (...)
+	{
+	}
 }
 
 std::wstring make_version(unsigned int ver)
