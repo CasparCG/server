@@ -51,7 +51,7 @@ namespace caspar { namespace ffmpeg {
 
 struct audio_decoder::implementation : boost::noncopyable
 {
-	int										index_				= -1;
+	int										index_;
 	const spl::shared_ptr<AVCodecContext>	codec_context_;
 	const int								out_samplerate_;
 
@@ -81,8 +81,9 @@ struct audio_decoder::implementation : boost::noncopyable
 																};
 
 public:
-	explicit implementation(const spl::shared_ptr<AVFormatContext>& context, int out_samplerate)
-		: codec_context_(open_codec(*context, AVMEDIA_TYPE_AUDIO, index_, false))
+	explicit implementation(int stream_index, const spl::shared_ptr<AVFormatContext>& context, int out_samplerate)
+		: index_(stream_index)
+		, codec_context_(open_codec(*context, AVMEDIA_TYPE_AUDIO, index_, false))
 		, out_samplerate_(out_samplerate)
 		, buffer_(10 * out_samplerate_ * codec_context_->channels) // 10 seconds of audio
 	{
@@ -168,14 +169,22 @@ public:
 	{
 		return L"[audio-decoder] " + u16(codec_context_->codec->long_name);
 	}
+
+	uint64_t ffmpeg_channel_layout() const
+	{
+		if (codec_context_->channel_layout == 0)
+			return av_get_default_channel_layout(codec_context_->channels);
+		else
+			return codec_context_->channel_layout;
+	}
 };
 
-audio_decoder::audio_decoder(const spl::shared_ptr<AVFormatContext>& context, int out_samplerate) : impl_(new implementation(context, out_samplerate)){}
+audio_decoder::audio_decoder(int stream_index, const spl::shared_ptr<AVFormatContext>& context, int out_samplerate) : impl_(new implementation(stream_index, context, out_samplerate)){}
 void audio_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
 bool audio_decoder::ready() const{return impl_->ready();}
 std::shared_ptr<core::mutable_audio_buffer> audio_decoder::poll() { return impl_->poll(); }
 int	audio_decoder::num_channels() const { return impl_->codec_context_->channels; }
-uint64_t audio_decoder::ffmpeg_channel_layout() const { return impl_->codec_context_->channel_layout; }
+uint64_t audio_decoder::ffmpeg_channel_layout() const { return impl_->ffmpeg_channel_layout(); }
 std::wstring audio_decoder::print() const{return impl_->print();}
 
 }}

@@ -77,7 +77,7 @@ std::string create_filter_list(const std::vector<std::string>& items)
 	return boost::join(items, "|");
 }
 
-std::string channel_layout_to_string(int64_t channel_layout)
+std::string channel_layout_to_string(uint64_t channel_layout)
 {
 	return (boost::format("0x%|1$x|") % channel_layout).str();
 }
@@ -108,13 +108,16 @@ struct audio_filter::implementation
 	std::vector<AVFilterContext*>	audio_graph_inputs_;
 	std::vector<AVFilterContext*>	audio_graph_outputs_;
 
+	std::vector<audio_input_pad>	input_pads_;
+
 	implementation(
 		std::vector<audio_input_pad> input_pads,
 		std::vector<audio_output_pad> output_pads,
 		const std::string& filtergraph)
 		: filtergraph_(boost::to_lower_copy(filtergraph))
+		, input_pads_(std::move(input_pads))
 	{
-		if (input_pads.empty())
+		if (input_pads_.empty())
 			CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("input_pads cannot be empty"));
 
 		if (output_pads.empty())
@@ -131,7 +134,7 @@ struct audio_filter::implementation
 
 		{
 			int i = 0;
-			for (auto& input_pad : input_pads)
+			for (auto& input_pad : input_pads_)
 				complete_filter_graph.push_back(create_sourcefilter_str(input_pad, "a:" + boost::lexical_cast<std::string>(i++)));
 		}
 
@@ -211,6 +214,31 @@ struct audio_filter::implementation
 			src_av_frame.get()));
 	}
 
+	void push(int input_pad_id, const boost::iterator_range<const int32_t*>& frame_samples)
+	{
+		auto& input_pad				= input_pads_.at(input_pad_id);
+		auto num_samples			= frame_samples.size() / av_get_channel_layout_nb_channels(input_pad.audio_channel_layout);
+		auto input_frame			= ffmpeg::create_frame();
+
+		input_frame->channels		= av_get_channel_layout_nb_channels(input_pad.audio_channel_layout);
+		input_frame->channel_layout	= input_pad.audio_channel_layout;
+		input_frame->sample_rate		= input_pad.sample_rate;
+		input_frame->nb_samples		= static_cast<int>(num_samples);
+		input_frame->format			= input_pad.sample_fmt;
+		input_frame->pts				= 0;
+
+		av_samples_fill_arrays(
+				input_frame->extended_data,
+				input_frame->linesize,
+				reinterpret_cast<const std::uint8_t*>(frame_samples.begin()),
+				input_frame->channels,
+				input_frame->nb_samples,
+				static_cast<AVSampleFormat>(input_frame->format),
+				16);
+
+		push(input_pad_id, input_frame);
+	}
+
 	std::shared_ptr<AVFrame> poll(int output_pad_id)
 	{
 		auto filt_frame = create_frame();
@@ -238,6 +266,7 @@ audio_filter::audio_filter(
 audio_filter::audio_filter(audio_filter&& other) : impl_(std::move(other.impl_)){}
 audio_filter& audio_filter::operator=(audio_filter&& other){impl_ = std::move(other.impl_); return *this;}
 void audio_filter::push(int input_pad_id, const std::shared_ptr<AVFrame>& frame){impl_->push(input_pad_id, frame);}
+void audio_filter::push(int input_pad_id, const boost::iterator_range<const int32_t*>& frame_samples) { impl_->push(input_pad_id, frame_samples); }
 std::shared_ptr<AVFrame> audio_filter::poll(int output_pad_id){return impl_->poll(output_pad_id);}
 std::wstring audio_filter::filter_str() const{return u16(impl_->filtergraph_);}
 std::vector<spl::shared_ptr<AVFrame>> audio_filter::poll_all(int output_pad_id)
