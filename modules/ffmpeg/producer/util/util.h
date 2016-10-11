@@ -93,7 +93,7 @@ bool try_get_duration(const std::wstring filename, std::int64_t& duration, boost
 core::audio_channel_layout get_audio_channel_layout(int num_channels, std::uint64_t layout, const std::wstring& channel_layout_spec);
 
 // av_get_default_channel_layout does not work for layouts not predefined in ffmpeg. This is needed to support > 8 channels.
-std::int64_t create_channel_layout_bitmask(int num_channels);
+std::uint64_t create_channel_layout_bitmask(int num_channels);
 
 std::vector<int> find_audio_cadence(const boost::rational<int>& framerate);
 

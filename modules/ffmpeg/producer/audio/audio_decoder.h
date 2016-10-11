@@ -36,8 +36,8 @@ namespace caspar { namespace ffmpeg {
 class audio_decoder : boost::noncopyable
 {
 public:
-	explicit audio_decoder(const spl::shared_ptr<AVFormatContext>& context, int out_samplerate);
-	
+	explicit audio_decoder(int stream_index, const spl::shared_ptr<AVFormatContext>& context, int out_samplerate);
+
 	bool ready() const;
 	void push(const std::shared_ptr<AVPacket>& packet);
 	std::shared_ptr<core::mutable_audio_buffer> poll();

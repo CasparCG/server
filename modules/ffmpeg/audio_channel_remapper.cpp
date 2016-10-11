@@ -166,25 +166,8 @@ struct audio_channel_remapper::impl
 
 		auto num_samples			=	input.size() / input_layout_.num_channels;
 		auto expected_output_size	=	num_samples * output_layout_.num_channels;
-		auto input_frame			=	ffmpeg::create_frame();
 
-		input_frame->channels		=	input_layout_.num_channels;
-		input_frame->channel_layout	=	ffmpeg::create_channel_layout_bitmask(input_layout_.num_channels);
-		input_frame->sample_rate	=	48000;
-		input_frame->nb_samples		=	static_cast<int>(num_samples);
-		input_frame->format			=	AV_SAMPLE_FMT_S32;
-		input_frame->pts			=	0;
-
-		av_samples_fill_arrays(
-				input_frame->extended_data,
-				input_frame->linesize,
-				reinterpret_cast<const std::uint8_t*>(input.data()),
-				input_frame->channels,
-				input_frame->nb_samples,
-				static_cast<AVSampleFormat>(input_frame->format),
-				16);
-
-		filter_->push(0, input_frame);
+		filter_->push(0, boost::make_iterator_range(input));
 
 		auto frames = filter_->poll_all(0);
 
