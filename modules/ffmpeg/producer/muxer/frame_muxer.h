@@ -22,6 +22,7 @@
 #pragma once
 
 #include "display_mode.h"
+#include "../filter/audio_filter.h"
 
 #include <common/forward.h>
 #include <common/memory.h>
@@ -44,6 +45,7 @@ class frame_muxer : boost::noncopyable
 public:
 	frame_muxer(
 			boost::rational<int> in_framerate,
+			std::vector<audio_input_pad> audio_input_pads,
 			const spl::shared_ptr<core::frame_factory>& frame_factory,
 			const core::video_format_desc& format_desc,
 			const core::audio_channel_layout& channel_layout,
@@ -51,7 +53,7 @@ public:
 			bool multithreaded_filter);
 
 	void push(const std::shared_ptr<AVFrame>& video_frame);
-	void push(const std::shared_ptr<core::mutable_audio_buffer>& audio_samples);
+	void push(const std::vector<std::shared_ptr<core::mutable_audio_buffer>>& audio_samples_per_stream);
 
 	bool video_ready() const;
 	bool audio_ready() const;

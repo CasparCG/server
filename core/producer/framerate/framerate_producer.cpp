@@ -193,8 +193,8 @@ class framerate_producer : public frame_producer_base
 	std::function<boost::rational<int>()>				get_source_framerate_;
 	boost::rational<int>								source_framerate_				= -1;
 	audio_channel_layout								source_channel_layout_			= audio_channel_layout::invalid();
-	boost::rational<int>								original_destination_framerate_;
-	field_mode											original_destination_fieldmode_;
+	const boost::rational<int>							original_destination_framerate_;
+	const field_mode									original_destination_fieldmode_;
 	field_mode											destination_fieldmode_			= field_mode::empty;
 	std::vector<int>									destination_audio_cadence_;
 	boost::rational<std::int64_t>						speed_;
@@ -485,6 +485,8 @@ private:
 		if (source_framerate_ == source_framerate)
 			return;
 
+		output_repeat_				= 0;
+		output_frame_				= 0;
 		source_framerate_			= source_framerate;
 		auto destination_framerate	= original_destination_framerate_;
 		destination_fieldmode_		= original_destination_fieldmode_;
