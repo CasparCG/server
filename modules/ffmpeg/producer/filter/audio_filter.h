@@ -25,6 +25,7 @@
 
 #include <boost/rational.hpp>
 #include <boost/noncopyable.hpp>
+#include <boost/range/iterator_range.hpp>
 
 #include <string>
 #include <vector>
@@ -50,13 +51,13 @@ struct audio_input_pad
 	boost::rational<int>	time_base;
 	int						sample_rate;
 	AVSampleFormat			sample_fmt;
-	std::int64_t			audio_channel_layout;
+	std::uint64_t			audio_channel_layout;
 
 	audio_input_pad(
 			boost::rational<int> time_base,
 			int sample_rate,
 			AVSampleFormat sample_fmt,
-			std::int64_t audio_channel_layout)
+			std::uint64_t audio_channel_layout)
 		: time_base(std::move(time_base))
 		, sample_rate(sample_rate)
 		, sample_fmt(sample_fmt)
@@ -69,12 +70,12 @@ struct audio_output_pad
 {
 	std::vector<int>			sample_rates;
 	std::vector<AVSampleFormat>	sample_fmts;
-	std::vector<std::int64_t>	audio_channel_layouts;
+	std::vector<std::uint64_t>	audio_channel_layouts;
 
 	audio_output_pad(
 			std::vector<int> sample_rates,
 			std::vector<AVSampleFormat> sample_fmts,
-			std::vector<std::int64_t> audio_channel_layouts)
+			std::vector<std::uint64_t> audio_channel_layouts)
 		: sample_rates(std::move(sample_rates))
 		, sample_fmts(std::move(sample_fmts))
 		, audio_channel_layouts(std::move(audio_channel_layouts))
@@ -93,6 +94,7 @@ public:
 	audio_filter& operator=(audio_filter&& other);
 
 	void push(int input_pad_id, const std::shared_ptr<AVFrame>& frame);
+	void push(int input_pad_id, const boost::iterator_range<const int32_t*>& frame_samples);
 	std::shared_ptr<AVFrame> poll(int output_pad_id);
 	std::vector<spl::shared_ptr<AVFrame>> poll_all(int output_pad_id);
 
