@@ -24,6 +24,7 @@
 #include "frame_muxer.h"
 
 #include "../filter/filter.h"
+#include "../filter/audio_filter.h"
 #include "../util/util.h"
 #include "../../ffmpeg.h"
 
@@ -67,6 +68,7 @@ extern "C"
 using namespace caspar::core;
 
 namespace caspar { namespace ffmpeg {
+
 struct av_frame_format
 {
 	int										pix_format;
@@ -96,31 +98,62 @@ struct av_frame_format
 	}
 };
 
+std::unique_ptr<audio_filter> create_amerge_filter(std::vector<audio_input_pad> input_pads, const core::audio_channel_layout& layout)
+{
+	std::vector<audio_output_pad> output_pads;
+	std::wstring amerge;
+
+	output_pads.emplace_back(
+			std::vector<int>			{ 48000 },
+			std::vector<AVSampleFormat>	{ AVSampleFormat::AV_SAMPLE_FMT_S32 },
+			std::vector<uint64_t>		{ static_cast<uint64_t>(av_get_default_channel_layout(layout.num_channels)) });
+
+	if (input_pads.size() > 1)
+	{
+		for (int i = 0; i < input_pads.size(); ++i)
+			amerge += L"[a:" + boost::lexical_cast<std::wstring>(i) + L"]";
+
+		amerge += L"amerge=inputs=" + boost::lexical_cast<std::wstring>(input_pads.size());
+	}
+
+	std::wstring afilter;
+
+	if (!amerge.empty())
+	{
+		afilter = amerge;
+		afilter += L"[aout:0]";
+	}
+
+	return std::unique_ptr<audio_filter>(new audio_filter(input_pads, output_pads, u8(afilter)));
+}
+
 struct frame_muxer::impl : boost::noncopyable
 {
 	std::queue<std::queue<core::mutable_frame>>		video_streams_;
 	std::queue<core::mutable_audio_buffer>			audio_streams_;
 	std::queue<core::draw_frame>					frame_buffer_;
-	display_mode									display_mode_			= display_mode::invalid;
+	display_mode									display_mode_				= display_mode::invalid;
 	const boost::rational<int>						in_framerate_;
 	const video_format_desc							format_desc_;
 	const audio_channel_layout						audio_channel_layout_;
 
-	std::vector<int>								audio_cadence_			= format_desc_.audio_cadence;
+	std::vector<int>								audio_cadence_				= format_desc_.audio_cadence;
 
 	spl::shared_ptr<core::frame_factory>			frame_factory_;
 	boost::optional<av_frame_format>				previously_filtered_frame_;
 
 	std::unique_ptr<filter>							filter_;
 	const std::wstring								filter_str_;
+	std::unique_ptr<audio_filter>					audio_filter_;
 	const bool										multithreaded_filter_;
-	bool											force_deinterlacing_	= env::properties().get(L"configuration.force-deinterlace", false);
+	bool											force_deinterlacing_		= env::properties().get(L"configuration.force-deinterlace", false);
 
 	mutable boost::mutex							out_framerate_mutex_;
 	boost::rational<int>							out_framerate_;
 
 	impl(
 			boost::rational<int> in_framerate,
+			std::vector<audio_input_pad> audio_input_pads,
 			const spl::shared_ptr<core::frame_factory>& frame_factory,
 			const core::video_format_desc& format_desc,
 			const core::audio_channel_layout& channel_layout,
@@ -137,6 +170,11 @@ struct frame_muxer::impl : boost::noncopyable
 		audio_streams_.push(core::mutable_audio_buffer());
 
 		set_out_framerate(in_framerate_);
+
+		if (!audio_input_pads.empty())
+		{
+			audio_filter_ = create_amerge_filter(std::move(audio_input_pads), audio_channel_layout_);
+		}
 	}
 
 	void push(const std::shared_ptr<AVFrame>& video_frame)
@@ -187,22 +225,42 @@ struct frame_muxer::impl : boost::noncopyable
 			CASPAR_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("video-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
 	}
 
-	void push(const std::shared_ptr<core::mutable_audio_buffer>& audio)
+	void push(const std::vector<std::shared_ptr<core::mutable_audio_buffer>>& audio_samples_per_stream)
 	{
-		if (!audio)
+		if (audio_samples_per_stream.empty())
 			return;
 
-		if (audio == flush_audio())
+		bool is_flush = boost::count_if(
+				audio_samples_per_stream,
+				[](std::shared_ptr<core::mutable_audio_buffer> a) { return a == flush_audio(); }) > 0;
+
+		if (is_flush)
 		{
 			audio_streams_.push(core::mutable_audio_buffer());
 		}
-		else if (audio == empty_audio())
+		else if (audio_samples_per_stream.at(0) == empty_audio())
 		{
 			boost::range::push_back(audio_streams_.back(), core::mutable_audio_buffer(audio_cadence_.front() * audio_channel_layout_.num_channels, 0));
 		}
 		else
 		{
-			boost::range::push_back(audio_streams_.back(), *audio);
+			for (int i = 0; i < audio_samples_per_stream.size(); ++i)
+			{
+				auto range = boost::make_iterator_range_n(
+						audio_samples_per_stream.at(i)->data(),
+						audio_samples_per_stream.at(i)->size());
+
+				audio_filter_->push(i, range);
+			}
+
+			for (auto frame : audio_filter_->poll_all(0))
+			{
+				auto audio = boost::make_iterator_range_n(
+						reinterpret_cast<std::int32_t*>(frame->extended_data[0]),
+						frame->nb_samples * frame->channels);
+
+				boost::range::push_back(audio_streams_.back(), audio);
+			}
 		}
 
 		if (audio_streams_.back().size() > 32 * audio_cadence_.front() * audio_channel_layout_.num_channels)
@@ -398,14 +456,15 @@ private:
 
 frame_muxer::frame_muxer(
 		boost::rational<int> in_framerate,
+		std::vector<audio_input_pad> audio_input_pads,
 		const spl::shared_ptr<core::frame_factory>& frame_factory,
 		const core::video_format_desc& format_desc,
 		const core::audio_channel_layout& channel_layout,
 		const std::wstring& filter,
 		bool multithreaded_filter)
-	: impl_(new impl(in_framerate, frame_factory, format_desc, channel_layout, filter, multithreaded_filter)){}
+	: impl_(new impl(std::move(in_framerate), std::move(audio_input_pads), frame_factory, format_desc, channel_layout, filter, multithreaded_filter)){}
 void frame_muxer::push(const std::shared_ptr<AVFrame>& video){impl_->push(video);}
-void frame_muxer::push(const std::shared_ptr<core::mutable_audio_buffer>& audio){impl_->push(audio);}
+void frame_muxer::push(const std::vector<std::shared_ptr<core::mutable_audio_buffer>>& audio_samples_per_stream){impl_->push(audio_samples_per_stream);}
 core::draw_frame frame_muxer::poll(){return impl_->poll();}
 uint32_t frame_muxer::calc_nb_frames(uint32_t nb_frames) const {return impl_->calc_nb_frames(nb_frames);}
 bool frame_muxer::video_ready() const{return impl_->video_ready();}

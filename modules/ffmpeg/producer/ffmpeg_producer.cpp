@@ -30,6 +30,7 @@
 #include "audio/audio_decoder.h"
 #include "video/video_decoder.h"
 #include "muxer/frame_muxer.h"
+#include "filter/audio_filter.h"
 
 #include <common/param.h>
 #include <common/diagnostics/graph.h>
@@ -90,7 +91,7 @@ struct ffmpeg_producer : public core::frame_producer_base
 
 	input												input_;
 	std::unique_ptr<video_decoder>						video_decoder_;
-	std::unique_ptr<audio_decoder>						audio_decoder_;
+	std::vector<std::unique_ptr<audio_decoder>>			audio_decoders_;
 	std::unique_ptr<frame_muxer>						muxer_;
 
 	const boost::rational<int>							framerate_;
@@ -154,33 +155,63 @@ public:
 		}
 
 		auto channel_layout = core::audio_channel_layout::invalid();
+		std::vector<audio_input_pad> audio_input_pads;
 
 		if (!thumbnail_mode_)
 		{
-			try
+			for (unsigned stream_index = 0; stream_index < input_.context()->nb_streams; ++stream_index)
 			{
-				audio_decoder_.reset(new audio_decoder(input_.context(), format_desc.audio_sample_rate));
+				auto stream = input_.context()->streams[stream_index];
+
+				if (stream->codec->codec_type != AVMediaType::AVMEDIA_TYPE_AUDIO)
+					continue;
+
+				try
+				{
+					audio_decoders_.push_back(std::unique_ptr<audio_decoder>(new audio_decoder(stream_index, input_.context(), format_desc.audio_sample_rate)));
+					audio_input_pads.emplace_back(
+							boost::rational<int>(1, format_desc.audio_sample_rate),
+							format_desc.audio_sample_rate,
+							AVSampleFormat::AV_SAMPLE_FMT_S32,
+							audio_decoders_.back()->ffmpeg_channel_layout());
+					CASPAR_LOG(info) << print() << L" " << audio_decoders_.back()->print();
+				}
+				catch (averror_stream_not_found&)
+				{
+					//CASPAR_LOG(warning) << print() << " No audio-stream found. Running without audio.";
+				}
+				catch (...)
+				{
+					CASPAR_LOG_CURRENT_EXCEPTION();
+					CASPAR_LOG(warning) << print() << " Failed to open audio-stream. Running without audio.";
+				}
+			}
+
+			if (audio_decoders_.size() == 1)
+			{
 				channel_layout = get_audio_channel_layout(
-						audio_decoder_->num_channels(),
-						audio_decoder_->ffmpeg_channel_layout(),
+						audio_decoders_.at(0)->num_channels(),
+						audio_decoders_.at(0)->ffmpeg_channel_layout(),
 						custom_channel_order);
-				CASPAR_LOG(info) << print() << L" " << audio_decoder_->print();
 			}
-			catch (averror_stream_not_found&)
+			else if (audio_decoders_.size() > 1)
 			{
-				//CASPAR_LOG(warning) << print() << " No audio-stream found. Running without audio.";
-			}
-			catch (...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				CASPAR_LOG(warning) << print() << " Failed to open audio-stream. Running without audio.";
+				auto num_channels = cpplinq::from(audio_decoders_)
+					.select(std::mem_fn(&audio_decoder::num_channels))
+					.aggregate(0, std::plus<int>());
+				auto ffmpeg_channel_layout = av_get_default_channel_layout(num_channels);
+
+				channel_layout = get_audio_channel_layout(
+						num_channels,
+						ffmpeg_channel_layout,
+						custom_channel_order);
 			}
 		}
 
-		if (!video_decoder_ && !audio_decoder_)
+		if (!video_decoder_ && audio_decoders_.empty())
 			CASPAR_THROW_EXCEPTION(averror_stream_not_found() << msg_info("No streams found"));
 
-		muxer_.reset(new frame_muxer(framerate_, frame_factory, format_desc, channel_layout, filter, true));
+		muxer_.reset(new frame_muxer(framerate_, std::move(audio_input_pads), frame_factory, format_desc, channel_layout, filter, true));
 	}
 
 	// frame_producer
@@ -490,20 +521,30 @@ public:
 				!video_decoder_->is_progressive()) : L"";
 	}
 
+	bool not_all_audio_decoders_ready() const
+	{
+		for (auto& audio_decoder : audio_decoders_)
+			if (!audio_decoder->ready())
+				return true;
+
+		return false;
+	}
+
 	void try_decode_frame()
 	{
 		std::shared_ptr<AVPacket> pkt;
 
-		for (int n = 0; n < 32 && ((video_decoder_ && !video_decoder_->ready()) || (audio_decoder_ && !audio_decoder_->ready())) && input_.try_pop(pkt); ++n)
+		for (int n = 0; n < 32 && ((video_decoder_ && !video_decoder_->ready()) || not_all_audio_decoders_ready()) && input_.try_pop(pkt); ++n)
 		{
 			if (video_decoder_)
 				video_decoder_->push(pkt);
-			if (audio_decoder_)
-				audio_decoder_->push(pkt);
+
+			for (auto& audio_decoder : audio_decoders_)
+				audio_decoder->push(pkt);
 		}
 
-		std::shared_ptr<AVFrame>					video;
-		std::shared_ptr<core::mutable_audio_buffer>	audio;
+		std::shared_ptr<AVFrame>									video;
+		std::vector<std::shared_ptr<core::mutable_audio_buffer>>	audio;
 
 		tbb::parallel_invoke(
 		[&]
@@ -513,32 +554,39 @@ public:
 		},
 		[&]
 		{
-			if (!muxer_->audio_ready() && audio_decoder_)
-				audio = audio_decoder_->poll();
+			if (!muxer_->audio_ready())
+			{
+				for (auto& audio_decoder : audio_decoders_)
+				{
+					auto audio_for_stream = audio_decoder->poll();
+
+					if (audio_for_stream)
+						audio.push_back(audio_for_stream);
+				}
+			}
 		});
 
 		muxer_->push(video);
 		muxer_->push(audio);
 
-		if (!audio_decoder_)
+		if (audio_decoders_.empty())
 		{
-			if(video == flush_video())
-				muxer_->push(flush_audio());
-			else if(!muxer_->audio_ready())
-				muxer_->push(empty_audio());
+			if (video == flush_video())
+				muxer_->push({ flush_audio() });
+			else if (!muxer_->audio_ready())
+				muxer_->push({ empty_audio() });
 		}
 
 		if (!video_decoder_)
 		{
-			if(audio == flush_audio())
+			if (boost::count_if(audio, [](std::shared_ptr<core::mutable_audio_buffer> a) { return a == flush_audio(); }) > 0)
 				muxer_->push(flush_video());
-			else if(!muxer_->video_ready())
+			else if (!muxer_->video_ready())
 				muxer_->push(empty_video());
 		}
 
 		uint32_t file_frame_number = 0;
 		file_frame_number = std::max(file_frame_number, video_decoder_ ? video_decoder_->file_frame_number() : 0);
-		//file_frame_number = std::max(file_frame_number, audio_decoder_ ? audio_decoder_->file_frame_number() : 0);
 
 		for (auto frame = muxer_->poll(); frame != core::draw_frame::empty(); frame = muxer_->poll())
 			frame_buffer_.push(std::make_pair(frame, file_frame_number));
