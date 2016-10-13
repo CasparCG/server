@@ -42,7 +42,7 @@
 
 namespace caspar { namespace core {
 
-draw_frame drop_and_skip(const draw_frame& source, const draw_frame&, const boost::rational<int64_t>&)
+draw_frame drop_or_repeat(const draw_frame& source, const draw_frame&, const boost::rational<int64_t>&)
 {
 	return source;
 }
@@ -202,7 +202,7 @@ class framerate_producer : public frame_producer_base
 	std::function<draw_frame (
 			const draw_frame& source,
 			const draw_frame& destination,
-			const boost::rational<int64_t>& distance)>	interpolator_					= drop_and_skip;
+			const boost::rational<int64_t>& distance)>	interpolator_					= drop_or_repeat;
 
 	boost::rational<std::int64_t>						current_frame_number_			= 0;
 	draw_frame											previous_frame_					= draw_frame::empty();
@@ -268,10 +268,10 @@ public:
 				interpolator_ = &blend2;
 			else if (boost::iequals(params.at(2), L"blend3"))
 				interpolator_ = blend3();
-			else if (boost::iequals(params.at(2), L"drop_and_skip"))
-				interpolator_ = &drop_and_skip;
+			else if (boost::iequals(params.at(2), L"drop_or_repeat"))
+				interpolator_ = &drop_or_repeat;
 			else
-				CASPAR_THROW_EXCEPTION(user_error() << msg_info("Valid interpolations are DROP_AND_SKIP, BLEND2 and BLEND3"));
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info("Valid interpolations are DROP_OR_REPEAT, BLEND2 and BLEND3"));
 		}
 		else if (boost::iequals(params.at(1), L"output_repeat")) // Only for debugging purposes
 		{
@@ -520,7 +520,7 @@ private:
 
 		speed_ = boost::rational<int64_t>(source_framerate_ / destination_framerate);
 
-		// drop_and_skip will only be used by default for exact framerate multiples (half, same and double)
+		// drop_or_repeat will only be used by default for exact framerate multiples (half, same and double)
 		// for all other framerates a frame interpolator will be chosen.
 		if (speed_ != 1 && speed_ * 2 != 1 && speed_ != 2)
 		{
@@ -536,7 +536,7 @@ private:
 			CASPAR_LOG(warning) << source_->print() << L" Frame blending frame rate conversion required to conform to channel frame rate.";
 		}
 		else
-			interpolator_		= &drop_and_skip;
+			interpolator_		= &drop_or_repeat;
 	}
 };
 
@@ -545,7 +545,7 @@ void describe_framerate_producer(help_sink& sink)
 	sink.para()->text(L"Framerate conversion control / Slow motion examples:");
 	sink.example(L">> CALL 1-10 FRAMERATE INTERPOLATION BLEND2", L"enables 2 frame blend interpolation.");
 	sink.example(L">> CALL 1-10 FRAMERATE INTERPOLATION BLEND3", L"enables 3 frame blend interpolation.");
-	sink.example(L">> CALL 1-10 FRAMERATE INTERPOLATION DROP_AND_SKIP", L"disables frame interpolation.");
+	sink.example(L">> CALL 1-10 FRAMERATE INTERPOLATION DROP_OR_REPEAT", L"disables frame interpolation.");
 	sink.example(L">> CALL 1-10 FRAMERATE SPEED 0.25", L"immediately changes the speed to 25%. Sound will be disabled.");
 	sink.example(L">> CALL 1-10 FRAMERATE SPEED 0.25 50", L"changes the speed to 25% linearly over 50 frames. Sound will be disabled.");
 	sink.example(L">> CALL 1-10 FRAMERATE SPEED 0.25 50 easeinoutsine", L"changes the speed to 25% over 50 frames using specified easing curve. Sound will be disabled.");
