@@ -521,20 +521,20 @@ public:
 				!video_decoder_->is_progressive()) : L"";
 	}
 
-	bool not_all_audio_decoders_ready() const
+	bool all_audio_decoders_ready() const
 	{
 		for (auto& audio_decoder : audio_decoders_)
 			if (!audio_decoder->ready())
-				return true;
+				return false;
 
-		return false;
+		return true;
 	}
 
 	void try_decode_frame()
 	{
 		std::shared_ptr<AVPacket> pkt;
 
-		for (int n = 0; n < 32 && ((video_decoder_ && !video_decoder_->ready()) || not_all_audio_decoders_ready()) && input_.try_pop(pkt); ++n)
+		for (int n = 0; n < 32 && ((video_decoder_ && !video_decoder_->ready()) || !all_audio_decoders_ready()) && input_.try_pop(pkt); ++n)
 		{
 			if (video_decoder_)
 				video_decoder_->push(pkt);
