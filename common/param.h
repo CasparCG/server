@@ -31,6 +31,25 @@ void replace_placeholders(const std::wstring& placeholder, const std::wstring& r
 		boost::ireplace_all(param, placeholder, replacement);
 }
 
+static std::vector<std::wstring> protocol_split(const std::wstring& s)
+{
+	std::vector<std::wstring> result;
+	size_t pos;
+
+	if ((pos = s.find(L"://")) != std::wstring::npos)
+	{
+		result.push_back(s.substr(0, pos));
+		result.push_back(s.substr(pos + 3));
+	}
+	else
+	{
+		result.push_back(L"");
+		result.push_back(s);
+	}
+
+	return result;
+}
+
 template<typename T, typename C>
 typename std::enable_if<!std::is_convertible<T, std::wstring>::value, typename std::decay<T>::type>::type get_param(const std::wstring& name, C&& params, T fail_value = T())
 {	

@@ -39,11 +39,10 @@
 #include <boost/thread.hpp>
 
 namespace caspar { namespace core {
-
 struct frame_producer_registry::impl
 {
 	std::vector<producer_factory_t>		producer_factories;
-	std::vector<producer_factory_t>		thumbnail_factories;
+	std::vector<thumbnail_producer_t>	thumbnail_producers;
 	spl::shared_ptr<help_repository>	help_repo;
 
 	impl(spl::shared_ptr<help_repository> help_repo)
@@ -63,9 +62,9 @@ void frame_producer_registry::register_producer_factory(std::wstring name, const
 	impl_->help_repo->register_item({ L"producer" }, std::move(name), describer);
 }
 
-void frame_producer_registry::register_thumbnail_producer_factory(const producer_factory_t& factory)
+void frame_producer_registry::register_thumbnail_producer(const thumbnail_producer_t& thumbnail_producer)
 {
-	impl_->thumbnail_factories.push_back(factory);
+	impl_->thumbnail_producers.push_back(thumbnail_producer);
 }
 
 frame_producer_dependencies::frame_producer_dependencies(
@@ -103,7 +102,7 @@ struct frame_producer_base::impl
 		frame_number_ = 0;
 		paused_ = false;
 	}
-	
+
 	draw_frame receive()
 	{
 		if(paused_)
@@ -127,10 +126,6 @@ struct frame_producer_base::impl
 	{
 		return draw_frame::still(last_frame_);
 	}
-	draw_frame create_thumbnail_frame()
-	{
-		return draw_frame::empty();
-	}
 };
 
 frame_producer_base::frame_producer_base() : impl_(new impl(*this))
@@ -151,12 +146,8 @@ draw_frame frame_producer_base::last_frame()
 {
 	return impl_->last_frame();
 }
-draw_frame frame_producer_base::create_thumbnail_frame()
-{
-	return impl_->create_thumbnail_frame();
-}
 
-std::future<std::wstring> frame_producer_base::call(const std::vector<std::wstring>&) 
+std::future<std::wstring> frame_producer_base::call(const std::vector<std::wstring>&)
 {
 	CASPAR_THROW_EXCEPTION(not_supported());
 }
@@ -184,7 +175,7 @@ const std::vector<std::wstring>& frame_producer_base::get_variables() const
 	return empty;
 }
 
-const spl::shared_ptr<frame_producer>& frame_producer::empty() 
+const spl::shared_ptr<frame_producer>& frame_producer::empty()
 {
 	class empty_frame_producer : public frame_producer
 	{
@@ -194,16 +185,15 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
 		void paused(bool value) override{}
 		uint32_t nb_frames() const override {return 0;}
 		std::wstring print() const override { return L"empty";}
-		monitor::subject& monitor_output() override {static monitor::subject monitor_subject(""); return monitor_subject;}										
+		monitor::subject& monitor_output() override {static monitor::subject monitor_subject(""); return monitor_subject;}
 		std::wstring name() const override {return L"empty";}
 		uint32_t frame_number() const override {return 0;}
 		std::future<std::wstring> call(const std::vector<std::wstring>& params) override{CASPAR_THROW_EXCEPTION(not_implemented());}
 		variable& get_variable(const std::wstring& name) override { CASPAR_THROW_EXCEPTION(not_implemented()); }
 		const std::vector<std::wstring>& get_variables() const override { static std::vector<std::wstring> empty; return empty; }
 		draw_frame last_frame() {return draw_frame::empty();}
-		draw_frame create_thumbnail_frame() {return draw_frame::empty();}
 		constraints& pixel_constraints() override { static constraints c; return c; }
-	
+
 		boost::property_tree::wptree info() const override
 		{
 			boost::property_tree::wptree info;
@@ -229,10 +219,10 @@ void destroy_producers_synchronously()
 }
 
 class destroy_producer_proxy : public frame_producer
-{	
+{
 	std::shared_ptr<frame_producer> producer_;
 public:
-	destroy_producer_proxy(spl::shared_ptr<frame_producer>&& producer) 
+	destroy_producer_proxy(spl::shared_ptr<frame_producer>&& producer)
 		: producer_(std::move(producer))
 	{
 		destroy_producers_in_separate_thread() = true;
@@ -243,13 +233,13 @@ public:
 		static tbb::atomic<int> counter;
 		static std::once_flag counter_init_once;
 		std::call_once(counter_init_once, []{ counter = 0; });
-		
+
 		if(producer_ == core::frame_producer::empty() || !destroy_producers_in_separate_thread())
 			return;
 
 		++counter;
 		CASPAR_VERIFY(counter < 8);
-		
+
 		auto producer = new spl::shared_ptr<frame_producer>(std::move(producer_));
 		boost::thread([=]
 		{
@@ -265,7 +255,7 @@ public:
 					CASPAR_LOG(debug) << str << L" Destroying on asynchronous destruction thread.";
 			}
 			catch(...){}
-			
+
 			try
 			{
 				pointer_guard.reset();
@@ -277,9 +267,9 @@ public:
 			}
 
 			--counter;
-		}).detach(); 
+		}).detach();
 	}
-	
+
 	draw_frame											receive() override																										{return producer_->receive();}
 	std::wstring										print() const override															{return producer_->print();}
 	void												paused(bool value) override														{producer_->paused(value);}
@@ -292,8 +282,7 @@ public:
 	void												leading_producer(const spl::shared_ptr<frame_producer>& producer) override		{return producer_->leading_producer(producer);}
 	uint32_t											nb_frames() const override														{return producer_->nb_frames();}
 	draw_frame											last_frame()																	{return producer_->last_frame();}
-	draw_frame											create_thumbnail_frame()														{return producer_->create_thumbnail_frame();}
-	monitor::subject&									monitor_output() override														{return producer_->monitor_output();}										
+	monitor::subject&									monitor_output() override														{return producer_->monitor_output();}
 	bool												collides(double x, double y) const override										{return producer_->collides(x, y);}
 	void												on_interaction(const interaction_event::ptr& event)	override					{return producer_->on_interaction(event);}
 	constraints&										pixel_constraints() override													{return producer_->pixel_constraints();}
@@ -308,7 +297,7 @@ spl::shared_ptr<core::frame_producer> do_create_producer(const frame_producer_de
 {
 	if(params.empty())
 		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("params cannot be empty"));
-	
+
 	auto producer = frame_producer::empty();
 	std::any_of(factories.begin(), factories.end(), [&](const producer_factory_t& factory) -> bool
 		{
@@ -335,66 +324,72 @@ spl::shared_ptr<core::frame_producer> do_create_producer(const frame_producer_de
 
 	if(producer == frame_producer::empty())
 		return producer;
-		
+
 	return producer;
 }
 
-spl::shared_ptr<core::frame_producer> frame_producer_registry::create_thumbnail_producer(const frame_producer_dependencies& dependencies, const std::wstring& media_file) const
+draw_frame do_create_thumbnail_frame(
+		const frame_producer_dependencies& dependencies,
+		const std::wstring& media_file,
+		const std::vector<thumbnail_producer_t>& thumbnail_producers)
 {
-	auto& thumbnail_factories = impl_->thumbnail_factories;
+	for (auto& thumbnail_producer : thumbnail_producers)
+	{
+		auto frame = thumbnail_producer(dependencies, media_file);
+
+		if (frame != draw_frame::empty())
+			return frame;
+	}
+
+	return draw_frame::empty();
+}
+
+draw_frame frame_producer_registry::create_thumbnail(const frame_producer_dependencies& dependencies, const std::wstring& media_file) const
+{
+	auto& thumbnail_producers = impl_->thumbnail_producers;
 	std::vector<std::wstring> params;
 	params.push_back(media_file);
 
-	auto producer = do_create_producer(dependencies, params, thumbnail_factories, true);
-	auto key_producer = frame_producer::empty();
-  
-	try // to find a key file.
-	{
-		auto params_copy = params;
-		if (params_copy.size() > 0)
-		{
-			params_copy[0] += L"_A";
-			key_producer = do_create_producer(dependencies, params_copy, thumbnail_factories, true);
-			if (key_producer == frame_producer::empty())
-			{
-				params_copy[0] += L"LPHA";
-				key_producer = do_create_producer(dependencies, params_copy, thumbnail_factories, true);
-			}
-		}
-	}
-	catch(...){}
+	auto fill_frame = do_create_thumbnail_frame(dependencies, media_file, thumbnail_producers);
+	auto key_frame = do_create_thumbnail_frame(dependencies, media_file + L"_A", thumbnail_producers);
 
-	if (producer != frame_producer::empty() && key_producer != frame_producer::empty())
-		return create_separated_producer(producer, key_producer);
-  
-	return producer;
+	if (key_frame == draw_frame::empty())
+		key_frame = do_create_thumbnail_frame(dependencies, media_file + L"_ALPHA", thumbnail_producers);
+
+	if (fill_frame != draw_frame::empty() && key_frame != draw_frame::empty())
+		return draw_frame::mask(fill_frame, key_frame);
+
+	return fill_frame;
 }
 
 spl::shared_ptr<core::frame_producer> frame_producer_registry::create_producer(const frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params) const
-{	
+{
 	auto& producer_factories = impl_->producer_factories;
 	auto producer = do_create_producer(dependencies, params, producer_factories);
 	auto key_producer = frame_producer::empty();
-	
-	try // to find a key file.
+
+	if (!params.empty() && !boost::contains(params.at(0), L"://"))
 	{
-		auto params_copy = params;
-		if(params_copy.size() > 0)
+		try // to find a key file.
 		{
-			params_copy[0] += L"_A";
-			key_producer = do_create_producer(dependencies, params_copy, producer_factories);
-			if(key_producer == frame_producer::empty())
+			auto params_copy = params;
+			if (params_copy.size() > 0)
 			{
-				params_copy[0] += L"LPHA";
+				params_copy[0] += L"_A";
 				key_producer = do_create_producer(dependencies, params_copy, producer_factories);
+				if (key_producer == frame_producer::empty())
+				{
+					params_copy[0] += L"LPHA";
+					key_producer = do_create_producer(dependencies, params_copy, producer_factories);
+				}
 			}
 		}
+		catch (...) {}
 	}
-	catch(...){}
 
 	if(producer != frame_producer::empty() && key_producer != frame_producer::empty())
 		return create_separated_producer(producer, key_producer);
-	
+
 	if(producer == frame_producer::empty())
 	{
 		std::wstring str;
@@ -415,5 +410,4 @@ spl::shared_ptr<core::frame_producer> frame_producer_registry::create_producer(c
 	std::copy(iterator(iss),  iterator(), std::back_inserter(tokens));
 	return create_producer(dependencies, tokens);
 }
-
 }}

@@ -536,7 +536,7 @@ void call_describer(core::help_sink& sink, const core::help_repository& repo)
 
 std::wstring call_command(command_context& ctx)
 {
-	auto result = ctx.channel.channel->stage().call(ctx.layer_index(), ctx.parameters);
+	auto result = ctx.channel.channel->stage().call(ctx.layer_index(), ctx.parameters).get();
 
 	// TODO: because of std::async deferred timed waiting does not work
 
@@ -545,10 +545,10 @@ std::wstring call_command(command_context& ctx)
 	CASPAR_THROW_EXCEPTION(timed_out());*/
 
 	std::wstringstream replyString;
-	if (result.get().empty())
+	if (result.empty())
 		replyString << L"202 CALL OK\r\n";
 	else
-		replyString << L"201 CALL OK\r\n" << result.get() << L"\r\n";
+		replyString << L"201 CALL OK\r\n" << result << L"\r\n";
 
 	return replyString.str();
 }
@@ -598,7 +598,7 @@ std::wstring swap_command(command_context& ctx)
 void add_describer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"Add a consumer to a video channel.");
-	sink.syntax(L"ADD [video_channel:int] [consumer:string] [parameters:string]");
+	sink.syntax(L"ADD [video_channel:int]{-[consumer_index:int]} [consumer:string] [parameters:string]");
 	sink.para()
 		->text(L"Adds a consumer to the specified video channel. The string ")
 		->code(L"consumer")->text(L" will be parsed by the available consumer factories. ")
@@ -606,6 +606,10 @@ void add_describer(core::help_sink& sink, const core::help_repository& repo)
 		->code(L"video_channel")->text(L". Different consumers require different parameters, ")
 		->text(L"some examples are below. Consumers can alternatively be specified by adding them to ")
 		->see(L"the CasparCG config file")->text(L".");
+	sink.para()
+		->text(L"Specifying ")->code(L"consumer_index")
+		->text(L" overrides the index that the consumer itself decides and can later be used with the ")
+		->see(L"REMOVE")->text(L" command to remove the consumer.");
 	sink.para()->text(L"Examples:");
 	sink.example(L">> ADD 1 DECKLINK 1");
 	sink.example(L">> ADD 1 BLUEFISH 2");
@@ -614,6 +618,9 @@ void add_describer(core::help_sink& sink, const core::help_repository& repo)
 	sink.example(L">> ADD 1 IMAGE filename");
 	sink.example(L">> ADD 1 FILE filename.mov");
 	sink.example(L">> ADD 1 FILE filename.mov SEPARATE_KEY");
+	sink.example(
+		L">> ADD 1-700 FILE filename.mov SEPARATE_KEY\n"
+		L">> REMOVE 1-700", L"overriding the consumer index to easier remove later.");
 	sink.para()->text(L"The streaming consumer is an implementation of the ffmpeg_consumer and supports many of the same arguments:");
 	sink.example(L">> ADD 1 STREAM udp://localhost:5004 -vcodec libx264 -tune zerolatency -preset ultrafast -crf 25 -format mpegts -vf scale=240:180");
 }
@@ -811,7 +818,7 @@ std::wstring data_store_command(command_context& ctx)
 void data_retrieve_describer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"Retrieve a dataset.");
-	sink.syntax(L"DATA RETRIEVE [name:string] [data:string]");
+	sink.syntax(L"DATA RETRIEVE [name:string]");
 	sink.para()->text(L"Returns the data saved under the name ")->code(L"name")->text(L".");
 	sink.para()->text(L"Examples:");
 	sink.example(L">> DATA RETRIEVE my_data");
@@ -2293,6 +2300,14 @@ void version_describer(core::help_sink& sink, const core::help_repository& repo)
 		L">> VERSION FLASH\n"
 		L"<< 201 VERSION OK\n"
 		L"<< 11.8.800.94");
+	sink.example(
+		L">> VERSION TEMPLATEHOST\n"
+		L"<< 201 VERSION OK\n"
+		L"<< unknown");
+	sink.example(
+		L">> VERSION CEF\n"
+		L"<< 201 VERSION OK\n"
+		L"<< 3.1750.1805");
 }
 
 std::wstring version_command(command_context& ctx)

@@ -106,6 +106,11 @@ struct image_producer : public core::frame_producer_base
 	void load(const std::shared_ptr<FIBITMAP>& bitmap)
 	{
 		FreeImage_FlipVertical(bitmap.get());
+		auto longest_side = static_cast<int>(std::max(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get())));
+
+		if (longest_side > frame_factory_->get_max_frame_size())
+			CASPAR_THROW_EXCEPTION(user_error() << msg_info("Image too large for texture"));
+
 		core::pixel_format_desc desc;
 		desc.format = core::pixel_format::bgra;
 		desc.planes.push_back(core::pixel_format_desc::plane(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), 4));
@@ -123,11 +128,6 @@ struct image_producer : public core::frame_producer_base
 	{
 		monitor_subject_ << core::monitor::message("/file/path") % description_;
 
-		return frame_;
-	}
-
-	core::draw_frame create_thumbnail_frame() override
-	{
 		return frame_;
 	}
 
@@ -265,7 +265,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
 	auto ext = std::find_if(g_extensions.begin(), g_extensions.end(), [&](const std::wstring& ex) -> bool
 	{
-		auto file = caspar::find_case_insensitive(boost::filesystem::path(filename).replace_extension(ex).wstring());
+		auto file = caspar::find_case_insensitive(boost::filesystem::path(filename).wstring() + ex);
 
 		return static_cast<bool>(file);
 	});
@@ -277,21 +277,26 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 }
 
 
-spl::shared_ptr<core::frame_producer> create_thumbnail_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
+core::draw_frame create_thumbnail(const core::frame_producer_dependencies& dependencies, const std::wstring& media_file)
 {
-	std::wstring filename = env::media_folder() + params.at(0);
+	std::wstring filename = env::media_folder() + media_file;
 
 	auto ext = std::find_if(g_extensions.begin(), g_extensions.end(), [&](const std::wstring& ex) -> bool
 	{
-		auto file = caspar::find_case_insensitive(boost::filesystem::path(filename).replace_extension(ex).wstring());
+		auto file = caspar::find_case_insensitive(boost::filesystem::path(filename).wstring() + ex);
 
 		return static_cast<bool>(file);
 	});
 
 	if (ext == g_extensions.end())
-		return core::frame_producer::empty();
+		return core::draw_frame::empty();
 
-	return spl::make_shared<image_producer>(dependencies.frame_factory, *caspar::find_case_insensitive(filename + *ext), true);
+	spl::shared_ptr<core::frame_producer> producer = spl::make_shared<image_producer>(
+			dependencies.frame_factory,
+			*caspar::find_case_insensitive(filename + *ext),
+			true);
+	
+	return producer->receive();
 }
 
 }}

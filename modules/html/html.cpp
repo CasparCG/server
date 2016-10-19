@@ -26,6 +26,7 @@
 
 #include <common/executor.h>
 #include <common/future.h>
+#include <common/env.h>
 
 #include <core/producer/cg_proxy.h>
 

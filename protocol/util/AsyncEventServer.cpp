@@ -329,6 +329,12 @@ struct AsyncEventServer::implementation : public spl::enable_shared_from_this<im
 		
         if (!error)
 		{
+			boost::system::error_code ec;
+			socket->set_option(boost::asio::socket_base::keep_alive(true), ec);
+
+			if (ec)
+				CASPAR_LOG(warning) << print() << L" Failed to enable TCP keep-alive on socket";
+			
 			auto conn = connection::create(service_, socket, protocol_factory_, connection_set_);
 			connection_set_->insert(conn);
 
@@ -340,6 +346,11 @@ struct AsyncEventServer::implementation : public spl::enable_shared_from_this<im
 		}
 		start_accept();
     }
+
+	std::wstring print() const
+	{
+		return L"async_event_server[:" + boost::lexical_cast<std::wstring>(acceptor_.local_endpoint().port()) + L"]";
+	}
 
 	void add_client_lifecycle_object_factory(const lifecycle_factory_t& factory)
 	{

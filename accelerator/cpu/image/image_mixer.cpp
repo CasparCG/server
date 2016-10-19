@@ -151,9 +151,16 @@ class image_renderer
 {
 	tbb::concurrent_unordered_map<int64_t, tbb::concurrent_bounded_queue<std::shared_ptr<SwsContext>>>	sws_devices_;
 	tbb::concurrent_bounded_queue<spl::shared_ptr<buffer>>												temp_buffers_;
+	core::video_format_desc																				format_desc_;
 public:	
 	std::future<array<const std::uint8_t>> operator()(std::vector<item> items, const core::video_format_desc& format_desc)
-	{	
+	{
+		if (format_desc != format_desc_)
+		{
+			format_desc_ = format_desc;
+			sws_devices_.clear();
+		}
+
 		convert(items, format_desc.width, format_desc.height);		
 				
 		// Remove first field stills.
@@ -273,8 +280,7 @@ private:
 			temp_buffers_.push(dest_frame);
 
 			{
-				spl::shared_ptr<AVFrame> dest_av_frame(avcodec_alloc_frame(), av_free);	
-				avcodec_get_frame_defaults(dest_av_frame.get());			
+				auto dest_av_frame = ffmpeg::create_frame();
 				avpicture_fill(reinterpret_cast<AVPicture*>(dest_av_frame.get()), dest_frame->data(), PIX_FMT_BGRA, width, height);
 				
 				sws_scale(sws_device.get(), input_av_frame->data, input_av_frame->linesize, 0, input_av_frame->height, dest_av_frame->data, dest_av_frame->linesize);				
@@ -365,6 +371,7 @@ image_mixer::~image_mixer(){}
 void image_mixer::push(const core::frame_transform& transform){impl_->push(transform);}
 void image_mixer::visit(const core::const_frame& frame){impl_->visit(frame);}
 void image_mixer::pop(){impl_->pop();}
+int image_mixer::get_max_frame_size() { return std::numeric_limits<int>::max(); }
 std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc, bool /* straighten_alpha */){return impl_->render(format_desc);}
 core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, const core::audio_channel_layout& channel_layout) {return impl_->create_frame(tag, desc, channel_layout);}
 

@@ -42,6 +42,7 @@
 #include <core/producer/scene/scene_producer.h>
 #include <core/producer/scene/xml_scene_producer.h>
 #include <core/producer/text/text_producer.h>
+#include <core/producer/color/color_producer.h>
 #include <core/consumer/output.h>
 #include <core/mixer/mixer.h>
 #include <core/mixer/image/image_mixer.h>
@@ -145,7 +146,7 @@ struct server::impl : boost::noncopyable
 	std::shared_ptr<thumbnail_generator>				thumbnail_generator_;
 	std::promise<bool>&									shutdown_server_now_;
 
-	explicit impl(std::promise<bool>& shutdown_server_now)		
+	explicit impl(std::promise<bool>& shutdown_server_now)
 		: accelerator_(env::properties().get(L"configuration.accelerator", L"auto"))
 		, media_info_repo_(create_in_memory_media_info_repository())
 		, producer_registry_(spl::make_shared<core::frame_producer_registry>(help_repo_))
@@ -167,6 +168,7 @@ struct server::impl : boost::noncopyable
 		initialize_modules(dependencies);
 		core::text::init(dependencies);
 		core::scene::init(dependencies);
+		help_repo_->register_item({ L"producer" }, L"Color Producer", &core::describe_color_producer);
 	}
 
 	void start()
@@ -210,7 +212,7 @@ struct server::impl : boost::noncopyable
 		destroy_producers_synchronously();
 		destroy_consumers_synchronously();
 		channels_.clear();
-		
+
 		while (weak_io_service.lock())
 			boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
 
@@ -246,7 +248,7 @@ struct server::impl : boost::noncopyable
 	}
 
 	void setup_channels(const boost::property_tree::wptree& pt)
-	{   
+	{
 		using boost::property_tree::wptree;
 		for (auto& xml_channel : pt | witerate_children(L"configuration.channels") | welement_context_iteration)
 		{
@@ -286,7 +288,7 @@ struct server::impl : boost::noncopyable
 				{
 					CASPAR_LOG_CURRENT_EXCEPTION();
 				}
-			}		
+			}
 
 		    channel->monitor_output().attach_parent(monitor_subject_);
 			channel->mixer().set_straight_alpha_output(xml_channel.second.get(L"straight-alpha-output", false));
@@ -307,14 +309,16 @@ struct server::impl : boost::noncopyable
 	}
 
 	void setup_osc(const boost::property_tree::wptree& pt)
-	{		
+	{
 		using boost::property_tree::wptree;
 		using namespace boost::asio::ip;
 
 		monitor_subject_->attach_parent(osc_client_->sink());
-		
+
 		auto default_port =
 				pt.get<unsigned short>(L"configuration.osc.default-port", 6250);
+		auto disable_send_to_amcp_clients =
+				pt.get(L"configuration.osc.disable-send-to-amcp-clients", false);
 		auto predefined_clients =
 				pt.get_child_optional(L"configuration.osc.predefined-clients");
 
@@ -335,7 +339,7 @@ struct server::impl : boost::noncopyable
 			}
 		}
 
-		if (primary_amcp_server_)
+		if (!disable_send_to_amcp_clients && primary_amcp_server_)
 			primary_amcp_server_->add_client_lifecycle_object_factory(
 					[=] (const std::string& ipv4_address)
 							-> std::pair<std::wstring, std::shared_ptr<void>>
@@ -361,7 +365,7 @@ struct server::impl : boost::noncopyable
 
 		polling_filesystem_monitor_factory monitor_factory(io_service_, scan_interval_millis);
 		thumbnail_generator_.reset(new thumbnail_generator(
-			monitor_factory, 
+			monitor_factory,
 			env::media_folder(),
 			env::thumbnails_folder(),
 			pt.get(L"configuration.thumbnails.width", 256),
@@ -374,7 +378,7 @@ struct server::impl : boost::noncopyable
 			producer_registry_,
 			pt.get(L"configuration.thumbnails.mipmap", true)));
 	}
-		
+
 	void setup_controllers(const boost::property_tree::wptree& pt)
 	{
 		amcp_command_repo_ = spl::make_shared<amcp::amcp_command_repository>(
@@ -397,7 +401,7 @@ struct server::impl : boost::noncopyable
 			auto protocol = ptree_get<std::wstring>(xml_controller.second, L"protocol");
 
 			if(name == L"tcp")
-			{					
+			{
 				auto port = ptree_get<unsigned int>(xml_controller.second, L"port");
 				auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(
 						io_service_,
@@ -409,7 +413,7 @@ struct server::impl : boost::noncopyable
 					primary_amcp_server_ = asyncbootstrapper;
 			}
 			else
-				CASPAR_LOG(warning) << "Invalid controller: " << name;	
+				CASPAR_LOG(warning) << "Invalid controller: " << name;
 		}
 	}
 

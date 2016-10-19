@@ -22,14 +22,17 @@
 #pragma once
 
 #include "display_mode.h"
+#include "../filter/audio_filter.h"
 
 #include <common/forward.h>
 #include <common/memory.h>
 
+#include <core/frame/frame.h>
 #include <core/mixer/audio/audio_mixer.h>
 #include <core/fwd.h>
 
 #include <boost/noncopyable.hpp>
+#include <boost/rational.hpp>
 
 #include <vector>
 
@@ -41,23 +44,23 @@ class frame_muxer : boost::noncopyable
 {
 public:
 	frame_muxer(
-			double in_fps,
+			boost::rational<int> in_framerate,
+			std::vector<audio_input_pad> audio_input_pads,
 			const spl::shared_ptr<core::frame_factory>& frame_factory,
 			const core::video_format_desc& format_desc,
 			const core::audio_channel_layout& channel_layout,
-			const std::wstring& filter);
-	
-	void push_video(const std::shared_ptr<AVFrame>& frame);
-	void push_audio(const std::shared_ptr<AVFrame>& frame);
-	
+			const std::wstring& filter,
+			bool multithreaded_filter);
+
+	void push(const std::shared_ptr<AVFrame>& video_frame);
+	void push(const std::vector<std::shared_ptr<core::mutable_audio_buffer>>& audio_samples_per_stream);
+
 	bool video_ready() const;
 	bool audio_ready() const;
 
-	void clear();
+	core::draw_frame poll();
 
-	bool empty() const;
-	core::draw_frame front() const;
-	void pop();
+	boost::rational<int> out_framerate() const;
 
 	uint32_t calc_nb_frames(uint32_t nb_frames) const;
 private:

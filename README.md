@@ -26,5 +26,4 @@ License
 CasparCG Server is distributed under the GNU General Public License GPLv3 or
 higher, see [LICENSE](LICENSE?raw=true) for details.
 
-The included software is provided as-is by Sveriges Televison AB.
-More information is available at http://casparcg.com
+More information is available at http://casparcg.com/

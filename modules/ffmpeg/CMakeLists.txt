@@ -85,6 +85,7 @@ if (MSVC)
 			avcodec.lib
 			avutil.lib
 			avfilter.lib
+			avdevice.lib
 			swscale.lib
 			swresample.lib
 	)
@@ -98,6 +99,7 @@ else()
 			avcodec.so
 			avutil.so
 			avfilter.so
+			avdevice.so
 			swscale.so
 			swresample.so
 			postproc.so

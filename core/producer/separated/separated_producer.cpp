@@ -88,20 +88,6 @@ public:
 		return draw_frame::mask(fill_producer_->last_frame(), key_producer_->last_frame());
 	}
 
-	draw_frame create_thumbnail_frame()
-	{
-		auto fill_frame = fill_producer_->create_thumbnail_frame();
-		auto key_frame = key_producer_->create_thumbnail_frame();
-
-		if (fill_frame == draw_frame::empty() || key_frame == draw_frame::empty())
-			return draw_frame::empty();
-
-		if (fill_frame == draw_frame::late() || key_frame == draw_frame::late())
-			return draw_frame::late();
-
-		return draw_frame::mask(fill_frame, key_frame);
-	}
-
 	constraints& pixel_constraints() override
 	{
 		return fill_producer_->pixel_constraints();

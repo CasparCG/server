@@ -454,7 +454,7 @@ public:
 
 		auto shear_factor = (yx*c + yy*s) / (yy*c - yx * s);
 		auto scale_y = 1.0;
-		if (abs(shear_factor) < 0.0001 || isnan(shear_factor)) {
+		if (abs(shear_factor) < 0.0001 || std::isnan(shear_factor)) {
 			shear_factor = 0;
 			scale_y = (abs(c) > 0.1) ? yy / c : yx / -s;
 		}

@@ -27,6 +27,8 @@
 
 #include <common/enum_class.h>
 
+#include <boost/rational.hpp>
+
 namespace caspar { namespace core {
 	
 enum class video_format
@@ -83,22 +85,23 @@ ENUM_ENABLE_BITWISE(field_mode);
 
 struct video_format_desc final
 {
-	video_format		format;		
+	video_format			format;		
 
-	int					width;		
-	int					height;		
-	int					square_width;
-	int					square_height;
-	core::field_mode	field_mode;	// progressive, interlaced upper field first, interlaced lower field first
-	double				fps;		// actual framerate = duration/time_scale, e.g. i50 = 25 fps, p50 = 50 fps
-	int					time_scale;
-	int					duration;
-	int					field_count;
-	std::size_t			size;		// frame size in bytes 
-	std::wstring		name;		// name of output format
+	int						width;		
+	int						height;		
+	int						square_width;
+	int						square_height;
+	core::field_mode		field_mode;	// progressive, interlaced upper field first, interlaced lower field first
+	double					fps;		// actual framerate = duration/time_scale, e.g. i50 = 25 fps, p50 = 50 fps
+	boost::rational<int>	framerate;
+	int						time_scale;
+	int						duration;
+	int						field_count;
+	std::size_t				size;		// frame size in bytes 
+	std::wstring			name;		// name of output format
 
-	int					audio_sample_rate;
-	std::vector<int>	audio_cadence;	// rotating optimal number of samples per frame
+	int						audio_sample_rate;
+	std::vector<int>		audio_cadence;	// rotating optimal number of samples per frame
 
 	video_format_desc(video_format format,
 					  int width,

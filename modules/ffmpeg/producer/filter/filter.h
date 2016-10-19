@@ -51,6 +51,11 @@ static std::wstring append_filter(const std::wstring& filters, const std::wstrin
 	return filters + (filters.empty() ? L"" : L",") + filter;
 }
 
+static std::wstring prepend_filter(const std::wstring& filters, const std::wstring& filter)
+{
+	return filter + (filters.empty() ? L"" : L",") + filters;
+}
+
 class filter : boost::noncopyable
 {
 public:
@@ -62,7 +67,8 @@ public:
 		boost::rational<int> in_sample_aspect_ratio,
 		AVPixelFormat in_pix_fmt,
 		std::vector<AVPixelFormat> out_pix_fmts,
-		const std::string& filtergraph);
+		const std::string& filtergraph,
+		bool multithreaded = true);
 	filter(filter&& other);
 	filter& operator=(filter&& other);
 
@@ -74,10 +80,13 @@ public:
 			
 	static bool is_double_rate(const std::wstring& filters)
 	{
-		if(boost::to_upper_copy(filters).find(L"YADIF=1") != std::string::npos)
+		if (boost::to_upper_copy(filters).find(L"YADIF=1") != std::string::npos)
 			return true;
-	
-		if(boost::to_upper_copy(filters).find(L"YADIF=3") != std::string::npos)
+
+		if (boost::to_upper_copy(filters).find(L"YADIF=3") != std::string::npos)
+			return true;
+
+		if (boost::to_upper_copy(filters).find(L"SEPARATEFIELDS") != std::string::npos)
 			return true;
 
 		return false;
@@ -85,20 +94,14 @@ public:
 
 	static bool is_deinterlacing(const std::wstring& filters)
 	{
-		if(boost::to_upper_copy(filters).find(L"YADIF") != std::string::npos)
-			return true;	
+		if (boost::to_upper_copy(filters).find(L"YADIF") != std::string::npos)
+			return true;
+
+		if (boost::to_upper_copy(filters).find(L"SEPARATEFIELDS") != std::string::npos)
+			return true;
+
 		return false;
 	}	
-	
-	static int delay(const std::wstring& filters)
-	{
-		return is_double_rate(filters) ? 1 : 1;
-	}
-
-	int delay() const
-	{
-		return delay(filter_str());
-	}
 
 	bool is_double_rate() const
 	{

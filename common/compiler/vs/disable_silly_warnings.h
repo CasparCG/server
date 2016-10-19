@@ -32,5 +32,12 @@
 #pragma warning (disable : 4505) // unreferenced local function has been 
 #pragma warning (disable : 4481) // nonstandard extension used: override specifier 'override'
 #pragma warning (disable : 4996) // function call with parameters that may be unsafe
+#pragma warning (disable : 4334) // '<<': result of 32 - bit shift implicitly converted to 64 bits(was 64 - bit shift intended ?)
+
+
+#if (_MSC_VER > 1800 && _MSC_FULL_VER >= 190023506)
+	#pragma warning( disable : 4592) // symbol will be dynamically initialized (implementation limitation). Bug in VS2015 14.0.24720.00 Update 1
+#endif
+
 #endif
 

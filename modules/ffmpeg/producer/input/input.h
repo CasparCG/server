@@ -1,5 +1,5 @@
 /*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
+* Copyright 2013 Sveriges Television AB http://casparcg.com/
 *
 * This file is part of CasparCG (www.casparcg.com).
 *
@@ -21,13 +21,17 @@
 
 #pragma once
 
+#include "../util/util.h"
+
 #include <common/memory.h>
 
 #include <memory>
 #include <string>
 #include <cstdint>
+#include <future>
 
 #include <boost/noncopyable.hpp>
+#include <boost/rational.hpp>
 
 struct AVFormatContext;
 struct AVPacket;
@@ -39,40 +43,33 @@ namespace diagnostics {
 class graph;
 
 }
-	 
+
 namespace ffmpeg {
 
 class input : boost::noncopyable
 {
 public:
-	explicit input(
-			const spl::shared_ptr<diagnostics::graph>& graph,
-			const std::wstring& filename,
-			bool loop, uint32_t start,
-			uint32_t length,
-			bool thumbnail_mode);
+	explicit input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& url_or_file, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_options& vid_params);
 
-	bool		try_pop_video(std::shared_ptr<AVPacket>& packet);
-	bool		try_pop_audio(std::shared_ptr<AVPacket>& packet);
+	bool								try_pop(std::shared_ptr<AVPacket>& packet);
+	bool								eof() const;
 
-	void		loop(bool value);
-	bool		loop() const;
+	void								start(uint32_t value);
+	uint32_t							start() const;
+	void								length(uint32_t value);
+	uint32_t							length() const;
+	void								loop(bool value);
+	bool								loop() const;
 
-	void		start(uint32_t value);
-	uint32_t	start() const;
+	int									num_audio_streams() const;
 
-	void		length(uint32_t value);
-	uint32_t	length() const;
+	std::future<bool>					seek(uint32_t target);
 
-	bool		eof() const;
-
-	void		seek(uint32_t target);
-
-	AVFormatContext& context();
+	spl::shared_ptr<AVFormatContext>	context();
 private:
-	struct impl;
-	std::shared_ptr<impl> impl_;
+	struct implementation;
+	std::shared_ptr<implementation> impl_;
 };
 
-	
+
 }}

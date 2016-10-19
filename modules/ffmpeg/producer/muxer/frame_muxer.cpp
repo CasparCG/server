@@ -24,6 +24,7 @@
 #include "frame_muxer.h"
 
 #include "../filter/filter.h"
+#include "../filter/audio_filter.h"
 #include "../util/util.h"
 #include "../../ffmpeg.h"
 
@@ -43,7 +44,7 @@
 #pragma warning (push)
 #pragma warning (disable : 4244)
 #endif
-extern "C" 
+extern "C"
 {
 	#define __STDC_CONSTANT_MACROS
 	#define __STDC_LIMIT_MACROS
@@ -57,6 +58,8 @@ extern "C"
 #include <common/assert.h>
 #include <boost/range/algorithm_ext/push_back.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/optional.hpp>
 
 #include <deque>
 #include <queue>
@@ -66,62 +69,122 @@ using namespace caspar::core;
 
 namespace caspar { namespace ffmpeg {
 
-bool is_frame_format_changed(const AVFrame& lhs, const AVFrame& rhs)
+struct av_frame_format
 {
-	if (lhs.format != rhs.format)
-		return true;
+	int										pix_format;
+	std::array<int, AV_NUM_DATA_POINTERS>	line_sizes;
+	int										width;
+	int										height;
 
-	for (int i = 0; i < AV_NUM_DATA_POINTERS; ++i)
+	av_frame_format(const AVFrame& frame)
+		: pix_format(frame.format)
+		, width(frame.width)
+		, height(frame.height)
 	{
-		if (lhs.linesize[i] != rhs.linesize[i])
-			return true;
+		boost::copy(frame.linesize, line_sizes.begin());
 	}
 
-	return false;
+	bool operator==(const av_frame_format& other) const
+	{
+		return pix_format == other.pix_format
+			&& line_sizes == other.line_sizes
+			&& width == other.width
+			&& height == other.height;
+	}
+
+	bool operator!=(const av_frame_format& other) const
+	{
+		return !(*this == other);
+	}
+};
+
+std::unique_ptr<audio_filter> create_amerge_filter(std::vector<audio_input_pad> input_pads, const core::audio_channel_layout& layout)
+{
+	std::vector<audio_output_pad> output_pads;
+	std::wstring amerge;
+
+	output_pads.emplace_back(
+			std::vector<int>			{ 48000 },
+			std::vector<AVSampleFormat>	{ AVSampleFormat::AV_SAMPLE_FMT_S32 },
+			std::vector<uint64_t>		{ static_cast<uint64_t>(av_get_default_channel_layout(layout.num_channels)) });
+
+	if (input_pads.size() > 1)
+	{
+		for (int i = 0; i < input_pads.size(); ++i)
+			amerge += L"[a:" + boost::lexical_cast<std::wstring>(i) + L"]";
+
+		amerge += L"amerge=inputs=" + boost::lexical_cast<std::wstring>(input_pads.size());
+	}
+
+	std::wstring afilter;
+
+	if (!amerge.empty())
+	{
+		afilter = amerge;
+		afilter += L"[aout:0]";
+	}
+
+	return std::unique_ptr<audio_filter>(new audio_filter(input_pads, output_pads, u8(afilter)));
 }
-	
+
 struct frame_muxer::impl : boost::noncopyable
-{	
-	std::queue<core::mutable_frame>					video_stream_;
-	core::mutable_audio_buffer						audio_stream_;
-	std::queue<draw_frame>							frame_buffer_;
-	display_mode									display_mode_			= display_mode::invalid;
-	const double									in_fps_;
+{
+	std::queue<std::queue<core::mutable_frame>>		video_streams_;
+	std::queue<core::mutable_audio_buffer>			audio_streams_;
+	std::queue<core::draw_frame>					frame_buffer_;
+	display_mode									display_mode_				= display_mode::invalid;
+	const boost::rational<int>						in_framerate_;
 	const video_format_desc							format_desc_;
-	audio_channel_layout							channel_layout_;
-	
-	std::vector<int>								audio_cadence_			= format_desc_.audio_cadence;
-			
+	const audio_channel_layout						audio_channel_layout_;
+
+	std::vector<int>								audio_cadence_				= format_desc_.audio_cadence;
+
 	spl::shared_ptr<core::frame_factory>			frame_factory_;
-	std::shared_ptr<AVFrame>						previous_frame_;
+	boost::optional<av_frame_format>				previously_filtered_frame_;
 
 	std::unique_ptr<filter>							filter_;
 	const std::wstring								filter_str_;
-	bool											force_deinterlacing_	= env::properties().get(L"configuration.force-deinterlace", true);
-		
+	std::unique_ptr<audio_filter>					audio_filter_;
+	const bool										multithreaded_filter_;
+	bool											force_deinterlacing_		= env::properties().get(L"configuration.force-deinterlace", false);
+
+	mutable boost::mutex							out_framerate_mutex_;
+	boost::rational<int>							out_framerate_;
+
 	impl(
-			double in_fps,
+			boost::rational<int> in_framerate,
+			std::vector<audio_input_pad> audio_input_pads,
 			const spl::shared_ptr<core::frame_factory>& frame_factory,
 			const core::video_format_desc& format_desc,
 			const core::audio_channel_layout& channel_layout,
-			const std::wstring& filter_str)
-		: in_fps_(in_fps)
+			const std::wstring& filter_str,
+			bool multithreaded_filter)
+		: in_framerate_(in_framerate)
 		, format_desc_(format_desc)
-		, channel_layout_(channel_layout)
+		, audio_channel_layout_(channel_layout)
 		, frame_factory_(frame_factory)
 		, filter_str_(filter_str)
-	{		
-		// Note: Uses 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
-		// This cadence fills the audio mixer most optimally.
-		boost::range::rotate(audio_cadence_, std::end(audio_cadence_)-1);
+		, multithreaded_filter_(multithreaded_filter)
+	{
+		video_streams_.push(std::queue<core::mutable_frame>());
+		audio_streams_.push(core::mutable_audio_buffer());
+
+		set_out_framerate(in_framerate_);
+
+		if (!audio_input_pads.empty())
+		{
+			audio_filter_ = create_amerge_filter(std::move(audio_input_pads), audio_channel_layout_);
+		}
 	}
-	
-	void push_video(const std::shared_ptr<AVFrame>& video)
-	{		
-		if(!video)
+
+	void push(const std::shared_ptr<AVFrame>& video_frame)
+	{
+		if (!video_frame)
 			return;
 
-		if (previous_frame_ && video->data[0] && is_frame_format_changed(*previous_frame_, *video))
+		av_frame_format current_frame_format(*video_frame);
+
+		if (previously_filtered_frame_ && video_frame->data[0] && *previously_filtered_frame_ != current_frame_format)
 		{
 			// Fixes bug where avfilter crashes server on some DV files (starts in YUV420p but changes to YUV411p after the first frame).
 			if (ffmpeg::is_logging_quiet_for_thread())
@@ -130,290 +193,281 @@ struct frame_muxer::impl : boost::noncopyable
 				CASPAR_LOG(info) << L"[frame_muxer] Frame format has changed. Resetting display mode.";
 
 			display_mode_ = display_mode::invalid;
+			filter_.reset();
+			previously_filtered_frame_ = boost::none;
 		}
 
-		if(!video->data[0])
+		if (video_frame == flush_video())
 		{
-			auto empty_frame = frame_factory_->create_frame(this, core::pixel_format_desc(core::pixel_format::invalid), channel_layout_);
-			video_stream_.push(std::move(empty_frame));
+			video_streams_.push(std::queue<core::mutable_frame>());
+		}
+		else if (video_frame == empty_video())
+		{
+			video_streams_.back().push(frame_factory_->create_frame(this, core::pixel_format::invalid, audio_channel_layout_));
 			display_mode_ = display_mode::simple;
 		}
 		else
 		{
-			if(!filter_ || display_mode_ == display_mode::invalid)
-				update_display_mode(video);
-				
-			filter_->push(video);
-			previous_frame_ = video;
-			for (auto& av_frame : filter_->poll_all())
-				video_stream_.push(make_frame(this, av_frame, format_desc_.fps, *frame_factory_, channel_layout_));
+			if (!filter_ || display_mode_ == display_mode::invalid)
+				update_display_mode(video_frame);
+
+			if (filter_)
+			{
+				filter_->push(video_frame);
+				previously_filtered_frame_ = current_frame_format;
+
+				for (auto& av_frame : filter_->poll_all())
+					video_streams_.back().push(make_frame(this, av_frame, *frame_factory_, audio_channel_layout_));
+			}
 		}
 
-		merge();
+		if (video_streams_.back().size() > 32)
+			CASPAR_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("video-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
 	}
 
-	void push_audio(const std::shared_ptr<AVFrame>& audio)
+	void push(const std::vector<std::shared_ptr<core::mutable_audio_buffer>>& audio_samples_per_stream)
 	{
-		if(!audio)
+		if (audio_samples_per_stream.empty())
 			return;
 
-		if(!audio->data[0])		
-		{
-			if (channel_layout_ == core::audio_channel_layout::invalid())
-				channel_layout_ = *core::audio_channel_layout_repository::get_default()->get_layout(L"stereo");
+		bool is_flush = boost::count_if(
+				audio_samples_per_stream,
+				[](std::shared_ptr<core::mutable_audio_buffer> a) { return a == flush_audio(); }) > 0;
 
-			boost::range::push_back(audio_stream_, core::mutable_audio_buffer(audio_cadence_.front() * channel_layout_.num_channels, 0));
+		if (is_flush)
+		{
+			audio_streams_.push(core::mutable_audio_buffer());
+		}
+		else if (audio_samples_per_stream.at(0) == empty_audio())
+		{
+			boost::range::push_back(audio_streams_.back(), core::mutable_audio_buffer(audio_cadence_.front() * audio_channel_layout_.num_channels, 0));
 		}
 		else
 		{
-			auto ptr = reinterpret_cast<int32_t*>(audio->data[0]);
-			audio_stream_.insert(audio_stream_.end(), ptr, ptr + audio->linesize[0]/sizeof(int32_t));
-		}
-
-		merge();
-	}
-	
-	bool video_ready() const
-	{
-		switch(display_mode_)
-		{
-		case display_mode::deinterlace_bob_reinterlace:					
-		case display_mode::interlace:	
-		case display_mode::half:
-			return video_stream_.size() >= 2;
-		default:										
-			return video_stream_.size() >= 1;
-		}
-	}
-	
-	bool audio_ready() const
-	{
-		switch(display_mode_)
-		{
-		case display_mode::duplicate:					
-			return audio_stream_.size() >= static_cast<size_t>(audio_cadence_[0] + audio_cadence_[1 % audio_cadence_.size()]) * channel_layout_.num_channels;
-		default:										
-			return audio_stream_.size() >= static_cast<size_t>(audio_cadence_.front()) * channel_layout_.num_channels;
-		}
-	}
-
-	bool empty() const
-	{
-		return frame_buffer_.empty();
-	}
-
-	core::draw_frame front() const
-	{
-		return frame_buffer_.front();
-	}
-
-	void pop()
-	{
-		frame_buffer_.pop();
-	}
-		
-	void merge()
-	{
-		while(video_ready() && audio_ready() && display_mode_ != display_mode::invalid)
-		{				
-			auto frame1			= pop_video();
-			frame1.audio_data()	= pop_audio();
-
-			switch(display_mode_)
+			for (int i = 0; i < audio_samples_per_stream.size(); ++i)
 			{
-			case display_mode::simple:						
-			case display_mode::deinterlace_bob:				
-			case display_mode::deinterlace:	
-				{
-					frame_buffer_.push(core::draw_frame(std::move(frame1)));
-					break;
-				}
-			case display_mode::interlace:					
-			case display_mode::deinterlace_bob_reinterlace:	
-				{				
-					auto frame2 = pop_video();
+				auto range = boost::make_iterator_range_n(
+						audio_samples_per_stream.at(i)->data(),
+						audio_samples_per_stream.at(i)->size());
 
-					frame_buffer_.push(core::draw_frame::interlace(
-						core::draw_frame(std::move(frame1)),
-						core::draw_frame(std::move(frame2)),
-						format_desc_.field_mode));	
-					break;
-				}
-			case display_mode::duplicate:	
-				{
-					//boost::range::push_back(frame1.audio_data(), pop_audio());
+				audio_filter_->push(i, range);
+			}
 
-					auto second_audio_frame = core::mutable_frame(
-							std::vector<array<std::uint8_t>>(),
-							pop_audio(),
-							frame1.stream_tag(),
-							core::pixel_format_desc(),
-							channel_layout_);
-					auto first_frame = core::draw_frame(std::move(frame1));
-					auto muted_first_frame = core::draw_frame(first_frame);
-					muted_first_frame.transform().audio_transform.volume = 0;
-					auto second_frame = core::draw_frame({ core::draw_frame(std::move(second_audio_frame)), muted_first_frame });
+			for (auto frame : audio_filter_->poll_all(0))
+			{
+				auto audio = boost::make_iterator_range_n(
+						reinterpret_cast<std::int32_t*>(frame->extended_data[0]),
+						frame->nb_samples * frame->channels);
 
-					// Same video but different audio.
-					frame_buffer_.push(first_frame);
-					frame_buffer_.push(second_frame);
-					break;
-				}
-			case display_mode::half:	
-				{				
-					pop_video(); // Throw away
-
-					frame_buffer_.push(core::draw_frame(std::move(frame1)));
-					break;
-				}
-			default:
-				CASPAR_THROW_EXCEPTION(invalid_operation());
+				boost::range::push_back(audio_streams_.back(), audio);
 			}
 		}
+
+		if (audio_streams_.back().size() > 32 * audio_cadence_.front() * audio_channel_layout_.num_channels)
+			CASPAR_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("audio-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
 	}
-	
+
+	bool video_ready() const
+	{
+		return video_streams_.size() > 1 || (video_streams_.size() >= audio_streams_.size() && video_ready2());
+	}
+
+	bool audio_ready() const
+	{
+		return audio_streams_.size() > 1 || (audio_streams_.size() >= video_streams_.size() && audio_ready2());
+	}
+
+	bool video_ready2() const
+	{
+		return video_streams_.front().size() >= 1;
+	}
+
+	bool audio_ready2() const
+	{
+		return audio_streams_.front().size() >= audio_cadence_.front() * audio_channel_layout_.num_channels;
+	}
+
+	core::draw_frame poll()
+	{
+		if (!frame_buffer_.empty())
+		{
+			auto frame = frame_buffer_.front();
+			frame_buffer_.pop();
+			return frame;
+		}
+
+		if (video_streams_.size() > 1 && audio_streams_.size() > 1 && (!video_ready2() || !audio_ready2()))
+		{
+			if (!video_streams_.front().empty() || !audio_streams_.front().empty())
+				CASPAR_LOG(trace) << "Truncating: " << video_streams_.front().size() << L" video-frames, " << audio_streams_.front().size() << L" audio-samples.";
+
+			video_streams_.pop();
+			audio_streams_.pop();
+		}
+
+		if (!video_ready2() || !audio_ready2() || display_mode_ == display_mode::invalid)
+			return core::draw_frame::empty();
+
+		auto frame			= pop_video();
+		frame.audio_data()	= pop_audio();
+
+		frame_buffer_.push(core::draw_frame(std::move(frame)));
+
+		return poll();
+	}
+
 	core::mutable_frame pop_video()
 	{
-		auto frame = std::move(video_stream_.front());
-		video_stream_.pop();		
-		return std::move(frame);
+		auto frame = std::move(video_streams_.front().front());
+		video_streams_.front().pop();
+		return frame;
 	}
 
 	core::mutable_audio_buffer pop_audio()
 	{
-		if (audio_stream_.size() < audio_cadence_.front() * channel_layout_.num_channels)
-			CASPAR_THROW_EXCEPTION(out_of_range());
+		CASPAR_VERIFY(audio_streams_.front().size() >= audio_cadence_.front() * audio_channel_layout_.num_channels);
 
-		auto begin = audio_stream_.begin();
-		auto end   = begin + audio_cadence_.front() * channel_layout_.num_channels;
+		auto begin	= audio_streams_.front().begin();
+		auto end	= begin + (audio_cadence_.front() * audio_channel_layout_.num_channels);
 
 		core::mutable_audio_buffer samples(begin, end);
-		audio_stream_.erase(begin, end);
-		
-		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
+		audio_streams_.front().erase(begin, end);
+
+		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_) + 1);
 
 		return samples;
 	}
-				
+
+	uint32_t calc_nb_frames(uint32_t nb_frames) const
+	{
+		uint64_t nb_frames2 = nb_frames;
+
+		if(filter_ && filter_->is_double_rate()) // Take into account transformations in filter.
+			nb_frames2 *= 2;
+
+		return static_cast<uint32_t>(nb_frames2);
+	}
+
+	boost::rational<int> out_framerate() const
+	{
+		boost::lock_guard<boost::mutex> lock(out_framerate_mutex_);
+
+		return out_framerate_;
+	}
+private:
 	void update_display_mode(const std::shared_ptr<AVFrame>& frame)
 	{
-		std::wstring filter_str = filter_str_;
+ 		std::wstring filter_str = filter_str_;
 
 		display_mode_ = display_mode::simple;
 
 		auto mode = get_mode(*frame);
-		if(mode == core::field_mode::progressive && frame->height < 720 && in_fps_ < 50.0) // SD frames are interlaced. Probably incorrect meta-data. Fix it.
-			mode = core::field_mode::upper;
 
-		auto fps  = in_fps_;
-
-		if(filter::is_deinterlacing(filter_str_))
-			mode = core::field_mode::progressive;
-
-		if(filter::is_double_rate(filter_str_))
-			fps *= 2;
-			
-		display_mode_ = get_display_mode(mode, fps, format_desc_.field_mode, format_desc_.fps);
-			
-		if((frame->height != 480 || format_desc_.height != 486) && // don't deinterlace for NTSC DV
-				display_mode_ == display_mode::simple && mode != core::field_mode::progressive && format_desc_.field_mode != core::field_mode::progressive && 
-				frame->height != format_desc_.height)
+		if (filter::is_deinterlacing(filter_str_))
 		{
-			display_mode_ = display_mode::deinterlace_bob_reinterlace; // The frame will most likely be scaled, we need to deinterlace->reinterlace	
-		}
-
-		// ALWAYS de-interlace, until we have GPU de-interlacing.
-		if(force_deinterlacing_ && frame->interlaced_frame && display_mode_ != display_mode::deinterlace_bob && display_mode_ != display_mode::deinterlace)
-			display_mode_ = display_mode::deinterlace_bob_reinterlace;
-		
-		if(display_mode_ == display_mode::deinterlace)
-			filter_str = append_filter(filter_str, L"YADIF=0:-1");
-		else if(display_mode_ == display_mode::deinterlace_bob || display_mode_ == display_mode::deinterlace_bob_reinterlace)
-			filter_str = append_filter(filter_str, L"YADIF=1:-1");
-
-		if(display_mode_ == display_mode::invalid)
-		{
-			if (ffmpeg::is_logging_quiet_for_thread())
-				CASPAR_LOG(debug) << L"[frame_muxer] Auto-transcode: Failed to detect display-mode.";
-			else
-				CASPAR_LOG(warning) << L"[frame_muxer] Auto-transcode: Failed to detect display-mode.";
-
 			display_mode_ = display_mode::simple;
 		}
+		else if (mode != core::field_mode::progressive)
+		{
+			if (force_deinterlacing_)
+			{
+				display_mode_ = display_mode::deinterlace_bob;
+			}
+			else
+			{
+				bool output_also_interlaced = format_desc_.field_mode != core::field_mode::progressive;
+				bool interlaced_output_compatible =
+						output_also_interlaced
+						&& (
+								(frame->height == 480 && format_desc_.height == 486) // don't deinterlace for NTSC DV
+								|| frame->height == format_desc_.height
+						)
+						&& in_framerate_ == format_desc_.framerate;
 
-		if(frame->height == 480) // NTSC DV
+				display_mode_ = interlaced_output_compatible ? display_mode::simple : display_mode::deinterlace_bob;
+			}
+		}
+
+		if (display_mode_ == display_mode::deinterlace_bob)
+			filter_str = append_filter(filter_str, L"YADIF=1:-1");
+
+		auto out_framerate = in_framerate_;
+
+		if (filter::is_double_rate(filter_str))
+			out_framerate *= 2;
+
+		if (frame->height == 480) // NTSC DV
 		{
 			auto pad_str = L"PAD=" + boost::lexical_cast<std::wstring>(frame->width) + L":486:0:2:black";
 			filter_str = append_filter(filter_str, pad_str);
 		}
 
 		filter_.reset (new filter(
-			frame->width,
-			frame->height,
-			boost::rational<int>(1000000, static_cast<int>(in_fps_ * 1000000)),
-			boost::rational<int>(static_cast<int>(in_fps_ * 1000000), 1000000),
-			boost::rational<int>(frame->sample_aspect_ratio.num, frame->sample_aspect_ratio.den),
-			static_cast<AVPixelFormat>(frame->format),
-			std::vector<AVPixelFormat>(),
-			u8(filter_str)));
+				frame->width,
+				frame->height,
+				1 / in_framerate_,
+				in_framerate_,
+				boost::rational<int>(frame->sample_aspect_ratio.num, frame->sample_aspect_ratio.den),
+				static_cast<AVPixelFormat>(frame->format),
+				std::vector<AVPixelFormat>(),
+				u8(filter_str)));
+
+		set_out_framerate(out_framerate);
+
+		auto in_fps = static_cast<double>(in_framerate_.numerator()) / static_cast<double>(in_framerate_.denominator());
 
 		if (ffmpeg::is_logging_quiet_for_thread())
-			CASPAR_LOG(debug) << L"[frame_muxer] " << display_mode_ << L" " << print_mode(frame->width, frame->height, in_fps_, frame->interlaced_frame > 0);
+			CASPAR_LOG(debug) << L"[frame_muxer] " << display_mode_ << L" " << print_mode(frame->width, frame->height, in_fps, frame->interlaced_frame > 0);
 		else
-			CASPAR_LOG(info) << L"[frame_muxer] " << display_mode_ << L" " << print_mode(frame->width, frame->height, in_fps_, frame->interlaced_frame > 0);
+			CASPAR_LOG(info) << L"[frame_muxer] " << display_mode_ << L" " << print_mode(frame->width, frame->height, in_fps, frame->interlaced_frame > 0);
 	}
-	
-	uint32_t calc_nb_frames(uint32_t nb_frames) const
-	{
-		uint64_t nb_frames2 = nb_frames;
-		
-		if(filter_ && filter_->is_double_rate()) // Take into account transformations in filter.
-			nb_frames2 *= 2;
 
-		switch(display_mode_) // Take into account transformation in run.
+	void merge()
+	{
+		while (video_ready() && audio_ready() && display_mode_ != display_mode::invalid)
 		{
-		case display_mode::deinterlace_bob_reinterlace:
-		case display_mode::interlace:	
-		case display_mode::half:
-			nb_frames2 /= 2;
-			break;
-		case display_mode::duplicate:
-			nb_frames2 *= 2;
-			break;
-		}
+			auto frame1 = pop_video();
+			frame1.audio_data() = pop_audio();
 
-		return static_cast<uint32_t>(nb_frames2);
+			frame_buffer_.push(core::draw_frame(std::move(frame1)));
+		}
 	}
 
-	void clear()
+	void set_out_framerate(boost::rational<int> out_framerate)
 	{
-		while(!video_stream_.empty())
-			video_stream_.pop();	
+		boost::lock_guard<boost::mutex> lock(out_framerate_mutex_);
 
-		audio_stream_.clear();
+		bool changed = out_framerate != out_framerate_;
+		out_framerate_ = std::move(out_framerate);
 
-		while(!frame_buffer_.empty())
-			frame_buffer_.pop();
-		
-		filter_.reset();
+		if (changed)
+			update_audio_cadence();
+	}
+
+	void update_audio_cadence()
+	{
+		audio_cadence_ = find_audio_cadence(out_framerate_);
+
+		// Note: Uses 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
+		// This cadence fills the audio mixer most optimally.
+		boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
 	}
 };
 
 frame_muxer::frame_muxer(
-		double in_fps,
+		boost::rational<int> in_framerate,
+		std::vector<audio_input_pad> audio_input_pads,
 		const spl::shared_ptr<core::frame_factory>& frame_factory,
 		const core::video_format_desc& format_desc,
 		const core::audio_channel_layout& channel_layout,
-		const std::wstring& filter)
-	: impl_(new impl(in_fps, frame_factory, format_desc, channel_layout, filter)){}
-void frame_muxer::push_video(const std::shared_ptr<AVFrame>& frame){impl_->push_video(frame);}
-void frame_muxer::push_audio(const std::shared_ptr<AVFrame>& frame){impl_->push_audio(frame);}
-bool frame_muxer::empty() const{return impl_->empty();}
-core::draw_frame frame_muxer::front() const{return impl_->front();}
-void frame_muxer::pop(){return impl_->pop();}
-void frame_muxer::clear(){impl_->clear();}
+		const std::wstring& filter,
+		bool multithreaded_filter)
+	: impl_(new impl(std::move(in_framerate), std::move(audio_input_pads), frame_factory, format_desc, channel_layout, filter, multithreaded_filter)){}
+void frame_muxer::push(const std::shared_ptr<AVFrame>& video){impl_->push(video);}
+void frame_muxer::push(const std::vector<std::shared_ptr<core::mutable_audio_buffer>>& audio_samples_per_stream){impl_->push(audio_samples_per_stream);}
+core::draw_frame frame_muxer::poll(){return impl_->poll();}
 uint32_t frame_muxer::calc_nb_frames(uint32_t nb_frames) const {return impl_->calc_nb_frames(nb_frames);}
 bool frame_muxer::video_ready() const{return impl_->video_ready();}
 bool frame_muxer::audio_ready() const{return impl_->audio_ready();}
-
+boost::rational<int> frame_muxer::out_framerate() const { return impl_->out_framerate(); }
 }}

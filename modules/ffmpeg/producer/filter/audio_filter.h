@@ -25,6 +25,7 @@
 
 #include <boost/rational.hpp>
 #include <boost/noncopyable.hpp>
+#include <boost/range/iterator_range.hpp>
 
 #include <string>
 #include <vector>
@@ -45,24 +46,57 @@ struct AVFrame;
 
 namespace caspar { namespace ffmpeg {
 
+struct audio_input_pad
+{
+	boost::rational<int>	time_base;
+	int						sample_rate;
+	AVSampleFormat			sample_fmt;
+	std::uint64_t			audio_channel_layout;
+
+	audio_input_pad(
+			boost::rational<int> time_base,
+			int sample_rate,
+			AVSampleFormat sample_fmt,
+			std::uint64_t audio_channel_layout)
+		: time_base(std::move(time_base))
+		, sample_rate(sample_rate)
+		, sample_fmt(sample_fmt)
+		, audio_channel_layout(audio_channel_layout)
+	{
+	}
+};
+
+struct audio_output_pad
+{
+	std::vector<int>			sample_rates;
+	std::vector<AVSampleFormat>	sample_fmts;
+	std::vector<std::uint64_t>	audio_channel_layouts;
+
+	audio_output_pad(
+			std::vector<int> sample_rates,
+			std::vector<AVSampleFormat> sample_fmts,
+			std::vector<std::uint64_t> audio_channel_layouts)
+		: sample_rates(std::move(sample_rates))
+		, sample_fmts(std::move(sample_fmts))
+		, audio_channel_layouts(std::move(audio_channel_layouts))
+	{
+	}
+};
+
 class audio_filter : boost::noncopyable
 {
 public:
 	audio_filter(
-			boost::rational<int> in_time_base,
-			int in_sample_rate,
-			AVSampleFormat in_sample_fmt,
-			std::int64_t in_audio_channel_layout,
-			std::vector<int> out_sample_rates,
-			std::vector<AVSampleFormat> out_sample_fmts,
-			std::vector<std::int64_t> out_audio_channel_layouts,
+			std::vector<audio_input_pad> input_pads,
+			std::vector<audio_output_pad> output_pads,
 			const std::string& filtergraph);
 	audio_filter(audio_filter&& other);
 	audio_filter& operator=(audio_filter&& other);
 
-	void push(const std::shared_ptr<AVFrame>& frame);
-	std::shared_ptr<AVFrame> poll();
-	std::vector<spl::shared_ptr<AVFrame>> poll_all();
+	void push(int input_pad_id, const std::shared_ptr<AVFrame>& frame);
+	void push(int input_pad_id, const boost::iterator_range<const int32_t*>& frame_samples);
+	std::shared_ptr<AVFrame> poll(int output_pad_id);
+	std::vector<spl::shared_ptr<AVFrame>> poll_all(int output_pad_id);
 
 	std::wstring filter_str() const;
 private:

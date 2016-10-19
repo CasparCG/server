@@ -26,6 +26,8 @@ set(SOURCES
 
 		producer/color/color_producer.cpp
 
+		producer/framerate/framerate_producer.cpp
+
 		producer/media_info/in_memory_media_info_repository.cpp
 
 		producer/scene/const_producer.cpp
@@ -84,11 +86,17 @@ set(HEADERS
 		interaction/interaction_sink.h
 		interaction/util.h
 
+		mixer/audio/audio_mixer.h
+
+		mixer/image/blend_modes.h
+
 		mixer/mixer.h
 
 		monitor/monitor.h
 
 		producer/color/color_producer.h
+
+		producer/framerate/framerate_producer.h
 
 		producer/media_info/in_memory_media_info_repository.h
 		producer/media_info/media_info.h
@@ -142,16 +150,21 @@ include_directories(${GLEW_INCLUDE_PATH})
 source_group(sources ./*)
 source_group(sources\\consumer consumer/*)
 source_group(sources\\diagnostics diagnostics/*)
+source_group(sources\\producer producer/*)
+source_group(sources\\producer\\framerate producer/framerate/*)
 source_group(sources\\frame frame/*)
 source_group(sources\\help help/*)
 source_group(sources\\interaction interaction/*)
 source_group(sources\\mixer mixer/*)
+source_group(sources\\mixer\\audio mixer/audio/*)
+source_group(sources\\mixer\\image mixer/image/*)
+source_group(sources\\producer\\color producer/color/*)
 source_group(sources\\producer\\media_info producer/media_info/*)
 source_group(sources\\producer\\scene producer/scene/*)
 source_group(sources\\producer\\text\\utils producer/text/utils/*)
 source_group(sources\\producer\\text producer/text/*)
 source_group(sources\\producer\\transition producer/transition/*)
-source_group(sources\\producer producer/*)
+source_group(sources\\producer\\separated producer/separated/*)
 
 if (MSVC)
 	target_link_libraries(core

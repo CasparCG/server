@@ -144,18 +144,13 @@ struct audio_channel_remapper::impl
 		if (!the_same_layouts_)
 		{
 			auto mix_config = mix_repo->get_config(input_layout_.type, output_layout_.type);
-			auto pan_filter = u8(generate_pan_filter_str(input_layout_, output_layout_, mix_config));
+			auto pan_filter = "[a:0] " + u8(generate_pan_filter_str(input_layout_, output_layout_, mix_config)) + " [aout:0]";
 
 			CASPAR_LOG(debug) << "[audio_channel_remapper] Using audio filter: " << pan_filter;
 			auto quiet_logging = ffmpeg::temporary_enable_quiet_logging_for_thread(true);
 			filter_.reset(new ffmpeg::audio_filter(
-					boost::rational<int>(1, 1),
-					48000,
-					AV_SAMPLE_FMT_S32,
-					ffmpeg::create_channel_layout_bitmask(input_layout_.num_channels),
-					{ 48000 },
-					{ AV_SAMPLE_FMT_S32 },
-					{ ffmpeg::create_channel_layout_bitmask(output_layout_.num_channels) },
+					{ ffmpeg::audio_input_pad(boost::rational<int>(1, 1), 48000, AV_SAMPLE_FMT_S32, ffmpeg::create_channel_layout_bitmask(input_layout_.num_channels)) },
+					{ ffmpeg::audio_output_pad({ 48000 }, { AV_SAMPLE_FMT_S32 }, { ffmpeg::create_channel_layout_bitmask(output_layout_.num_channels) }) },
 					pan_filter));
 		}
 		else
@@ -171,31 +166,10 @@ struct audio_channel_remapper::impl
 
 		auto num_samples			=	input.size() / input_layout_.num_channels;
 		auto expected_output_size	=	num_samples * output_layout_.num_channels;
-		auto input_frame			=	std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* p)
-										{
-											if (p)
-												av_frame_free(&p);
-										});
 
-		input_frame->channels		=	input_layout_.num_channels;
-		input_frame->channel_layout	=	ffmpeg::create_channel_layout_bitmask(input_layout_.num_channels);
-		input_frame->sample_rate	=	48000;
-		input_frame->nb_samples		=	static_cast<int>(num_samples);
-		input_frame->format			=	AV_SAMPLE_FMT_S32;
-		input_frame->pts			=	0;
+		filter_->push(0, boost::make_iterator_range(input));
 
-		av_samples_fill_arrays(
-				input_frame->extended_data,
-				input_frame->linesize,
-				reinterpret_cast<const std::uint8_t*>(input.data()),
-				input_frame->channels,
-				input_frame->nb_samples,
-				static_cast<AVSampleFormat>(input_frame->format),
-				16);
-
-		filter_->push(input_frame);
-
-		auto frames = filter_->poll_all();
+		auto frames = filter_->poll_all(0);
 
 		CASPAR_ENSURE(frames.size() == 1); // Expect 1:1 from pan filter
 

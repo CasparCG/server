@@ -86,11 +86,11 @@ static com_ptr<IDeckLinkIterator> create_iterator()
 }
 
 template<typename I, typename T>
-static com_iface_ptr<I> iface_cast(const com_ptr<T>& ptr)
+static com_iface_ptr<I> iface_cast(const com_ptr<T>& ptr, bool optional = false)
 {
 	com_iface_ptr<I> result = ptr;
 
-	if (!result)
+	if (!optional && !result)
 		CASPAR_THROW_EXCEPTION(not_supported() << msg_info(std::string("Could not cast from ") + typeid(T).name() + " to " + typeid(I).name() + ". This is probably due to old Decklink drivers."));
 
 	return result;
@@ -107,6 +107,7 @@ T* get_raw(const CComPtr<T>& ptr)
 #else
 
 #include "linux_interop/DeckLinkAPI.h"
+#include "linux_interop/DeckLinkAPIConfiguration_v10_2.h"
 #include <memory>
 #include <typeinfo>
 
@@ -170,12 +171,13 @@ template<>              REFIID iface_id<IDeckLink>() { return IID_IDeckLink; }
 template<>              REFIID iface_id<IDeckLinkOutput>() { return IID_IDeckLinkOutput; }
 template<>              REFIID iface_id<IDeckLinkAPIInformation>() { return IID_IDeckLinkAPIInformation; }
 template<>              REFIID iface_id<IDeckLinkConfiguration>() { return IID_IDeckLinkConfiguration; }
+template<>              REFIID iface_id<IDeckLinkConfiguration_v10_2>() { return IID_IDeckLinkConfiguration_v10_2; }
 template<>              REFIID iface_id<IDeckLinkKeyer>() { return IID_IDeckLinkKeyer; }
 template<>              REFIID iface_id<IDeckLinkAttributes>() { return IID_IDeckLinkAttributes; }
 template<>              REFIID iface_id<IDeckLinkInput>() { return IID_IDeckLinkInput; }
 
 template<typename I, typename T>
-static com_iface_ptr<I> iface_cast(com_ptr<T> ptr)
+static com_iface_ptr<I> iface_cast(com_ptr<T> ptr, bool optional = false)
 {
     I* iface;
     ptr->QueryInterface(iface_id<I>(), reinterpret_cast<void**>(&iface));

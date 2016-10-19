@@ -27,6 +27,7 @@
 
 #include "../tbb_avcodec.h"
 #include "../../ffmpeg_error.h"
+#include "../../ffmpeg.h"
 
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_queue.h>
@@ -57,7 +58,7 @@
 #pragma warning (push)
 #pragma warning (disable : 4244)
 #endif
-extern "C" 
+extern "C"
 {
 	#include <libswscale/swscale.h>
 	#include <libavcodec/avcodec.h>
@@ -68,7 +69,7 @@ extern "C"
 #endif
 
 namespace caspar { namespace ffmpeg {
-		
+
 core::field_mode get_mode(const AVFrame& frame)
 {
 	if(!frame.interlaced_frame)
@@ -101,23 +102,23 @@ core::pixel_format get_pixel_format(PixelFormat pix_fmt)
 core::pixel_format_desc pixel_format_desc(PixelFormat pix_fmt, int width, int height)
 {
 	// Get linesizes
-	AVPicture dummy_pict;	
+	AVPicture dummy_pict;
 	avpicture_fill(&dummy_pict, nullptr, pix_fmt, width, height);
 
 	core::pixel_format_desc desc = get_pixel_format(pix_fmt);
-		
+
 	switch(desc.format)
 	{
 	case core::pixel_format::gray:
 	case core::pixel_format::luma:
 		{
-			desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0], height, 1));						
+			desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0], height, 1));
 			return desc;
 		}
 	case core::pixel_format::bgr:
 	case core::pixel_format::rgb:
 		{
-			desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0]/3, height, 3));						
+			desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0]/3, height, 3));
 			return desc;
 		}
 	case core::pixel_format::bgra:
@@ -125,41 +126,41 @@ core::pixel_format_desc pixel_format_desc(PixelFormat pix_fmt, int width, int he
 	case core::pixel_format::rgba:
 	case core::pixel_format::abgr:
 		{
-			desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0]/4, height, 4));						
+			desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0]/4, height, 4));
 			return desc;
 		}
 	case core::pixel_format::ycbcr:
 	case core::pixel_format::ycbcra:
-		{		
+		{
 			// Find chroma height
 			int size2 = static_cast<int>(dummy_pict.data[2] - dummy_pict.data[1]);
-			int h2 = size2/dummy_pict.linesize[1];			
+			int h2 = size2/dummy_pict.linesize[1];
 
 			desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[0], height, 1));
 			desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[1], h2, 1));
 			desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[2], h2, 1));
 
-			if(desc.format == core::pixel_format::ycbcra)						
-				desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[3], height, 1));	
+			if(desc.format == core::pixel_format::ycbcra)
+				desc.planes.push_back(core::pixel_format_desc::plane(dummy_pict.linesize[3], height, 1));
 			return desc;
-		}		
-	default:		
+		}
+	default:
 		desc.format = core::pixel_format::invalid;
 		return desc;
 	}
 }
 
-core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, double fps, core::frame_factory& frame_factory, const core::audio_channel_layout& channel_layout)
-{			
+core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& decoded_frame, core::frame_factory& frame_factory, const core::audio_channel_layout& channel_layout)
+{
 	static tbb::concurrent_unordered_map<int64_t, tbb::concurrent_queue<std::shared_ptr<SwsContext>>> sws_contvalid_exts_;
-	
+
 	if(decoded_frame->width < 1 || decoded_frame->height < 1)
 		return frame_factory.create_frame(tag, core::pixel_format_desc(core::pixel_format::invalid), core::audio_channel_layout::invalid());
 
 	const auto width  = decoded_frame->width;
 	const auto height = decoded_frame->height;
 	auto desc		  = pixel_format_desc(static_cast<PixelFormat>(decoded_frame->format), width, height);
-		
+
 	if(desc.format == core::pixel_format::invalid)
 	{
 		auto pix_fmt = static_cast<PixelFormat>(decoded_frame->format);
@@ -177,7 +178,7 @@ core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& 
 			target_pix_fmt = PIX_FMT_YUV422P;
 		else if(pix_fmt == PIX_FMT_YUV444P10)
 			target_pix_fmt = PIX_FMT_YUV444P;
-		
+
 		auto target_desc = pixel_format_desc(target_pix_fmt, width, height);
 
 		auto write = frame_factory.create_frame(tag, target_desc, channel_layout);
@@ -185,32 +186,31 @@ core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& 
 		std::shared_ptr<SwsContext> sws_context;
 
 		//CASPAR_LOG(warning) << "Hardware accelerated color transform not supported.";
-		
-		int64_t key = ((static_cast<int64_t>(width)			 << 32) & 0xFFFF00000000) | 
-					  ((static_cast<int64_t>(height)		 << 16) & 0xFFFF0000) | 
-					  ((static_cast<int64_t>(pix_fmt)		 <<  8) & 0xFF00) | 
+
+		int64_t key = ((static_cast<int64_t>(width)			 << 32) & 0xFFFF00000000) |
+					  ((static_cast<int64_t>(height)		 << 16) & 0xFFFF0000) |
+					  ((static_cast<int64_t>(pix_fmt)		 <<  8) & 0xFF00) |
 					  ((static_cast<int64_t>(target_pix_fmt) <<  0) & 0xFF);
-			
+
 		auto& pool = sws_contvalid_exts_[key];
-						
+
 		if(!pool.try_pop(sws_context))
 		{
 			double param;
 			sws_context.reset(sws_getContext(width, height, pix_fmt, width, height, target_pix_fmt, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
 		}
-			
+
 		if(!sws_context)
 		{
-			CASPAR_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling context.") << 
+			CASPAR_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling context.") <<
 									boost::errinfo_api_function("sws_getContext"));
-		}	
-		
-		spl::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
-		avcodec_get_frame_defaults(av_frame.get());			
+		}
+
+		auto av_frame = create_frame();
 		if(target_pix_fmt == PIX_FMT_BGRA)
 		{
 			auto size = avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write.image_data(0).begin(), PIX_FMT_BGRA, width, height);
-			CASPAR_VERIFY(size == write.image_data(0).size()); 
+			CASPAR_VERIFY(size == write.image_data(0).size());
 		}
 		else
 		{
@@ -223,22 +223,22 @@ core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& 
 			}
 		}
 
-		sws_scale(sws_context.get(), decoded_frame->data, decoded_frame->linesize, 0, height, av_frame->data, av_frame->linesize);	
-		pool.push(sws_context);	
+		sws_scale(sws_context.get(), decoded_frame->data, decoded_frame->linesize, 0, height, av_frame->data, av_frame->linesize);
+		pool.push(sws_context);
 
 		return std::move(write);
 	}
 	else
 	{
 		auto write = frame_factory.create_frame(tag, desc, channel_layout);
-		
+
 		for(int n = 0; n < static_cast<int>(desc.planes.size()); ++n)
 		{
 			auto plane            = desc.planes[n];
 			auto result           = write.image_data(n).begin();
 			auto decoded          = decoded_frame->data[n];
 			auto decoded_linesize = decoded_frame->linesize[n];
-			
+
 			CASPAR_ASSERT(decoded);
 			CASPAR_ASSERT(write.image_data(n).begin());
 
@@ -257,7 +257,7 @@ core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& 
 				fast_memcpy(result, decoded, plane.size);
 			}
 		}
-	
+
 		return std::move(write);
 	}
 }
@@ -273,18 +273,17 @@ spl::shared_ptr<AVFrame> make_av_frame(core::mutable_frame& frame)
 
 spl::shared_ptr<AVFrame> make_av_frame(std::array<uint8_t*, 4> data, const core::pixel_format_desc& pix_desc)
 {
-	spl::shared_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
-	avcodec_get_frame_defaults(av_frame.get());
-	
+	auto av_frame = create_frame();
+
 	auto planes		 = pix_desc.planes;
 	auto format		 = pix_desc.format;
 
 	av_frame->width  = planes[0].width;
 	av_frame->height = planes[0].height;
-	for(int n = 0; n < planes.size(); ++n)	
+	for(int n = 0; n < planes.size(); ++n)
 	{
 		av_frame->data[n]	  = data[n];
-		av_frame->linesize[n] = planes[n].linesize;	
+		av_frame->linesize[n] = planes[n].linesize;
 	}
 
 	switch(format)
@@ -296,19 +295,19 @@ spl::shared_ptr<AVFrame> make_av_frame(std::array<uint8_t*, 4> data, const core:
 		av_frame->format = PIX_FMT_BGR24;
 		break;
 	case core::pixel_format::rgba:
-		av_frame->format = PIX_FMT_RGBA; 
+		av_frame->format = PIX_FMT_RGBA;
 		break;
 	case core::pixel_format::argb:
-		av_frame->format = PIX_FMT_ARGB; 
+		av_frame->format = PIX_FMT_ARGB;
 		break;
 	case core::pixel_format::bgra:
-		av_frame->format = PIX_FMT_BGRA; 
+		av_frame->format = PIX_FMT_BGRA;
 		break;
 	case core::pixel_format::abgr:
-		av_frame->format = PIX_FMT_ABGR; 
+		av_frame->format = PIX_FMT_ABGR;
 		break;
 	case core::pixel_format::gray:
-		av_frame->format = PIX_FMT_GRAY8; 
+		av_frame->format = PIX_FMT_GRAY8;
 		break;
 	case core::pixel_format::ycbcr:
 	{
@@ -346,8 +345,8 @@ bool is_sane_fps(AVRational time_base)
 AVRational fix_time_base(AVRational time_base)
 {
 	if(time_base.num == 1)
-		time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(time_base.den)))-1));	
-			
+		time_base.num = static_cast<int>(std::pow(10.0, static_cast<int>(std::log10(static_cast<float>(time_base.den)))-1));
+
 	if(!is_sane_fps(time_base))
 	{
 		auto tmp = time_base;
@@ -360,77 +359,83 @@ AVRational fix_time_base(AVRational time_base)
 }
 
 double read_fps(AVFormatContext& context, double fail_value)
-{						
+{
+	auto framerate = read_framerate(context, boost::rational<int>(static_cast<int>(fail_value * 1000000.0), 1000000));
+
+	return static_cast<double>(framerate.numerator()) / static_cast<double>(framerate.denominator());
+}
+
+boost::rational<int> read_framerate(AVFormatContext& context, const boost::rational<int>& fail_value)
+{
 	auto video_index = av_find_best_stream(&context, AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
 	auto audio_index = av_find_best_stream(&context, AVMEDIA_TYPE_AUDIO, -1, -1, 0, 0);
-	
-	if(video_index > -1)
+
+	if (video_index > -1)
 	{
 		const auto video_context = context.streams[video_index]->codec;
-		const auto video_stream  = context.streams[video_index];
+		const auto video_stream = context.streams[video_index];
 
 		auto frame_rate_time_base = video_stream->avg_frame_rate;
 		std::swap(frame_rate_time_base.num, frame_rate_time_base.den);
 
 		if (is_sane_fps(frame_rate_time_base))
 		{
-			return static_cast<double>(frame_rate_time_base.den) / static_cast<double>(frame_rate_time_base.num);
+			return boost::rational<int>(frame_rate_time_base.den, frame_rate_time_base.num);
 		}
 
 		AVRational time_base = video_context->time_base;
 
-		if(boost::filesystem::path(context.filename).extension().string() == ".flv")
+		if (boost::filesystem::path(context.filename).extension().string() == ".flv")
 		{
 			try
 			{
 				auto meta = read_flv_meta_info(context.filename);
-				return boost::lexical_cast<double>(meta["framerate"]);
+				return boost::rational<int>(static_cast<int>(boost::lexical_cast<double>(meta["framerate"]) * 1000000.0), 1000000);
 			}
-			catch(...)
+			catch (...)
 			{
-				return 0.0;
+				return fail_value;
 			}
 		}
 		else
 		{
 			time_base.num *= video_context->ticks_per_frame;
 
-			if(!is_sane_fps(time_base))
-			{			
+			if (!is_sane_fps(time_base))
+			{
 				time_base = fix_time_base(time_base);
 
-				if(!is_sane_fps(time_base) && audio_index > -1)
+				if (!is_sane_fps(time_base) && audio_index > -1)
 				{
 					auto& audio_context = *context.streams[audio_index]->codec;
-					auto& audio_stream  = *context.streams[audio_index];
+					auto& audio_stream = *context.streams[audio_index];
 
 					double duration_sec = audio_stream.duration / static_cast<double>(audio_context.sample_rate);
-								
+
 					time_base.num = static_cast<int>(duration_sec*100000.0);
-					time_base.den = static_cast<int>(video_stream->nb_frames*100000);
+					time_base.den = static_cast<int>(video_stream->nb_frames * 100000);
 				}
 			}
 		}
-		
-		double fps = static_cast<double>(time_base.den) / static_cast<double>(time_base.num);
 
-		double closest_fps = 0.0;
+		boost::rational<int> fps(time_base.den, time_base.num);
+		boost::rational<int> closest_fps(0);
 
 		for (auto video_mode : enum_constants<core::video_format>())
 		{
 			auto format = core::video_format_desc(core::video_format(video_mode));
 
-			double diff1 = std::abs(format.fps - fps);
-			double diff2 = std::abs(closest_fps - fps);
+			auto diff1 = boost::abs(boost::rational<int>(format.time_scale, format.duration) - fps);
+			auto diff2 = boost::abs(closest_fps - fps);
 
-			if(diff1 < diff2)
-				closest_fps = format.fps;
+			if (diff1 < diff2)
+				closest_fps = boost::rational<int>(format.time_scale, format.duration);
 		}
-	
+
 		return closest_fps;
 	}
 
-	return fail_value;	
+	return fail_value;
 }
 
 void fix_meta_data(AVFormatContext& context)
@@ -441,7 +446,7 @@ void fix_meta_data(AVFormatContext& context)
 	{
 		auto video_stream   = context.streams[video_index];
 		auto video_context  = context.streams[video_index]->codec;
-						
+
 		if(boost::filesystem::path(context.filename).extension().string() == ".flv")
 		{
 			try
@@ -460,7 +465,7 @@ void fix_meta_data(AVFormatContext& context)
 			auto ticks		 = video_context->ticks_per_frame;
 
 			if(video_stream->nb_frames == 0)
-				video_stream->nb_frames = (duration*stream_time.num*codec_time.den)/(stream_time.den*codec_time.num*ticks);	
+				video_stream->nb_frames = (duration*stream_time.num*codec_time.den)/(stream_time.den*codec_time.num*ticks);
 		}
 	}
 }
@@ -472,22 +477,48 @@ spl::shared_ptr<AVPacket> create_packet()
 		av_free_packet(p);
 		delete p;
 	});
-	
+
 	av_init_packet(packet.get());
 	return packet;
 }
 
 spl::shared_ptr<AVFrame> create_frame()
-{	
-	spl::shared_ptr<AVFrame> frame(avcodec_alloc_frame(), av_free);
-	avcodec_get_frame_defaults(frame.get());
+{
+	spl::shared_ptr<AVFrame> frame(av_frame_alloc(), [](AVFrame* p)
+	{
+		av_frame_free(&p);
+	});
 	return frame;
 }
 
+std::shared_ptr<core::mutable_audio_buffer> flush_audio()
+{
+	static std::shared_ptr<core::mutable_audio_buffer> audio(new core::mutable_audio_buffer());
+	return audio;
+}
+
+std::shared_ptr<core::mutable_audio_buffer> empty_audio()
+{
+	static std::shared_ptr<core::mutable_audio_buffer> audio(new core::mutable_audio_buffer());
+	return audio;
+}
+
+std::shared_ptr<AVFrame> flush_video()
+{
+	static auto video = create_frame();
+	return video;
+}
+
+std::shared_ptr<AVFrame> empty_video()
+{
+	static auto video = create_frame();
+	return video;
+}
+
 spl::shared_ptr<AVCodecContext> open_codec(AVFormatContext& context, enum AVMediaType type, int& index, bool single_threaded)
-{	
+{
 	AVCodec* decoder;
-	index = THROW_ON_ERROR2(av_find_best_stream(&context, type, -1, -1, &decoder, 0), "");
+	index = THROW_ON_ERROR2(av_find_best_stream(&context, type, index, -1, &decoder, 0), "");
 	//if(strcmp(decoder->name, "prores") == 0 && decoder->next && strcmp(decoder->next->name, "prores_lgpl") == 0)
 	//	decoder = decoder->next;
 
@@ -517,7 +548,7 @@ std::wstring print_mode(int width, int height, double fps, bool interlaced)
 }
 
 bool is_valid_file(const std::wstring& filename, bool only_video)
-{				
+{
 	static const auto invalid_exts = {
 		L".png",
 		L".tga",
@@ -552,21 +583,21 @@ bool is_valid_file(const std::wstring& filename, bool only_video)
 	};
 
 	auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
-		
+
 	if(std::find(valid_exts.begin(), valid_exts.end(), ext) != valid_exts.end())
 		return true;
 
 	if (!only_video && std::find(only_audio.begin(), only_audio.end(), ext) != only_audio.end())
 		return true;
-	
+
 	if(std::find(invalid_exts.begin(), invalid_exts.end(), ext) != invalid_exts.end())
-		return false;	
+		return false;
 
 	if (only_video && std::find(only_audio.begin(), only_audio.end(), ext) != only_audio.end())
 		return false;
 
 	auto u8filename = u8(filename);
-	
+
 	int score = 0;
 	AVProbeData pb = {};
 	pb.filename = u8filename.c_str();
@@ -581,7 +612,7 @@ bool is_valid_file(const std::wstring& filename, bool only_video)
 		buf.push_back(*file_it);
 
 	if(buf.empty())
-		return nullptr;
+		return false;
 
 	pb.buf		= buf.data();
 	pb.buf_size = static_cast<int>(buf.size());
@@ -638,10 +669,8 @@ std::wstring probe_stem(const std::wstring& stem, bool only_video)
 	return L"";
 }
 
-core::audio_channel_layout get_audio_channel_layout(const AVCodecContext& codec_context, const std::wstring& channel_layout_spec)
+core::audio_channel_layout get_audio_channel_layout(int num_channels, std::uint64_t layout, const std::wstring& channel_layout_spec)
 {
-	auto num_channels = codec_context.channels;
-
 	if (!channel_layout_spec.empty())
 	{
 		if (boost::contains(channel_layout_spec, L":")) // Custom on the fly layout specified.
@@ -655,18 +684,18 @@ core::audio_channel_layout get_audio_channel_layout(const AVCodecContext& codec_
 		}
 		else // Preconfigured named channel layout selected.
 		{
-			auto layout = core::audio_channel_layout_repository::get_default()->get_layout(channel_layout_spec);
+			auto channel_layout = core::audio_channel_layout_repository::get_default()->get_layout(channel_layout_spec);
 
-			if (!layout)
+			if (!channel_layout)
 				CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"No channel layout with name " + channel_layout_spec + L" registered"));
 
-			layout->num_channels = num_channels;
+			channel_layout->num_channels = num_channels;
 
-			return *layout;
+			return *channel_layout;
 		}
 	}
 
-	if (!codec_context.channel_layout)
+	if (!layout)
 	{
 		if (num_channels == 1)
 			return core::audio_channel_layout(num_channels, L"mono", L"FC");
@@ -682,7 +711,7 @@ core::audio_channel_layout get_audio_channel_layout(const AVCodecContext& codec_
 	// than the most common (5.1, mono and stereo) types.
 
 	// Based on information in https://ffmpeg.org/ffmpeg-utils.html#Channel-Layout
-	switch (codec_context.channel_layout)
+	switch (layout)
 	{
 	case AV_CH_LAYOUT_MONO:
 		return core::audio_channel_layout(num_channels, L"mono",			L"FC");
@@ -743,7 +772,7 @@ core::audio_channel_layout get_audio_channel_layout(const AVCodecContext& codec_
 }
 
 // av_get_default_channel_layout does not work for layouts not predefined in ffmpeg. This is needed to support > 8 channels.
-std::int64_t create_channel_layout_bitmask(int num_channels)
+std::uint64_t create_channel_layout_bitmask(int num_channels)
 {
 	if (num_channels > 63)
 		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info(L"FFmpeg cannot handle more than 63 audio channels"));
@@ -753,7 +782,61 @@ std::int64_t create_channel_layout_bitmask(int num_channels)
 	auto to_shift = 63 - num_channels;
 	auto result = ALL_63_CHANNELS >> to_shift;
 
-	return static_cast<std::int64_t>(result);
+	return static_cast<std::uint64_t>(result);
+}
+
+std::string to_string(const boost::rational<int>& framerate)
+{
+	return boost::lexical_cast<std::string>(framerate.numerator())
+		+ "/" + boost::lexical_cast<std::string>(framerate.denominator()) + " (" + boost::lexical_cast<std::string>(static_cast<double>(framerate.numerator()) / static_cast<double>(framerate.denominator())) + ") fps";
+}
+
+std::vector<int> find_audio_cadence(const boost::rational<int>& framerate)
+{
+	static std::map<boost::rational<int>, std::vector<int>> CADENCES_BY_FRAMERATE = []
+	{
+		std::map<boost::rational<int>, std::vector<int>> result;
+
+		for (core::video_format format : enum_constants<core::video_format>())
+		{
+			core::video_format_desc desc(format);
+			boost::rational<int> format_rate(desc.time_scale, desc.duration);
+
+			result.insert(std::make_pair(format_rate, desc.audio_cadence));
+		}
+
+		return result;
+	}();
+
+	auto exact_match = CADENCES_BY_FRAMERATE.find(framerate);
+
+	if (exact_match != CADENCES_BY_FRAMERATE.end())
+		return exact_match->second;
+
+	boost::rational<int> closest_framerate_diff = std::numeric_limits<int>::max();
+	boost::rational<int> closest_framerate = 0;
+
+	for (auto format_framerate : CADENCES_BY_FRAMERATE | boost::adaptors::map_keys)
+	{
+		auto diff = boost::abs(framerate - format_framerate);
+
+		if (diff < closest_framerate_diff)
+		{
+			closest_framerate_diff = diff;
+			closest_framerate = format_framerate;
+		}
+	}
+
+	if (is_logging_quiet_for_thread())
+		CASPAR_LOG(debug) << "No exact audio cadence match found for framerate " << to_string(framerate)
+		<< "\nClosest match is " << to_string(closest_framerate)
+		<< "\nwhich is a " << to_string(closest_framerate_diff) << " difference.";
+	else
+		CASPAR_LOG(warning) << "No exact audio cadence match found for framerate " << to_string(framerate)
+		<< "\nClosest match is " << to_string(closest_framerate)
+		<< "\nwhich is a " << to_string(closest_framerate_diff) << " difference.";
+
+	return CADENCES_BY_FRAMERATE[closest_framerate];
 }
 
 //
