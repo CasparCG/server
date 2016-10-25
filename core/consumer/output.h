@@ -35,7 +35,7 @@
 FORWARD2(caspar, diagnostics, class graph);
 
 namespace caspar { namespace core {
-	
+
 class output final
 {
 	output(const output&);
@@ -47,23 +47,24 @@ public:
 	// Constructors
 
 	explicit output(spl::shared_ptr<caspar::diagnostics::graph> graph, const video_format_desc& format_desc, const core::audio_channel_layout& channel_layout, int channel_index);
-	
+
 	// Methods
 
 	// Returns when submitted to consumers, but the future indicates when the consumers are ready for a new frame.
 	std::future<void> operator()(const_frame frame, const video_format_desc& format_desc, const core::audio_channel_layout& channel_layout);
-	
+
 	void add(const spl::shared_ptr<frame_consumer>& consumer);
 	void add(int index, const spl::shared_ptr<frame_consumer>& consumer);
 	void remove(const spl::shared_ptr<frame_consumer>& consumer);
 	void remove(int index);
-	
+
 	monitor::subject& monitor_output();
 
 	// Properties
 
 	std::future<boost::property_tree::wptree> info() const;
 	std::future<boost::property_tree::wptree> delay_info() const;
+	std::vector<spl::shared_ptr<const frame_consumer>> get_consumers() const;
 
 private:
 	struct impl;

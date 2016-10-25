@@ -53,7 +53,7 @@
 namespace caspar { namespace core {
 
 struct output::impl
-{		
+{
 	spl::shared_ptr<diagnostics::graph>	graph_;
 	spl::shared_ptr<monitor::subject>	monitor_subject_			= spl::make_shared<monitor::subject>("/output");
 	const int							channel_index_;
@@ -65,23 +65,23 @@ struct output::impl
 	std::map<int, int64_t>				send_to_consumers_delays_;
 	executor							executor_					{ L"output " + boost::lexical_cast<std::wstring>(channel_index_) };
 public:
-	impl(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, const audio_channel_layout& channel_layout, int channel_index) 
+	impl(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, const audio_channel_layout& channel_layout, int channel_index)
 		: graph_(std::move(graph))
 		, channel_index_(channel_index)
 		, format_desc_(format_desc)
 		, channel_layout_(channel_layout)
 	{
 		graph_->set_color("consume-time", diagnostics::color(1.0f, 0.4f, 0.0f, 0.8f));
-	}	
-	
+	}
+
 	void add(int index, spl::shared_ptr<frame_consumer> consumer)
-	{		
+	{
 		remove(index);
 
 		consumer->initialize(format_desc_, channel_layout_, channel_index_);
-		
+
 		executor_.begin_invoke([this, index, consumer]
-		{			
+		{
 			port p(index, channel_index_, std::move(consumer));
 			p.monitor_output().attach_parent(monitor_subject_);
 			ports_.insert(std::make_pair(index, std::move(p)));
@@ -94,7 +94,7 @@ public:
 	}
 
 	void remove(int index)
-	{		
+	{
 		executor_.begin_invoke([=]
 		{
 			auto it = ports_.find(index);
@@ -110,7 +110,7 @@ public:
 	{
 		remove(consumer->index());
 	}
-	
+
 	void change_channel_format(const core::video_format_desc& format_desc, const core::audio_channel_layout& channel_layout)
 	{
 		executor_.invoke([&]
@@ -120,7 +120,7 @@ public:
 
 			auto it = ports_.begin();
 			while(it != ports_.end())
-			{						
+			{
 				try
 				{
 					it->second.change_channel_format(format_desc, channel_layout);
@@ -133,7 +133,7 @@ public:
 					ports_.erase(it++);
 				}
 			}
-			
+
 			format_desc_ = format_desc;
 			channel_layout_ = channel_layout;
 			frames_.clear();
@@ -141,7 +141,7 @@ public:
 	}
 
 	std::pair<int, int> minmax_buffer_depth() const
-	{		
+	{
 		if(ports_.empty())
 			return std::make_pair(0, 0);
 
@@ -159,7 +159,7 @@ public:
 			.where(std::mem_fn(&port::has_synchronization_clock))
 			.any();
 	}
-		
+
 	std::future<void> operator()(const_frame input_frame, const core::video_format_desc& format_desc, const core::audio_channel_layout& channel_layout)
 	{
 		spl::shared_ptr<caspar::timer> frame_timer;
@@ -262,12 +262,12 @@ public:
 	std::future<boost::property_tree::wptree> info()
 	{
 		return std::move(executor_.begin_invoke([&]() -> boost::property_tree::wptree
-		{			
+		{
 			boost::property_tree::wptree info;
 			for (auto& port : ports_)
 			{
 				info.add_child(L"consumers.consumer", port.second.info())
-					.add(L"index", port.first); 
+					.add(L"index", port.first);
 			}
 			return info;
 		}, task_priority::high_priority));
@@ -297,6 +297,19 @@ public:
 			return info;
 		}, task_priority::high_priority));
 	}
+
+	std::vector<spl::shared_ptr<const frame_consumer>> get_consumers()
+	{
+		return executor_.invoke([=]
+		{
+			std::vector<spl::shared_ptr<const frame_consumer>> consumers;
+
+			for (auto& port : ports_)
+				consumers.push_back(port.second.consumer());
+
+			return consumers;
+		});
+	}
 };
 
 output::output(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, const core::audio_channel_layout& channel_layout, int channel_index) : impl_(new impl(std::move(graph), format_desc, channel_layout, channel_index)){}
@@ -306,6 +319,7 @@ void output::remove(int index){impl_->remove(index);}
 void output::remove(const spl::shared_ptr<frame_consumer>& consumer){impl_->remove(consumer);}
 std::future<boost::property_tree::wptree> output::info() const{return impl_->info();}
 std::future<boost::property_tree::wptree> output::delay_info() const{ return impl_->delay_info(); }
+std::vector<spl::shared_ptr<const frame_consumer>> output::get_consumers() const { return impl_->get_consumers(); }
 std::future<void> output::operator()(const_frame frame, const video_format_desc& format_desc, const core::audio_channel_layout& channel_layout){ return (*impl_)(std::move(frame), format_desc, channel_layout); }
 monitor::subject& output::monitor_output() {return *impl_->monitor_subject_;}
 }}
