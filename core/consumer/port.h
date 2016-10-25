@@ -28,7 +28,7 @@ public:
 
 	port& operator=(port&& other);
 
-	std::future<bool> send(const_frame frame);	
+	std::future<bool> send(const_frame frame);
 
 	monitor::subject& monitor_output();
 
@@ -40,6 +40,7 @@ public:
 	bool has_synchronization_clock() const;
 	boost::property_tree::wptree info() const;
 	int64_t presentation_frame_age_millis() const;
+	spl::shared_ptr<const frame_consumer> consumer() const;
 private:
 	struct impl;
 	std::unique_ptr<impl> impl_;
