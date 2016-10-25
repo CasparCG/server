@@ -30,8 +30,10 @@
 
 #include <boost/property_tree/ptree_fwd.hpp>
 
+#include <functional>
+
 namespace caspar { namespace core {
-	
+
 class video_channel final
 {
 	video_channel(const video_channel&);
@@ -50,7 +52,7 @@ public:
 	~video_channel();
 
 	// Methods
-			
+
 	monitor::subject&						monitor_output();
 
 	// Properties
@@ -66,6 +68,8 @@ public:
 	void									video_format_desc(const core::video_format_desc& format_desc);
 	core::audio_channel_layout				audio_channel_layout() const;
 	void									audio_channel_layout(const core::audio_channel_layout& channel_layout);
+
+	std::shared_ptr<void>					add_tick_listener(std::function<void()> listener);
 
 	spl::shared_ptr<core::frame_factory>	frame_factory();
 
