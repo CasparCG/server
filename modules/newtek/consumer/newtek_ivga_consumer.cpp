@@ -18,7 +18,7 @@
 *
 * Author: Robert Nagy, ronag@live.com
 */
- 
+
 #include "../StdAfx.h"
 
 #include "newtek_ivga_consumer.h"
@@ -76,13 +76,13 @@ public:
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
 		diagnostics::register_graph(graph_);
 	}
-	
+
 	~newtek_ivga_consumer()
 	{
 	}
 
 	// frame_consumer
-	
+
 	virtual void initialize(
 			const core::video_format_desc& format_desc,
 			const core::audio_channel_layout& channel_layout,
@@ -176,7 +176,7 @@ public:
 	{
 		return -1;
 	}
-	
+
 	virtual int index() const override
 	{
 		return 900;
@@ -191,7 +191,7 @@ public:
 	{
 		return false;
 	}
-};	
+};
 
 void describe_ivga_consumer(core::help_sink& sink, const core::help_repository& repo)
 {
@@ -202,7 +202,7 @@ void describe_ivga_consumer(core::help_sink& sink, const core::help_repository& 
 	sink.example(L">> ADD 1 NEWTEK_IVGA");
 }
 
-spl::shared_ptr<core::frame_consumer> create_ivga_consumer(const std::vector<std::wstring>& params, core::interaction_sink*)
+spl::shared_ptr<core::frame_consumer> create_ivga_consumer(const std::vector<std::wstring>& params, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
 	if (params.size() < 1 || !boost::iequals(params.at(0), L"NEWTEK_IVGA"))
 		return core::frame_consumer::empty();
@@ -210,8 +210,8 @@ spl::shared_ptr<core::frame_consumer> create_ivga_consumer(const std::vector<std
 	return spl::make_shared<newtek_ivga_consumer>();
 }
 
-spl::shared_ptr<core::frame_consumer> create_preconfigured_ivga_consumer(const boost::property_tree::wptree& ptree, core::interaction_sink*)
-{	
+spl::shared_ptr<core::frame_consumer> create_preconfigured_ivga_consumer(const boost::property_tree::wptree& ptree, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels)
+{
 	return spl::make_shared<newtek_ivga_consumer>();
 }
 
