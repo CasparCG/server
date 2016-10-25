@@ -30,11 +30,11 @@
 #include <boost/property_tree/ptree_fwd.hpp>
 
 namespace caspar { namespace oal {
-	
+
 void describe_consumer(core::help_sink& sink, const core::help_repository& repo);
 spl::shared_ptr<core::frame_consumer> create_consumer(
-		const std::vector<std::wstring>& params, core::interaction_sink*);
+		const std::vector<std::wstring>& params, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels);
 spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
-		const boost::property_tree::wptree&, core::interaction_sink*);
+		const boost::property_tree::wptree&, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels);
 
 }}
