@@ -1259,7 +1259,7 @@ void describe_streaming_consumer(core::help_sink& sink, const core::help_reposit
 }
 
 spl::shared_ptr<core::frame_consumer> create_streaming_consumer(
-		const std::vector<std::wstring>& params, core::interaction_sink*)
+		const std::vector<std::wstring>& params, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
 	if (params.size() < 1 || (!boost::iequals(params.at(0), L"STREAM") && !boost::iequals(params.at(0), L"FILE")))
 		return core::frame_consumer::empty();
@@ -1272,7 +1272,7 @@ spl::shared_ptr<core::frame_consumer> create_streaming_consumer(
 }
 
 spl::shared_ptr<core::frame_consumer> create_preconfigured_streaming_consumer(
-		const boost::property_tree::wptree& ptree, core::interaction_sink*)
+		const boost::property_tree::wptree& ptree, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
 	return spl::make_shared<streaming_consumer>(
 			u8(ptree_get<std::wstring>(ptree, L"path")),

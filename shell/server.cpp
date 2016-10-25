@@ -44,6 +44,7 @@
 #include <core/producer/text/text_producer.h>
 #include <core/producer/color/color_producer.h>
 #include <core/consumer/output.h>
+#include <core/consumer/syncto/syncto_consumer.h>
 #include <core/mixer/mixer.h>
 #include <core/mixer/image/image_mixer.h>
 #include <core/thumbnail_generator.h>
@@ -168,6 +169,7 @@ struct server::impl : boost::noncopyable
 		initialize_modules(dependencies);
 		core::text::init(dependencies);
 		core::scene::init(dependencies);
+		core::syncto::init(dependencies);
 		help_repo_->register_item({ L"producer" }, L"Color Producer", &core::describe_color_producer);
 	}
 
@@ -250,8 +252,12 @@ struct server::impl : boost::noncopyable
 	void setup_channels(const boost::property_tree::wptree& pt)
 	{
 		using boost::property_tree::wptree;
+
+		std::vector<wptree> xml_channels;
+
 		for (auto& xml_channel : pt | witerate_children(L"configuration.channels") | welement_context_iteration)
 		{
+			xml_channels.push_back(xml_channel.second);
 			ptree_verify_element_name(xml_channel, L"channel");
 
 			auto format_desc_str = xml_channel.second.get(L"video-mode", L"PAL");
@@ -267,17 +273,24 @@ struct server::impl : boost::noncopyable
 			auto channel_id = static_cast<int>(channels_.size() + 1);
 			auto channel = spl::make_shared<video_channel>(channel_id, format_desc, *channel_layout, accelerator_.create_image_mixer(channel_id));
 
+			channel->monitor_output().attach_parent(monitor_subject_);
+			channel->mixer().set_straight_alpha_output(xml_channel.second.get(L"straight-alpha-output", false));
+			channels_.push_back(channel);
+		}
+
+		for (auto& channel : channels_)
+		{
 			core::diagnostics::scoped_call_context save;
 			core::diagnostics::call_context::for_thread().video_channel = channel->index();
 
-			for (auto& xml_consumer : xml_channel.second | witerate_children(L"consumers") | welement_context_iteration)
+			for (auto& xml_consumer : xml_channels.at(channel->index() - 1) | witerate_children(L"consumers") | welement_context_iteration)
 			{
 				auto name = xml_consumer.first;
 
 				try
 				{
 					if (name != L"<xmlcomment>")
-						channel->output().add(consumer_registry_->create_consumer(name, xml_consumer.second, &channel->stage()));
+						channel->output().add(consumer_registry_->create_consumer(name, xml_consumer.second, &channel->stage(), channels_));
 				}
 				catch (const user_error& e)
 				{
@@ -289,10 +302,6 @@ struct server::impl : boost::noncopyable
 					CASPAR_LOG_CURRENT_EXCEPTION();
 				}
 			}
-
-		    channel->monitor_output().attach_parent(monitor_subject_);
-			channel->mixer().set_straight_alpha_output(xml_channel.second.get(L"straight-alpha-output", false));
-			channels_.push_back(channel);
 		}
 
 		// Dummy diagnostics channel
