@@ -101,12 +101,10 @@ private:
     AVFilterContext*							audio_graph_in_;
     AVFilterContext*							audio_graph_out_;
     std::shared_ptr<AVFilterGraph>				audio_graph_;
-	std::shared_ptr<AVBitStreamFilterContext>	audio_bitstream_filter_;
 
     AVFilterContext*							video_graph_in_;
     AVFilterContext*							video_graph_out_;
     std::shared_ptr<AVFilterGraph>				video_graph_;
-	std::shared_ptr<AVBitStreamFilterContext>	video_bitstream_filter_;
 
 	executor									executor_;
 
@@ -301,12 +299,6 @@ public:
 					*audio_codec,
 					try_remove_arg<std::string>(options_,
 					boost::regex("af|f:a|filter:a")).get_value_or(""));
-			}
-
-			// Bistream Filters
-			{
-				configue_audio_bistream_filters(options_);
-				configue_video_bistream_filters(options_);
 			}
 
 			// Encoders
@@ -584,58 +576,6 @@ private:
 		{
 			avcodec_close(st->codec);
 		});
-	}
-
-	void configue_audio_bistream_filters(
-			std::map<std::string, std::string>& options)
-	{
-		const auto audio_bitstream_filter_str =
-			try_remove_arg<std::string>(
-				options,
-				boost::regex("^bsf:a|absf$"));
-
-		const auto audio_bitstream_filter =
-			audio_bitstream_filter_str
-				? av_bitstream_filter_init(audio_bitstream_filter_str->c_str())
-				: nullptr;
-
-		CASPAR_VERIFY(!audio_bitstream_filter_str || audio_bitstream_filter);
-
-		if(audio_bitstream_filter)
-		{
-			audio_bitstream_filter_.reset(
-				audio_bitstream_filter,
-				av_bitstream_filter_close);
-		}
-
-		if(audio_bitstream_filter_str && !audio_bitstream_filter_)
-			options["bsf:a"] = *audio_bitstream_filter_str;
-	}
-
-	void configue_video_bistream_filters(
-			std::map<std::string, std::string>& options)
-	{
-		const auto video_bitstream_filter_str =
-				try_remove_arg<std::string>(
-					options,
-					boost::regex("^bsf:v|vbsf$"));
-
-		const auto video_bitstream_filter =
-			video_bitstream_filter_str
-				? av_bitstream_filter_init(video_bitstream_filter_str->c_str())
-				: nullptr;
-
-		CASPAR_VERIFY(!video_bitstream_filter_str || video_bitstream_filter);
-
-		if(video_bitstream_filter)
-		{
-			video_bitstream_filter_.reset(
-				video_bitstream_filter,
-				av_bitstream_filter_close);
-		}
-
-		if(video_bitstream_filter_str && !video_bitstream_filter_)
-			options["bsf:v"] = *video_bitstream_filter_str;
 	}
 
 	void configure_video_filters(
@@ -919,7 +859,6 @@ private:
 					{
 						while(encode_av_frame(
 								*video_st_,
-								video_bitstream_filter_.get(),
 								avcodec_encode_video2,
 								nullptr, token))
 						{
@@ -948,7 +887,6 @@ private:
 
 					encode_av_frame(
 						*video_st_,
-						video_bitstream_filter_.get(),
 						avcodec_encode_video2,
 						filt_frame,
 						token);
@@ -1011,7 +949,6 @@ private:
 					{
 						while(encode_av_frame(
 								*audio_st_,
-								audio_bitstream_filter_.get(),
 								avcodec_encode_audio2,
 								nullptr,
 								token))
@@ -1028,7 +965,6 @@ private:
 
 					encode_av_frame(
 						*audio_st_,
-						audio_bitstream_filter_.get(),
 						avcodec_encode_audio2,
 						filt_frame,
 						token);
@@ -1042,7 +978,6 @@ private:
 	template<typename F>
 	bool encode_av_frame(
 			AVStream& st,
-			AVBitStreamFilterContext* bsfc,
 			const F& func,
 			const std::shared_ptr<AVFrame>& src_av_frame,
 			std::shared_ptr<void> token)
@@ -1062,62 +997,6 @@ private:
 			return false;
 
 		pkt.stream_index = st.index;
-
-		if(bsfc)
-		{
-			auto new_pkt = pkt;
-
-			auto a = av_bitstream_filter_filter(
-					bsfc,
-					st.codec,
-					nullptr,
-					&new_pkt.data,
-					&new_pkt.size,
-					pkt.data,
-					pkt.size,
-					pkt.flags & AV_PKT_FLAG_KEY);
-
-			if(a == 0 && new_pkt.data != pkt.data && new_pkt.destruct)
-			{
-				auto t = reinterpret_cast<std::uint8_t*>(av_malloc(new_pkt.size + FF_INPUT_BUFFER_PADDING_SIZE));
-
-				if(t)
-				{
-					memcpy(
-						t,
-						new_pkt.data,
-						new_pkt.size);
-
-					memset(
-						t + new_pkt.size,
-						0,
-						FF_INPUT_BUFFER_PADDING_SIZE);
-
-					new_pkt.data = t;
-					new_pkt.buf  = nullptr;
-				}
-				else
-					a = AVERROR(ENOMEM);
-			}
-
-			av_free_packet(&pkt);
-
-			FF_RET(
-				a,
-				"av_bitstream_filter_filter");
-
-			new_pkt.buf =
-				av_buffer_create(
-					new_pkt.data,
-					new_pkt.size,
-					av_buffer_default_free,
-					nullptr,
-					0);
-
-			CASPAR_VERIFY(new_pkt.buf);
-
-			pkt = new_pkt;
-		}
 
 		if (pkt.pts != AV_NOPTS_VALUE)
 		{
