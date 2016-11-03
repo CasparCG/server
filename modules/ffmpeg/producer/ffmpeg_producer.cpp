@@ -441,19 +441,21 @@ public:
 		}
 		else if(boost::regex_match(param, what, seek_exp))
 		{
-			auto value = boost::lexical_cast<uint32_t>(what["VALUE"].str());
+			auto value = boost::lexical_cast<int64_t>(what["VALUE"].str());
 			auto whence = what["WHENCE"].str();
+			auto total = file_nb_frames();
 
 			if(boost::iequals(whence, L"REL"))
-			{
 				value = file_frame_number() + value;
-			}
 			else if(boost::iequals(whence, L"END"))
-			{
-				value = file_nb_frames() - value;
-			}
+				value = total - value;
 
-			input_.seek(value);
+			if(value < 0)
+				value = 0;
+			else if(value >= total)
+				value = total - 1;
+
+			input_.seek(static_cast<uint32_t>(value));
 		}
 		else if(boost::regex_match(param, what, length_exp))
 		{
