@@ -54,6 +54,8 @@ public:
 	uint32_t					file_frame_number() const;
 	bool						is_progressive() const;
 
+	void						discard(int);
+
 	std::wstring				print() const;
 
 private:
