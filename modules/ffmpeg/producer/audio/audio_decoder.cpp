@@ -59,6 +59,9 @@ struct audio_decoder::implementation : boost::noncopyable
 
 	std::queue<spl::shared_ptr<AVPacket>>	packets_;
 
+	int										discard_ = 0;
+	bool									release_ = true;
+
 	std::shared_ptr<SwrContext>				swr_				{
 																	swr_alloc_set_opts(
 																			nullptr,
@@ -106,24 +109,31 @@ public:
 
 	std::shared_ptr<core::mutable_audio_buffer> poll()
 	{
-		if(packets_.empty())
-			return nullptr;
-
-		auto packet = packets_.front();
-
-		if(packet->data == nullptr)
+		for(int cnt = 0; ; ++cnt)
 		{
-			packets_.pop();
-			avcodec_flush_buffers(codec_context_.get());
-			return flush_audio();
+			if(packets_.empty())
+				return nullptr;
+
+			auto packet = packets_.front();
+
+			if(packet->data == nullptr)
+			{
+				packets_.pop();
+				avcodec_flush_buffers(codec_context_.get());
+				return flush_audio();
+			}
+
+			auto audio = decode(*packet);
+
+			if(packet->size == 0)
+				packets_.pop();
+
+			if(release_ || cnt >= discard_)
+			{
+				release_ = false;
+				return audio;
+			}
 		}
-
-		auto audio = decode(*packet);
-
-		if(packet->size == 0)
-			packets_.pop();
-
-		return audio;
 	}
 
 	std::shared_ptr<core::mutable_audio_buffer> decode(AVPacket& pkt)
@@ -162,7 +172,12 @@ public:
 
 	bool ready() const
 	{
-		return packets_.size() > 10;
+		return packets_.size() > 10 + discard_;
+	}
+
+	void discard(int value)
+	{
+		discard_ = value;
 	}
 
 	std::wstring print() const
@@ -185,6 +200,7 @@ bool audio_decoder::ready() const{return impl_->ready();}
 std::shared_ptr<core::mutable_audio_buffer> audio_decoder::poll() { return impl_->poll(); }
 int	audio_decoder::num_channels() const { return impl_->codec_context_->channels; }
 uint64_t audio_decoder::ffmpeg_channel_layout() const { return impl_->ffmpeg_channel_layout(); }
+void audio_decoder::discard(int value){impl_->discard(value);}
 std::wstring audio_decoder::print() const{return impl_->print();}
 
 }}

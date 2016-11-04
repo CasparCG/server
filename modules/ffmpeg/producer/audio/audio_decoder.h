@@ -45,7 +45,10 @@ public:
 	int	num_channels() const;
 	uint64_t ffmpeg_channel_layout() const;
 
+	void discard(int);
+
 	std::wstring print() const;
+
 private:
 	struct implementation;
 	spl::shared_ptr<implementation> impl_;
