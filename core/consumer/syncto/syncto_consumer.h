@@ -16,34 +16,15 @@
 * You should have received a copy of the GNU General Public License
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
-* Author: Robert Nagy, ronag89@gmail.com
+* Author: Helge Norberg, helge.norberg@svt.se
 */
 
 #pragma once
 
-#include <common/memory.h>
+#include "../../fwd.h"
 
-#include <core/video_format.h>
-#include <core/consumer/frame_consumer.h>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/filesystem.hpp>
+namespace caspar { namespace core { namespace syncto {
 
-#include <string>
-#include <vector>
+void init(caspar::core::module_dependencies dependencies);
 
-namespace caspar {
-
-namespace image {
-
-void write_cropped_png(
-		const class core::const_frame& frame,
-		const core::video_format_desc& format_desc,
-		const boost::filesystem::path& output_file,
-		int width,
-		int height);
-
-void describe_consumer(core::help_sink& sink, const core::help_repository& repo);
-spl::shared_ptr<core::frame_consumer> create_consumer(
-		const std::vector<std::wstring>& params, struct core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels);
-
-}}
+}}}

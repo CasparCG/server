@@ -696,7 +696,8 @@ void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
 	sink.example(L">> ADD 1 SCREEN 1 BORDERLESS", L"opens a screen consumer without borders/window decorations on screen 1.");
 }
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params, core::interaction_sink* sink)
+spl::shared_ptr<core::frame_consumer> create_consumer(
+		const std::vector<std::wstring>& params, core::interaction_sink* sink, std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
 	if (params.size() < 1 || !boost::iequals(params.at(0), L"SCREEN"))
 		return core::frame_consumer::empty();
@@ -718,7 +719,8 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 	return spl::make_shared<screen_consumer_proxy>(config, sink);
 }
 
-spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(const boost::property_tree::wptree& ptree, core::interaction_sink* sink)
+spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
+		const boost::property_tree::wptree& ptree, core::interaction_sink* sink, std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
 	configuration config;
 	config.name				= ptree.get(L"name",				config.name);

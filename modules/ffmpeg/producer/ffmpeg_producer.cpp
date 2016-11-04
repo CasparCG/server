@@ -441,19 +441,21 @@ public:
 		}
 		else if(boost::regex_match(param, what, seek_exp))
 		{
-			auto value = boost::lexical_cast<uint32_t>(what["VALUE"].str());
+			auto value = boost::lexical_cast<int64_t>(what["VALUE"].str());
 			auto whence = what["WHENCE"].str();
+			auto total = file_nb_frames();
 
 			if(boost::iequals(whence, L"REL"))
-			{
 				value = file_frame_number() + value;
-			}
 			else if(boost::iequals(whence, L"END"))
-			{
-				value = file_nb_frames() - value;
-			}
+				value = total - value;
 
-			input_.seek(value);
+			if(value < 0)
+				value = 0;
+			else if(value >= total)
+				value = total - 1;
+
+			input_.seek(static_cast<uint32_t>(value));
 		}
 		else if(boost::regex_match(param, what, length_exp))
 		{
@@ -521,20 +523,20 @@ public:
 				!video_decoder_->is_progressive()) : L"";
 	}
 
-	bool not_all_audio_decoders_ready() const
+	bool all_audio_decoders_ready() const
 	{
 		for (auto& audio_decoder : audio_decoders_)
 			if (!audio_decoder->ready())
-				return true;
+				return false;
 
-		return false;
+		return true;
 	}
 
 	void try_decode_frame()
 	{
 		std::shared_ptr<AVPacket> pkt;
 
-		for (int n = 0; n < 32 && ((video_decoder_ && !video_decoder_->ready()) || not_all_audio_decoders_ready()) && input_.try_pop(pkt); ++n)
+		for (int n = 0; n < 32 && ((video_decoder_ && !video_decoder_->ready()) || !all_audio_decoders_ready()) && input_.try_pop(pkt); ++n)
 		{
 			if (video_decoder_)
 				video_decoder_->push(pkt);
