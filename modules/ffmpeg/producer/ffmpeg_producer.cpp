@@ -425,7 +425,7 @@ public:
 		static const boost::wregex loop_exp(LR"(LOOP\s*(?<VALUE>\d?)?)", boost::regex::icase);
 		static const boost::wregex seek_exp(LR"(SEEK\s+(?<VALUE>(\+|-)?\d+)(\s+(?<WHENCE>REL|END))?)", boost::regex::icase);
 		static const boost::wregex length_exp(LR"(LENGTH\s+(?<VALUE>\d+)?)", boost::regex::icase);
-		static const boost::wregex start_exp(LR"(START\\s+(?<VALUE>\\d+)?)", boost::regex::icase);
+		static const boost::wregex start_exp(LR"(START\s+(?<VALUE>\d+)?)", boost::regex::icase);
 
 		auto param = boost::algorithm::join(params, L" ");
 
