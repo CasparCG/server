@@ -81,7 +81,7 @@ struct configuration
 
 	int							device_index		= 1;
 	int							key_device_idx		= 0;
-	bool						embedded_audio		= true;
+	bool						embedded_audio		= false;
 	keyer_t						keyer				= keyer_t::default_keyer;
 	latency_t					latency				= latency_t::default_latency;
 	bool						key_only			= false;
