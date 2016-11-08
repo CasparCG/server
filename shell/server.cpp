@@ -109,12 +109,15 @@ std::shared_ptr<boost::asio::io_service> create_running_io_service()
 				CASPAR_LOG_CURRENT_EXCEPTION();
 			}
 		}
+
+		CASPAR_LOG(info) << "[asio] Global io_service uninitialized.";
 	});
 
 	return std::shared_ptr<boost::asio::io_service>(
 			service.get(),
 			[service, work, thread](void*) mutable
 			{
+				CASPAR_LOG(info) << "[asio] Shutting down global io_service.";
 				work.reset();
 				service->stop();
 				if (thread->get_id() != boost::this_thread::get_id())
