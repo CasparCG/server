@@ -219,7 +219,12 @@ public:
 	virtual ULONG STDMETHODCALLTYPE Release()
 	{
 		if(--ref_count_ == 0)
+		{
 			delete this;
+
+			return 0;
+		}
+
 		return ref_count_;
 	}
 
