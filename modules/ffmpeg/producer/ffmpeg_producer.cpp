@@ -426,6 +426,7 @@ public:
 		static const boost::wregex seek_exp(LR"(SEEK\s+(?<VALUE>(\+|-)?\d+)(\s+(?<WHENCE>REL|END))?)", boost::regex::icase);
 		static const boost::wregex length_exp(LR"(LENGTH\s+(?<VALUE>\d+)?)", boost::regex::icase);
 		static const boost::wregex start_exp(LR"(START\s+(?<VALUE>\d+)?)", boost::regex::icase);
+		static const boost::wregex framestep_exp(LR"(FRAMESTEP\s+(?<VALUE>\d+))", boost::regex::icase);
 
 		auto param = boost::algorithm::join(params, L" ");
 
@@ -470,6 +471,20 @@ public:
 			if(!value.empty())
 				input_.start(boost::lexical_cast<uint32_t>(value));
 			result = boost::lexical_cast<std::wstring>(input_.start());
+		}
+		else if(boost::regex_match(param, what, framestep_exp))
+		{
+			auto discard = static_cast<int>(boost::lexical_cast<double>(what["VALUE"].str()));
+			if(discard < 1)
+				discard = 1;
+			else if(discard > 16)
+				discard = 16;
+
+			if(video_decoder_)
+				video_decoder_->discard(discard - 1);
+
+			for(auto& audio_decoder : audio_decoders_)
+				audio_decoder->discard(discard - 1);
 		}
 		else
 			CASPAR_THROW_EXCEPTION(invalid_argument());
@@ -640,6 +655,7 @@ void describe_producer(core::help_sink& sink, const core::help_repository& repo)
 	sink.example(L">> CALL 1-10 START 10");
 	sink.example(L">> CALL 1-10 LENGTH 50");
 	sink.example(L">> CALL 1-10 SEEK 30");
+	sink.example(L">> CALL 1-10 FRAMESTEP 8");
 	core::describe_framerate_producer(sink);
 }
 
