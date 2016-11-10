@@ -85,7 +85,8 @@ public:
 private:
 	const spl::shared_ptr<diagnostics::graph>	graph_;
 	core::monitor::subject						subject_;
-	boost::filesystem::path						path_;
+	std::string									path_;
+	boost::filesystem::path						full_path_;
 
 	std::map<std::string, std::string>			options_;
 
@@ -98,8 +99,8 @@ private:
 	std::shared_ptr<AVStream>					video_st_;
 	std::shared_ptr<AVStream>					audio_st_;
 
-	std::int64_t								video_pts_;
-	std::int64_t								audio_pts_;
+	std::int64_t								video_pts_					= 0;
+	std::int64_t								audio_pts_					= 0;
 
     AVFilterContext*							audio_graph_in_;
     AVFilterContext*							audio_graph_out_;
@@ -124,8 +125,7 @@ public:
 			std::string path,
 			std::string options)
 		: path_(path)
-		, video_pts_(0)
-		, audio_pts_(0)
+		, full_path_(path)
 		, audio_encoder_executor_(print() + L" audio_encoder")
 		, video_encoder_executor_(print() + L" video_encoder")
 		, write_executor_(print() + L" io")
@@ -195,19 +195,21 @@ public:
 			static boost::regex prot_exp("^.+:.*" );
 
 			if(!boost::regex_match(
-					path_.string(),
+					path_,
 					prot_exp))
 			{
-				if(!path_.is_complete())
+				if(!full_path_.is_complete())
 				{
-					path_ =
+					full_path_ =
 						u8(
 							env::media_folder()) +
-							path_.string();
+							path_;
 				}
 
-				if(boost::filesystem::exists(path_))
-					boost::filesystem::remove(path_);
+				if(boost::filesystem::exists(full_path_))
+					boost::filesystem::remove(full_path_);
+
+				boost::filesystem::create_directories(full_path_.parent_path());
 			}
 
 			graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
@@ -226,7 +228,7 @@ public:
 				&oc,
 				nullptr,
 				oformat_name && !oformat_name->empty() ? oformat_name->c_str() : nullptr,
-				path_.string().c_str()));
+				full_path_.string().c_str()));
 
 			oc_.reset(
 				oc,
@@ -334,7 +336,7 @@ public:
 				{
 					FF(avio_open2(
 						&oc_->pb,
-						path_.string().c_str(),
+						full_path_.string().c_str(),
 						AVIO_FLAG_WRITE,
 						&oc_->interrupt_callback,
 						&av_opts));
@@ -421,7 +423,7 @@ public:
 
 	std::wstring print() const
 	{
-		return L"ffmpeg_consumer[" + u16(path_.string()) + L"]";
+		return L"ffmpeg_consumer[" + u16(path_) + L"]";
 	}
 
 	int64_t presentation_frame_age_millis() const
@@ -792,6 +794,11 @@ private:
 			src_av_frame->pts						= video_pts_;
 
 			video_pts_ += 1;
+
+			subject_
+					<< core::monitor::message("/frame")	% video_pts_
+					<< core::monitor::message("/path")	% path_
+					<< core::monitor::message("/fps")	% in_video_format_.fps;
 
 			FF(av_image_fill_arrays(
 				src_av_frame->data,
@@ -1205,7 +1212,7 @@ public:
 		return compatibility_mode_ ? 200 : 100000 + consumer_index_offset_;
 	}
 
-	core::monitor::subject& monitor_output()
+	core::monitor::subject& monitor_output() override
 	{
 		return consumer_->monitor_output();
 	}
