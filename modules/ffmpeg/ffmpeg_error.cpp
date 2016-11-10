@@ -169,6 +169,16 @@ void throw_on_ffmpeg_error(int ret, const char* source, const char* func, const 
 				<< call_stack_info(caspar::get_call_stack())
 				<< context_info(get_context()),
 			local_func, file, line);
+	case AVUNERROR(EINVAL):
+		::boost::exception_detail::throw_exception_(
+			averror_invalid_argument()
+				<< msg_info("Invalid FFmpeg argument given")
+				<< source_info(source)
+				<< boost::errinfo_api_function(func)
+				<< boost::errinfo_errno(AVUNERROR(ret))
+				<< call_stack_info(caspar::get_call_stack())
+				<< context_info(get_context()),
+			local_func, file, line);
 	default:
 		::boost::exception_detail::throw_exception_(
 			ffmpeg_error()
