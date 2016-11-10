@@ -67,6 +67,16 @@ extern "C"
 
 namespace caspar { namespace ffmpeg { namespace {
 
+bool is_pcm_s24le_not_supported(const AVFormatContext& container)
+{
+	auto name = std::string(container.oformat->name);
+
+	if (name == "mp4" || name == "dv")
+		return true;
+
+	return false;
+}
+
 class ffmpeg_consumer
 {
 public:
@@ -252,7 +262,9 @@ public:
 			const auto audio_codec =
 				audio_codec_name
 					? avcodec_find_encoder_by_name(audio_codec_name->c_str())
-					: avcodec_find_encoder(oc_->oformat->audio_codec);
+					: (is_pcm_s24le_not_supported(*oc_)
+						? avcodec_find_encoder(oc_->oformat->audio_codec)
+						: avcodec_find_encoder_by_name("pcm_s24le"));
 
 			if (!video_codec)
 				CASPAR_THROW_EXCEPTION(user_error() << msg_info(
@@ -436,7 +448,7 @@ private:
 				&codec);
 
 		if (!st)
-			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Could not allocate video-stream.") << boost::errinfo_api_function("av_new_stream"));
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Could not allocate video-stream.") << boost::errinfo_api_function("avformat_new_stream"));
 
 		auto enc = st->codec;
 
@@ -772,12 +784,12 @@ private:
 					in_video_format_.width,
 					in_video_format_.height);
 
-			src_av_frame->format				  = AV_PIX_FMT_BGRA;
-			src_av_frame->width					  = in_video_format_.width;
-			src_av_frame->height				  = in_video_format_.height;
-			src_av_frame->sample_aspect_ratio.num = sample_aspect_ratio.numerator();
-			src_av_frame->sample_aspect_ratio.den = sample_aspect_ratio.denominator();
-			src_av_frame->pts					  = video_pts_;
+			src_av_frame->format						= AV_PIX_FMT_BGRA;
+			src_av_frame->width						= in_video_format_.width;
+			src_av_frame->height						= in_video_format_.height;
+			src_av_frame->sample_aspect_ratio.num	= sample_aspect_ratio.numerator();
+			src_av_frame->sample_aspect_ratio.den	= sample_aspect_ratio.denominator();
+			src_av_frame->pts						= video_pts_;
 
 			video_pts_ += 1;
 
