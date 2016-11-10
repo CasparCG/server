@@ -4,6 +4,7 @@
 
 #include "../ffmpeg_error.h"
 #include "../producer/util/util.h"
+#include "../producer/filter/filter.h"
 
 #include <common/except.h>
 #include <common/executor.h>
@@ -66,6 +67,75 @@ extern "C"
 #pragma warning(pop)
 
 namespace caspar { namespace ffmpeg { namespace {
+
+void set_pixel_format(AVFilterContext* sink, AVPixelFormat pix_fmt)
+{
+#pragma warning (push)
+#pragma warning (disable : 4245)
+
+	FF(av_opt_set_int_list(
+		sink,
+		"pix_fmts",
+		std::vector<AVPixelFormat>({ pix_fmt, AVPixelFormat::AV_PIX_FMT_NONE }).data(),
+		-1,
+		AV_OPT_SEARCH_CHILDREN));
+
+#pragma warning (pop)
+}
+
+void adjust_video_filter(const AVCodec& codec, const core::video_format_desc& in_format, AVFilterContext* sink, std::string& filter)
+{
+	switch (codec.id)
+	{
+	case AV_CODEC_ID_DVVIDEO:
+		// Crop
+		if (in_format.format == core::video_format::ntsc)
+			filter = u8(append_filter(u16(filter), L"crop=720:480:0:2"));
+
+		// Pixel format selection
+		if (in_format.format == core::video_format::ntsc)
+			set_pixel_format(sink, AVPixelFormat::AV_PIX_FMT_YUV411P);
+		else if (in_format.format == core::video_format::pal)
+			set_pixel_format(sink, AVPixelFormat::AV_PIX_FMT_YUV420P);
+		else
+			set_pixel_format(sink, AVPixelFormat::AV_PIX_FMT_YUV422P);
+
+		// Scale
+		if (in_format.height == 1080)
+			filter = u8(append_filter(u16(filter), in_format.duration == 1001
+				? L"scale=1280:1080"
+				: L"scale=1440:1080"));
+		else if (in_format.height == 720)
+			filter = u8(append_filter(u16(filter), L"scale=960:720"));
+
+		break;
+	}
+}
+
+void setup_codec_defaults(AVCodecContext& encoder)
+{
+	static const int MEGABIT = 1000000;
+
+	switch (encoder.codec_id)
+	{
+	case AV_CODEC_ID_DNXHD:
+		encoder.bit_rate = 220 * MEGABIT;
+
+		break;
+	case AV_CODEC_ID_PRORES:
+		encoder.bit_rate = encoder.width < 1280
+				?  63 * MEGABIT
+				: 220 * MEGABIT;
+
+		break;
+	case AV_CODEC_ID_H264:
+		av_opt_set(encoder.priv_data,	"preset",	"ultrafast",	0);
+		av_opt_set(encoder.priv_data,	"tune",		"fastdecode",	0);
+		av_opt_set(encoder.priv_data,	"crf",		"5",			0);
+
+		break;
+	}
+}
 
 bool is_pcm_s24le_not_supported(const AVFormatContext& container)
 {
@@ -481,6 +551,8 @@ private:
 			}
 		}
 
+		setup_codec_defaults(*enc);
+
 		if(oc_->oformat->flags & AVFMT_GLOBALHEADER)
 			enc->flags |= CODEC_FLAG_GLOBAL_HEADER;
 
@@ -548,7 +620,7 @@ private:
 
 	void configure_video_filters(
 			const AVCodec& codec,
-			const std::string& filtergraph)
+			std::string filtergraph)
 	{
 		video_graph_.reset(
 				avfilter_graph_alloc(),
@@ -570,7 +642,7 @@ private:
 
 		const auto vsrc_options = (boost::format("video_size=%1%x%2%:pix_fmt=%3%:time_base=%4%/%5%:pixel_aspect=%6%/%7%:frame_rate=%8%/%9%")
 			% in_video_format_.width % in_video_format_.height
-			% AV_PIX_FMT_BGRA
+			% AVPixelFormat::AV_PIX_FMT_BGRA
 			% in_video_format_.duration	% in_video_format_.time_scale
 			% sample_aspect_ratio.numerator() % sample_aspect_ratio.denominator()
 			% in_video_format_.time_scale % in_video_format_.duration).str();
@@ -604,6 +676,8 @@ private:
 				AV_OPT_SEARCH_CHILDREN));
 
 #pragma warning (pop)
+
+		adjust_video_filter(codec, in_video_format_, filt_vsink, filtergraph);
 
 		configure_filtergraph(
 				*video_graph_,
@@ -720,51 +794,51 @@ private:
 		AVFilterInOut* outputs = nullptr;
 		AVFilterInOut* inputs = nullptr;
 
-		try
+		if(!filtergraph.empty())
 		{
-			if(!filtergraph.empty())
-			{
-				outputs = avfilter_inout_alloc();
-				inputs  = avfilter_inout_alloc();
+			outputs	= avfilter_inout_alloc();
+			inputs	= avfilter_inout_alloc();
 
+			try
+			{
 				CASPAR_VERIFY(outputs && inputs);
 
-				outputs->name       = av_strdup("in");
-				outputs->filter_ctx = &source_ctx;
-				outputs->pad_idx    = 0;
-				outputs->next       = nullptr;
+				outputs->name		= av_strdup("in");
+				outputs->filter_ctx	= &source_ctx;
+				outputs->pad_idx		= 0;
+				outputs->next		= nullptr;
 
-				inputs->name        = av_strdup("out");
-				inputs->filter_ctx  = &sink_ctx;
-				inputs->pad_idx     = 0;
-				inputs->next        = nullptr;
+				inputs->name			= av_strdup("out");
+				inputs->filter_ctx	= &sink_ctx;
+				inputs->pad_idx		= 0;
+				inputs->next			= nullptr;
+			}
+			catch (...)
+			{
+				avfilter_inout_free(&outputs);
+				avfilter_inout_free(&inputs);
+				throw;
+			}
 
-				FF(avfilter_graph_parse(
+			FF(avfilter_graph_parse(
 					&graph,
 					filtergraph.c_str(),
 					inputs,
 					outputs,
 					nullptr));
-			}
-			else
-			{
-				FF(avfilter_link(
+		}
+		else
+		{
+			FF(avfilter_link(
 					&source_ctx,
 					0,
 					&sink_ctx,
 					0));
-			}
+		}
 
-			FF(avfilter_graph_config(
+		FF(avfilter_graph_config(
 				&graph,
 				nullptr));
-		}
-		catch(...)
-		{
-			avfilter_inout_free(&outputs);
-			avfilter_inout_free(&inputs);
-			throw;
-		}
 	}
 
 	void encode_video(core::const_frame frame_ptr, std::shared_ptr<void> token)
@@ -786,7 +860,7 @@ private:
 					in_video_format_.width,
 					in_video_format_.height);
 
-			src_av_frame->format						= AV_PIX_FMT_BGRA;
+			src_av_frame->format						= AVPixelFormat::AV_PIX_FMT_BGRA;
 			src_av_frame->width						= in_video_format_.width;
 			src_av_frame->height						= in_video_format_.height;
 			src_av_frame->sample_aspect_ratio.num	= sample_aspect_ratio.numerator();
