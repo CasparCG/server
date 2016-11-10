@@ -585,6 +585,9 @@ public:
 				}
 			}
 
+			if (!is_running_)
+				return E_FAIL;
+
 			if (config_.embedded_audio)
 				schedule_next_audio(channel_remapper_.mix_and_rearrange(frame.audio_data()));
 
