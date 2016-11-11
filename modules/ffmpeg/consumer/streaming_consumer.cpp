@@ -5,6 +5,7 @@
 #include "../ffmpeg_error.h"
 #include "../producer/util/util.h"
 #include "../producer/filter/filter.h"
+#include "../producer/filter/audio_filter.h"
 
 #include <common/except.h>
 #include <common/executor.h>
@@ -147,11 +148,26 @@ bool is_pcm_s24le_not_supported(const AVFormatContext& container)
 	return false;
 }
 
+template<typename Out, typename In>
+std::vector<Out> from_terminated_array(const In* array, In terminator)
+{
+	std::vector<Out> result;
+
+	while (array != nullptr && *array != terminator)
+	{
+		In val		= *array;
+		Out casted	= static_cast<Out>(val);
+
+		result.push_back(casted);
+
+		++array;
+	}
+
+	return result;
+}
+
 class ffmpeg_consumer
 {
-public:
-	// Static Members
-
 private:
 	const spl::shared_ptr<diagnostics::graph>	graph_;
 	core::monitor::subject						subject_;
@@ -159,6 +175,7 @@ private:
 	boost::filesystem::path						full_path_;
 
 	std::map<std::string, std::string>			options_;
+	bool										mono_streams_;
 
 	core::video_format_desc						in_video_format_;
 	core::audio_channel_layout					in_channel_layout_			= core::audio_channel_layout::invalid();
@@ -167,15 +184,14 @@ private:
 	tbb::atomic<bool>							abort_request_;
 
 	std::shared_ptr<AVStream>					video_st_;
-	std::shared_ptr<AVStream>					audio_st_;
+	std::vector<std::shared_ptr<AVStream>>		audio_sts_;
 
 	std::int64_t								video_pts_					= 0;
 	std::int64_t								audio_pts_					= 0;
 
-    AVFilterContext*							audio_graph_in_;
-    AVFilterContext*							audio_graph_out_;
-    std::shared_ptr<AVFilterGraph>				audio_graph_;
+	std::unique_ptr<audio_filter>				audio_filter_;
 
+	// TODO: make use of already existent avfilter abstraction for video also
     AVFilterContext*							video_graph_in_;
     AVFilterContext*							video_graph_out_;
     std::shared_ptr<AVFilterGraph>				video_graph_;
@@ -193,9 +209,11 @@ public:
 
 	ffmpeg_consumer(
 			std::string path,
-			std::string options)
+			std::string options,
+			bool mono_streams)
 		: path_(path)
 		, full_path_(path)
+		, mono_streams_(mono_streams)
 		, audio_encoder_executor_(print() + L" audio_encoder")
 		, video_encoder_executor_(print() + L" video_encoder")
 		, write_executor_(print() + L" io")
@@ -238,9 +256,9 @@ public:
 			audio_encoder_executor_.join();
 
 			video_graph_.reset();
-			audio_graph_.reset();
+			audio_filter_.reset();
 			video_st_.reset();
-			audio_st_.reset();
+			audio_sts_.clear();
 
 			write_packet(nullptr, nullptr);
 
@@ -373,11 +391,14 @@ public:
 
 				video_st_ = open_encoder(
 					*video_codec,
-					video_options);
+					video_options,
+					0);
 
-				audio_st_ = open_encoder(
-					*audio_codec,
-					audio_options);
+				for (int i = 0; i < audio_filter_->get_num_output_pads(); ++i)
+					audio_sts_.push_back(open_encoder(
+							*audio_codec,
+							audio_options,
+							i));
 
 				auto it = options_.begin();
 				while(it != options_.end())
@@ -439,7 +460,7 @@ public:
 		catch(...)
 		{
 			video_st_.reset();
-			audio_st_.reset();
+			audio_sts_.clear();
 			oc_.reset();
 			throw;
 		}
@@ -512,7 +533,8 @@ private:
 	std::shared_ptr<AVStream> open_encoder(
 			const AVCodec& codec,
 			std::map<std::string,
-			std::string>& options)
+			std::string>& options,
+			int stream_number_for_media_type)
 	{
 		auto st =
 			avformat_new_stream(
@@ -541,11 +563,11 @@ private:
 			}
 			case AVMEDIA_TYPE_AUDIO:
 			{
-				enc->time_base				= audio_graph_out_->inputs[0]->time_base;
-				enc->sample_fmt				= static_cast<AVSampleFormat>(audio_graph_out_->inputs[0]->format);
-				enc->sample_rate				= audio_graph_out_->inputs[0]->sample_rate;
-				enc->channel_layout			= audio_graph_out_->inputs[0]->channel_layout;
-				enc->channels				= audio_graph_out_->inputs[0]->channels;
+				enc->time_base				= audio_filter_->get_output_pad_info(stream_number_for_media_type).time_base;
+				enc->sample_fmt				= static_cast<AVSampleFormat>(audio_filter_->get_output_pad_info(stream_number_for_media_type).format);
+				enc->sample_rate				= audio_filter_->get_output_pad_info(stream_number_for_media_type).sample_rate;
+				enc->channel_layout			= audio_filter_->get_output_pad_info(stream_number_for_media_type).channel_layout;
+				enc->channels				= audio_filter_->get_output_pad_info(stream_number_for_media_type).channels;
 
 				break;
 			}
@@ -608,8 +630,9 @@ private:
 		if(enc->codec_type == AVMEDIA_TYPE_AUDIO && !(codec.capabilities & CODEC_CAP_VARIABLE_FRAME_SIZE))
 		{
 			CASPAR_ASSERT(enc->frame_size > 0);
-			av_buffersink_set_frame_size(audio_graph_out_,
-										 enc->frame_size);
+			audio_filter_->set_guaranteed_output_num_samples_per_frame(
+					stream_number_for_media_type,
+					enc->frame_size);
 		}
 
 		return std::shared_ptr<AVStream>(st, [this](AVStream* st)
@@ -697,92 +720,42 @@ private:
 
 	void configure_audio_filters(
 			const AVCodec& codec,
-			const std::string& filtergraph)
+			std::string filtergraph)
 	{
-		audio_graph_.reset(
-			avfilter_graph_alloc(),
-			[](AVFilterGraph* p)
-			{
-				avfilter_graph_free(&p);
-			});
+		int num_output_pads = 1;
 
-		audio_graph_->nb_threads  = boost::thread::hardware_concurrency()/2;
-		audio_graph_->thread_type = AVFILTER_THREAD_SLICE;
+		if (mono_streams_)
+		{
+			num_output_pads = in_channel_layout_.num_channels;
+		}
 
-		const auto asrc_options = (boost::format("sample_rate=%1%:sample_fmt=%2%:channels=%3%:time_base=%4%/%5%:channel_layout=%6%")
-			% in_video_format_.audio_sample_rate
-			% av_get_sample_fmt_name(AV_SAMPLE_FMT_S32)
-			% in_channel_layout_.num_channels
-			% 1	% in_video_format_.audio_sample_rate
-			% boost::io::group(
-				std::hex,
-				std::showbase,
-				av_get_default_channel_layout(in_channel_layout_.num_channels))).str();
+		if (num_output_pads > 1)
+		{
+			std::string splitfilter = "[a:0]channelsplit=channel_layout=";
 
-		AVFilterContext* filt_asrc = nullptr;
-		FF(avfilter_graph_create_filter(
-			&filt_asrc,
-			avfilter_get_by_name("abuffer"),
-			"ffmpeg_consumer_abuffer",
-			asrc_options.c_str(),
-			nullptr,
-			audio_graph_.get()));
+			splitfilter += (boost::format("0x%|1$x|") % create_channel_layout_bitmask(in_channel_layout_.num_channels)).str();
 
-		AVFilterContext* filt_asink = nullptr;
-		FF(avfilter_graph_create_filter(
-			&filt_asink,
-			avfilter_get_by_name("abuffersink"),
-			"ffmpeg_consumer_abuffersink",
-			nullptr,
-			nullptr,
-			audio_graph_.get()));
+			for (int i = 0; i < num_output_pads; ++i)
+				splitfilter += "[aout:" + boost::lexical_cast<std::string>(i) + "]";
 
-#pragma warning (push)
-#pragma warning (disable : 4245)
+			filtergraph = u8(append_filter(u16(filtergraph), u16(splitfilter)));
+		}
 
-		FF(av_opt_set_int(
-			filt_asink,
-			"all_channel_counts",
-			1,
-			AV_OPT_SEARCH_CHILDREN));
+		std::vector<audio_output_pad> output_pads(
+				num_output_pads,
+				audio_output_pad(
+						from_terminated_array<int>(				codec.supported_samplerates,	0),
+						from_terminated_array<AVSampleFormat>(	codec.sample_fmts,				AVSampleFormat::AV_SAMPLE_FMT_NONE),
+						from_terminated_array<uint64_t>(		codec.channel_layouts,			0ull)));
 
-		FF(av_opt_set_int_list(
-			filt_asink,
-			"sample_fmts",
-			codec.sample_fmts,
-			-1,
-			AV_OPT_SEARCH_CHILDREN));
-
-		FF(av_opt_set_int_list(
-			filt_asink,
-			"channel_layouts",
-			codec.channel_layouts,
-			-1,
-			AV_OPT_SEARCH_CHILDREN));
-
-		FF(av_opt_set_int_list(
-			filt_asink,
-			"sample_rates" ,
-			codec.supported_samplerates,
-			-1,
-			AV_OPT_SEARCH_CHILDREN));
-
-#pragma warning (pop)
-
-		configure_filtergraph(
-			*audio_graph_,
-			filtergraph,
-			*filt_asrc,
-			*filt_asink);
-
-		audio_graph_in_  = filt_asrc;
-		audio_graph_out_ = filt_asink;
-
-		CASPAR_LOG(info)
-			<< 	u16(std::string("\n")
-				+ avfilter_graph_dump(
-					audio_graph_.get(),
-					nullptr));
+		audio_filter_.reset(new audio_filter(
+				{ audio_input_pad(
+						boost::rational<int>(1, in_video_format_.audio_sample_rate),
+						in_video_format_.audio_sample_rate,
+						AVSampleFormat::AV_SAMPLE_FMT_S32,
+						create_channel_layout_bitmask(in_channel_layout_.num_channels)) },
+						output_pads,
+						filtergraph));
 	}
 
 	void configure_filtergraph(
@@ -946,21 +919,19 @@ private:
 
 	void encode_audio(core::const_frame frame_ptr, std::shared_ptr<void> token)
 	{
-		if(!audio_st_)
+		if(audio_sts_.empty())
 			return;
-
-		auto enc = audio_st_->codec;
 
 		if(frame_ptr != core::const_frame::empty())
 		{
 			auto src_av_frame = create_frame();
 
-			src_av_frame->channels		 = in_channel_layout_.num_channels;
-			src_av_frame->channel_layout = av_get_default_channel_layout(in_channel_layout_.num_channels);
-			src_av_frame->sample_rate	 = in_video_format_.audio_sample_rate;
-			src_av_frame->nb_samples	 = static_cast<int>(frame_ptr.audio_data().size()) / src_av_frame->channels;
-			src_av_frame->format		 = AV_SAMPLE_FMT_S32;
-			src_av_frame->pts			 = audio_pts_;
+			src_av_frame->channels			= in_channel_layout_.num_channels;
+			src_av_frame->channel_layout		= create_channel_layout_bitmask(in_channel_layout_.num_channels);
+			src_av_frame->sample_rate		= in_video_format_.audio_sample_rate;
+			src_av_frame->nb_samples			= static_cast<int>(frame_ptr.audio_data().size()) / src_av_frame->channels;
+			src_av_frame->format				= AV_SAMPLE_FMT_S32;
+			src_av_frame->pts				= audio_pts_;
 
 			audio_pts_ += src_av_frame->nb_samples;
 
@@ -973,29 +944,40 @@ private:
 					static_cast<AVSampleFormat>(src_av_frame->format),
 					16));
 
-			FF(av_buffersrc_add_frame(
-					audio_graph_in_,
-					src_av_frame.get()));
+			audio_filter_->push(0, src_av_frame);
 		}
 
-		int ret = 0;
-
-		while(ret >= 0)
+		for (int pad_id = 0; pad_id < audio_filter_->get_num_output_pads(); ++pad_id)
 		{
-			auto filt_frame = create_frame();
+			for (auto filt_frame : audio_filter_->poll_all(pad_id))
+			{
+				audio_encoder_executor_.begin_invoke([=]
+				{
+					encode_av_frame(
+							*audio_sts_.at(pad_id),
+							avcodec_encode_audio2,
+							filt_frame,
+							token);
 
-			ret = av_buffersink_get_frame(
-				audio_graph_out_,
-				filt_frame.get());
+					boost::this_thread::yield(); // TODO:
+				});
+			}
+		}
 
+		bool eof = frame_ptr == core::const_frame::empty();
+
+		if (eof)
+		{
 			audio_encoder_executor_.begin_invoke([=]
 			{
-				if(ret == AVERROR_EOF)
+				for (int pad_id = 0; pad_id < audio_filter_->get_num_output_pads(); ++pad_id)
 				{
-					if(enc->codec->capabilities & CODEC_CAP_DELAY)
+					auto enc = audio_sts_.at(pad_id)->codec;
+
+					if (enc->codec->capabilities & CODEC_CAP_DELAY)
 					{
-						while(encode_av_frame(
-								*audio_st_,
+						while (encode_av_frame(
+								*audio_sts_.at(pad_id),
 								avcodec_encode_audio2,
 								nullptr,
 								token))
@@ -1003,20 +985,6 @@ private:
 							boost::this_thread::yield(); // TODO:
 						}
 					}
-				}
-				else if(ret != AVERROR(EAGAIN))
-				{
-					FF_RET(
-						ret,
-						"av_buffersink_get_frame");
-
-					encode_av_frame(
-						*audio_st_,
-						avcodec_encode_audio2,
-						filt_frame,
-						token);
-
-					boost::this_thread::yield(); // TODO:
 				}
 			});
 		}
@@ -1186,6 +1154,7 @@ struct ffmpeg_consumer_proxy : public core::frame_consumer
 	const std::string					path_;
 	const std::string					options_;
 	const bool							separate_key_;
+	const bool							mono_streams_;
 	const bool							compatibility_mode_;
 	int									consumer_index_offset_;
 
@@ -1194,10 +1163,11 @@ struct ffmpeg_consumer_proxy : public core::frame_consumer
 
 public:
 
-	ffmpeg_consumer_proxy(const std::string& path, const std::string& options, bool separate_key, bool compatibility_mode)
+	ffmpeg_consumer_proxy(const std::string& path, const std::string& options, bool separate_key, bool mono_streams, bool compatibility_mode)
 		: path_(path)
 		, options_(options)
 		, separate_key_(separate_key)
+		, mono_streams_(mono_streams)
 		, compatibility_mode_(compatibility_mode)
 		, consumer_index_offset_(crc16(path))
 	{
@@ -1208,7 +1178,7 @@ public:
 		if (consumer_)
 			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Cannot reinitialize ffmpeg-consumer."));
 
-		consumer_.reset(new ffmpeg_consumer(path_, options_));
+		consumer_.reset(new ffmpeg_consumer(path_, options_, mono_streams_));
 		consumer_->initialize(format_desc, channel_layout);
 
 		if (separate_key_)
@@ -1217,7 +1187,7 @@ public:
 			auto without_extension = u16(fill_file.parent_path().string() + "/" + fill_file.stem().string());
 			auto key_file = without_extension + L"_A" + u16(fill_file.extension().string());
 
-			key_only_consumer_.reset(new ffmpeg_consumer(u8(key_file), options_));
+			key_only_consumer_.reset(new ffmpeg_consumer(u8(key_file), options_, mono_streams_));
 			key_only_consumer_->initialize(format_desc, channel_layout);
 		}
 	}
@@ -1265,9 +1235,12 @@ public:
 	boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
-		info.add(L"type", L"ffmpeg");
-		info.add(L"path", u16(path_));
-		info.add(L"separate_key", separate_key_);
+
+		info.add(L"type",			L"ffmpeg");
+		info.add(L"path",			u16(path_));
+		info.add(L"separate_key",	separate_key_);
+		info.add(L"mono_streams",	mono_streams_);
+
 		return info;
 	}
 
@@ -1297,18 +1270,21 @@ public:
 void describe_streaming_consumer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"For streaming/recording the contents of a channel using FFmpeg.");
-	sink.syntax(L"FILE,STREAM [filename:string],[url:string] {-[ffmpeg_param1:string] [value1:string] {-[ffmpeg_param2:string] [value2:string] {...}}}");
+	sink.syntax(L"FILE,STREAM [filename:string],[url:string] {-[ffmpeg_param1:string] [value1:string] {-[ffmpeg_param2:string] [value2:string] {...}}} {[separate_key:SEPARATE_KEY]} {[mono_streams:MONO_STREAMS]}");
 	sink.para()->text(L"For recording or streaming the contents of a channel using FFmpeg");
 	sink.definitions()
-		->item(L"filename", L"The filename under the media folder including the extension (decides which kind of container format that will be used).")
-		->item(L"url", L"If the filename is given in the form of an URL a network stream will be created instead of a file on disk.")
-		->item(L"ffmpeg_paramX", L"A parameter supported by FFmpeg. For example vcodec or acodec etc.");
+		->item(L"filename",			L"The filename under the media folder including the extension (decides which kind of container format that will be used).")
+		->item(L"url",				L"If the filename is given in the form of an URL a network stream will be created instead of a file on disk.")
+		->item(L"ffmpeg_paramX",		L"A parameter supported by FFmpeg. For example vcodec or acodec etc.")
+		->item(L"separate_key",		L"If defined will create two files simultaneously -- One for fill and one for key (_A will be appended).")
+		->item(L"mono_streams",		L"If defined every audio channel will be written to its own audio stream.");
 	sink.para()->text(L"Examples:");
 	sink.example(L">> ADD 1 FILE output.mov -vcodec dnxhd");
 	sink.example(L">> ADD 1 FILE output.mov -vcodec prores");
 	sink.example(L">> ADD 1 FILE output.mov -vcodec dvvideo");
 	sink.example(L">> ADD 1 FILE output.mov -vcodec libx264 -preset ultrafast -tune fastdecode -crf 25");
 	sink.example(L">> ADD 1 FILE output.mov -vcodec dnxhd SEPARATE_KEY", L"for creating output.mov with fill and output_A.mov with key/alpha");
+	sink.example(L">> ADD 1 FILE output.mxf -vcodec dnxhd MONO_STREAMS", L"for creating output.mxf with every audio channel encoded in its own mono stream.");
 	sink.example(L">> ADD 1 STREAM udp://<client_ip_address>:9250 -format mpegts -vcodec libx264 -crf 25 -tune zerolatency -preset ultrafast",
 		L"for streaming over UDP instead of creating a local file.");
 }
@@ -1320,20 +1296,13 @@ spl::shared_ptr<core::frame_consumer> create_streaming_consumer(
 		return core::frame_consumer::empty();
 
 	auto params2			= params;
-	auto separate_key_it	= std::find_if(params2.begin(), params2.end(), param_comparer(L"SEPARATE_KEY"));
-	bool separate_key		= false;
-
-	if (separate_key_it != params2.end())
-	{
-		separate_key = true;
-		params2.erase(separate_key_it);
-	}
-
+	bool separate_key		= get_and_consume_flag(L"SEPARATE_KEY", params2);
+	bool mono_streams		= get_and_consume_flag(L"MONO_STREAMS", params2);
 	auto compatibility_mode	= boost::iequals(params.at(0), L"FILE");
 	auto path				= u8(params2.size() > 1 ? params2.at(1) : L"");
 	auto args				= u8(boost::join(params2, L" "));
 
-	return spl::make_shared<ffmpeg_consumer_proxy>(path, args, separate_key, compatibility_mode);
+	return spl::make_shared<ffmpeg_consumer_proxy>(path, args, separate_key, mono_streams, compatibility_mode);
 }
 
 spl::shared_ptr<core::frame_consumer> create_preconfigured_streaming_consumer(
@@ -1343,6 +1312,7 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_streaming_consumer(
 			u8(ptree_get<std::wstring>(ptree, L"path")),
 			u8(ptree.get<std::wstring>(L"args", L"")),
 			ptree.get<bool>(L"separate-key", false),
+			ptree.get<bool>(L"mono-streams", false),
 			false);
 }
 
