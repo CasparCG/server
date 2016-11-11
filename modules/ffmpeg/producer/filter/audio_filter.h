@@ -43,6 +43,7 @@ extern "C"
 #endif
 
 struct AVFrame;
+struct AVFilterLink;
 
 namespace caspar { namespace ffmpeg {
 
@@ -93,12 +94,15 @@ public:
 	audio_filter(audio_filter&& other);
 	audio_filter& operator=(audio_filter&& other);
 
+	void set_guaranteed_output_num_samples_per_frame(int output_pad_id, int num_samples);
 	void push(int input_pad_id, const std::shared_ptr<AVFrame>& frame);
 	void push(int input_pad_id, const boost::iterator_range<const int32_t*>& frame_samples);
 	std::shared_ptr<AVFrame> poll(int output_pad_id);
 	std::vector<spl::shared_ptr<AVFrame>> poll_all(int output_pad_id);
 
 	std::wstring filter_str() const;
+	int get_num_output_pads() const;
+	const AVFilterLink& get_output_pad_info(int output_pad_id) const;
 private:
 	struct implementation;
 	spl::shared_ptr<implementation> impl_;
