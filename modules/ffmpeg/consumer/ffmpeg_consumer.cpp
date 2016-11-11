@@ -746,7 +746,7 @@ private:
 				audio_output_pad(
 						from_terminated_array<int>(				codec.supported_samplerates,	0),
 						from_terminated_array<AVSampleFormat>(	codec.sample_fmts,				AVSampleFormat::AV_SAMPLE_FMT_NONE),
-						from_terminated_array<uint64_t>(		codec.channel_layouts,			0ull)));
+						from_terminated_array<uint64_t>(		codec.channel_layouts,			static_cast<uint64_t>(0))));
 
 		audio_filter_.reset(new audio_filter(
 				{ audio_input_pad(
