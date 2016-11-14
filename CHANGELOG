@@ -1,3 +1,5 @@
+C H A N G E S
+
 CasparCG 2.1.0 (w.r.t 2.0 Stable)
 =================================
 
@@ -86,8 +88,518 @@ AMCP
     exist.
   o DATA REMOVE command was added.
 
-CasparCG 2.0 Stable (w.r.t Beta 3)
-==================================
+
+
+CasparCG Server 2.0.7 Stable (as compared to CasparCG Server 2.0.7 Beta 2)
+==========================================================================
+
+General
+-------
+
+  o Added support for using a different configuration file at startup than the
+    default casparcg.config by simply adding the name of the file to use as the
+    first command line argument to casparcg.exe.
+  o Upgraded FFmpeg to latest stable.
+  o Created build script.
+  o Fixed bug where both layer_producer and channel_producer display:s and
+    empty/late first frame when the producer is called before the consumer in
+    the other end has received the first frame.
+  o Added rudimentary support for audio for layer_producer and channel_producer.
+  o Upgraded Decklink SDK to 10.1.4, bringing new 2K and 4K DCI video modes. New
+    template hosts also availble for those modes.
+  o General bug fixes (mostly memory and resource leaks, some serious).
+  o Updated Boost to version 1.57
+  o Frontend no longer maintained and therefore not included in the release.
+
+Mixer
+-----
+
+  o Added support for rotation.
+  o Added support for changing the anchor point around which fill_translation,
+    fill_scale and rotation will be done from.
+  o Added support for perspective correct corner pinning.
+  o Added support for mipmapped textures with anisotropic filtering for
+    increased downscaling quality. Whether to enable by default can be
+    configured in casparcg.config.
+  o Added support for cropping a layer. Not the same as clipping.
+
+AMCP
+----
+
+  o Added RESUME command to complement PAUSE. (Peter Keuter)
+  o To support the new mixer features the following commands has been added:
+
+    - MIXER ANCHOR -- will return or modify the anchor point for a layer
+      (default is 0 0 for backwards compatibility). Example:
+      MIXER 1-10 ANCHOR 0.5 0.5
+      ...for changing the anchor to the middle of the layer
+      (a MIXER 1-10 FILL 0.5 0.5 1 1 will be necessary to place the layer at the
+      same place on screen as it was before).
+
+    - MIXER ROTATION -- will return or modify the angle of which a layer is
+      rotated by (clockwise degrees) around the point specified by ANCHOR.
+
+    - MIXER PERSPECTIVE -- will return or modify the corners of the perspective
+      transformation of a layer. One X Y pair for each corner (order upper left,
+      upper right, lower right and lower left). Example:
+      MIXER 1-10 PERSPECTIVE 0.4 0.4 0.6 0.4 1 1 0 1
+
+    - MIXER MIPMAP -- will return or modify whether to enable mipmapping of
+      textures produced on a layer. Only frames produced after a change will be
+      affected. So for example image_producer will not be affected while the
+      image is displayed.
+
+    - MIXER CROP -- will return or modify how textures on a layer will be
+      cropped. One X Y pair each for the upper left corner and for the lower
+      right corner.
+
+  o Added INFO QUEUES command for debugging AMCP command queues. Useful for
+    debugging command queue overflows, where a command is deadlocked. Hopefully
+    always accessible via console, even though the TCP command queue may be
+    full.
+  o Added GL command:
+    - GL INFO prints information about device buffers and host buffers.
+    - GL GC garbage collects pooled but unused GL resources.
+  o Added INFO THREADS command listing the known threads and their descriptive
+    names. Can be matched against the thread id column of log entries.
+
+Consumers
+---------
+
+  o Removed blocking_decklink_consumer. It was more like an experiment at best
+    and its usefulness was questionable.
+  o Added a 10 second time-out for consumer sends, to detect/recover from
+    blocked consumers.
+  o Some consumers which are usually added and removed during playout (for
+    example ffmpeg_consumer, streaming_consumer and channel_consumer) no longer
+    affect the presentation time on other consumers. Previously a lag on the SDI
+    output could be seen when adding such consumers.
+
+HTML producer
+-------------
+
+  o No longer tries to play all files with a . in their name.
+    (Georgi Chorbadzhiyski)
+  o Reimplemented using CEF3 instead of Berkelium, which enables use of WebGL
+    and more. CEF3 is actively maintained, which Berkelium is not. (Robert Nagy)
+  o Implements a custom version of window.requestAnimationFrame which will
+    follow the pace of the channel, for perfectly smooth animations.
+  o No longer manually interlaces frames, to allow for mixer fill transforms
+    without artifacts.
+  o Now uses CEF3 event loop to avoid 100% CPU core usage.
+
+
+
+CasparCG Server 2.0.7 Beta 2 (as compared to CasparCG Server 2.0.7 Beta 1)
+==========================================================================
+
+General
+-------
+
+  o Added sendings of OSC messages for channel_grid channel in addition to
+    regular channels.
+
+Producers
+---------
+
+  o FFmpeg: Reports correct nb_frames() when using SEEK (Thomas Kaltz III)
+  o Flash: Fixed bug where CG PLAY, CG INVOKE did not work.
+
+Consumers
+---------
+
+  o channel_consumer: Added support for more than one channel_consumer per
+    channel.
+  o decklink_consumer: Added support for a single instance of the consumer to
+    manage a separate key output for use with decklink duo/quad cards:
+
+    <decklink>
+      <device>1</device>
+      <key-device>2</key-device>
+      <keyer>external_separate_device</keyer>
+    </decklink>
+
+    ...in the configuration will enable the feature. The value of <key-device />
+    defaults to the value of <device /> + 1.
+  o synchronizing_consumer: Removed in favour of a single decklink_consumer
+    managing both fill and key device.
+  o streaming_consumer: A new implementation of ffmpeg_consumer with added
+    support for streaming and other PTS dependent protocols. Examples:
+
+    <stream>
+      <path>udp://localhost:5004</path>
+      <args>-vcodec libx264 -tune zerolatency -preset ultrafast -crf 25 -format mpegts -vf scale=240:180</args>
+    </stream>
+
+    ...in configuration or:
+
+    ADD 1 STREAM udp://localhost:5004 -vcodec libx264 -tune zerolatency -preset ultrafast -crf 25 -format mpegts -vf scale=240:180
+
+    ...via AMCP. (Robert Nagy sponsored by Ericsson Broadcasting Services)
+  o newtek_ivga_consumer: Added support for iVGA consumer to not provide channel
+    sync even though connected. Useful for iVGA clients that downloads as fast
+    as possible instead of in frame-rate pace, like Wirecast. To enable:
+
+    <newtek-ivga>
+      <provide-sync>false</provide-sync>
+    </newtek-ivga>
+
+    ...in config to not provide channel sync when connected. The default is
+    true.
+
+AMCP
+----
+
+  o Added support in ADD and REMOVE for a placeholder <CLIENT_IP_ADDRESS> which
+    will resolve to the connected AMCP client's IPV4 address.
+  o Fixed bug where AMCP commands split into multiple TCP packets where not
+    correctly parsed (http://casparcg.com/forum/viewtopic.php?f=3&t=2480)
+
+
+
+CasparCG Server 2.0.7 Beta 1 (as compared to 2.0.6 Stable)
+==========================================================
+
+General
+-------
+  o FFmpeg: Upgraded to master and adapted CasparCG to FFmpeg API changes
+    (Robert Nagy sponsored by SVT)
+  o FFmpeg: Fixed problem with frame count calculation (Thomas Kaltz III)
+  o Fixed broken CG UPDATE.
+
+Producers
+---------
+
+  o New HTML producer has been created (Robert Nagy sponsored by Flemish Radio
+    and Television Broadcasting Organization, VRT)
+
+
+
+CasparCG Server 2.0.6 Stable (as compared to 2.0.4 Stable)
+==========================================================
+
+General
+-------
+  o iVGA: Allow for the server to work without Processing.AirSend.x86.dll to
+    prevent a possible GPL violation. It is available as a separate optional
+    download.
+  o iVGA: Only provide sync to channel while connected, to prevent channel
+    ticking too fast.
+  o FFmpeg: Fixed bug during deinterlace-bob-reinterlace where output fields
+    were offset by one field in relation to input fields.
+  o FFmpeg: Fixed bug in ffmpeg_consumer where an access violation occurred
+    during destruction.
+  o FFmpeg: Improved seeking. (Robert Nagy and Thomas Kaltz III)
+  o Frontend: Only writes elements to casparcg.config which overrides a default
+    value to keep the file as compact as possible.
+  o System audio: Patched sfml-audio to work better with oal-consumer and
+    therefore removed portaudio as the system audio implementation and went back
+    to oal.
+  o Flash: Changed so that the initial buffer fill of frames is rendered at a
+    frame-duration pace instead of as fast as possible. Otherwise time based
+    animations render incorrectly. During buffer recovery, a higher paced
+    rendering takes place, but still not as fast as possible, which can cause
+    animations to be somewhat incorrectly rendered. This is the only way though
+    if we want the buffer to be able to recover after depletion.
+  o Fixed race condition during server shutdown.
+  o OSC: outgoing audio levels from the audio mixer for each audio channel is
+    now transmitted (pFS and dBFS). (Thomas Kaltz III)
+  o Stage: Fixed bug where tweened transforms were only ticked when a
+    corresponding layer existed.
+  o Screen consumer: Added borderless option and correct handling of name
+    option. (Thomas Kaltz III)
+  o AMCP: CLS now reports duration and framerate for MOVIE files were
+    information is possible to extract. (Robert Nagy)
+  o Version bump to keep up with CasparCG Client version.
+
+
+
+CasparCG Server 2.0.4 Stable (as compared to 2.0.4 Beta 1)
+==========================================================
+
+General
+-------
+  o Can now open media with file names that only consist of digits.
+    (Cambell Prince)
+  o Miscellaneous stability and performance improvements.
+
+Video mixer
+-----------
+  o Conditional compilation of chroma key support and straight alpha output
+    support in shader (just like with blend-modes) because of performance impact
+    even when not in use on a layer or on a channel. New <mixer /> element added
+    to configuration for turning on mixer features that not everybody would want
+    to pay for (performance-wise.) blend-modes also moved into this element.
+  o Fixed bug where MIXER LEVELS interpreted arguments in the wrong order, so 
+    that gamma was interpreted as max_input and vice versa.
+
+Consumers
+---------
+  o Added support for NewTek iVGA, which enables the use of CasparCG Server 
+    fill+key output(s) as input source(s) to a NewTek TriCaster without 
+    requiring video card(s) in the CasparCG Server machine, or taking up inputs
+    in the TriCaster. <newtek-ivga /> element in config enables iVGA on a
+    channel. (Robert Nagy sponsored by NewTek)
+  o Decklink: Created custom decklink allocator to reduce the memory footprint.
+  o Replaced usage of SFML for <system-audio /> with PortAudio, because of
+    problems with SFML since change to static linkage. Also PortAudio seems to
+    give lower latency.
+
+Producers
+---------
+  o FFmpeg: Added support for arbitrary FFmpeg options/parameters
+    in ffmpeg_producer. (Cambell Prince)
+  o Flash: Flash Player 11.8 now tested and fully supported.
+  o Flash: No longer starts a Flash Player to service CG commands that mean
+    nothing without an already running Flash Player.
+  o Flash: globally serialize initialization and destruction of Flash Players,
+    to avoid race conditions in Flash.
+  o Flash: changed so that the Flash buffer is filled with Flash Player
+    generated content at initialization instead of empty frames.
+
+OSC
+---
+  o Performance improvements. (Robert Nagy sponsored by Boffins Technologies)
+  o Never sends old values to OSC reveivers. Collects the latest value of each
+    path logged since last UDP send, and sends the new UDP packet (to each
+    subscribing OSC receiver) with the values collected. (Robert Nagy sponsored
+    by Boffins Technologies)
+  o Batches as many OSC messages as possible in an OSC bundle to reduce the 
+    number of UDP packets sent. Breakup into separate packages if necessary to 
+    avoid fragmentation. (Robert Nagy sponsored by Boffins Technologies)
+  o Removed usage of Microsoft Agents library (Server ran out of memory after a
+    while) in favour of direct synchronous invocations.
+
+
+
+CasparCG Server 2.0.4 Beta 1 (as compared to 2.0.3 Stable)
+==========================================================
+
+General
+-------
+  o Front-end GUI for simplified configuration and easy access to common tasks.
+    (Thomas Kaltz III and Jeff Lafforgue)
+  o Added support for video and images file thumbnail generation. By default the
+    media directory is scanned every 5 seconds for new/modified/removed files
+    and thumbnails are generated/regenerated/removed accordingly.
+  o Support for new video modes: 1556p2398, 1556p2400, 1556p2500, 2160p2398,
+    2160p2400, 2160p2500, 2160p2997 and 2160p3000.
+  o Experimental ATI graphics card support by using static linking against SFML
+    instead of dynamic. Should improve ATI GPU support, but needs testing.
+  o Added support for playback and pass-through of up to 16 audio channels. See
+    http://casparcg.com/forum/viewtopic.php?f=3&t=1453 for more information.
+  o Optimizations in AMCP protocol implementations for large incoming messages,
+    for example base64 encoded PNG images.
+  o Logging output now includes milliseconds and has modified format:
+    YYYY-MM-DD hh:mm:ss.zzz
+  o Improved audio playback with 720p5994 and 720p6000 channels.
+  o An attempt to improve output synchronization of consumers has been made. Use
+    for example:
+
+    <consumers>
+      <synchronizing>
+        <decklink>
+          <device>1</device>
+          <embedded-audio>true</embedded-audio>
+        </decklink>
+        <decklink>
+          <device>2</device>
+          <key-only>true</key-only>
+        </decklink>
+      </synchronizing>
+    </consumers>
+
+    ...to instruct the server to keep both DeckLink consumers in sync with each
+    other. Consider this experimental, so don't wrap everything in
+    <synchronizing /> unless synchronization of consumer outputs is needed. For
+    synchronization to be effective all synchronized cards must have genlock
+    reference signal connected.
+  o Transfer of source code and issue tracker to github. (Thomas Kaltz III)
+
+Layer
+-----
+  o Fixed a problem where the first frame was not always shown on LOAD.
+    (Robert Nagy)
+
+Stage
+-----
+
+  o Support for layer consumers for listening to frames coming out of producers.
+    (Cambell Prince)
+
+Audio mixer
+-----------
+  o Added support for a master volume mixer setting for each channel.
+
+Video mixer
+-----------
+  o Added support for chroma keying. (Cambell Prince)
+  o Fixed bug where MIXER CONTRAST set to < 1 can cause transparency issues.
+  o Experimental support for straight alpha output.
+
+Consumers
+---------
+  o Avoid that the FFmpeg consumer blocks the channel output when it can't keep
+    up with the frame rate (drops frames instead).
+  o Added support for to create a separate key and fill file when recording with
+    the FFmpeg consumer. Add the SEPARATE_KEY parameter to the FFmpeg consumer
+    parameter list. The key file will get the _A file name suffix to be picked
+    up by the separated_producer when doing playback.
+  o The Image consumer now writes to the media folder instead of the data
+    folder.
+  o Fixed bug in DeckLink consumer where we submit too few audio samples to the
+    driver when the video format has a frame rate > 50.
+  o Added another experimental DeckLink consumer implementation where scheduled
+    playback is not used, but a similar approach as in the bluefish consumer
+    where we wait for a frame to be displayed and then display the next frame.
+    It is configured via a <blocking-decklink> consumer element. The benefits of
+    this consumer is lower latency and more deterministic synchronization
+    between multiple instances (should not need to be wrapped in a
+    <synchronizing> element when separated key/fill is used).
+
+Producers
+---------
+  o Added support for playing .swf files using the Flash producer. (Robert Nagy)
+  o Image producer premultiplies PNG images with their alpha.
+  o Image producer can load a PNG image encoded as base64 via:
+    PLAY 1-0 [PNG_BASE64] <base64 string>
+  o FFmpeg producer can now use a directshow input filters:
+    PLAY 1-10 "dshow://video=Some Camera"
+    (Cambell Prince, Julian Waller and Robert Nagy)
+  o New layer producer which directs the output of a layer to another layer via
+    a layer consumer. (Cambell Prince)
+
+AMCP
+----
+  o The master volume feature is controlled via the MASTERVOLUME MIXER
+    parameter. Example: MIXER 1 MASTERVOLUME 0.5
+  o THUMBNAIL LIST/RETRIEVE/GENERATE/GENERATE_ALL command was added to support
+    the thumbnail feature.
+  o ADD 1 FILE output.mov SEPARATE_KEY activates the separate key feature of the
+    FFmpeg consumer creating an additional output_a.mov containing only the key.
+  o Added KILL command for shutting down the server without console access.
+  o Added RESTART command for shutting down the server in the same way as KILL
+    except that the return code from CasparCG Server is 5 instead of 0, which
+    can be used by parent process to take other actions. The
+    'casparcg_auto_restart.bat' script restarts the server if the return code is
+    5.
+  o DATA RETRIEVE now returns linefeeds encoded as an actual linefeed (the
+    single character 0x0a) instead of the previous two characters:
+    \ followed by n.
+  o MIXER CHROMA command added to control the chroma keying. Example:
+    MIXER 1-1 CHROMA GREEN|BLUE 0.10 0.04
+    (Cambell Prince)
+  o Fixed bug where MIXER FILL overrides any previous MIXER CLIP on the same
+    layer. The bugfix also has the side effect of supporting negative scale on
+    MIXER FILL, causing the image to be flipped.
+  o MIXER <ch> STRAIGHT_ALPHA_OUTPUT added to control whether to output straight
+    alpha or not.
+  o Added INFO <ch> DELAY and INFO <ch>-<layer> DELAY commands for showing some
+    delay measurements.
+  o PLAY 1-1 2-10 creates a layer producer on 1-1 redirecting the output of
+    2-10. (Cambell Prince)
+
+OSC
+---
+  o Support for sending OSC messages over UDP to either a predefined set of
+    clients (servers in the OSC sense) or dynamically to the ip addresses of the
+    currently connected AMCP clients.
+    (Robert Nagy sponsored by Boffins Technologies)
+  o /channel/[1-9]/stage/layer/[0-9]
+    + always             /paused           [paused or not]
+    + color producer     /color            [color string]
+    + ffmpeg producer    /profiler/time    [render time]     [frame duration]
+    + ffmpeg producer    /file/time        [elapsed seconds] [total seconds]
+    + ffmpeg producer    /file/frame       [frame]           [total frames]
+    + ffmpeg producer    /file/fps         [fps]
+    + ffmpeg producer    /file/path        [file path]
+    + ffmpeg producer    /loop             [looping or not]
+    + during transitions /transition/frame [current frame]   [total frames]
+    + during transitions /transition/type  [transition type]
+    + flash producer     /host/path        [filename]
+    + flash producer     /host/width       [width]
+    + flash producer     /host/height      [height]
+    + flash producer     /host/fps         [fps]
+    + flash producer     /buffer           [buffered]        [buffer size]
+    + image producer     /file/path        [file path]
+
+
+
+CasparCG Server 2.0.3 Stable (as compared to 2.0.3 Alpha)
+=========================================================
+
+Stage
+-----
+
+  o Fixed dead-lock that can occur with multiple mixer tweens. (Robert Nagy)
+
+AMCP
+----
+
+  o DATA STORE now supports creating folders of path specified if they does not
+    exist. (Jeff Lafforgue)
+  o DATA REMOVE command was added. (Jeff Lafforgue)
+
+
+
+CasparCG Server 2.0.3 Alpha (as compared to 2.0 Stable)
+=======================================================
+
+General
+-------
+
+  o Data files are now stored in UTF-8 with BOM. Latin1 files are still
+    supported for backwards compatibility.
+  o Commands written in UTF-8 to log file but only ASCII characters to console.
+  o Added supported video formats:
+    + 720p2398 (not supported by DeckLink)
+    + 720p2400 (not supported by DeckLink)
+    + 1080p5994
+    + 1080p6000
+    + 720p30 (not supported by DeckLink)
+    + 720p29.976 (not supported by DeckLink)
+
+CLK
+---
+
+  o CLK protocol implementation can now serve more than one connection at a time
+    safely.
+  o Added timeline support to the CLK protocol.
+  o Refactored parts of the CLK parser implementation.
+
+Consumers
+---------
+
+  o Consumers on same channel now invoked asynchronously to allow for proper
+    sync of multiple consumers.
+  o System audio consumer:
+    + no longer provides sync to caspar.
+  o Screen consumer:
+    + Support for multiple screen consumers on the same channel
+    + No longer spin-waits for vsync
+    + Now deinterlaces to two separate frames so for example 50i will no longer
+      be converted to 25p but instead to 50p for smooth playback of interlaced
+      content.
+  o Decklink consumer now logs whether a reference signal is detected or not.
+
+Producers
+---------
+
+  o Image scroll producer:
+    + Field-rate motion instead of frame-rate motion with interlaced video
+      formats. This can be overridden by giving the PROGRESSIVE parameter.
+    + SPEED parameter now defines pixels per frame/field instead of half pixels
+      per frame. The scrolling direction is also reversed so SPEED 0.5 is the
+      previous equivalent of SPEED -1. Movements are done with subpixel accuracy
+    + Fixed incorrect starting position of image.
+    + Rounding error fixes to allow for more exact scrolling.
+    + Added support for motion blur via a new BLUR parameter
+    + Added PREMULTIPLY parameter to support images stored with straight alpha.
+
+
+
+CasparCG Server 2.0 Stable (as compared to Beta 3)
+==================================================
 
 General
 -------
@@ -98,13 +610,15 @@ Consumers
 ---------
 
   o File Consumer
-    + Changed semantics to more closely follow ffmpeg (see forums).
+    + Changed semantics to more closely follow FFmpeg (see forums).
     + Added options, -r, -acodec, -s, -pix_fmt, -f and more.
   o Screen Consumer
     + Added vsync support.
 
-CasparCG 2.0 Beta 3 (w.r.t Beta 1)
-==================================
+
+
+CasparCG Server 2.0 Beta 3 (as compared to Beta 1)
+==================================================
 
 Formats
 -------
@@ -121,7 +635,7 @@ Consumers
 
   o File Consumer added
     + See updated wiki or ask in forum for more information.
-    + Should support anything ffmpeg supports. However, we will work mainly with
+    + Should support anything FFmpeg supports. However, we will work mainly with
       DNXHD, PRORES and H264.
     - Key-only is not supported.
   o Bluefish Consumer
@@ -152,14 +666,14 @@ Producers
     + Improved auto-transcode accuracy.
     + Improved seeking accuracy.
     + Fixed bug with looping and LENGTH.
-    + Updated to newer ffmpeg version.
+    + Updated to newer FFmpeg version.
     + Fixed incorrect scaling of NTSC DV files.
     + Optimized color conversion when using YADIF filters.
   o Flash Producer
-    + Release flash-player when empty.
-    + Use native resolution template-host.
-    + Template-hosts are now choosen automatically if not configured. The
-      template-host with the corresponding video-mode name is now chosen.
+    + Release Flash Player when empty.
+    + Use native resolution TemplateHost.
+    + TemplateHosts are now choosen automatically if not configured. The
+      TemplateHost with the corresponding video-mode name is now chosen.
     + Use square pixel dimensions.
 
 AMCP
@@ -203,13 +717,10 @@ Diagnostics
     previously.
   o Diagnostics window is now closable.
 
-Configuration
--------------
 
-  o Simplified.
 
-CasparCG 2.0 Beta 1 (w.r.t Alpha)
-=================================
+CasparCG Server 2.0 Beta 1 (as compared to Alpha)
+=================================================
 
   o Blending Modes (needs to be explicitly enabled)
     + overlay
@@ -226,7 +737,7 @@ CasparCG 2.0 Beta 1 (w.r.t Alpha)
     + min output-level
     + max output-level
     + gamma
-  o Support for ffmpeg-filters such as (ee http://ffmpeg.org/libavfilter.html)
+  o Support for FFmpeg-filters such as (ee http://ffmpeg.org/libavfilter.html)
     + yadif deinterlacer (optimized in CasparCG for full multi-core support)
     + de-noising
     + dithering
@@ -234,8 +745,8 @@ CasparCG 2.0 Beta 1 (w.r.t Alpha)
     + and many more
   o 32-bit SSE optimized audio pipeline.
   o Decklink-Consumer uses external-key by default.
-  o Decklink-Consumer has 32 bit embedded-audio support.
-  o Decklink-Producer has 32 bit embedded-audio support.
+  o Decklink-Consumer has 24 bit embedded-audio support.
+  o Decklink-Producer has 24 bit embedded-audio support.
   o LOADBG with AUTO feature which automatically playes queued clip when
     foreground clip has ended.
   o STATUS command for layers.
@@ -245,7 +756,7 @@ CasparCG 2.0 Beta 1 (w.r.t Alpha)
   o Producer buffering is now configurable.
   o Consumer buffering is now configurable.
   o Now possible to configure template-hosts for different video-modes.
-  o Added auto transcoder for ffmpeg-producer which automatically transcodes
+  o Added auto transcoder for FFmpeg producer which automatically transcodes
     input video into compatible video format for the channel.
     + interlacing (50p -> 50i)
     + deinterlacing (50i -> 25p)
@@ -261,9 +772,9 @@ CasparCG 2.0 Beta 1 (w.r.t Alpha)
     producer-buffer size greater than 0.
   o Improved error and crash recovery.
   o Improved logging.
-  o Added Image-Scroll-Producer
-  o Key-only has now near zery performance overhead.
-  o Reduced memory requirements
+  o Added Image-Scroll-Producer.
+  o Key-only has now near zero performance overhead.
+  o Reduced memory requirements.
   o Removed "warm up lag" which occured when playing the first media clip after
     the server has started.
   o Added read-back fence for OpenGL device for improved multi-channel
@@ -276,8 +787,10 @@ CasparCG 2.0 Beta 1 (w.r.t Alpha)
   o Alpha value in color codes is now optional.
   o More than 2 Decklink cards might be possible but have not yet been tested.
 
-CasparCG 2.0 Alpha (w.r.t 1.8)
-==============================
+
+
+CasparCG Server 2.0 Alpha (as compared to 1.8)
+==============================================
 
 General
 -------
@@ -288,7 +801,7 @@ General
   o Misc improved scalability.
   o XML-configuration.
   o Decklink
-    + Support for multiple decklink-cards.
+    + Support for multiple DeckLink cards.
 
 Core
 ----
