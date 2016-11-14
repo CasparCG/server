@@ -81,7 +81,7 @@ struct configuration
 
 	int							device_index		= 1;
 	int							key_device_idx		= 0;
-	bool						embedded_audio		= true;
+	bool						embedded_audio		= false;
 	keyer_t						keyer				= keyer_t::default_keyer;
 	latency_t					latency				= latency_t::default_latency;
 	bool						key_only			= false;
@@ -219,7 +219,12 @@ public:
 	virtual ULONG STDMETHODCALLTYPE Release()
 	{
 		if(--ref_count_ == 0)
+		{
 			delete this;
+
+			return 0;
+		}
+
 		return ref_count_;
 	}
 
@@ -579,6 +584,9 @@ public:
 					send_completion_ = std::packaged_task<bool()>();
 				}
 			}
+
+			if (!is_running_)
+				return E_FAIL;
 
 			if (config_.embedded_audio)
 				schedule_next_audio(channel_remapper_.mix_and_rearrange(frame.audio_data()));
