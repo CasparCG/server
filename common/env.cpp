@@ -41,7 +41,8 @@
 #include <fstream>
 
 namespace caspar { namespace env {
-	
+
+std::wstring initial;
 std::wstring media;
 std::wstring log;
 std::wstring ftemplate;
@@ -60,18 +61,18 @@ void configure(const std::wstring& filename)
 {
 	try
 	{
-		auto initialPath = boost::filesystem::initial_path().wstring();
-	
-		boost::filesystem::wifstream file(initialPath + L"/" + filename);
+		initial = boost::filesystem::initial_path().wstring();
+
+		boost::filesystem::wifstream file(initial + L"/" + filename);
 		boost::property_tree::read_xml(file, pt, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
 
 		auto paths	= pt.get_child(L"configuration.paths");
-		media		= paths.get(L"media-path", initialPath + L"/media/");
-		log			= paths.get(L"log-path", initialPath + L"/log/");
-		ftemplate	= boost::filesystem::complete(paths.get(L"template-path", initialPath + L"/template/")).wstring();
-		data		= paths.get(L"data-path", initialPath + L"/data/");
-		font		= paths.get(L"font-path", initialPath + L"/font/");
-		thumbnails	= paths.get(L"thumbnail-path", initialPath + L"/thumbnail/");
+		media		= paths.get(L"media-path", initial + L"/media/");
+		log			= paths.get(L"log-path", initial + L"/log/");
+		ftemplate	= boost::filesystem::complete(paths.get(L"template-path", initial + L"/template/")).wstring();
+		data		= paths.get(L"data-path", initial + L"/data/");
+		font		= paths.get(L"font-path", initial + L"/font/");
+		thumbnails	= paths.get(L"thumbnail-path", initial + L"/thumbnail/");
 	}
 	catch(...)
 	{
@@ -130,30 +131,6 @@ void configure(const std::wstring& filename)
 			font.append(L"/");
 		if(thumbnails.at(thumbnails.length()-1) != L'/')
 			thumbnails.append(L"/");
-
-		try
-		{
-			auto initialPath = boost::filesystem::initial_path().wstring();
-
-			for(auto it = boost::filesystem::directory_iterator(initialPath); it != boost::filesystem::directory_iterator(); ++it)
-			{
-				if(it->path().wstring().find(L".fth") != std::wstring::npos)
-				{
-					auto from_path = *it;
-					auto to_path = boost::filesystem::path(ftemplate + L"/" + it->path().filename().wstring());
-
-					if(boost::filesystem::exists(to_path))
-						boost::filesystem::remove(to_path);
-
-					boost::filesystem::copy_file(from_path, to_path);
-				}
-			}
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			CASPAR_LOG(error) << L"Failed to copy template-hosts from initial-path to template-path.";
-		}
 	}
 	catch(...)
 	{
@@ -161,7 +138,13 @@ void configure(const std::wstring& filename)
 		CASPAR_LOG(error) << L"Failed to create configured directories.";
 	}
 }
-	
+
+const std::wstring& initial_folder()
+{
+	check_is_configured();
+	return initial;
+}
+
 const std::wstring& media_folder()
 {
 	check_is_configured();
@@ -204,10 +187,10 @@ const std::wstring& thumbnails_folder()
 const std::wstring& version()
 {
 	static std::wstring ver = u16(
-			EXPAND_AND_QUOTE(CASPAR_GEN)	"." 
-			EXPAND_AND_QUOTE(CASPAR_MAYOR)  "." 
-			EXPAND_AND_QUOTE(CASPAR_MINOR)  "." 
-			CASPAR_REV	" " 
+			EXPAND_AND_QUOTE(CASPAR_GEN)	"."
+			EXPAND_AND_QUOTE(CASPAR_MAYOR)  "."
+			EXPAND_AND_QUOTE(CASPAR_MINOR)  "."
+			CASPAR_REV	" "
 			CASPAR_TAG);
 	return ver;
 }
