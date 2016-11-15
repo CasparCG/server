@@ -205,8 +205,35 @@ spl::shared_ptr<core::frame_producer> create_ct_producer(
 	return producer;
 }
 
+void copy_template_hosts()
+{
+	try
+	{
+		for (auto it = boost::filesystem::directory_iterator(env::initial_folder()); it != boost::filesystem::directory_iterator(); ++it)
+		{
+			if (it->path().wstring().find(L".fth") != std::wstring::npos)
+			{
+				auto from_path = *it;
+				auto to_path = boost::filesystem::path(env::template_folder() + L"/" + it->path().filename().wstring());
+
+				if (boost::filesystem::exists(to_path))
+					boost::filesystem::remove(to_path);
+
+				boost::filesystem::copy_file(from_path, to_path);
+			}
+		}
+	}
+	catch (...)
+	{
+		CASPAR_LOG_CURRENT_EXCEPTION();
+		CASPAR_LOG(error) << L"Failed to copy template-hosts from initial-path to template-path.";
+	}
+}
+
 void init(core::module_dependencies dependencies)
 {
+	copy_template_hosts();
+
 	dependencies.producer_registry->register_producer_factory(L"Flash Producer (.ct)", create_ct_producer, describe_ct_producer);
 	dependencies.producer_registry->register_producer_factory(L"Flash Producer (.swf)", create_swf_producer, describe_swf_producer);
 	dependencies.media_info_repo->register_extractor([](const std::wstring& file, const std::wstring& extension, core::media_info& info)
@@ -249,11 +276,11 @@ std::wstring cg_version()
 }
 
 std::wstring version()
-{		
+{
 	std::wstring version = L"Not found";
-#ifdef WIN32 
+#ifdef WIN32
 	HKEY   hkey;
- 
+
 	DWORD dwType, dwSize;
 	if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SOFTWARE\\Macromedia\\FlashPlayerActiveX"), 0, KEY_QUERY_VALUE, &hkey) == ERROR_SUCCESS)
 	{
@@ -262,7 +289,7 @@ std::wstring version()
 		dwType = REG_SZ;
 		dwSize = sizeof(ver_str);
 		RegQueryValueEx(hkey, TEXT("Version"), NULL, &dwType, (PBYTE)&ver_str, &dwSize);
- 
+
 		version = ver_str;
 
 		RegCloseKey(hkey);
