@@ -140,7 +140,7 @@ void configure(const std::wstring& filename)
 				if(it->path().wstring().find(L".fth") != std::wstring::npos)
 				{
 					auto from_path = *it;
-					auto to_path = boost::filesystem::path(ftemplate + L"/" + it->path().wstring());
+					auto to_path = boost::filesystem::path(ftemplate + L"/" + it->path().filename().wstring());
 
 					if(boost::filesystem::exists(to_path))
 						boost::filesystem::remove(to_path);
