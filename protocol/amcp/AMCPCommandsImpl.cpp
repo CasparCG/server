@@ -2444,7 +2444,7 @@ std::wstring info_paths_command(command_context& ctx)
 {
 	boost::property_tree::wptree info;
 	info.add_child(L"paths", caspar::env::properties().get_child(L"configuration.paths"));
-	info.add(L"paths.initial-path", boost::filesystem::initial_path().wstring() + L"/");
+	info.add(L"paths.initial-path", caspar::env::initial_folder() + L"/");
 
 	return create_info_xml_reply(info, L"PATHS");
 }

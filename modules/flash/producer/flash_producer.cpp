@@ -625,7 +625,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 	auto filename = env::template_folder() + L"\\" + template_host.filename;
 	
 	if(!boost::filesystem::exists(filename))
-		CASPAR_THROW_EXCEPTION(file_not_found() << boost::errinfo_file_name(u8(filename)));	
+		CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Could not open flash movie " + filename));	
 
 	return create_destroy_proxy(spl::make_shared<flash_producer>(dependencies.frame_factory, dependencies.format_desc, filename, template_host.width, template_host.height));
 }
