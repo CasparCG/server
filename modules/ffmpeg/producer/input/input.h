@@ -49,13 +49,15 @@ namespace ffmpeg {
 class input : boost::noncopyable
 {
 public:
-	explicit input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& url_or_file, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_options& vid_params);
+	explicit input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& url_or_file, bool loop, uint32_t in, uint32_t out, bool thumbnail_mode, const ffmpeg_options& vid_params);
 
 	bool								try_pop(std::shared_ptr<AVPacket>& packet);
 	bool								eof() const;
 
-	void								start(uint32_t value);
-	uint32_t							start() const;
+	void								in(uint32_t value);
+	uint32_t							in() const;
+	void								out(uint32_t value);
+	uint32_t							out() const;
 	void								length(uint32_t value);
 	uint32_t							length() const;
 	void								loop(bool value);
@@ -67,8 +69,8 @@ public:
 
 	spl::shared_ptr<AVFormatContext>	context();
 private:
-	struct implementation;
-	std::shared_ptr<implementation> impl_;
+	struct impl;
+	std::shared_ptr<impl> impl_;
 };
 
 
