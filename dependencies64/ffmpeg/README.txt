@@ -32,6 +32,7 @@ This FFmpeg build was configured with:
   --enable-libfreetype
   --enable-libgme
   --enable-libgsm
+  --enable-libiec61883
   --enable-libilbc
   --enable-libmodplug
   --enable-libmp3lame
