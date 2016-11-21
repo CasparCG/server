@@ -115,7 +115,7 @@ public:
 				if(foreground_->last_frame() == basic_frame::empty())
 					foreground_->receive(frame_producer::NO_HINT);
 
-				return disable_audio(foreground_->last_frame());
+				return caspar::core::pause(disable_audio(foreground_->last_frame()));
 			}
 
 			auto foreground = foreground_;

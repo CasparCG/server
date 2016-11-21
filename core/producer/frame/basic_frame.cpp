@@ -167,5 +167,14 @@ safe_ptr<basic_frame> disable_audio(const safe_ptr<basic_frame>& frame)
 	frame2.get_frame_transform().volume = 0.0;
 	return make_safe<basic_frame>(std::move(frame2));
 }
+
+safe_ptr<basic_frame> pause(const safe_ptr<basic_frame>& frame)
+{
+	if(frame == basic_frame::empty() || frame->get_frame_transform().is_paused)
+		return frame;
+	basic_frame frame2 = frame;
+	frame2.get_frame_transform().is_paused = true;
+	return make_safe<basic_frame>(std::move(frame2));
+}
 	
 }}

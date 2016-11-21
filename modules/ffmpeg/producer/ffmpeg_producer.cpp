@@ -195,7 +195,7 @@ public:
 
 	virtual safe_ptr<core::basic_frame> last_frame() const override
 	{
-		return disable_audio(last_frame_);
+		return pause(disable_audio(last_frame_));
 	}
 
 	std::pair<safe_ptr<core::basic_frame>, uint32_t> render_frame(int hints)
