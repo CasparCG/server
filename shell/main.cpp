@@ -19,9 +19,9 @@
 * Author: Robert Nagy, ronag89@gmail.com
 */
 
-// tbbmalloc_proxy: 
-// Replace the standard memory allocation routines in Microsoft* C/C++ RTL 
-// (malloc/free, global new/delete, etc.) with the TBB memory allocator. 
+// tbbmalloc_proxy:
+// Replace the standard memory allocation routines in Microsoft* C/C++ RTL
+// (malloc/free, global new/delete, etc.) with the TBB memory allocator.
 
 #include "stdafx.h"
 
@@ -73,7 +73,7 @@
 #include <clocale>
 
 using namespace caspar;
-	
+
 void setup_global_locale()
 {
 	boost::locale::generator gen;
@@ -118,7 +118,7 @@ void do_run(
 	while(true)
 	{
 		std::getline(std::wcin, wcmd); // TODO: It's blocking...
-				
+
 		//boost::to_upper(wcmd);
 
 		if(boost::iequals(wcmd, L"EXIT") || boost::iequals(wcmd, L"Q") || boost::iequals(wcmd, L"QUIT") || boost::iequals(wcmd, L"BYE"))
@@ -143,11 +143,11 @@ void do_run(
 			else if(wcmd.substr(0, 1) == L"5")
 			{
 				auto file = wcmd.substr(2, wcmd.length()-1);
-				wcmd = L"PLAY 1-1 " + file + L" LOOP\r\n" 
-						L"PLAY 1-2 " + file + L" LOOP\r\n" 
+				wcmd = L"PLAY 1-1 " + file + L" LOOP\r\n"
+						L"PLAY 1-2 " + file + L" LOOP\r\n"
 						L"PLAY 1-3 " + file + L" LOOP\r\n"
-						L"PLAY 2-1 " + file + L" LOOP\r\n" 
-						L"PLAY 2-2 " + file + L" LOOP\r\n" 
+						L"PLAY 2-1 " + file + L" LOOP\r\n"
+						L"PLAY 2-2 " + file + L" LOOP\r\n"
 						L"PLAY 2-3 " + file + L" LOOP\r\n";
 			}
 			else if(wcmd.substr(0, 1) == L"7")
@@ -231,7 +231,7 @@ bool run(const std::wstring& config_file_name, tbb::atomic<bool>& should_wait_fo
 	boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
 	boost::property_tree::write_xml(str, env::properties(), w);
 	CASPAR_LOG(info) << config_file_name << L":\n-----------------------------------------\n" << str.str() << L"-----------------------------------------";
-	
+
 	{
 		CASPAR_SCOPED_CONTEXT_MSG(config_file_name + L": ")
 		caspar_server->start();
@@ -249,7 +249,7 @@ bool run(const std::wstring& config_file_name, tbb::atomic<bool>& should_wait_fo
 							caspar_server->get_amcp_command_repository())))->create(console_client);
 	std::weak_ptr<IO::protocol_strategy<wchar_t>> weak_amcp = amcp;
 
-	// Use separate thread for the blocking console input, will be terminated 
+	// Use separate thread for the blocking console input, will be terminated
 	// anyway when the main thread terminates.
 	boost::thread stdin_thread(std::bind(do_run, weak_amcp, std::ref(shutdown_server_now), std::ref(should_wait_for_keypress)));	//compiler didn't like lambda here...
 	stdin_thread.detach();
@@ -278,7 +278,7 @@ int main(int argc, char** argv)
 	setup_global_locale();
 
 	std::wcout << L"Type \"q\" to close application." << std::endl;
-	
+
 	// Set debug mode.
 	auto debugging_environment = setup_debugging_environment();
 
@@ -300,8 +300,8 @@ int main(int argc, char** argv)
 
 	tbb::task_scheduler_init init;
 	std::wstring config_file_name(L"casparcg.config");
-	
-	try 
+
+	try
 	{
 		// Configure environment properties from configuration.
 		if (argc >= 2)
@@ -323,7 +323,7 @@ int main(int argc, char** argv)
 		log::add_file_sink(env::log_folder() + L"caspar",		caspar::log::category != caspar::log::log_category::calltrace);
 		log::add_file_sink(env::log_folder() + L"calltrace",	caspar::log::category == caspar::log::log_category::calltrace);
 		std::wcout << L"Logging [info] or higher severity to " << env::log_folder() << std::endl << std::endl;
-		
+
 		// Setup console window.
 		setup_console_window();
 
@@ -337,7 +337,7 @@ int main(int argc, char** argv)
 			if (thread->name != "main thread" && thread->name != "tbb-worker-thread")
 				CASPAR_LOG(warning) << L"Thread left running: " << thread->name << L" (" << thread->native_id << L")";
 		}
-		
+
 		CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
 
 		if (should_wait_for_keypress)
@@ -345,13 +345,11 @@ int main(int argc, char** argv)
 	}
 	catch(const boost::property_tree::file_parser_error& e)
 	{
-		CASPAR_LOG_CURRENT_EXCEPTION();
 		CASPAR_LOG(fatal) << "At " << u8(config_file_name) << ":" << e.line() << ": " << e.message() << ". Please check the configuration file (" << u8(config_file_name) << ") for errors.";
 		wait_for_keypress();
 	}
 	catch (const user_error& e)
 	{
-		CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
 		CASPAR_LOG(fatal) << get_message_and_context(e) << " Please check the configuration file (" << u8(config_file_name) << ") for errors. Turn on log level debug for stacktrace.";
 		wait_for_keypress();
 	}
