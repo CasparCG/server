@@ -1,5 +1,14 @@
 C H A N G E S
 
+CasparCG 2.1.0 Next (w.r.t 2.1.0 Beta 1)
+========================================
+
+General
+-------
+
+  o Fail early with clear error message if configured paths are not
+    creatable/writable.
+
 CasparCG 2.1.0 Beta 1 (w.r.t 2.0.7 Stable)
 ==========================================
 
