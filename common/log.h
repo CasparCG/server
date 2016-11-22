@@ -39,20 +39,22 @@
 #include <memory>
 
 namespace caspar { namespace log {
-	
+
 namespace internal{
 void init();
 std::wstring get_call_stack();
 }
+
+const char* remove_source_prefix(const char* file);
 
 template<typename T>
 inline void replace_nonprintable(std::basic_string<T, std::char_traits<T>, std::allocator<T>>& str, T with)
 {
 	std::locale loc;
 	std::replace_if(str.begin(), str.end(), [&](T c)->bool {
-		return 
-			(!std::isprint(c, loc) 
-			&& c != '\r' 
+		return
+			(!std::isprint(c, loc)
+			&& c != '\r'
 			&& c != '\n')
 			|| c > static_cast<T>(127);
 	}, with);
@@ -119,4 +121,3 @@ void print_child(
 		const boost::property_tree::wptree& tree);
 
 }}
-

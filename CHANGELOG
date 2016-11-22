@@ -10,6 +10,8 @@ General
     creatable/writable.
   o Added backwards compatibility (with deprecation warning) for using
     thumbnails-path instead of thumbnail-path in casparcg.config.
+  o Suppress the logging of full path names in stack traces so that only the
+    relative path within the source tree is visible.
 
 AMCP
 ----
