@@ -74,6 +74,7 @@ struct input::impl : boost::noncopyable
 	const bool													thumbnail_mode_;
 	tbb::atomic<bool>											loop_;
 	uint32_t													file_frame_number_		= 0;
+	tbb::atomic<int32_t>										skip_					= 0;
 
 	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>	buffer_;
 	tbb::atomic<size_t>											buffer_size_			= 0;
@@ -208,8 +209,17 @@ struct input::impl : boost::noncopyable
 				{
 					THROW_ON_ERROR(ret, "av_read_frame", print());
 
-					if(packet->stream_index == default_stream_index_)
+					if (packet->stream_index == default_stream_index_)
+					{
 						++file_frame_number_;
+
+						if (skip_)
+						{
+							auto value = static_cast<int64_t>(file_frame_number_) + skip_;
+							if(value >= in_ && value < out_)
+								queued_seek(static_cast<uint32_t>(value));
+						}
+					}
 
 					THROW_ON_ERROR2(av_dup_packet(packet.get()), print());
 
@@ -372,18 +382,20 @@ struct input::impl : boost::noncopyable
 };
 
 input::input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& url_or_file, bool loop, uint32_t in, uint32_t out, bool thumbnail_mode, const ffmpeg_options& vid_params)
-	: impl_(new impl(graph, url_or_file, loop, in, out, thumbnail_mode, vid_params)){}
-bool input::eof() const {return !impl_->executor_.is_running();}
-bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
-spl::shared_ptr<AVFormatContext> input::context(){return impl_->format_context_;}
-void input::in(uint32_t value){impl_->in_ = value;}
-uint32_t input::in() const{return impl_->in_;}
-void input::out(uint32_t value){impl_->out_ = value;}
-uint32_t input::out() const{return impl_->out_;}
-void input::length(uint32_t value){impl_->out_ = impl_->in_ + value;}
-uint32_t input::length() const{return impl_->out_ - impl_->in_;}
-void input::loop(bool value){impl_->loop_ = value;}
-bool input::loop() const{return impl_->loop_;}
+	: impl_(new impl(graph, url_or_file, loop, in, out, thumbnail_mode, vid_params)) {}
+bool input::eof() const { return !impl_->executor_.is_running(); }
+bool input::try_pop(std::shared_ptr<AVPacket>& packet) { return impl_->try_pop(packet); }
+spl::shared_ptr<AVFormatContext> input::context() { return impl_->format_context_; }
+void input::in(uint32_t value) { impl_->in_ = value; }
+uint32_t input::in() const { return impl_->in_; }
+void input::out(uint32_t value) { impl_->out_ = value; }
+uint32_t input::out() const { return impl_->out_; }
+void input::length(uint32_t value) { impl_->out_ = impl_->in_ + value; }
+uint32_t input::length() const { return impl_->out_ - impl_->in_; }
+void input::loop(bool value) { impl_->loop_ = value; }
+bool input::loop() const { return impl_->loop_; }
+void input::skip(int32_t value) { impl_->skip_ = value; }
+int32_t input::skip() const { return impl_->skip_; }
 int input::num_audio_streams() const { return impl_->num_audio_streams(); }
-std::future<bool> input::seek(uint32_t target){return impl_->seek(target);}
+std::future<bool> input::seek(uint32_t target) { return impl_->seek(target); }
 }}

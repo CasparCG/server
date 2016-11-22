@@ -63,6 +63,9 @@ public:
 	void								loop(bool value);
 	bool								loop() const;
 
+	void								skip(int32_t value);
+	int32_t								skip() const;
+
 	int									num_audio_streams() const;
 
 	std::future<bool>					seek(uint32_t target);
@@ -72,6 +75,5 @@ private:
 	struct impl;
 	std::shared_ptr<impl> impl_;
 };
-
 
 }}

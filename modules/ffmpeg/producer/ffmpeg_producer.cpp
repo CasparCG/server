@@ -479,6 +479,12 @@ public:
 
 			input_.seek(static_cast<uint32_t>(seek));
 		}
+		else if (boost::iequals(cmd, L"framestep"))
+		{
+			if (!value.empty())
+				input_.skip(boost::lexical_cast<int32_t>(value) - 1);
+			result = boost::lexical_cast<std::wstring>(input_.skip() + 1);
+		}
 		else
 			CASPAR_THROW_EXCEPTION(invalid_argument());
 
