@@ -114,6 +114,7 @@ void do_run(
 		std::promise<bool>& shutdown_server_now,
 		tbb::atomic<bool>& should_wait_for_keypress)
 {
+	ensure_gpf_handler_installed_for_thread("Console thread");
 	std::wstring wcmd;
 	while(true)
 	{
