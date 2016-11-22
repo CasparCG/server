@@ -324,6 +324,9 @@ int main(int argc, char** argv)
 		log::add_file_sink(env::log_folder() + L"calltrace",	caspar::log::category == caspar::log::log_category::calltrace);
 		std::wcout << L"Logging [info] or higher severity to " << env::log_folder() << std::endl << std::endl;
 
+		// Once logging to file, log configuration warnings.
+		env::log_configuration_warnings();
+
 		// Setup console window.
 		setup_console_window();
 
@@ -350,7 +353,7 @@ int main(int argc, char** argv)
 	}
 	catch (const user_error& e)
 	{
-		CASPAR_LOG(fatal) << get_message_and_context(e) << " Please check the configuration file (" << u8(config_file_name) << ") for errors. Turn on log level debug for stacktrace.";
+		CASPAR_LOG(fatal) << get_message_and_context(e) << " Please check the configuration file (" << u8(config_file_name) << ") for errors.";
 		wait_for_keypress();
 	}
 	catch(...)
