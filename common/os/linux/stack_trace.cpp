@@ -102,4 +102,11 @@ std::wstring get_call_stack()
 	}
 }
 
+const std::string& get_source_prefix()
+{
+	static const std::string SOURCE_PREFIX;
+	return SOURCE_PREFIX;
 }
+
+}
+

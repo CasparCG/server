@@ -141,9 +141,9 @@ void my_formatter(bool print_all_characters, const boost::log::record_view& rec,
 }
 
 namespace internal{
-	
+
 void init()
-{	
+{
 	boost::log::add_common_attributes();
 	typedef boost::log::sinks::asynchronous_sink<boost::log::sinks::wtext_ostream_backend> stream_sink_type;
 
@@ -321,6 +321,16 @@ void print_child(
 
 	for (auto& child : tree)
 		print_child(level, indent + (elem.empty() ? L"" : elem + L"."), child.first, child.second);
+}
+
+const char* remove_source_prefix(const char* file)
+{
+	auto found = boost::ifind_first(file, get_source_prefix().c_str());
+
+	if (found)
+		return found.end();
+	else
+		return file;
 }
 
 }}

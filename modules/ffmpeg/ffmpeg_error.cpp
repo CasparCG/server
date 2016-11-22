@@ -23,6 +23,7 @@
 #include "ffmpeg_error.h"
 
 #include <common/utf.h>
+#include <common/log.h>
 
 #pragma warning(disable: 4146)
 
@@ -58,7 +59,7 @@ void throw_on_ffmpeg_error(int ret, const char* source, const char* func, const 
 				<< boost::errinfo_errno(AVUNERROR(ret))
 				<< call_stack_info(caspar::get_call_stack())
 				<< context_info(get_context()),
-			local_func, file, line);
+			local_func, log::remove_source_prefix(file), line);
 	case AVERROR_DECODER_NOT_FOUND:
 		::boost::exception_detail::throw_exception_(
 			averror_decoder_not_found()
@@ -68,7 +69,7 @@ void throw_on_ffmpeg_error(int ret, const char* source, const char* func, const 
 				<< boost::errinfo_errno(AVUNERROR(ret))
 				<< call_stack_info(caspar::get_call_stack())
 				<< context_info(get_context()),
-			local_func, file, line);
+			local_func, log::remove_source_prefix(file), line);
 	case AVERROR_DEMUXER_NOT_FOUND:
 		::boost::exception_detail::throw_exception_(
 			averror_demuxer_not_found()
@@ -78,7 +79,7 @@ void throw_on_ffmpeg_error(int ret, const char* source, const char* func, const 
 				<< boost::errinfo_errno(AVUNERROR(ret))
 				<< call_stack_info(caspar::get_call_stack())
 				<< context_info(get_context()),
-			local_func, file, line);
+			local_func, log::remove_source_prefix(file), line);
 	case AVERROR_ENCODER_NOT_FOUND:
 		::boost::exception_detail::throw_exception_(
 			averror_encoder_not_found()
@@ -88,7 +89,7 @@ void throw_on_ffmpeg_error(int ret, const char* source, const char* func, const 
 				<< boost::errinfo_errno(AVUNERROR(ret))
 				<< call_stack_info(caspar::get_call_stack())
 				<< context_info(get_context()),
-			local_func, file, line);
+			local_func, log::remove_source_prefix(file), line);
 	case AVERROR_EOF:
 		::boost::exception_detail::throw_exception_(
 			averror_eof()
@@ -98,7 +99,7 @@ void throw_on_ffmpeg_error(int ret, const char* source, const char* func, const 
 				<< boost::errinfo_errno(AVUNERROR(ret))
 				<< call_stack_info(caspar::get_call_stack())
 				<< context_info(get_context()),
-			local_func, file, line);
+			local_func, log::remove_source_prefix(file), line);
 	case AVERROR_EXIT:
 		::boost::exception_detail::throw_exception_(
 			averror_exit()
@@ -108,7 +109,7 @@ void throw_on_ffmpeg_error(int ret, const char* source, const char* func, const 
 				<< boost::errinfo_errno(AVUNERROR(ret))
 				<< call_stack_info(caspar::get_call_stack())
 				<< context_info(get_context()),
-			local_func, file, line);
+			local_func, log::remove_source_prefix(file), line);
 	case AVERROR_FILTER_NOT_FOUND:
 		::boost::exception_detail::throw_exception_(
 			averror_filter_not_found()
@@ -118,7 +119,7 @@ void throw_on_ffmpeg_error(int ret, const char* source, const char* func, const 
 				<< boost::errinfo_errno(AVUNERROR(ret))
 				<< call_stack_info(caspar::get_call_stack())
 				<< context_info(get_context()),
-			local_func, file, line);
+			local_func, log::remove_source_prefix(file), line);
 	case AVERROR_MUXER_NOT_FOUND:
 		::boost::exception_detail::throw_exception_(
 			averror_muxer_not_found()
@@ -128,7 +129,7 @@ void throw_on_ffmpeg_error(int ret, const char* source, const char* func, const 
 				<< boost::errinfo_errno(AVUNERROR(ret))
 				<< call_stack_info(caspar::get_call_stack())
 				<< context_info(get_context()),
-			local_func, file, line);
+			local_func, log::remove_source_prefix(file), line);
 	case AVERROR_OPTION_NOT_FOUND:
 		::boost::exception_detail::throw_exception_(
 			averror_option_not_found()
@@ -138,7 +139,7 @@ void throw_on_ffmpeg_error(int ret, const char* source, const char* func, const 
 				<< boost::errinfo_errno(AVUNERROR(ret))
 				<< call_stack_info(caspar::get_call_stack())
 				<< context_info(get_context()),
-			local_func, file, line);
+			local_func, log::remove_source_prefix(file), line);
 	case AVERROR_PATCHWELCOME:
 		::boost::exception_detail::throw_exception_(
 			averror_patchwelcome()
@@ -148,7 +149,7 @@ void throw_on_ffmpeg_error(int ret, const char* source, const char* func, const 
 				<< boost::errinfo_errno(AVUNERROR(ret))
 				<< call_stack_info(caspar::get_call_stack())
 				<< context_info(get_context()),
-			local_func, file, line);
+			local_func, log::remove_source_prefix(file), line);
 	case AVERROR_PROTOCOL_NOT_FOUND:
 		::boost::exception_detail::throw_exception_(
 			averror_protocol_not_found()
@@ -158,7 +159,7 @@ void throw_on_ffmpeg_error(int ret, const char* source, const char* func, const 
 				<< boost::errinfo_errno(AVUNERROR(ret))
 				<< call_stack_info(caspar::get_call_stack())
 				<< context_info(get_context()),
-			local_func, file, line);
+			local_func, log::remove_source_prefix(file), line);
 	case AVERROR_STREAM_NOT_FOUND:
 		::boost::exception_detail::throw_exception_(
 			averror_stream_not_found()
@@ -168,7 +169,7 @@ void throw_on_ffmpeg_error(int ret, const char* source, const char* func, const 
 				<< boost::errinfo_errno(AVUNERROR(ret))
 				<< call_stack_info(caspar::get_call_stack())
 				<< context_info(get_context()),
-			local_func, file, line);
+			local_func, log::remove_source_prefix(file), line);
 	case AVUNERROR(EINVAL):
 		::boost::exception_detail::throw_exception_(
 			averror_invalid_argument()
@@ -178,7 +179,7 @@ void throw_on_ffmpeg_error(int ret, const char* source, const char* func, const 
 				<< boost::errinfo_errno(AVUNERROR(ret))
 				<< call_stack_info(caspar::get_call_stack())
 				<< context_info(get_context()),
-			local_func, file, line);
+			local_func, log::remove_source_prefix(file), line);
 	default:
 		::boost::exception_detail::throw_exception_(
 			ffmpeg_error()
@@ -188,7 +189,7 @@ void throw_on_ffmpeg_error(int ret, const char* source, const char* func, const 
 				<< boost::errinfo_errno(AVUNERROR(ret))
 				<< call_stack_info(caspar::get_call_stack())
 				<< context_info(get_context()),
-			local_func, file, line);
+			local_func, log::remove_source_prefix(file), line);
 	}
 }
 
