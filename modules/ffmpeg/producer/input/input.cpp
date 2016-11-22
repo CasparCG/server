@@ -76,7 +76,8 @@ struct input::impl : boost::noncopyable
 	uint32_t													file_frame_number_		= 0;
 
 	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>	buffer_;
-	tbb::atomic<size_t>											buffer_size_;
+	tbb::atomic<size_t>											buffer_size_			= 0;
+	double														fps_;
 
 	executor													executor_;
 
@@ -96,7 +97,7 @@ struct input::impl : boost::noncopyable
 		in_				= in;
 		out_			= out;
 		loop_			= loop;
-		buffer_size_	= 0;
+		fps_			= read_fps(*format_context_, 0.0);
 
 		if(in_ > 0)
 			queued_seek(in_);
@@ -336,13 +337,11 @@ struct input::impl : boost::noncopyable
 
 		auto stream = format_context_->streams[default_stream_index_];
 
-		auto fps = read_fps(*format_context_, 0.0);
-
 		THROW_ON_ERROR2(avformat_seek_file(
 			format_context_.get(),
 			default_stream_index_,
 			std::numeric_limits<int64_t>::min(),
-			static_cast<int64_t>((target / fps * stream->time_base.den) / stream->time_base.num),
+			static_cast<int64_t>((target / fps_ * stream->time_base.den) / stream->time_base.num),
 			std::numeric_limits<int64_t>::max(),
 			0), print());
 
