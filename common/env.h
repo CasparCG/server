@@ -40,4 +40,6 @@ const std::wstring& version();
 
 const boost::property_tree::wptree& properties();
 
+void log_configuration_warnings();
+
 } }
