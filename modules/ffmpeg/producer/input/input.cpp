@@ -334,19 +334,6 @@ struct input::impl : boost::noncopyable
 		if (!thumbnail_mode_)
 			CASPAR_LOG(debug) << print() << " Seeking: " << target;
 
-		int flags = AVSEEK_FLAG_FRAME;
-		if(target == 0)
-		{
-			// Fix VP6 seeking
-			int vid_stream_index = av_find_best_stream(format_context_.get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
-			if(vid_stream_index >= 0)
-			{
-				auto codec_id = format_context_->streams[vid_stream_index]->codec->codec_id;
-				if(codec_id == CODEC_ID_VP6A || codec_id == CODEC_ID_VP6F || codec_id == CODEC_ID_VP6)
-					flags = AVSEEK_FLAG_BYTE;
-			}
-		}
-
 		auto stream = format_context_->streams[default_stream_index_];
 
 		auto fps = read_fps(*format_context_, 0.0);
