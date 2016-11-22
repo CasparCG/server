@@ -12,6 +12,9 @@ General
     thumbnails-path instead of thumbnail-path in casparcg.config.
   o Suppress the logging of full path names in stack traces so that only the
     relative path within the source tree is visible.
+  o General stability improvements.
+  o Native thread id is now logged in Linux as well. Finally they are mappable
+    against INFO THREADS, ps and top.
 
 AMCP
 ----
