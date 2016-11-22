@@ -125,7 +125,7 @@ void configure(const std::wstring& filename)
 		ftemplate	= clean_path(boost::filesystem::complete(paths.get(L"template-path", initial + L"/template/")).wstring());
 		data		= clean_path(paths.get(L"data-path", initial + L"/data/"));
 		font		= clean_path(paths.get(L"font-path", initial + L"/font/"));
-		thumbnails	= clean_path(paths.get(L"thumbnail-path", initial + L"/thumbnail/"));
+		thumbnails	= clean_path(paths.get(L"thumbnail-path", paths.get(L"thumbnails-path", initial + L"/thumbnail/")));
 	}
 	catch (...)
 	{
@@ -206,6 +206,15 @@ const boost::property_tree::wptree& properties()
 {
 	check_is_configured();
 	return pt;
+}
+
+void log_configuration_warnings()
+{
+	if (pt.empty())
+		return;
+
+	if (pt.get_optional<std::wstring>(L"configuration.paths.thumbnails-path"))
+		CASPAR_LOG(warning) << L"Element thumbnails-path in casparcg.config has been deprecated. Use thumbnail-path instead.";
 }
 
 }}
