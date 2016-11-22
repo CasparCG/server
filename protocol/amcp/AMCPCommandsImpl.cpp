@@ -2443,8 +2443,14 @@ void info_paths_describer(core::help_sink& sink, const core::help_repository& re
 std::wstring info_paths_command(command_context& ctx)
 {
 	boost::property_tree::wptree info;
-	info.add_child(L"paths", caspar::env::properties().get_child(L"configuration.paths"));
-	info.add(L"paths.initial-path", caspar::env::initial_folder() + L"/");
+
+	info.add(L"paths.media-path",		caspar::env::media_folder());
+	info.add(L"paths.log-path",			caspar::env::log_folder());
+	info.add(L"paths.data-path",			caspar::env::data_folder());
+	info.add(L"paths.template-path",		caspar::env::template_folder());
+	info.add(L"paths.thumbnail-path",	caspar::env::thumbnails_folder());
+	info.add(L"paths.font-path",			caspar::env::font_folder());
+	info.add(L"paths.initial-path",		caspar::env::initial_folder() + L"/");
 
 	return create_info_xml_reply(info, L"PATHS");
 }
