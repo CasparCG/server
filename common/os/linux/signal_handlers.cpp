@@ -61,15 +61,12 @@ void ensure_gpf_handler_installed_for_thread(
 	{
 		for_thread.name = thread_description;
 
-		if (std::strlen(thread_description) > MAX_LINUX_THREAD_NAME_LEN)
-		{
-			char truncated[MAX_LINUX_THREAD_NAME_LEN + 1];
-			std::memcpy(truncated, thread_description, MAX_LINUX_THREAD_NAME_LEN);
-			truncated[MAX_LINUX_THREAD_NAME_LEN] = 0;
-			pthread_setname_np(pthread_self(), truncated);
-		}
-		else
-			pthread_setname_np(pthread_self(), thread_description);
+		std::string kernel_thread_name = for_thread.name;
+
+		if (kernel_thread_name.length() > MAX_LINUX_THREAD_NAME_LEN)
+			kernel_thread_name.resize(MAX_LINUX_THREAD_NAME_LEN);
+
+		pthread_setname_np(pthread_self(), kernel_thread_name.c_str());
 	}
 }
 
