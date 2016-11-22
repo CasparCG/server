@@ -379,7 +379,7 @@ struct server::impl : boost::noncopyable
 		thumbnail_generator_.reset(new thumbnail_generator(
 			monitor_factory,
 			env::media_folder(),
-			env::thumbnails_folder(),
+			env::thumbnail_folder(),
 			pt.get(L"configuration.thumbnails.width", 256),
 			pt.get(L"configuration.thumbnails.height", 144),
 			core::video_format_desc(pt.get(L"configuration.thumbnails.video-mode", L"720p2500")),
