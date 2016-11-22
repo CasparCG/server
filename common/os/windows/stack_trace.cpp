@@ -26,9 +26,12 @@
 
 #include "../../compiler/vs/StackWalker.h"
 
+#include <boost/algorithm/string/replace.hpp>
+
 #include <utility>
 
 #include <tbb/enumerable_thread_specific.h>
+#include <boost/algorithm/string/find.hpp>
 
 namespace caspar {
 
@@ -38,11 +41,18 @@ std::wstring get_call_stack()
 	{
 		std::string str_ = "\n";
 	public:
-		log_call_stack_walker() : StackWalker() {}
+		log_call_stack_walker()
+			: StackWalker()
+		{
+		}
 
 		std::string flush()
 		{
-			return std::move(str_);
+			auto result = std::move(str_);
+
+			str_ = "\n";
+
+			return result;
 		}
 	protected:
 		virtual void OnSymInit(LPCSTR szSearchPath, DWORD symOptions, LPCSTR szUserName) override
@@ -58,8 +68,20 @@ std::wstring get_call_stack()
 		{
 			std::string str = szText;
 
-			if(str.find("caspar::get_call_stack") == std::string::npos && str.find("StackWalker::ShowCallstack") == std::string::npos)
+			auto include_path = boost::find_first(str, "\\include\\");
+
+			if (include_path)
+			{
+				str.erase(str.begin(), include_path.end());
+			}
+
+			boost::ireplace_all(str, get_source_prefix(), "");
+
+			if (str.find("caspar::get_call_stack") == std::string::npos &&
+				str.find("StackWalker::ShowCallstack") == std::string::npos)
+			{
 				str_ += "    " + std::move(str);
+			}
 		}
 	};
 
@@ -72,8 +94,23 @@ std::wstring get_call_stack()
 	}
 	catch(...)
 	{
-		return L"!!!";
+		return L"Bug in stacktrace code!!!";
 	}
+}
+
+const std::string& get_source_prefix()
+{
+	static const std::string SOURCE_PREFIX = []
+	{
+		std::string result = CASPAR_SOURCE_PREFIX;
+
+		boost::replace_all(result, "/", "\\");
+		result += "\\";
+
+		return result;
+	}();
+
+	return SOURCE_PREFIX;
 }
 
 }
