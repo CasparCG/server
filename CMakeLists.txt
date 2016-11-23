@@ -3,12 +3,16 @@ project ("CasparCG Server")
 
 find_package(Git)
 
-set(GIT_REV "N/A")
+set(GIT_REV "0")
+set(GIT_HASH "N/A")
 
 if (GIT_FOUND)
 	exec_program("${GIT_EXECUTABLE}" "${PROJECT_SOURCE_DIR}"
-			ARGS rev-parse --verify --short HEAD
+			ARGS rev-list --all --count
 			OUTPUT_VARIABLE GIT_REV)
+	exec_program("${GIT_EXECUTABLE}" "${PROJECT_SOURCE_DIR}"
+			ARGS rev-parse --verify --short HEAD
+			OUTPUT_VARIABLE GIT_HASH)
 endif ()
 
 configure_file("${PROJECT_SOURCE_DIR}/version.tmpl" "${PROJECT_SOURCE_DIR}/version.h")
