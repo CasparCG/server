@@ -15,13 +15,15 @@ General
   o General stability improvements.
   o Native thread id is now logged in Linux as well. Finally they are mappable
     against INFO THREADS, ps and top.
+  o Created automatically generated build number, so that it is easier to see
+    whether a build is newer or older than an other.
 
 Producers
 ---------
 
   o FFmpeg producer:
-    + Increased the max number frames that audio/video can be badly interleaved
-      with (Dimitry Ishenko).
+    + Increased the max number of frames that audio/video can be badly
+      interleaved with (Dimitry Ishenko).
 
 AMCP
 ----
