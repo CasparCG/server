@@ -176,7 +176,7 @@ public:
 
 			for(std::size_t n = 0; n < buffers_.size(); ++n)
 			{
-				audio_buffer_16 audio(format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()]*2, 0);
+				audio_buffer_16 audio(format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()] * 2, 0);
 				alBufferData(buffers_[n], AL_FORMAT_STEREO16, audio.data(), static_cast<ALsizei>(audio.size()*sizeof(int16_t)), format_desc_.audio_sample_rate);
 				alSourceQueueBuffers(source_, 1, &buffers_[n]);
 			}
@@ -208,7 +208,7 @@ public:
 					alSourceUnqueueBuffers(source_, 1, &buffer);
 					if(buffer)
 					{
-						std::vector<int16_t> audio(format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()] * 2, 0);
+						audio_buffer_16 audio(format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()] * 2, 0);
 						alBufferData(buffer, AL_FORMAT_STEREO16, audio.data(), static_cast<ALsizei>(audio.size()*sizeof(int16_t)), format_desc_.audio_sample_rate);
 						alSourceQueueBuffers(source_, 1, &buffer);
 					}
