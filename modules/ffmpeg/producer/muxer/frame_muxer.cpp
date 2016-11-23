@@ -129,6 +129,7 @@ std::unique_ptr<audio_filter> create_amerge_filter(std::vector<audio_input_pad> 
 
 struct frame_muxer::impl : boost::noncopyable
 {
+	static constexpr std::size_t					max_stream_size				= 120;
 	std::queue<std::queue<core::mutable_frame>>		video_streams_;
 	std::queue<core::mutable_audio_buffer>			audio_streams_;
 	std::queue<core::draw_frame>					frame_buffer_;
@@ -221,7 +222,7 @@ struct frame_muxer::impl : boost::noncopyable
 			}
 		}
 
-		if (video_streams_.back().size() > 32)
+		if (video_streams_.back().size() > max_stream_size)
 			CASPAR_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("video-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
 	}
 
@@ -263,7 +264,7 @@ struct frame_muxer::impl : boost::noncopyable
 			}
 		}
 
-		if (audio_streams_.back().size() > 32 * audio_cadence_.front() * audio_channel_layout_.num_channels)
+		if (audio_streams_.back().size() > max_stream_size * audio_cadence_.front() * audio_channel_layout_.num_channels)
 			CASPAR_THROW_EXCEPTION(invalid_operation() << source_info("frame_muxer") << msg_info("audio-stream overflow. This can be caused by incorrect frame-rate. Check clip meta-data."));
 	}
 
