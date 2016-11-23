@@ -16,6 +16,13 @@ General
   o Native thread id is now logged in Linux as well. Finally they are mappable
     against INFO THREADS, ps and top.
 
+Producers
+---------
+
+  o FFmpeg producer:
+    + Increased the max number frames that audio/video can be badly interleaved
+      with (Dimitry Ishenko).
+
 AMCP
 ----
 
