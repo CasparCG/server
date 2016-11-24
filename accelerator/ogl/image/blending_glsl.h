@@ -36,7 +36,9 @@ static std::string get_adjustement_glsl()
 				const float AvgLumG = 0.5;
 				const float AvgLumB = 0.5;
 
-				const vec3 LumCoeff = vec3(0.2125, 0.7154, 0.0721);
+				vec3 LumCoeff = is_hd
+						? vec3(0.0722, 0.7152, 0.2126)
+						: vec3(0.114, 0.587, 0.299);
 
 				vec3 AvgLumin = vec3(AvgLumR, AvgLumG, AvgLumB);
 				vec3 brtColor = color * brt;
