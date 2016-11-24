@@ -33,6 +33,12 @@ Producers
     + Increased the max number of frames that audio/video can be badly
       interleaved with (Dimitry Ishenko).
 
+Mixer
+-----
+
+  o Fixed bug in the contrast/saturation/brightness code where the wrong luma
+    coefficients was used.
+
 AMCP
 ----
 
