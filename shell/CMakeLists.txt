@@ -34,9 +34,19 @@ set(HEADERS
 )
 
 add_executable(casparcg ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
+if (CMAKE_COMPILER_IS_GNUCXX)
+	target_link_libraries(casparcg
+		-no-pie # Don't produce a position independent executable
+	)
+endif ()
 add_precompiled_header(casparcg stdafx.h FORCEINCLUDE)
 
 add_executable(generate_docs generate_docs.cpp included_modules.h)
+if (CMAKE_COMPILER_IS_GNUCXX)
+	target_link_libraries(generate_docs
+		-no-pie # Don't produce a position independent executable
+	)
+endif ()
 target_link_libraries(generate_docs
 		protocol
 		accelerator
