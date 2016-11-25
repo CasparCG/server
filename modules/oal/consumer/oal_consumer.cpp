@@ -72,7 +72,7 @@ public:
 
 		if(!context_)
 			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to create audio context."));
-			
+
 		if(alcMakeContextCurrent(context_) == ALC_FALSE)
 			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Failed to activate audio context."));
 	}
@@ -98,7 +98,7 @@ void init_device()
 {
 	static std::unique_ptr<device> instance;
 	static boost::once_flag f = BOOST_ONCE_INIT;
-	
+
 	boost::call_once(f, []{instance.reset(new device());});
 }
 
@@ -110,7 +110,7 @@ struct oal_consumer : public core::frame_consumer
 	boost::timer									perf_timer_;
 	tbb::atomic<int64_t>							presentation_age_;
 	int												channel_index_		= -1;
-	
+
 	core::video_format_desc							format_desc_;
 	core::audio_channel_layout						out_channel_layout_;
 	std::unique_ptr<core::audio_channel_remapper>	channel_remapper_;
@@ -130,7 +130,7 @@ public:
 
 		init_device();
 
-		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
+		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.3f));
 		diagnostics::register_graph(graph_);
@@ -139,7 +139,7 @@ public:
 	~oal_consumer()
 	{
 		executor_.invoke([=]
-		{		
+		{
 			if(source_)
 			{
 				alSourceStop(source_);
@@ -158,7 +158,7 @@ public:
 
 	void initialize(const core::video_format_desc& format_desc, const core::audio_channel_layout& channel_layout, int channel_index) override
 	{
-		format_desc_	= format_desc;		
+		format_desc_	= format_desc;
 		channel_index_	= channel_index;
 		if (out_channel_layout_ == core::audio_channel_layout::invalid())
 			out_channel_layout_ = channel_layout.num_channels == 2 ? channel_layout : *core::audio_channel_layout_repository::get_default()->get_layout(L"stereo");
@@ -169,21 +169,21 @@ public:
 		graph_->set_text(print());
 
 		executor_.begin_invoke([=]
-		{		
+		{
 			buffers_.resize(format_desc_.fps > 30 ? 8 : 4);
 			alGenBuffers(static_cast<ALsizei>(buffers_.size()), buffers_.data());
 			alGenSources(1, &source_);
 
 			for(std::size_t n = 0; n < buffers_.size(); ++n)
 			{
-				audio_buffer_16 audio(format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()]*2, 0);
+				audio_buffer_16 audio(format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()] * 2, 0);
 				alBufferData(buffers_[n], AL_FORMAT_STEREO16, audio.data(), static_cast<ALsizei>(audio.size()*sizeof(int16_t)), format_desc_.audio_sample_rate);
 				alSourceQueueBuffers(source_, 1, &buffers_[n]);
 			}
-			
+
 			alSourcei(source_, AL_LOOPING, AL_FALSE);
 
-			alSourcePlay(source_);	
+			alSourcePlay(source_);
 		});
 	}
 
@@ -198,28 +198,28 @@ public:
 		// exhausted, which should not happen
 		executor_.begin_invoke([=]
 		{
-			ALenum state; 
+			ALenum state;
 			alGetSourcei(source_, AL_SOURCE_STATE,&state);
 			if(state != AL_PLAYING)
 			{
 				for(int n = 0; n < buffers_.size()-1; ++n)
-				{					
-					ALuint buffer = 0;  
+				{
+					ALuint buffer = 0;
 					alSourceUnqueueBuffers(source_, 1, &buffer);
 					if(buffer)
 					{
-						std::vector<int16_t> audio(format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()] * 2, 0);
+						audio_buffer_16 audio(format_desc_.audio_cadence[n % format_desc_.audio_cadence.size()] * 2, 0);
 						alBufferData(buffer, AL_FORMAT_STEREO16, audio.data(), static_cast<ALsizei>(audio.size()*sizeof(int16_t)), format_desc_.audio_sample_rate);
 						alSourceQueueBuffers(source_, 1, &buffer);
 					}
 				}
-				alSourcePlay(source_);		
+				alSourcePlay(source_);
 				graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
 			}
 
 			auto audio = core::audio_32_to_16(channel_remapper_->mix_and_rearrange(frame.audio_data()));
-			
-			ALuint buffer = 0;  
+
+			ALuint buffer = 0;
 			alSourceUnqueueBuffers(source_, 1, &buffer);
 			if(buffer)
 			{
@@ -229,14 +229,14 @@ public:
 			else
 				graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
 
-			graph_->set_value("tick-time", perf_timer_.elapsed()*format_desc_.fps*0.5);		
+			graph_->set_value("tick-time", perf_timer_.elapsed()*format_desc_.fps*0.5);
 			perf_timer_.restart();
 			presentation_age_ = frame.get_age_millis() + latency_millis();
 		});
 
 		return make_ready_future(true);
 	}
-	
+
 	std::wstring print() const override
 	{
 		return L"oal[" + boost::lexical_cast<std::wstring>(channel_index_) + L"|" + format_desc_.name + L"]";
@@ -253,7 +253,7 @@ public:
 		info.add(L"type", L"system-audio");
 		return info;
 	}
-	
+
 	bool has_synchronization_clock() const override
 	{
 		return false;
@@ -263,14 +263,14 @@ public:
 	{
 		return latency_millis_;
 	}
-	
+
 	int buffer_depth() const override
 	{
 		int delay_in_frames = static_cast<int>(latency_millis() / (1000.0 / format_desc_.fps));
-		
+
 		return delay_in_frames;
 	}
-		
+
 	int index() const override
 	{
 		return 500;
@@ -293,7 +293,8 @@ void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
 	sink.example(L">> ADD 1 AUDIO LATENCY 500", L"Specifies that the system-audio chain: openal => driver => sound card => speaker output is 500ms");
 }
 
-spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wstring>& params, core::interaction_sink*)
+spl::shared_ptr<core::frame_consumer> create_consumer(
+		const std::vector<std::wstring>& params, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
 	if(params.size() < 1 || !boost::iequals(params.at(0), L"AUDIO"))
 		return core::frame_consumer::empty();
@@ -316,7 +317,8 @@ spl::shared_ptr<core::frame_consumer> create_consumer(const std::vector<std::wst
 	return spl::make_shared<oal_consumer>(channel_layout, latency_millis);
 }
 
-spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(const boost::property_tree::wptree& ptree, core::interaction_sink*)
+spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
+		const boost::property_tree::wptree& ptree, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
 	auto channel_layout			= core::audio_channel_layout::invalid();
 	auto channel_layout_spec	= ptree.get_optional<std::wstring>(L"channel-layout");

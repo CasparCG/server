@@ -87,16 +87,16 @@
 /* Return codes
 
 102 [action]			Information that [action] has happened
-101 [action]			Information that [action] has happened plus one row of data  
+101 [action]			Information that [action] has happened plus one row of data
 
 202 [command] OK		[command] has been executed
-201 [command] OK		[command] has been executed, plus one row of data  
+201 [command] OK		[command] has been executed, plus one row of data
 200 [command] OK		[command] has been executed, plus multiple lines of data. ends with an empty line
 
 400 ERROR				the command could not be understood
 401 [command] ERROR		invalid/missing channel
 402 [command] ERROR		parameter missing
-403 [command] ERROR		invalid parameter  
+403 [command] ERROR		invalid parameter
 404 [command] ERROR		file not found
 
 500 FAILED				internal error
@@ -134,7 +134,7 @@ std::wstring read_utf8_file(const boost::filesystem::path& file)
 	std::wstringstream result;
 	boost::filesystem::wifstream filestream(file);
 
-	if (filestream) 
+	if (filestream)
 	{
 		// Consume BOM first
 		filestream.get();
@@ -234,11 +234,11 @@ std::wstring MediaInfo(const boost::filesystem::path& path, const spl::shared_pt
 }
 
 std::wstring ListMedia(const spl::shared_ptr<media_info_repository>& media_info_repo)
-{	
+{
 	std::wstringstream replyString;
 	for (boost::filesystem::recursive_directory_iterator itr(env::media_folder()), end; itr != end; ++itr)
 		replyString << MediaInfo(itr->path(), media_info_repo);
-	
+
 	return boost::to_upper_copy(replyString.str());
 }
 
@@ -247,7 +247,7 @@ std::wstring ListTemplates(const spl::shared_ptr<core::cg_producer_registry>& cg
 	std::wstringstream replyString;
 
 	for (boost::filesystem::recursive_directory_iterator itr(env::template_folder()), end; itr != end; ++itr)
-	{		
+	{
 		if(boost::filesystem::is_regular_file(itr->path()) && cg_registry->is_cg_extension(itr->path().extension().wstring()))
 		{
 			auto relativePath = get_relative_without_extension(itr->path(), env::template_folder());
@@ -264,7 +264,7 @@ std::wstring ListTemplates(const spl::shared_ptr<core::cg_producer_registry>& cg
 			auto dir = relativePath.parent_path();
 			auto file = boost::to_upper_copy(relativePath.filename().wstring());
 			relativePath = dir / file;
-						
+
 			auto str = relativePath.generic_wstring();
 			boost::trim_if(str, boost::is_any_of("\\/"));
 
@@ -280,13 +280,18 @@ std::wstring ListTemplates(const spl::shared_ptr<core::cg_producer_registry>& cg
 	return replyString.str();
 }
 
+std::vector<spl::shared_ptr<core::video_channel>> get_channels(const command_context& ctx)
+{
+	return cpplinq::from(ctx.channels)
+		.select([](channel_context c) { return spl::make_shared_ptr(c.channel); })
+		.to_vector();
+}
+
 core::frame_producer_dependencies get_producer_dependencies(const std::shared_ptr<core::video_channel>& channel, const command_context& ctx)
 {
 	return core::frame_producer_dependencies(
 			channel->frame_factory(),
-			cpplinq::from(ctx.channels)
-					.select([](channel_context c) { return spl::make_shared_ptr(c.channel); })
-					.to_vector(),
+			get_channels(ctx),
 			channel->video_format_desc(),
 			ctx.producer_registry);
 }
@@ -616,6 +621,7 @@ void add_describer(core::help_sink& sink, const core::help_repository& repo)
 	sink.example(L">> ADD 1 SCREEN");
 	sink.example(L">> ADD 1 AUDIO");
 	sink.example(L">> ADD 1 IMAGE filename");
+	sink.example(L">> ADD 2 SYNCTO 1");
 	sink.example(L">> ADD 1 FILE filename.mov");
 	sink.example(L">> ADD 1 FILE filename.mov SEPARATE_KEY");
 	sink.example(
@@ -635,7 +641,7 @@ std::wstring add_command(command_context& ctx)
 	core::diagnostics::scoped_call_context save;
 	core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
 
-	auto consumer = ctx.consumer_registry->create_consumer(ctx.parameters, &ctx.channel.channel->stage());
+	auto consumer = ctx.consumer_registry->create_consumer(ctx.parameters, &ctx.channel.channel->stage(), get_channels(ctx));
 	ctx.channel.channel->output().add(ctx.layer_index(consumer->index()), consumer);
 
 	return L"202 ADD OK\r\n";
@@ -660,7 +666,7 @@ void remove_describer(core::help_sink& sink, const core::help_repository& repo)
 std::wstring remove_command(command_context& ctx)
 {
 	auto index = ctx.layer_index(std::numeric_limits<int>::min());
-	
+
 	if (index == std::numeric_limits<int>::min())
 	{
 		replace_placeholders(
@@ -668,7 +674,7 @@ std::wstring remove_command(command_context& ctx)
 				ctx.client->address(),
 				ctx.parameters);
 
-		index = ctx.consumer_registry->create_consumer(ctx.parameters, &ctx.channel.channel->stage())->index();
+		index = ctx.consumer_registry->create_consumer(ctx.parameters, &ctx.channel.channel->stage(), get_channels(ctx))->index();
 	}
 
 	ctx.channel.channel->output().remove(index);
@@ -689,7 +695,7 @@ void print_describer(core::help_sink& sink, const core::help_repository& repo)
 
 std::wstring print_command(command_context& ctx)
 {
-	ctx.channel.channel->output().add(ctx.consumer_registry->create_consumer({ L"IMAGE" }, &ctx.channel.channel->stage()));
+	ctx.channel.channel->output().add(ctx.consumer_registry->create_consumer({ L"IMAGE" }, &ctx.channel.channel->stage(), get_channels(ctx)));
 
 	return L"202 PRINT OK\r\n";
 }
@@ -2045,7 +2051,7 @@ std::wstring channel_grid_command(command_context& ctx)
 	params.push_back(L"0");
 	params.push_back(L"NAME");
 	params.push_back(L"Channel Grid Window");
-	auto screen = ctx.consumer_registry->create_consumer(params, &self.channel->stage());
+	auto screen = ctx.consumer_registry->create_consumer(params, &self.channel->stage(), get_channels(ctx));
 
 	self.channel->output().add(screen);
 
@@ -2093,14 +2099,14 @@ std::wstring thumbnail_list_command(command_context& ctx)
 	std::wstringstream replyString;
 	replyString << L"200 THUMBNAIL LIST OK\r\n";
 
-	for (boost::filesystem::recursive_directory_iterator itr(env::thumbnails_folder()), end; itr != end; ++itr)
+	for (boost::filesystem::recursive_directory_iterator itr(env::thumbnail_folder()), end; itr != end; ++itr)
 	{
 		if (boost::filesystem::is_regular_file(itr->path()))
 		{
 			if (!boost::iequals(itr->path().extension().wstring(), L".png"))
 				continue;
 
-			auto relativePath = get_relative_without_extension(itr->path(), env::thumbnails_folder());
+			auto relativePath = get_relative_without_extension(itr->path(), env::thumbnail_folder());
 			auto str = relativePath.generic_wstring();
 
 			if (str[0] == '\\' || str[0] == '/')
@@ -2133,7 +2139,7 @@ void thumbnail_retrieve_describer(core::help_sink& sink, const core::help_reposi
 
 std::wstring thumbnail_retrieve_command(command_context& ctx)
 {
-	std::wstring filename = env::thumbnails_folder();
+	std::wstring filename = env::thumbnail_folder();
 	filename.append(ctx.parameters.at(0));
 	filename.append(L".png");
 
@@ -2437,8 +2443,14 @@ void info_paths_describer(core::help_sink& sink, const core::help_repository& re
 std::wstring info_paths_command(command_context& ctx)
 {
 	boost::property_tree::wptree info;
-	info.add_child(L"paths", caspar::env::properties().get_child(L"configuration.paths"));
-	info.add(L"paths.initial-path", boost::filesystem::initial_path().wstring() + L"/");
+
+	info.add(L"paths.media-path",		caspar::env::media_folder());
+	info.add(L"paths.log-path",			caspar::env::log_folder());
+	info.add(L"paths.data-path",			caspar::env::data_folder());
+	info.add(L"paths.template-path",		caspar::env::template_folder());
+	info.add(L"paths.thumbnail-path",	caspar::env::thumbnail_folder());
+	info.add(L"paths.font-path",			caspar::env::font_folder());
+	info.add(L"paths.initial-path",		caspar::env::initial_folder() + L"/");
 
 	return create_info_xml_reply(info, L"PATHS");
 }

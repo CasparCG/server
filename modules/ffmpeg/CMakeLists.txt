@@ -3,7 +3,6 @@ project (ffmpeg)
 
 set(SOURCES
 		consumer/ffmpeg_consumer.cpp
-		consumer/streaming_consumer.cpp
 
 		producer/audio/audio_decoder.cpp
 
@@ -29,7 +28,6 @@ set(SOURCES
 )
 set(HEADERS
 		consumer/ffmpeg_consumer.h
-		consumer/streaming_consumer.h
 
 		producer/audio/audio_decoder.h
 

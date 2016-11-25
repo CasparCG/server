@@ -81,7 +81,7 @@ struct configuration
 
 	int							device_index		= 1;
 	int							key_device_idx		= 0;
-	bool						embedded_audio		= true;
+	bool						embedded_audio		= false;
 	keyer_t						keyer				= keyer_t::default_keyer;
 	latency_t					latency				= latency_t::default_latency;
 	bool						key_only			= false;
@@ -219,7 +219,12 @@ public:
 	virtual ULONG STDMETHODCALLTYPE Release()
 	{
 		if(--ref_count_ == 0)
+		{
 			delete this;
+
+			return 0;
+		}
+
 		return ref_count_;
 	}
 
@@ -580,6 +585,9 @@ public:
 				}
 			}
 
+			if (!is_running_)
+				return E_FAIL;
+
 			if (config_.embedded_audio)
 				schedule_next_audio(channel_remapper_.mix_and_rearrange(frame.audio_data()));
 
@@ -817,7 +825,7 @@ void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
 }
 
 spl::shared_ptr<core::frame_consumer> create_consumer(
-		const std::vector<std::wstring>& params, core::interaction_sink*)
+		const std::vector<std::wstring>& params, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
 	if (params.size() < 1 || !boost::iequals(params.at(0), L"DECKLINK"))
 		return core::frame_consumer::empty();
@@ -863,7 +871,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(
 }
 
 spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
-		const boost::property_tree::wptree& ptree, core::interaction_sink*)
+		const boost::property_tree::wptree& ptree, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
 	configuration config;
 

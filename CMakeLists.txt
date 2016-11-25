@@ -3,12 +3,16 @@ project ("CasparCG Server")
 
 find_package(Git)
 
-set(GIT_REV "N/A")
+set(GIT_REV "0")
+set(GIT_HASH "N/A")
 
 if (GIT_FOUND)
 	exec_program("${GIT_EXECUTABLE}" "${PROJECT_SOURCE_DIR}"
-			ARGS rev-parse --verify --short HEAD
+			ARGS rev-list --all --count
 			OUTPUT_VARIABLE GIT_REV)
+	exec_program("${GIT_EXECUTABLE}" "${PROJECT_SOURCE_DIR}"
+			ARGS rev-parse --verify --short HEAD
+			OUTPUT_VARIABLE GIT_HASH)
 endif ()
 
 configure_file("${PROJECT_SOURCE_DIR}/version.tmpl" "${PROJECT_SOURCE_DIR}/version.h")
@@ -75,6 +79,7 @@ add_definitions( -D_UNICODE )
 add_definitions( -DGLEW_NO_GLU )
 add_definitions( "-DBOOST_ASIO_ERROR_CATEGORY_NOEXCEPT=noexcept(true)" ) # Workaround macro redefinition in boost
 add_definitions( -D_GLIBCXX_USE_CXX11_ABI=0 ) # Allow compilation in GCC 5 while keeping old dependencies
+add_definitions( -DCASPAR_SOURCE_PREFIX="${CMAKE_CURRENT_SOURCE_DIR}" )
 
 if (MSVC)
 	set(CMAKE_CXX_FLAGS					"${CMAKE_CXX_FLAGS}					/EHa /Zi /W4 /WX /MP /fp:fast /Zm192 /FIcommon/compiler/vs/disable_silly_warnings.h")
