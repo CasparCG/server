@@ -154,7 +154,7 @@ public:
 		: duration_(0)
 		, time_(0)
 	{
-		dest_.image_transform.use_mipmap = env::properties().get(L"configuration.mixer.mipmapping_default_on", false);
+		dest_.image_transform.use_mipmap = env::properties().get(L"configuration.mixer.mipmapping-default-on", false);
 	}
 
 	tweened_transform(const frame_transform& source, const frame_transform& dest, int duration, const tweener& tween)
