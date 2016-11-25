@@ -2099,14 +2099,14 @@ std::wstring thumbnail_list_command(command_context& ctx)
 	std::wstringstream replyString;
 	replyString << L"200 THUMBNAIL LIST OK\r\n";
 
-	for (boost::filesystem::recursive_directory_iterator itr(env::thumbnails_folder()), end; itr != end; ++itr)
+	for (boost::filesystem::recursive_directory_iterator itr(env::thumbnail_folder()), end; itr != end; ++itr)
 	{
 		if (boost::filesystem::is_regular_file(itr->path()))
 		{
 			if (!boost::iequals(itr->path().extension().wstring(), L".png"))
 				continue;
 
-			auto relativePath = get_relative_without_extension(itr->path(), env::thumbnails_folder());
+			auto relativePath = get_relative_without_extension(itr->path(), env::thumbnail_folder());
 			auto str = relativePath.generic_wstring();
 
 			if (str[0] == '\\' || str[0] == '/')
@@ -2139,7 +2139,7 @@ void thumbnail_retrieve_describer(core::help_sink& sink, const core::help_reposi
 
 std::wstring thumbnail_retrieve_command(command_context& ctx)
 {
-	std::wstring filename = env::thumbnails_folder();
+	std::wstring filename = env::thumbnail_folder();
 	filename.append(ctx.parameters.at(0));
 	filename.append(L".png");
 
@@ -2443,8 +2443,14 @@ void info_paths_describer(core::help_sink& sink, const core::help_repository& re
 std::wstring info_paths_command(command_context& ctx)
 {
 	boost::property_tree::wptree info;
-	info.add_child(L"paths", caspar::env::properties().get_child(L"configuration.paths"));
-	info.add(L"paths.initial-path", boost::filesystem::initial_path().wstring() + L"/");
+
+	info.add(L"paths.media-path",		caspar::env::media_folder());
+	info.add(L"paths.log-path",			caspar::env::log_folder());
+	info.add(L"paths.data-path",			caspar::env::data_folder());
+	info.add(L"paths.template-path",		caspar::env::template_folder());
+	info.add(L"paths.thumbnail-path",	caspar::env::thumbnail_folder());
+	info.add(L"paths.font-path",			caspar::env::font_folder());
+	info.add(L"paths.initial-path",		caspar::env::initial_folder() + L"/");
 
 	return create_info_xml_reply(info, L"PATHS");
 }

@@ -34,7 +34,7 @@
 
 #define CASPAR_VERIFY(expr) do{if(!(expr)){ CASPAR_LOG(warning) << "Assertion Failed: " << \
 	CASPAR_VERIFY_EXPR_STR(expr) << " " \
-	<< "file:" << __FILE__ << " " \
+	<< "file:" << log::remove_source_prefix(__FILE__) << " " \
 	<< "line:" << __LINE__ << " "; \
 	_CASPAR_DBG_BREAK;\
 	}}while(0);

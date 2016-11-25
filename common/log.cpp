@@ -23,6 +23,7 @@
 
 #include "log.h"
 
+#include "os/threading.h"
 #include "except.h"
 #include "utf.h"
 
@@ -47,7 +48,7 @@
 #include <boost/log/sinks/async_frontend.hpp>
 #include <boost/log/core/record.hpp>
 #include <boost/log/attributes/attribute_value.hpp>
-#include <boost/log/attributes/current_thread_id.hpp>
+#include <boost/log/attributes/function.hpp>
 #include <boost/log/utility/setup/common_attributes.hpp>
 
 #include <boost/core/null_deleter.hpp>
@@ -121,7 +122,7 @@ void my_formatter(bool print_all_characters, const boost::log::record_view& rec,
 
 	std::wstringstream pre_message_stream;
 	append_timestamp(pre_message_stream);
-	thread_id_column.write(pre_message_stream, boost::log::extract<boost::log::attributes::current_thread_id::value_type>("ThreadID", rec).get().native_id());
+	thread_id_column.write(pre_message_stream, boost::log::extract<std::int64_t>("NativeThreadId", rec));
 	severity_column.write(pre_message_stream, boost::log::extract<boost::log::trivial::severity_level>("Severity", rec));
 
 	auto pre_message = pre_message_stream.str();
@@ -141,10 +142,11 @@ void my_formatter(bool print_all_characters, const boost::log::record_view& rec,
 }
 
 namespace internal{
-	
+
 void init()
-{	
+{
 	boost::log::add_common_attributes();
+	boost::log::core::get()->add_global_attribute("NativeThreadId", boost::log::attributes::make_function(&get_current_thread_id));
 	typedef boost::log::sinks::asynchronous_sink<boost::log::sinks::wtext_ostream_backend> stream_sink_type;
 
 	auto stream_backend = boost::make_shared<boost::log::sinks::wtext_ostream_backend>();
@@ -321,6 +323,16 @@ void print_child(
 
 	for (auto& child : tree)
 		print_child(level, indent + (elem.empty() ? L"" : elem + L"."), child.first, child.second);
+}
+
+const char* remove_source_prefix(const char* file)
+{
+	auto found = boost::ifind_first(file, get_source_prefix().c_str());
+
+	if (found)
+		return found.end();
+	else
+		return file;
 }
 
 }}

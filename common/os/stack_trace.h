@@ -26,5 +26,6 @@
 namespace caspar {
 
 std::wstring get_call_stack();
+const std::string& get_source_prefix();
 
 }

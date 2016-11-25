@@ -39,15 +39,17 @@
 #include <functional>
 #include <iostream>
 #include <fstream>
+#include <boost/algorithm/string/replace.hpp>
 
 namespace caspar { namespace env {
-	
+
+std::wstring initial;
 std::wstring media;
 std::wstring log;
 std::wstring ftemplate;
 std::wstring data;
 std::wstring font;
-std::wstring thumbnails;
+std::wstring thumbnail;
 boost::property_tree::wptree pt;
 
 void check_is_configured()
@@ -56,112 +58,100 @@ void check_is_configured()
 		CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(L"Enviroment properties has not been configured"));
 }
 
+std::wstring clean_path(std::wstring path)
+{
+	boost::replace_all(path, L"\\\\", L"/");
+	boost::replace_all(path, L"\\", L"/");
+
+	return path;
+}
+
+std::wstring ensure_trailing_slash(std::wstring folder)
+{
+	if (folder.at(folder.length() - 1) != L'/')
+		folder.append(L"/");
+
+	return folder;
+}
+
+std::wstring resolve_or_create(const std::wstring& folder)
+{
+	auto found_path = find_case_insensitive(folder);
+
+	if (found_path)
+		return *found_path;
+	else
+	{
+		boost::system::error_code ec;
+		boost::filesystem::create_directories(folder, ec);
+
+		if (ec)
+			CASPAR_THROW_EXCEPTION(user_error() << msg_info("Failed to create directory " + u8(folder) + " (" + ec.message() + ")"));
+
+		return folder;
+	}
+}
+
+void ensure_writable(const std::wstring& folder)
+{
+	static const std::wstring CREATE_FILE_TEST = L"casparcg_test_writable.empty";
+
+	boost::system::error_code	ec;
+	boost::filesystem::path		test_file(folder + L"/" + CREATE_FILE_TEST);
+	boost::filesystem::ofstream	out(folder + L"/" + CREATE_FILE_TEST);
+
+	if (out.fail())
+	{
+		boost::filesystem::remove(test_file, ec);
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Directory " + folder + L" is not writable."));
+	}
+
+	out.close();
+	boost::filesystem::remove(test_file, ec);
+}
+
 void configure(const std::wstring& filename)
 {
 	try
 	{
-		auto initialPath = boost::filesystem::initial_path().wstring();
-	
-		boost::filesystem::wifstream file(initialPath + L"/" + filename);
+		initial = clean_path(boost::filesystem::initial_path().wstring());
+
+		boost::filesystem::wifstream file(initial + L"/" + filename);
 		boost::property_tree::read_xml(file, pt, boost::property_tree::xml_parser::trim_whitespace | boost::property_tree::xml_parser::no_comments);
 
 		auto paths	= pt.get_child(L"configuration.paths");
-		media		= paths.get(L"media-path", initialPath + L"/media/");
-		log			= paths.get(L"log-path", initialPath + L"/log/");
-		ftemplate	= boost::filesystem::complete(paths.get(L"template-path", initialPath + L"/template/")).wstring();
-		data		= paths.get(L"data-path", initialPath + L"/data/");
-		font		= paths.get(L"font-path", initialPath + L"/font/");
-		thumbnails	= paths.get(L"thumbnail-path", initialPath + L"/thumbnail/");
+		media		= clean_path(paths.get(L"media-path", initial + L"/media/"));
+		log			= clean_path(paths.get(L"log-path", initial + L"/log/"));
+		ftemplate	= clean_path(boost::filesystem::complete(paths.get(L"template-path", initial + L"/template/")).wstring());
+		data		= clean_path(paths.get(L"data-path", initial + L"/data/"));
+		font		= clean_path(paths.get(L"font-path", initial + L"/font/"));
+		thumbnail	= clean_path(paths.get(L"thumbnail-path", paths.get(L"thumbnails-path", initial + L"/thumbnail/")));
 	}
-	catch(...)
+	catch (...)
 	{
 		CASPAR_LOG(error) << L" ### Invalid configuration file. ###";
 		throw;
 	}
 
-	try
-	{
-		auto found_media_path = find_case_insensitive(media);
-		if (found_media_path)
-			media = *found_media_path;
-		else
-			boost::filesystem::create_directories(media);
+	media		= ensure_trailing_slash(resolve_or_create(media));
+	log			= ensure_trailing_slash(resolve_or_create(log));
+	ftemplate	= ensure_trailing_slash(resolve_or_create(ftemplate));
+	data		= ensure_trailing_slash(resolve_or_create(data));
+	font		= ensure_trailing_slash(resolve_or_create(font));
+	thumbnail	= ensure_trailing_slash(resolve_or_create(thumbnail));
 
-		auto found_template_path = find_case_insensitive(ftemplate);
-		if (found_template_path)
-			ftemplate = *found_template_path;
-		else
-			boost::filesystem::create_directories(ftemplate);
-
-		auto found_data_path = find_case_insensitive(data);
-		if (found_data_path)
-			data = *found_data_path;
-		else
-			boost::filesystem::create_directories(data);
-
-		auto found_font_path = find_case_insensitive(font);
-		if (found_font_path)
-			font = *found_font_path;
-		else
-			boost::filesystem::create_directories(font);
-
-		auto found_thumbnails_path = find_case_insensitive(thumbnails);
-		if (found_thumbnails_path)
-			thumbnails = *found_thumbnails_path;
-		else
-			boost::filesystem::create_directories(thumbnails);
-
-		auto found_log_path = find_case_insensitive(log);
-		if (found_log_path)
-			log = *found_log_path;
-		else if (!boost::filesystem::create_directories(log))
-			log = L"./";
-
-		//Make sure that all paths have a trailing slash
-		if(media.at(media.length()-1) != L'/')
-			media.append(L"/");
-		if(log.at(log.length()-1) != L'/')
-			log.append(L"/");
-		if(ftemplate.at(ftemplate.length()-1) != L'/')
-			ftemplate.append(L"/");
-		if(data.at(data.length()-1) != L'/')
-			data.append(L"/");
-		if(font.at(font.length()-1) != L'/')
-			font.append(L"/");
-		if(thumbnails.at(thumbnails.length()-1) != L'/')
-			thumbnails.append(L"/");
-
-		try
-		{
-			auto initialPath = boost::filesystem::initial_path().wstring();
-
-			for(auto it = boost::filesystem::directory_iterator(initialPath); it != boost::filesystem::directory_iterator(); ++it)
-			{
-				if(it->path().wstring().find(L".fth") != std::wstring::npos)
-				{
-					auto from_path = *it;
-					auto to_path = boost::filesystem::path(ftemplate + L"/" + it->path().wstring());
-
-					if(boost::filesystem::exists(to_path))
-						boost::filesystem::remove(to_path);
-
-					boost::filesystem::copy_file(from_path, to_path);
-				}
-			}
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
-			CASPAR_LOG(error) << L"Failed to copy template-hosts from initial-path to template-path.";
-		}
-	}
-	catch(...)
-	{
-		CASPAR_LOG_CURRENT_EXCEPTION();
-		CASPAR_LOG(error) << L"Failed to create configured directories.";
-	}
+	ensure_writable(log);
+	ensure_writable(ftemplate);
+	ensure_writable(data);
+	ensure_writable(thumbnail);
 }
-	
+
+const std::wstring& initial_folder()
+{
+	check_is_configured();
+	return initial;
+}
+
 const std::wstring& media_folder()
 {
 	check_is_configured();
@@ -192,10 +182,10 @@ const std::wstring& font_folder()
 	return font;
 }
 
-const std::wstring& thumbnails_folder()
+const std::wstring& thumbnail_folder()
 {
 	check_is_configured();
-	return thumbnails;
+	return thumbnail;
 }
 
 #define QUOTE(str) #str
@@ -204,10 +194,11 @@ const std::wstring& thumbnails_folder()
 const std::wstring& version()
 {
 	static std::wstring ver = u16(
-			EXPAND_AND_QUOTE(CASPAR_GEN)	"." 
-			EXPAND_AND_QUOTE(CASPAR_MAYOR)  "." 
-			EXPAND_AND_QUOTE(CASPAR_MINOR)  "." 
-			CASPAR_REV	" " 
+			EXPAND_AND_QUOTE(CASPAR_GEN)	"."
+			EXPAND_AND_QUOTE(CASPAR_MAYOR)  "."
+			EXPAND_AND_QUOTE(CASPAR_MINOR)  "."
+			EXPAND_AND_QUOTE(CASPAR_REV)	" "
+			CASPAR_HASH						" "
 			CASPAR_TAG);
 	return ver;
 }
@@ -216,6 +207,15 @@ const boost::property_tree::wptree& properties()
 {
 	check_is_configured();
 	return pt;
+}
+
+void log_configuration_warnings()
+{
+	if (pt.empty())
+		return;
+
+	if (pt.get_optional<std::wstring>(L"configuration.paths.thumbnails-path"))
+		CASPAR_LOG(warning) << L"Element thumbnails-path in casparcg.config has been deprecated. Use thumbnail-path instead.";
 }
 
 }}

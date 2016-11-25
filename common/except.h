@@ -24,6 +24,7 @@
 #include "utf.h"
 
 #include "os/stack_trace.h"
+#include "log.h"
 
 #include <exception>
 #include <list>
@@ -64,7 +65,7 @@ inline context_info_t		context_info(const T& str)		{return context_info_t(u8(str
 typedef boost::error_info<struct tag_line_info, size_t>						line_info;
 typedef boost::error_info<struct tag_nested_exception_, std::exception_ptr> nested_exception;
 
-struct caspar_exception			: virtual boost::exception, virtual std::exception 
+struct caspar_exception			: virtual boost::exception, virtual std::exception
 {
 	caspar_exception(){}
 	const char* what() const throw() override
@@ -125,9 +126,8 @@ private:
 #define _CASPAR_GENERATE_UNIQUE_IDENTIFIER(name, line) _CASPAR_GENERATE_UNIQUE_IDENTIFIER_CAT(name, line)
 #define CASPAR_SCOPED_CONTEXT_MSG(ctx_msg) ::caspar::scoped_context _CASPAR_GENERATE_UNIQUE_IDENTIFIER(SCOPED_CONTEXT, __LINE__)(u8(ctx_msg));
 
-#define CASPAR_THROW_EXCEPTION(e) BOOST_THROW_EXCEPTION(e << call_stack_info(caspar::get_call_stack()) << context_info(get_context()))
+#define CASPAR_THROW_EXCEPTION(e) ::boost::exception_detail::throw_exception_((e << call_stack_info(caspar::get_call_stack()) << context_info(get_context())), BOOST_THROW_EXCEPTION_CURRENT_FUNCTION, ::caspar::log::remove_source_prefix(__FILE__), __LINE__)
 
 std::string get_message_and_context(const caspar_exception& e);
 
 }
-
