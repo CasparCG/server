@@ -66,7 +66,7 @@ if(MSVC)
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libcef.dll")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/d3dcompiler_43.dll")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/d3dcompiler_47.dll")
-	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/ffmpegsumo.dll")
+	
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/icudtl.dat")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libEGL.dll")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libGLESv2.dll")

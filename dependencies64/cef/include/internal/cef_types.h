@@ -181,6 +181,18 @@ typedef struct _cef_settings_t {
   int multi_threaded_message_loop;
 
   ///
+  // Set to true (1) to control browser process main (UI) thread message pump
+  // scheduling via the CefBrowserProcessHandler::OnScheduleMessagePumpWork()
+  // callback. This option is recommended for use in combination with the
+  // CefDoMessageLoopWork() function in cases where the CEF message loop must be
+  // integrated into an existing application message loop (see additional
+  // comments and warnings on CefDoMessageLoopWork). Enabling this option is not
+  // recommended for most users; leave this option disabled and use either the
+  // CefRunMessageLoop() function or multi_threaded_message_loop if possible.
+  ///
+  int external_message_pump;
+
+  ///
   // Set to true (1) to enable windowless (off-screen) rendering support. Do not
   // enable this value if the application does not use windowless rendering as
   // it may reduce rendering performance on some systems.
@@ -365,6 +377,19 @@ typedef struct _cef_settings_t {
   int ignore_certificate_errors;
 
   ///
+  // Set to true (1) to enable date-based expiration of built in network
+  // security information (i.e. certificate transparency logs, HSTS preloading
+  // and pinning information). Enabling this option improves network security
+  // but may cause HTTPS load failures when using CEF binaries built more than
+  // 10 weeks in the past. See https://www.certificate-transparency.org/ and
+  // https://www.chromium.org/hsts for details. Also configurable using the
+  // "enable-net-security-expiration" command-line switch. Can be overridden for
+  // individual CefRequestContext instances via the
+  // CefRequestContextSettings.enable_net_security_expiration value.
+  ///
+  int enable_net_security_expiration;
+
+  ///
   // Opaque background color used for accelerated content. By default the
   // background color will be white. Only the RGB compontents of the specified
   // value will be used. The alpha component must greater than 0 to enable use
@@ -430,6 +455,17 @@ typedef struct _cef_request_context_settings_t {
   // |cache_path| matches the CefSettings.cache_path value.
   ///
   int ignore_certificate_errors;
+
+  ///
+  // Set to true (1) to enable date-based expiration of built in network
+  // security information (i.e. certificate transparency logs, HSTS preloading
+  // and pinning information). Enabling this option improves network security
+  // but may cause HTTPS load failures when using CEF binaries built more than
+  // 10 weeks in the past. See https://www.certificate-transparency.org/ and
+  // https://www.chromium.org/hsts for details. Can be set globally using the
+  // CefSettings.enable_net_security_expiration value.
+  ///
+  int enable_net_security_expiration;
 
   ///
   // Comma delimited ordered list of language codes without any whitespace that
@@ -930,11 +966,12 @@ typedef enum {
 } cef_cert_status_t;
 
 ///
-// The manner in which a link click should be opened.
+// The manner in which a link click should be opened. These constants match
+// their equivalents in Chromium's window_open_disposition.h and should not be
+// renumbered.
 ///
 typedef enum {
   WOD_UNKNOWN,
-  WOD_SUPPRESS_OPEN,
   WOD_CURRENT_TAB,
   WOD_SINGLETON_TAB,
   WOD_NEW_FOREGROUND_TAB,
@@ -1076,6 +1113,16 @@ typedef enum {
   // Main resource of a service worker.
   ///
   RT_SERVICE_WORKER,
+
+  ///
+  // A report of Content Security Policy violations.
+  ///
+  RT_CSP_REPORT,
+
+  ///
+  // A resource that a plugin requested.
+  ///
+  RT_PLUGIN_RESOURCE,
 } cef_resource_type_t;
 
 ///
@@ -1273,6 +1320,24 @@ typedef struct _cef_size_t {
   int width;
   int height;
 } cef_size_t;
+
+///
+// Structure representing a range.
+///
+typedef struct _cef_range_t {
+  int from;
+  int to;
+} cef_range_t;
+
+///
+// Structure representing insets.
+///
+typedef struct _cef_insets_t {
+  int top;
+  int left;
+  int bottom;
+  int right;
+} cef_insets_t;
 
 ///
 // Structure representing a draggable region.
@@ -2024,14 +2089,6 @@ typedef enum {
 } cef_duplex_mode_t;
 
 ///
-// Structure representing a print job page range.
-///
-typedef struct _cef_page_range_t {
-  int from;
-  int to;
-} cef_page_range_t;
-
-///
 // Cursor type values.
 ///
 typedef enum {
@@ -2109,7 +2166,7 @@ typedef enum {
   // addition to their special meaning. Things like escaped letters, digits,
   // and most symbols will get unescaped with this mode.
   ///
-  UU_NORMAL = 1,
+  UU_NORMAL = 1 << 0,
 
   ///
   // Convert %20 to spaces. In some places where we're showing URLs, we may
@@ -2117,31 +2174,42 @@ typedef enum {
   // you wouldn't want this since it might not be interpreted in one piece
   // by other applications.
   ///
-  UU_SPACES = 2,
+  UU_SPACES = 1 << 1,
+
+  ///
+  // Unescapes '/' and '\\'. If these characters were unescaped, the resulting
+  // URL won't be the same as the source one. Moreover, they are dangerous to
+  // unescape in strings that will be used as file paths or names. This value
+  // should only be used when slashes don't have special meaning, like data
+  // URLs.
+  ///
+  UU_PATH_SEPARATORS = 1 << 2,
 
   ///
   // Unescapes various characters that will change the meaning of URLs,
-  // including '%', '+', '&', '/', '#'. If we unescaped these characters, the
-  // resulting URL won't be the same as the source one. This flag is used when
-  // generating final output like filenames for URLs where we won't be
-  // interpreting as a URL and want to do as much unescaping as possible.
+  // including '%', '+', '&', '#'. Does not unescape path separators.
+  // If these characters were unescaped, the resulting URL won't be the same
+  // as the source one. This flag is used when generating final output like
+  // filenames for URLs where we won't be interpreting as a URL and want to do
+  // as much unescaping as possible.
   ///
-  UU_URL_SPECIAL_CHARS = 4,
+  UU_URL_SPECIAL_CHARS_EXCEPT_PATH_SEPARATORS = 1 << 3,
 
   ///
-  // Unescapes control characters such as %01. This INCLUDES NULLs. This is
-  // used for rare cases such as data: URL decoding where the result is binary
-  // data. This flag also unescapes BiDi control characters.
+  // Unescapes characters that can be used in spoofing attempts (such as LOCK)
+  // and control characters (such as BiDi control characters and %01).  This
+  // INCLUDES NULLs.  This is used for rare cases such as data: URL decoding
+  // where the result is binary data.
   //
-  // DO NOT use CONTROL_CHARS if the URL is going to be displayed in the UI
-  // for security reasons.
+  // DO NOT use UU_SPOOFING_AND_CONTROL_CHARS if the URL is going to be
+  // displayed in the UI for security reasons.
   ///
-  UU_CONTROL_CHARS = 8,
+  UU_SPOOFING_AND_CONTROL_CHARS = 1 << 4,
 
   ///
   // URL queries use "+" for space. This flag controls that replacement.
   ///
-  UU_REPLACE_PLUS_WITH_SPACE = 16,
+  UU_REPLACE_PLUS_WITH_SPACE = 1 << 5,
 } cef_uri_unescape_rule_t;
 
 ///
@@ -2401,6 +2469,242 @@ typedef enum {
   ///
   RESPONSE_FILTER_ERROR
 } cef_response_filter_status_t;
+
+///
+// Describes how to interpret the components of a pixel.
+///
+typedef enum {
+  ///
+  // RGBA with 8 bits per pixel (32bits total).
+  ///
+  CEF_COLOR_TYPE_RGBA_8888,
+
+  ///
+  // BGRA with 8 bits per pixel (32bits total).
+  ///
+  CEF_COLOR_TYPE_BGRA_8888,
+} cef_color_type_t;
+
+///
+// Describes how to interpret the alpha component of a pixel.
+///
+typedef enum {
+  ///
+  // No transparency. The alpha component is ignored.
+  ///
+  CEF_ALPHA_TYPE_OPAQUE,
+
+  ///
+  // Transparency with pre-multiplied alpha component.
+  ///
+  CEF_ALPHA_TYPE_PREMULTIPLIED,
+  
+  ///
+  // Transparency with post-multiplied alpha component.
+  ///
+  CEF_ALPHA_TYPE_POSTMULTIPLIED,
+} cef_alpha_type_t;
+
+///
+// Text style types. Should be kepy in sync with gfx::TextStyle.
+///
+typedef enum {
+  CEF_TEXT_STYLE_BOLD,
+  CEF_TEXT_STYLE_ITALIC,
+  CEF_TEXT_STYLE_STRIKE,
+  CEF_TEXT_STYLE_DIAGONAL_STRIKE,
+  CEF_TEXT_STYLE_UNDERLINE,
+} cef_text_style_t;
+
+///
+// Specifies where along the main axis the CefBoxLayout child views should be
+// laid out.
+///
+typedef enum {
+  ///
+  // Child views will be left-aligned.
+  ///
+  CEF_MAIN_AXIS_ALIGNMENT_START,
+
+  ///
+  // Child views will be center-aligned.
+  ///
+  CEF_MAIN_AXIS_ALIGNMENT_CENTER,
+
+  ///
+  // Child views will be right-aligned.
+  ///
+  CEF_MAIN_AXIS_ALIGNMENT_END,
+} cef_main_axis_alignment_t;
+
+///
+// Specifies where along the cross axis the CefBoxLayout child views should be
+// laid out.
+///
+typedef enum {
+  ///
+  // Child views will be stretched to fit.
+  ///
+  CEF_CROSS_AXIS_ALIGNMENT_STRETCH,
+
+  ///
+  // Child views will be left-aligned.
+  ///
+  CEF_CROSS_AXIS_ALIGNMENT_START,
+
+  ///
+  // Child views will be center-aligned.
+  ///
+  CEF_CROSS_AXIS_ALIGNMENT_CENTER,
+
+  ///
+  // Child views will be right-aligned.
+  ///
+  CEF_CROSS_AXIS_ALIGNMENT_END,
+} cef_cross_axis_alignment_t;
+
+///
+// Settings used when initializing a CefBoxLayout.
+///
+typedef struct _cef_box_layout_settings_t {
+  ///
+  // If true (1) the layout will be horizontal, otherwise the layout will be
+  // vertical.
+  ///
+  int horizontal;
+
+  ///
+  // Adds additional horizontal space between the child view area and the host
+  // view border.
+  ///
+  int inside_border_horizontal_spacing;
+
+  ///
+  // Adds additional vertical space between the child view area and the host
+  // view border.
+  ///
+  int inside_border_vertical_spacing;
+
+  ///
+  // Adds additional space around the child view area.
+  ///
+  cef_insets_t inside_border_insets;
+
+  ///
+  // Adds additional space between child views.
+  ///
+  int between_child_spacing;
+
+  ///
+  // Specifies where along the main axis the child views should be laid out.
+  ///
+  cef_main_axis_alignment_t main_axis_alignment;
+
+  ///
+  // Specifies where along the cross axis the child views should be laid out.
+  ///
+  cef_cross_axis_alignment_t cross_axis_alignment;
+
+  ///
+  // Minimum cross axis size.
+  ///
+  int minimum_cross_axis_size;
+
+  ///
+  // Default flex for views when none is specified via CefBoxLayout methods.
+  // Using the preferred size as the basis, free space along the main axis is
+  // distributed to views in the ratio of their flex weights. Similarly, if the
+  // views will overflow the parent, space is subtracted in these ratios. A flex
+  // of 0 means this view is not resized. Flex values must not be negative.
+  ///
+  int default_flex;
+} cef_box_layout_settings_t;
+
+///
+// Specifies the button display state.
+///
+typedef enum {
+  CEF_BUTTON_STATE_NORMAL,
+  CEF_BUTTON_STATE_HOVERED,
+  CEF_BUTTON_STATE_PRESSED,
+  CEF_BUTTON_STATE_DISABLED,
+} cef_button_state_t;
+
+///
+// Specifies the horizontal text alignment mode.
+///
+typedef enum {
+  ///
+  // Align the text's left edge with that of its display area.
+  ///
+  CEF_HORIZONTAL_ALIGNMENT_LEFT,
+
+  ///
+  // Align the text's center with that of its display area.
+  ///
+  CEF_HORIZONTAL_ALIGNMENT_CENTER,
+
+  ///
+  // Align the text's right edge with that of its display area.
+  ///
+  CEF_HORIZONTAL_ALIGNMENT_RIGHT,
+} cef_horizontal_alignment_t;
+
+///
+// Specifies how a menu will be anchored for non-RTL languages. The opposite
+// position will be used for RTL languages.
+///
+typedef enum {
+  CEF_MENU_ANCHOR_TOPLEFT,
+  CEF_MENU_ANCHOR_TOPRIGHT,
+  CEF_MENU_ANCHOR_BOTTOMCENTER,
+} cef_menu_anchor_position_t;
+
+// Supported SSL version values. See net/ssl/ssl_connection_status_flags.h
+// for more information.
+typedef enum {
+  SSL_CONNECTION_VERSION_UNKNOWN = 0,  // Unknown SSL version.
+  SSL_CONNECTION_VERSION_SSL2 = 1,
+  SSL_CONNECTION_VERSION_SSL3 = 2,
+  SSL_CONNECTION_VERSION_TLS1 = 3,
+  SSL_CONNECTION_VERSION_TLS1_1 = 4,
+  SSL_CONNECTION_VERSION_TLS1_2 = 5,
+  // Reserve 6 for TLS 1.3.
+  SSL_CONNECTION_VERSION_QUIC = 7,
+} cef_ssl_version_t;
+
+// Supported SSL content status flags. See content/public/common/ssl_status.h
+// for more information.
+typedef enum {
+  SSL_CONTENT_NORMAL_CONTENT = 0,
+  SSL_CONTENT_DISPLAYED_INSECURE_CONTENT = 1 << 0,
+  SSL_CONTENT_RAN_INSECURE_CONTENT = 1 << 1,
+} cef_ssl_content_status_t;
+
+///
+// Error codes for CDM registration. See cef_web_plugin.h for details.
+///
+typedef enum {
+  ///
+  // No error. Registration completed successfully.
+  ///
+  CEF_CDM_REGISTRATION_ERROR_NONE,
+
+  ///
+  // Required files or manifest contents are missing.
+  ///
+  CEF_CDM_REGISTRATION_ERROR_INCORRECT_CONTENTS,
+
+  ///
+  // The CDM is incompatible with the current Chromium version.
+  ///
+  CEF_CDM_REGISTRATION_ERROR_INCOMPATIBLE,
+
+  ///
+  // CDM registration is not supported at this time.
+  ///
+  CEF_CDM_REGISTRATION_ERROR_NOT_SUPPORTED,
+} cef_cdm_registration_error_t;
 
 #ifdef __cplusplus
 }

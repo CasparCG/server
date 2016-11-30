@@ -152,7 +152,7 @@ public:
 					if (requestedFrames.hasOwnProperty(animationFrameId))
 						requestedFrames[animationFrameId](timestamp);
 			}
-		)", ret, exception);
+		)", CefString(), 1, ret, exception);
 
 		if (!injected)
 			caspar_log(browser, boost::log::trivial::error, "Could not inject javascript animation code.");
@@ -206,7 +206,7 @@ public:
 			{
 				CefRefPtr<CefV8Value> ret;
 				CefRefPtr<CefV8Exception> exception;
-				context->Eval("tickAnimations()", ret, exception);
+				context->Eval("tickAnimations()", CefString(), 1, ret, exception);
 			}
 
 			return true;
