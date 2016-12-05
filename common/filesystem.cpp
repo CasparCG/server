@@ -22,6 +22,7 @@
 #include "stdafx.h"
 
 #include "filesystem.h"
+#include "except.h"
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/path.hpp>
@@ -44,7 +45,7 @@ boost::filesystem::path get_relative(
 			break;
 
 		if (current_path.empty())
-			throw std::runtime_error("File not relative to folder");
+			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("File " + file.string() + " not relative to folder " + relative_to.string()));
 
 		result = current_path.filename() / result;
 	}
