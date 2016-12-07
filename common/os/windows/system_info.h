@@ -81,5 +81,26 @@ static std::wstring get_system_product_name()
 	return system_product_name;
 }
 
+static std::wstring get_computer_name()
+{
+	std::wstring computer_name = L"N/A";
+	HKEY hkey; 
+	DWORD dwType, dwSize;
+	if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, TEXT("SYSTEM\\CurrentControlSet\\Control\\ComputerName\\ComputerName"), 0, KEY_QUERY_VALUE, &hkey) == ERROR_SUCCESS)
+	{
+		wchar_t p_name_str[1024];
+
+		dwType = REG_SZ;
+		dwSize = sizeof(p_name_str);
+
+		if(RegQueryValueEx(hkey, TEXT("ComputerName"), NULL, &dwType, (PBYTE)&p_name_str, &dwSize) == ERROR_SUCCESS)		
+			computer_name = p_name_str;		
+		 
+		RegCloseKey(hkey);
+	}
+
+	return computer_name;
+}
+
 
 }

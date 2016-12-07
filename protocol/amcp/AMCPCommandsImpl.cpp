@@ -2222,7 +2222,8 @@ bool InfoCommand::DoExecute()
 			info.add(L"system.caspar.ffmpeg.avfilter",			caspar::ffmpeg::get_avfilter_version());
 			info.add(L"system.caspar.ffmpeg.avutil",			caspar::ffmpeg::get_avutil_version());
 			info.add(L"system.caspar.ffmpeg.swscale",			caspar::ffmpeg::get_swscale_version());
-									
+			info.add(L"computer.name",					caspar::get_computer_name());
+
 			boost::property_tree::write_xml(replyString, info, w);
 		}
 		else if(_parameters.size() >= 1 && _parameters[0] == L"SERVER")
