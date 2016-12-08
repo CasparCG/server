@@ -313,16 +313,28 @@ public:
 
 	uint32_t nb_frames() const override
 	{
+		auto speed = get_speed();
+
+		// return 0 for paused clips
+		if (speed == 0)
+			return static_cast<uint32_t>(0);
+
 		auto source_nb_frames = source_->nb_frames();
-		auto multiple = boost::rational_cast<double>(1 / get_speed() * (output_repeat_ != 0 ? 2 : 1));
+		auto multiple = boost::rational_cast<double>(1 / speed * (output_repeat_ != 0 ? 2 : 1));
 
 		return static_cast<uint32_t>(source_nb_frames * multiple);
 	}
 
 	uint32_t frame_number() const override
 	{
+		auto speed = get_speed();
+
+		// return 0 for paused clips
+		if (speed == 0)
+			return static_cast<uint32_t>(0);
+
 		auto source_frame_number = source_->frame_number() - 1; // next frame already received
-		auto multiple = boost::rational_cast<double>(1 / get_speed() * (output_repeat_ != 0 ? 2 : 1));
+		auto multiple = boost::rational_cast<double>(1 / speed * (output_repeat_ != 0 ? 2 : 1));
 
 		return static_cast<uint32_t>(source_frame_number * multiple);
 	}
