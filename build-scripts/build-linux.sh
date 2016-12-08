@@ -25,7 +25,7 @@ cd ../build || fail "Could not enter ../build"
 
 # Run cmake
 echo Running cmake...
-cmake -G "Unix Makefiles" -A x64 -DCMAKE_BUILD_TYPE=RelWithDebInfo .. || fail "cmake failed"
+cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=RelWithDebInfo .. || fail "cmake failed"
 
 # Run make using the number of hardware threads in BUILD_PARALLEL_THREADS
 echo Building...
