@@ -308,6 +308,9 @@ public:
 		if (incorrect_nb_frames)
 			incorrect_nb_frames->put_value(nb_frames());
 
+		auto speed = get_speed();
+		info.add(L"speed", static_cast<double>(speed.numerator()) / static_cast<double>(speed.denominator()));
+
 		return info;
 	}
 
