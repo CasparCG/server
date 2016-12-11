@@ -1377,6 +1377,8 @@ bool PrintCommand::DoExecute()
 {
 	parameters params;
 	params.push_back(L"IMAGE");
+	if(_parameters.size() > 0)
+		params.push_back(_parameters.at(0));
 	GetChannel()->output()->add(create_consumer(params));
 		
 	SetReplyString(TEXT("202 PRINT OK\r\n"));
