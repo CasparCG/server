@@ -60,10 +60,14 @@ struct adjustments
 
 struct chroma_key
 {
-	binding<core::chroma::type>	key;
-	binding<double>				threshold;
+	binding<bool>				enable;
+	binding<double>				target_hue;
+	binding<double>				hue_width;
+	binding<double>				min_saturation;
+	binding<double>				min_brightness;
 	binding<double>				softness;
 	binding<double>				spill;
+	binding<double>				spill_darken;
 };
 
 struct layer
@@ -195,7 +199,7 @@ public:
 							static_cast<double>(duration)));
 
 					to_affect.set(tweened);
-					
+
 					//CASPAR_LOG(info) << relative_frame << L" " << *start_value << L" " << duration << L" " << tweened;
 				};
 
