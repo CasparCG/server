@@ -40,12 +40,19 @@ Mixer
 
   o Fixed bug in the contrast/saturation/brightness code where the wrong luma
     coefficients was used.
+  o Rewrote the chroma key code to support variable hue, instead of fixed green
+    or blue. Threshold setting was removed in favour of separate hue width,
+    minimum saturation and minimum brightness constraints.
 
 AMCP
 ----
 
   o INFO PATHS now adds all the path elements even if they are using the default
     values.
+  o MIXER CHROMA syntax deprecated (still supported) in favour of the more
+    advanced syntax required by the rewritten chroma key code.
+
+
 
 CasparCG 2.1.0 Beta 1 (w.r.t 2.0.7 Stable)
 ==========================================

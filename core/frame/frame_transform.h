@@ -28,23 +28,29 @@
 #include <core/mixer/image/blend_modes.h>
 
 #include <boost/array.hpp>
+#include <boost/optional.hpp>
 #include <boost/property_tree/ptree.hpp>
 
 namespace caspar { namespace core {
 
 struct chroma
 {
-	enum class type
+	enum class legacy_type
 	{
 		none,
 		green,
 		blue
 	};
 
-	type	key			= type::none;
-	double	threshold	= 0.0;
-	double	softness	= 0.0;
-	double	spill		= 0.0;
+	bool		enable				= false;
+	bool		show_mask			= false;
+	double		target_hue			= 0.0;
+	double		hue_width			= 0.0;
+	double		min_saturation		= 0.0;
+	double		min_brightness		= 0.0;
+	double		softness			= 0.0;
+	double		spill				= 1.0;
+	double		spill_darken		= 0.0;
 };
 
 struct levels final
@@ -98,7 +104,7 @@ struct image_transform final
 	bool					use_mipmap			= false;
 	core::blend_mode		blend_mode			= core::blend_mode::normal;
 	int						layer_depth			= 0;
-	
+
 	image_transform& operator*=(const image_transform &other);
 	image_transform operator*(const image_transform &other) const;
 
@@ -112,7 +118,7 @@ struct audio_transform final
 {
 	double	volume		= 1.0;
 	bool	is_still	= false;
-	
+
 	audio_transform& operator*=(const audio_transform &other);
 	audio_transform operator*(const audio_transform &other) const;
 
@@ -122,17 +128,17 @@ struct audio_transform final
 bool operator==(const audio_transform& lhs, const audio_transform& rhs);
 bool operator!=(const audio_transform& lhs, const audio_transform& rhs);
 
-//__declspec(align(16)) 
+//__declspec(align(16))
 struct frame_transform final
 {
 public:
 	frame_transform();
-	
+
 	core::image_transform image_transform;
 	core::audio_transform audio_transform;
 
 	//char padding[(sizeof(core::image_transform) + sizeof(core::audio_transform)) % 16];
-	
+
 	frame_transform& operator*=(const frame_transform &other);
 	frame_transform operator*(const frame_transform &other) const;
 
@@ -149,7 +155,7 @@ class tweened_transform
 	int duration_;
 	int time_;
 	tweener tweener_;
-public:	
+public:
 	tweened_transform()
 		: duration_(0)
 		, time_(0)
@@ -170,21 +176,20 @@ public:
 	{
 		return dest_;
 	}
-	
+
 	frame_transform fetch()
 	{
 		return time_ == duration_ ? dest_ : frame_transform::tween(static_cast<double>(time_), source_, dest_, static_cast<double>(duration_), tweener_);
 	}
 
 	frame_transform fetch_and_tick(int num)
-	{						
+	{
 		time_ = std::min(time_+num, duration_);
 		return fetch();
 	}
 };
 
-chroma::type get_chroma_mode(const std::wstring& str);
-std::wstring get_chroma_mode(chroma::type type);
+boost::optional<chroma::legacy_type> get_chroma_mode(const std::wstring& str);
 
 namespace detail {
 

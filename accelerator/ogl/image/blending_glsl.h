@@ -281,40 +281,70 @@ static std::string get_chroma_glsl()
 		//      by F. van den Bergh & V. Lalioti
 		// but as a pixel shader algorithm.
 		//
-
-		float       chroma_blend_w = chroma_blend.y - chroma_blend.x;
-		const vec4  grey_xfer  = vec4(0.3, 0.59, 0.11, 0.0);
-
-		float fma(float a, float b, float c) { return a*b + c; }
+		vec4  grey_xfer  = is_hd
+				? vec4(0.2126, 0.7152, 0.0722, 0)
+				: vec4(0.299,  0.587,  0.114, 0);
 
 		// This allows us to implement the paper's alphaMap curve in software
 		// rather than a largeish array
 		float alpha_map(float d)
 		{
-		    return 1.0-smoothstep(chroma_blend.x, chroma_blend.y, d);
+		    return 1.0 - smoothstep(1.0, chroma_softness, d);
 		}
 
 		vec4 supress_spill(vec4 c, float d)
 		{
-		    float ds = smoothstep(chroma_spill, 1.0, d/chroma_blend.y);
+			float ds	= smoothstep(chroma_spill, clamp(chroma_spill + 0.2, 0, 1), d / chroma_softness);
 		    float gl = dot(grey_xfer, c);
-		    return mix(c, vec4(vec3(gl*gl), gl), ds);
+		    return mix(c, vec4(vec3(pow(gl, chroma_spill_darken)), gl), ds);
 		}
 
-		// Key on green
-		vec4 ChromaOnGreen(vec4 c)
+		// http://stackoverflow.com/questions/15095909/from-rgb-to-hsv-in-opengl-glsl
+		vec3 rgb2hsv(vec3 c)
 		{
-		    float d = fma(2.0, c.g, -c.r - c.b)/2.0;
-		    c *= alpha_map(d);
-		    return supress_spill(c, d);
+			vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+			vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+			vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+
+			float d = q.x - min(q.w, q.y);
+			float e = 1.0e-10;
+			return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
 		}
 
-		//Key on blue
-		vec4 ChromaOnBlue(vec4 c)
+		float AngleDiff(float angle1, float angle2)
 		{
-		    float d = fma(2.0, c.b, -c.r - c.g)/2.0;
-		    c *= alpha_map(d);
-		    return supress_spill(c, d);
+			return 0.5 - abs(abs(angle1 - angle2) - 0.5);
+		}
+
+		float Distance(float actual, float target)
+		{
+			return min(0.0, target - actual);
+		}
+
+		float ColorDistance(vec3 hsv)
+		{
+			float hueDiff					= AngleDiff(hsv.x, chroma_target_hue) * 2;
+			float saturationDiff			= Distance(hsv.y, chroma_min_saturation);
+			float brightnessDiff			= Distance(hsv.z, chroma_min_brightness);
+
+			float saturationBrightnessScore	= max(brightnessDiff, saturationDiff);
+			float hueScore					= hueDiff - chroma_hue_width;
+
+			return -hueScore * saturationBrightnessScore;
+		}
+
+		// Key on any color
+		vec4 ChromaOnCustomColor(vec4 c)
+		{
+			vec3 hsv		= rgb2hsv(c.rgb);
+			float distance	= ColorDistance(hsv);
+			float d			= distance * -2.0 + 1.0;
+		    vec4 suppressed	= supress_spill(c.rgba, d).rgba;
+			float alpha		= alpha_map(d);
+
+			suppressed *= alpha;
+
+			return chroma_show_mask ? vec4(suppressed.a, suppressed.a, suppressed.a, 1) : suppressed;
 		}
 	)shader";
 
