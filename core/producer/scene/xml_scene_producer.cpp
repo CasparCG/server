@@ -170,10 +170,14 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 		layer.is_key					= scene->create_variable<bool>(variable_prefix + L"is_key", false, elem.second.get(L"is_key", L"false"));
 		layer.use_mipmap				= scene->create_variable<bool>(variable_prefix + L"use_mipmap", false, elem.second.get(L"use_mipmap", L"false"));
 		layer.blend_mode				= scene->create_variable<std::wstring>(variable_prefix + L"blend_mode", false, elem.second.get(L"blend_mode", L"normal")).transformed([](const std::wstring& b) { return get_blend_mode(b); });
-		layer.chroma_key.key			= scene->create_variable<std::wstring>(variable_prefix + L"chroma_key.key", false, elem.second.get(L"chroma_key.key", L"none")).transformed([](const std::wstring& k) { return get_chroma_mode(k); });
-		layer.chroma_key.threshold		= scene->create_variable<double>(variable_prefix + L"chroma_key.threshold", false, elem.second.get(L"chroma_key.threshold", L"0.0"));
+		layer.chroma_key.enable			= scene->create_variable<bool>(variable_prefix + L"chroma_key.enable", false, elem.second.get(L"chroma_key.enable", L"false"));
+		layer.chroma_key.target_hue		= scene->create_variable<double>(variable_prefix + L"chroma_key.target_hue", false, elem.second.get(L"chroma_key.target_hue", L"120.0"));
+		layer.chroma_key.hue_width		= scene->create_variable<double>(variable_prefix + L"chroma_key.hue_width", false, elem.second.get(L"chroma_key.hue_width", L"0.1"));
+		layer.chroma_key.min_saturation	= scene->create_variable<double>(variable_prefix + L"chroma_key.min_saturation", false, elem.second.get(L"chroma_key.min_saturation", L"0.0"));
+		layer.chroma_key.min_brightness	= scene->create_variable<double>(variable_prefix + L"chroma_key.min_brightness", false, elem.second.get(L"chroma_key.min_brightness", L"0.0"));
 		layer.chroma_key.softness		= scene->create_variable<double>(variable_prefix + L"chroma_key.softness", false, elem.second.get(L"chroma_key.softness", L"0.0"));
-		layer.chroma_key.spill			= scene->create_variable<double>(variable_prefix + L"chroma_key.spill", false, elem.second.get(L"chroma_key.spill", L"0.0"));
+		layer.chroma_key.spill			= scene->create_variable<double>(variable_prefix + L"chroma_key.spill", false, elem.second.get(L"chroma_key.spill", L"1.0"));
+		layer.chroma_key.spill_darken	= scene->create_variable<double>(variable_prefix + L"chroma_key.spill_darken", false, elem.second.get(L"chroma_key.spill_darken", L"2.0"));
 
 		scene->create_variable<double>(variable_prefix + L"width", false) = layer.producer.get()->pixel_constraints().width;
 		scene->create_variable<double>(variable_prefix + L"height", false) = layer.producer.get()->pixel_constraints().height;
@@ -234,7 +238,7 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 
 	auto repo = [&scene](const std::wstring& name) -> variable&
 	{
-		return scene->get_variable(name); 
+		return scene->get_variable(name);
 	};
 
 	for (auto& var_name : scene->get_variables())
