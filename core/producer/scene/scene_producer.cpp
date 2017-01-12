@@ -149,7 +149,7 @@ struct scene_producer::impl
 		auto speed_variable = std::make_shared<core::variable_impl<double>>(L"1.0", true, 1.0);
 		store_variable(L"scene_speed", speed_variable);
 		speed_ = speed_variable->value();
-		
+
 		auto frame_variable = std::make_shared<core::variable_impl<double>>(L"-1", true, -1);
 		store_variable(L"frame", frame_variable);
 		frame_number_ = frame_variable->value();
@@ -256,14 +256,18 @@ struct scene_producer::impl
 
 		angle		= layer.rotation.get() * PI / 180.0;
 
-		transform.image_transform.opacity			= layer.adjustments.opacity.get();
-		transform.image_transform.is_key			= layer.is_key.get();
-		transform.image_transform.use_mipmap		= layer.use_mipmap.get();
-		transform.image_transform.blend_mode		= layer.blend_mode.get();
-		transform.image_transform.chroma.key		= layer.chroma_key.key.get();
-		transform.image_transform.chroma.threshold	= layer.chroma_key.threshold.get();
-		transform.image_transform.chroma.softness	= layer.chroma_key.softness.get();
-		transform.image_transform.chroma.spill		= layer.chroma_key.spill.get();
+		transform.image_transform.opacity				= layer.adjustments.opacity.get();
+		transform.image_transform.is_key				= layer.is_key.get();
+		transform.image_transform.use_mipmap			= layer.use_mipmap.get();
+		transform.image_transform.blend_mode			= layer.blend_mode.get();
+		transform.image_transform.chroma.enable			= layer.chroma_key.enable.get();
+		transform.image_transform.chroma.target_hue		= layer.chroma_key.target_hue.get();
+		transform.image_transform.chroma.hue_width		= layer.chroma_key.hue_width.get();
+		transform.image_transform.chroma.min_saturation	= layer.chroma_key.min_saturation.get();
+		transform.image_transform.chroma.min_brightness	= layer.chroma_key.min_brightness.get();
+		transform.image_transform.chroma.softness		= layer.chroma_key.softness.get();
+		transform.image_transform.chroma.spill			= layer.chroma_key.spill.get();
+		transform.image_transform.chroma.spill_darken	= layer.chroma_key.spill_darken.get();
 
 		// Mark as sublayer, so it will be composited separately by the mixer.
 		transform.image_transform.layer_depth = 1;
@@ -316,9 +320,9 @@ struct scene_producer::impl
 		{
 			prec_timer timer;
 			timer.tick_millis(0);
-			
+
 			auto field1 = render_progressive_frame();
-			
+
 			timer.tick(0.5 / format_desc_.fps);
 
 			auto field2 = render_progressive_frame();
@@ -432,7 +436,7 @@ struct scene_producer::impl
 		return boost::optional<interaction_target>();
 	}
 
-	std::future<std::wstring> call(const std::vector<std::wstring>& params) 
+	std::future<std::wstring> call(const std::vector<std::wstring>& params)
 	{
 		if (!params.empty() && boost::ends_with(params.at(0), L"()"))
 			return make_ready_future(handle_call(params));
@@ -531,7 +535,7 @@ struct scene_producer::impl
 	{
 		return producer_name_;
 	}
-	
+
 	boost::property_tree::wptree info() const
 	{
 		boost::property_tree::wptree info;
@@ -636,7 +640,7 @@ boost::property_tree::wptree scene_producer::info() const
 	return impl_->info();
 }
 
-std::future<std::wstring> scene_producer::call(const std::vector<std::wstring>& params) 
+std::future<std::wstring> scene_producer::call(const std::vector<std::wstring>& params)
 {
 	return impl_->call(params);
 }

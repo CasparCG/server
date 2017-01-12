@@ -123,15 +123,15 @@ GLubyte upper_pattern[] = {
 	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
 	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
 	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00};
-		
+
 GLubyte lower_pattern[] = {
-	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 
+	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
 	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,
 	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,
 	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff,	0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,	0xff, 0xff, 0xff, 0xff};
 
 struct image_kernel::impl
-{	
+{
 	spl::shared_ptr<device>	ogl_;
 	spl::shared_ptr<shader>	shader_;
 	bool					blend_modes_;
@@ -148,8 +148,8 @@ struct image_kernel::impl
 
 	void draw(draw_params params)
 	{
-		static const double epsilon = 0.001;		
-		
+		static const double epsilon = 0.001;
+
 		CASPAR_ASSERT(params.pix_desc.planes.size() == params.textures.size());
 
 		if(params.textures.empty() || !params.background)
@@ -240,12 +240,12 @@ struct image_kernel::impl
 
 		if(params.local_key)
 			params.local_key->bind(static_cast<int>(texture_id::local_key));
-		
+
 		if(params.layer_key)
 			params.layer_key->bind(static_cast<int>(texture_id::layer_key));
-			
+
 		// Setup shader
-								
+
 		shader_->use();
 
 		shader_->set("post_processing",	false);
@@ -254,8 +254,8 @@ struct image_kernel::impl
 		shader_->set("plane[2]",		texture_id::plane2);
 		shader_->set("plane[3]",		texture_id::plane3);
 		for (int n = 0; n < params.textures.size(); ++n)
-			shader_->set("plane_size[" + boost::lexical_cast<std::string>(n) + "]",	
-						 static_cast<float>(params.textures[n]->width()), 
+			shader_->set("plane_size[" + boost::lexical_cast<std::string>(n) + "]",
+						 static_cast<float>(params.textures[n]->width()),
 						 static_cast<float>(params.textures[n]->height()));
 
 		shader_->set("local_key",		texture_id::local_key);
@@ -263,22 +263,28 @@ struct image_kernel::impl
 		shader_->set("is_hd",		 	params.pix_desc.planes.at(0).height > 700 ? 1 : 0);
 		shader_->set("has_local_key",	static_cast<bool>(params.local_key));
 		shader_->set("has_layer_key",	static_cast<bool>(params.layer_key));
-		shader_->set("pixel_format",	params.pix_desc.format);
-		shader_->set("opacity",			params.transform.is_key ? 1.0 : params.transform.opacity);	
+		shader_->set("pixel_format",		params.pix_desc.format);
+		shader_->set("opacity",			params.transform.is_key ? 1.0 : params.transform.opacity);
 
-		if (params.transform.chroma.key != core::chroma::type::none)
+		if (params.transform.chroma.enable)
 		{
-			shader_->set("chroma", true);
-			shader_->set("chroma_mode", static_cast<int>(params.transform.chroma.key));
-			shader_->set("chroma_blend", params.transform.chroma.threshold, params.transform.chroma.softness);
-			shader_->set("chroma_spill", params.transform.chroma.spill);
+			shader_->set("chroma",						true);
+
+			shader_->set("chroma_show_mask",			params.transform.chroma.show_mask);
+			shader_->set("chroma_target_hue",		params.transform.chroma.target_hue / 360.0);
+			shader_->set("chroma_hue_width",			params.transform.chroma.hue_width);
+			shader_->set("chroma_min_saturation",	params.transform.chroma.min_saturation);
+			shader_->set("chroma_min_brightness",	params.transform.chroma.min_brightness);
+			shader_->set("chroma_softness",			1.0 + params.transform.chroma.softness);
+			shader_->set("chroma_spill",				params.transform.chroma.spill);
+			shader_->set("chroma_spill_darken",		params.transform.chroma.spill_darken);
 		}
 		else
 			shader_->set("chroma", false);
 
 
 		// Setup blend_func
-		
+
 		if(params.transform.is_key)
 			params.blend_mode = core::blend_mode::normal;
 
@@ -297,48 +303,48 @@ struct image_kernel::impl
 			switch(params.keyer)
 			{
 			case keyer::additive:
-				GL(glBlendFunc(GL_ONE, GL_ONE));	
+				GL(glBlendFunc(GL_ONE, GL_ONE));
 				break;
 			case keyer::linear:
-			default:			
+			default:
 				GL(glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA));
-			}		
+			}
 		}
 
 		// Setup image-adjustements
-		
+
 		if (params.transform.levels.min_input  > epsilon		||
 			params.transform.levels.max_input  < 1.0-epsilon	||
 			params.transform.levels.min_output > epsilon		||
 			params.transform.levels.max_output < 1.0-epsilon	||
 			std::abs(params.transform.levels.gamma - 1.0) > epsilon)
 		{
-			shader_->set("levels", true);	
-			shader_->set("min_input",	params.transform.levels.min_input);	
+			shader_->set("levels", true);
+			shader_->set("min_input",	params.transform.levels.min_input);
 			shader_->set("max_input",	params.transform.levels.max_input);
 			shader_->set("min_output",	params.transform.levels.min_output);
 			shader_->set("max_output",	params.transform.levels.max_output);
 			shader_->set("gamma",		params.transform.levels.gamma);
 		}
 		else
-			shader_->set("levels", false);	
+			shader_->set("levels", false);
 
 		if (std::abs(params.transform.brightness - 1.0) > epsilon ||
 			std::abs(params.transform.saturation - 1.0) > epsilon ||
 			std::abs(params.transform.contrast - 1.0)   > epsilon)
 		{
-			shader_->set("csb",	true);	
-			
-			shader_->set("brt", params.transform.brightness);	
+			shader_->set("csb",	true);
+
+			shader_->set("brt", params.transform.brightness);
 			shader_->set("sat", params.transform.saturation);
 			shader_->set("con", params.transform.contrast);
 		}
 		else
-			shader_->set("csb",	false);	
-		
+			shader_->set("csb",	false);
+
 		// Setup interlacing
-		
-		if (params.transform.field_mode != core::field_mode::progressive)	
+
+		if (params.transform.field_mode != core::field_mode::progressive)
 		{
 			GL(glEnable(GL_POLYGON_STIPPLE));
 
@@ -349,10 +355,10 @@ struct image_kernel::impl
 		}
 
 		// Setup drawing area
-		
+
 		GL(glViewport(0, 0, params.background->width(), params.background->height()));
 		glDisable(GL_DEPTH_TEST);
-										
+
 		auto m_p = params.transform.clip_translation;
 		auto m_s = params.transform.clip_scale;
 
@@ -363,18 +369,18 @@ struct image_kernel::impl
 		{
 			double w = static_cast<double>(params.background->width());
 			double h = static_cast<double>(params.background->height());
-		
+
 			GL(glEnable(GL_SCISSOR_TEST));
 			glScissor(static_cast<int>(m_p[0] * w), static_cast<int>(m_p[1] * h), std::max(0, static_cast<int>(m_s[0] * w)), std::max(0, static_cast<int>(m_s[1] * h)));
 		}
 
 		// Synchronize and set render target
-								
+
 		if (blend_modes_)
 		{
 			// http://www.opengl.org/registry/specs/NV/texture_barrier.txt
 			// This allows us to use framebuffer (background) both as source and target while blending.
-			glTextureBarrierNV(); 
+			glTextureBarrierNV();
 		}
 
 		params.background->attach();
@@ -451,7 +457,7 @@ struct image_kernel::impl
 		default:
 			break;
 		}
-		
+
 		// Cleanup
 		GL(glDisable(GL_SCISSOR_TEST));
 		GL(glDisable(GL_POLYGON_STIPPLE));
