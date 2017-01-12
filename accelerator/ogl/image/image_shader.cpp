@@ -103,7 +103,7 @@ std::string get_blend_color_func()
 				}
 		)shader";
 }
-		
+
 std::string get_simple_blend_color_func()
 {
 	return
@@ -125,20 +125,13 @@ std::string get_chroma_func()
 	return
 
 		get_chroma_glsl()
-		
+
 		+
-		
+
 		R"shader(
 				vec4 chroma_key(vec4 c)
 				{
-					switch (chroma_mode)
-					{
-					case 0: return c;
-					case 1: return ChromaOnGreen(c.bgra).bgra;
-					case 2: return ChromaOnBlue(c.bgra).bgra;
-					}
-
-					return c;
+					return ChromaOnCustomColor(c.bgra).bgra;
 				}
 		)shader";
 }
@@ -211,9 +204,14 @@ std::string get_fragment(bool blend_modes, bool post_processing)
 			uniform bool		straighten_alpha;
 
 			uniform bool		chroma;
-			uniform int			chroma_mode;
-			uniform vec2		chroma_blend;
+			uniform bool		chroma_show_mask;
+			uniform float		chroma_target_hue;
+			uniform float		chroma_hue_width;
+			uniform float		chroma_min_saturation;
+			uniform float		chroma_min_brightness;
+			uniform float		chroma_softness;
 			uniform float		chroma_spill;
+			uniform float		chroma_spill_darken;
 	)shader"
 
 	+
@@ -319,7 +317,7 @@ std::string get_fragment(bool blend_modes, bool post_processing)
 					color.rgb /= color.a + 0.0000001;
 
 				return color;
-			}	
+			}
 
 			void main()
 			{
@@ -383,9 +381,9 @@ std::shared_ptr<shader> get_image_shader(
 				delete p;
 			});
 	};
-		
+
 	try
-	{				
+	{
 		g_blend_modes  = glTextureBarrierNV ? blend_modes_wanted : false;
 		g_post_processing = straight_alpha_wanted;
 		existing_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes, g_post_processing)), deleter);
@@ -394,7 +392,7 @@ std::shared_ptr<shader> get_image_shader(
 	{
 		CASPAR_LOG_CURRENT_EXCEPTION();
 		CASPAR_LOG(warning) << "Failed to compile shader. Trying to compile without blend-modes.";
-				
+
 		g_blend_modes = false;
 		existing_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes, g_post_processing)), deleter);
 	}
