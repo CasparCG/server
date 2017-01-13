@@ -647,10 +647,13 @@ public:
 		if(!is_running_)
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Is not running."));
 
-		if (frame_buffer_.try_push(frame))
-			return make_ready_future(true);
-
 		boost::lock_guard<boost::mutex> lock(send_completion_mutex_);
+
+		if (frame_buffer_.try_push(frame))
+		{
+			send_completion_ = std::packaged_task<bool()>();
+			return make_ready_future(true);
+		}
 
 		send_completion_ = std::packaged_task<bool ()>([frame, this] () mutable -> bool
 		{
