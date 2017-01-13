@@ -27,6 +27,8 @@ Consumers
     + Fixed long overdue bug where HD material was always recorded using the
       BT.601 color matrix instead of the BT.709 color matrix. RGB codecs like
       qtrle was never affected but all the YCbCr based codecs were.
+  o DeckLink consumer:
+    + Fixed possible dead-lock.
 
 Producers
 ---------
