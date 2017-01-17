@@ -37,6 +37,8 @@ Producers
   o FFmpeg producer:
     + Increased the max number of frames that audio/video can be badly
       interleaved with (Dimitry Ishenko).
+  o Framerate producer:
+    + Fixed bug when INFO was used on a not yet playing framerate producer.
 
 Mixer
 -----
