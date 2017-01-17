@@ -313,6 +313,9 @@ public:
 
 	uint32_t nb_frames() const override
 	{
+		if (!is_initialized())
+			return std::numeric_limits<uint32_t>::max();
+
 		auto source_nb_frames = source_->nb_frames();
 		auto multiple = boost::rational_cast<double>(1 / get_speed() * (output_repeat_ != 0 ? 2 : 1));
 
@@ -321,6 +324,9 @@ public:
 
 	uint32_t frame_number() const override
 	{
+		if (!is_initialized())
+			return 0;
+
 		auto source_frame_number = source_->frame_number() - 1; // next frame already received
 		auto multiple = boost::rational_cast<double>(1 / get_speed() * (output_repeat_ != 0 ? 2 : 1));
 
@@ -332,6 +338,11 @@ public:
 		return source_->pixel_constraints();
 	}
 private:
+	bool is_initialized() const
+	{
+		return source_framerate_ != -1;
+	}
+
 	draw_frame do_render_progressive_frame(bool sound)
 	{
 		user_speed_.fetch_and_tick();
