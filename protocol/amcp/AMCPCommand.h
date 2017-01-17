@@ -95,6 +95,7 @@ namespace amcp {
 		int					min_num_params_;
 		std::wstring		name_;
 		std::wstring		replyString_;
+		std::wstring		request_id_;
 	public:
 		AMCPCommand(const command_context& ctx, const amcp_command_func& command, int min_num_params, const std::wstring& name)
 			: ctx_(ctx)
@@ -134,9 +135,17 @@ namespace amcp {
 			return name_;
 		}
 
+		void set_request_id(std::wstring request_id)
+		{
+			request_id_ = std::move(request_id);
+		}
+
 		void SetReplyString(const std::wstring& str)
 		{
-			replyString_ = str;
+			if (request_id_.empty())
+				replyString_ = str;
+			else
+				replyString_ = L"RES " + request_id_ + L" " + str;
 		}
 	};
 }}}

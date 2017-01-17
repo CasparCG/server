@@ -2948,6 +2948,21 @@ std::wstring lock_command(command_context& ctx)
 	CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Unknown LOCK command " + command));
 }
 
+void req_describer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Perform any command with an additional request id identifying the response.");
+	sink.syntax(L"REQ [request_id:string] COMMAND...");
+	sink.para()
+		->text(L"This special command modifies the AMCP protocol a little bit to prepend ")
+		->code(L"RES request_id")->text(L" to the response, in order to see what asynchronous response matches what request.");
+	sink.para()->text(L"Examples:");
+	sink.example(L"REQ unique PLAY 1-0 AMB\n");
+	sink.example(
+		L">> REQ unique PLAY 1-0 AMB\n"
+		L"<< RES unique 202 PLAY OK");
+}
+
+
 void register_commands(amcp_command_repository& repo)
 {
 	repo.register_channel_command(	L"Basic Commands",		L"LOADBG",						loadbg_describer,					loadbg_command,					1);
@@ -3034,6 +3049,8 @@ void register_commands(amcp_command_repository& repo)
 	repo.register_command(			L"Query Commands",		L"HELP",						help_describer,						help_command,					0);
 	repo.register_command(			L"Query Commands",		L"HELP PRODUCER",				help_producer_describer,			help_producer_command,			0);
 	repo.register_command(			L"Query Commands",		L"HELP CONSUMER",				help_consumer_describer,			help_consumer_command,			0);
+
+	repo.help_repo()->register_item({ L"AMCP", L"Protocol Commands" }, L"REQ", req_describer);
 }
 
 }	//namespace amcp
