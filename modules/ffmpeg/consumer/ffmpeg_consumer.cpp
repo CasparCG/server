@@ -247,30 +247,37 @@ public:
 	{
 		if(oc_)
 		{
-			video_encoder_executor_.begin_invoke([&] { encode_video(core::const_frame::empty(), nullptr); });
-			audio_encoder_executor_.begin_invoke([&] { encode_audio(core::const_frame::empty(), nullptr); });
+			try
+			{
+				video_encoder_executor_.begin_invoke([&] { encode_video(core::const_frame::empty(), nullptr); });
+				audio_encoder_executor_.begin_invoke([&] { encode_audio(core::const_frame::empty(), nullptr); });
 
-			video_encoder_executor_.stop();
-			audio_encoder_executor_.stop();
-			video_encoder_executor_.join();
-			audio_encoder_executor_.join();
+				video_encoder_executor_.stop();
+				audio_encoder_executor_.stop();
+				video_encoder_executor_.join();
+				audio_encoder_executor_.join();
 
-			video_graph_.reset();
-			audio_filter_.reset();
-			video_st_.reset();
-			audio_sts_.clear();
+				video_graph_.reset();
+				audio_filter_.reset();
+				video_st_.reset();
+				audio_sts_.clear();
 
-			write_packet(nullptr, nullptr);
+				write_packet(nullptr, nullptr);
 
-			write_executor_.stop();
-			write_executor_.join();
+				write_executor_.stop();
+				write_executor_.join();
 
-			FF(av_write_trailer(oc_.get()));
+				FF(av_write_trailer(oc_.get()));
 
-			if (!(oc_->oformat->flags & AVFMT_NOFILE) && oc_->pb)
-				avio_close(oc_->pb);
+				if (!(oc_->oformat->flags & AVFMT_NOFILE) && oc_->pb)
+					avio_close(oc_->pb);
 
-			oc_.reset();
+				oc_.reset();
+			}
+			catch (...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+			}
 		}
 	}
 
@@ -1303,6 +1310,15 @@ spl::shared_ptr<core::frame_consumer> create_ffmpeg_consumer(
 	bool mono_streams		= get_and_consume_flag(L"MONO_STREAMS", params2);
 	auto compatibility_mode	= boost::iequals(params.at(0), L"FILE");
 	auto path				= u8(params2.size() > 1 ? params2.at(1) : L"");
+
+	// remove FILE or STREAM
+	params2.erase(params2.begin());
+
+	// remove path
+	if (!path.empty())
+		params2.erase(params2.begin());
+
+	// join only the args
 	auto args				= u8(boost::join(params2, L" "));
 
 	return spl::make_shared<ffmpeg_consumer_proxy>(path, args, separate_key, mono_streams, compatibility_mode);
