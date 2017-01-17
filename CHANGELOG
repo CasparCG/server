@@ -56,6 +56,9 @@ AMCP
     values.
   o MIXER CHROMA syntax deprecated (still supported) in favour of the more
     advanced syntax required by the rewritten chroma key code.
+  o Added special command REQ that can be prepended before any command to
+    identify the response with a client specified request id, allowing a client
+    to know exactly what asynchronous response matched a specific request.
 
 
 
