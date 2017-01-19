@@ -159,7 +159,7 @@ private:
 
 			std::wstring request_id;
 
-			if (boost::iequals(tokens.front(), L"REQ"))
+			if (!tokens.empty() && boost::iequals(tokens.front(), L"REQ"))
 			{
 				tokens.pop_front();
 
