@@ -148,6 +148,11 @@ public:
 		return packets_.size() >= 8;
 	}
 
+	bool empty() const
+	{
+		return packets_.empty();
+	}
+
 	uint32_t nb_frames() const
 	{
 		return std::max(nb_frames_, static_cast<uint32_t>(file_frame_number_));
@@ -163,6 +168,7 @@ video_decoder::video_decoder(const spl::shared_ptr<AVFormatContext>& context) : 
 void video_decoder::push(const std::shared_ptr<AVPacket>& packet){impl_->push(packet);}
 std::shared_ptr<AVFrame> video_decoder::poll(){return impl_->poll();}
 bool video_decoder::ready() const{return impl_->ready();}
+bool video_decoder::empty() const { return impl_->empty(); }
 int video_decoder::width() const{return impl_->width_;}
 int video_decoder::height() const{return impl_->height_;}
 uint32_t video_decoder::nb_frames() const{return impl_->nb_frames();}
