@@ -551,8 +551,17 @@ public:
 		tbb::parallel_invoke(
 		[&]
 		{
-			if (!muxer_->video_ready() && video_decoder_)
-				video = video_decoder_->poll();
+			do
+			{
+				if (!muxer_->video_ready() && video_decoder_)
+				{
+					video = video_decoder_->poll();
+					if (video)
+						break;
+				}
+				else
+					break;
+			} while (!video_decoder_->empty());
 		},
 		[&]
 		{
@@ -591,7 +600,8 @@ public:
 		file_frame_number = std::max(file_frame_number, video_decoder_ ? video_decoder_->file_frame_number() : 0);
 
 		for (auto frame = muxer_->poll(); frame != core::draw_frame::empty(); frame = muxer_->poll())
-			frame_buffer_.push(std::make_pair(frame, file_frame_number));
+			if (frame != core::draw_frame::empty())
+				frame_buffer_.push(std::make_pair(frame, file_frame_number));
 	}
 
 	bool audio_only() const
