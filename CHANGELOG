@@ -21,6 +21,7 @@ General
     for consistency with the rest of the configuration (Jesper Stærkær).
   o Handle stdin EOF as EXIT.
   o Added support for RESTART in Linux startup script run.sh.
+  o Copy casparcg_auto_restart.bat into Windows releases.
 
 Consumers
 ---------
