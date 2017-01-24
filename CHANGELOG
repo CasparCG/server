@@ -41,6 +41,8 @@ Producers
       decode the first frame.
   o Framerate producer:
     + Fixed bug when INFO was used on a not yet playing framerate producer.
+  o HTML producer:
+    + Fixed bug where only URL:s with . in them where recognized.
 
 Mixer
 -----
