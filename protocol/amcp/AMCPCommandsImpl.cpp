@@ -233,20 +233,33 @@ std::wstring MediaInfo(const boost::filesystem::path& path, const spl::shared_pt
 		+ L"\r\n";
 }
 
-std::wstring ListMedia(const spl::shared_ptr<media_info_repository>& media_info_repo)
+std::wstring get_sub_directory(const std::wstring& base_folder, const std::wstring& sub_directory)
+{
+	if (sub_directory.empty())
+		return base_folder;
+
+	auto found = find_case_insensitive(base_folder + L"/" + sub_directory);
+
+	if (!found)
+		CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Sub directory " + sub_directory + L" not found."));
+
+	return *found;
+}
+
+std::wstring ListMedia(const spl::shared_ptr<media_info_repository>& media_info_repo, const std::wstring& sub_directory = L"")
 {
 	std::wstringstream replyString;
-	for (boost::filesystem::recursive_directory_iterator itr(env::media_folder()), end; itr != end; ++itr)
+	for (boost::filesystem::recursive_directory_iterator itr(get_sub_directory(env::media_folder(), sub_directory)), end; itr != end; ++itr)
 		replyString << MediaInfo(itr->path(), media_info_repo);
 
 	return boost::to_upper_copy(replyString.str());
 }
 
-std::wstring ListTemplates(const spl::shared_ptr<core::cg_producer_registry>& cg_registry)
+std::wstring ListTemplates(const spl::shared_ptr<core::cg_producer_registry>& cg_registry, const std::wstring& sub_directory = L"")
 {
 	std::wstringstream replyString;
 
-	for (boost::filesystem::recursive_directory_iterator itr(env::template_folder()), end; itr != end; ++itr)
+	for (boost::filesystem::recursive_directory_iterator itr(get_sub_directory(env::template_folder(), sub_directory)), end; itr != end; ++itr)
 	{
 		if(boost::filesystem::is_regular_file(itr->path()) && cg_registry->is_cg_extension(itr->path().extension().wstring()))
 		{
@@ -871,16 +884,24 @@ std::wstring data_retrieve_command(command_context& ctx)
 void data_list_describer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"List stored datasets.");
-	sink.syntax(L"DATA LIST");
-	sink.para()->text(L"Returns a list of all stored datasets.");
+	sink.syntax(L"DATA LIST {[sub_directory:string]}");
+	sink.para()->text(L"Returns a list of stored datasets.");
+	sink.para()
+		->text(L"if the optional ")->code(L"sub_directory")
+		->text(L" is specified only the datasets in that sub directory will be returned.");
 }
 
 std::wstring data_list_command(command_context& ctx)
 {
+	std::wstring sub_directory;
+
+	if (!ctx.parameters.empty())
+		sub_directory = ctx.parameters.at(0);
+
 	std::wstringstream replyString;
 	replyString << L"200 DATA LIST OK\r\n";
 
-	for (boost::filesystem::recursive_directory_iterator itr(env::data_folder()), end; itr != end; ++itr)
+	for (boost::filesystem::recursive_directory_iterator itr(get_sub_directory(env::data_folder(), sub_directory)), end; itr != end; ++itr)
 	{
 		if (boost::filesystem::is_regular_file(itr->path()))
 		{
@@ -2146,9 +2167,12 @@ std::wstring channel_grid_command(command_context& ctx)
 
 void thumbnail_list_describer(core::help_sink& sink, const core::help_repository& repo)
 {
-	sink.short_description(L"List all thumbnails.");
-	sink.syntax(L"THUMBNAIL LIST");
-	sink.para()->text(L"Lists all thumbnails.");
+	sink.short_description(L"List thumbnails.");
+	sink.syntax(L"THUMBNAIL LIST {[sub_directory:string]}");
+	sink.para()->text(L"Lists thumbnails.");
+	sink.para()
+		->text(L"if the optional ")->code(L"sub_directory")
+		->text(L" is specified only the thumbnails in that sub directory will be returned.");
 	sink.para()->text(L"Examples:");
 	sink.example(
 		L">> THUMBNAIL LIST\n"
@@ -2159,10 +2183,15 @@ void thumbnail_list_describer(core::help_sink& sink, const core::help_repository
 
 std::wstring thumbnail_list_command(command_context& ctx)
 {
+	std::wstring sub_directory;
+
+	if (!ctx.parameters.empty())
+		sub_directory = ctx.parameters.at(0);
+
 	std::wstringstream replyString;
 	replyString << L"200 THUMBNAIL LIST OK\r\n";
 
-	for (boost::filesystem::recursive_directory_iterator itr(env::thumbnail_folder()), end; itr != end; ++itr)
+	for (boost::filesystem::recursive_directory_iterator itr(get_sub_directory(env::thumbnail_folder(), sub_directory)), end; itr != end; ++itr)
 	{
 		if (boost::filesystem::is_regular_file(itr->path()))
 		{
@@ -2292,18 +2321,26 @@ std::wstring cinf_command(command_context& ctx)
 
 void cls_describer(core::help_sink& sink, const core::help_repository& repo)
 {
-	sink.short_description(L"List all media files.");
-	sink.syntax(L"CLS");
+	sink.short_description(L"List media files.");
+	sink.syntax(L"CLS {[sub_directory:string]}");
 	sink.para()
-		->text(L"Lists all media files in the ")->code(L"media")->text(L" folder. Use the command ")
+		->text(L"Lists media files in the ")->code(L"media")->text(L" folder. Use the command ")
 		->see(L"INFO PATHS")->text(L" to get the path to the ")->code(L"media")->text(L" folder.");
+	sink.para()
+		->text(L"if the optional ")->code(L"sub_directory")
+		->text(L" is specified only the media files in that sub directory will be returned.");
 }
 
 std::wstring cls_command(command_context& ctx)
 {
+	std::wstring sub_directory;
+
+	if (!ctx.parameters.empty())
+		sub_directory = ctx.parameters.at(0);
+
 	std::wstringstream replyString;
 	replyString << L"200 CLS OK\r\n";
-	replyString << ListMedia(ctx.media_info_repo);
+	replyString << ListMedia(ctx.media_info_repo, sub_directory);
 	replyString << L"\r\n";
 	return boost::to_upper_copy(replyString.str());
 }
@@ -2333,19 +2370,27 @@ std::wstring fls_command(command_context& ctx)
 
 void tls_describer(core::help_sink& sink, const core::help_repository& repo)
 {
-	sink.short_description(L"List all templates.");
-	sink.syntax(L"TLS");
+	sink.short_description(L"List templates.");
+	sink.syntax(L"TLS {[sub_directory:string]}");
 	sink.para()
-		->text(L"Lists all template files in the ")->code(L"templates")->text(L" folder. Use the command ")
+		->text(L"Lists template files in the ")->code(L"templates")->text(L" folder. Use the command ")
 		->see(L"INFO PATHS")->text(L" to get the path to the ")->code(L"templates")->text(L" folder.");
+	sink.para()
+		->text(L"if the optional ")->code(L"sub_directory")
+		->text(L" is specified only the template files in that sub directory will be returned.");
 }
 
 std::wstring tls_command(command_context& ctx)
 {
+	std::wstring sub_directory;
+
+	if (!ctx.parameters.empty())
+		sub_directory = ctx.parameters.at(0);
+
 	std::wstringstream replyString;
 	replyString << L"200 TLS OK\r\n";
 
-	replyString << ListTemplates(ctx.cg_registry);
+	replyString << ListTemplates(ctx.cg_registry, sub_directory);
 	replyString << L"\r\n";
 
 	return replyString.str();
