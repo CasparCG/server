@@ -66,6 +66,8 @@ AMCP
   o Added special command REQ that can be prepended before any command to
     identify the response with a client specified request id, allowing a client
     to know exactly what asynchronous response matched a specific request.
+  o Added support for listing contents of a specific directory for CLS, TLS,
+    DATA LIST and THUMBNAIL LIST.
 
 
 
