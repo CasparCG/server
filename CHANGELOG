@@ -20,6 +20,7 @@ General
   o Changed configuration element mipmapping_default_on to mipmapping-default-on
     for consistency with the rest of the configuration (Jesper Stærkær).
   o Handle stdin EOF as EXIT.
+  o Added support for RESTART in Linux startup script run.sh.
 
 Consumers
 ---------
