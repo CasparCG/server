@@ -19,6 +19,7 @@ General
     whether a build is newer or older than an other.
   o Changed configuration element mipmapping_default_on to mipmapping-default-on
     for consistency with the rest of the configuration (Jesper Stærkær).
+  o Handle stdin EOF as EXIT.
 
 Consumers
 ---------
