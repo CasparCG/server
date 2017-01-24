@@ -45,7 +45,7 @@ echo Copying binaries...
 copy shell\*.dll "%SERVER_FOLDER%\Server" || goto :error
 copy shell\RelWithDebInfo\casparcg.exe "%SERVER_FOLDER%\Server" || goto :error
 copy shell\RelWithDebInfo\casparcg.pdb "%SERVER_FOLDER%\Server" || goto :error
-copy shell\casparcg_auto_restart.bat "%SERVER_FOLDER%\Server" || goto :error
+copy ..\shell\casparcg_auto_restart.bat "%SERVER_FOLDER%\Server" || goto :error
 copy shell\casparcg.config "%SERVER_FOLDER%\Server" || goto :error
 copy shell\*.ttf "%SERVER_FOLDER%\Server" || goto :error
 copy shell\*.pak "%SERVER_FOLDER%\Server" || goto :error
