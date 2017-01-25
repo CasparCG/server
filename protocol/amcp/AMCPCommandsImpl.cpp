@@ -2296,15 +2296,16 @@ void cinf_describer(core::help_sink& sink, const core::help_repository& repo)
 	sink.short_description(L"Get information about a media file.");
 	sink.syntax(L"CINF [filename:string]");
 	sink.para()->text(L"Returns information about a media file.");
+	sink.para()->text(L"If a file with the same name exist in multiple directories, all of them are returned.");
 }
 
 std::wstring cinf_command(command_context& ctx)
 {
 	std::wstring info;
-	for (boost::filesystem::recursive_directory_iterator itr(env::media_folder()), end; itr != end && info.empty(); ++itr)
+	for (boost::filesystem::recursive_directory_iterator itr(env::media_folder()), end; itr != end; ++itr)
 	{
 		auto path = itr->path();
-		auto file = path.replace_extension(L"").filename().wstring();
+		auto file = path.stem().wstring();
 		if (boost::iequals(file, ctx.parameters.at(0)))
 			info += MediaInfo(itr->path(), ctx.media_info_repo);
 	}
