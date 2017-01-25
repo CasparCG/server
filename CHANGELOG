@@ -22,6 +22,8 @@ General
   o Handle stdin EOF as EXIT.
   o Added support for RESTART in Linux startup script run.sh.
   o Copy casparcg_auto_restart.bat into Windows releases.
+  o Fixed bug with thumbnail generation when there are .-files in the media
+    folder.
 
 Consumers
 ---------
