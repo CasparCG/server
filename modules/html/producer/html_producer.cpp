@@ -73,7 +73,7 @@
 #pragma comment (lib, "libcef_dll_wrapper.lib")
 
 namespace caspar { namespace html {
-		
+
 class html_client
 	: public CefClient
 	, public CefRenderHandler
@@ -459,7 +459,7 @@ public:
 			window_info.SetTransparentPainting(true);
 			window_info.SetAsOffScreen(nullptr);
 			//window_info.SetAsWindowless(nullptr, true);
-					
+
 			CefBrowserSettings browser_settings;
 			browser_settings.web_security = cef_state_t::STATE_DISABLED;
 			CefBrowserHost::CreateBrowser(window_info, client_.get(), url, browser_settings, nullptr);
@@ -606,11 +606,11 @@ spl::shared_ptr<core::frame_producer> create_producer(
 	if (!found_filename && !html_prefix)
 		return core::frame_producer::empty();
 
-	const auto url = found_filename 
+	const auto url = found_filename
 		? L"file://" + *found_filename
 		: params.at(1);
-		
-	if (!html_prefix || boost::algorithm::ends_with(url, "_A") || boost::algorithm::ends_with(url, "_ALPHA"))
+
+	if (!html_prefix && (!boost::algorithm::contains(url, ".") || boost::algorithm::ends_with(url, "_A") || boost::algorithm::ends_with(url, "_ALPHA")))
 		return core::frame_producer::empty();
 
 	return core::create_destroy_proxy(spl::make_shared<html_producer>(
