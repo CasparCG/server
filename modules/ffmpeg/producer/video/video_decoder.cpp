@@ -63,6 +63,9 @@ struct video_decoder::implementation : boost::noncopyable
 	const int								height_				= codec_context_->height;
 	bool									is_progressive_;
 
+	int										discard_			= 0;
+	bool									release_			= true;
+
 	tbb::atomic<uint32_t>					file_frame_number_;
 
 public:
@@ -86,34 +89,44 @@ public:
 
 	std::shared_ptr<AVFrame> poll()
 	{
-		if(packets_.empty())
-			return nullptr;
-
-		auto packet = packets_.front();
-
-		if(packet->data == nullptr)
+		for(int cnt = 0; ; ++cnt)
 		{
-			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
+			if(packets_.empty())
+				return nullptr;
+
+			auto packet = packets_.front();
+
+			if(packet->data == nullptr)
 			{
-				auto video = decode(packet);
-				if(video)
-					return video;
+				if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
+				{
+					auto video = decode(packet);
+					if(video)
+						return video;
+				}
+
+				packets_.pop();
+
+				if(packet->pos != -1)
+				{
+					file_frame_number_ = static_cast<uint32_t>(packet->pos);
+					avcodec_flush_buffers(codec_context_.get());
+					return flush_video();
+				}
+				else // Really EOF
+					return nullptr;
 			}
 
 			packets_.pop();
 
-			if (packet->pos != -1)
+			if(release_ || cnt >= discard_)
 			{
-				file_frame_number_ = static_cast<uint32_t>(packet->pos);
-				avcodec_flush_buffers(codec_context_.get());
-				return flush_video();
+				release_ = false;
+				return decode(packet);
 			}
-			else // Really EOF
-				return nullptr;
-		}
 
-		packets_.pop();
-		return decode(packet);
+			++file_frame_number_;
+		}
 	}
 
 	std::shared_ptr<AVFrame> decode(spl::shared_ptr<AVPacket> pkt)
@@ -145,7 +158,7 @@ public:
 
 	bool ready() const
 	{
-		return packets_.size() >= 8;
+		return packets_.size() > 8 + discard_;
 	}
 
 	bool empty() const
@@ -156,6 +169,11 @@ public:
 	uint32_t nb_frames() const
 	{
 		return std::max(nb_frames_, static_cast<uint32_t>(file_frame_number_));
+	}
+
+	void discard(int value)
+	{
+		discard_ = value;
 	}
 
 	std::wstring print() const
@@ -173,7 +191,8 @@ int video_decoder::width() const{return impl_->width_;}
 int video_decoder::height() const{return impl_->height_;}
 uint32_t video_decoder::nb_frames() const{return impl_->nb_frames();}
 uint32_t video_decoder::file_frame_number() const{return static_cast<uint32_t>(impl_->file_frame_number_);}
-bool	video_decoder::is_progressive() const{return impl_->is_progressive_;}
+bool video_decoder::is_progressive() const{return impl_->is_progressive_;}
+void video_decoder::discard(int value){impl_->discard(value);}
 std::wstring video_decoder::print() const{return impl_->print();}
 
 }}
