@@ -60,6 +60,10 @@ Mixer
   o Rewrote the chroma key code to support variable hue, instead of fixed green
     or blue. Threshold setting was removed in favour of separate hue width,
     minimum saturation and minimum brightness constraints.
+  o Fixed bug where glReadPixels() was done from the last drawn to texture
+    instead of always from the target texture. This means that for example a
+    MIXER KEYER layer without a layer above to key, as well as a separate alpha
+    file with MIXER OPACITY 0 now works as expected.
 
 AMCP
 ----
