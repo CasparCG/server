@@ -448,3 +448,11 @@ CFLAGS="-I$TARGET_DIR/include -I$TARGET_DIR/usr/local/include" LDFLAGS="-L$TARGE
 	--enable-libv4l2 \
 	--enable-zlib
 make -j $jval && make install
+
+#dirty hack
+#replace shipped ffmpeg linux libs with compiled ones from here!
+cd $BUILD_DIR
+mv ../../bin/linux ../../bin/linux-shipped
+cp -r ../target/lib ../../bin/linux
+#some ffmpeg libs are build in a different shared target folder
+cp ../target/usr/local/lib/* ../../bin/linux/
