@@ -42,17 +42,13 @@ std::wstring version()
 {
 	try
 	{
-		blue_initialize();
+		BvcWrapper blue = BvcWrapper();
+		return u16(blue.GetVersion());
 	}
 	catch(...)
 	{
 		return L"Not found";
 	}
-
-	if(!BlueVelvetVersion)
-		return L"Unknown";
-
-	return u16(BlueVelvetVersion());
 }
 
 std::vector<std::wstring> device_list()
@@ -61,14 +57,15 @@ std::vector<std::wstring> device_list()
 
 	try
 	{		
-		blue_initialize();
-		
-		auto blue = create_blue();
+		BvcWrapper blue = BvcWrapper();
+		int numCards = 0;
+		blue.Enumerate(numCards);
 
-		for(int n = 1; BLUE_PASS(blue->device_attach(n, FALSE)); ++n)
+		for(int n = 1; n < (numCards+1); n++)
 		{				
-			devices.push_back(std::wstring(get_card_desc(*blue)) + L" [" + boost::lexical_cast<std::wstring>(n) + L"]");
-			blue->device_detach();		
+			blue.Attach(n);
+			devices.push_back(std::wstring(get_card_desc(blue, n)) + L" [" + boost::lexical_cast<std::wstring>(n) + L"]");	
+			blue.Detach();
 		}
 	}
 	catch(...){}
@@ -78,21 +75,42 @@ std::vector<std::wstring> device_list()
 
 void init(core::module_dependencies dependencies)
 {
+
+	bool bCanBeConsumer = false;
 	try
 	{
-		blue_initialize();
+		BvcWrapper blue = BvcWrapper();
+		int numCards = 0;
+		blue.Enumerate(numCards);
+		if (numCards)
+		{
+			for (int n = 1; n < (numCards + 1); n++)
+			{
+				unsigned int value;
+				blue.Attach(n);
+				blue.QueryCardProperty32(CARD_FEATURE_STREAM_INFO, value);
+				if (CARD_FEATURE_GET_SDI_OUTPUT_STREAM_COUNT(value))
+					bCanBeConsumer = true;
+
+				blue.Detach();
+			}
+		}	
 	}
 	catch(...){}
 
-	dependencies.consumer_registry->register_consumer_factory(L"Bluefish Consumer", create_consumer, describe_consumer);
-	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"bluefish", create_preconfigured_consumer);
-	dependencies.system_info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
+	if (bCanBeConsumer)
 	{
-		info.add(L"system.bluefish.version", version());
+		dependencies.consumer_registry->register_consumer_factory(L"Bluefish Consumer", create_consumer, describe_consumer);
+		dependencies.consumer_registry->register_preconfigured_consumer_factory(L"bluefish", create_preconfigured_consumer);
+		dependencies.system_info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
+		{
+			info.add(L"system.bluefish.version", version());
 
-		for (auto device : device_list())
-			info.add(L"system.bluefish.device", device);
-	});
+			for (auto device : device_list())
+				info.add(L"system.bluefish.device", device);
+		});
+	}
 }
 
 }}
+
