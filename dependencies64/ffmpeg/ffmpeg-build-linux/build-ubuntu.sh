@@ -3,7 +3,6 @@
 #https://raw.githubusercontent.com/casparcg/Server/2.1.0/BUILDING
 
 sudo apt-get -y update
-sudo apt-get -y upgrade
-sudo apt-get -y install build-essential curl tar pkg-config python2.7-dev zlib1g-dev autoconf libtool subversion libfontconfig1-dev ant default-jre default-jdk frei0r-plugins-dev libv4l-dev
+sudo apt-get -y install curl tar pkg-config python2.7-dev zlib1g-dev autoconf libtool subversion libfontconfig1-dev ant default-jre default-jdk frei0r-plugins-dev libv4l-dev
 
 ./build.sh
