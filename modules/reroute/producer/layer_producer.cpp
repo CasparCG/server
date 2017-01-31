@@ -41,7 +41,7 @@
 namespace caspar { namespace reroute {
 
 class layer_consumer : public core::write_frame_consumer
-{	
+{
 	tbb::concurrent_bounded_queue<core::draw_frame>	frame_buffer_;
 	semaphore										frames_available_ { 0 };
 	int												frames_delay_;
@@ -108,7 +108,7 @@ public:
 		: layer_(layer)
 		, consumer_(spl::make_shared<layer_consumer>(frames_delay))
 		, channel_(channel)
-		, last_frame_(core::draw_frame::empty())
+		, last_frame_(core::draw_frame::late())
 		, frame_number_(0)
 	{
 		pixel_constraints_.width.set(channel->video_format_desc().width);
@@ -125,7 +125,7 @@ public:
 	}
 
 	// frame_producer
-			
+
 	core::draw_frame receive_impl() override
 	{
 		auto consumer_frame = consumer_->receive();
@@ -134,7 +134,12 @@ public:
 
 		frame_number_++;
 		return last_frame_ = consumer_frame;
-	}	
+	}
+
+	core::draw_frame last_frame() override
+	{
+		return last_frame_;
+	}
 
 	std::wstring print() const override
 	{
