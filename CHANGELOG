@@ -24,6 +24,8 @@ General
   o Copy casparcg_auto_restart.bat into Windows releases.
   o Fixed bug with thumbnail generation when there are .-files in the media
     folder.
+  o Removed CMake platform specification in Linux build script
+    (Krzysztof Pyrkosz).
 
 Consumers
 ---------
