@@ -451,8 +451,9 @@ make -j $jval && make install
 
 #dirty hack
 #replace shipped ffmpeg linux libs with compiled ones from here!
-cd $BUILD_DIR
-mv ../../bin/linux ../../bin/linux-shipped
-cp -r ../target/lib ../../bin/linux
+#also check modules/ffmpeg/CMakeLists.txt for lib version/name changes!
+#cd $BUILD_DIR
+#mv ../../bin/linux ../../bin/linux-shipped
+#cp -r ../target/lib ../../bin/linux
 #some ffmpeg libs are build in a different shared target folder
-cp ../target/usr/local/lib/* ../../bin/linux/
+#cp ../target/usr/local/lib/* ../../bin/linux/
