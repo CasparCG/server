@@ -167,7 +167,7 @@
     </PreBuildEvent>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>../;C:\WinDDK\7600.16385.1\inc\atl71;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../</AdditionalIncludeDirectories>
       <MinimalRebuild>false</MinimalRebuild>
       <ExceptionHandling>Async</ExceptionHandling>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -190,7 +190,7 @@
       <AdditionalDependencies>sfml-system-s-d.lib;sfml-audio-s-d.lib;sfml-window-s-d.lib;sfml-graphics-s-d.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avdevice.lib;avutil.lib;avfilter.lib;swscale.lib;swresample.lib;tbb.lib;glew32.lib;zdll.lib</AdditionalDependencies>
       <Version>
       </Version>
-      <AdditionalLibraryDirectories>C:\WinDDK\7600.16385.1\lib\ATL\i386;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>LIBC.lib;libcmt.lib</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(TargetDir)$(TargetName).pdb</ProgramDatabaseFile>
@@ -229,7 +229,7 @@ copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>../;C:\WinDDK\7600.16385.1\inc\atl71;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../</AdditionalIncludeDirectories>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
@@ -253,7 +253,7 @@ copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
       <AdditionalDependencies>sfml-system-s.lib;sfml-audio-s.lib;sfml-window-s.lib;sfml-graphics-s.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avdevice.lib;avutil.lib;avfilter.lib;swscale.lib;swresample.lib;tbb.lib;glew32.lib;zdll.lib</AdditionalDependencies>
       <Version>
       </Version>
-      <AdditionalLibraryDirectories>C:\WinDDK\7600.16385.1\lib\ATL\i386;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>LIBC.lib;libcmt.lib</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <GenerateMapFile>true</GenerateMapFile>
@@ -295,7 +295,7 @@ copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
       <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>../;C:\WinDDK\7600.16385.1\inc\atl71;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../</AdditionalIncludeDirectories>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
@@ -319,7 +319,7 @@ copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
       <AdditionalDependencies>sfml-system-s.lib;sfml-audio-s.lib;sfml-window-s.lib;sfml-graphics-s.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avdevice.lib;avutil.lib;avfilter.lib;swscale.lib;swresample.lib;tbb.lib;glew32.lib;zdll.lib</AdditionalDependencies>
       <Version>
       </Version>
-      <AdditionalLibraryDirectories>C:\WinDDK\7600.16385.1\lib\ATL\i386;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>LIBC.lib;libcmt.lib</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <GenerateMapFile>false</GenerateMapFile>
@@ -360,7 +360,7 @@ copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
       <InlineFunctionExpansion>Disabled</InlineFunctionExpansion>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <AdditionalIncludeDirectories>../;C:\WinDDK\7600.16385.1\inc\atl71;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../</AdditionalIncludeDirectories>
       <ExceptionHandling>Async</ExceptionHandling>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <EnableEnhancedInstructionSet>StreamingSIMDExtensions2</EnableEnhancedInstructionSet>
@@ -384,7 +384,7 @@ copy "$(ProjectDir)casparcg_auto_restart.bat" "$(OutDir)"</Command>
       <AdditionalDependencies>sfml-system-s.lib;sfml-audio-s.lib;sfml-window-s.lib;sfml-graphics-s.lib;OpenGL32.lib;FreeImage.lib;Winmm.lib;Ws2_32.lib;avformat.lib;avcodec.lib;avdevice.lib;avutil.lib;avfilter.lib;swscale.lib;swresample.lib;tbb.lib;glew32.lib;zdll.lib</AdditionalDependencies>
       <Version>
       </Version>
-      <AdditionalLibraryDirectories>C:\WinDDK\7600.16385.1\lib\ATL\i386;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>LIBC.lib;libcmt.lib</IgnoreSpecificDefaultLibraries>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <GenerateMapFile>false</GenerateMapFile>
