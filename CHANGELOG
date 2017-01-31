@@ -56,6 +56,8 @@ Producers
   o Layer producer:
     + Fixed serious bug where a circular reference of layer producers caused a
       stack overflow and server crash.
+  o Scene producer:
+    + Added abs() function to expression language.
 
 Mixer
 -----
