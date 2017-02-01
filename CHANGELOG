@@ -30,6 +30,8 @@ General
     Contributions during development (not w.r.t 2.1.0 Beta 1):
     + Fix ffmpeg build dependencies on clean ubuntu desktop amd64 14.04.3 or
       higher (Walter Sonius).
+  o Added support for video modes 2160p5000, 2160p5994 and 2160p6000
+    (Antonio Ruano Cuesta).
 
 Consumers
 ---------
