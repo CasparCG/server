@@ -53,6 +53,7 @@ Producers
     + Fixed bug where decoders sometimes requires more than one video packet to
       decode the first frame.
     + Added support for IN and OUT parameters (Dimitry Ishenko).
+    + Added DV/HDV video device support under Linux (Walter Sonius).
   o Framerate producer:
     + Fixed bug when INFO was used on a not yet playing framerate producer.
   o HTML producer:
