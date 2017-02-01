@@ -26,6 +26,10 @@ General
     folder.
   o Removed CMake platform specification in Linux build script
     (Krzysztof Pyrkosz).
+  o Build script for building FFmpeg for Linux now part of the repository.
+    Contributions during development (not w.r.t 2.1.0 Beta 1):
+    + Fix ffmpeg build dependencies on clean ubuntu desktop amd64 14.04.3 or
+      higher (Walter Sonius).
 
 Consumers
 ---------
