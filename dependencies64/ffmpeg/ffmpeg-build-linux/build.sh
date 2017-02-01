@@ -419,6 +419,7 @@ CFLAGS="-I$TARGET_DIR/include -I$TARGET_DIR/usr/local/include" LDFLAGS="-L$TARGE
 	--enable-libfreetype \
 	--enable-libgme \
 	--enable-libgsm \
+	--enable-libiec61883 \
 	--enable-libilbc \
 	--enable-libmodplug \
 	--enable-libmp3lame \
