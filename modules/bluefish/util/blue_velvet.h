@@ -23,7 +23,7 @@
 
 #include <Windows.h>
 
-#include <bluefish/interop/BlueVelvetC.h>
+#include <BlueVelvetC.h>
 
 #include <common/memory.h>
 #include <common/except.h>
@@ -32,23 +32,7 @@
 
 namespace caspar { namespace bluefish {
 
-
-template<typename T>
-int set_card_property(T& pSdk, ULONG prop, ULONG value)
-{
-	return (pSdk->SetCardProperty32(prop, value));
-}
-
-template<typename T>
-int get_card_property(T& pSdk, ULONG prop, ULONG& value)
-{
-	unsigned int val = 0;
-	int retVal = pSdk->QueryCardProperty32(prop, val);
-	value = val;
-	return retVal;
-}
-
-class BvcWrapper
+class bvc_wrapper
 {
 	// Define a different type for each of the function ptrs.
 	typedef const char* (__cdecl *pFunc_bfcGetVersion)();
@@ -121,45 +105,44 @@ class BvcWrapper
 
 public:
 
-	BvcWrapper();						// bfcFactory
-	~BvcWrapper();						// bfcDestory
+	bvc_wrapper();						// bfcFactory + function pointer lookups
 
-	bool		IsBvcValid();
-	const char*	GetVersion();
+	const char*	get_version();
 
-	BLUE_UINT32 Enumerate(int& iDevices);
-	BLUE_UINT32 QueryCardType(int& iCardType, int iDeviceID);
+	BLUE_UINT32 enumerate(int& iDevices);
+	BLUE_UINT32 query_card_type(int& iCardType, int iDeviceID);
 
-	BLUE_UINT32 Attach(int iDeviceId);
-	BLUE_UINT32 Detach();
+	BLUE_UINT32 attach(int iDeviceId);
+	BLUE_UINT32 detach();
 
-	BLUE_UINT32 QueryCardProperty32(const int iProperty, unsigned int& nValue);
-	BLUE_UINT32 SetCardProperty32(const int iProperty, const unsigned int nValue);
+	BLUE_UINT32 get_card_property32(const int iProperty, unsigned int& nValue);
+	BLUE_UINT32 set_card_property32(const int iProperty, const unsigned int nValue);
 	
-	BLUE_UINT32 SystemBufferWrite(unsigned char* pPixels, unsigned long ulSize, unsigned long ulBufferID, unsigned long ulOffset);
-	BLUE_UINT32 SystemBufferRead(unsigned char* pPixels, unsigned long ulSize, unsigned long ulBufferID, unsigned long ulOffset);
+	BLUE_UINT32 system_buffer_write(unsigned char* pPixels, unsigned long ulSize, unsigned long ulBufferID, unsigned long ulOffset);
+	BLUE_UINT32 system_buffer_read(unsigned char* pPixels, unsigned long ulSize, unsigned long ulBufferID, unsigned long ulOffset);
 
-	BLUE_UINT32 VideoPlaybackStop(int iWait, int iFlush);
-	BLUE_UINT32 WaitVideoOutputSync(unsigned long ulUpdateType, unsigned long& ulFieldCount);
-	BLUE_UINT32 WaitVideoInputSync(unsigned long ulUpdateType, unsigned long & ulFieldCount);
+	BLUE_UINT32 video_playback_stop(int iWait, int iFlush);
+	BLUE_UINT32 wait_video_output_sync(unsigned long ulUpdateType, unsigned long& ulFieldCount);
+	BLUE_UINT32 wait_video_input_sync(unsigned long ulUpdateType, unsigned long & ulFieldCount);
 
-	BLUE_UINT32 RenderBufferUpdate(unsigned long ulBufferID);
-	BLUE_UINT32 RenderBufferCapture(unsigned long ulBufferID);
+	BLUE_UINT32 render_buffer_update(unsigned long ulBufferID);
+	BLUE_UINT32 render_buffer_capture(unsigned long ulBufferID);
 
-	BLUE_UINT32 EncodeHancFrameEx(unsigned int nCardType, struct hanc_stream_info_struct* pHancEncodeInfo, void* pAudioBuffer, unsigned int nAudioChannels, unsigned int nAudioSamples, unsigned int nSampleType, unsigned int nAudioFlags);
-	BLUE_UINT32 DecodeHancFrameEx(unsigned int nCardType, unsigned int* pHancBuffer, struct hanc_decode_struct* pHancDecodeInfo);
+	BLUE_UINT32 encode_hanc_frame(unsigned int nCardType, struct hanc_stream_info_struct* pHancEncodeInfo, void* pAudioBuffer, unsigned int nAudioChannels, unsigned int nAudioSamples, unsigned int nSampleType, unsigned int nAudioFlags);
+	BLUE_UINT32 decode_hanc_frame(unsigned int nCardType, unsigned int* pHancBuffer, struct hanc_decode_struct* pHancDecodeInfo);
 
-	BLUE_UINT32 GetFrameInfoForVideoVode(const unsigned int nVideoMode, unsigned int&  nWidth, unsigned int& nHeight, unsigned int& nRate, unsigned int& bIs1001, unsigned int& bIsProgressive);
-	BLUE_UINT32 GetBytesPerFrame(EVideoMode nVideoMode, EMemoryFormat nMemoryFormat, EUpdateMethod nUpdateMethod, unsigned int& nBytesPerFrame);
+	BLUE_UINT32 get_frame_info_for_video_mode(const unsigned int nVideoMode, unsigned int&  nWidth, unsigned int& nHeight, unsigned int& nRate, unsigned int& bIs1001, unsigned int& bIsProgressive);
+	BLUE_UINT32 get_bytes_per_frame(EVideoMode nVideoMode, EMemoryFormat nMemoryFormat, EUpdateMethod nUpdateMethod, unsigned int& nBytesPerFrame);
 
 private:
-	bool				InitFunctionsPointers();
-	BLUEVELVETC_HANDLE	bvc;
-#if defined(_WIN32)
-	HMODULE				hModule;
-#else
-	void*				hModule;
-#endif
+	bool					init_function_pointers();
+	
+
+//	HMODULE					h_module_;
+//	BLUEVELVETC_HANDLE		bvc_;
+
+	std::shared_ptr<void>	h_module_;
+	std::shared_ptr<void>	bvc_;
 
 //BlueVelvetC function pointers members
 	pFunc_bfcGetVersion bfcGetVersion;
@@ -228,17 +211,17 @@ private:
 
 };
 
-spl::shared_ptr<BvcWrapper> create_blue();
-spl::shared_ptr<BvcWrapper> create_blue(int device_index);
+spl::shared_ptr<bvc_wrapper> create_blue();
+spl::shared_ptr<bvc_wrapper> create_blue(int device_index);
 
 //spl::shared_ptr<BvcWrapper> create_blue();
 
-bool is_epoch_card(BvcWrapper& blue);
-bool is_epoch_neutron_1i2o_card(BvcWrapper& blue);
-bool is_epoch_neutron_3o_card(BvcWrapper& blue);
-std::wstring get_card_desc(BvcWrapper& blue, int device_index);
-EVideoMode get_video_mode(BvcWrapper& blue, const core::video_format_desc& format_desc);
-core::video_format_desc get_format_desc(BvcWrapper& blue, EVideoMode vid_fmt, EMemoryFormat mem_fmt);
+bool is_epoch_card(bvc_wrapper& blue);
+bool is_epoch_neutron_1i2o_card(bvc_wrapper& blue);
+bool is_epoch_neutron_3o_card(bvc_wrapper& blue);
+std::wstring get_card_desc(bvc_wrapper& blue, int device_id);
+EVideoMode get_video_mode(bvc_wrapper& blue, const core::video_format_desc& format_desc);
+core::video_format_desc get_format_desc(bvc_wrapper& blue, EVideoMode vid_fmt, EMemoryFormat mem_fmt);
 
 
 }}

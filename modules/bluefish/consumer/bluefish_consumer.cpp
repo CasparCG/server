@@ -127,7 +127,7 @@ bool get_videooutput_channel_routing_info_from_streamid(bluefish_hardware_output
 
 struct bluefish_consumer : boost::noncopyable
 {
-	spl::shared_ptr<BvcWrapper>							blue_;
+	spl::shared_ptr<bvc_wrapper>							blue_;
 	const unsigned int									device_index_;
 	const core::video_format_desc						format_desc_;
 	const core::audio_channel_layout					channel_layout_;
@@ -195,31 +195,31 @@ public:
 		setup_hardware_output_channel();
 
 		// Setting output Video mode
-		if(BLUE_FAIL(set_card_property(blue_, VIDEO_MODE, vid_fmt_))) 
+		if (BLUE_FAIL(blue_->set_card_property32(VIDEO_MODE, vid_fmt_)))
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set videomode."));
 
 		// Select Update Mode for output
-		if(BLUE_FAIL(set_card_property(blue_, VIDEO_UPDATE_TYPE, UPD_FMT_FRAME))) 
+		if(BLUE_FAIL(blue_->set_card_property32(VIDEO_UPDATE_TYPE, UPD_FMT_FRAME)))
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set update type."));
 	
 		disable_video_output();
 		setup_hardware_output_channel_routing();
 			
 		//Select output memory format
-		if(BLUE_FAIL(set_card_property(blue_, VIDEO_MEMORY_FORMAT, MEM_FMT_ARGB_PC))) 
+		if(BLUE_FAIL(blue_->set_card_property32(VIDEO_MEMORY_FORMAT, MEM_FMT_ARGB_PC)))
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set memory format."));
 		
 		//Select image orientation
-		if(BLUE_FAIL(set_card_property(blue_, VIDEO_IMAGE_ORIENTATION, ImageOrientation_Normal)))
+		if(BLUE_FAIL(blue_->set_card_property32(VIDEO_IMAGE_ORIENTATION, ImageOrientation_Normal)))
 			CASPAR_LOG(warning) << print() << L" Failed to set image orientation to normal.";	
 
 		// Select data range
-		if(BLUE_FAIL(set_card_property(blue_, VIDEO_RGB_DATA_RANGE, CGR_RANGE))) 
+		if(BLUE_FAIL(blue_->set_card_property32(VIDEO_RGB_DATA_RANGE, CGR_RANGE)))
 			CASPAR_LOG(warning) << print() << L" Failed to set RGB data range to CGR.";	
 		
 		if(!embedded_audio_ || (hardware_keyer_ == hardware_downstream_keyer_mode::enable && keyer_audio_source_ == hardware_downstream_keyer_audio_source::VideoOutputChannel) )
 		{
-			if(BLUE_FAIL(set_card_property(blue_, EMBEDEDDED_AUDIO_OUTPUT, 0))) 
+			if(BLUE_FAIL(blue_->set_card_property32(EMBEDEDDED_AUDIO_OUTPUT, 0)))
 				CASPAR_LOG(warning) << TEXT("BLUECARD ERROR: Failed to disable embedded audio.");			
 			CASPAR_LOG(info) << print() << TEXT(" Disabled embedded-audio.");
 		}
@@ -237,12 +237,12 @@ public:
 			if (channel_layout_.num_channels > 12)
 				audio_value |= blue_emb_audio_group4_enable;
 
-			if(BLUE_FAIL(set_card_property(blue_, EMBEDEDDED_AUDIO_OUTPUT, audio_value)))
+			if(BLUE_FAIL(blue_->set_card_property32(EMBEDEDDED_AUDIO_OUTPUT, audio_value)))
 				CASPAR_LOG(warning) << print() << TEXT(" Failed to enable embedded audio.");			
 			CASPAR_LOG(info) << print() << TEXT(" Enabled embedded-audio.");
 		}
 
-		if(BLUE_FAIL(set_card_property(blue_, VIDEO_OUTPUT_ENGINE, VIDEO_ENGINE_FRAMESTORE))) 
+		if(BLUE_FAIL(blue_->set_card_property32(VIDEO_OUTPUT_ENGINE, VIDEO_ENGINE_FRAMESTORE)))
 			CASPAR_LOG(warning) << print() << TEXT(" Failed to set video engine.");
 
 		if (is_epoch_card((*blue_)))
@@ -261,7 +261,7 @@ public:
 			executor_.invoke([&]
 			{
 				disable_video_output();
-				blue_->Detach();		
+				blue_->detach();		
 			});
 		}
 		catch(...)
@@ -278,7 +278,7 @@ public:
 		{
 			if (outVidChannel != BLUE_VIDEOCHANNEL_INVALID)
 			{
-				if (BLUE_FAIL(set_card_property(blue_, DEFAULT_VIDEO_OUTPUT_CHANNEL, outVidChannel)))
+				if (BLUE_FAIL(blue_->set_card_property32(DEFAULT_VIDEO_OUTPUT_CHANNEL, outVidChannel)))
 					CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(" Failed to set video stream."));
 			}
 		}
@@ -300,16 +300,16 @@ public:
 				duallink_4224_enabled = true;
 
 			// Enable/Disable dual link output
-			if (BLUE_FAIL(set_card_property(blue_, VIDEO_DUAL_LINK_OUTPUT, duallink_4224_enabled)))
+			if (BLUE_FAIL(blue_->set_card_property32(VIDEO_DUAL_LINK_OUTPUT, duallink_4224_enabled)))
 				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to enable/disable dual link."));
 
 			if (!duallink_4224_enabled)
 			{
-				if (BLUE_FAIL(set_card_property(blue_, VIDEO_DUAL_LINK_OUTPUT_SIGNAL_FORMAT_TYPE, Signal_FormatType_Independent_422)))
+				if (BLUE_FAIL(blue_->set_card_property32(VIDEO_DUAL_LINK_OUTPUT_SIGNAL_FORMAT_TYPE, Signal_FormatType_Independent_422)))
 					CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set dual link format type to 4:2:2."));
 
 				ULONG routingValue = EPOCH_SET_ROUTING(srcElement, dstElement, BLUE_CONNECTOR_PROP_SINGLE_LINK);
-				if (BLUE_FAIL(set_card_property(blue_, MR2_ROUTING, routingValue)))
+				if (BLUE_FAIL(blue_->set_card_property32(MR2_ROUTING, routingValue)))
 					CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(" Failed to MR 2 routing."));
 
 				// If single link 422, but on second channel AND on Neutron we need to set Genlock to Aux.
@@ -318,7 +318,7 @@ public:
 					if (blueVideoOutputChannel == BLUE_VIDEO_OUTPUT_CHANNEL_B)
 					{
 						ULONG genLockSource = BlueGenlockAux;
-						if (BLUE_FAIL(set_card_property(blue_, VIDEO_GENLOCK_SIGNAL, genLockSource)))
+						if (BLUE_FAIL(blue_->set_card_property32(VIDEO_GENLOCK_SIGNAL, genLockSource)))
 							CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to set GenLock to Aux Input."));
 					}
 				}
@@ -327,20 +327,20 @@ public:
 					if (blueVideoOutputChannel == BLUE_VIDEO_OUTPUT_CHANNEL_C)
 					{
 						ULONG genLockSource = BlueGenlockAux;
-						if (BLUE_FAIL(set_card_property(blue_, VIDEO_GENLOCK_SIGNAL, genLockSource)))
+						if (BLUE_FAIL(blue_->set_card_property32(VIDEO_GENLOCK_SIGNAL, genLockSource)))
 							CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to set GenLock to Aux Input."));
 					}
 				}
 			}
 			else		// dual Link IS enabled, ie. 4224 Fill and Key
 			{
-				if (BLUE_FAIL(set_card_property(blue_, VIDEO_DUAL_LINK_OUTPUT_SIGNAL_FORMAT_TYPE, Signal_FormatType_4224)))
+				if (BLUE_FAIL(blue_->set_card_property32(VIDEO_DUAL_LINK_OUTPUT_SIGNAL_FORMAT_TYPE, Signal_FormatType_4224)))
 					CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set dual link format type to 4:2:2:4."));
 
 				if (is_epoch_neutron_1i2o_card((*blue_)))		// Neutron cards require setting the Genlock conector to Aux to enable them to do Dual-Link
 				{
 					ULONG genLockSource = BlueGenlockAux;
-					if (BLUE_FAIL(set_card_property(blue_, VIDEO_GENLOCK_SIGNAL, genLockSource)))
+					if (BLUE_FAIL(blue_->set_card_property32(VIDEO_GENLOCK_SIGNAL, genLockSource)))
 						CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to set GenLock to Aux Input."));
 				}
 				else if (is_epoch_neutron_3o_card((*blue_)))
@@ -348,7 +348,7 @@ public:
 					if (blueVideoOutputChannel == BLUE_VIDEO_OUTPUT_CHANNEL_C)
 					{
 						ULONG genLockSource = BlueGenlockAux;
-						if (BLUE_FAIL(set_card_property(blue_, VIDEO_GENLOCK_SIGNAL, genLockSource)))
+						if (BLUE_FAIL(blue_->set_card_property32(VIDEO_GENLOCK_SIGNAL, genLockSource)))
 							CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to set GenLock to Aux Input."));
 					}
 				}
@@ -358,18 +358,18 @@ public:
 
 	void setup_hardware_downstream_keyer(hardware_downstream_keyer_mode keyer, hardware_downstream_keyer_audio_source audio_source)
 	{
-		ULONG keyer_control_value = 0, card_feature_value = 0;
-		ULONG card_connector_value = 0;
+		unsigned int keyer_control_value = 0, card_feature_value = 0;
+		unsigned int card_connector_value = 0;
 		unsigned int nOutputStreams = 0;
 		unsigned int nInputStreams = 0;
 		unsigned int nInputSDIConnector = 0;
 		unsigned int nOutputSDIConnector = 0;
-		if (BLUE_OK(get_card_property(blue_, CARD_FEATURE_STREAM_INFO, card_feature_value)))
+		if (BLUE_OK(blue_->get_card_property32(CARD_FEATURE_STREAM_INFO, card_feature_value)))
 		{
 			nOutputStreams = CARD_FEATURE_GET_SDI_OUTPUT_STREAM_COUNT(card_feature_value);
 			nInputStreams = CARD_FEATURE_GET_SDI_INPUT_STREAM_COUNT(card_feature_value);
 		}
-		if (BLUE_OK(get_card_property(blue_, CARD_FEATURE_CONNECTOR_INFO, card_connector_value)))
+		if (BLUE_OK(blue_->get_card_property32(CARD_FEATURE_CONNECTOR_INFO, card_connector_value)))
 		{
 			nOutputSDIConnector = CARD_FEATURE_GET_SDI_OUTPUT_CONNECTOR_COUNT(card_connector_value);
 			nInputSDIConnector = CARD_FEATURE_GET_SDI_INPUT_CONNECTOR_COUNT(card_connector_value);
@@ -384,13 +384,13 @@ public:
 		}
 		else if (keyer == hardware_downstream_keyer_mode::enable)
 		{
-			ULONG invalidVideoModeFlag = 0;
-			ULONG inputVideoSignal = 0;
-			if (BLUE_FAIL(get_card_property(blue_, INVALID_VIDEO_MODE_FLAG, invalidVideoModeFlag)))
+			unsigned int invalidVideoModeFlag = 0;
+			unsigned int inputVideoSignal = 0;
+			if (BLUE_FAIL(blue_->get_card_property32(INVALID_VIDEO_MODE_FLAG, invalidVideoModeFlag)))
 				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(" Failed to get invalid video mode flag"));
 
 			keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_ENABLED(keyer_control_value);
-			if (BLUE_FAIL(get_card_property(blue_, VIDEO_INPUT_SIGNAL_VIDEO_MODE, inputVideoSignal)))
+			if (BLUE_FAIL(blue_->get_card_property32(VIDEO_INPUT_SIGNAL_VIDEO_MODE, inputVideoSignal)))
 				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(" Failed to get video input signal mode"));
 
 			if (inputVideoSignal >= invalidVideoModeFlag)
@@ -399,7 +399,7 @@ public:
 				keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_DISABLE_OVER_BLACK(keyer_control_value);
 		
 			// lock to input
-			if (BLUE_FAIL(set_card_property(blue_, VIDEO_GENLOCK_SIGNAL, BlueSDI_A_BNC)))
+			if (BLUE_FAIL(blue_->set_card_property32(VIDEO_GENLOCK_SIGNAL, BlueSDI_A_BNC)))
 				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(" Failed to set the genlock to the input for the HW keyer"));
 		}
 
@@ -408,20 +408,20 @@ public:
 		else if (audio_source == hardware_downstream_keyer_audio_source::VideoOutputChannel)
 			keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_USE_OUTPUT_ANCILLARY(keyer_control_value);
 
-		if (BLUE_FAIL(set_card_property(blue_, VIDEO_ONBOARD_KEYER, keyer_control_value)))
+		if (BLUE_FAIL(blue_->set_card_property32(VIDEO_ONBOARD_KEYER, keyer_control_value)))
 			CASPAR_LOG(error) << print() << TEXT(" Failed to set keyer control.");
 	}
 
 	void enable_video_output()
 	{
-		if(BLUE_FAIL(set_card_property(blue_, VIDEO_BLACKGENERATOR, 0)))
+		if(BLUE_FAIL(blue_->set_card_property32(VIDEO_BLACKGENERATOR, 0)))
 			CASPAR_LOG(error) << print() << TEXT(" Failed to disable video output.");	
 	}
 
 	void disable_video_output()
 	{
-		blue_->VideoPlaybackStop(0,0);
-		if(BLUE_FAIL(set_card_property(blue_, VIDEO_BLACKGENERATOR, 1)))
+		blue_->video_playback_stop(0,0);
+		if(BLUE_FAIL(blue_->set_card_property32(VIDEO_BLACKGENERATOR, 1)))
 			CASPAR_LOG(error)<< print() << TEXT(" Failed to disable video output.");		
 	}
 	
@@ -450,7 +450,7 @@ public:
 
 		sync_timer_.restart();
 		unsigned long n_field = 0;
-		blue_->WaitVideoOutputSync(UPD_FMT_FRAME, n_field);
+		blue_->wait_video_output_sync(UPD_FMT_FRAME, n_field);
 		graph_->set_value("sync-time", sync_timer_.elapsed()*format_desc_.fps*0.5);
 		
 		frame_timer_.restart();		
@@ -484,27 +484,27 @@ public:
 						static_cast<int>(frame.audio_data().size()/channel_layout_.num_channels), 
 						static_cast<int>(channel_layout_.num_channels));
 								
-			blue_->SystemBufferWrite(const_cast<uint8_t*>(reserved_frames_.front()->image_data()), 
+			blue_->system_buffer_write(const_cast<uint8_t*>(reserved_frames_.front()->image_data()), 
 											static_cast<unsigned long>(reserved_frames_.front()->image_size()),  
 											BlueImage_HANC_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_IMAGE), 
 											0);
 
-			blue_->SystemBufferWrite(reserved_frames_.front()->hanc_data(),
+			blue_->system_buffer_write(reserved_frames_.front()->hanc_data(),
 											static_cast<unsigned long>(reserved_frames_.front()->hanc_size()),
 											BlueImage_HANC_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_HANC),
 											0);
 
-			if(BLUE_FAIL(blue_->RenderBufferUpdate(BlueBuffer_Image_HANC(reserved_frames_.front()->id()))))
+			if(BLUE_FAIL(blue_->render_buffer_update(BlueBuffer_Image_HANC(reserved_frames_.front()->id()))))
 				CASPAR_LOG(warning) << print() << TEXT(" render_buffer_update failed.");
 		}
 		else
 		{
-			blue_->SystemBufferWrite(const_cast<uint8_t*>(reserved_frames_.front()->image_data()),
+			blue_->system_buffer_write(const_cast<uint8_t*>(reserved_frames_.front()->image_data()),
 											static_cast<unsigned long>(reserved_frames_.front()->image_size()), 
 											BlueImage_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_IMAGE),
 											0);
 			
-			if(BLUE_FAIL(blue_->RenderBufferUpdate(BlueBuffer_Image(reserved_frames_.front()->id()))))
+			if(BLUE_FAIL(blue_->render_buffer_update(BlueBuffer_Image(reserved_frames_.front()->id()))))
 				CASPAR_LOG(warning) << print() << TEXT(" render_buffer_update failed.");
 		}
 
@@ -538,8 +538,8 @@ public:
 		hanc_stream_info.video_mode		  = vid_fmt_;		
 		
 		int cardType = CRD_INVALID;
-		blue_->QueryCardType(cardType, device_index_);
-		blue_->EncodeHancFrameEx(cardType, &hanc_stream_info, audio_data, audio_nchannels, audio_samples, sample_type, emb_audio_flag);
+		blue_->query_card_type(cardType, device_index_);
+		blue_->encode_hanc_frame(cardType, &hanc_stream_info, audio_data, audio_nchannels, audio_samples, sample_type, emb_audio_flag);
 	}
 	
 	std::wstring print() const
