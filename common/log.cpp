@@ -163,6 +163,16 @@ void init()
 	boost::log::core::get()->add_sink(stream_sink);
 }
 
+std::string current_exception_diagnostic_information()
+{
+	auto e = boost::current_exception_cast<const char*>();
+
+	if (e)
+		return std::string("[char *] = ") + *e + "\n";
+	else
+		return boost::current_exception_diagnostic_information();
+}
+
 }
 
 void add_file_sink(const std::wstring& file, const boost::log::filter& filter)
