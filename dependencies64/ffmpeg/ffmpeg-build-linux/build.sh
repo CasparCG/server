@@ -40,7 +40,7 @@ mkdir -p "$BUILD_DIR" "$TARGET_DIR"
 echo "#### FFmpeg static build, by STVS SA ####"
 cd $BUILD_DIR
 ../fetchurl "http://www.tortall.net/projects/yasm/releases/yasm-1.3.0.tar.gz"
-../fetchurl "http://zlib.net/zlib-1.2.8.tar.gz"
+../fetchurl "http://www.zlib.net/fossils/zlib-1.2.8.tar.gz"
 ../fetchurl "http://www.bzip.org/1.0.6/bzip2-1.0.6.tar.gz"
 #../fetchurl "http://downloads.sf.net/project/libpng/libpng15/older-releases/1.5.14/libpng-1.5.14.tar.gz"
 ../fetchurl "http://downloads.xiph.org/releases/ogg/libogg-1.3.2.tar.gz"
@@ -419,6 +419,7 @@ CFLAGS="-I$TARGET_DIR/include -I$TARGET_DIR/usr/local/include" LDFLAGS="-L$TARGE
 	--enable-libfreetype \
 	--enable-libgme \
 	--enable-libgsm \
+	--enable-libiec61883 \
 	--enable-libilbc \
 	--enable-libmodplug \
 	--enable-libmp3lame \
@@ -448,3 +449,4 @@ CFLAGS="-I$TARGET_DIR/include -I$TARGET_DIR/usr/local/include" LDFLAGS="-L$TARGE
 	--enable-libv4l2 \
 	--enable-zlib
 make -j $jval && make install
+

@@ -259,7 +259,7 @@ struct input::impl : boost::noncopyable
 		auto path					= parts.at(1);
 		AVInputFormat* input_format	= nullptr;
 
-		static const std::set<std::wstring> PROTOCOLS_TREATED_AS_FORMATS = { L"dshow", L"v4l2" };
+		static const std::set<std::wstring> PROTOCOLS_TREATED_AS_FORMATS = { L"dshow", L"v4l2", L"iec61883" };
 
 		if (protocol.empty())
 			resource_name = path;
