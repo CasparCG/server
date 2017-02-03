@@ -26,7 +26,7 @@
 #include <boost/algorithm/string.hpp>
 
 namespace caspar { namespace core {
-	
+
 	const std::vector<video_format_desc> format_descs = {
 		{ video_format::pal,          720,  576,  1024, 576,  field_mode::upper,       25000, 1000, L"PAL",          { 1920                         } },
 		{ video_format::ntsc,         720,  486,  720,  540,  field_mode::lower,       30000, 1001, L"NTSC",         { 1602, 1601, 1602, 1601, 1602 } },
@@ -61,6 +61,9 @@ namespace caspar { namespace core {
 		{ video_format::x2160p2500,   3840, 2160, 3840, 2160, field_mode::progressive, 25000, 1000, L"2160p2500",    { 1920                         } },
 		{ video_format::x2160p2997,   3840, 2160, 3840, 2160, field_mode::progressive, 30000, 1001, L"2160p2997",    { 1602, 1601, 1602, 1601, 1602 } },
 		{ video_format::x2160p3000,   3840, 2160, 3840, 2160, field_mode::progressive, 30000, 1000, L"2160p3000",    { 1600                         } },
+		{ video_format::x2160p5000,   3840, 2160, 3840, 2160, field_mode::progressive, 50000, 1000, L"2160p5000",    { 960                          } },
+		{ video_format::x2160p5994,   3840, 2160, 3840, 2160, field_mode::progressive, 60000, 1001, L"2160p5994",    { 801,  800,  801,  801,  801  } },
+		{ video_format::x2160p6000,   3840, 2160, 3840, 2160, field_mode::progressive, 60000, 1000, L"2160p6000",    { 800                          } },
 		{ video_format::dci2160p2398, 4096, 2160, 4096, 2160, field_mode::progressive, 24000, 1001, L"dci2160p2398", { 2002                         } },
 		{ video_format::dci2160p2400, 4096, 2160, 4096, 2160, field_mode::progressive, 24000, 1000, L"dci2160p2400", { 2000                         } },
 		{ video_format::dci2160p2500, 4096, 2160, 4096, 2160, field_mode::progressive, 25000, 1000, L"dci2160p2500", { 1920                         } },
@@ -106,7 +109,7 @@ video_format_desc::video_format_desc(video_format format)
 video_format_desc::video_format_desc(const std::wstring& name)
 	: format(video_format::invalid)
 	, field_mode(core::field_mode::empty)
-{	
+{
 	*this = video_format_desc(video_format::invalid);
 	for(auto it = std::begin(format_descs); it != std::end(format_descs)-1; ++it)
 	{
@@ -119,7 +122,7 @@ video_format_desc::video_format_desc(const std::wstring& name)
 }
 
 bool operator==(const video_format_desc& lhs, const video_format_desc& rhs)
-{											
+{
 	return lhs.format == rhs.format;
 }
 
@@ -136,4 +139,3 @@ std::wostream& operator<<(std::wostream& out, const video_format_desc& format_de
 
 
 }}
-

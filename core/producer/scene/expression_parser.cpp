@@ -147,6 +147,17 @@ boost::any create_cos_function(const std::vector<boost::any>& params, const vari
 	return angle.transformed([](double a) { return std::cos(a); });
 }
 
+boost::any create_abs_function(const std::vector<boost::any>& params, const variable_repository& var_repo)
+{
+	if (params.size() != 1)
+		CASPAR_THROW_EXCEPTION(user_error()
+			<< msg_info(L"abs() function requires one parameters: value"));
+
+	auto val = require<double>(params.at(0));
+
+	return val.transformed([](double v) { return std::abs(v); });
+}
+
 boost::any parse_function(
 		const std::wstring& function_name,
 		std::wstring::const_iterator& cursor,
@@ -157,7 +168,8 @@ boost::any parse_function(
 	{
 		{L"animate",	create_animate_function },
 		{L"sin",		create_sin_function },
-		{L"cos",		create_cos_function }
+		{L"cos",		create_cos_function },
+		{L"abs",		create_abs_function }
 	};
 
 	auto function = FUNCTIONS.find(function_name);
@@ -642,7 +654,7 @@ boost::any ternary(
 	auto cond = require<bool>(condition);
 	auto t = as_binding(true_value);
 	auto f = as_binding(false_value);
-	
+
 	// double
 	if (is<binding<double>>(t) && is<binding<double>>(f))
 		return ternary(cond, as<binding<double>>(t), as<binding<double>>(f));
