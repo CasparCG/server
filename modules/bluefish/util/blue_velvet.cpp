@@ -23,224 +23,266 @@
 #include "blue_velvet.h"
 #include <common/utf.h>	
 #include <core/video_format.h>
-#include <bluefish/interop/BlueVelvetCUtils.h>
+#include <BlueVelvetCUtils.h>
 
 #if defined(__APPLE__)
-	#include <dlfcn.h>
+#include <dlfcn.h>
 #endif
 
 #if defined(_WIN32)
-	#define GET_PROCADDR_FOR_FUNC(name, module) { name = (pFunc_##name)GetProcAddress(module, #name); if(!name) { return false; } }
+	#define GET_PROCADDR_FOR_FUNC(name, module) { name = (pFunc_##name)GetProcAddress(reinterpret_cast<HMODULE>(module), #name); if(!name) { return false; } }
+//	#define GET_PROCADDR_FOR_FUNC(name, module) { name = (pFunc_##name)GetProcAddress(module, #name); if(!name) { return false; } }
 #elif defined(__APPLE__)
 	#define GET_PROCADDR_FOR_FUNC(name, module) { name = (pFunc_##name)dlsym(module, #name); if(!name) { return false; } }
 #endif
 
 namespace caspar { namespace bluefish {
 
-	BvcWrapper::BvcWrapper()
+	bvc_wrapper::bvc_wrapper()
 	{
-		bvc = nullptr;
-		hModule = nullptr;
-		InitFunctionsPointers();
-		if (bfcFactory)
-			bvc = bfcFactory();
+		bvc_ = nullptr;
+		h_module_ = nullptr;
+		init_function_pointers();
+		bvc_ = std::shared_ptr<void>(bfcFactory(), bfcDestroy);
+		
+		if (!bvc_)
+			CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Bluefish drivers not found."));
 	}
 
-	BvcWrapper::~BvcWrapper()
+	bool bvc_wrapper::init_function_pointers()
 	{
-		if (bvc)
-			bfcDestroy(bvc);
-		if (hModule)
-		{
+		bool res = false;
+		bfcGetVersion = nullptr;
+		bfcFactory = nullptr;
+		bfcDestroy = nullptr;
+		bfcEnumerate = nullptr;
+		bfcQueryCardType = nullptr;
+		bfcAttach = nullptr;
+		bfcDetach = nullptr;
+		bfcQueryCardProperty32 = nullptr;
+		bfcQueryCardProperty64 = nullptr;
+		bfcSetCardProperty32 = nullptr;
+		bfcSetCardProperty64 = nullptr;
+		bfcGetCardSerialNumber = nullptr;
+		bfcGetCardFwVersion = nullptr;
+		bfcWaitVideoSyncAsync = nullptr;
+		bfcWaitVideoInputSync = nullptr;
+		bfcWaitVideoOutputSync = nullptr;
+		bfcGetVideoOutputCurrentFieldCount = nullptr;
+		bfcGetVideoInputCurrentFieldCount = nullptr;
+		bfcVideoCaptureStart = nullptr;
+		bfcVideoCaptureStop = nullptr;
+		bfcVideoPlaybackStart = nullptr;
+		bfcVideoPlaybackStop = nullptr;
+		bfcVideoPlaybackAllocate = nullptr;
+		bfcVideoPlaybackPresent = nullptr;
+		bfcVideoPlaybackRelease = nullptr;
+		bfcGetCaptureVideoFrameInfoEx = nullptr;
+		bfcRenderBufferCapture = nullptr;
+		bfcRenderBufferUpdate = nullptr;
+		bfcGetRenderBufferCount = nullptr;
+		bfcEncodeHancFrameEx = nullptr;
+		bfcDecodeHancFrameEx = nullptr;
 #if defined(_WIN32)
-			FreeLibrary(hModule);
-#elif defined(__APPLE__)
-			dlclose(hModule);
+		bfcSystemBufferReadAsync = nullptr;
+		bfcSystemBufferWriteAsync = nullptr;
+#else
+		bfcSystemBufferRead = nullptr;
+		bfcSystemBufferWrite = nullptr;
 #endif
-		}
-	}
-
-	bool BvcWrapper::InitFunctionsPointers()
-	{
-		bool bRes = false;
+		bfcGetBytesForGroupPixels = nullptr;
+		bfcGetPixelsPerLine = nullptr;
+		bfcGetLinesPerFrame = nullptr;
+		bfcGetBytesPerLine = nullptr;
+		bfcGetBytesPerFrame = nullptr;
+		bfcGetGoldenValue = nullptr;
+		bfcGetVBILines = nullptr;
+		bfcGetVANCGoldenValue = nullptr;
+		bfcGetVANCLineBytes = nullptr;
+		bfcGetVANCLineCount = nullptr;
+		bfcGetWindowsDriverHandle = nullptr;
+		bfcUtilsGetStringForCardType = nullptr;
+		bfcUtilsGetStringForBlueProductId = nullptr;
+		bfcUtilsGetStringForVideoMode = nullptr;
+		bfcUtilsGetStringForMemoryFormat = nullptr;
+		bfcUtilsGetMR2Routing = nullptr;
+		bfcUtilsSetMR2Routing = nullptr;
+		bfcUtilsGetAudioOutputRouting = nullptr;
+		bfcUtilsSetAudioOutputRouting = nullptr;
+		bfcUtilsIsVideoModeProgressive = nullptr;
+		bfcUtilsIsVideoMode1001Framerate = nullptr;
+		bfcUtilsGetFpsForVideoMode = nullptr;
+		bfcUtilsGetVideoModeForFrameInfo = nullptr;
+		bfcUtilsGetFrameInfoForVideoMode = nullptr;
+		bfcUtilsGetAudioSamplesPerFrame = nullptr;
 
 #if defined(_WIN32)
 #ifdef _DEBUG
-		hModule = LoadLibraryExA("BlueVelvetC64_d.dll", NULL, 0);
+		h_module_ = std::shared_ptr<void>(LoadLibraryExA("BlueVelvetC64_d.dll", NULL, 0), FreeLibrary);
 #else
-		hModule = LoadLibraryExA("BlueVelvetC64.dll", NULL, 0);
+		h_module_ = std::shared_ptr<void>(LoadLibraryExA("BlueVelvetC64.dll", NULL, 0), FreeLibrary);
 #endif
 		
 #elif defined(__APPLE__)
 		// Look for the framework and load it accordingly.
 		char* libraryPath("/Library/Frameworks/BlueVelvetC.framework");		// full path may not be required, OSX might check in /l/f by default - MUST TEST!
-		hModule = dlopen(libraryPath, RTLD_NOW);
+		h_module_ = std::shared_ptr<void>(dlopen(libraryPath, RTLD_NOW), dlclose);
 #endif
 		
-		if (hModule)
+		if (h_module_)
 		{
-			GET_PROCADDR_FOR_FUNC(bfcGetVersion, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcFactory, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcDestroy, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcEnumerate, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcQueryCardType, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcAttach, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcDetach, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcQueryCardProperty32, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcQueryCardProperty64, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcSetCardProperty32, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcSetCardProperty64, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcGetCardSerialNumber, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcGetCardFwVersion, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcWaitVideoSyncAsync, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcWaitVideoInputSync, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcWaitVideoOutputSync, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcGetVideoOutputCurrentFieldCount, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcGetVideoInputCurrentFieldCount, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcVideoCaptureStart, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcVideoCaptureStop, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcVideoPlaybackStart, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcVideoPlaybackStop, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcVideoPlaybackAllocate, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcVideoPlaybackPresent, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcVideoPlaybackRelease, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcGetCaptureVideoFrameInfoEx, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcRenderBufferCapture, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcRenderBufferUpdate, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcGetRenderBufferCount, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcEncodeHancFrameEx, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcDecodeHancFrameEx, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcSystemBufferReadAsync, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcSystemBufferWriteAsync, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcGetBytesForGroupPixels, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcGetPixelsPerLine, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcGetLinesPerFrame, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcGetBytesPerLine, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcGetBytesPerFrame, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcGetGoldenValue, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcGetVBILines, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcGetVANCGoldenValue, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcGetVANCLineBytes, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcGetVANCLineCount, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcGetWindowsDriverHandle, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcUtilsGetStringForCardType, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcUtilsGetStringForBlueProductId, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcUtilsGetStringForVideoMode, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcUtilsGetStringForMemoryFormat, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcUtilsGetMR2Routing, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcUtilsSetMR2Routing, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcUtilsGetAudioOutputRouting, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcUtilsSetAudioOutputRouting, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcUtilsIsVideoModeProgressive, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcUtilsIsVideoMode1001Framerate, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcUtilsGetFpsForVideoMode, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcUtilsGetVideoModeForFrameInfo, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcUtilsGetFrameInfoForVideoMode, hModule);
-			GET_PROCADDR_FOR_FUNC(bfcUtilsGetAudioSamplesPerFrame, hModule);
-
-			bRes = true;
+			GET_PROCADDR_FOR_FUNC(bfcGetVersion, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcFactory, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcDestroy, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcEnumerate, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcQueryCardType, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcAttach, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcDetach, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcQueryCardProperty32, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcQueryCardProperty64, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcSetCardProperty32, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcSetCardProperty64, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcGetCardSerialNumber, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcGetCardFwVersion, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcWaitVideoSyncAsync, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcWaitVideoInputSync, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcWaitVideoOutputSync, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcGetVideoOutputCurrentFieldCount, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcGetVideoInputCurrentFieldCount, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcVideoCaptureStart, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcVideoCaptureStop, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcVideoPlaybackStart, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcVideoPlaybackStop, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcVideoPlaybackAllocate, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcVideoPlaybackPresent, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcVideoPlaybackRelease, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcGetCaptureVideoFrameInfoEx, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcRenderBufferCapture, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcRenderBufferUpdate, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcGetRenderBufferCount, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcEncodeHancFrameEx, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcDecodeHancFrameEx, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcSystemBufferReadAsync, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcSystemBufferWriteAsync, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcGetBytesForGroupPixels, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcGetPixelsPerLine, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcGetLinesPerFrame, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcGetBytesPerLine, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcGetBytesPerFrame, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcGetGoldenValue, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcGetVBILines, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcGetVANCGoldenValue, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcGetVANCLineBytes, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcGetVANCLineCount, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcGetWindowsDriverHandle, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcUtilsGetStringForCardType, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcUtilsGetStringForBlueProductId, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcUtilsGetStringForVideoMode, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcUtilsGetStringForMemoryFormat, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcUtilsGetMR2Routing, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcUtilsSetMR2Routing, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcUtilsGetAudioOutputRouting, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcUtilsSetAudioOutputRouting, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcUtilsIsVideoModeProgressive, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcUtilsIsVideoMode1001Framerate, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcUtilsGetFpsForVideoMode, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcUtilsGetVideoModeForFrameInfo, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcUtilsGetFrameInfoForVideoMode, h_module_.get());
+			GET_PROCADDR_FOR_FUNC(bfcUtilsGetAudioSamplesPerFrame, h_module_.get());
+			res = true;
 		}
-
-		return bRes;
+		return res;
 	}
 
-	bool BvcWrapper::IsBvcValid()
-	{
-		if (bvc)
-			return true;
-		else
-			return false;
-	}
-
-	const char * BvcWrapper::GetVersion()
+	const char * bvc_wrapper::get_version()
 	{
 		return bfcGetVersion();
 	}
 
-	BLUE_UINT32 BvcWrapper::Attach(int iDeviceId)
+	BLUE_UINT32 bvc_wrapper::attach(int iDeviceId)
 	{
-		return bfcAttach(bvc, iDeviceId);
+		return bfcAttach((BLUEVELVETC_HANDLE)bvc_.get(), iDeviceId);
 	}
 
-	BLUE_UINT32 BvcWrapper::Detach()
+	BLUE_UINT32 bvc_wrapper::detach()
 	{
-		return bfcDetach(bvc);
+		return bfcDetach((BLUEVELVETC_HANDLE)bvc_.get());
 	}
 
-	BLUE_UINT32 BvcWrapper::QueryCardProperty32(const int iProperty, unsigned int & nValue)
+	BLUE_UINT32 bvc_wrapper::get_card_property32(const int iProperty, unsigned int & nValue)
 	{
-		if (bvc)
-			return (BLUE_UINT32)bfcQueryCardProperty32(bvc, iProperty, nValue);
+		if (bvc_)
+			return (BLUE_UINT32)bfcQueryCardProperty32((BLUEVELVETC_HANDLE)bvc_.get(), iProperty, nValue);
 		else
 			return 0;
 	}
 
-	BLUE_UINT32 BvcWrapper::SetCardProperty32(const int iProperty, const unsigned int nValue)
+	BLUE_UINT32 bvc_wrapper::set_card_property32(const int iProperty, const unsigned int nValue)
 	{
-		return bfcSetCardProperty32(bvc, iProperty, nValue);
+		return bfcSetCardProperty32((BLUEVELVETC_HANDLE)bvc_.get(), iProperty, nValue);
 	}
 
-	BLUE_UINT32 BvcWrapper::Enumerate(int & iDevices)
+	BLUE_UINT32 bvc_wrapper::enumerate(int & iDevices)
 	{
-		return bfcEnumerate(bvc, iDevices);
+		return bfcEnumerate((BLUEVELVETC_HANDLE)bvc_.get(), iDevices);
 	}
 
-	BLUE_UINT32 BvcWrapper::QueryCardType(int & iCardType, int iDeviceID)
+	BLUE_UINT32 bvc_wrapper::query_card_type(int & iCardType, int iDeviceID)
 	{
-		return bfcQueryCardType(bvc, iCardType, iDeviceID);
+		return bfcQueryCardType((BLUEVELVETC_HANDLE)bvc_.get(), iCardType, iDeviceID);
 	}
 
-	BLUE_UINT32 BvcWrapper::SystemBufferWrite(unsigned char * pPixels, unsigned long ulSize, unsigned long ulBufferID, unsigned long ulOffset)
+	BLUE_UINT32 bvc_wrapper::system_buffer_write(unsigned char * pPixels, unsigned long ulSize, unsigned long ulBufferID, unsigned long ulOffset)
 	{
-		return bfcSystemBufferWriteAsync(bvc, pPixels, ulSize, nullptr, ulBufferID, ulOffset);
+		return bfcSystemBufferWriteAsync((BLUEVELVETC_HANDLE)bvc_.get(), pPixels, ulSize, nullptr, ulBufferID, ulOffset);
 	}
 
-	BLUE_UINT32 BvcWrapper::SystemBufferRead(unsigned char* pPixels, unsigned long ulSize, unsigned long ulBufferID, unsigned long ulOffset)
+	BLUE_UINT32 bvc_wrapper::system_buffer_read(unsigned char* pPixels, unsigned long ulSize, unsigned long ulBufferID, unsigned long ulOffset)
 	{
-		return bfcSystemBufferReadAsync(bvc, pPixels, ulSize, nullptr, ulBufferID, ulOffset);
+		return bfcSystemBufferReadAsync((BLUEVELVETC_HANDLE)bvc_.get(), pPixels, ulSize, nullptr, ulBufferID, ulOffset);
 	}
 
-	BLUE_UINT32 BvcWrapper::VideoPlaybackStop(int iWait, int iFlush)
+	BLUE_UINT32 bvc_wrapper::video_playback_stop(int iWait, int iFlush)
 	{
-		return bfcVideoPlaybackStop(bvc, iWait, iFlush);
+		return bfcVideoPlaybackStop((BLUEVELVETC_HANDLE)bvc_.get(), iWait, iFlush);
 	}
 
-	BLUE_UINT32 BvcWrapper::WaitVideoOutputSync(unsigned long ulUpdateType, unsigned long & ulFieldCount)
+	BLUE_UINT32 bvc_wrapper::wait_video_output_sync(unsigned long ulUpdateType, unsigned long & ulFieldCount)
 	{
-		return bfcWaitVideoOutputSync(bvc, ulUpdateType, ulFieldCount);
+		return bfcWaitVideoOutputSync((BLUEVELVETC_HANDLE)bvc_.get(), ulUpdateType, ulFieldCount);
 	}
 
-	BLUE_UINT32 BvcWrapper::WaitVideoInputSync(unsigned long ulUpdateType, unsigned long & ulFieldCount)
+	BLUE_UINT32 bvc_wrapper::wait_video_input_sync(unsigned long ulUpdateType, unsigned long & ulFieldCount)
 	{
-		return bfcWaitVideoInputSync(bvc, ulUpdateType, ulFieldCount);
+		return bfcWaitVideoInputSync((BLUEVELVETC_HANDLE)bvc_.get(), ulUpdateType, ulFieldCount);
 	}
 
-	BLUE_UINT32 BvcWrapper::RenderBufferUpdate( unsigned long ulBufferID)
+	BLUE_UINT32 bvc_wrapper::render_buffer_update( unsigned long ulBufferID)
 	{
-		return bfcRenderBufferUpdate(bvc, ulBufferID);
+		return bfcRenderBufferUpdate((BLUEVELVETC_HANDLE)bvc_.get(), ulBufferID);
 	}
 
-	BLUE_UINT32 BvcWrapper::RenderBufferCapture(unsigned long ulBufferID)
+	BLUE_UINT32 bvc_wrapper::render_buffer_capture(unsigned long ulBufferID)
 	{
-		return bfcRenderBufferCapture(bvc, ulBufferID);
+		return bfcRenderBufferCapture((BLUEVELVETC_HANDLE)bvc_.get(), ulBufferID);
 	}
 
-	BLUE_UINT32 BvcWrapper::EncodeHancFrameEx(unsigned int nCardType, hanc_stream_info_struct * pHancEncodeInfo, void * pAudioBuffer, unsigned int nAudioChannels, unsigned int nAudioSamples, unsigned int nSampleType, unsigned int nAudioFlags)
+	BLUE_UINT32 bvc_wrapper::encode_hanc_frame(unsigned int nCardType, hanc_stream_info_struct * pHancEncodeInfo, void * pAudioBuffer, unsigned int nAudioChannels, unsigned int nAudioSamples, unsigned int nSampleType, unsigned int nAudioFlags)
 	{
-		return bfcEncodeHancFrameEx(bvc, CRD_BLUE_NEUTRON, pHancEncodeInfo, pAudioBuffer, nAudioChannels, nAudioSamples, nSampleType, nAudioFlags);
+		return bfcEncodeHancFrameEx((BLUEVELVETC_HANDLE)bvc_.get(), CRD_BLUE_NEUTRON, pHancEncodeInfo, pAudioBuffer, nAudioChannels, nAudioSamples, nSampleType, nAudioFlags);
 	}
 
-	BLUE_UINT32 BvcWrapper::DecodeHancFrameEx(unsigned int nCardType, unsigned int * pHancBuffer, hanc_decode_struct * pHancDecodeInfo)
+	BLUE_UINT32 bvc_wrapper::decode_hanc_frame(unsigned int nCardType, unsigned int * pHancBuffer, hanc_decode_struct * pHancDecodeInfo)
 	{
-		return bfcDecodeHancFrameEx(bvc, CRD_BLUE_NEUTRON, pHancBuffer, pHancDecodeInfo);
+		return bfcDecodeHancFrameEx((BLUEVELVETC_HANDLE)bvc_.get(), CRD_BLUE_NEUTRON, pHancBuffer, pHancDecodeInfo);
 	}
 
-	BLUE_UINT32 BvcWrapper::GetFrameInfoForVideoVode(const unsigned int nVideoMode, unsigned int&  nWidth, unsigned int& nHeight, unsigned int& nRate, unsigned int& bIs1001, unsigned int& bIsProgressive)
+	BLUE_UINT32 bvc_wrapper::get_frame_info_for_video_mode(const unsigned int nVideoMode, unsigned int&  nWidth, unsigned int& nHeight, unsigned int& nRate, unsigned int& bIs1001, unsigned int& bIsProgressive)
 	{
 		return bfcUtilsGetFrameInfoForVideoMode(nVideoMode, nWidth, nHeight, nRate, bIs1001, bIsProgressive);
 	}
 
-	BLUE_UINT32 BvcWrapper::GetBytesPerFrame(EVideoMode nVideoMode, EMemoryFormat nMemoryFormat, EUpdateMethod nUpdateMethod, unsigned int& nBytesPerFrame)
+	BLUE_UINT32 bvc_wrapper::get_bytes_per_frame(EVideoMode nVideoMode, EMemoryFormat nMemoryFormat, EUpdateMethod nUpdateMethod, unsigned int& nBytesPerFrame)
 	{
 		return bfcGetBytesPerFrame(nVideoMode, nMemoryFormat, nUpdateMethod, nBytesPerFrame);
 	}
@@ -276,13 +318,13 @@ EVideoMode vid_fmt_from_video_format(const core::video_format& fmt)
 	}
 }
 
-bool is_epoch_card(BvcWrapper& blue)
+bool is_epoch_card(bvc_wrapper& blue)
 {
-	int iDeviceID = 1;
-	int iCardType = 0;
-	blue.QueryCardType(iCardType, iDeviceID);
+	int device_id = 1;
+	int card_type = 0;
+	blue.query_card_type(card_type, device_id);
 
-	switch(iCardType)
+	switch(card_type)
 	{
 		case CRD_BLUE_EPOCH_HORIZON:
 		case CRD_BLUE_EPOCH_CORE:
@@ -303,21 +345,20 @@ bool is_epoch_card(BvcWrapper& blue)
 	}
 }
 
-bool is_epoch_neutron_1i2o_card(BvcWrapper& blue)
+bool is_epoch_neutron_1i2o_card(bvc_wrapper& blue)
 {
 	BLUE_UINT32 val = 0;
-	blue.QueryCardProperty32(EPOCH_GET_PRODUCT_ID, val);
-
+	blue.get_card_property32(EPOCH_GET_PRODUCT_ID, val);
 	if (val == ORAC_NEUTRON_1_IN_2_OUT_FIRMWARE_PRODUCTID)
 		return true;
 	else
 		return false;
 }
 
-bool is_epoch_neutron_3o_card(BvcWrapper& blue)
+bool is_epoch_neutron_3o_card(bvc_wrapper& blue)
 {
 	BLUE_UINT32 val = 0;
-	blue.QueryCardProperty32(EPOCH_GET_PRODUCT_ID, val);
+	blue.get_card_property32(EPOCH_GET_PRODUCT_ID, val);
 
 	if (val == ORAC_NEUTRON_0_IN_3_OUT_FIRMWARE_PRODUCTID)
 		return true;
@@ -325,13 +366,12 @@ bool is_epoch_neutron_3o_card(BvcWrapper& blue)
 		return false;
 }
 
-
-std::wstring get_card_desc(BvcWrapper& blue, int iDeviceID)
+std::wstring get_card_desc(bvc_wrapper& blue, int device_id)
 {
-	int iCardType = 0;
-	blue.QueryCardType(iCardType, iDeviceID);
+	int card_type = 0;
+	blue.query_card_type(card_type, device_id);
 
-	switch(iCardType) 
+	switch(card_type)
 	{
 		case CRD_BLUEDEEP_LT:				return L"Deepblue LT";// D64 Lite
 		case CRD_BLUEDEEP_SD:				return L"Iridium SD";// Iridium SD
@@ -374,38 +414,35 @@ std::wstring get_card_desc(BvcWrapper& blue, int iDeviceID)
 	}
 }
 
-EVideoMode get_video_mode(BvcWrapper& blue, const core::video_format_desc& format_desc)
+EVideoMode get_video_mode(bvc_wrapper& blue, const core::video_format_desc& format_desc)
 {
 	EVideoMode vid_fmt = VID_FMT_INVALID;
-	BLUE_UINT32 inValidFmt = 0;
+	BLUE_UINT32 invalid_fmt = 0;
 	BErr err = 0;
-	err = blue.QueryCardProperty32(INVALID_VIDEO_MODE_FLAG, inValidFmt);
+	err = blue.get_card_property32(INVALID_VIDEO_MODE_FLAG, invalid_fmt);
 	vid_fmt = vid_fmt_from_video_format(format_desc.format);
 
 	if (vid_fmt == VID_FMT_INVALID)
 		CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"video-mode not supported: " + format_desc.name));
 
 
-	if ((unsigned int)vid_fmt >= inValidFmt)
+	if ((unsigned int)vid_fmt >= invalid_fmt)
 		CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"video-mode not supported - Outside of valid range: " + format_desc.name));
 
 	return vid_fmt;
 }
 
-spl::shared_ptr<BvcWrapper> create_blue()
+spl::shared_ptr<bvc_wrapper> create_blue()
 {
-	auto pWrap = new BvcWrapper();
-	if (!pWrap->IsBvcValid())
-		CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Bluefish drivers not found."));
-
-	return spl::shared_ptr<BvcWrapper>(pWrap);
+	auto pWrap = new bvc_wrapper();
+	return spl::shared_ptr<bvc_wrapper>(pWrap);
 }
 
-spl::shared_ptr<BvcWrapper> create_blue(int device_index)
+spl::shared_ptr<bvc_wrapper> create_blue(int device_index)
 {
 	auto blue = create_blue();
 	
-	if(BLUE_FAIL(blue->Attach(device_index)))
+	if(BLUE_FAIL(blue->attach(device_index)))
 		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to attach device."));
 
 	return blue;
@@ -440,15 +477,15 @@ core::video_format video_format_from_vid_fmt(EVideoMode fmt)
 	}
 }
 
-core::video_format_desc get_format_desc(BvcWrapper& blue, EVideoMode vid_fmt, EMemoryFormat mem_fmt)
+core::video_format_desc get_format_desc(bvc_wrapper& blue, EVideoMode vid_fmt, EMemoryFormat mem_fmt)
 {
 	core::video_format_desc fmt;
 	unsigned int width, height, duration = 0, time_scale = 0, rate = 0, bIs1001 = 0, bIsProgressive = 0, size = 0;
 	std::vector<int>	audio_cadence;
 	core::field_mode video_field_mode = core::field_mode::progressive;
 
-	blue.GetFrameInfoForVideoVode(vid_fmt, width, height, rate, bIs1001, bIsProgressive);
-	blue.GetBytesPerFrame(vid_fmt, mem_fmt, UPD_FMT_FRAME, size);
+	blue.get_frame_info_for_video_mode(vid_fmt, width, height, rate, bIs1001, bIsProgressive);
+	blue.get_bytes_per_frame(vid_fmt, mem_fmt, UPD_FMT_FRAME, size);
 
 	switch (vid_fmt)
 	{
