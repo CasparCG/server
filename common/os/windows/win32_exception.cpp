@@ -31,7 +31,7 @@ inline void SetThreadName(DWORD dwThreadID, LPCSTR szThreadName)
 	{
 		RaiseException( 0x406D1388, 0, sizeof(info)/sizeof(ULONG_PTR), (ULONG_PTR*)&info );
 	}
-	__except (EXCEPTION_CONTINUE_EXECUTION){}	
+	__except (EXCEPTION_CONTINUE_EXECUTION){}
 }
 
 } // namespace detail
@@ -41,7 +41,7 @@ bool& installed_for_thread()
 	static boost::thread_specific_ptr<bool> installed;
 
 	auto for_thread = installed.get();
-	
+
 	if (!for_thread)
 	{
 		for_thread = new bool(false);
@@ -99,6 +99,8 @@ void win32_exception::Handler(unsigned int errorCode, EXCEPTION_POINTERS* pInfo)
 	{
 	case EXCEPTION_ACCESS_VIOLATION:
 		CASPAR_THROW_EXCEPTION(win32_access_violation() << generate_message(*(pInfo->ExceptionRecord)));
+	case EXCEPTION_STACK_OVERFLOW:
+		throw "Stack overflow. Not generating stack trace to protect from further overflowing the stack";
 	default:
 		CASPAR_THROW_EXCEPTION(win32_exception() << generate_message(*(pInfo->ExceptionRecord)));
 	}
