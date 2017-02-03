@@ -8,10 +8,6 @@ set(SOURCES
 		StdAfx.cpp
 )
 set(HEADERS
-		interop/BlueDriver_p.h
-		interop/BlueHancUtils.h
-		interop/BlueVelvetC.h
-		interop/BlueVelvetCUtils.h
 		consumer/bluefish_consumer.h
 		util/blue_velvet.h
 		util/memory.h
@@ -28,11 +24,11 @@ include_directories(${BOOST_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_PATH})
 include_directories(${RXCPP_INCLUDE_PATH})
 include_directories(${ASMLIB_INCLUDE_PATH})
+include_directories(${BLUEFISH_INCLUDE_PATH})
 
 set_target_properties(bluefish PROPERTIES FOLDER modules)
 source_group(sources ./*)
 source_group(sources\\consumer consumer/*)
-source_group(sources\\interop interop/*)
 source_group(sources\\util util/*)
 
 target_link_libraries(bluefish common core)

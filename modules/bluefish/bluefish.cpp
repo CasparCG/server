@@ -42,8 +42,8 @@ std::wstring version()
 {
 	try
 	{
-		BvcWrapper blue = BvcWrapper();
-		return u16(blue.GetVersion());
+		bvc_wrapper blue = bvc_wrapper();
+		return u16(blue.get_version());
 	}
 	catch(...)
 	{
@@ -57,15 +57,15 @@ std::vector<std::wstring> device_list()
 
 	try
 	{		
-		BvcWrapper blue = BvcWrapper();
+		bvc_wrapper blue = bvc_wrapper();
 		int numCards = 0;
-		blue.Enumerate(numCards);
+		blue.enumerate(numCards);
 
 		for(int n = 1; n < (numCards+1); n++)
 		{				
-			blue.Attach(n);
+			blue.attach(n);
 			devices.push_back(std::wstring(get_card_desc(blue, n)) + L" [" + boost::lexical_cast<std::wstring>(n) + L"]");	
-			blue.Detach();
+			blue.detach();
 		}
 	}
 	catch(...){}
@@ -75,41 +75,25 @@ std::vector<std::wstring> device_list()
 
 void init(core::module_dependencies dependencies)
 {
-
-	bool bCanBeConsumer = false;
 	try
 	{
-		BvcWrapper blue = BvcWrapper();
-		int numCards = 0;
-		blue.Enumerate(numCards);
-		if (numCards)
-		{
-			for (int n = 1; n < (numCards + 1); n++)
-			{
-				unsigned int value;
-				blue.Attach(n);
-				blue.QueryCardProperty32(CARD_FEATURE_STREAM_INFO, value);
-				if (CARD_FEATURE_GET_SDI_OUTPUT_STREAM_COUNT(value))
-					bCanBeConsumer = true;
-
-				blue.Detach();
-			}
-		}	
+		bvc_wrapper blue = bvc_wrapper();
+		int num_cards = 0;
+		blue.enumerate(num_cards);
+	
 	}
 	catch(...){}
 
-	if (bCanBeConsumer)
+	dependencies.consumer_registry->register_consumer_factory(L"Bluefish Consumer", create_consumer, describe_consumer);
+	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"bluefish", create_preconfigured_consumer);
+	dependencies.system_info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
 	{
-		dependencies.consumer_registry->register_consumer_factory(L"Bluefish Consumer", create_consumer, describe_consumer);
-		dependencies.consumer_registry->register_preconfigured_consumer_factory(L"bluefish", create_preconfigured_consumer);
-		dependencies.system_info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
-		{
-			info.add(L"system.bluefish.version", version());
+		info.add(L"system.bluefish.version", version());
 
-			for (auto device : device_list())
-				info.add(L"system.bluefish.device", device);
-		});
-	}
+		for (auto device : device_list())
+			info.add(L"system.bluefish.device", device);
+	});
+
 }
 
 }}
