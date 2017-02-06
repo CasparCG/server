@@ -206,6 +206,9 @@ namespace caspar { namespace bluefish {
 
 	BLUE_UINT32 bvc_wrapper::detach()
 	{
+		// disable the audio on detach
+		unsigned int audio_value = 0;
+		bfcQueryCardProperty32((BLUEVELVETC_HANDLE)bvc_.get(), EMBEDEDDED_AUDIO_OUTPUT, audio_value);
 		return bfcDetach((BLUEVELVETC_HANDLE)bvc_.get());
 	}
 
