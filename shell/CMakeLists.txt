@@ -42,8 +42,6 @@ target_link_libraries(generate_docs
 		accelerator
 
 		"${CASPARCG_MODULE_PROJECTS}"
-
-		reroute
 )
 
 
@@ -67,8 +65,6 @@ target_link_libraries(casparcg
 		protocol
 
 		"${CASPARCG_MODULE_PROJECTS}"
-
-		reroute
 )
 
 add_custom_target(casparcg_copy_dependencies ALL)
