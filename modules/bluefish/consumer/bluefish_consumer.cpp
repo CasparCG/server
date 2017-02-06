@@ -166,7 +166,7 @@ public:
 			hardware_downstream_keyer_mode keyer,
 			hardware_downstream_keyer_audio_source keyer_audio_source,
 			int channel_index,
-			bluefish_hardware_output_channel device_output_channel = bluefish_hardware_output_channel::hardware_4224_channel_a)
+			bluefish_hardware_output_channel device_output_channel)
 		: blue_(create_blue(device_index))
 		, device_index_(device_index)
 		, format_desc_(format_desc)
@@ -272,13 +272,13 @@ public:
 
 	void setup_hardware_output_channel()
 	{
-		// this function would be used to setup the logic video channel in the bluefish hardware
-		EBlueVideoChannel outVidChannel = get_bluesdk_videochannel_from_streamid(device_output_channel_);
+		// This function would be used to setup the logic video channel in the bluefish hardware
+		EBlueVideoChannel out_vid_channel = get_bluesdk_videochannel_from_streamid(device_output_channel_);
 		if (is_epoch_card((*blue_)))
 		{
-			if (outVidChannel != BLUE_VIDEOCHANNEL_INVALID)
+			if (out_vid_channel != BLUE_VIDEOCHANNEL_INVALID)
 			{
-				if (BLUE_FAIL(blue_->set_card_property32(DEFAULT_VIDEO_OUTPUT_CHANNEL, outVidChannel)))
+				if (BLUE_FAIL(blue_->set_card_property32(DEFAULT_VIDEO_OUTPUT_CHANNEL, out_vid_channel)))
 					CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(" Failed to set video stream."));
 			}
 		}
@@ -287,13 +287,12 @@ public:
 	void setup_hardware_output_channel_routing()
 	{
 		//This function would be used to setup the dual link and any other routing that would be required .
-
 		if (is_epoch_card(*blue_))
 		{
 			EBlueVideoChannel blueVideoOutputChannel = get_bluesdk_videochannel_from_streamid(device_output_channel_);
-			EEpochRoutingElements srcElement = (EEpochRoutingElements)0;
-			EEpochRoutingElements dstElement = (EEpochRoutingElements)0;
-			get_videooutput_channel_routing_info_from_streamid(device_output_channel_, srcElement, dstElement);
+			EEpochRoutingElements src_element = (EEpochRoutingElements)0;
+			EEpochRoutingElements dst_element = (EEpochRoutingElements)0;
+			get_videooutput_channel_routing_info_from_streamid(device_output_channel_, src_element, dst_element);
 			bool duallink_4224_enabled = false;
 
 			if (device_output_channel_ == bluefish_hardware_output_channel::hardware_4224_channel_a || device_output_channel_ == bluefish_hardware_output_channel::hardware_4224_channel_c)
@@ -308,7 +307,7 @@ public:
 				if (BLUE_FAIL(blue_->set_card_property32(VIDEO_DUAL_LINK_OUTPUT_SIGNAL_FORMAT_TYPE, Signal_FormatType_Independent_422)))
 					CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set dual link format type to 4:2:2."));
 
-				ULONG routingValue = EPOCH_SET_ROUTING(srcElement, dstElement, BLUE_CONNECTOR_PROP_SINGLE_LINK);
+				ULONG routingValue = EPOCH_SET_ROUTING(src_element, dst_element, BLUE_CONNECTOR_PROP_SINGLE_LINK);
 				if (BLUE_FAIL(blue_->set_card_property32(MR2_ROUTING, routingValue)))
 					CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(" Failed to MR 2 routing."));
 
