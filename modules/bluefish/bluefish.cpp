@@ -42,7 +42,7 @@ std::wstring version()
 {
 	try
 	{
-		bvc_wrapper blue = bvc_wrapper();
+		bvc_wrapper blue;
 		return u16(blue.get_version());
 	}
 	catch(...)
@@ -57,7 +57,7 @@ std::vector<std::wstring> device_list()
 
 	try
 	{		
-		bvc_wrapper blue = bvc_wrapper();
+		bvc_wrapper blue;
 		int numCards = 0;
 		blue.enumerate(numCards);
 
@@ -77,10 +77,9 @@ void init(core::module_dependencies dependencies)
 {
 	try
 	{
-		bvc_wrapper blue = bvc_wrapper();
+		bvc_wrapper blue;
 		int num_cards = 0;
 		blue.enumerate(num_cards);
-	
 	}
 	catch(...){}
 
