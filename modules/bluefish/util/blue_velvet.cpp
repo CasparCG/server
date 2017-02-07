@@ -40,9 +40,9 @@ namespace caspar { namespace bluefish {
 
 	bvc_wrapper::bvc_wrapper()
 	{
-		bvc_ = nullptr;
-		h_module_ = nullptr;
-		init_function_pointers();
+		if(!init_function_pointers())
+			CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Bluefish drivers not found.  Unable to init Funcion Pointers"));
+		
 		bvc_ = std::shared_ptr<void>(bfcFactory(), bfcDestroy);
 		
 		if (!bvc_)
@@ -150,10 +150,7 @@ namespace caspar { namespace bluefish {
 
 	BLUE_UINT32 bvc_wrapper::get_card_property32(const int iProperty, unsigned int & nValue)
 	{
-		if (bvc_)
-			return (BLUE_UINT32)bfcQueryCardProperty32((BLUEVELVETC_HANDLE)bvc_.get(), iProperty, nValue);
-		else
-			return 0;
+		return (BLUE_UINT32)bfcQueryCardProperty32((BLUEVELVETC_HANDLE)bvc_.get(), iProperty, nValue);
 	}
 
 	BLUE_UINT32 bvc_wrapper::set_card_property32(const int iProperty, const unsigned int nValue)
