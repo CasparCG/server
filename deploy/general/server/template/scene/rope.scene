@@ -60,7 +60,7 @@
   <layers>
     <layer id="start"><producer>scene/rope_end</producer>
       <anchor_x>16</anchor_x>
-      <anchor_y>16</anchor_x>
+      <anchor_y>16</anchor_y>
       <x>${variable.anchor1_x}</x>
       <y>${variable.anchor1_y}</y>
     </layer>
@@ -87,7 +87,7 @@
     <layer id="end">
       <producer>scene/rope_end</producer>
       <anchor_x>16</anchor_x>
-      <anchor_y>16</anchor_x>
+      <anchor_y>16</anchor_y>
       <x>${variable.node20_x}</x>
       <y>${variable.node20_y + function_amplification * sin(variable.PI / (variable.num_nodes + 1) * 20)}</y>
     </layer>
