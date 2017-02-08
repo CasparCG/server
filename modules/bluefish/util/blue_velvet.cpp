@@ -31,7 +31,6 @@
 
 #if defined(_WIN32)
 	#define GET_PROCADDR_FOR_FUNC(name, module) { name = (pFunc_##name)GetProcAddress(reinterpret_cast<HMODULE>(module), #name); if(!name) { return false; } }
-//	#define GET_PROCADDR_FOR_FUNC(name, module) { name = (pFunc_##name)GetProcAddress(module, #name); if(!name) { return false; } }
 #elif defined(__APPLE__)
 	#define GET_PROCADDR_FOR_FUNC(name, module) { name = (pFunc_##name)dlsym(module, #name); if(!name) { return false; } }
 #endif
@@ -142,9 +141,6 @@ namespace caspar { namespace bluefish {
 
 	BLUE_UINT32 bvc_wrapper::detach()
 	{
-		// disable the audio on detach
-		unsigned int audio_value = 0;
-		bfcQueryCardProperty32((BLUEVELVETC_HANDLE)bvc_.get(), EMBEDEDDED_AUDIO_OUTPUT, audio_value);
 		return bfcDetach((BLUEVELVETC_HANDLE)bvc_.get());
 	}
 
