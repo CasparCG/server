@@ -136,77 +136,77 @@ namespace caspar { namespace bluefish {
 
 	BLUE_UINT32 bvc_wrapper::attach(int iDeviceId)
 	{
-		return bfcAttach((BLUEVELVETC_HANDLE)bvc_.get(), iDeviceId);
+		return bfcAttach(bvc_.get(), iDeviceId);
 	}
 
 	BLUE_UINT32 bvc_wrapper::detach()
 	{
-		return bfcDetach((BLUEVELVETC_HANDLE)bvc_.get());
+		return bfcDetach(bvc_.get());
 	}
 
 	BLUE_UINT32 bvc_wrapper::get_card_property32(const int iProperty, unsigned int & nValue)
 	{
-		return (BLUE_UINT32)bfcQueryCardProperty32((BLUEVELVETC_HANDLE)bvc_.get(), iProperty, nValue);
+		return (BLUE_UINT32)bfcQueryCardProperty32(bvc_.get(), iProperty, nValue);
 	}
 
 	BLUE_UINT32 bvc_wrapper::set_card_property32(const int iProperty, const unsigned int nValue)
 	{
-		return bfcSetCardProperty32((BLUEVELVETC_HANDLE)bvc_.get(), iProperty, nValue);
+		return bfcSetCardProperty32(bvc_.get(), iProperty, nValue);
 	}
 
 	BLUE_UINT32 bvc_wrapper::enumerate(int & iDevices)
 	{
-		return bfcEnumerate((BLUEVELVETC_HANDLE)bvc_.get(), iDevices);
+		return bfcEnumerate(bvc_.get(), iDevices);
 	}
 
 	BLUE_UINT32 bvc_wrapper::query_card_type(int & iCardType, int iDeviceID)
 	{
-		return bfcQueryCardType((BLUEVELVETC_HANDLE)bvc_.get(), iCardType, iDeviceID);
+		return bfcQueryCardType(bvc_.get(), iCardType, iDeviceID);
 	}
 
 	BLUE_UINT32 bvc_wrapper::system_buffer_write(unsigned char * pPixels, unsigned long ulSize, unsigned long ulBufferID, unsigned long ulOffset)
 	{
-		return bfcSystemBufferWriteAsync((BLUEVELVETC_HANDLE)bvc_.get(), pPixels, ulSize, nullptr, ulBufferID, ulOffset);
+		return bfcSystemBufferWriteAsync(bvc_.get(), pPixels, ulSize, nullptr, ulBufferID, ulOffset);
 	}
 
 	BLUE_UINT32 bvc_wrapper::system_buffer_read(unsigned char* pPixels, unsigned long ulSize, unsigned long ulBufferID, unsigned long ulOffset)
 	{
-		return bfcSystemBufferReadAsync((BLUEVELVETC_HANDLE)bvc_.get(), pPixels, ulSize, nullptr, ulBufferID, ulOffset);
+		return bfcSystemBufferReadAsync(bvc_.get(), pPixels, ulSize, nullptr, ulBufferID, ulOffset);
 	}
 
 	BLUE_UINT32 bvc_wrapper::video_playback_stop(int iWait, int iFlush)
 	{
-		return bfcVideoPlaybackStop((BLUEVELVETC_HANDLE)bvc_.get(), iWait, iFlush);
+		return bfcVideoPlaybackStop(bvc_.get(), iWait, iFlush);
 	}
 
 	BLUE_UINT32 bvc_wrapper::wait_video_output_sync(unsigned long ulUpdateType, unsigned long & ulFieldCount)
 	{
-		return bfcWaitVideoOutputSync((BLUEVELVETC_HANDLE)bvc_.get(), ulUpdateType, ulFieldCount);
+		return bfcWaitVideoOutputSync(bvc_.get(), ulUpdateType, ulFieldCount);
 	}
 
 	BLUE_UINT32 bvc_wrapper::wait_video_input_sync(unsigned long ulUpdateType, unsigned long & ulFieldCount)
 	{
-		return bfcWaitVideoInputSync((BLUEVELVETC_HANDLE)bvc_.get(), ulUpdateType, ulFieldCount);
+		return bfcWaitVideoInputSync(bvc_.get(), ulUpdateType, ulFieldCount);
 	}
 
 	BLUE_UINT32 bvc_wrapper::render_buffer_update( unsigned long ulBufferID)
 	{
-		return bfcRenderBufferUpdate((BLUEVELVETC_HANDLE)bvc_.get(), ulBufferID);
+		return bfcRenderBufferUpdate(bvc_.get(), ulBufferID);
 	}
 
 	BLUE_UINT32 bvc_wrapper::render_buffer_capture(unsigned long ulBufferID)
 	{
-		return bfcRenderBufferCapture((BLUEVELVETC_HANDLE)bvc_.get(), ulBufferID);
+		return bfcRenderBufferCapture(bvc_.get(), ulBufferID);
 	}
 
 	BLUE_UINT32 bvc_wrapper::encode_hanc_frame(unsigned int nCardType, hanc_stream_info_struct * pHancEncodeInfo, void * pAudioBuffer, unsigned int nAudioChannels, unsigned int nAudioSamples, unsigned int nSampleType, unsigned int nAudioFlags)
 	{
-		return bfcEncodeHancFrameEx((BLUEVELVETC_HANDLE)bvc_.get(), CRD_BLUE_NEUTRON, pHancEncodeInfo, pAudioBuffer, nAudioChannels, nAudioSamples, nSampleType, nAudioFlags);
+		return bfcEncodeHancFrameEx(bvc_.get(), CRD_BLUE_NEUTRON, pHancEncodeInfo, pAudioBuffer, nAudioChannels, nAudioSamples, nSampleType, nAudioFlags);
 	}
 
 	BLUE_UINT32 bvc_wrapper::decode_hanc_frame(unsigned int nCardType, unsigned int * pHancBuffer, hanc_decode_struct * pHancDecodeInfo)
 	{
-		return bfcDecodeHancFrameEx((BLUEVELVETC_HANDLE)bvc_.get(), CRD_BLUE_NEUTRON, pHancBuffer, pHancDecodeInfo);
+		return bfcDecodeHancFrameEx(bvc_.get(), CRD_BLUE_NEUTRON, pHancBuffer, pHancDecodeInfo);
 	}
 
 	BLUE_UINT32 bvc_wrapper::get_frame_info_for_video_mode(const unsigned int nVideoMode, unsigned int&  nWidth, unsigned int& nHeight, unsigned int& nRate, unsigned int& bIs1001, unsigned int& bIsProgressive)
