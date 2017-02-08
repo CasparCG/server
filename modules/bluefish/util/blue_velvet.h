@@ -137,10 +137,6 @@ public:
 private:
 	bool					init_function_pointers();
 	
-
-//	HMODULE					h_module_;
-//	BLUEVELVETC_HANDLE		bvc_;
-
 	std::shared_ptr<void>	h_module_;
 	std::shared_ptr<void>	bvc_;
 
