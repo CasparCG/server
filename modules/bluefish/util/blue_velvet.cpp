@@ -179,6 +179,23 @@ namespace caspar { namespace bluefish {
 		return bfcVideoPlaybackStop(bvc_.get(), iWait, iFlush);
 	}
 
+	BLUE_UINT32 bvc_wrapper::video_playback_start(int step, int loop)
+	{
+		return bfcVideoPlaybackStart(bvc_.get(), step, loop);
+	}
+
+	BLUE_UINT32 bvc_wrapper::video_playback_allocate(unsigned long& buffer_id, unsigned long& underrun)
+	{
+		void* unused = nullptr;
+		return bfcVideoPlaybackAllocate(bvc_.get(), &unused, buffer_id, underrun);
+	}
+
+	BLUE_UINT32 bvc_wrapper::video_playback_present(unsigned long buffer_id, unsigned long count, unsigned long keep, unsigned long odd)
+	{
+		unsigned long unique_id;
+		return bfcVideoPlaybackPresent(bvc_.get(), unique_id, buffer_id, count, keep, odd);
+	}
+
 	BLUE_UINT32 bvc_wrapper::wait_video_output_sync(unsigned long ulUpdateType, unsigned long & ulFieldCount)
 	{
 		return bfcWaitVideoOutputSync(bvc_.get(), ulUpdateType, ulFieldCount);
