@@ -135,7 +135,6 @@ struct bluefish_consumer : boost::noncopyable
 
 	std::array<blue_dma_buffer_ptr, 4>					all_frames_;	
 	std::queue<blue_dma_buffer_ptr>						reserved_frames_;
-	std::mutex											reserved_frames_lock_;
 	std::queue<blue_dma_buffer_ptr>						live_frames_;
 	std::mutex											live_frames_lock_;
 	std::shared_ptr<std::thread>						dma_present_thread_;
@@ -581,7 +580,7 @@ public:
 			if (dma_present_thread_ == 0)
 			{
 				end_dma_thread_ = false;
-				dma_present_thread_ = spl::make_shared<std::thread>(&dma_present_thread_actual, this);
+				dma_present_thread_ = std::make_shared<std::thread>(&dma_present_thread_actual, this);
 #if defined(_WIN32)
 				HANDLE handle = (HANDLE)dma_present_thread_->native_handle();
 				SetThreadPriority(handle, THREAD_PRIORITY_HIGHEST);
