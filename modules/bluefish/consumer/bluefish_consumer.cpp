@@ -133,7 +133,14 @@ struct bluefish_consumer : boost::noncopyable
 			
 	unsigned int										vid_fmt_;
 
-	std::array<blue_dma_buffer_ptr, 4>					reserved_frames_;	
+	std::array<blue_dma_buffer_ptr, 4>					all_frames_;	
+	std::queue<blue_dma_buffer_ptr>						reserved_frames_;
+	std::mutex											reserved_frames_lock_;
+	std::queue<blue_dma_buffer_ptr>						live_frames_;
+	std::mutex											live_frames_lock_;
+	std::shared_ptr<std::thread>						dma_present_thread_;
+	bool												end_dma_thread_;
+
 	tbb::concurrent_bounded_queue<core::const_frame>	frame_buffer_;
 	tbb::atomic<int64_t>								presentation_delay_millis_;
 	core::const_frame									previous_frame_				= core::const_frame::empty();
@@ -232,7 +239,7 @@ public:
 			CASPAR_LOG(info) << print() << TEXT(" Enabled embedded-audio.");
 		}
 
-		if(BLUE_FAIL(blue_->set_card_property32(VIDEO_OUTPUT_ENGINE, VIDEO_ENGINE_FRAMESTORE)))
+		if(BLUE_FAIL(blue_->set_card_property32(VIDEO_OUTPUT_ENGINE, VIDEO_ENGINE_PLAYBACK)))
 			CASPAR_LOG(warning) << print() << TEXT(" Failed to set video engine.");
 
 		if (is_epoch_card((*blue_)))
@@ -241,7 +248,10 @@ public:
 		enable_video_output();
 						
 		int n = 0;
-		boost::range::generate(reserved_frames_, [&]{return std::make_shared<blue_dma_buffer>(static_cast<int>(format_desc_.size), n++);});
+		boost::range::generate(all_frames_, [&]{return std::make_shared<blue_dma_buffer>(static_cast<int>(format_desc_.size), n++);});
+	
+		for (size_t i = 0; i < all_frames_.size(); i++)
+			reserved_frames_.push(all_frames_[i]);
 	}
 
 	~bluefish_consumer()
@@ -250,8 +260,12 @@ public:
 		{
 			executor_.invoke([&]
 			{
+				end_dma_thread_ = true;
 				disable_video_output();
-				blue_->detach();		
+				blue_->detach();	
+
+				if (dma_present_thread_)
+					dma_present_thread_->join();
 			});
 		}
 		catch(...)
@@ -270,6 +284,8 @@ public:
 			{
 				if (BLUE_FAIL(blue_->set_card_property32(DEFAULT_VIDEO_OUTPUT_CHANNEL, out_vid_channel)))
 					CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(" Failed to set video stream."));
+
+				blue_->video_playback_stop(0, 0);
 			}
 		}
 	}
@@ -436,17 +452,88 @@ public:
 			}
 
 			return true;
-		}, caspar::task_priority::higher_priority);
+		});
+	}
+
+	static void dma_present_thread_actual(void* arg)
+	{
+		bluefish_consumer* blue = (bluefish_consumer*)arg;
+
+		bvc_wrapper wait_b;
+		wait_b.attach(blue->device_index_);
+		EBlueVideoChannel out_vid_channel = get_bluesdk_videochannel_from_streamid(blue->device_output_channel_);
+		wait_b.set_card_property32(DEFAULT_VIDEO_OUTPUT_CHANNEL, out_vid_channel);
+		int frames_to_buffer = 3;
+		unsigned long buffer_id = 0;
+		unsigned long underrun = 0;
+
+		while (!blue->end_dma_thread_)
+		{
+			if (blue->live_frames_.size() && BLUE_OK(blue->blue_->video_playback_allocate(buffer_id, underrun)))
+			{
+				blue->live_frames_lock_.lock();
+				blue_dma_buffer_ptr buf = blue->live_frames_.front();
+				blue->live_frames_.pop();
+				blue->live_frames_lock_.unlock();
+
+				// Send and display
+				if (blue->embedded_audio_)
+				{
+					// Do video first, then encode hanc, then do hanc DMA...
+					blue->blue_->system_buffer_write(const_cast<uint8_t*>(buf->image_data()),
+						static_cast<unsigned long>(buf->image_size()),
+						BlueImage_HANC_DMABuffer(buffer_id, BLUE_DATA_IMAGE),
+						0);
+
+					blue->blue_->system_buffer_write(buf->hanc_data(),
+						static_cast<unsigned long>(buf->hanc_size()),
+						BlueImage_HANC_DMABuffer(buffer_id, BLUE_DATA_HANC),
+						0);
+
+					if (BLUE_FAIL(blue->blue_->video_playback_present(BlueBuffer_Image_HANC(buffer_id), 1, 0, 0)))
+					{
+						CASPAR_LOG(warning) << blue->print() << TEXT(" video_playback_present failed.");
+					}
+				}
+				else
+				{
+					blue->blue_->system_buffer_write(const_cast<uint8_t*>(buf->image_data()),
+						static_cast<unsigned long>(buf->image_size()),
+						BlueImage_DMABuffer(buffer_id, BLUE_DATA_IMAGE),
+						0);
+
+					if (BLUE_FAIL(blue->blue_->video_playback_present(BlueBuffer_Image(buffer_id), 1, 0, 0)))
+						CASPAR_LOG(warning) << blue->print() << TEXT(" video_playback_present failed.");
+				}
+
+				//				blue->graph_->set_value("frame-time", static_cast<float>(blue->frame_timer_.elapsed()*blue->format_desc_.fps*0.5));
+
+				blue->reserved_frames_lock_.lock();
+				blue->reserved_frames_.push(buf);
+				blue->reserved_frames_lock_.unlock();
+			}
+			else
+			{
+				// do WFS	
+				unsigned long n_field = 0;
+				wait_b.wait_video_output_sync(UPD_FMT_FRAME, n_field);
+			}
+
+			if (frames_to_buffer > 0)
+			{
+				frames_to_buffer--;
+				if (frames_to_buffer == 0)
+				{
+					if (BLUE_FAIL(blue->blue_->video_playback_start(0, 0)))
+						CASPAR_LOG(warning) << blue->print() << TEXT("Error video playback start failed");
+				}
+			}
+		}
+		wait_b.detach();
 	}
 
 	void display_frame(core::const_frame frame)
 	{
-		// Sync
-		sync_timer_.restart();
-		unsigned long n_field = 0;
-		blue_->wait_video_output_sync(UPD_FMT_FRAME, n_field);
-		graph_->set_value("sync-time", sync_timer_.elapsed()*format_desc_.fps*0.5);
-		
 		frame_timer_.restart();		
 
 		if (previous_frame_ != core::const_frame::empty())
@@ -455,52 +542,59 @@ public:
 		previous_frame_ = frame;
 
 		// Copy to local buffers
-		if(!frame.image_data().empty())
+		if (reserved_frames_.size())
 		{
-			if(key_only_)						
-				aligned_memshfl(reserved_frames_.front()->image_data(), frame.image_data().begin(), frame.image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+			reserved_frames_lock_.lock();
+			blue_dma_buffer_ptr buf = reserved_frames_.front();
+			reserved_frames_.pop();
+			reserved_frames_lock_.unlock();
+			void* dest = buf->image_data();
+
+			if (!frame.image_data().empty())
+			{
+				if (key_only_)
+					aligned_memshfl(dest, frame.image_data().begin(), frame.image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+				else
+					A_memcpy(dest, frame.image_data().begin(), frame.image_data().size());
+			}
 			else
-				A_memcpy(reserved_frames_.front()->image_data(), frame.image_data().begin(), frame.image_data().size());
-		}
-		else
-			A_memset(reserved_frames_.front()->image_data(), 0, reserved_frames_.front()->image_size());
-								
-		// Send and display
-		if(embedded_audio_)
-		{
-			auto remapped_audio	= channel_remapper_.mix_and_rearrange(frame.audio_data());
-			auto frame_audio	= core::audio_32_to_24(remapped_audio);
-			encode_hanc(reinterpret_cast<BLUE_UINT32*>(reserved_frames_.front()->hanc_data()), 
-						frame_audio.data(), 
-						static_cast<int>(frame.audio_data().size()/channel_layout_.num_channels), 
-						static_cast<int>(channel_layout_.num_channels));
-								
-			blue_->system_buffer_write(const_cast<uint8_t*>(reserved_frames_.front()->image_data()), 
-											static_cast<unsigned long>(reserved_frames_.front()->image_size()),  
-											BlueImage_HANC_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_IMAGE), 
-											0);
+				A_memset(dest, 0, reserved_frames_.front()->image_size());
 
-			blue_->system_buffer_write(reserved_frames_.front()->hanc_data(),
-											static_cast<unsigned long>(reserved_frames_.front()->hanc_size()),
-											BlueImage_HANC_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_HANC),
-											0);
+			frame_timer_.restart();
 
-			if(BLUE_FAIL(blue_->render_buffer_update(BlueBuffer_Image_HANC(reserved_frames_.front()->id()))))
-				CASPAR_LOG(warning) << print() << TEXT(" render_buffer_update failed.");
-		}
-		else
-		{
-			blue_->system_buffer_write(const_cast<uint8_t*>(reserved_frames_.front()->image_data()),
-											static_cast<unsigned long>(reserved_frames_.front()->image_size()), 
-											BlueImage_DMABuffer(reserved_frames_.front()->id(), BLUE_DATA_IMAGE),
-											0);
-			
-			if(BLUE_FAIL(blue_->render_buffer_update(BlueBuffer_Image(reserved_frames_.front()->id()))))
-				CASPAR_LOG(warning) << print() << TEXT(" render_buffer_update failed.");
-		}
+			// remap, encode and copy hanc data
+			if (embedded_audio_)
+			{
+				auto remapped_audio = channel_remapper_.mix_and_rearrange(frame.audio_data());
+				auto frame_audio = core::audio_32_to_24(remapped_audio);
+				encode_hanc(reinterpret_cast<BLUE_UINT32*>(buf->hanc_data()),
+					frame_audio.data(),
+					static_cast<int>(frame.audio_data().size() / channel_layout_.num_channels),
+					static_cast<int>(channel_layout_.num_channels));
+			}
 
-		boost::range::rotate(reserved_frames_, std::begin(reserved_frames_)+1);
+			live_frames_lock_.lock();
+			live_frames_.push(buf);
+			live_frames_lock_.unlock();
+
+			// start the thread if required.
+			if (dma_present_thread_ == 0)
+			{
+				end_dma_thread_ = false;
+				dma_present_thread_ = spl::make_shared<std::thread>(&dma_present_thread_actual, this);
+#if defined(_WIN32)
+				HANDLE handle = (HANDLE)dma_present_thread_->native_handle();
+				SetThreadPriority(handle, THREAD_PRIORITY_HIGHEST);
+#endif
+			}
+		}
 		graph_->set_value("frame-time", static_cast<float>(frame_timer_.elapsed()*format_desc_.fps*0.5));
+
+		// Sync
+		sync_timer_.restart();
+		unsigned long n_field = 0;
+		blue_->wait_video_output_sync(UPD_FMT_FRAME, n_field);
+		graph_->set_value("sync-time", sync_timer_.elapsed()*format_desc_.fps*0.5);
 	}
 
 	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, int audio_samples, int audio_nchannels)
