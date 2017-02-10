@@ -122,6 +122,10 @@ public:
 	BLUE_UINT32 system_buffer_read(unsigned char* pPixels, unsigned long ulSize, unsigned long ulBufferID, unsigned long ulOffset);
 
 	BLUE_UINT32 video_playback_stop(int iWait, int iFlush);
+	BLUE_UINT32 video_playback_start(int wait, int loop);
+	BLUE_UINT32 video_playback_allocate(unsigned long& buffer_id, unsigned long& underrun);
+	BLUE_UINT32 video_playback_present(unsigned long buffer_id, unsigned long count, unsigned long keep, unsigned long odd);
+
 	BLUE_UINT32 wait_video_output_sync(unsigned long ulUpdateType, unsigned long& ulFieldCount);
 	BLUE_UINT32 wait_video_input_sync(unsigned long ulUpdateType, unsigned long & ulFieldCount);
 
