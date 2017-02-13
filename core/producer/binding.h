@@ -69,9 +69,9 @@ struct impl_base : std::enable_shared_from_this<impl_base>
 		{
 			if (dependency == other)
 				return true;
-			
+
 			if (dependency->depends_on(other))
-				return true;		
+				return true;
 		}
 
 		return false;
@@ -177,7 +177,7 @@ private:
 			unbind();
 			depend_on(other);
 			expression_ = [other]{ return other->get(); };
-			//evaluate();
+			evaluate();
 		}
 
 		void unbind()
@@ -545,7 +545,7 @@ public:
 		std::shared_ptr<void> subscription(new char);
 
 		on_change(subscription, listener);
-		
+
 		return subscription;
 	}
 private:
@@ -600,7 +600,7 @@ public:
 
 		binding<T> result([condition, true_result, false_result]()
 		{
-			return condition.get() ? true_result.get() : false_result.get();		
+			return condition.get() ? true_result.get() : false_result.get();
 		});
 
 		result.depend_on(condition);
@@ -647,7 +647,7 @@ binding<T> add_tween(
 		const std::wstring& easing)
 {
 	tweener tween(easing);
-	
+
 	double start_val = to_tween.as<double>().get();
 	double destination_val = static_cast<double>(destination_value);
 	double start_time = counter.as<double>().get();
