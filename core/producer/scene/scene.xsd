@@ -201,11 +201,12 @@
                         <xs:documentation>
                           Each keyframe specifies a value that the variable should have at a specific timeline frame.
                           The value can be either immediately changed if no easing is specified, otherwise it is animated to the value with the given easing curve.
+                          The actual value to animate to can itself be an expression.
                         </xs:documentation>
                       </xs:annotation>
                       <xs:complexType>
                         <xs:simpleContent>
-                          <xs:extension base="xs:decimal">
+                          <xs:extension base="number_expression">
                             <xs:attribute name="at" type="xs:nonNegativeInteger" use="required"><xs:annotation><xs:documentation>The frame to place the keyframe at.</xs:documentation></xs:annotation></xs:attribute>
                             <xs:attribute name="easing" type="easing" use="optional"><xs:annotation><xs:documentation>If omitted there will be no animation but an immediate value change instead.</xs:documentation></xs:annotation></xs:attribute>
                           </xs:extension>
