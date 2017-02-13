@@ -77,7 +77,7 @@ std::map<std::wstring, std::wstring> enumerate_fonts()
 
 	for(auto iter = directory_iterator(env::font_folder()), end = directory_iterator(); iter != end; ++iter)
 	{
-		try 
+		try
 		{
 			auto file = (*iter);
 			if (is_regular_file(file.path()))
@@ -121,7 +121,7 @@ text_info& find_font_file(text_info& info)
 }
 
 } // namespace text
-	
+
 
 struct text_producer::impl
 {
@@ -145,10 +145,9 @@ struct text_producer::impl
 	draw_frame								frame_;
 	text::texture_atlas						atlas_						{ 1024, 512, 4 };
 	text::texture_font						font_;
-	bool									dirty_						= false;
 
 public:
-	explicit impl(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, text::text_info& text_info, long parent_width, long parent_height, bool standalone) 
+	explicit impl(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, text::text_info& text_info, long parent_width, long parent_height, bool standalone)
 		: frame_factory_(frame_factory)
 		, x_(x), y_(y)
 		, parent_width_(parent_width), parent_height_(parent_height)
@@ -161,16 +160,16 @@ public:
 		font_.load_glyphs(text::unicode_block::Latin_Extended_A, text_info.color);
 
 		tracking_.value().set(text_info.tracking);
-		scale_x_.value().set(text_info.scale_x); 
-		scale_y_.value().set(text_info.scale_y); 
+		scale_x_.value().set(text_info.scale_x);
+		scale_y_.value().set(text_info.scale_y);
 		shear_.value().set(text_info.shear);
 		text_subscription_ = text_.value().on_change([this]()
 		{
-			dirty_ = true;
+			generate_frame();
 		});
 		tracking_subscription_ = tracking_.value().on_change([this]()
 		{
-			dirty_ = true;
+			generate_frame();
 		});
 
 		constraints_.height.depend_on(text());
@@ -191,7 +190,7 @@ public:
 
 		text::string_metrics metrics;
 		font_.set_tracking(static_cast<int>(tracking_.value().get()));
-		
+
 		auto vertex_stream = font_.create_vertex_stream(text_.value().get(), x_, y_, parent_width_, parent_height_, &metrics, shear_.value().get());
 		auto frame = frame_factory_->create_frame(vertex_stream.data(), pfd, core::audio_channel_layout::invalid());
 		memcpy(frame.image_data().data(), atlas_.data(), frame.image_data().size());
@@ -210,15 +209,9 @@ public:
 	}
 
 	// frame_producer
-			
+
 	draw_frame receive_impl()
 	{
-		if (dirty_)
-		{
-			generate_frame();
-			dirty_ = false;
-		}
-
 		return frame_;
 	}
 
@@ -280,7 +273,7 @@ public:
 	{
 		return current_protrude_under_y_.value();
 	}
-	
+
 	std::wstring print() const
 	{
 		return L"text[" + text_.value().get() + L"]";
@@ -290,7 +283,7 @@ public:
 	{
 		return L"text";
 	}
-	
+
 	boost::property_tree::wptree info() const
 	{
 		boost::property_tree::wptree info;
@@ -364,7 +357,7 @@ spl::shared_ptr<frame_producer> create_text_producer(const frame_producer_depend
 	text::text_info text_info;
 	text_info.font = get_param(L"FONT", params, L"verdana");
 	text_info.size = get_param(L"SIZE", params, 30.0); // 30.0f does not seem to work to get as float directly
-	
+
 	std::wstring col_str = get_param(L"color", params, L"#ffffffff");
 	uint32_t col_val = 0xffffffff;
 	try_get_color(col_str, col_val);
