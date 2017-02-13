@@ -56,6 +56,9 @@
 #include <array>
 
 namespace caspar { namespace bluefish { 
+
+#define BLUEFISH_HW_BUFFER_DEPTH 1
+#define BLUEFISH_SOFTWARE_BUFFERS 4
 		
 enum class hardware_downstream_keyer_mode
 {
@@ -117,41 +120,39 @@ bool get_videooutput_channel_routing_info_from_streamid(bluefish_hardware_output
 
 struct bluefish_consumer : boost::noncopyable
 {
-	spl::shared_ptr<bvc_wrapper>						blue_;
-	const unsigned int									device_index_;
-	const core::video_format_desc						format_desc_;
-	const core::audio_channel_layout					channel_layout_;
-	core::audio_channel_remapper						channel_remapper_;
-	const int											channel_index_;
+	spl::shared_ptr<bvc_wrapper>								blue_;
+	const unsigned int											device_index_;
+	const core::video_format_desc								format_desc_;
+	const core::audio_channel_layout							channel_layout_;
+	core::audio_channel_remapper								channel_remapper_;
+	const int													channel_index_;
 
-	const std::wstring									model_name_;
+	const std::wstring											model_name_;
 
-	spl::shared_ptr<diagnostics::graph>					graph_;
-	boost::timer										frame_timer_;
-	boost::timer										tick_timer_;
-	boost::timer										sync_timer_;	
+	spl::shared_ptr<diagnostics::graph>							graph_;
+	boost::timer												frame_timer_;
+	boost::timer												tick_timer_;
+	boost::timer												sync_timer_;	
 			
-	unsigned int										vid_fmt_;
+	unsigned int												vid_fmt_;
 
-	std::array<blue_dma_buffer_ptr, 4>					all_frames_;	
-	std::queue<blue_dma_buffer_ptr>						reserved_frames_;
-	std::mutex											reserved_frames_lock_;
-	std::queue<blue_dma_buffer_ptr>						live_frames_;
-	std::mutex											live_frames_lock_;
-	std::shared_ptr<std::thread>						dma_present_thread_;
-	bool												end_dma_thread_;
+	std::array<blue_dma_buffer_ptr, BLUEFISH_SOFTWARE_BUFFERS>	all_frames_;	
+	tbb::concurrent_bounded_queue<blue_dma_buffer_ptr>			reserved_frames_;
+	tbb::concurrent_bounded_queue<blue_dma_buffer_ptr>			live_frames_;
+	std::shared_ptr<std::thread>								dma_present_thread_;
+	tbb::atomic<bool>											end_dma_thread_;
 
-	tbb::concurrent_bounded_queue<core::const_frame>	frame_buffer_;
-	tbb::atomic<int64_t>								presentation_delay_millis_;
-	core::const_frame									previous_frame_				= core::const_frame::empty();
+	tbb::concurrent_bounded_queue<core::const_frame>			frame_buffer_;
+	tbb::atomic<int64_t>										presentation_delay_millis_;
+	core::const_frame											previous_frame_				= core::const_frame::empty();
 
-	const bool											embedded_audio_;
-	const bool											key_only_;
+	const bool													embedded_audio_;
+	const bool													key_only_;
 		
-	executor											executor_;
-	hardware_downstream_keyer_mode						hardware_keyer_;
-	hardware_downstream_keyer_audio_source				keyer_audio_source_;
-	bluefish_hardware_output_channel					device_output_channel_;
+	executor													executor_;
+	hardware_downstream_keyer_mode								hardware_keyer_;
+	hardware_downstream_keyer_audio_source						keyer_audio_source_;
+	bluefish_hardware_output_channel							device_output_channel_;
 public:
 	bluefish_consumer(
 			const core::video_format_desc& format_desc,
@@ -182,6 +183,9 @@ public:
 		executor_.set_capacity(1);
 		presentation_delay_millis_ = 0;
 
+		reserved_frames_.set_capacity(BLUEFISH_SOFTWARE_BUFFERS);
+		live_frames_.set_capacity(BLUEFISH_SOFTWARE_BUFFERS);
+		
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
 		graph_->set_color("sync-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		graph_->set_color("frame-time", diagnostics::color(0.5f, 1.0f, 0.2f));
@@ -302,7 +306,7 @@ public:
 			bool duallink_4224_enabled = false;
 
 			if ((device_output_channel_ == bluefish_hardware_output_channel::channel_a || device_output_channel_ == bluefish_hardware_output_channel::channel_c) &&
-				(hardware_keyer_ == hardware_downstream_keyer_mode::external))
+				(hardware_keyer_ == hardware_downstream_keyer_mode::external) || (hardware_keyer_ == hardware_downstream_keyer_mode::internal) )
 			{
 				duallink_4224_enabled = true;
 			}
@@ -397,6 +401,10 @@ public:
 			if (BLUE_FAIL(blue_->get_card_property32(INVALID_VIDEO_MODE_FLAG, invalidVideoModeFlag)))
 				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(" Failed to get invalid video mode flag"));
 
+			// The bluefish HW keyer is going to pre-multiply the RGB with the A. 
+			// This setting results in the correct image coming through when using the 1080_test.tga image.
+			keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_DATA_IS_NOT_PREMULTIPLIED(keyer_control_value);
+
 			keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_ENABLED(keyer_control_value);
 			if (BLUE_FAIL(blue_->get_card_property32(VIDEO_INPUT_SIGNAL_VIDEO_MODE, inputVideoSignal)))
 				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(" Failed to get video input signal mode"));
@@ -455,62 +463,54 @@ public:
 		});
 	}
 
-	static void dma_present_thread_actual(void* arg)
+	void dma_present_thread_actual()
 	{
-		bluefish_consumer* blue = (bluefish_consumer*)arg;
-
 		bvc_wrapper wait_b;
-		wait_b.attach(blue->device_index_);
-		EBlueVideoChannel out_vid_channel = get_bluesdk_videochannel_from_streamid(blue->device_output_channel_);
+		wait_b.attach(device_index_);
+		EBlueVideoChannel out_vid_channel = get_bluesdk_videochannel_from_streamid(device_output_channel_);
 		wait_b.set_card_property32(DEFAULT_VIDEO_OUTPUT_CHANNEL, out_vid_channel);
-		int frames_to_buffer = 3;
+		int frames_to_buffer = BLUEFISH_HW_BUFFER_DEPTH;
 		unsigned long buffer_id = 0;
 		unsigned long underrun = 0;
 
-		while (!blue->end_dma_thread_)
+		while (!end_dma_thread_)
 		{
-			if (blue->live_frames_.size() && BLUE_OK(blue->blue_->video_playback_allocate(buffer_id, underrun)))
+			if (!live_frames_.empty() && BLUE_OK(blue_->video_playback_allocate(buffer_id, underrun)))
 			{
-				blue->live_frames_lock_.lock();
-				blue_dma_buffer_ptr buf = blue->live_frames_.front();
-				blue->live_frames_.pop();
-				blue->live_frames_lock_.unlock();
+				blue_dma_buffer_ptr buf = nullptr;
+				live_frames_.pop(buf);
 
 				// Send and display
-				if (blue->embedded_audio_)
+				if (embedded_audio_)
 				{
-					// Do video first, then encode hanc, then do hanc DMA...
-					blue->blue_->system_buffer_write(const_cast<uint8_t*>(buf->image_data()),
+					// Do video first, then do hanc DMA...
+					blue_->system_buffer_write(const_cast<uint8_t*>(buf->image_data()),
 						static_cast<unsigned long>(buf->image_size()),
 						BlueImage_HANC_DMABuffer(buffer_id, BLUE_DATA_IMAGE),
 						0);
 
-					blue->blue_->system_buffer_write(buf->hanc_data(),
+					blue_->system_buffer_write(buf->hanc_data(),
 						static_cast<unsigned long>(buf->hanc_size()),
 						BlueImage_HANC_DMABuffer(buffer_id, BLUE_DATA_HANC),
 						0);
 
-					if (BLUE_FAIL(blue->blue_->video_playback_present(BlueBuffer_Image_HANC(buffer_id), 1, 0, 0)))
+					if (BLUE_FAIL(blue_->video_playback_present(BlueBuffer_Image_HANC(buffer_id), 1, 0, 0)))
 					{
-						CASPAR_LOG(warning) << blue->print() << TEXT(" video_playback_present failed.");
+						CASPAR_LOG(warning) << print() << TEXT(" video_playback_present failed.");
 					}
 				}
 				else
 				{
-					blue->blue_->system_buffer_write(const_cast<uint8_t*>(buf->image_data()),
+					blue_->system_buffer_write(const_cast<uint8_t*>(buf->image_data()),
 						static_cast<unsigned long>(buf->image_size()),
 						BlueImage_DMABuffer(buffer_id, BLUE_DATA_IMAGE),
 						0);
 
-					if (BLUE_FAIL(blue->blue_->video_playback_present(BlueBuffer_Image(buffer_id), 1, 0, 0)))
-						CASPAR_LOG(warning) << blue->print() << TEXT(" video_playback_present failed.");
+					if (BLUE_FAIL(blue_->video_playback_present(BlueBuffer_Image(buffer_id), 1, 0, 0)))
+						CASPAR_LOG(warning) << print() << TEXT(" video_playback_present failed.");
 				}
 
-				//				blue->graph_->set_value("frame-time", static_cast<float>(blue->frame_timer_.elapsed()*blue->format_desc_.fps*0.5));
-
-				blue->reserved_frames_lock_.lock();
-				blue->reserved_frames_.push(buf);
-				blue->reserved_frames_lock_.unlock();
+				reserved_frames_.push(buf);
 			}
 			else
 			{
@@ -524,8 +524,8 @@ public:
 				frames_to_buffer--;
 				if (frames_to_buffer == 0)
 				{
-					if (BLUE_FAIL(blue->blue_->video_playback_start(0, 0)))
-						CASPAR_LOG(warning) << blue->print() << TEXT("Error video playback start failed");
+					if (BLUE_FAIL(blue_->video_playback_start(0, 0)))
+						CASPAR_LOG(warning) << print() << TEXT("Error video playback start failed");
 				}
 			}
 		}
@@ -542,12 +542,10 @@ public:
 		previous_frame_ = frame;
 
 		// Copy to local buffers
-		if (reserved_frames_.size())
+		if (!reserved_frames_.empty())
 		{
-			reserved_frames_lock_.lock();
-			blue_dma_buffer_ptr buf = reserved_frames_.front();
-			reserved_frames_.pop();
-			reserved_frames_lock_.unlock();
+			blue_dma_buffer_ptr buf = nullptr;
+			reserved_frames_.pop(buf);
 			void* dest = buf->image_data();
 
 			if (!frame.image_data().empty())
@@ -558,7 +556,7 @@ public:
 					A_memcpy(dest, frame.image_data().begin(), frame.image_data().size());
 			}
 			else
-				A_memset(dest, 0, reserved_frames_.front()->image_size());
+				A_memset(dest, 0, buf->image_size());
 
 			frame_timer_.restart();
 
@@ -572,16 +570,13 @@ public:
 					static_cast<int>(frame.audio_data().size() / channel_layout_.num_channels),
 					static_cast<int>(channel_layout_.num_channels));
 			}
-
-			live_frames_lock_.lock();
 			live_frames_.push(buf);
-			live_frames_lock_.unlock();
 
 			// start the thread if required.
 			if (dma_present_thread_ == 0)
 			{
 				end_dma_thread_ = false;
-				dma_present_thread_ = std::make_shared<std::thread>(&dma_present_thread_actual, this);
+				dma_present_thread_ = std::make_shared<std::thread>([this] {dma_present_thread_actual(); });
 #if defined(_WIN32)
 				HANDLE handle = (HANDLE)dma_present_thread_->native_handle();
 				SetThreadPriority(handle, THREAD_PRIORITY_HIGHEST);
@@ -729,7 +724,7 @@ public:
 
 	int buffer_depth() const override
 	{
-		return 1;
+		return BLUEFISH_HW_BUFFER_DEPTH;
 	}
 	
 	int index() const override
