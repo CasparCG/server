@@ -82,7 +82,7 @@
                     <xs:element type="number_expression" name="perspective_lower_right_y" minOccurs="0">            <xs:annotation><xs:documentation>The Y position within the layer coordinate system to corner pin the lower right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
                     <xs:element type="number_expression" name="perspective_lower_left_x" minOccurs="0" default="0"> <xs:annotation><xs:documentation>The X position within the layer coordinate system to corner pin the lower left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
                     <xs:element type="number_expression" name="perspective_lower_left_y" minOccurs="0">             <xs:annotation><xs:documentation>The Y position within the layer coordinate system to corner pin the lower left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element name="adjustment" minOccurs="0">
+                    <xs:element name="adjustments" minOccurs="0">
                       <xs:annotation>
                         <xs:documentation>
                           Properties regarding image adjustments. They are addressable from expressions as layer.[id].adjustment.[property].
