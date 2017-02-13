@@ -225,7 +225,8 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 		{
 			ptree_verify_element_name(elem, L"timeline");
 
-			auto& variable = scene->get_variable(ptree_get<std::wstring>(elem.second, L"<xmlattr>.variable"));
+			auto variable_name	= ptree_get<std::wstring>(elem.second, L"<xmlattr>.variable");
+			auto& variable		= scene->get_variable(variable_name);
 
 			for (auto& k : elem.second)
 			{
@@ -237,10 +238,12 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 				auto easing = k.second.get(L"<xmlattr>.easing", L"");
 				auto at = ptree_get<int64_t>(k.second, L"<xmlattr>.at");
 
+				auto keyframe_variable_name = L"timeline." + variable_name + L"." + boost::lexical_cast<std::wstring>(at);
+
 				if (variable.is<double>())
-					scene->add_keyframe(variable.as<double>(), ptree_get_value<double>(k.second), at, easing);
+					scene->add_keyframe(variable.as<double>(), scene->create_variable<double>(keyframe_variable_name, false, ptree_get_value<std::wstring>(k.second)), at, easing);
 				else if (variable.is<int>())
-					scene->add_keyframe(variable.as<int>(), ptree_get_value<int>(k.second), at, easing);
+					scene->add_keyframe(variable.as<int>(), scene->create_variable<int>(keyframe_variable_name, false, ptree_get_value<std::wstring>(k.second)), at, easing);
 			}
 		}
 	}
