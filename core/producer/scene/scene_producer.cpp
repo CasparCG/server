@@ -142,7 +142,6 @@ struct scene_producer::impl
 
 	impl(std::wstring producer_name, int width, int height, const video_format_desc& format_desc)
 		: producer_name_(std::move(producer_name))
-		, pixel_constraints_(width, height)
 		, format_desc_(format_desc)
 		, aggregator_([=] (double x, double y) { return collission_detect(x, y); })
 	{
@@ -166,6 +165,13 @@ struct scene_producer::impl
 		mouse_y_ = mouse_y_variable->value();
 		m_x_ = 0;
 		m_y_ = 0;
+
+		auto scene_width = std::make_shared<core::variable_impl<double>>(boost::lexical_cast<std::wstring>(width), false, width);
+		auto scene_height = std::make_shared<core::variable_impl<double>>(boost::lexical_cast<std::wstring>(height), false, height);
+		store_variable(L"scene_width", scene_width);
+		store_variable(L"scene_height", scene_height);
+		pixel_constraints_.width = scene_width->value();
+		pixel_constraints_.height = scene_height->value();
 	}
 
 	layer& create_layer(
