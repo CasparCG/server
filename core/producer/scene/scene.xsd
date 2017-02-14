@@ -36,7 +36,7 @@
                     <xs:extension base="any_expression">
                       <xs:attribute type="identifier" name="id" use="required"><xs:annotation><xs:documentation>The unique variable name. Will be exposed as [id] if the variable is public or variable.[id] otherwise.</xs:documentation></xs:annotation></xs:attribute>
                       <xs:attribute type="type" name="type" use="required"><xs:annotation><xs:documentation>The variable type. The value/expression of the variable must be parseable/resolvable as/to this type.</xs:documentation></xs:annotation></xs:attribute>
-                      <xs:attribute type="boolean" name="public" use="required"><xs:annotation><xs:documentation>Whether the variable should be accessible from outside the scene or not. Public variables can be accessed via CG UPDATE, CG ADD and as layer.[layerid].parameter.[id] when nested inside another scene.</xs:documentation></xs:annotation></xs:attribute>
+                      <xs:attribute type="boolean" name="public" default="false"><xs:annotation><xs:documentation>Whether the variable should be accessible from outside the scene or not. Public variables can be accessed via CG UPDATE, CG ADD and as layer.[layerid].parameter.[id] when nested inside another scene.</xs:documentation></xs:annotation></xs:attribute>
                     </xs:extension>
                   </xs:simpleContent>
                 </xs:complexType>
