@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scene width="1920" height="1080" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/CasparCG/Server/2.1.0/core/producer/scene/scene.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <variables>
+    <variable type="string" public="true" id="f0">Needs f0</variable>
+  </variables>
+
+  <layers>
+    <layer id="nested_simple_scene">
+      <!-- Nested scene becomes like a MovieClip in flash  -->
+      <producer>scene/namesign/simple</producer>
+      <x>0</x>
+      <y>0</y>
+      <parameters>
+        <!-- Uses the f0 parameter in this scene as the value of f0 in the nested scene as well -->
+        <f0>${f0}</f0>
+      </parameters>
+    </layer>
+  </layers>
+
+  <marks>
+    <mark at="0" type="start" label="intro" />
+    <mark at="100" type="start" label="outro" />
+    <mark at="115" type="remove"/>
+  </marks>
+
+  <timelines>
+    <timeline variable="layer.nested_simple_scene.parameter.plate_x">
+      <keyframe at="0">${-layer.nested_simple_scene.parameter.plate_width}</keyframe>
+      <keyframe at="12" easing="easeoutquad">0</keyframe>
+      <keyframe at="110">0</keyframe>
+      <keyframe at="115" easing="easeoutquad">${-layer.nested_simple_scene.parameter.plate_width}</keyframe>
+    </timeline>
+    <timeline variable="layer.nested_simple_scene.parameter.text_base_position_x">
+      <keyframe at="0">${-layer.nested_simple_scene.parameter.plate_width}</keyframe>
+      <keyframe at="24" easing="easeoutquad">0</keyframe>
+      <keyframe at="105">0</keyframe>
+      <keyframe at="115" easing="easeoutquad">${-layer.nested_simple_scene.parameter.plate_width}</keyframe>
+    </timeline>
+    <timeline variable="layer.nested_simple_scene.parameter.crown_base_position_x">
+      <keyframe at="0">${-layer.nested_simple_scene.parameter.plate_width}</keyframe>
+      <keyframe at="36" easing="easeoutquad">0</keyframe>
+      <keyframe at="100">0</keyframe>
+      <keyframe at="115" easing="easeoutquad">${-layer.nested_simple_scene.parameter.plate_width}</keyframe>
+    </timeline>
+  </timelines>
+</scene>
