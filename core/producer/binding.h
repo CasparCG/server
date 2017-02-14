@@ -31,6 +31,7 @@
 #include <stdexcept>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/utility/value_init.hpp>
 
 #include <common/tweener.h>
 #include <common/except.h>
@@ -99,7 +100,7 @@ private:
 		mutable bool		evaluated_		= false;
 
 		impl()
-			: value_()
+			: value_(boost::value_initialized<T>())
 		{
 		}
 
@@ -110,7 +111,8 @@ private:
 
 		template<typename Expr>
 		impl(const Expr& expression)
-			: expression_(expression)
+			: value_(boost::value_initialized<T>())
+			, expression_(expression)
 		{
 		}
 
@@ -142,7 +144,7 @@ private:
 
 		void evaluate() const override
 		{
-			if (expression_)
+			if (bound())
 			{
 				auto new_value = expression_();
 
@@ -182,7 +184,7 @@ private:
 
 		void unbind()
 		{
-			if (expression_)
+			if (bound())
 			{
 				expression_ = std::function<T ()>();
 				dependencies_.clear();
