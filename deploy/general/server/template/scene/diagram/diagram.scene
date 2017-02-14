@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scene width="1920" height="1080" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/CasparCG/Server/2.1.0/core/producer/scene/scene.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <!--
+  Example scene with animating bar chart. CG NEXT for next data series. 
+   -->
+
+  <variables>
+    <variable type="number" public="true" id="max">100</variable>
+    <variable type="number" public="true" id="series1_bar1">50</variable>
+    <variable type="number" public="true" id="series1_bar2">70</variable>
+    <variable type="number" public="true" id="series1_bar3">100</variable>
+    <variable type="number" public="true" id="series1_bar4">10</variable>
+    <variable type="number" public="true" id="series2_bar1">49</variable>
+    <variable type="number" public="true" id="series2_bar2">10</variable>
+    <variable type="number" public="true" id="series2_bar3">20</variable>
+    <variable type="number" public="true" id="series2_bar4">20</variable>
+    <variable type="number" public="true" id="series3_bar1">60</variable>
+    <variable type="number" public="true" id="series3_bar2">20</variable>
+    <variable type="number" public="true" id="series3_bar3">90</variable>
+    <variable type="number" public="true" id="series3_bar4">30</variable>
+
+    <variable type="number" public="false" id="margin_left">100</variable>
+    <variable type="number" public="false" id="bar_distance">50</variable>
+  </variables>
+
+  <layers>
+    <layer id="bar1">
+      <producer>scene/diagram/bar</producer>
+      <x>${variable.margin_left}</x>
+      <y>0</y>
+      <parameters>
+        <max>${max}</max>
+      </parameters>
+    </layer>
+    <layer id="bar2">
+      <producer>scene/diagram/bar</producer>
+      <x>${layer.bar1.x + layer.bar1.width + variable.bar_distance}</x>
+      <y>0</y>
+      <parameters>
+        <max>${max}</max>
+      </parameters>
+    </layer>
+    <layer id="bar3">
+      <producer>scene/diagram/bar</producer>
+      <x>${layer.bar2.x + layer.bar2.width + variable.bar_distance}</x>
+      <y>0</y>
+      <parameters>
+        <max>${max}</max>
+      </parameters>
+    </layer>
+    <layer id="bar4">
+      <producer>scene/diagram/bar</producer>
+      <x>${layer.bar3.x + layer.bar3.width + variable.bar_distance}</x>
+      <y>0</y>
+      <parameters>
+        <max>${max}</max>
+      </parameters>
+    </layer>
+  </layers>
+
+  <marks>
+    <mark at="0" type="start" label="intro" />
+    <mark at="100" type="stop" />
+    <mark at="200" type="start" label="series2" />
+    <mark at="300" type="stop" />
+    <mark at="400" type="start" label="series3" />
+    <mark at="500" type="stop" />
+    <mark at="600" type="start" label="outro" />
+    <mark at="620" type="remove" />
+  </marks>
+
+  <timelines>
+    <timeline variable="layer.bar1.parameter.value">
+      <keyframe at="0">${series1_bar1}</keyframe>
+      <keyframe at="200">${series2_bar1}</keyframe>
+      <keyframe at="400">${series3_bar1}</keyframe>
+      <keyframe at="600">0</keyframe>
+    </timeline>
+    <timeline variable="layer.bar2.parameter.value">
+      <keyframe at="0">${series1_bar2}</keyframe>
+      <keyframe at="200">${series2_bar2}</keyframe>
+      <keyframe at="400">${series3_bar2}</keyframe>
+      <keyframe at="600">0</keyframe>
+    </timeline>
+    <timeline variable="layer.bar3.parameter.value">
+      <keyframe at="0">${series1_bar3}</keyframe>
+      <keyframe at="200">${series2_bar3}</keyframe>
+      <keyframe at="400">${series3_bar3}</keyframe>
+      <keyframe at="600">0</keyframe>
+    </timeline>
+    <timeline variable="layer.bar4.parameter.value">
+      <keyframe at="0">${series1_bar4}</keyframe>
+      <keyframe at="200">${series2_bar4}</keyframe>
+      <keyframe at="400">${series3_bar4}</keyframe>
+      <keyframe at="600">0</keyframe>
+    </timeline>
+  </timelines>
+</scene>
