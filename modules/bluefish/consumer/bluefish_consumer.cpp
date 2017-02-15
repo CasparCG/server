@@ -475,11 +475,9 @@ public:
 
 		while (!end_dma_thread_)
 		{
-			if (!live_frames_.empty() && BLUE_OK(blue_->video_playback_allocate(buffer_id, underrun)))
+			blue_dma_buffer_ptr buf = nullptr;
+			if (live_frames_.try_pop(buf) && BLUE_OK(blue_->video_playback_allocate(buffer_id, underrun)))
 			{
-				blue_dma_buffer_ptr buf = nullptr;
-				live_frames_.pop(buf);
-
 				// Send and display
 				if (embedded_audio_)
 				{
@@ -540,14 +538,12 @@ public:
 			presentation_delay_millis_ = previous_frame_.get_age_millis();
 
 		previous_frame_ = frame;
+		blue_dma_buffer_ptr buf = nullptr;
 
 		// Copy to local buffers
-		if (!reserved_frames_.empty())
+		if (reserved_frames_.try_pop(buf))
 		{
-			blue_dma_buffer_ptr buf = nullptr;
-			reserved_frames_.pop(buf);
 			void* dest = buf->image_data();
-
 			if (!frame.image_data().empty())
 			{
 				if (key_only_)
