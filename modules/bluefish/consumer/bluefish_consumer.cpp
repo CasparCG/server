@@ -401,9 +401,8 @@ public:
 			if (BLUE_FAIL(blue_->get_card_property32(INVALID_VIDEO_MODE_FLAG, invalidVideoModeFlag)))
 				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(" Failed to get invalid video mode flag"));
 
-			// The bluefish HW keyer is going to pre-multiply the RGB with the A. 
-			// This setting results in the correct image coming through when using the 1080_test.tga image.
-			keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_DATA_IS_NOT_PREMULTIPLIED(keyer_control_value);
+			// The bluefish HW keyer is NOT going to pre-multiply the RGB with the A. 
+			keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_DATA_IS_PREMULTIPLIED(keyer_control_value);
 
 			keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_ENABLED(keyer_control_value);
 			if (BLUE_FAIL(blue_->get_card_property32(VIDEO_INPUT_SIGNAL_VIDEO_MODE, inputVideoSignal)))
