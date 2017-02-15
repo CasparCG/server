@@ -147,6 +147,18 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 		auto& layer						= scene->create_layer(producer, 0, 0, id);
 		auto variable_prefix			= L"layer." + id + L".";
 
+		auto overridden_width = elem.second.get<std::wstring>(L"width", L"");
+		if (!overridden_width.empty())
+			layer.producer.get()->pixel_constraints().width = scene->create_variable<double>(variable_prefix + L"width", false, overridden_width);
+		else
+			scene->create_variable<double>(variable_prefix + L"width", false) = layer.producer.get()->pixel_constraints().width;
+
+		auto overridden_height = elem.second.get<std::wstring>(L"height", L"");
+		if (!overridden_height.empty())
+			layer.producer.get()->pixel_constraints().height = scene->create_variable<double>(variable_prefix + L"height", false, overridden_height);
+		else
+			scene->create_variable<double>(variable_prefix + L"height", false) = layer.producer.get()->pixel_constraints().height;
+
 		layer.hidden					= scene->create_variable<bool>(variable_prefix + L"hidden", false, elem.second.get(L"hidden", L"false"));
 		layer.position.x				= scene->create_variable<double>(variable_prefix + L"x", false, ptree_get<std::wstring>(elem.second, L"x"));
 		layer.position.y				= scene->create_variable<double>(variable_prefix + L"y", false, ptree_get<std::wstring>(elem.second, L"y"));
@@ -155,16 +167,16 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 		layer.rotation					= scene->create_variable<double>(variable_prefix + L"rotation", false, elem.second.get<std::wstring>(L"rotation", L"0.0"));
 		layer.crop.upper_left.x			= scene->create_variable<double>(variable_prefix + L"crop_upper_left_x", false, elem.second.get<std::wstring>(L"crop_upper_left_x", L"0.0"));
 		layer.crop.upper_left.y			= scene->create_variable<double>(variable_prefix + L"crop_upper_left_y", false, elem.second.get<std::wstring>(L"crop_upper_left_y", L"0.0"));
-		layer.crop.lower_right.x		= scene->create_variable<double>(variable_prefix + L"crop_lower_right_x", false, elem.second.get<std::wstring>(L"crop_lower_right_x", layer.producer.get()->pixel_constraints().width.as<std::wstring>().get()));
-		layer.crop.lower_right.y		= scene->create_variable<double>(variable_prefix + L"crop_lower_right_y", false, elem.second.get<std::wstring>(L"crop_lower_right_y", layer.producer.get()->pixel_constraints().height.as<std::wstring>().get()));
+		layer.crop.lower_right.x		= scene->create_variable<double>(variable_prefix + L"crop_lower_right_x", false, elem.second.get<std::wstring>(L"crop_lower_right_x", L"${" + variable_prefix + L"width}"));
+		layer.crop.lower_right.y		= scene->create_variable<double>(variable_prefix + L"crop_lower_right_y", false, elem.second.get<std::wstring>(L"crop_lower_right_y", L"${" + variable_prefix + L"height}"));
 		layer.perspective.upper_left.x	= scene->create_variable<double>(variable_prefix + L"perspective_upper_left_x", false, elem.second.get<std::wstring>(L"perspective_upper_left_x", L"0.0"));
 		layer.perspective.upper_left.y	= scene->create_variable<double>(variable_prefix + L"perspective_upper_left_y", false, elem.second.get<std::wstring>(L"perspective_upper_left_y", L"0.0"));
-		layer.perspective.upper_right.x	= scene->create_variable<double>(variable_prefix + L"perspective_upper_right_x", false, elem.second.get<std::wstring>(L"perspective_upper_right_x", layer.producer.get()->pixel_constraints().width.as<std::wstring>().get()));
+		layer.perspective.upper_right.x	= scene->create_variable<double>(variable_prefix + L"perspective_upper_right_x", false, elem.second.get<std::wstring>(L"perspective_upper_right_x", L"${" + variable_prefix + L"width}"));
 		layer.perspective.upper_right.y	= scene->create_variable<double>(variable_prefix + L"perspective_upper_right_y", false, elem.second.get<std::wstring>(L"perspective_upper_right_y", L"0.0"));
-		layer.perspective.lower_right.x	= scene->create_variable<double>(variable_prefix + L"perspective_lower_right_x", false, elem.second.get<std::wstring>(L"perspective_lower_right_x", layer.producer.get()->pixel_constraints().width.as<std::wstring>().get()));
-		layer.perspective.lower_right.y	= scene->create_variable<double>(variable_prefix + L"perspective_lower_right_y", false, elem.second.get<std::wstring>(L"perspective_lower_right_y", layer.producer.get()->pixel_constraints().height.as<std::wstring>().get()));
+		layer.perspective.lower_right.x	= scene->create_variable<double>(variable_prefix + L"perspective_lower_right_x", false, elem.second.get<std::wstring>(L"perspective_lower_right_x", L"${" + variable_prefix + L"width}"));
+		layer.perspective.lower_right.y	= scene->create_variable<double>(variable_prefix + L"perspective_lower_right_y", false, elem.second.get<std::wstring>(L"perspective_lower_right_y", L"${" + variable_prefix + L"height}"));
 		layer.perspective.lower_left.x	= scene->create_variable<double>(variable_prefix + L"perspective_lower_left_x", false, elem.second.get<std::wstring>(L"perspective_lower_left_x", L"0.0"));
-		layer.perspective.lower_left.y	= scene->create_variable<double>(variable_prefix + L"perspective_lower_left_y", false, elem.second.get<std::wstring>(L"perspective_lower_left_y", layer.producer.get()->pixel_constraints().height.as<std::wstring>().get()));
+		layer.perspective.lower_left.y	= scene->create_variable<double>(variable_prefix + L"perspective_lower_left_y", false, elem.second.get<std::wstring>(L"perspective_lower_left_y", L"${" + variable_prefix + L"height}"));
 
 		layer.adjustments.opacity		= scene->create_variable<double>(variable_prefix + L"adjustment.opacity", false, elem.second.get(L"adjustments.opacity", L"1.0"));
 		layer.is_key					= scene->create_variable<bool>(variable_prefix + L"is_key", false, elem.second.get(L"is_key", L"false"));
@@ -178,9 +190,6 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 		layer.chroma_key.softness		= scene->create_variable<double>(variable_prefix + L"chroma_key.softness", false, elem.second.get(L"chroma_key.softness", L"0.0"));
 		layer.chroma_key.spill			= scene->create_variable<double>(variable_prefix + L"chroma_key.spill", false, elem.second.get(L"chroma_key.spill", L"1.0"));
 		layer.chroma_key.spill_darken	= scene->create_variable<double>(variable_prefix + L"chroma_key.spill_darken", false, elem.second.get(L"chroma_key.spill_darken", L"2.0"));
-
-		scene->create_variable<double>(variable_prefix + L"width", false) = layer.producer.get()->pixel_constraints().width;
-		scene->create_variable<double>(variable_prefix + L"height", false) = layer.producer.get()->pixel_constraints().height;
 
 		for (auto& var_name : producer->get_variables())
 		{
