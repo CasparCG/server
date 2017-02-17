@@ -148,14 +148,16 @@ private:
 			{
 				auto new_value = expression_();
 
+				evaluated_ = true;
+
 				if (new_value != value_)
 				{
 					value_ = new_value;
 					on_change();
 				}
 			}
-
-			evaluated_ = true;
+			else
+				evaluated_ = true;
 		}
 
 		using impl_base::on_change;
