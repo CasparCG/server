@@ -436,6 +436,10 @@ public:
 	void disable_video_output()
 	{
 		blue_->video_playback_stop(0,0);
+		blue_->set_card_property32(VIDEO_DUAL_LINK_OUTPUT, 0);
+		ULONG routingValue = EPOCH_SET_ROUTING(EPOCH_SRC_OUTPUT_MEM_INTERFACE_CHA, EPOCH_DEST_SDI_OUTPUT_B, BLUE_CONNECTOR_PROP_SINGLE_LINK);
+		blue_->set_card_property32(MR2_ROUTING, routingValue);
+
 		if(BLUE_FAIL(blue_->set_card_property32(VIDEO_BLACKGENERATOR, 1)))
 			CASPAR_LOG(error)<< print() << TEXT(" Failed to disable video output.");	
 		if (BLUE_FAIL(blue_->set_card_property32(EMBEDEDDED_AUDIO_OUTPUT, 0)))
