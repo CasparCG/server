@@ -32,6 +32,7 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/utility/value_init.hpp>
+#include <boost/range/algorithm/remove_if.hpp>
 
 #include <common/tweener.h>
 #include <common/except.h>
@@ -163,17 +164,24 @@ private:
 		using impl_base::on_change;
 		void on_change() const
 		{
-			auto copy = on_change_;
+			auto copy				= on_change_;
+			bool need_to_clean_up	= false;
 
-			for (int i = static_cast<int>(copy.size()) - 1; i >= 0; --i)
+			for (auto& listener : copy)
 			{
-				auto strong = copy[i].first.lock();
+				auto strong = listener.first.lock();
 
 				if (strong)
-					copy[i].second();
+					listener.second();
 				else
-					on_change_.erase(on_change_.begin() + i);
+					need_to_clean_up = true;
 			}
+
+			if (need_to_clean_up)
+				boost::remove_if(on_change_, [&](const std::pair<std::weak_ptr<void>, std::function<void()>>& l)
+				{
+					return l.first.expired();
+				});
 		}
 
 		void bind(const std::shared_ptr<impl>& other)
