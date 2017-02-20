@@ -388,6 +388,7 @@ struct server::impl : boost::noncopyable
 			&image::write_cropped_png,
 			media_info_repo_,
 			producer_registry_,
+			cg_registry_,
 			pt.get(L"configuration.thumbnails.mipmap", true)));
 	}
 

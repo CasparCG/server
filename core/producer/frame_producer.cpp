@@ -22,6 +22,7 @@
 #include "../StdAfx.h"
 
 #include "frame_producer.h"
+#include "cg_proxy.h"
 
 #include "../frame/draw_frame.h"
 #include "../frame/frame_transform.h"
@@ -71,11 +72,13 @@ frame_producer_dependencies::frame_producer_dependencies(
 		const spl::shared_ptr<core::frame_factory>& frame_factory,
 		const std::vector<spl::shared_ptr<video_channel>>& channels,
 		const video_format_desc& format_desc,
-		const spl::shared_ptr<const frame_producer_registry> producer_registry)
+		const spl::shared_ptr<const frame_producer_registry> producer_registry,
+		const spl::shared_ptr<const cg_producer_registry> cg_registry)
 	: frame_factory(frame_factory)
 	, channels(channels)
 	, format_desc(format_desc)
 	, producer_registry(producer_registry)
+	, cg_registry(cg_registry)
 {
 }
 

@@ -54,7 +54,7 @@ struct constraints
 	constraints(double width, double height);
 	constraints();
 };
-	
+
 // Interface
 class frame_producer : public interaction_sink
 {
@@ -63,21 +63,21 @@ class frame_producer : public interaction_sink
 public:
 
 	// Static Members
-	
+
 	static const spl::shared_ptr<frame_producer>& empty();
 
 	// Constructors
 
 	frame_producer(){}
-	virtual ~frame_producer(){}	
+	virtual ~frame_producer(){}
 
-	// Methods	
+	// Methods
 
 	virtual draw_frame							receive() = 0;
 	virtual std::future<std::wstring>			call(const std::vector<std::wstring>& params) = 0;
 	virtual variable&							get_variable(const std::wstring& name) = 0;
 	virtual const std::vector<std::wstring>&	get_variables() const = 0;
-	
+
 	// monitor::observable
 
 	virtual monitor::subject& monitor_output() = 0;
@@ -87,7 +87,7 @@ public:
 	virtual bool collides(double x, double y) const override { return false; }
 
 	// Properties
-	
+
 
 	virtual void								paused(bool value) = 0;
 	virtual std::wstring						print() const = 0;
@@ -97,26 +97,26 @@ public:
 	virtual uint32_t							frame_number() const = 0;
 	virtual draw_frame							last_frame() = 0;
 	virtual constraints&						pixel_constraints() = 0;
-	virtual void								leading_producer(const spl::shared_ptr<frame_producer>&) {}  
+	virtual void								leading_producer(const spl::shared_ptr<frame_producer>&) {}
 };
 
 class frame_producer_base : public frame_producer
 {
 public:
 	frame_producer_base();
-	virtual ~frame_producer_base(){}	
+	virtual ~frame_producer_base(){}
 
-	// Methods	
+	// Methods
 
 	virtual std::future<std::wstring>			call(const std::vector<std::wstring>& params) override;
 	virtual variable&							get_variable(const std::wstring& name) override;
 	virtual const std::vector<std::wstring>&	get_variables() const override;
-	
+
 	// monitor::observable
-	
+
 	// Properties
-	
-	void						paused(bool value) override;	
+
+	void						paused(bool value) override;
 	uint32_t					nb_frames() const override;
 	uint32_t					frame_number() const override;
 	virtual draw_frame			last_frame() override;
@@ -138,12 +138,14 @@ struct frame_producer_dependencies
 	std::vector<spl::shared_ptr<video_channel>>		channels;
 	video_format_desc								format_desc;
 	spl::shared_ptr<const frame_producer_registry>	producer_registry;
+	spl::shared_ptr<const cg_producer_registry>		cg_registry;
 
 	frame_producer_dependencies(
 			const spl::shared_ptr<core::frame_factory>& frame_factory,
 			const std::vector<spl::shared_ptr<video_channel>>& channels,
 			const video_format_desc& format_desc,
-			const spl::shared_ptr<const frame_producer_registry> producer_registry);
+			const spl::shared_ptr<const frame_producer_registry> producer_registry,
+			const spl::shared_ptr<const cg_producer_registry> cg_registry);
 };
 
 typedef std::function<spl::shared_ptr<core::frame_producer>(const frame_producer_dependencies&, const std::vector<std::wstring>&)> producer_factory_t;
