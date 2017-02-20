@@ -28,6 +28,7 @@
 #include <core/help/help_repository.h>
 #include <core/help/help_sink.h>
 #include <core/help/util.h>
+#include <core/consumer/syncto/syncto_consumer.h>
 #include <core/producer/text/text_producer.h>
 
 #include <protocol/amcp/amcp_command_repository.h>

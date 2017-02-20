@@ -115,7 +115,7 @@ mark_action get_mark_action(const std::wstring& name);
 class scene_producer : public frame_producer_base
 {
 public:
-	scene_producer(std::wstring producer_name, int width, int height, const video_format_desc& format_desc);
+	scene_producer(std::wstring producer_name, std::wstring template_name, int width, int height, const video_format_desc& format_desc);
 	~scene_producer();
 
 	draw_frame receive_impl() override;

@@ -117,7 +117,7 @@ class dependency_resolver
 
 	std::list<layer_record> layers;
 	layer_record master;
-	
+
 	spl::shared_ptr<core::scene::scene_producer> scene_;
 	bool is_root_;
 
@@ -142,9 +142,9 @@ public:
 			//if we don't have a master already, just assign this
 			if (master.layer == nullptr)
 				master = rec;
-			else if ((rec.tags & layer_tag::explicit_dynamic) == layer_tag::explicit_dynamic) 
+			else if ((rec.tags & layer_tag::explicit_dynamic) == layer_tag::explicit_dynamic)
 			{
-				if((master.tags & layer_tag::explicit_dynamic) == layer_tag::none) 
+				if((master.tags & layer_tag::explicit_dynamic) == layer_tag::none)
 				{
 					//if we have a master that's not explicitly tagged as dynamic but this layer is; use this as master
 					master = rec;
@@ -371,7 +371,7 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 	psd_document doc;
 	doc.parse(*found_file);
 
-	auto root = spl::make_shared<core::scene::scene_producer>(L"psd", doc.width(), doc.height(), dependencies.format_desc);
+	auto root = spl::make_shared<core::scene::scene_producer>(L"psd", params.at(0), doc.width(), doc.height(), dependencies.format_desc);
 
 	std::vector<std::pair<std::wstring, spl::shared_ptr<core::text_producer>>> text_producers_by_layer_name;
 
@@ -397,8 +397,8 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 																																	dependencies.format_desc.duration,
 																																	dependencies.format_desc.name,
 																																	dependencies.format_desc.audio_cadence };
-			
-			auto group = spl::make_shared<core::scene::scene_producer>(psd_layer->name(), doc.width(), doc.height(), format_desc);
+
+			auto group = spl::make_shared<core::scene::scene_producer>(psd_layer->name(), L"layer group in " + params.at(0), doc.width(), doc.height(), format_desc);
 
 			auto& scene_layer = current.scene()->create_layer(group, psd_layer->location().x, psd_layer->location().y, psd_layer->name());
 			scene_layer.adjustments.opacity.set(psd_layer->opacity() / 255.0);
@@ -444,19 +444,19 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 			if(psd_layer->is_text() && !psd_layer->is_static())
 			{
 				std::wstring str = psd_layer->text_data().get(L"EngineDict.Editor.Text", L"");
-			
+
 				core::text::text_info text_info(std::move(get_text_info(psd_layer->text_data())));
 				auto max_scale = std::max(abs(psd_layer->scale().x), abs(psd_layer->scale().y));
 				text_info.size *= max_scale;
 				text_info.scale_x = psd_layer->scale().x / max_scale;
 				text_info.scale_y = psd_layer->scale().y / max_scale;
-				text_info.shear = 0;	
+				text_info.shear = 0;
 
 				auto text_producer = core::text_producer::create(dependencies.frame_factory, 0, 0, str, text_info, doc.width(), doc.height());
 				//text_producer->pixel_constraints().width.set(psd_layer->size().width);
 				//text_producer->pixel_constraints().height.set(psd_layer->size().height);
 				core::text::string_metrics metrics = text_producer->measure_string(str);
-			
+
 				//adjustment_x = -2;	//the 2 offset is just a hack for now. don't know why our text is rendered 2 px to the right of that in photoshop
 				//adjustment_y = metrics.bearingY;
 				layer_producer = text_producer;
@@ -475,11 +475,11 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 						var.on_change([=]() {
 							hotswap->producer().set(dependencies.producer_registry->create_producer(dependencies, root->get_variable(layer_name).as<std::wstring>().get()));
 						});*/
-						
+
 					}
 					else
 						hotswap->producer().set(dependencies.producer_registry->create_producer(dependencies, layer_name));
-					
+
 					layer_producer = hotswap;
 				}
 				else if(psd_layer->is_solid())
@@ -516,7 +516,7 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 				if (psd_layer->mask().has_vector()) {
 
 					if (psd_layer->is_placeholder() && psd_layer->is_cornerpin()) {
-						
+
 						psd::point<int> layer_pos{ static_cast<int>(scene_layer->position.x.get()), static_cast<int>(scene_layer->position.y.get()) };
 						auto unbind_and_set = [&layer_pos](caspar::core::scene::coord& c, const caspar::psd::point<int>& pt) {
 							c.x.unbind();
@@ -580,7 +580,7 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 	}
 
 	if (scene_stack.size() != 1) {
-		
+
 	}
 	root->reverse_layers();
 	scene_stack.top().calculate();
