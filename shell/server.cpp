@@ -171,6 +171,7 @@ struct server::impl : boost::noncopyable
 
 		initialize_modules(dependencies);
 		core::text::init(dependencies);
+		core::init_cg_proxy_as_producer(dependencies);
 		core::scene::init(dependencies);
 		core::syncto::init(dependencies);
 		help_repo_->register_item({ L"producer" }, L"Color Producer", &core::describe_color_producer);
