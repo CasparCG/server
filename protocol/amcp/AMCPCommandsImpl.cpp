@@ -306,7 +306,8 @@ core::frame_producer_dependencies get_producer_dependencies(const std::shared_pt
 			channel->frame_factory(),
 			get_channels(ctx),
 			channel->video_format_desc(),
-			ctx.producer_registry);
+			ctx.producer_registry,
+			ctx.cg_registry);
 }
 
 // Basic Commands
