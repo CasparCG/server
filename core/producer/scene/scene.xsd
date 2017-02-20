@@ -1,7 +1,7 @@
 <xs:schema attributeFormDefault="unqualified" elementFormDefault="unqualified" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:vc="http://www.w3.org/2007/XMLSchema-versioning" vc:minVersion="1.1">
   <xs:element name="scene">
     <xs:complexType>
-      <xs:sequence>
+      <xs:all>
         <xs:element name="variables">
           <xs:annotation>
             <xs:documentation>
@@ -224,7 +224,64 @@
             <xs:field xpath="@variable" />
           </xs:unique>
         </xs:element>
-      </xs:sequence>
+        <xs:element name="tasks" minOccurs="0">
+          <xs:annotation>
+            <xs:documentation>
+              Tasks are scheduled to happen whenever a certain condition arises.
+              Use the at attribute to let the condition be that the timeline arrives at a specific frame
+              or the when attribute to specify a custom bool expression that when becomes true triggers the task.
+            </xs:documentation>
+          </xs:annotation>
+          <xs:complexType>
+            <xs:choice minOccurs="0" maxOccurs="unbounded">
+              <xs:element name="call">
+                <xs:annotation><xs:documentation>Performs the equivalent of an AMCP CALL on the specified layer.</xs:documentation></xs:annotation>
+                <xs:complexType>
+                  <xs:sequence maxOccurs="unbounded">
+                    <xs:element name="arg" type="xs:string"><xs:annotation><xs:documentation>See the producer documentation for the possible arguments.</xs:documentation></xs:annotation></xs:element>
+                  </xs:sequence>
+                  <xs:attribute name="at" use="optional" type="xs:nonNegativeInteger"><xs:annotation><xs:documentation>Trigger the CALL when the timeline gets to this specific frame.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="when" use="optional" type="bool_expression"><xs:annotation><xs:documentation>Trigger the CALL when the specified bool expression becomes true.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="to_layer" use="required" type="identifier"><xs:annotation><xs:documentation>The producer on this layer will receive the CALL.</xs:documentation></xs:annotation></xs:attribute>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="cg_play">
+                <xs:annotation><xs:documentation>Performs the equivalent of a CG PLAY on the specified layer.</xs:documentation></xs:annotation>
+                <xs:complexType>
+                  <xs:attribute name="at" use="optional" type="xs:nonNegativeInteger"><xs:annotation><xs:documentation>Trigger the CG PLAY when the timeline gets to this specific frame.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="when" use="optional" type="bool_expression"><xs:annotation><xs:documentation>Trigger the CG PLAY when the specified bool expression becomes true.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="to_layer" use="required" type="identifier"><xs:annotation><xs:documentation>The CG producer on this layer will receive the CG PLAY.</xs:documentation></xs:annotation></xs:attribute>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="cg_stop">
+                <xs:annotation><xs:documentation>Performs the equivalent of a CG STOP on the specified layer.</xs:documentation></xs:annotation>
+                <xs:complexType>
+                  <xs:attribute name="at" use="optional" type="xs:nonNegativeInteger"><xs:annotation><xs:documentation>Trigger the CG STOP when the timeline gets to this specific frame.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="when" use="optional" type="bool_expression"><xs:annotation><xs:documentation>Trigger the CG STOP when the specified bool expression becomes true.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="to_layer" use="required" type="identifier"><xs:annotation><xs:documentation>The CG producer on this layer will receive the CG STOP.</xs:documentation></xs:annotation></xs:attribute>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="cg_next">
+                <xs:annotation><xs:documentation>Performs the equivalent of a CG NEXT on the specified layer.</xs:documentation></xs:annotation>
+                <xs:complexType>
+                  <xs:attribute name="at" use="optional" type="xs:nonNegativeInteger"><xs:annotation><xs:documentation>Trigger the CG NEXT when the timeline gets to this specific frame.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="when" use="optional" type="bool_expression"><xs:annotation><xs:documentation>Trigger the CG NEXT when the specified bool expression becomes true.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="to_layer" use="required" type="identifier"><xs:annotation><xs:documentation>The CG producer on this layer will receive the CG NEXT.</xs:documentation></xs:annotation></xs:attribute>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="cg_invoke">
+                <xs:annotation><xs:documentation>Performs the equivalent of a CG INVOKE on the specified layer with the specified label.</xs:documentation></xs:annotation>
+                <xs:complexType>
+                  <xs:attribute name="at" use="optional" type="xs:nonNegativeInteger"><xs:annotation><xs:documentation>Trigger the CG INVOKE when the timeline gets to this specific frame.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="when" use="optional" type="bool_expression"><xs:annotation><xs:documentation>Trigger the CG INVOKE when the specified bool expression becomes true.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="to_layer" use="required" type="identifier"><xs:annotation><xs:documentation>The CG producer on this layer will receive the CG INVOKE.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="label" use="required" type="nonEmptyString"><xs:annotation><xs:documentation>The label that will be invoked.</xs:documentation></xs:annotation></xs:attribute>
+                </xs:complexType>
+              </xs:element>
+            </xs:choice>
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
       <xs:attribute type="xs:positiveInteger" name="width" use="required" />
       <xs:attribute type="xs:positiveInteger" name="height" use="required" />
     </xs:complexType>
