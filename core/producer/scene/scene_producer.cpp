@@ -199,6 +199,15 @@ struct scene_producer::impl
 		layers_.reverse();
 	}
 
+	layer& get_layer(const std::wstring& name)
+	{
+		for (auto& layer : layers_)
+			if (layer.name.get() == name)
+				return layer;
+
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(name + L" not found in scene"));
+	}
+
 	void store_keyframe(void* timeline_identity, const keyframe& k)
 	{
 		timelines_[timeline_identity].keyframes.insert(std::make_pair(k.destination_frame, k));
@@ -214,6 +223,27 @@ struct scene_producer::impl
 	void add_mark(int64_t frame, mark_action action, const std::wstring& label)
 	{
 		markers_by_frame_.insert(std::make_pair(frame, marker(action, label)));
+	}
+
+	void add_task(binding<bool> when, std::function<void ()> task)
+	{
+		auto subscription = when.on_change([=]
+		{
+			if (when.get())
+			{
+				try
+				{
+					task();
+				}
+				catch (...)
+				{
+					CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
+					CASPAR_LOG(error) << print() << " Error when invoking scene task. Turn on log level debug for stacktrace.";
+				}
+			}
+		});
+
+		task_subscriptions_.push_back(std::move(subscription));
 	}
 
 	core::variable& get_variable(const std::wstring& name)
@@ -614,8 +644,14 @@ layer& scene_producer::create_layer(
 	return impl_->create_layer(producer, 0, 0, name);
 }
 
-void scene_producer::reverse_layers() {
+void scene_producer::reverse_layers()
+{
 	impl_->reverse_layers();
+}
+
+layer& scene_producer::get_layer(const std::wstring& name)
+{
+	return impl_->get_layer(name);
 }
 
 binding<int64_t> scene_producer::timeline_frame()
@@ -679,6 +715,11 @@ void scene_producer::store_variable(
 void scene_producer::add_mark(int64_t frame, mark_action action, const std::wstring& label)
 {
 	impl_->add_mark(frame, action, label);
+}
+
+void scene_producer::add_task(binding<bool> when, std::function<void ()> task)
+{
+	impl_->add_task(std::move(when), std::move(task));
 }
 
 core::variable& scene_producer::get_variable(const std::wstring& name)

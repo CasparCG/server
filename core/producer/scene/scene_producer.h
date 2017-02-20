@@ -133,6 +133,7 @@ public:
 	layer& create_layer(
 			const spl::shared_ptr<frame_producer>& producer, const std::wstring& name);
 	void reverse_layers();
+	layer& get_layer(const std::wstring& name);
 
 	binding<int64_t> timeline_frame();
 	binding<double> speed();
@@ -225,7 +226,8 @@ public:
 		store_keyframe(to_affect.identity(), k);
 	}
 
-	void add_mark(int64_t frame, mark_action action, const std::wstring& label);
+	void add_mark(int64_t at_frame, mark_action action, const std::wstring& label);
+	void add_task(binding<bool> when, std::function<void ()> task);
 
 	core::variable& get_variable(const std::wstring& name) override;
 	const std::vector<std::wstring>& get_variables() const override;
