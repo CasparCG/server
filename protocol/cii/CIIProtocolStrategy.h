@@ -19,7 +19,7 @@
 * Author: Nicklas P Andersson
 */
 
- 
+
 #pragma once
 
 #include <core/video_channel.h>
@@ -53,7 +53,7 @@ public:
 	spl::shared_ptr<core::video_channel> GetChannel() const { return pChannel_; }
 	spl::shared_ptr<core::cg_producer_registry> get_cg_registry() const { return cg_registry_; }
 	spl::shared_ptr<const core::frame_producer_registry> get_producer_registry() const { return producer_registry_; }
-	core::frame_producer_dependencies get_dependencies() const { return core::frame_producer_dependencies(GetChannel()->frame_factory(), channels_, GetChannel()->video_format_desc(), producer_registry_); }
+	core::frame_producer_dependencies get_dependencies() const { return core::frame_producer_dependencies(GetChannel()->frame_factory(), channels_, GetChannel()->video_format_desc(), producer_registry_, cg_registry_); }
 
 	void DisplayMediaFile(const std::wstring& filename);
 	void DisplayTemplate(const std::wstring& titleName);
@@ -65,14 +65,14 @@ public:
 		TitleHolder() : titleName(L""), pframe_producer(core::frame_producer::empty())	{}
 		TitleHolder(const std::wstring& name, spl::shared_ptr<core::frame_producer> pFP) : titleName(name), pframe_producer(pFP) {}
 		TitleHolder(const TitleHolder& th) : titleName(th.titleName), pframe_producer(th.pframe_producer) {}
-		TitleHolder& operator=(const TitleHolder& th) 
+		TitleHolder& operator=(const TitleHolder& th)
 		{
 			titleName = th.titleName;
 			pframe_producer = th.pframe_producer;
 
 			return *this;
 		}
-		bool operator==(const TitleHolder& rhs) 
+		bool operator==(const TitleHolder& rhs)
 		{
 			return pframe_producer == rhs.pframe_producer;
 		}
