@@ -32,7 +32,7 @@
 #include <boost/noncopyable.hpp>
 
 namespace caspar { namespace core {
-		
+
 class cg_proxy
 {
 public:
@@ -96,5 +96,6 @@ private:
 	spl::shared_ptr<impl> impl_;
 };
 
+void init_cg_proxy_as_producer(core::module_dependencies dependencies);
 
 }}
