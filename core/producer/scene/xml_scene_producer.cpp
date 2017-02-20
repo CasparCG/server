@@ -88,9 +88,10 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 	if (!found)
 		return core::frame_producer::empty();
 
-	std::wstring filename = *found;
+	auto filename		= *found;
+	auto template_name	= get_relative(filename, env::template_folder()).wstring();
 
-	CASPAR_SCOPED_CONTEXT_MSG(get_relative(filename, env::template_folder()).string() + ": ");
+	CASPAR_SCOPED_CONTEXT_MSG(template_name + L": ");
 
 	boost::property_tree::wptree root;
 	boost::filesystem::wifstream file(filename);
@@ -103,7 +104,7 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 	int width = ptree_get<int>(root, L"scene.<xmlattr>.width");
 	int height = ptree_get<int>(root, L"scene.<xmlattr>.height");
 
-	auto scene = spl::make_shared<scene_producer>(L"scene", width, height, dependencies.format_desc);
+	auto scene = spl::make_shared<scene_producer>(L"scene", template_name, width, height, dependencies.format_desc);
 
 	for (auto elem : root | witerate_children(L"scene.variables") | welement_context_iteration)
 	{
