@@ -119,6 +119,7 @@ struct marker
 struct scene_producer::impl
 {
 	std::wstring											producer_name_;
+	std::wstring											template_name_;
 	constraints												pixel_constraints_;
 	video_format_desc										format_desc_;
 	std::list<layer>										layers_;
@@ -135,13 +136,20 @@ struct scene_producer::impl
 	std::map<std::wstring, std::shared_ptr<core::variable>>	variables_;
 	std::vector<std::wstring>								variable_names_;
 	std::multimap<int64_t, marker>							markers_by_frame_;
+	std::vector<std::shared_ptr<void>>						task_subscriptions_;
 	monitor::subject										monitor_subject_;
 	bool													paused_				= true;
 	bool													removed_			= false;
 	bool													going_to_mark_		= false;
 
-	impl(std::wstring producer_name, int width, int height, const video_format_desc& format_desc)
+	impl(
+			std::wstring producer_name,
+			std::wstring template_name,
+			int width,
+			int height,
+			const video_format_desc& format_desc)
 		: producer_name_(std::move(producer_name))
+		, template_name_(std::move(template_name))
 		, format_desc_(format_desc)
 		, aggregator_([=] (double x, double y) { return collission_detect(x, y); })
 	{
@@ -534,7 +542,7 @@ struct scene_producer::impl
 
 	std::wstring print() const
 	{
-		return L"scene[type=" + name() + L"]";
+		return L"scene[type=" + name() + L" template=" + template_name_ + L"]";
 	}
 
 	std::wstring name() const
@@ -547,6 +555,7 @@ struct scene_producer::impl
 		boost::property_tree::wptree info;
 		info.add(L"type", L"scene");
 		info.add(L"producer-name", name());
+		info.add(L"template-name", template_name_);
 		info.add(L"frame-number", frame_number_.get());
 		info.add(L"timeline-frame-number", timeline_frame_number_.get());
 
@@ -584,8 +593,8 @@ struct scene_producer::impl
 	}
 };
 
-scene_producer::scene_producer(std::wstring producer_name, int width, int height, const video_format_desc& format_desc)
-	: impl_(new impl(std::move(producer_name), width, height, format_desc))
+scene_producer::scene_producer(std::wstring producer_name, std::wstring template_name, int width, int height, const video_format_desc& format_desc)
+	: impl_(new impl(std::move(producer_name), std::move(template_name), width, height, format_desc))
 {
 }
 
