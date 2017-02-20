@@ -38,6 +38,7 @@
 #include <core/help/help_sink.h>
 
 #include <future>
+#include <vector>
 
 #include "scene_producer.h"
 #include "scene_cg_proxy.h"
@@ -236,8 +237,8 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 
 				ptree_verify_element_name(k, L"keyframe");
 
-				auto easing = k.second.get(L"<xmlattr>.easing", L"");
-				auto at = ptree_get<int64_t>(k.second, L"<xmlattr>.at");
+				auto easing	= k.second.get(L"<xmlattr>.easing", L"");
+				auto at		= ptree_get<int64_t>(k.second, L"<xmlattr>.at");
 
 				auto keyframe_variable_name = L"timeline." + variable_name + L"." + boost::lexical_cast<std::wstring>(at);
 
@@ -253,6 +254,68 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 	{
 		return scene->get_variable(name);
 	};
+
+	int task_id = 0;
+	if (root.get_child_optional(L"scene.tasks"))
+	{
+		for (auto& task : root | witerate_children(L"scene.tasks") | welement_context_iteration)
+		{
+			auto& element_name = task.first;
+
+			std::vector<std::wstring> call_params;
+
+			if (element_name == L"call")
+			{
+				for (auto& arg : task.second)
+				{
+					if (arg.first == L"<xmlattr>")
+						continue;
+
+					ptree_verify_element_name(arg, L"arg");
+					call_params.push_back(ptree_get_value<std::wstring>(arg.second));
+				}
+			}
+			else if (element_name == L"cg_play")
+				call_params.push_back(L"play()");
+			else if (element_name == L"cg_stop")
+				call_params.push_back(L"stop()");
+			else if (element_name == L"cg_next")
+				call_params.push_back(L"next()");
+			else if (element_name == L"cg_invoke")
+			{
+				call_params.push_back(L"invoke()");
+				call_params.push_back(ptree_get<std::wstring>(task.second, L"<xmlattr>.label"));
+			}
+			else
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Only valid element names in <tasks /> are call, cg_play, cg_stop, cg_next and cg_invoke"));
+
+			auto at_frame	= task.second.get_optional<int64_t>(L"<xmlattr>.at");
+			auto when		= task.second.get_optional<std::wstring>(L"<xmlattr>.when");
+			auto to_layer	= ptree_get<std::wstring>(task.second, L"<xmlattr>.to_layer");
+			auto producer	= scene->get_layer(to_layer).producer.get();
+
+			binding<bool> condition;
+
+			if (at_frame)
+				condition = scene->timeline_frame() == *at_frame;
+			else if (when)
+				condition = scene->create_variable<bool>(L"tasks.task_" + boost::lexical_cast<std::wstring>(task_id), false, *when);
+			else
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Task elements must have either an at attribute or a when attribute"));
+
+			auto weak_producer = static_cast<std::weak_ptr<frame_producer>>(producer);
+
+			scene->add_task(std::move(condition), [=]
+			{
+				auto strong = weak_producer.lock();
+
+				if (strong)
+					strong->call(call_params);
+			});
+
+			++task_id;
+		}
+	}
 
 	for (auto& var_name : scene->get_variables())
 	{
