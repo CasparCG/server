@@ -158,6 +158,17 @@ boost::any create_abs_function(const std::vector<boost::any>& params, const vari
 	return val.transformed([](double v) { return std::abs(v); });
 }
 
+boost::any create_floor_function(const std::vector<boost::any>& params, const variable_repository& var_repo)
+{
+	if (params.size() != 1)
+		CASPAR_THROW_EXCEPTION(user_error()
+			<< msg_info(L"floor() function requires one parameters: value"));
+
+	auto val = require<double>(params.at(0));
+
+	return val.transformed([](double v) { return std::floor(v); });
+}
+
 boost::any parse_function(
 		const std::wstring& function_name,
 		std::wstring::const_iterator& cursor,
@@ -169,7 +180,8 @@ boost::any parse_function(
 		{L"animate",	create_animate_function },
 		{L"sin",		create_sin_function },
 		{L"cos",		create_cos_function },
-		{L"abs",		create_abs_function }
+		{L"abs",		create_abs_function },
+		{L"floor",		create_floor_function }
 	};
 
 	auto function = FUNCTIONS.find(function_name);
