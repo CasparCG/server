@@ -260,6 +260,18 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 	{
 		for (auto& task : root | witerate_children(L"scene.tasks") | welement_context_iteration)
 		{
+			auto at_frame = task.second.get_optional<int64_t>(L"<xmlattr>.at");
+			auto when = task.second.get_optional<std::wstring>(L"<xmlattr>.when");
+
+			binding<bool> condition;
+
+			if (at_frame)
+				condition = scene->timeline_frame() == *at_frame;
+			else if (when)
+				condition = scene->create_variable<bool>(L"tasks.task_" + boost::lexical_cast<std::wstring>(task_id), false, *when);
+			else
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Task elements must have either an at attribute or a when attribute"));
+
 			auto& element_name = task.first;
 
 			std::vector<std::wstring> call_params;
@@ -286,32 +298,37 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 				call_params.push_back(L"invoke()");
 				call_params.push_back(ptree_get<std::wstring>(task.second, L"<xmlattr>.label"));
 			}
-			else
-				CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Only valid element names in <tasks /> are call, cg_play, cg_stop, cg_next and cg_invoke"));
-
-			auto at_frame	= task.second.get_optional<int64_t>(L"<xmlattr>.at");
-			auto when		= task.second.get_optional<std::wstring>(L"<xmlattr>.when");
-			auto to_layer	= ptree_get<std::wstring>(task.second, L"<xmlattr>.to_layer");
-			auto producer	= scene->get_layer(to_layer).producer.get();
-
-			binding<bool> condition;
-
-			if (at_frame)
-				condition = scene->timeline_frame() == *at_frame;
-			else if (when)
-				condition = scene->create_variable<bool>(L"tasks.task_" + boost::lexical_cast<std::wstring>(task_id), false, *when);
-			else
-				CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Task elements must have either an at attribute or a when attribute"));
-
-			auto weak_producer = static_cast<std::weak_ptr<frame_producer>>(producer);
-
-			scene->add_task(std::move(condition), [=]
+			else if (element_name == L"goto_mark")
 			{
-				auto strong = weak_producer.lock();
+				auto mark_label	= ptree_get<std::wstring>(task.second, L"<xmlattr>.label");
+				auto weak_scene	= static_cast<std::weak_ptr<scene_producer>>(scene);
 
-				if (strong)
-					strong->call(call_params);
-			});
+				scene->add_task(std::move(condition), [=]
+				{
+					auto strong = weak_scene.lock();
+
+					if (strong)
+						strong->call({ L"play()", mark_label });
+				});
+			}
+			else
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Only valid element names in <tasks /> are call, cg_play, cg_stop, cg_next, cg_invoke and goto_mark"));
+
+			if (!call_params.empty())
+			{
+				auto to_layer = ptree_get<std::wstring>(task.second, L"<xmlattr>.to_layer");
+				auto producer = scene->get_layer(to_layer).producer.get();
+
+				auto weak_producer = static_cast<std::weak_ptr<frame_producer>>(producer);
+
+				scene->add_task(std::move(condition), [=]
+				{
+					auto strong = weak_producer.lock();
+
+					if (strong)
+						strong->call(call_params);
+				});
+			}
 
 			++task_id;
 		}
