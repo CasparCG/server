@@ -278,6 +278,13 @@
                   <xs:attribute name="label" use="required" type="nonEmptyString"><xs:annotation><xs:documentation>The label that will be invoked.</xs:documentation></xs:annotation></xs:attribute>
                 </xs:complexType>
               </xs:element>
+              <xs:element name="goto_mark">
+                <xs:annotation><xs:documentation>Makes the scene go to a specific start mark given a specific condition becoming true.</xs:documentation></xs:annotation>
+                <xs:complexType>
+                  <xs:attribute name="when" use="required" type="bool_expression"><xs:annotation><xs:documentation>Go to the start mark when the specified bool expression becomes true.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="label" use="required" type="nonEmptyString"><xs:annotation><xs:documentation>The label of the start mark that the scene should go to.</xs:documentation></xs:annotation></xs:attribute>
+                </xs:complexType>
+              </xs:element>
             </xs:choice>
           </xs:complexType>
         </xs:element>
