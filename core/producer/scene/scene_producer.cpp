@@ -161,6 +161,10 @@ struct scene_producer::impl
 		store_variable(L"frame", frame_variable);
 		frame_number_ = frame_variable->value();
 
+		auto fps = format_desc_.fps * format_desc_.field_count;
+		auto fps_variable = std::make_shared<core::variable_impl<double>>(boost::lexical_cast<std::wstring>(fps), false, fps);
+		store_variable(L"fps", fps_variable);
+
 		auto timeline_frame_variable = std::make_shared<core::variable_impl<int64_t>>(L"-1", false, -1);
 		store_variable(L"timeline_frame", timeline_frame_variable);
 		timeline_frame_number_ = timeline_frame_variable->value();
