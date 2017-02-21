@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  A scene that tries to mimick the Flash template AdvancedTemplate1
+ -->
+<scene width="1024" height="576" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/CasparCG/Server/2.1.0/core/producer/scene/scene.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <variables>
+    <variable type="number" id="time" public="true">60</variable>
+    <variable type="number" id="hangaround_time" public="true">3</variable>
+
+    <!-- Controlled by timeline -->
+    <variable type="number" id="plate_x">0</variable>
+
+    <!-- Expressions good for time value between 0 and 3599. Can be extended to support hours as well -->
+    <variable type="number" id="countdown">             ${time - floor(frame / fps)}</variable>
+    <variable type="number" id="countdown_minutes">     ${floor(variable.countdown / 60)}</variable>
+    <variable type="number" id="countdown_seconds">     ${variable.countdown % 60}</variable>
+    <variable type="string" id="countdown_minutes_text">${(variable.countdown_minutes &lt; 10 ? "0" : "") + variable.countdown_minutes}</variable>
+    <variable type="string" id="countdown_seconds_text">${(variable.countdown_seconds &lt; 10 ? "0" : "") + variable.countdown_seconds}</variable>
+    <variable type="string" id="countdown_text">
+        ${variable.countdown &lt; 0
+                ? "00:00"
+                : variable.countdown_minutes_text + ":" + variable.countdown_seconds_text}
+    </variable>
+  </variables>
+
+  <layers>
+    <layer id="plate">
+      <!-- A PNG under media -->
+      <producer>scene/TemplatePack1/AdvancedTemplate1_plate</producer>
+      <x>${variable.plate_x}</x>
+      <y>60</y>
+      <anchor_x>${layer.plate.width}</anchor_x>
+    </layer>
+    <layer id="countdown">
+      <!-- Text producer -->
+      <producer>[TEXT] "" 0 0 size 40 color #444444 font LiberationSans</producer>
+      <!-- follow plate with minor adjustments -->
+      <x>${layer.plate.x - 20}</x>
+      <y>${layer.plate.y + layer.plate.height - 8}</y>
+      <anchor_x>${layer.countdown.width}</anchor_x>
+      <parameters>
+        <!-- Bind the text producer's published variable text to our countdown_text -->
+        <text>${variable.countdown_text}</text>
+      </parameters>
+    </layer>
+  </layers>
+
+  <marks>
+    <mark at="0" type="start" label="intro" />
+    <mark at="35" type="stop" />
+    <mark at="35" type="start" label="outro" />
+    <mark at="70" type="remove" />
+  </marks>
+
+  <tasks>
+    <!--
+        stop template automatically after the timer has been at 0 for
+        ${hangaround_time} seconds
+    -->
+    <goto_mark label="outro" when="${variable.countdown &lt;= -hangaround_time}" />
+  </tasks>
+
+  <!--
+    The timeline in this template is only for animating in and out, The actual
+    countdown is done entirely through expressions.
+  -->
+  <timelines>
+    <timeline variable="variable.plate_x">
+      <keyframe at="0">0</keyframe>
+      <keyframe at="35" easing="easeoutsine">250</keyframe>
+      <keyframe at="70" easing="easeinsine">0</keyframe>
+    </timeline>
+  </timelines>
+</scene>
