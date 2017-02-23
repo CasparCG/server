@@ -334,7 +334,7 @@
         </xs:documentation>
       </xs:annotation>
       <xs:whiteSpace value="collapse" />
-      <xs:pattern value="\$\{.+\}" />
+      <xs:pattern value="$\{.+\}" />
     </xs:restriction>
   </xs:simpleType>
 
