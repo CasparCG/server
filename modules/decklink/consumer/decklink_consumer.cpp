@@ -395,11 +395,10 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, boost::noncopyab
 	boost::circular_buffer<std::vector<int32_t>>		audio_container_		{ buffer_size_ + 1 };
 
 	tbb::concurrent_bounded_queue<core::const_frame>	frame_buffer_;
+	caspar::semaphore									ready_for_new_frames_	{ 0 };
 
 	spl::shared_ptr<diagnostics::graph>					graph_;
 	caspar::timer										tick_timer_;
-	boost::mutex										send_completion_mutex_;
-	std::packaged_task<bool ()>							send_completion_;
 	reference_signal_detector							reference_signal_detector_	{ output_ };
 	tbb::atomic<int64_t>								current_presentation_delay_;
 	tbb::atomic<int64_t>								scheduled_frames_completed_;
@@ -574,16 +573,7 @@ public:
 			auto frame = core::const_frame::empty();
 
 			frame_buffer_.pop(frame);
-
-			{
-				boost::lock_guard<boost::mutex> lock(send_completion_mutex_);
-
-				if (send_completion_.valid())
-				{
-					send_completion_();
-					send_completion_ = std::packaged_task<bool()>();
-				}
-			}
+			ready_for_new_frames_.release();
 
 			if (!is_running_)
 				return E_FAIL;
@@ -647,22 +637,16 @@ public:
 		if(!is_running_)
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Is not running."));
 
-		boost::lock_guard<boost::mutex> lock(send_completion_mutex_);
+		frame_buffer_.push(frame);
 
-		if (frame_buffer_.try_push(frame))
+		auto send_completion = spl::make_shared<std::promise<bool>>();
+
+		ready_for_new_frames_.acquire(1, [send_completion]
 		{
-			send_completion_ = std::packaged_task<bool()>();
-			return make_ready_future(true);
-		}
-
-		send_completion_ = std::packaged_task<bool ()>([frame, this] () mutable -> bool
-		{
-			frame_buffer_.push(frame);
-
-			return true;
+			send_completion->set_value(true);
 		});
 
-		return send_completion_.get_future();
+		return send_completion->get_future();
 	}
 
 	std::wstring print() const
