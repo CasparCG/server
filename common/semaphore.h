@@ -143,7 +143,14 @@ public:
 	{
 		boost::unique_lock<boost::mutex> lock(mutex_);
 
-		callbacks_per_requested_permits_[permits].push(std::move(acquired_callback));
+		if (permits_ >= permits)
+		{
+			permits_ -= permits;
+			lock.unlock();
+			acquired_callback();
+		}
+		else
+			callbacks_per_requested_permits_[permits].push(std::move(acquired_callback));
 	}
 
 	/**
