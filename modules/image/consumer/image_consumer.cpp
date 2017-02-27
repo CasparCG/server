@@ -98,14 +98,14 @@ public:
 				auto filename2 = filename;
 
 				if (filename2.empty())
-					filename2 = env::media_folder() + widen(boost::posix_time::to_iso_string(boost::posix_time::second_clock::local_time())) + L".png";
+					filename2 = env::media_folder() + widen(boost::posix_time::to_iso_string(boost::posix_time::second_clock::local_time())) + L".TGA";
 				else
-					filename2 = env::media_folder() + filename2 + L".png";
+					filename2 = env::media_folder() + filename2 + L".TGA";
 
 				auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Allocate(format_desc.width, format_desc.height, 32), FreeImage_Unload);
 				memcpy(FreeImage_GetBits(bitmap.get()), frame->image_data().begin(), frame->image_size());
 				FreeImage_FlipVertical(bitmap.get());
-				FreeImage_SaveU(FIF_PNG, bitmap.get(), filename2.c_str(), 0);
+				FreeImage_SaveU(FIF_TARGA, bitmap.get(), filename2.c_str(), 0);
 			}
 			catch(...)
 			{
