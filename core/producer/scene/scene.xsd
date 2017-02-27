@@ -343,6 +343,8 @@
       <xs:enumeration value="A string constant" />
       <xs:enumeration value="${&quot;A string constant&quot;}" />
       <xs:enumeration value="${variable.some_string + &quot; will be concatenated&quot;}" />
+      <xs:enumeration value="${to_lower(variable.some_string)}" />
+      <xs:enumeration value="${to_upper(variable.some_string)}" />
       <xs:enumeration value="${&quot;Concatenate string with number: &quot; + variable.some_number}" />
       <xs:enumeration value="${&quot;Concatenate string with different strings based on bool: &quot; + (variable.some_bool ? &quot;Enabled&quot; : &quot;Disabled&quot;)}" />
       <xs:enumeration value="${mouse_x &lt; 640 ? &quot;Left of middle&quot; : variable.message_when_right_of_middle}" />
@@ -413,6 +415,8 @@
       <xs:enumeration value="${sin(angle)}" />
       <xs:enumeration value="${cos(angle)}" />
       <xs:enumeration value="${abs(value)}" />
+      <xs:enumeration value="${floor(value)}" />
+      <xs:enumeration value="${length(str)}" />
       <xs:enumeration value="${animate(expression_to_animate, duration, tweener)}" />
       <xs:enumeration value="${animate(layer.to_follow.x, 200, &quot;easeoutelastic&quot;)}" />
     </xs:restriction>
