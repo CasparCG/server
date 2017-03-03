@@ -292,13 +292,6 @@ static std::string get_chroma_glsl()
 		    return 1.0 - smoothstep(1.0, chroma_softness, d);
 		}
 
-		vec4 supress_spill(vec4 c, float d)
-		{
-			float ds	= smoothstep(chroma_spill, clamp(chroma_spill + 0.2, 0, 1), d / chroma_softness);
-		    float gl = dot(grey_xfer, c);
-		    return mix(c, vec4(vec3(pow(gl, chroma_spill_darken)), gl), ds);
-		}
-
 		// http://stackoverflow.com/questions/15095909/from-rgb-to-hsv-in-opengl-glsl
 		vec3 rgb2hsv(vec3 c)
 		{
@@ -311,9 +304,26 @@ static std::string get_chroma_glsl()
 			return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
 		}
 
+		// From the same page
+		vec3 hsv2rgb(vec3 c)
+		{
+			vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+			vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+			return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+		}
+
 		float AngleDiff(float angle1, float angle2)
 		{
 			return 0.5 - abs(abs(angle1 - angle2) - 0.5);
+		}
+
+		float AngleDiffDirectional(float angle1, float angle2)
+		{
+			float diff = angle1 - angle2;
+
+			return diff < -0.5
+					? diff + 1.0
+					: (diff > 0.5 ? diff - 1.0 : diff);
 		}
 
 		float Distance(float actual, float target)
@@ -333,13 +343,30 @@ static std::string get_chroma_glsl()
 			return -hueScore * saturationBrightnessScore;
 		}
 
+		vec3 supress_spill(vec3 c)
+		{
+			float hue		= c.x;
+			float diff		= AngleDiffDirectional(hue, chroma_target_hue);
+			float distance	= abs(diff) / chroma_spill_suppress;
+
+			if (distance < 1)
+			{
+				c.x = diff < 0
+						? chroma_target_hue - chroma_spill_suppress
+						: chroma_target_hue + chroma_spill_suppress;
+				c.y *= min(1.0, distance + chroma_spill_suppress_saturation);
+			}
+
+			return c;
+		}
+
 		// Key on any color
 		vec4 ChromaOnCustomColor(vec4 c)
 		{
 			vec3 hsv		= rgb2hsv(c.rgb);
 			float distance	= ColorDistance(hsv);
 			float d			= distance * -2.0 + 1.0;
-		    vec4 suppressed	= supress_spill(c.rgba, d).rgba;
+		    vec4 suppressed	= vec4(hsv2rgb(supress_spill(hsv)), 1.0);
 			float alpha		= alpha_map(d);
 
 			suppressed *= alpha;

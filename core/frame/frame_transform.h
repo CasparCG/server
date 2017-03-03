@@ -42,15 +42,15 @@ struct chroma
 		blue
 	};
 
-	bool		enable				= false;
-	bool		show_mask			= false;
-	double		target_hue			= 0.0;
-	double		hue_width			= 0.0;
-	double		min_saturation		= 0.0;
-	double		min_brightness		= 0.0;
-	double		softness			= 0.0;
-	double		spill				= 1.0;
-	double		spill_darken		= 0.0;
+	bool		enable						= false;
+	bool		show_mask					= false;
+	double		target_hue					= 0.0;
+	double		hue_width					= 0.0;
+	double		min_saturation				= 0.0;
+	double		min_brightness				= 0.0;
+	double		softness					= 0.0;
+	double		spill_suppress				= 0.0;
+	double		spill_suppress_saturation	= 1.0;
 };
 
 struct levels final
