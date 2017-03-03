@@ -60,14 +60,14 @@ struct adjustments
 
 struct chroma_key
 {
-	binding<bool>				enable;
-	binding<double>				target_hue;
-	binding<double>				hue_width;
-	binding<double>				min_saturation;
-	binding<double>				min_brightness;
-	binding<double>				softness;
-	binding<double>				spill;
-	binding<double>				spill_darken;
+	binding<bool>	enable;
+	binding<double>	target_hue;
+	binding<double>	hue_width;
+	binding<double>	min_saturation;
+	binding<double>	min_brightness;
+	binding<double>	softness;
+	binding<double>	spill_suppress;
+	binding<double>	spill_suppress_saturation;
 };
 
 struct layer

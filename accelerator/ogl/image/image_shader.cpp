@@ -210,8 +210,8 @@ std::string get_fragment(bool blend_modes, bool post_processing)
 			uniform float		chroma_min_saturation;
 			uniform float		chroma_min_brightness;
 			uniform float		chroma_softness;
-			uniform float		chroma_spill;
-			uniform float		chroma_spill_darken;
+			uniform float		chroma_spill_suppress;
+			uniform float		chroma_spill_suppress_saturation;
 	)shader"
 
 	+
