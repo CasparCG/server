@@ -161,37 +161,37 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 		else
 			scene->create_variable<double>(variable_prefix + L"height", false) = layer.producer.get()->pixel_constraints().height;
 
-		layer.hidden					= scene->create_variable<bool>(variable_prefix + L"hidden", false, elem.second.get(L"hidden", L"false"));
-		layer.position.x				= scene->create_variable<double>(variable_prefix + L"x", false, ptree_get<std::wstring>(elem.second, L"x"));
-		layer.position.y				= scene->create_variable<double>(variable_prefix + L"y", false, ptree_get<std::wstring>(elem.second, L"y"));
-		layer.anchor.x					= scene->create_variable<double>(variable_prefix + L"anchor_x", false, elem.second.get<std::wstring>(L"anchor_x", L"0.0"));
-		layer.anchor.y					= scene->create_variable<double>(variable_prefix + L"anchor_y", false, elem.second.get<std::wstring>(L"anchor_y", L"0.0"));
-		layer.rotation					= scene->create_variable<double>(variable_prefix + L"rotation", false, elem.second.get<std::wstring>(L"rotation", L"0.0"));
-		layer.crop.upper_left.x			= scene->create_variable<double>(variable_prefix + L"crop_upper_left_x", false, elem.second.get<std::wstring>(L"crop_upper_left_x", L"0.0"));
-		layer.crop.upper_left.y			= scene->create_variable<double>(variable_prefix + L"crop_upper_left_y", false, elem.second.get<std::wstring>(L"crop_upper_left_y", L"0.0"));
-		layer.crop.lower_right.x		= scene->create_variable<double>(variable_prefix + L"crop_lower_right_x", false, elem.second.get<std::wstring>(L"crop_lower_right_x", L"${" + variable_prefix + L"width}"));
-		layer.crop.lower_right.y		= scene->create_variable<double>(variable_prefix + L"crop_lower_right_y", false, elem.second.get<std::wstring>(L"crop_lower_right_y", L"${" + variable_prefix + L"height}"));
-		layer.perspective.upper_left.x	= scene->create_variable<double>(variable_prefix + L"perspective_upper_left_x", false, elem.second.get<std::wstring>(L"perspective_upper_left_x", L"0.0"));
-		layer.perspective.upper_left.y	= scene->create_variable<double>(variable_prefix + L"perspective_upper_left_y", false, elem.second.get<std::wstring>(L"perspective_upper_left_y", L"0.0"));
-		layer.perspective.upper_right.x	= scene->create_variable<double>(variable_prefix + L"perspective_upper_right_x", false, elem.second.get<std::wstring>(L"perspective_upper_right_x", L"${" + variable_prefix + L"width}"));
-		layer.perspective.upper_right.y	= scene->create_variable<double>(variable_prefix + L"perspective_upper_right_y", false, elem.second.get<std::wstring>(L"perspective_upper_right_y", L"0.0"));
-		layer.perspective.lower_right.x	= scene->create_variable<double>(variable_prefix + L"perspective_lower_right_x", false, elem.second.get<std::wstring>(L"perspective_lower_right_x", L"${" + variable_prefix + L"width}"));
-		layer.perspective.lower_right.y	= scene->create_variable<double>(variable_prefix + L"perspective_lower_right_y", false, elem.second.get<std::wstring>(L"perspective_lower_right_y", L"${" + variable_prefix + L"height}"));
-		layer.perspective.lower_left.x	= scene->create_variable<double>(variable_prefix + L"perspective_lower_left_x", false, elem.second.get<std::wstring>(L"perspective_lower_left_x", L"0.0"));
-		layer.perspective.lower_left.y	= scene->create_variable<double>(variable_prefix + L"perspective_lower_left_y", false, elem.second.get<std::wstring>(L"perspective_lower_left_y", L"${" + variable_prefix + L"height}"));
+		layer.hidden								= scene->create_variable<bool>(variable_prefix + L"hidden", false, elem.second.get(L"hidden", L"false"));
+		layer.position.x							= scene->create_variable<double>(variable_prefix + L"x", false, ptree_get<std::wstring>(elem.second, L"x"));
+		layer.position.y							= scene->create_variable<double>(variable_prefix + L"y", false, ptree_get<std::wstring>(elem.second, L"y"));
+		layer.anchor.x								= scene->create_variable<double>(variable_prefix + L"anchor_x", false, elem.second.get<std::wstring>(L"anchor_x", L"0.0"));
+		layer.anchor.y								= scene->create_variable<double>(variable_prefix + L"anchor_y", false, elem.second.get<std::wstring>(L"anchor_y", L"0.0"));
+		layer.rotation								= scene->create_variable<double>(variable_prefix + L"rotation", false, elem.second.get<std::wstring>(L"rotation", L"0.0"));
+		layer.crop.upper_left.x						= scene->create_variable<double>(variable_prefix + L"crop_upper_left_x", false, elem.second.get<std::wstring>(L"crop_upper_left_x", L"0.0"));
+		layer.crop.upper_left.y						= scene->create_variable<double>(variable_prefix + L"crop_upper_left_y", false, elem.second.get<std::wstring>(L"crop_upper_left_y", L"0.0"));
+		layer.crop.lower_right.x					= scene->create_variable<double>(variable_prefix + L"crop_lower_right_x", false, elem.second.get<std::wstring>(L"crop_lower_right_x", L"${" + variable_prefix + L"width}"));
+		layer.crop.lower_right.y					= scene->create_variable<double>(variable_prefix + L"crop_lower_right_y", false, elem.second.get<std::wstring>(L"crop_lower_right_y", L"${" + variable_prefix + L"height}"));
+		layer.perspective.upper_left.x				= scene->create_variable<double>(variable_prefix + L"perspective_upper_left_x", false, elem.second.get<std::wstring>(L"perspective_upper_left_x", L"0.0"));
+		layer.perspective.upper_left.y				= scene->create_variable<double>(variable_prefix + L"perspective_upper_left_y", false, elem.second.get<std::wstring>(L"perspective_upper_left_y", L"0.0"));
+		layer.perspective.upper_right.x				= scene->create_variable<double>(variable_prefix + L"perspective_upper_right_x", false, elem.second.get<std::wstring>(L"perspective_upper_right_x", L"${" + variable_prefix + L"width}"));
+		layer.perspective.upper_right.y				= scene->create_variable<double>(variable_prefix + L"perspective_upper_right_y", false, elem.second.get<std::wstring>(L"perspective_upper_right_y", L"0.0"));
+		layer.perspective.lower_right.x				= scene->create_variable<double>(variable_prefix + L"perspective_lower_right_x", false, elem.second.get<std::wstring>(L"perspective_lower_right_x", L"${" + variable_prefix + L"width}"));
+		layer.perspective.lower_right.y				= scene->create_variable<double>(variable_prefix + L"perspective_lower_right_y", false, elem.second.get<std::wstring>(L"perspective_lower_right_y", L"${" + variable_prefix + L"height}"));
+		layer.perspective.lower_left.x				= scene->create_variable<double>(variable_prefix + L"perspective_lower_left_x", false, elem.second.get<std::wstring>(L"perspective_lower_left_x", L"0.0"));
+		layer.perspective.lower_left.y				= scene->create_variable<double>(variable_prefix + L"perspective_lower_left_y", false, elem.second.get<std::wstring>(L"perspective_lower_left_y", L"${" + variable_prefix + L"height}"));
 
-		layer.adjustments.opacity		= scene->create_variable<double>(variable_prefix + L"adjustment.opacity", false, elem.second.get(L"adjustments.opacity", L"1.0"));
-		layer.is_key					= scene->create_variable<bool>(variable_prefix + L"is_key", false, elem.second.get(L"is_key", L"false"));
-		layer.use_mipmap				= scene->create_variable<bool>(variable_prefix + L"use_mipmap", false, elem.second.get(L"use_mipmap", L"false"));
-		layer.blend_mode				= scene->create_variable<std::wstring>(variable_prefix + L"blend_mode", false, elem.second.get(L"blend_mode", L"normal")).transformed([](const std::wstring& b) { return get_blend_mode(b); });
-		layer.chroma_key.enable			= scene->create_variable<bool>(variable_prefix + L"chroma_key.enable", false, elem.second.get(L"chroma_key.enable", L"false"));
-		layer.chroma_key.target_hue		= scene->create_variable<double>(variable_prefix + L"chroma_key.target_hue", false, elem.second.get(L"chroma_key.target_hue", L"120.0"));
-		layer.chroma_key.hue_width		= scene->create_variable<double>(variable_prefix + L"chroma_key.hue_width", false, elem.second.get(L"chroma_key.hue_width", L"0.1"));
-		layer.chroma_key.min_saturation	= scene->create_variable<double>(variable_prefix + L"chroma_key.min_saturation", false, elem.second.get(L"chroma_key.min_saturation", L"0.0"));
-		layer.chroma_key.min_brightness	= scene->create_variable<double>(variable_prefix + L"chroma_key.min_brightness", false, elem.second.get(L"chroma_key.min_brightness", L"0.0"));
-		layer.chroma_key.softness		= scene->create_variable<double>(variable_prefix + L"chroma_key.softness", false, elem.second.get(L"chroma_key.softness", L"0.0"));
-		layer.chroma_key.spill			= scene->create_variable<double>(variable_prefix + L"chroma_key.spill", false, elem.second.get(L"chroma_key.spill", L"1.0"));
-		layer.chroma_key.spill_darken	= scene->create_variable<double>(variable_prefix + L"chroma_key.spill_darken", false, elem.second.get(L"chroma_key.spill_darken", L"2.0"));
+		layer.adjustments.opacity					= scene->create_variable<double>(variable_prefix + L"adjustment.opacity", false, elem.second.get(L"adjustments.opacity", L"1.0"));
+		layer.is_key								= scene->create_variable<bool>(variable_prefix + L"is_key", false, elem.second.get(L"is_key", L"false"));
+		layer.use_mipmap							= scene->create_variable<bool>(variable_prefix + L"use_mipmap", false, elem.second.get(L"use_mipmap", L"false"));
+		layer.blend_mode							= scene->create_variable<std::wstring>(variable_prefix + L"blend_mode", false, elem.second.get(L"blend_mode", L"normal")).transformed([](const std::wstring& b) { return get_blend_mode(b); });
+		layer.chroma_key.enable						= scene->create_variable<bool>(variable_prefix + L"chroma_key.enable", false, elem.second.get(L"chroma_key.enable", L"false"));
+		layer.chroma_key.target_hue					= scene->create_variable<double>(variable_prefix + L"chroma_key.target_hue", false, elem.second.get(L"chroma_key.target_hue", L"120.0"));
+		layer.chroma_key.hue_width					= scene->create_variable<double>(variable_prefix + L"chroma_key.hue_width", false, elem.second.get(L"chroma_key.hue_width", L"0.1"));
+		layer.chroma_key.min_saturation				= scene->create_variable<double>(variable_prefix + L"chroma_key.min_saturation", false, elem.second.get(L"chroma_key.min_saturation", L"0.0"));
+		layer.chroma_key.min_brightness				= scene->create_variable<double>(variable_prefix + L"chroma_key.min_brightness", false, elem.second.get(L"chroma_key.min_brightness", L"0.0"));
+		layer.chroma_key.softness					= scene->create_variable<double>(variable_prefix + L"chroma_key.softness", false, elem.second.get(L"chroma_key.softness", L"0.0"));
+		layer.chroma_key.spill_suppress				= scene->create_variable<double>(variable_prefix + L"chroma_key.spill_suppress", false, elem.second.get(L"chroma_key.spill_suppress", L"0.0"));
+		layer.chroma_key.spill_suppress_saturation	= scene->create_variable<double>(variable_prefix + L"chroma_key.spill_suppress_saturation", false, elem.second.get(L"chroma_key.spill_suppress_saturation", L"1.0"));
 
 		for (auto& var_name : producer->get_variables())
 		{
