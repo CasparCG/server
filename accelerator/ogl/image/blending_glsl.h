@@ -30,7 +30,7 @@ static std::string get_adjustement_glsl()
 			** http://irrlicht.sourceforge.net/phpBB2/viewtopic.php?t=21057
 			*/
 
-			vec3 ContrastSaturationBrightness(vec3 color, float brt, float sat, float con)
+			vec3 ContrastSaturationBrightness(vec4 color, float brt, float sat, float con)
 			{
 				const float AvgLumR = 0.5;
 				const float AvgLumG = 0.5;
@@ -40,11 +40,17 @@ static std::string get_adjustement_glsl()
 						? vec3(0.0722, 0.7152, 0.2126)
 						: vec3(0.114, 0.587, 0.299);
 
+				if (color.a > 0.0)
+					color.rgb /= color.a;
+
 				vec3 AvgLumin = vec3(AvgLumR, AvgLumG, AvgLumB);
-				vec3 brtColor = color * brt;
+				vec3 brtColor = color.rgb * brt;
 				vec3 intensity = vec3(dot(brtColor, LumCoeff));
 				vec3 satColor = mix(intensity, brtColor, sat);
 				vec3 conColor = mix(AvgLumin, satColor, con);
+
+				conColor.rgb *= color.a;
+
 				return conColor;
 			}
 
