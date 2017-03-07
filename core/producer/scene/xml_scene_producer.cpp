@@ -166,6 +166,10 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 		layer.position.y							= scene->create_variable<double>(variable_prefix + L"y", false, ptree_get<std::wstring>(elem.second, L"y"));
 		layer.anchor.x								= scene->create_variable<double>(variable_prefix + L"anchor_x", false, elem.second.get<std::wstring>(L"anchor_x", L"0.0"));
 		layer.anchor.y								= scene->create_variable<double>(variable_prefix + L"anchor_y", false, elem.second.get<std::wstring>(L"anchor_y", L"0.0"));
+		layer.clip.upper_left.x						= scene->create_variable<double>(variable_prefix + L"clip.upper_left_x", false, elem.second.get<std::wstring>(L"clip.upper_left_x", L"0.0"));
+		layer.clip.upper_left.y						= scene->create_variable<double>(variable_prefix + L"clip.upper_left_y", false, elem.second.get<std::wstring>(L"clip.upper_left_y", L"0.0"));
+		layer.clip.lower_right.x					= scene->create_variable<double>(variable_prefix + L"clip.lower_right_x", false, elem.second.get<std::wstring>(L"clip.lower_right_x", L"${scene_width}"));
+		layer.clip.lower_right.y					= scene->create_variable<double>(variable_prefix + L"clip.lower_right_y", false, elem.second.get<std::wstring>(L"clip.lower_right_y", L"${scene_height}"));
 		layer.rotation								= scene->create_variable<double>(variable_prefix + L"rotation", false, elem.second.get<std::wstring>(L"rotation", L"0.0"));
 		layer.crop.upper_left.x						= scene->create_variable<double>(variable_prefix + L"crop_upper_left_x", false, elem.second.get<std::wstring>(L"crop_upper_left_x", L"0.0"));
 		layer.crop.upper_left.y						= scene->create_variable<double>(variable_prefix + L"crop_upper_left_y", false, elem.second.get<std::wstring>(L"crop_upper_left_y", L"0.0"));
@@ -181,6 +185,15 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 		layer.perspective.lower_left.y				= scene->create_variable<double>(variable_prefix + L"perspective_lower_left_y", false, elem.second.get<std::wstring>(L"perspective_lower_left_y", L"${" + variable_prefix + L"height}"));
 
 		layer.adjustments.opacity					= scene->create_variable<double>(variable_prefix + L"adjustment.opacity", false, elem.second.get(L"adjustments.opacity", L"1.0"));
+		layer.adjustments.contrast					= scene->create_variable<double>(variable_prefix + L"adjustment.contrast", false, elem.second.get(L"adjustments.contrast", L"1.0"));
+		layer.adjustments.saturation				= scene->create_variable<double>(variable_prefix + L"adjustment.saturation", false, elem.second.get(L"adjustments.saturation", L"1.0"));
+		layer.adjustments.brightness				= scene->create_variable<double>(variable_prefix + L"adjustment.brightness", false, elem.second.get(L"adjustments.brightness", L"1.0"));
+		layer.levels.min_input						= scene->create_variable<double>(variable_prefix + L"level.min_input", false, elem.second.get(L"levels.min_input", L"0.0"));
+		layer.levels.max_input						= scene->create_variable<double>(variable_prefix + L"level.max_input", false, elem.second.get(L"levels.max_input", L"1.0"));
+		layer.levels.gamma							= scene->create_variable<double>(variable_prefix + L"level.gamma", false, elem.second.get(L"levels.gamma", L"1.0"));
+		layer.levels.min_output						= scene->create_variable<double>(variable_prefix + L"level.min_output", false, elem.second.get(L"levels.min_output", L"0.0"));
+		layer.levels.max_output						= scene->create_variable<double>(variable_prefix + L"level.max_output", false, elem.second.get(L"levels.max_output", L"1.0"));
+		layer.volume								= scene->create_variable<double>(variable_prefix + L"volume", false, elem.second.get(L"volume", L"1.0"));
 		layer.is_key								= scene->create_variable<bool>(variable_prefix + L"is_key", false, elem.second.get(L"is_key", L"false"));
 		layer.use_mipmap							= scene->create_variable<bool>(variable_prefix + L"use_mipmap", false, elem.second.get(L"use_mipmap", L"false"));
 		layer.blend_mode							= scene->create_variable<std::wstring>(variable_prefix + L"blend_mode", false, elem.second.get(L"blend_mode", L"normal")).transformed([](const std::wstring& b) { return get_blend_mode(b); });

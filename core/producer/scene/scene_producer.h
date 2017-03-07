@@ -54,8 +54,22 @@ struct corners
 struct adjustments
 {
 	binding<double> opacity;
+	binding<double> contrast;
+	binding<double> saturation;
+	binding<double> brightness;
 
 	adjustments();
+};
+
+struct levels
+{
+	binding<double> min_input;
+	binding<double> max_input;
+	binding<double> gamma;
+	binding<double> min_output;
+	binding<double> max_output;
+
+	levels();
 };
 
 struct chroma_key
@@ -77,14 +91,17 @@ struct layer
 	scene::coord								position;
 	scene::rect									crop;
 	scene::corners								perspective;
+	scene::rect									clip;
 	binding<double>								rotation;
 	scene::adjustments							adjustments;
+	scene::levels								levels;
 	binding<spl::shared_ptr<frame_producer>>	producer;
 	binding<bool>								hidden;
 	binding<bool>								is_key;
 	binding<bool>								use_mipmap;
 	binding<core::blend_mode>					blend_mode;
 	scene::chroma_key							chroma_key;
+	binding<double>								volume;
 
 	explicit layer(const std::wstring& name, const spl::shared_ptr<frame_producer>& producer);
 };
