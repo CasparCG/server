@@ -28,7 +28,7 @@ General
     (Krzysztof Pyrkosz).
   o Build script for building FFmpeg for Linux now part of the repository.
     Contributions during development (not w.r.t 2.1.0 Beta 1):
-    + Fix ffmpeg build dependencies on clean ubuntu desktop amd64 14.04.3 or
+    + Fix ffmpeg build dependencies on clean Ubuntu desktop amd64 14.04.3 or
       higher (Walter Sonius).
   o Added support for video modes 2160p5000, 2160p5994 and 2160p6000
     (Antonio Ruano Cuesta).
@@ -42,7 +42,8 @@ Consumers
       qtrle was never affected but all the YCbCr based codecs were.
     + Fixed bug in parsing of paths containing -.
   o DeckLink consumer:
-    + Fixed possible dead-lock in frame queue.
+    + Rewrote the frame hand-off between send() and ScheduledFrameCompleted() in
+      a way that hopefully resolves all dead-lock scenarios previously possible.
 
 Producers
 ---------
@@ -54,6 +55,10 @@ Producers
       decode the first frame.
     + Added support for IN and OUT parameters (Dimitry Ishenko).
     + Added DV/HDV video device support under Linux (Walter Sonius).
+  o Destroy producer proxy:
+    + Created workaround for bug in FFmpeg where every new thread used to
+      cleanup caused handles to leak (not sure why). Reduced the effect by using
+      only one thread for all producer destructions.
   o Framerate producer:
     + Fixed bug when INFO was used on a not yet playing framerate producer.
   o HTML producer:
@@ -64,7 +69,24 @@ Producers
     + Fixed serious bug where a circular reference of layer producers caused a
       stack overflow and server crash.
   o Scene producer:
-    + Added abs() function to expression language.
+    + Added abs(), floor(), to_lower(), to_upper() and length() functions to the
+      expression language.
+    + Created XML Schema for the *.scene XML format. Allows for IDE-like auto-
+      completion, API documentation and validation.
+    + Added possibility to specify the width and height of a layer instead of
+      letting the producer on the layer decide.
+    + Added global variables scene_width, scene_height and fps.
+    + Made it possible to use expressions in keyframe values.
+    + Fixed serious bug where uninitialized values were used.
+    + Created more example scenes.
+    + Can now forward CALL, CG PLAY, CG STOP, CG NEXT and CG INVOKE to the
+      producer on a layer.
+  o CG proxy wrapper producer:
+    + New in 2.1.0.
+    + Allows all CG producers to be used as an ordinary producer inside a layer
+      in a scene.
+    + Allows the Scene producer to know what variables are available in a
+      template.
 
 Mixer
 -----
