@@ -36,7 +36,9 @@
 namespace caspar { namespace core { namespace scene {
 
 layer::layer(const std::wstring& name, const spl::shared_ptr<frame_producer>& producer)
-	: name(name), producer(producer)
+	: name(name)
+	, producer(producer)
+	, volume(1.0)
 {
 	crop.lower_right.x.bind(producer.get()->pixel_constraints().width);
 	crop.lower_right.y.bind(producer.get()->pixel_constraints().height);
@@ -48,6 +50,18 @@ layer::layer(const std::wstring& name, const spl::shared_ptr<frame_producer>& pr
 
 adjustments::adjustments()
 	: opacity(1.0)
+	, contrast(1.0)
+	, saturation(1.0)
+	, brightness(1.0)
+{
+}
+
+levels::levels()
+	: min_input(0.0)
+	, max_input(1.0)
+	, gamma(1.0)
+	, min_output(0.0)
+	, max_output(1.0)
 {
 }
 
@@ -131,16 +145,16 @@ struct scene_producer::impl
 	mutable tbb::atomic<int64_t>							m_y_;
 	binding<int64_t>										mouse_x_;
 	binding<int64_t>										mouse_y_;
-	double													frame_fraction_		= 0.0;
+	double													frame_fraction_			= 0.0;
 	std::map<void*, timeline>								timelines_;
 	std::map<std::wstring, std::shared_ptr<core::variable>>	variables_;
 	std::vector<std::wstring>								variable_names_;
 	std::multimap<int64_t, marker>							markers_by_frame_;
 	std::vector<std::shared_ptr<void>>						task_subscriptions_;
 	monitor::subject										monitor_subject_;
-	bool													paused_				= true;
-	bool													removed_			= false;
-	bool													going_to_mark_		= false;
+	bool													paused_					= true;
+	bool													removed_				= false;
+	bool													going_to_mark_			= false;
 
 	impl(
 			std::wstring producer_name,
@@ -193,6 +207,8 @@ struct scene_producer::impl
 
 		layer.position.x.set(x);
 		layer.position.y.set(y);
+		layer.clip.lower_right.x.bind(pixel_constraints_.width);
+		layer.clip.lower_right.y.bind(pixel_constraints_.height);
 
 		layers_.push_back(layer);
 
@@ -277,37 +293,58 @@ struct scene_producer::impl
 		auto& anchor		= transform.image_transform.anchor;
 		auto& pos			= transform.image_transform.fill_translation;
 		auto& scale			= transform.image_transform.fill_scale;
+		auto& clip_pos		= transform.image_transform.clip_translation;
+		auto& clip_scale	= transform.image_transform.clip_scale;
 		auto& angle			= transform.image_transform.angle;
 		auto& crop			= transform.image_transform.crop;
 		auto& pers			= transform.image_transform.perspective;
+		auto& levels		= transform.image_transform.levels;
 
-		anchor[0]	= layer.anchor.x.get()										/ layer.producer.get()->pixel_constraints().width.get();
-		anchor[1]	= layer.anchor.y.get()										/ layer.producer.get()->pixel_constraints().height.get();
-		pos[0]		= layer.position.x.get()									/ pixel_constraints_.width.get();
-		pos[1]		= layer.position.y.get()									/ pixel_constraints_.height.get();
-		scale[0]	= layer.producer.get()->pixel_constraints().width.get()		/ pixel_constraints_.width.get();
-		scale[1]	= layer.producer.get()->pixel_constraints().height.get()	/ pixel_constraints_.height.get();
-		crop.ul[0]	= layer.crop.upper_left.x.get()								/ layer.producer.get()->pixel_constraints().width.get();
-		crop.ul[1]	= layer.crop.upper_left.y.get()								/ layer.producer.get()->pixel_constraints().height.get();
-		crop.lr[0]	= layer.crop.lower_right.x.get()							/ layer.producer.get()->pixel_constraints().width.get();
-		crop.lr[1]	= layer.crop.lower_right.y.get()							/ layer.producer.get()->pixel_constraints().height.get();
-		pers.ul[0]	= layer.perspective.upper_left.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
-		pers.ul[1]	= layer.perspective.upper_left.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
-		pers.ur[0]	= layer.perspective.upper_right.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
-		pers.ur[1]	= layer.perspective.upper_right.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
-		pers.lr[0]	= layer.perspective.lower_right.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
-		pers.lr[1]	= layer.perspective.lower_right.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
-		pers.ll[0]	= layer.perspective.lower_left.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
-		pers.ll[1]	= layer.perspective.lower_left.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
+		anchor[0]		= layer.anchor.x.get()										/ layer.producer.get()->pixel_constraints().width.get();
+		anchor[1]		= layer.anchor.y.get()										/ layer.producer.get()->pixel_constraints().height.get();
+
+		pos[0]			= layer.position.x.get()									/ pixel_constraints_.width.get();
+		pos[1]			= layer.position.y.get()									/ pixel_constraints_.height.get();
+		scale[0]		= layer.producer.get()->pixel_constraints().width.get()		/ pixel_constraints_.width.get();
+		scale[1]		= layer.producer.get()->pixel_constraints().height.get()		/ pixel_constraints_.height.get();
+
+		clip_pos[0]		= layer.clip.upper_left.x.get()								/ pixel_constraints_.width.get();
+		clip_pos[1]		= layer.clip.upper_left.y.get()								/ pixel_constraints_.height.get();
+		clip_scale[0]	= layer.clip.lower_right.x.get()							/ pixel_constraints_.width.get() - clip_pos[0];
+		clip_scale[1]	= layer.clip.lower_right.y.get()							/ pixel_constraints_.height.get() - clip_pos[1];
+
+		crop.ul[0]		= layer.crop.upper_left.x.get()								/ layer.producer.get()->pixel_constraints().width.get();
+		crop.ul[1]		= layer.crop.upper_left.y.get()								/ layer.producer.get()->pixel_constraints().height.get();
+		crop.lr[0]		= layer.crop.lower_right.x.get()							/ layer.producer.get()->pixel_constraints().width.get();
+		crop.lr[1]		= layer.crop.lower_right.y.get()							/ layer.producer.get()->pixel_constraints().height.get();
+
+		pers.ul[0]		= layer.perspective.upper_left.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
+		pers.ul[1]		= layer.perspective.upper_left.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
+		pers.ur[0]		= layer.perspective.upper_right.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
+		pers.ur[1]		= layer.perspective.upper_right.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
+		pers.lr[0]		= layer.perspective.lower_right.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
+		pers.lr[1]		= layer.perspective.lower_right.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
+		pers.ll[0]		= layer.perspective.lower_left.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
+		pers.ll[1]		= layer.perspective.lower_left.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
 
 		static const double PI = 3.141592653589793;
 
-		angle		= layer.rotation.get() * PI / 180.0;
+		angle = layer.rotation.get() * PI / 180.0;
+
+		levels.min_input	= layer.levels.min_input.get();
+		levels.max_input	= layer.levels.max_input.get();
+		levels.gamma		= layer.levels.gamma.get();
+		levels.min_output	= layer.levels.min_output.get();
+		levels.max_output	= layer.levels.max_output.get();
 
 		transform.image_transform.opacity							= layer.adjustments.opacity.get();
+		transform.image_transform.contrast							= layer.adjustments.contrast.get();
+		transform.image_transform.saturation						= layer.adjustments.saturation.get();
+		transform.image_transform.brightness						= layer.adjustments.brightness.get();
 		transform.image_transform.is_key							= layer.is_key.get();
 		transform.image_transform.use_mipmap						= layer.use_mipmap.get();
 		transform.image_transform.blend_mode						= layer.blend_mode.get();
+
 		transform.image_transform.chroma.enable						= layer.chroma_key.enable.get();
 		transform.image_transform.chroma.target_hue					= layer.chroma_key.target_hue.get();
 		transform.image_transform.chroma.hue_width					= layer.chroma_key.hue_width.get();
@@ -316,6 +353,8 @@ struct scene_producer::impl
 		transform.image_transform.chroma.softness					= layer.chroma_key.softness.get();
 		transform.image_transform.chroma.spill_suppress				= layer.chroma_key.spill_suppress.get();
 		transform.image_transform.chroma.spill_suppress_saturation	= layer.chroma_key.spill_suppress_saturation.get();
+
+		transform.audio_transform.volume							= layer.volume.get();
 
 		// Mark as sublayer, so it will be composited separately by the mixer.
 		transform.image_transform.layer_depth = 1;
