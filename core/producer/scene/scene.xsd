@@ -67,6 +67,21 @@
                     <xs:element type="number_expression" name="y">                                                          <xs:annotation><xs:documentation>The Y coordinate of the layer in the scene coordinate system. Can be an expression.</xs:documentation></xs:annotation></xs:element>
                     <xs:element type="number_expression" name="width" minOccurs="0">                                        <xs:annotation><xs:documentation>The width of the layer. Is by default calculated by the producer itself but can be overridden. Can be an expression.</xs:documentation></xs:annotation></xs:element>
                     <xs:element type="number_expression" name="height" minOccurs="0">                                       <xs:annotation><xs:documentation>The height of the layer. Is by default calculated by the producer itself but can be overridden. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                    <xs:element name="clip" minOccurs="0">
+                      <xs:annotation>
+                        <xs:documentation>
+                          Properties regarding viewport clipping. The coordinates are relative to the scene coordinate system. They are addressable from expressions as layer.[id].clip.[property].
+                        </xs:documentation>
+                      </xs:annotation>
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element type="number_expression" name="upper_left_x" minOccurs="0" default="0">                <xs:annotation><xs:documentation>The X position within the scene coordinate system to clip the upper left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="upper_left_y" minOccurs="0" default="0">                <xs:annotation><xs:documentation>The Y position within the scene coordinate system to clip the upper left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="lower_right_x" minOccurs="0">                           <xs:annotation><xs:documentation>The X position within the scene coordinate system to clip the lower right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="lower_right_y" minOccurs="0">                           <xs:annotation><xs:documentation>The Y position within the scene coordinate system to clip the lower right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                        </xs:all>
+                      </xs:complexType>
+                    </xs:element>
                     <xs:element type="number_expression" name="anchor_x" minOccurs="0" default="0">                         <xs:annotation><xs:documentation>The X anchor within the layer coordinate system where position and rotation are done relative to/around. Can be an expression.</xs:documentation></xs:annotation></xs:element>
                     <xs:element type="number_expression" name="anchor_y" minOccurs="0" default="0">                         <xs:annotation><xs:documentation>The Y anchor within the layer coordinate system where position and rotation are done relative to/around. Can be an expression.</xs:documentation></xs:annotation></xs:element>
                     <xs:element type="number_expression" name="rotation" minOccurs="0" default="0.0">                       <xs:annotation><xs:documentation>The rotation of the layer around anchor_x/anchor_y expressed in degrees. Can be an expression.</xs:documentation></xs:annotation></xs:element>
@@ -91,6 +106,25 @@
                       <xs:complexType>
                         <xs:all>
                           <xs:element type="number_expression" name="opacity" minOccurs="0" default="1.0">                  <xs:annotation><xs:documentation>The opacity of the layer. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="contrast" minOccurs="0" default="1.0">                 <xs:annotation><xs:documentation>The contrast of the layer. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="saturation" minOccurs="0" default="1.0">               <xs:annotation><xs:documentation>The saturation of the layer. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="brightness" minOccurs="0" default="1.0">               <xs:annotation><xs:documentation>The brightness of the layer. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                        </xs:all>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="levels" minOccurs="0">
+                      <xs:annotation>
+                        <xs:documentation>
+                          Properties regarding level adjustments. They are addressable from expressions as layer.[id].level.[property].
+                        </xs:documentation>
+                      </xs:annotation>
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element type="number_expression" name="min_input" minOccurs="0" default="0.0">                <xs:annotation><xs:documentation>The minimum input level of the layer. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="max_input" minOccurs="0" default="1.0">                <xs:annotation><xs:documentation>The maximum input level of the layer. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="gamma" minOccurs="0" default="1.0">                    <xs:annotation><xs:documentation>The gamma correction of the layer. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="min_output" minOccurs="0" default="0.0">               <xs:annotation><xs:documentation>The minimum output level of the layer. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="max_output" minOccurs="0" default="1.0">               <xs:annotation><xs:documentation>The maximum output level of the layer. Can be an expression.</xs:documentation></xs:annotation></xs:element>
                         </xs:all>
                       </xs:complexType>
                     </xs:element>
@@ -111,6 +145,7 @@
                         </xs:all>
                       </xs:complexType>
                     </xs:element>
+                    <xs:element type="number_expression" name="volume" minOccurs="0" default="1.0">                         <xs:annotation><xs:documentation>The audio volume of the layer. Can be an expression.</xs:documentation></xs:annotation></xs:element>
                     <xs:element name="parameters" minOccurs="0">
                       <xs:annotation>
                         <xs:documentation>
