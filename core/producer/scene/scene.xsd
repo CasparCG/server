@@ -86,18 +86,40 @@
                     <xs:element type="number_expression" name="anchor_x" minOccurs="0" default="0">                         <xs:annotation><xs:documentation>The X anchor within the layer coordinate system where position and rotation are done relative to/around. Can be an expression.</xs:documentation></xs:annotation></xs:element>
                     <xs:element type="number_expression" name="anchor_y" minOccurs="0" default="0">                         <xs:annotation><xs:documentation>The Y anchor within the layer coordinate system where position and rotation are done relative to/around. Can be an expression.</xs:documentation></xs:annotation></xs:element>
                     <xs:element type="number_expression" name="rotation" minOccurs="0" default="0.0">                       <xs:annotation><xs:documentation>The rotation of the layer around anchor_x/anchor_y expressed in degrees. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="crop_upper_left_x" minOccurs="0" default="0">                <xs:annotation><xs:documentation>The X position within the layer coordinate system to crop the upper left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="crop_upper_left_y" minOccurs="0" default="0">                <xs:annotation><xs:documentation>The Y position within the layer coordinate system to crop the upper left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="crop_lower_right_x" minOccurs="0">                           <xs:annotation><xs:documentation>The X position within the layer coordinate system to crop the lower right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="crop_lower_right_y" minOccurs="0">                           <xs:annotation><xs:documentation>The Y position within the layer coordinate system to crop the lower right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="perspective_upper_left_x" minOccurs="0" default="0">         <xs:annotation><xs:documentation>The X position within the layer coordinate system to corner pin the upper left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="perspective_upper_left_y" minOccurs="0" default="0">         <xs:annotation><xs:documentation>The Y position within the layer coordinate system to corner pin the upper left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="perspective_upper_right_x" minOccurs="0">                    <xs:annotation><xs:documentation>The X position within the layer coordinate system to corner pin the upper right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="perspective_upper_right_y" minOccurs="0" default="0">        <xs:annotation><xs:documentation>The Y position within the layer coordinate system to corner pin the upper right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="perspective_lower_right_x" minOccurs="0">                    <xs:annotation><xs:documentation>The X position within the layer coordinate system to corner pin the lower right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="perspective_lower_right_y" minOccurs="0">                    <xs:annotation><xs:documentation>The Y position within the layer coordinate system to corner pin the lower right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="perspective_lower_left_x" minOccurs="0" default="0">         <xs:annotation><xs:documentation>The X position within the layer coordinate system to corner pin the lower left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="perspective_lower_left_y" minOccurs="0">                     <xs:annotation><xs:documentation>The Y position within the layer coordinate system to corner pin the lower left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                    <xs:element name="crop" minOccurs="0">
+                      <xs:annotation>
+                        <xs:documentation>
+                          Properties for cropping the layer. The coordinates are relative to the layer coordinate system. They are addressable from expressions as layer.[id].crop.[property].
+                        </xs:documentation>
+                      </xs:annotation>
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element type="number_expression" name="upper_left_x" minOccurs="0" default="0">               <xs:annotation><xs:documentation>The X position within the layer coordinate system to crop the upper left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="upper_left_y" minOccurs="0" default="0">               <xs:annotation><xs:documentation>The Y position within the layer coordinate system to crop the upper left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="lower_right_x" minOccurs="0">                          <xs:annotation><xs:documentation>The X position within the layer coordinate system to crop the lower right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="lower_right_y" minOccurs="0">                          <xs:annotation><xs:documentation>The Y position within the layer coordinate system to crop the lower right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                        </xs:all>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="perspective" minOccurs="0">
+                      <xs:annotation>
+                        <xs:documentation>
+                          Properties for perspective/corner pin of the layer. The coordinates are relative to the layer coordinate system. They are addressable from expressions as layer.[id].perspective.[property].
+                        </xs:documentation>
+                      </xs:annotation>
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element type="number_expression" name="upper_left_x" minOccurs="0" default="0">               <xs:annotation><xs:documentation>The X position within the layer coordinate system to corner pin the upper left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="upper_left_y" minOccurs="0" default="0">               <xs:annotation><xs:documentation>The Y position within the layer coordinate system to corner pin the upper left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="upper_right_x" minOccurs="0">                          <xs:annotation><xs:documentation>The X position within the layer coordinate system to corner pin the upper right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="upper_right_y" minOccurs="0" default="0">              <xs:annotation><xs:documentation>The Y position within the layer coordinate system to corner pin the upper right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="lower_right_x" minOccurs="0">                          <xs:annotation><xs:documentation>The X position within the layer coordinate system to corner pin the lower right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="lower_right_y" minOccurs="0">                          <xs:annotation><xs:documentation>The Y position within the layer coordinate system to corner pin the lower right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="lower_left_x" minOccurs="0" default="0">               <xs:annotation><xs:documentation>The X position within the layer coordinate system to corner pin the lower left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="lower_left_y" minOccurs="0">                           <xs:annotation><xs:documentation>The Y position within the layer coordinate system to corner pin the lower left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                        </xs:all>
+                      </xs:complexType>
+                    </xs:element>
                     <xs:element name="adjustments" minOccurs="0">
                       <xs:annotation>
                         <xs:documentation>
