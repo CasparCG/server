@@ -11,7 +11,8 @@
               There are some variables that are always defined like
               "frame" which stores the number of frames that have gone by since the scene producer started,
               "mouse_x" and "mouse_y" which reflect the X and Y position of the mouse at all times relative to the scene coordinate system (requires interaction aware consumer like screen_consumer),
-              "timeline_frame" which differs from "frame" in that it can rewind and jump, depending on where the timeline is at the moment and
+              "timeline_frame" which differs from "frame" in that it can rewind and jump, depending on where the timeline is at the moment,
+              "fps" which always contains the framerate of the scene and
               "scene_width" and "scene_height" which contains the dimensions of the scene coordinate system.
             </xs:documentation>
           </xs:annotation>
