@@ -137,5 +137,53 @@ std::wostream& operator<<(std::wostream& out, const video_format_desc& format_de
 	return out;
 }
 
+std::vector<int> find_audio_cadence(const boost::rational<int>& framerate, bool log_quiet)
+{
+	static std::map<boost::rational<int>, std::vector<int>> CADENCES_BY_FRAMERATE = []
+	{
+		std::map<boost::rational<int>, std::vector<int>> result;
+
+		for (core::video_format format : enum_constants<core::video_format>())
+		{
+			core::video_format_desc desc(format);
+			boost::rational<int> format_rate(desc.time_scale, desc.duration);
+
+			result.insert(std::make_pair(format_rate, desc.audio_cadence));
+		}
+
+		return result;
+	}();
+
+	auto exact_match = CADENCES_BY_FRAMERATE.find(framerate);
+
+	if (exact_match != CADENCES_BY_FRAMERATE.end())
+		return exact_match->second;
+
+	boost::rational<int> closest_framerate_diff	= std::numeric_limits<int>::max();
+	boost::rational<int> closest_framerate		= 0;
+
+	for (auto format_framerate : CADENCES_BY_FRAMERATE | boost::adaptors::map_keys)
+	{
+		auto diff = boost::abs(framerate - format_framerate);
+
+		if (diff < closest_framerate_diff)
+		{
+			closest_framerate_diff = diff;
+			closest_framerate = format_framerate;
+		}
+	}
+
+	if (log_quiet)
+		CASPAR_LOG(debug) << "No exact audio cadence match found for framerate " << to_string(framerate)
+			<< "\nClosest match is " << to_string(closest_framerate)
+			<< "\nwhich is a " << to_string(closest_framerate_diff) << " difference.";
+	else
+		CASPAR_LOG(warning) << "No exact audio cadence match found for framerate " << to_string(framerate)
+			<< "\nClosest match is " << to_string(closest_framerate)
+			<< "\nwhich is a " << to_string(closest_framerate_diff) << " difference.";
+
+	return CADENCES_BY_FRAMERATE[closest_framerate];
+}
+
 
 }}
