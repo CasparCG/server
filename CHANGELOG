@@ -87,6 +87,8 @@ Producers
       in a scene.
     + Allows the Scene producer to know what variables are available in a
       template.
+  o Color producer:
+    + Now has support for gradients.
 
 Mixer
 -----
