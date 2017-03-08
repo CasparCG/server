@@ -62,7 +62,7 @@ struct audio_item
 };
 
 typedef cache_aligned_vector<double> audio_buffer_ps;
-	
+
 struct audio_stream
 {
 	audio_transform							prev_transform;
@@ -92,7 +92,7 @@ public:
 		graph_->set_color("audio-clipping", diagnostics::color(0.3f, 0.6f, 0.3f));
 		transform_stack_.push(core::audio_transform());
 	}
-	
+
 	void push(const frame_transform& transform)
 	{
 		transform_stack_.push(transform_stack_.top()*transform.audio_transform);
@@ -111,15 +111,15 @@ public:
 
 		if(item.transform.is_still)
 			item.transform.volume = 0.0;
-		
-		items_.push_back(std::move(item));		
+
+		items_.push_back(std::move(item));
 	}
 
 	void begin(const core::audio_transform& transform)
 	{
 		transform_stack_.push(transform_stack_.top()*transform);
 	}
-		
+
 	void pop()
 	{
 		transform_stack_.pop();
@@ -136,20 +136,19 @@ public:
 	}
 
 	audio_buffer mix(const video_format_desc& format_desc, const audio_channel_layout& channel_layout)
-	{	
+	{
 		if(format_desc_ != format_desc || channel_layout_ != channel_layout)
 		{
 			audio_streams_.clear();
 			audio_cadence_ = format_desc.audio_cadence;
 			format_desc_ = format_desc;
 			channel_layout_ = channel_layout;
-		}		
-		
+		}
+
 		std::map<const void*, audio_stream>	next_audio_streams;
-		std::vector<const void*> used_tags;
 
 		for (auto& item : items_)
-		{			
+		{
 			audio_buffer_ps next_audio;
 			std::unique_ptr<audio_channel_remapper> channel_remapper;
 			bool remapping_failed = false;
@@ -159,20 +158,23 @@ public:
 
 			auto tag = item.tag;
 
-			if(boost::range::find(used_tags, tag) != used_tags.end())
-				continue;
-			
-			used_tags.push_back(tag);
+			auto it = next_audio_streams.find(tag);
+			bool found = it != next_audio_streams.end();
 
-			const auto it = audio_streams_.find(tag);
-			if (it != audio_streams_.end())
+			if (!found)
+			{
+				it = audio_streams_.find(tag);
+				found = it != audio_streams_.end();
+			}
+
+			if (found)
 			{
 				prev_transform = it->second.prev_transform;
 				next_audio = std::move(it->second.audio_data);
 				channel_remapper = std::move(it->second.channel_remapper);
 				remapping_failed = it->second.remapping_failed;
 			}
-			
+
 			if (remapping_failed)
 			{
 				CASPAR_LOG(trace) << "[audio_mixer] audio channel remapping already failed for stream.";
@@ -181,7 +183,7 @@ public:
 			}
 
 			// Skip it if there is no existing audio stream and item has no audio-data.
-			if(it == audio_streams_.end() && item.audio_data.empty()) 
+			if(!found && item.audio_data.empty())
 				continue;
 
 			if (item.channel_layout == audio_channel_layout::invalid())
@@ -213,13 +215,13 @@ public:
 
 			// TODO: Move volume mixing into code below, in order to support audio sample counts not corresponding to frame audio samples.
 			auto alpha = (next_volume-prev_volume)/static_cast<double>(item.audio_data.size()/channel_layout_.num_channels);
-			
+
 			for(size_t n = 0; n < item.audio_data.size(); ++n)
 			{
 				auto sample_multiplier = (prev_volume + (n / channel_layout_.num_channels) * alpha);
 				next_audio.push_back(item.audio_data.data()[n] * sample_multiplier);
-			} 
-										
+			}
+
 			next_audio_streams[tag].prev_transform		= std::move(next_transform); // Store all active tags, inactive tags will be removed at the end.
 			next_audio_streams[tag].audio_data			= std::move(next_audio);
 			next_audio_streams[tag].channel_remapper	= std::move(channel_remapper);
@@ -231,8 +233,8 @@ public:
 		items_.clear();
 
 		audio_streams_ = std::move(next_audio_streams);
-		
-		if(audio_streams_.empty())		
+
+		if(audio_streams_.empty())
 			audio_streams_[nullptr].audio_data = audio_buffer_ps(audio_size(audio_cadence_.front()), 0.0);
 
 		{ // sanity check
@@ -245,10 +247,10 @@ public:
 				})
 				.count();
 
-			if(nb_invalid_streams > 0)		
-				CASPAR_LOG(trace) << "[audio_mixer] Incorrect frame audio cadence detected.";			
+			if(nb_invalid_streams > 0)
+				CASPAR_LOG(trace) << "[audio_mixer] Incorrect frame audio cadence detected.";
 		}
-				
+
 		audio_buffer_ps result_ps(audio_size(audio_cadence_.front()), 0.0);
 		for (auto& stream : audio_streams_ | boost::adaptors::map_values)
 		{
@@ -263,10 +265,10 @@ public:
 
 			auto out = boost::range::transform(result_ps, stream.audio_data, std::begin(result_ps), std::plus<double>());
 			stream.audio_data.erase(std::begin(stream.audio_data), std::begin(stream.audio_data) + std::distance(std::begin(result_ps), out));
-		}		
-		
+		}
+
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
-		
+
 		auto result_owner = spl::make_shared<mutable_audio_buffer>();
 		auto& result = *result_owner;
 		result.reserve(result_ps.size());
@@ -291,7 +293,7 @@ public:
 
 		if (clipping)
 			graph_->set_tag(diagnostics::tag_severity::WARNING, "audio-clipping");
-		
+
 		const int num_channels = channel_layout_.num_channels;
 		monitor_subject_ << monitor::message("/nb_channels") % num_channels;
 
