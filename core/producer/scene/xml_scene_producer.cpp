@@ -141,8 +141,10 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 
 			adjusted_format_desc.field_mode		 = field_mode::progressive;
 			adjusted_format_desc.fps			*= adjusted_format_desc.field_count;
-			adjusted_format_desc.duration		/= adjusted_format_desc.field_count;
+			adjusted_format_desc.time_scale		*= adjusted_format_desc.field_count;
+			adjusted_format_desc.framerate		*= adjusted_format_desc.field_count;
 			adjusted_format_desc.field_count	 = 1;
+			adjusted_format_desc.audio_cadence	 = core::find_audio_cadence(adjusted_format_desc.framerate);
 
 			return dependencies.producer_registry->create_producer(adjusted_dependencies, producer_string);
 		}();
