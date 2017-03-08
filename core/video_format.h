@@ -30,13 +30,13 @@
 #include <boost/rational.hpp>
 
 namespace caspar { namespace core {
-	
+
 enum class video_format
-{ 
-	pal,		
-	ntsc,		
-	x576p2500,	
-	x720p2500,	
+{
+	pal,
+	ntsc,
+	x576p2500,
+	x720p2500,
 	x720p5000,
 	x720p2398,
 	x720p2400,
@@ -45,13 +45,13 @@ enum class video_format
 	x720p3000,
 	x720p6000,
 	x1080p2398,
-	x1080p2400,	
-	x1080i5000,	
-	x1080i5994,	
-	x1080i6000,	
-	x1080p2500,	
-	x1080p2997,	
-	x1080p3000,	
+	x1080p2400,
+	x1080i5000,
+	x1080i5994,
+	x1080i6000,
+	x1080p2500,
+	x1080p2997,
+	x1080p3000,
 	x1080p5000,
 	x1080p5994,
 	x1080p6000,
@@ -88,10 +88,10 @@ ENUM_ENABLE_BITWISE(field_mode);
 
 struct video_format_desc final
 {
-	video_format			format;		
+	video_format			format;
 
-	int						width;		
-	int						height;		
+	int						width;
+	int						height;
 	int						square_width;
 	int						square_height;
 	core::field_mode		field_mode;	// progressive, interlaced upper field first, interlaced lower field first
@@ -100,7 +100,7 @@ struct video_format_desc final
 	int						time_scale;
 	int						duration;
 	int						field_count;
-	std::size_t				size;		// frame size in bytes 
+	std::size_t				size;		// frame size in bytes
 	std::wstring			name;		// name of output format
 
 	int						audio_sample_rate;
@@ -116,7 +116,7 @@ struct video_format_desc final
 					  int duration,
 					  const std::wstring& name,
 					  const std::vector<int>& audio_cadence);
-		
+
 	video_format_desc(video_format format = video_format::invalid);
 	video_format_desc(const std::wstring& name);
 };
@@ -125,5 +125,7 @@ bool operator==(const video_format_desc& rhs, const video_format_desc& lhs);
 bool operator!=(const video_format_desc& rhs, const video_format_desc& lhs);
 
 std::wostream& operator<<(std::wostream& out, const video_format_desc& format_desc);
+
+std::vector<int> find_audio_cadence(const boost::rational<int>& framerate, bool log_quiet = false);
 
 }}
