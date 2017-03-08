@@ -395,6 +395,8 @@ boost::any parse_variable(
 
 struct op
 {
+	static const int MAX_PRECEDENCE = 100;
+
 	enum class op_type
 	{
 		UNARY,
@@ -890,12 +892,15 @@ boost::any parse_expression(
 		CASPAR_THROW_EXCEPTION(user_error()
 				<< msg_info(L"Expected expression" + at_position(cursor, str)));
 
-	int precedence = 1;
-
-	while (tokens.size() > 1)
+	for (int precedence = 1; tokens.size() > 1 && precedence < op::MAX_PRECEDENCE; ++precedence)
 	{
-		resolve_operators(precedence++, tokens);
+		resolve_operators(precedence, tokens);
 	}
+
+	if (tokens.size() > 1)
+		CASPAR_THROW_EXCEPTION(user_error()
+				<< msg_info(L"Expected operator" + at_position(cursor, str)));
+
 
 	return as_binding(tokens.at(0));
 }
