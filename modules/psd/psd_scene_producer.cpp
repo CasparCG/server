@@ -461,6 +461,19 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 				//adjustment_y = metrics.bearingY;
 				layer_producer = text_producer;
 				scene_layer = &current.scene()->create_layer(spl::make_shared_ptr(layer_producer), static_cast<int>(psd_layer->text_pos().x) + adjustment_x, static_cast<int>(psd_layer->text_pos().y) + adjustment_y, layer_name);
+
+				int justification = psd_layer->text_data().get(L"EngineDict.ParagraphRun.RunArray..ParagraphSheet.Properties.Justification", 0);
+
+				switch (justification)
+				{
+				case 1: // Right
+					scene_layer->anchor.x = text_producer.get()->pixel_constraints().width;
+					break;
+				case 2: // Center
+					scene_layer->anchor.x = text_producer.get()->pixel_constraints().width / 2.0;
+					break;
+				}
+
 				text_producers_by_layer_name.push_back(std::make_pair(layer_name, text_producer));
 			}
 			else
