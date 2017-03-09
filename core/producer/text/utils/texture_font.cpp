@@ -46,7 +46,7 @@ private:
 
 public:
 	impl(texture_atlas& atlas, const text_info& info, bool normalize_coordinates)
-		: face_(get_new_face(u8(info.font_file)))
+		: face_(get_new_face(u8(info.font_file), u8(info.font)))
 		, atlas_(atlas)
 		, size_(info.size)
 		, tracking_(info.size*info.tracking/1000.0)
@@ -54,7 +54,7 @@ public:
 		, name_(info.font)
 	{
 		if (FT_Set_Char_Size(face_.get(), static_cast<FT_F26Dot6>(size_*64), 0, 72, 72))
-			CASPAR_THROW_EXCEPTION(freetype_exception() << msg_info("Failed to set font size"));
+			CASPAR_THROW_EXCEPTION(expected_freetype_exception() << msg_info("Failed to set font size"));
 	}
 
 	void set_tracking(int tracking)
@@ -63,7 +63,7 @@ public:
 	}
 
 	int count_glyphs_in_range(unicode_block block)
-	{ 
+	{
 		unicode_range range = get_range(block);
 
 		//TODO: extract info from freetype
@@ -82,7 +82,7 @@ public:
 			FT_UInt glyph_index = FT_Get_Char_Index(face_.get(), i);
 			if(!glyph_index)	//ignore codes that doesn't have a glyph for now. Might want to map these to a special glyph later.
 				continue;
-			
+
 			FT_Error err = FT_Load_Glyph(face_.get(), glyph_index, flags);
 			if(err) continue;	//igonore glyphs that fail to load
 
@@ -97,7 +97,7 @@ public:
 			}
 
 			atlas_.set_region(region.x, region.y, bitmap.width, bitmap.rows, bitmap.buffer, bitmap.pitch, col);
-			glyphs_.insert(std::pair<int, glyph_info>(i, glyph_info(bitmap.width, bitmap.rows, 
+			glyphs_.insert(std::pair<int, glyph_info>(i, glyph_info(bitmap.width, bitmap.rows,
 										region.x / static_cast<double>(atlas_.width()),
 										region.y / static_cast<double>(atlas_.height()),
 										(region.x + bitmap.width) / static_cast<double>(atlas_.width()),
@@ -126,7 +126,7 @@ public:
 		{
 			auto glyph_it = glyphs_.find(*it);
 			if (glyph_it != glyphs_.end())
-			{	
+			{
 				const glyph_info& coords = glyph_it->second;
 
 				FT_UInt glyph_index = FT_Get_Char_Index(face_.get(), (*it));
@@ -224,7 +224,7 @@ public:
 	string_metrics measure_string(const std::wstring& str)
 	{
 		string_metrics result;
-		
+
 		bool use_kerning = (face_->face_flags & FT_FACE_FLAG_KERNING) == FT_FACE_FLAG_KERNING;
 		int index = 0;
 		FT_UInt previous = 0;
@@ -236,7 +236,7 @@ public:
 		{
 			auto glyph_it = glyphs_.find(*it);
 			if(glyph_it != glyphs_.end())
-			{	
+			{
 				const glyph_info& coords = glyph_it->second;
 
 				FT_UInt glyph_index = FT_Get_Char_Index(face_.get(), (*it));
@@ -281,7 +281,7 @@ public:
 	{
 		return size_;
 	}
-}; 
+};
 
 texture_font::texture_font(texture_atlas& atlas, const text_info& info, bool normalize_coordinates) : impl_(new impl(atlas, info, normalize_coordinates)) {}
 void texture_font::load_glyphs(unicode_block range, const color<double>& col) { impl_->load_glyphs(range, col); }
