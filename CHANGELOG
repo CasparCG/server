@@ -89,6 +89,8 @@ Producers
       template.
   o Color producer:
     + Now has support for gradients.
+  o PSD producer:
+    + Added support for centered and right justified text.
 
 Mixer
 -----
