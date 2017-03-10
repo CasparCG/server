@@ -1,11 +1,11 @@
 #pragma once
-#ifndef BLUE_LINUX_CODE
+#ifndef __linux__
 #ifndef HANCUTILS_USE_STATIC_LIB
 	#ifdef HANCUTILS_EXPORTS
 		#define HANCUTILS_API __declspec(dllexport)
 	#elif defined(__APPLE__)
 		#define HANCUTILS_API
-		#define ATLTRACE	printf
+		#define //ATLTRACE	printf
 	#else
 		#define HANCUTILS_API __declspec(dllimport)
 	#endif
@@ -37,7 +37,7 @@ struct hanc_stream_info_struct
 {
 	BLUE_INT32 AudioDBNArray[4];			/**< Contains the DBN values that should be used for each of the embedded audio groups*/
 	BLUE_INT32 AudioChannelStatusBlock[4];	/**< channel status block information for each of the embedded audio group*/
-	BLUE_UINT32 flag_valid_time_code;		/**< flag which identifies the validity of the time code member in the #hanc_stream_info_struct*/
+	BLUE_UINT32 flag_valid_time_code;		/**< deprecated/unused flag; set to 0*/
 	BLUE_UINT64	time_code;					/**< RP188 time code that was extracted from the HANC buffer or RP188 timecode which should be inserted 
 												 into the HANC buffer*/
 	BLUE_UINT32* hanc_data_ptr;				/**< Hanc Buffer which should be used as the source or destination for either extraction or insertion */
@@ -54,35 +54,45 @@ struct hanc_stream_info_struct
 struct hanc_decode_struct
 {
 	void* audio_pcm_data_ptr;			// Buffer which would be used to store the extracted PCM
-										// audio data. Must be filled in by app before calling function.
-	BLUE_UINT32 audio_ch_required_mask;	// which all audio channels should be extracted from the 
-										// audio frame .Must be filled in by app before calling function.
-	BLUE_UINT32 type_of_sample_required;// type of destination  audio channel
-										//ie 16 bit ,24 bit or 32 bit PCM data .
-										//Must be filled in by app before calling function.
+										// audio data.
+										// Must be filled in by app before calling function.
+	BLUE_UINT32 audio_ch_required_mask;	// Defines which audio channels should be extracted;
+										// Use enumerator BlueAudioChannelDesc to set up this mask.
+										// Must be filled in by app before calling function.
+	BLUE_UINT32 type_of_sample_required;// Defines sample characteristics:
+										// AUDIO_CHANNEL_16BIT: for 16 bit pcm data
+										// AUDIO_CHANNEL_24BIT: for 24 bit pcm data
+										// If neither AUDIO_CHANNEL_16BIT nor AUDIO_CHANNEL_24BIT are set 32 bit pcm data will be extracted
+										// Must be filled in by app before calling function.
 	BLUE_UINT32 no_audio_samples;		// this would contain how many audio samples has been decoded from
 										// the hanc buffer.
-	BLUE_UINT64 timecodes[7];			// Would extract the timecode information from the audio frame.
+	BLUE_UINT64 timecodes[7];			// Only the first four elements are currently defined:
+										//	hanc_decode_struct::timcodes[0] ---> RP188 VITC timecode
+										//	hanc_decode_struct::timcodes[1] ---> RP188 LTC timecode
+										//	hanc_decode_struct::timcodes[2] ---> SD VITC timecode
+										//	hanc_decode_struct::timcodes[3] ---> External LTC timecode
 	void * raw_custom_anc_pkt_data_ptr;			// This buffer  would contain the raw ANC packets that was found in the orac hanc buffer.
 												// this would contain any ANC packets that is not of type embedded audio and RP188 TC.
-												//Must be filled in by app before calling function. can be NULL
+												// Must be filled in by app before calling function. can be NULL
 	BLUE_UINT32 sizeof_custom_anc_pkt_data_ptr; // size of the ANC buffer array
-												//Must be filled in by app before calling function. can be NULL
+												// Must be filled in by app before calling function. can be NULL
 	BLUE_UINT32 avail_custom_anc_pkt_data_bytes;// how many custom ANC packets has been decoded into raw_hanc_pkt_data_ptr
-												//Must be filled in by app before calling function. can be NULL
+												// Must be filled in by app before calling function. can be NULL
 	BLUE_UINT32 audio_input_source;		// Used to select the audio input source. 
 										// whether it is AES or Embedded.
-										//Must be filled in by app before calling function.
-	BLUE_UINT32 audio_temp_buffer[16];	// this is used to store split audio sample 
+										// Must be filled in by app before calling function.
+	BLUE_UINT32 audio_temp_buffer[16];	// deprecated/not used;
+										// this is used to store split audio sample 
 										// which did not contain all its audio channels
 										// in one audio frame
-										//Must be initialised to zero by app before first instantiating the  function. 
-	BLUE_UINT32 audio_split_buffer_mask; // The mask would be used to make a note of 
+										// Must be initialised to zero by app before first instantiating the  function. 
+	BLUE_UINT32 audio_split_buffer_mask; //deprecated/not used;
+										// The mask would be used to make a note of 
 										// split audio sample information for a frame.
-										//Must be initialised to zero by app before first instantiating the  function. 
-	BLUE_UINT32 max_expected_audio_sample_count; // specify the maximum number of audio samples 
-												 // that the audio pcm buffer can contain.
-												//Must be filled in by app before calling function.
+										// Must be initialised to zero by app before first instantiating the  function. 
+	BLUE_UINT32 max_expected_audio_sample_count;// specify the maximum number of audio samples 
+												// that the provided audio pcm buffer can contain.
+												// Must be filled in by app before calling function.
 	BLUE_UINT32 pad[124];
 };
 
@@ -151,8 +161,9 @@ HANCUTILS_API bool hanc_decoder_ex(	BLUE_UINT32 card_type,
 */
 enum blue_vanc_pkt_type_enum
 {
-	blue_vanc_pkt_y_comp=0, /**< ANC pkt should be inserted/extracted from the  Y component buffer*/
-	blue_vanc_pkt_cbcr_comp=1 /**< ANC pkt should be inserted/extracted from the  CbCr component buffer*/
+	blue_vanc_pkt_y_comp=0,		/**< ANC pkt should be inserted/extracted from the Y component buffer*/
+	blue_vanc_pkt_cbcr_comp=1,	/**< ANC pkt should be inserted/extracted from the CbCr component buffer*/
+	blue_vanc_pkt_all_comp=2	/**< ANC pkt should be inserted/extracted from all components (SD video modes)*/
 };
 
 /*!

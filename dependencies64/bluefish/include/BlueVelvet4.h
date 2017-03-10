@@ -54,21 +54,35 @@ public:
 
 
 extern "C" {
+/*!
+ * \brief	Create an instance of the Bluefish SDK
+ */
 BLUEFISH_API CBlueVelvet4*	BlueVelvetFactory4();
-BLUEFISH_API void BlueVelvetDestroy(CBlueVelvet4* pObj);
-// this would give you number of VANC/VBI line 
-BLUEFISH_API unsigned int BlueVelvetVANCLineCount(unsigned int CardType,unsigned long VidFmt,unsigned long FrameType);
 
-// this would give you golden value for the VANC frame size
-BLUEFISH_API unsigned int BlueVelvetVANCGoldenValue(	unsigned int CardType,
+/*!
+ * \brief	Deletes the passed in Bluefish SDK instance
+ */
+BLUEFISH_API void BlueVelvetDestroy(CBlueVelvet4* pObj);
+
+/*!
+ * \brief	Returns the number of VANC/VBI lines
+ */
+BLUEFISH_API unsigned int BlueVelvetVANCLineCount(unsigned int CardType, unsigned long VidFmt, unsigned long FrameType);
+
+/*!
+ * \brief	Returns the golden value (DMA friendly buffer size) for the VANC buffer
+ */
+BLUEFISH_API unsigned int BlueVelvetVANCGoldenValue(unsigned int CardType,
 													unsigned long VidFmt,
 													unsigned long MemFmt,
 													unsigned long FrameType);
 
-// this would give you number of bytes contained in a VANC line 
+/*!
+ * \brief	Returns the number of bytes making up a VBI/VANC line
+ */
 BLUEFISH_API unsigned int BlueVelvetVANCLineBytes(	unsigned int CardType,
-													unsigned long	VidFmt,
-													unsigned long	MemFmt);
+													unsigned long VidFmt,
+													unsigned long MemFmt);
 
 BLUEFISH_API unsigned int BlueVelvetBytesForGroupPixels(unsigned long MemFmt,unsigned int nPixelCount);
 BLUEFISH_API BErr SetVideo_MetaDataInfo(CBlueVelvet4 * pSdk,LPOVERLAPPED pOverLap,ULONG FrameId,ULONG prop,VARIANT value);
@@ -87,17 +101,14 @@ BLUEFISH_API BLUE_UINT32 emb_audio_decoder( BLUE_UINT32 * src_hanc_buffer,
 										    BLUE_UINT32 req_audio_sample_count,
 										    BLUE_UINT32 required_audio_channels,
 											BLUE_UINT32 sample_type);
-BLUEFISH_API BERR blue_wait_video_sync_async(CBlueVelvet4 * pSdk,
-											LPOVERLAPPED pOverlap,
-											blue_video_sync_struct * sync_struct);
-BLUEFISH_API BERR blue_dma_read_async(	CBlueVelvet4 * pSdk,
-										LPOVERLAPPED pOverlap,
-										struct blue_dma_request_struct  *pUserDmaRequest);
-
+BLUEFISH_API BERR blue_wait_video_sync_async(CBlueVelvet4* pSdk, LPOVERLAPPED pOverlap, blue_video_sync_struct* sync_struct);
+BLUEFISH_API BERR blue_wait_external_ltc_input_sync(CBlueVelvet4* pSdk, LPOVERLAPPED pOverlap, blue_external_ltc_input_sync_struct* sync_struct);
+BLUEFISH_API BERR blue_dma_read_async(CBlueVelvet4* pSdk, LPOVERLAPPED pOverlap, struct blue_dma_request_struct* pUserDmaRequest);
 
 BLUEFISH_API BERR blue_load_1D_lookup_table(CBlueVelvet4 * pSdk, struct blue_1d_lookup_table_struct * lut);
 
-BLUEFISH_API BERR blue_control_video_scaler(CBlueVelvet4 * pSdk, unsigned int nScalerId,
+BLUEFISH_API BERR blue_control_video_scaler(CBlueVelvet4 * pSdk,
+											unsigned int nScalerId,
 											bool bOnlyReadValue,
 											float *pSrcVideoHeight,
 											float *pSrcVideoWidth,
@@ -107,6 +118,13 @@ BLUEFISH_API BERR blue_control_video_scaler(CBlueVelvet4 * pSdk, unsigned int nS
 											float *pDestVideoWidth,
 											float *pDestVideoYPos,
 											float *pDestVideoXPos);
+
+BLUEFISH_API BERR blue_control_video_scaler_output_raster(CBlueVelvet4 * pSdk,
+											unsigned int nScalerId,
+											bool bOnlyReadValue,
+											unsigned int nVideoMode,
+											unsigned int nRasterOutputHeight,
+											unsigned int nRasterOutputWidth);
 
 BLUEFISH_API BERR blue_Epoch_GetTimecodes(CBlueVelvet4 * pSdk, UINT32 VideoChannel, UINT64* pArray, UINT32* FieldCount);
 
@@ -138,8 +156,43 @@ BLUEFISH_API BERR GetHancQueuesInfoEx(CBlueVelvet4 * pSdk,
 						UINT64 *pStartHancFifoTimeStamp,
 						UINT64 *pVideoSyncTimeStamp);
 
+BLUEFISH_API BERR blue_color_matrix(CBlueVelvet4* pSdk, bool bGetValue, blue_color_matrix_struct* color_matrix_ptr);
 
-BLUEFISH_API BERR blue_color_matrix(CBlueVelvet4 * pSdk,bool bGetValue,blue_color_matrix_struct * color_matrix_ptr);
+/*!
+ * \brief	Returns the card's serial number (Epoch/SuperNova range of cards only)
+ */
+BLUEFISH_API BERR bfGetCardSerialNumber(CBlueVelvet4* pSdk, char* pSerialNumber, unsigned int nStringSize); //nStringSize must be at least 20
+
+//AMD SDI Link support
+BLUEFISH_API BERR bfGetVideoBusAddressAndMarkerBusAddress(	CBlueVelvet4* pSdk,						//pointer to an SDK object
+															unsigned int nVideoChannel,				//video channel to work with (only BLUE_VIDEO_OUTPUT_CHANNEL_A)
+															unsigned int nBufferNumber,				//unique video frame ID
+															unsigned long long& n64DataAddress,		//physical memory address of video frame in Bluefish card memory
+															unsigned long long& n64MarkerAddress);	//physical memory address of marker in Bluefish card memory
+BLUEFISH_API BERR bfDmaWaitMarker(	CBlueVelvet4* pSdk,			//pointer to an SDK object
+									OVERLAPPED* pOverlap,		//used for asynchronous/non-blocking DMA; NULL for blocking call
+									unsigned int nVideoChannel,	//video channel to work with (only BLUE_VIDEO_OUTPUT_CHANNEL_A)
+									unsigned int nBufferId,		//buffer on Bluefish card to be transferred
+									unsigned int nMarker);		//marker to wait for (unique video frame ID)
+BLUEFISH_API BERR bfDmaReadToBusAddressWithMarker(	CBlueVelvet4* pSdk,						//pointer to an SDK object
+													unsigned int nVideoChannel,				//video channel to work with (only BLUE_VIDEO_INPUT_CHANNEL_A)
+													unsigned long long n64DataAddress,		//physical memory address in GPU memory
+													unsigned int nSize,						//size of data block to DMA (video frame size)
+													OVERLAPPED* pOverlap,					//used for asynchronous/non-blocking DMA; NULL for blocking call
+													unsigned int BufferID,					//buffer on Bluefish card to be transferred
+													unsigned long Offset,					//offset in buffer; usually 0
+													unsigned long long n64MarkerAddress,	//marker address in GPU memory; to flag that DMA transfer has finished
+													unsigned int nMarker);					//marker to be written (unique video frame ID)
+BLUEFISH_API BERR bfDmaReadToBusAddress(CBlueVelvet4* pSdk,					//pointer to an SDK object
+										unsigned int nVideoChannel,			//video channel to work with (only BLUE_VIDEO_INPUT_CHANNEL_A)
+										unsigned long long n64DataAddress,	//physical memory address in GPU memory
+										unsigned int nSize,					//size of data block to DMA (video frame size)
+										OVERLAPPED* pOverlap,				//used for asynchronous/non-blocking DMA; NULL for blocking call
+										unsigned int BufferID,				//buffer on Bluefish card to be transferred
+										unsigned long Offset);				//marker address in GPU memory; to flag that DMA transfer has finished
+BLUEFISH_API BERR bfDmaWriteMarker(	CBlueVelvet4* pSdk,						//pointer to an SDK object
+									unsigned long long n64MarkerAddress,	//marker address in GPU memory; to flag that DMA transfer has finished
+									unsigned int nMarker);					//marker to be written (unique video frame ID)
 }
 
 

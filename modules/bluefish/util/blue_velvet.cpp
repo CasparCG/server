@@ -126,6 +126,9 @@ bool is_epoch_card(CBlueVelvet4& blue)
 	case CRD_BLUE_CREATE_2K:
 	case CRD_BLUE_CREATE_2K_ULTRA:
 	case CRD_BLUE_SUPER_NOVA:
+	case CRD_BLUE_SUPER_NOVA_S_PLUS:
+	case CRD_BLUE_NEUTRON:
+	case CRD_BLUE_EPOCH_CG:
 		return true;
 	default:
 		return false;
@@ -169,6 +172,9 @@ std::wstring get_card_desc(CBlueVelvet4& blue)
 	case CRD_BLUE_CREATE_HD:			return L"Blue Create HD";
 	case CRD_BLUE_CREATE_2K:			return L"Blue Create 2K";
 	case CRD_BLUE_CREATE_2K_ULTRA:		return L"Blue Create 2K Ultra";
+	case CRD_BLUE_SUPER_NOVA_S_PLUS:	return L"Blue Supernova S Plus";
+	case CRD_BLUE_NEUTRON:				return L"Blue Neutron";
+	case CRD_BLUE_EPOCH_CG:				return L"Blue Epoch CG";
 	default:							return L"Unknown";
 	}
 }

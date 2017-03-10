@@ -9,6 +9,7 @@
 #else
 #define BLUE_CSDK_API __declspec(dllimport)
 #endif
+#include <OAidl.h>
 #include "BlueTypes.h"
 #include "BlueDriver_p.h"
 

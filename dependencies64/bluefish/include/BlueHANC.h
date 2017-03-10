@@ -1,7 +1,7 @@
 #pragma once 
 #include "BlueDriver_p.h"
 
-#ifdef _WINDOWS
+#if defined _WIN32
 #pragma pack(push,1)
 #endif
 
@@ -38,6 +38,7 @@
 #define MAX_HANC_BUFFER_SIZE_WITHOUT_HEADER			(65536 - 0x20/4)	//32 bytes = 8 * 4 (8 * UINT32)
 #define MAX_HANC_BUFFER_SIZE_BYTES					(256*1024)
 #define MAX_HANC_BUFFER_SIZE_WITHOUT_HEADER_BYTES	(256*1024 - 0x20)
+
 /* 
 HANC Packet header structure
 Contains 2 type of structure , 
@@ -46,12 +47,12 @@ which makes it easier to parse the data
 
 struct GenericV210_structure
 {
-#if defined(__LITTLE_ENDIAN__) || defined(_WINDOWS) || defined(BLUE_LINUX_CODE)
+#if defined(__LITTLE_ENDIAN__) || defined(_WIN32) || defined(__linux__)
 	BLUE_UINT32 first_word:10,second_word:10,third_word:10,unused:2;
 #else
 	BLUE_UINT32 unused:2,third_word:10,second_word:10,first_word:10;
 #endif
-#ifndef _WINDOWS
+#ifndef _WIN32
 }__attribute__((packed));
 #else
 };
@@ -66,7 +67,7 @@ union GenericV210_union
 /* HANC packet header*/
 struct HancPacketHeaderStruct
 {
-#if defined(__LITTLE_ENDIAN__) || defined(_WINDOWS) || defined(BLUE_LINUX_CODE)
+#if defined(__LITTLE_ENDIAN__) || defined(_WIN32) || defined(__linux__)
 	union GenericV210_union	ancillary_data_flag; // 0x0,0x3FF,0x3FF, This is a constant defined by smpte
 	union GenericV210_union	packet_info; 	//  first 10 bit word --> Data ID
 						//	Commonly used  Data ID packet values are 
@@ -83,7 +84,7 @@ struct HancPacketHeaderStruct
 	union GenericV210_union packet_info;
 	union GenericV210_union ancillary_data_flag;
 #endif
-#ifndef _WINDOWS
+#ifndef _WIN32
 }__attribute__((packed));
 #else
 };
@@ -93,7 +94,7 @@ struct HancPacketHeaderStruct
 /* Audio SubFrame Packet */
 struct BlueAudioSubFrameStruct
 {	
-#if defined(__LITTLE_ENDIAN__) || defined(_WINDOWS) || defined(BLUE_LINUX_CODE)
+#if defined(__LITTLE_ENDIAN__) || defined(_WIN32) || defined(__linux__)
 	BLUE_UINT32	ZBit:1,					//bit 0		set to declare start of channel status word
 			Channel:2,					//bit 1-2
 			AudioData_0_5:6,			//bit 3-8
@@ -123,7 +124,7 @@ struct BlueAudioSubFrameStruct
 			ZBit:1;
 #endif
 
-#ifndef _WINDOWS
+#ifndef _WIN32
 }__attribute__((packed));
 #else
 };
@@ -168,7 +169,7 @@ bits 60 - 63: binary8
 */
 struct LTC_TimeCode
 {
-#if defined(__LITTLE_ENDIAN__) || defined(_WINDOWS) || defined(BLUE_LINUX_CODE)
+#if defined(__LITTLE_ENDIAN__) || defined(_WIN32) || defined(__linux__)
 	BLUE_UINT64     unit_frame:4,binary1:4,ten_frame:2,drop_frame_flag:1,color_frame_flag:1,
 				 binary2:4,unit_second:4,binary3:4,ten_second:3,unsued_1:1,binary4:4,
 				 unit_minute:4,binary5:4,ten_minute:3,unsued_2:1,binary6:4,unit_hours:4,
@@ -180,7 +181,7 @@ struct LTC_TimeCode
 				color_frame_flag:1,drop_frame_flag:1,ten_frame:2,binary1:4,unit_frame:4;
 #endif
 
-#ifndef _WINDOWS
+#ifndef _WIN32
 }__attribute__((packed));
 #else
 };
@@ -204,7 +205,7 @@ struct nibble_struct
 {
 	BLUE_UINT8	first_half:4,second_half:4;
 
-#ifndef _WINDOWS
+#ifndef _WIN32
 }__attribute__((packed));
 #else
 };
@@ -219,7 +220,7 @@ struct TimeCode
 	struct nibble_struct ltc_char[8]; 
 	};
 	
-#ifndef _WINDOWS
+#ifndef _WIN32
 }__attribute__((packed));
 #else
 };
@@ -227,7 +228,7 @@ struct TimeCode
 
 struct HANCTimeCodeStruct 
 {	
-#if defined(__LITTLE_ENDIAN__) || defined(_WINDOWS) || defined(BLUE_LINUX_CODE)
+#if defined(__LITTLE_ENDIAN__) || defined(_WIN32) || defined(__linux__)
 	BLUE_UINT32	zero_0:3,
 				DBB_0:1,
 				ANC_0:4,
@@ -263,7 +264,7 @@ struct HANCTimeCodeStruct
 				zero_0:3;
 #endif
 
-#ifndef _WINDOWS
+#ifndef _WIN32
 }__attribute__((packed));
 #else
 };
@@ -277,7 +278,7 @@ union HANCTimeCode
 
 struct BAG2VancTimeCodeStruct 
 {	
-#if defined(__LITTLE_ENDIAN__) || defined(_WINDOWS) || defined(BLUE_LINUX_CODE)
+#if defined(__LITTLE_ENDIAN__) || defined(_WIN32) || defined(__linux__)
 	BLUE_UINT16	zero_0:3,
 				DBB_0:1,
 				ANC_0:4,
@@ -291,7 +292,7 @@ struct BAG2VancTimeCodeStruct
 				zero_0:3;
 #endif
 
-#ifndef _WINDOWS
+#ifndef _WIN32
 }__attribute__((packed));
 #else
 };
@@ -367,6 +368,6 @@ inline BLUE_UINT32 Int32SwapBigLittle(const BLUE_UINT32 i)
 	}
 }
 
-#ifdef _WINDOWS
+#ifdef _WIN32
 #pragma pack(pop)
 #endif
