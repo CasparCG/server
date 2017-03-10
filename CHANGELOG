@@ -55,6 +55,7 @@ Producers
       decode the first frame.
     + Added support for IN and OUT parameters (Dimitry Ishenko).
     + Added DV/HDV video device support under Linux (Walter Sonius).
+    + Remove unused flags variable in queued_seek (Dimitry Ishenko).
   o Destroy producer proxy:
     + Created workaround for bug in FFmpeg where every new thread used to
       cleanup caused handles to leak (not sure why). Reduced the effect by using
