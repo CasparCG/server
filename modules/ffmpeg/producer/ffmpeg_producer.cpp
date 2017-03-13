@@ -567,13 +567,13 @@ safe_ptr<core::frame_producer> create_producer(
 		}
 	}
 		
-	auto producer = make_safe<ffmpeg_producer>(frame_factory, filename, FFMPEG_FILE, filter_str, loop, start, length, true, vid_params);
+	auto producer = make_safe<ffmpeg_producer>(frame_factory, filename, FFMPEG_FILE, filter_str, loop, start, length, false, vid_params);
 	auto key_producer = core::frame_producer::empty();
 
 	try // to find a key file.
 	{
 		if (producer->has_alpha())
-			key_producer = make_safe<ffmpeg_producer>(frame_factory, filename, FFMPEG_FILE, filter_str, loop, start, length, true, vid_params, true);
+			key_producer = make_safe<ffmpeg_producer>(frame_factory, filename, FFMPEG_FILE, filter_str, loop, start, length, false, vid_params, true);
 	}
 	catch (...) {}
 
