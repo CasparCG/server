@@ -54,12 +54,13 @@
 #include <boost/range/algorithm/find_if.hpp>
 #include <boost/range/algorithm/find.hpp>
 #include <boost/regex.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 
 #include <tbb/parallel_invoke.h>
 
 #include <limits>
 #include <memory>
-#include <queue>
+#include <deque>
 
 namespace caspar { namespace ffmpeg {
 
@@ -116,10 +117,12 @@ struct ffmpeg_producer : public core::frame_producer
 
 	safe_ptr<core::basic_frame>									last_frame_;
 	
-	std::queue<std::pair<safe_ptr<core::basic_frame>, size_t>>	frame_buffer_;
+	std::deque<std::pair<safe_ptr<core::basic_frame>, size_t>>	frame_buffer_;
 
 	int64_t														frame_number_;
 	uint32_t													file_frame_number_;
+
+	std::deque<double>											stops_;
 		
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, FFMPEG_Resource resource_type, const std::wstring& filter, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_producer_params& vid_params, bool alpha = false)
@@ -140,6 +143,21 @@ public:
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
 		diagnostics::register_graph(graph_);
+
+		const auto xmlPath = boost::filesystem::change_extension(filename, L".xml");
+		std::ifstream xmlStream(xmlPath.wstring());
+		if (xmlStream)
+		{
+			using boost::property_tree::ptree;
+			ptree pt;
+			read_xml(xmlStream, pt);
+
+			BOOST_FOREACH(ptree::value_type const& v, pt.get_child("xml.layers.layer")) 
+			{
+				if (v.first == "marker")
+					stops_.push_back(v.second.get<double>("time.<xmlattr>.value"));
+			}
+		}
 	
 		try
 		{
@@ -191,6 +209,13 @@ public:
 	
 	virtual safe_ptr<core::basic_frame> receive(int hints) override
 	{
+		if (!stops_.empty() && frame_number_ >= static_cast<int>(fps_ * stops_.front()))
+		{
+			CASPAR_LOG(debug) << print() << " PAUSED " << frame_number_ << " " << stops_.front();
+			stops_.pop_front();
+			return core::basic_frame::pause();
+		}
+
 		return render_frame(hints).first;
 	}
 
@@ -230,9 +255,10 @@ public:
 		}
 		
 		auto frame = frame_buffer_.front(); 
-		frame_buffer_.pop();
+		frame_buffer_.pop_front();
 		
 		++frame_number_;
+
 		file_frame_number_ = frame.second;
 
 		graph_->set_text(print());
@@ -493,7 +519,7 @@ public:
 		//file_frame_number = std::max(file_frame_number, audio_decoder_ ? audio_decoder_->file_frame_number() : 0);
 
 		for(auto frame = muxer_->poll(); frame; frame = muxer_->poll())
-			frame_buffer_.push(std::make_pair(make_safe_ptr(frame), file_frame_number));
+			frame_buffer_.push_back(std::make_pair(make_safe_ptr(frame), file_frame_number));
 	}
 
 	core::monitor::subject& monitor_output()

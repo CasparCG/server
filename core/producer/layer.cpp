@@ -122,6 +122,11 @@ public:
 
 			auto frame = receive_and_follow(foreground, hints);
 
+			if (frame == core::basic_frame::pause()) {
+				is_paused_ = true;
+				return disable_audio(foreground_->last_frame());
+			}
+
 			if(foreground != foreground_)
 				set_foreground(foreground);
 

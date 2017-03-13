@@ -67,6 +67,12 @@ public:
 		return frame;
 	}
 
+	static const safe_ptr<basic_frame>& pause()
+	{
+		static safe_ptr<basic_frame> frame = make_safe<basic_frame>();
+		return frame;
+	}
+
 	static const safe_ptr<basic_frame>& empty()
 	{
 		static safe_ptr<basic_frame> frame = make_safe<basic_frame>();
