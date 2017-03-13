@@ -9,6 +9,9 @@
 /casparcg.suo
 /version.h
 /.docstates.suo
+shell/casparcg.config
+.vs
+packages
 
 # /common/
 /common/bin
