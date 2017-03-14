@@ -42,17 +42,13 @@ std::wstring version()
 {
 	try
 	{
-		blue_initialize();
+		bvc_wrapper blue;
+		return u16(blue.get_version());
 	}
 	catch(...)
 	{
 		return L"Not found";
 	}
-
-	if(!BlueVelvetVersion)
-		return L"Unknown";
-
-	return u16(BlueVelvetVersion());
 }
 
 std::vector<std::wstring> device_list()
@@ -61,14 +57,15 @@ std::vector<std::wstring> device_list()
 
 	try
 	{		
-		blue_initialize();
-		
-		auto blue = create_blue();
+		bvc_wrapper blue;
+		int numCards = 0;
+		blue.enumerate(numCards);
 
-		for(int n = 1; BLUE_PASS(blue->device_attach(n, FALSE)); ++n)
+		for(int n = 1; n < (numCards+1); n++)
 		{				
-			devices.push_back(std::wstring(get_card_desc(*blue)) + L" [" + boost::lexical_cast<std::wstring>(n) + L"]");
-			blue->device_detach();		
+			blue.attach(n);
+			devices.push_back(std::wstring(get_card_desc(blue, n)) + L" [" + boost::lexical_cast<std::wstring>(n) + L"]");	
+			blue.detach();
 		}
 	}
 	catch(...){}
@@ -80,7 +77,9 @@ void init(core::module_dependencies dependencies)
 {
 	try
 	{
-		blue_initialize();
+		bvc_wrapper blue;
+		int num_cards = 0;
+		blue.enumerate(num_cards);
 	}
 	catch(...){}
 
@@ -93,6 +92,8 @@ void init(core::module_dependencies dependencies)
 		for (auto device : device_list())
 			info.add(L"system.bluefish.device", device);
 	});
+
 }
 
 }}
+
