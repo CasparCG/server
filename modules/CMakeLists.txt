@@ -7,7 +7,7 @@ add_subdirectory(oal)
 
 if (MSVC)
 	add_subdirectory(bluefish)
-endif ()
+endif ()	
 
 add_subdirectory(decklink)
 add_subdirectory(screen)
