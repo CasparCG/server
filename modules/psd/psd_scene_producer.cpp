@@ -200,12 +200,11 @@ public:
 	}
 };
 
-int64_t get_frame_number(
+boost::rational<int> get_frame_number(
 		const core::video_format_desc& format_desc,
 		const boost::rational<int>& at_second)
 {
-	return static_cast<int64_t>(
-			boost::rational_cast<double>(at_second) * format_desc.fps);
+	return at_second * format_desc.framerate;
 }
 
 boost::rational<int> get_rational(const boost::property_tree::wptree& node)
@@ -227,7 +226,7 @@ void create_marks_from_comments(
 	for (auto& key : *keylist)
 	{
 		auto time = get_rational(key.second.get_child(L"time"));
-		auto frame = get_frame_number(format_desc, time);
+		auto frame = boost::rational_cast<int64_t>(get_frame_number(format_desc, time));
 		auto text = key.second.get<std::wstring>(L"animKey.Vl  ");
 		std::vector<std::wstring> marks;
 		boost::split(marks, text, boost::is_any_of(","));
@@ -252,7 +251,7 @@ void create_marks(
 	auto time = get_rational(global_timeline.get_child(L"duration"));
 	auto remove_at_frame = get_frame_number(format_desc, time);
 
-	scene->add_mark(remove_at_frame, core::scene::mark_action::remove, L"");
+	scene->add_mark(boost::rational_cast<int64_t>(remove_at_frame), core::scene::mark_action::remove, L"");
 
 	auto tracklist = global_timeline.get_child_optional(L"globalTrackList");
 
@@ -283,7 +282,7 @@ void create_timelines(
 	auto start_frame = get_frame_number(format_desc, start);
 	auto end_frame = get_frame_number(format_desc, end);
 
-	layer.hidden = scene->timeline_frame() < start_frame || scene->timeline_frame() > end_frame;
+	layer.hidden = scene->timeline_frame() < boost::rational_cast<int64_t>(start_frame) || scene->timeline_frame() > boost::rational_cast<int64_t>(end_frame);
 
 	auto tracklist = timeline.get_child_optional(L"trackList");
 
@@ -320,13 +319,13 @@ void create_timelines(
 
 				if (tween)
 				{
-					scene->add_keyframe(layer.position.x, x, frame, L"easeOutSine");
-					scene->add_keyframe(layer.position.y, y, frame, L"easeOutSine");
+					scene->add_keyframe(layer.position.x, x, boost::rational_cast<int64_t>(frame), L"easeOutSine");
+					scene->add_keyframe(layer.position.y, y, boost::rational_cast<int64_t>(frame), L"easeOutSine");
 				}
 				else
 				{
-					scene->add_keyframe(layer.position.x, x, frame);
-					scene->add_keyframe(layer.position.y, y, frame);
+					scene->add_keyframe(layer.position.x, x, boost::rational_cast<int64_t>(frame));
+					scene->add_keyframe(layer.position.y, y, boost::rational_cast<int64_t>(frame));
 				}
 			}
 		}
@@ -348,9 +347,9 @@ void create_timelines(
 				frame = start_frame + frame; // translate to global timeline
 
 				if (tween)
-					scene->add_keyframe(opacity, opct, frame, L"easeOutSine");
+					scene->add_keyframe(opacity, opct, boost::rational_cast<int64_t>(frame), L"linear");
 				else
-					scene->add_keyframe(opacity, opct, frame);
+					scene->add_keyframe(opacity, opct, boost::rational_cast<int64_t>(frame));
 			}
 		}
 		else
