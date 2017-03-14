@@ -44,6 +44,9 @@ Consumers
   o DeckLink consumer:
     + Rewrote the frame hand-off between send() and ScheduledFrameCompleted() in
       a way that hopefully resolves all dead-lock scenarios previously possible.
+  o Bluefish consumer:
+    + Largely rewritten against newest SDK, giving support for newer hardware
+      and features (Satchit Nambiar and James Wise sponsored by Bluefish444).
 
 Producers
 ---------
