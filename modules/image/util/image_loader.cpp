@@ -54,20 +54,20 @@ std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename)
 		fif = FreeImage_GetFIFFromFilename(u8(filename).c_str());
 #endif
 
-	if(fif == FIF_UNKNOWN || !FreeImage_FIFSupportsReading(fif)) 
+	if(fif == FIF_UNKNOWN || !FreeImage_FIFSupportsReading(fif))
 		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
-		
+
 #ifdef WIN32
 	auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_LoadU(fif, filename.c_str(), 0), FreeImage_Unload);
 #else
 	auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Load(fif, u8(filename).c_str(), 0), FreeImage_Unload);
 #endif
-		  
+
 	if(FreeImage_GetBPP(bitmap.get()) != 32)
 	{
 		bitmap = std::shared_ptr<FIBITMAP>(FreeImage_ConvertTo32Bits(bitmap.get()), FreeImage_Unload);
 		if(!bitmap)
-			CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));			
+			CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
 	}
 
 	//PNG-images need to be premultiplied with their alpha
@@ -76,7 +76,7 @@ std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename)
 		image_view<bgra_pixel> original_view(FreeImage_GetBits(bitmap.get()), FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
 		premultiply(original_view);
 	}
-	
+
 	return bitmap;
 }
 
@@ -98,6 +98,27 @@ std::shared_ptr<FIBITMAP> load_png_from_memory(const void* memory_location, size
 	}
 
 	return bitmap;
+}
+
+const std::set<std::wstring>& supported_extensions()
+{
+	static const std::set<std::wstring> extensions =
+	{
+		L".png",
+		L".tga",
+		L".bmp",
+		L".jpg",
+		L".jpeg",
+		L".gif",
+		L".tiff",
+		L".tif",
+		L".jp2",
+		L".jpx",
+		L".j2k",
+		L".j2c"
+	};
+
+	return extensions;
 }
 
 }}
