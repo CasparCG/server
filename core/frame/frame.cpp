@@ -129,6 +129,20 @@ struct const_frame::impl : boost::noncopyable
 		recorded_age_ = 0;
 	}
 
+	impl(const impl& other)
+		: future_buffers_(other.future_buffers_)
+		, audio_data_(other.audio_data_)
+		, desc_(other.desc_)
+		, channel_layout_(other.channel_layout_)
+		, tag_(other.tag_)
+		, geometry_(other.geometry_)
+		, since_created_timer_(other.since_created_timer_)
+		, should_record_age_(other.should_record_age_)
+		, key_only_on_demand_(other.key_only_on_demand_)
+	{
+		recorded_age_ = other.recorded_age_;
+	}
+
 	impl(
 			std::shared_future<array<const std::uint8_t>> image,
 			audio_buffer audio_data,
@@ -237,6 +251,7 @@ const_frame& const_frame::operator=(const_frame&& other)
 	return *this;
 }
 const_frame::const_frame(const const_frame& other) : impl_(other.impl_){}
+const_frame::const_frame(const const_frame::impl& other) : impl_(new impl(other)) {}
 const_frame& const_frame::operator=(const const_frame& other)
 {
 	impl_ = other.impl_;
@@ -255,7 +270,14 @@ std::size_t const_frame::height()const{return impl_->height();}
 std::size_t const_frame::size()const{return impl_->size();}
 const void* const_frame::stream_tag()const{return impl_->tag_;}
 const frame_geometry& const_frame::geometry() const { return impl_->geometry_; }
-void const_frame::set_geometry(const frame_geometry& g) { impl_->geometry_ = g; }
+const_frame const_frame::with_geometry(const frame_geometry& g) const
+{
+	const_frame copy(*impl_);
+
+	copy.impl_->geometry_ = g;
+
+	return copy;
+}
 int64_t const_frame::get_age_millis() const { return impl_->get_age_millis(); }
 const_frame const_frame::key_only() const
 {
