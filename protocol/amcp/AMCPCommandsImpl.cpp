@@ -959,7 +959,7 @@ void cg_add_describer(core::help_sink& sink, const core::help_repository& repo)
 		->text(L"Prepares a template for displaying. It won't show until you call ")->see(L"CG PLAY")
 		->text(L" (unless you supply the play-on-load flag, 1 for true). Data is either inline XML or a reference to a saved dataset.");
 	sink.para()->text(L"Examples:");
-	sink.example(L"CG 1 ADD 10 svtnews/info 1");
+	sink.example(L">> CG 1 ADD 10 svtnews/info 1");
 }
 
 std::wstring cg_add_command(command_context& ctx)
@@ -1030,7 +1030,7 @@ void cg_play_describer(core::help_sink& sink, const core::help_repository& repo)
 	sink.syntax(L"CG [video_channel:int]{-[layer:int]|-9999} PLAY [cg_layer:int]");
 	sink.para()->text(L"Plays and displays the template in the specified layer.");
 	sink.para()->text(L"Examples:");
-	sink.example(L"CG 1 PLAY 0");
+	sink.example(L">> CG 1 PLAY 0");
 }
 
 std::wstring cg_play_command(command_context& ctx)
@@ -1059,7 +1059,7 @@ void cg_stop_describer(core::help_sink& sink, const core::help_repository& repo)
 		->text(L"Stops and removes the template from the specified layer. This is different from ")->code(L"REMOVE")
 		->text(L" in that the template gets a chance to animate out when it is stopped.");
 	sink.para()->text(L"Examples:");
-	sink.example(L"CG 1 STOP 0");
+	sink.example(L">> CG 1 STOP 0");
 }
 
 std::wstring cg_stop_command(command_context& ctx)
@@ -1078,7 +1078,7 @@ void cg_next_describer(core::help_sink& sink, const core::help_repository& repo)
 		->text(LR"(Triggers a "continue" in the template on the specified layer. )")
 		->text(L"This is used to control animations that has multiple discreet steps.");
 	sink.para()->text(L"Examples:");
-	sink.example(L"CG 1 NEXT 0");
+	sink.example(L">> CG 1 NEXT 0");
 }
 
 std::wstring cg_next_command(command_context& ctx)
@@ -1095,7 +1095,7 @@ void cg_remove_describer(core::help_sink& sink, const core::help_repository& rep
 	sink.syntax(L"CG [video_channel:int]{-[layer:int]|-9999} REMOVE [cg_layer:int]");
 	sink.para()->text(L"Removes the template from the specified layer.");
 	sink.para()->text(L"Examples:");
-	sink.example(L"CG 1 REMOVE 0");
+	sink.example(L">> CG 1 REMOVE 0");
 }
 
 std::wstring cg_remove_command(command_context& ctx)
@@ -1112,7 +1112,7 @@ void cg_clear_describer(core::help_sink& sink, const core::help_repository& repo
 	sink.syntax(L"CG [video_channel:int]{-[layer:int]|-9999} CLEAR");
 	sink.para()->text(L"Removes all templates on a video layer. The entire cg producer will be removed.");
 	sink.para()->text(L"Examples:");
-	sink.example(L"CG 1 CLEAR");
+	sink.example(L">> CG 1 CLEAR");
 }
 
 std::wstring cg_clear_command(command_context& ctx)
@@ -2947,9 +2947,9 @@ void lock_describer(core::help_sink& sink, const core::help_repository& repo)
 	sink.syntax(L"LOCK [video_channel:int] [action:ACQUIRE,RELEASE,CLEAR] {[lock-phrase:string]}");
 	sink.para()->text(L"Allows for exclusive access to a channel.");
 	sink.para()->text(L"Examples:");
-	sink.example(L"LOCK 1 ACQUIRE secret");
-	sink.example(L"LOCK 1 RELEASE");
-	sink.example(L"LOCK 1 CLEAR");
+	sink.example(L">> LOCK 1 ACQUIRE secret");
+	sink.example(L">> LOCK 1 RELEASE");
+	sink.example(L">> LOCK 1 CLEAR");
 }
 
 std::wstring lock_command(command_context& ctx)
@@ -3003,7 +3003,6 @@ void req_describer(core::help_sink& sink, const core::help_repository& repo)
 		->text(L"This special command modifies the AMCP protocol a little bit to prepend ")
 		->code(L"RES request_id")->text(L" to the response, in order to see what asynchronous response matches what request.");
 	sink.para()->text(L"Examples:");
-	sink.example(L"REQ unique PLAY 1-0 AMB\n");
 	sink.example(
 		L">> REQ unique PLAY 1-0 AMB\n"
 		L"<< RES unique 202 PLAY OK");

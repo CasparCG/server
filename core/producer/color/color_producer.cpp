@@ -220,21 +220,21 @@ void describe_color_producer(core::help_sink& sink, const core::help_repository&
 		->strong(L"Note")->text(L" that it is important that all RGB values are multiplied with the alpha ")
 		->text(L"at all times, otherwise the compositing in the mixer will be incorrect.");
 	sink.para()->text(L"Solid color examples:");
-	sink.example(L"PLAY 1-10 EMPTY", L"For a completely transparent frame.");
-	sink.example(L"PLAY 1-10 #00000000", L"For an explicitly defined completely transparent frame.");
-	sink.example(L"PLAY 1-10 #000000", L"For an explicitly defined completely opaque black frame.");
-	sink.example(L"PLAY 1-10 RED", L"For a completely red frame.");
-	sink.example(L"PLAY 1-10 #7F007F00",
+	sink.example(L">> PLAY 1-10 EMPTY", L"For a completely transparent frame.");
+	sink.example(L">> PLAY 1-10 #00000000", L"For an explicitly defined completely transparent frame.");
+	sink.example(L">> PLAY 1-10 #000000", L"For an explicitly defined completely opaque black frame.");
+	sink.example(L">> PLAY 1-10 RED", L"For a completely red frame.");
+	sink.example(L">> PLAY 1-10 #7F007F00",
 		L"For a completely green half transparent frame. "
 		L"Since the RGB part has been premultiplied with the A part this is 100% green.");
 	sink.para()->text(L"Horizontal gradient examples:");
-	sink.example(L"PLAY 1-10 WHITE BLACK", L"For a gradient between white and black.");
-	sink.example(L"PLAY 1-10 WHITE WHITE WHITE BLACK", L"For a gradient between white and black with the white part beings 3 times as long as the black part.");
+	sink.example(L">> PLAY 1-10 WHITE BLACK", L"For a gradient between white and black.");
+	sink.example(L">> PLAY 1-10 WHITE WHITE WHITE BLACK", L"For a gradient between white and black with the white part beings 3 times as long as the black part.");
 	sink.example(
-		L"PLAY 1-10 RED EMPTY\n"
-		L"MIXER 1-10 ANCHOR 0.5 0.5\n"
-		L"MIXER 1-10 FILL 0.5 0.5 2 2\n"
-		L"MIXER 1-10 ROTATION 45",
+		L">> PLAY 1-10 RED EMPTY\n"
+		L">> MIXER 1-10 ANCHOR 0.5 0.5\n"
+		L">> MIXER 1-10 FILL 0.5 0.5 2 2\n"
+		L">> MIXER 1-10 ROTATION 45",
 		L"For a 45 degree gradient covering the screen.");
 }
 
