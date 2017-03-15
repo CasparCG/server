@@ -192,7 +192,7 @@ public:
 		pfd.planes.push_back(core::pixel_format_desc::plane(static_cast<int>(atlas_.width()), static_cast<int>(atlas_.height()), static_cast<int>(atlas_.depth())));
 		auto frame = frame_factory_->create_frame(this, pfd, core::audio_channel_layout::invalid());
 		memcpy(frame.image_data().data(), atlas_.data(), frame.image_data().size());
-		return frame;
+		return std::move(frame);
 	}
 
 	void generate_frame()
