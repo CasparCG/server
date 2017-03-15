@@ -57,14 +57,12 @@ private:
 	size_t width_;
 	size_t height_;
 	size_t depth_;
-	const unsigned char* dataptr_;
-	std::vector<unsigned char> data_;
+	std::vector<uint8_t> data_;
 	size_t used_						= 0;
 
 public:
 	impl(const size_t width, const size_t height, const size_t depth) : width_(width), height_(height), depth_(depth), data_(width*height*depth, 0)
 	{
-		dataptr_ = data_.data();
 		// We want a one pixel border around the whole atlas to avoid any artefact when sampling texture
 		node n = {1, 1, static_cast<int>(width_) - 2};
 		nodes_.push_back(n);
@@ -94,7 +92,7 @@ public:
 				}
 			}
 		}
-   
+
 		if(best_it == nodes_.end())
 		{
 			region.x = -1;
@@ -165,10 +163,10 @@ public:
 		data_.assign(width_*height_*depth_, 0);
 	}
 
-	size_t depth() { return depth_; }
-	size_t width() { return width_; }
-	size_t height() { return height_; }
-	unsigned char* data() { return data_.data(); }
+	size_t depth() const { return depth_; }
+	size_t width() const { return width_; }
+	size_t height() const { return height_; }
+	const uint8_t* data() const { return data_.data(); }
 
 private:
 	int fit(node_iterator it, const size_t width, const size_t height)
@@ -215,15 +213,15 @@ private:
 };
 
 texture_atlas::texture_atlas(const size_t w, const size_t h, const size_t d) : impl_(new impl(w, h, d)) {}
-rect texture_atlas::get_region(int width, int height) { return impl_->get_region(width, height); }
+rect texture_atlas::get_region(int width, int height) const { return impl_->get_region(width, height); }
 void texture_atlas::set_region(const size_t x, const size_t y, const size_t width, const size_t height, const unsigned char *src, const size_t stride, const color<double>& col)
 	{ impl_->set_region(x, y, width, height, src, stride, col); }
 
 void texture_atlas::clear() { impl_->clear(); }
 
-size_t texture_atlas::width() { return impl_->width(); }
-size_t texture_atlas::height() { return impl_->height(); }
-size_t texture_atlas::depth() { return impl_->depth(); }
-unsigned char* texture_atlas::data() { return impl_->data(); }
+size_t texture_atlas::width() const { return impl_->width(); }
+size_t texture_atlas::height() const { return impl_->height(); }
+size_t texture_atlas::depth() const { return impl_->depth(); }
+const uint8_t* texture_atlas::data() const { return impl_->data(); }
 
 }}}

@@ -80,15 +80,15 @@ class texture_atlas
 public:
 	texture_atlas(const size_t w, const size_t h, const size_t d);
 
-	rect get_region(int width, int height);
+	rect get_region(int width, int height) const;
 	void set_region(const size_t x, const size_t y, const size_t width, const size_t height, const unsigned char *data, const size_t stride, const color<double>& col);
 	void clear();
 
-	size_t depth();
-	size_t width();
-	size_t height();
+	size_t depth() const;
+	size_t width() const;
+	size_t height() const;
 
-	unsigned char* data();
+	const uint8_t* data() const;
 
 private:
 	struct impl;
