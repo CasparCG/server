@@ -25,10 +25,12 @@
 
 #include <memory>
 #include <string>
+#include <set>
 
 namespace caspar { namespace image {
 
 std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename);
 std::shared_ptr<FIBITMAP> load_png_from_memory(const void* memory_location, size_t size);
+const std::set<std::wstring>& supported_extensions();
 
 }}
