@@ -69,6 +69,8 @@ Producers
     + Fixed bug where only URL:s with . in them where recognized.
   o Image producer:
     + Added LENGTH parameter to allow for queueing with LOADBG AUTO.
+    + Fixed inconsistency in what file extensions are supported vs listed in
+      CLS/CINF.
   o Layer producer:
     + Fixed serious bug where a circular reference of layer producers caused a
       stack overflow and server crash.
