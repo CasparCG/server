@@ -75,6 +75,7 @@ private:
 
 class const_frame final
 {
+	struct impl;
 public:
 
 	// Static Members
@@ -97,6 +98,7 @@ public:
 	const_frame(const_frame&& other);
 	const_frame& operator=(const_frame&& other);
 	const_frame(const const_frame&);
+	const_frame(const const_frame::impl&);
 	const_frame& operator=(const const_frame& other);
 
 	const_frame key_only() const;
@@ -116,7 +118,7 @@ public:
 	const void* stream_tag() const;
 
 	const core::frame_geometry& geometry() const;
-	void set_geometry(const frame_geometry& g);
+	const_frame with_geometry(const frame_geometry& g) const;
 	int64_t get_age_millis() const;
 
 	bool operator==(const const_frame& other);
@@ -125,7 +127,6 @@ public:
 	bool operator>(const const_frame& other);
 
 private:
-	struct impl;
 	spl::shared_ptr<impl> impl_;
 };
 
