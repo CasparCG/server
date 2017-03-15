@@ -24,6 +24,7 @@
 #include "producer/image_producer.h"
 #include "producer/image_scroll_producer.h"
 #include "consumer/image_consumer.h"
+#include "util/image_loader.h"
 
 #include <core/producer/frame_producer.h>
 #include <core/consumer/frame_consumer.h>
@@ -35,6 +36,7 @@
 #include <common/utf.h>
 
 #include <boost/property_tree/ptree.hpp>
+#include <boost/algorithm/string/case_conv.hpp>
 
 #include <FreeImage.h>
 
@@ -54,13 +56,7 @@ void init(core::module_dependencies dependencies)
 	dependencies.consumer_registry->register_consumer_factory(L"Image Consumer", create_consumer, describe_consumer);
 	dependencies.media_info_repo->register_extractor([](const std::wstring& file, const std::wstring& extension, core::media_info& info)
 	{
-		if (extension == L".TGA"
-			|| extension == L".COL"
-			|| extension == L".PNG"
-			|| extension == L".JPEG"
-			|| extension == L".JPG"
-			|| extension == L".GIF"
-			|| extension == L".BMP")
+		if (supported_extensions().find(boost::to_lower_copy(extension)) != supported_extensions().end())
 		{
 			info.clip_type = L"STILL";
 
