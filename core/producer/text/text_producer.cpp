@@ -145,6 +145,7 @@ struct text_producer::impl
 	draw_frame								frame_;
 	text::texture_atlas						atlas_						{ 1024, 512, 4 };
 	text::texture_font						font_;
+	const_frame								atlas_frame_;
 
 public:
 	explicit impl(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, text::text_info& text_info, long parent_width, long parent_height, bool standalone)
@@ -158,6 +159,8 @@ public:
 		font_.load_glyphs(text::unicode_block::Basic_Latin, text_info.color);
 		font_.load_glyphs(text::unicode_block::Latin_1_Supplement, text_info.color);
 		font_.load_glyphs(text::unicode_block::Latin_Extended_A, text_info.color);
+
+		atlas_frame_ = create_atlas_frame();
 
 		tracking_.value().set(text_info.tracking);
 		scale_x_.value().set(text_info.scale_x);
@@ -183,18 +186,22 @@ public:
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}
 
-	void generate_frame()
+	core::const_frame create_atlas_frame() const
 	{
 		core::pixel_format_desc pfd(core::pixel_format::bgra);
 		pfd.planes.push_back(core::pixel_format_desc::plane(static_cast<int>(atlas_.width()), static_cast<int>(atlas_.height()), static_cast<int>(atlas_.depth())));
+		auto frame = frame_factory_->create_frame(this, pfd, core::audio_channel_layout::invalid());
+		memcpy(frame.image_data().data(), atlas_.data(), frame.image_data().size());
+		return frame;
+	}
 
+	void generate_frame()
+	{
 		text::string_metrics metrics;
-		font_.set_tracking(static_cast<int>(tracking_.value().get()));
+		font_.set_tracking(tracking_.value().get());
 
 		auto vertex_stream = font_.create_vertex_stream(text_.value().get(), x_, y_, parent_width_, parent_height_, &metrics, shear_.value().get());
-		auto frame = frame_factory_->create_frame(vertex_stream.data(), pfd, core::audio_channel_layout::invalid());
-		memcpy(frame.image_data().data(), atlas_.data(), frame.image_data().size());
-		frame.set_geometry(frame_geometry(frame_geometry::geometry_type::quad_list, std::move(vertex_stream)));
+		auto frame = atlas_frame_.with_geometry(frame_geometry(frame_geometry::geometry_type::quad_list, std::move(vertex_stream)));
 
 		this->constraints_.width.set(metrics.width * this->scale_x_.value().get());
 		this->constraints_.height.set(metrics.height * this->scale_y_.value().get());

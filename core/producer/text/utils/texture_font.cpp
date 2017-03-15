@@ -57,7 +57,7 @@ public:
 			CASPAR_THROW_EXCEPTION(expected_freetype_exception() << msg_info("Failed to set font size"));
 	}
 
-	void set_tracking(int tracking)
+	void set_tracking(double tracking)
 	{
 		tracking_ = size_ * tracking / 1000.0;
 	}
@@ -285,7 +285,7 @@ public:
 
 texture_font::texture_font(texture_atlas& atlas, const text_info& info, bool normalize_coordinates) : impl_(new impl(atlas, info, normalize_coordinates)) {}
 void texture_font::load_glyphs(unicode_block range, const color<double>& col) { impl_->load_glyphs(range, col); }
-void texture_font::set_tracking(int tracking) { impl_->set_tracking(tracking); }
+void texture_font::set_tracking(double tracking) { impl_->set_tracking(tracking); }
 std::vector<frame_geometry::coord> texture_font::create_vertex_stream(const std::wstring& str, int x, int y, int parent_width, int parent_height, string_metrics* metrics, double shear) { return impl_->create_vertex_stream(str, x, y, parent_width, parent_height, metrics, shear); }
 string_metrics texture_font::measure_string(const std::wstring& str) { return impl_->measure_string(str); }
 std::wstring texture_font::get_name() const { return impl_->get_name(); }
