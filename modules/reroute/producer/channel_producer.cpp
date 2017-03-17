@@ -27,6 +27,7 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/consumer/output.h>
 #include <core/producer/frame_producer.h>
+#include <core/producer/framerate/framerate_producer.h>
 #include <core/video_channel.h>
 
 #include <core/frame/frame.h>
@@ -56,7 +57,7 @@
 namespace caspar { namespace reroute {
 
 class channel_consumer : public core::frame_consumer
-{	
+{
 	core::monitor::subject								monitor_subject_;
 	tbb::concurrent_bounded_queue<core::const_frame>	frame_buffer_;
 	core::video_format_desc								format_desc_;
@@ -139,7 +140,7 @@ public:
 		info.add(L"channel-index", channel_index_);
 		return info;
 	}
-	
+
 	bool has_synchronization_clock() const override
 	{
 		return false;
@@ -161,7 +162,7 @@ public:
 	}
 
 	// channel_consumer
-	
+
 	const core::video_format_desc& get_video_format_desc()
 	{
 		return format_desc_;
@@ -185,7 +186,7 @@ public:
 
 		if (!is_running_)
 			return frame;
-		
+
 		if (frame_buffer_.try_pop(frame))
 			current_age_ = frame.get_age_millis();
 
@@ -197,7 +198,7 @@ public:
 		is_running_ = false;
 	}
 };
-	
+
 class channel_producer : public core::frame_producer_base
 {
 	core::monitor::subject						monitor_subject_;
@@ -208,14 +209,12 @@ class channel_producer : public core::frame_producer_base
 	core::constraints							pixel_constraints_;
 
 	std::queue<core::draw_frame>				frame_buffer_;
-	uint64_t									frame_number_;
 
 public:
 	explicit channel_producer(const core::frame_producer_dependencies& dependecies, const spl::shared_ptr<core::video_channel>& channel, int frames_delay)
 		: frame_factory_(dependecies.frame_factory)
 		, output_format_desc_(dependecies.format_desc)
 		, consumer_(spl::make_shared<channel_consumer>(frames_delay))
-		, frame_number_(0)
 	{
 		pixel_constraints_.width.set(output_format_desc_.width);
 		pixel_constraints_.height.set(output_format_desc_.height);
@@ -231,7 +230,7 @@ public:
 	}
 
 	// frame_producer
-			
+
 	core::draw_frame receive_impl() override
 	{
 		auto format_desc = consumer_->get_video_format_desc();
@@ -242,41 +241,25 @@ public:
 			frame_buffer_.pop();
 			return frame;
 		}
-		
+
 		auto read_frame = consumer_->receive();
 		if(read_frame == core::const_frame::empty() || read_frame.image_data().empty())
 			return core::draw_frame::late();
-
-		frame_number_++;
-		
-		bool double_speed	= std::abs(output_format_desc_.fps / 2.0 - format_desc.fps) < 0.01;
-		bool half_speed		= std::abs(format_desc.fps / 2.0 - output_format_desc_.fps) < 0.01;
-
-		if(half_speed && frame_number_ % 2 == 0) // Skip frame
-			return receive_impl();
 
 		core::pixel_format_desc desc;
 		desc.format = core::pixel_format::bgra;
 		desc.planes.push_back(core::pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
 		auto frame = frame_factory_->create_frame(this, desc, consumer_->get_audio_channel_layout());
 
-		bool copy_audio = !double_speed && !half_speed;
-
-		if (copy_audio)
-		{
-			frame.audio_data().reserve(read_frame.audio_data().size());
-			boost::copy(read_frame.audio_data(), std::back_inserter(frame.audio_data()));
-		}
+		frame.audio_data().reserve(read_frame.audio_data().size());
+		boost::copy(read_frame.audio_data(), std::back_inserter(frame.audio_data()));
 
 		fast_memcpy(frame.image_data().begin(), read_frame.image_data().begin(), read_frame.image_data().size());
 
 		frame_buffer_.push(core::draw_frame(std::move(frame)));
-		
-		if(double_speed)
-			frame_buffer_.push(frame_buffer_.back());
 
 		return receive_impl();
-	}	
+	}
 
 	std::wstring name() const override
 	{
@@ -311,7 +294,12 @@ spl::shared_ptr<core::frame_producer> create_channel_producer(
 		const spl::shared_ptr<core::video_channel>& channel,
 		int frames_delay)
 {
-	return spl::make_shared<channel_producer>(dependencies, channel, frames_delay);
+	return core::create_framerate_producer(
+			spl::make_shared<channel_producer>(dependencies, channel, frames_delay),
+			[channel] { return channel->video_format_desc().framerate; }	,
+			dependencies.format_desc.framerate,
+			dependencies.format_desc.field_mode,
+			dependencies.format_desc.audio_cadence);
 }
 
 }}
