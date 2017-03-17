@@ -100,7 +100,7 @@ spl::shared_ptr<core::frame_producer> create_producer(
 	{
 		auto layer = boost::lexical_cast<int>(channel_layer_spec.substr(dash + 1));
 
-		return create_layer_producer(*found_channel, layer, frames_delay);
+		return create_layer_producer(*found_channel, layer, frames_delay, dependencies.format_desc);
 	}
 	else
 	{
