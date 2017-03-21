@@ -204,7 +204,7 @@ boost::rational<int> get_frame_number(
 		const core::video_format_desc& format_desc,
 		const boost::rational<int>& at_second)
 {
-	return at_second * format_desc.framerate;
+	return at_second * format_desc.framerate * format_desc.field_count;
 }
 
 boost::rational<int> get_rational(const boost::property_tree::wptree& node)
