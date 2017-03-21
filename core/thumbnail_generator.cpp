@@ -171,16 +171,24 @@ public:
 	void generate(const std::wstring& media_file)
 	{
 		using namespace boost::filesystem;
-		auto base_file = media_path_ / media_file;
-		auto folder = base_file.parent_path();
+
+		auto base_file	= media_path_ / media_file;
+		auto folder		= base_file.parent_path();
+		bool found		= false;
 
 		for (boost::filesystem::directory_iterator iter(folder); iter != boost::filesystem::directory_iterator(); ++iter)
 		{
 			auto stem = iter->path().stem();
 
 			if (boost::iequals(stem.wstring(), base_file.filename().wstring()))
+			{
 				monitor_->reemmit(iter->path());
+				found = true;
+			}
 		}
+
+		if (!found)
+			CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Media file " + media_file + L" not found"));
 	}
 
 	void generate_all()
