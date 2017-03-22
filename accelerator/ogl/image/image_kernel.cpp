@@ -374,15 +374,7 @@ struct image_kernel::impl
 			glScissor(static_cast<int>(m_p[0] * w), static_cast<int>(m_p[1] * h), std::max(0, static_cast<int>(m_s[0] * w)), std::max(0, static_cast<int>(m_s[1] * h)));
 		}
 
-		// Synchronize and set render target
-
-		if (blend_modes_)
-		{
-			// http://www.opengl.org/registry/specs/NV/texture_barrier.txt
-			// This allows us to use framebuffer (background) both as source and target while blending.
-			glTextureBarrierNV();
-		}
-
+		// Set render target
 		params.background->attach();
 
 		// Perspective correction
@@ -448,7 +440,20 @@ struct image_kernel::impl
 
 				glVertexPointer(2, GL_DOUBLE, stride, vertex_coord_ptr);
 				glTexCoordPointer(4, GL_DOUBLE, stride, texture_coord_ptr);
-				glDrawArrays(GL_QUADS, 0, static_cast<GLsizei>(coords.size()));	//each vertex is four doubles.
+
+				if (blend_modes_)
+				{
+					for (int i = 0; i < coords.size(); i += 4)
+					{
+						// http://www.opengl.org/registry/specs/NV/texture_barrier.txt
+						// This allows us to use framebuffer (background) both as source and target while blending.
+						glTextureBarrierNV();
+						glDrawArrays(GL_QUADS, i, 4);
+					}
+				}
+				else
+					glDrawArrays(GL_QUADS, 0, static_cast<GLsizei>(coords.size()));
+
 
 				glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 				glDisableClientState(GL_VERTEX_ARRAY);
