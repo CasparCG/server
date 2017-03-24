@@ -111,6 +111,8 @@ Mixer
     instead of always from the target texture. This means that for example a
     MIXER KEYER layer without a layer above to key, as well as a separate alpha
     file with MIXER OPACITY 0 now works as expected.
+  o Fixed bug where already drawn GL_QUADS were not composited against, causing
+    for example italic texts to be rendered incorrectly in the text_producer.
 
 AMCP
 ----
