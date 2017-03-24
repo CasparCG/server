@@ -196,7 +196,7 @@ public:
 				return rec.second.info_extractor(*found);
 		}
 
-		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"No meta info extractor for " + filename));
+		CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"No meta info extractor for " + filename));
 	}
 
 	bool is_cg_extension(const std::wstring& extension) const
