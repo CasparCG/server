@@ -581,7 +581,8 @@ bool is_valid_file(const std::wstring& filename, bool only_video)
 		L".h264",
 		L".prores",
 		L".mkv",
-		L".mxf"
+		L".mxf",
+		L".ts"
 	};
 
 	auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
