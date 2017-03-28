@@ -41,6 +41,8 @@ Consumers
       BT.601 color matrix instead of the BT.709 color matrix. RGB codecs like
       qtrle was never affected but all the YCbCr based codecs were.
     + Fixed bug in parsing of paths containing -.
+    + Fixed bugs where previously effective arguments like -pix_fmt were
+      ignored.
   o DeckLink consumer:
     + Rewrote the frame hand-off between send() and ScheduledFrameCompleted() in
       a way that hopefully resolves all dead-lock scenarios previously possible.
