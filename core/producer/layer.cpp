@@ -35,7 +35,7 @@
 namespace caspar { namespace core {
 
 struct layer::impl
-{				
+{
 	spl::shared_ptr<monitor::subject>	monitor_subject_;
 	spl::shared_ptr<frame_producer>		foreground_			= frame_producer::empty();
 	spl::shared_ptr<frame_producer>		background_			= frame_producer::empty();;
@@ -44,7 +44,7 @@ struct layer::impl
 	int64_t								current_frame_age_	= 0;
 
 public:
-	impl(int index) 
+	impl(int index)
 		: monitor_subject_(spl::make_shared<monitor::subject>(
 				"/layer/" + boost::lexical_cast<std::string>(index)))
 //		, foreground_event_subject_("")
@@ -74,7 +74,7 @@ public:
 	}
 
 	void load(spl::shared_ptr<frame_producer> producer, bool preview, const boost::optional<int32_t>& auto_play_delta)
-	{		
+	{
 //		background_->unsubscribe(background_event_subject_);
 		background_ = std::move(producer);
 //		background_->subscribe(background_event_subject_);
@@ -92,9 +92,9 @@ public:
 		if(auto_play_delta_ && foreground_ == frame_producer::empty())
 			play();
 	}
-	
+
 	void play()
-	{			
+	{
 		if(background_ != frame_producer::empty())
 		{
 			background_->leading_producer(foreground_);
@@ -108,18 +108,18 @@ public:
 		foreground_->paused(false);
 		is_paused_ = false;
 	}
-	
+
 	void stop()
 	{
 		set_foreground(frame_producer::empty());
 
 		auto_play_delta_.reset();
 	}
-		
+
 	draw_frame receive(const video_format_desc& format_desc)
-	{		
+	{
 		try
-		{		
+		{
 			*monitor_subject_ << monitor::message("/paused") % is_paused_;
 
 			caspar::timer produce_timer;
@@ -127,10 +127,10 @@ public:
 			auto produce_time = produce_timer.elapsed();
 
 			*monitor_subject_ << monitor::message("/profiler/time") % produce_time % (1.0 / format_desc.fps);
-			
+
 			if(frame == core::draw_frame::late())
 				return foreground_->last_frame();
-						
+
 			if(auto_play_delta_)
 			{
 				auto frames_left = static_cast<int64_t>(foreground_->nb_frames()) - foreground_->frame_number() - static_cast<int64_t>(*auto_play_delta_);
@@ -150,7 +150,7 @@ public:
 			//background_event_subject_ << monitor::event("type") % background_->name();
 
 			current_frame_age_ = frame.get_and_record_age_millis();
-				
+
 			return frame;
 		}
 		catch(...)
@@ -160,7 +160,7 @@ public:
 			return core::draw_frame::empty();
 		}
 	}
-	
+
 	boost::property_tree::wptree info() const
 	{
 		boost::property_tree::wptree info;
@@ -172,7 +172,7 @@ public:
 		info.add(L"nb_frames",	 nb_frames == std::numeric_limits<int64_t>::max() ? -1 : nb_frames);
 		info.add(L"frames-left", nb_frames == std::numeric_limits<int64_t>::max() ? -1 : (foreground_->nb_frames() - foreground_->frame_number() - (auto_play_delta_ ? *auto_play_delta_ : 0)));
 		info.add(L"frame-age", current_frame_age_);
-		info.add_child(L"producer", foreground_->info());
+		info.add_child(L"foreground.producer", foreground_->info());
 		info.add_child(L"background.producer", background_->info());
 		return info;
 	}
@@ -189,7 +189,7 @@ public:
 	{
 		foreground_->on_interaction(event);
 	}
-	
+
 	bool collides(double x, double y) const
 	{
 		return foreground_->collides(x, y);
@@ -204,10 +204,10 @@ layer& layer::operator=(layer&& other)
 	return *this;
 }
 void layer::swap(layer& other)
-{	
+{
 	impl_.swap(other.impl_);
 }
-void layer::load(spl::shared_ptr<frame_producer> frame_producer, bool preview, const boost::optional<int32_t>& auto_play_delta){return impl_->load(std::move(frame_producer), preview, auto_play_delta);}	
+void layer::load(spl::shared_ptr<frame_producer> frame_producer, bool preview, const boost::optional<int32_t>& auto_play_delta){return impl_->load(std::move(frame_producer), preview, auto_play_delta);}
 void layer::play(){impl_->play();}
 void layer::pause(){impl_->pause();}
 void layer::resume(){impl_->resume();}
