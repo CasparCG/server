@@ -381,8 +381,9 @@ public:
 			{
 				configure_video_filters(
 					*video_codec,
-					try_remove_arg<std::string>(options_,
-					boost::regex("vf|f:v|filter:v")).get_value_or(""));
+					try_remove_arg<std::string>(options_, boost::regex("vf|f:v|filter:v"))
+							.get_value_or(""),
+					try_remove_arg<std::string>(options_, boost::regex("pix_fmt")));
 
 				configure_audio_filters(
 					*audio_codec,
@@ -650,7 +651,8 @@ private:
 
 	void configure_video_filters(
 			const AVCodec& codec,
-			std::string filtergraph)
+			std::string filtergraph,
+			const boost::optional<std::string>& preferred_pix_fmt)
 	{
 		video_graph_.reset(
 				avfilter_graph_alloc(),
@@ -698,12 +700,33 @@ private:
 #pragma warning (push)
 #pragma warning (disable : 4245)
 
-		FF(av_opt_set_int_list(
+		if (preferred_pix_fmt)
+		{
+			auto requested_fmt = av_get_pix_fmt(preferred_pix_fmt->c_str());
+			auto valid_fmts = from_terminated_array<AVPixelFormat>(codec.pix_fmts, AVPixelFormat::AV_PIX_FMT_NONE);
+
+			if (!cpplinq::from(valid_fmts).contains(requested_fmt))
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(*preferred_pix_fmt + " is not supported by codec."));
+
+			std::vector<AVPixelFormat> fmts = { requested_fmt, AVPixelFormat::AV_PIX_FMT_NONE };
+
+			FF(av_opt_set_int_list(
+				filt_vsink,
+				"pix_fmts",
+				fmts.data(),
+				-1,
+				AV_OPT_SEARCH_CHILDREN));
+		}
+		else
+		{
+			FF(av_opt_set_int_list(
 				filt_vsink,
 				"pix_fmts",
 				codec.pix_fmts,
 				-1,
 				AV_OPT_SEARCH_CHILDREN));
+		}
+
 
 #pragma warning (pop)
 
