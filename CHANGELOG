@@ -49,6 +49,8 @@ Consumers
   o Bluefish consumer:
     + Largely rewritten against newest SDK, giving support for newer hardware
       and features (Satchit Nambiar and James Wise sponsored by Bluefish444).
+  o Screen consumer:
+    + Fixed full screen mode.
 
 Producers
 ---------
