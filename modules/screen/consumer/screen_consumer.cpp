@@ -241,10 +241,20 @@ public:
 			: (config_.windowed
 				? sf::Style::Resize | sf::Style::Close
 				: sf::Style::Fullscreen);
-		window_.create(sf::VideoMode(screen_width_, screen_height_, 32), u8(print()), window_style);
+		window_.create(sf::VideoMode::getDesktopMode(), u8(print()), window_style);
+
+		if (config_.windowed)
+		{
+			window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
+			window_.setSize(sf::Vector2u(screen_width_, screen_height_));
+		}
+		else
+		{
+			screen_width_	= window_.getSize().x;
+			screen_height_	= window_.getSize().y;
+		}
+
 		window_.setMouseCursorVisible(config_.interactive);
-		window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
-		window_.setSize(sf::Vector2u(screen_width_, screen_height_));
 		window_.setActive();
 
 		if(!GLEW_VERSION_2_1 && glewInit() != GLEW_OK)
