@@ -307,4 +307,13 @@ std::vector<spl::shared_ptr<AVFrame>> audio_filter::poll_all(int output_pad_id)
 	return frames;
 }
 
+ffmpeg::audio_input_pad create_input_pad(const core::video_format_desc& in_format, int num_channels)
+{
+	return ffmpeg::audio_input_pad(
+			boost::rational<int>(1, in_format.audio_sample_rate),
+			in_format.audio_sample_rate,
+			AVSampleFormat::AV_SAMPLE_FMT_S32,
+			av_get_default_channel_layout(num_channels));
+}
+
 }}

@@ -27,12 +27,13 @@ include_directories(${BOOST_INCLUDE_PATH})
 include_directories(${RXCPP_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_PATH})
 include_directories(${ASMLIB_INCLUDE_PATH})
+include_directories(${FFMPEG_INCLUDE_PATH})
 
 set_target_properties(reroute PROPERTIES FOLDER modules)
 source_group(sources\\producer producer/*)
 source_group(sources ./*)
 
-target_link_libraries(reroute common core)
+target_link_libraries(reroute common core ffmpeg)
 
 casparcg_add_include_statement("modules/reroute/reroute.h")
 casparcg_add_init_statement("reroute::init" "reroute")
