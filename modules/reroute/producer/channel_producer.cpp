@@ -50,6 +50,24 @@
 
 #include <tbb/concurrent_queue.h>
 
+#if defined(_MSC_VER)
+#pragma warning (push)
+#pragma warning (disable : 4244)
+#endif
+extern "C"
+{
+#define __STDC_CONSTANT_MACROS
+#define __STDC_LIMIT_MACROS
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+}
+#if defined(_MSC_VER)
+#pragma warning (pop)
+#endif
+
+#include <modules/ffmpeg/producer/muxer/frame_muxer.h>
+#include <modules/ffmpeg/producer/util/util.h>
+
 #include <asmlib.h>
 
 #include <queue>
@@ -199,6 +217,20 @@ public:
 	}
 };
 
+core::video_format_desc get_progressive_format(core::video_format_desc format_desc)
+{
+	if (format_desc.field_count == 1)
+		return format_desc;
+
+	format_desc.framerate		*= 2;
+	format_desc.fps				*= 2.0;
+	format_desc.audio_cadence	 = core::find_audio_cadence(format_desc.framerate);
+	format_desc.time_scale		*= 2;
+	format_desc.field_count		 = 1;
+
+	return format_desc;
+}
+
 class channel_producer : public core::frame_producer_base
 {
 	core::monitor::subject						monitor_subject_;
@@ -207,6 +239,7 @@ class channel_producer : public core::frame_producer_base
 	const core::video_format_desc				output_format_desc_;
 	const spl::shared_ptr<channel_consumer>		consumer_;
 	core::constraints							pixel_constraints_;
+	ffmpeg::frame_muxer							muxer_;
 
 	std::queue<core::draw_frame>				frame_buffer_;
 
@@ -215,6 +248,15 @@ public:
 		: frame_factory_(dependecies.frame_factory)
 		, output_format_desc_(dependecies.format_desc)
 		, consumer_(spl::make_shared<channel_consumer>(frames_delay))
+		, muxer_(
+				channel->video_format_desc().framerate,
+				{ ffmpeg::create_input_pad(channel->video_format_desc(), channel->audio_channel_layout().num_channels) },
+				dependecies.frame_factory,
+				get_progressive_format(channel->video_format_desc()),
+				channel->audio_channel_layout(),
+				L"",
+				false,
+				true)
 	{
 		pixel_constraints_.width.set(output_format_desc_.width);
 		pixel_constraints_.height.set(output_format_desc_.height);
@@ -233,32 +275,39 @@ public:
 
 	core::draw_frame receive_impl() override
 	{
-		auto format_desc = consumer_->get_video_format_desc();
-
-		if(frame_buffer_.size() > 0)
+		if (!muxer_.video_ready() || !muxer_.audio_ready())
 		{
-			auto frame = frame_buffer_.front();
-			frame_buffer_.pop();
-			return frame;
+			auto read_frame = consumer_->receive();
+
+			if (read_frame == core::const_frame::empty() || read_frame.image_data().empty())
+				return core::draw_frame::late();
+
+			auto video_frame = ffmpeg::create_frame();
+
+			video_frame->data[0]				= const_cast<uint8_t*>(read_frame.image_data().begin());
+			video_frame->linesize[0]			= static_cast<int>(read_frame.width()) * 4;
+			video_frame->format				= AVPixelFormat::AV_PIX_FMT_BGRA;
+			video_frame->width				= static_cast<int>(read_frame.width());
+			video_frame->height				= static_cast<int>(read_frame.height());
+			video_frame->interlaced_frame	= consumer_->get_video_format_desc().field_mode != core::field_mode::progressive;
+			video_frame->top_field_first		= consumer_->get_video_format_desc().field_mode == core::field_mode::upper ? 1 : 0;
+			video_frame->key_frame			= 1;
+
+			muxer_.push(video_frame);
+			muxer_.push(
+					{
+						std::make_shared<core::mutable_audio_buffer>(
+								read_frame.audio_data().begin(),
+								read_frame.audio_data().end())
+					});
 		}
 
-		auto read_frame = consumer_->receive();
-		if(read_frame == core::const_frame::empty() || read_frame.image_data().empty())
+		auto frame = muxer_.poll();
+
+		if (frame == core::draw_frame::empty())
 			return core::draw_frame::late();
 
-		core::pixel_format_desc desc;
-		desc.format = core::pixel_format::bgra;
-		desc.planes.push_back(core::pixel_format_desc::plane(format_desc.width, format_desc.height, 4));
-		auto frame = frame_factory_->create_frame(this, desc, consumer_->get_audio_channel_layout());
-
-		frame.audio_data().reserve(read_frame.audio_data().size());
-		boost::copy(read_frame.audio_data(), std::back_inserter(frame.audio_data()));
-
-		fast_memcpy(frame.image_data().begin(), read_frame.image_data().begin(), read_frame.image_data().size());
-
-		frame_buffer_.push(core::draw_frame(std::move(frame)));
-
-		return receive_impl();
+		return frame;
 	}
 
 	std::wstring name() const override
@@ -287,6 +336,11 @@ public:
 	{
 		return monitor_subject_;
 	}
+
+	boost::rational<int> current_framerate() const
+	{
+		return muxer_.out_framerate();
+	}
 };
 
 spl::shared_ptr<core::frame_producer> create_channel_producer(
@@ -294,9 +348,11 @@ spl::shared_ptr<core::frame_producer> create_channel_producer(
 		const spl::shared_ptr<core::video_channel>& channel,
 		int frames_delay)
 {
+	auto producer = spl::make_shared<channel_producer>(dependencies, channel, frames_delay);
+
 	return core::create_framerate_producer(
-			spl::make_shared<channel_producer>(dependencies, channel, frames_delay),
-			[channel] { return channel->video_format_desc().framerate; }	,
+			producer,
+			[producer] { return producer->current_framerate(); },
 			dependencies.format_desc.framerate,
 			dependencies.format_desc.field_mode,
 			dependencies.format_desc.audio_cadence);
