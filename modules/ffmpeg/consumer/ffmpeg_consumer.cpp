@@ -700,37 +700,28 @@ private:
 #pragma warning (push)
 #pragma warning (disable : 4245)
 
-		if (preferred_pix_fmt)
-		{
-			auto requested_fmt = av_get_pix_fmt(preferred_pix_fmt->c_str());
-			auto valid_fmts = from_terminated_array<AVPixelFormat>(codec.pix_fmts, AVPixelFormat::AV_PIX_FMT_NONE);
-
-			if (!cpplinq::from(valid_fmts).contains(requested_fmt))
-				CASPAR_THROW_EXCEPTION(user_error() << msg_info(*preferred_pix_fmt + " is not supported by codec."));
-
-			std::vector<AVPixelFormat> fmts = { requested_fmt, AVPixelFormat::AV_PIX_FMT_NONE };
-
-			FF(av_opt_set_int_list(
-				filt_vsink,
-				"pix_fmts",
-				fmts.data(),
-				-1,
-				AV_OPT_SEARCH_CHILDREN));
-		}
-		else
-		{
-			FF(av_opt_set_int_list(
-				filt_vsink,
-				"pix_fmts",
-				codec.pix_fmts,
-				-1,
-				AV_OPT_SEARCH_CHILDREN));
-		}
+		FF(av_opt_set_int_list(
+			filt_vsink,
+			"pix_fmts",
+			codec.pix_fmts,
+			-1,
+			AV_OPT_SEARCH_CHILDREN));
 
 
 #pragma warning (pop)
 
 		adjust_video_filter(codec, in_video_format_, filt_vsink, filtergraph);
+
+		if (preferred_pix_fmt)
+		{
+			auto requested_fmt	= av_get_pix_fmt(preferred_pix_fmt->c_str());
+			auto valid_fmts		= from_terminated_array<AVPixelFormat>(codec.pix_fmts, AVPixelFormat::AV_PIX_FMT_NONE);
+
+			if (!cpplinq::from(valid_fmts).contains(requested_fmt))
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(*preferred_pix_fmt + " is not supported by codec."));
+
+			set_pixel_format(filt_vsink, requested_fmt);
+		}
 
 		if (in_video_format_.width < 1280)
 			video_graph_->scale_sws_opts = "out_color_matrix=bt601";
