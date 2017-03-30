@@ -43,6 +43,8 @@ Consumers
     + Fixed bug in parsing of paths containing -.
     + Fixed bugs where previously effective arguments like -pix_fmt were
       ignored.
+    + Fixed bug where interlaced channels where not recorded correctly for
+      some codecs.
   o DeckLink consumer:
     + Rewrote the frame hand-off between send() and ScheduledFrameCompleted() in
       a way that hopefully resolves all dead-lock scenarios previously possible.
@@ -79,6 +81,10 @@ Producers
   o Layer producer:
     + Fixed serious bug where a circular reference of layer producers caused a
       stack overflow and server crash.
+    + Can now route from layer on a channel with an incompatible framerate.
+  o Channel producer:
+    + Can now route from channel with an incompatible framerate.
+    + Deinterlaces interlaced content from source channel.
   o Scene producer:
     + Added abs(), floor(), to_lower(), to_upper() and length() functions to the
       expression language.
