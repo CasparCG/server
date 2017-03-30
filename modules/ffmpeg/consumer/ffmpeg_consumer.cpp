@@ -874,6 +874,8 @@ private:
 			src_av_frame->sample_aspect_ratio.num	= sample_aspect_ratio.numerator();
 			src_av_frame->sample_aspect_ratio.den	= sample_aspect_ratio.denominator();
 			src_av_frame->pts						= video_pts_;
+			src_av_frame->interlaced_frame			= in_video_format_.field_mode != core::field_mode::progressive;
+			src_av_frame->top_field_first			= (in_video_format_.field_mode & core::field_mode::upper) == core::field_mode::upper ? 1 : 0;
 
 			video_pts_ += 1;
 
