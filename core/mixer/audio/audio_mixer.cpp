@@ -115,11 +115,6 @@ public:
 		items_.push_back(std::move(item));
 	}
 
-	void begin(const core::audio_transform& transform)
-	{
-		transform_stack_.push(transform_stack_.top()*transform);
-	}
-
 	void pop()
 	{
 		transform_stack_.pop();
