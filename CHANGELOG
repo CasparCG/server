@@ -49,8 +49,15 @@ Consumers
     + Rewrote the frame hand-off between send() and ScheduledFrameCompleted() in
       a way that hopefully resolves all dead-lock scenarios previously possible.
   o Bluefish consumer:
-    + Largely rewritten against newest SDK, giving support for newer hardware
-      and features (Satchit Nambiar and James Wise sponsored by Bluefish444).
+    + Largely rewritten against newest SDK Driver 5.11.0.47 (Satchit Nambiar and
+      James Wise sponsored by Bluefish444):
+      + Added support for Epoch Neutron and Supernova CG. All current Epoch
+        cards are now supported.
+      + Added support for for multiple SDI channels per card. 1 to 4 channels
+        per Bluefish444 card depending on model and firmware.
+      + Added support for single SDI output, complementing existing external key
+        output support.
+      + Added support for internal key using the Bluefish444 hardware keyer.
   o Screen consumer:
     + Fixed full screen mode.
 
