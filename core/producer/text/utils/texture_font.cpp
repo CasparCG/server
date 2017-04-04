@@ -221,57 +221,6 @@ public:
 		return result;
 	}
 
-	string_metrics measure_string(const std::wstring& str)
-	{
-		string_metrics result;
-
-		bool use_kerning = (face_->face_flags & FT_FACE_FLAG_KERNING) == FT_FACE_FLAG_KERNING;
-		int index = 0;
-		FT_UInt previous = 0;
-		double pos_x = 0;
-//		float pos_y = 0;
-
-		auto end = str.end();
-		for(auto it = str.begin(); it != end; ++it, ++index)
-		{
-			auto glyph_it = glyphs_.find(*it);
-			if(glyph_it != glyphs_.end())
-			{
-				const glyph_info& coords = glyph_it->second;
-
-				FT_UInt glyph_index = FT_Get_Char_Index(face_.get(), (*it));
-
-				if(use_kerning && previous && glyph_index)
-				{
-					FT_Vector delta;
-					FT_Get_Kerning(face_.get(), previous, glyph_index, FT_KERNING_DEFAULT, &delta);
-
-					pos_x += delta.x / 64.0;
-				}
-
-				FT_Load_Glyph(face_.get(), glyph_index, FT_LOAD_NO_BITMAP | FT_LOAD_FORCE_AUTOHINT | FT_LOAD_TARGET_NORMAL);
-
-				int bearingY = face_->glyph->metrics.horiBearingY >> 6;
-				if(bearingY > result.bearingY)
-					result.bearingY = bearingY;
-
-				int protrudeUnderY = coords.height - bearingY;
-
-				if (protrudeUnderY > result.protrudeUnderY)
-					result.protrudeUnderY = protrudeUnderY;
-
-				if (result.bearingY + result.protrudeUnderY > result.height)
-					 result.height = result.bearingY + result.protrudeUnderY;
-
-				pos_x += face_->glyph->advance.x / 64.0;
-				previous = glyph_index;
-			}
-		}
-
-		result.width = (int)(pos_x+.5f);
-		return result;
-	}
-
 	std::wstring get_name() const
 	{
 		return name_;
@@ -287,7 +236,6 @@ texture_font::texture_font(texture_atlas& atlas, const text_info& info, bool nor
 void texture_font::load_glyphs(unicode_block range, const color<double>& col) { impl_->load_glyphs(range, col); }
 void texture_font::set_tracking(double tracking) { impl_->set_tracking(tracking); }
 std::vector<frame_geometry::coord> texture_font::create_vertex_stream(const std::wstring& str, int x, int y, int parent_width, int parent_height, string_metrics* metrics, double shear) { return impl_->create_vertex_stream(str, x, y, parent_width, parent_height, metrics, shear); }
-string_metrics texture_font::measure_string(const std::wstring& str) { return impl_->measure_string(str); }
 std::wstring texture_font::get_name() const { return impl_->get_name(); }
 double texture_font::get_size() const { return impl_->get_size(); }
 
