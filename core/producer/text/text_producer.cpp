@@ -210,11 +210,6 @@ public:
 		frame_ = core::draw_frame(std::move(frame));
 	}
 
-	text::string_metrics measure_string(const std::wstring& str)
-	{
-		return font_.measure_string(str);
-	}
-
 	// frame_producer
 
 	draw_frame receive_impl()
@@ -310,7 +305,6 @@ draw_frame text_producer::receive_impl() { return impl_->receive_impl(); }
 std::future<std::wstring> text_producer::call(const std::vector<std::wstring>& param) { return impl_->call(param); }
 variable& text_producer::get_variable(const std::wstring& name) { return impl_->get_variable(name); }
 const std::vector<std::wstring>& text_producer::get_variables() const { return impl_->get_variables(); }
-text::string_metrics text_producer::measure_string(const std::wstring& str) { return impl_->measure_string(str); }
 
 constraints& text_producer::pixel_constraints() { return impl_->pixel_constraints(); }
 std::wstring text_producer::print() const { return impl_->print(); }
