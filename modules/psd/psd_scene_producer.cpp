@@ -451,7 +451,6 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 				auto text_producer = core::text_producer::create(dependencies.frame_factory, 0, 0, str, text_info, doc.width(), doc.height());
 				//text_producer->pixel_constraints().width.set(psd_layer->size().width);
 				//text_producer->pixel_constraints().height.set(psd_layer->size().height);
-				core::text::string_metrics metrics = text_producer->measure_string(str);
 
 				layer_producer = text_producer;
 				scene_layer = &current.scene()->create_layer(spl::make_shared_ptr(layer_producer), static_cast<int>(psd_layer->text_pos().x), static_cast<int>(psd_layer->text_pos().y), layer_name);
