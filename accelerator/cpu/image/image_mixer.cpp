@@ -58,7 +58,7 @@
 #pragma warning (push)
 #pragma warning (disable : 4244)
 #endif
-extern "C" 
+extern "C"
 {
 	#include <libswscale/swscale.h>
 	#include <libavcodec/avcodec.h>
@@ -69,7 +69,7 @@ extern "C"
 #endif
 
 namespace caspar { namespace accelerator { namespace cpu {
-		
+
 struct item
 {
 	core::pixel_format_desc			pix_desc	= core::pixel_format::invalid;
@@ -91,54 +91,54 @@ bool operator!=(const item& lhs, const item& rhs)
 {
 	return !(lhs == rhs);
 }
-	
+
 // 100% accurate blending with correct rounding.
 inline xmm::s8_x blend(xmm::s8_x d, xmm::s8_x s)
-{	
+{
 	using namespace xmm;
-		
+
 	// C(S, D) = S + D - (((T >> 8) + T) >> 8);
 	// T(S, D) = S * D[A] + 0x80
 
 	auto aaaa   = s8_x::shuffle(d, s8_x(15, 15, 15, 15, 11, 11, 11, 11, 7, 7, 7, 7, 3, 3, 3, 3));
 	d			= s8_x(u8_x::min(u8_x(d), u8_x(aaaa))); // Overflow guard. Some source files have color values which incorrectly exceed pre-multiplied alpha values, e.g. red(255) > alpha(254).
 
-	auto xaxa	= s16_x(aaaa) >> 8;		
-			      
-	auto t1		= s16_x::multiply_low(s16_x(s) & 0x00FF, xaxa) + 0x80;    
+	auto xaxa	= s16_x(aaaa) >> 8;
+
+	auto t1		= s16_x::multiply_low(s16_x(s) & 0x00FF, xaxa) + 0x80;
 	auto t2		= s16_x::multiply_low(s16_x(s) >> 8    , xaxa) + 0x80;
-		
-	auto xyxy	= s8_x(((t1 >> 8) + t1) >> 8);      
-	auto yxyx	= s8_x((t2 >> 8) + t2);    
+
+	auto xyxy	= s8_x(((t1 >> 8) + t1) >> 8);
+	auto yxyx	= s8_x((t2 >> 8) + t2);
 	auto argb   = s8_x::blend(xyxy, yxyx, s8_x(-1, 0, -1, 0));
 
 	return s8_x(s) + (d - argb);
 }
-	
+
 template<typename temporal, typename alignment>
 static void kernel(uint8_t* dest, const uint8_t* source, size_t count)
-{			
+{
 	using namespace xmm;
 
-	for(auto n = 0; n < count; n += 32)    
+	for(auto n = 0; n < count; n += 32)
 	{
 		auto s0 = s8_x::load<temporal_tag, alignment>(dest+n+0);
 		auto s1 = s8_x::load<temporal_tag, alignment>(dest+n+16);
 
 		auto d0 = s8_x::load<temporal_tag, alignment>(source+n+0);
 		auto d1 = s8_x::load<temporal_tag, alignment>(source+n+16);
-		
+
 		auto argb0 = blend(d0, s0);
 		auto argb1 = blend(d1, s1);
 
 		s8_x::store<temporal, alignment>(argb0, dest+n+0 );
 		s8_x::store<temporal, alignment>(argb1, dest+n+16);
-	} 
+	}
 }
 
 template<typename temporal>
 static void kernel(uint8_t* dest, const uint8_t* source, size_t count)
-{			
+{
 	using namespace xmm;
 
 	if(reinterpret_cast<std::uint64_t>(dest) % 16 != 0 || reinterpret_cast<std::uint64_t>(source) % 16 != 0)
@@ -152,7 +152,7 @@ class image_renderer
 	tbb::concurrent_unordered_map<int64_t, tbb::concurrent_bounded_queue<std::shared_ptr<SwsContext>>>	sws_devices_;
 	tbb::concurrent_bounded_queue<spl::shared_ptr<buffer>>												temp_buffers_;
 	core::video_format_desc																				format_desc_;
-public:	
+public:
 	std::future<array<const std::uint8_t>> operator()(std::vector<item> items, const core::video_format_desc& format_desc)
 	{
 		if (format_desc != format_desc_)
@@ -161,14 +161,14 @@ public:
 			sws_devices_.clear();
 		}
 
-		convert(items, format_desc.width, format_desc.height);		
-				
+		convert(items, format_desc.width, format_desc.height);
+
 		// Remove first field stills.
 		boost::range::remove_erase_if(items, [&](const item& item)
 		{
 			return item.transform.is_still && item.transform.field_mode == format_desc.field_mode; // only us last field for stills.
 		});
-		
+
 		// Stills are progressive
 		for (auto& item : items)
 		{
@@ -178,7 +178,7 @@ public:
 
 		auto result = spl::make_shared<buffer>(format_desc.size, 0);
 		if(format_desc.field_mode != core::field_mode::progressive)
-		{			
+		{
 			draw(items, result->data(), format_desc.width, format_desc.height, core::field_mode::upper);
 			draw(items, result->data(), format_desc.width, format_desc.height, core::field_mode::lower);
 		}
@@ -188,17 +188,17 @@ public:
 		}
 
 		temp_buffers_.clear();
-		
+
 		return make_ready_future(array<const std::uint8_t>(result->data(), format_desc.size, true, result));
 	}
 
 private:
 
 	void draw(std::vector<item> items, uint8_t* dest, std::size_t width, std::size_t height, core::field_mode field_mode)
-	{		
+	{
 		for (auto& item : items)
 			item.transform.field_mode &= field_mode;
-		
+
 		// Remove empty items.
 		boost::range::remove_erase_if(items, [&](const item& item)
 		{
@@ -207,10 +207,10 @@ private:
 
 		if(items.empty())
 			return;
-		
+
 		auto start = field_mode == core::field_mode::lower ? 1 : 0;
 		auto step  = field_mode == core::field_mode::progressive ? 1 : 2;
-		
+
 		// TODO: Add support for fill translations.
 		// TODO: Add support for mask rect.
 		// TODO: Add support for opacity.
@@ -226,29 +226,29 @@ private:
 
 				for(std::size_t n = 0; n < items.size()-1; ++n)
 					kernel<xmm::temporal_tag>(dest + y*width*4, items[n].data.at(0) + y*width*4, width*4);
-				
-				std::size_t n = items.size()-1;				
+
+				std::size_t n = items.size()-1;
 				kernel<xmm::nontemporal_tag>(dest + y*width*4, items[n].data.at(0) + y*width*4, width*4);
 			}
 
 			_mm_mfence();
 		});
 	}
-		
+
 	void convert(std::vector<item>& source_items, int width, int height)
 	{
 		std::set<std::array<const uint8_t*, 4>> buffers;
 
 		for (auto& item : source_items)
 			buffers.insert(item.data);
-		
+
 		auto dest_items = source_items;
 
 		tbb::parallel_for_each(buffers.begin(), buffers.end(), [&](const std::array<const uint8_t*, 4>& data)
-		{			
+		{
 			auto pix_desc = std::find_if(source_items.begin(), source_items.end(), [&](const item& item){return item.data == data;})->pix_desc;
 
-			if(pix_desc.format == core::pixel_format::bgra && 
+			if(pix_desc.format == core::pixel_format::bgra &&
 				pix_desc.planes.at(0).width == width &&
 				pix_desc.planes.at(0).height == height)
 				return;
@@ -259,9 +259,9 @@ private:
 
 			auto input_av_frame = ffmpeg::make_av_frame(data2, pix_desc);
 
-		
-			int64_t key = ((static_cast<int64_t>(input_av_frame->width)	 << 32) & 0xFFFF00000000) | 
-						  ((static_cast<int64_t>(input_av_frame->height) << 16) & 0xFFFF0000) | 
+
+			int64_t key = ((static_cast<int64_t>(input_av_frame->width)	 << 32) & 0xFFFF00000000) |
+						  ((static_cast<int64_t>(input_av_frame->height) << 16) & 0xFFFF0000) |
 						  ((static_cast<int64_t>(input_av_frame->format) <<  8) & 0xFF00);
 
 			auto& pool = sws_devices_[key];
@@ -270,23 +270,23 @@ private:
 			if(!pool.try_pop(sws_device))
 			{
 				double param;
-				sws_device.reset(sws_getContext(input_av_frame->width, input_av_frame->height, static_cast<PixelFormat>(input_av_frame->format), width, height, PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
+				sws_device.reset(sws_getContext(input_av_frame->width, input_av_frame->height, static_cast<AVPixelFormat>(input_av_frame->format), width, height, AVPixelFormat::AV_PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
 			}
-			
-			if(!sws_device)				
-				CASPAR_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling device.") << boost::errinfo_api_function("sws_getContext"));				
-		
+
+			if(!sws_device)
+				CASPAR_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling device.") << boost::errinfo_api_function("sws_getContext"));
+
 			auto dest_frame = spl::make_shared<buffer>(width*height*4);
 			temp_buffers_.push(dest_frame);
 
 			{
 				auto dest_av_frame = ffmpeg::create_frame();
-				avpicture_fill(reinterpret_cast<AVPicture*>(dest_av_frame.get()), dest_frame->data(), PIX_FMT_BGRA, width, height);
-				
-				sws_scale(sws_device.get(), input_av_frame->data, input_av_frame->linesize, 0, input_av_frame->height, dest_av_frame->data, dest_av_frame->linesize);				
+				avpicture_fill(reinterpret_cast<AVPicture*>(dest_av_frame.get()), dest_frame->data(), AVPixelFormat::AV_PIX_FMT_BGRA, width, height);
+
+				sws_scale(sws_device.get(), input_av_frame->data, input_av_frame->linesize, 0, input_av_frame->height, dest_av_frame->data, dest_av_frame->linesize);
 				pool.push(sws_device);
 			}
-					
+
 			for(std::size_t n = 0; n < source_items.size(); ++n)
 			{
 				if(source_items[n].data == data)
@@ -298,37 +298,37 @@ private:
 					dest_items[n].transform			= source_items[n].transform;
 				}
 			}
-		});	
+		});
 
 		source_items = std::move(dest_items);
 	}
 };
-		
+
 struct image_mixer::impl : boost::noncopyable
-{	
+{
 	image_renderer						renderer_;
 	std::vector<core::image_transform>	transform_stack_;
 	std::vector<item>					items_; // layer/stream/items
 public:
 	impl(int channel_id)
-		: transform_stack_(1)	
+		: transform_stack_(1)
 	{
 		CASPAR_LOG(info) << L"Initialized Streaming SIMD Extensions Accelerated CPU Image Mixer for channel " << channel_id;
 	}
-		
+
 	void push(const core::frame_transform& transform)
 	{
 		transform_stack_.push_back(transform_stack_.back()*transform.image_transform);
 	}
-		
+
 	void visit(const core::const_frame& frame)
-	{			
+	{
 		if(frame.pixel_format_desc().format == core::pixel_format::invalid)
 			return;
 
 		if(frame.pixel_format_desc().planes.empty())
 			return;
-		
+
 		if(frame.pixel_format_desc().planes.at(0).size < 16)
 			return;
 
@@ -339,7 +339,7 @@ public:
 		item.pix_desc	= frame.pixel_format_desc();
 		item.transform	= transform_stack_.back();
 		for(int n = 0; n < item.pix_desc.planes.size(); ++n)
-			item.data.at(n) = frame.image_data(n).begin();		
+			item.data.at(n) = frame.image_data(n).begin();
 
 		items_.push_back(item);
 	}
@@ -348,12 +348,12 @@ public:
 	{
 		transform_stack_.pop_back();
 	}
-	
+
 	std::future<array<const std::uint8_t>> render(const core::video_format_desc& format_desc)
 	{
 		return renderer_(std::move(items_), format_desc);
 	}
-	
+
 	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc, const core::audio_channel_layout& channel_layout)
 	{
 		std::vector<array<std::uint8_t>> buffers;
