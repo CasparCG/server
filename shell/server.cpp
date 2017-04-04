@@ -462,7 +462,10 @@ struct server::impl : boost::noncopyable
 					if (running_)
 					{
 						if (boost::filesystem::is_regular_file(iter->path()))
+						{
+							CASPAR_LOG(trace) << L"Retrieving information for file " << iter->path().wstring();
 							media_info_repo_->get(iter->path().wstring());
+						}
 					}
 					else
 					{
