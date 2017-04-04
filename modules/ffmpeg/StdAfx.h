@@ -76,12 +76,11 @@
 
 #pragma warning(push, 1)
 
-extern "C" 
+extern "C"
 {
 	#define __STDC_CONSTANT_MACROS
 	#define __STDC_LIMIT_MACROS
 	#include <libavcodec/avcodec.h>
-	#include <libavfilter/avcodec.h>
 	#include <libavfilter/avfilter.h>
 	#include <libavfilter/avfiltergraph.h>
 	#include <libavfilter/buffersink.h>
