@@ -65,7 +65,7 @@ core::mutable_frame					make_frame(const void* tag, const spl::shared_ptr<AVFram
 spl::shared_ptr<AVFrame>			make_av_frame(core::mutable_frame& frame);
 spl::shared_ptr<AVFrame>			make_av_frame(std::array<uint8_t*, 4> data, const core::pixel_format_desc& pix_desc);
 
-core::pixel_format_desc				pixel_format_desc(PixelFormat pix_fmt, int width, int height);
+core::pixel_format_desc				pixel_format_desc(AVPixelFormat pix_fmt, int width, int height);
 
 spl::shared_ptr<AVPacket> create_packet();
 spl::shared_ptr<AVFrame>  create_frame();

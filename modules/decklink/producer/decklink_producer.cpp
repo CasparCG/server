@@ -234,7 +234,7 @@ public:
 
 			video_frame->data[0]			= reinterpret_cast<uint8_t*>(video_bytes);
 			video_frame->linesize[0]		= video->GetRowBytes();
-			video_frame->format				= PIX_FMT_UYVY422;
+			video_frame->format				= AVPixelFormat::AV_PIX_FMT_UYVY422;
 			video_frame->width				= video->GetWidth();
 			video_frame->height				= video->GetHeight();
 			video_frame->interlaced_frame	= in_format_desc_.field_mode != core::field_mode::progressive;
