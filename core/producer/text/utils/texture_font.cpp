@@ -201,7 +201,7 @@ public:
 
 		if(normalize_)
 		{
-			auto ratio_x = parent_width / (pos_x - x);
+			auto ratio_x = parent_width / (pos_x - tracking_ - x);
 			auto ratio_y = parent_height / static_cast<double>(maxHeight);
 
 			for (auto& coord : result)
@@ -213,11 +213,12 @@ public:
 
 		if (metrics != nullptr)
 		{
-			metrics->width = (int)(pos_x - x + 0.5);
-			metrics->bearingY = maxBearingY;
-			metrics->height = maxHeight;
-			metrics->protrudeUnderY = maxProtrudeUnderY;
+			metrics->width			= static_cast<int>(pos_x - tracking_ - x + 0.5);
+			metrics->bearingY		= maxBearingY;
+			metrics->height			= maxHeight;
+			metrics->protrudeUnderY	= maxProtrudeUnderY;
 		}
+
 		return result;
 	}
 
