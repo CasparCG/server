@@ -157,8 +157,14 @@ public:
 
 	void disconnect()
 	{
-		auto self = shared_from_this();
-		service_->dispatch([=] { self->stop(); });
+		std::weak_ptr<connection> self = shared_from_this();
+		service_->dispatch([=]
+		{
+			auto strong = self.lock();
+
+			if (strong)
+				strong->stop();
+		});
 	}
 
 	void add_lifecycle_bound_object(const std::wstring& key, const std::shared_ptr<void>& lifecycle_bound)
