@@ -115,6 +115,9 @@ Producers
     + Now has support for gradients.
   o PSD producer:
     + Added support for centered and right justified text.
+  o Text producer:
+    + Fixed bug where tracking contributed to the overall text width on the
+      last character.
 
 Mixer
 -----
