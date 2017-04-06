@@ -145,7 +145,7 @@ class layer_producer : public core::frame_producer_base
 
 	core::draw_frame							last_frame_;
 
-	const spl::shared_ptr<core::video_channel>	channel_;
+	const std::weak_ptr<core::video_channel>	channel_;
 	core::constraints							pixel_constraints_;
 
 	tbb::atomic<bool>							double_framerate_;
@@ -160,7 +160,7 @@ public:
 	{
 		pixel_constraints_.width.set(channel->video_format_desc().width);
 		pixel_constraints_.height.set(channel->video_format_desc().height);
-		channel_->stage().add_layer_consumer(this, layer_, consumer_);
+		channel->stage().add_layer_consumer(this, layer_, consumer_);
 		consumer_->block_until_first_frame_available();
 		double_framerate_ = false;
 		CASPAR_LOG(info) << print() << L" Initialized";
@@ -168,7 +168,11 @@ public:
 
 	~layer_producer()
 	{
-		channel_->stage().remove_layer_consumer(this, layer_);
+		auto channel = channel_.lock();
+
+		if (channel)
+			channel->stage().remove_layer_consumer(this, layer_);
+
 		CASPAR_LOG(info) << print() << L" Uninitialized";
 	}
 
@@ -183,11 +187,16 @@ public:
 			return last_frame_;
 		}
 
+		auto channel = channel_.lock();
+
+		if (!channel)
+			return last_frame_;
+
 		auto consumer_frame = consumer_->receive();
 		if (consumer_frame == core::draw_frame::late())
 			return last_frame_;
 
-		auto actual_frames = extract_actual_frames(std::move(consumer_frame), channel_->video_format_desc().field_mode);
+		auto actual_frames = extract_actual_frames(std::move(consumer_frame), channel->video_format_desc().field_mode);
 		double_framerate_ = actual_frames.size() == 2;
 
 		for (auto& frame : actual_frames)
@@ -230,9 +239,14 @@ public:
 
 	boost::rational<int> current_framerate() const
 	{
+		auto channel = channel_.lock();
+
+		if (!channel)
+			return 1;
+
 		return double_framerate_
-				? channel_->video_format_desc().framerate * 2
-				: channel_->video_format_desc().framerate;
+				? channel->video_format_desc().framerate * 2
+				: channel->video_format_desc().framerate;
 	}
 };
 
