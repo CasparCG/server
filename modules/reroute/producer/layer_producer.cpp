@@ -144,6 +144,7 @@ class layer_producer : public core::frame_producer_base
 	const spl::shared_ptr<layer_consumer>		consumer_;
 
 	core::draw_frame							last_frame_;
+	mutable boost::rational<int>				last_frame_rate_;
 
 	const std::weak_ptr<core::video_channel>	channel_;
 	core::constraints							pixel_constraints_;
@@ -242,11 +243,13 @@ public:
 		auto channel = channel_.lock();
 
 		if (!channel)
-			return 1;
+			return last_frame_rate_;
 
-		return double_framerate_
+		last_frame_rate_ = double_framerate_
 				? channel->video_format_desc().framerate * 2
 				: channel->video_format_desc().framerate;
+
+		return last_frame_rate_;
 	}
 };
 
