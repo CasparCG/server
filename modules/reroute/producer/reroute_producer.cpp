@@ -40,7 +40,7 @@ namespace caspar { namespace reroute {
 void describe_producer(core::help_sink& sink, const core::help_repository& repository)
 {
 	sink.short_description(L"Reroutes a complete channel or a layer to another layer.");
-	sink.syntax(L"route://[source_channel:int]{-[source_layer:int]} {FRAMES_DELAY [frames_delay:int]}");
+	sink.syntax(L"route://[source_channel:int]{-[source_layer:int]} {FRAMES_DELAY [frames_delay:int]} {[no_auto_deinterlace:NO_AUTO_DEINTERLACE]}");
 	sink.para()->text(L"Reroutes the composited video of a channel or the untransformed video of a layer.");
 	sink.para()
 		->text(L"If ")->code(L"source_layer")->text(L" is specified, only the video of the source layer is rerouted. ")
@@ -48,9 +48,13 @@ void describe_producer(core::help_sink& sink, const core::help_repository& repos
 	sink.para()
 		->text(L"An optional additional delay can be specified with the ")->code(L"frames_delay")
 		->text(L" parameter.");
+	sink.para()
+		->text(L"For channel routing an optional ")->code(L"no_auto_deinterlace")
+		->text(L" parameter can be specified, when performance is more important than good quality output.");
 	sink.para()->text(L"Examples:");
 	sink.example(L">> PLAY 1-10 route://1-11", L"Play the contents of layer 1-11 on layer 1-10 as well.");
 	sink.example(L">> PLAY 1-10 route://2", L"Play the composited contents of channel 2 on layer 1-10 as well.");
+	sink.example(L">> PLAY 1-10 route://2 NO_AUTO_DEINTERLACE");
 	sink.example(
 		L">> MIXER 1-10 FILL 0.02 0.01 0.9 0.9\n"
 		L">> PLAY 1-10 route://1\n"
@@ -94,7 +98,8 @@ spl::shared_ptr<core::frame_producer> create_producer(
 	auto params2 = params;
 	params2.erase(params2.begin());
 
-	auto frames_delay = get_param(L"FRAMES_DELAY", params2, 0);
+	auto frames_delay			= get_param(L"FRAMES_DELAY", params2, 0);
+	bool no_auto_deinterlace	= contains_param(L"NO_AUTO_DEINTERLACE", params2);
 
 	if (has_layer_spec)
 	{
@@ -104,7 +109,7 @@ spl::shared_ptr<core::frame_producer> create_producer(
 	}
 	else
 	{
-		return create_channel_producer(dependencies, *found_channel, frames_delay);
+		return create_channel_producer(dependencies, *found_channel, frames_delay, no_auto_deinterlace);
 	}
 }
 
