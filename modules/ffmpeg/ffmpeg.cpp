@@ -110,8 +110,7 @@ static void sanitize(uint8_t *line)
 void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 {
 	static int print_prefix=1;
-	static char prev[1024];
-	char line[8192];
+	char line[1024];
 	AVClass* avc= ptr ? *(AVClass**)ptr : NULL;
 	if (level > AV_LOG_DEBUG)
 		return;
@@ -124,21 +123,16 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 		{
 			AVClass** parent= *(AVClass***)(((uint8_t*)ptr) + avc->parent_log_context_offset);
 			if(parent && *parent)
-				std::sprintf(line, "[%s @ %p] ", (*parent)->item_name(parent), parent);
+				std::snprintf(line, sizeof(line), "[%s @ %p] ", (*parent)->item_name(parent), parent);
 		}
-		std::sprintf(line + strlen(line), "[%s @ %p] ", avc->item_name(ptr), ptr);
+		std::snprintf(line + strlen(line), sizeof(line) - strlen(line), "[%s @ %p] ", avc->item_name(ptr), ptr);
 	}
 
-	std::vsprintf(line + strlen(line), fmt, vl);
+	std::vsnprintf(line + strlen(line), sizeof(line) - strlen(line), fmt, vl);
 
 	print_prefix = strlen(line) && line[strlen(line)-1] == '\n';
 
-	strcpy(prev, line);
 	sanitize((uint8_t*)line);
-
-	auto len = strlen(line);
-	if(len > 0)
-		line[len-1] = 0;
 
 	try
 	{
