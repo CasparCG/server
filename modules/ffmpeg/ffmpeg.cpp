@@ -109,7 +109,15 @@ static void sanitize(uint8_t *line)
 
 void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 {
-	static int print_prefix=1;
+	static boost::thread_specific_ptr<bool> print_prefix_tss;
+	auto print_prefix = print_prefix_tss.get();
+
+	if (!print_prefix)
+	{
+		print_prefix = new bool(true);
+		print_prefix_tss.reset(print_prefix);
+	}
+
 	char line[1024];
 	AVClass* avc= ptr ? *(AVClass**)ptr : NULL;
 	if (level > AV_LOG_DEBUG)
@@ -117,7 +125,7 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 	line[0]=0;
 
 #undef fprintf
-	if(print_prefix && avc)
+	if(*print_prefix && avc)
 	{
 		if (avc->parent_log_context_offset)
 		{
@@ -130,7 +138,7 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 
 	std::vsnprintf(line + strlen(line), sizeof(line) - strlen(line), fmt, vl);
 
-	print_prefix = strlen(line) && line[strlen(line)-1] == '\n';
+	*print_prefix = strlen(line) && line[strlen(line)-1] == '\n';
 
 	sanitize((uint8_t*)line);
 
