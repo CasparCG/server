@@ -32,6 +32,7 @@ General
       higher (Walter Sonius).
   o Added support for video modes 2160p5000, 2160p5994 and 2160p6000
     (Antonio Ruano Cuesta).
+  o Fixed serious buffer overrun in FFmpeg logging code.
 
 Consumers
 ---------
@@ -73,6 +74,8 @@ Producers
     + Added DV/HDV video device support under Linux (Walter Sonius).
     + Remove unused flags variable in queued_seek (Dimitry Ishenko).
     + Now recognizes .ts files without probing contents (Ovidijus Striaukas).
+    + Fixed uninitialized value causing initial log printout to usually say that
+      clips are interlaced when they are not.
   o Destroy producer proxy:
     + Created workaround for bug in FFmpeg where every new thread used to
       cleanup caused handles to leak (not sure why). Reduced the effect by using
@@ -92,6 +95,8 @@ Producers
   o Channel producer:
     + Can now route from channel with an incompatible framerate.
     + Deinterlaces interlaced content from source channel.
+    + Added optional NO_AUTO_DEINTERLACE parameter to opt out of the mentioned
+      deinterlacing.
   o Scene producer:
     + Added abs(), floor(), to_lower(), to_upper() and length() functions to the
       expression language.
@@ -148,6 +153,8 @@ AMCP
   o Added support for listing contents of a specific directory for CLS, TLS,
     DATA LIST and THUMBNAIL LIST.
   o Fixed bug where CINF only returned the first match.
+  o Fixed bug where a client closing the connection after BYE instead of
+    letting the server close the connection caused an exception to be logged.
 
 
 
