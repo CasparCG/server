@@ -50,8 +50,6 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/algorithm/string.hpp>
 
-#include <asmlib.h>
-
 #include <memory>
 #include <array>
 
@@ -554,10 +552,10 @@ public:
 				if (key_only_)
 					aligned_memshfl(dest, frame.image_data().begin(), frame.image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 				else
-					A_memcpy(dest, frame.image_data().begin(), frame.image_data().size());
+					std::memcpy(dest, frame.image_data().begin(), frame.image_data().size());
 			}
 			else
-				A_memset(dest, 0, buf->image_size());
+				std::memset(dest, 0, buf->image_size());
 
 			frame_timer_.restart();
 
