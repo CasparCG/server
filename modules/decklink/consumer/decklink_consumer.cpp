@@ -41,7 +41,6 @@
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
 #include <common/memshfl.h>
-#include <common/memcpy.h>
 #include <common/no_init_proxy.h>
 #include <common/array.h>
 #include <common/future.h>
@@ -261,7 +260,7 @@ public:
 				if (needs_to_copy_)
 				{
 					data_.resize(frame_.image_data().size());
-					fast_memcpy(data_.data(), *buffer, frame_.image_data().size());
+					std::memcpy(data_.data(), *buffer, frame_.image_data().size());
 					*buffer = data_.data();
 				}
 			}

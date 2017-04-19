@@ -37,8 +37,6 @@
 
 #include <modules/ffmpeg/producer/util/util.h>
 
-#include <asmlib.h>
-
 #include <GL/glew.h>
 
 #include <tbb/parallel_for.h>

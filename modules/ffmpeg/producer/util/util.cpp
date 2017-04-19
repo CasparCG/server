@@ -41,7 +41,6 @@
 #include <common/except.h>
 #include <common/array.h>
 #include <common/os/filesystem.h>
-#include <common/memcpy.h>
 
 #include <tbb/parallel_for.h>
 
@@ -51,8 +50,6 @@
 #include <boost/rational.hpp>
 
 #include <fstream>
-
-#include <asmlib.h>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -249,12 +246,12 @@ core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& 
 				tbb::parallel_for(tbb::blocked_range<int>(0, desc.planes[n].height), [&](const tbb::blocked_range<int>& r)
 				{
 					for (int y = r.begin(); y != r.end(); ++y)
-						A_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
+						std::memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
 				}, ap);
 			}
 			else
 			{
-				fast_memcpy(result, decoded, plane.size);
+				std::memcpy(result, decoded, plane.size);
 			}
 		}
 
