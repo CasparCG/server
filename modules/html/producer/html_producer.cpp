@@ -44,7 +44,6 @@
 #include <common/prec_timer.h>
 #include <common/linq.h>
 #include <common/os/filesystem.h>
-#include <common/memcpy.h>
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
@@ -62,8 +61,6 @@
 #include <cef_client.h>
 #include <cef_render_handler.h>
 #pragma warning(pop)
-
-#include <asmlib.h>
 
 #include <queue>
 
@@ -211,7 +208,7 @@ private:
 			pixel_desc.planes.push_back(
 				core::pixel_format_desc::plane(width, height, 4));
 		auto frame = frame_factory_->create_frame(this, pixel_desc, core::audio_channel_layout::invalid());
-		fast_memcpy(frame.image_data().begin(), buffer, width * height * 4);
+		std::memcpy(frame.image_data().begin(), buffer, width * height * 4);
 
 		lock(frames_mutex_, [&]
 		{

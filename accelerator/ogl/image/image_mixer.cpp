@@ -39,8 +39,6 @@
 #include <core/video_format.h>
 #include <core/frame/geometry.h>
 
-#include <asmlib.h>
-
 #include <GL/glew.h>
 
 #include <boost/range/algorithm_ext/erase.hpp>
