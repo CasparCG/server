@@ -44,7 +44,6 @@
 
 #include <common/except.h>
 #include <common/memory.h>
-#include <common/memcpy.h>
 #include <common/semaphore.h>
 #include <common/future.h>
 
@@ -67,8 +66,6 @@ extern "C"
 
 #include <modules/ffmpeg/producer/muxer/frame_muxer.h>
 #include <modules/ffmpeg/producer/util/util.h>
-
-#include <asmlib.h>
 
 #include <queue>
 
