@@ -1,5 +1,16 @@
 C H A N G E S
 
+CasparCG 2.1.0 Next (w.r.t 2.1.0 Beta 2)
+==========================================
+
+General
+-------
+
+  o Removed asmlib dependency in favor of using standard library std::memcpy and
+    std::memset, because of better performance.
+
+
+
 CasparCG 2.1.0 Beta 2 (w.r.t 2.1.0 Beta 1)
 ==========================================
 
