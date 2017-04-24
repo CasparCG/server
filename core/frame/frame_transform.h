@@ -100,7 +100,6 @@ struct image_transform final
 	core::field_mode		field_mode			= core::field_mode::progressive;
 	bool					is_key				= false;
 	bool					is_mix				= false;
-	bool					is_still			= false;
 	bool					use_mipmap			= false;
 	core::blend_mode		blend_mode			= core::blend_mode::normal;
 	int						layer_depth			= 0;
