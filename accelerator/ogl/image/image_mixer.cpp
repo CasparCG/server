@@ -98,25 +98,6 @@ public:
 			return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true));
 		}
 
-		if(format_desc.field_mode != core::field_mode::progressive)
-		{ // Remove jitter from still.
-			for (auto& layer : layers)
-			{
-				// Remove first field stills.
-				boost::range::remove_erase_if(layer.items, [&](const item& item)
-				{
-					return item.transform.is_still && item.transform.field_mode == format_desc.field_mode; // only us last field for stills.
-				});
-
-				// Stills are progressive
-				for (auto& item : layer.items)
-				{
-					if(item.transform.is_still)
-						item.transform.field_mode = core::field_mode::progressive;
-				}
-			}
-		}
-
 		return flatten(ogl_->begin_invoke([=]() mutable -> std::shared_future<array<const std::uint8_t>>
 		{
 			auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4, false);
