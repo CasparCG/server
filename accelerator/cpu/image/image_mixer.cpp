@@ -161,19 +161,6 @@ public:
 
 		convert(items, format_desc.width, format_desc.height);
 
-		// Remove first field stills.
-		boost::range::remove_erase_if(items, [&](const item& item)
-		{
-			return item.transform.is_still && item.transform.field_mode == format_desc.field_mode; // only us last field for stills.
-		});
-
-		// Stills are progressive
-		for (auto& item : items)
-		{
-			if(item.transform.is_still)
-				item.transform.field_mode = core::field_mode::progressive;
-		}
-
 		auto result = spl::make_shared<buffer>(format_desc.size, 0);
 		if(format_desc.field_mode != core::field_mode::progressive)
 		{
