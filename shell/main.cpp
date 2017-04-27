@@ -152,7 +152,7 @@ void do_run(
 			}
 			else if(wcmd.substr(0, 1) == L"7")
 			{
-				wcmd = L"";
+				wcmd.clear();
 				wcmd += L"CLEAR 1\r\n";
 				wcmd += L"MIXER 1 CLEAR\r\n";
 				wcmd += L"PLAY 1-0 GREEN\r\n";
@@ -162,7 +162,7 @@ void do_run(
 			}
 			else if(wcmd.substr(0, 1) == L"8")
 			{
-				wcmd = L"";
+				wcmd.clear();
 				wcmd += L"MIXER 1-1 FILL 0.0 0.5 1.0 1.0 500 linear DEFER\r\n";
 				wcmd += L"MIXER 1-2 FILL 0.0 0.0 1.0 1.0 500 linear DEFER\r\n";
 				wcmd += L"MIXER 1 COMMIT\r\n";
