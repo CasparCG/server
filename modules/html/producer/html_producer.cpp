@@ -44,7 +44,6 @@
 #include <common/prec_timer.h>
 #include <common/linq.h>
 #include <common/os/filesystem.h>
-#include <common/memcpy.h>
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
@@ -63,8 +62,6 @@
 #include <cef_render_handler.h>
 #pragma warning(pop)
 
-#include <asmlib.h>
-
 #include <queue>
 
 #include "../html.h"
@@ -73,7 +70,7 @@
 #pragma comment (lib, "libcef_dll_wrapper.lib")
 
 namespace caspar { namespace html {
-		
+
 class html_client
 	: public CefClient
 	, public CefRenderHandler
@@ -211,7 +208,7 @@ private:
 			pixel_desc.planes.push_back(
 				core::pixel_format_desc::plane(width, height, 4));
 		auto frame = frame_factory_->create_frame(this, pixel_desc, core::audio_channel_layout::invalid());
-		fast_memcpy(frame.image_data().begin(), buffer, width * height * 4);
+		std::memcpy(frame.image_data().begin(), buffer, width * height * 4);
 
 		lock(frames_mutex_, [&]
 		{
@@ -459,7 +456,7 @@ public:
 			window_info.SetTransparentPainting(true);
 			window_info.SetAsOffScreen(nullptr);
 			//window_info.SetAsWindowless(nullptr, true);
-					
+
 			CefBrowserSettings browser_settings;
 			browser_settings.web_security = cef_state_t::STATE_DISABLED;
 			CefBrowserHost::CreateBrowser(window_info, client_.get(), url, browser_settings, nullptr);
@@ -599,17 +596,18 @@ spl::shared_ptr<core::frame_producer> create_producer(
 		const core::frame_producer_dependencies& dependencies,
 		const std::vector<std::wstring>& params)
 {
-	const auto filename = env::template_folder() + params.at(0) + L".html";
-	const auto found_filename = find_case_insensitive(filename);
+	const auto filename			= env::template_folder() + params.at(0) + L".html";
+	const auto found_filename	= find_case_insensitive(filename);
+	const auto html_prefix		= boost::iequals(params.at(0), L"[HTML]");
 
-	if (!found_filename && !boost::iequals(params.at(0), L"[HTML]"))
+	if (!found_filename && !html_prefix)
 		return core::frame_producer::empty();
 
-	const auto url = found_filename 
+	const auto url = found_filename
 		? L"file://" + *found_filename
 		: params.at(1);
-		
-	if (!boost::algorithm::contains(url, ".") || boost::algorithm::ends_with(url, "_A") || boost::algorithm::ends_with(url, "_ALPHA"))
+
+	if (!html_prefix && (!boost::algorithm::contains(url, ".") || boost::algorithm::ends_with(url, "_A") || boost::algorithm::ends_with(url, "_ALPHA")))
 		return core::frame_producer::empty();
 
 	return core::create_destroy_proxy(spl::make_shared<html_producer>(

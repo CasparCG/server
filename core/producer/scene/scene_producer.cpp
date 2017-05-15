@@ -36,7 +36,9 @@
 namespace caspar { namespace core { namespace scene {
 
 layer::layer(const std::wstring& name, const spl::shared_ptr<frame_producer>& producer)
-	: name(name), producer(producer)
+	: name(name)
+	, producer(producer)
+	, volume(1.0)
 {
 	crop.lower_right.x.bind(producer.get()->pixel_constraints().width);
 	crop.lower_right.y.bind(producer.get()->pixel_constraints().height);
@@ -48,6 +50,18 @@ layer::layer(const std::wstring& name, const spl::shared_ptr<frame_producer>& pr
 
 adjustments::adjustments()
 	: opacity(1.0)
+	, contrast(1.0)
+	, saturation(1.0)
+	, brightness(1.0)
+{
+}
+
+levels::levels()
+	: min_input(0.0)
+	, max_input(1.0)
+	, gamma(1.0)
+	, min_output(0.0)
+	, max_output(1.0)
 {
 }
 
@@ -119,6 +133,7 @@ struct marker
 struct scene_producer::impl
 {
 	std::wstring											producer_name_;
+	std::wstring											template_name_;
 	constraints												pixel_constraints_;
 	video_format_desc										format_desc_;
 	std::list<layer>										layers_;
@@ -130,29 +145,39 @@ struct scene_producer::impl
 	mutable tbb::atomic<int64_t>							m_y_;
 	binding<int64_t>										mouse_x_;
 	binding<int64_t>										mouse_y_;
-	double													frame_fraction_		= 0.0;
+	double													frame_fraction_			= 0.0;
 	std::map<void*, timeline>								timelines_;
 	std::map<std::wstring, std::shared_ptr<core::variable>>	variables_;
 	std::vector<std::wstring>								variable_names_;
 	std::multimap<int64_t, marker>							markers_by_frame_;
+	std::vector<std::shared_ptr<void>>						task_subscriptions_;
 	monitor::subject										monitor_subject_;
-	bool													paused_				= true;
-	bool													removed_			= false;
-	bool													going_to_mark_		= false;
+	bool													paused_					= true;
+	bool													removed_				= false;
+	bool													going_to_mark_			= false;
 
-	impl(std::wstring producer_name, int width, int height, const video_format_desc& format_desc)
+	impl(
+			std::wstring producer_name,
+			std::wstring template_name,
+			int width,
+			int height,
+			const video_format_desc& format_desc)
 		: producer_name_(std::move(producer_name))
-		, pixel_constraints_(width, height)
+		, template_name_(std::move(template_name))
 		, format_desc_(format_desc)
 		, aggregator_([=] (double x, double y) { return collission_detect(x, y); })
 	{
 		auto speed_variable = std::make_shared<core::variable_impl<double>>(L"1.0", true, 1.0);
 		store_variable(L"scene_speed", speed_variable);
 		speed_ = speed_variable->value();
-		
+
 		auto frame_variable = std::make_shared<core::variable_impl<double>>(L"-1", true, -1);
 		store_variable(L"frame", frame_variable);
 		frame_number_ = frame_variable->value();
+
+		auto fps = format_desc_.fps * format_desc_.field_count;
+		auto fps_variable = std::make_shared<core::variable_impl<double>>(boost::lexical_cast<std::wstring>(fps), false, fps);
+		store_variable(L"fps", fps_variable);
 
 		auto timeline_frame_variable = std::make_shared<core::variable_impl<int64_t>>(L"-1", false, -1);
 		store_variable(L"timeline_frame", timeline_frame_variable);
@@ -166,6 +191,13 @@ struct scene_producer::impl
 		mouse_y_ = mouse_y_variable->value();
 		m_x_ = 0;
 		m_y_ = 0;
+
+		auto scene_width = std::make_shared<core::variable_impl<double>>(boost::lexical_cast<std::wstring>(width), false, width);
+		auto scene_height = std::make_shared<core::variable_impl<double>>(boost::lexical_cast<std::wstring>(height), false, height);
+		store_variable(L"scene_width", scene_width);
+		store_variable(L"scene_height", scene_height);
+		pixel_constraints_.width = scene_width->value();
+		pixel_constraints_.height = scene_height->value();
 	}
 
 	layer& create_layer(
@@ -175,6 +207,8 @@ struct scene_producer::impl
 
 		layer.position.x.set(x);
 		layer.position.y.set(y);
+		layer.clip.lower_right.x.bind(pixel_constraints_.width);
+		layer.clip.lower_right.y.bind(pixel_constraints_.height);
 
 		layers_.push_back(layer);
 
@@ -183,6 +217,15 @@ struct scene_producer::impl
 
 	void reverse_layers() {
 		layers_.reverse();
+	}
+
+	layer& get_layer(const std::wstring& name)
+	{
+		for (auto& layer : layers_)
+			if (layer.name.get() == name)
+				return layer;
+
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(name + L" not found in scene"));
 	}
 
 	void store_keyframe(void* timeline_identity, const keyframe& k)
@@ -200,6 +243,27 @@ struct scene_producer::impl
 	void add_mark(int64_t frame, mark_action action, const std::wstring& label)
 	{
 		markers_by_frame_.insert(std::make_pair(frame, marker(action, label)));
+	}
+
+	void add_task(binding<bool> when, std::function<void ()> task)
+	{
+		auto subscription = when.on_change([=]
+		{
+			if (when.get())
+			{
+				try
+				{
+					task();
+				}
+				catch (...)
+				{
+					CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
+					CASPAR_LOG(error) << print() << " Error when invoking scene task. Turn on log level debug for stacktrace.";
+				}
+			}
+		});
+
+		task_subscriptions_.push_back(std::move(subscription));
 	}
 
 	core::variable& get_variable(const std::wstring& name)
@@ -229,41 +293,68 @@ struct scene_producer::impl
 		auto& anchor		= transform.image_transform.anchor;
 		auto& pos			= transform.image_transform.fill_translation;
 		auto& scale			= transform.image_transform.fill_scale;
+		auto& clip_pos		= transform.image_transform.clip_translation;
+		auto& clip_scale	= transform.image_transform.clip_scale;
 		auto& angle			= transform.image_transform.angle;
 		auto& crop			= transform.image_transform.crop;
 		auto& pers			= transform.image_transform.perspective;
+		auto& levels		= transform.image_transform.levels;
 
-		anchor[0]	= layer.anchor.x.get()										/ layer.producer.get()->pixel_constraints().width.get();
-		anchor[1]	= layer.anchor.y.get()										/ layer.producer.get()->pixel_constraints().height.get();
-		pos[0]		= layer.position.x.get()									/ pixel_constraints_.width.get();
-		pos[1]		= layer.position.y.get()									/ pixel_constraints_.height.get();
-		scale[0]	= layer.producer.get()->pixel_constraints().width.get()		/ pixel_constraints_.width.get();
-		scale[1]	= layer.producer.get()->pixel_constraints().height.get()	/ pixel_constraints_.height.get();
-		crop.ul[0]	= layer.crop.upper_left.x.get()								/ layer.producer.get()->pixel_constraints().width.get();
-		crop.ul[1]	= layer.crop.upper_left.y.get()								/ layer.producer.get()->pixel_constraints().height.get();
-		crop.lr[0]	= layer.crop.lower_right.x.get()							/ layer.producer.get()->pixel_constraints().width.get();
-		crop.lr[1]	= layer.crop.lower_right.y.get()							/ layer.producer.get()->pixel_constraints().height.get();
-		pers.ul[0]	= layer.perspective.upper_left.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
-		pers.ul[1]	= layer.perspective.upper_left.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
-		pers.ur[0]	= layer.perspective.upper_right.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
-		pers.ur[1]	= layer.perspective.upper_right.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
-		pers.lr[0]	= layer.perspective.lower_right.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
-		pers.lr[1]	= layer.perspective.lower_right.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
-		pers.ll[0]	= layer.perspective.lower_left.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
-		pers.ll[1]	= layer.perspective.lower_left.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
+		anchor[0]		= layer.anchor.x.get()										/ layer.producer.get()->pixel_constraints().width.get();
+		anchor[1]		= layer.anchor.y.get()										/ layer.producer.get()->pixel_constraints().height.get();
+
+		pos[0]			= layer.position.x.get()									/ pixel_constraints_.width.get();
+		pos[1]			= layer.position.y.get()									/ pixel_constraints_.height.get();
+		scale[0]		= layer.producer.get()->pixel_constraints().width.get()		/ pixel_constraints_.width.get();
+		scale[1]		= layer.producer.get()->pixel_constraints().height.get()		/ pixel_constraints_.height.get();
+
+		clip_pos[0]		= layer.clip.upper_left.x.get()								/ pixel_constraints_.width.get();
+		clip_pos[1]		= layer.clip.upper_left.y.get()								/ pixel_constraints_.height.get();
+		clip_scale[0]	= layer.clip.lower_right.x.get()							/ pixel_constraints_.width.get() - clip_pos[0];
+		clip_scale[1]	= layer.clip.lower_right.y.get()							/ pixel_constraints_.height.get() - clip_pos[1];
+
+		crop.ul[0]		= layer.crop.upper_left.x.get()								/ layer.producer.get()->pixel_constraints().width.get();
+		crop.ul[1]		= layer.crop.upper_left.y.get()								/ layer.producer.get()->pixel_constraints().height.get();
+		crop.lr[0]		= layer.crop.lower_right.x.get()							/ layer.producer.get()->pixel_constraints().width.get();
+		crop.lr[1]		= layer.crop.lower_right.y.get()							/ layer.producer.get()->pixel_constraints().height.get();
+
+		pers.ul[0]		= layer.perspective.upper_left.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
+		pers.ul[1]		= layer.perspective.upper_left.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
+		pers.ur[0]		= layer.perspective.upper_right.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
+		pers.ur[1]		= layer.perspective.upper_right.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
+		pers.lr[0]		= layer.perspective.lower_right.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
+		pers.lr[1]		= layer.perspective.lower_right.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
+		pers.ll[0]		= layer.perspective.lower_left.x.get()						/ layer.producer.get()->pixel_constraints().width.get();
+		pers.ll[1]		= layer.perspective.lower_left.y.get()						/ layer.producer.get()->pixel_constraints().height.get();
 
 		static const double PI = 3.141592653589793;
 
-		angle		= layer.rotation.get() * PI / 180.0;
+		angle = layer.rotation.get() * PI / 180.0;
 
-		transform.image_transform.opacity			= layer.adjustments.opacity.get();
-		transform.image_transform.is_key			= layer.is_key.get();
-		transform.image_transform.use_mipmap		= layer.use_mipmap.get();
-		transform.image_transform.blend_mode		= layer.blend_mode.get();
-		transform.image_transform.chroma.key		= layer.chroma_key.key.get();
-		transform.image_transform.chroma.threshold	= layer.chroma_key.threshold.get();
-		transform.image_transform.chroma.softness	= layer.chroma_key.softness.get();
-		transform.image_transform.chroma.spill		= layer.chroma_key.spill.get();
+		levels.min_input	= layer.levels.min_input.get();
+		levels.max_input	= layer.levels.max_input.get();
+		levels.gamma		= layer.levels.gamma.get();
+		levels.min_output	= layer.levels.min_output.get();
+		levels.max_output	= layer.levels.max_output.get();
+
+		transform.image_transform.opacity							= layer.adjustments.opacity.get();
+		transform.image_transform.contrast							= layer.adjustments.contrast.get();
+		transform.image_transform.saturation						= layer.adjustments.saturation.get();
+		transform.image_transform.brightness						= layer.adjustments.brightness.get();
+		transform.image_transform.is_key							= layer.is_key.get();
+		transform.image_transform.use_mipmap						= layer.use_mipmap.get();
+		transform.image_transform.blend_mode						= layer.blend_mode.get();
+
+		transform.image_transform.chroma.enable						= layer.chroma_key.enable.get();
+		transform.image_transform.chroma.target_hue					= layer.chroma_key.target_hue.get();
+		transform.image_transform.chroma.hue_width					= layer.chroma_key.hue_width.get();
+		transform.image_transform.chroma.min_saturation				= layer.chroma_key.min_saturation.get();
+		transform.image_transform.chroma.min_brightness				= layer.chroma_key.min_brightness.get();
+		transform.image_transform.chroma.softness					= layer.chroma_key.softness.get();
+		transform.image_transform.chroma.spill_suppress				= layer.chroma_key.spill_suppress.get();
+		transform.image_transform.chroma.spill_suppress_saturation	= layer.chroma_key.spill_suppress_saturation.get();
+
+		transform.audio_transform.volume							= layer.volume.get();
 
 		// Mark as sublayer, so it will be composited separately by the mixer.
 		transform.image_transform.layer_depth = 1;
@@ -316,9 +407,9 @@ struct scene_producer::impl
 		{
 			prec_timer timer;
 			timer.tick_millis(0);
-			
+
 			auto field1 = render_progressive_frame();
-			
+
 			timer.tick(0.5 / format_desc_.fps);
 
 			auto field2 = render_progressive_frame();
@@ -432,7 +523,7 @@ struct scene_producer::impl
 		return boost::optional<interaction_target>();
 	}
 
-	std::future<std::wstring> call(const std::vector<std::wstring>& params) 
+	std::future<std::wstring> call(const std::vector<std::wstring>& params)
 	{
 		if (!params.empty() && boost::ends_with(params.at(0), L"()"))
 			return make_ready_future(handle_call(params));
@@ -524,19 +615,20 @@ struct scene_producer::impl
 
 	std::wstring print() const
 	{
-		return L"scene[type=" + name() + L"]";
+		return L"scene[type=" + name() + L" template=" + template_name_ + L"]";
 	}
 
 	std::wstring name() const
 	{
 		return producer_name_;
 	}
-	
+
 	boost::property_tree::wptree info() const
 	{
 		boost::property_tree::wptree info;
 		info.add(L"type", L"scene");
 		info.add(L"producer-name", name());
+		info.add(L"template-name", template_name_);
 		info.add(L"frame-number", frame_number_.get());
 		info.add(L"timeline-frame-number", timeline_frame_number_.get());
 
@@ -574,8 +666,8 @@ struct scene_producer::impl
 	}
 };
 
-scene_producer::scene_producer(std::wstring producer_name, int width, int height, const video_format_desc& format_desc)
-	: impl_(new impl(std::move(producer_name), width, height, format_desc))
+scene_producer::scene_producer(std::wstring producer_name, std::wstring template_name, int width, int height, const video_format_desc& format_desc)
+	: impl_(new impl(std::move(producer_name), std::move(template_name), width, height, format_desc))
 {
 }
 
@@ -595,8 +687,14 @@ layer& scene_producer::create_layer(
 	return impl_->create_layer(producer, 0, 0, name);
 }
 
-void scene_producer::reverse_layers() {
+void scene_producer::reverse_layers()
+{
 	impl_->reverse_layers();
+}
+
+layer& scene_producer::get_layer(const std::wstring& name)
+{
+	return impl_->get_layer(name);
 }
 
 binding<int64_t> scene_producer::timeline_frame()
@@ -636,7 +734,7 @@ boost::property_tree::wptree scene_producer::info() const
 	return impl_->info();
 }
 
-std::future<std::wstring> scene_producer::call(const std::vector<std::wstring>& params) 
+std::future<std::wstring> scene_producer::call(const std::vector<std::wstring>& params)
 {
 	return impl_->call(params);
 }
@@ -660,6 +758,11 @@ void scene_producer::store_variable(
 void scene_producer::add_mark(int64_t frame, mark_action action, const std::wstring& label)
 {
 	impl_->add_mark(frame, action, label);
+}
+
+void scene_producer::add_task(binding<bool> when, std::function<void ()> task)
+{
+	impl_->add_task(std::move(when), std::move(task));
 }
 
 core::variable& scene_producer::get_variable(const std::wstring& name)

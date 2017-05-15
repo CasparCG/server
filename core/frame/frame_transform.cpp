@@ -53,7 +53,7 @@ void transform_corners(corners& self, const corners& other)
 
 image_transform& image_transform::operator*=(const image_transform &other)
 {
-	opacity					*= other.opacity;	
+	opacity					*= other.opacity;
 	brightness				*= other.brightness;
 	contrast				*= other.contrast;
 	saturation				*= other.saturation;
@@ -86,22 +86,26 @@ image_transform& image_transform::operator*=(const image_transform &other)
 	transform_rect(crop, other.crop);
 	transform_corners(perspective, other.perspective);
 
-	levels.min_input		 = std::max(levels.min_input,  other.levels.min_input);
-	levels.max_input		 = std::min(levels.max_input,  other.levels.max_input);	
-	levels.min_output		 = std::max(levels.min_output, other.levels.min_output);
-	levels.max_output		 = std::min(levels.max_output, other.levels.max_output);
-	levels.gamma			*= other.levels.gamma;
-	chroma.key				 = std::max(chroma.key, other.chroma.key);
-	chroma.threshold		+= other.chroma.threshold;
-	chroma.softness			+= other.chroma.softness;
-	chroma.spill			+= other.chroma.spill;
-	field_mode				 = field_mode & other.field_mode;
-	is_key					|= other.is_key;
-	is_mix					|= other.is_mix;
-	is_still				|= other.is_still;
-	use_mipmap				|= other.use_mipmap;
-	blend_mode				 = std::max(blend_mode, other.blend_mode);
-	layer_depth				+= other.layer_depth;
+	levels.min_input					 = std::max(levels.min_input,  other.levels.min_input);
+	levels.max_input					 = std::min(levels.max_input,  other.levels.max_input);
+	levels.min_output					 = std::max(levels.min_output, other.levels.min_output);
+	levels.max_output					 = std::min(levels.max_output, other.levels.max_output);
+	levels.gamma						*= other.levels.gamma;
+	chroma.enable						|= other.chroma.enable;
+	chroma.show_mask					|= other.chroma.show_mask;
+	chroma.target_hue					 = std::max(other.chroma.target_hue, chroma.target_hue);
+	chroma.min_saturation				 = std::max(other.chroma.min_saturation, chroma.min_saturation);
+	chroma.min_brightness				 = std::max(other.chroma.min_brightness, chroma.min_brightness);
+	chroma.hue_width					 = std::max(other.chroma.hue_width, chroma.hue_width);
+	chroma.softness						 = std::max(other.chroma.softness, chroma.softness);
+	chroma.spill_suppress				 = std::max(other.chroma.spill_suppress, chroma.spill_suppress);
+	chroma.spill_suppress_saturation	 = std::min(other.chroma.spill_suppress_saturation, chroma.spill_suppress_saturation);
+	field_mode							 = field_mode & other.field_mode;
+	is_key								|= other.is_key;
+	is_mix								|= other.is_mix;
+	use_mipmap							|= other.use_mipmap;
+	blend_mode							 = std::max(blend_mode, other.blend_mode);
+	layer_depth							+= other.layer_depth;
 
 	return *this;
 }
@@ -137,39 +141,43 @@ void do_tween_corners(const corners& source, const corners& dest, corners& out, 
 
 image_transform image_transform::tween(double time, const image_transform& source, const image_transform& dest, double duration, const tweener& tween)
 {
-	image_transform result;	
+	image_transform result;
 
-	result.brightness			= do_tween(time, source.brightness,				dest.brightness,			duration, tween);
-	result.contrast				= do_tween(time, source.contrast,				dest.contrast,				duration, tween);
-	result.saturation			= do_tween(time, source.saturation,				dest.saturation,			duration, tween);
-	result.opacity				= do_tween(time, source.opacity,				dest.opacity,				duration, tween);
-	result.anchor[0]			= do_tween(time, source.anchor[0],				dest.anchor[0],				duration, tween);
-	result.anchor[1]			= do_tween(time, source.anchor[1],				dest.anchor[1],				duration, tween);
-	result.fill_translation[0]	= do_tween(time, source.fill_translation[0],	dest.fill_translation[0],	duration, tween);
-	result.fill_translation[1]	= do_tween(time, source.fill_translation[1],	dest.fill_translation[1],	duration, tween);
-	result.fill_scale[0]		= do_tween(time, source.fill_scale[0],			dest.fill_scale[0],			duration, tween);
-	result.fill_scale[1]		= do_tween(time, source.fill_scale[1],			dest.fill_scale[1],			duration, tween);
-	result.clip_translation[0]	= do_tween(time, source.clip_translation[0],	dest.clip_translation[0],	duration, tween);
-	result.clip_translation[1]	= do_tween(time, source.clip_translation[1],	dest.clip_translation[1],	duration, tween);
-	result.clip_scale[0]		= do_tween(time, source.clip_scale[0],			dest.clip_scale[0],			duration, tween);
-	result.clip_scale[1]		= do_tween(time, source.clip_scale[1],			dest.clip_scale[1],			duration, tween);
-	result.angle				= do_tween(time, source.angle,					dest.angle,					duration, tween);
-	result.levels.max_input		= do_tween(time, source.levels.max_input,		dest.levels.max_input,		duration, tween);
-	result.levels.min_input		= do_tween(time, source.levels.min_input,		dest.levels.min_input,		duration, tween);
-	result.levels.max_output	= do_tween(time, source.levels.max_output,		dest.levels.max_output,		duration, tween);
-	result.levels.min_output	= do_tween(time, source.levels.min_output,		dest.levels.min_output,		duration, tween);
-	result.levels.gamma			= do_tween(time, source.levels.gamma,			dest.levels.gamma,			duration, tween);
-	result.chroma.threshold		= do_tween(time, source.chroma.threshold,		dest.chroma.threshold,		duration, tween);
-	result.chroma.softness		= do_tween(time, source.chroma.softness,		dest.chroma.softness,		duration, tween);
-	result.chroma.spill			= do_tween(time, source.chroma.spill,			dest.chroma.spill,			duration, tween);
-	result.chroma.key			= dest.chroma.key;
-	result.field_mode			= source.field_mode & dest.field_mode;
-	result.is_key				= source.is_key | dest.is_key;
-	result.is_mix				= source.is_mix | dest.is_mix;
-	result.is_still				= source.is_still | dest.is_still;
-	result.use_mipmap			= source.use_mipmap | dest.use_mipmap;
-	result.blend_mode			= std::max(source.blend_mode, dest.blend_mode);
-	result.layer_depth			= dest.layer_depth;
+	result.brightness						= do_tween(time, source.brightness,							dest.brightness,						duration, tween);
+	result.contrast							= do_tween(time, source.contrast,							dest.contrast,							duration, tween);
+	result.saturation						= do_tween(time, source.saturation,							dest.saturation,						duration, tween);
+	result.opacity							= do_tween(time, source.opacity,							dest.opacity,							duration, tween);
+	result.anchor[0]						= do_tween(time, source.anchor[0],							dest.anchor[0],							duration, tween);
+	result.anchor[1]						= do_tween(time, source.anchor[1],							dest.anchor[1],							duration, tween);
+	result.fill_translation[0]				= do_tween(time, source.fill_translation[0],				dest.fill_translation[0],				duration, tween);
+	result.fill_translation[1]				= do_tween(time, source.fill_translation[1],				dest.fill_translation[1],				duration, tween);
+	result.fill_scale[0]					= do_tween(time, source.fill_scale[0],						dest.fill_scale[0],						duration, tween);
+	result.fill_scale[1]					= do_tween(time, source.fill_scale[1],						dest.fill_scale[1],						duration, tween);
+	result.clip_translation[0]				= do_tween(time, source.clip_translation[0],				dest.clip_translation[0],				duration, tween);
+	result.clip_translation[1]				= do_tween(time, source.clip_translation[1],				dest.clip_translation[1],				duration, tween);
+	result.clip_scale[0]					= do_tween(time, source.clip_scale[0],						dest.clip_scale[0],						duration, tween);
+	result.clip_scale[1]					= do_tween(time, source.clip_scale[1],						dest.clip_scale[1],						duration, tween);
+	result.angle							= do_tween(time, source.angle,								dest.angle,								duration, tween);
+	result.levels.max_input					= do_tween(time, source.levels.max_input,					dest.levels.max_input,					duration, tween);
+	result.levels.min_input					= do_tween(time, source.levels.min_input,					dest.levels.min_input,					duration, tween);
+	result.levels.max_output				= do_tween(time, source.levels.max_output,					dest.levels.max_output,					duration, tween);
+	result.levels.min_output				= do_tween(time, source.levels.min_output,					dest.levels.min_output,					duration, tween);
+	result.levels.gamma						= do_tween(time, source.levels.gamma,						dest.levels.gamma,						duration, tween);
+	result.chroma.target_hue				= do_tween(time, source.chroma.target_hue,					dest.chroma.target_hue,					duration, tween);
+	result.chroma.hue_width					= do_tween(time, source.chroma.hue_width,					dest.chroma.hue_width,					duration, tween);
+	result.chroma.min_saturation			= do_tween(time, source.chroma.min_saturation,				dest.chroma.min_saturation,				duration, tween);
+	result.chroma.min_brightness			= do_tween(time, source.chroma.min_brightness,				dest.chroma.min_brightness,				duration, tween);
+	result.chroma.softness					= do_tween(time, source.chroma.softness,					dest.chroma.softness,					duration, tween);
+	result.chroma.spill_suppress			= do_tween(time, source.chroma.spill_suppress,				dest.chroma.spill_suppress,				duration, tween);
+	result.chroma.spill_suppress_saturation	= do_tween(time, source.chroma.spill_suppress_saturation,	dest.chroma.spill_suppress_saturation,	duration, tween);
+	result.chroma.enable					= dest.chroma.enable;
+	result.chroma.show_mask					= dest.chroma.show_mask;
+	result.field_mode						= source.field_mode & dest.field_mode;
+	result.is_key							= source.is_key | dest.is_key;
+	result.is_mix							= source.is_mix | dest.is_mix;
+	result.use_mipmap						= source.use_mipmap | dest.use_mipmap;
+	result.blend_mode						= std::max(source.blend_mode, dest.blend_mode);
+	result.layer_depth						= dest.layer_depth;
 
 	do_tween_rectangle(source.crop, dest.crop, result.crop, time, duration, tween);
 	do_tween_corners(source.perspective, dest.perspective, result.perspective, time, duration, tween);
@@ -200,7 +208,7 @@ bool operator==(const rectangle& lhs, const rectangle& rhs)
 
 bool operator==(const image_transform& lhs, const image_transform& rhs)
 {
-	return 
+	return
 		eq(lhs.opacity, rhs.opacity) &&
 		eq(lhs.contrast, rhs.contrast) &&
 		eq(lhs.brightness, rhs.brightness) &&
@@ -214,10 +222,18 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
 		lhs.field_mode == rhs.field_mode &&
 		lhs.is_key == rhs.is_key &&
 		lhs.is_mix == rhs.is_mix &&
-		lhs.is_still == rhs.is_still &&
 		lhs.use_mipmap == rhs.use_mipmap &&
 		lhs.blend_mode == rhs.blend_mode &&
 		lhs.layer_depth == rhs.layer_depth &&
+		lhs.chroma.enable == rhs.chroma.enable &&
+		lhs.chroma.show_mask == rhs.chroma.show_mask &&
+		eq(lhs.chroma.target_hue, rhs.chroma.target_hue) &&
+		eq(lhs.chroma.hue_width, rhs.chroma.hue_width) &&
+		eq(lhs.chroma.min_saturation, rhs.chroma.min_saturation) &&
+		eq(lhs.chroma.min_brightness, rhs.chroma.min_brightness) &&
+		eq(lhs.chroma.softness, rhs.chroma.softness) &&
+		eq(lhs.chroma.spill_suppress, rhs.chroma.spill_suppress) &&
+		eq(lhs.chroma.spill_suppress_saturation, rhs.chroma.spill_suppress_saturation) &&
 		lhs.crop == rhs.crop &&
 		lhs.perspective == rhs.perspective;
 }
@@ -231,7 +247,7 @@ bool operator!=(const image_transform& lhs, const image_transform& rhs)
 
 audio_transform& audio_transform::operator*=(const audio_transform &other)
 {
-	volume	 *= other.volume;	
+	volume	 *= other.volume;
 	is_still |= other.is_still;
 	return *this;
 }
@@ -242,11 +258,11 @@ audio_transform audio_transform::operator*(const audio_transform &other) const
 }
 
 audio_transform audio_transform::tween(double time, const audio_transform& source, const audio_transform& dest, double duration, const tweener& tween)
-{	
+{
 	audio_transform result;
 	result.is_still			= source.is_still | dest.is_still;
 	result.volume			= do_tween(time, source.volume,				dest.volume,			duration, tween);
-	
+
 	return result;
 }
 
@@ -287,7 +303,7 @@ frame_transform frame_transform::tween(double time, const frame_transform& sourc
 
 bool operator==(const frame_transform& lhs, const frame_transform& rhs)
 {
-	return	lhs.image_transform == rhs.image_transform && 
+	return	lhs.image_transform == rhs.image_transform &&
 			lhs.audio_transform == rhs.audio_transform;
 }
 
@@ -297,31 +313,16 @@ bool operator!=(const frame_transform& lhs, const frame_transform& rhs)
 }
 
 
-core::chroma::type get_chroma_mode(const std::wstring& str)
+boost::optional<core::chroma::legacy_type> get_chroma_mode(const std::wstring& str)
 {
 	if (boost::iequals(str, L"none"))
-		return core::chroma::type::none;
+		return core::chroma::legacy_type::none;
 	else if (boost::iequals(str, L"green"))
-		return core::chroma::type::green;
+		return core::chroma::legacy_type::green;
 	else if (boost::iequals(str, L"blue"))
-		return core::chroma::type::blue;
+		return core::chroma::legacy_type::blue;
 	else
-		CASPAR_THROW_EXCEPTION(user_error() << msg_info("chroma mode has to be one of none, green or blue"));
-}
-
-std::wstring get_chroma_mode(core::chroma::type type)
-{
-	switch (type)
-	{
-	case core::chroma::type::none:
-		return L"none";
-	case core::chroma::type::green:
-		return L"green";
-	case core::chroma::type::blue:
-		return L"blue";
-	default:
-		CASPAR_THROW_EXCEPTION(programming_error() << msg_info("Unhandled enum constant"));
-	};
+		return boost::none;
 }
 
 namespace detail {

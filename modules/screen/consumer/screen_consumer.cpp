@@ -30,7 +30,6 @@
 #include <common/memory.h>
 #include <common/array.h>
 #include <common/memshfl.h>
-#include <common/memcpy.h>
 #include <common/utf.h>
 #include <common/prec_timer.h>
 #include <common/future.h>
@@ -60,8 +59,6 @@
 #include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
 #include <tbb/parallel_for.h>
-
-#include <asmlib.h>
 
 #include <algorithm>
 #include <vector>
@@ -241,10 +238,20 @@ public:
 			: (config_.windowed
 				? sf::Style::Resize | sf::Style::Close
 				: sf::Style::Fullscreen);
-		window_.create(sf::VideoMode(screen_width_, screen_height_, 32), u8(print()), window_style);
+		window_.create(sf::VideoMode::getDesktopMode(), u8(print()), window_style);
+
+		if (config_.windowed)
+		{
+			window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
+			window_.setSize(sf::Vector2u(screen_width_, screen_height_));
+		}
+		else
+		{
+			screen_width_	= window_.getSize().x;
+			screen_height_	= window_.getSize().y;
+		}
+
 		window_.setMouseCursorVisible(config_.interactive);
-		window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
-		window_.setSize(sf::Vector2u(screen_width_, screen_height_));
 		window_.setActive();
 
 		if(!GLEW_VERSION_2_1 && glewInit() != GLEW_OK)
@@ -419,9 +426,9 @@ public:
 		auto av_frame = ffmpeg::create_frame();
 
 		av_frame->linesize[0]		= format_desc_.width*4;
-		av_frame->format			= PIX_FMT_BGRA;
+		av_frame->format				= AVPixelFormat::AV_PIX_FMT_BGRA;
 		av_frame->width				= format_desc_.width;
-		av_frame->height			= format_desc_.height;
+		av_frame->height				= format_desc_.height;
 		av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
 		av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
 		av_frame->pts				= pts_++;
@@ -495,7 +502,7 @@ public:
 			}
 			else
 			{
-				fast_memcpy(ptr, av_frame->data[0], format_desc_.size);
+				std::memcpy(ptr, av_frame->data[0], format_desc_.size);
 			}
 
 			GL(glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER)); // release the mapped buffer

@@ -93,15 +93,6 @@ std::wstring to_string(const T& cadence)
 	return boost::join(cadence | boost::adaptors::transformed([](size_t i) { return boost::lexical_cast<std::wstring>(i); }), L", ");
 }
 
-ffmpeg::audio_input_pad create_input_pad(const core::video_format_desc& in_format, int num_channels)
-{
-	return ffmpeg::audio_input_pad(
-			boost::rational<int>(1, in_format.audio_sample_rate),
-			in_format.audio_sample_rate,
-			AVSampleFormat::AV_SAMPLE_FMT_S32,
-			av_get_default_channel_layout(num_channels));
-}
-
 class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 {
 	const int										device_index_;
@@ -126,7 +117,7 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	core::audio_channel_layout						channel_layout_;
 	ffmpeg::frame_muxer								muxer_				{
 																			in_format_desc_.framerate,
-																			{ create_input_pad(in_format_desc_, channel_layout_.num_channels) },
+																			{ ffmpeg::create_input_pad(in_format_desc_, channel_layout_.num_channels) },
 																			frame_factory_,
 																			out_format_desc_,
 																			channel_layout_,
@@ -247,7 +238,7 @@ public:
 
 			video_frame->data[0]			= reinterpret_cast<uint8_t*>(video_bytes);
 			video_frame->linesize[0]		= video->GetRowBytes();
-			video_frame->format				= PIX_FMT_UYVY422;
+			video_frame->format				= AVPixelFormat::AV_PIX_FMT_UYVY422;
 			video_frame->width				= video->GetWidth();
 			video_frame->height				= video->GetHeight();
 			video_frame->interlaced_frame	= in_format_desc_.field_mode != core::field_mode::progressive;

@@ -22,6 +22,7 @@
 #include "../StdAfx.h"
 
 #include "frame_producer.h"
+#include "cg_proxy.h"
 
 #include "../frame/draw_frame.h"
 #include "../frame/frame_transform.h"
@@ -71,11 +72,13 @@ frame_producer_dependencies::frame_producer_dependencies(
 		const spl::shared_ptr<core::frame_factory>& frame_factory,
 		const std::vector<spl::shared_ptr<video_channel>>& channels,
 		const video_format_desc& format_desc,
-		const spl::shared_ptr<const frame_producer_registry> producer_registry)
+		const spl::shared_ptr<const frame_producer_registry> producer_registry,
+		const spl::shared_ptr<const cg_producer_registry> cg_registry)
 	: frame_factory(frame_factory)
 	, channels(channels)
 	, format_desc(format_desc)
 	, producer_registry(producer_registry)
+	, cg_registry(cg_registry)
 {
 }
 
@@ -206,6 +209,18 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
 	return producer;
 }
 
+std::shared_ptr<executor>& producer_destroyer()
+{
+	static auto destroyer = []
+	{
+		auto result = std::make_shared<executor>(L"Producer destroyer");
+		result->set_capacity(std::numeric_limits<unsigned int>::max());
+		return result;
+	}();;
+
+	return destroyer;
+}
+
 tbb::atomic<bool>& destroy_producers_in_separate_thread()
 {
 	static tbb::atomic<bool> state;
@@ -216,6 +231,8 @@ tbb::atomic<bool>& destroy_producers_in_separate_thread()
 void destroy_producers_synchronously()
 {
 	destroy_producers_in_separate_thread() = false;
+	// Join destroyer, executing rest of producers in queue synchronously.
+	producer_destroyer().reset();
 }
 
 class destroy_producer_proxy : public frame_producer
@@ -230,25 +247,24 @@ public:
 
 	virtual ~destroy_producer_proxy()
 	{
-		static tbb::atomic<int> counter;
-		static std::once_flag counter_init_once;
-		std::call_once(counter_init_once, []{ counter = 0; });
-
 		if(producer_ == core::frame_producer::empty() || !destroy_producers_in_separate_thread())
 			return;
 
-		++counter;
-		CASPAR_VERIFY(counter < 8);
+		auto destroyer = producer_destroyer();
+
+		if (!destroyer)
+			return;
+
+		CASPAR_VERIFY(destroyer->size() < 8);
 
 		auto producer = new spl::shared_ptr<frame_producer>(std::move(producer_));
-		boost::thread([=]
+
+		destroyer->begin_invoke([=]
 		{
 			std::unique_ptr<spl::shared_ptr<frame_producer>> pointer_guard(producer);
 			auto str = (*producer)->print();
 			try
 			{
-				ensure_gpf_handler_installed_for_thread(u8(L"Destroyer: " + str).c_str());
-
 				if (!producer->unique())
 					CASPAR_LOG(debug) << str << L" Not destroyed on asynchronous destruction thread: " << producer->use_count();
 				else
@@ -265,9 +281,7 @@ public:
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
 			}
-
-			--counter;
-		}).detach();
+		});
 	}
 
 	draw_frame											receive() override																										{return producer_->receive();}

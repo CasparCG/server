@@ -247,30 +247,37 @@ public:
 	{
 		if(oc_)
 		{
-			video_encoder_executor_.begin_invoke([&] { encode_video(core::const_frame::empty(), nullptr); });
-			audio_encoder_executor_.begin_invoke([&] { encode_audio(core::const_frame::empty(), nullptr); });
+			try
+			{
+				video_encoder_executor_.begin_invoke([&] { encode_video(core::const_frame::empty(), nullptr); });
+				audio_encoder_executor_.begin_invoke([&] { encode_audio(core::const_frame::empty(), nullptr); });
 
-			video_encoder_executor_.stop();
-			audio_encoder_executor_.stop();
-			video_encoder_executor_.join();
-			audio_encoder_executor_.join();
+				video_encoder_executor_.stop();
+				audio_encoder_executor_.stop();
+				video_encoder_executor_.join();
+				audio_encoder_executor_.join();
 
-			video_graph_.reset();
-			audio_filter_.reset();
-			video_st_.reset();
-			audio_sts_.clear();
+				video_graph_.reset();
+				audio_filter_.reset();
+				video_st_.reset();
+				audio_sts_.clear();
 
-			write_packet(nullptr, nullptr);
+				write_packet(nullptr, nullptr);
 
-			write_executor_.stop();
-			write_executor_.join();
+				write_executor_.stop();
+				write_executor_.join();
 
-			FF(av_write_trailer(oc_.get()));
+				FF(av_write_trailer(oc_.get()));
 
-			if (!(oc_->oformat->flags & AVFMT_NOFILE) && oc_->pb)
-				avio_close(oc_->pb);
+				if (!(oc_->oformat->flags & AVFMT_NOFILE) && oc_->pb)
+					avio_close(oc_->pb);
 
-			oc_.reset();
+				oc_.reset();
+			}
+			catch (...)
+			{
+				CASPAR_LOG_CURRENT_EXCEPTION();
+			}
 		}
 	}
 
@@ -374,8 +381,9 @@ public:
 			{
 				configure_video_filters(
 					*video_codec,
-					try_remove_arg<std::string>(options_,
-					boost::regex("vf|f:v|filter:v")).get_value_or(""));
+					try_remove_arg<std::string>(options_, boost::regex("vf|f:v|filter:v"))
+							.get_value_or(""),
+					try_remove_arg<std::string>(options_, boost::regex("pix_fmt")));
 
 				configure_audio_filters(
 					*audio_codec,
@@ -643,7 +651,8 @@ private:
 
 	void configure_video_filters(
 			const AVCodec& codec,
-			std::string filtergraph)
+			std::string filtergraph,
+			const boost::optional<std::string>& preferred_pix_fmt)
 	{
 		video_graph_.reset(
 				avfilter_graph_alloc(),
@@ -692,15 +701,27 @@ private:
 #pragma warning (disable : 4245)
 
 		FF(av_opt_set_int_list(
-				filt_vsink,
-				"pix_fmts",
-				codec.pix_fmts,
-				-1,
-				AV_OPT_SEARCH_CHILDREN));
+			filt_vsink,
+			"pix_fmts",
+			codec.pix_fmts,
+			-1,
+			AV_OPT_SEARCH_CHILDREN));
+
 
 #pragma warning (pop)
 
 		adjust_video_filter(codec, in_video_format_, filt_vsink, filtergraph);
+
+		if (preferred_pix_fmt)
+		{
+			auto requested_fmt	= av_get_pix_fmt(preferred_pix_fmt->c_str());
+			auto valid_fmts		= from_terminated_array<AVPixelFormat>(codec.pix_fmts, AVPixelFormat::AV_PIX_FMT_NONE);
+
+			if (!cpplinq::from(valid_fmts).contains(requested_fmt))
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(*preferred_pix_fmt + " is not supported by codec."));
+
+			set_pixel_format(filt_vsink, requested_fmt);
+		}
 
 		if (in_video_format_.width < 1280)
 			video_graph_->scale_sws_opts = "out_color_matrix=bt601";
@@ -844,6 +865,8 @@ private:
 			src_av_frame->sample_aspect_ratio.num	= sample_aspect_ratio.numerator();
 			src_av_frame->sample_aspect_ratio.den	= sample_aspect_ratio.denominator();
 			src_av_frame->pts						= video_pts_;
+			src_av_frame->interlaced_frame			= in_video_format_.field_mode != core::field_mode::progressive;
+			src_av_frame->top_field_first			= (in_video_format_.field_mode & core::field_mode::upper) == core::field_mode::upper ? 1 : 0;
 
 			video_pts_ += 1;
 
@@ -1303,6 +1326,15 @@ spl::shared_ptr<core::frame_consumer> create_ffmpeg_consumer(
 	bool mono_streams		= get_and_consume_flag(L"MONO_STREAMS", params2);
 	auto compatibility_mode	= boost::iequals(params.at(0), L"FILE");
 	auto path				= u8(params2.size() > 1 ? params2.at(1) : L"");
+
+	// remove FILE or STREAM
+	params2.erase(params2.begin());
+
+	// remove path
+	if (!path.empty())
+		params2.erase(params2.begin());
+
+	// join only the args
 	auto args				= u8(boost::join(params2, L" "));
 
 	return spl::make_shared<ffmpeg_consumer_proxy>(path, args, separate_key, mono_streams, compatibility_mode);

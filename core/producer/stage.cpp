@@ -47,7 +47,7 @@
 #include <future>
 
 namespace caspar { namespace core {
-	
+
 struct stage::impl : public std::enable_shared_from_this<impl>
 {
 	int																		channel_index_;
@@ -67,21 +67,21 @@ public:
 	{
 		graph_->set_color("produce-time", diagnostics::color(0.0f, 1.0f, 0.0f));
 	}
-		
+
 	std::map<int, draw_frame> operator()(const video_format_desc& format_desc)
-	{		
+	{
 		caspar::timer frame_timer;
 
 		auto frames = executor_.invoke([=]() -> std::map<int, draw_frame>
 		{
 
 			std::map<int, draw_frame> frames;
-			
+
 			try
-			{			
+			{
 				std::vector<int> indices;
 
-				for (auto& layer : layers_)	
+				for (auto& layer : layers_)
 				{
 					// Prevent race conditions in parallel for each later
 					frames[layer.first] = draw_frame::empty();
@@ -102,14 +102,14 @@ public:
 			{
 				layers_.clear();
 				CASPAR_LOG_CURRENT_EXCEPTION();
-			}	
-			
+			}
+
 
 			return frames;
 		});
-		
+
 		//frames_subject_ << frames;
-		
+
 		graph_->set_value("produce-time", frame_timer.elapsed()*format_desc.fps*0.5);
 		*monitor_subject_ << monitor::message("/profiler/time") % frame_timer.elapsed() % (1.0/format_desc.fps);
 
@@ -122,8 +122,8 @@ public:
 		auto& tween		= tweens_[index];
 		auto& consumers	= layer_consumers_[index];
 
-		auto frame  = layer.receive(format_desc);					
-		
+		auto frame  = layer.receive(format_desc);
+
 		if (!consumers.empty())
 		{
 			auto consumer_it = consumers | boost::adaptors::map_values;
@@ -134,13 +134,14 @@ public:
 		}
 
 		auto frame1 = frame;
-		
+
 		frame1.transform() *= tween.fetch_and_tick(1);
 
 		if(format_desc.field_mode != core::field_mode::progressive)
-		{				
+		{
 			auto frame2 = frame;
 			frame2.transform() *= tween.fetch_and_tick(1);
+			frame2.transform().audio_transform.volume = 0.0;
 			frame1 = core::draw_frame::interlace(frame1, frame2, format_desc.field_mode);
 		}
 
@@ -157,7 +158,7 @@ public:
 		}
 		return it->second;
 	}
-		
+
 	std::future<void> apply_transforms(const std::vector<std::tuple<int, stage::transform_func_t, unsigned int, tweener>>& transforms)
 	{
 		return executor_.begin_invoke([=]
@@ -171,7 +172,7 @@ public:
 			}
 		}, task_priority::high_priority);
 	}
-						
+
 	std::future<void> apply_transform(int index, const stage::transform_func_t& transform, unsigned int mix_duration, const tweener& tween)
 	{
 		return executor_.begin_invoke([=]
@@ -210,12 +211,12 @@ public:
 	{
 		return executor_.begin_invoke([=]
 		{
-			get_layer(index).load(producer, preview, auto_play_delta);			
+			get_layer(index).load(producer, preview, auto_play_delta);
 		}, task_priority::high_priority);
 	}
 
 	std::future<void> pause(int index)
-	{		
+	{
 		return executor_.begin_invoke([=]
 		{
 			get_layer(index).pause();
@@ -231,7 +232,7 @@ public:
 	}
 
 	std::future<void> play(int index)
-	{		
+	{
 		return executor_.begin_invoke([=]
 		{
 			get_layer(index).play();
@@ -239,7 +240,7 @@ public:
 	}
 
 	std::future<void> stop(int index)
-	{		
+	{
 		return executor_.begin_invoke([=]
 		{
 			get_layer(index).stop();
@@ -253,15 +254,15 @@ public:
 			layers_.erase(index);
 		}, task_priority::high_priority);
 	}
-		
+
 	std::future<void> clear()
 	{
 		return executor_.begin_invoke([=]
 		{
 			layers_.clear();
 		}, task_priority::high_priority);
-	}	
-		
+	}
+
 	std::future<void> swap_layers(stage& other, bool swap_transforms)
 	{
 		auto other_impl = other.impl_;
@@ -270,7 +271,7 @@ public:
 		{
 			return make_ready_future();
 		}
-		
+
 		auto func = [=]
 		{
 			auto layers			= layers_ | boost::adaptors::map_values;
@@ -278,15 +279,15 @@ public:
 
 			for (auto& layer : layers)
 				layer.monitor_output().detach_parent();
-			
+
 			for (auto& layer : other_layers)
 				layer.monitor_output().detach_parent();
-			
+
 			std::swap(layers_, other_impl->layers_);
-						
+
 			for (auto& layer : layers)
 				layer.monitor_output().attach_parent(monitor_subject_);
-			
+
 			for (auto& layer : other_layers)
 				layer.monitor_output().attach_parent(monitor_subject_);
 
@@ -338,7 +339,7 @@ public:
 					auto& other_tween	= other_impl->tweens_[other_index];
 					std::swap(my_tween, other_tween);
 				}
-			};		
+			};
 
 			return executor_.begin_invoke([=]
 			{
@@ -375,7 +376,7 @@ public:
 			return get_layer(index).foreground();
 		}, task_priority::high_priority);
 	}
-	
+
 	std::future<std::shared_ptr<frame_producer>> background(int index)
 	{
 		return executor_.begin_invoke([=]() -> std::shared_ptr<frame_producer>
@@ -389,9 +390,9 @@ public:
 		return executor_.begin_invoke([this]() -> boost::property_tree::wptree
 		{
 			boost::property_tree::wptree info;
-			for (auto& layer : layers_)			
+			for (auto& layer : layers_)
 				info.add_child(L"layers.layer", layer.second.info())
-					.add(L"index", layer.first);	
+					.add(L"index", layer.first);
 			return info;
 		}, task_priority::high_priority);
 	}
@@ -424,7 +425,7 @@ public:
 			return get_layer(index).delay_info();
 		}, task_priority::high_priority));
 	}
-	
+
 	std::future<std::wstring> call(int index, const std::vector<std::wstring>& params)
 	{
 		return flatten(executor_.begin_invoke([=]

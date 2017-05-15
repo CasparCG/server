@@ -225,4 +225,9 @@ void amcp_command_repository::register_channel_command(
 	self.channel_commands.insert(std::make_pair(std::move(name), std::make_pair(std::move(command), min_num_params)));
 }
 
+spl::shared_ptr<core::help_repository> amcp_command_repository::help_repo() const
+{
+	return impl_->help_repo;
+}
+
 }}}
