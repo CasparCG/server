@@ -59,7 +59,7 @@
 #include <cstdint>
 
 namespace caspar { namespace image {
-		
+
 // Like tweened_transform but for speed
 class speed_tweener
 {
@@ -105,9 +105,9 @@ public:
 		return fetch();
 	}
 };
-	
+
 struct image_scroll_producer : public core::frame_producer_base
-{	
+{
 	core::monitor::subject						monitor_subject_;
 
 	const std::wstring							filename_;
@@ -124,7 +124,7 @@ struct image_scroll_producer : public core::frame_producer_base
 	int											start_offset_x_		= 0;
 	int											start_offset_y_		= 0;
 	bool										progressive_;
-	
+
 	explicit image_scroll_producer(
 			const spl::shared_ptr<core::frame_factory>& frame_factory,
 			const core::video_format_desc& format_desc,
@@ -219,13 +219,13 @@ struct image_scroll_producer : public core::frame_producer_base
 				auto frame = frame_factory->create_frame(this, desc, core::audio_channel_layout::invalid());
 
 				if(count >= frame.image_data(0).size())
-				{	
+				{
 					std::copy_n(bytes + count - frame.image_data(0).size(), frame.image_data(0).size(), frame.image_data(0).begin());
 					count -= static_cast<int>(frame.image_data(0).size());
 				}
 				else
 				{
-					memset(frame.image_data(0).begin(), 0, frame.image_data(0).size());	
+					memset(frame.image_data(0).begin(), 0, frame.image_data(0).size());
 					std::copy_n(bytes, count, frame.image_data(0).begin() + format_desc_.size - count);
 					count = 0;
 				}
@@ -247,23 +247,23 @@ struct image_scroll_producer : public core::frame_producer_base
 				desc.planes.push_back(core::pixel_format_desc::plane(format_desc_.width, height_, 4));
 				auto frame = frame_factory->create_frame(this, desc, core::audio_channel_layout::invalid());
 				if(count >= frame.image_data(0).size())
-				{	
+				{
 					for(int y = 0; y < height_; ++y)
 						std::copy_n(bytes + i * format_desc_.width*4 + y * width_*4, format_desc_.width*4, frame.image_data(0).begin() + y * format_desc_.width*4);
-					
+
 					++i;
 					count -= static_cast<int>(frame.image_data(0).size());
 				}
 				else
 				{
-					memset(frame.image_data(0).begin(), 0, frame.image_data(0).size());	
+					memset(frame.image_data(0).begin(), 0, frame.image_data(0).size());
 					auto width2 = width_ % format_desc_.width;
 					for(int y = 0; y < height_; ++y)
 						std::copy_n(bytes + i * format_desc_.width*4 + y * width_*4, width2*4, frame.image_data(0).begin() + y * format_desc_.width*4);
 
 					count = 0;
 				}
-			
+
 				frames_.push_back(core::draw_frame(std::move(frame)));
 			}
 
@@ -348,13 +348,13 @@ struct image_scroll_producer : public core::frame_producer_base
 
 		return std::move(result);
 	}
-	
+
 	// frame_producer
 	core::draw_frame render_frame(bool allow_eof)
 	{
 		if(frames_.empty())
 			return core::draw_frame::empty();
-		
+
 		core::draw_frame result(get_visible());
 		auto& fill_translation = result.transform().image_transform.fill_translation;
 
@@ -363,7 +363,7 @@ struct image_scroll_producer : public core::frame_producer_base
 			if (static_cast<size_t>(std::abs(delta_)) >= height_ + format_desc_.height && allow_eof)
 				return core::draw_frame::empty();
 
-			fill_translation[1] = 
+			fill_translation[1] =
 				static_cast<double>(start_offset_y_) / static_cast<double>(format_desc_.height)
 				+ delta_ / static_cast<double>(format_desc_.height);
 		}
@@ -372,7 +372,7 @@ struct image_scroll_producer : public core::frame_producer_base
 			if (static_cast<size_t>(std::abs(delta_)) >= width_ + format_desc_.width && allow_eof)
 				return core::draw_frame::empty();
 
-			fill_translation[0] = 
+			fill_translation[0] =
 				static_cast<double>(start_offset_x_) / static_cast<double>(format_desc_.width)
 				+ (delta_) / static_cast<double>(format_desc_.width);
 		}
@@ -437,9 +437,9 @@ struct image_scroll_producer : public core::frame_producer_base
 
 			result = core::draw_frame::interlace(field1, field2, format_desc_.field_mode);
 		}
-		
+
 		monitor_subject_ << core::monitor::message("/file/path") % filename_
-						 << core::monitor::message("/delta") % delta_ 
+						 << core::monitor::message("/delta") % delta_
 						 << core::monitor::message("/speed") % speed_.fetch();
 
 		return result;
@@ -449,7 +449,7 @@ struct image_scroll_producer : public core::frame_producer_base
 	{
 		return constraints_;
 	}
-				
+
 	std::wstring print() const override
 	{
 		return L"image_scroll_producer[" + filename_ + L"]";
@@ -516,32 +516,18 @@ void describe_scroll_producer(core::help_sink& sink, const core::help_repository
 
 spl::shared_ptr<core::frame_producer> create_scroll_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
 {
-	static const auto extensions = {
-		L".png",
-		L".tga",
-		L".bmp",
-		L".jpg",
-		L".jpeg",
-		L".gif",
-		L".tiff",
-		L".tif",
-		L".jp2",
-		L".jpx",
-		L".j2k",
-		L".j2c"
-	};
 	std::wstring filename = env::media_folder() + params.at(0);
-	
-	auto ext = std::find_if(extensions.begin(), extensions.end(), [&](const std::wstring& ex) -> bool
+
+	auto ext = std::find_if(supported_extensions().begin(), supported_extensions().end(), [&](const std::wstring& ex) -> bool
 	{
 		auto file = caspar::find_case_insensitive(boost::filesystem::path(filename).replace_extension(ex).wstring());
 
 		return static_cast<bool>(file);
 	});
 
-	if(ext == extensions.end())
+	if(ext == supported_extensions().end())
 		return core::frame_producer::empty();
-	
+
 	double duration = 0.0;
 	double speed = get_param(L"SPEED", params, 0.0);
 	boost::optional<boost::posix_time::ptime> end_time;

@@ -26,7 +26,7 @@
 #include "frame_transform.h"
 
 namespace caspar { namespace core {
-		
+
 enum class tags
 {
 	frame_tag = 0,
@@ -36,22 +36,22 @@ enum class tags
 };
 
 struct draw_frame::impl
-{		
+{
 	std::shared_ptr<const_frame>	frame_;
 	std::vector<draw_frame>			frames_;
 	core::frame_transform			frame_transform_;
-public:		
+public:
 
 	impl()
 	{
 	}
 
-	impl(const_frame&& frame) 
+	impl(const_frame&& frame)
 		: frame_(new const_frame(std::move(frame)))
 	{
 	}
-	
-	impl(mutable_frame&& frame) 
+
+	impl(mutable_frame&& frame)
 		: frame_(new const_frame(std::move(frame)))
 	{
 	}
@@ -67,7 +67,7 @@ public:
 		, frame_transform_(other.frame_transform_)
 	{
 	}
-			
+
 	void accept(frame_visitor& visitor) const
 	{
 		visitor.push(frame_transform_);
@@ -81,11 +81,11 @@ public:
 				frame.accept(visitor);
 		}
 		visitor.pop();
-	}	
-		
+	}
+
 	bool operator==(const impl& other)
 	{
-		return	frames_				== other.frames_ && 
+		return	frames_				== other.frames_ &&
 				frame_				== other.frame_ &&
 				frame_transform_	== other.frame_transform_;
 	}
@@ -106,7 +106,7 @@ public:
 		return result;
 	}
 };
-	
+
 draw_frame::draw_frame() : impl_(new impl()){}
 draw_frame::draw_frame(const draw_frame& other) : impl_(new impl(*other.impl_)){}
 draw_frame::draw_frame(draw_frame&& other) : impl_(std::move(other.impl_)){}
@@ -129,22 +129,22 @@ bool draw_frame::operator==(const draw_frame& other)const{return *impl_ == *othe
 bool draw_frame::operator!=(const draw_frame& other)const{return !(*this == other);}
 
 draw_frame draw_frame::interlace(draw_frame frame1, draw_frame frame2, core::field_mode mode)
-{				
+{
 	if(frame1 == draw_frame::empty() && frame2 == draw_frame::empty())
 		return draw_frame::empty();
-	
+
 	if(frame1 == frame2 || mode == field_mode::progressive)
 		return frame2;
 
 	if(mode == field_mode::upper)
 	{
-		frame1.transform().image_transform.field_mode = field_mode::upper;	
-		frame2.transform().image_transform.field_mode = field_mode::lower;	
-	}									 
-	else								 
-	{									 
-		frame1.transform().image_transform.field_mode = field_mode::lower;	
-		frame2.transform().image_transform.field_mode = field_mode::upper;	
+		frame1.transform().image_transform.field_mode = field_mode::upper;
+		frame2.transform().image_transform.field_mode = field_mode::lower;
+	}
+	else
+	{
+		frame1.transform().image_transform.field_mode = field_mode::lower;
+		frame2.transform().image_transform.field_mode = field_mode::upper;
 	}
 
 	std::vector<draw_frame> frames;
@@ -154,7 +154,7 @@ draw_frame draw_frame::interlace(draw_frame frame1, draw_frame frame2, core::fie
 }
 
 draw_frame draw_frame::over(draw_frame frame1, draw_frame frame2)
-{		
+{
 	if(frame1 == draw_frame::empty() && frame2 == draw_frame::empty())
 		return draw_frame::empty();
 
@@ -165,7 +165,7 @@ draw_frame draw_frame::over(draw_frame frame1, draw_frame frame2)
 }
 
 draw_frame draw_frame::mask(draw_frame fill, draw_frame key)
-{	
+{
 	if(fill == draw_frame::empty() || key == draw_frame::empty())
 		return draw_frame::empty();
 
@@ -189,8 +189,7 @@ draw_frame late_frame(const_frame(0));
 
 draw_frame draw_frame::still(draw_frame frame)
 {
-	frame.transform().image_transform.is_still = true;	
-	frame.transform().audio_transform.is_still = true;		
+	frame.transform().audio_transform.is_still = true;
 	return frame;
 }
 
@@ -203,6 +202,6 @@ const draw_frame& draw_frame::late()
 {
 	return late_frame;
 }
-	
+
 
 }}

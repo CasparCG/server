@@ -65,9 +65,8 @@ namespace caspar { namespace log {
 using namespace boost;
 
 template<typename Stream>
-void append_timestamp(Stream& stream)
+void append_timestamp(Stream& stream, boost::posix_time::ptime timestamp)
 {
-	auto timestamp = boost::posix_time::microsec_clock::local_time();
 	auto date = timestamp.date();
 	auto time = timestamp.time_of_day();
 	auto milliseconds = time.fractional_seconds() / 1000; // microseconds to milliseconds
@@ -121,7 +120,7 @@ void my_formatter(bool print_all_characters, const boost::log::record_view& rec,
 	namespace expr = boost::log::expressions;
 
 	std::wstringstream pre_message_stream;
-	append_timestamp(pre_message_stream);
+	append_timestamp(pre_message_stream, boost::log::extract<boost::posix_time::ptime>("TimestampMillis", rec).get());
 	thread_id_column.write(pre_message_stream, boost::log::extract<std::int64_t>("NativeThreadId", rec));
 	severity_column.write(pre_message_stream, boost::log::extract<boost::log::trivial::severity_level>("Severity", rec));
 
@@ -147,6 +146,10 @@ void init()
 {
 	boost::log::add_common_attributes();
 	boost::log::core::get()->add_global_attribute("NativeThreadId", boost::log::attributes::make_function(&get_current_thread_id));
+	boost::log::core::get()->add_global_attribute("TimestampMillis", boost::log::attributes::make_function([]
+	{
+		return boost::posix_time::microsec_clock::local_time();
+	}));
 	typedef boost::log::sinks::asynchronous_sink<boost::log::sinks::wtext_ostream_backend> stream_sink_type;
 
 	auto stream_backend = boost::make_shared<boost::log::sinks::wtext_ostream_backend>();
@@ -161,6 +164,16 @@ void init()
 	stream_sink->set_formatter(boost::bind(&my_formatter<boost::log::wformatting_ostream>, print_all_characters, _1, _2));
 
 	boost::log::core::get()->add_sink(stream_sink);
+}
+
+std::string current_exception_diagnostic_information()
+{
+	auto e = boost::current_exception_cast<const char*>();
+
+	if (e)
+		return std::string("[char *] = ") + *e + "\n";
+	else
+		return boost::current_exception_diagnostic_information();
 }
 
 }

@@ -54,16 +54,34 @@ struct corners
 struct adjustments
 {
 	binding<double> opacity;
+	binding<double> contrast;
+	binding<double> saturation;
+	binding<double> brightness;
 
 	adjustments();
 };
 
+struct levels
+{
+	binding<double> min_input;
+	binding<double> max_input;
+	binding<double> gamma;
+	binding<double> min_output;
+	binding<double> max_output;
+
+	levels();
+};
+
 struct chroma_key
 {
-	binding<core::chroma::type>	key;
-	binding<double>				threshold;
-	binding<double>				softness;
-	binding<double>				spill;
+	binding<bool>	enable;
+	binding<double>	target_hue;
+	binding<double>	hue_width;
+	binding<double>	min_saturation;
+	binding<double>	min_brightness;
+	binding<double>	softness;
+	binding<double>	spill_suppress;
+	binding<double>	spill_suppress_saturation;
 };
 
 struct layer
@@ -73,14 +91,17 @@ struct layer
 	scene::coord								position;
 	scene::rect									crop;
 	scene::corners								perspective;
+	scene::rect									clip;
 	binding<double>								rotation;
 	scene::adjustments							adjustments;
+	scene::levels								levels;
 	binding<spl::shared_ptr<frame_producer>>	producer;
 	binding<bool>								hidden;
 	binding<bool>								is_key;
 	binding<bool>								use_mipmap;
 	binding<core::blend_mode>					blend_mode;
 	scene::chroma_key							chroma_key;
+	binding<double>								volume;
 
 	explicit layer(const std::wstring& name, const spl::shared_ptr<frame_producer>& producer);
 };
@@ -111,7 +132,7 @@ mark_action get_mark_action(const std::wstring& name);
 class scene_producer : public frame_producer_base
 {
 public:
-	scene_producer(std::wstring producer_name, int width, int height, const video_format_desc& format_desc);
+	scene_producer(std::wstring producer_name, std::wstring template_name, int width, int height, const video_format_desc& format_desc);
 	~scene_producer();
 
 	draw_frame receive_impl() override;
@@ -129,6 +150,7 @@ public:
 	layer& create_layer(
 			const spl::shared_ptr<frame_producer>& producer, const std::wstring& name);
 	void reverse_layers();
+	layer& get_layer(const std::wstring& name);
 
 	binding<int64_t> timeline_frame();
 	binding<double> speed();
@@ -195,7 +217,7 @@ public:
 							static_cast<double>(duration)));
 
 					to_affect.set(tweened);
-					
+
 					//CASPAR_LOG(info) << relative_frame << L" " << *start_value << L" " << duration << L" " << tweened;
 				};
 
@@ -221,7 +243,8 @@ public:
 		store_keyframe(to_affect.identity(), k);
 	}
 
-	void add_mark(int64_t frame, mark_action action, const std::wstring& label);
+	void add_mark(int64_t at_frame, mark_action action, const std::wstring& label);
+	void add_task(binding<bool> when, std::function<void ()> task);
 
 	core::variable& get_variable(const std::wstring& name) override;
 	const std::vector<std::wstring>& get_variables() const override;

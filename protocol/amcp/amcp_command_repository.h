@@ -60,6 +60,7 @@ public:
 
 	void register_command(std::wstring category, std::wstring name, core::help_item_describer describer, amcp_command_func command, int min_num_params);
 	void register_channel_command(std::wstring category, std::wstring name, core::help_item_describer describer, amcp_command_func command, int min_num_params);
+	spl::shared_ptr<core::help_repository> help_repo() const;
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

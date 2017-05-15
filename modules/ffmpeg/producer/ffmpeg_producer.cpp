@@ -95,8 +95,6 @@ struct ffmpeg_producer : public core::frame_producer_base
 	std::unique_ptr<frame_muxer>						muxer_;
 
 	const boost::rational<int>							framerate_;
-	const uint32_t										start_;
-	const uint32_t										length_;
 	const bool											thumbnail_mode_;
 
 	core::draw_frame									last_frame_;
@@ -112,21 +110,18 @@ public:
 			const std::wstring& url_or_file,
 			const std::wstring& filter,
 			bool loop,
-			uint32_t start,
-			uint32_t length,
+			uint32_t in,
+			uint32_t out,
 			bool thumbnail_mode,
 			const std::wstring& custom_channel_order,
 			const ffmpeg_options& vid_params)
 		: filename_(url_or_file)
 		, frame_factory_(frame_factory)
 		, initial_logger_disabler_(temporary_enable_quiet_logging_for_thread(thumbnail_mode))
-		, input_(graph_, url_or_file, loop, start, length, thumbnail_mode, vid_params)
+		, input_(graph_, url_or_file, loop, in, out, thumbnail_mode, vid_params)
 		, framerate_(read_framerate(*input_.context(), format_desc.framerate))
-		, start_(start)
-		, length_(length)
 		, thumbnail_mode_(thumbnail_mode)
 		, last_frame_(core::draw_frame::empty())
-		, frame_number_(0)
 	{
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));
@@ -212,6 +207,12 @@ public:
 			CASPAR_THROW_EXCEPTION(averror_stream_not_found() << msg_info("No streams found"));
 
 		muxer_.reset(new frame_muxer(framerate_, std::move(audio_input_pads), frame_factory, format_desc, channel_layout, filter, true));
+
+		if (auto nb_frames = file_nb_frames())
+		{
+			out = std::min(out, nb_frames);
+			input_.out(out);
+		}
 	}
 
 	// frame_producer
@@ -313,12 +314,12 @@ public:
 			                   // therefore no seeking should be necessary for the first frame.
 		{
 			input_.seek(file_position > 1 ? file_position - 2: file_position).get();
-            boost::this_thread::sleep_for(boost::chrono::milliseconds(40));
+			boost::this_thread::sleep_for(boost::chrono::milliseconds(40));
 		}
 
 		for (int i = 0; i < NUM_RETRIES; ++i)
 		{
-            boost::this_thread::sleep_for(boost::chrono::milliseconds(40));
+			boost::this_thread::sleep_for(boost::chrono::milliseconds(40));
 
 			auto frame = render_frame();
 
@@ -338,7 +339,7 @@ public:
 				{
 					CASPAR_LOG(trace) << print() << L" adjusting to " << adjusted_seek;
 					input_.seek(static_cast<uint32_t>(adjusted_seek) - 1).get();
-                    boost::this_thread::sleep_for(boost::chrono::milliseconds(40));
+					boost::this_thread::sleep_for(boost::chrono::milliseconds(40));
 				}
 				else
 					return frame.first;
@@ -405,71 +406,78 @@ public:
 		if (is_url() || input_.loop())
 			return std::numeric_limits<uint32_t>::max();
 
-		uint32_t nb_frames = file_nb_frames();
+		auto nb_frames = std::min(input_.out(), file_nb_frames());
+		if (nb_frames >= input_.in())
+			nb_frames -= input_.in();
+		else
+			nb_frames = 0;
 
-		nb_frames = std::min(length_, nb_frames - start_);
-		nb_frames = muxer_->calc_nb_frames(nb_frames);
-
-		return nb_frames;
+		return muxer_->calc_nb_frames(nb_frames);
 	}
 
 	uint32_t file_nb_frames() const
 	{
-		uint32_t file_nb_frames = 0;
-		file_nb_frames = std::max(file_nb_frames, video_decoder_ ? video_decoder_->nb_frames() : 0);
-		return file_nb_frames;
+		return video_decoder_ ? video_decoder_->nb_frames() : 0;
 	}
 
 	std::future<std::wstring> call(const std::vector<std::wstring>& params) override
 	{
-		static const boost::wregex loop_exp(LR"(LOOP\s*(?<VALUE>\d?)?)", boost::regex::icase);
-		static const boost::wregex seek_exp(LR"(SEEK\s+(?<VALUE>(\+|-)?\d+)(\s+(?<WHENCE>REL|END))?)", boost::regex::icase);
-		static const boost::wregex length_exp(LR"(LENGTH\s+(?<VALUE>\d+)?)", boost::regex::icase);
-		static const boost::wregex start_exp(LR"(START\s+(?<VALUE>\d+)?)", boost::regex::icase);
-
-		auto param = boost::algorithm::join(params, L" ");
-
 		std::wstring result;
 
-		boost::wsmatch what;
-		if(boost::regex_match(param, what, loop_exp))
+		std::wstring cmd = params.at(0);
+		std::wstring value;
+		if (params.size() > 1)
+			value = params.at(1);
+
+		if (boost::iequals(cmd, L"loop"))
 		{
-			auto value = what["VALUE"].str();
 			if (!value.empty())
 				input_.loop(boost::lexical_cast<bool>(value));
 			result = boost::lexical_cast<std::wstring>(input_.loop());
 		}
-		else if(boost::regex_match(param, what, seek_exp))
+		else if (boost::iequals(cmd, L"in") || boost::iequals(cmd, L"start"))
 		{
-			auto value = boost::lexical_cast<int64_t>(what["VALUE"].str());
-			auto whence = what["WHENCE"].str();
-			auto total = file_nb_frames();
-
-			if(boost::iequals(whence, L"REL"))
-				value = file_frame_number() + value;
-			else if(boost::iequals(whence, L"END"))
-				value = total - value;
-
-			if(value < 0)
-				value = 0;
-			else if(value >= total)
-				value = total - 1;
-
-			input_.seek(static_cast<uint32_t>(value));
+			if (!value.empty())
+				input_.in(boost::lexical_cast<uint32_t>(value));
+			result = boost::lexical_cast<std::wstring>(input_.in());
 		}
-		else if(boost::regex_match(param, what, length_exp))
+		else if (boost::iequals(cmd, L"out"))
 		{
-			auto value = what["VALUE"].str();
-			if(!value.empty())
+			if (!value.empty())
+				input_.out(boost::lexical_cast<uint32_t>(value));
+			result = boost::lexical_cast<std::wstring>(input_.out());
+		}
+		else if (boost::iequals(cmd, L"length"))
+		{
+			if (!value.empty())
 				input_.length(boost::lexical_cast<uint32_t>(value));
 			result = boost::lexical_cast<std::wstring>(input_.length());
 		}
-		else if(boost::regex_match(param, what, start_exp))
+		else if (boost::iequals(cmd, L"seek") && !value.empty())
 		{
-			auto value = what["VALUE"].str();
-			if(!value.empty())
-				input_.start(boost::lexical_cast<uint32_t>(value));
-			result = boost::lexical_cast<std::wstring>(input_.start());
+			auto nb_frames = file_nb_frames();
+
+			int64_t seek;
+			if (boost::iequals(value, L"rel"))
+				seek = file_frame_number();
+			else if (boost::iequals(value, L"in"))
+				seek = input_.in();
+			else if (boost::iequals(value, L"out"))
+				seek = input_.out();
+			else if (boost::iequals(value, L"end"))
+				seek = nb_frames;
+			else
+				seek = boost::lexical_cast<int64_t>(value);
+
+			if (params.size() > 2)
+				seek += boost::lexical_cast<int64_t>(params.at(2));
+
+			if (seek < 0)
+				seek = 0;
+			else if (seek >= nb_frames)
+				seek = nb_frames - 1;
+
+			input_.seek(static_cast<uint32_t>(seek));
 		}
 		else
 			CASPAR_THROW_EXCEPTION(invalid_argument());
@@ -551,8 +559,17 @@ public:
 		tbb::parallel_invoke(
 		[&]
 		{
-			if (!muxer_->video_ready() && video_decoder_)
-				video = video_decoder_->poll();
+			do
+			{
+				if (!muxer_->video_ready() && video_decoder_)
+				{
+					video = video_decoder_->poll();
+					if (video)
+						break;
+				}
+				else
+					break;
+			} while (!video_decoder_->empty());
 		},
 		[&]
 		{
@@ -591,7 +608,8 @@ public:
 		file_frame_number = std::max(file_frame_number, video_decoder_ ? video_decoder_->file_frame_number() : 0);
 
 		for (auto frame = muxer_->poll(); frame != core::draw_frame::empty(); frame = muxer_->poll())
-			frame_buffer_.push(std::make_pair(frame, file_frame_number));
+			if (frame != core::draw_frame::empty())
+				frame_buffer_.push(std::make_pair(frame, file_frame_number));
 	}
 
 	bool audio_only() const
@@ -608,36 +626,39 @@ public:
 void describe_producer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"A producer for playing media files supported by FFmpeg.");
-	sink.syntax(L"[clip,url:string] {[loop:LOOP]} {SEEK [start:int]} {LENGTH [start:int]} {FILTER [filter:string]} {CHANNEL_LAYOUT [channel_layout:string]}");
+	sink.syntax(L"[clip,url:string] {[loop:LOOP]} {IN,SEEK [in:int]} {OUT [out:int] | LENGTH [length:int]} {FILTER [filter:string]} {CHANNEL_LAYOUT [channel_layout:string]}");
 	sink.para()
 		->text(L"The FFmpeg Producer can play all media that FFmpeg can play, which includes many ")
 		->text(L"QuickTime video codec such as Animation, PNG, PhotoJPEG, MotionJPEG, as well as ")
 		->text(L"H.264, FLV, WMV and several audio codecs as well as uncompressed audio.");
 	sink.definitions()
 		->item(L"clip", L"The file without the file extension to play. It should reside under the media folder.")
-		->item(L"url", L"If clip contains :// it is instead treated as the URL parameter. The URL can either be any streaming protocol supported by FFmpeg, dshow://video={webcam_name} or v4l2://{video device}.")
-		->item(L"loop", L"Will cause the media file to loop between start and start + length")
-		->item(L"start", L"Optionally sets the start frame. 0 by default. If loop is specified this will be the frame where it starts over again.")
-		->item(L"length", L"Optionally sets the length of the clip. If not specified the clip will be played to the end. If loop is specified the file will jump to start position once this number of frames has been played.")
+		->item(L"url", L"If clip contains :// it is instead treated as the URL parameter. The URL can either be any streaming protocol supported by FFmpeg, dshow://video={webcam_name} or v4l2://{video device} or iec61883://{auto}.")
+		->item(L"loop", L"Will cause the media file to loop between in and out.")
+		->item(L"in", L"Optionally sets the first frame. 0 by default. If loop is specified, this will be the frame where it starts over again.")
+		->item(L"out", L"Optionally sets the last frame. If not specified the clip will be played to the end. If loop is specified, the file will jump to start position once it reaches the last frame.")
+		->item(L"length", L"Optionally sets the length of the clip. Equivalent to OUT in + length.")
 		->item(L"filter", L"If specified, will be used as an FFmpeg video filter.")
 		->item(L"channel_layout",
-				L"Optionally override the automatically deduced audio channel layout. "
+				L"Optionally override the automatically deduced audio channel layout."
 				L"Either a named layout as specified in casparcg.config or in the format [type:string]:[channel_order:string] for a custom layout.");
 	sink.para()->text(L"Examples:");
 	sink.example(L">> PLAY 1-10 folder/clip", L"to play all frames in a clip and stop at the last frame.");
 	sink.example(L">> PLAY 1-10 folder/clip LOOP", L"to loop a clip between the first frame and the last frame.");
-	sink.example(L">> PLAY 1-10 folder/clip LOOP SEEK 10", L"to loop a clip between frame 10 and the last frame.");
-	sink.example(L">> PLAY 1-10 folder/clip LOOP SEEK 10 LENGTH 50", L"to loop a clip between frame 10 and frame 60.");
-	sink.example(L">> PLAY 1-10 folder/clip SEEK 10 LENGTH 50", L"to play frames 10-60 in a clip and stop.");
+	sink.example(L">> PLAY 1-10 folder/clip LOOP IN 10", L"to loop a clip between frame 10 and the last frame.");
+	sink.example(L">> PLAY 1-10 folder/clip LOOP IN 10 LENGTH 50", L"to loop a clip between frame 10 and frame 60.");
+	sink.example(L">> PLAY 1-10 folder/clip IN 10 OUT 60", L"to play frames 10-60 in a clip and stop.");
 	sink.example(L">> PLAY 1-10 folder/clip FILTER yadif=1,-1", L"to deinterlace the video.");
 	sink.example(L">> PLAY 1-10 folder/clip CHANNEL_LAYOUT film", L"given the defaults in casparcg.config this will specifies that the clip has 6 audio channels of the type 5.1 and that they are in the order FL FC FR BL BR LFE regardless of what ffmpeg says.");
 	sink.example(L">> PLAY 1-10 folder/clip CHANNEL_LAYOUT \"5.1:LFE FL FC FR BL BR\"", L"specifies that the clip has 6 audio channels of the type 5.1 and that they are in the specified order regardless of what ffmpeg says.");
 	sink.example(L">> PLAY 1-10 rtmp://example.com/live/stream", L"to play an RTMP stream.");
 	sink.example(L">> PLAY 1-10 \"dshow://video=Live! Cam Chat HD VF0790\"", L"to use a web camera as video input on Windows.");
 	sink.example(L">> PLAY 1-10 v4l2:///dev/video0", L"to use a web camera as video input on Linux.");
+	sink.example(L">> PLAY 1-10 iec61883://auto", L"to use a FireWire (H)DV video device as video input on Linux.");
 	sink.para()->text(L"The FFmpeg producer also supports changing some of the settings via ")->code(L"CALL")->text(L":");
 	sink.example(L">> CALL 1-10 LOOP 1");
-	sink.example(L">> CALL 1-10 START 10");
+	sink.example(L">> CALL 1-10 IN 10");
+	sink.example(L">> CALL 1-10 OUT 60");
 	sink.example(L">> CALL 1-10 LENGTH 50");
 	sink.example(L">> CALL 1-10 SEEK 30");
 	core::describe_framerate_producer(sink);
@@ -659,9 +680,20 @@ spl::shared_ptr<core::frame_producer> create_producer(
 	if (file_or_url.empty())
 		return core::frame_producer::empty();
 
+	constexpr auto uint32_max = std::numeric_limits<uint32_t>::max();
+
 	auto loop					= contains_param(L"LOOP",		params);
-	auto start					= get_param(L"SEEK",			params, static_cast<uint32_t>(0));
-	auto length					= get_param(L"LENGTH",			params, std::numeric_limits<uint32_t>::max());
+
+	auto in						= get_param(L"SEEK",			params, static_cast<uint32_t>(0)); // compatibility
+	in							= get_param(L"IN",				params, in);
+
+	auto out					= get_param(L"LENGTH",			params, uint32_max);
+	if (out < uint32_max - in)
+		out += in;
+	else
+		out = uint32_max;
+	out							= get_param(L"OUT",				params, out);
+
 	auto filter_str				= get_param(L"FILTER",			params, L"");
 	auto custom_channel_order	= get_param(L"CHANNEL_LAYOUT",	params, L"");
 
@@ -692,8 +724,8 @@ spl::shared_ptr<core::frame_producer> create_producer(
 			file_or_url,
 			filter_str,
 			loop,
-			start,
-			length,
+			in,
+			out,
 			false,
 			custom_channel_order,
 			vid_params);
@@ -724,8 +756,8 @@ core::draw_frame create_thumbnail_frame(
 		return core::draw_frame::empty();
 
 	auto loop		= false;
-	auto start		= 0;
-	auto length		= std::numeric_limits<uint32_t>::max();
+	auto in			= 0;
+	auto out		= std::numeric_limits<uint32_t>::max();
 	auto filter_str = L"";
 
 	ffmpeg_options vid_params;
@@ -735,8 +767,8 @@ core::draw_frame create_thumbnail_frame(
 			filename,
 			filter_str,
 			loop,
-			start,
-			length,
+			in,
+			out,
 			true,
 			L"",
 			vid_params);

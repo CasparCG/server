@@ -19,7 +19,7 @@
 * Author: Nicklas P Andersson
 */
 
- 
+
 #include "../StdAfx.h"
 
 #include "AMCPProtocolStrategy.h"
@@ -95,6 +95,7 @@ public:
 	struct command_interpreter_result
 	{
 		std::shared_ptr<caspar::IO::lock_container>	lock;
+		std::wstring								request_id;
 		std::wstring								command_name;
 		AMCPCommand::ptr_type						command;
 		error_state									error			= error_state::no_error;
@@ -106,7 +107,7 @@ public:
 	void Parse(const std::wstring& message, ClientInfoPtr client)
 	{
 		CASPAR_LOG_COMMUNICATION(info) << L"Received message from " << client->address() << ": " << message << L"\\r\\n";
-	
+
 		command_interpreter_result result;
 		if(interpret_command_string(message, result, client))
 		{
@@ -115,10 +116,13 @@ public:
 			else
 				result.queue->AddCommand(result.command);
 		}
-		
+
 		if (result.error != error_state::no_error)
 		{
 			std::wstringstream answer;
+
+			if (!result.request_id.empty())
+				answer << L"RES " << result.request_id << L" ";
 
 			switch(result.error)
 			{
@@ -156,6 +160,20 @@ private:
 			// Discard GetSwitch
 			if (!tokens.empty() && tokens.front().at(0) == L'/')
 				tokens.pop_front();
+
+			if (!tokens.empty() && boost::iequals(tokens.front(), L"REQ"))
+			{
+				tokens.pop_front();
+
+				if (tokens.empty())
+				{
+					result.error = error_state::parameters_error;
+					return false;
+				}
+
+				result.request_id = tokens.front();
+				tokens.pop_front();
+			}
 
 			// Fail if no more tokens.
 			if (tokens.empty())
@@ -234,6 +252,9 @@ private:
 				if (result.command->parameters().size() < result.command->minimum_parameters())
 					result.error = error_state::parameters_error;
 			}
+
+			if (result.command)
+				result.command->set_request_id(result.request_id);
 		}
 		catch (std::out_of_range&)
 		{

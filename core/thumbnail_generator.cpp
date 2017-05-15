@@ -38,6 +38,7 @@
 #include <common/filesystem.h>
 
 #include "producer/frame_producer.h"
+#include "producer/cg_proxy.h"
 #include "consumer/frame_consumer.h"
 #include "mixer/mixer.h"
 #include "mixer/image/image_mixer.h"
@@ -88,6 +89,7 @@ private:
 	thumbnail_creator								thumbnail_creator_;
 	spl::shared_ptr<media_info_repository>			media_info_repo_;
 	spl::shared_ptr<const frame_producer_registry>	producer_registry_;
+	spl::shared_ptr<const cg_producer_registry>		cg_registry_;
 	bool											mipmap_;
 	filesystem_monitor::ptr							monitor_;
 public:
@@ -103,6 +105,7 @@ public:
 			const thumbnail_creator& thumbnail_creator,
 			spl::shared_ptr<media_info_repository> media_info_repo,
 			spl::shared_ptr<const frame_producer_registry> producer_registry,
+			spl::shared_ptr<const cg_producer_registry> cg_registry,
 			bool mipmap)
 		: media_path_(media_path)
 		, thumbnails_path_(thumbnails_path)
@@ -115,6 +118,7 @@ public:
 		, thumbnail_creator_(thumbnail_creator)
 		, media_info_repo_(std::move(media_info_repo))
 		, producer_registry_(std::move(producer_registry))
+		, cg_registry_(std::move(cg_registry))
 		, mipmap_(mipmap)
 		, monitor_(monitor_factory.create(
 				media_path,
@@ -156,7 +160,7 @@ public:
 				continue;
 
 			auto relative_without_extension = get_relative_without_extension(path, thumbnails_path_);
-			bool no_corresponding_media_file = relative_without_extensions.find(relative_without_extension.wstring()) 
+			bool no_corresponding_media_file = relative_without_extensions.find(relative_without_extension.wstring())
 					== relative_without_extensions.end();
 
 			if (no_corresponding_media_file)
@@ -167,16 +171,24 @@ public:
 	void generate(const std::wstring& media_file)
 	{
 		using namespace boost::filesystem;
-		auto base_file = media_path_ / media_file;
-		auto folder = base_file.parent_path();
+
+		auto base_file	= media_path_ / media_file;
+		auto folder		= base_file.parent_path();
+		bool found		= false;
 
 		for (boost::filesystem::directory_iterator iter(folder); iter != boost::filesystem::directory_iterator(); ++iter)
 		{
 			auto stem = iter->path().stem();
 
 			if (boost::iequals(stem.wstring(), base_file.filename().wstring()))
+			{
 				monitor_->reemmit(iter->path());
+				found = true;
+			}
 		}
+
+		if (!found)
+			CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Media file " + media_file + L" not found"));
 	}
 
 	void generate_all()
@@ -257,7 +269,7 @@ public:
 
 			try
 			{
-				raw_frame = producer_registry_->create_thumbnail(frame_producer_dependencies(image_mixer_, {}, format_desc_, producer_registry_), media_file.wstring());
+				raw_frame = producer_registry_->create_thumbnail(frame_producer_dependencies(image_mixer_, {}, format_desc_, producer_registry_, cg_registry_), media_file.wstring());
 				media_info_repo_->remove(file.wstring());
 				media_info_repo_->get(file.wstring());
 			}
@@ -324,6 +336,7 @@ thumbnail_generator::thumbnail_generator(
 		const thumbnail_creator& thumbnail_creator,
 		spl::shared_ptr<media_info_repository> media_info_repo,
 		spl::shared_ptr<const frame_producer_registry> producer_registry,
+		spl::shared_ptr<const cg_producer_registry> cg_registry,
 		bool mipmap)
 		: impl_(new impl(
 				monitor_factory,
@@ -336,6 +349,7 @@ thumbnail_generator::thumbnail_generator(
 				thumbnail_creator,
 				media_info_repo,
 				producer_registry,
+				cg_registry,
 				mipmap))
 {
 }

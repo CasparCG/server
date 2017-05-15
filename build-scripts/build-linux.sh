@@ -25,7 +25,7 @@ cd ../build || fail "Could not enter ../build"
 
 # Run cmake
 echo Running cmake...
-cmake -G "Unix Makefiles" -A x64 -DCMAKE_BUILD_TYPE=RelWithDebInfo .. || fail "cmake failed"
+cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=RelWithDebInfo .. || fail "cmake failed"
 
 # Run make using the number of hardware threads in BUILD_PARALLEL_THREADS
 echo Building...
@@ -54,7 +54,10 @@ echo Copying binary dependencies...
 cp -Rf ../deploy/linux/* "$SERVER_FOLDER/" || fail "Could not copy binary dependencies"
 cp -f  ../deploy/general/*.pdf "$SERVER_FOLDER/" || fail "Could not copy pdf"
 cp -Rf ../deploy/general/wallpapers "$SERVER_FOLDER/" || fail "Could not copy wallpapers"
+cp -Rf ../deploy/general/logos "$SERVER_FOLDER/" || fail "Could not copy logos"
 cp -Rf ../deploy/general/server/media "$SERVER_FOLDER/" || fail "Could not copy media"
+cp -Rf ../deploy/general/server/template "$SERVER_FOLDER/" || fail "Could not copy template"
+cp -Rf ../deploy/general/server/font "$SERVER_FOLDER/" || fail "Could not copy font"
 
 # Copy documentation
 echo Copying documentation...
