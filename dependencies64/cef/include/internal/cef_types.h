@@ -166,11 +166,22 @@ typedef struct _cef_settings_t {
 
   ///
   // The path to a separate executable that will be launched for sub-processes.
-  // By default the browser process executable is used. See the comments on
-  // CefExecuteProcess() for details. Also configurable using the
-  // "browser-subprocess-path" command-line switch.
+  // If this value is empty on Windows or Linux then the main process executable
+  // will be used. If this value is empty on macOS then a helper executable must
+  // exist at "Contents/Frameworks/<app> Helper.app/Contents/MacOS/<app> Helper"
+  // in the top-level app bundle. See the comments on CefExecuteProcess() for
+  // details. Also configurable using the "browser-subprocess-path" command-line
+  // switch.
   ///
   cef_string_t browser_subprocess_path;
+
+  ///
+  // The path to the CEF framework directory on macOS. If this value is empty
+  // then the framework must exist at "Contents/Frameworks/Chromium Embedded
+  // Framework.framework" in the top-level app bundle. Also configurable using
+  // the "framework-dir-path" command-line switch.
+  ///
+  cef_string_t framework_dir_path;
 
   ///
   // Set to true (1) to have the browser process message loop run in a separate
@@ -562,12 +573,6 @@ typedef struct _cef_browser_settings_t {
   // command-line switch.
   ///
   cef_state_t javascript_dom_paste;
-
-  ///
-  // Controls whether the caret position will be drawn. Also configurable using
-  // the "enable-caret-browsing" command-line switch.
-  ///
-  cef_state_t caret_browsing;
 
   ///
   // Controls whether any plugins will be loaded. Also configurable using the
@@ -1421,6 +1426,73 @@ typedef enum {
 } cef_thread_id_t;
 
 ///
+// Thread priority values listed in increasing order of importance.
+///
+typedef enum {
+  ///
+  // Suitable for threads that shouldn't disrupt high priority work.
+  ///
+  TP_BACKGROUND,
+
+  ///
+  // Default priority level.
+  ///
+  TP_NORMAL,
+
+  ///
+  // Suitable for threads which generate data for the display (at ~60Hz).
+  ///
+  TP_DISPLAY,
+
+  ///
+  // Suitable for low-latency, glitch-resistant audio.
+  ///
+  TP_REALTIME_AUDIO,
+} cef_thread_priority_t;
+
+///
+// Message loop types. Indicates the set of asynchronous events that a message
+// loop can process.
+///
+typedef enum {
+  ///
+  // Supports tasks and timers.
+  ///
+  ML_TYPE_DEFAULT,
+
+  ///
+  // Supports tasks, timers and native UI events (e.g. Windows messages).
+  ///
+  ML_TYPE_UI,
+
+  ///
+  // Supports tasks, timers and asynchronous IO events.
+  ///
+  ML_TYPE_IO,
+} cef_message_loop_type_t;
+
+///
+// Windows COM initialization mode. Specifies how COM will be initialized for a
+// new thread.
+///
+typedef enum {
+  ///
+  // No COM initialization.
+  ///
+  COM_INIT_MODE_NONE,
+
+  ///
+  // Initialize COM using single-threaded apartments.
+  ///
+  COM_INIT_MODE_STA,
+
+  ///
+  // Initialize COM using multi-threaded apartments.
+  ///
+  COM_INIT_MODE_MTA,
+} cef_com_init_mode_t;
+
+///
 // Supported value types.
 ///
 typedef enum {
@@ -1875,7 +1947,6 @@ typedef struct _cef_popup_features_t {
 
   int fullscreen;
   int dialog;
-  cef_string_list_t additionalFeatures;
 } cef_popup_features_t;
 
 ///
@@ -2325,6 +2396,13 @@ typedef struct _cef_pdf_print_settings_t {
   int page_height;
 
   ///
+  // The percentage to scale the PDF by before printing (e.g. 50 is 50%).
+  // If this value is less than or equal to zero the default value of 100
+  // will be used.
+  ///
+  int scale_factor;
+
+  ///
   // Margins in millimeters. Only used if |margin_type| is set to
   // PDF_PRINT_MARGIN_CUSTOM.
   ///
@@ -2660,6 +2738,19 @@ typedef enum {
   CEF_MENU_ANCHOR_BOTTOMCENTER,
 } cef_menu_anchor_position_t;
 
+///
+// Supported color types for menu items.
+///
+typedef enum {
+  CEF_MENU_COLOR_TEXT,
+  CEF_MENU_COLOR_TEXT_HOVERED,
+  CEF_MENU_COLOR_TEXT_ACCELERATOR,
+  CEF_MENU_COLOR_TEXT_ACCELERATOR_HOVERED,
+  CEF_MENU_COLOR_BACKGROUND,
+  CEF_MENU_COLOR_BACKGROUND_HOVERED,
+  CEF_MENU_COLOR_COUNT,
+} cef_menu_color_type_t;
+
 // Supported SSL version values. See net/ssl/ssl_connection_status_flags.h
 // for more information.
 typedef enum {
@@ -2705,6 +2796,33 @@ typedef enum {
   ///
   CEF_CDM_REGISTRATION_ERROR_NOT_SUPPORTED,
 } cef_cdm_registration_error_t;
+
+///
+// Structure representing IME composition underline information. This is a thin
+// wrapper around Blink's WebCompositionUnderline class and should be kept in
+// sync with that.
+///
+typedef struct _cef_composition_underline_t {
+  ///
+  // Underline character range.
+  ///
+  cef_range_t range;
+
+  ///
+  // Text color.
+  ///
+  cef_color_t color;
+
+  ///
+  // Background color.
+  ///
+  cef_color_t background_color;
+
+  ///
+  // Set to true (1) for thick underline.
+  ///
+  int thick;
+} cef_composition_underline_t;
 
 #ifdef __cplusplus
 }

@@ -58,7 +58,7 @@ class CefClient;
 // this class may only be called on the main thread.
 ///
 /*--cef(source=library)--*/
-class CefBrowser : public virtual CefBase {
+class CefBrowser : public virtual CefBaseRefCounted {
  public:
   ///
   // Returns the browser host object. This method can only be called in the
@@ -197,7 +197,7 @@ class CefBrowser : public virtual CefBase {
 // class will be called on the browser process UI thread.
 ///
 /*--cef(source=client)--*/
-class CefRunFileDialogCallback : public virtual CefBase {
+class CefRunFileDialogCallback : public virtual CefBaseRefCounted {
  public:
   ///
   // Called asynchronously after the file dialog is dismissed.
@@ -218,7 +218,7 @@ class CefRunFileDialogCallback : public virtual CefBase {
 // this class will be called on the browser process UI thread.
 ///
 /*--cef(source=client)--*/
-class CefNavigationEntryVisitor : public virtual CefBase {
+class CefNavigationEntryVisitor : public virtual CefBaseRefCounted {
  public:
   ///
   // Method that will be executed. Do not keep a reference to |entry| outside of
@@ -240,7 +240,7 @@ class CefNavigationEntryVisitor : public virtual CefBase {
 // will be called on the browser process UI thread.
 ///
 /*--cef(source=client)--*/
-class CefPdfPrintCallback : public virtual CefBase {
+class CefPdfPrintCallback : public virtual CefBaseRefCounted {
  public:
   ///
   // Method that will be executed when the PDF printing has completed. |path|
@@ -257,7 +257,7 @@ class CefPdfPrintCallback : public virtual CefBase {
 // class will be called on the browser process UI thread.
 ///
 /*--cef(source=client)--*/
-class CefDownloadImageCallback : public virtual CefBase {
+class CefDownloadImageCallback : public virtual CefBaseRefCounted {
  public:
   ///
   // Method that will be executed when the image download has completed.
@@ -280,7 +280,7 @@ class CefDownloadImageCallback : public virtual CefBase {
 // comments.
 ///
 /*--cef(source=library)--*/
-class CefBrowserHost : public virtual CefBase {
+class CefBrowserHost : public virtual CefBaseRefCounted {
  public:
   typedef cef_drag_operations_mask_t DragOperationsMask;
   typedef cef_file_dialog_mode_t FileDialogMode;
@@ -472,12 +472,15 @@ class CefBrowserHost : public virtual CefBase {
                           CefRefPtr<CefPdfPrintCallback> callback) =0;
 
   ///
-  // Search for |searchText|. |identifier| can be used to have multiple searches
-  // running simultaniously. |forward| indicates whether to search forward or
-  // backward within the page. |matchCase| indicates whether the search should
-  // be case-sensitive. |findNext| indicates whether this is the first request
-  // or a follow-up. The CefFindHandler instance, if any, returned via
-  // CefClient::GetFindHandler will be called to report find results.
+  // Search for |searchText|. |identifier| must be a unique ID and these IDs
+  // must strictly increase so that newer requests always have greater IDs than
+  // older requests. If |identifier| is zero or less than the previous ID value
+  // then it will be automatically assigned a new valid ID. |forward| indicates
+  // whether to search forward or backward within the page. |matchCase|
+  // indicates whether the search should be case-sensitive. |findNext| indicates
+  // whether this is the first request or a follow-up. The CefFindHandler
+  // instance, if any, returned via CefClient::GetFindHandler will be called to
+  // report find results.
   ///
   /*--cef()--*/
   virtual void Find(int identifier, const CefString& searchText,
@@ -669,24 +672,66 @@ class CefBrowserHost : public virtual CefBase {
   virtual void SetWindowlessFrameRate(int frame_rate) =0;
 
   ///
-  // Get the NSTextInputContext implementation for enabling IME on Mac when
-  // window rendering is disabled.
+  // Begins a new composition or updates the existing composition. Blink has a
+  // special node (a composition node) that allows the input method to change
+  // text without affecting other DOM nodes. |text| is the optional text that
+  // will be inserted into the composition node. |underlines| is an optional set
+  // of ranges that will be underlined in the resulting text.
+  // |replacement_range| is an optional range of the existing text that will be
+  // replaced. |selection_range| is an optional range of the resulting text that
+  // will be selected after insertion or replacement. The |replacement_range|
+  // value is only used on OS X.
+  //
+  // This method may be called multiple times as the composition changes. When
+  // the client is done making changes the composition should either be canceled
+  // or completed. To cancel the composition call ImeCancelComposition. To
+  // complete the composition call either ImeCommitText or
+  // ImeFinishComposingText. Completion is usually signaled when:
+  //   A. The client receives a WM_IME_COMPOSITION message with a GCS_RESULTSTR
+  //      flag (on Windows), or;
+  //   B. The client receives a "commit" signal of GtkIMContext (on Linux), or;
+  //   C. insertText of NSTextInput is called (on Mac).
+  //
+  // This method is only used when window rendering is disabled.
   ///
-  /*--cef(default_retval=NULL)--*/
-  virtual CefTextInputContext GetNSTextInputContext() =0;
+  /*--cef(optional_param=text, optional_param=underlines)--*/
+  virtual void ImeSetComposition(
+      const CefString& text,
+      const std::vector<CefCompositionUnderline>& underlines,
+      const CefRange& replacement_range,
+      const CefRange& selection_range) =0;
 
   ///
-  // Handles a keyDown event prior to passing it through the NSTextInputClient
-  // machinery.
+  // Completes the existing composition by optionally inserting the specified
+  // |text| into the composition node. |replacement_range| is an optional range
+  // of the existing text that will be replaced. |relative_cursor_pos| is where
+  // the cursor will be positioned relative to the current cursor position. See
+  // comments on ImeSetComposition for usage. The |replacement_range| and
+  // |relative_cursor_pos| values are only used on OS X.
+  // This method is only used when window rendering is disabled.
   ///
-  /*--cef()--*/
-  virtual void HandleKeyEventBeforeTextInputClient(CefEventHandle keyEvent) =0;
+  /*--cef(optional_param=text)--*/
+  virtual void ImeCommitText(const CefString& text,
+                             const CefRange& replacement_range,
+                             int relative_cursor_pos) =0;
 
   ///
-  // Performs any additional actions after NSTextInputClient handles the event.
+  // Completes the existing composition by applying the current composition node
+  // contents. If |keep_selection| is false the current selection, if any, will
+  // be discarded. See comments on ImeSetComposition for usage.
+  // This method is only used when window rendering is disabled.
   ///
   /*--cef()--*/
-  virtual void HandleKeyEventAfterTextInputClient(CefEventHandle keyEvent) =0;
+  virtual void ImeFinishComposingText(bool keep_selection) =0;
+
+  ///
+  // Cancels the existing composition and discards the composition node
+  // contents without applying them. See comments on ImeSetComposition for
+  // usage.
+  // This method is only used when window rendering is disabled.
+  ///
+  /*--cef()--*/
+  virtual void ImeCancelComposition() =0;
 
   ///
   // Call this method when the user drags the mouse into the web view (before

@@ -1,4 +1,4 @@
-// Copyright (c) 2016 Marshall A. Greenblatt. All rights reserved.
+// Copyright (c) 2017 Marshall A. Greenblatt. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -250,12 +250,6 @@ typedef struct _cef_textfield_t {
   ///
   void (CEF_CALLBACK *set_placeholder_text_color)(struct _cef_textfield_t* self,
       cef_color_t color);
-
-  ///
-  // Returns the placeholder text color.
-  ///
-  cef_color_t (CEF_CALLBACK *get_placeholder_text_color)(
-      struct _cef_textfield_t* self);
 
   ///
   // Set the accessible name that will be exposed to assistive technology (AT).

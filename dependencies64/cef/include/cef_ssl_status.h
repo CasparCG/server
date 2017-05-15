@@ -40,14 +40,13 @@
 
 #include "include/cef_base.h"
 #include "include/cef_values.h"
-
-class CefX509Certificate;
+#include "include/cef_x509_certificate.h"
 
 ///
 // Class representing the SSL information for a navigation entry.
 ///
 /*--cef(source=library)--*/
-class CefSSLStatus : public virtual CefBase {
+class CefSSLStatus : public virtual CefBaseRefCounted {
  public:
   ///
   // Returns true if the status is related to a secure SSL/TLS connection.

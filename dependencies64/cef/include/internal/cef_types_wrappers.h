@@ -509,18 +509,10 @@ struct CefPopupFeaturesTraits {
     s->resizable = true;
   }
 
-  static inline void clear(struct_type* s) {
-    if (s->additionalFeatures)
-      cef_string_list_free(s->additionalFeatures);
-  }
+  static inline void clear(struct_type* s) {}
 
   static inline void set(const struct_type* src, struct_type* target,
       bool copy) {
-    if (target->additionalFeatures)
-      cef_string_list_free(target->additionalFeatures);
-    target->additionalFeatures = src->additionalFeatures ?
-        cef_string_list_copy(src->additionalFeatures) : NULL;
-
     target->x = src->x;
     target->xSet = src->xSet;
     target->y = src->y;
@@ -555,6 +547,7 @@ struct CefSettingsTraits {
 
   static inline void clear(struct_type* s) {
     cef_string_clear(&s->browser_subprocess_path);
+    cef_string_clear(&s->framework_dir_path);
     cef_string_clear(&s->cache_path);
     cef_string_clear(&s->user_data_path);
     cef_string_clear(&s->user_agent);
@@ -574,6 +567,9 @@ struct CefSettingsTraits {
     cef_string_set(src->browser_subprocess_path.str,
         src->browser_subprocess_path.length,
         &target->browser_subprocess_path, copy);
+    cef_string_set(src->framework_dir_path.str,
+        src->framework_dir_path.length,
+        &target->framework_dir_path, copy);
     target->multi_threaded_message_loop = src->multi_threaded_message_loop;
     target->external_message_pump = src->external_message_pump;
     target->windowless_rendering_enabled = src->windowless_rendering_enabled;
@@ -705,7 +701,6 @@ struct CefBrowserSettingsTraits {
     target->javascript_close_windows = src->javascript_close_windows;
     target->javascript_access_clipboard = src->javascript_access_clipboard;
     target->javascript_dom_paste = src->javascript_dom_paste;
-    target->caret_browsing = src->caret_browsing;
     target->plugins = src->plugins;
     target->universal_access_from_file_urls =
         src->universal_access_from_file_urls;
@@ -942,6 +937,8 @@ struct CefPdfPrintSettingsTraits {
     target->page_width = src->page_width;
     target->page_height = src->page_height;
 
+    target->scale_factor = src->scale_factor;
+
     target->margin_top = src->margin_top;
     target->margin_right = src->margin_right;
     target->margin_bottom = src->margin_bottom;
@@ -978,5 +975,33 @@ struct CefBoxLayoutSettingsTraits {
 // Class representing CefBoxLayout settings.
 ///
 typedef CefStructBase<CefBoxLayoutSettingsTraits> CefBoxLayoutSettings;
+
+struct CefCompositionUnderlineTraits {
+  typedef cef_composition_underline_t struct_type;
+
+  static inline void init(struct_type* s) {
+    s->range.from = 0;
+    s->range.to = 0;
+    s->color = 0;
+    s->background_color = 0;
+    s->thick = 0;
+  }
+
+  static inline void clear(struct_type* s) {
+  }
+
+  static inline void set(const struct_type* src, struct_type* target,
+                         bool copy) {
+    target->range = src->range;
+    target->color = src->color;
+    target->background_color = src->background_color;
+    target->thick = src->thick;
+  }
+};
+
+///
+// Class representing IME composition underline.
+///
+typedef CefStructBase<CefCompositionUnderlineTraits> CefCompositionUnderline;
 
 #endif  // CEF_INCLUDE_INTERNAL_CEF_TYPES_WRAPPERS_H_
