@@ -47,12 +47,15 @@ public:
 	explicit audio_decoder(const safe_ptr<AVFormatContext>& context, const core::video_format_desc& format_desc, const std::wstring& custom_channel_order);
 	
 	bool ready() const;
+	bool empty() const;
 	void push(const std::shared_ptr<AVPacket>& packet);
 	std::shared_ptr<core::audio_buffer> poll();
 
 	uint32_t nb_frames() const;
 	
 	uint32_t file_frame_number() const;
+
+	int64_t packet_time() const;
 
 	const core::channel_layout& channel_layout() const;
 

@@ -74,6 +74,7 @@ struct input::implementation : boost::noncopyable
 
 	const safe_ptr<AVFormatContext>								format_context_; // Destroy this last
 	const int													default_stream_index_;
+	const AVStream*												default_stream_;
 			
 	const std::wstring											filename_;
 	const uint32_t												start_;		
@@ -81,22 +82,30 @@ struct input::implementation : boost::noncopyable
 	const bool													thumbnail_mode_;
 	tbb::atomic<bool>											loop_;
 	uint32_t													frame_number_;
-	
+	int64_t														pts_correction_;
+	int64_t														start_time_;
+	int64_t														end_time_;
+	const double												channel_fps_;
+
 	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>	buffer_;
 	tbb::atomic<size_t>											buffer_size_;
 		
 	executor													executor_;
 	
-	explicit implementation(const safe_ptr<diagnostics::graph> graph, const std::wstring& filename, FFMPEG_Resource resource_type, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_producer_params& vid_params) 
+	explicit implementation(const safe_ptr<diagnostics::graph> graph, const std::wstring& filename, FFMPEG_Resource resource_type, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_producer_params& vid_params, double fps) 
 		: graph_(graph)
 		, format_context_(open_input(filename, resource_type, vid_params))		
 		, default_stream_index_(av_find_default_stream_index(format_context_.get()))
+		, default_stream_(format_context_->streams[default_stream_index_])
 		, filename_(filename)
 		, start_(start)
 		, length_(length)
 		, thumbnail_mode_(thumbnail_mode)
 		, frame_number_(0)
 		, executor_(print())
+		, start_time_(0)
+		, end_time_(std::numeric_limits<int64_t>().max())
+		, channel_fps_(fps)
 	{
 		if (thumbnail_mode_)
 			executor_.invoke([]
@@ -106,6 +115,22 @@ struct input::implementation : boost::noncopyable
 
 		loop_			= loop;
 		buffer_size_	= 0;
+		pts_correction_ = default_stream_ ? default_stream_->first_dts : AV_NOPTS_VALUE;
+		if (pts_correction_ == AV_NOPTS_VALUE)
+			pts_correction_ = 0;
+
+		if (default_stream_ && default_stream_->avg_frame_rate.num > 0)
+		{
+				start_time_ = (AV_TIME_BASE * static_cast<int64_t>(start) * default_stream_->avg_frame_rate.den)/default_stream_->avg_frame_rate.num;
+				if (length_ != std::numeric_limits<uint32_t>().max())
+					end_time_ = (AV_TIME_BASE * static_cast<int64_t>(start+length-1) * default_stream_->avg_frame_rate.den)/default_stream_->avg_frame_rate.num;
+		}
+		else  // in case no video == no frame rate
+		{
+				start_time_ = static_cast<int64_t>((AV_TIME_BASE * static_cast<int64_t>(start))/channel_fps_);
+				if (length_ != std::numeric_limits<uint32_t>().max())
+					end_time_ = static_cast<int64_t>((AV_TIME_BASE * static_cast<int64_t>(start+length-1))/channel_fps_);
+		}
 
 		if(start_ > 0)			
 			queued_seek(start_);
@@ -188,8 +213,11 @@ struct input::implementation : boost::noncopyable
 				auto packet = create_packet();
 		
 				auto ret = av_read_frame(format_context_.get(), packet.get()); // packet is only valid until next call of av_read_frame. Use av_dup_packet to extend its life.	
-		
-				if(is_eof(ret))														     
+
+				AVStream * packet_stream = format_context_->streams[packet->stream_index];
+				int64_t packet_time = (packet.get() && packet->pts != AV_NOPTS_VALUE && packet_stream->time_base.den>0)  ? ((packet->pts + pts_correction_) * AV_TIME_BASE * packet_stream->time_base.num)/packet_stream->time_base.den : std::numeric_limits<int64_t>().max();
+				
+				if(is_eof(ret) || (packet->stream_index == default_stream_index_ && packet_time > end_time_))
 				{
 					frame_number_	= 0;
 
@@ -206,7 +234,7 @@ struct input::implementation : boost::noncopyable
 				{		
 					THROW_ON_ERROR(ret, "av_read_frame", print());
 
-					if(packet->stream_index == default_stream_index_)
+					if(packet->stream_index == default_stream_index_ && packet_time >= start_time_)
 						++frame_number_;
 
 					THROW_ON_ERROR2(av_dup_packet(packet.get()), print());
@@ -348,17 +376,16 @@ struct input::implementation : boost::noncopyable
 					flags = AVSEEK_FLAG_BYTE;
 			}
 		}
-		
-		auto stream = format_context_->streams[default_stream_index_];
-		
-		
-		auto fps = read_fps(*format_context_, 0.0);
-				
+		int64_t seek;
+		if (default_stream_->avg_frame_rate.num != 0)
+			seek = (static_cast<int64_t>(target) * default_stream_->time_base.den * default_stream_->avg_frame_rate.den)/(default_stream_->time_base.num * default_stream_->avg_frame_rate.num) + pts_correction_;		
+		else
+			seek = static_cast<int64_t>((static_cast<int64_t>(target) * default_stream_->time_base.den )/(default_stream_->time_base.num * channel_fps_) + pts_correction_);
 		THROW_ON_ERROR2(avformat_seek_file(
 			format_context_.get(), 
 			default_stream_index_, 
 			std::numeric_limits<int64_t>::min(),
-			static_cast<int64_t>((target / fps * stream->time_base.den) / stream->time_base.num),
+			seek,
 			std::numeric_limits<int64_t>::max(), 
 			0), print());
 
@@ -377,13 +404,14 @@ struct input::implementation : boost::noncopyable
 		if(ret == AVERROR_EOF)
 			CASPAR_LOG(trace) << print() << " Received EOF. ";
 
-		return ret == AVERROR_EOF || ret == AVERROR(EIO) || frame_number_ >= length_; // av_read_frame doesn't always correctly return AVERROR_EOF;
+		return ret == AVERROR_EOF || ret == AVERROR(EIO) || (length_ < std::numeric_limits<uint32_t>().max() && frame_number_ >= length_ + MAX_GOP_SIZE); // av_read_frame doesn't always correctly return AVERROR_EOF;	
 	}
 };
 
-input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, FFMPEG_Resource resource_type, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_producer_params& vid_params) 
-	: impl_(new implementation(graph, filename, resource_type, loop, start, length, thumbnail_mode, vid_params)){}
+input::input(const safe_ptr<diagnostics::graph>& graph, const std::wstring& filename, FFMPEG_Resource resource_type, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const ffmpeg_producer_params& vid_params, double fps) 
+	: impl_(new implementation(graph, filename, resource_type, loop, start, length, thumbnail_mode, vid_params, fps)){}
 bool input::eof() const {return !impl_->executor_.is_running();}
+bool input::empty() const {return impl_->buffer_size_ == 0;}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
 safe_ptr<AVFormatContext> input::context(){return impl_->format_context_;}
 void input::loop(bool value){impl_->loop_ = value;}

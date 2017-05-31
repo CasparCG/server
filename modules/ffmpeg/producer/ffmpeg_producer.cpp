@@ -119,7 +119,8 @@ struct ffmpeg_producer : public core::frame_producer
 
 	int64_t														frame_number_;
 	uint32_t													file_frame_number_;
-		
+	int64_t														start_time_;
+
 public:
 	explicit ffmpeg_producer(const safe_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, FFMPEG_Resource resource_type, const std::wstring& filter, bool loop, uint32_t start, uint32_t length, bool thumbnail_mode, const std::wstring& custom_channel_order, const ffmpeg_producer_params& vid_params)
 		: filename_(filename)
@@ -128,18 +129,26 @@ public:
 		, frame_factory_(frame_factory)		
 		, format_desc_(frame_factory->get_video_format_desc())
 		, initial_logger_disabler_(temporary_disable_logging_for_thread(thumbnail_mode))
-		, input_(graph_, filename_, resource_type, loop, start, length, thumbnail_mode, vid_params)
+		, input_(graph_, filename_, resource_type, loop, start, length, thumbnail_mode, vid_params, format_desc_.fps)
 		, fps_(read_fps(*input_.context(), format_desc_.fps))
 		, start_(start)
 		, length_(length)
 		, thumbnail_mode_(thumbnail_mode)
 		, last_frame_(core::basic_frame::empty())
 		, frame_number_(0)
+		, start_time_(0) 
 	{
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("underflow", diagnostics::color(0.6f, 0.3f, 0.9f));	
 		diagnostics::register_graph(graph_);
-	
+
+		int stream_index = av_find_best_stream(input_.context().get(), AVMEDIA_TYPE_VIDEO, -1, -1, 0, 0);
+		AVStream* stream = stream_index >=0 ? input_.context()->streams[stream_index]: NULL;
+		if (stream && stream->avg_frame_rate.num > 0)
+			start_time_ = (AV_TIME_BASE * static_cast<int64_t>(start_) * stream ->avg_frame_rate.den)/(stream ->avg_frame_rate.num); 
+		else
+			start_time_ = static_cast<int64_t>(AV_TIME_BASE * (start_ / format_desc_.fps));
+
 		try
 		{
 			video_decoder_.reset(new video_decoder(input_.context()));
@@ -439,29 +448,39 @@ public:
 	void try_decode_frame(int hints)
 	{
 		std::shared_ptr<AVPacket> pkt;
-
-		for(int n = 0; n < 32 && ((video_decoder_ && !video_decoder_->ready()) || (audio_decoder_ && !audio_decoder_->ready())) && input_.try_pop(pkt); ++n)
-		{
-			if(video_decoder_)
-				video_decoder_->push(pkt);
-			if(audio_decoder_)
-				audio_decoder_->push(pkt);
-		}
-		
 		std::shared_ptr<AVFrame>			video;
 		std::shared_ptr<core::audio_buffer> audio;
-
-		tbb::parallel_invoke(
-		[&]
+		int i = 0;
+		bool video_completed = false;
+		bool audio_completed = false;
+		do // discard all frames fefore start_time_ except flush
 		{
-			if(!muxer_->video_ready() && video_decoder_)	
-				video = video_decoder_->poll();	
-		},
-		[&]
-		{		
-			if(!muxer_->audio_ready() && audio_decoder_)
-				audio = audio_decoder_->poll();
-		});
+			for(int n = 0; n < 32 && ((video_decoder_ && !video_decoder_->ready()) || (audio_decoder_ && !audio_decoder_->ready())) && input_.try_pop(pkt); ++n)
+			{
+				if(video_decoder_)
+					video_decoder_->push(pkt);
+				if(audio_decoder_)
+					audio_decoder_->push(pkt);
+			}		
+		
+			tbb::parallel_invoke(
+			[&]
+			{
+				if(!muxer_->video_ready() && video_decoder_ && !video_completed)	
+					video = video_decoder_->poll();	
+			},
+			[&]
+			{		
+				if(!muxer_->audio_ready() && audio_decoder_ && !audio_completed)		
+					audio = audio_decoder_->poll();		
+			});
+			i++;
+			video_completed = !video_decoder_ || video == flush_video() || video_decoder_->packet_time() >= start_time_;
+			audio_completed = !audio_decoder_ || audio == flush_audio() || audio_decoder_->packet_time() >= start_time_;
+		}
+		while ((!video_completed || !audio_completed) && i < MAX_GOP_SIZE && !(input_.empty() && (!video_decoder_ || video_decoder_->empty()) &&  (!audio_decoder_ || audio_decoder_->empty()))); // max i detemines maximal gop size which correctly seek
+		if (i>=MAX_GOP_SIZE)
+			CASPAR_LOG(warning) << print() << " Giving up seeking frame at " << start_;
 		
 		muxer_->push(video, hints);
 		muxer_->push(audio);

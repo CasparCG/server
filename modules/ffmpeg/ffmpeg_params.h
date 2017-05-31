@@ -31,6 +31,8 @@ namespace caspar {
 	
 namespace ffmpeg {
 
+const int MAX_GOP_SIZE = 256;
+
 enum FFMPEG_Resource {
 	FFMPEG_FILE,
 	FFMPEG_DEVICE,
