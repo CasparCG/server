@@ -82,6 +82,8 @@ struct key_video_context
 
 		set_latency(configuration_, config.latency, print);
 		set_keyer(attributes_, keyer_, config.keyer, print);
+		
+		configuration_->SetFlag(bmdDeckLinkConfigUse1080pNotPsF, TRUE);
 
 		if(FAILED(output_->SetScheduledFrameCompletionCallback(this)))
 			BOOST_THROW_EXCEPTION(caspar_exception() 

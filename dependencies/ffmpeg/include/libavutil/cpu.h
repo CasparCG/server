@@ -39,23 +39,24 @@
 #define AV_CPU_FLAG_SSE3SLOW 0x20000000 ///< SSE3 supported, but usually not faster
                                         ///< than regular MMX/SSE (e.g. Core1)
 #define AV_CPU_FLAG_SSSE3        0x0080 ///< Conroe SSSE3 functions
+#define AV_CPU_FLAG_SSSE3SLOW 0x4000000 ///< SSSE3 supported, but usually not faster
 #define AV_CPU_FLAG_ATOM     0x10000000 ///< Atom processor, some SSSE3 instructions are slower
 #define AV_CPU_FLAG_SSE4         0x0100 ///< Penryn SSE4.1 functions
 #define AV_CPU_FLAG_SSE42        0x0200 ///< Nehalem SSE4.2 functions
+#define AV_CPU_FLAG_AESNI       0x80000 ///< Advanced Encryption Standard functions
 #define AV_CPU_FLAG_AVX          0x4000 ///< AVX functions: requires OS support even if YMM registers aren't used
+#define AV_CPU_FLAG_AVXSLOW   0x8000000 ///< AVX supported, but slow when using YMM registers (e.g. Bulldozer)
 #define AV_CPU_FLAG_XOP          0x0400 ///< Bulldozer XOP functions
 #define AV_CPU_FLAG_FMA4         0x0800 ///< Bulldozer FMA4 functions
-// #if LIBAVUTIL_VERSION_MAJOR <52
-#define AV_CPU_FLAG_CMOV      0x1001000 ///< supports cmov instruction
-// #else
-// #define AV_CPU_FLAG_CMOV         0x1000 ///< supports cmov instruction
-// #endif
+#define AV_CPU_FLAG_CMOV         0x1000 ///< supports cmov instruction
 #define AV_CPU_FLAG_AVX2         0x8000 ///< AVX2 functions: requires OS support even if YMM registers aren't used
 #define AV_CPU_FLAG_FMA3        0x10000 ///< Haswell FMA3 functions
 #define AV_CPU_FLAG_BMI1        0x20000 ///< Bit Manipulation Instruction Set 1
 #define AV_CPU_FLAG_BMI2        0x40000 ///< Bit Manipulation Instruction Set 2
 
 #define AV_CPU_FLAG_ALTIVEC      0x0001 ///< standard
+#define AV_CPU_FLAG_VSX          0x0002 ///< ISA 2.06
+#define AV_CPU_FLAG_POWER8       0x0004 ///< ISA 2.07
 
 #define AV_CPU_FLAG_ARMV5TE      (1 << 0)
 #define AV_CPU_FLAG_ARMV6        (1 << 1)
@@ -63,11 +64,14 @@
 #define AV_CPU_FLAG_VFP          (1 << 3)
 #define AV_CPU_FLAG_VFPV3        (1 << 4)
 #define AV_CPU_FLAG_NEON         (1 << 5)
+#define AV_CPU_FLAG_ARMV8        (1 << 6)
+#define AV_CPU_FLAG_VFP_VM       (1 << 7) ///< VFPv2 vector mode, deprecated in ARMv7-A and unavailable in various CPUs implementations
+#define AV_CPU_FLAG_SETEND       (1 <<16)
 
 /**
  * Return the flags which specify extensions supported by the CPU.
  * The returned value is affected by av_force_cpu_flags() if that was used
- * before. So av_get_cpu_flags() can easily be used in a application to
+ * before. So av_get_cpu_flags() can easily be used in an application to
  * detect the enabled cpu flags.
  */
 int av_get_cpu_flags(void);
@@ -82,8 +86,6 @@ void av_force_cpu_flags(int flags);
  * Set a mask on flags returned by av_get_cpu_flags().
  * This function is mainly useful for testing.
  * Please use av_force_cpu_flags() and av_get_cpu_flags() instead which are more flexible
- *
- * @warning this function is not thread safe.
  */
 attribute_deprecated void av_set_cpu_flags_mask(int mask);
 

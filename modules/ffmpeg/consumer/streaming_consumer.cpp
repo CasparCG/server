@@ -811,8 +811,8 @@ private:
 				FF(avfilter_graph_parse(
 					&graph, 
 					filtergraph.c_str(), 
-					&inputs, 
-					&outputs, 
+					inputs, 
+					outputs, 
 					nullptr));
 			} 
 			else 
@@ -855,8 +855,6 @@ private:
 				{
 					av_frame_free(&frame);
 				});
-
-			avcodec_get_frame_defaults(src_av_frame.get());		
 			
 			const auto sample_aspect_ratio = 
 				boost::rational<int>(
@@ -1069,63 +1067,7 @@ private:
 			return false;
 				
 		pkt.stream_index = st.index;
-		
-		if(bsfc)
-		{
-			auto new_pkt = pkt;
-
-			auto a = av_bitstream_filter_filter(
-				bsfc, 
-				st.codec, 
-				nullptr,
-				&new_pkt.data, 
-				&new_pkt.size,
-				pkt.data,
-				pkt.size,
-				pkt.flags & AV_PKT_FLAG_KEY);
-
-			if(a == 0 && new_pkt.data != pkt.data && new_pkt.destruct) 
-			{
-				auto t = reinterpret_cast<std::uint8_t*>(av_malloc(new_pkt.size + FF_INPUT_BUFFER_PADDING_SIZE));
-
-				if(t) 
-				{
-					memcpy(
-						t, 
-						new_pkt.data,
-						new_pkt.size);
-
-					memset(
-						t + new_pkt.size, 
-						0, 
-						FF_INPUT_BUFFER_PADDING_SIZE);
-
-					new_pkt.data = t;
-					new_pkt.buf  = nullptr;
-				} 
-				else
-					a = AVERROR(ENOMEM);
-			}
-
-			av_free_packet(&pkt);
-
-			FF_RET(
-				a, 
-				"av_bitstream_filter_filter");
-
-			new_pkt.buf =
-				av_buffer_create(
-					new_pkt.data, 
-					new_pkt.size,
-					av_buffer_default_free, 
-					nullptr, 
-					0);
-
-			CASPAR_VERIFY(new_pkt.buf);
-
-			pkt = new_pkt;
-		}
-		
+				
 		if (pkt.pts != AV_NOPTS_VALUE)
 		{
 			pkt.pts = 

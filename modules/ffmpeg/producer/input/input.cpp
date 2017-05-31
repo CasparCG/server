@@ -188,7 +188,7 @@ struct input::implementation : boost::noncopyable
 				auto packet = create_packet();
 		
 				auto ret = av_read_frame(format_context_.get(), packet.get()); // packet is only valid until next call of av_read_frame. Use av_dup_packet to extend its life.	
-		
+
 				if(is_eof(ret))														     
 				{
 					frame_number_	= 0;
@@ -265,7 +265,7 @@ struct input::implementation : boost::noncopyable
 							unsupported_tokens += ", ";
 						unsupported_tokens += t->key;
 					}
-					av_close_input_file(weak_context);
+					avformat_close_input(&weak_context);
 					BOOST_THROW_EXCEPTION(ffmpeg_error() << msg_info(unsupported_tokens));
 				}
 				av_dict_free(&format_options);
@@ -287,13 +287,13 @@ struct input::implementation : boost::noncopyable
 							unsupported_tokens += ", ";
 						unsupported_tokens += t->key;
 					}
-					av_close_input_file(weak_context);
+					avformat_close_input(&weak_context);
 					BOOST_THROW_EXCEPTION(ffmpeg_error() << msg_info(unsupported_tokens));
 				}
 				av_dict_free(&format_options);
 			} break;
 		};
-		safe_ptr<AVFormatContext> context(weak_context, av_close_input_file);      
+		safe_ptr<AVFormatContext> context(weak_context, [](AVFormatContext* ptr) { avformat_close_input(&ptr); });
 		THROW_ON_ERROR2(avformat_find_stream_info(weak_context, nullptr), resource_name);
 		fix_meta_data(*context);
 		return context;
@@ -344,13 +344,12 @@ struct input::implementation : boost::noncopyable
 			if(vid_stream_index >= 0)
 			{
 				auto codec_id = format_context_->streams[vid_stream_index]->codec->codec_id;
-				if(codec_id == CODEC_ID_VP6A || codec_id == CODEC_ID_VP6F || codec_id == CODEC_ID_VP6)
+				if(codec_id == AV_CODEC_ID_VP6A || codec_id == AV_CODEC_ID_VP6F || codec_id == AV_CODEC_ID_VP6)
 					flags = AVSEEK_FLAG_BYTE;
 			}
 		}
 		
 		auto stream = format_context_->streams[default_stream_index_];
-		
 		
 		auto fps = read_fps(*format_context_, 0.0);
 				

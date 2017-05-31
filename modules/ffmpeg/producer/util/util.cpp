@@ -77,13 +77,13 @@ std::shared_ptr<core::audio_buffer> empty_audio()
 
 std::shared_ptr<AVFrame>			flush_video()
 {
-	static std::shared_ptr<AVFrame> video(avcodec_alloc_frame(), av_free);
+	static std::shared_ptr<AVFrame> video(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
 	return video;
 }
 
 std::shared_ptr<AVFrame>			empty_video()
 {
-	static std::shared_ptr<AVFrame> video(avcodec_alloc_frame(), av_free);
+	static std::shared_ptr<AVFrame> video(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
 	return video;
 }
 
@@ -95,31 +95,31 @@ core::field_mode::type get_mode(const AVFrame& frame)
 	return frame.top_field_first ? core::field_mode::upper : core::field_mode::lower;
 }
 
-core::pixel_format::type get_pixel_format(PixelFormat pix_fmt)
+core::pixel_format::type get_pixel_format(AVPixelFormat pix_fmt)
 {
 	switch(pix_fmt)
 	{
 	case CASPAR_PIX_FMT_LUMA:	return core::pixel_format::luma;
-	case PIX_FMT_GRAY8:			return core::pixel_format::gray;
-	case PIX_FMT_BGRA:			return core::pixel_format::bgra;
-	case PIX_FMT_ARGB:			return core::pixel_format::argb;
-	case PIX_FMT_RGBA:			return core::pixel_format::rgba;
-	case PIX_FMT_ABGR:			return core::pixel_format::abgr;
-	case PIX_FMT_YUV444P:		return core::pixel_format::ycbcr;
-	case PIX_FMT_YUV422P:		return core::pixel_format::ycbcr;
-	case PIX_FMT_YUV420P:		return core::pixel_format::ycbcr;
-	case PIX_FMT_YUV411P:		return core::pixel_format::ycbcr;
-	case PIX_FMT_YUV410P:		return core::pixel_format::ycbcr;
-	case PIX_FMT_YUVA420P:		return core::pixel_format::ycbcra;
+	case AV_PIX_FMT_GRAY8:		return core::pixel_format::gray;
+	case AV_PIX_FMT_BGRA:		return core::pixel_format::bgra;
+	case AV_PIX_FMT_ARGB:		return core::pixel_format::argb;
+	case AV_PIX_FMT_RGBA:		return core::pixel_format::rgba;
+	case AV_PIX_FMT_ABGR:		return core::pixel_format::abgr;
+	case AV_PIX_FMT_YUV444P:	return core::pixel_format::ycbcr;
+	case AV_PIX_FMT_YUV422P:	return core::pixel_format::ycbcr;
+	case AV_PIX_FMT_YUV420P:	return core::pixel_format::ycbcr;
+	case AV_PIX_FMT_YUV411P:	return core::pixel_format::ycbcr;
+	case AV_PIX_FMT_YUV410P:	return core::pixel_format::ycbcr;
+	case AV_PIX_FMT_YUVA420P:	return core::pixel_format::ycbcra;
 	default:					return core::pixel_format::invalid;
 	}
 }
 
-core::pixel_format_desc get_pixel_format_desc(PixelFormat pix_fmt, size_t width, size_t height)
+core::pixel_format_desc get_pixel_format_desc(AVPixelFormat pix_fmt, size_t width, size_t height)
 {
 	// Get linesizes
 	AVPicture dummy_pict;	
-	avpicture_fill(&dummy_pict, nullptr, pix_fmt == CASPAR_PIX_FMT_LUMA ? PIX_FMT_GRAY8 : pix_fmt, width, height);
+	avpicture_fill(&dummy_pict, nullptr, pix_fmt == CASPAR_PIX_FMT_LUMA ? AV_PIX_FMT_GRAY8 : pix_fmt, width, height);
 
 	core::pixel_format_desc desc;
 	desc.pix_fmt = get_pixel_format(pix_fmt);
@@ -184,32 +184,32 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 
 	const auto width  = decoded_frame->width;
 	const auto height = decoded_frame->height;
-	auto desc		  = get_pixel_format_desc(static_cast<PixelFormat>(decoded_frame->format), width, height);
+	auto desc		  = get_pixel_format_desc(static_cast<AVPixelFormat>(decoded_frame->format), width, height);
 	
 	if(hints & core::frame_producer::ALPHA_HINT)
-		desc = get_pixel_format_desc(static_cast<PixelFormat>(make_alpha_format(decoded_frame->format)), width, height);
+		desc = get_pixel_format_desc(static_cast<AVPixelFormat>(make_alpha_format(decoded_frame->format)), width, height);
 
 	std::shared_ptr<core::write_frame> write;
 
 	if(desc.pix_fmt == core::pixel_format::invalid)
 	{
-		auto pix_fmt = static_cast<PixelFormat>(decoded_frame->format);
-		auto target_pix_fmt = PIX_FMT_BGRA;
+		auto pix_fmt = static_cast<AVPixelFormat>(decoded_frame->format);
+		auto target_pix_fmt = AV_PIX_FMT_BGRA;
 
-		if(pix_fmt == PIX_FMT_UYVY422)
-			target_pix_fmt = PIX_FMT_YUV422P;
-		else if(pix_fmt == PIX_FMT_YUYV422)
-			target_pix_fmt = PIX_FMT_YUV422P;
-		else if(pix_fmt == PIX_FMT_UYYVYY411)
-			target_pix_fmt = PIX_FMT_YUV411P;
-		else if(pix_fmt == PIX_FMT_YUV420P10)
-			target_pix_fmt = PIX_FMT_YUV420P;
-		else if(pix_fmt == PIX_FMT_YUV422P10)
-			target_pix_fmt = PIX_FMT_YUV422P;
-		else if(pix_fmt == PIX_FMT_YUV444P10)
-			target_pix_fmt = PIX_FMT_YUV444P;
+		if(pix_fmt == AV_PIX_FMT_UYVY422)
+			target_pix_fmt = AV_PIX_FMT_YUV422P;
+		else if(pix_fmt == AV_PIX_FMT_YUYV422)
+			target_pix_fmt = AV_PIX_FMT_YUV422P;
+		else if(pix_fmt == AV_PIX_FMT_UYYVYY411)
+			target_pix_fmt = AV_PIX_FMT_YUV411P;
+		else if(pix_fmt == AV_PIX_FMT_YUV420P10)
+			target_pix_fmt = AV_PIX_FMT_YUV420P;
+		else if(pix_fmt == AV_PIX_FMT_YUV422P10)
+			target_pix_fmt = AV_PIX_FMT_YUV422P;
+		else if(pix_fmt == AV_PIX_FMT_YUV444P10)
+			target_pix_fmt = AV_PIX_FMT_YUV444P;
 		
-		auto target_desc = get_pixel_format_desc(target_pix_fmt, width, height);
+		auto target_desc = get_pixel_format_desc(static_cast<AVPixelFormat>(target_pix_fmt), width, height);
 
 		write = frame_factory->create_frame(tag, target_desc, audio_channel_layout);
 		write->set_type(get_mode(*decoded_frame));
@@ -228,7 +228,7 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 		if(!pool.try_pop(sws_context))
 		{
 			double param;
-			sws_context.reset(sws_getContext(width, height, pix_fmt, width, height, target_pix_fmt, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
+			sws_context.reset(sws_getContext(width, height, static_cast<AVPixelFormat>(pix_fmt), width, height, target_pix_fmt, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
 		}
 			
 		if(!sws_context)
@@ -237,11 +237,10 @@ safe_ptr<core::write_frame> make_write_frame(const void* tag, const safe_ptr<AVF
 									boost::errinfo_api_function("sws_getContext"));
 		}	
 		
-		safe_ptr<AVFrame> av_frame(avcodec_alloc_frame(), av_free);	
-		avcodec_get_frame_defaults(av_frame.get());			
-		if(target_pix_fmt == PIX_FMT_BGRA)
+		safe_ptr<AVFrame> av_frame(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
+		if(target_pix_fmt == AV_PIX_FMT_BGRA)
 		{
-			auto size = avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write->image_data().begin(), PIX_FMT_BGRA, width, height);
+			auto size = avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write->image_data().begin(), AV_PIX_FMT_BGRA, width, height);
 			CASPAR_VERIFY(size == static_cast<int>(write->image_data().size()));
 		}
 		else
@@ -435,9 +434,10 @@ std::wstring print_mode(size_t width, size_t height, double fps, bool interlaced
 
 bool is_valid_file(const std::wstring filename, const std::vector<std::wstring>& invalid_exts)
 {
-	static std::vector<std::wstring> valid_exts = boost::assign::list_of(L".m2t")(L".mov")(L".mp4")(L".dv")(L".flv")(L".mpg")(L".wav")(L".mp3")(L".dnxhd")(L".h264")(L".prores");
+	static std::vector<std::wstring> valid_exts = boost::assign::list_of
+		(L".m2t")(L".mov")(L".mp4")(L".dv")(L".flv")(L".mpg")(L".wav")(L".mp3")(L".dnxhd")(L".h264")(L".prores")(L".ts")(L".m3u8")(L".mxf")(L".m2t");
 
-	auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
+	const auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
 		
 	if(std::find(invalid_exts.begin(), invalid_exts.end(), ext) != invalid_exts.end())
 		return false;	
@@ -445,27 +445,14 @@ bool is_valid_file(const std::wstring filename, const std::vector<std::wstring>&
 	if(std::find(valid_exts.begin(), valid_exts.end(), ext) != valid_exts.end())
 		return true;	
 
-	auto filename2 = narrow(filename);
+	AVFormatContext* ctx = nullptr;
+	auto ret = avformat_open_input(&ctx, narrow(filename).c_str(), nullptr, nullptr);
+	if (ret < 0)
+		return false;
 
-	if(boost::filesystem::path(filename2).extension() == ".m2t")
-		return true;
+	avformat_close_input(&ctx);
 
-	std::ifstream file(filename);
-
-	std::vector<unsigned char> buf;
-	for(auto file_it = std::istreambuf_iterator<char>(file); file_it != std::istreambuf_iterator<char>() && buf.size() < 2048; ++file_it)
-		buf.push_back(*file_it);
-
-	if(buf.empty())
-		return nullptr;
-
-	AVProbeData pb;
-	pb.filename = filename2.c_str();
-	pb.buf		= buf.data();
-	pb.buf_size = buf.size();
-
-	int score = 0;
-	return av_probe_input_format2(&pb, true, &score) != nullptr;
+	return true;
 }
 
 bool is_valid_file(const std::wstring filename)
@@ -481,7 +468,7 @@ bool try_get_duration(const std::wstring filename, std::int64_t& duration, boost
 	if(avformat_open_input(&weak_context, narrow(filename).c_str(), nullptr, nullptr) < 0)
 		return false;
 
-	std::shared_ptr<AVFormatContext> context(weak_context, av_close_input_file);
+	std::shared_ptr<AVFormatContext> context(weak_context, [](AVFormatContext* ptr) { avformat_close_input(&ptr); });
 	
 	context->probesize = context->probesize / 10;
 	context->max_analyze_duration = context->probesize / 10;

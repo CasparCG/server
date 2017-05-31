@@ -34,7 +34,7 @@
 
 #include <cstdint>
 
-enum PixelFormat;
+enum AVPixelFormat;
 struct AVFrame;
 struct AVFormatContext;
 struct AVPacket;

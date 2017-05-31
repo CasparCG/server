@@ -334,7 +334,7 @@ public:
 						});
 						
 						av_frame->linesize[0]		= format_desc_.width*4;			
-						av_frame->format			= PIX_FMT_BGRA;
+						av_frame->format			= AV_PIX_FMT_BGRA;
 						av_frame->width				= format_desc_.width;
 						av_frame->height			= format_desc_.height;
 						av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;

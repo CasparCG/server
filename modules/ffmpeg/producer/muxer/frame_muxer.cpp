@@ -191,7 +191,7 @@ struct frame_muxer::implementation : boost::noncopyable
 		
 			auto format = video_frame->format;
 			if(video_frame->format == CASPAR_PIX_FMT_LUMA) // CASPAR_PIX_FMT_LUMA is not valid for filter, change it to GRAY8
-				video_frame->format = PIX_FMT_GRAY8;
+				video_frame->format = AV_PIX_FMT_GRAY8;
 
 			if (filter_)
 			{
@@ -199,7 +199,7 @@ struct frame_muxer::implementation : boost::noncopyable
 				previously_filtered_frame_ = current_frame_format;
 				BOOST_FOREACH(auto& av_frame, filter_->poll_all())
 				{
-					if(video_frame->format == PIX_FMT_GRAY8 && format == CASPAR_PIX_FMT_LUMA)
+					if(video_frame->format == AV_PIX_FMT_GRAY8 && format == CASPAR_PIX_FMT_LUMA)
 						av_frame->format = format;
 
 					video_streams_.back().push(make_write_frame(this, av_frame, frame_factory_, hints, audio_channel_layout_));

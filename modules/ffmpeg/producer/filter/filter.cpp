@@ -51,8 +51,6 @@ extern "C"
 	#include <libavutil/imgutils.h>
 	#include <libavutil/opt.h>
 	#include <libavfilter/avfilter.h>
-	#include <libavfilter/avcodec.h>
-	#include <libavfilter/avfilter.h>
 	#include <libavfilter/buffersink.h>
 	#include <libavfilter/buffersrc.h>
 }
@@ -197,8 +195,8 @@ struct filter::implementation
 				FF(avfilter_graph_parse(
 					&graph, 
 					filtergraph.c_str(), 
-					&inputs, 
-					&outputs, 
+					inputs, 
+					outputs, 
 					nullptr));
 			} 
 			else 
