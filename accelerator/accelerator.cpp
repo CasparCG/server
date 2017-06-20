@@ -2,9 +2,7 @@
 
 #include "accelerator.h"
 
-#ifdef _MSC_VER
 #include "cpu/image/image_mixer.h"
-#endif
 #include "ogl/image/image_mixer.h"
 #include "ogl/util/device.h"
 
@@ -50,11 +48,7 @@ struct accelerator::impl
 			if(path_ == L"gpu" || path_ == L"ogl")
 				CASPAR_LOG_CURRENT_EXCEPTION();
 		}
-#ifdef _MSC_VER
 		return std::unique_ptr<core::image_mixer>(new cpu::image_mixer(channel_id));
-#else
-		CASPAR_THROW_EXCEPTION(not_supported());
-#endif
 	}
 };
 
