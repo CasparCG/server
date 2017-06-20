@@ -48,7 +48,11 @@ public:
 class s32_x : public base_x<s32_x>
 {
 	__m128i value_;
+#ifdef WIN32
 	template<typename> friend class base_x;
+#else
+	friend class base_x;
+#endif
 	friend class s16_x;
 	friend class s8_x;
 	friend class u8_x;
@@ -74,7 +78,11 @@ class s16_x : public base_x<s16_x>
 	__m128i value_;
 
 private:
+#ifdef WIN32
 	template<typename> friend class base_x;
+#else
+	friend class base_x;
+#endif
 	friend class s32_x;
 	friend class s8_x;
 	friend class u8_x;
@@ -122,7 +130,11 @@ class s8_x : public base_x<s8_x>
 {
 	__m128i value_;
 private:
+#ifdef WIN32
 	template<typename> friend class base_x;
+#else
+	friend class base_x;
+#endif
 	friend class s32_x;
 	friend class s16_x;
 	friend class u8_x;
@@ -160,7 +172,11 @@ class u8_x : public base_x<u8_x>
 {
 	__m128i value_;
 private:
+#ifdef WIN32
 	template<typename> friend class base_x;
+#else
+	friend class base_x;
+#endif
 	friend class s32_x;
 	friend class s16_x;
 	friend class s8_x;
@@ -272,12 +288,20 @@ s32_x& s32_x::operator&=(const s32_x& other)
 		
 int32_t s32_x::operator[](int index) const
 {
+#ifdef WIN32
 	return value_.m128i_i32[index];
+#else
+	return ((int32_t *)&value_)[index];
+#endif
 }
 
 int32_t& s32_x::operator[](int index)
 {
+#ifdef WIN32
 	return value_.m128i_i32[index];
+#else
+        return ((int32_t *)&value_)[index];
+#endif
 }
 
 inline s32_x operator>>(const s32_x& lhs, int count)
@@ -369,12 +393,20 @@ s16_x& s16_x::operator&=(const s16_x& other)
 			
 int16_t s16_x::operator[](int index) const
 {
+#ifdef WIN32
 	return value_.m128i_i16[index];
+#else
+        return ((int16_t *)&value_)[index];
+#endif
 }
 
 int16_t& s16_x::operator[](int index)
 {
+#ifdef WIN32
 	return value_.m128i_i16[index];
+#else
+        return ((int16_t *)&value_)[index];
+#endif
 }
 
 s16_x s16_x::unpack_low(const s8_x& lhs, const s8_x& rhs)
@@ -519,12 +551,20 @@ s8_x& s8_x::operator-=(const s8_x& other)
 									
 char s8_x::operator[](int index) const
 {
+#ifdef WIN32
 	return value_.m128i_i8[index];
+#else
+        return ((char *)&value_)[index];
+#endif
 }
 
 char& s8_x::operator[](int index)
 {
+#ifdef WIN32
 	return value_.m128i_i8[index];
+#else
+        return ((char *)&value_)[index];
+#endif
 }
 	
 s8_x s8_x::upack(const s16_x& lhs, const s16_x& rhs)
@@ -613,12 +653,20 @@ u8_x::u8_x(char b15, char b14, char b13, char b12,
 										
 char u8_x::operator[](int index) const
 {
+#ifdef WIN32
 	return value_.m128i_i8[index];
+#else
+        return ((char *)&value_)[index];
+#endif
 }
 
 char& u8_x::operator[](int index)
 {
+#ifdef WIN32
 	return value_.m128i_i8[index];
+#else
+        return ((char *)&value_)[index];
+#endif
 }
 
 u8_x u8_x::max(const u8_x& lhs, const u8_x& rhs)
