@@ -1,15 +1,6 @@
 cmake_minimum_required (VERSION 2.6)
 project (accelerator)
 
-if (MSVC)
-	set(OS_SPECIFIC_SOURCES
-			cpu/image/image_mixer.cpp
-			cpu/image/image_mixer.h
-	
-			cpu/util/xmm.h
-	)
-elseif (CMAKE_COMPILER_IS_GNUCXX)
-endif ()
 set(SOURCES
 
 		ogl/image/image_kernel.cpp
@@ -20,6 +11,8 @@ set(SOURCES
 		ogl/util/device.cpp
 		ogl/util/shader.cpp
 		ogl/util/texture.cpp
+
+		cpu/image/image_mixer.cpp
 
 		accelerator.cpp
 		StdAfx.cpp
@@ -34,6 +27,9 @@ set(HEADERS
 		ogl/util/device.h
 		ogl/util/shader.h
 		ogl/util/texture.h
+
+		cpu/image/image_mixer.h
+		cpu/util/xmm.h
 
 		accelerator.h
 		StdAfx.h
