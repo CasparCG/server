@@ -97,6 +97,13 @@ std::shared_ptr<FIBITMAP> load_png_from_memory(const void* memory_location, size
 			CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Unsupported image format."));
 	}
 
+	//PNG-images need to be premultiplied with their alpha
+	if (fif == FIF_PNG)
+	{
+		image_view<bgra_pixel> original_view(FreeImage_GetBits(bitmap.get()), FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()));
+		premultiply(original_view);
+	}
+
 	return bitmap;
 }
 
