@@ -38,8 +38,6 @@
 #include <common/os/general_protection_fault.h>
 #include <common/scope_exit.h>
 
-//#include <windows.h>
-
 #include <ffmpeg/producer/filter/filter.h>
 #include <ffmpeg/producer/util/util.h>
 
@@ -64,6 +62,8 @@
 #include <vector>
 
 #if defined(_MSC_VER)
+#include <windows.h>
+
 #pragma warning (push)
 #pragma warning (disable : 4244)
 #endif
@@ -197,7 +197,8 @@ public:
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 
-		/*DISPLAY_DEVICE d_device = {sizeof(d_device), 0};
+#if defined(_MSC_VER)
+		DISPLAY_DEVICE d_device = {sizeof(d_device), 0};
 		std::vector<DISPLAY_DEVICE> displayDevices;
 		for(int n = 0; EnumDisplayDevices(NULL, n, &d_device, NULL); ++n)
 			displayDevices.push_back(d_device);
@@ -212,11 +213,16 @@ public:
 		screen_x_		= devmode.dmPosition.x;
 		screen_y_		= devmode.dmPosition.y;
 		screen_width_	= config_.windowed ? square_width_ : devmode.dmPelsWidth;
-		screen_height_	= config_.windowed ? square_height_ : devmode.dmPelsHeight;*/
+		screen_height_	= config_.windowed ? square_height_ : devmode.dmPelsHeight;
+#else
+		if(config_.screen_index > 1)
+			CASPAR_LOG(warning) << print() << L" Screen-index is not supported on linux";
+
 		screen_x_		= 0;
 		screen_y_		= 0;
 		screen_width_	= square_width_;
 		screen_height_	= square_height_;
+#endif
 
 		polling_event_ = false;
 		is_running_ = true;
@@ -236,20 +242,11 @@ public:
 		auto window_style = config_.borderless
 			? sf::Style::None
 			: (config_.windowed
-				? sf::Style::Resize | sf::Style::Close
+				?sf::Style::Resize // | sf::Style::Close 
 				: sf::Style::Fullscreen);
 		window_.create(sf::VideoMode::getDesktopMode(), u8(print()), window_style);
-
-		if (config_.windowed)
-		{
-			window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
-			window_.setSize(sf::Vector2u(screen_width_, screen_height_));
-		}
-		else
-		{
-			screen_width_	= window_.getSize().x;
-			screen_height_	= window_.getSize().y;
-		}
+		window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
+		window_.setSize(sf::Vector2u(screen_width_, screen_height_));
 
 		window_.setMouseCursorVisible(config_.interactive);
 		window_.setActive();
@@ -689,7 +686,7 @@ void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
 			L"{NAME [name:string]}");
 	sink.para()->text(L"Displays the contents of a channel on screen using OpenGL.");
 	sink.definitions()
-		->item(L"screen_index", L"Determines which screen the channel should be displayed on. Defaults to 1.")
+		->item(L"screen_index", L"Determines which screen the channel should be displayed on. Defaults to 1. Only supported on windows.")
 		->item(L"fullscreen", L"If specified opens the window in fullscreen.")
 		->item(L"borderless", L"Makes the window appear without any window decorations.")
 		->item(L"key_only", L"Only displays the alpha channel of the video channel if specified.")
@@ -698,7 +695,7 @@ void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
 		->item(L"name", L"Optionally specifies a name of the window to show.");
 	sink.para()->text(L"Examples:");
 	sink.example(L">> ADD 1 SCREEN", L"opens a screen consumer on the default screen.");
-	sink.example(L">> ADD 1 SCREEN 2", L"opens a screen consumer on the screen 2.");
+	sink.example(L">> ADD 1 SCREEN 2", L"opens a screen consumer on the screen 2. Note: Only supported on windows");
 	sink.example(L">> ADD 1 SCREEN 1 FULLSCREEN", L"opens a screen consumer in fullscreen on screen 1.");
 	sink.example(L">> ADD 1 SCREEN 1 BORDERLESS", L"opens a screen consumer without borders/window decorations on screen 1.");
 }
