@@ -50,6 +50,13 @@
 
 #include <vector>
 
+#if defined(_MSC_VER)
+#include <windows.h>
+
+#pragma warning (push)
+#pragma warning (disable : 4244)
+#endif
+
 namespace caspar { namespace screen {
 
 enum class stretch
@@ -149,10 +156,36 @@ struct screen_consumer : boost::noncopyable
         graph_->set_text(print());
         diagnostics::register_graph(graph_);
 
-        screen_x_      = 0;
-        screen_y_      = 0;
-        screen_width_  = square_width_;
+#if defined(_MSC_VER)
+        DISPLAY_DEVICE d_device = { sizeof(d_device), 0 };
+        std::vector<DISPLAY_DEVICE> displayDevices;
+        for (int n = 0; EnumDisplayDevices(NULL, n, &d_device, NULL); ++n) {
+            displayDevices.push_back(d_device);
+        }
+
+        if (config_.screen_index >= displayDevices.size()) {
+            CASPAR_LOG(warning) << print() << L" Invalid screen-index: " << config_.screen_index;
+        }
+
+        DEVMODE devmode = {};
+        if (!EnumDisplaySettings(displayDevices[config_.screen_index].DeviceName, ENUM_CURRENT_SETTINGS, &devmode)) {
+            CASPAR_LOG(warning) << print() << L" Could not find display settings for screen-index: " << config_.screen_index;
+        }
+
+        screen_x_ = devmode.dmPosition.x;
+        screen_y_ = devmode.dmPosition.y;
+        screen_width_ = config_.windowed ? square_width_ : devmode.dmPelsWidth;
+        screen_height_ = config_.windowed ? square_height_ : devmode.dmPelsHeight;
+#else
+        if (config_.screen_index > 1) {
+            CASPAR_LOG(warning) << print() << L" Screen-index is not supported on linux";
+        }
+
+        screen_x_ = 0;
+        screen_y_ = 0;
+        screen_width_ = square_width_;
         screen_height_ = square_height_;
+#endif
 
         polling_event_ = false;
         is_running_    = true;
@@ -170,17 +203,10 @@ struct screen_consumer : boost::noncopyable
     {
         auto window_style = config_.borderless
                                 ? sf::Style::None
-                                : (config_.windowed ? sf::Style::Resize | sf::Style::Close : sf::Style::Fullscreen);
+                                : (config_.windowed ? sf::Style::Resize : sf::Style::Fullscreen);
         window_.create(sf::VideoMode::getDesktopMode(), u8(print()), window_style);
-
-        if (config_.windowed) {
-            window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
-            window_.setSize(sf::Vector2u(screen_width_, screen_height_));
-        } else {
-            screen_width_  = window_.getSize().x;
-            screen_height_ = window_.getSize().y;
-        }
-
+        window_.setPosition(sf::Vector2i(screen_x_, screen_y_));
+        window_.setSize(sf::Vector2u(screen_width_, screen_height_));
         window_.setMouseCursorVisible(config_.interactive);
         window_.setActive();
 
