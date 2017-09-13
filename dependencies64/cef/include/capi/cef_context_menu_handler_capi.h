@@ -1,4 +1,4 @@
-// Copyright (c) 2014 Marshall A. Greenblatt. All rights reserved.
+// Copyright (c) 2017 Marshall A. Greenblatt. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -50,6 +50,29 @@ extern "C" {
 struct _cef_context_menu_params_t;
 
 ///
+// Callback structure used for continuation of custom context menu display.
+///
+typedef struct _cef_run_context_menu_callback_t {
+  ///
+  // Base structure.
+  ///
+  cef_base_ref_counted_t base;
+
+  ///
+  // Complete context menu display by selecting the specified |command_id| and
+  // |event_flags|.
+  ///
+  void (CEF_CALLBACK *cont)(struct _cef_run_context_menu_callback_t* self,
+      int command_id, cef_event_flags_t event_flags);
+
+  ///
+  // Cancel context menu display.
+  ///
+  void (CEF_CALLBACK *cancel)(struct _cef_run_context_menu_callback_t* self);
+} cef_run_context_menu_callback_t;
+
+
+///
 // Implement this structure to handle context menu events. The functions of this
 // structure will be called on the UI thread.
 ///
@@ -57,7 +80,7 @@ typedef struct _cef_context_menu_handler_t {
   ///
   // Base structure.
   ///
-  cef_base_t base;
+  cef_base_ref_counted_t base;
 
   ///
   // Called before a context menu is displayed. |params| provides information
@@ -70,6 +93,20 @@ typedef struct _cef_context_menu_handler_t {
       struct _cef_context_menu_handler_t* self, struct _cef_browser_t* browser,
       struct _cef_frame_t* frame, struct _cef_context_menu_params_t* params,
       struct _cef_menu_model_t* model);
+
+  ///
+  // Called to allow custom display of the context menu. |params| provides
+  // information about the context menu state. |model| contains the context menu
+  // model resulting from OnBeforeContextMenu. For custom display return true
+  // (1) and execute |callback| either synchronously or asynchronously with the
+  // selected command ID. For default display return false (0). Do not keep
+  // references to |params| or |model| outside of this callback.
+  ///
+  int (CEF_CALLBACK *run_context_menu)(struct _cef_context_menu_handler_t* self,
+      struct _cef_browser_t* browser, struct _cef_frame_t* frame,
+      struct _cef_context_menu_params_t* params,
+      struct _cef_menu_model_t* model,
+      struct _cef_run_context_menu_callback_t* callback);
 
   ///
   // Called to execute a command selected from the context menu. Return true (1)
@@ -103,7 +140,7 @@ typedef struct _cef_context_menu_params_t {
   ///
   // Base structure.
   ///
-  cef_base_t base;
+  cef_base_ref_counted_t base;
 
   ///
   // Returns the X coordinate of the mouse where the context menu was invoked.
@@ -156,6 +193,14 @@ typedef struct _cef_context_menu_params_t {
       struct _cef_context_menu_params_t* self);
 
   ///
+  // Returns the title text or the alt text if the context menu was invoked on
+  // an image.
+  ///
+  // The resulting string must be freed by calling cef_string_userfree_free().
+  cef_string_userfree_t (CEF_CALLBACK *get_title_text)(
+      struct _cef_context_menu_params_t* self);
+
+  ///
   // Returns the URL of the top level page that the context menu was invoked on.
   ///
   // The resulting string must be freed by calling cef_string_userfree_free().
@@ -199,15 +244,31 @@ typedef struct _cef_context_menu_params_t {
       struct _cef_context_menu_params_t* self);
 
   ///
+  // Returns the text of the misspelled word, if any, that the context menu was
+  // invoked on.
+  ///
+  // The resulting string must be freed by calling cef_string_userfree_free().
+  cef_string_userfree_t (CEF_CALLBACK *get_misspelled_word)(
+      struct _cef_context_menu_params_t* self);
+
+  ///
+  // Returns true (1) if suggestions exist, false (0) otherwise. Fills in
+  // |suggestions| from the spell check service for the misspelled word if there
+  // is one.
+  ///
+  int (CEF_CALLBACK *get_dictionary_suggestions)(
+      struct _cef_context_menu_params_t* self, cef_string_list_t suggestions);
+
+  ///
   // Returns true (1) if the context menu was invoked on an editable node.
   ///
   int (CEF_CALLBACK *is_editable)(struct _cef_context_menu_params_t* self);
 
   ///
   // Returns true (1) if the context menu was invoked on an editable node where
-  // speech-input is enabled.
+  // spell-check is enabled.
   ///
-  int (CEF_CALLBACK *is_speech_input_enabled)(
+  int (CEF_CALLBACK *is_spell_check_enabled)(
       struct _cef_context_menu_params_t* self);
 
   ///
@@ -216,6 +277,18 @@ typedef struct _cef_context_menu_params_t {
   ///
   cef_context_menu_edit_state_flags_t (CEF_CALLBACK *get_edit_state_flags)(
       struct _cef_context_menu_params_t* self);
+
+  ///
+  // Returns true (1) if the context menu contains items specified by the
+  // renderer process (for example, plugin placeholder or pepper plugin menu
+  // items).
+  ///
+  int (CEF_CALLBACK *is_custom_menu)(struct _cef_context_menu_params_t* self);
+
+  ///
+  // Returns true (1) if the context menu was invoked from a pepper plugin.
+  ///
+  int (CEF_CALLBACK *is_pepper_menu)(struct _cef_context_menu_params_t* self);
 } cef_context_menu_params_t;
 
 

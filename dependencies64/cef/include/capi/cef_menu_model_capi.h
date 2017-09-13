@@ -1,4 +1,4 @@
-// Copyright (c) 2014 Marshall A. Greenblatt. All rights reserved.
+// Copyright (c) 2017 Marshall A. Greenblatt. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -39,6 +39,7 @@
 #pragma once
 
 #include "include/capi/cef_base_capi.h"
+#include "include/capi/cef_menu_model_delegate_capi.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,7 +56,12 @@ typedef struct _cef_menu_model_t {
   ///
   // Base structure.
   ///
-  cef_base_t base;
+  cef_base_ref_counted_t base;
+
+  ///
+  // Returns true (1) if this menu is a submenu.
+  ///
+  int (CEF_CALLBACK *is_sub_menu)(struct _cef_menu_model_t* self);
 
   ///
   // Clears the menu. Returns true (1) on success.
@@ -67,59 +73,59 @@ typedef struct _cef_menu_model_t {
   ///
   int (CEF_CALLBACK *get_count)(struct _cef_menu_model_t* self);
 
-  //
+  ///
   // Add a separator to the menu. Returns true (1) on success.
   ///
   int (CEF_CALLBACK *add_separator)(struct _cef_menu_model_t* self);
 
-  //
+  ///
   // Add an item to the menu. Returns true (1) on success.
   ///
   int (CEF_CALLBACK *add_item)(struct _cef_menu_model_t* self, int command_id,
       const cef_string_t* label);
 
-  //
+  ///
   // Add a check item to the menu. Returns true (1) on success.
   ///
   int (CEF_CALLBACK *add_check_item)(struct _cef_menu_model_t* self,
       int command_id, const cef_string_t* label);
 
-  //
+  ///
   // Add a radio item to the menu. Only a single item with the specified
   // |group_id| can be checked at a time. Returns true (1) on success.
   ///
   int (CEF_CALLBACK *add_radio_item)(struct _cef_menu_model_t* self,
       int command_id, const cef_string_t* label, int group_id);
 
-  //
+  ///
   // Add a sub-menu to the menu. The new sub-menu is returned.
   ///
   struct _cef_menu_model_t* (CEF_CALLBACK *add_sub_menu)(
       struct _cef_menu_model_t* self, int command_id,
       const cef_string_t* label);
 
-  //
+  ///
   // Insert a separator in the menu at the specified |index|. Returns true (1)
   // on success.
   ///
   int (CEF_CALLBACK *insert_separator_at)(struct _cef_menu_model_t* self,
       int index);
 
-  //
+  ///
   // Insert an item in the menu at the specified |index|. Returns true (1) on
   // success.
   ///
   int (CEF_CALLBACK *insert_item_at)(struct _cef_menu_model_t* self, int index,
       int command_id, const cef_string_t* label);
 
-  //
+  ///
   // Insert a check item in the menu at the specified |index|. Returns true (1)
   // on success.
   ///
   int (CEF_CALLBACK *insert_check_item_at)(struct _cef_menu_model_t* self,
       int index, int command_id, const cef_string_t* label);
 
-  //
+  ///
   // Insert a radio item in the menu at the specified |index|. Only a single
   // item with the specified |group_id| can be checked at a time. Returns true
   // (1) on success.
@@ -127,7 +133,7 @@ typedef struct _cef_menu_model_t {
   int (CEF_CALLBACK *insert_radio_item_at)(struct _cef_menu_model_t* self,
       int index, int command_id, const cef_string_t* label, int group_id);
 
-  //
+  ///
   // Insert a sub-menu in the menu at the specified |index|. The new sub-menu is
   // returned.
   ///
@@ -242,98 +248,98 @@ typedef struct _cef_menu_model_t {
   struct _cef_menu_model_t* (CEF_CALLBACK *get_sub_menu_at)(
       struct _cef_menu_model_t* self, int index);
 
-  //
+  ///
   // Returns true (1) if the specified |command_id| is visible.
   ///
   int (CEF_CALLBACK *is_visible)(struct _cef_menu_model_t* self,
       int command_id);
 
-  //
+  ///
   // Returns true (1) if the specified |index| is visible.
   ///
   int (CEF_CALLBACK *is_visible_at)(struct _cef_menu_model_t* self, int index);
 
-  //
+  ///
   // Change the visibility of the specified |command_id|. Returns true (1) on
   // success.
   ///
   int (CEF_CALLBACK *set_visible)(struct _cef_menu_model_t* self,
       int command_id, int visible);
 
-  //
+  ///
   // Change the visibility at the specified |index|. Returns true (1) on
   // success.
   ///
   int (CEF_CALLBACK *set_visible_at)(struct _cef_menu_model_t* self, int index,
       int visible);
 
-  //
+  ///
   // Returns true (1) if the specified |command_id| is enabled.
   ///
   int (CEF_CALLBACK *is_enabled)(struct _cef_menu_model_t* self,
       int command_id);
 
-  //
+  ///
   // Returns true (1) if the specified |index| is enabled.
   ///
   int (CEF_CALLBACK *is_enabled_at)(struct _cef_menu_model_t* self, int index);
 
-  //
+  ///
   // Change the enabled status of the specified |command_id|. Returns true (1)
   // on success.
   ///
   int (CEF_CALLBACK *set_enabled)(struct _cef_menu_model_t* self,
       int command_id, int enabled);
 
-  //
+  ///
   // Change the enabled status at the specified |index|. Returns true (1) on
   // success.
   ///
   int (CEF_CALLBACK *set_enabled_at)(struct _cef_menu_model_t* self, int index,
       int enabled);
 
-  //
+  ///
   // Returns true (1) if the specified |command_id| is checked. Only applies to
   // check and radio items.
   ///
   int (CEF_CALLBACK *is_checked)(struct _cef_menu_model_t* self,
       int command_id);
 
-  //
+  ///
   // Returns true (1) if the specified |index| is checked. Only applies to check
   // and radio items.
   ///
   int (CEF_CALLBACK *is_checked_at)(struct _cef_menu_model_t* self, int index);
 
-  //
+  ///
   // Check the specified |command_id|. Only applies to check and radio items.
   // Returns true (1) on success.
   ///
   int (CEF_CALLBACK *set_checked)(struct _cef_menu_model_t* self,
       int command_id, int checked);
 
-  //
+  ///
   // Check the specified |index|. Only applies to check and radio items. Returns
   // true (1) on success.
   ///
   int (CEF_CALLBACK *set_checked_at)(struct _cef_menu_model_t* self, int index,
       int checked);
 
-  //
+  ///
   // Returns true (1) if the specified |command_id| has a keyboard accelerator
   // assigned.
   ///
   int (CEF_CALLBACK *has_accelerator)(struct _cef_menu_model_t* self,
       int command_id);
 
-  //
+  ///
   // Returns true (1) if the specified |index| has a keyboard accelerator
   // assigned.
   ///
   int (CEF_CALLBACK *has_accelerator_at)(struct _cef_menu_model_t* self,
       int index);
 
-  //
+  ///
   // Set the keyboard accelerator for the specified |command_id|. |key_code| can
   // be any virtual key or character value. Returns true (1) on success.
   ///
@@ -341,7 +347,7 @@ typedef struct _cef_menu_model_t {
       int command_id, int key_code, int shift_pressed, int ctrl_pressed,
       int alt_pressed);
 
-  //
+  ///
   // Set the keyboard accelerator at the specified |index|. |key_code| can be
   // any virtual key or character value. Returns true (1) on success.
   ///
@@ -349,21 +355,21 @@ typedef struct _cef_menu_model_t {
       int index, int key_code, int shift_pressed, int ctrl_pressed,
       int alt_pressed);
 
-  //
+  ///
   // Remove the keyboard accelerator for the specified |command_id|. Returns
   // true (1) on success.
   ///
   int (CEF_CALLBACK *remove_accelerator)(struct _cef_menu_model_t* self,
       int command_id);
 
-  //
+  ///
   // Remove the keyboard accelerator at the specified |index|. Returns true (1)
   // on success.
   ///
   int (CEF_CALLBACK *remove_accelerator_at)(struct _cef_menu_model_t* self,
       int index);
 
-  //
+  ///
   // Retrieves the keyboard accelerator for the specified |command_id|. Returns
   // true (1) on success.
   ///
@@ -371,14 +377,88 @@ typedef struct _cef_menu_model_t {
       int command_id, int* key_code, int* shift_pressed, int* ctrl_pressed,
       int* alt_pressed);
 
-  //
+  ///
   // Retrieves the keyboard accelerator for the specified |index|. Returns true
   // (1) on success.
   ///
   int (CEF_CALLBACK *get_accelerator_at)(struct _cef_menu_model_t* self,
       int index, int* key_code, int* shift_pressed, int* ctrl_pressed,
       int* alt_pressed);
+
+  ///
+  // Set the explicit color for |command_id| and |color_type| to |color|.
+  // Specify a |color| value of 0 to remove the explicit color. If no explicit
+  // color or default color is set for |color_type| then the system color will
+  // be used. Returns true (1) on success.
+  ///
+  int (CEF_CALLBACK *set_color)(struct _cef_menu_model_t* self, int command_id,
+      cef_menu_color_type_t color_type, cef_color_t color);
+
+  ///
+  // Set the explicit color for |command_id| and |index| to |color|. Specify a
+  // |color| value of 0 to remove the explicit color. Specify an |index| value
+  // of -1 to set the default color for items that do not have an explicit color
+  // set. If no explicit color or default color is set for |color_type| then the
+  // system color will be used. Returns true (1) on success.
+  ///
+  int (CEF_CALLBACK *set_color_at)(struct _cef_menu_model_t* self, int index,
+      cef_menu_color_type_t color_type, cef_color_t color);
+
+  ///
+  // Returns in |color| the color that was explicitly set for |command_id| and
+  // |color_type|. If a color was not set then 0 will be returned in |color|.
+  // Returns true (1) on success.
+  ///
+  int (CEF_CALLBACK *get_color)(struct _cef_menu_model_t* self, int command_id,
+      cef_menu_color_type_t color_type, cef_color_t* color);
+
+  ///
+  // Returns in |color| the color that was explicitly set for |command_id| and
+  // |color_type|. Specify an |index| value of -1 to return the default color in
+  // |color|. If a color was not set then 0 will be returned in |color|. Returns
+  // true (1) on success.
+  ///
+  int (CEF_CALLBACK *get_color_at)(struct _cef_menu_model_t* self, int index,
+      cef_menu_color_type_t color_type, cef_color_t* color);
+
+  ///
+  // Sets the font list for the specified |command_id|. If |font_list| is NULL
+  // the system font will be used. Returns true (1) on success. The format is
+  // "<FONT_FAMILY_LIST>,[STYLES] <SIZE>", where: - FONT_FAMILY_LIST is a comma-
+  // separated list of font family names, - STYLES is an optional space-
+  // separated list of style names (case-sensitive
+  //   "Bold" and "Italic" are supported), and
+  // - SIZE is an integer font size in pixels with the suffix "px".
+  //
+  // Here are examples of valid font description strings: - "Arial, Helvetica,
+  // Bold Italic 14px" - "Arial, 14px"
+  ///
+  int (CEF_CALLBACK *set_font_list)(struct _cef_menu_model_t* self,
+      int command_id, const cef_string_t* font_list);
+
+  ///
+  // Sets the font list for the specified |index|. Specify an |index| value of
+  // -1 to set the default font. If |font_list| is NULL the system font will be
+  // used. Returns true (1) on success. The format is
+  // "<FONT_FAMILY_LIST>,[STYLES] <SIZE>", where: - FONT_FAMILY_LIST is a comma-
+  // separated list of font family names, - STYLES is an optional space-
+  // separated list of style names (case-sensitive
+  //   "Bold" and "Italic" are supported), and
+  // - SIZE is an integer font size in pixels with the suffix "px".
+  //
+  // Here are examples of valid font description strings: - "Arial, Helvetica,
+  // Bold Italic 14px" - "Arial, 14px"
+  ///
+  int (CEF_CALLBACK *set_font_list_at)(struct _cef_menu_model_t* self,
+      int index, const cef_string_t* font_list);
 } cef_menu_model_t;
+
+
+///
+// Create a new MenuModel with the specified |delegate|.
+///
+CEF_EXPORT cef_menu_model_t* cef_menu_model_create(
+    struct _cef_menu_model_delegate_t* delegate);
 
 
 #ifdef __cplusplus

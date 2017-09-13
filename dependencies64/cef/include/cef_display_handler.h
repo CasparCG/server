@@ -47,7 +47,7 @@
 // The methods of this class will be called on the UI thread.
 ///
 /*--cef(source=client)--*/
-class CefDisplayHandler : public virtual CefBase {
+class CefDisplayHandler : public virtual CefBaseRefCounted {
  public:
   ///
   // Called when a frame's address has changed.
@@ -65,6 +65,24 @@ class CefDisplayHandler : public virtual CefBase {
                              const CefString& title) {}
 
   ///
+  // Called when the page icon changes.
+  ///
+  /*--cef(optional_param=icon_urls)--*/
+  virtual void OnFaviconURLChange(CefRefPtr<CefBrowser> browser,
+                                  const std::vector<CefString>& icon_urls) {}
+
+  ///
+  // Called when web content in the page has toggled fullscreen mode. If
+  // |fullscreen| is true the content will automatically be sized to fill the
+  // browser content area. If |fullscreen| is false the content will
+  // automatically return to its original size and position. The client is
+  // responsible for resizing the browser if desired.
+  ///
+  /*--cef()--*/
+  virtual void OnFullscreenModeChange(CefRefPtr<CefBrowser> browser,
+                                      bool fullscreen) {}
+
+  ///
   // Called when the browser is about to display a tooltip. |text| contains the
   // text that will be displayed in the tooltip. To handle the display of the
   // tooltip yourself return true. Otherwise, you can optionally modify |text|
@@ -77,9 +95,8 @@ class CefDisplayHandler : public virtual CefBase {
                          CefString& text) { return false; }
 
   ///
-  // Called when the browser receives a status message. |text| contains the text
-  // that will be displayed in the status message and |type| indicates the
-  // status message type.
+  // Called when the browser receives a status message. |value| contains the
+  // text that will be displayed in the status message.
   ///
   /*--cef(optional_param=value)--*/
   virtual void OnStatusMessage(CefRefPtr<CefBrowser> browser,

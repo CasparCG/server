@@ -1,4 +1,4 @@
-// Copyright (c) 2014 Marshall A. Greenblatt. All rights reserved.
+// Copyright (c) 2017 Marshall A. Greenblatt. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -55,7 +55,7 @@ typedef struct _cef_request_t {
   ///
   // Base structure.
   ///
-  cef_base_t base;
+  cef_base_ref_counted_t base;
 
   ///
   // Returns true (1) if this object is read-only.
@@ -88,6 +88,27 @@ typedef struct _cef_request_t {
       const cef_string_t* method);
 
   ///
+  // Set the referrer URL and policy. If non-NULL the referrer URL must be fully
+  // qualified with an HTTP or HTTPS scheme component. Any username, password or
+  // ref component will be removed.
+  ///
+  void (CEF_CALLBACK *set_referrer)(struct _cef_request_t* self,
+      const cef_string_t* referrer_url, cef_referrer_policy_t policy);
+
+  ///
+  // Get the referrer URL.
+  ///
+  // The resulting string must be freed by calling cef_string_userfree_free().
+  cef_string_userfree_t (CEF_CALLBACK *get_referrer_url)(
+      struct _cef_request_t* self);
+
+  ///
+  // Get the referrer policy.
+  ///
+  cef_referrer_policy_t (CEF_CALLBACK *get_referrer_policy)(
+      struct _cef_request_t* self);
+
+  ///
   // Get the post data.
   ///
   struct _cef_post_data_t* (CEF_CALLBACK *get_post_data)(
@@ -100,13 +121,14 @@ typedef struct _cef_request_t {
       struct _cef_post_data_t* postData);
 
   ///
-  // Get the header values.
+  // Get the header values. Will not include the Referer value if any.
   ///
   void (CEF_CALLBACK *get_header_map)(struct _cef_request_t* self,
       cef_string_multimap_t headerMap);
 
   ///
-  // Set the header values.
+  // Set the header values. If a Referer value exists in the header map it will
+  // be removed and ignored.
   ///
   void (CEF_CALLBACK *set_header_map)(struct _cef_request_t* self,
       cef_string_multimap_t headerMap);
@@ -146,8 +168,8 @@ typedef struct _cef_request_t {
       const cef_string_t* url);
 
   ///
-  // Get the resource type for this request. Accurate resource type information
-  // may only be available in the browser process.
+  // Get the resource type for this request. Only available in the browser
+  // process.
   ///
   cef_resource_type_t (CEF_CALLBACK *get_resource_type)(
       struct _cef_request_t* self);
@@ -159,6 +181,13 @@ typedef struct _cef_request_t {
   ///
   cef_transition_type_t (CEF_CALLBACK *get_transition_type)(
       struct _cef_request_t* self);
+
+  ///
+  // Returns the globally unique identifier for this request or 0 if not
+  // specified. Can be used by cef_request_tHandler implementations in the
+  // browser process to track a single request across multiple callbacks.
+  ///
+  uint64 (CEF_CALLBACK *get_identifier)(struct _cef_request_t* self);
 } cef_request_t;
 
 
@@ -176,12 +205,20 @@ typedef struct _cef_post_data_t {
   ///
   // Base structure.
   ///
-  cef_base_t base;
+  cef_base_ref_counted_t base;
 
   ///
   // Returns true (1) if this object is read-only.
   ///
   int (CEF_CALLBACK *is_read_only)(struct _cef_post_data_t* self);
+
+  ///
+  // Returns true (1) if the underlying POST data includes elements that are not
+  // represented by this cef_post_data_t object (for example, multi-part file
+  // upload data). Modifying cef_post_data_t objects with excluded elements may
+  // result in the request failing.
+  ///
+  int (CEF_CALLBACK *has_excluded_elements)(struct _cef_post_data_t* self);
 
   ///
   // Returns the number of existing post data elements.
@@ -228,7 +265,7 @@ typedef struct _cef_post_data_element_t {
   ///
   // Base structure.
   ///
-  cef_base_t base;
+  cef_base_ref_counted_t base;
 
   ///
   // Returns true (1) if this object is read-only.

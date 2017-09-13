@@ -1,4 +1,4 @@
-// Copyright (c) 2014 Marshall A. Greenblatt. All rights reserved.
+// Copyright (c) 2017 Marshall A. Greenblatt. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -54,7 +54,7 @@ typedef struct _cef_jsdialog_callback_t {
   ///
   // Base structure.
   ///
-  cef_base_t base;
+  cef_base_ref_counted_t base;
 
   ///
   // Continue the JS dialog request. Set |success| to true (1) if the OK button
@@ -73,10 +73,12 @@ typedef struct _cef_jsdialog_handler_t {
   ///
   // Base structure.
   ///
-  cef_base_t base;
+  cef_base_ref_counted_t base;
 
   ///
-  // Called to run a JavaScript dialog. The |default_prompt_text| value will be
+  // Called to run a JavaScript dialog. If |origin_url| is non-NULL it can be
+  // passed to the CefFormatUrlForSecurityDisplay function to retrieve a secure
+  // and user-friendly display string. The |default_prompt_text| value will be
   // specified for prompt dialogs only. Set |suppress_message| to true (1) and
   // return false (0) to suppress the message (suppressing messages is
   // preferable to immediately executing the callback as this is used to detect
@@ -92,8 +94,7 @@ typedef struct _cef_jsdialog_handler_t {
   ///
   int (CEF_CALLBACK *on_jsdialog)(struct _cef_jsdialog_handler_t* self,
       struct _cef_browser_t* browser, const cef_string_t* origin_url,
-      const cef_string_t* accept_lang, cef_jsdialog_type_t dialog_type,
-      const cef_string_t* message_text,
+      cef_jsdialog_type_t dialog_type, const cef_string_t* message_text,
       const cef_string_t* default_prompt_text,
       struct _cef_jsdialog_callback_t* callback, int* suppress_message);
 

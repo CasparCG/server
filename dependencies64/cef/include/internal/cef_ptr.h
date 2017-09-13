@@ -1,5 +1,4 @@
-// Copyright (c) 2008 Marshall A. Greenblatt. Portions Copyright (c)
-// 2006-2008 Google Inc. All rights reserved.
+// Copyright (c) 2014 Marshall A. Greenblatt. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -33,17 +32,25 @@
 #define CEF_INCLUDE_INTERNAL_CEF_PTR_H_
 #pragma once
 
-#include <stddef.h>
+#include "include/base/cef_build.h"
+#include "include/base/cef_ref_counted.h"
+
+#if defined(USING_CHROMIUM_INCLUDES)
+#include <memory>  // For std::unique_ptr.
+#else
+#include "include/base/cef_scoped_ptr.h"
+#endif
 
 ///
-// Smart pointer implementation borrowed from base/ref_counted.h
+// Smart pointer implementation that is an alias of scoped_refptr from
+// include/base/cef_ref_counted.h.
 // <p>
 // A smart pointer class for reference counted objects.  Use this class instead
 // of calling AddRef and Release manually on a reference counted object to
 // avoid common memory leaks caused by forgetting to Release an object
 // reference.  Sample usage:
 // <pre>
-//   class MyFoo : public CefBase {
+//   class MyFoo : public CefBaseRefCounted {
 //    ...
 //   };
 //
@@ -143,57 +150,86 @@
 // </pre>
 // </p>
 ///
+#if defined(HAS_CPP11_TEMPLATE_ALIAS_SUPPORT)
 template <class T>
-class CefRefPtr {
+using CefRefPtr = scoped_refptr<T>;
+#else
+// When template aliases are not supported use a define instead of subclassing
+// because it's otherwise hard to get the constructors to behave correctly.
+#define CefRefPtr scoped_refptr
+#endif
+
+
+///
+// A CefOwnPtr<T> is like a T*, except that the destructor of CefOwnPtr<T>
+// automatically deletes the pointer it holds (if any). That is, CefOwnPtr<T>
+// owns the T object that it points to. Like a T*, a CefOwnPtr<T> may hold
+// either NULL or a pointer to a T object. Also like T*, CefOwnPtr<T> is
+// thread-compatible, and once you dereference it, you get the thread safety
+// guarantees of T.
+///
+#if defined(USING_CHROMIUM_INCLUDES)
+// Implementation-side code uses std::unique_ptr instead of scoped_ptr.
+template <class T, class D = std::default_delete<T>>
+using CefOwnPtr = std::unique_ptr<T, D>;
+#elif defined(HAS_CPP11_TEMPLATE_ALIAS_SUPPORT)
+template <class T, class D = base::DefaultDeleter<T>>
+using CefOwnPtr = scoped_ptr<T, D>;
+#else
+// When template aliases are not supported use a define instead of subclassing
+// because it's otherwise hard to get the constructors to behave correctly.
+#define CefOwnPtr scoped_ptr
+#endif
+
+
+///
+// A CefRawPtr<T> is the same as T*
+///
+#if defined(HAS_CPP11_TEMPLATE_ALIAS_SUPPORT)
+#define CEF_RAW_PTR_GET(r) r
+template <class T>
+using CefRawPtr = T*;
+#else
+// Simple wrapper implementation that behaves as much like T* as possible.
+// CEF_RAW_PTR_GET is required for VS2008 compatibility (Issue #2155).
+#define CEF_RAW_PTR_GET(r) r.get()
+template <class T>
+class CefRawPtr {
  public:
-  CefRefPtr() : ptr_(NULL) {
-  }
+  CefRawPtr() : ptr_(nullptr) {}
+  CefRawPtr(T* p) : ptr_(p) {}
+  CefRawPtr(const CefRawPtr& r) : ptr_(r.ptr_) {}
 
-  CefRefPtr(T* p) : ptr_(p) {  // NOLINT(runtime/explicit)
-    if (ptr_)
-      ptr_->AddRef();
-  }
-
-  CefRefPtr(const CefRefPtr<T>& r) : ptr_(r.ptr_) {
-    if (ptr_)
-      ptr_->AddRef();
-  }
-
-  ~CefRefPtr() {
-    if (ptr_)
-      ptr_->Release();
-  }
+  template <typename U>
+  CefRawPtr(const CefRawPtr<U>& r) : ptr_(r.get()) {}
 
   T* get() const { return ptr_; }
-  operator T*() const { return ptr_; }
-  T* operator->() const { return ptr_; }
 
-  CefRefPtr<T>& operator=(T* p) {
-    // AddRef first so that self assignment should work
-    if (p)
-      p->AddRef();
-    if (ptr_ )
-      ptr_ ->Release();
+  // Allow CefRawPtr to be used in boolean expression and comparison operations.
+  operator T*() const { return ptr_; }
+
+  T* operator->() const {
+    assert(ptr_ != NULL);
+    return ptr_;
+  }
+
+  CefRawPtr<T>& operator=(T* p) {
     ptr_ = p;
     return *this;
   }
 
-  CefRefPtr<T>& operator=(const CefRefPtr<T>& r) {
+  CefRawPtr<T>& operator=(const CefRawPtr<T>& r) {
     return *this = r.ptr_;
   }
 
-  void swap(T** pp) {
-    T* p = ptr_;
-    ptr_ = *pp;
-    *pp = p;
-  }
-
-  void swap(CefRefPtr<T>& r) {
-    swap(&r.ptr_);  // NOLINT(build/include_what_you_use)
+  template <typename U>
+  CefRawPtr<T>& operator=(const CefRawPtr<U>& r) {
+    return *this = r.get();
   }
 
  private:
   T* ptr_;
 };
+#endif
 
 #endif  // CEF_INCLUDE_INTERNAL_CEF_PTR_H_

@@ -46,7 +46,7 @@
 // permission requests.
 ///
 /*--cef(source=library)--*/
-class CefGeolocationCallback : public virtual CefBase {
+class CefGeolocationCallback : public virtual CefBaseRefCounted {
  public:
   ///
   // Call to allow or deny geolocation access.
@@ -58,35 +58,36 @@ class CefGeolocationCallback : public virtual CefBase {
 
 ///
 // Implement this interface to handle events related to geolocation permission
-// requests. The methods of this class will be called on the browser process IO
+// requests. The methods of this class will be called on the browser process UI
 // thread.
 ///
 /*--cef(source=client)--*/
-class CefGeolocationHandler : public virtual CefBase {
+class CefGeolocationHandler : public virtual CefBaseRefCounted {
  public:
   ///
   // Called when a page requests permission to access geolocation information.
   // |requesting_url| is the URL requesting permission and |request_id| is the
-  // unique ID for the permission request. Call CefGeolocationCallback::Continue
-  // to allow or deny the permission request.
+  // unique ID for the permission request. Return true and call
+  // CefGeolocationCallback::Continue() either in this method or at a later
+  // time to continue or cancel the request. Return false to cancel the request
+  // immediately.
   ///
   /*--cef()--*/
-  virtual void OnRequestGeolocationPermission(
+  virtual bool OnRequestGeolocationPermission(
       CefRefPtr<CefBrowser> browser,
       const CefString& requesting_url,
       int request_id,
       CefRefPtr<CefGeolocationCallback> callback) {
+    return false;
   }
 
   ///
-  // Called when a geolocation access request is canceled. |requesting_url| is
-  // the URL that originally requested permission and |request_id| is the unique
-  // ID for the permission request.
+  // Called when a geolocation access request is canceled. |request_id| is the
+  // unique ID for the permission request.
   ///
   /*--cef()--*/
   virtual void OnCancelGeolocationPermission(
       CefRefPtr<CefBrowser> browser,
-      const CefString& requesting_url,
       int request_id) {
   }
 };

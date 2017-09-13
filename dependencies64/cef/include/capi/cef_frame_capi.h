@@ -1,4 +1,4 @@
-// Copyright (c) 2014 Marshall A. Greenblatt. All rights reserved.
+// Copyright (c) 2017 Marshall A. Greenblatt. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -61,7 +61,7 @@ typedef struct _cef_frame_t {
   ///
   // Base structure.
   ///
-  cef_base_t base;
+  cef_base_ref_counted_t base;
 
   ///
   // True if this object is currently attached to a valid frame.
@@ -176,7 +176,8 @@ typedef struct _cef_frame_t {
   cef_string_userfree_t (CEF_CALLBACK *get_name)(struct _cef_frame_t* self);
 
   ///
-  // Returns the globally unique identifier for this frame.
+  // Returns the globally unique identifier for this frame or < 0 if the
+  // underlying frame does not yet exist.
   ///
   int64 (CEF_CALLBACK *get_identifier)(struct _cef_frame_t* self);
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2014 Marshall A. Greenblatt. All rights reserved.
+// Copyright (c) 2017 Marshall A. Greenblatt. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -55,7 +55,7 @@ typedef struct _cef_drag_handler_t {
   ///
   // Base structure.
   ///
-  cef_base_t base;
+  cef_base_ref_counted_t base;
 
   ///
   // Called when an external drag event enters the browser window. |dragData|
@@ -66,6 +66,17 @@ typedef struct _cef_drag_handler_t {
   int (CEF_CALLBACK *on_drag_enter)(struct _cef_drag_handler_t* self,
       struct _cef_browser_t* browser, struct _cef_drag_data_t* dragData,
       cef_drag_operations_mask_t mask);
+
+  ///
+  // Called whenever draggable regions for the browser window change. These can
+  // be specified using the '-webkit-app-region: drag/no-drag' CSS-property. If
+  // draggable regions are never defined in a document this function will also
+  // never be called. If the last draggable region is removed from a document
+  // this function will be called with an NULL vector.
+  ///
+  void (CEF_CALLBACK *on_draggable_regions_changed)(
+      struct _cef_drag_handler_t* self, struct _cef_browser_t* browser,
+      size_t regionsCount, cef_draggable_region_t const* regions);
 } cef_drag_handler_t;
 
 

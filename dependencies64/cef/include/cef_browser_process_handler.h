@@ -40,6 +40,7 @@
 
 #include "include/cef_base.h"
 #include "include/cef_command_line.h"
+#include "include/cef_print_handler.h"
 #include "include/cef_values.h"
 
 ///
@@ -47,7 +48,7 @@
 // will be called on the browser process main thread unless otherwise indicated.
 ///
 /*--cef(source=client)--*/
-class CefBrowserProcessHandler : public virtual CefBase {
+class CefBrowserProcessHandler : public virtual CefBaseRefCounted {
  public:
   ///
   // Called on the browser process UI thread immediately after the CEF context
@@ -77,6 +78,31 @@ class CefBrowserProcessHandler : public virtual CefBase {
   /*--cef()--*/
   virtual void OnRenderProcessThreadCreated(
       CefRefPtr<CefListValue> extra_info) {}
+
+  ///
+  // Return the handler for printing on Linux. If a print handler is not
+  // provided then printing will not be supported on the Linux platform.
+  ///
+  /*--cef()--*/
+  virtual CefRefPtr<CefPrintHandler> GetPrintHandler() {
+    return NULL;
+  }
+
+  ///
+  // Called from any thread when work has been scheduled for the browser process
+  // main (UI) thread. This callback is used in combination with CefSettings.
+  // external_message_pump and CefDoMessageLoopWork() in cases where the CEF
+  // message loop must be integrated into an existing application message loop
+  // (see additional comments and warnings on CefDoMessageLoopWork). This
+  // callback should schedule a CefDoMessageLoopWork() call to happen on the
+  // main (UI) thread. |delay_ms| is the requested delay in milliseconds. If
+  // |delay_ms| is <= 0 then the call should happen reasonably soon. If
+  // |delay_ms| is > 0 then the call should be scheduled to happen after the
+  // specified delay and any currently pending scheduled call should be
+  // cancelled.
+  ///
+  /*--cef()--*/
+  virtual void OnScheduleMessagePumpWork(int64 delay_ms) {}
 };
 
 #endif  // CEF_INCLUDE_CEF_BROWSER_PROCESS_HANDLER_H_

@@ -54,7 +54,7 @@ class CefV8Context;
 // methods of this class may only be called on the main thread.
 ///
 /*--cef(source=library)--*/
-class CefFrame : public virtual CefBase {
+class CefFrame : public virtual CefBaseRefCounted {
  public:
   ///
   // True if this object is currently attached to a valid frame.
@@ -182,7 +182,8 @@ class CefFrame : public virtual CefBase {
   virtual CefString GetName() =0;
 
   ///
-  // Returns the globally unique identifier for this frame.
+  // Returns the globally unique identifier for this frame or < 0 if the
+  // underlying frame does not yet exist.
   ///
   /*--cef()--*/
   virtual int64 GetIdentifier() =0;

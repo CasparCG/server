@@ -117,6 +117,7 @@ public:
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
+		
 
 		loaded_ = false;
 		removed_ = false;
@@ -187,6 +188,8 @@ private:
 		rect = CefRect(0, 0, format_desc_.square_width, format_desc_.square_height);
 		return true;
 	}
+
+
 
 	void OnPaint(
 			CefRefPtr<CefBrowser> browser,
@@ -453,12 +456,13 @@ public:
 
 			CefWindowInfo window_info;
 
-			window_info.SetTransparentPainting(true);
-			window_info.SetAsOffScreen(nullptr);
-			//window_info.SetAsWindowless(nullptr, true);
+			//window_info.SetTransparentPainting(true);
+			//window_info.SetAsOffScreen(nullptr);
+			window_info.SetAsWindowless(nullptr, true);
 
 			CefBrowserSettings browser_settings;
 			browser_settings.web_security = cef_state_t::STATE_DISABLED;
+			browser_settings.webgl = cef_state_t::STATE_ENABLED;
 			CefBrowserHost::CreateBrowser(window_info, client_.get(), url, browser_settings, nullptr);
 		});
 	}

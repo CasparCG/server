@@ -39,6 +39,7 @@
 #pragma once
 
 #include "include/cef_base.h"
+#include "include/cef_menu_model_delegate.h"
 
 ///
 // Supports creation and modification of menus. See cef_menu_id_t for the
@@ -47,9 +48,22 @@
 // this class can only be accessed on the browser process the UI thread.
 ///
 /*--cef(source=library)--*/
-class CefMenuModel : public virtual CefBase {
+class CefMenuModel : public virtual CefBaseRefCounted {
  public:
   typedef cef_menu_item_type_t MenuItemType;
+
+  ///
+  // Create a new MenuModel with the specified |delegate|.
+  ///
+  /*--cef()--*/
+  static CefRefPtr<CefMenuModel> CreateMenuModel(
+      CefRefPtr<CefMenuModelDelegate> delegate);
+
+  ///
+  // Returns true if this menu is a submenu.
+  ///
+  /*--cef()--*/
+  virtual bool IsSubMenu() =0;
 
   ///
   // Clears the menu. Returns true on success.
@@ -63,26 +77,26 @@ class CefMenuModel : public virtual CefBase {
   /*--cef()--*/
   virtual int GetCount() =0;
 
-  //
+  ///
   // Add a separator to the menu. Returns true on success.
   ///
   /*--cef()--*/
   virtual bool AddSeparator() =0;
 
-  //
+  ///
   // Add an item to the menu. Returns true on success.
   ///
   /*--cef()--*/
   virtual bool AddItem(int command_id,
                        const CefString& label) =0;
 
-  //
+  ///
   // Add a check item to the menu. Returns true on success.
   ///
   /*--cef()--*/
   virtual bool AddCheckItem(int command_id,
                             const CefString& label) =0;
-  //
+  ///
   // Add a radio item to the menu. Only a single item with the specified
   // |group_id| can be checked at a time. Returns true on success.
   ///
@@ -91,21 +105,21 @@ class CefMenuModel : public virtual CefBase {
                             const CefString& label,
                             int group_id) =0;
 
-  //
+  ///
   // Add a sub-menu to the menu. The new sub-menu is returned.
   ///
   /*--cef()--*/
   virtual CefRefPtr<CefMenuModel> AddSubMenu(int command_id,
                                              const CefString& label) =0;
 
-  //
+  ///
   // Insert a separator in the menu at the specified |index|. Returns true on
   // success.
   ///
   /*--cef()--*/
   virtual bool InsertSeparatorAt(int index) =0;
 
-  //
+  ///
   // Insert an item in the menu at the specified |index|. Returns true on
   // success.
   ///
@@ -114,7 +128,7 @@ class CefMenuModel : public virtual CefBase {
                             int command_id,
                             const CefString& label) =0;
 
-  //
+  ///
   // Insert a check item in the menu at the specified |index|. Returns true on
   // success.
   ///
@@ -123,7 +137,7 @@ class CefMenuModel : public virtual CefBase {
                                  int command_id,
                                  const CefString& label) =0;
 
-  //
+  ///
   // Insert a radio item in the menu at the specified |index|. Only a single
   // item with the specified |group_id| can be checked at a time. Returns true
   // on success.
@@ -134,7 +148,7 @@ class CefMenuModel : public virtual CefBase {
                                  const CefString& label,
                                  int group_id) =0;
 
-  //
+  ///
   // Insert a sub-menu in the menu at the specified |index|. The new sub-menu
   // is returned.
   ///
@@ -248,99 +262,99 @@ class CefMenuModel : public virtual CefBase {
   /*--cef()--*/
   virtual CefRefPtr<CefMenuModel> GetSubMenuAt(int index) =0;
 
-  //
+  ///
   // Returns true if the specified |command_id| is visible.
   ///
   /*--cef()--*/
   virtual bool IsVisible(int command_id) =0;
 
-  //
+  ///
   // Returns true if the specified |index| is visible.
   ///
   /*--cef()--*/
   virtual bool IsVisibleAt(int index) =0;
 
-  //
+  ///
   // Change the visibility of the specified |command_id|. Returns true on
   // success.
   ///
   /*--cef()--*/
   virtual bool SetVisible(int command_id, bool visible) =0;
 
-  //
+  ///
   // Change the visibility at the specified |index|. Returns true on success.
   ///
   /*--cef()--*/
   virtual bool SetVisibleAt(int index, bool visible) =0;
 
-  //
+  ///
   // Returns true if the specified |command_id| is enabled.
   ///
   /*--cef()--*/
   virtual bool IsEnabled(int command_id) =0;
 
-  //
+  ///
   // Returns true if the specified |index| is enabled.
   ///
   /*--cef()--*/
   virtual bool IsEnabledAt(int index) =0;
 
-  //
+  ///
   // Change the enabled status of the specified |command_id|. Returns true on
   // success.
   ///
   /*--cef()--*/
   virtual bool SetEnabled(int command_id, bool enabled) =0;
 
-  //
+  ///
   // Change the enabled status at the specified |index|. Returns true on
   // success.
   ///
   /*--cef()--*/
   virtual bool SetEnabledAt(int index, bool enabled) =0;
 
-  //
+  ///
   // Returns true if the specified |command_id| is checked. Only applies to
   // check and radio items.
   ///
   /*--cef()--*/
   virtual bool IsChecked(int command_id) =0;
 
-  //
+  ///
   // Returns true if the specified |index| is checked. Only applies to check
   // and radio items.
   ///
   /*--cef()--*/
   virtual bool IsCheckedAt(int index) =0;
 
-  //
+  ///
   // Check the specified |command_id|. Only applies to check and radio items.
   // Returns true on success.
   ///
   /*--cef()--*/
   virtual bool SetChecked(int command_id, bool checked) =0;
 
-  //
+  ///
   // Check the specified |index|. Only applies to check and radio items. Returns
   // true on success.
   ///
   /*--cef()--*/
   virtual bool SetCheckedAt(int index, bool checked) =0;
 
-  //
+  ///
   // Returns true if the specified |command_id| has a keyboard accelerator
   // assigned.
   ///
   /*--cef()--*/
   virtual bool HasAccelerator(int command_id) =0;
 
-  //
+  ///
   // Returns true if the specified |index| has a keyboard accelerator assigned.
   ///
   /*--cef()--*/
   virtual bool HasAcceleratorAt(int index) =0;
 
-  //
+  ///
   // Set the keyboard accelerator for the specified |command_id|. |key_code| can
   // be any virtual key or character value. Returns true on success.
   ///
@@ -351,7 +365,7 @@ class CefMenuModel : public virtual CefBase {
                               bool ctrl_pressed,
                               bool alt_pressed) =0;
 
-  //
+  ///
   // Set the keyboard accelerator at the specified |index|. |key_code| can be
   // any virtual key or character value. Returns true on success.
   ///
@@ -362,21 +376,21 @@ class CefMenuModel : public virtual CefBase {
                                 bool ctrl_pressed,
                                 bool alt_pressed) =0;
 
-  //
+  ///
   // Remove the keyboard accelerator for the specified |command_id|. Returns
   // true on success.
   ///
   /*--cef()--*/
   virtual bool RemoveAccelerator(int command_id) =0;
 
-  //
+  ///
   // Remove the keyboard accelerator at the specified |index|. Returns true on
   // success.
   ///
   /*--cef()--*/
   virtual bool RemoveAcceleratorAt(int index) =0;
 
-  //
+  ///
   // Retrieves the keyboard accelerator for the specified |command_id|. Returns
   // true on success.
   ///
@@ -387,7 +401,7 @@ class CefMenuModel : public virtual CefBase {
                               bool& ctrl_pressed,
                               bool& alt_pressed) =0;
 
-  //
+  ///
   // Retrieves the keyboard accelerator for the specified |index|. Returns true
   // on success.
   ///
@@ -397,6 +411,85 @@ class CefMenuModel : public virtual CefBase {
                                 bool& shift_pressed,
                                 bool& ctrl_pressed,
                                 bool& alt_pressed) =0;
+
+  ///
+  // Set the explicit color for |command_id| and |color_type| to |color|.
+  // Specify a |color| value of 0 to remove the explicit color. If no explicit
+  // color or default color is set for |color_type| then the system color will
+  // be used. Returns true on success.
+  ///
+  /*--cef()--*/
+  virtual bool SetColor(int command_id,
+                        cef_menu_color_type_t color_type,
+                        cef_color_t color) =0;
+
+  ///
+  // Set the explicit color for |command_id| and |index| to |color|. Specify a
+  // |color| value of 0 to remove the explicit color. Specify an |index| value
+  // of -1 to set the default color for items that do not have an explicit
+  // color set. If no explicit color or default color is set for |color_type|
+  // then the system color will be used. Returns true on success.
+  ///
+  /*--cef()--*/
+  virtual bool SetColorAt(int index,
+                          cef_menu_color_type_t color_type,
+                          cef_color_t color) =0;
+
+  ///
+  // Returns in |color| the color that was explicitly set for |command_id| and
+  // |color_type|. If a color was not set then 0 will be returned in |color|.
+  // Returns true on success.
+  ///
+  /*--cef()--*/
+  virtual bool GetColor(int command_id,
+                        cef_menu_color_type_t color_type,
+                        cef_color_t& color) =0;
+
+  ///
+  // Returns in |color| the color that was explicitly set for |command_id| and
+  // |color_type|. Specify an |index| value of -1 to return the default color
+  // in |color|. If a color was not set then 0 will be returned in |color|.
+  // Returns true on success.
+  ///
+  /*--cef()--*/
+  virtual bool GetColorAt(int index,
+                          cef_menu_color_type_t color_type,
+                          cef_color_t& color) =0;
+
+  ///
+  // Sets the font list for the specified |command_id|. If |font_list| is empty
+  // the system font will be used. Returns true on success. The format is
+  // "<FONT_FAMILY_LIST>,[STYLES] <SIZE>", where:
+  // - FONT_FAMILY_LIST is a comma-separated list of font family names,
+  // - STYLES is an optional space-separated list of style names (case-sensitive
+  //   "Bold" and "Italic" are supported), and
+  // - SIZE is an integer font size in pixels with the suffix "px".
+  //
+  // Here are examples of valid font description strings:
+  // - "Arial, Helvetica, Bold Italic 14px"
+  // - "Arial, 14px"
+  ///
+  /*--cef(optional_param=font_list)--*/
+  virtual bool SetFontList(int command_id,
+                           const CefString& font_list) =0;
+
+  ///
+  // Sets the font list for the specified |index|. Specify an |index| value of
+  // -1 to set the default font. If |font_list| is empty the system font will
+  // be used. Returns true on success. The format is
+  // "<FONT_FAMILY_LIST>,[STYLES] <SIZE>", where:
+  // - FONT_FAMILY_LIST is a comma-separated list of font family names,
+  // - STYLES is an optional space-separated list of style names (case-sensitive
+  //   "Bold" and "Italic" are supported), and
+  // - SIZE is an integer font size in pixels with the suffix "px".
+  //
+  // Here are examples of valid font description strings:
+  // - "Arial, Helvetica, Bold Italic 14px"
+  // - "Arial, 14px"
+  ///
+  /*--cef(optional_param=font_list)--*/
+  virtual bool SetFontListAt(int index,
+                             const CefString& font_list) =0;
 };
 
 #endif  // CEF_INCLUDE_CEF_MENU_MODEL_H_

@@ -45,12 +45,36 @@
 
 class CefContextMenuParams;
 
+
+///
+// Callback interface used for continuation of custom context menu display.
+///
+/*--cef(source=library)--*/
+class CefRunContextMenuCallback : public virtual CefBaseRefCounted {
+ public:
+  typedef cef_event_flags_t EventFlags;
+
+  ///
+  // Complete context menu display by selecting the specified |command_id| and
+  // |event_flags|.
+  ///
+  /*--cef(capi_name=cont)--*/
+  virtual void Continue(int command_id, EventFlags event_flags) =0;
+
+  ///
+  // Cancel context menu display.
+  ///
+  /*--cef()--*/
+  virtual void Cancel() =0;
+};
+
+
 ///
 // Implement this interface to handle context menu events. The methods of this
 // class will be called on the UI thread.
 ///
 /*--cef(source=client)--*/
-class CefContextMenuHandler : public virtual CefBase {
+class CefContextMenuHandler : public virtual CefBaseRefCounted {
  public:
   typedef cef_event_flags_t EventFlags;
 
@@ -66,6 +90,23 @@ class CefContextMenuHandler : public virtual CefBase {
                                    CefRefPtr<CefFrame> frame,
                                    CefRefPtr<CefContextMenuParams> params,
                                    CefRefPtr<CefMenuModel> model) {}
+
+  ///
+  // Called to allow custom display of the context menu. |params| provides
+  // information about the context menu state. |model| contains the context menu
+  // model resulting from OnBeforeContextMenu. For custom display return true
+  // and execute |callback| either synchronously or asynchronously with the
+  // selected command ID. For default display return false. Do not keep
+  // references to |params| or |model| outside of this callback.
+  ///
+  /*--cef()--*/
+  virtual bool RunContextMenu(CefRefPtr<CefBrowser> browser,
+                              CefRefPtr<CefFrame> frame,
+                              CefRefPtr<CefContextMenuParams> params,
+                              CefRefPtr<CefMenuModel> model,
+                              CefRefPtr<CefRunContextMenuCallback> callback) {
+    return false;
+  }
 
   ///
   // Called to execute a command selected from the context menu. Return true if
@@ -98,7 +139,7 @@ class CefContextMenuHandler : public virtual CefBase {
 // can only be accessed on browser process the UI thread.
 ///
 /*--cef(source=library)--*/
-class CefContextMenuParams : public virtual CefBase {
+class CefContextMenuParams : public virtual CefBaseRefCounted {
  public:
   typedef cef_context_menu_type_flags_t TypeFlags;
   typedef cef_context_menu_media_type_t MediaType;
@@ -155,6 +196,13 @@ class CefContextMenuParams : public virtual CefBase {
   virtual bool HasImageContents() =0;
 
   ///
+  // Returns the title text or the alt text if the context menu was invoked on
+  // an image.
+  ///
+  /*--cef()--*/
+  virtual CefString GetTitleText() = 0;
+
+  ///
   // Returns the URL of the top level page that the context menu was invoked on.
   ///
   /*--cef()--*/
@@ -194,6 +242,20 @@ class CefContextMenuParams : public virtual CefBase {
   virtual CefString GetSelectionText() =0;
 
   ///
+  // Returns the text of the misspelled word, if any, that the context menu was
+  // invoked on.
+  ///
+  /*--cef()--*/
+  virtual CefString GetMisspelledWord() =0;
+
+  ///
+  // Returns true if suggestions exist, false otherwise. Fills in |suggestions|
+  // from the spell check service for the misspelled word if there is one.
+  ///
+  /*--cef()--*/
+  virtual bool GetDictionarySuggestions(std::vector<CefString>& suggestions) =0;
+
+  ///
   // Returns true if the context menu was invoked on an editable node.
   ///
   /*--cef()--*/
@@ -201,10 +263,10 @@ class CefContextMenuParams : public virtual CefBase {
 
   ///
   // Returns true if the context menu was invoked on an editable node where
-  // speech-input is enabled.
+  // spell-check is enabled.
   ///
   /*--cef()--*/
-  virtual bool IsSpeechInputEnabled() =0;
+  virtual bool IsSpellCheckEnabled() =0;
 
   ///
   // Returns flags representing the actions supported by the editable node, if
@@ -212,6 +274,19 @@ class CefContextMenuParams : public virtual CefBase {
   ///
   /*--cef(default_retval=CM_EDITFLAG_NONE)--*/
   virtual EditStateFlags GetEditStateFlags() =0;
+
+  ///
+  // Returns true if the context menu contains items specified by the renderer
+  // process (for example, plugin placeholder or pepper plugin menu items).
+  ///
+  /*--cef()--*/
+  virtual bool IsCustomMenu() =0;
+
+  ///
+  // Returns true if the context menu was invoked from a pepper plugin.
+  ///
+  /*--cef()--*/
+  virtual bool IsPepperMenu() =0;
 };
 
 #endif  // CEF_INCLUDE_CEF_CONTEXT_MENU_HANDLER_H_

@@ -1,4 +1,4 @@
-// Copyright (c) 2014 Marshall A. Greenblatt. All rights reserved.
+// Copyright (c) 2017 Marshall A. Greenblatt. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -40,6 +40,7 @@
 
 #include "include/capi/cef_base_capi.h"
 #include "include/capi/cef_command_line_capi.h"
+#include "include/capi/cef_print_handler_capi.h"
 #include "include/capi/cef_values_capi.h"
 
 #ifdef __cplusplus
@@ -56,7 +57,7 @@ typedef struct _cef_browser_process_handler_t {
   ///
   // Base structure.
   ///
-  cef_base_t base;
+  cef_base_ref_counted_t base;
 
   ///
   // Called on the browser process UI thread immediately after the CEF context
@@ -86,6 +87,29 @@ typedef struct _cef_browser_process_handler_t {
   void (CEF_CALLBACK *on_render_process_thread_created)(
       struct _cef_browser_process_handler_t* self,
       struct _cef_list_value_t* extra_info);
+
+  ///
+  // Return the handler for printing on Linux. If a print handler is not
+  // provided then printing will not be supported on the Linux platform.
+  ///
+  struct _cef_print_handler_t* (CEF_CALLBACK *get_print_handler)(
+      struct _cef_browser_process_handler_t* self);
+
+  ///
+  // Called from any thread when work has been scheduled for the browser process
+  // main (UI) thread. This callback is used in combination with CefSettings.
+  // external_message_pump and cef_do_message_loop_work() in cases where the CEF
+  // message loop must be integrated into an existing application message loop
+  // (see additional comments and warnings on CefDoMessageLoopWork). This
+  // callback should schedule a cef_do_message_loop_work() call to happen on the
+  // main (UI) thread. |delay_ms| is the requested delay in milliseconds. If
+  // |delay_ms| is <= 0 then the call should happen reasonably soon. If
+  // |delay_ms| is > 0 then the call should be scheduled to happen after the
+  // specified delay and any currently pending scheduled call should be
+  // cancelled.
+  ///
+  void (CEF_CALLBACK *on_schedule_message_pump_work)(
+      struct _cef_browser_process_handler_t* self, int64 delay_ms);
 } cef_browser_process_handler_t;
 
 

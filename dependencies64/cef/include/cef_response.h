@@ -46,7 +46,7 @@
 // called on any thread.
 ///
 /*--cef(source=library,no_debugct_check)--*/
-class CefResponse : public virtual CefBase {
+class CefResponse : public virtual CefBaseRefCounted {
  public:
   typedef std::multimap<CefString, CefString> HeaderMap;
 
@@ -61,6 +61,19 @@ class CefResponse : public virtual CefBase {
   ///
   /*--cef()--*/
   virtual bool IsReadOnly() =0;
+
+  ///
+  // Get the response error code. Returns ERR_NONE if there was no error.
+  ///
+  /*--cef(default_retval=ERR_NONE)--*/
+  virtual cef_errorcode_t GetError() = 0;
+
+  ///
+  // Set the response error code. This can be used by custom scheme handlers
+  // to return errors during initial request processing.
+  ///
+  /*--cef()--*/
+  virtual void SetError(cef_errorcode_t error) = 0;
 
   ///
   // Get the response status code.

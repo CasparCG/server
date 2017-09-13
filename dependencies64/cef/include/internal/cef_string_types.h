@@ -36,26 +36,14 @@
 // modification. It is the user's responsibility to provide synchronization if
 // modifying CEF strings from multiple threads.
 
+#include <stddef.h>
+
+#include "include/base/cef_basictypes.h"
+#include "include/internal/cef_export.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "include/internal/cef_build.h"
-#include "include/internal/cef_export.h"
-#include <stddef.h>
-
-// CEF character type definitions. wchar_t is 2 bytes on Windows and 4 bytes on
-// most other platforms.
-
-#if defined(OS_WIN)
-typedef wchar_t char16;
-#else  // !OS_WIN
-typedef unsigned short char16;  // NOLINT (runtime/int)
-#ifndef WCHAR_T_IS_UTF32
-#define WCHAR_T_IS_UTF32
-#endif  // WCHAR_T_IS_UTF32
-#endif  // !OS_WIN
-
 
 // CEF string type definitions. Whomever allocates |str| is responsible for
 // providing an appropriate |dtor| implementation that will free the string in
@@ -195,6 +183,17 @@ CEF_EXPORT cef_string_userfree_utf16_t cef_string_userfree_utf16_alloc();
 CEF_EXPORT void cef_string_userfree_wide_free(cef_string_userfree_wide_t str);
 CEF_EXPORT void cef_string_userfree_utf8_free(cef_string_userfree_utf8_t str);
 CEF_EXPORT void cef_string_userfree_utf16_free(cef_string_userfree_utf16_t str);
+
+
+///
+// These functions convert utf16 string case using the current ICU locale. This
+// may change the length of the string in some cases.
+///
+
+CEF_EXPORT int cef_string_utf16_to_lower(const char16* src, size_t src_len,
+                                         cef_string_utf16_t* output);
+CEF_EXPORT int cef_string_utf16_to_upper(const char16* src, size_t src_len,
+                                         cef_string_utf16_t* output);
 
 
 #ifdef __cplusplus

@@ -1,4 +1,4 @@
-// Copyright (c) 2014 Marshall A. Greenblatt. All rights reserved.
+// Copyright (c) 2017 Marshall A. Greenblatt. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -40,6 +40,7 @@
 
 #include "include/capi/cef_base_capi.h"
 #include "include/capi/cef_browser_capi.h"
+#include "include/capi/cef_drag_data_capi.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,7 +55,7 @@ typedef struct _cef_render_handler_t {
   ///
   // Base structure.
   ///
-  cef_base_t base;
+  cef_base_ref_counted_t base;
 
   ///
   // Called to retrieve the root window rectangle in screen coordinates. Return
@@ -99,17 +100,20 @@ typedef struct _cef_render_handler_t {
 
   ///
   // Called when the browser wants to move or resize the popup widget. |rect|
-  // contains the new location and size.
+  // contains the new location and size in view coordinates.
   ///
   void (CEF_CALLBACK *on_popup_size)(struct _cef_render_handler_t* self,
       struct _cef_browser_t* browser, const cef_rect_t* rect);
 
   ///
-  // Called when an element should be painted. |type| indicates whether the
-  // element is the view or the popup widget. |buffer| contains the pixel data
-  // for the whole image. |dirtyRects| contains the set of rectangles that need
-  // to be repainted. On Windows |buffer| will be |width|*|height|*4 bytes in
-  // size and represents a BGRA image with an upper-left origin.
+  // Called when an element should be painted. Pixel values passed to this
+  // function are scaled relative to view coordinates based on the value of
+  // CefScreenInfo.device_scale_factor returned from GetScreenInfo. |type|
+  // indicates whether the element is the view or the popup widget. |buffer|
+  // contains the pixel data for the whole image. |dirtyRects| contains the set
+  // of rectangles in pixel coordinates that need to be repainted. |buffer| will
+  // be |width|*|height|*4 bytes in size and represents a BGRA image with an
+  // upper-left origin.
   ///
   void (CEF_CALLBACK *on_paint)(struct _cef_render_handler_t* self,
       struct _cef_browser_t* browser, cef_paint_element_type_t type,
@@ -117,16 +121,56 @@ typedef struct _cef_render_handler_t {
       int width, int height);
 
   ///
-  // Called when the browser window's cursor has changed.
+  // Called when the browser's cursor has changed. If |type| is CT_CUSTOM then
+  // |custom_cursor_info| will be populated with the custom cursor information.
   ///
   void (CEF_CALLBACK *on_cursor_change)(struct _cef_render_handler_t* self,
-      struct _cef_browser_t* browser, cef_cursor_handle_t cursor);
+      struct _cef_browser_t* browser, cef_cursor_handle_t cursor,
+      cef_cursor_type_t type,
+      const struct _cef_cursor_info_t* custom_cursor_info);
+
+  ///
+  // Called when the user starts dragging content in the web view. Contextual
+  // information about the dragged content is supplied by |drag_data|. (|x|,
+  // |y|) is the drag start location in screen coordinates. OS APIs that run a
+  // system message loop may be used within the StartDragging call.
+  //
+  // Return false (0) to abort the drag operation. Don't call any of
+  // cef_browser_host_t::DragSource*Ended* functions after returning false (0).
+  //
+  // Return true (1) to handle the drag operation. Call
+  // cef_browser_host_t::DragSourceEndedAt and DragSourceSystemDragEnded either
+  // synchronously or asynchronously to inform the web view that the drag
+  // operation has ended.
+  ///
+  int (CEF_CALLBACK *start_dragging)(struct _cef_render_handler_t* self,
+      struct _cef_browser_t* browser, struct _cef_drag_data_t* drag_data,
+      cef_drag_operations_mask_t allowed_ops, int x, int y);
+
+  ///
+  // Called when the web view wants to update the mouse cursor during a drag &
+  // drop operation. |operation| describes the allowed operation (none, move,
+  // copy, link).
+  ///
+  void (CEF_CALLBACK *update_drag_cursor)(struct _cef_render_handler_t* self,
+      struct _cef_browser_t* browser, cef_drag_operations_mask_t operation);
 
   ///
   // Called when the scroll offset has changed.
   ///
   void (CEF_CALLBACK *on_scroll_offset_changed)(
-      struct _cef_render_handler_t* self, struct _cef_browser_t* browser);
+      struct _cef_render_handler_t* self, struct _cef_browser_t* browser,
+      double x, double y);
+
+  ///
+  // Called when the IME composition range has changed. |selected_range| is the
+  // range of characters that have been selected. |character_bounds| is the
+  // bounds of each character in view coordinates.
+  ///
+  void (CEF_CALLBACK *on_ime_composition_range_changed)(
+      struct _cef_render_handler_t* self, struct _cef_browser_t* browser,
+      const cef_range_t* selected_range, size_t character_boundsCount,
+      cef_rect_t const* character_bounds);
 } cef_render_handler_t;
 
 

@@ -1,4 +1,4 @@
-// Copyright (c) 2014 Marshall A. Greenblatt. All rights reserved.
+// Copyright (c) 2017 Marshall A. Greenblatt. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -54,7 +54,7 @@ typedef struct _cef_geolocation_callback_t {
   ///
   // Base structure.
   ///
-  cef_base_t base;
+  cef_base_ref_counted_t base;
 
   ///
   // Call to allow or deny geolocation access.
@@ -67,34 +67,34 @@ typedef struct _cef_geolocation_callback_t {
 ///
 // Implement this structure to handle events related to geolocation permission
 // requests. The functions of this structure will be called on the browser
-// process IO thread.
+// process UI thread.
 ///
 typedef struct _cef_geolocation_handler_t {
   ///
   // Base structure.
   ///
-  cef_base_t base;
+  cef_base_ref_counted_t base;
 
   ///
   // Called when a page requests permission to access geolocation information.
   // |requesting_url| is the URL requesting permission and |request_id| is the
-  // unique ID for the permission request. Call
-  // cef_geolocation_callback_t::Continue to allow or deny the permission
-  // request.
+  // unique ID for the permission request. Return true (1) and call
+  // cef_geolocation_callback_t::cont() either in this function or at a later
+  // time to continue or cancel the request. Return false (0) to cancel the
+  // request immediately.
   ///
-  void (CEF_CALLBACK *on_request_geolocation_permission)(
+  int (CEF_CALLBACK *on_request_geolocation_permission)(
       struct _cef_geolocation_handler_t* self, struct _cef_browser_t* browser,
       const cef_string_t* requesting_url, int request_id,
       struct _cef_geolocation_callback_t* callback);
 
   ///
-  // Called when a geolocation access request is canceled. |requesting_url| is
-  // the URL that originally requested permission and |request_id| is the unique
-  // ID for the permission request.
+  // Called when a geolocation access request is canceled. |request_id| is the
+  // unique ID for the permission request.
   ///
   void (CEF_CALLBACK *on_cancel_geolocation_permission)(
       struct _cef_geolocation_handler_t* self, struct _cef_browser_t* browser,
-      const cef_string_t* requesting_url, int request_id);
+      int request_id);
 } cef_geolocation_handler_t;
 
 
