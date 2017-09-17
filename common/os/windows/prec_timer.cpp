@@ -23,9 +23,11 @@
 
 #include "../../prec_timer.h"
 
+#include <boost/chrono/system_clocks.hpp>
+
 #include "windows.h"
 
-#include <Mmsystem.h>
+using namespace boost::chrono;
 
 namespace caspar {
 	
@@ -34,9 +36,9 @@ prec_timer::prec_timer()
 {
 }
 
-void prec_timer::tick_millis(int64_t ticks_to_wait)
+void prec_timer::tick_nanos(int64_t ticks_to_wait)
 {
-	auto t = ::timeGetTime();
+	auto t = duration_cast<nanoseconds>(high_resolution_clock::now().time_since_epoch()).count();
 
 	if (time_ != 0)
 	{
@@ -59,14 +61,14 @@ void prec_timer::tick_millis(int64_t ticks_to_wait)
 				// otherwise, do a few Sleep(0)'s, which just give up the timeslice,
 				//   but don't really save cpu or battery, but do pass a tiny
 				//   amount of time.
-				if (ticks_left > 2)
+				if (ticks_left > 2000000)
 					Sleep(1);
 				else
 					for (int i = 0; i < 10; ++i)
 						Sleep(0);  // causes thread to give up its timeslice
 			}
 
-			t = ::timeGetTime();
+			t = duration_cast<nanoseconds>(high_resolution_clock::now().time_since_epoch()).count();
 		} while (!done);
 	}
 
