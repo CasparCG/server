@@ -39,9 +39,8 @@ prec_timer::prec_timer()
 {
 }
 
-void prec_timer::tick_millis(int64_t ticks_to_wait)
+void prec_timer::tick_nanos(int64_t ticks_to_wait)
 {
-	ticks_to_wait *= 1000000;
 	auto t = duration_cast<nanoseconds>(high_resolution_clock::now().time_since_epoch()).count();
 
 	if (time_ != 0)
