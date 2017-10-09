@@ -21,7 +21,7 @@
 
 #include "../stdafx.h"
 
-#include <core/monitor/monitor.h>
+#include "core/monitor/monitor.h"
 #include "FlashAxContainer.h"
 #include "../interop/TimerHelper.h"
 
@@ -619,7 +619,9 @@ void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 	else if(str.find(L"Activity") != std::wstring::npos)
 	{
 		CASPAR_LOG(debug) << print_() << L" [activity]     " << str;
-
+		if (monitor_subject_) {
+			*monitor_subject_ << core::monitor::message("/flashtrace") % str;
+		}
 		//this is how templatehost 1.7 reports that a command has been received
 		if(str.find(L"Command recieved") != std::wstring::npos)
 			bCallSuccessful_ = true;
@@ -853,7 +855,7 @@ void FlashAxContainer::SetSize(size_t width, size_t height) {
 	}
 }
 
-void FlashAxContainer::SetMonitor(core::monitor::subject& monitor_subject) {
+void FlashAxContainer::SetMonitor(core::monitor::subject* monitor_subject) {
 	monitor_subject_ = monitor_subject;
 }
 

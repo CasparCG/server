@@ -259,7 +259,7 @@ public:
 	bool IsEmpty() const { return bIsEmpty_; }
 
 	void SetSize(size_t width, size_t height);
-	void SetMonitor(core::monitor::subject& monitor_subject);
+	void SetMonitor(core::monitor::subject* monitor_subject);
 	bool IsReadyToRender() const;
 	void EnterFullscreen();
 
@@ -275,7 +275,7 @@ private:
 	volatile bool bReadyToRender_;
 	volatile bool bIsEmpty_;
 	volatile bool bHasNewTiming_;
-	core::monitor::subject monitor_subject_;
+	core::monitor::subject* monitor_subject_;
 	//std::vector<DirtyRect> bDirtyRects_;
 
 
