@@ -21,6 +21,7 @@
 
 #include "../stdafx.h"
 
+#include <core/monitor/monitor.h>
 #include "FlashAxContainer.h"
 #include "../interop/TimerHelper.h"
 
@@ -727,7 +728,7 @@ bool FlashAxContainer::CheckForFlashSupport()
 
 HRESULT FlashAxContainer::CreateAxControl()
 {
-	CLSID clsid;
+	CLSID clsid;	
 	HRESULT hr = CLSIDFromString((LPOLESTR)flashGUID_, &clsid); 
 	if(SUCCEEDED(hr))
 		hr = CoCreateInstance(clsid, NULL, CLSCTX_INPROC_SERVER, __uuidof(IUnknown), (void**)&m_spUnknown);
@@ -851,6 +852,11 @@ void FlashAxContainer::SetSize(size_t width, size_t height) {
 		bInvalidRect_ = true;
 	}
 }
+
+void FlashAxContainer::SetMonitor(core::monitor::subject& monitor_subject) {
+	monitor_subject_ = monitor_subject;
+}
+
 
 HRESULT FlashAxContainer::QueryControl(REFIID iid, void** ppUnk)
 {

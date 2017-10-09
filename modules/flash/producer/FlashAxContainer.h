@@ -33,6 +33,7 @@
 #include <vector>
 
 #include <core/video_format.h>
+#include <core/monitor/monitor.h>
 #include "../interop/axflash.h"
 //#import "progid:ShockwaveFlash.ShockwaveFlash.9" no_namespace, named_guids
 
@@ -258,6 +259,7 @@ public:
 	bool IsEmpty() const { return bIsEmpty_; }
 
 	void SetSize(size_t width, size_t height);
+	void SetMonitor(core::monitor::subject& monitor_subject);
 	bool IsReadyToRender() const;
 	void EnterFullscreen();
 
@@ -273,6 +275,7 @@ private:
 	volatile bool bReadyToRender_;
 	volatile bool bIsEmpty_;
 	volatile bool bHasNewTiming_;
+	core::monitor::subject monitor_subject_;
 	//std::vector<DirtyRect> bDirtyRects_;
 
 

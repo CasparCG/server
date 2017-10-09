@@ -239,6 +239,7 @@ public:
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Set Scale Mode"));
 						
 		ax_->SetSize(width_, height_);
+		ax_->SetMonitor(monitor_subject_);
 		render_frame(0.0);
 
 		CASPAR_LOG(info) << print() << L" Initialized.";
