@@ -34,5 +34,8 @@ void describe_producer(core::help_sink& sink, const core::help_repository& repo)
 spl::shared_ptr<core::frame_producer> create_producer(
 		const core::frame_producer_dependencies& dependencies,
 		const std::vector<std::wstring>& params);
+spl::shared_ptr<core::frame_producer> create_cg_producer(
+	const core::frame_producer_dependencies& dependencies,
+	const std::vector<std::wstring>& params);
 
 }}
