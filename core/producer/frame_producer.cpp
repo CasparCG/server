@@ -191,7 +191,10 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
 		monitor::subject& monitor_output() override {static monitor::subject monitor_subject(""); return monitor_subject;}
 		std::wstring name() const override {return L"empty";}
 		uint32_t frame_number() const override {return 0;}
-		std::future<std::wstring> call(const std::vector<std::wstring>& params) override{CASPAR_THROW_EXCEPTION(not_implemented());}
+		std::future<std::wstring> call(const std::vector<std::wstring>& params) override{
+			CASPAR_LOG(warning) << L" Cannot call on empty frame_producer";
+			return make_ready_future(std::wstring(L""));
+		}
 		variable& get_variable(const std::wstring& name) override { CASPAR_THROW_EXCEPTION(not_implemented()); }
 		const std::vector<std::wstring>& get_variables() const override { static std::vector<std::wstring> empty; return empty; }
 		draw_frame last_frame() {return draw_frame::empty();}

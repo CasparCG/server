@@ -592,6 +592,27 @@ void describe_producer(core::help_sink& sink, const core::help_repository& repo)
 	sink.example(L">> PLAY 1-10 folder/html_file");
 }
 
+spl::shared_ptr<core::frame_producer> create_cg_producer(
+	const core::frame_producer_dependencies& dependencies,
+	const std::vector<std::wstring>& params)
+{
+	const auto filename = env::template_folder() + params.at(0) + L".html";
+	const auto found_filename = find_case_insensitive(filename);
+	const auto http_prefix = boost::algorithm::istarts_with(params.at(0), L"http:") || boost::algorithm::istarts_with(params.at(0), L"https:");
+
+	if (!found_filename && !http_prefix)
+		return core::frame_producer::empty();
+
+	const auto url = found_filename
+		? L"file://" + *found_filename
+		: params.at(0);
+
+	return core::create_destroy_proxy(spl::make_shared<html_producer>(
+		dependencies.frame_factory,
+		dependencies.format_desc,
+		url));
+}
+
 spl::shared_ptr<core::frame_producer> create_producer(
 		const core::frame_producer_dependencies& dependencies,
 		const std::vector<std::wstring>& params)

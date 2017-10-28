@@ -256,7 +256,7 @@ void init(core::module_dependencies dependencies)
 			},
 			[](const core::frame_producer_dependencies& dependencies, const std::wstring& filename)
 			{
-				return html::create_producer(dependencies, { filename });
+				return html::create_cg_producer(dependencies, { filename });
 			},
 			false
 	);
