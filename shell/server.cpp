@@ -345,10 +345,15 @@ struct server::impl : boost::noncopyable
 						ptree_get<std::wstring>(predefined_client.second, L"address");
 				const auto port =
 						ptree_get<unsigned short>(predefined_client.second, L"port");
-				predefined_osc_subscriptions_.push_back(
+
+				boost::system::error_code ec;
+				auto ipaddr = address_v4::from_string(u8(address), ec);
+				if (!ec)
+					predefined_osc_subscriptions_.push_back(
 						osc_client_->get_subscription_token(udp::endpoint(
-								address_v4::from_string(u8(address)),
-								port)));
+							ipaddr, port)));
+				else
+					CASPAR_LOG(warning) << "Invalid OSC client. Must be valid ipv4 address: " << address;
 			}
 		}
 
