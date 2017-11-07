@@ -206,4 +206,36 @@ void premultiply(SrcDstView& view_to_modify)
 	});
 }
 
+/**
+* Un-multiply with alpha for each pixel in an ImageView. The modifications is
+* done in place. The pixel type of the ImageView must model the RGBAPixel
+* concept.
+*
+* @param view_to_modify The image view to unmultiply in place. Has to model
+*                       the ImageView concept and have a pixel type that
+*                       models RGBAPixel.
+*/
+template<class SrcDstView>
+void unmultiply(SrcDstView& view_to_modify)
+{
+	std::for_each(view_to_modify.begin(), view_to_modify.end(), [&](typename SrcDstView::pixel_type& pixel)
+	{
+		int alpha = static_cast<int>(pixel.a());
+
+		if (alpha != 0 && alpha != 255)
+		{
+			// We don't event try to premultiply 0 since it will be unaffected.
+			if (pixel.r())
+				pixel.r() = static_cast<uint8_t>(static_cast<int>(pixel.r()) * 255 / alpha);
+
+			if (pixel.g())
+				pixel.g() = static_cast<uint8_t>(static_cast<int>(pixel.g()) * 255 / alpha);
+
+			if (pixel.b())
+				pixel.b() = static_cast<uint8_t>(static_cast<int>(pixel.b()) * 255 / alpha);
+		}
+	});
+}
+
+
 }}
