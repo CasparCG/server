@@ -48,8 +48,12 @@ spl::shared_ptr<std::remove_pointer<FT_Library>::type> get_lib_for_thread()
 	return *result;
 }
 
-spl::shared_ptr<std::remove_pointer<FT_Face>::type> get_new_face(const std::string& font_file)
+spl::shared_ptr<std::remove_pointer<FT_Face>::type> get_new_face(
+		const std::string& font_file, const std::string& font_name)
 {
+	if (font_file.empty())
+		CASPAR_THROW_EXCEPTION(expected_freetype_exception() << msg_info("Failed to find font file for \"" + font_name + "\""));
+
 	auto lib = get_lib_for_thread();
 	FT_Face face;
 	if (FT_New_Face(lib.get(), u8(font_file).c_str(), 0, &face))

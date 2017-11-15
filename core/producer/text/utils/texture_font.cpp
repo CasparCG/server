@@ -46,7 +46,7 @@ private:
 
 public:
 	impl(texture_atlas& atlas, const text_info& info, bool normalize_coordinates)
-		: face_(get_new_face(u8(info.font_file)))
+		: face_(get_new_face(u8(info.font_file), u8(info.font)))
 		, atlas_(atlas)
 		, size_(info.size)
 		, tracking_(info.size*info.tracking/1000.0)
@@ -54,16 +54,16 @@ public:
 		, name_(info.font)
 	{
 		if (FT_Set_Char_Size(face_.get(), static_cast<FT_F26Dot6>(size_*64), 0, 72, 72))
-			CASPAR_THROW_EXCEPTION(freetype_exception() << msg_info("Failed to set font size"));
+			CASPAR_THROW_EXCEPTION(expected_freetype_exception() << msg_info("Failed to set font size"));
 	}
 
-	void set_tracking(int tracking)
+	void set_tracking(double tracking)
 	{
 		tracking_ = size_ * tracking / 1000.0;
 	}
 
 	int count_glyphs_in_range(unicode_block block)
-	{ 
+	{
 		unicode_range range = get_range(block);
 
 		//TODO: extract info from freetype
@@ -82,7 +82,7 @@ public:
 			FT_UInt glyph_index = FT_Get_Char_Index(face_.get(), i);
 			if(!glyph_index)	//ignore codes that doesn't have a glyph for now. Might want to map these to a special glyph later.
 				continue;
-			
+
 			FT_Error err = FT_Load_Glyph(face_.get(), glyph_index, flags);
 			if(err) continue;	//igonore glyphs that fail to load
 
@@ -97,7 +97,7 @@ public:
 			}
 
 			atlas_.set_region(region.x, region.y, bitmap.width, bitmap.rows, bitmap.buffer, bitmap.pitch, col);
-			glyphs_.insert(std::pair<int, glyph_info>(i, glyph_info(bitmap.width, bitmap.rows, 
+			glyphs_.insert(std::pair<int, glyph_info>(i, glyph_info(bitmap.width, bitmap.rows,
 										region.x / static_cast<double>(atlas_.width()),
 										region.y / static_cast<double>(atlas_.height()),
 										(region.x + bitmap.width) / static_cast<double>(atlas_.width()),
@@ -126,7 +126,7 @@ public:
 		{
 			auto glyph_it = glyphs_.find(*it);
 			if (glyph_it != glyphs_.end())
-			{	
+			{
 				const glyph_info& coords = glyph_it->second;
 
 				FT_UInt glyph_index = FT_Get_Char_Index(face_.get(), (*it));
@@ -201,7 +201,7 @@ public:
 
 		if(normalize_)
 		{
-			auto ratio_x = parent_width / (pos_x - x);
+			auto ratio_x = parent_width / (pos_x - tracking_ - x);
 			auto ratio_y = parent_height / static_cast<double>(maxHeight);
 
 			for (auto& coord : result)
@@ -213,62 +213,12 @@ public:
 
 		if (metrics != nullptr)
 		{
-			metrics->width = (int)(pos_x - x + 0.5);
-			metrics->bearingY = maxBearingY;
-			metrics->height = maxHeight;
-			metrics->protrudeUnderY = maxProtrudeUnderY;
-		}
-		return result;
-	}
-
-	string_metrics measure_string(const std::wstring& str)
-	{
-		string_metrics result;
-		
-		bool use_kerning = (face_->face_flags & FT_FACE_FLAG_KERNING) == FT_FACE_FLAG_KERNING;
-		int index = 0;
-		FT_UInt previous = 0;
-		double pos_x = 0;
-//		float pos_y = 0;
-
-		auto end = str.end();
-		for(auto it = str.begin(); it != end; ++it, ++index)
-		{
-			auto glyph_it = glyphs_.find(*it);
-			if(glyph_it != glyphs_.end())
-			{	
-				const glyph_info& coords = glyph_it->second;
-
-				FT_UInt glyph_index = FT_Get_Char_Index(face_.get(), (*it));
-
-				if(use_kerning && previous && glyph_index)
-				{
-					FT_Vector delta;
-					FT_Get_Kerning(face_.get(), previous, glyph_index, FT_KERNING_DEFAULT, &delta);
-
-					pos_x += delta.x / 64.0;
-				}
-
-				FT_Load_Glyph(face_.get(), glyph_index, FT_LOAD_NO_BITMAP | FT_LOAD_FORCE_AUTOHINT | FT_LOAD_TARGET_NORMAL);
-
-				int bearingY = face_->glyph->metrics.horiBearingY >> 6;
-				if(bearingY > result.bearingY)
-					result.bearingY = bearingY;
-
-				int protrudeUnderY = coords.height - bearingY;
-
-				if (protrudeUnderY > result.protrudeUnderY)
-					result.protrudeUnderY = protrudeUnderY;
-
-				if (result.bearingY + result.protrudeUnderY > result.height)
-					 result.height = result.bearingY + result.protrudeUnderY;
-
-				pos_x += face_->glyph->advance.x / 64.0;
-				previous = glyph_index;
-			}
+			metrics->width			= static_cast<int>(pos_x - tracking_ - x + 0.5);
+			metrics->bearingY		= maxBearingY;
+			metrics->height			= maxHeight;
+			metrics->protrudeUnderY	= maxProtrudeUnderY;
 		}
 
-		result.width = (int)(pos_x+.5f);
 		return result;
 	}
 
@@ -281,13 +231,12 @@ public:
 	{
 		return size_;
 	}
-}; 
+};
 
 texture_font::texture_font(texture_atlas& atlas, const text_info& info, bool normalize_coordinates) : impl_(new impl(atlas, info, normalize_coordinates)) {}
 void texture_font::load_glyphs(unicode_block range, const color<double>& col) { impl_->load_glyphs(range, col); }
-void texture_font::set_tracking(int tracking) { impl_->set_tracking(tracking); }
+void texture_font::set_tracking(double tracking) { impl_->set_tracking(tracking); }
 std::vector<frame_geometry::coord> texture_font::create_vertex_stream(const std::wstring& str, int x, int y, int parent_width, int parent_height, string_metrics* metrics, double shear) { return impl_->create_vertex_stream(str, x, y, parent_width, parent_height, metrics, shear); }
-string_metrics texture_font::measure_string(const std::wstring& str) { return impl_->measure_string(str); }
 std::wstring texture_font::get_name() const { return impl_->get_name(); }
 double texture_font::get_size() const { return impl_->get_size(); }
 

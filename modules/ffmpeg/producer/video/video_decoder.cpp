@@ -61,7 +61,7 @@ struct video_decoder::implementation : boost::noncopyable
 
 	const int								width_				= codec_context_->width;
 	const int								height_				= codec_context_->height;
-	bool									is_progressive_;
+	bool									is_progressive_		= true;
 
 	tbb::atomic<uint32_t>					file_frame_number_;
 

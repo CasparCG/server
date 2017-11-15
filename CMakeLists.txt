@@ -32,7 +32,6 @@ else ()
 	set(FFMPEG_INCLUDE_PATH		"${DEPENDENCIES_FOLDER}/ffmpeg/include")
 endif ()
 
-set(ASMLIB_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/asmlib")
 set(FREEIMAGE_INCLUDE_PATH		"${DEPENDENCIES_FOLDER}/freeimage/include")
 set(OPENAL_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/openal/include")
 set(BLUEFISH_INCLUDE_PATH		"${DEPENDENCIES_FOLDER}/bluefish/include")

@@ -36,20 +36,21 @@ mkdir "%SERVER_FOLDER%" || goto :error
 
 :: Copy media files
 echo Copying media...
-xcopy ..\deploy\general\Server "%SERVER_FOLDER%\Server" /E /I /Y || goto :error
-xcopy ..\deploy\general\Wallpapers "%SERVER_FOLDER%\Wallpapers" /E /I /Y || goto :error
+xcopy ..\deploy\general\server "%SERVER_FOLDER%\server" /E /I /Y || goto :error
+xcopy ..\deploy\general\wallpapers "%SERVER_FOLDER%\wallpapers" /E /I /Y || goto :error
+xcopy ..\deploy\general\logos "%SERVER_FOLDER%\logos" /E /I /Y || goto :error
 copy ..\deploy\general\CasparCG_Server_2.0-brochure.pdf "%SERVER_FOLDER%" || goto :error
 
 :: Copy binaries
 echo Copying binaries...
-copy shell\*.dll "%SERVER_FOLDER%\Server" || goto :error
-copy shell\RelWithDebInfo\casparcg.exe "%SERVER_FOLDER%\Server" || goto :error
-copy shell\RelWithDebInfo\casparcg.pdb "%SERVER_FOLDER%\Server" || goto :error
-copy ..\shell\casparcg_auto_restart.bat "%SERVER_FOLDER%\Server" || goto :error
-copy shell\casparcg.config "%SERVER_FOLDER%\Server" || goto :error
-copy shell\*.ttf "%SERVER_FOLDER%\Server" || goto :error
-copy shell\*.pak "%SERVER_FOLDER%\Server" || goto :error
-xcopy shell\locales "%SERVER_FOLDER%\Server\locales" /E /I /Y || goto :error
+copy shell\*.dll "%SERVER_FOLDER%\server" || goto :error
+copy shell\RelWithDebInfo\casparcg.exe "%SERVER_FOLDER%\server" || goto :error
+copy shell\RelWithDebInfo\casparcg.pdb "%SERVER_FOLDER%\server" || goto :error
+copy ..\shell\casparcg_auto_restart.bat "%SERVER_FOLDER%\server" || goto :error
+copy shell\casparcg.config "%SERVER_FOLDER%\server" || goto :error
+copy shell\*.ttf "%SERVER_FOLDER%\server" || goto :error
+copy shell\*.pak "%SERVER_FOLDER%\server" || goto :error
+xcopy shell\locales "%SERVER_FOLDER%\server\locales" /E /I /Y || goto :error
 
 :: Copy documentation
 echo Copying documentation...

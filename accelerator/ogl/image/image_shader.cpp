@@ -210,8 +210,8 @@ std::string get_fragment(bool blend_modes, bool post_processing)
 			uniform float		chroma_min_saturation;
 			uniform float		chroma_min_brightness;
 			uniform float		chroma_softness;
-			uniform float		chroma_spill;
-			uniform float		chroma_spill_darken;
+			uniform float		chroma_spill_suppress;
+			uniform float		chroma_spill_suppress_saturation;
 	)shader"
 
 	+
@@ -337,7 +337,7 @@ std::string get_fragment(bool blend_modes, bool post_processing)
 					if(levels)
 						color.rgb = LevelsControl(color.rgb, min_input, gamma, max_input, min_output, max_output);
 					if(csb)
-						color.rgb = ContrastSaturationBrightness(color.rgb, brt, sat, con);
+						color.rgb = ContrastSaturationBrightness(color, brt, sat, con);
 					if(has_local_key)
 						color *= texture2D(local_key, gl_TexCoord[1].st).r;
 					if(has_layer_key)
