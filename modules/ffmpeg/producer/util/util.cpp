@@ -41,7 +41,6 @@
 #include <common/except.h>
 #include <common/array.h>
 #include <common/os/filesystem.h>
-#include <common/memcpy.h>
 
 #include <tbb/parallel_for.h>
 
@@ -51,8 +50,6 @@
 #include <boost/rational.hpp>
 
 #include <fstream>
-
-#include <asmlib.h>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -78,28 +75,28 @@ core::field_mode get_mode(const AVFrame& frame)
 	return frame.top_field_first ? core::field_mode::upper : core::field_mode::lower;
 }
 
-core::pixel_format get_pixel_format(PixelFormat pix_fmt)
+core::pixel_format get_pixel_format(AVPixelFormat pix_fmt)
 {
 	switch(pix_fmt)
 	{
-	case PIX_FMT_GRAY8:			return core::pixel_format::gray;
-	case PIX_FMT_RGB24:			return core::pixel_format::rgb;
-	case PIX_FMT_BGR24:			return core::pixel_format::bgr;
-	case PIX_FMT_BGRA:			return core::pixel_format::bgra;
-	case PIX_FMT_ARGB:			return core::pixel_format::argb;
-	case PIX_FMT_RGBA:			return core::pixel_format::rgba;
-	case PIX_FMT_ABGR:			return core::pixel_format::abgr;
-	case PIX_FMT_YUV444P:		return core::pixel_format::ycbcr;
-	case PIX_FMT_YUV422P:		return core::pixel_format::ycbcr;
-	case PIX_FMT_YUV420P:		return core::pixel_format::ycbcr;
-	case PIX_FMT_YUV411P:		return core::pixel_format::ycbcr;
-	case PIX_FMT_YUV410P:		return core::pixel_format::ycbcr;
-	case PIX_FMT_YUVA420P:		return core::pixel_format::ycbcra;
-	default:					return core::pixel_format::invalid;
+	case AVPixelFormat::AV_PIX_FMT_GRAY8:		return core::pixel_format::gray;
+	case AVPixelFormat::AV_PIX_FMT_RGB24:		return core::pixel_format::rgb;
+	case AVPixelFormat::AV_PIX_FMT_BGR24:		return core::pixel_format::bgr;
+	case AVPixelFormat::AV_PIX_FMT_BGRA:		return core::pixel_format::bgra;
+	case AVPixelFormat::AV_PIX_FMT_ARGB:		return core::pixel_format::argb;
+	case AVPixelFormat::AV_PIX_FMT_RGBA:		return core::pixel_format::rgba;
+	case AVPixelFormat::AV_PIX_FMT_ABGR:		return core::pixel_format::abgr;
+	case AVPixelFormat::AV_PIX_FMT_YUV444P:		return core::pixel_format::ycbcr;
+	case AVPixelFormat::AV_PIX_FMT_YUV422P:		return core::pixel_format::ycbcr;
+	case AVPixelFormat::AV_PIX_FMT_YUV420P:		return core::pixel_format::ycbcr;
+	case AVPixelFormat::AV_PIX_FMT_YUV411P:		return core::pixel_format::ycbcr;
+	case AVPixelFormat::AV_PIX_FMT_YUV410P:		return core::pixel_format::ycbcr;
+	case AVPixelFormat::AV_PIX_FMT_YUVA420P:	return core::pixel_format::ycbcra;
+	default:									return core::pixel_format::invalid;
 	}
 }
 
-core::pixel_format_desc pixel_format_desc(PixelFormat pix_fmt, int width, int height)
+core::pixel_format_desc pixel_format_desc(AVPixelFormat pix_fmt, int width, int height)
 {
 	// Get linesizes
 	AVPicture dummy_pict;
@@ -159,25 +156,25 @@ core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& 
 
 	const auto width  = decoded_frame->width;
 	const auto height = decoded_frame->height;
-	auto desc		  = pixel_format_desc(static_cast<PixelFormat>(decoded_frame->format), width, height);
+	auto desc		  = pixel_format_desc(static_cast<AVPixelFormat>(decoded_frame->format), width, height);
 
 	if(desc.format == core::pixel_format::invalid)
 	{
-		auto pix_fmt = static_cast<PixelFormat>(decoded_frame->format);
-		auto target_pix_fmt = PIX_FMT_BGRA;
+		auto pix_fmt = static_cast<AVPixelFormat>(decoded_frame->format);
+		auto target_pix_fmt = AVPixelFormat::AV_PIX_FMT_BGRA;
 
-		if(pix_fmt == PIX_FMT_UYVY422)
-			target_pix_fmt = PIX_FMT_YUV422P;
-		else if(pix_fmt == PIX_FMT_YUYV422)
-			target_pix_fmt = PIX_FMT_YUV422P;
-		else if(pix_fmt == PIX_FMT_UYYVYY411)
-			target_pix_fmt = PIX_FMT_YUV411P;
-		else if(pix_fmt == PIX_FMT_YUV420P10)
-			target_pix_fmt = PIX_FMT_YUV420P;
-		else if(pix_fmt == PIX_FMT_YUV422P10)
-			target_pix_fmt = PIX_FMT_YUV422P;
-		else if(pix_fmt == PIX_FMT_YUV444P10)
-			target_pix_fmt = PIX_FMT_YUV444P;
+		if(pix_fmt == AVPixelFormat::AV_PIX_FMT_UYVY422)
+			target_pix_fmt = AVPixelFormat::AV_PIX_FMT_YUV422P;
+		else if(pix_fmt == AVPixelFormat::AV_PIX_FMT_YUYV422)
+			target_pix_fmt = AVPixelFormat::AV_PIX_FMT_YUV422P;
+		else if(pix_fmt == AVPixelFormat::AV_PIX_FMT_UYYVYY411)
+			target_pix_fmt = AVPixelFormat::AV_PIX_FMT_YUV411P;
+		else if(pix_fmt == AVPixelFormat::AV_PIX_FMT_YUV420P10)
+			target_pix_fmt = AVPixelFormat::AV_PIX_FMT_YUV420P;
+		else if(pix_fmt == AVPixelFormat::AV_PIX_FMT_YUV422P10)
+			target_pix_fmt = AVPixelFormat::AV_PIX_FMT_YUV422P;
+		else if(pix_fmt == AVPixelFormat::AV_PIX_FMT_YUV444P10)
+			target_pix_fmt = AVPixelFormat::AV_PIX_FMT_YUV444P;
 
 		auto target_desc = pixel_format_desc(target_pix_fmt, width, height);
 
@@ -207,9 +204,9 @@ core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& 
 		}
 
 		auto av_frame = create_frame();
-		if(target_pix_fmt == PIX_FMT_BGRA)
+		if(target_pix_fmt == AVPixelFormat::AV_PIX_FMT_BGRA)
 		{
-			auto size = avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write.image_data(0).begin(), PIX_FMT_BGRA, width, height);
+			auto size = avpicture_fill(reinterpret_cast<AVPicture*>(av_frame.get()), write.image_data(0).begin(), AVPixelFormat::AV_PIX_FMT_BGRA, width, height);
 			CASPAR_VERIFY(size == write.image_data(0).size());
 		}
 		else
@@ -249,12 +246,12 @@ core::mutable_frame make_frame(const void* tag, const spl::shared_ptr<AVFrame>& 
 				tbb::parallel_for(tbb::blocked_range<int>(0, desc.planes[n].height), [&](const tbb::blocked_range<int>& r)
 				{
 					for (int y = r.begin(); y != r.end(); ++y)
-						A_memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
+						std::memcpy(result + y*plane.linesize, decoded + y*decoded_linesize, plane.linesize);
 				}, ap);
 			}
 			else
 			{
-				fast_memcpy(result, decoded, plane.size);
+				std::memcpy(result, decoded, plane.size);
 			}
 		}
 
@@ -289,25 +286,25 @@ spl::shared_ptr<AVFrame> make_av_frame(std::array<uint8_t*, 4> data, const core:
 	switch(format)
 	{
 	case core::pixel_format::rgb:
-		av_frame->format = PIX_FMT_RGB24;
+		av_frame->format = AVPixelFormat::AV_PIX_FMT_RGB24;
 		break;
 	case core::pixel_format::bgr:
-		av_frame->format = PIX_FMT_BGR24;
+		av_frame->format = AVPixelFormat::AV_PIX_FMT_BGR24;
 		break;
 	case core::pixel_format::rgba:
-		av_frame->format = PIX_FMT_RGBA;
+		av_frame->format = AVPixelFormat::AV_PIX_FMT_RGBA;
 		break;
 	case core::pixel_format::argb:
-		av_frame->format = PIX_FMT_ARGB;
+		av_frame->format = AVPixelFormat::AV_PIX_FMT_ARGB;
 		break;
 	case core::pixel_format::bgra:
-		av_frame->format = PIX_FMT_BGRA;
+		av_frame->format = AVPixelFormat::AV_PIX_FMT_BGRA;
 		break;
 	case core::pixel_format::abgr:
-		av_frame->format = PIX_FMT_ABGR;
+		av_frame->format = AVPixelFormat::AV_PIX_FMT_ABGR;
 		break;
 	case core::pixel_format::gray:
-		av_frame->format = PIX_FMT_GRAY8;
+		av_frame->format = AVPixelFormat::AV_PIX_FMT_GRAY8;
 		break;
 	case core::pixel_format::ycbcr:
 	{
@@ -317,20 +314,20 @@ spl::shared_ptr<AVFrame> make_av_frame(std::array<uint8_t*, 4> data, const core:
 		int c_h = planes[1].height;
 
 		if(c_h == y_h && c_w == y_w)
-			av_frame->format = PIX_FMT_YUV444P;
+			av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV444P;
 		else if(c_h == y_h && c_w*2 == y_w)
-			av_frame->format = PIX_FMT_YUV422P;
+			av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV422P;
 		else if(c_h == y_h && c_w*4 == y_w)
-			av_frame->format = PIX_FMT_YUV411P;
+			av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV411P;
 		else if(c_h*2 == y_h && c_w*2 == y_w)
-			av_frame->format = PIX_FMT_YUV420P;
+			av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV420P;
 		else if(c_h*2 == y_h && c_w*4 == y_w)
-			av_frame->format = PIX_FMT_YUV410P;
+			av_frame->format = AVPixelFormat::AV_PIX_FMT_YUV410P;
 
 		break;
 	}
 	case core::pixel_format::ycbcra:
-		av_frame->format = PIX_FMT_YUVA420P;
+		av_frame->format = AVPixelFormat::AV_PIX_FMT_YUVA420P;
 		break;
 	}
 	return av_frame;
@@ -581,7 +578,8 @@ bool is_valid_file(const std::wstring& filename, bool only_video)
 		L".h264",
 		L".prores",
 		L".mkv",
-		L".mxf"
+		L".mxf",
+		L".ts"
 	};
 
 	auto ext = boost::to_lower_copy(boost::filesystem::path(filename).extension().wstring());
@@ -795,50 +793,7 @@ std::string to_string(const boost::rational<int>& framerate)
 
 std::vector<int> find_audio_cadence(const boost::rational<int>& framerate)
 {
-	static std::map<boost::rational<int>, std::vector<int>> CADENCES_BY_FRAMERATE = []
-	{
-		std::map<boost::rational<int>, std::vector<int>> result;
-
-		for (core::video_format format : enum_constants<core::video_format>())
-		{
-			core::video_format_desc desc(format);
-			boost::rational<int> format_rate(desc.time_scale, desc.duration);
-
-			result.insert(std::make_pair(format_rate, desc.audio_cadence));
-		}
-
-		return result;
-	}();
-
-	auto exact_match = CADENCES_BY_FRAMERATE.find(framerate);
-
-	if (exact_match != CADENCES_BY_FRAMERATE.end())
-		return exact_match->second;
-
-	boost::rational<int> closest_framerate_diff = std::numeric_limits<int>::max();
-	boost::rational<int> closest_framerate = 0;
-
-	for (auto format_framerate : CADENCES_BY_FRAMERATE | boost::adaptors::map_keys)
-	{
-		auto diff = boost::abs(framerate - format_framerate);
-
-		if (diff < closest_framerate_diff)
-		{
-			closest_framerate_diff = diff;
-			closest_framerate = format_framerate;
-		}
-	}
-
-	if (is_logging_quiet_for_thread())
-		CASPAR_LOG(debug) << "No exact audio cadence match found for framerate " << to_string(framerate)
-		<< "\nClosest match is " << to_string(closest_framerate)
-		<< "\nwhich is a " << to_string(closest_framerate_diff) << " difference.";
-	else
-		CASPAR_LOG(warning) << "No exact audio cadence match found for framerate " << to_string(framerate)
-		<< "\nClosest match is " << to_string(closest_framerate)
-		<< "\nwhich is a " << to_string(closest_framerate_diff) << " difference.";
-
-	return CADENCES_BY_FRAMERATE[closest_framerate];
+	return core::find_audio_cadence(framerate, is_logging_quiet_for_thread());
 }
 
 //

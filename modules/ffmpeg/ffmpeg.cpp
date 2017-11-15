@@ -109,36 +109,38 @@ static void sanitize(uint8_t *line)
 
 void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 {
-	static int print_prefix=1;
-	static char prev[1024];
-	char line[8192];
+	static boost::thread_specific_ptr<bool> print_prefix_tss;
+	auto print_prefix = print_prefix_tss.get();
+
+	if (!print_prefix)
+	{
+		print_prefix = new bool(true);
+		print_prefix_tss.reset(print_prefix);
+	}
+
+	char line[1024];
 	AVClass* avc= ptr ? *(AVClass**)ptr : NULL;
 	if (level > AV_LOG_DEBUG)
 		return;
 	line[0]=0;
 
 #undef fprintf
-	if(print_prefix && avc)
+	if(*print_prefix && avc)
 	{
 		if (avc->parent_log_context_offset)
 		{
 			AVClass** parent= *(AVClass***)(((uint8_t*)ptr) + avc->parent_log_context_offset);
 			if(parent && *parent)
-				std::sprintf(line, "[%s @ %p] ", (*parent)->item_name(parent), parent);
+				std::snprintf(line, sizeof(line), "[%s @ %p] ", (*parent)->item_name(parent), parent);
 		}
-		std::sprintf(line + strlen(line), "[%s @ %p] ", avc->item_name(ptr), ptr);
+		std::snprintf(line + strlen(line), sizeof(line) - strlen(line), "[%s @ %p] ", avc->item_name(ptr), ptr);
 	}
 
-	std::vsprintf(line + strlen(line), fmt, vl);
+	std::vsnprintf(line + strlen(line), sizeof(line) - strlen(line), fmt, vl);
 
-	print_prefix = strlen(line) && line[strlen(line)-1] == '\n';
+	*print_prefix = strlen(line) && line[strlen(line)-1] == '\n';
 
-	strcpy(prev, line);
 	sanitize((uint8_t*)line);
-
-	auto len = strlen(line);
-	if(len > 0)
-		line[len-1] = 0;
 
 	try
 	{

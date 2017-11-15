@@ -42,15 +42,15 @@ struct chroma
 		blue
 	};
 
-	bool		enable				= false;
-	bool		show_mask			= false;
-	double		target_hue			= 0.0;
-	double		hue_width			= 0.0;
-	double		min_saturation		= 0.0;
-	double		min_brightness		= 0.0;
-	double		softness			= 0.0;
-	double		spill				= 1.0;
-	double		spill_darken		= 0.0;
+	bool		enable						= false;
+	bool		show_mask					= false;
+	double		target_hue					= 0.0;
+	double		hue_width					= 0.0;
+	double		min_saturation				= 0.0;
+	double		min_brightness				= 0.0;
+	double		softness					= 0.0;
+	double		spill_suppress				= 0.0;
+	double		spill_suppress_saturation	= 1.0;
 };
 
 struct levels final
@@ -100,7 +100,6 @@ struct image_transform final
 	core::field_mode		field_mode			= core::field_mode::progressive;
 	bool					is_key				= false;
 	bool					is_mix				= false;
-	bool					is_still			= false;
 	bool					use_mipmap			= false;
 	core::blend_mode		blend_mode			= core::blend_mode::normal;
 	int						layer_depth			= 0;
