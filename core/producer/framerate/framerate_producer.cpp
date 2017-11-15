@@ -135,7 +135,7 @@ public:
 
 	void visit(const const_frame& frame) override
 	{
-		if (!frame.audio_data().empty() && !transform_stack_.top().is_still)
+		if (!frame.audio_data().empty() && !transform_stack_.top().is_still && !transform_stack_.top().volume == 0.0)
 			on_frame_(frame);
 	}
 };

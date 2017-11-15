@@ -50,7 +50,6 @@ extern "C"
 	#include <libavutil/imgutils.h>
 	#include <libavutil/opt.h>
 	#include <libavfilter/avfilter.h>
-	#include <libavfilter/avcodec.h>
 	#include <libavfilter/buffersink.h>
 	#include <libavfilter/buffersrc.h>
 }

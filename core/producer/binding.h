@@ -31,6 +31,8 @@
 #include <stdexcept>
 
 #include <boost/lexical_cast.hpp>
+#include <boost/utility/value_init.hpp>
+#include <boost/range/algorithm/remove_if.hpp>
 
 #include <common/tweener.h>
 #include <common/except.h>
@@ -69,9 +71,9 @@ struct impl_base : std::enable_shared_from_this<impl_base>
 		{
 			if (dependency == other)
 				return true;
-			
+
 			if (dependency->depends_on(other))
-				return true;		
+				return true;
 		}
 
 		return false;
@@ -99,7 +101,7 @@ private:
 		mutable bool		evaluated_		= false;
 
 		impl()
-			: value_()
+			: value_(boost::value_initialized<T>())
 		{
 		}
 
@@ -110,7 +112,8 @@ private:
 
 		template<typename Expr>
 		impl(const Expr& expression)
-			: expression_(expression)
+			: value_(boost::value_initialized<T>())
+			, expression_(expression)
 		{
 		}
 
@@ -142,9 +145,11 @@ private:
 
 		void evaluate() const override
 		{
-			if (expression_)
+			if (bound())
 			{
 				auto new_value = expression_();
+
+				evaluated_ = true;
 
 				if (new_value != value_)
 				{
@@ -152,24 +157,31 @@ private:
 					on_change();
 				}
 			}
-
-			evaluated_ = true;
+			else
+				evaluated_ = true;
 		}
 
 		using impl_base::on_change;
 		void on_change() const
 		{
-			auto copy = on_change_;
+			auto copy				= on_change_;
+			bool need_to_clean_up	= false;
 
-			for (int i = static_cast<int>(copy.size()) - 1; i >= 0; --i)
+			for (auto& listener : copy)
 			{
-				auto strong = copy[i].first.lock();
+				auto strong = listener.first.lock();
 
 				if (strong)
-					copy[i].second();
+					listener.second();
 				else
-					on_change_.erase(on_change_.begin() + i);
+					need_to_clean_up = true;
 			}
+
+			if (need_to_clean_up)
+				boost::remove_if(on_change_, [&](const std::pair<std::weak_ptr<void>, std::function<void()>>& l)
+				{
+					return l.first.expired();
+				});
 		}
 
 		void bind(const std::shared_ptr<impl>& other)
@@ -177,12 +189,12 @@ private:
 			unbind();
 			depend_on(other);
 			expression_ = [other]{ return other->get(); };
-			//evaluate();
+			evaluate();
 		}
 
 		void unbind()
 		{
-			if (expression_)
+			if (bound())
 			{
 				expression_ = std::function<T ()>();
 				dependencies_.clear();
@@ -545,7 +557,7 @@ public:
 		std::shared_ptr<void> subscription(new char);
 
 		on_change(subscription, listener);
-		
+
 		return subscription;
 	}
 private:
@@ -600,7 +612,7 @@ public:
 
 		binding<T> result([condition, true_result, false_result]()
 		{
-			return condition.get() ? true_result.get() : false_result.get();		
+			return condition.get() ? true_result.get() : false_result.get();
 		});
 
 		result.depend_on(condition);
@@ -647,7 +659,7 @@ binding<T> add_tween(
 		const std::wstring& easing)
 {
 	tweener tween(easing);
-	
+
 	double start_val = to_tween.as<double>().get();
 	double destination_val = static_cast<double>(destination_value);
 	double start_time = counter.as<double>().get();

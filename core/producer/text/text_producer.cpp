@@ -77,7 +77,7 @@ std::map<std::wstring, std::wstring> enumerate_fonts()
 
 	for(auto iter = directory_iterator(env::font_folder()), end = directory_iterator(); iter != end; ++iter)
 	{
-		try 
+		try
 		{
 			auto file = (*iter);
 			if (is_regular_file(file.path()))
@@ -121,7 +121,7 @@ text_info& find_font_file(text_info& info)
 }
 
 } // namespace text
-	
+
 
 struct text_producer::impl
 {
@@ -145,10 +145,10 @@ struct text_producer::impl
 	draw_frame								frame_;
 	text::texture_atlas						atlas_						{ 1024, 512, 4 };
 	text::texture_font						font_;
-	bool									dirty_						= false;
+	const_frame								atlas_frame_;
 
 public:
-	explicit impl(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, text::text_info& text_info, long parent_width, long parent_height, bool standalone) 
+	explicit impl(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, text::text_info& text_info, long parent_width, long parent_height, bool standalone)
 		: frame_factory_(frame_factory)
 		, x_(x), y_(y)
 		, parent_width_(parent_width), parent_height_(parent_height)
@@ -160,17 +160,19 @@ public:
 		font_.load_glyphs(text::unicode_block::Latin_1_Supplement, text_info.color);
 		font_.load_glyphs(text::unicode_block::Latin_Extended_A, text_info.color);
 
+		atlas_frame_ = create_atlas_frame();
+
 		tracking_.value().set(text_info.tracking);
-		scale_x_.value().set(text_info.scale_x); 
-		scale_y_.value().set(text_info.scale_y); 
+		scale_x_.value().set(text_info.scale_x);
+		scale_y_.value().set(text_info.scale_y);
 		shear_.value().set(text_info.shear);
 		text_subscription_ = text_.value().on_change([this]()
 		{
-			dirty_ = true;
+			generate_frame();
 		});
 		tracking_subscription_ = tracking_.value().on_change([this]()
 		{
-			dirty_ = true;
+			generate_frame();
 		});
 
 		constraints_.height.depend_on(text());
@@ -184,18 +186,22 @@ public:
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}
 
-	void generate_frame()
+	core::const_frame create_atlas_frame() const
 	{
 		core::pixel_format_desc pfd(core::pixel_format::bgra);
 		pfd.planes.push_back(core::pixel_format_desc::plane(static_cast<int>(atlas_.width()), static_cast<int>(atlas_.height()), static_cast<int>(atlas_.depth())));
-
-		text::string_metrics metrics;
-		font_.set_tracking(static_cast<int>(tracking_.value().get()));
-		
-		auto vertex_stream = font_.create_vertex_stream(text_.value().get(), x_, y_, parent_width_, parent_height_, &metrics, shear_.value().get());
-		auto frame = frame_factory_->create_frame(vertex_stream.data(), pfd, core::audio_channel_layout::invalid());
+		auto frame = frame_factory_->create_frame(this, pfd, core::audio_channel_layout::invalid());
 		memcpy(frame.image_data().data(), atlas_.data(), frame.image_data().size());
-		frame.set_geometry(frame_geometry(frame_geometry::geometry_type::quad_list, std::move(vertex_stream)));
+		return std::move(frame);
+	}
+
+	void generate_frame()
+	{
+		text::string_metrics metrics;
+		font_.set_tracking(tracking_.value().get());
+
+		auto vertex_stream = font_.create_vertex_stream(text_.value().get(), x_, y_, parent_width_, parent_height_, &metrics, shear_.value().get());
+		auto frame = atlas_frame_.with_geometry(frame_geometry(frame_geometry::geometry_type::quad_list, std::move(vertex_stream)));
 
 		this->constraints_.width.set(metrics.width * this->scale_x_.value().get());
 		this->constraints_.height.set(metrics.height * this->scale_y_.value().get());
@@ -204,21 +210,10 @@ public:
 		frame_ = core::draw_frame(std::move(frame));
 	}
 
-	text::string_metrics measure_string(const std::wstring& str)
-	{
-		return font_.measure_string(str);
-	}
-
 	// frame_producer
-			
+
 	draw_frame receive_impl()
 	{
-		if (dirty_)
-		{
-			generate_frame();
-			dirty_ = false;
-		}
-
 		return frame_;
 	}
 
@@ -280,7 +275,7 @@ public:
 	{
 		return current_protrude_under_y_.value();
 	}
-	
+
 	std::wstring print() const
 	{
 		return L"text[" + text_.value().get() + L"]";
@@ -290,7 +285,7 @@ public:
 	{
 		return L"text";
 	}
-	
+
 	boost::property_tree::wptree info() const
 	{
 		boost::property_tree::wptree info;
@@ -310,7 +305,6 @@ draw_frame text_producer::receive_impl() { return impl_->receive_impl(); }
 std::future<std::wstring> text_producer::call(const std::vector<std::wstring>& param) { return impl_->call(param); }
 variable& text_producer::get_variable(const std::wstring& name) { return impl_->get_variable(name); }
 const std::vector<std::wstring>& text_producer::get_variables() const { return impl_->get_variables(); }
-text::string_metrics text_producer::measure_string(const std::wstring& str) { return impl_->measure_string(str); }
 
 constraints& text_producer::pixel_constraints() { return impl_->pixel_constraints(); }
 std::wstring text_producer::print() const { return impl_->print(); }
@@ -364,7 +358,7 @@ spl::shared_ptr<frame_producer> create_text_producer(const frame_producer_depend
 	text::text_info text_info;
 	text_info.font = get_param(L"FONT", params, L"verdana");
 	text_info.size = get_param(L"SIZE", params, 30.0); // 30.0f does not seem to work to get as float directly
-	
+
 	std::wstring col_str = get_param(L"color", params, L"#ffffffff");
 	uint32_t col_val = 0xffffffff;
 	try_get_color(col_str, col_val);

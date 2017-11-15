@@ -196,7 +196,7 @@ template <typename Key, typename Ptree, typename Str>
 void ptree_verify_element_name(const std::pair<const Key, Ptree>& elem, const Str& expected)
 {
 	if (elem.first != expected)
-		CASPAR_THROW_EXCEPTION(ptree_exception() << msg_info("Expected element named " + u8(expected)));
+		CASPAR_THROW_EXCEPTION(ptree_exception() << msg_info("Expected element named " + u8(expected) + ". Was " + u8(elem.first)));
 }
 
 }

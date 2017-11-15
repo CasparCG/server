@@ -32,6 +32,7 @@
 #include <cmath>
 
 #include <boost/any.hpp>
+#include <boost/locale.hpp>
 
 #include <common/log.h>
 #include <common/except.h>
@@ -158,6 +159,61 @@ boost::any create_abs_function(const std::vector<boost::any>& params, const vari
 	return val.transformed([](double v) { return std::abs(v); });
 }
 
+boost::any create_floor_function(const std::vector<boost::any>& params, const variable_repository& var_repo)
+{
+	if (params.size() != 1)
+		CASPAR_THROW_EXCEPTION(user_error()
+			<< msg_info(L"floor() function requires one parameters: value"));
+
+	auto val = require<double>(params.at(0));
+
+	return val.transformed([](double v) { return std::floor(v); });
+}
+
+std::locale create_utf_locale()
+{
+	boost::locale::generator gen;
+	gen.categories(boost::locale::codepage_facet);
+	gen.categories(boost::locale::convert_facet);
+
+	return gen("");
+}
+
+boost::any create_to_lower_function(const std::vector<boost::any>& params, const variable_repository& var_repo)
+{
+	if (params.size() != 1)
+		CASPAR_THROW_EXCEPTION(user_error()
+			<< msg_info(L"to_lower() function requires one parameters: str"));
+
+	auto str	= require<std::wstring>(params.at(0));
+	auto locale	= create_utf_locale();
+
+	return str.transformed([=](std::wstring v) { return boost::locale::to_lower(v, locale); });
+}
+
+boost::any create_to_upper_function(const std::vector<boost::any>& params, const variable_repository& var_repo)
+{
+	if (params.size() != 1)
+		CASPAR_THROW_EXCEPTION(user_error()
+			<< msg_info(L"to_upper() function requires one parameters: str"));
+
+	auto str	= require<std::wstring>(params.at(0));
+	auto locale	= create_utf_locale();
+
+	return str.transformed([=](std::wstring v) { return boost::locale::to_upper(v, locale); });
+}
+
+boost::any create_length_function(const std::vector<boost::any>& params, const variable_repository& var_repo)
+{
+	if (params.size() != 1)
+		CASPAR_THROW_EXCEPTION(user_error()
+			<< msg_info(L"length() function requires one parameters: str"));
+
+	auto str = require<std::wstring>(params.at(0));
+
+	return str.transformed([](std::wstring v) { return static_cast<double>(v.length()); });
+}
+
 boost::any parse_function(
 		const std::wstring& function_name,
 		std::wstring::const_iterator& cursor,
@@ -166,10 +222,14 @@ boost::any parse_function(
 {
 	static std::map<std::wstring, std::function<boost::any (const std::vector<boost::any>& params, const variable_repository& var_repo)>> FUNCTIONS
 	{
-		{L"animate",	create_animate_function },
-		{L"sin",		create_sin_function },
-		{L"cos",		create_cos_function },
-		{L"abs",		create_abs_function }
+		{ L"animate",	create_animate_function },
+		{ L"sin",		create_sin_function },
+		{ L"cos",		create_cos_function },
+		{ L"abs",		create_abs_function },
+		{ L"floor",		create_floor_function },
+		{ L"to_lower",	create_to_lower_function },
+		{ L"to_upper",	create_to_upper_function },
+		{ L"length",	create_length_function }
 	};
 
 	auto function = FUNCTIONS.find(function_name);
@@ -335,6 +395,8 @@ boost::any parse_variable(
 
 struct op
 {
+	static const int MAX_PRECEDENCE = 100;
+
 	enum class op_type
 	{
 		UNARY,
@@ -830,12 +892,15 @@ boost::any parse_expression(
 		CASPAR_THROW_EXCEPTION(user_error()
 				<< msg_info(L"Expected expression" + at_position(cursor, str)));
 
-	int precedence = 1;
-
-	while (tokens.size() > 1)
+	for (int precedence = 1; tokens.size() > 1 && precedence < op::MAX_PRECEDENCE; ++precedence)
 	{
-		resolve_operators(precedence++, tokens);
+		resolve_operators(precedence, tokens);
 	}
+
+	if (tokens.size() > 1)
+		CASPAR_THROW_EXCEPTION(user_error()
+				<< msg_info(L"Expected operator" + at_position(cursor, str)));
+
 
 	return as_binding(tokens.at(0));
 }
