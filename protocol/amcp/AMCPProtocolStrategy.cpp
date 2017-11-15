@@ -95,6 +95,7 @@ public:
 	struct command_interpreter_result
 	{
 		std::shared_ptr<caspar::IO::lock_container>	lock;
+		std::wstring								request_id;
 		std::wstring								command_name;
 		AMCPCommand::ptr_type						command;
 		error_state									error			= error_state::no_error;
@@ -119,6 +120,9 @@ public:
 		if (result.error != error_state::no_error)
 		{
 			std::wstringstream answer;
+
+			if (!result.request_id.empty())
+				answer << L"RES " << result.request_id << L" ";
 
 			switch(result.error)
 			{
@@ -157,8 +161,6 @@ private:
 			if (!tokens.empty() && tokens.front().at(0) == L'/')
 				tokens.pop_front();
 
-			std::wstring request_id;
-
 			if (!tokens.empty() && boost::iequals(tokens.front(), L"REQ"))
 			{
 				tokens.pop_front();
@@ -169,7 +171,7 @@ private:
 					return false;
 				}
 
-				request_id = tokens.front();
+				result.request_id = tokens.front();
 				tokens.pop_front();
 			}
 
@@ -252,7 +254,7 @@ private:
 			}
 
 			if (result.command)
-				result.command->set_request_id(std::move(request_id));
+				result.command->set_request_id(result.request_id);
 		}
 		catch (std::out_of_range&)
 		{

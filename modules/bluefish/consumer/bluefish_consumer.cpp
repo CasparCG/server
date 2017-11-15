@@ -18,7 +18,7 @@
 *
 * Author: Robert Nagy, ronag89@gmail.com
 */
- 
+
 #include "../StdAfx.h"
 
 #include "bluefish_consumer.h"
@@ -50,16 +50,14 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/algorithm/string.hpp>
 
-#include <asmlib.h>
-
 #include <memory>
 #include <array>
 
-namespace caspar { namespace bluefish { 
+namespace caspar { namespace bluefish {
 
 #define BLUEFISH_HW_BUFFER_DEPTH 1
 #define BLUEFISH_SOFTWARE_BUFFERS 4
-		
+
 enum class hardware_downstream_keyer_mode
 {
 	disable = 0,
@@ -132,11 +130,11 @@ struct bluefish_consumer : boost::noncopyable
 	spl::shared_ptr<diagnostics::graph>							graph_;
 	boost::timer												frame_timer_;
 	boost::timer												tick_timer_;
-	boost::timer												sync_timer_;	
-			
+	boost::timer												sync_timer_;
+
 	unsigned int												vid_fmt_;
 
-	std::array<blue_dma_buffer_ptr, BLUEFISH_SOFTWARE_BUFFERS>	all_frames_;	
+	std::array<blue_dma_buffer_ptr, BLUEFISH_SOFTWARE_BUFFERS>	all_frames_;
 	tbb::concurrent_bounded_queue<blue_dma_buffer_ptr>			reserved_frames_;
 	tbb::concurrent_bounded_queue<blue_dma_buffer_ptr>			live_frames_;
 	std::shared_ptr<std::thread>								dma_present_thread_;
@@ -148,7 +146,7 @@ struct bluefish_consumer : boost::noncopyable
 
 	const bool													embedded_audio_;
 	const bool													key_only_;
-		
+
 	executor													executor_;
 	hardware_downstream_keyer_mode								hardware_keyer_;
 	hardware_downstream_keyer_audio_source						keyer_audio_source_;
@@ -185,8 +183,8 @@ public:
 
 		reserved_frames_.set_capacity(BLUEFISH_SOFTWARE_BUFFERS);
 		live_frames_.set_capacity(BLUEFISH_SOFTWARE_BUFFERS);
-		
-		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));	
+
+		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
 		graph_->set_color("sync-time", diagnostics::color(1.0f, 0.0f, 0.0f));
 		graph_->set_color("frame-time", diagnostics::color(0.5f, 1.0f, 0.2f));
 		graph_->set_text(print());
@@ -202,26 +200,26 @@ public:
 		// Select Update Mode for output
 		if(BLUE_FAIL(blue_->set_card_property32(VIDEO_UPDATE_TYPE, UPD_FMT_FRAME)))
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set update type."));
-	
+
 		disable_video_output();
 		setup_hardware_output_channel_routing();
-			
+
 		//Select output memory format
 		if(BLUE_FAIL(blue_->set_card_property32(VIDEO_MEMORY_FORMAT, MEM_FMT_ARGB_PC)))
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to set memory format."));
-		
+
 		//Select image orientation
 		if(BLUE_FAIL(blue_->set_card_property32(VIDEO_IMAGE_ORIENTATION, ImageOrientation_Normal)))
-			CASPAR_LOG(warning) << print() << L" Failed to set image orientation to normal.";	
+			CASPAR_LOG(warning) << print() << L" Failed to set image orientation to normal.";
 
 		// Select data range
 		if(BLUE_FAIL(blue_->set_card_property32(VIDEO_RGB_DATA_RANGE, CGR_RANGE)))
-			CASPAR_LOG(warning) << print() << L" Failed to set RGB data range to CGR.";	
-		
+			CASPAR_LOG(warning) << print() << L" Failed to set RGB data range to CGR.";
+
 		if(!embedded_audio_ || (hardware_keyer_ == hardware_downstream_keyer_mode::internal && keyer_audio_source_ == hardware_downstream_keyer_audio_source::SDIVideoInput) )
 		{
 			if(BLUE_FAIL(blue_->set_card_property32(EMBEDEDDED_AUDIO_OUTPUT, 0)))
-				CASPAR_LOG(warning) << TEXT("BLUECARD ERROR: Failed to disable embedded audio.");			
+				CASPAR_LOG(warning) << TEXT("BLUECARD ERROR: Failed to disable embedded audio.");
 			CASPAR_LOG(info) << print() << TEXT(" Disabled embedded-audio.");
 		}
 		else
@@ -239,7 +237,7 @@ public:
 				audio_value |= blue_emb_audio_group4_enable;
 
 			if(BLUE_FAIL(blue_->set_card_property32(EMBEDEDDED_AUDIO_OUTPUT, audio_value)))
-				CASPAR_LOG(warning) << print() << TEXT(" Failed to enable embedded audio.");			
+				CASPAR_LOG(warning) << print() << TEXT(" Failed to enable embedded audio.");
 			CASPAR_LOG(info) << print() << TEXT(" Enabled embedded-audio.");
 		}
 
@@ -250,10 +248,10 @@ public:
 			setup_hardware_downstream_keyer(hardware_keyer_, keyer_audio_source_);
 
 		enable_video_output();
-						
+
 		int n = 0;
 		boost::range::generate(all_frames_, [&]{return std::make_shared<blue_dma_buffer>(static_cast<int>(format_desc_.size), n++);});
-	
+
 		for (size_t i = 0; i < all_frames_.size(); i++)
 			reserved_frames_.push(all_frames_[i]);
 	}
@@ -266,7 +264,7 @@ public:
 			{
 				end_dma_thread_ = true;
 				disable_video_output();
-				blue_->detach();	
+				blue_->detach();
 
 				if (dma_present_thread_)
 					dma_present_thread_->join();
@@ -325,7 +323,7 @@ public:
 					CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(" Failed to MR 2 routing."));
 
 				// If single link 422, but on second channel AND on Neutron we need to set Genlock to Aux.
-				if (is_epoch_neutron_1i2o_card((*blue_)))		
+				if (is_epoch_neutron_1i2o_card((*blue_)))
 				{
 					if (blueVideoOutputChannel == BLUE_VIDEO_OUTPUT_CHANNEL_B)
 					{
@@ -401,7 +399,7 @@ public:
 			if (BLUE_FAIL(blue_->get_card_property32(INVALID_VIDEO_MODE_FLAG, invalidVideoModeFlag)))
 				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(" Failed to get invalid video mode flag"));
 
-			// The bluefish HW keyer is NOT going to pre-multiply the RGB with the A. 
+			// The bluefish HW keyer is NOT going to pre-multiply the RGB with the A.
 			keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_DATA_IS_PREMULTIPLIED(keyer_control_value);
 
 			keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_ENABLED(keyer_control_value);
@@ -412,7 +410,7 @@ public:
 				keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_ENABLE_OVER_BLACK(keyer_control_value);
 			else
 				keyer_control_value = VIDEO_ONBOARD_KEYER_SET_STATUS_DISABLE_OVER_BLACK(keyer_control_value);
-		
+
 			// lock to input
 			if (BLUE_FAIL(blue_->set_card_property32(VIDEO_GENLOCK_SIGNAL, BlueSDI_A_BNC)))
 				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(" Failed to set the genlock to the input for the HW keyer"));
@@ -430,7 +428,7 @@ public:
 	void enable_video_output()
 	{
 		if(BLUE_FAIL(blue_->set_card_property32(VIDEO_BLACKGENERATOR, 0)))
-			CASPAR_LOG(error) << print() << TEXT(" Failed to disable video output.");	
+			CASPAR_LOG(error) << print() << TEXT(" Failed to disable video output.");
 	}
 
 	void disable_video_output()
@@ -441,19 +439,19 @@ public:
 		blue_->set_card_property32(MR2_ROUTING, routingValue);
 
 		if(BLUE_FAIL(blue_->set_card_property32(VIDEO_BLACKGENERATOR, 1)))
-			CASPAR_LOG(error)<< print() << TEXT(" Failed to disable video output.");	
+			CASPAR_LOG(error)<< print() << TEXT(" Failed to disable video output.");
 		if (BLUE_FAIL(blue_->set_card_property32(EMBEDEDDED_AUDIO_OUTPUT, 0)))
 			CASPAR_LOG(error) << print() << TEXT(" Failed to disable audio output.");
 
 	}
-	
+
 	std::future<bool> send(core::const_frame& frame)
-	{				
+	{
 		return executor_.begin_invoke([=]() -> bool
 		{
 			try
-			{	
-				display_frame(frame);				
+			{
+				display_frame(frame);
 				graph_->set_value("tick-time", static_cast<float>(tick_timer_.elapsed()*format_desc_.fps*0.5));
 				tick_timer_.restart();
 			}
@@ -468,6 +466,8 @@ public:
 
 	void dma_present_thread_actual()
 	{
+		ensure_gpf_handler_installed_for_thread("bluefish consumer DMA thread");
+
 		bvc_wrapper wait_b;
 		wait_b.attach(device_index_);
 		EBlueVideoChannel out_vid_channel = get_bluesdk_videochannel_from_streamid(device_output_channel_);
@@ -515,7 +515,7 @@ public:
 			}
 			else
 			{
-				// do WFS	
+				// do WFS
 				unsigned long n_field = 0;
 				wait_b.wait_video_output_sync(UPD_FMT_FRAME, n_field);
 			}
@@ -535,7 +535,7 @@ public:
 
 	void display_frame(core::const_frame frame)
 	{
-		frame_timer_.restart();		
+		frame_timer_.restart();
 
 		if (previous_frame_ != core::const_frame::empty())
 			presentation_delay_millis_ = previous_frame_.get_age_millis();
@@ -552,10 +552,10 @@ public:
 				if (key_only_)
 					aligned_memshfl(dest, frame.image_data().begin(), frame.image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 				else
-					A_memcpy(dest, frame.image_data().begin(), frame.image_data().size());
+					std::memcpy(dest, frame.image_data().begin(), frame.image_data().size());
 			}
 			else
-				A_memset(dest, 0, buf->image_size());
+				std::memset(dest, 0, buf->image_size());
 
 			frame_timer_.restart();
 
@@ -592,7 +592,7 @@ public:
 	}
 
 	void encode_hanc(BLUE_UINT32* hanc_data, void* audio_data, int audio_samples, int audio_nchannels)
-	{	
+	{
 		const auto sample_type = AUDIO_CHANNEL_24BIT | AUDIO_CHANNEL_LITTLEENDIAN;
 		auto emb_audio_flag = blue_emb_audio_enable | blue_emb_audio_group1_enable;
 
@@ -604,25 +604,25 @@ public:
 
 		if (audio_nchannels > 12)
 			emb_audio_flag |= blue_emb_audio_group4_enable;
-		
+
 		hanc_stream_info_struct hanc_stream_info;
 		memset(&hanc_stream_info, 0, sizeof(hanc_stream_info));
-		
+
 		hanc_stream_info.AudioDBNArray[0] = -1;
 		hanc_stream_info.AudioDBNArray[1] = -1;
 		hanc_stream_info.AudioDBNArray[2] = -1;
 		hanc_stream_info.AudioDBNArray[3] = -1;
 		hanc_stream_info.hanc_data_ptr	  = hanc_data;
-		hanc_stream_info.video_mode		  = vid_fmt_;		
-		
+		hanc_stream_info.video_mode		  = vid_fmt_;
+
 		int cardType = CRD_INVALID;
 		blue_->query_card_type(cardType, device_index_);
 		blue_->encode_hanc_frame(cardType, &hanc_stream_info, audio_data, audio_nchannels, audio_samples, sample_type, emb_audio_flag);
 	}
-	
+
 	std::wstring print() const
 	{
-		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" + 
+		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(channel_index_) + L"-" +
 			boost::lexical_cast<std::wstring>(device_index_) + L"|" +  format_desc_.name + L"]";
 	}
 
@@ -651,9 +651,9 @@ struct bluefish_consumer_proxy : public core::frame_consumer
 
 public:
 
-	bluefish_consumer_proxy(int device_index, 
-							bool embedded_audio, 
-							bool key_only, 
+	bluefish_consumer_proxy(int device_index,
+							bool embedded_audio,
+							bool key_only,
 							hardware_downstream_keyer_mode keyer,
 							hardware_downstream_keyer_audio_source keyer_audio_source,
 							const core::audio_channel_layout& out_channel_layout,
@@ -668,9 +668,9 @@ public:
 		, hardware_output_channel_(hardware_output_channel)
 	{
 	}
-	
+
 	// frame_consumer
-	
+
 	void initialize(const core::video_format_desc& format_desc, const core::audio_channel_layout& channel_layout, int channel_index) override
 	{
 		format_desc_		= format_desc;
@@ -681,25 +681,25 @@ public:
 			out_channel_layout_ = in_channel_layout_;
 
 		consumer_.reset();
-		consumer_.reset(new bluefish_consumer(	format_desc, 
-												in_channel_layout_, 
-												out_channel_layout_, 
-												device_index_, 
-												embedded_audio_, 
-												key_only_, 
+		consumer_.reset(new bluefish_consumer(	format_desc,
+												in_channel_layout_,
+												out_channel_layout_,
+												device_index_,
+												embedded_audio_,
+												key_only_,
 												hardware_keyer_,
-												hardware_keyer_audio_source_, 
+												hardware_keyer_audio_source_,
 												channel_index,
 												hardware_output_channel_));
 	}
-	
+
 	std::future<bool> send(core::const_frame frame) override
 	{
 		CASPAR_VERIFY(audio_cadence_.front() * in_channel_layout_.num_channels == static_cast<size_t>(frame.audio_data().size()));
 		boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 		return consumer_->send(frame);
 	}
-		
+
 	std::wstring print() const override
 	{
 		return consumer_ ? consumer_->print() : L"[bluefish_consumer]";
@@ -725,7 +725,7 @@ public:
 	{
 		return BLUEFISH_HW_BUFFER_DEPTH;
 	}
-	
+
 	int index() const override
 	{
 		return 400 + device_index_;
@@ -740,7 +740,7 @@ public:
 	{
 		return monitor_subject_;
 	}
-};	
+};
 
 
 void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
@@ -833,7 +833,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(	const std::vector<std::ws
 spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 											const boost::property_tree::wptree& ptree, core::interaction_sink*,
 											std::vector<spl::shared_ptr<core::video_channel>> channels)
-{	
+{
 	const auto device_index		= ptree.get(						L"device",			1);
 	const auto device_stream	= ptree.get(						L"sdi-stream", L"a");
 	const auto embedded_audio	= ptree.get(						L"embedded-audio",	false);
@@ -841,7 +841,7 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 	const auto channel_layout	= ptree.get_optional<std::wstring>(	L"channel-layout");
 	const auto hardware_keyer_value = ptree.get(					L"keyer", L"disabled");
 	const auto keyer_audio_source_value = ptree.get(				L"internal-keyer-audio-source", L"videooutputchannel");
-	
+
 	auto layout = core::audio_channel_layout::invalid();
 
 	if (channel_layout)

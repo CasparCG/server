@@ -381,8 +381,9 @@ public:
 			{
 				configure_video_filters(
 					*video_codec,
-					try_remove_arg<std::string>(options_,
-					boost::regex("vf|f:v|filter:v")).get_value_or(""));
+					try_remove_arg<std::string>(options_, boost::regex("vf|f:v|filter:v"))
+							.get_value_or(""),
+					try_remove_arg<std::string>(options_, boost::regex("pix_fmt")));
 
 				configure_audio_filters(
 					*audio_codec,
@@ -650,7 +651,8 @@ private:
 
 	void configure_video_filters(
 			const AVCodec& codec,
-			std::string filtergraph)
+			std::string filtergraph,
+			const boost::optional<std::string>& preferred_pix_fmt)
 	{
 		video_graph_.reset(
 				avfilter_graph_alloc(),
@@ -699,15 +701,27 @@ private:
 #pragma warning (disable : 4245)
 
 		FF(av_opt_set_int_list(
-				filt_vsink,
-				"pix_fmts",
-				codec.pix_fmts,
-				-1,
-				AV_OPT_SEARCH_CHILDREN));
+			filt_vsink,
+			"pix_fmts",
+			codec.pix_fmts,
+			-1,
+			AV_OPT_SEARCH_CHILDREN));
+
 
 #pragma warning (pop)
 
 		adjust_video_filter(codec, in_video_format_, filt_vsink, filtergraph);
+
+		if (preferred_pix_fmt)
+		{
+			auto requested_fmt	= av_get_pix_fmt(preferred_pix_fmt->c_str());
+			auto valid_fmts		= from_terminated_array<AVPixelFormat>(codec.pix_fmts, AVPixelFormat::AV_PIX_FMT_NONE);
+
+			if (!cpplinq::from(valid_fmts).contains(requested_fmt))
+				CASPAR_THROW_EXCEPTION(user_error() << msg_info(*preferred_pix_fmt + " is not supported by codec."));
+
+			set_pixel_format(filt_vsink, requested_fmt);
+		}
 
 		if (in_video_format_.width < 1280)
 			video_graph_->scale_sws_opts = "out_color_matrix=bt601";
@@ -851,6 +865,8 @@ private:
 			src_av_frame->sample_aspect_ratio.num	= sample_aspect_ratio.numerator();
 			src_av_frame->sample_aspect_ratio.den	= sample_aspect_ratio.denominator();
 			src_av_frame->pts						= video_pts_;
+			src_av_frame->interlaced_frame			= in_video_format_.field_mode != core::field_mode::progressive;
+			src_av_frame->top_field_first			= (in_video_format_.field_mode & core::field_mode::upper) == core::field_mode::upper ? 1 : 0;
 
 			video_pts_ += 1;
 

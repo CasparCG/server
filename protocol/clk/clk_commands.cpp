@@ -60,9 +60,9 @@ public:
 
 	void send_to_flash(const std::wstring& data)
 	{
-		if (!clock_loaded_) 
+		if (!clock_loaded_)
 		{
-			core::frame_producer_dependencies dependencies(channel_->frame_factory(), channels_, channel_->video_format_desc(), producer_registry_);
+			core::frame_producer_dependencies dependencies(channel_->frame_factory(), channels_, channel_->video_format_desc(), producer_registry_, cg_registry_);
 			cg_registry_->get_or_create_proxy(channel_, dependencies, core::cg_proxy::DEFAULT_LAYER, L"hawrysklocka/clock")->add(
 					0, L"hawrysklocka/clock", true, L"", data);
 			clock_loaded_ = true;
@@ -71,7 +71,7 @@ public:
 		{
 			cg_registry_->get_proxy(channel_, core::cg_proxy::DEFAULT_LAYER)->update(0, data);
 		}
-				
+
 		CASPAR_LOG(info) << L"CLK: Clockdata sent: " << data;
 	}
 
@@ -107,10 +107,10 @@ std::wstring get_xml(
 {
 	std::wstringstream stream;
 
-	stream << L"<templateData>";	
+	stream << L"<templateData>";
 	stream << L"<componentData id=\"command\">";
 	stream << L"<command id=\"" << command_name << "\"";
-	
+
 	std::vector<std::wstring>::const_iterator it = parameters.begin();
 	std::vector<std::wstring>::const_iterator end = parameters.end();
 
@@ -147,9 +147,9 @@ std::wstring get_xml(
 }
 
 clk_command_handler create_send_xml_handler(
-	const std::wstring& command_name, 
-	bool expect_clock, 
-	bool expect_time, 
+	const std::wstring& command_name,
+	bool expect_clock,
+	bool expect_time,
 	const spl::shared_ptr<command_context>& context)
 {
 	return [=] (const std::vector<std::wstring>& params)
@@ -169,25 +169,25 @@ void add_command_handlers(
 	auto context = spl::make_shared<command_context>(channels, channel, cg_registry, producer_registry);
 
 	processor
-		.add_handler(L"DUR", 
+		.add_handler(L"DUR",
 			create_send_xml_handler(L"DUR", true, true, context))
-		.add_handler(L"NEWDUR", 
+		.add_handler(L"NEWDUR",
 			create_send_xml_handler(L"NEWDUR", true, true, context))
-		.add_handler(L"UNTIL", 
+		.add_handler(L"UNTIL",
 			create_send_xml_handler(L"UNTIL", true, true, context))
-		.add_handler(L"NEXTEVENT", 
+		.add_handler(L"NEXTEVENT",
 			create_send_xml_handler(L"NEXTEVENT", true, false, context))
-		.add_handler(L"STOP", 
+		.add_handler(L"STOP",
 			create_send_xml_handler(L"STOP", true, false, context))
-		.add_handler(L"ADD", 
+		.add_handler(L"ADD",
 			create_send_xml_handler(L"ADD", true, true, context))
-		.add_handler(L"SUB", 
+		.add_handler(L"SUB",
 			create_send_xml_handler(L"SUB", true, true, context))
-		.add_handler(L"TIMELINE_LOAD", 
+		.add_handler(L"TIMELINE_LOAD",
 			create_send_xml_handler(L"TIMELINE_LOAD", false, false, context))
-		.add_handler(L"TIMELINE_PLAY", 
+		.add_handler(L"TIMELINE_PLAY",
 			create_send_xml_handler(L"TIMELINE_PLAY", false, false, context))
-		.add_handler(L"TIMELINE_STOP", 
+		.add_handler(L"TIMELINE_STOP",
 			create_send_xml_handler(L"TIMELINE_STOP", false, false, context))
 		.add_handler(L"RESET", [=] (const std::vector<std::wstring>& params)
 		{

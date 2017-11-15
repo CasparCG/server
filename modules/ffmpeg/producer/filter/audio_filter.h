@@ -23,6 +23,8 @@
 
 #include <common/memory.h>
 
+#include <core/fwd.h>
+
 #include <boost/rational.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/range/iterator_range.hpp>
@@ -107,5 +109,7 @@ private:
 	struct implementation;
 	spl::shared_ptr<implementation> impl_;
 };
+
+audio_input_pad create_input_pad(const core::video_format_desc& in_format, int num_channels);
 
 }}

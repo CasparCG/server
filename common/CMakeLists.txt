@@ -75,8 +75,6 @@ set(HEADERS
 		lock.h
 		log.h
 		memory.h
-		memcpy.h
-		memset.h
 		memshfl.h
 		no_init_proxy.h
 		param.h
@@ -97,7 +95,6 @@ add_library(common ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
 add_precompiled_header(common stdafx.h FORCEINCLUDE)
 
 include_directories(..)
-include_directories(${ASMLIB_INCLUDE_PATH})
 include_directories(${BOOST_INCLUDE_PATH})
 include_directories(${RXCPP_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_PATH})
@@ -112,7 +109,6 @@ source_group(sources\\os os/*)
 
 if (MSVC)
 	target_link_libraries(common
-		alibcof64.lib
 		jpeg.lib
 		sndfile.lib
 		optimized sfml-system-2.lib
@@ -132,7 +128,6 @@ if (MSVC)
 	)
 else ()
 	target_link_libraries(common
-		"${DEPENDENCIES_FOLDER}/asmlib/alibelf64.a"
 		boost_system
 		boost_thread
 		boost_chrono

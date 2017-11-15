@@ -33,8 +33,9 @@
 namespace caspar { namespace core { namespace text {
 
 struct freetype_exception : virtual caspar_exception { };
+struct expected_freetype_exception : virtual user_error { };
 
 spl::shared_ptr<std::remove_pointer<FT_Library>::type> get_lib_for_thread();
-spl::shared_ptr<std::remove_pointer<FT_Face>::type> get_new_face(const std::string& font_file);
+spl::shared_ptr<std::remove_pointer<FT_Face>::type> get_new_face(const std::string& font_file, const std::string& font_name = "");
 
 }}}

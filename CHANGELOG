@@ -1,7 +1,18 @@
 C H A N G E S
 
-CasparCG 2.1.0 Next (w.r.t 2.1.0 Beta 1)
-========================================
+CasparCG 2.1.0 Next (w.r.t 2.1.0 Beta 2)
+==========================================
+
+General
+-------
+
+  o Removed asmlib dependency in favor of using standard library std::memcpy and
+    std::memset, because of better performance.
+
+
+
+CasparCG 2.1.0 Beta 2 (w.r.t 2.1.0 Beta 1)
+==========================================
 
 General
 -------
@@ -28,10 +39,11 @@ General
     (Krzysztof Pyrkosz).
   o Build script for building FFmpeg for Linux now part of the repository.
     Contributions during development (not w.r.t 2.1.0 Beta 1):
-    + Fix ffmpeg build dependencies on clean ubuntu desktop amd64 14.04.3 or
+    + Fix ffmpeg build dependencies on clean Ubuntu desktop amd64 14.04.3 or
       higher (Walter Sonius).
   o Added support for video modes 2160p5000, 2160p5994 and 2160p6000
     (Antonio Ruano Cuesta).
+  o Fixed serious buffer overrun in FFmpeg logging code.
 
 Consumers
 ---------
@@ -41,8 +53,25 @@ Consumers
       BT.601 color matrix instead of the BT.709 color matrix. RGB codecs like
       qtrle was never affected but all the YCbCr based codecs were.
     + Fixed bug in parsing of paths containing -.
+    + Fixed bugs where previously effective arguments like -pix_fmt were
+      ignored.
+    + Fixed bug where interlaced channels where not recorded correctly for
+      some codecs.
   o DeckLink consumer:
-    + Fixed possible dead-lock in frame queue.
+    + Rewrote the frame hand-off between send() and ScheduledFrameCompleted() in
+      a way that hopefully resolves all dead-lock scenarios previously possible.
+  o Bluefish consumer:
+    + Largely rewritten against newest SDK Driver 5.11.0.47 (Satchit Nambiar and
+      James Wise sponsored by Bluefish444):
+      + Added support for Epoch Neutron and Supernova CG. All current Epoch
+        cards are now supported.
+      + Added support for for multiple SDI channels per card. 1 to 4 channels
+        per Bluefish444 card depending on model and firmware.
+      + Added support for single SDI output, complementing existing external key
+        output support.
+      + Added support for internal key using the Bluefish444 hardware keyer.
+  o Screen consumer:
+    + Fixed full screen mode.
 
 Producers
 ---------
@@ -54,17 +83,57 @@ Producers
       decode the first frame.
     + Added support for IN and OUT parameters (Dimitry Ishenko).
     + Added DV/HDV video device support under Linux (Walter Sonius).
+    + Remove unused flags variable in queued_seek (Dimitry Ishenko).
+    + Now recognizes .ts files without probing contents (Ovidijus Striaukas).
+    + Fixed uninitialized value causing initial log printout to usually say that
+      clips are interlaced when they are not.
+  o Destroy producer proxy:
+    + Created workaround for bug in FFmpeg where every new thread used to
+      cleanup caused handles to leak (not sure why). Reduced the effect by using
+      only one thread for all producer destructions.
   o Framerate producer:
     + Fixed bug when INFO was used on a not yet playing framerate producer.
   o HTML producer:
     + Fixed bug where only URL:s with . in them where recognized.
   o Image producer:
     + Added LENGTH parameter to allow for queueing with LOADBG AUTO.
+    + Fixed inconsistency in what file extensions are supported vs listed in
+      CLS/CINF.
   o Layer producer:
     + Fixed serious bug where a circular reference of layer producers caused a
       stack overflow and server crash.
+    + Can now route from layer on a channel with an incompatible framerate.
+  o Channel producer:
+    + Can now route from channel with an incompatible framerate.
+    + Deinterlaces interlaced content from source channel.
+    + Added optional NO_AUTO_DEINTERLACE parameter to opt out of the mentioned
+      deinterlacing.
   o Scene producer:
-    + Added abs() function to expression language.
+    + Added abs(), floor(), to_lower(), to_upper() and length() functions to the
+      expression language.
+    + Created XML Schema for the *.scene XML format. Allows for IDE-like auto-
+      completion, API documentation and validation.
+    + Added possibility to specify the width and height of a layer instead of
+      letting the producer on the layer decide.
+    + Added global variables scene_width, scene_height and fps.
+    + Made it possible to use expressions in keyframe values.
+    + Fixed serious bug where uninitialized values were used.
+    + Created more example scenes.
+    + Can now forward CALL, CG PLAY, CG STOP, CG NEXT and CG INVOKE to the
+      producer on a layer.
+  o CG proxy wrapper producer:
+    + New in 2.1.0.
+    + Allows all CG producers to be used as an ordinary producer inside a layer
+      in a scene.
+    + Allows the Scene producer to know what variables are available in a
+      template.
+  o Color producer:
+    + Now has support for gradients.
+  o PSD producer:
+    + Added support for centered and right justified text.
+  o Text producer:
+    + Fixed bug where tracking contributed to the overall text width on the
+      last character.
 
 Mixer
 -----
@@ -73,11 +142,14 @@ Mixer
     coefficients was used.
   o Rewrote the chroma key code to support variable hue, instead of fixed green
     or blue. Threshold setting was removed in favour of separate hue width,
-    minimum saturation and minimum brightness constraints.
+    minimum saturation and minimum brightness constraints. Also a much more
+    effective spill suppression method was implemented.
   o Fixed bug where glReadPixels() was done from the last drawn to texture
     instead of always from the target texture. This means that for example a
     MIXER KEYER layer without a layer above to key, as well as a separate alpha
     file with MIXER OPACITY 0 now works as expected.
+  o Fixed bug where already drawn GL_QUADS were not composited against, causing
+    for example italic texts to be rendered incorrectly in the text_producer.
 
 AMCP
 ----
@@ -92,6 +164,8 @@ AMCP
   o Added support for listing contents of a specific directory for CLS, TLS,
     DATA LIST and THUMBNAIL LIST.
   o Fixed bug where CINF only returned the first match.
+  o Fixed bug where a client closing the connection after BYE instead of
+    letting the server close the connection caused an exception to be logged.
 
 
 

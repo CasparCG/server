@@ -31,8 +31,6 @@
 #include "producer/filter/audio_filter.h"
 #include "producer/util/util.h"
 
-#include <asmlib.h>
-
 #include <boost/algorithm/string/split.hpp>
 #include <boost/format.hpp>
 
