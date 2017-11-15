@@ -33,15 +33,6 @@
 
 namespace caspar {
 
-template <class N, class Func>
-void repeat_n(N times_to_repeat_block, const Func& func)
-{
-	for (N i = 0; i < times_to_repeat_block; ++i)
-	{
-		func();
-	}
-}
-
 /**
  * Counting semaphore modelled after java.util.concurrent.Semaphore
  */
@@ -87,7 +78,7 @@ public:
 		permits_ += permits;
 
 		perform_callback_based_acquire();
-		repeat_n(permits, [this] { permits_available_.notify_one(); });
+		permits_available_.notify_all();
 	}
 
 	/**
@@ -143,7 +134,14 @@ public:
 	{
 		boost::unique_lock<boost::mutex> lock(mutex_);
 
-		callbacks_per_requested_permits_[permits].push(std::move(acquired_callback));
+		if (permits_ >= permits)
+		{
+			permits_ -= permits;
+			lock.unlock();
+			acquired_callback();
+		}
+		else
+			callbacks_per_requested_permits_[permits].push(std::move(acquired_callback));
 	}
 
 	/**

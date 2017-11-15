@@ -1,7 +1,7 @@
 <xs:schema attributeFormDefault="unqualified" elementFormDefault="unqualified" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:vc="http://www.w3.org/2007/XMLSchema-versioning" vc:minVersion="1.1">
   <xs:element name="scene">
     <xs:complexType>
-      <xs:sequence>
+      <xs:all>
         <xs:element name="variables">
           <xs:annotation>
             <xs:documentation>
@@ -11,7 +11,8 @@
               There are some variables that are always defined like
               "frame" which stores the number of frames that have gone by since the scene producer started,
               "mouse_x" and "mouse_y" which reflect the X and Y position of the mouse at all times relative to the scene coordinate system (requires interaction aware consumer like screen_consumer),
-              "timeline_frame" which differs from "frame" in that it can rewind and jump, depending on where the timeline is at the moment and
+              "timeline_frame" which differs from "frame" in that it can rewind and jump, depending on where the timeline is at the moment,
+              "fps" which always contains the framerate of the scene and
               "scene_width" and "scene_height" which contains the dimensions of the scene coordinate system.
             </xs:documentation>
           </xs:annotation>
@@ -36,7 +37,7 @@
                     <xs:extension base="any_expression">
                       <xs:attribute type="identifier" name="id" use="required"><xs:annotation><xs:documentation>The unique variable name. Will be exposed as [id] if the variable is public or variable.[id] otherwise.</xs:documentation></xs:annotation></xs:attribute>
                       <xs:attribute type="type" name="type" use="required"><xs:annotation><xs:documentation>The variable type. The value/expression of the variable must be parseable/resolvable as/to this type.</xs:documentation></xs:annotation></xs:attribute>
-                      <xs:attribute type="boolean" name="public" use="required"><xs:annotation><xs:documentation>Whether the variable should be accessible from outside the scene or not. Public variables can be accessed via CG UPDATE, CG ADD and as layer.[layerid].parameter.[id] when nested inside another scene.</xs:documentation></xs:annotation></xs:attribute>
+                      <xs:attribute type="boolean" name="public" default="false"><xs:annotation><xs:documentation>Whether the variable should be accessible from outside the scene or not. Public variables can be accessed via CG UPDATE, CG ADD and as layer.[layerid].parameter.[id] when nested inside another scene.</xs:documentation></xs:annotation></xs:attribute>
                     </xs:extension>
                   </xs:simpleContent>
                 </xs:complexType>
@@ -61,28 +62,65 @@
               <xs:element name="layer" minOccurs="0" maxOccurs="unbounded">
                 <xs:complexType>
                   <xs:all>
-                    <xs:element type="producer_string" name="producer">                                             <xs:annotation><xs:documentation>The same syntax as in AMCP after for example PLAY 1-10. Cannot be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="bool_expression" name="hidden" minOccurs="0" default="false">                 <xs:annotation><xs:documentation>Hides the layer if true. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="x">                                                  <xs:annotation><xs:documentation>The X coordinate of the layer in the scene coordinate system. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="y">                                                  <xs:annotation><xs:documentation>The Y coordinate of the layer in the scene coordinate system. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="width" minOccurs="0">                                <xs:annotation><xs:documentation>The width of the layer. Is by default calculated by the producer itself but can be overridden. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="height" minOccurs="0">                               <xs:annotation><xs:documentation>The height of the layer. Is by default calculated by the producer itself but can be overridden. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="anchor_x" minOccurs="0" default="0">                 <xs:annotation><xs:documentation>The X anchor within the layer coordinate system where position and rotation are done relative to/around. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="anchor_y" minOccurs="0" default="0">                 <xs:annotation><xs:documentation>The Y anchor within the layer coordinate system where position and rotation are done relative to/around. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="rotation" minOccurs="0" default="0.0">               <xs:annotation><xs:documentation>The rotation of the layer around anchor_x/anchor_y expressed in degrees. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="crop_upper_left_x" minOccurs="0" default="0">        <xs:annotation><xs:documentation>The X position within the layer coordinate system to crop the upper left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="crop_upper_left_y" minOccurs="0" default="0">        <xs:annotation><xs:documentation>The Y position within the layer coordinate system to crop the upper left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="crop_lower_right_x" minOccurs="0">                   <xs:annotation><xs:documentation>The X position within the layer coordinate system to crop the lower right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="crop_lower_right_y" minOccurs="0">                   <xs:annotation><xs:documentation>The Y position within the layer coordinate system to crop the lower right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="perspective_upper_left_x" minOccurs="0" default="0"> <xs:annotation><xs:documentation>The X position within the layer coordinate system to corner pin the upper left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="perspective_upper_left_y" minOccurs="0" default="0"> <xs:annotation><xs:documentation>The Y position within the layer coordinate system to corner pin the upper left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="perspective_upper_right_x" minOccurs="0">            <xs:annotation><xs:documentation>The X position within the layer coordinate system to corner pin the upper right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="perspective_upper_right_y" minOccurs="0" default="0"><xs:annotation><xs:documentation>The Y position within the layer coordinate system to corner pin the upper right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="perspective_lower_right_x" minOccurs="0">            <xs:annotation><xs:documentation>The X position within the layer coordinate system to corner pin the lower right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="perspective_lower_right_y" minOccurs="0">            <xs:annotation><xs:documentation>The Y position within the layer coordinate system to corner pin the lower right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="perspective_lower_left_x" minOccurs="0" default="0"> <xs:annotation><xs:documentation>The X position within the layer coordinate system to corner pin the lower left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="number_expression" name="perspective_lower_left_y" minOccurs="0">             <xs:annotation><xs:documentation>The Y position within the layer coordinate system to corner pin the lower left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element name="adjustment" minOccurs="0">
+                    <xs:element type="producer_string" name="producer">                                                     <xs:annotation><xs:documentation>The same syntax as in AMCP after for example PLAY 1-10. Cannot be an expression.</xs:documentation></xs:annotation></xs:element>
+                    <xs:element type="bool_expression" name="hidden" minOccurs="0" default="false">                         <xs:annotation><xs:documentation>Hides the layer if true. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                    <xs:element type="number_expression" name="x">                                                          <xs:annotation><xs:documentation>The X coordinate of the layer in the scene coordinate system. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                    <xs:element type="number_expression" name="y">                                                          <xs:annotation><xs:documentation>The Y coordinate of the layer in the scene coordinate system. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                    <xs:element type="number_expression" name="width" minOccurs="0">                                        <xs:annotation><xs:documentation>The width of the layer. Is by default calculated by the producer itself but can be overridden. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                    <xs:element type="number_expression" name="height" minOccurs="0">                                       <xs:annotation><xs:documentation>The height of the layer. Is by default calculated by the producer itself but can be overridden. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                    <xs:element name="clip" minOccurs="0">
+                      <xs:annotation>
+                        <xs:documentation>
+                          Properties regarding viewport clipping. The coordinates are relative to the scene coordinate system. They are addressable from expressions as layer.[id].clip.[property].
+                        </xs:documentation>
+                      </xs:annotation>
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element type="number_expression" name="upper_left_x" minOccurs="0" default="0">                <xs:annotation><xs:documentation>The X position within the scene coordinate system to clip the upper left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="upper_left_y" minOccurs="0" default="0">                <xs:annotation><xs:documentation>The Y position within the scene coordinate system to clip the upper left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="lower_right_x" minOccurs="0">                           <xs:annotation><xs:documentation>The X position within the scene coordinate system to clip the lower right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="lower_right_y" minOccurs="0">                           <xs:annotation><xs:documentation>The Y position within the scene coordinate system to clip the lower right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                        </xs:all>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element type="number_expression" name="anchor_x" minOccurs="0" default="0">                         <xs:annotation><xs:documentation>The X anchor within the layer coordinate system where position and rotation are done relative to/around. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                    <xs:element type="number_expression" name="anchor_y" minOccurs="0" default="0">                         <xs:annotation><xs:documentation>The Y anchor within the layer coordinate system where position and rotation are done relative to/around. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                    <xs:element type="number_expression" name="rotation" minOccurs="0" default="0.0">                       <xs:annotation><xs:documentation>The rotation of the layer around anchor_x/anchor_y expressed in degrees. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                    <xs:element name="crop" minOccurs="0">
+                      <xs:annotation>
+                        <xs:documentation>
+                          Properties for cropping the layer. The coordinates are relative to the layer coordinate system. They are addressable from expressions as layer.[id].crop.[property].
+                        </xs:documentation>
+                      </xs:annotation>
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element type="number_expression" name="upper_left_x" minOccurs="0" default="0">               <xs:annotation><xs:documentation>The X position within the layer coordinate system to crop the upper left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="upper_left_y" minOccurs="0" default="0">               <xs:annotation><xs:documentation>The Y position within the layer coordinate system to crop the upper left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="lower_right_x" minOccurs="0">                          <xs:annotation><xs:documentation>The X position within the layer coordinate system to crop the lower right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="lower_right_y" minOccurs="0">                          <xs:annotation><xs:documentation>The Y position within the layer coordinate system to crop the lower right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                        </xs:all>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="perspective" minOccurs="0">
+                      <xs:annotation>
+                        <xs:documentation>
+                          Properties for perspective/corner pin of the layer. The coordinates are relative to the layer coordinate system. They are addressable from expressions as layer.[id].perspective.[property].
+                        </xs:documentation>
+                      </xs:annotation>
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element type="number_expression" name="upper_left_x" minOccurs="0" default="0">               <xs:annotation><xs:documentation>The X position within the layer coordinate system to corner pin the upper left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="upper_left_y" minOccurs="0" default="0">               <xs:annotation><xs:documentation>The Y position within the layer coordinate system to corner pin the upper left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="upper_right_x" minOccurs="0">                          <xs:annotation><xs:documentation>The X position within the layer coordinate system to corner pin the upper right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="upper_right_y" minOccurs="0" default="0">              <xs:annotation><xs:documentation>The Y position within the layer coordinate system to corner pin the upper right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="lower_right_x" minOccurs="0">                          <xs:annotation><xs:documentation>The X position within the layer coordinate system to corner pin the lower right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="lower_right_y" minOccurs="0">                          <xs:annotation><xs:documentation>The Y position within the layer coordinate system to corner pin the lower right corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="lower_left_x" minOccurs="0" default="0">               <xs:annotation><xs:documentation>The X position within the layer coordinate system to corner pin the lower left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="lower_left_y" minOccurs="0">                           <xs:annotation><xs:documentation>The Y position within the layer coordinate system to corner pin the lower left corner. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                        </xs:all>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="adjustments" minOccurs="0">
                       <xs:annotation>
                         <xs:documentation>
                           Properties regarding image adjustments. They are addressable from expressions as layer.[id].adjustment.[property].
@@ -90,27 +128,47 @@
                       </xs:annotation>
                       <xs:complexType>
                         <xs:all>
-                          <xs:element type="number_expression" name="opacity" minOccurs="0" default="1.0">          <xs:annotation><xs:documentation>The opacity of the layer. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="opacity" minOccurs="0" default="1.0">                  <xs:annotation><xs:documentation>The opacity of the layer. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="contrast" minOccurs="0" default="1.0">                 <xs:annotation><xs:documentation>The contrast of the layer. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="saturation" minOccurs="0" default="1.0">               <xs:annotation><xs:documentation>The saturation of the layer. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="brightness" minOccurs="0" default="1.0">               <xs:annotation><xs:documentation>The brightness of the layer. Can be an expression.</xs:documentation></xs:annotation></xs:element>
                         </xs:all>
                       </xs:complexType>
                     </xs:element>
-                    <xs:element type="bool_expression" name="is_key" minOccurs="0" default="false">                 <xs:annotation><xs:documentation>If true causes the layer to key the layer above. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="bool_expression" name="use_mipmap" minOccurs="0" default="false">             <xs:annotation><xs:documentation>Whether to enable mipmapping on the layer or not. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                    <xs:element type="blend_mode" name="blend_mode" minOccurs="0" default="normal">                 <xs:annotation><xs:documentation>The blend mode to use. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                    <xs:element name="levels" minOccurs="0">
+                      <xs:annotation>
+                        <xs:documentation>
+                          Properties regarding level adjustments. They are addressable from expressions as layer.[id].level.[property].
+                        </xs:documentation>
+                      </xs:annotation>
+                      <xs:complexType>
+                        <xs:all>
+                          <xs:element type="number_expression" name="min_input" minOccurs="0" default="0.0">                <xs:annotation><xs:documentation>The minimum input level of the layer. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="max_input" minOccurs="0" default="1.0">                <xs:annotation><xs:documentation>The maximum input level of the layer. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="gamma" minOccurs="0" default="1.0">                    <xs:annotation><xs:documentation>The gamma correction of the layer. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="min_output" minOccurs="0" default="0.0">               <xs:annotation><xs:documentation>The minimum output level of the layer. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="max_output" minOccurs="0" default="1.0">               <xs:annotation><xs:documentation>The maximum output level of the layer. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                        </xs:all>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element type="bool_expression" name="is_key" minOccurs="0" default="false">                         <xs:annotation><xs:documentation>If true causes the layer to key the layer above. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                    <xs:element type="bool_expression" name="use_mipmap" minOccurs="0" default="false">                     <xs:annotation><xs:documentation>Whether to enable mipmapping on the layer or not. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                    <xs:element type="blend_mode" name="blend_mode" minOccurs="0" default="normal">                         <xs:annotation><xs:documentation>The blend mode to use. Can be an expression.</xs:documentation></xs:annotation></xs:element>
                     <xs:element name="chroma_key" minOccurs="0">
                       <xs:complexType>
                         <xs:all>
-                          <xs:element type="bool_expression" name="enable" minOccurs="0" default="false">           <xs:annotation><xs:documentation>Whether to enable chroma keying on the layer or not. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                          <xs:element type="number_expression" name="target_hue" minOccurs="0" default="120.0">     <xs:annotation><xs:documentation>The degrees within 0-360 of the hue window centrum of the color to key. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                          <xs:element type="number_expression" name="hue_width" minOccurs="0" default="0.1">        <xs:annotation><xs:documentation>How wide within 0.0-1.0 the hue window of the color to key should be. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                          <xs:element type="number_expression" name="min_saturation" minOccurs="0" default="0.0">   <xs:annotation><xs:documentation>The minimum saturation within 0.0-1.0 of the color to key. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                          <xs:element type="number_expression" name="min_brightness" minOccurs="0" default="0.0">   <xs:annotation><xs:documentation>The minimum brightness within 0.0-1.0 of the color to key. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                          <xs:element type="number_expression" name="softness" minOccurs="0" default="0.0">         <xs:annotation><xs:documentation>How soft the chroma key window should be within 0.0-1.0. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                          <xs:element type="number_expression" name="spill" minOccurs="0" default="1.0">            <xs:annotation><xs:documentation>How much of the chroma fringing should be left within 0.0-1.0. Values below 1.0 gradually replaces the fringe with a gray scale and more transparent equivalent. Can be an expression.</xs:documentation></xs:annotation></xs:element>
-                          <xs:element type="number_expression" name="spill_darken" minOccurs="0" default="2.0">     <xs:annotation><xs:documentation>Defined how dark the spill replacement gray scale should be. The default is 2.0 but can be anywhere between 0.0 and up. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="bool_expression" name="enable" minOccurs="0" default="false">                   <xs:annotation><xs:documentation>Whether to enable chroma keying on the layer or not. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="target_hue" minOccurs="0" default="120.0">             <xs:annotation><xs:documentation>The degrees within 0-360 of the hue window centrum of the color to key. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="hue_width" minOccurs="0" default="0.1">                <xs:annotation><xs:documentation>How wide within 0.0-1.0 the hue window of the color to key should be. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="min_saturation" minOccurs="0" default="0.0">           <xs:annotation><xs:documentation>The minimum saturation within 0.0-1.0 of the color to key. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="min_brightness" minOccurs="0" default="0.0">           <xs:annotation><xs:documentation>The minimum brightness within 0.0-1.0 of the color to key. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="softness" minOccurs="0" default="0.0">                 <xs:annotation><xs:documentation>How soft the chroma key window should be within 0.0-1.0. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="spill_suppress" minOccurs="0" default="0.0">           <xs:annotation><xs:documentation>How much to suppress spill by within 0.0-180.0. It works by taking all hue values within +- this value from target_hue and clamps it to either target_hue - this value or target_hue + this value depending on which side it is closest to. Can be an expression.</xs:documentation></xs:annotation></xs:element>
+                          <xs:element type="number_expression" name="spill_suppress_saturation" minOccurs="0" default="1.0"><xs:annotation><xs:documentation>Controls how much saturation should be kept on colors affected by spill_suppress within 0.0-1.0. Full saturation may not always be desirable to be kept on suppressed colors. Can be an expression.</xs:documentation></xs:annotation></xs:element>
                         </xs:all>
                       </xs:complexType>
                     </xs:element>
+                    <xs:element type="number_expression" name="volume" minOccurs="0" default="1.0">                         <xs:annotation><xs:documentation>The audio volume of the layer. Can be an expression.</xs:documentation></xs:annotation></xs:element>
                     <xs:element name="parameters" minOccurs="0">
                       <xs:annotation>
                         <xs:documentation>
@@ -201,11 +259,12 @@
                         <xs:documentation>
                           Each keyframe specifies a value that the variable should have at a specific timeline frame.
                           The value can be either immediately changed if no easing is specified, otherwise it is animated to the value with the given easing curve.
+                          The actual value to animate to can itself be an expression.
                         </xs:documentation>
                       </xs:annotation>
                       <xs:complexType>
                         <xs:simpleContent>
-                          <xs:extension base="xs:decimal">
+                          <xs:extension base="number_expression">
                             <xs:attribute name="at" type="xs:nonNegativeInteger" use="required"><xs:annotation><xs:documentation>The frame to place the keyframe at.</xs:documentation></xs:annotation></xs:attribute>
                             <xs:attribute name="easing" type="easing" use="optional"><xs:annotation><xs:documentation>If omitted there will be no animation but an immediate value change instead.</xs:documentation></xs:annotation></xs:attribute>
                           </xs:extension>
@@ -223,7 +282,71 @@
             <xs:field xpath="@variable" />
           </xs:unique>
         </xs:element>
-      </xs:sequence>
+        <xs:element name="tasks" minOccurs="0">
+          <xs:annotation>
+            <xs:documentation>
+              Tasks are scheduled to happen whenever a certain condition arises.
+              Use the at attribute to let the condition be that the timeline arrives at a specific frame
+              or the when attribute to specify a custom bool expression that when becomes true triggers the task.
+            </xs:documentation>
+          </xs:annotation>
+          <xs:complexType>
+            <xs:choice minOccurs="0" maxOccurs="unbounded">
+              <xs:element name="call">
+                <xs:annotation><xs:documentation>Performs the equivalent of an AMCP CALL on the specified layer.</xs:documentation></xs:annotation>
+                <xs:complexType>
+                  <xs:sequence maxOccurs="unbounded">
+                    <xs:element name="arg" type="xs:string"><xs:annotation><xs:documentation>See the producer documentation for the possible arguments.</xs:documentation></xs:annotation></xs:element>
+                  </xs:sequence>
+                  <xs:attribute name="at" use="optional" type="xs:nonNegativeInteger"><xs:annotation><xs:documentation>Trigger the CALL when the timeline gets to this specific frame.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="when" use="optional" type="bool_expression"><xs:annotation><xs:documentation>Trigger the CALL when the specified bool expression becomes true.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="to_layer" use="required" type="identifier"><xs:annotation><xs:documentation>The producer on this layer will receive the CALL.</xs:documentation></xs:annotation></xs:attribute>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="cg_play">
+                <xs:annotation><xs:documentation>Performs the equivalent of a CG PLAY on the specified layer.</xs:documentation></xs:annotation>
+                <xs:complexType>
+                  <xs:attribute name="at" use="optional" type="xs:nonNegativeInteger"><xs:annotation><xs:documentation>Trigger the CG PLAY when the timeline gets to this specific frame.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="when" use="optional" type="bool_expression"><xs:annotation><xs:documentation>Trigger the CG PLAY when the specified bool expression becomes true.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="to_layer" use="required" type="identifier"><xs:annotation><xs:documentation>The CG producer on this layer will receive the CG PLAY.</xs:documentation></xs:annotation></xs:attribute>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="cg_stop">
+                <xs:annotation><xs:documentation>Performs the equivalent of a CG STOP on the specified layer.</xs:documentation></xs:annotation>
+                <xs:complexType>
+                  <xs:attribute name="at" use="optional" type="xs:nonNegativeInteger"><xs:annotation><xs:documentation>Trigger the CG STOP when the timeline gets to this specific frame.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="when" use="optional" type="bool_expression"><xs:annotation><xs:documentation>Trigger the CG STOP when the specified bool expression becomes true.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="to_layer" use="required" type="identifier"><xs:annotation><xs:documentation>The CG producer on this layer will receive the CG STOP.</xs:documentation></xs:annotation></xs:attribute>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="cg_next">
+                <xs:annotation><xs:documentation>Performs the equivalent of a CG NEXT on the specified layer.</xs:documentation></xs:annotation>
+                <xs:complexType>
+                  <xs:attribute name="at" use="optional" type="xs:nonNegativeInteger"><xs:annotation><xs:documentation>Trigger the CG NEXT when the timeline gets to this specific frame.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="when" use="optional" type="bool_expression"><xs:annotation><xs:documentation>Trigger the CG NEXT when the specified bool expression becomes true.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="to_layer" use="required" type="identifier"><xs:annotation><xs:documentation>The CG producer on this layer will receive the CG NEXT.</xs:documentation></xs:annotation></xs:attribute>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="cg_invoke">
+                <xs:annotation><xs:documentation>Performs the equivalent of a CG INVOKE on the specified layer with the specified label.</xs:documentation></xs:annotation>
+                <xs:complexType>
+                  <xs:attribute name="at" use="optional" type="xs:nonNegativeInteger"><xs:annotation><xs:documentation>Trigger the CG INVOKE when the timeline gets to this specific frame.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="when" use="optional" type="bool_expression"><xs:annotation><xs:documentation>Trigger the CG INVOKE when the specified bool expression becomes true.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="to_layer" use="required" type="identifier"><xs:annotation><xs:documentation>The CG producer on this layer will receive the CG INVOKE.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="label" use="required" type="nonEmptyString"><xs:annotation><xs:documentation>The label that will be invoked.</xs:documentation></xs:annotation></xs:attribute>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="goto_mark">
+                <xs:annotation><xs:documentation>Makes the scene go to a specific start mark given a specific condition becoming true.</xs:documentation></xs:annotation>
+                <xs:complexType>
+                  <xs:attribute name="when" use="required" type="bool_expression"><xs:annotation><xs:documentation>Go to the start mark when the specified bool expression becomes true.</xs:documentation></xs:annotation></xs:attribute>
+                  <xs:attribute name="label" use="required" type="nonEmptyString"><xs:annotation><xs:documentation>The label of the start mark that the scene should go to.</xs:documentation></xs:annotation></xs:attribute>
+                </xs:complexType>
+              </xs:element>
+            </xs:choice>
+          </xs:complexType>
+        </xs:element>
+      </xs:all>
       <xs:attribute type="xs:positiveInteger" name="width" use="required" />
       <xs:attribute type="xs:positiveInteger" name="height" use="required" />
     </xs:complexType>
@@ -269,7 +392,7 @@
         </xs:documentation>
       </xs:annotation>
       <xs:whiteSpace value="collapse" />
-      <xs:pattern value="\$\{.+\}" />
+      <xs:pattern value="$\{.+\}" />
     </xs:restriction>
   </xs:simpleType>
 
@@ -278,6 +401,8 @@
       <xs:enumeration value="A string constant" />
       <xs:enumeration value="${&quot;A string constant&quot;}" />
       <xs:enumeration value="${variable.some_string + &quot; will be concatenated&quot;}" />
+      <xs:enumeration value="${to_lower(variable.some_string)}" />
+      <xs:enumeration value="${to_upper(variable.some_string)}" />
       <xs:enumeration value="${&quot;Concatenate string with number: &quot; + variable.some_number}" />
       <xs:enumeration value="${&quot;Concatenate string with different strings based on bool: &quot; + (variable.some_bool ? &quot;Enabled&quot; : &quot;Disabled&quot;)}" />
       <xs:enumeration value="${mouse_x &lt; 640 ? &quot;Left of middle&quot; : variable.message_when_right_of_middle}" />
@@ -348,6 +473,8 @@
       <xs:enumeration value="${sin(angle)}" />
       <xs:enumeration value="${cos(angle)}" />
       <xs:enumeration value="${abs(value)}" />
+      <xs:enumeration value="${floor(value)}" />
+      <xs:enumeration value="${length(str)}" />
       <xs:enumeration value="${animate(expression_to_animate, duration, tweener)}" />
       <xs:enumeration value="${animate(layer.to_follow.x, 200, &quot;easeoutelastic&quot;)}" />
     </xs:restriction>

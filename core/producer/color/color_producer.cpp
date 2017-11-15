@@ -42,6 +42,38 @@
 
 namespace caspar { namespace core {
 
+draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, const std::vector<uint32_t>& values)
+{
+	core::pixel_format_desc desc(pixel_format::bgra);
+	desc.planes.push_back(core::pixel_format_desc::plane(static_cast<int>(values.size()), 1, 4));
+	auto frame = frame_factory->create_frame(tag, desc, core::audio_channel_layout::invalid());
+
+	for (int i = 0; i < values.size(); ++i)
+		*reinterpret_cast<uint32_t*>(frame.image_data(0).begin() + (i * 4)) = values.at(i);
+
+	return core::draw_frame(std::move(frame));
+}
+
+draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, uint32_t value)
+{
+	std::vector<uint32_t> values = { value };
+
+	return create_color_frame(tag, frame_factory, values);
+}
+
+draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, const std::vector<std::wstring>& strs)
+{
+	std::vector<uint32_t> values(strs.size());
+
+	for (int i = 0; i < values.size(); ++i)
+	{
+		if (!try_get_color(strs.at(i), values.at(i)))
+			CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid color: " + strs.at(i)));
+	}
+
+	return create_color_frame(tag, frame_factory, values);
+}
+
 class color_producer : public frame_producer_base
 {
 	monitor::subject		monitor_subject_;
@@ -59,17 +91,16 @@ public:
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}
 
-
-	color_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& color) 
-		: color_str_(color)
-		, constraints_(1, 1)
-		, frame_(create_color_frame(this, frame_factory, color))
+	color_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::vector<std::wstring>& colors)
+		: color_str_(boost::join(colors, L", "))
+		, constraints_(static_cast<int>(colors.size()), 1)
+		, frame_(create_color_frame(this, frame_factory, colors))
 	{
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}
 
 	// frame_producer
-			
+
 	draw_frame receive_impl() override
 	{
 		monitor_subject_ << monitor::message("color") % color_str_;
@@ -81,7 +112,7 @@ public:
 	{
 		return constraints_;
 	}
-	
+
 	std::wstring print() const override
 	{
 		return L"color[" + color_str_ + L"]";
@@ -91,7 +122,7 @@ public:
 	{
 		return L"color";
 	}
-	
+
 	boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;
@@ -100,14 +131,14 @@ public:
 		return info;
 	}
 
-	monitor::subject& monitor_output() override {return monitor_subject_;}										
+	monitor::subject& monitor_output() override {return monitor_subject_;}
 };
 
 std::wstring get_hex_color(const std::wstring& str)
 {
 	if(str.at(0) == '#')
 		return str.length() == 7 ? L"#FF" + str.substr(1) : str;
-	
+
 	std::wstring col_str = boost::to_upper_copy(str);
 
 	if(col_str == L"EMPTY")
@@ -115,34 +146,34 @@ std::wstring get_hex_color(const std::wstring& str)
 
 	if(col_str == L"BLACK")
 		return L"#FF000000";
-	
+
 	if(col_str == L"WHITE")
 		return L"#FFFFFFFF";
-	
+
 	if(col_str == L"RED")
 		return L"#FFFF0000";
-	
+
 	if(col_str == L"GREEN")
 		return L"#FF00FF00";
-	
+
 	if(col_str == L"BLUE")
-		return L"#FF0000FF";	
-	
+		return L"#FF0000FF";
+
 	if(col_str == L"ORANGE")
-		return L"#FFFFA500";	
-	
+		return L"#FFFFA500";
+
 	if(col_str == L"YELLOW")
 		return L"#FFFFFF00";
-	
+
 	if(col_str == L"BROWN")
 		return L"#FFA52A2A";
-	
+
 	if(col_str == L"GRAY")
 		return L"#FF808080";
-	
+
 	if(col_str == L"TEAL")
 		return L"#FF008080";
-	
+
 	return str;
 }
 
@@ -155,18 +186,19 @@ bool try_get_color(const std::wstring& str, uint32_t& value)
 	std::wstringstream ss(color_str.substr(1));
 	if(!(ss >> std::hex >> value) || !ss.eof())
 		return false;
-	
+
 	return true;
 }
 
 void describe_color_producer(core::help_sink& sink, const core::help_repository& repo)
 {
-	sink.short_description(L"Fills a layer with a solid color.");
+	sink.short_description(L"Fills a layer with a solid color or a horizontal gradient.");
 	sink.syntax(
 		L"{#[argb_hex_value:string]}"
 		L",{#[rgb_hex_value:string]}"
-		L",{[named_color:EMPTY,BLACK,WHITE,RED,GREEN,BLUE,ORANGE,YELLOW,BROWN,GRAY,TEAL]}");
-	sink.para()->text(L"A producer that fills a layer with a solid color.");
+		L",{[named_color:EMPTY,BLACK,WHITE,RED,GREEN,BLUE,ORANGE,YELLOW,BROWN,GRAY,TEAL]} "
+		L"{...more colors}");
+	sink.para()->text(L"A producer that fills a layer with a solid color. If more than one color is specified it becomes a gradient between those colors.");
 	sink.para()
 		->text(L"If a ")->code(L"#")
 		->text(L" sign followed by an 8 character hexadecimal number is given it is interpreted as an 8-bit per channel ARGB color. ")
@@ -187,14 +219,23 @@ void describe_color_producer(core::help_sink& sink, const core::help_repository&
 	sink.para()
 		->strong(L"Note")->text(L" that it is important that all RGB values are multiplied with the alpha ")
 		->text(L"at all times, otherwise the compositing in the mixer will be incorrect.");
-	sink.para()->text(L"Examples:");
-	sink.example(L"PLAY 1-10 EMPTY", L"For a completely transparent frame.");
-	sink.example(L"PLAY 1-10 #00000000", L"For an explicitly defined completely transparent frame.");
-	sink.example(L"PLAY 1-10 #000000", L"For an explicitly defined completely opaque black frame.");
-	sink.example(L"PLAY 1-10 RED", L"For a completely red frame.");
-	sink.example(L"PLAY 1-10 #7F007F00",
+	sink.para()->text(L"Solid color examples:");
+	sink.example(L">> PLAY 1-10 EMPTY", L"For a completely transparent frame.");
+	sink.example(L">> PLAY 1-10 #00000000", L"For an explicitly defined completely transparent frame.");
+	sink.example(L">> PLAY 1-10 #000000", L"For an explicitly defined completely opaque black frame.");
+	sink.example(L">> PLAY 1-10 RED", L"For a completely red frame.");
+	sink.example(L">> PLAY 1-10 #7F007F00",
 		L"For a completely green half transparent frame. "
 		L"Since the RGB part has been premultiplied with the A part this is 100% green.");
+	sink.para()->text(L"Horizontal gradient examples:");
+	sink.example(L">> PLAY 1-10 WHITE BLACK", L"For a gradient between white and black.");
+	sink.example(L">> PLAY 1-10 WHITE WHITE WHITE BLACK", L"For a gradient between white and black with the white part beings 3 times as long as the black part.");
+	sink.example(
+		L">> PLAY 1-10 RED EMPTY\n"
+		L">> MIXER 1-10 ANCHOR 0.5 0.5\n"
+		L">> MIXER 1-10 FILL 0.5 0.5 2 2\n"
+		L">> MIXER 1-10 ROTATION 45",
+		L"For a 45 degree gradient covering the screen.");
 }
 
 spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<frame_factory>& frame_factory, uint32_t value)
@@ -211,27 +252,15 @@ spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<fram
 	if(!try_get_color(params.at(0), value))
 		return core::frame_producer::empty();
 
-	return spl::make_shared<color_producer>(frame_factory, params.at(0));
-}
+	std::vector<std::wstring> colors;
 
-draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, uint32_t value)
-{
-	core::pixel_format_desc desc(pixel_format::bgra);
-	desc.planes.push_back(core::pixel_format_desc::plane(1, 1, 4));
-	auto frame = frame_factory->create_frame(tag, desc, core::audio_channel_layout::invalid());
-	
-	*reinterpret_cast<uint32_t*>(frame.image_data(0).begin()) = value;
+	for (auto& param : params)
+	{
+		if (try_get_color(param, value))
+			colors.push_back(param);
+	}
 
-	return core::draw_frame(std::move(frame));
-}
-
-draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& frame_factory, const std::wstring& str)
-{
-	uint32_t value = 0;
-	if(!try_get_color(str, value))
-		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid color: " + str));
-	
-	return create_color_frame(tag, frame_factory, value);
+	return spl::make_shared<color_producer>(frame_factory, colors);
 }
 
 }}

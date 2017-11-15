@@ -58,7 +58,7 @@ std::pair<core::draw_frame, core::constraints> load_image(
 {
 	auto bitmap = load_image(filename);
 	FreeImage_FlipVertical(bitmap.get());
-		
+
 	core::pixel_format_desc desc = core::pixel_format::bgra;
 	auto width = FreeImage_GetWidth(bitmap.get());
 	auto height = FreeImage_GetHeight(bitmap.get());
@@ -69,21 +69,21 @@ std::pair<core::draw_frame, core::constraints> load_image(
 			FreeImage_GetBits(bitmap.get()),
 			frame.image_data(0).size(),
 			frame.image_data(0).begin());
-	
+
 	return std::make_pair(
 			core::draw_frame(std::move(frame)),
 			core::constraints(width, height));
 }
 
 struct image_producer : public core::frame_producer_base
-{	
+{
 	core::monitor::subject						monitor_subject_;
 	const std::wstring							description_;
 	const spl::shared_ptr<core::frame_factory>	frame_factory_;
 	const uint32_t								length_;
 	core::draw_frame							frame_				= core::draw_frame::empty();
 	core::constraints							constraints_;
-	
+
 	image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& description, bool thumbnail_mode, uint32_t length)
 		: description_(description)
 		, frame_factory_(frame_factory)
@@ -119,13 +119,13 @@ struct image_producer : public core::frame_producer_base
 		desc.format = core::pixel_format::bgra;
 		desc.planes.push_back(core::pixel_format_desc::plane(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), 4));
 		auto frame = frame_factory_->create_frame(this, desc, core::audio_channel_layout::invalid());
- 
+
 		std::copy_n(FreeImage_GetBits(bitmap.get()), frame.image_data().size(), frame.image_data().begin());
 		frame_ = core::draw_frame(std::move(frame));
 		constraints_.width.set(FreeImage_GetWidth(bitmap.get()));
 		constraints_.height.set(FreeImage_GetHeight(bitmap.get()));
 	}
-	
+
 	// frame_producer
 
 	core::draw_frame receive_impl() override
@@ -144,7 +144,7 @@ struct image_producer : public core::frame_producer_base
 	{
 		return constraints_;
 	}
-			
+
 	std::wstring print() const override
 	{
 		return L"image_producer[" + description_ + L"]";
@@ -163,7 +163,7 @@ struct image_producer : public core::frame_producer_base
 		return info;
 	}
 
-	core::monitor::subject& monitor_output() 
+	core::monitor::subject& monitor_output()
 	{
 		return monitor_subject_;
 	}
@@ -202,21 +202,6 @@ void describe_producer(core::help_sink& sink, const core::help_repository& repo)
 				L">> LOADBG 1-10 EMPTY MIX 20 AUTO\n", L"Plays a slide show of 3 images for 100 frames each and fades to black.");
 }
 
-static const auto g_extensions = {
-	L".png",
-	L".tga",
-	L".bmp",
-	L".jpg",
-	L".jpeg",
-	L".gif",
-	L".tiff",
-	L".tif",
-	L".jp2",
-	L".jpx",
-	L".j2k",
-	L".j2c"
-};
-
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
 {
 	auto length = get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
@@ -240,7 +225,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
 			auto extension = it->path().extension().wstring();
 
-			if (std::find_if(g_extensions.begin(), g_extensions.end(), ieq(extension)) == g_extensions.end())
+			if (std::find_if(supported_extensions().begin(), supported_extensions().end(), ieq(extension)) == supported_extensions().end())
 				continue;
 
 			files.insert(it->path().wstring());
@@ -281,14 +266,14 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
 	std::wstring filename = env::media_folder() + params.at(0);
 
-	auto ext = std::find_if(g_extensions.begin(), g_extensions.end(), [&](const std::wstring& ex) -> bool
+	auto ext = std::find_if(supported_extensions().begin(), supported_extensions().end(), [&](const std::wstring& ex) -> bool
 	{
 		auto file = caspar::find_case_insensitive(boost::filesystem::path(filename).wstring() + ex);
 
 		return static_cast<bool>(file);
 	});
 
-	if(ext == g_extensions.end())
+	if(ext == supported_extensions().end())
 		return core::frame_producer::empty();
 
 	return spl::make_shared<image_producer>(dependencies.frame_factory, *caspar::find_case_insensitive(filename + *ext), false, length);
@@ -299,14 +284,14 @@ core::draw_frame create_thumbnail(const core::frame_producer_dependencies& depen
 {
 	std::wstring filename = env::media_folder() + media_file;
 
-	auto ext = std::find_if(g_extensions.begin(), g_extensions.end(), [&](const std::wstring& ex) -> bool
+	auto ext = std::find_if(supported_extensions().begin(), supported_extensions().end(), [&](const std::wstring& ex) -> bool
 	{
 		auto file = caspar::find_case_insensitive(boost::filesystem::path(filename).wstring() + ex);
 
 		return static_cast<bool>(file);
 	});
 
-	if (ext == g_extensions.end())
+	if (ext == supported_extensions().end())
 		return core::draw_frame::empty();
 
 	spl::shared_ptr<core::frame_producer> producer = spl::make_shared<image_producer>(
@@ -314,7 +299,7 @@ core::draw_frame create_thumbnail(const core::frame_producer_dependencies& depen
 			*caspar::find_case_insensitive(filename + *ext),
 			true,
 			1);
-	
+
 	return producer->receive();
 }
 

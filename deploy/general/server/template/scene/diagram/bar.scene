@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scene width="400" height="1080" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/CasparCG/Server/2.1.0/core/producer/scene/scene.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <variables>
+    <variable type="number" public="true" id="value">0</variable>
+    <variable type="number" public="true" id="max">1</variable>
+
+    <variable type="number" public="false" id="margin_top">200</variable>
+    <variable type="number" public="false" id="margin_bottom">100</variable>
+    <variable type="number" public="false" id="bar_height">${scene_height - variable.margin_top - variable.margin_bottom}</variable>
+    <!-- The animate function creates a tension between the input value and the output value, delaying the change by 12 frames in this case -->
+    <variable type="number" public="false" id="current_bar_height">${animate(value / max, 12, "easeoutquad") * variable.bar_height}</variable>
+  </variables>
+
+  <layers>
+    <layer id="bar">
+      <producer>RED</producer>
+      <x>0</x>
+      <y>${variable.margin_top + variable.bar_height - variable.current_bar_height}</y>
+      <width>${scene_width}</width>
+      <height>${variable.current_bar_height}</height>
+    </layer>
+    <layer id="text">
+      <producer>[TEXT] "" 0 0 size 30 color #FFFFFF font LiberationSans</producer>
+      <x>${scene_width / 2 - layer.text.width / 2}</x>
+      <y>${variable.margin_top - 100}</y>
+      <parameters>
+        <text>${value}</text>
+      </parameters>
+    </layer>
+  </layers>
+</scene>

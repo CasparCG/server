@@ -41,8 +41,6 @@
 
 #include <tbb/concurrent_queue.h>
 
-#include <asmlib.h>
-
 #include <FreeImage.h>
 
 #include <vector>
@@ -113,7 +111,7 @@ public:
 					filename2 = env::media_folder() + filename2 + L".png";
 
 				auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Allocate(static_cast<int>(frame.width()), static_cast<int>(frame.height()), 32), FreeImage_Unload);
-				A_memcpy(FreeImage_GetBits(bitmap.get()), frame.image_data().begin(), frame.image_data().size());
+				std::memcpy(FreeImage_GetBits(bitmap.get()), frame.image_data().begin(), frame.image_data().size());
 				FreeImage_FlipVertical(bitmap.get());
 #ifdef WIN32
 				FreeImage_SaveU(FIF_PNG, bitmap.get(), filename2.c_str(), 0);

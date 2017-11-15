@@ -36,7 +36,7 @@
 #pragma warning (push)
 #pragma warning (disable : 4244)
 #endif
-extern "C" 
+extern "C"
 {
 	#define __STDC_CONSTANT_MACROS
 	#define __STDC_LIMIT_MACROS
@@ -47,7 +47,7 @@ extern "C"
 #endif
 
 namespace caspar {
-		
+
 static const int MAX_THREADS = 16; // See mpegvideo.h
 
 int thread_execute(AVCodecContext* s, int (*func)(AVCodecContext *c2, void *arg2), void* arg, int* ret, int count, int size)
@@ -55,7 +55,7 @@ int thread_execute(AVCodecContext* s, int (*func)(AVCodecContext *c2, void *arg2
 	tbb::parallel_for(0, count, 1, [&](int i)
 	{
         int r = func(s, (char*)arg + i*size);
-        if(ret) 
+        if(ret)
 			ret[i] = r;
     });
 
@@ -63,44 +63,44 @@ int thread_execute(AVCodecContext* s, int (*func)(AVCodecContext *c2, void *arg2
 }
 
 int thread_execute2(AVCodecContext* s, int (*func)(AVCodecContext* c2, void* arg2, int, int), void* arg, int* ret, int count)
-{	   
+{
 	// TODO: Micro-optimize...
 
 	std::array<std::vector<int>, 16> jobs;
-	
-	for(int n = 0; n < count; ++n)	
-		jobs[(n*MAX_THREADS) / count].push_back(n);	
-	
-	tbb::parallel_for(0, MAX_THREADS, [&](int n)    
-    {   
+
+	for(int n = 0; n < count; ++n)
+		jobs[(n*MAX_THREADS) / count].push_back(n);
+
+	tbb::parallel_for(0, MAX_THREADS, [&](int n)
+    {
 		for (auto k : jobs[n])
 		{
 			int r = func(s, arg, k, n);
-			if(ret) 
+			if(ret)
 				ret[k]= r;
 		}
-    });   
+    });
 
-	return 0; 
+	return 0;
 }
 
 void thread_init(AVCodecContext* s)
 {
 	static int dummy_opaque;
 
-    s->active_thread_type = FF_THREAD_SLICE;
-	s->thread_opaque	  = &dummy_opaque; 
-    s->execute			  = thread_execute;
-    s->execute2			  = thread_execute2;
-    s->thread_count		  = MAX_THREADS; // We are using a task-scheduler, so use as many "threads/tasks" as possible. 
+    s->active_thread_type	= FF_THREAD_SLICE;
+	s->opaque				= &dummy_opaque;
+    s->execute				= thread_execute;
+    s->execute2				= thread_execute2;
+    s->thread_count			= MAX_THREADS; // We are using a task-scheduler, so use as many "threads/tasks" as possible.
 }
 
 void thread_free(AVCodecContext* s)
 {
-	if(!s->thread_opaque)
+	if(!s->opaque)
 		return;
 
-	s->thread_opaque = nullptr;
+	s->opaque = nullptr;
 }
 
 int tbb_avcodec_open(AVCodecContext* avctx, AVCodec* codec, bool single_threaded)
@@ -112,16 +112,16 @@ int tbb_avcodec_open(AVCodecContext* avctx, AVCodec* codec, bool single_threaded
 
 	if(!single_threaded && codec->capabilities & CODEC_CAP_SLICE_THREADS)
 		thread_init(avctx);
-	
+
 	// ff_thread_init will not be executed since thread_opaque != nullptr || thread_count == 1.
-	return avcodec_open2(avctx, codec, nullptr); 
+	return avcodec_open2(avctx, codec, nullptr);
 }
 
 int tbb_avcodec_close(AVCodecContext* avctx)
 {
 	thread_free(avctx);
 	// ff_thread_free will not be executed since thread_opaque == nullptr.
-	return avcodec_close(avctx); 
+	return avcodec_close(avctx);
 }
 
 }

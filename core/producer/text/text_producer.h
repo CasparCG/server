@@ -36,7 +36,7 @@
 #include "utils/text_info.h"
 
 namespace caspar { namespace core {
-	namespace text 
+	namespace text
 	{
 		void init(module_dependencies dependencies);
 		std::vector<std::pair<std::wstring, std::wstring>> list_fonts();
@@ -45,16 +45,14 @@ namespace caspar { namespace core {
 class text_producer : public frame_producer_base
 {
 public:
-	text_producer(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, 
+	text_producer(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str,
 		text::text_info& text_info, long parent_width, long parent_height, bool standalone);
 	static spl::shared_ptr<text_producer> create(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, text::text_info& text_info, long parent_width, long parent_height, bool standalone = false);
-	
+
 	draw_frame receive_impl() override;
 	std::future<std::wstring> call(const std::vector<std::wstring>& param) override;
 	variable& get_variable(const std::wstring& name) override;
 	const std::vector<std::wstring>& get_variables() const override;
-
-	text::string_metrics measure_string(const std::wstring& str);
 
 	constraints& pixel_constraints() override;
 	std::wstring print() const override;
