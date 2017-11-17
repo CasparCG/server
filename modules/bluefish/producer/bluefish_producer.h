@@ -17,34 +17,20 @@
 * along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
 *
 * Author: Robert Nagy, ronag89@gmail.com
+*		  satchit puthenveetil
+*         James Wise, james.wise@bluefish444.com
 */
 
 #pragma once
 
-#if defined _DEBUG && defined _MSC_VER
-#include <crtdbg.h>
-#endif
+#include <core/fwd.h>
 
-#define NOMINMAX
-
-#include <Windows.h>
-
-#include <memory>
-#include <array>
-#include <functional>
-#include <algorithm>
-#include <vector>
-#include <deque>
-#include <queue>
 #include <string>
-#include <math.h>
+#include <vector>
 
-#include <common/utf.h>
-#include <common/memory.h>
-//#include "../common/executor.h" // Can't include this due to MSVC lambda bug
+namespace caspar { namespace bluefish {
 
-#include <common/log.h>
-#include <common/except.h>
+void describe_producer(core::help_sink& sink, const core::help_repository& repo);
+spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params);
 
-#include <assert.h>
-#include <boost/property_tree/ptree.hpp>
+}}
