@@ -361,7 +361,20 @@ public:
 						if (BLUE_FAIL(blue_->set_card_property32(VIDEO_GENLOCK_SIGNAL, genLockSource)))
 							CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to set GenLock to Aux Input."));
 					}
-				}
+                }
+                else
+                {
+                    // using channel C for 4224 on other configurations requires explicit routing
+                    if (blueVideoOutputChannel == BLUE_VIDEO_OUTPUT_CHANNEL_C)
+                    {
+                        ULONG routingValue = EPOCH_SET_ROUTING(EPOCH_SRC_OUTPUT_MEM_INTERFACE_CHC, EPOCH_DEST_SDI_OUTPUT_C, BLUE_CONNECTOR_PROP_DUALLINK_LINK_1);
+                        if (BLUE_FAIL(blue_->set_card_property32(MR2_ROUTING, routingValue)))
+                            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to MR 2 routing."));
+                        routingValue = EPOCH_SET_ROUTING(EPOCH_SRC_OUTPUT_MEM_INTERFACE_CHC, EPOCH_DEST_SDI_OUTPUT_D, BLUE_CONNECTOR_PROP_DUALLINK_LINK_2);
+                        if (BLUE_FAIL(blue_->set_card_property32(MR2_ROUTING, routingValue)))
+                            CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("Failed to MR 2 routing."));
+                    }
+                }
 			}
 		}
 	}
@@ -435,8 +448,6 @@ public:
 	{
 		blue_->video_playback_stop(0,0);
 		blue_->set_card_property32(VIDEO_DUAL_LINK_OUTPUT, 0);
-		ULONG routingValue = EPOCH_SET_ROUTING(EPOCH_SRC_OUTPUT_MEM_INTERFACE_CHA, EPOCH_DEST_SDI_OUTPUT_B, BLUE_CONNECTOR_PROP_SINGLE_LINK);
-		blue_->set_card_property32(MR2_ROUTING, routingValue);
 
 		if(BLUE_FAIL(blue_->set_card_property32(VIDEO_BLACKGENERATOR, 1)))
 			CASPAR_LOG(error)<< print() << TEXT(" Failed to disable video output.");
