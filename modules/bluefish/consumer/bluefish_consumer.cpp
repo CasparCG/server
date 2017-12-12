@@ -757,7 +757,7 @@ public:
 void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"Sends video on an SDI output using Bluefish video cards.");
-	sink.syntax(L"BLUEFISH {[device_index:int]|1} {[sdi_device:int]|a} {[embedded_audio:EMBEDDED_AUDIO]} {[key_only:KEY_ONLY]} {CHANNEL_LAYOUT [channel_layout:string]} {[keyer:string|disabled]} ");
+	sink.syntax(L"BLUEFISH {[device_index:int]|1} {[sdi_device:int]|1} {[embedded_audio:EMBEDDED_AUDIO]} {[key_only:KEY_ONLY]} {CHANNEL_LAYOUT [channel_layout:string]} {[keyer:string|disabled]} ");
 	sink.para()
 		->text(L"Sends video on an SDI output using Bluefish video cards. Multiple devices can be ")
 		->text(L"installed in the same machine and used at the same time, they will be addressed via ")
@@ -814,13 +814,13 @@ spl::shared_ptr<core::frame_consumer> create_consumer(	const std::vector<std::ws
 	}
 
 	bluefish_hardware_output_channel device_output_channel = bluefish_hardware_output_channel::channel_a;
-	if (contains_param(L"A", params))
+	if (contains_param(L"1", params))
 		device_output_channel = bluefish_hardware_output_channel::channel_a;
-	else if (contains_param(L"B", params))
+	else if (contains_param(L"2", params))
 		device_output_channel = bluefish_hardware_output_channel::channel_b;
-	else if (contains_param(L"C", params))
+	else if (contains_param(L"3", params))
 		device_output_channel = bluefish_hardware_output_channel::channel_c;
-	else if (contains_param(L"D", params))
+	else if (contains_param(L"4", params))
 		device_output_channel = bluefish_hardware_output_channel::channel_d;
 
 	hardware_downstream_keyer_mode keyer = hardware_downstream_keyer_mode::disable;
@@ -846,7 +846,7 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 											std::vector<spl::shared_ptr<core::video_channel>> channels)
 {
 	const auto device_index		= ptree.get(						L"device",			1);
-	const auto device_stream	= ptree.get(						L"sdi-stream", L"a");
+	const auto device_stream	= ptree.get(						L"sdi-stream", L"1");
 	const auto embedded_audio	= ptree.get(						L"embedded-audio",	false);
 	const auto key_only			= ptree.get(						L"key-only",		false);
 	const auto channel_layout	= ptree.get_optional<std::wstring>(	L"channel-layout");
@@ -868,13 +868,13 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 	}
 
 	bluefish_hardware_output_channel device_output_channel = bluefish_hardware_output_channel::channel_a;
-	if (device_stream == L"a")
+	if (device_stream == L"1")
 		device_output_channel = bluefish_hardware_output_channel::channel_a;
-	else if (device_stream == L"b")
+	else if (device_stream == L"2")
 		device_output_channel = bluefish_hardware_output_channel::channel_b;
-	else if (device_stream == L"c")
+	else if (device_stream == L"3")
 		device_output_channel = bluefish_hardware_output_channel::channel_c;
-	else if (device_stream == L"d")
+	else if (device_stream == L"4")
 		device_output_channel = bluefish_hardware_output_channel::channel_d;
 
 	hardware_downstream_keyer_mode keyer_mode = hardware_downstream_keyer_mode::disable;
