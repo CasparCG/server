@@ -10,10 +10,6 @@
 
 /clang-analyze.out
 
-/dependencies64/cef/bin/linux/libcef.so
-/dependencies64/cef/bin/win32/libcef.dll.pdb
-/dependencies64/boost/stage/lib/win32/libboost_wave-vc140-mt-gd-1_59.lib
-
 /build
 
 CMakeLists.txt.user

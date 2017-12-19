@@ -1,0 +1,5 @@
+/cef/linux/Release/libcef.so
+/cef/win32/Release/libcef.dll
+/cef/win32/Release/cef_sandbox.lib
+
+/boost/stage/lib/win32/libboost_wave-vc140-mt-gd-1_59.lib
