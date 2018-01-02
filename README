@@ -71,7 +71,29 @@ INSTALLATION ON LINUX
 
 3. If using an Nvidia graphics card enable the use of "NVIDIA binary driver"
    under "Software & Updates -- Additional Drivers".
+   
+RESOLVING COMMON ISSUES ON LINUX
+--------------------------------
 
+Common problems you may encounter when running on newer and unsupported
+Ubuntu editions:
+
+1. HTML producer freezes and/or throws "Fontconfig error" message
+Add below line to run.sh script:
+export FONTCONFIG_PATH=/etc/fonts
+
+2. HTML producer throws "GTK theme error" message
+Install gnome-themes-standard package:
+sudo apt install gnome-themes-standard
+
+3. Error while loading libgcrypt.so.11
+Extract libgcrypt.so.11 and libgcrypt.so.11.8.2 to CasparCG lib/ directory.
+You can get it from:
+https://launchpad.net/ubuntu/+archive/primary/+files/libgcrypt11_1.5.3-2ubuntu4.2_amd64.deb
+
+4. Error while loading libcgmanager.so.0
+Install central cgroup manager daemon (client library):
+sudo apt install libcgmanager0
 
 INSTALLATION OF ADDITIONAL NON-GPL SOFTWARE
 -------------------------------------------
