@@ -37,6 +37,12 @@ FIND_PACKAGE (SFML 2 COMPONENTS graphics window system REQUIRED)
 
 # TO CLEANUP!!
 
+if (MSVC)
+	set(PLATFORM_FOLDER_NAME	"win32")
+else()
+	set(PLATFORM_FOLDER_NAME	"linux")
+endif ()
+
 set(BOOST_INCLUDE_PATH			"${Boost_INCLUDE_DIRS}")
 set(RXCPP_INCLUDE_PATH			"${CMAKE_CURRENT_SOURCE_DIR}/dependencies64/RxCpp/include")
 set(TBB_INCLUDE_PATH			"${TBB_INCLUDE_DIRS}")
@@ -46,19 +52,13 @@ set(FREETYPE_INCLUDE_PATH		"${FREETYPE_INCLUDE_DIRS}")
 set(FFMPEG_INCLUDE_PATH			"${FFMPEG_INCLUDE_DIRS}")
 set(ASMLIB_INCLUDE_PATH			"${EXTERNAL_INCLUDE_PATH}")
 set(FREEIMAGE_INCLUDE_PATH		"${FreeImage_INCLUDE_DIRS}")
-set(CEF_INCLUDE_PATH			"${CMAKE_CURRENT_SOURCE_DIR}/dependencies64/cef/include")
-
-if (MSVC)
-	set(PLATFORM_FOLDER_NAME	"win32")
-else()
-	set(PLATFORM_FOLDER_NAME	"linux")
-endif ()
+set(CEF_INCLUDE_PATH			"${CMAKE_CURRENT_SOURCE_DIR}/dependencies64/cef/${PLATFORM_FOLDER_NAME}/include")
 
 set(LIBERATION_FONTS_BIN_PATH	"${CMAKE_CURRENT_SOURCE_DIR}/dependencies64/liberation-fonts")
-set(CEF_PATH					"${CMAKE_CURRENT_SOURCE_DIR}/dependencies64/cef")
-set(CEF_BIN_PATH				"${CMAKE_CURRENT_SOURCE_DIR}/dependencies64/cef/bin/linux")
+set(CEF_PATH					"${CMAKE_CURRENT_SOURCE_DIR}/dependencies64/cef/${PLATFORM_FOLDER_NAME}")
+set(CEF_BIN_PATH				"${CMAKE_CURRENT_SOURCE_DIR}/dependencies64/cef/${PLATFORM_FOLDER_NAME}/Release")
 
-link_directories("${CMAKE_CURRENT_SOURCE_DIR}/dependencies64/cef/lib/linux")
+link_directories("${CEF_BIN_PATH}")
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
