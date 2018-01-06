@@ -148,7 +148,7 @@ public:
 					if (requestedFrames.hasOwnProperty(animationFrameId))
 						requestedFrames[animationFrameId](timestamp);
 			}
-		)", ret, exception);
+		)", CefString(), 1, ret, exception);
 
 		if (!injected)
 			caspar_log(browser, boost::log::trivial::error, "Could not inject javascript animation code.");
@@ -181,6 +181,24 @@ public:
 	{
 		contexts_.clear();
 	}
+	
+	void OnBeforeCommandLineProcessing(
+		const CefString& process_type,
+		CefRefPtr<CefCommandLine> command_line) override
+	{
+		//command_line->AppendSwitch("ignore-gpu-blacklist");
+		//command_line->AppendSwitch("enable-webgl");
+		command_line->AppendSwitch("enable-begin-frame-scheduling");
+		command_line->AppendSwitch("enable-media-stream");
+
+		if (process_type.empty())
+		{
+			// This gives more performance, but disabled gpu effects. Without it a single 1080p producer cannot be run smoothly
+			command_line->AppendSwitch("disable-gpu");
+			command_line->AppendSwitch("disable-gpu-compositing");
+			command_line->AppendSwitchWithValue("disable-gpu-vsync", "gpu");
+		}
+	}
 
 	bool OnProcessMessageReceived(
 			CefRefPtr<CefBrowser> browser,
@@ -193,7 +211,7 @@ public:
 			{
 				CefRefPtr<CefV8Value> ret;
 				CefRefPtr<CefV8Exception> exception;
-				context->Eval("tickAnimations()", ret, exception);
+				context->Eval("tickAnimations()", CefString(), 1, ret, exception);
 			}
 
 			return true;
@@ -230,10 +248,11 @@ void init(core::module_dependencies dependencies)
 	g_cef_executor->invoke([&]
 	{
 		CefSettings settings;
+		settings.command_line_args_disabled = false;
 		settings.no_sandbox = true;
 		settings.remote_debugging_port = env::properties().get(L"configuration.html.remote-debugging-port", 0);
-		//settings.windowless_rendering_enabled = true;
-		CefInitialize(main_args, settings, nullptr, nullptr);
+		settings.windowless_rendering_enabled = true;
+		CefInitialize(main_args, settings, CefRefPtr<CefApp>(new renderer_application), nullptr);
 	});
 	g_cef_executor->begin_invoke([&]
 	{
