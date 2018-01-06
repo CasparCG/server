@@ -115,6 +115,7 @@ public:
 		graph_->set_color("browser-tick-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
 		graph_->set_color("dropped-frame", diagnostics::color(0.3f, 0.6f, 0.3f));
+		graph_->set_color("browser-dropped-frame", diagnostics::color(0.6f, 0.1f, 0.1f));
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 
@@ -150,6 +151,23 @@ public:
 			do_execute_javascript(javascript);
 		}
 	}
+
+	bool OnBeforePopup(CefRefPtr<CefBrowser> browser,
+		CefRefPtr<CefFrame> frame,
+		const CefString& target_url,
+		const CefString& target_frame_name,
+		WindowOpenDisposition target_disposition,
+		bool user_gesture,
+		const CefPopupFeatures& popupFeatures,
+		CefWindowInfo& windowInfo,
+		CefRefPtr<CefClient>& client,
+		CefBrowserSettings& settings,
+		bool* no_javascript_access) override
+	{
+		// This blocks popup windows from opening, as they dont make sense and hit an exception in get_browser_host upon closing
+		return true;
+	}
+	
 
 	CefRefPtr<CefBrowserHost> get_browser_host()
 	{
@@ -203,10 +221,13 @@ private:
 		paint_timer_.restart();
 		CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
 
+		if (type != PET_VIEW)
+			return;
+
 		core::pixel_format_desc pixel_desc;
-			pixel_desc.format = core::pixel_format::bgra;
-			pixel_desc.planes.push_back(
-				core::pixel_format_desc::plane(width, height, 4));
+		pixel_desc.format = core::pixel_format::bgra;
+		pixel_desc.planes.push_back(core::pixel_format_desc::plane(width, height, 4));
+
 		auto frame = frame_factory_->create_frame(this, pixel_desc, core::audio_channel_layout::invalid());
 		std::memcpy(frame.image_data().begin(), buffer, width * height * 4);
 
@@ -392,6 +413,7 @@ private:
 
 			timer.tick(1.0 / (format_desc_.fps * format_desc_.field_count));
 			invoke_requested_animation_frames();
+			graph_->set_tag(diagnostics::tag_severity::WARNING, "browser-dropped-frame");
 		}
 		else
 		{
@@ -400,6 +422,8 @@ private:
 				{
 					last_frame_ = last_progressive_frame_;
 				});
+
+			graph_->set_tag(diagnostics::tag_severity::WARNING, "browser-dropped-frame");
 		}
 	}
 
@@ -529,7 +553,7 @@ public:
 
 	bool collides(double x, double y) const override
 	{
-		return true;
+		return client_ != nullptr;
 	}
 
 	core::draw_frame receive_impl() override
