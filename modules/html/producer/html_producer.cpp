@@ -44,10 +44,10 @@
 #include <common/prec_timer.h>
 #include <common/linq.h>
 #include <common/os/filesystem.h>
+#include <common/timer.h>
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/timer.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/property_tree/ptree.hpp>
 
@@ -79,9 +79,9 @@ class html_client
 {
 	std::wstring							url_;
 	spl::shared_ptr<diagnostics::graph>		graph_;
-	boost::timer							tick_timer_;
-	boost::timer							frame_timer_;
-	boost::timer							paint_timer_;
+	caspar::timer							tick_timer_;
+	caspar::timer							frame_timer_;
+	caspar::timer							paint_timer_;
 
 	spl::shared_ptr<core::frame_factory>	frame_factory_;
 	core::video_format_desc					format_desc_;
@@ -452,13 +452,19 @@ public:
 			client_ = new html_client(frame_factory, format_desc, url_);
 
 			CefWindowInfo window_info;
-
-			window_info.SetTransparentPainting(true);
-			window_info.SetAsOffScreen(nullptr);
-			//window_info.SetAsWindowless(nullptr, true);
+			window_info.width = format_desc.square_width;
+			window_info.height = format_desc.square_height;
+			window_info.windowless_rendering_enabled = true;
 
 			CefBrowserSettings browser_settings;
 			browser_settings.web_security = cef_state_t::STATE_DISABLED;
+			//browser_settings.webgl = cef_state_t::STATE_ENABLED;
+			browser_settings.webgl = cef_state_t::STATE_DISABLED;
+			double fps = format_desc.fps;
+			if (format_desc.field_mode != core::field_mode::progressive) {
+				fps *= 2.0;
+			}
+			browser_settings.windowless_frame_rate = int(ceil(fps));
 			CefBrowserHost::CreateBrowser(window_info, client_.get(), url, browser_settings, nullptr);
 		});
 	}
