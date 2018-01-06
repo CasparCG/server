@@ -47,7 +47,10 @@ cp -f  shell/*.ttf "$SERVER_FOLDER/" || fail "Could not copy font(s)"
 cp -f  shell/casparcg "$SERVER_FOLDER/bin/" || fail "Could not copy server executable"
 cp -f  shell/casparcg.config "$SERVER_FOLDER/" || fail "Could not copy server config"
 cp -Rf shell/locales "$SERVER_FOLDER/bin/" || fail "Could not copy server CEF locales"
-cp -f  shell/*.pak "$SERVER_FOLDER/" || fail "Could not copy CEF resources"
+cp -Rf shell/swiftshader "$SERVER_FOLDER/bin/" || fail "Could not copy server CEF swiftshader"
+cp -f  shell/*.pak "$SERVER_FOLDER/bin/" || fail "Could not copy CEF resources"
+cp -f  shell/*.bin "$SERVER_FOLDER/bin/" || fail "Could not copy V8 resources"
+cp -f  shell/*.dat "$SERVER_FOLDER/bin/" || fail "Could not copy ICU resources"
 
 # Copy binary dependencies
 echo Copying binary dependencies...
