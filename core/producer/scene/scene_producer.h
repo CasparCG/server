@@ -89,6 +89,7 @@ struct layer
 	binding<std::wstring>						name;
 	scene::coord								anchor;
 	scene::coord								position;
+	scene::coord								blur;
 	scene::rect									crop;
 	scene::corners								perspective;
 	scene::rect									clip;
@@ -221,6 +222,7 @@ public:
 					//CASPAR_LOG(info) << relative_frame << L" " << *start_value << L" " << duration << L" " << tweened;
 				};
 
+		// TODO - this can exception is two keyframes have the same number
 		store_keyframe(to_affect.identity(), k);
 	}
 

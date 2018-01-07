@@ -248,6 +248,7 @@ struct image_kernel::impl
 
 		shader_->use();
 
+		shader_->set("blur",			false);
 		shader_->set("post_processing",	false);
 		shader_->set("plane[0]",		texture_id::plane0);
 		shader_->set("plane[1]",		texture_id::plane1);
@@ -282,6 +283,10 @@ struct image_kernel::impl
 		else
 			shader_->set("chroma", false);
 
+		// Check if the blur post step needs to be performed
+		const int blur_x = static_cast<int>(params.transform.blur[0]);
+		const int blur_y = static_cast<int>(params.transform.blur[1]);
+		const bool has_blur = blur_x > 0 || blur_y > 0;
 
 		// Setup blend_func
 
@@ -375,7 +380,14 @@ struct image_kernel::impl
 		}
 
 		// Set render target
-		params.background->attach();
+		std::shared_ptr<texture> blur_precomposite_texture = params.background;
+		if (!has_blur)
+			params.background->attach();
+		else
+		{
+			blur_precomposite_texture = ogl_->create_texture(params.background->width(), params.background->height(), 4, false);
+			blur_precomposite_texture->attach();
+		}
 
 		// Perspective correction
 		double diagonal_intersection_x;
@@ -461,6 +473,37 @@ struct image_kernel::impl
 			break;
 		default:
 			break;
+		}
+
+		if (has_blur)
+		{
+			params.background->attach();
+
+			blur_precomposite_texture->bind(static_cast<int>(texture_id::background));
+			blur_precomposite_texture->bind(static_cast<int>(texture_id::plane0));
+
+			shader_->use();
+			shader_->set("background", texture_id::background);
+			shader_->set("blur", true);
+			shader_->set("post_processing", false);
+			shader_->set("straighten_alpha", false);
+
+			const auto samples = std::ceil(std::sqrt(blur_x * blur_x + blur_y * blur_y) * 4);						
+			shader_->set("blur_samples", static_cast<int>(samples));
+			shader_->set("blur_vector",
+				static_cast<float>(-blur_x) / params.pix_desc.planes.at(0).width,
+				static_cast<float>(blur_y) / params.pix_desc.planes.at(0).height);
+
+			GL(glViewport(0, 0, params.background->width(), params.background->height()));
+			
+			glBegin(GL_QUADS);
+				glMultiTexCoord2d(GL_TEXTURE0, 0.0, 0.0); glVertex2d(0.0, 0.0);
+				glMultiTexCoord2d(GL_TEXTURE0, 1.0, 0.0); glVertex2d(1.0, 0.0);
+				glMultiTexCoord2d(GL_TEXTURE0, 1.0, 1.0); glVertex2d(1.0, 1.0);
+				glMultiTexCoord2d(GL_TEXTURE0, 0.0, 1.0); glVertex2d(0.0, 1.0);
+			glEnd();
+
+			glTextureBarrierNV();
 		}
 
 		// Cleanup

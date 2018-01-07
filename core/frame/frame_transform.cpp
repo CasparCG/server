@@ -73,6 +73,8 @@ image_transform& image_transform::operator*=(const image_transform &other)
 
 	anchor[0]				+= other.anchor[0] * fill_scale[0];
 	anchor[1]				+= other.anchor[1] * fill_scale[1];
+	blur[0]					+= other.blur[0];
+	blur[1]					+= other.blur[1];
 	fill_translation[0]		+= rotated[0] * fill_scale[0];
 	fill_translation[1]		+= rotated[1] * fill_scale[1];
 	fill_scale[0]			*= other.fill_scale[0];
@@ -149,6 +151,8 @@ image_transform image_transform::tween(double time, const image_transform& sourc
 	result.opacity							= do_tween(time, source.opacity,							dest.opacity,							duration, tween);
 	result.anchor[0]						= do_tween(time, source.anchor[0],							dest.anchor[0],							duration, tween);
 	result.anchor[1]						= do_tween(time, source.anchor[1],							dest.anchor[1],							duration, tween);
+	result.blur[0]							= do_tween(time, source.blur[0],							dest.blur[0],							duration, tween);
+	result.blur[1]							= do_tween(time, source.blur[1],							dest.blur[1],							duration, tween);
 	result.fill_translation[0]				= do_tween(time, source.fill_translation[0],				dest.fill_translation[0],				duration, tween);
 	result.fill_translation[1]				= do_tween(time, source.fill_translation[1],				dest.fill_translation[1],				duration, tween);
 	result.fill_scale[0]					= do_tween(time, source.fill_scale[0],						dest.fill_scale[0],						duration, tween);
@@ -214,6 +218,7 @@ bool operator==(const image_transform& lhs, const image_transform& rhs)
 		eq(lhs.brightness, rhs.brightness) &&
 		eq(lhs.saturation, rhs.saturation) &&
 		boost::range::equal(lhs.anchor, rhs.anchor, eq) &&
+		boost::range::equal(lhs.blur, rhs.blur, eq) &&
 		boost::range::equal(lhs.fill_translation, rhs.fill_translation, eq) &&
 		boost::range::equal(lhs.fill_scale, rhs.fill_scale, eq) &&
 		boost::range::equal(lhs.clip_translation, rhs.clip_translation, eq) &&

@@ -87,6 +87,7 @@ struct image_transform final
 	// boost::array<double, 2> fill_translation = { { 0.0, 0.0 } };
 	// See http://blogs.msdn.com/b/vcblog/archive/2014/08/19/the-future-of-non-static-data-member-initialization.aspx
 	boost::array<double, 2>	anchor				= boost::array<double, 2> { { 0.0, 0.0 } };
+	boost::array<double, 2>	blur				= boost::array<double, 2> { { 0.0, 0.0 } };
 	boost::array<double, 2>	fill_translation	= boost::array<double, 2> { { 0.0, 0.0 } };
 	boost::array<double, 2>	fill_scale			= boost::array<double, 2> { { 1.0, 1.0 } };
 	boost::array<double, 2>	clip_translation	= boost::array<double, 2> { { 0.0, 0.0 } };

@@ -291,6 +291,7 @@ struct scene_producer::impl
 		frame_transform transform;
 
 		auto& anchor		= transform.image_transform.anchor;
+		auto& blur			= transform.image_transform.blur;
 		auto& pos			= transform.image_transform.fill_translation;
 		auto& scale			= transform.image_transform.fill_scale;
 		auto& clip_pos		= transform.image_transform.clip_translation;
@@ -302,6 +303,8 @@ struct scene_producer::impl
 
 		anchor[0]		= layer.anchor.x.get()										/ layer.producer.get()->pixel_constraints().width.get();
 		anchor[1]		= layer.anchor.y.get()										/ layer.producer.get()->pixel_constraints().height.get();
+		blur[0]			= layer.blur.x.get();
+		blur[1]			= layer.blur.y.get();
 
 		pos[0]			= layer.position.x.get()									/ pixel_constraints_.width.get();
 		pos[1]			= layer.position.y.get()									/ pixel_constraints_.height.get();

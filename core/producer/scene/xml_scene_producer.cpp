@@ -168,6 +168,8 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 		layer.position.y							= scene->create_variable<double>(variable_prefix + L"y", false, ptree_get<std::wstring>(elem.second, L"y"));
 		layer.anchor.x								= scene->create_variable<double>(variable_prefix + L"anchor_x", false, elem.second.get<std::wstring>(L"anchor_x", L"0.0"));
 		layer.anchor.y								= scene->create_variable<double>(variable_prefix + L"anchor_y", false, elem.second.get<std::wstring>(L"anchor_y", L"0.0"));
+		layer.blur.x								= scene->create_variable<double>(variable_prefix + L"blur_x", false, elem.second.get<std::wstring>(L"blur_x", L"0.0"));
+		layer.blur.y								= scene->create_variable<double>(variable_prefix + L"blur_y", false, elem.second.get<std::wstring>(L"blur_y", L"0.0"));
 		layer.clip.upper_left.x						= scene->create_variable<double>(variable_prefix + L"clip.upper_left_x", false, elem.second.get<std::wstring>(L"clip.upper_left_x", L"0.0"));
 		layer.clip.upper_left.y						= scene->create_variable<double>(variable_prefix + L"clip.upper_left_y", false, elem.second.get<std::wstring>(L"clip.upper_left_y", L"0.0"));
 		layer.clip.lower_right.x					= scene->create_variable<double>(variable_prefix + L"clip.lower_right_x", false, elem.second.get<std::wstring>(L"clip.lower_right_x", L"${scene_width}"));

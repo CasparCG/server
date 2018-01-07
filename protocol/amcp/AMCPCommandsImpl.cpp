@@ -1919,6 +1919,53 @@ std::wstring mixer_perspective_command(command_context& ctx)
 	return L"202 MIXER OK\r\n";
 }
 
+
+void mixer_blur_describer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Change the blur of a layer.");
+	sink.syntax(L"MIXER [video_channel:int]{-[layer:int]|-0} BLUR {[x:int] [y:int]" + ANIMATION_SYNTAX);
+	sink.para()->text(L"Changes the blur of the specified layer, or returns the current values if no arguments are given.");
+	sink.para()
+		->text(L"The blur is a measured in number of pixels.");
+	sink.definitions()
+		->item(L"x", L"The x blur radius.")
+		->item(L"y", L"The y blur radius.");
+	sink.para()->text(L"Examples:");
+	sink.example(L">> MIXER 1-10 BLUR 5 6 25 easeinsine", L"sets the blur strength");
+	sink.example(
+		L">> MIXER 1-10 BLUR\n"
+		L"<< 201 MIXER OK\n"
+		L"<< 5 6", L"gets the blur point");
+}
+
+std::wstring mixer_blur_command(command_context& ctx)
+{
+	if (ctx.parameters.empty())
+	{
+		auto transform = get_current_transform(ctx).image_transform;
+		auto blur = transform.blur;
+		return L"201 MIXER OK\r\n"
+			+ boost::lexical_cast<std::wstring>(blur[0]) + L" "
+			+ boost::lexical_cast<std::wstring>(blur[1]) + L"\r\n";
+	}
+
+	transforms_applier transforms(ctx);
+	int duration = ctx.parameters.size() > 2 ? boost::lexical_cast<int>(ctx.parameters[2]) : 0;
+	std::wstring tween = ctx.parameters.size() > 3 ? ctx.parameters[3] : L"linear";
+	double x = boost::lexical_cast<double>(ctx.parameters.at(0));
+	double y = boost::lexical_cast<double>(ctx.parameters.at(1));
+
+	transforms.add(stage::transform_tuple_t(ctx.layer_index(), [=](frame_transform transform) mutable -> frame_transform
+	{
+		transform.image_transform.blur[0] = x;
+		transform.image_transform.blur[1] = y;
+		return transform;
+	}, duration, tween));
+	transforms.apply();
+
+	return L"202 MIXER OK\r\n";
+}
+
 void mixer_mipmap_describer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"Enable or disable mipmapping for a layer.");
@@ -3052,6 +3099,7 @@ void register_commands(amcp_command_repository& repo)
 	repo.register_channel_command(	L"Mixer Commands",		L"MIXER CONTRAST",				mixer_contrast_describer,			mixer_contrast_command,			0);
 	repo.register_channel_command(	L"Mixer Commands",		L"MIXER LEVELS",				mixer_levels_describer,				mixer_levels_command,			0);
 	repo.register_channel_command(	L"Mixer Commands",		L"MIXER FILL",					mixer_fill_describer,				mixer_fill_command,				0);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER BLUR",					mixer_blur_describer,				mixer_blur_command,				0);
 	repo.register_channel_command(	L"Mixer Commands",		L"MIXER CLIP",					mixer_clip_describer,				mixer_clip_command,				0);
 	repo.register_channel_command(	L"Mixer Commands",		L"MIXER ANCHOR",				mixer_anchor_describer,				mixer_anchor_command,			0);
 	repo.register_channel_command(	L"Mixer Commands",		L"MIXER CROP",					mixer_crop_describer,				mixer_crop_command,				0);
