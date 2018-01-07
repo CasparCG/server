@@ -69,7 +69,7 @@ class connection : public spl::enable_shared_from_this<connection>
 		explicit connection_holder(std::weak_ptr<connection> conn) : connection_(std::move(conn))
 		{}
 
-		void send(std::basic_string<char>&& data) override
+		void send(std::basic_string<char>&& data, bool skip_log) override
 		{
 			auto conn = connection_.lock();
 
