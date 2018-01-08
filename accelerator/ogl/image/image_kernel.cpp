@@ -1,4 +1,4 @@
-/*
+﻿/*
 * Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
 *
 * This file is part of CasparCG (www.casparcg.com).
@@ -233,6 +233,17 @@ struct image_kernel::impl
 		if (is_outside_screen(coords))
 			return;
 
+		// Check if the blur post step needs to be performed
+		const int blur_x = static_cast<int>(params.transform.blur[0] * std::cos(angle) + params.transform.blur[1] * std::sin(angle));
+		const int blur_y = static_cast<int>(params.transform.blur[1] * std::cos(angle) + params.transform.blur[0] * std::sin(angle));
+		const bool has_blur = blur_x > 0 || blur_y > 0;
+
+		// Set render target
+		std::shared_ptr<texture> composite_texture = params.background;
+		if (has_blur)
+			composite_texture = ogl_->create_texture(params.background->width(), params.background->height(), 4, false);
+		composite_texture->attach();
+
 		// Bind textures
 
 		for(int n = 0; n < params.textures.size(); ++n)
@@ -282,12 +293,7 @@ struct image_kernel::impl
 		}
 		else
 			shader_->set("chroma", false);
-
-		// Check if the blur post step needs to be performed
-		const int blur_x = static_cast<int>(params.transform.blur[0]);
-		const int blur_y = static_cast<int>(params.transform.blur[1]);
-		const bool has_blur = blur_x > 0 || blur_y > 0;
-
+		
 		// Setup blend_func
 
 		if(params.transform.is_key)
@@ -295,7 +301,7 @@ struct image_kernel::impl
 
 		if(blend_modes_)
 		{
-			params.background->bind(static_cast<int>(texture_id::background));
+			composite_texture->bind(static_cast<int>(texture_id::background));
 
 			shader_->set("background",	texture_id::background);
 			shader_->set("blend_mode",	params.blend_mode);
@@ -377,16 +383,6 @@ struct image_kernel::impl
 
 			GL(glEnable(GL_SCISSOR_TEST));
 			glScissor(static_cast<int>(m_p[0] * w), static_cast<int>(m_p[1] * h), std::max(0, static_cast<int>(m_s[0] * w)), std::max(0, static_cast<int>(m_s[1] * h)));
-		}
-
-		// Set render target
-		std::shared_ptr<texture> blur_precomposite_texture = params.background;
-		if (!has_blur)
-			params.background->attach();
-		else
-		{
-			blur_precomposite_texture = ogl_->create_texture(params.background->width(), params.background->height(), 4, false);
-			blur_precomposite_texture->attach();
 		}
 
 		// Perspective correction
@@ -479,11 +475,12 @@ struct image_kernel::impl
 		{
 			params.background->attach();
 
-			blur_precomposite_texture->bind(static_cast<int>(texture_id::background));
-			blur_precomposite_texture->bind(static_cast<int>(texture_id::plane0));
+			params.background->bind(static_cast<int>(texture_id::background));
+			composite_texture->bind(static_cast<int>(texture_id::plane0));
 
 			shader_->use();
 			shader_->set("background", texture_id::background);
+			shader_->set("blend_mode", 0);
 			shader_->set("blur", true);
 			shader_->set("post_processing", false);
 			shader_->set("straighten_alpha", false);
@@ -491,8 +488,8 @@ struct image_kernel::impl
 			const auto samples = std::ceil(std::sqrt(blur_x * blur_x + blur_y * blur_y) * 4);						
 			shader_->set("blur_samples", static_cast<int>(samples));
 			shader_->set("blur_vector",
-				static_cast<float>(-blur_x) / params.pix_desc.planes.at(0).width,
-				static_cast<float>(blur_y) / params.pix_desc.planes.at(0).height);
+				static_cast<float>(-blur_x) / params.background->width(),
+				static_cast<float>(blur_y) / params.background->height());
 
 			GL(glViewport(0, 0, params.background->width(), params.background->height()));
 			

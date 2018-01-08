@@ -1923,7 +1923,7 @@ std::wstring mixer_perspective_command(command_context& ctx)
 void mixer_blur_describer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"Change the blur of a layer.");
-	sink.syntax(L"MIXER [video_channel:int]{-[layer:int]|-0} BLUR {[x:int] [y:int]" + ANIMATION_SYNTAX);
+	sink.syntax(L"MIXER [video_channel:int]{-[layer:int]|-0} BLUR_XY {[x:int] [y:int]" + ANIMATION_SYNTAX);
 	sink.para()->text(L"Changes the blur of the specified layer, or returns the current values if no arguments are given.");
 	sink.para()
 		->text(L"The blur is a measured in number of pixels.");
@@ -1931,11 +1931,11 @@ void mixer_blur_describer(core::help_sink& sink, const core::help_repository& re
 		->item(L"x", L"The x blur radius.")
 		->item(L"y", L"The y blur radius.");
 	sink.para()->text(L"Examples:");
-	sink.example(L">> MIXER 1-10 BLUR 5 6 25 easeinsine", L"sets the blur strength");
+	sink.example(L">> MIXER 1-10 BLUR_XY 5 6 25 easeinsine", L"sets the blur strength");
 	sink.example(
-		L">> MIXER 1-10 BLUR\n"
+		L">> MIXER 1-10 BLUR_XY\n"
 		L"<< 201 MIXER OK\n"
-		L"<< 5 6", L"gets the blur point");
+		L"<< 5 6", L"gets the blur amount");
 }
 
 std::wstring mixer_blur_command(command_context& ctx)
@@ -3099,7 +3099,7 @@ void register_commands(amcp_command_repository& repo)
 	repo.register_channel_command(	L"Mixer Commands",		L"MIXER CONTRAST",				mixer_contrast_describer,			mixer_contrast_command,			0);
 	repo.register_channel_command(	L"Mixer Commands",		L"MIXER LEVELS",				mixer_levels_describer,				mixer_levels_command,			0);
 	repo.register_channel_command(	L"Mixer Commands",		L"MIXER FILL",					mixer_fill_describer,				mixer_fill_command,				0);
-	repo.register_channel_command(	L"Mixer Commands",		L"MIXER BLUR",					mixer_blur_describer,				mixer_blur_command,				0);
+	repo.register_channel_command(	L"Mixer Commands",		L"MIXER BLUR_XY",					mixer_blur_describer,				mixer_blur_command,				0);
 	repo.register_channel_command(	L"Mixer Commands",		L"MIXER CLIP",					mixer_clip_describer,				mixer_clip_command,				0);
 	repo.register_channel_command(	L"Mixer Commands",		L"MIXER ANCHOR",				mixer_anchor_describer,				mixer_anchor_command,			0);
 	repo.register_channel_command(	L"Mixer Commands",		L"MIXER CROP",					mixer_crop_describer,				mixer_crop_command,				0);

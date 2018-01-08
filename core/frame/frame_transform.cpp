@@ -73,8 +73,8 @@ image_transform& image_transform::operator*=(const image_transform &other)
 
 	anchor[0]				+= other.anchor[0] * fill_scale[0];
 	anchor[1]				+= other.anchor[1] * fill_scale[1];
-	blur[0]					+= other.blur[0];
-	blur[1]					+= other.blur[1];
+	blur[0]					+= other.blur[0]; // TODO - account for angle?
+	blur[1]					+= other.blur[1]; // TODO - account for angle?
 	fill_translation[0]		+= rotated[0] * fill_scale[0];
 	fill_translation[1]		+= rotated[1] * fill_scale[1];
 	fill_scale[0]			*= other.fill_scale[0];

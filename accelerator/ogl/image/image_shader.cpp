@@ -341,7 +341,7 @@ std::string get_fragment(bool blend_modes, bool post_processing)
 			{
 				if (blur)
 				{
-					gl_FragColor = get_blur_pixel(plane[0], gl_TexCoord[0].st, blur_samples).rgba;
+					gl_FragColor = blend(get_blur_pixel(plane[0], gl_TexCoord[0].st, blur_samples).bgra).bgra;
 				}
 				else
 	)shader"
