@@ -202,7 +202,7 @@ void describe_ivga_consumer(core::help_sink& sink, const core::help_repository& 
 	sink.example(L">> ADD 1 NEWTEK_IVGA");
 }
 
-spl::shared_ptr<core::frame_consumer> create_ivga_consumer(const std::vector<std::wstring>& params, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels)
+spl::shared_ptr<core::frame_consumer> create_ivga_consumer(const std::vector<std::wstring>& params, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels, spl::shared_ptr<core::consumer_delayed_responder> responder)
 {
 	if (params.size() < 1 || !boost::iequals(params.at(0), L"NEWTEK_IVGA"))
 		return core::frame_consumer::empty();

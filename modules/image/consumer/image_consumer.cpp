@@ -47,6 +47,8 @@
 #include <algorithm>
 
 #include "../util/image_view.h"
+#include "image/util/image_algorithms.h"
+#include "image/util/image_loader.h"
 
 namespace caspar { namespace image {
 
@@ -54,8 +56,8 @@ void write_cropped_png(
 		const core::const_frame& frame,
 		const core::video_format_desc& format_desc,
 		const boost::filesystem::path& output_file,
-		int width,
-		int height)
+		const int width,
+		const int height)
 {
 	auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Allocate(width, height, 32), FreeImage_Unload);
 	image_view<bgra_pixel> destination_view(FreeImage_GetBits(bitmap.get()), width, height);
@@ -71,16 +73,23 @@ void write_cropped_png(
 #endif
 }
 
+
 struct image_consumer : public core::frame_consumer
 {
-	core::monitor::subject	monitor_subject_;
-	std::wstring			filename_;
+	core::monitor::subject							monitor_subject_;
+	std::wstring									filename_;
+	spl::shared_ptr<core::consumer_delayed_responder>	responder_;
 public:
 
 	// frame_consumer
 
 	image_consumer(const std::wstring& filename)
 		: filename_(filename)
+	{
+	}
+
+	image_consumer(const spl::shared_ptr<core::consumer_delayed_responder> responder)
+		: responder_(responder)
 	{
 	}
 
@@ -96,23 +105,35 @@ public:
 	std::future<bool> send(core::const_frame frame) override
 	{
 		auto filename = filename_;
+		auto responder = responder_;
 
-		boost::thread async([frame, filename]
+		boost::thread async([frame, filename, responder]
 		{
 			ensure_gpf_handler_installed_for_thread("image-consumer");
 
 			try
 			{
-				auto filename2 = filename;
-
-				if (filename2.empty())
-					filename2 = env::media_folder() +  boost::posix_time::to_iso_wstring(boost::posix_time::second_clock::local_time()) + L".png";
-				else
-					filename2 = env::media_folder() + filename2 + L".png";
-
 				auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Allocate(static_cast<int>(frame.width()), static_cast<int>(frame.height()), 32), FreeImage_Unload);
 				std::memcpy(FreeImage_GetBits(bitmap.get()), frame.image_data().begin(), frame.image_data().size());
 				FreeImage_FlipVertical(bitmap.get());
+
+				if (responder.get() != nullptr && responder->is_valid())
+				{
+					auto str = bitmap_to_base64_png(bitmap);
+
+					std::wstringstream res;
+					res << L"[PNG_BASE64] " << str.c_str();
+					responder->send(res.str());
+					return;
+				}
+
+				auto filename2 = filename;
+
+				if (filename2.empty())
+					filename2 = env::media_folder() + boost::posix_time::to_iso_wstring(boost::posix_time::second_clock::local_time()) + L".png";
+				else
+					filename2 = env::media_folder() + filename2 + L".png";
+
 #ifdef WIN32
 				FreeImage_SaveU(FIF_PNG, bitmap.get(), filename2.c_str(), 0);
 #else
@@ -172,10 +193,11 @@ void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
 	sink.para()->text(L"Examples:");
 	sink.example(L">> ADD 1 IMAGE screenshot", L"creating media/screenshot.png");
 	sink.example(L">> ADD 1 IMAGE", L"creating media/20130228T210946.png if the current time is 2013-02-28 21:09:46.");
+	sink.example(L">> ADD 1 IMAGE [PNG_BASE64]", L"returns an base64 encoded png over amcp.");
 }
 
 spl::shared_ptr<core::frame_consumer> create_consumer(
-		const std::vector<std::wstring>& params, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels)
+		const std::vector<std::wstring>& params, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>>, spl::shared_ptr<core::consumer_delayed_responder> responder)
 {
 	if (params.size() < 1 || !boost::iequals(params.at(0), L"IMAGE"))
 		return core::frame_consumer::empty();
@@ -184,6 +206,11 @@ spl::shared_ptr<core::frame_consumer> create_consumer(
 
 	if (params.size() > 1)
 		filename = params.at(1);
+
+	if (boost::iequals(filename, L"[PNG_BASE64]"))
+	{
+		return spl::make_shared<image_consumer>(responder);
+	}
 
 	return spl::make_shared<image_consumer>(filename);
 }

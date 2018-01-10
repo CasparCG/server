@@ -68,15 +68,14 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 {
 	if(!pCurrentCommand)
 		return;
-	
+
 	if(executor_.size() > 128)
 	{
 		try
 		{
 			CASPAR_LOG(error) << "AMCP Command Queue Overflow.";
 			CASPAR_LOG(error) << "Failed to execute command:" << pCurrentCommand->print();
-			pCurrentCommand->SetReplyString(L"500 FAILED\r\n");
-			pCurrentCommand->SendReply();
+			pCurrentCommand->SendReply(L"500 FAILED\r\n");
 		}
 		catch(...)
 		{
@@ -103,7 +102,12 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 					running_command_since_.restart();
 				}
 
-				if (pCurrentCommand->Execute())
+				amcp_send_response_func send([=](const std::wstring& res)
+				{
+					pCurrentCommand->SendReply(res);
+				});
+
+				if (pCurrentCommand->Execute(std::make_shared<amcp_send_response_func>(send)))
 					CASPAR_LOG(debug) << "Executed command (" << timer.elapsed() << "s): " << print;
 				else
 					CASPAR_LOG(warning) << "Failed to execute command: " << print;
@@ -112,41 +116,39 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
 				CASPAR_LOG(error) << get_message_and_context(e) << " Turn on log level debug for stacktrace.";
-				pCurrentCommand->SetReplyString(L"404 " + pCurrentCommand->print() + L" FAILED\r\n");
+				pCurrentCommand->SendReply(L"404 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
 			catch (const expected_user_error& e)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
 				CASPAR_LOG(info) << get_message_and_context(e) << " Check syntax. Turn on log level debug for stacktrace.";
-				pCurrentCommand->SetReplyString(L"403 " + pCurrentCommand->print() + L" FAILED\r\n");
+				pCurrentCommand->SendReply(L"403 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
 			catch (const user_error& e)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
 				CASPAR_LOG(error) << get_message_and_context(e) << " Check syntax. Turn on log level debug for stacktrace.";
-				pCurrentCommand->SetReplyString(L"403 " + pCurrentCommand->print() + L" FAILED\r\n");
+				pCurrentCommand->SendReply(L"403 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
 			catch (std::out_of_range&)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
 				CASPAR_LOG(error) << L"Missing parameter. Check syntax. Turn on log level debug for stacktrace.";
-				pCurrentCommand->SetReplyString(L"402 " + pCurrentCommand->print() + L" FAILED\r\n");
+				pCurrentCommand->SendReply(L"402 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
 			catch (boost::bad_lexical_cast&)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
 				CASPAR_LOG(error) << L"Invalid parameter. Check syntax. Turn on log level debug for stacktrace.";
-				pCurrentCommand->SetReplyString(L"403 " + pCurrentCommand->print() + L" FAILED\r\n");
+				pCurrentCommand->SendReply(L"403 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
 			catch (...)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
 				CASPAR_LOG(error) << "Failed to execute command:" << pCurrentCommand->print();
-				pCurrentCommand->SetReplyString(L"501 " + pCurrentCommand->print() + L" FAILED\r\n");
+				pCurrentCommand->SendReply(L"501 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
-				
-			pCurrentCommand->SendReply();
-			
+							
 			CASPAR_LOG(trace) << "Ready for a new command";
 
 			tbb::spin_mutex::scoped_lock lock(running_command_mutex_);

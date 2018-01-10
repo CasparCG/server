@@ -30,7 +30,8 @@
 namespace caspar { namespace image {
 
 std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename);
-std::shared_ptr<FIBITMAP> load_png_from_memory(const void* memory_location, size_t size);
+std::shared_ptr<FIBITMAP> bitmap_from_base64_png(const std::string png_data);
+std::string bitmap_to_base64_png(std::shared_ptr<FIBITMAP> src);
 const std::set<std::wstring>& supported_extensions();
 
 }}

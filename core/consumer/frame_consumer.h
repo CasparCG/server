@@ -30,6 +30,7 @@
 
 #include <boost/property_tree/ptree_fwd.hpp>
 
+#include <future>
 #include <functional>
 #include <string>
 #include <vector>
@@ -73,10 +74,49 @@ public:
 	virtual const frame_consumer*			unwrapped() const { return this; }
 };
 
+class consumer_delayed_responder
+{
+	typedef std::shared_ptr<std::function<void(const std::wstring& res)>> send_response;
+
+	bool is_valid_;
+	send_response respond_;
+
+	consumer_delayed_responder(const send_response respond) : is_valid_(true), respond_(respond)
+	{
+	}
+public:
+	consumer_delayed_responder() : is_valid_(false)
+	{
+		
+	}
+
+	static spl::shared_ptr<consumer_delayed_responder> create(const send_response respond)
+	{
+		return spl::shared_ptr<consumer_delayed_responder>(new consumer_delayed_responder(respond));
+	}
+
+	static spl::shared_ptr<consumer_delayed_responder> empty()
+	{
+		return spl::shared_ptr<consumer_delayed_responder>(new consumer_delayed_responder(nullptr));
+	}
+
+	bool is_valid() const
+	{
+		return is_valid_;
+	}
+
+	void send(std::wstring message) const
+	{
+		if (respond_ != nullptr)
+			(*respond_)(std::move(message));
+	}
+};
+
 typedef std::function<spl::shared_ptr<frame_consumer>(
 		const std::vector<std::wstring>&,
 		interaction_sink* sink,
-		std::vector<spl::shared_ptr<video_channel>> channels)> consumer_factory_t;
+		std::vector<spl::shared_ptr<video_channel>> channels,
+		spl::shared_ptr<consumer_delayed_responder> responder)> consumer_factory_t;
 typedef std::function<spl::shared_ptr<frame_consumer>(
 		const boost::property_tree::wptree& element,
 		interaction_sink* sink,
@@ -93,7 +133,8 @@ public:
 	spl::shared_ptr<frame_consumer> create_consumer(
 			const std::vector<std::wstring>& params,
 			interaction_sink* sink,
-			std::vector<spl::shared_ptr<video_channel>> channels) const;
+			std::vector<spl::shared_ptr<video_channel>> channels,
+			spl::shared_ptr<consumer_delayed_responder> responder) const;
 	spl::shared_ptr<frame_consumer> create_consumer(
 			const std::wstring& element_name,
 			const boost::property_tree::wptree& element,

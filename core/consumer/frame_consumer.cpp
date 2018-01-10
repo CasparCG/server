@@ -282,7 +282,7 @@ public:
 };
 
 spl::shared_ptr<core::frame_consumer> frame_consumer_registry::create_consumer(
-		const std::vector<std::wstring>& params, interaction_sink* sink, std::vector<spl::shared_ptr<video_channel>> channels) const
+		const std::vector<std::wstring>& params, interaction_sink* sink, std::vector<spl::shared_ptr<video_channel>> channels, spl::shared_ptr<consumer_delayed_responder> responder) const
 {
 	if(params.empty())
 		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("params cannot be empty"));
@@ -293,7 +293,7 @@ spl::shared_ptr<core::frame_consumer> frame_consumer_registry::create_consumer(
 		{
 			try
 			{
-				consumer = factory(params, sink, channels);
+				consumer = factory(params, sink, channels, responder);
 			}
 			catch(...)
 			{

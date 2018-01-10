@@ -645,7 +645,7 @@ void add_describer(core::help_sink& sink, const core::help_repository& repo)
 	sink.example(L">> ADD 1 STREAM udp://localhost:5004 -vcodec libx264 -tune zerolatency -preset ultrafast -crf 25 -format mpegts -vf scale=240:180");
 }
 
-std::wstring add_command(command_context& ctx)
+std::wstring add_command(command_context& ctx, const amcp_send_response_func_ptr respond)
 {
 	replace_placeholders(
 			L"<CLIENT_IP_ADDRESS>",
@@ -655,9 +655,9 @@ std::wstring add_command(command_context& ctx)
 	core::diagnostics::scoped_call_context save;
 	core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
 
-	auto consumer = ctx.consumer_registry->create_consumer(ctx.parameters, &ctx.channel.channel->stage(), get_channels(ctx));
+	const auto consumer = ctx.consumer_registry->create_consumer(ctx.parameters, &ctx.channel.channel->stage(), get_channels(ctx), consumer_delayed_responder::create(respond));
 	ctx.channel.channel->output().add(ctx.layer_index(consumer->index()), consumer);
-
+	
 	return L"202 ADD OK\r\n";
 }
 
@@ -688,7 +688,7 @@ std::wstring remove_command(command_context& ctx)
 				ctx.client->address(),
 				ctx.parameters);
 
-		index = ctx.consumer_registry->create_consumer(ctx.parameters, &ctx.channel.channel->stage(), get_channels(ctx))->index();
+		index = ctx.consumer_registry->create_consumer(ctx.parameters, &ctx.channel.channel->stage(), get_channels(ctx), consumer_delayed_responder::empty())->index();
 	}
 
 	ctx.channel.channel->output().remove(index);
@@ -705,11 +705,14 @@ void print_describer(core::help_sink& sink, const core::help_repository& repo)
 		->code(L"media")->text(L" folder.");
 	sink.para()->text(L"Examples:");
 	sink.example(L">> PRINT 1", L"will produce a PNG image with the current date and time as the filename for example 20130620T192220.png");
+	sink.example(L">> PRINT 1 [PNG_BASE64]", L"will produce a PNG image and return over AMCP base64 encoded");
 }
 
-std::wstring print_command(command_context& ctx)
+std::wstring print_command(command_context& ctx, const amcp_send_response_func_ptr respond)
 {
-	ctx.channel.channel->output().add(ctx.consumer_registry->create_consumer({ L"IMAGE" }, &ctx.channel.channel->stage(), get_channels(ctx)));
+	auto params = ctx.parameters;
+	params.insert(params.begin(), L"IMAGE");
+	ctx.channel.channel->output().add(ctx.consumer_registry->create_consumer(params, &ctx.channel.channel->stage(), get_channels(ctx), consumer_delayed_responder::create(respond)));
 
 	return L"202 PRINT OK\r\n";
 }
@@ -2136,7 +2139,7 @@ std::wstring channel_grid_command(command_context& ctx)
 	params.push_back(L"0");
 	params.push_back(L"NAME");
 	params.push_back(L"Channel Grid Window");
-	auto screen = ctx.consumer_registry->create_consumer(params, &self.channel->stage(), get_channels(ctx));
+	auto screen = ctx.consumer_registry->create_consumer(params, &self.channel->stage(), get_channels(ctx), consumer_delayed_responder::empty());
 
 	self.channel->output().add(screen);
 

@@ -97,12 +97,12 @@ struct image_producer : public core::frame_producer_base
 			CASPAR_LOG(info) << print() << L" Initialized";
 	}
 
-	image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const void* png_data, size_t size, uint32_t length)
+	image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, std::string png_data, uint32_t length)
 		: description_(L"png from memory")
 		, frame_factory_(frame_factory)
 		, length_(length)
 	{
-		load(load_png_from_memory(png_data, size));
+		load(bitmap_from_base64_png(png_data));
 
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}
@@ -259,9 +259,9 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 		if (params.size() < 2)
 			return core::frame_producer::empty();
 
-		auto png_data = from_base64(std::string(params.at(1).begin(), params.at(1).end()));
+		auto png_data = std::string(params.at(1).begin(), params.at(1).end());
 
-		return spl::make_shared<image_producer>(dependencies.frame_factory, png_data.data(), png_data.size(), length);
+		return spl::make_shared<image_producer>(dependencies.frame_factory, png_data, length);
 	}
 
 	std::wstring filename = env::media_folder() + params.at(0);

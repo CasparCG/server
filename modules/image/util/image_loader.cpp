@@ -33,6 +33,7 @@
 
 #include "image_algorithms.h"
 #include "image_view.h"
+#include "common/base64.h"
 
 namespace caspar { namespace image {
 
@@ -80,12 +81,13 @@ std::shared_ptr<FIBITMAP> load_image(const std::wstring& filename)
 	return bitmap;
 }
 
-std::shared_ptr<FIBITMAP> load_png_from_memory(const void* memory_location, size_t size)
+std::shared_ptr<FIBITMAP> bitmap_from_base64_png(const std::string png_data)
 {
+	auto decoded = from_base64(png_data);
 	FREE_IMAGE_FORMAT fif = FIF_PNG;
 
 	auto memory = std::unique_ptr<FIMEMORY, decltype(&FreeImage_CloseMemory)>(
-			FreeImage_OpenMemory(static_cast<BYTE*>(const_cast<void*>(memory_location)), static_cast<DWORD>(size)),
+			FreeImage_OpenMemory(static_cast<BYTE*>(static_cast<void*>(decoded.data())), static_cast<DWORD>(decoded.size())),
 			FreeImage_CloseMemory);
 	auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_LoadFromMemory(fif, memory.get(), 0), FreeImage_Unload);
 
@@ -98,6 +100,16 @@ std::shared_ptr<FIBITMAP> load_png_from_memory(const void* memory_location, size
 	}
 
 	return bitmap;
+}
+
+std::string bitmap_to_base64_png(std::shared_ptr<FIBITMAP> src){
+	auto memory = std::unique_ptr<FIMEMORY, decltype(&FreeImage_CloseMemory)>(FreeImage_OpenMemory(), FreeImage_CloseMemory);
+	FreeImage_SaveToMemory(FIF_PNG, src.get(), memory.get());
+	BYTE* png_data;
+	DWORD size;
+	FreeImage_AcquireMemory(memory.get(), &png_data, &size);
+
+	return to_base64(reinterpret_cast<char*>(png_data), size);
 }
 
 const std::set<std::wstring>& supported_extensions()

@@ -216,7 +216,7 @@ private:
 			// Create command instance
 			if (is_channel_command)
 			{
-				result.command = repo_->create_channel_command(result.command_name, client, channel_index, layer_index, tokens);
+				result.command = repo_->create_channel_command(result.command_name, result.request_id, client, channel_index, layer_index, tokens);
 
 				if (result.command)
 				{
@@ -227,7 +227,7 @@ private:
 				{
 					// Restore backed up channel spec string.
 					tokens.push_front(channel_spec);
-					result.command = repo_->create_command(result.command_name, client, tokens);
+					result.command = repo_->create_command(result.command_name, result.request_id, client, tokens);
 
 					if (result.command)
 						result.queue = commandQueues_.at(0);
@@ -235,7 +235,7 @@ private:
 			}
 			else
 			{
-				result.command = repo_->create_command(result.command_name, client, tokens);
+				result.command = repo_->create_command(result.command_name, result.request_id, client, tokens);
 
 				if (result.command)
 					result.queue = commandQueues_.at(0);
@@ -252,9 +252,6 @@ private:
 				if (result.command->parameters().size() < result.command->minimum_parameters())
 					result.error = error_state::parameters_error;
 			}
-
-			if (result.command)
-				result.command->set_request_id(result.request_id);
 		}
 		catch (std::out_of_range&)
 		{

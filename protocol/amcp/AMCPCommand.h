@@ -85,31 +85,34 @@ namespace amcp {
 		}
 	};
 
-	typedef std::function<std::wstring(command_context& args)> amcp_command_func;
+	typedef std::function<std::wstring(command_context& args)> amcp_simple_command_func;
+	typedef std::function<void(const std::wstring& res)> amcp_send_response_func;
+	typedef std::shared_ptr<amcp_send_response_func> amcp_send_response_func_ptr;
+	typedef std::function<std::wstring(command_context& args, amcp_send_response_func_ptr respond)> amcp_command_func;
 
 	class AMCPCommand
 	{
 	private:
 		command_context		ctx_;
 		amcp_command_func	command_;
-		int					min_num_params_;
-		std::wstring		name_;
-		std::wstring		replyString_;
-		std::wstring		request_id_;
+		const int			min_num_params_;
+		const std::wstring	name_;
+		const std::wstring	request_id_;
 	public:
-		AMCPCommand(const command_context& ctx, const amcp_command_func& command, int min_num_params, const std::wstring& name)
+		AMCPCommand(const command_context& ctx, const amcp_command_func& command, const int min_num_params, const std::wstring& name, const std::wstring& request_id)
 			: ctx_(ctx)
 			, command_(command)
 			, min_num_params_(min_num_params)
 			, name_(name)
+			, request_id_(request_id)
 		{
 		}
 
 		typedef std::shared_ptr<AMCPCommand> ptr_type;
 
-		bool Execute()
+		bool Execute(const amcp_send_response_func_ptr send)
 		{
-			SetReplyString(command_(ctx_));
+			(*send)(command_(ctx_, send));
 			return true;
 		}
 
@@ -118,34 +121,25 @@ namespace amcp {
 			return min_num_params_;
 		}
 
-		void SendReply()
+		void SendReply(const std::wstring& str) const
 		{
-			if (replyString_.empty())
+			if (str.empty())
 				return;
 
-			ctx_.client->send(std::move(replyString_));
+			std::wstring reply = str;
+			if (!request_id_.empty())
+				reply = L"RES " + request_id_ + L" " + str;
+
+			ctx_.client->send(std::move(reply));
 		}
 
 		std::vector<std::wstring>& parameters() { return ctx_.parameters; }
 
-		IO::ClientInfoPtr client() { return ctx_.client; }
+		IO::ClientInfoPtr client() const { return ctx_.client; }
 
 		std::wstring print() const
 		{
 			return name_;
-		}
-
-		void set_request_id(std::wstring request_id)
-		{
-			request_id_ = std::move(request_id);
-		}
-
-		void SetReplyString(const std::wstring& str)
-		{
-			if (request_id_.empty())
-				replyString_ = str;
-			else
-				replyString_ = L"RES " + request_id_ + L" " + str;
 		}
 	};
 }}}

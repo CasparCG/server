@@ -30,6 +30,7 @@ namespace caspar { namespace protocol { namespace amcp {
 AMCPCommand::ptr_type find_command(
 		const std::map<std::wstring, std::pair<amcp_command_func, int>>& commands,
 		const std::wstring& str,
+		const std::wstring& id,
 		const command_context& ctx,
 		std::list<std::wstring>& tokens)
 {
@@ -47,7 +48,7 @@ AMCPCommand::ptr_type find_command(
 		if (subcmd != commands.end())
 		{
 			tokens.pop_front();
-			return std::make_shared<AMCPCommand>(ctx, subcmd->second.first, subcmd->second.second, s);
+			return std::make_shared<AMCPCommand>(ctx, subcmd->second.first, subcmd->second.second, s, id);
 		}
 	}
 
@@ -56,7 +57,7 @@ AMCPCommand::ptr_type find_command(
 	auto command = commands.find(s);
 
 	if (command != commands.end())
-		return std::make_shared<AMCPCommand>(ctx, command->second.first, command->second.second, s);
+		return std::make_shared<AMCPCommand>(ctx, command->second.first, command->second.second, s, id);
 
 	return nullptr;
 }
@@ -133,7 +134,7 @@ amcp_command_repository::amcp_command_repository(
 {
 }
 
-AMCPCommand::ptr_type amcp_command_repository::create_command(const std::wstring& s, IO::ClientInfoPtr client, std::list<std::wstring>& tokens) const
+AMCPCommand::ptr_type amcp_command_repository::create_command(const std::wstring& s, const std::wstring& id, IO::ClientInfoPtr client, std::list<std::wstring>& tokens) const
 {
 	auto& self = *impl_;
 
@@ -153,7 +154,7 @@ AMCPCommand::ptr_type amcp_command_repository::create_command(const std::wstring
 			self.ogl_device,
 			self.shutdown_server_now);
 
-	auto command = find_command(self.commands, s, ctx, tokens);
+	auto command = find_command(self.commands, s, id, ctx, tokens);
 
 	if (command)
 		return command;
@@ -168,6 +169,7 @@ const std::vector<channel_context>& amcp_command_repository::channels() const
 
 AMCPCommand::ptr_type amcp_command_repository::create_channel_command(
 		const std::wstring& s,
+		const std::wstring& id,
 		IO::ClientInfoPtr client,
 		unsigned int channel_index,
 		int layer_index,
@@ -193,7 +195,7 @@ AMCPCommand::ptr_type amcp_command_repository::create_channel_command(
 			self.ogl_device,
 			self.shutdown_server_now);
 
-	auto command = find_command(self.channel_commands, s, ctx, tokens);
+	auto command = find_command(self.channel_commands, s, id, ctx, tokens);
 
 	if (command)
 		return command;
@@ -201,16 +203,44 @@ AMCPCommand::ptr_type amcp_command_repository::create_channel_command(
 	return nullptr;
 }
 
+amcp_command_func convert_command_func(amcp_simple_command_func command)
+{
+	return [command] (command_context& args, amcp_send_response_func_ptr respond)
+	{
+		return std::move(command(args));
+	};
+}
+
 void amcp_command_repository::register_command(
 		std::wstring category,
 		std::wstring name,
 		core::help_item_describer describer,
-		amcp_command_func command,
+		amcp_simple_command_func command,
 		int min_num_params)
+{
+	register_command(category, name, describer, convert_command_func(command), min_num_params);
+}
+
+void amcp_command_repository::register_command(
+	std::wstring category,
+	std::wstring name,
+	core::help_item_describer describer,
+	amcp_command_func command,
+	int min_num_params)
 {
 	auto& self = *impl_;
 	self.help_repo->register_item({ L"AMCP", category }, name, describer);
 	self.commands.insert(std::make_pair(std::move(name), std::make_pair(std::move(command), min_num_params)));
+}
+
+void amcp_command_repository::register_channel_command(
+	std::wstring category,
+	std::wstring name,
+	core::help_item_describer describer,
+	amcp_simple_command_func command,
+	int min_num_params)
+{
+	register_channel_command(category, name, describer, convert_command_func(command), min_num_params);
 }
 
 void amcp_command_repository::register_channel_command(

@@ -48,9 +48,10 @@ public:
 			const std::shared_ptr<accelerator::ogl::device>& ogl_device,
 			std::promise<bool>& shutdown_server_now);
 
-	AMCPCommand::ptr_type create_command(const std::wstring& s, IO::ClientInfoPtr client, std::list<std::wstring>& tokens) const;
+	AMCPCommand::ptr_type create_command(const std::wstring& s, const std::wstring& id, IO::ClientInfoPtr client, std::list<std::wstring>& tokens) const;
 	AMCPCommand::ptr_type create_channel_command(
 			const std::wstring& s,
+			const std::wstring& id,
 			IO::ClientInfoPtr client,
 			unsigned int channel_index,
 			int layer_index,
@@ -58,7 +59,9 @@ public:
 
 	const std::vector<channel_context>& channels() const;
 
+	void register_command(std::wstring category, std::wstring name, core::help_item_describer describer, amcp_simple_command_func command, int min_num_params);
 	void register_command(std::wstring category, std::wstring name, core::help_item_describer describer, amcp_command_func command, int min_num_params);
+	void register_channel_command(std::wstring category, std::wstring name, core::help_item_describer describer, amcp_simple_command_func command, int min_num_params);
 	void register_channel_command(std::wstring category, std::wstring name, core::help_item_describer describer, amcp_command_func command, int min_num_params);
 	spl::shared_ptr<core::help_repository> help_repo() const;
 private:
