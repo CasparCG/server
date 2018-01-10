@@ -164,9 +164,11 @@ public:
 	}
 	
 
-	CefRefPtr<CefBrowserHost> get_browser_host()
+	CefRefPtr<CefBrowserHost> get_browser_host() const
 	{
-		return browser_->GetHost();
+		if (browser_)
+			return browser_->GetHost();
+		return nullptr;
 	}
 
 	void close()
@@ -252,6 +254,7 @@ private:
 	{
 		CASPAR_ASSERT(CefCurrentlyOn(TID_UI));
 
+		removed_ = true;
 		browser_ = nullptr;
 	}
 
