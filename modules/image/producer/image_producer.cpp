@@ -27,6 +27,7 @@
 
 #include <core/producer/frame_producer.h>
 #include <core/producer/scene/const_producer.h>
+#include <core/producer/variable.h>
 #include <core/frame/frame.h>
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
@@ -40,6 +41,7 @@
 #include <common/log.h>
 #include <common/array.h>
 #include <common/base64.h>
+#include <common/future.h>
 #include <common/param.h>
 #include <common/os/filesystem.h>
 
@@ -83,6 +85,8 @@ struct image_producer : public core::frame_producer_base
 	const uint32_t								length_;
 	core::draw_frame							frame_				= core::draw_frame::empty();
 	core::constraints							constraints_;
+	core::variable_impl<std::wstring>			png_string_data_;
+	std::shared_ptr<void>						png_data_subscription_;
 
 	image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& description, bool thumbnail_mode, uint32_t length)
 		: description_(description)
@@ -97,12 +101,20 @@ struct image_producer : public core::frame_producer_base
 			CASPAR_LOG(info) << print() << L" Initialized";
 	}
 
-	image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const void* png_data, size_t size, uint32_t length)
-		: description_(L"png from memory")
+	image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& png_data, uint32_t length)
+		: description_(L"base64 png")
 		, frame_factory_(frame_factory)
 		, length_(length)
 	{
-		load(load_png_from_memory(png_data, size));
+		png_data_subscription_ = png_string_data_.value().on_change([this]()
+		{
+			auto raw_str = png_string_data_.value().get();
+			auto new_str = std::string(raw_str.begin(), raw_str.end());
+			new_str.resize(raw_str.size());
+			auto decoded_str = from_base64(new_str);
+			load(load_png_from_memory(decoded_str.data(), decoded_str.size()));
+		});
+		png_string_data_.value().set(png_data);
 
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}
@@ -124,6 +136,31 @@ struct image_producer : public core::frame_producer_base
 		frame_ = core::draw_frame(std::move(frame));
 		constraints_.width.set(FreeImage_GetWidth(bitmap.get()));
 		constraints_.height.set(FreeImage_GetHeight(bitmap.get()));
+	}
+
+	std::future<std::wstring> call(const std::vector<std::wstring>& param) override
+	{
+		std::wstring result;
+		png_string_data_.value().set(param.empty() ? L"" : param[0]);
+
+		return caspar::make_ready_future(std::move(result));
+	}
+
+	core::variable& get_variable(const std::wstring& name) override
+	{
+		if (name == L"image")
+			return png_string_data_;
+
+		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"image_producer does not have a variable called " + name));
+	}
+
+	const std::vector<std::wstring>& get_variables() const override
+	{
+		static const std::vector<std::wstring> vars = {
+			L"image",
+		};
+
+		return vars;
 	}
 
 	// frame_producer
@@ -256,12 +293,11 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 	}
 	else if(boost::iequals(params.at(0), L"[PNG_BASE64]"))
 	{
-		if (params.size() < 2)
-			return core::frame_producer::empty();
-
-		auto png_data = from_base64(std::string(params.at(1).begin(), params.at(1).end()));
-
-		return spl::make_shared<image_producer>(dependencies.frame_factory, png_data.data(), png_data.size(), length);
+		std::wstring png_data;
+		if (params.size() >= 2)
+			png_data = std::wstring(params.at(1).begin(), params.at(1).end());
+		
+		return spl::make_shared<image_producer>(dependencies.frame_factory, std::move(png_data), length);
 	}
 
 	std::wstring filename = env::media_folder() + params.at(0);
