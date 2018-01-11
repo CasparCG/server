@@ -334,7 +334,7 @@ spl::shared_ptr<core::frame_producer> do_create_producer(const frame_producer_de
 		});
 
 	if(producer == frame_producer::empty())
-		producer = create_color_producer(dependencies.frame_factory, params);
+		producer = create_color_producer(dependencies, params);
 
 	if(producer == frame_producer::empty())
 		return producer;
