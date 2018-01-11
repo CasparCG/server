@@ -22,6 +22,7 @@
 #include "../../StdAfx.h"
 
 #include <common/future.h>
+#include <common/diagnostics/graph.h>
 #include <common/prec_timer.h>
 
 #include <boost/algorithm/string/split.hpp>
@@ -152,6 +153,8 @@ struct scene_producer::impl
 	std::multimap<int64_t, marker>							markers_by_frame_;
 	std::vector<std::shared_ptr<void>>						task_subscriptions_;
 	monitor::subject										monitor_subject_;
+	const spl::shared_ptr<diagnostics::graph>				graph_;
+	timer													frame_timer_;
 	bool													paused_					= true;
 	bool													removed_				= false;
 	bool													going_to_mark_			= false;
@@ -167,6 +170,9 @@ struct scene_producer::impl
 		, format_desc_(format_desc)
 		, aggregator_([=] (double x, double y) { return collission_detect(x, y); })
 	{
+		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
+		diagnostics::register_graph(graph_);
+
 		auto speed_variable = std::make_shared<core::variable_impl<double>>(L"1.0", true, 1.0);
 		store_variable(L"scene_speed", speed_variable);
 		speed_ = speed_variable->value();
@@ -461,6 +467,8 @@ struct scene_producer::impl
 		if (removed_)
 			return draw_frame::empty();
 
+		frame_timer_.restart();
+
 		mouse_x_.set(m_x_);
 		mouse_y_.set(m_y_);
 
@@ -483,6 +491,13 @@ struct scene_producer::impl
 			frame.transform() = get_transform(layer);
 			frames.push_back(frame);
 		}
+
+		graph_->set_value("frame-time", frame_timer_.elapsed()
+			* format_desc_.fps
+			* format_desc_.field_count
+			* 0.5);
+		graph_->set_text(print());
+		send_osc();
 
 		return draw_frame(frames);
 	}
@@ -521,6 +536,40 @@ struct scene_producer::impl
 		}
 
 		return boost::optional<interaction_target>();
+	}
+
+	void send_osc()
+	{
+		monitor_subject_ << core::monitor::message("/profiler/time") % frame_timer_.elapsed() % (1.0 / (format_desc_.fps * format_desc_.field_count));
+
+		monitor_subject_ << core::monitor::message("/scene/name") % template_name_;
+		monitor_subject_ << core::monitor::message("/scene/timeline-frame") % timeline_frame_number_.get() % get_remove_frame();
+		monitor_subject_ << core::monitor::message("/scene/frame") % frame_number_.get();
+		monitor_subject_ << core::monitor::message("/scene/speed") % speed_.get();
+
+		monitor_subject_ << core::monitor::message("/scene/paused") % paused_ % get_paused_name();
+	}
+
+	std::wstring get_paused_name()
+	{
+		for (auto it = markers_by_frame_.begin(); it != markers_by_frame_.end(); ++it)
+		{
+			if (it->first == timeline_frame_number_.get() && it->second.action == mark_action::stop)
+				return it->second.label_argument;
+		}
+
+		return L"";
+	}
+
+	int64_t get_remove_frame() const
+	{
+		for (auto it = markers_by_frame_.begin(); it != markers_by_frame_.end(); ++it)
+		{
+			if (it->second.action == mark_action::remove)
+				return it->first;
+		}
+
+		return 0;
 	}
 
 	std::future<std::wstring> call(const std::vector<std::wstring>& params)
@@ -615,7 +664,7 @@ struct scene_producer::impl
 
 	std::wstring print() const
 	{
-		return L"scene[type=" + name() + L" template=" + template_name_ + L"]";
+		return L"scene[type=" + name() + L" template=" + template_name_ + L" frame=" + std::to_wstring(timeline_frame_number_.get()) + L"/" + std::to_wstring(get_remove_frame()) + L"]";
 	}
 
 	std::wstring name() const
