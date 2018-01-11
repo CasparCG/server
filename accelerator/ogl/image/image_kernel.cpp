@@ -354,16 +354,8 @@ struct image_kernel::impl
 			shader_->set("csb",	false);
 
 		// Setup interlacing
-
-		if (params.transform.field_mode != core::field_mode::progressive)
-		{
-			GL(glEnable(GL_POLYGON_STIPPLE));
-
-			if(params.transform.field_mode == core::field_mode::upper)
-				glPolygonStipple(upper_pattern);
-			else if(params.transform.field_mode == core::field_mode::lower)
-				glPolygonStipple(lower_pattern);
-		}
+		if (!has_blur)
+			setup_interlacing(params);
 
 		// Setup drawing area
 
@@ -491,6 +483,9 @@ struct image_kernel::impl
 				static_cast<float>(-blur_x) / params.background->width(),
 				static_cast<float>(blur_y) / params.background->height());
 
+			// Setup interlacing
+			setup_interlacing(params);
+
 			GL(glViewport(0, 0, params.background->width(), params.background->height()));
 			
 			glBegin(GL_QUADS);
@@ -507,6 +502,19 @@ struct image_kernel::impl
 		GL(glDisable(GL_SCISSOR_TEST));
 		GL(glDisable(GL_POLYGON_STIPPLE));
 		GL(glDisable(GL_BLEND));
+	}
+
+	void setup_interlacing(const draw_params params) const
+	{
+		if (params.transform.field_mode != core::field_mode::progressive)
+		{
+			GL(glEnable(GL_POLYGON_STIPPLE));
+
+			if (params.transform.field_mode == core::field_mode::upper)
+				glPolygonStipple(upper_pattern);
+			else if (params.transform.field_mode == core::field_mode::lower)
+				glPolygonStipple(lower_pattern);
+		}
 	}
 
 	void post_process(const std::shared_ptr<texture>& background, bool straighten_alpha)
