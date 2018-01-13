@@ -24,6 +24,7 @@
 #include "bluefish.h"
 
 #include "consumer/bluefish_consumer.h"
+#include "producer/bluefish_producer.h"
 
 #include "util/blue_velvet.h"
 
@@ -31,6 +32,7 @@
 #include <common/utf.h>
 
 #include <core/consumer/frame_consumer.h>
+#include <core/producer/frame_producer.h>
 #include <core/system_info_provider.h>
 
 #include <boost/lexical_cast.hpp>
@@ -85,6 +87,7 @@ void init(core::module_dependencies dependencies)
 
 	dependencies.consumer_registry->register_consumer_factory(L"Bluefish Consumer", create_consumer, describe_consumer);
 	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"bluefish", create_preconfigured_consumer);
+    dependencies.producer_registry->register_producer_factory(L"Bluefish Producer", create_producer, describe_producer);
 	dependencies.system_info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
 	{
 		info.add(L"system.bluefish.version", version());
