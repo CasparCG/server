@@ -32,58 +32,18 @@
 namespace caspar { namespace core {
 
 struct fence::implementation
-{
-	GLsync sync_;
-
-	implementation() : sync_(0){}
-	~implementation(){glDeleteSync(sync_);}
-		
+{		
 	void set()
 	{
-		glDeleteSync(sync_);
-		sync_ = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
 	}
 
 	bool ready() const
 	{
-		if(!sync_)
-			return true;
-
-		GLsizei length = 0;
-		int values[] = {0};
-
-		GL(glGetSynciv(sync_, GL_SYNC_STATUS, 1, &length, values));
-
-		return values[0] == GL_SIGNALED;
+		return true;
 	}
 
 	void wait(ogl_device& ogl)
 	{	
-		int delay = 0;
-		if(!ogl.invoke([this]{return ready();}, high_priority))
-		{
-			while(!ogl.invoke([this]{return ready();}, normal_priority) && delay < 20)
-			{
-				delay += 2;
-				Sleep(2);
-			}
-		}
-		
-		static tbb::atomic<size_t> count;
-		static tbb::atomic<bool> warned;
-		
-		if(delay > 2 && ++count > 50)
-		{
-			if(!warned.fetch_and_store(true))
-			{
-				CASPAR_LOG(warning) << L"[fence] Performance warning. GPU was not ready during requested host read-back. Delayed by atleast: " << delay << L" ms. Further warnings are sent to trace log level."
-									<< L" You can ignore this warning if you do not notice any problems with output video. This warning is caused by insufficent support or performance of your graphics card for OpenGL based memory transfers. "
-									<< L" Please try to update your graphics drivers or update your graphics card, see recommendations on (www.casparcg.com)."
-									<< L" Further help is available at (www.casparcg.com/forum).";
-			}
-			else
-				CASPAR_LOG(trace) << L"[fence] Performance warning. GPU was not ready during requested host read-back. Delayed by atleast: " << delay << L" ms.";
-		}
 	}
 };
 	
