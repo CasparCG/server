@@ -47,6 +47,7 @@
 #include <algorithm>
 
 #include "../util/image_view.h"
+#include "image/util/image_algorithms.h"
 
 namespace caspar { namespace image {
 
@@ -112,6 +113,10 @@ public:
 
 				auto bitmap = std::shared_ptr<FIBITMAP>(FreeImage_Allocate(static_cast<int>(frame.width()), static_cast<int>(frame.height()), 32), FreeImage_Unload);
 				std::memcpy(FreeImage_GetBits(bitmap.get()), frame.image_data().begin(), frame.image_data().size());
+
+				image_view<bgra_pixel> original_view(FreeImage_GetBits(bitmap.get()), static_cast<int>(frame.width()), static_cast<int>(frame.height()));
+				unmultiply(original_view);
+
 				FreeImage_FlipVertical(bitmap.get());
 #ifdef WIN32
 				FreeImage_SaveU(FIF_PNG, bitmap.get(), filename2.c_str(), 0);
