@@ -234,6 +234,17 @@ struct scene_producer::impl
 		CASPAR_THROW_EXCEPTION(user_error() << msg_info(name + L" not found in scene"));
 	}
 
+	bool has_keyframe(void* timeline_identity, const int64_t frame_number)
+	{
+		for(auto& keyframe : timelines_[timeline_identity].keyframes)
+		{
+			if (keyframe.first == frame_number)
+				return true;
+		}
+
+		return false;
+	}
+
 	void store_keyframe(void* timeline_identity, const keyframe& k)
 	{
 		timelines_[timeline_identity].keyframes.insert(std::make_pair(k.destination_frame, k));
@@ -791,6 +802,11 @@ std::future<std::wstring> scene_producer::call(const std::vector<std::wstring>& 
 monitor::subject& scene_producer::monitor_output()
 {
 	return impl_->monitor_output();
+}
+
+bool scene_producer::has_keyframe(void* timeline_identity, const int64_t k)
+{
+	return impl_->has_keyframe(timeline_identity, k);
 }
 
 void scene_producer::store_keyframe(void* timeline_identity, const keyframe& k)

@@ -467,7 +467,17 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 					break;
 				}
 
-				text_producers_by_layer_name.push_back(std::make_pair(layer_name, text_producer));
+				auto text_layer_exists = std::find_if(text_producers_by_layer_name.begin(), text_producers_by_layer_name.end(),
+					[layer_name](const std::pair<std::wstring, spl::shared_ptr<core::text_producer>>& element) { return element.first == layer_name; });
+
+				if (text_layer_exists == text_producers_by_layer_name.end())
+				{
+					text_producers_by_layer_name.push_back(std::make_pair(layer_name, text_producer));
+				}
+				else
+				{
+					CASPAR_LOG(warning) << "Found duplicate text layer name: " << layer_name;
+				}
 			}
 			else
 			{
