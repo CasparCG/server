@@ -477,7 +477,7 @@ struct image_kernel::impl
 			shader_->set("post_processing", false);
 			shader_->set("straighten_alpha", false);
 
-			const auto samples = std::ceil(std::sqrt(blur_x * blur_x + blur_y * blur_y) * 4);						
+			const auto samples = std::ceil(std::sqrt(blur_x * blur_x + blur_y * blur_y));
 			shader_->set("blur_samples", static_cast<int>(samples));
 			shader_->set("blur_vector",
 				static_cast<float>(-blur_x) / params.background->width(),
