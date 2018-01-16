@@ -32,6 +32,7 @@
 #include <cmath>
 
 #include <boost/any.hpp>
+#include <boost/date_time.hpp>
 #include <boost/locale.hpp>
 
 #include <common/log.h>
@@ -214,6 +215,26 @@ boost::any create_length_function(const std::vector<boost::any>& params, const v
 	return str.transformed([](std::wstring v) { return static_cast<double>(v.length()); });
 }
 
+boost::any create_date_function(const std::vector<boost::any>& params, const variable_repository& var_repo)
+{
+	if (params.size() != 1)
+		CASPAR_THROW_EXCEPTION(user_error()
+			<< msg_info(L"date() function requires one parameters: str"));
+
+	auto str = require<std::wstring>(params.at(0));
+	variable& time_var = var_repo(L"system_time");
+
+	return time_var.as<int64_t>().transformed([str](int64_t v)
+	{
+		std::locale loc(std::wcout.getloc(), new boost::posix_time::wtime_facet(str.get().c_str()));
+
+		std::wstringstream wss;
+		wss.imbue(loc);
+		wss << boost::posix_time::second_clock::universal_time();
+		return static_cast<std::wstring>(wss.str());
+	});
+}
+
 boost::any parse_function(
 		const std::wstring& function_name,
 		std::wstring::const_iterator& cursor,
@@ -229,7 +250,8 @@ boost::any parse_function(
 		{ L"floor",		create_floor_function },
 		{ L"to_lower",	create_to_lower_function },
 		{ L"to_upper",	create_to_upper_function },
-		{ L"length",	create_length_function }
+		{ L"length",	create_length_function },
+		{ L"date",		create_date_function },
 	};
 
 	auto function = FUNCTIONS.find(function_name);
@@ -570,13 +592,17 @@ op parse_operator(std::wstring::const_iterator& cursor, const std::wstring& str)
 boost::any as_binding(const boost::any& value)
 {
 	// Wrap supported constants as bindings
-	if (is<double>(value))
+	if (is<int64_t>(value))
+		return binding<int64_t>(as<int64_t>(value));
+	else if (is<double>(value))
 		return binding<double>(as<double>(value));
 	else if (is<bool>(value))
 		return binding<bool>(as<bool>(value));
 	else if (is<std::wstring>(value))
 		return binding<std::wstring>(as<std::wstring>(value));
 	// Already one of the supported binding types
+	else if (is<binding<int64_t>>(value))
+		return as<binding<int64_t>>(value);
 	else if (is<binding<double>>(value))
 		return as<binding<double>>(value);
 	else if (is<binding<bool>>(value))

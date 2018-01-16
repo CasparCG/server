@@ -146,6 +146,7 @@ struct scene_producer::impl
 	mutable tbb::atomic<int64_t>							m_y_;
 	binding<int64_t>										mouse_x_;
 	binding<int64_t>										mouse_y_;
+	binding<int64_t>										system_time_;
 	double													frame_fraction_			= 0.0;
 	std::map<void*, timeline>								timelines_;
 	std::map<std::wstring, std::shared_ptr<core::variable>>	variables_;
@@ -204,6 +205,11 @@ struct scene_producer::impl
 		store_variable(L"scene_height", scene_height);
 		pixel_constraints_.width = scene_width->value();
 		pixel_constraints_.height = scene_height->value();
+
+		int64_t current_time = get_current_time();
+		auto system_time_variable = std::make_shared<core::variable_impl<int64_t>>(boost::lexical_cast<std::wstring>(current_time), false, current_time);
+		store_variable(L"system_time", system_time_variable);
+		system_time_ = system_time_variable->value();
 	}
 
 	layer& create_layer(
@@ -219,6 +225,13 @@ struct scene_producer::impl
 		layers_.push_back(layer);
 
 		return layers_.back();
+	}
+
+	int64_t get_current_time() const
+	{
+		using namespace boost::chrono;
+
+		return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 	}
 
 	void reverse_layers() {
@@ -482,6 +495,8 @@ struct scene_producer::impl
 
 		mouse_x_.set(m_x_);
 		mouse_y_.set(m_y_);
+
+		system_time_.set(get_current_time());
 
 		if (!paused_)
 			advance();
