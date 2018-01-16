@@ -106,7 +106,7 @@ void setup_console_window()
 	// Disable close button in console to avoid shutdown without cleanup.
 	EnableMenuItem(GetSystemMenu(GetConsoleWindow(), FALSE), SC_CLOSE , MF_GRAYED);
 	DrawMenuBar(GetConsoleWindow());
-	//SetConsoleCtrlHandler(HandlerRoutine, true);
+	SetConsoleCtrlHandler(NULL, true);
 
 	// Configure console size and position.
 	auto coord = GetLargestConsoleWindowSize(hOut);
@@ -336,6 +336,7 @@ int main(int argc, char* argv[])
 
 				while(true)
 				{
+					std::wcin.clear();
 					std::getline(std::wcin, wcmd); // TODO: It's blocking...
 				
 					//boost::to_upper(wcmd);  // TODO COMPILER crashes on this line, Strange!
