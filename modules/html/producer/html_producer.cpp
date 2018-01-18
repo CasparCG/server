@@ -471,10 +471,11 @@ public:
 			window_info.height = format_desc.square_height;
 			window_info.windowless_rendering_enabled = true;
 
+			const bool enable_gpu = env::properties().get(L"configuration.html.enable-gpu", false);
+
 			CefBrowserSettings browser_settings;
 			browser_settings.web_security = cef_state_t::STATE_DISABLED;
-			//browser_settings.webgl = cef_state_t::STATE_ENABLED;
-			browser_settings.webgl = cef_state_t::STATE_DISABLED;
+			browser_settings.webgl = enable_gpu ? cef_state_t::STATE_ENABLED : cef_state_t::STATE_DISABLED;
 			double fps = format_desc.fps;
 			if (format_desc.field_mode != core::field_mode::progressive) {
 				fps *= 2.0;
