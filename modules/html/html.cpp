@@ -101,7 +101,13 @@ public:
 class renderer_application : public CefApp, CefRenderProcessHandler
 {
 	std::vector<CefRefPtr<CefV8Context>> contexts_;
+	const bool enable_gpu_;
 public:
+
+	explicit renderer_application(const bool enable_gpu) : enable_gpu_(enable_gpu)
+	{
+	}
+
 	CefRefPtr<CefRenderProcessHandler> GetRenderProcessHandler() override
 	{
 		return this;
@@ -190,11 +196,13 @@ public:
 		CefRefPtr<CefCommandLine> command_line) override
 	{
 		//command_line->AppendSwitch("ignore-gpu-blacklist");
-		//command_line->AppendSwitch("enable-webgl");
+		if (enable_gpu_)
+			command_line->AppendSwitch("enable-webgl");
+
 		command_line->AppendSwitch("enable-begin-frame-scheduling");
 		command_line->AppendSwitch("enable-media-stream");
 
-		if (process_type.empty())
+		if (process_type.empty() && !enable_gpu_)
 		{
 			// This gives more performance, but disabled gpu effects. Without it a single 1080p producer cannot be run smoothly
 			command_line->AppendSwitch("disable-gpu");
@@ -236,7 +244,7 @@ bool intercept_command_line(int argc, char** argv)
 	CefMainArgs main_args(argc, argv);
 #endif
 
-	if (CefExecuteProcess(main_args, CefRefPtr<CefApp>(new renderer_application), nullptr) >= 0)
+	if (CefExecuteProcess(main_args, CefRefPtr<CefApp>(new renderer_application(false)), nullptr) >= 0)
 		return true;
 
 	return false;
@@ -250,12 +258,13 @@ void init(core::module_dependencies dependencies)
 	g_cef_executor.reset(new executor(L"cef"));
 	g_cef_executor->invoke([&]
 	{
+		const bool enable_gpu = env::properties().get(L"configuration.html.enable-gpu", false);
 		CefSettings settings;
 		settings.command_line_args_disabled = false;
 		settings.no_sandbox = true;
 		settings.remote_debugging_port = env::properties().get(L"configuration.html.remote-debugging-port", 0);
 		settings.windowless_rendering_enabled = true;
-		CefInitialize(main_args, settings, CefRefPtr<CefApp>(new renderer_application), nullptr);
+		CefInitialize(main_args, settings, CefRefPtr<CefApp>(new renderer_application(enable_gpu)), nullptr);
 	});
 	g_cef_executor->begin_invoke([&]
 	{
