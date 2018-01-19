@@ -207,7 +207,7 @@ std::wstring MediaInfo(const boost::filesystem::path& path, const spl::shared_pt
 	if (!media_info)
 		return L"";
 
-	auto is_not_digit = [](char c){ return std::isdigit(c) == 0; };
+	auto is_not_digit = [](wchar_t c){ return std::isdigit(c) == 0; };
 
 	auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(path)));
 	writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), is_not_digit), writeTimeStr.end());

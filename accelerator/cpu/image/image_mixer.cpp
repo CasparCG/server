@@ -161,7 +161,7 @@ public:
 
 		convert(items, format_desc.width, format_desc.height);
 
-		auto result = spl::make_shared<buffer>(format_desc.size, 0);
+		auto result = spl::make_shared<buffer>(format_desc.size, static_cast<uint8_t>(0));
 		if(format_desc.field_mode != core::field_mode::progressive)
 		{
 			draw(items, result->data(), format_desc.width, format_desc.height, core::field_mode::upper);
