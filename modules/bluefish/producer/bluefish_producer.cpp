@@ -294,9 +294,9 @@ public:
 		video_frame->linesize[0] = static_cast<int>(video_input_format_desc_.size/ video_input_format_desc_.height);
 		
 		if (memory_format_on_card_ == MEM_FMT_2VUY)
-			video_frame->format = PIX_FMT_UYVY422;
+			video_frame->format = AV_PIX_FMT_UYVY422;
 		else if (memory_format_on_card_ == MEM_FMT_RGBA)
-			video_frame->format = PIX_FMT_RGBA;
+			video_frame->format = AV_PIX_FMT_RGBA;
 		
 		video_frame->width = video_input_format_desc_.width;
 		video_frame->height = video_input_format_desc_.height;

@@ -27,14 +27,6 @@
 
 namespace caspar { namespace core {
 
-enum class tags
-{
-	frame_tag = 0,
-	empty_tag,
-	eof_tag,
-	late_tag
-};
-
 struct draw_frame::impl
 {
 	std::shared_ptr<const_frame>	frame_;
@@ -202,6 +194,5 @@ const draw_frame& draw_frame::late()
 {
 	return late_frame;
 }
-
 
 }}

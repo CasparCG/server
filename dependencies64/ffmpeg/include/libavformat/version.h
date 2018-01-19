@@ -29,8 +29,10 @@
 
 #include "libavutil/version.h"
 
-#define LIBAVFORMAT_VERSION_MAJOR 56
-#define LIBAVFORMAT_VERSION_MINOR  36
+// Major bumping may affect Ticket5467, 5421, 5451(compatibility with Chromium)
+// Also please add any ticket numbers that you believe might be affected here
+#define LIBAVFORMAT_VERSION_MAJOR  58
+#define LIBAVFORMAT_VERSION_MINOR   3
 #define LIBAVFORMAT_VERSION_MICRO 100
 
 #define LIBAVFORMAT_VERSION_INT AV_VERSION_INT(LIBAVFORMAT_VERSION_MAJOR, \
@@ -47,19 +49,40 @@
  * FF_API_* defines may be placed below to indicate public API that will be
  * dropped at a future version bump. The defines themselves are not part of
  * the public API and may change, break or disappear at any time.
+ *
+ * @note, when bumping the major version it is recommended to manually
+ * disable each FF_API_* in its own commit instead of disabling them all
+ * at once through the bump. This improves the git bisect-ability of the change.
+ *
  */
-#ifndef FF_API_LAVF_BITEXACT
-#define FF_API_LAVF_BITEXACT            (LIBAVFORMAT_VERSION_MAJOR < 57)
+#ifndef FF_API_COMPUTE_PKT_FIELDS2
+#define FF_API_COMPUTE_PKT_FIELDS2      (LIBAVFORMAT_VERSION_MAJOR < 59)
 #endif
-#ifndef FF_API_LAVF_FRAC
-#define FF_API_LAVF_FRAC                (LIBAVFORMAT_VERSION_MAJOR < 57)
+#ifndef FF_API_OLD_OPEN_CALLBACKS
+#define FF_API_OLD_OPEN_CALLBACKS       (LIBAVFORMAT_VERSION_MAJOR < 59)
 #endif
-#ifndef FF_API_LAVF_CODEC_TB
-#define FF_API_LAVF_CODEC_TB            (LIBAVFORMAT_VERSION_MAJOR < 57)
+#ifndef FF_API_LAVF_AVCTX
+#define FF_API_LAVF_AVCTX               (LIBAVFORMAT_VERSION_MAJOR < 59)
 #endif
-#ifndef FF_API_URL_FEOF
-#define FF_API_URL_FEOF                 (LIBAVFORMAT_VERSION_MAJOR < 57)
+#ifndef FF_API_HTTP_USER_AGENT
+#define FF_API_HTTP_USER_AGENT          (LIBAVFORMAT_VERSION_MAJOR < 59)
 #endif
+#ifndef FF_API_HLS_WRAP
+#define FF_API_HLS_WRAP                 (LIBAVFORMAT_VERSION_MAJOR < 59)
+#endif
+#ifndef FF_API_LAVF_KEEPSIDE_FLAG
+#define FF_API_LAVF_KEEPSIDE_FLAG       (LIBAVFORMAT_VERSION_MAJOR < 59)
+#endif
+#ifndef FF_API_OLD_ROTATE_API
+#define FF_API_OLD_ROTATE_API           (LIBAVFORMAT_VERSION_MAJOR < 59)
+#endif
+#ifndef FF_API_FORMAT_GET_SET
+#define FF_API_FORMAT_GET_SET           (LIBAVFORMAT_VERSION_MAJOR < 59)
+#endif
+#ifndef FF_API_OLD_AVIO_EOF_0
+#define FF_API_OLD_AVIO_EOF_0           (LIBAVFORMAT_VERSION_MAJOR < 59)
+#endif
+
 
 #ifndef FF_API_R_FRAME_RATE
 #define FF_API_R_FRAME_RATE            1

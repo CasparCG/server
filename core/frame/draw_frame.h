@@ -67,7 +67,7 @@ public:
 	
 	bool operator==(const draw_frame& other) const;
 	bool operator!=(const draw_frame& other) const;
-
+   
 	// Properties
 
 	const core::frame_transform&	transform() const;
