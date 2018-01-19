@@ -30,6 +30,7 @@
 #include <locale>
 #include <vector>
 #include <sstream>
+#include <boost/algorithm/string/case_conv.hpp>
 
 namespace caspar { namespace protocol { namespace CLK {
 
@@ -107,10 +108,7 @@ public:
 			}
 			else
 			{
-				std::transform(
-					command_name_.begin(), command_name_.end(), 
-					command_name_.begin(), 
-					toupper);
+                boost::to_upper(command_name_);
 
 				try
 				{
