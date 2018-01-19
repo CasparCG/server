@@ -425,7 +425,7 @@ struct server::impl : boost::noncopyable
 				auto asyncbootstrapper = spl::make_shared<IO::AsyncEventServer>(
 						io_service_,
 						create_protocol(protocol, L"TCP Port " + boost::lexical_cast<std::wstring>(port)),
-						port);
+						static_cast<short>(port));
 				async_servers_.push_back(asyncbootstrapper);
 
 				if (!primary_amcp_server_ && boost::iequals(protocol, L"AMCP"))
