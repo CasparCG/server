@@ -68,5 +68,5 @@ if(MSVC)
 	casparcg_add_runtime_dependency("${FREEIMAGE_BIN_PATH}/FreeImage.dll")
 	casparcg_add_runtime_dependency("${FREEIMAGE_BIN_PATH}/FreeImaged.dll")
 else()
-	casparcg_add_runtime_dependency("${FREEIMAGE_BIN_PATH}/libfreeimage.so.3")
+
 endif()
