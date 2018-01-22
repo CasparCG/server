@@ -129,7 +129,7 @@ static std::wstring get_mode_name(const com_ptr<IDeckLinkDisplayMode>& mode)
 }
 
 template<typename T, typename F>
-BMDDisplayMode get_display_mode(const T& device, BMDDisplayMode format, BMDPixelFormat pix_fmt, F flag, bool& will_attempt_dma)
+BMDDisplayMode get_display_mode(const T& device, BMDDisplayMode format, BMDPixelFormat pix_fmt, F flag)
 {
     IDeckLinkDisplayMode* m = nullptr;
     IDeckLinkDisplayModeIterator* iter;
@@ -150,7 +150,6 @@ BMDDisplayMode get_display_mode(const T& device, BMDDisplayMode format, BMDPixel
 	com_ptr<IDeckLinkDisplayMode> mode = wrap_raw<com_ptr>(m, true);
 
 	BMDDisplayModeSupport displayModeSupport;
-	will_attempt_dma = false;
 
 	if (FAILED(device->DoesSupportVideoMode(mode->GetDisplayMode(), pix_fmt, flag, &displayModeSupport, nullptr)))
 		CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(L"Could not determine whether device supports requested video format: " + get_mode_name(mode)));
@@ -158,16 +157,14 @@ BMDDisplayMode get_display_mode(const T& device, BMDDisplayMode format, BMDPixel
 		CASPAR_LOG(warning) << L"Device does not support video-format: " << get_mode_name(mode);
 	else if (displayModeSupport == bmdDisplayModeSupportedWithConversion)
 		CASPAR_LOG(warning) << L"Device supports video-format with conversion: " << get_mode_name(mode);
-	else
-		will_attempt_dma = true;
 
 	return mode->GetDisplayMode();
 }
 
 template<typename T, typename F>
-static BMDDisplayMode get_display_mode(const T& device, core::video_format fmt, BMDPixelFormat pix_fmt, F flag, bool& will_attempt_dma)
+static BMDDisplayMode get_display_mode(const T& device, core::video_format fmt, BMDPixelFormat pix_fmt, F flag)
 {	
-	return get_display_mode(device, get_decklink_video_format(fmt), pix_fmt, flag, will_attempt_dma);
+	return get_display_mode(device, get_decklink_video_format(fmt), pix_fmt, flag);
 }
 
 template<typename T>

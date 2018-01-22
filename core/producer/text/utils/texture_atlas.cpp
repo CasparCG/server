@@ -34,6 +34,7 @@
 
 #include <list>
 #include <vector>
+#include <limits.h>
 #include "texture_atlas.h"
 
 namespace caspar { namespace core { namespace text {
