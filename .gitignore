@@ -15,7 +15,8 @@
 /dependencies64/boost/stage/lib/win32/libboost_wave-vc140-mt-gd-1_59.lib
 
 /build
+/products
 
 CMakeLists.txt.user
 .settings
-
+.vscode

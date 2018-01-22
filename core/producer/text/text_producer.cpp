@@ -132,7 +132,7 @@ struct text_producer::impl
 	int										parent_width_;
 	int										parent_height_;
 	bool									standalone_;
-	constraints								constraints_				{ parent_width_, parent_height_ };
+	constraints								constraints_				{ static_cast<double>(parent_width_), static_cast<double>(parent_height_) };
 	variable_impl<std::wstring>				text_;
 	std::shared_ptr<void>					text_subscription_;
 	variable_impl<double>					tracking_;
