@@ -24,6 +24,7 @@ echo Copying dependencies...
 cp -rf /build/shell/lib* "$STAGING_DIRECTORY/lib/" || fail "Could not copy server libraries"
 cp -f  /source/shell/LiberationSans-Regular.ttf "$STAGING_DIRECTORY/" || fail "Could not copy LiberationSans-Regular.ttf"
 cp -f  /source/shell/casparcg.config "$STAGING_DIRECTORY/" || fail "Could not copy server config"
+cp -f  /source/shell/run.sh "$STAGING_DIRECTORY/" || fail "Could not copy run.sh"
 cp -Rf /build/shell/locales "$STAGING_DIRECTORY/bin/" || fail "Could not copy server CEF locales"
 cp -f  /build/shell/*.pak "$STAGING_DIRECTORY/" || fail "Could not copy CEF resources"
 
