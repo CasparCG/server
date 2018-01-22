@@ -212,10 +212,10 @@ std::shared_ptr<void> add_preformatted_line_sink(std::function<void(std::string 
 	{
 		std::function<void(std::string line)> formatted_line_sink_;
 	public:
-		sink_backend(std::function<void(std::string line)> formatted_line_sink)
-			: formatted_line_sink_(std::move(formatted_line_sink))
-		{
-		}
+//		sink_backend(std::function<void(std::string line)> formatted_line_sink)
+//			: formatted_line_sink_(std::move(formatted_line_sink))
+//		{
+//		}
 
 		void consume(const boost::log::record_view& rec, const std::string& formatted_message)
 		{
@@ -230,19 +230,19 @@ std::shared_ptr<void> add_preformatted_line_sink(std::function<void(std::string 
 		}
 	};
 
-	typedef boost::log::sinks::synchronous_sink<sink_backend> sink_type;
+//	typedef boost::log::sinks::synchronous_sink<sink_backend> sink_type;
 
-	auto sink = boost::make_shared<sink_type>(std::move(formatted_line_sink));
-	bool print_all_characters = true;
+//	auto sink = boost::make_shared<sink_type>(std::move(formatted_line_sink));
+//	bool print_all_characters = true;
 
-	sink->set_formatter(boost::bind(&my_formatter<boost::log::formatting_ostream>, print_all_characters, _1, _2));
-	sink->set_filter(category != log_category::calltrace);
+//	sink->set_formatter(boost::bind(&my_formatter<boost::log::formatting_ostream>, print_all_characters, _1, _2));
+//	sink->set_filter(category != log_category::calltrace);
 
-	boost::log::core::get()->add_sink(sink);
+//	boost::log::core::get()->add_sink(sink);
 
 	return std::shared_ptr<void>(nullptr, [=](void*)
 	{
-		boost::log::core::get()->remove_sink(sink);
+//		boost::log::core::get()->remove_sink(sink);
 	});
 }
 

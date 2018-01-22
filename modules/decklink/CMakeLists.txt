@@ -27,7 +27,7 @@ if (MSVC)
 			interop/DeckLinkAPI.h
 			interop/DeckLinkAPIVersion.h
 	)
-elseif (CMAKE_COMPILER_IS_GNUCXX)
+else()
 	set(OS_SPECIFIC_SOURCES
 			linux_interop/DeckLinkAPIConfiguration.h
 			linux_interop/DeckLinkAPIDeckControl.h
@@ -74,7 +74,7 @@ if (MSVC)
 			core
 			ffmpeg
 	)
-elseif (CMAKE_COMPILER_IS_GNUCXX)
+else()
 	target_link_libraries(decklink
 			common
 			core

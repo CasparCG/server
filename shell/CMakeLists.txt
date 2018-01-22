@@ -13,11 +13,12 @@ if (MSVC)
 			shell.rc
 			windows_specific.cpp
 	)
-elseif (CMAKE_COMPILER_IS_GNUCXX)
+else ()
 	set(OS_SPECIFIC_SOURCES
 			linux_specific.cpp
 	)
 endif ()
+
 set(SOURCES
 		casparcg.config
 		included_modules.tmpl
@@ -36,13 +37,14 @@ set(HEADERS
 add_executable(casparcg ${SOURCES} ${HEADERS} ${OS_SPECIFIC_SOURCES})
 add_precompiled_header(casparcg stdafx.h FORCEINCLUDE)
 
-add_executable(generate_docs generate_docs.cpp included_modules.h)
-target_link_libraries(generate_docs
-		protocol
-		accelerator
-
-		"${CASPARCG_MODULE_PROJECTS}"
-)
+# Temporarily disabling docs generation
+#add_executable(generate_docs generate_docs.cpp included_modules.h)
+#target_link_libraries(generate_docs
+#		protocol
+#		accelerator
+#
+#		"${CASPARCG_MODULE_PROJECTS}"
+#)
 
 
 include_directories(..)
