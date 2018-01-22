@@ -1,0 +1,44 @@
+#!/bin/sh
+
+fail() {
+    echo "$1" 1>&2
+    exit 1
+}
+
+export SOURCE_FOLDER="/source"
+export SERVER_FOLDER="/build/staging"
+
+rm -rf "$SERVER_FOLDER" || fail "Could not delete $SERVER_FOLDER"
+mkdir "$SERVER_FOLDER" || fail "Could not create $SERVER_FOLDER"
+mkdir "$SERVER_FOLDER/bin" || fail "Could not create $SERVER_FOLDER/bin"
+mkdir "$SERVER_FOLDER/lib" || fail "Could not create $SERVER_FOLDER/lib"
+mkdir "$SERVER_FOLDER/template" || fail "Could not create $SERVER_FOLDER/template"
+mkdir "$SERVER_FOLDER/media" || fail "Could not create $SERVER_FOLDER/media"
+
+# Copy compiled binaries
+echo Copying binaries...
+cp -rf  /build/shell/lib* "$SERVER_FOLDER/lib/" || fail "Could not copy server libraries"
+cp -f  /source/deploy/general/server/font/LiberationSans-Regular.ttf "$SERVER_FOLDER/" || fail "Could not copy font(s)"
+cp -f  /build/shell/casparcg "$SERVER_FOLDER/bin/" || fail "Could not copy server executable"
+cp -f  /build/shell/casparcg.config "$SERVER_FOLDER/" || fail "Could not copy server config"
+cp -Rf /build/shell/locales "$SERVER_FOLDER/bin/" || fail "Could not copy server CEF locales"
+cp -f  /build/shell/*.pak "$SERVER_FOLDER/" || fail "Could not copy CEF resources"
+
+# Copy binary dependencies
+echo Copying binary dependencies...
+cp -Rf $SOURCE_FOLDER/deploy/linux/* "$SERVER_FOLDER/" || fail "Could not copy binary dependencies"
+cp -Rf $SOURCE_FOLDER/deploy/general/server/media/AMB.mp4 "$SERVER_FOLDER/media/" || fail "Could not copy AMB.mp4"
+cp -Rf $SOURCE_FOLDER/deploy/general/server/media/CG1080i50_A.mp4 "$SERVER_FOLDER/media/" || fail "Could not copy CG1080i50_A.mp4"
+cp -Rf $SOURCE_FOLDER/deploy/general/server/media/CG1080i50.mp4 "$SERVER_FOLDER/media/" || fail "Could not copy CG1080i50.mp4"
+cp -Rf $SOURCE_FOLDER/deploy/general/server/media/go1080p25.mp4 "$SERVER_FOLDER/media/" || fail "Could not copy go1080p25.mp4"
+cp -Rf $SOURCE_FOLDER/deploy/general/server/font "$SERVER_FOLDER/" || fail "Could not copy font"
+
+# Copy documentation
+echo Copying documentation...
+cp -f $SOURCE_FOLDER/CHANGELOG "$SERVER_FOLDER/" || fail "Could not copy CHANGELOG"
+cp -f $SOURCE_FOLDER/README "$SERVER_FOLDER/" || fail "Could not copy README"
+cp -f $SOURCE_FOLDER/LICENSE "$SERVER_FOLDER/" || fail "Could not copy LICENSE"
+
+# Create tar.gz file
+echo Creating tag.gz...
+tar -cvzf "/build/products/CasparCG_Server_ubuntu-17.10.tar.gz" "$SERVER_FOLDER" || fail "Could not create archive"

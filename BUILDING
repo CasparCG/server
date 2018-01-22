@@ -54,6 +54,21 @@ Development using Visual Studio
 Linux
 =====
 
+Building inside Docker
+----------------------
+
+1. Checkout project
+2. build-scripts/ubuntu-17.10/build-docker-image
+3. build-scripts/ubuntu-17.10/launch-interactive
+4. cmake /source
+5. make -j8 (or however many cores you want to use)
+6. /source/build-scripts/ubuntu-17.10/package
+
+If all goes to plan, a package has been created in /build/products which should be accessible outside of the Docker container
+
+Legacy build instructions
+-------------------------
+
 All instructions are based on a clean install of the x86_64 version of Ubuntu
 Desktop 14.04.3 LTS. Other distributions might work as well.
 

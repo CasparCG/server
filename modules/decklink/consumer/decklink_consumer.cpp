@@ -50,6 +50,7 @@
 #include <common/software_version.h>
 
 #include <tbb/concurrent_queue.h>
+#include <tbb/scalable_allocator.h>
 
 #include <common/assert.h>
 #include <boost/lexical_cast.hpp>
@@ -180,27 +181,20 @@ class decklink_frame : public IDeckLinkVideoFrame
 	const core::video_format_desc					format_desc_;
 
 	const bool										key_only_;
-	bool											needs_to_copy_;
-	cache_aligned_vector<no_init_proxy<uint8_t>>	data_;
+	void*											data_;
 public:
-	decklink_frame(core::const_frame frame, const core::video_format_desc& format_desc, bool key_only, bool will_attempt_dma)
+	decklink_frame(core::const_frame frame, const core::video_format_desc& format_desc, bool key_only)
 		: frame_(frame)
 		, format_desc_(format_desc)
 		, key_only_(key_only)
+		, data_(scalable_aligned_malloc(format_desc_.size, 64))
 	{
 		ref_count_ = 0;
+	}
 
-		bool dma_transfer_from_gl_buffer_impossible;
-
-#if !defined(_MSC_VER)
-		// On Linux Decklink cannot DMA transfer from memory returned by glMapBuffer (at least on nvidia)
-		dma_transfer_from_gl_buffer_impossible = true;
-#else
-		// On Windows it is possible.
-		dma_transfer_from_gl_buffer_impossible = false;
-#endif
-
-		needs_to_copy_ = will_attempt_dma && dma_transfer_from_gl_buffer_impossible;
+	~decklink_frame()
+	{
+		scalable_aligned_free(data_);
 	}
 
 	// IUnknown
@@ -237,36 +231,16 @@ public:
 
 	virtual HRESULT STDMETHODCALLTYPE GetBytes(void** buffer)
 	{
-		try
-		{
-			if(static_cast<int>(frame_.image_data().size()) != format_desc_.size)
-			{
-				data_.resize(format_desc_.size);
-				*buffer = data_.data();
+		try {
+			if (static_cast<int>(frame_.image_data().size()) != format_desc_.size) {
+				std::memset(data_, 0, format_desc_.size);
+			} else if(key_only_) {
+				aligned_memshfl(data_, frame_.image_data().begin(), format_desc_.size, 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+			} else {
+				std::memcpy(data_, frame_.image_data().begin(), format_desc_.size);
 			}
-			else if(key_only_)
-			{
-				if(data_.empty())
-				{
-					data_.resize(frame_.image_data().size());
-					aligned_memshfl(data_.data(), frame_.image_data().begin(), frame_.image_data().size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
-				}
-				*buffer = data_.data();
-			}
-			else
-			{
-				*buffer = const_cast<uint8_t*>(frame_.image_data().begin());
-
-				if (needs_to_copy_)
-				{
-					data_.resize(frame_.image_data().size());
-					std::memcpy(data_.data(), *buffer, frame_.image_data().size());
-					*buffer = data_.data();
-				}
-			}
-		}
-		catch(...)
-		{
+			*buffer = data_;
+		} catch(...) {
 			CASPAR_LOG_CURRENT_EXCEPTION();
 			return E_FAIL;
 		}
@@ -379,7 +353,6 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, boost::noncopyab
 	tbb::atomic<bool>									is_running_;
 
 	const std::wstring									model_name_				= get_model_name(decklink_);
-	bool												will_attempt_dma_;
 	const core::video_format_desc						format_desc_;
 	const core::audio_channel_layout					in_channel_layout_;
 	const core::audio_channel_layout					out_channel_layout_		= config_.get_adjusted_layout(in_channel_layout_);
@@ -391,7 +364,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, boost::noncopyab
 
 	int													preroll_count_			= 0;
 
-	boost::circular_buffer<std::vector<int32_t>>		audio_container_		{ buffer_size_ + 1 };
+	boost::circular_buffer<std::vector<int32_t>>		audio_container_		{ static_cast<unsigned long>(buffer_size_ + 1) };
 
 	tbb::concurrent_bounded_queue<core::const_frame>	frame_buffer_;
 	caspar::semaphore									ready_for_new_frames_	{ 0 };
@@ -438,7 +411,7 @@ public:
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 
-		enable_video(get_display_mode(output_, format_desc_.format, bmdFormat8BitBGRA, bmdVideoOutputFlagDefault, will_attempt_dma_));
+		enable_video(get_display_mode(output_, format_desc_.format, bmdFormat8BitBGRA, bmdVideoOutputFlagDefault));
 
 		if(config.embedded_audio)
 			enable_audio();
@@ -571,7 +544,11 @@ public:
 
 			auto frame = core::const_frame::empty();
 
-			frame_buffer_.pop(frame);
+			if (!frame_buffer_.try_pop(frame)) {
+				graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
+				frame_buffer_.pop(frame);
+			}
+
 			ready_for_new_frames_.release();
 
 			if (!is_running_)
@@ -611,12 +588,12 @@ public:
 	{
 		if (key_context_)
 		{
-			auto key_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(frame, format_desc_, true, will_attempt_dma_));
+			auto key_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(frame, format_desc_, true));
 			if (FAILED(key_context_->output_->ScheduleVideoFrame(get_raw(key_frame), video_scheduled_, format_desc_.duration, format_desc_.time_scale)))
 				CASPAR_LOG(error) << print() << L" Failed to schedule key video.";
 		}
 
-		auto fill_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(frame, format_desc_, config_.key_only, will_attempt_dma_));
+		auto fill_frame = wrap_raw<com_ptr, IDeckLinkVideoFrame>(new decklink_frame(frame, format_desc_, config_.key_only));
 		if (FAILED(output_->ScheduleVideoFrame(get_raw(fill_frame), video_scheduled_, format_desc_.duration, format_desc_.time_scale)))
 			CASPAR_LOG(error) << print() << L" Failed to schedule fill video.";
 

@@ -5,11 +5,13 @@ if (MSVC)
 	set(OS_SPECIFIC_SOURCES
 			cpu/image/image_mixer.cpp
 			cpu/image/image_mixer.h
-	
+
 			cpu/util/xmm.h
 	)
-elseif (CMAKE_COMPILER_IS_GNUCXX)
+else ()
+
 endif ()
+
 set(SOURCES
 
 		ogl/image/image_kernel.cpp
