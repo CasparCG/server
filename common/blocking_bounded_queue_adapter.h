@@ -56,7 +56,7 @@ private:
 	mutable	boost::mutex	capacity_mutex_;
 	size_type				capacity_;
 	semaphore				space_available_		= capacity_;
-	semaphore				elements_available_		= 0;
+	semaphore				elements_available_;
 	Q						queue_;
 public:
 	/**

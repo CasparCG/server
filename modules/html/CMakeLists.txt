@@ -45,6 +45,9 @@ else()
 
 		cef
 		cef_dll_wrapper
+
+		${CEF_BIN_PATH}/libudev.so.0
+		${CEF_BIN_PATH}/libcap.so.2
 	)
 endif()
 
@@ -71,4 +74,7 @@ else()
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libcef.so")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libffmpegsumo.so")
 	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libudev.so.0")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libgcrypt.so.11")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libcap.so.2")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libcgmanager.so.0")
 endif()

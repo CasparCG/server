@@ -123,7 +123,7 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 																			ffmpeg::filter::is_deinterlacing(filter_)
 																		};
 
-	core::constraints								constraints_		{ in_format_desc_.width, in_format_desc_.height };
+	core::constraints								constraints_		{ static_cast<double>(in_format_desc_.width), static_cast<double>(in_format_desc_.height) };
 
 	tbb::concurrent_bounded_queue<core::draw_frame>	frame_buffer_;
 	core::draw_frame								last_frame_			= core::draw_frame::empty();
@@ -155,8 +155,7 @@ public:
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 
-		bool will_attempt_dma;
-		auto display_mode = get_display_mode(input_, in_format_desc.format, bmdFormat8BitYUV, bmdVideoInputFlagDefault, will_attempt_dma);
+		auto display_mode = get_display_mode(input_, in_format_desc.format, bmdFormat8BitYUV, bmdVideoInputFlagDefault);
 
 		// NOTE: bmdFormat8BitARGB is currently not supported by any decklink card. (2011-05-08)
 		if(FAILED(input_->EnableVideoInput(display_mode, bmdFormat8BitYUV, 0)))
