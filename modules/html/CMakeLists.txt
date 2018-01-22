@@ -43,7 +43,7 @@ else()
 		common
 		core
 
-		cef
+		${CEF_BIN_PATH}/libcef.so
 		cef_dll_wrapper
 
 		${CEF_BIN_PATH}/libudev.so.0
