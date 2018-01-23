@@ -83,7 +83,7 @@ else()
 	add_compile_options( -mssse3 )
 	add_compile_options( -msse4.1 )
 	add_compile_options( -fnon-call-exceptions ) # Allow signal handler to throw exception
-	add_compile_options( -Wno-max-unsigned-zero -Wno-inconsistent-missing-override -Wno-inconsistent-missing-override -Wno-macro-redefined -Wno-unsequenced -Wno-deprecated-declarations -Wno-logical-not-parentheses -Wno-switch -Wno-tautological-constant-out-of-range-compare -Wno-tautological-compare -Wno-writable-strings -Wno-dangling-else )
+	add_compile_options( -Wno-unknown-warning-option -Wno-max-unsigned-zero -Wno-inconsistent-missing-override -Wno-inconsistent-missing-override -Wno-macro-redefined -Wno-unsequenced -Wno-deprecated-declarations -Wno-logical-not-parentheses -Wno-switch -Wno-tautological-constant-out-of-range-compare -Wno-tautological-compare -Wno-writable-strings -Wno-dangling-else )
 	add_definitions( -DBOOST_NO_SWPRINTF ) # swprintf on Linux seems to always use , as decimal point regardless of C-locale or C++-locale
 	add_definitions( -DTBB_USE_CAPTURED_EXCEPTION=1 )
 	add_definitions( -DBOOST_ALL_NO_LIB -DBOOST_ALL_DYN_LINK -DBOOST_LOG_DYN_LINK )
