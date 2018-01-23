@@ -36,10 +36,7 @@ mkdir "%SERVER_FOLDER%" || goto :error
 
 :: Copy media files
 echo Copying media...
-xcopy ..\deploy\general\server "%SERVER_FOLDER%\server" /E /I /Y || goto :error
-xcopy ..\deploy\general\wallpapers "%SERVER_FOLDER%\wallpapers" /E /I /Y || goto :error
-xcopy ..\deploy\general\logos "%SERVER_FOLDER%\logos" /E /I /Y || goto :error
-copy ..\deploy\general\CasparCG_Server_2.0-brochure.pdf "%SERVER_FOLDER%" || goto :error
+xcopy ..\resources\windows\flash-template-host-files\cg20* "%SERVER_FOLDER%\server" /E /I /Y || goto :error
 
 :: Copy binaries
 echo Copying binaries...
