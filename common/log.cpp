@@ -161,7 +161,7 @@ void init()
 	stream_sink->set_filter(category != log_category::calltrace);
 
 	bool print_all_characters = false;
-	stream_sink->set_formatter(boost::bind(&my_formatter<boost::log::wformatting_ostream>, print_all_characters, _1, _2));
+	//stream_sink->set_formatter(boost::bind(&my_formatter<boost::log::wformatting_ostream>, print_all_characters, _1, _2));
 
 	boost::log::core::get()->add_sink(stream_sink);
 }
@@ -196,7 +196,7 @@ void add_file_sink(const std::wstring& file, const boost::log::filter& filter)
 
 		bool print_all_characters = true;
 
-		file_sink->set_formatter(boost::bind(&my_formatter<boost::log::formatting_ostream>, print_all_characters, _1, _2));
+		//file_sink->set_formatter(boost::bind(&my_formatter<boost::log::formatting_ostream>, print_all_characters, _1, _2));
 		file_sink->set_filter(filter);
 		boost::log::core::get()->add_sink(file_sink);
 	}
