@@ -24,8 +24,8 @@ public:
         boost::optional<int64_t> duration,
         boost::optional<bool> loop);
 
-    core::draw_frame get();
-    bool next();
+    core::draw_frame prev_frame();
+    core::draw_frame next_frame();
 
     AVProducer& seek(int64_t time);
     int64_t time() const;

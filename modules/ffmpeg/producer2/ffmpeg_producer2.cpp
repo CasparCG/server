@@ -90,11 +90,9 @@ struct ffmpeg_producer : public core::frame_producer_base
 	core::video_format_desc								format_desc_;
 
 	AVProducer											producer_;
-    
+
 	core::monitor::subject  							monitor_subject_;
 	core::constraints									constraints_;
-
-    core::draw_frame                                    last_frame_ = core::draw_frame::late();
 public:
 	explicit ffmpeg_producer(
 			spl::shared_ptr<core::frame_factory> frame_factory,
@@ -108,13 +106,13 @@ public:
 		: format_desc_(format_desc)
 		, filename_(filename)
 		, frame_factory_(frame_factory)
-		, producer_(frame_factory_, 
-					format_desc_, 
-					u8(filename), 
-					u8(vfilter), 
-					u8(afilter), 
-					start, 
-					duration, 
+		, producer_(frame_factory_,
+					format_desc_,
+					u8(filename),
+					u8(vfilter),
+					u8(afilter),
+					start,
+					duration,
 					loop)
 	{
 		if (producer_.width() > 0 && producer_.height() > 0) {
@@ -132,23 +130,17 @@ public:
 	{
 		return av_rescale_q(frames, AVRational{ format_desc_.duration, format_desc_.time_scale }, AVRational{ 1, AV_TIME_BASE });
 	}
- 
+
 	// frame_producer
 
     core::draw_frame last_frame() override
     {
-        if (producer_.get() != core::draw_frame::late() || producer_.next()) {
-            last_frame_ = core::draw_frame::still(producer_.get());
-        }
-
-        return last_frame_;
+        return producer_.prev_frame();
     }
 
 	core::draw_frame receive_impl() override
 	{
-        if (!producer_.next()) {
-            return core::draw_frame::late();
-        }
+        auto frame = producer_.next_frame();
 
         auto number = to_frames(producer_.time());
         auto count = to_frames(producer_.duration());
@@ -160,11 +152,9 @@ public:
             << core::monitor::message("/file/path") % path_relative_to_media_
             << core::monitor::message("/loop") % producer_.loop();
 
-        last_frame_ = core::draw_frame::still(producer_.get());
-
-		return producer_.get();
+		return frame;
 	}
-	
+
 	core::constraints& pixel_constraints() override
 	{
 		return constraints_;
@@ -260,10 +250,10 @@ public:
         auto number = to_frames(producer_.time());
         auto count = to_frames(producer_.duration());
 
-		return L"ffmpeg[" + 
-			filename_ + L"|" + 
-			boost::lexical_cast<std::wstring>(number) + L"/" + 
-			boost::lexical_cast<std::wstring>(count) + 
+		return L"ffmpeg[" +
+			filename_ + L"|" +
+			boost::lexical_cast<std::wstring>(number) + L"/" +
+			boost::lexical_cast<std::wstring>(count) +
 			L"]";
 	}
 

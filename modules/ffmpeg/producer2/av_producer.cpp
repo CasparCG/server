@@ -76,9 +76,17 @@ std::shared_ptr<AVPacket> alloc_packet()
     return packet;
 }
 
-
-core::mutable_frame make_frame(void* tag, core::frame_factory& frame_factory, std::shared_ptr<AVFrame> video, std::shared_ptr<AVFrame> audio)
+struct Frame
 {
+    std::shared_ptr<AVFrame> video;
+    std::shared_ptr<AVFrame> audio;
+};
+
+core::mutable_frame make_frame(void* tag, core::frame_factory& frame_factory, const Frame& in_frame)
+{
+    const auto video = in_frame.video;
+    const auto audio = in_frame.audio;
+
     const auto pix_desc = video
         ? ffmpeg2::pixel_format_desc(static_cast<AVPixelFormat>(video->format), video->width, video->height)
         : core::pixel_format_desc(core::pixel_format::invalid);
@@ -510,13 +518,6 @@ struct Filter
                 % (format_desc.framerate.numerator() * format_desc.field_count) % format_desc.framerate.denominator()
                 % (static_cast<double>(start_time) / AV_TIME_BASE)
                 ).str();
-
-            if (format_desc.field_count == 2) {
-                filter_spec += (boost::format(",scale=%d:%d,interlace=scan=")
-                    % format_desc.width % format_desc.height
-                    % (format_desc.field_mode == core::field_mode::upper ? "tff" : "bff")
-                    ).str();
-            }
         } else if (media_type == AVMEDIA_TYPE_AUDIO) {
             if (filter_spec.empty()) {
                 filter_spec = "anull";
@@ -748,12 +749,6 @@ struct Filter
 
 struct AVProducer::Impl
 {
-    struct Frame
-    {
-        std::shared_ptr<AVFrame> video;
-        std::shared_ptr<AVFrame> audio;
-    };
-
     spl::shared_ptr<diagnostics::graph>             graph_;
 
     const std::shared_ptr<core::frame_factory>      frame_factory_;
@@ -831,7 +826,7 @@ struct AVProducer::Impl
                 };
 
                 while (!abort_request_) {
-                    // Note: Use 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
+                    // Note: Use 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601), (801, 801, 800, 801, 800)
                     // This cadence fills the audio mixer most optimally.
                     boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
 
@@ -841,7 +836,8 @@ struct AVProducer::Impl
                     }
 
                     std::unique_lock<std::mutex> lock(mutex_);
-                    cond_.wait(lock, [&] { return loop_ || !(input_.paused() || eof()) || abort_request_; });
+                    // TODO input_.paused?
+                    cond_.wait(lock, [&] { return loop_ || !eof() || abort_request_; });
 
                     if (abort_request_) {
                         break;
@@ -867,7 +863,7 @@ struct AVProducer::Impl
                         continue;
                     }
 
-                    if (!audio_filter_.frame && !filter_frame(audio_filter_, audio_cadence_[0])) {
+                    if (!audio_filter_.frame && !filter_frame(audio_filter_, audio_cadence_[0] / format_desc_.field_count)) {
                         // TODO (perf) avoid polling
                         cond_.wait_for(lock, 10ms, [&] { return abort_request_.load(); });
                         continue;
@@ -1042,34 +1038,44 @@ struct AVProducer::Impl
 
 public:
 
-    bool next()
+    core::draw_frame prev_frame()
+    {
+        return frame_ != core::draw_frame::late() ? core::draw_frame::still(frame_) : core::draw_frame::late();
+
+    }
+
+    core::draw_frame next_frame()
     {
         std::lock_guard<std::mutex> lock(frame_mutex_);
 
-        Frame frame;
+        core::draw_frame result;
         {
             std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
-            if (buffer_.empty()) {
+            if (buffer_.size() < format_desc_.field_count) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
-                return false;
+                return core::draw_frame::late();
             }
-            frame = std::move(buffer_.front());
+
+            frame_time_ = buffer_.front().video ? buffer_.front().video->pts : buffer_.front().audio->pts;
+            frame_ = core::draw_frame(make_frame(this, *frame_factory_, std::move(buffer_.front())));
             buffer_.pop();
+
+            if (format_desc_.field_count == 2) {
+                auto frame = frame_;
+                frame_ = core::draw_frame(make_frame(this, *frame_factory_, std::move(buffer_.front())));
+                buffer_.pop();
+
+                result = core::draw_frame::interlace(frame, frame_, format_desc_.field_mode);
+            } else {
+                result = frame_;
+            }
+
+            graph_->set_text(u16(print()));
+
         }
         buffer_cond_.notify_all();
 
-        frame_time_ = frame.video ? frame.video->pts : frame.audio->pts;
-        frame_ = core::draw_frame(make_frame(this, *frame_factory_, frame.video, frame.audio));
-        graph_->set_text(u16(print()));
-
-        return true;
-    }
-
-    core::draw_frame get()
-    {
-        std::lock_guard<std::mutex> lock(frame_mutex_);
-
-        return frame_;
+        return result;
     }
 
     boost::optional<int64_t> time() const
@@ -1198,14 +1204,14 @@ AVProducer::AVProducer(
 {
 }
 
-bool AVProducer::next()
+core::draw_frame AVProducer::next_frame()
 {
-    return impl_->next();
+    return impl_->next_frame();
 }
 
-core::draw_frame AVProducer::get()
+core::draw_frame AVProducer::prev_frame()
 {
-    return impl_->get();
+    return impl_->prev_frame();
 }
 
 AVProducer& AVProducer::seek(int64_t time)
