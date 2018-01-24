@@ -780,7 +780,7 @@ struct AVProducer::Impl
 
     std::mutex                                      buffer_mutex_;
     std::condition_variable                         buffer_cond_;
-    std::queue<Frame>                               buffer_;
+    std::deque<Frame>                               buffer_;
     int                                             buffer_capacity_;
 
     std::atomic<bool>                               abort_request_ = false;
@@ -904,7 +904,7 @@ struct AVProducer::Impl
 
                     {
                          std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
-                         buffer_.push(frame);
+                         buffer_.push_back(frame);
                     }
                 }
             } catch (tbb::user_abort&) {
@@ -1040,8 +1040,7 @@ public:
 
     core::draw_frame prev_frame()
     {
-        return frame_ != core::draw_frame::late() ? core::draw_frame::still(frame_) : core::draw_frame::late();
-
+        return frame_;
     }
 
     core::draw_frame next_frame()
@@ -1056,22 +1055,24 @@ public:
                 return core::draw_frame::late();
             }
 
-            frame_time_ = buffer_.front().video ? buffer_.front().video->pts : buffer_.front().audio->pts;
-            frame_ = core::draw_frame(make_frame(this, *frame_factory_, std::move(buffer_.front())));
-            buffer_.pop();
+            frame_time_ = buffer_[0].video ? buffer_[0].video->pts : buffer_[0].audio->pts;
+            auto frame1 = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0]));
+            auto frame2 = frame1;
 
             if (format_desc_.field_count == 2) {
-                auto frame = frame_;
-                frame_ = core::draw_frame(make_frame(this, *frame_factory_, std::move(buffer_.front())));
-                buffer_.pop();
-
-                result = core::draw_frame::interlace(frame, frame_, format_desc_.field_mode);
+                frame2 = core::draw_frame(make_frame(this, *frame_factory_, buffer_[1]));
+                result = core::draw_frame::interlace(frame1, frame2, format_desc_.field_mode);
             } else {
-                result = frame_;
+                result = frame2;
             }
+
+            frame_ = core::draw_frame::still(frame2);
 
             graph_->set_text(u16(print()));
 
+            for (auto n = 0; n < format_desc_.field_count; ++n) {
+                buffer_.pop_front();
+            }
         }
         buffer_cond_.notify_all();
 
@@ -1092,9 +1093,7 @@ public:
 
             {
                 std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
-                while (!buffer_.empty()) {
-                    buffer_.pop();
-                }
+                buffer_.clear();
             }
 
             time_ = time + input_.start_time();
