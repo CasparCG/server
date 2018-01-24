@@ -578,7 +578,7 @@ struct Filter
                 }
             }
             if (count > 1) {
-                filter_spec = (boost::format("amerge=inputs=%d") % count).str() + filter_spec;
+                filter_spec = (boost::format("amerge=inputs=%d,") % count).str() + filter_spec;
             }
         } else if (video_input_count == 1) {
             int count = 0;
@@ -588,7 +588,7 @@ struct Filter
                 }
             }
             if (count > 1) {
-                filter_spec = "alphamerge" + filter_spec;
+                filter_spec = "alphamerge," + filter_spec;
             }
         }
 
