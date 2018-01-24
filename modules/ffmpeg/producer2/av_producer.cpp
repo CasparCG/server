@@ -1037,6 +1037,9 @@ struct AVProducer::Impl
     }
 
 public:
+    // TODO first frame
+    // TODO interlaced step
+    // TODO make_frame buffered
 
     core::draw_frame prev_frame()
     {
