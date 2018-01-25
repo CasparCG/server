@@ -29,10 +29,10 @@
 #include <vector>
 
 namespace caspar { namespace core {
-	
+
 class draw_frame final
 {
-public:		
+public:
 	// Static Members
 
 	static draw_frame interlace(draw_frame frame1, draw_frame frame2, core::field_mode mode);
@@ -40,7 +40,7 @@ public:
 	static draw_frame mask(draw_frame fill, draw_frame key);
 	static draw_frame still(draw_frame frame);
 	static draw_frame push(draw_frame frame);
-		
+
 	static const draw_frame& empty();
 	static const draw_frame& late();
 
@@ -48,26 +48,26 @@ public:
 
 	draw_frame();
 	draw_frame(const draw_frame& other);
-	draw_frame(draw_frame&& other);	
-	explicit draw_frame(const_frame&& frame);
+	draw_frame(draw_frame&& other);
+	explicit draw_frame(const_frame frame);
 	explicit draw_frame(mutable_frame&& frame);
 	explicit draw_frame(std::vector<draw_frame> frames);
 
 	~draw_frame();
-	
+
 	// Methods
 
 	draw_frame& operator=(draw_frame other);
 
-	void swap(draw_frame& other);	
-	
+	void swap(draw_frame& other);
+
 	void accept(frame_visitor& visitor) const;
-	
+
 	int64_t get_and_record_age_millis();
-	
+
 	bool operator==(const draw_frame& other) const;
 	bool operator!=(const draw_frame& other) const;
-   
+
 	// Properties
 
 	const core::frame_transform&	transform() const;
@@ -77,6 +77,6 @@ private:
 	struct impl;
 	spl::unique_ptr<impl> impl_;
 };
-	
+
 
 }}

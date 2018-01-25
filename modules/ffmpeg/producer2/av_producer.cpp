@@ -264,6 +264,9 @@ struct Stream
             if (input_.size() > input_capacity_ && packet) {
                 return false;
             }
+            if (!packet) {
+                // TODO (fix) remove pending null range
+            }
             input_.push(std::move(packet));
         }
         cond_.notify_all();
@@ -945,15 +948,11 @@ struct AVProducer::Impl
     {
         auto result = false;
 
-        // TODO (fix) check streams vs sources
-
         input_([&](std::shared_ptr<AVPacket>& packet)
         {
             if (!packet) {
                 for (auto& p : input_) {
-                    // NOTE: This should never fail
-                    // TODO (fix) overflow?
-                    p.second.try_push(nullptr);
+                    CASPAR_ENSURE(p.second.try_push(nullptr));
                 }
             } else if (sources_.find(packet->stream_index) != sources_.end()) {
                 auto it = input_.find(packet->stream_index);
