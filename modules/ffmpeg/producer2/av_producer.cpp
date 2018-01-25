@@ -116,10 +116,9 @@ core::mutable_frame make_frame(void* tag, core::frame_factory& frame_factory, st
     return frame;
 }
 
-// TODO AVFMT_TS_DISCONT
-// TODO filter preset
-// TODO AVDISCARD
-// TODO forward options
+// TODO (fix) ts discontinuities
+// TODO (feat) filter preset
+// TODO (feat) forward options
 
 struct Stream
 {
@@ -373,6 +372,8 @@ struct Input
                     std::lock_guard<std::mutex> format_lock(format_mutex_);
 
                     auto packet = alloc_packet();
+
+                    // TODO (perf) non blocking av_read_frame when possible
                     auto ret = av_read_frame(format_.get(), packet.get());
 
                     if (ret == AVERROR_EXIT) {
@@ -497,8 +498,6 @@ struct Input
 
     void seek(int64_t ts, bool flush = true)
     {
-        // TODO (perf) non blocking av_read_frame
-
         std::lock_guard<std::mutex> lock(format_mutex_);
 
         FF(avformat_seek_file(format_.get(), -1, INT64_MIN, ts, ts, 0));
@@ -854,8 +853,7 @@ struct AVProducer::Impl
         {
             try {
                 while (!abort_request_) {
-                    // Note: Use 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601), (801, 801, 800, 801, 800)
-                    // This cadence fills the audio mixer most optimally.
+                    // Use 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601), (801, 801, 800, 801, 800)
                     boost::range::rotate(audio_cadence_, std::end(audio_cadence_) - 1);
 
                     {
@@ -1000,6 +998,7 @@ struct AVProducer::Impl
     bool schedule_filters()
     {
         auto result = schedule_inputs();
+        // TODO (perf) avoid copy?
         auto sources = sources_;
 
         for (auto& p : sources) {
@@ -1065,7 +1064,7 @@ struct AVProducer::Impl
                 }
             } else if (ret == AVERROR_EOF) {
                 filter.eof = true;
-                // TODO null frame with pts
+                // TODO (fix) null frame with pts
                 filter.frame = nullptr;
                 return true;
             } else {
@@ -1164,12 +1163,14 @@ public:
     {
         std::lock_guard<std::mutex> lock(frame_mutex_);
 
+        // TODO (fix) How to handle NOPTS case?
         return frame_time_ != AV_NOPTS_VALUE ? av_rescale_q(frame_time_, TIME_BASE_Q, format_tb_) : 0;
     }
 
     void seek(int64_t time)
     {
         // TODO (fix) Validate input.
+
         {
             std::lock_guard<std::mutex> lock(mutex_);
 
@@ -1187,7 +1188,8 @@ public:
 
         {
             std::lock_guard<std::mutex> lock(frame_mutex_);
-            // TODO (fix)
+            // XXX
+            // TODO (fix) Keep frame until next one is available. Still needs to flush!
             frame_ = core::draw_frame::late();
         }
     }
@@ -1209,10 +1211,12 @@ public:
     void start(int64_t start)
     {
         // TODO (fix) Validate input.
-        // TODO (fix) What if input has already looped?
+
         {
             std::lock_guard<std::mutex> lock(mutex_);
             start_ = av_rescale_q(start, format_tb_, TIME_BASE_Q);
+
+            // TODO (fix) Flush.
         }
         cond_.notify_all();
     }
@@ -1229,12 +1233,7 @@ public:
             std::lock_guard<std::mutex> lock(mutex_);
             duration_ = av_rescale_q(duration, format_tb_, TIME_BASE_Q);
 
-            {
-                std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
-                while (!buffer_.empty() && buffer_.front().pts >= duration_) {
-                    buffer_.pop_front();
-                }
-            }
+            // TODO (fix) Flush.
 
             input_.resume();
         }
