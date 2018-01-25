@@ -121,39 +121,31 @@ public:
 		}
 	}
 
-	int64_t to_frames(int64_t pts) const
-	{
-		return av_rescale_q(pts, AVRational{ 1, AV_TIME_BASE }, AVRational{ format_desc_.duration, format_desc_.time_scale });
-	}
-
-	int64_t from_frames(int64_t frames) const
-	{
-		return av_rescale_q(frames, AVRational{ format_desc_.duration, format_desc_.time_scale }, AVRational{ 1, AV_TIME_BASE });
-	}
-
 	// frame_producer
 
     core::draw_frame last_frame() override
     {
-        return producer_.prev_frame();
+        auto frame = producer_.prev_frame();
+        send_osc();
+        return frame;
     }
 
 	core::draw_frame receive_impl() override
 	{
         auto frame = producer_.next_frame();
+        send_osc();
+		return frame;
+	}
 
-        auto number = to_frames(producer_.time());
-        auto count = to_frames(producer_.duration());
-
+    void send_osc()
+    {
         monitor_subject_
-            << core::monitor::message("/file/time") % (number / format_desc_.fps) % (count / format_desc_.fps)
-            << core::monitor::message("/file/frame") % static_cast<int32_t>(number) % static_cast<int32_t>(count)
+            << core::monitor::message("/file/time") % (producer_.time() / format_desc_.fps) % (producer_.duration() / format_desc_.fps)
+            << core::monitor::message("/file/frame") % static_cast<int32_t>(producer_.time()) % static_cast<int32_t>(producer_.duration())
             << core::monitor::message("/file/fps") % format_desc_.fps
             << core::monitor::message("/file/path") % path_relative_to_media_
             << core::monitor::message("/loop") % producer_.loop();
-
-		return frame;
-	}
+    }
 
 	core::constraints& pixel_constraints() override
 	{
@@ -162,7 +154,7 @@ public:
 
 	uint32_t nb_frames() const override
 	{
-		return producer_.loop() ? std::numeric_limits<std::uint32_t>::max() : static_cast<uint32_t>(to_frames(producer_.time()));
+		return producer_.loop() ? std::numeric_limits<std::uint32_t>::max() : static_cast<uint32_t>(producer_.time());
 	}
 
 	std::future<std::wstring> call(const std::vector<std::wstring>& params) override
@@ -183,22 +175,22 @@ public:
             result = boost::lexical_cast<std::wstring>(producer_.loop());
         } else if (boost::iequals(cmd, L"in") || boost::iequals(cmd, L"start")) {
             if (!value.empty()) {
-                producer_.start(from_frames(boost::lexical_cast<std::int64_t>(value)));
+                producer_.start(boost::lexical_cast<std::int64_t>(value));
             }
 
-            result = boost::lexical_cast<std::wstring>(to_frames(producer_.start()));
+            result = boost::lexical_cast<std::wstring>(producer_.start());
         } else if (boost::iequals(cmd, L"out")) {
             if (!value.empty()) {
-                producer_.duration(from_frames(boost::lexical_cast<std::int64_t>(value)) - producer_.start());
+                producer_.duration(boost::lexical_cast<std::int64_t>(value) - producer_.start());
             }
 
-            result = boost::lexical_cast<std::wstring>(to_frames(producer_.start() + producer_.duration()));
+            result = boost::lexical_cast<std::wstring>(producer_.start() + producer_.duration());
         } else if (boost::iequals(cmd, L"length")) {
             if (!value.empty()) {
-                producer_.duration(from_frames(boost::lexical_cast<std::int64_t>(value)));
+                producer_.duration(boost::lexical_cast<std::int64_t>(value));
             }
 
-            result = boost::lexical_cast<std::wstring>(to_frames(producer_.duration()));
+            result = boost::lexical_cast<std::wstring>(producer_.duration());
         } else if (boost::iequals(cmd, L"seek") && !value.empty()) {
             int64_t seek;
             if (boost::iequals(value, L"rel")) {
@@ -210,11 +202,11 @@ public:
             } else if (boost::iequals(value, L"end")) {
                 seek = producer_.duration();
             } else {
-                seek = from_frames(boost::lexical_cast<std::int64_t>(value));
+                seek = boost::lexical_cast<std::int64_t>(value);
             }
 
             if (params.size() > 2) {
-                seek += from_frames(boost::lexical_cast<std::int64_t>(params.at(2)));
+                seek += boost::lexical_cast<std::int64_t>(params.at(2));
             }
 
             producer_.seek(seek);
@@ -239,21 +231,18 @@ public:
         pt.add(L"progressive", format_desc_.field_mode == core::field_mode::progressive);
         pt.add(L"fps", format_desc_.fps);
         pt.add(L"loop", producer_.loop());
-        pt.add(L"file-frame-number", to_frames(producer_.time()));
-        pt.add(L"file-nb-frames", to_frames(producer_.duration()));
+        pt.add(L"file-frame-number", producer_.time());
+        pt.add(L"file-nb-frames", producer_.duration());
 
         return pt;
 	}
 
 	std::wstring print() const override
 	{
-        auto number = to_frames(producer_.time());
-        auto count = to_frames(producer_.duration());
-
 		return L"ffmpeg[" +
 			filename_ + L"|" +
-			boost::lexical_cast<std::wstring>(number) + L"/" +
-			boost::lexical_cast<std::wstring>(count) +
+			boost::lexical_cast<std::wstring>(producer_.time()) + L"/" +
+			boost::lexical_cast<std::wstring>(producer_.duration()) +
 			L"]";
 	}
 
