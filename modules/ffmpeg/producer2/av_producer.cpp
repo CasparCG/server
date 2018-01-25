@@ -41,6 +41,7 @@ extern "C" {
 #include "av_assert.h"
 #include "av_util.h"
 
+#include <algorithm>
 #include <atomic>
 #include <queue>
 #include <deque>
@@ -961,11 +962,14 @@ struct AVProducer::Impl
 
     std::string print() const
     {
+        auto time = frame_time_ != AV_NOPTS_VALUE ? frame_time_ : 0;
+        auto duration = duration_ != AV_NOPTS_VALUE ? duration_ : input_->duration;
+
         std::ostringstream str;
         str << std::fixed << std::setprecision(4)
             << "ffmpeg[" << filename_ << "|"
-            << (static_cast<double>(frame_time_) / AV_TIME_BASE) << "/"
-            << (static_cast<double>(duration().value_or(0LL)) / AV_TIME_BASE)
+            << (static_cast<double>(time) / AV_TIME_BASE) << "/"
+            << (static_cast<double>(duration) / AV_TIME_BASE)
             << "]";
         return str.str();
     }
