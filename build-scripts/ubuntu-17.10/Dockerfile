@@ -55,8 +55,8 @@ RUN set -ex; \
 	; \
 	rm -rf /var/lib/apt/lists/*
 
-RUN update-alternatives --set c++ /usr/bin/clang++; \
-    update-alternatives --set cc /usr/bin/clang
+#RUN update-alternatives --set c++ /usr/bin/clang++; \
+#    update-alternatives --set cc /usr/bin/clang
 
 RUN mkdir -p /build/products; mkdir /source
 

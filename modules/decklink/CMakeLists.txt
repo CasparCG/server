@@ -7,7 +7,6 @@ set(SOURCES
 		producer/decklink_producer.cpp
 
 		decklink.cpp
-		StdAfx.c
 		StdAfx.cpp
 )
 set(HEADERS
@@ -23,6 +22,7 @@ set(HEADERS
 )
 if (MSVC)
 	set(OS_SPECIFIC_SOURCES
+			StdAfx.c
 			interop/DeckLinkAPI_i.c
 			interop/DeckLinkAPI.h
 			interop/DeckLinkAPIVersion.h
