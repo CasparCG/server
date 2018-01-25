@@ -135,7 +135,7 @@ struct Stream
 
     int64_t                                   next_pts_;
 
-    int                                       input_capacity_ = 256;
+    int                                       input_capacity_ = 16;
     std::queue<std::shared_ptr<AVPacket>>     input_;
 
     int                                       output_capacity_ = 8;
@@ -218,14 +218,17 @@ struct Stream
                             // TODO (fix) is this always best?
                             frame->pts = frame->best_effort_timestamp;
 
-                            // TODO is time_base always in framerate & samplerate?
+                            auto frame_duration = frame->pkt_duration;
+
                             if (decoder_->codec_type == AVMEDIA_TYPE_VIDEO) {
-                                next_pts_ = frame->pts + 1;
+                                frame_duration = frame->pkt_duration > 0
+                                    ? av_rescale_q(frame->pkt_duration, decoder_->pkt_timebase, decoder_->time_base)
+                                    : 1;
                             } else if (decoder_->codec_type == AVMEDIA_TYPE_AUDIO) {
-                                next_pts_ = frame->pts + frame->nb_samples;
-                            } else {
-                                // TODO
+                                frame_duration = av_rescale_q(frame->nb_samples, { 1, frame->sample_rate }, decoder_->time_base);
                             }
+
+                            next_pts_ = frame->pts + frame_duration;
                         }
 
                         {
@@ -984,7 +987,7 @@ struct AVProducer::Impl
                 nb_requests = std::max<int>(nb_requests, av_buffersrc_get_nb_failed_requests(source));
             }
 
-            if (nb_requests) {
+            if (nb_requests == 0) {
                 continue;
             }
 
@@ -1059,13 +1062,23 @@ struct AVProducer::Impl
     }
 
 public:
-    // TODO first frame
     // TODO interlaced step
     // TODO make_frame buffered
 
     core::draw_frame prev_frame()
     {
-        return frame_;
+        std::lock_guard<std::mutex> lock(frame_mutex_);
+
+        if (frame_ == core::draw_frame::late()) {
+            std::lock_guard<std::mutex> frame_lock(buffer_mutex_);
+
+            if (buffer_.empty()) {
+                return core::draw_frame::late();
+            }
+            frame_ = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0]));
+        }
+
+        return core::draw_frame::still(frame_);
     }
 
     core::draw_frame next_frame()
@@ -1075,6 +1088,7 @@ public:
         core::draw_frame result;
         {
             std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
+
             if (buffer_.size() < format_desc_.field_count) {
                 graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
                 return core::draw_frame::late();
@@ -1090,7 +1104,7 @@ public:
                 result = frame2;
             }
 
-            frame_ = core::draw_frame::still(frame2);
+            frame_ = frame2;
 
             graph_->set_text(u16(print()));
 
