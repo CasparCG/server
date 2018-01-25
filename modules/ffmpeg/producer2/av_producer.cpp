@@ -378,7 +378,6 @@ struct Input
                     if (ret == AVERROR_EXIT) {
                         break;
                     } else if (ret == AVERROR_EOF) {
-                        eof_ = true;
                         packet = nullptr;
                     } else {
                         FF_RET(ret, "av_read_frame");
@@ -386,7 +385,8 @@ struct Input
 
                     {
                         std::lock_guard<std::mutex> lock(mutex_);
-                        paused_ = packet == nullptr;
+                        eof_ = packet == nullptr;
+                        paused_ = eof_;
                         output_.push(std::move(packet));
 
                         graph_->set_value("input", (static_cast<double>(output_.size() + 0.001) / output_capacity_));
@@ -490,6 +490,7 @@ struct Input
         {
             std::lock_guard<std::mutex> lock(mutex_);
             paused_ = false;
+            eof_ = false;
         }
         cond_.notify_all();
     }
@@ -514,10 +515,7 @@ struct Input
             for (auto& p : streams_) {
                 p.second.flush();
             }
-
-            eof_ = false;
         }
-
 
         cond_.notify_all();
 
