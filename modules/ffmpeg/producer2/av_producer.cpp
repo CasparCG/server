@@ -137,18 +137,10 @@ struct Stream
     int                                       output_capacity_ = 8;
     std::queue<std::shared_ptr<AVFrame>>      output_;
 
-    std::shared_ptr<diagnostics::graph>       graph_;
-
     std::atomic<bool>                         abort_request_ = false;
     std::thread                               thread_;
 
-    Stream()
-    {
-
-    }
-
-    Stream(AVStream* stream, std::shared_ptr<diagnostics::graph> graph)
-        : graph_(graph)
+    Stream(AVStream* stream)
     {
         const auto codec = avcodec_find_decoder(stream->codecpar->codec_id);
         if (!codec) {
@@ -206,28 +198,27 @@ struct Stream
                     FF(avcodec_send_packet(decoder_.get(), packet.get()));
 
                     while (true) {
-                        // TODO (perf) release lock between decoding
-
                         auto frame = alloc_frame();
                         auto ret = avcodec_receive_frame(decoder_.get(), frame.get());
 
                         if (ret == AVERROR(EAGAIN)) {
                             break;
-                        } else if (ret == AVERROR_EOF) {
-                            avcodec_flush_buffers(decoder_.get());
+                        }
 
-                            std::lock_guard<std::mutex> lock(mutex_);
-                            output_.push(nullptr);
+                        if (ret == AVERROR_EOF) {
+                            avcodec_flush_buffers(decoder_.get());
+                            frame = nullptr;
                         } else {
                             FF_RET(ret, "avcodec_receive_frame");
 
                             // TODO (fix) is this always best?
                             frame->pts = frame->best_effort_timestamp;
+                        }
 
+                        {
                             std::lock_guard<std::mutex> lock(mutex_);
                             output_.push(std::move(frame));
                         }
-
                         cond_.notify_all();
                     }
                 }
@@ -283,6 +274,8 @@ struct Stream
     {
         std::lock_guard<std::mutex> decoder_lock(decoder_mutex_);
 
+        avcodec_flush_buffers(decoder_.get());
+
         {
             std::lock_guard<std::mutex> lock(mutex_);
             while (!output_.empty()) {
@@ -293,8 +286,6 @@ struct Stream
             }
         }
         cond_.notify_all();
-
-        avcodec_flush_buffers(decoder_.get());
     }
 };
 
@@ -342,7 +333,12 @@ struct Input
         FF(avformat_find_stream_info(format_.get(), nullptr));
 
         for (auto n = 0ULL; n < format_->nb_streams; ++n) {
-            streams_.try_emplace(static_cast<int>(n), format_->streams[n], graph_);
+            // TODO lazy load decoders?
+            try {
+                streams_.try_emplace(static_cast<int>(n), format_->streams[n]);
+            } catch (...) {
+                // TODO
+            }
         }
 
         thread_ = std::thread([&]
@@ -365,21 +361,19 @@ struct Input
 
                     if (ret == AVERROR_EXIT) {
                         break;
-                    }
-
-                    if (ret == AVERROR_EOF) {
-                        std::lock_guard<std::mutex> lock(mutex_);
-                        paused_ = true;
-                        output_.push(nullptr);
-                        graph_->set_value("input", (static_cast<double>(output_.size() + 0.001) / output_capacity_));
+                    } else if (ret == AVERROR_EOF) {
+                        packet = nullptr;
                     } else {
                         FF_RET(ret, "av_read_frame");
-
-                        std::lock_guard<std::mutex> lock(mutex_);
-                        output_.push(packet);
-                        graph_->set_value("input", (static_cast<double>(output_.size() + 0.001) / output_capacity_));
                     }
 
+                    {
+                        std::lock_guard<std::mutex> lock(mutex_);
+                        paused_ = packet == nullptr;
+                        output_.push(packet);
+
+                        graph_->set_value("input", (static_cast<double>(output_.size() + 0.001) / output_capacity_));
+                    }
                     cond_.notify_all();
                 }
             } catch (...) {
@@ -429,9 +423,9 @@ struct Input
         return format_.get();
     }
 
-    Stream& operator[](int n)
+    auto find(int n)
     {
-        return streams_[n];
+        return streams_.find(n);
     }
 
     auto begin()
@@ -948,8 +942,11 @@ struct AVProducer::Impl
                     // TODO (fix) overflow?
                     p.second.try_push(nullptr);
                 }
-            } else if (!input_[packet->stream_index].try_push(packet)) {
-                return false;
+            } else {
+                auto it = input_.find(packet->stream_index);
+                if (it != input_.end() && !it->second.try_push(packet)) {
+                    return false;
+                }
             }
 
             result = true;
@@ -970,7 +967,12 @@ struct AVProducer::Impl
                 nb_requests = std::max<int>(nb_requests, av_buffersrc_get_nb_failed_requests(source));
             }
 
-            input_[p.first]([&](std::shared_ptr<AVFrame>& frame)
+            auto it = input_.find(p.first);
+            if (it == input_.end()) {
+                continue;
+            }
+
+            it->second([&](std::shared_ptr<AVFrame>& frame)
             {
                 if (nb_requests == 0) {
                     return false;
