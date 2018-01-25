@@ -831,7 +831,6 @@ struct AVProducer::Impl
             try {
                 auto eof = [&]
                 {
-                    // TODO
                     return false; // time_ != AV_NOPTS_VALUE && duration_ != AV_NOPTS_VALUE && time_ >= duration_;
                 };
 
@@ -845,8 +844,9 @@ struct AVProducer::Impl
                         buffer_cond_.wait(lock, [&] { return buffer_.size() < buffer_capacity_ || abort_request_; });
                     }
 
+                    // TODO (perf) wait on input_.paused?
+
                     std::unique_lock<std::mutex> lock(mutex_);
-                    // TODO input_.paused?
                     cond_.wait(lock, [&] { return loop_ || !eof() || abort_request_; });
 
                     if (abort_request_) {
@@ -883,11 +883,11 @@ struct AVProducer::Impl
                     if (!video_filter_.frame && !audio_filter_.frame) {
                         auto start = start_ != AV_NOPTS_VALUE ? start_ : 0;
                         reset(start + input_.start_time());
-                        // TODO set duration_?
+                        // TODO (fix) set duration_?
                         continue;
                     }
 
-                    // drop extra audio
+                    // Drop extra audio.
                     if (video_filter_.sink && !video_filter_.frame) {
                         audio_filter_.frame = nullptr;
                         video_filter_.frame = nullptr;
@@ -903,6 +903,7 @@ struct AVProducer::Impl
                     const auto start_time = input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0;
 
                     // TODO (fix) check video->pts vs audio->pts
+                    // TODO (fix) ensure pts != AV_NOPTS_VALUE
 
                     if (video) {
                         frame.pts      = av_rescale_q(video->pts, av_buffersink_get_time_base(video_filter_.sink), TIME_BASE_Q) - start_time;
@@ -998,7 +999,7 @@ struct AVProducer::Impl
                     if (frame && !frame->data[0]) {
                         av_buffersrc_close(source, frame->pts, 0);
                     } else {
-                        // TODO (fix) overflow?
+                        // TODO (fix) Guard against overflow?
                         FF(av_buffersrc_write_frame(source, frame.get()));
                     }
                 }
@@ -1049,7 +1050,6 @@ struct AVProducer::Impl
         audio_filter_ = Filter(afilter_, input_, ts, AVMEDIA_TYPE_AUDIO, format_desc_);
 
         sources_.clear();
-
         for (auto& p : video_filter_.sources) {
             sources_[p.first].push_back(p.second);
         }
@@ -1057,15 +1057,22 @@ struct AVProducer::Impl
             sources_[p.first].push_back(p.second);
         }
 
-        // TODO
-        //if (format_desc_.field_count == 2)
-        //{
-        //    std::lock_guard<std::mutex> frame_lock(buffer_mutex_);
+        // Flush unused inputs
+        for (auto& p : input_) {
+            if (sources_.find(p.first) == sources_.end()) {
+                p.second.flush();
+            }
+        }
 
-        //    if (buffer_.size() % 2 != 0) {
-        //        buffer_.pop_front();
-        //    }
-        //}
+        // TODO (fix)
+        if (loop_ && format_desc_.field_count == 2)
+        {
+            std::lock_guard<std::mutex> frame_lock(buffer_mutex_);
+
+            if (buffer_.size() % 2 != 0) {
+                buffer_.pop_front();
+            }
+        }
     }
 
 public:
@@ -1130,7 +1137,7 @@ public:
 
     void seek(int64_t time)
     {
-        // TODO (fix) validate input
+        // TODO (fix) Validate input.
         {
             std::lock_guard<std::mutex> lock(mutex_);
 
@@ -1147,7 +1154,7 @@ public:
 
         {
             std::lock_guard<std::mutex> lock(frame_mutex_);
-            // TODO
+            // TODO (fix)
             frame_ = core::draw_frame::late();
         }
     }
@@ -1168,7 +1175,7 @@ public:
 
     void start(int64_t start)
     {
-        // TODO (fix)validate input
+        // TODO (fix) Validate input.
         // TODO (fix) What if input has already looped?
         {
             std::lock_guard<std::mutex> lock(mutex_);
@@ -1184,7 +1191,7 @@ public:
 
     void duration(int64_t duration)
     {
-        // TODO (fix) validate input
+        // TODO (fix) Validate input.
         {
             std::lock_guard<std::mutex> lock(mutex_);
             duration_ = av_rescale_q(duration, format_tb_, TIME_BASE_Q);
