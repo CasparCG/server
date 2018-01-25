@@ -806,6 +806,7 @@ struct AVProducer::Impl
     mutable std::mutex                              mutex_;
     std::condition_variable                         cond_;
 
+    // TODO (perf) Avoid this mutex.
     mutable std::mutex                              frame_mutex_;
     int64_t                                         frame_time_ = 0;
     core::draw_frame                                frame_ = core::draw_frame::late();
@@ -962,14 +963,11 @@ struct AVProducer::Impl
 
     std::string print() const
     {
-        auto time = frame_time_ != AV_NOPTS_VALUE ? frame_time_ : 0;
-        auto duration = duration_ != AV_NOPTS_VALUE ? duration_ : input_->duration;
-
         std::ostringstream str;
         str << std::fixed << std::setprecision(4)
             << "ffmpeg[" << filename_ << "|"
-            << (static_cast<double>(time) / AV_TIME_BASE) << "/"
-            << (static_cast<double>(duration) / AV_TIME_BASE)
+            << av_q2d({ static_cast<int>(time()) * format_tb_.num, format_tb_.den }) << "/"
+            << av_q2d({ static_cast<int>(duration().value_or(0LL)) * format_tb_.num, format_tb_.den })
             << "]";
         return str.str();
     }
@@ -1113,60 +1111,61 @@ struct AVProducer::Impl
 public:
     core::draw_frame prev_frame()
     {
-        std::lock_guard<std::mutex> lock(frame_mutex_);
+        {
+            std::lock_guard<std::mutex> lock(frame_mutex_);
 
-        if (frame_ == core::draw_frame::late()) {
-            std::lock_guard<std::mutex> frame_lock(buffer_mutex_);
+            if (frame_ == core::draw_frame::late()) {
+                std::lock_guard<std::mutex> frame_lock(buffer_mutex_);
 
-            if (buffer_.empty()) {
-                return core::draw_frame::late();
+                if (buffer_.empty()) {
+                    return core::draw_frame::late();
+                }
+
+                frame_ = core::draw_frame::still(buffer_[0].frame);
+                frame_time_ = buffer_[0].pts + buffer_[0].duration;
             }
-
-            frame_ = core::draw_frame::still(buffer_[0].frame);
-            frame_time_ = buffer_[0].pts + buffer_[0].duration;
-            graph_->set_text(u16(print()));
         }
+        graph_->set_text(u16(print()));
 
         return frame_;
     }
 
     core::draw_frame next_frame()
     {
-        std::lock_guard<std::mutex> lock(frame_mutex_);
-
         core::draw_frame result;
         {
-            std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
+            std::lock_guard<std::mutex> lock(frame_mutex_);
 
-            if (buffer_.size() < format_desc_.field_count) {
-                graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
-                return core::draw_frame::late();
+            {
+                std::lock_guard<std::mutex> buffer_lock(buffer_mutex_);
+
+                if (buffer_.size() < format_desc_.field_count) {
+                    graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
+                    return core::draw_frame::late();
+                }
+
+                if (format_desc_.field_count == 2) {
+                    result = core::draw_frame::interlace(buffer_[0].frame, buffer_[1].frame, format_desc_.field_mode);
+                    frame_ = core::draw_frame::still(buffer_[1].frame);
+                    frame_time_ = buffer_[0].pts + buffer_[0].duration + buffer_[1].duration;
+                    buffer_.pop_front();
+                    buffer_.pop_front();
+                } else {
+                    result = buffer_[0].frame;
+                    frame_ = core::draw_frame::still(buffer_[0].frame);
+                    frame_time_ = buffer_[0].pts + buffer_[0].duration;
+                    buffer_.pop_front();
+                }
             }
-
-            if (format_desc_.field_count == 2) {
-                result = core::draw_frame::interlace(buffer_[0].frame, buffer_[1].frame, format_desc_.field_mode);
-                frame_ = core::draw_frame::still(buffer_[1].frame);
-                frame_time_ = buffer_[0].pts + buffer_[0].duration + buffer_[1].duration;
-                buffer_.pop_front();
-                buffer_.pop_front();
-            } else {
-                result = buffer_[0].frame;
-                frame_ = core::draw_frame::still(buffer_[0].frame);
-                frame_time_ = buffer_[0].pts + buffer_[0].duration;
-                buffer_.pop_front();
-            }
-            graph_->set_text(u16(print()));
-
+            buffer_cond_.notify_all();
         }
-        buffer_cond_.notify_all();
+        graph_->set_text(u16(print()));
 
         return result;
     }
 
     int64_t time() const
     {
-        std::lock_guard<std::mutex> lock(frame_mutex_);
-
         // TODO (fix) How to handle NOPTS case?
         return frame_time_ != AV_NOPTS_VALUE ? av_rescale_q(frame_time_, TIME_BASE_Q, format_tb_) : 0;
     }
