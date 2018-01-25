@@ -1,5 +1,3 @@
-INCLUDE (PrecompiledHeader)
-
 # Determine build (target) platform
 INCLUDE (PlatformIntrospection)
 TEST_FOR_SUPPORTED_PLATFORM (SUPPORTED_PLATFORM)
@@ -65,28 +63,31 @@ link_directories("${CMAKE_CURRENT_SOURCE_DIR}/dependencies64/cef/lib/linux")
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 add_definitions( -DSFML_STATIC )
-add_definitions( -DTBB_USE_CAPTURED_EXCEPTION=0 )
 add_definitions( -DUNICODE )
 add_definitions( -D_UNICODE )
 add_definitions( -DGLEW_NO_GLU )
-add_definitions( -DCASPAR_SOURCE_PREFIX="${CMAKE_CURRENT_SOURCE_DIR}" )
+#add_definitions( -DCASPAR_SOURCE_PREFIX="${CMAKE_CURRENT_SOURCE_DIR}" ) # This needs to be re-enabled at some point!
 
 if (MSVC)
+	add_definitions( -DTBB_USE_CAPTURED_EXCEPTION=0 )
 	set(CMAKE_CXX_FLAGS					"${CMAKE_CXX_FLAGS}					/EHa /Zi /W4 /WX /MP /fp:fast /Zm192 /FIcommon/compiler/vs/disable_silly_warnings.h")
 	set(CMAKE_CXX_FLAGS_DEBUG			"${CMAKE_CXX_FLAGS_DEBUG}			/D TBB_USE_ASSERT=1 /D TBB_USE_DEBUG /bigobj")
 	set(CMAKE_CXX_FLAGS_RELEASE			"${CMAKE_CXX_FLAGS_RELEASE}			/Oi /Ot /Gy /bigobj")
 	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO	"${CMAKE_CXX_FLAGS_RELWITHDEBINFO}	/Oi /Ot /Gy /bigobj /Ob2")
 else()
-	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O3 -g")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+	add_compile_options( -std=c++11 ) # Needed for precompiled headers to work
+	add_compile_options( -O3 ) # Needed for precompiled headers to work
+	add_definitions( -DNDEBUG ) # Needed for precompiled headers to work
 	add_compile_options( -msse3 )
 	add_compile_options( -mssse3 )
 	add_compile_options( -msse4.1 )
 	add_compile_options( -fnon-call-exceptions ) # Allow signal handler to throw exception
-	add_compile_options( -Wno-unknown-warning-option -Wno-max-unsigned-zero -Wno-inconsistent-missing-override -Wno-inconsistent-missing-override -Wno-macro-redefined -Wno-unsequenced -Wno-deprecated-declarations -Wno-logical-not-parentheses -Wno-switch -Wno-tautological-constant-out-of-range-compare -Wno-tautological-compare -Wno-writable-strings -Wno-dangling-else )
+	add_definitions( -D__NO_INLINE__ ) # Needed for precompiled headers to work
 	add_definitions( -DBOOST_NO_SWPRINTF ) # swprintf on Linux seems to always use , as decimal point regardless of C-locale or C++-locale
 	add_definitions( -DTBB_USE_CAPTURED_EXCEPTION=1 )
-	add_definitions( -DBOOST_ALL_NO_LIB -DBOOST_ALL_DYN_LINK -DBOOST_LOG_DYN_LINK )
+	add_definitions( -DBOOST_ALL_NO_LIB )
+	add_definitions( -DBOOST_ALL_DYN_LINK )
+	add_definitions( -DBOOST_LOG_DYN_LINK )
 endif ()
 
 if (POLICY CMP0045)
@@ -100,7 +101,7 @@ set(CASPARCG_MODULE_COMMAND_LINE_ARG_INTERCEPTORS_STATEMENTS	"" CACHE INTERNAL "
 set(CASPARCG_MODULE_PROJECTS									"" CACHE INTERNAL "")
 set(CASPARCG_RUNTIME_DEPENDENCIES								"" CACHE INTERNAL "")
 
-
+INCLUDE (PrecompiledHeader)
 
 function(casparcg_add_include_statement HEADER_FILE_TO_INCLUDE)
 	set(CASPARCG_MODULE_INCLUDE_STATEMENTS "${CASPARCG_MODULE_INCLUDE_STATEMENTS}"
