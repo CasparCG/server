@@ -102,7 +102,7 @@ public:
 draw_frame::draw_frame() : impl_(new impl()){}
 draw_frame::draw_frame(const draw_frame& other) : impl_(new impl(*other.impl_)){}
 draw_frame::draw_frame(draw_frame&& other) : impl_(std::move(other.impl_)){}
-draw_frame::draw_frame(const_frame&& frame)  : impl_(new impl(std::move(frame))){}
+draw_frame::draw_frame(const_frame frame)  : impl_(new impl(std::move(frame))){}
 draw_frame::draw_frame(mutable_frame&& frame)  : impl_(new impl(std::move(frame))){}
 draw_frame::draw_frame(std::vector<draw_frame> frames) : impl_(new impl(frames)){}
 draw_frame::~draw_frame(){}

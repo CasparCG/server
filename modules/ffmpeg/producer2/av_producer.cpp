@@ -78,17 +78,13 @@ std::shared_ptr<AVPacket> alloc_packet()
 
 struct Frame
 {
-    std::shared_ptr<AVFrame> video;
-    std::shared_ptr<AVFrame> audio;
+    core::draw_frame         frame = core::draw_frame::empty();
     int64_t                  pts;
     int64_t                  duration;
 };
 
-core::mutable_frame make_frame(void* tag, core::frame_factory& frame_factory, const Frame& in_frame)
+core::mutable_frame make_frame(void* tag, core::frame_factory& frame_factory, std::shared_ptr<AVFrame> video, std::shared_ptr<AVFrame> audio)
 {
-    const auto video = in_frame.video;
-    const auto audio = in_frame.audio;
-
     const auto pix_desc = video
         ? ffmpeg2::pixel_format_desc(static_cast<AVPixelFormat>(video->format), video->width, video->height)
         : core::pixel_format_desc(core::pixel_format::invalid);
@@ -135,10 +131,10 @@ struct Stream
 
     int64_t                                   next_pts_;
 
-    int                                       input_capacity_ = 16;
+    int                                       input_capacity_ = 256;
     std::queue<std::shared_ptr<AVPacket>>     input_;
 
-    int                                       output_capacity_ = 8;
+    int                                       output_capacity_ = 2;
     std::queue<std::shared_ptr<AVFrame>>      output_;
 
     std::atomic<bool>                         abort_request_ = false;
@@ -222,10 +218,10 @@ struct Stream
 
                             if (decoder_->codec_type == AVMEDIA_TYPE_VIDEO) {
                                 frame_duration = frame->pkt_duration > 0
-                                    ? av_rescale_q(frame->pkt_duration, decoder_->pkt_timebase, decoder_->time_base)
-                                    : 1;
+                                    ? frame->pkt_duration
+                                    : av_rescale_q(1, decoder_->time_base, decoder_->pkt_timebase);
                             } else if (decoder_->codec_type == AVMEDIA_TYPE_AUDIO) {
-                                frame_duration = av_rescale_q(frame->nb_samples, { 1, frame->sample_rate }, decoder_->time_base);
+                                frame_duration = av_rescale_q(frame->nb_samples, { 1, frame->sample_rate }, decoder_->pkt_timebase);
                             }
 
                             next_pts_ = frame->pts + frame_duration;
@@ -353,7 +349,7 @@ struct Input
             try {
                 streams_.try_emplace(static_cast<int>(n), format_->streams[n]);
             } catch (...) {
-                // TODO
+                CASPAR_LOG(warning) << "[ffmpeg] " << "Failed to open stream #" << n << ".";
             }
         }
 
@@ -895,20 +891,22 @@ struct AVProducer::Impl
                         continue;
                     }
 
+                    auto video = std::move(video_filter_.frame);
+                    auto audio = std::move(audio_filter_.frame);
+
                     Frame frame;
-                    frame.video = std::move(video_filter_.frame);
-                    frame.audio = std::move(audio_filter_.frame);
+                    frame.frame = core::draw_frame(make_frame(this, *frame_factory_, video, audio));
 
                     const auto start_time = input_->start_time != AV_NOPTS_VALUE ? input_->start_time : 0;
 
                     // TODO (fix) check video->pts vs audio->pts
 
-                    if (frame.video) {
-                        frame.pts      = av_rescale_q(frame.video->pts, av_buffersink_get_time_base(video_filter_.sink), TIME_BASE_Q) - start_time;
+                    if (video) {
+                        frame.pts      = av_rescale_q(video->pts, av_buffersink_get_time_base(video_filter_.sink), TIME_BASE_Q) - start_time;
                         frame.duration = av_rescale_q(1, av_inv_q(av_buffersink_get_frame_rate(video_filter_.sink)), TIME_BASE_Q);
-                    } else if (frame.audio) {
-                        frame.pts = av_rescale_q(frame.audio->pts, av_buffersink_get_time_base(audio_filter_.sink), TIME_BASE_Q) - start_time;
-                        frame.duration = av_rescale_q(frame.audio->nb_samples, { 1, av_buffersink_get_sample_rate(audio_filter_.sink) }, TIME_BASE_Q);
+                    } else if (audio) {
+                        frame.pts      = av_rescale_q(audio->pts, av_buffersink_get_time_base(audio_filter_.sink), TIME_BASE_Q) - start_time;
+                        frame.duration = av_rescale_q(audio->nb_samples, { 1, av_buffersink_get_sample_rate(audio_filter_.sink) }, TIME_BASE_Q);
                     }
 
                     {
@@ -957,7 +955,7 @@ struct AVProducer::Impl
                     // TODO (fix) overflow?
                     p.second.try_push(nullptr);
                 }
-            } else {
+            } else if (sources_.find(packet->stream_index) != sources_.end()) {
                 auto it = input_.find(packet->stream_index);
                 if (it != input_.end() && !it->second.try_push(packet)) {
                     return false;
@@ -1059,12 +1057,19 @@ struct AVProducer::Impl
         for (auto& p : audio_filter_.sources) {
             sources_[p.first].push_back(p.second);
         }
+
+        // TODO
+        //if (format_desc_.field_count == 2)
+        //{
+        //    std::lock_guard<std::mutex> frame_lock(buffer_mutex_);
+
+        //    if (buffer_.size() % 2 != 0) {
+        //        buffer_.pop_front();
+        //    }
+        //}
     }
 
 public:
-    // TODO interlaced step
-    // TODO make_frame buffered
-
     core::draw_frame prev_frame()
     {
         std::lock_guard<std::mutex> lock(frame_mutex_);
@@ -1075,10 +1080,13 @@ public:
             if (buffer_.empty()) {
                 return core::draw_frame::late();
             }
-            frame_ = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0]));
+
+            frame_ = core::draw_frame::still(buffer_[0].frame);
+            frame_time_ = buffer_[0].pts + buffer_[0].duration;
+            graph_->set_text(u16(print()));
         }
 
-        return core::draw_frame::still(frame_);
+        return frame_;
     }
 
     core::draw_frame next_frame()
@@ -1094,24 +1102,20 @@ public:
                 return core::draw_frame::late();
             }
 
-            auto frame1 = core::draw_frame(make_frame(this, *frame_factory_, buffer_[0]));
-            auto frame2 = frame1;
-
             if (format_desc_.field_count == 2) {
-                frame2 = core::draw_frame(make_frame(this, *frame_factory_, buffer_[1]));
-                result = core::draw_frame::interlace(frame1, frame2, format_desc_.field_mode);
+                result = core::draw_frame::interlace(buffer_[0].frame, buffer_[1].frame, format_desc_.field_mode);
+                frame_ = core::draw_frame::still(buffer_[1].frame);
+                frame_time_ = buffer_[0].pts + buffer_[0].duration + buffer_[1].duration;
+                buffer_.pop_front();
+                buffer_.pop_front();
             } else {
-                result = frame2;
-            }
-
-            frame_ = frame2;
-
-            graph_->set_text(u16(print()));
-
-            for (auto n = 0; n < format_desc_.field_count; ++n) {
-                frame_time_ = buffer_.front().pts + buffer_.front().duration;
+                result = buffer_[0].frame;
+                frame_ = core::draw_frame::still(buffer_[0].frame);
+                frame_time_ = buffer_[0].pts + buffer_[0].duration;
                 buffer_.pop_front();
             }
+            graph_->set_text(u16(print()));
+
         }
         buffer_cond_.notify_all();
 
@@ -1122,11 +1126,12 @@ public:
     {
         std::lock_guard<std::mutex> lock(frame_mutex_);
 
-        return av_rescale_q(frame_time_, TIME_BASE_Q, format_tb_);
+        return frame_time_ != AV_NOPTS_VALUE ? av_rescale_q(frame_time_, TIME_BASE_Q, format_tb_) : 0;
     }
 
     void seek(int64_t time)
     {
+        // TODO (fix) validate input
         {
             std::lock_guard<std::mutex> lock(mutex_);
 
@@ -1135,21 +1140,17 @@ public:
                 buffer_.clear();
             }
 
-            const auto time2 = av_rescale_q(time, format_tb_, TIME_BASE_Q) + input_.start_time();
-
-            input_.seek(time2);
-            reset(time2);
+            time = av_rescale_q(time, format_tb_, TIME_BASE_Q) + input_.start_time();
+            input_.seek(time);
+            reset(time);
         }
         cond_.notify_all();
 
-        // TODO
-        //{
-        //    std::lock_guard<std::mutex> lock(frame_mutex_);
-
-        //    frame_time_ = time;
-        //    frame_ = core::draw_frame::late();
-        //    graph_->set_text(u16(print()));
-        //}
+        {
+            std::lock_guard<std::mutex> lock(frame_mutex_);
+            // TODO
+            frame_ = core::draw_frame::late();
+        }
     }
 
     void loop(bool loop)
@@ -1168,6 +1169,7 @@ public:
 
     void start(int64_t start)
     {
+        // TODO (fix)validate input
         // TODO (fix) What if input has already looped?
         {
             std::lock_guard<std::mutex> lock(mutex_);
@@ -1183,6 +1185,7 @@ public:
 
     void duration(int64_t duration)
     {
+        // TODO (fix) validate input
         {
             std::lock_guard<std::mutex> lock(mutex_);
             duration_ = av_rescale_q(duration, format_tb_, TIME_BASE_Q);
