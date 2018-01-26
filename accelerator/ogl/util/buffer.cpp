@@ -38,7 +38,6 @@ struct buffer::impl : boost::noncopyable
 	GLuint     id_;
 	GLsizei    size_;
     void*      data_;
-    GLsync     fence_ = 0;
     bool       write_;
     GLenum     target_;
     GLbitfield flags_;
@@ -59,30 +58,7 @@ public:
 	{
         GL(glUnmapNamedBuffer(id_));
 		glDeleteBuffers(1, &id_);
-        if (fence_) {
-            glDeleteSync(fence_);
-        }
 	}
-
-    void lock()
-    {
-        fence_ = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-    }
-
-    bool try_wait()
-    {
-        if (!fence_) {
-            return true;
-        }
-
-        auto wait = glClientWaitSync(fence_, GL_SYNC_FLUSH_COMMANDS_BIT, 1);
-        if (wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED) {
-            glDeleteSync(fence_);
-            fence_ = 0;
-            return true;
-        }
-        return false;
-    }
 
     void bind()
     {
@@ -102,8 +78,6 @@ buffer& buffer::operator=(buffer&& other){impl_ = std::move(other.impl_); return
 void* buffer::data(){return impl_->data_;}
 bool buffer::write() const { return impl_->write_;  }
 int buffer::size() const { return impl_->size_; }
-bool buffer::try_wait() { return impl_->try_wait(); }
-void buffer::lock() { return impl_->lock(); }
 void buffer::bind() { return impl_->bind(); }
 void buffer::unbind() { return impl_->unbind(); }
 int buffer::id() const {return impl_->id_;}

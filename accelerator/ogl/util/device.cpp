@@ -40,6 +40,9 @@
 #include <SFML/Window/Context.hpp>
 
 #include <boost/asio/deadline_timer.hpp>
+#include <boost/asio/post.hpp>
+#include <boost/asio/dispatch.hpp>
+#include <boost/asio/spawn.hpp>
 
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/concurrent_queue.h>
@@ -70,11 +73,11 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
 	GLuint fbo_;
 
-	io_service& service_;
-    io_service::work work_;
-    std::thread thread_;
+	io_context&      service_;
+    io_context::work work_;
+    std::thread      thread_;
 
-	impl(boost::asio::io_service& service)
+	impl(io_context& service)
 		: service_(service)
         , work_(service)
         , thread_([&] { service_.run(); })
@@ -134,14 +137,14 @@ struct device::impl : public std::enable_shared_from_this<impl>
     void post(F&& func)
     {
         auto func_ptr = std::make_shared<std::function<void()>>(std::forward<F>(func));
-        service_.post(std::bind(&std::function<void()>::operator(), std::move(func_ptr)));
+        boost::asio::post(service_, std::bind(&std::function<void()>::operator(), std::move(func_ptr)));
     }
 
     template <typename F>
     void dispatch(F&& func)
     {
         auto func_ptr = std::make_shared<std::function<void()>>(std::forward<F>(func));
-        service_.dispatch(std::bind(&std::function<void()>::operator(), std::move(func_ptr)));
+        boost::asio::dispatch(service_, std::bind(&std::function<void()>::operator(), std::move(func_ptr)));
     }
 
     template<typename Func>
@@ -153,7 +156,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
         auto task = std::make_shared<task_type>(std::forward<Func>(func));
         auto future = task->get_future();
-        service_.dispatch(std::bind(&task_type::operator(), std::move(task)));
+        boost::asio::dispatch(service_, std::bind(&task_type::operator(), std::move(task)));
         return future;
     }
 
@@ -263,34 +266,38 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
 	std::future<array<const uint8_t>> copy_async(const spl::shared_ptr<texture>& source)
 	{
-        return flatten(dispatch_async([=]
-        {
-            auto buf = create_buffer(source->size(), false);
-            source->copy_to(*buf);
-            buf->lock();
+        auto promise = std::make_shared<std::promise<array<const uint8_t>>>();
 
-            return std::async(std::launch::deferred, [=, buf = std::move(buf)]()
-            {
-                for (auto n = 0; true; n = std::min(10, n + 1)) {
-                    if (dispatch_sync([&] { return buf->try_wait(); })) {
+        boost::asio::spawn(service_, [=](yield_context yield)
+        {
+            try {
+                auto buf = create_buffer(source->size(), false);
+                source->copy_to(*buf);
+                auto fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+
+                for (auto n = 0; true; ++n) {
+                    auto wait = glClientWaitSync(fence, GL_SYNC_FLUSH_COMMANDS_BIT, 1);
+                    if (wait == GL_ALREADY_SIGNALED || wait == GL_CONDITION_SATISFIED) {
                         break;
                     }
-
-                    boost::asio::deadline_timer timer(service_, boost::posix_time::milliseconds(n));
-                    // TODO (fix) Does timer.wait yield?
-                    timer.wait();
+                    deadline_timer timer(service_, boost::posix_time::milliseconds(std::min(10, n)));
+                    timer.async_wait(yield);
                 }
 
                 auto ptr = reinterpret_cast<uint8_t*>(buf->data());
                 auto size = buf->size();
-                return array<const uint8_t>(ptr, size, true, std::move(buf));
-            });
-        }));
+                promise->set_value(array<const uint8_t>(ptr, size, true, std::move(buf)));
+            } catch (...) {
+                promise->set_exception(std::current_exception());
+            }
+        });
+
+        return promise->get_future();
 	}
 
     void flush()
     {
-        post([&]
+        boost::asio::post(service_, [this]
         {
             sync_queue_.push(sync_t(glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0), nullptr));
 
