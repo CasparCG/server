@@ -161,20 +161,21 @@ public:
 
 		convert(items, format_desc.width, format_desc.height);
 
-		auto result = spl::make_shared<buffer>(format_desc.size, static_cast<uint8_t>(0));
+		auto result = std::shared_ptr<uint8_t[]>(new uint8_t[format_desc.size]);
+		memset(result.get(), 0, format_desc.size);
 		if(format_desc.field_mode != core::field_mode::progressive)
 		{
-			draw(items, result->data(), format_desc.width, format_desc.height, core::field_mode::upper);
-			draw(items, result->data(), format_desc.width, format_desc.height, core::field_mode::lower);
+			draw(items, result.get(), format_desc.width, format_desc.height, core::field_mode::upper);
+			draw(items, result.get(), format_desc.width, format_desc.height, core::field_mode::lower);
 		}
 		else
 		{
-			draw(items, result->data(), format_desc.width, format_desc.height,  core::field_mode::progressive);
+			draw(items, result.get(), format_desc.width, format_desc.height,  core::field_mode::progressive);
 		}
 
 		temp_buffers_.clear();
 
-		return make_ready_future(array<const std::uint8_t>(result->data(), format_desc.size, true, result));
+		return make_ready_future(array<const std::uint8_t>(result.get(), format_desc.size, true, result));
 	}
 
 private:
