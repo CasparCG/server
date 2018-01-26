@@ -29,16 +29,17 @@ namespace boost
         class Allocator      = std::allocator<void*>
     >
     class ptr_circular_buffer : public 
-        ptr_sequence_adapter< T, 
-                              boost::circular_buffer<void*,Allocator>, 
+        ptr_sequence_adapter< T, boost::circular_buffer<
+                typename ptr_container_detail::void_ptr<T>::type,Allocator>, 
                               CloneAllocator >
     {  
-        typedef ptr_sequence_adapter< T, 
-                                      boost::circular_buffer<void*,Allocator>, 
+        typedef ptr_sequence_adapter< T, boost::circular_buffer<
+                typename ptr_container_detail::void_ptr<T>::type,Allocator>, 
                                       CloneAllocator > 
             base_type;
 
-        typedef boost::circular_buffer<void*,Allocator>         circular_buffer_type;
+        typedef boost::circular_buffer<typename 
+            ptr_container_detail::void_ptr<T>::type,Allocator>  circular_buffer_type;
         typedef ptr_circular_buffer<T,CloneAllocator,Allocator> this_type;
         
     public: // typedefs
@@ -264,7 +265,7 @@ namespace boost
         {
             ptr_circular_buffer temp( n );
             for( size_type i = 0u; i != n; ++i )
-               temp.push_back( this->null_policy_allocate_clone( to_clone ) );
+               temp.push_back( temp.null_policy_allocate_clone( to_clone ) );
             this->swap( temp ); 
         }
         
@@ -284,13 +285,13 @@ namespace boost
 
         void push_back( value_type ptr ) // nothrow
         {
-            BOOST_ASSERT( capacity() > 0 );   
+            BOOST_ASSERT( capacity() > 0 );
             this->enforce_null_policy( ptr, "Null pointer in 'push_back()'" );
          
-            auto_type old_ptr;
+            auto_type old_ptr( value_type(), *this );
             if( full() )
-                old_ptr.reset( &*this->begin() );
-            this->base().push_back( ptr );            
+                old_ptr.reset( &*this->begin(), *this );
+            this->base().push_back( ptr );           
         }
 
         template< class U >
@@ -304,9 +305,9 @@ namespace boost
             BOOST_ASSERT( capacity() > 0 );
             this->enforce_null_policy( ptr, "Null pointer in 'push_front()'" );
 
-            auto_type old_ptr;
+            auto_type old_ptr( value_type(), *this );
             if( full() )
-                old_ptr.reset( &*(--this->end()) );
+                old_ptr.reset( &*(--this->end()), *this );
             this->base().push_front( ptr );            
         }
 
@@ -321,16 +322,16 @@ namespace boost
             BOOST_ASSERT( capacity() > 0 );
             this->enforce_null_policy( ptr, "Null pointer in 'insert()'" );
 
-            auto_type new_ptr( ptr );
+            auto_type new_ptr( ptr, *this );
             iterator b = this->begin();
             if( full() && pos == b )
                 return b;
             
-            auto_type old_ptr;
+            new_ptr.release();            
+            auto_type old_ptr( value_type(), *this );
             if( full() )
-                old_ptr.reset( &*this->begin() );
+                old_ptr.reset( &*this->begin(), *this );
 
-            new_ptr.release();
             return this->base().insert( pos.base(), ptr );
         }
 
@@ -364,16 +365,16 @@ namespace boost
             BOOST_ASSERT( capacity() > 0 );
             this->enforce_null_policy( ptr, "Null pointer in 'rinsert()'" );
 
-            auto_type new_ptr( ptr );
+            auto_type new_ptr( ptr, *this );
             iterator b = this->end();
             if (full() && pos == b)
                 return b;
-            
-            auto_type old_ptr;
+                       
+            new_ptr.release();            
+            auto_type old_ptr( value_type(), *this );
             if( full() )
-                old_ptr.reset( &this->back() );
+                old_ptr.reset( &this->back(), *this );
 
-            new_ptr.release();
             return this->base().rinsert( pos.base(), ptr );
         }
 
@@ -485,7 +486,7 @@ namespace boost
             if( delete_from )
             {
                 BOOST_DEDUCED_TYPENAME base_type::scoped_deleter 
-                    deleter( from, size );                         // nothrow
+                    deleter( *this, from, size );                  // nothrow
                 for( size_type i = 0u; i != size; ++i, ++before )
                     before = insert( before, *(from+i) );          // nothrow
                 deleter.release();                                 // nothrow

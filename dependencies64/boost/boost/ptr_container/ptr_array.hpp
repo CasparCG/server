@@ -56,12 +56,14 @@ namespace boost
     >
     class ptr_array : public
         ptr_sequence_adapter< T,
-                              ptr_container_detail::ptr_array_impl<void*,N>,
+            ptr_container_detail::ptr_array_impl<
+                typename ptr_container_detail::void_ptr<T>::type,N>,
                               CloneAllocator >
     {
     private:
         typedef ptr_sequence_adapter< T,
-                                      ptr_container_detail::ptr_array_impl<void*,N>,
+            ptr_container_detail::ptr_array_impl<
+                typename ptr_container_detail::void_ptr<T>::type,N>,
                                       CloneAllocator >
             base_class;
 
@@ -88,7 +90,7 @@ namespace boost
             size_t i = 0;
             for( ; i != N; ++i )
                 this->base()[i] = this->null_policy_allocate_clone( 
-                                        static_cast<const T*>( &r[i] ) ); 
+                                        static_cast<const U*>( &r[i] ) ); 
         }
 
         template< class U >
@@ -127,8 +129,8 @@ namespace boost
             std::auto_ptr<this_type> pa( new this_type );
             for( size_t i = 0; i != N; ++i )
             {
-                if( ! is_null(i) )
-                    pa->replace( i, this->null_policy_allocate_clone( &(*this)[i] ) ); 
+                if( !this->is_null(i) )
+                    pa->replace( i, pa->null_policy_allocate_clone( &(*this)[i] ) ); 
             }
             return pa;
         }
@@ -151,10 +153,9 @@ namespace boost
             BOOST_STATIC_ASSERT( idx < N );
 
             this->enforce_null_policy( r, "Null pointer in 'ptr_array::replace()'" );
-
-            auto_type res( static_cast<U*>( this->base()[idx] ) ); // nothrow
-            this->base()[idx] = r;                                 // nothrow
-            return boost::ptr_container::move(res);                // nothrow 
+            auto_type res( static_cast<U*>(this->base()[idx]), *this ); // nothrow                    
+            this->base()[idx] = r;                                      // nothrow
+            return boost::ptr_container::move(res);                     // nothrow 
         }
 
         template< size_t idx, class V >
@@ -167,14 +168,13 @@ namespace boost
         {
             this->enforce_null_policy( r, "Null pointer in 'ptr_array::replace()'" );
 
-            auto_type ptr( r );
-
+            auto_type ptr( r, *this );
             BOOST_PTR_CONTAINER_THROW_EXCEPTION( idx >= N, bad_index,
                                                  "'replace()' aout of bounds" );
 
-            auto_type res( static_cast<U*>( this->base()[idx] ) ); // nothrow
-            this->base()[idx] = ptr.release();                     // nothrow
-            return boost::ptr_container::move(res);                // nothrow 
+            auto_type res( static_cast<U*>(this->base()[idx]), *this ); // nothrow
+            this->base()[idx] = ptr.release();                          // nothrow
+            return boost::ptr_container::move(res);                     // nothrow 
         }
 
         template< class V >

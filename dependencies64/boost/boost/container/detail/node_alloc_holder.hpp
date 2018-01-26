@@ -30,10 +30,10 @@
 #include <boost/container/detail/allocator_version_traits.hpp>
 #include <boost/container/detail/construct_in_place.hpp>
 #include <boost/container/detail/destroyers.hpp>
-#include <boost/container/detail/iterator_to_raw_pointer.hpp>
+#include <boost/move/detail/iterator_to_raw_pointer.hpp>
 #include <boost/container/detail/mpl.hpp>
 #include <boost/container/detail/placement_new.hpp>
-#include <boost/container/detail/to_raw_pointer.hpp>
+#include <boost/move/detail/to_raw_pointer.hpp>
 #include <boost/container/detail/type_traits.hpp>
 #include <boost/container/detail/version_type.hpp>
 // intrusive
@@ -60,14 +60,17 @@ struct node_alloc_holder
 {
    //If the intrusive container is an associative container, obtain the predicate, which will
    //be of type node_compare<>. If not an associative container value_compare will be a "nat" type.
-   typedef BOOST_INTRUSIVE_OBTAIN_TYPE_WITH_DEFAULT(boost::container::container_detail::, ICont,
-      value_compare, container_detail::nat)                       intrusive_value_compare;
+   typedef BOOST_INTRUSIVE_OBTAIN_TYPE_WITH_DEFAULT
+      ( boost::container::container_detail::
+      , ICont, value_compare, container_detail::nat)              intrusive_value_compare;
    //In that case obtain the value predicate from the node predicate via predicate_type
    //if intrusive_value_compare is node_compare<>, nat otherwise
-   typedef BOOST_INTRUSIVE_OBTAIN_TYPE_WITH_DEFAULT(boost::container::container_detail::, intrusive_value_compare,
-      predicate_type, container_detail::nat)                      value_compare;
+   typedef BOOST_INTRUSIVE_OBTAIN_TYPE_WITH_DEFAULT
+      ( boost::container::container_detail::
+      , intrusive_value_compare
+      , predicate_type, container_detail::nat)                    value_compare;
 
-   typedef allocator_traits<Allocator>                                    allocator_traits_type;
+   typedef allocator_traits<Allocator>                            allocator_traits_type;
    typedef typename allocator_traits_type::value_type             value_type;
    typedef ICont                                                  intrusive_container;
    typedef typename ICont::value_type                             Node;
@@ -75,19 +78,19 @@ struct node_alloc_holder
       portable_rebind_alloc<Node>::type                           NodeAlloc;
    typedef allocator_traits<NodeAlloc>                            node_allocator_traits_type;
    typedef container_detail::allocator_version_traits<NodeAlloc>  node_allocator_version_traits_type;
-   typedef Allocator                                                      ValAlloc;
+   typedef Allocator                                              ValAlloc;
    typedef typename node_allocator_traits_type::pointer           NodePtr;
    typedef container_detail::scoped_deallocator<NodeAlloc>        Deallocator;
    typedef typename node_allocator_traits_type::size_type         size_type;
    typedef typename node_allocator_traits_type::difference_type   difference_type;
    typedef container_detail::integral_constant<unsigned,
       boost::container::container_detail::
-         version<NodeAlloc>::value>                   alloc_version;
-   typedef typename ICont::iterator                   icont_iterator;
-   typedef typename ICont::const_iterator             icont_citerator;
-   typedef allocator_destroyer<NodeAlloc>             Destroyer;
-   typedef allocator_traits<NodeAlloc>                NodeAllocTraits;
-   typedef allocator_version_traits<NodeAlloc>        AllocVersionTraits;
+         version<NodeAlloc>::value>                               alloc_version;
+   typedef typename ICont::iterator                               icont_iterator;
+   typedef typename ICont::const_iterator                         icont_citerator;
+   typedef allocator_destroyer<NodeAlloc>                         Destroyer;
+   typedef allocator_traits<NodeAlloc>                            NodeAllocTraits;
+   typedef allocator_version_traits<NodeAlloc>                    AllocVersionTraits;
 
    private:
    BOOST_COPYABLE_AND_MOVABLE(node_alloc_holder)
@@ -103,22 +106,22 @@ struct node_alloc_holder
       : members_(a)
    {}
 
+   //Constructors for associative containers
+   node_alloc_holder(const value_compare &c, const ValAlloc &a)
+      : members_(a, c)
+   {}
+
    explicit node_alloc_holder(const node_alloc_holder &x)
       : members_(NodeAllocTraits::select_on_container_copy_construction(x.node_alloc()))
+   {}
+
+   node_alloc_holder(const node_alloc_holder &x, const value_compare &c)
+      : members_(NodeAllocTraits::select_on_container_copy_construction(x.node_alloc()), c)
    {}
 
    explicit node_alloc_holder(BOOST_RV_REF(node_alloc_holder) x)
       : members_(boost::move(x.node_alloc()))
    {  this->icont().swap(x.icont());  }
-
-   //Constructors for associative containers
-   explicit node_alloc_holder(const value_compare &c, const ValAlloc &a)
-      : members_(a, c)
-   {}
-
-   explicit node_alloc_holder(const value_compare &c, const node_alloc_holder &x)
-      : members_(NodeAllocTraits::select_on_container_copy_construction(x.node_alloc()), c)
-   {}
 
    explicit node_alloc_holder(const value_compare &c)
       : members_(c)
@@ -168,7 +171,7 @@ struct node_alloc_holder
       node_deallocator.release();
       //This does not throw
       typedef typename Node::hook_type hook_type;
-      ::new(static_cast<hook_type*>(container_detail::to_raw_pointer(p)), boost_container_new_t()) hook_type;
+      ::new(static_cast<hook_type*>(boost::movelib::to_raw_pointer(p)), boost_container_new_t()) hook_type;
       return (p);
    }
 
@@ -186,7 +189,7 @@ struct node_alloc_holder
           BOOST_MOVE_I##N BOOST_MOVE_FWD##N);\
       node_deallocator.release();\
       typedef typename Node::hook_type hook_type;\
-      ::new(static_cast<hook_type*>(container_detail::to_raw_pointer(p)), boost_container_new_t()) hook_type;\
+      ::new(static_cast<hook_type*>(boost::movelib::to_raw_pointer(p)), boost_container_new_t()) hook_type;\
       return (p);\
    }\
    //
@@ -204,13 +207,36 @@ struct node_alloc_holder
       node_deallocator.release();
       //This does not throw
       typedef typename Node::hook_type hook_type;
-      ::new(static_cast<hook_type*>(container_detail::to_raw_pointer(p)), boost_container_new_t()) hook_type;
+      ::new(static_cast<hook_type*>(boost::movelib::to_raw_pointer(p)), boost_container_new_t()) hook_type;
+      return (p);
+   }
+
+   template<class KeyConvertible>
+   NodePtr create_node_from_key(BOOST_FWD_REF(KeyConvertible) key)
+   {
+      NodePtr p = this->allocate_one();
+      NodeAlloc &na = this->node_alloc();
+      Deallocator node_deallocator(p, this->node_alloc());
+      node_allocator_traits_type::construct
+         (na, container_detail::addressof(p->m_data.first), boost::forward<KeyConvertible>(key));
+      BOOST_TRY{
+         node_allocator_traits_type::construct(na, container_detail::addressof(p->m_data.second));
+      }
+      BOOST_CATCH(...){
+         node_allocator_traits_type::destroy(na, container_detail::addressof(p->m_data.first));
+         BOOST_RETHROW;
+      }
+      BOOST_CATCH_END
+      node_deallocator.release();
+      //This does not throw
+      typedef typename Node::hook_type hook_type;
+      ::new(static_cast<hook_type*>(boost::movelib::to_raw_pointer(p)), boost_container_new_t()) hook_type;
       return (p);
    }
 
    void destroy_node(const NodePtr &nodep)
    {
-      allocator_traits<NodeAlloc>::destroy(this->node_alloc(), container_detail::to_raw_pointer(nodep));
+      allocator_traits<NodeAlloc>::destroy(this->node_alloc(), boost::movelib::to_raw_pointer(nodep));
       this->deallocate_one(nodep);
    }
 
@@ -240,7 +266,7 @@ struct node_alloc_holder
             Deallocator node_deallocator(NodePtr(), nalloc);
             container_detail::scoped_destructor<NodeAlloc> sdestructor(nalloc, 0);
             while(n--){
-               p = container_detail::iterator_to_raw_pointer(itbeg);
+               p = boost::movelib::iterator_to_raw_pointer(itbeg);
                node_deallocator.set(p);
                ++itbeg;
                //This can throw
@@ -368,12 +394,6 @@ struct node_alloc_holder
    ICont &non_const_icont() const
    {  return const_cast<ICont&>(this->members_.m_icont);   }
 
-   ICont &icont()
-   {  return this->members_.m_icont;   }
-
-   const ICont &icont() const
-   {  return this->members_.m_icont;   }
-
    NodeAlloc &node_alloc()
    {  return static_cast<NodeAlloc &>(this->members_);   }
 
@@ -381,6 +401,13 @@ struct node_alloc_holder
    {  return static_cast<const NodeAlloc &>(this->members_);   }
 
    members_holder members_;
+
+   public:
+   ICont &icont()
+   {  return this->members_.m_icont;   }
+
+   const ICont &icont() const
+   {  return this->members_.m_icont;   }
 };
 
 }  //namespace container_detail {

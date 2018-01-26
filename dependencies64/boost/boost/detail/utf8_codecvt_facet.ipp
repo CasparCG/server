@@ -30,6 +30,12 @@ BOOST_UTF8_BEGIN_NAMESPACE
 /////////1/////////2/////////3/////////4/////////5/////////6/////////7/////////8
 // implementation for wchar_t
 
+utf8_codecvt_facet::utf8_codecvt_facet(
+    std::size_t no_locale_manage
+) :
+    std::codecvt<wchar_t, char, std::mbstate_t>(no_locale_manage)
+{}
+
 // Translate incoming UTF-8 into UCS-4
 std::codecvt_base::result utf8_codecvt_facet::do_in(
     std::mbstate_t& /*state*/, 
@@ -171,7 +177,7 @@ std::codecvt_base::result utf8_codecvt_facet::do_out(
 // How many char objects can I process to get <= max_limit
 // wchar_t objects?
 int utf8_codecvt_facet::do_length(
-    const std::mbstate_t &,
+    std::mbstate_t &,
     const char * from,
     const char * from_end, 
     std::size_t max_limit
@@ -198,11 +204,11 @@ int utf8_codecvt_facet::do_length(
         last_octet_count = (get_octet_count(*from_next));
         ++char_count;
     }
-    return static_cast<int>(from_next-from_end);
+    return static_cast<int>(from_next-from);
 }
 
 unsigned int utf8_codecvt_facet::get_octet_count(
-    unsigned char   lead_octet
+    unsigned char lead_octet
 ){
     // if the 0-bit (MSB) is 0, then 1 character
     if (lead_octet <= 0x7f) return 1;

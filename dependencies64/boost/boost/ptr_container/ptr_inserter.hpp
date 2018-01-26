@@ -65,10 +65,8 @@ namespace ptr_container
         ptr_back_insert_iterator& 
         operator=( typename PtrContainer::value_type r )
         {
-            typename PtrContainer::value_type obj = 0;
-            if( r != 0 )
-                obj = container_type::clone_allocator_type::allocate_clone(*r);
-
+            typename PtrContainer::value_type obj 
+                          = container->null_policy_allocate_clone(r);
             container->push_back( obj );
             return *this;
         }
@@ -84,8 +82,7 @@ namespace ptr_container
         ptr_back_insert_iterator& 
         operator=( typename PtrContainer::const_reference r )
         {
-            container->push_back( container_type::clone_allocator_type::
-                                  allocate_clone(r) );
+            container->push_back( container->null_policy_allocate_clone(&r) );
             return *this;
         }
 
@@ -125,10 +122,8 @@ namespace ptr_container
         ptr_front_insert_iterator& 
         operator=( typename PtrContainer::value_type r )
         {
-            typename PtrContainer::value_type obj = 0;
-            if( r != 0 )
-                obj = container_type::clone_allocator_type::allocate_clone(*r);
-
+            typename PtrContainer::value_type obj 
+                              = container->null_policy_allocate_clone(r);
             container->push_front( obj );
             return *this;
         }
@@ -144,8 +139,7 @@ namespace ptr_container
         ptr_front_insert_iterator& 
         operator=( typename PtrContainer::const_reference r )
         {
-            container->push_front( container_type::clone_allocator_type::
-                                   allocate_clone(r) );
+            container->push_front( container->null_policy_allocate_clone(&r) );
             return *this;
         }
 
@@ -186,9 +180,8 @@ namespace ptr_container
         ptr_insert_iterator& 
         operator=( typename PtrContainer::value_type r )
         {
-            typename PtrContainer::value_type obj = 0;
-            if( r != 0 )
-                obj = container_type::clone_allocator_type::allocate_clone(*r);
+            typename PtrContainer::value_type obj = 
+                        container->null_policy_allocate_clone(r);
 
             iter = container->insert( iter, obj );
             return *this;
@@ -205,8 +198,8 @@ namespace ptr_container
         ptr_insert_iterator& 
         operator=( typename PtrContainer::const_reference r )
         {
-            iter = container->insert( iter, container_type::clone_allocator_type::
-                                            allocate_clone(r) );
+            iter = container->insert( iter, 
+                              container->null_policy_allocate_clone(&r) );
             return *this;
         }
 

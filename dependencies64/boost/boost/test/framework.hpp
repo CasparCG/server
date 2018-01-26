@@ -1,4 +1,4 @@
-//  (C) Copyright Gennadiy Rozental 2005-2014.
+//  (C) Copyright Gennadiy Rozental 2001.
 //  Distributed under the Boost Software License, Version 1.0.
 //  (See accompanying file LICENSE_1_0.txt or copy at
 //  http://www.boost.org/LICENSE_1_0.txt)
@@ -74,7 +74,7 @@ BOOST_TEST_DECL bool                test_in_progress();
 /// This function shuts down the framework and clears up its mono-state.
 ///
 /// It needs to be at the very end of test module execution
-BOOST_TEST_DECL void    shutdown();
+BOOST_TEST_DECL void                shutdown();
 /// @}
 
 /// @name Test unit registration
@@ -120,7 +120,7 @@ BOOST_TEST_DECL void                deregister_test_unit( test_unit* tu );
 
 // This function clears up the framework mono-state.
 
-/// Afer this call the framework can be reinitialized to perform a second test run during the same program lifetime.
+/// After this call the framework can be reinitialized to perform a second test run during the same program lifetime.
 BOOST_TEST_DECL void                clear();
 /// @}
 
@@ -132,10 +132,26 @@ BOOST_TEST_DECL void                clear();
 /// @param[in]  to  test observer object to add
 BOOST_TEST_DECL void                register_observer( test_observer& to );
 
-/// Excldes the observer object form the framework's list of test observers
+/// Excludes the observer object form the framework's list of test observers
 /// @param[in]  to  test observer object to exclude
 BOOST_TEST_DECL void                deregister_observer( test_observer& to );
 
+/// @}
+
+/// @name Global fixtures registration
+/// @{
+
+/// Adds a new global fixture to be setup before any other tests starts and tore down after
+/// any other tests finished.
+/// Test unit fixture lifetime should exceed the testing execution timeframe
+/// @param[in]  tuf  fixture to add
+BOOST_TEST_DECL void                register_global_fixture( test_unit_fixture& tuf );
+
+/// Removes a test global fixture from the framework
+///
+/// Test unit fixture lifetime should exceed the testing execution timeframe
+/// @param[in]  tuf  fixture to remove
+BOOST_TEST_DECL void                deregister_global_fixture( test_unit_fixture& tuf );
 /// @}
 
 /// @name Assertion/uncaught exception context support
@@ -177,6 +193,15 @@ BOOST_TEST_DECL context_generator   get_context();
 /// There is only only master test suite per test module.
 /// @returns a reference the master test suite instance
 BOOST_TEST_DECL master_test_suite_t& master_test_suite();
+
+/// This function provides an access to the test unit currently being executed.
+
+/// The difference with current_test_case is about the time between a test-suite
+/// is being set up or torn down (fixtures) and when the test-cases of that suite start.
+
+/// This function is only valid during test execution phase.
+/// @see current_test_case_id, current_test_case
+BOOST_TEST_DECL test_unit const&    current_test_unit();
 
 /// This function provides an access to the test case currently being executed.
 
@@ -231,11 +256,14 @@ BOOST_TEST_DECL void                assertion_result( unit_test::assertion_resul
 BOOST_TEST_DECL void                exception_caught( execution_exception const& );
 /// Reports aborted test unit to all test observers
 BOOST_TEST_DECL void                test_unit_aborted( test_unit const& );
+/// Reports aborted test module to all test observers
+BOOST_TEST_DECL void                test_aborted( );
 /// @}
 
 namespace impl {
 // exclusively for self test
 BOOST_TEST_DECL void                setup_for_execution( test_unit const& );
+BOOST_TEST_DECL void                setup_loggers( );
 } // namespace impl
 
 // ************************************************************************** //
@@ -254,13 +282,15 @@ struct BOOST_TEST_DECL setup_error : public std::runtime_error {
     setup_error( const_string m ) : std::runtime_error( std::string( m.begin(), m.size() ) ) {}
 };
 
-#define BOOST_TEST_SETUP_ASSERT( cond, msg ) \
-    if( cond ) {} \
-    else BOOST_TEST_IMPL_THROW( unit_test::framework::setup_error( msg ) )
+#define BOOST_TEST_SETUP_ASSERT( cond, msg ) BOOST_TEST_I_ASSRT( cond, unit_test::framework::setup_error( msg ) )
 
 //____________________________________________________________________________//
 
-struct nothing_to_test {}; // not really an error
+struct nothing_to_test {
+    explicit    nothing_to_test( int rc ) : m_result_code( rc ) {}
+
+    int         m_result_code;
+};
 
 //____________________________________________________________________________//
 
@@ -271,4 +301,3 @@ struct nothing_to_test {}; // not really an error
 #include <boost/test/detail/enable_warnings.hpp>
 
 #endif // BOOST_TEST_FRAMEWORK_HPP_020805GER
-
