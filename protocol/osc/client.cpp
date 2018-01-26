@@ -60,8 +60,8 @@ struct param_visitor : public boost::static_visitor<void>
 	param_visitor(T& o)
 		: o(o)
 	{
-	}		
-		
+	}
+
 	void operator()(const bool value)					{o << value;}
 	void operator()(const int32_t value)				{o << static_cast<int64_t>(value);}
 	void operator()(const uint32_t value)				{o << static_cast<int64_t>(value);}
@@ -119,7 +119,7 @@ byte_vector write_osc_bundle_start()
 }
 
 void write_osc_bundle_element_start(byte_vector& destination, const byte_vector& message)
-{		
+{
 	destination.resize(4);
 
 	int32_t* bundle_element_size = reinterpret_cast<int32_t*>(destination.data());
@@ -133,19 +133,19 @@ void write_osc_bundle_element_start(byte_vector& destination, const byte_vector&
 
 struct client::impl : public spl::enable_shared_from_this<client::impl>, core::monitor::sink
 {
-	std::shared_ptr<boost::asio::io_service>		service_;
+	std::shared_ptr<boost::asio::io_context>		service_;
 	udp::socket										socket_;
 	tbb::spin_mutex									endpoints_mutex_;
 	std::map<udp::endpoint, int>					reference_counts_by_endpoint_;
 
 	std::unordered_map<std::string, byte_vector>	updates_;
-	boost::mutex									updates_mutex_;								
+	boost::mutex									updates_mutex_;
 	boost::condition_variable						updates_cond_;
 
 	tbb::atomic<bool>								is_running_;
 
 	boost::thread									thread_;
-	
+
 public:
 	impl(std::shared_ptr<boost::asio::io_service> service)
 		: service_(std::move(service))
@@ -195,7 +195,7 @@ private:
 	{
 		boost::lock_guard<boost::mutex> lock(updates_mutex_);
 
-		try 
+		try
 		{
 			write_osc_event(updates_[msg.path()], msg);
 		}
@@ -235,11 +235,11 @@ private:
 			std::vector<byte_vector> element_headers;
 
 			while (is_running_)
-			{		
+			{
 				updates.clear();
 				destinations.clear();
 
-				{			
+				{
 					boost::unique_lock<boost::mutex> cond_lock(updates_mutex_);
 
 					if (!is_running_)
@@ -275,7 +275,7 @@ private:
 					const auto& headers = element_headers;
 
 					auto size_of_element = headers[i].size() + slot.second.size();
-	
+
 					if (datagram_size + size_of_element >= SAFE_DATAGRAM_SIZE)
 					{
 						do_send(buffers, destinations);
@@ -290,7 +290,7 @@ private:
 					datagram_size += size_of_element;
 					++i;
 				}
-			
+
 				if (!buffers.empty())
 					do_send(buffers, destinations);
 			}
@@ -302,7 +302,7 @@ private:
 	}
 };
 
-client::client(std::shared_ptr<boost::asio::io_service> service)
+client::client(std::shared_ptr<boost::asio::io_context> service)
 	: impl_(new impl(std::move(service)))
 {
 }
@@ -322,8 +322,7 @@ client::~client()
 {
 }
 
-std::shared_ptr<void> client::get_subscription_token(
-			const boost::asio::ip::udp::endpoint& endpoint)
+std::shared_ptr<void> client::get_subscription_token(const boost::asio::ip::udp::endpoint& endpoint)
 {
 	return impl_->get_subscription_token(endpoint);
 }

@@ -48,8 +48,6 @@ public:
     buffer& operator=(const buffer&) = delete;
 	buffer& operator=(buffer&& other);
 
-    void lock();
-    bool try_wait();
     void bind();
     void unbind();
 
