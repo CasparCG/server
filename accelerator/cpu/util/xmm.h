@@ -89,34 +89,34 @@ private:
 public:
 	typedef s16_x xmm_epi_tag;
 
-	s16_x();
-	explicit s16_x(const s32_x& other);
-	explicit s16_x(const s8_x& other);
-	explicit s16_x(const u8_x& other);
-	s16_x(const __m128i& value);
-	s16_x(short value);
+	inline s16_x();
+	explicit inline s16_x(const s32_x& other);
+	explicit inline s16_x(const s8_x& other);
+	explicit inline s16_x(const u8_x& other);
+	inline s16_x(const __m128i& value);
+	inline s16_x(short value);
 
-	s16_x& operator+=(const s16_x& other);	
-	s16_x& operator-=(const s16_x& other);
-	s16_x& operator>>=(int count);
-	s16_x& operator<<=(int count);
-	s16_x& operator|=(const s16_x& other);
-	s16_x& operator&=(const s16_x& other);	
-	int16_t operator[](int index) const;
-	int16_t& operator[](int index);
+	inline s16_x& operator+=(const s16_x& other);	
+	inline s16_x& operator-=(const s16_x& other);
+	inline s16_x& operator>>=(int count);
+	inline s16_x& operator<<=(int count);
+	inline s16_x& operator|=(const s16_x& other);
+	inline s16_x& operator&=(const s16_x& other);	
+	inline int16_t operator[](int index) const;
+	inline int16_t& operator[](int index);
 	
-	static s16_x unpack_low(const s8_x& lhs, const s8_x& rhs);
-	static s16_x unpack_high(const s8_x& lhs, const s8_x& rhs);
-	static s32_x horizontal_add(const s16_x& lhs);
-	static s16_x multiply_low(const s16_x& lhs, const s16_x& rhs);
-	static s16_x multiply_high(const s16_x& lhs, const s16_x& rhs);
-	static s16_x umultiply_low(const s16_x& lhs, const s16_x& rhs);
-	static s16_x umultiply_high(const s16_x& lhs, const s16_x& rhs);	
-	static s16_x unpack_low(const s16_x& lhs, const s16_x& rhs);
-	static s16_x unpack_high(const s16_x& lhs, const s16_x& rhs);
-	static s16_x and_not(const s16_x& lhs, const s16_x& rhs);	
-	static s16_x max(const s16_x& lhs, const s16_x& rhs);
-	static s16_x min(const s16_x& lhs, const s16_x& rhs);
+	static inline s16_x unpack_low(const s8_x& lhs, const s8_x& rhs);
+	static inline s16_x unpack_high(const s8_x& lhs, const s8_x& rhs);
+	static inline s32_x horizontal_add(const s16_x& lhs);
+	static inline s16_x multiply_low(const s16_x& lhs, const s16_x& rhs);
+	static inline s16_x multiply_high(const s16_x& lhs, const s16_x& rhs);
+	static inline s16_x umultiply_low(const s16_x& lhs, const s16_x& rhs);
+	static inline s16_x umultiply_high(const s16_x& lhs, const s16_x& rhs);	
+	static inline s16_x unpack_low(const s16_x& lhs, const s16_x& rhs);
+	static inline s16_x unpack_high(const s16_x& lhs, const s16_x& rhs);
+	static inline s16_x and_not(const s16_x& lhs, const s16_x& rhs);	
+	static inline s16_x max(const s16_x& lhs, const s16_x& rhs);
+	static inline s16_x min(const s16_x& lhs, const s16_x& rhs);
 };
 
 template<typename T>
@@ -141,31 +141,31 @@ private:
 public:
 	typedef s8_x xmm_epi_tag;
 
-	s8_x();
-	explicit s8_x(const s32_x& other);
-	explicit s8_x(const s16_x& other);
-	explicit s8_x(const u8_x& other);
-	s8_x(const __m128i& value);	
-	s8_x(char b);
-	s8_x(char b3,  char b2,  char b1,  char b0);
-	s8_x(char b15, char b14, char b13, char b12, 
-		 char b11, char b10, char b9,  char b8,  
+	inline s8_x();
+	inline explicit s8_x(const s32_x& other);
+	inline explicit s8_x(const s16_x& other);
+	inline explicit s8_x(const u8_x& other);
+	inline s8_x(const __m128i& value);	
+	inline s8_x(char b);
+	inline s8_x(char b3,  char b2,  char b1,  char b0);
+	inline s8_x(char b15, char b14, char b13, char b12, 
+	         char b11, char b10, char b9,  char b8,  
 		 char b7,  char b6,  char b5,  char b4,  
 		 char b3,  char b2,  char b1,  char b0);
 
-	s8_x& operator+=(const s8_x& other);
-	s8_x& operator-=(const s8_x& other);	
-	char operator[](int index) const;
-	char& operator[](int index);
+	inline s8_x& operator+=(const s8_x& other);
+	inline s8_x& operator-=(const s8_x& other);	
+	inline char operator[](int index) const;
+	inline char& operator[](int index);
 	
-	static s8_x upack(const s16_x& lhs, const s16_x& rhs);
+	static inline s8_x upack(const s16_x& lhs, const s16_x& rhs);
 
-	static s16_x multiply_add(const u8_x& lhs, const s8_x& rhs);
-	static s8_x max(const s8_x& lhs, const s8_x& rhs);
-	static s8_x min(const s8_x& lhs, const s8_x& rhs);
+	static inline s16_x multiply_add(const u8_x& lhs, const s8_x& rhs);
+	static inline s8_x max(const s8_x& lhs, const s8_x& rhs);
+	static inline s8_x min(const s8_x& lhs, const s8_x& rhs);
 
-	static s8_x shuffle(const s8_x& lhs, const s8_x& rhs);
-	static s8_x blend(const s8_x& lhs, const s8_x& rhs, const s8_x& mask);
+	static inline s8_x shuffle(const s8_x& lhs, const s8_x& rhs);
+	static inline s8_x blend(const s8_x& lhs, const s8_x& rhs, const s8_x& mask);
 };
 
 class u8_x : public base_x<u8_x>
@@ -183,26 +183,26 @@ private:
 public:
 	typedef u8_x xmm_epu_tag;
 
-	u8_x();
-	explicit u8_x(const s32_x& other);
-	explicit u8_x(const s16_x& other);
-	explicit u8_x(const s8_x& other);
-	u8_x(const __m128i& value);	
-	u8_x(char b);
-	u8_x(char b3,  char b2,  char b1,  char b0);
-	u8_x(char b15, char b14, char b13, char b12, 
+	inline u8_x();
+	explicit inline u8_x(const s32_x& other);
+	explicit inline u8_x(const s16_x& other);
+	explicit inline u8_x(const s8_x& other);
+	inline u8_x(const __m128i& value);	
+	inline u8_x(char b);
+	inline u8_x(char b3,  char b2,  char b1,  char b0);
+	inline u8_x(char b15, char b14, char b13, char b12, 
 		 char b11, char b10, char b9,  char b8,  
 		 char b7,  char b6,  char b5,  char b4,  
 		 char b3,  char b2,  char b1,  char b0);
 										
-	char operator[](int index) const;
-	char& operator[](int index);
+	inline char operator[](int index) const;
+	inline char& operator[](int index);
 			
-	static u8_x max(const u8_x& lhs, const u8_x& rhs);
-	static u8_x min(const u8_x& lhs, const u8_x& rhs);
+	static inline u8_x max(const u8_x& lhs, const u8_x& rhs);
+	static inline u8_x min(const u8_x& lhs, const u8_x& rhs);
 		
-	static u8_x shuffle(const u8_x& lhs, const u8_x& rhs);
-	static u8_x blend(const u8_x& lhs, const u8_x& rhs, const u8_x& mask);
+	static inline u8_x shuffle(const u8_x& lhs, const u8_x& rhs);
+	static inline u8_x blend(const u8_x& lhs, const u8_x& rhs, const u8_x& mask);
 };
 
 // base_x
