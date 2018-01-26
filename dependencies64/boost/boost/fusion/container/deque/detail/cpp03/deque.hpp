@@ -24,6 +24,8 @@
 #include <boost/preprocessor/repetition/enum_binary_params.hpp>
 #include <boost/preprocessor/repetition/enum_params_with_a_default.hpp>
 #include <boost/type_traits/is_convertible.hpp>
+#include <boost/type_traits/is_same.hpp>
+#include <boost/type_traits/remove_reference.hpp>
 
 #include <boost/fusion/container/deque/deque_fwd.hpp>
 #include <boost/fusion/container/deque/detail/value_at_impl.hpp>
@@ -35,6 +37,7 @@
 #include <boost/mpl/bool.hpp>
 
 #include <boost/fusion/support/void.hpp>
+#include <boost/fusion/support/detail/enabler.hpp>
 #include <boost/utility/enable_if.hpp>
 
 #if !defined(BOOST_FUSION_DONT_USE_PREPROCESSED_FILES)
@@ -101,18 +104,11 @@ namespace boost { namespace fusion {
 
         template<typename Sequence>
         BOOST_FUSION_GPU_ENABLED
-        deque(Sequence const& seq, typename disable_if<is_convertible<Sequence, T0> >::type* /*dummy*/ = 0)
+        deque(Sequence const& seq
+            , typename disable_if<is_convertible<Sequence, T0>, detail::enabler_>::type = detail::enabler
+            , typename enable_if<traits::is_sequence<Sequence>, detail::enabler_>::type = detail::enabler)
             : base(base::from_iterator(fusion::begin(seq)))
             {}
-
-        template <BOOST_PP_ENUM_PARAMS(FUSION_MAX_DEQUE_SIZE, typename U)>
-        BOOST_CXX14_CONSTEXPR BOOST_FUSION_GPU_ENABLED
-        deque&
-        operator=(deque<BOOST_PP_ENUM_PARAMS(FUSION_MAX_DEQUE_SIZE, U)> const& rhs)
-        {
-            base::operator=(rhs);
-            return *this;
-        }
 
         template <typename T>
         BOOST_CXX14_CONSTEXPR BOOST_FUSION_GPU_ENABLED
@@ -131,7 +127,11 @@ FUSION_HASH if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
         template <typename T0_>
         BOOST_FUSION_GPU_ENABLED
         explicit deque(T0_&& t0
-          , typename enable_if<is_convertible<T0_, T0> >::type* /*dummy*/ = 0
+          , typename enable_if<is_convertible<T0_, T0>, detail::enabler_>::type = detail::enabler
+          , typename disable_if_c<
+                boost::is_same<deque const, typename boost::remove_reference<T0_>::type const>::value
+              , detail::enabler_
+            >::type = detail::enabler
          )
             : base(BOOST_FUSION_FWD_ELEM(T0_, t0), detail::nil_keyed_element())
             {}
@@ -144,7 +144,8 @@ FUSION_HASH if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
         deque(deque<BOOST_PP_ENUM_PARAMS(FUSION_MAX_DEQUE_SIZE, U)>&& seq
             , typename disable_if<
                   is_convertible<deque<BOOST_PP_ENUM_PARAMS(FUSION_MAX_DEQUE_SIZE, U)>, T0>
-              >::type* /*dummy*/ = 0)
+                , detail::enabler_
+              >::type = detail::enabler)
             : base(std::forward<deque<BOOST_PP_ENUM_PARAMS(FUSION_MAX_DEQUE_SIZE, U)>>(seq))
             {}
         template <typename T>
@@ -153,6 +154,14 @@ FUSION_HASH if !defined(BOOST_NO_CXX11_RVALUE_REFERENCES)
         operator=(T&& rhs)
         {
             base::operator=(BOOST_FUSION_FWD_ELEM(T, rhs));
+            return *this;
+        }
+        // This copy op= is required because move ctor deletes copy op=.
+        BOOST_CXX14_CONSTEXPR BOOST_FUSION_GPU_ENABLED
+        deque&
+        operator=(deque const& rhs)
+        {
+            base::operator=(static_cast<base const&>(rhs));
             return *this;
         }
 #endif
@@ -178,7 +187,7 @@ FUSION_HASH endif
             typename enable_if<
                 mpl::and_<
                     traits::is_sequence<Sequence>
-                  , result_of::empty<Sequence> > >::type* /*dummy*/ = 0) BOOST_NOEXCEPT
+                  , result_of::empty<Sequence> >, detail::enabler_>::type = detail::enabler) BOOST_NOEXCEPT
         {}
 
         BOOST_CONSTEXPR BOOST_FUSION_GPU_ENABLED

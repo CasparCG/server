@@ -110,8 +110,7 @@ namespace boost { namespace fusion
             {
                 // read a delimiter
                 string_type const* p = stream_data_t::get(stream);
-                using namespace std;
-                ws(stream);
+                std::ws(stream);
 
                 if (p)
                 {
@@ -132,6 +131,7 @@ namespace boost { namespace fusion
             void
             check_delim(Char c) const
             {
+                using namespace std;
                 if (!isspace(c))
                 {
                     if (stream.get() != c)

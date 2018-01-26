@@ -1,4 +1,4 @@
-/* Copyright 2003-2015 Joaquin M Lopez Munoz.
+/* Copyright 2003-2017 Joaquin M Lopez Munoz.
  * Distributed under the Boost Software License, Version 1.0.
  * (See accompanying file LICENSE_1_0.txt or copy at
  * http://www.boost.org/LICENSE_1_0.txt)
@@ -911,6 +911,11 @@ BOOST_MULTI_INDEX_PROTECTED_IF_MEMBER_TEMPLATE_FRIENDS:
     BOOST_CATCH_END
   }
 
+  bool check_rollback_(node_type* x)const
+  {
+    return in_place(x->value(),x,Category())&&super::check_rollback_(x);
+  }
+
 #if !defined(BOOST_MULTI_INDEX_DISABLE_SERIALIZATION)
   /* serialization */
 
@@ -1153,7 +1158,7 @@ private:
     this->final_delete_node_(static_cast<final_node_type*>(x));
   }
 
-  bool in_place(value_param_type v,node_type* x,ordered_unique_tag)
+  bool in_place(value_param_type v,node_type* x,ordered_unique_tag)const
   {
     node_type* y;
     if(x!=leftmost()){
@@ -1167,7 +1172,7 @@ private:
     return y==header()||comp_(key(v),key(y->value()));
   }
 
-  bool in_place(value_param_type v,node_type* x,ordered_non_unique_tag)
+  bool in_place(value_param_type v,node_type* x,ordered_non_unique_tag)const
   {
     node_type* y;
     if(x!=leftmost()){
@@ -1556,7 +1561,7 @@ template<
 inline boost::mpl::true_* boost_foreach_is_noncopyable(
   boost::multi_index::detail::ordered_index<
     KeyFromValue,Compare,SuperMeta,TagList,Category,AugmentPolicy>*&,
-  boost::foreach::tag)
+  boost_foreach_argument_dependent_lookup_hack)
 {
   return 0;
 }

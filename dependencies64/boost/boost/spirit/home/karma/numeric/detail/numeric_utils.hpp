@@ -68,7 +68,7 @@ namespace boost { namespace spirit { namespace traits
             typedef unsignedtype type;                                        \
             static type call(signedtype n)                                    \
             {                                                                 \
-                return (n >= 0) ? n : (unsignedtype)(-n);                     \
+                return static_cast<unsignedtype>((n >= 0) ? n : -n);          \
             }                                                                 \
         }                                                                     \
     /**/
@@ -285,7 +285,7 @@ namespace boost { namespace spirit { namespace traits
     {
         static bool call(T n)
         {
-            if (!std::numeric_limits<T>::has_infinity) 
+            if (!std::numeric_limits<T>::has_infinity)
                 return false;
             return (n == std::numeric_limits<T>::infinity()) ? true : false;
         }
@@ -771,4 +771,3 @@ namespace boost { namespace spirit { namespace karma
 }}}
 
 #endif
-

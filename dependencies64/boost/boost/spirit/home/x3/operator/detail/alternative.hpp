@@ -226,7 +226,7 @@ namespace boost { namespace spirit { namespace x3 { namespace detail
     struct move_if_not_alternative
     {
         template<typename T1, typename T2>
-        static void call(T1& attr_, T2& attr) {}
+        static void call(T1& /* attr_ */, T2& /* attr */) {}
     };
 
     template <>

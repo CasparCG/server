@@ -2,6 +2,10 @@
 
 // Copyright (c) 2011-2012 Barend Gehrels, Amsterdam, the Netherlands.
 
+// This file was modified by Oracle on 2016.
+// Modifications copyright (c) 2016, Oracle and/or its affiliates.
+// Contributed and/or modified by Adam Wulkiewicz, on behalf of Oracle
+
 // Use, modification and distribution is subject to the Boost Software License,
 // Version 1.0. (See accompanying file LICENSE_1_0.txt or copy at
 // http://www.boost.org/LICENSE_1_0.txt)
@@ -9,8 +13,6 @@
 #ifndef BOOST_GEOMETRY_STRATEGIES_SPHERICAL_SSF_HPP
 #define BOOST_GEOMETRY_STRATEGIES_SPHERICAL_SSF_HPP
 
-#include <boost/mpl/if.hpp>
-#include <boost/type_traits.hpp>
 
 #include <boost/geometry/core/cs.hpp>
 #include <boost/geometry/core/access.hpp>
@@ -21,6 +23,8 @@
 #include <boost/geometry/util/select_calculation_type.hpp>
 
 #include <boost/geometry/strategies/side.hpp>
+#include <boost/geometry/strategies/spherical/disjoint_segment_box.hpp>
+#include <boost/geometry/strategies/spherical/envelope_segment.hpp>
 //#include <boost/geometry/strategies/concepts/side_concept.hpp>
 
 
@@ -61,9 +65,9 @@ int spherical_side_formula(T const& lambda1, T const& delta1,
         + (c1x * c2y - c1y * c2x) * sin(delta);
 
     T zero = T();
-    return dist > zero ? 1
-        : dist < zero ? -1
-        : 0;
+    return math::equals(dist, zero) ? 0
+        : dist > zero ? 1
+        : -1; // dist < zero
 }
 
 }
@@ -80,6 +84,20 @@ class spherical_side_formula
 {
 
 public :
+    typedef strategy::envelope::spherical_segment<CalculationType> envelope_strategy_type;
+
+    static inline envelope_strategy_type get_envelope_strategy()
+    {
+        return envelope_strategy_type();
+    }
+
+    typedef strategy::disjoint::segment_box_spherical disjoint_strategy_type;
+
+    static inline disjoint_strategy_type get_disjoint_strategy()
+    {
+        return disjoint_strategy_type();
+    }
+
     template <typename P1, typename P2, typename P>
     static inline int apply(P1 const& p1, P2 const& p2, P const& p)
     {
