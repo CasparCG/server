@@ -30,6 +30,7 @@
 
 #include <common/gl/gl_check.h>
 #include <common/future.h>
+#include <common/scope_exit.h>
 #include <common/array.h>
 #include <common/linq.h>
 
@@ -98,9 +99,14 @@ public:
 			return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true));
 		}
 
-		return flatten(ogl_->begin_invoke([=]() mutable -> std::shared_future<array<const std::uint8_t>>
+		return flatten(ogl_->dispatch_async([=]() mutable -> std::shared_future<array<const std::uint8_t>>
 		{
-			auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4, false);
+            CASPAR_SCOPE_EXIT
+            {
+                ogl_->flush();
+            };
+
+			auto target_texture = ogl_->create_texture(format_desc.width, format_desc.height, 4);
 
 			if (format_desc.field_mode != core::field_mode::progressive)
 			{
@@ -111,8 +117,6 @@ public:
 				draw(target_texture, std::move(layers), format_desc, core::field_mode::progressive);
 
 			kernel_.post_process(target_texture, straighten_alpha);
-
-			target_texture->attach();
 
 			return ogl_->copy_async(target_texture);
 		}));
@@ -179,7 +183,7 @@ private:
 
 		if(layer.blend_mode != core::blend_mode::normal)
 		{
-			auto layer_texture = ogl_->create_texture(target_texture->width(), target_texture->height(), 4, false);
+			auto layer_texture = ogl_->create_texture(target_texture->width(), target_texture->height(), 4);
 
 			for (auto& item : layer.items)
 				draw(layer_texture, std::move(item), layer_key_texture, local_key_texture, local_mix_texture, format_desc);
@@ -216,7 +220,7 @@ private:
 
 		if(item.transform.is_key)
 		{
-			local_key_texture = local_key_texture ? local_key_texture : ogl_->create_texture(target_texture->width(), target_texture->height(), 1, draw_params.transform.use_mipmap);
+			local_key_texture = local_key_texture ? local_key_texture : ogl_->create_texture(target_texture->width(), target_texture->height(), 1);
 
 			draw_params.background	= local_key_texture;
 			draw_params.local_key	= nullptr;
@@ -226,7 +230,7 @@ private:
 		}
 		else if(item.transform.is_mix)
 		{
-			local_mix_texture = local_mix_texture ? local_mix_texture : ogl_->create_texture(target_texture->width(), target_texture->height(), 4, draw_params.transform.use_mipmap);
+			local_mix_texture = local_mix_texture ? local_mix_texture : ogl_->create_texture(target_texture->width(), target_texture->height(), 4);
 
 			draw_params.background	= local_mix_texture;
 			draw_params.local_key	= std::move(local_key_texture);
@@ -324,9 +328,8 @@ public:
 		item.transform	= transform_stack_.back();
 		item.geometry	= frame.geometry();
 
-		// NOTE: Once we have copied the arrays they are no longer valid for reading!!! Check for alternative solution e.g. transfer with AMD_pinned_memory.
 		for(int n = 0; n < static_cast<int>(item.pix_desc.planes.size()); ++n)
-			item.textures.push_back(ogl_->copy_async(frame.image_data(n), item.pix_desc.planes[n].width, item.pix_desc.planes[n].height, item.pix_desc.planes[n].stride, item.transform.use_mipmap));
+			item.textures.push_back(ogl_->copy_async(frame.image_data(n), item.pix_desc.planes[n].width, item.pix_desc.planes[n].height, item.pix_desc.planes[n].stride));
 
 		layer_stack_.back()->items.push_back(item);
 	}
@@ -353,7 +356,7 @@ public:
 
 	int get_max_frame_size() override
 	{
-		return ogl_->invoke([]
+		return ogl_->dispatch_sync([]
 		{
 			GLint64 params[1];
 			glGetInteger64v(GL_MAX_TEXTURE_SIZE, params);
