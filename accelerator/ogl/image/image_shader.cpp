@@ -375,11 +375,12 @@ std::shared_ptr<shader> get_image_shader(
 	{
 		auto ogl = weak_ogl.lock();
 
-		if (ogl)
-			ogl->invoke([=]
-			{
-				delete p;
-			});
+        if (ogl) {
+            ogl->dispatch_async([=]
+            {
+                delete p;
+            });
+        }
 	};
 
 	try

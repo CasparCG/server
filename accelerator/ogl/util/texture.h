@@ -28,7 +28,7 @@
 #include <cstddef>
 
 namespace caspar { namespace accelerator { namespace ogl {
-		
+
 class buffer;
 class device;
 
@@ -36,23 +36,23 @@ class texture final
 {
 	texture(const texture&);
 	texture& operator=(const texture&);
-public:	
+public:
 
 	// Static Members
 
 	// Constructors
 
-	texture(int width, int height, int stride, bool mipmapped);
+	texture(int width, int height, int stride);
 	texture(texture&& other);
 	~texture();
-	
+
 	// Methods
 
 	texture& operator=(texture&& other);
-		
+
 	void copy_from(buffer& source);
 	void copy_to(buffer& dest);
-			
+
 	void attach();
 	void clear();
 	void bind(int index);
@@ -62,16 +62,12 @@ public:
 
 	int width() const;
 	int height() const;
-	int stride() const;	
-	bool mipmapped() const;
-	std::size_t size() const;
-
+	int stride() const;
+	int size() const;
 	int id() const;
-
-	static boost::property_tree::wptree info();
 private:
 	struct impl;
 	spl::unique_ptr<impl> impl_;
 };
-	
+
 }}}
