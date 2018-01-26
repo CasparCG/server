@@ -18,8 +18,11 @@
 
 #include <locale>
 #include <cstddef> // NULL, size_t
+#ifndef BOOST_NO_CWCHAR
 #include <cwchar>   // for mbstate_t
+#endif
 #include <boost/config.hpp>
+#include <boost/serialization/force_include.hpp>
 #include <boost/archive/detail/auto_link_archive.hpp>
 #include <boost/archive/detail/abi_prefix.hpp> // must be the last header
 
@@ -56,12 +59,14 @@ public:
     explicit codecvt_null(std::size_t no_locale_manage = 0) :
         std::codecvt<char, char, std::mbstate_t>(no_locale_manage)
     {}
+    virtual ~codecvt_null(){};
 };
 
 template<>
-class codecvt_null<wchar_t> : public std::codecvt<wchar_t, char, std::mbstate_t>
+class BOOST_WARCHIVE_DECL codecvt_null<wchar_t> :
+    public std::codecvt<wchar_t, char, std::mbstate_t>
 {
-    virtual BOOST_WARCHIVE_DECL std::codecvt_base::result
+    virtual std::codecvt_base::result
     do_out(
         std::mbstate_t & state,
         const wchar_t * first1,
@@ -71,7 +76,7 @@ class codecvt_null<wchar_t> : public std::codecvt<wchar_t, char, std::mbstate_t>
         char * last2,
         char * & next2
     ) const;
-    virtual BOOST_WARCHIVE_DECL std::codecvt_base::result
+    virtual std::codecvt_base::result
     do_in(
         std::mbstate_t & state,
         const char * first1,
@@ -91,6 +96,7 @@ public:
     explicit codecvt_null(std::size_t no_locale_manage = 0) :
         std::codecvt<wchar_t, char, std::mbstate_t>(no_locale_manage)
     {}
+    //virtual ~codecvt_null(){};
 };
 
 } // namespace archive

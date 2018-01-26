@@ -133,15 +133,41 @@
 //
 // Recent GCC versions have __int128 when in 64-bit mode.
 //
-// We disable this if the compiler is really nvcc as it
-// doesn't actually support __int128 as of CUDA_VERSION=5000
+// We disable this if the compiler is really nvcc with C++03 as it
+// doesn't actually support __int128 as of CUDA_VERSION=7500
 // even though it defines __SIZEOF_INT128__.
 // See https://svn.boost.org/trac/boost/ticket/8048
+//     https://svn.boost.org/trac/boost/ticket/11852
 // Only re-enable this for nvcc if you're absolutely sure
 // of the circumstances under which it's supported:
 //
-#if defined(__SIZEOF_INT128__) && !defined(__CUDACC__)
+#if defined(__CUDACC__)
+#  if defined(BOOST_GCC_CXX11)
+#    define BOOST_NVCC_CXX11
+#  else
+#    define BOOST_NVCC_CXX03
+#  endif
+#endif
+
+#if defined(__SIZEOF_INT128__) && !defined(BOOST_NVCC_CXX03)
 #  define BOOST_HAS_INT128
+#endif
+//
+// Recent GCC versions have a __float128 native type, we need to
+// include a std lib header to detect this - not ideal, but we'll
+// be including <cstddef> later anyway when we select the std lib.
+//
+// Nevertheless, as of CUDA 7.5, using __float128 with the host
+// compiler in pre-C++11 mode is still not supported.
+// See https://svn.boost.org/trac/boost/ticket/11852
+//
+#ifdef __cplusplus
+#include <cstddef>
+#else
+#include <stddef.h>
+#endif
+#if defined(_GLIBCXX_USE_FLOAT128) && !defined(__STRICT_ANSI__) && !defined(BOOST_NVCC_CXX03)
+# define BOOST_HAS_FLOAT128
 #endif
 
 // C++0x features in 4.3.n and later
@@ -226,6 +252,8 @@
 //
 #if (BOOST_GCC_VERSION < 40800) || !defined(BOOST_GCC_CXX11)
 #  define BOOST_NO_CXX11_ALIGNAS
+#  define BOOST_NO_CXX11_THREAD_LOCAL
+#  define BOOST_NO_CXX11_SFINAE_EXPR
 #endif
 
 // C++0x features in 4.8.1 and later
@@ -260,10 +288,41 @@
 #  define BOOST_NO_CXX14_VARIABLE_TEMPLATES
 #endif
 
+// C++17
+#if !defined(__cpp_structured_bindings) || (__cpp_structured_bindings < 201606)
+#  define BOOST_NO_CXX17_STRUCTURED_BINDINGS
+#endif
+#if !defined(__cpp_inline_variables) || (__cpp_inline_variables < 201606)
+#  define BOOST_NO_CXX17_INLINE_VARIABLES
+#endif
+#if !defined(__cpp_fold_expressions) || (__cpp_fold_expressions < 201603)
+#  define BOOST_NO_CXX17_FOLD_EXPRESSIONS
+#endif
+
+#if __GNUC__ >= 7
+#  define BOOST_FALLTHROUGH __attribute__((fallthrough))
+#endif
+
+#ifdef __MINGW32__
+// Currently (June 2017) thread_local is broken on mingw for all current compiler releases, see
+// https://sourceforge.net/p/mingw-w64/bugs/527/
+// Not setting this causes program termination on thread exit.
+#define BOOST_NO_CXX11_THREAD_LOCAL
+#endif
+
 //
 // Unused attribute:
 #if __GNUC__ >= 4
-#  define BOOST_ATTRIBUTE_UNUSED __attribute__((unused))
+#  define BOOST_ATTRIBUTE_UNUSED __attribute__((__unused__))
+#endif
+
+// Type aliasing hint. Supported since gcc 3.3.
+#define BOOST_MAY_ALIAS __attribute__((__may_alias__))
+
+//
+// __builtin_unreachable:
+#if BOOST_GCC_VERSION >= 40800
+#define BOOST_UNREACHABLE_RETURN(x) __builtin_unreachable();
 #endif
 
 #ifndef BOOST_COMPILER
@@ -283,10 +342,10 @@
 #  error "Compiler not configured - please reconfigure"
 #endif
 //
-// last known and checked version is 4.9:
-#if (BOOST_GCC_VERSION > 40900)
+// last known and checked version is 7.1:
+#if (BOOST_GCC_VERSION > 70100)
 #  if defined(BOOST_ASSERT_CONFIG)
-#     error "Unknown compiler version - please run the configure tests and report the results"
+#     error "Boost.Config is older than your compiler - please check for an updated Boost release."
 #  else
 // we don't emit warnings here anymore since there are no defect macros defined for
 // gcc post 3.4, so any failures are gcc regressions...

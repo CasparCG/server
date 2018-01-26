@@ -7,6 +7,7 @@
 #if !defined(BOOST_SPIRIT_X3_DETAIL_RULE_JAN_08_2012_0326PM)
 #define BOOST_SPIRIT_X3_DETAIL_RULE_JAN_08_2012_0326PM
 
+#include <boost/core/ignore_unused.hpp>
 #include <boost/spirit/home/x3/auxiliary/guard.hpp>
 #include <boost/spirit/home/x3/core/parser.hpp>
 #include <boost/spirit/home/x3/core/skip_over.hpp>
@@ -138,7 +139,7 @@ namespace boost { namespace spirit { namespace x3 { namespace detail
 
     template <typename ID, typename RHS, typename Context>
     Context const&
-    make_rule_context(RHS const& rhs, Context const& context
+    make_rule_context(RHS const& /* rhs */, Context const& context
       , mpl::false_ /* is_default_parse_rule */)
     {
         return context;
@@ -156,8 +157,8 @@ namespace boost { namespace spirit { namespace x3 { namespace detail
     {
         template <typename Iterator, typename Context, typename ActualAttribute>
         static bool call_on_success(
-            Iterator& first, Iterator const& last
-          , Context const& context, ActualAttribute& attr
+            Iterator& /* first */, Iterator const& /* last */
+          , Context const& /* context */, ActualAttribute& /* attr */
           , mpl::false_ /* No on_success handler */ )
         {
             return true;
@@ -285,7 +286,7 @@ namespace boost { namespace spirit { namespace x3 { namespace detail
         static bool parse_rhs(
             RHS const& rhs
           , Iterator& first, Iterator const& last
-          , Context const& context, RContext& rcontext, ActualAttribute& attr
+          , Context const& context, RContext& rcontext, ActualAttribute& /* attr */
           , mpl::true_)
         {
             return parse_rhs_main(rhs, first, last, context, rcontext, unused);
@@ -300,6 +301,8 @@ namespace boost { namespace spirit { namespace x3 { namespace detail
           , Context const& context, ActualAttribute& attr
           , ExplicitAttrPropagation)
         {
+            boost::ignore_unused(rule_name);
+
             typedef traits::make_attribute<Attribute, ActualAttribute> make_attribute;
 
             // do down-stream transformation, provides attribute for
@@ -318,17 +321,17 @@ namespace boost { namespace spirit { namespace x3 { namespace detail
               //called inside the following scope.
               ;
             {
-             //Create a scope to cause the dbg variable below (within
-             //the #if...#endif) to call it's DTOR before any
-             //modifications are made to the attribute, attr_ passed
-             //to parse_rhs (such as might be done in
-             //traits::post_transform when, for example,
-             //ActualAttribute is a recursive variant).
+             // Create a scope to cause the dbg variable below (within
+             // the #if...#endif) to call it's DTOR before any
+             // modifications are made to the attribute, attr_ passed
+             // to parse_rhs (such as might be done in
+             // traits::post_transform when, for example,
+             // ActualAttribute is a recursive variant).
 #if defined(BOOST_SPIRIT_X3_DEBUG)
-                  context_debug<Iterator, typename make_attribute::value_type>
+                context_debug<Iterator, transform_attr>
                 dbg(rule_name, first, last, attr_, ok_parse);
 #endif
-                ok_parse=parse_rhs(rhs, first, last, context, attr_, attr_
+                ok_parse = parse_rhs(rhs, first, last, context, attr_, attr_
                    , mpl::bool_
                      < (  RHS::has_action
                        && !ExplicitAttrPropagation::value
@@ -336,11 +339,11 @@ namespace boost { namespace spirit { namespace x3 { namespace detail
                      >()
                   );
             }
-            if(ok_parse)
+            if (ok_parse)
             {
                 // do up-stream transformation, this integrates the results
                 // back into the original attribute value, if appropriate
-                traits::post_transform(attr, attr_);
+                traits::post_transform(attr, std::forward<transform_attr>(attr_));
             }
             return ok_parse;
         }

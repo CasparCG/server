@@ -20,14 +20,9 @@ namespace std{
 } // namespace std
 #endif
 
-#include <boost/detail/workaround.hpp> // fixup for RogueWave
-
 #include <boost/serialization/throw_exception.hpp>
-
 #include <boost/core/no_exceptions_support.hpp>
 #include <boost/archive/archive_exception.hpp>
-#include <boost/archive/codecvt_null.hpp>
-#include <boost/archive/add_facet.hpp>
 #include <boost/archive/basic_binary_iprimitive.hpp> 
 
 namespace boost {
@@ -89,6 +84,8 @@ basic_binary_iprimitive<Archive, Elem, Tr>::init()
         );
 }
 
+#ifndef BOOST_NO_CWCHAR
+#ifndef BOOST_NO_INTRINSIC_WCHAR_T
 template<class Archive, class Elem, class Tr>
 BOOST_ARCHIVE_OR_WARCHIVE_DECL void
 basic_binary_iprimitive<Archive, Elem, Tr>::load(wchar_t * ws)
@@ -98,6 +95,8 @@ basic_binary_iprimitive<Archive, Elem, Tr>::load(wchar_t * ws)
     load_binary(ws, l * sizeof(wchar_t) / sizeof(char));
     ws[l] = L'\0';
 }
+#endif
+#endif
 
 template<class Archive, class Elem, class Tr>
 BOOST_ARCHIVE_OR_WARCHIVE_DECL void
@@ -115,7 +114,6 @@ basic_binary_iprimitive<Archive, Elem, Tr>::load(std::string & s)
         load_binary(&(*s.begin()), l);
 }
 
-#ifndef BOOST_NO_CWCHAR
 template<class Archive, class Elem, class Tr>
 BOOST_ARCHIVE_OR_WARCHIVE_DECL void
 basic_binary_iprimitive<Archive, Elem, Tr>::load(char * s)
@@ -125,7 +123,6 @@ basic_binary_iprimitive<Archive, Elem, Tr>::load(char * s)
     load_binary(s, l);
     s[l] = '\0';
 }
-#endif
 
 #ifndef BOOST_NO_STD_WSTRING
 template<class Archive, class Elem, class Tr>
@@ -152,16 +149,13 @@ basic_binary_iprimitive<Archive, Elem, Tr>::basic_binary_iprimitive(
 ) :
 #ifndef BOOST_NO_STD_LOCALE
     m_sb(sb),
-    locale_saver(m_sb)
+    codecvt_null_facet(1),
+    locale_saver(m_sb),
+    archive_locale(sb.getloc(), & codecvt_null_facet)
 {
     if(! no_codecvt){
-        archive_locale.reset(
-            add_facet(
-                std::locale::classic(),
-                new codecvt_null<Elem>
-            )
-        );
-        //m_sb.pubimbue(* archive_locale);
+        m_sb.pubsync();
+        m_sb.pubimbue(archive_locale);
     }
 }
 #else
@@ -169,42 +163,11 @@ basic_binary_iprimitive<Archive, Elem, Tr>::basic_binary_iprimitive(
 {}
 #endif
 
-// some libraries including stl and libcomo fail if the
-// buffer isn't flushed before the code_cvt facet is changed.
-// I think this is a bug.  We explicity invoke sync to when
-// we're done with the streambuf to work around this problem.
-// Note that sync is a protected member of stream buff so we
-// have to invoke it through a contrived derived class.
-namespace detail {
-// note: use "using" to get past msvc bug
-using namespace std;
-template<class Elem, class Tr>
-class input_streambuf_access : public std::basic_streambuf<Elem, Tr> {
-    public:
-        virtual int sync(){
-#if BOOST_WORKAROUND(__MWERKS__, BOOST_TESTED_AT(0x3206))
-            return this->basic_streambuf::sync();
-#else
-            return this->basic_streambuf<Elem, Tr>::sync();
-#endif
-        }
-};
-} // detail
-
-// scoped_ptr requires that archive_locale be a complete type at time of
+// scoped_ptr requires that g be a complete type at time of
 // destruction so define destructor here rather than in the header
 template<class Archive, class Elem, class Tr>
 BOOST_ARCHIVE_OR_WARCHIVE_DECL
-basic_binary_iprimitive<Archive, Elem, Tr>::~basic_binary_iprimitive(){
-    // push back unread characters
-    //destructor can't throw !
-    BOOST_TRY{
-        static_cast<detail::input_streambuf_access<Elem, Tr> &>(m_sb).sync();
-    }
-    BOOST_CATCH(...){
-    }
-    BOOST_CATCH_END
-}
+basic_binary_iprimitive<Archive, Elem, Tr>::~basic_binary_iprimitive(){}
 
 } // namespace archive
 } // namespace boost

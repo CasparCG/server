@@ -1,5 +1,5 @@
 // Copyright (C) 2014 Ian Forbed
-// Copyright (C) 2014 Vicente J. Botet Escriba
+// Copyright (C) 2014-2017 Vicente J. Botet Escriba
 //
 //  Distributed under the Boost Software License, Version 1.0. (See accompanying
 //  file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -130,8 +130,10 @@ namespace concurrent
 
     void pull(ValueType&);
 
-    queue_op_status pull_until(const clock::time_point&, ValueType&);
-    queue_op_status pull_for(const clock::duration&, ValueType&);
+    template <class WClock, class Duration>
+    queue_op_status pull_until(const chrono::time_point<WClock,Duration>&, ValueType&);
+    template <class Rep, class Period>
+    queue_op_status pull_for(const chrono::duration<Rep,Period>&, ValueType&);
 
     queue_op_status try_pull(ValueType& elem);
     queue_op_status wait_pull(ValueType& elem);
@@ -273,8 +275,9 @@ namespace concurrent
 
   //////////////////////
   template <class T, class Cont,class Cmp>
+  template <class WClock, class Duration>
   queue_op_status
-  sync_priority_queue<T,Cont,Cmp>::pull_until(const clock::time_point& tp, T& elem)
+  sync_priority_queue<T,Cont,Cmp>::pull_until(const chrono::time_point<WClock,Duration>& tp, T& elem)
   {
     unique_lock<mutex> lk(super::mtx_);
     if (queue_op_status::timeout == super::wait_until_not_empty_until(lk, tp))
@@ -285,8 +288,9 @@ namespace concurrent
 
   //////////////////////
   template <class T, class Cont,class Cmp>
+  template <class Rep, class Period>
   queue_op_status
-  sync_priority_queue<T,Cont,Cmp>::pull_for(const clock::duration& dura, T& elem)
+  sync_priority_queue<T,Cont,Cmp>::pull_for(const chrono::duration<Rep,Period>& dura, T& elem)
   {
     return pull_until(clock::now() + dura, elem);
   }

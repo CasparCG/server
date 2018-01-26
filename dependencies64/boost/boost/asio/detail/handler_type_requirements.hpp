@@ -2,7 +2,7 @@
 // detail/handler_type_requirements.hpp
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2015 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2017 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -50,18 +50,8 @@
 #endif // !defined(BOOST_ASIO_DISABLE_HANDLER_TYPE_REQUIREMENTS)
 
 #if defined(BOOST_ASIO_ENABLE_HANDLER_TYPE_REQUIREMENTS)
-# include <boost/asio/handler_type.hpp>
+# include <boost/asio/async_result.hpp>
 #endif // defined(BOOST_ASIO_ENABLE_HANDLER_TYPE_REQUIREMENTS)
-
-// Newer gcc needs special treatment to suppress unused typedef warnings.
-#if defined(__GNUC__)
-# if ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 8)) || (__GNUC__ > 4)
-#  define BOOST_ASIO_UNUSED_TYPEDEF __attribute__((__unused__))
-# endif // ((__GNUC__ == 4) && (__GNUC_MINOR__ >= 8)) || (__GNUC__ > 4)
-#endif // defined(__GNUC__)
-#if !defined(BOOST_ASIO_UNUSED_TYPEDEF)
-# define BOOST_ASIO_UNUSED_TYPEDEF
-#endif // !defined(BOOST_ASIO_UNUSED_TYPEDEF)
 
 namespace boost {
 namespace asio {
@@ -72,19 +62,19 @@ namespace detail {
 # if defined(BOOST_ASIO_ENABLE_HANDLER_TYPE_REQUIREMENTS_ASSERT)
 
 template <typename Handler>
-auto zero_arg_handler_test(Handler h, void*)
+auto zero_arg_copyable_handler_test(Handler h, void*)
   -> decltype(
     sizeof(Handler(static_cast<const Handler&>(h))),
     ((h)()),
     char(0));
 
 template <typename Handler>
-char (&zero_arg_handler_test(Handler, ...))[2];
+char (&zero_arg_copyable_handler_test(Handler, ...))[2];
 
 template <typename Handler, typename Arg1>
 auto one_arg_handler_test(Handler h, Arg1* a1)
   -> decltype(
-    sizeof(Handler(static_cast<const Handler&>(h))),
+    sizeof(Handler(BOOST_ASIO_MOVE_CAST(Handler)(h))),
     ((h)(*a1)),
     char(0));
 
@@ -94,12 +84,22 @@ char (&one_arg_handler_test(Handler h, ...))[2];
 template <typename Handler, typename Arg1, typename Arg2>
 auto two_arg_handler_test(Handler h, Arg1* a1, Arg2* a2)
   -> decltype(
-    sizeof(Handler(static_cast<const Handler&>(h))),
+    sizeof(Handler(BOOST_ASIO_MOVE_CAST(Handler)(h))),
     ((h)(*a1, *a2)),
     char(0));
 
 template <typename Handler>
 char (&two_arg_handler_test(Handler, ...))[2];
+
+template <typename Handler, typename Arg1, typename Arg2>
+auto two_arg_move_handler_test(Handler h, Arg1* a1, Arg2* a2)
+  -> decltype(
+    sizeof(Handler(BOOST_ASIO_MOVE_CAST(Handler)(h))),
+    ((h)(*a1, BOOST_ASIO_MOVE_CAST(Arg2)(*a2))),
+    char(0));
+
+template <typename Handler>
+char (&two_arg_move_handler_test(Handler, ...))[2];
 
 #  define BOOST_ASIO_HANDLER_TYPE_REQUIREMENTS_ASSERT(expr, msg) \
      static_assert(expr, msg);
@@ -114,6 +114,13 @@ template <typename T> T& lvref();
 template <typename T> T& lvref(T);
 template <typename T> const T& clvref();
 template <typename T> const T& clvref(T);
+#if defined(BOOST_ASIO_HAS_MOVE)
+template <typename T> T rvref();
+template <typename T> T rvref(T);
+#else // defined(BOOST_ASIO_HAS_MOVE)
+template <typename T> const T& rvref();
+template <typename T> const T& rvref(T);
+#endif // defined(BOOST_ASIO_HAS_MOVE)
 template <typename T> char argbyv(T);
 
 template <int>
@@ -128,7 +135,7 @@ struct handler_type_requirements
       void()) asio_true_handler_type; \
   \
   BOOST_ASIO_HANDLER_TYPE_REQUIREMENTS_ASSERT( \
-      sizeof(boost::asio::detail::zero_arg_handler_test( \
+      sizeof(boost::asio::detail::zero_arg_copyable_handler_test( \
           boost::asio::detail::clvref< \
             asio_true_handler_type>(), 0)) == 1, \
       "CompletionHandler type requirements not met") \
@@ -152,7 +159,7 @@ struct handler_type_requirements
   \
   BOOST_ASIO_HANDLER_TYPE_REQUIREMENTS_ASSERT( \
       sizeof(boost::asio::detail::two_arg_handler_test( \
-          boost::asio::detail::clvref< \
+          boost::asio::detail::rvref< \
             asio_true_handler_type>(), \
           static_cast<const boost::system::error_code*>(0), \
           static_cast<const std::size_t*>(0))) == 1, \
@@ -161,7 +168,7 @@ struct handler_type_requirements
   typedef boost::asio::detail::handler_type_requirements< \
       sizeof( \
         boost::asio::detail::argbyv( \
-          boost::asio::detail::clvref< \
+          boost::asio::detail::rvref< \
             asio_true_handler_type>())) + \
       sizeof( \
         boost::asio::detail::lvref< \
@@ -169,7 +176,6 @@ struct handler_type_requirements
             boost::asio::detail::lvref<const boost::system::error_code>(), \
             boost::asio::detail::lvref<const std::size_t>()), \
         char(0))> BOOST_ASIO_UNUSED_TYPEDEF
-
 
 #define BOOST_ASIO_WRITE_HANDLER_CHECK( \
     handler_type, handler) \
@@ -180,7 +186,7 @@ struct handler_type_requirements
   \
   BOOST_ASIO_HANDLER_TYPE_REQUIREMENTS_ASSERT( \
       sizeof(boost::asio::detail::two_arg_handler_test( \
-          boost::asio::detail::clvref< \
+          boost::asio::detail::rvref< \
             asio_true_handler_type>(), \
           static_cast<const boost::system::error_code*>(0), \
           static_cast<const std::size_t*>(0))) == 1, \
@@ -189,7 +195,7 @@ struct handler_type_requirements
   typedef boost::asio::detail::handler_type_requirements< \
       sizeof( \
         boost::asio::detail::argbyv( \
-          boost::asio::detail::clvref< \
+          boost::asio::detail::rvref< \
             asio_true_handler_type>())) + \
       sizeof( \
         boost::asio::detail::lvref< \
@@ -207,7 +213,7 @@ struct handler_type_requirements
   \
   BOOST_ASIO_HANDLER_TYPE_REQUIREMENTS_ASSERT( \
       sizeof(boost::asio::detail::one_arg_handler_test( \
-          boost::asio::detail::clvref< \
+          boost::asio::detail::rvref< \
             asio_true_handler_type>(), \
           static_cast<const boost::system::error_code*>(0))) == 1, \
       "AcceptHandler type requirements not met") \
@@ -215,12 +221,39 @@ struct handler_type_requirements
   typedef boost::asio::detail::handler_type_requirements< \
       sizeof( \
         boost::asio::detail::argbyv( \
-          boost::asio::detail::clvref< \
+          boost::asio::detail::rvref< \
             asio_true_handler_type>())) + \
       sizeof( \
         boost::asio::detail::lvref< \
           asio_true_handler_type>()( \
             boost::asio::detail::lvref<const boost::system::error_code>()), \
+        char(0))> BOOST_ASIO_UNUSED_TYPEDEF
+
+#define BOOST_ASIO_MOVE_ACCEPT_HANDLER_CHECK( \
+    handler_type, handler, socket_type) \
+  \
+  typedef BOOST_ASIO_HANDLER_TYPE(handler_type, \
+      void(boost::system::error_code, socket_type)) \
+    asio_true_handler_type; \
+  \
+  BOOST_ASIO_HANDLER_TYPE_REQUIREMENTS_ASSERT( \
+      sizeof(boost::asio::detail::two_arg_move_handler_test( \
+          boost::asio::detail::rvref< \
+            asio_true_handler_type>(), \
+          static_cast<const boost::system::error_code*>(0), \
+          static_cast<socket_type*>(0))) == 1, \
+      "MoveAcceptHandler type requirements not met") \
+  \
+  typedef boost::asio::detail::handler_type_requirements< \
+      sizeof( \
+        boost::asio::detail::argbyv( \
+          boost::asio::detail::rvref< \
+            asio_true_handler_type>())) + \
+      sizeof( \
+        boost::asio::detail::lvref< \
+          asio_true_handler_type>()( \
+            boost::asio::detail::lvref<const boost::system::error_code>(), \
+            boost::asio::detail::rvref<socket_type>()), \
         char(0))> BOOST_ASIO_UNUSED_TYPEDEF
 
 #define BOOST_ASIO_CONNECT_HANDLER_CHECK( \
@@ -232,7 +265,7 @@ struct handler_type_requirements
   \
   BOOST_ASIO_HANDLER_TYPE_REQUIREMENTS_ASSERT( \
       sizeof(boost::asio::detail::one_arg_handler_test( \
-          boost::asio::detail::clvref< \
+          boost::asio::detail::rvref< \
             asio_true_handler_type>(), \
           static_cast<const boost::system::error_code*>(0))) == 1, \
       "ConnectHandler type requirements not met") \
@@ -240,7 +273,7 @@ struct handler_type_requirements
   typedef boost::asio::detail::handler_type_requirements< \
       sizeof( \
         boost::asio::detail::argbyv( \
-          boost::asio::detail::clvref< \
+          boost::asio::detail::rvref< \
             asio_true_handler_type>())) + \
       sizeof( \
         boost::asio::detail::lvref< \
@@ -248,7 +281,34 @@ struct handler_type_requirements
             boost::asio::detail::lvref<const boost::system::error_code>()), \
         char(0))> BOOST_ASIO_UNUSED_TYPEDEF
 
-#define BOOST_ASIO_COMPOSED_CONNECT_HANDLER_CHECK( \
+#define BOOST_ASIO_RANGE_CONNECT_HANDLER_CHECK( \
+    handler_type, handler, endpoint_type) \
+  \
+  typedef BOOST_ASIO_HANDLER_TYPE(handler_type, \
+      void(boost::system::error_code, endpoint_type)) \
+    asio_true_handler_type; \
+  \
+  BOOST_ASIO_HANDLER_TYPE_REQUIREMENTS_ASSERT( \
+      sizeof(boost::asio::detail::two_arg_handler_test( \
+          boost::asio::detail::rvref< \
+            asio_true_handler_type>(), \
+          static_cast<const boost::system::error_code*>(0), \
+          static_cast<const endpoint_type*>(0))) == 1, \
+      "RangeConnectHandler type requirements not met") \
+  \
+  typedef boost::asio::detail::handler_type_requirements< \
+      sizeof( \
+        boost::asio::detail::argbyv( \
+          boost::asio::detail::rvref< \
+            asio_true_handler_type>())) + \
+      sizeof( \
+        boost::asio::detail::lvref< \
+          asio_true_handler_type>()( \
+            boost::asio::detail::lvref<const boost::system::error_code>(), \
+            boost::asio::detail::lvref<const endpoint_type>()), \
+        char(0))> BOOST_ASIO_UNUSED_TYPEDEF
+
+#define BOOST_ASIO_ITERATOR_CONNECT_HANDLER_CHECK( \
     handler_type, handler, iter_type) \
   \
   typedef BOOST_ASIO_HANDLER_TYPE(handler_type, \
@@ -257,16 +317,16 @@ struct handler_type_requirements
   \
   BOOST_ASIO_HANDLER_TYPE_REQUIREMENTS_ASSERT( \
       sizeof(boost::asio::detail::two_arg_handler_test( \
-          boost::asio::detail::clvref< \
+          boost::asio::detail::rvref< \
             asio_true_handler_type>(), \
           static_cast<const boost::system::error_code*>(0), \
           static_cast<const iter_type*>(0))) == 1, \
-      "ComposedConnectHandler type requirements not met") \
+      "IteratorConnectHandler type requirements not met") \
   \
   typedef boost::asio::detail::handler_type_requirements< \
       sizeof( \
         boost::asio::detail::argbyv( \
-          boost::asio::detail::clvref< \
+          boost::asio::detail::rvref< \
             asio_true_handler_type>())) + \
       sizeof( \
         boost::asio::detail::lvref< \
@@ -276,30 +336,30 @@ struct handler_type_requirements
         char(0))> BOOST_ASIO_UNUSED_TYPEDEF
 
 #define BOOST_ASIO_RESOLVE_HANDLER_CHECK( \
-    handler_type, handler, iter_type) \
+    handler_type, handler, range_type) \
   \
   typedef BOOST_ASIO_HANDLER_TYPE(handler_type, \
-      void(boost::system::error_code, iter_type)) \
+      void(boost::system::error_code, range_type)) \
     asio_true_handler_type; \
   \
   BOOST_ASIO_HANDLER_TYPE_REQUIREMENTS_ASSERT( \
       sizeof(boost::asio::detail::two_arg_handler_test( \
-          boost::asio::detail::clvref< \
+          boost::asio::detail::rvref< \
             asio_true_handler_type>(), \
           static_cast<const boost::system::error_code*>(0), \
-          static_cast<const iter_type*>(0))) == 1, \
+          static_cast<const range_type*>(0))) == 1, \
       "ResolveHandler type requirements not met") \
   \
   typedef boost::asio::detail::handler_type_requirements< \
       sizeof( \
         boost::asio::detail::argbyv( \
-          boost::asio::detail::clvref< \
+          boost::asio::detail::rvref< \
             asio_true_handler_type>())) + \
       sizeof( \
         boost::asio::detail::lvref< \
           asio_true_handler_type>()( \
             boost::asio::detail::lvref<const boost::system::error_code>(), \
-            boost::asio::detail::lvref<const iter_type>()), \
+            boost::asio::detail::lvref<const range_type>()), \
         char(0))> BOOST_ASIO_UNUSED_TYPEDEF
 
 #define BOOST_ASIO_WAIT_HANDLER_CHECK( \
@@ -311,7 +371,7 @@ struct handler_type_requirements
   \
   BOOST_ASIO_HANDLER_TYPE_REQUIREMENTS_ASSERT( \
       sizeof(boost::asio::detail::one_arg_handler_test( \
-          boost::asio::detail::clvref< \
+          boost::asio::detail::rvref< \
             asio_true_handler_type>(), \
           static_cast<const boost::system::error_code*>(0))) == 1, \
       "WaitHandler type requirements not met") \
@@ -319,7 +379,7 @@ struct handler_type_requirements
   typedef boost::asio::detail::handler_type_requirements< \
       sizeof( \
         boost::asio::detail::argbyv( \
-          boost::asio::detail::clvref< \
+          boost::asio::detail::rvref< \
             asio_true_handler_type>())) + \
       sizeof( \
         boost::asio::detail::lvref< \
@@ -336,7 +396,7 @@ struct handler_type_requirements
   \
   BOOST_ASIO_HANDLER_TYPE_REQUIREMENTS_ASSERT( \
       sizeof(boost::asio::detail::two_arg_handler_test( \
-          boost::asio::detail::clvref< \
+          boost::asio::detail::rvref< \
             asio_true_handler_type>(), \
           static_cast<const boost::system::error_code*>(0), \
           static_cast<const int*>(0))) == 1, \
@@ -345,7 +405,7 @@ struct handler_type_requirements
   typedef boost::asio::detail::handler_type_requirements< \
       sizeof( \
         boost::asio::detail::argbyv( \
-          boost::asio::detail::clvref< \
+          boost::asio::detail::rvref< \
             asio_true_handler_type>())) + \
       sizeof( \
         boost::asio::detail::lvref< \
@@ -363,7 +423,7 @@ struct handler_type_requirements
   \
   BOOST_ASIO_HANDLER_TYPE_REQUIREMENTS_ASSERT( \
       sizeof(boost::asio::detail::one_arg_handler_test( \
-          boost::asio::detail::clvref< \
+          boost::asio::detail::rvref< \
             asio_true_handler_type>(), \
           static_cast<const boost::system::error_code*>(0))) == 1, \
       "HandshakeHandler type requirements not met") \
@@ -371,7 +431,7 @@ struct handler_type_requirements
   typedef boost::asio::detail::handler_type_requirements< \
       sizeof( \
         boost::asio::detail::argbyv( \
-          boost::asio::detail::clvref< \
+          boost::asio::detail::rvref< \
             asio_true_handler_type>())) + \
       sizeof( \
         boost::asio::detail::lvref< \
@@ -388,7 +448,7 @@ struct handler_type_requirements
   \
   BOOST_ASIO_HANDLER_TYPE_REQUIREMENTS_ASSERT( \
       sizeof(boost::asio::detail::two_arg_handler_test( \
-          boost::asio::detail::clvref< \
+          boost::asio::detail::rvref< \
             asio_true_handler_type>(), \
           static_cast<const boost::system::error_code*>(0), \
           static_cast<const std::size_t*>(0))) == 1, \
@@ -397,7 +457,7 @@ struct handler_type_requirements
   typedef boost::asio::detail::handler_type_requirements< \
       sizeof( \
         boost::asio::detail::argbyv( \
-          boost::asio::detail::clvref< \
+          boost::asio::detail::rvref< \
             asio_true_handler_type>())) + \
       sizeof( \
         boost::asio::detail::lvref< \
@@ -415,7 +475,7 @@ struct handler_type_requirements
   \
   BOOST_ASIO_HANDLER_TYPE_REQUIREMENTS_ASSERT( \
       sizeof(boost::asio::detail::one_arg_handler_test( \
-          boost::asio::detail::clvref< \
+          boost::asio::detail::rvref< \
             asio_true_handler_type>(), \
           static_cast<const boost::system::error_code*>(0))) == 1, \
       "ShutdownHandler type requirements not met") \
@@ -423,7 +483,7 @@ struct handler_type_requirements
   typedef boost::asio::detail::handler_type_requirements< \
       sizeof( \
         boost::asio::detail::argbyv( \
-          boost::asio::detail::clvref< \
+          boost::asio::detail::rvref< \
             asio_true_handler_type>())) + \
       sizeof( \
         boost::asio::detail::lvref< \
@@ -449,11 +509,19 @@ struct handler_type_requirements
     handler_type, handler) \
   typedef int BOOST_ASIO_UNUSED_TYPEDEF
 
+#define BOOST_ASIO_MOVE_ACCEPT_HANDLER_CHECK( \
+    handler_type, handler, socket_type) \
+  typedef int BOOST_ASIO_UNUSED_TYPEDEF
+
 #define BOOST_ASIO_CONNECT_HANDLER_CHECK( \
     handler_type, handler) \
   typedef int BOOST_ASIO_UNUSED_TYPEDEF
 
-#define BOOST_ASIO_COMPOSED_CONNECT_HANDLER_CHECK( \
+#define BOOST_ASIO_RANGE_CONNECT_HANDLER_CHECK( \
+    handler_type, handler, iter_type) \
+  typedef int BOOST_ASIO_UNUSED_TYPEDEF
+
+#define BOOST_ASIO_ITERATOR_CONNECT_HANDLER_CHECK( \
     handler_type, handler, iter_type) \
   typedef int BOOST_ASIO_UNUSED_TYPEDEF
 
