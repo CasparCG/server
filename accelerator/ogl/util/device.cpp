@@ -271,7 +271,16 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
             return std::async(std::launch::deferred, [=, buf = std::move(buf)]()
             {
-                buf->wait(service_);
+                for (auto n = 0; true; n = std::min(10, n + 1)) {
+                    if (dispatch_sync([&] { return buf->try_wait(); })) {
+                        break;
+                    }
+
+                    boost::asio::deadline_timer timer(service_, boost::posix_time::milliseconds(n));
+                    // TODO (fix) Does timer.wait yield?
+                    timer.wait();
+                }
+
                 auto ptr = reinterpret_cast<uint8_t*>(buf->data());
                 auto size = buf->size();
                 return array<const uint8_t>(ptr, size, true, std::move(buf));

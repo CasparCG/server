@@ -50,7 +50,6 @@ public:
 
     void lock();
     bool try_wait();
-    void wait(boost::asio::io_service& context);
     void bind();
     void unbind();
 

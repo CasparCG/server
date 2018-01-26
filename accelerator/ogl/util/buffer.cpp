@@ -31,8 +31,6 @@
 
 #include <GL/glew.h>
 
-#include <boost/asio/deadline_timer.hpp>
-
 namespace caspar { namespace accelerator { namespace ogl {
 
 struct buffer::impl : boost::noncopyable
@@ -86,23 +84,6 @@ public:
         return false;
     }
 
-    void wait(boost::asio::io_service& context)
-    {
-        for (auto n = 0; true; n = std::min(10, n + 1)) {
-            context.dispatch([&]
-            {
-                try_wait();
-            });
-
-            if (fence_) {
-                break;
-            }
-
-            boost::asio::deadline_timer timer(context, boost::posix_time::milliseconds(n));
-            timer.wait();
-        }
-    }
-
     void bind()
     {
         GL(glBindBuffer(target_, id_));
@@ -122,7 +103,6 @@ void* buffer::data(){return impl_->data_;}
 bool buffer::write() const { return impl_->write_;  }
 int buffer::size() const { return impl_->size_; }
 bool buffer::try_wait() { return impl_->try_wait(); }
-void buffer::wait(boost::asio::io_service& context) { return impl_->wait(context); }
 void buffer::lock() { return impl_->lock(); }
 void buffer::bind() { return impl_->bind(); }
 void buffer::unbind() { return impl_->unbind(); }
