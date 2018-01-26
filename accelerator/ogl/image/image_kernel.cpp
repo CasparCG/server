@@ -140,7 +140,7 @@ struct image_kernel::impl
 
 	impl(const spl::shared_ptr<device>& ogl, bool blend_modes_wanted, bool straight_alpha_wanted)
 		: ogl_(ogl)
-		, shader_(ogl_->invoke([&]{return get_image_shader(ogl, blend_modes_, blend_modes_wanted, post_processing_, straight_alpha_wanted); }))
+		, shader_(ogl_->dispatch_sync([&]{return get_image_shader(ogl, blend_modes_, blend_modes_wanted, post_processing_, straight_alpha_wanted); }))
 	{
 		if (!supports_texture_barrier_)
 			CASPAR_LOG(warning) << L"[image_mixer] TextureBarrierNV not supported. Post processing will not be available";
