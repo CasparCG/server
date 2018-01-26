@@ -26,7 +26,7 @@
 #include <common/memory.h>
 #include <common/except.h>
 
-#include <boost/asio/io_service.hpp>
+#include <boost/asio/io_context.hpp>
 
 #include <future>
 
@@ -39,7 +39,7 @@ class device final : public std::enable_shared_from_this<device>
 	device(const device&);
 	device& operator=(const device&);
 
-    boost::asio::io_service service_;
+    boost::asio::io_context service_;
 public:
 
 	// Static Members

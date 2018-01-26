@@ -93,6 +93,7 @@ public:
 	void copy_from(buffer& src)
 	{
         src.bind();
+        // TODO (fix) This fails on weird dimensions.
 		GL(glTextureSubImage2D(id_, 0, 0, 0, width_, height_, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
         src.unbind();
 	}
