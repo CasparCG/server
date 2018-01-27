@@ -9,13 +9,33 @@
 
 namespace caspar {
 
-template<typename F>
-auto flatten(F&& f)
+template <typename T>
+struct _fold
 {
-    return std::async(std::launch::deferred, [](F&& f)
-    {
-        return f.get().get();
-    }, std::forward<F>(f));
+     template <typename F>
+     static auto get(F&& f)
+     {
+        return std::move(f);
+     }
+};
+
+template <typename T>
+struct _fold<std::future<T>>
+{
+     template <typename F>
+     static auto get(F&& f)
+     {
+        return std::async(std::launch::deferred, [](auto f)
+        {
+            return _fold<decltype(f.get().get())>::get(f.get()).get();
+        }, std::forward<F>(f));
+     }
+};
+
+template <typename F>
+auto fold(F&& f)
+{
+    return _fold<decltype(f.get())>::get(std::move(f));
 }
 
 template<typename F>
@@ -24,22 +44,12 @@ bool is_ready(const F& future)
 	return future.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
 }
 
-/**
- * Wrap a value in a future with an already known result.
- * <p>
- * Useful when the result of an operation is already known at the time of
- * calling.
- *
- * @param value The r-value to wrap.
- *
- * @return The future with the result set.
- */
 template<class R>
 std::future<R> make_ready_future(R&& value)
 {
 	std::promise<R> p;
 
-	p.set_value(value);
+	p.set_value(std::forward<R>(value));
 
 	return p.get_future();
 }
