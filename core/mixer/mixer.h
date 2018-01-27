@@ -24,12 +24,12 @@
 #include "image/blend_modes.h"
 
 #include <common/forward.h>
-#include <common/future_fwd.h>
 #include <common/memory.h>
 
 #include <core/fwd.h>
 #include <core/monitor/monitor.h>
 
+#include <future>
 #include <map>
 
 FORWARD2(caspar, diagnostics, class graph);

@@ -4,9 +4,10 @@
 #include "../fwd.h"
 
 #include <common/memory.h>
-#include <common/future_fwd.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
+
+#include <future>
 
 namespace caspar { namespace core {
 

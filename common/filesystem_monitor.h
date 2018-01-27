@@ -28,8 +28,9 @@
 #include <boost/noncopyable.hpp>
 
 #include "memory.h"
-#include "future_fwd.h"
 #include "enum_class.h"
+
+#include <future>
 
 namespace caspar {
 

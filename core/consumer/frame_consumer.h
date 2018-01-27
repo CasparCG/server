@@ -26,10 +26,10 @@
 #include "../help/help_repository.h"
 
 #include <common/memory.h>
-#include <common/future_fwd.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
 
+#include <future>
 #include <functional>
 #include <string>
 #include <vector>

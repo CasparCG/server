@@ -22,13 +22,13 @@
 #pragma once
 
 #include <common/memory.h>
-#include <common/future_fwd.h>
 
 #include <core/monitor/monitor.h>
 #include <core/fwd.h>
 
 #include <boost/noncopyable.hpp>
 
+#include <future>
 #include <vector>
 
 FORWARD3(caspar, protocol, amcp, class amcp_command_repository);

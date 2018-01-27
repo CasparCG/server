@@ -8,10 +8,10 @@
 #include <common/memory.h>
 #include <common/forward.h>
 #include <common/array.h>
-#include <common/future_fwd.h>
 #include <common/cache_aligned_vector.h>
 #include <common/timer.h>
 
+#include <future>
 #include <cstddef>
 #include <cstdint>
 

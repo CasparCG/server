@@ -24,7 +24,6 @@
 #include "blend_modes.h"
 
 #include <common/forward.h>
-#include <common/future_fwd.h>
 #include <common/memory.h>
 
 #include <core/video_format.h>
@@ -32,6 +31,7 @@
 #include <core/frame/frame_factory.h>
 #include <core/frame/frame.h>
 
+#include <future>
 #include <cstdint>
 
 FORWARD2(caspar, core, struct pixel_format_desc);

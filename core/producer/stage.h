@@ -26,13 +26,13 @@
 #include "../interaction/interaction_sink.h"
 
 #include <common/forward.h>
-#include <common/future_fwd.h>
 #include <common/memory.h>
 #include <common/tweener.h>
 
 #include <boost/optional.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
 
+#include <future>
 #include <functional>
 #include <map>
 #include <tuple>
