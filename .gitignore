@@ -1,15 +1,6 @@
 /version.h
 /shell/included_modules.h
 
-/unit-test/bin
-/unit-test/tmp
-/unit-test/unit-test.vcxproj.user
-
-/test/psd-test/Debug
-/test/psd-test/psd-test.vcxproj.user
-
-/clang-analyze.out
-
 /build
 /products
 
