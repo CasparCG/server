@@ -23,8 +23,6 @@
 
 namespace caspar {
 
-void install_gpf_handler();
-void ensure_gpf_handler_installed_for_thread(
-			const char* thread_description = nullptr);
+void ensure_gpf_handler_installed_for_thread(const char* thread_description = nullptr);
 
 }

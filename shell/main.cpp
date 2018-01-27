@@ -63,6 +63,7 @@
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
+#include <boost/stacktrace.hpp>
 
 #include <tbb/atomic.h>
 
@@ -71,8 +72,15 @@
 
 #include <csignal>
 #include <clocale>
+#include <signal.h>
 
 using namespace caspar;
+
+void signal_handler(int signum) {
+    ::signal(signum, SIG_DFL);
+    boost::stacktrace::safe_dump_to("./backtrace.dump");
+    ::raise(SIGABRT);
+}
 
 void setup_global_locale()
 {
@@ -98,7 +106,6 @@ void print_info()
 	CASPAR_LOG(info) << cpu_info();
 	CASPAR_LOG(info) << system_product_name();
 }
-
 
 void print_system_info(const spl::shared_ptr<core::system_info_provider_repository>& repo)
 {
@@ -267,6 +274,19 @@ void on_abort(int)
 
 int main(int argc, char** argv)
 {
+	::signal(SIGSEGV, &signal_handler);
+	::signal(SIGABRT, &signal_handler);
+	
+	if (boost::filesystem::exists("./backtrace.dump")) {
+		std::ifstream ifs("./backtrace.dump");
+
+		auto st = boost::stacktrace::stacktrace::from_dump(ifs);
+		CASPAR_LOG(error) << "Previous run crashed:\n" << st;
+
+		ifs.close();
+		boost::filesystem::remove("./backtrace.dump");
+	}
+
 	if (intercept_command_line_args(argc, argv))
 		return 0;
 

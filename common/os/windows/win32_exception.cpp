@@ -53,14 +53,11 @@ bool& installed_for_thread()
 
 void install_gpf_handler()
 {
-//#ifndef _DEBUG
 	_set_se_translator(win32_exception::Handler);
 	installed_for_thread() = true;
-//#endif
 }
 
-void ensure_gpf_handler_installed_for_thread(
-		const char* thread_description)
+void ensure_gpf_handler_installed_for_thread(const char* thread_description)
 {
 	if (!installed_for_thread())
 	{
