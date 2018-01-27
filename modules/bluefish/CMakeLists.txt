@@ -24,7 +24,6 @@ include_directories(..)
 include_directories(../..)
 include_directories(${BOOST_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_PATH})
-include_directories(${RXCPP_INCLUDE_PATH})
 include_directories(${FFMPEG_INCLUDE_PATH})
 include_directories(${BLUEFISH_INCLUDE_PATH})
 

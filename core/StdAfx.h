@@ -54,12 +54,11 @@
 #include <boost/thread.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
+#include <boost/timer.h>
 
 #include <common/assert.h>
 #include <common/utf.h>
 #include <common/memory.h>
-//#include "../common/executor.h" // Can't include this due to MSVC lambda bug
 
 #include <common/log.h>
 #include <common/except.h>
-#include <common/timer.h>

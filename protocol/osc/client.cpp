@@ -30,9 +30,7 @@
 #include <common/utf.h>
 #include <common/except.h>
 #include <common/endian.h>
-#include <common/cache_aligned_vector.h>
 #include <common/os/general_protection_fault.h>
-#include <common/no_init_proxy.h>
 
 #include <core/monitor/monitor.h>
 
@@ -50,7 +48,7 @@ using namespace boost::asio::ip;
 
 namespace caspar { namespace protocol { namespace osc {
 
-typedef cache_aligned_vector<no_init_proxy<char>> byte_vector;
+typedef std::vector<char> byte_vector;
 
 template<typename T>
 struct param_visitor : public boost::static_visitor<void>

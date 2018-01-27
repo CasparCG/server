@@ -25,20 +25,17 @@
 
 #pragma warning (disable : 4244)
 
-#include "call_context.h"
-
 #include <common/executor.h>
-#include <common/lock.h>
 #include <common/env.h>
 #include <common/prec_timer.h>
 #include <common/os/threading.h>
-#include <common/timer.h>
 
 #include <SFML/Graphics.hpp>
 
 #include <boost/optional.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/timer.h>
 
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/atomic.h>
@@ -99,7 +96,7 @@ class context : public drawable
 	
 	std::list<std::weak_ptr<drawable>>	drawables_;
 	int64_t								refresh_rate_millis_		= 16;
-	caspar::timer						display_time_;
+	boost::timer						display_time_;
 	bool								calculate_view_				= true;
 	int									scroll_position_			= 0;
 	bool								dragging_					= false;
@@ -116,7 +113,7 @@ public:
 		get_instance()->executor_.begin_invoke([=]
 		{
 			get_instance()->do_register_drawable(drawable);
-		}, task_priority::high_priority);
+		});
 	}
 
 	static void show(bool value)
@@ -124,7 +121,7 @@ public:
 		get_instance()->executor_.begin_invoke([=]
 		{	
 			get_instance()->do_show(value);
-		}, task_priority::high_priority);
+		});
 	}
 	
 	static void shutdown()
@@ -134,10 +131,6 @@ public:
 private:
 	context()
 	{
-		executor_.begin_invoke([=]
-		{
-			set_priority_of_current_thread(thread_priority::LOW);
-		});
 	}
 
 	void do_show(bool value)
@@ -401,7 +394,6 @@ private:
 
 struct graph : public drawable, public caspar::diagnostics::spi::graph_sink, public std::enable_shared_from_this<graph>
 {
-	call_context										context_	= call_context::for_thread();
 	tbb::concurrent_unordered_map<std::string, line>	lines_;
 
 	tbb::spin_mutex										mutex_;

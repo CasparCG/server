@@ -31,8 +31,6 @@
 #include <common/except.h>
 #include <common/utf.h>
 #include <common/memory.h>
-#include <common/polling_filesystem_monitor.h>
-#include <common/ptree.h>
 
 #include <core/video_channel.h>
 #include <core/video_format.h>
@@ -44,16 +42,12 @@
 #include <core/producer/text/text_producer.h>
 #include <core/producer/color/color_producer.h>
 #include <core/consumer/output.h>
-#include <core/consumer/syncto/syncto_consumer.h>
 #include <core/mixer/mixer.h>
 #include <core/mixer/image/image_mixer.h>
-#include <core/thumbnail_generator.h>
 #include <core/producer/media_info/media_info.h>
 #include <core/producer/media_info/media_info_repository.h>
 #include <core/producer/media_info/in_memory_media_info_repository.h>
 #include <core/producer/cg_proxy.h>
-#include <core/diagnostics/subject_diagnostics.h>
-#include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
 #include <core/diagnostics/graph_to_log_sink.h>
 #include <core/system_info_provider.h>
@@ -147,7 +141,6 @@ struct server::impl : boost::noncopyable
 	spl::shared_ptr<core::frame_producer_registry>		producer_registry_;
 	spl::shared_ptr<core::frame_consumer_registry>		consumer_registry_;
 	tbb::atomic<bool>									running_;
-	std::shared_ptr<thumbnail_generator>				thumbnail_generator_;
 	std::promise<bool>&									shutdown_server_now_;
 
 	explicit impl(std::promise<bool>& shutdown_server_now)
@@ -173,7 +166,6 @@ struct server::impl : boost::noncopyable
 		core::text::init(dependencies);
 		core::init_cg_proxy_as_producer(dependencies);
 		core::scene::init(dependencies);
-		core::syncto::init(dependencies);
 		help_repo_->register_item({ L"producer" }, L"Color Producer", &core::describe_color_producer);
 	}
 
@@ -186,9 +178,6 @@ struct server::impl : boost::noncopyable
 
 		setup_channels(env::properties());
 		CASPAR_LOG(info) << L"Initialized channels.";
-
-		setup_thumbnail_generation(env::properties());
-		CASPAR_LOG(info) << L"Initialized thumbnail generator.";
 
 		setup_controllers(env::properties());
 		CASPAR_LOG(info) << L"Initialized controllers.";
@@ -211,7 +200,6 @@ struct server::impl : boost::noncopyable
 		std::weak_ptr<boost::asio::io_service> weak_io_service = io_service_;
 		io_service_.reset();
 		osc_client_.reset();
-		thumbnail_generator_.reset();
 		amcp_command_repo_.reset();
 		primary_amcp_server_.reset();
 		async_servers_.clear();
@@ -242,13 +230,11 @@ struct server::impl : boost::noncopyable
 
 		if (custom_channel_layouts)
 		{
-			CASPAR_SCOPED_CONTEXT_MSG("/configuration/audio/channel-layouts");
 			audio_channel_layout_repository::get_default()->register_all_layouts(*custom_channel_layouts);
 		}
 
 		if (custom_mix_configs)
 		{
-			CASPAR_SCOPED_CONTEXT_MSG("/configuration/audio/mix-configs");
 			audio_mix_config_repository::get_default()->register_all_configs(*custom_mix_configs);
 		}
 	}
@@ -284,9 +270,6 @@ struct server::impl : boost::noncopyable
 
 		for (auto& channel : channels_)
 		{
-			core::diagnostics::scoped_call_context save;
-			core::diagnostics::call_context::for_thread().video_channel = channel->index();
-
 			for (auto& xml_consumer : xml_channels.at(channel->index() - 1) | witerate_children(L"consumers") | welement_context_iteration)
 			{
 				auto name = xml_consumer.first;
@@ -374,35 +357,10 @@ struct server::impl : boost::noncopyable
 					});
 	}
 
-	void setup_thumbnail_generation(const boost::property_tree::wptree& pt)
-	{
-		if (!pt.get(L"configuration.thumbnails.generate-thumbnails", true))
-			return;
-
-		auto scan_interval_millis = pt.get(L"configuration.thumbnails.scan-interval-millis", 5000);
-
-		polling_filesystem_monitor_factory monitor_factory(io_service_, scan_interval_millis);
-		thumbnail_generator_.reset(new thumbnail_generator(
-			monitor_factory,
-			env::media_folder(),
-			env::thumbnail_folder(),
-			pt.get(L"configuration.thumbnails.width", 256),
-			pt.get(L"configuration.thumbnails.height", 144),
-			core::video_format_desc(pt.get(L"configuration.thumbnails.video-mode", L"720p2500")),
-			accelerator_.create_image_mixer(0),
-			pt.get(L"configuration.thumbnails.generate-delay-millis", 2000),
-			&image::write_cropped_png,
-			media_info_repo_,
-			producer_registry_,
-			cg_registry_,
-			pt.get(L"configuration.thumbnails.mipmap", true)));
-	}
-
 	void setup_controllers(const boost::property_tree::wptree& pt)
 	{
 		amcp_command_repo_ = spl::make_shared<amcp::amcp_command_repository>(
 				channels_,
-				thumbnail_generator_,
 				media_info_repo_,
 				system_info_provider_repo_,
 				cg_registry_,

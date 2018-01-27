@@ -54,10 +54,8 @@
 #include <core/producer/layer.h>
 #include <core/mixer/mixer.h>
 #include <core/consumer/output.h>
-#include <core/thumbnail_generator.h>
 #include <core/producer/media_info/media_info.h>
 #include <core/producer/media_info/media_info_repository.h>
-#include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
 #include <core/system_info_provider.h>
 
@@ -295,9 +293,11 @@ std::wstring ListTemplates(const spl::shared_ptr<core::cg_producer_registry>& cg
 
 std::vector<spl::shared_ptr<core::video_channel>> get_channels(const command_context& ctx)
 {
-	return cpplinq::from(ctx.channels)
-		.select([](channel_context c) { return spl::make_shared_ptr(c.channel); })
-		.to_vector();
+	std::vector<spl::shared_ptr<core::video_channel>> result;
+	for (auto& p : ctx.channels) {
+		result.push_back(spl::make_shared_ptr(c.channel));
+	}
+	return result;
 }
 
 core::frame_producer_dependencies get_producer_dependencies(const std::shared_ptr<core::video_channel>& channel, const command_context& ctx)
@@ -392,9 +392,6 @@ std::wstring loadbg_command(command_context& ctx)
 	}
 
 	//Perform loading of the clip
-	core::diagnostics::scoped_call_context save;
-	core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
-	core::diagnostics::call_context::for_thread().layer = ctx.layer_index();
 
 	auto channel = ctx.channel.channel;
 	auto pFP = ctx.producer_registry->create_producer(get_producer_dependencies(channel, ctx), ctx.parameters);
@@ -428,9 +425,6 @@ void load_describer(core::help_sink& sink, const core::help_repository& repo)
 
 std::wstring load_command(command_context& ctx)
 {
-	core::diagnostics::scoped_call_context save;
-	core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
-	core::diagnostics::call_context::for_thread().layer = ctx.layer_index();
 	auto pFP = ctx.producer_registry->create_producer(get_producer_dependencies(ctx.channel.channel, ctx), ctx.parameters);
 	ctx.channel.channel->stage().load(ctx.layer_index(), pFP, true);
 
@@ -651,9 +645,6 @@ std::wstring add_command(command_context& ctx)
 			L"<CLIENT_IP_ADDRESS>",
 			ctx.client->address(),
 			ctx.parameters);
-
-	core::diagnostics::scoped_call_context save;
-	core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
 
 	auto consumer = ctx.consumer_registry->create_consumer(ctx.parameters, &ctx.channel.channel->stage(), get_channels(ctx));
 	ctx.channel.channel->output().add(ctx.layer_index(consumer->index()), consumer);
@@ -2128,9 +2119,6 @@ std::wstring channel_grid_command(command_context& ctx)
 	int index = 1;
 	auto self = ctx.channels.back();
 
-	core::diagnostics::scoped_call_context save;
-	core::diagnostics::call_context::for_thread().video_channel = ctx.channels.size();
-
 	std::vector<std::wstring> params;
 	params.push_back(L"SCREEN");
 	params.push_back(L"0");
@@ -2144,7 +2132,6 @@ std::wstring channel_grid_command(command_context& ctx)
 	{
 		if (channel.channel != self.channel)
 		{
-			core::diagnostics::call_context::for_thread().layer = index;
 			auto producer = ctx.producer_registry->create_producer(get_producer_dependencies(self.channel, ctx), L"route://" + boost::lexical_cast<std::wstring>(channel.channel->index()) + L" NO_AUTO_DEINTERLACE");
 			self.channel->stage().load(index, producer, false);
 			self.channel->stage().play(index);
@@ -2165,58 +2152,6 @@ std::wstring channel_grid_command(command_context& ctx)
 }
 
 // Thumbnail Commands
-
-void thumbnail_list_describer(core::help_sink& sink, const core::help_repository& repo)
-{
-	sink.short_description(L"List thumbnails.");
-	sink.syntax(L"THUMBNAIL LIST {[sub_directory:string]}");
-	sink.para()->text(L"Lists thumbnails.");
-	sink.para()
-		->text(L"if the optional ")->code(L"sub_directory")
-		->text(L" is specified only the thumbnails in that sub directory will be returned.");
-	sink.para()->text(L"Examples:");
-	sink.example(
-		L">> THUMBNAIL LIST\n"
-		L"<< 200 THUMBNAIL LIST OK\n"
-		L"<< \"AMB\" 20130301T124409 1149\n"
-		L"<< \"foo/bar\" 20130523T234001 244");
-}
-
-std::wstring thumbnail_list_command(command_context& ctx)
-{
-	std::wstring sub_directory;
-
-	if (!ctx.parameters.empty())
-		sub_directory = ctx.parameters.at(0);
-
-	std::wstringstream replyString;
-	replyString << L"200 THUMBNAIL LIST OK\r\n";
-
-	for (boost::filesystem::recursive_directory_iterator itr(get_sub_directory(env::thumbnail_folder(), sub_directory)), end; itr != end; ++itr)
-	{
-		if (boost::filesystem::is_regular_file(itr->path()))
-		{
-			if (!boost::iequals(itr->path().extension().wstring(), L".png"))
-				continue;
-
-			auto relativePath = get_relative_without_extension(itr->path(), env::thumbnail_folder());
-			auto str = relativePath.generic_wstring();
-
-			if (str[0] == '\\' || str[0] == '/')
-				str = std::wstring(str.begin() + 1, str.end());
-
-			auto mtime = boost::filesystem::last_write_time(itr->path());
-			auto mtime_readable = boost::posix_time::to_iso_wstring(boost::posix_time::from_time_t(mtime));
-			auto file_size = boost::filesystem::file_size(itr->path());
-
-			replyString << L"\"" << str << L"\" " << mtime_readable << L" " << file_size << L"\r\n";
-		}
-	}
-
-	replyString << L"\r\n";
-
-	return boost::to_upper_copy(replyString.str());
-}
 
 void thumbnail_retrieve_describer(core::help_sink& sink, const core::help_repository& repo)
 {
@@ -2252,42 +2187,6 @@ std::wstring thumbnail_retrieve_command(command_context& ctx)
 	reply << file_contents;
 	reply << L"\r\n";
 	return reply.str();
-}
-
-void thumbnail_generate_describer(core::help_sink& sink, const core::help_repository& repo)
-{
-	sink.short_description(L"Regenerate a thumbnail.");
-	sink.syntax(L"THUMBNAIL GENERATE [filename:string]");
-	sink.para()->text(L"Regenerates a thumbnail.");
-}
-
-std::wstring thumbnail_generate_command(command_context& ctx)
-{
-	if (ctx.thumb_gen)
-	{
-		ctx.thumb_gen->generate(ctx.parameters.at(0));
-		return L"202 THUMBNAIL GENERATE OK\r\n";
-	}
-	else
-		CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"Thumbnail generation turned off"));
-}
-
-void thumbnail_generateall_describer(core::help_sink& sink, const core::help_repository& repo)
-{
-	sink.short_description(L"Regenerate all thumbnails.");
-	sink.syntax(L"THUMBNAIL GENERATE_ALL");
-	sink.para()->text(L"Regenerates all thumbnails.");
-}
-
-std::wstring thumbnail_generateall_command(command_context& ctx)
-{
-	if (ctx.thumb_gen)
-	{
-		ctx.thumb_gen->generate_all();
-		return L"202 THUMBNAIL GENERATE_ALL OK\r\n";
-	}
-	else
-		CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"Thumbnail generation turned off"));
 }
 
 // Query Commands
@@ -2626,14 +2525,7 @@ void info_threads_describer(core::help_sink& sink, const core::help_repository& 
 std::wstring info_threads_command(command_context& ctx)
 {
 	std::wstringstream replyString;
-	replyString << L"200 INFO THREADS OK\r\n";
-
-	for (auto& thread : get_thread_infos())
-	{
-		replyString << thread->native_id << L" " << u16(thread->name) << L"\r\n";
-	}
-
-	replyString << L"\r\n";
+	replyString << L"202 INFO THREADS OK\r\n";
 	return replyString.str();
 }
 
@@ -3059,10 +2951,7 @@ void register_commands(amcp_command_repository& repo)
 	repo.register_channel_command(	L"Mixer Commands",		L"MIXER CLEAR",					mixer_clear_describer,				mixer_clear_command,			0);
 	repo.register_command(			L"Mixer Commands",		L"CHANNEL_GRID",				channel_grid_describer,				channel_grid_command,			0);
 
-	repo.register_command(			L"Thumbnail Commands",	L"THUMBNAIL LIST",				thumbnail_list_describer,			thumbnail_list_command,			0);
 	repo.register_command(			L"Thumbnail Commands",	L"THUMBNAIL RETRIEVE",			thumbnail_retrieve_describer,		thumbnail_retrieve_command,		1);
-	repo.register_command(			L"Thumbnail Commands",	L"THUMBNAIL GENERATE",			thumbnail_generate_describer,		thumbnail_generate_command,		1);
-	repo.register_command(			L"Thumbnail Commands",	L"THUMBNAIL GENERATE_ALL",		thumbnail_generateall_describer,	thumbnail_generateall_command,	0);
 
 	repo.register_command(			L"Query Commands",		L"CINF",						cinf_describer,						cinf_command,					1);
 	repo.register_command(			L"Query Commands",		L"CLS",							cls_describer,						cls_command,					0);

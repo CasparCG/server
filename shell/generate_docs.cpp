@@ -28,7 +28,6 @@
 #include <core/help/help_repository.h>
 #include <core/help/help_sink.h>
 #include <core/help/util.h>
-#include <core/consumer/syncto/syncto_consumer.h>
 #include <core/producer/text/text_producer.h>
 #include <core/producer/scene/xml_scene_producer.h>
 #include <core/producer/cg_proxy.h>
@@ -235,7 +234,6 @@ int main(int argc, char** argv)
 	initialize_modules(dependencies);
 	core::init_cg_proxy_as_producer(dependencies);
 	core::scene::init(dependencies);
-	core::syncto::init(dependencies);
 
 	generate_amcp_commands_help(*help_repo);
 	generate_producers_help(*help_repo);

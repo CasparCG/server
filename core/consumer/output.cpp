@@ -41,9 +41,8 @@
 #include <common/prec_timer.h>
 #include <common/memshfl.h>
 #include <common/env.h>
-#include <common/linq.h>
-#include <common/timer.h>
 
+#include <boost/timer.h>
 #include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -85,7 +84,7 @@ public:
 			port p(index, channel_index_, std::move(consumer));
 			p.monitor_output().attach_parent(monitor_subject_);
 			ports_.insert(std::make_pair(index, std::move(p)));
-		}, task_priority::high_priority);
+		});
 	}
 
 	void add(const spl::shared_ptr<frame_consumer>& consumer)
@@ -103,7 +102,7 @@ public:
 				ports_.erase(it);
 				send_to_consumers_delays_.erase(index);
 			}
-		}, task_priority::high_priority);
+		});
 	}
 
 	void remove(const spl::shared_ptr<frame_consumer>& consumer)
@@ -142,27 +141,32 @@ public:
 
 	std::pair<int, int> minmax_buffer_depth() const
 	{
-		if(ports_.empty())
-			return std::make_pair(0, 0);
+		boost::optional<std::pair<int, int>> minmax;
+		for (auto& p : ports_) {
+			auto depth = p.second.buffer_depth();
+			if (!minmax) {
+				*minmax = std::pair<int, int>(depth, depth);
+			} else {
+				minmax->first = std::min(minmax->first, depth);
+				minmax->second = std::max(minmax->second, depth);
+			}
+		}
 
-		return cpplinq::from(ports_)
-			.select(values())
-			.select(std::mem_fn(&port::buffer_depth))
-			.where([](int v) { return v >= 0; })
-			.aggregate(minmax::initial_value<int>(), minmax());
+		return minmax.value_or(std::pair<int, int>(0, 0));
 	}
 
 	bool has_synchronization_clock() const
 	{
-		return cpplinq::from(ports_)
-			.select(values())
-			.where(std::mem_fn(&port::has_synchronization_clock))
-			.any();
+		bool has_synchronization_clock = false;
+		for (auto& p : ports_) {
+			has_synchronization_clock |= p.second.has_synchronization_clock();
+		}
+		return has_synchronization_clock;
 	}
 
 	std::future<void> operator()(const_frame input_frame, const core::video_format_desc& format_desc, const core::audio_channel_layout& channel_layout)
 	{
-		spl::shared_ptr<caspar::timer> frame_timer;
+		spl::shared_ptr<boost::timer> frame_timer;
 
 		change_channel_format(format_desc, channel_layout);
 
@@ -270,7 +274,7 @@ public:
 					.add(L"index", port.first);
 			}
 			return info;
-		}, task_priority::high_priority));
+		}));
 	}
 
 	std::future<boost::property_tree::wptree> delay_info()
@@ -295,7 +299,7 @@ public:
 				info.add_child(L"consumer", child);
 			}
 			return info;
-		}, task_priority::high_priority));
+		}));
 	}
 
 	std::vector<spl::shared_ptr<const frame_consumer>> get_consumers()

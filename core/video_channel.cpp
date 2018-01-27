@@ -35,16 +35,14 @@
 
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
-#include <common/lock.h>
 #include <common/executor.h>
-#include <common/timer.h>
 #include <common/future.h>
 
 #include <core/mixer/image/image_mixer.h>
-#include <core/diagnostics/call_context.h>
 
 #include <tbb/spin_mutex.h>
 
+#include <boost/timer.h>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/lexical_cast.hpp>
 
@@ -64,12 +62,7 @@ struct video_channel::impl final
 	mutable tbb::spin_mutex								channel_layout_mutex_;
 	core::audio_channel_layout							channel_layout_;
 
-	const spl::shared_ptr<caspar::diagnostics::graph>	graph_					= [](int index)
-																				  {
-																					  core::diagnostics::scoped_call_context save;
-																					  core::diagnostics::call_context::for_thread().video_channel = index;
-																					  return spl::make_shared<caspar::diagnostics::graph>();
-																				  }(index_);
+	const spl::shared_ptr<caspar::diagnostics::graph>	graph_;
 
 	caspar::core::output								output_;
 	std::future<void>									output_ready_for_frame_	= make_ready_future();
@@ -176,7 +169,7 @@ public:
 			auto format_desc	= video_format_desc();
 			auto channel_layout = audio_channel_layout();
 
-			caspar::timer frame_timer;
+			boost::timer frame_timer;
 
 			// Produce
 

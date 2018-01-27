@@ -33,12 +33,9 @@
 #include <common/utf.h>
 #include <common/prec_timer.h>
 #include <common/future.h>
-#include <common/timer.h>
 #include <common/param.h>
 #include <common/os/general_protection_fault.h>
 #include <common/scope_exit.h>
-
-//#include <windows.h>
 
 #include <ffmpeg/producer/filter/filter.h>
 #include <ffmpeg/producer/util/util.h>
@@ -50,6 +47,7 @@
 #include <core/help/help_sink.h>
 #include <core/help/help_repository.h>
 
+#include <boost/timer.h>
 #include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -132,8 +130,8 @@ struct screen_consumer : boost::noncopyable
 	std::int64_t										pts_;
 
 	spl::shared_ptr<diagnostics::graph>					graph_;
-	caspar::timer										perf_timer_;
-	caspar::timer										tick_timer_;
+	boost::timer										perf_timer_;
+	boost::timer										tick_timer_;
 
 	caspar::prec_timer									wait_timer_;
 

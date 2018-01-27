@@ -35,7 +35,6 @@
 #include <common/except.h>
 #include <common/log.h>
 #include <common/param.h>
-#include <common/timer.h>
 
 #include <core/frame/audio_channel_layout.h>
 #include <core/frame/frame.h>
@@ -45,13 +44,13 @@
 #include <core/producer/frame_producer.h>
 #include <core/producer/framerate/framerate_producer.h>
 #include <core/monitor/monitor.h>
-#include <core/diagnostics/call_context.h>
 #include <core/mixer/audio/audio_mixer.h>
 #include <core/help/help_repository.h>
 #include <core/help/help_sink.h>
 
 #include <tbb/concurrent_queue.h>
 
+#include <boost/timer.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/adaptor/transformed.hpp>
@@ -98,7 +97,7 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	const int										device_index_;
 	core::monitor::subject							monitor_subject_;
 	spl::shared_ptr<diagnostics::graph>				graph_;
-	caspar::timer									tick_timer_;
+	boost::timer									tick_timer_;
 
 	com_ptr<IDeckLink>								decklink_			= get_device(device_index_);
 	com_iface_ptr<IDeckLinkInput>					input_				= iface_cast<IDeckLinkInput>(decklink_);
@@ -179,7 +178,7 @@ public:
 									<< boost::errinfo_api_function("StartStreams"));
 
 		// Wait for first frame until returning or give up after 2 seconds.
-		caspar::timer timeout_timer;
+		boost::timer timeout_timer;
 
 		while (frame_buffer_.size() < 1 && timeout_timer.elapsed() < 2.0)
 			boost::this_thread::sleep_for(boost::chrono::milliseconds(1));
@@ -221,7 +220,7 @@ public:
 			graph_->set_value("tick-time", tick_timer_.elapsed()*out_format_desc_.fps*0.5);
 			tick_timer_.restart();
 
-			caspar::timer frame_timer;
+			boost::timer frame_timer;
 
 			// Video
 
@@ -365,10 +364,8 @@ public:
 		: executor_(L"decklink_producer[" + boost::lexical_cast<std::wstring>(device_index) + L"]")
 		, length_(length)
 	{
-		auto ctx = core::diagnostics::call_context::for_thread();
 		executor_.invoke([=]
 		{
-			core::diagnostics::call_context::for_thread() = ctx;
 			com_initialize();
 			producer_.reset(new decklink_producer(in_format_desc, device_index, frame_factory, out_format_desc, channel_layout, filter_str));
 		});

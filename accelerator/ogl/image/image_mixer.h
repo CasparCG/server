@@ -23,7 +23,6 @@
 
 #include <common/forward.h>
 #include <common/memory.h>
-#include <common/future_fwd.h>
 
 #include <core/mixer/image/blend_modes.h>
 #include <core/mixer/image/image_mixer.h>
@@ -31,6 +30,8 @@
 
 #include <core/frame/frame_visitor.h>
 #include <core/video_format.h>
+
+#include <future>
 
 namespace caspar { namespace accelerator { namespace ogl {
 	

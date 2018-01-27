@@ -23,79 +23,89 @@
 
 #include "os/general_protection_fault.h"
 #include "except.h"
-#include "log.h"
-#include "blocking_bounded_queue_adapter.h"
-#include "blocking_priority_queue.h"
 #include "future.h"
 
-#include <tbb/atomic.h>
-#include <tbb/concurrent_priority_queue.h>
-
-#include <boost/thread.hpp>
-#include <boost/optional.hpp>
-
+#include <atomic>
 #include <functional>
 #include <future>
-
-namespace caspar {
-enum class task_priority
-{
-	lowest_priority = 0,
-	lower_priority,
-	low_priority,
-	normal_priority,
-	high_priority,
-	higher_priority
-};
+#include <thread>
+#include <deque>
+#include <mutex>
+#include <condition_variabl>
 
 class executor final
 {
-	executor(const executor&);
-	executor& operator=(const executor&);
+	typedef std::shared_ptr<std::function<void()>> func_t;
 
-	typedef blocking_priority_queue<std::function<void()>, task_priority>	function_queue_t;
-
-	const std::wstring	name_;
-	tbb::atomic<bool>	is_running_;
-	boost::thread		thread_;
-	function_queue_t	execution_queue_;
-	tbb::atomic<bool>	currently_in_task_;
+	const std::wstring  	 name_;
+	std::atomic<bool>   	 running_;
+	std::deque<func_t>		 queue_;
+	std::atomic<std::size_t> queue_capacity_ = std::numeric_limits<std::size_t>::max();
+	std::mutex          	 queue_mutex_;
+	std::condition_variable  queue_cond_;
+	std::thread         	 thread_;
 
 public:
 	executor(const std::wstring& name)
 		: name_(name)
-		, execution_queue_(std::numeric_limits<int>::max(), std::vector<task_priority> {
-			task_priority::lowest_priority,
-			task_priority::lower_priority,
-			task_priority::low_priority,
-			task_priority::normal_priority,
-			task_priority::high_priority,
-			task_priority::higher_priority
-		})
+		, thread_([this]{run();}))
 	{
-		is_running_ = true;
-		currently_in_task_ = false;
-		thread_ = boost::thread([this]{run();});
+		running_ = true;
 	}
+
+	executor(const executor&) = delete;
 
 	~executor()
 	{
-		CASPAR_LOG(debug) << L"Shutting down " << name_;
+		running_ = false;
+		thread_.join();
+	}
 
-		try
-		{
-			if (is_running_)
-				internal_begin_invoke([=]
-				{
-					is_running_ = false;
-				}).wait();
-		}
-		catch(...)
-		{
-			CASPAR_LOG_CURRENT_EXCEPTION();
+	executor& operator=(const executor&) = delete;
+
+	template<typename Func>
+	auto begin_invoke(Func&& func)
+	{
+		if(!running_) {
+			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("executor not running.") << source_info(name_));
 		}
 
-		join();
+		return internal_begin_invoke(std::forward<Func>(func), priority);
+	}
+
+	template<typename Func>
+	auto invoke(Func&& func)
+	{
+		if(is_current()) {
+			return func();
+		}
+
+		return begin_invoke(std::forward<Func>(func)).get();
+	}
+
+	void set_capacity(std::size_t capacity)
+	{
+		queue_capacity_ = capacity;
+	}
+
+	std::size_t capacity() const
+	{
+		return queue_capacity_;
+	}
+
+	void clear()
+	{
+		{
+			std::lock_guard<std::mutex> lock(queue_mutex_);
+			queue_.clear();
+		}
+		queue_cond_.notify_all();
+	}
+
+	void stop()
+	{
+		running_ = false;
+		queue_cond_.notify_one();
 	}
 
 	void join()
@@ -103,87 +113,25 @@ public:
 		thread_.join();
 	}
 
-	template<typename Func>
-	auto begin_invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> std::future<decltype(func())> // noexcept
-	{
-		if(!is_running_)
-			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("executor not running.") << source_info(name_));
-
-		return internal_begin_invoke(std::forward<Func>(func), priority);
-	}
-
-	template<typename Func>
-	auto invoke(Func&& func, task_priority prioriy = task_priority::normal_priority) -> decltype(func()) // noexcept
-	{
-		if(is_current())  // Avoids potential deadlock.
-			return func();
-
-		return begin_invoke(std::forward<Func>(func), prioriy).get();
-	}
-
-	void yield(task_priority minimum_priority)
-	{
-		if(!is_current())
-			CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Executor can only yield inside of thread context.")  << source_info(name_));
-
-		std::function<void ()> func;
-
-		while (execution_queue_.try_pop(func, minimum_priority))
-			func();
-	}
-
-	void set_capacity(function_queue_t::size_type capacity)
-	{
-		execution_queue_.set_capacity(capacity);
-	}
-
-	function_queue_t::size_type capacity() const
-	{
-		return execution_queue_.capacity();
-	}
-
-	bool is_full() const
-	{
-		return execution_queue_.space_available() == 0;
-	}
-
-	void clear()
-	{
-		std::function<void ()> func;
-		while(execution_queue_.try_pop(func));
-	}
-
-	void stop()
-	{
-		invoke([this]
-		{
-			is_running_ = false;
-		});
-	}
-
 	void wait()
 	{
-		invoke([]{}, task_priority::lowest_priority);
+		invoke([]{});
 	}
 
-	function_queue_t::size_type size() const
+	std::size_t size() const
 	{
-		return execution_queue_.size();
+		std::lock_guard<std::mutex> lock(queue_mutex_);
+		return queue_.size();
 	}
 
 	bool is_running() const
 	{
-		return is_running_;
+		return running_;
 	}
 
 	bool is_current() const
 	{
-		return boost::this_thread::get_id() == thread_.get_id();
-	}
-
-	bool is_currently_in_task() const
-	{
-		return currently_in_task_;
+		return std::this_thread::get_id() == thread_.get_id();
 	}
 
 	std::wstring name() const
@@ -199,112 +147,62 @@ private:
 	}
 
 	template<typename Func>
-	auto internal_begin_invoke(
-		Func&& func,
-		task_priority priority = task_priority::normal_priority) -> std::future<decltype(func())> // noexcept
+	auto internal_begin_invoke(Func&& func)
 	{
-		typedef typename std::remove_reference<Func>::type	function_type;
-		typedef decltype(func())							result_type;
-		typedef std::packaged_task<result_type()>			task_type;
+		typedef decltype(func())                  result_type;
+		typedef std::packaged_task<result_type()> task_type;
 
-		std::shared_ptr<task_type> task;
+ 		auto task 	= task_type(std::forward<Func>(func));
+		auto future = task.get_future();
+		auto func 	= std::make_shared<func_t>(std::move(task));
 
-		// Use pointers since the boost thread library doesn't fully support move semantics.
-
-		auto raw_func2 = new function_type(std::forward<Func>(func));
-		try
 		{
-			task.reset(new task_type([raw_func2]() -> result_type
-			{
-				std::unique_ptr<function_type> func2(raw_func2);
-				return (*func2)();
-			}));
+			std::unique_lock<std::mutex> lock(queue_mutex_);
+			queue_cond_.wait([&] { return queue_.size() < queue_capacity_ || !running_; });			
+			queue_.push(func);
 		}
-		catch(...)
+		queue_cond_.notify_one();
+
+		return std::async(std::launch::deferred, [=, func = std::move(func), future = std::move(future)]
 		{
-			delete raw_func2;
-			throw;
-		}
-
-		auto future = task->get_future().share();
-		auto function = [task]
-		{
-			try
-			{
-				(*task)();
-			}
-			catch(std::future_error&){}
-		};
-
-		if (!execution_queue_.try_push(priority, function))
-		{
-			if (is_current())
-				CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(print() + L" Overflow. Avoiding deadlock."));
-
-			CASPAR_LOG(warning) << print() << L" Overflow. Blocking caller.";
-			execution_queue_.push(priority, function);
-		}
-
-		return std::async(std::launch::deferred, [=]() mutable -> result_type
-		{
-			if (!is_ready(future) && is_current()) // Avoids potential deadlock.
-			{
-				function();
-			}
-
-			try
-			{
-				return future.get();
-			}
-			catch (const caspar_exception& e)
-			{
-				if (!is_current()) // Add context information from this thread before rethrowing.
+			if (is_current() && !is_ready(future)) {
 				{
-					auto ctx_info = boost::get_error_info<context_info_t>(e);
-
-					if (ctx_info)
-						e << context_info(get_context() + *ctx_info);
-					else
-						e << context_info(get_context());
+					std::lock_guard<std::mutex> lock(queue_mutex_);
+					(*func)();
+					queue_.erase(std::find(queue_.begin(), queue_.end(), func));
 				}
-
-				throw;
+				queue_cond_.notify_one();
 			}
+
+			return future.get();
 		});
 	}
 
-	void run() // noexcept
+	void run() noexcept
 	{
-		ensure_gpf_handler_installed_for_thread(u8(name_).c_str());
-		while (is_running_)
-		{
-			try
-			{
-				std::function<void ()> func;
-				execution_queue_.pop(func);
-				currently_in_task_ = true;
-				func();
-			}
-			catch (...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-			}
+		try {
+			ensure_gpf_handler_installed_for_thread(u8(name_).c_str());
 
-			currently_in_task_ = false;
-		}
+			while (true) {
+				func_t func;
+				{
+					std::unique_lock<std::mutex> lock(queue_mutex_);
+					queue_cond_.wait([&] { return !queue_.empty() || !running_; });
+					if (!queue_.empty()) {
+						func = std::move(queue_.front());
+						queue_.pop();	
+					}				
+				}
 
-		// Execute rest
-		try
-		{
-			std::function<void()> func;
+				if (!func) {
+					break;
+				}
 
-			while (execution_queue_.try_pop(func))
-			{
-				func();
+				queue_cond_.notify_one();
+
+				(*func)();
 			}
-		}
-		catch (...)
-		{
+		} catch (...) {
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 	}

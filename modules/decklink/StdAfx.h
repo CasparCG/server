@@ -51,6 +51,7 @@
 #include <boost/range.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/timer.h>
 #include <boost/algorithm/string.hpp>
 
 #if defined(_MSC_VER)
@@ -86,7 +87,6 @@ extern "C"
 #include "../common/utf.h"
 #include "../common/except.h"
 #include "../common/log.h"
-#include "../common/timer.h"
 #endif
 
 #if defined(_MSC_VER)

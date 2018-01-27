@@ -23,7 +23,6 @@
 
 #include "log.h"
 
-#include "os/threading.h"
 #include "except.h"
 #include "utf.h"
 
@@ -145,7 +144,7 @@ namespace internal{
 void init()
 {
 	boost::log::add_common_attributes();
-	boost::log::core::get()->add_global_attribute("NativeThreadId", boost::log::attributes::make_function(&get_current_thread_id));
+	boost::log::core::get()->add_global_attribute("NativeThreadId", boost::log::attributes::make_function(&std::this_thread::get_id));
 	boost::log::core::get()->add_global_attribute("TimestampMillis", boost::log::attributes::make_function([]
 	{
 		return boost::posix_time::microsec_clock::local_time();

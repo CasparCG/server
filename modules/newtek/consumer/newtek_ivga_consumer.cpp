@@ -35,7 +35,6 @@
 #include <common/assert.h>
 #include <common/executor.h>
 #include <common/diagnostics/graph.h>
-#include <common/timer.h>
 #include <common/param.h>
 
 #include <boost/algorithm/string.hpp>

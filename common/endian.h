@@ -32,15 +32,13 @@
 namespace caspar {
 
 template<typename T>
-typename std::enable_if<sizeof(T) == sizeof(std::uint8_t), T>::type swap_byte_order(
-		const T& value)
+typename std::enable_if<sizeof(T) == sizeof(std::uint8_t), T>::type swap_byte_order(const T& value)
 {
 	return value;
 }
 
 template<typename T>
-typename std::enable_if<sizeof(T) == sizeof(std::uint16_t), T>::type swap_byte_order(
-		const T& value)
+typename std::enable_if<sizeof(T) == sizeof(std::uint16_t), T>::type swap_byte_order(const T& value)
 {
 #ifdef _MSC_VER
 	auto swapped = _byteswap_ushort(reinterpret_cast<const unsigned short&>(value));
@@ -52,8 +50,7 @@ typename std::enable_if<sizeof(T) == sizeof(std::uint16_t), T>::type swap_byte_o
 }
 
 template<typename T>
-typename std::enable_if<sizeof(T) == sizeof(std::uint32_t), T>::type swap_byte_order(
-		const T& value)
+typename std::enable_if<sizeof(T) == sizeof(std::uint32_t), T>::type swap_byte_order(const T& value)
 {
 #ifdef _MSC_VER
 	auto swapped = _byteswap_ulong(reinterpret_cast<const unsigned long&>(value));
@@ -65,15 +62,13 @@ typename std::enable_if<sizeof(T) == sizeof(std::uint32_t), T>::type swap_byte_o
 }
 
 template<typename T>
-typename std::enable_if<sizeof(T) == sizeof(std::uint64_t), T>::type swap_byte_order(
-		const T& value)
+typename std::enable_if<sizeof(T) == sizeof(std::uint64_t), T>::type swap_byte_order(const T& value)
 {
 #ifdef _MSC_VER
 	auto swapped = _byteswap_uint64(reinterpret_cast<const unsigned long long&>(value));
 #elif __GNUC__
 	auto swapped = __builtin_bswap64(value);
 #endif
-
 	return reinterpret_cast<const T&>(swapped);
 }
 

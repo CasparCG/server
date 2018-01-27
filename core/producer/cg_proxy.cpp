@@ -27,7 +27,6 @@
 #include "frame_producer.h"
 #include "stage.h"
 #include "../video_channel.h"
-#include "../diagnostics/call_context.h"
 #include "../module_dependencies.h"
 #include "../frame/draw_frame.h"
 #include "../help/help_sink.h"
@@ -167,10 +166,6 @@ public:
 
 		if (create_new)
 		{
-			diagnostics::scoped_call_context save;
-			diagnostics::call_context::for_thread().video_channel = video_channel->index();
-			diagnostics::call_context::for_thread().layer = render_layer;
-
 			producer = found->producer_factory(dependencies, filename);
 			video_channel->stage().load(render_layer, producer);
 			video_channel->stage().play(render_layer);

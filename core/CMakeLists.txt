@@ -2,16 +2,11 @@ cmake_minimum_required (VERSION 2.6)
 project (core)
 
 set(SOURCES
-		consumer/syncto/syncto_consumer.cpp
-
 		consumer/frame_consumer.cpp
 		consumer/output.cpp
 		consumer/port.cpp
 
-		diagnostics/call_context.cpp
-		diagnostics/graph_to_log_sink.cpp
 		diagnostics/osd_graph.cpp
-		diagnostics/subject_diagnostics.cpp
 
 		frame/audio_channel_layout.cpp
 		frame/draw_frame.cpp
@@ -55,22 +50,16 @@ set(SOURCES
 
 		system_info_provider.cpp
 		StdAfx.cpp
-		thumbnail_generator.cpp
 		video_channel.cpp
 		video_format.cpp
 )
 set(HEADERS
-		consumer/syncto/syncto_consumer.h
-
 		consumer/frame_consumer.h
 		consumer/output.h
 		consumer/port.h
 		consumer/write_frame_consumer.h
 
-		diagnostics/call_context.h
-		diagnostics/graph_to_log_sink.h
 		diagnostics/osd_graph.h
-		diagnostics/subject_diagnostics.h
 
 		frame/audio_channel_layout.h
 		frame/draw_frame.h
@@ -135,7 +124,6 @@ set(HEADERS
 		module_dependencies.h
 		system_info_provider.h
 		StdAfx.h
-		thumbnail_generator.h
 		video_channel.h
 		video_format.h
 )
@@ -145,7 +133,6 @@ add_precompiled_header(core StdAfx.h FORCEINCLUDE)
 
 include_directories(..)
 include_directories(${BOOST_INCLUDE_PATH})
-include_directories(${RXCPP_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_PATH})
 include_directories(${SFML_INCLUDE_PATH})
 include_directories(${FREETYPE_INCLUDE_PATH})
@@ -153,7 +140,6 @@ include_directories(${GLEW_INCLUDE_PATH})
 
 source_group(sources ./*)
 source_group(sources\\consumer consumer/*)
-source_group(sources\\consumer\\syncto consumer/syncto/*)
 source_group(sources\\diagnostics diagnostics/*)
 source_group(sources\\producer producer/*)
 source_group(sources\\producer\\framerate producer/framerate/*)

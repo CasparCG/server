@@ -29,12 +29,12 @@
 #include <core/monitor/monitor.h>
 
 #include <common/diagnostics/graph.h>
-#include <common/linq.h>
 
 #include <boost/range/adaptors.hpp>
 #include <boost/range/distance.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <atomic>
 #include <map>
 #include <stack>
 #include <vector>
@@ -61,7 +61,7 @@ struct audio_item
 	}
 };
 
-typedef cache_aligned_vector<double> audio_buffer_ps;
+typedef std::vector<double> audio_buffer_ps;
 
 struct audio_stream
 {
@@ -81,7 +81,7 @@ struct audio_mixer::impl : boost::noncopyable
 	std::vector<int>					audio_cadence_;
 	video_format_desc					format_desc_;
 	audio_channel_layout				channel_layout_			= audio_channel_layout::invalid();
-	float								master_volume_			= 1.0f;
+	std::atomic<float>					master_volume_			= 1.0f;
 	float								previous_master_volume_	= master_volume_;
 	spl::shared_ptr<diagnostics::graph>	graph_;
 public:
@@ -231,20 +231,6 @@ public:
 
 		if(audio_streams_.empty())
 			audio_streams_[nullptr].audio_data = audio_buffer_ps(audio_size(audio_cadence_.front()), 0.0);
-
-		{ // sanity check
-
-			auto nb_invalid_streams = cpplinq::from(audio_streams_)
-				.select(values())
-				.where([&](const audio_stream& x)
-				{
-					return !x.remapping_failed && x.audio_data.size() < audio_size(audio_cadence_.front());
-				})
-				.count();
-
-			if(nb_invalid_streams > 0)
-				CASPAR_LOG(trace) << "[audio_mixer] Incorrect frame audio cadence detected.";
-		}
 
 		audio_buffer_ps result_ps(audio_size(audio_cadence_.front()), 0.0);
 		for (auto& stream : audio_streams_ | boost::adaptors::map_values)

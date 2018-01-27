@@ -32,27 +32,22 @@
 #include <core/frame/audio_channel_layout.h>
 #include <core/mixer/audio/audio_mixer.h>
 #include <core/consumer/frame_consumer.h>
-#include <core/diagnostics/call_context.h>
 #include <core/help/help_sink.h>
 #include <core/help/help_repository.h>
 
 #include <common/executor.h>
-#include <common/lock.h>
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
 #include <common/memshfl.h>
-#include <common/no_init_proxy.h>
 #include <common/array.h>
 #include <common/future.h>
-#include <common/cache_aligned_vector.h>
-#include <common/timer.h>
 #include <common/param.h>
-#include <common/software_version.h>
+#include <common/assert.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/scalable_allocator.h>
 
-#include <common/assert.h>
+#include <boost/timer.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -338,6 +333,9 @@ struct key_video_context : public IDeckLinkVideoOutputCallback, boost::noncopyab
 template <typename Configuration>
 struct decklink_consumer : public IDeckLinkVideoOutputCallback, boost::noncopyable
 {
+	typedef std::pair<std::promise<bool()>, core::const_frame> 	frame_t;
+	typedef tbb::concurrent_bounded_queue<frame_t> 				buffer_t;
+
 	const int											channel_index_;
 	const configuration									config_;
 
@@ -366,11 +364,10 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, boost::noncopyab
 
 	boost::circular_buffer<std::vector<int32_t>>		audio_container_		{ static_cast<unsigned long>(buffer_size_ + 1) };
 
-	tbb::concurrent_bounded_queue<core::const_frame>	frame_buffer_;
-	caspar::semaphore									ready_for_new_frames_	{ 0 };
+	buffer_t											frame_buffer_;
 
 	spl::shared_ptr<diagnostics::graph>					graph_;
-	caspar::timer										tick_timer_;
+	boost::timer										tick_timer_;
 	reference_signal_detector							reference_signal_detector_	{ output_ };
 	tbb::atomic<int64_t>								current_presentation_delay_;
 	tbb::atomic<int64_t>								scheduled_frames_completed_;
@@ -542,14 +539,14 @@ public:
 				graph_->set_value("buffered-audio", static_cast<double>(buffered) / (format_desc_.audio_cadence[0] * config_.buffer_depth()));
 			}
 
-			auto frame = core::const_frame::empty();
+			frame_t frame;
 
 			if (!frame_buffer_.try_pop(frame)) {
 				graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
 				frame_buffer_.pop(frame);
 			}
 
-			ready_for_new_frames_.release();
+			frame.first.set_value(true);
 
 			if (!is_running_)
 				return E_FAIL;
@@ -557,7 +554,7 @@ public:
 			if (config_.embedded_audio)
 				schedule_next_audio(channel_remapper_.mix_and_rearrange(frame.audio_data()));
 
-			schedule_next_video(frame);
+			schedule_next_video(frame.second);
 		}
 		catch(...)
 		{
@@ -613,16 +610,11 @@ public:
 		if(!is_running_)
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Is not running."));
 
-		frame_buffer_.push(frame);
+		auto promise = std::promise<bool()>();
+		auto future  = promise.get_future();
+		frame_buffer_.push(frame_t(std::move(promise), std::move(frame)));
 
-		auto send_completion = spl::make_shared<std::promise<bool>>();
-
-		ready_for_new_frames_.acquire(1, [send_completion]
-		{
-			send_completion->set_value(true);
-		});
-
-		return send_completion->get_future();
+		return future;
 	}
 
 	std::wstring print() const
@@ -654,10 +646,8 @@ public:
 		: config_(config)
 		, executor_(L"decklink_consumer[" + boost::lexical_cast<std::wstring>(config.device_index) + L"]")
 	{
-		auto ctx = core::diagnostics::call_context::for_thread();
 		executor_.begin_invoke([=]
 		{
-			core::diagnostics::call_context::for_thread() = ctx;
 			com_initialize();
 		});
 	}
@@ -738,20 +728,6 @@ public:
 	}
 };
 
-const software_version<3>& get_driver_version()
-{
-	static software_version<3> version(u8(get_version()));
-
-	return version;
-}
-
-const software_version<3> get_new_configuration_api_version()
-{
-	static software_version<3> NEW_CONFIGURATION_API("10.2");
-
-	return NEW_CONFIGURATION_API;
-}
-
 void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"Sends video on an SDI output using Blackmagic Decklink video cards.");
@@ -825,12 +801,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(
 		config.out_channel_layout = *found_layout;
 	}
 
-	bool old_configuration_api = get_driver_version() < get_new_configuration_api_version();
-
-	if (old_configuration_api)
-		return spl::make_shared<decklink_consumer_proxy<IDeckLinkConfiguration_v10_2>>(config);
-	else
-		return spl::make_shared<decklink_consumer_proxy<IDeckLinkConfiguration>>(config);
+	return spl::make_shared<decklink_consumer_proxy<IDeckLinkConfiguration>>(config);
 }
 
 spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
@@ -856,8 +827,6 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 
 	if (channel_layout)
 	{
-		CASPAR_SCOPED_CONTEXT_MSG("/channel-layout")
-
 		auto found_layout = core::audio_channel_layout_repository::get_default()->get_layout(*channel_layout);
 
 		if (!found_layout)
@@ -872,12 +841,7 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 	config.embedded_audio		= ptree.get(L"embedded-audio",	config.embedded_audio);
 	config.base_buffer_depth	= ptree.get(L"buffer-depth",	config.base_buffer_depth);
 
-	bool old_configuration_api = get_driver_version() < get_new_configuration_api_version();
-
-	if (old_configuration_api)
-		return spl::make_shared<decklink_consumer_proxy<IDeckLinkConfiguration_v10_2>>(config);
-	else
-		return spl::make_shared<decklink_consumer_proxy<IDeckLinkConfiguration>>(config);
+	return spl::make_shared<decklink_consumer_proxy<IDeckLinkConfiguration>>(config);
 }
 
 }}

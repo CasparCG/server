@@ -38,11 +38,9 @@
 #include <common/assert.h>
 #include <common/env.h>
 #include <common/executor.h>
-#include <common/lock.h>
 #include <common/future.h>
 #include <common/diagnostics/graph.h>
 #include <common/prec_timer.h>
-#include <common/linq.h>
 #include <common/os/filesystem.h>
 
 #include <boost/algorithm/string/predicate.hpp>
@@ -356,8 +354,6 @@ private:
 			if (format_desc_.field_mode != core::field_mode::progressive)
 			{
 				auto frame1 = pop();
-
-				executor_.yield(caspar::task_priority::lowest_priority);
 				timer.tick(1.0 / (format_desc_.fps * format_desc_.field_count));
 				invoke_requested_animation_frames();
 

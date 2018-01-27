@@ -17,7 +17,6 @@ configure_file("${PROJECT_SOURCE_DIR}/version.tmpl" "${PROJECT_SOURCE_DIR}/versi
 set(DEPENDENCIES_FOLDER			"${PROJECT_SOURCE_DIR}/dependencies64")
 
 set(BOOST_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/boost")
-set(RXCPP_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/RxCpp/include")
 set(TBB_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/tbb/include")
 set(GLEW_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/glew/include")
 set(SFML_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/sfml/include")
@@ -33,7 +32,6 @@ set(FREEIMAGE_INCLUDE_PATH		"${DEPENDENCIES_FOLDER}/freeimage/include")
 set(OPENAL_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/openal/include")
 set(BLUEFISH_INCLUDE_PATH		"${DEPENDENCIES_FOLDER}/bluefish/include")
 set(CEF_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/cef/include")
-set(GTEST_INCLUDE_PATH			"${DEPENDENCIES_FOLDER}/gtest/include")
 
 if (MSVC)
 	set(PLATFORM_FOLDER_NAME	"win32")
@@ -63,7 +61,6 @@ link_directories("${DEPENDENCIES_FOLDER}/openal/lib/${PLATFORM_FOLDER_NAME}")
 link_directories("${DEPENDENCIES_FOLDER}/bluefish/lib")
 link_directories("${DEPENDENCIES_FOLDER}/zlib/lib")
 link_directories("${DEPENDENCIES_FOLDER}/cef/lib/${PLATFORM_FOLDER_NAME}")
-link_directories("${DEPENDENCIES_FOLDER}/gtest/lib/${PLATFORM_FOLDER_NAME}")
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
@@ -158,4 +155,3 @@ add_subdirectory(modules)
 
 add_subdirectory(protocol)
 add_subdirectory(shell)
-add_subdirectory(unit-test)

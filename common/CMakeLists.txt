@@ -11,7 +11,6 @@ set(SOURCES
 		except.cpp
 		filesystem.cpp
 		log.cpp
-		polling_filesystem_monitor.cpp
 		stdafx.cpp
 		thread_info.cpp
 		tweener.cpp
@@ -20,14 +19,11 @@ set(SOURCES
 if (MSVC)
 	set(OS_SPECIFIC_SOURCES
 			compiler/vs/disable_silly_warnings.h
-			compiler/vs/StackWalker.cpp
-			compiler/vs/StackWalker.h
 
 			os/windows/filesystem.cpp
 			os/windows/page_locked_allocator.cpp
 			os/windows/prec_timer.cpp
 			os/windows/threading.cpp
-			os/windows/stack_trace.cpp
 			os/windows/system_info.cpp
 			os/windows/win32_exception.cpp
 			os/windows/win32_exception.h
@@ -39,7 +35,6 @@ else ()
 			os/linux/prec_timer.cpp
 			os/linux/signal_handlers.cpp
 			os/linux/threading.cpp
-			os/linux/stack_trace.cpp
 			os/linux/system_info.cpp
 	)
 endif ()
@@ -52,38 +47,26 @@ set(HEADERS
 		os/general_protection_fault.h
 		os/page_locked_allocator.h
 		os/threading.h
-		os/stack_trace.h
 		os/system_info.h
 
 		array.h
 		assert.h
+		asio.h
 		base64.h
-		blocking_bounded_queue_adapter.h
-		blocking_priority_queue.h
-		cache_aligned_vector.h
 		endian.h
 		enum_class.h
 		env.h
 		except.h
 		executor.h
 		filesystem.h
-		filesystem_monitor.h
 		forward.h
 		future.h
-		future_fwd.h
-		linq.h
-		lock.h
 		log.h
 		memory.h
 		memshfl.h
-		no_init_proxy.h
 		param.h
-		polling_filesystem_monitor.h
 		prec_timer.h
-		ptree.h
 		scope_exit.h
-		semaphore.h
-		software_version.h
 		stdafx.h
 		thread_info.h
 		timer.h
@@ -96,7 +79,6 @@ add_precompiled_header(common stdafx.h FORCEINCLUDE)
 
 include_directories(..)
 include_directories(${BOOST_INCLUDE_PATH})
-include_directories(${RXCPP_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_PATH})
 include_directories(${GLEW_INCLUDE_PATH})
 

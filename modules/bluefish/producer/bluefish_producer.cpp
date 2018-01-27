@@ -39,7 +39,6 @@
 #include <common/except.h>
 #include <common/log.h>
 #include <common/param.h>
-#include <common/timer.h>
 
 #include <core/frame/audio_channel_layout.h>
 #include <core/frame/frame.h>
@@ -49,13 +48,13 @@
 #include <core/producer/frame_producer.h>
 #include <core/producer/framerate/framerate_producer.h>
 #include <core/monitor/monitor.h>
-#include <core/diagnostics/call_context.h>
 #include <core/mixer/audio/audio_mixer.h>
 #include <core/help/help_repository.h>
 #include <core/help/help_sink.h>
 
 #include <tbb/concurrent_queue.h>
 
+#include <boost/timer.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/adaptor/transformed.hpp>
@@ -125,7 +124,7 @@ class bluefish_producer : boost::noncopyable
 	
 	core::monitor::subject							monitor_subject_;
 	spl::shared_ptr<diagnostics::graph>				graph_;
-	caspar::timer									tick_timer_;
+	boost::timer									tick_timer_;
 
     const std::wstring								model_name_ = std::wstring(L"Bluefish");
     const std::wstring								filter_;
@@ -263,7 +262,7 @@ public:
 				if (current_input_video_signal < invalid_video_mode_flag && dma_ready_captured_frame_id_ != std::numeric_limits<ULONG>::max())
 				{
 					//DoneID is now what ScheduleID was at the last iteration when we called render_buffer_capture(ScheduleID)
-					//we just checked if the video signal for the buffer “DoneID” was valid while it was capturing so we can DMA the buffer
+					//we just checked if the video signal for the buffer ï¿½DoneIDï¿½ was valid while it was capturing so we can DMA the buffer
 					//DMA the frame from the card to our buffer
 					grab_frame_from_bluefishcard();
 					processing_benchmark_timer_.restart();

@@ -63,6 +63,7 @@
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
+#include <boost/stacktrace.hpp>
 
 #include <tbb/atomic.h>
 
@@ -71,8 +72,15 @@
 
 #include <csignal>
 #include <clocale>
+#include <signal.h>
 
 using namespace caspar;
+
+void signal_handler(int signum) {
+    ::signal(signum, SIG_DFL);
+    boost::stacktrace::safe_dump_to("./backtrace.dump");
+    ::raise(SIGABRT);
+}
 
 void setup_global_locale()
 {
@@ -98,7 +106,6 @@ void print_info()
 	CASPAR_LOG(info) << cpu_info();
 	CASPAR_LOG(info) << system_product_name();
 }
-
 
 void print_system_info(const spl::shared_ptr<core::system_info_provider_repository>& repo)
 {
@@ -233,7 +240,6 @@ bool run(const std::wstring& config_file_name, tbb::atomic<bool>& should_wait_fo
 	CASPAR_LOG(info) << config_file_name << L":\n-----------------------------------------\n" << str.str() << L"-----------------------------------------";
 
 	{
-		CASPAR_SCOPED_CONTEXT_MSG(config_file_name + L": ")
 		caspar_server->start();
 	}
 
@@ -268,6 +274,19 @@ void on_abort(int)
 
 int main(int argc, char** argv)
 {
+	::signal(SIGSEGV, &signal_handler);
+	::signal(SIGABRT, &signal_handler);
+	
+	if (boost::filesystem::exists("./backtrace.dump")) {
+		std::ifstream ifs("./backtrace.dump");
+
+		auto st = boost::stacktrace::stacktrace::from_dump(ifs);
+		CASPAR_LOG(error) << "Previous run crashed:\n" << st;
+
+		ifs.close();
+		boost::filesystem::remove("./backtrace.dump");
+	}
+
 	if (intercept_command_line_args(argc, argv))
 		return 0;
 
@@ -334,12 +353,6 @@ int main(int argc, char** argv)
 		should_wait_for_keypress = false;
 		auto should_restart = run(config_file_name, should_wait_for_keypress);
 		return_code = should_restart ? 5 : 0;
-
-		for (auto& thread : get_thread_infos())
-		{
-			if (thread->name != "main thread" && thread->name != "tbb-worker-thread")
-				CASPAR_LOG(warning) << L"Thread left running: " << thread->name << L" (" << thread->native_id << L")";
-		}
 
 		CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
 

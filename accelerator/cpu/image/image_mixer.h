@@ -13,8 +13,6 @@
 
 namespace caspar { namespace accelerator { namespace cpu {
 	
-typedef cache_aligned_vector<uint8_t> buffer;
-
 class image_mixer final : public core::image_mixer
 {
 public:

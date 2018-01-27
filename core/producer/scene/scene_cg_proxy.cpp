@@ -23,8 +23,6 @@
 
 #include "scene_cg_proxy.h"
 
-#include <common/ptree.h>
-
 #include <core/producer/frame_producer.h>
 
 #include <boost/property_tree/ptree.hpp>

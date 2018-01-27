@@ -45,7 +45,6 @@
 
 #include <common/env.h>
 #include <common/executor.h>
-#include <common/lock.h>
 #include <common/diagnostics/graph.h>
 #include <common/prec_timer.h>
 #include <common/array.h>
@@ -193,7 +192,7 @@ class flash_renderer
 	core::draw_frame								head_				= core::draw_frame::late();
 	bitmap											bmp_				{ width_, height_ };
 	prec_timer										timer_;
-	caspar::timer									tick_timer_;
+	boost::timer									tick_timer_;
 	
 	spl::shared_ptr<diagnostics::graph>				graph_;
 	
@@ -387,7 +386,7 @@ public:
 		executor_.invoke([this]
 		{
 			renderer_.reset();
-		}, task_priority::high_priority);
+		});
 	}
 
 	// frame_producer
@@ -466,7 +465,7 @@ public:
 			}
 
 			return L"";
-		}, task_priority::high_priority);
+		});
 	}
 		
 	std::wstring print() const override
@@ -533,8 +532,6 @@ public:
 				else
 					return;
 			}
-
-			executor_.yield(task_priority::high_priority);
 		}
 	}
 
