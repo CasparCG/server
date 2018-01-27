@@ -65,14 +65,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< Arg, coroutine_fn, stack_allocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     boost::forward< coroutine_fn >( fn), attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -89,14 +89,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< Arg, coroutine_fn, StackAllocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     boost::forward< coroutine_fn >( fn), attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -113,14 +113,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< Arg, Fn, stack_allocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     boost::forward< Fn >( fn), attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -137,14 +137,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< Arg, Fn, StackAllocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     boost::forward< Fn >( fn), attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -161,14 +161,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< Arg, Fn, stack_allocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     fn, attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -185,14 +185,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< Arg, Fn, StackAllocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     fn, attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -209,14 +209,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< Arg, Fn, stack_allocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     fn, attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -233,14 +233,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< Arg, Fn, StackAllocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     fn, attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -321,14 +321,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< Arg &, coroutine_fn, stack_allocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     boost::forward< coroutine_fn >( fn), attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -345,14 +345,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< Arg &, coroutine_fn, StackAllocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     boost::forward< coroutine_fn >( fn), attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -369,14 +369,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< Arg &, Fn, stack_allocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     boost::forward< Fn >( fn), attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -393,14 +393,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< Arg &, Fn, StackAllocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     boost::forward< Fn >( fn), attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -417,14 +417,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< Arg &, Fn, stack_allocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     fn, attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -441,14 +441,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< Arg &, Fn, StackAllocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     fn, attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -465,14 +465,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< Arg &, Fn, stack_allocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     fn, attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -489,14 +489,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< Arg &, Fn, StackAllocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     fn, attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -577,14 +577,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< void, coroutine_fn, stack_allocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     boost::forward< coroutine_fn >( fn), attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -601,14 +601,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< void, coroutine_fn, StackAllocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     boost::forward< coroutine_fn >( fn), attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -625,14 +625,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< void, Fn, stack_allocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     boost::forward< Fn >( fn), attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -649,14 +649,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< void, Fn, StackAllocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     boost::forward< Fn >( fn), attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -673,14 +673,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< void, Fn, stack_allocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     fn, attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -697,14 +697,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< void, Fn, StackAllocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     fn, attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -721,14 +721,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< void, Fn, stack_allocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     fn, attrs, preallocated( sp, size, stack_ctx), stack_alloc); 
@@ -745,14 +745,14 @@ public:
         stack_context stack_ctx;
         // allocate the coroutine-stack
         stack_alloc.allocate( stack_ctx, attrs.size);
-        BOOST_ASSERT( 0 < stack_ctx.sp);
+        BOOST_ASSERT( 0 != stack_ctx.sp);
         // typedef of internal coroutine-type
         typedef symmetric_coroutine_object< void, Fn, StackAllocator > object_t;
         // reserve space on top of coroutine-stack for internal coroutine-type
         std::size_t size = stack_ctx.size - sizeof( object_t);
-        BOOST_ASSERT( 0 < size);
+        BOOST_ASSERT( 0 != size);
         void * sp = static_cast< char * >( stack_ctx.sp) - sizeof( object_t);
-        BOOST_ASSERT( 0 < sp);
+        BOOST_ASSERT( 0 != sp);
         // placement new for internal coroutine
         impl_ = new ( sp) object_t(
                     fn, attrs, preallocated( sp, size, stack_ctx), stack_alloc); 

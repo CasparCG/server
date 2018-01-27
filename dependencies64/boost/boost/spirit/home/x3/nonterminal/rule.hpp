@@ -20,15 +20,12 @@
 
 namespace boost { namespace spirit { namespace x3
 {
-    template <typename ID>
-    struct identity {};
-
     // default parse_rule implementation
     template <typename ID, typename Attribute, typename Iterator
       , typename Context, typename ActualAttribute>
     inline detail::default_parse_rule_result
     parse_rule(
-        rule<ID, Attribute> rule_
+        rule<ID, Attribute> /* rule_ */
       , Iterator& first, Iterator const& last
       , Context const& context, ActualAttribute& attr)
     {
@@ -137,7 +134,8 @@ namespace boost { namespace spirit { namespace x3
         typedef std::string result_type;
         std::string operator()(T const& r) const
         {
-            return r.name;
+            BOOST_ASSERT_MSG(r.name, "uninitialized rule"); // static initialization order fiasco
+            return r.name? r.name : "uninitialized";
         }
     };
 
@@ -156,7 +154,7 @@ namespace boost { namespace spirit { namespace x3
 #define BOOST_SPIRIT_DEFINE_(r, data, rule_name)                                \
     template <typename Iterator, typename Context, typename Attribute>          \
     inline bool parse_rule(                                                     \
-        decltype(rule_name) rule_                                               \
+        decltype(rule_name) /* rule_ */                                         \
       , Iterator& first, Iterator const& last                                   \
       , Context const& context, Attribute& attr)                                \
     {                                                                           \

@@ -2,7 +2,7 @@
 // detail/thread.hpp
 // ~~~~~~~~~~~~~~~~~
 //
-// Copyright (c) 2003-2015 Christopher M. Kohlhoff (chris at kohlhoff dot com)
+// Copyright (c) 2003-2017 Christopher M. Kohlhoff (chris at kohlhoff dot com)
 //
 // Distributed under the Boost Software License, Version 1.0. (See accompanying
 // file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
@@ -22,6 +22,8 @@
 #elif defined(BOOST_ASIO_WINDOWS)
 # if defined(UNDER_CE)
 #  include <boost/asio/detail/wince_thread.hpp>
+# elif defined(BOOST_ASIO_WINDOWS_APP)
+#  include <boost/asio/detail/winapp_thread.hpp>
 # else
 #  include <boost/asio/detail/win_thread.hpp>
 # endif
@@ -42,6 +44,8 @@ typedef null_thread thread;
 #elif defined(BOOST_ASIO_WINDOWS)
 # if defined(UNDER_CE)
 typedef wince_thread thread;
+# elif defined(BOOST_ASIO_WINDOWS_APP)
+typedef winapp_thread thread;
 # else
 typedef win_thread thread;
 # endif

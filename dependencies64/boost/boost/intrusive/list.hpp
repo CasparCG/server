@@ -176,7 +176,20 @@ class list_impl
    //!
    //! <b>Throws</b>: If value_traits::node_traits::node
    //!   constructor throws (this does not happen with predefined Boost.Intrusive hooks).
-   explicit list_impl(const value_traits &v_traits = value_traits())
+   list_impl()
+      :  data_(value_traits())
+   {
+      this->priv_size_traits().set_size(size_type(0));
+      node_algorithms::init_header(this->get_root_node());
+   }
+
+   //! <b>Effects</b>: constructs an empty list.
+   //!
+   //! <b>Complexity</b>: Constant
+   //!
+   //! <b>Throws</b>: If value_traits::node_traits::node
+   //!   constructor throws (this does not happen with predefined Boost.Intrusive hooks).
+   explicit list_impl(const value_traits &v_traits)
       :  data_(v_traits)
    {
       this->priv_size_traits().set_size(size_type(0));
@@ -202,8 +215,15 @@ class list_impl
       this->insert(this->cend(), b, e);
    }
 
-   //! <b>Effects</b>: to-do
+   //! <b>Effects</b>: Constructs a container moving resources from another container.
+   //!   Internal value traits are move constructed and
+   //!   nodes belonging to x (except the node representing the "end") are linked to *this.
    //!
+   //! <b>Complexity</b>: Constant.
+   //!
+   //! <b>Throws</b>: If value_traits::node_traits::node's
+   //!   move constructor throws (this does not happen with predefined Boost.Intrusive hooks)
+   //!   or the move constructor of value traits throws.
    list_impl(BOOST_RV_REF(list_impl) x)
       : data_(::boost::move(x.priv_value_traits()))
    {
@@ -213,7 +233,7 @@ class list_impl
       this->swap(x);
    }
 
-   //! <b>Effects</b>: to-do
+   //! <b>Effects</b>: Equivalent to swap
    //!
    list_impl& operator=(BOOST_RV_REF(list_impl) x)
    {  this->swap(x); return *this;  }
@@ -529,11 +549,7 @@ class list_impl
    void swap(list_impl& other)
    {
       node_algorithms::swap_nodes(this->get_root_node(), other.get_root_node());
-      if(constant_time_size){
-         size_type backup = this->priv_size_traits().get_size();
-         this->priv_size_traits().set_size(other.priv_size_traits().get_size());
-         other.priv_size_traits().set_size(backup);
-      }
+      this->priv_size_traits().swap(other.priv_size_traits());
    }
 
    //! <b>Effects</b>: Moves backwards all the elements, so that the first
@@ -1455,7 +1471,11 @@ class list
    typedef typename Base::iterator              iterator;
    typedef typename Base::const_iterator        const_iterator;
 
-   explicit list(const value_traits &v_traits = value_traits())
+   list()
+      :  Base()
+   {}
+
+   explicit list(const value_traits &v_traits)
       :  Base(v_traits)
    {}
 
