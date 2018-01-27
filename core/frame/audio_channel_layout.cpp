@@ -23,8 +23,6 @@
 
 #include "audio_channel_layout.h"
 
-#include <common/ptree.h>
-
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/algorithm/equal.hpp>

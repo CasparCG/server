@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include "os/stack_trace.h"
 #include "utf.h"
 #include "thread_info.h"
 #include "enum_class.h"
@@ -42,7 +41,6 @@ namespace caspar { namespace log {
 
 namespace internal{
 void init();
-std::wstring get_call_stack();
 std::string current_exception_diagnostic_information();
 }
 

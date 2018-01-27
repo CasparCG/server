@@ -233,7 +233,6 @@ bool run(const std::wstring& config_file_name, tbb::atomic<bool>& should_wait_fo
 	CASPAR_LOG(info) << config_file_name << L":\n-----------------------------------------\n" << str.str() << L"-----------------------------------------";
 
 	{
-		CASPAR_SCOPED_CONTEXT_MSG(config_file_name + L": ")
 		caspar_server->start();
 	}
 

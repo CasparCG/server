@@ -78,8 +78,6 @@ public:
 		{		
 			try
 			{
-				CASPAR_SCOPED_CONTEXT_MSG(L" '" + executor_.name() + L"' ");
-
 				detail::set_current_aspect_ratio(
 						static_cast<double>(format_desc.square_width)
 						/ static_cast<double>(format_desc.square_height));

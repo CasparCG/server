@@ -27,7 +27,6 @@ if (MSVC)
 			os/windows/page_locked_allocator.cpp
 			os/windows/prec_timer.cpp
 			os/windows/threading.cpp
-			os/windows/stack_trace.cpp
 			os/windows/system_info.cpp
 			os/windows/win32_exception.cpp
 			os/windows/win32_exception.h
@@ -39,7 +38,6 @@ else ()
 			os/linux/prec_timer.cpp
 			os/linux/signal_handlers.cpp
 			os/linux/threading.cpp
-			os/linux/stack_trace.cpp
 			os/linux/system_info.cpp
 	)
 endif ()
@@ -52,7 +50,6 @@ set(HEADERS
 		os/general_protection_fault.h
 		os/page_locked_allocator.h
 		os/threading.h
-		os/stack_trace.h
 		os/system_info.h
 
 		array.h
@@ -78,7 +75,6 @@ set(HEADERS
 		param.h
 		polling_filesystem_monitor.h
 		prec_timer.h
-		ptree.h
 		scope_exit.h
 		semaphore.h
 		software_version.h

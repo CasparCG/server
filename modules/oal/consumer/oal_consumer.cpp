@@ -325,8 +325,6 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 
 	if (channel_layout_spec)
 	{
-		CASPAR_SCOPED_CONTEXT_MSG("/channel-layout")
-
 		auto found_layout = core::audio_channel_layout_repository::get_default()->get_layout(*channel_layout_spec);
 
 		if (!found_layout)

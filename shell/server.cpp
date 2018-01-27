@@ -32,7 +32,6 @@
 #include <common/utf.h>
 #include <common/memory.h>
 #include <common/polling_filesystem_monitor.h>
-#include <common/ptree.h>
 
 #include <core/video_channel.h>
 #include <core/video_format.h>
@@ -242,13 +241,11 @@ struct server::impl : boost::noncopyable
 
 		if (custom_channel_layouts)
 		{
-			CASPAR_SCOPED_CONTEXT_MSG("/configuration/audio/channel-layouts");
 			audio_channel_layout_repository::get_default()->register_all_layouts(*custom_channel_layouts);
 		}
 
 		if (custom_mix_configs)
 		{
-			CASPAR_SCOPED_CONTEXT_MSG("/configuration/audio/mix-configs");
 			audio_mix_config_repository::get_default()->register_all_configs(*custom_mix_configs);
 		}
 	}
