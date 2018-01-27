@@ -35,7 +35,6 @@
 
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
-#include <common/lock.h>
 #include <common/executor.h>
 #include <common/future.h>
 

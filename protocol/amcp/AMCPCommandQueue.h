@@ -29,7 +29,7 @@
 #include <boost/timer.h>
 #include <boost/property_tree/ptree_fwd.hpp>
 
-#include <tbb/mutex.h>
+#include <mutex>
 
 namespace caspar { namespace protocol { namespace amcp {
 
@@ -50,7 +50,7 @@ public:
 	static boost::property_tree::wptree info_all_queues();
 private:
 	executor				executor_;
-	mutable tbb::spin_mutex	running_command_mutex_;
+	mutable std::mutex   	running_command_mutex_;
 	bool					running_command_		= false;
 	std::wstring			running_command_name_;
 	std::wstring			running_command_params_;

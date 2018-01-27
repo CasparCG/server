@@ -38,7 +38,6 @@
 #include <common/assert.h>
 #include <common/env.h>
 #include <common/executor.h>
-#include <common/lock.h>
 #include <common/future.h>
 #include <common/diagnostics/graph.h>
 #include <common/prec_timer.h>

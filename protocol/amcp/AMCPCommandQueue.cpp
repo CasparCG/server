@@ -23,8 +23,6 @@
 
 #include "AMCPCommandQueue.h"
 
-#include <common/lock.h>
-
 #include <boost/property_tree/ptree.hpp>
 
 #include <cmath>
@@ -52,14 +50,14 @@ std::map<std::wstring, AMCPCommandQueue*>& get_instances()
 AMCPCommandQueue::AMCPCommandQueue(const std::wstring& name)
 	: executor_(L"AMCPCommandQueue " + name)
 {
-	tbb::spin_mutex::scoped_lock lock(get_global_mutex());
+	std::lock_guard<std::mutex> lock(get_global_mutex());
 
 	get_instances().insert(std::make_pair(name, this));
 }
 
 AMCPCommandQueue::~AMCPCommandQueue()
 {
-	tbb::spin_mutex::scoped_lock lock(get_global_mutex());
+	std::lock_guard<std::mutex> lock(get_global_mutex());
 
 	get_instances().erase(executor_.name());
 }
@@ -96,7 +94,7 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 				auto params = boost::join(pCurrentCommand->parameters(), L" ");
 
 				{
-					tbb::spin_mutex::scoped_lock lock(running_command_mutex_);
+					std::lock_guard<std::mutex> lock(running_command_mutex_);
 					running_command_ = true;
 					running_command_name_ = print;
 					running_command_params_ = std::move(params);
@@ -149,7 +147,7 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 			
 			CASPAR_LOG(trace) << "Ready for a new command";
 
-			tbb::spin_mutex::scoped_lock lock(running_command_mutex_);
+			std::lock_guard<std::mutex> lock(running_command_mutex_);
 			running_command_ = false;
 		}
 		catch(...)
@@ -173,8 +171,9 @@ boost::property_tree::wptree AMCPCommandQueue::info() const
 	std::wstring running_command_params;
 	int64_t running_command_elapsed;
 
-	lock(running_command_mutex_, [&]
 	{
+		std::lock_guard<std::mutex> lock(running_command_mutex_);
+
 		running_command = running_command_;
 
 		if (running_command)
@@ -199,7 +198,7 @@ boost::property_tree::wptree AMCPCommandQueue::info() const
 boost::property_tree::wptree AMCPCommandQueue::info_all_queues()
 {
 	boost::property_tree::wptree info;
-	tbb::spin_mutex::scoped_lock lock(get_global_mutex());
+	std::lock_guard<std::mutex> lock(get_global_mutex());
 
 	for (auto& queue : get_instances())
 	{

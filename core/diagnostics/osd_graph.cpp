@@ -28,7 +28,6 @@
 #include "call_context.h"
 
 #include <common/executor.h>
-#include <common/lock.h>
 #include <common/env.h>
 #include <common/prec_timer.h>
 #include <common/os/threading.h>

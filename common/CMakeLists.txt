@@ -63,7 +63,6 @@ set(HEADERS
 		filesystem_monitor.h
 		forward.h
 		future.h
-		lock.h
 		log.h
 		memory.h
 		memshfl.h

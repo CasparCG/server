@@ -37,7 +37,6 @@
 #include <core/help/help_repository.h>
 
 #include <common/executor.h>
-#include <common/lock.h>
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
 #include <common/memshfl.h>
