@@ -333,6 +333,9 @@ struct key_video_context : public IDeckLinkVideoOutputCallback, boost::noncopyab
 template <typename Configuration>
 struct decklink_consumer : public IDeckLinkVideoOutputCallback, boost::noncopyable
 {
+	typedef std::pair<std::promise<bool()>, core::const_frame> 	frame_t;
+	typedef tbb::concurrent_bounded_queue<frame_t> 				buffer_t;
+
 	const int											channel_index_;
 	const configuration									config_;
 
@@ -361,8 +364,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, boost::noncopyab
 
 	boost::circular_buffer<std::vector<int32_t>>		audio_container_		{ static_cast<unsigned long>(buffer_size_ + 1) };
 
-	tbb::concurrent_bounded_queue<core::const_frame>	frame_buffer_;
-	caspar::semaphore									ready_for_new_frames_	{ 0 };
+	buffer_t											frame_buffer_;
 
 	spl::shared_ptr<diagnostics::graph>					graph_;
 	boost::timer										tick_timer_;
@@ -537,14 +539,14 @@ public:
 				graph_->set_value("buffered-audio", static_cast<double>(buffered) / (format_desc_.audio_cadence[0] * config_.buffer_depth()));
 			}
 
-			auto frame = core::const_frame::empty();
+			frame_t frame;
 
 			if (!frame_buffer_.try_pop(frame)) {
 				graph_->set_tag(diagnostics::tag_severity::WARNING, "underflow");
 				frame_buffer_.pop(frame);
 			}
 
-			ready_for_new_frames_.release();
+			frame.first.set_value(true);
 
 			if (!is_running_)
 				return E_FAIL;
@@ -552,7 +554,7 @@ public:
 			if (config_.embedded_audio)
 				schedule_next_audio(channel_remapper_.mix_and_rearrange(frame.audio_data()));
 
-			schedule_next_video(frame);
+			schedule_next_video(frame.second);
 		}
 		catch(...)
 		{
@@ -608,16 +610,11 @@ public:
 		if(!is_running_)
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Is not running."));
 
-		frame_buffer_.push(frame);
+		auto promise = std::promise<bool()>();
+		auto future  = promise.get_future();
+		frame_buffer_.push(frame_t(std::move(promise), std::move(frame)));
 
-		auto send_completion = spl::make_shared<std::promise<bool>>();
-
-		ready_for_new_frames_.acquire(1, [send_completion]
-		{
-			send_completion->set_value(true);
-		});
-
-		return send_completion->get_future();
+		return future;
 	}
 
 	std::wstring print() const

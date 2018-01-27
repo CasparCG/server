@@ -67,7 +67,6 @@ set(HEADERS
 		param.h
 		prec_timer.h
 		scope_exit.h
-		semaphore.h
 		stdafx.h
 		thread_info.h
 		timer.h
