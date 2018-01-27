@@ -20,8 +20,6 @@ set(SOURCES
 if (MSVC)
 	set(OS_SPECIFIC_SOURCES
 			compiler/vs/disable_silly_warnings.h
-			compiler/vs/StackWalker.cpp
-			compiler/vs/StackWalker.h
 
 			os/windows/filesystem.cpp
 			os/windows/page_locked_allocator.cpp
