@@ -23,7 +23,6 @@
 
 #include <common/forward.h>
 #include <common/memory.h>
-#include <common/cache_aligned_vector.h>
 #include <common/array.h>
 
 #include <core/frame/frame_visitor.h>

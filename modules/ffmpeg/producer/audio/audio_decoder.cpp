@@ -29,9 +29,8 @@
 #include <core/video_format.h>
 #include <core/mixer/audio/audio_util.h>
 
-#include <common/cache_aligned_vector.h>
-
 #include <queue>
+#include <vector>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -55,7 +54,7 @@ struct audio_decoder::implementation : boost::noncopyable
 	const spl::shared_ptr<AVCodecContext>	codec_context_;
 	const int								out_samplerate_;
 
-	cache_aligned_vector<int32_t>			buffer_;
+	std::vector<int32_t>					buffer_;
 
 	std::queue<spl::shared_ptr<AVPacket>>	packets_;
 

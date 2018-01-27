@@ -61,7 +61,7 @@ struct audio_item
 	}
 };
 
-typedef cache_aligned_vector<double> audio_buffer_ps;
+typedef std::vector<double> audio_buffer_ps;
 
 struct audio_stream
 {

@@ -53,7 +53,7 @@
 
 namespace caspar { namespace oal {
 
-typedef cache_aligned_vector<int16_t> audio_buffer_16;
+typedef std::vector<int16_t> audio_buffer_16;
 
 class device
 {

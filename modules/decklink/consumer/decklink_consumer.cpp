@@ -43,7 +43,6 @@
 #include <common/memshfl.h>
 #include <common/array.h>
 #include <common/future.h>
-#include <common/cache_aligned_vector.h>
 #include <common/param.h>
 #include <common/assert.h>
 
