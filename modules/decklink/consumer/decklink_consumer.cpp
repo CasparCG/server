@@ -41,7 +41,6 @@
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
 #include <common/memshfl.h>
-#include <common/no_init_proxy.h>
 #include <common/array.h>
 #include <common/future.h>
 #include <common/cache_aligned_vector.h>
