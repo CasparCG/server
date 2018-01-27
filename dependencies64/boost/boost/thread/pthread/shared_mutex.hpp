@@ -20,7 +20,6 @@
 #include <boost/chrono/ceil.hpp>
 #endif
 #include <boost/thread/detail/delete.hpp>
-#include <boost/assert.hpp>
 
 #include <boost/config/abi_prefix.hpp>
 
@@ -269,13 +268,13 @@ namespace boost
                     // avoid other threads to lock, lock_upgrade or lock_shared, so only this thread is notified.
                     state.upgrade=false;
                     state.exclusive=true;
-                    lk.unlock();
+                    //lk.unlock();
                     upgrade_cond.notify_one();
                 }
                 else
                 {
                     state.exclusive_waiting_blocked=false;
-                    lk.unlock();
+                    //lk.unlock();
                 }
                 release_waiters();
             }

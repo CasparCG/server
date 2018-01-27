@@ -179,7 +179,7 @@ namespace boost
                 hash_float_combine(seed, part);
             }
 
-            hash_float_combine(seed, exp);
+            hash_float_combine(seed, static_cast<std::size_t>(exp));
 
             return seed;
         }
@@ -241,7 +241,7 @@ namespace boost
         template <class T>
         inline bool is_zero(T v)
         {
-#if !defined(__GNUC__)
+#if !defined(__GNUC__) && !defined(__clang__)
             return v == 0;
 #else
             // GCC's '-Wfloat-equal' will complain about comparing

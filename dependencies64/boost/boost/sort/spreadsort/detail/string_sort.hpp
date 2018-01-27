@@ -42,7 +42,7 @@ namespace spreadsort {
     {
       const int char_size = sizeof(Unsigned_char_type);
       size_t nextOffset = char_offset;
-      int step_size = max_step_size;
+      int step_size = max_step_size / char_size;
       while (true) {
         RandomAccessIter curr = first;
         do {
@@ -285,7 +285,7 @@ namespace spreadsort {
       ++last;
       //Offsetting on identical characters.  This section works
       //a few characters at a time for optimal worst-case performance.
-      update_offset<RandomAccessIter, Unsigned_char_type>(first, last,
+      update_offset<RandomAccessIter, Unsigned_char_type>(curr, last,
                                                           char_offset);
       RandomAccessIter * target_bin;
 

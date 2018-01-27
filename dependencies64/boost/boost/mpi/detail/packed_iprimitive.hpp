@@ -16,8 +16,8 @@
 #include <boost/mpi/exception.hpp>
 #include <boost/assert.hpp>
 #include <boost/serialization/array.hpp>
-#include <boost/serialization/detail/get_data.hpp>
 #include <vector>
+#include <boost/mpi/detail/antiques.hpp>
 #include <boost/mpi/allocator.hpp>
 
 namespace boost { namespace mpi {
@@ -64,7 +64,7 @@ public:
 
     // fast saving of arrays of fundamental types
     template<class T>
-    void load_array(serialization::array<T> const& x, unsigned int /* file_version */)
+    void load_array(serialization::array_wrapper<T> const& x, unsigned int /* file_version */)
     {
       if (x.count())
         load_impl(x.address(), get_mpi_datatype(*x.address()), x.count());
@@ -72,7 +72,7 @@ public:
 
 /*
     template<class T>
-    void load(serialization::array<T> const& x)
+    void load(serialization::array_wrapper<T> const& x)
     {
       load_array(x,0u);
     }
@@ -104,7 +104,7 @@ private:
     void load_impl(void * p, MPI_Datatype t, int l)
     {
       BOOST_MPI_CHECK_RESULT(MPI_Unpack,
-        (const_cast<char*>(boost::serialization::detail::get_data(buffer_)), buffer_.size(), &position, p, l, t, comm));
+                             (const_cast<char*>(detail::c_data(buffer_)), buffer_.size(), &position, p, l, t, comm));
     }
 
     buffer_type & buffer_;

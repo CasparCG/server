@@ -1,4 +1,4 @@
-//  (C) Copyright Gennadiy Rozental 2005-2014.
+//  (C) Copyright Gennadiy Rozental 2001.
 //  Distributed under the Boost Software License, Version 1.0.
 //  (See accompanying file LICENSE_1_0.txt or copy at
 //  http://www.boost.org/LICENSE_1_0.txt)
@@ -54,8 +54,8 @@ public:
     void    log_entry_finish( std::ostream& );
 
     void    entry_context_start( std::ostream&, log_level );
-    void    log_entry_context( std::ostream&, const_string );
-    void    entry_context_finish( std::ostream& );
+    void    log_entry_context( std::ostream&, log_level, const_string );
+    void    entry_context_finish( std::ostream&, log_level );
 
 private:
     // Data members

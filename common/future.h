@@ -9,14 +9,13 @@
 
 namespace caspar {
 
-template<typename T>
-auto flatten(std::future<T>&& f) -> std::future<typename std::decay<decltype(f.get().get())>::type>
+template<typename F>
+auto flatten(F&& f)
 {
-	auto shared_f = f.share();
-	return std::async(std::launch::deferred, [=]() mutable -> typename std::decay<decltype(f.get().get())>::type
-	{
-		return shared_f.get().get();
-	});
+    return std::async(std::launch::deferred, [](F&& f)
+    {
+        return f.get().get();
+    }, std::forward<F>(f));
 }
 
 template<typename F>

@@ -401,7 +401,7 @@ struct image_scroll_producer : public core::frame_producer_base
 			auto diff = *end_time_ - now;
 			auto seconds = diff.total_seconds();
 
-			set_speed(-speed_from_duration(seconds));
+			set_speed(-speed_from_duration(static_cast<double>(seconds)));
 			end_time_ = boost::none;
 		}
 		else

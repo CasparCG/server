@@ -2687,12 +2687,7 @@ std::wstring gl_info_command(command_context& ctx)
 		CASPAR_THROW_EXCEPTION(not_supported() << msg_info("GL command only supported with OpenGL accelerator."));
 
 	std::wstringstream result;
-	result << L"201 GL INFO OK\r\n";
-
-	boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
-	auto info = device->info();
-	boost::property_tree::write_xml(result, info, w);
-	result << L"\r\n";
+	result << L"202 GL INFO OK\r\n";
 
 	return result.str();
 }
@@ -2710,8 +2705,6 @@ std::wstring gl_gc_command(command_context& ctx)
 
 	if (!device)
 		CASPAR_THROW_EXCEPTION(not_supported() << msg_info("GL command only supported with OpenGL accelerator."));
-
-	device->gc().wait();
 
 	return L"202 GL GC OK\r\n";
 }

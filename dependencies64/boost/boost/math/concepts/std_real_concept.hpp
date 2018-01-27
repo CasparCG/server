@@ -226,6 +226,18 @@ inline boost::math::concepts::std_real_concept sqrt(boost::math::concepts::std_r
 { return std::sqrt(a.value()); }
 inline boost::math::concepts::std_real_concept tanh(boost::math::concepts::std_real_concept a)
 { return std::tanh(a.value()); }
+//
+// C++11 ism's
+// Note that these must not actually call the std:: versions as that precludes using this
+// header to test in C++03 mode, call the Boost versions instead:
+//
+inline boost::math::concepts::std_real_concept asinh(boost::math::concepts::std_real_concept a)
+{ return boost::math::asinh(a.value(), boost::math::policies::make_policy(boost::math::policies::overflow_error<boost::math::policies::ignore_error>())); }
+inline boost::math::concepts::std_real_concept acosh(boost::math::concepts::std_real_concept a)
+{ return boost::math::acosh(a.value(), boost::math::policies::make_policy(boost::math::policies::overflow_error<boost::math::policies::ignore_error>())); }
+inline boost::math::concepts::std_real_concept atanh(boost::math::concepts::std_real_concept a)
+{ return boost::math::atanh(a.value(), boost::math::policies::make_policy(boost::math::policies::overflow_error<boost::math::policies::ignore_error>())); }
+
 
 } // namespace std
 
@@ -378,7 +390,7 @@ inline concepts::std_real_concept epsilon(BOOST_MATH_EXPLICIT_TEMPLATE_TYPE_SPEC
 }
 
 template <>
-inline int digits<concepts::std_real_concept>(BOOST_MATH_EXPLICIT_TEMPLATE_TYPE_SPEC(concepts::std_real_concept))
+inline BOOST_MATH_CONSTEXPR int digits<concepts::std_real_concept>(BOOST_MATH_EXPLICIT_TEMPLATE_TYPE_SPEC(concepts::std_real_concept)) BOOST_NOEXCEPT
 { // Assume number of significand bits is same as std_real_concept_base_type,
   // unless std::numeric_limits<T>::is_specialized to provide digits.
    return digits<concepts::std_real_concept_base_type>();
@@ -398,8 +410,12 @@ using concepts::llround;
 } // namespace math
 } // namespace boost
 
+//
+// These must go at the end, as they include stuff that won't compile until
+// after std_real_concept has been defined:
+//
+#include <boost/math/special_functions/acosh.hpp>
+#include <boost/math/special_functions/asinh.hpp>
+#include <boost/math/special_functions/atanh.hpp>
+
 #endif // BOOST_MATH_STD_REAL_CONCEPT_HPP
-
-
-
-

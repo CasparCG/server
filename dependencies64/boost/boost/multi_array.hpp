@@ -18,6 +18,11 @@
 // declaration and definition
 //
 
+#if defined(__GNUC__) && ((__GNUC__*100 + __GNUC_MINOR__) >= 406)
+#  pragma GCC diagnostic push
+#  pragma GCC diagnostic ignored "-Wshadow"
+#endif
+
 #include "boost/multi_array/base.hpp"
 #include "boost/multi_array/collection_concept.hpp"
 #include "boost/multi_array/copy_array.hpp"
@@ -495,5 +500,9 @@ private:
 };
 
 } // namespace boost
+
+#if defined(__GNUC__) && ((__GNUC__*100 + __GNUC_MINOR__) >= 406)
+#  pragma GCC diagnostic pop
+#endif
 
 #endif // BOOST_MULTI_ARRAY_RG071801_HPP

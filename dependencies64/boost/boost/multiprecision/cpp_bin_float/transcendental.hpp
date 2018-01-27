@@ -70,6 +70,7 @@ void eval_exp(cpp_bin_float<Digits, DigitBase, Allocator, Exponent, MinE, MaxE> 
    if(type == (int)FP_NAN)
    {
       res = arg;
+      errno = EDOM;
       return;
    }
    else if(type == (int)FP_INFINITE)
@@ -109,10 +110,19 @@ void eval_exp(cpp_bin_float<Digits, DigitBase, Allocator, Exponent, MinE, MaxE> 
       // rounds up, in that situation t ends up negative at this point which breaks our invariants below:
       t = limb_type(0);
    }
-   BOOST_ASSERT(t.compare(default_ops::get_constant_ln2<cpp_bin_float<Digits, DigitBase, Allocator, Exponent, MinE, MaxE> >()) < 0);
 
    Exponent k, nn;
    eval_convert_to(&nn, n);
+
+   if (nn == (std::numeric_limits<Exponent>::max)())
+   {
+      // The result will necessarily oveflow:
+      res = std::numeric_limits<number<cpp_bin_float<Digits, DigitBase, Allocator, Exponent, MinE, MaxE> > >::infinity().backend();
+      return;
+   }
+
+   BOOST_ASSERT(t.compare(default_ops::get_constant_ln2<cpp_bin_float<Digits, DigitBase, Allocator, Exponent, MinE, MaxE> >()) < 0);
+
    k = nn ? Exponent(1) << (msb(nn) / 2) : 0;
    eval_ldexp(t, t, -k);
 

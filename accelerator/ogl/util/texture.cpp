@@ -35,77 +35,35 @@
 #include <boost/thread/future.hpp>
 
 namespace caspar { namespace accelerator { namespace ogl {
-	
-static GLenum FORMAT[] = {0, GL_RED, GL_RG, GL_BGR, GL_BGRA};
-static GLenum INTERNAL_FORMAT[] = {0, GL_R8, GL_RG8, GL_RGB8, GL_RGBA8};	
-static GLenum TYPE[]			= { 0, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE };
-static GLenum READPIXELS_TYPE[]	= { 0, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_BYTE, GL_UNSIGNED_INT_8_8_8_8_REV };
 
-static tbb::atomic<int>			g_total_count;
-static tbb::atomic<std::size_t>	g_total_size;
+static GLenum FORMAT[]          = { 0, GL_RED, GL_RG, GL_BGR, GL_BGRA};
+static GLenum INTERNAL_FORMAT[] = { 0, GL_R8, GL_RG8, GL_RGB8, GL_RGBA8};
 
 struct texture::impl : boost::noncopyable
 {
 	GLuint	id_;
-
-	const int	width_;
-	const int	height_;
-	const int	stride_;
-	const bool	mipmapped_;
+	GLsizei width_;
+    GLsizei height_;
+    GLsizei stride_;
 public:
-	impl(int width, int height, int stride, bool mipmapped) 
+	impl(int width, int height, int stride)
 		: width_(width)
 		, height_(height)
 		, stride_(stride)
-		, mipmapped_(mipmapped)
-	{	
-		CASPAR_LOG_CALL(trace) << "texture::texture() <- " << get_context();
-
-		GL(glGenTextures(1, &id_));
-		GL(glBindTexture(GL_TEXTURE_2D, id_));
-		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (mipmapped ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR)));
-		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
-		GL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
-		GL(glTexImage2D(GL_TEXTURE_2D, 0, INTERNAL_FORMAT[stride_], width_, height_, 0, FORMAT[stride_], TYPE[stride_], NULL));
-
-		if (mipmapped)
-		{
-			enable_anosotropic_filtering_if_available();
-			GL(glGenerateMipmap(GL_TEXTURE_2D));
-		}
-
-		GL(glBindTexture(GL_TEXTURE_2D, 0));
-		g_total_count++;
-		g_total_size += static_cast<std::size_t>(width * height * stride * (mipmapped ? 1.33 : 1.0));
-		//CASPAR_LOG(trace) << "[texture] [" << ++g_total_count << L"] allocated size:" << width*height*stride;	
-	}	
-
-	void enable_anosotropic_filtering_if_available()
 	{
-		static auto AVAILABLE = glewIsSupported("GL_EXT_texture_filter_anisotropic");
-
-		if (!AVAILABLE)
-			return;
-
-		static GLfloat MAX_ANISOTROPY = []() -> GLfloat
-		{
-			GLfloat anisotropy;
-			glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &anisotropy);
-			return anisotropy;
-		}();
-
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, MAX_ANISOTROPY);
+		GL(glCreateTextures(GL_TEXTURE_2D, 1, &id_));
+		GL(glTextureParameteri(id_, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
+		GL(glTextureParameteri(id_, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+		GL(glTextureParameteri(id_, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+		GL(glTextureParameteri(id_, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+		GL(glTextureStorage2D(id_, 1, INTERNAL_FORMAT[stride_], width_, height_));
 	}
 
 	~impl()
 	{
-		CASPAR_LOG_CALL(trace) << "texture::~texture() <- " << get_context();
 		glDeleteTextures(1, &id_);
-		g_total_size -= static_cast<std::size_t>(width_ * height_ * stride_ * (mipmapped_ ? 1.33 : 1.0));
-		g_total_count--;
 	}
-	
+
 	void bind()
 	{
 		GL(glBindTexture(GL_TEXTURE_2D, id_));
@@ -123,47 +81,32 @@ public:
 	}
 
 	void attach()
-	{		
+	{
 		GL(glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + 0, GL_TEXTURE_2D, id_, 0));
 	}
 
 	void clear()
 	{
-		attach();		
-		GL(glClear(GL_COLOR_BUFFER_BIT));
-	}
-		
-	void copy_from(buffer& source)
-	{
-		CASPAR_LOG_CALL(trace) << "texture::copy_from(buffer&) <- " << get_context();
-		source.unmap();
-		source.bind();
-		GL(glBindTexture(GL_TEXTURE_2D, id_));
-		GL(glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width_, height_, FORMAT[stride_], TYPE[stride_], NULL));
-
-		if (mipmapped_)
-			GL(glGenerateMipmap(GL_TEXTURE_2D));
-
-		GL(glBindTexture(GL_TEXTURE_2D, 0));
-		source.unbind();
-		source.map(); // Just map it back since map will orphan buffer.
+        GL(glClearTexImage(id_, 0, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
 	}
 
-	void copy_to(buffer& dest)
+	void copy_from(buffer& src)
 	{
-		CASPAR_LOG_CALL(trace) << "texture::copy_to(buffer&) <- " << get_context();
-		dest.unmap();
-		dest.bind();
-		GL(glBindTexture(GL_TEXTURE_2D, id_));
-		GL(glReadBuffer(GL_COLOR_ATTACHMENT0));
-		GL(glReadPixels(0, 0, width_, height_, FORMAT[stride_], READPIXELS_TYPE[stride_], NULL));
-		GL(glBindTexture(GL_TEXTURE_2D, 0));
-		dest.unbind();
-		GL(glFlush());
+        src.bind();
+        // TODO (fix) This fails on weird dimensions.
+		GL(glTextureSubImage2D(id_, 0, 0, 0, width_, height_, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
+        src.unbind();
+	}
+
+	void copy_to(buffer& dst)
+	{
+        dst.bind();
+        GL(glGetTextureImage(id_, 0, FORMAT[stride_], GL_UNSIGNED_BYTE, width_ * height_ * stride_, NULL));
+        dst.unbind();
 	}
 };
 
-texture::texture(int width, int height, int stride, bool mipmapped) : impl_(new impl(width, height, stride, mipmapped)){}
+texture::texture(int width, int height, int stride) : impl_(new impl(width, height, stride)){}
 texture::texture(texture&& other) : impl_(std::move(other.impl_)){}
 texture::~texture(){}
 texture& texture::operator=(texture&& other){impl_ = std::move(other.impl_); return *this;}
@@ -176,18 +119,7 @@ void texture::copy_to(buffer& dest){impl_->copy_to(dest);}
 int texture::width() const { return impl_->width_; }
 int texture::height() const { return impl_->height_; }
 int texture::stride() const { return impl_->stride_; }
-bool texture::mipmapped() const { return impl_->mipmapped_; }
-std::size_t texture::size() const { return static_cast<std::size_t>(impl_->width_*impl_->height_*impl_->stride_); }
+int texture::size() const { return impl_->width_*impl_->height_*impl_->stride_; }
 int texture::id() const{ return impl_->id_;}
-
-boost::property_tree::wptree texture::info()
-{
-	boost::property_tree::wptree info;
-
-	info.add(L"total_count", g_total_count);
-	info.add(L"total_size", g_total_size);
-
-	return info;
-}
 
 }}}
