@@ -43,7 +43,6 @@
 #include "tweener.h"
 
 #include "except.h"
-#include "linq.h"
 
 #include <boost/regex.hpp>
 #include <boost/lexical_cast.hpp>
@@ -487,10 +486,6 @@ bool tweener::operator!=(const tweener& other) const
 
 const std::vector<std::wstring>& tweener::names()
 {
-	/*static const auto names = cpplinq::from(get_tweens())
-		.select(keys())
-		.to_vector();*/
-
 	static const auto result = []
 	{
 		std::vector<std::wstring> tweens;
@@ -500,7 +495,6 @@ const std::vector<std::wstring>& tweener::names()
 
 		return tweens;
 	}();
-	//static const std::vector<std::wstring> result;
 
 	return result;
 }

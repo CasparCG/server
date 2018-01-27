@@ -4,8 +4,6 @@
 
 #include <boost/range/irange.hpp>
 
-#include "linq.h"
-
 // Macro that defines & and &= for an enum class. Add more when needed.
 
 #define ENUM_ENABLE_BITWISE(enum_class) \
@@ -56,12 +54,10 @@ const std::vector<E>& enum_constants()
 {
 	typedef typename std::underlying_type<E>::type integer;
 
-	static const auto ints = boost::irange(static_cast<integer>(0), static_cast<integer>(E::count));
-	static const auto result = cpplinq::from(ints.begin(), ints.end())
-		//.cast<E>()
-		.select([](int i) { return static_cast<E>(i); })
-		.to_vector();
-
+	std::vector<E> result;
+	for (auto i : boost::irange(static_cast<integer>(0), static_cast<integer>(E::count))) {
+		result.push_back(static_cast<E>(i));
+	}
 	return result;
 }
 

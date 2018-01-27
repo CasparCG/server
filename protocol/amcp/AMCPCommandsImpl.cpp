@@ -295,9 +295,11 @@ std::wstring ListTemplates(const spl::shared_ptr<core::cg_producer_registry>& cg
 
 std::vector<spl::shared_ptr<core::video_channel>> get_channels(const command_context& ctx)
 {
-	return cpplinq::from(ctx.channels)
-		.select([](channel_context c) { return spl::make_shared_ptr(c.channel); })
-		.to_vector();
+	std::vector<spl::shared_ptr<core::video_channel>> result;
+	for (auto& p : ctx.channels) {
+		result.push_back(spl::make_shared_ptr(c.channel));
+	}
+	return result;
 }
 
 core::frame_producer_dependencies get_producer_dependencies(const std::shared_ptr<core::video_channel>& channel, const command_context& ctx)

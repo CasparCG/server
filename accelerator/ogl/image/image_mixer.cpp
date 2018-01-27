@@ -32,7 +32,6 @@
 #include <common/future.h>
 #include <common/scope_exit.h>
 #include <common/array.h>
-#include <common/linq.h>
 
 #include <core/frame/frame.h>
 #include <core/frame/frame_transform.h>
@@ -75,9 +74,11 @@ struct layer
 std::size_t get_max_video_format_size()
 {
 	auto format_size = [](core::video_format format) { return core::video_format_desc(format).size; };
-	return cpplinq::from(enum_constants<core::video_format>())
-		.select(std::ref(format_size))
-		.max();
+	std::size_t max_size = 0;
+	for (auto format : enum_constants<core::video_format>()) {
+		max_size = std::max(max_size, core::video_format_desc(format).size);
+	}
+	return max_size;
 }
 
 class image_renderer
