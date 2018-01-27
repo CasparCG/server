@@ -89,8 +89,8 @@ struct device::impl : public std::enable_shared_from_this<impl>
                 CASPAR_THROW_EXCEPTION(not_supported() << msg_info("Your graphics card does not meet the minimum hardware requirements since it does not support OpenGL 4.0 or higher."));
             }
 
-            glCreateFramebuffers(1, &fbo_);
-			glBindFramebuffer(GL_FRAMEBUFFER, fbo_);
+            GL(glCreateFramebuffers(1, &fbo_));
+			GL(glBindFramebuffer(GL_FRAMEBUFFER, fbo_));
 		}).wait();
 
 		CASPAR_LOG(info) << L"Successfully initialized OpenGL " << version();
@@ -150,20 +150,10 @@ struct device::impl : public std::enable_shared_from_this<impl>
 
         std::shared_ptr<texture> tex;
         if (!pool->try_pop(tex)) {
-            dispatch_async(context_, [&]
-            {
-                tex = spl::make_shared<texture>(width, height, stride);
-				if (clear) {
-                	tex->clear();
-				}
-            }).wait();
-        } else if (clear) {
-			// TODO (perf) Avoid wait?
-            dispatch_async(context_, [&]
-            {
-				tex->clear();
-            }).wait();
+			tex = spl::make_shared<texture>(width, height, stride);
         }
+
+		tex->clear();
 
 		auto ptr = tex.get();
         return spl::shared_ptr<texture>(ptr, [=, tex = std::move(tex), pool, self = shared_from_this()](texture*) mutable
@@ -212,6 +202,7 @@ struct device::impl : public std::enable_shared_from_this<impl>
 				buf = *tmp;
 			} else {
 				buf = create_buffer(static_cast<int>(source.size()), true);
+				// TODO (perf) Run in another thread.
 				std::memcpy(buf->data(), source.data(), source.size());
 			}
 			

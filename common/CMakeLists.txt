@@ -57,6 +57,7 @@ set(HEADERS
 
 		array.h
 		assert.h
+		asio.h
 		base64.h
 		blocking_bounded_queue_adapter.h
 		blocking_priority_queue.h
