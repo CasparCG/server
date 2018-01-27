@@ -49,8 +49,6 @@
 #include <core/producer/media_info/media_info_repository.h>
 #include <core/producer/media_info/in_memory_media_info_repository.h>
 #include <core/producer/cg_proxy.h>
-#include <core/diagnostics/subject_diagnostics.h>
-#include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
 #include <core/diagnostics/graph_to_log_sink.h>
 #include <core/system_info_provider.h>
@@ -274,9 +272,6 @@ struct server::impl : boost::noncopyable
 
 		for (auto& channel : channels_)
 		{
-			core::diagnostics::scoped_call_context save;
-			core::diagnostics::call_context::for_thread().video_channel = channel->index();
-
 			for (auto& xml_consumer : xml_channels.at(channel->index() - 1) | witerate_children(L"consumers") | welement_context_iteration)
 			{
 				auto name = xml_consumer.first;

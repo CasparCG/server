@@ -32,7 +32,6 @@
 #include <core/frame/audio_channel_layout.h>
 #include <core/mixer/audio/audio_mixer.h>
 #include <core/consumer/frame_consumer.h>
-#include <core/diagnostics/call_context.h>
 #include <core/help/help_sink.h>
 #include <core/help/help_repository.h>
 
@@ -650,10 +649,8 @@ public:
 		: config_(config)
 		, executor_(L"decklink_consumer[" + boost::lexical_cast<std::wstring>(config.device_index) + L"]")
 	{
-		auto ctx = core::diagnostics::call_context::for_thread();
 		executor_.begin_invoke([=]
 		{
-			core::diagnostics::call_context::for_thread() = ctx;
 			com_initialize();
 		});
 	}

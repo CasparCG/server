@@ -25,8 +25,6 @@
 
 #pragma warning (disable : 4244)
 
-#include "call_context.h"
-
 #include <common/executor.h>
 #include <common/env.h>
 #include <common/prec_timer.h>
@@ -396,7 +394,6 @@ private:
 
 struct graph : public drawable, public caspar::diagnostics::spi::graph_sink, public std::enable_shared_from_this<graph>
 {
-	call_context										context_	= call_context::for_thread();
 	tbb::concurrent_unordered_map<std::string, line>	lines_;
 
 	tbb::spin_mutex										mutex_;

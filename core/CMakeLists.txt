@@ -8,10 +8,7 @@ set(SOURCES
 		consumer/output.cpp
 		consumer/port.cpp
 
-		diagnostics/call_context.cpp
-		diagnostics/graph_to_log_sink.cpp
 		diagnostics/osd_graph.cpp
-		diagnostics/subject_diagnostics.cpp
 
 		frame/audio_channel_layout.cpp
 		frame/draw_frame.cpp
@@ -66,10 +63,7 @@ set(HEADERS
 		consumer/port.h
 		consumer/write_frame_consumer.h
 
-		diagnostics/call_context.h
-		diagnostics/graph_to_log_sink.h
 		diagnostics/osd_graph.h
-		diagnostics/subject_diagnostics.h
 
 		frame/audio_channel_layout.h
 		frame/draw_frame.h

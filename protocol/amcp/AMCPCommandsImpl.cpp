@@ -56,7 +56,6 @@
 #include <core/consumer/output.h>
 #include <core/producer/media_info/media_info.h>
 #include <core/producer/media_info/media_info_repository.h>
-#include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
 #include <core/system_info_provider.h>
 
@@ -393,9 +392,6 @@ std::wstring loadbg_command(command_context& ctx)
 	}
 
 	//Perform loading of the clip
-	core::diagnostics::scoped_call_context save;
-	core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
-	core::diagnostics::call_context::for_thread().layer = ctx.layer_index();
 
 	auto channel = ctx.channel.channel;
 	auto pFP = ctx.producer_registry->create_producer(get_producer_dependencies(channel, ctx), ctx.parameters);
@@ -429,9 +425,6 @@ void load_describer(core::help_sink& sink, const core::help_repository& repo)
 
 std::wstring load_command(command_context& ctx)
 {
-	core::diagnostics::scoped_call_context save;
-	core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
-	core::diagnostics::call_context::for_thread().layer = ctx.layer_index();
 	auto pFP = ctx.producer_registry->create_producer(get_producer_dependencies(ctx.channel.channel, ctx), ctx.parameters);
 	ctx.channel.channel->stage().load(ctx.layer_index(), pFP, true);
 
@@ -652,9 +645,6 @@ std::wstring add_command(command_context& ctx)
 			L"<CLIENT_IP_ADDRESS>",
 			ctx.client->address(),
 			ctx.parameters);
-
-	core::diagnostics::scoped_call_context save;
-	core::diagnostics::call_context::for_thread().video_channel = ctx.channel_index + 1;
 
 	auto consumer = ctx.consumer_registry->create_consumer(ctx.parameters, &ctx.channel.channel->stage(), get_channels(ctx));
 	ctx.channel.channel->output().add(ctx.layer_index(consumer->index()), consumer);
@@ -2129,9 +2119,6 @@ std::wstring channel_grid_command(command_context& ctx)
 	int index = 1;
 	auto self = ctx.channels.back();
 
-	core::diagnostics::scoped_call_context save;
-	core::diagnostics::call_context::for_thread().video_channel = ctx.channels.size();
-
 	std::vector<std::wstring> params;
 	params.push_back(L"SCREEN");
 	params.push_back(L"0");
@@ -2145,7 +2132,6 @@ std::wstring channel_grid_command(command_context& ctx)
 	{
 		if (channel.channel != self.channel)
 		{
-			core::diagnostics::call_context::for_thread().layer = index;
 			auto producer = ctx.producer_registry->create_producer(get_producer_dependencies(self.channel, ctx), L"route://" + boost::lexical_cast<std::wstring>(channel.channel->index()) + L" NO_AUTO_DEINTERLACE");
 			self.channel->stage().load(index, producer, false);
 			self.channel->stage().play(index);

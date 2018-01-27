@@ -39,7 +39,6 @@
 #include <common/future.h>
 
 #include <core/mixer/image/image_mixer.h>
-#include <core/diagnostics/call_context.h>
 
 #include <tbb/spin_mutex.h>
 
@@ -63,12 +62,7 @@ struct video_channel::impl final
 	mutable tbb::spin_mutex								channel_layout_mutex_;
 	core::audio_channel_layout							channel_layout_;
 
-	const spl::shared_ptr<caspar::diagnostics::graph>	graph_					= [](int index)
-																				  {
-																					  core::diagnostics::scoped_call_context save;
-																					  core::diagnostics::call_context::for_thread().video_channel = index;
-																					  return spl::make_shared<caspar::diagnostics::graph>();
-																				  }(index_);
+	const spl::shared_ptr<caspar::diagnostics::graph>	graph_;
 
 	caspar::core::output								output_;
 	std::future<void>									output_ready_for_frame_	= make_ready_future();

@@ -48,7 +48,6 @@
 #include <core/producer/frame_producer.h>
 #include <core/producer/framerate/framerate_producer.h>
 #include <core/monitor/monitor.h>
-#include <core/diagnostics/call_context.h>
 #include <core/mixer/audio/audio_mixer.h>
 #include <core/help/help_repository.h>
 #include <core/help/help_sink.h>

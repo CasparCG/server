@@ -29,7 +29,6 @@
 #include "CIICommandsImpl.h"
 #include <core/producer/transition/transition_producer.h>
 #include <core/mixer/mixer.h>
-#include <core/diagnostics/call_context.h>
 #include <common/env.h>
 
 #include <boost/algorithm/string/replace.hpp>
@@ -160,9 +159,6 @@ void CIIProtocolStrategy::WriteTemplateData(const std::wstring& templateName, co
 	if (!currentProfile_.empty())
 		fullTemplateFilename = currentProfile_ + L"/" + templateName;
 
-	core::diagnostics::scoped_call_context save;
-	core::diagnostics::call_context::for_thread().video_channel = 1;
-	core::diagnostics::call_context::for_thread().layer = 0;
 	auto producer = cg_registry_->create_producer(get_dependencies(), fullTemplateFilename);
 
 	if (producer == core::frame_producer::empty())
@@ -199,10 +195,6 @@ void CIIProtocolStrategy::DisplayMediaFile(const std::wstring& filename)
 	transition_info transition;
 	transition.type = transition_type::mix;
 	transition.duration = 12;
-
-	core::diagnostics::scoped_call_context save;
-	core::diagnostics::call_context::for_thread().video_channel = 1;
-	core::diagnostics::call_context::for_thread().layer = 0;
 
 	auto pFP = get_producer_registry()->create_producer(get_dependencies(), filename);
 	auto pTransition = create_transition_producer(GetChannel()->video_format_desc().field_mode, pFP, transition);
