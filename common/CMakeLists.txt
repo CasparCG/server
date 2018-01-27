@@ -11,7 +11,6 @@ set(SOURCES
 		except.cpp
 		filesystem.cpp
 		log.cpp
-		polling_filesystem_monitor.cpp
 		stdafx.cpp
 		thread_info.cpp
 		tweener.cpp
@@ -60,14 +59,12 @@ set(HEADERS
 		except.h
 		executor.h
 		filesystem.h
-		filesystem_monitor.h
 		forward.h
 		future.h
 		log.h
 		memory.h
 		memshfl.h
 		param.h
-		polling_filesystem_monitor.h
 		prec_timer.h
 		scope_exit.h
 		semaphore.h

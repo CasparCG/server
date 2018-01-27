@@ -31,7 +31,6 @@
 #include <common/except.h>
 #include <common/utf.h>
 #include <common/memory.h>
-#include <common/polling_filesystem_monitor.h>
 
 #include <core/video_channel.h>
 #include <core/video_format.h>
@@ -46,7 +45,6 @@
 #include <core/consumer/syncto/syncto_consumer.h>
 #include <core/mixer/mixer.h>
 #include <core/mixer/image/image_mixer.h>
-#include <core/thumbnail_generator.h>
 #include <core/producer/media_info/media_info.h>
 #include <core/producer/media_info/media_info_repository.h>
 #include <core/producer/media_info/in_memory_media_info_repository.h>
@@ -146,7 +144,6 @@ struct server::impl : boost::noncopyable
 	spl::shared_ptr<core::frame_producer_registry>		producer_registry_;
 	spl::shared_ptr<core::frame_consumer_registry>		consumer_registry_;
 	tbb::atomic<bool>									running_;
-	std::shared_ptr<thumbnail_generator>				thumbnail_generator_;
 	std::promise<bool>&									shutdown_server_now_;
 
 	explicit impl(std::promise<bool>& shutdown_server_now)
@@ -186,9 +183,6 @@ struct server::impl : boost::noncopyable
 		setup_channels(env::properties());
 		CASPAR_LOG(info) << L"Initialized channels.";
 
-		setup_thumbnail_generation(env::properties());
-		CASPAR_LOG(info) << L"Initialized thumbnail generator.";
-
 		setup_controllers(env::properties());
 		CASPAR_LOG(info) << L"Initialized controllers.";
 
@@ -210,7 +204,6 @@ struct server::impl : boost::noncopyable
 		std::weak_ptr<boost::asio::io_service> weak_io_service = io_service_;
 		io_service_.reset();
 		osc_client_.reset();
-		thumbnail_generator_.reset();
 		amcp_command_repo_.reset();
 		primary_amcp_server_.reset();
 		async_servers_.clear();
@@ -371,35 +364,10 @@ struct server::impl : boost::noncopyable
 					});
 	}
 
-	void setup_thumbnail_generation(const boost::property_tree::wptree& pt)
-	{
-		if (!pt.get(L"configuration.thumbnails.generate-thumbnails", true))
-			return;
-
-		auto scan_interval_millis = pt.get(L"configuration.thumbnails.scan-interval-millis", 5000);
-
-		polling_filesystem_monitor_factory monitor_factory(io_service_, scan_interval_millis);
-		thumbnail_generator_.reset(new thumbnail_generator(
-			monitor_factory,
-			env::media_folder(),
-			env::thumbnail_folder(),
-			pt.get(L"configuration.thumbnails.width", 256),
-			pt.get(L"configuration.thumbnails.height", 144),
-			core::video_format_desc(pt.get(L"configuration.thumbnails.video-mode", L"720p2500")),
-			accelerator_.create_image_mixer(0),
-			pt.get(L"configuration.thumbnails.generate-delay-millis", 2000),
-			&image::write_cropped_png,
-			media_info_repo_,
-			producer_registry_,
-			cg_registry_,
-			pt.get(L"configuration.thumbnails.mipmap", true)));
-	}
-
 	void setup_controllers(const boost::property_tree::wptree& pt)
 	{
 		amcp_command_repo_ = spl::make_shared<amcp::amcp_command_repository>(
 				channels_,
-				thumbnail_generator_,
 				media_info_repo_,
 				system_info_provider_repo_,
 				cg_registry_,
