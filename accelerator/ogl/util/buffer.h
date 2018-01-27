@@ -21,55 +21,46 @@
 
 #pragma once
 
-#include <common/memory.h>
-
-#include <boost/property_tree/ptree_fwd.hpp>
-
+#include <future>
+#include <memory>
 #include <cstdint>
 
+#include <boost/asio/io_service.hpp>
+
 namespace caspar { namespace accelerator { namespace ogl {
-			
+
 class buffer final
 {
-	buffer(const buffer&);
-	buffer& operator=(const buffer&);
 public:
 
 	// Static Members
 
-	enum class usage
-	{
-		write_only,
-		read_only
-	};
-	
 	// Constructors
 
-	buffer(std::size_t size, usage usage);
+	buffer(int size, bool write);
+    buffer(const buffer&) = delete;
 	buffer(buffer&& other);
 	~buffer();
 
+
 	// Methods
 
+    buffer& operator=(const buffer&) = delete;
 	buffer& operator=(buffer&& other);
-	
-	void map();
-	void unmap();
 
-	void bind() const;
-	void unbind() const;
+    void bind();
+    void unbind();
 
 	// Properties
 
-	uint8_t* data();
-	std::size_t size() const;	
+    int id() const;
+	void* data();
+    int size() const;
+    bool write() const;
 
-	int id() const;
-
-	static boost::property_tree::wptree info();
 private:
 	struct impl;
-	spl::unique_ptr<impl> impl_;
+	std::unique_ptr<impl> impl_;
 };
 
 }}}

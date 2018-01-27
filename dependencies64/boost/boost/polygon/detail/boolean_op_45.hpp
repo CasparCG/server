@@ -150,8 +150,11 @@ namespace boost { namespace polygon{
     //       return o;
     //     }
 
-    class lessScan45ElementRise : public std::binary_function<Scan45Element, Scan45Element, bool> {
+    class lessScan45ElementRise {
     public:
+      typedef Scan45Element first_argument_type;
+      typedef Scan45Element second_argument_type;
+      typedef bool result_type;
       inline lessScan45ElementRise() {} //default constructor is only constructor
       inline bool operator () (Scan45Element elm1, Scan45Element elm2) const {
         return elm1.rise < elm2.rise;
@@ -272,13 +275,9 @@ namespace boost { namespace polygon{
       inline Vertex45T(const Vertex45T& vertex) : pt(vertex.pt), rise(vertex.rise), count(vertex.count) {}
       inline Vertex45T& operator=(const Vertex45T& vertex){
         pt = vertex.pt; rise = vertex.rise; count = vertex.count; return *this; }
-      inline Vertex45T(const std::pair<Point, Point>& vertex) : pt(), rise(), count() {}
-      inline Vertex45T& operator=(const std::pair<Point, Point>& vertex){ return *this; }
       inline bool operator==(const Vertex45T& vertex) const {
         return pt == vertex.pt && rise == vertex.rise && count == vertex.count; }
       inline bool operator!=(const Vertex45T& vertex) const { return !((*this) == vertex); }
-      inline bool operator==(const std::pair<Point, Point>& vertex) const { return false; }
-      inline bool operator!=(const std::pair<Point, Point>& vertex) const { return !((*this) == vertex); }
       inline bool operator<(const Vertex45T& vertex) const {
         if(pt.x() < vertex.pt.x()) return true;
         if(pt.x() == vertex.pt.x()) {
@@ -461,8 +460,11 @@ namespace boost { namespace polygon{
         return Scan45Element(vertex.first.x(), vertex.first.y(), index - 1, vertex.second[index]);
       }
 
-      class lessScan45Point : public std::binary_function<Point, Point, bool> {
+      class lessScan45Point {
       public:
+      typedef Point first_argument_type;
+      typedef Point second_argument_type;
+      typedef bool result_type;
         inline lessScan45Point() {} //default constructor is only constructor
         inline bool operator () (const Point& v1, const Point& v2) const {
           return (v1.x() < v2.x()) || (v1.x() == v2.x() && v1.y() < v2.y());

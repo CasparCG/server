@@ -32,11 +32,13 @@ namespace detail {
 
 // note: referred to as Curiously Recurring Template Patter (CRTP)
 template<class Archive>
-class common_oarchive : 
+
+class BOOST_SYMBOL_VISIBLE common_oarchive :
     public basic_oarchive,
     public interface_oarchive<Archive>
 {
     friend class interface_oarchive<Archive>;
+    friend class basic_oarchive;
 private:
     virtual void vsave(const version_type t){
         * this->This() << t;

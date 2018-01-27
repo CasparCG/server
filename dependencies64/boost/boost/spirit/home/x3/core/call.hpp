@@ -52,7 +52,7 @@ namespace boost { namespace spirit { namespace x3
         }
 
         template <typename F, typename Context>
-        auto call(F f, Context const& context, mpl::false_)
+        auto call(F f, Context const& /* context */, mpl::false_)
         {
             return f();
         }

@@ -24,22 +24,23 @@
 #include <core/frame/frame.h>
 
 #include <common/memory.h>
-#include <common/executor.h>
 #include <common/except.h>
 
-#include <boost/property_tree/ptree_fwd.hpp>
+#include <boost/asio/io_context.hpp>
+
+#include <future>
 
 namespace caspar { namespace accelerator { namespace ogl {
 
 class texture;
 
 class device final : public std::enable_shared_from_this<device>
-{	
+{
 	device(const device&);
 	device& operator=(const device&);
 
-	executor executor_;
-public:		
+    boost::asio::io_context service_;
+public:
 
 	// Static Members
 
@@ -49,45 +50,36 @@ public:
 	~device();
 
 	// Methods
-			
-	spl::shared_ptr<texture> create_texture(int width, int height, int stride, bool mipmapped);
-	array<std::uint8_t>		 create_array(int size);
-		
-	// NOTE: Since the returned texture is cached it SHOULD NOT be modified.
-	std::future<std::shared_ptr<texture>>	copy_async(const array<const std::uint8_t>& source, int width, int height, int stride, bool mipmapped);
 
-	std::future<std::shared_ptr<texture>>	copy_async(const array<std::uint8_t>& source, int width, int height, int stride, bool mipmapped);
-	std::future<array<const std::uint8_t>>	copy_async(const spl::shared_ptr<texture>& source);
-			
-	template<typename Func>
-	auto begin_invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> std::future<decltype(func())> // noexcept
-	{			
-		auto context = executor_.is_current() ? std::string() : get_context();
+	spl::shared_ptr<texture> create_texture(int width, int height, int stride);
+	array<uint8_t>		     create_array(int size);
 
-		return executor_.begin_invoke([func, context]() mutable
-		{
-			CASPAR_SCOPED_CONTEXT_MSG(context);
-			return func();
-		}, priority);
-	}
-	
-	template<typename Func>
-	auto invoke(Func&& func, task_priority priority = task_priority::normal_priority) -> decltype(func())
-	{
-		auto context = executor_.is_current() ? std::string() : get_context();
+	std::future<std::shared_ptr<texture>> copy_async(const array<const uint8_t>& source, int width, int height, int stride);
+	std::future<array<const uint8_t>>     copy_async(const spl::shared_ptr<texture>& source);
 
-		return executor_.invoke([func, context]() mutable
-		{
-			CASPAR_SCOPED_CONTEXT_MSG(context);
-			return func();
-		}, priority);
-	}
+    void flush();
 
-	std::future<void> gc();
+    template<typename Func>
+    auto dispatch_async(Func&& func) -> std::future<decltype(func())>
+    {
+        typedef typename std::remove_reference<Func>::type	function_type;
+        typedef decltype(func())							result_type;
+        typedef std::packaged_task<result_type()>			task_type;
+
+        auto task = std::make_shared<task_type>(std::forward<Func>(func));
+        auto future = task->get_future();
+        service_.dispatch(std::bind(&task_type::operator(), std::move(task)));
+        return future;
+    }
+
+    template<typename Func>
+    auto dispatch_sync(Func&& func) -> decltype(func())
+    {
+        return dispatch_async(std::forward<Func>(func)).get();
+    }
 
 	// Properties
-	
-	boost::property_tree::wptree	info() const;
+
 	std::wstring					version() const;
 
 private:

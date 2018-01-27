@@ -74,8 +74,9 @@ if (MSVC)
 	set(CMAKE_CXX_FLAGS_DEBUG			"${CMAKE_CXX_FLAGS_DEBUG}			/D TBB_USE_ASSERT=1 /D TBB_USE_DEBUG /bigobj")
 	set(CMAKE_CXX_FLAGS_RELEASE			"${CMAKE_CXX_FLAGS_RELEASE}			/Oi /Ot /Gy /bigobj")
 	set(CMAKE_CXX_FLAGS_RELWITHDEBINFO	"${CMAKE_CXX_FLAGS_RELWITHDEBINFO}	/Oi /Ot /Gy /bigobj /Ob2")
+	add_definitions( -DTBB_USE_CAPTURED_EXCEPTION=0 )
 else()
-	add_compile_options( -std=c++11 ) # Needed for precompiled headers to work
+	add_compile_options( -std=c++14 ) # Needed for precompiled headers to work
 	add_compile_options( -O3 ) # Needed for precompiled headers to work
 	add_definitions( -DNDEBUG ) # Needed for precompiled headers to work
 	add_compile_options( -msse3 )

@@ -179,17 +179,6 @@ namespace boost { namespace polygon{
 
   };
 
-  template <typename T>
-  struct polygon_90_mutable_traits<T, typename gtl_same_type<polygon_concept, typename geometry_concept<T>::type>::type> {
-    // Set the data of a polygon with the unique coordinates in an iterator, starting with an x
-    template <typename iT>
-    static inline T& set_compact(T& t, iT input_begin, iT input_end) {
-      typedef iterator_points_to_compact<iT, typename polygon_traits<T>::point_type> iTp;
-      t.set_points(iTp(polygon_traits<T>::begin_points(t)), iTp(polygon_traits<T>::end_points(t)));
-      return t;
-    }
-  };
-
   template <typename T, typename enable = void>
   struct polygon_mutable_traits {
 
@@ -1194,8 +1183,11 @@ namespace boost { namespace polygon{
     typedef point_data<Unit> Point;
     typedef std::pair<Point, Point> half_edge;
 
-    class less_point : public std::binary_function<Point, Point, bool> {
+    class less_point {
     public:
+      typedef Point first_argument_type;
+      typedef Point second_argument_type;
+      typedef bool result_type;
       inline less_point() {}
       inline bool operator () (const Point& pt1, const Point& pt2) const {
         if(pt1.get(HORIZONTAL) < pt2.get(HORIZONTAL)) return true;
@@ -1567,7 +1559,6 @@ namespace boost { namespace polygon{
     typedef const hole_type* iterator_holes_type;
     static inline iterator_holes_type begin_holes(const hole_type& t) { return &t; }
     static inline iterator_holes_type end_holes(const hole_type& t) { return &t; }
-    static inline std::size_t size_holes(const hole_type& t) { return 0; }
   };
 
   template <typename T>

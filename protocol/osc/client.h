@@ -34,14 +34,14 @@ class client
 {
 	client(const client&);
 	client& operator=(const client&);
-public:	
+public:
 
 	// Static Members
 
 	// Constructors
 
-	client(std::shared_ptr<boost::asio::io_service> service);
-	
+	client(std::shared_ptr<boost::asio::io_context> service);
+
 	client(client&&);
 
 	/**
@@ -60,9 +60,9 @@ public:
 	~client();
 
 	// Methods
-		
+
 	client& operator=(client&&);
-	
+
 	// Properties
 
 	spl::shared_ptr<core::monitor::sink> sink();
