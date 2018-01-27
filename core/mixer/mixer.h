@@ -30,8 +30,6 @@
 #include <core/fwd.h>
 #include <core/monitor/monitor.h>
 
-#include <boost/property_tree/ptree_fwd.hpp>
-
 #include <map>
 
 FORWARD2(caspar, diagnostics, class graph);
@@ -62,9 +60,6 @@ public:
 	mutable_frame create_frame(const void* tag, const pixel_format_desc& desc, const core::audio_channel_layout& channel_layout);
 
 	// Properties
-
-	std::future<boost::property_tree::wptree> info() const;
-	std::future<boost::property_tree::wptree> delay_info() const;
 
 	monitor::subject& monitor_output();
 
