@@ -56,6 +56,7 @@ set(HEADERS
 		os/system_info.h
 
 		array.h
+		asio.h
 		assert.h
 		base64.h
 		blocking_bounded_queue_adapter.h
