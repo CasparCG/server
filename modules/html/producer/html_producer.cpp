@@ -355,8 +355,6 @@ private:
 			if (format_desc_.field_mode != core::field_mode::progressive)
 			{
 				auto frame1 = pop();
-
-				executor_.yield(caspar::task_priority::lowest_priority);
 				timer.tick(1.0 / (format_desc_.fps * format_desc_.field_count));
 				invoke_requested_animation_frames();
 

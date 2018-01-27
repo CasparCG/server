@@ -151,7 +151,7 @@ struct input::impl : boost::noncopyable
 			tick();
 
 			return true;
-		}, task_priority::high_priority);
+		});
 	}
 
 	std::wstring print() const

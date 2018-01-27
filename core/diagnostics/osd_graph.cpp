@@ -116,7 +116,7 @@ public:
 		get_instance()->executor_.begin_invoke([=]
 		{
 			get_instance()->do_register_drawable(drawable);
-		}, task_priority::high_priority);
+		});
 	}
 
 	static void show(bool value)
@@ -124,7 +124,7 @@ public:
 		get_instance()->executor_.begin_invoke([=]
 		{	
 			get_instance()->do_show(value);
-		}, task_priority::high_priority);
+		});
 	}
 	
 	static void shutdown()

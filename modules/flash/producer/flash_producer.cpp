@@ -387,7 +387,7 @@ public:
 		executor_.invoke([this]
 		{
 			renderer_.reset();
-		}, task_priority::high_priority);
+		});
 	}
 
 	// frame_producer
@@ -466,7 +466,7 @@ public:
 			}
 
 			return L"";
-		}, task_priority::high_priority);
+		});
 	}
 		
 	std::wstring print() const override
@@ -533,8 +533,6 @@ public:
 				else
 					return;
 			}
-
-			executor_.yield(task_priority::high_priority);
 		}
 	}
 
