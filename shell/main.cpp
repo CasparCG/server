@@ -354,12 +354,6 @@ int main(int argc, char** argv)
 		auto should_restart = run(config_file_name, should_wait_for_keypress);
 		return_code = should_restart ? 5 : 0;
 
-		for (auto& thread : get_thread_infos())
-		{
-			if (thread->name != "main thread" && thread->name != "tbb-worker-thread")
-				CASPAR_LOG(warning) << L"Thread left running: " << thread->name << L" (" << thread->native_id << L")";
-		}
-
 		CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
 
 		if (should_wait_for_keypress)

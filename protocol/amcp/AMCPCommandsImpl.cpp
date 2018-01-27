@@ -2628,14 +2628,7 @@ void info_threads_describer(core::help_sink& sink, const core::help_repository& 
 std::wstring info_threads_command(command_context& ctx)
 {
 	std::wstringstream replyString;
-	replyString << L"200 INFO THREADS OK\r\n";
-
-	for (auto& thread : get_thread_infos())
-	{
-		replyString << thread->native_id << L" " << u16(thread->name) << L"\r\n";
-	}
-
-	replyString << L"\r\n";
+	replyString << L"202 INFO THREADS OK\r\n";
 	return replyString.str();
 }
 

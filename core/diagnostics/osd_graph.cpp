@@ -134,10 +134,6 @@ public:
 private:
 	context()
 	{
-		executor_.begin_invoke([=]
-		{
-			set_priority_of_current_thread(thread_priority::LOW);
-		});
 	}
 
 	void do_show(bool value)
