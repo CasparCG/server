@@ -46,7 +46,6 @@
 #include <common/cache_aligned_vector.h>
 #include <common/timer.h>
 #include <common/param.h>
-#include <common/software_version.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/scalable_allocator.h>
@@ -737,20 +736,6 @@ public:
 	}
 };
 
-const software_version<3>& get_driver_version()
-{
-	static software_version<3> version(u8(get_version()));
-
-	return version;
-}
-
-const software_version<3> get_new_configuration_api_version()
-{
-	static software_version<3> NEW_CONFIGURATION_API("10.2");
-
-	return NEW_CONFIGURATION_API;
-}
-
 void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
 {
 	sink.short_description(L"Sends video on an SDI output using Blackmagic Decklink video cards.");
@@ -824,12 +809,7 @@ spl::shared_ptr<core::frame_consumer> create_consumer(
 		config.out_channel_layout = *found_layout;
 	}
 
-	bool old_configuration_api = get_driver_version() < get_new_configuration_api_version();
-
-	if (old_configuration_api)
-		return spl::make_shared<decklink_consumer_proxy<IDeckLinkConfiguration_v10_2>>(config);
-	else
-		return spl::make_shared<decklink_consumer_proxy<IDeckLinkConfiguration>>(config);
+	return spl::make_shared<decklink_consumer_proxy<IDeckLinkConfiguration>>(config);
 }
 
 spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
@@ -869,12 +849,7 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 	config.embedded_audio		= ptree.get(L"embedded-audio",	config.embedded_audio);
 	config.base_buffer_depth	= ptree.get(L"buffer-depth",	config.base_buffer_depth);
 
-	bool old_configuration_api = get_driver_version() < get_new_configuration_api_version();
-
-	if (old_configuration_api)
-		return spl::make_shared<decklink_consumer_proxy<IDeckLinkConfiguration_v10_2>>(config);
-	else
-		return spl::make_shared<decklink_consumer_proxy<IDeckLinkConfiguration>>(config);
+	return spl::make_shared<decklink_consumer_proxy<IDeckLinkConfiguration>>(config);
 }
 
 }}

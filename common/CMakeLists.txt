@@ -75,7 +75,6 @@ set(HEADERS
 		prec_timer.h
 		scope_exit.h
 		semaphore.h
-		software_version.h
 		stdafx.h
 		thread_info.h
 		timer.h
