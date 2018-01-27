@@ -42,7 +42,6 @@
 #include <core/producer/text/text_producer.h>
 #include <core/producer/color/color_producer.h>
 #include <core/consumer/output.h>
-#include <core/consumer/syncto/syncto_consumer.h>
 #include <core/mixer/mixer.h>
 #include <core/mixer/image/image_mixer.h>
 #include <core/producer/media_info/media_info.h>
@@ -167,7 +166,6 @@ struct server::impl : boost::noncopyable
 		core::text::init(dependencies);
 		core::init_cg_proxy_as_producer(dependencies);
 		core::scene::init(dependencies);
-		core::syncto::init(dependencies);
 		help_repo_->register_item({ L"producer" }, L"Color Producer", &core::describe_color_producer);
 	}
 
