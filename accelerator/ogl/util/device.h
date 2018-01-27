@@ -23,10 +23,11 @@
 
 #include <core/frame/frame.h>
 
+#include <common/asio.h>
 #include <common/memory.h>
 #include <common/except.h>
 
-#include <boost/asio/io_context.hpp>
+#include <boost/asio/thread_pool.hpp>
 
 #include <future>
 
@@ -39,7 +40,7 @@ class device final : public std::enable_shared_from_this<device>
 	device(const device&);
 	device& operator=(const device&);
 
-    boost::asio::io_context service_;
+    boost::asio::thread_pool context_;
 public:
 
 	// Static Members
@@ -60,27 +61,14 @@ public:
     void flush();
 
     template<typename Func>
-    auto dispatch_async(Func&& func) -> std::future<decltype(func())>
+    auto dispatch_async(Func&& func)
     {
-        typedef typename std::remove_reference<Func>::type	function_type;
-        typedef decltype(func())							result_type;
-        typedef std::packaged_task<result_type()>			task_type;
-
-        auto task = std::make_shared<task_type>(std::forward<Func>(func));
-        auto future = task->get_future();
-        service_.dispatch(std::bind(&task_type::operator(), std::move(task)));
-        return future;
-    }
-
-    template<typename Func>
-    auto dispatch_sync(Func&& func) -> decltype(func())
-    {
-        return dispatch_async(std::forward<Func>(func)).get();
+        return caspar::dispatch_async(std::forward<Func>(func));
     }
 
 	// Properties
 
-	std::wstring					version() const;
+	std::wstring version() const;
 
 private:
 	struct impl;
