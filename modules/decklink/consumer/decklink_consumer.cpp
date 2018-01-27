@@ -44,13 +44,13 @@
 #include <common/array.h>
 #include <common/future.h>
 #include <common/cache_aligned_vector.h>
-#include <common/timer.h>
 #include <common/param.h>
+#include <common/assert.h>
 
 #include <tbb/concurrent_queue.h>
 #include <tbb/scalable_allocator.h>
 
-#include <common/assert.h>
+#include <boost/timer.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -368,7 +368,7 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, boost::noncopyab
 	caspar::semaphore									ready_for_new_frames_	{ 0 };
 
 	spl::shared_ptr<diagnostics::graph>					graph_;
-	caspar::timer										tick_timer_;
+	boost::timer										tick_timer_;
 	reference_signal_detector							reference_signal_detector_	{ output_ };
 	tbb::atomic<int64_t>								current_presentation_delay_;
 	tbb::atomic<int64_t>								scheduled_frames_completed_;

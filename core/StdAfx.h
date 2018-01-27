@@ -54,6 +54,7 @@
 #include <boost/thread.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
+#include <boost/timer.h>
 
 #include <common/assert.h>
 #include <common/utf.h>
@@ -61,4 +62,3 @@
 
 #include <common/log.h>
 #include <common/except.h>
-#include <common/timer.h>

@@ -26,7 +26,6 @@
 #include <common/except.h>
 #include <common/array.h>
 #include <common/future.h>
-#include <common/timer.h>
 #include <common/memshfl.h>
 
 #include <core/frame/frame_visitor.h>
@@ -37,6 +36,7 @@
 #include <cstdint>
 #include <vector>
 
+#include <boost/timer.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/thread/future.hpp>
 
@@ -50,7 +50,7 @@ struct mutable_frame::impl : boost::noncopyable
 	const core::audio_channel_layout			channel_layout_;
 	const void*									tag_;
 	core::frame_geometry						geometry_				= frame_geometry::get_default();
-	caspar::timer								since_created_timer_;
+	boost::timer								since_created_timer_;
 
 	impl(
 			std::vector<array<std::uint8_t>> buffers,
@@ -96,7 +96,7 @@ std::size_t mutable_frame::height() const{return impl_->desc_.planes.at(0).heigh
 const void* mutable_frame::stream_tag()const{return impl_->tag_;}
 const frame_geometry& mutable_frame::geometry() const { return impl_->geometry_; }
 void mutable_frame::set_geometry(const frame_geometry& g) { impl_->geometry_ = g; }
-caspar::timer mutable_frame::since_created() const { return impl_->since_created_timer_; }
+boost::timer mutable_frame::since_created() const { return impl_->since_created_timer_; }
 
 const const_frame& const_frame::empty()
 {
@@ -113,7 +113,7 @@ struct const_frame::impl : boost::noncopyable
 	const core::audio_channel_layout									channel_layout_;
 	const void*															tag_;
 	core::frame_geometry												geometry_;
-	caspar::timer														since_created_timer_;
+	boost::timer														since_created_timer_;
 	bool																should_record_age_;
 	mutable tbb::atomic<int64_t>										recorded_age_;
 	std::shared_future<array<const std::uint8_t>>						key_only_on_demand_;
@@ -149,7 +149,7 @@ struct const_frame::impl : boost::noncopyable
 			const void* tag,
 			const core::pixel_format_desc& desc,
 			const core::audio_channel_layout& channel_layout,
-			caspar::timer since_created_timer = caspar::timer())
+			boost::timer since_created_timer = boost::timer())
 		: audio_data_(std::move(audio_data))
 		, desc_(desc)
 		, channel_layout_(channel_layout)

@@ -90,7 +90,7 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 		{
 			try
 			{
-				caspar::timer timer;
+				boost::timer timer;
 
 				auto print = pCurrentCommand->print();
 				auto params = boost::join(pCurrentCommand->parameters(), L" ");

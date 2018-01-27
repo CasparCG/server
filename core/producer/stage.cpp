@@ -33,10 +33,10 @@
 #include <common/executor.h>
 #include <common/future.h>
 #include <common/diagnostics/graph.h>
-#include <common/timer.h>
 
 #include <core/frame/frame_transform.h>
 
+#include <boost/timer.h>
 #include <boost/property_tree/ptree.hpp>
 
 #include <tbb/parallel_for_each.h>
@@ -70,7 +70,7 @@ public:
 
 	std::map<int, draw_frame> operator()(const video_format_desc& format_desc)
 	{
-		caspar::timer frame_timer;
+		boost::timer frame_timer;
 
 		auto frames = executor_.invoke([=]() -> std::map<int, draw_frame>
 		{

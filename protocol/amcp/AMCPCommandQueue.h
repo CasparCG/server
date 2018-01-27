@@ -25,8 +25,8 @@
 
 #include <common/executor.h>
 #include <common/memory.h>
-#include <common/timer.h>
 
+#include <boost/timer.h>
 #include <boost/property_tree/ptree_fwd.hpp>
 
 #include <tbb/mutex.h>
@@ -54,7 +54,7 @@ private:
 	bool					running_command_		= false;
 	std::wstring			running_command_name_;
 	std::wstring			running_command_params_;
-	caspar::timer			running_command_since_;
+	boost::timer			running_command_since_;
 };
 
 }}}

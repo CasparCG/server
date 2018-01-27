@@ -122,7 +122,7 @@ public:
 		{
 			*monitor_subject_ << monitor::message("/paused") % is_paused_;
 
-			caspar::timer produce_timer;
+			boost::timer produce_timer;
 			auto frame = foreground_->receive();
 			auto produce_time = produce_timer.elapsed();
 

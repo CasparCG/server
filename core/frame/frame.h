@@ -9,7 +9,8 @@
 #include <common/forward.h>
 #include <common/array.h>
 #include <common/cache_aligned_vector.h>
-#include <common/timer.h>
+
+#include <boost/timer.h>
 
 #include <future>
 #include <cstddef>
@@ -66,7 +67,7 @@ public:
 	const core::frame_geometry& geometry() const;
 	void set_geometry(const frame_geometry& g);
 
-	caspar::timer since_created() const;
+	boost::timer since_created() const;
 
 private:
 	struct impl;

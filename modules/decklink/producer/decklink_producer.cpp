@@ -35,7 +35,6 @@
 #include <common/except.h>
 #include <common/log.h>
 #include <common/param.h>
-#include <common/timer.h>
 
 #include <core/frame/audio_channel_layout.h>
 #include <core/frame/frame.h>
@@ -52,6 +51,7 @@
 
 #include <tbb/concurrent_queue.h>
 
+#include <boost/timer.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/adaptor/transformed.hpp>
@@ -98,7 +98,7 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	const int										device_index_;
 	core::monitor::subject							monitor_subject_;
 	spl::shared_ptr<diagnostics::graph>				graph_;
-	caspar::timer									tick_timer_;
+	boost::timer									tick_timer_;
 
 	com_ptr<IDeckLink>								decklink_			= get_device(device_index_);
 	com_iface_ptr<IDeckLinkInput>					input_				= iface_cast<IDeckLinkInput>(decklink_);
@@ -179,7 +179,7 @@ public:
 									<< boost::errinfo_api_function("StartStreams"));
 
 		// Wait for first frame until returning or give up after 2 seconds.
-		caspar::timer timeout_timer;
+		boost::timer timeout_timer;
 
 		while (frame_buffer_.size() < 1 && timeout_timer.elapsed() < 2.0)
 			boost::this_thread::sleep_for(boost::chrono::milliseconds(1));
@@ -221,7 +221,7 @@ public:
 			graph_->set_value("tick-time", tick_timer_.elapsed()*out_format_desc_.fps*0.5);
 			tick_timer_.restart();
 
-			caspar::timer frame_timer;
+			boost::timer frame_timer;
 
 			// Video
 

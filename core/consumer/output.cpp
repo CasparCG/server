@@ -41,8 +41,8 @@
 #include <common/prec_timer.h>
 #include <common/memshfl.h>
 #include <common/env.h>
-#include <common/timer.h>
 
+#include <boost/timer.h>
 #include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -166,7 +166,7 @@ public:
 
 	std::future<void> operator()(const_frame input_frame, const core::video_format_desc& format_desc, const core::audio_channel_layout& channel_layout)
 	{
-		spl::shared_ptr<caspar::timer> frame_timer;
+		spl::shared_ptr<boost::timer> frame_timer;
 
 		change_channel_format(format_desc, channel_layout);
 

@@ -50,6 +50,7 @@
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/once.hpp>
 #include <boost/thread/thread.hpp>
+#include <boost/timer.h>
 #include <cstdint>
 #include <cstdio>
 #include <deque>
@@ -72,7 +73,7 @@
 #include <tbb/tbb_thread.h>
 #include <unordered_map>
 #include <vector>
-#include <common/timer.h>
+#include <boost/timer.h>
 
 #pragma warning(push, 1)
 

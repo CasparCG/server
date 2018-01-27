@@ -32,13 +32,13 @@
 #include <common/env.h>
 #include <common/prec_timer.h>
 #include <common/os/threading.h>
-#include <common/timer.h>
 
 #include <SFML/Graphics.hpp>
 
 #include <boost/optional.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/timer.h>
 
 #include <tbb/concurrent_unordered_map.h>
 #include <tbb/atomic.h>
@@ -99,7 +99,7 @@ class context : public drawable
 	
 	std::list<std::weak_ptr<drawable>>	drawables_;
 	int64_t								refresh_rate_millis_		= 16;
-	caspar::timer						display_time_;
+	boost::timer						display_time_;
 	bool								calculate_view_				= true;
 	int									scroll_position_			= 0;
 	bool								dragging_					= false;

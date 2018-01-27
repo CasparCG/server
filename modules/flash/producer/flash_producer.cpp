@@ -193,7 +193,7 @@ class flash_renderer
 	core::draw_frame								head_				= core::draw_frame::late();
 	bitmap											bmp_				{ width_, height_ };
 	prec_timer										timer_;
-	caspar::timer									tick_timer_;
+	boost::timer									tick_timer_;
 	
 	spl::shared_ptr<diagnostics::graph>				graph_;
 	

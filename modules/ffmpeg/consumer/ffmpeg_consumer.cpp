@@ -482,7 +482,7 @@ public:
 	{
 		CASPAR_VERIFY(in_video_format_.format != core::video_format::invalid);
 
-		auto frame_timer = spl::make_shared<caspar::timer>();
+		auto frame_timer = spl::make_shared<boost::timer>();
 
 		std::shared_ptr<void> token(
 			nullptr,
