@@ -158,4 +158,3 @@ add_subdirectory(modules)
 
 add_subdirectory(protocol)
 add_subdirectory(shell)
-add_subdirectory(unit-test)

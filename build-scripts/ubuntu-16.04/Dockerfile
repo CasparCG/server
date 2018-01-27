@@ -1,9 +1,8 @@
-FROM buildpack-deps:artful
+FROM buildpack-deps:xenial
 
 RUN set -ex; \
 	apt-get update; \
 	apt-get install -y --no-install-recommends \
-		clang \
 		cmake \
 		libxrandr-dev \
 		libjpeg-dev \
@@ -54,9 +53,6 @@ RUN set -ex; \
 		libnih-dbus-dev \
 	; \
 	rm -rf /var/lib/apt/lists/*
-
-#RUN update-alternatives --set c++ /usr/bin/clang++; \
-#    update-alternatives --set cc /usr/bin/clang
 
 RUN mkdir -p /build/products; mkdir /source
 

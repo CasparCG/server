@@ -36,4 +36,4 @@ cp -f /source/LICENSE "$STAGING_DIRECTORY/" || fail "Could not copy LICENSE"
 
 # Create tar.gz file
 echo Creating tag.gz...
-tar -cvzf "/build/products/CasparCG_Server_ubuntu-17.10.tar.gz" "$STAGING_DIRECTORY" || fail "Could not create archive"
+tar -cvzf "/build/products/CasparCG_Server_ubuntu-16.04.tar.gz" "$STAGING_DIRECTORY" || fail "Could not create archive"
