@@ -1,6 +1,10 @@
+#pragma once
+
 #include <boost/asio/post.hpp>
 #include <boost/asio/dispatch.hpp>
 #include <boost/asio/spawn.hpp>
+
+#include <future>
 
 namespace caspar {
 

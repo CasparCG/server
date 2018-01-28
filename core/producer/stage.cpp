@@ -428,7 +428,7 @@ public:
 
 	std::future<std::wstring> call(int index, const std::vector<std::wstring>& params)
 	{
-		return flatten(executor_.begin_invoke([=]
+		return fold(executor_.begin_invoke([=]
 		{
 			return get_layer(index).foreground()->call(params).share();
 		}, task_priority::high_priority));

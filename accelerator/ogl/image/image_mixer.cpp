@@ -99,7 +99,7 @@ public:
 			return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true));
 		}
 
-		return flatten(ogl_->dispatch_async([=]() mutable -> std::shared_future<array<const std::uint8_t>>
+		return fold(ogl_->dispatch_async([=]() mutable -> std::shared_future<array<const std::uint8_t>>
 		{
             CASPAR_SCOPE_EXIT
             {
