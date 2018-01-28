@@ -36,6 +36,7 @@ namespace caspar { namespace core {
 
 struct layer::impl
 {
+	int									index_;
 	spl::shared_ptr<monitor::subject>	monitor_subject_;
 	spl::shared_ptr<frame_producer>		foreground_			= frame_producer::empty();
 	spl::shared_ptr<frame_producer>		background_			= frame_producer::empty();;
@@ -44,14 +45,21 @@ struct layer::impl
 	int64_t								current_frame_age_	= 0;
 
 public:
-	impl(int index)
-		: monitor_subject_(spl::make_shared<monitor::subject>(
+	impl(const int index)
+		: index_(index)
+		, monitor_subject_(spl::make_shared<monitor::subject>(
 				"/layer/" + boost::lexical_cast<std::string>(index)))
 //		, foreground_event_subject_("")
 //		, background_event_subject_("background")
 	{
 //		foreground_event_subject_.subscribe(event_subject_);
 //		background_event_subject_.subscribe(event_subject_);
+	}
+
+	void update_index(const int index)
+	{
+		index_ = index;
+		monitor_subject_->update_path("/layer/" + boost::lexical_cast<std::string>(index));
 	}
 
 	void set_foreground(spl::shared_ptr<frame_producer> producer)
@@ -206,6 +214,10 @@ layer& layer::operator=(layer&& other)
 void layer::swap(layer& other)
 {
 	impl_.swap(other.impl_);
+
+	const int old_index = impl_->index_;
+	impl_->update_index(other.impl_->index_);
+	other.impl_->update_index(old_index);
 }
 void layer::load(spl::shared_ptr<frame_producer> frame_producer, bool preview, const boost::optional<int32_t>& auto_play_delta){return impl_->load(std::move(frame_producer), preview, auto_play_delta);}
 void layer::play(){impl_->play();}
