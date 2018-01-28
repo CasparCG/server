@@ -62,7 +62,7 @@ public:
 
 	virtual ~client_connection() { }
 
-	virtual void send(std::basic_string<CharT>&& data) = 0;
+	virtual void send(std::basic_string<CharT>&& data, bool skip_log = false) = 0;
 	virtual void disconnect() = 0;
 	virtual std::wstring address() const = 0;
 

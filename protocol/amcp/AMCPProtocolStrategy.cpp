@@ -106,10 +106,27 @@ public:
 	//Thesefore the AMCPProtocolStrategy should be decorated with a delimiter_based_chunking_strategy
 	void Parse(const std::wstring& message, ClientInfoPtr client)
 	{
+		std::list<std::wstring> tokens;
+		tokenize(message, tokens);
+
+		if (!tokens.empty() && boost::iequals(tokens.front(), L"PING"))
+		{
+			tokens.pop_front();
+			std::wstringstream answer;
+			answer << L"PONG";
+
+			for (auto t : tokens)
+				answer << L" " << t;
+
+			answer << "\r\n";
+			client->send(answer.str(), true);
+			return;
+		}
+
 		CASPAR_LOG_COMMUNICATION(info) << L"Received message from " << client->address() << ": " << message << L"\\r\\n";
 
 		command_interpreter_result result;
-		if(interpret_command_string(message, result, client))
+		if(interpret_command_string(tokens, result, client))
 		{
 			if(result.lock && !result.lock->check_access(client))
 				result.error = error_state::access_error;
@@ -150,13 +167,10 @@ public:
 	}
 
 private:
-	bool interpret_command_string(const std::wstring& message, command_interpreter_result& result, ClientInfoPtr client)
+	bool interpret_command_string(std::list<std::wstring> tokens, command_interpreter_result& result, ClientInfoPtr client)
 	{
 		try
 		{
-			std::list<std::wstring> tokens;
-			tokenize(message, tokens);
-
 			// Discard GetSwitch
 			if (!tokens.empty() && tokens.front().at(0) == L'/')
 				tokens.pop_front();
