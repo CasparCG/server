@@ -161,7 +161,7 @@ public:
 
 		convert(items, format_desc.width, format_desc.height);
 
-		auto result = std::shared_ptr<uint8_t[]>(new uint8_t[format_desc.size]);
+		auto result = std::shared_ptr<uint8_t>(new uint8_t[format_desc.size]);
 		memset(result.get(), 0, format_desc.size);
 		if(format_desc.field_mode != core::field_mode::progressive)
 		{

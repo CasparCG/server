@@ -8,13 +8,8 @@ if not defined BUILD_7ZIP exit /b 1
 
 :: Clean and enter shadow build folder
 echo Cleaning...
-cd .. || goto :error
 if exist build rmdir build /s /q || goto :error
 mkdir build || goto :error
-
-:: Unpack archived dependencies
-echo Unpacking archived dependencies...
-"%BUILD_7ZIP%" x -y -odependencies64 dependencies64\large_files_win32.7z || goto :error
 
 :: Setup VC++ environment
 echo Setting up VC++...
@@ -33,6 +28,7 @@ msbuild "CasparCG Server.sln" /p:Configuration=RelWithDebInfo /m:%BUILD_PARALLEL
 set SERVER_FOLDER=CasparCG Server
 if exist "%SERVER_FOLDER%" rmdir "%SERVER_FOLDER%" /s /q || goto :error
 mkdir "%SERVER_FOLDER%" || goto :error
+mkdir "%SERVER_FOLDER%\server" || goto :error
 
 :: Copy media files
 echo Copying media...
