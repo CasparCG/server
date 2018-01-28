@@ -3001,6 +3001,15 @@ void req_describer(core::help_sink& sink, const core::help_repository& repo)
 		L"<< RES unique 202 PLAY OK");
 }
 
+void ping_describer(core::help_sink& sink, const core::help_repository& repo)
+{
+	sink.short_description(L"Pings the server to ensure the amcp connection is still active.");
+	sink.syntax(LR"(PING {[tokens:string]})");
+	sink.example(
+		L">> PING abcdef123\n"
+		L"<< PONG abcdef123");
+}
+
 
 void register_commands(amcp_command_repository& repo)
 {
@@ -3090,6 +3099,7 @@ void register_commands(amcp_command_repository& repo)
 	repo.register_command(			L"Query Commands",		L"HELP CONSUMER",				help_consumer_describer,			help_consumer_command,			0);
 
 	repo.help_repo()->register_item({ L"AMCP", L"Protocol Commands" }, L"REQ", req_describer);
+	repo.help_repo()->register_item({ L"AMCP", L"Protocol Commands" }, L"PING", ping_describer);
 }
 
 }	//namespace amcp
