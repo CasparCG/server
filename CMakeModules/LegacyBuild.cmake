@@ -98,7 +98,7 @@ if (POLICY CMP0045)
 	cmake_policy(SET CMP0045 OLD)
 endif ()
 
-include(CMake/PrecompiledHeader.cmake)
+include(CMakeModules/PrecompiledHeader.cmake)
 
 set(CASPARCG_MODULE_INCLUDE_STATEMENTS							"" CACHE INTERNAL "")
 set(CASPARCG_MODULE_INIT_STATEMENTS								"" CACHE INTERNAL "")
