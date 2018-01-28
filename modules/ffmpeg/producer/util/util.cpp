@@ -516,11 +516,11 @@ spl::shared_ptr<AVCodecContext> open_codec(AVFormatContext& context, enum AVMedi
 {
 	AVCodec* decoder;
 	if (index == -1 && type == AVMEDIA_TYPE_VIDEO) {
-		int bestHeight = 0;
+		int best_height = 0;
 		for (unsigned int i = 0; i < context.nb_streams; i++) {
-			if (context.streams[i]->codec->codec_type == type && context.streams[i]->codec->height > bestHeight) {
+			if (context.streams[i]->codec->codec_type == type && context.streams[i]->codec->height > best_height) {
 				index = i;
-				bestHeight = context.streams[i]->codec->height;
+				best_height = context.streams[i]->codec->height;
 			}
 		}
 	}
