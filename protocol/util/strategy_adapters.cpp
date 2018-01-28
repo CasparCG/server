@@ -64,11 +64,14 @@ public:
 	{
 	}
 
-	void send(std::basic_string<wchar_t>&& data) override
+	void send(std::basic_string<wchar_t>&& data, bool skip_log) override
 	{
 		auto str = boost::locale::conv::from_utf<wchar_t>(data, codepage_);
 
-		client_->send(std::move(str));
+		client_->send(std::move(str), skip_log);
+
+		if (skip_log)
+			return;
 
 		if (data.length() < 512)
 		{
