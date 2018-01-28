@@ -160,7 +160,7 @@ void init()
 	// Never log calltrace to console. The terminal is too slow, so the log queue will build up faster than consumed.
 	stream_sink->set_filter(category != log_category::calltrace);
 
-	bool print_all_characters = false;
+	//bool print_all_characters = false;
 	//stream_sink->set_formatter(boost::bind(&my_formatter<boost::log::wformatting_ostream>, print_all_characters, _1, _2));
 
 	boost::log::core::get()->add_sink(stream_sink);
@@ -194,7 +194,7 @@ void add_file_sink(const std::wstring& file, const boost::log::filter& filter)
 			boost::log::keywords::open_mode = std::ios::app
 			);
 
-		bool print_all_characters = true;
+		//bool print_all_characters = true;
 
 		//file_sink->set_formatter(boost::bind(&my_formatter<boost::log::formatting_ostream>, print_all_characters, _1, _2));
 		file_sink->set_filter(filter);
