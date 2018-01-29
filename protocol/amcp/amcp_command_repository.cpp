@@ -64,7 +64,6 @@ AMCPCommand::ptr_type find_command(
 struct amcp_command_repository::impl
 {
 	std::vector<channel_context>								channels;
-	spl::shared_ptr<core::media_info_repository>				media_info_repo;
 	spl::shared_ptr<core::system_info_provider_repository>		system_info_provider_repo;
 	spl::shared_ptr<core::cg_producer_registry>					cg_registry;
 	spl::shared_ptr<core::help_repository>						help_repo;
@@ -78,7 +77,6 @@ struct amcp_command_repository::impl
 
 	impl(
 			const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-			const spl::shared_ptr<core::media_info_repository>& media_info_repo,
 			const spl::shared_ptr<core::system_info_provider_repository>& system_info_provider_repo,
 			const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
 			const spl::shared_ptr<core::help_repository>& help_repo,
@@ -86,8 +84,7 @@ struct amcp_command_repository::impl
 			const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
 			const std::shared_ptr<accelerator::ogl::device>& ogl_device,
 			std::promise<bool>& shutdown_server_now)
-		: media_info_repo(media_info_repo)
-		, system_info_provider_repo(system_info_provider_repo)
+		: system_info_provider_repo(system_info_provider_repo)
 		, cg_registry(cg_registry)
 		, help_repo(help_repo)
 		, producer_registry(producer_registry)
@@ -107,7 +104,6 @@ struct amcp_command_repository::impl
 
 amcp_command_repository::amcp_command_repository(
 		const std::vector<spl::shared_ptr<core::video_channel>>& channels,
-		const spl::shared_ptr<core::media_info_repository>& media_info_repo,
 		const spl::shared_ptr<core::system_info_provider_repository>& system_info_provider_repo,
 		const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
 		const spl::shared_ptr<core::help_repository>& help_repo,
@@ -117,7 +113,6 @@ amcp_command_repository::amcp_command_repository(
 		std::promise<bool>& shutdown_server_now)
 		: impl_(new impl(
 				channels,
-				media_info_repo,
 				system_info_provider_repo,
 				cg_registry,
 				help_repo,
@@ -139,7 +134,6 @@ AMCPCommand::ptr_type amcp_command_repository::create_command(const std::wstring
 			-1,
 			self.channels,
 			self.help_repo,
-			self.media_info_repo,
 			self.cg_registry,
 			self.system_info_provider_repo,
 			self.producer_registry,
@@ -178,7 +172,6 @@ AMCPCommand::ptr_type amcp_command_repository::create_channel_command(
 			layer_index,
 			self.channels,
 			self.help_repo,
-			self.media_info_repo,
 			self.cg_registry,
 			self.system_info_provider_repo,
 			self.producer_registry,

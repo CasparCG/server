@@ -33,8 +33,6 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/draw_frame.h>
 #include <core/producer/frame_producer.h>
-#include <core/producer/media_info/media_info.h>
-#include <core/producer/media_info/media_info_repository.h>
 #include <core/system_info_provider.h>
 
 #include <boost/property_tree/ptree.hpp>
@@ -252,29 +250,10 @@ void init(core::module_dependencies dependencies)
 	avcodec_register_all();
 	avdevice_register_all();
 
-	auto info_repo = dependencies.media_info_repo;
-
 	dependencies.consumer_registry->register_consumer_factory(L"FFmpeg Consumer", create_ffmpeg_consumer, describe_ffmpeg_consumer);
 	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"ffmpeg", create_preconfigured_ffmpeg_consumer);
-	dependencies.producer_registry->register_producer_factory(L"FFmpeg Producer", boost::bind(&create_producer, _1, _2, info_repo), describe_producer);
+	dependencies.producer_registry->register_producer_factory(L"FFmpeg Producer", boost::bind(&create_producer, _1, _2), describe_producer);
 
-	info_repo->register_extractor(
-			[](const std::wstring& file, const std::wstring& extension, core::media_info& info) -> bool
-			{
-				auto quiet_logging = temporary_enable_quiet_logging_for_thread(true);
-				if (extension == L".WAV" || extension == L".MP3")
-				{
-					info.clip_type = L"AUDIO";
-					return true;
-				}
-
-				if (!is_valid_file(file, true))
-					return false;
-
-				info.clip_type = L"MOVIE";
-
-				return try_get_duration(file, info.duration, info.time_base);
-			});
 	dependencies.system_info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
 	{
 		info.add(L"system.ffmpeg.avcodec", avcodec_version());
