@@ -27,7 +27,6 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/consumer/output.h>
 #include <core/producer/frame_producer.h>
-#include <core/producer/framerate/framerate_producer.h>
 #include <core/video_channel.h>
 
 #include <core/frame/frame.h>
@@ -351,13 +350,7 @@ spl::shared_ptr<core::frame_producer> create_channel_producer(
 		bool no_auto_deinterlace)
 {
 	auto producer = spl::make_shared<channel_producer>(dependencies, channel, frames_delay, no_auto_deinterlace);
-
-	return core::create_framerate_producer(
-			producer,
-			[producer] { return producer->current_framerate(); },
-			dependencies.format_desc.framerate,
-			dependencies.format_desc.field_mode,
-			dependencies.format_desc.audio_cadence);
+    return core::create_destroy_proxy(producer);
 }
 
 }}

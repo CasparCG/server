@@ -43,7 +43,6 @@
 #include <core/frame/frame_transform.h>
 #include <core/frame/frame_factory.h>
 #include <core/producer/frame_producer.h>
-#include <core/producer/framerate/framerate_producer.h>
 #include <core/monitor/monitor.h>
 #include <core/diagnostics/call_context.h>
 #include <core/mixer/audio/audio_mixer.h>
@@ -467,15 +466,6 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 			device_index,
 			filter_str,
 			length);
-
-	auto get_source_framerate	= [=] { return producer->get_out_framerate(); };
-	auto target_framerate		= dependencies.format_desc.framerate;
-
-	return core::create_destroy_proxy(core::create_framerate_producer(
-			producer,
-			get_source_framerate,
-			target_framerate,
-			dependencies.format_desc.field_mode,
-			dependencies.format_desc.audio_cadence));
+	return core::create_destroy_proxy(producer);
 }
 }}
