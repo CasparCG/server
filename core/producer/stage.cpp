@@ -428,15 +428,10 @@ public:
 
 	std::future<std::wstring> call(int index, const std::vector<std::wstring>& params)
 	{
-		auto f = executor_.begin_invoke([=]
+		return fold(executor_.begin_invoke([=]
 		{
-			return get_layer(index).foreground()->call(params);
-		}, task_priority::high_priority);
-
-        return std::async(std::launch::deferred, [f = std::move(f)] () mutable
-        {
-            return f.get().get();
-        });
+			return get_layer(index).foreground()->call(params).share();
+		}, task_priority::high_priority));
 	}
 
 	void on_interaction(const interaction_event::ptr& event)
