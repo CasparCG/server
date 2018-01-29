@@ -84,17 +84,14 @@ struct image_producer : public core::frame_producer_base
 	core::draw_frame							frame_				= core::draw_frame::empty();
 	core::constraints							constraints_;
 
-	image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& description, bool thumbnail_mode, uint32_t length)
+	image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& description, uint32_t length)
 		: description_(description)
 		, frame_factory_(frame_factory)
 		, length_(length)
 	{
 		load(load_image(description_));
 
-		if (thumbnail_mode)
-			CASPAR_LOG(debug) << print() << L" Initialized";
-		else
-			CASPAR_LOG(info) << print() << L" Initialized";
+		CASPAR_LOG(info) << print() << L" Initialized";
 	}
 
 	image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const void* png_data, size_t size, uint32_t length)
@@ -276,31 +273,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 	if(ext == supported_extensions().end())
 		return core::frame_producer::empty();
 
-	return spl::make_shared<image_producer>(dependencies.frame_factory, *caspar::find_case_insensitive(filename + *ext), false, length);
-}
-
-
-core::draw_frame create_thumbnail(const core::frame_producer_dependencies& dependencies, const std::wstring& media_file)
-{
-	std::wstring filename = env::media_folder() + media_file;
-
-	auto ext = std::find_if(supported_extensions().begin(), supported_extensions().end(), [&](const std::wstring& ex) -> bool
-	{
-		auto file = caspar::find_case_insensitive(boost::filesystem::path(filename).wstring() + ex);
-
-		return static_cast<bool>(file);
-	});
-
-	if (ext == supported_extensions().end())
-		return core::draw_frame::empty();
-
-	spl::shared_ptr<core::frame_producer> producer = spl::make_shared<image_producer>(
-			dependencies.frame_factory,
-			*caspar::find_case_insensitive(filename + *ext),
-			true,
-			1);
-
-	return producer->receive();
+	return spl::make_shared<image_producer>(dependencies.frame_factory, *caspar::find_case_insensitive(filename + *ext), length);
 }
 
 }}

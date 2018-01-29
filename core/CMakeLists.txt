@@ -55,7 +55,6 @@ set(SOURCES
 
 		system_info_provider.cpp
 		StdAfx.cpp
-		thumbnail_generator.cpp
 		video_channel.cpp
 		video_format.cpp
 )
@@ -135,7 +134,6 @@ set(HEADERS
 		module_dependencies.h
 		system_info_provider.h
 		StdAfx.h
-		thumbnail_generator.h
 		video_channel.h
 		video_format.h
 )
