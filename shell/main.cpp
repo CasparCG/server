@@ -91,9 +91,6 @@ void print_info()
 	CASPAR_LOG(info) << L"http://www.casparcg.com/";
 	CASPAR_LOG(info) << L"############################################################################";
 	CASPAR_LOG(info) << L"Starting CasparCG Video and Graphics Playout Server " << env::version();
-	CASPAR_LOG(info) << L"on " << os_description();
-	CASPAR_LOG(info) << cpu_info();
-	CASPAR_LOG(info) << system_product_name();
 }
 
 void do_run(
