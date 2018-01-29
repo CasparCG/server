@@ -26,7 +26,10 @@ cp -f  /source/shell/LiberationSans-Regular.ttf "$STAGING_DIRECTORY/" || fail "C
 cp -f  /source/shell/casparcg.config "$STAGING_DIRECTORY/" || fail "Could not copy server config"
 cp -f  /source/shell/run.sh "$STAGING_DIRECTORY/" || fail "Could not copy run.sh"
 cp -Rf /build/shell/locales "$STAGING_DIRECTORY/bin/" || fail "Could not copy server CEF locales"
-cp -f  /build/shell/*.pak "$STAGING_DIRECTORY/" || fail "Could not copy CEF resources"
+cp -Rf /build/shell/swiftshader "$STAGING_DIRECTORY/bin/" || fail "Could not copy server CEF swiftshader"
+cp -f  /build/shell/*.pak "$STAGING_DIRECTORY/bin/" || fail "Could not copy CEF resources"
+cp -f  /build/shell/*.bin "$STAGING_DIRECTORY/bin/" || fail "Could not copy CEF v8 resources"
+cp -f  /build/shell/*.dat "$STAGING_DIRECTORY/bin/" || fail "Could not copy CEF ICU resources"
 
 # Copy documentation
 echo Copying documentation...

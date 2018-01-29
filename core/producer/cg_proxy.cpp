@@ -48,6 +48,7 @@
 #include <future>
 #include <map>
 #include <sstream>
+#include "common/param.h"
 
 namespace caspar { namespace core {
 
@@ -230,6 +231,18 @@ private:
 
 			if (find_case_insensitive(p.wstring()))
 				return rec.second;
+		}
+
+		auto protocol = caspar::protocol_split(filename).at(0);
+		if (!protocol.empty())
+		{
+			auto ext = path(filename).extension().wstring();
+			
+			for (auto& rec : records_by_extension_)
+			{
+				if (rec.first == ext)
+					return rec.second;
+			}
 		}
 
 		return boost::none;
