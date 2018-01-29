@@ -176,9 +176,10 @@ public:
 		}
 		else if (audio_decoders_.size() > 1)
 		{
-			auto num_channels = cpplinq::from(audio_decoders_)
-				.select(std::mem_fn(&audio_decoder::num_channels))
-				.aggregate(0, std::plus<int>());
+            auto num_channels = 0;
+            for (auto& dec : audio_decoders_) {
+                num_channels += dec->num_channels();
+            }
 			auto ffmpeg_channel_layout = av_get_default_channel_layout(num_channels);
 
 			channel_layout = get_audio_channel_layout(

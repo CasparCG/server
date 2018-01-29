@@ -41,7 +41,6 @@
 #include <common/prec_timer.h>
 #include <common/memshfl.h>
 #include <common/env.h>
-#include <common/linq.h>
 #include <common/timer.h>
 
 #include <boost/circular_buffer.hpp>
@@ -142,22 +141,24 @@ public:
 
 	std::pair<int, int> minmax_buffer_depth() const
 	{
-		if(ports_.empty())
-			return std::make_pair(0, 0);
+        if (ports_.empty()) {
+            return std::make_pair(0, 0);
+        }
 
-		return cpplinq::from(ports_)
-			.select(values())
-			.select(std::mem_fn(&port::buffer_depth))
-			.where([](int v) { return v >= 0; })
-			.aggregate(minmax::initial_value<int>(), minmax());
+        std::pair<int, int> minmax = std::make_pair(INT_MAX, 0);
+        for (auto& port : ports_) {
+            minmax.first = std::min<int>(minmax.first, port.second.buffer_depth());
+            minmax.second = std::max<int>(minmax.second, port.second.buffer_depth());
+        }
 	}
 
 	bool has_synchronization_clock() const
 	{
-		return cpplinq::from(ports_)
-			.select(values())
-			.where(std::mem_fn(&port::has_synchronization_clock))
-			.any();
+        bool result = false;
+        for (auto& port : ports_) {
+            result |= port.second.has_synchronization_clock();
+        }
+        return result;
 	}
 
 	std::future<void> operator()(const_frame input_frame, const core::video_format_desc& format_desc, const core::audio_channel_layout& channel_layout)
