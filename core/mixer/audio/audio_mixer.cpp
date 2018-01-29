@@ -29,7 +29,6 @@
 #include <core/monitor/monitor.h>
 
 #include <common/diagnostics/graph.h>
-#include <common/linq.h>
 
 #include <boost/range/adaptors.hpp>
 #include <boost/range/distance.hpp>
@@ -231,20 +230,6 @@ public:
 
 		if(audio_streams_.empty())
 			audio_streams_[nullptr].audio_data = audio_buffer_ps(audio_size(audio_cadence_.front()), 0.0);
-
-		{ // sanity check
-
-			auto nb_invalid_streams = cpplinq::from(audio_streams_)
-				.select(values())
-				.where([&](const audio_stream& x)
-				{
-					return !x.remapping_failed && x.audio_data.size() < audio_size(audio_cadence_.front());
-				})
-				.count();
-
-			if(nb_invalid_streams > 0)
-				CASPAR_LOG(trace) << "[audio_mixer] Incorrect frame audio cadence detected.";
-		}
 
 		audio_buffer_ps result_ps(audio_size(audio_cadence_.front()), 0.0);
 		for (auto& stream : audio_streams_ | boost::adaptors::map_values)

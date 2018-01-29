@@ -24,7 +24,6 @@ include_directories(..)
 include_directories(../..)
 include_directories(${BOOST_INCLUDE_PATH})
 include_directories(${TBB_INCLUDE_PATH})
-include_directories(${RXCPP_INCLUDE_PATH})
 include_directories(${FFMPEG_INCLUDE_PATH})
 include_directories(${BLUEFISH_INCLUDE_PATH})
 
@@ -34,9 +33,9 @@ source_group(sources\\consumer consumer/*)
 source_group(sources\\producer producer/*)
 source_group(sources\\util util/*)
 
-target_link_libraries(  bluefish 
-                        common 
-                        core 
+target_link_libraries(  bluefish
+                        common
+                        core
                         ffmpeg)
 
 casparcg_add_include_statement("modules/bluefish/bluefish.h")

@@ -715,7 +715,7 @@ private:
 			auto requested_fmt	= av_get_pix_fmt(preferred_pix_fmt->c_str());
 			auto valid_fmts		= from_terminated_array<AVPixelFormat>(codec.pix_fmts, AVPixelFormat::AV_PIX_FMT_NONE);
 
-			if (!cpplinq::from(valid_fmts).contains(requested_fmt))
+			if (std::find(valid_fmts.begin(), valid_fmts.end(), requested_fmt) == valid_fmts.end())
 				CASPAR_THROW_EXCEPTION(user_error() << msg_info(*preferred_pix_fmt + " is not supported by codec."));
 
 			set_pixel_format(filt_vsink, requested_fmt);

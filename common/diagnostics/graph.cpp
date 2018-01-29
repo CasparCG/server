@@ -23,8 +23,6 @@
 
 #include "graph.h"
 
-#include "../linq.h"
-
 #include <boost/thread.hpp>
 
 #include <tbb/spin_mutex.h>
@@ -32,7 +30,7 @@
 #include <vector>
 
 namespace caspar { namespace diagnostics {
-		
+
 int color(float r, float g, float b, float a)
 {
 	int code = 0;
@@ -60,9 +58,11 @@ std::vector<spl::shared_ptr<spi::graph_sink>> create_sinks()
 {
 	boost::lock_guard<boost::mutex> lock(g_sink_factories_mutex);
 
-	return cpplinq::from(g_sink_factories)
-		.select([](const spi::sink_factory_t& s){ return s(); })
-		.to_vector();
+    std::vector<spl::shared_ptr<spi::graph_sink>> result;
+    for (auto sink : g_sink_factories) {
+        result.push_back(sink());
+    }
+    return result;
 }
 
 struct graph::impl
@@ -108,12 +108,12 @@ public:
 		for (auto& sink : sinks_)
 			sink->auto_reset();
 	}
-		
+
 private:
 	impl(impl&);
 	impl& operator=(impl&);
 };
-	
+
 graph::graph() : impl_(new impl)
 {
 }
