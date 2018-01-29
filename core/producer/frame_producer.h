@@ -23,13 +23,14 @@
 
 #include "../monitor/monitor.h"
 #include "../fwd.h"
-#include "../interaction/interaction_sink.h"
-#include "../help/help_repository.h"
 #include "binding.h"
 
 #include <common/forward.h>
 #include <common/future_fwd.h>
 #include <common/memory.h>
+
+#include <core/video_format.h>
+#include <core/interaction/interaction_sink.h>
 
 #include <cstdint>
 #include <limits>
@@ -154,8 +155,8 @@ typedef std::function<draw_frame (const frame_producer_dependencies&, const std:
 class frame_producer_registry : boost::noncopyable
 {
 public:
-	frame_producer_registry(spl::shared_ptr<help_repository> help_repo);
-	void register_producer_factory(std::wstring name, const producer_factory_t& factory, const help_item_describer& describer); // Not thread-safe.
+	frame_producer_registry();
+	void register_producer_factory(std::wstring name, const producer_factory_t& factoryr); // Not thread-safe.
 	spl::shared_ptr<core::frame_producer> create_producer(const frame_producer_dependencies&, const std::vector<std::wstring>& params) const;
 	spl::shared_ptr<core::frame_producer> create_producer(const frame_producer_dependencies&, const std::wstring& params) const;
 private:

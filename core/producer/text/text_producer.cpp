@@ -35,8 +35,6 @@
 #include <core/monitor/monitor.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/module_dependencies.h>
-#include <core/help/help_repository.h>
-#include <core/help/help_sink.h>
 
 #include <modules/image/consumer/image_consumer.h>
 
@@ -103,12 +101,11 @@ std::vector<std::pair<std::wstring, std::wstring>> list_fonts()
 	return std::vector<std::pair<std::wstring, std::wstring>>(fonts.begin(), fonts.end());
 }
 
-void describe_text_producer(help_sink&, const help_repository&);
 spl::shared_ptr<frame_producer> create_text_producer(const frame_producer_dependencies&, const std::vector<std::wstring>&);
 
 void init(module_dependencies dependencies)
 {
-	dependencies.producer_registry->register_producer_factory(L"Text Producer", create_text_producer, describe_text_producer);
+	dependencies.producer_registry->register_producer_factory(L"Text Producer", create_text_producer);
 }
 
 text_info& find_font_file(text_info& info)
@@ -321,27 +318,6 @@ spl::shared_ptr<text_producer> text_producer::create(const spl::shared_ptr<frame
 	return spl::make_shared<text_producer>(frame_factory, x, y, str, text_info, parent_width, parent_height, standalone);
 }
 namespace text {
-
-void describe_text_producer(help_sink& sink, const help_repository& repo)
-{
-	sink.short_description(L"A producer for rendering dynamic text.");
-	sink.syntax(L"[TEXT] [text:string] {[x:int] [y:int]} {FONT [font:string]|verdana} {SIZE [size:float]|30.0} {COLOR [color:string]|#ffffffff} {STANDALONE [standalone:0,1]|0}");
-	sink.para()
-		->text(L"Renders dynamic text using fonts found under the ")->code(L"fonts")->text(L" folder. ")
-		->text(L"Parameters:");
-	sink.definitions()
-		->item(L"text", L"The text to display. Can be changed later via CALL as well.")
-		->item(L"x", L"The x position of the text.")
-		->item(L"y", L"The y position of the text.")
-		->item(L"font", L"The name of the font (not the actual filename, but the font name).")
-		->item(L"size", L"The point size.")
-		->item(L"color", L"The color as an ARGB hex value.")
-		->item(L"standalone", L"Whether to normalize coordinates or not.");
-	sink.para()->text(L"Examples:");
-	sink.example(L">> PLAY 1-10 [TEXT] \"John Doe\" 0 0 FONT ArialMT SIZE 30 COLOR #1b698d STANDALONE 1");
-	sink.example(L">> CALL 1-10 \"Jane Doe\"", L"for modifying the text while playing.");
-	sink.para()->text(L"See ")->see(L"FLS")->text(L" for listing the available fonts.");
-}
 
 spl::shared_ptr<frame_producer> create_text_producer(const frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
 {

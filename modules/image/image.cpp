@@ -48,9 +48,9 @@ std::wstring version()
 void init(core::module_dependencies dependencies)
 {
 	FreeImage_Initialise();
-	dependencies.producer_registry->register_producer_factory(L"Image Scroll Producer", create_scroll_producer, describe_scroll_producer);
-	dependencies.producer_registry->register_producer_factory(L"Image Producer", create_producer, describe_producer);
-	dependencies.consumer_registry->register_consumer_factory(L"Image Consumer", create_consumer, describe_consumer);
+	dependencies.producer_registry->register_producer_factory(L"Image Scroll Producer", create_scroll_producer);
+	dependencies.producer_registry->register_producer_factory(L"Image Producer", create_producer);
+	dependencies.consumer_registry->register_consumer_factory(L"Image Consumer", create_consumer);
 	dependencies.system_info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
 	{
 		info.add(L"system.freeimage", version());

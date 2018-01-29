@@ -28,8 +28,6 @@
 #include <core/video_format.h>
 #include <core/frame/frame.h>
 #include <core/frame/audio_channel_layout.h>
-#include <core/help/help_repository.h>
-#include <core/help/help_sink.h>
 
 #include <common/executor.h>
 #include <common/diagnostics/graph.h>
@@ -752,39 +750,6 @@ public:
 		return monitor_subject_;
 	}
 };
-
-
-void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
-{
-	sink.short_description(L"Sends video on an SDI output using Bluefish video cards.");
-	sink.syntax(L"BLUEFISH {[device_index:int]|1} {[sdi_device:int]|1} {[embedded_audio:EMBEDDED_AUDIO]} {[key_only:KEY_ONLY]} {CHANNEL_LAYOUT [channel_layout:string]} {[keyer:string|disabled]} ");
-	sink.para()
-		->text(L"Sends video on an SDI output using Bluefish video cards. Multiple devices can be ")
-		->text(L"installed in the same machine and used at the same time, they will be addressed via ")
-		->text(L"different ")->code(L"device_index")->text(L" parameters.");
-	sink.para()->text(L"Multiple output channels can be accessed via the ")->code(L"sdi_device")->text(L" parameter.");
-	sink.para()->text(L"Specify ")->code(L"embedded_audio")->text(L" to embed audio into the SDI signal.");
-	sink.para()
-		->text(L"Specifying ")->code(L"key_only")->text(L" will extract only the alpha channel from the ")
-		->text(L"channel. This is useful when you have two SDI video cards, and neither has native support ")
-		->text(L"for separate fill/key output");
-	sink.para()->text(L"Specify ")->code(L"channel_layout")->text(L" to output a different audio channel layout than the channel uses.");
-	sink.para()->text(L"Specify ")->code(L"keyer")->text(L" to control the output channel configuration and hardware keyer")
-		->text(L"disabled results in a single SDI stream of 422 output - This is the default")
-		->text(L"external results in a 4224 stream across 2 SDI connectors, ")
-		->text(L"internal results in a 422 output keyed over the incoming SDI input using the dedicated hardware keyer on the Bleufish hadrware");
-	sink.para()->text(L"Specify ")->code(L"internal-keyer-audio-source")->text(L" to control the source of the audio and ANC data when using the internal/hardware keyer");
-
-	sink.para()->text(L"Examples:");
-	sink.example(L">> ADD 1 BLUEFISH", L"uses the default device_index of 1.");
-	sink.example(L">> ADD 1 BLUEFISH 2", L"for device_index 2.");
-	sink.example(
-		L">> ADD 1 BLUEFISH 1 EMBEDDED_AUDIO\n"
-
-		L">> ADD 1 BLUEFISH 2 KEY_ONLY", L"uses device with index 1 as fill output with audio and device with index 2 as key output.");
-
-}
-
 
 spl::shared_ptr<core::frame_consumer> create_consumer(	const std::vector<std::wstring>& params,
 														core::interaction_sink*,

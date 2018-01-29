@@ -24,8 +24,6 @@
 #include <core/frame/audio_channel_layout.h>
 #include <core/video_format.h>
 #include <core/monitor/monitor.h>
-#include <core/help/help_repository.h>
-#include <core/help/help_sink.h>
 
 #include <boost/noncopyable.hpp>
 #include <boost/rational.hpp>
@@ -1292,28 +1290,6 @@ public:
 		return consumer_->monitor_output();
 	}
 };
-
-void describe_ffmpeg_consumer(core::help_sink& sink, const core::help_repository& repo)
-{
-	sink.short_description(L"For streaming/recording the contents of a channel using FFmpeg.");
-	sink.syntax(L"FILE,STREAM [filename:string],[url:string] {-[ffmpeg_param1:string] [value1:string] {-[ffmpeg_param2:string] [value2:string] {...}}} {[separate_key:SEPARATE_KEY]} {[mono_streams:MONO_STREAMS]}");
-	sink.para()->text(L"For recording or streaming the contents of a channel using FFmpeg");
-	sink.definitions()
-		->item(L"filename",			L"The filename under the media folder including the extension (decides which kind of container format that will be used).")
-		->item(L"url",				L"If the filename is given in the form of an URL a network stream will be created instead of a file on disk.")
-		->item(L"ffmpeg_paramX",		L"A parameter supported by FFmpeg. For example vcodec or acodec etc.")
-		->item(L"separate_key",		L"If defined will create two files simultaneously -- One for fill and one for key (_A will be appended).")
-		->item(L"mono_streams",		L"If defined every audio channel will be written to its own audio stream.");
-	sink.para()->text(L"Examples:");
-	sink.example(L">> ADD 1 FILE output.mov -vcodec dnxhd");
-	sink.example(L">> ADD 1 FILE output.mov -vcodec prores");
-	sink.example(L">> ADD 1 FILE output.mov -vcodec dvvideo");
-	sink.example(L">> ADD 1 FILE output.mov -vcodec libx264 -preset ultrafast -tune fastdecode -crf 25");
-	sink.example(L">> ADD 1 FILE output.mov -vcodec dnxhd SEPARATE_KEY", L"for creating output.mov with fill and output_A.mov with key/alpha");
-	sink.example(L">> ADD 1 FILE output.mxf -vcodec dnxhd MONO_STREAMS", L"for creating output.mxf with every audio channel encoded in its own mono stream.");
-	sink.example(L">> ADD 1 STREAM udp://<client_ip_address>:9250 -format mpegts -vcodec libx264 -crf 25 -tune zerolatency -preset ultrafast",
-		L"for streaming over UDP instead of creating a local file.");
-}
 
 spl::shared_ptr<core::frame_consumer> create_ffmpeg_consumer(
 		const std::vector<std::wstring>& params, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels)

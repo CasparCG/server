@@ -32,8 +32,6 @@
 #include <core/frame/pixel_format.h>
 #include <core/frame/audio_channel_layout.h>
 #include <core/frame/geometry.h>
-#include <core/help/help_repository.h>
-#include <core/help/help_sink.h>
 
 #include <common/assert.h>
 #include <common/env.h>
@@ -576,21 +574,6 @@ public:
 		return monitor_subject_;
 	}
 };
-
-void describe_producer(core::help_sink& sink, const core::help_repository& repo)
-{
-	sink.short_description(L"Renders a web page in real time.");
-	sink.syntax(L"{[html_filename:string]},{[HTML] [url:string]}");
-	sink.para()->text(L"Embeds an actual web browser and renders the content in realtime.");
-	sink.para()
-		->text(L"HTML content can either be stored locally under the ")->code(L"templates")
-		->text(L" folder or fetched directly via an URL. If a .html file is found with the name ")
-		->code(L"html_filename")->text(L" under the ")->code(L"templates")->text(L" folder it will be rendered. If the ")
-		->code(L"[HTML] url")->text(L" syntax is used instead, the URL will be loaded.");
-	sink.para()->text(L"Examples:");
-	sink.example(L">> PLAY 1-10 [HTML] http://www.casparcg.com");
-	sink.example(L">> PLAY 1-10 folder/html_file");
-}
 
 spl::shared_ptr<core::frame_producer> create_producer(
 		const core::frame_producer_dependencies& dependencies,

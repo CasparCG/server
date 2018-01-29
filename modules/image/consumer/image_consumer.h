@@ -42,7 +42,6 @@ void write_cropped_png(
 		int width,
 		int height);
 
-void describe_consumer(core::help_sink& sink, const core::help_repository& repo);
 spl::shared_ptr<core::frame_consumer> create_consumer(
 		const std::vector<std::wstring>& params, struct core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels);
 
