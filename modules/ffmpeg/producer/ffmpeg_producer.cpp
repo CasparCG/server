@@ -37,7 +37,6 @@
 #include <common/future.h>
 
 #include <core/frame/draw_frame.h>
-#include <core/producer/framerate/framerate_producer.h>
 #include <core/frame/frame_factory.h>
 
 #include <future>
@@ -624,19 +623,7 @@ spl::shared_ptr<core::frame_producer> create_producer(
 			out,
 			custom_channel_order,
 			vid_params);
-
-	if (producer->audio_only())
-		return core::create_destroy_proxy(producer);
-
-	auto get_source_framerate	= [=] { return producer->get_out_framerate(); };
-	auto target_framerate		= dependencies.format_desc.framerate;
-
-	return core::create_destroy_proxy(core::create_framerate_producer(
-			producer,
-			get_source_framerate,
-			target_framerate,
-			dependencies.format_desc.field_mode,
-			dependencies.format_desc.audio_cadence));
+	return core::create_destroy_proxy(producer);
 }
 
 }}

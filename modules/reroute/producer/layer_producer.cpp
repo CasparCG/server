@@ -30,7 +30,6 @@
 #include <core/frame/frame_factory.h>
 #include <core/producer/frame_producer.h>
 #include <core/producer/stage.h>
-#include <core/producer/framerate/framerate_producer.h>
 
 #include <common/except.h>
 #include <common/semaphore.h>
@@ -259,14 +258,7 @@ spl::shared_ptr<core::frame_producer> create_layer_producer(
 		int frames_delay,
 		const core::video_format_desc& destination_mode)
 {
-	auto producer = spl::make_shared<layer_producer>(channel, layer, frames_delay);
-
-	return core::create_framerate_producer(
-			producer,
-			std::bind(&layer_producer::current_framerate, producer),
-			destination_mode.framerate,
-			destination_mode.field_mode,
-			destination_mode.audio_cadence);
+	return spl::make_shared<layer_producer>(channel, layer, frames_delay);
 }
 
 }}

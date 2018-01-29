@@ -47,7 +47,6 @@
 #include <core/frame/frame_transform.h>
 #include <core/frame/frame_factory.h>
 #include <core/producer/frame_producer.h>
-#include <core/producer/framerate/framerate_producer.h>
 #include <core/monitor/monitor.h>
 #include <core/diagnostics/call_context.h>
 #include <core/mixer/audio/audio_mixer.h>
@@ -583,15 +582,16 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 		channel_layout = *found_layout;
 	}
 
-	return create_destroy_proxy(spl::make_shared<bluefish_producer_proxy>(
-			in_format_desc,
-			dependencies.frame_factory,
-			dependencies.format_desc,
-			channel_layout,
-			device_index,
-            stream_index,
-			filter_str,
-			length));
+    auto producer = spl::make_shared<bluefish_producer_proxy>(
+        in_format_desc,
+        dependencies.frame_factory,
+        dependencies.format_desc,
+        channel_layout,
+        device_index,
+        stream_index,
+        filter_str,
+        length);
+	return create_destroy_proxy(producer);
 }
 
 }}
