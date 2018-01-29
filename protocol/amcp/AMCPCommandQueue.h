@@ -47,7 +47,6 @@ public:
 
 	boost::property_tree::wptree info() const;
 
-	static boost::property_tree::wptree info_all_queues();
 private:
 	executor				executor_;
 	mutable tbb::spin_mutex	running_command_mutex_;

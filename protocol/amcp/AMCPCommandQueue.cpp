@@ -68,7 +68,7 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 {
 	if(!pCurrentCommand)
 		return;
-	
+
 	if(executor_.size() > 128)
 	{
 		try
@@ -83,7 +83,7 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 	}
-	
+
 	executor_.begin_invoke([=]
 	{
 		try
@@ -144,9 +144,9 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 				CASPAR_LOG(error) << "Failed to execute command:" << pCurrentCommand->print();
 				pCurrentCommand->SetReplyString(L"501 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
-				
+
 			pCurrentCommand->SendReply();
-			
+
 			CASPAR_LOG(trace) << "Ready for a new command";
 
 			tbb::spin_mutex::scoped_lock lock(running_command_mutex_);
@@ -191,19 +191,6 @@ boost::property_tree::wptree AMCPCommandQueue::info() const
 		info.add(L"running.command", running_command_name);
 		info.add(L"running.params", running_command_params);
 		info.add(L"running.elapsed", running_command_elapsed);
-	}
-
-	return info;
-}
-
-boost::property_tree::wptree AMCPCommandQueue::info_all_queues()
-{
-	boost::property_tree::wptree info;
-	tbb::spin_mutex::scoped_lock lock(get_global_mutex());
-
-	for (auto& queue : get_instances())
-	{
-		info.add_child(L"queues.queue", queue.second->info());
 	}
 
 	return info;
