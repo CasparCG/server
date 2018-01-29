@@ -29,8 +29,6 @@
 #include <common/env.h>
 #include <common/os/windows/windows.h>
 
-#include <core/producer/media_info/media_info.h>
-#include <core/producer/media_info/media_info_repository.h>
 #include <core/producer/cg_proxy.h>
 #include <core/system_info_provider.h>
 #include <core/frame/frame_factory.h>
@@ -236,15 +234,6 @@ void init(core::module_dependencies dependencies)
 
 	dependencies.producer_registry->register_producer_factory(L"Flash Producer (.ct)", create_ct_producer, describe_ct_producer);
 	dependencies.producer_registry->register_producer_factory(L"Flash Producer (.swf)", create_swf_producer, describe_swf_producer);
-	dependencies.media_info_repo->register_extractor([](const std::wstring& file, const std::wstring& extension, core::media_info& info)
-	{
-		if (extension != L".CT" && extension != L".SWF")
-			return false;
-
-		info.clip_type = L"MOVIE";
-
-		return true;
-	});
 	dependencies.system_info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
 	{
 		info.add(L"system.flash", version());

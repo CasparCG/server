@@ -24,7 +24,6 @@
 #include "../util/ProtocolStrategy.h"
 
 #include <core/video_channel.h>
-#include <core/producer/media_info/media_info_repository.h>
 #include <core/producer/cg_proxy.h>
 #include <core/system_info_provider.h>
 

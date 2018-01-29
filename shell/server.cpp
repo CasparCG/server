@@ -46,9 +46,6 @@
 #include <core/consumer/syncto/syncto_consumer.h>
 #include <core/mixer/mixer.h>
 #include <core/mixer/image/image_mixer.h>
-#include <core/producer/media_info/media_info.h>
-#include <core/producer/media_info/media_info_repository.h>
-#include <core/producer/media_info/in_memory_media_info_repository.h>
 #include <core/producer/cg_proxy.h>
 #include <core/diagnostics/subject_diagnostics.h>
 #include <core/diagnostics/call_context.h>
@@ -75,8 +72,6 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/asio.hpp>
-
-#include <tbb/atomic.h>
 
 #include <future>
 
@@ -138,23 +133,18 @@ struct server::impl : boost::noncopyable
 	std::shared_ptr<osc::client>						osc_client_						= std::make_shared<osc::client>(io_service_);
 	std::vector<std::shared_ptr<void>>					predefined_osc_subscriptions_;
 	std::vector<spl::shared_ptr<video_channel>>			channels_;
-	spl::shared_ptr<media_info_repository>				media_info_repo_;
-	boost::thread										initial_media_info_thread_;
 	spl::shared_ptr<system_info_provider_repository>	system_info_provider_repo_;
 	spl::shared_ptr<core::cg_producer_registry>			cg_registry_;
 	spl::shared_ptr<core::frame_producer_registry>		producer_registry_;
 	spl::shared_ptr<core::frame_consumer_registry>		consumer_registry_;
-	tbb::atomic<bool>									running_;
 	std::promise<bool>&									shutdown_server_now_;
 
 	explicit impl(std::promise<bool>& shutdown_server_now)
 		: accelerator_(env::properties().get(L"configuration.accelerator", L"auto"))
-		, media_info_repo_(create_in_memory_media_info_repository())
 		, producer_registry_(spl::make_shared<core::frame_producer_registry>(help_repo_))
 		, consumer_registry_(spl::make_shared<core::frame_consumer_registry>(help_repo_))
 		, shutdown_server_now_(shutdown_server_now)
 	{
-		running_ = false;
 		core::diagnostics::register_graph_to_log_sink();
 		caspar::core::diagnostics::osd::register_sink();
 		diag_subject_->attach_parent(monitor_subject_);
@@ -162,7 +152,6 @@ struct server::impl : boost::noncopyable
 		module_dependencies dependencies(
 				system_info_provider_repo_,
 				cg_registry_,
-				media_info_repo_,
 				producer_registry_,
 				consumer_registry_);
 
@@ -176,8 +165,6 @@ struct server::impl : boost::noncopyable
 
 	void start()
 	{
-		running_ = true;
-
 		setup_audio_config(env::properties());
 		CASPAR_LOG(info) << L"Initialized audio config.";
 
@@ -189,19 +176,10 @@ struct server::impl : boost::noncopyable
 
 		setup_osc(env::properties());
 		CASPAR_LOG(info) << L"Initialized osc.";
-
-		start_initial_media_info_scan();
-		CASPAR_LOG(info) << L"Started initial media information retrieval.";
 	}
 
 	~impl()
 	{
-		if (running_)
-		{
-			running_ = false;
-			initial_media_info_thread_.join();
-		}
-
 		std::weak_ptr<boost::asio::io_service> weak_io_service = io_service_;
 		io_service_.reset();
 		osc_client_.reset();
@@ -371,7 +349,6 @@ struct server::impl : boost::noncopyable
 	{
 		amcp_command_repo_ = spl::make_shared<amcp::amcp_command_repository>(
 				channels_,
-				media_info_repo_,
 				system_info_provider_repo_,
 				cg_registry_,
 				help_repo_,
@@ -420,40 +397,6 @@ struct server::impl : boost::noncopyable
 			return spl::make_shared<protocol::log::tcp_logger_protocol_strategy_factory>();
 
 		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid protocol: " + name));
-	}
-
-	void start_initial_media_info_scan()
-	{
-		initial_media_info_thread_ = boost::thread([this]
-		{
-			try
-			{
-				ensure_gpf_handler_installed_for_thread("initial media scan");
-
-				for (boost::filesystem::wrecursive_directory_iterator iter(env::media_folder()), end; iter != end; ++iter)
-				{
-					if (running_)
-					{
-						if (boost::filesystem::is_regular_file(iter->path()))
-						{
-							CASPAR_LOG(trace) << L"Retrieving information for file " << iter->path().wstring();
-							media_info_repo_->get(iter->path().wstring());
-						}
-					}
-					else
-					{
-						CASPAR_LOG(info) << L"Initial media information retrieval aborted.";
-						return;
-					}
-				}
-
-				CASPAR_LOG(info) << L"Initial media information retrieval finished.";
-			}
-			catch (...)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-			}
-		});
 	}
 };
 
