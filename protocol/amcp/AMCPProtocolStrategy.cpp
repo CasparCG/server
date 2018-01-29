@@ -34,9 +34,6 @@
 #include <cctype>
 #include <future>
 
-#include <core/help/help_repository.h>
-#include <core/help/help_sink.h>
-
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/replace.hpp>

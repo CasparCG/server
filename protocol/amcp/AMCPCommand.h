@@ -39,7 +39,6 @@ namespace amcp {
 		int														channel_index;
 		int														layer_id;
 		std::vector<channel_context>							channels;
-		spl::shared_ptr<core::help_repository>					help_repo;
 		spl::shared_ptr<core::cg_producer_registry>				cg_registry;
 		spl::shared_ptr<core::system_info_provider_repository>	system_info_repo;
 		spl::shared_ptr<const core::frame_producer_registry>	producer_registry;
@@ -56,7 +55,6 @@ namespace amcp {
 				int channel_index,
 				int layer_id,
 				std::vector<channel_context> channels,
-				spl::shared_ptr<core::help_repository> help_repo,
 				spl::shared_ptr<core::cg_producer_registry> cg_registry,
 				spl::shared_ptr<core::system_info_provider_repository> system_info_repo,
 				spl::shared_ptr<const core::frame_producer_registry> producer_registry,
@@ -68,7 +66,6 @@ namespace amcp {
 			, channel_index(channel_index)
 			, layer_id(layer_id)
 			, channels(std::move(channels))
-			, help_repo(std::move(help_repo))
 			, cg_registry(std::move(cg_registry))
 			, system_info_repo(std::move(system_info_repo))
 			, producer_registry(std::move(producer_registry))

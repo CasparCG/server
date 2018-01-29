@@ -35,8 +35,6 @@
 
 namespace caspar { namespace core {
 
-void describe_framerate_producer(help_sink& sink);
-
 spl::shared_ptr<frame_producer> create_framerate_producer(
 		spl::shared_ptr<frame_producer> source,
 		std::function<boost::rational<int> ()> get_source_framerate, // Will be called after first receive() on the source

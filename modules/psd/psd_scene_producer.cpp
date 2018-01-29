@@ -34,8 +34,6 @@
 #include <core/producer/scene/const_producer.h>
 #include <core/producer/scene/hotswap_producer.h>
 #include <core/frame/draw_frame.h>
-#include <core/help/help_repository.h>
-#include <core/help/help_sink.h>
 
 #include <common/env.h>
 #include <common/memory.h>
@@ -608,16 +606,9 @@ spl::shared_ptr<core::frame_producer> create_psd_scene_producer(const core::fram
 	return root;
 }
 
-void describe_psd_scene_producer(core::help_sink& sink, const core::help_repository& repo)
-{
-	sink.short_description(L"A producer for dynamic graphics using Photoshops .psd files.");
-	sink.syntax(L"[.psd_filename:string] {[param1:string] [value1:string]} {[param2:string] [value2:string]} ...");
-	sink.para()->text(L"A producer that looks in the ")->code(L"templates")->text(L" folder for .psd files.");
-}
-
 void init(core::module_dependencies dependencies)
 {
-	dependencies.producer_registry->register_producer_factory(L"PSD Scene Producer", create_psd_scene_producer, describe_psd_scene_producer);
+	dependencies.producer_registry->register_producer_factory(L"PSD Scene Producer", create_psd_scene_producer);
 	dependencies.cg_registry->register_cg_producer(
 			L"psd",
 			{ L".psd" },

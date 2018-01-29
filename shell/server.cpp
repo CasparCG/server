@@ -52,7 +52,6 @@
 #include <core/diagnostics/osd_graph.h>
 #include <core/diagnostics/graph_to_log_sink.h>
 #include <core/system_info_provider.h>
-#include <core/help/help_repository.h>
 
 #include <modules/image/consumer/image_consumer.h>
 
@@ -126,7 +125,6 @@ struct server::impl : boost::noncopyable
 	spl::shared_ptr<monitor::subject>					monitor_subject_;
 	spl::shared_ptr<monitor::subject>					diag_subject_					= core::diagnostics::get_or_create_subject();
 	accelerator::accelerator							accelerator_;
-	spl::shared_ptr<help_repository>					help_repo_;
 	std::shared_ptr<amcp::amcp_command_repository>		amcp_command_repo_;
 	std::vector<spl::shared_ptr<IO::AsyncEventServer>>	async_servers_;
 	std::shared_ptr<IO::AsyncEventServer>				primary_amcp_server_;
@@ -141,8 +139,8 @@ struct server::impl : boost::noncopyable
 
 	explicit impl(std::promise<bool>& shutdown_server_now)
 		: accelerator_(env::properties().get(L"configuration.accelerator", L"auto"))
-		, producer_registry_(spl::make_shared<core::frame_producer_registry>(help_repo_))
-		, consumer_registry_(spl::make_shared<core::frame_consumer_registry>(help_repo_))
+		, producer_registry_(spl::make_shared<core::frame_producer_registry>())
+		, consumer_registry_(spl::make_shared<core::frame_consumer_registry>())
 		, shutdown_server_now_(shutdown_server_now)
 	{
 		core::diagnostics::register_graph_to_log_sink();
@@ -160,7 +158,6 @@ struct server::impl : boost::noncopyable
 		core::init_cg_proxy_as_producer(dependencies);
 		core::scene::init(dependencies);
 		core::syncto::init(dependencies);
-		help_repo_->register_item({ L"producer" }, L"Color Producer", &core::describe_color_producer);
 	}
 
 	void start()
@@ -351,7 +348,6 @@ struct server::impl : boost::noncopyable
 				channels_,
 				system_info_provider_repo_,
 				cg_registry_,
-				help_repo_,
 				producer_registry_,
 				consumer_registry_,
 				accelerator_.get_ogl_device(),

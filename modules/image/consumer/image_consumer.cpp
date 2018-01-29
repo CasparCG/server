@@ -32,8 +32,6 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/video_format.h>
 #include <core/frame/frame.h>
-#include <core/help/help_sink.h>
-#include <core/help/help_repository.h>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/thread.hpp>
@@ -166,18 +164,6 @@ public:
 		return monitor_subject_;
 	}
 };
-
-void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
-{
-	sink.short_description(L"Writes a single PNG snapshot of a video channel.");
-	sink.syntax(L"IMAGE {[filename:string]|yyyyMMddTHHmmss}");
-	sink.para()
-		->text(L"Writes a single PNG snapshot of a video channel. ")->code(L".png")->text(L" will be appended to ")
-		->code(L"filename")->text(L". The PNG image will be stored under the ")->code(L"media")->text(L" folder.");
-	sink.para()->text(L"Examples:");
-	sink.example(L">> ADD 1 IMAGE screenshot", L"creating media/screenshot.png");
-	sink.example(L">> ADD 1 IMAGE", L"creating media/20130228T210946.png if the current time is 2013-02-28 21:09:46.");
-}
 
 spl::shared_ptr<core::frame_consumer> create_consumer(
 		const std::vector<std::wstring>& params, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels)

@@ -40,8 +40,6 @@
 #include <core/frame/audio_channel_layout.h>
 #include <core/producer/frame_producer.h>
 #include <core/monitor/monitor.h>
-#include <core/help/help_repository.h>
-#include <core/help/help_sink.h>
 
 #include <common/env.h>
 #include <common/executor.h>
@@ -61,14 +59,14 @@
 #include <functional>
 
 namespace caspar { namespace flash {
-		
+
 class bitmap
 {
 public:
 	bitmap(int width, int height)
 		: bmp_data_(nullptr)
 		, hdc_(CreateCompatibleDC(0), DeleteDC)
-	{	
+	{
 		BITMAPINFO info;
 		memset(&info, 0, sizeof(BITMAPINFO));
 		info.bmiHeader.biBitCount = 32;
@@ -79,7 +77,7 @@ public:
 		info.bmiHeader.biWidth = static_cast<LONG>(width);
 
 		bmp_.reset(CreateDIBSection(static_cast<HDC>(hdc_.get()), &info, DIB_RGB_COLORS, reinterpret_cast<void**>(&bmp_data_), 0, 0), DeleteObject);
-		SelectObject(static_cast<HDC>(hdc_.get()), bmp_.get());	
+		SelectObject(static_cast<HDC>(hdc_.get()), bmp_.get());
 
 		if(!bmp_data_)
 			CASPAR_THROW_EXCEPTION(bad_alloc());
@@ -91,7 +89,7 @@ public:
 	const BYTE* data() const { return bmp_data_;}
 
 private:
-	BYTE* bmp_data_;	
+	BYTE* bmp_data_;
 	std::shared_ptr<void> hdc_;
 	std::shared_ptr<void> bmp_;
 };
@@ -137,7 +135,7 @@ template_host get_template_host(const core::video_format_desc& desc)
 			return *template_host_it;
 	}
 	catch(...){}
-		
+
 	template_host template_host;
 	template_host.filename = L"cg.fth";
 
@@ -163,7 +161,7 @@ boost::mutex& get_global_init_destruct_mutex()
 }
 
 class flash_renderer
-{	
+{
 	struct com_init
 	{
 		HRESULT result_ = CoInitialize(nullptr);
@@ -188,17 +186,17 @@ class flash_renderer
 	const int										height_;
 
 	const std::shared_ptr<core::frame_factory>		frame_factory_;
-	
+
 	CComObject<caspar::flash::FlashAxContainer>*	ax_					= nullptr;
 	core::draw_frame								head_				= core::draw_frame::late();
 	bitmap											bmp_				{ width_, height_ };
 	prec_timer										timer_;
 	caspar::timer									tick_timer_;
-	
+
 	spl::shared_ptr<diagnostics::graph>				graph_;
-	
+
 public:
-	flash_renderer(core::monitor::subject& monitor_subject, const spl::shared_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height) 
+	flash_renderer(core::monitor::subject& monitor_subject, const spl::shared_ptr<diagnostics::graph>& graph, const std::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& filename, int width, int height)
 		: monitor_subject_(monitor_subject)
 		, graph_(graph)
 		, filename_(filename)
@@ -206,14 +204,14 @@ public:
 		, height_(height)
 		, frame_factory_(frame_factory)
 		, bmp_(width, height)
-	{		
+	{
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));
 		graph_->set_color("param", diagnostics::color(1.0f, 0.5f, 0.0f));
-		
+
 		if(FAILED(CComObject<caspar::flash::FlashAxContainer>::CreateInstance(&ax_)))
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to create FlashAxContainer"));
-		
+
 		if(FAILED(ax_->CreateAxControl()))
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Create FlashAxControl"));
 
@@ -222,7 +220,7 @@ public:
 		CComPtr<IShockwaveFlash> spFlash;
 		if(FAILED(ax_->QueryControl(&spFlash)))
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Query FlashAxControl"));
-												
+
 		if(FAILED(spFlash->put_Playing(true)) )
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to start playing Flash"));
 
@@ -234,10 +232,10 @@ public:
 			if (FAILED(spFlash->put_Movie(CComBSTR(filename.c_str()))))
 				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Load Template Host"));
 		});
-										
+
 		if(FAILED(spFlash->put_ScaleMode(2)))  //Exact fit. Scale without respect to the aspect ratio.
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Set Scale Mode"));
-						
+
 		ax_->SetSize(width_, height_);
 		render_frame(0.0);
 
@@ -245,7 +243,7 @@ public:
 	}
 
 	~flash_renderer()
-	{		
+	{
 		if(ax_)
 		{
 			ax_->DestroyAxControl();
@@ -255,9 +253,9 @@ public:
 		graph_->set_value("frame-time", 0.0f);
 		CASPAR_LOG(info) << print() << L" Uninitialized.";
 	}
-	
+
 	std::wstring call(const std::wstring& param)
-	{		
+	{
 		std::wstring result;
 
 		CASPAR_LOG(debug) << print() << " Call: " << param;
@@ -272,9 +270,9 @@ public:
 
 		return result;
 	}
-	
+
 	core::draw_frame render_frame(double sync)
-	{			
+	{
 		const float frame_time = 1.0f/fps();
 
 		if (!ax_->IsReadyToRender())
@@ -292,20 +290,20 @@ public:
 		ax_->Tick();
 
 		if (ax_->InvalidRect())
-		{			
+		{
 			core::pixel_format_desc desc = core::pixel_format::bgra;
 			desc.planes.push_back(core::pixel_format_desc::plane(width_, height_, 4));
 			auto frame = frame_factory_->create_frame(this, desc, core::audio_channel_layout::invalid());
 
 			std::memset(bmp_.data(), 0, width_ * height_ * 4);
 			ax_->DrawControl(bmp_);
-		
+
 			std::memcpy(frame.image_data(0).begin(), bmp_.data(), width_*height_*4);
-			head_ = core::draw_frame(std::move(frame));	
-		}		
+			head_ = core::draw_frame(std::move(frame));
+		}
 
 		MSG msg;
-		while (PeekMessage(&msg, NULL, NULL, NULL, PM_REMOVE)) // DO NOT REMOVE THE MESSAGE DISPATCH LOOP. Without this some stuff doesn't work!  
+		while (PeekMessage(&msg, NULL, NULL, NULL, PM_REMOVE)) // DO NOT REMOVE THE MESSAGE DISPATCH LOOP. Without this some stuff doesn't work!
 		{
 			if (msg.message == WM_TIMER && msg.wParam == 3 && msg.lParam == 0) // We tick this inside FlashAxContainer
 				continue;
@@ -318,7 +316,7 @@ public:
 		monitor_subject_ << core::monitor::message("/renderer/profiler/time") % frame_timer.elapsed() % frame_time;
 		return head_;
 	}
-	
+
 	bool is_empty() const
 	{
 		return ax_->IsEmpty();
@@ -326,22 +324,22 @@ public:
 
 	double fps() const
 	{
-		return ax_->GetFPS();	
+		return ax_->GetFPS();
 	}
-	
+
 	std::wstring print()
 	{
 		return L"flash-player[" + boost::filesystem::path(filename_).filename().wstring()
 				  + L"|" + boost::lexical_cast<std::wstring>(width_)
 				  + L"x" + boost::lexical_cast<std::wstring>(height_)
-				  + L"]";		
+				  + L"]";
 	}
 };
 
 struct flash_producer : public core::frame_producer_base
-{	
+{
 	core::monitor::subject							monitor_subject_;
-	const std::wstring								filename_;	
+	const std::wstring								filename_;
 	const spl::shared_ptr<core::frame_factory>		frame_factory_;
 	const core::video_format_desc					format_desc_;
 	const int										width_;
@@ -357,21 +355,21 @@ struct flash_producer : public core::frame_producer_base
 	tbb::concurrent_bounded_queue<core::draw_frame>	output_buffer_;
 
 	core::draw_frame								last_frame_			= core::draw_frame::empty();
-				
+
 	std::unique_ptr<flash_renderer>					renderer_;
 	tbb::atomic<bool>								has_renderer_;
 
 	executor										executor_			= L"flash_producer";
 public:
-	flash_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::wstring& filename, int width, int height) 
-		: filename_(filename)		
+	flash_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const core::video_format_desc& format_desc, const std::wstring& filename, int width, int height)
+		: filename_(filename)
 		, frame_factory_(frame_factory)
 		, format_desc_(format_desc)
 		, width_(width > 0 ? width : format_desc.width)
 		, height_(height > 0 ? height : format_desc.height)
-	{	
+	{
 		fps_ = 0;
-	 
+
 		graph_->set_color("buffered", diagnostics::color(1.0f, 1.0f, 0.0f));
 		graph_->set_color("late-frame", diagnostics::color(0.6f, 0.3f, 0.9f));
 		graph_->set_text(print());
@@ -391,7 +389,7 @@ public:
 	}
 
 	// frame_producer
-	
+
 	void log_buffered()
 	{
 		double buffered = output_buffer_.size();
@@ -400,20 +398,20 @@ public:
 	}
 
 	core::draw_frame receive_impl() override
-	{					
+	{
 		auto frame = last_frame_;
 
 		double buffered = output_buffer_.size();
 		auto ratio = buffered / buffer_size_;
 		graph_->set_value("buffered", ratio);
-		
+
 		if (output_buffer_.try_pop(frame))
 			last_frame_ = frame;
-		else		
+		else
 			graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
 
 		fill_buffer();
-				
+
 		monitor_subject_ << core::monitor::message("/host/path")	% filename_
 						<< core::monitor::message("/host/width")	% width_
 						<< core::monitor::message("/host/height")	% height_
@@ -427,7 +425,7 @@ public:
 	{
 		return constraints_;
 	}
-		
+
 	std::future<std::wstring> call(const std::vector<std::wstring>& params) override
 	{
 		auto param = boost::algorithm::join(params, L" ");
@@ -436,7 +434,7 @@ public:
 			return make_ready_future(std::wstring(has_renderer_ ? L"1" : L"0"));
 
 		return executor_.begin_invoke([this, param]() -> std::wstring
-		{			
+		{
 			try
 			{
 				bool initialize_renderer = !renderer_;
@@ -456,7 +454,7 @@ public:
 					do_fill_buffer(true);
 				}
 
-				return result;	
+				return result;
 			}
 			catch(...)
 			{
@@ -468,11 +466,11 @@ public:
 			return L"";
 		}, task_priority::high_priority);
 	}
-		
+
 	std::wstring print() const override
-	{ 
-		return L"flash[" + boost::filesystem::path(filename_).wstring() + L"|" + boost::lexical_cast<std::wstring>(fps_) + L"]";		
-	}	
+	{
+		return L"flash[" + boost::filesystem::path(filename_).wstring() + L"|" + boost::lexical_cast<std::wstring>(fps_) + L"]";
+	}
 
 	std::wstring name() const override
 	{
@@ -492,7 +490,7 @@ public:
 	}
 
 	// flash_producer
-	
+
 	void fill_buffer()
 	{
 		if (executor_.size() > 0)
@@ -619,22 +617,13 @@ public:
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
 {
 	auto template_host = get_template_host(dependencies.format_desc);
-	
+
 	auto filename = env::template_folder() + L"\\" + template_host.filename;
-	
+
 	if(!boost::filesystem::exists(filename))
-		CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Could not open flash movie " + filename));	
+		CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Could not open flash movie " + filename));
 
 	return create_destroy_proxy(spl::make_shared<flash_producer>(dependencies.frame_factory, dependencies.format_desc, filename, template_host.width, template_host.height));
-}
-
-void describe_swf_producer(core::help_sink& sink, const core::help_repository& repo)
-{
-	sink.short_description(L"Plays flash files (.swf files).");
-	sink.syntax(L"[swf_file:string]");
-	sink.para()->text(L"Plays flash files (.swf files). The file should reside under the media folder.");
-	sink.para()->text(L"Examples:");
-	sink.example(L">> PLAY 1-10 folder/swf_file");
 }
 
 spl::shared_ptr<core::frame_producer> create_swf_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
@@ -656,12 +645,12 @@ spl::shared_ptr<core::frame_producer> create_swf_producer(const core::frame_prod
 
 std::wstring find_template(const std::wstring& template_name)
 {
-	if(boost::filesystem::exists(template_name + L".ft")) 
+	if(boost::filesystem::exists(template_name + L".ft"))
 		return template_name + L".ft";
-	
+
 	if(boost::filesystem::exists(template_name + L".ct"))
 		return template_name + L".ct";
-	
+
 	if(boost::filesystem::exists(template_name + L".swf"))
 		return template_name + L".swf";
 

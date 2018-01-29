@@ -25,7 +25,6 @@
 
 #include "../frame_consumer.h"
 #include "../../frame/frame.h"
-#include "../../help/help_sink.h"
 #include "../../module_dependencies.h"
 #include "../../monitor/monitor.h"
 #include "../../video_channel.h"
@@ -146,15 +145,6 @@ void verify_cyclic_reference(int self_channel_index, const spl::shared_ptr<video
 	}
 }
 
-void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
-{
-	sink.short_description(L"Lets a channel provide sync to another.");
-	sink.syntax(L"SYNCTO [other_channel:int]");
-	sink.para()->text(L"Provides sync to its own channel based on the rendering pace of the specified channel.");
-	sink.para()->text(L"Examples:");
-	sink.example(L">> ADD 1 SYNCTO 2");
-}
-
 spl::shared_ptr<core::frame_consumer> create_consumer(
 		const std::vector<std::wstring>& params,
 		core::interaction_sink*,
@@ -181,7 +171,7 @@ spl::shared_ptr<core::frame_consumer> create_preconfigured_consumer(
 
 void init(module_dependencies dependencies)
 {
-	dependencies.consumer_registry->register_consumer_factory(L"syncto", &create_consumer, &describe_consumer);
+	dependencies.consumer_registry->register_consumer_factory(L"syncto", &create_consumer);
 	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"syncto", &create_preconfigured_consumer);
 }
 

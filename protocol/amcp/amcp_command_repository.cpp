@@ -66,7 +66,6 @@ struct amcp_command_repository::impl
 	std::vector<channel_context>								channels;
 	spl::shared_ptr<core::system_info_provider_repository>		system_info_provider_repo;
 	spl::shared_ptr<core::cg_producer_registry>					cg_registry;
-	spl::shared_ptr<core::help_repository>						help_repo;
 	spl::shared_ptr<const core::frame_producer_registry>		producer_registry;
 	spl::shared_ptr<const core::frame_consumer_registry>		consumer_registry;
 	std::shared_ptr<accelerator::ogl::device>					ogl_device;
@@ -79,14 +78,12 @@ struct amcp_command_repository::impl
 			const std::vector<spl::shared_ptr<core::video_channel>>& channels,
 			const spl::shared_ptr<core::system_info_provider_repository>& system_info_provider_repo,
 			const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
-			const spl::shared_ptr<core::help_repository>& help_repo,
 			const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
 			const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
 			const std::shared_ptr<accelerator::ogl::device>& ogl_device,
 			std::promise<bool>& shutdown_server_now)
 		: system_info_provider_repo(system_info_provider_repo)
 		, cg_registry(cg_registry)
-		, help_repo(help_repo)
 		, producer_registry(producer_registry)
 		, consumer_registry(consumer_registry)
 		, ogl_device(ogl_device)
@@ -106,7 +103,6 @@ amcp_command_repository::amcp_command_repository(
 		const std::vector<spl::shared_ptr<core::video_channel>>& channels,
 		const spl::shared_ptr<core::system_info_provider_repository>& system_info_provider_repo,
 		const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
-		const spl::shared_ptr<core::help_repository>& help_repo,
 		const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
 		const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
 		const std::shared_ptr<accelerator::ogl::device>& ogl_device,
@@ -115,7 +111,6 @@ amcp_command_repository::amcp_command_repository(
 				channels,
 				system_info_provider_repo,
 				cg_registry,
-				help_repo,
 				producer_registry,
 				consumer_registry,
 				ogl_device,
@@ -133,7 +128,6 @@ AMCPCommand::ptr_type amcp_command_repository::create_command(const std::wstring
 			-1,
 			-1,
 			self.channels,
-			self.help_repo,
 			self.cg_registry,
 			self.system_info_provider_repo,
 			self.producer_registry,
@@ -171,7 +165,6 @@ AMCPCommand::ptr_type amcp_command_repository::create_channel_command(
 			channel_index,
 			layer_index,
 			self.channels,
-			self.help_repo,
 			self.cg_registry,
 			self.system_info_provider_repo,
 			self.producer_registry,
@@ -190,30 +183,21 @@ AMCPCommand::ptr_type amcp_command_repository::create_channel_command(
 void amcp_command_repository::register_command(
 		std::wstring category,
 		std::wstring name,
-		core::help_item_describer describer,
 		amcp_command_func command,
 		int min_num_params)
 {
 	auto& self = *impl_;
-	self.help_repo->register_item({ L"AMCP", category }, name, describer);
 	self.commands.insert(std::make_pair(std::move(name), std::make_pair(std::move(command), min_num_params)));
 }
 
 void amcp_command_repository::register_channel_command(
 		std::wstring category,
 		std::wstring name,
-		core::help_item_describer describer,
 		amcp_command_func command,
 		int min_num_params)
 {
 	auto& self = *impl_;
-	self.help_repo->register_item({ L"AMCP", category }, name, describer);
 	self.channel_commands.insert(std::make_pair(std::move(name), std::make_pair(std::move(command), min_num_params)));
-}
-
-spl::shared_ptr<core::help_repository> amcp_command_repository::help_repo() const
-{
-	return impl_->help_repo;
 }
 
 }}}

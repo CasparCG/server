@@ -27,7 +27,6 @@
 #include <common/memory.h>
 
 #include <core/fwd.h>
-#include <core/help/help_repository.h>
 
 #include <future>
 
@@ -40,7 +39,6 @@ public:
 			const std::vector<spl::shared_ptr<core::video_channel>>& channels,
 			const spl::shared_ptr<core::system_info_provider_repository>& system_info_provider_repo,
 			const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
-			const spl::shared_ptr<core::help_repository>& help_repo,
 			const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
 			const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
 			const std::shared_ptr<accelerator::ogl::device>& ogl_device,
@@ -56,9 +54,8 @@ public:
 
 	const std::vector<channel_context>& channels() const;
 
-	void register_command(std::wstring category, std::wstring name, core::help_item_describer describer, amcp_command_func command, int min_num_params);
-	void register_channel_command(std::wstring category, std::wstring name, core::help_item_describer describer, amcp_command_func command, int min_num_params);
-	spl::shared_ptr<core::help_repository> help_repo() const;
+	void register_command(std::wstring category, std::wstring name, amcp_command_func command, int min_num_params);
+	void register_channel_command(std::wstring category, std::wstring name, amcp_command_func command, int min_num_params);
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

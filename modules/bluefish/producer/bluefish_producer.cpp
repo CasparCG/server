@@ -22,7 +22,7 @@
 */
 
 
-#include "../StdAfx.h" 
+#include "../StdAfx.h"
 
 #include "bluefish_producer.h"
 
@@ -51,8 +51,6 @@
 #include <core/monitor/monitor.h>
 #include <core/diagnostics/call_context.h>
 #include <core/mixer/audio/audio_mixer.h>
-#include <core/help/help_repository.h>
-#include <core/help/help_sink.h>
 
 #include <tbb/concurrent_queue.h>
 
@@ -103,7 +101,7 @@ std::wstring to_string(const T& cadence)
 {
 	return boost::join(cadence | boost::adaptors::transformed([](size_t i) { return boost::lexical_cast<std::wstring>(i); }), L", ");
 }
-		
+
 unsigned int get_bluesdk_input_videochannel_from_streamid(int stream_id)
 {
     /*This function would return the corresponding EBlueVideoChannel from them stream_id argument */
@@ -122,7 +120,7 @@ class bluefish_producer : boost::noncopyable
 	const int										device_index_;
     const int                                       stream_index_;
 	spl::shared_ptr<bvc_wrapper>					blue_;
-	
+
 	core::monitor::subject							monitor_subject_;
 	spl::shared_ptr<diagnostics::graph>				graph_;
 	caspar::timer									tick_timer_;
@@ -182,7 +180,7 @@ public:
 		, frame_factory_(frame_factory)
 		, model_name_(get_card_desc(*blue_, device_index))
 		, channel_layout_(get_adjusted_channel_layout(channel_layout))
-		, memory_format_on_card_(MEM_FMT_2VUY) 
+		, memory_format_on_card_(MEM_FMT_2VUY)
 	{
  		uint32_t current_input_video_signal = VID_FMT_INVALID;
 
@@ -257,7 +255,7 @@ public:
 
 				if (last_field_count + 3 < current_field_count)
 					CASPAR_LOG(warning) <<  L"Error: dropped " << ((current_field_count - last_field_count - 2) / 2) << L" frames" << L"Current "<< current_field_count <<L"  Old "<< last_field_count;
-				
+
                 last_field_count = current_field_count;
                 blue_->get_card_property32(VIDEO_INPUT_SIGNAL_VIDEO_MODE, current_input_video_signal);
 				if (current_input_video_signal < invalid_video_mode_flag && dma_ready_captured_frame_id_ != std::numeric_limits<ULONG>::max())
@@ -289,15 +287,15 @@ public:
 	void process_data()
 	{
 		auto video_frame = ffmpeg::create_frame();
- 
+
 		video_frame->data[0] = reinterpret_cast<uint8_t*>(reserved_frames_.front()->image_data());
 		video_frame->linesize[0] = static_cast<int>(video_input_format_desc_.size/ video_input_format_desc_.height);
-		
+
 		if (memory_format_on_card_ == MEM_FMT_2VUY)
 			video_frame->format = PIX_FMT_UYVY422;
 		else if (memory_format_on_card_ == MEM_FMT_RGBA)
 			video_frame->format = PIX_FMT_RGBA;
-		
+
 		video_frame->width = video_input_format_desc_.width;
 		video_frame->height = video_input_format_desc_.height;
 		video_frame->interlaced_frame =  in_format_desc_.field_mode != core::field_mode::progressive;
@@ -313,7 +311,7 @@ public:
 			<< core::monitor::message("/file/audio/channels") % 2
 			<< core::monitor::message("/file/audio/format") % u8(av_get_sample_fmt_name(AV_SAMPLE_FMT_S32))
 			<< core::monitor::message("/file/fps") % in_format_desc_.fps;
-		
+
         // Audio
         // It is assumed that audio is always equal or ahead of video.
         std::shared_ptr<core::mutable_audio_buffer>	audio_buffer;
@@ -335,7 +333,7 @@ public:
 
             audio_buffer = std::make_shared<core::mutable_audio_buffer>(
                 audio_data,
-                audio_data + sample_frame_count * channel_layout_.num_channels);    
+                audio_data + sample_frame_count * channel_layout_.num_channels);
         }
         else
             audio_buffer = std::make_shared<core::mutable_audio_buffer>(audio_cadence_.front() * channel_layout_.num_channels, 0);
@@ -349,7 +347,7 @@ public:
             return;
         }
         boost::range::rotate(audio_cadence_, std::begin(audio_cadence_) + 1);
-        
+
         // PUSH
         muxer_.push({ audio_buffer });
         muxer_.push(static_cast<std::shared_ptr<AVFrame>>(video_frame));
@@ -415,15 +413,15 @@ public:
 	{
 		if(exception_ != nullptr)
 			std::rethrow_exception(exception_);
-		
+
 		core::draw_frame frame = core::draw_frame::late();
 		if(!frame_buffer_.try_pop(frame))
 			graph_->set_tag(diagnostics::tag_severity::WARNING, "late-frame");
 
-		graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));	
+		graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 		return frame;
 	}
-	
+
 	std::wstring print() const
 	{
 		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"|" + in_format_desc_.name + L"]";
@@ -471,7 +469,7 @@ public:
         case BLUE_VIDEO_INPUT_CHANNEL_D:
             routing_value = EPOCH_SET_ROUTING(EPOCH_SRC_SDI_INPUT_D, EPOCH_DEST_INPUT_MEM_INTERFACE_CHD, BLUE_CONNECTOR_PROP_SINGLE_LINK);
             break;
-        default: 
+        default:
             routing_value = EPOCH_SET_ROUTING(EPOCH_SRC_SDI_INPUT_A, EPOCH_DEST_INPUT_MEM_INTERFACE_CHA, BLUE_CONNECTOR_PROP_SINGLE_LINK);
             break;
         }
@@ -479,9 +477,9 @@ public:
         return blue_->set_card_property32(MR2_ROUTING, routing_value);
     }
 };
-	
+
 class bluefish_producer_proxy : public core::frame_producer_base
-{		
+{
 	std::unique_ptr<bluefish_producer>	producer_;
 	const uint32_t						length_;
 	executor							executor_;
@@ -505,7 +503,7 @@ public:
 	}
 
 	~bluefish_producer_proxy()
-	{		
+	{
 		executor_.invoke([=]
 		{
 			producer_.reset();
@@ -516,11 +514,11 @@ public:
 	{
 		return producer_->monitor_output();
 	}
-	
+
 	// frame_producer
-				
+
 	core::draw_frame receive_impl() override
-	{		
+	{
 		return producer_->get_frame();
 	}
 
@@ -528,17 +526,17 @@ public:
 	{
 		return producer_->pixel_constraints();
 	}
-			
+
 	uint32_t nb_frames() const override
 	{
 		return length_;
 	}
-	
+
 	std::wstring print() const override
 	{
 		return producer_->print();
 	}
-	
+
 	std::wstring name() const override
 	{
 		return L"bluefish";
@@ -552,26 +550,6 @@ public:
 	}
 };
 
-void describe_producer(core::help_sink& sink, const core::help_repository& repo)
-{
-	sink.short_description(L"Allows video sources to be input from Bluefish444 cards.");
-	sink.syntax(L"BLUEFISH [device:int], DEVICE [device:int] {SDI-STREAM [sdi-stream:int]} {FILTER [filter:string]} {LENGTH [length:int]} {FORMAT [format:string]} {CHANNEL_LAYOUT [channel_layout:string]}");
-	sink.para()->text(L"Allows video sources to be input from Bluefish cards. Parameters:");
-	sink.definitions()
-		->item(L"device", L"The bluefish device to stream the input from.")
-        ->item(L"sdi-stream", L"Optionally specify the sdi input connector to stream the input from.")
-		->item(L"filter", L"If specified, sets an FFmpeg video filter to use.")
-		->item(L"length", L"Optionally specify a limit on how many frames to produce.")
-		->item(L"format", L"Specifies what video format to expect on the incoming SDI/HDMI signal. If not specified the video format of the channel is assumed.")
-		->item(L"channel_layout", L"Specifies what audio channel layout to expect on the incoming SDI/HDMI signal. If not specified, stereo is assumed.");
-	sink.para()->text(L"Examples:");
-	sink.example(L">> PLAY 1-1 BLUEFISH DEVICE 1", L"Play using Bluefish device 1 expecting the video signal to have the same video format as the channel.");
-    sink.example(L">> PLAY 1-1 BLUEFISH DEVICE 1 SDI-STREAM 2", L"Play using Bluefish device 1, and take stream from 2nd input connector and use memchannel 2, expecting the video signal to have the same video format as the channel.");
-	sink.example(L">> PLAY 1-1 BLUEFISH DEVICE 1 FORMAT PAL FILTER yadif=1:-1", L"Play using Bluefish device 1 expecting the video signal to be in PAL and deinterlace it.");
-	sink.example(L">> PLAY 1-1 BLUEFISH DEVICE 1 LENGTH 1000", L"Play using Bluefish device 1 but only produce 1000 frames.");
-	sink.example(L">> PLAY 1-1 BLUEFISH DEVICE 2 CHANNEL_LAYOUT smpte", L"Play using Bluefish device 2 and expect smpte surround sound.");
-}
-
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
 {
 	if(params.empty() || !boost::iequals(params.at(0), "Bluefish"))
@@ -583,12 +561,12 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
     auto stream_index = get_param(L"SDI-STREAM", params, -1);
     if (stream_index == -1)
-        stream_index = 0;             
+        stream_index = 0;
 
-	auto filter_str		= get_param(L"FILTER", params); 	
-	auto length			= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max()); 	
+	auto filter_str		= get_param(L"FILTER", params);
+	auto length			= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
 	auto in_format_desc = core::video_format_desc(get_param(L"FORMAT", params, L"INVALID"));
-		
+
 	if(in_format_desc.format == core::video_format::invalid)
 		in_format_desc = dependencies.format_desc;
 
@@ -604,7 +582,7 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
 		channel_layout = *found_layout;
 	}
-			
+
 	return create_destroy_proxy(spl::make_shared<bluefish_producer_proxy>(
 			in_format_desc,
 			dependencies.frame_factory,
