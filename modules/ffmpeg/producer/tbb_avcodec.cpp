@@ -105,12 +105,12 @@ void thread_free(AVCodecContext* s)
 
 int tbb_avcodec_open(AVCodecContext* avctx, AVCodec* codec, bool single_threaded)
 {
-	if(codec->capabilities & CODEC_CAP_EXPERIMENTAL)
+	if(codec->capabilities & AV_CODEC_CAP_EXPERIMENTAL)
 		CASPAR_THROW_EXCEPTION(invalid_argument() << msg_info("Experimental codecs are not supported."));
 
 	avctx->thread_count = 1;
 
-	if(!single_threaded && codec->capabilities & CODEC_CAP_SLICE_THREADS)
+	if(!single_threaded && codec->capabilities & AV_CODEC_CAP_SLICE_THREADS)
 		thread_init(avctx);
 
 	// ff_thread_init will not be executed since thread_opaque != nullptr || thread_count == 1.

@@ -93,7 +93,7 @@ public:
 
 		if(packet->data == nullptr)
 		{
-			if(codec_context_->codec->capabilities & CODEC_CAP_DELAY)
+			if(codec_context_->codec->capabilities & AV_CODEC_CAP_DELAY)
 			{
 				auto video = decode(packet);
 				if(video)

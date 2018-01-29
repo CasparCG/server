@@ -4,6 +4,10 @@ project (ffmpeg)
 set(SOURCES
 		consumer/ffmpeg_consumer.cpp
 
+		producer2/av_producer.cpp
+		producer2/av_util.cpp
+		producer2/ffmpeg_producer2.cpp
+
 		producer/audio/audio_decoder.cpp
 
 		producer/filter/audio_filter.cpp
@@ -28,6 +32,11 @@ set(SOURCES
 )
 set(HEADERS
 		consumer/ffmpeg_consumer.h
+
+		producer2/av_assert.h
+		producer2/av_producer.h
+		producer2/av_util.h
+		producer2/ffmpeg_producer2.h
 
 		producer/audio/audio_decoder.h
 
@@ -64,14 +73,15 @@ include_directories(${RXCPP_INCLUDE_PATH})
 
 set_target_properties(ffmpeg PROPERTIES FOLDER modules)
 source_group(sources ./*)
-source_group(sources\\consumer consumer/*)
-source_group(sources\\producer\\audio producer/audio/*)
-source_group(sources\\producer\\filter producer/filter/*)
-source_group(sources\\producer\\input producer/input/*)
-source_group(sources\\producer\\muxer producer/muxer/*)
-source_group(sources\\producer\\util producer/util/*)
-source_group(sources\\producer\\video producer/video/*)
-source_group(sources\\producer producer/*)
+source_group(sources\\consumer ./consumer/*)
+source_group(sources\\producer\\audio ./producer/audio/*)
+source_group(sources\\producer\\filter ./producer/filter/*)
+source_group(sources\\producer\\input ./producer/input/*)
+source_group(sources\\producer\\muxer ./producer/muxer/*)
+source_group(sources\\producer\\util ./producer/util/*)
+source_group(sources\\producer\\video ./producer/video/*)
+source_group(sources\\producer2 ./producer2/.*)
+source_group(sources\\producer ./producer/.*)
 
 if (MSVC)
 	target_link_libraries(ffmpeg
@@ -139,14 +149,14 @@ casparcg_add_uninit_statement("ffmpeg::uninit")
 casparcg_add_module_project("ffmpeg")
 
 if(MSVC)
-	casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avcodec-56.dll")
-	casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avdevice-56.dll")
-	casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avfilter-5.dll")
-	casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avformat-56.dll")
-	casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avutil-54.dll")
-	casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/postproc-53.dll")
-	casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/swresample-1.dll")
-	casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/swscale-3.dll")
+	casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avcodec-58.dll")
+	casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avdevice-58.dll")
+	casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avfilter-7.dll")
+	casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avformat-58.dll")
+	casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/avutil-56.dll")
+	casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/postproc-55.dll")
+	casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/swresample-3.dll")
+	casparcg_add_runtime_dependency("${FFMPEG_BIN_PATH}/swscale-5.dll")
 else()
 
 endif()
