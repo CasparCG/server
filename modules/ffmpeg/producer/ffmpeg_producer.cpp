@@ -39,7 +39,6 @@
 #include <core/frame/draw_frame.h>
 #include <core/help/help_repository.h>
 #include <core/help/help_sink.h>
-#include <core/producer/media_info/media_info.h>
 #include <core/producer/framerate/framerate_producer.h>
 #include <core/frame/frame_factory.h>
 
@@ -607,8 +606,7 @@ void describe_producer(core::help_sink& sink, const core::help_repository& repo)
 
 spl::shared_ptr<core::frame_producer> create_producer(
 		const core::frame_producer_dependencies& dependencies,
-		const std::vector<std::wstring>& params,
-		const spl::shared_ptr<core::media_info_repository>& info_repo)
+		const std::vector<std::wstring>& params)
 {
 	auto file_or_url	= params.at(0);
 

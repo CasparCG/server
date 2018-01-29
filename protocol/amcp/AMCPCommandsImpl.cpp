@@ -54,8 +54,6 @@
 #include <core/producer/layer.h>
 #include <core/mixer/mixer.h>
 #include <core/consumer/output.h>
-#include <core/producer/media_info/media_info.h>
-#include <core/producer/media_info/media_info_repository.h>
 #include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
 #include <core/system_info_provider.h>
@@ -196,42 +194,6 @@ std::wstring read_file(const boost::filesystem::path& file)
 	return read_latin1_file(file);
 }
 
-std::wstring MediaInfo(const boost::filesystem::path& path, const spl::shared_ptr<media_info_repository>& media_info_repo)
-{
-	if (!boost::filesystem::is_regular_file(path))
-		return L"";
-
-	auto media_info = media_info_repo->get(path.wstring());
-
-	if (!media_info)
-		return L"";
-
-	auto is_not_digit = [](wchar_t c){ return std::isdigit(c) == 0; };
-
-	auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(path)));
-	writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), is_not_digit), writeTimeStr.end());
-	auto writeTimeWStr = std::wstring(writeTimeStr.begin(), writeTimeStr.end());
-
-	auto sizeStr = boost::lexical_cast<std::wstring>(boost::filesystem::file_size(path));
-	sizeStr.erase(std::remove_if(sizeStr.begin(), sizeStr.end(), is_not_digit), sizeStr.end());
-	auto sizeWStr = std::wstring(sizeStr.begin(), sizeStr.end());
-
-	auto relativePath = get_relative_without_extension(path, env::media_folder());
-	auto str = relativePath.generic_wstring();
-
-	if (str[0] == '\\' || str[0] == '/')
-		str = std::wstring(str.begin() + 1, str.end());
-
-	return std::wstring()
-		+ L"\"" + str +
-		+ L"\" " + media_info->clip_type +
-		+ L" " + sizeStr +
-		+ L" " + writeTimeWStr +
-		+ L" " + boost::lexical_cast<std::wstring>(media_info->duration) +
-		+ L" " + boost::lexical_cast<std::wstring>(media_info->time_base.numerator()) + L"/" + boost::lexical_cast<std::wstring>(media_info->time_base.denominator())
-		+ L"\r\n";
-}
-
 std::wstring get_sub_directory(const std::wstring& base_folder, const std::wstring& sub_directory)
 {
 	if (sub_directory.empty())
@@ -243,53 +205,6 @@ std::wstring get_sub_directory(const std::wstring& base_folder, const std::wstri
 		CASPAR_THROW_EXCEPTION(file_not_found() << msg_info(L"Sub directory " + sub_directory + L" not found."));
 
 	return *found;
-}
-
-std::wstring ListMedia(const spl::shared_ptr<media_info_repository>& media_info_repo, const std::wstring& sub_directory = L"")
-{
-	std::wstringstream replyString;
-	for (boost::filesystem::recursive_directory_iterator itr(get_sub_directory(env::media_folder(), sub_directory)), end; itr != end; ++itr)
-		replyString << MediaInfo(itr->path(), media_info_repo);
-
-	return boost::to_upper_copy(replyString.str());
-}
-
-std::wstring ListTemplates(const spl::shared_ptr<core::cg_producer_registry>& cg_registry, const std::wstring& sub_directory = L"")
-{
-	std::wstringstream replyString;
-
-	for (boost::filesystem::recursive_directory_iterator itr(get_sub_directory(env::template_folder(), sub_directory)), end; itr != end; ++itr)
-	{
-		if(boost::filesystem::is_regular_file(itr->path()) && cg_registry->is_cg_extension(itr->path().extension().wstring()))
-		{
-			auto relativePath = get_relative_without_extension(itr->path(), env::template_folder());
-
-			auto writeTimeStr = boost::posix_time::to_iso_string(boost::posix_time::from_time_t(boost::filesystem::last_write_time(itr->path())));
-			writeTimeStr.erase(std::remove_if(writeTimeStr.begin(), writeTimeStr.end(), [](char c){ return std::isdigit(c) == 0;}), writeTimeStr.end());
-			auto writeTimeWStr = std::wstring(writeTimeStr.begin(), writeTimeStr.end());
-
-			auto sizeStr = boost::lexical_cast<std::string>(boost::filesystem::file_size(itr->path()));
-			sizeStr.erase(std::remove_if(sizeStr.begin(), sizeStr.end(), [](char c){ return std::isdigit(c) == 0;}), sizeStr.end());
-
-			auto sizeWStr = std::wstring(sizeStr.begin(), sizeStr.end());
-
-			auto dir = relativePath.parent_path();
-			auto file = boost::to_upper_copy(relativePath.filename().wstring());
-			relativePath = dir / file;
-
-			auto str = relativePath.generic_wstring();
-			boost::trim_if(str, boost::is_any_of("\\/"));
-
-			auto template_type = cg_registry->get_cg_producer_name(str);
-
-			replyString << L"\"" << str
-						<< L"\" " << sizeWStr
-						<< L" " << writeTimeWStr
-						<< L" " << template_type
-						<< L"\r\n";
-		}
-	}
-	return replyString.str();
 }
 
 std::vector<spl::shared_ptr<core::video_channel>> get_channels(const command_context& ctx)
@@ -2289,23 +2204,7 @@ void cinf_describer(core::help_sink& sink, const core::help_repository& repo)
 
 std::wstring cinf_command(command_context& ctx)
 {
-	std::wstring info;
-	for (boost::filesystem::recursive_directory_iterator itr(env::media_folder()), end; itr != end; ++itr)
-	{
-		auto path = itr->path();
-		auto file = path.stem().wstring();
-		if (boost::iequals(file, ctx.parameters.at(0)))
-			info += MediaInfo(itr->path(), ctx.media_info_repo);
-	}
-
-	if (info.empty())
-		CASPAR_THROW_EXCEPTION(file_not_found());
-
-	std::wstringstream replyString;
-	replyString << L"200 CINF OK\r\n";
-	replyString << info << "\r\n";
-
-	return replyString.str();
+    CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"cinf turned off"));
 }
 
 void cls_describer(core::help_sink& sink, const core::help_repository& repo)
@@ -2322,16 +2221,7 @@ void cls_describer(core::help_sink& sink, const core::help_repository& repo)
 
 std::wstring cls_command(command_context& ctx)
 {
-	std::wstring sub_directory;
-
-	if (!ctx.parameters.empty())
-		sub_directory = ctx.parameters.at(0);
-
-	std::wstringstream replyString;
-	replyString << L"200 CLS OK\r\n";
-	replyString << ListMedia(ctx.media_info_repo, sub_directory);
-	replyString << L"\r\n";
-	return boost::to_upper_copy(replyString.str());
+    CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"cls turned off"));
 }
 
 void fls_describer(core::help_sink& sink, const core::help_repository& repo)
@@ -2371,18 +2261,7 @@ void tls_describer(core::help_sink& sink, const core::help_repository& repo)
 
 std::wstring tls_command(command_context& ctx)
 {
-	std::wstring sub_directory;
-
-	if (!ctx.parameters.empty())
-		sub_directory = ctx.parameters.at(0);
-
-	std::wstringstream replyString;
-	replyString << L"200 TLS OK\r\n";
-
-	replyString << ListTemplates(ctx.cg_registry, sub_directory);
-	replyString << L"\r\n";
-
-	return replyString.str();
+    CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"tls turned off"));
 }
 
 void version_describer(core::help_sink& sink, const core::help_repository& repo)

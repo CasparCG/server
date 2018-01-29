@@ -33,7 +33,6 @@
 #include <core/producer/scene/scene_producer.h>
 #include <core/producer/scene/const_producer.h>
 #include <core/producer/scene/hotswap_producer.h>
-#include <core/producer/media_info/media_info.h>
 #include <core/frame/draw_frame.h>
 #include <core/help/help_repository.h>
 #include <core/help/help_sink.h>
