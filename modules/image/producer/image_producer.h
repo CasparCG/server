@@ -30,6 +30,5 @@ namespace caspar { namespace image {
 
 void describe_producer(core::help_sink& sink, const core::help_repository& repo);
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params);
-core::draw_frame create_thumbnail(const core::frame_producer_dependencies& dependencies, const std::wstring& media_file);
 
 }}

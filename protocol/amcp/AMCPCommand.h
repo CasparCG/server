@@ -43,7 +43,6 @@ namespace amcp {
 		spl::shared_ptr<core::media_info_repository>			media_info_repo;
 		spl::shared_ptr<core::cg_producer_registry>				cg_registry;
 		spl::shared_ptr<core::system_info_provider_repository>	system_info_repo;
-		std::shared_ptr<core::thumbnail_generator>				thumb_gen;
 		spl::shared_ptr<const core::frame_producer_registry>	producer_registry;
 		spl::shared_ptr<const core::frame_consumer_registry>	consumer_registry;
 		std::shared_ptr<accelerator::ogl::device>				ogl_device;
@@ -62,7 +61,6 @@ namespace amcp {
 				spl::shared_ptr<core::media_info_repository> media_info_repo,
 				spl::shared_ptr<core::cg_producer_registry> cg_registry,
 				spl::shared_ptr<core::system_info_provider_repository> system_info_repo,
-				std::shared_ptr<core::thumbnail_generator> thumb_gen,
 				spl::shared_ptr<const core::frame_producer_registry> producer_registry,
 				spl::shared_ptr<const core::frame_consumer_registry> consumer_registry,
 				std::shared_ptr<accelerator::ogl::device> ogl_device,
@@ -76,7 +74,6 @@ namespace amcp {
 			, media_info_repo(std::move(media_info_repo))
 			, cg_registry(std::move(cg_registry))
 			, system_info_repo(std::move(system_info_repo))
-			, thumb_gen(std::move(thumb_gen))
 			, producer_registry(std::move(producer_registry))
 			, consumer_registry(std::move(consumer_registry))
 			, ogl_device(std::move(ogl_device))

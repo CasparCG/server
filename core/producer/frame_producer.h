@@ -156,10 +156,8 @@ class frame_producer_registry : boost::noncopyable
 public:
 	frame_producer_registry(spl::shared_ptr<help_repository> help_repo);
 	void register_producer_factory(std::wstring name, const producer_factory_t& factory, const help_item_describer& describer); // Not thread-safe.
-	void register_thumbnail_producer(const thumbnail_producer_t& thumbnail_producer); // Not thread-safe.
 	spl::shared_ptr<core::frame_producer> create_producer(const frame_producer_dependencies&, const std::vector<std::wstring>& params) const;
 	spl::shared_ptr<core::frame_producer> create_producer(const frame_producer_dependencies&, const std::wstring& params) const;
-	draw_frame create_thumbnail(const frame_producer_dependencies&, const std::wstring& media_file) const;
 private:
 	struct impl;
 	spl::shared_ptr<impl> impl_;

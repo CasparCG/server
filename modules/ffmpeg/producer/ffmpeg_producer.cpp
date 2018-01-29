@@ -85,8 +85,6 @@ struct ffmpeg_producer : public core::frame_producer_base
 
 	const spl::shared_ptr<core::frame_factory>			frame_factory_;
 
-	std::shared_ptr<void>								initial_logger_disabler_;
-
 	core::constraints									constraints_;
 
 	input												input_;
@@ -95,7 +93,6 @@ struct ffmpeg_producer : public core::frame_producer_base
 	std::unique_ptr<frame_muxer>						muxer_;
 
 	const boost::rational<int>							framerate_;
-	const bool											thumbnail_mode_;
 
 	core::draw_frame									last_frame_;
 
@@ -112,15 +109,12 @@ public:
 			bool loop,
 			uint32_t in,
 			uint32_t out,
-			bool thumbnail_mode,
 			const std::wstring& custom_channel_order,
 			const ffmpeg_options& vid_params)
 		: filename_(url_or_file)
 		, frame_factory_(frame_factory)
-		, initial_logger_disabler_(temporary_enable_quiet_logging_for_thread(thumbnail_mode))
-		, input_(graph_, url_or_file, loop, in, out, thumbnail_mode, vid_params)
+		, input_(graph_, url_or_file, loop, in, out, vid_params)
 		, framerate_(read_framerate(*input_.context(), format_desc.framerate))
-		, thumbnail_mode_(thumbnail_mode)
 		, last_frame_(core::draw_frame::empty())
 	{
 		graph_->set_color("frame-time", diagnostics::color(0.1f, 1.0f, 0.1f));
@@ -130,8 +124,7 @@ public:
 		try
 		{
 			video_decoder_.reset(new video_decoder(input_.context()));
-			if (!thumbnail_mode_)
-				CASPAR_LOG(info) << print() << L" " << video_decoder_->print();
+			CASPAR_LOG(info) << print() << L" " << video_decoder_->print();
 
 			constraints_.width.set(video_decoder_->width());
 			constraints_.height.set(video_decoder_->height());
@@ -142,65 +135,60 @@ public:
 		}
 		catch (...)
 		{
-			if (!thumbnail_mode_)
-			{
-				CASPAR_LOG_CURRENT_EXCEPTION();
-				CASPAR_LOG(warning) << print() << "Failed to open video-stream. Running without video.";
-			}
+			CASPAR_LOG_CURRENT_EXCEPTION();
+			CASPAR_LOG(warning) << print() << "Failed to open video-stream. Running without video.";
 		}
 
 		auto channel_layout = core::audio_channel_layout::invalid();
 		std::vector<audio_input_pad> audio_input_pads;
 
-		if (!thumbnail_mode_)
+
+		for (unsigned stream_index = 0; stream_index < input_.context()->nb_streams; ++stream_index)
 		{
-			for (unsigned stream_index = 0; stream_index < input_.context()->nb_streams; ++stream_index)
+			auto stream = input_.context()->streams[stream_index];
+
+			if (stream->codec->codec_type != AVMediaType::AVMEDIA_TYPE_AUDIO)
+				continue;
+
+			try
 			{
-				auto stream = input_.context()->streams[stream_index];
-
-				if (stream->codec->codec_type != AVMediaType::AVMEDIA_TYPE_AUDIO)
-					continue;
-
-				try
-				{
-					audio_decoders_.push_back(std::unique_ptr<audio_decoder>(new audio_decoder(stream_index, input_.context(), format_desc.audio_sample_rate)));
-					audio_input_pads.emplace_back(
-							boost::rational<int>(1, format_desc.audio_sample_rate),
-							format_desc.audio_sample_rate,
-							AVSampleFormat::AV_SAMPLE_FMT_S32,
-							audio_decoders_.back()->ffmpeg_channel_layout());
-					CASPAR_LOG(info) << print() << L" " << audio_decoders_.back()->print();
-				}
-				catch (averror_stream_not_found&)
-				{
-					//CASPAR_LOG(warning) << print() << " No audio-stream found. Running without audio.";
-				}
-				catch (...)
-				{
-					CASPAR_LOG_CURRENT_EXCEPTION();
-					CASPAR_LOG(warning) << print() << " Failed to open audio-stream. Running without audio.";
-				}
+				audio_decoders_.push_back(std::unique_ptr<audio_decoder>(new audio_decoder(stream_index, input_.context(), format_desc.audio_sample_rate)));
+				audio_input_pads.emplace_back(
+						boost::rational<int>(1, format_desc.audio_sample_rate),
+						format_desc.audio_sample_rate,
+						AVSampleFormat::AV_SAMPLE_FMT_S32,
+						audio_decoders_.back()->ffmpeg_channel_layout());
+				CASPAR_LOG(info) << print() << L" " << audio_decoders_.back()->print();
 			}
-
-			if (audio_decoders_.size() == 1)
+			catch (averror_stream_not_found&)
 			{
-				channel_layout = get_audio_channel_layout(
-						audio_decoders_.at(0)->num_channels(),
-						audio_decoders_.at(0)->ffmpeg_channel_layout(),
-						custom_channel_order);
+				//CASPAR_LOG(warning) << print() << " No audio-stream found. Running without audio.";
 			}
-			else if (audio_decoders_.size() > 1)
+			catch (...)
 			{
-				auto num_channels = cpplinq::from(audio_decoders_)
-					.select(std::mem_fn(&audio_decoder::num_channels))
-					.aggregate(0, std::plus<int>());
-				auto ffmpeg_channel_layout = av_get_default_channel_layout(num_channels);
-
-				channel_layout = get_audio_channel_layout(
-						num_channels,
-						ffmpeg_channel_layout,
-						custom_channel_order);
+				CASPAR_LOG_CURRENT_EXCEPTION();
+				CASPAR_LOG(warning) << print() << " Failed to open audio-stream. Running without audio.";
 			}
+		}
+
+		if (audio_decoders_.size() == 1)
+		{
+			channel_layout = get_audio_channel_layout(
+					audio_decoders_.at(0)->num_channels(),
+					audio_decoders_.at(0)->ffmpeg_channel_layout(),
+					custom_channel_order);
+		}
+		else if (audio_decoders_.size() > 1)
+		{
+			auto num_channels = cpplinq::from(audio_decoders_)
+				.select(std::mem_fn(&audio_decoder::num_channels))
+				.aggregate(0, std::plus<int>());
+			auto ffmpeg_channel_layout = av_get_default_channel_layout(num_channels);
+
+			channel_layout = get_audio_channel_layout(
+					num_channels,
+					ffmpeg_channel_layout,
+					custom_channel_order);
 		}
 
 		if (!video_decoder_ && audio_decoders_.empty())
@@ -243,7 +231,6 @@ public:
 	std::pair<core::draw_frame, uint32_t> render_frame()
 	{
 		frame_timer_.restart();
-		auto disable_logging = temporary_enable_quiet_logging_for_thread(thumbnail_mode_);
 
 		for (int n = 0; n < 16 && frame_buffer_.size() < 2; ++n)
 			try_decode_frame();
@@ -348,52 +335,6 @@ public:
 
 		CASPAR_LOG(trace) << print() << " Giving up finding frame at " << file_position;
 		return core::draw_frame::empty();
-	}
-
-	core::draw_frame create_thumbnail_frame()
-	{
-		auto total_frames = nb_frames();
-		auto grid = env::properties().get(L"configuration.thumbnails.video-grid", 2);
-
-		if (grid < 1)
-		{
-			CASPAR_LOG(error) << L"configuration/thumbnails/video-grid cannot be less than 1";
-			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info("configuration/thumbnails/video-grid cannot be less than 1"));
-		}
-
-		if (grid == 1)
-		{
-			return render_specific_frame(total_frames / 2);
-		}
-
-		auto num_snapshots = grid * grid;
-
-		std::vector<core::draw_frame> frames;
-
-		for (int i = 0; i < num_snapshots; ++i)
-		{
-			int x = i % grid;
-			int y = i / grid;
-			int desired_frame;
-
-			if (i == 0)
-				desired_frame = 0; // first
-			else if (i == num_snapshots - 1)
-				desired_frame = total_frames - 1; // last
-			else
-				// evenly distributed across the file.
-				desired_frame = total_frames * i / (num_snapshots - 1);
-
-			auto frame = render_specific_frame(desired_frame);
-			frame.transform().image_transform.fill_scale[0] = 1.0 / static_cast<double>(grid);
-			frame.transform().image_transform.fill_scale[1] = 1.0 / static_cast<double>(grid);
-			frame.transform().image_transform.fill_translation[0] = 1.0 / static_cast<double>(grid) * x;
-			frame.transform().image_transform.fill_translation[1] = 1.0 / static_cast<double>(grid) * y;
-
-			frames.push_back(frame);
-		}
-
-		return core::draw_frame(frames);
 	}
 
 	uint32_t file_frame_number() const
@@ -726,7 +667,6 @@ spl::shared_ptr<core::frame_producer> create_producer(
 			loop,
 			in,
 			out,
-			false,
 			custom_channel_order,
 			vid_params);
 
@@ -744,35 +684,4 @@ spl::shared_ptr<core::frame_producer> create_producer(
 			dependencies.format_desc.audio_cadence));
 }
 
-core::draw_frame create_thumbnail_frame(
-		const core::frame_producer_dependencies& dependencies,
-		const std::wstring& media_file,
-		const spl::shared_ptr<core::media_info_repository>& info_repo)
-{
-	auto quiet_logging = temporary_enable_quiet_logging_for_thread(true);
-	auto filename = probe_stem(env::media_folder() + L"/" + media_file, true);
-
-	if (filename.empty())
-		return core::draw_frame::empty();
-
-	auto loop		= false;
-	auto in			= 0;
-	auto out		= std::numeric_limits<uint32_t>::max();
-	auto filter_str = L"";
-
-	ffmpeg_options vid_params;
-	auto producer = spl::make_shared<ffmpeg_producer>(
-			dependencies.frame_factory,
-			dependencies.format_desc,
-			filename,
-			filter_str,
-			loop,
-			in,
-			out,
-			true,
-			L"",
-			vid_params);
-
-	return producer->create_thumbnail_frame();
-}
 }}

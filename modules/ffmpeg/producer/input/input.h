@@ -49,7 +49,7 @@ namespace ffmpeg {
 class input : boost::noncopyable
 {
 public:
-	explicit input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& url_or_file, bool loop, uint32_t in, uint32_t out, bool thumbnail_mode, const ffmpeg_options& vid_params);
+	explicit input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& url_or_file, bool loop, uint32_t in, uint32_t out, const ffmpeg_options& vid_params);
 
 	bool								try_pop(std::shared_ptr<AVPacket>& packet);
 	bool								eof() const;

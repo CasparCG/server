@@ -43,7 +43,6 @@ namespace caspar { namespace core {
 struct frame_producer_registry::impl
 {
 	std::vector<producer_factory_t>		producer_factories;
-	std::vector<thumbnail_producer_t>	thumbnail_producers;
 	spl::shared_ptr<help_repository>	help_repo;
 
 	impl(spl::shared_ptr<help_repository> help_repo)
@@ -61,11 +60,6 @@ void frame_producer_registry::register_producer_factory(std::wstring name, const
 {
 	impl_->producer_factories.push_back(factory);
 	impl_->help_repo->register_item({ L"producer" }, std::move(name), describer);
-}
-
-void frame_producer_registry::register_thumbnail_producer(const thumbnail_producer_t& thumbnail_producer)
-{
-	impl_->thumbnail_producers.push_back(thumbnail_producer);
 }
 
 frame_producer_dependencies::frame_producer_dependencies(
@@ -340,40 +334,6 @@ spl::shared_ptr<core::frame_producer> do_create_producer(const frame_producer_de
 		return producer;
 
 	return producer;
-}
-
-draw_frame do_create_thumbnail_frame(
-		const frame_producer_dependencies& dependencies,
-		const std::wstring& media_file,
-		const std::vector<thumbnail_producer_t>& thumbnail_producers)
-{
-	for (auto& thumbnail_producer : thumbnail_producers)
-	{
-		auto frame = thumbnail_producer(dependencies, media_file);
-
-		if (frame != draw_frame::empty())
-			return frame;
-	}
-
-	return draw_frame::empty();
-}
-
-draw_frame frame_producer_registry::create_thumbnail(const frame_producer_dependencies& dependencies, const std::wstring& media_file) const
-{
-	auto& thumbnail_producers = impl_->thumbnail_producers;
-	std::vector<std::wstring> params;
-	params.push_back(media_file);
-
-	auto fill_frame = do_create_thumbnail_frame(dependencies, media_file, thumbnail_producers);
-	auto key_frame = do_create_thumbnail_frame(dependencies, media_file + L"_A", thumbnail_producers);
-
-	if (key_frame == draw_frame::empty())
-		key_frame = do_create_thumbnail_frame(dependencies, media_file + L"_ALPHA", thumbnail_producers);
-
-	if (fill_frame != draw_frame::empty() && key_frame != draw_frame::empty())
-		return draw_frame::mask(fill_frame, key_frame);
-
-	return fill_frame;
 }
 
 spl::shared_ptr<core::frame_producer> frame_producer_registry::create_producer(const frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params) const
