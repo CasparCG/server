@@ -34,6 +34,7 @@
 #include <boost/asio.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/foreach.hpp>
+#include <boost/timer.hpp>
 #include <boost/range/algorithm/remove_if.hpp>
 #include <boost/thread/future.hpp>
 #include <boost/lexical_cast.hpp>
@@ -101,13 +102,7 @@ public:
 class renderer_application : public CefApp, CefRenderProcessHandler
 {
 	std::vector<CefRefPtr<CefV8Context>> contexts_;
-	const bool enable_gpu_;
 public:
-
-	explicit renderer_application(const bool enable_gpu) : enable_gpu_(enable_gpu)
-	{
-	}
-
 	CefRefPtr<CefRenderProcessHandler> GetRenderProcessHandler() override
 	{
 		return this;
@@ -157,7 +152,7 @@ public:
 					if (requestedFrames.hasOwnProperty(animationFrameId))
 						requestedFrames[animationFrameId](timestamp);
 			}
-		)", CefString(), 1, ret, exception);
+		)", ret, exception);
 
 		if (!injected)
 			caspar_log(browser, boost::log::trivial::error, "Could not inject javascript animation code.");
@@ -190,26 +185,6 @@ public:
 	{
 		contexts_.clear();
 	}
-	
-	void OnBeforeCommandLineProcessing(
-		const CefString& process_type,
-		CefRefPtr<CefCommandLine> command_line) override
-	{
-		//command_line->AppendSwitch("ignore-gpu-blacklist");
-		if (enable_gpu_)
-			command_line->AppendSwitch("enable-webgl");
-
-		command_line->AppendSwitch("enable-begin-frame-scheduling");
-		command_line->AppendSwitch("enable-media-stream");
-
-		if (process_type.empty() && !enable_gpu_)
-		{
-			// This gives more performance, but disabled gpu effects. Without it a single 1080p producer cannot be run smoothly
-			command_line->AppendSwitch("disable-gpu");
-			command_line->AppendSwitch("disable-gpu-compositing");
-			command_line->AppendSwitchWithValue("disable-gpu-vsync", "gpu");
-		}
-	}
 
 	bool OnProcessMessageReceived(
 			CefRefPtr<CefBrowser> browser,
@@ -222,7 +197,7 @@ public:
 			{
 				CefRefPtr<CefV8Value> ret;
 				CefRefPtr<CefV8Exception> exception;
-				context->Eval("tickAnimations()", CefString(), 1, ret, exception);
+				context->Eval("tickAnimations()", ret, exception);
 			}
 
 			return true;
@@ -244,7 +219,7 @@ bool intercept_command_line(int argc, char** argv)
 	CefMainArgs main_args(argc, argv);
 #endif
 
-	if (CefExecuteProcess(main_args, CefRefPtr<CefApp>(new renderer_application(false)), nullptr) >= 0)
+	if (CefExecuteProcess(main_args, CefRefPtr<CefApp>(new renderer_application), nullptr) >= 0)
 		return true;
 
 	return false;
@@ -258,13 +233,11 @@ void init(core::module_dependencies dependencies)
 	g_cef_executor.reset(new executor(L"cef"));
 	g_cef_executor->invoke([&]
 	{
-		const bool enable_gpu = env::properties().get(L"configuration.html.enable-gpu", false);
 		CefSettings settings;
-		settings.command_line_args_disabled = false;
 		settings.no_sandbox = true;
 		settings.remote_debugging_port = env::properties().get(L"configuration.html.remote-debugging-port", 0);
-		settings.windowless_rendering_enabled = true;
-		CefInitialize(main_args, settings, CefRefPtr<CefApp>(new renderer_application(enable_gpu)), nullptr);
+		//settings.windowless_rendering_enabled = true;
+		CefInitialize(main_args, settings, nullptr, nullptr);
 	});
 	g_cef_executor->begin_invoke([&]
 	{
@@ -283,7 +256,7 @@ void init(core::module_dependencies dependencies)
 			},
 			[](const core::frame_producer_dependencies& dependencies, const std::wstring& filename)
 			{
-				return html::create_cg_producer(dependencies, { filename });
+				return html::create_producer(dependencies, { filename });
 			},
 			false
 	);

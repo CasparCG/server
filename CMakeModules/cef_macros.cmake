@@ -101,19 +101,7 @@ macro(COPY_FILES target file_list source_dir target_dir)
     set(source_file ${source_dir}/${FILENAME})
     get_filename_component(target_name ${FILENAME} NAME)
     set(target_file ${target_dir}/${target_name})
-
-    string(FIND ${source_file} "$<CONFIGURATION>" _pos)
-    if(NOT ${_pos} EQUAL -1)
-      # Must test with an actual configuration directory.
-      string(REPLACE "$<CONFIGURATION>" "Release" existing_source_file ${source_file})
-      if(NOT EXISTS ${existing_source_file})
-        string(REPLACE "$<CONFIGURATION>" "Debug" existing_source_file ${source_file})
-      endif()
-    else()
-      set(existing_source_file ${source_file})
-    endif()
-
-    if(IS_DIRECTORY ${existing_source_file})
+    if(IS_DIRECTORY ${source_file})
       add_custom_command(
         TARGET ${target}
         POST_BUILD
