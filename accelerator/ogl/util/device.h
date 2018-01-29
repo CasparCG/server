@@ -40,7 +40,7 @@ class device final : public std::enable_shared_from_this<device>
 	device(const device&);
 	device& operator=(const device&);
 
-    boost::asio::io_context context_;
+    boost::asio::thread_pool context_;
 public:
 
 	// Static Members
@@ -52,18 +52,18 @@ public:
 
 	// Methods
 
-    std::shared_ptr<texture> create_texture(int width, int height, int stride);
+	spl::shared_ptr<texture> create_texture(int width, int height, int stride);
 	array<uint8_t>		     create_array(int size);
 
 	std::future<std::shared_ptr<texture>> copy_async(const array<const uint8_t>& source, int width, int height, int stride);
-	std::future<array<const uint8_t>>     copy_async(const std::shared_ptr<texture>& source);
+	std::future<array<const uint8_t>>     copy_async(const spl::shared_ptr<texture>& source);
 
     void flush();
 
     template<typename Func>
     auto dispatch_async(Func&& func)
     {
-        return caspar::dispatch_async(context_, std::forward<Func>(func));
+        return caspar::dispatch_async(std::forward<Func>(func));
     }
 
 	// Properties
