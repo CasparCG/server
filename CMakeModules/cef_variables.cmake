@@ -60,7 +60,7 @@ set(CEF_LIBCEF_DLL_WRAPPER_PATH "${_CEF_ROOT}/libcef_dll")
 
 # Shared compiler/linker flags.
 list(APPEND CEF_COMPILER_DEFINES
-  # Allow C++ programs to use stdint.h macros specified in the C99 standard that aren't 
+  # Allow C++ programs to use stdint.h macros specified in the C99 standard that aren't
   # in the C++ standard (e.g. UINT8_MAX, INT64_MIN, etc)
   __STDC_CONSTANT_MACROS __STDC_FORMAT_MACROS
   )
@@ -199,7 +199,6 @@ if(OS_LINUX)
     libcef.so
     natives_blob.bin
     snapshot_blob.bin
-    v8_context_snapshot.bin
     )
 
   # List of CEF resource files.
@@ -330,19 +329,11 @@ if(OS_WINDOWS)
 
   # Configure use of the sandbox.
   option(USE_SANDBOX "Enable or disable use of the sandbox." ON)
-  if(USE_SANDBOX)
-    # Check if the current MSVC version is compatible with the cef_sandbox.lib
-    # static library.
-    list(APPEND supported_msvc_versions
-      1900  # VS2015
-      1910  # VS2017 <= 15.2
-      1911  # VS2017 >= 15.3
-      )
-    list(FIND supported_msvc_versions ${MSVC_VERSION} _index)
-    if (${_index} EQUAL -1)
-      message(WARNING "CEF sandbox is not compatible with the current MSVC version (${MSVC_VERSION})")
-      set(USE_SANDBOX OFF)
-    endif()
+  if(USE_SANDBOX AND NOT MSVC_VERSION EQUAL 1900 AND NOT MSVC_VERSION EQUAL 1910)
+    # The cef_sandbox.lib static library is currently built with VS2015, which
+    # is compatible with VS2015 and VS2017. It will not link successfully with
+    # other VS versions.
+    set(USE_SANDBOX OFF)
   endif()
 
   # Consumers who run into LNK4099 warnings can pass /Z7 instead (see issue #385).
@@ -424,8 +415,6 @@ if(OS_WINDOWS)
     libGLESv2.dll
     natives_blob.bin
     snapshot_blob.bin
-    v8_context_snapshot.bin
-    swiftshader
     )
 
   # List of CEF resource files.
