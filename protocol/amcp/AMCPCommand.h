@@ -40,7 +40,6 @@ namespace amcp {
 		int														layer_id;
 		std::vector<channel_context>							channels;
 		spl::shared_ptr<core::cg_producer_registry>				cg_registry;
-		spl::shared_ptr<core::system_info_provider_repository>	system_info_repo;
 		spl::shared_ptr<const core::frame_producer_registry>	producer_registry;
 		spl::shared_ptr<const core::frame_consumer_registry>	consumer_registry;
 		std::shared_ptr<accelerator::ogl::device>				ogl_device;
@@ -56,7 +55,6 @@ namespace amcp {
 				int layer_id,
 				std::vector<channel_context> channels,
 				spl::shared_ptr<core::cg_producer_registry> cg_registry,
-				spl::shared_ptr<core::system_info_provider_repository> system_info_repo,
 				spl::shared_ptr<const core::frame_producer_registry> producer_registry,
 				spl::shared_ptr<const core::frame_consumer_registry> consumer_registry,
 				std::shared_ptr<accelerator::ogl::device> ogl_device,
@@ -67,7 +65,6 @@ namespace amcp {
 			, layer_id(layer_id)
 			, channels(std::move(channels))
 			, cg_registry(std::move(cg_registry))
-			, system_info_repo(std::move(system_info_repo))
 			, producer_registry(std::move(producer_registry))
 			, consumer_registry(std::move(consumer_registry))
 			, ogl_device(std::move(ogl_device))

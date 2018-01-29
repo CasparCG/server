@@ -25,7 +25,6 @@
 
 #include <core/video_channel.h>
 #include <core/producer/cg_proxy.h>
-#include <core/system_info_provider.h>
 
 #include <common/memory.h>
 

@@ -48,7 +48,6 @@ set(SOURCES
 		producer/layer.cpp
 		producer/stage.cpp
 
-		system_info_provider.cpp
 		StdAfx.cpp
 		video_channel.cpp
 		video_format.cpp
@@ -119,7 +118,6 @@ set(HEADERS
 
 		fwd.h
 		module_dependencies.h
-		system_info_provider.h
 		StdAfx.h
 		video_channel.h
 		video_format.h

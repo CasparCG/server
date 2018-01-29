@@ -30,7 +30,6 @@
 #include <common/os/windows/windows.h>
 
 #include <core/producer/cg_proxy.h>
-#include <core/system_info_provider.h>
 #include <core/frame/frame_factory.h>
 #include <core/video_format.h>
 
@@ -222,12 +221,6 @@ void init(core::module_dependencies dependencies)
 
 	dependencies.producer_registry->register_producer_factory(L"Flash Producer (.ct)", create_ct_producer);
 	dependencies.producer_registry->register_producer_factory(L"Flash Producer (.swf)", create_swf_producer);
-	dependencies.system_info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
-	{
-		info.add(L"system.flash", version());
-	});
-	dependencies.system_info_provider_repo->register_version_provider(L"FLASH", &version);
-	dependencies.system_info_provider_repo->register_version_provider(L"TEMPLATEHOST", &cg_version);
 	dependencies.cg_registry->register_cg_producer(
 			L"flash",
 			{ L".ft", L".ct" },

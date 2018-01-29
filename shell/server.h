@@ -40,7 +40,6 @@ class server final : public boost::noncopyable
 public:
 	explicit server(std::promise<bool>& shutdown_server_now);
 	void start();
-	spl::shared_ptr<core::system_info_provider_repository> get_system_info_provider_repo() const;
 	spl::shared_ptr<protocol::amcp::amcp_command_repository> get_amcp_command_repository() const;
 
 	core::monitor::subject& monitor_output();
