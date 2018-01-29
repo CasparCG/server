@@ -33,7 +33,6 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/draw_frame.h>
 #include <core/producer/frame_producer.h>
-#include <core/system_info_provider.h>
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/thread/tss.hpp>
@@ -253,15 +252,6 @@ void init(core::module_dependencies dependencies)
 	dependencies.consumer_registry->register_consumer_factory(L"FFmpeg Consumer", create_ffmpeg_consumer);
 	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"ffmpeg", create_preconfigured_ffmpeg_consumer);
 	dependencies.producer_registry->register_producer_factory(L"FFmpeg Producer", boost::bind(&create_producer, _1, _2));
-
-	dependencies.system_info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
-	{
-		info.add(L"system.ffmpeg.avcodec", avcodec_version());
-		info.add(L"system.ffmpeg.avformat", avformat_version());
-		info.add(L"system.ffmpeg.avfilter", avfilter_version());
-		info.add(L"system.ffmpeg.avutil", avutil_version());
-		info.add(L"system.ffmpeg.swscale", swscale_version());
-	});
 }
 
 void uninit()

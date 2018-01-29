@@ -267,16 +267,6 @@ void init(core::module_dependencies dependencies)
 	auto chrome_minor =			boost::lexical_cast<std::wstring>(cef_version_info(3));
 	auto chrome_build =			boost::lexical_cast<std::wstring>(cef_version_info(4));
 	auto chrome_patch =			boost::lexical_cast<std::wstring>(cef_version_info(5));
-
-	dependencies.system_info_provider_repo->register_version_provider(L"cef", [=]
-	{
-		return cef_version_major + L"." + chrome_build + L"." + cef_revision;
-	});
-	dependencies.system_info_provider_repo->register_system_info_provider([=](boost::property_tree::wptree& info)
-	{
-		info.add(L"system.cef.version",			cef_version_major	+ L"." + chrome_build + L"." + cef_revision);
-		info.add(L"system.cef.chromeversion",	chrome_major		+ L"." + chrome_minor + L"." + chrome_build + L"." + chrome_patch);
-	});
 }
 
 void uninit()

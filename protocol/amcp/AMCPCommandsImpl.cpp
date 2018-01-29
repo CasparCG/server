@@ -34,7 +34,6 @@
 
 #include <common/log.h>
 #include <common/param.h>
-#include <common/os/system_info.h>
 #include <common/os/filesystem.h>
 #include <common/base64.h>
 #include <common/thread_info.h>
@@ -53,7 +52,6 @@
 #include <core/consumer/output.h>
 #include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
-#include <core/system_info_provider.h>
 
 #include <algorithm>
 #include <locale>
@@ -1448,13 +1446,6 @@ std::wstring tls_command(command_context& ctx)
 
 std::wstring version_command(command_context& ctx)
 {
-	if (!ctx.parameters.empty() && !boost::iequals(ctx.parameters.at(0), L"SERVER"))
-	{
-		auto version = ctx.system_info_repo->get_version(ctx.parameters.at(0));
-
-		return L"201 VERSION OK\r\n" + version + L"\r\n";
-	}
-
 	return L"201 VERSION OK\r\n" + env::version() + L"\r\n";
 }
 
@@ -1542,19 +1533,6 @@ std::wstring info_paths_command(command_context& ctx)
 	info.add(L"paths.initial-path",		caspar::env::initial_folder() + L"/");
 
 	return create_info_xml_reply(info, L"PATHS");
-}
-
-std::wstring info_system_command(command_context& ctx)
-{
-	boost::property_tree::wptree info;
-
-	info.add(L"system.name", caspar::system_product_name());
-	info.add(L"system.os.description", caspar::os_description());
-	info.add(L"system.cpu", caspar::cpu_info());
-
-	ctx.system_info_repo->fill_information(info);
-
-	return create_info_xml_reply(info, L"SYSTEM");
 }
 
 std::wstring info_server_command(command_context& ctx)

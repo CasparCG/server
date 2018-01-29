@@ -40,7 +40,6 @@ FORWARD2(caspar, core, class const_frame);
 FORWARD2(caspar, core, class video_channel);
 FORWARD2(caspar, core, struct pixel_format_desc);
 FORWARD2(caspar, core, enum class field_mode);
-FORWARD2(caspar, core, class system_info_provider_repository);
 FORWARD2(caspar, core, class cg_producer_registry);
 FORWARD2(caspar, core, struct frame_transform);
 FORWARD2(caspar, core, struct write_frame_consumer);

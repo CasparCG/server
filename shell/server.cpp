@@ -51,7 +51,6 @@
 #include <core/diagnostics/call_context.h>
 #include <core/diagnostics/osd_graph.h>
 #include <core/diagnostics/graph_to_log_sink.h>
-#include <core/system_info_provider.h>
 
 #include <modules/image/consumer/image_consumer.h>
 
@@ -131,7 +130,6 @@ struct server::impl : boost::noncopyable
 	std::shared_ptr<osc::client>						osc_client_						= std::make_shared<osc::client>(io_service_);
 	std::vector<std::shared_ptr<void>>					predefined_osc_subscriptions_;
 	std::vector<spl::shared_ptr<video_channel>>			channels_;
-	spl::shared_ptr<system_info_provider_repository>	system_info_provider_repo_;
 	spl::shared_ptr<core::cg_producer_registry>			cg_registry_;
 	spl::shared_ptr<core::frame_producer_registry>		producer_registry_;
 	spl::shared_ptr<core::frame_consumer_registry>		consumer_registry_;
@@ -148,7 +146,6 @@ struct server::impl : boost::noncopyable
 		diag_subject_->attach_parent(monitor_subject_);
 
 		module_dependencies dependencies(
-				system_info_provider_repo_,
 				cg_registry_,
 				producer_registry_,
 				consumer_registry_);
@@ -346,7 +343,6 @@ struct server::impl : boost::noncopyable
 	{
 		amcp_command_repo_ = spl::make_shared<amcp::amcp_command_repository>(
 				channels_,
-				system_info_provider_repo_,
 				cg_registry_,
 				producer_registry_,
 				consumer_registry_,
@@ -398,7 +394,6 @@ struct server::impl : boost::noncopyable
 
 server::server(std::promise<bool>& shutdown_server_now) : impl_(new impl(shutdown_server_now)){}
 void server::start() { impl_->start(); }
-spl::shared_ptr<core::system_info_provider_repository> server::get_system_info_provider_repo() const { return impl_->system_info_provider_repo_; }
 spl::shared_ptr<protocol::amcp::amcp_command_repository> server::get_amcp_command_repository() const { return spl::make_shared_ptr(impl_->amcp_command_repo_); }
 core::monitor::subject& server::monitor_output() { return *impl_->monitor_subject_; }
 

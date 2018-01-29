@@ -29,7 +29,6 @@
 #include <core/producer/frame_producer.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/draw_frame.h>
-#include <core/system_info_provider.h>
 
 #include <common/utf.h>
 
@@ -51,10 +50,6 @@ void init(core::module_dependencies dependencies)
 	dependencies.producer_registry->register_producer_factory(L"Image Scroll Producer", create_scroll_producer);
 	dependencies.producer_registry->register_producer_factory(L"Image Producer", create_producer);
 	dependencies.consumer_registry->register_consumer_factory(L"Image Consumer", create_consumer);
-	dependencies.system_info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
-	{
-		info.add(L"system.freeimage", version());
-	});
 }
 
 void uninit()
