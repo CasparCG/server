@@ -60,7 +60,7 @@ public:
 	 *
 	 * Usually b, c and d remains constant during a transition, while t changes
 	 * for each temporal tweened value.
-	 * 
+	 *
 	 * @param t	The timepoint within the total duration (0 <= n <= d).
 	 * @param b	The starting value.
 	 * @param c	The destination value delta from the starting value
