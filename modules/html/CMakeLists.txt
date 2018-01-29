@@ -41,11 +41,11 @@ else()
 		common
 		core
 
-		${CEF_BINARY_DIR}/libcef.so
+		${CEF_BIN_PATH}/libcef.so
 		libcef_dll_wrapper
 
-		${CEF_BINARY_DIR}/libudev.so.0
-		${CEF_BINARY_DIR}/libcap.so.2
+		${CEF_BIN_PATH}/libudev.so.0
+		${CEF_BIN_PATH}/libcap.so.2
 	)
 endif()
 
@@ -65,30 +65,30 @@ casparcg_add_uninit_statement("html::uninit")
 casparcg_add_command_line_arg_interceptor("html::intercept_command_line")
 casparcg_add_module_project("html")
 
-casparcg_add_runtime_dependency("${CEF_RESOURCE_DIR}/locales")
-casparcg_add_runtime_dependency("${CEF_RESOURCE_DIR}/cef.pak")
-casparcg_add_runtime_dependency("${CEF_RESOURCE_DIR}/cef_100_percent.pak")
-casparcg_add_runtime_dependency("${CEF_RESOURCE_DIR}/cef_200_percent.pak")
-casparcg_add_runtime_dependency("${CEF_RESOURCE_DIR}/cef_extensions.pak")
-casparcg_add_runtime_dependency("${CEF_RESOURCE_DIR}/devtools_resources.pak")
-casparcg_add_runtime_dependency("${CEF_RESOURCE_DIR}/icudtl.dat")
-casparcg_add_runtime_dependency("${CEF_BINARY_DIR}/natives_blob.bin")
-casparcg_add_runtime_dependency("${CEF_BINARY_DIR}/snapshot_blob.bin")
-casparcg_add_runtime_dependency("${CEF_BINARY_DIR}/swiftshader")
+casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/locales")
+casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/cef.pak")
+casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/cef_100_percent.pak")
+casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/cef_200_percent.pak")
+casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/cef_extensions.pak")
+casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/devtools_resources.pak")
+casparcg_add_runtime_dependency("${CEF_RESOURCE_PATH}/icudtl.dat")
+casparcg_add_runtime_dependency("${CEF_BIN_PATH}/natives_blob.bin")
+casparcg_add_runtime_dependency("${CEF_BIN_PATH}/snapshot_blob.bin")
+casparcg_add_runtime_dependency("${CEF_BIN_PATH}/swiftshader")
 
 if(MSVC)
-	casparcg_add_runtime_dependency("${CEF_BINARY_DIR}/libcef.dll")
-	casparcg_add_runtime_dependency("${CEF_BINARY_DIR}/chrome_elf.dll")
-	casparcg_add_runtime_dependency("${CEF_BINARY_DIR}/d3dcompiler_43.dll")
-	casparcg_add_runtime_dependency("${CEF_BINARY_DIR}/d3dcompiler_47.dll")
-	casparcg_add_runtime_dependency("${CEF_BINARY_DIR}/libEGL.dll")
-	casparcg_add_runtime_dependency("${CEF_BINARY_DIR}/libGLESv2.dll")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libcef.dll")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/chrome_elf.dll")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/d3dcompiler_43.dll")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/d3dcompiler_47.dll")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libEGL.dll")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libGLESv2.dll")
 else()
-	casparcg_add_runtime_dependency("${CEF_BINARY_DIR}/chrome-sandbox")
-	casparcg_add_runtime_dependency("${CEF_BINARY_DIR}/libcef.so")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/chrome-sandbox")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libcef.so")
 	# TODO - these or similar will likely need to be re-added
-	# casparcg_add_runtime_dependency("${CEF_BINARY_DIR}/libgcrypt.so.11")
-	# casparcg_add_runtime_dependency("${CEF_BINARY_DIR}/libcap.so.2")
-	# casparcg_add_runtime_dependency("${CEF_BINARY_DIR}/libcgmanager.so.0")
-	casparcg_add_runtime_dependency("${CEF_BINARY_DIR}/libwidevinecdmadapter.so")
+	# casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libgcrypt.so.11")
+	# casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libcap.so.2")
+	# casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libcgmanager.so.0")
+	casparcg_add_runtime_dependency("${CEF_BIN_PATH}/libwidevinecdmadapter.so")
 endif()
