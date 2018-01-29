@@ -54,7 +54,6 @@
 #include <core/producer/layer.h>
 #include <core/mixer/mixer.h>
 #include <core/consumer/output.h>
-#include <core/thumbnail_generator.h>
 #include <core/producer/media_info/media_info.h>
 #include <core/producer/media_info/media_info_repository.h>
 #include <core/diagnostics/call_context.h>
@@ -2263,13 +2262,7 @@ void thumbnail_generate_describer(core::help_sink& sink, const core::help_reposi
 
 std::wstring thumbnail_generate_command(command_context& ctx)
 {
-	if (ctx.thumb_gen)
-	{
-		ctx.thumb_gen->generate(ctx.parameters.at(0));
-		return L"202 THUMBNAIL GENERATE OK\r\n";
-	}
-	else
-		CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"Thumbnail generation turned off"));
+	CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"Thumbnail generation turned off"));
 }
 
 void thumbnail_generateall_describer(core::help_sink& sink, const core::help_repository& repo)
@@ -2281,13 +2274,7 @@ void thumbnail_generateall_describer(core::help_sink& sink, const core::help_rep
 
 std::wstring thumbnail_generateall_command(command_context& ctx)
 {
-	if (ctx.thumb_gen)
-	{
-		ctx.thumb_gen->generate_all();
-		return L"202 THUMBNAIL GENERATE_ALL OK\r\n";
-	}
-	else
-		CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"Thumbnail generation turned off"));
+	CASPAR_THROW_EXCEPTION(not_supported() << msg_info(L"Thumbnail generation turned off"));
 }
 
 // Query Commands

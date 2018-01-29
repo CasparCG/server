@@ -71,7 +71,6 @@ struct input::impl : boost::noncopyable
 	const std::wstring											filename_;
 	tbb::atomic<uint32_t>										in_;
 	tbb::atomic<uint32_t>										out_;
-	const bool													thumbnail_mode_;
 	tbb::atomic<bool>											loop_;
 	uint32_t													file_frame_number_		= 0;
 
@@ -80,19 +79,12 @@ struct input::impl : boost::noncopyable
 
 	executor													executor_;
 
-	explicit impl(const spl::shared_ptr<diagnostics::graph> graph, const std::wstring& url_or_file, bool loop, uint32_t in, uint32_t out, bool thumbnail_mode, const ffmpeg_options& vid_params)
+	explicit impl(const spl::shared_ptr<diagnostics::graph> graph, const std::wstring& url_or_file, bool loop, uint32_t in, uint32_t out, const ffmpeg_options& vid_params)
 		: graph_(graph)
 		, format_context_(open_input(url_or_file, vid_params))
 		, filename_(url_or_file)
-		, thumbnail_mode_(thumbnail_mode)
 		, executor_(print())
 	{
-		if (thumbnail_mode_)
-			executor_.invoke([]
-			{
-				enable_quiet_logging_for_thread();
-			});
-
 		in_				= in;
 		out_			= out;
 		loop_			= loop;
@@ -127,12 +119,12 @@ struct input::impl : boost::noncopyable
 
 	std::ptrdiff_t get_max_buffer_count() const
 	{
-		return thumbnail_mode_ ? 1 : MAX_BUFFER_COUNT;
+		return MAX_BUFFER_COUNT;
 	}
 
 	std::ptrdiff_t get_min_buffer_count() const
 	{
-		return thumbnail_mode_ ? 0 : MIN_BUFFER_COUNT;
+		return MIN_BUFFER_COUNT;
 	}
 
 	std::future<bool> seek(uint32_t target)
@@ -233,8 +225,7 @@ struct input::impl : boost::noncopyable
 			}
 			catch(...)
 			{
-				if (!thumbnail_mode_)
-					CASPAR_LOG_CURRENT_EXCEPTION();
+				CASPAR_LOG_CURRENT_EXCEPTION();
 				executor_.stop();
 			}
 		});
@@ -331,8 +322,7 @@ struct input::impl : boost::noncopyable
 
 	void queued_seek(const uint32_t target)
 	{
-		if (!thumbnail_mode_)
-			CASPAR_LOG(debug) << print() << " Seeking: " << target;
+		CASPAR_LOG(debug) << print() << " Seeking: " << target;
 
 		auto stream = format_context_->streams[default_stream_index_];
 
@@ -372,8 +362,8 @@ struct input::impl : boost::noncopyable
 	}
 };
 
-input::input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& url_or_file, bool loop, uint32_t in, uint32_t out, bool thumbnail_mode, const ffmpeg_options& vid_params)
-	: impl_(new impl(graph, url_or_file, loop, in, out, thumbnail_mode, vid_params)){}
+input::input(const spl::shared_ptr<diagnostics::graph>& graph, const std::wstring& url_or_file, bool loop, uint32_t in, uint32_t out, const ffmpeg_options& vid_params)
+	: impl_(new impl(graph, url_or_file, loop, in, out, vid_params)){}
 bool input::eof() const {return !impl_->executor_.is_running();}
 bool input::try_pop(std::shared_ptr<AVPacket>& packet){return impl_->try_pop(packet);}
 spl::shared_ptr<AVFormatContext> input::context(){return impl_->format_context_;}

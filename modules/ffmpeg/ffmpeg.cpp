@@ -257,7 +257,6 @@ void init(core::module_dependencies dependencies)
 	dependencies.consumer_registry->register_consumer_factory(L"FFmpeg Consumer", create_ffmpeg_consumer, describe_ffmpeg_consumer);
 	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"ffmpeg", create_preconfigured_ffmpeg_consumer);
 	dependencies.producer_registry->register_producer_factory(L"FFmpeg Producer", boost::bind(&create_producer, _1, _2, info_repo), describe_producer);
-	dependencies.producer_registry->register_thumbnail_producer(boost::bind(&create_thumbnail_frame, _1, _2, info_repo));
 
 	info_repo->register_extractor(
 			[](const std::wstring& file, const std::wstring& extension, core::media_info& info) -> bool
