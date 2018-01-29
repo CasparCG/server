@@ -30,7 +30,6 @@
 #include "../../frame/frame_transform.h"
 #include "../../frame/pixel_format.h"
 #include "../../monitor/monitor.h"
-#include "../../help/help_sink.h"
 
 #include <common/future.h>
 #include <common/tweener.h>
@@ -550,18 +549,6 @@ private:
 			interpolator_		= &drop_or_repeat;
 	}
 };
-
-void describe_framerate_producer(help_sink& sink)
-{
-	sink.para()->text(L"Framerate conversion control / Slow motion examples:");
-	sink.example(L">> CALL 1-10 FRAMERATE INTERPOLATION BLEND2", L"enables 2 frame blend interpolation.");
-	sink.example(L">> CALL 1-10 FRAMERATE INTERPOLATION BLEND3", L"enables 3 frame blend interpolation.");
-	sink.example(L">> CALL 1-10 FRAMERATE INTERPOLATION DROP_OR_REPEAT", L"disables frame interpolation.");
-	sink.example(L">> CALL 1-10 FRAMERATE SPEED 0.25", L"immediately changes the speed to 25%. Sound will be disabled.");
-	sink.example(L">> CALL 1-10 FRAMERATE SPEED 0.25 50", L"changes the speed to 25% linearly over 50 frames. Sound will be disabled.");
-	sink.example(L">> CALL 1-10 FRAMERATE SPEED 0.25 50 easeinoutsine", L"changes the speed to 25% over 50 frames using specified easing curve. Sound will be disabled.");
-	sink.example(L">> CALL 1-10 FRAMERATE SPEED 1 50", L"changes the speed to 100% linearly over 50 frames. Sound will be enabled when the destination speed of 100% has been reached.");
-}
 
 spl::shared_ptr<frame_producer> create_framerate_producer(
 		spl::shared_ptr<frame_producer> source,

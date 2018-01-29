@@ -33,8 +33,6 @@
 #include <core/mixer/audio/audio_mixer.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/diagnostics/call_context.h>
-#include <core/help/help_sink.h>
-#include <core/help/help_repository.h>
 
 #include <common/executor.h>
 #include <common/lock.h>
@@ -750,41 +748,6 @@ const software_version<3> get_new_configuration_api_version()
 	static software_version<3> NEW_CONFIGURATION_API("10.2");
 
 	return NEW_CONFIGURATION_API;
-}
-
-void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
-{
-	sink.short_description(L"Sends video on an SDI output using Blackmagic Decklink video cards.");
-	sink.syntax(L"DECKLINK "
-				L"{[device_index:int]|1} "
-				L"{[keyer:INTERNAL_KEY,EXTERNAL_KEY,EXTERNAL_SEPARATE_DEVICE_KEY]} "
-				L"{[low_latency:LOW_LATENCY]} "
-				L"{[embedded_audio:EMBEDDED_AUDIO]} "
-				L"{[key_only:KEY_ONLY]} "
-				L"{CHANNEL_LAYOUT [channel_layout:string]}");
-	sink.para()->text(L"Sends video on an SDI output using Blackmagic Decklink video cards.");
-	sink.definitions()
-		->item(L"device_index", L"The Blackmagic video card to use (See Blackmagic control panel for card order). Default is 1.")
-		->item(L"keyer",
-				L"If given tries to enable either internal or external keying. Not all Blackmagic cards supports this. "
-				L"There is also a third experimental option (EXTERNAL_SEPARATE_DEVICE_KEY) which allocates device_index + 1 for synhronized key output.")
-		->item(L"low_latency", L"Tries to enable low latency if given.")
-		->item(L"embedded_audio", L"Embeds the audio into the SDI signal if given.")
-		->item(L"key_only",
-				L" will extract only the alpha channel from the "
-				L"channel. This is useful when you have two SDI video cards, and neither has native support "
-				L"for separate fill/key output")
-		->item(L"channel_layout", L"If specified, overrides the audio channel layout used by the channel.");
-	sink.para()->text(L"Examples:");
-	sink.example(L">> ADD 1 DECKLINK", L"for using the default device_index of 1.");
-	sink.example(L">> ADD 1 DECKLINK 2", L"uses device_index 2.");
-	sink.example(L">> ADD 1 DECKLINK 1 EXTERNAL_KEY EMBEDDED_AUDIO");
-	sink.example(
-			L">> ADD 1 DECKLINK 1 EMBEDDED_AUDIO\n"
-			L">> ADD 1 DECKLINK 2 KEY_ONLY", L"uses device with index 1 as fill output with audio and device with index 2 as key output.");
-	sink.example(
-			L">> ADD 1 DECKLINK 1 EXTERNAL_SEPARATE_DEVICE_KEY EMBEDDED_AUDIO",
-			L"Uses device 2 for key output. May give better sync between key and fill than the previous method.");
 }
 
 spl::shared_ptr<core::frame_consumer> create_consumer(

@@ -58,15 +58,15 @@ std::vector<std::wstring> device_list()
 	std::vector<std::wstring> devices;
 
 	try
-	{		
+	{
 		bvc_wrapper blue;
 		int numCards = 0;
 		blue.enumerate(numCards);
 
 		for(int n = 1; n < (numCards+1); n++)
-		{				
+		{
 			blue.attach(n);
-			devices.push_back(std::wstring(get_card_desc(blue, n)) + L" [" + boost::lexical_cast<std::wstring>(n) + L"]");	
+			devices.push_back(std::wstring(get_card_desc(blue, n)) + L" [" + boost::lexical_cast<std::wstring>(n) + L"]");
 			blue.detach();
 		}
 	}
@@ -85,9 +85,9 @@ void init(core::module_dependencies dependencies)
 	}
 	catch(...){}
 
-	dependencies.consumer_registry->register_consumer_factory(L"Bluefish Consumer", create_consumer, describe_consumer);
+	dependencies.consumer_registry->register_consumer_factory(L"Bluefish Consumer", create_consumer);
 	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"bluefish", create_preconfigured_consumer);
-    dependencies.producer_registry->register_producer_factory(L"Bluefish Producer", create_producer, describe_producer);
+    dependencies.producer_registry->register_producer_factory(L"Bluefish Producer", create_producer);
 	dependencies.system_info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
 	{
 		info.add(L"system.bluefish.version", version());

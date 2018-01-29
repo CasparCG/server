@@ -36,8 +36,6 @@
 #include <core/mixer/audio/audio_util.h>
 #include <core/mixer/audio/audio_mixer.h>
 #include <core/video_format.h>
-#include <core/help/help_sink.h>
-#include <core/help/help_repository.h>
 
 #include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>
@@ -281,17 +279,6 @@ public:
 		return monitor_subject_;
 	}
 };
-
-void describe_consumer(core::help_sink& sink, const core::help_repository& repo)
-{
-	sink.short_description(L"A system audio consumer.");
-	sink.syntax(L"AUDIO {CHANNEL_LAYOUT [channel_layout:string]} {LATENCY [latency_millis:int|200]}");
-	sink.para()->text(L"Uses the system's default audio playback device.");
-	sink.para()->text(L"Examples:");
-	sink.example(L">> ADD 1 AUDIO");
-	sink.example(L">> ADD 1 AUDIO CHANNEL_LAYOUT matrix", L"Uses the matrix channel layout");
-	sink.example(L">> ADD 1 AUDIO LATENCY 500", L"Specifies that the system-audio chain: openal => driver => sound card => speaker output is 500ms");
-}
 
 spl::shared_ptr<core::frame_consumer> create_consumer(
 		const std::vector<std::wstring>& params, core::interaction_sink*, std::vector<spl::shared_ptr<core::video_channel>> channels)

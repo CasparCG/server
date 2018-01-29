@@ -34,8 +34,6 @@
 #include <common/filesystem.h>
 #include <common/ptree.h>
 #include <core/producer/frame_producer.h>
-#include <core/help/help_repository.h>
-#include <core/help/help_sink.h>
 
 #include <future>
 #include <vector>
@@ -65,17 +63,6 @@ void deduce_expression(variable& var, const variable_repository& repo)
 	{
 		var.from_string(expr_str);
 	}
-}
-
-void describe_xml_scene_producer(core::help_sink& sink, const core::help_repository& repo)
-{
-	sink.short_description(L"A simple producer for dynamic graphics using .scene files.");
-	sink.syntax(L"[.scene_filename:string] {[param1:string] [value1:string]} {[param2:string] [value2:string]} ...");
-	sink.para()->text(L"A simple producer that looks in the ")->code(L"templates")->text(L" folder for .scene files.");
-	sink.para()->text(L"The .scene file is a simple XML document containing variables, layers and timelines.");
-	sink.example(L">> PLAY 1-10 scene_name_sign FIRSTNAME \"John\" LASTNAME \"Doe\"", L"loads and plays templates/scene_name_sign.scene and sets the variables FIRSTNAME and LASTNAME.");
-	sink.para()->text(L"The scene producer also supports setting the variables while playing via the CALL command:");
-	sink.example(L">> CALL 1-10 FIRSTNAME \"Jane\"", L"changes the variable FIRSTNAME on an already loaded scene.");
 }
 
 spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
@@ -365,7 +352,7 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 
 void init(module_dependencies dependencies)
 {
-	dependencies.producer_registry->register_producer_factory(L"XML Scene Producer", create_xml_scene_producer, describe_xml_scene_producer);
+	dependencies.producer_registry->register_producer_factory(L"XML Scene Producer", create_xml_scene_producer);
 	dependencies.cg_registry->register_cg_producer(
 			L"scene",
 			{ L".scene" },

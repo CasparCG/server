@@ -31,7 +31,6 @@
 namespace caspar { namespace flash {
 
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params);
-void describe_swf_producer(core::help_sink& sink, const core::help_repository& repo);
 spl::shared_ptr<core::frame_producer> create_swf_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params);
 
 std::wstring find_template(const std::wstring& templateName);

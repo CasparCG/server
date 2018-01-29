@@ -37,8 +37,6 @@
 #include <common/future.h>
 
 #include <core/frame/draw_frame.h>
-#include <core/help/help_repository.h>
-#include <core/help/help_sink.h>
 #include <core/producer/framerate/framerate_producer.h>
 #include <core/frame/frame_factory.h>
 
@@ -562,47 +560,6 @@ public:
 		return muxer_->out_framerate();
 	}
 };
-
-void describe_producer(core::help_sink& sink, const core::help_repository& repo)
-{
-	sink.short_description(L"A producer for playing media files supported by FFmpeg.");
-	sink.syntax(L"[clip,url:string] {[loop:LOOP]} {IN,SEEK [in:int]} {OUT [out:int] | LENGTH [length:int]} {FILTER [filter:string]} {CHANNEL_LAYOUT [channel_layout:string]}");
-	sink.para()
-		->text(L"The FFmpeg Producer can play all media that FFmpeg can play, which includes many ")
-		->text(L"QuickTime video codec such as Animation, PNG, PhotoJPEG, MotionJPEG, as well as ")
-		->text(L"H.264, FLV, WMV and several audio codecs as well as uncompressed audio.");
-	sink.definitions()
-		->item(L"clip", L"The file without the file extension to play. It should reside under the media folder.")
-		->item(L"url", L"If clip contains :// it is instead treated as the URL parameter. The URL can either be any streaming protocol supported by FFmpeg, dshow://video={webcam_name} or v4l2://{video device} or iec61883://{auto}.")
-		->item(L"loop", L"Will cause the media file to loop between in and out.")
-		->item(L"in", L"Optionally sets the first frame. 0 by default. If loop is specified, this will be the frame where it starts over again.")
-		->item(L"out", L"Optionally sets the last frame. If not specified the clip will be played to the end. If loop is specified, the file will jump to start position once it reaches the last frame.")
-		->item(L"length", L"Optionally sets the length of the clip. Equivalent to OUT in + length.")
-		->item(L"filter", L"If specified, will be used as an FFmpeg video filter.")
-		->item(L"channel_layout",
-				L"Optionally override the automatically deduced audio channel layout."
-				L"Either a named layout as specified in casparcg.config or in the format [type:string]:[channel_order:string] for a custom layout.");
-	sink.para()->text(L"Examples:");
-	sink.example(L">> PLAY 1-10 folder/clip", L"to play all frames in a clip and stop at the last frame.");
-	sink.example(L">> PLAY 1-10 folder/clip LOOP", L"to loop a clip between the first frame and the last frame.");
-	sink.example(L">> PLAY 1-10 folder/clip LOOP IN 10", L"to loop a clip between frame 10 and the last frame.");
-	sink.example(L">> PLAY 1-10 folder/clip LOOP IN 10 LENGTH 50", L"to loop a clip between frame 10 and frame 60.");
-	sink.example(L">> PLAY 1-10 folder/clip IN 10 OUT 60", L"to play frames 10-60 in a clip and stop.");
-	sink.example(L">> PLAY 1-10 folder/clip FILTER yadif=1,-1", L"to deinterlace the video.");
-	sink.example(L">> PLAY 1-10 folder/clip CHANNEL_LAYOUT film", L"given the defaults in casparcg.config this will specifies that the clip has 6 audio channels of the type 5.1 and that they are in the order FL FC FR BL BR LFE regardless of what ffmpeg says.");
-	sink.example(L">> PLAY 1-10 folder/clip CHANNEL_LAYOUT \"5.1:LFE FL FC FR BL BR\"", L"specifies that the clip has 6 audio channels of the type 5.1 and that they are in the specified order regardless of what ffmpeg says.");
-	sink.example(L">> PLAY 1-10 rtmp://example.com/live/stream", L"to play an RTMP stream.");
-	sink.example(L">> PLAY 1-10 \"dshow://video=Live! Cam Chat HD VF0790\"", L"to use a web camera as video input on Windows.");
-	sink.example(L">> PLAY 1-10 v4l2:///dev/video0", L"to use a web camera as video input on Linux.");
-	sink.example(L">> PLAY 1-10 iec61883://auto", L"to use a FireWire (H)DV video device as video input on Linux.");
-	sink.para()->text(L"The FFmpeg producer also supports changing some of the settings via ")->code(L"CALL")->text(L":");
-	sink.example(L">> CALL 1-10 LOOP 1");
-	sink.example(L">> CALL 1-10 IN 10");
-	sink.example(L">> CALL 1-10 OUT 60");
-	sink.example(L">> CALL 1-10 LENGTH 50");
-	sink.example(L">> CALL 1-10 SEEK 30");
-	core::describe_framerate_producer(sink);
-}
 
 spl::shared_ptr<core::frame_producer> create_producer(
 		const core::frame_producer_dependencies& dependencies,

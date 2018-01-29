@@ -30,8 +30,6 @@
 #include <core/frame/pixel_format.h>
 #include <core/frame/audio_channel_layout.h>
 #include <core/monitor/monitor.h>
-#include <core/help/help_repository.h>
-#include <core/help/help_sink.h>
 
 #include <common/except.h>
 #include <common/array.h>
@@ -189,55 +187,6 @@ bool try_get_color(const std::wstring& str, uint32_t& value)
 
 	return true;
 }
-
-void describe_color_producer(core::help_sink& sink, const core::help_repository& repo)
-{
-	sink.short_description(L"Fills a layer with a solid color or a horizontal gradient.");
-	sink.syntax(
-		L"{#[argb_hex_value:string]}"
-		L",{#[rgb_hex_value:string]}"
-		L",{[named_color:EMPTY,BLACK,WHITE,RED,GREEN,BLUE,ORANGE,YELLOW,BROWN,GRAY,TEAL]} "
-		L"{...more colors}");
-	sink.para()->text(L"A producer that fills a layer with a solid color. If more than one color is specified it becomes a gradient between those colors.");
-	sink.para()
-		->text(L"If a ")->code(L"#")
-		->text(L" sign followed by an 8 character hexadecimal number is given it is interpreted as an 8-bit per channel ARGB color. ")
-		->text(L"If it is instead followed by a 6 character hexadecimal number it is interpreted as an 8-bit per channel RGB value with an opaque alpha channel.");
-	sink.para()->text(L"There are also a number of predefined named colors, that are specified without a ")->code(L"#")->text(L" sign:");
-	sink.definitions()
-		->item(L"EMPTY",	L"Predefined ARGB value #00000000")
-		->item(L"BLACK",	L"Predefined ARGB value #FF000000")
-		->item(L"WHITE",	L"Predefined ARGB value #FFFFFFFF")
-		->item(L"RED",		L"Predefined ARGB value #FFFF0000")
-		->item(L"GREEN",	L"Predefined ARGB value #FF00FF00")
-		->item(L"BLUE",		L"Predefined ARGB value #FF0000FF")
-		->item(L"ORANGE",	L"Predefined ARGB value #FFFFA500")
-		->item(L"YELLOW",	L"Predefined ARGB value #FFFFFF00")
-		->item(L"BROWN",	L"Predefined ARGB value #FFA52A2A")
-		->item(L"GRAY",		L"Predefined ARGB value #FF808080")
-		->item(L"TEAL",		L"Predefined ARGB value #FF008080");
-	sink.para()
-		->strong(L"Note")->text(L" that it is important that all RGB values are multiplied with the alpha ")
-		->text(L"at all times, otherwise the compositing in the mixer will be incorrect.");
-	sink.para()->text(L"Solid color examples:");
-	sink.example(L">> PLAY 1-10 EMPTY", L"For a completely transparent frame.");
-	sink.example(L">> PLAY 1-10 #00000000", L"For an explicitly defined completely transparent frame.");
-	sink.example(L">> PLAY 1-10 #000000", L"For an explicitly defined completely opaque black frame.");
-	sink.example(L">> PLAY 1-10 RED", L"For a completely red frame.");
-	sink.example(L">> PLAY 1-10 #7F007F00",
-		L"For a completely green half transparent frame. "
-		L"Since the RGB part has been premultiplied with the A part this is 100% green.");
-	sink.para()->text(L"Horizontal gradient examples:");
-	sink.example(L">> PLAY 1-10 WHITE BLACK", L"For a gradient between white and black.");
-	sink.example(L">> PLAY 1-10 WHITE WHITE WHITE BLACK", L"For a gradient between white and black with the white part beings 3 times as long as the black part.");
-	sink.example(
-		L">> PLAY 1-10 RED EMPTY\n"
-		L">> MIXER 1-10 ANCHOR 0.5 0.5\n"
-		L">> MIXER 1-10 FILL 0.5 0.5 2 2\n"
-		L">> MIXER 1-10 ROTATION 45",
-		L"For a 45 degree gradient covering the screen.");
-}
-
 spl::shared_ptr<frame_producer> create_color_producer(const spl::shared_ptr<frame_factory>& frame_factory, uint32_t value)
 {
 	return spl::make_shared<color_producer>(frame_factory, value);

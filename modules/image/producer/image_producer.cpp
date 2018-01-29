@@ -33,8 +33,6 @@
 #include <core/frame/pixel_format.h>
 #include <core/frame/audio_channel_layout.h>
 #include <core/monitor/monitor.h>
-#include <core/help/help_sink.h>
-#include <core/help/help_repository.h>
 
 #include <common/env.h>
 #include <common/log.h>
@@ -180,24 +178,6 @@ public:
 		return boost::iequals(elem, test_);
 	}
 };
-
-void describe_producer(core::help_sink& sink, const core::help_repository& repo)
-{
-	sink.short_description(L"Loads a still image.");
-	sink.syntax(L"{[image_file:string]},{[PNG_BASE64] [encoded:string]} {LENGTH [length:int]}");
-	sink.para()->text(L"Loads a still image, either from disk or via a base64 encoded image submitted via AMCP.");
-	sink.para()->text(L"The ")->code(L"length")->text(L" parameter can be used to limit the number of frames that the image will be shown for.");
-	sink.para()->text(L"Examples:");
-	sink.example(L">> PLAY 1-10 image_file", L"Plays an image from the media folder.");
-	sink.example(L">> PLAY 1-10 [PNG_BASE64] data...", L"Plays a PNG image transferred as a base64 encoded string.");
-	sink.example(
-				L">> PLAY 1-10 slide_show1 LENGTH 100\n"
-				L">> LOADBG 1-10 slide_show2 LENGTH 100 MIX 20 AUTO\n"
-				L"delay until foreground layer becomes slide_show2 and then\n"
-				L">> LOADBG 1-10 slide_show3 LENGTH 100 MIX 20 AUTO\n"
-				L"delay until foreground layer becomes slide_show3 and then\n"
-				L">> LOADBG 1-10 EMPTY MIX 20 AUTO\n", L"Plays a slide show of 3 images for 100 frames each and fades to black.");
-}
 
 spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
 {

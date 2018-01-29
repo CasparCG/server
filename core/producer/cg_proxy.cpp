@@ -30,8 +30,6 @@
 #include "../diagnostics/call_context.h"
 #include "../module_dependencies.h"
 #include "../frame/draw_frame.h"
-#include "../help/help_sink.h"
-#include "../help/help_repository.h"
 
 #include <common/env.h>
 #include <common/os/filesystem.h>
@@ -440,21 +438,6 @@ private:
 	}
 };
 
-void describe_cg_proxy_as_producer(core::help_sink& sink, const core::help_repository& repo)
-{
-	sink.short_description(L"Wraps any CG producer for compatibility with scene producer.");
-	sink.syntax(L"[CG] [template:string] {[param1_type:\"string\",\"number\"] [param1_name:string] {[param2_type:\"string\",\"number\"] [param2_name:string] {...}}}");
-	sink.para()->text(L"Wraps any CG producer for compatibility with scene producer.");
-	sink.para()->text(L"It allows the user to specify what template parameters should be exposed to the parent scene. This is only required for Flash and HTML templates. PSD and Scene templates does this automatically.");
-	sink.para()->text(L"Examples only really usable from within the scene producer implementation:");
-	sink.example(L">> PLAY 1-10 [CG] folder/flas_template string f0 number f1");
-	sink.para()->text(L"...followed by the scene producer setting variables causing the equivalent of a ")->code(L"CG ADD")->text(L". Then the following calls can be made:");
-	sink.example(L">> CALL 1-10 play()");
-	sink.example(L">> CALL 1-10 next()");
-	sink.example(L">> CALL 1-10 invoke() label");
-	sink.example(L">> CALL 1-10 stop()");
-}
-
 spl::shared_ptr<frame_producer> create_cg_proxy_as_producer(const core::frame_producer_dependencies& dependencies, const std::vector<std::wstring>& params)
 {
 	if (!boost::iequals(params.at(0), L"[CG]") || params.size() < 2)
@@ -476,7 +459,6 @@ spl::shared_ptr<frame_producer> create_cg_proxy_as_producer(const core::frame_pr
 
 void init_cg_proxy_as_producer(core::module_dependencies dependencies)
 {
-	dependencies.producer_registry->register_producer_factory(L"CG proxy wrapper", create_cg_proxy_as_producer, describe_cg_proxy_as_producer);
 }
 
 }}

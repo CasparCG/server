@@ -250,9 +250,9 @@ void init(core::module_dependencies dependencies)
 	avcodec_register_all();
 	avdevice_register_all();
 
-	dependencies.consumer_registry->register_consumer_factory(L"FFmpeg Consumer", create_ffmpeg_consumer, describe_ffmpeg_consumer);
+	dependencies.consumer_registry->register_consumer_factory(L"FFmpeg Consumer", create_ffmpeg_consumer);
 	dependencies.consumer_registry->register_preconfigured_consumer_factory(L"ffmpeg", create_preconfigured_ffmpeg_consumer);
-	dependencies.producer_registry->register_producer_factory(L"FFmpeg Producer", boost::bind(&create_producer, _1, _2), describe_producer);
+	dependencies.producer_registry->register_producer_factory(L"FFmpeg Producer", boost::bind(&create_producer, _1, _2));
 
 	dependencies.system_info_provider_repo->register_system_info_provider([](boost::property_tree::wptree& info)
 	{
