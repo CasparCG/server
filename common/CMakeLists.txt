@@ -27,7 +27,6 @@ if (MSVC)
 			os/windows/prec_timer.cpp
 			os/windows/threading.cpp
 			os/windows/stack_trace.cpp
-			os/windows/system_info.cpp
 			os/windows/win32_exception.cpp
 			os/windows/win32_exception.h
 			os/windows/windows.h
@@ -39,7 +38,6 @@ else ()
 			os/linux/signal_handlers.cpp
 			os/linux/threading.cpp
 			os/linux/stack_trace.cpp
-			os/linux/system_info.cpp
 	)
 endif ()
 set(HEADERS
@@ -52,7 +50,6 @@ set(HEADERS
 		os/page_locked_allocator.h
 		os/threading.h
 		os/stack_trace.h
-		os/system_info.h
 
 		array.h
 		assert.h

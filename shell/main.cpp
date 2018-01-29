@@ -48,10 +48,7 @@
 #include <common/except.h>
 #include <common/log.h>
 #include <common/gl/gl_check.h>
-#include <common/os/system_info.h>
 #include <common/os/general_protection_fault.h>
-
-#include <core/system_info_provider.h>
 
 #include <boost/property_tree/detail/file_parser_error.hpp>
 #include <boost/property_tree/xml_parser.hpp>
@@ -97,16 +94,6 @@ void print_info()
 	CASPAR_LOG(info) << L"on " << os_description();
 	CASPAR_LOG(info) << cpu_info();
 	CASPAR_LOG(info) << system_product_name();
-}
-
-
-void print_system_info(const spl::shared_ptr<core::system_info_provider_repository>& repo)
-{
-	boost::property_tree::wptree info;
-	repo->fill_information(info);
-
-	for (auto& elem : info.get_child(L"system"))
-		log::print_child(boost::log::trivial::info, L"", elem.first, elem.second);
 }
 
 void do_run(
@@ -223,9 +210,6 @@ bool run(const std::wstring& config_file_name, tbb::atomic<bool>& should_wait_fo
 
 	// For example CEF resets the global locale, so this is to reset it back to "our" preference.
 	setup_global_locale();
-
-	// Print environment information.
-	print_system_info(caspar_server->get_system_info_provider_repo());
 
 	std::wstringstream str;
 	boost::property_tree::xml_writer_settings<std::wstring> w(' ', 3);
