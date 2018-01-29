@@ -226,7 +226,7 @@ private:
 			throw;
 		}
 
-		auto future = task->get_future().share();
+		auto future = task->get_future();
 		auto function = [task]
 		{
 			try
@@ -245,16 +245,16 @@ private:
 			execution_queue_.push(priority, function);
 		}
 
-		return std::async(std::launch::deferred, [=]() mutable -> result_type
+		return std::async(std::launch::deferred, [=, f = std::move(future)]() mutable -> result_type
 		{
-			if (!is_ready(future) && is_current()) // Avoids potential deadlock.
+			if (!is_ready(f) && is_current()) // Avoids potential deadlock.
 			{
 				function();
 			}
 
 			try
 			{
-				return future.get();
+				return f.get();
 			}
 			catch (const caspar_exception& e)
 			{
