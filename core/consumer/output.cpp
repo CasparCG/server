@@ -150,6 +150,8 @@ public:
             minmax.first = std::min<int>(minmax.first, port.second.buffer_depth());
             minmax.second = std::max<int>(minmax.second, port.second.buffer_depth());
         }
+
+		return minmax;
 	}
 
 	bool has_synchronization_clock() const
