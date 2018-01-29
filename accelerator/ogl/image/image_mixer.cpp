@@ -99,7 +99,7 @@ public:
 			return make_ready_future(array<const std::uint8_t>(buffer.data(), format_desc.size, true));
 		}
 
-		auto f = ogl_->dispatch_async([=]() mutable
+		return fold(ogl_->dispatch_async([=]() mutable -> std::shared_future<array<const std::uint8_t>>
 		{
             CASPAR_SCOPE_EXIT
             {
@@ -119,16 +119,12 @@ public:
 			kernel_.post_process(target_texture, straighten_alpha);
 
 			return ogl_->copy_async(target_texture);
-		});
-        return std::async(std::launch::deferred, [f = std::move(f)]() mutable
-        {
-            return f.get().get();
-        });
+		}));
 	}
 
 private:
 
-	void draw(std::shared_ptr<texture>&			target_texture,
+	void draw(spl::shared_ptr<texture>&			target_texture,
 			  std::vector<layer>				layers,
 			  const core::video_format_desc&	format_desc,
 			  core::field_mode					field_mode)
@@ -142,7 +138,7 @@ private:
 		}
 	}
 
-	void draw(std::shared_ptr<texture>&			target_texture,
+	void draw(spl::shared_ptr<texture>&			target_texture,
 			  layer								layer,
 			  std::shared_ptr<texture>&			layer_key_texture,
 			  const core::video_format_desc&	format_desc,
@@ -206,7 +202,7 @@ private:
 		layer_key_texture = std::move(local_key_texture);
 	}
 
-	void draw(std::shared_ptr<texture>& target_texture,
+	void draw(spl::shared_ptr<texture>& target_texture,
 			  item item,
 		      std::shared_ptr<texture>& layer_key_texture,
 			  std::shared_ptr<texture>& local_key_texture,
@@ -256,7 +252,7 @@ private:
 		}
 	}
 
-	void draw(std::shared_ptr<texture>&	 target_texture,
+	void draw(spl::shared_ptr<texture>&	 target_texture,
 			  std::shared_ptr<texture>&& source_buffer,
 			  core::blend_mode			 blend_mode = core::blend_mode::normal)
 	{
@@ -360,12 +356,12 @@ public:
 
 	int get_max_frame_size() override
 	{
-		return ogl_->dispatch_async([]
+		return ogl_->dispatch_sync([]
 		{
 			GLint64 params[1];
 			glGetInteger64v(GL_MAX_TEXTURE_SIZE, params);
 			return static_cast<int>(params[0]);
-		}).get();
+		});
 	}
 };
 
