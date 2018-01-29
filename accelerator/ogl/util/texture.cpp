@@ -92,21 +92,17 @@ public:
 
 	void copy_from(buffer& src)
 	{
-		// glPushClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
         src.bind();
         // TODO (fix) This fails on weird dimensions.
 		GL(glTextureSubImage2D(id_, 0, 0, 0, width_, height_, FORMAT[stride_], GL_UNSIGNED_BYTE, NULL));
         src.unbind();
-		// glPopClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
 	}
 
 	void copy_to(buffer& dst)
 	{
-		// glPushClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
         dst.bind();
         GL(glGetTextureImage(id_, 0, FORMAT[stride_], GL_UNSIGNED_BYTE, width_ * height_ * stride_, NULL));
         dst.unbind();
-		// glPopClientAttrib(GL_CLIENT_PIXEL_STORE_BIT);
 	}
 };
 
