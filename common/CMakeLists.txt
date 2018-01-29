@@ -11,7 +11,6 @@ set(SOURCES
 		except.cpp
 		filesystem.cpp
 		log.cpp
-		polling_filesystem_monitor.cpp
 		stdafx.cpp
 		thread_info.cpp
 		tweener.cpp
@@ -67,7 +66,6 @@ set(HEADERS
 		except.h
 		executor.h
 		filesystem.h
-		filesystem_monitor.h
 		forward.h
 		future.h
 		future_fwd.h
@@ -78,7 +76,6 @@ set(HEADERS
 		memshfl.h
 		no_init_proxy.h
 		param.h
-		polling_filesystem_monitor.h
 		prec_timer.h
 		ptree.h
 		scope_exit.h
@@ -152,10 +149,10 @@ if(MSVC)
 	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbb_debug.dll")
 
 	# Reenable when tbb gets official support for vc14
-	# casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc.dll")
-	# casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_debug.dll")
-	# casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_proxy.dll")
-	# casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_proxy_debug.dll")
+	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc.dll")
+	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_debug.dll")
+	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_proxy.dll")
+	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_proxy_debug.dll")
 else()
 
 endif()
