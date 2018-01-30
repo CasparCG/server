@@ -58,7 +58,6 @@
 #include <boost/range/adaptor/transformed.hpp>
 
 #include <boost/circular_buffer.hpp>
-#include <boost/timer.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/range/adaptor/transformed.hpp>
 
@@ -156,7 +155,7 @@ class bluefish_producer : boost::noncopyable
 	ULONG											schedule_capture_frame_id_ = 0;
 	ULONG											capturing_frame_id_ = std::numeric_limits<ULONG>::max();
 	ULONG											dma_ready_captured_frame_id_ = std::numeric_limits<ULONG>::max();
-	boost::timer									processing_benchmark_timer_;
+    caspar::timer									processing_benchmark_timer_;
 	struct hanc_decode_struct						hanc_decode_struct_;
     std::vector<uint32_t>                           decoded_audio_bytes_;
     unsigned int									memory_format_on_card_;
