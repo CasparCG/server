@@ -354,7 +354,7 @@ private:
 			{
 				auto frame1 = pop();
 
-				executor_.yield(caspar::task_priority::lowest_priority);
+                // TODO yield
 				timer.tick(1.0 / (format_desc_.fps * format_desc_.field_count));
 				invoke_requested_animation_frames();
 

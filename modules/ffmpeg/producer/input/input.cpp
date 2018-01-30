@@ -33,6 +33,7 @@
 #include <common/diagnostics/graph.h>
 #include <common/executor.h>
 #include <common/except.h>
+#include <common/future.h>
 #include <common/os/general_protection_fault.h>
 #include <common/param.h>
 #include <common/scope_exit.h>
@@ -141,7 +142,7 @@ struct input::impl : boost::noncopyable
 			tick();
 
 			return true;
-		}, task_priority::high_priority);
+		});
 	}
 
 	std::wstring print() const

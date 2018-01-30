@@ -170,7 +170,7 @@ public:
 				auto dst = std::get<1>(transform)(tween.dest());
 				tweens_[std::get<0>(transform)] = tweened_transform(src, dst, std::get<2>(transform), std::get<3>(transform));
 			}
-		}, task_priority::high_priority);
+		});
 	}
 
 	std::future<void> apply_transform(int index, const stage::transform_func_t& transform, unsigned int mix_duration, const tweener& tween)
@@ -180,7 +180,7 @@ public:
 			auto src = tweens_[index].fetch();
 			auto dst = transform(src);
 			tweens_[index] = tweened_transform(src, dst, mix_duration, tween);
-		}, task_priority::high_priority);
+		});
 	}
 
 	std::future<void> clear_transforms(int index)
@@ -188,7 +188,7 @@ public:
 		return executor_.begin_invoke([=]
 		{
 			tweens_.erase(index);
-		}, task_priority::high_priority);
+		});
 	}
 
 	std::future<void> clear_transforms()
@@ -196,7 +196,7 @@ public:
 		return executor_.begin_invoke([=]
 		{
 			tweens_.clear();
-		}, task_priority::high_priority);
+		});
 	}
 
 	std::future<frame_transform> get_current_transform(int index)
@@ -204,7 +204,7 @@ public:
 		return executor_.begin_invoke([=]
 		{
 			return tweens_[index].fetch();
-		}, task_priority::high_priority);
+		});
 	}
 
 	std::future<void> load(int index, const spl::shared_ptr<frame_producer>& producer, bool preview, const boost::optional<int32_t>& auto_play_delta)
@@ -212,7 +212,7 @@ public:
 		return executor_.begin_invoke([=]
 		{
 			get_layer(index).load(producer, preview, auto_play_delta);
-		}, task_priority::high_priority);
+		});
 	}
 
 	std::future<void> pause(int index)
@@ -220,7 +220,7 @@ public:
 		return executor_.begin_invoke([=]
 		{
 			get_layer(index).pause();
-		}, task_priority::high_priority);
+		});
 	}
 
 	std::future<void> resume(int index)
@@ -228,7 +228,7 @@ public:
 		return executor_.begin_invoke([=]
 		{
 			get_layer(index).resume();
-		}, task_priority::high_priority);
+		});
 	}
 
 	std::future<void> play(int index)
@@ -236,7 +236,7 @@ public:
 		return executor_.begin_invoke([=]
 		{
 			get_layer(index).play();
-		}, task_priority::high_priority);
+		});
 	}
 
 	std::future<void> stop(int index)
@@ -244,7 +244,7 @@ public:
 		return executor_.begin_invoke([=]
 		{
 			get_layer(index).stop();
-		}, task_priority::high_priority);
+		});
 	}
 
 	std::future<void> clear(int index)
@@ -252,7 +252,7 @@ public:
 		return executor_.begin_invoke([=]
 		{
 			layers_.erase(index);
-		}, task_priority::high_priority);
+		});
 	}
 
 	std::future<void> clear()
@@ -260,7 +260,7 @@ public:
 		return executor_.begin_invoke([=]
 		{
 			layers_.clear();
-		}, task_priority::high_priority);
+		});
 	}
 
 	std::future<void> swap_layers(stage& other, bool swap_transforms)
@@ -297,8 +297,8 @@ public:
 
 		return executor_.begin_invoke([=]
 		{
-			other_impl->executor_.invoke(func, task_priority::high_priority);
-		}, task_priority::high_priority);
+			other_impl->executor_.invoke(func);
+		});
 	}
 
 	std::future<void> swap_layer(int index, int other_index, bool swap_transforms)
@@ -309,7 +309,7 @@ public:
 
 			if (swap_transforms)
 				std::swap(tweens_[index], tweens_[other_index]);
-		}, task_priority::high_priority);
+		});
 	}
 
 	std::future<void> swap_layer(int index, int other_index, stage& other, bool swap_transforms)
@@ -343,8 +343,8 @@ public:
 
 			return executor_.begin_invoke([=]
 			{
-				other_impl->executor_.invoke(func, task_priority::high_priority);
-			}, task_priority::high_priority);
+				other_impl->executor_.invoke(func);
+			});
 		}
 	}
 
@@ -353,7 +353,7 @@ public:
 		executor_.begin_invoke([=]
 		{
 			layer_consumers_[layer].insert(std::make_pair(token, layer_consumer));
-		}, task_priority::high_priority);
+		});
 	}
 
 	void remove_layer_consumer(void* token, int layer)
@@ -366,7 +366,7 @@ public:
 			{
 				layer_consumers_.erase(layer);
 			}
-		}, task_priority::high_priority);
+		});
 	}
 
 	std::future<std::shared_ptr<frame_producer>> foreground(int index)
@@ -374,7 +374,7 @@ public:
 		return executor_.begin_invoke([=]() -> std::shared_ptr<frame_producer>
 		{
 			return get_layer(index).foreground();
-		}, task_priority::high_priority);
+		});
 	}
 
 	std::future<std::shared_ptr<frame_producer>> background(int index)
@@ -382,7 +382,7 @@ public:
 		return executor_.begin_invoke([=]() -> std::shared_ptr<frame_producer>
 		{
 			return get_layer(index).background();
-		}, task_priority::high_priority);
+		});
 	}
 
 	std::future<boost::property_tree::wptree> info()
@@ -394,7 +394,7 @@ public:
 				info.add_child(L"layers.layer", layer.second.info())
 					.add(L"index", layer.first);
 			return info;
-		}, task_priority::high_priority);
+		});
 	}
 
 	std::future<boost::property_tree::wptree> info(int index)
@@ -402,7 +402,7 @@ public:
 		return executor_.begin_invoke([=]
 		{
 			return get_layer(index).info();
-		}, task_priority::high_priority);
+		});
 	}
 
 	std::future<boost::property_tree::wptree> delay_info()
@@ -415,7 +415,7 @@ public:
 				info.add_child(L"layer", layer.second.delay_info()).add(L"index", layer.first);
 
 			return info;
-		}, task_priority::high_priority));
+		}));
 	}
 
 	std::future<boost::property_tree::wptree> delay_info(int index)
@@ -423,7 +423,7 @@ public:
 		return std::move(executor_.begin_invoke([=]() -> boost::property_tree::wptree
 		{
 			return get_layer(index).delay_info();
-		}, task_priority::high_priority));
+		}));
 	}
 
 	std::future<std::wstring> call(int index, const std::vector<std::wstring>& params)
@@ -431,7 +431,7 @@ public:
 		return flatten(executor_.begin_invoke([=]
 		{
 			return get_layer(index).foreground()->call(params).share();
-		}, task_priority::high_priority));
+		}));
 	}
 
 	void on_interaction(const interaction_event::ptr& event)
@@ -439,7 +439,7 @@ public:
 		executor_.begin_invoke([=]
 		{
 			aggregator_.offer(event);
-		}, task_priority::high_priority);
+		});
 	}
 
 	boost::optional<interaction_target> collission_detect(double x, double y)

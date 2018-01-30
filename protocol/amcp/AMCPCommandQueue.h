@@ -27,8 +27,6 @@
 #include <common/memory.h>
 #include <common/timer.h>
 
-#include <boost/property_tree/ptree_fwd.hpp>
-
 #include <mutex>
 
 namespace caspar { namespace protocol { namespace amcp {
@@ -44,8 +42,6 @@ public:
 	~AMCPCommandQueue();
 
 	void AddCommand(AMCPCommand::ptr_type pCommand);
-
-	boost::property_tree::wptree info() const;
 
 private:
 	executor				executor_;

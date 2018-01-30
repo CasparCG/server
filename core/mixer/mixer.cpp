@@ -125,7 +125,7 @@ public:
 		executor_.begin_invoke([=]
 		{
 			audio_mixer_.set_master_volume(volume);
-		}, task_priority::high_priority);
+		});
 	}
 
 	float get_master_volume()
@@ -133,7 +133,7 @@ public:
 		return executor_.invoke([=]
 		{
 			return audio_mixer_.get_master_volume();
-		}, task_priority::high_priority);
+		});
 	}
 
 	void set_straight_alpha_output(bool value)
@@ -141,7 +141,7 @@ public:
 		executor_.begin_invoke([=]
 		{
 			straighten_alpha_ = value;
-		}, task_priority::high_priority);
+		});
 	}
 
 	bool get_straight_alpha_output()
@@ -149,7 +149,7 @@ public:
 		return executor_.invoke([=]
 		{
 			return straighten_alpha_;
-		}, task_priority::high_priority);
+		});
 	}
 
 	std::future<boost::property_tree::wptree> info() const

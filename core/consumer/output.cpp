@@ -84,7 +84,7 @@ public:
 			port p(index, channel_index_, std::move(consumer));
 			p.monitor_output().attach_parent(monitor_subject_);
 			ports_.insert(std::make_pair(index, std::move(p)));
-		}, task_priority::high_priority);
+		});
 	}
 
 	void add(const spl::shared_ptr<frame_consumer>& consumer)
@@ -102,7 +102,7 @@ public:
 				ports_.erase(it);
 				send_to_consumers_delays_.erase(index);
 			}
-		}, task_priority::high_priority);
+		});
 	}
 
 	void remove(const spl::shared_ptr<frame_consumer>& consumer)
@@ -273,7 +273,7 @@ public:
 					.add(L"index", port.first);
 			}
 			return info;
-		}, task_priority::high_priority));
+		}));
 	}
 
 	std::future<boost::property_tree::wptree> delay_info()
@@ -298,7 +298,7 @@ public:
 				info.add_child(L"consumer", child);
 			}
 			return info;
-		}, task_priority::high_priority));
+		}));
 	}
 
 	std::vector<spl::shared_ptr<const frame_consumer>> get_consumers()

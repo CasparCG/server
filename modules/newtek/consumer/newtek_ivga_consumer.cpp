@@ -31,6 +31,7 @@
 #include <core/monitor/monitor.h>
 
 #include <common/assert.h>
+#include <common/future.h>
 #include <common/executor.h>
 #include <common/diagnostics/graph.h>
 #include <common/timer.h>
@@ -134,7 +135,7 @@ public:
 	{
 		CASPAR_VERIFY(format_desc_.height * format_desc_.width * 4 == frame.image_data().size());
 
-		if (executor_.size() > 0 || executor_.is_currently_in_task())
+		if (executor_.size() > 0)
 		{
 			graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
 
