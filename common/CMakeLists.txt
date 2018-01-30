@@ -54,7 +54,6 @@ set(HEADERS
 		array.h
 		assert.h
 		base64.h
-		cache_aligned_vector.h
 		endian.h
 		enum_class.h
 		env.h
