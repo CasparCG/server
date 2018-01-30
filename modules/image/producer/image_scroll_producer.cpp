@@ -113,7 +113,6 @@ struct image_scroll_producer : public core::frame_producer_base
 	core::video_format_desc						format_desc_;
 	int											width_;
 	int											height_;
-	core::constraints							constraints_;
 
 	double										delta_				= 0.0;
 	speed_tweener								speed_;
@@ -148,8 +147,6 @@ struct image_scroll_producer : public core::frame_producer_base
 
 		width_  = FreeImage_GetWidth(bitmap.get());
 		height_ = FreeImage_GetHeight(bitmap.get());
-		constraints_.width.set(width_);
-		constraints_.height.set(height_);
 
 		bool vertical = width_ == format_desc_.width;
 		bool horizontal = height_ == format_desc_.height;
@@ -441,11 +438,6 @@ struct image_scroll_producer : public core::frame_producer_base
 						 << core::monitor::message("/speed") % speed_.fetch();
 
 		return result;
-	}
-
-	core::constraints& pixel_constraints() override
-	{
-		return constraints_;
 	}
 
 	std::wstring print() const override

@@ -51,19 +51,11 @@ public:
 
 	draw_frame receive_impl() override;
 	std::future<std::wstring> call(const std::vector<std::wstring>& param) override;
-	variable& get_variable(const std::wstring& name) override;
-	const std::vector<std::wstring>& get_variables() const override;
 
-	constraints& pixel_constraints() override;
 	std::wstring print() const override;
 	std::wstring name() const override;
 	boost::property_tree::wptree info() const override;
 	monitor::subject& monitor_output();
-
-	binding<std::wstring>& text();
-	binding<double>& tracking();
-	const binding<double>& current_bearing_y() const;
-	const binding<double>& current_protrude_under_y() const;
 private:
 	struct impl;
 	spl::unique_ptr<impl> impl_;

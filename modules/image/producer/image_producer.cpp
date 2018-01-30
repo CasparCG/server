@@ -49,37 +49,13 @@
 
 namespace caspar { namespace image {
 
-std::pair<core::draw_frame, core::constraints> load_image(
-		const spl::shared_ptr<core::frame_factory>& frame_factory,
-		const std::wstring& filename)
-{
-	auto bitmap = load_image(filename);
-	FreeImage_FlipVertical(bitmap.get());
-
-	core::pixel_format_desc desc = core::pixel_format::bgra;
-	auto width = FreeImage_GetWidth(bitmap.get());
-	auto height = FreeImage_GetHeight(bitmap.get());
-	desc.planes.push_back(core::pixel_format_desc::plane(width, height, 4));
-	auto frame = frame_factory->create_frame(bitmap.get(), desc, core::audio_channel_layout::invalid());
-
-	std::copy_n(
-			FreeImage_GetBits(bitmap.get()),
-			frame.image_data(0).size(),
-			frame.image_data(0).begin());
-
-	return std::make_pair(
-			core::draw_frame(std::move(frame)),
-			core::constraints(width, height));
-}
-
 struct image_producer : public core::frame_producer_base
 {
 	core::monitor::subject						monitor_subject_;
 	const std::wstring							description_;
 	const spl::shared_ptr<core::frame_factory>	frame_factory_;
 	const uint32_t								length_;
-	core::draw_frame							frame_				= core::draw_frame::empty();
-	core::constraints							constraints_;
+	core::draw_frame							frame_ = core::draw_frame::empty();
 
 	image_producer(const spl::shared_ptr<core::frame_factory>& frame_factory, const std::wstring& description, uint32_t length)
 		: description_(description)
@@ -116,8 +92,6 @@ struct image_producer : public core::frame_producer_base
 
 		std::copy_n(FreeImage_GetBits(bitmap.get()), frame.image_data().size(), frame.image_data().begin());
 		frame_ = core::draw_frame(std::move(frame));
-		constraints_.width.set(FreeImage_GetWidth(bitmap.get()));
-		constraints_.height.set(FreeImage_GetHeight(bitmap.get()));
 	}
 
 	// frame_producer
@@ -132,11 +106,6 @@ struct image_producer : public core::frame_producer_base
 	uint32_t nb_frames() const override
 	{
 		return length_;
-	}
-
-	core::constraints& pixel_constraints() override
-	{
-		return constraints_;
 	}
 
 	std::wstring print() const override

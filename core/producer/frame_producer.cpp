@@ -29,7 +29,6 @@
 
 #include "color/color_producer.h"
 #include "separated/separated_producer.h"
-#include "variable.h"
 
 #include <common/assert.h>
 #include <common/except.h>
@@ -40,7 +39,7 @@
 namespace caspar { namespace core {
 struct frame_producer_registry::impl
 {
-	std::vector<producer_factory_t>		producer_factories;
+	std::vector<producer_factory_t> producer_factories;
 };
 
 frame_producer_registry::frame_producer_registry()
@@ -64,15 +63,6 @@ frame_producer_dependencies::frame_producer_dependencies(
 	, format_desc(format_desc)
 	, producer_registry(producer_registry)
 	, cg_registry(cg_registry)
-{
-}
-
-constraints::constraints(double width, double height)
-	: width(width), height(height)
-{
-}
-
-constraints::constraints()
 {
 }
 
@@ -150,18 +140,6 @@ uint32_t frame_producer_base::frame_number() const
 	return impl_->frame_number_;
 }
 
-variable& frame_producer_base::get_variable(const std::wstring& name)
-{
-	CASPAR_THROW_EXCEPTION(user_error()
-			<< msg_info(L"No variable called " + name + L" found in " + print()));
-}
-
-const std::vector<std::wstring>& frame_producer_base::get_variables() const
-{
-	static std::vector<std::wstring> empty;
-
-	return empty;
-}
 
 const spl::shared_ptr<frame_producer>& frame_producer::empty()
 {
@@ -177,10 +155,7 @@ const spl::shared_ptr<frame_producer>& frame_producer::empty()
 		std::wstring name() const override {return L"empty";}
 		uint32_t frame_number() const override {return 0;}
 		std::future<std::wstring> call(const std::vector<std::wstring>& params) override{CASPAR_THROW_EXCEPTION(not_implemented());}
-		variable& get_variable(const std::wstring& name) override { CASPAR_THROW_EXCEPTION(not_implemented()); }
-		const std::vector<std::wstring>& get_variables() const override { static std::vector<std::wstring> empty; return empty; }
 		draw_frame last_frame() {return draw_frame::empty();}
-		constraints& pixel_constraints() override { static constraints c; return c; }
 
 		boost::property_tree::wptree info() const override
 		{
@@ -269,22 +244,19 @@ public:
 		});
 	}
 
-	draw_frame											receive() override																										{return producer_->receive();}
+	draw_frame											receive() override																{return producer_->receive();}
 	std::wstring										print() const override															{return producer_->print();}
 	void												paused(bool value) override														{producer_->paused(value);}
 	std::wstring										name() const override															{return producer_->name();}
 	uint32_t											frame_number() const override													{return producer_->frame_number();}
 	boost::property_tree::wptree 						info() const override															{return producer_->info();}
 	std::future<std::wstring>							call(const std::vector<std::wstring>& params) override							{return producer_->call(params);}
-	variable&											get_variable(const std::wstring& name) override									{return producer_->get_variable(name);}
-	const std::vector<std::wstring>&					get_variables() const override													{return producer_->get_variables();}
 	void												leading_producer(const spl::shared_ptr<frame_producer>& producer) override		{return producer_->leading_producer(producer);}
 	uint32_t											nb_frames() const override														{return producer_->nb_frames();}
 	draw_frame											last_frame()																	{return producer_->last_frame();}
 	monitor::subject&									monitor_output() override														{return producer_->monitor_output();}
 	bool												collides(double x, double y) const override										{return producer_->collides(x, y);}
 	void												on_interaction(const interaction_event::ptr& event)	override					{return producer_->on_interaction(event);}
-	constraints&										pixel_constraints() override													{return producer_->pixel_constraints();}
 };
 
 spl::shared_ptr<core::frame_producer> create_destroy_proxy(spl::shared_ptr<core::frame_producer> producer)

@@ -27,7 +27,6 @@ set(SOURCES
 
 		producer/separated/separated_producer.cpp
 
-		producer/text/text_producer.cpp
 		producer/text/utils/freetype_library.cpp
 		producer/text/utils/texture_atlas.cpp
 		producer/text/utils/texture_font.cpp
@@ -86,8 +85,6 @@ set(HEADERS
 		producer/text/utils/text_info.h
 		producer/text/utils/texture_atlas.h
 		producer/text/utils/texture_font.h
-
-		producer/text/text_producer.h
 
 		producer/transition/transition_producer.h
 

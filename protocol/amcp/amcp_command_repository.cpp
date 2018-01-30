@@ -23,6 +23,8 @@
 
 #include "amcp_command_repository.h"
 
+#include <boost/lexical_cast.hpp>
+
 #include <map>
 
 namespace caspar { namespace protocol { namespace amcp {

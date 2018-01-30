@@ -117,11 +117,6 @@ public:
 		return frame_producer_base::last_frame();
 	}
 
-	constraints& pixel_constraints() override
-	{
-		return dest_producer_->pixel_constraints();
-	}
-
 	uint32_t nb_frames() const override
 	{
 		return dest_producer_->nb_frames();

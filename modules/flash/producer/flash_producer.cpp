@@ -51,6 +51,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include <tbb/spin_mutex.h>
 
@@ -342,7 +343,6 @@ struct flash_producer : public core::frame_producer_base
 	const core::video_format_desc					format_desc_;
 	const int										width_;
 	const int										height_;
-	core::constraints								constraints_		{ static_cast<double>(width_), static_cast<double>(height_) };
 	const int										buffer_size_		= env::properties().get(L"configuration.flash.buffer-depth", format_desc_.fps > 30.0 ? 4 : 2);
 
 	std::atomic<int>								fps_;
@@ -417,11 +417,6 @@ public:
 						<< core::monitor::message("/buffer")		% output_buffer_.size() % buffer_size_;
 
 		return frame;
-	}
-
-	core::constraints& pixel_constraints() override
-	{
-		return constraints_;
 	}
 
 	std::future<std::wstring> call(const std::vector<std::wstring>& params) override

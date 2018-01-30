@@ -38,7 +38,6 @@
 #include <core/frame/audio_channel_layout.h>
 #include <core/producer/stage.h>
 #include <core/producer/frame_producer.h>
-#include <core/producer/text/text_producer.h>
 #include <core/producer/color/color_producer.h>
 #include <core/consumer/output.h>
 #include <core/consumer/syncto/syncto_consumer.h>
@@ -147,7 +146,6 @@ struct server::impl : boost::noncopyable
 				consumer_registry_);
 
 		initialize_modules(dependencies);
-		core::text::init(dependencies);
 		core::init_cg_proxy_as_producer(dependencies);
 		core::syncto::init(dependencies);
 	}

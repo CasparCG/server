@@ -146,8 +146,6 @@ class bluefish_producer : boost::noncopyable
                                                                 ffmpeg::filter::is_deinterlacing(filter_)
                                                             };
 
-	core::constraints								constraints_{ in_format_desc_.width, in_format_desc_.height };
-
 	tbb::concurrent_bounded_queue<core::draw_frame>	frame_buffer_;
 	std::exception_ptr								exception_;
 
@@ -402,11 +400,6 @@ public:
         }
 	}
 
-	core::constraints& pixel_constraints()
-	{
-		return constraints_;
-	}
-
 	core::draw_frame get_frame()
 	{
 		if(exception_ != nullptr)
@@ -518,11 +511,6 @@ public:
 	core::draw_frame receive_impl() override
 	{
 		return producer_->get_frame();
-	}
-
-	core::constraints& pixel_constraints() override
-	{
-		return producer_->pixel_constraints();
 	}
 
 	uint32_t nb_frames() const override

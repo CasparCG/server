@@ -22,7 +22,6 @@
 #pragma once
 
 #include "../fwd.h"
-#include "binding.h"
 #include "../monitor/monitor.h"
 
 #include <common/memory.h>
@@ -40,17 +39,6 @@
 #include <boost/property_tree/ptree_fwd.hpp>
 
 namespace caspar { namespace core {
-
-class variable;
-
-struct constraints
-{
-	binding<double> width;
-	binding<double> height;
-
-	constraints(double width, double height);
-	constraints();
-};
 
 // Interface
 class frame_producer : public interaction_sink
@@ -72,8 +60,6 @@ public:
 
 	virtual draw_frame							receive() = 0;
 	virtual std::future<std::wstring>			call(const std::vector<std::wstring>& params) = 0;
-	virtual variable&							get_variable(const std::wstring& name) = 0;
-	virtual const std::vector<std::wstring>&	get_variables() const = 0;
 
 	// monitor::observable
 
@@ -93,7 +79,6 @@ public:
 	virtual uint32_t							nb_frames() const = 0;
 	virtual uint32_t							frame_number() const = 0;
 	virtual draw_frame							last_frame() = 0;
-	virtual constraints&						pixel_constraints() = 0;
 	virtual void								leading_producer(const spl::shared_ptr<frame_producer>&) {}
 };
 
@@ -106,8 +91,6 @@ public:
 	// Methods
 
 	virtual std::future<std::wstring>			call(const std::vector<std::wstring>& params) override;
-	virtual variable&							get_variable(const std::wstring& name) override;
-	virtual const std::vector<std::wstring>&	get_variables() const override;
 
 	// monitor::observable
 

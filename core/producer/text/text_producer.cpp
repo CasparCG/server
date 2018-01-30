@@ -25,7 +25,6 @@
 
 #include <core/producer/frame_producer.h>
 #include <core/producer/color/color_producer.h>
-#include <core/producer/variable.h>
 #include <core/frame/geometry.h>
 #include <core/frame/frame.h>
 #include <core/frame/draw_frame.h>
@@ -129,16 +128,15 @@ struct text_producer::impl
 	int										parent_width_;
 	int										parent_height_;
 	bool									standalone_;
-	constraints								constraints_				{ static_cast<double>(parent_width_), static_cast<double>(parent_height_) };
-	variable_impl<std::wstring>				text_;
+    std::wstring				            text_;
 	std::shared_ptr<void>					text_subscription_;
-	variable_impl<double>					tracking_;
-	variable_impl<double>					scale_x_;
-	variable_impl<double>					scale_y_;
-	variable_impl<double>					shear_;
+	double					               tracking_;
+	double					                scale_x_;
+	double					                scale_y_;
+	double					                shear_;
 	std::shared_ptr<void>					tracking_subscription_;
-	variable_impl<double>					current_bearing_y_;
-	variable_impl<double>					current_protrude_under_y_;
+	double					                current_bearing_y_;
+	double					                current_protrude_under_y_;
 	draw_frame								frame_;
 	text::texture_atlas						atlas_						{ 1024, 512, 4 };
 	text::texture_font						font_;
@@ -172,8 +170,6 @@ public:
 			generate_frame();
 		});
 
-		constraints_.height.depend_on(text());
-		constraints_.width.depend_on(text());
 		current_bearing_y_.as<double>().depend_on(text());
 		current_protrude_under_y_.as<double>().depend_on(text());
 
@@ -248,27 +244,22 @@ public:
 		return vars;
 	}
 
-	constraints& pixel_constraints()
-	{
-		return constraints_;
-	}
+	//std::wstring text()
+	//{
+	//	return text_.value();
+	//}
 
-	binding<std::wstring>& text()
-	{
-		return text_.value();
-	}
+	//double tracking()
+	//{
+	//	return tracking_.value();
+	//}
 
-	binding<double>& tracking()
-	{
-		return tracking_.value();
-	}
-
-	const binding<double>& current_bearing_y() const
+	double current_bearing_y() const
 	{
 		return current_bearing_y_.value();
 	}
 
-	const binding<double>& current_protrude_under_y() const
+	double current_protrude_under_y() const
 	{
 		return current_protrude_under_y_.value();
 	}
@@ -300,18 +291,14 @@ text_producer::text_producer(const spl::shared_ptr<frame_factory>& frame_factory
 
 draw_frame text_producer::receive_impl() { return impl_->receive_impl(); }
 std::future<std::wstring> text_producer::call(const std::vector<std::wstring>& param) { return impl_->call(param); }
-variable& text_producer::get_variable(const std::wstring& name) { return impl_->get_variable(name); }
-const std::vector<std::wstring>& text_producer::get_variables() const { return impl_->get_variables(); }
-
-constraints& text_producer::pixel_constraints() { return impl_->pixel_constraints(); }
 std::wstring text_producer::print() const { return impl_->print(); }
 std::wstring text_producer::name() const { return impl_->name(); }
 boost::property_tree::wptree text_producer::info() const { return impl_->info(); }
 monitor::subject& text_producer::monitor_output() { return impl_->monitor_subject_; }
-binding<std::wstring>& text_producer::text() { return impl_->text(); }
-binding<double>& text_producer::tracking() { return impl_->tracking(); }
-const binding<double>& text_producer::current_bearing_y() const { return impl_->current_bearing_y(); }
-const binding<double>& text_producer::current_protrude_under_y() const { return impl_->current_protrude_under_y(); }
+//std::wstring text_producer::text() { return impl_->text(); }
+//double text_producer::tracking() { return impl_->tracking(); }
+double text_producer::current_bearing_y() const { return impl_->current_bearing_y(); }
+double text_producer::current_protrude_under_y() const { return impl_->current_protrude_under_y(); }
 
 spl::shared_ptr<text_producer> text_producer::create(const spl::shared_ptr<frame_factory>& frame_factory, int x, int y, const std::wstring& str, text::text_info& text_info, long parent_width, long parent_height, bool standalone)
 {

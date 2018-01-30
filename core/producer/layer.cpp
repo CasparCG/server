@@ -29,6 +29,7 @@
 #include "../frame/draw_frame.h"
 #include "../frame/frame_transform.h"
 
+#include <boost/lexical_cast.hpp>
 #include <boost/optional.hpp>
 
 namespace caspar { namespace core {
