@@ -23,8 +23,6 @@
 
 #include "AMCPCommandQueue.h"
 
-#include <boost/property_tree/ptree.hpp>
-
 #include <cmath>
 
 namespace caspar { namespace protocol { namespace amcp {
@@ -155,43 +153,6 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 			CASPAR_LOG_CURRENT_EXCEPTION();
 		}
 	});
-}
-
-boost::property_tree::wptree AMCPCommandQueue::info() const
-{
-	boost::property_tree::wptree info;
-
-	auto name = executor_.name();
-	info.add(L"name", name);
-	auto size = executor_.size();
-	info.add(L"queued", std::max(0u, size));
-
-	bool running_command;
-	std::wstring running_command_name;
-	std::wstring running_command_params;
-	int64_t running_command_elapsed;
-
-	{
-        std::lock_guard<std::mutex> lock(running_command_mutex_);
-		running_command = running_command_;
-
-		if (running_command)
-		{
-			running_command_name = running_command_name_;
-			running_command_params = running_command_params_;
-			running_command_elapsed = static_cast<int64_t>(
-				running_command_since_.elapsed() * 1000.0);
-		}
-	}
-
-	if (running_command)
-	{
-		info.add(L"running.command", running_command_name);
-		info.add(L"running.params", running_command_params);
-		info.add(L"running.elapsed", running_command_elapsed);
-	}
-
-	return info;
 }
 
 }}}
