@@ -23,6 +23,8 @@
 
 #include "AMCPCommandQueue.h"
 
+#include <common/except.h>
+
 #include <cmath>
 
 namespace caspar { namespace protocol { namespace amcp {
@@ -104,22 +106,21 @@ void AMCPCommandQueue::AddCommand(AMCPCommand::ptr_type pCurrentCommand)
 				else
 					CASPAR_LOG(warning) << "Failed to execute command: " << print;
 			}
-			catch (const file_not_found& e)
+			catch (file_not_found&)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
-				CASPAR_LOG(error) << get_message_and_context(e) << " Turn on log level debug for stacktrace.";
+				CASPAR_LOG(error) << " Turn on log level debug for stacktrace.";
 				pCurrentCommand->SetReplyString(L"404 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
-			catch (const expected_user_error& e)
+			catch (expected_user_error&)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
-				CASPAR_LOG(info) << get_message_and_context(e) << " Check syntax. Turn on log level debug for stacktrace.";
 				pCurrentCommand->SetReplyString(L"403 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
-			catch (const user_error& e)
+			catch (user_error&)
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
-				CASPAR_LOG(error) << get_message_and_context(e) << " Check syntax. Turn on log level debug for stacktrace.";
+				CASPAR_LOG(error) << " Check syntax. Turn on log level debug for stacktrace.";
 				pCurrentCommand->SetReplyString(L"403 " + pCurrentCommand->print() + L" FAILED\r\n");
 			}
 			catch (std::out_of_range&)

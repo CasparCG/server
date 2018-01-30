@@ -25,13 +25,6 @@ set(SOURCES
 
 		producer/color/color_producer.cpp
 
-		producer/scene/const_producer.cpp
-		producer/scene/expression_parser.cpp
-		producer/scene/hotswap_producer.cpp
-		producer/scene/scene_cg_proxy.cpp
-		producer/scene/scene_producer.cpp
-		producer/scene/xml_scene_producer.cpp
-
 		producer/separated/separated_producer.cpp
 
 		producer/text/text_producer.cpp
@@ -87,13 +80,6 @@ set(HEADERS
 
 		producer/color/color_producer.h
 
-		producer/scene/const_producer.h
-		producer/scene/expression_parser.h
-		producer/scene/hotswap_producer.h
-		producer/scene/scene_cg_proxy.h
-		producer/scene/scene_producer.h
-		producer/scene/xml_scene_producer.h
-
 		producer/text/utils/color.h
 		producer/text/utils/freetype_library.h
 		producer/text/utils/string_metrics.h
@@ -141,7 +127,6 @@ source_group(sources\\mixer mixer/*)
 source_group(sources\\mixer\\audio mixer/audio/*)
 source_group(sources\\mixer\\image mixer/image/*)
 source_group(sources\\producer\\color producer/color/*)
-source_group(sources\\producer\\scene producer/scene/*)
 source_group(sources\\producer\\text\\utils producer/text/utils/*)
 source_group(sources\\producer\\text producer/text/*)
 source_group(sources\\producer\\transition producer/transition/*)

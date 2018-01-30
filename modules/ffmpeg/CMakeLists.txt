@@ -2,8 +2,6 @@ cmake_minimum_required (VERSION 2.6)
 project (ffmpeg)
 
 set(SOURCES
-		consumer/ffmpeg_consumer.cpp
-
 		producer/audio/audio_decoder.cpp
 
 		producer/filter/audio_filter.cpp
@@ -27,8 +25,6 @@ set(SOURCES
 		StdAfx.cpp
 )
 set(HEADERS
-		consumer/ffmpeg_consumer.h
-
 		producer/audio/audio_decoder.h
 
 		producer/filter/audio_filter.h

@@ -44,7 +44,7 @@ std::string to_base64(const char* data, size_t length)
 	using namespace boost::archive::iterators;
 
 	// From http://www.webbiscuit.co.uk/2012/04/02/base64-encoder-and-boost/
-		
+
 	typedef
 		insert_linebreaks<         // insert line breaks every 76 characters
 			base64_from_binary<    // convert binary values to base64 characters
