@@ -25,9 +25,9 @@ public:
 		consumer_->monitor_output().attach_parent(monitor_subject_);
 	}
 
-	void change_channel_format(const core::video_format_desc& format_desc, const audio_channel_layout& channel_layout)
+	void change_channel_format(const core::video_format_desc& format_desc)
 	{
-		consumer_->initialize(format_desc, channel_layout, channel_index_);
+		consumer_->initialize(format_desc, index_);
 	}
 
 	std::future<bool> send(const_frame frame)
@@ -77,7 +77,7 @@ port::~port(){}
 port& port::operator=(port&& other){impl_ = std::move(other.impl_); return *this;}
 std::future<bool> port::send(const_frame frame){return impl_->send(std::move(frame));}
 monitor::subject& port::monitor_output() {return *impl_->monitor_subject_;}
-void port::change_channel_format(const core::video_format_desc& format_desc, const audio_channel_layout& channel_layout){impl_->change_channel_format(format_desc, channel_layout);}
+void port::change_channel_format(const core::video_format_desc& format_desc){impl_->change_channel_format(format_desc);}
 int port::buffer_depth() const{return impl_->buffer_depth();}
 std::wstring port::print() const{ return impl_->print();}
 bool port::has_synchronization_clock() const{return impl_->has_synchronization_clock();}

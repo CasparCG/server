@@ -28,7 +28,6 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
-#include <core/frame/audio_channel_layout.h>
 #include <core/monitor/monitor.h>
 
 #include <common/except.h>
@@ -44,7 +43,7 @@ draw_frame create_color_frame(void* tag, const spl::shared_ptr<frame_factory>& f
 {
 	core::pixel_format_desc desc(pixel_format::bgra);
 	desc.planes.push_back(core::pixel_format_desc::plane(static_cast<int>(values.size()), 1, 4));
-	auto frame = frame_factory->create_frame(tag, desc, core::audio_channel_layout::invalid());
+	auto frame = frame_factory->create_frame(tag, desc);
 
 	for (int i = 0; i < values.size(); ++i)
 		*reinterpret_cast<uint32_t*>(frame.image_data(0).begin() + (i * 4)) = values.at(i);

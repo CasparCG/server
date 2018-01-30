@@ -34,7 +34,7 @@ public:
 
 	// Properties
 
-	void change_channel_format(const struct video_format_desc& format_desc, const struct audio_channel_layout& channel_layout);
+	void change_channel_format(const struct video_format_desc& format_desc);
 	std::wstring print() const;
 	int buffer_depth() const;
 	bool has_synchronization_clock() const;

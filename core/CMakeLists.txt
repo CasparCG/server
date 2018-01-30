@@ -55,7 +55,6 @@ set(HEADERS
 		diagnostics/osd_graph.h
 		diagnostics/subject_diagnostics.h
 
-		frame/audio_channel_layout.h
 		frame/draw_frame.h
 		frame/frame.h
 		frame/frame_factory.h

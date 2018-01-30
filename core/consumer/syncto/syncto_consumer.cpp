@@ -54,7 +54,7 @@ public:
 	{
 	}
 
-	void initialize(const video_format_desc& format_desc, const audio_channel_layout& channel_layout, int channel_index) override
+	void initialize(const video_format_desc& format_desc, int channel_index) override
 	{
 		verify_cyclic_reference(channel_index, other_channel_);
 

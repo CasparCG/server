@@ -50,7 +50,7 @@ public:
 	// Methods
 
 	std::future<array<const std::uint8_t>> operator()(const core::video_format_desc& format_desc, bool straighten_alpha) override;
-	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc, const core::audio_channel_layout& channel_layout) override;
+	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc) override;
 
 	// core::image_mixer
 

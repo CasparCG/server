@@ -51,7 +51,7 @@ public:
 
 	// Methods
 
-	audio_buffer operator()(const struct video_format_desc& format_desc, const struct audio_channel_layout& channel_layout);
+	audio_buffer operator()(const struct video_format_desc& format_desc);
 	void set_master_volume(float volume);
 	float get_master_volume();
 	monitor::subject& monitor_output();
