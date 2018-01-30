@@ -66,7 +66,6 @@ set(HEADERS
 		log.h
 		memory.h
 		memshfl.h
-		no_init_proxy.h
 		param.h
 		prec_timer.h
 		ptree.h
