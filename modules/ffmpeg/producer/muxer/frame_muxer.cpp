@@ -58,7 +58,6 @@ extern "C"
 #include <common/assert.h>
 #include <boost/range/algorithm_ext/push_back.hpp>
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/thread/mutex.hpp>
 #include <boost/optional.hpp>
 
 #include <deque>
@@ -149,7 +148,7 @@ struct frame_muxer::impl : boost::noncopyable
 	const bool										multithreaded_filter_;
 	bool											force_deinterlacing_;
 
-	mutable boost::mutex							out_framerate_mutex_;
+	mutable std::mutex							    out_framerate_mutex_;
 	boost::rational<int>							out_framerate_;
 
 	impl(
@@ -353,7 +352,7 @@ struct frame_muxer::impl : boost::noncopyable
 
 	boost::rational<int> out_framerate() const
 	{
-		boost::lock_guard<boost::mutex> lock(out_framerate_mutex_);
+		std::lock_guard<std::mutex> lock(out_framerate_mutex_);
 
 		return out_framerate_;
 	}
@@ -452,7 +451,7 @@ private:
 
 	void set_out_framerate(boost::rational<int> out_framerate)
 	{
-		boost::lock_guard<boost::mutex> lock(out_framerate_mutex_);
+		std::lock_guard<std::mutex> lock(out_framerate_mutex_);
 
 		bool changed = out_framerate != out_framerate_;
 		out_framerate_ = std::move(out_framerate);

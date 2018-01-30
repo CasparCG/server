@@ -51,13 +51,12 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/thread.hpp>
 #include <boost/algorithm/string.hpp>
 
-#include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
 #include <tbb/parallel_for.h>
 
+#include <atomic>
 #include <algorithm>
 #include <vector>
 
@@ -126,7 +125,7 @@ struct screen_consumer : boost::noncopyable
 	int													square_height_	= format_desc_.square_height;
 
 	sf::Window											window_;
-	tbb::atomic<bool>									polling_event_;
+	std::atomic<bool>									polling_event_;
 	std::int64_t										pts_;
 
 	spl::shared_ptr<diagnostics::graph>					graph_;
@@ -138,9 +137,9 @@ struct screen_consumer : boost::noncopyable
 	tbb::concurrent_bounded_queue<core::const_frame>	frame_buffer_;
 	core::interaction_sink*								sink_;
 
-	boost::thread										thread_;
-	tbb::atomic<bool>									is_running_;
-	tbb::atomic<int64_t>								current_presentation_age_;
+	std::thread										    thread_;
+	std::atomic<bool>									is_running_;
+	std::atomic<int64_t>								current_presentation_age_;
 
 	ffmpeg::filter										filter_;
 public:
@@ -219,7 +218,7 @@ public:
 		polling_event_ = false;
 		is_running_ = true;
 		current_presentation_age_ = 0;
-		thread_ = boost::thread([this]{run();});
+		thread_ = std::thread([this]{run();});
 	}
 
 	~screen_consumer()

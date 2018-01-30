@@ -1,12 +1,12 @@
 #pragma once
 
 #include "../monitor/monitor.h"
-#include "../fwd.h"
 
 #include <common/memory.h>
-#include <common/future_fwd.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
+
+#include <future>
 
 namespace caspar { namespace core {
 
@@ -20,7 +20,7 @@ public:
 
 	// Constructors
 
-	port(int index, int channel_index, spl::shared_ptr<frame_consumer> consumer);
+	port(int index, int channel_index, spl::shared_ptr<class frame_consumer> consumer);
 	port(port&& other);
 	~port();
 
@@ -28,13 +28,13 @@ public:
 
 	port& operator=(port&& other);
 
-	std::future<bool> send(const_frame frame);
+	std::future<bool> send(class const_frame frame);
 
 	monitor::subject& monitor_output();
 
 	// Properties
 
-	void change_channel_format(const video_format_desc& format_desc, const audio_channel_layout& channel_layout);
+	void change_channel_format(const struct video_format_desc& format_desc, const struct audio_channel_layout& channel_layout);
 	std::wstring print() const;
 	int buffer_depth() const;
 	bool has_synchronization_clock() const;

@@ -84,7 +84,7 @@ public:
 
 	void block_until_first_frame_available()
 	{
-		if (!frames_available_.try_acquire(1 + frames_delay_, boost::chrono::seconds(2)))
+		if (!frames_available_.try_acquire(1 + frames_delay_, std::chrono::seconds(2)))
 			CASPAR_LOG(warning)
 					<< print() << L" Timed out while waiting for first frame";
 	}
@@ -148,7 +148,7 @@ class layer_producer : public core::frame_producer_base
 	const std::weak_ptr<core::video_channel>	channel_;
 	core::constraints							pixel_constraints_;
 
-	tbb::atomic<bool>							double_framerate_;
+	std::atomic<bool>							double_framerate_;
 	std::queue<core::draw_frame>				frame_buffer_;
 
 public:

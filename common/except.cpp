@@ -23,38 +23,15 @@
 
 #include "except.h"
 
-#include <boost/thread/tss.hpp>
 #include <boost/algorithm/string/join.hpp>
 
-namespace {
-
-boost::thread_specific_ptr<std::list<std::string>>& context_stacks_per_thread()
-{
-	static boost::thread_specific_ptr<std::list<std::string>> instances;
-
-	return instances;
-}
-
-}
+thread_local std::list<std::string> instances;
 
 namespace caspar {
 
-std::list<std::string>& context_stack_for_thread()
-{
-	auto local = context_stacks_per_thread().get();
-
-	if (!local)
-	{
-		local = new std::list<std::string>();
-		context_stacks_per_thread().reset(local);
-	}
-
-	return *local;
-}
-
 std::string get_context()
 {
-	return boost::join(context_stack_for_thread(), "");
+	return boost::join(instances, "");
 }
 
 scoped_context::scoped_context()
@@ -63,7 +40,7 @@ scoped_context::scoped_context()
 }
 
 scoped_context::scoped_context(std::string msg)
-	: for_thread_(context_stack_for_thread())
+	: for_thread_(instances)
 {
 	for_thread_.push_back(std::move(msg));
 	msg_ = &for_thread_.back();
@@ -71,7 +48,7 @@ scoped_context::scoped_context(std::string msg)
 
 void scoped_context::replace_msg(std::string msg)
 {
-	if (&for_thread_ != &context_stack_for_thread())
+	if (&for_thread_ != &instances)
 		CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("Called from wrong thread"));
 
 	*msg_ = std::move(msg);
@@ -86,8 +63,6 @@ scoped_context::~scoped_context()
 {
 	for_thread_.pop_back();
 }
-
-
 
 std::string get_message_and_context(const caspar_exception& e)
 {

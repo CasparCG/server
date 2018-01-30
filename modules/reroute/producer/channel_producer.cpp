@@ -36,7 +36,6 @@
 #include <core/frame/frame_factory.h>
 #include <core/video_format.h>
 
-#include <boost/thread/once.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/algorithm/copy.hpp>
@@ -78,8 +77,8 @@ class channel_consumer : public core::frame_consumer
 	core::audio_channel_layout							channel_layout_			= core::audio_channel_layout::invalid();
 	int													channel_index_;
 	int													consumer_index_;
-	tbb::atomic<bool>									is_running_;
-	tbb::atomic<int64_t>								current_age_;
+	std::atomic<bool>									is_running_;
+	std::atomic<int64_t>								current_age_;
 	semaphore											frames_available_ { 0 };
 	int													frames_delay_;
 
@@ -95,10 +94,10 @@ public:
 
 	static int next_consumer_index()
 	{
-		static tbb::atomic<int> consumer_index_counter;
-		static boost::once_flag consumer_index_counter_initialized;
+		static std::atomic<int> consumer_index_counter;
+		static std::once_flag consumer_index_counter_initialized;
 
-		boost::call_once(consumer_index_counter_initialized, [&]()
+		std::call_once(consumer_index_counter_initialized, [&]()
 		{
 			consumer_index_counter = 0;
 		});
@@ -189,7 +188,7 @@ public:
 
 	void block_until_first_frame_available()
 	{
-		if (!frames_available_.try_acquire(1 + frames_delay_, boost::chrono::seconds(2)))
+		if (!frames_available_.try_acquire(1 + frames_delay_, std::chrono::seconds(2)))
 			CASPAR_LOG(warning)
 					<< print() << L" Timed out while waiting for first frame";
 	}

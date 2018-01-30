@@ -1,26 +1,19 @@
 #pragma once
 
-#undef BOOST_PARAMETER_MAX_ARITY
-#define BOOST_PARAMETER_MAX_ARITY 7
-
 #include "../fwd.h"
 
 #include <common/memory.h>
-#include <common/forward.h>
 #include <common/array.h>
-#include <common/future_fwd.h>
-#include <common/cache_aligned_vector.h>
 #include <common/timer.h>
 
+#include <future>
 #include <cstddef>
 #include <cstdint>
-
-FORWARD1(boost, template<typename> class shared_future);
 
 namespace caspar { namespace core {
 
 typedef caspar::array<const int32_t> audio_buffer;
-typedef cache_aligned_vector<int32_t> mutable_audio_buffer;
+typedef std::vector<int32_t> mutable_audio_buffer;
 class frame_geometry;
 
 class mutable_frame final

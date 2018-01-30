@@ -21,27 +21,23 @@
 
 #pragma once
 
-#include "../monitor/monitor.h"
 #include "../fwd.h"
 #include "binding.h"
+#include "../monitor/monitor.h"
 
-#include <common/forward.h>
-#include <common/future_fwd.h>
 #include <common/memory.h>
 
 #include <core/video_format.h>
 #include <core/interaction/interaction_sink.h>
 
 #include <cstdint>
-#include <limits>
+#include <future>
 #include <functional>
 #include <string>
 #include <type_traits>
 #include <vector>
 
 #include <boost/property_tree/ptree_fwd.hpp>
-
-FORWARD1(caspar, class executor);
 
 namespace caspar { namespace core {
 

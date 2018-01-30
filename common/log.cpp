@@ -56,9 +56,9 @@
 #include <boost/bind.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/thread/mutex.hpp>
 
-#include <tbb/atomic.h>
+#include <mutex>
+#include <atomic>
 
 namespace caspar { namespace log {
 
@@ -88,7 +88,7 @@ void append_timestamp(Stream& stream, boost::posix_time::ptime timestamp)
 
 class column_writer
 {
-	tbb::atomic<int> column_width_;
+	std::atomic<int> column_width_;
 public:
 	column_writer(int initial_width = 0)
 	{
@@ -246,9 +246,9 @@ std::shared_ptr<void> add_preformatted_line_sink(std::function<void(std::string 
 	});
 }
 
-boost::mutex& get_filter_mutex()
+std::mutex& get_filter_mutex()
 {
-	static boost::mutex instance;
+	static std::mutex instance;
 
 	return instance;
 }
@@ -281,7 +281,7 @@ void set_log_filter()
 
 void set_log_level(const std::wstring& lvl)
 {
-	boost::lock_guard<boost::mutex> lock(get_filter_mutex());
+	std::lock_guard<std::mutex> lock(get_filter_mutex());
 
 	if (boost::iequals(lvl, L"trace"))
 		get_level() = boost::log::trivial::trace;
@@ -310,7 +310,7 @@ void set_log_category(const std::wstring& cat, bool enabled)
 	else
 		return; // Ignore
 
-	boost::lock_guard<boost::mutex> lock(get_filter_mutex());
+	std::lock_guard<std::mutex> lock(get_filter_mutex());
 	auto& disabled_categories = get_disabled_categories();
 
 	if (enabled)

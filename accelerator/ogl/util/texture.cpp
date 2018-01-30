@@ -30,10 +30,6 @@
 
 #include <GL/glew.h>
 
-#include <tbb/atomic.h>
-
-#include <boost/thread/future.hpp>
-
 namespace caspar { namespace accelerator { namespace ogl {
 
 static GLenum FORMAT[]          = { 0, GL_RED, GL_RG, GL_BGR, GL_BGRA};

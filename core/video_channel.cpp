@@ -35,7 +35,6 @@
 
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
-#include <common/lock.h>
 #include <common/executor.h>
 #include <common/timer.h>
 #include <common/future.h>
@@ -43,11 +42,10 @@
 #include <core/mixer/image/image_mixer.h>
 #include <core/diagnostics/call_context.h>
 
-#include <tbb/spin_mutex.h>
-
 #include <boost/property_tree/ptree.hpp>
 #include <boost/lexical_cast.hpp>
 
+#include <mutex>
 #include <string>
 #include <unordered_map>
 
@@ -59,9 +57,9 @@ struct video_channel::impl final
 
 	const int											index_;
 
-	mutable tbb::spin_mutex								format_desc_mutex_;
+	mutable std::mutex   								format_desc_mutex_;
 	core::video_format_desc								format_desc_;
-	mutable tbb::spin_mutex								channel_layout_mutex_;
+    mutable std::mutex								    channel_layout_mutex_;
 	core::audio_channel_layout							channel_layout_;
 
 	const spl::shared_ptr<caspar::diagnostics::graph>	graph_					= [](int index)
@@ -77,7 +75,7 @@ struct video_channel::impl final
 	caspar::core::mixer									mixer_;
 	caspar::core::stage									stage_;
 
-	mutable tbb::spin_mutex								tick_listeners_mutex_;
+	mutable std::mutex    								tick_listeners_mutex_;
 	int64_t												last_tick_listener_id	= 0;
 	std::unordered_map<int64_t, std::function<void ()>>	tick_listeners_;
 
@@ -118,41 +116,35 @@ public:
 
 	core::video_format_desc video_format_desc() const
 	{
-		return lock(format_desc_mutex_, [&]
-		{
-			return format_desc_;
-		});
+        std::lock_guard<std::mutex> lock(format_desc_mutex_);
+		return format_desc_;
 	}
 
 	void video_format_desc(const core::video_format_desc& format_desc)
 	{
-		lock(format_desc_mutex_, [&]
-		{
-			format_desc_ = format_desc;
-			stage_.clear();
-		});
+        std::lock_guard<std::mutex> lock(format_desc_mutex_);
+		format_desc_ = format_desc;
+		stage_.clear();
 	}
 
 	core::audio_channel_layout audio_channel_layout() const
 	{
-		return lock(channel_layout_mutex_, [&]
-		{
-			return channel_layout_;
-		});
+        std::lock_guard<std::mutex> lock(channel_layout_mutex_);
+		return channel_layout_;
 	}
 
 	void audio_channel_layout(const core::audio_channel_layout& channel_layout)
 	{
-		lock(channel_layout_mutex_, [&]
-		{
-			channel_layout_ = channel_layout;
-			stage_.clear();
-		});
+        std::lock_guard<std::mutex> lock(channel_layout_mutex_);
+		channel_layout_ = channel_layout;
+		stage_.clear();
 	}
 
 	void invoke_tick_listeners()
 	{
-		auto listeners = lock(tick_listeners_mutex_, [=] { return tick_listeners_; });
+        std::lock_guard<std::mutex> lock(tick_listeners_mutex_);
+
+		auto listeners = tick_listeners_;;
 
 		for (auto listener : listeners)
 		{
@@ -251,18 +243,15 @@ public:
 
 	std::shared_ptr<void> add_tick_listener(std::function<void()> listener)
 	{
-		return lock(tick_listeners_mutex_, [&]
-		{
-			auto tick_listener_id = last_tick_listener_id++;
-			tick_listeners_.insert(std::make_pair(tick_listener_id, listener));
+        std::lock_guard<std::mutex> lock(tick_listeners_mutex_);
 
-			return std::shared_ptr<void>(nullptr, [=](void*)
-			{
-				lock(tick_listeners_mutex_, [&]
-				{
-					tick_listeners_.erase(tick_listener_id);
-				});
-			});
+		auto tick_listener_id = last_tick_listener_id++;
+		tick_listeners_.insert(std::make_pair(tick_listener_id, listener));
+
+		return std::shared_ptr<void>(nullptr, [=](void*)
+		{
+            std::lock_guard<std::mutex> lock(tick_listeners_mutex_);
+			tick_listeners_.erase(tick_listener_id);
 		});
 	}
 };

@@ -10,14 +10,14 @@
 
 #include <core/mixer/image/image_mixer.h>
 
-#include <tbb/mutex.h>
+#include <mutex>
 
 namespace caspar { namespace accelerator {
-	
+
 struct accelerator::impl
 {
 	const std::wstring				path_;
-	tbb::mutex						mutex_;
+	std::mutex						mutex_;
 	std::shared_ptr<ogl::device>	ogl_device_;
 
 	impl(const std::wstring& path)
@@ -31,7 +31,7 @@ struct accelerator::impl
 		{
 			if(path_ == L"gpu" || path_ == L"ogl" || path_ == L"auto" || path_ == L"default")
 			{
-				tbb::mutex::scoped_lock lock(mutex_);
+				std::lock_guard<std::mutex> lock(mutex_);
 
 				if(!ogl_device_)
 					ogl_device_.reset(new ogl::device());

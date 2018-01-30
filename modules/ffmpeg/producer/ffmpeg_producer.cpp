@@ -289,51 +289,6 @@ public:
 							<< core::monitor::message("/loop")				% input_.loop();
 	}
 
-	core::draw_frame render_specific_frame(uint32_t file_position)
-	{
-		// Some trial and error and undeterministic stuff here
-		static const int NUM_RETRIES = 32;
-
-		if (file_position > 0) // Assume frames are requested in sequential order,
-			                   // therefore no seeking should be necessary for the first frame.
-		{
-			input_.seek(file_position > 1 ? file_position - 2: file_position).get();
-			boost::this_thread::sleep_for(boost::chrono::milliseconds(40));
-		}
-
-		for (int i = 0; i < NUM_RETRIES; ++i)
-		{
-			boost::this_thread::sleep_for(boost::chrono::milliseconds(40));
-
-			auto frame = render_frame();
-
-			if (frame.second == std::numeric_limits<uint32_t>::max())
-			{
-				// Retry
-				continue;
-			}
-			else if (frame.second == file_position + 1 || frame.second == file_position)
-				return frame.first;
-			else if (frame.second > file_position + 1)
-			{
-				CASPAR_LOG(trace) << print() << L" " << frame.second << L" received, wanted " << file_position + 1;
-				int64_t adjusted_seek = file_position - (frame.second - file_position + 1);
-
-				if (adjusted_seek > 1 && file_position > 0)
-				{
-					CASPAR_LOG(trace) << print() << L" adjusting to " << adjusted_seek;
-					input_.seek(static_cast<uint32_t>(adjusted_seek) - 1).get();
-					boost::this_thread::sleep_for(boost::chrono::milliseconds(40));
-				}
-				else
-					return frame.first;
-			}
-		}
-
-		CASPAR_LOG(trace) << print() << " Giving up finding frame at " << file_position;
-		return core::draw_frame::empty();
-	}
-
 	uint32_t file_frame_number() const
 	{
 		return video_decoder_ ? video_decoder_->file_frame_number() : 0;

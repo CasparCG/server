@@ -26,13 +26,13 @@
 #include "../interaction/interaction_sink.h"
 
 #include <common/forward.h>
-#include <common/future_fwd.h>
 #include <common/memory.h>
 #include <common/tweener.h>
 
 #include <boost/optional.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
 
+#include <future>
 #include <functional>
 #include <map>
 #include <tuple>
@@ -43,7 +43,7 @@ FORWARD2(caspar, diagnostics, class graph);
 namespace caspar { namespace core {
 
 //typedef reactive::observable<std::map<int, class draw_frame>> frame_observable;
-	
+
 class stage final : public interaction_sink
 {
 	stage(const stage&);
@@ -51,14 +51,14 @@ class stage final : public interaction_sink
 public:
 
 	// Static Members
-	
+
 	typedef std::function<struct frame_transform(struct frame_transform)> transform_func_t;
 	typedef std::tuple<int, transform_func_t, unsigned int, tweener> transform_tuple_t;
 
 	// Constructors
 
 	explicit stage(int channel_index, spl::shared_ptr<caspar::diagnostics::graph> graph);
-	
+
 	// Methods
 
 	std::map<int, draw_frame>		operator()(const video_format_desc& format_desc);
@@ -83,7 +83,7 @@ public:
 	void							add_layer_consumer(void* token, int layer, const spl::shared_ptr<write_frame_consumer>& layer_consumer);
 	void							remove_layer_consumer(void* token, int layer);
 
-	monitor::subject& monitor_output();	
+	monitor::subject& monitor_output();
 
 	// frame_observable
 	//void subscribe(const frame_observable::observer_ptr& o) override;
