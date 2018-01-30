@@ -41,7 +41,6 @@
 #include <common/os/filesystem.h>
 
 #include <boost/filesystem.hpp>
-#include <boost/thread/future.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/rational.hpp>
 

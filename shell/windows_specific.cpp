@@ -34,6 +34,7 @@
 
 #include <sstream>
 #include <cstdlib>
+#include <thread>
 
 // NOTE: This is needed in order to make CComObject work since this is not a real ATL project.
 CComModule _AtlModule;
@@ -124,7 +125,7 @@ void increase_process_priority()
 
 void wait_for_keypress()
 {
-	boost::this_thread::sleep_for(boost::chrono::milliseconds(200));
+	std::this_thread::sleep_for(std::chrono::milliseconds(200));
 	std::system("pause");
 }
 
@@ -153,7 +154,7 @@ void wait_for_remote_debugging()
 {
 #ifdef _DEBUG
 	MessageBox(nullptr, L"Now is the time to connect for remote debugging...", L"Debug", MB_OK | MB_TOPMOST);
-#endif	 
+#endif
 }
 
 }

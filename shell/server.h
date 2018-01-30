@@ -22,16 +22,11 @@
 #pragma once
 
 #include <common/memory.h>
-#include <common/future_fwd.h>
+#include <protocol/amcp/amcp_command_repository.h>
 
-#include <core/monitor/monitor.h>
 #include <core/fwd.h>
 
 #include <boost/noncopyable.hpp>
-
-#include <vector>
-
-FORWARD3(caspar, protocol, amcp, class amcp_command_repository);
 
 namespace caspar {
 

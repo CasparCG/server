@@ -65,13 +65,13 @@
 #include <protocol/log/tcp_logger_protocol_strategy.h>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/thread.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/asio.hpp>
 
 #include <future>
+#include <thread>
 
 namespace caspar {
 
@@ -85,7 +85,7 @@ std::shared_ptr<boost::asio::io_service> create_running_io_service()
 	// operations are posted.
 	auto work = std::make_shared<boost::asio::io_service::work>(*service);
 	auto weak_work = std::weak_ptr<boost::asio::io_service::work>(work);
-	auto thread = std::make_shared<boost::thread>([service, weak_work]
+	auto thread = std::make_shared<std::thread>([service, weak_work]
 	{
 		ensure_gpf_handler_installed_for_thread("asio-thread");
 
@@ -111,7 +111,7 @@ std::shared_ptr<boost::asio::io_service> create_running_io_service()
 				CASPAR_LOG(info) << "[asio] Shutting down global io_service.";
 				work.reset();
 				service->stop();
-				if (thread->get_id() != boost::this_thread::get_id())
+				if (thread->get_id() != std::this_thread::get_id())
 					thread->join();
 				else
 					thread->detach();
@@ -185,7 +185,7 @@ struct server::impl : boost::noncopyable
 		channels_.clear();
 
 		while (weak_io_service.lock())
-			boost::this_thread::sleep_for(boost::chrono::milliseconds(100));
+			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
 		uninitialize_modules();
 		core::diagnostics::osd::shutdown();

@@ -29,10 +29,10 @@
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/algorithm/equal.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/thread/mutex.hpp>
 #include <boost/property_tree/ptree.hpp>
 
 #include <map>
+#include <mutex>
 
 namespace caspar { namespace core {
 
@@ -107,7 +107,7 @@ bool operator!=(const audio_channel_layout& lhs, const audio_channel_layout& rhs
 
 struct audio_channel_layout_repository::impl
 {
-	mutable boost::mutex							mutex_;
+	mutable std::mutex							    mutex_;
 	std::map<std::wstring, audio_channel_layout>	layouts_;
 };
 
@@ -119,7 +119,7 @@ audio_channel_layout_repository::audio_channel_layout_repository()
 void audio_channel_layout_repository::register_layout(std::wstring name, audio_channel_layout layout)
 {
 	auto& self = *impl_;
-	boost::lock_guard<boost::mutex> lock(self.mutex_);
+	std::lock_guard<std::mutex> lock(self.mutex_);
 
 	boost::to_upper(name);
 	self.layouts_.insert(std::make_pair(std::move(name), std::move(layout)));
@@ -128,7 +128,7 @@ void audio_channel_layout_repository::register_layout(std::wstring name, audio_c
 void audio_channel_layout_repository::register_all_layouts(const boost::property_tree::wptree& layouts)
 {
 	auto& self = *impl_;
-	boost::lock_guard<boost::mutex> lock(self.mutex_);
+	std::lock_guard<std::mutex> lock(self.mutex_);
 
 	for (auto& layout : layouts | welement_context_iteration)
 	{
@@ -149,7 +149,7 @@ void audio_channel_layout_repository::register_all_layouts(const boost::property
 boost::optional<audio_channel_layout> audio_channel_layout_repository::get_layout(const std::wstring& name) const
 {
 	auto& self = *impl_;
-	boost::lock_guard<boost::mutex> lock(self.mutex_);
+	std::lock_guard<std::mutex> lock(self.mutex_);
 
 	auto found = self.layouts_.find(boost::to_upper_copy(name));
 
@@ -168,7 +168,7 @@ spl::shared_ptr<audio_channel_layout_repository> audio_channel_layout_repository
 
 struct audio_mix_config_repository::impl
 {
-	mutable boost::mutex											mutex_;
+	mutable std::mutex											    mutex_;
 	std::map<std::wstring, std::map<std::wstring, std::wstring>>	from_to_configs_;
 };
 
@@ -183,8 +183,8 @@ void audio_mix_config_repository::register_config(
 		const std::wstring& mix_config)
 {
 	auto& self = *impl_;
-	boost::lock_guard<boost::mutex> lock(self.mutex_);
-	
+	std::lock_guard<std::mutex> lock(self.mutex_);
+
 	for (auto& to_type : to_types)
 		self.from_to_configs_[boost::to_upper_copy(from_type)][boost::to_upper_copy(to_type)] = mix_config;
 }
@@ -192,7 +192,7 @@ void audio_mix_config_repository::register_config(
 void audio_mix_config_repository::register_all_configs(const boost::property_tree::wptree& configs)
 {
 	auto& self = *impl_;
-	boost::lock_guard<boost::mutex> lock(self.mutex_);
+	std::lock_guard<std::mutex> lock(self.mutex_);
 
 	for (auto& config : configs | welement_context_iteration)
 	{
@@ -224,7 +224,7 @@ boost::optional<std::wstring> audio_mix_config_repository::get_config(
 		const std::wstring& to_type) const
 {
 	auto& self = *impl_;
-	boost::lock_guard<boost::mutex> lock(self.mutex_);
+	std::lock_guard<std::mutex> lock(self.mutex_);
 
 	auto from_found = self.from_to_configs_.find(boost::to_upper_copy(from_type));
 

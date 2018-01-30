@@ -44,7 +44,6 @@
 #include <tbb/concurrent_queue.h>
 
 #include <boost/range/algorithm_ext/erase.hpp>
-#include <boost/thread/future.hpp>
 
 #include <algorithm>
 #include <cstdint>

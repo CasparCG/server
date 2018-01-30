@@ -24,7 +24,6 @@
 #include "frame_transform.h"
 
 #include <boost/range/algorithm/equal.hpp>
-#include <boost/thread.hpp>
 
 namespace caspar { namespace core {
 

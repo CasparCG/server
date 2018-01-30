@@ -63,7 +63,7 @@ struct video_decoder::implementation : boost::noncopyable
 	const int								height_				= codec_context_->height;
 	bool									is_progressive_		= true;
 
-	tbb::atomic<uint32_t>					file_frame_number_;
+	std::atomic<uint32_t>					file_frame_number_;
 
 public:
 	explicit implementation(const spl::shared_ptr<AVFormatContext>& context)

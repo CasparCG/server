@@ -38,7 +38,6 @@
 #include <vector>
 
 #include <boost/lexical_cast.hpp>
-#include <boost/thread/future.hpp>
 
 namespace caspar { namespace core {
 
@@ -115,7 +114,7 @@ struct const_frame::impl : boost::noncopyable
 	core::frame_geometry												geometry_;
 	caspar::timer														since_created_timer_;
 	bool																should_record_age_;
-	mutable tbb::atomic<int64_t>										recorded_age_;
+	mutable std::atomic<int64_t>										recorded_age_;
 	std::shared_future<array<const std::uint8_t>>						key_only_on_demand_;
 
 	impl(const void* tag)
@@ -140,7 +139,7 @@ struct const_frame::impl : boost::noncopyable
 		, should_record_age_(other.should_record_age_)
 		, key_only_on_demand_(other.key_only_on_demand_)
 	{
-		recorded_age_ = other.recorded_age_;
+		recorded_age_ = other.recorded_age_.load();
 	}
 
 	impl(

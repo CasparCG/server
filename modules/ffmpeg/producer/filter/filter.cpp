@@ -31,7 +31,6 @@
 #include <common/except.h>
 
 #include <boost/algorithm/string.hpp>
-#include <boost/thread.hpp>
 #include <boost/format.hpp>
 #include <boost/rational.hpp>
 

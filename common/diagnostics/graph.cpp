@@ -23,10 +23,7 @@
 
 #include "graph.h"
 
-#include <boost/thread.hpp>
-
-#include <tbb/spin_mutex.h>
-
+#include <mutex>
 #include <vector>
 
 namespace caspar { namespace diagnostics {
@@ -51,12 +48,12 @@ std::tuple<float, float, float, float> color(int code)
 }
 
 typedef std::vector<spi::sink_factory_t> sink_factories_t;
-static boost::mutex g_sink_factories_mutex;
+static std::mutex g_sink_factories_mutex;
 static sink_factories_t g_sink_factories;
 
 std::vector<spl::shared_ptr<spi::graph_sink>> create_sinks()
 {
-	boost::lock_guard<boost::mutex> lock(g_sink_factories_mutex);
+	std::lock_guard<std::mutex> lock(g_sink_factories_mutex);
 
     std::vector<spl::shared_ptr<spi::graph_sink>> result;
     for (auto sink : g_sink_factories) {
@@ -133,7 +130,7 @@ namespace spi {
 
 void register_sink_factory(sink_factory_t factory)
 {
-	boost::lock_guard<boost::mutex> lock(g_sink_factories_mutex);
+	std::lock_guard<std::mutex> lock(g_sink_factories_mutex);
 
 	g_sink_factories.push_back(std::move(factory));
 }

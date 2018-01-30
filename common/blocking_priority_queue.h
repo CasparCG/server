@@ -26,8 +26,6 @@
 
 #include <tbb/concurrent_queue.h>
 
-#include <boost/thread/mutex.hpp>
-
 #include "semaphore.h"
 
 namespace caspar {
@@ -44,18 +42,18 @@ class blocking_priority_queue
 {
 public:
 	typedef unsigned int size_type;
-private:	
+private:
 	std::map<Prio, tbb::concurrent_queue<T>, std::greater<Prio>>	queues_by_priority_;
 	size_type														capacity_;
 	semaphore														space_available_	{ capacity_ };
 	semaphore														elements_available_	{ 0u };
-	mutable boost::mutex											capacity_mutex_;
+	mutable std::mutex											    capacity_mutex_;
 public:
 	/**
 	 * Constructor.
 	 *
 	 * @param capacity   The initial capacity of the queue.
-	 * @param priorities A forward iterable range with the priorities to 
+	 * @param priorities A forward iterable range with the priorities to
 	 *                   support.
 	 */
 	template<class PrioList>
@@ -67,8 +65,8 @@ public:
 			queues_by_priority_.insert(std::make_pair(priority, tbb::concurrent_queue<T>()));
 		}
 
-		// The std::map is read-only from now on, so there *should* (it is 
-		// unlikely but possible for a std::map implementor to choose to 
+		// The std::map is read-only from now on, so there *should* (it is
+		// unlikely but possible for a std::map implementor to choose to
 		// rebalance the tree during read operations) be no race conditions
 		// regarding the map.
 		//
@@ -189,7 +187,7 @@ public:
 	 */
 	void set_capacity(size_type capacity)
 	{
-		boost::unique_lock<boost::mutex> lock(capacity_mutex_);
+		std::unique_lock<std::mutex> lock(capacity_mutex_);
 
 		if (capacity_ < capacity)
 		{
@@ -211,7 +209,7 @@ public:
 	 */
 	size_type capacity() const
 	{
-		boost::unique_lock<boost::mutex> lock (capacity_mutex_);
+		std::unique_lock<std::mutex> lock (capacity_mutex_);
 
 		return capacity_;
 	}

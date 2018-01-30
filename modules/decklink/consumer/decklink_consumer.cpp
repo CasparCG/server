@@ -35,7 +35,6 @@
 #include <core/diagnostics/call_context.h>
 
 #include <common/executor.h>
-#include <common/lock.h>
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
 #include <common/memshfl.h>
@@ -54,8 +53,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/thread/mutex.hpp>
 
+#include <mutex>
 #include <future>
 
 namespace caspar { namespace decklink {
@@ -174,7 +173,7 @@ void set_keyer(
 
 class decklink_frame : public IDeckLinkVideoFrame
 {
-	tbb::atomic<int>								ref_count_;
+	std::atomic<int>								ref_count_;
 	core::const_frame								frame_;
 	const core::video_format_desc					format_desc_;
 
@@ -271,8 +270,8 @@ struct key_video_context : public IDeckLinkVideoOutputCallback, boost::noncopyab
 	com_iface_ptr<IDeckLinkKeyer>		keyer_						= iface_cast<IDeckLinkKeyer>(decklink_, true);
 	com_iface_ptr<IDeckLinkAttributes>	attributes_					= iface_cast<IDeckLinkAttributes>(decklink_);
 	com_iface_ptr<Configuration>		configuration_				= iface_cast<Configuration>(decklink_);
-	tbb::atomic<int64_t>				current_presentation_delay_;
-	tbb::atomic<int64_t>				scheduled_frames_completed_;
+	std::atomic<int64_t>				current_presentation_delay_;
+	std::atomic<int64_t>				scheduled_frames_completed_;
 
 	key_video_context(const configuration& config, const std::wstring& print)
 		: config_(config)
@@ -345,10 +344,10 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, boost::noncopyab
 	com_iface_ptr<IDeckLinkKeyer>						keyer_					= iface_cast<IDeckLinkKeyer>(decklink_, true);
 	com_iface_ptr<IDeckLinkAttributes>					attributes_				= iface_cast<IDeckLinkAttributes>(decklink_);
 
-	tbb::spin_mutex										exception_mutex_;
+	std::mutex   										exception_mutex_;
 	std::exception_ptr									exception_;
 
-	tbb::atomic<bool>									is_running_;
+	std::atomic<bool>									is_running_;
 
 	const std::wstring									model_name_				= get_model_name(decklink_);
 	const core::video_format_desc						format_desc_;
@@ -370,8 +369,8 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, boost::noncopyab
 	spl::shared_ptr<diagnostics::graph>					graph_;
 	caspar::timer										tick_timer_;
 	reference_signal_detector							reference_signal_detector_	{ output_ };
-	tbb::atomic<int64_t>								current_presentation_delay_;
-	tbb::atomic<int64_t>								scheduled_frames_completed_;
+	std::atomic<int64_t>								current_presentation_delay_;
+	std::atomic<int64_t>								scheduled_frames_completed_;
 	std::unique_ptr<key_video_context<Configuration>>	key_context_;
 
 public:
@@ -559,10 +558,8 @@ public:
 		}
 		catch(...)
 		{
-			lock(exception_mutex_, [&]
-			{
-				exception_ = std::current_exception();
-			});
+            std::lock_guard<std::mutex> lock(exception_mutex_);
+			exception_ = std::current_exception();
 			return E_FAIL;
 		}
 
@@ -600,13 +597,11 @@ public:
 
 	std::future<bool> send(core::const_frame frame)
 	{
-		auto exception = lock(exception_mutex_, [&]
-		{
-			return exception_;
-		});
-
-		if(exception != nullptr)
-			std::rethrow_exception(exception);
+        {
+            std::lock_guard<std::mutex> lock(exception_mutex_);
+            if (exception_ != nullptr)
+                std::rethrow_exception(exception_);
+        }
 
 		if(!is_running_)
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Is not running."));

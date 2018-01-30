@@ -31,12 +31,10 @@
 #include <common/gl/gl_check.h>
 #include <common/env.h>
 
-#include <tbb/mutex.h>
-
 namespace caspar { namespace accelerator { namespace ogl {
 
 std::weak_ptr<shader>	g_shader;
-tbb::mutex				g_shader_mutex;
+std::mutex				g_shader_mutex;
 bool					g_blend_modes		= false;
 bool					g_post_processing	= false;
 
@@ -357,7 +355,7 @@ std::shared_ptr<shader> get_image_shader(
 		bool& post_processing,
 		bool straight_alpha_wanted)
 {
-	tbb::mutex::scoped_lock lock(g_shader_mutex);
+	std::lock_guard<std::mutex> lock(g_shader_mutex);
 	auto existing_shader = g_shader.lock();
 
 	if(existing_shader)

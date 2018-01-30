@@ -40,7 +40,7 @@
 #include <boost/timer.hpp>
 #include <boost/property_tree/ptree.hpp>
 
-#include <tbb/atomic.h>
+#include <atomic>
 
 #include "../util/air_send.h"
 
@@ -53,7 +53,7 @@ struct newtek_ivga_consumer : public core::frame_consumer
 	core::video_format_desc				format_desc_;
 	core::audio_channel_layout			channel_layout_		= core::audio_channel_layout::invalid();
 	executor							executor_;
-	tbb::atomic<bool>					connected_;
+	std::atomic<bool>					connected_;
 	spl::shared_ptr<diagnostics::graph>	graph_;
 	timer								tick_timer_;
 	timer								frame_timer_;

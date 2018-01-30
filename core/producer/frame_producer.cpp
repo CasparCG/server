@@ -37,8 +37,6 @@
 #include <common/future.h>
 #include <common/memory.h>
 
-#include <boost/thread.hpp>
-
 namespace caspar { namespace core {
 struct frame_producer_registry::impl
 {
@@ -80,8 +78,8 @@ constraints::constraints()
 
 struct frame_producer_base::impl
 {
-	tbb::atomic<uint32_t>	frame_number_;
-	tbb::atomic<bool>		paused_;
+	std::atomic<uint32_t>	frame_number_;
+	std::atomic<bool>		paused_;
 	frame_producer_base&	self_;
 	draw_frame				last_frame_;
 
@@ -208,9 +206,9 @@ std::shared_ptr<executor>& producer_destroyer()
 	return destroyer;
 }
 
-tbb::atomic<bool>& destroy_producers_in_separate_thread()
+std::atomic<bool>& destroy_producers_in_separate_thread()
 {
-	static tbb::atomic<bool> state;
+	static std::atomic<bool> state;
 
 	return state;
 }

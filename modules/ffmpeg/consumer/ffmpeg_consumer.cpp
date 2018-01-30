@@ -37,11 +37,11 @@
 #include <boost/crc.hpp>
 #pragma warning(pop)
 
-#include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
 #include <tbb/parallel_invoke.h>
 #include <tbb/parallel_for.h>
 
+#include <atomic>
 #include <numeric>
 
 #pragma warning(push)
@@ -179,7 +179,7 @@ private:
 	core::audio_channel_layout					in_channel_layout_			= core::audio_channel_layout::invalid();
 
 	std::shared_ptr<AVFormatContext>			oc_;
-	tbb::atomic<bool>							abort_request_;
+	std::atomic<bool>							abort_request_;
 
 	std::shared_ptr<AVStream>					video_st_;
 	std::vector<std::shared_ptr<AVStream>>		audio_sts_;
@@ -199,7 +199,7 @@ private:
 
 	semaphore									tokens_						{ 0 };
 
-	tbb::atomic<int64_t>						current_encoding_delay_;
+	std::atomic<int64_t>						current_encoding_delay_;
 
 	executor									write_executor_;
 
@@ -659,7 +659,6 @@ private:
 					avfilter_graph_free(&p);
 				});
 
-		video_graph_->nb_threads  = boost::thread::hardware_concurrency()/2;
 		video_graph_->thread_type = AVFILTER_THREAD_SLICE;
 
 		const auto sample_aspect_ratio =
@@ -908,7 +907,7 @@ private:
 								avcodec_encode_video2,
 								nullptr, token))
 						{
-							boost::this_thread::yield(); // TODO:
+							std::this_thread::yield(); // TODO:
 						}
 					}
 				}
@@ -937,7 +936,7 @@ private:
 						filt_frame,
 						token);
 
-					boost::this_thread::yield(); // TODO:
+					std::this_thread::yield(); // TODO:
 				}
 			});
 		}
@@ -985,7 +984,7 @@ private:
 							filt_frame,
 							token);
 
-					boost::this_thread::yield(); // TODO:
+					std::this_thread::yield(); // TODO:
 				});
 			}
 		}
@@ -1008,7 +1007,7 @@ private:
 								nullptr,
 								token))
 						{
-							boost::this_thread::yield(); // TODO:
+							std::this_thread::yield(); // TODO:
 						}
 					}
 				}

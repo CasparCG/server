@@ -179,7 +179,7 @@ public:
 		caspar::timer timeout_timer;
 
 		while (frame_buffer_.size() < 1 && timeout_timer.elapsed() < 2.0)
-			boost::this_thread::sleep_for(boost::chrono::milliseconds(1));
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}

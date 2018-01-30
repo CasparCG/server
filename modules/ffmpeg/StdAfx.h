@@ -46,10 +46,6 @@
 #include <boost/range/algorithm_ext/push_back.hpp>
 #include <boost/range/iterator_range.hpp>
 #include <boost/regex.hpp>
-#include <boost/thread/condition_variable.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/once.hpp>
-#include <boost/thread/thread.hpp>
 #include <cstdint>
 #include <cstdio>
 #include <deque>
@@ -62,7 +58,6 @@
 #include <queue>
 #include <sstream>
 #include <string>
-#include <tbb/atomic.h>
 #include <tbb/cache_aligned_allocator.h>
 #include <tbb/concurrent_queue.h>
 #include <tbb/concurrent_unordered_map.h>
