@@ -38,6 +38,7 @@
 #include <core/frame/frame_transform.h>
 
 #include <boost/property_tree/ptree.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include <tbb/parallel_for_each.h>
 
