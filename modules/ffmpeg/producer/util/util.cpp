@@ -515,6 +515,15 @@ std::shared_ptr<AVFrame> empty_video()
 spl::shared_ptr<AVCodecContext> open_codec(AVFormatContext& context, enum AVMediaType type, int& index, bool single_threaded)
 {
 	AVCodec* decoder;
+	if (index == -1 && type == AVMEDIA_TYPE_VIDEO) {
+		int best_height = 0;
+		for (unsigned int i = 0; i < context.nb_streams; i++) {
+			if (context.streams[i]->codec->codec_type == type && context.streams[i]->codec->height > best_height) {
+				index = i;
+				best_height = context.streams[i]->codec->height;
+			}
+		}
+	}
 	index = THROW_ON_ERROR2(av_find_best_stream(&context, type, index, -1, &decoder, 0), "");
 	//if(strcmp(decoder->name, "prores") == 0 && decoder->next && strcmp(decoder->next->name, "prores_lgpl") == 0)
 	//	decoder = decoder->next;
