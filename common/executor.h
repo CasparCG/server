@@ -43,8 +43,8 @@ class executor final
 
     std::wstring        name_;
     std::atomic<bool>	is_running_ = true;
-    std::thread		    thread_;
     queue_t	            queue_;
+    std::thread		    thread_;
 
 public:
     executor(const std::wstring& name)
