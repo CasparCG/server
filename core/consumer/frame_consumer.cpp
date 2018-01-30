@@ -25,7 +25,6 @@
 
 #include <common/except.h>
 #include <common/future.h>
-#include <common/os/general_protection_fault.h>
 
 #include <core/video_format.h>
 #include <core/frame/frame.h>
@@ -102,8 +101,6 @@ public:
 
 			try
 			{
-				ensure_gpf_handler_installed_for_thread(u8(L"Destroyer: " + str).c_str());
-
 				if (!consumer->unique())
 					CASPAR_LOG(debug) << str << L" Not destroyed on asynchronous destruction thread: " << consumer->use_count();
 				else

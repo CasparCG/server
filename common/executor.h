@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include "os/general_protection_fault.h"
 #include "except.h"
 #include "log.h"
 
@@ -154,10 +153,8 @@ private:
         return task->get_future();
     }
 
-    void run() // noexcept
+    void run()
     {
-        ensure_gpf_handler_installed_for_thread(u8(name_).c_str());
-
         task_t task;
 
         while (true) {

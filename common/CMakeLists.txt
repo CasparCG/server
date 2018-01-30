@@ -12,7 +12,6 @@ set(SOURCES
 		filesystem.cpp
 		log.cpp
 		stdafx.cpp
-		thread_info.cpp
 		tweener.cpp
 		utf.cpp
 )
@@ -22,17 +21,12 @@ if (MSVC)
 
 			os/windows/filesystem.cpp
 			os/windows/prec_timer.cpp
-			os/windows/threading.cpp
-			os/windows/win32_exception.cpp
-			os/windows/win32_exception.h
 			os/windows/windows.h
 	)
 else ()
 	set(OS_SPECIFIC_SOURCES
 			os/linux/filesystem.cpp
 			os/linux/prec_timer.cpp
-			os/linux/signal_handlers.cpp
-			os/linux/threading.cpp
 	)
 endif ()
 set(HEADERS
@@ -41,8 +35,6 @@ set(HEADERS
 		gl/gl_check.h
 
 		os/filesystem.h
-		os/general_protection_fault.h
-		os/threading.h
 
 		array.h
 		assert.h
@@ -63,7 +55,6 @@ set(HEADERS
 		scope_exit.h
 		semaphore.h
 		stdafx.h
-		thread_info.h
 		timer.h
 		tweener.h
 		utf.h
@@ -127,8 +118,6 @@ if(MSVC)
 	casparcg_add_runtime_dependency("${GLEW_BIN_PATH}/glew32.dll")
 	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbb.dll")
 	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbb_debug.dll")
-
-	# Reenable when tbb gets official support for vc14
 	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc.dll")
 	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_debug.dll")
 	casparcg_add_runtime_dependency("${TBB_BIN_PATH}/tbbmalloc_proxy.dll")

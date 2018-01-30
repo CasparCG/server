@@ -36,7 +36,6 @@
 #include <common/param.h>
 #include <common/os/filesystem.h>
 #include <common/base64.h>
-#include <common/thread_info.h>
 #include <common/filesystem.h>
 
 #include <core/producer/cg_proxy.h>

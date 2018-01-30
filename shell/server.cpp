@@ -85,8 +85,6 @@ std::shared_ptr<boost::asio::io_service> create_running_io_service()
 	auto weak_work = std::weak_ptr<boost::asio::io_service::work>(work);
 	auto thread = std::make_shared<std::thread>([service, weak_work]
 	{
-		ensure_gpf_handler_installed_for_thread("asio-thread");
-
 		while (auto strong = weak_work.lock())
 		{
 			try
