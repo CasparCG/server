@@ -1,0 +1,53 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="M:\Server6\modules\ffmpeg\producer\av_producer.cpp">
+      <Filter>sources\producer</Filter>
+    </ClCompile>
+    <ClCompile Include="M:\Server6\modules\ffmpeg\producer\av_util.cpp">
+      <Filter>sources\producer</Filter>
+    </ClCompile>
+    <ClCompile Include="M:\Server6\modules\ffmpeg\ffmpeg.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="M:\Server6\modules\ffmpeg\StdAfx.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="producer\ffmpeg_producer.cpp">
+      <Filter>sources\producer</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="M:\Server6\modules\ffmpeg\producer\av_assert.h">
+      <Filter>sources\producer</Filter>
+    </ClInclude>
+    <ClInclude Include="M:\Server6\modules\ffmpeg\producer\av_producer.h">
+      <Filter>sources\producer</Filter>
+    </ClInclude>
+    <ClInclude Include="M:\Server6\modules\ffmpeg\producer\av_util.h">
+      <Filter>sources\producer</Filter>
+    </ClInclude>
+    <ClInclude Include="M:\Server6\modules\ffmpeg\ffmpeg.h">
+      <Filter>sources</Filter>
+    </ClInclude>
+    <ClInclude Include="M:\Server6\modules\ffmpeg\StdAfx.h">
+      <Filter>sources</Filter>
+    </ClInclude>
+    <ClInclude Include="producer\ffmpeg_producer.h">
+      <Filter>sources\producer</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="M:\Server6\modules\ffmpeg\CMakeLists.txt">
+      <Filter>sources</Filter>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="sources\producer">
+      <UniqueIdentifier>{4B081710-DCDC-33A0-BC2E-2B30334D692D}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="sources">
+      <UniqueIdentifier>{D1E03E4A-5C9C-3D50-B581-E27FAB49F43C}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

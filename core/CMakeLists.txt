@@ -13,7 +13,6 @@ set(SOURCES
 		diagnostics/osd_graph.cpp
 		diagnostics/subject_diagnostics.cpp
 
-		frame/audio_channel_layout.cpp
 		frame/draw_frame.cpp
 		frame/frame.cpp
 		frame/frame_transform.cpp
@@ -87,12 +86,10 @@ set(HEADERS
 
 		producer/transition/transition_producer.h
 
-		producer/binding.h
 		producer/cg_proxy.h
 		producer/frame_producer.h
 		producer/layer.h
 		producer/stage.h
-		producer/variable.h
 
 		fwd.h
 		module_dependencies.h
