@@ -2,10 +2,6 @@
 
 #include <type_traits>
 
-#include <boost/range/irange.hpp>
-
-// Macro that defines & and &= for an enum class. Add more when needed.
-
 #define ENUM_ENABLE_BITWISE(enum_class) \
 	static enum_class operator&(enum_class lhs, enum_class rhs) \
 	{ \
@@ -48,7 +44,6 @@
 
 namespace caspar {
 
-// For enum classes starting at 0 and without any gaps with a terminating count constant.
 template <typename E>
 const std::vector<E>& enum_constants()
 {
@@ -57,8 +52,8 @@ const std::vector<E>& enum_constants()
     static auto res = []
     {
         std::vector<E> result;
-        for (auto i : boost::irange(static_cast<integer>(0), static_cast<integer>(E::count))) {
-            result.push_back(static_cast<E>(i));
+        for (auto n = 0; n < static_cast<int>(E::count); ++n) {
+            result.push_back(static_cast<E>(n));
         }
         return result;
     }();
