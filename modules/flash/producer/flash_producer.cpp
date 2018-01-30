@@ -50,7 +50,6 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/timer.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include <tbb/spin_mutex.h>
@@ -285,7 +284,7 @@ public:
 
 		graph_->set_value("tick-time", static_cast<float>(tick_timer_.elapsed() / frame_time) * 0.5f);
 		tick_timer_.restart();
-		boost::timer frame_timer;
+        caspar::timer frame_timer;
 		ax_->Tick();
 
 		if (ax_->InvalidRect())

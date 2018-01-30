@@ -77,9 +77,9 @@ class html_client
 {
 	std::wstring							url_;
 	spl::shared_ptr<diagnostics::graph>		graph_;
-	boost::timer							tick_timer_;
-	boost::timer							frame_timer_;
-	boost::timer							paint_timer_;
+    caspar::timer							tick_timer_;
+    caspar::timer							frame_timer_;
+    caspar::timer							paint_timer_;
 
 	spl::shared_ptr<core::frame_factory>	frame_factory_;
 	core::video_format_desc					format_desc_;
