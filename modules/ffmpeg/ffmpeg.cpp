@@ -27,7 +27,6 @@
 #include "producer/util/util.h"
 
 #include <common/log.h>
-#include <common/os/general_protection_fault.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/frame/draw_frame.h>
@@ -221,8 +220,6 @@ std::shared_ptr<void> temporary_enable_quiet_logging_for_thread(bool enable)
 
 void log_for_thread(void* ptr, int level, const char* fmt, va_list vl)
 {
-	ensure_gpf_handler_installed_for_thread("ffmpeg-thread");
-
 	int min_level = is_logging_quiet_for_thread() ? AV_LOG_DEBUG : AV_LOG_FATAL;
 
 	log_callback(ptr, std::max(level, min_level), fmt, vl);

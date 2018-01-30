@@ -34,7 +34,6 @@
 #include <common/executor.h>
 #include <common/except.h>
 #include <common/future.h>
-#include <common/os/general_protection_fault.h>
 #include <common/param.h>
 #include <common/scope_exit.h>
 

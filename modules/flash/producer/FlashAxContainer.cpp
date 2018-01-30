@@ -25,7 +25,6 @@
 #include "../interop/TimerHelper.h"
 
 #include <common/log.h>
-#include <common/os/general_protection_fault.h>
 
 #if defined(_MSC_VER)
 #pragma warning (push, 2) // TODO
@@ -44,7 +43,7 @@ FlashAxContainer::FlashAxContainer() : bInPlaceActive_(FALSE), pTimerHelper(0), 
 {
 }
 FlashAxContainer::~FlashAxContainer()
-{	
+{
 	if(m_lpDD4)
 	{
 		m_lpDD4->Release();
@@ -324,7 +323,7 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::ReleaseDC(HDC hDC)
 HRESULT STDMETHODCALLTYPE FlashAxContainer::InvalidateRect(LPCRECT pRect, BOOL fErase)
 {
 //	ATLTRACE(_T("IOleInPlaceSiteWindowless::InvalidateRect\n"));
-	
+
 	bInvalidRect_ = true;
 
 /*	//Keep a list of dirty rectangles in order to be able to redraw only them
@@ -452,9 +451,8 @@ DEFINE_GUID2(IID_IDirectDraw7,0x15e65ec0,0x3b9c,0x11d2,0xb9,0x2f,0x00,0x60,0x97,
 /////////
 // IServiceProvider
 /////////
-HRESULT STDMETHODCALLTYPE FlashAxContainer::QueryService( REFGUID rsid, REFIID riid, void** ppvObj) 
+HRESULT STDMETHODCALLTYPE FlashAxContainer::QueryService( REFGUID rsid, REFIID riid, void** ppvObj)
 {
-	ensure_gpf_handler_installed_for_thread("flash-player-thread");
 //	ATLTRACE(_T("IServiceProvider::QueryService\n"));
 	//the flashcontrol asks for an interface {618F8AD4-8B7A-11D0-8FCC-00C04FD9189D}, this is IID for a DirectDraw3 object
 
@@ -462,17 +460,17 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::QueryService( REFGUID rsid, REFIID r
 	if (ppvObj == NULL)
 		return E_POINTER;
 	*ppvObj = NULL;
-	
+
 	HRESULT hr;
 	// Author: Makarov Igor
-	// Transparent Flash Control in Plain C++ 
-	// http://www.codeproject.com/KB/COM/flashcontrol.aspx 
+	// Transparent Flash Control in Plain C++
+	// http://www.codeproject.com/KB/COM/flashcontrol.aspx
 	if (IsEqualGUID(rsid, IID_IDirectDraw3))
 	{
 		if (!m_lpDD4)
 		{
 			m_lpDD4 = new IDirectDraw4Ptr;
-			hr = m_lpDD4->CreateInstance(CLSID_DirectDraw, NULL, CLSCTX_INPROC_SERVER); 
+			hr = m_lpDD4->CreateInstance(CLSID_DirectDraw, NULL, CLSCTX_INPROC_SERVER);
 			if (FAILED(hr))
 			{
 				delete m_lpDD4;
@@ -583,7 +581,7 @@ HRESULT STDMETHODCALLTYPE FlashAxContainer::GetTime(/* [out] */ VARIANT *pvtime)
 double FlashAxContainer::GetFPS() {
 	if(pTimerHelper != 0 && pTimerHelper->interval > 0)
 		return (1000.0 / static_cast<double>(pTimerHelper->interval));
-	
+
 	return 0.0;
 }
 
@@ -603,7 +601,6 @@ void FlashAxContainer::EnterFullscreen()
 
 void STDMETHODCALLTYPE FlashAxContainer::OnFlashCall(BSTR request)
 {
-	ensure_gpf_handler_installed_for_thread("flash-player-thread");
 	std::wstring str(request);
 	if(str.find(L"DisplayedTemplate") != std::wstring::npos)
 	{
@@ -728,7 +725,7 @@ bool FlashAxContainer::CheckForFlashSupport()
 HRESULT FlashAxContainer::CreateAxControl()
 {
 	CLSID clsid;
-	HRESULT hr = CLSIDFromString((LPOLESTR)flashGUID_, &clsid); 
+	HRESULT hr = CLSIDFromString((LPOLESTR)flashGUID_, &clsid);
 	if(SUCCEEDED(hr))
 		hr = CoCreateInstance(clsid, NULL, CLSCTX_INPROC_SERVER, __uuidof(IUnknown), (void**)&m_spUnknown);
 
@@ -866,7 +863,7 @@ bool FlashAxContainer::DrawControl(HDC targetDC)
 {
 //	ATLTRACE(_T("FlashAxContainer::DrawControl\n"));
 	DVASPECTINFO aspectInfo = {sizeof(DVASPECTINFO), DVASPECTINFOFLAG_CANOPTIMIZE};
-	HRESULT hr = m_spViewObject->Draw(DVASPECT_CONTENT, -1, &aspectInfo, NULL, NULL, targetDC, NULL, NULL, NULL, NULL); 
+	HRESULT hr = m_spViewObject->Draw(DVASPECT_CONTENT, -1, &aspectInfo, NULL, NULL, targetDC, NULL, NULL, NULL, NULL);
 	bInvalidRect_ = false;
 /*	const video_format_desc& fmtDesc = video_format_desc::FormatDescriptions[format_];
 
@@ -877,12 +874,12 @@ bool FlashAxContainer::DrawControl(HDC targetDC)
 		flash::DirtyRect& dirtyRect = (*it);
 		if(dirtyRect.bWhole || dirtyRect.rect.right >= fmtDesc.width || dirtyRect.rect.bottom >= fmtDesc.height) {
 			m_spInPlaceObjectWindowless->SetObjectRects(&m_rcPos, &m_rcPos);
-			hr = m_spViewObject->Draw(DVASPECT_OPAQUE, -1, NULL, NULL, NULL, targetDC, NULL, NULL, NULL, NULL); 
+			hr = m_spViewObject->Draw(DVASPECT_OPAQUE, -1, NULL, NULL, NULL, targetDC, NULL, NULL, NULL, NULL);
 			break;
 		}
 		else {
 			m_spInPlaceObjectWindowless->SetObjectRects(&m_rcPos, &(dirtyRect.rect));
-			hr = m_spViewObject->Draw(DVASPECT_OPAQUE, -1, NULL, NULL, NULL, targetDC, NULL, NULL, NULL, NULL); 
+			hr = m_spViewObject->Draw(DVASPECT_OPAQUE, -1, NULL, NULL, NULL, targetDC, NULL, NULL, NULL, NULL);
 		}
 	}
 	bDirtyRects_.clear();
@@ -911,7 +908,7 @@ bool FlashAxContainer::FlashCall(const std::wstring& str, std::wstring& result2)
 	CComPtr<IShockwaveFlash> spFlash;
 	QueryControl(&spFlash);
 	CComBSTR request(str.c_str());
-	
+
 	bIsEmpty_ = false;
 	bCallSuccessful_ = false;
 	for(size_t retries = 0; !bCallSuccessful_ && retries < 4; ++retries)

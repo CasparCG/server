@@ -475,8 +475,6 @@ public:
 
 	void dma_present_thread_actual()
 	{
-		ensure_gpf_handler_installed_for_thread("bluefish consumer DMA thread");
-
 		bvc_wrapper wait_b;
 		wait_b.attach(device_index_);
 		EBlueVideoChannel out_vid_channel = get_bluesdk_videochannel_from_streamid(device_output_channel_);

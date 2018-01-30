@@ -30,7 +30,6 @@
 #include <common/executor.h>
 #include <common/env.h>
 #include <common/prec_timer.h>
-#include <common/os/threading.h>
 #include <common/timer.h>
 
 #include <SFML/Graphics.hpp>
@@ -133,10 +132,6 @@ public:
 private:
 	context()
 	{
-		executor_.begin_invoke([=]
-		{
-			set_priority_of_current_thread(thread_priority::LOW);
-		});
 	}
 
 	void do_show(bool value)
