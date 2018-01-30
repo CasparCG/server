@@ -324,26 +324,18 @@ boost::optional<core::chroma::legacy_type> get_chroma_mode(const std::wstring& s
 		return boost::none;
 }
 
+thread_local double aspect_ratio = 1.0;
+
 namespace detail {
-
-boost::thread_specific_ptr<double>& get_thread_local_aspect_ratio()
+void set_current_aspect_ratio(double value)
 {
-	static boost::thread_specific_ptr<double> aspect_ratio;
-
-	if (!aspect_ratio.get())
-		aspect_ratio.reset(new double(1.0));
-
-	return aspect_ratio;
-}
-
-void set_current_aspect_ratio(double aspect_ratio)
-{
-	*get_thread_local_aspect_ratio() = aspect_ratio;
+    aspect_ratio = value;
 }
 
 double get_current_aspect_ratio()
 {
-	return *get_thread_local_aspect_ratio();
+    return aspect_ratio;
+}
 }
 
-}}}
+}}
