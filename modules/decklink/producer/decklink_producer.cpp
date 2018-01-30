@@ -120,8 +120,6 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 																			ffmpeg::filter::is_deinterlacing(filter_)
 																		};
 
-	core::constraints								constraints_		{ static_cast<double>(in_format_desc_.width), static_cast<double>(in_format_desc_.height) };
-
 	tbb::concurrent_bounded_queue<core::draw_frame>	frame_buffer_;
 	core::draw_frame								last_frame_			= core::draw_frame::empty();
 
@@ -191,11 +189,6 @@ public:
 			input_->StopStreams();
 			input_->DisableVideoInput();
 		}
-	}
-
-	core::constraints& pixel_constraints()
-	{
-		return constraints_;
 	}
 
 	virtual HRESULT STDMETHODCALLTYPE	QueryInterface (REFIID, LPVOID*)	{return E_NOINTERFACE;}
@@ -389,11 +382,6 @@ public:
 	core::draw_frame receive_impl() override
 	{
 		return producer_->get_frame();
-	}
-
-	core::constraints& pixel_constraints() override
-	{
-		return producer_->pixel_constraints();
 	}
 
 	uint32_t nb_frames() const override

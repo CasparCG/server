@@ -24,6 +24,7 @@
 #include "AMCPCommandQueue.h"
 
 #include <common/except.h>
+#include <boost/lexical_cast.hpp>
 
 #include <cmath>
 

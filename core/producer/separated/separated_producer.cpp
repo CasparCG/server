@@ -31,10 +31,10 @@
 
 #include <future>
 
-namespace caspar { namespace core {	
+namespace caspar { namespace core {
 
 class separated_producer : public frame_producer_base
-{		
+{
 	spl::shared_ptr<monitor::subject>	monitor_subject_;
 	spl::shared_ptr<monitor::subject>	key_monitor_subject_	= spl::make_shared<monitor::subject>("/keyer");
 
@@ -42,9 +42,9 @@ class separated_producer : public frame_producer_base
 	spl::shared_ptr<frame_producer>	key_producer_;
 	draw_frame						fill_						= core::draw_frame::late();
 	draw_frame						key_						= core::draw_frame::late();
-			
+
 public:
-	explicit separated_producer(const spl::shared_ptr<frame_producer>& fill, const spl::shared_ptr<frame_producer>& key) 
+	explicit separated_producer(const spl::shared_ptr<frame_producer>& fill, const spl::shared_ptr<frame_producer>& key)
 		: fill_producer_(fill)
 		, key_producer_(key)
 	{
@@ -57,7 +57,7 @@ public:
 	}
 
 	// frame_producer
-	
+
 	draw_frame receive_impl() override
 	{
 		tbb::parallel_invoke(
@@ -71,15 +71,15 @@ public:
 			if(key_ == core::draw_frame::late())
 				key_ = key_producer_->receive();
 		});
-		
+
 		if(fill_ == core::draw_frame::late() || key_ == core::draw_frame::late()) // One of the producers is lagging, keep them in sync.
 			return core::draw_frame::late();
-		
+
 		auto frame = draw_frame::mask(fill_, key_);
 
 		fill_ = draw_frame::late();
 		key_  = draw_frame::late();
-		
+
 		return frame;
 	}
 
@@ -88,11 +88,6 @@ public:
 		return draw_frame::mask(fill_producer_->last_frame(), key_producer_->last_frame());
 	}
 
-	constraints& pixel_constraints() override
-	{
-		return fill_producer_->pixel_constraints();
-	}
-				
 	uint32_t nb_frames() const override
 	{
 		return std::min(fill_producer_->nb_frames(), key_producer_->nb_frames());
@@ -101,7 +96,7 @@ public:
 	std::wstring print() const override
 	{
 		return L"separated[fill:" + fill_producer_->print() + L"|key[" + key_producer_->print() + L"]]";
-	}	
+	}
 
 	std::future<std::wstring> call(const std::vector<std::wstring>& params) override
 	{

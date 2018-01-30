@@ -422,9 +422,9 @@ private:
 class html_producer
 	: public core::frame_producer_base
 {
+    core::video_format_desc format_desc_;
 	core::monitor::subject	monitor_subject_;
 	const std::wstring		url_;
-	core::constraints		constraints_;
 
 	CefRefPtr<html_client>	client_;
 
@@ -433,11 +433,9 @@ public:
 		const spl::shared_ptr<core::frame_factory>& frame_factory,
 		const core::video_format_desc& format_desc,
 		const std::wstring& url)
-		: url_(url)
+		: format_desc_(format_desc)
+        , url_(url)
 	{
-		constraints_.width.set(format_desc.square_width);
-		constraints_.height.set(format_desc.square_height);
-
 		html::invoke([&]
 		{
 			client_ = new html_client(frame_factory, format_desc, url_);
@@ -469,11 +467,14 @@ public:
 
 	void on_interaction(const core::interaction_event::ptr& event) override
 	{
+        auto w = format_desc_.square_width;
+        auto h = format_desc_.square_height;
+
 		if (core::is<core::mouse_move_event>(event))
 		{
 			auto move = core::as<core::mouse_move_event>(event);
-			int x = static_cast<int>(move->x * constraints_.width.get());
-			int y = static_cast<int>(move->y * constraints_.height.get());
+			int x = static_cast<int>(move->x * w);
+			int y = static_cast<int>(move->y * h);
 
 			CefMouseEvent e;
 			e.x = x;
@@ -483,8 +484,8 @@ public:
 		else if (core::is<core::mouse_button_event>(event))
 		{
 			auto button = core::as<core::mouse_button_event>(event);
-			int x = static_cast<int>(button->x * constraints_.width.get());
-			int y = static_cast<int>(button->y * constraints_.height.get());
+			int x = static_cast<int>(button->x * w);
+			int y = static_cast<int>(button->y * h);
 
 			CefMouseEvent e;
 			e.x = x;
@@ -498,8 +499,8 @@ public:
 		else if (core::is<core::mouse_wheel_event>(event))
 		{
 			auto wheel = core::as<core::mouse_wheel_event>(event);
-			int x = static_cast<int>(wheel->x * constraints_.width.get());
-			int y = static_cast<int>(wheel->y * constraints_.height.get());
+			int x = static_cast<int>(wheel->x * w);
+			int y = static_cast<int>(wheel->y * h);
 
 			CefMouseEvent e;
 			e.x = x;
@@ -555,11 +556,6 @@ public:
 		boost::property_tree::wptree info;
 		info.add(L"type", L"html-producer");
 		return info;
-	}
-
-	core::constraints& pixel_constraints() override
-	{
-		return constraints_;
 	}
 
 	core::monitor::subject& monitor_output()

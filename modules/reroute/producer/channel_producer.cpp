@@ -233,7 +233,6 @@ class channel_producer : public core::frame_producer_base
 	const spl::shared_ptr<core::frame_factory>	frame_factory_;
 	const core::video_format_desc				output_format_desc_;
 	const spl::shared_ptr<channel_consumer>		consumer_;
-	core::constraints							pixel_constraints_;
 	ffmpeg::frame_muxer							muxer_;
 
 	std::queue<core::draw_frame>				frame_buffer_;
@@ -257,8 +256,6 @@ public:
 				false,
 				!no_auto_deinterlace)
 	{
-		pixel_constraints_.width.set(output_format_desc_.width);
-		pixel_constraints_.height.set(output_format_desc_.height);
 		channel->output().add(consumer_);
 		consumer_->block_until_first_frame_available();
 		CASPAR_LOG(info) << print() << L" Initialized";
@@ -317,11 +314,6 @@ public:
 	std::wstring print() const override
 	{
 		return L"channel-producer[]";
-	}
-
-	core::constraints& pixel_constraints() override
-	{
-		return pixel_constraints_;
 	}
 
 	boost::property_tree::wptree info() const override

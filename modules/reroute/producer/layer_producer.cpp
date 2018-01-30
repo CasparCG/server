@@ -35,6 +35,7 @@
 #include <common/semaphore.h>
 
 #include <boost/format.hpp>
+#include <boost/lexical_cast.hpp>
 
 #include <tbb/concurrent_queue.h>
 
@@ -146,7 +147,6 @@ class layer_producer : public core::frame_producer_base
 	mutable boost::rational<int>				last_frame_rate_;
 
 	const std::weak_ptr<core::video_channel>	channel_;
-	core::constraints							pixel_constraints_;
 
 	std::atomic<bool>							double_framerate_;
 	std::queue<core::draw_frame>				frame_buffer_;
@@ -158,8 +158,6 @@ public:
 		, channel_(channel)
 		, last_frame_(core::draw_frame::late())
 	{
-		pixel_constraints_.width.set(channel->video_format_desc().width);
-		pixel_constraints_.height.set(channel->video_format_desc().height);
 		channel->stage().add_layer_consumer(this, layer_, consumer_);
 		consumer_->block_until_first_frame_available();
 		double_framerate_ = false;
@@ -230,11 +228,6 @@ public:
 	core::monitor::subject& monitor_output() override
 	{
 		return monitor_subject_;
-	}
-
-	core::constraints& pixel_constraints() override
-	{
-		return pixel_constraints_;
 	}
 
 	boost::rational<int> current_framerate() const

@@ -81,8 +81,6 @@ struct ffmpeg_producer : public core::frame_producer_base
 
 	const spl::shared_ptr<core::frame_factory>			frame_factory_;
 
-	core::constraints									constraints_;
-
 	input												input_;
 	std::unique_ptr<video_decoder>						video_decoder_;
 	std::vector<std::unique_ptr<audio_decoder>>			audio_decoders_;
@@ -121,9 +119,6 @@ public:
 		{
 			video_decoder_.reset(new video_decoder(input_.context()));
 			CASPAR_LOG(info) << print() << L" " << video_decoder_->print();
-
-			constraints_.width.set(video_decoder_->width());
-			constraints_.height.set(video_decoder_->height());
 		}
 		catch (averror_stream_not_found&)
 		{
@@ -137,7 +132,6 @@ public:
 
 		auto channel_layout = core::audio_channel_layout::invalid();
 		std::vector<audio_input_pad> audio_input_pads;
-
 
 		for (unsigned stream_index = 0; stream_index < input_.context()->nb_streams; ++stream_index)
 		{
@@ -210,11 +204,6 @@ public:
 	core::draw_frame last_frame() override
 	{
 		return core::draw_frame::still(last_frame_);
-	}
-
-	core::constraints& pixel_constraints() override
-	{
-		return constraints_;
 	}
 
 	double out_fps() const
