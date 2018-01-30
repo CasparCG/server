@@ -23,7 +23,6 @@
 
 #include <common/forward.h>
 #include <common/memory.h>
-#include <common/cache_aligned_vector.h>
 #include <common/array.h>
 
 #include <core/frame/frame_visitor.h>
@@ -35,7 +34,7 @@
 FORWARD2(caspar, diagnostics, class graph);
 
 namespace caspar { namespace core {
-		
+
 typedef caspar::array<const int32_t> audio_buffer;
 
 class audio_mixer final : public frame_visitor
@@ -51,9 +50,9 @@ public:
 	audio_mixer(spl::shared_ptr<::caspar::diagnostics::graph> graph);
 
 	// Methods
-	
+
 	audio_buffer operator()(const struct video_format_desc& format_desc, const struct audio_channel_layout& channel_layout);
-	void set_master_volume(float volume); 
+	void set_master_volume(float volume);
 	float get_master_volume();
 	monitor::subject& monitor_output();
 
@@ -62,7 +61,7 @@ public:
 	virtual void push(const struct frame_transform& transform);
 	virtual void visit(const class const_frame& frame);
 	virtual void pop();
-	
+
 	// Properties
 
 private:

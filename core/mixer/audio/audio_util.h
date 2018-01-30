@@ -25,17 +25,15 @@
 #include <vector>
 #include <cstdint>
 
-#include <common/cache_aligned_vector.h>
-
 namespace caspar { namespace core {
-	
+
 template<typename T>
-cache_aligned_vector<int8_t> audio_32_to_24(const T& audio_data)
-{	
+std::vector<int8_t> audio_32_to_24(const T& audio_data)
+{
 	auto size		= std::distance(std::begin(audio_data), std::end(audio_data));
 	auto input8		= reinterpret_cast<const int8_t*>(&(*std::begin(audio_data)));
-	auto output8	= cache_aligned_vector<int8_t>();
-			
+	auto output8	= std::vector<int8_t>();
+
 	output8.reserve(size*3);
 	for(int n = 0; n < size; ++n)
 	{
@@ -48,12 +46,12 @@ cache_aligned_vector<int8_t> audio_32_to_24(const T& audio_data)
 }
 
 template<typename T>
-cache_aligned_vector<int16_t> audio_32_to_16(const T& audio_data)
-{	
+std::vector<int16_t> audio_32_to_16(const T& audio_data)
+{
 	auto size		= std::distance(std::begin(audio_data), std::end(audio_data));
 	auto input32	= &(*std::begin(audio_data));
-	auto output16	= cache_aligned_vector<int16_t> ();
-			
+	auto output16	= std::vector<int16_t> ();
+
 	output16.reserve(size);
 	for(int n = 0; n < size; ++n)
 		output16.push_back((input32[n] >> 16) & 0xFFFF);
