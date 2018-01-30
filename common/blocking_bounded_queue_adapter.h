@@ -23,8 +23,9 @@
 
 #include "semaphore.h"
 
-#include <boost/thread/mutex.hpp>
 #include <boost/noncopyable.hpp>
+
+#include <mutex>
 
 namespace caspar {
 
@@ -53,7 +54,7 @@ public:
 	typedef typename Q::value_type value_type;
 	typedef unsigned int size_type;
 private:
-	mutable	boost::mutex	capacity_mutex_;
+	mutable	std::mutex	    capacity_mutex_;
 	size_type				capacity_;
 	semaphore				space_available_		= capacity_;
 	semaphore				elements_available_;
@@ -138,7 +139,7 @@ public:
 	 */
 	void set_capacity(size_type capacity)
 	{
-		boost::unique_lock<boost::mutex> lock (capacity_mutex_);
+		std::unique_lock<std::mutex> lock (capacity_mutex_);
 
 		if (capacity_ < capacity)
 		{
@@ -162,7 +163,7 @@ public:
 	 */
 	size_type capacity() const
 	{
-		boost::unique_lock<boost::mutex> lock (capacity_mutex_);
+		std::unique_lock<std::mutex> lock (capacity_mutex_);
 
 		return capacity_;
 	}

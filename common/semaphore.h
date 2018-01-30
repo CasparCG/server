@@ -24,9 +24,9 @@
 #include <cmath>
 
 #include <boost/noncopyable.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/condition_variable.hpp>
 
+#include <mutex>
+#include <condition_variable>
 #include <map>
 #include <queue>
 #include <functional>
@@ -38,9 +38,9 @@ namespace caspar {
  */
 class semaphore : boost::noncopyable
 {
-	mutable boost::mutex										mutex_;
+	mutable std::mutex										    mutex_;
 	unsigned int												permits_;
-	boost::condition_variable_any								permits_available_;
+    std::condition_variable_any								    permits_available_;
 	std::map<unsigned int, std::queue<std::function<void()>>>	callbacks_per_requested_permits_;
 public:
 	/**
@@ -58,7 +58,7 @@ public:
 	 */
 	void release()
 	{
-		boost::unique_lock<boost::mutex> lock(mutex_);
+		std::unique_lock<std::mutex> lock(mutex_);
 
 		++permits_;
 
@@ -73,7 +73,7 @@ public:
 	 */
 	void release(unsigned int permits)
 	{
-		boost::unique_lock<boost::mutex> lock(mutex_);
+		std::unique_lock<std::mutex> lock(mutex_);
 
 		permits_ += permits;
 
@@ -87,7 +87,7 @@ public:
 	 */
 	void acquire()
 	{
-		boost::unique_lock<boost::mutex> lock(mutex_);
+		std::unique_lock<std::mutex> lock(mutex_);
 
 		while (permits_ == 0u)
 		{
@@ -105,7 +105,7 @@ public:
 	 */
 	void acquire(unsigned int permits)
 	{
-		boost::unique_lock<boost::mutex> lock(mutex_);
+		std::unique_lock<std::mutex> lock(mutex_);
 		auto num_acquired = 0u;
 
 		while (true)
@@ -132,7 +132,7 @@ public:
 	*/
 	void acquire(unsigned int permits, std::function<void()> acquired_callback)
 	{
-		boost::unique_lock<boost::mutex> lock(mutex_);
+		std::unique_lock<std::mutex> lock(mutex_);
 
 		if (permits_ >= permits)
 		{
@@ -155,9 +155,9 @@ public:
 	 * @return whether successfully acquired within timeout or not.
 	 */
 	template <typename Rep, typename Period>
-	bool try_acquire(unsigned int permits, const boost::chrono::duration<Rep, Period>& timeout)
+	bool try_acquire(unsigned int permits, const std::chrono::duration<Rep, Period>& timeout)
 	{
-		boost::unique_lock<boost::mutex> lock(mutex_);
+		std::unique_lock<std::mutex> lock(mutex_);
 		auto num_acquired = 0u;
 
 		while (true)
@@ -171,7 +171,7 @@ public:
 			if (num_acquired == permits)
 				break;
 
-			if (permits_available_.wait_for(lock, timeout) == boost::cv_status::timeout)
+			if (permits_available_.wait_for(lock, timeout) == std::cv_status::timeout)
 			{
 				lock.unlock();
 				release(num_acquired);
@@ -191,7 +191,7 @@ public:
 	 */
 	bool try_acquire()
 	{
-		boost::unique_lock<boost::mutex> lock(mutex_);
+		std::unique_lock<std::mutex> lock(mutex_);
 
 		if (permits_ == 0u)
 			return false;
@@ -209,7 +209,7 @@ public:
 	 */
 	unsigned int permits() const
 	{
-		boost::unique_lock<boost::mutex> lock(mutex_);
+		std::unique_lock<std::mutex> lock(mutex_);
 
 		return permits_;
 	}

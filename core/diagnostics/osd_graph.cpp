@@ -28,7 +28,6 @@
 #include "call_context.h"
 
 #include <common/executor.h>
-#include <common/lock.h>
 #include <common/env.h>
 #include <common/prec_timer.h>
 #include <common/os/threading.h>
@@ -41,11 +40,11 @@
 #include <boost/lexical_cast.hpp>
 
 #include <tbb/concurrent_unordered_map.h>
-#include <tbb/atomic.h>
-#include <tbb/spin_mutex.h>
 
 #include <GL/glew.h>
 
+#include <atomic>
+#include <mutex>
 #include <numeric>
 #include <tuple>
 #include <memory>
@@ -93,10 +92,10 @@ struct drawable : public sf::Drawable, public sf::Transformable
 };
 
 class context : public drawable
-{	
+{
 	std::unique_ptr<sf::RenderWindow>	window_;
 	sf::View							view_;
-	
+
 	std::list<std::weak_ptr<drawable>>	drawables_;
 	int64_t								refresh_rate_millis_		= 16;
 	caspar::timer						display_time_;
@@ -106,7 +105,7 @@ class context : public drawable
 	int									last_mouse_y_				= 0;
 
 	executor							executor_					{ L"diagnostics" };
-public:					
+public:
 
 	static void register_drawable(const std::shared_ptr<drawable>& drawable)
 	{
@@ -122,11 +121,11 @@ public:
 	static void show(bool value)
 	{
 		get_instance()->executor_.begin_invoke([=]
-		{	
+		{
 			get_instance()->do_show(value);
 		}, task_priority::high_priority);
 	}
-	
+
 	static void shutdown()
 	{
 		get_instance().reset();
@@ -252,15 +251,15 @@ private:
 			if (drawable)
 			{
 				float target_y = n * RENDERING_HEIGHT;
-				drawable->setPosition(0.0f, target_y);			
+				drawable->setPosition(0.0f, target_y);
 				target.draw(*drawable, states);
-				++it;		
+				++it;
 			}
-			else	
+			else
 				it = drawables_.erase(it);
 		}
-	}	
-	
+	}
+
 	void do_register_drawable(const std::shared_ptr<drawable>& drawable)
 	{
 		drawables_.push_back(drawable);
@@ -269,11 +268,11 @@ private:
 		{
 			if(it->lock())
 				++it;
-			else	
-				it = drawables_.erase(it);			
+			else
+				it = drawables_.erase(it);
 		}
 	}
-	
+
 	static std::unique_ptr<context>& get_instance()
 	{
 		static auto impl = std::unique_ptr<context>(new context);
@@ -287,31 +286,42 @@ class line : public drawable
 	boost::circular_buffer<sf::Vertex>							line_data_	{ res_ };
 	boost::circular_buffer<boost::optional<sf::VertexArray>>	line_tags_	{ res_ };
 
-	tbb::atomic<float>											tick_data_;
-	tbb::atomic<bool>											tick_tag_;
-	tbb::atomic<int>											color_;
+	std::atomic<float>											tick_data_;
+	std::atomic<bool>											tick_tag_;
+	std::atomic<int>											color_;
 
 	double														x_delta_	= 1.0 / (res_ - 1);
-	//double														x_pos_		= 1.0;
 public:
-	line(size_t res = 750)
-		: res_(res)
-	{
-		tick_data_	= -1.0f;
-		color_		= 0xFFFFFFFF;
-		tick_tag_	= false;
-	}
-	
+    line()
+        : res_(750)
+    {
+        tick_data_ = -1.0f;
+        color_ = 0xFFFFFFFF;
+        tick_tag_ = false;
+    }
+
+    line(const line& other)
+        : res_(other.res_)
+        , line_data_(other.line_data_)
+        , line_tags_(other.line_tags_)
+        , tick_data_(other.tick_data_.load())
+        , tick_tag_(other.tick_tag_.load())
+        , color_(other.color_.load())
+        , x_delta_(other.x_delta_)
+    {
+
+    }
+
 	void set_value(float value)
 	{
 		tick_data_ = value;
 	}
-	
+
 	void set_tag()
 	{
 		tick_tag_ = true;
 	}
-		
+
 	void set_color(int color)
 	{
 		color_ = color;
@@ -321,7 +331,7 @@ public:
 	{
 		return color_;
 	}
-		
+
 	void render(sf::RenderTarget& target, sf::RenderStates states)
 	{
 		/*states.transform.translate(x_pos_, 0.f);
@@ -404,7 +414,7 @@ struct graph : public drawable, public caspar::diagnostics::spi::graph_sink, pub
 	call_context										context_	= call_context::for_thread();
 	tbb::concurrent_unordered_map<std::string, line>	lines_;
 
-	tbb::spin_mutex										mutex_;
+	std::mutex   										mutex_;
 	std::wstring										text_;
 	bool												auto_reset_	= false;
 
@@ -416,19 +426,17 @@ struct graph : public drawable, public caspar::diagnostics::spi::graph_sink, pub
 	{
 		context::register_drawable(shared_from_this());
 	}
-		
+
 	void set_text(const std::wstring& value) override
 	{
 		auto temp = value;
-		lock(mutex_, [&]
-		{
-			text_ = std::move(temp);
-		});
+        std::lock_guard<std::mutex> lock(mutex_);
+        text_ = std::move(temp);
 	}
 
 	void set_value(const std::string& name, double value) override
 	{
-		lines_[name].set_value(value);
+		lines_[name].set_value(static_cast<float>(value));
 	}
 
 	void set_tag(caspar::diagnostics::tag_severity /*severity*/, const std::string& name) override
@@ -443,12 +451,10 @@ struct graph : public drawable, public caspar::diagnostics::spi::graph_sink, pub
 
 	void auto_reset() override
 	{
-		lock(mutex_, [this]
-		{
-			auto_reset_ = true;
-		});
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto_reset_ = true;
 	}
-		
+
 private:
 	void render(sf::RenderTarget& target, sf::RenderStates states) override
 	{
@@ -460,7 +466,7 @@ private:
 		bool auto_reset;
 
 		{
-			tbb::spin_mutex::scoped_lock lock(mutex_);
+            std::lock_guard<std::mutex> lock(mutex_);
 			text_str = text_;
 			auto_reset = auto_reset_;
 		}
@@ -468,7 +474,7 @@ private:
 		sf::Text text(text_str.c_str(), get_default_font(), text_size);
 		text.setStyle(sf::Text::Italic);
 		text.move(text_margin, text_margin);
-		
+
 		target.draw(text, states);
 
 		if (context_.video_channel != -1)
@@ -509,7 +515,7 @@ private:
 		states.transform
 			.translate(0, text_offset)
 			.scale(RENDERING_WIDTH, RENDERING_HEIGHT * (static_cast<float>(RENDERING_HEIGHT - text_offset) / static_cast<float>(RENDERING_HEIGHT)));
-		
+
 		static const sf::Color guide_color(255, 255, 255, 127);
 		static const sf::VertexArray middle_guide = []()
 		{
@@ -535,14 +541,14 @@ private:
 
 		glEnable(GL_LINE_STIPPLE);
 		glLineStipple(3, 0xAAAA);
-		
+
 		target.draw(middle_guide, states);
 		target.draw(bottom_guide, states);
 		target.draw(top_guide, states);
-		
+
 		glDisable(GL_LINE_STIPPLE);
 
-		for (auto it = lines_.begin(); it != lines_.end(); ++it)		
+		for (auto it = lines_.begin(); it != lines_.end(); ++it)
 		{
 			target.draw(it->second, states);
 			if(auto_reset)

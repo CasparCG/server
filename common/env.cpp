@@ -34,7 +34,6 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
-#include <boost/thread/once.hpp>
 
 #include <functional>
 #include <iostream>

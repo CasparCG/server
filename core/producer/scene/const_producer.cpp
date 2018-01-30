@@ -24,6 +24,7 @@
 #include "const_producer.h"
 
 #include "../frame_producer.h"
+#include "../../monitor/monitor.h"
 #include "../../frame/draw_frame.h"
 
 namespace caspar { namespace core {
@@ -65,7 +66,7 @@ public:
 	{
 		return constraints_;
 	}
-	
+
 	std::wstring print() const override
 	{
 		return L"const[]";
@@ -75,7 +76,7 @@ public:
 	{
 		return L"const";
 	}
-	
+
 	boost::property_tree::wptree info() const override
 	{
 		boost::property_tree::wptree info;

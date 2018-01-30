@@ -43,7 +43,8 @@
 #include <queue>
 #include <string>
 #include <vector>
-#include <tbb/atomic.h>
+#include <atomic>
+#include <mutex>
 #include <tbb/concurrent_queue.h>
 #include <tbb/cache_aligned_allocator.h>
 #include <boost/circular_buffer.hpp>
@@ -57,7 +58,7 @@
 #pragma warning (push)
 #pragma warning (disable : 4244)
 #endif
-extern "C" 
+extern "C"
 {
 	#define __STDC_CONSTANT_MACROS
 	#define __STDC_LIMIT_MACROS

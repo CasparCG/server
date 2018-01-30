@@ -27,13 +27,13 @@
 #include <common/memory.h>
 #include <common/log.h>
 
-#include <tbb/spin_mutex.h>
+#include <mutex>
 
 namespace caspar { namespace core { namespace diagnostics {
 
 class graph_to_log_sink : public caspar::diagnostics::spi::graph_sink
 {
-	tbb::spin_mutex	mutex_;
+    std::mutex   	mutex_;
 	std::wstring	text_;
 	std::wstring	context_	= call_context::for_thread().to_string();
 public:
@@ -43,7 +43,7 @@ public:
 
 	void set_text(const std::wstring& value) override
 	{
-		tbb::spin_mutex::scoped_lock lock(mutex_);
+		std::lock_guard<std::mutex> lock(mutex_);
 		text_ = value;
 	}
 
@@ -57,8 +57,8 @@ public:
 
 	void set_tag(caspar::diagnostics::tag_severity severity, const std::string& name) override
 	{
-		tbb::spin_mutex::scoped_lock lock(mutex_);
-			
+        std::lock_guard<std::mutex> lock(mutex_);
+
 		switch (severity)
 		{
 		case caspar::diagnostics::tag_severity::INFO:

@@ -28,7 +28,6 @@
 #include "../fwd.h"
 
 #include <common/forward.h>
-#include <common/future_fwd.h>
 #include <common/memory.h>
 
 #include <boost/property_tree/ptree_fwd.hpp>
@@ -37,7 +36,7 @@
 #include <string>
 
 namespace caspar { namespace core {
-	
+
 class layer final : public interaction_sink
 {
 	layer(const layer&);
@@ -47,23 +46,23 @@ public:
 
 	// Constructors
 
-	explicit layer(int index = -1); 
-	layer(layer&& other); 
+	explicit layer(int index = -1);
+	layer(layer&& other);
 
 	// Methods
 
-	layer& operator=(layer&& other); 
+	layer& operator=(layer&& other);
 
-	void swap(layer& other);  
-		
+	void swap(layer& other);
+
 	void load(spl::shared_ptr<frame_producer> producer, bool preview, const boost::optional<int32_t>& auto_play_delta = boost::optional<int32_t>());
 	void play();
 	void pause();
 	void resume();
 	void stop();
-	
+
 	draw_frame receive(const video_format_desc& format_desc);
-	
+
 	// monitor::observable
 
 	monitor::subject& monitor_output();
@@ -74,9 +73,9 @@ public:
 	bool collides(double x, double y) const override;
 
 	// Properties
-		
-	spl::shared_ptr<frame_producer>	foreground() const; 
-	spl::shared_ptr<frame_producer>	background() const; 
+
+	spl::shared_ptr<frame_producer>	foreground() const;
+	spl::shared_ptr<frame_producer>	background() const;
 
 	boost::property_tree::wptree	info() const;
 	boost::property_tree::wptree	delay_info() const;

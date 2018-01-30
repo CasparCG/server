@@ -38,8 +38,6 @@
 #include <common/scope_exit.h>
 
 #include <tbb/concurrent_queue.h>
-#include <tbb/atomic.h>
-#include <tbb/recursive_mutex.h>
 
 #if defined(_MSC_VER)
 #pragma warning (push)
@@ -69,13 +67,13 @@ struct input::impl : boost::noncopyable
 	const int													default_stream_index_	= av_find_default_stream_index(format_context_.get());
 
 	const std::wstring											filename_;
-	tbb::atomic<uint32_t>										in_;
-	tbb::atomic<uint32_t>										out_;
-	tbb::atomic<bool>											loop_;
+	std::atomic<uint32_t>										in_;
+	std::atomic<uint32_t>										out_;
+	std::atomic<bool>											loop_;
 	uint32_t													file_frame_number_		= 0;
 
 	tbb::concurrent_bounded_queue<std::shared_ptr<AVPacket>>	buffer_;
-	tbb::atomic<size_t>											buffer_size_;
+	std::atomic<size_t>											buffer_size_;
 
 	executor													executor_;
 

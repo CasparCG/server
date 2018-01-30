@@ -141,8 +141,8 @@ struct scene_producer::impl
 	binding<double>											frame_number_;
 	binding<int64_t>										timeline_frame_number_;
 	binding<double>											speed_;
-	mutable tbb::atomic<int64_t>							m_x_;
-	mutable tbb::atomic<int64_t>							m_y_;
+	mutable std::atomic<int64_t>							m_x_;
+	mutable std::atomic<int64_t>							m_y_;
 	binding<int64_t>										mouse_x_;
 	binding<int64_t>										mouse_y_;
 	double													frame_fraction_			= 0.0;

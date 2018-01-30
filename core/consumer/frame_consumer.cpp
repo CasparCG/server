@@ -31,8 +31,6 @@
 #include <core/frame/frame.h>
 #include <core/frame/audio_channel_layout.h>
 
-#include <boost/thread.hpp>
-
 #include <future>
 #include <vector>
 #include <map>
@@ -62,9 +60,9 @@ void frame_consumer_registry::register_preconfigured_consumer_factory(
 	impl_->preconfigured_consumer_factories.insert(std::make_pair(element_name, factory));
 }
 
-tbb::atomic<bool>& destroy_consumers_in_separate_thread()
+std::atomic<bool>& destroy_consumers_in_separate_thread()
 {
-	static tbb::atomic<bool> state;
+	static std::atomic<bool> state;
 
 	return state;
 }
@@ -86,7 +84,7 @@ public:
 
 	~destroy_consumer_proxy()
 	{
-		static tbb::atomic<int> counter;
+		static std::atomic<int> counter;
 		static std::once_flag counter_init_once;
 		std::call_once(counter_init_once, []{ counter = 0; });
 
@@ -97,7 +95,7 @@ public:
 		CASPAR_VERIFY(counter < 8);
 
 		auto consumer = new std::shared_ptr<frame_consumer>(std::move(consumer_));
-		boost::thread([=]
+		std::thread([=]
 		{
 			std::unique_ptr<std::shared_ptr<frame_consumer>> pointer_guard(consumer);
 			auto str = (*consumer)->print();

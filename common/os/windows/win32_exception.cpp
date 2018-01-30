@@ -2,11 +2,12 @@
 
 #include "win32_exception.h"
 
-#include <boost/thread.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include "../../thread_info.h"
 #include "windows.h"
+
+thread_local bool installed = false;
 
 namespace caspar { namespace detail {
 
@@ -36,33 +37,18 @@ inline void SetThreadName(DWORD dwThreadID, LPCSTR szThreadName)
 
 } // namespace detail
 
-bool& installed_for_thread()
-{
-	static boost::thread_specific_ptr<bool> installed;
-
-	auto for_thread = installed.get();
-
-	if (!for_thread)
-	{
-		for_thread = new bool(false);
-		installed.reset(for_thread);
-	}
-
-	return *for_thread;
-}
-
 void install_gpf_handler()
 {
 //#ifndef _DEBUG
 	_set_se_translator(win32_exception::Handler);
-	installed_for_thread() = true;
+    installed = true;
 //#endif
 }
 
 void ensure_gpf_handler_installed_for_thread(
 		const char* thread_description)
 {
-	if (!installed_for_thread())
+	if (!installed)
 	{
 		install_gpf_handler();
 

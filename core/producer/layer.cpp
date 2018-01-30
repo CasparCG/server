@@ -30,7 +30,6 @@
 #include "../frame/frame_transform.h"
 
 #include <boost/optional.hpp>
-#include <boost/thread/future.hpp>
 
 namespace caspar { namespace core {
 

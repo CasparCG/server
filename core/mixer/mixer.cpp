@@ -46,9 +46,9 @@
 #include <boost/lexical_cast.hpp>
 
 #include <tbb/concurrent_queue.h>
-#include <tbb/spin_mutex.h>
-#include <tbb/atomic.h>
 
+#include <atomic>
+#include <mutex>
 #include <unordered_map>
 #include <vector>
 
@@ -58,32 +58,32 @@ struct mixer::impl : boost::noncopyable
 {
 	int									channel_index_;
 	spl::shared_ptr<diagnostics::graph>	graph_;
-	tbb::atomic<int64_t>				current_mix_time_;
+	std::atomic<int64_t>				current_mix_time_;
 	spl::shared_ptr<monitor::subject>	monitor_subject_	= spl::make_shared<monitor::subject>("/mixer");
 	audio_mixer							audio_mixer_		{ graph_ };
 	spl::shared_ptr<image_mixer>		image_mixer_;
 
 	bool								straighten_alpha_	= false;
-			
+
 	executor							executor_			{ L"mixer " + boost::lexical_cast<std::wstring>(channel_index_) };
 
 public:
-	impl(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer) 
+	impl(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer)
 		: channel_index_(channel_index)
 		, graph_(std::move(graph))
 		, image_mixer_(std::move(image_mixer))
-	{			
+	{
 		graph_->set_color("mix-time", diagnostics::color(1.0f, 0.0f, 0.9f, 0.8f));
 		current_mix_time_ = 0;
 		audio_mixer_.monitor_output().attach_parent(monitor_subject_);
 	}
-	
+
 	const_frame operator()(std::map<int, draw_frame> frames, const video_format_desc& format_desc, const core::audio_channel_layout& channel_layout)
-	{		
+	{
 		caspar::timer frame_timer;
 
 		auto frame = executor_.invoke([=]() mutable -> const_frame
-		{		
+		{
 			try
 			{
 				CASPAR_SCOPED_CONTEXT_MSG(L" '" + executor_.name() + L"' ");
@@ -98,7 +98,7 @@ public:
 					frame.second.transform().image_transform.layer_depth = 1;
 					frame.second.accept(*image_mixer_);
 				}
-				
+
 				auto image = (*image_mixer_)(format_desc, straighten_alpha_);
 				auto audio = audio_mixer_(format_desc, channel_layout);
 
@@ -110,8 +110,8 @@ public:
 			{
 				CASPAR_LOG_CURRENT_EXCEPTION();
 				return const_frame::empty();
-			}	
-		});		
+			}
+		});
 
 		auto mix_time = frame_timer.elapsed();
 		graph_->set_value("mix-time", mix_time * format_desc.fps * 0.5);
@@ -168,8 +168,8 @@ public:
 		return make_ready_future(std::move(info));
 	}
 };
-	
-mixer::mixer(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer) 
+
+mixer::mixer(int channel_index, spl::shared_ptr<diagnostics::graph> graph, spl::shared_ptr<image_mixer> image_mixer)
 	: impl_(new impl(channel_index, std::move(graph), std::move(image_mixer))){}
 void mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 float mixer::get_master_volume() { return impl_->get_master_volume(); }

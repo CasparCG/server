@@ -30,13 +30,11 @@
 
 #include <core/producer/cg_proxy.h>
 
-#include <boost/thread.hpp>
 #include <boost/asio.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/foreach.hpp>
 #include <boost/timer.hpp>
 #include <boost/range/algorithm/remove_if.hpp>
-#include <boost/thread/future.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/property_tree/ptree.hpp>

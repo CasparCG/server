@@ -42,7 +42,6 @@
 #include <string>
 #include <math.h>
 
-#include <tbb/atomic.h>
 #include <tbb/concurrent_queue.h>
 
 #include <boost/filesystem.hpp>

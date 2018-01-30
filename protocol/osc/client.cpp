@@ -36,15 +36,16 @@
 
 #include <core/monitor/monitor.h>
 
+#include <boost/asio.hpp>
+#include <boost/bind.hpp>
+
 #include <functional>
 #include <vector>
 #include <unordered_map>
+#include <thread>
+#include <mutex>
+#include <atomic>
 
-#include <boost/asio.hpp>
-#include <boost/bind.hpp>
-#include <boost/thread.hpp>
-
-#include <tbb/spin_mutex.h>
 
 using namespace boost::asio::ip;
 
@@ -135,16 +136,16 @@ struct client::impl : public spl::enable_shared_from_this<client::impl>, core::m
 {
 	std::shared_ptr<boost::asio::io_context>		service_;
 	udp::socket										socket_;
-	tbb::spin_mutex									endpoints_mutex_;
+	std::mutex   									endpoints_mutex_;
 	std::map<udp::endpoint, int>					reference_counts_by_endpoint_;
 
 	std::unordered_map<std::string, byte_vector>	updates_;
-	boost::mutex									updates_mutex_;
-	boost::condition_variable						updates_cond_;
+	std::mutex									    updates_mutex_;
+	std::condition_variable						    updates_cond_;
 
-	tbb::atomic<bool>								is_running_;
+	std::atomic<bool>								is_running_;
 
-	boost::thread									thread_;
+    std::thread									    thread_;
 
 public:
 	impl(std::shared_ptr<boost::asio::io_service> service)
@@ -166,7 +167,7 @@ public:
 	std::shared_ptr<void> get_subscription_token(
 			const boost::asio::ip::udp::endpoint& endpoint)
 	{
-		tbb::spin_mutex::scoped_lock lock(endpoints_mutex_);
+		std::lock_guard<std::mutex> lock(endpoints_mutex_);
 
 		++reference_counts_by_endpoint_[endpoint];
 
@@ -181,7 +182,7 @@ public:
 
 			auto& self = *strong;
 
-			tbb::spin_mutex::scoped_lock lock(self.endpoints_mutex_);
+            std::lock_guard<std::mutex> lock(self.endpoints_mutex_);
 
 			int reference_count_after =
 				--self.reference_counts_by_endpoint_[endpoint];
@@ -193,7 +194,7 @@ public:
 private:
 	void propagate(const core::monitor::message& msg)
 	{
-		boost::lock_guard<boost::mutex> lock(updates_mutex_);
+		std::lock_guard<std::mutex> lock(updates_mutex_);
 
 		try
 		{
@@ -240,7 +241,7 @@ private:
 				destinations.clear();
 
 				{
-					boost::unique_lock<boost::mutex> cond_lock(updates_mutex_);
+					std::unique_lock<std::mutex> cond_lock(updates_mutex_);
 
 					if (!is_running_)
 						return;
@@ -252,7 +253,7 @@ private:
 				}
 
 				{
-					tbb::spin_mutex::scoped_lock lock(endpoints_mutex_);
+					std::lock_guard<std::mutex> lock(endpoints_mutex_);
 
 					for (const auto& endpoint : reference_counts_by_endpoint_)
 						destinations.push_back(endpoint.first);

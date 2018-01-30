@@ -43,14 +43,12 @@
 
 #include <common/env.h>
 #include <common/executor.h>
-#include <common/lock.h>
 #include <common/diagnostics/graph.h>
 #include <common/prec_timer.h>
 #include <common/array.h>
 
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/thread.hpp>
 #include <boost/timer.hpp>
 #include <boost/algorithm/string.hpp>
 
@@ -153,9 +151,9 @@ template_host get_template_host(const core::video_format_desc& desc)
 	return template_host;
 }
 
-boost::mutex& get_global_init_destruct_mutex()
+std::mutex& get_global_init_destruct_mutex()
 {
-	static boost::mutex m;
+	static std::mutex m;
 
 	return m;
 }
@@ -227,11 +225,11 @@ public:
 		// Concurrent initialization of two template hosts causes a
 		// SecurityException later when CG ADD is performed. Initialization is
 		// therefore serialized via a global mutex.
-		lock(get_global_init_destruct_mutex(), [&]
-		{
-			if (FAILED(spFlash->put_Movie(CComBSTR(filename.c_str()))))
-				CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Load Template Host"));
-		});
+        {
+            std::lock_guard<std::mutex> lock(get_global_init_destruct_mutex());
+            if (FAILED(spFlash->put_Movie(CComBSTR(filename.c_str()))))
+                CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Load Template Host"));
+        }
 
 		if(FAILED(spFlash->put_ScaleMode(2)))  //Exact fit. Scale without respect to the aspect ratio.
 			CASPAR_THROW_EXCEPTION(caspar_exception() << msg_info(print() + L" Failed to Set Scale Mode"));
@@ -347,7 +345,7 @@ struct flash_producer : public core::frame_producer_base
 	core::constraints								constraints_		{ static_cast<double>(width_), static_cast<double>(height_) };
 	const int										buffer_size_		= env::properties().get(L"configuration.flash.buffer-depth", format_desc_.fps > 30.0 ? 4 : 2);
 
-	tbb::atomic<int>								fps_;
+	std::atomic<int>								fps_;
 
 	spl::shared_ptr<diagnostics::graph>				graph_;
 
@@ -357,7 +355,7 @@ struct flash_producer : public core::frame_producer_base
 	core::draw_frame								last_frame_			= core::draw_frame::empty();
 
 	std::unique_ptr<flash_renderer>					renderer_;
-	tbb::atomic<bool>								has_renderer_;
+	std::atomic<bool>								has_renderer_;
 
 	executor										executor_			= L"flash_producer";
 public:
@@ -525,8 +523,8 @@ public:
 				if (nothing_rendered++ < MAX_NOTHING_RENDERED_RETRIES)
 				{
 					// Flash player not ready with first frame, sleep to not busy-loop;
-					boost::this_thread::sleep(boost::posix_time::milliseconds(10));
-					boost::this_thread::yield();
+					std::this_thread::sleep_for(std::chrono::milliseconds(10));
+					std::this_thread::yield();
 				}
 				else
 					return;
@@ -571,7 +569,7 @@ public:
 					frame_buffer_.push(frame);
 			}
 
-			fps_.fetch_and_store(static_cast<int>(renderer_->fps()*100.0));
+			fps_ = static_cast<int>(renderer_->fps() * 100.0);
 			graph_->set_text(print());
 
 			if (renderer_->is_empty())

@@ -24,18 +24,17 @@
 #include "thread_info.h"
 #include "os/threading.h"
 
-#include <map>
-
 #include <boost/thread/tss.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/thread/lock_guard.hpp>
 #include <boost/lexical_cast.hpp>
+
+#include <mutex>
+#include <map>
 
 namespace caspar {
 
 class enumerable_thread_infos
 {
-	boost::mutex												mutex_;
+	std::mutex											     	mutex_;
 	std::map<void*, std::weak_ptr<thread_info>>					enumerable_;
 	boost::thread_specific_ptr<std::shared_ptr<thread_info>>	infos_;
 public:
@@ -48,7 +47,7 @@ public:
 
 	std::vector<spl::shared_ptr<thread_info>> get_thread_infos()
 	{
-		boost::lock_guard<boost::mutex> lock(mutex_);
+		std::lock_guard<std::mutex> lock(mutex_);
 
 		std::vector<spl::shared_ptr<thread_info>> result;
 		result.reserve(enumerable_.size());
@@ -82,13 +81,13 @@ public:
 			std::unique_ptr<thread_info> p(new thread_info);
 			local = new std::shared_ptr<thread_info>(p.get(), [this](thread_info* p)
 			{
-				boost::lock_guard<boost::mutex> lock(mutex_);
+				std::lock_guard<std::mutex> lock(mutex_);
 				enumerable_.erase(p);
 				delete p;
 			});
 			p.release();
 			infos_.reset(local);
-			boost::lock_guard<boost::mutex> lock(mutex_);
+			std::lock_guard<std::mutex> lock(mutex_);
 			enumerable_.insert(std::make_pair(local->get(), *local));
 		}
 

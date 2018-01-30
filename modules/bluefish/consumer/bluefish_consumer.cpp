@@ -39,7 +39,6 @@
 #include <core/mixer/audio/audio_util.h>
 
 #include <tbb/concurrent_queue.h>
-#include <tbb/atomic.h>
 
 #include <common/assert.h>
 #include <boost/lexical_cast.hpp>
@@ -48,6 +47,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include <atomic>
 #include <memory>
 #include <array>
 
@@ -136,10 +136,10 @@ struct bluefish_consumer : boost::noncopyable
 	tbb::concurrent_bounded_queue<blue_dma_buffer_ptr>			reserved_frames_;
 	tbb::concurrent_bounded_queue<blue_dma_buffer_ptr>			live_frames_;
 	std::shared_ptr<std::thread>								dma_present_thread_;
-	tbb::atomic<bool>											end_dma_thread_;
+	std::atomic<bool>											end_dma_thread_;
 
 	tbb::concurrent_bounded_queue<core::const_frame>			frame_buffer_;
-	tbb::atomic<int64_t>										presentation_delay_millis_;
+	std::atomic<int64_t>										presentation_delay_millis_;
 	core::const_frame											previous_frame_				= core::const_frame::empty();
 
 	const bool													embedded_audio_;

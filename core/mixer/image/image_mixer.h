@@ -24,7 +24,6 @@
 #include "blend_modes.h"
 
 #include <common/forward.h>
-#include <common/future_fwd.h>
 #include <common/memory.h>
 
 #include <core/video_format.h>
@@ -37,7 +36,7 @@
 FORWARD2(caspar, core, struct pixel_format_desc);
 
 namespace caspar { namespace core {
-	
+
 // Interface
 class image_mixer : public frame_visitor
 				  , public frame_factory
@@ -52,13 +51,13 @@ public:
 
 	image_mixer(){}
 	virtual ~image_mixer(){}
-	
+
 	// Methods
 
 	virtual void push(const struct frame_transform& frame) = 0;
 	virtual void visit(const class const_frame& frame) = 0;
 	virtual void pop() = 0;
-		
+
 	virtual std::future<array<const std::uint8_t>> operator()(const struct video_format_desc& format_desc, bool straighten_alpha) = 0;
 
 	virtual class mutable_frame create_frame(const void* tag, const struct pixel_format_desc& desc, const core::audio_channel_layout& channel_layout) = 0;
