@@ -209,7 +209,6 @@ public:
 
 	virtual HRESULT STDMETHODCALLTYPE VideoInputFrameArrived(IDeckLinkVideoInputFrame* video, IDeckLinkAudioInputPacket* audio)
 	{
-		ensure_gpf_handler_installed_for_thread("decklink-VideoInputFrameArrived");
 		if(!video)
 			return S_OK;
 

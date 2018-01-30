@@ -22,7 +22,6 @@
 #pragma once
 
 #include "utf.h"
-#include "thread_info.h"
 #include "enum_class.h"
 
 #include <boost/log/trivial.hpp>

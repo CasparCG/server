@@ -48,7 +48,6 @@
 #include <common/except.h>
 #include <common/log.h>
 #include <common/gl/gl_check.h>
-#include <common/os/general_protection_fault.h>
 
 #include <boost/property_tree/detail/file_parser_error.hpp>
 #include <boost/property_tree/xml_parser.hpp>
@@ -97,7 +96,6 @@ void do_run(
 		std::promise<bool>& shutdown_server_now,
 		std::atomic<bool>& should_wait_for_keypress)
 {
-	ensure_gpf_handler_installed_for_thread("Console thread");
 	std::wstring wcmd;
 	while(true)
 	{
@@ -284,16 +282,12 @@ int main(int argc, char** argv)
 	// Increase process priotity.
 	increase_process_priority();
 
-	// Install general protection fault handler.
-	ensure_gpf_handler_installed_for_thread("main thread");
-
 	// Install GPF handler into all tbb threads.
 	struct tbb_thread_installer : public tbb::task_scheduler_observer
 	{
 		tbb_thread_installer(){observe(true);}
 		void on_scheduler_entry(bool is_worker) override
 		{
-			ensure_gpf_handler_installed_for_thread("tbb-worker-thread");
 		}
 	} tbb_thread_installer;
 
@@ -333,12 +327,6 @@ int main(int argc, char** argv)
 		should_wait_for_keypress = false;
 		auto should_restart = run(config_file_name, should_wait_for_keypress);
 		return_code = should_restart ? 5 : 0;
-
-		for (auto& thread : get_thread_infos())
-		{
-			if (thread->name != "main thread" && thread->name != "tbb-worker-thread")
-				CASPAR_LOG(warning) << L"Thread left running: " << thread->name << L" (" << thread->native_id << L")";
-		}
 
 		CASPAR_LOG(info) << "Successfully shutdown CasparCG Server.";
 
