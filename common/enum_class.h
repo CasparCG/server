@@ -1,6 +1,7 @@
 #pragma once
 
 #include <type_traits>
+#include <vector>
 
 #define ENUM_ENABLE_BITWISE(enum_class) \
 	static enum_class operator&(enum_class lhs, enum_class rhs) \
