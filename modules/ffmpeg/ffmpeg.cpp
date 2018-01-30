@@ -182,22 +182,14 @@ std::wstring swscale_version()
 }
 bool& get_quiet_logging_for_thread()
 {
-	static boost::thread_specific_ptr<bool> quiet_logging_for_thread;
+	static thread_local bool quiet_logging_for_thread;
 
-	auto local = quiet_logging_for_thread.get();
-
-	if (!local)
-	{
-		local = new bool(false);
-		quiet_logging_for_thread.reset(local);
-	}
-
-	return *local;
+	return quiet_logging_for_thread;
 }
 
 void enable_quiet_logging_for_thread()
 {
-	get_quiet_logging_for_thread() = true;
+    get_quiet_logging_for_thread() = true;
 }
 
 bool is_logging_quiet_for_thread()
