@@ -12,7 +12,6 @@ endif ()
 add_subdirectory(decklink)
 add_subdirectory(screen)
 add_subdirectory(html)
-add_subdirectory(psd)
 
 if (MSVC)
 	add_subdirectory(flash)

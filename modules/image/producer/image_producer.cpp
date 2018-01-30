@@ -26,7 +26,6 @@
 #include <core/video_format.h>
 
 #include <core/producer/frame_producer.h>
-#include <core/producer/scene/const_producer.h>
 #include <core/frame/frame.h>
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
@@ -183,55 +182,56 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 {
 	auto length = get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
 
-	if (boost::iequals(params.at(0), L"[IMG_SEQUENCE]"))
-	{
-		if (params.size() != 2)
-			return core::frame_producer::empty();
+	//if (boost::iequals(params.at(0), L"[IMG_SEQUENCE]"))
+	//{
+	//	if (params.size() != 2)
+	//		return core::frame_producer::empty();
 
-		auto dir = boost::filesystem::path(env::media_folder() + params.at(1)).parent_path();
-		auto basename = boost::filesystem::basename(params.at(1));
-		std::set<std::wstring> files;
-		boost::filesystem::directory_iterator end;
+	//	auto dir = boost::filesystem::path(env::media_folder() + params.at(1)).parent_path();
+	//	auto basename = boost::filesystem::basename(params.at(1));
+	//	std::set<std::wstring> files;
+	//	boost::filesystem::directory_iterator end;
 
-		for (boost::filesystem::directory_iterator it(dir); it != end; ++it)
-		{
-			auto name = it->path().filename().wstring();
+	//	for (boost::filesystem::directory_iterator it(dir); it != end; ++it)
+	//	{
+	//		auto name = it->path().filename().wstring();
 
-			if (!boost::algorithm::istarts_with(name, basename))
-				continue;
+	//		if (!boost::algorithm::istarts_with(name, basename))
+	//			continue;
 
-			auto extension = it->path().extension().wstring();
+	//		auto extension = it->path().extension().wstring();
 
-			if (std::find_if(supported_extensions().begin(), supported_extensions().end(), ieq(extension)) == supported_extensions().end())
-				continue;
+	//		if (std::find_if(supported_extensions().begin(), supported_extensions().end(), ieq(extension)) == supported_extensions().end())
+	//			continue;
 
-			files.insert(it->path().wstring());
-		}
+	//		files.insert(it->path().wstring());
+	//	}
 
-		if (files.empty())
-			return core::frame_producer::empty();
+	//	if (files.empty())
+	//		return core::frame_producer::empty();
 
-		int width = -1;
-		int height = -1;
-		std::vector<core::draw_frame> frames;
-		frames.reserve(files.size());
+	//	int width = -1;
+	//	int height = -1;
+	//	std::vector<core::draw_frame> frames;
+	//	frames.reserve(files.size());
 
-		for (auto& file : files)
-		{
-			auto frame = load_image(dependencies.frame_factory, file);
+	//	for (auto& file : files)
+	//	{
+	//		auto frame = load_image(dependencies.frame_factory, file);
 
-			if (width == -1)
-			{
-				width = static_cast<int>(frame.second.width.get());
-				height = static_cast<int>(frame.second.height.get());
-			}
+	//		if (width == -1)
+	//		{
+	//			width = static_cast<int>(frame.second.width.get());
+	//			height = static_cast<int>(frame.second.height.get());
+	//		}
 
-			frames.push_back(std::move(frame.first));
-		}
+	//		frames.push_back(std::move(frame.first));
+	//	}
 
-		return core::create_const_producer(std::move(frames), width, height);
-	}
-	else if(boost::iequals(params.at(0), L"[PNG_BASE64]"))
+	//	return core::create_const_producer(std::move(frames), width, height);
+	//}
+	//else
+    if(boost::iequals(params.at(0), L"[PNG_BASE64]"))
 	{
 		if (params.size() < 2)
 			return core::frame_producer::empty();

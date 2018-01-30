@@ -58,7 +58,6 @@ T ptree_get(const Ptree& ptree, const typename Ptree::key_type& path)
 	}
 	catch (const boost::property_tree::ptree_bad_data& e)
 	{
-		CASPAR_SCOPED_CONTEXT_MSG(to_xpath(u8(path)))
 		CASPAR_THROW_EXCEPTION(ptree_exception() << msg_info(e.what()));
 	}
 }
@@ -92,19 +91,16 @@ const Ptree& ptree_get_child(const Ptree& ptree, const typename Ptree::key_type&
 template <typename Ptree>
 class scope_aware_ptree_child_range
 {
-	const Ptree&					child_;
-	spl::shared_ptr<scoped_context>	ctx_;
+	const Ptree& child_;
 
 	typedef std::pair<const typename Ptree::key_type, Ptree> type;
 public:
 	class scoped_const_iterator : public boost::iterator_facade<scoped_const_iterator, type const, boost::forward_traversal_tag>
 	{
-		spl::shared_ptr<scoped_context>	ctx_;
 		typename Ptree::const_iterator	wrapped_;
 	public:
-		scoped_const_iterator(spl::shared_ptr<scoped_context> ctx, typename Ptree::const_iterator it)
-			: ctx_(std::move(ctx))
-			, wrapped_(std::move(it))
+		scoped_const_iterator(typename Ptree::const_iterator it)
+			: wrapped_(std::move(it))
 		{
 		}
 
@@ -129,18 +125,17 @@ public:
 
 	scope_aware_ptree_child_range(const Ptree& parent, const typename Ptree::key_type& path)
 		: child_(ptree_get_child(parent, path))
-		, ctx_(spl::make_shared<scoped_context>(to_xpath(u8(path))))
 	{
 	}
 
 	scoped_const_iterator begin() const
 	{
-		return scoped_const_iterator(ctx_, child_.begin());
+		return scoped_const_iterator(child_.begin());
 	}
 
 	scoped_const_iterator end() const
 	{
-		return scoped_const_iterator(ctx_, child_.end());
+		return scoped_const_iterator(child_.end());
 	}
 };
 
@@ -167,17 +162,12 @@ scope_aware_ptree_child_range<Ptree> operator|(const Ptree& ptree, iterate_child
 template<typename Ptree>
 struct basic_scoped_element_translator
 {
-	mutable std::shared_ptr<scoped_context>			ctx;
 	mutable std::map<typename Ptree::key_type, int>	by_name;
 
 	typedef const std::pair<const typename Ptree::key_type, Ptree>& result_type;
 
 	result_type operator()(result_type pair) const
 	{
-		if (!ctx) // Lazy
-			ctx.reset(new scoped_context);
-
-		ctx->replace_msg("/" + u8(pair.first) + "[" + boost::lexical_cast<std::string>(++by_name[pair.first]) + "]");
 		return pair;
 	}
 };

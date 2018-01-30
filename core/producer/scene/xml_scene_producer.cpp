@@ -79,8 +79,6 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 	auto filename		= *found;
 	auto template_name	= get_relative(filename, env::template_folder()).wstring();
 
-	CASPAR_SCOPED_CONTEXT_MSG(template_name + L": ");
-
 	boost::property_tree::wptree root;
 	boost::filesystem::wifstream file(filename);
 	boost::property_tree::read_xml(
@@ -118,11 +116,10 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 	{
 		ptree_verify_element_name(elem, L"layer");
 
-		auto id							= ptree_get<std::wstring>(elem.second, L"<xmlattr>.id");
+		std::wstring id							= ptree_get<std::wstring>(elem.second, L"<xmlattr>.id");
 		auto producer_string			= ptree_get<std::wstring>(elem.second, L"producer");
 		auto producer					= [&]
 		{
-			CASPAR_SCOPED_CONTEXT_MSG(" -> ");
 			auto adjusted_dependencies = dependencies;
 			auto& adjusted_format_desc = adjusted_dependencies.format_desc;
 
@@ -338,7 +335,6 @@ spl::shared_ptr<core::frame_producer> create_xml_scene_producer(
 
 	for (auto& var_name : scene->get_variables())
 	{
-		CASPAR_SCOPED_CONTEXT_MSG(L"/scene/variables/variable[@id=" + var_name + L"]/text()");
 		deduce_expression(scene->get_variable(var_name), repo);
 	}
 

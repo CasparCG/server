@@ -454,7 +454,7 @@ tweener_t get_tweener(std::wstring name)
 
 	auto it = get_tweens().find(name);
 	if(it == get_tweens().end())
-		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Could not find tween " + name));
+        CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Could not find tween " + name));
 
 	auto tween = it->second;
 	return [=](double t, double b, double c, double d)

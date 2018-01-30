@@ -19,14 +19,11 @@ set(SOURCES
 if (MSVC)
 	set(OS_SPECIFIC_SOURCES
 			compiler/vs/disable_silly_warnings.h
-			compiler/vs/StackWalker.cpp
-			compiler/vs/StackWalker.h
 
 			os/windows/filesystem.cpp
 			os/windows/page_locked_allocator.cpp
 			os/windows/prec_timer.cpp
 			os/windows/threading.cpp
-			os/windows/stack_trace.cpp
 			os/windows/win32_exception.cpp
 			os/windows/win32_exception.h
 			os/windows/windows.h
@@ -37,7 +34,6 @@ else ()
 			os/linux/prec_timer.cpp
 			os/linux/signal_handlers.cpp
 			os/linux/threading.cpp
-			os/linux/stack_trace.cpp
 	)
 endif ()
 set(HEADERS
@@ -49,7 +45,6 @@ set(HEADERS
 		os/general_protection_fault.h
 		os/page_locked_allocator.h
 		os/threading.h
-		os/stack_trace.h
 
 		array.h
 		assert.h
@@ -57,7 +52,6 @@ set(HEADERS
 		endian.h
 		enum_class.h
 		env.h
-		except.h
 		executor.h
 		filesystem.h
 		forward.h
