@@ -8,10 +8,17 @@ set(SOURCES
 		bluefish.cpp
 		StdAfx.cpp
 )
+if (MSVC)
+	set(OS_SPECIFIC_SOURCES
+		util/page_locked_allocator.cpp
+	)
+else ()
+endif ()
 set(HEADERS
 		consumer/bluefish_consumer.h
         producer/bluefish_producer.h
 		util/blue_velvet.h
+		util/page_locked_allocator.h
 		util/memory.h
 		bluefish.h
 		StdAfx.h

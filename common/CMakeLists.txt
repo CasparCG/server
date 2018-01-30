@@ -21,7 +21,6 @@ if (MSVC)
 			compiler/vs/disable_silly_warnings.h
 
 			os/windows/filesystem.cpp
-			os/windows/page_locked_allocator.cpp
 			os/windows/prec_timer.cpp
 			os/windows/threading.cpp
 			os/windows/win32_exception.cpp
@@ -43,7 +42,6 @@ set(HEADERS
 
 		os/filesystem.h
 		os/general_protection_fault.h
-		os/page_locked_allocator.h
 		os/threading.h
 
 		array.h
