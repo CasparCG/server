@@ -25,8 +25,6 @@ set(SOURCES
 
 		producer/color/color_producer.cpp
 
-		producer/framerate/framerate_producer.cpp
-
 		producer/scene/const_producer.cpp
 		producer/scene/expression_parser.cpp
 		producer/scene/hotswap_producer.cpp
@@ -88,8 +86,6 @@ set(HEADERS
 		monitor/monitor.h
 
 		producer/color/color_producer.h
-
-		producer/framerate/framerate_producer.h
 
 		producer/scene/const_producer.h
 		producer/scene/expression_parser.h
