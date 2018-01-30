@@ -23,24 +23,15 @@
 
 #include "call_context.h"
 
-#include <boost/thread/tss.hpp>
 #include <boost/lexical_cast.hpp>
 
 namespace caspar { namespace core { namespace diagnostics {
 
+thread_local call_context context;
+
 call_context& call_context::for_thread()
 {
-	static boost::thread_specific_ptr<call_context> contexts;
-
-	auto local = contexts.get();
-
-	if (!local)
-	{
-		local = new call_context;
-		contexts.reset(local);
-	}
-
-	return *local;
+    return context;
 }
 
 std::wstring call_context::to_string() const
