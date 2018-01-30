@@ -43,6 +43,7 @@
 
 #include <common/env.h>
 #include <common/executor.h>
+#include <common/future.h>
 #include <common/diagnostics/graph.h>
 #include <common/prec_timer.h>
 #include <common/array.h>
@@ -383,7 +384,7 @@ public:
 		executor_.invoke([this]
 		{
 			renderer_.reset();
-		}, task_priority::high_priority);
+		});
 	}
 
 	// frame_producer
@@ -462,7 +463,7 @@ public:
 			}
 
 			return L"";
-		}, task_priority::high_priority);
+		});
 	}
 
 	std::wstring print() const override
@@ -530,7 +531,7 @@ public:
 					return;
 			}
 
-			executor_.yield(task_priority::high_priority);
+            // TODO yield
 		}
 	}
 
