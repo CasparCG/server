@@ -58,6 +58,8 @@
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
+#include <boost/stacktrace.hpp>
+#include <boost/filesystem.hpp>
 
 #include <atomic>
 #include <future>
@@ -243,10 +245,30 @@ void on_abort(int)
 	CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("abort called"));
 }
 
+void signal_handler(int signum)
+{
+    ::signal(signum, SIG_DFL);
+    boost::stacktrace::safe_dump_to("./backtrace.dump");
+    ::raise(SIGABRT);
+}
+
 int main(int argc, char** argv)
 {
 	if (intercept_command_line_args(argc, argv))
 		return 0;
+
+    ::signal(SIGSEGV, &signal_handler);
+    ::signal(SIGABRT, &signal_handler);
+
+    static auto backtrace = "./backtrace.dump";
+    if (boost::filesystem::exists(backtrace)) {
+        std::ifstream ifs(backtrace);
+        std::stringstream str;
+        str << boost::stacktrace::stacktrace::from_dump(ifs);
+        CASPAR_LOG(error) << u16(str.str());
+        ifs.close();
+        boost::filesystem::remove(backtrace);
+    }
 
 	int return_code = 0;
 	setup_prerequisites();
