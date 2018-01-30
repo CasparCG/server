@@ -34,6 +34,7 @@
 #include <common/array.h>
 #include <common/memshfl.h>
 #include <common/param.h>
+#include <common/timer.h>
 
 #include <core/consumer/frame_consumer.h>
 #include <core/mixer/audio/audio_util.h>
@@ -42,7 +43,6 @@
 
 #include <common/assert.h>
 #include <boost/lexical_cast.hpp>
-#include <boost/timer.hpp>
 #include <boost/range/algorithm.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/algorithm/string.hpp>
@@ -126,9 +126,9 @@ struct bluefish_consumer : boost::noncopyable
 	const std::wstring											model_name_;
 
 	spl::shared_ptr<diagnostics::graph>							graph_;
-	boost::timer												frame_timer_;
-	boost::timer												tick_timer_;
-	boost::timer												sync_timer_;
+	caspar::timer												frame_timer_;
+    caspar::timer												tick_timer_;
+    caspar::timer												sync_timer_;
 
 	unsigned int												vid_fmt_;
 

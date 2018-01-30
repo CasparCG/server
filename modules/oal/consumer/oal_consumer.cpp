@@ -40,7 +40,6 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/timer.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include <tbb/concurrent_queue.h>
@@ -104,7 +103,7 @@ struct oal_consumer : public core::frame_consumer
 	core::monitor::subject							monitor_subject_;
 
 	spl::shared_ptr<diagnostics::graph>				graph_;
-	boost::timer									perf_timer_;
+    caspar::timer									perf_timer_;
 	std::atomic<int64_t>							presentation_age_;
 	int												channel_index_		= -1;
 

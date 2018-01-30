@@ -25,24 +25,23 @@
 
 namespace caspar {
 
-// Replacement of boost::timer because it uses std::clock which has very low resolution in linux.
 class timer
 {
-	boost::int_least64_t _start_time;
+	boost::int_least64_t start_time_;
 public:
 	timer()
 	{
-		_start_time = now();
+        start_time_ = now();
 	}
 
 	void restart()
 	{
-		_start_time = now();
+        start_time_ = now();
 	}
 
 	double elapsed() const
 	{
-		return static_cast<double>(now() - _start_time) / 1000.0;
+		return static_cast<double>(now() - start_time_) / 1000.0;
 	}
 private:
 	static boost::int_least64_t now()
