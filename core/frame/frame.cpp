@@ -165,7 +165,7 @@ struct const_frame::impl : boost::noncopyable
 		key_only_on_demand_ = std::async(std::launch::deferred, [image]
 		{
 			auto fill	= image.get();
-			auto key	= cache_aligned_vector<std::uint8_t>(fill.size());
+			auto key	= std::vector<std::uint8_t>(fill.size());
 
 			aligned_memshfl(key.data(), fill.data(), fill.size(), 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 

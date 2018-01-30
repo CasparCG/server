@@ -41,7 +41,6 @@
 #include <common/semaphore.h>
 #include <common/array.h>
 #include <common/future.h>
-#include <common/cache_aligned_vector.h>
 #include <common/timer.h>
 #include <common/param.h>
 #include <common/software_version.h>
