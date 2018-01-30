@@ -38,8 +38,6 @@
 #include <core/frame/audio_channel_layout.h>
 #include <core/producer/stage.h>
 #include <core/producer/frame_producer.h>
-#include <core/producer/scene/scene_producer.h>
-#include <core/producer/scene/xml_scene_producer.h>
 #include <core/producer/text/text_producer.h>
 #include <core/producer/color/color_producer.h>
 #include <core/consumer/output.h>
@@ -153,7 +151,6 @@ struct server::impl : boost::noncopyable
 		initialize_modules(dependencies);
 		core::text::init(dependencies);
 		core::init_cg_proxy_as_producer(dependencies);
-		core::scene::init(dependencies);
 		core::syncto::init(dependencies);
 	}
 
@@ -207,13 +204,11 @@ struct server::impl : boost::noncopyable
 
 		if (custom_channel_layouts)
 		{
-			CASPAR_SCOPED_CONTEXT_MSG("/configuration/audio/channel-layouts");
 			audio_channel_layout_repository::get_default()->register_all_layouts(*custom_channel_layouts);
 		}
 
 		if (custom_mix_configs)
 		{
-			CASPAR_SCOPED_CONTEXT_MSG("/configuration/audio/mix-configs");
 			audio_mix_config_repository::get_default()->register_all_configs(*custom_mix_configs);
 		}
 	}
@@ -261,10 +256,9 @@ struct server::impl : boost::noncopyable
 					if (name != L"<xmlcomment>")
 						channel->output().add(consumer_registry_->create_consumer(name, xml_consumer.second, &channel->stage(), channels_));
 				}
-				catch (const user_error& e)
+				catch (user_error&)
 				{
 					CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(debug);
-					CASPAR_LOG(error) << get_message_and_context(e) << " Turn on log level debug for stacktrace.";
 				}
 				catch (...)
 				{
@@ -306,10 +300,8 @@ struct server::impl : boost::noncopyable
 			{
 				ptree_verify_element_name(predefined_client, L"predefined-client");
 
-				const auto address =
-						ptree_get<std::wstring>(predefined_client.second, L"address");
-				const auto port =
-						ptree_get<unsigned short>(predefined_client.second, L"port");
+				const auto address = ptree_get<std::wstring>(predefined_client.second, L"address");
+				const auto port = ptree_get<unsigned short>(predefined_client.second, L"port");
 
 				boost::system::error_code ec;
 				auto ipaddr = address_v4::from_string(u8(address), ec);

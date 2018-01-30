@@ -54,7 +54,7 @@ boost::property_tree::wptree pt;
 void check_is_configured()
 {
 	if(pt.empty())
-		CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(L"Enviroment properties has not been configured"));
+        CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info(L"Enviroment properties has not been configured"));
 }
 
 std::wstring clean_path(std::wstring path)
@@ -85,7 +85,7 @@ std::wstring resolve_or_create(const std::wstring& folder)
 		boost::filesystem::create_directories(folder, ec);
 
 		if (ec)
-			CASPAR_THROW_EXCEPTION(user_error() << msg_info("Failed to create directory " + u8(folder) + " (" + ec.message() + ")"));
+            CASPAR_THROW_EXCEPTION(user_error() << msg_info("Failed to create directory " + u8(folder) + " (" + ec.message() + ")"));
 
 		return folder;
 	}
@@ -102,7 +102,7 @@ void ensure_writable(const std::wstring& folder)
 	if (out.fail())
 	{
 		boost::filesystem::remove(test_file, ec);
-		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Directory " + folder + L" is not writable."));
+        CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Directory " + folder + L" is not writable."));
 	}
 
 	out.close();

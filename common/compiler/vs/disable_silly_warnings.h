@@ -29,7 +29,7 @@
 #pragma warning (disable : 4512) // assignment operator could not be generated
 #pragma warning (disable : 4702) // unreachable code
 #pragma warning (disable : 4714) // marked as __forceinline not inlined
-#pragma warning (disable : 4505) // unreferenced local function has been 
+#pragma warning (disable : 4505) // unreferenced local function has been
 #pragma warning (disable : 4481) // nonstandard extension used: override specifier 'override'
 #pragma warning (disable : 4996) // function call with parameters that may be unsafe
 #pragma warning (disable : 4334) // '<<': result of 32 - bit shift implicitly converted to 64 bits(was 64 - bit shift intended ?)

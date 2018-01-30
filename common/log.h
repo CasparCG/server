@@ -21,7 +21,6 @@
 
 #pragma once
 
-#include "os/stack_trace.h"
 #include "utf.h"
 #include "thread_info.h"
 #include "enum_class.h"
@@ -31,7 +30,6 @@
 #include <boost/log/sources/global_logger_storage.hpp>
 #include <boost/log/sources/severity_channel_logger.hpp>
 #include <boost/exception/all.hpp>
-#include <boost/property_tree/ptree_fwd.hpp>
 
 #include <string>
 #include <locale>
@@ -42,11 +40,8 @@ namespace caspar { namespace log {
 
 namespace internal{
 void init();
-std::wstring get_call_stack();
 std::string current_exception_diagnostic_information();
 }
-
-const char* remove_source_prefix(const char* file);
 
 template<typename T>
 inline void replace_nonprintable(std::basic_string<T, std::char_traits<T>, std::allocator<T>>& str, T with)
@@ -98,27 +93,21 @@ BOOST_LOG_INLINE_GLOBAL_LOGGER_INIT(logger, caspar_logger)
 	BOOST_LOG_CHANNEL_SEV(::caspar::log::logger::get(), ::caspar::log::log_category::communication,	::boost::log::trivial::lvl)
 
 #define CASPAR_LOG_CALL_STACK()	try{\
-		CASPAR_LOG(info) << L"callstack (" << caspar::get_thread_info().name << L"):\n" << caspar::get_call_stack();\
+		CASPAR_LOG(info) << L"callstack:\n";/* << boost::stacktrace::stacktrace();*/\
 	}\
 	catch(...){}
 
 #define CASPAR_LOG_CURRENT_EXCEPTION() try{\
-		CASPAR_LOG(error) << caspar::u16(::caspar::log::internal::current_exception_diagnostic_information()) << L"Caught at (" << caspar::get_thread_info().name << L"):\n" << caspar::get_call_stack();\
+		CASPAR_LOG(error) << caspar::u16(::caspar::log::internal::current_exception_diagnostic_information());\
 	}\
 	catch(...){}
 
 #define CASPAR_LOG_CURRENT_EXCEPTION_AT_LEVEL(lvl) try{\
-		CASPAR_LOG(lvl) << caspar::u16(::caspar::log::internal::current_exception_diagnostic_information()) << L"Caught at (" << caspar::get_thread_info().name << L"):\n" << caspar::get_call_stack();\
+		CASPAR_LOG(lvl) << caspar::u16(::caspar::log::internal::current_exception_diagnostic_information());\
 	}\
 	catch(...){}
 
 void set_log_level(const std::wstring& lvl);
 void set_log_category(const std::wstring& cat, bool enabled);
-
-void print_child(
-		boost::log::trivial::severity_level level,
-		const std::wstring& indent,
-		const std::wstring& elem,
-		const boost::property_tree::wptree& tree);
 
 }}

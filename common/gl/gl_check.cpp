@@ -27,6 +27,7 @@
 #include "gl_check.h"
 
 #include "../log.h"
+#include "../except.h"
 
 #include <GL/glew.h>
 
@@ -49,67 +50,46 @@ void SMFL_GLCheckError(const std::string&, const char* func, const char* file, u
 		switch (LastErrorCode)
 		{
 			case GL_INVALID_ENUM :
-				::boost::exception_detail::throw_exception_(
+                CASPAR_THROW_EXCEPTION(
 					ogl_invalid_enum()
 						<< msg_info("an unacceptable value has been specified for an enumerated argument")
-						<< error_info("GL_INVALID_ENUM")
-						<< call_stack_info(caspar::get_call_stack())
-						<< context_info(get_context()),
-					func, log::remove_source_prefix(file), line);
+						<< error_info("GL_INVALID_ENUM"));
 
 			case GL_INVALID_VALUE :
-				::boost::exception_detail::throw_exception_(
+                CASPAR_THROW_EXCEPTION(
 					ogl_invalid_value()
 						<< msg_info("a numeric argument is out of range")
-						<< error_info("GL_INVALID_VALUE")
-						<< call_stack_info(caspar::get_call_stack())
-						<< context_info(get_context()),
-					func, log::remove_source_prefix(file), line);
+						<< error_info("GL_INVALID_VALUE"));
 
 			case GL_INVALID_OPERATION :
-				::boost::exception_detail::throw_exception_(
-					ogl_invalid_operation()
-						<< msg_info("the specified operation is not allowed in the current state")
-						<< error_info("GL_INVALID_OPERATION")
-						<< call_stack_info(caspar::get_call_stack())
-						<< context_info(get_context()),
-					func, log::remove_source_prefix(file), line);
+                CASPAR_THROW_EXCEPTION(
+                    ogl_invalid_operation()
+                        << msg_info("the specified operation is not allowed in the current state")
+                        << error_info("GL_INVALID_OPERATION"));
 
 			case GL_STACK_OVERFLOW :
-				::boost::exception_detail::throw_exception_(
+                CASPAR_THROW_EXCEPTION(
 					ogl_stack_overflow()
 						<< msg_info("this command would cause a stack overflow")
-						<< error_info("GL_STACK_OVERFLOW")
-						<< call_stack_info(caspar::get_call_stack())
-						<< context_info(get_context()),
-					func, log::remove_source_prefix(file), line);
+						<< error_info("GL_STACK_OVERFLOW"));
 
 			case GL_STACK_UNDERFLOW :
-				::boost::exception_detail::throw_exception_(
-					ogl_stack_underflow()
-						<< msg_info("this command would cause a stack underflow")
-						<< error_info("GL_STACK_UNDERFLOW")
-						<< call_stack_info(caspar::get_call_stack())
-						<< context_info(get_context()),
-					func, log::remove_source_prefix(file), line);
+                CASPAR_THROW_EXCEPTION(
+                    ogl_stack_underflow()
+                        << msg_info("this command would cause a stack underflow")
+                        << error_info("GL_STACK_UNDERFLOW"));
 
 			case GL_OUT_OF_MEMORY :
-				::boost::exception_detail::throw_exception_(
+                CASPAR_THROW_EXCEPTION(
 					ogl_out_of_memory()
 						<< msg_info("there is not enough memory left to execute the command")
-						<< error_info("GL_OUT_OF_MEMORY")
-						<< call_stack_info(caspar::get_call_stack())
-						<< context_info(get_context()),
-					func, log::remove_source_prefix(file), line);
+						<< error_info("GL_OUT_OF_MEMORY"));
 
 			case GL_INVALID_FRAMEBUFFER_OPERATION_EXT :
-				::boost::exception_detail::throw_exception_(
+				 CASPAR_THROW_EXCEPTION(
 					ogl_invalid_framebuffer_operation_ext()
 						<< msg_info("the object bound to FRAMEBUFFER_BINDING_EXT is not \"framebuffer complete\"")
-						<< error_info("GL_INVALID_FRAMEBUFFER_OPERATION_EXT")
-						<< call_stack_info(caspar::get_call_stack())
-						<< context_info(get_context()),
-					func, log::remove_source_prefix(file), line);
+						<< error_info("GL_INVALID_FRAMEBUFFER_OPERATION_EXT"));
 		}
 	}
 }

@@ -51,145 +51,103 @@ void throw_on_ffmpeg_error(int ret, const char* source, const char* func, const 
 	switch(ret)
 	{
 	case AVERROR_BSF_NOT_FOUND:
-		::boost::exception_detail::throw_exception_(
+        CASPAR_THROW_EXCEPTION(
 			averror_bsf_not_found()
 				<< msg_info(av_error_str(ret))
 				<< source_info(source)
 				<< boost::errinfo_api_function(func)
-				<< boost::errinfo_errno(AVUNERROR(ret))
-				<< call_stack_info(caspar::get_call_stack())
-				<< context_info(get_context()),
-			local_func, log::remove_source_prefix(file), line);
+				<< boost::errinfo_errno(AVUNERROR(ret)));
 	case AVERROR_DECODER_NOT_FOUND:
-		::boost::exception_detail::throw_exception_(
+        CASPAR_THROW_EXCEPTION(
 			averror_decoder_not_found()
 				<< msg_info(av_error_str(ret))
 				<< source_info(source)
 				<< boost::errinfo_api_function(func)
-				<< boost::errinfo_errno(AVUNERROR(ret))
-				<< call_stack_info(caspar::get_call_stack())
-				<< context_info(get_context()),
-			local_func, log::remove_source_prefix(file), line);
+				<< boost::errinfo_errno(AVUNERROR(ret)));
 	case AVERROR_DEMUXER_NOT_FOUND:
-		::boost::exception_detail::throw_exception_(
+        CASPAR_THROW_EXCEPTION(
 			averror_demuxer_not_found()
 				<< msg_info(av_error_str(ret))
 				<< source_info(source)
 				<< boost::errinfo_api_function(func)
-				<< boost::errinfo_errno(AVUNERROR(ret))
-				<< call_stack_info(caspar::get_call_stack())
-				<< context_info(get_context()),
-			local_func, log::remove_source_prefix(file), line);
+				<< boost::errinfo_errno(AVUNERROR(ret)));
 	case AVERROR_ENCODER_NOT_FOUND:
-		::boost::exception_detail::throw_exception_(
+        CASPAR_THROW_EXCEPTION(
 			averror_encoder_not_found()
 				<< msg_info(av_error_str(ret))
 				<< source_info(source)
 				<< boost::errinfo_api_function(func)
-				<< boost::errinfo_errno(AVUNERROR(ret))
-				<< call_stack_info(caspar::get_call_stack())
-				<< context_info(get_context()),
-			local_func, log::remove_source_prefix(file), line);
+				<< boost::errinfo_errno(AVUNERROR(ret)));
 	case AVERROR_EOF:
-		::boost::exception_detail::throw_exception_(
+        CASPAR_THROW_EXCEPTION(
 			averror_eof()
 				<< msg_info(av_error_str(ret))
 				<< source_info(source)
 				<< boost::errinfo_api_function(func)
-				<< boost::errinfo_errno(AVUNERROR(ret))
-				<< call_stack_info(caspar::get_call_stack())
-				<< context_info(get_context()),
-			local_func, log::remove_source_prefix(file), line);
+				<< boost::errinfo_errno(AVUNERROR(ret)));
 	case AVERROR_EXIT:
-		::boost::exception_detail::throw_exception_(
+        CASPAR_THROW_EXCEPTION(
 			averror_exit()
 				<< msg_info(av_error_str(ret))
 				<< source_info(source)
 				<< boost::errinfo_api_function(func)
-				<< boost::errinfo_errno(AVUNERROR(ret))
-				<< call_stack_info(caspar::get_call_stack())
-				<< context_info(get_context()),
-			local_func, log::remove_source_prefix(file), line);
+				<< boost::errinfo_errno(AVUNERROR(ret)));
 	case AVERROR_FILTER_NOT_FOUND:
-		::boost::exception_detail::throw_exception_(
+        CASPAR_THROW_EXCEPTION(
 			averror_filter_not_found()
 				<< msg_info(av_error_str(ret))
 				<< source_info(source)
 				<< boost::errinfo_api_function(func)
-				<< boost::errinfo_errno(AVUNERROR(ret))
-				<< call_stack_info(caspar::get_call_stack())
-				<< context_info(get_context()),
-			local_func, log::remove_source_prefix(file), line);
+				<< boost::errinfo_errno(AVUNERROR(ret)));
 	case AVERROR_MUXER_NOT_FOUND:
-		::boost::exception_detail::throw_exception_(
+        CASPAR_THROW_EXCEPTION(
 			averror_muxer_not_found()
 				<< msg_info(av_error_str(ret))
 				<< source_info(source)
 				<< boost::errinfo_api_function(func)
-				<< boost::errinfo_errno(AVUNERROR(ret))
-				<< call_stack_info(caspar::get_call_stack())
-				<< context_info(get_context()),
-			local_func, log::remove_source_prefix(file), line);
+				<< boost::errinfo_errno(AVUNERROR(ret)));
 	case AVERROR_OPTION_NOT_FOUND:
-		::boost::exception_detail::throw_exception_(
+        CASPAR_THROW_EXCEPTION(
 			averror_option_not_found()
 				<< msg_info(av_error_str(ret))
 				<< source_info(source)
 				<< boost::errinfo_api_function(func)
-				<< boost::errinfo_errno(AVUNERROR(ret))
-				<< call_stack_info(caspar::get_call_stack())
-				<< context_info(get_context()),
-			local_func, log::remove_source_prefix(file), line);
+				<< boost::errinfo_errno(AVUNERROR(ret)));
 	case AVERROR_PATCHWELCOME:
-		::boost::exception_detail::throw_exception_(
+        CASPAR_THROW_EXCEPTION(
 			averror_patchwelcome()
 				<< msg_info(av_error_str(ret))
 				<< source_info(source)
 				<< boost::errinfo_api_function(func)
-				<< boost::errinfo_errno(AVUNERROR(ret))
-				<< call_stack_info(caspar::get_call_stack())
-				<< context_info(get_context()),
-			local_func, log::remove_source_prefix(file), line);
+				<< boost::errinfo_errno(AVUNERROR(ret)));
 	case AVERROR_PROTOCOL_NOT_FOUND:
-		::boost::exception_detail::throw_exception_(
+        CASPAR_THROW_EXCEPTION(
 			averror_protocol_not_found()
 				<< msg_info(av_error_str(ret))
 				<< source_info(source)
 				<< boost::errinfo_api_function(func)
-				<< boost::errinfo_errno(AVUNERROR(ret))
-				<< call_stack_info(caspar::get_call_stack())
-				<< context_info(get_context()),
-			local_func, log::remove_source_prefix(file), line);
+				<< boost::errinfo_errno(AVUNERROR(ret)));
 	case AVERROR_STREAM_NOT_FOUND:
-		::boost::exception_detail::throw_exception_(
+        CASPAR_THROW_EXCEPTION(
 			averror_stream_not_found()
 				<< msg_info(av_error_str(ret))
 				<< source_info(source)
 				<< boost::errinfo_api_function(func)
-				<< boost::errinfo_errno(AVUNERROR(ret))
-				<< call_stack_info(caspar::get_call_stack())
-				<< context_info(get_context()),
-			local_func, log::remove_source_prefix(file), line);
+				<< boost::errinfo_errno(AVUNERROR(ret)));
 	case AVUNERROR(EINVAL):
-		::boost::exception_detail::throw_exception_(
+        CASPAR_THROW_EXCEPTION(
 			averror_invalid_argument()
 				<< msg_info("Invalid FFmpeg argument given")
 				<< source_info(source)
 				<< boost::errinfo_api_function(func)
-				<< boost::errinfo_errno(AVUNERROR(ret))
-				<< call_stack_info(caspar::get_call_stack())
-				<< context_info(get_context()),
-			local_func, log::remove_source_prefix(file), line);
+				<< boost::errinfo_errno(AVUNERROR(ret)));
 	default:
-		::boost::exception_detail::throw_exception_(
+        CASPAR_THROW_EXCEPTION(
 			ffmpeg_error()
 				<< msg_info(av_error_str(ret))
 				<< source_info(source)
 				<< boost::errinfo_api_function(func)
-				<< boost::errinfo_errno(AVUNERROR(ret))
-				<< call_stack_info(caspar::get_call_stack())
-				<< context_info(get_context()),
-			local_func, log::remove_source_prefix(file), line);
+				<< boost::errinfo_errno(AVUNERROR(ret)));
 	}
 }
 

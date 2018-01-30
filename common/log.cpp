@@ -185,7 +185,7 @@ void add_file_sink(const std::wstring& file, const boost::log::filter& filter)
 	try
 	{
 		if (!boost::filesystem::is_directory(boost::filesystem::path(file).parent_path()))
-			CASPAR_THROW_EXCEPTION(directory_not_found());
+            CASPAR_THROW_EXCEPTION(directory_not_found());
 
 		auto file_sink = boost::make_shared<file_sink_type>(
 			boost::log::keywords::file_name = (file + L"_%Y-%m-%d.log"),
@@ -319,33 +319,6 @@ void set_log_category(const std::wstring& cat, bool enabled)
 		disabled_categories |= category_to_set;
 
 	set_log_filter();
-}
-
-void print_child(
-		boost::log::trivial::severity_level level,
-		const std::wstring& indent,
-		const std::wstring& elem,
-		const boost::property_tree::wptree& tree)
-{
-	auto& data = tree.data();
-
-	if (!data.empty())
-		BOOST_LOG_STREAM_WITH_PARAMS(log::logger::get(), (boost::log::keywords::severity = level)) << indent << elem << L" " << replace_nonprintable_copy(data, L'?');
-	else if (tree.size() == 0)
-		BOOST_LOG_STREAM_WITH_PARAMS(log::logger::get(), (boost::log::keywords::severity = level)) << indent << elem;
-
-	for (auto& child : tree)
-		print_child(level, indent + (elem.empty() ? L"" : elem + L"."), child.first, child.second);
-}
-
-const char* remove_source_prefix(const char* file)
-{
-	auto found = boost::ifind_first(file, get_source_prefix().c_str());
-
-	if (found)
-		return found.end();
-	else
-		return file;
 }
 
 }}

@@ -211,7 +211,6 @@ bool run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
 	CASPAR_LOG(info) << config_file_name << L":\n-----------------------------------------\n" << str.str() << L"-----------------------------------------";
 
 	{
-		CASPAR_SCOPED_CONTEXT_MSG(config_file_name + L": ")
 		caspar_server->start();
 	}
 
@@ -324,14 +323,14 @@ int main(int argc, char** argv)
 		if (should_wait_for_keypress)
 			wait_for_keypress();
 	}
-	catch(const boost::property_tree::file_parser_error& e)
+	catch(boost::property_tree::file_parser_error& e)
 	{
 		CASPAR_LOG(fatal) << "At " << u8(config_file_name) << ":" << e.line() << ": " << e.message() << ". Please check the configuration file (" << u8(config_file_name) << ") for errors.";
 		wait_for_keypress();
 	}
-	catch (const user_error& e)
+	catch (user_error&)
 	{
-		CASPAR_LOG(fatal) << get_message_and_context(e) << " Please check the configuration file (" << u8(config_file_name) << ") for errors.";
+		CASPAR_LOG(fatal) << " Please check the configuration file (" << u8(config_file_name) << ") for errors.";
 		wait_for_keypress();
 	}
 	catch(...)
