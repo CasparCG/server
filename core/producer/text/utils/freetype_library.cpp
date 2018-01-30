@@ -21,35 +21,27 @@
 
 #include "freetype_library.h"
 
-#include <boost/thread/tss.hpp>
-
 namespace caspar { namespace core { namespace text {
 
 spl::shared_ptr<std::remove_pointer<FT_Library>::type> get_lib_for_thread()
 {
 	typedef std::remove_pointer<FT_Library>::type non_ptr_type;
-	static boost::thread_specific_ptr<spl::shared_ptr<non_ptr_type>> libs;
+	static thread_local std::shared_ptr<non_ptr_type> lib;
 
-	auto result = libs.get();
-
-	if (!result)
+	if (!lib)
 	{
 		FT_Library raw_lib;
 
 		if (FT_Init_FreeType(&raw_lib))
 			CASPAR_THROW_EXCEPTION(freetype_exception() << msg_info("Failed to initialize freetype"));
 
-		auto lib = spl::shared_ptr<non_ptr_type>(raw_lib, FT_Done_FreeType);
-		result = new spl::shared_ptr<non_ptr_type>(std::move(lib));
-
-		libs.reset(result);
+		lib = spl::shared_ptr<non_ptr_type>(raw_lib, FT_Done_FreeType);
 	}
 
-	return *result;
+	return spl::make_shared_ptr(lib);
 }
 
-spl::shared_ptr<std::remove_pointer<FT_Face>::type> get_new_face(
-		const std::string& font_file, const std::string& font_name)
+spl::shared_ptr<std::remove_pointer<FT_Face>::type> get_new_face(const std::string& font_file, const std::string& font_name)
 {
 	if (font_file.empty())
 		CASPAR_THROW_EXCEPTION(expected_freetype_exception() << msg_info("Failed to find font file for \"" + font_name + "\""));

@@ -30,7 +30,6 @@
 #include <boost/array.hpp>
 #include <boost/optional.hpp>
 #include <boost/property_tree/ptree.hpp>
-#include <boost/thread/tss.hpp>
 
 namespace caspar { namespace core {
 
