@@ -18,15 +18,14 @@
 *
 * Author: Robert Nagy, ronag89@gmail.com
 */
-
-#include "../../StdAfx.h"
-
 #include "image_shader.h"
 
 #include "../util/shader.h"
 #include "../util/device.h"
 
 #include "blending_glsl.h"
+
+#include <GL/glew.h>
 
 #include <common/gl/gl_check.h>
 #include <common/env.h>
@@ -383,7 +382,7 @@ std::shared_ptr<shader> get_image_shader(
 
 	try
 	{
-		g_blend_modes  = glTextureBarrierNV ? blend_modes_wanted : false;
+		g_blend_modes  = glTextureBarrier ? blend_modes_wanted : false;
 		g_post_processing = straight_alpha_wanted;
 		existing_shader.reset(new shader(get_vertex(), get_fragment(g_blend_modes, g_post_processing)), deleter);
 	}

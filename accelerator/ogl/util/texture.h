@@ -21,21 +21,13 @@
 
 #pragma once
 
-#include <common/memory.h>
-
-#include <boost/property_tree/ptree_fwd.hpp>
-
+#include <memory>
 #include <cstddef>
 
 namespace caspar { namespace accelerator { namespace ogl {
 
-class buffer;
-class device;
-
 class texture final
 {
-	texture(const texture&);
-	texture& operator=(const texture&);
 public:
 
 	// Static Members
@@ -43,15 +35,17 @@ public:
 	// Constructors
 
 	texture(int width, int height, int stride);
+    texture(const texture&) = delete;
 	texture(texture&& other);
 	~texture();
 
 	// Methods
 
+    texture& operator=(const texture&) = delete;
 	texture& operator=(texture&& other);
 
-	void copy_from(buffer& source);
-	void copy_to(buffer& dest);
+	void copy_from(class buffer& source);
+	void copy_to(class buffer& dest);
 
 	void attach();
 	void clear();
@@ -67,7 +61,7 @@ public:
 	int id() const;
 private:
 	struct impl;
-	spl::unique_ptr<impl> impl_;
+	std::unique_ptr<impl> impl_;
 };
 
 }}}

@@ -1,61 +1,55 @@
-/*
-* Copyright (c) 2011 Sveriges Television AB <info@casparcg.com>
-*
-* This file is part of CasparCG (www.casparcg.com).
-*
-* CasparCG is free software: you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation, either version 3 of the License, or
-* (at your option) any later version.
-*
-* CasparCG is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with CasparCG. If not, see <http://www.gnu.org/licenses/>.
-*
-* Author: Robert Nagy, ronag89@gmail.com
-*/
-
 #pragma once
 
-#if defined _DEBUG && defined _MSC_VER
-#include <crtdbg.h>
-#endif
-
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
-
-#include <GL/glew.h>
+// TODO Move into cmake config
+#define _WIN32_WINNT 0x601
 
 #include <algorithm>
 #include <array>
-#include <functional>
-#include <deque>
-#include <map>
+#include <boost/algorithm/cxx11/all_of.hpp>
+#include <boost/asio/deadline_timer.hpp>
+#include <boost/asio/dispatch.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/io_service.hpp>
+#include <boost/asio/post.hpp>
+#include <boost/asio/spawn.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/noncopyable.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
+#include <boost/range/adaptor/transformed.hpp>
+#include <boost/range/algorithm_ext/erase.hpp>
+#include <cmath>
+#include <common/array.h>
+#include <common/assert.h>
+#include <common/env.h>
+#include <common/except.h>
+#include <common/forward.h>
+#include <common/future.h>
+#include <common/gl/gl_check.h>
+#include <common/memory.h>
+#include <common/scope_exit.h>
+#include <core/frame/frame.h>
+#include <core/frame/frame_transform.h>
+#include <core/frame/frame_visitor.h>
+#include <core/frame/geometry.h>
+#include <core/frame/pixel_format.h>
+#include <core/fwd.h>
+#include <core/mixer/image/blend_modes.h>
+#include <core/mixer/image/image_mixer.h>
+#include <core/video_format.h>
+#include <cstddef>
+#include <cstdint>
+#include <future>
+#include <GL/glew.h>
 #include <memory>
-#include <queue>
+#include <mutex>
+#include <set>
+#include <SFML/Window/Context.hpp>
 #include <string>
-#include <vector>
-
 #include <tbb/concurrent_queue.h>
 #include <tbb/concurrent_unordered_map.h>
-
-#include <boost/circular_buffer.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/range.hpp>
-#include <boost/range/adaptors.hpp>
-#include <boost/range/algorithm.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
-
-#include <common/assert.h>
-#include <common/utf.h>
-#include <common/memory.h>
-//#include "../common/executor.h" // Can't include this due to MSVC lambda bug
-
-#include <common/log.h>
-#include <common/except.h>
-#include <common/timer.h>
+#include <tbb/parallel_for.h>
+#include <tbb/parallel_for_each.h>
+#include <thread>
+#include <type_traits>
+#include <unordered_map>
+#include <vector>

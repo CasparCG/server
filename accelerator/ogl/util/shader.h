@@ -21,14 +21,12 @@
 
 #pragma once
 
-#include <common/memory.h>
-
+#include <memory>
 #include <string>
-
 #include <type_traits>
 
 namespace caspar { namespace accelerator { namespace ogl {
-		
+
 class shader final
 {
 	shader(const shader&);
@@ -62,12 +60,12 @@ public:
 	void use() const;
 
 	// Properties
-	
+
 	int id() const;
 
 private:
 	struct impl;
-	spl::unique_ptr<impl> impl_;
+	std::unique_ptr<impl> impl_;
 };
 
 }}}

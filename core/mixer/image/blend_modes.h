@@ -21,8 +21,10 @@
 
 #pragma once
 
+#include <string>
+
 namespace caspar { namespace core {
-		
+
 enum class blend_mode
 {
 	normal = 0,
@@ -55,7 +57,7 @@ enum class blend_mode
 	color,
 	luminosity,
 	mix,
-	blend_mode_count 
+	blend_mode_count
 };
 
 blend_mode get_blend_mode(const std::wstring& str);
