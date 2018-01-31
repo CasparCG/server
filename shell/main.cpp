@@ -91,43 +91,19 @@ void print_info()
 	CASPAR_LOG(info) << L"Starting CasparCG Video and Graphics Playout Server " << env::version();
 }
 
-void do_run(
-		std::weak_ptr<caspar::IO::protocol_strategy<wchar_t>> amcp,
-		std::promise<bool>& shutdown_server_now,
-		std::atomic<bool>& should_wait_for_keypress)
+auto run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_for_keypress)
 {
-	std::wstring wcmd;
-	while(true)
-	{
-		if (!std::getline(std::wcin, wcmd))		// TODO: It's blocking...
-			wcmd = L"EXIT";						// EOF, handle as EXIT
-
-		if(boost::iequals(wcmd, L"EXIT") || boost::iequals(wcmd, L"Q") || boost::iequals(wcmd, L"QUIT") || boost::iequals(wcmd, L"BYE"))
-		{
-			CASPAR_LOG(info) << L"Received message from Console: " << wcmd << L"\\r\\n";
-			should_wait_for_keypress = true;
-			shutdown_server_now.set_value(false);	//false to not restart
-			break;
-		}
-
-		wcmd += L"\r\n";
-		auto strong = amcp.lock();
-		if (strong)
-			strong->parse(wcmd);
-		else
-			break;
-	}
-};
-
-bool run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_for_keypress)
-{
-	std::promise<bool> shutdown_server_now;
-	std::future<bool> shutdown_server = shutdown_server_now.get_future();
+	auto promise = std::make_shared<std::promise<bool>>();
+	auto future = promise->get_future();
+    auto shutdown = [promise = std::move(promise)](bool restart)
+    {
+        promise->set_value(restart);
+    };
 
 	print_info();
 
 	// Create server object which initializes channels, protocols and controllers.
-	std::unique_ptr<server> caspar_server(new server(shutdown_server_now));
+	std::unique_ptr<server> caspar_server(new server(shutdown));
 
 	// For example CEF resets the global locale, so this is to reset it back to "our" preference.
 	setup_global_locale();
@@ -137,9 +113,7 @@ bool run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
 	boost::property_tree::write_xml(str, env::properties(), w);
 	CASPAR_LOG(info) << config_file_name << L":\n-----------------------------------------\n" << str.str() << L"-----------------------------------------";
 
-	{
-		caspar_server->start();
-	}
+	caspar_server->start();
 
 	// Create a dummy client which prints amcp responses to console.
 	auto console_client = spl::make_shared<IO::ConsoleClientInfo>();
@@ -151,23 +125,33 @@ bool run(const std::wstring& config_file_name, std::atomic<bool>& should_wait_fo
 					spl::make_shared<protocol::amcp::AMCPProtocolStrategy>(
 							L"Console",
 							caspar_server->get_amcp_command_repository())))->create(console_client);
-	std::weak_ptr<IO::protocol_strategy<wchar_t>> weak_amcp = amcp;
 
 	// Use separate thread for the blocking console input, will be terminated
 	// anyway when the main thread terminates.
-	std::thread stdin_thread(std::bind(do_run, weak_amcp, std::ref(shutdown_server_now), std::ref(should_wait_for_keypress)));	//compiler didn't like lambda here...
-	stdin_thread.detach();
-	bool should_restart = shutdown_server.get();
-	amcp.reset();
+    std::thread([&] () mutable
+    {
+        std::wstring wcmd;
+        while (true) {
+            if (!std::getline(std::wcin, wcmd))		// TODO: It's blocking...
+                wcmd = L"EXIT";						// EOF, handle as EXIT
 
-	while (weak_amcp.lock());
+            if (boost::iequals(wcmd, L"EXIT") || boost::iequals(wcmd, L"Q") || boost::iequals(wcmd, L"QUIT") || boost::iequals(wcmd, L"BYE")) {
+                CASPAR_LOG(info) << L"Received message from Console: " << wcmd << L"\\r\\n";
+                should_wait_for_keypress = true;
+                shutdown(false);	//false to not restart
+                break;
+            }
 
-	return should_restart;
-}
+            wcmd += L"\r\n";
+            amcp->parse(wcmd);
+        }
+    }).detach();
 
-void on_abort(int)
-{
-	CASPAR_THROW_EXCEPTION(invalid_operation() << msg_info("abort called"));
+    future.wait();
+
+    caspar_server.reset();
+
+	return future.get();
 }
 
 void signal_handler(int signum)
@@ -212,7 +196,6 @@ int main(int argc, char** argv)
 
 	int return_code = 0;
 	setup_prerequisites();
-	//std::signal(SIGABRT, on_abort);
 
 	setup_global_locale();
 
@@ -223,15 +206,6 @@ int main(int argc, char** argv)
 
 	// Increase process priotity.
 	increase_process_priority();
-
-	// Install GPF handler into all tbb threads.
-	struct tbb_thread_installer : public tbb::task_scheduler_observer
-	{
-		tbb_thread_installer(){observe(true);}
-		void on_scheduler_entry(bool is_worker) override
-		{
-		}
-	} tbb_thread_installer;
 
 	tbb::task_scheduler_init init;
 	std::wstring config_file_name(L"casparcg.config");

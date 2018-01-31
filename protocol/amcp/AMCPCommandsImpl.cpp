@@ -1448,13 +1448,13 @@ std::wstring bye_command(command_context& ctx)
 
 std::wstring kill_command(command_context& ctx)
 {
-	ctx.shutdown_server_now.set_value(false);	//false for not attempting to restart
+	ctx.shutdown_server_now(false);	//false for not attempting to restart
 	return L"202 KILL OK\r\n";
 }
 
 std::wstring restart_command(command_context& ctx)
 {
-	ctx.shutdown_server_now.set_value(true);	//true for attempting to restart
+	ctx.shutdown_server_now(true);	//true for attempting to restart
 	return L"202 RESTART OK\r\n";
 }
 

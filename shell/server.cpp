@@ -126,9 +126,9 @@ struct server::impl : boost::noncopyable
 	spl::shared_ptr<core::cg_producer_registry>			cg_registry_;
 	spl::shared_ptr<core::frame_producer_registry>		producer_registry_;
 	spl::shared_ptr<core::frame_consumer_registry>		consumer_registry_;
-	std::promise<bool>&									shutdown_server_now_;
+	std::function<void(bool)>							shutdown_server_now_;
 
-	explicit impl(std::promise<bool>& shutdown_server_now)
+	explicit impl(std::function<void(bool)> shutdown_server_now)
 		: accelerator_(env::properties().get(L"configuration.accelerator", L"auto"))
 		, producer_registry_(spl::make_shared<core::frame_producer_registry>())
 		, consumer_registry_(spl::make_shared<core::frame_consumer_registry>())
@@ -342,7 +342,7 @@ struct server::impl : boost::noncopyable
 	}
 };
 
-server::server(std::promise<bool>& shutdown_server_now) : impl_(new impl(shutdown_server_now)){}
+server::server(std::function<void(bool)> shutdown_server_now) : impl_(new impl(shutdown_server_now)){}
 void server::start() { impl_->start(); }
 spl::shared_ptr<protocol::amcp::amcp_command_repository> server::get_amcp_command_repository() const { return spl::make_shared_ptr(impl_->amcp_command_repo_); }
 core::monitor::subject& server::monitor_output() { return *impl_->monitor_subject_; }

@@ -41,7 +41,7 @@ namespace amcp {
 		spl::shared_ptr<core::cg_producer_registry>				cg_registry;
 		spl::shared_ptr<const core::frame_producer_registry>	producer_registry;
 		spl::shared_ptr<const core::frame_consumer_registry>	consumer_registry;
-		std::promise<bool>&										shutdown_server_now;
+		std::function<void(bool)>								shutdown_server_now;
 		std::vector<std::wstring>								parameters;
 
 		int layer_index(int default_ = 0) const { return layer_id == -1 ? default_: layer_id; }
@@ -55,7 +55,7 @@ namespace amcp {
 				spl::shared_ptr<core::cg_producer_registry> cg_registry,
 				spl::shared_ptr<const core::frame_producer_registry> producer_registry,
 				spl::shared_ptr<const core::frame_consumer_registry> consumer_registry,
-				std::promise<bool>& shutdown_server_now)
+				std::function<void(bool)> shutdown_server_now)
 			: client(std::move(client))
 			, channel(channel)
 			, channel_index(channel_index)
