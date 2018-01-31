@@ -39,9 +39,9 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/range/algorithm/copy.hpp>
 
+#include <common/executor.h>
 #include <common/except.h>
 #include <common/memory.h>
-#include <common/semaphore.h>
 #include <common/future.h>
 
 #include <tbb/concurrent_queue.h>
@@ -68,13 +68,10 @@ namespace caspar { namespace reroute {
 class channel_consumer : public core::frame_consumer
 {
 	core::monitor::subject								monitor_subject_;
-	tbb::concurrent_bounded_queue<core::const_frame>	frame_buffer_;
+    tbb::concurrent_bounded_queue<core::draw_frame>	    frame_buffer_;
 	core::video_format_desc								format_desc_;
 	int													channel_index_;
 	int													consumer_index_;
-	std::atomic<bool>									is_running_;
-	std::atomic<int64_t>								current_age_;
-	semaphore											frames_available_ { 0 };
 	int													frames_delay_;
 
 public:
@@ -82,8 +79,6 @@ public:
 		: consumer_index_(next_consumer_index())
 		, frames_delay_(frames_delay)
 	{
-		is_running_ = true;
-		current_age_ = 0;
 		frame_buffer_.set_capacity(3 + frames_delay);
 	}
 
@@ -108,12 +103,8 @@ public:
 
 	std::future<bool> send(core::const_frame frame) override
 	{
-		bool pushed = frame_buffer_.try_push(frame);
-
-		if (pushed)
-			frames_available_.release();
-
-		return make_ready_future(is_running_.load());
+        frame_buffer_.try_push(core::draw_frame(std::move(frame)));
+		return make_ready_future(true);
 	}
 
 	void initialize(const core::video_format_desc& format_desc,	int channel_index) override
@@ -167,29 +158,11 @@ public:
 		return format_desc_;
 	}
 
-	void block_until_first_frame_available()
+    core::draw_frame receive()
 	{
-		if (!frames_available_.try_acquire(1 + frames_delay_, std::chrono::seconds(2)))
-			CASPAR_LOG(warning)
-					<< print() << L" Timed out while waiting for first frame";
-	}
-
-	core::const_frame receive()
-	{
-		core::const_frame frame = core::const_frame::empty();
-
-		if (!is_running_)
-			return frame;
-
-		if (frame_buffer_.try_pop(frame))
-			current_age_ = frame.get_age_millis();
-
+		auto frame = core::draw_frame::late();
+        frame_buffer_.try_pop(frame);
 		return frame;
-	}
-
-	void stop()
-	{
-		is_running_ = false;
 	}
 };
 
@@ -209,6 +182,7 @@ core::video_format_desc get_progressive_format(core::video_format_desc format_de
 
 class channel_producer : public core::frame_producer_base
 {
+    spl::shared_ptr<core::video_channel>        channel_;
 	core::monitor::subject						monitor_subject_;
 
 	const spl::shared_ptr<core::frame_factory>	frame_factory_;
@@ -225,16 +199,16 @@ public:
 			bool no_auto_deinterlace)
 		: frame_factory_(dependecies.frame_factory)
 		, format_desc_(dependecies.format_desc)
+        , channel_(channel)
 		, consumer_(spl::make_shared<channel_consumer>(frames_delay))
 	{
-		channel->output().add(consumer_);
-		consumer_->block_until_first_frame_available();
+        channel_->output().add(consumer_);
 		CASPAR_LOG(info) << print() << L" Initialized";
 	}
 
 	~channel_producer()
 	{
-		consumer_->stop();
+        channel_->output().remove(consumer_);
 		CASPAR_LOG(info) << print() << L" Uninitialized";
 	}
 
