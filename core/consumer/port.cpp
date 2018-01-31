@@ -4,7 +4,9 @@
 
 #include "frame_consumer.h"
 #include "../frame/frame.h"
+
 #include <boost/lexical_cast.hpp>
+#include <boost/property_tree/ptree.hpp>
 
 #include <future>
 

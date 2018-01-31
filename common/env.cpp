@@ -18,9 +18,6 @@
 *
 * Author: Robert Nagy, ronag89@gmail.com
 */
-
-#include "stdafx.h"
-
 #include "env.h"
 
 #include "../version.h"

@@ -36,6 +36,8 @@
 #include <common/future.h>
 #include <common/memory.h>
 
+#include <boost/algorithm/string/predicate.hpp>
+
 namespace caspar { namespace core {
 struct frame_producer_registry::impl
 {

@@ -21,43 +21,66 @@
 
 #pragma once
 
-#if defined _DEBUG && defined _MSC_VER
-#include <crtdbg.h>
-#endif
-
-#define NOMINMAX
-#define WIN32_LEAN_AND_MEAN
-
-#include <GL/glew.h>
-
 #include <algorithm>
-#include <array>
-#include <functional>
-#include <deque>
-#include <map>
-#include <memory>
-#include <queue>
-#include <string>
-#include <vector>
-#include <set>
-
-#include <tbb/concurrent_queue.h>
-#include <tbb/concurrent_unordered_map.h>
-
+#include <atomic>
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/array.hpp>
+#include <boost/chrono/duration.hpp>
 #include <boost/circular_buffer.hpp>
+#include <boost/core/noncopyable.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/range.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/noncopyable.hpp>
+#include <boost/optional.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ptree_fwd.hpp>
+#include <boost/property_tree/xml_parser.hpp>
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm.hpp>
-#include <boost/algorithm/string.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/xml_parser.hpp>
-
+#include <boost/range/algorithm/equal.hpp>
+#include <boost/range/distance.hpp>
+#include <boost/range/iterator_range.hpp>
+#include <boost/rational.hpp>
+#include <boost/timer.hpp>
+#include <boost/variant.hpp>
+#include <common/array.h>
 #include <common/assert.h>
-#include <common/utf.h>
-#include <common/memory.h>
-//#include "../common/executor.h" // Can't include this due to MSVC lambda bug
-
-#include <common/log.h>
+#include <common/diagnostics/graph.h>
+#include <common/enum_class.h>
+#include <common/env.h>
 #include <common/except.h>
+#include <common/executor.h>
+#include <common/forward.h>
+#include <common/future.h>
+#include <common/log.h>
+#include <common/memory.h>
+#include <common/memshfl.h>
+#include <common/os/filesystem.h>
+#include <common/prec_timer.h>
 #include <common/timer.h>
+#include <common/tweener.h>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <future>
+#include <GL/glew.h>
+#include <list>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <numeric>
+#include <queue>
+#include <set>
+#include <SFML/Graphics.hpp>
+#include <sstream>
+#include <stack>
+#include <string>
+#include <tbb/concurrent_queue.h>
+#include <tbb/concurrent_unordered_map.h>
+#include <tbb/parallel_for_each.h>
+#include <tbb/parallel_invoke.h>
+#include <tuple>
+#include <type_traits>
+#include <unordered_map>
+#include <vector>

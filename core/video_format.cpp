@@ -23,6 +23,10 @@
 
 #include "video_format.h"
 
+#include <common/log.h>
+
+#include <boost/range/adaptors.hpp>
+#include <boost/range/algorithm.hpp>
 #include <boost/algorithm/string.hpp>
 
 namespace caspar { namespace core {

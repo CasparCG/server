@@ -29,6 +29,12 @@
 #include <core/video_format.h>
 #include <core/frame/frame.h>
 
+#include <boost/timer.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/circular_buffer.hpp>
+#include <boost/range/adaptors.hpp>
+#include <boost/range/algorithm.hpp>
+
 #include <future>
 #include <vector>
 #include <map>

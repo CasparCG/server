@@ -22,6 +22,8 @@
 
 #include "../StdAfx.h"
 
+#include <common/except.h>
+
 #include "geometry.h"
 
 namespace caspar { namespace core {
@@ -60,7 +62,7 @@ struct frame_geometry::impl
 
 		data_ = std::move(data);
 	}
-	
+
 	frame_geometry::geometry_type	type_;
 	std::vector<coord>				data_;
 };
@@ -72,7 +74,7 @@ const std::vector<frame_geometry::coord>& frame_geometry::data() const
 {
 	return impl_->data_;
 }
-	
+
 const frame_geometry& frame_geometry::get_default()
 {
 	static std::vector<frame_geometry::coord> data = {

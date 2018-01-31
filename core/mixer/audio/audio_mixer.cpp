@@ -31,6 +31,7 @@
 
 #include <boost/range/adaptors.hpp>
 #include <boost/range/distance.hpp>
+#include <boost/range/algorithm.hpp>
 #include <boost/lexical_cast.hpp>
 
 #include <map>
