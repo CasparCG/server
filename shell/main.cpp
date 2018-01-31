@@ -67,7 +67,7 @@
 #include <csignal>
 #include <clocale>
 
-using namespace caspar;
+namespace caspar {
 
 void setup_global_locale()
 {
@@ -250,13 +250,28 @@ void signal_handler(int signum)
     ::raise(SIGABRT);
 }
 
+void terminate_handler()
+{
+    try {
+        std::rethrow_exception(std::current_exception());
+    } catch (...) {
+        CASPAR_LOG_CURRENT_EXCEPTION();
+    }
+    std::abort();
+}
+
+}
+
 int main(int argc, char** argv)
 {
+    using namespace caspar;
+
 	if (intercept_command_line_args(argc, argv))
 		return 0;
 
-    ::signal(SIGSEGV, &signal_handler);
-    ::signal(SIGABRT, &signal_handler);
+    ::signal(SIGSEGV, signal_handler);
+    ::signal(SIGABRT, signal_handler);
+    std::set_terminate(caspar::terminate_handler);
 
     static auto backtrace = "./backtrace.dump";
     if (boost::filesystem::exists(backtrace)) {
