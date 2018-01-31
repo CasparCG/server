@@ -21,26 +21,26 @@
 
 #pragma once
 
-#include <common/memory.h>
 #include <protocol/amcp/amcp_command_repository.h>
 
-#include <core/fwd.h>
-
 #include <boost/noncopyable.hpp>
+
+#include <memory>
+#include <functional>
 
 namespace caspar {
 
 class server final : public boost::noncopyable
 {
 public:
-	explicit server(std::promise<bool>& shutdown_server_now);
+	explicit server(std::function<void(bool)> shutdown_server_now);
 	void start();
 	spl::shared_ptr<protocol::amcp::amcp_command_repository> get_amcp_command_repository() const;
 
 	core::monitor::subject& monitor_output();
 private:
 	struct impl;
-	spl::shared_ptr<impl> impl_;
+	std::shared_ptr<impl> impl_;
 };
 
 }
