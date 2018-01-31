@@ -47,8 +47,6 @@ public:
 			const pixel_format_desc& desc) = 0;
 
 	// Properties
-
-	virtual int get_max_frame_size() = 0;
 };
 
 }}

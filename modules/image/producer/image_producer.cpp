@@ -79,11 +79,6 @@ struct image_producer : public core::frame_producer_base
 	void load(const std::shared_ptr<FIBITMAP>& bitmap)
 	{
 		FreeImage_FlipVertical(bitmap.get());
-		auto longest_side = static_cast<int>(std::max(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get())));
-
-		if (longest_side > frame_factory_->get_max_frame_size())
-			CASPAR_THROW_EXCEPTION(user_error() << msg_info("Image too large for texture"));
-
 		core::pixel_format_desc desc;
 		desc.format = core::pixel_format::bgra;
 		desc.planes.push_back(core::pixel_format_desc::plane(FreeImage_GetWidth(bitmap.get()), FreeImage_GetHeight(bitmap.get()), 4));

@@ -30,7 +30,6 @@
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/frame/pixel_format.h>
-#include <core/frame/audio_channel_layout.h>
 #include <core/monitor/monitor.h>
 #include <core/consumer/frame_consumer.h>
 #include <core/module_dependencies.h>

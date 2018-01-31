@@ -25,7 +25,6 @@
 #include "amcp_shared.h"
 #include <core/consumer/frame_consumer.h>
 #include <core/producer/frame_producer.h>
-#include <accelerator/ogl/util/device.h>
 
 #include <boost/algorithm/string.hpp>
 
@@ -42,7 +41,6 @@ namespace amcp {
 		spl::shared_ptr<core::cg_producer_registry>				cg_registry;
 		spl::shared_ptr<const core::frame_producer_registry>	producer_registry;
 		spl::shared_ptr<const core::frame_consumer_registry>	consumer_registry;
-		std::shared_ptr<accelerator::ogl::device>				ogl_device;
 		std::promise<bool>&										shutdown_server_now;
 		std::vector<std::wstring>								parameters;
 
@@ -57,7 +55,6 @@ namespace amcp {
 				spl::shared_ptr<core::cg_producer_registry> cg_registry,
 				spl::shared_ptr<const core::frame_producer_registry> producer_registry,
 				spl::shared_ptr<const core::frame_consumer_registry> consumer_registry,
-				std::shared_ptr<accelerator::ogl::device> ogl_device,
 				std::promise<bool>& shutdown_server_now)
 			: client(std::move(client))
 			, channel(channel)
@@ -67,7 +64,6 @@ namespace amcp {
 			, cg_registry(std::move(cg_registry))
 			, producer_registry(std::move(producer_registry))
 			, consumer_registry(std::move(consumer_registry))
-			, ogl_device(std::move(ogl_device))
 			, shutdown_server_now(shutdown_server_now)
 		{
 		}

@@ -355,7 +355,6 @@ image_mixer::~image_mixer(){}
 void image_mixer::push(const core::frame_transform& transform){impl_->push(transform);}
 void image_mixer::visit(const core::const_frame& frame){impl_->visit(frame);}
 void image_mixer::pop(){impl_->pop();}
-int image_mixer::get_max_frame_size() { return std::numeric_limits<int>::max(); }
 std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc, bool /* straighten_alpha */){return impl_->render(format_desc);}
 core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->create_frame(tag, desc);}
 

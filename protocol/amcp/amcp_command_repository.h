@@ -40,7 +40,6 @@ public:
 			const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
 			const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
 			const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
-			const std::shared_ptr<accelerator::ogl::device>& ogl_device,
 			std::promise<bool>& shutdown_server_now);
 
 	AMCPCommand::ptr_type create_command(const std::wstring& s, IO::ClientInfoPtr client, std::list<std::wstring>& tokens) const;

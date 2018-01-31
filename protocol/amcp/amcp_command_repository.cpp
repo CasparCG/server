@@ -69,7 +69,6 @@ struct amcp_command_repository::impl
 	spl::shared_ptr<core::cg_producer_registry>					cg_registry;
 	spl::shared_ptr<const core::frame_producer_registry>		producer_registry;
 	spl::shared_ptr<const core::frame_consumer_registry>		consumer_registry;
-	std::shared_ptr<accelerator::ogl::device>					ogl_device;
 	std::promise<bool>&											shutdown_server_now;
 
 	std::map<std::wstring, std::pair<amcp_command_func, int>>	commands;
@@ -80,12 +79,10 @@ struct amcp_command_repository::impl
 			const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
 			const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
 			const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
-			const std::shared_ptr<accelerator::ogl::device>& ogl_device,
 			std::promise<bool>& shutdown_server_now)
 		: cg_registry(cg_registry)
 		, producer_registry(producer_registry)
 		, consumer_registry(consumer_registry)
-		, ogl_device(ogl_device)
 		, shutdown_server_now(shutdown_server_now)
 	{
 		int index = 0;
@@ -103,14 +100,12 @@ amcp_command_repository::amcp_command_repository(
 		const spl::shared_ptr<core::cg_producer_registry>& cg_registry,
 		const spl::shared_ptr<const core::frame_producer_registry>& producer_registry,
 		const spl::shared_ptr<const core::frame_consumer_registry>& consumer_registry,
-		const std::shared_ptr<accelerator::ogl::device>& ogl_device,
 		std::promise<bool>& shutdown_server_now)
 		: impl_(new impl(
 				channels,
 				cg_registry,
 				producer_registry,
 				consumer_registry,
-				ogl_device,
 				shutdown_server_now))
 {
 }
@@ -128,7 +123,6 @@ AMCPCommand::ptr_type amcp_command_repository::create_command(const std::wstring
 			self.cg_registry,
 			self.producer_registry,
 			self.consumer_registry,
-			self.ogl_device,
 			self.shutdown_server_now);
 
 	auto command = find_command(self.commands, s, ctx, tokens);
@@ -164,7 +158,6 @@ AMCPCommand::ptr_type amcp_command_repository::create_channel_command(
 			self.cg_registry,
 			self.producer_registry,
 			self.consumer_registry,
-			self.ogl_device,
 			self.shutdown_server_now);
 
 	auto command = find_command(self.channel_commands, s, ctx, tokens);
