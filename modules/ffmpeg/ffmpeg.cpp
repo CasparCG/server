@@ -24,17 +24,14 @@
 #include "ffmpeg.h"
 
 #include "producer/ffmpeg_producer.h"
-#include "producer/util/util.h"
 
 #include <common/log.h>
 
-#include <core/consumer/frame_consumer.h>
 #include <core/frame/draw_frame.h>
+#include <core/consumer/frame_consumer.h>
 #include <core/producer/frame_producer.h>
 
-#include <boost/property_tree/ptree.hpp>
-#include <boost/bind.hpp>
-
+#include <functional>
 #include <mutex>
 
 #if defined(_MSC_VER)
@@ -103,7 +100,7 @@ static void sanitize(uint8_t *line)
 
 void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 {
-	static thread_local bool print_prefix = true;
+	static thread_local bool print_prefix_tss = true;
 
 	char line[1024];
 	AVClass* avc= ptr ? *(AVClass**)ptr : NULL;
@@ -112,7 +109,7 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 	line[0]=0;
 
 #undef fprintf
-	if(print_prefix && avc)
+	if(print_prefix_tss && avc)
 	{
 		if (avc->parent_log_context_offset)
 		{
@@ -125,7 +122,7 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 
 	std::vsnprintf(line + strlen(line), sizeof(line) - strlen(line), fmt, vl);
 
-	print_prefix = strlen(line) && line[strlen(line)-1] == '\n';
+    print_prefix_tss = strlen(line) && line[strlen(line)-1] == '\n';
 
 	sanitize((uint8_t*)line);
 
@@ -149,72 +146,9 @@ void log_callback(void* ptr, int level, const char* fmt, va_list vl)
 	}
 }
 
-std::wstring make_version(unsigned int ver)
-{
-	std::wstringstream str;
-	str << ((ver >> 16) & 0xFF) << L"." << ((ver >> 8) & 0xFF) << L"." << ((ver >> 0) & 0xFF);
-	return str.str();
-}
-
-std::wstring avcodec_version()
-{
-	return make_version(::avcodec_version());
-}
-
-std::wstring avformat_version()
-{
-	return make_version(::avformat_version());
-}
-
-std::wstring avutil_version()
-{
-	return make_version(::avutil_version());
-}
-
-std::wstring avfilter_version()
-{
-	return make_version(::avfilter_version());
-}
-
-std::wstring swscale_version()
-{
-	return make_version(::swscale_version());
-}
-bool& get_quiet_logging_for_thread()
-{
-	static thread_local bool quiet_logging_for_thread;
-
-	return quiet_logging_for_thread;
-}
-
-void enable_quiet_logging_for_thread()
-{
-    get_quiet_logging_for_thread() = true;
-}
-
-bool is_logging_quiet_for_thread()
-{
-	return get_quiet_logging_for_thread();
-}
-
-std::shared_ptr<void> temporary_enable_quiet_logging_for_thread(bool enable)
-{
-	if (!enable || is_logging_quiet_for_thread())
-		return std::shared_ptr<void>();
-
-	get_quiet_logging_for_thread() = true;
-
-	return std::shared_ptr<void>(nullptr, [](void*)
-	{
-		get_quiet_logging_for_thread() = false; // Only works correctly if destructed in same thread as original caller.
-	});
-}
-
 void log_for_thread(void* ptr, int level, const char* fmt, va_list vl)
 {
-	int min_level = is_logging_quiet_for_thread() ? AV_LOG_DEBUG : AV_LOG_FATAL;
-
-	log_callback(ptr, std::max(level, min_level), fmt, vl);
+	log_callback(ptr, level, fmt, vl);
 }
 
 void init(core::module_dependencies dependencies)
@@ -223,20 +157,21 @@ void init(core::module_dependencies dependencies)
 	av_log_set_callback(log_for_thread);
 
 	avfilter_register_all();
-	//fix_yadif_filter_format_query();
 	av_register_all();
 	avformat_network_init();
 	avcodec_register_all();
 	avdevice_register_all();
 
-	//dependencies.consumer_registry->register_consumer_factory(L"FFmpeg Consumer", create_ffmpeg_consumer);
+	//dependencies.consumer_registry->register_consumer_factory(L"FFmpeg Consumer", create_ffmpeg_consumer, describe_ffmpeg_consumer);
 	//dependencies.consumer_registry->register_preconfigured_consumer_factory(L"ffmpeg", create_preconfigured_ffmpeg_consumer);
-	dependencies.producer_registry->register_producer_factory(L"FFmpeg Producer", boost::bind(&create_producer, _1, _2));
+
+	dependencies.producer_registry->register_producer_factory(L"FFmpeg Producer", ffmpeg::create_producer);
+	//dependencies.producer_registry->register_thumbnail_producer(boost::bind(&create_thumbnail_frame, _1, _2, info_repo));
 }
 
 void uninit()
 {
-	avfilter_uninit();
+	// avfilter_uninit();
 	avformat_network_deinit();
 	av_lockmgr_register(nullptr);
 }

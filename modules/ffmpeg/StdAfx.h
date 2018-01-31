@@ -77,7 +77,6 @@ extern "C"
 	#define __STDC_LIMIT_MACROS
 	#include <libavcodec/avcodec.h>
 	#include <libavfilter/avfilter.h>
-	#include <libavfilter/avfiltergraph.h>
 	#include <libavfilter/buffersink.h>
 	#include <libavformat/avformat.h>
 	#include <libavutil/avutil.h>

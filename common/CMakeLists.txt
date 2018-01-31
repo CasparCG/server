@@ -8,7 +8,6 @@ set(SOURCES
 
 		base64.cpp
 		env.cpp
-		except.cpp
 		filesystem.cpp
 		log.cpp
 		stdafx.cpp

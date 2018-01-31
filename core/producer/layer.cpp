@@ -216,7 +216,7 @@ draw_frame layer::receive(const video_format_desc& format_desc) {return impl_->r
 spl::shared_ptr<frame_producer> layer::foreground() const { return impl_->foreground_;}
 spl::shared_ptr<frame_producer> layer::background() const { return impl_->background_;}
 boost::property_tree::wptree layer::info() const{return impl_->info();}
-boost::property_tree::wptree layer::delay_info() const{return impl_->delay_info();}
+
 monitor::subject& layer::monitor_output() {return *impl_->monitor_subject_;}
 void layer::on_interaction(const interaction_event::ptr& event) { impl_->on_interaction(event); }
 bool layer::collides(double x, double y) const { return impl_->collides(x, y); }

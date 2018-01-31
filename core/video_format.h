@@ -103,6 +103,7 @@ struct video_format_desc final
 	std::size_t				size;		// frame size in bytes
 	std::wstring			name;		// name of output format
 
+    int                     audio_channels = 8;
 	int						audio_sample_rate;
 	std::vector<int>		audio_cadence;	// rotating optimal number of samples per frame
 

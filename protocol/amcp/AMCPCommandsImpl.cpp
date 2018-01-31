@@ -42,7 +42,6 @@
 #include <core/producer/frame_producer.h>
 #include <core/video_format.h>
 #include <core/producer/transition/transition_producer.h>
-#include <core/frame/audio_channel_layout.h>
 #include <core/frame/frame_transform.h>
 #include <core/producer/text/text_producer.h>
 #include <core/producer/stage.h>
@@ -452,18 +451,6 @@ std::wstring set_command(command_context& ctx)
 		}
 
 		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid video mode"));
-	}
-	else if (name == L"CHANNEL_LAYOUT")
-	{
-		auto channel_layout = core::audio_channel_layout_repository::get_default()->get_layout(value);
-
-		if (channel_layout)
-		{
-			ctx.channel.channel->audio_channel_layout(*channel_layout);
-			return L"202 SET CHANNEL_LAYOUT OK\r\n";
-		}
-
-		CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid audio channel layout"));
 	}
 
 	CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid channel variable"));

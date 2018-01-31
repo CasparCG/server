@@ -78,7 +78,6 @@ public:
 	spl::shared_ptr<frame_producer>	background() const;
 
 	boost::property_tree::wptree	info() const;
-	boost::property_tree::wptree	delay_info() const;
 
 private:
 	struct impl;
