@@ -89,22 +89,6 @@ public:
 				frame_				== other.frame_ &&
 				frame_transform_	== other.frame_transform_;
 	}
-
-	int64_t get_and_record_age_millis(const draw_frame& self)
-	{
-		int64_t result = 0;
-
-		for (auto& frame : frames_)
-		{
-			if (frame != self)
-				result = std::max(result, frame.get_and_record_age_millis());
-		}
-
-		if (frame_)
-			result = std::max(result, frame_->get_age_millis());
-
-		return result;
-	}
 };
 
 draw_frame::draw_frame() : impl_(new impl()){}
@@ -124,7 +108,6 @@ void draw_frame::swap(draw_frame& other){impl_.swap(other.impl_);}
 const core::frame_transform& draw_frame::transform() const { return impl_->frame_transform_;}
 core::frame_transform& draw_frame::transform() { return impl_->frame_transform_;}
 void draw_frame::accept(frame_visitor& visitor) const{impl_->accept(visitor);}
-int64_t draw_frame::get_and_record_age_millis() { return impl_->get_and_record_age_millis(*this); }
 bool draw_frame::operator==(const draw_frame& other)const{return *impl_ == *other.impl_;}
 bool draw_frame::operator!=(const draw_frame& other)const{return !(*this == other);}
 

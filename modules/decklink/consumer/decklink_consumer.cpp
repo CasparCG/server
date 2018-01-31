@@ -33,6 +33,7 @@
 #include <core/consumer/frame_consumer.h>
 #include <core/diagnostics/call_context.h>
 
+#include <common/assert.h>
 #include <common/executor.h>
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
@@ -45,7 +46,6 @@
 #include <tbb/concurrent_queue.h>
 #include <tbb/scalable_allocator.h>
 
-#include <common/assert.h>
 #include <boost/lexical_cast.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -224,11 +224,6 @@ public:
 	{
 		return frame_.audio_data();
 	}
-
-	int64_t get_age_millis() const
-	{
-		return frame_.get_age_millis();
-	}
 };
 
 template <typename Configuration>
@@ -240,13 +235,11 @@ struct key_video_context : public IDeckLinkVideoOutputCallback, boost::noncopyab
 	com_iface_ptr<IDeckLinkKeyer>		keyer_						= iface_cast<IDeckLinkKeyer>(decklink_, true);
 	com_iface_ptr<IDeckLinkAttributes>	attributes_					= iface_cast<IDeckLinkAttributes>(decklink_);
 	com_iface_ptr<Configuration>		configuration_				= iface_cast<Configuration>(decklink_);
-	std::atomic<int64_t>				current_presentation_delay_;
 	std::atomic<int64_t>				scheduled_frames_completed_;
 
 	key_video_context(const configuration& config, const std::wstring& print)
 		: config_(config)
 	{
-		current_presentation_delay_ = 0;
 		scheduled_frames_completed_ = 0;
 
 		set_latency(configuration_, config.latency, print);
@@ -292,8 +285,6 @@ struct key_video_context : public IDeckLinkVideoOutputCallback, boost::noncopyab
 			IDeckLinkVideoFrame* completed_frame,
 			BMDOutputFrameCompletionResult result)
 	{
-		auto dframe = reinterpret_cast<decklink_frame*>(completed_frame);
-		current_presentation_delay_ = dframe->get_age_millis();
 		++scheduled_frames_completed_;
 
 		// Let the fill callback keep the pace, so no scheduling here.
@@ -335,7 +326,6 @@ struct decklink_consumer : public IDeckLinkVideoOutputCallback, boost::noncopyab
 	spl::shared_ptr<diagnostics::graph>					graph_;
 	caspar::timer										tick_timer_;
 	reference_signal_detector							reference_signal_detector_	{ output_ };
-	std::atomic<int64_t>								current_presentation_delay_;
 	std::atomic<int64_t>								scheduled_frames_completed_;
 	std::unique_ptr<key_video_context<Configuration>>	key_context_;
 
@@ -352,7 +342,6 @@ public:
         , executor_(L"decklink")
 	{
 		is_running_ = true;
-		current_presentation_delay_ = 0;
 		scheduled_frames_completed_ = 0;
 
 		frame_buffer_.set_capacity(1);
@@ -474,7 +463,6 @@ public:
 			reference_signal_detector_.detect_change([this]() { return print(); });
 
 			auto dframe = reinterpret_cast<decklink_frame*>(completed_frame);
-			current_presentation_delay_ = dframe->get_age_millis();
 			++scheduled_frames_completed_;
 
 			if (key_context_)

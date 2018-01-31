@@ -59,7 +59,6 @@ struct output::impl
 	std::map<int, port>					ports_;
 	prec_timer							sync_timer_;
 	boost::circular_buffer<const_frame>	frames_;
-	std::map<int, int64_t>				send_to_consumers_delays_;
 	executor							executor_					{ L"output " + boost::lexical_cast<std::wstring>(channel_index_) };
 public:
 	impl(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index)
@@ -97,7 +96,6 @@ public:
 			if (it != ports_.end())
 			{
 				ports_.erase(it);
-				send_to_consumers_delays_.erase(index);
 			}
 		});
 	}
@@ -125,7 +123,6 @@ public:
 				catch(...)
 				{
 					CASPAR_LOG_CURRENT_EXCEPTION();
-					send_to_consumers_delays_.erase(it->first);
 					ports_.erase(it++);
 				}
 			}
@@ -190,8 +187,6 @@ public:
 				auto depth = port.buffer_depth();
 				auto& frame = depth < 0 ? frames_.back() : frames_.at(depth - minmax.first);
 
-				send_to_consumers_delays_[it->first] = frame.get_age_millis();
-
 				try
 				{
 					send_results->insert(std::make_pair(it->first, port.send(frame)));
@@ -209,7 +204,6 @@ public:
 					{
 						CASPAR_LOG_CURRENT_EXCEPTION();
 						CASPAR_LOG(error) << "Failed to recover consumer: " << port.print() << L". Removing it.";
-						send_to_consumers_delays_.erase(it->first);
 						it = ports_.erase(it);
 					}
 				}
@@ -230,14 +224,12 @@ public:
 				{
 					if (!it->second.get())
 					{
-						send_to_consumers_delays_.erase(it->first);
 						ports_.erase(it->first);
 					}
 				}
 				catch (...)
 				{
 					CASPAR_LOG_CURRENT_EXCEPTION();
-					send_to_consumers_delays_.erase(it->first);
 					ports_.erase(it->first);
 				}
 			}

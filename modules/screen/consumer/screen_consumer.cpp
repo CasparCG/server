@@ -135,7 +135,6 @@ struct screen_consumer : boost::noncopyable
 
 	std::thread										    thread_;
 	std::atomic<bool>									is_running_;
-	std::atomic<int64_t>								current_presentation_age_;
 public:
 	screen_consumer(
 			const configuration& config,
@@ -191,7 +190,6 @@ public:
 
 		polling_event_ = false;
 		is_running_ = true;
-		current_presentation_age_ = 0;
 		thread_ = std::thread([this]{run();});
 	}
 
@@ -353,7 +351,6 @@ public:
 
 					window_.Display();*/
 
-					current_presentation_age_ = frame.get_age_millis();
 					graph_->set_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
 					tick_timer_.restart();
 				}
