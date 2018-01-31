@@ -40,43 +40,41 @@
 
 #include <boost/range/algorithm_ext/erase.hpp>
 
+#include <tbb/concurrent_unordered_map.h>
+
 #include <algorithm>
 #include <cstdint>
 #include <vector>
 #include <set>
 #include <array>
 
-//#if defined(_MSC_VER)
-//#pragma warning (push)
-//#pragma warning (disable : 4244)
-//#endif
-//extern "C"
-//{
-//	#include <libswscale/swscale.h>
-//	#include <libavcodec/avcodec.h>
-//	#include <libswscale/swscale.h>
-//}
-//#if defined(_MSC_VER)
-//#pragma warning (pop)
-//#endif
+#if defined(_MSC_VER)
+#pragma warning (push)
+#pragma warning (disable : 4244)
+#endif
+extern "C"
+{
+	#include <libswscale/swscale.h>
+	#include <libavcodec/avcodec.h>
+	#include <libswscale/swscale.h>
+}
+#if defined(_MSC_VER)
+#pragma warning (pop)
+#endif
 
 namespace caspar { namespace accelerator { namespace cpu {
 
+typedef std::vector<uint8_t> buffer;
+
 struct item
 {
-	core::pixel_format_desc			pix_desc	= core::pixel_format::invalid;
-	std::array<const uint8_t*, 4>	data;
+	std::shared_ptr<AVFrame>     	frame;
 	core::image_transform			transform;
-
-	item()
-	{
-		data.fill(0);
-	}
 };
 
 bool operator==(const item& lhs, const item& rhs)
 {
-	return lhs.data == rhs.data && lhs.transform == rhs.transform;
+	return lhs.frame == rhs.frame && lhs.transform == rhs.transform;
 }
 
 bool operator!=(const item& lhs, const item& rhs)
@@ -141,7 +139,7 @@ static void kernel(uint8_t* dest, const uint8_t* source, size_t count)
 
 class image_renderer
 {
-	//tbb::concurrent_unordered_map<int64_t, tbb::concurrent_bounded_queue<std::shared_ptr<SwsContext>>>	sws_devices_;
+	tbb::concurrent_unordered_map<int64_t, tbb::concurrent_bounded_queue<std::shared_ptr<SwsContext>>>	sws_devices_;
 	tbb::concurrent_bounded_queue<spl::shared_ptr<buffer>>												temp_buffers_;
 	core::video_format_desc																				format_desc_;
 public:
@@ -150,7 +148,7 @@ public:
 		if (format_desc != format_desc_)
 		{
 			format_desc_ = format_desc;
-			//sws_devices_.clear();
+			sws_devices_.clear();
 		}
 
 		convert(items, format_desc.width, format_desc.height);
@@ -205,10 +203,10 @@ private:
 				auto y = i*step+start;
 
 				for(std::size_t n = 0; n < items.size()-1; ++n)
-					kernel<xmm::temporal_tag>(dest + y*width*4, items[n].data.at(0) + y*width*4, width*4);
+					kernel<xmm::temporal_tag>(dest + y*width*4, items[n].frame->data[0] + y*width*4, width*4);
 
 				std::size_t n = items.size()-1;
-				kernel<xmm::nontemporal_tag>(dest + y*width*4, items[n].data.at(0) + y*width*4, width*4);
+				kernel<xmm::nontemporal_tag>(dest + y*width*4, items[n].frame->data[0] + y*width*4, width*4);
 			}
 
 			_mm_mfence();
@@ -217,69 +215,54 @@ private:
 
 	void convert(std::vector<item>& source_items, int width, int height)
 	{
-		std::set<std::array<const uint8_t*, 4>> buffers;
+		std::set<std::shared_ptr<AVFrame>> buffers;
 
 		for (auto& item : source_items)
-			buffers.insert(item.data);
+			buffers.insert(item.frame);
 
 		auto dest_items = source_items;
 
-        // XXX
-		//tbb::parallel_for_each(buffers.begin(), buffers.end(), [&](const std::array<const uint8_t*, 4>& data)
-		//{
-		//	auto pix_desc = std::find_if(source_items.begin(), source_items.end(), [&](const item& item){return item.data == data;})->pix_desc;
+		tbb::parallel_for_each(buffers.begin(), buffers.end(), [&](const std::shared_ptr<AVFrame>& in_frame)
+		{
+            auto out_frame = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr)
+            {
+                av_frame_free(&ptr);
+            });
+            out_frame->width = width;
+            out_frame->height = height;
+            out_frame->format = AV_PIX_FMT_BGRA;
+            if (av_frame_get_buffer(out_frame.get(), 32) < 0) {
+                CASPAR_THROW_EXCEPTION(bad_alloc());
+            }
 
-		//	if(pix_desc.format == core::pixel_format::bgra &&
-		//		pix_desc.planes.at(0).width == width &&
-		//		pix_desc.planes.at(0).height == height)
-		//		return;
+            int64_t key = ((static_cast<int64_t>(in_frame->width) << 32) & 0xFFFF00000000) |
+                ((static_cast<int64_t>(in_frame->height) << 16) & 0xFFFF0000) |
+                ((static_cast<int64_t>(in_frame->format) << 8) & 0xFF00);
 
-		//	std::array<uint8_t*, 4> data2 = {};
-		//	for(std::size_t n = 0; n < data.size(); ++n)
-		//		data2.at(n) = const_cast<uint8_t*>(data[n]);
+            auto& pool = sws_devices_[key];
 
-		//	auto input_av_frame = ffmpeg::make_av_frame(data2, pix_desc);
+            std::shared_ptr<SwsContext> sws_device;
+            if (!pool.try_pop(sws_device)) {
+                double param;
+                sws_device.reset(sws_getContext(in_frame->width, in_frame->height, static_cast<AVPixelFormat>(in_frame->format), width, height, AV_PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
+            }
 
+            if (!sws_device) {
+                CASPAR_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling device.") << boost::errinfo_api_function("sws_getContext"));
+            }
 
-		//	int64_t key = ((static_cast<int64_t>(input_av_frame->width)	 << 32) & 0xFFFF00000000) |
-		//				  ((static_cast<int64_t>(input_av_frame->height) << 16) & 0xFFFF0000) |
-		//				  ((static_cast<int64_t>(input_av_frame->format) <<  8) & 0xFF00);
+            sws_scale(sws_device.get(), in_frame->data, in_frame->linesize, 0, in_frame->height, out_frame->data, out_frame->linesize);
+            pool.push(sws_device);
 
-		//	auto& pool = sws_devices_[key];
-
-		//	std::shared_ptr<SwsContext> sws_device;
-		//	if(!pool.try_pop(sws_device))
-		//	{
-		//		double param;
-		//		sws_device.reset(sws_getContext(input_av_frame->width, input_av_frame->height, static_cast<AVPixelFormat>(input_av_frame->format), width, height, AVPixelFormat::AV_PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
-		//	}
-
-		//	if(!sws_device)
-		//		CASPAR_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling device.") << boost::errinfo_api_function("sws_getContext"));
-
-		//	auto dest_frame = spl::make_shared<buffer>(width*height*4);
-		//	temp_buffers_.push(dest_frame);
-
-		//	{
-		//		auto dest_av_frame = ffmpeg::create_frame();
-		//		avpicture_fill(reinterpret_cast<AVPicture*>(dest_av_frame.get()), dest_frame->data(), AVPixelFormat::AV_PIX_FMT_BGRA, width, height);
-
-		//		sws_scale(sws_device.get(), input_av_frame->data, input_av_frame->linesize, 0, input_av_frame->height, dest_av_frame->data, dest_av_frame->linesize);
-		//		pool.push(sws_device);
-		//	}
-
-		//	for(std::size_t n = 0; n < source_items.size(); ++n)
-		//	{
-		//		if(source_items[n].data == data)
-		//		{
-		//			dest_items[n].data.fill(0);
-		//			dest_items[n].data[0]			= dest_frame->data();
-		//			dest_items[n].pix_desc			= core::pixel_format_desc(core::pixel_format::bgra);
-		//			dest_items[n].pix_desc.planes	= { core::pixel_format_desc::plane(width, height, 4) };
-		//			dest_items[n].transform			= source_items[n].transform;
-		//		}
-		//	}
-		//});
+			for(std::size_t n = 0; n < source_items.size(); ++n)
+			{
+				if(source_items[n].frame == in_frame)
+				{
+					dest_items[n].frame     = out_frame;
+					dest_items[n].transform = source_items[n].transform;
+				}
+			}
+		});
 
 		source_items = std::move(dest_items);
 	}
@@ -316,11 +299,82 @@ public:
 		if(transform_stack_.back().field_mode == core::field_mode::empty)
 			return;
 
+        auto in_frame = std::shared_ptr<AVFrame>(av_frame_alloc(), [frame](AVFrame* ptr)
+        {
+            av_frame_free(&ptr);
+        });
+
+        auto pix_desc = frame.pixel_format_desc();
+        for (auto n = 0UL; n < pix_desc.planes.size(); ++n) {
+            in_frame->data[n] = const_cast<uint8_t*>(frame.image_data(n).begin());
+            in_frame->linesize[n] = pix_desc.planes[n].linesize;
+        }
+
+        switch (pix_desc.format) {
+        case core::pixel_format::abgr:
+            in_frame->format = AV_PIX_FMT_ABGR;
+            break;
+        case core::pixel_format::bgra:
+            in_frame->format = AV_PIX_FMT_BGRA;
+            break;
+        case core::pixel_format::rgba:
+            in_frame->format = AV_PIX_FMT_RGBA;
+            break;
+        case core::pixel_format::argb:
+            in_frame->format = AV_PIX_FMT_ARGB;
+            break;
+        case core::pixel_format::ycbcr: {
+            int y_w = pix_desc.planes[0].width;
+            int y_h = pix_desc.planes[0].height;
+            int c_w = pix_desc.planes[1].width;
+            int c_h = pix_desc.planes[1].height;
+
+            if (c_h == y_h && c_w == y_w)
+                in_frame->format = AV_PIX_FMT_YUV444P;
+            else if (c_h == y_h && c_w * 2 == y_w)
+                in_frame->format = AV_PIX_FMT_YUV422P;
+            else if (c_h == y_h && c_w * 4 == y_w)
+                in_frame->format = AV_PIX_FMT_YUV411P;
+            else if (c_h * 2 == y_h && c_w * 2 == y_w)
+                in_frame->format = AV_PIX_FMT_YUV420P;
+            else if (c_h * 2 == y_h && c_w * 4 == y_w)
+                in_frame->format = AV_PIX_FMT_YUV410P;
+            else
+                return;
+
+            break;
+        }
+        case core::pixel_format::ycbcra: {
+            int y_w = pix_desc.planes[0].width;
+            int y_h = pix_desc.planes[0].height;
+            int c_w = pix_desc.planes[1].width;
+            int c_h = pix_desc.planes[1].height;
+
+            if (c_h == y_h && c_w == y_w)
+                in_frame->format = AV_PIX_FMT_YUVA444P;
+            else if (c_h == y_h && c_w * 2 == y_w)
+                in_frame->format = AV_PIX_FMT_YUVA422P;
+            else if (c_h == y_h && c_w * 4 == y_w)
+                return;
+            else if (c_h * 2 == y_h && c_w * 2 == y_w)
+                in_frame->format = AV_PIX_FMT_YUVA420P;
+            else if (c_h * 2 == y_h && c_w * 4 == y_w)
+                return;
+            else
+                return;
+
+            break;
+        }
+        default:
+            return;
+        }
+
+        in_frame->width = pix_desc.planes[0].width;
+        in_frame->height = pix_desc.planes[0].height;
+
 		item item;
-		item.pix_desc	= frame.pixel_format_desc();
-		item.transform	= transform_stack_.back();
-		for(int n = 0; n < item.pix_desc.planes.size(); ++n)
-			item.data.at(n) = frame.image_data(n).begin();
+		item.frame    	= in_frame;
+		item.transform	= transform_stack_.back();;
 
 		items_.push_back(item);
 	}

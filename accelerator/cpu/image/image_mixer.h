@@ -1,21 +1,15 @@
 #pragma once
 
-#include <common/forward.h>
-#include <common/memory.h>
-
 #include <core/mixer/image/blend_modes.h>
 #include <core/mixer/image/image_mixer.h>
-#include <core/fwd.h>
 
 #include <core/frame/frame.h>
 #include <core/frame/frame_visitor.h>
 #include <core/video_format.h>
 
-#include <vector>
+#include <memory>
 
 namespace caspar { namespace accelerator { namespace cpu {
-
-typedef std::vector<uint8_t> buffer;
 
 class image_mixer final : public core::image_mixer
 {
@@ -41,7 +35,7 @@ public:
 	// Properties
 private:
 	struct impl;
-	spl::unique_ptr<impl> impl_;
+	std::unique_ptr<impl> impl_;
 };
 
 }}}
