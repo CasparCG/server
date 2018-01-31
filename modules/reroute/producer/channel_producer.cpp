@@ -31,7 +31,6 @@
 
 #include <core/frame/frame.h>
 #include <core/frame/pixel_format.h>
-#include <core/frame/audio_channel_layout.h>
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_factory.h>
 #include <core/video_format.h>
@@ -62,9 +61,6 @@ extern "C"
 #pragma warning (pop)
 #endif
 
-#include <modules/ffmpeg/producer/muxer/frame_muxer.h>
-#include <modules/ffmpeg/producer/util/util.h>
-
 #include <queue>
 
 namespace caspar { namespace reroute {
@@ -74,7 +70,6 @@ class channel_consumer : public core::frame_consumer
 	core::monitor::subject								monitor_subject_;
 	tbb::concurrent_bounded_queue<core::const_frame>	frame_buffer_;
 	core::video_format_desc								format_desc_;
-	core::audio_channel_layout							channel_layout_			= core::audio_channel_layout::invalid();
 	int													channel_index_;
 	int													consumer_index_;
 	std::atomic<bool>									is_running_;
@@ -121,24 +116,15 @@ public:
 		return make_ready_future(is_running_.load());
 	}
 
-	void initialize(
-			const core::video_format_desc& format_desc,
-			const core::audio_channel_layout& channel_layout,
-			int channel_index) override
+	void initialize(const core::video_format_desc& format_desc,	int channel_index) override
 	{
 		format_desc_    = format_desc;
-		channel_layout_ = channel_layout;
 		channel_index_  = channel_index;
 	}
 
 	std::wstring name() const override
 	{
 		return L"channel-consumer";
-	}
-
-	int64_t presentation_frame_age_millis() const override
-	{
-		return current_age_;
 	}
 
 	std::wstring print() const override
@@ -179,11 +165,6 @@ public:
 	const core::video_format_desc& get_video_format_desc()
 	{
 		return format_desc_;
-	}
-
-	const core::audio_channel_layout& get_audio_channel_layout()
-	{
-		return channel_layout_;
 	}
 
 	void block_until_first_frame_available()
@@ -231,9 +212,8 @@ class channel_producer : public core::frame_producer_base
 	core::monitor::subject						monitor_subject_;
 
 	const spl::shared_ptr<core::frame_factory>	frame_factory_;
-	const core::video_format_desc				output_format_desc_;
+	const core::video_format_desc				format_desc_;
 	const spl::shared_ptr<channel_consumer>		consumer_;
-	ffmpeg::frame_muxer							muxer_;
 
 	std::queue<core::draw_frame>				frame_buffer_;
 
@@ -244,17 +224,8 @@ public:
 			int frames_delay,
 			bool no_auto_deinterlace)
 		: frame_factory_(dependecies.frame_factory)
-		, output_format_desc_(dependecies.format_desc)
+		, format_desc_(dependecies.format_desc)
 		, consumer_(spl::make_shared<channel_consumer>(frames_delay))
-		, muxer_(
-				channel->video_format_desc().framerate,
-				{ ffmpeg::create_input_pad(channel->video_format_desc(), channel->audio_channel_layout().num_channels) },
-				dependecies.frame_factory,
-				no_auto_deinterlace ? channel->video_format_desc() : get_progressive_format(channel->video_format_desc()),
-				channel->audio_channel_layout(),
-				L"",
-				false,
-				!no_auto_deinterlace)
 	{
 		channel->output().add(consumer_);
 		consumer_->block_until_first_frame_available();
@@ -271,39 +242,7 @@ public:
 
 	core::draw_frame receive_impl() override
 	{
-		if (!muxer_.video_ready() || !muxer_.audio_ready())
-		{
-			auto read_frame = consumer_->receive();
-
-			if (read_frame == core::const_frame::empty() || read_frame.image_data().empty())
-				return core::draw_frame::late();
-
-			auto video_frame = ffmpeg::create_frame();
-
-			video_frame->data[0]				= const_cast<uint8_t*>(read_frame.image_data().begin());
-			video_frame->linesize[0]			= static_cast<int>(read_frame.width()) * 4;
-			video_frame->format				= AVPixelFormat::AV_PIX_FMT_BGRA;
-			video_frame->width				= static_cast<int>(read_frame.width());
-			video_frame->height				= static_cast<int>(read_frame.height());
-			video_frame->interlaced_frame	= consumer_->get_video_format_desc().field_mode != core::field_mode::progressive;
-			video_frame->top_field_first		= consumer_->get_video_format_desc().field_mode == core::field_mode::upper ? 1 : 0;
-			video_frame->key_frame			= 1;
-
-			muxer_.push(video_frame);
-			muxer_.push(
-					{
-						std::make_shared<core::mutable_audio_buffer>(
-								read_frame.audio_data().begin(),
-								read_frame.audio_data().end())
-					});
-		}
-
-		auto frame = muxer_.poll();
-
-		if (frame == core::draw_frame::empty())
-			return core::draw_frame::late();
-
-		return frame;
+        return core::draw_frame(consumer_->receive());
 	}
 
 	std::wstring name() const override
@@ -330,7 +269,7 @@ public:
 
 	boost::rational<int> current_framerate() const
 	{
-		return muxer_.out_framerate();
+        return format_desc_.framerate;
 	}
 };
 

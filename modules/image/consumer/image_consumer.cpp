@@ -81,13 +81,8 @@ public:
 	{
 	}
 
-	void initialize(const core::video_format_desc&, const core::audio_channel_layout&, int) override
+	void initialize(const core::video_format_desc&, int) override
 	{
-	}
-
-	int64_t presentation_frame_age_millis() const override
-	{
-		return 0;
 	}
 
 	std::future<bool> send(core::const_frame frame) override

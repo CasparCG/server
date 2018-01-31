@@ -25,7 +25,6 @@
 
 #include <core/frame/frame.h>
 #include <core/frame/frame_transform.h>
-#include <core/frame/audio_channel_layout.h>
 #include <core/monitor/monitor.h>
 
 #include <common/diagnostics/graph.h>
@@ -45,7 +44,6 @@ struct audio_item
 	const void*				tag				= nullptr;
 	audio_transform			transform;
 	audio_buffer			audio_data;
-	audio_channel_layout	channel_layout	= audio_channel_layout::invalid();
 
 	audio_item()
 	{
@@ -55,7 +53,6 @@ struct audio_item
 		: tag(std::move(other.tag))
 		, transform(std::move(other.transform))
 		, audio_data(std::move(other.audio_data))
-		, channel_layout(std::move(other.channel_layout))
 	{
 	}
 };
@@ -66,8 +63,6 @@ struct audio_stream
 {
 	audio_transform							prev_transform;
 	audio_buffer_ps							audio_data;
-	std::unique_ptr<audio_channel_remapper>	channel_remapper;
-	bool									remapping_failed	= false;
 	bool									is_still			= false;
 };
 
@@ -79,7 +74,6 @@ struct audio_mixer::impl : boost::noncopyable
 	std::vector<audio_item>				items_;
 	std::vector<int>					audio_cadence_;
 	video_format_desc					format_desc_;
-	audio_channel_layout				channel_layout_			= audio_channel_layout::invalid();
 	float								master_volume_			= 1.0f;
 	float								previous_master_volume_	= master_volume_;
 	spl::shared_ptr<diagnostics::graph>	graph_;
@@ -106,7 +100,6 @@ public:
 		item.tag			= frame.stream_tag();
 		item.transform		= transform_stack_.top();
 		item.audio_data		= frame.audio_data();
-		item.channel_layout = frame.audio_channel_layout();
 
 		if(item.transform.is_still)
 			item.transform.volume = 0.0;
@@ -129,14 +122,13 @@ public:
 		return master_volume_;
 	}
 
-	audio_buffer mix(const video_format_desc& format_desc, const audio_channel_layout& channel_layout)
+	audio_buffer mix(const video_format_desc& format_desc)
 	{
-		if(format_desc_ != format_desc || channel_layout_ != channel_layout)
+		if (format_desc_ != format_desc)
 		{
 			audio_streams_.clear();
 			audio_cadence_ = format_desc.audio_cadence;
 			format_desc_ = format_desc;
-			channel_layout_ = channel_layout;
 		}
 
 		std::map<const void*, audio_stream>	next_audio_streams;
@@ -144,8 +136,6 @@ public:
 		for (auto& item : items_)
 		{
 			audio_buffer_ps next_audio;
-			std::unique_ptr<audio_channel_remapper> channel_remapper;
-			bool remapping_failed = false;
 
 			auto next_transform = item.transform;
 			auto prev_transform = next_transform;
@@ -165,61 +155,26 @@ public:
 			{
 				prev_transform = it->second.prev_transform;
 				next_audio = std::move(it->second.audio_data);
-				channel_remapper = std::move(it->second.channel_remapper);
-				remapping_failed = it->second.remapping_failed;
-			}
-
-			if (remapping_failed)
-			{
-				CASPAR_LOG(trace) << "[audio_mixer] audio channel remapping already failed for stream.";
-				next_audio_streams[tag].remapping_failed = true;
-				continue;
 			}
 
 			// Skip it if there is no existing audio stream and item has no audio-data.
 			if(!found && item.audio_data.empty())
 				continue;
 
-			if (item.channel_layout == audio_channel_layout::invalid())
-			{
-				CASPAR_LOG(warning) << "[audio_mixer] invalid audio channel layout for item";
-				next_audio_streams[tag].remapping_failed = true;
-				continue;
-			}
-
-			if (!channel_remapper)
-			{
-				try
-				{
-					channel_remapper.reset(new audio_channel_remapper(item.channel_layout, channel_layout_));
-				}
-				catch (...)
-				{
-					CASPAR_LOG_CURRENT_EXCEPTION();
-					CASPAR_LOG(error) << "[audio_mixer] audio channel remapping failed for stream.";
-					next_audio_streams[tag].remapping_failed = true;
-					continue;
-				}
-			}
-
-			item.audio_data = channel_remapper->mix_and_rearrange(item.audio_data);
-
 			const double prev_volume = prev_transform.volume * previous_master_volume_;
 			const double next_volume = next_transform.volume * master_volume_;
 
 			// TODO: Move volume mixing into code below, in order to support audio sample counts not corresponding to frame audio samples.
-			auto alpha = (next_volume-prev_volume)/static_cast<double>(item.audio_data.size()/channel_layout_.num_channels);
+			auto alpha = (next_volume-prev_volume)/static_cast<double>(item.audio_data.size()/format_desc_.audio_channels);
 
 			for(size_t n = 0; n < item.audio_data.size(); ++n)
 			{
-				auto sample_multiplier = (prev_volume + (n / channel_layout_.num_channels) * alpha);
+				auto sample_multiplier = (prev_volume + (n / format_desc_.audio_channels) * alpha);
 				next_audio.push_back(item.audio_data.data()[n] * sample_multiplier);
 			}
 
 			next_audio_streams[tag].prev_transform		= std::move(next_transform); // Store all active tags, inactive tags will be removed at the end.
 			next_audio_streams[tag].audio_data			= std::move(next_audio);
-			next_audio_streams[tag].channel_remapper	= std::move(channel_remapper);
-			next_audio_streams[tag].remapping_failed	= remapping_failed;
 			next_audio_streams[tag].is_still			= item.transform.is_still;
 		}
 
@@ -236,10 +191,10 @@ public:
 		{
 			if (stream.audio_data.size() < result_ps.size())
 			{
-				auto samples = (result_ps.size() - stream.audio_data.size()) / channel_layout_.num_channels;
+				auto samples = (result_ps.size() - stream.audio_data.size()) / format_desc_.audio_channels;
 				CASPAR_LOG(trace) << L"[audio_mixer] Appended " << samples << L" zero samples";
-				CASPAR_LOG(trace) << L"[audio_mixer] Actual number of samples " << stream.audio_data.size() / channel_layout_.num_channels;
-				CASPAR_LOG(trace) << L"[audio_mixer] Wanted number of samples " << result_ps.size() / channel_layout_.num_channels;
+				CASPAR_LOG(trace) << L"[audio_mixer] Actual number of samples " << stream.audio_data.size() / format_desc_.audio_channels;
+				CASPAR_LOG(trace) << L"[audio_mixer] Wanted number of samples " << result_ps.size() / format_desc_.audio_channels;
 				stream.audio_data.resize(result_ps.size(), 0.0);
 			}
 
@@ -274,7 +229,7 @@ public:
 		if (clipping)
 			graph_->set_tag(diagnostics::tag_severity::WARNING, "audio-clipping");
 
-		const int num_channels = channel_layout_.num_channels;
+		const int num_channels = format_desc_.audio_channels;
 		monitor_subject_ << monitor::message("/nb_channels") % num_channels;
 
 		auto max = std::vector<int32_t>(num_channels, std::numeric_limits<int32_t>::min());
@@ -305,7 +260,7 @@ public:
 
 	size_t audio_size(size_t num_samples) const
 	{
-		return num_samples * channel_layout_.num_channels;
+		return num_samples * format_desc_.audio_channels;
 	}
 };
 
@@ -315,7 +270,7 @@ void audio_mixer::visit(const const_frame& frame){impl_->visit(frame);}
 void audio_mixer::pop(){impl_->pop();}
 void audio_mixer::set_master_volume(float volume) { impl_->set_master_volume(volume); }
 float audio_mixer::get_master_volume() { return impl_->get_master_volume(); }
-audio_buffer audio_mixer::operator()(const video_format_desc& format_desc, const audio_channel_layout& channel_layout){ return impl_->mix(format_desc, channel_layout); }
+audio_buffer audio_mixer::operator()(const video_format_desc& format_desc){ return impl_->mix(format_desc); }
 monitor::subject& audio_mixer::monitor_output(){ return impl_->monitor_subject_; }
 
 }}

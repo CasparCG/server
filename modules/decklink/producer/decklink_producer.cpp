@@ -25,11 +25,6 @@
 
 #include "../util/util.h"
 
-#include "../../ffmpeg/producer/filter/filter.h"
-#include "../../ffmpeg/producer/util/util.h"
-#include "../../ffmpeg/producer/muxer/frame_muxer.h"
-#include "../../ffmpeg/producer/muxer/display_mode.h"
-
 #include <common/executor.h>
 #include <common/diagnostics/graph.h>
 #include <common/except.h>
@@ -37,7 +32,7 @@
 #include <common/param.h>
 #include <common/timer.h>
 
-#include <core/frame/audio_channel_layout.h>
+#include <core/frame/pixel_format.h>
 #include <core/frame/frame.h>
 #include <core/frame/draw_frame.h>
 #include <core/frame/frame_transform.h>
@@ -62,6 +57,7 @@ extern "C"
 	#define __STDC_CONSTANT_MACROS
 	#define __STDC_LIMIT_MACROS
 	#include <libavcodec/avcodec.h>
+    #include <libswscale/swscale.h>
 }
 #if defined(_MSC_VER)
 #pragma warning (pop)
@@ -72,17 +68,6 @@ extern "C"
 #include <functional>
 
 namespace caspar { namespace decklink {
-core::audio_channel_layout get_adjusted_channel_layout(core::audio_channel_layout layout)
-{
-	if (layout.num_channels <= 2)
-		layout.num_channels = 2;
-	else if (layout.num_channels <= 8)
-		layout.num_channels = 8;
-	else
-		layout.num_channels = 16;
-
-	return layout;
-}
 
 template <typename T>
 std::wstring to_string(const T& cadence)
@@ -102,43 +87,28 @@ class decklink_producer : boost::noncopyable, public IDeckLinkInputCallback
 	com_iface_ptr<IDeckLinkAttributes>				attributes_			= iface_cast<IDeckLinkAttributes>(decklink_);
 
 	const std::wstring								model_name_			= get_model_name(decklink_);
-	const std::wstring								filter_;
 
-	core::video_format_desc							in_format_desc_;
-	core::video_format_desc							out_format_desc_;
-	std::vector<int>								audio_cadence_		= in_format_desc_.audio_cadence;
+	core::video_format_desc							format_desc_;
+	std::vector<int>								audio_cadence_		= format_desc_.audio_cadence;
 	boost::circular_buffer<size_t>					sync_buffer_		{ audio_cadence_.size() };
 	spl::shared_ptr<core::frame_factory>			frame_factory_;
-	core::audio_channel_layout						channel_layout_;
-	ffmpeg::frame_muxer								muxer_				{
-																			in_format_desc_.framerate,
-																			{ ffmpeg::create_input_pad(in_format_desc_, channel_layout_.num_channels) },
-																			frame_factory_,
-																			out_format_desc_,
-																			channel_layout_,
-																			filter_,
-																			ffmpeg::filter::is_deinterlacing(filter_)
-																		};
 
 	tbb::concurrent_bounded_queue<core::draw_frame>	frame_buffer_;
 	core::draw_frame								last_frame_			= core::draw_frame::empty();
+
+    std::shared_ptr<SwsContext>                     sws_;
 
 	std::exception_ptr								exception_;
 
 public:
 	decklink_producer(
-			const core::video_format_desc& in_format_desc,
+			const core::video_format_desc& format_desc,
 			int device_index,
 			const spl::shared_ptr<core::frame_factory>& frame_factory,
-			const core::video_format_desc& out_format_desc,
-			const core::audio_channel_layout& channel_layout,
 			const std::wstring& filter)
 		: device_index_(device_index)
-		, filter_(filter)
-		, in_format_desc_(in_format_desc)
-		, out_format_desc_(out_format_desc)
+		, format_desc_(format_desc)
 		, frame_factory_(frame_factory)
-		, channel_layout_(get_adjusted_channel_layout(channel_layout))
 	{
 		frame_buffer_.set_capacity(4);
 
@@ -150,7 +120,7 @@ public:
 		graph_->set_text(print());
 		diagnostics::register_graph(graph_);
 
-		auto display_mode = get_display_mode(input_, in_format_desc.format, bmdFormat8BitYUV, bmdVideoInputFlagDefault);
+		auto display_mode = get_display_mode(input_, format_desc.format, bmdFormat8BitYUV, bmdVideoInputFlagDefault);
 
 		// NOTE: bmdFormat8BitARGB is currently not supported by any decklink card. (2011-05-08)
 		if(FAILED(input_->EnableVideoInput(display_mode, bmdFormat8BitYUV, 0)))
@@ -158,7 +128,7 @@ public:
 									<< msg_info(print() + L" Could not enable video input.")
 									<< boost::errinfo_api_function("EnableVideoInput"));
 
-		if(FAILED(input_->EnableAudioInput(bmdAudioSampleRate48kHz, bmdAudioSampleType32bitInteger, static_cast<int>(channel_layout_.num_channels))))
+		if(FAILED(input_->EnableAudioInput(bmdAudioSampleRate48kHz, bmdAudioSampleType32bitInteger, static_cast<int>(format_desc_.audio_channels))))
 			CASPAR_THROW_EXCEPTION(caspar_exception()
 									<< msg_info(print() + L" Could not enable audio input.")
 									<< boost::errinfo_api_function("EnableAudioInput"));
@@ -207,7 +177,7 @@ public:
 
 		try
 		{
-			graph_->set_value("tick-time", tick_timer_.elapsed()*out_format_desc_.fps*0.5);
+			graph_->set_value("tick-time", tick_timer_.elapsed()*format_desc_.fps*0.5);
 			tick_timer_.restart();
 
 			caspar::timer frame_timer;
@@ -218,27 +188,16 @@ public:
 			if(FAILED(video->GetBytes(&video_bytes)) || !video_bytes)
 				return S_OK;
 
-			auto video_frame = ffmpeg::create_frame();
-
-			video_frame->data[0]			= reinterpret_cast<uint8_t*>(video_bytes);
-			video_frame->linesize[0]		= video->GetRowBytes();
-			video_frame->format				= AVPixelFormat::AV_PIX_FMT_UYVY422;
-			video_frame->width				= video->GetWidth();
-			video_frame->height				= video->GetHeight();
-			video_frame->interlaced_frame	= in_format_desc_.field_mode != core::field_mode::progressive;
-			video_frame->top_field_first	= in_format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
-			video_frame->key_frame			= 1;
-
 			monitor_subject_
 					<< core::monitor::message("/file/name")					% model_name_
 					<< core::monitor::message("/file/path")					% device_index_
 					<< core::monitor::message("/file/video/width")			% video->GetWidth()
 					<< core::monitor::message("/file/video/height")			% video->GetHeight()
-					<< core::monitor::message("/file/video/field")			% u8(!video_frame->interlaced_frame ? "progressive" : (video_frame->top_field_first ? "upper" : "lower"))
+					<< core::monitor::message("/file/video/field")			% u8(format_desc_.field_mode != core::field_mode::progressive ? "progressive" : (format_desc_.field_mode == core::field_mode::upper ? "upper" : "lower"))
 					<< core::monitor::message("/file/audio/sample-rate")	% 48000
 					<< core::monitor::message("/file/audio/channels")		% 2
 					<< core::monitor::message("/file/audio/format")			% u8(av_get_sample_fmt_name(AV_SAMPLE_FMT_S32))
-					<< core::monitor::message("/file/fps")					% in_format_desc_.fps;
+					<< core::monitor::message("/file/fps")					% format_desc_.fps;
 
 			// Audio
 
@@ -253,15 +212,15 @@ public:
 
 				audio_buffer = std::make_shared<core::mutable_audio_buffer>(
 					audio_data,
-					audio_data + sample_frame_count * channel_layout_.num_channels);
+					audio_data + sample_frame_count * format_desc_.audio_channels);
 			}
 			else
-				audio_buffer = std::make_shared<core::mutable_audio_buffer>(audio_cadence_.front() * channel_layout_.num_channels, 0);
+				audio_buffer = std::make_shared<core::mutable_audio_buffer>(audio_cadence_.front() * format_desc_.audio_channels, 0);
 
 			// Note: Uses 1 step rotated cadence for 1001 modes (1602, 1602, 1601, 1602, 1601)
 			// This cadence fills the audio mixer most optimally.
 
-			sync_buffer_.push_back(audio_buffer->size() / channel_layout_.num_channels);
+			sync_buffer_.push_back(audio_buffer->size() / format_desc_.audio_channels);
 			if(!boost::range::equal(sync_buffer_, audio_cadence_))
 			{
 				CASPAR_LOG(trace) << print() << L" Syncing audio. Expected cadence: " << to_string(audio_cadence_) << L" Got cadence: " << to_string(sync_buffer_);
@@ -269,28 +228,67 @@ public:
 			}
 			boost::range::rotate(audio_cadence_, std::begin(audio_cadence_)+1);
 
-			// PUSH
+            auto frame = [&]
+            {
+                auto src = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
 
-			muxer_.push({ audio_buffer });
-			muxer_.push(static_cast<std::shared_ptr<AVFrame>>(video_frame));
+                src->data[0] = reinterpret_cast<uint8_t*>(video_bytes);
+                src->linesize[0] = video->GetRowBytes();
+                src->format = AV_PIX_FMT_UYVY422;
+                src->width = video->GetWidth();
+                src->height = video->GetHeight();
+                src->interlaced_frame = format_desc_.field_mode != core::field_mode::progressive;
+                src->top_field_first = format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
+                src->key_frame = 1;
 
-			// POLL
+                core::pixel_format_desc desc;
+                auto frame = frame_factory_->create_frame(this, desc);
+                desc.planes.push_back(core::pixel_format_desc::plane(src->width,    src->height, 1));
+                desc.planes.push_back(core::pixel_format_desc::plane(src->width / 2, src->height, 1));
+                desc.planes.push_back(core::pixel_format_desc::plane(src->width / 2, src->height, 1));
 
-			for (auto frame = muxer_.poll(); frame != core::draw_frame::empty(); frame = muxer_.poll())
-			{
-				if (!frame_buffer_.try_push(frame))
-				{
-					auto dummy = core::draw_frame::empty();
-					frame_buffer_.try_pop(dummy);
+                auto dst = std::shared_ptr<AVFrame>(av_frame_alloc(), [](AVFrame* ptr) { av_frame_free(&ptr); });
+                dst->data[0] = reinterpret_cast<uint8_t*>(frame.image_data(0).data());
+                dst->data[1] = reinterpret_cast<uint8_t*>(frame.image_data(1).data());
+                dst->data[2] = reinterpret_cast<uint8_t*>(frame.image_data(2).data());
+                dst->linesize[0] = desc.planes[0].linesize;
+                dst->linesize[1] = desc.planes[1].linesize;
+                dst->linesize[2] = desc.planes[2].linesize;
+                dst->format = AV_PIX_FMT_YUV422P;
+                dst->width = format_desc_.width;
+                dst->height = format_desc_.height;
+                dst->interlaced_frame = format_desc_.field_mode != core::field_mode::progressive;
+                dst->top_field_first = format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
+                dst->key_frame = 1;
 
-					frame_buffer_.try_push(frame);
+                auto sws = sws_getCachedContext(
+                    sws_.get(),
+                    src->width, src->height, static_cast<AVPixelFormat>(src->format),
+                    dst->width, dst->height, static_cast<AVPixelFormat>(dst->format),
+                    SWS_BILINEAR, nullptr, nullptr, nullptr
+                );
 
-					graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
-				}
-			}
+                if (sws != sws_.get()) {
+                    sws_.reset(sws, sws_freeContext);
+                }
 
-			graph_->set_value("frame-time", frame_timer.elapsed()*out_format_desc_.fps*0.5);
-			monitor_subject_ << core::monitor::message("/profiler/time") % frame_timer.elapsed() % out_format_desc_.fps;
+                sws_scale(sws_.get(), src->data, src->linesize, 0, src->height, dst->data, dst->linesize);
+
+                return core::draw_frame(std::move(frame));
+            }();
+
+            if (!frame_buffer_.try_push(frame))
+            {
+            	auto dummy = core::draw_frame::empty();
+            	frame_buffer_.try_pop(dummy);
+
+            	frame_buffer_.try_push(frame);
+
+            	graph_->set_tag(diagnostics::tag_severity::WARNING, "dropped-frame");
+            }
+
+			graph_->set_value("frame-time", frame_timer.elapsed()*format_desc_.fps*0.5);
+			monitor_subject_ << core::monitor::message("/profiler/time") % frame_timer.elapsed() % format_desc_.fps;
 
 			graph_->set_value("output-buffer", static_cast<float>(frame_buffer_.size())/static_cast<float>(frame_buffer_.capacity()));
 			monitor_subject_ << core::monitor::message("/buffer") % frame_buffer_.size() % frame_buffer_.capacity();
@@ -323,12 +321,12 @@ public:
 
 	std::wstring print() const
 	{
-		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"|" + in_format_desc_.name + L"]";
+		return model_name_ + L" [" + boost::lexical_cast<std::wstring>(device_index_) + L"|" + format_desc_.name + L"]";
 	}
 
 	boost::rational<int> get_out_framerate() const
 	{
-		return muxer_.out_framerate();
+		return format_desc_.framerate;
 	}
 
 	core::monitor::subject& monitor_output()
@@ -344,10 +342,8 @@ class decklink_producer_proxy : public core::frame_producer_base
 	executor							executor_;
 public:
 	explicit decklink_producer_proxy(
-			const core::video_format_desc& in_format_desc,
+			const core::video_format_desc& format_desc,
 			const spl::shared_ptr<core::frame_factory>& frame_factory,
-			const core::video_format_desc& out_format_desc,
-			const core::audio_channel_layout& channel_layout,
 			int device_index,
 			const std::wstring& filter_str,
 			uint32_t length)
@@ -359,7 +355,7 @@ public:
 		{
 			core::diagnostics::call_context::for_thread() = ctx;
 			com_initialize();
-			producer_.reset(new decklink_producer(in_format_desc, device_index, frame_factory, out_format_desc, channel_layout, filter_str));
+			producer_.reset(new decklink_producer(format_desc, device_index, frame_factory, filter_str));
 		});
 	}
 
@@ -423,33 +419,14 @@ spl::shared_ptr<core::frame_producer> create_producer(const core::frame_producer
 
 	auto filter_str		= get_param(L"FILTER", params);
 	auto length			= get_param(L"LENGTH", params, std::numeric_limits<uint32_t>::max());
-	auto in_format_desc = core::video_format_desc(get_param(L"FORMAT", params, L"INVALID"));
-
-	if(in_format_desc.format == core::video_format::invalid)
-		in_format_desc = dependencies.format_desc;
-
-	auto channel_layout_spec	= get_param(L"CHANNEL_LAYOUT", params);
-	auto channel_layout			= *core::audio_channel_layout_repository::get_default()->get_layout(L"stereo");
-
-	if (!channel_layout_spec.empty())
-	{
-		auto found_layout = core::audio_channel_layout_repository::get_default()->get_layout(channel_layout_spec);
-
-		if (!found_layout)
-			CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Channel layout not found."));
-
-		channel_layout = *found_layout;
-	}
 
 	boost::ireplace_all(filter_str, L"DEINTERLACE_BOB",	L"YADIF=1:-1");
 	boost::ireplace_all(filter_str, L"DEINTERLACE_LQ",	L"SEPARATEFIELDS");
 	boost::ireplace_all(filter_str, L"DEINTERLACE",		L"YADIF=0:-1");
 
 	auto producer = spl::make_shared<decklink_producer_proxy>(
-			in_format_desc,
+            dependencies.format_desc,
 			dependencies.frame_factory,
-			dependencies.format_desc,
-			channel_layout,
 			device_index,
 			filter_str,
 			length);

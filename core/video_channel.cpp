@@ -31,7 +31,6 @@
 #include "frame/frame.h"
 #include "frame/draw_frame.h"
 #include "frame/frame_factory.h"
-#include "frame/audio_channel_layout.h"
 
 #include <common/diagnostics/graph.h>
 #include <common/env.h>
@@ -59,8 +58,6 @@ struct video_channel::impl final
 
 	mutable std::mutex   								format_desc_mutex_;
 	core::video_format_desc								format_desc_;
-    mutable std::mutex								    channel_layout_mutex_;
-	core::audio_channel_layout							channel_layout_;
 
 	const spl::shared_ptr<caspar::diagnostics::graph>	graph_					= [](int index)
 																				  {
@@ -81,33 +78,30 @@ struct video_channel::impl final
 
 	executor											executor_				{ L"video_channel " + boost::lexical_cast<std::wstring>(index_) };
 public:
-	impl(
-			int index,
-			const core::video_format_desc& format_desc,
-			const core::audio_channel_layout& channel_layout,
-			std::unique_ptr<image_mixer> image_mixer)
-		: monitor_subject_(spl::make_shared<monitor::subject>(
-				"/channel/" + boost::lexical_cast<std::string>(index)))
-		, index_(index)
-		, format_desc_(format_desc)
-		, channel_layout_(channel_layout)
-		, output_(graph_, format_desc, channel_layout, index)
-		, image_mixer_(std::move(image_mixer))
-		, mixer_(index, graph_, image_mixer_)
-		, stage_(index, graph_)
-	{
-		graph_->set_color("tick-time", caspar::diagnostics::color(0.0f, 0.6f, 0.9f));
-		graph_->set_text(print());
-		caspar::diagnostics::register_graph(graph_);
+    impl(int index,
+        const core::video_format_desc& format_desc,
+        std::unique_ptr<image_mixer> image_mixer)
+        : monitor_subject_(spl::make_shared<monitor::subject>(
+            "/channel/" + boost::lexical_cast<std::string>(index)))
+        , index_(index)
+        , format_desc_(format_desc)
+        , output_(graph_, format_desc, index)
+        , image_mixer_(std::move(image_mixer))
+        , mixer_(index, graph_, image_mixer_)
+        , stage_(index, graph_)
+    {
+        graph_->set_color("tick-time", caspar::diagnostics::color(0.0f, 0.6f, 0.9f));
+        graph_->set_text(print());
+        caspar::diagnostics::register_graph(graph_);
 
-		output_.monitor_output().attach_parent(monitor_subject_);
-		mixer_.monitor_output().attach_parent(monitor_subject_);
-		stage_.monitor_output().attach_parent(monitor_subject_);
+        output_.monitor_output().attach_parent(monitor_subject_);
+        mixer_.monitor_output().attach_parent(monitor_subject_);
+        stage_.monitor_output().attach_parent(monitor_subject_);
 
-		executor_.begin_invoke([=]{tick();});
+        executor_.begin_invoke([=] { tick(); });
 
-		CASPAR_LOG(info) << print() << " Successfully Initialized.";
-	}
+        CASPAR_LOG(info) << print() << " Successfully Initialized.";
+    }
 
 	~impl()
 	{
@@ -124,19 +118,6 @@ public:
 	{
         std::lock_guard<std::mutex> lock(format_desc_mutex_);
 		format_desc_ = format_desc;
-		stage_.clear();
-	}
-
-	core::audio_channel_layout audio_channel_layout() const
-	{
-        std::lock_guard<std::mutex> lock(channel_layout_mutex_);
-		return channel_layout_;
-	}
-
-	void audio_channel_layout(const core::audio_channel_layout& channel_layout)
-	{
-        std::lock_guard<std::mutex> lock(channel_layout_mutex_);
-		channel_layout_ = channel_layout;
 		stage_.clear();
 	}
 
@@ -166,7 +147,6 @@ public:
 			invoke_tick_listeners();
 
 			auto format_desc	= video_format_desc();
-			auto channel_layout = audio_channel_layout();
 
 			caspar::timer frame_timer;
 
@@ -176,11 +156,11 @@ public:
 
 			// Mix
 
-			auto mixed_frame  = mixer_(std::move(stage_frames), format_desc, channel_layout);
+			auto mixed_frame  = mixer_(std::move(stage_frames), format_desc);
 
 			// Consume
 
-			output_ready_for_frame_ = output_(std::move(mixed_frame), format_desc, channel_layout);
+			output_ready_for_frame_ = output_(std::move(mixed_frame), format_desc);
 			output_ready_for_frame_.get();
 
 			auto frame_time = frame_timer.elapsed()*format_desc.fps*0.5;
@@ -217,25 +197,8 @@ public:
 		auto output_info = output_.info();
 
 		info.add(L"video-mode", video_format_desc().name);
-		info.add(L"audio-channel-layout", audio_channel_layout().print());
 		info.add_child(L"stage", stage_info.get());
 		info.add_child(L"mixer", mixer_info.get());
-		info.add_child(L"output", output_info.get());
-
-		return info;
-	}
-
-	boost::property_tree::wptree delay_info() const
-	{
-		boost::property_tree::wptree info;
-
-		auto stage_info = stage_.delay_info();
-		auto mixer_info = mixer_.delay_info();
-		auto output_info = output_.delay_info();
-
-		// TODO: because of std::async deferred timed waiting does not work so for now we have to block
-		info.add_child(L"layers", stage_info.get());
-		info.add_child(L"mix-time", mixer_info.get());
 		info.add_child(L"output", output_info.get());
 
 		return info;
@@ -259,8 +222,7 @@ public:
 video_channel::video_channel(
 		int index,
 		const core::video_format_desc& format_desc,
-		const core::audio_channel_layout& channel_layout,
-		std::unique_ptr<image_mixer> image_mixer) : impl_(new impl(index, format_desc, channel_layout, std::move(image_mixer))){}
+		std::unique_ptr<image_mixer> image_mixer) : impl_(new impl(index, format_desc, std::move(image_mixer))){}
 video_channel::~video_channel(){}
 const stage& video_channel::stage() const { return impl_->stage_;}
 stage& video_channel::stage() { return impl_->stage_;}
@@ -271,10 +233,7 @@ output& video_channel::output() { return impl_->output_;}
 spl::shared_ptr<frame_factory> video_channel::frame_factory() { return impl_->image_mixer_;}
 core::video_format_desc video_channel::video_format_desc() const{return impl_->video_format_desc();}
 void core::video_channel::video_format_desc(const core::video_format_desc& format_desc){impl_->video_format_desc(format_desc);}
-core::audio_channel_layout video_channel::audio_channel_layout() const { return impl_->audio_channel_layout(); }
-void core::video_channel::audio_channel_layout(const core::audio_channel_layout& channel_layout) { impl_->audio_channel_layout(channel_layout); }
 boost::property_tree::wptree video_channel::info() const{return impl_->info();}
-boost::property_tree::wptree video_channel::delay_info() const { return impl_->delay_info(); }
 int video_channel::index() const { return impl_->index(); }
 monitor::subject& video_channel::monitor_output(){ return *impl_->monitor_subject_; }
 std::shared_ptr<void> video_channel::add_tick_listener(std::function<void()> listener) { return impl_->add_tick_listener(std::move(listener)); }

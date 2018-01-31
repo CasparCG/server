@@ -39,9 +39,6 @@
 
 //#include <windows.h>
 
-#include <ffmpeg/producer/filter/filter.h>
-#include <ffmpeg/producer/util/util.h>
-
 #include <core/video_format.h>
 #include <core/frame/frame.h>
 #include <core/consumer/frame_consumer.h>
@@ -139,8 +136,6 @@ struct screen_consumer : boost::noncopyable
 	std::thread										    thread_;
 	std::atomic<bool>									is_running_;
 	std::atomic<int64_t>								current_presentation_age_;
-
-	ffmpeg::filter										filter_;
 public:
 	screen_consumer(
 			const configuration& config,
@@ -152,26 +147,6 @@ public:
 		, channel_index_(channel_index)
 		, pts_(0)
 		, sink_(sink)
-		, filter_([&]() -> ffmpeg::filter
-		{
-			const auto sample_aspect_ratio =
-				boost::rational<int>(
-					format_desc.square_width,
-					format_desc.square_height) /
-				boost::rational<int>(
-					format_desc.width,
-					format_desc.height);
-
-			return ffmpeg::filter(
-				format_desc.width,
-				format_desc.height,
-				boost::rational<int>(format_desc.duration, format_desc.time_scale),
-				boost::rational<int>(format_desc.time_scale, format_desc.duration),
-				sample_aspect_ratio,
-				AV_PIX_FMT_BGRA,
-				{ AV_PIX_FMT_BGRA },
-				format_desc.field_mode == core::field_mode::progressive || !config.auto_deinterlace ? "" : "format=pix_fmts=gbrp,YADIF=1:-1");
-		}())
 	{
 		if (format_desc_.format == core::video_format::ntsc && config_.aspect == configuration::aspect_ratio::aspect_4_3)
 		{
@@ -370,7 +345,7 @@ public:
 					core::const_frame frame;
 					frame_buffer_.pop(frame);
 
-					render_and_draw_frame(frame);
+					render(frame);
 
 					/*perf_timer_.restart();
 					render(frame);
@@ -415,64 +390,7 @@ public:
 		wait_timer_.tick(0.0);
 	}
 
-	spl::shared_ptr<AVFrame> get_av_frame()
-	{
-		auto av_frame = ffmpeg::create_frame();
-
-		av_frame->linesize[0]		= format_desc_.width*4;
-		av_frame->format				= AVPixelFormat::AV_PIX_FMT_BGRA;
-		av_frame->width				= format_desc_.width;
-		av_frame->height				= format_desc_.height;
-		av_frame->interlaced_frame	= format_desc_.field_mode != core::field_mode::progressive;
-		av_frame->top_field_first	= format_desc_.field_mode == core::field_mode::upper ? 1 : 0;
-		av_frame->pts				= pts_++;
-
-		return av_frame;
-	}
-
-	void render_and_draw_frame(core::const_frame input_frame)
-	{
-		if(static_cast<size_t>(input_frame.image_data().size()) != format_desc_.size)
-			return;
-
-		if(screen_width_ == 0 && screen_height_ == 0)
-			return;
-
-		perf_timer_.restart();
-		auto av_frame = get_av_frame();
-		av_frame->data[0] = const_cast<uint8_t*>(input_frame.image_data().begin());
-
-		filter_.push(av_frame);
-		auto frame = filter_.poll();
-
-		if (!frame)
-			return;
-
-		if (!filter_.is_double_rate())
-		{
-			render(spl::make_shared_ptr(frame));
-			graph_->set_value("frame-time", perf_timer_.elapsed() * format_desc_.fps * 0.5);
-
-			wait_for_vblank_and_display(); // progressive frame
-		}
-		else
-		{
-			render(spl::make_shared_ptr(frame));
-			double perf_elapsed = perf_timer_.elapsed();
-
-			wait_for_vblank_and_display(); // field1
-
-			perf_timer_.restart();
-			frame = filter_.poll();
-			render(spl::make_shared_ptr(frame));
-			perf_elapsed += perf_timer_.elapsed();
-			graph_->set_value("frame-time", perf_elapsed * format_desc_.fps * 0.5);
-
-			wait_for_vblank_and_display(); // field2
-		}
-	}
-
-	void render(spl::shared_ptr<AVFrame> av_frame)
+	void render(core::const_frame input_frame)
 	{
 		CASPAR_LOG_CALL(trace) << "screen_consumer::render() <- " << print();
 		GL(glBindTexture(GL_TEXTURE_2D, texture_));
@@ -491,12 +409,12 @@ public:
 				tbb::parallel_for(tbb::blocked_range<int>(0, format_desc_.height), [&](const tbb::blocked_range<int>& r)
 				{
 					for(int n = r.begin(); n != r.end(); ++n)
-						aligned_memshfl(ptr+n*format_desc_.width*4, av_frame->data[0]+n*av_frame->linesize[0], format_desc_.width*4, 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
+						aligned_memshfl(ptr+n*format_desc_.width*4, input_frame.image_data(0).begin()+n* format_desc_.width*4, format_desc_.width*4, 0x0F0F0F0F, 0x0B0B0B0B, 0x07070707, 0x03030303);
 				});
 			}
 			else
 			{
-				std::memcpy(ptr, av_frame->data[0], format_desc_.size);
+				std::memcpy(ptr, input_frame.image_data(0).begin(), format_desc_.size);
 			}
 
 			GL(glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER)); // release the mapped buffer
@@ -611,15 +529,10 @@ public:
 
 	// frame_consumer
 
-	void initialize(const core::video_format_desc& format_desc, const core::audio_channel_layout&, int channel_index) override
+	void initialize(const core::video_format_desc& format_desc, int channel_index) override
 	{
 		consumer_.reset();
 		consumer_.reset(new screen_consumer(config_, format_desc, channel_index, sink_));
-	}
-
-	int64_t presentation_frame_age_millis() const override
-	{
-		return consumer_ ? static_cast<int64_t>(consumer_->current_presentation_age_) : 0;
 	}
 
 	std::future<bool> send(core::const_frame frame) override

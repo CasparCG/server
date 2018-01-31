@@ -35,8 +35,6 @@
 #include <core/frame/pixel_format.h>
 #include <core/video_format.h>
 
-#include <modules/ffmpeg/producer/util/util.h>
-
 #include <GL/glew.h>
 
 #include <tbb/parallel_for.h>
@@ -229,61 +227,62 @@ private:
 
 		auto dest_items = source_items;
 
-		tbb::parallel_for_each(buffers.begin(), buffers.end(), [&](const std::array<const uint8_t*, 4>& data)
-		{
-			auto pix_desc = std::find_if(source_items.begin(), source_items.end(), [&](const item& item){return item.data == data;})->pix_desc;
+        // XXX
+		//tbb::parallel_for_each(buffers.begin(), buffers.end(), [&](const std::array<const uint8_t*, 4>& data)
+		//{
+		//	auto pix_desc = std::find_if(source_items.begin(), source_items.end(), [&](const item& item){return item.data == data;})->pix_desc;
 
-			if(pix_desc.format == core::pixel_format::bgra &&
-				pix_desc.planes.at(0).width == width &&
-				pix_desc.planes.at(0).height == height)
-				return;
+		//	if(pix_desc.format == core::pixel_format::bgra &&
+		//		pix_desc.planes.at(0).width == width &&
+		//		pix_desc.planes.at(0).height == height)
+		//		return;
 
-			std::array<uint8_t*, 4> data2 = {};
-			for(std::size_t n = 0; n < data.size(); ++n)
-				data2.at(n) = const_cast<uint8_t*>(data[n]);
+		//	std::array<uint8_t*, 4> data2 = {};
+		//	for(std::size_t n = 0; n < data.size(); ++n)
+		//		data2.at(n) = const_cast<uint8_t*>(data[n]);
 
-			auto input_av_frame = ffmpeg::make_av_frame(data2, pix_desc);
+		//	auto input_av_frame = ffmpeg::make_av_frame(data2, pix_desc);
 
 
-			int64_t key = ((static_cast<int64_t>(input_av_frame->width)	 << 32) & 0xFFFF00000000) |
-						  ((static_cast<int64_t>(input_av_frame->height) << 16) & 0xFFFF0000) |
-						  ((static_cast<int64_t>(input_av_frame->format) <<  8) & 0xFF00);
+		//	int64_t key = ((static_cast<int64_t>(input_av_frame->width)	 << 32) & 0xFFFF00000000) |
+		//				  ((static_cast<int64_t>(input_av_frame->height) << 16) & 0xFFFF0000) |
+		//				  ((static_cast<int64_t>(input_av_frame->format) <<  8) & 0xFF00);
 
-			auto& pool = sws_devices_[key];
+		//	auto& pool = sws_devices_[key];
 
-			std::shared_ptr<SwsContext> sws_device;
-			if(!pool.try_pop(sws_device))
-			{
-				double param;
-				sws_device.reset(sws_getContext(input_av_frame->width, input_av_frame->height, static_cast<AVPixelFormat>(input_av_frame->format), width, height, AVPixelFormat::AV_PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
-			}
+		//	std::shared_ptr<SwsContext> sws_device;
+		//	if(!pool.try_pop(sws_device))
+		//	{
+		//		double param;
+		//		sws_device.reset(sws_getContext(input_av_frame->width, input_av_frame->height, static_cast<AVPixelFormat>(input_av_frame->format), width, height, AVPixelFormat::AV_PIX_FMT_BGRA, SWS_BILINEAR, nullptr, nullptr, &param), sws_freeContext);
+		//	}
 
-			if(!sws_device)
-				CASPAR_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling device.") << boost::errinfo_api_function("sws_getContext"));
+		//	if(!sws_device)
+		//		CASPAR_THROW_EXCEPTION(operation_failed() << msg_info("Could not create software scaling device.") << boost::errinfo_api_function("sws_getContext"));
 
-			auto dest_frame = spl::make_shared<buffer>(width*height*4);
-			temp_buffers_.push(dest_frame);
+		//	auto dest_frame = spl::make_shared<buffer>(width*height*4);
+		//	temp_buffers_.push(dest_frame);
 
-			{
-				auto dest_av_frame = ffmpeg::create_frame();
-				avpicture_fill(reinterpret_cast<AVPicture*>(dest_av_frame.get()), dest_frame->data(), AVPixelFormat::AV_PIX_FMT_BGRA, width, height);
+		//	{
+		//		auto dest_av_frame = ffmpeg::create_frame();
+		//		avpicture_fill(reinterpret_cast<AVPicture*>(dest_av_frame.get()), dest_frame->data(), AVPixelFormat::AV_PIX_FMT_BGRA, width, height);
 
-				sws_scale(sws_device.get(), input_av_frame->data, input_av_frame->linesize, 0, input_av_frame->height, dest_av_frame->data, dest_av_frame->linesize);
-				pool.push(sws_device);
-			}
+		//		sws_scale(sws_device.get(), input_av_frame->data, input_av_frame->linesize, 0, input_av_frame->height, dest_av_frame->data, dest_av_frame->linesize);
+		//		pool.push(sws_device);
+		//	}
 
-			for(std::size_t n = 0; n < source_items.size(); ++n)
-			{
-				if(source_items[n].data == data)
-				{
-					dest_items[n].data.fill(0);
-					dest_items[n].data[0]			= dest_frame->data();
-					dest_items[n].pix_desc			= core::pixel_format_desc(core::pixel_format::bgra);
-					dest_items[n].pix_desc.planes	= { core::pixel_format_desc::plane(width, height, 4) };
-					dest_items[n].transform			= source_items[n].transform;
-				}
-			}
-		});
+		//	for(std::size_t n = 0; n < source_items.size(); ++n)
+		//	{
+		//		if(source_items[n].data == data)
+		//		{
+		//			dest_items[n].data.fill(0);
+		//			dest_items[n].data[0]			= dest_frame->data();
+		//			dest_items[n].pix_desc			= core::pixel_format_desc(core::pixel_format::bgra);
+		//			dest_items[n].pix_desc.planes	= { core::pixel_format_desc::plane(width, height, 4) };
+		//			dest_items[n].transform			= source_items[n].transform;
+		//		}
+		//	}
+		//});
 
 		source_items = std::move(dest_items);
 	}
@@ -339,7 +338,7 @@ public:
 		return renderer_(std::move(items_), format_desc);
 	}
 
-	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc, const core::audio_channel_layout& channel_layout)
+	core::mutable_frame create_frame(const void* tag, const core::pixel_format_desc& desc)
 	{
 		std::vector<array<std::uint8_t>> buffers;
 		for (auto& plane : desc.planes)
@@ -347,7 +346,7 @@ public:
 			auto buf = spl::make_shared<buffer>(plane.size);
 			buffers.push_back(array<std::uint8_t>(buf->data(), plane.size, true, buf));
 		}
-		return core::mutable_frame(std::move(buffers), core::mutable_audio_buffer(), tag, desc, channel_layout);
+		return core::mutable_frame(std::move(buffers), core::mutable_audio_buffer(), tag, desc);
 	}
 };
 
@@ -358,6 +357,6 @@ void image_mixer::visit(const core::const_frame& frame){impl_->visit(frame);}
 void image_mixer::pop(){impl_->pop();}
 int image_mixer::get_max_frame_size() { return std::numeric_limits<int>::max(); }
 std::future<array<const std::uint8_t>> image_mixer::operator()(const core::video_format_desc& format_desc, bool /* straighten_alpha */){return impl_->render(format_desc);}
-core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc, const core::audio_channel_layout& channel_layout) {return impl_->create_frame(tag, desc, channel_layout);}
+core::mutable_frame image_mixer::create_frame(const void* tag, const core::pixel_format_desc& desc) {return impl_->create_frame(tag, desc);}
 
 }}}

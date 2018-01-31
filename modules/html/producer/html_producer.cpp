@@ -30,7 +30,6 @@
 #include <core/interaction/interaction_event.h>
 #include <core/frame/frame.h>
 #include <core/frame/pixel_format.h>
-#include <core/frame/audio_channel_layout.h>
 #include <core/frame/geometry.h>
 
 #include <common/assert.h>
@@ -203,7 +202,7 @@ private:
 			pixel_desc.format = core::pixel_format::bgra;
 			pixel_desc.planes.push_back(
 				core::pixel_format_desc::plane(width, height, 4));
-		auto frame = frame_factory_->create_frame(this, pixel_desc, core::audio_channel_layout::invalid());
+		auto frame = frame_factory_->create_frame(this, pixel_desc);
 		std::memcpy(frame.image_data().begin(), buffer, width * height * 4);
 
 		{

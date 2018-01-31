@@ -32,7 +32,6 @@
 
 #include "../video_format.h"
 #include "../frame/frame.h"
-#include "../frame/audio_channel_layout.h"
 
 #include <common/assert.h>
 #include <common/future.h>
@@ -57,18 +56,16 @@ struct output::impl
 	spl::shared_ptr<monitor::subject>	monitor_subject_			= spl::make_shared<monitor::subject>("/output");
 	const int							channel_index_;
 	video_format_desc					format_desc_;
-	audio_channel_layout				channel_layout_;
 	std::map<int, port>					ports_;
 	prec_timer							sync_timer_;
 	boost::circular_buffer<const_frame>	frames_;
 	std::map<int, int64_t>				send_to_consumers_delays_;
 	executor							executor_					{ L"output " + boost::lexical_cast<std::wstring>(channel_index_) };
 public:
-	impl(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, const audio_channel_layout& channel_layout, int channel_index)
+	impl(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index)
 		: graph_(std::move(graph))
 		, channel_index_(channel_index)
 		, format_desc_(format_desc)
-		, channel_layout_(channel_layout)
 	{
 		graph_->set_color("consume-time", diagnostics::color(1.0f, 0.4f, 0.0f, 0.8f));
 	}
@@ -77,7 +74,7 @@ public:
 	{
 		remove(index);
 
-		consumer->initialize(format_desc_, channel_layout_, channel_index_);
+		consumer->initialize(format_desc_, channel_index_);
 
 		executor_.begin_invoke([this, index, consumer]
 		{
@@ -110,11 +107,11 @@ public:
 		remove(consumer->index());
 	}
 
-	void change_channel_format(const core::video_format_desc& format_desc, const core::audio_channel_layout& channel_layout)
+	void change_channel_format(const core::video_format_desc& format_desc)
 	{
 		executor_.invoke([&]
 		{
-			if(format_desc_ == format_desc && channel_layout_ == channel_layout)
+			if(format_desc_ == format_desc)
 				return;
 
 			auto it = ports_.begin();
@@ -122,7 +119,7 @@ public:
 			{
 				try
 				{
-					it->second.change_channel_format(format_desc, channel_layout);
+					it->second.change_channel_format(format_desc);
 					++it;
 				}
 				catch(...)
@@ -134,7 +131,6 @@ public:
 			}
 
 			format_desc_ = format_desc;
-			channel_layout_ = channel_layout;
 			frames_.clear();
 		});
 	}
@@ -163,11 +159,11 @@ public:
         return result;
 	}
 
-	std::future<void> operator()(const_frame input_frame, const core::video_format_desc& format_desc, const core::audio_channel_layout& channel_layout)
+	std::future<void> operator()(const_frame input_frame, const core::video_format_desc& format_desc)
 	{
 		spl::shared_ptr<caspar::timer> frame_timer;
 
-		change_channel_format(format_desc, channel_layout);
+		change_channel_format(format_desc);
 
 		auto pending_send_results = executor_.invoke([=]() -> std::shared_ptr<std::map<int, std::future<bool>>>
 		{
@@ -276,31 +272,6 @@ public:
 		}));
 	}
 
-	std::future<boost::property_tree::wptree> delay_info()
-	{
-		return std::move(executor_.begin_invoke([&]() -> boost::property_tree::wptree
-		{
-			boost::property_tree::wptree info;
-
-			for (auto& port : ports_)
-			{
-				auto total_age =
-					port.second.presentation_frame_age_millis();
-				auto sendoff_age = send_to_consumers_delays_[port.first];
-				auto presentation_time = total_age - sendoff_age;
-
-				boost::property_tree::wptree child;
-				child.add(L"name", port.second.print());
-				child.add(L"age-at-arrival", sendoff_age);
-				child.add(L"presentation-time", presentation_time);
-				child.add(L"age-at-presentation", total_age);
-
-				info.add_child(L"consumer", child);
-			}
-			return info;
-		}));
-	}
-
 	std::vector<spl::shared_ptr<const frame_consumer>> get_consumers()
 	{
 		return executor_.invoke([=]
@@ -315,14 +286,13 @@ public:
 	}
 };
 
-output::output(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, const core::audio_channel_layout& channel_layout, int channel_index) : impl_(new impl(std::move(graph), format_desc, channel_layout, channel_index)){}
+output::output(spl::shared_ptr<diagnostics::graph> graph, const video_format_desc& format_desc, int channel_index) : impl_(new impl(std::move(graph), format_desc, channel_index)){}
 void output::add(int index, const spl::shared_ptr<frame_consumer>& consumer){impl_->add(index, consumer);}
 void output::add(const spl::shared_ptr<frame_consumer>& consumer){impl_->add(consumer);}
 void output::remove(int index){impl_->remove(index);}
 void output::remove(const spl::shared_ptr<frame_consumer>& consumer){impl_->remove(consumer);}
 std::future<boost::property_tree::wptree> output::info() const{return impl_->info();}
-std::future<boost::property_tree::wptree> output::delay_info() const{ return impl_->delay_info(); }
 std::vector<spl::shared_ptr<const frame_consumer>> output::get_consumers() const { return impl_->get_consumers(); }
-std::future<void> output::operator()(const_frame frame, const video_format_desc& format_desc, const core::audio_channel_layout& channel_layout){ return (*impl_)(std::move(frame), format_desc, channel_layout); }
+std::future<void> output::operator()(const_frame frame, const video_format_desc& format_desc){ return (*impl_)(std::move(frame), format_desc); }
 monitor::subject& output::monitor_output() {return *impl_->monitor_subject_;}
 }}

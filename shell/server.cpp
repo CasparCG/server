@@ -35,7 +35,6 @@
 
 #include <core/video_channel.h>
 #include <core/video_format.h>
-#include <core/frame/audio_channel_layout.h>
 #include <core/producer/stage.h>
 #include <core/producer/frame_producer.h>
 #include <core/producer/color/color_producer.h>
@@ -152,9 +151,6 @@ struct server::impl : boost::noncopyable
 
 	void start()
 	{
-		setup_audio_config(env::properties());
-		CASPAR_LOG(info) << L"Initialized audio config.";
-
 		setup_channels(env::properties());
 		CASPAR_LOG(info) << L"Initialized channels.";
 
@@ -184,31 +180,6 @@ struct server::impl : boost::noncopyable
 		core::diagnostics::osd::shutdown();
 	}
 
-	void setup_audio_config(const boost::property_tree::wptree& pt)
-	{
-		using boost::property_tree::wptree;
-
-		auto default_config = get_default_audio_config();
-
-		// Start with the defaults
-		audio_channel_layout_repository::get_default()->register_all_layouts(default_config.get_child(L"audio.channel-layouts"));
-		audio_mix_config_repository::get_default()->register_all_configs(default_config.get_child(L"audio.mix-configs"));
-
-		// Merge with user configuration (adds to or overwrites the defaults)
-		auto custom_channel_layouts	= pt.get_child_optional(L"configuration.audio.channel-layouts");
-		auto custom_mix_configs		= pt.get_child_optional(L"configuration.audio.mix-configs");
-
-		if (custom_channel_layouts)
-		{
-			audio_channel_layout_repository::get_default()->register_all_layouts(*custom_channel_layouts);
-		}
-
-		if (custom_mix_configs)
-		{
-			audio_mix_config_repository::get_default()->register_all_configs(*custom_mix_configs);
-		}
-	}
-
 	void setup_channels(const boost::property_tree::wptree& pt)
 	{
 		using boost::property_tree::wptree;
@@ -225,13 +196,8 @@ struct server::impl : boost::noncopyable
 			if(format_desc.format == video_format::invalid)
 				CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Invalid video-mode: " + format_desc_str));
 
-			auto channel_layout_str = xml_channel.second.get(L"channel-layout", L"stereo");
-			auto channel_layout = core::audio_channel_layout_repository::get_default()->get_layout(channel_layout_str);
-			if (!channel_layout)
-				CASPAR_THROW_EXCEPTION(user_error() << msg_info(L"Unknown channel-layout: " + channel_layout_str));
-
 			auto channel_id = static_cast<int>(channels_.size() + 1);
-			auto channel = spl::make_shared<video_channel>(channel_id, format_desc, *channel_layout, accelerator_.create_image_mixer(channel_id));
+			auto channel = spl::make_shared<video_channel>(channel_id, format_desc, accelerator_.create_image_mixer(channel_id));
 
 			channel->monitor_output().attach_parent(monitor_subject_);
 			channel->mixer().set_straight_alpha_output(xml_channel.second.get(L"straight-alpha-output", false));
@@ -270,7 +236,6 @@ struct server::impl : boost::noncopyable
 			channels_.push_back(spl::make_shared<video_channel>(
 					channel_id,
 					core::video_format_desc(core::video_format::x576p2500),
-					*core::audio_channel_layout_repository::get_default()->get_layout(L"stereo"),
 					accelerator_.create_image_mixer(channel_id)));
 			channels_.back()->monitor_output().attach_parent(monitor_subject_);
 		}
