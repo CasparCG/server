@@ -23,11 +23,6 @@ set(SOURCES
 		producer/color/color_producer.cpp
 
 		producer/separated/separated_producer.cpp
-
-		producer/text/utils/freetype_library.cpp
-		producer/text/utils/texture_atlas.cpp
-		producer/text/utils/texture_font.cpp
-
 		producer/transition/transition_producer.cpp
 
 		producer/cg_proxy.cpp
@@ -72,13 +67,6 @@ set(HEADERS
 		monitor/monitor.h
 
 		producer/color/color_producer.h
-
-		producer/text/utils/color.h
-		producer/text/utils/freetype_library.h
-		producer/text/utils/string_metrics.h
-		producer/text/utils/text_info.h
-		producer/text/utils/texture_atlas.h
-		producer/text/utils/texture_font.h
 
 		producer/transition/transition_producer.h
 
