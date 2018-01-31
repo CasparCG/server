@@ -120,7 +120,6 @@ struct oal_consumer : public core::frame_consumer
 
 	spl::shared_ptr<diagnostics::graph>				graph_;
     caspar::timer									perf_timer_;
-	std::atomic<int64_t>							presentation_age_;
 	int												channel_index_ = -1;
 
 	core::video_format_desc							format_desc_;
@@ -137,8 +136,6 @@ struct oal_consumer : public core::frame_consumer
 public:
 	oal_consumer()
 	{
-		presentation_age_ = 0;
-
 		init_device();
 
 		graph_->set_color("tick-time", diagnostics::color(0.0f, 0.6f, 0.9f));

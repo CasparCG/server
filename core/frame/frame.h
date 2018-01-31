@@ -108,7 +108,6 @@ public:
 
 	const core::frame_geometry& geometry() const;
 	const_frame with_geometry(const frame_geometry& g) const;
-	int64_t get_age_millis() const;
 
 	bool operator==(const const_frame& other);
 	bool operator!=(const const_frame& other);
